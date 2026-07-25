@@ -48,14 +48,14 @@ export type FirstAdInput = {
     description: string;
     cta: string;
   };
-  /** Vision-QA verdict + editable-element regions for the clone image. */
+  /** Editable-element regions + text values for the clone image. */
   templateCloneQa?: AdStudioCloneQa;
   templateCloneQaByFormat?: Partial<Record<AdStudioFormat, AdStudioCloneQa>>;
   /**
    * On-image copy typed by the customer, keyed by the template's copy-field
    * key (price, address, phone…). Rendered VERBATIM: these values override
-   * anything the copy model writes, and QA verifies them letter for letter —
-   * the fix for AI-invented prices and filler stats.
+   * anything the copy model writes — the fix for AI-invented prices and
+   * filler stats.
    */
   onImageCopy?: Partial<Record<string, string>>;
   formats: ["9:16", "4:5"];
@@ -236,16 +236,32 @@ export type AdStudioCloneRegion = {
   box: { x: number; y: number; width: number; height: number };
 };
 
-/** Vision-QA verdict for an AI-cloned creative (copy verification + regions). */
+/** Editor map for an AI-cloned creative: clickable regions + current text values. */
 export type AdStudioCloneQa = {
-  passed: boolean;
-  attempts: number;
-  checkedAt: string;
-  copyChecks: Array<{ key: string; expected: string; rendered: string; exact: boolean }>;
-  defects: string[];
   regions: AdStudioCloneRegion[];
-  model?: string;
+  /** Current value of each editable text field, keyed by region key. */
+  copyValues: Record<string, string>;
 };
+
+/**
+ * Accepts the current { regions, copyValues } shape and legacy persisted rows
+ * ({ regions, copyChecks: [{ key, expected, ... }] } plus inert verdict keys).
+ */
+export function normalizeCloneQa(raw: unknown): AdStudioCloneQa | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const value = raw as { regions?: unknown; copyValues?: unknown; copyChecks?: unknown };
+  const regions = Array.isArray(value.regions) ? (value.regions as AdStudioCloneRegion[]) : [];
+  if (value.copyValues && typeof value.copyValues === "object" && !Array.isArray(value.copyValues)) {
+    return { regions, copyValues: value.copyValues as Record<string, string> };
+  }
+  const copyValues: Record<string, string> = {};
+  if (Array.isArray(value.copyChecks)) {
+    for (const check of value.copyChecks as Array<{ key?: string; expected?: string }>) {
+      if (check?.key) copyValues[check.key] = check.expected ?? "";
+    }
+  }
+  return { regions, copyValues };
+}
 
 export type AdStudioCreative = {
   creativeId: string;
@@ -259,15 +275,15 @@ export type AdStudioCreative = {
     height: number;
     backgroundAssetId: string | null;
     objects: AdStudioCanvasObject[];
-    /** Present on AI-cloned creatives: QA verdict + editable-element regions. */
+    /** Present on AI-cloned creatives: editable-element regions + text values. */
     cloneQa?: AdStudioCloneQa;
     /** Previous renders (media paths, newest last) for undo on clone edits. */
     renderHistory?: string[];
-    /** QA snapshots paired by index with renderHistory. */
+    /** Editor-map snapshots paired by index with renderHistory. */
     renderQaHistory?: AdStudioCloneQa[];
     /** Renders made available after undo; cleared by the next new edit. */
     redoHistory?: string[];
-    /** QA snapshots paired by index with redoHistory. */
+    /** Editor-map snapshots paired by index with redoHistory. */
     redoQaHistory?: AdStudioCloneQa[];
   };
   safeZones: {

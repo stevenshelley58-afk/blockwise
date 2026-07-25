@@ -53,6 +53,20 @@ path, or second full-ad generator. Diversity is measured by the AI ad-radar
 classification. `node scripts/verify/adstudio-templates.mjs` and
 `npm run verify:hard-reset` must pass; never weaken or special-case either gate.
 
+## Component system (shadcn/ui canonical)
+
+- The customer (self-serve) surface is built on shadcn/ui + Tailwind v4. New
+  customer-facing UI must reuse the primitives in `src/components/ui/` and
+  Tailwind utilities wired to the Blockwise token bridge (`src/app/tailwind.css`,
+  the `--ui-*` variables). Do not add new global CSS classes for customer UI.
+- Operator and monitor surfaces remain on the existing CSS shell (`globals.css`)
+  until their own migration. Do not mix the two systems within one route.
+- Install components with the shadcn CLI (`npx shadcn add <name>`) instead of
+  hand-rolling parallel primitives (button, dialog, sheet, table, select, etc.).
+- The `.tw` scope and the no-preflight Tailwind setup are load-bearing for
+  coexistence with `globals.css`. Do not enable Tailwind preflight or remove
+  the scope.
+
 ## Mandatory UI workflow
 
 For every task affecting UI, UX, styling, layout, typography, responsive

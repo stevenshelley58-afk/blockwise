@@ -71,13 +71,12 @@ export const generateAdStudioTemplateCampaignTask = task({
       });
 
       // "done" the moment the feed (4:5) persists — the polling client shows
-      // the ad now. The story (9:16) render and advisory QA pass run after.
+      // the ad now. The story (9:16) render and region detection run after.
       await supabase
         .from("adstudio_creative_jobs")
         .update({
           status: "done",
           campaign_id: result.campaignId,
-          qa: null,
           error: null,
           updated_at: now(),
         })
@@ -102,7 +101,7 @@ export const generateAdStudioTemplateCampaignTask = task({
       const message = error instanceof Error ? error.message : "Ad generation failed.";
       await supabase
         .from("adstudio_creative_jobs")
-        .update({ status: "failed", error: message, qa: null, updated_at: now() })
+        .update({ status: "failed", error: message, updated_at: now() })
         .eq("workspace_id", payload.workspaceId)
         .eq("id", payload.jobId);
 

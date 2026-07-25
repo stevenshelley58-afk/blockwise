@@ -1,4 +1,3 @@
-import { PageHeading } from "@/components/page-heading";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
 import { GOOGLE_ADS_ENABLED } from "@/lib/config/feature-flags";
 import { listProviderConnections } from "@/lib/providers/provider-connections";
@@ -82,12 +81,10 @@ export default async function SettingsPage() {
   const wsQuery = encodeURIComponent(access.workspaceId);
 
   return (
-    <main className="content">
-      <PageHeading
-        eyebrow="Account"
-        title="Settings"
-        description="Manage your account, security, billing, ad connections, workspace, and team."
-      />
+    <main className="mx-auto w-full max-w-4xl px-4 py-8 md:px-6" aria-label="Settings">
+      <header className="mb-6">
+        <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
+      </header>
       <SettingsView
         user={{ id: access.userId, email: p?.email ?? "" }}
         profile={{ fullName: p?.full_name ?? "", notificationPreferences: p?.notification_preferences ?? {} }}

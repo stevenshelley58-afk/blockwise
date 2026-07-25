@@ -1,12 +1,11 @@
-// Editable-region detection + deterministic text QA for AI-cloned creatives.
+// Editable-region detection for AI-cloned creatives.
 //
-// Copy verification is gone. Baked-in text used to trigger a blocking reroll
-// loop; now the customer gets the ad immediately and fixes any text in place.
-// What survives:
+// One vision call per render locates the clickable hit-boxes that power the
+// in-place editor. QA verdicts are gone — the customer gets the ad
+// immediately and fixes anything in place, with history/undo as the safety
+// net. What lives here:
 //   - detectCloneRegions: one vision call per render locates the editable
-//     hit-boxes that power in-place editing. Never throws (returns []).
-//   - applyDeterministicTextEditQa: a deterministic text render writes the
-//     requested characters itself, so its verdict updates without a model call.
+//     hit-boxes. Never throws (returns []).
 //   - parseCloneRegions / boxFromRegionEntry: parse the vision response into
 //     normalized 0..1 editor boxes.
 
@@ -14,7 +13,7 @@ import { randomUUID } from "node:crypto";
 
 import { createTextProviderForCandidate } from "./ai-providers.ts";
 import type { TextProviderAdapter, TextProviderResponse } from "./providers.ts";
-import type { AdStudioCloneQa, AdStudioCloneRegion } from "./types.ts";
+import type { AdStudioCloneRegion } from "./types.ts";
 import {
   isProviderFallbackEligible,
   modelCandidateAttempts,
@@ -86,41 +85,6 @@ export function parseCloneRegions(
     });
   }
   return regions;
-}
-
-function cloneQaPassed(qa: Pick<AdStudioCloneQa, "copyChecks" | "defects">): boolean {
-  return qa.copyChecks.every((check) => check.exact) && qa.defects.length === 0;
-}
-
-/**
- * A deterministic text render writes the requested characters itself, so it
- * does not need another vision-model round trip. The previous passing verdict
- * remains authoritative for every untouched pixel and copy field.
- */
-export function applyDeterministicTextEditQa(
-  previous: AdStudioCloneQa,
-  fieldKey: string,
-  value: string,
-): AdStudioCloneQa {
-  const expected = value.trim();
-  let replaced = false;
-  const copyChecks = previous.copyChecks.map((check) => {
-    if (check.key !== fieldKey) return check;
-    replaced = true;
-    return { key: fieldKey, expected, rendered: expected, exact: true };
-  });
-  if (!replaced) {
-    copyChecks.push({ key: fieldKey, expected, rendered: expected, exact: true });
-  }
-
-  const next: AdStudioCloneQa = {
-    ...previous,
-    attempts: 1,
-    checkedAt: new Date().toISOString(),
-    copyChecks,
-    model: "deterministic-text-renderer",
-  };
-  return { ...next, passed: cloneQaPassed(next) };
 }
 
 export type DetectCloneRegionsInput = {

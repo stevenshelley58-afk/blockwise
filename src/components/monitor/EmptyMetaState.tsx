@@ -1,19 +1,16 @@
 import { MetaMark } from "./MetaMonitorHeader";
 
 export function EmptyMetaState({ issue, connected, metaConnectHref }: { issue: string | null; connected: boolean; metaConnectHref?: string }) {
-  const title = connected ? "Meta reporting couldn't load" : "Connect Meta to view ad performance";
-  const description = connected
-    ? (issue ?? "Something went wrong while loading your Meta account. Try refreshing.")
-    : (issue ??
-      "Once your Meta ad account is connected, spend, leads and ad performance appear here automatically. No sample data is shown for live accounts.");
+  const line = connected
+    ? (issue ?? "Meta reporting couldn't load. Try refreshing.")
+    : "Connect Meta to view ad performance.";
 
   return (
     <section className="panel mm-empty" aria-live="polite">
       <div className="mm-empty-mark">
         <MetaMark size={30} />
       </div>
-      <h2>{title}</h2>
-      <p>{description}</p>
+      <h2>{line}</h2>
       {!connected ? (
         <a className="button" href={metaConnectHref ?? "/settings"}>
           Connect Meta

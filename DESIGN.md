@@ -277,3 +277,24 @@ changing.
   across product surfaces.
 - **Don't** use colored side-stripe card accents, gradient text, default
   glassmorphism, decorative hero metrics, or nested cards.
+
+## 7. Implementation Governance
+
+The canonical implementation of this design system for the customer
+(self-serve) surface is **shadcn/ui on Tailwind v4**. The primitives in
+`src/components/ui/` are the shared vocabulary for buttons, cards, dialogs,
+sheets, tables, selects, inputs, and navigation. They are wired to the
+Blockwise tokens through the bridge in `src/app/tailwind.css` (the `--ui-*`
+variables map onto the palette, radius, and type defined above).
+
+- Build customer-facing UI from the shadcn primitives and Tailwind utilities;
+  do not introduce new global CSS classes or a parallel component set.
+- Keep the token bridge as the single source of truth: shadcn semantic tokens
+  (`background`, `foreground`, `primary`, `muted`, `border`, etc.) resolve to
+  the Blockwise values in this document, so a token change here propagates.
+- Operator and monitor surfaces remain on the existing CSS shell until their
+  own migration; the two systems coexist via the scoped, no-preflight Tailwind
+  setup and must not be mixed within one route.
+- This register remains "the quiet operations desk": shadcn is the delivery
+  mechanism, not a new visual language. Density, restraint, and the one-voice
+  accent rule still govern every component choice.

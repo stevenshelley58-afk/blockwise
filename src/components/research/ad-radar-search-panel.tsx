@@ -392,7 +392,7 @@ export function AdRadarSearchPanel({ initialQuery, initialSort, initialIncludeSu
           ) : (
             <div className="research-empty-state">
               <h3>No ads matched</h3>
-              <p>Try a WA postcode such as 6008 or 6000 while the background collector expands coverage.</p>
+              <p>Try a nearby postcode.</p>
             </div>
           )}
         </section>

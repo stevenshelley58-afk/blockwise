@@ -168,7 +168,7 @@ export function PropertyCheckSearch({ initialChecks }: { initialChecks: Property
             }}
             onFocus={() => setIsFocused(true)}
             onKeyDown={onInputKeyDown}
-            placeholder="Type a street address to run a property check"
+            placeholder="Street address"
             aria-label="Street address"
             aria-autocomplete="list"
             aria-controls={`${listId}-list`}
@@ -226,7 +226,7 @@ export function PropertyCheckSearch({ initialChecks }: { initialChecks: Property
         ) : null}
         {submitting ? (
           <p className="pc-running" role="status">
-            Running the check — gathering source-cited planning signals…
+            Checking…
           </p>
         ) : null}
 

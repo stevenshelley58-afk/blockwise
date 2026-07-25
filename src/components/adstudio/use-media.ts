@@ -10,8 +10,9 @@ import {
 
 import { uploadAdStudioMedia } from "./media-upload";
 
-/** What an asset depicts — drives the library filters and template slot matching. */
-export type AssetRole = "property" | "person" | "logo" | "background";
+import type { AssetRole } from "./asset-roles";
+
+export type { AssetRole };
 
 export const MEDIA_ASSETS = [
   { src: "/ads/ad-northstar.jpg", label: "South Perth skyline", type: "Uploaded", ratio: "Story", role: "background" },

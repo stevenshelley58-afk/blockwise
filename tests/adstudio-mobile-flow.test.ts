@@ -9,22 +9,24 @@ function read(path: string): string {
 test("mobile nav exposes the canvas-first Ad Studio sections", () => {
   const mobileBody = read("src/components/adstudio/ad-studio-workbench.tsx");
   const mediaPanel = read("src/components/adstudio/panels/media-panel.tsx");
+  const navBlocks = `${mobileBody.match(/const NAV_ITEMS:[\s\S]*?\];/)?.[0] ?? ""}\n${mobileBody.match(/const MOBILE_NAV:[\s\S]*?\];/)?.[0] ?? ""}`;
 
   assert.match(mobileBody, /studio\.mobileTab === "home"/);
-  assert.match(mobileBody, /studio\.mobileTab === "media"/);
+  assert.doesNotMatch(mobileBody, /studio\.mobileTab === "media"/);
+  assert.match(mobileBody, /href: "\/ad-studio\/library"/);
   assert.match(mobileBody, /studio\.mobileTab === "text"/);
   assert.match(mobileBody, /label: "Home"/);
-  assert.match(mobileBody, /label: "Templates"/);
+  assert.match(mobileBody, /label: "Create"/);
   assert.match(mobileBody, /samplePickerOpen/);
-  assert.match(mobileBody, /label: "Media"/);
+  assert.match(mobileBody, /label: "Library"/);
   assert.match(mobileBody, /label: "Text"/);
   assert.match(mobileBody, /label: "Publish"/);
   assert.match(mobileBody, /label: "Brand Pack"/);
   assert.match(mobileBody, /label: "Settings"/);
   assert.doesNotMatch(mobileBody, /studio\.mobileTab === "campaign"/);
   assert.doesNotMatch(mobileBody, /studio\.mobileTab === "design"/);
-  assert.doesNotMatch(mobileBody, /label: "Edit"/);
-  assert.doesNotMatch(mobileBody, /label: "Design"/);
+  assert.doesNotMatch(navBlocks, /label: "Edit"/);
+  assert.doesNotMatch(navBlocks, /label: "Design"/);
   assert.match(mediaPanel, /studio-current-media/);
   assert.match(mediaPanel, /Upload image/);
   assert.match(mediaPanel, /Replace/);
@@ -44,7 +46,7 @@ test("media library stages a replacement and confirms before generating a new ad
   assert.match(mediaPanel, /Replace image/);
   assert.match(mediaPanel, /Generate a new ad with this image\?/);
   assert.match(mediaPanel, /Generate new ad/);
-  assert.match(mediaPanel, /role="dialog"/);
+  assert.match(mediaPanel, /<DialogContent/);
   assert.match(workbench, /setPendingMediaReplacement\(\{ src, label: asset\.label \}\)/);
   assert.match(workbench, /currentCreative\.canvas\.cloneQa\?\.regions\.find\(\(region\) => region\.kind === "image"\)/);
   assert.match(workbench, /requestCreativeEdit\(\{/);
@@ -53,20 +55,18 @@ test("media library stages a replacement and confirms before generating a new ad
   assert.match(editClient, /objects: \[\{ \.\.\.cloneObject, content: data\.previewDataUrl \?\? data\.image, assetId: data\.image \}\]/);
 });
 
-test("media library separates uploaded assets from generated ads", () => {
+test("media library filters assets by role without a generated ads tab", () => {
   const workbench = read("src/components/adstudio/ad-studio-workbench.tsx");
   const mediaPanel = read("src/components/adstudio/panels/media-panel.tsx");
 
-  assert.match(mediaPanel, /type LibraryView = "assets" \| "ads"/);
-  assert.match(mediaPanel, /aria-label="Library content"/);
-  assert.match(mediaPanel, /Assets <span>\{mediaAssets\.length\}<\/span>/);
-  assert.match(mediaPanel, /Ads <span>\{generatedAds\.length\}<\/span>/);
-  assert.match(mediaPanel, /studio-library-assets-panel/);
-  assert.match(mediaPanel, /studio-library-ads-panel/);
-  assert.match(mediaPanel, /No generated ads yet/);
-  assert.match(workbench, /creativeLibraryPreview/);
-  assert.match(workbench, /onSelectGeneratedAd=\{selectGeneratedAd\}/);
-  assert.match(workbench, /setPreviewFormat\(creative\.format === "9:16" \? "story" : "feed"\)/);
+  assert.match(mediaPanel, /studio-library-filters/);
+  assert.match(mediaPanel, /resolveRole/);
+  assert.match(mediaPanel, /All <span>\{mediaAssets\.length\}<\/span>/);
+  assert.match(mediaPanel, /ROLE_META\[role\]\.plural/);
+  assert.doesNotMatch(mediaPanel, /generatedAds/);
+  assert.doesNotMatch(mediaPanel, /LibraryView/);
+  assert.doesNotMatch(workbench, /creativeLibraryPreview/);
+  assert.doesNotMatch(workbench, /onSelectGeneratedAd/);
 });
 
 test("brief copy generation leaves editable copy visible with inline feedback", () => {

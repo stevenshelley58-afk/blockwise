@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
+import path from "node:path";
 import test from "node:test";
 
 test("onboarding page renders the wizard instead of redirecting to settings", () => {
@@ -47,8 +48,10 @@ test("landing CTA tracking fires cta_click for every CTA and BookDemoClick only 
   // The homepage renders from page.tsx plus the home-landing component tree.
   const homepage = [
     readFileSync("src/app/page.tsx", "utf8"),
-    readFileSync("src/components/home-landing/home-desktop.tsx", "utf8"),
-    readFileSync("src/components/home-landing/home-mobile.tsx", "utf8"),
+    ...readdirSync("src/components/home-landing")
+      .filter((file) => file.endsWith(".ts") || file.endsWith(".tsx"))
+      .sort()
+      .map((file) => readFileSync(path.join("src/components/home-landing", file), "utf8")),
   ].join("\n");
 
   // Every CTA fires a cta_click with the location label.

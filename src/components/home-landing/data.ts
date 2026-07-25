@@ -1,6 +1,6 @@
 /**
- * Content data for the homepage redesign. Values are copied verbatim from the
- * design handoff (`renderVals()` in the .dc.html references) — copy is final.
+ * Content data for the homepage. Copy is preserved from the previous build
+ * and remains final.
  */
 
 export const FAQ_DATA = [
@@ -67,12 +67,60 @@ export const RADAR_ADS = [
   },
 ] as const;
 
-export const STUCK_TASKS = [
-  { name: "Pick suburb audience", sub: "Meta targeting choices", status: "Needs review" },
-  { name: "Write seller lead copy", sub: "Hooks, headline, CTA", status: "Draft again" },
-  { name: "Resize listing image", sub: "Feed, story, reels", status: "Wrong size" },
-  { name: "Set lead form questions", sub: "Contact, suburb, intent", status: "Not ready" },
-  { name: "Send vendor update", sub: "Spend, leads, result", status: "Still pending" },
+/**
+ * Curated feed templates for the #start studio. Each entry references a real
+ * AdStudio sample image directly (no gallery JSON in the landing bundle) and
+ * carries short, realistic copy so the live preview reads at a glance.
+ */
+export const START_TEMPLATES = [
+  {
+    id: "free-appraisal",
+    label: "Free appraisal",
+    imageSrc: "/adstudio-samples/meta/meta-appraisal-feed-002-sample.png",
+    copy: "Thinking of selling? Find out what your home could be worth with a free property appraisal.",
+    footHeading: "Find out what your home could be worth",
+    footSub: "Book a free property appraisal",
+  },
+  {
+    id: "seller-consult",
+    label: "Seller consult",
+    imageSrc: "/adstudio-samples/meta/meta-seller-consult-feed-097-sample.png",
+    copy: "Curious what buyers would pay for your home? Get a free, no-obligation consultation.",
+    footHeading: "Free seller consultation",
+    footSub: "Local market expertise",
+  },
+  {
+    id: "buyers-wanted",
+    label: "Buyers wanted",
+    imageSrc: "/adstudio-samples/meta/meta-buyers-wanted-feed-126-sample.png",
+    copy: "We have qualified buyers waiting for homes like yours. List with us and meet them.",
+    footHeading: "Meet ready buyers",
+    footSub: "Sell faster",
+  },
+  {
+    id: "market-report",
+    label: "Market report",
+    imageSrc: "/adstudio-samples/meta/meta-market-report-feed-139-sample.png",
+    copy: "What's your suburb really worth right now? Get the latest market report for your area.",
+    footHeading: "Free suburb market report",
+    footSub: "Updated monthly",
+  },
+  {
+    id: "offmarket-alerts",
+    label: "Off-market alerts",
+    imageSrc: "/adstudio-samples/meta/meta-offmarket-alerts-feed-130-sample.png",
+    copy: "See homes for sale before they hit the market. Get off-market alerts for your suburb.",
+    footHeading: "Off-market property alerts",
+    footSub: "Be first to know",
+  },
+  {
+    id: "agent-intro",
+    label: "Agent intro",
+    imageSrc: "/adstudio-samples/meta/meta-agent-intro-feed-037-sample.png",
+    copy: "Meet your local agent. Trusted advice, real results, and a plan for your next move.",
+    footHeading: "Meet your local agent",
+    footSub: "Trusted local expertise",
+  },
 ] as const;
 
 export const PROPERTY_USES = [
@@ -111,7 +159,7 @@ export const DASH_ROWS = [
     name: "Mt Lawley appraisal",
     sub: "Seller lead angle",
     status: "Active",
-    statusColor: "#3D806A",
+    tone: "active",
     clicks: "247",
     leads: "18",
     spend: "$324",
@@ -120,7 +168,7 @@ export const DASH_ROWS = [
     name: "Subiaco just listed",
     sub: "Listing attention",
     status: "Active",
-    statusColor: "#3D806A",
+    tone: "active",
     clicks: "182",
     leads: "11",
     spend: "$210",
@@ -129,7 +177,7 @@ export const DASH_ROWS = [
     name: "Cottesloe open home",
     sub: "Open home traffic",
     status: "Paused",
-    statusColor: "#8B97A5",
+    tone: "quiet",
     clicks: "93",
     leads: "7",
     spend: "$98",
@@ -138,37 +186,12 @@ export const DASH_ROWS = [
     name: "South Perth market update",
     sub: "Seller proof",
     status: "Draft",
-    statusColor: "#8B97A5",
+    tone: "quiet",
     clicks: "--",
     leads: "--",
     spend: "--",
   },
 ] as const;
 
-export const DASH_TILES = [
-  {
-    label: "Status",
-    body: "See what is live, paused or waiting.",
-    value: "Live",
-    valueColor: "#3D806A",
-  },
-  { label: "Spend", body: "Know what has been spent.", value: "$186", valueColor: "#F1F3F4" },
-  {
-    label: "Results",
-    body: "Track clicks and leads in one place.",
-    value: "17 leads",
-    valueColor: "#F1F3F4",
-  },
-  {
-    label: "Next step",
-    body: "Know when something needs approval.",
-    value: "Review",
-    valueColor: "#5F8FCE",
-  },
-] as const;
-
-export const CHART_POINTS_DESKTOP =
+export const CHART_POINTS =
   "0,74 40,70 80,72 120,62 160,64 200,52 240,55 280,44 320,47 360,36 400,38 440,28 480,30 520,20 560,16";
-
-export const CHART_POINTS_MOBILE =
-  "0,64 40,60 80,62 120,54 160,56 200,45 240,48 280,38 320,41 360,31 400,33 440,24 480,26 520,17 560,14";

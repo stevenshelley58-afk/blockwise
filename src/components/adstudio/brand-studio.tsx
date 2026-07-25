@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -298,7 +298,6 @@ export function BrandStudio({ brandKit: initialKit }: { brandKit: AdStudioBrandK
         <div className="bs-empty-panel">
           <span className="chip warn">Brand needed</span>
           <h2>Enter your website. We’ll build your brand kit.</h2>
-          <p>We’ll find your logo, colours, fonts, and business details automatically. You can review everything before it is used.</p>
           <form
             className="site-setup"
             onSubmit={(event) => {

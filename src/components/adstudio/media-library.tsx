@@ -1,0 +1,214 @@
+"use client";
+
+import { Images, Megaphone, Plus, Upload } from "lucide-react";
+import Link from "next/link";
+import { useMemo, useRef, useState } from "react";
+import { Toaster, toast } from "sonner";
+
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+import { AD_IMAGE_MAX_BYTES, AD_IMAGE_UPLOAD_TYPES, validateAssetUploadFile } from "@/lib/upload/asset-file";
+
+import { ROLE_META, ROLE_ORDER, resolveRole, type AssetRole } from "./asset-roles";
+import { uploadAdStudioMedia } from "./media-upload";
+
+export type LibraryAsset = {
+  id: string;
+  src: string;
+  label: string;
+  type: string;
+  role: AssetRole;
+};
+
+export type LibraryAd = {
+  creativeId: string;
+  campaignId: string;
+  campaignName: string;
+  src: string;
+  format: string;
+};
+
+type MediaLibraryProps = {
+  workspaceId: string;
+  brandKitId: string;
+  assets: LibraryAsset[];
+  ads: LibraryAd[];
+};
+
+type RoleFilter = AssetRole | "all";
+
+function formatLabel(format: string): string {
+  if (format === "9:16") return "Story";
+  if (format === "4:5") return "Feed";
+  if (format === "1:1") return "Square";
+  return format || "Ad";
+}
+
+export function MediaLibrary({ workspaceId, brandKitId, assets, ads }: MediaLibraryProps) {
+  const [uploaded, setUploaded] = useState<LibraryAsset[]>([]);
+  const [filter, setFilter] = useState<RoleFilter>("all");
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Fresh uploads land at the front so they are visible without a reload.
+  const allAssets = useMemo(() => [...uploaded, ...assets], [uploaded, assets]);
+
+  const counts = useMemo(() => {
+    const next: Record<AssetRole, number> = { property: 0, person: 0, logo: 0, background: 0 };
+    for (const asset of allAssets) next[resolveRole(asset)] += 1;
+    return next;
+  }, [allAssets]);
+
+  const presentRoles = ROLE_ORDER.filter((role) => counts[role] > 0);
+  const visibleAssets =
+    filter === "all" ? allAssets : allAssets.filter((asset) => resolveRole(asset) === filter);
+
+  async function handleUpload(file: File | null | undefined) {
+    if (!file) return;
+    const validationError = validateAssetUploadFile(file, {
+      acceptedTypes: AD_IMAGE_UPLOAD_TYPES,
+      maxBytes: AD_IMAGE_MAX_BYTES,
+      typeError: "Use a JPG, PNG, or WebP image.",
+      sizeError: "Use an image under 8 MB.",
+    });
+    if (validationError) {
+      toast.error(validationError);
+      return;
+    }
+    if (!brandKitId) {
+      toast.error("Set up your brand before uploading images.");
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const result = await uploadAdStudioMedia({ file, workspaceId, brandKitId });
+      setUploaded((previous) => [
+        { id: `upload-${Date.now()}`, src: result.src, label: file.name, type: "uploaded_asset", role: "property" },
+        ...previous,
+      ]);
+      toast.success("Added");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not upload that image.");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
+  return (
+    <div className="mx-auto w-full max-w-5xl px-4 py-8 md:px-6">
+      <Toaster richColors position="top-center" />
+
+      <header className="mb-6 flex items-center justify-between gap-4">
+        <h1 className="text-2xl font-bold tracking-tight">Library</h1>
+        <Button type="button" disabled={uploading || !brandKitId} onClick={() => fileInputRef.current?.click()}>
+          <Upload aria-hidden />
+          {uploading ? "Uploading…" : "Upload"}
+        </Button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept={AD_IMAGE_UPLOAD_TYPES.join(",")}
+          hidden
+          aria-label="Upload image"
+          onChange={(event) => void handleUpload(event.target.files?.[0])}
+        />
+      </header>
+
+      <Tabs defaultValue="assets">
+        <TabsList>
+          <TabsTrigger value="assets">Assets ({allAssets.length})</TabsTrigger>
+          <TabsTrigger value="ads">Ads ({ads.length})</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="assets" className="mt-4">
+          {presentRoles.length > 0 ? (
+            <div className="mb-4 flex flex-wrap gap-2" aria-label="Filter assets by type">
+              <Badge asChild variant={filter === "all" ? "default" : "outline"}>
+                <button type="button" aria-pressed={filter === "all"} onClick={() => setFilter("all")}>
+                  All {allAssets.length}
+                </button>
+              </Badge>
+              {presentRoles.map((role) => (
+                <Badge asChild key={role} variant={filter === role ? "default" : "outline"}>
+                  <button type="button" aria-pressed={filter === role} onClick={() => setFilter(role)}>
+                    {ROLE_META[role].plural} {counts[role]}
+                  </button>
+                </Badge>
+              ))}
+            </div>
+          ) : null}
+
+          {visibleAssets.length > 0 ? (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+              {visibleAssets.map((asset) => (
+                <Card key={asset.id} className="gap-0 overflow-hidden py-0">
+                  <div className="aspect-square w-full overflow-hidden bg-(--surface-subtle)">
+                    <img src={asset.src} alt={asset.label} loading="lazy" className="size-full object-cover" />
+                  </div>
+                  <div className="px-3 py-2">
+                    <p className="truncate text-xs font-medium">{asset.label}</p>
+                    <p className="text-[11px] text-muted-foreground">{ROLE_META[resolveRole(asset)].label}</p>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <EmptyState icon={<Images aria-hidden className="size-6" />} title="Upload your first image." />
+          )}
+        </TabsContent>
+
+        <TabsContent value="ads" className="mt-4">
+          {ads.length > 0 ? (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+              {ads.map((ad) => (
+                <Link
+                  key={ad.creativeId}
+                  href={`/ad-studio?campaignId=${encodeURIComponent(ad.campaignId)}`}
+                  className="rounded-(--r-card) focus-visible:outline-2 focus-visible:outline-(--accent)"
+                >
+                  <Card className="gap-0 overflow-hidden py-0 transition-shadow hover:shadow-md">
+                    <div className="aspect-[4/5] w-full overflow-hidden bg-(--surface-subtle)">
+                      <img src={ad.src} alt={ad.campaignName} loading="lazy" className="size-full object-cover" />
+                    </div>
+                    <div className="px-3 py-2">
+                      <p className="truncate text-xs font-semibold">{ad.campaignName}</p>
+                      <p className="text-[11px] text-muted-foreground">{formatLabel(ad.format)}</p>
+                    </div>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <EmptyState
+              icon={<Megaphone aria-hidden className="size-6" />}
+              title="Your ads will appear here."
+              action={
+                <Button asChild variant="outline" size="sm">
+                  <Link href="/ad-studio?newAd=1">
+                    <Plus aria-hidden />
+                    Create ad
+                  </Link>
+                </Button>
+              }
+            />
+          )}
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
+function EmptyState({ icon, title, action }: { icon: React.ReactNode; title: string; action?: React.ReactNode }) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-3 rounded-(--r-card) border border-dashed px-6 py-16 text-center">
+      <span className="text-muted-foreground">{icon}</span>
+      <p className="text-sm font-medium text-muted-foreground">{title}</p>
+      {action}
+    </div>
+  );
+}

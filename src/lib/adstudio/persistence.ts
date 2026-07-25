@@ -1,6 +1,7 @@
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import { applyBrandAssetRows, loadAdStudioBrandAssetRows } from "./assets.ts";
+import { normalizeCloneQa } from "./types.ts";
 import type {
   AdStudioBrandKit,
   AdStudioCampaign,
@@ -295,13 +296,17 @@ function rowToVariant(row: Record<string, unknown>): AdStudioCampaignVariant {
   };
 }
 
-function rowToCreative(row: Record<string, unknown>): AdStudioCreative {
-  const canvas = (row.canvas_json as AdStudioCreative["canvas"] | null) ?? {
+export function rowToCreative(row: Record<string, unknown>): AdStudioCreative {
+  const rawCanvas = (row.canvas_json as AdStudioCreative["canvas"] | null) ?? {
     width: Number(row.width ?? 0),
     height: Number(row.height ?? 0),
     backgroundAssetId: null,
     objects: [],
   };
+  // Legacy rows carry verdict-era { copyChecks, passed… } blobs under cloneQa;
+  // normalize to the lean { regions, copyValues } editor map on read.
+  const cloneQa = normalizeCloneQa(rawCanvas.cloneQa);
+  const canvas = cloneQa ? { ...rawCanvas, cloneQa } : rawCanvas;
 
   return {
     creativeId: String(row.id),

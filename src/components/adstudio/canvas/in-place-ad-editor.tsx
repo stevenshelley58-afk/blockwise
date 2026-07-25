@@ -56,7 +56,7 @@ function truncateForStatus(value: string): string {
 }
 
 function expectedTextForKey(creative: AdStudioCreative, key: string): string {
-  return creative.canvas.cloneQa?.copyChecks.find((item) => item.key === key)?.expected ?? "";
+  return creative.canvas.cloneQa?.copyValues?.[key] ?? "";
 }
 
 function preferredScrollBehavior(): ScrollBehavior {
@@ -109,16 +109,6 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast }: InPla
   const selectedRegion = useMemo(
     () => regions.find((region) => region.key === selectedKey),
     [regions, selectedKey],
-  );
-  // Copy checks that came back inexact get a quiet flag on their element pill,
-  // pointing at the exact place a one-tap fix applies.
-  const warningKeys = useMemo(
-    () => new Set(
-      (creative.canvas.cloneQa?.copyChecks ?? [])
-        .filter((check) => !check.exact)
-        .map((check) => check.key),
-    ),
-    [creative.canvas.cloneQa?.copyChecks],
   );
 
   useEffect(() => {
@@ -572,9 +562,6 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast }: InPla
                 >
                   <i className="studio-inplace-thumb" style={regionThumbStyle(src, region.box)} aria-hidden />
                   {labelForRegionKey(region.key)}
-                  {warningKeys.has(region.key) ? (
-                    <em className="studio-inplace-flag" title="Check this text on the ad" aria-label="Needs review" />
-                  ) : null}
                 </button>
               ))}
             </div>
@@ -635,7 +622,7 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast }: InPla
           )}
 
           <p className="studio-inplace-preserve-note">
-            Every change saves to your history — use Undo or Compare to step back. Anything that looks off after an edit is flagged for you.
+            Every change saves to your history — use Undo or Compare to step back.
           </p>
           {busy ? (
             <div className="studio-inplace-progress" role="status" aria-live="polite">

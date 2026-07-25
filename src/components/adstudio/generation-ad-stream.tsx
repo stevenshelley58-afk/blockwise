@@ -1,6 +1,6 @@
 "use client";
 
-import { ExternalLink, Image as ImageIcon, LoaderCircle } from "lucide-react";
+import { ExternalLink, Forward, Image as ImageIcon, LoaderCircle, MessageCircle, MoreHorizontal, ThumbsUp } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { PublicAdRadarCard, PublicAdRadarResponse } from "@/lib/research/public-ad-radar";
@@ -279,24 +279,30 @@ function GenerationAdCard({
   eager: boolean;
   onSelect: (card: PublicAdRadarCard, trigger: HTMLButtonElement) => void;
 }) {
+  const [mediaFailed, setMediaFailed] = useState(false);
+  const [avatarFailed, setAvatarFailed] = useState(false);
   const mediaUrl = generationAdMediaUrl(card);
   const location = [card.suburb, card.state].filter(Boolean).join(", ");
   const primaryText = card.body || card.headline || card.description;
   const linkHeadline = (card.body ? card.headline : null) || card.description || card.pageName;
 
-  if (!mediaUrl) return null;
+  // A broken creative reads as fake immediately; drop the card instead.
+  if (!mediaUrl || mediaFailed) return null;
 
   return (
     <article className="studio-generation-card">
       <button type="button" onClick={(event) => onSelect(card, event.currentTarget)} aria-label={`View ${card.pageName} ad in Ad Radar`}>
         <span className="studio-generation-card-head">
           <span className="studio-generation-avatar">
-            {card.pageImageUrl ? <img src={card.pageImageUrl} alt="" loading="lazy" decoding="async" /> : card.pageName.slice(0, 1).toUpperCase()}
+            {card.pageImageUrl && !avatarFailed
+              ? <img src={card.pageImageUrl} alt="" loading="lazy" decoding="async" onError={() => setAvatarFailed(true)} />
+              : card.pageName.slice(0, 1).toUpperCase()}
           </span>
           <span>
             <strong>{card.pageName}</strong>
             <small>Sponsored{location ? ` · ${location}` : ""}</small>
           </span>
+          <MoreHorizontal aria-hidden className="studio-generation-card-dots" size={20} />
         </span>
         {primaryText ? <span className="studio-generation-card-copy">{primaryText}</span> : null}
         <span className="studio-generation-card-media">
@@ -306,6 +312,7 @@ function GenerationAdCard({
             loading={eager ? "eager" : "lazy"}
             decoding="async"
             fetchPriority={eager ? "high" : "low"}
+            onError={() => setMediaFailed(true)}
           />
         </span>
         <span className="studio-generation-card-linkbar">
@@ -314,6 +321,11 @@ function GenerationAdCard({
             <strong>{linkHeadline}</strong>
           </span>
           <span className="studio-generation-card-cta">{generationAdCtaLabel(card.cta)}</span>
+        </span>
+        <span aria-hidden className="studio-generation-card-social">
+          <span><ThumbsUp size={16} /> Like</span>
+          <span><MessageCircle size={16} /> Comment</span>
+          <span><Forward size={16} /> Share</span>
         </span>
       </button>
     </article>

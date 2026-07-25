@@ -51,18 +51,18 @@ test("undo and redo restore instantly from the stored verdict and always succeed
   assert.doesNotMatch(route, /That version no longer passes/);
 });
 
-test("edits save always; verification is advisory and rendering stays model-driven", () => {
-  // The destructive blur-and-generic-font RENDER fallback stays banned; the
-  // deterministic path below is verdict bookkeeping only.
+test("edits save always; every edit routes through the image model", () => {
+  // The destructive blur-and-generic-font RENDER fallback stays banned, and
+  // the deterministic text shortcut is gone too: all edits go through the
+  // image model so the original type treatment is retained.
   assert.doesNotMatch(route, /renderExactCloneTextEdit/);
   assert.match(route, /buildTargetedEditRequest/);
   assert.match(route, /cropRegionWithPadding/);
   assert.match(route, /compositeRegionBack/);
-  // No reroll loop, no QA gate on saving: one render, one advisory check,
-  // and a vision outage falls back to deterministic verdict bookkeeping.
+  // No reroll loop, no QA gate on saving, no deterministic verdict shortcut.
   assert.doesNotMatch(route, /cloneQaCorrectionPrompt/);
   assert.doesNotMatch(route, /qa && !qa\.passed/);
-  assert.match(route, /applyDeterministicTextEditQa/);
+  assert.doesNotMatch(route, /applyDeterministicTextEditQa/);
 });
 
 test("all editor controls meet the 44px target and adapt to a mobile sheet", () => {
@@ -110,11 +110,9 @@ test("zoom is available for small targets: toolbar cycle, double-click, drag pan
   assert.match(styles, /\.studio-metachrome-media \.studio-inplace-zoom,\.studio-metachrome-story \.studio-inplace-zoom\{display:block;width:100%;height:100%\}/);
 });
 
-test("element list shows real thumbnails and flags inexact copy", () => {
+test("element list shows real thumbnails", () => {
   assert.match(editor, /regionThumbStyle\(src, region\.box\)/);
-  assert.match(editor, /warningKeys\.has\(region\.key\)/);
   assert.match(styles, /\.studio-inplace-thumb\{width:26px/);
-  assert.match(styles, /\.studio-inplace-flag\{width:8px/);
   // Pending edits narrate what they are doing instead of a generic label.
   assert.match(editor, /truncateForStatus/);
   assert.match(editor, /Repainting this area/);

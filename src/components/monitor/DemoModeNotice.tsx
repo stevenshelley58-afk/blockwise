@@ -54,7 +54,7 @@ export function DemoModeNotice({ metaConnectHref }: { metaConnectHref: string })
         </button>
         <h2 id="mm-guide-title">Welcome to Blockwise</h2>
         <p className="mm-guide-sub">
-          Everything on this page is <strong>demo data</strong> - a preview of what Results looks like once your
+          Everything on this page is <strong>demo data</strong> - a preview of what Performance looks like once your
           ads are running. Getting set up takes about a minute.
         </p>
         <ol className="mm-guide-steps">
@@ -72,7 +72,7 @@ export function DemoModeNotice({ metaConnectHref }: { metaConnectHref: string })
               <ChartNoAxesCombined aria-hidden size={16} />
             </span>
             <div>
-              <strong>Watch Results fill with your numbers</strong>
+              <strong>Watch Performance fill with your numbers</strong>
               <p>Spend, leads, cost per lead, and ad-by-ad performance - updated automatically.</p>
             </div>
           </li>

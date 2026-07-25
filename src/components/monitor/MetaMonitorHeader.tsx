@@ -67,13 +67,12 @@ export function MetaMonitorHeader(props: {
   return (
     <header className="mm-header">
       <div>
-        <div className="eyebrow">Results</div>
+        <div className="eyebrow">Performance</div>
         <div className="mm-title-row">
           <MetaMark />
-          <h1>Results</h1>
+          <h1>Performance</h1>
           {props.isSample ? <span className="mm-chip mm-chip-demo">Demo data</span> : null}
         </div>
-        <p className="mm-subtitle">Live performance and one-click management for everything Blockwise runs on Meta.</p>
       </div>
       <div className="mm-header-controls">
         <span className="mm-synced">

@@ -9,15 +9,13 @@ import {
   CircleAlert,
   FileText,
   Home,
-  Image as ImageIcon,
+  Images,
   LayoutGrid,
   Palette,
   Plus,
   RefreshCw,
   Send,
   Settings2,
-  Sparkles,
-  X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -34,6 +32,7 @@ import type {
   FirstAdInput,
 } from "@/lib/adstudio";
 import { builtInAdStudioTemplates } from "@/lib/adstudio";
+import { isCloneCreative, primaryImageSource } from "@/lib/adstudio/creative-preview";
 
 
 import { requestCreativeEdit } from "./canvas/creative-edit-client";
@@ -58,6 +57,11 @@ import { PublishSetupPanel } from "./panels/publish-panel";
 import { SettingsPanel } from "./panels/settings-panel";
 import { PanelHeader } from "./inspector";
 import { NewAdDialog } from "./new-ad-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
 type AdStudioWorkbenchProps = {
   workspaceId: string;
@@ -76,22 +80,27 @@ type AdStudioWorkbenchProps = {
   showBrandSetupPrompt?: boolean;
 };
 
-type NavItem = { id: import("./use-ad-studio").StudioSection | "samples"; label: string; icon: LucideIcon };
+type NavItem =
+  | { id: import("./use-ad-studio").StudioSection | "samples"; label: string; icon: LucideIcon; href?: undefined }
+  | { id: "library"; label: string; icon: LucideIcon; href: string };
 
 const NAV_ITEMS: NavItem[] = [
   { id: "home", label: "Home", icon: Home },
-  { id: "samples", label: "Templates", icon: LayoutGrid },
-  { id: "media", label: "Media", icon: ImageIcon },
+  { id: "samples", label: "Create", icon: Plus },
+  { id: "library", label: "Library", icon: Images, href: "/ad-studio/library" },
   { id: "text", label: "Text", icon: FileText },
   { id: "publish", label: "Publish", icon: Send },
   { id: "brand", label: "Brand Pack", icon: Palette },
   { id: "settings", label: "Settings", icon: Settings2 },
 ];
 
-const MOBILE_NAV: Array<{ id: import("./use-ad-studio").MobileTab | "samples"; label: string; icon: LucideIcon }> = [
+const MOBILE_NAV: Array<
+  | { id: import("./use-ad-studio").MobileTab | "samples"; label: string; icon: LucideIcon; href?: undefined }
+  | { id: "library"; label: string; icon: LucideIcon; href: string }
+> = [
   { id: "home", label: "Home", icon: Home },
   { id: "samples", label: "Create", icon: Plus },
-  { id: "media", label: "Media", icon: ImageIcon },
+  { id: "library", label: "Library", icon: Images, href: "/ad-studio/library" },
   { id: "text", label: "Text", icon: FileText },
   { id: "publish", label: "Review", icon: Send },
 ];
@@ -186,14 +195,6 @@ function initialDestinationUrl(pack: AdStudioCampaignPack, brandKit: AdStudioBra
   );
 }
 
-/** A reference-clone creative: a single flat image with copy baked into pixels. */
-function isCloneCreative(creative: AdStudioCreative): boolean {
-  return (
-    creative.canvas.objects.length === 1 &&
-    creative.canvas.objects[0]?.objectId === "template_clone_image"
-  );
-}
-
 function dedupeAssetsBySrc<T extends { src: string }>(assets: T[]): T[] {
   const seen = new Set<string>();
   return assets.filter((asset) => (seen.has(asset.src) ? false : seen.add(asset.src)));
@@ -206,8 +207,7 @@ function labelForImageSrc(src: string): string {
 }
 
 function primaryImageFromCreative(creative: AdStudioCreative | null | undefined): { src: string; label: string } | null {
-  const imageObject = creative?.canvas.objects.find((object) => object.role === "primary_image");
-  const src = imageObject?.content || imageObject?.assetId;
+  const src = primaryImageSource(creative);
   return src ? { src, label: labelForImageSrc(src) } : null;
 }
 
@@ -222,14 +222,6 @@ function primaryImageForVariant(
     pack.creatives.find((item) => item.variantId === variantId && item.format === "9:16") ??
     pack.creatives.find((item) => item.variantId === variantId);
   return primaryImageFromCreative(creative);
-}
-
-function creativeLibraryPreview(creative: AdStudioCreative): string | null {
-  if (isCloneCreative(creative)) return primaryImageFromCreative(creative)?.src ?? null;
-  if (!creative.previewSvg) return null;
-  return creative.previewSvg.startsWith("data:image/")
-    ? creative.previewSvg
-    : `data:image/svg+xml;charset=utf-8,${encodeURIComponent(creative.previewSvg)}`;
 }
 
 function commitVariantEdits(input: {
@@ -353,6 +345,7 @@ export function AdStudioWorkbench({
   const [samplePickerInitialId, setSamplePickerInitialId] = useState<string | undefined>(undefined);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [brandPromptOpen, setBrandPromptOpen] = useState(false);
+  const [replaceSheetOpen, setReplaceSheetOpen] = useState(false);
   const [publishCreativeSource, setPublishCreativeSource] = useState<"current" | "library">("current");
   const [dismissedCloneWarningKeys, setDismissedCloneWarningKeys] = useState<Set<string>>(() => new Set());
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -412,8 +405,7 @@ export function AdStudioWorkbench({
   const { primaryImage, setPrimaryImage, primaryImageName, setPrimaryImageName, fileInputRef, replaceImage, openFilePicker } = useMedia(
     studio.showToast,
     () => {
-      setSelectedElement("image");
-      studio.setSection("media");
+      openMediaSheet();
     },
     {
       initialImage: initialMedia,
@@ -438,8 +430,7 @@ export function AdStudioWorkbench({
     }
     if (!uploaded) return;
     setPendingMediaReplacement(uploaded);
-    setSelectedElement("image");
-    studio.setSection("media");
+    openMediaSheet();
   }
 
   const workspaceMediaAssets = useMemo(
@@ -483,22 +474,6 @@ export function AdStudioWorkbench({
     [isSample, uploadedAssets, workspaceMediaAssets],
   );
 
-  const generatedAds = useMemo(
-    () =>
-      pack.creatives.flatMap((creative) => {
-        const src = creativeLibraryPreview(creative);
-        if (!src) return [];
-        const variantIndex = pack.variants.findIndex((variant) => variant.variantId === creative.variantId);
-        return [{
-          creativeId: creative.creativeId,
-          src,
-          label: variantIndex >= 0 ? `Ad ${variantIndex + 1}` : "Generated ad",
-          formatLabel: creative.format === "9:16" ? "Story" : "Feed",
-        }];
-      }),
-    [pack.creatives, pack.variants],
-  );
-
   function selectMediaImage(src: string) {
     const asset = mediaAssets.find((item) => item.src === src);
     if (!asset || src === primaryImage) {
@@ -506,22 +481,7 @@ export function AdStudioWorkbench({
       return;
     }
     setPendingMediaReplacement({ src, label: asset.label });
-    setSelectedElement("image");
-    studio.setSection("media");
-  }
-
-  function selectGeneratedAd(creativeId: string) {
-    const creative = pack.creatives.find((item) => item.creativeId === creativeId);
-    if (!creative) return;
-    const variantIndex = pack.variants.findIndex((variant) => variant.variantId === creative.variantId);
-    if (variantIndex >= 0) selectVariant(variantIndex);
-    setPreviewFormat(creative.format === "9:16" ? "story" : "feed");
-    const image = primaryImageFromCreative(creative);
-    if (image) {
-      setPrimaryImage(image.src);
-      setPrimaryImageName(image.label);
-    }
-    setSelectedElement("canvas");
+    openMediaSheet();
   }
 
   const { readinessItems } = useReadiness({
@@ -535,7 +495,16 @@ export function AdStudioWorkbench({
     pack,
   });
 
+  function openMediaSheet() {
+    setSelectedElement("image");
+    setReplaceSheetOpen(true);
+  }
+
   function goToSection(section: import("./use-ad-studio").StudioSection) {
+    if (section === "media") {
+      openMediaSheet();
+      return;
+    }
     setSelectedElement("canvas");
     if (section !== "publish") setPublishCreativeSource("current");
     studio.setSection(section);
@@ -750,9 +719,9 @@ export function AdStudioWorkbench({
     setSaveState("saving");
   }, [setSaveState]);
 
-  // The finished ad shows the moment its renders persist; the advisory QA pass
-  // (editor regions + copy warnings) attaches to the persisted creatives a few
-  // seconds later. Poll the campaign until the verdicts land, merging ONLY the
+  // The finished ad shows the moment its renders persist; region detection
+  // (editor regions + text values) attaches to the persisted creatives a few
+  // seconds later. Poll the campaign until the regions land, merging ONLY the
   // missing cloneQa so concurrent local state is never clobbered.
   const editorPreparing = pack.creatives.some(
     (creative) => isCloneCreative(creative) && !creative.canvas.cloneQa,
@@ -795,10 +764,10 @@ export function AdStudioWorkbench({
       } catch {
         // Transient poll failure - the next tick retries.
       }
-      if (!cancelled) timer = window.setTimeout(() => void poll(), 3000);
+      if (!cancelled) timer = window.setTimeout(() => void poll(), 1500);
     };
 
-    timer = window.setTimeout(() => void poll(), 3000);
+    timer = window.setTimeout(() => void poll(), 1000);
     return () => {
       cancelled = true;
       window.clearTimeout(timer);
@@ -841,7 +810,7 @@ export function AdStudioWorkbench({
 
   async function patchSelectedLayer() {
     if (selectedElement === "image") {
-      studio.setSection("media");
+      openMediaSheet();
       openFilePicker();
       return;
     }
@@ -854,9 +823,7 @@ export function AdStudioWorkbench({
     await generateFirstAd(input);
     setPublishCreativeSource("current");
     setActiveSampleId(input.templateId);
-    setSelectedElement("image");
-    studio.setSection("media");
-    studio.setMobileTab("media");
+    openMediaSheet();
   }
 
   function renderTextLayerPanel(field: "primaryText" | "headline" | "description" | "cta") {
@@ -910,9 +877,6 @@ export function AdStudioWorkbench({
         onClearSelection={() => setPendingMediaReplacement(null)}
         onConfirmReplace={confirmMediaReplacement}
         mediaAssets={mediaAssets}
-        generatedAds={generatedAds}
-        activeGeneratedAdId={currentCreative?.creativeId}
-        onSelectGeneratedAd={selectGeneratedAd}
       />
     );
   }
@@ -944,11 +908,10 @@ export function AdStudioWorkbench({
     return (
       <div className="studio-empty">
         <div className="studio-empty-ic"><LayoutGrid aria-hidden size={22} /></div>
-        <strong>No ad created yet</strong>
-        <p>Choose a template, add its requested images and text, then clone it.</p>
-        <button className="studio-btn accent" type="button" onClick={() => openSamplePicker()}>
-          Choose a template
-        </button>
+        <strong>No ad yet.</strong>
+        <Button type="button" onClick={() => openSamplePicker()}>
+          Create an ad
+        </Button>
       </div>
     );
   }
@@ -996,223 +959,57 @@ export function AdStudioWorkbench({
   function renderHomePanel() {
     const startingPointDone = Boolean(activeSampleId || pack.campaign.templateKey || pack.variants.length > 0);
     const mediaDone = Boolean(primaryImage);
-    const copyItems = readinessItems.filter((item) => ["Ad copy", "Call to action"].includes(item.label));
-    const copyDone = copyItems.length > 0 && copyItems.every((item) => item.state === "done");
     const publishReady = !brandIsDraft && readinessItems.every((item) => item.state === "done");
+
     const steps = [
-      {
-        title: brandIsDraft ? "Set your brand" : "Brand ready",
-        detail: brandIsDraft ? "Confirm logo, colours and contact details before launch." : `${brand} is ready for ads.`,
-        done: !brandIsDraft,
-        action: "Settings",
-        onClick: () => goToSection("settings"),
-      },
-      {
-        title: "Choose a starting point",
-        detail: startingPointDone ? "Your ad is ready." : "Choose the template you want to use.",
-        done: startingPointDone,
-        action: "Templates",
-        onClick: () => openSamplePicker(),
-      },
-      {
-        title: "Add media",
-        detail: mediaDone ? "A photo is attached." : "Choose a template, then add every requested image.",
-        done: mediaDone,
-        action: "Media",
-        onClick: () => goToSection("media"),
-      },
-      {
-        title: "Launch",
-        detail: publishReady ? "Ready to submit and go live." : "Check copy, media, brand and destination.",
-        done: publishReady,
-        action: "Publish",
-        onClick: () => goToSection("publish"),
-      },
+      { label: "Brand", done: !brandIsDraft, onClick: () => goToSection("brand") },
+      { label: "Design", done: startingPointDone, onClick: () => openSamplePicker() },
+      { label: "Media", done: mediaDone, onClick: () => openMediaSheet() },
+      { label: "Publish", done: publishReady, onClick: () => goToSection("publish") },
     ];
-    const completedSteps = steps.filter((step) => step.done).length;
-    const mobileSteps = [
-      {
-        title: "Choose a template",
-        detail: startingPointDone ? "Your starting design is ready." : "Pick the ad you want to make your own.",
-        action: startingPointDone ? "Change template" : "Choose template",
-        done: startingPointDone,
-        onClick: () => openSamplePicker(),
-      },
-      {
-        title: "Add your media",
-        detail: mediaDone ? "Your property image is attached." : "Add the property image requested by the template.",
-        action: mediaDone ? "Change media" : "Add media",
-        done: mediaDone,
-        onClick: () => goToSection("media"),
-      },
-      {
-        title: "Check the wording",
-        detail: copyDone ? "Your headline and call to action are ready." : "Review the headline and call to action.",
-        action: copyDone ? "Edit text" : "Check text",
-        done: copyDone,
-        onClick: () => goToSection("text"),
-      },
-      {
-        title: "Review and publish",
-        detail: publishReady ? "Your ad is ready to export." : "Resolve the final checks before launch.",
-        action: "Review ad",
-        done: publishReady,
-        onClick: () => goToSection("publish"),
-      },
-    ];
-    const completedMobileSteps = mobileSteps.filter((step) => step.done).length;
-    const nextMobileStep = mobileSteps.find((step) => !step.done) ?? mobileSteps[mobileSteps.length - 1]!;
-    const tools = [
-      {
-        title: "Template gallery",
-        detail: "Choose the finished ad template to use with your own images and exact text.",
-        icon: LayoutGrid,
-        action: "Browse",
-        onClick: () => openSamplePicker(),
-      },
-      {
-        title: "Media",
-        detail: "Upload, replace, and reuse approved property photos.",
-        icon: Sparkles,
-        action: "Open",
-        onClick: () => goToSection("media"),
-      },
-      {
-        title: "Ad text",
-        detail: "Click text on the canvas or rewrite selected copy.",
-        icon: FileText,
-        action: "Edit",
-        onClick: () => goToSection("text"),
-      },
-      {
-        title: "Launch",
-        detail: "Review readiness, export creatives, and send the campaign forward.",
-        icon: Send,
-        action: "Review",
-        onClick: () => goToSection("publish"),
-      },
-    ];
+    const nextStep = steps.find((step) => !step.done) ?? steps[steps.length - 1]!;
 
     return (
-      <div className="studio-home-panel">
-        <section className="studio-mobile-home-focus" aria-labelledby="studio-mobile-home-title">
-          <div className="studio-mobile-home-kicker">
-            <span>Ad Studio</span>
-            <span>{completedMobileSteps} of {mobileSteps.length} ready</span>
-          </div>
-
-          <div className="studio-mobile-home-hero">
-            <div className="studio-mobile-home-media" aria-hidden={!primaryImage}>
-              {primaryImage ? <img src={primaryImage} alt={`${campaignName} ad preview`} /> : <span>{initials}</span>}
+      <div className="mx-auto flex w-full max-w-lg flex-col gap-6 py-4">
+        <Card>
+          <CardContent className="flex flex-col items-center gap-5 text-center">
+            <div className="aspect-[4/5] w-full max-w-[220px] overflow-hidden rounded-(--r-card) border border-border bg-(--surface-subtle)">
+              {primaryImage ? (
+                <img src={primaryImage} alt={`${campaignName} ad preview`} className="size-full object-cover" />
+              ) : (
+                <div className="grid size-full place-items-center text-3xl font-extrabold text-(--accent)">{initials}</div>
+              )}
             </div>
-            <div className="studio-mobile-home-shade" />
-            <div className="studio-mobile-home-copy">
-              <p>{startingPointDone ? "Continue your ad" : "Start with one proven design"}</p>
-              <h1 id="studio-mobile-home-title">{startingPointDone ? campaignName : "Create your first ad"}</h1>
-              <span>{nextMobileStep.title}. {nextMobileStep.detail}</span>
-              <button type="button" onClick={nextMobileStep.onClick}>
-                {nextMobileStep.action}
-                <ArrowRight aria-hidden size={18} />
+            <h1 className="text-2xl font-bold tracking-tight">{startingPointDone ? campaignName : "Create your first ad"}</h1>
+            <Button size="lg" onClick={() => (startingPointDone ? nextStep.onClick() : openSamplePicker())}>
+              {startingPointDone ? "Continue" : "Create an ad"}
+              <ArrowRight aria-hidden />
+            </Button>
+          </CardContent>
+        </Card>
+
+        <ol className="flex items-center gap-2" aria-label="Ad progress">
+          {steps.map((step, index) => (
+            <li key={step.label} className="flex-1">
+              <button
+                type="button"
+                onClick={step.onClick}
+                aria-label={step.done ? `${step.label} complete` : `Step ${index + 1}: ${step.label}`}
+                className="flex w-full items-center gap-2 rounded-(--r-card) px-2 py-1.5 text-left transition-colors hover:bg-(--surface-subtle)"
+              >
+                <Badge variant={step.done ? "default" : "secondary"} className="size-6 shrink-0 p-0">
+                  {step.done ? <Check aria-hidden className="size-3.5" /> : index + 1}
+                </Badge>
+                <span className="text-sm font-medium">{step.label}</span>
               </button>
-            </div>
-          </div>
-
-          {brandIsDraft && (
-            <Link href="/ad-studio/brand" className="studio-mobile-brand-note">
-              <CircleAlert aria-hidden size={17} />
-              <span><b>Confirm your brand before publishing.</b> You can keep creating now.</span>
-              <ArrowRight aria-hidden size={16} />
-            </Link>
-          )}
-
-          <details className="studio-mobile-home-progress">
-            <summary>
-              <span>View all steps</span>
-              <span>{completedMobileSteps}/{mobileSteps.length}</span>
-            </summary>
-            <div>
-              {mobileSteps.map((step) => (
-                <button key={step.title} type="button" onClick={step.onClick}>
-                  <span className={step.done ? "done" : "todo"}>
-                    {step.done ? <Check aria-hidden size={14} /> : <ArrowRight aria-hidden size={14} />}
-                  </span>
-                  <span>
-                    <strong>{step.title}</strong>
-                    <small>{step.detail}</small>
-                  </span>
-                </button>
-              ))}
-            </div>
-          </details>
-        </section>
-
-        <header className="studio-home-head">
-          <div>
-            <span>Ad Studio</span>
-            <h1>Home</h1>
-          </div>
-          <button className="studio-home-create" type="button" onClick={() => openSamplePicker()}>
-            <Plus aria-hidden size={19} />
-            Create new
-          </button>
-        </header>
-
-        <section className="studio-home-hero" aria-labelledby="studio-home-start-title">
-          <div className="studio-home-start">
-            <h2 id="studio-home-start-title">
-              Getting started <span>{completedSteps} / {steps.length} completed</span>
-            </h2>
-            <div className="studio-home-steps">
-              {steps.map((step, index) => (
-                <button key={step.title} type="button" onClick={step.onClick}>
-                  <span className={step.done ? "done" : "todo"}>
-                    {step.done ? <Check aria-hidden size={14} /> : index + 1}
-                  </span>
-                  <span>
-                    <strong>{step.title}</strong>
-                    <small>{step.detail}</small>
-                  </span>
-                  <em>{step.action}</em>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <aside className="studio-home-preview" aria-label="Current ad">
-            <div className="studio-home-preview-media">
-              {primaryImage ? <img src={primaryImage} alt="" /> : <span>{initials}</span>}
-            </div>
-            <strong>{campaignName}</strong>
-            <small>{format.label} editor is ready for image and text changes.</small>
-            <button type="button" onClick={() => primaryImage ? goToSection("media") : openSamplePicker()}>
-              Continue editing
-              <ArrowRight aria-hidden size={16} />
-            </button>
-          </aside>
-        </section>
-
-        <section className="studio-home-tools" aria-labelledby="studio-home-tools-title">
-          <h2 id="studio-home-tools-title">Tools</h2>
-          <div>
-            {tools.map((tool) => {
-              const Icon = tool.icon;
-              return (
-                <button key={tool.title} type="button" onClick={tool.onClick}>
-                  <span><Icon aria-hidden size={20} /></span>
-                  <strong>{tool.title}</strong>
-                  <small>{tool.detail}</small>
-                  <em>{tool.action} <ArrowRight aria-hidden size={14} /></em>
-                </button>
-              );
-            })}
-          </div>
-        </section>
+            </li>
+          ))}
+        </ol>
       </div>
     );
   }
 
   function renderPanel() {
-    if (studio.section === "media") return renderMediaPanel();
     if (studio.section === "text") return renderTextPanel();
     if (studio.section === "publish") {
       // M1: wire real props; H9: pass deleteCampaign
@@ -1251,7 +1048,7 @@ export function AdStudioWorkbench({
       <div className="studio-empty">
         <div className="studio-empty-ic"><Home aria-hidden size={22} /></div>
         <strong>Choose where to work</strong>
-        <p>Open Templates, Media, Text, Publish, Brand Pack or Settings from the left rail.</p>
+        <p>Open Create, Library, Text, Publish, Brand Pack or Settings from the left rail.</p>
       </div>
     );
   }
@@ -1287,15 +1084,21 @@ export function AdStudioWorkbench({
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
 
+            if (item.id === "library") {
+              return (
+                <Link key={item.id} href={item.href}>
+                  <Icon aria-hidden size={18} />
+                  <span>{item.label}</span>
+                </Link>
+              );
+            }
+
             let railState: "done" | "warn" | "todo" | null = null;
             if (item.id === "brand") {
               railState = brandKit.reviewStatus === "approved" ? "done" : "warn";
             } else if (item.id === "publish") {
               const allDone = readinessItems.every((ri) => ri.state === "done");
               railState = allDone ? "done" : readinessItems.some((ri) => ri.state === "warn") ? "warn" : "todo";
-            } else if (item.id === "media") {
-              const relevant = readinessItems.filter((ri) => ri.label === "Primary media");
-              if (relevant.length > 0) railState = relevant.every((ri) => ri.state === "done") ? "done" : "warn";
             } else if (item.id === "text") {
               const labels = ["Ad copy", "Call to action"];
               const relevant = readinessItems.filter((ri) => labels.includes(ri.label));
@@ -1394,8 +1197,7 @@ export function AdStudioWorkbench({
                 }}
                 onReplaceImage={(index) => {
                   selectVariant(index);
-                  setSelectedElement("image");
-                  studio.setSection("media");
+                  openMediaSheet();
                   openFilePicker();
                 }}
               />
@@ -1412,7 +1214,7 @@ export function AdStudioWorkbench({
           </Link>
         )}
 
-        {(studio.mobileTab === "media" || studio.mobileTab === "text") && (
+        {(studio.mobileTab === "text") && (
           <div className="studio-mobile-format-tabs">
             {(["story", "feed"] as PreviewFormat[]).map((item) => (
               <button className={previewFormat === item ? "active" : ""} key={item} type="button" onClick={() => setPreviewFormat(item)}>
@@ -1426,7 +1228,7 @@ export function AdStudioWorkbench({
           <div className="studio-mobile-panel">{renderHomePanel()}</div>
         )}
 
-        {(studio.mobileTab === "media" || studio.mobileTab === "text") && (
+        {(studio.mobileTab === "text") && (
           <>
             <div className="studio-mobile-preview-wrap">
               {renderCreativeEditor()}
@@ -1472,7 +1274,7 @@ export function AdStudioWorkbench({
           </div>
         )}
 
-        {(studio.mobileTab === "media" || studio.mobileTab === "text") && (
+        {(studio.mobileTab === "text") && (
           <div className="studio-mobile-variants">
             <VariantStrip
               variants={variants}
@@ -1513,6 +1315,14 @@ export function AdStudioWorkbench({
       <nav className="studio-mobile-bottom" aria-label="Ad Studio mobile navigation">
         {MOBILE_NAV.map((item) => {
           const Icon = item.icon;
+          if (item.id === "library") {
+            return (
+              <Link key={item.id} href={item.href}>
+                <Icon aria-hidden size={22} />
+                <span>{item.label}</span>
+              </Link>
+            );
+          }
           return (
             <button
               className={item.id === "samples" ? samplePickerOpen ? "active" : "" : studio.mobileTab === item.id ? "active" : ""}
@@ -1547,49 +1357,51 @@ export function AdStudioWorkbench({
         initialTemplateId={samplePickerInitialId}
       />
 
-      {brandPromptOpen && (
-        <div
-          className="studio-brand-prompt-overlay"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="studio-brand-prompt-title"
-        >
-          <section className="studio-brand-prompt">
-            <button type="button" aria-label="Close brand prompt" onClick={skipBrandPrompt}>
-              <X aria-hidden size={18} />
-            </button>
-            <Settings2 aria-hidden size={22} />
-            <h2 id="studio-brand-prompt-title">Set your brand before launch?</h2>
-            <p>
+      <Dialog open={brandPromptOpen} onOpenChange={(open) => { if (!open) skipBrandPrompt(); }}>
+        <DialogContent showCloseButton={false} className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Set your brand before launch?</DialogTitle>
+            <DialogDescription>
               Add logo, colours and contact details now, or skip and keep building. Publishing stays blocked until the brand is confirmed.
-            </p>
-            <div>
-              <Link className="studio-btn accent" href="/ad-studio/brand">Set brand</Link>
-              <button className="studio-btn secondary" type="button" onClick={skipBrandPrompt}>Skip for now</button>
-            </div>
-          </section>
-        </div>
-      )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" type="button" onClick={skipBrandPrompt}>Skip for now</Button>
+            <Button asChild type="button">
+              <Link href="/ad-studio/brand">Set brand</Link>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {studio.toast && <div className="studio-toast">{studio.toast}</div>}
 
-      {confirmDeleteOpen && (
-        <div
-          style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(15,23,42,.55)", display: "grid", placeItems: "center", padding: 24 }}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="confirm-delete-title"
-        >
-          <div style={{ background: "var(--surface, #fff)", borderRadius: 12, padding: "28px 32px", maxWidth: 420, width: "100%", boxShadow: "0 8px 32px rgba(0,0,0,.2)" }}>
-            <h2 id="confirm-delete-title" style={{ margin: "0 0 8px", fontSize: 18 }}>Delete campaign?</h2>
-            <p style={{ margin: "0 0 24px", color: "var(--text-2, #666)" }}>Are you sure? This cannot be undone.</p>
-            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-              <button className="button secondary" type="button" onClick={() => setConfirmDeleteOpen(false)}>Cancel</button>
-              <button className="button" type="button" onClick={confirmDeleteCampaign} style={{ background: "var(--destructive, #dc2626)", color: "#fff", borderColor: "transparent" }}>Delete campaign</button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Dialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+        <DialogContent showCloseButton={false} className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete campaign?</DialogTitle>
+            <DialogDescription>Are you sure? This cannot be undone.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" type="button" onClick={() => setConfirmDeleteOpen(false)}>Cancel</Button>
+            <Button variant="destructive" type="button" onClick={confirmDeleteCampaign}>Delete campaign</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Sheet open={replaceSheetOpen} onOpenChange={setReplaceSheetOpen}>
+        <SheetContent side="right" className="gap-0 overflow-hidden sm:max-w-md">
+          <SheetHeader className="border-b border-border p-4">
+            <SheetTitle>Replace image</SheetTitle>
+          </SheetHeader>
+          <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4">{renderMediaPanel()}</div>
+          <SheetFooter className="border-t border-border p-4">
+            <Link href="/ad-studio/library" className="text-sm font-semibold text-primary hover:underline">
+              Open library →
+            </Link>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
     </main>
   );
 }

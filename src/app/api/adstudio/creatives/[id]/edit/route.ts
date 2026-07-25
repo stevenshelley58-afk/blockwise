@@ -9,7 +9,6 @@ import {
   resolveCloneProviders,
 } from "@/lib/adstudio/clone-generation";
 import { compositeRegionBack, cropRegionWithPadding, rebaseBoxToCrop } from "@/lib/adstudio/region-edit";
-import { applyDeterministicTextEditQa } from "@/lib/adstudio/clone-qa";
 import {
   appendAdStudioCreativeRevision,
   executeAdStudioCreativeRevisionMutation,
@@ -18,7 +17,7 @@ import {
 import { errorResponse, readJsonBody, requireAdStudioRequest } from "@/lib/adstudio/http";
 import { buildTargetedEditRequest } from "@/lib/adstudio/reference-clone";
 import { resolveAdStudioImageForModel } from "@/lib/adstudio/resolve-image-for-model";
-import type { AdStudioCloneQa, AdStudioCreative } from "@/lib/adstudio/types";
+import { normalizeCloneQa, type AdStudioCloneQa, type AdStudioCreative } from "@/lib/adstudio/types";
 import { checkRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
@@ -169,10 +168,10 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
       );
     }
     const currentImageRef = cloneObject.content || cloneObject.assetId || "";
-    // Undo/redo restores a version the customer already had, with the QA
-    // verdict saved alongside it — no vision round-trip, so restores are
-    // instant. A version saved before its advisory pass landed restores with
-    // the current verdict carried forward.
+    // Undo/redo restores a version the customer already had, with the editor
+    // map (regions + text values) saved alongside it — no vision round-trip,
+    // so restores are instant. A version saved before region detection landed
+    // restores with the current map carried forward.
     const restoredQa: AdStudioCloneQa | undefined = targetQa ?? canvas.cloneQa;
     const nextCanvas: AdStudioCreative["canvas"] = {
       ...canvas,
@@ -229,12 +228,16 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
   // Parallelize the three independent async setup steps that used to run
   // serially: fetch the current image, fetch the replacement image (if any),
   // and resolve the provider cascade. This saves ~1-3s per edit.
+  // Region edits use the fast (draft) profile: an edit repaints a small masked
+  // crop, sits behind undo/compare/history, and draft-class image models are
+  // several times faster. The runtime model-profile table can re-pin models
+  // without code changes if quality regresses.
   const [currentImage, newImage, providers] = await Promise.all([
     resolveAdStudioImageForModel(context.supabase, context.access.workspaceId, currentImageRef),
     newImageRef
       ? resolveAdStudioImageForModel(context.supabase, context.access.workspaceId, newImageRef)
       : Promise.resolve(undefined),
-    resolveCloneProviders(),
+    resolveCloneProviders("fast"),
   ]);
   if (!currentImage) {
     await releaseClaim();
@@ -245,16 +248,14 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
     return NextResponse.json({ error: "The replacement image could not be read." }, { status: 400 });
   }
 
-  // Expected copy carries forward from the last QA verdict, with the edited
-  // field overridden — so the verifier re-checks the WHOLE ad, catching drift
-  // in elements the edit was not supposed to touch.
-  const expectedCopy: Record<string, string> = {};
-  for (const check of canvas.cloneQa?.copyChecks ?? []) {
-    expectedCopy[check.key] = check.expected;
-  }
+  // Expected copy carries the current value of every text field, with the
+  // edited field overridden — sent to the image model so unedited text is not
+  // drifted while it repaints the selected region.
+  const currentQa = normalizeCloneQa(canvas.cloneQa);
+  const expectedCopy: Record<string, string> = { ...(currentQa?.copyValues ?? {}) };
   if (newValue) expectedCopy[editFieldKey] = newValue;
 
-  const selectedRegion = canvas.cloneQa?.regions.find((region) => region.key === editFieldKey);
+  const selectedRegion = currentQa?.regions.find((region) => region.key === editFieldKey);
   if (!selectedRegion) {
     await releaseClaim();
     return NextResponse.json({ error: "That editable area is no longer available. Reload the ad." }, { status: 409 });
@@ -313,6 +314,7 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
         userId: context.access.userId,
         correlationId,
         attempt: 1,
+        modelProfile: "image_draft",
       });
       // normalizeCloneRenderAspect is intentionally SKIPPED for cropped edits:
       // it force-resizes the render to the ad's exact placement ratio, which
@@ -330,13 +332,18 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
       return errorResponse(error, 502);
     }
 
-    // No QA re-run on edit. Text edits update the verdict deterministically
-    // (the requested string IS the expected string, so no model round-trip is
-    // needed). Image edits carry the previous verdict forward unchanged. The
-    // edit saves either way — history, Compare, and Undo are the safety net.
-    qa = selectedRegion.kind === "text" && newValue && canvas.cloneQa
-      ? applyDeterministicTextEditQa(canvas.cloneQa, editFieldKey, newValue)
-      : canvas.cloneQa ?? null;
+    // Text edits update the stored value for the edited field (the requested
+    // string IS the new value — no model round-trip). Image edits carry the
+    // editor map forward unchanged. History, Compare, and Undo are the safety
+    // net either way.
+    qa = currentQa
+      ? {
+        ...currentQa,
+        copyValues: selectedRegion.kind === "text" && newValue
+          ? { ...currentQa.copyValues, [editFieldKey]: newValue }
+          : currentQa.copyValues,
+      }
+      : null;
   }
 
   let image: string;
@@ -353,15 +360,19 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
   }
 
   // Previous render goes to history (undo); the new render becomes current.
+  // persistCloneRender runs before appendAdStudioCreativeRevision on purpose:
+  // mutation replays return the completed canvas WITHOUT re-running this work
+  // function, so a revision appended before a failed upload could never be
+  // rolled back — it would permanently reference a path with no content.
   const renderHistory = [...(canvas.renderHistory ?? []), currentImageRef]
     .filter(Boolean)
     .slice(-RENDER_HISTORY_LIMIT);
-  const renderQaHistory = [...(canvas.renderQaHistory ?? []), ...(canvas.cloneQa ? [canvas.cloneQa] : [])]
+  const renderQaHistory = [...(canvas.renderQaHistory ?? []), ...(currentQa ? [currentQa] : [])]
     .slice(-RENDER_HISTORY_LIMIT);
   const nextCanvas: AdStudioCreative["canvas"] = {
     ...canvas,
     objects: [{ ...cloneObject, content: image, assetId: image }],
-    cloneQa: qa ?? canvas.cloneQa,
+    cloneQa: qa ?? currentQa,
     renderHistory,
     renderQaHistory,
     redoHistory: [],

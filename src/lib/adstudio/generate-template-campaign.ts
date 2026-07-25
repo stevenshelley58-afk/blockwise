@@ -6,10 +6,10 @@
 // copy (on-image fields + feed copy in one pass) -> reference clone renders
 // (feed + story) -> deterministic pack build -> provided-copy application ->
 // one transactional persist. The customer gets the finished ad the moment the
-// renders persist; vision QA runs AFTER persistence as advisory enrichment
-// (editor regions + copy warnings) and never blocks or rerolls a render. The
-// editor's history (undo/compare) plus in-place fixes replaced the old
-// blocking reroll gate.
+// renders persist; region detection (the editor's clickable hit-boxes) starts
+// the instant a render exists and writes onto the persisted creatives — it
+// never blocks or rerolls a render. The editor's history (undo/compare) plus
+// in-place fixes are the safety net.
 import { randomUUID } from "node:crypto";
 
 import { applyProvidedCopyToCampaignPack } from "./campaign-copy-enrichment.ts";
@@ -21,7 +21,7 @@ import {
   resolveCloneProviders,
   type CloneGenerationResult,
 } from "./clone-generation.ts";
-import { detectCloneRegions, type CloneRegion } from "./clone-qa.ts";
+import { detectCloneRegions, type CloneRegion } from "./clone-regions.ts";
 import { generateAdStudioTemplateCopy, type AdStudioCopyFields } from "./copy-generation.ts";
 import { buildCloneCampaignPack, buildCloneCreative } from "./clone-campaign.ts";
 import { persistAdStudioCampaignPack } from "./persistence.ts";
@@ -40,6 +40,7 @@ import type {
   AdStudioCampaignPack,
   FirstAdInput,
 } from "./types.ts";
+import { normalizeCloneQa } from "./types.ts";
 import type { ImageProviderAdapter, ImageProviderRequest } from "./providers.ts";
 import type { createSupabaseServerClient } from "../supabase/server.ts";
 import type { createSupabaseServiceClient } from "../supabase/service.ts";
@@ -138,7 +139,7 @@ type CloneRenderDependencies = {
  * One final-quality render per format: provider cascade (bounded fallback
  * inside) then an exact aspect crop. No vision gate, no reroll — the customer
  * sees this render as soon as it persists, and the editor regions are
- * detected afterwards via enrichCloneCreativesWithRegions.
+ * detected in parallel via enrichCloneCreativesWithRegions.
  */
 export async function generateFinalCloneRender(input: {
   format: TemplateCloneRenderFormat;
@@ -171,15 +172,22 @@ export type CloneRegionsEnrichmentInput = {
   userId: string;
   correlationId: string;
   expectedCopy: Record<string, string>;
-  /** Primary format first. */
-  renders: Array<{ format: TemplateCloneRenderFormat; creativeId: string; imageUrl: string }>;
+  /** Primary format first. regionsPromise lets callers start the vision call
+   * the moment the render exists, overlapping upload + persist. */
+  renders: Array<{
+    format: TemplateCloneRenderFormat;
+    creativeId: string;
+    imageUrl: string;
+    regionsPromise?: Promise<CloneRegion[]>;
+  }>;
 };
 
 /**
- * Post-persist advisory pass: one vision call per format produces the editor
- * regions, written onto the already-persisted creatives. Failures are
- * contained per format — the customer keeps the ad either way, and a creative
- * that already has regions (a fast in-place edit) is never overwritten.
+ * Region detection write: one vision call per format produces the editor
+ * regions + current text values, written onto the already-persisted
+ * creatives. Failures are contained per format — the customer keeps the ad
+ * either way, and a creative that already has regions (a fast in-place edit)
+ * is never overwritten.
  */
 export async function enrichCloneCreativesWithRegions(
   input: CloneRegionsEnrichmentInput,
@@ -188,14 +196,14 @@ export async function enrichCloneCreativesWithRegions(
 
   await Promise.all(input.renders.map(async (render) => {
     try {
-      const regions: CloneRegion[] = await detectCloneRegions({
+      const regions: CloneRegion[] = await (render.regionsPromise ?? detectCloneRegions({
         workspaceId: input.workspaceId,
         userId: input.userId,
         correlationId: input.correlationId,
         imageUrl: render.imageUrl,
         expectedCopy: input.expectedCopy,
         format: render.format,
-      });
+      }));
       if (regions.length === 0) return;
 
       const { data: row, error } = await supabase
@@ -206,20 +214,12 @@ export async function enrichCloneCreativesWithRegions(
         .maybeSingle();
       if (error || !row) return;
       const canvas = (row.canvas_json ?? {}) as Record<string, unknown>;
-      const existing = canvas.cloneQa as Record<string, unknown> | undefined;
-      if (existing && Array.isArray(existing.regions) && existing.regions.length > 0) return;
-      const qaShell = {
-        ...(existing ?? {}),
-        passed: true,
-        attempts: 1,
-        checkedAt: new Date().toISOString(),
-        copyChecks: existing?.copyChecks ?? [],
-        defects: [],
-        regions,
-      };
+      const existing = normalizeCloneQa(canvas.cloneQa);
+      if (existing && existing.regions.length > 0) return;
+      const cloneQa = { regions, copyValues: input.expectedCopy };
       await supabase
         .from("adstudio_creatives")
-        .update({ canvas_json: { ...canvas, cloneQa: qaShell }, updated_at: new Date().toISOString() })
+        .update({ canvas_json: { ...canvas, cloneQa }, updated_at: new Date().toISOString() })
         .eq("workspace_id", input.workspaceId)
         .eq("id", render.creativeId);
     } catch {
@@ -289,20 +289,21 @@ export async function runTemplateCampaignGeneration(
 
   // Resolve each supplied customer image (keyed by slot role or object id, the
   // same contract as customer generation) to a model-consumable reference.
+  // Slots are independent — resolve them in parallel.
   const suppliedImages = firstAd.imageDataUrls ?? {};
   const resolvedImages: Record<string, string> = {};
-  for (const slot of template.inputs.images) {
+  await Promise.all(template.inputs.images.map(async (slot) => {
     const brandLogo = /logo/i.test(slot.key)
       ? brandKit.logos.primaryLogoUrl ?? brandKit.logos.darkLogoUrl ?? brandKit.logos.lightLogoUrl ?? brandKit.logos.faviconUrl
       : undefined;
     const ref = suppliedImages[slot.key] ?? brandLogo;
-    if (!ref?.trim()) continue;
+    if (!ref?.trim()) return;
     const resolved = await resolveAdStudioImageForModel(supabase, input.workspaceId, ref.trim());
     if (!resolved) {
       throw new Error(`Image for "${slot.label}" could not be read.`);
     }
     resolvedImages[slot.key] = resolved;
-  }
+  }));
 
   // Single-image submissions may arrive only as firstAd.imageDataUrl.
   const primarySlot = template.inputs.images.find((slot) => slot.required) ?? template.inputs.images[0];
@@ -321,7 +322,7 @@ export async function runTemplateCampaignGeneration(
 
   // Customer-typed on-image values (price, address, phone…) override the
   // model's suggestions VERBATIM — the copy model must never invent facts the
-  // customer supplies. QA then verifies these exact strings on the render.
+  // customer supplies. These exact strings become the editor's copyValues.
   const customerOnImage: Record<string, string> = {};
   for (const field of template.inputs.text) {
     const provided = firstAd.onImageCopy?.[field.key]?.trim();
@@ -346,6 +347,16 @@ export async function runTemplateCampaignGeneration(
           cta: firstAd.copy.cta.trim() || "Learn more",
         }
       : undefined;
+
+  // The raster reference and provider cascade don't depend on the copy
+  // result — start them NOW so they overlap the 25-47s copy call instead of
+  // following it. Gallery samples are SVGs, which no image provider accepts;
+  // rasterize to a PNG data URL before the clone requests are built.
+  const generationQuality = firstAd.generationQuality ?? "fast";
+  const rasterPromise = ensureRasterReferenceImage(
+    new URL(template.sample.imageSrc, input.origin).toString(),
+  );
+  const providersPromise = resolveCloneProviders(generationQuality);
 
   const copyResult = providedCopy
     ? { onImage: customerOnImage, copy: providedCopy, source: "provided" as const }
@@ -376,13 +387,10 @@ export async function runTemplateCampaignGeneration(
   // customer supplied everything, copyResult.onImage IS the customer's values.
   const onImageCopy = { ...copyResult.onImage, ...customerOnImage };
 
-  // Gallery samples are SVGs, which no image provider accepts; rasterize to
-  // a PNG data URL before the clone requests are built. The image lane runs
-  // one native feed render and one recomposed 9:16 story render in parallel;
-  // both persist as soon as they exist and the advisory QA pass follows.
-  const referenceImage = await ensureRasterReferenceImage(
-    new URL(template.sample.imageSrc, input.origin).toString(),
-  );
+  // The image lane runs one native feed render and one recomposed 9:16 story
+  // render in parallel; both persist as soon as they exist and region
+  // detection starts the moment each render lands.
+  const [referenceImage, providers] = await Promise.all([rasterPromise, providersPromise]);
   const expectedCopy = resolveCloneCopy(template, onImageCopy);
   const cloneRequestsByFormat = buildTemplateCloneRequestsByFormat(template, {
     referenceImage,
@@ -390,8 +398,6 @@ export async function runTemplateCampaignGeneration(
     copy: onImageCopy,
     brandHex: brandKit.colours.accent || brandKit.colours.primary,
   });
-  const generationQuality = firstAd.generationQuality ?? "fast";
-  const providers = await resolveCloneProviders(generationQuality);
   const modelProfile = cloneModelProfileForQuality(generationQuality);
   // --- Feed-first critical path (Point 8): both formats generate in parallel,
   // the customer gets the 4:5 ad the instant it persists, the 9:16 story
@@ -417,8 +423,17 @@ export async function runTemplateCampaignGeneration(
     modelProfile,
   });
 
-  // Await only the feed: generate → normalize → upload.
+  // Await only the feed: generate → normalize → upload. Region detection
+  // starts the instant the render exists, overlapping the upload + persist.
   const feedRender = await feedGenPromise;
+  const feedRegionsPromise = detectCloneRegions({
+    workspaceId: input.workspaceId,
+    userId: input.userId,
+    correlationId,
+    imageUrl: feedRender.assetUrl,
+    expectedCopy,
+    format: PRIMARY_CLONE_FORMAT,
+  });
   const feedPersisted: PersistedCloneRender = {
     ...feedRender,
     image: await persistCloneRender({
@@ -463,7 +478,8 @@ export async function runTemplateCampaignGeneration(
     );
   }
 
-  // Region detection for the feed creative (fires after the response).
+  // Region detection write for the feed creative (fires after the response;
+  // the vision call itself is already in flight).
   const feedCreative = feedPack.creatives.find((c) => c.format === PRIMARY_CLONE_FORMAT);
   const enrichRegions = () =>
     feedCreative
@@ -473,7 +489,12 @@ export async function runTemplateCampaignGeneration(
           userId: input.userId,
           correlationId,
           expectedCopy,
-          renders: [{ format: PRIMARY_CLONE_FORMAT, creativeId: feedCreative.creativeId, imageUrl: feedRender.assetUrl }],
+          renders: [{
+            format: PRIMARY_CLONE_FORMAT,
+            creativeId: feedCreative.creativeId,
+            imageUrl: feedRender.assetUrl,
+            regionsPromise: feedRegionsPromise,
+          }],
         })
       : Promise.resolve();
 
@@ -513,6 +534,15 @@ async function persistStoryInBackground(input: {
 }): Promise<void> {
   try {
     const storyRender = await input.storyGenPromise;
+    // Vision call starts now, overlapping the upload + row insert below.
+    const storyRegionsPromise = detectCloneRegions({
+      workspaceId: input.workspaceId,
+      userId: input.userId,
+      correlationId: input.correlationId,
+      imageUrl: storyRender.assetUrl,
+      expectedCopy: input.expectedCopy,
+      format: STORY_CLONE_FORMAT,
+    });
     const storyImage = await persistCloneRender({
       supabase: input.supabase,
       workspaceId: input.workspaceId,
@@ -560,14 +590,19 @@ async function persistStoryInBackground(input: {
       updated_at: new Date().toISOString(),
     });
 
-    // Region detection for the story creative.
+    // Region detection write for the story creative (call already in flight).
     await enrichCloneCreativesWithRegions({
       supabase: input.supabase,
       workspaceId: input.workspaceId,
       userId: input.userId,
       correlationId: input.correlationId,
       expectedCopy: input.expectedCopy,
-      renders: [{ format: STORY_CLONE_FORMAT, creativeId: storyCreative.creativeId, imageUrl: storyRender.assetUrl }],
+      renders: [{
+        format: STORY_CLONE_FORMAT,
+        creativeId: storyCreative.creativeId,
+        imageUrl: storyRender.assetUrl,
+        regionsPromise: storyRegionsPromise,
+      }],
     });
   } catch (error) {
     // Story failure must NEVER fail the feed. Log and contain.

@@ -1,10 +1,33 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 
 import { StatusPill } from "@/components/status-pill";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 const REGION_CURRENCY: Record<string, string> = { AU: "AUD", NZ: "NZD", GB: "GBP", US: "USD", CA: "CAD" };
 
@@ -103,10 +126,10 @@ type SettingsViewProps = {
 };
 
 const NOTIFICATION_OPTIONS: Array<{ key: string; label: string; description: string; fallback: boolean }> = [
-  { key: "approvalRequests", label: "Approval requests", description: "When something needs review before publishing.", fallback: true },
-  { key: "leadAlerts", label: "New leads", description: "When a new lead arrives from Meta or Google.", fallback: true },
-  { key: "weeklyDigest", label: "Weekly digest", description: "A weekly summary of spend, leads, and results.", fallback: false },
-  { key: "productUpdates", label: "Product updates", description: "Occasional news about new Blockwise features.", fallback: false },
+  { key: "approvalRequests", label: "Approval requests", description: "Something needs your review.", fallback: true },
+  { key: "leadAlerts", label: "New leads", description: "A lead just arrived.", fallback: true },
+  { key: "weeklyDigest", label: "Weekly digest", description: "Spend and leads, weekly.", fallback: false },
+  { key: "productUpdates", label: "Product updates", description: "New features, occasionally.", fallback: false },
 ];
 
 const ASSIGNABLE_ROLES = ["owner", "admin", "member", "viewer"];
@@ -114,18 +137,20 @@ const META_LEAD_DESTINATION_TYPES: MetaLeadDestinationType[] = ["manual", "webho
 
 function Feedback({ message }: { message: Msg }) {
   if (!message) return null;
-  return <p className={`wizard-status ${message.tone}`}>{message.text}</p>;
+  return <p className={cn("text-sm", message.tone === "error" ? "text-destructive" : "text-emerald-700")}>{message.text}</p>;
 }
 
-function Section({ id, title, description, children }: { id: string; title: string; description?: string; children: ReactNode }) {
+const selectClass =
+  "h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50";
+
+function Section({ id, title, children }: { id: string; title: string; children: ReactNode }) {
   return (
-    <section className="panel" id={id} style={{ scrollMarginTop: 84 }}>
-      <h2>{title}</h2>
-      {description ? <p className="item-meta">{description}</p> : null}
-      <div className="stack" style={{ marginTop: 14 }}>
-        {children}
-      </div>
-    </section>
+    <Card id={id} style={{ scrollMarginTop: 84 }}>
+      <CardHeader>
+        <CardTitle>{title}</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">{children}</CardContent>
+    </Card>
   );
 }
 
@@ -170,10 +195,14 @@ export function SettingsView(props: SettingsViewProps) {
   ];
 
   return (
-    <div className="stack" style={{ gap: 18 }}>
-      <nav aria-label="Settings sections" style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+    <div className="flex flex-col gap-6">
+      <nav aria-label="Settings sections" className="flex flex-wrap gap-1 border-b border-border pb-px">
         {navItems.map((item) => (
-          <a key={item.href} className="button secondary" href={item.href} style={{ padding: "6px 12px", fontSize: 13 }}>
+          <a
+            key={item.href}
+            href={item.href}
+            className="rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
             {item.label}
           </a>
         ))}
@@ -245,21 +274,21 @@ function AccountSection({ supabase, router, user, fullName }: { supabase: SB; ro
   }
 
   return (
-    <Section id="account" title="Account" description="Your name and sign-in email.">
-      <form className="stack" onSubmit={save}>
-        <label className="wizard-field">
-          <span className="wizard-label">Full name</span>
-          <input value={name} onChange={(e) => setName(e.target.value)} required />
-        </label>
-        <label className="wizard-field">
-          <span className="wizard-label">Email</span>
-          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" required />
-        </label>
+    <Section id="account" title="Account">
+      <form className="flex flex-col gap-4" onSubmit={save}>
+        <div className="grid gap-2">
+          <Label htmlFor="account-name">Full name</Label>
+          <Input id="account-name" value={name} onChange={(e) => setName(e.target.value)} required />
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="account-email">Email</Label>
+          <Input id="account-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" required />
+        </div>
         <Feedback message={message} />
-        <div className="wizard-actions">
-          <button className="button" type="submit" disabled={busy}>
+        <div>
+          <Button type="submit" disabled={busy}>
             {busy ? "Saving" : "Save changes"}
-          </button>
+          </Button>
         </div>
       </form>
     </Section>
@@ -296,21 +325,21 @@ function PasswordSection({ supabase }: { supabase: SB }) {
   }
 
   return (
-    <Section id="security" title="Password" description="Change the password for this account.">
-      <form className="stack" onSubmit={save}>
-        <label className="wizard-field">
-          <span className="wizard-label">New password</span>
-          <input type="password" value={pw} onChange={(e) => setPw(e.target.value)} autoComplete="new-password" required />
-        </label>
-        <label className="wizard-field">
-          <span className="wizard-label">Confirm new password</span>
-          <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} autoComplete="new-password" required />
-        </label>
+    <Section id="security" title="Password">
+      <form className="flex flex-col gap-4" onSubmit={save}>
+        <div className="grid gap-2">
+          <Label htmlFor="new-password">New password</Label>
+          <Input id="new-password" type="password" value={pw} onChange={(e) => setPw(e.target.value)} autoComplete="new-password" required />
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="confirm-password">Confirm new password</Label>
+          <Input id="confirm-password" type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} autoComplete="new-password" required />
+        </div>
         <Feedback message={message} />
-        <div className="wizard-actions">
-          <button className="button" type="submit" disabled={busy}>
+        <div>
+          <Button type="submit" disabled={busy}>
             {busy ? "Updating" : "Update password"}
-          </button>
+          </Button>
         </div>
       </form>
     </Section>
@@ -375,60 +404,66 @@ function BillingSection({
   }
 
   return (
-    <Section id="billing" title="Billing & plan" description="Your subscription, payment method, and invoices.">
-      <div className="grid cols-3">
-        <div className="item-card">
-          <span className="item-meta">Current plan</span>
-          <h3 style={{ margin: "4px 0" }}>{plan?.name ?? "No plan"}</h3>
-          <StatusPill tone={workspace.subscriptionStatus === "active" ? "green" : "blue"}>
-            {workspace.subscriptionStatus ?? "Trial / unbilled"}
-          </StatusPill>
-        </div>
-        <div className="item-card">
-          <span className="item-meta">Plan features</span>
-          <h3 style={{ margin: "4px 0" }}>{plan ? planFeatureTitle(plan) : "—"}</h3>
-          <span className="item-meta">{plan ? `Up to ${plan.maxWorkspaces} workspace${plan.maxWorkspaces === 1 ? "" : "s"}` : ""}</span>
-        </div>
-        <div className="item-card">
-          <span className="item-meta">Payment method</span>
-          <h3 style={{ margin: "4px 0" }}>{workspace.stripeCustomerId ? "Card on file" : "No card on file"}</h3>
-          <span className="item-meta">Invoices appear here once billing is connected.</span>
-        </div>
+    <Section id="billing" title="Billing & plan">
+      <div className="grid gap-4 sm:grid-cols-3">
+        <Card className="gap-2 py-4">
+          <CardContent className="flex flex-col gap-1">
+            <span className="text-sm text-muted-foreground">Current plan</span>
+            <h3 className="text-lg font-semibold">{plan?.name ?? "No plan"}</h3>
+            <StatusPill tone={workspace.subscriptionStatus === "active" ? "green" : "blue"}>
+              {workspace.subscriptionStatus ?? "Trial / unbilled"}
+            </StatusPill>
+          </CardContent>
+        </Card>
+        <Card className="gap-2 py-4">
+          <CardContent className="flex flex-col gap-1">
+            <span className="text-sm text-muted-foreground">Plan features</span>
+            <h3 className="text-lg font-semibold">{plan ? planFeatureTitle(plan) : "—"}</h3>
+            <span className="text-sm text-muted-foreground">{plan ? `Up to ${plan.maxWorkspaces} workspace${plan.maxWorkspaces === 1 ? "" : "s"}` : ""}</span>
+          </CardContent>
+        </Card>
+        <Card className="gap-2 py-4">
+          <CardContent className="flex flex-col gap-1">
+            <span className="text-sm text-muted-foreground">Payment method</span>
+            <h3 className="text-lg font-semibold">{workspace.stripeCustomerId ? "Card on file" : "No card on file"}</h3>
+            <span className="text-sm text-muted-foreground">Invoices appear here once billing is connected.</span>
+          </CardContent>
+        </Card>
       </div>
 
       {canManage ? (
         <>
           {workspace.stripeCustomerId ? (
-            <div className="wizard-connect-row">
-              <span>Manage payment method & invoices</span>
-              <button className="button" type="button" onClick={openPortal} disabled={portalBusy}>
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-sm font-medium">Manage payment method & invoices</span>
+              <Button type="button" onClick={openPortal} disabled={portalBusy}>
                 {portalBusy ? "Opening" : "Manage billing"}
-              </button>
+              </Button>
             </div>
           ) : (
-            <p className="wizard-skip-note">Billing management will appear here after your first paid plan is active.</p>
+            <p className="text-sm text-muted-foreground">Billing management will appear here after your first paid plan is active.</p>
           )}
-          <form className="stack" onSubmit={saveBillingEmail}>
-            <label className="wizard-field">
-              <span className="wizard-label">Billing email</span>
-              <input type="email" value={billingEmail} onChange={(e) => setBillingEmail(e.target.value)} placeholder="accounts@yourcompany.com" />
-            </label>
-            <div className="wizard-actions">
-              <button className="button secondary" type="submit" disabled={busy}>
+          <form className="flex flex-col gap-4" onSubmit={saveBillingEmail}>
+            <div className="grid gap-2">
+              <Label htmlFor="billing-email">Billing email</Label>
+              <Input id="billing-email" type="email" value={billingEmail} onChange={(e) => setBillingEmail(e.target.value)} placeholder="accounts@yourcompany.com" />
+            </div>
+            <div>
+              <Button variant="outline" type="submit" disabled={busy}>
                 {busy ? "Saving" : "Save billing email"}
-              </button>
+              </Button>
             </div>
           </form>
-          <div className="stack" style={{ gap: "4px" }}>
-            <h4 style={{ margin: 0 }}>Upgrade your plan</h4>
-            <p className="wizard-skip-note" style={{ margin: 0 }}>
+          <div className="flex flex-col gap-1">
+            <h4 className="text-sm font-semibold">Upgrade your plan</h4>
+            <p className="text-sm text-muted-foreground">
               Want early access to a paid plan? Email us at{" "}
-              <a href="mailto:hello@blockwise.sale">hello@blockwise.sale</a> and we&apos;ll get you set up.
+              <a href="mailto:hello@blockwise.sale" className="underline">hello@blockwise.sale</a> and we&apos;ll get you set up.
             </p>
           </div>
         </>
       ) : (
-        <p className="wizard-skip-note">Only an owner or admin can manage billing.</p>
+        <p className="text-sm text-muted-foreground">Only an owner or admin can manage billing.</p>
       )}
       <Feedback message={message} />
     </Section>
@@ -495,42 +530,46 @@ function ConnectionsSection({
   }
 
   return (
-    <Section id="connections" title="Ad & API connections" description="Connect the ad platforms Blockwise reads and publishes through.">
+    <Section id="connections" title="Ad & API connections">
       {providers.map((prov) => {
         const conn = connections.find((c) => c.provider === prov.key);
         const connected = conn && conn.status !== "revoked" && conn.status !== "not_connected";
         return (
-          <div className="stack" key={prov.key} style={{ gap: 10 }}>
-            <div className="wizard-connect-row">
-              <div>
-              <strong>{prov.label}</strong>
-              <div className="item-meta">
-                {conn?.accountName ? `${conn.accountName} · ` : ""}
-                {conn ? <StatusPill tone={statusTone(conn.status)}>{STATUS_LABELS[conn.status] ?? conn.status.replace(/_/g, " ")}</StatusPill> : <StatusPill tone="blue">Not connected</StatusPill>}
-              </div>
+          <div className="flex flex-col gap-3" key={prov.key}>
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex flex-col gap-1">
+                <strong className="text-sm font-medium">{prov.label}</strong>
+                <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                  {conn?.accountName ? <span>{conn.accountName} ·</span> : null}
+                  {conn ? <StatusPill tone={statusTone(conn.status)}>{STATUS_LABELS[conn.status] ?? conn.status.replace(/_/g, " ")}</StatusPill> : <StatusPill tone="blue">Not connected</StatusPill>}
+                </div>
               </div>
               {!prov.enabled ? (
-              <button className="button secondary" type="button" disabled>
-                Not enabled yet
-              </button>
-            ) : !canManage ? (
-              <StatusPill tone="blue">Owner/admin only</StatusPill>
-            ) : connected ? (
-              <div style={{ display: "flex", gap: 8 }}>
-                <a className="button secondary" href={prov.connectHref}>Reconnect</a>
-                <button className="button secondary" type="button" onClick={() => disconnect(prov.key, prov.label)} disabled={busyProvider === prov.key}>
-                  {busyProvider === prov.key ? "Working" : "Disconnect"}
-                </button>
-              </div>
-            ) : (
-              <a className="button" href={prov.connectHref}>Connect</a>
+                <Button variant="outline" type="button" disabled>
+                  Not enabled yet
+                </Button>
+              ) : !canManage ? (
+                <StatusPill tone="blue">Owner/admin only</StatusPill>
+              ) : connected ? (
+                <div className="flex gap-2">
+                  <Button variant="outline" asChild>
+                    <a href={prov.connectHref}>Reconnect</a>
+                  </Button>
+                  <Button variant="outline" type="button" onClick={() => disconnect(prov.key, prov.label)} disabled={busyProvider === prov.key}>
+                    {busyProvider === prov.key ? "Working" : "Disconnect"}
+                  </Button>
+                </div>
+              ) : (
+                <Button asChild>
+                  <a href={prov.connectHref}>Connect</a>
+                </Button>
               )}
             </div>
             {prov.key === "meta" && connected ? (
               <MetaSetupForm workspaceId={workspaceId} canManage={canManage} />
             ) : null}
             {prov.key === "meta" && !connected ? (
-              <p className="wizard-skip-note">Connect Meta first, then choose the ad account, Page, lead destination, and privacy policy used for publishing.</p>
+              <p className="text-sm text-muted-foreground">Connect Meta first, then choose the ad account, Page, lead destination, and privacy policy used for publishing.</p>
             ) : null}
           </div>
         );
@@ -635,23 +674,24 @@ function MetaSetupForm({ workspaceId, canManage }: { workspaceId: string; canMan
   const availableInstagramActors = assets?.instagramActors.filter((actor) => !actor.pageId || actor.pageId === setup.pageId) ?? [];
 
   return (
-    <form className="stack" onSubmit={save} style={{ border: "1px solid var(--line)", borderRadius: 8, padding: 14 }}>
-      <div className="wizard-connect-row" style={{ padding: 0, border: 0 }}>
-        <span>
-          <strong>Meta publishing setup</strong>
-          <div className="item-meta">Required assets for paused Meta lead campaigns.</div>
-        </span>
+    <form className="flex flex-col gap-4 rounded-lg border border-border p-4" onSubmit={save}>
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex flex-col gap-1">
+          <strong className="text-sm font-medium">Meta publishing setup</strong>
+          <span className="text-sm text-muted-foreground">Required assets for paused Meta lead campaigns.</span>
+        </div>
         <StatusPill tone={blockers.length === 0 ? "green" : "amber"}>{blockers.length === 0 ? "ready" : "missing setup"}</StatusPill>
       </div>
 
       {loading ? (
-        <p className="wizard-skip-note">Loading Meta assets.</p>
+        <p className="text-sm text-muted-foreground">Loading Meta assets.</p>
       ) : <>
-      <div className="grid cols-2">
-        <label className="wizard-field">
-          <span className="wizard-label">Meta ad account</span>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-2">
+          <Label>Meta ad account</Label>
           {assets?.adAccounts.length ? (
             <select
+              className={selectClass}
               value={setup.metaAdAccountId}
               onChange={(e) => {
                 const account = assets.adAccounts.find((item) => item.id === e.target.value);
@@ -670,110 +710,110 @@ function MetaSetupForm({ workspaceId, canManage }: { workspaceId: string; canMan
               ))}
             </select>
           ) : (
-            <input value={setup.metaAdAccountId} onChange={(e) => updateSetup({ metaAdAccountId: e.target.value })} disabled={!canManage} required />
+            <Input value={setup.metaAdAccountId} onChange={(e) => updateSetup({ metaAdAccountId: e.target.value })} disabled={!canManage} required />
           )}
-        </label>
-        <label className="wizard-field">
-          <span className="wizard-label">Meta Page</span>
+        </div>
+        <div className="grid gap-2">
+          <Label>Meta Page</Label>
           {assets?.pages.length ? (
-            <select value={setup.pageId} onChange={(e) => updateSetup({ pageId: e.target.value, instagramActorId: null })} disabled={!canManage} required>
+            <select className={selectClass} value={setup.pageId} onChange={(e) => updateSetup({ pageId: e.target.value, instagramActorId: null })} disabled={!canManage} required>
               <option value="">Choose a Page</option>
               {assets.pages.map((page) => (
                 <option key={page.id} value={page.id}>{page.name} ({page.id})</option>
               ))}
             </select>
           ) : (
-            <input value={setup.pageId} onChange={(e) => updateSetup({ pageId: e.target.value })} disabled={!canManage} required />
+            <Input value={setup.pageId} onChange={(e) => updateSetup({ pageId: e.target.value })} disabled={!canManage} required />
           )}
-        </label>
-        <label className="wizard-field">
-          <span className="wizard-label">Instagram account (optional)</span>
+        </div>
+        <div className="grid gap-2">
+          <Label>Instagram account (optional)</Label>
           {availableInstagramActors.length ? (
-            <select value={setup.instagramActorId ?? ""} onChange={(e) => updateSetup({ instagramActorId: e.target.value || null })} disabled={!canManage}>
+            <select className={selectClass} value={setup.instagramActorId ?? ""} onChange={(e) => updateSetup({ instagramActorId: e.target.value || null })} disabled={!canManage}>
               <option value="">None</option>
               {availableInstagramActors.map((actor) => (
                 <option key={actor.id} value={actor.id}>{actor.username} ({actor.id})</option>
               ))}
             </select>
           ) : (
-            <input value={setup.instagramActorId ?? ""} onChange={(e) => updateSetup({ instagramActorId: e.target.value || null })} disabled={!canManage} />
+            <Input value={setup.instagramActorId ?? ""} onChange={(e) => updateSetup({ instagramActorId: e.target.value || null })} disabled={!canManage} />
           )}
-        </label>
-        <label className="wizard-field">
-          <span className="wizard-label">Pixel</span>
+        </div>
+        <div className="grid gap-2">
+          <Label>Pixel</Label>
           {assets?.pixels.length ? (
-            <select value={setup.pixelId ?? ""} onChange={(e) => updateSetup({ pixelId: e.target.value || null })} disabled={!canManage}>
+            <select className={selectClass} value={setup.pixelId ?? ""} onChange={(e) => updateSetup({ pixelId: e.target.value || null })} disabled={!canManage}>
               <option value="">None</option>
               {assets.pixels.map((pixel) => (
                 <option key={pixel.id} value={pixel.id}>{pixel.name} ({pixel.id})</option>
               ))}
             </select>
           ) : (
-            <input value={setup.pixelId ?? ""} onChange={(e) => updateSetup({ pixelId: e.target.value || null })} disabled={!canManage} />
+            <Input value={setup.pixelId ?? ""} onChange={(e) => updateSetup({ pixelId: e.target.value || null })} disabled={!canManage} />
           )}
-        </label>
+        </div>
       </div>
 
-      <div className="grid cols-2">
-        <label className="wizard-field">
-          <span className="wizard-label">Lead destination type</span>
-          <select value={setup.leadDestination.type} onChange={(e) => updateLeadDestination({ type: e.target.value as MetaLeadDestinationType })} disabled={!canManage}>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-2">
+          <Label>Lead destination type</Label>
+          <select className={selectClass} value={setup.leadDestination.type} onChange={(e) => updateLeadDestination({ type: e.target.value as MetaLeadDestinationType })} disabled={!canManage}>
             {META_LEAD_DESTINATION_TYPES.map((type) => (
               <option key={type} value={type}>{formatLeadDestinationType(type)}</option>
             ))}
           </select>
-        </label>
-        <label className="wizard-field">
-          <span className="wizard-label">Lead destination label</span>
-          <input value={setup.leadDestination.label} onChange={(e) => updateLeadDestination({ label: e.target.value })} disabled={!canManage} required />
-        </label>
+        </div>
+        <div className="grid gap-2">
+          <Label>Lead destination label</Label>
+          <Input value={setup.leadDestination.label} onChange={(e) => updateLeadDestination({ label: e.target.value })} disabled={!canManage} required />
+        </div>
       </div>
 
       {setup.leadDestination.type !== "manual" ? (
-        <label className="wizard-field">
-          <span className="wizard-label">Lead destination endpoint</span>
-          <input
+        <div className="grid gap-2">
+          <Label>Lead destination endpoint</Label>
+          <Input
             value={setup.leadDestination.config?.endpoint ?? ""}
             onChange={(e) => updateLeadDestination({ config: { endpoint: e.target.value } })}
             placeholder="https://example.com/meta-leads"
             disabled={!canManage}
             required
           />
-        </label>
+        </div>
       ) : null}
 
-      <div className="grid cols-3">
-        <label className="wizard-field">
-          <span className="wizard-label">Privacy policy URL</span>
-          <input type="url" value={setup.privacyPolicyUrl} onChange={(e) => updateSetup({ privacyPolicyUrl: e.target.value })} disabled={!canManage} required />
-        </label>
-        <label className="wizard-field">
-          <span className="wizard-label">Currency</span>
-          <select value={setup.currency} onChange={(e) => updateSetup({ currency: e.target.value })} disabled={!canManage} required>
+      <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-2">
+          <Label>Privacy policy URL</Label>
+          <Input type="url" value={setup.privacyPolicyUrl} onChange={(e) => updateSetup({ privacyPolicyUrl: e.target.value })} disabled={!canManage} required />
+        </div>
+        <div className="grid gap-2">
+          <Label>Currency</Label>
+          <select className={selectClass} value={setup.currency} onChange={(e) => updateSetup({ currency: e.target.value })} disabled={!canManage} required>
             <option value="">Select currency</option>
             {Object.values(REGION_CURRENCY).map((c) => (
               <option key={c} value={c}>{c}</option>
             ))}
           </select>
-        </label>
-        <label className="wizard-field">
-          <span className="wizard-label">Timezone</span>
-          <input value={setup.timezone} onChange={(e) => updateSetup({ timezone: e.target.value })} placeholder={selectedAccount?.timezone ?? "Australia/Perth"} disabled={!canManage} required />
-        </label>
+        </div>
+        <div className="grid gap-2">
+          <Label>Timezone</Label>
+          <Input value={setup.timezone} onChange={(e) => updateSetup({ timezone: e.target.value })} placeholder={selectedAccount?.timezone ?? "Australia/Perth"} disabled={!canManage} required />
+        </div>
       </div>
 
       {blockers.length > 0 ? (
-        <div className="stack" style={{ gap: 6 }}>
+        <div className="flex flex-col gap-1.5">
           {blockers.map((blocker) => (
-            <p className="wizard-status error" key={blocker}>{blocker}</p>
+            <p className="text-sm text-destructive" key={blocker}>{blocker}</p>
           ))}
         </div>
       ) : null}
       <Feedback message={message} />
-      <div className="wizard-actions">
-        <button className="button" type="submit" disabled={!canManage || busy || loading}>
+      <div>
+        <Button type="submit" disabled={!canManage || busy || loading}>
           {busy ? "Saving" : "Save Meta setup"}
-        </button>
+        </Button>
       </div>
       </>}
     </form>
@@ -828,31 +868,29 @@ function WorkspaceSection({ supabase, router, workspace }: { supabase: SB; route
   }
 
   return (
-    <Section id="workspace" title="Workspace" description="Settings for this workspace.">
-      <form className="stack" onSubmit={save}>
-        <label className="wizard-field">
-          <span className="wizard-label">Workspace name</span>
-          <input value={name} onChange={(e) => setName(e.target.value)} required />
-        </label>
-        <label className="wizard-field">
-          <span className="wizard-label">Region</span>
-          <select value={region} onChange={(e) => setRegion(e.target.value)} required>
+    <Section id="workspace" title="Workspace">
+      <form className="flex flex-col gap-4" onSubmit={save}>
+        <div className="grid gap-2">
+          <Label htmlFor="workspace-name">Workspace name</Label>
+          <Input id="workspace-name" value={name} onChange={(e) => setName(e.target.value)} required />
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="workspace-region">Region</Label>
+          <select id="workspace-region" className={selectClass} value={region} onChange={(e) => setRegion(e.target.value)} required>
             {Object.keys(REGION_CURRENCY).map((r) => (
               <option key={r} value={r}>{REGION_NAMES[r] ?? r}</option>
             ))}
           </select>
-        </label>
-        <div className="wizard-connect-row">
-          <span>
-            <strong>Publishing review</strong>
-            <div className="item-meta">All campaigns are reviewed before going live during early access.</div>
-          </span>
+        </div>
+        <div className="flex flex-col gap-1">
+          <strong className="text-sm font-medium">Publishing review</strong>
+          <span className="text-sm text-muted-foreground">All campaigns are reviewed before going live during early access.</span>
         </div>
         <Feedback message={message} />
-        <div className="wizard-actions">
-          <button className="button" type="submit" disabled={busy}>
+        <div>
+          <Button type="submit" disabled={busy}>
             {busy ? "Saving" : "Save workspace"}
-          </button>
+          </Button>
         </div>
       </form>
     </Section>
@@ -929,33 +967,36 @@ function TeamSection({
   }
 
   return (
-    <Section id="team" title="Team members" description="People with access to this workspace.">
-      <div className="table-wrap">
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Member</th>
-              <th>Role</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
+    <Section id="team" title="Team members">
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Member</TableHead>
+              <TableHead>Role</TableHead>
+              <TableHead className="sr-only">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {members.map((m) => {
               const isSelf = m.profileId === currentUserId;
               return (
-                <tr key={m.profileId}>
-                  <td>
-                    <strong>{m.fullName ?? m.email ?? "Unknown"}</strong>
-                    {isSelf ? <span className="item-meta"> (you)</span> : null}
-                    <div className="item-meta">{m.email}</div>
-                  </td>
-                  <td>
+                <TableRow key={m.profileId}>
+                  <TableCell>
+                    <div className="font-medium">
+                      {m.fullName ?? m.email ?? "Unknown"}
+                      {isSelf ? <span className="text-muted-foreground"> (you)</span> : null}
+                    </div>
+                    <div className="text-sm text-muted-foreground">{m.email}</div>
+                  </TableCell>
+                  <TableCell>
                     {m.isOperator ? (
                       <StatusPill tone="blue">operator</StatusPill>
                     ) : isSelf ? (
                       <StatusPill tone="green">{m.role}</StatusPill>
                     ) : (
                       <select
+                        className={cn(selectClass, "w-32")}
                         value={m.role}
                         onChange={(e) => changeRole(m.profileId, e.target.value)}
                         disabled={rowBusy === m.profileId}
@@ -967,40 +1008,40 @@ function TeamSection({
                         ))}
                       </select>
                     )}
-                  </td>
-                  <td style={{ textAlign: "right" }}>
+                  </TableCell>
+                  <TableCell className="text-right">
                     {!isSelf && !m.isOperator ? (
-                      <button className="button secondary" type="button" onClick={() => remove(m.profileId)} disabled={rowBusy === m.profileId}>
+                      <Button variant="outline" type="button" onClick={() => remove(m.profileId)} disabled={rowBusy === m.profileId}>
                         Remove
-                      </button>
+                      </Button>
                     ) : null}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               );
             })}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
-      <form className="wizard-connect-row" onSubmit={invite} style={{ flexWrap: "wrap", gap: 10 }}>
-        <input
+      <form className="flex flex-wrap items-center gap-2" onSubmit={invite}>
+        <Input
           type="email"
           value={inviteEmail}
           onChange={(e) => setInviteEmail(e.target.value)}
           placeholder="teammate@email.com"
           required
-          style={{ flex: "1 1 220px" }}
+          className="min-w-[220px] flex-1"
         />
-        <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)}>
+        <select className={cn(selectClass, "w-32")} value={inviteRole} onChange={(e) => setInviteRole(e.target.value)}>
           {ASSIGNABLE_ROLES.map((r) => (
             <option key={r} value={r}>
               {r}
             </option>
           ))}
         </select>
-        <button className="button" type="submit" disabled={busy}>
+        <Button type="submit" disabled={busy}>
           {busy ? "Inviting" : "Invite"}
-        </button>
+        </Button>
       </form>
       <Feedback message={message} />
     </Section>
@@ -1034,25 +1075,25 @@ function NotificationsSection({ supabase, userId, initial }: { supabase: SB; use
   }
 
   return (
-    <Section id="notifications" title="Notifications" description="Choose which emails Blockwise sends you.">
+    <Section id="notifications" title="Notifications">
       {NOTIFICATION_OPTIONS.map((opt) => (
-        <label className="wizard-connect-row" key={opt.key} style={{ cursor: "pointer" }}>
-          <span>
-            <strong>{opt.label}</strong>
-            <div className="item-meta">{opt.description}</div>
-          </span>
-          <input
-            type="checkbox"
+        <div className="flex items-center justify-between gap-4" key={opt.key}>
+          <div className="grid gap-0.5">
+            <Label htmlFor={`notif-${opt.key}`}>{opt.label}</Label>
+            <p className="text-sm text-muted-foreground">{opt.description}</p>
+          </div>
+          <Switch
+            id={`notif-${opt.key}`}
             checked={prefs[opt.key] ?? opt.fallback}
-            onChange={(e) => setPrefs((prev) => ({ ...prev, [opt.key]: e.target.checked }))}
+            onCheckedChange={(checked) => setPrefs((prev) => ({ ...prev, [opt.key]: checked }))}
           />
-        </label>
+        </div>
       ))}
       <Feedback message={message} />
-      <div className="wizard-actions">
-        <button className="button" type="button" onClick={save} disabled={busy}>
+      <div>
+        <Button type="button" onClick={save} disabled={busy}>
           {busy ? "Saving" : "Save preferences"}
-        </button>
+        </Button>
       </div>
     </Section>
   );
@@ -1099,44 +1140,43 @@ function DangerSection({ supabase, router, workspaceId }: { supabase: SB; router
   }
 
   return (
-    <Section id="danger" title="Danger zone" description="Account-level actions.">
-      <div className="wizard-connect-row">
-        <span>
-          <strong>Sign out of all devices</strong>
-          <div className="item-meta">Ends every active session for your account.</div>
-        </span>
-        <button className="button secondary" type="button" onClick={signOutEverywhere} disabled={busy}>
+    <Section id="danger" title="Danger zone">
+      <div className="flex items-center justify-between gap-4">
+        <div className="grid gap-0.5">
+          <strong className="text-sm font-medium">Sign out of all devices</strong>
+          <span className="text-sm text-muted-foreground">Ends every active session for your account.</span>
+        </div>
+        <Button variant="outline" type="button" onClick={signOutEverywhere} disabled={busy}>
           {busy ? "Signing out" : "Sign out everywhere"}
-        </button>
+        </Button>
       </div>
-      <div className="wizard-connect-row">
-        <span>
-          <strong>Delete account & workspace data</strong>
-          <div className="item-meta">Submits a deletion request for review.</div>
-        </span>
-        <button className="button secondary" type="button" onClick={requestDeletion} disabled={delBusy}>
+      <div className="flex items-center justify-between gap-4">
+        <div className="grid gap-0.5">
+          <strong className="text-sm font-medium">Delete account & workspace data</strong>
+          <span className="text-sm text-muted-foreground">Submits a deletion request for review.</span>
+        </div>
+        <Button variant="destructive" type="button" onClick={requestDeletion} disabled={delBusy}>
           {delBusy ? "Submitting" : "Request deletion"}
-        </button>
+        </Button>
       </div>
       <Feedback message={message} />
 
-      {confirmDeleteOpen && (
-        <div
-          style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(15,23,42,.55)", display: "grid", placeItems: "center", padding: 24 }}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="confirm-account-delete-title"
-        >
-          <div style={{ background: "var(--surface, #fff)", borderRadius: 12, padding: "28px 32px", maxWidth: 440, width: "100%", boxShadow: "0 8px 32px rgba(0,0,0,.2)" }}>
-            <h2 id="confirm-account-delete-title" style={{ margin: "0 0 8px", fontSize: 18 }}>Delete your account?</h2>
-            <p style={{ margin: "0 0 24px", color: "var(--text-2, #666)" }}>This will permanently delete your account and all data. This cannot be undone.</p>
-            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-              <button className="button secondary" type="button" onClick={() => setConfirmDeleteOpen(false)}>Cancel</button>
-              <button className="button" type="button" onClick={confirmDeletion} style={{ background: "var(--destructive, #dc2626)", color: "#fff", borderColor: "transparent" }}>Delete my account</button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Dialog open={confirmDeleteOpen} onOpenChange={(open) => setConfirmDeleteOpen(open)}>
+        <DialogContent showCloseButton={false} className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete your account?</DialogTitle>
+            <DialogDescription>This will permanently delete your account and all data. This cannot be undone.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" type="button" onClick={() => setConfirmDeleteOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" type="button" onClick={confirmDeletion}>
+              Delete my account
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Section>
   );
 }

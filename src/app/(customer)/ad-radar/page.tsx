@@ -1,6 +1,5 @@
 import { headers } from "next/headers";
 
-import { PageHeading } from "@/components/page-heading";
 import { AdRadarSearchPanel } from "@/components/research/ad-radar-search-panel";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
 import {
@@ -27,11 +26,9 @@ export default async function ResearchPage({ searchParams }: { searchParams?: Se
 
   return (
     <main className="content">
-      <PageHeading
-        eyebrow="Competitor intelligence"
-        title="Ad Radar"
-        description="Search live real-estate ads by postcode, suburb, page, Library ID, or ad copy."
-      />
+      <div className="page-heading">
+        <h1>Ad Radar</h1>
+      </div>
       <AdRadarSearchPanel
         initialIncludeSurrounding={includeSurrounding}
         initialQuery={searchTerm}

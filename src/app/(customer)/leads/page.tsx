@@ -1,9 +1,10 @@
-import { Clock, Fingerprint, Tags, UsersRound } from "lucide-react";
+import { Clock, Fingerprint, Tags, UsersRound, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 
-import { MetricCard } from "@/components/metric-card";
-import { PageHeading } from "@/components/page-heading";
-import { StatusPill } from "@/components/status-pill";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
 import { listLeadRowsWithDedupe, type LeadQualityLabel } from "@/lib/operator/overview";
 import { LeadQualitySelect } from "./lead-quality-select";
@@ -31,134 +32,155 @@ export default async function LeadsPage() {
     : "Never synced";
 
   return (
-    <main className="content">
-      <PageHeading
-        eyebrow="Your leads"
-        title="Leads"
-        description="Every Meta lead in one place. We flag duplicates, highlight high-intent leads, and keep your data secure."
-        actions={
-          <div className="leads-heading-actions">
-            <LeadSyncButton workspaceId={access.workspaceId} />
-            <span className="sync-last-at">
-              <Clock size={14} aria-hidden="true" />
-              {lastSyncedLabel}
-            </span>
-          </div>
-        }
-      />
+    <main className="mx-auto w-full max-w-6xl px-4 py-8 md:px-6" aria-label="Leads">
+      <header className="mb-6 flex flex-wrap items-center justify-between gap-4">
+        <h1 className="text-2xl font-bold tracking-tight">Leads</h1>
+        <div className="flex items-center gap-3">
+          <LeadSyncButton workspaceId={access.workspaceId} />
+          <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+            <Clock size={14} aria-hidden="true" />
+            {lastSyncedLabel}
+          </span>
+        </div>
+      </header>
 
-      <section className="grid cols-3">
-        <MetricCard icon={UsersRound} label="Leads" value={String(rows.length)} note="From Meta ads" />
-        <MetricCard icon={Tags} label="High intent" value={String(highIntentCount)} note="Most likely to convert" />
-        <MetricCard icon={Fingerprint} label="Duplicates flagged" value={String(duplicateCount)} note="Same person, matched by email or phone" />
+      <section className="mb-6 grid gap-4 sm:grid-cols-3" aria-label="Lead metrics">
+        <MetricStat icon={UsersRound} label="Leads" value={String(rows.length)} />
+        <MetricStat icon={Tags} label="High intent" value={String(highIntentCount)} />
+        <MetricStat icon={Fingerprint} label="Duplicates flagged" value={String(duplicateCount)} note="Matched by email or phone" />
       </section>
 
-      <section className="panel leads-panel">
-        <h2>Your leads</h2>
-        {rows.length === 0 ? (
-          <div className="leads-empty-state">
-            <p>No leads yet. Leads appear here when your Meta ad campaigns are live through Blockwise.</p>
-            <Link href="/ad-studio" className="btn btn-primary">Go to Ad Studio</Link>
-          </div>
-        ) : (
-          <>
-            <div className="leads-table-wrap">
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Phone</th>
-                    <th>Suburb</th>
-                    <th>Source</th>
-                    <th>Quality</th>
-                    <th>Delivery</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((lead) => (
-                    <tr key={lead.id}>
-                      <td>{lead.name}</td>
-                      <td>{lead.email || "-"}</td>
-                      <td>{lead.phone || "-"}</td>
-                      <td>{lead.suburb}</td>
-                      <td>{lead.source}</td>
-                      <td>
-                        <LeadQualitySelect
-                          leadId={lead.id}
-                          workspaceId={access.workspaceId}
-                          value={leadQualityValue(lead.quality)}
-                          disabled={!canEditLeadQuality}
-                        />
-                      </td>
-                      <td>{lead.delivery}</td>
-                      <td>
-                        <StatusPill tone={lead.duplicateCandidate ? "amber" : "green"}>
-                          {lead.duplicateCandidate ? "Possible duplicate" : "New"}
-                        </StatusPill>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="leads-mobile-list" aria-label="Leads">
-              {rows.map((lead) => (
-                <article className="lead-mobile-card" key={lead.id}>
-                  <div className="lead-card-title">
-                    <div>
-                      <span className="lead-card-label">Name</span>
-                      <strong>{lead.name}</strong>
+      {rows.length === 0 ? (
+        <div className="flex flex-col items-center justify-center gap-3 rounded-(--r-card) border border-dashed px-6 py-16 text-center">
+          <p className="text-sm font-medium text-muted-foreground">No leads yet.</p>
+          <Button asChild>
+            <Link href="/ad-studio">Create an ad</Link>
+          </Button>
+        </div>
+      ) : (
+        <>
+          <Card className="hidden gap-0 py-0 md:block">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Phone</TableHead>
+                  <TableHead>Suburb</TableHead>
+                  <TableHead>Source</TableHead>
+                  <TableHead>Quality</TableHead>
+                  <TableHead>Delivery</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {rows.map((lead) => (
+                  <TableRow key={lead.id}>
+                    <TableCell className="font-medium">{lead.name}</TableCell>
+                    <TableCell>{lead.email || "-"}</TableCell>
+                    <TableCell>{lead.phone || "-"}</TableCell>
+                    <TableCell>{lead.suburb}</TableCell>
+                    <TableCell>{lead.source}</TableCell>
+                    <TableCell>
+                      <LeadQualitySelect
+                        leadId={lead.id}
+                        workspaceId={access.workspaceId}
+                        value={leadQualityValue(lead.quality)}
+                        disabled={!canEditLeadQuality}
+                      />
+                    </TableCell>
+                    <TableCell>{lead.delivery}</TableCell>
+                    <TableCell>
+                      <LeadStatusBadge duplicate={Boolean(lead.duplicateCandidate)} />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Card>
+
+          <div className="flex flex-col gap-3 md:hidden" aria-label="Leads">
+            {rows.map((lead) => (
+              <Card key={lead.id} className="gap-0 py-4">
+                <CardContent className="flex flex-col gap-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold">{lead.name}</p>
+                      <p className="text-xs text-muted-foreground">{lead.suburb}</p>
                     </div>
-                    <StatusPill tone={lead.duplicateCandidate ? "amber" : "green"}>
-                      {lead.duplicateCandidate ? "Possible duplicate" : "New"}
-                    </StatusPill>
+                    <LeadStatusBadge duplicate={Boolean(lead.duplicateCandidate)} />
                   </div>
-                  <dl className="lead-card-fields">
-                    <div>
-                      <dt>Email</dt>
-                      <dd>{lead.email || "-"}</dd>
+                  <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                    <div className="min-w-0">
+                      <dt className="text-xs text-muted-foreground">Email</dt>
+                      <dd className="truncate">{lead.email || "-"}</dd>
                     </div>
-                    <div>
-                      <dt>Phone</dt>
-                      <dd>{lead.phone || "-"}</dd>
+                    <div className="min-w-0">
+                      <dt className="text-xs text-muted-foreground">Phone</dt>
+                      <dd className="truncate">{lead.phone || "-"}</dd>
                     </div>
-                    <div>
-                      <dt>Suburb</dt>
-                      <dd>{lead.suburb}</dd>
+                    <div className="min-w-0">
+                      <dt className="text-xs text-muted-foreground">Source</dt>
+                      <dd className="truncate">{lead.source}</dd>
                     </div>
-                    <div>
-                      <dt>Source</dt>
-                      <dd>{lead.source}</dd>
-                    </div>
-                    <div>
-                      <dt>Quality</dt>
-                      <dd>
-                        <LeadQualitySelect
-                          leadId={lead.id}
-                          workspaceId={access.workspaceId}
-                          value={leadQualityValue(lead.quality)}
-                          disabled={!canEditLeadQuality}
-                        />
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>Delivery</dt>
-                      <dd>{lead.delivery}</dd>
-                    </div>
-                    <div>
-                      <dt>Status</dt>
-                      <dd>{lead.duplicateCandidate ? "Possible duplicate" : "New"}</dd>
+                    <div className="min-w-0">
+                      <dt className="text-xs text-muted-foreground">Delivery</dt>
+                      <dd className="truncate">{lead.delivery}</dd>
                     </div>
                   </dl>
-                </article>
-              ))}
-            </div>
-          </>
-        )}
-      </section>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Quality</span>
+                    <LeadQualitySelect
+                      leadId={lead.id}
+                      workspaceId={access.workspaceId}
+                      value={leadQualityValue(lead.quality)}
+                      disabled={!canEditLeadQuality}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </>
+      )}
     </main>
+  );
+}
+
+function MetricStat({
+  icon: Icon,
+  label,
+  value,
+  note,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: string;
+  note?: string;
+}) {
+  return (
+    <Card className="py-4">
+      <CardContent className="flex flex-col gap-1">
+        <div className="flex items-center justify-between text-muted-foreground">
+          <span className="text-sm font-medium">{label}</span>
+          <Icon aria-hidden className="size-4" />
+        </div>
+        <p className="text-2xl font-bold">{value}</p>
+        {note ? <p className="text-xs text-muted-foreground">{note}</p> : null}
+      </CardContent>
+    </Card>
+  );
+}
+
+function LeadStatusBadge({ duplicate }: { duplicate: boolean }) {
+  return duplicate ? (
+    <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-800">
+      Possible duplicate
+    </Badge>
+  ) : (
+    <Badge variant="outline" className="border-emerald-300 bg-emerald-50 text-emerald-800">
+      New
+    </Badge>
   );
 }
 

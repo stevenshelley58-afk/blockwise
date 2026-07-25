@@ -105,9 +105,10 @@ test("Ad Studio UI presents the constrained campaign workspace", () => {
   assert.match(adstudio, /Create from the selected template/);
   assert.match(adstudio, /Campaign readiness/);
   assert.match(adstudio, /Export creatives/);
-  assert.match(adstudio, /const NAV_ITEMS:[\s\S]*id: "home"[\s\S]*id: "samples"[\s\S]*id: "media"[\s\S]*id: "text"[\s\S]*id: "publish"[\s\S]*id: "brand"[\s\S]*id: "settings"/);
+  assert.match(adstudio, /const NAV_ITEMS:[\s\S]*id: "home"[\s\S]*id: "samples"[\s\S]*id: "library"[\s\S]*id: "text"[\s\S]*id: "publish"[\s\S]*id: "brand"[\s\S]*id: "settings"/);
+  const navItems = adstudio.match(/const NAV_ITEMS:[\s\S]*?\];/)?.[0] ?? "";
   const mobileNav = adstudio.match(/const MOBILE_NAV:[\s\S]*?\];/)?.[0] ?? "";
-  assert.match(mobileNav, /id: "home"[\s\S]*id: "samples"[\s\S]*id: "media"[\s\S]*id: "text"[\s\S]*id: "publish"/);
+  assert.match(mobileNav, /id: "home"[\s\S]*id: "samples"[\s\S]*id: "library"[\s\S]*id: "text"[\s\S]*id: "publish"/);
   assert.doesNotMatch(mobileNav, /id: "brand"|id: "settings"/);
   assert.match(mobileNav, /label: "Create"/);
   assert.match(mobileNav, /label: "Review"/);
@@ -116,11 +117,11 @@ test("Ad Studio UI presents the constrained campaign workspace", () => {
   assert.doesNotMatch(adstudio, /const ADVANCED_NAV_ITEMS/);
   assert.doesNotMatch(adstudio, /label: "Ad"/);
   assert.match(adstudio, /label: "Brand Pack"/);
-  assert.doesNotMatch(adstudio, /label: "Brand"[,}]/);
-  assert.doesNotMatch(adstudio, /label: "Design"/);
+  assert.doesNotMatch(navItems, /label: "Brand"[,}]/);
+  assert.doesNotMatch(navItems, /label: "Design"/);
   assert.match(adstudio, /studio-home-shell/);
-  assert.match(adstudio, /studio-mobile-home-focus/);
-  assert.match(adstudio, /View all steps/);
+  assert.match(adstudio, /aria-label="Ad progress"/);
+  assert.match(adstudio, /Create an ad/);
   assert.match(adstudio, /samplePickerOpen/);
   assert.match(adstudio, /<NewAdDialog/);
   assert.match(adstudio, /showBrandSetupPrompt/);

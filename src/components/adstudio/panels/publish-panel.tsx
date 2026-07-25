@@ -315,7 +315,7 @@ export function PublishSetupPanel({
         if (fetchFailures >= 4) {
           stopPolling();
           setPublishDone(false);
-          setPublishError("We couldn't confirm the publish status. Check Results in a few minutes, or try again.");
+          setPublishError("We couldn't confirm the publish status. Check Performance in a few minutes, or try again.");
           setPublishPhase("failed");
         }
         return;
@@ -342,7 +342,7 @@ export function PublishSetupPanel({
         if (ticks > 60) {
           stopPolling();
           setPublishDone(false);
-          setPublishError("This is taking longer than expected. Check Results in a few minutes — your ad may still finish publishing.");
+          setPublishError("This is taking longer than expected. Check Performance in a few minutes — your ad may still finish publishing.");
           setPublishPhase("failed");
         }
       } else if (plan.status === "draft") {
@@ -505,7 +505,7 @@ export function PublishSetupPanel({
           // ~5 min soft cap. The plan is still queued/running — stop the spinner
           // and point the user to Results rather than spinning indefinitely.
           setPublishPhase("live");
-          setPublishMessage("Still processing on Meta — confirm in Results shortly.");
+          setPublishMessage("Still processing on Meta — confirm in Performance shortly.");
         }
       } catch {
         // Transient fetch error — keep polling.
@@ -1135,7 +1135,7 @@ export function PublishSetupPanel({
                   <span><Check aria-hidden size={24} /></span>
                   <strong>Ad submitted</strong>
                   {publishedVariantCount && <small>{publishedVariantCount} creatives published (paused)</small>}
-                  <Link href="/results" className="studio-btn publish studio-live-results-btn">View in Results <ChevronRight aria-hidden size={17} /></Link>
+                  <Link href="/results" className="studio-btn publish studio-live-results-btn">View in Performance <ChevronRight aria-hidden size={17} /></Link>
                 </div>
               )}
               {publishPhase === "failed" && !publishing && (

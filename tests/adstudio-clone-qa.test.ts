@@ -3,9 +3,8 @@ import test from "node:test";
 import { readFileSync } from "node:fs";
 
 import {
-  applyDeterministicTextEditQa,
   parseCloneRegions,
-} from "../src/lib/adstudio/clone-qa.ts";
+} from "../src/lib/adstudio/clone-regions.ts";
 import {
   compositeCloneRegionEdit,
   createCloneRegionEditMask,
@@ -251,31 +250,6 @@ test("post-clone text edits typeset exact copy only inside the selected region",
     }
   }
   assert.ok(lightPixels > 30, "the exact-copy finalizer paints readable high-contrast text in the region");
-});
-
-test("deterministic text edits update QA without another model review", () => {
-  const previous = {
-    passed: true,
-    attempts: 2,
-    checkedAt: "2026-07-14T00:00:00.000Z",
-    copyChecks: [
-      { key: "headline", expected: "JUST LISTED", rendered: "JUST LISTED", exact: true },
-      { key: "suburb", expected: "Spearwood", rendered: "Spearwood", exact: true },
-    ],
-    defects: [],
-    regions: [],
-    model: "vision-model",
-  };
-
-  const next = applyDeterministicTextEditQa(previous, "headline", "OPEN SATURDAY");
-
-  assert.equal(next.passed, true);
-  assert.equal(next.attempts, 1);
-  assert.equal(next.model, "deterministic-text-renderer");
-  assert.deepEqual(next.copyChecks, [
-    { key: "headline", expected: "OPEN SATURDAY", rendered: "OPEN SATURDAY", exact: true },
-    { key: "suburb", expected: "Spearwood", rendered: "Spearwood", exact: true },
-  ]);
 });
 
 const executeAttempt = (async (input: Parameters<typeof executeAdStudioProviderAttempt>[0]) => {
@@ -666,12 +640,13 @@ test("targeted edit endpoint model-edits selected regions and verifies advisoril
   assert.match(route, /buildTargetedEditRequest/);
   assert.doesNotMatch(route, /canRenderTextDirectly/);
   assert.doesNotMatch(route, /renderExactCloneTextEdit/);
-  assert.match(route, /resolveCloneProviders\(\)/);
+  assert.match(route, /resolveCloneProviders\("fast"\)/);
   assert.match(route, /maxDuration = 300/);
 
-  // Expected copy carries forward from the last verdict with the edited field
-  // overridden, so the advisory check also flags unrelated drift.
-  assert.match(route, /canvas\.cloneQa\?\.copyChecks/);
+  // Expected copy carries the current value of every text field (from the
+  // stored QA copy values) with the edited field overridden, so the model
+  // does not drift unedited text while repainting the selected region.
+  assert.match(route, /currentQa\?\.copyValues/);
   assert.match(route, /expectedCopy\[editFieldKey\] = newValue/);
   assert.match(route, /createCloneRegionEditMask/);
   // Crop-region edit: the model edits a padded window around the selected

@@ -5,6 +5,7 @@ import { ChevronRight } from "lucide-react";
 import { AccountMenu } from "@/components/account-menu";
 import { MobileBottomNav } from "@/components/app/mobile-bottom-nav";
 import { BlockwiseLogo } from "@/components/blockwise-logo";
+import { SelfServeShell } from "@/components/self-serve-shell";
 import { SidebarNav, type SidebarVariant } from "@/components/sidebar-nav";
 import { SidebarThemeToggle } from "@/components/sidebar-theme-toggle";
 import { TrialStatusPill, type TrialStatus } from "@/components/trial-status-pill";
@@ -160,6 +161,25 @@ export async function AppShell({ children, requiredAccess = "authenticated" }: A
   const accountName = profile?.full_name ?? user.email ?? "Signed in";
   const roleLabel = isOperator ? "operator" : primaryMembership?.role ?? "member";
   const initialTrialStatus = await loadInitialTrialStatus(supabase, workspace?.id, workspaceMode, isOperator);
+
+  // Self-serve workspaces render on the shadcn/ui shell; operator and monitor
+  // workspaces keep the existing CSS shell until their own migrations.
+  if (variant === "self_serve") {
+    return (
+      <SelfServeShell
+        workspaceName={workspaceName}
+        workspaceRegion={workspace?.region ?? "AU"}
+        account={{
+          email: user.email ?? "",
+          name: accountName,
+          role: roleLabel,
+        }}
+        initialTrialStatus={initialTrialStatus}
+      >
+        {children}
+      </SelfServeShell>
+    );
+  }
 
   return (
     <div className="app-shell">
