@@ -378,6 +378,7 @@ async function postChatCompletion(input: {
   includeModelInBody?: boolean;
 }): Promise<TextProviderResponse> {
   const includeModelInBody = input.includeModelInBody ?? true;
+  const reasoningEffort = minimalReasoningEffort(input.model);
   const response = await fetchProviderRequest(input.fetchImpl, input.url, {
     method: "POST",
     headers: {
@@ -394,7 +395,7 @@ async function postChatCompletion(input: {
       ...(supportsCustomTemperature(input.model) ? { temperature: 0.4 } : {}),
       // Reasoning models (gpt-5.x): use the cheapest thinking tier so the small
       // structured outputs return fast and cheap.
-      ...(wantsMinimalReasoning(input.model) ? { reasoning_effort: "minimal" } : {}),
+      ...(reasoningEffort ? { reasoning_effort: reasoningEffort } : {}),
       // Without an explicit cap the provider reserves credits for the model's
       // absolute max completion (65k+ tokens) — requests fail on low balances
       // and a bad loop can drain the account. Copy/QA outputs are small JSON;
@@ -546,9 +547,15 @@ function supportsCustomTemperature(model: string): boolean {
 
 // Reasoning models (gpt-5.x) think before answering; the copy/QA outputs are
 // small structured JSON, so asking for the cheapest reasoning tier keeps calls
-// fast and cheap without sacrificing quality.
-function wantsMinimalReasoning(model: string): boolean {
-  return /^gpt-5/i.test(model);
+// fast and cheap without sacrificing quality. The name of that tier changed
+// across the family: the original gpt-5 generation accepts "minimal", while
+// gpt-5.N point releases renamed it to "none" and reject "minimal" outright
+// ("Unsupported value: 'reasoning_effort' does not support 'minimal'…").
+// Returns null for non-reasoning models so no reasoning_effort is sent at all.
+export function minimalReasoningEffort(model: string): "minimal" | "none" | null {
+  const name = model.split("/").pop() ?? model;
+  if (!/^gpt-5/i.test(name)) return null;
+  return /^gpt-5\.\d/i.test(name) ? "none" : "minimal";
 }
 
 // Builds the chat payload. When an image is supplied, it is attached to the final
