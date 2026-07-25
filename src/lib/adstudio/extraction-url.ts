@@ -4,6 +4,11 @@ export type ExtractionUrlResult =
   | { ok: true; url: string; error?: never }
   | { ok: false; url?: never; error: string };
 
+/** True when the hostname ends with an Australian TLD (.com.au, .net.au, .org.au, .au). */
+export function isAustralianListingDomain(hostname: string): boolean {
+  return /\.(com\.au|net\.au|org\.au|au)$/i.test(hostname);
+}
+
 export function normalizeAndValidateExtractionUrl(value: string | null | undefined): ExtractionUrlResult {
   const raw = value?.trim();
   if (!raw) return { ok: false, error: "Website URL is required." };

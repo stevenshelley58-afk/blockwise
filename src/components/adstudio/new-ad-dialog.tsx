@@ -2,11 +2,13 @@
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import type { FocusEvent, RefObject } from "react";
-import { AlertTriangle, ArrowLeft, ArrowUpRight, Image as ImageIcon, X } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ArrowUpRight, Image as ImageIcon, Link, Loader2, X } from "lucide-react";
 
 import { AssetUploadDropzone } from "@/components/asset-upload-dropzone";
 import type { AdStudioBrandKit, AdStudioTemplate, FirstAdInput } from "@/lib/adstudio";
 import { resolveAdvertiserDomain } from "@/lib/adstudio/advertiser-domain";
+import type { ListingData } from "@/lib/adstudio/listing-extract";
+import { mapListingToOnImageCopy } from "@/lib/adstudio/listing-extract";
 import { templatePreviewDataUrl } from "@/lib/adstudio/template-preview.ts";
 import { AD_IMAGE_MAX_BYTES, AD_IMAGE_UPLOAD_TYPES } from "@/lib/upload/asset-file";
 
@@ -554,6 +556,11 @@ export function NewAdDialog({
   const latestMediaAssetsRef = useRef(mediaAssets);
   const [step, setStep] = useState<Step>("source");
   const [filter, setFilter] = useState<TemplateFilter>("all");
+  // Listing URL scrape state
+  const [listingUrl, setListingUrl] = useState("");
+  const [listingLoading, setListingLoading] = useState(false);
+  const [listingError, setListingError] = useState("");
+  const [listingData, setListingData] = useState<ListingData | null>(null);
   // Nothing can be created until the customer chooses the sample to clone.
   const [templateId, setTemplateId] = useState<string | undefined>(undefined);
   const [description, setDescription] = useState("");
@@ -690,6 +697,10 @@ export function NewAdDialog({
     setFilter("all");
     setDescription("");
     setGenerationQuality("fast");
+    setListingUrl("");
+    setListingLoading(false);
+    setListingError("");
+    setListingData(null);
     // The customer supplies every declared image and text field. The selected
     // sample is only the visual anchor sent to the image model.
     setImageDataUrlsBySlot({});
@@ -795,6 +806,81 @@ export function NewAdDialog({
     setActiveImageSlotId(DEFAULT_IMAGE_SLOT.id);
     setMediaSourceMode("details");
     setStep("brief");
+    // Auto-fill from listing data if available
+    if (listingData) {
+      applyListingData(listingData, template);
+    }
+  }
+
+  /** Fetch listing details from the VPS scraper via the Vercel proxy. */
+  async function fetchListingDetails() {
+    const trimmed = listingUrl.trim();
+    if (!trimmed) return;
+    setListingLoading(true);
+    setListingError("");
+    try {
+      const response = await fetch("/api/adstudio/listing-extract", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: trimmed }),
+      });
+      const result = (await response.json()) as {
+        ok: boolean;
+        listing?: ListingData;
+        brief?: string;
+        photos?: string[];
+        error?: string;
+        message?: string;
+      };
+      if (!response.ok || !result.ok || !result.listing) {
+        setListingError(result.message || "Could not fetch that listing. Try again or enter details manually.");
+        return;
+      }
+      setListingData(result.listing);
+      // Auto-select a listings template and advance
+      const listingTemplate = templates.find((t) => templateCategory(t.goal) === "listings") ?? templates[0];
+      if (listingTemplate) {
+        chooseTemplate(listingTemplate.id);
+        // Apply listing data to the chosen template
+        applyListingData(result.listing, listingTemplate, result.brief, result.photos);
+      }
+    } catch {
+      setListingError("Could not reach the listing service. Try again in a moment.");
+    } finally {
+      setListingLoading(false);
+    }
+  }
+
+  /** Apply extracted listing data to the dialog fields. */
+  function applyListingData(
+    data: ListingData,
+    template: AdStudioTemplate,
+    brief?: string,
+    photos?: string[],
+  ) {
+    // Fill description with the brief
+    if (brief) setDescription(brief);
+    // Fill on-image copy fields
+    const fields = customerCopyFieldsForTemplate(template);
+    const mapped = mapListingToOnImageCopy(data, fields);
+    setOnImageCopy((current) => ({ ...current, ...mapped }));
+    // Set primary photo
+    const photoUrls = photos ?? data.photos;
+    if (photoUrls.length > 0) {
+      const primarySlot = imageRequirementsForTemplate(template).find((s) => s.required) ?? DEFAULT_IMAGE_SLOT;
+      setSlotImage(primarySlot.id, photoUrls[0], `${data.address || "Listing"} photo`);
+      // Add remaining photos to the library
+      for (let i = 1; i < photoUrls.length; i++) {
+        rememberLibraryAsset({
+          src: photoUrls[i],
+          label: `${data.address || "Listing"} photo ${i + 1}`,
+          type: "Listing",
+          role: "property",
+        });
+      }
+    }
+    // Set filter to listings
+    setFilter("listings");
   }
 
   function goBack() {
@@ -1102,6 +1188,43 @@ export function NewAdDialog({
         <div className="studio-newad-body">
           {step === "source" && (
             <div className="studio-explore">
+              {/* Listing URL scrape bar */}
+              <div className="newad-url-bar">
+                <label className="newad-url-label" htmlFor="listing-url-input">
+                  <Link aria-hidden size={15} />
+                  <span>Have a listing? Paste the URL and we&apos;ll fill in the details.</span>
+                </label>
+                <div className="newad-url-row">
+                  <input
+                    id="listing-url-input"
+                    type="url"
+                    className="newad-url-input"
+                    placeholder="https://www.realestate.com.au/property-house-wa-..."
+                    value={listingUrl}
+                    onChange={(event) => { setListingUrl(event.target.value); setListingError(""); }}
+                    onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); void fetchListingDetails(); } }}
+                    disabled={listingLoading}
+                  />
+                  <button
+                    type="button"
+                    className="newad-url-btn"
+                    onClick={() => void fetchListingDetails()}
+                    disabled={listingLoading || !listingUrl.trim()}
+                  >
+                    {listingLoading ? <Loader2 aria-hidden size={15} className="newad-url-spin" /> : null}
+                    {listingLoading ? "Fetching..." : "Fetch details"}
+                  </button>
+                </div>
+                {listingError ? <p className="newad-url-error">{listingError}</p> : null}
+                {listingData ? (
+                  <span className="newad-url-chip">
+                    <span>{listingData.address || listingData.suburb}{listingData.bedrooms != null ? ` · ${listingData.bedrooms} bed` : ""}{listingData.price ? ` · ${listingData.price}` : ""}</span>
+                    <button type="button" aria-label="Clear listing data" onClick={() => { setListingData(null); setListingUrl(""); setListingError(""); }}>
+                      <X aria-hidden size={13} />
+                    </button>
+                  </span>
+                ) : null}
+              </div>
               <p className="studio-explore-intro">Choose a template. The next step asks only for the images and exact text it requires.</p>
               <div className="studio-explore-filterbar">
                 <label className="studio-explore-filter">
@@ -1788,5 +1911,24 @@ button.studio-explore-card{padding:0;cursor:pointer}
 .newad-peek-line span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .newad-peek-line .is-ghost{color:#94a3b8;font-style:italic}
 .newad-peek-line:hover{border-color:#b8bec9}
+
+/* Listing URL scrape bar */
+.newad-url-bar{display:grid;gap:8px;padding:12px 14px;border:1px solid #d4e0ed;border-radius:12px;background:linear-gradient(135deg,#f0f7ff 0%,#f8fbff 100%)}
+.newad-url-label{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:700;color:#1e3a5f}
+.newad-url-label svg{flex:0 0 auto;color:#3b82f6}
+.newad-url-row{display:flex;gap:8px}
+.newad-url-input{flex:1;min-width:0;padding:9px 12px;border:1px solid #c8d6e5;border-radius:8px;font:inherit;font-size:13px;color:var(--ink);background:#fff;transition:border-color .15s}
+.newad-url-input:focus{outline:none;border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.12)}
+.newad-url-input:disabled{opacity:.6;cursor:not-allowed}
+.newad-url-btn{flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border:0;border-radius:8px;background:#1d4ed8;color:#fff;font:inherit;font-size:13px;font-weight:700;cursor:pointer;transition:background .15s,opacity .15s}
+.newad-url-btn:hover:not(:disabled){background:#1e40af}
+.newad-url-btn:disabled{opacity:.5;cursor:not-allowed}
+.newad-url-spin{animation:newad-spin 1s linear infinite}
+@keyframes newad-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+.newad-url-error{margin:0;font-size:12.5px;color:#dc2626;font-weight:600;line-height:1.4}
+.newad-url-chip{display:inline-flex;align-items:center;gap:8px;padding:5px 10px;border-radius:999px;background:#dbeafe;color:#1e40af;font-size:12.5px;font-weight:650;max-width:100%}
+.newad-url-chip>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.newad-url-chip button{display:grid;place-items:center;border:0;background:none;padding:2px;cursor:pointer;color:#1e40af;border-radius:50%}
+.newad-url-chip button:hover{background:rgba(30,64,175,.12)}
 `;
 // NewAdDialog: choose one gallery sample, then provide its declared assets.

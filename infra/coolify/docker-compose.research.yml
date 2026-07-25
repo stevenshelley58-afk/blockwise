@@ -149,6 +149,35 @@ services:
       driver: json-file
       options: { max-size: "20m", max-file: "5" }
 
+  listing-scraper:
+    build:
+      context: ../..
+      dockerfile: infra/hermes/Dockerfile
+    image: "${BLOCKWISE_HERMES_IMAGE:-blockwise/hermes-research:2026-06-02}"
+    container_name: blockwise-listing-scraper
+    command: ["node", "/app/hermes/tools/listing-scraper/index.mjs"]
+    restart: unless-stopped
+    depends_on:
+      - steel
+      - obscura
+    expose: ["8650"]
+    environment:
+      API_KEY: ${HERMES_API_SERVER_KEY}
+      OBSCURA_CDP_URL: http://blockwise-obscura:9222
+      STEEL_CDP_URL: http://blockwise-steel:9223
+      RESIDENTIAL_PROXY_URL: ${RESIDENTIAL_PROXY_URL:-}
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      PORT: "8650"
+    networks: [research]
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
   uptime-kuma:
     image: "${UPTIME_KUMA_IMAGE:-louislam/uptime-kuma:1.23.16}"
     container_name: blockwise-uptime-kuma

@@ -1,0 +1,14 @@
+{
+  "name": "@blockwise/listing-scraper",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "index.mjs",
+  "scripts": {
+    "start": "node index.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0",
+    "playwright-core": "^1.45.3"
+  }
+}
