@@ -13,6 +13,7 @@ export async function queueMetaPublishPlanExecution(plan: MetaPublishPlan) {
       workspaceId: plan.workspaceId,
       planId: plan.planId,
       idempotencyKey: plan.idempotencyKey,
+      attemptKey: plan.updatedAt,
     }),
   );
 }
