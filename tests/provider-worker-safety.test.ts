@@ -9,8 +9,11 @@ test("double-publish reuses an active plan and avoids duplicate queue dispatch",
   const source = readFileSync(publishRoute, "utf8");
 
   assert.match(source, /loadMetaPublishPlanByIdempotencyKey/);
-  assert.match(source, /isActivePublishPlanStatus\(existingPlan\.status\)/);
-  assert.match(source, /return \{ plan: existingPlan, reusedActivePlan: true \}/);
+  // In-flight and completed plans are reused as-is. "approved" is deliberately
+  // NOT reused: a plan can be stranded there when queueing fails, and reusing
+  // it would skip the requeue forever.
+  assert.match(source, /existingPlan\.status === "publishing" \|\| existingPlan\.status === "paused_live"/);
+  assert.match(source, /return \{ plan: existingPlan, approval, reusedActivePlan: true \}/);
   assert.match(source, /!metaPublishPlanResult\?\.reusedActivePlan/);
   assert.match(source, /requestLog: existingPlan\.requestLog/);
   assert.match(source, /responseLog: existingPlan\.responseLog/);
