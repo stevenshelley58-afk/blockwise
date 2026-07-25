@@ -225,14 +225,21 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
   const editFieldKey = fieldKey!;
 
   const currentImageRef = cloneObject.content || cloneObject.assetId || "";
-  const currentImage = await resolveAdStudioImageForModel(context.supabase, context.access.workspaceId, currentImageRef);
+
+  // Parallelize the three independent async setup steps that used to run
+  // serially: fetch the current image, fetch the replacement image (if any),
+  // and resolve the provider cascade. This saves ~1-3s per edit.
+  const [currentImage, newImage, providers] = await Promise.all([
+    resolveAdStudioImageForModel(context.supabase, context.access.workspaceId, currentImageRef),
+    newImageRef
+      ? resolveAdStudioImageForModel(context.supabase, context.access.workspaceId, newImageRef)
+      : Promise.resolve(undefined),
+    resolveCloneProviders(),
+  ]);
   if (!currentImage) {
     await releaseClaim();
     return NextResponse.json({ error: "The current creative image could not be read." }, { status: 400 });
   }
-  const newImage = newImageRef
-    ? await resolveAdStudioImageForModel(context.supabase, context.access.workspaceId, newImageRef)
-    : undefined;
   if (newImageRef && !newImage) {
     await releaseClaim();
     return NextResponse.json({ error: "The replacement image could not be read." }, { status: 400 });
@@ -293,13 +300,14 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
     // fallback blurred the selected rectangle and painted generic Arial over
     // the ad, permanently destroying the source design. The model retains the
     // original type treatment, while compositing preserves the rest.
-    const providers = (await resolveCloneProviders()).sort(
+    // Providers were resolved in parallel above to save serial latency.
+    const sortedProviders = providers.sort(
       (left, right) => Number(Boolean(right.capabilities.inpainting)) - Number(Boolean(left.capabilities.inpainting)),
     );
 
     try {
       const generated = await generateCloneWithCascade({
-        providers,
+        providers: sortedProviders,
         request: { ...baseRequest, seed: 1 },
         workspaceId: context.access.workspaceId,
         userId: context.access.userId,
@@ -388,9 +396,18 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
     throw new Error("Creative revision append failed without a recognized reason.");
   }
 
+  // The edit route returns a data: URL preview alongside the canonical storage
+  // path so the client can paint pixels immediately without a second round
+  // trip through the auth-gated media proxy. The storage path remains the
+  // source of truth for reload/export; the data URL is purely a display hint.
+  const previewDataUrl = lastImage.assetUrl.startsWith("data:image/")
+    ? lastImage.assetUrl
+    : undefined;
+
   return NextResponse.json({
     creativeId: id,
     image,
+    previewDataUrl,
     qa,
     renderHistory,
     renderQaHistory,

@@ -65,7 +65,7 @@ export async function cropRegionWithPadding(
   if (!box || box.width <= 0 || box.height <= 0) {
     // No region: the "crop" is the whole image, so the edit degrades to the
     // legacy full-image behaviour rather than failing.
-    const png = await sharp(bytes).png().toBuffer();
+    const png = await sharp(bytes).png({ compressionLevel: 1 }).toBuffer();
     return {
       croppedDataUrl: `data:image/png;base64,${png.toString("base64")}`,
       cropRect: { left: 0, top: 0, width: imageWidth, height: imageHeight },
@@ -93,7 +93,7 @@ export async function cropRegionWithPadding(
 
   const cropped = await sharp(bytes)
     .extract({ left, top, width, height })
-    .png()
+    .png({ compressionLevel: 1 })
     .toBuffer();
   return {
     croppedDataUrl: `data:image/png;base64,${cropped.toString("base64")}`,
@@ -157,14 +157,14 @@ export async function compositeRegionBack(
   // crop-local pixel math lines up regardless of what size the model returned.
   const normalizedCrop = await sharp(editedBytes)
     .resize(cropRect.width, cropRect.height, { fit: "fill" })
-    .png()
+    .png({ compressionLevel: 1 })
     .toBuffer();
 
   if (!box || box.width <= 0 || box.height <= 0) {
     // No region: the crop was the whole image, so the edited crop IS the result.
     const full = await sharp(normalizedCrop)
       .resize(imageWidth, imageHeight, { fit: "fill" })
-      .png()
+      .png({ compressionLevel: 1 })
       .toBuffer();
     return `data:image/png;base64,${full.toString("base64")}`;
   }
@@ -188,12 +188,12 @@ export async function compositeRegionBack(
 
   const editedRegion = await sharp(normalizedCrop)
     .extract({ left: cropLocalLeft, top: cropLocalTop, width: regionWidth, height: regionHeight })
-    .png()
+    .png({ compressionLevel: 1 })
     .toBuffer();
 
   const composited = await sharp(originalBytes)
     .composite([{ input: editedRegion, left: fullLeft, top: fullTop }])
-    .png()
+    .png({ compressionLevel: 1 })
     .toBuffer();
   return `data:image/png;base64,${composited.toString("base64")}`;
 }

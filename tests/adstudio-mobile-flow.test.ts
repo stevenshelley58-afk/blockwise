@@ -50,7 +50,7 @@ test("media library stages a replacement and confirms before generating a new ad
   assert.match(workbench, /requestCreativeEdit\(\{/);
   assert.match(workbench, /newImage: pendingMediaReplacement\.src/);
   assert.match(editClient, /expectedRevisionId: creative\.activeRevisionId/);
-  assert.match(editClient, /objects: \[\{ \.\.\.cloneObject, content: data\.image, assetId: data\.image \}\]/);
+  assert.match(editClient, /objects: \[\{ \.\.\.cloneObject, content: data\.previewDataUrl \?\? data\.image, assetId: data\.image \}\]/);
 });
 
 test("media library separates uploaded assets from generated ads", () => {

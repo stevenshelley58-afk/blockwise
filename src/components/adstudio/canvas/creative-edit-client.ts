@@ -2,6 +2,10 @@ import type { AdStudioCreative } from "@/lib/adstudio/types.ts";
 
 type CreativeEditResponse = {
   image?: string;
+  /** Data: URL preview for instant display — avoids a second round trip
+   * through the auth-gated media proxy. The canonical `image` path is still
+   * used for persistence/reload. */
+  previewDataUrl?: string;
   qa?: AdStudioCreative["canvas"]["cloneQa"];
   renderHistory?: string[];
   renderQaHistory?: NonNullable<AdStudioCreative["canvas"]["cloneQa"]>[];
@@ -47,7 +51,11 @@ export async function requestCreativeEdit(input: {
     activeRevisionId: data.revisionId,
     canvas: {
       ...creative.canvas,
-      objects: [{ ...cloneObject, content: data.image, assetId: data.image }],
+      // Use the data: URL for immediate pixel display; the canonical storage
+      // path is still set as content/assetId for reload/export/persistence.
+      // The browser paints the data URL instantly without a second fetch
+      // through the /api/adstudio/media auth proxy.
+      objects: [{ ...cloneObject, content: data.previewDataUrl ?? data.image, assetId: data.image }],
       cloneQa: data.qa ?? creative.canvas.cloneQa,
       renderHistory: data.renderHistory ?? creative.canvas.renderHistory,
       renderQaHistory: data.renderQaHistory ?? creative.canvas.renderQaHistory,

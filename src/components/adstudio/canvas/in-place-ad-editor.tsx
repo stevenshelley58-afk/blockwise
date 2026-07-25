@@ -78,6 +78,11 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast }: InPla
   const [instruction, setInstruction] = useState("");
   const [pendingKey, setPendingKey] = useState<string | null>(null);
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
+  /** When a text edit is in flight, the new text is rendered immediately as a
+   * CSS overlay positioned over the region, so the user sees their edit
+   * instantly instead of waiting 10-30s for the image model. The overlay is
+   * replaced by the model's actual typeset version when the edit completes. */
+  const [pendingTextPreview, setPendingTextPreview] = useState<{ key: string; value: string } | null>(null);
   const [stillWorking, setStillWorking] = useState(false);
   const [comparePrevious, setComparePrevious] = useState(false);
   const [zoom, setZoom] = useState<number>(1);
@@ -194,6 +199,11 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast }: InPla
     retryMutationRef.current = { signature, mutationId };
     setPendingKey(mutation.fieldKey ?? mutation.action ?? "edit");
     setPendingLabel(progressLabel ?? null);
+    // For text edits, render the new value as an instant CSS overlay so the
+    // user sees their change immediately. The model pass replaces it.
+    if (mutation.action === "edit" && mutation.fieldKey && mutation.newValue) {
+      setPendingTextPreview({ key: mutation.fieldKey, value: mutation.newValue });
+    }
     try {
       const next = await requestCreativeEdit({ creative, mutation, mutationId });
       onCreativeChange(next);
@@ -205,6 +215,7 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast }: InPla
     } finally {
       setPendingKey(null);
       setPendingLabel(null);
+      setPendingTextPreview(null);
     }
   }, [cloneObject, creative, onCreativeChange, showToast]);
 
@@ -460,9 +471,22 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast }: InPla
                   </span>
                 ) : null}
               </button>
-            );
-          })}
-        </div>
+                );
+              })}
+              {pendingTextPreview ? (() => {
+                const region = regions.find((r) => r.key === pendingTextPreview.key);
+                if (!region) return null;
+                return (
+                  <div
+                    className="studio-inplace-text-preview"
+                    style={regionStyle(region)}
+                    aria-hidden
+                  >
+                    <span>{pendingTextPreview.value}</span>
+                  </div>
+                );
+              })() : null}
+              </div>
       </div>
 
       <div className="studio-inplace-toolbar" aria-label="Edit history">

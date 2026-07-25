@@ -141,7 +141,7 @@ export async function createCloneRegionEditMask(
       + '<rect width="100%" height="100%" fill="white" mask="url(#edit-region)"/>'
       + "</svg>",
   );
-  const png = await sharp(svg).ensureAlpha().png().toBuffer();
+  const png = await sharp(svg).ensureAlpha().png({ compressionLevel: 1 }).toBuffer();
   return `data:image/png;base64,${png.toString("base64")}`;
 }
 
@@ -183,11 +183,11 @@ export async function compositeCloneRegionEdit(
   const editedRegion = await sharp(editedBytes)
     .resize(metadata.width, metadata.height, { fit: "fill" })
     .extract({ left, top, width, height })
-    .png()
+    .png({ compressionLevel: 1 })
     .toBuffer();
   const composited = await sharp(originalBytes)
     .composite([{ input: editedRegion, left, top }])
-    .png()
+    .png({ compressionLevel: 1 })
     .toBuffer();
   return `data:image/png;base64,${composited.toString("base64")}`;
 }
@@ -247,7 +247,7 @@ export async function renderExactCloneTextEdit(
   const bottom = Math.min(metadata.height, Math.ceil((box.y + box.height) * metadata.height));
   const width = Math.max(1, right - left);
   const height = Math.max(1, bottom - top);
-  const region = await sharp(bytes).extract({ left, top, width, height }).ensureAlpha().png().toBuffer();
+  const region = await sharp(bytes).extract({ left, top, width, height }).ensureAlpha().png({ compressionLevel: 1 }).toBuffer();
   const stats = await sharp(region).stats();
   const red = Math.round(stats.channels[0]?.mean ?? 127);
   const green = Math.round(stats.channels[1]?.mean ?? 127);
@@ -288,11 +288,11 @@ export async function renderExactCloneTextEdit(
   const softened = await sharp(region)
     .blur(Math.max(2, Math.min(12, Math.floor(Math.min(width, height) / 18))))
     .composite([{ input: svg }])
-    .png()
+    .png({ compressionLevel: 1 })
     .toBuffer();
   const output = await sharp(bytes)
     .composite([{ input: softened, left, top }])
-    .png()
+    .png({ compressionLevel: 1 })
     .toBuffer();
   return `data:image/png;base64,${output.toString("base64")}`;
 }
@@ -433,7 +433,7 @@ export async function persistCloneRender(input: {
     if (!response.ok) throw new Error("Generated image could not be stored.");
     const source = new Uint8Array(await response.arrayBuffer());
     const { default: sharp } = await import("sharp");
-    const png = await sharp(source).png().toBuffer();
+    const png = await sharp(source).png({ compressionLevel: 1 }).toBuffer();
     decoded = {
       bytes: new Uint8Array(png),
       contentType: "image/png",
