@@ -26,12 +26,12 @@ export function evaluatePublishReadiness(input: PublishReadinessInput): PublishR
     blockers.push("Human approval is required before publishing.");
   }
 
+  // "needs_review" no longer blocks: the human compliance review step was
+  // removed from the product (Meta runs its own ad review), and every pack
+  // defaults to "needs_review", so blocking on it froze all publishes.
+  // Hard "blocked" findings still stop the publish.
   if (input.complianceStatus === "blocked") {
     blockers.push("Compliance review has unresolved high-risk findings.");
-  }
-
-  if (input.complianceStatus === "needs_review") {
-    blockers.push("Compliance review still needs human review.");
   }
 
   if (!input.hasDraftPayload) {
