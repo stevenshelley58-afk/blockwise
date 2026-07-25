@@ -42,6 +42,20 @@ const PHOTO_MAX_BYTES = 5 * 1024 * 1024; // 5 MB
 const MAX_PHOTOS = 5;
 const MAX_RETRIES = 2;
 
+/** Parse a proxy URL with embedded credentials into Playwright's proxy format. */
+function parseProxyConfig(proxyUrl) {
+  if (!proxyUrl) return undefined;
+  try {
+    const parsed = new URL(proxyUrl);
+    const config = { server: `${parsed.protocol}//${parsed.hostname}:${parsed.port}` };
+    if (parsed.username) config.username = decodeURIComponent(parsed.username);
+    if (parsed.password) config.password = decodeURIComponent(parsed.password);
+    return config;
+  } catch {
+    return { server: proxyUrl };
+  }
+}
+
 const BROWSER_HEADERS = {
   "User-Agent":
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
