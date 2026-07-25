@@ -19,6 +19,7 @@ on:
       - "trigger/**"
       - "trigger.config.ts"
       - ".github/workflows/trigger-deploy.yml"
+      - ".github/actions/sync-trigger-key-to-vercel/**"
   workflow_dispatch:
 
 concurrency:
