@@ -30,7 +30,6 @@ type ReadinessEntry = {
   met: boolean;
   automatic?: boolean;
   blocked?: boolean;
-  review?: boolean;
 };
 
 type MetaCampaign = {
@@ -59,7 +58,6 @@ type PublishResponse = {
   blockers?: string[];
   providerWritesEnabled?: boolean;
   triggerRunId?: string | null;
-  status?: string;
   metaPublishPlan?: {
     id?: string;
     status?: string;
@@ -165,7 +163,7 @@ export function PublishSetupPanel({
   const [publishError, setPublishError] = useState("");
   const [publishDone, setPublishDone] = useState(false);
   const [publishMessage, setPublishMessage] = useState("Published");
-  const [publishPhase, setPublishPhase] = useState<"idle" | "submitting" | "creating" | "live" | "failed">("idle");
+  const [publishPhase, setPublishPhase] = useState<"idle" | "creating" | "live" | "failed">("idle");
   const [publishPlanId, setPublishPlanId] = useState<string | null>(null);
   const [deselectedVariantIds, setDeselectedVariantIds] = useState<ReadonlySet<string>>(new Set());
   const [publishedVariantCount, setPublishedVariantCount] = useState<number | null>(null);
@@ -288,7 +286,6 @@ export function PublishSetupPanel({
           met: item.met ?? Boolean(item.done),
           automatic: item.automatic,
           blocked: item.blocked,
-          review: item.review,
         })));
       })
       .catch(() => setReadiness([]));
@@ -299,37 +296,68 @@ export function PublishSetupPanel({
 
     const planId = publishPlanId;
     let cancelled = false;
-    let draftTicks = 0;
+    let ticks = 0;
+    let fetchFailures = 0;
+    let interval = 0;
+
+    function stopPolling() {
+      window.clearInterval(interval);
+    }
+
     async function pollPlan() {
-      const response = await fetch(`/api/integrations/meta/publish-plans/${encodeURIComponent(planId)}`);
+      ticks += 1;
+      const response = await fetch(`/api/integrations/meta/publish-plans/${encodeURIComponent(planId)}`).catch(() => null);
+      if (cancelled) return;
+
+      if (!response?.ok) {
+        fetchFailures += 1;
+        // Don't spin forever when the status check itself keeps failing.
+        if (fetchFailures >= 4) {
+          stopPolling();
+          setPublishDone(false);
+          setPublishError("We couldn't confirm the publish status. Check Results in a few minutes, or try again.");
+          setPublishPhase("failed");
+        }
+        return;
+      }
+      fetchFailures = 0;
       const plan = (await response.json().catch(() => ({}))) as PublishPlanStatus;
-      if (cancelled || !response.ok) return;
+      if (cancelled) return;
 
       if (plan.status === "failed") {
+        stopPolling();
         setPublishDone(false);
         setPublishError(plan.lastError ?? "Meta publish failed.");
         setPublishPhase("failed");
       } else if (plan.status === "paused_live") {
+        stopPolling();
         setPublishMessage("Ad submitted");
         setPublishPhase("live");
       } else if (plan.status === "publishing" || plan.status === "approved") {
         const ads = plan.reconciledObjects?.ads ?? 0;
         setPublishMessage(ads > 0 ? `Creating ${ads} paused ad${ads === 1 ? "" : "s"} on Meta` : "Creating your paused ads on Meta");
         setPublishPhase("creating");
-      } else if (plan.status === "draft") {
-        draftTicks += 1;
-        // If the plan stays in "draft" for >30s, the Trigger.dev job never picked it up
-        // (provider writes disabled, queue failure, etc.) — surface a clear error.
-        if (draftTicks > 6) {
+        // A publish normally completes well inside 5 minutes. Past that,
+        // stop the spinner and be honest instead of spinning forever.
+        if (ticks > 60) {
+          stopPolling();
           setPublishDone(false);
-          setPublishError("Live publishing is not enabled yet — export your creatives to launch manually.");
+          setPublishError("This is taking longer than expected. Check Results in a few minutes — your ad may still finish publishing.");
+          setPublishPhase("failed");
+        }
+      } else if (plan.status === "draft") {
+        // The plan was never queued (blockers or a queue failure) — surface it.
+        if (ticks > 6) {
+          stopPolling();
+          setPublishDone(false);
+          setPublishError("The publish did not start. Go back to Review and try again.");
           setPublishPhase("failed");
         }
       }
     }
 
     void pollPlan();
-    const interval = window.setInterval(() => void pollPlan(), 5000);
+    interval = window.setInterval(() => void pollPlan(), 5000);
     return () => {
       cancelled = true;
       window.clearInterval(interval);
@@ -342,9 +370,6 @@ export function PublishSetupPanel({
   const checklist = [...(brandItem ? [brandItem] : []), ...(readiness ?? [])];
   const blockingItems = checklist.filter((item) => !item.met);
   const allMet = readiness !== null && blockingItems.length === 0;
-  const onlyBlockedProviderWrite = blockingItems.length === 1
-    && blockingItems[0]?.id === "provider_writes"
-    && blockingItems[0]?.blocked;
   const variants = campaignPack.variants;
   const selectedVariantIds = variants.map((variant) => variant.variantId).filter((id) => !deselectedVariantIds.has(id));
   const fullSelection = selectedVariantIds.length === variants.length;
@@ -479,27 +504,24 @@ export function PublishSetupPanel({
 
       if (body.providerWritesEnabled === false) throw new Error("Live publishing is not enabled yet — export your creatives to launch manually.");
 
-      if (body.metaPublishPlan?.approvalRequestId && !body.triggerRunId) {
-        setPublishMessage("Submitting to Meta");
-        setPublishPlanId(body.metaPublishPlan.id ?? null);
-        setPublishDone(true);
-        setPublishPhase("submitting");
-        return;
-      }
-
-      const queued = Boolean(body.triggerRunId) || body.metaPublishPlan?.status === "paused_live";
+      const planStatus = body.metaPublishPlan?.status;
+      const queued = Boolean(body.triggerRunId) || planStatus === "paused_live" || planStatus === "publishing";
       if (!queued) {
-        if (body.blockers?.length) throw new Error("Resolve the readiness items before publishing.");
+        // The server declined to queue the publish — show the real blockers
+        // instead of pretending the submission is in progress.
+        if (body.blockers?.length) throw new Error(body.blockers.join(" "));
         throw new Error("Meta did not confirm the publish request.");
       }
 
       if (!fullSelection) setPublishedVariantCount(body.metaPublishPlan?.variantIds?.length ?? selectedVariantIds.length);
       setPublishPlanId(body.metaPublishPlan?.id ?? null);
-      setPublishMessage(body.metaPublishPlan?.status === "paused_live" ? "Ad submitted" : "Creating your paused ads on Meta");
+      setPublishMessage(planStatus === "paused_live" ? "Ad submitted" : "Creating your paused ads on Meta");
       setPublishDone(true);
-      setPublishPhase(body.metaPublishPlan?.status === "paused_live" ? "live" : "creating");
+      setPublishPhase(planStatus === "paused_live" ? "live" : "creating");
     } catch (error) {
       setPublishError(error instanceof Error ? error.message : "Publish failed.");
+      setPublishDone(false);
+      setPublishPhase("failed");
     } finally {
       setPublishing(false);
     }
@@ -1041,20 +1063,19 @@ export function PublishSetupPanel({
                 </div>
               )}
               {publishError && stepIndex === 4 && <p className="studio-publish-error">{publishError}</p>}
-              {onlyBlockedProviderWrite && <button className="studio-btn secondary" type="button" onClick={onExport}>Export creatives</button>}
             </section>
           )}
 
           {stepIndex === 5 && (
             <section className="studio-publish-screen studio-live-screen" aria-labelledby="live-title">
               <h1 id="live-title">Live</h1>
-              {publishPhase === "idle" && !publishDone && (
+              {publishPhase === "idle" && !publishDone && !publishing && (
                 <div className="studio-live-status blocked">
                   <CircleAlert aria-hidden size={20} />
                   <span><strong>Not submitted yet</strong><small>Go back to Review and submit your ad to Meta.</small></span>
                 </div>
               )}
-              {(publishPhase === "submitting" || publishing) && (
+              {publishing && (
                 <div className="studio-live-progress">
                   <span className="studio-live-spinner"><RefreshCw aria-hidden size={24} /></span>
                   <strong>Submitting to Meta...</strong>
@@ -1076,13 +1097,13 @@ export function PublishSetupPanel({
                   <Link href="/results" className="studio-btn publish studio-live-results-btn">View in Results <ChevronRight aria-hidden size={17} /></Link>
                 </div>
               )}
-              {publishPhase === "failed" && (
+              {publishPhase === "failed" && !publishing && (
                 <>
                   <div className="studio-live-status blocked">
                     <CircleAlert aria-hidden size={20} />
                     <span><strong>Publish failed</strong><small>{publishError || "Something went wrong submitting to Meta."}</small></span>
                   </div>
-                  <button className="studio-btn publish studio-publish-retry" type="button" onClick={handlePublishLive}><Send aria-hidden size={17} /> Try again</button>
+                  <button className="studio-btn publish studio-publish-retry" type="button" disabled={publishing} onClick={handlePublishLive}><Send aria-hidden size={17} /> Try again</button>
                 </>
               )}
 
