@@ -272,6 +272,19 @@ async function stealthRender(url) {
           viewport: { width: 1920, height: 1080 },
           ...(parseProxyConfig(RESIDENTIAL_PROXY_URL) ? { proxy: parseProxyConfig(RESIDENTIAL_PROXY_URL) } : {}),
         });
+
+        // Stealth patches: hide headless/CDP signals from bot detection (Kasada, etc.)
+        await context.addInitScript(() => {
+          Object.defineProperty(navigator, "webdriver", { get: () => false });
+          Object.defineProperty(navigator, "plugins", { get: () => [1, 2, 3, 4, 5] });
+          Object.defineProperty(navigator, "languages", { get: () => ["en-AU", "en"] });
+          window.chrome = { runtime: {}, loadTimes: () => {}, csi: () => {} };
+          const originalQuery = window.navigator.permissions.query;
+          window.navigator.permissions.query = (parameters) =>
+            parameters.name === "notifications"
+              ? Promise.resolve({ state: Notification.permission })
+              : originalQuery(parameters);
+        });
         const page = await context.newPage();
         await page.goto(url, { waitUntil: "domcontentloaded", timeout: STEALTH_TIMEOUT_MS });
 
