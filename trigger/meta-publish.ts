@@ -1,4 +1,4 @@
-﻿import { schedules, task } from "@trigger.dev/sdk/v3";
+import { schedules, task } from "@trigger.dev/sdk/v3";
 import * as Sentry from "@sentry/nextjs";
 
 import { executeLeadDeliveryAttemptById } from "../src/lib/providers/lead-delivery-worker.ts";
@@ -50,6 +50,10 @@ type ScheduledMetaConnectionRow = {
 
 export const executeMetaPublishPlanTask = task({
   id: "publish.meta.execute",
+  // concurrencyKey (per plan) copies this queue, so at most one publish run
+  // executes per plan at a time. Without the limit, a retry that overlaps a
+  // backlogged run could create the campaign on Meta twice.
+  queue: { concurrencyLimit: 1 },
   run: async (payload: MetaPublishPayload) =>
     executeMetaPublishPlanById({
       serviceSupabase: createSupabaseServiceClient(),
@@ -202,4 +206,3 @@ export async function runScheduledMetaTokenHealthChecks(serviceSupabase: Supabas
     results,
   };
 }
-

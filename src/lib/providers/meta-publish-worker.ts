@@ -69,7 +69,10 @@ export async function executeMetaPublishPlan(input: {
       throw new Error("Meta access token is missing.");
     }
 
-    const result = await createMetaExecutionAdapter(publishingPlan.adapter).publish(publishingPlan, {
+    // Resolve storage-sourced creative images to inline bytes in memory only —
+    // executionPlan is never persisted, so image payloads stay out of the DB.
+    const executionPlan = await resolveStorageCreativeAssets(input.serviceSupabase, publishingPlan);
+    const result = await createMetaExecutionAdapter(publishingPlan.adapter).publish(executionPlan, {
       accessToken: tokens.accessToken,
       fetchImpl: input.fetchImpl,
     });
@@ -90,6 +93,47 @@ export async function executeMetaPublishPlan(input: {
     await persistPublishAudit(input.serviceSupabase, failedPlan);
     throw error;
   }
+}
+
+/**
+ * Downloads each storage-sourced creative image from workspace-artifacts and
+ * attaches it as inline bytes so the Marketing API adapter can upload it to
+ * `/adimages`. Missing images fail the publish with an honest error instead of
+ * letting Meta reject an imageless lead-ad creative later.
+ */
+async function resolveStorageCreativeAssets(
+  serviceSupabase: SupabaseServiceClient,
+  plan: MetaPublishPlan,
+): Promise<MetaPublishPlan> {
+  const creatives = await Promise.all(plan.creatives.map(async (creative) => {
+    const asset = creative.asset;
+    if (!asset || asset.source !== "storage" || !asset.storagePath || asset.bytesBase64 || asset.imageHash) {
+      return creative;
+    }
+
+    const storagePath = asset.storagePath;
+    if (!storagePath.startsWith(`${plan.workspaceId}/`) || storagePath.includes("..")) {
+      throw new Error(`The finished ad image for ${creative.name} is outside this workspace.`);
+    }
+
+    const { data, error } = await serviceSupabase.storage.from("workspace-artifacts").download(storagePath);
+    if (error || !data) {
+      throw new Error(`The finished ad image for ${creative.name} could not be loaded. Regenerate the ad and try again.`);
+    }
+
+    const bytes = Buffer.from(await data.arrayBuffer());
+
+    return {
+      ...creative,
+      asset: {
+        ...asset,
+        source: "inline" as const,
+        bytesBase64: bytes.toString("base64"),
+      },
+    };
+  }));
+
+  return { ...plan, creatives };
 }
 
 async function persistPublishAudit(serviceSupabase: SupabaseServiceClient, plan: MetaPublishPlan) {

@@ -40,3 +40,17 @@ test("evaluatePublishReadiness allows approved, compliant, connected drafts", ()
 
   assert.deepEqual(result, { ready: true, blockers: [] });
 });
+
+test("evaluatePublishReadiness does not block the default needs_review compliance status", () => {
+  // The human compliance review step was removed from the product (Meta runs
+  // its own ad review) and every pack defaults to "needs_review" — blocking
+  // on it froze all publishes behind a checklist item the UI no longer shows.
+  const result = evaluatePublishReadiness({
+    providerConnectionStatus: "connected",
+    approvalStatus: "approved",
+    complianceStatus: "needs_review",
+    hasDraftPayload: true,
+  });
+
+  assert.deepEqual(result, { ready: true, blockers: [] });
+});

@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import { NextResponse, type NextRequest } from "next/server";
 
 import { requireAdStudioRequest } from "@/lib/adstudio/http";
@@ -43,7 +45,6 @@ type PublishBody = {
   adapter?: MetaExecutionAdapter;
   metaSetup?: Partial<MetaConnectionSetup>;
   controls?: MetaPublishControls;
-  requestApproval?: boolean;
   /** A/B publish (A6): plan only these variants — one ad set, one tagged ad per variant. Absent = full pack (unchanged). */
   variantIds?: string[];
   existingMetaCampaignId?: string;
@@ -56,6 +57,7 @@ type ApprovalRecord = {
 
 type MetaPlanPersistenceResult = {
   plan: MetaPublishPlan;
+  approval: ApprovalRecord;
   reusedActivePlan: boolean;
 };
 
@@ -128,12 +130,6 @@ export async function POST(request: NextRequest, context: RouteContext) {
     ...(firstCopyPack?.meta ? { meta: publishableConnectionStatus(metaConnection?.status) } : {}),
     ...(firstCopyPack?.googleSearch ? { google: publishableConnectionStatus(googleConnection?.status) } : {}),
   };
-  const providerPayloadReadiness = resolveAdStudioPublishReadiness({
-    providerStatuses,
-    approvalStatus: existingApproval.status,
-    complianceStatus: pack.compliance.status,
-    hasDraftPayload: Boolean(firstCopyPack?.meta || firstCopyPack?.googleSearch),
-  });
   const publishRequests = buildAdStudioPublishRequests({
     exportPackageId: id,
     workspaceId: access.access.workspaceId,
@@ -155,15 +151,21 @@ export async function POST(request: NextRequest, context: RouteContext) {
         adapter: body.adapter ?? "marketing_api",
         setupPatch: body.metaSetup,
         controls: body.controls,
-        requestApproval: body.requestApproval ?? !body.dryRun,
+        requestApproval: !body.dryRun,
         variantIds: body.variantIds,
         existingMetaCampaignId,
       })
     : null;
   let metaPublishPlan = metaPublishPlanResult?.plan ?? null;
+  const providerPayloadReadiness = resolveAdStudioPublishReadiness({
+    providerStatuses,
+    approvalStatus: metaPublishPlanResult?.approval.status ?? existingApproval.status,
+    complianceStatus: pack.compliance.status,
+    hasDraftPayload: Boolean(firstCopyPack?.meta || firstCopyPack?.googleSearch),
+  });
   const metaReadiness = metaPublishPlan
     ? validateMetaPublishPlanReadiness(metaPublishPlan, {
-        approvalStatus: metaPublishPlan.approvalRequestId ? await loadApprovalById(access.supabase, access.access.workspaceId, metaPublishPlan.approvalRequestId) : "draft",
+        approvalStatus: metaPublishPlanResult?.approval.status ?? "draft",
         providerConnectionStatus: publishableConnectionStatus(metaConnection?.status),
         complianceStatus: pack.compliance.status,
       })
@@ -188,9 +190,27 @@ export async function POST(request: NextRequest, context: RouteContext) {
       updatedAt: new Date().toISOString(),
     };
     await persistMetaPublishPlan(serviceSupabase, approvedPlan, access.access.userId);
-    const run = await queueMetaPublishPlanExecution(approvedPlan);
-    triggerRunId = run.id ?? null;
-    metaPublishPlan = approvedPlan;
+
+    try {
+      const run = await queueMetaPublishPlanExecution(approvedPlan);
+      triggerRunId = run.id ?? null;
+      metaPublishPlan = approvedPlan;
+    } catch (error) {
+      // Without this, the plan stays "approved" with no queued run and every
+      // retry is treated as a duplicate — mark it failed so retries requeue.
+      const failedPlan: MetaPublishPlan = {
+        ...approvedPlan,
+        status: "failed",
+        lastError: error instanceof Error ? error.message : "Publish could not be queued.",
+        updatedAt: new Date().toISOString(),
+      };
+      await persistMetaPublishPlan(serviceSupabase, failedPlan, access.access.userId);
+
+      return NextResponse.json(
+        { error: "Your ad could not be submitted to Meta. Try again in a moment." },
+        { status: 502 },
+      );
+    }
   }
 
   return NextResponse.json({
@@ -243,7 +263,39 @@ async function createAndPersistMetaPlan(input: {
     input.setupPatch,
   );
   let approval = input.approval;
-  let plan = buildMetaPublishPlan({
+
+  // The review step was removed from the UI, so submissions are approved
+  // immediately. This also unblocks approvals created before the removal that
+  // are still sitting in "requested" with no UI left to resolve them.
+  if (input.requestApproval && approval.id && approval.status !== "approved") {
+    const approvalId = approval.id;
+    const { error } = await input.serviceSupabase
+      .from("approval_requests")
+      .update({ status: "approved", approved_by: input.userId, resolved_at: new Date().toISOString() })
+      .eq("id", approvalId)
+      .eq("workspace_id", input.workspaceId);
+
+    if (error) {
+      throw new Error(error.message);
+    }
+    approval = { id: approvalId, status: "approved" };
+    await recordAutoApprovalAudit(input, approvalId);
+  }
+
+  if (input.requestApproval && !approval.id) {
+    const createdApproval = await createMetaPublishApproval(input.serviceSupabase, {
+      workspaceId: input.workspaceId,
+      userId: input.userId,
+      campaignName: input.campaignPack.campaign.name,
+      adapter: input.adapter,
+    });
+    approval = createdApproval;
+    if (createdApproval.id) {
+      await recordAutoApprovalAudit(input, createdApproval.id);
+    }
+  }
+
+  const plan = buildMetaPublishPlan({
     workspaceId: input.workspaceId,
     campaignPack: input.campaignPack,
     connectionId: input.connection.id,
@@ -255,56 +307,24 @@ async function createAndPersistMetaPlan(input: {
     existingMetaCampaignId: input.existingMetaCampaignId,
   });
 
-  if (!approval.id && input.requestApproval) {
-    const createdApproval = await createMetaPublishApproval(input.serviceSupabase, {
-      workspaceId: input.workspaceId,
-      userId: input.userId,
-      temporaryTargetId: plan.planId,
-      campaignName: input.campaignPack.campaign.name,
-      adapter: input.adapter,
-    });
-    // Auto-approve: the review step was removed from the UI, so submissions
-    // are approved immediately instead of waiting for a separate approval action.
-    await input.serviceSupabase
-      .from("approval_requests")
-      .update({ status: "approved" })
-      .eq("id", createdApproval.id)
-      .eq("workspace_id", input.workspaceId);
-    approval = { id: createdApproval.id, status: "approved" };
-    plan = buildMetaPublishPlan({
-      workspaceId: input.workspaceId,
-      campaignPack: input.campaignPack,
-      connectionId: input.connection.id,
-      setup,
-      controls: input.controls,
-      adapter: input.adapter,
-      approvalRequestId: approval.id,
-      variantIds: input.variantIds,
-      existingMetaCampaignId: input.existingMetaCampaignId,
-    });
-    await input.serviceSupabase
+  if (approval.id) {
+    const { error } = await input.serviceSupabase
       .from("approval_requests")
       .update({ target_id: plan.planId })
       .eq("id", approval.id)
       .eq("workspace_id", input.workspaceId);
-    await input.serviceSupabase.from("audit_logs").insert({
-      workspace_id: input.workspaceId,
-      actor_profile_id: input.userId,
-      action: "meta_publish_approval_requested",
-      target_type: "approval_request",
-      target_id: approval.id,
-      metadata: {
-        metaPublishPlanId: plan.planId,
-        campaignName: input.campaignPack.campaign.name,
-        adapter: input.adapter,
-      },
-    });
+
+    if (error) {
+      throw new Error(error.message);
+    }
   }
 
+  // Plans persist as "draft" here; the POST handler flips them to "approved"
+  // only when the plan is actually ready and a worker run is being queued.
   let persistedPlan: MetaPublishPlan = {
     ...plan,
     approvalRequestId: approval.id,
-    status: approval.status === "approved" ? "approved" : "draft",
+    status: "draft",
     updatedAt: new Date().toISOString(),
   };
   const existingPlan = await loadMetaPublishPlanByIdempotencyKey(input.serviceSupabase, {
@@ -312,8 +332,11 @@ async function createAndPersistMetaPlan(input: {
     idempotencyKey: persistedPlan.idempotencyKey,
   });
 
-  if (existingPlan && isActivePublishPlanStatus(existingPlan.status)) {
-    return { plan: existingPlan, reusedActivePlan: true };
+  // Only in-flight or completed plans are reused as-is. "approved" is not
+  // treated as active: a plan can be stranded there when queueing failed, and
+  // reusing it would silently skip the requeue forever.
+  if (existingPlan && (existingPlan.status === "publishing" || existingPlan.status === "paused_live")) {
+    return { plan: existingPlan, approval, reusedActivePlan: true };
   }
 
   if (existingPlan) {
@@ -329,11 +352,24 @@ async function createAndPersistMetaPlan(input: {
 
   await persistMetaPublishPlan(input.serviceSupabase, persistedPlan, input.userId);
 
-  return { plan: persistedPlan, reusedActivePlan: false };
+  return { plan: persistedPlan, approval, reusedActivePlan: false };
 }
 
-function isActivePublishPlanStatus(status: MetaPublishPlan["status"]) {
-  return status === "approved" || status === "publishing" || status === "paused_live";
+async function recordAutoApprovalAudit(
+  input: { serviceSupabase: ReturnType<typeof createSupabaseServiceClient>; workspaceId: string; userId: string; campaignPack: AdStudioCampaignPack; adapter: MetaExecutionAdapter },
+  approvalRequestId: string,
+) {
+  await input.serviceSupabase.from("audit_logs").insert({
+    workspace_id: input.workspaceId,
+    actor_profile_id: input.userId,
+    action: "meta_publish_approval_auto_approved",
+    target_type: "approval_request",
+    target_id: approvalRequestId,
+    metadata: {
+      campaignName: input.campaignPack.campaign.name,
+      adapter: input.adapter,
+    },
+  });
 }
 
 function mergeConnectionSetup(
@@ -366,7 +402,6 @@ async function createMetaPublishApproval(
   input: {
     workspaceId: string;
     userId: string;
-    temporaryTargetId: string;
     campaignName: string;
     adapter: MetaExecutionAdapter;
   },
@@ -376,9 +411,13 @@ async function createMetaPublishApproval(
     .insert({
       workspace_id: input.workspaceId,
       target_type: "meta_publish_plan",
-      target_id: input.temporaryTargetId,
-      status: "requested",
+      // Placeholder until the plan id exists (it depends on the approval id);
+      // the caller updates target_id to the real plan id straight after.
+      target_id: randomUUID(),
+      status: "approved",
       requested_by: input.userId,
+      approved_by: input.userId,
+      resolved_at: new Date().toISOString(),
       risk_summary: `Publish paused Meta lead campaign pack "${input.campaignName}" through ${input.adapter}.`,
     })
     .select("id,status")
@@ -447,21 +486,6 @@ async function loadApprovalStatus(
     id: typeof data?.id === "string" ? data.id : null,
     status: normalizeApprovalStatus(data?.status),
   };
-}
-
-async function loadApprovalById(
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
-  workspaceId: string,
-  approvalRequestId: string,
-): Promise<ApprovalStatus> {
-  const { data } = await supabase
-    .from("approval_requests")
-    .select("status")
-    .eq("workspace_id", workspaceId)
-    .eq("id", approvalRequestId)
-    .maybeSingle();
-
-  return normalizeApprovalStatus(data?.status);
 }
 
 function normalizeApprovalStatus(value: unknown): ApprovalStatus {
