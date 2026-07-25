@@ -234,31 +234,42 @@ async function staticFetch(url) {
 // ---------------------------------------------------------------------------
 
 async function stealthRender(url) {
-  // Obscura exposes a CDP endpoint. We use Playwright-core (already installed)
-  // to connect and render the page.
+  // Try Obscura first (stealth browser), fall back to Steel (plain CDP).
   const { chromium } = await import("playwright-core");
 
-  const browser = await chromium.connectOverCDP(OBSCURA_CDP_URL, {
-    timeout: STEALTH_TIMEOUT_MS,
-  });
+  const cdpUrls = [OBSCURA_CDP_URL, STEEL_CDP_URL].filter(Boolean);
+  let lastError = null;
 
-  try {
-    const context = await browser.newContext({
-      userAgent: BROWSER_HEADERS["User-Agent"],
-      locale: "en-AU",
-      viewport: { width: 1920, height: 1080 },
-      ...(RESIDENTIAL_PROXY_URL ? { proxy: { server: RESIDENTIAL_PROXY_URL } } : {}),
-    });
-    const page = await context.newPage();
-    await page.goto(url, { waitUntil: "networkidle", timeout: STEALTH_TIMEOUT_MS });
-    // Wait a bit for any lazy-loaded content
-    await page.waitForTimeout(2000);
-    const html = await page.content();
-    await context.close();
-    return html;
-  } finally {
-    await browser.close().catch(() => {});
+  for (const cdpUrl of cdpUrls) {
+    try {
+      const browser = await chromium.connectOverCDP(cdpUrl, {
+        timeout: STEALTH_TIMEOUT_MS,
+      });
+
+      try {
+        const context = await browser.newContext({
+          userAgent: BROWSER_HEADERS["User-Agent"],
+          locale: "en-AU",
+          viewport: { width: 1920, height: 1080 },
+          ...(RESIDENTIAL_PROXY_URL ? { proxy: { server: RESIDENTIAL_PROXY_URL } } : {}),
+        });
+        const page = await context.newPage();
+        await page.goto(url, { waitUntil: "networkidle", timeout: STEALTH_TIMEOUT_MS });
+        // Wait a bit for any lazy-loaded content
+        await page.waitForTimeout(2000);
+        const html = await page.content();
+        await context.close();
+        return html;
+      } finally {
+        await browser.close().catch(() => {});
+      }
+    } catch (err) {
+      lastError = err;
+      console.error(`[listing-scraper] CDP ${cdpUrl} failed: ${err.message}`);
+    }
   }
+
+  throw lastError || new Error("No CDP endpoints available");
 }
 
 // ---------------------------------------------------------------------------
