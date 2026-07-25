@@ -1,0 +1,305 @@
+/* ============================================================
+   Night Ops hero — production homepage fold (#top).
+   Dark map with a baked-in suburb boundary. Self-contained:
+   tokens scoped to .hw-no. Display: Manrope · Body: Inter
+   (from the :root font variables set in app/layout).
+   ============================================================ */
+
+.hw-no {
+  position: relative;
+  overflow: clip;
+  display: flex;
+  align-items: center;
+  min-height: 94svh;
+  background: #070d18;
+  color: #e8ecf3;
+  font-family: var(--no-body);
+  -webkit-font-smoothing: antialiased;
+
+  --no-accent: #006bff;
+  --no-accent-bright: #4d94ff;
+  --no-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --no-display: var(--font-manrope), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --no-body: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  /* dark glass suburb-search theme */
+  --no-pill-bg: rgba(10, 20, 38, 0.72);
+  --no-pill-fg: #eef3fb;
+  --no-pill-ph: #7c8db0;
+  --no-pill-border: rgba(120, 170, 255, 0.28);
+  --no-pill-shadow: 0 16px 40px -18px rgba(0, 0, 0, 0.7);
+  --no-note-fg: rgba(200, 214, 238, 0.66);
+  --no-sug-bg: #0d1830;
+  --no-sug-fg: #e8eefb;
+  --no-sug-border: rgba(120, 170, 255, 0.2);
+  --no-sug-line: rgba(120, 170, 255, 0.1);
+  --no-sug-hover: rgba(0, 107, 255, 0.16);
+  --no-sug-muted: #8fa3c8;
+}
+.hw-no img { display: block; max-width: none; }
+
+.hw-no-map {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.85;
+}
+.hw-no-scrim {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(120% 90% at 78% 40%, rgba(0, 40, 90, 0.18), transparent 55%),
+    linear-gradient(90deg, rgba(5, 9, 17, 0.92) 0%, rgba(5, 9, 17, 0.72) 38%, rgba(5, 9, 17, 0.16) 70%, rgba(5, 9, 17, 0) 100%),
+    linear-gradient(0deg, rgba(5, 9, 17, 0.6), transparent 32%);
+}
+
+/* ---------- Copy + form ---------- */
+
+.hw-no-content {
+  position: relative;
+  z-index: 5;
+  width: min(1200px, 100%);
+  margin: 0 auto;
+  padding: 120px 24px 110px;
+}
+.hw-no-h1 {
+  margin: 0;
+  font-family: var(--no-display);
+  font-size: clamp(2.4rem, 4.6vw, 3.8rem);
+  line-height: 1.05;
+  letter-spacing: -0.028em;
+  font-weight: 800;
+  color: #fff;
+}
+.hw-no-accent { color: var(--no-accent-bright); }
+.hw-no-form { margin-top: 30px; }
+
+/* ---------- Metric cards ---------- */
+
+.hw-no-cards {
+  position: absolute;
+  z-index: 6;
+  right: clamp(24px, 6vw, 88px);
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  width: 300px;
+}
+.hw-no-card {
+  padding: 20px 22px;
+  border-radius: 18px;
+  background: rgba(13, 24, 42, 0.55);
+  border: 1px solid rgba(120, 170, 255, 0.18);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 24px 60px -24px rgba(0, 0, 0, 0.6);
+}
+.hw-no-card-k {
+  margin: 0;
+  font-size: 11.5px;
+  font-weight: 650;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #7fa6e8;
+}
+.hw-no-card-v {
+  margin: 8px 0 4px;
+  font-family: var(--no-display);
+  font-size: 34px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+.hw-no-card-v--text { font-size: 21px; letter-spacing: -0.01em; }
+.hw-no-card-s { margin: 0; font-size: 12.5px; color: #93a5c4; }
+
+.hw-no-plate {
+  position: absolute;
+  z-index: 6;
+  left: 24px;
+  bottom: 20px;
+  margin: 0;
+  font-size: 11.5px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: rgba(200, 214, 238, 0.5);
+}
+
+/* ---------- Dark suburb-search form theme ----------
+   SuburbReportLocationForm renders .hw-report-search > .lp-location-form.
+   Scoped under .hw-no .hw-report-search so it wins over the light homepage
+   form theme regardless of stylesheet order. */
+
+.hw-no .hw-report-search { position: relative; max-width: 540px; }
+.hw-no .hw-report-search .lp-location-form {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: stretch;
+}
+.hw-no .hw-report-search .lp-location-field { display: block; min-width: 0; }
+.hw-no .hw-report-search .lp-location-pill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 56px;
+  padding: 0 18px;
+  border-radius: 16px;
+  background: var(--no-pill-bg);
+  border: 1px solid var(--no-pill-border);
+  color: var(--no-pill-fg);
+  box-shadow: var(--no-pill-shadow);
+  backdrop-filter: blur(10px);
+  transition: border-color 0.2s var(--no-ease), box-shadow 0.2s var(--no-ease);
+}
+.hw-no .hw-report-search .lp-location-pill:focus-within {
+  border-color: var(--no-accent);
+  box-shadow: 0 0 0 4px rgba(0, 107, 255, 0.16), var(--no-pill-shadow);
+}
+.hw-no .hw-report-search .lp-location-pill > svg { flex: none; color: #9db8e8; opacity: 0.7; }
+.hw-no .hw-report-search .lp-location-pill input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: inherit;
+  font-family: inherit;
+  font-size: 15.5px;
+  font-weight: 500;
+}
+.hw-no .hw-report-search .lp-location-pill input::placeholder {
+  color: var(--no-pill-ph);
+  font-weight: 450;
+}
+.hw-no .hw-report-search .lp-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 56px;
+  padding: 0 24px;
+  border: 0;
+  border-radius: 16px;
+  background: var(--no-accent);
+  color: #fff;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 650;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: 0 16px 32px -14px rgba(0, 107, 255, 0.55);
+  transition: background 0.2s var(--no-ease), transform 0.2s var(--no-ease),
+    box-shadow 0.2s var(--no-ease);
+}
+.hw-no .hw-report-search .lp-btn:hover { background: #0055d4; transform: translateY(-1px); }
+.hw-no .hw-report-search .lp-btn:active { transform: translateY(0); }
+.hw-no .hw-report-search .lp-btn:disabled { opacity: 0.6; pointer-events: none; }
+.hw-no .hw-report-search .lp-btn > svg { width: 15px; height: 15px; display: inline-block; }
+
+.hw-no .hw-report-search .lp-location-suggestions {
+  position: absolute;
+  z-index: 70;
+  top: calc(100% + 10px);
+  left: 0;
+  width: min(440px, 100%);
+  overflow: hidden;
+  border-radius: 14px;
+  background: var(--no-sug-bg);
+  border: 1px solid var(--no-sug-border);
+  box-shadow: 0 26px 64px -22px rgba(9, 24, 44, 0.4);
+}
+.hw-no .hw-report-search .lp-location-option {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  border: 0;
+  border-bottom: 1px solid var(--no-sug-line);
+  background: transparent;
+  color: var(--no-sug-fg);
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+}
+.hw-no .hw-report-search .lp-location-option:hover,
+.hw-no .hw-report-search .lp-location-option[aria-selected="true"] {
+  background: var(--no-sug-hover);
+}
+.hw-no .hw-report-search .ad-radar-suggestion-icon { display: inline-flex; flex: none; color: var(--no-accent-bright); }
+.hw-no .hw-report-search .ad-radar-suggestion-copy { display: flex; flex-direction: column; min-width: 0; }
+.hw-no .hw-report-search .ad-radar-suggestion-copy strong { font-size: 13.5px; font-weight: 650; }
+.hw-no .hw-report-search .ad-radar-suggestion-copy span { font-size: 11.5px; color: var(--no-sug-muted); }
+.hw-no .hw-report-search .ad-radar-suggestion-kind {
+  margin-left: auto;
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--no-sug-muted);
+}
+.hw-no .hw-report-search .lp-location-powered {
+  display: block;
+  padding: 8px 14px;
+  font-size: 10.5px;
+  color: var(--no-sug-muted);
+}
+.hw-no .hw-report-search-note { margin: 12px 2px 0; font-size: 13px; color: var(--no-note-fg); }
+.hw-no .hw-report-search-error { margin: 8px 2px 0; font-size: 13px; color: #ff6b6b; }
+
+/* ---------- Entrance (CSS-only, SSR-safe) ---------- */
+
+@keyframes no-rise { to { opacity: 1; transform: none; } }
+.hw-no-content > * { opacity: 0; transform: translateY(24px); animation: no-rise 0.75s var(--no-ease) forwards; }
+.hw-no-content > *:nth-child(1) { animation-delay: 0.08s; }
+.hw-no-content > *:nth-child(2) { animation-delay: 0.2s; }
+.hw-no-card { opacity: 0; transform: translateY(26px); animation: no-rise 0.8s var(--no-ease) forwards; }
+.hw-no-card--1 { animation-delay: 0.4s; }
+.hw-no-card--2 { animation-delay: 0.55s; }
+.hw-no-card--3 { animation-delay: 0.7s; }
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 959.98px) {
+  .hw-no { flex-direction: column; align-items: stretch; min-height: 0; }
+  .hw-no-content { padding: 96px 20px 40px; }
+  .hw-no-cards {
+    position: static;
+    transform: none;
+    width: auto;
+    flex-direction: row;
+    gap: 12px;
+    overflow-x: auto;
+    padding: 0 20px 48px;
+    scrollbar-width: none;
+  }
+  .hw-no-cards::-webkit-scrollbar { display: none; }
+  .hw-no-card { flex: 0 0 240px; }
+}
+
+@media (max-width: 560px) {
+  .hw-no .hw-report-search .lp-location-form { grid-template-columns: 1fr; }
+  .hw-no .hw-report-search .lp-btn { width: 100%; }
+}
+
+/* ---------- Reduced motion ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .hw-no *,
+  .hw-no *::before,
+  .hw-no *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+  .hw-no-content > *,
+  .hw-no-card {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}

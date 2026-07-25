@@ -1,15 +1,15 @@
 import { SuburbReportLocationForm } from "@/components/home-landing/suburb-report-location-form";
 
-import { CountUp, InView, ParallaxField } from "./motion";
+import { CountUp, InView, ParallaxField } from "@/components/motion";
 
 /* Shared suburb-boundary geometry (drawn in a 1376×768 space to match the map
    assets). Heroes that draw their own boundary/pins use these so the overlay
-   reads as one coherent "scanned suburb" across variants. The outline is an
-   irregular polygon with sharp vertices and a few straight road-following runs
-   (plus one smooth coastal edge) so it reads as a real selected suburb, not a
-   bubble. */
+   reads as one coherent "scanned suburb" across variants. The outline is a
+   realistic coastal suburb: smooth organic curves with a prominent bay on the
+   east side and irregular lobes, so it reads as a real selected suburb rather
+   than a bubble or a jagged crystal. */
 const BOUNDARY_D =
-  "M462 186 L510 170 L552 181 L594 160 L638 173 L680 152 L726 152 L742 168 L766 149 L808 171 L850 163 L888 189 C922 216 946 252 960 292 C976 338 983 386 973 432 C964 476 946 518 918 554 C892 588 860 616 822 636 L776 650 L740 672 L694 662 L656 682 L610 670 L570 688 L526 668 L486 676 L448 650 L410 638 L380 608 L348 586 L324 550 L300 518 L286 476 L262 442 L262 400 L246 362 L256 320 L240 284 L262 248 L290 226 L322 210 L350 186 L392 194 L424 174 Z";
+  "M425 205 C465 172 512 162 555 178 C596 193 628 168 672 158 C718 147 758 163 795 155 C833 147 868 168 900 162 C940 155 972 185 992 222 C1012 260 1024 302 1010 342 C999 373 1010 402 1026 436 C1040 468 1030 496 998 508 C958 523 920 515 894 540 C868 566 888 592 926 602 C964 612 986 636 972 664 C956 694 916 704 878 696 C840 688 810 702 770 697 C730 692 700 707 660 700 C620 693 590 707 550 697 C510 687 480 699 442 685 C404 671 376 645 356 609 C336 573 340 535 328 499 C316 463 326 427 314 391 C302 355 312 319 300 283 C289 249 302 219 332 204 C358 191 398 212 425 205 Z";
 
 const PINS = [
   { x: 620, y: 300 },
@@ -170,15 +170,6 @@ export function HeroNightOps() {
         loading="lazy"
       />
       <div className="hl-v3-scrim" aria-hidden />
-
-      <svg
-        className="hl-v3-boundary"
-        viewBox="0 0 1376 768"
-        preserveAspectRatio="xMidYMid slice"
-        aria-hidden
-      >
-        <path className="hl-v3-boundary-path" d={BOUNDARY_D} pathLength={1} />
-      </svg>
 
       <div className="hl-v3-content">
         <h2 className="hl-v3-h1">
