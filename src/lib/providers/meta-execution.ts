@@ -34,7 +34,7 @@ export type MetaConnectionSetup = {
 
 export type MetaPublishControls = {
   dailyBudgetMinorUnits?: number;
-  /** Destination URL for the lead form thank-you button (falls back to privacy policy). */
+  /** Destination URL for the ad link and lead form thank-you button (falls back to privacy policy). */
   destinationUrl?: string;
   geo?:
     | { type: "country"; country: string }
@@ -78,11 +78,13 @@ export type MetaPublishAdSetPlan = {
 
 export type MetaCreativeAssetPlan = {
   type: "image" | "video";
-  source: "inline" | "url" | "meta";
+  /** "storage" = workspace-artifacts path resolved to bytes by the publish worker. */
+  source: "inline" | "url" | "meta" | "storage";
   mimeType?: string;
   filename?: string;
   bytesBase64?: string;
   url?: string;
+  storagePath?: string;
   imageHash?: string;
   videoId?: string;
 };
@@ -233,7 +235,6 @@ export function buildMetaPublishPlan(input: {
   approvalRequestId?: string | null;
   legacyCampaignId?: string | null;
   adStudioExportId?: string | null;
-  includeCreativeAssets?: boolean;
   existingMetaCampaignId?: string | null;
   /**
    * A/B publish (A6): when set, only these variants are planned — one campaign,
@@ -279,7 +280,7 @@ export function buildMetaPublishPlan(input: {
     campaign,
     adSets: buildAdSetPlans(campaignPack, controls),
     leadForms: buildLeadFormPlans(campaignPack, input.setup, controls.destinationUrl),
-    creatives: buildCreativePlans(campaignPack, input.setup, Boolean(input.includeCreativeAssets)),
+    creatives: buildCreativePlans(campaignPack, input.setup),
     ads: buildAdPlans(campaignPack),
     tracking: {
       utmSource: "meta",
@@ -351,6 +352,10 @@ export function validateMetaPublishPlanReadiness(
     blockers.push("Meta publish plan is not linked to an approval request.");
   }
 
+  if (plan.adapter === "marketing_api" && plan.creatives.some((creative) => !hasUsableCreativeImage(creative))) {
+    blockers.push("The finished ad image could not be found for one or more creatives.");
+  }
+
   return {
     ready: blockers.length === 0,
     blockers,
@@ -403,9 +408,20 @@ export function applyMetaPublishExecutionResult(
   };
 }
 
-export function buildMetaPublishTaskOptions(input: { workspaceId: string; planId: string; idempotencyKey: string }) {
+export function buildMetaPublishTaskOptions(input: {
+  workspaceId: string;
+  planId: string;
+  idempotencyKey: string;
+  /**
+   * Distinguishes submit attempts (use the plan's updatedAt). Without it, a
+   * retry after a failed run reuses the trigger.dev idempotency key and gets
+   * the cached original run back — nothing executes and the plan sits at
+   * "approved" forever. The concurrencyKey still serialises runs per plan.
+   */
+  attemptKey?: string | null;
+}) {
   return {
-    idempotencyKey: input.idempotencyKey,
+    idempotencyKey: input.attemptKey ? `${input.idempotencyKey}:${input.attemptKey}` : input.idempotencyKey,
     concurrencyKey: `meta-publish:${input.workspaceId}:${input.idempotencyKey}`,
     tags: ["meta-publish", input.workspaceId, input.planId],
     maxAttempts: 3,
@@ -590,7 +606,8 @@ async function publishWithMarketingApi(
 
       const imageHash = await resolveCreativeImageHash(plan, creative, input, requestLog, responseLog);
       const leadFormId = reconciledObjects.leadFormIds[creative.leadFormLocalId];
-      const utmLink = buildUtmLink(plan.setup.privacyPolicyUrl, plan.tracking, creative.localId);
+      const linkBase = plan.controls.destinationUrl?.trim() || plan.setup.privacyPolicyUrl;
+      const utmLink = buildUtmLink(linkBase, plan.tracking, creative.localId);
       const response = await postMetaObject(input, requestLog, responseLog, `creative.${creative.localId}`, `/${plan.setup.metaAdAccountId}/adcreatives`, {
         name: creative.name,
         object_story_spec: {
@@ -702,7 +719,7 @@ async function postMetaObject(
   body: Record<string, unknown>,
 ) {
   const createdAt = new Date().toISOString();
-  requestLog.push({ step, method: "POST", path, body, createdAt });
+  requestLog.push({ step, method: "POST", path, body: redactMetaRequestBody(body), createdAt });
 
   const response = await (input.fetchImpl ?? fetch)(`https://graph.facebook.com/${input.graphVersion ?? DEFAULT_META_GRAPH_VERSION}${path}`, {
     method: "POST",
@@ -722,6 +739,13 @@ async function postMetaObject(
   }
 
   return payload;
+}
+
+/** Keep persisted request logs small and free of image payloads. */
+function redactMetaRequestBody(body: Record<string, unknown>): Record<string, unknown> {
+  if (typeof body.bytes !== "string") return body;
+
+  return { ...body, bytes: `<redacted ${body.bytes.length} base64 chars>` };
 }
 
 async function getMetaObjectStatus(
@@ -839,7 +863,7 @@ function buildLeadFormPlans(pack: AdStudioCampaignPack, setup: MetaConnectionSet
   }));
 }
 
-function buildCreativePlans(pack: AdStudioCampaignPack, setup: MetaConnectionSetup, includeAssets: boolean): MetaPublishCreativePlan[] {
+function buildCreativePlans(pack: AdStudioCampaignPack, setup: MetaConnectionSetup): MetaPublishCreativePlan[] {
   return pack.copyPacks.slice(0, 6).map((copy, index) => {
     const creative = pack.creatives.find((item) => item.variantId === copy.variantId) ?? pack.creatives[index] ?? null;
 
@@ -855,17 +879,67 @@ function buildCreativePlans(pack: AdStudioCampaignPack, setup: MetaConnectionSet
       leadFormLocalId: `form_${index + 1}`,
       adStudioCreativeId: creative?.creativeId ?? null,
       format: creative?.format ?? null,
-      asset: includeAssets && creative?.previewSvg
-        ? {
-            type: "image",
-            source: "inline",
-            mimeType: "image/svg+xml",
-            filename: `${creative.creativeId}.svg`,
-            bytesBase64: Buffer.from(creative.previewSvg, "utf8").toString("base64"),
-          }
-        : null,
+      asset: creative ? buildCreativeImageAsset(creative) : null,
     };
   });
+}
+
+/**
+ * The finished ad image is the full-canvas clone. After autosave its storage
+ * reference lives on the clone object as either a raw workspace-artifacts
+ * path or an `/api/adstudio/media?path=…` URL; freshly generated packs may
+ * still hold a data URL. Storage references are resolved to bytes by the
+ * publish worker just before upload, so plans stay small in the database.
+ */
+function buildCreativeImageAsset(creative: AdStudioCampaignPack["creatives"][number]): MetaCreativeAssetPlan | null {
+  const imageObject = creative.canvas.objects.find((object) => object.objectId === "template_clone_image")
+    ?? creative.canvas.objects.find((object) => object.role === "primary_image");
+  const reference = imageObject?.content?.trim() || imageObject?.assetId?.trim() || "";
+
+  if (!reference) return null;
+
+  const dataUrlMatch = reference.match(/^data:(image\/[a-z0-9.+-]+);base64,(.+)$/i);
+  if (dataUrlMatch) {
+    return {
+      type: "image",
+      source: "inline",
+      mimeType: dataUrlMatch[1],
+      filename: `${creative.creativeId}.${dataUrlMatch[1] === "image/jpeg" ? "jpg" : "png"}`,
+      bytesBase64: dataUrlMatch[2],
+    };
+  }
+
+  const storagePath = reference.startsWith("/api/adstudio/media?")
+    ? new URL(reference, "https://blockwise.invalid").searchParams.get("path")
+    : reference.startsWith("data:") || isHttpUrl(reference)
+      ? null
+      : reference;
+
+  if (!storagePath) return null;
+
+  return {
+    type: "image",
+    source: "storage",
+    mimeType: "image/png",
+    filename: `${creative.creativeId}.png`,
+    storagePath,
+  };
+}
+
+function hasUsableCreativeImage(creative: MetaPublishCreativePlan): boolean {
+  const asset = creative.asset;
+  if (!asset) return false;
+
+  return Boolean(asset.imageHash || asset.bytesBase64 || (asset.source === "storage" && asset.storagePath));
+}
+
+function isHttpUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
 }
 
 function buildAdPlans(pack: AdStudioCampaignPack): MetaPublishAdPlan[] {
@@ -903,10 +977,13 @@ export function buildAdVariantTagSuffix(tag: MetaAdVariantTag): string {
 }
 
 function normalizeMetaPublishControls(controls: MetaPublishControls | undefined, pack: AdStudioCampaignPack): MetaPublishControls {
+  const destinationUrl = controls?.destinationUrl?.trim();
+
   return {
     dailyBudgetMinorUnits: controls?.dailyBudgetMinorUnits && controls.dailyBudgetMinorUnits > 0
       ? Math.round(controls.dailyBudgetMinorUnits)
       : 2000,
+    ...(destinationUrl && isHttpUrl(destinationUrl) ? { destinationUrl } : {}),
     geo: controls?.geo ?? { type: "country", country: pack.campaign.market.country },
     schedule: {
       startTime: controls?.schedule?.startTime ?? null,
