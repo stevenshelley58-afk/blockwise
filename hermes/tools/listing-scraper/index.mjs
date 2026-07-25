@@ -297,8 +297,9 @@ async function resolveCdpWsUrl(httpUrl) {
     const info = await res.json();
     const wsUrl = info.webSocketDebuggerUrl;
     if (!wsUrl) throw new Error("No webSocketDebuggerUrl in /json/version");
-    // Rewrite ws://localhost/... → ws://<ip>:<port>/...
-    return wsUrl.replace(/ws:\/\/localhost(:\d+)?\//, `ws://${ip}:${parsed.port}/`);
+    // Rebuild the WS URL with the resolved IP and correct port.
+    const wsPath = new URL(wsUrl).pathname; // e.g. /devtools/browser/<id>
+    return `ws://${ip}:${parsed.port}${wsPath}`;
   } finally {
     clearTimeout(timer);
   }
