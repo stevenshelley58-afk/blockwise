@@ -713,7 +713,7 @@
 .studio-generation-card-head strong,.studio-generation-card-head small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .studio-generation-card-head strong{font-size:12.8px;font-weight:750}
 .studio-generation-card-head small{color:var(--muted);font-size:10.8px}
-.studio-generation-card-copy{display:-webkit-box;overflow:hidden;-webkit-box-orient:vertical;-webkit-line-clamp:3;padding:0 13px 12px;font-size:13px;font-weight:450;line-height:1.4;overflow-wrap:anywhere}
+.studio-generation-card-copy{display:-webkit-box;overflow:hidden;-webkit-box-orient:vertical;-webkit-line-clamp:3;margin-bottom:12px;padding:0 13px;font-size:13px;font-weight:450;line-height:1.4;overflow-wrap:anywhere}
 .studio-generation-card-media{flex:1;min-height:150px;overflow:hidden;border-top:1px solid var(--line-soft);background:#e9edf2;display:grid;place-items:center}
 .studio-generation-card-media>img{width:100%;height:100%;display:block;object-fit:cover}
 .studio-generation-card-linkbar{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px;border-top:1px solid var(--line-soft);background:var(--surface-subtle);padding:9px 13px}
