@@ -273,10 +273,18 @@ async function stealthRender(url) {
           ...(parseProxyConfig(RESIDENTIAL_PROXY_URL) ? { proxy: parseProxyConfig(RESIDENTIAL_PROXY_URL) } : {}),
         });
         const page = await context.newPage();
-        await page.goto(url, { waitUntil: "networkidle", timeout: STEALTH_TIMEOUT_MS });
-        // Wait a bit for any lazy-loaded content
-        await page.waitForTimeout(2000);
-        const html = await page.content();
+        await page.goto(url, { waitUntil: "domcontentloaded", timeout: STEALTH_TIMEOUT_MS });
+
+        // Kasada / bot challenge detection: wait for the challenge JS to
+        // execute and the real page to load. Polls up to 15s.
+        let html = "";
+        for (let i = 0; i < 15; i++) {
+          await page.waitForTimeout(1000);
+          html = await page.content();
+          // Real listing pages are > 50KB; challenge pages are < 2KB.
+          if (html.length > 5000 && !html.includes("KPSDK")) break;
+        }
+
         await context.close();
         return html;
       } finally {
