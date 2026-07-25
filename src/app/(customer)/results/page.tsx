@@ -65,7 +65,9 @@ export default async function ResultsPage({
   return (
     <MetaMonitorDashboard
       initialPayload={initialPayload}
-      metaConnectHref={`/api/integrations/meta/connect?workspaceId=${encodeURIComponent(access.workspaceId)}`}
+      // Send Connect/Reconnect to Settings: the ad account, Page, lead
+      // destination, and privacy policy have to be chosen there anyway.
+      metaConnectHref="/settings"
       oauthNotice={oauthNotice}
     />
   );
