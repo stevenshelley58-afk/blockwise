@@ -186,7 +186,7 @@ export function AdRadarLocationForm({
 
   return (
     <form
-      className={isLanding ? "lp-location-form" : "research-search-form research-location-form"}
+      className={isLanding ? "lp-location-form" : "relative flex w-full flex-wrap items-end gap-2.5"}
       action={action}
       onSubmit={
         onSearch
@@ -197,9 +197,24 @@ export function AdRadarLocationForm({
           : undefined
       }
     >
-      <label className={isLanding ? "lp-location-field" : undefined} htmlFor={`${listId}-input`}>
-        <span className={isLanding ? "sr-only" : undefined}>{inputLabel}</span>
-        <span className={isLanding ? "lp-location-pill" : "research-location-field"}>
+      <label
+        className={isLanding ? "lp-location-field" : "grid min-w-[min(100%,260px)] flex-1 gap-1.5"}
+        htmlFor={`${listId}-input`}
+      >
+        <span
+          className={
+            isLanding ? "sr-only" : "font-mono text-[9.5px] font-medium tracking-[0.12em] text-(--faint) uppercase"
+          }
+        >
+          {inputLabel}
+        </span>
+        <span
+          className={
+            isLanding
+              ? "lp-location-pill"
+              : "flex h-11 items-center gap-2 rounded-(--r-card) border border-(--line) bg-(--surface) px-3 transition-[border-color,box-shadow] duration-150 focus-within:border-(--ink) focus-within:shadow-card"
+          }
+        >
           <input
             id={`${listId}-input`}
             ref={inputRef}
@@ -217,49 +232,104 @@ export function AdRadarLocationForm({
             onChange={(event) => onChange(event.target.value)}
             onFocus={() => setIsFocused(true)}
             onKeyDown={onKeyDown}
+            className={
+              isLanding
+                ? undefined
+                : "min-w-0 flex-1 border-0 bg-transparent p-0 text-[13.5px] font-semibold outline-none placeholder:text-(--faint)"
+            }
           />
-          <Search size={isLanding ? 18 : 14} aria-hidden />
+          <Search size={isLanding ? 18 : 15} aria-hidden className={isLanding ? undefined : "shrink-0 text-(--faint)"} />
         </span>
       </label>
 
       {showSuggestions ? (
         <div
           id={`${listId}-list`}
-          className={isLanding ? "lp-location-suggestions" : "research-location-suggestions"}
+          className={
+            isLanding
+              ? "lp-location-suggestions"
+              : "absolute top-[68px] left-0 z-20 w-full max-w-[560px] overflow-hidden rounded-(--r-card) border border-(--line) bg-(--surface) shadow-float"
+          }
           role="listbox"
           onMouseDown={(event) => event.preventDefault()}
         >
           {suggestions.map((suggestion, index) => (
             <button
               aria-selected={index === activeIndex}
-              className={isLanding ? "lp-location-option" : "research-location-option"}
+              className={
+                isLanding
+                  ? "lp-location-option"
+                  : "grid w-full cursor-pointer grid-cols-[28px_minmax(0,1fr)_auto] items-center gap-[9px] border-0 bg-(--surface) px-3 py-2.5 text-left transition-colors duration-100 hover:bg-(--surface-subtle) aria-selected:bg-(--surface-subtle)"
+              }
               id={`${listId}-option-${index}`}
               key={suggestion.id}
               onClick={() => chooseSuggestion(suggestion)}
               role="option"
               type="button"
             >
-              <span className="ad-radar-suggestion-icon" aria-hidden>
+              <span
+                className={
+                  isLanding
+                    ? "ad-radar-suggestion-icon"
+                    : "inline-grid size-7 place-items-center rounded-lg bg-(--surface-subtle) text-foreground"
+                }
+                aria-hidden
+              >
                 {suggestion.kind === "location" ? <MapPin size={15} /> : <Users size={15} />}
               </span>
-              <span className="ad-radar-suggestion-copy">
-                <strong>{suggestion.mainText}</strong>
-                <span>{suggestion.secondaryText}</span>
+              <span className={isLanding ? "ad-radar-suggestion-copy" : "grid min-w-0 gap-0.5"}>
+                <strong className={isLanding ? undefined : "truncate text-[13.5px] font-bold text-foreground"}>
+                  {suggestion.mainText}
+                </strong>
+                <span className={isLanding ? undefined : "truncate text-xs text-muted-foreground"}>
+                  {suggestion.secondaryText}
+                </span>
               </span>
-              <span className="ad-radar-suggestion-kind">{suggestion.kind === "location" ? "Place" : "Advertiser"}</span>
+              <span
+                className={
+                  isLanding
+                    ? "ad-radar-suggestion-kind"
+                    : "text-[10.5px] font-bold tracking-[0.08em] text-(--faint) uppercase"
+                }
+              >
+                {suggestion.kind === "location" ? "Place" : "Advertiser"}
+              </span>
             </button>
           ))}
           {suggestions.some((suggestion) => suggestion.source === "google") ? (
-            <span className={isLanding ? "lp-location-powered" : "research-location-powered"}>Location suggestions powered by Google</span>
+            <span
+              className={
+                isLanding
+                  ? "lp-location-powered"
+                  : "block border-t border-(--line) px-3 pt-[7px] pb-[9px] text-right text-[10.5px] font-bold text-(--faint)"
+              }
+            >
+              Location suggestions powered by Google
+            </span>
           ) : null}
         </div>
       ) : null}
 
-      <p id={`${listId}-scope`} className={isLanding ? "lp-search-scope" : "research-search-scope"}>
+      <p
+        id={`${listId}-scope`}
+        className={isLanding ? "lp-search-scope" : "basis-full text-[11.5px] text-(--faint)"}
+      >
         Predictive search for postcode, suburb, agency or agent
       </p>
-      {note ? <p id={`${listId}-note`} className={isLanding ? "lp-radar-note" : "research-location-note"}>{note}</p> : null}
-      <button className={isLanding ? "lp-btn lp-btn-primary lp-btn-wide" : "button"} disabled={isSubmitting} type="submit">
+      {note ? (
+        <p id={`${listId}-note`} className={isLanding ? "lp-radar-note" : "basis-full text-xs text-muted-foreground"}>
+          {note}
+        </p>
+      ) : null}
+      <button
+        className={
+          isLanding
+            ? "lp-btn lp-btn-primary lp-btn-wide"
+            : "inline-flex h-11 shrink-0 cursor-pointer items-center gap-1.5 rounded-full bg-(--ink) px-5 text-[13px] font-bold text-white transition-[opacity,transform] duration-150 hover:opacity-85 active:scale-[0.97] disabled:cursor-default disabled:opacity-50"
+        }
+        disabled={isSubmitting}
+        type="submit"
+      >
         <Search size={14} aria-hidden />
         {isSubmitting ? "Scanning..." : buttonLabel}
       </button>

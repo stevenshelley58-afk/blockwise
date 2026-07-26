@@ -15,6 +15,13 @@ import {
   type PropertySignal,
 } from "@/lib/property-check/types";
 
+const cardClass = "rounded-(--r-panel) border border-(--line) bg-(--surface) p-5 shadow-card";
+const cardTitleClass = "font-display text-[15.5px] font-extrabold tracking-[-0.015em]";
+const ghostButtonClass =
+  "inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-full border border-(--line-heavy) bg-card px-3.5 text-[12.5px] font-bold text-foreground transition-[background,box-shadow] duration-150 hover:bg-(--surface-subtle) hover:shadow-card";
+const inkButtonClass =
+  "inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-full bg-(--ink) px-4 text-[12.5px] font-bold text-white transition-[opacity,transform] duration-150 hover:opacity-85 active:scale-[0.97]";
+
 export function PropertyCheckReport({ check }: { check: PropertyCheckRecord }) {
   const [copied, setCopied] = useState(false);
   const ready = check.status === "success";
@@ -30,32 +37,39 @@ export function PropertyCheckReport({ check }: { check: PropertyCheckRecord }) {
   }
 
   return (
-    <article className="pc-report" aria-label={`Property report for ${check.address}`}>
-      <Link className="pc-report-back" href="/property-check">
-        <ArrowLeft aria-hidden size={15} />
+    <article className="grid gap-3.5" aria-label={`Property report for ${check.address}`}>
+      <Link
+        className="inline-flex w-fit items-center gap-1.5 text-[12.5px] font-bold text-muted-foreground transition-colors duration-150 hover:text-foreground"
+        href="/property-check"
+      >
+        <ArrowLeft aria-hidden size={14} />
         Property Check
       </Link>
 
-      <header className="pc-report-head">
+      <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1>{check.address}</h1>
-          <p className="pc-report-meta">
+          <h1 className="font-display text-[22px] font-extrabold tracking-[-0.02em] md:text-[24px]">{check.address}</h1>
+          <p className="mt-1 text-[12.5px] text-muted-foreground">
             {PROPERTY_CHECK_CLIENT_SITUATION_LABELS[check.clientSituation]} · Generated {formatDate(check.createdAt)}
           </p>
         </div>
-        <div className="pc-report-actions">
-          <span className={ready ? "pc-report-status ok" : "pc-report-status warn"}>
+        <div className="flex flex-wrap items-center gap-2">
+          <span
+            className={`inline-flex h-[30px] items-center gap-1.5 rounded-full px-3 text-[11.5px] font-bold ${
+              ready ? "bg-success-soft text-success" : "bg-warning-soft text-warning"
+            }`}
+          >
             {ready ? <CheckCircle2 aria-hidden size={14} /> : <AlertTriangle aria-hidden size={14} />}
             {ready ? "Ready" : check.status === "engine_unavailable" ? "Unavailable" : "No source result"}
           </span>
           {ready ? (
             <>
-              <button type="button" className="btn" onClick={() => void copySummary()}>
-                <Copy aria-hidden size={15} />
+              <button type="button" className={ghostButtonClass} onClick={() => void copySummary()}>
+                <Copy aria-hidden size={14} />
                 {copied ? "Copied" : "Copy summary"}
               </button>
-              <button type="button" className="btn btn-primary" onClick={() => window.print()}>
-                <Printer aria-hidden size={15} />
+              <button type="button" className={inkButtonClass} onClick={() => window.print()}>
+                <Printer aria-hidden size={14} />
                 Print / PDF
               </button>
             </>
@@ -84,13 +98,18 @@ export function PropertyCheckReport({ check }: { check: PropertyCheckRecord }) {
           <ReportSources citations={check.citations} />
         </>
       ) : (
-        <div className="pc-report-card pc-report-safe" role="status">
-          <AlertTriangle aria-hidden size={22} />
-          <p>{check.status === "engine_unavailable" ? PROPERTY_CHECK_UNAVAILABLE_MESSAGE : PROPERTY_CHECK_NO_SOURCE_MESSAGE}</p>
+        <div
+          className="flex flex-col items-center gap-2.5 rounded-(--r-panel) border border-dashed border-(--line-heavy) bg-(--surface-subtle)/50 px-6 py-12 text-center"
+          role="status"
+        >
+          <AlertTriangle aria-hidden size={22} className="text-warning" />
+          <p className="max-w-[420px] text-[13px]/relaxed text-muted-foreground">
+            {check.status === "engine_unavailable" ? PROPERTY_CHECK_UNAVAILABLE_MESSAGE : PROPERTY_CHECK_NO_SOURCE_MESSAGE}
+          </p>
         </div>
       )}
 
-      <p className="pc-report-disclaimer">{check.disclaimer}</p>
+      <p className="text-[11px]/relaxed text-(--faint)">{check.disclaimer}</p>
     </article>
   );
 }
@@ -101,13 +120,13 @@ function ReportSnapshot({ facts }: { facts: Record<string, unknown> }) {
   if (entries.length === 0) return null;
 
   return (
-    <section className="pc-report-card">
-      <h2>Property snapshot</h2>
-      <dl className="pc-report-facts">
+    <section className={cardClass}>
+      <h2 className={cardTitleClass}>Property snapshot</h2>
+      <dl className="mt-3.5 grid gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
         {entries.map((entry) => (
           <div key={entry.label}>
-            <dt>{entry.label}</dt>
-            <dd>{entry.value}</dd>
+            <dt className="font-mono text-[9.5px] font-medium tracking-[0.12em] text-(--faint) uppercase">{entry.label}</dt>
+            <dd className="mt-1 text-[13.5px] font-bold text-foreground">{entry.value}</dd>
           </div>
         ))}
       </dl>
@@ -131,24 +150,36 @@ function ReportItems({
   const citationById = new Map(citations.map((citation) => [citation.id, citation]));
 
   return (
-    <section className="pc-report-card">
-      <h2>{title}</h2>
+    <section className={cardClass}>
+      <h2 className={cardTitleClass}>{title}</h2>
       {items.length === 0 ? (
-        <p className="pc-report-muted">{empty}</p>
+        <p className="mt-2 text-xs text-muted-foreground">{empty}</p>
       ) : (
-        <div className="pc-report-items">
+        <div className="mt-3.5 grid gap-2.5">
           {items.map((item) => (
-            <div className={`pc-report-item ${tone}`} key={item.id}>
-              <span className="pc-report-item-dot" aria-hidden>
+            <div className="flex gap-3 rounded-(--r-card) border border-(--line) bg-(--surface-subtle)/50 p-3.5" key={item.id}>
+              <span
+                className={`grid size-6 shrink-0 place-items-center rounded-full text-[12px] font-bold ${
+                  tone === "ok" ? "bg-success-soft text-success" : "bg-warning-soft text-warning"
+                }`}
+                aria-hidden
+              >
                 {tone === "ok" ? "✓" : "!"}
               </span>
-              <div>
-                <b>{item.title}</b>
-                <p>{item.summary}</p>
-                <span className="pc-report-cites">
+              <div className="min-w-0">
+                <b className="text-[13px] font-bold text-foreground">{item.title}</b>
+                <p className="mt-0.5 text-xs/relaxed text-muted-foreground">{item.summary}</p>
+                <span className="mt-2 flex flex-wrap gap-1.5">
                   {item.citationIds.map((citationId) => {
                     const citation = citationById.get(citationId);
-                    return <span key={citationId}>{citation?.title ?? citationId}</span>;
+                    return (
+                      <span
+                        key={citationId}
+                        className="inline-flex h-5 items-center rounded-full border border-(--line) bg-(--surface) px-2 text-[10px] font-bold text-muted-foreground"
+                      >
+                        {citation?.title ?? citationId}
+                      </span>
+                    );
                   })}
                 </span>
               </div>
@@ -164,11 +195,13 @@ function ReportTalkingPoints({ points }: { points: string[] }) {
   if (points.length === 0) return null;
 
   return (
-    <section className="pc-report-card">
-      <h2>Talking points for the conversation</h2>
-      <ol className="pc-report-talk">
+    <section className={cardClass}>
+      <h2 className={cardTitleClass}>Talking points for the conversation</h2>
+      <ol className="mt-3.5 grid list-decimal gap-2 pl-5 marker:font-display marker:text-[13px] marker:font-extrabold marker:text-(--faint)">
         {points.map((point) => (
-          <li key={point}>{point}</li>
+          <li key={point} className="pl-1 text-[13px]/relaxed text-foreground">
+            {point}
+          </li>
         ))}
       </ol>
     </section>
@@ -179,17 +212,25 @@ function ReportSources({ citations }: { citations: PropertyCitation[] }) {
   if (citations.length === 0) return null;
 
   return (
-    <section className="pc-report-card">
-      <h2>Sources</h2>
-      <div className="pc-report-sources">
+    <section className={cardClass}>
+      <h2 className={cardTitleClass}>Sources</h2>
+      <div className="mt-3.5 grid gap-2">
         {citations.map((citation) => (
-          <div className="pc-report-source" key={citation.id}>
-            <b>{citation.title}</b>
-            <span>{formatLabel(citation.sourceType)}</span>
+          <div
+            className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-(--r-card) border border-(--line) bg-(--surface-subtle)/50 px-3.5 py-2.5"
+            key={citation.id}
+          >
+            <b className="text-[12.5px] font-bold text-foreground">{citation.title}</b>
+            <span className="text-[11px] text-(--faint)">{formatLabel(citation.sourceType)}</span>
             {citation.url ? (
-              <a href={citation.url} target="_blank" rel="noreferrer">
+              <a
+                href={citation.url}
+                target="_blank"
+                rel="noreferrer"
+                className="ml-auto inline-flex items-center gap-1 text-[11.5px] font-bold text-data hover:underline"
+              >
                 Open
-                <ExternalLink aria-hidden size={13} />
+                <ExternalLink aria-hidden size={12} />
               </a>
             ) : null}
           </div>

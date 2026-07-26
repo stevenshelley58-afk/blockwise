@@ -12,6 +12,8 @@
  */
 
 export type NicheFeatures = {
+  /** The competitor ad-library surface (Blockwise: Ad Radar). */
+  adRadar: boolean;
   /** The address-report surface (Blockwise: Property Check). */
   propertyCheck: boolean;
   /** Public area/suburb report pages. */

@@ -35,7 +35,7 @@ export const blockwise: NicheConfig = {
       { href: "/self-serve", label: "Home" },
       { href: "/ad-studio", label: "Ad Studio" },
       { href: "/results", label: "Performance" },
-      { href: "/ad-radar", label: "Ad Radar" },
+      { href: "/ad-radar", label: "Ad Radar", feature: "adRadar" },
       { href: "/property-check", label: "Property Check", feature: "propertyCheck" },
       { href: "/leads", label: "Leads" },
       { href: "/ad-studio/brand", label: "Brand Pack", section: "Set up" },
@@ -49,6 +49,7 @@ export const blockwise: NicheConfig = {
     ],
   },
   features: {
+    adRadar: true,
     propertyCheck: true,
     suburbPages: true,
     guides: true,

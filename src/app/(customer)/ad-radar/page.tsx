@@ -1,6 +1,8 @@
 import { headers } from "next/headers";
+import { notFound } from "next/navigation";
 
 import { AdRadarSearchPanel } from "@/components/research/ad-radar-search-panel";
+import { niche } from "@/config/niche";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
 import {
   resolveAdRadarLocationGuess,
@@ -13,6 +15,7 @@ type ResearchSort = "recent" | "longest";
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
 export default async function ResearchPage({ searchParams }: { searchParams?: SearchParams }) {
+  if (!niche.features.adRadar) notFound();
   await requirePageSurfaceAccess("monitor");
   const requestHeaders = await headers();
   const params = searchParams ? await searchParams : {};
@@ -25,10 +28,13 @@ export default async function ResearchPage({ searchParams }: { searchParams?: Se
   const locationLabel = locationGuess?.label ?? "Perth, WA";
 
   return (
-    <main className="content">
-      <div className="page-heading">
-        <h1>Ad Radar</h1>
-      </div>
+    <main className="mx-auto grid w-full max-w-[1120px] gap-3.5 px-4 pt-6 pb-28 md:px-6 md:pt-8 md:pb-16">
+      <header>
+        <h1 className="font-display text-[24px] font-extrabold tracking-[-0.02em] md:text-[27px]">
+          {niche.copy.adRadar.title}
+        </h1>
+        <p className="mt-1 text-[13px] text-muted-foreground">{niche.copy.adRadar.lead}</p>
+      </header>
       <AdRadarSearchPanel
         initialIncludeSurrounding={includeSurrounding}
         initialQuery={searchTerm}

@@ -45,7 +45,7 @@ export function AdRadarResultsGrid({ cards }: { cards: CustomerMetaAdLibraryCard
 
   return (
     <>
-      <div className="research-results-grid">
+      <div className="grid items-start gap-4 [grid-auto-rows:8px] [grid-template-columns:repeat(auto-fill,minmax(min(100%,360px),1fr))]">
         {visibleCards.map((card) => (
           <MasonryItem key={card.id}>
             <MetaAdLibraryCard card={card} />
@@ -53,9 +53,9 @@ export function AdRadarResultsGrid({ cards }: { cards: CustomerMetaAdLibraryCard
         ))}
       </div>
       {remaining > 0 ? (
-        <div ref={sentinelRef} style={{ display: "flex", justifyContent: "center", padding: "8px 0 4px" }}>
+        <div ref={sentinelRef} className="flex justify-center pt-2 pb-1">
           <button
-            className="button secondary"
+            className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-full border border-(--line-heavy) bg-card px-3.5 text-[12.5px] font-bold text-foreground transition-[background,box-shadow] duration-150 hover:bg-(--surface-subtle) hover:shadow-card"
             type="button"
             onClick={() => setVisibleCount((current) => Math.min(current + BATCH_SIZE, cards.length))}
           >
@@ -89,7 +89,7 @@ function MasonryItem({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <div className="research-results-item" ref={itemRef} style={{ gridRowEnd: `span ${rowSpan}` }}>
+    <div ref={itemRef} style={{ gridRowEnd: `span ${rowSpan}` }}>
       {children}
     </div>
   );

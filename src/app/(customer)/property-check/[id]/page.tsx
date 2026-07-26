@@ -20,7 +20,7 @@ export default async function PropertyCheckReportPage({ params }: { params: Prom
   }
 
   return (
-    <main className="content property-check-page">
+    <main className="mx-auto w-full max-w-[880px] px-4 pt-6 pb-28 md:px-6 md:pt-8 md:pb-16">
       <PropertyCheckReport check={check} />
     </main>
   );
