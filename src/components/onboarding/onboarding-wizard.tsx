@@ -1,12 +1,17 @@
 "use client";
 
-import { ArrowRight, Check, Link2, MapPinned, Palette } from "lucide-react";
+import { ArrowRight, Check, ChevronDown, Link2, MapPinned, Palette, PartyPopper } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { Fragment, useEffect, useState, type FormEvent } from "react";
 
 import { AssetUploadDropzone } from "@/components/asset-upload-dropzone";
 import { StatusPill } from "@/components/status-pill";
+import { Button } from "@/components/ui/button";
+import { Confetti } from "@/components/ui/confetti";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useReducedMotion } from "@/lib/motion";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import {
   LOGO_MAX_BYTES,
@@ -107,6 +112,8 @@ export function OnboardingWizard({
   const [logoPreviewUrl, setLogoPreviewUrl] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ tone: "success" | "error"; text: string } | null>(null);
+  const [celebrating, setCelebrating] = useState(false);
+  const reducedMotion = useReducedMotion();
 
   const current = STEPS[stepIndex].id;
   const progressPercent = Math.round((stepIndex / (STEPS.length - 1)) * 100);
@@ -140,13 +147,28 @@ export function OnboardingWizard({
         throw new Error(payload.error ?? "We couldn't finish setup yet.");
       }
 
-      router.push("/ad-studio?first=1");
-      router.refresh();
+      if (reducedMotion) {
+        router.push("/ad-studio?first=1");
+        router.refresh();
+      } else {
+        setCelebrating(true);
+      }
     } catch (caught) {
       setBusy(false);
       setMessage({ tone: "error", text: caught instanceof Error ? caught.message : "We couldn't finish setup yet." });
     }
   }
+
+  // After the one-and-only confetti moment (first-run setup complete), hand
+  // off to Ad Studio. The burst is brief and never loops.
+  useEffect(() => {
+    if (!celebrating) return;
+    const timer = setTimeout(() => {
+      router.push("/ad-studio?first=1");
+      router.refresh();
+    }, 1600);
+    return () => clearTimeout(timer);
+  }, [celebrating, router]);
 
   async function chooseLogo(file: File) {
     setMessage(null);
@@ -302,80 +324,147 @@ export function OnboardingWizard({
     next();
   }
 
-  return (
-    <section className="wizard">
-      <ol className="wizard-steps" aria-label="Setup steps">
-        {STEPS.map((step, i) => {
-          const state = i < stepIndex ? "done" : i === stepIndex ? "active" : "todo";
-          return (
-            <li className={`wizard-step ${state}`} key={step.id}>
-              <span className="wizard-step-dot">{state === "done" ? <Check size={14} aria-hidden /> : i + 1}</span>
-              <span>{step.label}</span>
-            </li>
-          );
-        })}
-      </ol>
+  const panelClass = "rounded-(--r-panel) border border-(--line) bg-(--surface) p-6 shadow-card";
+  const selectClass =
+    "h-9 w-full appearance-none rounded-(--r-card) border border-(--line) bg-(--surface) px-2.5 pr-7 text-[12.5px] font-semibold text-foreground outline-none transition-[border-color] duration-150 focus:border-(--ink) disabled:cursor-not-allowed disabled:opacity-50";
+  const connectRowClass = "flex items-center justify-between gap-4 rounded-(--r-card) border border-(--line) bg-(--surface-subtle)/40 px-4 py-3";
+  const inkLinkClass =
+    "inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-full bg-(--ink) px-4 text-[12.5px] font-bold text-white transition-[opacity,transform] duration-150 hover:opacity-85 active:scale-[0.97]";
+  const ghostLinkClass =
+    "inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-full border border-(--line-heavy) bg-card px-3.5 text-[12.5px] font-bold text-foreground transition-[background,box-shadow] duration-150 hover:bg-(--surface-subtle) hover:shadow-card";
+  const statusClass = (tone: "success" | "error") =>
+    `text-[12.5px] font-bold ${tone === "error" ? "text-error" : "text-success"}`;
+  const stepIconClass = "grid size-10 shrink-0 place-items-center rounded-full bg-success-soft text-success";
+  const stepTitleClass = "font-display text-[17px] font-extrabold tracking-[-0.015em]";
+  const stepLeadClass = "mt-0.5 text-[13px] text-muted-foreground";
 
-      <div className="wizard-track" aria-hidden>
-        <span style={{ width: `${progressPercent}%` }} />
+  return (
+    <section className="grid gap-5">
+      <div>
+        <ol aria-label="Setup steps" className="flex items-start">
+          {STEPS.map((step, i) => {
+            const state = i < stepIndex ? "done" : i === stepIndex ? "active" : "todo";
+            return (
+              <Fragment key={step.id}>
+                <li className="flex w-16 flex-col items-center gap-1.5 sm:w-20">
+                  <span
+                    aria-current={state === "active" ? "step" : undefined}
+                    className={`grid size-8 shrink-0 place-items-center rounded-full text-xs font-bold transition-colors duration-200 ${
+                      state === "done"
+                        ? "bg-(--ink) text-white"
+                        : state === "active"
+                          ? "border-2 border-(--ink) bg-(--surface) text-(--ink)"
+                          : "border border-(--line) bg-(--surface) text-(--faint)"
+                    }`}
+                  >
+                    {state === "done" ? <Check size={14} aria-hidden /> : i + 1}
+                  </span>
+                  <span className={`text-[11px] font-bold ${state === "todo" ? "text-(--faint)" : "text-foreground"}`}>
+                    {step.label}
+                  </span>
+                </li>
+                {i < STEPS.length - 1 ? (
+                  <li aria-hidden="true" className="mt-[15px] h-0.5 flex-1 overflow-hidden rounded-full bg-(--line)">
+                    <span
+                      className="block h-full rounded-full bg-(--ink) transition-[width] duration-300 ease-out"
+                      style={{ width: i < stepIndex ? "100%" : "0%" }}
+                    />
+                  </li>
+                ) : null}
+              </Fragment>
+            );
+          })}
+        </ol>
+        <div className="mt-4 flex items-center gap-3">
+          <div className="h-1 flex-1 overflow-hidden rounded-full bg-(--line)">
+            <span
+              className="block h-full rounded-full bg-(--ink) transition-[width] duration-300 ease-out"
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
+          <span className="font-mono text-[9.5px] font-medium tracking-[0.12em] text-(--faint) uppercase">
+            Step {stepIndex + 1} of {STEPS.length}
+          </span>
+        </div>
       </div>
 
-      <div className="panel wizard-panel">
+      <div className={panelClass}>
         {current === "profile" ? (
-          <form className="wizard-body" onSubmit={saveProfile}>
-            <MapPinned size={26} aria-hidden color="#31c46f" />
-            <h2>Confirm your profile</h2>
-            <p>These details come from your signed-in workspace.</p>
-            {!canSaveProfile ? <StatusPill tone="blue">Managed by an owner or admin</StatusPill> : null}
-            <label className="wizard-field">
-              <span className="wizard-label">Business name</span>
-              <input
+          <form className="grid gap-4" onSubmit={saveProfile}>
+            <div className="flex items-start gap-3">
+              <span className={stepIconClass}>
+                <MapPinned size={20} aria-hidden />
+              </span>
+              <div>
+                <h2 className={stepTitleClass}>Confirm your profile</h2>
+                <p className={stepLeadClass}>These details come from your signed-in workspace.</p>
+              </div>
+            </div>
+            {!canSaveProfile ? (
+              <div>
+                <StatusPill tone="blue">Managed by an owner or admin</StatusPill>
+              </div>
+            ) : null}
+            <div className="grid gap-2">
+              <Label htmlFor="ob-business">Business name</Label>
+              <Input
+                id="ob-business"
                 value={profileName}
                 onChange={(event) => setProfileName(event.target.value)}
                 readOnly={!canSaveProfile}
                 required
               />
-            </label>
-            <label className="wizard-field">
-              <span className="wizard-label">Region</span>
-              <select
-                value={profileRegion}
-                onChange={(event) => setProfileRegion(event.target.value)}
-                disabled={!canSaveProfile}
-                required
-              >
-                {Object.keys(REGION_CURRENCY).map((r) => (
-                  <option key={r} value={r}>{REGION_NAMES[r] ?? r}</option>
-                ))}
-              </select>
-            </label>
-            {message ? <p className={`wizard-status ${message.tone}`}>{message.text}</p> : null}
-            <div className="wizard-actions">
-              <button className="button secondary" disabled={busy} onClick={next} type="button">
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="ob-region">Region</Label>
+              <span className="relative block">
+                <select
+                  id="ob-region"
+                  className={selectClass}
+                  value={profileRegion}
+                  onChange={(event) => setProfileRegion(event.target.value)}
+                  disabled={!canSaveProfile}
+                  required
+                >
+                  {Object.keys(REGION_CURRENCY).map((r) => (
+                    <option key={r} value={r}>{REGION_NAMES[r] ?? r}</option>
+                  ))}
+                </select>
+                <ChevronDown size={14} aria-hidden className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-(--faint)" />
+              </span>
+            </div>
+            {message ? <p className={statusClass(message.tone)}>{message.text}</p> : null}
+            <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
+              <Button variant="outline" type="button" disabled={busy} onClick={next}>
                 Skip for now
-              </button>
-              <button className="button" disabled={busy} type="submit">
+              </Button>
+              <Button type="submit" disabled={busy}>
                 {canSaveProfile ? "Save and continue" : "Continue"} <ArrowRight size={16} aria-hidden />
-              </button>
+              </Button>
             </div>
           </form>
         ) : null}
 
         {current === "brand" ? (
-          <form className="wizard-body" onSubmit={saveBrand}>
-            <Palette size={26} aria-hidden color="#31c46f" />
-            <h2>Add your brand</h2>
-            <p>
-              {canSaveBrand
-                ? "Your colour and tone guide drafts. Logo uploads are stored with your brand assets for review."
-                : "An owner, admin, or member can update brand assets. You can keep going with the current workspace defaults."}
-            </p>
+          <form className="grid gap-4" onSubmit={saveBrand}>
+            <div className="flex items-start gap-3">
+              <span className={stepIconClass}>
+                <Palette size={20} aria-hidden />
+              </span>
+              <div>
+                <h2 className={stepTitleClass}>Add your brand</h2>
+                <p className={stepLeadClass}>
+                  {canSaveBrand
+                    ? "Your colour and tone guide drafts. Logo uploads are stored with your brand assets for review."
+                    : "An owner, admin, or member can update brand assets. You can keep going with the current workspace defaults."}
+                </p>
+              </div>
+            </div>
             {canSaveBrand ? (
               <>
-                <label className="wizard-field">
-                  <span className="wizard-label">Logo asset</span>
+                <div className="grid gap-2">
+                  <Label>Logo asset</Label>
                   <AssetUploadDropzone
-                    className="wizard-upload"
                     label="Upload logo"
                     actionText="Upload logo"
                     helperText="PNG, JPG, WebP, or SVG / up to 5 MB"
@@ -398,90 +487,124 @@ export function OnboardingWizard({
                       setMessage(null);
                     }}
                   />
-                </label>
-                <label className="wizard-field">
-                  <span className="wizard-label">Brand colour</span>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="ob-color">Brand colour</Label>
                   <input
+                    id="ob-color"
                     type="color"
-                    className="wizard-color"
+                    className="size-11 cursor-pointer rounded-(--r-card) border border-(--line) bg-(--surface) p-1"
                     value={brandColor}
                     onChange={(event) => setBrandColor(event.target.value)}
                   />
-                </label>
-                <label className="wizard-field">
-                  <span className="wizard-label">Tone</span>
-                  <textarea value={brandTone} onChange={(event) => setBrandTone(event.target.value)} />
-                </label>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="ob-tone">Tone</Label>
+                  <textarea
+                    id="ob-tone"
+                    className="min-h-20 w-full rounded-(--r-card) border border-(--line) bg-(--surface) px-3 py-2 text-sm text-foreground outline-none transition-[border-color] duration-150 focus:border-(--ink)"
+                    value={brandTone}
+                    onChange={(event) => setBrandTone(event.target.value)}
+                  />
+                </div>
               </>
             ) : (
-              <div className="wizard-connect-row">
-                <span>Brand defaults</span>
+              <div className={connectRowClass}>
+                <span className="text-sm font-semibold">Brand defaults</span>
                 <StatusPill tone="blue">Ready</StatusPill>
               </div>
             )}
-            {message ? <p className={`wizard-status ${message.tone}`}>{message.text}</p> : null}
-            <div className="wizard-actions">
-              <button className="button secondary" disabled={busy} onClick={back} type="button">
+            {message ? <p className={statusClass(message.tone)}>{message.text}</p> : null}
+            <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
+              <Button variant="outline" type="button" disabled={busy} onClick={back}>
                 Back
-              </button>
-              <button className="button secondary" disabled={busy} onClick={next} type="button">
+              </Button>
+              <Button variant="outline" type="button" disabled={busy} onClick={next}>
                 Skip for now
-              </button>
-              <button className="button" disabled={busy} type="submit">
+              </Button>
+              <Button type="submit" disabled={busy}>
                 {canSaveBrand ? "Save and continue" : "Continue"} <ArrowRight size={16} aria-hidden />
-              </button>
+              </Button>
             </div>
           </form>
         ) : null}
 
         {current === "connect" ? (
-          <div className="wizard-body">
-            <Link2 size={26} aria-hidden color="#31c46f" />
-            <h2>Connect your ad accounts</h2>
-            <p>
-              {canManageConnections
-                ? "Connect ad accounts when you are ready to publish. You can create ads before Meta is connected."
-                : "An owner or admin can connect ad accounts later when the workspace is ready to publish."}
-            </p>
-            <div className="wizard-connect-row">
-              <span>Meta</span>
+          <div className="grid gap-4">
+            <div className="flex items-start gap-3">
+              <span className={stepIconClass}>
+                <Link2 size={20} aria-hidden />
+              </span>
+              <div>
+                <h2 className={stepTitleClass}>Connect your ad accounts</h2>
+                <p className={stepLeadClass}>
+                  {canManageConnections
+                    ? "Connect ad accounts when you are ready to publish. You can create ads before Meta is connected."
+                    : "An owner or admin can connect ad accounts later when the workspace is ready to publish."}
+                </p>
+              </div>
+            </div>
+            <div className={connectRowClass}>
+              <span className="text-sm font-semibold">Meta</span>
               {canManageConnections ? (
-                <Link className="button" href={metaConnectHref}>
+                <Link className={inkLinkClass} href={metaConnectHref}>
                   Connect Meta
                 </Link>
               ) : (
-                <button className="button" disabled type="button">
+                <Button variant="outline" disabled type="button">
                   Owner/admin only
-                </button>
+                </Button>
               )}
             </div>
-            <div className="wizard-connect-row">
-              <span>Google</span>
+            <div className={connectRowClass}>
+              <span className="text-sm font-semibold">Google</span>
               {canManageConnections && googleAdsEnabled ? (
-                <Link className="button secondary" href={googleConnectHref}>
+                <Link className={ghostLinkClass} href={googleConnectHref}>
                   Connect Google
                 </Link>
               ) : (
-                <button className="button secondary" disabled type="button">
+                <Button variant="outline" disabled type="button">
                   Not needed for Meta launch
-                </button>
+                </Button>
               )}
             </div>
-            {message ? <p className={`wizard-status ${message.tone}`}>{message.text}</p> : null}
-            <div className="wizard-actions">
-              <button className="button secondary" disabled={busy} onClick={back} type="button">
+            {message ? <p className={statusClass(message.tone)}>{message.text}</p> : null}
+            <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
+              <Button variant="outline" type="button" disabled={busy} onClick={back}>
                 Back
-              </button>
-              <button className="button secondary" disabled={busy} onClick={finishOnboarding} type="button">
+              </Button>
+              <Button variant="outline" type="button" disabled={busy} onClick={finishOnboarding}>
                 Skip for now
-              </button>
-              <button className="button" disabled={busy} onClick={finishOnboarding} type="button">
+              </Button>
+              <Button type="button" disabled={busy} onClick={finishOnboarding}>
                 Open Ad Studio <ArrowRight size={16} aria-hidden />
-              </button>
+              </Button>
             </div>
           </div>
         ) : null}
       </div>
+
+      {celebrating ? (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-(--ink)/40 px-6 backdrop-blur-[2px]">
+          <Confetti
+            className="pointer-events-none absolute inset-0"
+            options={{
+              particleCount: 140,
+              spread: 75,
+              startVelocity: 32,
+              origin: { y: 0.55 },
+              colors: ["#2a78d6", "#31c46f", "#16181d", "#94a3b8"],
+            }}
+          />
+          <div className="relative rounded-(--r-panel) border border-(--line) bg-(--surface) px-10 py-8 text-center shadow-float">
+            <span className="mx-auto grid size-12 place-items-center rounded-full bg-success-soft text-success">
+              <PartyPopper size={22} aria-hidden />
+            </span>
+            <h2 className="mt-3 font-display text-[19px] font-extrabold tracking-[-0.015em]">You're all set!</h2>
+            <p className="mt-1 text-[13px] text-muted-foreground">Taking you to Ad Studio…</p>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }
