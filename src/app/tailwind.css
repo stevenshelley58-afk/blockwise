@@ -38,6 +38,12 @@
     ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-jetbrains), "JetBrains Mono", ui-monospace, SFMono-Regular,
     Menlo, Consolas, monospace;
+
+  /* Premium v2 finish: layered soft shadows and the spring curve, exposed as
+     `shadow-card` / `shadow-float` / `ease-spring` utilities. */
+  --shadow-card: 0 1px 2px rgba(16, 18, 23, 0.04), 0 8px 24px rgba(16, 18, 23, 0.06);
+  --shadow-float: 0 2px 4px rgba(16, 18, 23, 0.05), 0 16px 40px rgba(16, 18, 23, 0.1);
+  --ease-spring: cubic-bezier(0.22, 1.1, 0.36, 1);
 }
 
 /* shadcn theme variables, namespaced and bridged onto Blockwise tokens. */
@@ -76,6 +82,22 @@
   --ui-sidebar-accent-foreground: var(--side-ink-active);
   --ui-sidebar-border: var(--side-line);
   --ui-sidebar-ring: var(--ui-ring);
+
+  /* Premium v2: the one vivid data voice (charts, meters, sparklines only —
+     never UI chrome or text). Defaults to the Blockwise hue; the customer
+     layout overrides these three from src/config/niche for white-labeling. */
+  --ui-data: #2a78d6;
+  --ui-data-soft: rgba(42, 120, 214, 0.1);
+  --ui-data-track: rgba(42, 120, 214, 0.16);
+
+  /* Semantic status colors, bridged onto the Blockwise palette. Status only —
+     they never decorate headings, cards, or illustrations. */
+  --ui-success: var(--green, #006d38);
+  --ui-success-soft: var(--green-soft, #e9f6ef);
+  --ui-warning: var(--amber, #8a5a00);
+  --ui-warning-soft: #fdf6e7;
+  --ui-error: var(--rose, #ba1a1a);
+  --ui-error-soft: var(--rose-soft, #ffdad6);
 }
 
 /*
@@ -117,6 +139,16 @@
   --color-sidebar-accent-foreground: var(--ui-sidebar-accent-foreground);
   --color-sidebar-border: var(--ui-sidebar-border);
   --color-sidebar-ring: var(--ui-sidebar-ring);
+
+  --color-data: var(--ui-data);
+  --color-data-soft: var(--ui-data-soft);
+  --color-data-track: var(--ui-data-track);
+  --color-success: var(--ui-success);
+  --color-success-soft: var(--ui-success-soft);
+  --color-warning: var(--ui-warning);
+  --color-warning-soft: var(--ui-warning-soft);
+  --color-error: var(--ui-error);
+  --color-error-soft: var(--ui-error-soft);
 }
 
 /*

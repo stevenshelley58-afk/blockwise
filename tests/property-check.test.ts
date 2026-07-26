@@ -170,11 +170,15 @@ test("property check persistence and RLS stay workspace scoped", () => {
 
 test("property check navigation is exposed to builder surfaces only", () => {
   const sidebar = readFileSync("src/components/sidebar-nav.tsx", "utf8");
-  const selfServeBlock = sidebar.match(/const selfServeNavItems[\s\S]*?const monitorNavItems/)?.[0] ?? "";
-  const operatorBlock = sidebar.match(/const operatorNavItems[\s\S]*?const selfServeNavItems/)?.[0] ?? "";
+  // Self-serve nav now comes from the white-label niche config, feature-flagged.
+  const nicheConfig = readFileSync("src/config/niche/blockwise.ts", "utf8");
+  const operatorBlock = sidebar.match(/const operatorNavItems[\s\S]*?const selfServeIconByHref/)?.[0] ?? "";
   const monitorBlock = sidebar.match(/const monitorNavItems[\s\S]*?export const navByVariant/)?.[0] ?? "";
 
-  assert.match(selfServeBlock, /href: "\/property-check", label: "Property Check"/);
+  assert.match(
+    nicheConfig,
+    /href: "\/property-check", label: "Property Check", feature: "propertyCheck"/,
+  );
   assert.match(operatorBlock, /href: "\/property-check", label: "Property Check"/);
   assert.doesNotMatch(monitorBlock, /\/property-check/);
 });

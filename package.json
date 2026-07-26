@@ -32,8 +32,10 @@
     "@tailwindcss/postcss": "^4.3.3",
     "@tanstack/react-table": "^8.21.3",
     "@vercel/analytics": "^2.0.1",
+    "canvas-confetti": "^1.9.4",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "cmdk": "^1.1.1",
     "lucide-react": "^0.468.0",
     "motion": "^12.42.2",
     "next": "^16.2.6",
@@ -53,6 +55,7 @@
   "devDependencies": {
     "@playwright/test": "^1.53.0",
     "@trigger.dev/sdk": "4.4.6",
+    "@types/canvas-confetti": "^1.9.0",
     "@types/node": "^22.15.30",
     "@types/react": "^19.0.12",
     "@types/react-dom": "^19.0.4",

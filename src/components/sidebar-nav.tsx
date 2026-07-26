@@ -19,6 +19,8 @@ import type { ComponentType, SVGProps } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { niche } from "@/config/niche";
+
 export type SidebarVariant = "operator" | "self_serve" | "monitor";
 
 type NavIcon = ComponentType<{ size?: number; "aria-hidden"?: boolean | "true" | "false" }>;
@@ -68,19 +70,28 @@ const operatorNavItems: NavItem[] = [
   { href: "/model-control", label: "Model Control", icon: Settings2 },
 ];
 
-// Self-serve menu mirrors the approved self-serve simplification: one guided
-// path (Home, Ad Studio, Performance, Ad Radar, Property Check, Leads) then a
-// "Set up" group. Every entry maps to a real, working route.
-const selfServeNavItems: NavItem[] = [
-  { href: "/self-serve", label: "Home", icon: LayoutGrid },
-  { href: "/ad-studio", label: "Ad Studio", icon: Star },
-  { href: "/results", label: "Performance", icon: LineChart },
-  { href: "/ad-radar", label: "Ad Radar", icon: RadarIcon },
-  { href: "/property-check", label: "Property Check", icon: FileSearch },
-  { href: "/leads", label: "Leads", icon: UsersRound },
-  { href: "/ad-studio/brand", label: "Brand Pack", icon: UserRound, section: "Set up" },
-  { href: "/settings", label: "Settings", icon: Settings, section: "Set up" },
-];
+// Self-serve labels, order, and feature gating live in the niche config
+// (src/config/niche) — the white-label layer. Icons stay here, keyed by
+// route, because they are structural rather than niche identity.
+const selfServeIconByHref: Record<string, NavIcon> = {
+  "/self-serve": LayoutGrid,
+  "/ad-studio": Star,
+  "/results": LineChart,
+  "/ad-radar": RadarIcon,
+  "/property-check": FileSearch,
+  "/leads": UsersRound,
+  "/ad-studio/brand": UserRound,
+  "/settings": Settings,
+};
+
+const selfServeNavItems: NavItem[] = niche.nav.items
+  .filter((item) => !item.feature || niche.features[item.feature])
+  .map((item) => ({
+    href: item.href,
+    label: item.label,
+    icon: selfServeIconByHref[item.href] ?? LayoutGrid,
+    section: item.section,
+  }));
 
 const monitorNavItems: NavItem[] = [
   { href: "/results", label: "Results", icon: LineChart },
