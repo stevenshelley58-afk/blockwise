@@ -151,7 +151,7 @@ export default async function SelfServeHome() {
           <div className="min-w-0">
             <h1
               id="self-serve-title"
-              className="text-2xl font-semibold tracking-tight text-balance md:text-3xl"
+              className="font-display text-[26px] leading-tight font-extrabold tracking-[-0.02em] text-balance md:text-[28px]"
             >
               {heading}
             </h1>
@@ -162,15 +162,19 @@ export default async function SelfServeHome() {
 
         {/* Key numbers */}
         <div className="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <Card>
-            <CardContent className="p-5">
-              <div className="flex items-start justify-between gap-3">
-                <p className="text-sm font-medium text-muted-foreground">Ads created</p>
-                <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-(--accent-tint) text-(--accent)">
+          <Card className="rounded-[14px] border-0 py-0 shadow-(--shadow) transition-all duration-200 hover:-translate-y-1 hover:shadow-(--shadow-float)">
+            <CardContent className="p-[18px]">
+              <div className="flex items-center justify-between gap-3">
+                <p className="font-mono text-[10px] font-medium tracking-[0.1em] text-(--faint) uppercase">
+                  Ads created
+                </p>
+                <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-(--accent-tint) text-(--accent)">
                   <Megaphone aria-hidden className="size-4" />
                 </span>
               </div>
-              <p className="mt-3 text-3xl font-semibold tracking-tight tabular-nums">{usedAdPacks}</p>
+              <p className="mt-3 font-display text-2xl font-extrabold tracking-[-0.02em] tabular-nums">
+                {usedAdPacks}
+              </p>
               <p className="mt-1 text-xs text-muted-foreground">
                 {usedAdPacks === 0
                   ? "No ads yet"
@@ -181,17 +185,21 @@ export default async function SelfServeHome() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardContent className="p-5">
-              <div className="flex items-start justify-between gap-3">
-                <p className="text-sm font-medium text-muted-foreground">Free ad packs left</p>
-                <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-(--accent-tint) text-(--accent)">
+          <Card className="rounded-[14px] border-0 py-0 shadow-(--shadow) transition-all duration-200 hover:-translate-y-1 hover:shadow-(--shadow-float)">
+            <CardContent className="p-[18px]">
+              <div className="flex items-center justify-between gap-3">
+                <p className="font-mono text-[10px] font-medium tracking-[0.1em] text-(--faint) uppercase">
+                  Ad packs left
+                </p>
+                <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-(--accent-tint) text-(--accent)">
                   <Package aria-hidden className="size-4" />
                 </span>
               </div>
-              <p className="mt-3 flex items-baseline gap-1 text-3xl font-semibold tracking-tight tabular-nums">
+              <p className="mt-3 flex items-baseline gap-1 font-display text-2xl font-extrabold tracking-[-0.02em] tabular-nums">
                 {remainingAdPacks}
-                <span className="text-base font-medium text-muted-foreground">/ {INCLUDED_AD_PACKS}</span>
+                <span className="font-sans text-sm font-medium text-muted-foreground">
+                  / {INCLUDED_AD_PACKS}
+                </span>
               </p>
               <Progress
                 value={(usedAdPacks / INCLUDED_AD_PACKS) * 100}
@@ -201,13 +209,15 @@ export default async function SelfServeHome() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardContent className="p-5">
-              <div className="flex items-start justify-between gap-3">
-                <p className="text-sm font-medium text-muted-foreground">Meta connection</p>
+          <Card className="rounded-[14px] border-0 py-0 shadow-(--shadow) transition-all duration-200 hover:-translate-y-1 hover:shadow-(--shadow-float)">
+            <CardContent className="p-[18px]">
+              <div className="flex items-center justify-between gap-3">
+                <p className="font-mono text-[10px] font-medium tracking-[0.1em] text-(--faint) uppercase">
+                  Meta connection
+                </p>
                 <span
                   className={cn(
-                    "grid size-9 shrink-0 place-items-center rounded-lg",
+                    "grid size-8 shrink-0 place-items-center rounded-lg",
                     hasProvider
                       ? "bg-(--green-soft) text-(--green)"
                       : "bg-(--amber)/10 text-(--amber)",
@@ -218,7 +228,7 @@ export default async function SelfServeHome() {
               </div>
               <p
                 className={cn(
-                  "mt-3 flex items-center gap-1.5 text-lg font-semibold",
+                  "mt-3 flex items-center gap-1.5 text-lg font-bold",
                   hasProvider ? "text-(--green)" : "text-(--amber)",
                 )}
               >
@@ -235,13 +245,15 @@ export default async function SelfServeHome() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardContent className="p-5">
-              <div className="flex items-start justify-between gap-3">
-                <p className="text-sm font-medium text-muted-foreground">Brand pack</p>
+          <Card className="rounded-[14px] border-0 py-0 shadow-(--shadow) transition-all duration-200 hover:-translate-y-1 hover:shadow-(--shadow-float)">
+            <CardContent className="p-[18px]">
+              <div className="flex items-center justify-between gap-3">
+                <p className="font-mono text-[10px] font-medium tracking-[0.1em] text-(--faint) uppercase">
+                  Brand pack
+                </p>
                 <span
                   className={cn(
-                    "grid size-9 shrink-0 place-items-center rounded-lg",
+                    "grid size-8 shrink-0 place-items-center rounded-lg",
                     hasBrand
                       ? "bg-(--green-soft) text-(--green)"
                       : "bg-(--amber)/10 text-(--amber)",
@@ -252,7 +264,7 @@ export default async function SelfServeHome() {
               </div>
               <p
                 className={cn(
-                  "mt-3 flex items-center gap-1.5 text-lg font-semibold",
+                  "mt-3 flex items-center gap-1.5 text-lg font-bold",
                   hasBrand ? "text-(--green)" : "text-(--amber)",
                 )}
               >
@@ -271,10 +283,12 @@ export default async function SelfServeHome() {
         </div>
 
         {/* Setup + brand */}
-        <div className="mt-6 grid gap-6 lg:grid-cols-5">
-          <Card className="lg:col-span-3">
+        <div className="mt-10 grid gap-5 lg:grid-cols-5">
+          <Card className="border-0 rounded-(--r-panel) shadow-(--shadow) transition-shadow duration-200 hover:shadow-(--shadow-float) lg:col-span-3">
             <CardHeader>
-              <CardTitle>{setupComplete ? "Ready to publish" : "Setup progress"}</CardTitle>
+              <CardTitle className="font-display font-extrabold tracking-[-0.02em]">
+                {setupComplete ? "Ready to publish" : "Setup progress"}
+              </CardTitle>
               <CardDescription>
                 {setupComplete
                   ? "Everything is connected. Turn your next listing into a live ad."
@@ -282,7 +296,7 @@ export default async function SelfServeHome() {
               </CardDescription>
               {!setupComplete ? (
                 <CardAction>
-                  <span className="text-xs font-semibold tabular-nums text-muted-foreground">
+                  <span className="rounded-full bg-(--surface-subtle) px-2.5 py-1 font-mono text-[10px] font-medium tracking-[0.08em] text-muted-foreground uppercase tabular-nums">
                     {completedCount} of {steps.length}
                   </span>
                 </CardAction>
@@ -317,19 +331,19 @@ export default async function SelfServeHome() {
                           href={step.href}
                           aria-current={isCurrent ? "step" : undefined}
                           className={cn(
-                            "flex min-h-14 items-center gap-3.5 rounded-lg px-3 py-2.5 transition-colors hover:bg-muted",
+                            "flex min-h-14 items-center gap-3.5 rounded-xl px-3 py-2.5 transition-colors hover:bg-muted",
                             isCurrent && "bg-(--accent-tint) hover:bg-(--accent-tint)",
                           )}
                         >
                           <span
                             aria-hidden
                             className={cn(
-                              "grid size-8 shrink-0 place-items-center rounded-full border text-sm font-bold",
+                              "grid size-8 shrink-0 place-items-center rounded-full font-display text-sm font-extrabold",
                               step.complete
-                                ? "border-transparent bg-(--green-soft) text-(--green)"
+                                ? "bg-(--green-soft) text-(--green)"
                                 : isCurrent
-                                  ? "border-transparent bg-(--accent) text-white"
-                                  : "border-border bg-muted/50 text-muted-foreground",
+                                  ? "bg-(--ink) text-white"
+                                  : "border border-border bg-(--surface-subtle) text-muted-foreground",
                             )}
                           >
                             {step.complete ? <Check className="size-4" /> : step.n}
@@ -345,11 +359,11 @@ export default async function SelfServeHome() {
                           <Badge
                             variant="secondary"
                             className={cn(
-                              "hidden sm:inline-flex",
+                              "hidden rounded-full sm:inline-flex",
                               step.complete
                                 ? "bg-(--green-soft) text-(--green)"
                                 : isCurrent
-                                  ? "bg-(--accent-tint) text-(--accent)"
+                                  ? "bg-white/80 text-(--ink)"
                                   : "text-muted-foreground",
                             )}
                           >
@@ -366,7 +380,7 @@ export default async function SelfServeHome() {
                 </ol>
               )}
             </CardContent>
-            <CardFooter className="border-t pt-6">
+            <CardFooter className="pt-6">
               {setupComplete ? (
                 <Link
                   href="/results"
@@ -382,7 +396,7 @@ export default async function SelfServeHome() {
                     className="h-1.5 flex-1"
                     aria-label="Setup progress"
                   />
-                  <span className="text-xs font-medium tabular-nums text-muted-foreground">
+                  <span className="font-mono text-[10px] font-medium tracking-[0.08em] text-muted-foreground uppercase tabular-nums">
                     {progressPct}% complete
                   </span>
                 </div>
@@ -390,13 +404,14 @@ export default async function SelfServeHome() {
             </CardFooter>
           </Card>
 
-          <Card className="lg:col-span-2">
+          <Card className="border-0 rounded-(--r-panel) shadow-(--shadow) transition-shadow duration-200 hover:shadow-(--shadow-float) lg:col-span-2">
             <CardHeader>
-              <CardTitle>Brand pack</CardTitle>
+              <CardTitle className="font-display font-extrabold tracking-[-0.02em]">Brand pack</CardTitle>
               <CardAction>
                 <Badge
                   variant="secondary"
                   className={cn(
+                    "rounded-full",
                     hasBrand ? "bg-(--green-soft) text-(--green)" : "bg-(--amber)/10 text-(--amber)",
                   )}
                 >
@@ -407,32 +422,34 @@ export default async function SelfServeHome() {
             <CardContent className="grid gap-5">
               <div className="flex items-center gap-3">
                 <Avatar size="lg">
-                  <AvatarFallback className="bg-(--accent-tint) text-sm font-bold text-(--accent)">
+                  <AvatarFallback className="bg-(--accent-tint) font-display text-sm font-extrabold text-(--accent)">
                     {initialsFor(displayName)}
                   </AvatarFallback>
                 </Avatar>
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold">{displayName}</p>
-                  <p className="truncate text-xs text-muted-foreground">
-                    Real estate agent · {region}
+                  <p className="truncate font-mono text-[10px] tracking-[0.08em] text-(--faint) uppercase">
+                    Real estate · {region}
                   </p>
                 </div>
               </div>
               <div>
-                <p className="text-xs font-medium text-muted-foreground">Brand colours</p>
+                <p className="font-mono text-[10px] font-medium tracking-[0.1em] text-(--faint) uppercase">
+                  Brand colours
+                </p>
                 <div className="mt-2 flex gap-1.5" aria-label="Brand colours">
                   {brandColors.map((color) => (
                     <span
                       key={color}
                       title={color}
-                      className="size-6 rounded-full border border-border"
+                      className="size-6 rounded-full border border-border shadow-(--shadow)"
                       style={{ background: color }}
                     />
                   ))}
                 </div>
               </div>
             </CardContent>
-            <CardFooter className="mt-auto border-t pt-6">
+            <CardFooter className="mt-auto pt-6">
               <div className="flex w-full items-center justify-between gap-3">
                 <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
                   <Clock3 aria-hidden className="size-3.5" />
@@ -449,18 +466,18 @@ export default async function SelfServeHome() {
         </div>
 
         {/* Quick actions */}
-        <div className="mt-6 grid gap-6 sm:grid-cols-2">
-          <Link href="/ad-radar" className="group rounded-xl outline-none">
-            <Card className="transition-colors group-hover:border-(--line-heavy) group-focus-visible:border-(--line-heavy)">
+        <div className="mt-5 grid gap-5 sm:grid-cols-2">
+          <Link href="/ad-radar" className="group rounded-(--r-panel) outline-none">
+            <Card className="border-0 rounded-(--r-panel) shadow-(--shadow) transition-all duration-200 group-hover:-translate-y-0.5 group-hover:shadow-(--shadow-float) group-focus-visible:shadow-(--shadow-float)">
               <CardContent className="flex items-center gap-4">
                 <span
                   aria-hidden
-                  className="grid size-11 shrink-0 place-items-center rounded-lg bg-(--surface-subtle) text-(--accent)"
+                  className="grid size-11 shrink-0 place-items-center rounded-xl bg-(--accent-tint) text-(--accent)"
                 >
                   <Radar className="size-5" />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-semibold">Ad Radar</span>
+                  <span className="block text-sm font-bold">Ad Radar</span>
                   <span className="mt-0.5 block text-xs text-muted-foreground">
                     See top-performing ads from agents near you.
                   </span>
@@ -472,17 +489,17 @@ export default async function SelfServeHome() {
               </CardContent>
             </Card>
           </Link>
-          <Link href="/property-check" className="group rounded-xl outline-none">
-            <Card className="transition-colors group-hover:border-(--line-heavy) group-focus-visible:border-(--line-heavy)">
+          <Link href="/property-check" className="group rounded-(--r-panel) outline-none">
+            <Card className="border-0 rounded-(--r-panel) shadow-(--shadow) transition-all duration-200 group-hover:-translate-y-0.5 group-hover:shadow-(--shadow-float) group-focus-visible:shadow-(--shadow-float)">
               <CardContent className="flex items-center gap-4">
                 <span
                   aria-hidden
-                  className="grid size-11 shrink-0 place-items-center rounded-lg bg-(--surface-subtle) text-(--accent)"
+                  className="grid size-11 shrink-0 place-items-center rounded-xl bg-(--accent-tint) text-(--accent)"
                 >
                   <FileSearch className="size-5" />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-semibold">Property Check</span>
+                  <span className="block text-sm font-bold">Property Check</span>
                   <span className="mt-0.5 block text-xs text-muted-foreground">
                     Instant insights and ad ideas for any listing.
                   </span>
