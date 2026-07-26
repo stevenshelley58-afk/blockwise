@@ -13,7 +13,28 @@
  * (solid borders + a default border colour).
  */
 
-@layer theme, base, components, utilities;
+/*
+ * Cascade layers. `legacy` is declared FIRST so everything in it loses to the
+ * Tailwind layers regardless of specificity.
+ *
+ * This is load-bearing. globals.css styles bare element selectors (h1, h2, p,
+ * table, …) and was previously unlayered — and unlayered CSS beats ALL layered
+ * CSS no matter how specific the layered rule is. That silently overrode every
+ * Tailwind utility on the rebuilt customer surface: an `<h1 class="text-[24px]
+ * font-extrabold">` rendered at the legacy 32px/700, not the Premium v2 ramp.
+ *
+ * Importing the legacy sheets into a lower layer fixes the customer surface
+ * without touching operator/monitor, which use only legacy classes: relative
+ * order and specificity inside the layer are preserved, so those surfaces
+ * cascade exactly as before.
+ *
+ * theme-monochrome.css deliberately stays unlayered (imported after this file
+ * in layout.tsx) — it is the token override that must keep winning, and its
+ * presentational rules are scoped to legacy-only classes.
+ */
+@layer legacy, theme, base, components, utilities;
+@import "./globals.css" layer(legacy);
+@import "./landing.css" layer(legacy);
 @import "tailwindcss/theme.css" layer(theme);
 @import "tailwindcss/utilities.css" layer(utilities);
 

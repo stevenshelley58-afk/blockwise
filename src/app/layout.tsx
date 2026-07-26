@@ -7,9 +7,10 @@ import { PageViewTracker } from "@/components/page-view-tracker";
 import { ConsentBanner } from "@/components/consent-banner";
 import { ServiceWorkerRegistrar } from "@/components/pwa/ServiceWorkerRegistrar";
 
-import "./globals.css";
+// globals.css and landing.css are imported by tailwind.css into the `legacy`
+// cascade layer so Tailwind utilities win on the rebuilt customer surface.
+// theme-monochrome.css stays last and unlayered — it is the token override.
 import "./tailwind.css";
-import "./landing.css";
 import "./theme-monochrome.css";
 
 const inter = Inter({
