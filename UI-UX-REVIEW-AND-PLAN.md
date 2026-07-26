@@ -1,5 +1,13 @@
 # Blockwise UI/UX Review & Execution Plan
 
+> ## ⚠️ ARCHIVED — SUPERSEDED, DO NOT EXECUTE
+>
+> **Status: historical artifact.** This document predates the Premium v2 rebuild and describes the *old* "Executive Precision" register (navy `#123e75`, Manrope, whisper shadows). The live design system is **Premium v2** — see [`DESIGN.md`](./DESIGN.md) (tokens, component vocabulary, motion, states) and [`docs/CLONE-PLAYBOOK.md`](./docs/CLONE-PLAYBOOK.md) (white-labeling).
+>
+> Its palette and component prescriptions are **stale and a brand-drift hazard**: any agent executing from this file will rebuild the wrong register. It is retained only for historical context (it is referenced by `LANDING-CRAFT-REVIEW.md` and `docs/REBUILD-PLAN.md`). The Premium v2 rebuild spec and phase history live in `docs/REBUILD-PLAN.md`.
+
+---
+
 Date: 2026-06-10. Scope: all surfaces (landing, pricing, auth, customer app, Ad Studio, Monitor, Research).
 Audience: an executing agent. Every task states the file, the exact change, and an acceptance check. Do tasks in order. Do not improvise beyond what is written.
 

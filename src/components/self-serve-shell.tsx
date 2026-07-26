@@ -3,7 +3,7 @@
 import { Download, LogOut, MoreHorizontal } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
 
 import { BlockwiseLogo } from "@/components/blockwise-logo";
 import { CommandMenu } from "@/components/command-menu";
@@ -174,7 +174,16 @@ export function SelfServeShell({
   const pageTitle = pageTitleForPath(pathname);
 
   return (
-    <SidebarProvider className="tw">
+    <SidebarProvider
+      className="tw"
+      style={
+        {
+          "--ui-data": niche.theme.data,
+          "--ui-data-soft": niche.theme.dataSoft,
+          "--ui-data-track": niche.theme.dataTrack,
+        } as CSSProperties
+      }
+    >
       <Sidebar collapsible="icon">
         <SidebarHeader className="p-3">
           <Link
