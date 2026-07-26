@@ -17,6 +17,12 @@ type ManageTarget =
 
 const MANAGE_API = "/api/integrations/meta/manage";
 
+const mgmtButton =
+  "inline-flex h-7 cursor-pointer items-center gap-1 rounded-full border border-(--line) bg-(--surface) px-2.5 text-[11px] font-bold transition-[background,border-color,color] duration-150 hover:border-(--line-heavy) hover:bg-(--surface-subtle)";
+const mgmtDanger = `${mgmtButton} border-error/25 text-error hover:border-error/40 hover:bg-error-soft`;
+const mgmtApprove =
+  "inline-flex h-7 cursor-pointer items-center rounded-full border border-transparent bg-(--ink) px-3 text-[11px] font-bold text-white transition-opacity duration-150 hover:opacity-85";
+
 export function AdManagementControls({
   target,
   status,
@@ -95,27 +101,27 @@ export function AdManagementControls({
 
   if (phase === "pushing") {
     return (
-      <span className="mm-mgmt-state mm-mgmt-pushing">
-        <Loader2 size={13} className="mm-spin" aria-hidden /> Pushing to Meta...
+      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-muted-foreground">
+        <Loader2 size={12} className="animate-spin" aria-hidden /> Pushing to Meta...
       </span>
     );
   }
 
   if (phase === "done") {
     return (
-      <span className="mm-mgmt-state mm-mgmt-done">
-        <Check size={13} aria-hidden /> {message}
+      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-success">
+        <Check size={12} aria-hidden /> {message}
       </span>
     );
   }
 
   if (phase === "error") {
     return (
-      <span className="mm-mgmt-row">
-        <span className="mm-mgmt-state mm-mgmt-error">
-          <AlertTriangle size={13} aria-hidden /> {message}
+      <span className="inline-flex flex-wrap items-center gap-1.5">
+        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-error">
+          <AlertTriangle size={12} aria-hidden /> {message}
         </span>
-        <button type="button" className="button secondary mm-mgmt-btn" onClick={reset}>
+        <button type="button" className={mgmtButton} onClick={reset}>
           Dismiss
         </button>
       </span>
@@ -124,12 +130,12 @@ export function AdManagementControls({
 
   if (phase === "confirm") {
     return (
-      <span className="mm-mgmt-row mm-mgmt-confirm">
-        <span className="mm-mgmt-confirm-text">{confirmLabel(pending)}</span>
-        <button type="button" className="button mm-mgmt-btn mm-mgmt-approve" onClick={run}>
+      <span className="inline-flex flex-wrap items-center gap-1.5">
+        <span className="text-[11px] font-bold">{confirmLabel(pending)}</span>
+        <button type="button" className={mgmtApprove} onClick={run}>
           Approve
         </button>
-        <button type="button" className="button secondary mm-mgmt-btn" onClick={reset}>
+        <button type="button" className={mgmtButton} onClick={reset}>
           Cancel
         </button>
       </span>
@@ -137,23 +143,23 @@ export function AdManagementControls({
   }
 
   if (!canRun) {
-    return <span className="mm-mgmt-disabled">{disabledReason ?? "Missing Meta id"}</span>;
+    return <span className="text-[11px] font-medium text-(--faint)">{disabledReason ?? "Missing Meta id"}</span>;
   }
 
   return (
-    <span className="mm-mgmt-row">
+    <span className="inline-flex flex-wrap items-center gap-1.5">
       {statusIsActive || statusIsMixed ? (
-        <button type="button" className="button secondary mm-mgmt-btn mm-mgmt-danger" onClick={() => ask("pause")}>
+        <button type="button" className={mgmtDanger} onClick={() => ask("pause")}>
           {statusIsMixed ? "Pause all" : "Pause"}
         </button>
       ) : null}
       {!statusIsActive || statusIsMixed ? (
-        <button type="button" className="button secondary mm-mgmt-btn" onClick={() => ask("activate")}>
+        <button type="button" className={mgmtButton} onClick={() => ask("activate")}>
           {statusIsMixed ? "Resume all" : "Resume"}
         </button>
       ) : null}
       {showExport ? (
-        <button type="button" className="button secondary mm-mgmt-btn" onClick={() => ask("export_leads")}>
+        <button type="button" className={mgmtButton} onClick={() => ask("export_leads")}>
           Export leads
         </button>
       ) : null}
@@ -212,21 +218,21 @@ export function BudgetManagementControl({
   }
 
   if (disabledReason) {
-    return <span className="muted">{disabledReason}</span>;
+    return <span className="text-[11px] font-medium text-(--faint)">{disabledReason}</span>;
   }
 
   if (!adSetId) {
-    return <span className="muted">-</span>;
+    return <span className="text-[11px] font-medium text-(--faint)">-</span>;
   }
 
   if (phase === "confirm") {
     return (
-      <span className="mm-mgmt-row mm-mgmt-confirm">
-        <span className="mm-mgmt-confirm-text">Approve ${nextBudget.toLocaleString("en-AU")}/day?</span>
-        <button type="button" className="button mm-mgmt-btn mm-mgmt-approve" onClick={run}>
+      <span className="inline-flex flex-wrap items-center gap-1.5">
+        <span className="text-[11px] font-bold">Approve ${nextBudget.toLocaleString("en-AU")}/day?</span>
+        <button type="button" className={mgmtApprove} onClick={run}>
           Approve
         </button>
-        <button type="button" className="button secondary mm-mgmt-btn" onClick={reset}>
+        <button type="button" className={mgmtButton} onClick={reset}>
           Cancel
         </button>
       </span>
@@ -235,27 +241,27 @@ export function BudgetManagementControl({
 
   if (phase === "pushing") {
     return (
-      <span className="mm-mgmt-state mm-mgmt-pushing">
-        <Loader2 size={13} className="mm-spin" aria-hidden /> Updating...
+      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-muted-foreground">
+        <Loader2 size={12} className="animate-spin" aria-hidden /> Updating...
       </span>
     );
   }
 
   if (phase === "done") {
     return (
-      <span className="mm-mgmt-state mm-mgmt-done">
-        <Check size={13} aria-hidden /> {message}
+      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-success">
+        <Check size={12} aria-hidden /> {message}
       </span>
     );
   }
 
   if (phase === "error") {
     return (
-      <span className="mm-mgmt-row">
-        <span className="mm-mgmt-state mm-mgmt-error">
-          <AlertTriangle size={13} aria-hidden /> {message}
+      <span className="inline-flex flex-wrap items-center gap-1.5">
+        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-error">
+          <AlertTriangle size={12} aria-hidden /> {message}
         </span>
-        <button type="button" className="button secondary mm-mgmt-btn" onClick={reset}>
+        <button type="button" className={mgmtButton} onClick={reset}>
           Dismiss
         </button>
       </span>
@@ -263,15 +269,18 @@ export function BudgetManagementControl({
   }
 
   return (
-    <span className="mm-budget-control">
-      <span aria-hidden>$</span>
+    <span className="inline-flex items-center gap-1">
+      <span aria-hidden className="text-[11px] font-bold text-(--faint)">
+        $
+      </span>
       <input
         aria-label="Daily budget dollars"
         inputMode="decimal"
         value={draft}
         onChange={(event) => setDraft(event.target.value)}
+        className="h-7 w-[68px] rounded-lg border border-(--line) bg-(--surface) px-2 text-[11.5px] font-semibold tabular-nums outline-none focus:border-(--ink)"
       />
-      <button type="button" className="button secondary mm-mgmt-btn" disabled={!canApply} onClick={() => setPhase("confirm")}>
+      <button type="button" className={`${mgmtButton} disabled:cursor-default disabled:opacity-45`} disabled={!canApply} onClick={() => setPhase("confirm")}>
         Apply
       </button>
     </span>

@@ -9,6 +9,10 @@ export const performance: PerformanceCopy = {
     leads: "Valid leads over time",
     cpl: "Valid CPL over time",
   },
+  demoChip: "Demo data",
+  refresh: "Refresh",
+  refreshing: "Refreshing",
+  moreRanges: "More ranges",
   states: {
     disconnectedTitle: "Connect Meta to see results",
     disconnectedBody:
@@ -17,5 +21,6 @@ export const performance: PerformanceCopy = {
     emptyTitle: "No results yet",
     emptyBody: "Results appear within a day of your first ad going live.",
     staleNotice: (age) => `Data last synced ${age} ago.`,
+    notSynced: "Not synced yet",
   },
 };

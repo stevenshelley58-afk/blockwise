@@ -9,7 +9,6 @@ import { ServiceWorkerRegistrar } from "@/components/pwa/ServiceWorkerRegistrar"
 
 import "./globals.css";
 import "./tailwind.css";
-import "./meta-monitor.css";
 import "./landing.css";
 import "./theme-monochrome.css";
 

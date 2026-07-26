@@ -8,30 +8,30 @@ export function SuburbBarChart({ rows }: { rows: SuburbPerformance[] }) {
 
   if (top.length === 0) {
     return (
-      <p className="mm-chart-empty">
-        No suburb attribution yet. Suburbs come from lead records or the &quot;Suburb - Name&quot; ad set
-        convention — never from Meta geo estimates.
+      <p className="rounded-xl border border-dashed border-(--line-heavy) px-4 py-6 text-center text-[12.5px] leading-relaxed text-muted-foreground">
+        No suburb attribution yet. Suburbs come from lead records or the &quot;Suburb - Name&quot; ad set convention —
+        never from Meta geo estimates.
       </p>
     );
   }
 
   return (
-    <div className="mm-suburb-bars">
+    <div className="grid gap-[9px]">
       {top.map((row) => (
-        <div className="mm-suburb-row" key={row.suburb}>
-          <span className="mm-suburb-name" title={row.suburb}>
+        <div className="grid grid-cols-[minmax(72px,110px)_1fr_28px] items-center gap-2.5" key={row.suburb}>
+          <span className="truncate text-[12px] font-semibold text-foreground" title={row.suburb}>
             {row.suburb}
           </span>
-          <span className="mm-suburb-track">
+          <span className="h-[9px] w-full overflow-hidden rounded-full bg-data-track">
             <span
-              className="mm-suburb-fill"
+              className="block h-full rounded-full bg-data"
               style={{
                 width: `${(row.validLeads / max) * 100}%`,
                 opacity: 0.45 + 0.55 * (row.validLeads / max),
               }}
             />
           </span>
-          <span className="mm-suburb-count">{row.validLeads}</span>
+          <span className="text-right text-[12px] font-bold text-foreground tabular-nums">{row.validLeads}</span>
         </div>
       ))}
     </div>

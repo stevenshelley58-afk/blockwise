@@ -140,6 +140,10 @@ export type PerformanceCopy = {
   subtitle: string;
   ranges: { d7: string; d30: string; d90: string };
   charts: { spend: string; leads: string; cpl: string };
+  demoChip: string;
+  refresh: string;
+  refreshing: string;
+  moreRanges: string;
   states: {
     disconnectedTitle: string;
     disconnectedBody: string;
@@ -147,6 +151,7 @@ export type PerformanceCopy = {
     emptyTitle: string;
     emptyBody: string;
     staleNotice: (age: string) => string;
+    notSynced: string;
   };
 };
 

@@ -1,37 +1,31 @@
-import { RefreshCw } from "lucide-react";
+import { ChevronDown, RefreshCw } from "lucide-react";
 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { niche } from "@/config/niche";
 import type { MonitorDateRange, MonitorRange } from "@/lib/meta-monitor/types";
 
-const RANGE_OPTIONS: Array<{ value: MonitorRange; label: string }> = [
-  { value: "today", label: "Today" },
-  { value: "yesterday", label: "Yesterday" },
-  { value: "last_7", label: "7d" },
-  { value: "last_30", label: "30d" },
-  { value: "maximum", label: "Max" },
+/** Primary chip presets; everything else lives in the overflow menu. */
+const PRIMARY_RANGES: Array<{ value: MonitorRange; key: "d7" | "d30" | "d90" }> = [
+  { value: "last_7", key: "d7" },
+  { value: "last_30", key: "d30" },
+  { value: "last_90", key: "d90" },
 ];
 
-const customRangeStyles = {
-  container: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 6,
-    border: "1px solid var(--line)",
-    borderRadius: 999,
-    background: "var(--surface-subtle)",
-    padding: "3px 10px",
-    color: "var(--muted)",
-  },
-  input: {
-    minHeight: 30,
-    border: 0,
-    background: "transparent",
-    color: "var(--ink)",
-    font: "inherit",
-    fontSize: 12.5,
-    fontWeight: 600,
-    outline: "none",
-  },
-} as const;
+const MORE_RANGES: Array<{ value: MonitorRange; label: string }> = [
+  { value: "today", label: "Today" },
+  { value: "yesterday", label: "Yesterday" },
+  { value: "maximum", label: "Maximum" },
+];
+
+const chipBase =
+  "inline-flex h-[34px] cursor-pointer items-center rounded-full border px-[13px] text-xs font-bold transition-[background,color,border-color,transform] duration-150 active:scale-[0.96]";
+const chipOn = `${chipBase} border-(--ink) bg-(--ink) text-white`;
+const chipOff = `${chipBase} border-(--line) bg-(--surface) text-foreground hover:border-(--line-heavy)`;
 
 export function MetaMark({ size = 26 }: { size?: number }) {
   return (
@@ -64,73 +58,123 @@ export function MetaMonitorHeader(props: {
   onCustomRangeChange: (range: { since: string; until: string }) => void;
   onRefresh: () => void;
 }) {
+  const copy = niche.copy.performance;
+  const activeMore = MORE_RANGES.find((option) => option.value === props.rangeKey);
+  const isCustom = props.rangeKey === "custom";
+
   return (
-    <header className="mm-header">
-      <div>
-        <div className="eyebrow">Performance</div>
-        <div className="mm-title-row">
-          <MetaMark />
-          <h1>Performance</h1>
-          {props.isSample ? <span className="mm-chip mm-chip-demo">Demo data</span> : null}
-        </div>
-      </div>
-      <div className="mm-header-controls">
-        <span className="mm-synced">
-          <span className="mm-synced-dot" aria-hidden />
-          {props.lastSyncedAt ? `Last synced ${timeAgo(props.lastSyncedAt)}` : "Not synced yet"}
-        </span>
-        <div className="mm-range-toolbar">
-          <div className="mm-range-segment" role="group" aria-label={`Date range, ${formatRangeSpan(props.range)}`}>
-            {RANGE_OPTIONS.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                className={option.value === props.rangeKey ? "active" : undefined}
-                onClick={() => props.onRangeChange(option.value)}
-              >
-                {option.label}
-              </button>
-            ))}
-            <button
-              type="button"
-              className={props.rangeKey === "custom" ? "active" : undefined}
-              onClick={() => props.onCustomRangeChange(props.customRange)}
-            >
-              Custom
-            </button>
+    <header className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <MetaMark />
+            <h1 className="font-display text-[24px] font-extrabold tracking-[-0.02em] md:text-[27px]">
+              {copy.title}
+            </h1>
+            {props.isSample ? (
+              <span className="rounded-full bg-warning-soft px-2.5 py-1 text-[10.5px] font-bold tracking-wide text-warning uppercase">
+                {copy.demoChip}
+              </span>
+            ) : null}
           </div>
-          {props.rangeKey === "custom" ? (
-            <div style={customRangeStyles.container} role="group" aria-label="Custom date range">
-              <input
-                type="date"
-                aria-label="From date"
-                style={customRangeStyles.input}
-                value={props.customRange.since}
-                max={props.customRange.until || undefined}
-                onChange={(event) => props.onCustomRangeChange({ ...props.customRange, since: event.target.value })}
-              />
-              <span aria-hidden>–</span>
-              <input
-                type="date"
-                aria-label="To date"
-                style={customRangeStyles.input}
-                value={props.customRange.until}
-                min={props.customRange.since || undefined}
-                onChange={(event) => props.onCustomRangeChange({ ...props.customRange, until: event.target.value })}
-              />
-            </div>
-          ) : null}
-          <button
-            className="button secondary mm-refresh-button"
-            type="button"
-            onClick={props.onRefresh}
-            disabled={props.isRefreshing}
-            aria-label={props.isRefreshing ? "Refreshing results" : "Refresh results"}
-          >
-            <RefreshCw size={14} className={props.isRefreshing ? "mm-spin" : undefined} aria-hidden />
-            <span>{props.isRefreshing ? "Refreshing" : "Refresh"}</span>
-          </button>
+          <p className="mt-1 text-[13px] text-muted-foreground">{copy.subtitle}</p>
         </div>
+
+        <button
+          className="inline-flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-(--line-heavy) bg-card px-3.5 text-[12.5px] font-bold text-foreground transition-[background,box-shadow] duration-150 hover:bg-(--surface-subtle) hover:shadow-card disabled:cursor-default disabled:opacity-60"
+          type="button"
+          onClick={props.onRefresh}
+          disabled={props.isRefreshing}
+          aria-label={props.isRefreshing ? `${copy.refreshing} results` : `${copy.refresh} results`}
+        >
+          <RefreshCw size={13} className={props.isRefreshing ? "animate-spin" : undefined} aria-hidden />
+          <span>{props.isRefreshing ? copy.refreshing : copy.refresh}</span>
+        </button>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <div
+          className="flex flex-wrap items-center gap-1.5"
+          role="group"
+          aria-label={`Date range, ${formatRangeSpan(props.range)}`}
+        >
+          {PRIMARY_RANGES.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              className={option.value === props.rangeKey ? chipOn : chipOff}
+              aria-pressed={option.value === props.rangeKey}
+              onClick={() => props.onRangeChange(option.value)}
+            >
+              {copy.ranges[option.key]}
+            </button>
+          ))}
+
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              className={`${activeMore || isCustom ? chipOn : chipOff} gap-1 outline-none focus-visible:border-(--ink) focus-visible:ring-2 focus-visible:ring-(--ink)/20`}
+              aria-label={copy.moreRanges}
+            >
+              {isCustom ? "Custom" : (activeMore?.label ?? copy.moreRanges)}
+              <ChevronDown size={12} aria-hidden />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="min-w-[160px]">
+              {MORE_RANGES.map((option) => (
+                <DropdownMenuItem
+                  key={option.value}
+                  onClick={() => props.onRangeChange(option.value)}
+                  className="text-xs font-semibold"
+                >
+                  {option.label}
+                  {option.value === props.rangeKey ? (
+                    <span className="ml-auto size-1.5 rounded-full bg-(--ink)" aria-hidden />
+                  ) : null}
+                </DropdownMenuItem>
+              ))}
+              <DropdownMenuItem
+                onClick={() => props.onCustomRangeChange(props.customRange)}
+                className="text-xs font-semibold"
+              >
+                Custom range
+                {isCustom ? <span className="ml-auto size-1.5 rounded-full bg-(--ink)" aria-hidden /> : null}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        {isCustom ? (
+          <div
+            className="inline-flex items-center gap-1.5 rounded-full border border-(--line) bg-(--surface-subtle) px-2.5 py-1 text-muted-foreground"
+            role="group"
+            aria-label="Custom date range"
+          >
+            <input
+              type="date"
+              aria-label="From date"
+              className="h-[30px] border-0 bg-transparent text-[12.5px] font-semibold text-(--ink) outline-none"
+              value={props.customRange.since}
+              max={props.customRange.until || undefined}
+              onChange={(event) => props.onCustomRangeChange({ ...props.customRange, since: event.target.value })}
+            />
+            <span aria-hidden>–</span>
+            <input
+              type="date"
+              aria-label="To date"
+              className="h-[30px] border-0 bg-transparent text-[12.5px] font-semibold text-(--ink) outline-none"
+              value={props.customRange.until}
+              min={props.customRange.since || undefined}
+              onChange={(event) => props.onCustomRangeChange({ ...props.customRange, until: event.target.value })}
+            />
+          </div>
+        ) : null}
+
+        <span className="ml-auto inline-flex items-center gap-1.5 text-[11.5px] font-medium text-(--faint)">
+          <span
+            className={`size-[7px] rounded-full ${props.lastSyncedAt ? "bg-success" : "bg-(--faint)"}`}
+            aria-hidden
+          />
+          {props.lastSyncedAt ? copy.states.staleNotice(timeAgo(props.lastSyncedAt)) : copy.states.notSynced}
+        </span>
       </div>
     </header>
   );
@@ -154,10 +198,10 @@ function timeAgo(iso: string): string {
   }
 
   if (minutes < 60) {
-    return `${minutes} min ago`;
+    return `${minutes} min`;
   }
 
   const hours = Math.round(minutes / 60);
 
-  return hours < 24 ? `${hours}h ago` : `${Math.round(hours / 24)}d ago`;
+  return hours < 24 ? `${hours}h` : `${Math.round(hours / 24)}d`;
 }

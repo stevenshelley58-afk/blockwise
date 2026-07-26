@@ -2,6 +2,40 @@ import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YA
 
 export type SmoothAreaPoint = { date: string; value: number | null };
 
+/**
+ * Ink-background tooltip shared by the monitor charts (matches the home
+ * performance chart). Text never wears the data hue.
+ */
+export function MonitorTooltip({
+  active,
+  payload,
+  label,
+  formatValue,
+  seriesLabel,
+}: {
+  active?: boolean;
+  payload?: Array<{ value?: number | string | null; name?: string | number }>;
+  label?: string | number;
+  formatValue: (value: number) => string;
+  seriesLabel?: (name: string) => string;
+}) {
+  if (!active || !payload || payload.length === 0) return null;
+
+  return (
+    <div className="rounded-[9px] bg-(--ink) px-2.5 py-1.5 text-white shadow-float">
+      <p className="text-[10.5px] leading-[1.35] text-white/65">{formatDayTick(String(label ?? ""))}</p>
+      {payload.map((entry, index) => (
+        <p key={index} className="text-[12.5px] leading-[1.35] font-bold tabular-nums">
+          {typeof entry.value === "number" ? formatValue(entry.value) : "—"}
+          {seriesLabel && entry.name != null ? (
+            <span className="font-medium text-white/65"> · {seriesLabel(String(entry.name))}</span>
+          ) : null}
+        </p>
+      ))}
+    </div>
+  );
+}
+
 /** Shopify-style smooth area chart: monotone curve, gradient fill, horizontal grid only. */
 export function SmoothAreaChart(props: {
   id: string;
@@ -12,7 +46,7 @@ export function SmoothAreaChart(props: {
   const gradientId = `mm-area-${props.id}`;
 
   return (
-    <div className="mm-chart">
+    <div>
       <ResponsiveContainer width="100%" height={180}>
         <AreaChart data={props.data} margin={{ top: 8, right: 6, bottom: 0, left: 0 }}>
           <defs>
@@ -39,11 +73,8 @@ export function SmoothAreaChart(props: {
             tickFormatter={(value: number) => props.valueFormatter(value)}
           />
           <Tooltip
-            cursor={{ stroke: "var(--line)", strokeWidth: 1 }}
-            contentStyle={tooltipStyle}
-            labelFormatter={(label) => formatDayTick(String(label))}
-            formatter={(value) => [typeof value === "number" ? props.valueFormatter(value) : "—", ""]}
-            separator=""
+            cursor={{ stroke: "var(--faint)", strokeWidth: 1, strokeDasharray: "3 3" }}
+            content={<MonitorTooltip formatValue={props.valueFormatter} />}
           />
           <Area
             type="monotone"
@@ -61,14 +92,6 @@ export function SmoothAreaChart(props: {
     </div>
   );
 }
-
-export const tooltipStyle: React.CSSProperties = {
-  borderRadius: 10,
-  border: "1px solid var(--line)",
-  boxShadow: "var(--shadow-float)",
-  fontSize: 12,
-  padding: "6px 10px",
-};
 
 export function formatDayTick(isoDate: string): string {
   const date = new Date(`${isoDate}T00:00:00`);

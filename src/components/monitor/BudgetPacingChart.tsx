@@ -3,7 +3,9 @@ import { CartesianGrid, ComposedChart, Line, ReferenceLine, ResponsiveContainer,
 import { calculateBudgetPacing, formatCurrency, formatPercent } from "@/lib/meta-monitor/calculations";
 import type { MetaDailyPoint, MonitorDateRange } from "@/lib/meta-monitor/types";
 
-import { formatDayTick, tooltipStyle } from "./SmoothAreaChart";
+import { formatDayTick, MonitorTooltip } from "./SmoothAreaChart";
+
+const DATA_HUE = "var(--ui-data)";
 
 export function BudgetPacingChart(props: {
   daily: MetaDailyPoint[];
@@ -38,8 +40,8 @@ export function BudgetPacingChart(props: {
   });
 
   return (
-    <div className="mm-pacing">
-      <div className="mm-chart">
+    <div className="grid gap-4 lg:grid-cols-[1fr_168px]">
+      <div>
         <ResponsiveContainer width="100%" height={196}>
           <ComposedChart data={data} margin={{ top: 8, right: 6, bottom: 0, left: 0 }}>
             <CartesianGrid vertical={false} stroke="var(--line-soft)" />
@@ -61,12 +63,13 @@ export function BudgetPacingChart(props: {
               domain={props.budget != null ? [0, Math.ceil((props.budget * 1.25) / 1000) * 1000] : undefined}
             />
             <Tooltip
-              contentStyle={tooltipStyle}
-              labelFormatter={(label) => formatDayTick(String(label))}
-              formatter={(value, name) => [
-                typeof value === "number" ? formatCurrency(value) : "—",
-                name === "actual" ? "Actual spend" : "Expected spend",
-              ]}
+              cursor={{ stroke: "var(--faint)", strokeWidth: 1, strokeDasharray: "3 3" }}
+              content={
+                <MonitorTooltip
+                  formatValue={formatCurrency}
+                  seriesLabel={(name) => (name === "actual" ? "Actual spend" : "Expected spend")}
+                />
+              }
             />
             {props.budget != null ? (
               <ReferenceLine
@@ -80,7 +83,7 @@ export function BudgetPacingChart(props: {
               <Line
                 type="monotone"
                 dataKey="expected"
-                stroke="var(--blue)"
+                stroke={DATA_HUE}
                 strokeWidth={1.6}
                 strokeDasharray="5 5"
                 strokeOpacity={0.5}
@@ -91,7 +94,7 @@ export function BudgetPacingChart(props: {
             <Line
               type="monotone"
               dataKey="actual"
-              stroke="var(--blue)"
+              stroke={DATA_HUE}
               strokeWidth={2.4}
               dot={false}
               connectNulls={false}
@@ -101,34 +104,31 @@ export function BudgetPacingChart(props: {
         </ResponsiveContainer>
       </div>
       {pacing ? (
-        <aside className="mm-pacing-panel">
-          <div className="mm-pacing-stat">
-            <span>Budget</span>
-            <b>{formatCurrency(pacing.budget)}</b>
-          </div>
-          <div className="mm-pacing-stat">
-            <span>Spent</span>
-            <b>
-              {formatCurrency(pacing.spend)}{" "}
-              <small>({formatPercent(pacing.spendPercent)})</small>
-            </b>
-          </div>
-          <div className="mm-pacing-stat">
-            <span>Forecast</span>
-            <b>{formatCurrency(pacing.forecastSpend)}</b>
-          </div>
-          <div className="mm-pacing-stat">
-            <span>Pacing status</span>
-            <span className={`mm-badge ${badgeTone(pacing.status)}`}>{pacing.status}</span>
+        <aside className="grid content-start gap-2.5 rounded-(--r-card) border border-(--line) bg-(--surface-subtle) p-4">
+          <PacingStat label="Budget" value={formatCurrency(pacing.budget)} />
+          <PacingStat
+            label="Spent"
+            value={
+              <>
+                {formatCurrency(pacing.spend)}{" "}
+                <small className="font-medium text-(--faint)">({formatPercent(pacing.spendPercent)})</small>
+              </>
+            }
+          />
+          <PacingStat label="Forecast" value={formatCurrency(pacing.forecastSpend)} />
+          <div className="flex items-center justify-between gap-2">
+            <span className="font-mono text-[9.5px] font-medium tracking-[0.12em] text-(--faint) uppercase">
+              Pacing status
+            </span>
+            <span className={`rounded-full px-2 py-0.5 text-[10.5px] font-bold ${badgeTone(pacing.status)}`}>
+              {pacing.status}
+            </span>
           </div>
         </aside>
       ) : (
-        <aside className="mm-pacing-panel">
-          <div className="mm-pacing-stat">
-            <span>Budget</span>
-            <b>Not set</b>
-          </div>
-          <p className="mm-pacing-note">
+        <aside className="grid content-start gap-2.5 rounded-(--r-card) border border-(--line) bg-(--surface-subtle) p-4">
+          <PacingStat label="Budget" value="Not set" />
+          <p className="text-[11.5px] leading-relaxed text-muted-foreground">
             No monthly budget set. Pacing appears once a monthly budget is configured.
           </p>
         </aside>
@@ -137,8 +137,20 @@ export function BudgetPacingChart(props: {
   );
 }
 
+function PacingStat({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="flex items-baseline justify-between gap-2">
+      <span className="font-mono text-[9.5px] font-medium tracking-[0.12em] text-(--faint) uppercase">{label}</span>
+      <b className="text-[13px] font-bold tabular-nums">{value}</b>
+    </div>
+  );
+}
+
 function badgeTone(status: "Overspending" | "On pace" | "Under pacing"): string {
-  return status === "On pace" ? "green" : status === "Overspending" ? "rose" : "amber";
+  if (status === "On pace") return "bg-success-soft text-success";
+  if (status === "Overspending") return "bg-error-soft text-error";
+
+  return "bg-warning-soft text-warning";
 }
 
 function auDate(now: Date): string {
