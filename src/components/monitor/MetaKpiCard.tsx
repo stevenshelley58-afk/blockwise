@@ -25,7 +25,7 @@ export function MetaKpiCard(props: {
       <div className="font-mono text-[9.5px] font-medium tracking-[0.12em] text-(--faint) uppercase">
         {props.label}
       </div>
-      <div className="mt-[7px] font-display text-[24px] font-extrabold tracking-[-0.02em] tabular-nums xl:text-[26px]">
+      <div className="mt-[7px] font-display text-[24px] font-extrabold tracking-[-0.02em] tabular-nums">
         {props.value}
       </div>
       <div className="mt-[7px] flex flex-wrap items-center gap-1.5">

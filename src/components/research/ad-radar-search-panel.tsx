@@ -354,7 +354,7 @@ function StatTile({ label, value, note }: { label: string; value: string; note: 
   return (
     <article className="rounded-(--r-card) border border-(--line) bg-(--surface) px-[18px] pt-[17px] pb-[15px] shadow-card">
       <p className="font-mono text-[9.5px] font-medium tracking-[0.12em] text-(--faint) uppercase">{label}</p>
-      <p className="mt-[6px] font-display text-[24px] font-extrabold tracking-[-0.02em] tabular-nums xl:text-[26px]">{value}</p>
+      <p className="mt-[6px] font-display text-[24px] font-extrabold tracking-[-0.02em] tabular-nums">{value}</p>
       <p className="mt-[7px] text-[10.5px]/[11.5px] text-muted-foreground">{note}</p>
     </article>
   );

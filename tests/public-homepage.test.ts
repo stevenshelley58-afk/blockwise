@@ -221,8 +221,11 @@ test("robots and 404 keep protected routes out of search and anonymous visitors 
     assert.match(robots, new RegExp(`"${route}"`));
   }
 
+  // The 404 offers both recovery paths. It was ported off the legacy
+  // `.button secondary` class (globals.css is unlayered and would override the
+  // token styling), so assert the links, not the class name.
   assert.match(notFound, /href="\/"[\s\S]*Back to home/);
-  assert.match(notFound, /className="button secondary"[\s\S]*href="\/self-serve"[\s\S]*Go to dashboard/);
+  assert.match(notFound, /href="\/self-serve"[\s\S]*Go to dashboard/);
 });
 
 test("production login page does not expose development test profiles or passwords", () => {
