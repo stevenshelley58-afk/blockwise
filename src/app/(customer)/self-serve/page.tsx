@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { ConfirmRegistrationTracker } from "@/components/confirm-registration-tracker";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
+import { ButtonArrow } from "@/components/shadcn-dashboard/button/button-01";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -150,18 +151,13 @@ export default async function SelfServeHome() {
           <div className="min-w-0">
             <h1
               id="self-serve-title"
-              className="text-2xl font-bold tracking-tight text-balance md:text-3xl"
+              className="text-2xl font-semibold tracking-tight text-balance md:text-3xl"
             >
               {heading}
             </h1>
             <p className="mt-1.5 text-sm text-muted-foreground">{subtitle}</p>
           </div>
-          <Button asChild size="lg">
-            <Link href={ctaHref}>
-              {ctaLabel}
-              <ArrowRight aria-hidden />
-            </Link>
-          </Button>
+          <ButtonArrow href={ctaHref}>{ctaLabel}</ButtonArrow>
         </div>
 
         {/* Key numbers */}
@@ -174,7 +170,7 @@ export default async function SelfServeHome() {
                   <Megaphone aria-hidden className="size-4" />
                 </span>
               </div>
-              <p className="mt-3 text-3xl font-bold tracking-tight tabular-nums">{usedAdPacks}</p>
+              <p className="mt-3 text-3xl font-semibold tracking-tight tabular-nums">{usedAdPacks}</p>
               <p className="mt-1 text-xs text-muted-foreground">
                 {usedAdPacks === 0
                   ? "No ads yet"
@@ -193,7 +189,7 @@ export default async function SelfServeHome() {
                   <Package aria-hidden className="size-4" />
                 </span>
               </div>
-              <p className="mt-3 flex items-baseline gap-1 text-3xl font-bold tracking-tight tabular-nums">
+              <p className="mt-3 flex items-baseline gap-1 text-3xl font-semibold tracking-tight tabular-nums">
                 {remainingAdPacks}
                 <span className="text-base font-medium text-muted-foreground">/ {INCLUDED_AD_PACKS}</span>
               </p>

@@ -40,7 +40,9 @@ const SmoothAreaChart = dynamic(() => import("./SmoothAreaChart").then((m) => m.
 const BudgetPacingChart = dynamic(() => import("./BudgetPacingChart").then((m) => m.BudgetPacingChart), { ssr: false });
 
 const SPEND_COLOR = "#123e75";
-const LEADS_COLOR = "#31c46f";
+// One data colour across every chart (Premium V2 restraint). Green is reserved
+// for positive deltas in the KPI strip, not used as a series colour.
+const LEADS_COLOR = "#123e75";
 
 export type OAuthNotice = {
   tone: "success" | "error" | "warning";

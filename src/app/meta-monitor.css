@@ -14,6 +14,12 @@
 }
 .mm-dashboard-body { display: grid; gap: 24px; }
 
+/* Premium V2: flat surfaces. Borders + tone explain hierarchy; drop the
+   floating shadow across every Results panel and KPI cell. Scoped to .mm-page
+   so the operator/monitor CSS shell is unaffected. */
+.mm-page .panel,
+.mm-page .metric-card { box-shadow: none; }
+
 .mm-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
 .mm-title-row { display: flex; align-items: center; gap: 13px; }
 .mm-title-row h1 { margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -0.025em; }
@@ -86,7 +92,11 @@
   100% { background-position: -200% 0; }
 }
 
-.mm-kpi-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 14px; }
+/* KPI instrument panel: one bordered container, hairline dividers (the 1px gap
+   is filled by the container's line colour). Reflows cleanly at every
+   breakpoint without per-cell border math. */
+.mm-kpi-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 1px; background: var(--line-soft); border: 1px solid var(--line); border-radius: var(--r-card); overflow: hidden; }
+.mm-kpi-grid .mm-kpi { background: var(--surface); border: 0; border-radius: 0; box-shadow: none; min-height: 0; }
 .mm-kpi { padding: 16px; }
 .mm-kpi-icon { width: 32px; height: 32px; border-radius: var(--r-ctl); display: flex; align-items: center; justify-content: center; margin-bottom: 11px; }
 .mm-kpi-icon.tone-blue { background: var(--accent-tint); color: var(--accent); }
@@ -96,7 +106,7 @@
 .mm-kpi-icon.tone-rose { background: var(--rose-soft); color: var(--rose); }
 .mm-kpi-icon.tone-indigo { background: var(--accent-tint); color: var(--accent-strong); }
 .mm-kpi-label { font-size: 12.5px; color: var(--muted); font-weight: 500; margin-bottom: 5px; }
-.mm-kpi-value { font-size: 24px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; color: var(--ink); font-variant-numeric: tabular-nums; }
+.mm-kpi-value { font-size: 24px; font-weight: 650; letter-spacing: -0.03em; line-height: 1.1; color: var(--ink); font-variant-numeric: tabular-nums; }
 .mm-kpi-compare { font-size: 11.5px; color: var(--faint); margin-top: 6px; }
 .mm-kpi-trend { display: inline-flex; align-items: center; gap: 3px; font-size: 12px; font-weight: 700; margin-top: 7px; }
 .mm-kpi-trend.good { color: var(--green); }
@@ -193,7 +203,7 @@
 .mm-section-heading h2 {
   margin: 0;
   font-size: 18px;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: -0.02em;
 }
 .mm-section-heading p {
@@ -446,7 +456,7 @@
   .mm-range-segment button { flex: 1 1 0; min-height: 40px; padding: 0 8px; }
   .mm-refresh-button { min-height: 40px; padding: 0 13px; justify-content: center; }
 
-  .mm-kpi-grid { grid-template-columns: 1fr; gap: 10px; }
+  .mm-kpi-grid { grid-template-columns: 1fr; gap: 1px; }
   .mm-kpi.metric-card { min-height: 0; }
   .mm-kpi {
     padding: 13px 15px;
