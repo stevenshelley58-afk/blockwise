@@ -191,7 +191,7 @@ export function SelfServeShell({
             aria-label={niche.product.name}
             className="inline-flex items-center text-[var(--brand-ink)] transition-opacity hover:opacity-80 group-data-[collapsible=icon]:justify-center"
           >
-            <BlockwiseLogo />
+            <BlockwiseLogo tokens />
           </Link>
         </SidebarHeader>
         <SidebarContent className="pt-2">
@@ -236,7 +236,7 @@ export function SelfServeShell({
           <SidebarTrigger className="-ml-1 hidden md:inline-flex" />
 
           {/* Desktop: workspace / page breadcrumb */}
-          <span className="hidden truncate font-display text-[15px] font-extrabold tracking-[-0.01em] md:inline">
+          <span className="hidden truncate font-display text-[15.5px] font-extrabold tracking-[-0.01em] md:inline">
             {workspaceName} <span className="font-normal text-(--faint)">/</span> {pageTitle}
           </span>
 
@@ -246,7 +246,7 @@ export function SelfServeShell({
             aria-label={niche.product.name}
             className="inline-flex items-center gap-2 text-foreground md:hidden"
           >
-            <BlockwiseLogo showWordmark={false} />
+            <BlockwiseLogo tokens showWordmark={false} />
             <span className="font-display text-base font-extrabold tracking-[-0.015em]">
               {niche.product.name}
             </span>
@@ -262,7 +262,7 @@ export function SelfServeShell({
 
           <div className="ml-auto inline-flex items-center gap-2.5 md:gap-3">
             <CommandMenu />
-            <SidebarThemeToggle />
+            <SidebarThemeToggle tokens />
             <AccountDropdown account={account} />
           </div>
         </header>

@@ -48,7 +48,7 @@ export function PropertyCheckReport({ check }: { check: PropertyCheckRecord }) {
 
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="font-display text-[22px] font-extrabold tracking-[-0.02em] md:text-[24px]">{check.address}</h1>
+          <h1 className="font-display text-[24px] font-extrabold tracking-[-0.02em] md:text-[27px]">{check.address}</h1>
           <p className="mt-1 text-[12.5px] text-muted-foreground">
             {PROPERTY_CHECK_CLIENT_SITUATION_LABELS[check.clientSituation]} · Generated {formatDate(check.createdAt)}
           </p>
@@ -227,7 +227,7 @@ function ReportSources({ citations }: { citations: PropertyCitation[] }) {
                 href={citation.url}
                 target="_blank"
                 rel="noreferrer"
-                className="ml-auto inline-flex items-center gap-1 text-[11.5px] font-bold text-data hover:underline"
+                className="ml-auto inline-flex items-center gap-1 text-[11.5px] font-bold text-foreground hover:underline"
               >
                 Open
                 <ExternalLink aria-hidden size={12} />

@@ -19,12 +19,18 @@ const buttonVariants = cva(
         ghost:
           "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
         link: "text-primary underline-offset-4 hover:underline",
+        // Premium v2 "ghost button": full pill on Clean Surface with a Control
+        // Line boundary and ink label (DESIGN.md §7 Controls). Pair with
+        // `size="pill"` for the 36px toolbar/page-head control.
+        "ghost-pill":
+          "cursor-pointer border border-(--line-heavy) bg-card text-foreground hover:bg-(--surface-subtle) hover:shadow-card disabled:opacity-60",
       },
       size: {
         default: "h-9 px-4 py-2 has-[>svg]:px-3",
         xs: "h-6 gap-1 rounded-full px-2 text-xs has-[>svg]:px-1.5 [&_svg:not([class*='size-'])]:size-3",
         sm: "h-8 gap-1.5 rounded-full px-3 has-[>svg]:px-2.5",
         lg: "h-10 rounded-full px-6 has-[>svg]:px-4",
+        pill: "h-9 gap-2 rounded-full px-3.5 text-[12.5px] font-bold",
         icon: "size-9",
         "icon-xs": "size-6 rounded-full [&_svg:not([class*='size-'])]:size-3",
         "icon-sm": "size-8",

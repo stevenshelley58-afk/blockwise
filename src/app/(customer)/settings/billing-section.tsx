@@ -20,9 +20,11 @@ function planFeatureTitle(plan: NonNullable<Plan>): string {
 
 function PlanTile({ label, value, foot }: { label: string; value: string; foot?: ReactNode }) {
   return (
-    <article className="rounded-(--r-card) border border-(--line) bg-(--surface) px-[18px] pt-[17px] pb-[15px] shadow-card">
+    // Flat-first: these tiles sit inside a Section card, so they use a tonal
+    // layer rather than a nested border+shadow.
+    <article className="rounded-(--r-card) bg-(--surface-subtle) px-[18px] pt-[17px] pb-[15px]">
       <p className="font-mono text-[9.5px] font-medium tracking-[0.12em] text-(--faint) uppercase">{label}</p>
-      <p className="mt-[6px] font-display text-[18px] font-extrabold tracking-[-0.02em]">{value}</p>
+      <p className="mt-[6px] font-display text-[17px] font-extrabold tracking-[-0.02em]">{value}</p>
       {foot ? <div className="mt-[7px] text-[10.5px]/[11.5px] text-muted-foreground">{foot}</div> : null}
     </article>
   );

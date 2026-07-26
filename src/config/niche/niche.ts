@@ -129,7 +129,23 @@ export type LeadsCopy = {
   searchPlaceholder: string;
   filters: { all: string; highIntent: string; duplicates: string };
   exportCsv: string;
-  columns: { lead: string; suburb: string; sourceAd: string; quality: string; status: string };
+  /**
+   * Column labels. `lead`/`suburb`/`sourceAd`/`quality`/`delivery`/`status` head
+   * the on-screen table; `name`/`email`/`phone`/`capturedAt` exist so the CSV
+   * export header is config-driven too (no niche nouns in the component).
+   */
+  columns: {
+    lead: string;
+    name: string;
+    email: string;
+    phone: string;
+    suburb: string;
+    sourceAd: string;
+    quality: string;
+    delivery: string;
+    status: string;
+    capturedAt: string;
+  };
   status: { newLead: string; possibleDuplicate: string };
   showing: (shown: number, total: number) => string;
   neverSynced: string;
@@ -142,6 +158,11 @@ export type PerformanceCopy = {
   subtitle: string;
   ranges: { d7: string; d30: string; d90: string };
   charts: { spend: string; leads: string; cpl: string };
+  cplGapNote: string;
+  leadResults: { title: string; subtitle: string };
+  /** Per-area performance panel — "area" is `terms.area` for this niche. */
+  areaBreakdown: { title: string; empty: string };
+  budgetPacing: string;
   demoChip: string;
   refresh: string;
   refreshing: string;
@@ -157,11 +178,31 @@ export type PerformanceCopy = {
   };
 };
 
+/**
+ * One ad-classification filter option. `value` is the stored classification /
+ * query-param contract and is never rewritten for copy; only `label` is niche
+ * surface text.
+ */
+export type AdRadarAdTypeOption = {
+  value: string;
+  label: string;
+};
+
 export type AdRadarCopy = {
   title: string;
   lead: string;
   searchPlaceholder: string;
+  /** Assistive line under the search input naming what can be searched. */
+  searchScope: string;
   includeSurrounding: string;
+  filters: {
+    agency: string;
+    agent: string;
+    allAgencies: string;
+    allAgents: string;
+    adTypes: AdRadarAdTypeOption[];
+    hookPlaceholder: string;
+  };
 };
 
 export type PropertyCheckCopy = {

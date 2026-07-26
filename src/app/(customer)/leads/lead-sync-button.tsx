@@ -4,6 +4,7 @@ import { useState } from "react";
 import { RefreshCw } from "lucide-react";
 import { useRouter } from "next/navigation";
 
+import { Button } from "@/components/ui/button";
 import { niche } from "@/config/niche";
 
 type SyncResult = {
@@ -56,16 +57,20 @@ export function LeadSyncButton({ workspaceId }: { workspaceId: string }) {
 
   return (
     <div className="flex flex-col items-end gap-1">
-      <button
+      <Button
         type="button"
+        variant="ghost-pill"
+        size="pill"
         onClick={onSync}
         disabled={busy}
         aria-busy={busy}
-        className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-full border border-(--line-heavy) bg-card px-3.5 text-[12.5px] font-bold text-foreground transition-[background,box-shadow] duration-150 hover:bg-(--surface-subtle) hover:shadow-card disabled:cursor-default disabled:opacity-60"
       >
-        <RefreshCw size={13} aria-hidden className={busy ? "animate-spin" : undefined} />
+        <RefreshCw
+          aria-hidden
+          className={`size-[13px]${busy ? " animate-spin motion-reduce:animate-none" : ""}`}
+        />
         {busy ? "Syncing…" : copy.syncCta}
-      </button>
+      </Button>
       {(message ?? error) && (
         <p className={`text-xs${error ? " text-error" : " text-muted-foreground"}`} role="status">
           {message ?? error}

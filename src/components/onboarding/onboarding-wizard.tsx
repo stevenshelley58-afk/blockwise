@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Confetti } from "@/components/ui/confetti";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { niche } from "@/config/niche";
 import { useReducedMotion } from "@/lib/motion";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import {
@@ -243,6 +244,7 @@ export function OnboardingWizard({
       voice: brandTone.trim() || "professional local expert",
     };
     const now = new Date().toISOString();
+    const marketCountry = profileRegion.trim() || brandKit?.market_country || "AU";
     const { error: kitError } = await supabase.from("adstudio_brand_kits").upsert(
       {
         id,
@@ -250,13 +252,16 @@ export function OnboardingWizard({
         source_type: brandKit?.source_type ?? "manual",
         source_url: brandKit?.source_url ?? null,
         business_name: profileName.trim() || agencyName,
-        market_country: brandKit?.market_country ?? "AU",
+        // The Region select is a country picker (Australia / New Zealand / UK /
+        // US / Canada), so the chosen value is the market country. It used to be
+        // hard-coded to AU, silently mis-tagging every non-Australian workspace.
+        market_country: marketCountry,
         market_region: profileRegion.trim() || null,
         identity_json: {
           ...(brandKit?.identity_json ?? {}),
           businessName: profileName.trim() || agencyName,
           tradingName: profileName.trim() || agencyName,
-          marketCountry: "AU",
+          marketCountry,
           marketRegion: profileRegion.trim() || null,
           licenceText: brandKit?.identity_json?.licenceText ?? null,
         },
@@ -593,14 +598,17 @@ export function OnboardingWizard({
               spread: 75,
               startVelocity: 32,
               origin: { y: 0.55 },
-              colors: ["#2a78d6", "#31c46f", "#16181d", "#94a3b8"],
+              // Celebration palette follows the niche's data hue so a clone
+              // never throws Blockwise-blue confetti. #31c46f was in no token
+              // file; the neutrals come from the documented palette.
+              colors: [niche.theme.data, "#16181d", "#9aa0ad"],
             }}
           />
           <div className="relative rounded-(--r-panel) border border-(--line) bg-(--surface) px-10 py-8 text-center shadow-float">
             <span className="mx-auto grid size-12 place-items-center rounded-full bg-success-soft text-success">
               <PartyPopper size={22} aria-hidden />
             </span>
-            <h2 className="mt-3 font-display text-[19px] font-extrabold tracking-[-0.015em]">You're all set!</h2>
+            <h2 className="mt-3 font-display text-[17px] font-extrabold tracking-[-0.015em]">You're all set!</h2>
             <p className="mt-1 text-[13px] text-muted-foreground">Taking you to Ad Studio…</p>
           </div>
         </div>

@@ -63,7 +63,7 @@ export function HomePerformanceChart({ daily }: { daily: HomeDailyPoint[] | null
   return (
     <section
       aria-label={copy.title}
-      className="rounded-(--r-panel) bg-card shadow-card transition-shadow duration-200 hover:shadow-float"
+      className="rounded-(--r-panel) bg-card shadow-card"
     >
       <div className="flex items-start justify-between gap-2.5 px-5 pt-5 md:px-[22px]">
         <div>

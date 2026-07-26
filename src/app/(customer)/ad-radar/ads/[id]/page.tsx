@@ -1,9 +1,11 @@
 import { ExternalLink } from "lucide-react";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 
 import { AdCardActions } from "@/components/research/ad-card-actions";
 import { StatusPill } from "@/components/status-pill";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { niche } from "@/config/niche";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
 import { loadCustomerResearchAdDetail } from "@/lib/research/customer-ad-library-pages";
 
@@ -14,8 +16,11 @@ const ghostButtonClass =
 const panelClass = "rounded-(--r-panel) border border-(--line) bg-(--surface) p-5 shadow-card";
 const panelTitleClass = "font-display text-[15.5px] font-extrabold tracking-[-0.015em]";
 const thClass = "font-mono text-[9.5px] font-medium tracking-[0.12em] text-(--faint) uppercase";
+const mediaClass =
+  "block max-h-[min(72svh,520px)] w-full max-w-full rounded-(--r-card) border border-(--line) bg-(--surface-subtle) object-contain";
 
 export default async function ResearchAdDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  if (!niche.features.adRadar) notFound();
   const { id } = await params;
   const { supabase } = await requirePageSurfaceAccess("monitor");
   const { ad, versions, error } = await loadCustomerResearchAdDetail(supabase, id);
@@ -59,7 +64,7 @@ export default async function ResearchAdDetailPage({ params }: { params: Promise
         <div className="min-w-0">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
-              <h2 className="font-display text-[16px] font-extrabold tracking-[-0.015em]">
+              <h2 className="font-display text-[17px] font-extrabold tracking-[-0.015em]">
                 <Link href={`/ad-radar/advertisers/${ad.page.id}`} className="hover:underline">
                   {ad.page.name}
                 </Link>
@@ -105,14 +110,14 @@ export default async function ResearchAdDetailPage({ params }: { params: Promise
         <div className="min-w-0">
           {ad.media[0] ? (
             ad.media[0].kind === "video" ? (
-              <video className="meta-ad-media" src={ad.media[0].url} controls preload="metadata" playsInline />
+              <video className={mediaClass} src={ad.media[0].url} controls preload="metadata" playsInline />
             ) : (
               // eslint-disable-next-line @next/next/no-img-element
-              <img className="meta-ad-media" src={ad.media[0].url} alt={ad.creative.headline ?? ad.page.name} />
+              <img className={mediaClass} src={ad.media[0].url} alt={ad.creative.headline ?? ad.page.name} />
             )
           ) : (
-            <div className="meta-ad-text-only">
-              <span>No stored media captured</span>
+            <div className="grid min-h-[180px] place-items-center rounded-(--r-card) border border-dashed border-(--line-heavy) bg-(--surface-subtle)/50 p-4 text-center">
+              <span className="text-[12.5px] font-bold text-muted-foreground">No stored media captured</span>
             </div>
           )}
         </div>

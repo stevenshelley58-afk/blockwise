@@ -1,7 +1,9 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 
 import { AdCardActions } from "@/components/research/ad-card-actions";
 import { StatusPill } from "@/components/status-pill";
+import { niche } from "@/config/niche";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
 import { loadCustomerAdvertiserAds } from "@/lib/research/customer-ad-library-pages";
 
@@ -11,6 +13,7 @@ const ghostButtonClass =
   "inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-full border border-(--line-heavy) bg-card px-3.5 text-[12.5px] font-bold text-foreground transition-[background,box-shadow] duration-150 hover:bg-(--surface-subtle) hover:shadow-card";
 
 export default async function AdvertiserProfilePage({ params }: { params: Promise<{ id: string }> }) {
+  if (!niche.features.adRadar) notFound();
   const { id } = await params;
   const { supabase } = await requirePageSurfaceAccess("monitor");
   const { ads, error } = await loadCustomerAdvertiserAds(supabase, id);
@@ -75,7 +78,7 @@ export default async function AdvertiserProfilePage({ params }: { params: Promis
           ))}
           {ads.length === 0 ? (
             <div className="rounded-(--r-card) border border-dashed border-(--line-heavy) bg-(--surface-subtle)/50 px-6 py-10 text-center">
-              <h3 className="font-display text-[15px] font-extrabold">No ads captured</h3>
+              <h3 className="font-display text-[15.5px] font-extrabold">No ads captured</h3>
               <p className="mt-1 text-xs text-muted-foreground">
                 This advertiser page has no visible ad history in the Blockwise research database.
               </p>

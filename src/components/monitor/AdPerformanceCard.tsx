@@ -17,7 +17,7 @@ export function AdPerformanceCard({ ad }: { ad: MetaAdPerformance }) {
 
   return (
     <article
-      className="flex flex-col overflow-hidden rounded-(--r-card) border border-(--line) bg-(--surface) shadow-card transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-float motion-reduce:hover:translate-y-0"
+      className="flex flex-col overflow-hidden rounded-(--r-card) border border-(--line) bg-(--surface) shadow-card"
       id={adCardDomId(ad.adId)}
     >
       <div className="relative">
@@ -38,7 +38,7 @@ export function AdPerformanceCard({ ad }: { ad: MetaAdPerformance }) {
         </div>
 
         <p className="mt-3 flex items-baseline gap-1">
-          <strong className="font-display text-[22px] font-extrabold tracking-[-0.02em] tabular-nums">
+          <strong className="font-display text-[24px] font-extrabold tracking-[-0.02em] tabular-nums">
             {costPerLead != null ? formatCurrency(costPerLead) : "-"}
           </strong>
           <span className="text-[12px] font-medium text-muted-foreground">/ lead</span>

@@ -22,24 +22,22 @@ const MORE_RANGES: Array<{ value: MonitorRange; label: string }> = [
   { value: "maximum", label: "Maximum" },
 ];
 
+// 34px visual height with a pseudo-element expanding the hit area to the 44px
+// minimum touch target.
 const chipBase =
-  "inline-flex h-[34px] cursor-pointer items-center rounded-full border px-[13px] text-xs font-bold transition-[background,color,border-color,transform] duration-150 active:scale-[0.96]";
+  "relative inline-flex h-[34px] cursor-pointer items-center rounded-full border px-[13px] text-xs font-bold transition-[background,color,border-color,transform] duration-150 before:absolute before:inset-x-0 before:-inset-y-[5px] before:content-[''] active:scale-[0.96] motion-reduce:active:scale-100";
 const chipOn = `${chipBase} border-(--ink) bg-(--ink) text-white`;
 const chipOff = `${chipBase} border-(--line) bg-(--surface) text-foreground hover:border-(--line-heavy)`;
 
 export function MetaMark({ size = 26 }: { size?: number }) {
   return (
+    // One-voice rule: the mark inherits ink rather than carrying a second
+    // accent family or a gradient.
     <svg width={size * 1.6} height={size} viewBox="0 0 48 30" aria-hidden role="presentation">
-      <defs>
-        <linearGradient id="mm-meta-gradient" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0" stopColor="#0668E1" />
-          <stop offset="1" stopColor="#7c3aed" />
-        </linearGradient>
-      </defs>
       <path
         d="M24 15 C19 5, 7 5, 7 15 C7 25, 19 25, 24 15 C29 5, 41 5, 41 15 C41 25, 29 25, 24 15 Z"
         fill="none"
-        stroke="url(#mm-meta-gradient)"
+        stroke="currentColor"
         strokeWidth="5"
         strokeLinecap="round"
       />

@@ -26,20 +26,20 @@ export function LeadStats({
 
   return (
     <AnimatedGroup className="grid gap-3.5 sm:grid-cols-3" itemClassName="h-full">
-      <div className="rounded-(--r-card) bg-card px-[18px] pt-[17px] pb-[15px] shadow-card transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-float motion-reduce:hover:translate-y-0">
+      <div className="rounded-(--r-card) border border-(--line) bg-card px-[18px] pt-[17px] pb-[15px] shadow-card">
         <span className="font-mono text-[9.5px] font-medium tracking-[0.12em] text-(--faint) uppercase">
           {copy.leads}
         </span>
-        <p className="mt-2.5 font-display text-[26px] leading-[1.1] font-extrabold tracking-[-0.02em]">
+        <p className="mt-2.5 font-display text-[24px] leading-[1.1] font-extrabold tracking-[-0.02em]">
           <AnimatedNumber value={total} springOptions={COUNT_SPRING} />
         </p>
       </div>
 
-      <div className="rounded-(--r-card) bg-card px-[18px] pt-[17px] pb-[15px] shadow-card transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-float motion-reduce:hover:translate-y-0">
+      <div className="rounded-(--r-card) border border-(--line) bg-card px-[18px] pt-[17px] pb-[15px] shadow-card">
         <span className="font-mono text-[9.5px] font-medium tracking-[0.12em] text-(--faint) uppercase">
           {copy.highIntent}
         </span>
-        <p className="mt-2.5 flex items-baseline gap-[7px] font-display text-[26px] leading-[1.1] font-extrabold tracking-[-0.02em]">
+        <p className="mt-2.5 flex items-baseline gap-[7px] font-display text-[24px] leading-[1.1] font-extrabold tracking-[-0.02em]">
           <AnimatedNumber value={highIntent} springOptions={COUNT_SPRING} />
           <span className="font-sans text-[13px] font-medium tracking-normal text-muted-foreground">
             {highIntentPct}%
@@ -47,11 +47,11 @@ export function LeadStats({
         </p>
       </div>
 
-      <div className="rounded-(--r-card) bg-card px-[18px] pt-[17px] pb-[15px] shadow-card transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-float motion-reduce:hover:translate-y-0">
+      <div className="rounded-(--r-card) border border-(--line) bg-card px-[18px] pt-[17px] pb-[15px] shadow-card">
         <span className="font-mono text-[9.5px] font-medium tracking-[0.12em] text-(--faint) uppercase">
           {copy.duplicates}
         </span>
-        <p className="mt-2.5 font-display text-[26px] leading-[1.1] font-extrabold tracking-[-0.02em]">
+        <p className="mt-2.5 font-display text-[24px] leading-[1.1] font-extrabold tracking-[-0.02em]">
           <AnimatedNumber value={duplicates} springOptions={COUNT_SPRING} />
         </p>
         <p className="mt-[7px] text-[11.5px] text-muted-foreground">{copy.duplicatesNote}</p>

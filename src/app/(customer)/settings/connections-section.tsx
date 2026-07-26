@@ -280,9 +280,9 @@ function MetaSetupForm({ workspaceId, canManage }: { workspaceId: string; canMan
       ) : <>
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="grid gap-2">
-          <Label>Meta ad account</Label>
+          <Label htmlFor="meta-meta-ad-account">Meta ad account</Label>
           {assets?.adAccounts.length ? (
-            <select
+            <select id="meta-meta-ad-account"
               className={selectClass}
               value={setup.metaAdAccountId}
               onChange={(e) => {
@@ -302,69 +302,69 @@ function MetaSetupForm({ workspaceId, canManage }: { workspaceId: string; canMan
               ))}
             </select>
           ) : (
-            <Input value={setup.metaAdAccountId} onChange={(e) => updateSetup({ metaAdAccountId: e.target.value })} disabled={!canManage} required />
+            <Input id="meta-meta-ad-account" value={setup.metaAdAccountId} onChange={(e) => updateSetup({ metaAdAccountId: e.target.value })} disabled={!canManage} required />
           )}
         </div>
         <div className="grid gap-2">
-          <Label>Meta Page</Label>
+          <Label htmlFor="meta-meta-page">Meta Page</Label>
           {assets?.pages.length ? (
-            <select className={selectClass} value={setup.pageId} onChange={(e) => updateSetup({ pageId: e.target.value, instagramActorId: null })} disabled={!canManage} required>
+            <select id="meta-meta-page" className={selectClass} value={setup.pageId} onChange={(e) => updateSetup({ pageId: e.target.value, instagramActorId: null })} disabled={!canManage} required>
               <option value="">Choose a Page</option>
               {assets.pages.map((page) => (
                 <option key={page.id} value={page.id}>{page.name} ({page.id})</option>
               ))}
             </select>
           ) : (
-            <Input value={setup.pageId} onChange={(e) => updateSetup({ pageId: e.target.value })} disabled={!canManage} required />
+            <Input id="meta-meta-page" value={setup.pageId} onChange={(e) => updateSetup({ pageId: e.target.value })} disabled={!canManage} required />
           )}
         </div>
         <div className="grid gap-2">
-          <Label>Instagram account (optional)</Label>
+          <Label htmlFor="meta-instagram-account-optional">Instagram account (optional)</Label>
           {availableInstagramActors.length ? (
-            <select className={selectClass} value={setup.instagramActorId ?? ""} onChange={(e) => updateSetup({ instagramActorId: e.target.value || null })} disabled={!canManage}>
+            <select id="meta-instagram-account-optional" className={selectClass} value={setup.instagramActorId ?? ""} onChange={(e) => updateSetup({ instagramActorId: e.target.value || null })} disabled={!canManage}>
               <option value="">None</option>
               {availableInstagramActors.map((actor) => (
                 <option key={actor.id} value={actor.id}>{actor.username} ({actor.id})</option>
               ))}
             </select>
           ) : (
-            <Input value={setup.instagramActorId ?? ""} onChange={(e) => updateSetup({ instagramActorId: e.target.value || null })} disabled={!canManage} />
+            <Input id="meta-instagram-account-optional" value={setup.instagramActorId ?? ""} onChange={(e) => updateSetup({ instagramActorId: e.target.value || null })} disabled={!canManage} />
           )}
         </div>
         <div className="grid gap-2">
-          <Label>Pixel</Label>
+          <Label htmlFor="meta-pixel">Pixel</Label>
           {assets?.pixels.length ? (
-            <select className={selectClass} value={setup.pixelId ?? ""} onChange={(e) => updateSetup({ pixelId: e.target.value || null })} disabled={!canManage}>
+            <select id="meta-pixel" className={selectClass} value={setup.pixelId ?? ""} onChange={(e) => updateSetup({ pixelId: e.target.value || null })} disabled={!canManage}>
               <option value="">None</option>
               {assets.pixels.map((pixel) => (
                 <option key={pixel.id} value={pixel.id}>{pixel.name} ({pixel.id})</option>
               ))}
             </select>
           ) : (
-            <Input value={setup.pixelId ?? ""} onChange={(e) => updateSetup({ pixelId: e.target.value || null })} disabled={!canManage} />
+            <Input id="meta-pixel" value={setup.pixelId ?? ""} onChange={(e) => updateSetup({ pixelId: e.target.value || null })} disabled={!canManage} />
           )}
         </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="grid gap-2">
-          <Label>Lead destination type</Label>
-          <select className={selectClass} value={setup.leadDestination.type} onChange={(e) => updateLeadDestination({ type: e.target.value as MetaLeadDestinationType })} disabled={!canManage}>
+          <Label htmlFor="meta-lead-destination-type">Lead destination type</Label>
+          <select id="meta-lead-destination-type" className={selectClass} value={setup.leadDestination.type} onChange={(e) => updateLeadDestination({ type: e.target.value as MetaLeadDestinationType })} disabled={!canManage}>
             {META_LEAD_DESTINATION_TYPES.map((type) => (
               <option key={type} value={type}>{formatLeadDestinationType(type)}</option>
             ))}
           </select>
         </div>
         <div className="grid gap-2">
-          <Label>Lead destination label</Label>
-          <Input value={setup.leadDestination.label} onChange={(e) => updateLeadDestination({ label: e.target.value })} disabled={!canManage} required />
+          <Label htmlFor="meta-lead-destination-label">Lead destination label</Label>
+          <Input id="meta-lead-destination-label" value={setup.leadDestination.label} onChange={(e) => updateLeadDestination({ label: e.target.value })} disabled={!canManage} required />
         </div>
       </div>
 
       {setup.leadDestination.type !== "manual" ? (
         <div className="grid gap-2">
-          <Label>Lead destination endpoint</Label>
-          <Input
+          <Label htmlFor="meta-lead-destination-endpoint">Lead destination endpoint</Label>
+          <Input id="meta-lead-destination-endpoint"
             value={setup.leadDestination.config?.endpoint ?? ""}
             onChange={(e) => updateLeadDestination({ config: { endpoint: e.target.value } })}
             placeholder="https://example.com/meta-leads"
@@ -376,12 +376,12 @@ function MetaSetupForm({ workspaceId, canManage }: { workspaceId: string; canMan
 
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="grid gap-2">
-          <Label>Privacy policy URL</Label>
-          <Input type="url" value={setup.privacyPolicyUrl} onChange={(e) => updateSetup({ privacyPolicyUrl: e.target.value })} disabled={!canManage} required />
+          <Label htmlFor="meta-privacy-policy-url">Privacy policy URL</Label>
+          <Input id="meta-privacy-policy-url" type="url" value={setup.privacyPolicyUrl} onChange={(e) => updateSetup({ privacyPolicyUrl: e.target.value })} disabled={!canManage} required />
         </div>
         <div className="grid gap-2">
-          <Label>Currency</Label>
-          <select className={selectClass} value={setup.currency} onChange={(e) => updateSetup({ currency: e.target.value })} disabled={!canManage} required>
+          <Label htmlFor="meta-currency">Currency</Label>
+          <select id="meta-currency" className={selectClass} value={setup.currency} onChange={(e) => updateSetup({ currency: e.target.value })} disabled={!canManage} required>
             <option value="">Select currency</option>
             {Object.values(REGION_CURRENCY).map((c) => (
               <option key={c} value={c}>{c}</option>
@@ -389,8 +389,8 @@ function MetaSetupForm({ workspaceId, canManage }: { workspaceId: string; canMan
           </select>
         </div>
         <div className="grid gap-2">
-          <Label>Timezone</Label>
-          <Input value={setup.timezone} onChange={(e) => updateSetup({ timezone: e.target.value })} placeholder={selectedAccount?.timezone ?? "Australia/Perth"} disabled={!canManage} required />
+          <Label htmlFor="meta-timezone">Timezone</Label>
+          <Input id="meta-timezone" value={setup.timezone} onChange={(e) => updateSetup({ timezone: e.target.value })} placeholder={selectedAccount?.timezone ?? "Australia/Perth"} disabled={!canManage} required />
         </div>
       </div>
 

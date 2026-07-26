@@ -112,6 +112,7 @@ export function TeamSection({
                       <StatusPill tone="green">{m.role}</StatusPill>
                     ) : (
                       <select
+                        aria-label={`Role for ${m.fullName ?? m.email ?? "this member"}`}
                         className={cn(selectClass, "w-32")}
                         value={m.role}
                         onChange={(e) => changeRole(m.profileId, e.target.value)}
@@ -142,13 +143,14 @@ export function TeamSection({
       <form className="flex flex-wrap items-center gap-2" onSubmit={invite}>
         <Input
           type="email"
+          aria-label="Teammate email"
           value={inviteEmail}
           onChange={(e) => setInviteEmail(e.target.value)}
           placeholder="teammate@email.com"
           required
           className="min-w-[220px] flex-1"
         />
-        <select className={cn(selectClass, "w-32")} value={inviteRole} onChange={(e) => setInviteRole(e.target.value)}>
+        <select aria-label="Invite role" className={cn(selectClass, "w-32")} value={inviteRole} onChange={(e) => setInviteRole(e.target.value)}>
           {ASSIGNABLE_ROLES.map((r) => (
             <option key={r} value={r}>
               {r}

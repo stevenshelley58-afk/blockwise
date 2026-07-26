@@ -36,17 +36,26 @@ export function MonitorTooltip({
   );
 }
 
-/** Shopify-style smooth area chart: monotone curve, gradient fill, horizontal grid only. */
+/**
+ * Smooth area chart: monotone curve, soft fill, horizontal grid only.
+ *
+ * Accessibility: Recharts renders a bare <svg>, so the series is also exposed
+ * as a visually-hidden data table. `label` names the chart for assistive
+ * technology; without it the chart is announced as a decorative image.
+ */
 export function SmoothAreaChart(props: {
   id: string;
   data: SmoothAreaPoint[];
   color: string;
   valueFormatter: (value: number) => string;
+  label?: string;
 }) {
   const gradientId = `mm-area-${props.id}`;
+  const points = props.data.filter((point) => typeof point.value === "number");
 
   return (
-    <div>
+    <figure className="m-0">
+      {props.label ? <figcaption className="sr-only">{props.label}</figcaption> : null}
       <ResponsiveContainer width="100%" height={180}>
         <AreaChart data={props.data} margin={{ top: 8, right: 6, bottom: 0, left: 0 }}>
           <defs>
@@ -89,7 +98,24 @@ export function SmoothAreaChart(props: {
           />
         </AreaChart>
       </ResponsiveContainer>
-    </div>
+      <table className="sr-only">
+        <caption>{props.label}</caption>
+        <thead>
+          <tr>
+            <th scope="col">Date</th>
+            <th scope="col">Value</th>
+          </tr>
+        </thead>
+        <tbody>
+          {points.map((point) => (
+            <tr key={point.date}>
+              <td>{formatDayTick(point.date)}</td>
+              <td>{props.valueFormatter(point.value as number)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </figure>
   );
 }
 

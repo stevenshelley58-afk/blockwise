@@ -19,6 +19,7 @@ import {
 import { Fragment, useMemo, useState } from "react";
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { niche } from "@/config/niche";
 import { calculateTrend, formatCurrency, formatPercent, safeRate } from "@/lib/meta-monitor/calculations";
 import {
   buildResultsHierarchy,
@@ -209,18 +210,23 @@ function Dashboard({
   onSelectAd: (adId: string) => void;
   refreshing?: boolean;
 }) {
+  const copy = niche.copy.performance;
   const summary = payload.summary!;
   const previous = summary.previousPeriod;
   const hierarchy = useMemo(() => buildResultsHierarchy(payload.ads), [payload.ads]);
   const ctr = safeRate(summary.clicks, summary.impressions);
   const previousCtr = previous ? safeRate(previous.clicks, previous.impressions) : null;
   const compare = previous ? `vs previous ${payload.range.days} day${payload.range.days === 1 ? "" : "s"}` : undefined;
-  const wrapperStyle = refreshing
-    ? ({ opacity: 0.55, pointerEvents: "none" as const, transition: "opacity 200ms ease" })
-    : undefined;
-
   return (
-    <div className="grid gap-3.5" style={wrapperStyle} aria-busy={refreshing || undefined} aria-live="polite">
+    <div
+      className={`grid gap-3.5 transition-opacity duration-250 motion-reduce:transition-none ${
+        refreshing ? "opacity-55" : ""
+      }`}
+      // `inert` keeps keyboard focus out of the stale subtree while refreshing,
+      // which pointer-events alone does not.
+      inert={refreshing || undefined}
+      aria-busy={refreshing || undefined}
+    >
       <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 xl:grid-cols-6">
         <MetaKpiCard
           icon={Eye}
@@ -274,10 +280,11 @@ function Dashboard({
 
       <div className="grid gap-3.5 md:grid-cols-3">
         <section className={panelClass}>
-          <h3 className={panelTitleClass}>Spend over time</h3>
+          <h3 className={panelTitleClass}>{copy.charts.spend}</h3>
           <div className="mt-3">
             <SmoothAreaChart
               id="spend"
+              label={copy.charts.spend}
               color={DATA_HUE}
               data={payload.daily.map((point) => ({ date: point.date, value: point.spend }))}
               valueFormatter={(value) => formatCurrency(value)}
@@ -285,10 +292,11 @@ function Dashboard({
           </div>
         </section>
         <section className={panelClass}>
-          <h3 className={panelTitleClass}>Valid leads over time</h3>
+          <h3 className={panelTitleClass}>{copy.charts.leads}</h3>
           <div className="mt-3">
             <SmoothAreaChart
               id="valid-leads"
+              label={copy.charts.leads}
               color={DATA_HUE}
               data={payload.daily.map((point) => ({ date: point.date, value: point.validLeads }))}
               valueFormatter={(value) => String(Math.round(value))}
@@ -296,11 +304,12 @@ function Dashboard({
           </div>
         </section>
         <section className={panelClass}>
-          <h3 className={panelTitleClass}>Valid CPL over time</h3>
-          <p className="mt-0.5 text-[11.5px] text-(--faint)">Gaps mark days with no valid leads — a $0 CPL is never shown.</p>
+          <h3 className={panelTitleClass}>{copy.charts.cpl}</h3>
+          <p className="mt-0.5 text-[11.5px] text-(--faint)">{copy.cplGapNote}</p>
           <div className="mt-3">
             <SmoothAreaChart
               id="valid-cpl"
+              label={copy.charts.cpl}
               color={DATA_HUE}
               data={payload.daily.map((point) => ({ date: point.date, value: point.validCpl }))}
               valueFormatter={(value) => formatCurrency(value)}
@@ -313,8 +322,8 @@ function Dashboard({
         <>
           <CampaignManagementTable rows={hierarchy} onSelectAd={onSelectAd} />
           <SectionHeading
-            title="Lead results"
-            subtitle="Results by listing or offer, with lead quality, cost, and the next action."
+            title={copy.leadResults.title}
+            subtitle={copy.leadResults.subtitle}
           />
           <div className="grid gap-3.5 sm:grid-cols-2 xl:grid-cols-3">
             {payload.ads.map((ad) => (
@@ -327,14 +336,14 @@ function Dashboard({
       <div className="grid gap-3.5 lg:grid-cols-[2fr_3fr]">
         {payload.suburbPerformance.length > 0 ? (
           <section className={panelClass}>
-            <h3 className={panelTitleClass}>Valid leads by suburb</h3>
+            <h3 className={panelTitleClass}>{copy.areaBreakdown.title}</h3>
             <div className="mt-4">
               <SuburbBarChart rows={payload.suburbPerformance} />
             </div>
           </section>
         ) : null}
         <section className={panelClass}>
-          <h3 className={panelTitleClass}>Budget pacing</h3>
+          <h3 className={panelTitleClass}>{copy.budgetPacing}</h3>
           <div className="mt-4">
             <BudgetPacingChart
               daily={payload.daily}

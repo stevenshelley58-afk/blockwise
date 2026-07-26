@@ -32,7 +32,9 @@ export function LeadQualitySelect({
       <select
         aria-label="Lead quality"
         className={cn(
-          "lead-quality-select appearance-none rounded-full py-[5px] pr-[24px] pl-[11px] text-[11.5px] font-bold transition-[border-color,box-shadow,background-color] duration-150",
+          // No legacy `lead-quality-select` class here: globals.css is unlayered,
+          // so it would beat every Tailwind utility below and flatten the pill.
+          "appearance-none rounded-full py-[5px] pr-[24px] pl-[11px] text-[11.5px] font-bold transition-[border-color,box-shadow,background-color] duration-150 focus-visible:shadow-(--ring) focus-visible:outline-none",
           selected === "high_intent"
             ? "border border-transparent bg-success-soft text-success"
             : "border border-(--line) bg-(--surface-subtle) text-foreground hover:border-(--line-heavy)",

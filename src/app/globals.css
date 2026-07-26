@@ -1734,20 +1734,6 @@ article.card a[href]:focus-visible,
 
 }
 
-.lead-quality-select {
-  width: 100%;
-  min-width: 128px;
-  height: 36px;
-  border: 1px solid var(--line);
-  border-radius: var(--r-ctl);
-  background: var(--surface);
-  color: var(--ink);
-  font: inherit;
-  font-size: 13px;
-  font-weight: 750;
-  padding: 0 10px;
-}
-
 .row-between {
   display: flex;
   align-items: center;

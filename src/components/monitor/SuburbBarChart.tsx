@@ -1,3 +1,4 @@
+import { niche } from "@/config/niche";
 import type { SuburbPerformance } from "@/lib/meta-monitor/types";
 
 const MAX_ROWS = 10;
@@ -9,8 +10,7 @@ export function SuburbBarChart({ rows }: { rows: SuburbPerformance[] }) {
   if (top.length === 0) {
     return (
       <p className="rounded-xl border border-dashed border-(--line-heavy) px-4 py-6 text-center text-[12.5px] leading-relaxed text-muted-foreground">
-        No suburb attribution yet. Suburbs come from lead records or the &quot;Suburb - Name&quot; ad set convention —
-        never from Meta geo estimates.
+        {niche.copy.performance.areaBreakdown.empty}
       </p>
     );
   }

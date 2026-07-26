@@ -1,12 +1,14 @@
 import { notFound } from "next/navigation";
 
 import { PropertyCheckReport } from "@/components/property-check/property-check-report";
+import { niche } from "@/config/niche";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
 import { getPropertyCheck } from "@/lib/property-check/persistence";
 
 export const dynamic = "force-dynamic";
 
 export default async function PropertyCheckReportPage({ params }: { params: Promise<{ id: string }> }) {
+  if (!niche.features.propertyCheck) notFound();
   const { id } = await params;
   const { supabase, access } = await requirePageSurfaceAccess("property_check");
 

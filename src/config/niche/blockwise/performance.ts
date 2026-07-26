@@ -9,6 +9,17 @@ export const performance: PerformanceCopy = {
     leads: "Valid leads over time",
     cpl: "Valid CPL over time",
   },
+  cplGapNote: "Gaps mark days with no valid leads — a $0 CPL is never shown.",
+  leadResults: {
+    title: "Lead results",
+    subtitle: "Results by listing or offer, with lead quality, cost, and the next action.",
+  },
+  areaBreakdown: {
+    title: "Valid leads by suburb",
+    empty:
+      'No suburb attribution yet. Suburbs come from lead records or the "Suburb - Name" ad set convention.',
+  },
+  budgetPacing: "Budget pacing",
   demoChip: "Demo data",
   refresh: "Refresh",
   refreshing: "Refreshing",

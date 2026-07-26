@@ -6,7 +6,10 @@ test("approval workflow stays contextual instead of exposing a standalone sectio
   const sidebar = readFileSync("src/components/sidebar-nav.tsx", "utf8");
   const appShell = readFileSync("src/components/app-shell.tsx", "utf8");
   const mobileNav = readFileSync("src/components/app/mobile-bottom-nav.tsx", "utf8");
-  const campaignControls = readFileSync("src/components/monitor/CampaignsManagement.tsx", "utf8");
+  // The approval call lives in the inline ad/campaign controls. It used to be
+  // asserted against CampaignsManagement.tsx, which was deleted as dead code
+  // (zero importers); AdManagementControls is the live owner.
+  const campaignControls = readFileSync("src/components/monitor/AdManagementControls.tsx", "utf8");
   const approvalRoute = readFileSync("src/app/api/approvals/[id]/route.ts", "utf8");
 
   assert.doesNotMatch(sidebar, /\/approvals|Approvals|ClipboardCheck/);

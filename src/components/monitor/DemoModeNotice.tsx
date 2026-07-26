@@ -68,7 +68,7 @@ export function DemoModeNotice({ metaConnectHref }: { metaConnectHref: string })
             {demoChip}
           </span>
           <span className="flex items-center gap-3 text-[12px] font-bold">
-            <a href={metaConnectHref} className="cursor-pointer text-data underline-offset-2 hover:underline">
+            <a href={metaConnectHref} className="cursor-pointer font-bold text-foreground underline-offset-2 hover:underline">
               Connect Meta
             </a>
             <button type="button" className="cursor-pointer text-muted-foreground hover:text-foreground" onClick={showBanner}>
@@ -113,7 +113,7 @@ export function DemoModeNotice({ metaConnectHref }: { metaConnectHref: string })
       <Dialog open={showGuide} onOpenChange={setShowGuide}>
         <DialogContent className="max-w-[440px] rounded-(--r-panel)">
           <DialogHeader>
-            <DialogTitle className="font-display text-[19px] font-extrabold tracking-[-0.015em]">
+            <DialogTitle className="font-display text-[17px] font-extrabold tracking-[-0.015em]">
               Welcome to Blockwise
             </DialogTitle>
             <DialogDescription className="text-[13px] leading-relaxed">

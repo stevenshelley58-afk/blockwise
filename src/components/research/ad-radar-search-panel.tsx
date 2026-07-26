@@ -23,15 +23,7 @@ type Filters = {
 
 const EMPTY_FILTERS: Filters = { status: "", agency: "", agent: "", adType: "", format: "", hook: "" };
 
-const AD_TYPE_OPTIONS: Array<{ value: string; label: string }> = [
-  { value: "listing", label: "Listing" },
-  { value: "just_sold", label: "Just sold" },
-  { value: "appraisal", label: "Appraisal" },
-  { value: "open_home", label: "Open home" },
-  { value: "property_management", label: "Property mgmt" },
-  { value: "market_update", label: "Market update" },
-  { value: "agency_brand", label: "Agency brand" },
-];
+const AD_TYPE_OPTIONS = niche.copy.adRadar.filters.adTypes;
 
 const FORMAT_OPTIONS: Array<{ value: string; label: string }> = [
   { value: "image", label: "Image" },
@@ -253,10 +245,10 @@ export function AdRadarSearchPanel({ initialQuery, initialSort, initialIncludeSu
                 </SelectWrap>
               </label>
               <label className="grid gap-1.5">
-                <span className={fieldLabelClass}>Agency</span>
+                <span className={fieldLabelClass}>{niche.copy.adRadar.filters.agency}</span>
                 <SelectWrap>
                   <select className={controlClass} value={filters.agency} onChange={(e) => onChangeFilter("agency", e.target.value)}>
-                    <option value="">All agencies</option>
+                    <option value="">{niche.copy.adRadar.filters.allAgencies}</option>
                     {agencyOptions.map((name) => (
                       <option key={name} value={name}>{name}</option>
                     ))}
@@ -264,10 +256,10 @@ export function AdRadarSearchPanel({ initialQuery, initialSort, initialIncludeSu
                 </SelectWrap>
               </label>
               <label className="grid gap-1.5">
-                <span className={fieldLabelClass}>Agent</span>
+                <span className={fieldLabelClass}>{niche.copy.adRadar.filters.agent}</span>
                 <SelectWrap>
                   <select className={controlClass} value={filters.agent} onChange={(e) => onChangeFilter("agent", e.target.value)}>
-                    <option value="">All agents</option>
+                    <option value="">{niche.copy.adRadar.filters.allAgents}</option>
                     {agentOptions.map((name) => (
                       <option key={name} value={name}>{name}</option>
                     ))}
@@ -280,7 +272,7 @@ export function AdRadarSearchPanel({ initialQuery, initialSort, initialIncludeSu
                   className="h-9 w-full rounded-(--r-card) border border-(--line) bg-(--surface) px-2.5 text-[12.5px] font-semibold text-foreground outline-none transition-[border-color] duration-150 placeholder:text-(--faint) focus:border-(--ink)"
                   type="text"
                   value={filters.hook}
-                  placeholder="e.g. free appraisal"
+                  placeholder={niche.copy.adRadar.filters.hookPlaceholder}
                   onChange={(e) => onChangeFilter("hook", e.target.value)}
                 />
               </label>
@@ -330,12 +322,12 @@ export function AdRadarSearchPanel({ initialQuery, initialSort, initialIncludeSu
             <AdRadarResultsGrid cards={cards} />
           ) : activeFilterCount > 0 ? (
             <div className="rounded-(--r-card) border border-dashed border-(--line-heavy) bg-(--surface-subtle)/50 px-6 py-10 text-center">
-              <h3 className="font-display text-[15px] font-extrabold">No ads matched your filters</h3>
+              <h3 className="font-display text-[15.5px] font-extrabold">No ads matched your filters</h3>
               <p className="mt-1 text-xs text-muted-foreground">Try clearing a filter or widening the search area.</p>
             </div>
           ) : (
             <div className="rounded-(--r-card) border border-dashed border-(--line-heavy) bg-(--surface-subtle)/50 px-6 py-10 text-center">
-              <h3 className="font-display text-[15px] font-extrabold">No ads matched</h3>
+              <h3 className="font-display text-[15.5px] font-extrabold">No ads matched</h3>
               <p className="mt-1 text-xs text-muted-foreground">Try a nearby postcode.</p>
             </div>
           )}

@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 
 import { GuidesShell } from "@/components/guides/guides-shell";
+import { niche } from "@/config/niche";
 
 import "./guides.css";
 
@@ -112,6 +114,7 @@ const guides = [
 ];
 
 export default function GuidesIndexPage() {
+  if (!niche.features.guides) notFound();
   return (
     <GuidesShell>
       <main className="bw-guides-index" id="main-content">

@@ -64,7 +64,7 @@ export function HomeSetupCard({
   return (
     <section
       aria-label={copy.title}
-      className="flex h-full flex-col rounded-(--r-panel) bg-card shadow-card transition-shadow duration-200 hover:shadow-float"
+      className="flex h-full flex-col rounded-(--r-panel) bg-card shadow-card"
     >
       <div className="flex items-start justify-between gap-2.5 px-5 pt-5 md:px-[22px]">
         <div>
@@ -84,7 +84,7 @@ export function HomeSetupCard({
             label={copy.progressLabel(doneCount, total)}
           />
           <p className="text-[12.5px] text-muted-foreground">
-            <strong className="block font-display text-[15px] font-extrabold tracking-[-0.01em] text-foreground">
+            <strong className="block font-display text-[15.5px] font-extrabold tracking-[-0.01em] text-foreground">
               {allDone ? copy.readyTitle : copy.progressLabel(doneCount, total)}
             </strong>
             {allDone ? copy.readySubtitle : copy.subtitle}

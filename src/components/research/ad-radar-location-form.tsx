@@ -3,6 +3,7 @@
 import { MapPin, Search, Users } from "lucide-react";
 import { type KeyboardEvent, useEffect, useId, useRef, useState } from "react";
 
+import { niche } from "@/config/niche";
 import type { AdRadarSearchSuggestion } from "@/lib/research/ad-radar-search-suggestions";
 
 type AdRadarLocationFormProps = {
@@ -314,7 +315,7 @@ export function AdRadarLocationForm({
         id={`${listId}-scope`}
         className={isLanding ? "lp-search-scope" : "basis-full text-[11.5px] text-(--faint)"}
       >
-        Predictive search for postcode, suburb, agency or agent
+        {niche.copy.adRadar.searchScope}
       </p>
       {note ? (
         <p id={`${listId}-note`} className={isLanding ? "lp-radar-note" : "basis-full text-xs text-muted-foreground"}>

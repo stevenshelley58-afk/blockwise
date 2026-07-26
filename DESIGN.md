@@ -8,13 +8,13 @@ colors:
   primary-tint: "#f1f2f4"
   canvas: "#f6f7f9"
   surface: "#ffffff"
-  surface-subtle: "#f1f5f9"
-  ink: "#131b2e"
+  surface-subtle: "#f1f2f4"
+  ink: "#16181d"
   muted: "#545a66"
-  faint: "#94a3b8"
-  line: "#dfe6f0"
+  faint: "#9aa0ad"
+  line: "#e9ebef"
   line-heavy: "#d3d7df"
-  accent-tint: "#eef3fb"
+  accent-tint: "#f1f2f4"
   data: "#2a78d6"
   data-soft: "rgba(42,120,214,0.10)"
   data-track: "rgba(42,120,214,0.16)"
@@ -28,6 +28,7 @@ typography:
   headline:
     fontFamily: "Manrope, Inter, ui-sans-serif, system-ui, sans-serif"
     fontSize: "27px"
+    fontSizeMobile: "24px"
     fontWeight: 800
     lineHeight: "1.15"
     letterSpacing: "-0.02em"
@@ -37,9 +38,21 @@ typography:
     fontWeight: 800
     lineHeight: "1.25"
     letterSpacing: "-0.015em"
+  stat:
+    fontFamily: "Manrope, Inter, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "24px"
+    fontWeight: 800
+    lineHeight: "1.1"
+    letterSpacing: "-0.02em"
+  section:
+    fontFamily: "Manrope, Inter, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "17px"
+    fontWeight: 800
+    lineHeight: "1.3"
+    letterSpacing: "-0.015em"
   body:
     fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif"
-    fontSize: "13px"
+    fontSize: "13.5px"
     fontWeight: 400
     lineHeight: "1.5"
     letterSpacing: "0"
@@ -49,6 +62,24 @@ typography:
     fontWeight: 600
     lineHeight: "1.4"
     letterSpacing: "0"
+  micro:
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "11.5px"
+    fontWeight: 500
+    lineHeight: "1.4"
+    letterSpacing: "0"
+  badge:
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "10.5px"
+    fontWeight: 700
+    lineHeight: "1.1"
+    letterSpacing: "0"
+  wordmark:
+    fontFamily: "Manrope, Inter, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "20px"
+    fontWeight: 700
+    lineHeight: "1"
+    letterSpacing: "-0.035em"
   eyebrow:
     fontFamily: "JetBrains Mono, ui-monospace, monospace"
     fontSize: "9.5px"
@@ -56,9 +87,9 @@ typography:
     lineHeight: "1.2"
     letterSpacing: "0.12em"
 rounded:
-  control: "8px"
-  card: "12px"
-  panel: "16px"
+  control: "10px"
+  card: "16px"
+  panel: "20px"
   pill: "9999px"
 spacing:
   compact: "8px"

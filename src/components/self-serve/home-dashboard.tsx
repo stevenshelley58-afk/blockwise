@@ -58,11 +58,13 @@ function DeltaBadge({
   previous,
   downIsGood = false,
 }: {
-  current: number;
+  current: number | null;
   previous: number | null;
   downIsGood?: boolean;
 }) {
-  if (previous == null || previous === 0) return null;
+  // No current reading is not a 100% drop — without both periods there is no
+  // honest delta to show.
+  if (current == null || previous == null || previous === 0) return null;
   const change = (current - previous) / previous;
   if (!Number.isFinite(change) || Math.abs(change) < 0.005) return null;
 
@@ -120,7 +122,7 @@ function StatCard({
   foot: React.ReactNode;
 }) {
   return (
-    <div className="flex h-full flex-col rounded-(--r-card) bg-card px-[18px] pt-[17px] pb-[15px] shadow-card transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-float motion-reduce:hover:translate-y-0">
+    <div className="flex h-full flex-col rounded-(--r-card) bg-card px-[18px] pt-[17px] pb-[15px] shadow-card">
       <div className="flex items-center justify-between gap-2">
         <span className="font-mono text-[9.5px] font-medium tracking-[0.12em] text-(--faint) uppercase">
           {label}
@@ -132,7 +134,7 @@ function StatCard({
           {icon}
         </span>
       </div>
-      <p className="mt-2.5 flex items-baseline gap-[7px] font-display text-[26px] leading-[1.1] font-extrabold tracking-[-0.02em]">
+      <p className="mt-2.5 flex items-baseline gap-[7px] font-display text-[24px] leading-[1.1] font-extrabold tracking-[-0.02em]">
         {children}
       </p>
       <div className="mt-[7px] flex items-center justify-between gap-2 text-[11.5px] text-muted-foreground">
@@ -173,7 +175,7 @@ export function HomeDashboard({ data }: { data: HomeData }) {
         {/* Page head */}
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <h1 className="font-display text-[26px] font-extrabold tracking-[-0.02em] md:text-[28px]">
+            <h1 className="font-display text-[24px] font-extrabold tracking-[-0.02em] md:text-[27px]">
               {headState.heading}
             </h1>
             <p className="mt-1 text-[13.5px] text-muted-foreground">{headState.subtitle}</p>
@@ -207,7 +209,7 @@ export function HomeDashboard({ data }: { data: HomeData }) {
             ) : (
               <span aria-label="No cost data yet">—</span>
             )}
-            <DeltaBadge current={performance?.cpl ?? 0} previous={performance?.previousCpl ?? null} downIsGood />
+            <DeltaBadge current={performance?.cpl ?? null} previous={performance?.previousCpl ?? null} downIsGood />
           </StatCard>
 
           <StatCard
