@@ -2,7 +2,16 @@
 
 import { useState } from "react";
 
-import { logCaught } from "@/lib/log";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { niche } from "@/config/niche";
 
 import { Feedback, Section, type Msg, type RT, type SB } from "./settings-shared";
 
@@ -19,7 +28,7 @@ export function DangerSection({ supabase, router, workspaceId }: { supabase: SB;
     router.refresh();
   }
 
-  async function requestDeletion() {
+  function requestDeletion() {
     setConfirmDeleteOpen(true);
   }
 
@@ -33,7 +42,7 @@ export function DangerSection({ supabase, router, workspaceId }: { supabase: SB;
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ workspaceId }),
       });
-      const data = (await res.json().catch(logCaught("settings: account deletion response parse failed", {}))) as { error?: string };
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
       setDelBusy(false);
       setMessage(
         res.ok
@@ -47,44 +56,43 @@ export function DangerSection({ supabase, router, workspaceId }: { supabase: SB;
   }
 
   return (
-    <Section id="danger" title="Danger zone" description="Account-level actions.">
-      <div className="wizard-connect-row">
-        <span>
-          <strong>Sign out of all devices</strong>
-          <div className="item-meta">Ends every active session for your account.</div>
-        </span>
-        <button className="button secondary" type="button" onClick={signOutEverywhere} disabled={busy}>
+    <Section id="danger" title={niche.copy.settings.sections.danger}>
+      <div className="flex items-center justify-between gap-4">
+        <div className="grid gap-0.5">
+          <strong className="text-sm font-medium">Sign out of all devices</strong>
+          <span className="text-xs text-muted-foreground">Ends every active session for your account.</span>
+        </div>
+        <Button variant="outline" type="button" onClick={signOutEverywhere} disabled={busy}>
           {busy ? "Signing out" : "Sign out everywhere"}
-        </button>
+        </Button>
       </div>
-      <div className="wizard-connect-row">
-        <span>
-          <strong>Delete account & workspace data</strong>
-          <div className="item-meta">Submits a deletion request for review.</div>
-        </span>
-        <button className="button secondary" type="button" onClick={requestDeletion} disabled={delBusy}>
+      <div className="flex items-center justify-between gap-4">
+        <div className="grid gap-0.5">
+          <strong className="text-sm font-medium">Delete account & workspace data</strong>
+          <span className="text-xs text-muted-foreground">Submits a deletion request for review.</span>
+        </div>
+        <Button variant="destructive" type="button" onClick={requestDeletion} disabled={delBusy}>
           {delBusy ? "Submitting" : "Request deletion"}
-        </button>
+        </Button>
       </div>
       <Feedback message={message} />
 
-      {confirmDeleteOpen && (
-        <div
-          style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(15,23,42,.55)", display: "grid", placeItems: "center", padding: 24 }}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="confirm-account-delete-title"
-        >
-          <div style={{ background: "var(--surface, #fff)", borderRadius: 12, padding: "28px 32px", maxWidth: 440, width: "100%", boxShadow: "0 8px 32px rgba(0,0,0,.2)" }}>
-            <h2 id="confirm-account-delete-title" style={{ margin: "0 0 8px", fontSize: 18 }}>Delete your account?</h2>
-            <p style={{ margin: "0 0 24px", color: "var(--text-2, #666)" }}>This will permanently delete your account and all data. This cannot be undone.</p>
-            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-              <button className="button secondary" type="button" onClick={() => setConfirmDeleteOpen(false)}>Cancel</button>
-              <button className="button" type="button" onClick={confirmDeletion} style={{ background: "var(--destructive, #dc2626)", color: "#fff", borderColor: "transparent" }}>Delete my account</button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Dialog open={confirmDeleteOpen} onOpenChange={(open) => setConfirmDeleteOpen(open)}>
+        <DialogContent showCloseButton={false} className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete your account?</DialogTitle>
+            <DialogDescription>This will permanently delete your account and all data. This cannot be undone.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" type="button" onClick={() => setConfirmDeleteOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" type="button" onClick={confirmDeletion}>
+              Delete my account
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Section>
   );
 }

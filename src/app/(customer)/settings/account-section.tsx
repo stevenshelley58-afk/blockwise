@@ -2,9 +2,24 @@
 
 import { useState, type FormEvent } from "react";
 
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { niche } from "@/config/niche";
+
 import { Feedback, Section, type Msg, type RT, type SB } from "./settings-shared";
 
-export function AccountSection({ supabase, router, user, fullName }: { supabase: SB; router: RT; user: { id: string; email: string }; fullName: string }) {
+export function AccountSection({
+  supabase,
+  router,
+  user,
+  fullName,
+}: {
+  supabase: SB;
+  router: RT;
+  user: { id: string; email: string };
+  fullName: string;
+}) {
   const [name, setName] = useState(fullName);
   const [email, setEmail] = useState(user.email);
   const [busy, setBusy] = useState(false);
@@ -30,21 +45,21 @@ export function AccountSection({ supabase, router, user, fullName }: { supabase:
   }
 
   return (
-    <Section id="account" title="Account" description="Your name and sign-in email.">
-      <form className="stack" onSubmit={save}>
-        <label className="wizard-field">
-          <span className="wizard-label">Full name</span>
-          <input value={name} onChange={(e) => setName(e.target.value)} required />
-        </label>
-        <label className="wizard-field">
-          <span className="wizard-label">Email</span>
-          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" required />
-        </label>
+    <Section id="account" title={niche.copy.settings.sections.account}>
+      <form className="grid gap-4" onSubmit={save}>
+        <div className="grid gap-2">
+          <Label htmlFor="account-name">Full name</Label>
+          <Input id="account-name" value={name} onChange={(e) => setName(e.target.value)} required />
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="account-email">Email</Label>
+          <Input id="account-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" required />
+        </div>
         <Feedback message={message} />
-        <div className="wizard-actions">
-          <button className="button" type="submit" disabled={busy}>
+        <div>
+          <Button type="submit" disabled={busy}>
             {busy ? "Saving" : "Save changes"}
-          </button>
+          </Button>
         </div>
       </form>
     </Section>
@@ -81,21 +96,21 @@ export function PasswordSection({ supabase }: { supabase: SB }) {
   }
 
   return (
-    <Section id="security" title="Password" description="Change the password for this account.">
-      <form className="stack" onSubmit={save}>
-        <label className="wizard-field">
-          <span className="wizard-label">New password</span>
-          <input type="password" value={pw} onChange={(e) => setPw(e.target.value)} autoComplete="new-password" required />
-        </label>
-        <label className="wizard-field">
-          <span className="wizard-label">Confirm new password</span>
-          <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} autoComplete="new-password" required />
-        </label>
+    <Section id="security" title={niche.copy.settings.sections.password}>
+      <form className="grid gap-4" onSubmit={save}>
+        <div className="grid gap-2">
+          <Label htmlFor="new-password">New password</Label>
+          <Input id="new-password" type="password" value={pw} onChange={(e) => setPw(e.target.value)} autoComplete="new-password" required />
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="confirm-password">Confirm new password</Label>
+          <Input id="confirm-password" type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} autoComplete="new-password" required />
+        </div>
         <Feedback message={message} />
-        <div className="wizard-actions">
-          <button className="button" type="submit" disabled={busy}>
+        <div>
+          <Button type="submit" disabled={busy}>
             {busy ? "Updating" : "Update password"}
-          </button>
+          </Button>
         </div>
       </form>
     </Section>

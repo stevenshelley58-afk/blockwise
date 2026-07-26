@@ -2,13 +2,18 @@
 
 import { useState } from "react";
 
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { niche } from "@/config/niche";
+
 import { Feedback, Section, type Msg, type SB } from "./settings-shared";
 
 const NOTIFICATION_OPTIONS: Array<{ key: string; label: string; description: string; fallback: boolean }> = [
-  { key: "approvalRequests", label: "Approval requests", description: "When something needs review before publishing.", fallback: true },
-  { key: "leadAlerts", label: "New leads", description: "When a new lead arrives from Meta or Google.", fallback: true },
-  { key: "weeklyDigest", label: "Weekly digest", description: "A weekly summary of spend, leads, and results.", fallback: false },
-  { key: "productUpdates", label: "Product updates", description: "Occasional news about new Blockwise features.", fallback: false },
+  { key: "approvalRequests", label: "Approval requests", description: "Something needs your review.", fallback: true },
+  { key: "leadAlerts", label: "New leads", description: "A lead just arrived.", fallback: true },
+  { key: "weeklyDigest", label: "Weekly digest", description: "Spend and leads, weekly.", fallback: false },
+  { key: "productUpdates", label: "Product updates", description: "New features, occasionally.", fallback: false },
 ];
 
 export function NotificationsSection({ supabase, userId, initial }: { supabase: SB; userId: string; initial: Record<string, boolean> }) {
@@ -38,25 +43,25 @@ export function NotificationsSection({ supabase, userId, initial }: { supabase: 
   }
 
   return (
-    <Section id="notifications" title="Notifications" description="Choose which emails Blockwise sends you.">
+    <Section id="notifications" title={niche.copy.settings.sections.notifications}>
       {NOTIFICATION_OPTIONS.map((opt) => (
-        <label className="wizard-connect-row" key={opt.key} style={{ cursor: "pointer" }}>
-          <span>
-            <strong>{opt.label}</strong>
-            <div className="item-meta">{opt.description}</div>
-          </span>
-          <input
-            type="checkbox"
+        <div className="flex items-center justify-between gap-4" key={opt.key}>
+          <div className="grid gap-0.5">
+            <Label htmlFor={`notif-${opt.key}`}>{opt.label}</Label>
+            <p className="text-xs text-muted-foreground">{opt.description}</p>
+          </div>
+          <Switch
+            id={`notif-${opt.key}`}
             checked={prefs[opt.key] ?? opt.fallback}
-            onChange={(e) => setPrefs((prev) => ({ ...prev, [opt.key]: e.target.checked }))}
+            onCheckedChange={(checked) => setPrefs((prev) => ({ ...prev, [opt.key]: checked }))}
           />
-        </label>
+        </div>
       ))}
       <Feedback message={message} />
-      <div className="wizard-actions">
-        <button className="button" type="button" onClick={save} disabled={busy}>
+      <div>
+        <Button type="button" onClick={save} disabled={busy}>
           {busy ? "Saving" : "Save preferences"}
-        </button>
+        </Button>
       </div>
     </Section>
   );

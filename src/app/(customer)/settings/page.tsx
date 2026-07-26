@@ -1,4 +1,5 @@
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
+import { niche } from "@/config/niche";
 import { GOOGLE_ADS_ENABLED } from "@/lib/config/feature-flags";
 import { listProviderConnections } from "@/lib/providers/provider-connections";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
@@ -81,9 +82,9 @@ export default async function SettingsPage() {
   const wsQuery = encodeURIComponent(access.workspaceId);
 
   return (
-    <main className="mx-auto w-full max-w-4xl px-4 py-8 md:px-6" aria-label="Settings">
-      <header className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
+    <main className="mx-auto w-full max-w-[880px] px-4 pt-6 pb-28 md:px-6 md:pt-8 md:pb-16" aria-label="Settings">
+      <header className="mb-5">
+        <h1 className="font-display text-[24px] font-extrabold tracking-[-0.02em] md:text-[27px]">{niche.copy.settings.title}</h1>
       </header>
       <SettingsView
         user={{ id: access.userId, email: p?.email ?? "" }}

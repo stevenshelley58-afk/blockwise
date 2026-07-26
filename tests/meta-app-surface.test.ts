@@ -55,17 +55,14 @@ test("Meta setup API captures concrete lead delivery endpoint config", () => {
 });
 
 test("Meta settings offers only real lead delivery destinations", () => {
-  const settings = readFileSync("src/app/(customer)/settings/settings-view.tsx", "utf8");
+  // The settings view is a thin composer; the Meta setup form (and its
+  // destination types) lives in the connections section.
   const splitSettings = readFileSync("src/app/(customer)/settings/connections-section.tsx", "utf8");
   const execution = readFileSync("src/lib/providers/meta-execution.ts", "utf8");
-  const destinationTypesLine = settings.match(/const META_LEAD_DESTINATION_TYPES: MetaLeadDestinationType\[\] = \[[^\n]+\];/)?.[0] ?? "";
   const splitDestinationTypesLine = splitSettings.match(/const META_LEAD_DESTINATION_TYPES: MetaLeadDestinationType\[\] = \[[^\n]+\];/)?.[0] ?? "";
 
-  assert.match(settings, /type MetaLeadDestinationType = "webhook" \| "crm" \| "manual"/);
   assert.match(splitSettings, /type MetaLeadDestinationType = "webhook" \| "crm" \| "manual"/);
-  assert.match(settings, /META_LEAD_DESTINATION_TYPES: MetaLeadDestinationType\[\] = \["manual", "webhook", "crm"\]/);
   assert.match(splitSettings, /META_LEAD_DESTINATION_TYPES: MetaLeadDestinationType\[\] = \["manual", "webhook", "crm"\]/);
-  assert.doesNotMatch(destinationTypesLine, /"email"/);
   assert.doesNotMatch(splitDestinationTypesLine, /"email"/);
   assert.match(execution, /type: "webhook" \| "crm" \| "manual"/);
   assert.match(execution, /normalizeMetaLeadDestinationType/);
