@@ -73,7 +73,7 @@ const operatorNavItems: NavItem[] = [
 // Self-serve labels, order, and feature gating live in the niche config
 // (src/config/niche) — the white-label layer. Icons stay here, keyed by
 // route, because they are structural rather than niche identity.
-const selfServeIconByHref: Record<string, NavIcon> = {
+export const selfServeIcons: Record<string, NavIcon> = {
   "/self-serve": LayoutGrid,
   "/ad-studio": Star,
   "/results": LineChart,
@@ -89,7 +89,7 @@ const selfServeNavItems: NavItem[] = niche.nav.items
   .map((item) => ({
     href: item.href,
     label: item.label,
-    icon: selfServeIconByHref[item.href] ?? LayoutGrid,
+    icon: selfServeIcons[item.href] ?? LayoutGrid,
     section: item.section,
   }));
 

@@ -172,7 +172,7 @@ test("property check navigation is exposed to builder surfaces only", () => {
   const sidebar = readFileSync("src/components/sidebar-nav.tsx", "utf8");
   // Self-serve nav now comes from the white-label niche config, feature-flagged.
   const nicheConfig = readFileSync("src/config/niche/blockwise.ts", "utf8");
-  const operatorBlock = sidebar.match(/const operatorNavItems[\s\S]*?const selfServeIconByHref/)?.[0] ?? "";
+  const operatorBlock = sidebar.match(/const operatorNavItems[\s\S]*?export const selfServeIcons/)?.[0] ?? "";
   const monitorBlock = sidebar.match(/const monitorNavItems[\s\S]*?export const navByVariant/)?.[0] ?? "";
 
   assert.match(
