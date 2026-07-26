@@ -8015,6 +8015,7 @@ a.operator-file-row {
   border-top: 1px solid var(--line);
   box-shadow: var(--shadow-float);
   padding: 16px 24px;
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
   display: flex;
   align-items: center;
   gap: 16px;
@@ -8043,6 +8044,7 @@ a.operator-file-row {
 
 .consent-banner__btn {
   padding: 8px 16px;
+  min-height: 44px;
   border-radius: var(--r-ctl);
   font-size: 0.875rem;
   font-weight: 500;

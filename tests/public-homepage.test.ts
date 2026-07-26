@@ -69,12 +69,12 @@ test("landing page anchors, sections, and claims stay connected", () => {
   assert.doesNotMatch(combined, forbiddenClaims);
 
   // One section element per anchor id; both breakpoint variants render inside
-  // it, so every anchor resolves at desktop and mobile widths.
+  // it, so every anchor resolves at desktop and mobile widths. The former
+  // #done-for-you fold was merged into #workflow (headline + approval panel).
   const expectedSections = [
     "top",
     "start",
     "workflow",
-    "done-for-you",
     "control",
     "updates",
     "property-check",

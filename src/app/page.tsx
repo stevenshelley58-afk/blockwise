@@ -3,7 +3,6 @@ import { Inter, Manrope } from "next/font/google";
 
 import {
   ControlFold,
-  DoneForYou,
   FaqSection,
   FreeTrial,
   ManagedSetup,
@@ -32,7 +31,6 @@ export default function HomePage() {
         <section id="top"><NightOpsHero /></section>
         <section id="start"><StartBand /></section>
         <section id="workflow"><WorkflowBand /></section>
-        <section id="done-for-you"><DoneForYou /></section>
         <section id="control"><ControlFold /></section>
         <section id="updates"><Updates /></section>
         <section id="property-check"><PropertyCheck /></section>

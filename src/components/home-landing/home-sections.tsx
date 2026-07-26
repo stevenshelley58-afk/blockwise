@@ -1,4 +1,7 @@
+import { Fragment, type CSSProperties } from "react";
+
 import { CtaLink } from "@/components/landing/cta-link";
+import { InView } from "@/components/motion";
 
 import {
   CHART_POINTS,
@@ -64,52 +67,56 @@ export function StartBand() {
   return <StartStudio />;
 }
 
-/* ---------- 6.4 #workflow — Text band ---------- */
+/* ---------- 6.4 #workflow — Merged headline + approval panel ----------
+   The "too much time" promise and the "prepared, checked, sent" proof live in
+   one fold: the headline cascades word-by-word on the left while the approval
+   panel (ad preview + checklist + single Approve action) springs up on the
+   right. Entrance motion is driven by the shared InView `.is-in` hook and
+   honors prefers-reduced-motion in homepage.css. */
+
+const WORKFLOW_HEADLINE: ReadonlyArray<{ w: string; hl?: boolean }> = [
+  { w: "Too" },
+  { w: "much" },
+  { w: "time" },
+  { w: "is" },
+  { w: "wasted" },
+  { w: "on" },
+  { w: "ads.", hl: true },
+  { w: "Not" },
+  { w: "enough" },
+  { w: "time" },
+  { w: "is" },
+  { w: "spent" },
+  { w: "with" },
+  { w: "clients.", hl: true },
+];
 
 export function WorkflowBand() {
   return (
-    <div className="hw-band">
-      <h2>Too much time is wasted on ads. Not enough time is spent with clients.</h2>
-      <p className="hw-sub">
-        Blockwise handles the setup, creative, approvals and updates so agents can stay out of Ads
-        Manager.
-      </p>
-      <CtaLink location="workflow" href="/signup" className="hw-textlink">
-        Get your first ad prepared <span className="hw-arr">→</span>
-      </CtaLink>
-    </div>
-  );
-}
-
-/* ---------- 6.5 #done-for-you — Prepared. Checked. Sent. ---------- */
-
-export function DoneForYou() {
-  return (
-    <div className="hw-fold hw-dfy">
-      <div className="hw-wide hw-dfy-grid">
-        <div className="hw-dfy-rail">
-          <h2>
-            Prepared.
-            <br />
-            Checked.
-            <br />
-            Sent.
-          </h2>
-          <p className="hw-sub">One approval replaces the setup work.</p>
-          <dl className="hw-spec">
-            {HERO_RAIL.map((row) => (
-              <div className="hw-spec-row" key={row.k}>
-                <dt>{row.k}</dt>
-                <dd>{row.v}</dd>
-              </div>
+    <div className="hw-fold hw-wf">
+      <InView className="hw-wide hw-wf-grid" threshold={0.18}>
+        <div className="hw-wf-copy">
+          <h2 className="hw-wf-h2">
+            {WORKFLOW_HEADLINE.map((word, i) => (
+              <Fragment key={`${word.w}-${i}`}>
+                <span
+                  className={word.hl ? "hw-wf-w hw-wf-w--hl" : "hw-wf-w"}
+                  style={{ "--i": i } as CSSProperties}
+                >
+                  {word.w}
+                </span>{" "}
+              </Fragment>
             ))}
-          </dl>
-          <CtaLink location="done_for_you_approve" href="/signup" className="hw-btn hw-btn--dark">
-            Approve
+          </h2>
+          <p className="hw-sub">
+            Blockwise handles the setup, creative, approvals and updates so agents can stay out of
+            Ads Manager.
+          </p>
+          <CtaLink location="workflow" href="/signup" className="hw-textlink hw-wf-cta">
+            Get your first ad prepared <span className="hw-arr">→</span>
           </CtaLink>
-          <p className="hw-note">Nothing spends before approval.</p>
         </div>
-        <div className="hw-dfy-ad">
+        <div className="hw-wf-panel">
           <p className="hw-status hw-status--ink">
             <span className="hw-status-dot" aria-hidden />
             Seller lead ad · Ready for review
@@ -121,8 +128,24 @@ export function DoneForYou() {
             footHeading="Free home appraisal"
             footSub="Local experts. No obligation."
           />
+          <dl className="hw-spec hw-wf-spec">
+            {HERO_RAIL.map((row, i) => (
+              <div className="hw-spec-row" key={row.k} style={{ "--i": i } as CSSProperties}>
+                <dt>{row.k}</dt>
+                <dd>{row.v}</dd>
+              </div>
+            ))}
+          </dl>
+          <CtaLink
+            location="done_for_you_approve"
+            href="/signup"
+            className="hw-btn hw-btn--dark hw-wf-approve"
+          >
+            Approve
+          </CtaLink>
+          <p className="hw-note">Nothing spends before approval.</p>
         </div>
-      </div>
+      </InView>
     </div>
   );
 }

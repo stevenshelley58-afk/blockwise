@@ -55,6 +55,79 @@
     linear-gradient(0deg, rgba(5, 9, 17, 0.6), transparent 32%);
 }
 
+/* ---------- Animated suburb boundary ----------
+   Traced from the baked map outline. Loop: draw the outline → fill the area
+   → hold → fade out → repeat. The static baked boundary stays visible
+   underneath the whole time, so the suburb never loses its street-following
+   shape; this overlay is the glowing "scan" that re-traces it. */
+
+.hw-no-boundary {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.hw-no-boundary-fill {
+  fill: rgba(0, 107, 255, 0.16);
+  opacity: 0;
+  animation: no-boundary-fill 7s ease-in-out infinite;
+}
+/* Blurred bloom that swells in once the line is drawing and fades before the
+   loop. Opacity-only animation on a filtered element = safely composited. */
+.hw-no-boundary-glow {
+  fill: none;
+  stroke: rgba(0, 107, 255, 0.6);
+  stroke-width: 9;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  filter: blur(7px);
+  opacity: 0;
+  animation: no-boundary-glow 7s ease-in-out infinite;
+}
+/* Crisp tracing core. No filter here so the stroke-dashoffset draw always
+   repaints (a filter on a dash-animated path can freeze the draw in some
+   browsers). Bright core so the trace reads over the baked blue boundary. */
+.hw-no-boundary-stroke {
+  fill: none;
+  stroke: #d6e7ff;
+  stroke-width: 3;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: no-boundary-trace 7s ease-in-out infinite;
+}
+
+/* trace the outline (0–38%), hold, then fade out (78–92%) while still drawn,
+   reset the dash invisibly, and loop. */
+@keyframes no-boundary-trace {
+  0% { stroke-dashoffset: 1; opacity: 1; }
+  38% { stroke-dashoffset: 0; opacity: 1; }
+  78% { stroke-dashoffset: 0; opacity: 1; }
+  92% { stroke-dashoffset: 0; opacity: 0; }
+  100% { stroke-dashoffset: 1; opacity: 0; }
+}
+/* bloom follows the trace: rises as the line nears complete, holds, fades. */
+@keyframes no-boundary-glow {
+  0% { opacity: 0; }
+  22% { opacity: 0; }
+  44% { opacity: 0.9; }
+  78% { opacity: 0.9; }
+  92% { opacity: 0; }
+  100% { opacity: 0; }
+}
+/* fill swells in after the line starts drawing, holds, fades out before loop. */
+@keyframes no-boundary-fill {
+  0% { opacity: 0; }
+  30% { opacity: 0; }
+  48% { opacity: 1; }
+  78% { opacity: 1; }
+  92% { opacity: 0; }
+  100% { opacity: 0; }
+}
+
 /* ---------- Copy + form ---------- */
 
 .hw-no-content {
@@ -170,7 +243,7 @@
   background: transparent;
   color: inherit;
   font-family: inherit;
-  font-size: 15.5px;
+  font-size: 16px; /* 16px prevents iOS Safari auto-zoom on focus */
   font-weight: 500;
 }
 .hw-no .hw-report-search .lp-location-pill input::placeholder {
@@ -278,9 +351,10 @@
     overflow-x: auto;
     padding: 0 20px 48px;
     scrollbar-width: none;
+    scroll-snap-type: x mandatory;
   }
   .hw-no-cards::-webkit-scrollbar { display: none; }
-  .hw-no-card { flex: 0 0 240px; }
+  .hw-no-card { flex: 0 0 240px; scroll-snap-align: start; }
 }
 
 @media (max-width: 560px) {
@@ -302,4 +376,11 @@
     opacity: 1 !important;
     transform: none !important;
   }
+  /* show the suburb as quietly selected (drawn outline + bloom + soft fill), no loop */
+  .hw-no-boundary-stroke {
+    stroke-dashoffset: 0 !important;
+    opacity: 1 !important;
+  }
+  .hw-no-boundary-glow { opacity: 0.8 !important; }
+  .hw-no-boundary-fill { opacity: 1 !important; }
 }
