@@ -127,8 +127,11 @@ export type LeadsCopy = {
   searchPlaceholder: string;
   filters: { all: string; highIntent: string; duplicates: string };
   exportCsv: string;
-  columns: { lead: string; sourceAd: string; quality: string; status: string };
+  columns: { lead: string; suburb: string; sourceAd: string; quality: string; status: string };
+  status: { newLead: string; possibleDuplicate: string };
   showing: (shown: number, total: number) => string;
+  neverSynced: string;
+  noMatches: string;
   empty: { title: string; body: string };
 };
 

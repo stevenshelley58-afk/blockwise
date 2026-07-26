@@ -64,8 +64,10 @@ test("trial generation limit responses keep a machine code with friendly money-p
 });
 
 test("leads surface labels duplicate candidates as possible duplicates", () => {
-  const source = read("src/app/(customer)/leads/page.tsx");
+  const source = read("src/config/niche/blockwise/leads.ts");
+  const table = read("src/components/leads/leads-table.tsx");
 
   assert.match(source, /Possible duplicate/);
   assert.doesNotMatch(source, /Duplicate flagged/);
+  assert.match(table, /copy\.status\.possibleDuplicate/);
 });

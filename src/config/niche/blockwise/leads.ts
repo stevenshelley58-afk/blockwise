@@ -19,11 +19,15 @@ export const leads: LeadsCopy = {
   exportCsv: "Export CSV",
   columns: {
     lead: "Lead",
+    suburb: "Suburb",
     sourceAd: "Source ad",
     quality: "Quality",
     status: "Status",
   },
+  status: { newLead: "New", possibleDuplicate: "Possible duplicate" },
   showing: (shown, total) => `Showing ${shown} of ${total}`,
+  neverSynced: "Never synced",
+  noMatches: "No leads match your search or filters.",
   empty: {
     title: "No leads yet",
     body: "Leads land here as soon as your first ad is live.",
