@@ -138,6 +138,7 @@ test("Ad Radar keeps postcode-only search labels specific", () => {
   assert.ok(guess.terms.includes("6166"));
   assert.ok(guess.terms.includes("Coogee"));
   assert.ok(guess.terms.includes("Lake Coogee"));
+  assert.ok(guess.terms.includes("Henderson"));
   assert.equal(guess.terms.includes("6163"), false);
 });
 

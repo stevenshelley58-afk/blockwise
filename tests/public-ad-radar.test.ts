@@ -241,7 +241,13 @@ test("public Ad Radar loader keeps exact location score ahead of newer broad mat
 });
 
 test("public Ad Radar loader asks for postcode arrays and national postcode suburbs", async () => {
-  const fake = fakeInspectableSupabaseRows([]);
+  const fake = fakeInspectableSupabaseRows([
+    row({
+      card_id: "exact-postcode",
+      postcode: "6166",
+      suburb: "Coogee",
+    }),
+  ]);
 
   await loadPublicAdRadarCards(fake.client, { location: "6166", limit: 1 });
 
@@ -255,11 +261,19 @@ test("public Ad Radar loader asks for postcode arrays and national postcode subu
   );
   assert.ok(
     fake.queries.some((query) => query.callArgs("ilike").some((args) => args[0] === "suburb" && args[1] === "Coogee")),
-    "postcode searches should expand to suburbs from the national postcode dataset",
+    "postcode searches should include Coogee even when exact postcode rows exist",
+  );
+  assert.ok(
+    fake.queries.some((query) => query.callArgs("ilike").some((args) => args[0] === "suburb" && args[1] === "Lake Coogee")),
+    "postcode searches should include Lake Coogee even when exact postcode rows exist",
+  );
+  assert.ok(
+    fake.queries.some((query) => query.callArgs("ilike").some((args) => args[0] === "suburb" && args[1] === "Henderson")),
+    "postcode searches should include Henderson even when exact postcode rows exist",
   );
 });
 
-test("public Ad Radar loader stops after exact postcode rows", async () => {
+test("public Ad Radar loader can stop after exact postcode rows when area expansion is disabled", async () => {
   const fake = fakeInspectableSupabaseRows([
     row({
       card_id: "exact-postcode",
@@ -270,7 +284,11 @@ test("public Ad Radar loader stops after exact postcode rows", async () => {
     }),
   ]);
 
-  const response = await loadPublicAdRadarCards(fake.client, { location: "6163", limit: 1 });
+  const response = await loadPublicAdRadarCards(fake.client, {
+    location: "6163",
+    includeSurroundingSuburbs: false,
+    limit: 1,
+  });
 
   assert.deepEqual(response.ads.map((ad) => ad.id), ["exact-postcode"]);
   assert.ok(
