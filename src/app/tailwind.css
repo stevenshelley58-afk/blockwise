@@ -9,8 +9,7 @@
  * components look native from day one.
  *
  * shadcn components live under a `.tw` wrapper (the customer layout root),
- * which supplies the small base layer preflight would otherwise provide
- * (solid borders + a default border colour).
+ * which gets a scoped preflight (see the `preflight` layer below).
  */
 
 /*
@@ -32,11 +31,100 @@
  * in layout.tsx) — it is the token override that must keep winning, and its
  * presentational rules are scoped to legacy-only classes.
  */
-@layer legacy, theme, base, components, utilities;
+@layer preflight, legacy, theme, base, components, utilities;
 @import "./globals.css" layer(legacy);
 @import "./landing.css" layer(legacy);
 @import "tailwindcss/theme.css" layer(theme);
 @import "tailwindcss/utilities.css" layer(utilities);
+
+/*
+ * Scoped preflight for the customer surface (`.tw`) and portaled shadcn
+ * overlays (`[data-slot]`).
+ *
+ * Tailwind is loaded WITHOUT global preflight so the legacy surfaces
+ * (operator / monitor / landing / auth) keep UA defaults. But the rebuilt
+ * customer surface is authored against preflight semantics — without these
+ * resets every element under `.tw` rendered the UA default `medium` border
+ * the moment `border-style: solid` was applied (the wireframe-box look), and
+ * sidebar `<ul>`s kept their UA bullets and indent.
+ *
+ * This lives in the `preflight` layer, declared BELOW `legacy`, so the legacy
+ * classes still used inside the customer surface (Ad Studio et al.) and every
+ * Tailwind utility override it — exactly the contract real preflight has.
+ */
+@layer preflight {
+  .tw,
+  .tw *,
+  .tw *::before,
+  .tw *::after,
+  [data-slot],
+  [data-slot] *,
+  [data-slot] *::before,
+  [data-slot] *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    border: 0 solid var(--ui-border);
+  }
+
+  .tw :where(ol, ul, menu),
+  [data-slot] :where(ol, ul, menu),
+  :where(ol, ul, menu)[data-slot] {
+    list-style: none;
+  }
+
+  .tw :where(h1, h2, h3, h4, h5, h6),
+  [data-slot] :where(h1, h2, h3, h4, h5, h6) {
+    font-size: inherit;
+    font-weight: inherit;
+  }
+
+  .tw :where(a),
+  [data-slot] :where(a) {
+    color: inherit;
+    text-decoration: inherit;
+  }
+
+  .tw :where(hr),
+  [data-slot] :where(hr) {
+    height: 0;
+    color: inherit;
+    border-top-width: 1px;
+  }
+
+  .tw :where(img, svg, video, canvas, audio, iframe, embed, object),
+  [data-slot] :where(img, svg, video, canvas, audio, iframe, embed, object) {
+    display: block;
+    vertical-align: middle;
+  }
+
+  .tw :where(img, video),
+  [data-slot] :where(img, video) {
+    max-width: 100%;
+    height: auto;
+  }
+
+  .tw :where(table),
+  [data-slot] :where(table) {
+    border-collapse: collapse;
+    border-color: inherit;
+    text-indent: 0;
+  }
+
+  .tw :where(button, input, optgroup, select, textarea),
+  [data-slot] :where(button, input, optgroup, select, textarea) {
+    font: inherit;
+    letter-spacing: inherit;
+    color: inherit;
+    background-color: transparent;
+    border-radius: 0;
+  }
+
+  .tw :where(textarea),
+  [data-slot] :where(textarea) {
+    resize: vertical;
+  }
+}
 
 /*
  * Class-based dark variant. shadcn components ship `dark:` utilities, but
@@ -173,33 +261,12 @@
 }
 
 /*
- * Scoped base layer for shadcn components — the replacement for preflight,
- * which we deliberately do not load. Only applies under the `.tw` wrapper, so
- * it has no effect until the customer layout adds that class (Phase 1).
+ * Base look for the customer surface root. The border/box resets that used to
+ * live here moved to the `preflight` layer above — in `base` they outranked
+ * the `legacy` layer, and they were missing `border-width: 0`, which is what
+ * drew a UA-default border around every element on the rebuilt surface.
  */
 @layer base {
-  .tw,
-  .tw *,
-  .tw *::before,
-  .tw *::after {
-    border-style: solid;
-    border-color: var(--ui-border);
-  }
-
-  /*
-   * shadcn overlays (Sheet, Dialog, dropdown/select menus, tooltips) render
-   * through Radix portals attached to <body>, so they escape the `.tw`
-   * wrapper. The same preflight-lite therefore also keys off the `data-slot`
-   * attribute that every shadcn component carries. This stays scoped to
-   * shadcn components — no legacy Blockwise element uses `data-slot`.
-   */
-  [data-slot],
-  [data-slot]::before,
-  [data-slot]::after {
-    border-style: solid;
-    border-color: var(--ui-border);
-  }
-
   .tw {
     background-color: var(--ui-background);
     color: var(--ui-foreground);
