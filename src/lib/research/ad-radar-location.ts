@@ -174,6 +174,12 @@ export function resolveAdRadarLocationSearch(value: string, options: AdRadarLoca
   };
 }
 
+export function resolveAdRadarPostcodeSuburbs(value: string): string[] {
+  const postcode = value.trim();
+  if (!/^\d{4}$/u.test(postcode)) return [];
+  return [...(postcodeAreaHint(postcode)?.suburbs ?? [])];
+}
+
 export function shouldPrioritiseAdRadarLocationSearch(value: string, guess: AdRadarLocationGuess | null): boolean {
   if (!guess) return false;
   const cleaned = cleanLocationValue(value);

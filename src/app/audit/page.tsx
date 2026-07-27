@@ -297,7 +297,7 @@ function Stats({ area, stats }: { area: string; stats: AdAuditStats }) {
       <div className="container">
         <div className="section-head">
           <h2>What the scan found</h2>
-          <p>Public Meta Ad Library signals for {area} and surrounding suburbs, measured at scan time.</p>
+          <p>Live advertising signals for {area} and surrounding suburbs, measured at scan time.</p>
         </div>
         <div className="stats-grid">
           <article className="stat-card"><strong>{numberFormat.format(stats.totals.detected)}</strong><span>Local real estate ads detected</span></article>
@@ -527,7 +527,7 @@ function Evidence({
           ) : null}
           <TrackedDetails summary="Methodology and notes" data={analytics}>
             <div className="method-note">
-              <p>Data is sourced from the public Meta Ad Library at scan time and covers ads detected for the searched suburb plus surrounding suburbs and postcodes. Only advertisers classified as real estate are counted in the headline numbers.</p>
+              <p>Data reflects ads detected at scan time for the searched suburb plus surrounding suburbs and postcodes. Only advertisers classified as real estate are counted in the headline numbers.</p>
               <p>Long-running ads are public signals only. They are not proof of ROAS, CPA, lead quality, or listing wins.</p>
               <p>Blockwise is independent and is not affiliated with Meta Platforms, Inc. Advertiser names are shown for competitive research only.</p>
             </div>

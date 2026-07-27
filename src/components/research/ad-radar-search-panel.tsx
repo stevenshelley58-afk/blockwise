@@ -298,8 +298,8 @@ export function AdRadarSearchPanel({ initialQuery, initialSort, initialIncludeSu
 
       {searched ? (
         <section className="grid grid-cols-2 gap-3.5 xl:grid-cols-4">
-          <StatTile label="Ads in view" value={String(cards.length)} note="Meta Ad Library results" />
-          <StatTile label="Advertisers" value={String(advertiserCount)} note="Meta pages with visible ads" />
+          <StatTile label="Ads in view" value={String(cards.length)} note="Current matching ads" />
+          <StatTile label="Advertisers" value={String(advertiserCount)} note="Pages with visible ads" />
           <StatTile label="Postcodes" value={String(allPostcodes.length)} note="Matched ad areas" />
           <StatTile label="Media visible" value={String(mediaReady)} note="Images, videos, or carousel media" />
         </section>

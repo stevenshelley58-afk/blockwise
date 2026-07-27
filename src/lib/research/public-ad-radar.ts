@@ -348,9 +348,9 @@ async function loadCandidateRows(
   let structuredRows = dedupeRows(exactBatches.flat());
   let maybeMore = exactBatches.some((batch) => batch.length >= limit);
 
-  if (structuredRows.length === 0) {
+  if (structuredRows.length === 0 || structuredQueryLoaders.related.length > 0) {
     const relatedBatches = await Promise.all(structuredQueryLoaders.related.map((query) => query(offset, limit)));
-    structuredRows = dedupeRows(relatedBatches.flat());
+    structuredRows = dedupeRows([...structuredRows, ...relatedBatches.flat()]);
     maybeMore = maybeMore || relatedBatches.some((batch) => batch.length >= limit);
   }
 
@@ -382,6 +382,9 @@ function structuredLocationCandidateQueries(
 
   for (const suburb of suburbTerms) {
     related.push((offset, limit) => fetchRows(supabase, offset, limit, (query) => query.ilike("suburb", escapeLikeTerm(suburb))));
+  }
+  if (suburbTerms.length > 0) {
+    related.push((offset, limit) => fetchRows(supabase, offset, limit, (query) => query.overlaps("ad_area_suburbs", suburbTerms)));
   }
 
   if (suburbTerms.length === 0 && postcodes.length === 0 && state) {

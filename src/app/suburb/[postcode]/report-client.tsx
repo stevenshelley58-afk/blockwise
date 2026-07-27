@@ -14,8 +14,8 @@ type NearbyArea = { postcode: string; suburb: string; count: number };
 
 type SuburbReportClientProps = {
   ads: PublicAdRadarCard[];
+  coverageLabel: string;
   insights: SuburbReportInsights;
-  isSurrounds: boolean;
   nearby: NearbyArea[];
   playScan: boolean;
   postcode: string;
@@ -25,7 +25,7 @@ type SuburbReportClientProps = {
 const initialEmailState: ReportEmailState = { ok: false };
 
 export function SuburbReportClient(props: SuburbReportClientProps) {
-  const { ads, insights, isSurrounds, nearby, playScan, postcode, suburb } = props;
+  const { ads, coverageLabel, insights, nearby, playScan, postcode, suburb } = props;
   const [visibleCount, setVisibleCount] = useState(9);
   const [showScan, setShowScan] = useState(playScan);
   const [scanStep, setScanStep] = useState(0);
@@ -48,7 +48,7 @@ export function SuburbReportClient(props: SuburbReportClientProps) {
     return () => { window.clearInterval(tick); window.clearTimeout(done); };
   }, [ads.length, playScan]);
 
-  const reportLabel = `${suburb}${isSurrounds ? " + surrounds" : ""}`;
+  const reportLabel = coverageLabel ? postcode : suburb;
   const trialHref = gateHref(postcode, "trial");
 
   return (
@@ -57,7 +57,7 @@ export function SuburbReportClient(props: SuburbReportClientProps) {
       <header className="sr-topbar">
         <div className="sr-topbar-inner">
           <Link className="sr-logo" href="/">blockwise</Link>
-          <span className="sr-live-chip"><span />{reportLabel} {postcode} · live</span>
+          <span className="sr-live-chip"><span />{reportLabel}{coverageLabel ? "" : ` ${postcode}`} · live</span>
           <div className="sr-topbar-actions">
             <button className="sr-button sr-button-ghost" type="button" onClick={() => setEmailOpen(true)}>Email me this report</button>
             <GateLink href={trialHref} intent="trial" postcode={postcode} className="sr-button sr-button-dark">Start free trial</GateLink>
@@ -68,8 +68,8 @@ export function SuburbReportClient(props: SuburbReportClientProps) {
       <div className="sr-shell">
         <section className="sr-report-header" aria-labelledby="report-title">
           <p className="sr-eyebrow">Free suburb report · no account needed</p>
-          <h1 id="report-title">Every live ad in {reportLabel}, in one place.</h1>
-          <p className="sr-meta">Observed from the Meta Ad Library · Updated today · Free to browse, all of it</p>
+          <h1 id="report-title">Every live ad {coverageLabel ? `across ${postcode}` : `in ${suburb}`}, in one place.</h1>
+          <p className="sr-meta">{coverageLabel ? `${coverageLabel} · ` : ""}Updated today · Free to browse, all of it</p>
           <div className="sr-stats">
             <Stat value={String(ads.length)} label="live ads observed" />
             <Stat value={String(insights.distinctAdvertiserCount)} label="local advertisers" />
@@ -134,7 +134,7 @@ export function SuburbReportClient(props: SuburbReportClientProps) {
 }
 
 function ScanOverlay({ suburb, postcode, step, count }: { suburb: string; postcode: string; step: number; count: number }) {
-  const steps = ["Pulling live ads from the Meta Ad Library", `Matching ads to ${suburb} and surrounds`, "Profiling advertisers and categories", "Finding gaps you could test"];
+  const steps = [`Finding live ads across ${postcode}`, `Matching ads to ${suburb} and surrounds`, "Profiling advertisers and categories", "Finding gaps you could test"];
   return <div className="sr-scan" role="status" aria-live="polite"><div className="sr-scan-inner"><p>Free suburb report</p><h1>Scanning {suburb} <span>{postcode}</span></h1><p>Building your report from the ads observed right now.</p><ol>{steps.map((label, index) => <li className={index <= step ? "is-active" : ""} key={label}><span>{index < step ? "✓" : index === step ? "◌" : ""}</span>{label}</li>)}</ol><strong>{count}</strong><small>live ads found so far</small></div><div className="sr-scan-map" aria-hidden><b>{suburb}, WA</b><span>scanning…</span><i /><i /><i /><i /></div></div>;
 }
 
@@ -144,7 +144,7 @@ function SectionHeading({ id, title, note }: { id: string; title: string; note: 
 function ReportAdCard({ ad, postcode, suburb, longestId, longestDays }: { ad: PublicAdRadarCard; postcode: string; suburb: string; longestId: string | null; longestDays: number }) {
   const media = ad.media[0];
   const initials = ad.pageName.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
-  return <article className="sr-ad-card"><header>{ad.pageImageUrl ? <img src={ad.pageImageUrl} alt="" loading="lazy" /> : <span>{initials}</span>}<div><h3>{ad.pageName}</h3><p>{ad.adType || "Local advertiser"}</p></div><div className="sr-platforms">{ad.platforms.map((platform) => <b key={platform}>{platform.slice(0, 2).toUpperCase()}</b>)}</div></header><div className="sr-ad-media">{media ? (media.kind === "video" ? <video poster={media.posterUrl ?? undefined} preload="none" aria-label={`Video ad from ${ad.pageName}`} /> : <img src={media.url} alt={`Ad creative from ${ad.pageName}`} loading="lazy" />) : <div><span>Creative unavailable</span></div>}{ad.id === longestId ? <em>⏱ {longestDays} days · longest in {suburb}</em> : null}</div><div className="sr-ad-copy"><h3>{ad.headline || ad.description || "Observed local ad"}</h3><p>{ad.body || ad.description || "Copy was not available from the source."}</p><footer><span className="sr-active-dot" />{ad.durationLabel || "Recently observed"}<b>{ad.destinationDomain || "Destination unavailable"}</b></footer></div><div className="sr-ad-actions"><GateLink href={gateHref(postcode, "track")} intent="track" postcode={postcode}>Track advertiser</GateLink><GateLink href={gateHref(postcode, "remix")} intent="remix" postcode={postcode}>Remix in AdStudio</GateLink></div></article>;
+  return <article className="sr-ad-card"><header>{ad.pageImageUrl ? <img src={ad.pageImageUrl} alt="" loading="lazy" /> : <span>{initials}</span>}<div><h3>{ad.pageName}</h3><p>{ad.adType || "Local advertiser"}</p></div><div className="sr-platforms">{ad.platforms.map((platform) => <b key={platform}>{platform.slice(0, 2).toUpperCase()}</b>)}</div></header><div className="sr-ad-media">{media ? (media.kind === "video" ? <video poster={media.posterUrl ?? undefined} preload="none" aria-label={`Video ad from ${ad.pageName}`} /> : <img src={media.url} alt={`Ad creative from ${ad.pageName}`} loading="lazy" />) : <div><span>Creative unavailable</span></div>}{ad.id === longestId ? <em>⏱ {longestDays} days · longest in {suburb}</em> : null}</div><div className="sr-ad-copy"><h3>{ad.headline || ad.description || "Observed local ad"}</h3><p>{ad.body || ad.description || "Copy was not available."}</p><footer><span className="sr-active-dot" />{ad.durationLabel || "Recently observed"}<b>{ad.destinationDomain || "Destination unavailable"}</b></footer></div><div className="sr-ad-actions"><GateLink href={gateHref(postcode, "track")} intent="track" postcode={postcode}>Track advertiser</GateLink><GateLink href={gateHref(postcode, "remix")} intent="remix" postcode={postcode}>Remix in AdStudio</GateLink></div></article>;
 }
 
 function EmptyState({ suburb, postcode, nearby, trialHref }: { suburb: string; postcode: string; nearby: NearbyArea[]; trialHref: string }) {

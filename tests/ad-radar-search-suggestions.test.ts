@@ -55,3 +55,20 @@ test("every shared Ad Radar field explains all supported predictive search types
   assert.match(formSource, /\/api\/research\/ad-radar\/suggestions/);
   assert.match(formSource, /aria-autocomplete="list"/);
 });
+
+test("customer-facing ad reports do not disclose the collection source", () => {
+  const reportSource = readFileSync(
+    join(process.cwd(), "src/app/suburb/[postcode]/report-client.tsx"),
+    "utf8",
+  );
+  const resultsSource = readFileSync(
+    join(process.cwd(), "src/components/research/ad-radar-search-panel.tsx"),
+    "utf8",
+  );
+  const auditSource = readFileSync(
+    join(process.cwd(), "src/app/audit/page.tsx"),
+    "utf8",
+  );
+
+  assert.doesNotMatch(`${reportSource}\n${resultsSource}\n${auditSource}`, /Meta Ad Library|Meta pages/i);
+});
