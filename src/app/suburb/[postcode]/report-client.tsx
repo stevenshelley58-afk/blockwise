@@ -57,7 +57,7 @@ export function SuburbReportClient(props: SuburbReportClientProps) {
       <header className="sr-topbar">
         <div className="sr-topbar-inner">
           <Link className="sr-logo" href="/">blockwise</Link>
-          <span className="sr-live-chip"><span />{reportLabel} {postcode} · live</span>
+          <span className="sr-live-chip"><span />{reportLabel}{coverageLabel ? "" : ` ${postcode}`} · live</span>
           <div className="sr-topbar-actions">
             <button className="sr-button sr-button-ghost" type="button" onClick={() => setEmailOpen(true)}>Email me this report</button>
             <GateLink href={trialHref} intent="trial" postcode={postcode} className="sr-button sr-button-dark">Start free trial</GateLink>
