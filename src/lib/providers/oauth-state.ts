@@ -8,6 +8,7 @@ export type OAuthStatePayload = {
   workspaceId: string;
   userId: string;
   returnPath: string;
+  campaignId?: string | null;
   issuedAt: number;
   nonce: string;
 };
@@ -21,7 +22,12 @@ type VerifyOptions = {
 };
 
 const DEFAULT_MAX_AGE_SECONDS = 10 * 60;
-const ALLOWED_RETURN_PATHS = new Set(["/results", "/onboarding"]);
+const ALLOWED_RETURN_PATHS = new Set([
+  "/results",
+  "/onboarding",
+  "/ad-studio",
+  "/settings#connections",
+]);
 
 export function sanitizeOAuthReturnPath(value: string | null | undefined): string {
   const path = value?.trim();
@@ -33,6 +39,7 @@ export function createOAuthStatePayload(input: {
   workspaceId: string;
   userId: string;
   returnPath?: string;
+  campaignId?: string | null;
   nowSeconds?: number;
 }): OAuthStatePayload {
   return {
@@ -40,6 +47,7 @@ export function createOAuthStatePayload(input: {
     workspaceId: input.workspaceId,
     userId: input.userId,
     returnPath: sanitizeOAuthReturnPath(input.returnPath),
+    campaignId: sanitizeOAuthCampaignId(input.campaignId),
     issuedAt: input.nowSeconds ?? Math.floor(Date.now() / 1000),
     nonce: randomBytes(16).toString("base64url"),
   };
@@ -81,6 +89,10 @@ export function verifyOAuthState(
   if (payload.userId !== options.expectedUserId) {
     return { ok: false, error: "OAuth user mismatch." };
   }
+  const campaignId = sanitizeOAuthCampaignId(payload.campaignId);
+  if (payload.campaignId !== undefined && payload.campaignId !== null && campaignId !== payload.campaignId) {
+    return { ok: false, error: "Invalid OAuth campaign resume identifier." };
+  }
 
   const now = options.nowSeconds ?? Math.floor(Date.now() / 1000);
   const maxAge = options.maxAgeSeconds ?? DEFAULT_MAX_AGE_SECONDS;
@@ -89,7 +101,12 @@ export function verifyOAuthState(
     return { ok: false, error: "OAuth state expired." };
   }
 
-  return { ok: true, payload };
+  return { ok: true, payload: { ...payload, campaignId } };
+}
+
+export function sanitizeOAuthCampaignId(value: string | null | undefined): string | null {
+  const campaignId = value?.trim() ?? "";
+  return /^[A-Za-z0-9_-]{1,128}$/.test(campaignId) ? campaignId : null;
 }
 
 function sign(encodedPayload: string, secret: string): string {

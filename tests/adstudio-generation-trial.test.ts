@@ -5,7 +5,8 @@ import test from "node:test";
 import { buildTrialFallbackBrandKit } from "../src/lib/adstudio/trial-brand-kit.ts";
 
 const campaignsRoute = "src/app/api/adstudio/campaigns/route.ts";
-const trialHelper = "src/lib/adstudio/generation-trial.ts";
+const creditHelper = "src/lib/adstudio/generation-credits.ts";
+const creditDomain = "src/lib/credits/workspace-credits.ts";
 const trialBrandKitHelper = "src/lib/adstudio/trial-brand-kit.ts";
 const persistence = "src/lib/adstudio/persistence.ts";
 const adStudioPage = "src/app/(customer)/ad-studio/page.tsx";
@@ -16,12 +17,13 @@ function read(path: string): string {
   return readFileSync(path, "utf8");
 }
 
-test("campaign generation route uses the trial reservation helper", () => {
+test("campaign generation route uses the shared render-credit reservation", () => {
   const source = read(campaignsRoute);
 
-  assert.match(source, /@\/lib\/adstudio\/generation-trial/);
-  assert.match(source, /reserveAdStudioGenerationCredit/);
-  assert.match(source, /refundReservedTrialCredit/);
+  assert.match(source, /@\/lib\/adstudio\/generation-credits/);
+  assert.match(source, /reserveAdStudioGenerationCredits/);
+  assert.match(source, /refundOutstandingWorkspaceCredits/);
+  assert.match(source, /clientMutationId \?\? request\.headers\.get\("idempotency-key"\)/);
   assert.match(read("src/lib/adstudio/generate-template-campaign.ts"), /resolveAdStudioGenerationBrandKit/);
 });
 
@@ -43,25 +45,33 @@ test("real campaign generation route guards duplicate in-flight requests", () =>
   assert.match(source, /inFlightGenerations\.delete\(dedupKey\)/);
 });
 
-test("trial helper checks confirmed email only for trial workspaces before the reserve RPC", () => {
-  const source = read(trialHelper);
-  const planCheckIndex = source.indexOf("loadWorkspacePlanKey");
+test("generation helper checks confirmed identity before the shared reserve RPC", () => {
+  const source = read(creditHelper);
   const emailCheckIndex = source.indexOf("hasConfirmedEmail(user)");
-  const reserveIndex = source.indexOf("reserve_trial_ad_pack_credit");
+  const reserveIndex = source.indexOf("await reserveWorkspaceCredits");
 
-  assert.ok(planCheckIndex > -1);
   assert.ok(emailCheckIndex > -1);
   assert.ok(reserveIndex > -1);
-  assert.ok(planCheckIndex < emailCheckIndex);
   assert.ok(emailCheckIndex < reserveIndex);
-  assert.match(source, /workspacePlan\.planKey !== "trial"/);
-  assert.match(source, /reason:\s*"not_trial"/);
-  assert.match(source, /select\("workspace_plans\(key\)"\)/);
+  assert.match(source, /credits:\s*2/);
+  assert.match(source, /adstudio\.feed_story_pack/);
   assert.match(source, /status:\s*403/);
-  assert.match(source, /trial_expired/);
-  assert.match(source, /credit_limit_reached/);
-  assert.match(source, /status:\s*trialCreditErrorStatus\(reason\)/);
-  assert.match(source, /refund_trial_ad_pack_credit/);
+  assert.match(source, /WorkspaceCreditError/);
+  assert.match(source, /status:\s*402/);
+  assert.match(read(creditDomain), /reserve_workspace_credits/);
+  assert.match(read(creditDomain), /settle_workspace_credit_reservation/);
+  assert.match(read(creditDomain), /refund_workspace_credit_reservation/);
+});
+
+test("Feed and Story settle independently and Story failure refunds only its render", () => {
+  const pipeline = read("src/lib/adstudio/generate-template-campaign.ts");
+  const trigger = read("trigger/adstudio-generate.ts");
+
+  assert.match(pipeline, /:settle:4x5/);
+  assert.match(pipeline, /:settle:9x16/);
+  assert.match(pipeline, /credits:\s*1[\s\S]*:refund:9x16/);
+  assert.match(pipeline, /story_render_failed/);
+  assert.match(trigger, /refundOutstandingWorkspaceCredits/);
 });
 
 test("campaign-pack persistence is transactional and surfaces errors", () => {

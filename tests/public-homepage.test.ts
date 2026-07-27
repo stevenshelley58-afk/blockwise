@@ -114,7 +114,7 @@ test("landing page anchors, sections, and claims stay connected", () => {
     assert.ok(ids.includes(target), `#${target} anchor must target an existing ID`);
   }
 
-  assert.match(combined, /href="#free-trial"/);
+  assert.match(combined, /href="\/#free-trial"/);
   // The walkthrough CTAs use CtaLink's default #managed-setup target.
   assert.match(combined, /location="faq_walkthrough"/);
 });
@@ -137,7 +137,7 @@ test("landing page metadata matches Blockwise positioning", () => {
   const pricing = readFileSync("src/app/pricing/page.tsx", "utf8");
 
   assert.match(layout, /Blockwise \| Real Estate Meta Ads Workflow/);
-  assert.match(layout, /create, approve, export, and track Meta ad campaigns through their own ad account/);
+  assert.match(layout, /Create, approve, publish, and track Meta ad campaigns through your own ad account/);
   assert.match(layout, /type:\s*"website"/);
   assert.match(layout, /card:\s*"summary_large_image"/);
   assert.doesNotMatch(layout, /alternates:\s*\{\s*canonical:\s*"\/"\s*\}/);
@@ -145,7 +145,7 @@ test("landing page metadata matches Blockwise positioning", () => {
   assert.match(pricing, /alternates:\s*\{\s*canonical:\s*"\/pricing"\s*\}/);
 });
 
-test("public marketing copy stays honest about first-tester export posture", () => {
+test("public marketing copy states the approved progressive offer", () => {
   const { combined: home } = readHomeSources();
   const pricing = readFileSync("src/app/pricing/page.tsx", "utf8");
   const layout = readFileSync("src/app/layout.tsx", "utf8");
@@ -155,13 +155,60 @@ test("public marketing copy stays honest about first-tester export posture", () 
   assert.match(home, /Nothing spends before approval/i);
   assert.match(home, /before and after approval/i);
   assert.match(home, /Approve every ad before it goes live/i);
-  assert.match(pricing, /Create, approve, export and track property/);
-  assert.match(pricing, /\$799/);
-  assert.doesNotMatch(pricing, /\$500/);
+  assert.match(home, /Create three complete ads free/i);
+  assert.match(home, /Start with only your email/i);
+  assert.match(pricing, /Create three complete Feed \+ Story ads with only your email/i);
+  assert.match(pricing, /Meta ad spend is separate/i);
+  assert.doesNotMatch(combined, /\$799/);
   assert.doesNotMatch(combined, /Launch from Blockwise/);
-  assert.doesNotMatch(combined, /publish the campaign/i);
   assert.doesNotMatch(combined, /create, approve, launch/i);
   assert.doesNotMatch(combined, /To launch from Blockwise/i);
+});
+
+test("homepage FAQ discloses billing triggers, credit expiry, cancellation, and managed scope", () => {
+  const faq = readFileSync("src/components/home-landing/data.ts", "utf8");
+
+  assert.match(faq, /US\$99 or A\$99 when your first campaign launches/i);
+  assert.match(faq, /seven days after checkout, whichever comes first/i);
+  assert.match(faq, /US\$499 or A\$499 each month until cancelled/i);
+  assert.match(faq, /market and local currency you confirm/i);
+
+  assert.match(faq, /Credits expire at the end of that period/i);
+  assert.match(faq, /do not roll over or transfer/i);
+  assert.match(faq, /credits you have already paid for remain available until the current period ends/i);
+
+  assert.match(faq, /Deleting a profile, workspace, or creative is not a substitute for cancelling/i);
+  assert.match(faq, /paid access and remaining credits continue until the end of the current billing period/i);
+
+  assert.match(faq, /US\$1,500\/month in the United States/i);
+  assert.match(faq, /A\$2,500\/month in Australia/i);
+  assert.match(faq, /100 monthly render credits/i);
+  assert.match(faq, /weekly optimization of up to four live campaigns/i);
+  assert.match(faq, /You pay Meta directly/i);
+  assert.match(faq, /additional scope is confirmed and repriced during onboarding/i);
+});
+
+test("pricing keeps US and AU offers explicit and accessible", () => {
+  const pricingPage = readFileSync("src/app/pricing/page.tsx", "utf8");
+  const pricing = readFileSync("src/components/pricing/market-pricing.tsx", "utf8");
+  const combined = `${pricingPage}\n${pricing}`;
+
+  assert.match(pricing, /aria-pressed=\{market === value\}/);
+  assert.match(pricing, /Choose your market/);
+  assert.match(pricing, /United States/);
+  assert.match(pricing, /Australia/);
+  assert.match(pricing, /US\$99/);
+  assert.match(pricing, /US\$499/);
+  assert.match(pricing, /A\$99/);
+  assert.match(pricing, /A\$499/);
+  assert.match(pricing, /US\$1,500/);
+  assert.match(pricing, /A\$2,500/);
+  assert.match(combined, /100 render credits/);
+  assert.match(combined, /Up to 50 complete Feed \+ Story packs/);
+  assert.match(combined, /Five named, email-verified team members/);
+  assert.match(combined, /One free live campaign setup/);
+  assert.match(combined, /Subscribe and book onboarding/);
+  assert.match(combined, /Book a call first/);
 });
 
 test("managed-setup form posts to the demo-request endpoint with an intact honeypot", () => {
@@ -198,7 +245,6 @@ test("public pages identify the legal operator in server-rendered content", () =
   assert.match(combined, new RegExp(legalName), "homepage must identify the legal operator");
 
   const publicPages = [
-    "src/app/pricing/page.tsx",
     "src/app/(legal)/privacy/page.tsx",
     "src/app/(legal)/terms/page.tsx",
     "src/app/(legal)/layout.tsx",
@@ -211,6 +257,9 @@ test("public pages identify the legal operator in server-rendered content", () =
       `${file} must identify the legal operator`,
     );
   }
+
+  const pricing = readFileSync("src/app/pricing/page.tsx", "utf8");
+  assert.match(pricing, /<SiteFooter \/>/, "pricing must render the shared legal footer");
 });
 
 test("robots and 404 keep protected routes out of search and anonymous visitors on public home", () => {

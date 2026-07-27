@@ -199,11 +199,25 @@ export type MetaPublishExecutionResult = Pick<
   "status" | "requestLog" | "responseLog" | "reconciledObjects" | "lastError" | "updatedAt"
 >;
 
+export type MetaPublishExecutionInput = {
+  accessToken: string;
+  graphVersion?: string;
+  fetchImpl?: typeof fetch;
+  /**
+   * A previous run may have reached Meta before its response could be stored.
+   * In that case, adopt objects bearing this plan's deterministic marker before
+   * issuing another create request.
+   */
+  reconcileMissingObjects?: boolean;
+  /** Persist each provider object ID before the adapter moves to its next write. */
+  onCheckpoint?: (result: MetaPublishExecutionResult) => Promise<void>;
+};
+
 export type MetaExecutionAdapterImplementation = {
   adapter: MetaExecutionAdapter;
   publish: (
     plan: MetaPublishPlan,
-    input: { accessToken: string; graphVersion?: string; fetchImpl?: typeof fetch },
+    input: MetaPublishExecutionInput,
   ) => Promise<MetaPublishExecutionResult>;
   diagnostics: (plan: MetaPublishPlan) => Promise<Record<string, unknown>>;
 };
@@ -525,7 +539,7 @@ export function resolveMetaConnectionSetup(
 
 async function publishWithMarketingApi(
   plan: MetaPublishPlan,
-  input: { accessToken: string; graphVersion?: string; fetchImpl?: typeof fetch },
+  input: MetaPublishExecutionInput,
 ): Promise<MetaPublishExecutionResult> {
   if (plan.status !== "approved" && plan.status !== "publishing") {
     throw new Error("Meta publish plan must be approved before execution.");
@@ -544,103 +558,183 @@ async function publishWithMarketingApi(
 
   try {
     if (!reconciledObjects.campaignId) {
-      const response = await postMetaObject(input, requestLog, responseLog, "campaign.create", `/${plan.setup.metaAdAccountId}/campaigns`, {
-        name: plan.campaign.name,
-        objective: plan.campaign.objective,
-        status: "PAUSED",
-        special_ad_categories: plan.campaign.specialAdCategories,
-        budget_strategy: "CAMPAIGN",
-        daily_budget: String(plan.controls.dailyBudgetMinorUnits ?? 2000),
-      });
-      reconciledObjects.campaignId = requireMetaId(response, "campaign");
+      const providerName = buildMetaProviderObjectName(plan, plan.campaign.localId, plan.campaign.name);
+      const existingId = input.reconcileMissingObjects
+        ? await findMetaObjectByName(
+            input,
+            requestLog,
+            responseLog,
+            "campaign.reconcile_missing",
+            `/${plan.setup.metaAdAccountId}/campaigns`,
+            providerName,
+          )
+        : null;
+      if (existingId) {
+        reconciledObjects.campaignId = existingId;
+      } else {
+        const response = await postMetaObject(input, requestLog, responseLog, "campaign.create", `/${plan.setup.metaAdAccountId}/campaigns`, {
+          name: providerName,
+          objective: plan.campaign.objective,
+          status: "PAUSED",
+          special_ad_categories: plan.campaign.specialAdCategories,
+          budget_strategy: "CAMPAIGN",
+          daily_budget: String(plan.controls.dailyBudgetMinorUnits ?? 2000),
+        });
+        reconciledObjects.campaignId = requireMetaId(response, "campaign");
+      }
+      await checkpointMetaPublishProgress(input, requestLog, responseLog, reconciledObjects);
     }
 
     for (const leadForm of plan.leadForms) {
       if (reconciledObjects.leadFormIds[leadForm.localId]) continue;
 
-      const response = await postMetaObject(input, requestLog, responseLog, `lead_form.${leadForm.localId}`, `/${plan.setup.pageId}/leadgen_forms`, {
-        name: leadForm.name,
-        follow_up_action_url: leadForm.thankYouWebsiteUrl,
-        privacy_policy: {
-          url: leadForm.privacyPolicyUrl,
-          link_text: "Privacy Policy",
-        },
-        is_optimized_for_quality: true,
-        questions: [
-          { type: "FIRST_NAME", key: "first_name" },
-          { type: "LAST_NAME", key: "last_name" },
-          { type: "EMAIL", key: "email" },
-          { type: "PHONE", key: "phone" },
-          ...leadForm.questions.map((question, qi) => ({ type: "CUSTOM", key: `custom_${qi + 1}`, label: question })),
-        ],
-        thank_you_page: {
-          title: leadForm.thankYouTitle,
-          body: leadForm.thankYouBody,
-          button_text: "Visit website",
-          button_type: "VIEW_WEBSITE",
-          website_url: leadForm.thankYouWebsiteUrl,
-        },
-      });
-      reconciledObjects.leadFormIds[leadForm.localId] = requireMetaId(response, "lead form");
+      const providerName = buildMetaProviderObjectName(plan, leadForm.localId, leadForm.name);
+      const existingId = input.reconcileMissingObjects
+        ? await findMetaObjectByName(
+            input,
+            requestLog,
+            responseLog,
+            `lead_form.${leadForm.localId}.reconcile_missing`,
+            `/${plan.setup.pageId}/leadgen_forms`,
+            providerName,
+          )
+        : null;
+      if (existingId) {
+        reconciledObjects.leadFormIds[leadForm.localId] = existingId;
+      } else {
+        const response = await postMetaObject(input, requestLog, responseLog, `lead_form.${leadForm.localId}`, `/${plan.setup.pageId}/leadgen_forms`, {
+          name: providerName,
+          follow_up_action_url: leadForm.thankYouWebsiteUrl,
+          privacy_policy: {
+            url: leadForm.privacyPolicyUrl,
+            link_text: "Privacy Policy",
+          },
+          is_optimized_for_quality: true,
+          questions: [
+            { type: "FIRST_NAME", key: "first_name" },
+            { type: "LAST_NAME", key: "last_name" },
+            { type: "EMAIL", key: "email" },
+            { type: "PHONE", key: "phone" },
+            ...leadForm.questions.map((question, qi) => ({ type: "CUSTOM", key: `custom_${qi + 1}`, label: question })),
+          ],
+          thank_you_page: {
+            title: leadForm.thankYouTitle,
+            body: leadForm.thankYouBody,
+            button_text: "Visit website",
+            button_type: "VIEW_WEBSITE",
+            website_url: leadForm.thankYouWebsiteUrl,
+          },
+        });
+        reconciledObjects.leadFormIds[leadForm.localId] = requireMetaId(response, "lead form");
+      }
+      await checkpointMetaPublishProgress(input, requestLog, responseLog, reconciledObjects);
     }
 
     for (const adSet of plan.adSets) {
       if (reconciledObjects.adSetIds[adSet.localId]) continue;
 
-      const response = await postMetaObject(input, requestLog, responseLog, `adset.${adSet.localId}`, `/${plan.setup.metaAdAccountId}/adsets`, {
-        name: adSet.name,
-        campaign_id: reconciledObjects.campaignId,
-        billing_event: adSet.billingEvent,
-        optimization_goal: adSet.optimizationGoal,
-        targeting: adSet.targeting,
-        status: "PAUSED",
-        ...(plan.setup.pixelId ? { promoted_object: { pixel_id: plan.setup.pixelId, custom_event_type: "Lead" } } : {}),
-        ...(adSet.startTime ? { start_time: adSet.startTime } : {}),
-        ...(adSet.endTime ? { end_time: adSet.endTime } : {}),
-      });
-      reconciledObjects.adSetIds[adSet.localId] = requireMetaId(response, "ad set");
+      const providerName = buildMetaProviderObjectName(plan, adSet.localId, adSet.name);
+      const existingId = input.reconcileMissingObjects
+        ? await findMetaObjectByName(
+            input,
+            requestLog,
+            responseLog,
+            `adset.${adSet.localId}.reconcile_missing`,
+            `/${plan.setup.metaAdAccountId}/adsets`,
+            providerName,
+          )
+        : null;
+      if (existingId) {
+        reconciledObjects.adSetIds[adSet.localId] = existingId;
+      } else {
+        const response = await postMetaObject(input, requestLog, responseLog, `adset.${adSet.localId}`, `/${plan.setup.metaAdAccountId}/adsets`, {
+          name: providerName,
+          campaign_id: reconciledObjects.campaignId,
+          billing_event: adSet.billingEvent,
+          optimization_goal: adSet.optimizationGoal,
+          targeting: adSet.targeting,
+          status: "PAUSED",
+          ...(plan.setup.pixelId ? { promoted_object: { pixel_id: plan.setup.pixelId, custom_event_type: "Lead" } } : {}),
+          ...(adSet.startTime ? { start_time: adSet.startTime } : {}),
+          ...(adSet.endTime ? { end_time: adSet.endTime } : {}),
+        });
+        reconciledObjects.adSetIds[adSet.localId] = requireMetaId(response, "ad set");
+      }
+      await checkpointMetaPublishProgress(input, requestLog, responseLog, reconciledObjects);
     }
 
     for (const creative of plan.creatives) {
       if (reconciledObjects.creativeIds[creative.localId]) continue;
 
-      const imageHash = await resolveCreativeImageHash(plan, creative, input, requestLog, responseLog);
-      const leadFormId = reconciledObjects.leadFormIds[creative.leadFormLocalId];
-      const linkBase = plan.controls.destinationUrl?.trim() || plan.setup.privacyPolicyUrl;
-      const utmLink = buildUtmLink(linkBase, plan.tracking, creative.localId);
-      const response = await postMetaObject(input, requestLog, responseLog, `creative.${creative.localId}`, `/${plan.setup.metaAdAccountId}/adcreatives`, {
-        name: creative.name,
-        object_story_spec: {
-          page_id: creative.pageId,
-          ...(creative.instagramActorId ? { instagram_actor_id: creative.instagramActorId } : {}),
-          link_data: {
-            message: creative.primaryText,
-            name: creative.headline,
-            description: creative.description,
-            link: utmLink,
-            ...(imageHash ? { image_hash: imageHash } : {}),
-            call_to_action: {
-              type: creative.cta,
-              value: {
-                lead_gen_form_id: leadFormId,
+      const providerName = buildMetaProviderObjectName(plan, creative.localId, creative.name);
+      const existingId = input.reconcileMissingObjects
+        ? await findMetaObjectByName(
+            input,
+            requestLog,
+            responseLog,
+            `creative.${creative.localId}.reconcile_missing`,
+            `/${plan.setup.metaAdAccountId}/adcreatives`,
+            providerName,
+          )
+        : null;
+      if (existingId) {
+        reconciledObjects.creativeIds[creative.localId] = existingId;
+      } else {
+        const imageHash = await resolveCreativeImageHash(plan, creative, input, requestLog, responseLog);
+        const leadFormId = reconciledObjects.leadFormIds[creative.leadFormLocalId];
+        const linkBase = plan.controls.destinationUrl?.trim() || plan.setup.privacyPolicyUrl;
+        const utmLink = buildUtmLink(linkBase, plan.tracking, creative.localId);
+        const response = await postMetaObject(input, requestLog, responseLog, `creative.${creative.localId}`, `/${plan.setup.metaAdAccountId}/adcreatives`, {
+          name: providerName,
+          object_story_spec: {
+            page_id: creative.pageId,
+            ...(creative.instagramActorId ? { instagram_actor_id: creative.instagramActorId } : {}),
+            link_data: {
+              message: creative.primaryText,
+              name: creative.headline,
+              description: creative.description,
+              link: utmLink,
+              ...(imageHash ? { image_hash: imageHash } : {}),
+              call_to_action: {
+                type: creative.cta,
+                value: {
+                  lead_gen_form_id: leadFormId,
+                },
               },
             },
           },
-        },
-      });
-      reconciledObjects.creativeIds[creative.localId] = requireMetaId(response, "creative");
+        });
+        reconciledObjects.creativeIds[creative.localId] = requireMetaId(response, "creative");
+      }
+      await checkpointMetaPublishProgress(input, requestLog, responseLog, reconciledObjects);
     }
 
     for (const ad of plan.ads) {
       if (reconciledObjects.adIds[ad.localId]) continue;
 
-      const response = await postMetaObject(input, requestLog, responseLog, `ad.${ad.localId}`, `/${plan.setup.metaAdAccountId}/ads`, {
-        name: ad.name,
-        adset_id: reconciledObjects.adSetIds[ad.adSetLocalId],
-        creative: { creative_id: reconciledObjects.creativeIds[ad.creativeLocalId] },
-        status: "PAUSED",
-      });
-      reconciledObjects.adIds[ad.localId] = requireMetaId(response, "ad");
+      const providerName = buildMetaProviderObjectName(plan, ad.localId, ad.name);
+      const existingId = input.reconcileMissingObjects
+        ? await findMetaObjectByName(
+            input,
+            requestLog,
+            responseLog,
+            `ad.${ad.localId}.reconcile_missing`,
+            `/${plan.setup.metaAdAccountId}/ads`,
+            providerName,
+          )
+        : null;
+      if (existingId) {
+        reconciledObjects.adIds[ad.localId] = existingId;
+      } else {
+        const response = await postMetaObject(input, requestLog, responseLog, `ad.${ad.localId}`, `/${plan.setup.metaAdAccountId}/ads`, {
+          name: providerName,
+          adset_id: reconciledObjects.adSetIds[ad.adSetLocalId],
+          creative: { creative_id: reconciledObjects.creativeIds[ad.creativeLocalId] },
+          status: "PAUSED",
+        });
+        reconciledObjects.adIds[ad.localId] = requireMetaId(response, "ad");
+      }
+      await checkpointMetaPublishProgress(input, requestLog, responseLog, reconciledObjects);
     }
 
     reconciledObjects.objectStatuses = await reconcileMetaObjects(input, requestLog, responseLog, reconciledObjects);
@@ -668,7 +762,7 @@ async function publishWithMarketingApi(
 async function resolveCreativeImageHash(
   plan: MetaPublishPlan,
   creative: MetaPublishCreativePlan,
-  input: { accessToken: string; graphVersion?: string; fetchImpl?: typeof fetch },
+  input: MetaPublishExecutionInput,
   requestLog: MetaProviderLogEntry[],
   responseLog: MetaProviderLogEntry[],
 ): Promise<string | null> {
@@ -688,7 +782,7 @@ async function resolveCreativeImageHash(
 }
 
 async function reconcileMetaObjects(
-  input: { accessToken: string; graphVersion?: string; fetchImpl?: typeof fetch },
+  input: MetaPublishExecutionInput,
   requestLog: MetaProviderLogEntry[],
   responseLog: MetaProviderLogEntry[],
   reconciledObjects: MetaReconciledObjects,
@@ -711,7 +805,7 @@ async function reconcileMetaObjects(
 }
 
 async function postMetaObject(
-  input: { accessToken: string; graphVersion?: string; fetchImpl?: typeof fetch },
+  input: MetaPublishExecutionInput,
   requestLog: MetaProviderLogEntry[],
   responseLog: MetaProviderLogEntry[],
   step: string,
@@ -741,6 +835,78 @@ async function postMetaObject(
   return payload;
 }
 
+async function checkpointMetaPublishProgress(
+  input: MetaPublishExecutionInput,
+  requestLog: MetaProviderLogEntry[],
+  responseLog: MetaProviderLogEntry[],
+  reconciledObjects: MetaReconciledObjects,
+) {
+  if (!input.onCheckpoint) return;
+
+  await input.onCheckpoint({
+    status: "publishing",
+    requestLog: [...requestLog],
+    responseLog: [...responseLog],
+    reconciledObjects: {
+      ...reconciledObjects,
+      leadFormIds: { ...reconciledObjects.leadFormIds },
+      adSetIds: { ...reconciledObjects.adSetIds },
+      creativeIds: { ...reconciledObjects.creativeIds },
+      adIds: { ...reconciledObjects.adIds },
+    },
+    lastError: null,
+    updatedAt: new Date().toISOString(),
+  });
+}
+
+function buildMetaProviderObjectName(plan: MetaPublishPlan, localId: string, displayName: string) {
+  const marker = `[BW:${plan.planId}:${localId}]`;
+  const prefix = displayName.trim().slice(0, Math.max(0, 255 - marker.length - 1));
+  return `${prefix} ${marker}`.trim();
+}
+
+async function findMetaObjectByName(
+  input: MetaPublishExecutionInput,
+  requestLog: MetaProviderLogEntry[],
+  responseLog: MetaProviderLogEntry[],
+  step: string,
+  edgePath: string,
+  providerName: string,
+): Promise<string | null> {
+  const path = `${edgePath}?fields=id,name&limit=100`;
+  const createdAt = new Date().toISOString();
+  requestLog.push({ step, method: "GET", path, createdAt });
+
+  const response = await (input.fetchImpl ?? fetch)(`https://graph.facebook.com/${input.graphVersion ?? DEFAULT_META_GRAPH_VERSION}${path}`, {
+    method: "GET",
+    headers: { authorization: `Bearer ${input.accessToken}` },
+  });
+  const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+  const rows = Array.isArray(payload.data) ? payload.data : [];
+  const match = rows.find((item): item is { id: string; name: string } => {
+    if (!item || typeof item !== "object") return false;
+    const row = item as Record<string, unknown>;
+    return typeof row.id === "string" && row.name === providerName;
+  });
+  responseLog.push({
+    step,
+    method: "GET",
+    path,
+    response: response.ok
+      ? { returnedObjectCount: rows.length, matchedObjectId: match?.id ?? null }
+      : payload,
+    status: response.status,
+    createdAt: new Date().toISOString(),
+  });
+
+  if (!response.ok) {
+    const error = payload.error as { message?: string } | undefined;
+    throw new Error(error?.message ?? `Meta reconciliation ${step} failed with ${response.status}.`);
+  }
+
+  return match?.id ?? null;
+}
+
 /** Keep persisted request logs small and free of image payloads. */
 function redactMetaRequestBody(body: Record<string, unknown>): Record<string, unknown> {
   if (typeof body.bytes !== "string") return body;
@@ -749,7 +915,7 @@ function redactMetaRequestBody(body: Record<string, unknown>): Record<string, un
 }
 
 async function getMetaObjectStatus(
-  input: { accessToken: string; graphVersion?: string; fetchImpl?: typeof fetch },
+  input: MetaPublishExecutionInput,
   requestLog: MetaProviderLogEntry[],
   responseLog: MetaProviderLogEntry[],
   step: string,

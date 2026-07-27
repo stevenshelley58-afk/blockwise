@@ -24,13 +24,16 @@ export default async function SignupPage() {
           <span>Blockwise</span>
         </div>
         <div>
-          <p className="eyebrow">Free trial</p>
-          <h1 id="signup-heading">Start your free trial</h1>
-          <p className="login-copy">Create your first listing ad before connecting Meta. No card required.</p>
+          <p className="eyebrow">Start free</p>
+          <h1 id="signup-heading">Create your first three ads</h1>
+          <p className="login-copy">
+            Enter your email and we&rsquo;ll send a secure sign-in link. No password or card
+            required.
+          </p>
         </div>
         <SignupForm />
         <p className="auth-alt-link">
-          Already have an account? <Link href="/login">Sign in</Link>
+          Use an existing password instead? <Link href="/login">Sign in with password</Link>
         </p>
       </section>
     </main>

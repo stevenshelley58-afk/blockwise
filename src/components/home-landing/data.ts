@@ -1,12 +1,11 @@
 /**
- * Content data for the homepage. Copy is preserved from the previous build
- * and remains final.
+ * Owner-approved content data for the public homepage.
  */
 
 export const FAQ_DATA = [
   {
     q: "Who pays for ad spend?",
-    a: "You do. Your ads run through your connected ad account and your ad spend is paid to the platform directly. Blockwise is the software used to build, approve, export and track your ads.",
+    a: "You do. Your ads run through your connected Meta ad account and you pay Meta directly. Blockwise does not include, mark up, or silently fund your media spend.",
   },
   {
     q: "Do I need a Meta ad account?",
@@ -25,8 +24,28 @@ export const FAQ_DATA = [
     a: "Blockwise flags common property advertising risks and brand issues before approval. Your agency remains responsible for final review, claims, pricing language and export.",
   },
   {
-    q: "What happens after the 7 days?",
-    a: "Your free access pauses and we ask you to pick a plan. We never took a card, so there is no surprise charge. Your drafts stay put.",
+    q: "What do I get before paying?",
+    a: "You can create three complete Feed + Story ads without a card. When you choose to run one, Blockwise collects a card and includes one live campaign setup free.",
+  },
+  {
+    q: "What is included after I subscribe?",
+    a: "Self-serve includes 100 render credits each month, enough for up to 50 complete Feed + Story packs when each pack uses two renders, plus five verified team members.",
+  },
+  {
+    q: "When does the self-serve subscription start?",
+    a: "After you add a card, your subscription starts at US$99 or A$99 when your first campaign launches, or seven days after checkout, whichever comes first. It then renews at US$499 or A$499 each month until cancelled. Checkout uses the market and local currency you confirm.",
+  },
+  {
+    q: "Do unused render credits roll over?",
+    a: "No. Paid self-serve includes 100 render credits per billing period. Credits expire at the end of that period and do not roll over or transfer. Cancellation stops future credit grants; credits you have already paid for remain available until the current period ends.",
+  },
+  {
+    q: "Does deleting my account cancel the subscription?",
+    a: "No. Cancel through Blockwise billing settings or the Stripe billing portal to stop future renewals. Deleting a profile, workspace, or creative is not a substitute for cancelling. After cancellation, paid access and remaining credits continue until the end of the current billing period.",
+  },
+  {
+    q: "What does managed service include?",
+    a: "Managed service starts at US$1,500/month in the United States or A$2,500/month in Australia, plus Meta ad spend. It includes the complete self-serve product, 100 monthly render credits, one brand, one Meta ad account, operator launch and weekly optimization of up to four live campaigns, and a monthly report. You pay Meta directly; additional scope is confirmed and repriced during onboarding.",
   },
 ] as const;
 

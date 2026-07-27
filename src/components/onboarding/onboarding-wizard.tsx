@@ -1,618 +1,507 @@
 "use client";
 
-import { ArrowRight, Check, ChevronDown, Link2, MapPinned, Palette, PartyPopper } from "lucide-react";
+import { ArrowRight, Check, Globe2, Palette, PartyPopper, RotateCcw } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Fragment, useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 
-import { AssetUploadDropzone } from "@/components/asset-upload-dropzone";
-import { StatusPill } from "@/components/status-pill";
 import { Button } from "@/components/ui/button";
 import { Confetti } from "@/components/ui/confetti";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { niche } from "@/config/niche";
 import { useReducedMotion } from "@/lib/motion";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
-import {
-  LOGO_MAX_BYTES,
-  LOGO_UPLOAD_TYPES,
-  readFileAsDataUrl,
-  sanitizeUploadFileName,
-  validateAssetUploadFile,
-} from "@/lib/upload/asset-file";
 
-const REGION_CURRENCY: Record<string, string> = { AU: "AUD", NZ: "NZD", GB: "GBP", US: "USD", CA: "CAD" };
-
-const REGION_NAMES: Record<string, string> = {
-  AU: "Australia",
-  NZ: "New Zealand",
-  GB: "United Kingdom",
-  US: "United States",
-  CA: "Canada",
-};
-
+type Market = "AU" | "US";
 type JsonObject = Record<string, unknown>;
 
 type BrandKitRow = {
   id: string;
-  source_type?: string | null;
   source_url?: string | null;
   business_name?: string | null;
   market_country?: string | null;
-  market_region?: string | null;
   identity_json?: JsonObject | null;
   logos_json?: JsonObject | null;
   colours_json?: JsonObject | null;
-  typography_json?: JsonObject | null;
   tone_json?: JsonObject | null;
-  visual_style_json?: JsonObject | null;
-  compliance_json?: JsonObject | null;
-  contact_json?: JsonObject | null;
   review_status?: string | null;
-  locked_fields_json?: unknown[] | null;
+};
+
+type BrandPackReview = {
+  id: string;
+  website: string;
+  businessName: string;
+  primaryColour: string;
+  logoUrl: string | null;
+  voice: string;
+  reviewStatus: string;
 };
 
 type WizardProps = {
   workspaceId: string;
-  agencyName: string;
-  region: string;
+  country: string;
   brandKit: BrandKitRow | null;
-  canSaveProfile: boolean;
-  canSaveBrand: boolean;
-  canManageConnections: boolean;
-  canOpenCampaigns: boolean;
-  googleAdsEnabled: boolean;
+  canConfirmMarket: boolean;
 };
 
-type StepId = "profile" | "brand" | "connect";
+type ExtractedBrandKit = {
+  brandKitId?: string;
+  source?: { url?: string };
+  identity?: { businessName?: string; marketCountry?: string };
+  logos?: { primaryLogoUrl?: string | null };
+  colours?: { primary?: string };
+  tone?: { voice?: string };
+  reviewStatus?: string;
+};
 
-const STEPS: Array<{ id: StepId; label: string }> = [
-  { id: "profile", label: "Profile" },
-  { id: "brand", label: "Brand" },
-  { id: "connect", label: "Connect" },
+const MARKETS: Array<{ value: Market; name: string; currency: string }> = [
+  { value: "AU", name: "Australia", currency: "AUD" },
+  { value: "US", name: "United States", currency: "USD" },
 ];
 
-const DEFAULT_COLOURS = {
-  primary: "#123E75",
-  secondary: "#F1F5F9",
-  accent: "#31C46F",
-  background: "#FFFFFF",
-  text: "#131B2E",
-  confidence: { primary: 0.52, secondary: 0.48 },
-};
-
-const DEFAULT_LOGOS = {
-  primaryLogoUrl: null,
-  darkLogoUrl: null,
-  lightLogoUrl: null,
-  faviconUrl: null,
-};
-
-export function OnboardingWizard({
-  workspaceId,
-  agencyName,
-  region,
-  brandKit,
-  canSaveProfile,
-  canSaveBrand,
-  canManageConnections,
-  canOpenCampaigns,
-  googleAdsEnabled,
-}: WizardProps) {
+export function OnboardingWizard({ workspaceId, country, brandKit, canConfirmMarket }: WizardProps) {
   const router = useRouter();
-  const initialColours = (brandKit?.colours_json ?? {}) as JsonObject;
-  const initialTone = (brandKit?.tone_json ?? {}) as JsonObject;
-  const [stepIndex, setStepIndex] = useState(0);
-  const [profileName, setProfileName] = useState(agencyName);
-  const [profileRegion, setProfileRegion] = useState(region);
-  const [brandKitId, setBrandKitId] = useState(brandKit?.id ?? null);
-  const [brandColor, setBrandColor] = useState(String(initialColours.primary ?? DEFAULT_COLOURS.primary));
-  const [brandTone, setBrandTone] = useState(String(initialTone.voice ?? "professional local expert"));
-  const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [logoPreviewUrl, setLogoPreviewUrl] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<{ tone: "success" | "error"; text: string } | null>(null);
-  const [celebrating, setCelebrating] = useState(false);
   const reducedMotion = useReducedMotion();
+  const initialReview = brandKit ? reviewFromRow(brandKit) : null;
+  const [step, setStep] = useState<"website" | "review">(initialReview ? "review" : "website");
+  const [market, setMarket] = useState<Market>(country.toUpperCase() === "US" ? "US" : "AU");
+  const [website, setWebsite] = useState(brandKit?.source_url ?? "");
+  const [review, setReview] = useState<BrandPackReview | null>(initialReview);
+  const [manualName, setManualName] = useState(brandKit?.business_name ?? "");
+  const [manualColour, setManualColour] = useState(
+    String(brandKit?.colours_json?.primary ?? "#16181d"),
+  );
+  const [scanFailed, setScanFailed] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [celebrating, setCelebrating] = useState(false);
+  const [message, setMessage] = useState<{ tone: "success" | "error"; text: string } | null>(null);
 
-  const current = STEPS[stepIndex].id;
-  const progressPercent = Math.round((stepIndex / (STEPS.length - 1)) * 100);
-  const workspaceQuery = encodeURIComponent(workspaceId);
-  const metaConnectHref = `/api/integrations/meta/connect?workspaceId=${workspaceQuery}&returnPath=%2Fonboarding`;
-  const googleConnectHref = `/api/integrations/google/connect?workspaceId=${workspaceQuery}`;
+  useEffect(() => {
+    if (!celebrating) return;
+    const timer = setTimeout(() => {
+      router.push("/ad-studio?first=1");
+      router.refresh();
+    }, 1200);
+    return () => clearTimeout(timer);
+  }, [celebrating, router]);
 
-  function next() {
-    setStepIndex((i) => Math.min(i + 1, STEPS.length - 1));
-    setMessage(null);
+  async function prepareMarket(): Promise<string> {
+    const response = await fetch("/api/workspace/onboarding-market", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ workspaceId, country: market, websiteUrl: website }),
+    });
+    const payload = (await response.json().catch(() => ({}))) as {
+      websiteUrl?: string;
+      error?: string;
+    };
+    if (!response.ok || !payload.websiteUrl) {
+      throw new Error(payload.error ?? "We couldn't save your website and country.");
+    }
+    return payload.websiteUrl;
   }
 
-  function back() {
-    setStepIndex((i) => Math.max(i - 1, 0));
-    setMessage(null);
-  }
-
-  async function finishOnboarding() {
+  async function scanWebsite(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
     setBusy(true);
     setMessage(null);
-
+    setScanFailed(false);
     try {
-      const response = await fetch("/api/workspace/onboarding-status", {
-        method: "PATCH",
+      const normalizedWebsite = await prepareMarket();
+      await extractBrandPack(normalizedWebsite);
+    } catch (error) {
+      setScanFailed(true);
+      setMessage({
+        tone: "error",
+        text:
+          error instanceof Error
+            ? error.message
+            : "We couldn't scan that website. Your address is still here, and you can retry or add the essentials.",
+      });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function createManualBrandPack(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setBusy(true);
+    setMessage(null);
+    try {
+      const normalizedWebsite = await prepareMarket();
+      const safeName = escapeHtml(manualName.trim());
+      const safeColour = /^#[0-9a-f]{6}$/i.test(manualColour) ? manualColour : "#16181d";
+      await extractBrandPack(
+        normalizedWebsite,
+        `<!doctype html><html><head><title>${safeName}</title><style>:root{--brand:${safeColour}} body{color:${safeColour}}</style></head><body><h1>${safeName}</h1></body></html>`,
+      );
+    } catch (error) {
+      setMessage({
+        tone: "error",
+        text: error instanceof Error ? error.message : "We couldn't save those Brand Pack essentials.",
+      });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function extractBrandPack(normalizedWebsite: string, html?: string) {
+    const response = await fetch("/api/adstudio/brand-kits/extract", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        websiteUrl: normalizedWebsite,
+        marketCountry: market,
+        marketRegion: market,
+        ...(html ? { html } : {}),
+      }),
+    });
+    const payload = (await response.json().catch(() => ({}))) as {
+      brandKit?: ExtractedBrandKit;
+      data?: ExtractedBrandKit;
+      error?: string;
+    };
+    const extracted = payload.brandKit ?? payload.data;
+    if (!response.ok || !extracted?.brandKitId) {
+      throw new Error(
+        payload.error ??
+          "We couldn't scan that website. Your address is still here, and you can retry or add the essentials.",
+      );
+    }
+    const nextReview = reviewFromExtracted(extracted, normalizedWebsite);
+    setWebsite(normalizedWebsite);
+    setReview(nextReview);
+    setStep("review");
+    setScanFailed(false);
+    setMessage({ tone: "success", text: "Brand Pack ready for your review." });
+  }
+
+  async function approveBrandPack() {
+    if (!review) return;
+    setBusy(true);
+    setMessage(null);
+    try {
+      const response = await fetch(`/api/adstudio/brand-kits/${encodeURIComponent(review.id)}/approve`, {
+        method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ workspaceId, status: "complete" }),
+        body: "{}",
       });
       const payload = (await response.json().catch(() => ({}))) as { error?: string };
-
       if (!response.ok) {
-        throw new Error(payload.error ?? "We couldn't finish setup yet.");
+        throw new Error(payload.error ?? "We couldn't approve this Brand Pack.");
       }
-
       if (reducedMotion) {
         router.push("/ad-studio?first=1");
         router.refresh();
       } else {
         setCelebrating(true);
       }
-    } catch (caught) {
-      setBusy(false);
-      setMessage({ tone: "error", text: caught instanceof Error ? caught.message : "We couldn't finish setup yet." });
-    }
-  }
-
-  // After the one-and-only confetti moment (first-run setup complete), hand
-  // off to Ad Studio. The burst is brief and never loops.
-  useEffect(() => {
-    if (!celebrating) return;
-    const timer = setTimeout(() => {
-      router.push("/ad-studio?first=1");
-      router.refresh();
-    }, 1600);
-    return () => clearTimeout(timer);
-  }, [celebrating, router]);
-
-  async function chooseLogo(file: File) {
-    setMessage(null);
-    try {
-      const previewUrl = await readFileAsDataUrl(file);
-      setLogoFile(file);
-      setLogoPreviewUrl(previewUrl);
-    } catch {
-      setLogoFile(null);
-      setLogoPreviewUrl("");
-      throw new Error("Could not read that logo.");
-    }
-  }
-
-  async function saveProfile(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!canSaveProfile) {
-      next();
-      return;
-    }
-
-    setBusy(true);
-    setMessage(null);
-
-    const supabase = createSupabaseBrowserClient();
-    const { error } = await supabase
-      .from("workspaces")
-      .update({ name: profileName.trim(), region: profileRegion.trim() || "AU", updated_at: new Date().toISOString() })
-      .eq("id", workspaceId);
-
-    setBusy(false);
-    if (error) {
-      setMessage({ tone: "error", text: "We couldn't save your profile yet. Try again or continue later." });
-      return;
-    }
-    next();
-  }
-
-  async function saveBrand(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!canSaveBrand) {
-      next();
-      return;
-    }
-
-    const logoError = logoFile
-      ? validateAssetUploadFile(logoFile, {
-          acceptedTypes: LOGO_UPLOAD_TYPES,
-          maxBytes: LOGO_MAX_BYTES,
-          typeError: "Upload a PNG, JPG, WebP, or SVG logo under 5 MB.",
-          sizeError: "Upload a PNG, JPG, WebP, or SVG logo under 5 MB.",
-        })
-      : null;
-    if (logoError) {
-      setLogoFile(null);
-      setLogoPreviewUrl("");
-      setMessage({ tone: "error", text: logoError });
-      return;
-    }
-
-    setBusy(true);
-    setMessage(null);
-
-    const supabase = createSupabaseBrowserClient();
-    const id = brandKitId ?? crypto.randomUUID();
-    const colours = { ...DEFAULT_COLOURS, ...(brandKit?.colours_json ?? {}), primary: brandColor };
-    const tone = {
-      avoid: ["hype", "cheap urgency", "unsupported guarantees"],
-      preferredPhrases: [],
-      sampleCopy: [],
-      ...(brandKit?.tone_json ?? {}),
-      voice: brandTone.trim() || "professional local expert",
-    };
-    const now = new Date().toISOString();
-    const marketCountry = profileRegion.trim() || brandKit?.market_country || "AU";
-    const { error: kitError } = await supabase.from("adstudio_brand_kits").upsert(
-      {
-        id,
-        workspace_id: workspaceId,
-        source_type: brandKit?.source_type ?? "manual",
-        source_url: brandKit?.source_url ?? null,
-        business_name: profileName.trim() || agencyName,
-        // The Region select is a country picker (Australia / New Zealand / UK /
-        // US / Canada), so the chosen value is the market country. It used to be
-        // hard-coded to AU, silently mis-tagging every non-Australian workspace.
-        market_country: marketCountry,
-        market_region: profileRegion.trim() || null,
-        identity_json: {
-          ...(brandKit?.identity_json ?? {}),
-          businessName: profileName.trim() || agencyName,
-          tradingName: profileName.trim() || agencyName,
-          marketCountry,
-          marketRegion: profileRegion.trim() || null,
-          licenceText: brandKit?.identity_json?.licenceText ?? null,
-        },
-        logos_json: brandKit?.logos_json ?? DEFAULT_LOGOS,
-        colours_json: colours,
-        typography_json: brandKit?.typography_json ?? {
-          headingFont: "Inter",
-          bodyFont: "Inter",
-          fallbackHeading: "sans-serif",
-          fallbackBody: "sans-serif",
-        },
-        tone_json: tone,
-        visual_style_json: brandKit?.visual_style_json ?? {
-          styleTags: ["professional", "local", "clean"],
-          imageTreatment: "Bright local property imagery with clean brand typography.",
-          layoutDensity: "low",
-          cornerRadius: "small",
-        },
-        compliance_json: brandKit?.compliance_json ?? { disclaimers: [], privacyPolicyUrl: null, termsUrl: null },
-        contact_json: brandKit?.contact_json ?? { phone: null, email: null, address: null, socialLinks: [] },
-        review_status: brandKit?.review_status ?? "pending_user_review",
-        locked_fields_json: brandKit?.locked_fields_json ?? [],
-        updated_at: now,
-      },
-      { onConflict: "id" },
-    );
-
-    if (kitError) {
-      setBusy(false);
-      setMessage({ tone: "error", text: "We couldn't save your brand yet. Try again or continue later." });
-      return;
-    }
-
-    if (logoFile) {
-      const safeName = sanitizeUploadFileName(logoFile.name);
-      const storagePath = `${workspaceId}/brand/${id}/${crypto.randomUUID()}-${safeName}`;
-      const { error: uploadError } = await supabase.storage.from("workspace-artifacts").upload(storagePath, logoFile);
-
-      if (uploadError) {
-        setBusy(false);
-        setMessage({ tone: "error", text: "We couldn't upload that logo. Try another file or continue without it." });
-        return;
-      }
-
-      const { error: assetError } = await supabase.from("adstudio_brand_assets").insert({
-        workspace_id: workspaceId,
-        brand_kit_id: id,
-        asset_type: "logo",
-        storage_path: storagePath,
-        source_url: null,
-        metadata_json: { fileName: logoFile.name, contentType: logoFile.type, size: logoFile.size },
+    } catch (error) {
+      setMessage({
+        tone: "error",
+        text: error instanceof Error ? error.message : "We couldn't approve this Brand Pack.",
       });
-
-      if (assetError) {
-        setBusy(false);
-        setMessage({ tone: "error", text: "We uploaded the file but couldn't attach it to your brand yet." });
-        return;
-      }
+    } finally {
+      setBusy(false);
     }
-
-    setBrandKitId(id);
-    setLogoFile(null);
-    setLogoPreviewUrl("");
-    setBusy(false);
-    next();
   }
 
-  const panelClass = "rounded-(--r-panel) border border-(--line) bg-(--surface) p-6 shadow-card";
-  const selectClass =
-    "h-9 w-full appearance-none rounded-(--r-card) border border-(--line) bg-(--surface) px-2.5 pr-7 text-[12.5px] font-semibold text-foreground outline-none transition-[border-color] duration-150 focus:border-(--ink) disabled:cursor-not-allowed disabled:opacity-50";
-  const connectRowClass = "flex items-center justify-between gap-4 rounded-(--r-card) border border-(--line) bg-(--surface-subtle)/40 px-4 py-3";
-  const inkLinkClass =
-    "inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-full bg-(--ink) px-4 text-[12.5px] font-bold text-white transition-[opacity,transform] duration-150 hover:opacity-85 active:scale-[0.97]";
-  const ghostLinkClass =
-    "inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-full border border-(--line-heavy) bg-card px-3.5 text-[12.5px] font-bold text-foreground transition-[background,box-shadow] duration-150 hover:bg-(--surface-subtle) hover:shadow-card";
-  const statusClass = (tone: "success" | "error") =>
-    `text-[12.5px] font-bold ${tone === "error" ? "text-error" : "text-success"}`;
-  const stepIconClass = "grid size-10 shrink-0 place-items-center rounded-full bg-success-soft text-success";
-  const stepTitleClass = "font-display text-[17px] font-extrabold tracking-[-0.015em]";
-  const stepLeadClass = "mt-0.5 text-[13px] text-muted-foreground";
+  if (!canConfirmMarket) {
+    return (
+      <section className="rounded-(--r-panel) border border-(--line) bg-(--surface) p-6 shadow-card">
+        <h2 className="font-display text-[17px] font-extrabold tracking-[-0.015em]">
+          An owner or admin needs to confirm the workspace
+        </h2>
+        <p className="mt-1 text-[13px] text-muted-foreground">
+          You can keep using the rest of Blockwise while they add the website and billing country.
+        </p>
+        <Button asChild className="mt-5">
+          <Link href="/self-serve">Open workspace</Link>
+        </Button>
+      </section>
+    );
+  }
 
   return (
     <section className="grid gap-5">
       <div>
-        <ol aria-label="Setup steps" className="flex items-start">
-          {STEPS.map((step, i) => {
-            const state = i < stepIndex ? "done" : i === stepIndex ? "active" : "todo";
+        <ol aria-label="Brand Pack setup steps" className="grid grid-cols-2 gap-2">
+          {[
+            { id: "website", label: "Website and country" },
+            { id: "review", label: "Review Brand Pack" },
+          ].map((item, index) => {
+            const active = item.id === step;
+            const complete = step === "review" && index === 0;
             return (
-              <Fragment key={step.id}>
-                <li className="flex w-16 flex-col items-center gap-1.5 sm:w-20">
-                  <span
-                    aria-current={state === "active" ? "step" : undefined}
-                    className={`grid size-8 shrink-0 place-items-center rounded-full text-xs font-bold transition-colors duration-200 ${
-                      state === "done"
-                        ? "bg-(--ink) text-white"
-                        : state === "active"
-                          ? "border-2 border-(--ink) bg-(--surface) text-(--ink)"
-                          : "border border-(--line) bg-(--surface) text-(--faint)"
-                    }`}
-                  >
-                    {state === "done" ? <Check size={14} aria-hidden /> : i + 1}
-                  </span>
-                  <span className={`text-[11px] font-bold ${state === "todo" ? "text-(--faint)" : "text-foreground"}`}>
-                    {step.label}
-                  </span>
-                </li>
-                {i < STEPS.length - 1 ? (
-                  <li aria-hidden="true" className="mt-[15px] h-0.5 flex-1 overflow-hidden rounded-full bg-(--line)">
-                    <span
-                      className="block h-full rounded-full bg-(--ink) transition-[width] duration-300 ease-out"
-                      style={{ width: i < stepIndex ? "100%" : "0%" }}
-                    />
-                  </li>
-                ) : null}
-              </Fragment>
+              <li
+                key={item.id}
+                aria-current={active ? "step" : undefined}
+                className={`flex min-h-11 items-center gap-2 rounded-(--r-card) border px-3 text-[12.5px] font-bold ${
+                  active ? "border-(--ink) bg-(--surface)" : "border-(--line) bg-(--surface-subtle)"
+                }`}
+              >
+                <span
+                  className={`grid size-6 place-items-center rounded-full text-[11px] ${
+                    complete ? "bg-success-soft text-success" : active ? "bg-(--ink) text-white" : "bg-card text-(--faint)"
+                  }`}
+                >
+                  {complete ? <Check size={13} aria-hidden /> : index + 1}
+                </span>
+                {item.label}
+              </li>
             );
           })}
         </ol>
-        <div className="mt-4 flex items-center gap-3">
-          <div className="h-1 flex-1 overflow-hidden rounded-full bg-(--line)">
-            <span
-              className="block h-full rounded-full bg-(--ink) transition-[width] duration-300 ease-out"
-              style={{ width: `${progressPercent}%` }}
-            />
-          </div>
-          <span className="font-mono text-[9.5px] font-medium tracking-[0.12em] text-(--faint) uppercase">
-            Step {stepIndex + 1} of {STEPS.length}
-          </span>
-        </div>
       </div>
 
-      <div className={panelClass}>
-        {current === "profile" ? (
-          <form className="grid gap-4" onSubmit={saveProfile}>
+      {step === "website" ? (
+        <div className="rounded-(--r-panel) border border-(--line) bg-(--surface) p-5 shadow-card sm:p-6">
+          <form className="grid gap-5" onSubmit={scanWebsite}>
             <div className="flex items-start gap-3">
-              <span className={stepIconClass}>
-                <MapPinned size={20} aria-hidden />
+              <span className="grid size-10 shrink-0 place-items-center rounded-full bg-(--accent-tint)">
+                <Globe2 size={19} aria-hidden />
               </span>
               <div>
-                <h2 className={stepTitleClass}>Confirm your profile</h2>
-                <p className={stepLeadClass}>These details come from your signed-in workspace.</p>
+                <h2 className="font-display text-[17px] font-extrabold tracking-[-0.015em]">
+                  Start with your website
+                </h2>
+                <p className="mt-0.5 text-[13px] text-muted-foreground">
+                  We’ll draft one Brand Pack from your public site. You review it before it is used.
+                </p>
               </div>
             </div>
-            {!canSaveProfile ? (
-              <div>
-                <StatusPill tone="blue">Managed by an owner or admin</StatusPill>
-              </div>
-            ) : null}
+
             <div className="grid gap-2">
-              <Label htmlFor="ob-business">Business name</Label>
+              <Label htmlFor="onboarding-website">Business website</Label>
               <Input
-                id="ob-business"
-                value={profileName}
-                onChange={(event) => setProfileName(event.target.value)}
-                readOnly={!canSaveProfile}
+                id="onboarding-website"
+                type="url"
+                inputMode="url"
+                autoComplete="url"
+                placeholder="https://yourbusiness.com"
+                value={website}
+                onChange={(event) => setWebsite(event.target.value)}
                 required
               />
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="ob-region">Region</Label>
-              <span className="relative block">
-                <select
-                  id="ob-region"
-                  className={selectClass}
-                  value={profileRegion}
-                  onChange={(event) => setProfileRegion(event.target.value)}
-                  disabled={!canSaveProfile}
-                  required
-                >
-                  {Object.keys(REGION_CURRENCY).map((r) => (
-                    <option key={r} value={r}>{REGION_NAMES[r] ?? r}</option>
-                  ))}
-                </select>
-                <ChevronDown size={14} aria-hidden className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-(--faint)" />
-              </span>
-            </div>
-            {message ? <p className={statusClass(message.tone)}>{message.text}</p> : null}
-            <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
-              <Button variant="outline" type="button" disabled={busy} onClick={next}>
-                Skip for now
-              </Button>
+
+            <fieldset className="grid gap-2">
+              <legend className="text-[12.5px] font-semibold">Country and billing currency</legend>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {MARKETS.map((item) => (
+                  <label
+                    key={item.value}
+                    className={`flex min-h-14 cursor-pointer items-center gap-3 rounded-(--r-card) border px-4 ${
+                      market === item.value
+                        ? "border-(--ink) bg-(--surface-subtle)"
+                        : "border-(--line) bg-(--surface)"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="market"
+                      value={item.value}
+                      checked={market === item.value}
+                      onChange={() => setMarket(item.value)}
+                    />
+                    <span className="grid">
+                      <span className="text-[13px] font-bold">{item.name}</span>
+                      <span className="text-xs text-muted-foreground">{item.currency} billing</span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                After Checkout or Meta connection, country changes need an assisted workspace migration.
+              </p>
+            </fieldset>
+
+            {message ? <Feedback message={message} /> : null}
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <Link className="min-h-11 py-3 text-[12.5px] font-bold underline-offset-4 hover:underline" href="/self-serve">
+                Finish later
+              </Link>
               <Button type="submit" disabled={busy}>
-                {canSaveProfile ? "Save and continue" : "Continue"} <ArrowRight size={16} aria-hidden />
+                {busy ? "Scanning website…" : "Create my Brand Pack"} <ArrowRight size={16} aria-hidden />
               </Button>
             </div>
           </form>
-        ) : null}
 
-        {current === "brand" ? (
-          <form className="grid gap-4" onSubmit={saveBrand}>
-            <div className="flex items-start gap-3">
-              <span className={stepIconClass}>
-                <Palette size={20} aria-hidden />
-              </span>
+          {scanFailed ? (
+            <form
+              className="mt-5 grid gap-4 rounded-(--r-card) border border-(--line-heavy) bg-(--surface-subtle) p-4"
+              onSubmit={createManualBrandPack}
+            >
               <div>
-                <h2 className={stepTitleClass}>Add your brand</h2>
-                <p className={stepLeadClass}>
-                  {canSaveBrand
-                    ? "Your colour and tone guide drafts. Logo uploads are stored with your brand assets for review."
-                    : "An owner, admin, or member can update brand assets. You can keep going with the current workspace defaults."}
+                <h3 className="text-[13px] font-bold">Add the essentials instead</h3>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Keep the website above and add only what we need to create a reviewable Brand Pack.
                 </p>
               </div>
-            </div>
-            {canSaveBrand ? (
-              <>
+              <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
                 <div className="grid gap-2">
-                  <Label>Logo asset</Label>
-                  <AssetUploadDropzone
-                    label="Upload logo"
-                    actionText="Upload logo"
-                    helperText="PNG, JPG, WebP, or SVG / up to 5 MB"
-                    previewUrl={logoPreviewUrl}
-                    previewAlt=""
-                    fileName={logoFile?.name}
-                    fileSize={logoFile?.size}
-                    fileType={logoFile?.type}
-                    acceptedTypes={LOGO_UPLOAD_TYPES}
-                    maxBytes={LOGO_MAX_BYTES}
-                    typeError="Upload a PNG, JPG, WebP, or SVG logo under 5 MB."
-                    sizeError="Upload a PNG, JPG, WebP, or SVG logo under 5 MB."
-                    capturePagePaste
-                    disabled={busy}
-                    onFileAccepted={chooseLogo}
-                    onFileRejected={(text) => setMessage({ tone: "error", text })}
-                    onClear={() => {
-                      setLogoFile(null);
-                      setLogoPreviewUrl("");
-                      setMessage(null);
-                    }}
+                  <Label htmlFor="manual-business-name">Business name</Label>
+                  <Input
+                    id="manual-business-name"
+                    value={manualName}
+                    onChange={(event) => setManualName(event.target.value)}
+                    required
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="ob-color">Brand colour</Label>
+                  <Label htmlFor="manual-primary-colour">Primary colour</Label>
                   <input
-                    id="ob-color"
+                    id="manual-primary-colour"
                     type="color"
-                    className="size-11 cursor-pointer rounded-(--r-card) border border-(--line) bg-(--surface) p-1"
-                    value={brandColor}
-                    onChange={(event) => setBrandColor(event.target.value)}
+                    className="size-11 cursor-pointer rounded-(--r-card) border border-(--line-heavy) bg-card p-1"
+                    value={manualColour}
+                    onChange={(event) => setManualColour(event.target.value)}
                   />
                 </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="ob-tone">Tone</Label>
-                  <textarea
-                    id="ob-tone"
-                    className="min-h-20 w-full rounded-(--r-card) border border-(--line) bg-(--surface) px-3 py-2 text-sm text-foreground outline-none transition-[border-color] duration-150 focus:border-(--ink)"
-                    value={brandTone}
-                    onChange={(event) => setBrandTone(event.target.value)}
-                  />
-                </div>
-              </>
-            ) : (
-              <div className={connectRowClass}>
-                <span className="text-sm font-semibold">Brand defaults</span>
-                <StatusPill tone="blue">Ready</StatusPill>
               </div>
-            )}
-            {message ? <p className={statusClass(message.tone)}>{message.text}</p> : null}
-            <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
-              <Button variant="outline" type="button" disabled={busy} onClick={back}>
-                Back
-              </Button>
-              <Button variant="outline" type="button" disabled={busy} onClick={next}>
-                Skip for now
-              </Button>
-              <Button type="submit" disabled={busy}>
-                {canSaveBrand ? "Save and continue" : "Continue"} <ArrowRight size={16} aria-hidden />
-              </Button>
-            </div>
-          </form>
-        ) : null}
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" type="button" disabled={busy} onClick={() => setScanFailed(false)}>
+                  <RotateCcw size={15} aria-hidden /> Retry scan
+                </Button>
+                <Button type="submit" disabled={busy || !manualName.trim()}>
+                  {busy ? "Saving…" : "Create essentials"}
+                </Button>
+              </div>
+            </form>
+          ) : null}
+        </div>
+      ) : null}
 
-        {current === "connect" ? (
-          <div className="grid gap-4">
-            <div className="flex items-start gap-3">
-              <span className={stepIconClass}>
-                <Link2 size={20} aria-hidden />
-              </span>
-              <div>
-                <h2 className={stepTitleClass}>Connect your ad accounts</h2>
-                <p className={stepLeadClass}>
-                  {canManageConnections
-                    ? "Connect ad accounts when you are ready to publish. You can create ads before Meta is connected."
-                    : "An owner or admin can connect ad accounts later when the workspace is ready to publish."}
-                </p>
-              </div>
+      {step === "review" && review ? (
+        <div className="rounded-(--r-panel) border border-(--line) bg-(--surface) p-5 shadow-card sm:p-6">
+          <div className="flex items-start gap-3">
+            <span className="grid size-10 shrink-0 place-items-center rounded-full bg-success-soft text-success">
+              <Palette size={19} aria-hidden />
+            </span>
+            <div>
+              <h2 className="font-display text-[17px] font-extrabold tracking-[-0.015em]">
+                Review your Brand Pack
+              </h2>
+              <p className="mt-0.5 text-[13px] text-muted-foreground">
+                Confirm the extracted identity before Blockwise uses it in an ad.
+              </p>
             </div>
-            <div className={connectRowClass}>
-              <span className="text-sm font-semibold">Meta</span>
-              {canManageConnections ? (
-                <Link className={inkLinkClass} href={metaConnectHref}>
-                  Connect Meta
-                </Link>
-              ) : (
-                <Button variant="outline" disabled type="button">
-                  Owner/admin only
-                </Button>
-              )}
-            </div>
-            <div className={connectRowClass}>
-              <span className="text-sm font-semibold">Google</span>
-              {canManageConnections && googleAdsEnabled ? (
-                <Link className={ghostLinkClass} href={googleConnectHref}>
-                  Connect Google
-                </Link>
-              ) : (
-                <Button variant="outline" disabled type="button">
-                  Not needed for Meta launch
-                </Button>
-              )}
-            </div>
-            {message ? <p className={statusClass(message.tone)}>{message.text}</p> : null}
-            <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
-              <Button variant="outline" type="button" disabled={busy} onClick={back}>
-                Back
+          </div>
+
+          <dl className="mt-5 grid gap-px overflow-hidden rounded-(--r-card) border border-(--line) bg-(--line) sm:grid-cols-2">
+            <ReviewItem label="Business" value={review.businessName || "Needs your review"} />
+            <ReviewItem label="Website" value={review.website} />
+            <ReviewItem
+              label="Primary colour"
+              value={
+                <span className="inline-flex items-center gap-2">
+                  <span
+                    aria-hidden
+                    className="size-4 rounded-full border border-black/10"
+                    style={{ backgroundColor: review.primaryColour }}
+                  />
+                  {review.primaryColour}
+                </span>
+              }
+            />
+            <ReviewItem label="Brand voice" value={review.voice || "Professional and clear"} />
+          </dl>
+
+          {message ? <div className="mt-4"><Feedback message={message} /></div> : null}
+          <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+            <Button variant="outline" type="button" disabled={busy} onClick={() => setStep("website")}>
+              Change website or country
+            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" asChild>
+                <Link href="/ad-studio/brand">Review all details</Link>
               </Button>
-              <Button variant="outline" type="button" disabled={busy} onClick={finishOnboarding}>
-                Skip for now
-              </Button>
-              <Button type="button" disabled={busy} onClick={finishOnboarding}>
-                Open Ad Studio <ArrowRight size={16} aria-hidden />
+              <Button type="button" disabled={busy} onClick={approveBrandPack}>
+                {busy ? "Approving…" : "Approve and choose an ad"} <ArrowRight size={16} aria-hidden />
               </Button>
             </div>
           </div>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
 
       {celebrating ? (
         <div className="fixed inset-0 z-50 grid place-items-center bg-(--ink)/40 px-6 backdrop-blur-[2px]">
           <Confetti
             className="pointer-events-none absolute inset-0"
             options={{
-              particleCount: 140,
-              spread: 75,
-              startVelocity: 32,
+              particleCount: 120,
+              spread: 70,
+              startVelocity: 30,
               origin: { y: 0.55 },
-              // Celebration palette follows the niche's data hue so a clone
-              // never throws Blockwise-blue confetti. #31c46f was in no token
-              // file; the neutrals come from the documented palette.
               colors: [niche.theme.data, "#16181d", "#9aa0ad"],
             }}
           />
-          <div className="relative rounded-(--r-panel) border border-(--line) bg-(--surface) px-10 py-8 text-center shadow-float">
+          <div className="relative rounded-(--r-panel) border border-(--line) bg-(--surface) px-9 py-7 text-center shadow-float">
             <span className="mx-auto grid size-12 place-items-center rounded-full bg-success-soft text-success">
               <PartyPopper size={22} aria-hidden />
             </span>
-            <h2 className="mt-3 font-display text-[17px] font-extrabold tracking-[-0.015em]">You're all set!</h2>
-            <p className="mt-1 text-[13px] text-muted-foreground">Taking you to Ad Studio…</p>
+            <h2 className="mt-3 font-display text-[17px] font-extrabold tracking-[-0.015em]">
+              Brand Pack approved
+            </h2>
+            <p className="mt-1 text-[13px] text-muted-foreground">Opening Ad Studio…</p>
           </div>
         </div>
       ) : null}
     </section>
   );
+}
+
+function Feedback({ message }: { message: { tone: "success" | "error"; text: string } }) {
+  return (
+    <p
+      role={message.tone === "error" ? "alert" : "status"}
+      className={`text-[12.5px] font-bold ${message.tone === "error" ? "text-error" : "text-success"}`}
+    >
+      {message.text}
+    </p>
+  );
+}
+
+function ReviewItem({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="min-w-0 bg-(--surface-subtle) p-4">
+      <dt className="font-mono text-[9.5px] font-medium tracking-[0.12em] text-(--faint) uppercase">
+        {label}
+      </dt>
+      <dd className="mt-1 break-words text-[13px] font-bold">{value}</dd>
+    </div>
+  );
+}
+
+function reviewFromRow(row: BrandKitRow): BrandPackReview {
+  return {
+    id: row.id,
+    website: row.source_url ?? "",
+    businessName: String(row.identity_json?.businessName ?? row.business_name ?? ""),
+    primaryColour: String(row.colours_json?.primary ?? "#16181d"),
+    logoUrl: typeof row.logos_json?.primaryLogoUrl === "string" ? row.logos_json.primaryLogoUrl : null,
+    voice: String(row.tone_json?.voice ?? ""),
+    reviewStatus: row.review_status ?? "pending_user_review",
+  };
+}
+
+function reviewFromExtracted(brandKit: ExtractedBrandKit, website: string): BrandPackReview {
+  return {
+    id: brandKit.brandKitId ?? "",
+    website: brandKit.source?.url ?? website,
+    businessName: brandKit.identity?.businessName ?? "",
+    primaryColour: brandKit.colours?.primary ?? "#16181d",
+    logoUrl: brandKit.logos?.primaryLogoUrl ?? null,
+    voice: brandKit.tone?.voice ?? "",
+    reviewStatus: brandKit.reviewStatus ?? "pending_user_review",
+  };
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }

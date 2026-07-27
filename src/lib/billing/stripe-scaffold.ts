@@ -1,5 +1,14 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
+import {
+  currencyForMarket,
+  getBillingOffer,
+  type BillingCurrency,
+  type BillingMarket,
+  type BillingOffer,
+  type BillingProduct,
+} from "./offers.ts";
+
 const STRIPE_API_BASE = "https://api.stripe.com";
 const WEBHOOK_TOLERANCE_SECONDS = 300;
 
@@ -22,10 +31,12 @@ export function isBillingConfigured(): boolean {
 }
 
 export type BillingSessionResult = { url: string };
+export type StripeFormParams = Record<string, string | number | boolean | null | undefined>;
 
 export type StripeWebhookEvent = {
   id: string;
   type: string;
+  created?: number;
   data: {
     object: StripeObject;
   };
@@ -51,6 +62,26 @@ type StripeErrorResponse = {
     message?: string;
     type?: string;
   };
+};
+
+export type CheckoutSessionInput = {
+  workspaceId: string;
+  market: BillingMarket;
+  currency: BillingCurrency;
+  product: BillingProduct;
+  stripeCustomerId?: string | null;
+  customerEmail: string | null;
+  userId?: string | null;
+  successUrl: string;
+  cancelUrl: string;
+  acceptedAt?: string;
+  idempotencyKey?: string | null;
+};
+
+export type CheckoutSessionRequest = {
+  offer: BillingOffer;
+  params: StripeFormParams;
+  idempotencyKey: string;
 };
 
 export function resolveStripePriceId(planKey?: string | null): string {
@@ -86,22 +117,46 @@ export async function createBillingPortalSession(input: {
   return { url: session.url };
 }
 
-export async function createCheckoutSession(input: {
-  workspaceId: string;
-  priceId?: string | null;
-  stripeCustomerId?: string | null;
-  customerEmail: string | null;
-  userId?: string | null;
-  planKey?: string | null;
-  successUrl: string;
-  cancelUrl: string;
-}): Promise<BillingSessionResult> {
-  const priceId = input.priceId?.trim() || resolveStripePriceId(input.planKey);
+export function buildCheckoutSessionRequest(
+  input: CheckoutSessionInput,
+  env: NodeJS.ProcessEnv = process.env,
+): CheckoutSessionRequest {
+  const offer = getBillingOffer(input.market, input.product);
+  if (input.currency !== currencyForMarket(input.market) || input.currency !== offer.currency) {
+    throw new Error(`Billing currency ${input.currency} does not match market ${input.market}.`);
+  }
+
+  const priceId = env[offer.priceEnvKey]?.trim();
+  if (!priceId) {
+    throw new BillingNotConfiguredError(`${offer.priceEnvKey} is not configured.`);
+  }
+  const couponId = offer.couponEnvKey ? env[offer.couponEnvKey]?.trim() : null;
+  if (offer.product === "self_serve" && !couponId) {
+    throw new BillingNotConfiguredError(`${offer.couponEnvKey} is not configured.`);
+  }
+
   const customerEmail = input.customerEmail?.trim() || null;
   const userId = input.userId?.trim() || null;
   const stripeCustomerId = input.stripeCustomerId?.trim() || null;
-
-  const session = await stripePost<CheckoutSessionResponse>("/v1/checkout/sessions", {
+  const acceptedAt = input.acceptedAt ?? new Date().toISOString();
+  const acceptanceMetadata: StripeFormParams = {
+    "metadata[workspace_id]": input.workspaceId,
+    "metadata[offer_key]": offer.key,
+    "metadata[offer_version]": offer.version,
+    "metadata[accepted_at]": acceptedAt,
+    "metadata[market]": offer.market,
+    "metadata[currency]": offer.currency,
+    "metadata[first_invoice_amount]": offer.firstInvoiceAmount,
+    "metadata[renewal_amount]": offer.recurringAmount,
+    "metadata[triggering_rule]": offer.triggeringRule,
+  };
+  const subscriptionMetadata: StripeFormParams = Object.fromEntries(
+    Object.entries(acceptanceMetadata).map(([key, value]) => [
+      key.replace(/^metadata/, "subscription_data[metadata]"),
+      value,
+    ]),
+  );
+  const params: StripeFormParams = {
     mode: "subscription",
     "payment_method_types[0]": "card",
     "line_items[0][price]": priceId,
@@ -111,21 +166,63 @@ export async function createCheckoutSession(input: {
     client_reference_id: input.workspaceId,
     ...(stripeCustomerId ? { customer: stripeCustomerId } : {}),
     ...(!stripeCustomerId && customerEmail ? { customer_email: customerEmail } : {}),
-    "metadata[workspace_id]": input.workspaceId,
     ...(userId ? { "metadata[user_id]": userId } : {}),
-    ...(input.planKey ? { "metadata[plan_key]": input.planKey } : {}),
-    "subscription_data[metadata][workspace_id]": input.workspaceId,
     ...(userId ? { "subscription_data[metadata][user_id]": userId } : {}),
-    ...(input.planKey ? { "subscription_data[metadata][plan_key]": input.planKey } : {}),
-    allow_promotion_codes: process.env.STRIPE_ALLOW_PROMOTION_CODES === "true",
-    billing_address_collection: "auto",
-  });
+    ...acceptanceMetadata,
+    ...subscriptionMetadata,
+    "automatic_tax[enabled]": true,
+    billing_address_collection: "required",
+    "tax_id_collection[enabled]": true,
+    "consent_collection[terms_of_service]": "required",
+    "custom_text[submit][message]": offer.checkoutDisclosure,
+    payment_method_collection: "always",
+    ...(stripeCustomerId
+      ? {
+          "customer_update[address]": "auto",
+          "customer_update[name]": "auto",
+        }
+      : {}),
+    ...(offer.product === "self_serve"
+      ? {
+          "discounts[0][coupon]": couponId,
+          "subscription_data[trial_period_days]": offer.trialDays,
+          "subscription_data[trial_settings][end_behavior][missing_payment_method]": "cancel",
+        }
+      : {}),
+  };
+  const idempotencyKey =
+    input.idempotencyKey?.trim() || `checkout:${input.workspaceId}:${offer.key}:${offer.version}`;
 
+  return { offer, params, idempotencyKey };
+}
+
+export async function createCheckoutSession(input: CheckoutSessionInput): Promise<BillingSessionResult> {
+  const request = buildCheckoutSessionRequest(input);
+  const session = await stripePost<CheckoutSessionResponse>(
+    "/v1/checkout/sessions",
+    request.params,
+    request.idempotencyKey,
+  );
   if (!session.url) {
     throw new Error("Stripe did not return a checkout URL.");
   }
-
   return { url: session.url };
+}
+
+export async function retrieveStripeSubscription(subscriptionId: string): Promise<StripeObject> {
+  if (!/^sub_[A-Za-z0-9]+$/.test(subscriptionId)) {
+    throw new Error("Invalid Stripe subscription ID.");
+  }
+
+  return stripeGet<StripeObject>(`/v1/subscriptions/${subscriptionId}?expand[]=latest_invoice`);
+}
+
+export async function retrieveStripeCharge(chargeId: string): Promise<StripeObject> {
+  if (!/^ch_[A-Za-z0-9]+$/.test(chargeId)) {
+    throw new Error("Invalid Stripe charge ID.");
+  }
+
+  return stripeGet<StripeObject>(`/v1/charges/${chargeId}`);
 }
 
 export function constructStripeWebhookEvent(
@@ -173,12 +270,13 @@ export function constructStripeWebhookEvent(
   return event as StripeWebhookEvent;
 }
 
-async function stripePost<T>(path: string, params: Record<string, string | number | boolean | null | undefined>): Promise<T> {
+async function stripePost<T>(path: string, params: StripeFormParams, idempotencyKey?: string): Promise<T> {
   const response = await fetch(`${STRIPE_API_BASE}${path}`, {
     method: "POST",
     headers: {
       authorization: `Basic ${Buffer.from(`${getStripeSecretKey(true)}:`).toString("base64")}`,
       "content-type": "application/x-www-form-urlencoded",
+      ...(idempotencyKey ? { "idempotency-key": idempotencyKey } : {}),
     },
     body: encodeStripeForm(params),
     cache: "no-store",
@@ -192,7 +290,23 @@ async function stripePost<T>(path: string, params: Record<string, string | numbe
   return payload as T;
 }
 
-function encodeStripeForm(params: Record<string, string | number | boolean | null | undefined>) {
+async function stripeGet<T>(path: string): Promise<T> {
+  const response = await fetch(`${STRIPE_API_BASE}${path}`, {
+    headers: {
+      authorization: `Basic ${Buffer.from(`${getStripeSecretKey(true)}:`).toString("base64")}`,
+    },
+    cache: "no-store",
+  });
+  const payload = (await response.json().catch(() => ({}))) as T & StripeErrorResponse;
+
+  if (!response.ok) {
+    throw new Error(payload.error?.message ?? `Stripe request failed with ${response.status}.`);
+  }
+
+  return payload as T;
+}
+
+function encodeStripeForm(params: StripeFormParams) {
   const body = new URLSearchParams();
 
   for (const [key, value] of Object.entries(params)) {

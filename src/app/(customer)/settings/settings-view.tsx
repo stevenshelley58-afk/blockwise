@@ -48,7 +48,7 @@ export function SettingsView(props: SettingsViewProps) {
         ))}
       </nav>
 
-      <AccountSection supabase={supabase} router={router} user={props.user} fullName={props.profile.fullName} />
+      <AccountSection supabase={supabase} router={router} user={props.user} profile={props.profile} />
       <ConnectionsSection
         supabase={supabase}
         router={router}
@@ -66,6 +66,8 @@ export function SettingsView(props: SettingsViewProps) {
         canManage={props.canManage}
         workspace={props.workspace}
         plan={props.plan}
+        usage={props.usage}
+        bookingState={props.bookingState}
       />
       {props.canManage ? (
         <WorkspaceSection supabase={supabase} router={router} workspace={props.workspace} />
@@ -77,6 +79,9 @@ export function SettingsView(props: SettingsViewProps) {
           workspaceId={props.workspace.id}
           currentUserId={props.user.id}
           members={props.members}
+          invitations={props.invitations}
+          billingAccessState={props.workspace.billingAccessState}
+          currentRole={props.role}
         />
       ) : null}
       <NotificationsSection supabase={supabase} userId={props.user.id} initial={props.profile.notificationPreferences} />

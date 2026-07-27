@@ -8,20 +8,20 @@ export function SiteHeader() {
   return (
     <header className="hw-header">
       <div className="hw-wide hw-header-inner">
-        <a href="#top" className="hw-logo">
+        <Link href="/" className="hw-logo">
           <span className="hw-logo-mark" aria-hidden />
           blockwise
-        </a>
+        </Link>
         <nav className="hw-nav" aria-label="Main">
-          <a href="#start">How it works</a>
-          <a href="#property-check">Property Check</a>
+          <Link href="/#start">How it works</Link>
+          <Link href="/#property-check">Property Check</Link>
           <Link href="/pricing">Pricing</Link>
           <Link href="/guides">Guides</Link>
         </nav>
         <div className="hw-header-actions">
           <SignInLink className="hw-login" />
           <CtaLink location="header" href="/signup" className="hw-btn hw-btn--dark">
-            Start free trial
+            Start with email
           </CtaLink>
         </div>
       </div>
@@ -36,7 +36,7 @@ export function SiteFooter() {
       <div className="hw-wide hw-footer-statement-block">
         <p className="hw-footer-statement">Your competitors are advertising. Are you?</p>
         <CtaLink location="footer" href="/signup" className="hw-btn hw-btn--light">
-          Start free trial <span className="hw-arr">→</span>
+          Create three ads free <span className="hw-arr">→</span>
         </CtaLink>
       </div>
       <div className="hw-wide">
@@ -47,9 +47,9 @@ export function SiteFooter() {
             blockwise
           </span>
           <nav className="hw-footer-links" aria-label="Footer">
-            <a href="#start">How it works</a>
-            <a href="#property-check">Property Check</a>
-            <a href="#free-trial">Free trial</a>
+            <Link href="/#start">How it works</Link>
+            <Link href="/#property-check">Property Check</Link>
+            <Link href="/#free-trial">Start free</Link>
             <Link href="/pricing">Pricing</Link>
             <Link href="/guides">Guides</Link>
             <Link href="/privacy">Privacy</Link>

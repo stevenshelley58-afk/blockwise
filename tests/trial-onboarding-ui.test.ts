@@ -12,14 +12,15 @@ test("onboarding page renders the wizard instead of redirecting to settings", ()
   assert.match(source, /<OnboardingWizard/);
 });
 
-test("onboarding wizard completes setup into first ad flow", () => {
+test("onboarding wizard completes the progressive website and Brand Pack path into first ad flow", () => {
   const wizard = readFileSync("src/components/onboarding/onboarding-wizard.tsx", "utf8");
 
-  assert.match(wizard, /\/api\/workspace\/onboarding-status/);
-  assert.match(wizard, /status: "complete"/);
+  assert.match(wizard, /\/api\/workspace\/onboarding-market/);
+  assert.match(wizard, /\/api\/adstudio\/brand-kits\/extract/);
+  assert.match(wizard, /\/api\/adstudio\/brand-kits\/\$\{encodeURIComponent\(review\.id\)\}\/approve/);
   assert.match(wizard, /router\.push\("\/ad-studio\?first=1"\)/);
   assert.doesNotMatch(wizard, /\/campaigns/);
-  assert.ok((wizard.match(/Skip for now/g) ?? []).length >= 3);
+  assert.doesNotMatch(wizard, /Skip for now/);
 });
 
 test("new ad dialog explains trial credit use without requiring Meta", () => {
@@ -34,12 +35,16 @@ test("new ad dialog explains trial credit use without requiring Meta", () => {
   assert.match(dialog, /capturePagePaste/);
 });
 
-test("onboarding logo upload previews flexible file input", () => {
+test("onboarding scan failure preserves the website and offers a minimal canonical fallback", () => {
   const wizard = readFileSync("src/components/onboarding/onboarding-wizard.tsx", "utf8");
 
-  assert.match(wizard, /AssetUploadDropzone/);
-  assert.match(wizard, /logoPreviewUrl/);
-  assert.match(wizard, /capturePagePaste/);
+  assert.match(wizard, /setScanFailed\(true\)/);
+  assert.match(wizard, /retry or add the essentials/);
+  assert.match(wizard, /createManualBrandPack/);
+  assert.match(wizard, /manualName/);
+  assert.match(wizard, /manualColour/);
+  assert.match(wizard, /escapeHtml\(manualName\.trim\(\)\)/);
+  assert.doesNotMatch(wizard, /AssetUploadDropzone/);
 });
 
 test("landing CTA tracking fires cta_click for every CTA and BookDemoClick only for managed setup", () => {

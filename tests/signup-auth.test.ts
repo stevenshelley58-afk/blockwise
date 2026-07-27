@@ -14,7 +14,7 @@ const accessUnavailablePagePath = "src/app/access-unavailable/page.tsx";
 const accessUnavailableActionsPath = "src/app/access-unavailable/access-unavailable-actions.tsx";
 const turnstileVerificationPath = "src/components/auth/turnstile-verification.tsx";
 
-test("signup form uses Supabase captchaToken and trial metadata without a Turnstile dependency", () => {
+test("signup starts or resumes an account with one passwordless email field", () => {
   const source = readFileSync(signupFormPath, "utf8");
   const turnstile = readFileSync(turnstileVerificationPath, "utf8");
 
@@ -27,15 +27,19 @@ test("signup form uses Supabase captchaToken and trial metadata without a Turnst
   assert.match(turnstile, /execution:\s*"render"/);
   assert.match(source, /<TurnstileVerification/i);
   assert.match(source, /captchaToken:\s*turnstileToken/i);
+  assert.match(source, /signInWithOtp\(\{/i);
+  assert.match(source, /shouldCreateUser:\s*true/i);
   assert.match(source, /emailRedirectTo:\s*`\$\{location\.origin\}\/auth\/confirm\?next=\/self-serve\?confirmed=1`/i);
   assert.match(source, /signup_flow:\s*"trial_self_serve"/i);
-  assert.match(source, /agency_name:\s*agencyName/i);
   assert.match(source, /name="company_website"/i);
   assert.match(source, /signup-honeypot/i);
-  assert.match(source, /name="terms"/i);
-  assert.match(source, /signUpData\.user/);
-  assert.match(source, /signUpData\.user\.identities\.length === 0/);
-  assert.match(source, /An account with this email already exists\. Sign in or reset your password\./);
+  assert.match(source, /By continuing, you accept the/i);
+  assert.match(source, /href="\/terms"/i);
+  assert.match(source, /href="\/privacy"/i);
+  assert.doesNotMatch(source, /type="password"/i);
+  assert.doesNotMatch(source, /name="agency_name"/i);
+  assert.doesNotMatch(source, /name="terms"/i);
+  assert.doesNotMatch(source, /signUp\(\{/i);
   assert.doesNotMatch(source, /onboarding_status/i);
 });
 
@@ -61,6 +65,17 @@ test("confirm route verifies token hash and only redirects to safe relative next
   assert.match(source, /includes\("\\\\"\)/);
   assert.match(source, /parsed\.origin !== SAFE_REDIRECT_ORIGIN/i);
   assert.match(source, /type: type as EmailOtpType/i);
+  assert.match(source, /supabase\.auth\.getUser\(\)/i);
+  assert.match(source, /acceptVerifiedWorkspaceInvitations\(\{\s*user\s*\}\)/i);
+  assert.match(
+    source,
+    /bootstrapVerifiedTrialWorkspace\(\{\s*user,\s*serviceSupabase:\s*service\s*\}\)/i,
+  );
+  assert.ok(
+    source.indexOf("acceptVerifiedWorkspaceInvitations({ user })")
+      < source.indexOf("bootstrapVerifiedTrialWorkspace({ user, serviceSupabase: service })"),
+  );
+  assert.match(source, /workspace_bootstrap_failed/i);
   assert.match(source, /\/login\?error=confirm_failed/);
 });
 
@@ -79,6 +94,7 @@ test("login form keeps email validation while identifying the account field to p
 
   assert.match(source, /id="login-email"[\s\S]{0,200}type="email"[\s\S]{0,300}autoComplete="username"/i);
   assert.match(source, /id="login-password"[\s\S]*type="password"[\s\S]*autoComplete="current-password"/i);
+  assert.match(source, /signInWithPassword\(\{/i);
 });
 
 test("login and password reset pass Turnstile captcha tokens to Supabase auth", () => {

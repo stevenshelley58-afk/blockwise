@@ -42,6 +42,12 @@ import type {
 } from "./types.ts";
 import { normalizeCloneQa } from "./types.ts";
 import type { ImageProviderAdapter, ImageProviderRequest } from "./providers.ts";
+import {
+  refundWorkspaceCreditReservation,
+  settleWorkspaceCreditReservation,
+  type WorkspaceCreditReservation,
+} from "../credits/workspace-credits.ts";
+import { recordCustomerActivationMilestone } from "../activation/customer-activation.ts";
 import type { createSupabaseServerClient } from "../supabase/server.ts";
 import type { createSupabaseServiceClient } from "../supabase/service.ts";
 
@@ -57,6 +63,7 @@ export type SupabaseGenerationClient = SupabaseServerClient | SupabaseServiceCli
 
 /** The campaigns POST body — shared with the route and the job payload. */
 export type CreateCampaignBody = {
+  clientMutationId?: string;
   brandKit?: AdStudioBrandKit;
   suburb?: string;
   city?: string;
@@ -75,6 +82,8 @@ export type RunTemplateCampaignGenerationInput = {
   region?: string;
   /** From the route's credit reservation; drives the trial fallback brand kit. */
   isTrialWorkspace?: boolean;
+  /** Server-owned two-render reservation settled independently by format. */
+  creditReservation?: WorkspaceCreditReservation;
 };
 
 export type RunTemplateCampaignGenerationResult = {
@@ -478,6 +487,26 @@ export async function runTemplateCampaignGeneration(
     );
   }
 
+  if (input.creditReservation) {
+    await settleWorkspaceCreditReservation({
+      reservation: input.creditReservation,
+      credits: 1,
+      mutationKey: `${input.creditReservation.mutationKey}:settle:4x5`,
+      metadata: { format: PRIMARY_CLONE_FORMAT, campaignId: feedPack.campaign.campaignId },
+    });
+  }
+  try {
+    await recordCustomerActivationMilestone({
+      workspaceId: input.workspaceId,
+      milestone: "first_ad_pack_generated",
+      occurredAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    // Campaign rows remain authoritative; the activation resolver repairs this
+    // monotonic milestone on the next read.
+    console.error("adstudio: activation milestone repair deferred", error);
+  }
+
   // Region detection write for the feed creative (fires after the response;
   // the vision call itself is already in flight).
   const feedCreative = feedPack.creatives.find((c) => c.format === PRIMARY_CLONE_FORMAT);
@@ -511,6 +540,7 @@ export async function runTemplateCampaignGeneration(
     variantId: feedPack.variants[0].variantId,
     template,
     storyGenPromise,
+    creditReservation: input.creditReservation,
   });
 
   return { campaignId: feedPack.campaign.campaignId, campaignPack: feedPack, enrichRegions, storyTask };
@@ -531,6 +561,7 @@ async function persistStoryInBackground(input: {
   variantId: string;
   template: AdStudioTemplate;
   storyGenPromise: Promise<GeneratedCloneRender>;
+  creditReservation?: WorkspaceCreditReservation;
 }): Promise<void> {
   try {
     const storyRender = await input.storyGenPromise;
@@ -566,7 +597,7 @@ async function persistStoryInBackground(input: {
       .eq("workspace_id", input.workspaceId)
       .maybeSingle();
     const currentFormats = (campaignRow?.creative_formats_json as string[] | null) ?? [];
-    await input.supabase
+    const campaignUpdate = await input.supabase
       .from("adstudio_campaigns")
       .update({
         creative_formats_json: [...new Set([...currentFormats, STORY_CLONE_FORMAT])],
@@ -574,9 +605,10 @@ async function persistStoryInBackground(input: {
       })
       .eq("id", input.campaignId)
       .eq("workspace_id", input.workspaceId);
+    if (campaignUpdate.error) throw new Error(campaignUpdate.error.message);
 
     // Insert the story creative row.
-    await input.supabase.from("adstudio_creatives").insert({
+    const creativeInsert = await input.supabase.from("adstudio_creatives").insert({
       id: storyCreative.creativeId,
       workspace_id: input.workspaceId,
       campaign_id: input.campaignId,
@@ -589,6 +621,16 @@ async function persistStoryInBackground(input: {
       preview_svg: null,
       updated_at: new Date().toISOString(),
     });
+    if (creativeInsert.error) throw new Error(creativeInsert.error.message);
+
+    if (input.creditReservation) {
+      await settleWorkspaceCreditReservation({
+        reservation: input.creditReservation,
+        credits: 1,
+        mutationKey: `${input.creditReservation.mutationKey}:settle:9x16`,
+        metadata: { format: STORY_CLONE_FORMAT, campaignId: input.campaignId },
+      });
+    }
 
     // Region detection write for the story creative (call already in flight).
     await enrichCloneCreativesWithRegions({
@@ -605,6 +647,19 @@ async function persistStoryInBackground(input: {
       }],
     });
   } catch (error) {
+    if (input.creditReservation?.creditsOutstanding) {
+      try {
+        await refundWorkspaceCreditReservation({
+          reservation: input.creditReservation,
+          credits: 1,
+          mutationKey: `${input.creditReservation.mutationKey}:refund:9x16`,
+          reason: "story_render_failed",
+          metadata: { format: STORY_CLONE_FORMAT, campaignId: input.campaignId },
+        });
+      } catch (refundError) {
+        console.error("adstudio: story credit refund failed", refundError);
+      }
+    }
     // Story failure must NEVER fail the feed. Log and contain.
     console.error("adstudio: story (9:16) background persist failed", error);
   }

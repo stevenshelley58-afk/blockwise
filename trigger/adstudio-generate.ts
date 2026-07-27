@@ -1,14 +1,15 @@
 import { task } from "@trigger.dev/sdk/v3";
 import * as Sentry from "@sentry/nextjs";
 
+import { recordWorkspaceFunnelEventBestEffort } from "../src/lib/analytics/progressive-funnel.ts";
 import {
   runTemplateCampaignGeneration,
   type CreateCampaignBody,
 } from "../src/lib/adstudio/generate-template-campaign.ts";
 import {
-  refundReservedTrialCredit,
-  type AdStudioGenerationTrialReservation,
-} from "../src/lib/adstudio/generation-trial.ts";
+  type AdStudioGenerationCreditReservation,
+} from "../src/lib/adstudio/generation-credits.ts";
+import { refundOutstandingWorkspaceCredits } from "../src/lib/credits/workspace-credits.ts";
 import { createSupabaseServiceClient } from "../src/lib/supabase/service.ts";
 
 
@@ -24,7 +25,7 @@ type GenerateTemplateCampaignPayload = {
 /** Extra request context the route stored on the job row (payload jsonb). */
 type StoredJobPayload = {
   body?: CreateCampaignBody;
-  reservation?: AdStudioGenerationTrialReservation | null;
+  reservation?: AdStudioGenerationCreditReservation | null;
   workspaceName?: string;
   region?: string;
 };
@@ -68,6 +69,7 @@ export const generateAdStudioTemplateCampaignTask = task({
         workspaceName: stored.workspaceName,
         region: stored.region,
         isTrialWorkspace: reservation?.isTrialWorkspace ?? false,
+        creditReservation: reservation ?? undefined,
       });
 
       // "done" the moment the feed (4:5) persists — the polling client shows
@@ -82,6 +84,16 @@ export const generateAdStudioTemplateCampaignTask = task({
         })
         .eq("workspace_id", payload.workspaceId)
         .eq("id", payload.jobId);
+      await recordWorkspaceFunnelEventBestEffort(supabase, {
+        eventName: "first_generation_completed",
+        workspaceId: payload.workspaceId,
+        idempotencyKey: `activation:${payload.workspaceId}:first-generation-completed`,
+        properties: {
+          mutation_key: reservation?.mutationKey ?? payload.jobId,
+          campaign_id: result.campaignId,
+          execution: "trigger",
+        },
+      });
 
       // Fire-and-forget region detection for the feed creative.
       await result.enrichRegions();
@@ -94,9 +106,14 @@ export const generateAdStudioTemplateCampaignTask = task({
       return { jobId: payload.jobId, status: "done" as const, campaignId: result.campaignId };
     } catch (error) {
       Sentry.captureException(error);
-      // The route reserved the trial credit before enqueueing; a failed job
-      // gives it back (no-op for paid workspaces via shouldRefund).
-      await refundReservedTrialCredit(reservation, supabase);
+      // Return only the renders that are still outstanding. A persisted Feed
+      // remains settled even when the optional Story path fails later.
+      await refundOutstandingWorkspaceCredits({
+        reservation,
+        mutationKey: `${reservation?.mutationKey ?? payload.jobId}:refund:job-failure`,
+        reason: "generation_job_failed",
+        serviceSupabase: supabase,
+      });
 
       const message = error instanceof Error ? error.message : "Ad generation failed.";
       await supabase

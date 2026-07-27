@@ -1,8 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { recordWorkspaceFunnelEventBestEffort } from "@/lib/analytics/progressive-funnel";
 import { approveAdStudioBrandKitForUse, buildAdStudioLiveResult, type AdStudioBrandKit } from "@/lib/adstudio";
 import { errorResponse, readJsonBody, requireAdStudioRequest } from "@/lib/adstudio/http";
 import { isExampleBrandKit, isExampleBrandKitSourceUrl, persistAdStudioBrandKit, rowToBrandKit } from "@/lib/adstudio/persistence";
+import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,6 +34,9 @@ export async function POST(request: NextRequest, context: RouteContext) {
       workspaceId: access.access.workspaceId,
     });
     const persisted = await persistAdStudioBrandKit(access.supabase, approvedBrandKit, access.access.userId);
+    if (!persisted.error) {
+      await recordBrandPackApproval(access.access.workspaceId, id);
+    }
     const liveResult = buildAdStudioLiveResult({
       data: approvedBrandKit,
       persistenceError: persisted.error?.message,
@@ -67,8 +72,18 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
   if (error) return errorResponse(error);
 
+  await recordBrandPackApproval(access.access.workspaceId, id);
   const approvedBrandKit = approveAdStudioBrandKitForUse(rowToBrandKit(data));
   const liveResult = buildAdStudioLiveResult({ data: approvedBrandKit });
 
   return NextResponse.json({ brandKit: liveResult.data, data: liveResult.data, persistence: liveResult.persistence });
+}
+
+async function recordBrandPackApproval(workspaceId: string, brandKitId: string): Promise<void> {
+  await recordWorkspaceFunnelEventBestEffort(createSupabaseServiceClient(), {
+    eventName: "brand_pack_approved",
+    workspaceId,
+    idempotencyKey: `activation:${workspaceId}:first-brand-pack-approved`,
+    properties: { brand_kit_id: brandKitId },
+  });
 }

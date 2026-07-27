@@ -13,6 +13,7 @@ import {
   type MetaConnectionSetup,
   type MetaPublishControls,
 } from "../src/lib/providers/meta-execution.ts";
+import { metaProviderMutationMayHaveOccurred } from "../src/lib/providers/meta-publish-worker.ts";
 
 const setup: MetaConnectionSetup = {
   metaAdAccountId: "act_123",
@@ -495,6 +496,100 @@ test("marketing_api adapter resumes partial publishes without recreating reconci
   assert.equal(result.status, "paused_live");
   assert.equal(requested.some((request) => request.method === "POST" && request.url.includes("/campaigns")), false);
   assert.equal(result.reconciledObjects.campaignId, "existing_campaign");
+});
+
+test("marketing_api adapter reconciles a provider success after its local checkpoint failed", async () => {
+  const plan = {
+    ...buildMetaPublishPlan({
+      workspaceId: "workspace_demo",
+      campaignPack: buildPack(),
+      connectionId: "connection_123",
+      setup,
+      approvalRequestId: "approval_123",
+    }),
+    adSets: [],
+    leadForms: [],
+    creatives: [],
+    ads: [],
+  };
+  let providerName = "";
+  const firstFetch = async (_url: string | URL | Request, init?: RequestInit) => {
+    const body = JSON.parse(String(init?.body ?? "{}")) as Record<string, unknown>;
+    providerName = String(body.name);
+    return new Response(JSON.stringify({ id: "meta_campaign_existing" }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  };
+
+  const firstResult = await createMetaExecutionAdapter("marketing_api").publish(
+    { ...plan, status: "approved" },
+    {
+      accessToken: "token",
+      fetchImpl: firstFetch,
+      onCheckpoint: async () => {
+        throw new Error("database write failed after provider success");
+      },
+    },
+  );
+
+  assert.equal(firstResult.status, "failed");
+  assert.equal(firstResult.reconciledObjects.campaignId, "meta_campaign_existing");
+  assert.equal(metaProviderMutationMayHaveOccurred(firstResult), true);
+
+  const retryRequests: Array<{ url: string; method: string }> = [];
+  const retryFetch = async (url: string | URL | Request, init?: RequestInit) => {
+    const method = init?.method ?? "GET";
+    retryRequests.push({ url: String(url), method });
+    if (String(url).includes("/campaigns?")) {
+      return new Response(JSON.stringify({
+        data: [{ id: "meta_campaign_existing", name: providerName }],
+      }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }
+    return new Response(JSON.stringify({
+      id: "meta_campaign_existing",
+      effective_status: "PAUSED",
+      configured_status: "PAUSED",
+    }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  };
+
+  const retryResult = await createMetaExecutionAdapter("marketing_api").publish(
+    { ...plan, status: "publishing" },
+    {
+      accessToken: "token",
+      fetchImpl: retryFetch,
+      reconcileMissingObjects: true,
+    },
+  );
+
+  assert.equal(retryResult.status, "paused_live");
+  assert.equal(retryResult.reconciledObjects.campaignId, "meta_campaign_existing");
+  assert.equal(retryRequests.some((request) => request.method === "POST"), false);
+});
+
+test("provider mutation uncertainty distinguishes rejected writes from unsafe outcomes", () => {
+  const request = {
+    step: "campaign.create",
+    method: "POST" as const,
+    path: "/act_123/campaigns",
+    createdAt: "2026-07-27T00:00:00.000Z",
+  };
+
+  assert.equal(metaProviderMutationMayHaveOccurred({ requestLog: [request], responseLog: [] }), true);
+  assert.equal(metaProviderMutationMayHaveOccurred({
+    requestLog: [request],
+    responseLog: [{ ...request, status: 500 }],
+  }), true);
+  assert.equal(metaProviderMutationMayHaveOccurred({
+    requestLog: [request],
+    responseLog: [{ ...request, status: 400 }],
+  }), false);
 });
 
 test("marketing_api adapter reconciles Meta object state after publish", async () => {

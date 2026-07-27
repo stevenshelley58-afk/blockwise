@@ -32,9 +32,9 @@ test("billing settings prefer friendly portal messages and hide billing manageme
   assert.match(source, /data\.message \?\? data\.error \?\? "Billing isn't connected yet\."/);
   assert.match(source, /workspace\.stripeCustomerId \?/);
   assert.match(source, /Billing management will appear here after your first paid plan is active\./);
-  assert.match(source, /function planFeatureTitle/);
-  assert.match(source, /plan\.key === "trial" \|\| plan\.maxAgentRunsPerMonth <= 0/);
-  assert.match(source, /10 free ad packs included/);
+  assert.match(source, /Usage this period/);
+  assert.match(source, /workspace\.billingAccessState === "paid"/);
+  assert.match(source, /complete Feed \+ Story packs/);
 });
 
 test("ad studio lead destination stays out of local-only workbench state", () => {
@@ -55,14 +55,14 @@ test("Meta OAuth notices handle missing code and never echo unknown provider err
   assert.doesNotMatch(source, /message:\s*error/);
 });
 
-test("trial generation limit responses keep a machine code with friendly money-path messages", () => {
-  const source = read("src/lib/adstudio/generation-trial.ts");
+test("generation limit responses keep a machine code with friendly credit messages", () => {
+  const source = read("src/lib/adstudio/generation-credits.ts");
+  const domain = read("src/lib/credits/workspace-credits.ts");
 
-  assert.match(source, /trialCreditErrorMessage/);
-  assert.match(source, /reason === "credit_limit_reached"[\s\S]*You've used all trial ad credits/);
-  assert.match(source, /reason === "trial_expired"[\s\S]*Your trial has ended/);
-  assert.match(source, /code:\s*reason \?\? "trial_credit_reservation_failed"/);
-  assert.match(source, /status:\s*trialCreditErrorStatus\(reason\)/);
+  assert.match(source, /code:\s*error\.reason/);
+  assert.match(source, /status:\s*402/);
+  assert.match(domain, /reason === "credit_limit_reached"[\s\S]*not enough render credits/);
+  assert.match(domain, /reason === "entitlement_expired"[\s\S]*credit period has ended/);
 });
 
 test("leads surface labels duplicate candidates as possible duplicates", () => {

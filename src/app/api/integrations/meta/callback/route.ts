@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { recordWorkspaceFunnelEventBestEffort } from "@/lib/analytics/progressive-funnel";
 import { canManageProviderConnections } from "@/lib/auth/access-control";
 import { requireWorkspaceAccess } from "@/lib/auth/workspace-access";
 import { resolveMonitorDateRange } from "@/lib/monitor/dashboard-data";
@@ -23,7 +24,7 @@ async function handleCallback(request: NextRequest) {
   const state = request.nextUrl.searchParams.get("state");
   const origin = request.nextUrl.origin;
 
-  if (!code || !state) {
+  if (!state) {
     return NextResponse.redirect(new URL("/results?integration=meta&error=missing_code", origin));
   }
 
@@ -45,13 +46,31 @@ async function handleCallback(request: NextRequest) {
     return NextResponse.redirect(new URL("/results?integration=meta&error=invalid_state", origin));
   }
 
+  if (!code) {
+    return NextResponse.redirect(
+      providerReturnUrl(
+        verified.payload.returnPath,
+        origin,
+        { error: request.nextUrl.searchParams.get("error") ?? "missing_code" },
+        verified.payload.campaignId ?? null,
+      ),
+    );
+  }
+
   const access = await requireWorkspaceAccess(supabase, {
     surface: "monitor",
     requestedWorkspaceId: verified.payload.workspaceId,
   });
 
   if (!access.ok || !canManageProviderConnections(access.access)) {
-    return NextResponse.redirect(providerReturnUrl(verified.payload.returnPath, origin, { error: "forbidden" }));
+    return NextResponse.redirect(
+      providerReturnUrl(
+        verified.payload.returnPath,
+        origin,
+        { error: "forbidden" },
+        verified.payload.campaignId ?? null,
+      ),
+    );
   }
 
   const serviceSupabase = createSupabaseServiceClient();
@@ -75,6 +94,12 @@ async function handleCallback(request: NextRequest) {
       metadata: exchanged.metadata,
       tokenExpiresAt: exchanged.tokenExpiresAt,
     });
+    await recordMetaConnected(
+      serviceSupabase,
+      verified.payload.workspaceId,
+      exchanged.status,
+      exchanged.externalAccountId,
+    );
   } catch (error) {
     // Duplicate callback requests (double navigation, browser re-requests)
     // re-exchange an already-used code, which Meta rejects. The first request
@@ -84,6 +109,12 @@ async function handleCallback(request: NextRequest) {
     const recent = await loadFreshMetaConnection(serviceSupabase, verified.payload.workspaceId);
 
     if (recent) {
+      await recordMetaConnected(
+        serviceSupabase,
+        verified.payload.workspaceId,
+        "connected",
+        recent.external_account_id ?? undefined,
+      );
       return NextResponse.redirect(
         providerReturnUrl(
           verified.payload.returnPath,
@@ -91,12 +122,15 @@ async function handleCallback(request: NextRequest) {
           recent.external_account_id === "meta_account_pending"
             ? { connected: "1", status: "needs_account" }
             : { connected: "1" },
+          verified.payload.campaignId ?? null,
         ),
       );
     }
 
     const message = error instanceof Error ? error.message : "Meta connection failed.";
-    return NextResponse.redirect(providerReturnUrl(verified.payload.returnPath, origin, { error: message }));
+    return NextResponse.redirect(
+      providerReturnUrl(verified.payload.returnPath, origin, { error: message }, verified.payload.campaignId ?? null),
+    );
   }
 
   // Best-effort first sync so the dashboard shows real data immediately after
@@ -121,8 +155,26 @@ async function handleCallback(request: NextRequest) {
       exchangedAccountId === "meta_account_pending"
         ? { connected: "1", status: "needs_account" }
         : { connected: "1" },
+      verified.payload.campaignId ?? null,
     ),
   );
+}
+
+async function recordMetaConnected(
+  service: ReturnType<typeof createSupabaseServiceClient>,
+  workspaceId: string,
+  status: string,
+  externalAccountId?: string,
+): Promise<void> {
+  await recordWorkspaceFunnelEventBestEffort(service, {
+    eventName: "meta_connected",
+    workspaceId,
+    idempotencyKey: `meta:${workspaceId}:first-connection`,
+    properties: {
+      connection_status: status,
+      account_bound: Boolean(externalAccountId && externalAccountId !== "meta_account_pending"),
+    },
+  });
 }
 
 const FRESH_CONNECTION_WINDOW_MS = 2 * 60 * 1000;
@@ -158,9 +210,15 @@ async function loadFreshMetaConnection(
   return row;
 }
 
-function providerReturnUrl(returnPath: string, origin: string, params: Record<string, string>): URL {
+function providerReturnUrl(
+  returnPath: string,
+  origin: string,
+  params: Record<string, string>,
+  campaignId: string | null,
+): URL {
   const url = new URL(sanitizeOAuthReturnPath(returnPath), origin);
   url.searchParams.set("integration", "meta");
+  if (campaignId) url.searchParams.set("campaignId", campaignId);
   for (const [key, value] of Object.entries(params)) {
     url.searchParams.set(key, value);
   }
