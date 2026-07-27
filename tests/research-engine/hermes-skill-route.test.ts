@@ -27,7 +27,7 @@ test("operator research skills list includes every bundled Hermes skill", () => 
     .map((entry) => entry.name)
     .sort();
 
-  assert.equal(skills.length, 29);
+  assert.equal(skills.length, 31);
   assert.ok(skills.includes("blockwise-agent-cleanup"));
   assert.ok(skills.includes("blockwise-location-ad-search"));
   assert.match(hermesAssets, /readdir\(SKILLS_ROOT, \{ withFileTypes: true \}\)/u);
