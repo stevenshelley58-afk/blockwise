@@ -306,8 +306,7 @@ async function loadLongestRunningResponse(
   supabase: SupabaseClient,
   limit: number,
 ): Promise<PublicAdRadarResponse> {
-  let rows = await fetchLongestRunningRows(supabase, LONGEST_RUNNING_WINDOW, true);
-  if (rows.length === 0) rows = await fetchLongestRunningRows(supabase, LONGEST_RUNNING_WINDOW, false);
+  const rows = await fetchLongestRunningRows(supabase, LONGEST_RUNNING_WINDOW);
 
   const now = Date.now();
   const cards = sortCards(dedupeRows(rows).map(normaliseCustomerMetaAdLibraryCard), "longest")
@@ -320,17 +319,15 @@ async function loadLongestRunningResponse(
 async function fetchLongestRunningRows(
   supabase: SupabaseClient,
   limit: number,
-  activeOnly: boolean,
 ): Promise<CustomerMetaAdLibraryCardRow[]> {
-  let query = supabase
+  const query = supabase
     .schema("research")
     .from("v_customer_meta_ad_library_cards")
     .select(CUSTOMER_META_AD_LIBRARY_CARD_SELECT)
+    .eq("active_status", "active")
     .not("ad_delivery_started_at", "is", null)
     .order("ad_delivery_started_at", { ascending: true })
     .limit(limit);
-
-  if (activeOnly) query = query.ilike("active_status", "active");
 
   const { data, error } = await query;
   if (error) throw new Error(error.message);
@@ -466,6 +463,7 @@ async function fetchRows(
     .schema("research")
     .from("v_customer_meta_ad_library_cards")
     .select(CUSTOMER_META_AD_LIBRARY_CARD_SELECT)
+    .eq("active_status", "active")
     .order("last_seen_at", { ascending: false, nullsFirst: false })
     .range(offset, offset + limit - 1);
 

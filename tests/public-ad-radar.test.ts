@@ -252,6 +252,10 @@ test("public Ad Radar loader asks for postcode arrays and national postcode subu
   await loadPublicAdRadarCards(fake.client, { location: "6166", limit: 1 });
 
   assert.ok(
+    fake.queries.every((query) => query.callArgs("eq").some((args) => args[0] === "active_status" && args[1] === "active")),
+    "every public location query must exclude inactive and unconfirmed ads",
+  );
+  assert.ok(
     fake.queries.some((query) => query.callArgs("in").some((args) => args[0] === "postcode" && sameArray(args[1], ["6166"]))),
     "postcode searches should query direct ad_area_matches postcode rows",
   );
@@ -343,7 +347,7 @@ test("public Ad Radar loader uses longest-running coverage when location is empt
   assert.deepEqual(firstQuery.callArgs("not"), [["ad_delivery_started_at", "is", null]]);
   assert.deepEqual(firstQuery.callArgs("order"), [["ad_delivery_started_at", { ascending: true }]]);
   assert.deepEqual(firstQuery.callArgs("limit"), [[150]]);
-  assert.deepEqual(firstQuery.callArgs("ilike"), [["active_status", "active"]]);
+  assert.deepEqual(firstQuery.callArgs("eq"), [["active_status", "active"]]);
 });
 
 function card(input: Partial<CustomerMetaAdLibraryCard> & { id: string }): CustomerMetaAdLibraryCard {
