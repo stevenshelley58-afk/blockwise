@@ -5,6 +5,7 @@ import test from "node:test";
 import { decryptToken, encryptToken } from "../src/lib/providers/token-crypto.ts";
 import {
   createOAuthStatePayload,
+  sanitizeOAuthCampaignId,
   sanitizeOAuthReturnPath,
   signOAuthState,
   verifyOAuthState,
@@ -94,14 +95,37 @@ test("OAuth return paths are allowlisted for onboarding", () => {
   assert.equal(payload.returnPath, "/onboarding");
 });
 
-test("Meta onboarding connect preserves the onboarding return path", () => {
-  const wizard = readFileSync("src/components/onboarding/onboarding-wizard.tsx", "utf8");
+test("Meta OAuth state signs a safe Ad Studio resume path and campaign identifier", () => {
+  const payload = createOAuthStatePayload({
+    provider: "meta",
+    workspaceId: "workspace_demo",
+    userId: "user_demo",
+    returnPath: "/ad-studio",
+    campaignId: "campaign_123",
+    nowSeconds: 1_779_840_000,
+  });
+  const verified = verifyOAuthState(signOAuthState(payload, stateSecret), {
+    expectedProvider: "meta",
+    expectedUserId: "user_demo",
+    nowSeconds: 1_779_840_100,
+    secret: stateSecret,
+  });
+
+  assert.equal(payload.returnPath, "/ad-studio");
+  assert.equal(verified.ok && verified.payload.campaignId, "campaign_123");
+  assert.equal(sanitizeOAuthCampaignId("../../billing"), null);
+  assert.equal(sanitizeOAuthReturnPath("//evil.example"), "/results");
+});
+
+test("Meta connect and callback preserve the signed resume path and campaign", () => {
   const connectRoute = readFileSync("src/app/api/integrations/meta/connect/route.ts", "utf8");
   const callbackRoute = readFileSync("src/app/api/integrations/meta/callback/route.ts", "utf8");
 
-  assert.match(wizard, /returnPath=%2Fonboarding/);
   assert.match(connectRoute, /sanitizeOAuthReturnPath\(request\.nextUrl\.searchParams\.get\("returnPath"\)\)/);
+  assert.match(connectRoute, /sanitizeOAuthCampaignId\(request\.nextUrl\.searchParams\.get\("campaignId"\)\)/);
   assert.match(connectRoute, /returnPath,/);
+  assert.match(connectRoute, /campaignId,/);
   assert.match(callbackRoute, /providerReturnUrl\(verified\.payload\.returnPath/);
+  assert.match(callbackRoute, /verified\.payload\.campaignId/);
   assert.doesNotMatch(callbackRoute, /const finalUrl = .*\/results/);
 });

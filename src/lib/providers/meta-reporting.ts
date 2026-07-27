@@ -167,7 +167,15 @@ export async function fetchMetaReporting(input: {
 
 export async function fetchMetaAdAccounts(
   accessToken: string,
-): Promise<Array<{ id: string; name: string; currency?: string; timezone?: string; isActive: boolean }>> {
+): Promise<Array<{
+  id: string;
+  name: string;
+  currency?: string;
+  timezone?: string;
+  isActive: boolean;
+  businessId?: string;
+  businessName?: string;
+}>> {
   const accounts = await fetchMetaList<{
     id?: string;
     account_id?: string;
@@ -175,11 +183,12 @@ export async function fetchMetaAdAccounts(
     currency?: string;
     timezone_name?: string;
     account_status?: number;
+    business?: { id?: string; name?: string | null } | null;
   }>(
     "/me/adaccounts",
     accessToken,
     {
-    fields: "id,account_id,name,currency,timezone_name,account_status",
+    fields: "id,account_id,name,currency,timezone_name,account_status,business{id,name}",
     limit: "25",
     },
   );
@@ -191,6 +200,8 @@ export async function fetchMetaAdAccounts(
       name: account.name ?? account.id ?? "Meta ad account",
       currency: account.currency,
       timezone: account.timezone_name,
+      businessId: account.business?.id,
+      businessName: account.business?.name ?? undefined,
       // Meta account_status 1 = active; anything else is disabled/closed/etc.
       isActive: account.account_status == null || account.account_status === 1,
     }));

@@ -1,13 +1,14 @@
 import { NextResponse, after, type NextRequest } from "next/server";
 
+import { recordWorkspaceFunnelEventBestEffort } from "@/lib/analytics/progressive-funnel";
 import { buildAdStudioLiveResult } from "@/lib/adstudio";
 import { errorResponse, readJsonBody, requireAdStudioRequest } from "@/lib/adstudio/http";
 import { publicAdStudioGenerationError } from "@/lib/adstudio/generation-error";
 import {
-  refundReservedTrialCredit,
-  reserveAdStudioGenerationCredit,
-  type AdStudioGenerationTrialReservation,
-} from "@/lib/adstudio/generation-trial";
+  reserveAdStudioGenerationCredits,
+  type AdStudioGenerationCreditReservation,
+} from "@/lib/adstudio/generation-credits";
+import { refundOutstandingWorkspaceCredits } from "@/lib/credits/workspace-credits";
 import {
   runTemplateCampaignGeneration,
   type CreateCampaignBody,
@@ -111,6 +112,20 @@ function generationDedupKey(workspaceId: string, body: unknown): string {
   return `${workspaceId}:${hash}`;
 }
 
+function generationCreditMutationKey(
+  request: NextRequest,
+  body: CreateCampaignBody,
+  workspaceId: string,
+  dedupKey: string,
+): string {
+  const supplied = body.clientMutationId ?? request.headers.get("idempotency-key");
+  const normalized = supplied?.trim().replace(/[^a-zA-Z0-9:_-]/g, "").slice(0, 160);
+  if (normalized) return `adstudio-generation:${workspaceId}:${normalized}`;
+
+  const bucket = Math.floor(Date.now() / GENERATION_DEDUP_TTL_MS);
+  return `adstudio-generation:${dedupKey}:${bucket}`;
+}
+
 export async function GET(request: NextRequest) {
   const context = await requireAdStudioRequest(request);
 
@@ -210,6 +225,12 @@ export async function POST(request: NextRequest) {
 
   const body = await readJsonBody<CreateCampaignBody>(request);
   const dedupKey = generationDedupKey(context.access.workspaceId, body);
+  const creditMutationKey = generationCreditMutationKey(
+    request,
+    body,
+    context.access.workspaceId,
+    dedupKey,
+  );
   const inFlightSince = inFlightGenerations.get(dedupKey);
 
   if (inFlightSince !== undefined && Date.now() - inFlightSince < GENERATION_DEDUP_TTL_MS) {
@@ -227,24 +248,35 @@ export async function POST(request: NextRequest) {
   }
 
   inFlightGenerations.set(dedupKey, Date.now());
-  let trialReservation: AdStudioGenerationTrialReservation | null = null;
+  let creditReservation: AdStudioGenerationCreditReservation | null = null;
 
   try {
     const firstAdError = validateFirstAd(body.firstAd);
     if (firstAdError) {
       return NextResponse.json({ error: firstAdError }, { status: 400 });
     }
-    const trialGate = await reserveAdStudioGenerationCredit({
+    const creditGate = await reserveAdStudioGenerationCredits({
       supabase: context.supabase,
       workspaceId: context.access.workspaceId,
       actorProfileId: context.access.userId,
+      mutationKey: creditMutationKey,
     });
 
-    if (!trialGate.ok) {
-      return trialGate.response;
+    if (!creditGate.ok) {
+      return creditGate.response;
     }
 
-    trialReservation = trialGate.reservation;
+    creditReservation = creditGate.reservation;
+    const funnelService = createSupabaseServiceClient();
+    await recordWorkspaceFunnelEventBestEffort(funnelService, {
+      eventName: "template_selected",
+      workspaceId: context.access.workspaceId,
+      idempotencyKey: `activation:${context.access.workspaceId}:first-template-selected`,
+      properties: {
+        template_id: body.firstAd!.templateId,
+        mutation_key: creditMutationKey,
+      },
+    });
 
     // Copy, clone, QA, and persistence run as one server-owned operation. The
     // whole copy → clone → QA → persist pipeline runs server-side. Normally as
@@ -267,7 +299,7 @@ export async function POST(request: NextRequest) {
             // it has already returned 202 by then.
             payload: {
               body,
-              reservation: trialReservation,
+              reservation: creditReservation,
               workspaceName: context.access.workspaceName,
               region: context.access.region,
             },
@@ -289,6 +321,12 @@ export async function POST(request: NextRequest) {
             origin,
             body,
           });
+          await recordFirstGenerationStarted(
+            funnelService,
+            context.access.workspaceId,
+            creditMutationKey,
+            "trigger",
+          );
         } catch (error) {
           // Fail quickly instead of hiding a queue fault behind a multi-minute
           // synchronous request. The customer can retry without a lost credit.
@@ -305,6 +343,12 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ jobId }, { status: 202 });
       }
 
+      await recordFirstGenerationStarted(
+        funnelService,
+        context.access.workspaceId,
+        creditMutationKey,
+        "inline",
+      );
       const result = await runTemplateCampaignGeneration({
         supabase: context.supabase,
         workspaceId: context.access.workspaceId,
@@ -313,7 +357,18 @@ export async function POST(request: NextRequest) {
         body,
         workspaceName: context.access.workspaceName,
         region: context.access.region,
-        isTrialWorkspace: trialReservation.isTrialWorkspace,
+        isTrialWorkspace: creditReservation.isTrialWorkspace,
+        creditReservation,
+      });
+      await recordWorkspaceFunnelEventBestEffort(funnelService, {
+        eventName: "first_generation_completed",
+        workspaceId: context.access.workspaceId,
+        idempotencyKey: `activation:${context.access.workspaceId}:first-generation-completed`,
+        properties: {
+          mutation_key: creditMutationKey,
+          campaign_id: result.campaignId,
+          execution: "inline",
+        },
       });
 
       // The customer has the ad in this response; region detection
@@ -337,11 +392,29 @@ export async function POST(request: NextRequest) {
     }
 
   } catch (error) {
-    await refundReservedTrialCredit(trialReservation);
+    await refundOutstandingWorkspaceCredits({
+      reservation: creditReservation,
+      mutationKey: `${creditReservation?.mutationKey ?? creditMutationKey}:refund:route-failure`,
+      reason: "generation_route_failed",
+    });
     console.error("adstudio campaign generation failed", error);
     return errorResponse(new Error(publicAdStudioGenerationError(error)), 400);
   } finally {
     inFlightGenerations.delete(dedupKey);
     await releaseGenerationLock(context.supabase, dedupKey);
   }
+}
+
+async function recordFirstGenerationStarted(
+  service: ReturnType<typeof createSupabaseServiceClient>,
+  workspaceId: string,
+  mutationKey: string,
+  execution: "trigger" | "inline",
+): Promise<void> {
+  await recordWorkspaceFunnelEventBestEffort(service, {
+    eventName: "first_generation_started",
+    workspaceId,
+    idempotencyKey: `activation:${workspaceId}:first-generation-started`,
+    properties: { mutation_key: mutationKey, execution },
+  });
 }

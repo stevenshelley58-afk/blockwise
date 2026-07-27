@@ -4,7 +4,7 @@ import type { AdStudioBrandKit, AdStudioReviewStatus } from "./types.ts";
 export type ExtractBrandKitInput = {
   workspaceId: string;
   websiteUrl: string;
-  marketCountry: "AU";
+  marketCountry: "AU" | "US";
   marketRegion?: string | null;
   htmlByUrl: Record<string, string>;
   stylesheetTextByUrl?: Record<string, string>;

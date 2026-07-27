@@ -38,7 +38,7 @@ const GOOGLE_ADS_ID = process.env.NEXT_PUBLIC_GOOGLE_ADS_ID;
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://blockwise.sale";
 const SITE_TITLE = "Blockwise | Real Estate Meta Ads Workflow";
 const SITE_DESCRIPTION =
-  "Help real estate teams create, approve, export, and track Meta ad campaigns through their own ad account. Free 7-day trial, no card required.";
+  "Create, approve, publish, and track Meta ad campaigns through your own ad account. Start with email and create three complete ads before adding a card.";
 
 export const viewport: Viewport = {
   width: "device-width",

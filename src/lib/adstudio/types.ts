@@ -73,7 +73,7 @@ export type AdStudioBrandKit = {
   identity: {
     businessName: string;
     tradingName: string | null;
-    marketCountry: "AU";
+    marketCountry: "AU" | "US";
     marketRegion: string | null;
     licenceText: string | null;
   };

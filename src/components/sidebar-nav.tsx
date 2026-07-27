@@ -13,6 +13,7 @@ import {
   Settings2,
   Star,
   UserRound,
+  ContactRound,
   UsersRound,
 } from "lucide-react";
 import type { ComponentType, SVGProps } from "react";
@@ -56,6 +57,7 @@ function RadarIcon({ size = 18, ...props }: { size?: number } & SVGProps<SVGSVGE
 
 const operatorNavItems: NavItem[] = [
   { href: "/operator", label: "Operator", icon: LayoutGrid },
+  { href: "/operator/customers", label: "Customers", icon: ContactRound },
   { href: "/operator/email", label: "Email", icon: Mail },
   { href: "/operator/research", label: "Research Ops", icon: Activity },
   { href: "/operator/analytics", label: "Site Analytics", icon: BarChart3 },

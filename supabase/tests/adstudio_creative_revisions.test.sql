@@ -35,12 +35,12 @@ values ('b1000000-0000-4000-8000-000000000001', 'Other Revision Test');
 
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password,
-  raw_app_meta_data, raw_user_meta_data, created_at, updated_at
+  raw_app_meta_data, raw_user_meta_data, email_confirmed_at, created_at, updated_at
 ) values (
   '00000000-0000-0000-0000-000000000000',
   'c1000000-0000-4000-8000-000000000001',
   'authenticated', 'authenticated', 'revision-test@example.test', '',
-  '{}'::jsonb, '{}'::jsonb, now(), now()
+  '{}'::jsonb, '{}'::jsonb, now(), now(), now()
 );
 insert into public.profiles (id, email)
 values ('c1000000-0000-4000-8000-000000000001', 'revision-test@example.test');

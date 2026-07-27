@@ -1,9 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { recordWorkspaceFunnelEventBestEffort } from "@/lib/analytics/progressive-funnel";
 import { errorResponse, readJsonBody, requireAdStudioRequest } from "@/lib/adstudio/http";
 import { buildAdStudioLiveResult, extractBrandKitFromWebsite } from "@/lib/adstudio";
 import { normalizeAndValidateExtractionUrl } from "@/lib/adstudio/extraction-url";
 import { isExampleBrandKitSourceUrl, persistAdStudioBrandKit } from "@/lib/adstudio/persistence";
+import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,7 +14,7 @@ type ExtractBody = {
   websiteUrl?: string;
   website_url?: string;
   html?: string;
-  marketCountry?: "AU";
+  marketCountry?: "AU" | "US";
   marketRegion?: string;
   forceRecrawl?: boolean;
 };
@@ -29,6 +31,9 @@ export async function POST(request: NextRequest) {
 
   if (!websiteUrl) {
     return NextResponse.json({ error: "websiteUrl is required." }, { status: 400 });
+  }
+  if (body.marketCountry !== undefined && body.marketCountry !== "AU" && body.marketCountry !== "US") {
+    return NextResponse.json({ error: "marketCountry must be AU or US." }, { status: 400 });
   }
 
   try {
@@ -53,6 +58,14 @@ export async function POST(request: NextRequest) {
       stylesheetTextByUrl,
     });
     const persisted = await persistAdStudioBrandKit(context.supabase, brandKit, context.access.userId);
+    if (!persisted.error) {
+      await recordWorkspaceFunnelEventBestEffort(createSupabaseServiceClient(), {
+        eventName: "website_submitted",
+        workspaceId: context.access.workspaceId,
+        idempotencyKey: `activation:${context.access.workspaceId}:first-website-submitted`,
+        properties: { brand_kit_id: brandKit.brandKitId },
+      });
+    }
     const liveResult = buildAdStudioLiveResult({
       data: brandKit,
       persistenceError: persisted.error?.message,

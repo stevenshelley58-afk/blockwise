@@ -18,11 +18,10 @@ import {
   ArrowUpRight,
   CircleDollarSign,
   Megaphone,
-  Package,
+  Sparkles,
   UsersRound,
 } from "lucide-react";
 
-import { ButtonArrow } from "@/components/shadcn-dashboard/button/button-01";
 import { selfServeIcons } from "@/components/sidebar-nav";
 import { AnimatedGroup } from "@/components/ui/animated-group";
 import { AnimatedNumber } from "@/components/ui/animated-number";
@@ -30,14 +29,13 @@ import { niche } from "@/config/niche";
 import { countUpDuration, cssSpring, springs } from "@/lib/motion";
 
 import { HomePerformanceChart, type HomeDailyPoint } from "./home-chart";
-import { HomeSetupCard } from "./home-setup-card";
+import { ActivationCard, type ActivationCardData } from "./activation-card";
 import { Sparkline } from "./sparkline";
 
-export type HomeData = {
+export type HomeData = ActivationCardData & {
   workspaceName: string;
   hasBrand: boolean;
   hasProvider: boolean;
-  packs: { used: number; included: number; remaining: number };
   ads: { created: number; live: number | null; publishedThisWeek: number };
   performance: {
     leads: number;
@@ -82,8 +80,8 @@ function DeltaBadge({
   );
 }
 
-/** Ad-pack meter: data-hue fill on the data track, width eased on mount. */
-function PackMeter({ remaining, included }: { remaining: number; included: number }) {
+/** Credit meter: data-hue fill on the data track, width eased on mount. */
+function CreditMeter({ remaining, granted }: { remaining: number; granted: number }) {
   const [on, setOn] = useState(false);
 
   useEffect(() => {
@@ -91,20 +89,24 @@ function PackMeter({ remaining, included }: { remaining: number; included: numbe
     return () => cancelAnimationFrame(frame);
   }, []);
 
-  const pct = included > 0 ? Math.max(0, Math.min(100, (remaining / included) * 100)) : 0;
+  const pct = granted > 0 ? Math.max(0, Math.min(100, (remaining / granted) * 100)) : 0;
 
   return (
     <div
       role="progressbar"
       aria-valuemin={0}
-      aria-valuemax={included}
+      aria-valuemax={granted}
       aria-valuenow={remaining}
-      aria-label={niche.copy.shell.trial.packsLeft(remaining, included)}
+      aria-label={`${remaining} of ${granted} render credits remaining`}
       className="h-1.5 w-full overflow-hidden rounded-full bg-data-track"
     >
       <div
         className="h-full rounded-full bg-data motion-reduce:transition-none"
-        style={{ width: on ? `${pct}%` : "0%", transition: `width 1s ${cssSpring}` }}
+        style={{
+          transform: `scaleX(${on ? pct / 100 : 0})`,
+          transformOrigin: "left",
+          transition: `transform 1s ${cssSpring}`,
+        }}
       />
     </div>
   );
@@ -146,21 +148,7 @@ function StatCard({
 
 export function HomeDashboard({ data }: { data: HomeData }) {
   const copy = niche.copy.home;
-  const { packs, ads, performance } = data;
-
-  // Page-head state machine: the single most important next action.
-  const headState = !data.hasBrand
-    ? { ...copy.states.needsBrand, href: "/ad-studio/brand" }
-    : !data.hasProvider
-      ? { ...copy.states.needsProvider, href: "/settings#connections" }
-      : ads.created === 0
-        ? { ...copy.states.needsFirstAd, href: "/ad-studio?newAd=1" }
-        : {
-            heading: copy.states.ready.heading,
-            subtitle: copy.states.ready.subtitle(data.workspaceName),
-            ctaLabel: copy.states.ready.ctaLabel,
-            href: "/ad-studio?newAd=1",
-          };
+  const { credits, ads, performance } = data;
 
   const quickActions = copy.quickActions.filter(
     (action) => !action.feature || niche.features[action.feature],
@@ -173,14 +161,16 @@ export function HomeDashboard({ data }: { data: HomeData }) {
     <div className="mx-auto w-full max-w-[1120px] px-4 pt-6 pb-28 md:px-6 md:pt-8 md:pb-16">
       <AnimatedGroup className="grid gap-3.5">
         {/* Page head */}
-        <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="font-mono text-[9.5px] font-medium tracking-[0.12em] text-(--faint) uppercase">
+            Customer workspace
+          </p>
           <div>
             <h1 className="font-display text-[24px] font-extrabold tracking-[-0.02em] md:text-[27px]">
-              {headState.heading}
+              Home
             </h1>
-            <p className="mt-1 text-[13.5px] text-muted-foreground">{headState.subtitle}</p>
+            <p className="mt-1 text-[13.5px] text-muted-foreground">{data.workspaceName}</p>
           </div>
-          <ButtonArrow href={headState.href}>{headState.ctaLabel}</ButtonArrow>
         </div>
 
         {/* KPI row */}
@@ -228,25 +218,35 @@ export function HomeDashboard({ data }: { data: HomeData }) {
           </StatCard>
 
           <StatCard
-            label={copy.kpis.adPacksLeft}
-            icon={<Package size={15} strokeWidth={1.8} />}
+            label="Render credits"
+            icon={<Sparkles size={15} strokeWidth={1.8} />}
             foot={
               <div className="w-full">
-                <PackMeter remaining={packs.remaining} included={packs.included} />
+                {credits.remaining != null && credits.granted != null ? (
+                  <CreditMeter remaining={credits.remaining} granted={credits.granted} />
+                ) : (
+                  <span>Issued after entitlement setup</span>
+                )}
               </div>
             }
           >
-            <AnimatedNumber value={packs.remaining} springOptions={COUNT_SPRING} />
-            <span className="font-sans text-[13px] font-medium tracking-normal text-muted-foreground">
-              / {packs.included}
-            </span>
+            {credits.remaining != null ? (
+              <>
+                <AnimatedNumber value={credits.remaining} springOptions={COUNT_SPRING} />
+                <span className="font-sans text-[13px] font-medium tracking-normal text-muted-foreground">
+                  / {credits.granted ?? credits.remaining}
+                </span>
+              </>
+            ) : (
+              <span aria-label="Credits not issued yet">—</span>
+            )}
           </StatCard>
         </AnimatedGroup>
 
-        {/* Chart + setup */}
+        {/* One server-resolved activation card remains dominant; performance is secondary. */}
         <AnimatedGroup className="grid gap-3.5 lg:grid-cols-[3fr_2fr]" itemClassName="h-full">
+          <ActivationCard data={data} />
           <HomePerformanceChart daily={performance?.daily ?? null} />
-          <HomeSetupCard hasBrand={data.hasBrand} hasProvider={data.hasProvider} adsCreated={ads.created} />
         </AnimatedGroup>
 
         {/* Quick actions */}

@@ -79,7 +79,8 @@ test("asset upload UI supports picker, drop, paste, previews, and editable-targe
     /\.studio-newad-upload\[data-has-file="true"\] \.asset-upload-preview \{\s*width: 100%;/,
   );
   assert.match(globals, /studio-media-upload\[data-has-file="true"\]/);
-  assert.match(onboarding, /<AssetUploadDropzone[\s\S]*Upload logo/);
+  assert.match(onboarding, /\/api\/adstudio\/brand-kits\/extract/);
+  assert.match(onboarding, /Add the essentials instead/);
   assert.match(brandStudio, /workspace-artifacts/);
   assert.match(brandStudio, /\/api\/adstudio\/brand-kits\/\$\{kit\.brandKitId\}\/assets/);
 });

@@ -1,0 +1,186 @@
+import { createHmac, timingSafeEqual } from "node:crypto";
+
+export type BookingMarket = "US" | "AU";
+export type BookingState = "link_sent" | "booked" | "rescheduled" | "cancelled" | "completed" | "failed";
+
+export type ProviderBookingEvent = {
+  provider: "calcom";
+  providerEventId: string;
+  providerBookingId: string;
+  providerEventTypeId: string | null;
+  trigger:
+    | "BOOKING_CREATED"
+    | "BOOKING_RESCHEDULED"
+    | "BOOKING_CANCELLED"
+    | "MEETING_ENDED";
+  state: BookingState;
+  occurredAt: string;
+  invitationToken: string | null;
+  customerEmail: string | null;
+  customerName: string | null;
+  scheduledStartAt: string | null;
+  scheduledEndAt: string | null;
+  rescheduleUrl: string | null;
+  raw: Record<string, unknown>;
+};
+
+export class BookingConfigurationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "BookingConfigurationError";
+  }
+}
+
+export class BookingWebhookError extends Error {
+  readonly status: number;
+
+  constructor(message: string, status = 400) {
+    super(message);
+    this.name = "BookingWebhookError";
+    this.status = status;
+  }
+}
+
+export function normalizeBookingMarket(value: string | null | undefined): BookingMarket {
+  return value?.trim().toUpperCase() === "US" ? "US" : "AU";
+}
+
+export function getHostedBookingUrl(
+  market: BookingMarket,
+  env: NodeJS.ProcessEnv = process.env,
+): string | null {
+  const value = market === "US" ? env.CALCOM_ONBOARDING_URL_US : env.CALCOM_ONBOARDING_URL_AU;
+  const trimmed = value?.trim();
+  if (!trimmed) return null;
+  try {
+    const url = new URL(trimmed);
+    return url.protocol === "https:" ? url.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
+export function buildHostedBookingUrl(input: {
+  market: BookingMarket;
+  invitationId: string;
+  env?: NodeJS.ProcessEnv;
+}): string {
+  const configured = getHostedBookingUrl(input.market, input.env);
+  if (!configured) {
+    throw new BookingConfigurationError(`The ${input.market} onboarding booking URL is not configured.`);
+  }
+  const url = new URL(configured);
+  const invitationToken = signBookingInvitation(input.invitationId, input.env);
+  url.searchParams.set("utm_source", "blockwise");
+  url.searchParams.set("utm_medium", "product");
+  url.searchParams.set("utm_campaign", "onboarding");
+  url.searchParams.set("metadata[invitation]", invitationToken);
+  return url.toString();
+}
+
+export function signBookingInvitation(
+  invitationId: string,
+  env: NodeJS.ProcessEnv = process.env,
+): string {
+  const secret = env.BOOKING_INVITATION_SECRET?.trim();
+  if (!secret) throw new BookingConfigurationError("The booking invitation signing secret is not configured.");
+  if (!isUuid(invitationId)) throw new BookingConfigurationError("Booking invitation ID is invalid.");
+  const signature = createHmac("sha256", secret).update(invitationId).digest("hex");
+  return `${invitationId}.${signature}`;
+}
+
+export function verifyBookingInvitationToken(
+  token: string | null | undefined,
+  env: NodeJS.ProcessEnv = process.env,
+): string | null {
+  const secret = env.BOOKING_INVITATION_SECRET?.trim();
+  if (!secret || !token) return null;
+  const [invitationId, received, extra] = token.split(".");
+  if (extra || !invitationId || !received || !isUuid(invitationId) || !/^[a-f0-9]{64}$/i.test(received)) {
+    return null;
+  }
+  const expected = createHmac("sha256", secret).update(invitationId).digest();
+  return timingSafeEqual(expected, Buffer.from(received, "hex")) ? invitationId : null;
+}
+
+export function verifyCalcomWebhook(input: {
+  rawBody: string;
+  signature: string | null;
+  secret?: string | null;
+}): boolean {
+  const secret = input.secret?.trim();
+  if (!secret || !input.signature) return false;
+  const expected = createHmac("sha256", secret).update(input.rawBody).digest("hex");
+  const received = input.signature.trim().toLowerCase();
+  if (!/^[a-f0-9]{64}$/.test(received)) return false;
+  return timingSafeEqual(Buffer.from(expected, "hex"), Buffer.from(received, "hex"));
+}
+
+export function parseCalcomWebhook(input: {
+  raw: Record<string, unknown>;
+  providerEventId: string;
+}): ProviderBookingEvent {
+  const trigger = stringValue(input.raw.triggerEvent);
+  if (!isSupportedTrigger(trigger)) {
+    throw new BookingWebhookError("Unsupported booking webhook event.", 202);
+  }
+  const payload = recordValue(input.raw.payload) ?? input.raw;
+  const providerBookingId =
+    stringValue(payload.uid) ??
+    stringValue(payload.bookingUid) ??
+    stringValue(recordValue(payload.booking)?.uid);
+  if (!providerBookingId) {
+    throw new BookingWebhookError("Booking webhook is missing a booking identifier.");
+  }
+  const attendee = Array.isArray(payload.attendees)
+    ? recordValue(payload.attendees[0])
+    : null;
+  const metadata = recordValue(payload.metadata);
+  const occurredAt = stringValue(input.raw.createdAt) ?? new Date().toISOString();
+
+  return {
+    provider: "calcom",
+    providerEventId: input.providerEventId,
+    providerBookingId,
+    providerEventTypeId: stringValue(payload.eventTypeId),
+    trigger,
+    state: stateForTrigger(trigger),
+    occurredAt,
+    invitationToken: stringValue(metadata?.invitation),
+    customerEmail: stringValue(attendee?.email),
+    customerName: stringValue(attendee?.name),
+    scheduledStartAt: stringValue(payload.startTime),
+    scheduledEndAt: stringValue(payload.endTime),
+    rescheduleUrl:
+      stringValue(payload.rescheduleUrl) ??
+      stringValue(payload.rescheduleLink) ??
+      stringValue(payload.bookerUrl),
+    raw: input.raw,
+  };
+}
+
+function isSupportedTrigger(value: string | null): value is ProviderBookingEvent["trigger"] {
+  return ["BOOKING_CREATED", "BOOKING_RESCHEDULED", "BOOKING_CANCELLED", "MEETING_ENDED"].includes(value ?? "");
+}
+
+function stateForTrigger(trigger: ProviderBookingEvent["trigger"]): BookingState {
+  if (trigger === "BOOKING_CREATED") return "booked";
+  if (trigger === "BOOKING_RESCHEDULED") return "rescheduled";
+  if (trigger === "BOOKING_CANCELLED") return "cancelled";
+  return "completed";
+}
+
+function recordValue(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function stringValue(value: unknown): string | null {
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}

@@ -23,7 +23,7 @@ export default async function DataDeletionPage({ searchParams }: PageProps) {
   return (
     <>
       <p style={{ color: "#475569", fontSize: 13, textTransform: "uppercase", letterSpacing: 0.5 }}>
-        Last updated: 28 May 2026
+        Last updated: 27 July 2026
       </p>
       <h1 style={{ fontSize: 36, margin: "8px 0 24px", fontWeight: 600 }}>Requesting Data Deletion</h1>
 
@@ -57,6 +57,12 @@ export default async function DataDeletionPage({ searchParams }: PageProps) {
         page explains how to make a request, what to expect, and how Meta-initiated deletion
         callbacks are handled. For the full picture of what data we hold and why, see our
         {" "}<a href="/privacy">Privacy Policy</a>.
+      </p>
+      <p>
+        Cancelling a paid subscription stops future renewals but does not delete your workspace.
+        Use one of the deletion options below when you also want the associated data removed.
+        Limited billing, security, audit, or dispute records may still be retained as described in
+        the Privacy Policy.
       </p>
 
       <h2 style={{ fontSize: 22, marginTop: 32, fontWeight: 600 }}>

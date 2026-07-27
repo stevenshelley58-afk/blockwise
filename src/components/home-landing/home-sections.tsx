@@ -347,26 +347,26 @@ export function PropertyCheck() {
 export function FreeTrial() {
   return (
     <div className="hw-band hw-band--wide hw-trial">
-      <h2>Try Blockwise free for 7 days.</h2>
+      <h2>Create three complete ads free.</h2>
       <p className="hw-sub">
-        No card required. Review your ads and connect your ad account when you are ready for final
-        setup.
+        Start with only your email. Build and review three Feed + Story ad packs before connecting
+        Meta or adding a card.
       </p>
       <CtaLink location="free_trial" href="/signup" className="hw-btn hw-btn--dark">
-        Start free trial <span className="hw-arr">→</span>
+        Continue with email <span className="hw-arr">→</span>
       </CtaLink>
       <div className="hw-trial-facts">
         <div className="hw-trial-fact">
-          <h3>7 days</h3>
-          <p>Full access from the minute you confirm your email.</p>
+          <h3>Three complete ads</h3>
+          <p>Each includes a finished Feed and Story creative.</p>
         </div>
         <div className="hw-trial-fact">
           <h3>No card</h3>
-          <p>Nothing charges when the trial ends. Your drafts stay put.</p>
+          <p>Add payment details only when you choose to run a campaign.</p>
         </div>
         <div className="hw-trial-fact">
-          <h3>Connect anytime</h3>
-          <p>Connect your Meta ad account when you are ready.</p>
+          <h3>One live setup free</h3>
+          <p>Your Meta ad spend is always paid separately to Meta.</p>
         </div>
       </div>
     </div>
@@ -378,29 +378,29 @@ export function ManagedSetup() {
     <div className="hw-fold hw-ms">
       <div className="hw-wide hw-ms-grid">
         <div className="hw-ms-copy">
-          <h2>Want help getting started?</h2>
+          <h2>Want Blockwise to run it with you?</h2>
           <p className="hw-sub">
-            Book a 15-minute walkthrough. We&rsquo;ll set up your first ads, connect your ad
-            account and review everything before handoff.
+            Managed service starts at US$1,500/month or A$2,500/month, plus ad spend. Book a call
+            before paying, or start managed onboarding and book immediately.
           </p>
           <ul className="hw-control-points hw-control-points--ink">
             <li>
               <span className="hw-check" aria-hidden>
                 ✓
               </span>
-              First ads set up with you
+              The complete self-serve product
             </li>
             <li>
               <span className="hw-check" aria-hidden>
                 ✓
               </span>
-              Ad account connected
+              Launch and weekly optimization for up to four live campaigns
             </li>
             <li>
               <span className="hw-check" aria-hidden>
                 ✓
               </span>
-              Everything reviewed before handoff
+              One brand, one Meta ad account, and a monthly report
             </li>
           </ul>
         </div>

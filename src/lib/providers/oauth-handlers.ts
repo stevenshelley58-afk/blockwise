@@ -138,6 +138,8 @@ async function exchangeMetaCode(request: NextRequest, code: string): Promise<OAu
     metadata: {
       meta: {
         metaAdAccountId: account?.id ?? "",
+        metaBusinessId: account?.businessId ?? "",
+        metaBusinessName: account?.businessName ?? "",
         pageId: page?.id ?? "",
         instagramActorId: null,
         pixelId: null,

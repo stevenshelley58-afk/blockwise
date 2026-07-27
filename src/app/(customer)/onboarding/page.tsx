@@ -1,8 +1,6 @@
 import { OnboardingWizard } from "@/components/onboarding/onboarding-wizard";
 import { niche } from "@/config/niche";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
-import { canManageProviderConnections } from "@/lib/auth/access-control";
-import { GOOGLE_ADS_ENABLED } from "@/lib/config/feature-flags";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +28,7 @@ type BrandKitRow = {
 type WorkspaceRow = {
   name?: string | null;
   region?: string | null;
+  country_code?: string | null;
 };
 
 export default async function OnboardingPage() {
@@ -47,26 +46,23 @@ export default async function OnboardingPage() {
   ]);
 
   const w = (workspace as WorkspaceRow | null) ?? null;
-  const canManage = access.isOperator || access.role === "owner" || access.role === "admin";
+  const canConfirmMarket = access.isOperator || access.role === "owner" || access.role === "admin";
 
   return (
     <main className="mx-auto w-full max-w-[720px] px-4 pt-6 pb-28 md:px-6 md:pt-8 md:pb-16" aria-label="Onboarding">
       <header className="mb-6">
         <p className="font-mono text-[9.5px] font-medium tracking-[0.12em] text-(--faint) uppercase">Workspace setup</p>
         <h1 className="mt-1 font-display text-[24px] font-extrabold tracking-[-0.02em] md:text-[27px]">{niche.copy.onboarding.title}</h1>
-        <p className="mt-1 text-[13px] text-muted-foreground">{niche.copy.onboarding.lead}</p>
+        <p className="mt-1 text-[13px] text-muted-foreground">
+          Add your website, confirm your country, then review the Brand Pack we prepare.
+        </p>
       </header>
 
       <OnboardingWizard
         workspaceId={access.workspaceId}
-        agencyName={w?.name ?? access.workspaceName ?? "Workspace"}
-        region={w?.region ?? access.region ?? "AU"}
+        country={w?.country_code ?? w?.region ?? access.region ?? "AU"}
         brandKit={(brandKit as BrandKitRow | null) ?? null}
-        canSaveProfile={canManage}
-        canSaveBrand={access.isOperator || access.role === "owner" || access.role === "admin" || access.role === "member"}
-        canManageConnections={canManageProviderConnections({ role: access.role, workspaceMode: access.workspaceMode })}
-        canOpenCampaigns
-        googleAdsEnabled={GOOGLE_ADS_ENABLED}
+        canConfirmMarket={canConfirmMarket}
       />
     </main>
   );

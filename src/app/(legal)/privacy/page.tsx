@@ -13,7 +13,7 @@ export default function PrivacyPolicyPage() {
   return (
     <>
       <p style={{ color: "#475569", fontSize: 13, textTransform: "uppercase", letterSpacing: 0.5 }}>
-        Last updated: 19 July 2026
+        Last updated: 27 July 2026
       </p>
       <h1 style={{ fontSize: 36, margin: "8px 0 24px", fontWeight: 600 }}>Privacy Policy</h1>
 
@@ -45,11 +45,32 @@ export default function PrivacyPolicyPage() {
         2. Data we collect from Blockwise customers (agents)
       </h2>
       <ul>
-        <li>Account profile: email address, name, workspace name, role.</li>
-        <li>Authentication metadata managed by Supabase.</li>
         <li>
-          Advertising configuration: brand kit, target suburbs, ad copy you write or approve, lead
-          form questions, lead destination preferences.
+          Account profile: verified email address, preferred name when provided, optional phone
+          number, timezone, workspace name, and role.
+        </li>
+        <li>
+          Authentication metadata managed by Supabase, including magic-link or one-time-code
+          verification.
+        </li>
+        <li>
+          Workspace and advertising configuration: website, confirmed country, Brand Pack, target
+          locations, ad copy and images you provide or approve, lead form questions, and lead
+          destination preferences.
+        </li>
+        <li>
+          Billing records: Stripe customer, Checkout, subscription, invoice, payment status,
+          accepted offer, and cancellation references. Stripe processes your payment method;
+          Blockwise does not store the full card number.
+        </li>
+        <li>
+          Onboarding records: hosted booking identifier, booking status, scheduled time, and
+          attendance status.
+        </li>
+        <li>
+          Product analytics: server-confirmed activation and billing milestones, workspace,
+          country, acquisition source, and small non-sensitive event facts. Funnel event rows do
+          not store your email address, payment card data, or provider access tokens.
         </li>
         <li>Audit history of approvals, publishes, and configuration changes.</li>
       </ul>
@@ -75,8 +96,8 @@ export default function PrivacyPolicyPage() {
         </li>
         <li>
           <strong>Campaign, ad set, and ad objects</strong> we create on your account. These are
-          always created in PAUSED state. We never create, activate, or modify a campaign without
-          a separate in-application human approval.
+          created or changed only after the in-application approval required for that action. We do
+          not publish or modify a campaign without that approval.
         </li>
         <li>
           <strong>Lead form submissions</strong> you have authorized us to retrieve from forms
@@ -115,6 +136,15 @@ export default function PrivacyPolicyPage() {
       <ul>
         <li>Account and configuration data: retained while your Blockwise workspace is active.</li>
         <li>
+          Cancelling a subscription does not delete the workspace. A separate workspace deletion
+          request follows the deletion periods in Section 7.
+        </li>
+        <li>
+          Billing acceptance, invoice, cancellation, security, and dispute records may be retained
+          after workspace deletion where needed for accounting, legal, fraud-prevention, or dispute
+          obligations.
+        </li>
+        <li>
           Meta access and refresh tokens: stored encrypted and rotated on Meta&rsquo;s schedule;
           deleted within 30 days of you disconnecting the integration.
         </li>
@@ -131,6 +161,9 @@ export default function PrivacyPolicyPage() {
         <li>Vercel (application hosting)</li>
         <li>Supabase (authentication, application database, encrypted storage)</li>
         <li>Trigger.dev (background job execution)</li>
+        <li>Stripe (Checkout, payment methods, tax calculation, subscriptions, and receipts)</li>
+        <li>Cal.com (hosted onboarding scheduling)</li>
+        <li>Meta (connected business assets, campaign delivery, lead forms, and reporting)</li>
         <li>Model providers and gateways (large language model inference for ad copy generation)</li>
         <li>Cloudflare (egress filtering and model gateway)</li>
       </ul>
