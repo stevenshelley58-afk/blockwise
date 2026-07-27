@@ -1,8 +1,11 @@
 ﻿"use client";
 
-import { RefreshCw } from "lucide-react";
+import { ArrowRight, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+
+import { niche } from "@/config/niche";
+import { cssSpring } from "@/lib/motion";
 
 export type TrialStatus = {
   isTrial: boolean;
@@ -16,7 +19,7 @@ export type TrialStatus = {
   upgradeHref: string;
 };
 
-export function TrialStatusPill({ initialStatus }: { initialStatus: TrialStatus | null }) {
+function useTrialStatus(initialStatus: TrialStatus | null) {
   const [status, setStatus] = useState<TrialStatus | null>(initialStatus);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -42,16 +45,94 @@ export function TrialStatusPill({ initialStatus }: { initialStatus: TrialStatus 
     return () => window.removeEventListener("blockwise:trial-status-refresh", handleRefresh);
   }, [refresh]);
 
+  return { status, refreshing, refresh };
+}
+
+function trialLabel(status: TrialStatus): string {
+  const copy = niche.copy.shell.trial;
+  if (status.trialExpired) return copy.ended;
+  if (typeof status.trialDaysRemaining === "number") {
+    return copy.daysLeft(status.trialDaysRemaining);
+  }
+  return copy.active;
+}
+
+/**
+ * Premium v2 trial card for the self-serve sidebar footer (mockup target):
+ * label row, ad-pack meter in the data hue, upgrade CTA with arrow nudge.
+ */
+export function TrialStatusCard({ initialStatus }: { initialStatus: TrialStatus | null }) {
+  const { status } = useTrialStatus(initialStatus);
+  const [meterOn, setMeterOn] = useState(false);
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => setMeterOn(true));
+    return () => cancelAnimationFrame(frame);
+  }, []);
+
+  if (!status?.isTrial) return null;
+
+  const copy = niche.copy.shell.trial;
+  const included = Math.max(1, status.includedAdPacks);
+  const remaining = Math.max(0, status.remainingAdPacks);
+  const fill = Math.min(100, Math.round((remaining / included) * 100));
+
+  return (
+    <div
+      aria-label="Trial status"
+      className="rounded-(--r-card) border border-border bg-card p-3 shadow-card"
+    >
+      <p className="flex items-baseline justify-between gap-2 text-[11.5px] font-semibold text-muted-foreground">
+        <span className="truncate">{trialLabel(status)}</span>
+        <strong className="font-bold text-foreground tabular-nums">
+          {remaining} / {included}
+        </strong>
+      </p>
+      <div
+        role="progressbar"
+        aria-label={copy.packsLeft(remaining, included)}
+        aria-valuemin={0}
+        aria-valuemax={included}
+        aria-valuenow={remaining}
+        className="mt-2 h-[5px] overflow-hidden rounded-full bg-data-track"
+      >
+        <div
+          className="h-full rounded-full bg-data motion-reduce:transition-none"
+          style={{
+            width: meterOn ? `${fill}%` : "0%",
+            transition: `width 1s ${cssSpring}`,
+          }}
+        />
+      </div>
+      <Link
+        href={status.upgradeHref}
+        className="group mt-2.5 inline-flex items-center gap-1 text-xs font-bold text-foreground"
+      >
+        {copy.upgrade}
+        <ArrowRight
+          aria-hidden
+          size={12}
+          className="transition-transform duration-200 group-hover:translate-x-0.5 motion-reduce:transition-none"
+          style={{ transitionTimingFunction: cssSpring }}
+        />
+      </Link>
+    </div>
+  );
+}
+
+/**
+ * Legacy inline pill — kept verbatim for the operator/monitor shells, which
+ * stay on the existing CSS shell until their own migration.
+ */
+export function TrialStatusPill({ initialStatus }: { initialStatus: TrialStatus | null }) {
+  const { status, refreshing, refresh } = useTrialStatus(initialStatus);
+
   if (!status?.isTrial) return null;
 
   const used = Math.max(0, status.usedAdPacks);
   const included = Math.max(1, status.includedAdPacks);
   const remaining = Math.max(0, status.remainingAdPacks);
-  const trialLabel = status.trialExpired
-    ? "Trial ended"
-    : typeof status.trialDaysRemaining === "number"
-      ? `Trial: ${status.trialDaysRemaining} day${status.trialDaysRemaining === 1 ? "" : "s"} left`
-      : "Trial active";
+  const label = trialLabel(status);
 
   return (
     <div
@@ -76,7 +157,7 @@ export function TrialStatusPill({ initialStatus }: { initialStatus: TrialStatus 
         whiteSpace: "nowrap",
       }}
     >
-      <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{trialLabel}</span>
+      <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{label}</span>
       <span aria-hidden style={{ color: "var(--line)", fontWeight: 500 }}>
         |
       </span>

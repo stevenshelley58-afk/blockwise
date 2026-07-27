@@ -3,9 +3,12 @@
 import { useEffect, useState, type FormEvent } from "react";
 
 import { StatusPill } from "@/components/status-pill";
-import { logCaught } from "@/lib/log";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { niche } from "@/config/niche";
 
-import { Feedback, REGION_CURRENCY, Section, type Connection, type Msg, type RT, type SB } from "./settings-shared";
+import { Feedback, REGION_CURRENCY, Section, selectClass, type Connection, type Msg, type RT, type SB } from "./settings-shared";
 
 type MetaLeadDestinationType = "webhook" | "crm" | "manual";
 
@@ -98,7 +101,7 @@ export function ConnectionsSection({
       });
       setBusyProvider(null);
       if (!res.ok) {
-        const data = (await res.json().catch(logCaught("settings: meta disconnect response parse failed", {}))) as { error?: string };
+        const data = (await res.json().catch(() => ({}))) as { error?: string };
         setMessage({ tone: "error", text: data.error ?? `Couldn't disconnect ${label}.` });
         return;
       }
@@ -119,42 +122,46 @@ export function ConnectionsSection({
   }
 
   return (
-    <Section id="connections" title="Ad & API connections" description="Connect the ad platforms Blockwise reads and publishes through.">
+    <Section id="connections" title={niche.copy.settings.sections.connections}>
       {providers.map((prov) => {
         const conn = connections.find((c) => c.provider === prov.key);
         const connected = conn && conn.status !== "revoked" && conn.status !== "not_connected";
         return (
-          <div className="stack" key={prov.key} style={{ gap: 10 }}>
-            <div className="wizard-connect-row">
-              <div>
-              <strong>{prov.label}</strong>
-              <div className="item-meta">
-                {conn?.accountName ? `${conn.accountName} · ` : ""}
-                {conn ? <StatusPill tone={statusTone(conn.status)}>{STATUS_LABELS[conn.status] ?? conn.status.replace(/_/g, " ")}</StatusPill> : <StatusPill tone="blue">Not connected</StatusPill>}
-              </div>
+          <div className="flex flex-col gap-3" key={prov.key}>
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex flex-col gap-1">
+                <strong className="text-sm font-medium">{prov.label}</strong>
+                <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                  {conn?.accountName ? <span>{conn.accountName} ·</span> : null}
+                  {conn ? <StatusPill tone={statusTone(conn.status)}>{STATUS_LABELS[conn.status] ?? conn.status.replace(/_/g, " ")}</StatusPill> : <StatusPill tone="blue">Not connected</StatusPill>}
+                </div>
               </div>
               {!prov.enabled ? (
-              <button className="button secondary" type="button" disabled>
-                Not enabled yet
-              </button>
-            ) : !canManage ? (
-              <StatusPill tone="blue">Owner/admin only</StatusPill>
-            ) : connected ? (
-              <div style={{ display: "flex", gap: 8 }}>
-                <a className="button secondary" href={prov.connectHref}>Reconnect</a>
-                <button className="button secondary" type="button" onClick={() => disconnect(prov.key, prov.label)} disabled={busyProvider === prov.key}>
-                  {busyProvider === prov.key ? "Working" : "Disconnect"}
-                </button>
-              </div>
-            ) : (
-              <a className="button" href={prov.connectHref}>Connect</a>
+                <Button variant="outline" type="button" disabled>
+                  Not enabled yet
+                </Button>
+              ) : !canManage ? (
+                <StatusPill tone="blue">Owner/admin only</StatusPill>
+              ) : connected ? (
+                <div className="flex gap-2">
+                  <Button variant="outline" asChild>
+                    <a href={prov.connectHref}>Reconnect</a>
+                  </Button>
+                  <Button variant="outline" type="button" onClick={() => disconnect(prov.key, prov.label)} disabled={busyProvider === prov.key}>
+                    {busyProvider === prov.key ? "Working" : "Disconnect"}
+                  </Button>
+                </div>
+              ) : (
+                <Button asChild>
+                  <a href={prov.connectHref}>Connect</a>
+                </Button>
               )}
             </div>
             {prov.key === "meta" && connected ? (
               <MetaSetupForm workspaceId={workspaceId} canManage={canManage} />
             ) : null}
             {prov.key === "meta" && !connected ? (
-              <p className="wizard-skip-note">Connect Meta first, then choose the ad account, Page, lead destination, and privacy policy used for publishing.</p>
+              <p className="text-sm text-muted-foreground">Connect Meta first, then choose the ad account, Page, lead destination, and privacy policy used for publishing.</p>
             ) : null}
           </div>
         );
@@ -189,10 +196,10 @@ function MetaSetupForm({ workspaceId, canManage }: { workspaceId: string; canMan
     let active = true;
     setLoading(true);
     fetch(`/api/integrations/meta/setup?workspaceId=${encodeURIComponent(workspaceId)}`)
-      .then((res) => res.json().catch(logCaught("settings: meta setup response parse failed", {})) as Promise<MetaSetupResponse>)
+      .then((res) => res.json().catch(() => ({})) as Promise<MetaSetupResponse>)
       .then((data) => {
         if (!active) return;
-        if (data.setup) setSetup(data.setup);
+        if (data.setup) setSetup(normalizeMetaSetupForForm(data.setup));
         setAssets(data.assets ?? null);
         setBlockers(data.blockers ?? []);
         setMessage(data.error ? { tone: "error", text: data.error } : null);
@@ -237,13 +244,13 @@ function MetaSetupForm({ workspaceId, canManage }: { workspaceId: string; canMan
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ workspaceId, setup }),
       });
-      const data = (await res.json().catch(logCaught("settings: meta setup save response parse failed", {}))) as MetaSetupResponse;
+      const data = (await res.json().catch(() => ({}))) as MetaSetupResponse;
       setBusy(false);
       if (!res.ok) {
         setMessage({ tone: "error", text: data.error ?? "Couldn't save Meta setup." });
         return;
       }
-      if (data.setup) setSetup(data.setup);
+      if (data.setup) setSetup(normalizeMetaSetupForForm(data.setup));
       setBlockers(data.blockers ?? []);
       setMessage({
         tone: data.ready ? "success" : "error",
@@ -259,23 +266,24 @@ function MetaSetupForm({ workspaceId, canManage }: { workspaceId: string; canMan
   const availableInstagramActors = assets?.instagramActors.filter((actor) => !actor.pageId || actor.pageId === setup.pageId) ?? [];
 
   return (
-    <form className="stack" onSubmit={save} style={{ border: "1px solid var(--line)", borderRadius: 8, padding: 14 }}>
-      <div className="wizard-connect-row" style={{ padding: 0, border: 0 }}>
-        <span>
-          <strong>Meta publishing setup</strong>
-          <div className="item-meta">Required assets for paused Meta lead campaigns.</div>
-        </span>
+    <form className="flex flex-col gap-4 rounded-(--r-card) border border-(--line) bg-(--surface-subtle)/40 p-4" onSubmit={save}>
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex flex-col gap-1">
+          <strong className="text-sm font-medium">Meta publishing setup</strong>
+          <span className="text-sm text-muted-foreground">Required assets for paused Meta lead campaigns.</span>
+        </div>
         <StatusPill tone={blockers.length === 0 ? "green" : "amber"}>{blockers.length === 0 ? "ready" : "missing setup"}</StatusPill>
       </div>
 
       {loading ? (
-        <p className="wizard-skip-note">Loading Meta assets.</p>
+        <p className="text-sm text-muted-foreground">Loading Meta assets.</p>
       ) : <>
-      <div className="grid cols-2">
-        <label className="wizard-field">
-          <span className="wizard-label">Meta ad account</span>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-2">
+          <Label htmlFor="meta-meta-ad-account">Meta ad account</Label>
           {assets?.adAccounts.length ? (
-            <select
+            <select id="meta-meta-ad-account"
+              className={selectClass}
               value={setup.metaAdAccountId}
               onChange={(e) => {
                 const account = assets.adAccounts.find((item) => item.id === e.target.value);
@@ -294,112 +302,132 @@ function MetaSetupForm({ workspaceId, canManage }: { workspaceId: string; canMan
               ))}
             </select>
           ) : (
-            <input value={setup.metaAdAccountId} onChange={(e) => updateSetup({ metaAdAccountId: e.target.value })} disabled={!canManage} required />
+            <Input id="meta-meta-ad-account" value={setup.metaAdAccountId} onChange={(e) => updateSetup({ metaAdAccountId: e.target.value })} disabled={!canManage} required />
           )}
-        </label>
-        <label className="wizard-field">
-          <span className="wizard-label">Meta Page</span>
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="meta-meta-page">Meta Page</Label>
           {assets?.pages.length ? (
-            <select value={setup.pageId} onChange={(e) => updateSetup({ pageId: e.target.value, instagramActorId: null })} disabled={!canManage} required>
+            <select id="meta-meta-page" className={selectClass} value={setup.pageId} onChange={(e) => updateSetup({ pageId: e.target.value, instagramActorId: null })} disabled={!canManage} required>
               <option value="">Choose a Page</option>
               {assets.pages.map((page) => (
                 <option key={page.id} value={page.id}>{page.name} ({page.id})</option>
               ))}
             </select>
           ) : (
-            <input value={setup.pageId} onChange={(e) => updateSetup({ pageId: e.target.value })} disabled={!canManage} required />
+            <Input id="meta-meta-page" value={setup.pageId} onChange={(e) => updateSetup({ pageId: e.target.value })} disabled={!canManage} required />
           )}
-        </label>
-        <label className="wizard-field">
-          <span className="wizard-label">Instagram account (optional)</span>
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="meta-instagram-account-optional">Instagram account (optional)</Label>
           {availableInstagramActors.length ? (
-            <select value={setup.instagramActorId ?? ""} onChange={(e) => updateSetup({ instagramActorId: e.target.value || null })} disabled={!canManage}>
+            <select id="meta-instagram-account-optional" className={selectClass} value={setup.instagramActorId ?? ""} onChange={(e) => updateSetup({ instagramActorId: e.target.value || null })} disabled={!canManage}>
               <option value="">None</option>
               {availableInstagramActors.map((actor) => (
                 <option key={actor.id} value={actor.id}>{actor.username} ({actor.id})</option>
               ))}
             </select>
           ) : (
-            <input value={setup.instagramActorId ?? ""} onChange={(e) => updateSetup({ instagramActorId: e.target.value || null })} disabled={!canManage} />
+            <Input id="meta-instagram-account-optional" value={setup.instagramActorId ?? ""} onChange={(e) => updateSetup({ instagramActorId: e.target.value || null })} disabled={!canManage} />
           )}
-        </label>
-        <label className="wizard-field">
-          <span className="wizard-label">Pixel</span>
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="meta-pixel">Pixel</Label>
           {assets?.pixels.length ? (
-            <select value={setup.pixelId ?? ""} onChange={(e) => updateSetup({ pixelId: e.target.value || null })} disabled={!canManage}>
+            <select id="meta-pixel" className={selectClass} value={setup.pixelId ?? ""} onChange={(e) => updateSetup({ pixelId: e.target.value || null })} disabled={!canManage}>
               <option value="">None</option>
               {assets.pixels.map((pixel) => (
                 <option key={pixel.id} value={pixel.id}>{pixel.name} ({pixel.id})</option>
               ))}
             </select>
           ) : (
-            <input value={setup.pixelId ?? ""} onChange={(e) => updateSetup({ pixelId: e.target.value || null })} disabled={!canManage} />
+            <Input id="meta-pixel" value={setup.pixelId ?? ""} onChange={(e) => updateSetup({ pixelId: e.target.value || null })} disabled={!canManage} />
           )}
-        </label>
+        </div>
       </div>
 
-      <div className="grid cols-2">
-        <label className="wizard-field">
-          <span className="wizard-label">Lead destination type</span>
-          <select value={setup.leadDestination.type} onChange={(e) => updateLeadDestination({ type: e.target.value as MetaLeadDestinationType })} disabled={!canManage}>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-2">
+          <Label htmlFor="meta-lead-destination-type">Lead destination type</Label>
+          <select id="meta-lead-destination-type" className={selectClass} value={setup.leadDestination.type} onChange={(e) => updateLeadDestination({ type: e.target.value as MetaLeadDestinationType })} disabled={!canManage}>
             {META_LEAD_DESTINATION_TYPES.map((type) => (
-              <option key={type} value={type}>{type.replace(/_/g, " ")}</option>
+              <option key={type} value={type}>{formatLeadDestinationType(type)}</option>
             ))}
           </select>
-        </label>
-        <label className="wizard-field">
-          <span className="wizard-label">Lead destination label</span>
-          <input value={setup.leadDestination.label} onChange={(e) => updateLeadDestination({ label: e.target.value })} disabled={!canManage} required />
-        </label>
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="meta-lead-destination-label">Lead destination label</Label>
+          <Input id="meta-lead-destination-label" value={setup.leadDestination.label} onChange={(e) => updateLeadDestination({ label: e.target.value })} disabled={!canManage} required />
+        </div>
       </div>
 
       {setup.leadDestination.type !== "manual" ? (
-        <label className="wizard-field">
-          <span className="wizard-label">Lead destination endpoint</span>
-          <input
+        <div className="grid gap-2">
+          <Label htmlFor="meta-lead-destination-endpoint">Lead destination endpoint</Label>
+          <Input id="meta-lead-destination-endpoint"
             value={setup.leadDestination.config?.endpoint ?? ""}
             onChange={(e) => updateLeadDestination({ config: { endpoint: e.target.value } })}
             placeholder="https://example.com/meta-leads"
             disabled={!canManage}
             required
           />
-        </label>
+        </div>
       ) : null}
 
-      <div className="grid cols-3">
-        <label className="wizard-field">
-          <span className="wizard-label">Privacy policy URL</span>
-          <input type="url" value={setup.privacyPolicyUrl} onChange={(e) => updateSetup({ privacyPolicyUrl: e.target.value })} disabled={!canManage} required />
-        </label>
-        <label className="wizard-field">
-          <span className="wizard-label">Currency</span>
-          <select value={setup.currency} onChange={(e) => updateSetup({ currency: e.target.value })} disabled={!canManage} required>
+      <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-2">
+          <Label htmlFor="meta-privacy-policy-url">Privacy policy URL</Label>
+          <Input id="meta-privacy-policy-url" type="url" value={setup.privacyPolicyUrl} onChange={(e) => updateSetup({ privacyPolicyUrl: e.target.value })} disabled={!canManage} required />
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="meta-currency">Currency</Label>
+          <select id="meta-currency" className={selectClass} value={setup.currency} onChange={(e) => updateSetup({ currency: e.target.value })} disabled={!canManage} required>
             <option value="">Select currency</option>
             {Object.values(REGION_CURRENCY).map((c) => (
               <option key={c} value={c}>{c}</option>
             ))}
           </select>
-        </label>
-        <label className="wizard-field">
-          <span className="wizard-label">Timezone</span>
-          <input value={setup.timezone} onChange={(e) => updateSetup({ timezone: e.target.value })} placeholder={selectedAccount?.timezone ?? "Australia/Perth"} disabled={!canManage} required />
-        </label>
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="meta-timezone">Timezone</Label>
+          <Input id="meta-timezone" value={setup.timezone} onChange={(e) => updateSetup({ timezone: e.target.value })} placeholder={selectedAccount?.timezone ?? "Australia/Perth"} disabled={!canManage} required />
+        </div>
       </div>
 
       {blockers.length > 0 ? (
-        <div className="stack" style={{ gap: 6 }}>
+        <div className="flex flex-col gap-1.5">
           {blockers.map((blocker) => (
-            <p className="wizard-status error" key={blocker}>{blocker}</p>
+            <p className="text-sm text-destructive" key={blocker}>{blocker}</p>
           ))}
         </div>
       ) : null}
       <Feedback message={message} />
-      <div className="wizard-actions">
-        <button className="button" type="submit" disabled={!canManage || busy || loading}>
+      <div>
+        <Button type="submit" disabled={!canManage || busy || loading}>
           {busy ? "Saving" : "Save Meta setup"}
-        </button>
+        </Button>
       </div>
       </>}
     </form>
   );
+}
+
+function normalizeMetaSetupForForm(setup: MetaSetup): MetaSetup {
+  return {
+    ...setup,
+    leadDestination: {
+      ...setup.leadDestination,
+      type: normalizeLeadDestinationType(setup.leadDestination.type),
+    },
+  };
+}
+
+function normalizeLeadDestinationType(type: string): MetaLeadDestinationType {
+  return type === "crm" || type === "manual" ? type : "webhook";
+}
+
+function formatLeadDestinationType(type: MetaLeadDestinationType): string {
+  if (type === "crm") return "CRM";
+  if (type === "webhook") return "Webhook";
+  return "Manual review";
 }

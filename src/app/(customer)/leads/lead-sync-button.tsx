@@ -1,10 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import { RefreshCw } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { niche } from "@/config/niche";
 
 type SyncResult = {
   ok?: boolean;
@@ -17,6 +18,7 @@ type SyncResult = {
 
 export function LeadSyncButton({ workspaceId }: { workspaceId: string }) {
   const router = useRouter();
+  const copy = niche.copy.leads;
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -55,12 +57,22 @@ export function LeadSyncButton({ workspaceId }: { workspaceId: string }) {
 
   return (
     <div className="flex flex-col items-end gap-1">
-      <Button type="button" variant="outline" onClick={onSync} disabled={busy} aria-busy={busy}>
-        <RefreshCw className={busy ? "animate-spin" : undefined} aria-hidden="true" />
-        {busy ? "Syncing…" : "Sync leads"}
+      <Button
+        type="button"
+        variant="ghost-pill"
+        size="pill"
+        onClick={onSync}
+        disabled={busy}
+        aria-busy={busy}
+      >
+        <RefreshCw
+          aria-hidden
+          className={`size-[13px]${busy ? " animate-spin motion-reduce:animate-none" : ""}`}
+        />
+        {busy ? "Syncing…" : copy.syncCta}
       </Button>
       {(message ?? error) && (
-        <p className={`text-xs${error ? " text-destructive" : " text-muted-foreground"}`} role="status">
+        <p className={`text-xs${error ? " text-error" : " text-muted-foreground"}`} role="status">
           {message ?? error}
         </p>
       )}

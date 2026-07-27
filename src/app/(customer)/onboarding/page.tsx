@@ -1,5 +1,5 @@
 import { OnboardingWizard } from "@/components/onboarding/onboarding-wizard";
-import { PageHeading } from "@/components/page-heading";
+import { niche } from "@/config/niche";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
 import { canManageProviderConnections } from "@/lib/auth/access-control";
 import { GOOGLE_ADS_ENABLED } from "@/lib/config/feature-flags";
@@ -50,12 +50,12 @@ export default async function OnboardingPage() {
   const canManage = access.isOperator || access.role === "owner" || access.role === "admin";
 
   return (
-    <main className="content">
-      <PageHeading
-        eyebrow="Workspace setup"
-        title="Set up your workspace"
-        description="Confirm the basics now. You can skip anything and come back later."
-      />
+    <main className="mx-auto w-full max-w-[720px] px-4 pt-6 pb-28 md:px-6 md:pt-8 md:pb-16" aria-label="Onboarding">
+      <header className="mb-6">
+        <p className="font-mono text-[9.5px] font-medium tracking-[0.12em] text-(--faint) uppercase">Workspace setup</p>
+        <h1 className="mt-1 font-display text-[24px] font-extrabold tracking-[-0.02em] md:text-[27px]">{niche.copy.onboarding.title}</h1>
+        <p className="mt-1 text-[13px] text-muted-foreground">{niche.copy.onboarding.lead}</p>
+      </header>
 
       <OnboardingWizard
         workspaceId={access.workspaceId}

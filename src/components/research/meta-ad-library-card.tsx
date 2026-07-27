@@ -6,28 +6,55 @@ import {
   type CustomerMetaAdLibraryMedia,
 } from "@/lib/research/customer-meta-card";
 
+/*
+ * Ad Radar result card, rebuilt on the Premium v2 token bridge. The legacy
+ * `.meta-ad-*` rules in globals.css are unlayered, so any left on this element
+ * would beat every Tailwind utility applied to it — the card is now fully
+ * self-contained. Layout, density, and the mobile behaviour of the original
+ * rules are preserved; only the register (radius, elevation, type scale,
+ * status tokens) moves to Premium v2.
+ *
+ * The 640px breakpoint below mirrors the legacy `@media (max-width: 640px)`
+ * block: base classes are the mobile treatment, `sm:` restores desktop.
+ */
+const headMetaClass = "text-[11.5px] leading-[1.4] text-muted-foreground [overflow-wrap:anywhere]";
+const gutterClass = "px-3 sm:px-3.5";
+const bodyTextClass = "text-[13.5px] leading-[1.55] whitespace-pre-wrap text-foreground";
+const pageNameClass =
+  "inline-flex w-fit min-w-0 items-center gap-1 text-[13.5px] leading-[1.3] font-extrabold text-foreground [overflow-wrap:anywhere]";
+const ctaClass =
+  "inline-flex min-h-11 w-full flex-none items-center justify-center rounded-full border border-(--line-heavy) bg-(--surface) px-3.5 text-[12.5px] font-bold whitespace-nowrap text-foreground sm:min-h-9 sm:w-auto";
+
+/** Status dot + label tokens. Semantic colour communicates state only. */
+const STATUS_TONE: Record<string, { dot: string; label: string }> = {
+  active: { dot: "bg-success", label: "text-success" },
+  inactive: { dot: "bg-warning", label: "text-warning" },
+};
+const STATUS_TONE_UNKNOWN = { dot: "bg-(--faint)", label: "text-muted-foreground" };
+
 export function MetaAdLibraryCard({ card }: { card: CustomerMetaAdLibraryCard }) {
   const hasLongBody = Boolean(card.body && card.body.length > 320);
   const visibleBody = hasLongBody && card.body ? `${card.body.slice(0, 300).trim()}...` : card.body;
   const dateText = deliveryDateText(card.startedAt, card.stoppedAt);
   const statusLabel =
     card.activeStatus === "inactive" ? "Inactive" : card.activeStatus === "active" ? "Active" : "Unknown";
+  const statusTone = STATUS_TONE[card.activeStatus] ?? STATUS_TONE_UNKNOWN;
 
   return (
-    <article className="meta-ad-card">
-      <header className="meta-ad-headblock">
-        <span className="meta-ad-status" data-status={card.activeStatus}>
-          <span className="meta-ad-status-dot" aria-hidden />
-          <span className="meta-ad-status-label">{statusLabel}</span>
+    <article className="grid w-full min-w-0 overflow-hidden rounded-(--r-card) border border-(--line) bg-(--surface) shadow-card">
+      <header className={`grid gap-[3px] pt-[13px] pb-1 ${gutterClass}`}>
+        <span className="mb-px inline-flex w-fit items-center gap-1.5" data-status={card.activeStatus}>
+          <span className={`size-2 rounded-full ${statusTone.dot}`} aria-hidden />
+          <span className={`text-[12.5px] font-bold ${statusTone.label}`}>{statusLabel}</span>
         </span>
-        <span className="meta-ad-headmeta">
+        <span className={headMetaClass}>
           {card.libraryId ? `Library ID: ${card.libraryId}` : "Library ID unavailable"}
         </span>
-        {dateText ? <span className="meta-ad-headmeta">{dateText}</span> : null}
+        {dateText ? <span className={headMetaClass}>{dateText}</span> : null}
         {card.platforms.length > 0 ? (
-          <div className="meta-ad-platforms">
+          <div className="mt-1 flex items-center gap-2 text-[11.5px] font-semibold text-muted-foreground">
             <span>Platforms</span>
-            <span className="meta-ad-platform-icons">
+            <span className="inline-flex items-center gap-[7px] text-muted-foreground">
               {card.platforms.map((platform) => (
                 <PlatformIcon key={platform} platform={platform} />
               ))}
@@ -36,35 +63,40 @@ export function MetaAdLibraryCard({ card }: { card: CustomerMetaAdLibraryCard })
         ) : null}
       </header>
 
-      <div className="meta-ad-page">
+      <div className={`flex min-w-0 items-center gap-2.5 pt-1.5 pb-3 ${gutterClass}`}>
         <PageAvatar card={card} />
-        <div className="meta-ad-page-copy">
+        <div className="grid min-w-0 gap-[3px]">
           {card.pageUrl ? (
-            <a href={card.pageUrl} target="_blank" rel="noreferrer">
-              {card.pageName} <ExternalLink size={12} />
+            <a
+              className={`${pageNameClass} -my-1 py-1 hover:underline`}
+              href={card.pageUrl}
+              target="_blank"
+              rel="noreferrer"
+            >
+              {card.pageName} <ExternalLink size={12} aria-hidden />
             </a>
           ) : (
-            <strong>{card.pageName}</strong>
+            <strong className={pageNameClass}>{card.pageName}</strong>
           )}
-          <span className="meta-ad-sponsored">Sponsored</span>
+          <span className="text-[11.5px] font-semibold text-(--faint)">Sponsored</span>
         </div>
       </div>
 
       {card.body ? (
-        <div className="meta-ad-card-body">
+        <div className={`grid gap-3 border-t border-(--line) py-3.5 ${gutterClass}`}>
           {hasLongBody ? (
-            <details className="meta-ad-copy-details">
-              <summary>
-                <span className="meta-ad-copy-preview">{visibleBody}</span>
-                <span className="meta-ad-copy-toggle">
-                  <span className="meta-ad-copy-toggle-closed">See more</span>
-                  <span className="meta-ad-copy-toggle-open">See less</span>
+            <details className="group">
+              <summary className="grid cursor-pointer list-none gap-1 [&::-webkit-details-marker]:hidden">
+                <span className={`${bodyTextClass} group-open:hidden`}>{visibleBody}</span>
+                <span className="inline-flex min-h-11 w-fit items-center text-[12.5px] font-bold text-foreground underline-offset-2 hover:underline">
+                  <span className="group-open:hidden">See more</span>
+                  <span className="hidden group-open:inline">See less</span>
                 </span>
               </summary>
-              <p>{card.body}</p>
+              <p className={bodyTextClass}>{card.body}</p>
             </details>
           ) : (
-            <p className="meta-ad-primary-text">{visibleBody}</p>
+            <p className={bodyTextClass}>{visibleBody}</p>
           )}
         </div>
       ) : null}
@@ -72,11 +104,13 @@ export function MetaAdLibraryCard({ card }: { card: CustomerMetaAdLibraryCard })
       <MediaPanel card={card} />
 
       {card.headline || card.description || card.cta || card.destinationUrl ? (
-        <div className="meta-ad-link-preview">
-          <div className="meta-ad-link-copy">
+        <div
+          className={`flex flex-wrap items-stretch justify-between gap-3 border-t border-(--line) bg-(--surface-subtle) py-3 sm:items-center ${gutterClass}`}
+        >
+          <div className="grid min-w-0 gap-[3px]">
             {card.destinationUrl ? (
               <a
-                className="meta-ad-link-domain meta-ad-destination-link"
+                className="-my-1 w-fit py-1 font-mono text-[9.5px] font-medium tracking-[0.12em] text-(--faint) uppercase hover:text-muted-foreground hover:underline"
                 href={card.destinationUrl}
                 target="_blank"
                 rel="noreferrer"
@@ -84,13 +118,17 @@ export function MetaAdLibraryCard({ card }: { card: CustomerMetaAdLibraryCard })
                 {displayDomain(card.destinationUrl)}
               </a>
             ) : null}
-            {card.headline ? <h3>{card.headline}</h3> : null}
-            {card.description ? <p>{card.description}</p> : null}
+            {card.headline ? (
+              <h3 className="text-[14px] leading-[1.35] font-bold text-foreground">{card.headline}</h3>
+            ) : null}
+            {card.description ? (
+              <p className="text-[12.5px] leading-[1.45] text-muted-foreground">{card.description}</p>
+            ) : null}
           </div>
           {card.cta ? (
             card.destinationUrl ? (
               <a
-                className="meta-ad-card-cta meta-ad-destination-link"
+                className={`${ctaClass} transition-[background,box-shadow] duration-150 hover:bg-(--surface-subtle) hover:shadow-card`}
                 href={card.destinationUrl}
                 target="_blank"
                 rel="noreferrer"
@@ -98,13 +136,15 @@ export function MetaAdLibraryCard({ card }: { card: CustomerMetaAdLibraryCard })
                 {card.cta}
               </a>
             ) : (
-              <span className="meta-ad-card-cta">{card.cta}</span>
+              <span className={ctaClass}>{card.cta}</span>
             )
           ) : null}
         </div>
       ) : null}
 
-      <AdCardActions observedAdId={card.id} libraryId={card.libraryId} />
+      <div className={`border-t border-(--line) py-3 ${gutterClass}`}>
+        <AdCardActions observedAdId={card.id} libraryId={card.libraryId} />
+      </div>
     </article>
   );
 }
@@ -151,45 +191,66 @@ function PlatformIcon({ platform }: { platform: string }) {
     );
   }
 
-  return <span className="meta-ad-platform-chip">{platform}</span>;
+  return (
+    <span className="inline-flex min-h-6 items-center rounded-full border border-(--line) bg-(--surface-subtle) px-2 text-[10.5px] font-bold text-foreground">
+      {platform}
+    </span>
+  );
 }
 
 function PageAvatar({ card }: { card: CustomerMetaAdLibraryCard }) {
+  const avatarClass = "size-[42px] flex-none rounded-full border border-(--line) bg-(--surface-subtle)";
+
   if (card.pageImageUrl) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
-      <img className="meta-ad-page-avatar" src={card.pageImageUrl} alt="" loading="lazy" />
+      <img className={`${avatarClass} object-cover`} src={card.pageImageUrl} alt="" loading="lazy" />
     );
   }
 
-  return <span className="meta-ad-page-avatar fallback">{card.pageName.slice(0, 1).toUpperCase()}</span>;
+  return (
+    <span className={`${avatarClass} grid place-items-center text-[13.5px] font-extrabold text-foreground`}>
+      {card.pageName.slice(0, 1).toUpperCase()}
+    </span>
+  );
 }
 
 function MediaPanel({ card }: { card: CustomerMetaAdLibraryCard }) {
   if (card.media.length === 0) {
     return (
-      <div className="meta-ad-text-only">
-        <span>Text-only ad</span>
+      <div className="grid min-h-[180px] place-items-center border-t border-(--line) bg-(--surface-subtle) p-4 text-center">
+        <span className="text-[12.5px] font-bold text-muted-foreground">Text-only ad</span>
       </div>
     );
   }
 
   if (card.media.length === 1) {
     return (
-      <div className="meta-ad-media-frame meta-ad-media-frame--single">
-        <MediaAsset media={card.media[0]} label={card.headline ?? card.pageName} />
+      <div className="max-w-full overflow-hidden bg-(--surface)">
+        <MediaAsset
+          media={card.media[0]}
+          label={card.headline ?? card.pageName}
+          className="block h-auto w-full max-w-full max-h-[min(72svh,520px)] bg-(--surface-subtle) object-contain sm:max-h-none"
+        />
       </div>
     );
   }
 
   return (
-    <div className="meta-ad-carousel" aria-label={`${card.media.length} ad media items`}>
+    <div
+      className="grid snap-x snap-mandatory grid-flow-col gap-3 overflow-x-auto px-3 pb-3 [grid-auto-columns:minmax(236px,88%)] sm:px-3.5 sm:pb-3.5 sm:[grid-auto-columns:minmax(260px,82%)]"
+      aria-label={`${card.media.length} ad media items`}
+    >
       {card.media.map((media, index) => (
-        <figure className="meta-ad-carousel-item" key={media.id}>
-          <div className="meta-ad-media-frame">
-            <MediaAsset media={media} label={`${card.headline ?? card.pageName} ${index + 1}`} />
+        <figure className="m-0 grid snap-start gap-1.5" key={media.id}>
+          <div className="aspect-square max-w-full overflow-hidden rounded-(--r-ctl) border border-(--line) bg-(--surface-subtle)">
+            <MediaAsset
+              media={media}
+              label={`${card.headline ?? card.pageName} ${index + 1}`}
+              className="block h-full w-full max-w-full object-cover"
+            />
           </div>
-          <figcaption>
+          <figcaption className="text-center text-[11.5px] font-semibold text-muted-foreground">
             {index + 1} of {card.media.length}
           </figcaption>
         </figure>
@@ -198,11 +259,19 @@ function MediaPanel({ card }: { card: CustomerMetaAdLibraryCard }) {
   );
 }
 
-function MediaAsset({ media, label }: { media: CustomerMetaAdLibraryMedia; label: string }) {
+function MediaAsset({
+  media,
+  label,
+  className,
+}: {
+  media: CustomerMetaAdLibraryMedia;
+  label: string;
+  className: string;
+}) {
   if (media.kind === "video") {
     return (
       <video
-        className="meta-ad-media"
+        className={className}
         src={media.url}
         poster={media.posterUrl ?? undefined}
         aria-label={label}
@@ -215,7 +284,7 @@ function MediaAsset({ media, label }: { media: CustomerMetaAdLibraryMedia; label
 
   return (
     // eslint-disable-next-line @next/next/no-img-element
-    <img className="meta-ad-media" src={media.url} alt={label} loading="lazy" />
+    <img className={className} src={media.url} alt={label} loading="lazy" />
   );
 }
 

@@ -16,8 +16,10 @@ test("workspace settings show early-access review copy instead of a dead approva
     assert.doesNotMatch(source, /Require approval before publishing/);
     assert.doesNotMatch(source, /setApproval/);
     assert.doesNotMatch(source, /approval_required_by_default:\s*approval/);
-    assert.match(source, /All campaigns are reviewed before going live during early access\./);
   }
+  // The review copy lives in the workspace section now that the settings
+  // view is a thin composer over per-section components.
+  assert.match(sources[1], /All campaigns are reviewed before going live during early access\./);
 });
 
 test("billing settings prefer friendly portal messages and hide billing management until Stripe exists", () => {
@@ -64,8 +66,10 @@ test("trial generation limit responses keep a machine code with friendly money-p
 });
 
 test("leads surface labels duplicate candidates as possible duplicates", () => {
-  const source = read("src/app/(customer)/leads/page.tsx");
+  const source = read("src/config/niche/blockwise/leads.ts");
+  const table = read("src/components/leads/leads-table.tsx");
 
   assert.match(source, /Possible duplicate/);
   assert.doesNotMatch(source, /Duplicate flagged/);
+  assert.match(table, /copy\.status\.possibleDuplicate/);
 });

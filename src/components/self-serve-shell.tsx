@@ -3,15 +3,22 @@
 import { Download, LogOut, MoreHorizontal } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
 
-import { AccountMenu } from "@/components/account-menu";
 import { BlockwiseLogo } from "@/components/blockwise-logo";
+import { CommandMenu } from "@/components/command-menu";
 import { SidebarThemeToggle } from "@/components/sidebar-theme-toggle";
-import { isItemActive, navByVariant, type NavItem } from "@/components/sidebar-nav";
-import { TrialStatusPill, type TrialStatus } from "@/components/trial-status-pill";
-import { cn } from "@/lib/utils";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { isItemActive, navByVariant, selfServeIcons, type NavItem } from "@/components/sidebar-nav";
+import { TrialStatusCard, type TrialStatus } from "@/components/trial-status-pill";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Sheet,
   SheetContent,
@@ -34,6 +41,10 @@ import {
   SidebarRail,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
+import { niche } from "@/config/niche";
+import { cssSpring } from "@/lib/motion";
+import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { cn } from "@/lib/utils";
 
 type SelfServeShellProps = {
   children: React.ReactNode;
@@ -67,6 +78,90 @@ function groupNavItems(items: NavItem[]): NavGroup[] {
   return groups;
 }
 
+/** Topbar breadcrumb page title: the deepest nav item matching the path. */
+function pageTitleForPath(pathname: string): string {
+  let best: { href: string; label: string } | null = null;
+  for (const item of niche.nav.items) {
+    const matches = pathname === item.href || pathname.startsWith(`${item.href}/`);
+    if (matches && (!best || item.href.length > best.href.length)) {
+      best = item;
+    }
+  }
+  return best?.label ?? niche.product.name;
+}
+
+function initialsFor(name: string): string {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]!.toUpperCase())
+    .join("");
+}
+
+type Account = { email: string; name: string; role: string };
+
+function useSignOut() {
+  const router = useRouter();
+  const [isSigningOut, setIsSigningOut] = useState(false);
+
+  async function signOut() {
+    setIsSigningOut(true);
+    const supabase = createSupabaseBrowserClient();
+    await supabase.auth.signOut();
+    router.replace("/login");
+    router.refresh();
+  }
+
+  return { signOut, isSigningOut };
+}
+
+function requestInstallPrompt() {
+  window.dispatchEvent(new CustomEvent("blockwise:install-app-request"));
+}
+
+// Avatar account menu — the mockup's topbar avatar. Desktop and mobile share
+// it; the mobile "More" sheet keeps the large-touch-target equivalents.
+function AccountDropdown({ account }: { account: Account }) {
+  const copy = niche.copy.shell;
+  const { signOut, isSigningOut } = useSignOut();
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          aria-label="Account"
+          className="inline-grid size-8 cursor-pointer place-items-center rounded-full border border-border bg-(--accent-tint) font-display text-[11.5px] font-extrabold text-foreground transition-opacity duration-150 hover:opacity-80 md:size-9"
+        >
+          <Avatar className="size-full">
+            <AvatarFallback className="bg-transparent font-display text-[11.5px] font-extrabold">
+              {initialsFor(account.name)}
+            </AvatarFallback>
+          </Avatar>
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="min-w-56">
+        <DropdownMenuLabel className="font-normal">
+          <p className="text-sm font-semibold">{account.name}</p>
+          <p className="text-xs font-normal text-muted-foreground">
+            {account.role} · {account.email}
+          </p>
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={requestInstallPrompt}>
+          <Download aria-hidden />
+          {copy.installApp}
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => void signOut()} disabled={isSigningOut}>
+          <LogOut aria-hidden />
+          {copy.signOut}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 export function SelfServeShell({
   children,
   workspaceName,
@@ -76,17 +171,27 @@ export function SelfServeShell({
 }: SelfServeShellProps) {
   const pathname = usePathname() ?? "";
   const groups = useMemo(() => groupNavItems(navByVariant.self_serve), []);
+  const pageTitle = pageTitleForPath(pathname);
 
   return (
-    <SidebarProvider className="tw">
+    <SidebarProvider
+      className="tw"
+      style={
+        {
+          "--ui-data": niche.theme.data,
+          "--ui-data-soft": niche.theme.dataSoft,
+          "--ui-data-track": niche.theme.dataTrack,
+        } as CSSProperties
+      }
+    >
       <Sidebar collapsible="icon">
         <SidebarHeader className="p-3">
           <Link
             href="/self-serve"
-            aria-label="Blockwise"
+            aria-label={niche.product.name}
             className="inline-flex items-center text-[var(--brand-ink)] transition-opacity hover:opacity-80 group-data-[collapsible=icon]:justify-center"
           >
-            <BlockwiseLogo />
+            <BlockwiseLogo tokens />
           </Link>
         </SidebarHeader>
         <SidebarContent className="pt-2">
@@ -117,31 +222,48 @@ export function SelfServeShell({
           ))}
         </SidebarContent>
         <SidebarFooter className="p-2">
-          {/* Trial pill moves out of the topbar into the sidebar footer; hide it
-              when the rail is collapsed to icons. */}
+          {/* Trial card lives in the sidebar footer; hidden when the rail is
+              collapsed to icons. */}
           <div className="group-data-[collapsible=icon]:hidden">
-            <TrialStatusPill initialStatus={initialTrialStatus} />
+            <TrialStatusCard initialStatus={initialTrialStatus} />
           </div>
         </SidebarFooter>
         <SidebarRail />
       </Sidebar>
 
       <SidebarInset className="pb-[calc(4.75rem+env(safe-area-inset-bottom))] md:pb-0">
-        <header className="sticky top-0 z-10 flex min-h-16 items-center gap-3 border-b border-border bg-background/85 px-4 backdrop-blur-md md:px-7">
+        <header className="sticky top-0 z-20 flex min-h-[54px] items-center gap-2.5 border-b border-border bg-background/85 px-4 pt-[env(safe-area-inset-top)] backdrop-blur-md md:min-h-[60px] md:gap-3.5 md:px-7">
           <SidebarTrigger className="-ml-1 hidden md:inline-flex" />
+
+          {/* Desktop: workspace / page breadcrumb */}
+          <span className="hidden truncate font-display text-[15.5px] font-extrabold tracking-[-0.01em] md:inline">
+            {workspaceName} <span className="font-normal text-(--faint)">/</span> {pageTitle}
+          </span>
+
+          {/* Mobile: condensed brand topbar */}
           <Link
             href="/self-serve"
-            aria-label="Blockwise"
-            className="inline-flex items-center text-foreground md:hidden"
+            aria-label={niche.product.name}
+            className="inline-flex items-center gap-2 text-foreground md:hidden"
           >
-            <BlockwiseLogo showWordmark={false} />
+            <BlockwiseLogo tokens showWordmark={false} />
+            <span className="font-display text-base font-extrabold tracking-[-0.015em]">
+              {niche.product.name}
+            </span>
           </Link>
-          <span className="workspace-chip" aria-label={`Workspace: ${workspaceName}`}>
-            {workspaceName} - {workspaceRegion}
+
+          {/* Industry chip — config-driven, no legacy class */}
+          <span
+            aria-label={`Workspace: ${workspaceName}`}
+            className="hidden shrink-0 rounded-full border border-border bg-card px-2.5 py-1 text-xs font-semibold text-muted-foreground lg:inline"
+          >
+            {niche.industry.label} · {workspaceRegion}
           </span>
-          <div className="ml-auto inline-flex items-center gap-3">
-            <SidebarThemeToggle />
-            <AccountMenu email={account.email} name={account.name} role={account.role} />
+
+          <div className="ml-auto inline-flex items-center gap-2.5 md:gap-3">
+            <CommandMenu />
+            <SidebarThemeToggle tokens />
+            <AccountDropdown account={account} />
           </div>
         </header>
         {children}
@@ -152,75 +274,53 @@ export function SelfServeShell({
   );
 }
 
-// Mobile navigation for the self-serve shell: four primary destinations plus a
-// "More" sheet for the rest. Hidden inside Ad Studio, which renders its own
+// Mobile navigation for the self-serve shell: the four primary tabs from the
+// niche config (bottom tab bar, mockup pattern) plus a "More" sheet for the
+// remaining destinations. Hidden inside Ad Studio, which renders its own
 // studio navigation.
-const MOBILE_PRIMARY_HREFS = ["/self-serve", "/ad-studio", "/ad-radar", "/results"];
-
-const MOBILE_PRIMARY_LABELS: Record<string, string> = {
-  "/self-serve": "Home",
-  "/ad-studio": "Studio",
-  "/ad-radar": "Radar",
-  "/results": "Performance",
-};
-
-function SelfServeMobileNav({
-  account,
-}: {
-  account: { email: string; name: string; role: string };
-}) {
+function SelfServeMobileNav({ account }: { account: Account }) {
   const pathname = usePathname() ?? "";
-  const router = useRouter();
   const [moreOpen, setMoreOpen] = useState(false);
-  const [isSigningOut, setIsSigningOut] = useState(false);
+  const { signOut, isSigningOut } = useSignOut();
 
-  const { primaryItems, overflowItems } = useMemo(() => {
+  const copy = niche.copy.shell;
+
+  const { tabItems, overflowItems } = useMemo(() => {
     const allItems = navByVariant.self_serve;
-    const primary = MOBILE_PRIMARY_HREFS.map((href) => allItems.find((item) => item.href === href)).filter(
-      (item): item is NavItem => Boolean(item),
-    );
-    const primarySet = new Set(primary.map((item) => item.href));
-    return { primaryItems: primary, overflowItems: allItems.filter((item) => !primarySet.has(item.href)) };
+    const tabs = niche.nav.mobileTabs
+      .map((tab) => allItems.find((item) => item.href === tab.href))
+      .filter((item): item is NavItem => Boolean(item));
+    const tabSet = new Set(tabs.map((item) => item.href));
+    return { tabItems: tabs, overflowItems: allItems.filter((item) => !tabSet.has(item.href)) };
   }, []);
 
   if (pathname.startsWith("/ad-studio")) {
     return null;
   }
 
-  async function signOut() {
-    setIsSigningOut(true);
-    const supabase = createSupabaseBrowserClient();
-    await supabase.auth.signOut();
-    router.replace("/login");
-    router.refresh();
-  }
-
-  function requestInstallPrompt() {
-    window.dispatchEvent(new CustomEvent("blockwise:install-app-request"));
-    setMoreOpen(false);
-  }
-
   return (
     <>
       <nav
         aria-label="Primary mobile navigation"
-        className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-5 gap-1 border-t border-border bg-background/95 px-2.5 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] backdrop-blur-md md:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 gap-1 border-t border-border bg-card/95 px-2.5 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] backdrop-blur-2xl md:hidden"
       >
-        {primaryItems.map((item) => {
-          const Icon = item.icon;
+        {tabItems.map((item) => {
+          const Icon = selfServeIcons[item.href];
           const active = isItemActive(pathname, item.href);
+          const tab = niche.nav.mobileTabs.find((entry) => entry.href === item.href);
           return (
             <Link
               key={item.href}
               href={item.href}
               aria-current={active ? "page" : undefined}
+              style={{ transitionTimingFunction: cssSpring }}
               className={cn(
-                "grid min-h-13 min-w-0 place-items-center gap-[3px] rounded-(--r-card) px-0.5 py-1 text-[11px] leading-[1.1] font-bold",
-                active ? "bg-(--accent-tint) text-(--accent-strong)" : "text-muted-foreground",
+                "grid min-h-12 min-w-0 place-items-center gap-[3px] rounded-xl px-0.5 py-1 text-[10.5px] leading-[1.1] font-bold transition-[color,transform,background-color] duration-150 active:scale-[0.94] motion-reduce:transition-none",
+                active ? "bg-(--accent-tint) text-foreground" : "text-(--faint)",
               )}
             >
-              <Icon aria-hidden size={21} />
-              <span className="max-w-full truncate">{MOBILE_PRIMARY_LABELS[item.href] ?? item.label}</span>
+              {Icon ? <Icon aria-hidden size={21} /> : null}
+              <span className="max-w-full truncate">{tab?.label ?? item.label}</span>
             </Link>
           );
         })}
@@ -228,22 +328,26 @@ function SelfServeMobileNav({
           type="button"
           onClick={() => setMoreOpen(true)}
           aria-expanded={moreOpen}
+          style={{ transitionTimingFunction: cssSpring }}
           className={cn(
-            "grid min-h-13 min-w-0 cursor-pointer place-items-center gap-[3px] rounded-(--r-card) border-0 bg-transparent px-0.5 py-1 text-[11px] leading-[1.1] font-bold",
-            moreOpen ? "bg-(--accent-tint) text-(--accent-strong)" : "text-muted-foreground",
+            "grid min-h-12 min-w-0 cursor-pointer place-items-center gap-[3px] rounded-xl border-0 bg-transparent px-0.5 py-1 text-[10.5px] leading-[1.1] font-bold transition-[color,transform,background-color] duration-150 active:scale-[0.94] motion-reduce:transition-none",
+            moreOpen ? "bg-(--accent-tint) text-foreground" : "text-(--faint)",
           )}
         >
           <MoreHorizontal aria-hidden size={22} />
-          <span>More</span>
+          <span>{copy.more}</span>
         </button>
       </nav>
 
       <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
-        <SheetContent side="bottom" className="max-h-[min(76dvh,640px)] rounded-t-(--r-panel) pb-[calc(1rem+env(safe-area-inset-bottom))]">
+        <SheetContent
+          side="bottom"
+          className="max-h-[min(76dvh,640px)] rounded-t-(--r-panel) pb-[calc(1rem+env(safe-area-inset-bottom))]"
+        >
           <SheetHeader className="px-4 pt-5">
             <SheetTitle>{account.name}</SheetTitle>
             <SheetDescription>
-              {account.role} - {account.email}
+              {account.role} · {account.email}
             </SheetDescription>
           </SheetHeader>
 
@@ -260,7 +364,9 @@ function SelfServeMobileNav({
                     onClick={() => setMoreOpen(false)}
                     className={cn(
                       "flex min-h-11 items-center gap-3 rounded-(--r-card) px-3 text-sm font-semibold",
-                      active ? "bg-(--accent-tint) text-(--accent-strong)" : "text-foreground hover:bg-muted",
+                      active
+                        ? "bg-(--accent-tint) text-(--accent-strong)"
+                        : "text-foreground hover:bg-muted",
                     )}
                   >
                     <Icon aria-hidden size={18} />
@@ -274,20 +380,23 @@ function SelfServeMobileNav({
           <div className="mt-auto grid gap-2 px-4 pt-2">
             <button
               type="button"
-              onClick={requestInstallPrompt}
-              className="inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-(--r-card) border border-border bg-(--surface) px-4 text-sm font-semibold text-foreground hover:bg-muted"
+              onClick={() => {
+                requestInstallPrompt();
+                setMoreOpen(false);
+              }}
+              className="inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-(--r-card) border border-border bg-card px-4 text-sm font-semibold text-foreground hover:bg-muted"
             >
               <Download aria-hidden size={18} />
-              Install app
+              {copy.installApp}
             </button>
             <button
               type="button"
               onClick={() => void signOut()}
               disabled={isSigningOut}
-              className="inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-(--r-card) border border-border bg-(--surface) px-4 text-sm font-semibold text-(--rose) hover:bg-muted disabled:opacity-60"
+              className="inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-(--r-card) border border-border bg-card px-4 text-sm font-semibold text-error hover:bg-muted disabled:opacity-60"
             >
               <LogOut aria-hidden size={18} />
-              {isSigningOut ? "Signing out" : "Sign out"}
+              {isSigningOut ? "…" : copy.signOut}
             </button>
           </div>
         </SheetContent>

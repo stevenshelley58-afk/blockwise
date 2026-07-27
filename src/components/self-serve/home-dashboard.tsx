@@ -1,0 +1,285 @@
+"use client";
+
+/*
+ * Home dashboard (Premium v2 mockup): outcome-first KPI row, performance
+ * snapshot chart, setup card and quick actions. The server page hands down a
+ * plain `HomeData` payload — this component owns layout, motion and copy
+ * (all of it from the niche config; customer pages carry zero niche nouns).
+ *
+ * Data honesty: KPIs render live Meta numbers or honest zeros. Demo/sample
+ * data never reaches Home.
+ */
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import {
+  ArrowDownRight,
+  ArrowRight,
+  ArrowUpRight,
+  CircleDollarSign,
+  Megaphone,
+  Package,
+  UsersRound,
+} from "lucide-react";
+
+import { ButtonArrow } from "@/components/shadcn-dashboard/button/button-01";
+import { selfServeIcons } from "@/components/sidebar-nav";
+import { AnimatedGroup } from "@/components/ui/animated-group";
+import { AnimatedNumber } from "@/components/ui/animated-number";
+import { niche } from "@/config/niche";
+import { countUpDuration, cssSpring, springs } from "@/lib/motion";
+
+import { HomePerformanceChart, type HomeDailyPoint } from "./home-chart";
+import { HomeSetupCard } from "./home-setup-card";
+import { Sparkline } from "./sparkline";
+
+export type HomeData = {
+  workspaceName: string;
+  hasBrand: boolean;
+  hasProvider: boolean;
+  packs: { used: number; included: number; remaining: number };
+  ads: { created: number; live: number | null; publishedThisWeek: number };
+  performance: {
+    leads: number;
+    cpl: number | null;
+    previousLeads: number | null;
+    previousCpl: number | null;
+    daily: HomeDailyPoint[];
+  } | null;
+};
+
+const COUNT_SPRING = { ...springs.slow, duration: countUpDuration };
+
+const money = (value: number) => `$${value.toFixed(2)}`;
+
+/** Period-over-period delta badge (mockup pattern). Hidden without a prior period. */
+function DeltaBadge({
+  current,
+  previous,
+  downIsGood = false,
+}: {
+  current: number | null;
+  previous: number | null;
+  downIsGood?: boolean;
+}) {
+  // No current reading is not a 100% drop — without both periods there is no
+  // honest delta to show.
+  if (current == null || previous == null || previous === 0) return null;
+  const change = (current - previous) / previous;
+  if (!Number.isFinite(change) || Math.abs(change) < 0.005) return null;
+
+  const up = change > 0;
+  const good = downIsGood ? !up : up;
+  const Arrow = up ? ArrowUpRight : ArrowDownRight;
+
+  return (
+    <span
+      className={`inline-flex items-center gap-[3px] text-xs font-bold ${good ? "text-success" : "text-error"}`}
+    >
+      <Arrow aria-hidden size={11} strokeWidth={2.4} />
+      {Math.round(Math.abs(change) * 100)}%
+    </span>
+  );
+}
+
+/** Ad-pack meter: data-hue fill on the data track, width eased on mount. */
+function PackMeter({ remaining, included }: { remaining: number; included: number }) {
+  const [on, setOn] = useState(false);
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => setOn(true));
+    return () => cancelAnimationFrame(frame);
+  }, []);
+
+  const pct = included > 0 ? Math.max(0, Math.min(100, (remaining / included) * 100)) : 0;
+
+  return (
+    <div
+      role="progressbar"
+      aria-valuemin={0}
+      aria-valuemax={included}
+      aria-valuenow={remaining}
+      aria-label={niche.copy.shell.trial.packsLeft(remaining, included)}
+      className="h-1.5 w-full overflow-hidden rounded-full bg-data-track"
+    >
+      <div
+        className="h-full rounded-full bg-data motion-reduce:transition-none"
+        style={{ width: on ? `${pct}%` : "0%", transition: `width 1s ${cssSpring}` }}
+      />
+    </div>
+  );
+}
+
+function StatCard({
+  label,
+  icon,
+  children,
+  foot,
+}: {
+  label: string;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+  foot: React.ReactNode;
+}) {
+  return (
+    <div className="flex h-full flex-col rounded-(--r-card) bg-card px-[18px] pt-[17px] pb-[15px] shadow-card">
+      <div className="flex items-center justify-between gap-2">
+        <span className="font-mono text-[9.5px] font-medium tracking-[0.12em] text-(--faint) uppercase">
+          {label}
+        </span>
+        <span
+          aria-hidden
+          className="grid size-[30px] shrink-0 place-items-center rounded-[9px] bg-(--accent-tint) text-foreground"
+        >
+          {icon}
+        </span>
+      </div>
+      <p className="mt-2.5 flex items-baseline gap-[7px] font-display text-[24px] leading-[1.1] font-extrabold tracking-[-0.02em]">
+        {children}
+      </p>
+      <div className="mt-[7px] flex items-center justify-between gap-2 text-[11.5px] text-muted-foreground">
+        {foot}
+      </div>
+    </div>
+  );
+}
+
+export function HomeDashboard({ data }: { data: HomeData }) {
+  const copy = niche.copy.home;
+  const { packs, ads, performance } = data;
+
+  // Page-head state machine: the single most important next action.
+  const headState = !data.hasBrand
+    ? { ...copy.states.needsBrand, href: "/ad-studio/brand" }
+    : !data.hasProvider
+      ? { ...copy.states.needsProvider, href: "/settings#connections" }
+      : ads.created === 0
+        ? { ...copy.states.needsFirstAd, href: "/ad-studio?newAd=1" }
+        : {
+            heading: copy.states.ready.heading,
+            subtitle: copy.states.ready.subtitle(data.workspaceName),
+            ctaLabel: copy.states.ready.ctaLabel,
+            href: "/ad-studio?newAd=1",
+          };
+
+  const quickActions = copy.quickActions.filter(
+    (action) => !action.feature || niche.features[action.feature],
+  );
+
+  const sparkPoints = (performance?.daily ?? []).map((point) => point.leads);
+  const adsLiveValue = ads.live ?? ads.created;
+
+  return (
+    <div className="mx-auto w-full max-w-[1120px] px-4 pt-6 pb-28 md:px-6 md:pt-8 md:pb-16">
+      <AnimatedGroup className="grid gap-3.5">
+        {/* Page head */}
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h1 className="font-display text-[24px] font-extrabold tracking-[-0.02em] md:text-[27px]">
+              {headState.heading}
+            </h1>
+            <p className="mt-1 text-[13.5px] text-muted-foreground">{headState.subtitle}</p>
+          </div>
+          <ButtonArrow href={headState.href}>{headState.ctaLabel}</ButtonArrow>
+        </div>
+
+        {/* KPI row */}
+        <AnimatedGroup className="grid grid-cols-2 gap-3.5 xl:grid-cols-4" itemClassName="h-full">
+          <StatCard
+            label={copy.kpis.leads}
+            icon={<UsersRound size={15} strokeWidth={1.8} />}
+            foot={
+              <>
+                <span>{copy.kpis.vsPrior}</span>
+                <Sparkline points={sparkPoints} />
+              </>
+            }
+          >
+            <AnimatedNumber value={performance?.leads ?? 0} springOptions={COUNT_SPRING} />
+            <DeltaBadge current={performance?.leads ?? 0} previous={performance?.previousLeads ?? null} />
+          </StatCard>
+
+          <StatCard
+            label={copy.kpis.costPerLead}
+            icon={<CircleDollarSign size={15} strokeWidth={1.8} />}
+            foot={<span>{copy.kpis.vsPrior}</span>}
+          >
+            {performance?.cpl != null ? (
+              <AnimatedNumber value={performance.cpl} format={money} springOptions={COUNT_SPRING} />
+            ) : (
+              <span aria-label="No cost data yet">—</span>
+            )}
+            <DeltaBadge current={performance?.cpl ?? null} previous={performance?.previousCpl ?? null} downIsGood />
+          </StatCard>
+
+          <StatCard
+            label={ads.live != null ? copy.kpis.adsLive : copy.kpis.adsCreated}
+            icon={<Megaphone size={15} strokeWidth={1.8} />}
+            foot={
+              <span>{ads.created > 0 ? copy.kpis.publishedThisWeek(ads.publishedThisWeek) : copy.kpis.noAdsYet}</span>
+            }
+          >
+            <AnimatedNumber value={adsLiveValue} springOptions={COUNT_SPRING} />
+            {ads.live != null && (
+              <span className="font-sans text-[13px] font-medium tracking-normal text-muted-foreground">
+                {copy.kpis.adsLiveUnit(ads.created)}
+              </span>
+            )}
+          </StatCard>
+
+          <StatCard
+            label={copy.kpis.adPacksLeft}
+            icon={<Package size={15} strokeWidth={1.8} />}
+            foot={
+              <div className="w-full">
+                <PackMeter remaining={packs.remaining} included={packs.included} />
+              </div>
+            }
+          >
+            <AnimatedNumber value={packs.remaining} springOptions={COUNT_SPRING} />
+            <span className="font-sans text-[13px] font-medium tracking-normal text-muted-foreground">
+              / {packs.included}
+            </span>
+          </StatCard>
+        </AnimatedGroup>
+
+        {/* Chart + setup */}
+        <AnimatedGroup className="grid gap-3.5 lg:grid-cols-[3fr_2fr]" itemClassName="h-full">
+          <HomePerformanceChart daily={performance?.daily ?? null} />
+          <HomeSetupCard hasBrand={data.hasBrand} hasProvider={data.hasProvider} adsCreated={ads.created} />
+        </AnimatedGroup>
+
+        {/* Quick actions */}
+        <AnimatedGroup className="grid gap-3.5 sm:grid-cols-2" itemClassName="h-full">
+          {quickActions.map((action) => {
+            const Icon = selfServeIcons[action.href] ?? ArrowRight;
+            return (
+              <Link
+                key={action.href}
+                href={action.href}
+                className="group flex items-center gap-3.5 rounded-(--r-card) bg-card px-5 py-[18px] shadow-card transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-float motion-reduce:hover:translate-y-0"
+              >
+                <span
+                  aria-hidden
+                  className="grid size-[42px] shrink-0 place-items-center rounded-[13px] bg-(--accent-tint) text-foreground"
+                >
+                  <Icon size={19} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[13.5px] font-bold">{action.title}</span>
+                  <span className="mt-px block truncate text-xs text-muted-foreground">{action.subtitle}</span>
+                </span>
+                <ArrowRight
+                  aria-hidden
+                  size={15}
+                  strokeWidth={2.2}
+                  className="shrink-0 text-(--faint) transition-[transform,color] duration-200 group-hover:translate-x-[3px] group-hover:text-foreground motion-reduce:group-hover:translate-x-0"
+                />
+              </Link>
+            );
+          })}
+        </AnimatedGroup>
+      </AnimatedGroup>
+    </div>
+  );
+}

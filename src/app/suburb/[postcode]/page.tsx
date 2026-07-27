@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { cache } from "react";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
+import { niche } from "@/config/niche";
 import { resolveAdRadarLocationSearch } from "@/lib/research/ad-radar-location";
 import { loadPublicAdRadarCards } from "@/lib/research/public-ad-radar";
 import type { PublicAdRadarResponse } from "@/lib/research/public-ad-radar";
@@ -55,6 +56,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function SuburbReportPage({ params, searchParams }: PageProps) {
+  if (!niche.features.suburbPages) notFound();
   const [{ postcode }, query] = await Promise.all([params, searchParams]);
   if (!/^\d{4}$/.test(postcode) || !resolveAdRadarLocationSearch(postcode, { includeSurroundingSuburbs: true })) {
     redirect("/?report=invalid-postcode");

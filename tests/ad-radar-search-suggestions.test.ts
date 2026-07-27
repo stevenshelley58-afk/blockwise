@@ -43,7 +43,15 @@ test("every shared Ad Radar field explains all supported predictive search types
     "utf8",
   );
 
-  assert.match(formSource, /Predictive search for postcode, suburb, agency or agent/);
+  // The scope sentence is niche copy and now lives in the white-label config;
+  // the form reads it from there.
+  const adRadarCopy = readFileSync(
+    join(process.cwd(), "src/config/niche/blockwise/ad-radar.ts"),
+    "utf8",
+  );
+
+  assert.match(adRadarCopy, /Predictive search for postcode, suburb, agency or agent/);
+  assert.match(formSource, /niche\.copy\.adRadar\.searchScope/);
   assert.match(formSource, /\/api\/research\/ad-radar\/suggestions/);
   assert.match(formSource, /aria-autocomplete="list"/);
 });

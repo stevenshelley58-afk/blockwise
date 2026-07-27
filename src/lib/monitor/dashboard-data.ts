@@ -1,4 +1,4 @@
-export type MonitorRange = "today" | "yesterday" | "last_7" | "last_30" | "maximum" | "custom";
+export type MonitorRange = "today" | "yesterday" | "last_7" | "last_30" | "last_90" | "maximum" | "custom";
 
 export type MonitorCustomRange = {
   since?: string | null;
@@ -98,6 +98,7 @@ const RANGE_LABELS: Record<MonitorRange, string> = {
   yesterday: "Yesterday",
   last_7: "Last 7 days",
   last_30: "Last 30 days",
+  last_90: "Last 90 days",
   maximum: "Maximum",
   custom: "Custom range",
 };
@@ -110,6 +111,7 @@ const RANGE_DAYS: Record<MonitorRange, number> = {
   yesterday: 1,
   last_7: 7,
   last_30: 30,
+  last_90: 90,
   maximum: MAX_LOOKBACK_DAYS,
   custom: 30,
 };
@@ -179,6 +181,7 @@ export function parseMonitorRange(value: string | null | undefined): MonitorRang
     value === "yesterday" ||
     value === "last_7" ||
     value === "last_30" ||
+    value === "last_90" ||
     value === "maximum" ||
     value === "custom"
   ) {

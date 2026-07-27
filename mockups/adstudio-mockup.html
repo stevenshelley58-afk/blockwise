@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ad Studio — Premium v2 mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --canvas: #f6f7f9;
+    --surface: #ffffff;
+    --surface-subtle: #f1f2f4;
+    --ink: #16181d;
+    --ink-strong: #0b0c10;
+    --muted: #545a66;
+    --faint: #9aa0ad;
+    --line: #e9ebef;
+    --line-heavy: #d3d7df;
+    --tint: #f1f2f4;
+    --data: #2a78d6;
+    --data-track: rgba(42,120,214,.16);
+    --green: #006d38;
+    --green-soft: #e9f6ef;
+    --amber: #8a5a00;
+    --amber-soft: #fdf6e7;
+    --rose: #ba1a1a;
+    --shadow: 0 1px 2px rgba(16,18,23,.04), 0 8px 24px rgba(16,18,23,.06);
+    --shadow-float: 0 2px 4px rgba(16,18,23,.05), 0 16px 40px rgba(16,18,23,.10);
+    --ring: 0 0 0 3px rgba(22,24,29,.12);
+    --r-control: 10px;
+    --r-card: 16px;
+    --r-panel: 20px;
+    --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
+    --font-display: "Manrope", "Inter", ui-sans-serif, system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+    --spring: cubic-bezier(.22, 1.1, .36, 1);
+    /* studio rail */
+    --rail-bg: #101216;
+    --rail-ink: #f5f6f8;
+    --rail-muted: rgba(245,246,248,.55);
+    --rail-line: rgba(255,255,255,.09);
+    --rail-hover: rgba(255,255,255,.07);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { -webkit-font-smoothing: antialiased; }
+  body { font-family: var(--font-body); background: var(--canvas); color: var(--ink); font-size: 14.5px; line-height: 1.5; min-height: 100vh; }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+  a { color: inherit; text-decoration: none; }
+  input, textarea, select { font: inherit; color: inherit; }
+  ::selection { background: var(--ink); color: #fff; }
+
+  .app { display: grid; grid-template-columns: 232px 1fr; min-height: 100vh; }
+
+  /* ============ Black studio rail ============ */
+  .rail {
+    background: var(--rail-bg); color: var(--rail-ink);
+    padding: 20px 12px 16px;
+    display: flex; flex-direction: column; gap: 4px;
+    position: sticky; top: 0; height: 100vh;
+  }
+  .rail-brand { display: flex; align-items: center; gap: 10px; padding: 2px 10px 18px; }
+  .rail-glyph {
+    width: 30px; height: 30px; border-radius: 9px;
+    background: var(--rail-ink); color: var(--rail-bg);
+    display: grid; place-items: center;
+  }
+  .rail-glyph svg { width: 16px; height: 16px; }
+  .rail-brand-name { font-family: var(--font-display); font-weight: 800; font-size: 16px; letter-spacing: -.02em; }
+  .rail-brand-sub { display: block; font-family: var(--font-mono); font-size: 8.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--rail-muted); margin-top: 1px; }
+
+  .rail-item {
+    display: flex; align-items: center; gap: 11px;
+    width: 100%; padding: 10px 11px; border-radius: var(--r-control);
+    font-weight: 600; font-size: 13.5px; color: var(--rail-muted);
+    transition: background .15s, color .15s, transform .15s var(--spring);
+    text-align: left;
+  }
+  .rail-item svg { width: 17px; height: 17px; flex: none; }
+  .rail-item:hover { background: var(--rail-hover); color: var(--rail-ink); }
+  .rail-item:active { transform: scale(.985); }
+  .rail-item.active { background: var(--rail-ink); color: var(--rail-bg); }
+  .rail-item .kbd {
+    margin-left: auto; font-family: var(--font-mono); font-size: 9px;
+    color: inherit; opacity: .45;
+  }
+
+  .rail-foot { margin-top: auto; display: grid; gap: 10px; }
+  .rail-status {
+    padding: 11px 12px; border: 1px solid var(--rail-line); border-radius: 13px;
+    font-size: 11.5px; color: var(--rail-muted); line-height: 1.45;
+  }
+  .rail-status b { color: var(--rail-ink); font-weight: 700; }
+  .dot { display: inline-block; width: 7px; height: 7px; border-radius: 999px; background: #35c07e; margin-right: 5px; }
+  .back-home {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 11px; border-radius: 13px;
+    background: rgba(255,255,255,.06); border: 1px solid var(--rail-line);
+    font-weight: 700; font-size: 13px; color: var(--rail-ink);
+    transition: background .15s, transform .15s var(--spring);
+  }
+  .back-home:hover { background: rgba(255,255,255,.12); }
+  .back-home:active { transform: scale(.98); }
+  .bw-mark {
+    width: 26px; height: 26px; border-radius: 8px; flex: none;
+    background: var(--rail-ink); color: var(--rail-bg);
+    display: grid; place-items: center;
+    font-family: var(--font-display); font-weight: 800; font-size: 13px;
+  }
+  .back-home svg { width: 14px; height: 14px; margin-left: auto; opacity: .6; transition: transform .2s var(--spring); }
+  .back-home:hover svg { transform: translateX(2px); opacity: 1; }
+
+  /* ============ Main ============ */
+  .main { min-width: 0; display: flex; flex-direction: column; }
+  .content { width: 100%; max-width: 1120px; margin: 0 auto; padding: 34px 32px 80px; }
+  .view { display: none; }
+  .view.on { display: block; }
+
+  h1 { font-family: var(--font-display); font-size: 26px; font-weight: 800; letter-spacing: -.025em; line-height: 1.15; }
+  .sub { margin-top: 5px; color: var(--muted); font-size: 13.5px; }
+  .page-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px; }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    height: 41px; padding: 0 19px; border-radius: 999px;
+    background: var(--ink); color: #fff; font-weight: 700; font-size: 13.5px;
+    box-shadow: var(--shadow);
+    transition: background .15s, transform .15s var(--spring), box-shadow .2s;
+  }
+  .btn:hover { background: var(--ink-strong); box-shadow: var(--shadow-float); }
+  .btn:active { transform: scale(.97); }
+  .btn svg { width: 14px; height: 14px; }
+  .btn.ghost { background: var(--surface); color: var(--ink); border: 1px solid var(--line-heavy); box-shadow: none; height: 38px; padding: 0 15px; font-size: 13px; }
+  .btn.ghost:hover { background: var(--surface-subtle); box-shadow: var(--shadow); }
+  .btn.small { height: 33px; padding: 0 13px; font-size: 12.5px; }
+
+  .card { background: var(--surface); border-radius: var(--r-card); box-shadow: var(--shadow); transition: transform .2s var(--spring), box-shadow .25s; }
+  .card.lift:hover { transform: translateY(-2px); box-shadow: var(--shadow-float); }
+  .panel { border-radius: var(--r-panel); }
+
+  .chip { font-size: 11px; font-weight: 700; border-radius: 999px; padding: 4px 11px; }
+  .chip.draft { background: var(--amber-soft); color: var(--amber); }
+  .chip.live { background: var(--green-soft); color: var(--green); }
+  .chip.sync { background: var(--green-soft); color: var(--green); display: inline-flex; align-items: center; gap: 5px; }
+  .chip.sync svg { width: 11px; height: 11px; }
+
+  .mono-label { font-family: var(--font-mono); font-size: 9.5px; font-weight: 500; letter-spacing: .12em; text-transform: uppercase; color: var(--faint); }
+
+  /* ============ Create ============ */
+  .ways { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 24px; }
+  .way { padding: 22px; display: flex; flex-direction: column; gap: 12px; }
+  .way-ico { width: 42px; height: 42px; border-radius: 13px; display: grid; place-items: center; background: var(--tint); color: var(--ink); }
+  .way-ico svg { width: 19px; height: 19px; }
+  .way h3 { font-family: var(--font-display); font-size: 15.5px; font-weight: 800; letter-spacing: -.015em; }
+  .way p { font-size: 12.5px; color: var(--muted); flex: 1; }
+  .way-input { display: flex; gap: 8px; }
+  .way-input input {
+    flex: 1; min-width: 0; height: 40px; padding: 0 13px;
+    border: 1px solid var(--line-heavy); border-radius: var(--r-control);
+    outline: none; font-size: 13px; background: var(--surface);
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .way-input input:focus { border-color: var(--ink); box-shadow: var(--ring); }
+  .way-note { font-size: 11px; color: var(--faint); }
+  .thumb-row { display: flex; gap: 7px; }
+  .mini-thumb { width: 44px; height: 44px; border-radius: 9px; border: 1px solid var(--line); }
+
+  .recent { margin-top: 26px; }
+  .recent-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-top: 12px; }
+  .recent-card { display: flex; align-items: center; gap: 14px; padding: 14px 16px; }
+  .recent-main { flex: 1; min-width: 0; }
+  .recent-title { font-size: 13.5px; font-weight: 700; }
+  .recent-sub { font-size: 12px; color: var(--muted); }
+
+  /* ad thumbnails — CSS-art meta ads */
+  .ad-thumb { position: relative; display: inline-block; border-radius: 12px; overflow: hidden; flex: none; border: 1px solid var(--line); }
+  .ad-thumb .img { position: absolute; inset: 0; }
+  .ad-thumb .brandchip {
+    position: absolute; top: 7%; left: 6%;
+    background: rgba(255,255,255,.92); color: var(--ink);
+    font-family: var(--font-display); font-weight: 800;
+    border-radius: 999px; display: grid; place-items: center;
+  }
+  .ad-thumb .adbar {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    background: linear-gradient(transparent, rgba(10,12,16,.72) 40%);
+    color: #fff; display: flex; align-items: flex-end; justify-content: space-between; gap: 6px;
+    padding: 26% 7% 7%;
+  }
+  .ad-thumb .adhead { font-family: var(--font-display); font-weight: 800; letter-spacing: -.01em; line-height: 1.15; }
+  .ad-thumb .adcta { background: #fff; color: var(--ink); border-radius: 999px; font-weight: 700; white-space: nowrap; }
+  .g1 { background: linear-gradient(160deg, #f4d9b0 0%, #e8a87c 45%, #7c5c8f 100%); }
+  .g2 { background: linear-gradient(165deg, #cfe3d8 0%, #8fb8a5 50%, #3f6455 100%); }
+  .g3 { background: linear-gradient(160deg, #f6e7d3 0%, #d9a05b 55%, #8a4f2d 100%); }
+  .g4 { background: linear-gradient(165deg, #cdd9ea 0%, #7d9dc4 50%, #2f4a6b 100%); }
+  .g5 { background: linear-gradient(160deg, #e8e3f4 0%, #a99fd1 55%, #4f4478 100%); }
+  .g6 { background: linear-gradient(165deg, #d7ecf2 0%, #7cb8c9 50%, #2b5a6b 100%); }
+
+  /* ============ Edit ============ */
+  .edit-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+  .edit-title { font-family: var(--font-display); font-size: 19px; font-weight: 800; letter-spacing: -.02em; }
+  .edit-bar .spacer { flex: 1; }
+  .edit-grid { display: grid; grid-template-columns: 1fr 340px; gap: 14px; margin-top: 20px; align-items: start; }
+
+  .canvas-card { padding: 20px; display: flex; flex-direction: column; align-items: center; gap: 16px; }
+  .seg { display: flex; background: var(--surface-subtle); border: 1px solid var(--line); border-radius: 999px; padding: 3px; gap: 2px; }
+  .seg button { font-size: 12px; font-weight: 700; padding: 6px 16px; border-radius: 999px; color: var(--muted); transition: all .22s var(--spring); }
+  .seg button.on { background: var(--ink); color: #fff; box-shadow: var(--shadow); }
+
+  .stage { display: grid; place-items: center; width: 100%; }
+  .creative {
+    position: relative; border-radius: 14px; overflow: hidden;
+    box-shadow: var(--shadow-float); border: 1px solid var(--line);
+    width: 360px; height: 360px;
+    transition: width .35s var(--spring), height .35s var(--spring);
+  }
+  .creative.story { width: 250px; height: 444px; }
+  .creative .brandchip { position: absolute; top: 14px; left: 14px; width: 34px; height: 34px; font-size: 13px; z-index: 2; background: rgba(255,255,255,.92); color: var(--ink); font-family: var(--font-display); font-weight: 800; border-radius: 999px; display: grid; place-items: center; }
+  .creative .adbar { position: absolute; left: 0; right: 0; bottom: 0; background: linear-gradient(transparent, rgba(10,12,16,.75) 45%); color: #fff; padding: 90px 18px 16px; display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+  .creative .adhead { font-family: var(--font-display); font-size: 19px; font-weight: 800; letter-spacing: -.015em; line-height: 1.15; }
+  .creative .adsub { font-size: 12px; opacity: .85; margin-top: 3px; }
+  .creative .adcta { background: #fff; color: var(--ink); border-radius: 999px; font-weight: 700; font-size: 12.5px; padding: 9px 16px; white-space: nowrap; }
+  .region {
+    position: absolute; border: 1.5px dashed rgba(255,255,255,.85); border-radius: 8px;
+    background: rgba(255,255,255,.06); opacity: 0; transition: opacity .2s;
+  }
+  .creative:hover .region { opacity: 1; }
+  .canvas-hint { font-size: 11.5px; color: var(--faint); }
+
+  .side { display: grid; gap: 14px; }
+  .side .card { padding: 18px; }
+  .side h4 { font-family: var(--font-display); font-size: 14px; font-weight: 800; letter-spacing: -.01em; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; }
+  .field { display: grid; gap: 5px; margin-bottom: 12px; }
+  .field label { font-size: 11.5px; font-weight: 700; color: var(--muted); }
+  .field input, .field textarea, .field select {
+    width: 100%; border: 1px solid var(--line-heavy); border-radius: var(--r-control);
+    padding: 9px 12px; font-size: 13px; outline: none; background: var(--surface);
+    transition: border-color .15s, box-shadow .15s; resize: none;
+  }
+  .field input:focus, .field textarea:focus, .field select:focus { border-color: var(--ink); box-shadow: var(--ring); }
+  .charcount { font-size: 10.5px; color: var(--faint); text-align: right; }
+  .img-row { display: flex; align-items: center; gap: 12px; }
+  .img-row .ad-thumb { width: 62px; height: 62px; }
+  .img-actions { display: grid; gap: 7px; flex: 1; }
+  .save-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .autosave { font-size: 11.5px; color: var(--faint); display: inline-flex; align-items: center; gap: 5px; }
+  .autosave .dot { background: #35c07e; }
+
+  /* ============ Library ============ */
+  .lib-tabs { display: flex; gap: 6px; margin-top: 20px; }
+  .lib-tab {
+    font-size: 12.5px; font-weight: 700; padding: 8px 16px; border-radius: 999px;
+    background: var(--surface); border: 1px solid var(--line); color: var(--muted);
+    transition: all .18s var(--spring);
+  }
+  .lib-tab:hover { color: var(--ink); border-color: var(--line-heavy); }
+  .lib-tab.on { background: var(--ink); border-color: var(--ink); color: #fff; }
+  .lib-pane { display: none; margin-top: 16px; }
+  .lib-pane.on { display: block; }
+  .lib-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .lib-card { overflow: hidden; }
+  .lib-card .ad-thumb { display: block; width: 100%; height: 170px; border-radius: 0; border: 0; position: relative; }
+  .lib-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 14px; }
+  .lib-title { font-size: 12.5px; font-weight: 700; }
+  .lib-sub { font-size: 11px; color: var(--muted); }
+  .asset-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  .asset { height: 120px; border-radius: var(--r-card); display: grid; place-items: center; position: relative; overflow: hidden; }
+  .asset .tag { position: absolute; bottom: 8px; left: 10px; font-size: 10.5px; font-weight: 700; color: #fff; text-shadow: 0 1px 6px rgba(0,0,0,.4); }
+  .asset.upload { border: 1.5px dashed var(--line-heavy); background: var(--surface); color: var(--muted); font-size: 12px; font-weight: 600; cursor: pointer; display: grid; place-items: center; gap: 6px; transition: border-color .15s, color .15s; }
+  .asset.upload:hover { border-color: var(--ink); color: var(--ink); }
+  .asset.logo-tile { background: var(--ink); }
+  .asset.logo-tile span { font-family: var(--font-display); font-weight: 800; font-size: 26px; color: #fff; }
+  .listing-list { display: grid; gap: 10px; }
+  .listing { display: flex; align-items: center; gap: 14px; padding: 14px 16px; }
+  .listing-ico { width: 40px; height: 40px; border-radius: 12px; background: var(--tint); display: grid; place-items: center; flex: none; }
+  .listing-ico svg { width: 18px; height: 18px; }
+  .listing-main { flex: 1; min-width: 0; }
+  .listing-title { font-size: 13.5px; font-weight: 700; }
+  .listing-sub { font-size: 12px; color: var(--muted); }
+
+  /* ============ Settings ============ */
+  .set-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-top: 20px; }
+  .set-card { padding: 20px; }
+  .set-card h4 { font-family: var(--font-display); font-size: 14.5px; font-weight: 800; margin-bottom: 4px; }
+  .set-card .desc { font-size: 12.5px; color: var(--muted); margin-bottom: 14px; }
+  .set-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); font-size: 13px; }
+  .set-row .v { color: var(--muted); display: inline-flex; align-items: center; gap: 8px; }
+  .swatches { display: inline-flex; gap: 5px; }
+  .swatches i { width: 16px; height: 16px; border-radius: 999px; border: 1px solid var(--line); }
+
+  /* ============ Publish modal ============ */
+  .overlay {
+    position: fixed; inset: 0; z-index: 60; display: none;
+    place-items: center; background: rgba(12,14,18,.45); backdrop-filter: blur(4px);
+    padding: 20px;
+  }
+  .overlay.on { display: grid; }
+  .modal {
+    width: min(460px, 100%); background: var(--surface); border-radius: var(--r-panel);
+    box-shadow: var(--shadow-float); padding: 26px;
+    animation: pop .35s var(--spring);
+  }
+  @keyframes pop { from { opacity: 0; transform: scale(.95) translateY(10px); } to { opacity: 1; transform: none; } }
+  .modal h3 { font-family: var(--font-display); font-size: 18px; font-weight: 800; letter-spacing: -.02em; }
+  .modal .msub { font-size: 12.5px; color: var(--muted); margin-top: 3px; }
+  .check-list { margin: 18px 0 6px; display: grid; gap: 3px; }
+  .check-item { display: flex; align-items: center; gap: 11px; padding: 9px 10px; border-radius: 10px; font-size: 13px; font-weight: 600; }
+  .check-item .ok { width: 24px; height: 24px; border-radius: 999px; background: var(--green-soft); color: var(--green); display: grid; place-items: center; flex: none; }
+  .check-item .ok svg { width: 12px; height: 12px; }
+  .check-item small { margin-left: auto; color: var(--faint); font-weight: 500; }
+  .modal .field { margin: 12px 0 18px; }
+  .modal-actions { display: flex; gap: 9px; justify-content: flex-end; }
+  .success { text-align: center; padding: 14px 0 4px; display: none; }
+  .success.on { display: block; }
+  .big-check { width: 64px; height: 64px; border-radius: 999px; background: var(--green-soft); color: var(--green); display: grid; place-items: center; margin: 0 auto 14px; }
+  .big-check svg { width: 30px; height: 30px; }
+  .big-check .check-path { stroke-dasharray: 26; stroke-dashoffset: 26; animation: draw .55s .15s var(--spring) forwards; }
+  @keyframes draw { to { stroke-dashoffset: 0; } }
+
+  /* ============ Motion ============ */
+  @keyframes rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  .view.on .stagger { opacity: 0; animation: rise .5s var(--spring) forwards; animation-delay: calc(var(--i, 0) * 45ms); }
+
+  .mock-note {
+    position: fixed; right: 16px; bottom: 16px; z-index: 50; pointer-events: none;
+    background: var(--ink); color: #fff; border-radius: 999px;
+    padding: 8px 16px; font-size: 11.5px; font-weight: 600;
+    box-shadow: var(--shadow-float); opacity: .92;
+  }
+  .mock-note b { color: #9ec5f4; }
+
+  /* ============ Mobile ============ */
+  .m-topbar { display: none; }
+  .tabbar { display: none; }
+  @media (max-width: 960px) {
+    .app { grid-template-columns: 1fr; }
+    .rail { display: none; }
+    .m-topbar {
+      position: sticky; top: 0; z-index: 20;
+      display: flex; align-items: center; gap: 10px;
+      min-height: 54px; padding: 0 16px;
+      padding-top: env(safe-area-inset-top);
+      background: var(--rail-bg); color: var(--rail-ink);
+    }
+    .m-topbar .rail-glyph { width: 27px; height: 27px; border-radius: 8px; }
+    .m-topbar .rail-glyph svg { width: 14px; height: 14px; }
+    .m-title { font-family: var(--font-display); font-weight: 800; font-size: 15.5px; letter-spacing: -.015em; }
+    .m-home { margin-left: auto; display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 700; background: rgba(255,255,255,.08); border: 1px solid var(--rail-line); border-radius: 999px; padding: 6px 12px 6px 6px; }
+    .m-home .bw-mark { width: 22px; height: 22px; border-radius: 6px; font-size: 11px; }
+    .content { padding: 20px 16px calc(90px + env(safe-area-inset-bottom)); }
+    h1 { font-size: 22px; }
+    .ways { grid-template-columns: 1fr; gap: 10px; }
+    .recent-grid { grid-template-columns: 1fr; }
+    .edit-grid { grid-template-columns: 1fr; }
+    .creative { width: min(360px, 100%); height: auto; aspect-ratio: 1; }
+    .creative.story { width: min(250px, 70%); height: auto; aspect-ratio: 9/16; }
+    .lib-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .asset-grid { grid-template-columns: repeat(2, 1fr); }
+    .set-grid { grid-template-columns: 1fr; }
+    .card.lift:hover { transform: none; }
+    .edit-bar { gap: 9px; }
+    .edit-title { width: 100%; }
+    .edit-bar .spacer { display: none; }
+    .edit-bar .btn.ghost { order: 3; flex: 1; }
+    .edit-bar .btn:not(.ghost) { order: 4; }
+    .mock-note { display: none; }
+    .tabbar {
+      position: fixed; inset: auto 0 0 0; z-index: 40;
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+      background: color-mix(in srgb, var(--surface) 94%, transparent);
+      backdrop-filter: blur(16px);
+      border-top: 1px solid var(--line);
+    }
+    .tab { display: grid; place-items: center; gap: 3px; min-height: 48px; border-radius: 12px; font-size: 10.5px; font-weight: 700; color: var(--faint); transition: color .15s, transform .15s var(--spring), background .15s; }
+    .tab svg { width: 21px; height: 21px; }
+    .tab:active { transform: scale(.94); }
+    .tab.on { color: var(--ink); background: var(--tint); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01ms !important; animation-delay: 0ms !important; transition-duration: .01ms !important; }
+    .view.on .stagger { opacity: 1; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ============ Studio rail (black = you are in Ad Studio) ============ -->
+  <aside class="rail">
+    <div class="rail-brand">
+      <span class="rail-glyph">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6-5.4-3-5.4 3 1.2-6L3.3 9.3l6.1-.7z"/></svg>
+      </span>
+      <span>
+        <span class="rail-brand-name">Ad Studio</span>
+        <span class="rail-brand-sub">Blockwise</span>
+      </span>
+    </div>
+
+    <button class="rail-item active" data-view="create">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>
+      Create
+    </button>
+    <button class="rail-item" data-view="edit">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3.5a2.1 2.1 0 0 1 3 3L8.5 18l-4 1 1-4z"/></svg>
+      Edit
+    </button>
+    <button class="rail-item" data-view="library">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V5a1 1 0 0 1 1-1h3v16H5a1 1 0 0 1-1-1zM8 4h4v16H8z"/><path d="M13.5 4.6l4.2-1 3.6 15.6-4.2 1z"/></svg>
+      Library
+    </button>
+    <button class="rail-item" data-view="settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h10M18 8h2M4 16h2M10 16h10"/><circle cx="16" cy="8" r="2.2"/><circle cx="8" cy="16" r="2.2"/></svg>
+      Settings
+    </button>
+
+    <div class="rail-foot">
+      <div class="rail-status"><span class="dot"></span><b>Meta connected</b><br>Coastal Realty · AU</div>
+      <a class="back-home" href="./dashboard-premium-v2.html" title="Back to Blockwise home">
+        <span class="bw-mark">B</span>
+        Blockwise
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </a>
+    </div>
+  </aside>
+
+  <!-- ============ Main ============ -->
+  <div class="main">
+    <header class="m-topbar">
+      <span class="rail-glyph">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6-5.4-3-5.4 3 1.2-6L3.3 9.3l6.1-.7z"/></svg>
+      </span>
+      <span class="m-title">Ad Studio</span>
+      <a class="m-home" href="./dashboard-premium-v2.html"><span class="bw-mark">B</span>Home</a>
+    </header>
+
+    <div class="content">
+
+      <!-- ============ Create ============ -->
+      <section id="view-create" class="view on">
+        <div class="page-head stagger" style="--i:0">
+          <div>
+            <h1>Create an ad.</h1>
+            <p class="sub">Three ways in — every one ends at the same finished, editable ad.</p>
+          </div>
+        </div>
+
+        <div class="ways">
+          <div class="card lift way stagger" style="--i:1">
+            <span class="way-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 9.5V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9.5"/></svg></span>
+            <h3>From a listing</h3>
+            <p>Paste an address or pick one from your Library. We build the ad from your photos and brand pack.</p>
+            <div class="way-input">
+              <input type="text" placeholder="12 Seaview Tce, Applecross" aria-label="Listing address">
+              <button class="btn small">Start</button>
+            </div>
+          </div>
+
+          <div class="card lift way stagger" style="--i:2">
+            <span class="way-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7.5" height="7.5" rx="1.8"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.8"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.8"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.8"/></svg></span>
+            <h3>From a template</h3>
+            <p>Proven layouts drawn from real, working ads. Pick one and drop your listing in.</p>
+            <div class="thumb-row">
+              <span class="mini-thumb g1"></span>
+              <span class="mini-thumb g2"></span>
+              <span class="mini-thumb g4"></span>
+            </div>
+            <button class="btn ghost">Browse templates</button>
+          </div>
+
+          <div class="card lift way stagger" style="--i:3">
+            <span class="way-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 12l5-3"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg></span>
+            <h3>From Ad Radar</h3>
+            <p>Seen a winning ad near you? We turn it into a template of your own, then you make it yours.</p>
+            <span class="way-note">Becomes a template like any other — same generator, same quality checks.</span>
+            <button class="btn ghost">Open Ad Radar</button>
+          </div>
+        </div>
+
+        <div class="recent stagger" style="--i:4">
+          <p class="mono-label">Pick up where you left off</p>
+          <div class="recent-grid">
+            <div class="card lift recent-card">
+              <span class="ad-thumb g1" style="width:56px;height:56px"><span class="img g1"></span><span class="brandchip" style="width:14px;height:14px;font-size:7px">C</span></span>
+              <span class="recent-main">
+                <span class="recent-title" style="display:block">12 Seaview Tce — Just listed</span>
+                <span class="recent-sub">Draft · edited 2 hours ago</span>
+              </span>
+              <button class="btn small" data-goto="edit">Continue</button>
+            </div>
+            <div class="card lift recent-card">
+              <span class="ad-thumb g2" style="width:56px;height:56px"><span class="img g2"></span><span class="brandchip" style="width:14px;height:14px;font-size:7px">C</span></span>
+              <span class="recent-main">
+                <span class="recent-title" style="display:block">Autumn appraisal offer</span>
+                <span class="recent-sub">Draft · edited yesterday</span>
+              </span>
+              <button class="btn small ghost" data-goto="edit">Open</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ Edit ============ -->
+      <section id="view-edit" class="view">
+        <div class="edit-bar stagger" style="--i:0">
+          <span class="edit-title">12 Seaview Tce — Just listed</span>
+          <span class="chip draft">Draft</span>
+          <span class="spacer"></span>
+          <button class="btn ghost" data-goto="library">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V5a1 1 0 0 1 1-1h3v16H5a1 1 0 0 1-1-1zM8 4h4v16H8z"/><path d="M13.5 4.6l4.2-1 3.6 15.6-4.2 1z"/></svg>
+            Library — open another ad
+          </button>
+          <button class="btn" id="openPublish">Publish</button>
+        </div>
+
+        <div class="edit-grid">
+          <div class="card panel canvas-card stagger" style="--i:1">
+            <div class="seg" id="formatSeg">
+              <button class="on" data-format="feed">Feed</button>
+              <button data-format="story">Story</button>
+            </div>
+            <div class="stage">
+              <div class="creative" id="creative">
+                <span class="img g1" style="position:absolute;inset:0"></span>
+                <span class="brandchip">CR</span>
+                <span class="region" style="top:16%;right:10%;width:34%;height:22%" title="Image region"></span>
+                <div class="adbar">
+                  <span>
+                    <span class="adhead" id="prevHead">Just listed in Applecross</span>
+                    <span class="adsub" style="display:block">4 bed · 2 bath · river glimpses</span>
+                  </span>
+                  <span class="adcta" id="prevCta">Learn more</span>
+                </div>
+              </div>
+            </div>
+            <p class="canvas-hint">Hover the ad to see editable regions — every region also has a field below.</p>
+          </div>
+
+          <div class="side">
+            <div class="card stagger" style="--i:2">
+              <h4>Copy</h4>
+              <div class="field">
+                <label for="fHead">Headline</label>
+                <input id="fHead" type="text" value="Just listed in Applecross" maxlength="40">
+                <span class="charcount">25 / 40</span>
+              </div>
+              <div class="field">
+                <label for="fBody">Primary text</label>
+                <textarea id="fBody" rows="3">4 bed, 2 bath family home moments from the river. Open Saturday 11am.</textarea>
+              </div>
+              <div class="field">
+                <label for="fCta">Call to action</label>
+                <select id="fCta">
+                  <option selected>Learn more</option>
+                  <option>Book appraisal</option>
+                  <option>Get the price list</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="card stagger" style="--i:3">
+              <h4>Image</h4>
+              <div class="img-row">
+                <span class="ad-thumb g1"><span class="img g1"></span></span>
+                <span class="img-actions">
+                  <button class="btn ghost small">Replace image</button>
+                  <button class="btn ghost small">Edit a region</button>
+                </span>
+              </div>
+            </div>
+
+            <div class="card stagger" style="--i:4">
+              <div class="save-row">
+                <span class="autosave"><span class="dot"></span>Saved just now</span>
+                <button class="btn small">Save changes</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ Library ============ -->
+      <section id="view-library" class="view">
+        <div class="page-head stagger" style="--i:0">
+          <div>
+            <h1>Library</h1>
+            <p class="sub">Everything you've made and everything you make ads from.</p>
+          </div>
+          <button class="btn" data-goto="create">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            New ad
+          </button>
+        </div>
+
+        <div class="lib-tabs stagger" style="--i:1">
+          <button class="lib-tab on" data-tab="ads">Ads</button>
+          <button class="lib-tab" data-tab="assets">Assets</button>
+          <button class="lib-tab" data-tab="listings">Listings</button>
+        </div>
+
+        <div class="lib-pane on" id="pane-ads">
+          <div class="lib-grid">
+            <div class="card lift lib-card stagger" style="--i:2">
+              <span class="ad-thumb"><span class="img g1"></span><span class="brandchip" style="width:22px;height:22px;font-size:9px">CR</span><span class="adbar"><span class="adhead" style="font-size:12px">Just listed in Applecross</span><span class="adcta" style="font-size:9px;padding:5px 9px">Learn more</span></span></span>
+              <div class="lib-meta">
+                <span><span class="lib-title" style="display:block">12 Seaview Tce</span><span class="lib-sub">Edited 2h ago</span></span>
+                <span style="display:inline-flex;align-items:center;gap:7px"><span class="chip draft">Draft</span><button class="btn small" data-goto="edit">Edit</button></span>
+              </div>
+            </div>
+            <div class="card lift lib-card stagger" style="--i:3">
+              <span class="ad-thumb"><span class="img g2"></span><span class="brandchip" style="width:22px;height:22px;font-size:9px">CR</span><span class="adbar"><span class="adhead" style="font-size:12px">What's your home worth?</span><span class="adcta" style="font-size:9px;padding:5px 9px">Book appraisal</span></span></span>
+              <div class="lib-meta">
+                <span><span class="lib-title" style="display:block">Autumn appraisal offer</span><span class="lib-sub">Edited yesterday</span></span>
+                <span style="display:inline-flex;align-items:center;gap:7px"><span class="chip draft">Draft</span><button class="btn small" data-goto="edit">Edit</button></span>
+              </div>
+            </div>
+            <div class="card lift lib-card stagger" style="--i:4">
+              <span class="ad-thumb"><span class="img g4"></span><span class="brandchip" style="width:22px;height:22px;font-size:9px">CR</span><span class="adbar"><span class="adhead" style="font-size:12px">Open home Saturday</span><span class="adcta" style="font-size:9px;padding:5px 9px">Learn more</span></span></span>
+              <div class="lib-meta">
+                <span><span class="lib-title" style="display:block">8 Marine Pde</span><span class="lib-sub">Live 6 days · 41 leads</span></span>
+                <span style="display:inline-flex;align-items:center;gap:7px"><span class="chip live">Live</span><button class="btn small ghost" data-goto="edit">Edit</button></span>
+              </div>
+            </div>
+            <div class="card lift lib-card stagger" style="--i:5">
+              <span class="ad-thumb"><span class="img g3"></span><span class="brandchip" style="width:22px;height:22px;font-size:9px">CR</span><span class="adbar"><span class="adhead" style="font-size:12px">Sold above asking</span><span class="adcta" style="font-size:9px;padding:5px 9px">Get the price list</span></span></span>
+              <div class="lib-meta">
+                <span><span class="lib-title" style="display:block">Sold price list</span><span class="lib-sub">Live 12 days · 87 leads</span></span>
+                <span style="display:inline-flex;align-items:center;gap:7px"><span class="chip live">Live</span><button class="btn small ghost" data-goto="edit">Edit</button></span>
+              </div>
+            </div>
+            <div class="card lift lib-card stagger" style="--i:6">
+              <span class="ad-thumb"><span class="img g5"></span><span class="brandchip" style="width:22px;height:22px;font-size:9px">CR</span><span class="adbar"><span class="adhead" style="font-size:12px">Downsizing done right</span><span class="adcta" style="font-size:9px;padding:5px 9px">Learn more</span></span></span>
+              <div class="lib-meta">
+                <span><span class="lib-title" style="display:block">Downsizer campaign</span><span class="lib-sub">Paused · 23 leads</span></span>
+                <span style="display:inline-flex;align-items:center;gap:7px"><span class="chip draft">Paused</span><button class="btn small ghost" data-goto="edit">Edit</button></span>
+              </div>
+            </div>
+            <div class="card lift lib-card stagger" style="--i:7">
+              <span class="ad-thumb"><span class="img g6"></span><span class="brandchip" style="width:22px;height:22px;font-size:9px">CR</span><span class="adbar"><span class="adhead" style="font-size:12px">Your suburb, this month</span><span class="adcta" style="font-size:9px;padding:5px 9px">Learn more</span></span></span>
+              <div class="lib-meta">
+                <span><span class="lib-title" style="display:block">Market update</span><span class="lib-sub">Ended · 54 leads</span></span>
+                <span style="display:inline-flex;align-items:center;gap:7px"><span class="chip draft">Ended</span><button class="btn small ghost" data-goto="edit">Edit</button></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="lib-pane" id="pane-assets">
+          <div class="asset-grid">
+            <div class="card lift asset logo-tile stagger" style="--i:2"><span>CR</span><span class="tag">Logo</span></div>
+            <div class="card lift asset g1 stagger" style="--i:3"><span class="tag">Hero — Seaview Tce</span></div>
+            <div class="card lift asset g2 stagger" style="--i:4"><span class="tag">Garden — Marine Pde</span></div>
+            <div class="card lift asset g4 stagger" style="--i:5"><span class="tag">Facade — Marine Pde</span></div>
+            <div class="card lift asset g3 stagger" style="--i:6"><span class="tag">Interior — Seaview Tce</span></div>
+            <div class="card lift asset g6 stagger" style="--i:7"><span class="tag">Pool — Seaview Tce</span></div>
+            <div class="asset upload stagger" style="--i:8">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 20h16"/></svg>
+              Upload
+            </div>
+          </div>
+        </div>
+
+        <div class="lib-pane" id="pane-listings">
+          <div class="listing-list">
+            <div class="card lift listing stagger" style="--i:2">
+              <span class="listing-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 9.5V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9.5"/></svg></span>
+              <span class="listing-main">
+                <span class="listing-title" style="display:block">12 Seaview Tce, Applecross</span>
+                <span class="listing-sub">4 bed · 2 bath · Just listed · 6 photos</span>
+              </span>
+              <span class="chip live">Active</span>
+              <button class="btn small ghost" data-goto="create">Create ad</button>
+            </div>
+            <div class="card lift listing stagger" style="--i:3">
+              <span class="listing-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 9.5V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9.5"/></svg></span>
+              <span class="listing-main">
+                <span class="listing-title" style="display:block">8 Marine Pde, Cottesloe</span>
+                <span class="listing-sub">3 bed · 1 bath · Open home Sat · 9 photos</span>
+              </span>
+              <span class="chip live">Active</span>
+              <button class="btn small ghost" data-goto="create">Create ad</button>
+            </div>
+            <div class="card lift listing stagger" style="--i:4">
+              <span class="listing-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 9.5V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9.5"/></svg></span>
+              <span class="listing-main">
+                <span class="listing-title" style="display:block">44 Hensman St, South Perth</span>
+                <span class="listing-sub">2 bed · 1 bath · Sold · 5 photos</span>
+              </span>
+              <span class="chip draft">Sold</span>
+              <button class="btn small ghost" data-goto="create">Create ad</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ Settings ============ -->
+      <section id="view-settings" class="view">
+        <div class="page-head stagger" style="--i:0">
+          <div>
+            <h1>Studio settings</h1>
+            <p class="sub">The same settings as your workspace — change them here or there, they stay in sync.</p>
+          </div>
+          <span class="chip sync">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7l-9.5 9.5L5 11"/></svg>
+            Synced with Settings
+          </span>
+        </div>
+
+        <div class="set-grid">
+          <div class="card panel set-card stagger" style="--i:1">
+            <h4>Brand pack</h4>
+            <p class="desc">Used on every ad you create.</p>
+            <div class="set-row"><span>Business name</span><span class="v">Coastal Realty</span></div>
+            <div class="set-row"><span>Colours</span><span class="v"><span class="swatches"><i style="background:#07152b"></i><i style="background:#315ca8"></i><i style="background:#e8e8e8"></i></span></span></div>
+            <div class="set-row"><span>Logo</span><span class="v">coastal-realty.svg</span></div>
+            <div style="margin-top:14px"><button class="btn ghost small">Edit brand pack</button></div>
+          </div>
+
+          <div class="card panel set-card stagger" style="--i:2">
+            <h4>Meta connection</h4>
+            <p class="desc">Where finished ads publish.</p>
+            <div class="set-row"><span>Status</span><span class="v" style="color:var(--green);font-weight:700">Connected</span></div>
+            <div class="set-row"><span>Ad account</span><span class="v">Coastal Realty — 8841</span></div>
+            <div class="set-row"><span>Lead destination</span><span class="v">Blockwise CRM sync</span></div>
+            <div style="margin-top:14px"><button class="btn ghost small">Manage connection</button></div>
+          </div>
+
+          <div class="card panel set-card stagger" style="--i:3">
+            <h4>Defaults</h4>
+            <p class="desc">Starting points for new ads.</p>
+            <div class="set-row"><span>Call to action</span><span class="v">Learn more</span></div>
+            <div class="set-row"><span>Region</span><span class="v">Perth, WA</span></div>
+            <div class="set-row"><span>Formats</span><span class="v">Feed + Story</span></div>
+            <div style="margin-top:14px"><button class="btn ghost small">Edit defaults</button></div>
+          </div>
+
+          <div class="card panel set-card stagger" style="--i:4">
+            <h4>Everything else</h4>
+            <p class="desc">Billing, team, notifications and workspace options live in your main Settings.</p>
+            <div style="margin-top:6px"><button class="btn ghost small">Open workspace Settings</button></div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<!-- ============ Publish modal ============ -->
+<div class="overlay" id="publishOverlay">
+  <div class="modal">
+    <div id="publishReview">
+      <h3>Review &amp; publish</h3>
+      <p class="msub">12 Seaview Tce — Just listed</p>
+      <div class="check-list">
+        <div class="check-item"><span class="ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7l-9.5 9.5L5 11"/></svg></span>Feed creative<small>Ready</small></div>
+        <div class="check-item"><span class="ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7l-9.5 9.5L5 11"/></svg></span>Story creative<small>Ready</small></div>
+        <div class="check-item"><span class="ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7l-9.5 9.5L5 11"/></svg></span>Quality check<small>Passed</small></div>
+      </div>
+      <div class="field">
+        <label for="fDest">Publish to</label>
+        <select id="fDest">
+          <option selected>Leads campaign — Meta · Coastal Realty 8841</option>
+          <option>New campaign…</option>
+        </select>
+      </div>
+      <div class="modal-actions">
+        <button class="btn ghost" id="cancelPublish">Cancel</button>
+        <button class="btn" id="confirmPublish">Publish ad</button>
+      </div>
+    </div>
+    <div class="success" id="publishSuccess">
+      <div class="big-check">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path class="check-path" d="M20 7l-9.5 9.5L5 11"/></svg>
+      </div>
+      <h3>Your ad is live.</h3>
+      <p class="msub" style="margin-bottom:18px">Publishing to Meta — leads will appear in Blockwise as they arrive.</p>
+      <button class="btn" id="closeSuccess">Done</button>
+    </div>
+  </div>
+</div>
+
+<nav class="tabbar" aria-label="Studio mobile navigation">
+  <button class="tab on" data-view="create">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>
+    Create
+  </button>
+  <button class="tab" data-view="edit">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3.5a2.1 2.1 0 0 1 3 3L8.5 18l-4 1 1-4z"/></svg>
+    Edit
+  </button>
+  <button class="tab" data-view="library">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V5a1 1 0 0 1 1-1h3v16H5a1 1 0 0 1-1-1zM8 4h4v16H8z"/><path d="M13.5 4.6l4.2-1 3.6 15.6-4.2 1z"/></svg>
+    Library
+  </button>
+  <button class="tab" data-view="settings">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h10M18 8h2M4 16h2M10 16h10"/><circle cx="16" cy="8" r="2.2"/><circle cx="8" cy="16" r="2.2"/></svg>
+    Settings
+  </button>
+</nav>
+
+<div class="mock-note">Ad Studio mockup · <b>Premium v2</b> · black rail = you're in the studio</div>
+
+<script>
+"use strict";
+
+/* view switching — rail, mobile tabs, and in-page buttons */
+function switchView(key) {
+  document.querySelectorAll(".rail-item").forEach(b => b.classList.toggle("active", b.dataset.view === key));
+  document.querySelectorAll(".tab").forEach(b => b.classList.toggle("on", b.dataset.view === key));
+  document.querySelectorAll(".view").forEach(v => v.classList.remove("on"));
+  const view = document.getElementById("view-" + key);
+  view.querySelectorAll(".stagger").forEach(el => { el.style.animation = "none"; el.getBoundingClientRect(); el.style.animation = ""; });
+  view.classList.add("on");
+  window.scrollTo({ top: 0 });
+}
+document.querySelectorAll(".rail-item[data-view], .tab[data-view]").forEach(btn => {
+  btn.addEventListener("click", () => switchView(btn.dataset.view));
+});
+document.querySelectorAll("[data-goto]").forEach(btn => {
+  btn.addEventListener("click", () => switchView(btn.dataset.goto));
+});
+
+/* Feed / Story format toggle */
+document.querySelectorAll("#formatSeg button").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll("#formatSeg button").forEach(b => b.classList.remove("on"));
+    btn.classList.add("on");
+    document.getElementById("creative").classList.toggle("story", btn.dataset.format === "story");
+  });
+});
+
+/* live copy binding — headline + CTA update the preview */
+const fHead = document.getElementById("fHead");
+fHead.addEventListener("input", () => {
+  document.getElementById("prevHead").textContent = fHead.value || "Just listed in Applecross";
+  fHead.nextElementSibling.textContent = fHead.value.length + " / 40";
+});
+document.getElementById("fCta").addEventListener("change", e => {
+  document.getElementById("prevCta").textContent = e.target.value;
+});
+
+/* library tabs */
+document.querySelectorAll(".lib-tab").forEach(tab => {
+  tab.addEventListener("click", () => {
+    document.querySelectorAll(".lib-tab").forEach(t => t.classList.remove("on"));
+    tab.classList.add("on");
+    document.querySelectorAll(".lib-pane").forEach(p => p.classList.remove("on"));
+    document.getElementById("pane-" + tab.dataset.tab).classList.add("on");
+  });
+});
+
+/* publish flow */
+const overlay = document.getElementById("publishOverlay");
+document.getElementById("openPublish").addEventListener("click", () => {
+  document.getElementById("publishReview").style.display = "";
+  document.getElementById("publishSuccess").classList.remove("on");
+  overlay.classList.add("on");
+});
+document.getElementById("cancelPublish").addEventListener("click", () => overlay.classList.remove("on"));
+document.getElementById("confirmPublish").addEventListener("click", () => {
+  document.getElementById("publishReview").style.display = "none";
+  const s = document.getElementById("publishSuccess");
+  s.classList.add("on");
+  const path = s.querySelector(".check-path");
+  path.style.animation = "none"; path.getBoundingClientRect(); path.style.animation = "";
+});
+document.getElementById("closeSuccess").addEventListener("click", () => {
+  overlay.classList.remove("on");
+  document.querySelector("#view-edit .chip.draft").outerHTML = '<span class="chip live">Live</span>';
+});
+overlay.addEventListener("click", e => { if (e.target === overlay) overlay.classList.remove("on"); });
+</script>
+</body>
+</html>

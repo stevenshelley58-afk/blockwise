@@ -3,11 +3,15 @@
 import { useState, type FormEvent } from "react";
 
 import { StatusPill } from "@/components/status-pill";
-import { logCaught } from "@/lib/log";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { cn } from "@/lib/utils";
+import { niche } from "@/config/niche";
 
-import { Feedback, Section, type Member, type Msg, type RT, type SB } from "./settings-shared";
+import { ASSIGNABLE_ROLES, Feedback, Section, selectClass, type Member, type Msg, type RT, type SB } from "./settings-shared";
 
-const ASSIGNABLE_ROLES = ["owner", "admin", "member", "viewer"];
+const thClass = "font-mono text-[9.5px] font-medium tracking-[0.12em] text-(--faint) uppercase";
 
 export function TeamSection({
   supabase,
@@ -63,7 +67,7 @@ export function TeamSection({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ workspaceId, email: inviteEmail.trim(), role: inviteRole }),
       });
-      const data = (await res.json().catch(logCaught("settings: team invite response parse failed", {}))) as { error?: string; message?: string };
+      const data = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
       setBusy(false);
       if (!res.ok) {
         setMessage({ tone: "error", text: data.error ?? "Couldn't send that invite." });
@@ -79,33 +83,37 @@ export function TeamSection({
   }
 
   return (
-    <Section id="team" title="Team members" description="People with access to this workspace.">
-      <div className="table-wrap">
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Member</th>
-              <th>Role</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
+    <Section id="team" title={niche.copy.settings.sections.team}>
+      <div className="-mx-5 overflow-x-auto px-5">
+        <Table className="min-w-[480px]">
+          <TableHeader>
+            <TableRow className="hover:bg-transparent">
+              <TableHead className={thClass}>Member</TableHead>
+              <TableHead className={thClass}>Role</TableHead>
+              <TableHead className="sr-only">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {members.map((m) => {
               const isSelf = m.profileId === currentUserId;
               return (
-                <tr key={m.profileId}>
-                  <td>
-                    <strong>{m.fullName ?? m.email ?? "Unknown"}</strong>
-                    {isSelf ? <span className="item-meta"> (you)</span> : null}
-                    <div className="item-meta">{m.email}</div>
-                  </td>
-                  <td>
+                <TableRow key={m.profileId}>
+                  <TableCell>
+                    <div className="text-[13px] font-bold">
+                      {m.fullName ?? m.email ?? "Unknown"}
+                      {isSelf ? <span className="font-normal text-muted-foreground"> (you)</span> : null}
+                    </div>
+                    <div className="text-xs text-muted-foreground">{m.email}</div>
+                  </TableCell>
+                  <TableCell>
                     {m.isOperator ? (
                       <StatusPill tone="blue">operator</StatusPill>
                     ) : isSelf ? (
                       <StatusPill tone="green">{m.role}</StatusPill>
                     ) : (
                       <select
+                        aria-label={`Role for ${m.fullName ?? m.email ?? "this member"}`}
+                        className={cn(selectClass, "w-32")}
                         value={m.role}
                         onChange={(e) => changeRole(m.profileId, e.target.value)}
                         disabled={rowBusy === m.profileId}
@@ -117,40 +125,41 @@ export function TeamSection({
                         ))}
                       </select>
                     )}
-                  </td>
-                  <td style={{ textAlign: "right" }}>
+                  </TableCell>
+                  <TableCell className="text-right">
                     {!isSelf && !m.isOperator ? (
-                      <button className="button secondary" type="button" onClick={() => remove(m.profileId)} disabled={rowBusy === m.profileId}>
+                      <Button variant="outline" type="button" onClick={() => remove(m.profileId)} disabled={rowBusy === m.profileId}>
                         Remove
-                      </button>
+                      </Button>
                     ) : null}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               );
             })}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
-      <form className="wizard-connect-row" onSubmit={invite} style={{ flexWrap: "wrap", gap: 10 }}>
-        <input
+      <form className="flex flex-wrap items-center gap-2" onSubmit={invite}>
+        <Input
           type="email"
+          aria-label="Teammate email"
           value={inviteEmail}
           onChange={(e) => setInviteEmail(e.target.value)}
           placeholder="teammate@email.com"
           required
-          style={{ flex: "1 1 220px" }}
+          className="min-w-[220px] flex-1"
         />
-        <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)}>
+        <select aria-label="Invite role" className={cn(selectClass, "w-32")} value={inviteRole} onChange={(e) => setInviteRole(e.target.value)}>
           {ASSIGNABLE_ROLES.map((r) => (
             <option key={r} value={r}>
               {r}
             </option>
           ))}
         </select>
-        <button className="button" type="submit" disabled={busy}>
+        <Button type="submit" disabled={busy}>
           {busy ? "Inviting" : "Invite"}
-        </button>
+        </Button>
       </form>
       <Feedback message={message} />
     </Section>

@@ -13,7 +13,28 @@
  * (solid borders + a default border colour).
  */
 
-@layer theme, base, components, utilities;
+/*
+ * Cascade layers. `legacy` is declared FIRST so everything in it loses to the
+ * Tailwind layers regardless of specificity.
+ *
+ * This is load-bearing. globals.css styles bare element selectors (h1, h2, p,
+ * table, …) and was previously unlayered — and unlayered CSS beats ALL layered
+ * CSS no matter how specific the layered rule is. That silently overrode every
+ * Tailwind utility on the rebuilt customer surface: an `<h1 class="text-[24px]
+ * font-extrabold">` rendered at the legacy 32px/700, not the Premium v2 ramp.
+ *
+ * Importing the legacy sheets into a lower layer fixes the customer surface
+ * without touching operator/monitor, which use only legacy classes: relative
+ * order and specificity inside the layer are preserved, so those surfaces
+ * cascade exactly as before.
+ *
+ * theme-monochrome.css deliberately stays unlayered (imported after this file
+ * in layout.tsx) — it is the token override that must keep winning, and its
+ * presentational rules are scoped to legacy-only classes.
+ */
+@layer legacy, theme, base, components, utilities;
+@import "./globals.css" layer(legacy);
+@import "./landing.css" layer(legacy);
 @import "tailwindcss/theme.css" layer(theme);
 @import "tailwindcss/utilities.css" layer(utilities);
 
@@ -38,6 +59,12 @@
     ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-jetbrains), "JetBrains Mono", ui-monospace, SFMono-Regular,
     Menlo, Consolas, monospace;
+
+  /* Premium v2 finish: layered soft shadows and the spring curve, exposed as
+     `shadow-card` / `shadow-float` / `ease-spring` utilities. */
+  --shadow-card: 0 1px 2px rgba(16, 18, 23, 0.04), 0 8px 24px rgba(16, 18, 23, 0.06);
+  --shadow-float: 0 2px 4px rgba(16, 18, 23, 0.05), 0 16px 40px rgba(16, 18, 23, 0.1);
+  --ease-spring: cubic-bezier(0.22, 1.1, 0.36, 1);
 }
 
 /* shadcn theme variables, namespaced and bridged onto Blockwise tokens. */
@@ -76,6 +103,22 @@
   --ui-sidebar-accent-foreground: var(--side-ink-active);
   --ui-sidebar-border: var(--side-line);
   --ui-sidebar-ring: var(--ui-ring);
+
+  /* Premium v2: the one vivid data voice (charts, meters, sparklines only —
+     never UI chrome or text). Defaults to the Blockwise hue; the customer
+     layout overrides these three from src/config/niche for white-labeling. */
+  --ui-data: #2a78d6;
+  --ui-data-soft: rgba(42, 120, 214, 0.1);
+  --ui-data-track: rgba(42, 120, 214, 0.16);
+
+  /* Semantic status colors, bridged onto the Blockwise palette. Status only —
+     they never decorate headings, cards, or illustrations. */
+  --ui-success: var(--green, #006d38);
+  --ui-success-soft: var(--green-soft, #e9f6ef);
+  --ui-warning: var(--amber, #8a5a00);
+  --ui-warning-soft: #fdf6e7;
+  --ui-error: var(--rose, #ba1a1a);
+  --ui-error-soft: var(--rose-soft, #ffdad6);
 }
 
 /*
@@ -117,6 +160,16 @@
   --color-sidebar-accent-foreground: var(--ui-sidebar-accent-foreground);
   --color-sidebar-border: var(--ui-sidebar-border);
   --color-sidebar-ring: var(--ui-sidebar-ring);
+
+  --color-data: var(--ui-data);
+  --color-data-soft: var(--ui-data-soft);
+  --color-data-track: var(--ui-data-track);
+  --color-success: var(--ui-success);
+  --color-success-soft: var(--ui-success-soft);
+  --color-warning: var(--ui-warning);
+  --color-warning-soft: var(--ui-warning-soft);
+  --color-error: var(--ui-error);
+  --color-error-soft: var(--ui-error-soft);
 }
 
 /*

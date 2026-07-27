@@ -1,12 +1,13 @@
 "use client";
 
-import { Bookmark, ChevronDown, Clock3, FileSearch, ImageIcon, MapPin, SlidersHorizontal, Users } from "lucide-react";
+import { Bookmark, ChevronDown, Clock3, SlidersHorizontal } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
-import { MetricCard } from "@/components/metric-card";
 import { AdRadarLocationForm } from "@/components/research/ad-radar-location-form";
 import { AdRadarResultsGrid } from "@/components/research/ad-radar-results-grid";
+import { Switch } from "@/components/ui/switch";
+import { niche } from "@/config/niche";
 import type { CustomerMetaAdLibraryCard } from "@/lib/research/customer-meta-card";
 
 type ResearchSort = "recent" | "longest";
@@ -22,15 +23,7 @@ type Filters = {
 
 const EMPTY_FILTERS: Filters = { status: "", agency: "", agent: "", adType: "", format: "", hook: "" };
 
-const AD_TYPE_OPTIONS: Array<{ value: string; label: string }> = [
-  { value: "listing", label: "Listing" },
-  { value: "just_sold", label: "Just sold" },
-  { value: "appraisal", label: "Appraisal" },
-  { value: "open_home", label: "Open home" },
-  { value: "property_management", label: "Property mgmt" },
-  { value: "market_update", label: "Market update" },
-  { value: "agency_brand", label: "Agency brand" },
-];
+const AD_TYPE_OPTIONS = niche.copy.adRadar.filters.adTypes;
 
 const FORMAT_OPTIONS: Array<{ value: string; label: string }> = [
   { value: "image", label: "Image" },
@@ -38,23 +31,11 @@ const FORMAT_OPTIONS: Array<{ value: string; label: string }> = [
   { value: "carousel", label: "Carousel" },
 ];
 
-const fieldStyle: CSSProperties = { display: "flex", flexDirection: "column", gap: 4 };
-const fieldLabelStyle: CSSProperties = {
-  fontSize: 11,
-  fontWeight: 700,
-  textTransform: "uppercase",
-  letterSpacing: "0.03em",
-  color: "var(--muted)",
-};
-const controlStyle: CSSProperties = {
-  minHeight: 36,
-  padding: "0 10px",
-  border: "1px solid var(--line)",
-  borderRadius: "var(--r-card, 10px)",
-  background: "var(--surface)",
-  color: "var(--ink)",
-  fontSize: 13,
-};
+const fieldLabelClass = "font-mono text-[9.5px] font-medium tracking-[0.12em] text-(--faint) uppercase";
+const controlClass =
+  "h-9 w-full appearance-none rounded-(--r-card) border border-(--line) bg-(--surface) px-2.5 pr-7 text-[12.5px] font-semibold text-foreground outline-none transition-[border-color] duration-150 focus:border-(--ink)";
+const ghostButtonClass =
+  "inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-full border border-(--line-heavy) bg-card px-3.5 text-[12.5px] font-bold text-foreground transition-[background,box-shadow] duration-150 hover:bg-(--surface-subtle) hover:shadow-card";
 
 type Props = {
   initialQuery: string;
@@ -162,27 +143,14 @@ export function AdRadarSearchPanel({ initialQuery, initialSort, initialIncludeSu
     .sort()
     .at(-1);
 
-  const sortButtonStyle = (active: boolean): CSSProperties => ({
-    fontSize: 13,
-    fontWeight: 700,
-    padding: "6px 14px",
-    border: "none",
-    background: active ? "var(--navy, #131b2e)" : "transparent",
-    color: active ? "#fff" : "var(--ink)",
-    cursor: "pointer",
-  });
+  const sortChipClass = (active: boolean) =>
+    `cursor-pointer rounded-full px-3 py-1.5 text-xs font-bold transition-[background,color] duration-150 ${
+      active ? "bg-(--ink) text-white" : "text-muted-foreground hover:text-foreground"
+    }`;
 
   return (
     <>
-      <style>{`
-        .ad-radar-search-card { flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 14px; }
-        .ad-radar-search-card .research-search-form { width: 100%; align-items: center; }
-        .ad-radar-search-card .research-search-form > label { flex: 1 1 260px; min-width: 0; }
-        .ad-radar-search-card .research-location-field { width: 100%; }
-        .ad-radar-search-card .research-location-note { flex-basis: 100%; margin: 4px 0 0; font-size: 12px; color: var(--muted); }
-        .ad-radar-filters-row { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 16px; border-top: 1px solid var(--line); padding-top: 14px; }
-      `}</style>
-      <section className="panel research-search-panel ad-radar-search-card">
+      <section className="grid gap-4 rounded-(--r-panel) border border-(--line) bg-(--surface) p-5 shadow-card">
         <AdRadarLocationForm
           buttonLabel={loading ? "Searching..." : "Search"}
           initialNote={initialNote}
@@ -190,214 +158,205 @@ export function AdRadarSearchPanel({ initialQuery, initialSort, initialIncludeSu
           inputLabel="Search Ad Radar"
           isSubmitting={loading}
           onSearch={onSearch}
-          placeholder="Postcode, suburb, agency, or agent"
+          placeholder={niche.copy.adRadar.searchPlaceholder}
           surface="research"
         />
 
-        <label className="research-surrounding-toggle">
-          <input
-            checked={includeSurrounding}
-            name="includeSurrounding"
-            onChange={(event) => onToggleSurrounding(event.target.checked)}
-            type="checkbox"
-            value="1"
-          />
-          <span>Include surrounding suburbs</span>
+        <label className="flex w-fit cursor-pointer items-center gap-2.5">
+          <Switch checked={includeSurrounding} onCheckedChange={onToggleSurrounding} />
+          <span className="text-[12.5px] font-bold text-foreground">{niche.copy.adRadar.includeSurrounding}</span>
         </label>
 
-        <div className="ad-radar-filters-row">
+        <div className="flex flex-wrap items-center gap-2.5 border-t border-(--line) pt-4">
           <button
             type="button"
             aria-expanded={filtersOpen}
             onClick={() => setFiltersOpen((open) => !open)}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 8,
-              minHeight: 36,
-              padding: "0 14px",
-              border: "1px solid var(--line)",
-              borderRadius: 999,
-              background: "var(--surface)",
-              color: "var(--ink)",
-              fontSize: 13,
-              fontWeight: 700,
-              cursor: "pointer",
-            }}
+            className={ghostButtonClass}
           >
-            <SlidersHorizontal size={16} />
+            <SlidersHorizontal size={15} aria-hidden />
             Filters
-            {activeFilterCount > 0 && (
-              <span
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  minWidth: 18,
-                  height: 18,
-                  padding: "0 5px",
-                  borderRadius: 999,
-                  background: "var(--navy, #131b2e)",
-                  color: "#fff",
-                  fontSize: 11,
-                  fontWeight: 700,
-                }}
-              >
+            {activeFilterCount > 0 ? (
+              <span className="inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-(--ink) px-1 text-[11px] font-bold text-white">
                 {activeFilterCount}
               </span>
-            )}
-            <ChevronDown size={15} style={{ transform: filtersOpen ? "rotate(180deg)" : "none", transition: "transform 0.15s ease" }} />
+            ) : null}
+            <ChevronDown
+              size={14}
+              aria-hidden
+              className={`text-(--faint) transition-transform duration-150 ${filtersOpen ? "rotate-180" : ""}`}
+            />
           </button>
 
-          <div style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 10 }}>
-            <Link
-              href="/ad-radar/swipe-file"
-              style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 700, color: "var(--ink)", textDecoration: "none" }}
-            >
-              <Bookmark size={13} /> Swipe file
+          <div className="ml-auto flex flex-wrap items-center gap-2.5">
+            <Link href="/ad-radar/swipe-file" className={ghostButtonClass}>
+              <Bookmark size={13} aria-hidden />
+              Swipe file
             </Link>
-            <span style={{ fontSize: 12, color: "var(--muted)" }}>Sort</span>
+            <span className="text-[11.5px] font-bold text-(--faint)">Sort</span>
             <div
               role="group"
               aria-label="Sort ads"
-              style={{ display: "inline-flex", border: "1px solid var(--line)", borderRadius: 999, overflow: "hidden" }}
+              className="inline-flex items-center rounded-full border border-(--line) bg-(--surface) p-0.5"
             >
-              <button type="button" aria-pressed={sort === "recent"} onClick={() => onChangeSort("recent")} style={sortButtonStyle(sort === "recent")}>
+              <button type="button" aria-pressed={sort === "recent"} onClick={() => onChangeSort("recent")} className={sortChipClass(sort === "recent")}>
                 Most recent
               </button>
-              <button type="button" aria-pressed={sort === "longest"} onClick={() => onChangeSort("longest")} style={{ ...sortButtonStyle(sort === "longest"), borderLeft: "1px solid var(--line)" }}>
+              <button type="button" aria-pressed={sort === "longest"} onClick={() => onChangeSort("longest")} className={sortChipClass(sort === "longest")}>
                 Longest running
               </button>
             </div>
           </div>
         </div>
 
-        {filtersOpen && (
-          <div style={{ paddingTop: 4 }}>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12 }}>
-              <label style={fieldStyle}>
-                <span style={fieldLabelStyle}>Status</span>
-                <select style={controlStyle} value={filters.status} onChange={(e) => onChangeFilter("status", e.target.value as Filters["status"])}>
-                  <option value="">Any</option>
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                </select>
+        {filtersOpen ? (
+          <div className="border-t border-(--line) pt-4">
+            <div className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(150px,1fr))]">
+              <label className="grid gap-1.5">
+                <span className={fieldLabelClass}>Status</span>
+                <SelectWrap>
+                  <select className={controlClass} value={filters.status} onChange={(e) => onChangeFilter("status", e.target.value as Filters["status"])}>
+                    <option value="">Any</option>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
+                </SelectWrap>
               </label>
-              <label style={fieldStyle}>
-                <span style={fieldLabelStyle}>Ad type</span>
-                <select style={controlStyle} value={filters.adType} onChange={(e) => onChangeFilter("adType", e.target.value)}>
-                  <option value="">All</option>
-                  {AD_TYPE_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value}>{o.label}</option>
-                  ))}
-                </select>
+              <label className="grid gap-1.5">
+                <span className={fieldLabelClass}>Ad type</span>
+                <SelectWrap>
+                  <select className={controlClass} value={filters.adType} onChange={(e) => onChangeFilter("adType", e.target.value)}>
+                    <option value="">All</option>
+                    {AD_TYPE_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                  </select>
+                </SelectWrap>
               </label>
-              <label style={fieldStyle}>
-                <span style={fieldLabelStyle}>Format</span>
-                <select style={controlStyle} value={filters.format} onChange={(e) => onChangeFilter("format", e.target.value)}>
-                  <option value="">All</option>
-                  {FORMAT_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value}>{o.label}</option>
-                  ))}
-                </select>
+              <label className="grid gap-1.5">
+                <span className={fieldLabelClass}>Format</span>
+                <SelectWrap>
+                  <select className={controlClass} value={filters.format} onChange={(e) => onChangeFilter("format", e.target.value)}>
+                    <option value="">All</option>
+                    {FORMAT_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                  </select>
+                </SelectWrap>
               </label>
-              <label style={fieldStyle}>
-                <span style={fieldLabelStyle}>Agency</span>
-                <select style={controlStyle} value={filters.agency} onChange={(e) => onChangeFilter("agency", e.target.value)}>
-                  <option value="">All agencies</option>
-                  {agencyOptions.map((name) => (
-                    <option key={name} value={name}>{name}</option>
-                  ))}
-                </select>
+              <label className="grid gap-1.5">
+                <span className={fieldLabelClass}>{niche.copy.adRadar.filters.agency}</span>
+                <SelectWrap>
+                  <select className={controlClass} value={filters.agency} onChange={(e) => onChangeFilter("agency", e.target.value)}>
+                    <option value="">{niche.copy.adRadar.filters.allAgencies}</option>
+                    {agencyOptions.map((name) => (
+                      <option key={name} value={name}>{name}</option>
+                    ))}
+                  </select>
+                </SelectWrap>
               </label>
-              <label style={fieldStyle}>
-                <span style={fieldLabelStyle}>Agent</span>
-                <select style={controlStyle} value={filters.agent} onChange={(e) => onChangeFilter("agent", e.target.value)}>
-                  <option value="">All agents</option>
-                  {agentOptions.map((name) => (
-                    <option key={name} value={name}>{name}</option>
-                  ))}
-                </select>
+              <label className="grid gap-1.5">
+                <span className={fieldLabelClass}>{niche.copy.adRadar.filters.agent}</span>
+                <SelectWrap>
+                  <select className={controlClass} value={filters.agent} onChange={(e) => onChangeFilter("agent", e.target.value)}>
+                    <option value="">{niche.copy.adRadar.filters.allAgents}</option>
+                    {agentOptions.map((name) => (
+                      <option key={name} value={name}>{name}</option>
+                    ))}
+                  </select>
+                </SelectWrap>
               </label>
-              <label style={fieldStyle}>
-                <span style={fieldLabelStyle}>Hook contains</span>
+              <label className="grid gap-1.5">
+                <span className={fieldLabelClass}>Hook contains</span>
                 <input
-                  style={controlStyle}
+                  className="h-9 w-full rounded-(--r-card) border border-(--line) bg-(--surface) px-2.5 text-[12.5px] font-semibold text-foreground outline-none transition-[border-color] duration-150 placeholder:text-(--faint) focus:border-(--ink)"
                   type="text"
                   value={filters.hook}
-                  placeholder="e.g. free appraisal"
+                  placeholder={niche.copy.adRadar.filters.hookPlaceholder}
                   onChange={(e) => onChangeFilter("hook", e.target.value)}
                 />
               </label>
             </div>
-            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 12 }}>
+            <div className="mt-3 flex justify-end">
               <button
                 type="button"
                 onClick={onClearFilters}
                 disabled={activeFilterCount === 0}
-                style={{
-                  border: "1px solid var(--line)",
-                  borderRadius: 999,
-                  background: "var(--surface)",
-                  color: "var(--ink)",
-                  fontSize: 13,
-                  fontWeight: 700,
-                  minHeight: 34,
-                  padding: "0 14px",
-                  cursor: activeFilterCount === 0 ? "default" : "pointer",
-                  opacity: activeFilterCount === 0 ? 0.5 : 1,
-                }}
+                className={`${ghostButtonClass} disabled:cursor-default disabled:opacity-50 disabled:hover:bg-card disabled:hover:shadow-none`}
               >
                 Clear all
               </button>
             </div>
           </div>
-        )}
+        ) : null}
 
-        <div className="research-freshness">
-          <Clock3 size={14} />
+        <div className="flex items-center gap-1.5 text-[11.5px] text-(--faint)">
+          <Clock3 size={13} aria-hidden />
           {newestSeenAt ? `Last seen ${formatDateTime(newestSeenAt)}` : "No live observations yet"}
         </div>
       </section>
 
-      {searched && (
-        <section className="grid cols-4">
-          <MetricCard icon={FileSearch} label="Ads in view" value={String(cards.length)} note="Meta Ad Library results" />
-          <MetricCard icon={Users} label="Advertisers" value={String(advertiserCount)} note="Meta pages with visible ads" />
-          <MetricCard icon={MapPin} label="Postcodes" value={String(allPostcodes.length)} note="Matched ad areas" />
-          <MetricCard icon={ImageIcon} label="Media visible" value={String(mediaReady)} note="Images, videos, or carousel media" />
+      {searched ? (
+        <section className="grid grid-cols-2 gap-3.5 xl:grid-cols-4">
+          <StatTile label="Ads in view" value={String(cards.length)} note="Meta Ad Library results" />
+          <StatTile label="Advertisers" value={String(advertiserCount)} note="Meta pages with visible ads" />
+          <StatTile label="Postcodes" value={String(allPostcodes.length)} note="Matched ad areas" />
+          <StatTile label="Media visible" value={String(mediaReady)} note="Images, videos, or carousel media" />
         </section>
-      )}
+      ) : null}
 
-      {searched && (
-        <section className="research-results-section">
-          <div className="section-title-row">
-            <div>
-              <h2>{query ? `Results for "${query}"` : `Ads near ${initialLocationLabel}`}</h2>
-              <p className="item-meta">
-                {cards.length} ad{cards.length === 1 ? "" : "s"} across {advertiserCount} advertiser page
-                {advertiserCount === 1 ? "" : "s"}
-                {activeFilterCount > 0 ? ` · ${activeFilterCount} filter${activeFilterCount === 1 ? "" : "s"} applied` : ""}.
-              </p>
-            </div>
+      {searched ? (
+        <section className="grid gap-3.5">
+          <div>
+            <h2 className="font-display text-[17px] font-extrabold tracking-[-0.015em]">
+              {query ? `Results for "${query}"` : `Ads near ${initialLocationLabel}`}
+            </h2>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {cards.length} ad{cards.length === 1 ? "" : "s"} across {advertiserCount} advertiser page
+              {advertiserCount === 1 ? "" : "s"}
+              {activeFilterCount > 0 ? ` · ${activeFilterCount} filter${activeFilterCount === 1 ? "" : "s"} applied` : ""}.
+            </p>
           </div>
 
           {cards.length > 0 ? (
             <AdRadarResultsGrid cards={cards} />
           ) : activeFilterCount > 0 ? (
-            <div className="research-empty-state">
-              <h3>No ads matched your filters</h3>
-              <p>Try clearing a filter or widening the search area.</p>
+            <div className="rounded-(--r-card) border border-dashed border-(--line-heavy) bg-(--surface-subtle)/50 px-6 py-10 text-center">
+              <h3 className="font-display text-[15.5px] font-extrabold">No ads matched your filters</h3>
+              <p className="mt-1 text-xs text-muted-foreground">Try clearing a filter or widening the search area.</p>
             </div>
           ) : (
-            <div className="research-empty-state">
-              <h3>No ads matched</h3>
-              <p>Try a nearby postcode.</p>
+            <div className="rounded-(--r-card) border border-dashed border-(--line-heavy) bg-(--surface-subtle)/50 px-6 py-10 text-center">
+              <h3 className="font-display text-[15.5px] font-extrabold">No ads matched</h3>
+              <p className="mt-1 text-xs text-muted-foreground">Try a nearby postcode.</p>
             </div>
           )}
         </section>
-      )}
+      ) : null}
     </>
+  );
+}
+
+function SelectWrap({ children }: { children: ReactNode }) {
+  return (
+    <span className="relative block">
+      {children}
+      <ChevronDown
+        size={14}
+        aria-hidden
+        className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-(--faint)"
+      />
+    </span>
+  );
+}
+
+function StatTile({ label, value, note }: { label: string; value: string; note: string }) {
+  return (
+    <article className="rounded-(--r-card) border border-(--line) bg-(--surface) px-[18px] pt-[17px] pb-[15px] shadow-card">
+      <p className="font-mono text-[9.5px] font-medium tracking-[0.12em] text-(--faint) uppercase">{label}</p>
+      <p className="mt-[6px] font-display text-[24px] font-extrabold tracking-[-0.02em] tabular-nums">{value}</p>
+      <p className="mt-[7px] text-[10.5px]/[11.5px] text-muted-foreground">{note}</p>
+    </article>
   );
 }
 

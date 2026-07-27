@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 
+import { niche } from "@/config/niche";
 import type { PropertyAddressPrediction } from "@/lib/property-check/address-autocomplete";
 import {
   PROPERTY_CHECK_CLIENT_SITUATION_LABELS,
@@ -150,12 +151,27 @@ export function PropertyCheckSearch({ initialChecks }: { initialChecks: Property
     }
   }
 
-  return (
-    <div className="pc-home" aria-label="Property Check">
-      <section className="pc-hero">
-        <h1>Know the block before the call.</h1>
+  const chipClass = (active: boolean) =>
+    `inline-flex h-[34px] cursor-pointer items-center gap-1.5 rounded-full border px-[13px] text-xs font-bold transition-[background,color,border-color,transform] duration-150 active:scale-[0.96] disabled:cursor-default disabled:opacity-50 ${
+      active
+        ? "border-(--ink) bg-(--ink) text-white"
+        : "border-(--line) bg-(--surface) text-foreground hover:border-(--line-heavy)"
+    }`;
 
-        <form className="pc-searchbox" onSubmit={(event) => void submitCheck(event)}>
+  return (
+    <div className="grid gap-8" aria-label="Property Check">
+      <section className="grid gap-4">
+        <div>
+          <h1 className="font-display text-[24px] font-extrabold tracking-[-0.02em] md:text-[27px]">
+            {niche.copy.propertyCheck.heroTitle}
+          </h1>
+          <p className="mt-1 text-[13px] text-muted-foreground">{niche.copy.propertyCheck.heroLead}</p>
+        </div>
+
+        <form
+          className="relative flex items-center gap-2 rounded-full border border-(--line) bg-(--surface) py-1.5 pr-1.5 pl-4 shadow-card transition-[border-color,box-shadow] duration-150 focus-within:border-(--ink) focus-within:shadow-float"
+          onSubmit={(event) => void submitCheck(event)}
+        >
           <input
             id={`${listId}-input`}
             ref={inputRef}
@@ -168,7 +184,7 @@ export function PropertyCheckSearch({ initialChecks }: { initialChecks: Property
             }}
             onFocus={() => setIsFocused(true)}
             onKeyDown={onInputKeyDown}
-            placeholder="Street address"
+            placeholder={niche.copy.propertyCheck.searchPlaceholder}
             aria-label="Street address"
             aria-autocomplete="list"
             aria-controls={`${listId}-list`}
@@ -178,11 +194,12 @@ export function PropertyCheckSearch({ initialChecks }: { initialChecks: Property
             role="combobox"
             maxLength={500}
             disabled={submitting}
+            className="h-11 min-w-0 flex-1 border-0 bg-transparent text-[14px] font-semibold outline-none placeholder:text-(--faint)"
           />
           {showSuggestions ? (
             <div
               id={`${listId}-list`}
-              className="pc-address-suggestions"
+              className="absolute top-[calc(100%+6px)] left-0 z-20 w-full overflow-hidden rounded-(--r-card) border border-(--line) bg-(--surface) shadow-float"
               role="listbox"
               onMouseDown={(event) => event.preventDefault()}
             >
@@ -190,24 +207,35 @@ export function PropertyCheckSearch({ initialChecks }: { initialChecks: Property
                 <button
                   id={`${listId}-option-${index}`}
                   aria-selected={index === activeIndex}
-                  className="pc-address-option"
+                  className="flex w-full cursor-pointer items-center gap-2.5 border-0 bg-(--surface) px-3.5 py-2.5 text-left transition-colors duration-100 hover:bg-(--surface-subtle) aria-selected:bg-(--surface-subtle)"
                   key={suggestion.placeId}
                   onClick={() => chooseSuggestion(suggestion)}
                   role="option"
                   type="button"
                 >
-                  <MapPin aria-hidden size={17} />
-                  <span>
-                    <strong>{suggestion.mainText}</strong>
-                    {suggestion.secondaryText ? <small>{suggestion.secondaryText}</small> : null}
+                  <MapPin aria-hidden size={16} className="shrink-0 text-(--faint)" />
+                  <span className="grid min-w-0 gap-0.5">
+                    <strong className="truncate text-[13.5px] font-bold text-foreground">{suggestion.mainText}</strong>
+                    {suggestion.secondaryText ? (
+                      <small className="block truncate text-xs text-muted-foreground">{suggestion.secondaryText}</small>
+                    ) : null}
                   </span>
                 </button>
               ))}
-              {suggestionSource === "google" ? <span className="pc-address-powered">Powered by Google</span> : null}
+              {suggestionSource === "google" ? (
+                <span className="block border-t border-(--line) px-3.5 py-2 text-right text-[10.5px] font-bold text-(--faint)">
+                  Powered by Google
+                </span>
+              ) : null}
             </div>
           ) : null}
-          <button className="pc-go" type="submit" disabled={!canSubmit} aria-label="Run property check">
-            <ArrowUp aria-hidden size={22} />
+          <button
+            className="grid size-11 shrink-0 cursor-pointer place-items-center rounded-full bg-(--ink) text-white transition-[opacity,transform] duration-150 hover:opacity-85 active:scale-[0.95] disabled:cursor-default disabled:opacity-40"
+            type="submit"
+            disabled={!canSubmit}
+            aria-label="Run property check"
+          >
+            <ArrowUp aria-hidden size={20} />
           </button>
         </form>
 
@@ -220,31 +248,31 @@ export function PropertyCheckSearch({ initialChecks }: { initialChecks: Property
         </span>
 
         {error ? (
-          <p className="form-error pc-error" role="alert">
+          <p className="text-[12.5px] font-bold text-error" role="alert">
             {error}
           </p>
         ) : null}
         {submitting ? (
-          <p className="pc-running" role="status">
+          <p className="animate-pulse text-[12.5px] font-bold text-muted-foreground" role="status">
             Checking…
           </p>
         ) : null}
 
-        <div className="pc-chips">
-          <button type="button" className="pc-chip" onClick={fillSample} disabled={submitting}>
-            <MapPin aria-hidden size={15} />
+        <div className="flex flex-wrap gap-2">
+          <button type="button" className={chipClass(false)} onClick={fillSample} disabled={submitting}>
+            <MapPin aria-hidden size={14} />
             Try an address
           </button>
           {SITUATION_CHIPS.map((chip) => (
             <button
               type="button"
-              className={situation === chip.value ? "pc-chip active" : "pc-chip"}
+              className={chipClass(situation === chip.value)}
               onClick={() => toggleSituation(chip.value)}
               aria-pressed={situation === chip.value}
               disabled={submitting}
               key={chip.value}
             >
-              <MessageCircle aria-hidden size={15} />
+              <MessageCircle aria-hidden size={14} />
               {chip.label}
             </button>
           ))}
@@ -252,24 +280,32 @@ export function PropertyCheckSearch({ initialChecks }: { initialChecks: Property
       </section>
 
       {initialChecks.length > 0 ? (
-        <section className="pc-recent" aria-label="Recent property checks">
-          <p className="pc-recent-label">Recent</p>
-          <div className="pc-recent-grid">
+        <section className="grid gap-3" aria-label="Recent property checks">
+          <p className="font-mono text-[9.5px] font-medium tracking-[0.12em] text-(--faint) uppercase">Recent</p>
+          <div className="grid gap-3 sm:grid-cols-2">
             {initialChecks.map((check) => (
-              <Link className="pc-recent-card" href={`/property-check/${check.id}`} key={check.id}>
-                <span className="pc-recent-icon">
-                  <Building2 aria-hidden size={18} />
+              <Link
+                className="flex items-center gap-3 rounded-(--r-card) border border-(--line) bg-(--surface) p-3.5 shadow-card transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-float motion-reduce:hover:translate-y-0"
+                href={`/property-check/${check.id}`}
+                key={check.id}
+              >
+                <span className="grid size-10 shrink-0 place-items-center rounded-(--r-card) bg-(--accent-tint) text-foreground">
+                  <Building2 aria-hidden size={17} />
                 </span>
-                <span className="pc-recent-body">
-                  <b>{check.address}</b>
-                  <small>
+                <span className="grid min-w-0 flex-1 gap-0.5">
+                  <b className="truncate text-[13px] font-bold text-foreground">{check.address}</b>
+                  <small className="truncate text-[11.5px] text-muted-foreground">
                     {formatDate(check.createdAt)}
                     {check.clientSituation !== "general"
                       ? ` · ${PROPERTY_CHECK_CLIENT_SITUATION_LABELS[check.clientSituation]}`
                       : ""}
                   </small>
                 </span>
-                <span className={check.status === "success" ? "pc-recent-badge ok" : "pc-recent-badge"}>
+                <span
+                  className={`inline-flex h-6 shrink-0 items-center rounded-full px-2.5 text-[10.5px] font-bold ${
+                    check.status === "success" ? "bg-success-soft text-success" : "bg-(--surface-subtle) text-muted-foreground"
+                  }`}
+                >
                   {check.status === "success" ? "Ready" : "No result"}
                 </span>
               </Link>

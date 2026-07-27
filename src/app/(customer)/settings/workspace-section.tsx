@@ -2,9 +2,32 @@
 
 import { useState, type FormEvent } from "react";
 
-import { Feedback, REGION_CURRENCY, REGION_NAMES, Section, type Msg, type RT, type SB, type SettingsViewProps } from "./settings-shared";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { niche } from "@/config/niche";
 
-export function WorkspaceSection({ supabase, router, workspace }: { supabase: SB; router: RT; workspace: SettingsViewProps["workspace"] }) {
+import {
+  Feedback,
+  REGION_CURRENCY,
+  REGION_NAMES,
+  Section,
+  selectClass,
+  type Msg,
+  type RT,
+  type SB,
+  type SettingsViewProps,
+} from "./settings-shared";
+
+export function WorkspaceSection({
+  supabase,
+  router,
+  workspace,
+}: {
+  supabase: SB;
+  router: RT;
+  workspace: SettingsViewProps["workspace"];
+}) {
   const [name, setName] = useState(workspace.name);
   const [region, setRegion] = useState(workspace.region);
   const [busy, setBusy] = useState(false);
@@ -32,31 +55,29 @@ export function WorkspaceSection({ supabase, router, workspace }: { supabase: SB
   }
 
   return (
-    <Section id="workspace" title="Workspace" description="Settings for this workspace.">
-      <form className="stack" onSubmit={save}>
-        <label className="wizard-field">
-          <span className="wizard-label">Workspace name</span>
-          <input value={name} onChange={(e) => setName(e.target.value)} required />
-        </label>
-        <label className="wizard-field">
-          <span className="wizard-label">Region</span>
-          <select value={region} onChange={(e) => setRegion(e.target.value)} required>
+    <Section id="workspace" title={niche.copy.settings.sections.workspace}>
+      <form className="grid gap-4" onSubmit={save}>
+        <div className="grid gap-2">
+          <Label htmlFor="workspace-name">Workspace name</Label>
+          <Input id="workspace-name" value={name} onChange={(e) => setName(e.target.value)} required />
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="workspace-region">Region</Label>
+          <select id="workspace-region" className={selectClass} value={region} onChange={(e) => setRegion(e.target.value)} required>
             {Object.keys(REGION_CURRENCY).map((r) => (
               <option key={r} value={r}>{REGION_NAMES[r] ?? r}</option>
             ))}
           </select>
-        </label>
-        <div className="wizard-connect-row">
-          <span>
-            <strong>Publishing review</strong>
-            <div className="item-meta">All campaigns are reviewed before going live during early access.</div>
-          </span>
+        </div>
+        <div className="flex flex-col gap-1">
+          <strong className="text-sm font-medium">Publishing review</strong>
+          <span className="text-sm text-muted-foreground">All campaigns are reviewed before going live during early access.</span>
         </div>
         <Feedback message={message} />
-        <div className="wizard-actions">
-          <button className="button" type="submit" disabled={busy}>
+        <div>
+          <Button type="submit" disabled={busy}>
             {busy ? "Saving" : "Save workspace"}
-          </button>
+          </Button>
         </div>
       </form>
     </Section>

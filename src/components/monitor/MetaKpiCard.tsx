@@ -21,22 +21,39 @@ export function MetaKpiCard(props: {
   const isGood = trend != null && (props.goodWhenDown ? trend <= 0 : trend >= 0);
 
   return (
-    <article className="metric-card mm-kpi">
-      <div className="mm-kpi-label">{props.label}</div>
-      <div className="mm-kpi-value">{props.value}</div>
-      {props.compareText ? <div className="mm-kpi-compare">{props.compareText}</div> : null}
-      {trend != null ? (
-        <div className={`mm-kpi-trend ${isGood ? "good" : "bad"}`}>
-          {isUp ? <ArrowUpRight size={12} aria-hidden /> : <ArrowDownRight size={12} aria-hidden />}
-          {formatPercent(Math.abs(trend), 1)}
-        </div>
-      ) : null}
+    <article className="rounded-(--r-card) border border-(--line) bg-(--surface) px-[18px] pt-[17px] pb-[15px] shadow-card">
+      <div className="font-mono text-[9.5px] font-medium tracking-[0.12em] text-(--faint) uppercase">
+        {props.label}
+      </div>
+      <div className="mt-[7px] font-display text-[24px] font-extrabold tracking-[-0.02em] tabular-nums">
+        {props.value}
+      </div>
+      <div className="mt-[7px] flex flex-wrap items-center gap-1.5">
+        {trend != null ? (
+          <span
+            className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10.5px] font-bold tabular-nums ${
+              isGood ? "bg-success-soft text-success" : "bg-error-soft text-error"
+            }`}
+          >
+            {isUp ? <ArrowUpRight size={11} aria-hidden /> : <ArrowDownRight size={11} aria-hidden />}
+            {formatPercent(Math.abs(trend), 1)}
+          </span>
+        ) : null}
+        {props.compareText ? (
+          <span className="text-[10.5px] font-medium text-(--faint)">{props.compareText}</span>
+        ) : null}
+      </div>
       {props.progress != null ? (
         <>
-          <div className="mm-progress" role="presentation">
-            <i style={{ width: `${Math.min(Math.max(props.progress, 0), 1) * 100}%` }} />
+          <div className="mt-2 h-[5px] w-full overflow-hidden rounded-full bg-data-track" role="presentation">
+            <i
+              className="block h-full rounded-full bg-data"
+              style={{ width: `${Math.min(Math.max(props.progress, 0), 1) * 100}%` }}
+            />
           </div>
-          <div className="mm-progress-note">{formatPercent(1 - Math.min(Math.max(props.progress, 0), 1))} remaining</div>
+          <div className="mt-1 text-[10.5px] font-medium text-(--faint)">
+            {formatPercent(1 - Math.min(Math.max(props.progress, 0), 1))} remaining
+          </div>
         </>
       ) : null}
     </article>

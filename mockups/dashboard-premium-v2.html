@@ -1,0 +1,1112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blockwise — Premium v2 dashboard mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  /* ============ Premium v2 tokens ============ */
+  :root {
+    --canvas: #f6f7f9;
+    --surface: #ffffff;
+    --surface-subtle: #f1f2f4;
+    --ink: #16181d;
+    --ink-strong: #0b0c10;
+    --muted: #545a66;
+    --faint: #9aa0ad;
+    --line: #e9ebef;
+    --line-heavy: #d3d7df;
+    --tint: #f1f2f4;
+
+    /* the one vivid voice — set per niche */
+    --data: #2a78d6;
+    --data-soft: rgba(42, 120, 214, .10);
+    --data-track: rgba(42, 120, 214, .16);
+
+    --green: #006d38;
+    --green-soft: #e9f6ef;
+    --amber: #8a5a00;
+    --amber-soft: #fdf6e7;
+    --rose: #ba1a1a;
+
+    --shadow: 0 1px 2px rgba(16,18,23,.04), 0 8px 24px rgba(16,18,23,.06);
+    --shadow-float: 0 2px 4px rgba(16,18,23,.05), 0 16px 40px rgba(16,18,23,.10);
+    --ring: 0 0 0 3px rgba(22,24,29,.12);
+
+    --r-control: 10px;
+    --r-card: 16px;
+    --r-panel: 20px;
+
+    --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
+    --font-display: "Manrope", "Inter", ui-sans-serif, system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+    --spring: cubic-bezier(.22, 1.1, .36, 1);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+  body {
+    font-family: var(--font-body);
+    background: var(--canvas);
+    color: var(--ink);
+    font-size: 14.5px;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+  a { color: inherit; text-decoration: none; }
+  ::selection { background: var(--ink); color: #fff; }
+
+  .app { display: grid; grid-template-columns: 250px 1fr; min-height: 100vh; }
+
+  /* ============ Sidebar ============ */
+  .sidebar {
+    background: var(--surface);
+    border-right: 1px solid var(--line);
+    padding: 18px 12px 14px;
+    display: flex; flex-direction: column; gap: 4px;
+    position: sticky; top: 0; height: 100vh;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; padding: 4px 10px 16px; }
+  .brand-mark {
+    width: 30px; height: 30px; border-radius: 9px;
+    background: var(--ink); color: #fff;
+    display: grid; place-items: center;
+    font-family: var(--font-display); font-weight: 800; font-size: 15px;
+    transition: background .3s var(--spring);
+  }
+  .brand-name { font-family: var(--font-display); font-weight: 800; font-size: 16.5px; letter-spacing: -.02em; }
+
+  .nav-section {
+    font-family: var(--font-mono); font-size: 9.5px; font-weight: 500;
+    letter-spacing: .14em; text-transform: uppercase; color: var(--faint);
+    padding: 16px 10px 6px;
+  }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    width: 100%; padding: 9px 10px; border-radius: var(--r-control);
+    font-weight: 600; font-size: 13.5px; color: var(--muted);
+    transition: background .15s ease, color .15s ease, transform .15s var(--spring);
+    text-align: left;
+  }
+  .nav-item svg { width: 17px; height: 17px; flex: none; opacity: .85; }
+  .nav-item:hover { background: var(--surface-subtle); color: var(--ink); }
+  .nav-item:active { transform: scale(.985); }
+  .nav-item.active { background: var(--ink); color: #fff; box-shadow: var(--shadow); }
+  .nav-item.active svg { opacity: 1; }
+
+  .sidebar-foot { margin-top: auto; }
+  .trial-pill {
+    border: 1px solid var(--line); border-radius: var(--r-card);
+    padding: 12px; background: var(--surface);
+  }
+  .trial-pill .t-label { font-size: 11.5px; font-weight: 600; color: var(--muted); display: flex; justify-content: space-between; }
+  .trial-pill .t-label strong { color: var(--ink); font-variant-numeric: tabular-nums; }
+  .meter { height: 5px; border-radius: 999px; background: var(--data-track); margin-top: 8px; overflow: hidden; }
+  .meter > i { display: block; height: 100%; border-radius: 999px; background: var(--data); width: 0; transition: width 1s var(--spring), background .3s; }
+  .trial-pill .t-cta { margin-top: 9px; font-size: 12px; font-weight: 700; color: var(--ink); display: inline-flex; align-items: center; gap: 4px; }
+  .trial-pill .t-cta:hover svg { transform: translateX(2px); }
+  .trial-pill .t-cta svg { width: 12px; height: 12px; transition: transform .2s var(--spring); }
+
+  /* ============ Topbar ============ */
+  .main { display: flex; flex-direction: column; min-width: 0; }
+  .topbar {
+    position: sticky; top: 0; z-index: 20;
+    display: flex; align-items: center; gap: 14px;
+    min-height: 60px; padding: 0 28px;
+    background: color-mix(in srgb, var(--canvas) 82%, transparent);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--line);
+  }
+  .page-title { font-family: var(--font-display); font-weight: 800; font-size: 15px; letter-spacing: -.01em; }
+  .crumb-sep { color: var(--faint); font-weight: 400; }
+  .workspace-chip {
+    font-size: 12px; font-weight: 600; color: var(--muted);
+    background: var(--surface); border: 1px solid var(--line);
+    padding: 4px 11px; border-radius: 999px;
+  }
+  .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+
+  .niche-switch {
+    display: flex; background: var(--surface-subtle); border: 1px solid var(--line);
+    border-radius: 999px; padding: 3px; gap: 2px;
+  }
+  .niche-switch button {
+    font-size: 12px; font-weight: 700; padding: 5px 12px; border-radius: 999px;
+    color: var(--muted); transition: all .25s var(--spring);
+  }
+  .niche-switch button.on { background: var(--ink); color: #fff; box-shadow: var(--shadow); }
+
+  .search-pill {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 999px; padding: 7px 12px; width: 190px;
+    color: var(--faint); font-size: 12.5px; font-weight: 500;
+    transition: box-shadow .2s, border-color .2s;
+  }
+  .search-pill:hover { border-color: var(--line-heavy); box-shadow: var(--shadow); }
+  .search-pill svg { width: 14px; height: 14px; }
+  .search-pill kbd {
+    margin-left: auto; font-family: var(--font-mono); font-size: 10px;
+    background: var(--surface-subtle); border: 1px solid var(--line);
+    border-radius: 5px; padding: 1px 5px; color: var(--muted);
+  }
+  .avatar {
+    width: 32px; height: 32px; border-radius: 999px;
+    background: var(--tint); color: var(--ink);
+    display: grid; place-items: center;
+    font-size: 11.5px; font-weight: 800; font-family: var(--font-display);
+    border: 1px solid var(--line);
+  }
+
+  /* ============ Content ============ */
+  .content { width: 100%; max-width: 1060px; margin: 0 auto; padding: 30px 28px 72px; }
+  .view { display: none; }
+  .view.on { display: block; }
+
+  .page-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; }
+  h1 {
+    font-family: var(--font-display); font-size: 27px; font-weight: 800;
+    letter-spacing: -.025em; line-height: 1.15;
+  }
+  .sub { margin-top: 5px; color: var(--muted); font-size: 13.5px; }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    height: 42px; padding: 0 20px; border-radius: 999px;
+    background: var(--ink); color: #fff; font-weight: 700; font-size: 13.5px;
+    box-shadow: var(--shadow);
+    transition: background .15s, transform .15s var(--spring), box-shadow .2s;
+  }
+  .btn:hover { background: var(--ink-strong); box-shadow: var(--shadow-float); }
+  .btn:hover .btn-arrow { transform: translateX(3px); }
+  .btn:active { transform: scale(.97); }
+  .btn-arrow { width: 15px; height: 15px; transition: transform .2s var(--spring); }
+  .btn.ghost {
+    background: var(--surface); color: var(--ink); border: 1px solid var(--line-heavy);
+    box-shadow: none; height: 36px; padding: 0 14px; font-size: 12.5px;
+  }
+  .btn.ghost:hover { background: var(--surface-subtle); box-shadow: var(--shadow); }
+
+  /* cards */
+  .card {
+    background: var(--surface); border-radius: var(--r-card);
+    box-shadow: var(--shadow);
+    transition: transform .2s var(--spring), box-shadow .25s;
+  }
+  .card.lift:hover { transform: translateY(-2px); box-shadow: var(--shadow-float); }
+  .panel { border-radius: var(--r-panel); }
+
+  /* stat tiles */
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 26px; }
+  .stat { padding: 17px 18px 15px; }
+  .stat-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .stat-label {
+    font-family: var(--font-mono); font-size: 9.5px; font-weight: 500;
+    letter-spacing: .12em; text-transform: uppercase; color: var(--faint);
+  }
+  .stat-ico {
+    width: 30px; height: 30px; border-radius: 9px; flex: none;
+    display: grid; place-items: center; background: var(--tint); color: var(--ink);
+  }
+  .stat-ico svg { width: 15px; height: 15px; }
+  .stat-value {
+    margin-top: 10px; font-family: var(--font-display);
+    font-size: 26px; font-weight: 800; letter-spacing: -.02em; line-height: 1.1;
+    display: flex; align-items: baseline; gap: 7px;
+  }
+  .stat-value .unit { font-family: var(--font-body); font-size: 13px; font-weight: 500; color: var(--muted); letter-spacing: 0; }
+  .delta { display: inline-flex; align-items: center; gap: 3px; font-family: var(--font-body); font-size: 12px; font-weight: 700; letter-spacing: 0; }
+  .delta svg { width: 11px; height: 11px; }
+  .delta.good { color: var(--green); }
+  .delta.bad { color: var(--rose); }
+  .stat-foot { margin-top: 7px; font-size: 11.5px; color: var(--muted); display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .spark { flex: none; }
+  .spark path { transition: stroke .3s; }
+
+  /* grid rows */
+  .row-2 { display: grid; grid-template-columns: 3fr 2fr; gap: 14px; margin-top: 14px; }
+  .quick { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
+
+  .card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; padding: 20px 22px 0; }
+  .card-title { font-family: var(--font-display); font-size: 15.5px; font-weight: 800; letter-spacing: -.015em; }
+  .card-sub { margin-top: 3px; font-size: 12.5px; color: var(--muted); }
+  .card-body { padding: 16px 22px 20px; }
+
+  /* chart */
+  .chart-wrap { position: relative; margin-top: 4px; }
+  .chart-wrap svg { display: block; width: 100%; height: auto; }
+  .axis-text { font: 500 10px var(--font-body); fill: var(--faint); }
+  .gridline { stroke: var(--line); stroke-width: 1; }
+  .baseline { stroke: var(--line-heavy); stroke-width: 1; }
+  .chart-tip {
+    position: absolute; pointer-events: none; opacity: 0;
+    background: var(--ink); color: #fff; border-radius: 9px;
+    padding: 7px 10px; font-size: 11.5px; line-height: 1.35;
+    transform: translate(-50%, -110%); white-space: nowrap;
+    transition: opacity .12s; box-shadow: var(--shadow-float); z-index: 5;
+  }
+  .chart-tip strong { font-size: 12.5px; }
+  .chart-tip .tip-date { color: rgba(255,255,255,.65); font-size: 10.5px; }
+  .table-toggle {
+    margin-top: 10px; font-size: 12px; font-weight: 600; color: var(--muted);
+  }
+  .table-toggle summary { cursor: pointer; list-style: none; display: inline-flex; align-items: center; gap: 5px; }
+  .table-toggle summary::-webkit-details-marker { display: none; }
+  .table-toggle summary:hover { color: var(--ink); }
+  .mini-table { margin-top: 8px; width: 100%; border-collapse: collapse; font-size: 12px; }
+  .mini-table th, .mini-table td { text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+  .mini-table th { color: var(--faint); font-weight: 600; font-size: 11px; }
+
+  /* setup card */
+  .ring-wrap { display: flex; align-items: center; gap: 14px; }
+  .ring { transform: rotate(-90deg); }
+  .ring .track { stroke: var(--data-track); transition: stroke .3s; }
+  .ring .fill { stroke: var(--data); transition: stroke-dashoffset 1.1s var(--spring), stroke .3s; }
+  .ring-label { font-size: 12.5px; color: var(--muted); }
+  .ring-label strong { display: block; font-family: var(--font-display); font-size: 15px; font-weight: 800; color: var(--ink); letter-spacing: -.01em; }
+  .steps { margin-top: 14px; display: grid; gap: 4px; list-style: none; }
+  .step {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 12px; border-radius: 12px;
+    transition: background .15s;
+  }
+  .step:hover { background: var(--surface-subtle); }
+  .step.current { background: var(--tint); }
+  .step-dot {
+    width: 28px; height: 28px; border-radius: 999px; flex: none;
+    display: grid; place-items: center;
+    font-family: var(--font-display); font-weight: 800; font-size: 12.5px;
+  }
+  .step.done .step-dot { background: var(--green-soft); color: var(--green); }
+  .step.current .step-dot { background: var(--ink); color: #fff; }
+  .step.todo .step-dot { background: var(--surface-subtle); color: var(--faint); border: 1px solid var(--line); }
+  .step-dot svg { width: 13px; height: 13px; }
+  .step-dot .check-path { stroke-dasharray: 20; stroke-dashoffset: 20; animation: draw .5s .5s var(--spring) forwards; }
+  .step-main { min-width: 0; flex: 1; }
+  .step-title { font-size: 13px; font-weight: 700; }
+  .step-sub { font-size: 11.5px; color: var(--muted); }
+  .step-badge {
+    font-size: 10.5px; font-weight: 700; border-radius: 999px; padding: 3px 9px; flex: none;
+  }
+  .step.done .step-badge { background: var(--green-soft); color: var(--green); }
+  .step.current .step-badge { background: var(--surface); color: var(--ink); }
+  .step.todo .step-badge { background: var(--surface-subtle); color: var(--faint); }
+
+  /* quick actions */
+  .quick-card { display: flex; align-items: center; gap: 14px; padding: 18px 20px; cursor: pointer; }
+  .quick-ico {
+    width: 42px; height: 42px; border-radius: 13px; flex: none;
+    display: grid; place-items: center; background: var(--tint); color: var(--ink);
+    transition: background .3s;
+  }
+  .quick-ico svg { width: 19px; height: 19px; }
+  .quick-main { flex: 1; min-width: 0; }
+  .quick-title { font-size: 13.5px; font-weight: 700; }
+  .quick-sub { font-size: 12px; color: var(--muted); margin-top: 1px; }
+  .quick-arrow { width: 15px; height: 15px; color: var(--faint); flex: none; transition: transform .2s var(--spring), color .2s; }
+  .quick-card:hover .quick-arrow { transform: translateX(3px); color: var(--ink); }
+
+  /* ============ Leads view ============ */
+  .stats-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 24px; }
+  .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 16px 18px; border-bottom: 1px solid var(--line); }
+  .t-search {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--surface); border: 1px solid var(--line-heavy);
+    border-radius: var(--r-control); padding: 0 12px; height: 36px; width: 220px;
+    transition: box-shadow .15s, border-color .15s;
+  }
+  .t-search:focus-within { border-color: var(--ink); box-shadow: var(--ring); }
+  .t-search svg { width: 14px; height: 14px; color: var(--faint); flex: none; }
+  .t-search input { border: 0; outline: 0; font: inherit; font-size: 13px; width: 100%; background: transparent; color: var(--ink); }
+  .t-search input::placeholder { color: var(--faint); }
+  .chips { display: flex; gap: 6px; }
+  .chip {
+    font-size: 12px; font-weight: 700; padding: 7px 13px; border-radius: 999px;
+    background: var(--surface); border: 1px solid var(--line); color: var(--muted);
+    transition: all .18s var(--spring);
+  }
+  .chip:hover { border-color: var(--line-heavy); color: var(--ink); }
+  .chip.on { background: var(--ink); border-color: var(--ink); color: #fff; }
+  .chip:active { transform: scale(.96); }
+  .toolbar .spacer { flex: 1; }
+
+  table.leads { width: 100%; border-collapse: collapse; }
+  .leads th {
+    text-align: left; padding: 11px 18px;
+    font-family: var(--font-mono); font-size: 9.5px; font-weight: 500;
+    letter-spacing: .12em; text-transform: uppercase; color: var(--faint);
+    border-bottom: 1px solid var(--line); white-space: nowrap;
+  }
+  .leads th.sortable { cursor: pointer; }
+  .leads th.sortable:hover { color: var(--ink); }
+  .leads th .sort-ico { display: inline-block; margin-left: 4px; opacity: .7; font-size: 9px; }
+  .leads td { padding: 12px 18px; border-bottom: 1px solid var(--line); font-size: 13px; vertical-align: middle; }
+  .leads tbody tr { transition: background .12s; }
+  .leads tbody tr:hover { background: var(--surface-subtle); }
+  .leads tbody tr:last-child td { border-bottom: 0; }
+  .lead-name { font-weight: 700; }
+  .lead-contact { color: var(--muted); font-size: 12px; line-height: 1.4; }
+  .cell-muted { color: var(--muted); font-size: 12.5px; }
+  .src { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--muted); }
+  .src i { width: 7px; height: 7px; border-radius: 999px; background: var(--data); flex: none; transition: background .3s; }
+  .q-select {
+    appearance: none; -webkit-appearance: none;
+    font: 700 11.5px var(--font-body); color: var(--ink);
+    background: var(--surface-subtle); border: 1px solid var(--line);
+    border-radius: 999px; padding: 5px 22px 5px 11px; cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M1 1l3 3 3-3' stroke='%23545a66' fill='none' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 9px center;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .q-select:hover { border-color: var(--line-heavy); }
+  .q-select:focus { outline: none; border-color: var(--ink); box-shadow: var(--ring); }
+  .q-select.hi { background-color: var(--green-soft); border-color: transparent; color: var(--green); }
+  .badge { font-size: 11px; font-weight: 700; border-radius: 999px; padding: 4px 10px; white-space: nowrap; }
+  .badge.new { background: var(--green-soft); color: var(--green); }
+  .badge.dup { background: var(--amber-soft); color: var(--amber); }
+  .table-foot {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 13px 18px; font-size: 12.5px; color: var(--muted);
+  }
+  .pager { display: flex; gap: 5px; }
+  .pager button {
+    width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center;
+    border: 1px solid var(--line); background: var(--surface); color: var(--muted);
+    font-size: 12px; font-weight: 700; transition: all .15s;
+  }
+  .pager button:hover { border-color: var(--line-heavy); color: var(--ink); }
+  .pager button.on { background: var(--ink); border-color: var(--ink); color: #fff; }
+  .pager button svg { width: 13px; height: 13px; }
+
+  .sync-note { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--muted); }
+  .sync-note svg { width: 13px; height: 13px; }
+
+  /* ============ Motion ============ */
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes draw { to { stroke-dashoffset: 0; } }
+  .view.on .stagger {
+    opacity: 0;
+    animation: rise .5s var(--spring) forwards;
+    animation-delay: calc(var(--i, 0) * 45ms);
+  }
+  .draw-line { transition: stroke-dashoffset 1.2s .15s ease-out; }
+  .fade-fill { transition: opacity .8s .7s ease; }
+
+  .mock-note {
+    position: fixed; right: 16px; bottom: 16px; z-index: 50;
+    background: var(--ink); color: #fff; border-radius: 999px;
+    padding: 8px 16px; font-size: 11.5px; font-weight: 600;
+    box-shadow: var(--shadow-float); opacity: .92; pointer-events: none;
+  }
+  .mock-note b { color: #9ec5f4; }
+
+  /* ============ Mobile — feels like an app ============ */
+  .m-topbar { display: none; }
+  .tabbar { display: none; }
+  .lead-cards { display: none; }
+
+  @media (max-width: 960px) {
+    body { font-size: 15px; }
+    .app { grid-template-columns: 1fr; }
+    .sidebar { display: none; }
+    .topbar { display: none; }
+
+    /* condensed app topbar */
+    .m-topbar {
+      position: sticky; top: 0; z-index: 20;
+      display: flex; align-items: center; gap: 10px;
+      min-height: 54px; padding: 0 16px;
+      padding-top: env(safe-area-inset-top);
+      background: color-mix(in srgb, var(--canvas) 80%, transparent);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--line);
+    }
+    .m-topbar .brand-mark { width: 28px; height: 28px; font-size: 13.5px; border-radius: 8px; }
+    .m-title { font-family: var(--font-display); font-weight: 800; font-size: 16px; letter-spacing: -.015em; }
+    .m-topbar .niche-switch { margin-left: auto; }
+    .m-topbar .niche-switch button { padding: 4px 9px; font-size: 11px; }
+    .m-topbar .avatar { width: 30px; height: 30px; }
+
+    .content { padding: 20px 16px calc(90px + env(safe-area-inset-bottom)); }
+    h1 { font-size: 23px; }
+    .page-head { gap: 12px; }
+    .page-head .btn { height: 40px; padding: 0 16px; font-size: 13px; }
+    .stats { grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 20px; }
+    .stat { padding: 14px 15px 13px; }
+    .stat-value { font-size: 23px; }
+    .stat-foot { font-size: 11px; white-space: nowrap; }
+    .stat-foot .spark { width: 58px; }
+    .row-2, .quick, .stats-3 { grid-template-columns: 1fr; gap: 10px; }
+    .row-2 { margin-top: 10px; }
+    .quick { margin-top: 10px; }
+    .stats-3 { margin-top: 18px; }
+    .card-head { padding: 16px 16px 0; }
+    .card-body { padding: 12px 16px 16px; }
+    .card.lift:hover { transform: none; }
+
+    /* bottom tab bar */
+    .tabbar {
+      position: fixed; inset: auto 0 0 0; z-index: 40;
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+      background: color-mix(in srgb, var(--surface) 94%, transparent);
+      backdrop-filter: blur(16px);
+      border-top: 1px solid var(--line);
+    }
+    .tab {
+      display: grid; place-items: center; gap: 3px;
+      min-height: 48px; border-radius: 12px;
+      font-size: 10.5px; font-weight: 700; color: var(--faint);
+      transition: color .15s, transform .15s var(--spring), background .15s;
+    }
+    .tab svg { width: 21px; height: 21px; }
+    .tab:active { transform: scale(.94); }
+    .tab.on { color: var(--ink); background: var(--tint); }
+
+    /* leads: table → cards */
+    .leads-table-wrap { display: none; }
+    .lead-cards { display: grid; gap: 10px; padding: 14px 16px 16px; }
+    .lead-card { border: 1px solid var(--line); border-radius: 14px; padding: 13px 14px; }
+    .lead-card .lc-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+    .lead-card .lc-sub { font-size: 12px; color: var(--muted); margin-top: 1px; }
+    .lead-card .lc-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 11px; }
+    .toolbar { padding: 13px 16px; }
+    .t-search { width: 100%; height: 42px; }
+    .chips { width: 100%; }
+    .chip { padding: 9px 14px; }
+    .toolbar .btn.ghost { display: none; }
+    .table-foot { padding: 12px 16px calc(12px + 0px); }
+    .mock-note { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01ms !important; animation-delay: 0ms !important; transition-duration: .01ms !important; }
+    .view.on .stagger { opacity: 1; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ================= Sidebar ================= -->
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="brand-mark" id="brandMark">B</span>
+      <span class="brand-name" id="brandName">Blockwise</span>
+    </div>
+
+    <button class="nav-item active" data-view="home">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7.5" height="7.5" rx="1.8"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.8"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.8"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.8"/></svg>
+      Home
+    </button>
+    <button class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6-5.4-3-5.4 3 1.2-6L3.3 9.3l6.1-.7z"/></svg>
+      Ad Studio
+    </button>
+    <button class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>
+      Performance
+    </button>
+    <button class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 12l5-3"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg>
+      Ad Radar
+    </button>
+    <button class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><circle cx="11" cy="14" r="2.4"/><path d="M12.8 15.8l2 2"/></svg>
+      <span id="navPropertyCheck">Property Check</span>
+    </button>
+    <button class="nav-item" data-view="leads">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.4"/><path d="M3.5 20c.6-3.4 2.9-5.2 5.5-5.2s4.9 1.8 5.5 5.2"/><circle cx="16.8" cy="9.4" r="2.6"/><path d="M16.4 14.7c2.3.2 4 1.8 4.6 4.4"/></svg>
+      Leads
+    </button>
+
+    <p class="nav-section">Set up</p>
+    <button class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".8" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".8" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".8" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".8" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.9 0 1.8-.7 1.8-1.8 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-1 .8-1.8 1.8-1.8H17c2.8 0 5-2.2 5-5 0-4.9-4.5-9-10-9z"/></svg>
+      Brand Pack
+    </button>
+    <button class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h10M18 8h2M4 16h2M10 16h10"/><circle cx="16" cy="8" r="2.2"/><circle cx="8" cy="16" r="2.2"/></svg>
+      Settings
+    </button>
+
+    <div class="sidebar-foot">
+      <div class="trial-pill">
+        <p class="t-label"><span>Trial · ad packs left</span><strong><span id="packsLeft">7</span> / 10</strong></p>
+        <div class="meter"><i id="trialMeter" data-w="70"></i></div>
+        <a class="t-cta" href="#">Upgrade
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </a>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ================= Main ================= -->
+  <div class="main">
+    <header class="m-topbar">
+      <span class="brand-mark" id="mBrandMark">B</span>
+      <span class="m-title" id="mBrandName">Blockwise</span>
+      <div class="niche-switch">
+        <button class="on" data-niche="blockwise">B</button>
+        <button data-niche="dentistwise">D</button>
+      </div>
+      <div class="avatar" id="mAvatar">CR</div>
+    </header>
+    <header class="topbar">
+      <span class="page-title"><span id="crumbWs">Coastal Realty</span> <span class="crumb-sep">/</span> <span id="crumbPage">Home</span></span>
+      <span class="workspace-chip" id="industryChip">Real estate · AU</span>
+      <div class="topbar-right">
+        <div class="niche-switch" title="White-label demo — swaps src/config/niche">
+          <button class="on" data-niche="blockwise">Blockwise</button>
+          <button data-niche="dentistwise">DentistWise</button>
+        </div>
+        <div class="search-pill">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+          Search
+          <kbd>⌘K</kbd>
+        </div>
+        <div class="avatar" id="avatar">CR</div>
+      </div>
+    </header>
+
+    <div class="content">
+
+      <!-- ================= Home ================= -->
+      <section id="view-home" class="view on">
+        <div class="page-head stagger" style="--i:0">
+          <div>
+            <h1 id="homeHeading">Welcome back.</h1>
+            <p class="sub" id="homeSub">Here's where Coastal Realty stands today.</p>
+          </div>
+          <button class="btn">Create ad
+            <svg class="btn-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </button>
+        </div>
+
+        <div class="stats">
+          <div class="card lift stat stagger" style="--i:1">
+            <div class="stat-top"><span class="stat-label">Leads · 30 days</span>
+              <span class="stat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.4"/><path d="M3.5 20c.6-3.4 2.9-5.2 5.5-5.2s4.9 1.8 5.5 5.2"/><circle cx="16.8" cy="9.4" r="2.6"/><path d="M16.4 14.7c2.3.2 4 1.8 4.6 4.4"/></svg></span>
+            </div>
+            <p class="stat-value"><span data-count="132">0</span>
+              <span class="delta good"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M9 7h8v8"/></svg>18%</span>
+            </p>
+            <div class="stat-foot"><span>vs prior 30 days</span><svg class="spark" id="spark1" width="72" height="26" viewBox="0 0 72 26"></svg></div>
+          </div>
+
+          <div class="card lift stat stagger" style="--i:2">
+            <div class="stat-top"><span class="stat-label">Cost per lead</span>
+              <span class="stat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M14.8 9.2c-.5-.9-1.6-1.4-2.8-1.4-1.7 0-3 .9-3 2.2 0 2.9 6 1.5 6 4.4 0 1.3-1.3 2.2-3 2.2-1.2 0-2.3-.5-2.8-1.4M12 6v1.8M12 16.4v1.8"/></svg></span>
+            </div>
+            <p class="stat-value"><span data-count="6.4" data-decimals="2" data-prefix="$">$0.00</span>
+              <span class="delta good"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7l10 10M15 17H7V9"/></svg>12%</span>
+            </p>
+            <div class="stat-foot"><span>vs prior 30 days</span></div>
+          </div>
+
+          <div class="card lift stat stagger" style="--i:3">
+            <div class="stat-top"><span class="stat-label">Ads live</span>
+              <span class="stat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l14-5v12L3 13v-2z"/><path d="M17 8.5c1.7.5 3 1.9 3 3.5s-1.3 3-3 3.5"/><path d="M7.5 13.8l1 5.2h2.6l-.8-4.6"/></svg></span>
+            </div>
+            <p class="stat-value"><span data-count="4">0</span><span class="unit">of 9 created</span></p>
+            <div class="stat-foot"><span>2 published this week</span></div>
+          </div>
+
+          <div class="card lift stat stagger" style="--i:4">
+            <div class="stat-top"><span class="stat-label">Ad packs left</span>
+              <span class="stat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5"/></svg></span>
+            </div>
+            <p class="stat-value"><span data-count="7">0</span><span class="unit">/ 10</span></p>
+            <div class="stat-foot" style="display:block">
+              <div class="meter"><i id="packMeter" data-w="70"></i></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row-2">
+          <div class="card panel stagger" style="--i:5">
+            <div class="card-head">
+              <div>
+                <p class="card-title" id="chartTitle">Leads captured</p>
+                <p class="card-sub">Last 30 days · synced 5 min ago</p>
+              </div>
+              <button class="btn ghost">View performance</button>
+            </div>
+            <div class="card-body">
+              <div class="chart-wrap" id="chartWrap">
+                <svg id="bigChart" viewBox="0 0 640 218" aria-label="Leads captured per day, last 30 days"></svg>
+                <div class="chart-tip" id="chartTip"></div>
+              </div>
+              <details class="table-toggle">
+                <summary>View as table
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+                </summary>
+                <table class="mini-table" id="chartTable"></table>
+              </details>
+            </div>
+          </div>
+
+          <div class="card panel stagger" style="--i:6">
+            <div class="card-head">
+              <div>
+                <p class="card-title">Setup</p>
+                <p class="card-sub">One step from your first live ad.</p>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="ring-wrap">
+                <svg class="ring" width="64" height="64" viewBox="0 0 64 64">
+                  <circle class="track" cx="32" cy="32" r="26" fill="none" stroke-width="6"/>
+                  <circle class="fill" id="ringFill" cx="32" cy="32" r="26" fill="none" stroke-width="6" stroke-linecap="round"
+                          stroke-dasharray="163.4" stroke-dashoffset="163.4"/>
+                </svg>
+                <p class="ring-label"><strong>2 of 3 complete</strong>Finish setup to go live.</p>
+              </div>
+              <ol class="steps">
+                <li class="step done">
+                  <span class="step-dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path class="check-path" d="M5 13l4.5 4.5L19 7"/></svg></span>
+                  <span class="step-main"><span class="step-title">Brand pack</span><br><span class="step-sub">Logo, colours and key details</span></span>
+                  <span class="step-badge">Done</span>
+                </li>
+                <li class="step done">
+                  <span class="step-dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path class="check-path" style="animation-delay:.65s" d="M5 13l4.5 4.5L19 7"/></svg></span>
+                  <span class="step-main"><span class="step-title">Connect Meta</span><br><span class="step-sub">Ad account linked</span></span>
+                  <span class="step-badge">Done</span>
+                </li>
+                <li class="step current">
+                  <span class="step-dot">3</span>
+                  <span class="step-main"><span class="step-title" id="step3Title">Publish your first ad</span><br><span class="step-sub" id="step3Sub">Feed and Story, ready in minutes</span></span>
+                  <span class="step-badge">Up next</span>
+                </li>
+              </ol>
+            </div>
+          </div>
+        </div>
+
+        <div class="quick">
+          <div class="card lift quick-card stagger" style="--i:7">
+            <span class="quick-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 12l5-3"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg></span>
+            <span class="quick-main">
+              <span class="quick-title">Ad Radar</span>
+              <span class="quick-sub" id="quick1Sub" style="display:block">See top-performing ads from agents near you.</span>
+            </span>
+            <svg class="quick-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </div>
+          <div class="card lift quick-card stagger" style="--i:8">
+            <span class="quick-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><circle cx="11" cy="14" r="2.4"/><path d="M12.8 15.8l2 2"/></svg></span>
+            <span class="quick-main">
+              <span class="quick-title" id="quick2Title">Property Check</span>
+              <span class="quick-sub" id="quick2Sub" style="display:block">Instant insights and ad ideas for any listing.</span>
+            </span>
+            <svg class="quick-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= Leads ================= -->
+      <section id="view-leads" class="view">
+        <div class="page-head stagger" style="--i:0">
+          <div>
+            <h1>Leads</h1>
+            <p class="sub">132 captured in the last 30 days.</p>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px">
+            <span class="sync-note">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
+              Synced 9:41 am
+            </span>
+            <button class="btn ghost">Sync from Meta</button>
+          </div>
+        </div>
+
+        <div class="stats-3">
+          <div class="card lift stat stagger" style="--i:1">
+            <div class="stat-top"><span class="stat-label">Leads</span></div>
+            <p class="stat-value"><span data-count="132">0</span></p>
+          </div>
+          <div class="card lift stat stagger" style="--i:2">
+            <div class="stat-top"><span class="stat-label">High intent</span></div>
+            <p class="stat-value"><span data-count="34">0</span><span class="unit">26%</span></p>
+          </div>
+          <div class="card lift stat stagger" style="--i:3">
+            <div class="stat-top"><span class="stat-label">Duplicates flagged</span></div>
+            <p class="stat-value"><span data-count="6">0</span></p>
+            <div class="stat-foot"><span>Matched by email or phone</span></div>
+          </div>
+        </div>
+
+        <div class="card panel stagger" style="--i:4;margin-top:14px">
+          <div class="toolbar">
+            <label class="t-search">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+              <input type="text" id="leadSearch" placeholder="Search leads">
+            </label>
+            <div class="chips" id="leadChips">
+              <button class="chip on" data-f="all">All</button>
+              <button class="chip" data-f="high">High intent</button>
+              <button class="chip" data-f="dup">Duplicates</button>
+            </div>
+            <span class="spacer"></span>
+            <button class="btn ghost">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 19h16"/></svg>
+              Export CSV
+            </button>
+          </div>
+
+          <div class="leads-table-wrap" style="overflow-x:auto">
+            <table class="leads">
+              <thead>
+                <tr>
+                  <th class="sortable" id="sortName">Lead <span class="sort-ico">▲</span></th>
+                  <th>Suburb</th>
+                  <th>Source ad</th>
+                  <th>Quality</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="leadRows"></tbody>
+            </table>
+          </div>
+
+          <div class="lead-cards" id="leadCards"></div>
+
+          <div class="table-foot">
+            <span id="rowCount">Showing 8 of 132</span>
+            <div class="pager">
+              <button aria-label="Previous page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></button>
+              <button class="on">1</button><button>2</button><button>3</button>
+              <button aria-label="Next page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<nav class="tabbar" aria-label="Primary mobile navigation">
+  <button class="tab on" data-view="home">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7.5" height="7.5" rx="1.8"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.8"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.8"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.8"/></svg>
+    Home
+  </button>
+  <button class="tab">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6-5.4-3-5.4 3 1.2-6L3.3 9.3l6.1-.7z"/></svg>
+    Studio
+  </button>
+  <button class="tab">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 12l5-3"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg>
+    Radar
+  </button>
+  <button class="tab" data-view="leads">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.4"/><path d="M3.5 20c.6-3.4 2.9-5.2 5.5-5.2s4.9 1.8 5.5 5.2"/><circle cx="16.8" cy="9.4" r="2.6"/><path d="M16.4 14.7c2.3.2 4 1.8 4.6 4.4"/></svg>
+    Leads
+  </button>
+</nav>
+
+<div class="mock-note">Mockup · <b>Premium v2</b> · the niche switch is the white-label config demo</div>
+<script>
+"use strict";
+const REDUCED = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/* ============ Niche config (mirrors src/config/niche/) ============ */
+const NICHES = {
+  blockwise: {
+    name: "Blockwise", glyph: "B",
+    data: "#2a78d6", dataSoft: "rgba(42,120,214,.10)", dataTrack: "rgba(42,120,214,.16)",
+    workspace: "Coastal Realty", industry: "Real estate · AU", avatar: "CR",
+    homeSub: "Here's where Coastal Realty stands today.",
+    navPropertyCheck: "Property Check",
+    chartTitle: "Leads captured",
+    step3Title: "Publish your first ad", step3Sub: "Feed and Story, ready in minutes",
+    quick1Sub: "See top-performing ads from agents near you.",
+    quick2Title: "Property Check", quick2Sub: "Instant insights and ad ideas for any listing.",
+    sources: ["Feed ad — 3BR Applecross", "Story ad — Appraisal offer", "Feed ad — Open home Scarborough", "Feed ad — Sold price list"]
+  },
+  dentistwise: {
+    name: "DentistWise", glyph: "D",
+    data: "#0e8a68", dataSoft: "rgba(14,138,104,.10)", dataTrack: "rgba(14,138,104,.16)",
+    workspace: "Bright Smile Dental", industry: "Dental · AU", avatar: "BS",
+    homeSub: "Here's where Bright Smile Dental stands today.",
+    navPropertyCheck: "Offer Check",
+    chartTitle: "Patient enquiries",
+    step3Title: "Publish your first ad", step3Sub: "Feed and Story, ready in minutes",
+    quick1Sub: "See top-performing ads from practices near you.",
+    quick2Title: "Offer Check", quick2Sub: "Instant insights and ad ideas for any treatment offer.",
+    sources: ["Feed ad — Invisalign offer", "Story ad — New patient special", "Feed ad — Teeth whitening", "Feed ad — Check-up reminder"]
+  }
+};
+
+/* ============ Data ============ */
+const DAYS = [1,2,1,3,2,3,2,4,3,2,4,3,5,4,3,5,4,6,5,4,6,5,7,6,5,7,6,8,7,9];
+const SPARK1 = [4,6,5,8,7,9,8,11,10,12,11,14];
+const LEADS = [
+  { name: "Sarah Mitchell", contact: "sarah.m@outlook.com", suburb: "Applecross",    src: 0, q: "high",  dup: false },
+  { name: "James Okafor",   contact: "0413 552 108",        suburb: "Scarborough",   src: 2, q: "valid", dup: false },
+  { name: "Priya Nair",     contact: "priya.n@gmail.com",   suburb: "Fremantle",     src: 0, q: "high",  dup: false },
+  { name: "Tom Ricci",      contact: "tom.ricci@bigpond.com", suburb: "Subiaco",     src: 1, q: "un",    dup: true  },
+  { name: "Hannah Lee",     contact: "0402 118 664",        suburb: "Joondalup",     src: 3, q: "valid", dup: false },
+  { name: "Marcus Webb",    contact: "m.webb@iinet.net.au", suburb: "Cottesloe",     src: 0, q: "high",  dup: false },
+  { name: "Elena Petrov",   contact: "elena.p@hotmail.com", suburb: "Victoria Park", src: 1, q: "valid", dup: false },
+  { name: "Dave Cooper",    contact: "0433 907 552",        suburb: "Mount Lawley",  src: 2, q: "un",    dup: true  }
+];
+const Q_LABELS = { high: "High intent", valid: "Valid", invalid: "Invalid", un: "Unlabelled" };
+const DATE_START = new Date(2026, 5, 27); // Jun 27 — 30 days ending Jul 26
+function dayLabel(i) {
+  const d = new Date(DATE_START); d.setDate(d.getDate() + i);
+  return d.toLocaleDateString("en-AU", { month: "short", day: "numeric" });
+}
+
+/* ============ Count-up ============ */
+function countUp(el) {
+  const target = parseFloat(el.dataset.count);
+  const dec = parseInt(el.dataset.decimals || "0", 10);
+  const pre = el.dataset.prefix || "";
+  const fmt = v => pre + v.toLocaleString("en-AU", { minimumFractionDigits: dec, maximumFractionDigits: dec });
+  if (REDUCED) { el.textContent = fmt(target); return; }
+  const t0 = performance.now(), dur = 900;
+  function tick(t) {
+    const p = Math.min(1, (t - t0) / dur);
+    const e = 1 - Math.pow(1 - p, 3); // ease-out cubic
+    el.textContent = fmt(target * e);
+    if (p < 1) requestAnimationFrame(tick); else el.textContent = fmt(target);
+  }
+  requestAnimationFrame(tick);
+}
+function runCountUps(scope) {
+  scope.querySelectorAll("[data-count]").forEach(countUp);
+}
+
+/* ============ Sparkline ============ */
+function drawSpark(svg, data) {
+  const w = 72, h = 26, pad = 3;
+  const max = Math.max(...data), min = Math.min(...data);
+  const x = i => pad + i * (w - pad * 2) / (data.length - 1);
+  const y = v => h - pad - (v - min) * (h - pad * 2) / (max - min || 1);
+  const pts = data.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`);
+  svg.innerHTML =
+    `<path d="M${pts.join(" L")}" fill="none" stroke="var(--data)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>` +
+    `<circle cx="${x(data.length - 1)}" cy="${y(data[data.length - 1])}" r="3" fill="var(--data)" stroke="var(--surface)" stroke-width="2"/>`;
+  const path = svg.querySelector("path");
+  if (!REDUCED && path.getTotalLength) {
+    const L = path.getTotalLength();
+    path.style.strokeDasharray = L;
+    path.style.strokeDashoffset = L;
+    path.getBoundingClientRect();
+    path.style.transition = "stroke-dashoffset .9s .3s ease-out";
+    path.style.strokeDashoffset = "0";
+  }
+}
+
+/* ============ Big chart ============ */
+const CH = { w: 640, h: 218, top: 14, right: 46, bottom: 26, left: 30 };
+let chartPts = [];
+function drawChart() {
+  const svg = document.getElementById("bigChart");
+  const { w, h, top, right, bottom, left } = CH;
+  const iw = w - left - right, ih = h - top - bottom;
+  const max = 10; // clean axis: 0 / 5 / 10
+  const x = i => left + i * iw / (DAYS.length - 1);
+  const y = v => top + ih - v * ih / max;
+  chartPts = DAYS.map((v, i) => ({ x: x(i), y: y(v), v, label: dayLabel(i) }));
+
+  let g = "";
+  [0, 5, 10].forEach(v => {
+    const cls = v === 0 ? "baseline" : "gridline";
+    g += `<line class="${cls}" x1="${left}" y1="${y(v)}" x2="${w - right}" y2="${y(v)}"/>`;
+    g += `<text class="axis-text" x="${left - 8}" y="${y(v) + 3}" text-anchor="end">${v}</text>`;
+  });
+  [0, 7, 14, 21, 29].forEach(i => {
+    g += `<text class="axis-text" x="${x(i)}" y="${h - 8}" text-anchor="middle">${dayLabel(i)}</text>`;
+  });
+
+  const line = "M" + chartPts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" L");
+  const area = line + ` L${x(DAYS.length - 1).toFixed(1)},${y(0)} L${left},${y(0)} Z`;
+  const last = chartPts[chartPts.length - 1];
+
+  g += `<path class="fade-fill" d="${area}" fill="var(--data)" fill-opacity=".1" style="opacity:${REDUCED ? 1 : 0}"/>`;
+  g += `<path class="draw-line" id="chartLine" d="${line}" fill="none" stroke="var(--data)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`;
+  g += `<circle cx="${last.x}" cy="${last.y}" r="4" fill="var(--data)" stroke="var(--surface)" stroke-width="2"/>`;
+  g += `<text x="${last.x + 8}" y="${last.y + 4}" style="font:700 12px var(--font-body)" fill="var(--ink)">${last.v}</text>`;
+  g += `<line id="crosshair" x1="0" y1="${top}" x2="0" y2="${top + ih}" stroke="var(--line-heavy)" stroke-width="1" style="opacity:0"/>`;
+  g += `<circle id="hoverDot" r="4.5" fill="var(--data)" stroke="var(--surface)" stroke-width="2" style="opacity:0"/>`;
+  svg.innerHTML = g;
+
+  const lp = document.getElementById("chartLine");
+  if (!REDUCED && lp.getTotalLength) {
+    const L = lp.getTotalLength();
+    lp.style.strokeDasharray = L;
+    lp.style.strokeDashoffset = L;
+    lp.getBoundingClientRect();
+    lp.style.strokeDashoffset = "0";
+    setTimeout(() => { svg.querySelector(".fade-fill").style.opacity = "1"; }, 50);
+  }
+
+  // accessible table fallback
+  const tbl = document.getElementById("chartTable");
+  let rows = "<tr><th>Date</th><th>Leads</th><th>Date</th><th>Leads</th><th>Date</th><th>Leads</th></tr>";
+  for (let i = 0; i < 10; i++) {
+    rows += `<tr><td>${dayLabel(i)}</td><td>${DAYS[i]}</td><td>${dayLabel(i + 10)}</td><td>${DAYS[i + 10]}</td><td>${dayLabel(i + 20)}</td><td>${DAYS[i + 20]}</td></tr>`;
+  }
+  tbl.innerHTML = rows;
+}
+
+/* chart hover — crosshair + tooltip */
+(function chartHover() {
+  const wrap = document.getElementById("chartWrap");
+  const tip = document.getElementById("chartTip");
+  wrap.addEventListener("mousemove", e => {
+    if (!chartPts.length) return;
+    const svg = document.getElementById("bigChart");
+    const r = svg.getBoundingClientRect();
+    const sx = (e.clientX - r.left) * CH.w / r.width;
+    let best = chartPts[0], bd = Infinity;
+    chartPts.forEach(p => { const d = Math.abs(p.x - sx); if (d < bd) { bd = d; best = p; } });
+    const ch = document.getElementById("crosshair"), dot = document.getElementById("hoverDot");
+    ch.setAttribute("x1", best.x); ch.setAttribute("x2", best.x); ch.style.opacity = "1";
+    dot.setAttribute("cx", best.x); dot.setAttribute("cy", best.y); dot.style.opacity = "1";
+    tip.style.opacity = "1";
+    tip.style.left = (best.x * r.width / CH.w) + "px";
+    tip.style.top = (best.y * r.height / CH.h) + "px";
+    tip.innerHTML = `<span class="tip-date">${best.label}</span><br><strong>${best.v}</strong> lead${best.v === 1 ? "" : "s"}`;
+  });
+  wrap.addEventListener("mouseleave", () => {
+    tip.style.opacity = "0";
+    const ch = document.getElementById("crosshair"), dot = document.getElementById("hoverDot");
+    if (ch) ch.style.opacity = "0";
+    if (dot) dot.style.opacity = "0";
+  });
+})();
+
+/* ============ Leads table ============ */
+let sortAsc = true;
+function renderLeads() {
+  const tbody = document.getElementById("leadRows");
+  const filter = document.querySelector("#leadChips .chip.on").dataset.f;
+  const term = document.getElementById("leadSearch").value.trim().toLowerCase();
+  const n = NICHES[currentNiche];
+  let rows = [...LEADS];
+  if (filter === "high") rows = rows.filter(l => l.q === "high");
+  if (filter === "dup") rows = rows.filter(l => l.dup);
+  if (term) rows = rows.filter(l => (l.name + " " + l.suburb).toLowerCase().includes(term));
+  rows.sort((a, b) => sortAsc ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name));
+
+  tbody.innerHTML = rows.map(l => `
+    <tr>
+      <td><span class="lead-name">${l.name}</span><br><span class="lead-contact">${l.contact}</span></td>
+      <td class="cell-muted">${l.suburb}</td>
+      <td><span class="src"><i></i>${n.sources[l.src]}</span></td>
+      <td>
+        <select class="q-select ${l.q === "high" ? "hi" : ""}" aria-label="Lead quality for ${l.name}">
+          ${Object.entries(Q_LABELS).map(([k, v]) => `<option value="${k}" ${k === l.q ? "selected" : ""}>${v}</option>`).join("")}
+        </select>
+      </td>
+      <td><span class="badge ${l.dup ? "dup" : "new"}">${l.dup ? "Possible duplicate" : "New"}</span></td>
+    </tr>`).join("");
+
+  // mobile card list — same data, app-like presentation
+  document.getElementById("leadCards").innerHTML = rows.map(l => `
+    <div class="lead-card">
+      <div class="lc-top">
+        <span><span class="lead-name">${l.name}</span><span class="lc-sub" style="display:block">${l.suburb} · ${l.contact}</span></span>
+        <span class="badge ${l.dup ? "dup" : "new"}">${l.dup ? "Duplicate?" : "New"}</span>
+      </div>
+      <div class="lc-row">
+        <span class="src"><i></i>${n.sources[l.src]}</span>
+        <select class="q-select ${l.q === "high" ? "hi" : ""}" aria-label="Lead quality for ${l.name}">
+          ${Object.entries(Q_LABELS).map(([k, v]) => `<option value="${k}" ${k === l.q ? "selected" : ""}>${v}</option>`).join("")}
+        </select>
+      </div>
+    </div>`).join("");
+
+  const total = filter === "all" && !term ? 132 : rows.length;
+  document.getElementById("rowCount").textContent = `Showing ${rows.length} of ${total}`;
+  document.querySelectorAll("#leadRows .q-select, #leadCards .q-select").forEach(sel => {
+    sel.addEventListener("change", () => sel.classList.toggle("hi", sel.value === "high"));
+  });
+}
+document.getElementById("leadChips").addEventListener("click", e => {
+  const chip = e.target.closest(".chip");
+  if (!chip) return;
+  document.querySelectorAll("#leadChips .chip").forEach(c => c.classList.remove("on"));
+  chip.classList.add("on");
+  renderLeads();
+});
+document.getElementById("leadSearch").addEventListener("input", renderLeads);
+document.getElementById("sortName").addEventListener("click", function () {
+  sortAsc = !sortAsc;
+  this.querySelector(".sort-ico").textContent = sortAsc ? "▲" : "▼";
+  renderLeads();
+});
+
+/* ============ View switching (sidebar + mobile tab bar) ============ */
+function switchView(key) {
+  document.querySelectorAll(".nav-item").forEach(b => b.classList.toggle("active", b.dataset.view === key));
+  document.querySelectorAll(".tab").forEach(b => b.classList.toggle("on", b.dataset.view === key));
+  document.querySelectorAll(".view").forEach(v => v.classList.remove("on"));
+  const view = document.getElementById("view-" + key);
+  view.querySelectorAll(".stagger").forEach(el => { el.style.animation = "none"; el.getBoundingClientRect(); el.style.animation = ""; });
+  view.classList.add("on");
+  document.getElementById("crumbPage").textContent = key === "home" ? "Home" : "Leads";
+  window.scrollTo({ top: 0 });
+  runCountUps(view);
+  if (key === "home") { drawChart(); drawSpark(document.getElementById("spark1"), SPARK1); }
+}
+document.querySelectorAll(".nav-item[data-view], .tab[data-view]").forEach(btn => {
+  btn.addEventListener("click", () => switchView(btn.dataset.view));
+});
+
+/* ============ Niche switching ============ */
+let currentNiche = "blockwise";
+function applyNiche(key) {
+  currentNiche = key;
+  const n = NICHES[key];
+  const r = document.documentElement.style;
+  r.setProperty("--data", n.data);
+  r.setProperty("--data-soft", n.dataSoft);
+  r.setProperty("--data-track", n.dataTrack);
+  document.getElementById("brandMark").textContent = n.glyph;
+  document.getElementById("brandName").textContent = n.name;
+  document.getElementById("mBrandMark").textContent = n.glyph;
+  document.getElementById("mBrandName").textContent = n.name;
+  document.getElementById("mAvatar").textContent = n.avatar;
+  document.getElementById("crumbWs").textContent = n.workspace;
+  document.getElementById("industryChip").textContent = n.industry;
+  document.getElementById("avatar").textContent = n.avatar;
+  document.getElementById("homeSub").textContent = n.homeSub;
+  document.getElementById("navPropertyCheck").textContent = n.navPropertyCheck;
+  document.getElementById("chartTitle").textContent = n.chartTitle;
+  document.getElementById("step3Title").textContent = n.step3Title;
+  document.getElementById("step3Sub").textContent = n.step3Sub;
+  document.getElementById("quick1Sub").textContent = n.quick1Sub;
+  document.getElementById("quick2Title").textContent = n.quick2Title;
+  document.getElementById("quick2Sub").textContent = n.quick2Sub;
+  document.querySelectorAll(".niche-switch button").forEach(b => b.classList.toggle("on", b.dataset.niche === key));
+  const active = document.querySelector(".view.on");
+  runCountUps(active);
+  if (active.id === "view-home") { drawChart(); drawSpark(document.getElementById("spark1"), SPARK1); }
+  renderLeads();
+}
+document.querySelectorAll(".niche-switch button").forEach(b => {
+  b.addEventListener("click", () => { if (b.dataset.niche !== currentNiche) applyNiche(b.dataset.niche); });
+});
+
+/* ============ Boot ============ */
+renderLeads();
+drawChart();
+drawSpark(document.getElementById("spark1"), SPARK1);
+runCountUps(document.getElementById("view-home"));
+requestAnimationFrame(() => {
+  document.getElementById("ringFill").style.strokeDashoffset = (163.4 * (1 - 2 / 3)).toFixed(1);
+  document.querySelectorAll(".meter > i").forEach(m => { m.style.width = m.dataset.w + "%"; });
+});
+</script>
+</body>
+</html>
