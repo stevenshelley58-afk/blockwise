@@ -1,1 +1,1 @@
-const zeroWidth = /[​-‍﻿]/g;
+  return (value ?? "").replace(/[​-‍﻿]/g, "").trim();
