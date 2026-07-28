@@ -49,10 +49,11 @@ test("media library stages a replacement and confirms before generating a new ad
   assert.match(mediaPanel, /Generate a new ad with this image\?/);
   assert.match(mediaPanel, /Generate new ad/);
   assert.match(mediaPanel, /<DialogContent/);
-  assert.match(workbench, /setPendingMediaReplacement\(\{ src, label: asset\.label \}\)/);
+  // The tile is keyed by the thumbnail `src`; the re-generation consumes `fullSrc`.
+  assert.match(workbench, /setPendingMediaReplacement\(\{ src, fullSrc: asset\.fullSrc, label: asset\.label \}\)/);
   assert.match(workbench, /currentCreative\.canvas\.cloneQa\?\.regions\.find\(\(region\) => region\.kind === "image"\)/);
   assert.match(workbench, /requestCreativeEdit\(\{/);
-  assert.match(workbench, /newImage: pendingMediaReplacement\.src/);
+  assert.match(workbench, /newImage: pendingMediaReplacement\.fullSrc/);
   assert.match(editClient, /expectedRevisionId: creative\.activeRevisionId/);
   assert.match(editClient, /objects: \[\{ \.\.\.cloneObject, content: data\.previewDataUrl \?\? data\.image, assetId: data\.image \}\]/);
 });
