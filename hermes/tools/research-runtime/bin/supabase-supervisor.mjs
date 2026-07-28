@@ -4099,6 +4099,34 @@ async function handleLocationAdSearch(job) {
   };
 }
 
+// Paid-spend circuit guard. With the Apify capture path dropped
+// (supabase/migrations/20260721110000_drop_apify_capture.sql) every live
+// provider reports costUsd = 0, so this is a no-op in practice; it records a
+// defect only if a paid provider ever reports spend that produced no ingest.
+async function openCircuitIfPaidSpendWithoutIngest({ sourceProvider, input, costUsd = 0, ingestedCount = 0, reason = "unknown", scope = "capture" }) {
+  const spend = Number(costUsd) || 0;
+  if (spend <= 0 || ingestedCount > 0) return { opened: false };
+  log("paid capture spend without ingest", { source_provider: sourceProvider, cost_usd: spend, reason, scope, meta_page_id: input?.metaPageId || null }, "warn");
+  await insertCoverageDefect({
+    platform: "facebook",
+    reason: "paid_spend_without_ingest",
+    notes: `Paid capture provider ${sourceProvider} reported $${spend.toFixed(4)} spend with zero ads ingested (${scope}: ${reason}).`,
+    reported_by: "system",
+    reporter_identity: workerId,
+    status: "open",
+    resolution: {
+      advertiser_page_id: input?.advertiserPageId || null,
+      meta_page_id: input?.metaPageId || null,
+      source_provider: sourceProvider,
+      cost_usd: spend,
+      reason,
+      scope,
+    },
+    resolved_advertiser_page_id: input?.advertiserPageId || null,
+  });
+  return { opened: true };
+}
+
 async function handleAdCollector(job) {
   const payload = job.payload || {};
   if (!payload.advertiserPageId || !payload.metaPageId || payload.realEstateGate?.verified !== true) {
