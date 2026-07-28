@@ -27,7 +27,8 @@ RUN cd /app/meta-library-capture && PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm ci --
 COPY infra/hermes/hermes.toml /app/hermes.toml
 COPY infra/hermes/main-wrapper.sh /opt/hermes/docker/main-wrapper.sh
 
-RUN chmod +x /opt/hermes/docker/main-wrapper.sh /app/research-runtime/bin/supabase-supervisor.mjs
+RUN chmod 755 /opt/hermes/docker/main-wrapper.sh /app/research-runtime/bin/supabase-supervisor.mjs \
+  && chmod -R a+rX /app/research-runtime
 
 EXPOSE 8080
 
