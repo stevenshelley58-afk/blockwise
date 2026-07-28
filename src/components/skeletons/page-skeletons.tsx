@@ -44,10 +44,11 @@ export function SkeletonPageHead({ action = true }: { action?: boolean }) {
 }
 
 export function SkeletonStatRow({ count = 4 }: { count?: number }) {
+  const columns =
+    count === 3 ? "lg:grid-cols-3" : count === 6 ? "sm:grid-cols-3 xl:grid-cols-6" : "xl:grid-cols-4";
+
   return (
-    <div
-      className={`grid grid-cols-2 gap-3.5 ${count === 3 ? "lg:grid-cols-3" : "xl:grid-cols-4"}`}
-    >
+    <div className={`grid grid-cols-2 gap-3.5 ${columns}`}>
       {Array.from({ length: count }, (_, index) => (
         <div
           key={index}

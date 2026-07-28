@@ -73,7 +73,7 @@ Usage map:
 |---|---|---|
 | KPI numbers | `AnimatedNumber` (count-up on view) | motion-primitives |
 | Card/list entrance | `AnimatedGroup` stagger 40ms, 12px rise + fade, once per navigation | motion-primitives |
-| Route transitions | fade/slide via `template.tsx` in `(customer)` | motion |
+| Route transitions | shared layout stays mounted; local state changes may animate without remounting the route | motion |
 | Buttons | `whileTap` scale 0.97; arrow-nudge on hover | motion |
 | Interactive cards | hover lift −2px + float shadow (interactive cards only, never static panels) | CSS |
 | Setup steps | drawn SVG checkmark + spring row highlight | animated-list-02 pattern |
@@ -124,7 +124,7 @@ Acceptance: `grep -rn "real estate\|listing\|suburb\|agent" src/app/\(customer\)
 
 **Phase 0 — Foundations (~1 day).** Install motion-primitives + Magic UI components and missing shadcn primitives; create `src/lib/motion.ts`; scaffold `src/config/niche/` and move *shell-level* copy (nav labels, workspace chip, trial pill) into `blockwise.ts`; token bridge v2 (`--data` hue, `--color-success/warning/error` in `@theme` — some registry blocks reference `text-success` etc.). No visual change yet.
 
-**Phase 1 — Shell polish (~1 day).** SelfServeShell refinements: page-title/breadcrumb slot in the topbar, ⌘K command menu (shadcn `command`) for navigation + "create ad", cleaner workspace chip from config (kill the legacy `workspace-chip` class), sidebar footer trial pill restyle, route entrance transitions.
+**Phase 1 — Shell polish (~1 day).** SelfServeShell refinements: page-title/breadcrumb slot in the topbar, ⌘K command menu (shadcn `command`) for navigation + "create ad", cleaner workspace chip from config (kill the legacy `workspace-chip` class), and sidebar footer trial pill restyle. The shared route layout stays mounted so navigation does not animate settled operational data back into view.
 
 **Phase 2 — Home (~1–2 days).** Per the mockup: KPI tiles with `AnimatedNumber` + sparklines + deltas, setup card with animated progress ring and drawn checks, performance snapshot area chart (`area-chart-01` restyled, crosshair tooltip, 30-day default), quick-action cards. Home copy → config.
 

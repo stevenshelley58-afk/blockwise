@@ -1,3 +1,5 @@
+import * as Sentry from "@sentry/nextjs";
+
 import { MetaMonitorDashboard, type OAuthNotice } from "@/components/monitor/MetaMonitorDashboard";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
 import { getResultsPayload } from "@/lib/meta-monitor/getResultsPayload";
@@ -53,12 +55,20 @@ export default async function ResultsPage({
 }) {
   const resolvedParams = await searchParams;
   const { supabase, access } = await requirePageSurfaceAccess("monitor");
-  const initialPayload = await getResultsPayload({
-    supabase,
-    serviceSupabase: createSupabaseServiceClient(),
-    workspaceId: access.workspaceId,
-    range: "last_30",
-  });
+  const initialPayload = await Sentry.startSpan(
+    {
+      name: "Load Performance Meta reporting",
+      op: "provider.meta",
+      attributes: { "workspace.id": access.workspaceId },
+    },
+    () =>
+      getResultsPayload({
+        supabase,
+        serviceSupabase: createSupabaseServiceClient(),
+        workspaceId: access.workspaceId,
+        range: "last_30",
+      }),
+  );
 
   const oauthNotice = resolveOAuthNotice(resolvedParams);
 

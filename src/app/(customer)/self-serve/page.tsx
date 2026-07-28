@@ -1,3 +1,5 @@
+import * as Sentry from "@sentry/nextjs";
+
 import { ConfirmRegistrationTracker } from "@/components/confirm-registration-tracker";
 import { HomeDashboard, type HomeData } from "@/components/self-serve/home-dashboard";
 import { resolveCustomerActivation } from "@/lib/activation/customer-activation";
@@ -11,41 +13,60 @@ export default async function SelfServeHome() {
   const { supabase, access } = await requirePageSurfaceAccess("self_serve");
   const serviceSupabase = createSupabaseServiceClient();
 
-  const [campaigns, brandKits, connections, results, workspace, wallet, activation] = await Promise.all([
-    supabase
-      .from("adstudio_campaigns")
-      .select("id, created_at, template_key")
-      .eq("workspace_id", access.workspaceId),
-    supabase
-      .from("adstudio_brand_kits")
-      .select("business_name, colours_json, source_url, review_status")
-      .eq("workspace_id", access.workspaceId)
-      .limit(1),
-    supabase
-      .from("provider_connections")
-      .select("id, provider, status, external_account_name, updated_at")
-      .eq("workspace_id", access.workspaceId)
-      .neq("status", "revoked"),
-    getResultsPayload({
-      supabase,
-      serviceSupabase,
-      workspaceId: access.workspaceId,
-      range: "last_30",
-    }).catch(() => null),
-    supabase.from("workspaces").select("*").eq("id", access.workspaceId).maybeSingle(),
-    supabase
-      .from("workspace_credit_wallets")
-      .select("*")
-      .eq("workspace_id", access.workspaceId)
-      .eq("status", "active")
-      .order("period_end", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-    resolveCustomerActivation({
-      workspaceId: access.workspaceId,
-      serviceSupabase,
-    }),
+  const [dashboardRows, results] = await Promise.all([
+    Sentry.startSpan(
+      {
+        name: "Load Home database read model",
+        op: "db.home_dashboard",
+        attributes: { "workspace.id": access.workspaceId },
+      },
+      () =>
+        Promise.all([
+          supabase
+            .from("adstudio_campaigns")
+            .select("id, created_at, template_key")
+            .eq("workspace_id", access.workspaceId),
+          supabase
+            .from("adstudio_brand_kits")
+            .select("business_name, colours_json, source_url, review_status")
+            .eq("workspace_id", access.workspaceId)
+            .limit(1),
+          supabase
+            .from("provider_connections")
+            .select("id, provider, status, external_account_name, updated_at")
+            .eq("workspace_id", access.workspaceId)
+            .neq("status", "revoked"),
+          supabase.from("workspaces").select("*").eq("id", access.workspaceId).maybeSingle(),
+          supabase
+            .from("workspace_credit_wallets")
+            .select("*")
+            .eq("workspace_id", access.workspaceId)
+            .eq("status", "active")
+            .order("period_end", { ascending: false })
+            .limit(1)
+            .maybeSingle(),
+          resolveCustomerActivation({
+            workspaceId: access.workspaceId,
+            serviceSupabase,
+          }),
+        ]),
+    ),
+    Sentry.startSpan(
+      {
+        name: "Load Home Meta reporting",
+        op: "provider.meta",
+        attributes: { "workspace.id": access.workspaceId },
+      },
+      () =>
+        getResultsPayload({
+          supabase,
+          serviceSupabase,
+          workspaceId: access.workspaceId,
+          range: "last_30",
+        }).catch(() => null),
+    ),
   ]);
+  const [campaigns, brandKits, connections, workspace, wallet, activation] = dashboardRows;
 
   const brandKit = brandKits.data?.[0] ?? null;
   const workspaceName = access.workspaceName?.trim() || "Workspace";

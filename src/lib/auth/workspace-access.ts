@@ -51,6 +51,13 @@ type MembershipRow = {
     | null;
 };
 
+type WorkspaceAccessAuthContext = {
+  supabase: SupabaseServerClient;
+  claims: { sub: string } | null;
+  profile: { is_operator?: boolean | null } | null;
+  memberships: MembershipRow[];
+};
+
 export function hasOperatorAccessFromRows(
   profile: { is_operator?: boolean | null } | null | undefined,
   memberships: Array<{ role?: string | null }> | null | undefined,
@@ -112,25 +119,43 @@ export async function requireWorkspaceAccess(
   supabase: SupabaseServerClient,
   input: { surface: ProductSurface; requestedWorkspaceId?: string | null },
 ): Promise<{ ok: true; access: WorkspaceAccess } | { ok: false; status: 401 | 403 | 404; error: string }> {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data } = await supabase.auth.getClaims();
+  const claims = data?.claims?.sub ? { sub: data.claims.sub } : null;
 
-  if (!user) {
+  if (!claims) {
     return { ok: false, status: 401, error: "Authentication is required." };
   }
 
   const [{ data: profile }, { data: memberships }] = await Promise.all([
-    supabase.from("profiles").select("is_operator").eq("id", user.id).maybeSingle(),
+    supabase.from("profiles").select("is_operator").eq("id", claims.sub).maybeSingle(),
     supabase
       .from("workspace_members")
       .select("role, workspaces(id, name, mode, region)")
-      .eq("profile_id", user.id)
+      .eq("profile_id", claims.sub)
       .order("created_at", { ascending: true }),
   ]);
 
-  const normalizedMemberships = ((memberships ?? []) as MembershipRow[]).flatMap(normalizeMembershipRow);
-  const isOperator = hasOperatorAccessFromRows(profile, normalizedMemberships);
+  return requireWorkspaceAccessFromContext(
+    {
+      supabase,
+      claims,
+      profile,
+      memberships: (memberships ?? []) as MembershipRow[],
+    },
+    input,
+  );
+}
+
+export async function requireWorkspaceAccessFromContext(
+  context: WorkspaceAccessAuthContext,
+  input: { surface: ProductSurface; requestedWorkspaceId?: string | null },
+): Promise<{ ok: true; access: WorkspaceAccess } | { ok: false; status: 401 | 403 | 404; error: string }> {
+  if (!context.claims) {
+    return { ok: false, status: 401, error: "Authentication is required." };
+  }
+
+  const normalizedMemberships = context.memberships.flatMap(normalizeMembershipRow);
+  const isOperator = hasOperatorAccessFromRows(context.profile, normalizedMemberships);
   let resolved = resolveRequestedWorkspaceAccess({
     isOperator,
     memberships: normalizedMemberships,
@@ -139,7 +164,7 @@ export async function requireWorkspaceAccess(
   });
 
   if (isOperator && resolved.ok && !resolved.access.workspaceId) {
-    const fallback = await loadOperatorFallbackWorkspace(supabase);
+    const fallback = await loadOperatorFallbackWorkspace(context.supabase);
 
     if (fallback) {
       resolved = {
@@ -161,7 +186,7 @@ export async function requireWorkspaceAccess(
     ok: true,
     access: {
       ...resolved.access,
-      userId: user.id,
+      userId: context.claims.sub,
       isOperator,
     },
   };

@@ -9,7 +9,6 @@ import { BlockwiseLogo } from "@/components/blockwise-logo";
 import { CommandMenu } from "@/components/command-menu";
 import { SidebarThemeToggle } from "@/components/sidebar-theme-toggle";
 import { isItemActive, navByVariant, selfServeIcons, type NavItem } from "@/components/sidebar-nav";
-import { TrialStatusCard, type TrialStatus } from "@/components/trial-status-pill";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -55,7 +54,7 @@ type SelfServeShellProps = {
     name: string;
     role: string;
   };
-  initialTrialStatus: TrialStatus | null;
+  trialStatus: React.ReactNode;
 };
 
 type NavGroup = {
@@ -167,7 +166,7 @@ export function SelfServeShell({
   workspaceName,
   workspaceRegion,
   account,
-  initialTrialStatus,
+  trialStatus,
 }: SelfServeShellProps) {
   const pathname = usePathname() ?? "";
   const groups = useMemo(() => groupNavItems(navByVariant.self_serve), []);
@@ -225,7 +224,7 @@ export function SelfServeShell({
           {/* Trial card lives in the sidebar footer; hidden when the rail is
               collapsed to icons. */}
           <div className="group-data-[collapsible=icon]:hidden">
-            <TrialStatusCard initialStatus={initialTrialStatus} />
+            {trialStatus}
           </div>
         </SidebarFooter>
         <SidebarRail />

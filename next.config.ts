@@ -11,7 +11,13 @@ const nextConfig: NextConfig = {
   },
   // Tree-shake heavy barrel-export libs so only used modules ship to the client.
   // lucide-react is already optimized by Next's defaults; recharts is not.
-  experimental: { optimizePackageImports: ["recharts"] },
+  experimental: {
+    optimizePackageImports: ["recharts"],
+    staleTimes: {
+      dynamic: 30,
+      static: 180,
+    },
+  },
   async redirects() {
     return [
       {
