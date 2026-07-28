@@ -26,11 +26,11 @@ const ctaClass =
   "inline-flex min-h-11 w-full flex-none items-center justify-center rounded-full border border-(--line-heavy) bg-(--surface) px-3.5 text-[12.5px] font-bold whitespace-nowrap text-foreground sm:min-h-9 sm:w-auto";
 
 /** Status dot + label tokens. Semantic colour communicates state only. */
-const STATUS_TONE: Record<string, { dot: string; label: string }> = {
+export const STATUS_TONE: Record<string, { dot: string; label: string }> = {
   active: { dot: "bg-success", label: "text-success" },
   inactive: { dot: "bg-warning", label: "text-warning" },
 };
-const STATUS_TONE_UNKNOWN = { dot: "bg-(--faint)", label: "text-muted-foreground" };
+export const STATUS_TONE_UNKNOWN = { dot: "bg-(--faint)", label: "text-muted-foreground" };
 
 export function MetaAdLibraryCard({ card }: { card: CustomerMetaAdLibraryCard }) {
   const hasLongBody = Boolean(card.body && card.body.length > 320);
@@ -309,7 +309,7 @@ function formatDate(value: string | null): string | null {
   }).format(date);
 }
 
-function displayDomain(value: string): string {
+export function displayDomain(value: string): string {
   try {
     return new URL(value).hostname.replace(/^www\./i, "");
   } catch {
