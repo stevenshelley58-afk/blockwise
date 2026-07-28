@@ -21,11 +21,11 @@ const MIN_QUERY_LENGTH = 2;
 
 /**
  * Predictive list of advertiser pages (agents/agencies) whose page name matches
- * the typed term, sourced from `research.v_customer_meta_ad_library_cards` so it
+ * the typed term, sourced from the customer-safe Ad Radar read model so it
  * only ever surfaces advertisers that actually have visible, real-estate ads.
  */
 export async function loadAdvertiserSuggestions(
-  supabase: { schema: (schema: string) => any },
+  supabase: { from: (table: string) => any },
   query: string,
   limit: number = SUGGESTION_LIMIT,
 ): Promise<AdvertiserSuggestion[]> {
@@ -34,8 +34,7 @@ export async function loadAdvertiserSuggestions(
 
   const escaped = term.replace(/[%_\\]/g, "\\$&");
   const { data, error } = await supabase
-    .schema("research")
-    .from("v_customer_meta_ad_library_cards")
+    .from("customer_ad_radar_cards")
     .select("page_id,page_name,page_image_url")
     .ilike("page_name", `%${escaped}%`)
     .order("page_name", { ascending: true })

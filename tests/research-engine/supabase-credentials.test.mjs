@@ -4,6 +4,7 @@ import test from "node:test";
 
 import {
   hermesSupabaseHeaders,
+  resolveHermesCustomerSupabaseCredential,
   resolveHermesSupabaseCredential,
 } from "../../hermes/tools/research-runtime/bin/supabase-credentials.mjs";
 
@@ -24,6 +25,23 @@ test("Hermes resolves the secret aliases before legacy service-role aliases", ()
   assert.equal(resolveHermesSupabaseCredential({ HERMES_SUPABASE_SECRET_KEY: legacyJwt })?.kind, "legacy_jwt");
   assert.equal(resolveHermesSupabaseCredential({ HERMES_SUPABASE_SERVICE_ROLE_KEY: "sb_secret_legacy_slot" })?.kind, "secret");
   assert.equal(resolveHermesSupabaseCredential({}), null);
+});
+
+test("Hermes keeps the private research credential ahead of global customer aliases", () => {
+  const credential = resolveHermesSupabaseCredential({
+    HERMES_SUPABASE_SERVICE_ROLE_KEY: legacyJwt,
+    SUPABASE_SECRET_KEY: "sb_secret_customer",
+  });
+
+  assert.equal(credential?.source, "HERMES_SUPABASE_SERVICE_ROLE_KEY");
+  assert.equal(credential?.value, legacyJwt);
+  assert.equal(
+    resolveHermesCustomerSupabaseCredential({
+      HERMES_CUSTOMER_SUPABASE_SECRET_KEY: "sb_secret_customer",
+      HERMES_SUPABASE_SERVICE_ROLE_KEY: legacyJwt,
+    })?.source,
+    "HERMES_CUSTOMER_SUPABASE_SECRET_KEY",
+  );
 });
 
 test("Hermes REST and Storage headers never use an opaque key as bearer", () => {
@@ -49,13 +67,14 @@ test("Hermes legacy JWT headers preserve the existing apikey plus bearer behavio
   assert.equal(headers.authorization, `Bearer ${legacyJwt}`);
 });
 
-test("Hermes supervisor applies the shared credential headers to REST, Storage, and upload", () => {
+test("Hermes supervisor separates private research and customer storage credentials", () => {
   const source = readFileSync(
     "hermes/tools/research-runtime/bin/supabase-supervisor.mjs",
     "utf8",
   );
 
-  assert.equal((source.match(/hermesSupabaseHeaders\(supabaseCredential/g) ?? []).length, 3);
+  assert.equal((source.match(/hermesSupabaseHeaders\(supabaseCredential/g) ?? []).length, 1);
+  assert.equal((source.match(/hermesSupabaseHeaders\(customerSupabaseCredential/g) ?? []).length, 2);
   assert.doesNotMatch(source, /Authorization:\s*`Bearer \$\{serviceRoleKey\}`/);
   assert.doesNotMatch(source, /const serviceRoleKey/);
 });

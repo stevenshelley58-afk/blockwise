@@ -50,7 +50,6 @@ export async function persistOwnedAdPerformanceFromMonitor(input: {
   }
 
   const { error } = await input.serviceSupabase
-    .schema("research")
     .from("owned_ad_performance")
     .upsert(rows, {
       onConflict: "workspace_id,meta_ad_id,reported_at,source",

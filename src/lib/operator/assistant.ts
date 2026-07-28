@@ -1,5 +1,5 @@
 import { executeRefreshPostcode as executeSharedRefreshPostcode } from "@/lib/operator/postcode-refresh";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { createResearchServiceClient } from "@/lib/research/service";
 
 /**
  * Conversational operator assistant for the Hermes research engine.
@@ -21,7 +21,7 @@ const OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions";
 const MODEL = process.env.OPERATOR_ASSISTANT_MODEL ?? "gpt-4.1-mini";
 const MAX_ITERATIONS = 6;
 
-type ResearchClient = ReturnType<ReturnType<typeof createSupabaseServiceClient>["schema"]>;
+type ResearchClient = ReturnType<ReturnType<typeof createResearchServiceClient>["schema"]>;
 
 export type OperatorChatMessage = { role: "user" | "assistant"; content: string };
 
@@ -188,7 +188,7 @@ const TOOL_SPECS = [
 ] as const;
 
 function researchClient(): ResearchClient {
-  return createSupabaseServiceClient().schema("research");
+  return createResearchServiceClient().schema("research");
 }
 
 function asString(value: unknown): string | undefined {

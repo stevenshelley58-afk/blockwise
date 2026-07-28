@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { requireOperator } from "@/lib/operator/auth";
+import { createResearchServiceClient } from "@/lib/research/service";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +18,7 @@ export async function GET(req: Request) {
   const status = url.searchParams.get("status");
   const since = url.searchParams.get("since");
 
-  let q = guard.supabase
+  let q = createResearchServiceClient()
     .schema("research")
     .from("ad_fetch_runs")
     .select(

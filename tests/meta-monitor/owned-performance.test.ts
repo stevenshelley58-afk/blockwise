@@ -8,18 +8,13 @@ test("persistOwnedAdPerformanceFromMonitor upserts only tagged live ads", async 
   let rows: unknown[] = [];
   let conflictTarget: string | undefined;
   const serviceSupabase = {
-    schema(schemaName: string) {
-      assert.equal(schemaName, "research");
+    from(tableName: string) {
+      assert.equal(tableName, "owned_ad_performance");
       return {
-        from(tableName: string) {
-          assert.equal(tableName, "owned_ad_performance");
-          return {
-            async upsert(inputRows: unknown[], options: { onConflict?: string }) {
-              rows = inputRows;
-              conflictTarget = options.onConflict;
-              return { error: null };
-            },
-          };
+        async upsert(inputRows: unknown[], options: { onConflict?: string }) {
+          rows = inputRows;
+          conflictTarget = options.onConflict;
+          return { error: null };
         },
       };
     },

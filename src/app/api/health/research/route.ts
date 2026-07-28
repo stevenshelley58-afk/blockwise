@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { createResearchServiceClient } from "@/lib/research/service";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -24,7 +24,7 @@ export async function GET(request: Request) {
   const authorization = request.headers.get("authorization");
   const authenticated = secret && authorization === `Bearer ${secret}`;
 
-  const { data, error } = await createSupabaseServiceClient()
+  const { data, error } = await createResearchServiceClient()
     .schema("research")
     .from("v_health")
     .select("latest_fetch_started_at,latest_ingest_at,due_backlog_size,blocked_job_count,apify_state,paid_spend_without_ingest")

@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { requireOperator } from "@/lib/operator/auth";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { createResearchServiceClient } from "@/lib/research/service";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +23,7 @@ export async function POST(
   const patch = {
     display_state: input.displayState,
   };
-  const research = createSupabaseServiceClient().schema("research");
+  const research = createResearchServiceClient().schema("research");
 
   let { data: creative, error } = await research
     .from("ad_creatives")

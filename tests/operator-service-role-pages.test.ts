@@ -14,7 +14,7 @@ test("operator pages render a friendly service-role configuration state", () => 
   assert.match(helper, /return null/);
   assert.match(notice, /Operator data is unavailable/);
   assert.match(notice, /SUPABASE_SERVICE_ROLE_KEY/);
-  assert.match(researchPage, /createOperatorSupabaseServiceClient\(\)/);
+  assert.match(researchPage, /tryCreateResearchServiceClient\(\)/);
   assert.match(researchPage, /<ServiceRoleRequired \/>/);
   assert.match(contentRunsPage, /createOperatorSupabaseServiceClient\(\)/);
   assert.match(contentRunsPage, /<ServiceRoleRequired \/>/);

@@ -1,0 +1,40 @@
+services:
+  caddy:
+    image: "caddy:2.11.3-alpine"
+    container_name: blockwise-caddy
+    restart: unless-stopped
+    environment:
+      HERMES_DASHBOARD_PASSWORD_HASH: ${HERMES_DASHBOARD_PASSWORD_HASH:?Set HERMES_DASHBOARD_PASSWORD_HASH}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ../caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      - blockwise
+      - draftcheck
+      - research
+    logging:
+      driver: json-file
+      options: { max-size: "20m", max-file: "5" }
+
+volumes:
+  caddy-data:
+    external: true
+    name: blockwise_caddy-data
+  caddy-config:
+    external: true
+    name: blockwise_caddy-config
+
+networks:
+  blockwise:
+    external: true
+    name: blockwise
+  draftcheck:
+    external: true
+    name: draftcheck-wa-v3_default
+  research:
+    external: true
+    name: coolify_research

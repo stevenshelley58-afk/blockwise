@@ -131,7 +131,6 @@ test("health, tracking, and Trigger runtimes use the central secret-first resolv
   }
 
   for (const path of [
-    "trigger/ad-radar-accuracy.ts",
     "trigger/adstudio-generate.ts",
     "trigger/meta-publish.ts",
     "trigger/provider-sync.ts",
@@ -140,4 +139,11 @@ test("health, tracking, and Trigger runtimes use the central secret-first resolv
     assert.match(source, /\.\.\/src\/lib\/supabase\/service\.ts/, path);
     assert.doesNotMatch(source, /process\.env\.SUPABASE_(?:SECRET_KEY|SERVICE_ROLE_KEY)/, path);
   }
+
+  const researchSupervisor = readFileSync(
+    "hermes/tools/research-runtime/bin/supabase-supervisor.mjs",
+    "utf8",
+  );
+  assert.match(researchSupervisor, /resolveHermesSupabaseCredential\(env\)/);
+  assert.doesNotMatch(researchSupervisor, /createResearchServiceClient/);
 });

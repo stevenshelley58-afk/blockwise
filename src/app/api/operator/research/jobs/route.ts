@@ -2,11 +2,12 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { requireOperator } from "@/lib/operator/auth";
+import { createResearchServiceClient } from "@/lib/research/service";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const dynamic = "force-dynamic";
 
-type ResearchSupabase = ReturnType<ReturnType<typeof createSupabaseServiceClient>["schema"]>;
+type ResearchSupabase = ReturnType<ReturnType<typeof createResearchServiceClient>["schema"]>;
 
 type WorkQueueInsert = {
   queue_name: string;
@@ -34,7 +35,7 @@ export async function GET(req: Request) {
   const status = url.searchParams.get("status");
   const jobType = url.searchParams.get("jobType");
   const limit = Math.min(Number.parseInt(url.searchParams.get("limit") ?? "100", 10) || 100, 500);
-  const research = createSupabaseServiceClient().schema("research");
+  const research = createResearchServiceClient().schema("research");
 
   let query = research
     .from("v_operator_work_queue_diagnostics")
@@ -58,7 +59,7 @@ export async function POST(req: Request) {
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
 
   const serviceSupabase = createSupabaseServiceClient();
-  const research = serviceSupabase.schema("research");
+  const research = createResearchServiceClient().schema("research");
   let job;
   try {
     job = await buildQueueJob(research, parsed.data);

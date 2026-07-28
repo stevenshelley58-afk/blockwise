@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import { requireOperator } from "@/lib/operator/auth";
 import { listHermesSkills } from "@/lib/operator/hermes-assets";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { createResearchServiceClient } from "@/lib/research/service";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -22,7 +22,7 @@ export async function GET(req: Request) {
 
   const url = new URL(req.url);
   const kind = url.searchParams.get("kind");
-  const research = createSupabaseServiceClient().schema("research");
+  const research = createResearchServiceClient().schema("research");
 
   const [sourceDocuments, mediaBlobs, buildRunReports, skills] = await Promise.all([
     loadSection(

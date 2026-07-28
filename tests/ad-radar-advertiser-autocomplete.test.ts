@@ -5,7 +5,7 @@ import test from "node:test";
 
 import { loadAdvertiserSuggestions } from "../src/lib/research/advertiser-autocomplete.ts";
 
-type Captured = { schema?: string; from?: string; select?: string; ilike?: [string, string] };
+type Captured = { from?: string; select?: string; ilike?: [string, string] };
 
 function mockSupabase(rows: Array<{ page_id: string | null; page_name: string | null; page_image_url: string | null }>) {
   const captured: Captured = {};
@@ -26,14 +26,9 @@ function mockSupabase(rows: Array<{ page_id: string | null; page_name: string | 
     },
   };
   const client = {
-    schema(name: string) {
-      captured.schema = name;
-      return {
-        from(view: string) {
-          captured.from = view;
-          return builder;
-        },
-      };
+    from(view: string) {
+      captured.from = view;
+      return builder;
     },
   };
   return { client, captured };
@@ -47,8 +42,7 @@ test("advertiser autocomplete short-circuits queries shorter than two characters
 test("advertiser autocomplete queries the cards view by page name with an escaped contains filter", async () => {
   const { client, captured } = mockSupabase([]);
   await loadAdvertiserSuggestions(client, "50%_off");
-  assert.equal(captured.schema, "research");
-  assert.equal(captured.from, "v_customer_meta_ad_library_cards");
+  assert.equal(captured.from, "customer_ad_radar_cards");
   assert.deepEqual(captured.ilike, ["page_name", "%50\\%\\_off%"]);
 });
 

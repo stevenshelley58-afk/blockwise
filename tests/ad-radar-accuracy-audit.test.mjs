@@ -6,7 +6,7 @@ import {
   AD_RADAR_ACCURACY_SETTING_KEY,
   formatAdRadarAccuracyAlert,
   summariseAdRadarAccuracyRows,
-} from "../src/lib/research/ad-radar-accuracy-audit.ts";
+} from "../hermes/tools/research-runtime/bin/ad-radar-accuracy-audit.mjs";
 
 test("Ad Radar accuracy audit summarises typed, advertiser, suburb, and freshness coverage", () => {
   const now = new Date("2026-06-13T08:00:00.000Z");
@@ -89,15 +89,19 @@ test("Ad Radar accuracy alert names threshold failures and runtime setting key i
   assert.match(alert.text, /coverage query failed/);
 });
 
-test("weekly Ad Radar accuracy Trigger task stores to runtime settings and uses alert delivery", () => {
-  const helper = readFileSync("src/lib/research/ad-radar-accuracy-audit.ts", "utf8");
-  const trigger = readFileSync("trigger/ad-radar-accuracy.ts", "utf8");
+test("weekly Ad Radar accuracy audit runs only inside the Hermes VPS supervisor", () => {
+  const helper = readFileSync(
+    "hermes/tools/research-runtime/bin/ad-radar-accuracy-audit.mjs",
+    "utf8",
+  );
+  const supervisor = readFileSync(
+    "hermes/tools/research-runtime/bin/supabase-supervisor.mjs",
+    "utf8",
+  );
 
-  assert.match(helper, /from\("runtime_settings"\)/);
+  assert.match(helper, /runtime_settings\?on_conflict=setting_key/);
   assert.match(helper, /AD_RADAR_ACCURACY_SETTING_KEY/);
-  assert.match(helper, /sendPaidServiceAlert/);
-  assert.match(trigger, /schedules\.task/);
-  assert.match(trigger, /research\.ad-radar\.accuracy\.weekly/);
-  assert.match(trigger, /0 8 \* \* 1/);
-  assert.match(trigger, /runAdRadarAccuracyAudit\(createSupabaseServiceClient\(\)\)/);
+  assert.match(helper, /RESEND_API_KEY/);
+  assert.match(supervisor, /runAdRadarAccuracyAudit/);
+  assert.match(supervisor, /HERMES_ACCURACY_AUDIT_INTERVAL_HOURS/);
 });

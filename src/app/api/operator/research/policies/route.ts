@@ -2,13 +2,14 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { requireOperator } from "@/lib/operator/auth";
+import { createResearchServiceClient } from "@/lib/research/service";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   const guard = await requireOperator();
   if (!guard.ok) return guard.response;
-  const { data, error } = await guard.supabase
+  const { data, error } = await createResearchServiceClient()
     .schema("research")
     .from("refresh_policies")
     .select("*")
@@ -33,7 +34,7 @@ export async function POST(req: Request) {
   const parsed = upsertSchema.safeParse(await req.json());
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
 
-  const { data, error } = await guard.supabase
+  const { data, error } = await createResearchServiceClient()
     .schema("research")
     .from("refresh_policies")
     .upsert(

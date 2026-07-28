@@ -59,9 +59,8 @@ export async function POST(request: NextRequest) {
   const [adRows, creativeRows] = await Promise.all([
     loadAds(supabase, [parsed.data.observedAdId]),
     supabase
-      .schema("research")
-      .from("ad_creatives")
-      .select("id")
+      .from("customer_ad_radar_cards")
+      .select("source_ad_creative_id")
       .eq("observed_ad_id", parsed.data.observedAdId)
       .maybeSingle(),
   ]);
@@ -75,7 +74,7 @@ export async function POST(request: NextRequest) {
       {
         workspace_id: access.workspaceId,
         observed_ad_id: parsed.data.observedAdId,
-        ad_creative_id: creativeRows.data?.id ?? null,
+        ad_creative_id: creativeRows.data?.source_ad_creative_id ?? null,
         note: parsed.data.note ?? null,
         source_snapshot_url: ad.source.snapshotUrl,
         created_by: access.userId,
@@ -106,7 +105,6 @@ async function loadAds(
   observedIds: string[],
 ) {
   const { data } = await supabase
-    .schema("research")
     .from(CUSTOMER_RESEARCH_AD_HISTORY_VIEW)
     .select(RESEARCH_AD_SELECT)
     .in("observed_ad_id", observedIds)

@@ -16,12 +16,12 @@ export type QueuedContentRun = {
 export const CONTENT_RUN_QUEUE_PRIORITY = 1;
 
 export async function queueContentRun(input: {
-  supabase: ContentQueueClient;
+  researchSupabase: ContentQueueClient;
   workspaceId: string;
   runId: string;
   fromStep?: ContentSkillName;
 }): Promise<QueuedContentRun> {
-  const research = input.supabase.schema("research");
+  const research = input.researchSupabase.schema("research");
   const dedupeKey = `content-run:${input.workspaceId}:${input.runId}`;
   const payload = {
     contentRunId: input.runId,
