@@ -1,2 +1,4 @@
-K[​-‍﻿]
+aa​bb
+cc‍dd
+ee﻿ff
 END
