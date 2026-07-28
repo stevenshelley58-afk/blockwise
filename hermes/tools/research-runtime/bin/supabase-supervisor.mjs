@@ -21,6 +21,7 @@ import {
 import { CONTENT_RUN_JOB_TYPE, handleHermesContentRun } from "./content-engine.mjs";
 import { runAdRadarAccuracyAudit } from "./ad-radar-accuracy-audit.mjs";
 import { publishCustomerReadModels } from "./customer-read-model-publisher.mjs";
+import { runInactiveAdPurge } from "./inactive-ad-purge.mjs";
 import {
   hermesSupabaseHeaders,
   resolveHermesCustomerSupabaseCredential,
@@ -81,6 +82,11 @@ const accuracyAuditCheckIntervalMs = positiveInt(
   3600,
 ) * 1000;
 const accuracyAuditIntervalHours = positiveInt("HERMES_ACCURACY_AUDIT_INTERVAL_HOURS", 168);
+const inactiveAdPurgeCheckIntervalMs = positiveInt(
+  "HERMES_INACTIVE_AD_PURGE_CHECK_INTERVAL_SECONDS",
+  3600,
+) * 1000;
+const inactiveAdPurgeIntervalHours = positiveInt("HERMES_INACTIVE_AD_PURGE_INTERVAL_HOURS", 24);
 const rawEvidenceDir = env.HERMES_RAW_EVIDENCE_DIR || "/opt/research-raw-evidence";
 const mode = env.HERMES_RESEARCH_MODE === "build" ? "build" : "maintain";
 const workerId = env.HERMES_QUEUE_WORKER_ID || `hermes-research-${randomUUID()}`;
@@ -5260,6 +5266,7 @@ async function tick() {
   let priorityContentHandled = 0;
   let customerReadModels = { skipped: true, reason: "not_due" };
   let accuracyAudit = { skipped: true, reason: "not_due" };
+  let inactiveAdPurge = { skipped: true, reason: "not_due" };
   try {
     const fastLaneJobs = await claimContentFastLaneJobs({ jobTypes: [CONTENT_RUN_JOB_TYPE], limit: 1 });
     await Promise.all(fastLaneJobs.map(processOneJob));
@@ -5296,11 +5303,18 @@ async function tick() {
     accuracyAudit = { skipped: false, error: error.message };
     log("Ad Radar accuracy audit failed", { error: error.message }, "error");
   }
-  log("tick complete", { mode, workerId, buildRunId, priorityContentHandled, ...supervisor, handled, watchdogs, customerReadModels, accuracyAudit });
+  try {
+    inactiveAdPurge = await maybeRunInactiveAdPurge();
+  } catch (error) {
+    inactiveAdPurge = { skipped: false, error: error.message };
+    log("inactive-ad purge failed", { error: error.message }, "error");
+  }
+  log("tick complete", { mode, workerId, buildRunId, priorityContentHandled, ...supervisor, handled, watchdogs, customerReadModels, accuracyAudit, inactiveAdPurge });
 }
 
 let lastCustomerReadModelPublishAt = 0;
 let lastAccuracyAuditCheckAt = 0;
+let lastInactiveAdPurgeCheckAt = 0;
 
 async function maybePublishCustomerReadModels() {
   const current = Date.now();
@@ -5324,6 +5338,18 @@ async function maybeRunAccuracyAudit() {
     fetchImpl: fetch,
     now,
     intervalHours: accuracyAuditIntervalHours,
+  });
+}
+
+async function maybeRunInactiveAdPurge() {
+  const current = Date.now();
+  if (current - lastInactiveAdPurgeCheckAt < inactiveAdPurgeCheckIntervalMs) {
+    return { skipped: true, reason: "not_due" };
+  }
+  lastInactiveAdPurgeCheckAt = current;
+  return runInactiveAdPurge({
+    researchRest: rest,
+    intervalHours: inactiveAdPurgeIntervalHours,
   });
 }
 
