@@ -14,11 +14,13 @@ import type { AssetRole } from "./asset-roles";
 
 export type { AssetRole };
 
+// Demo imagery for the sample workspace. These ship with the app, so the
+// displayed and generated sources are the same file.
 export const MEDIA_ASSETS = [
-  { src: "/ads/ad-northstar.jpg", label: "South Perth skyline", type: "Uploaded", ratio: "Story", role: "background" },
-  { src: "/ads/ad-hillview.jpg", label: "Modern family home", type: "Property image", ratio: "Feed", role: "property" },
-  { src: "/ads/ad-hillco.jpg", label: "Living room hero", type: "Brand asset", ratio: "Square", role: "property" },
-  { src: "/ads/ad-coastline.jpg", label: "River market view", type: "Previously used", ratio: "Landscape", role: "background" },
+  { src: "/ads/ad-northstar.jpg", fullSrc: "/ads/ad-northstar.jpg", label: "South Perth skyline", type: "Uploaded", ratio: "Story", role: "background" },
+  { src: "/ads/ad-hillview.jpg", fullSrc: "/ads/ad-hillview.jpg", label: "Modern family home", type: "Property image", ratio: "Feed", role: "property" },
+  { src: "/ads/ad-hillco.jpg", fullSrc: "/ads/ad-hillco.jpg", label: "Living room hero", type: "Brand asset", ratio: "Square", role: "property" },
+  { src: "/ads/ad-coastline.jpg", fullSrc: "/ads/ad-coastline.jpg", label: "River market view", type: "Previously used", ratio: "Landscape", role: "background" },
 ];
 
 export function useMedia(

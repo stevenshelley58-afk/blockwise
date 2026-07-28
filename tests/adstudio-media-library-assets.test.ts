@@ -18,6 +18,9 @@ test("workspace media rows become renderable library assets", () => {
   assert.deepEqual(asset, {
     id: "asset-1",
     src: "/api/adstudio/media?path=workspace-1%2Fadstudio%2Fkit-1%2Fuuid-front-of-house.jpg",
+    // These rows resolve to the media proxy already, so display and generation
+    // share one source.
+    fullSrc: "/api/adstudio/media?path=workspace-1%2Fadstudio%2Fkit-1%2Fuuid-front-of-house.jpg",
     label: "Front of house.jpg",
     type: "listing_image",
     role: "property",

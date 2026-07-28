@@ -1,3 +1,4 @@
+import { workspaceMediaSrc } from "./image-src.ts";
 import type { AdStudioBrandKit } from "./types.ts";
 
 export const ADSTUDIO_EMBEDDED_ASSET_LIMIT = 24;
@@ -14,6 +15,8 @@ export type AdStudioBrandAssetRow = {
 export type AdStudioMediaLibraryAsset = {
   id: string;
   src: string;
+  /** Matches `src` here: these rows are already resolved to durable sources. */
+  fullSrc: string;
   label: string;
   type: string;
   role: "property" | "person" | "logo" | "background";
@@ -21,10 +24,7 @@ export type AdStudioMediaLibraryAsset = {
 };
 
 export function mediaUrlForStoragePath(workspaceId: string, storagePath: string | null | undefined): string | null {
-  const path = storagePath?.trim();
-  if (!workspaceId || !path) return null;
-  if (!path.startsWith(`${workspaceId}/`) || path.includes("..")) return null;
-  return `/api/adstudio/media?path=${encodeURIComponent(path)}`;
+  return workspaceMediaSrc(workspaceId, storagePath);
 }
 
 export function assetUrlForRow(workspaceId: string, row: AdStudioBrandAssetRow): string | null {
@@ -44,6 +44,7 @@ export function mediaLibraryAssetForRow(
   return {
     id: String(row.id ?? src),
     src,
+    fullSrc: src,
     label: labelForAssetRow(row),
     type,
     role: roleForAssetType(type),
