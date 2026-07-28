@@ -9,6 +9,15 @@ export type AdStudioBrandAssetRow = {
   created_at?: unknown;
 };
 
+export type AdStudioMediaLibraryAsset = {
+  id: string;
+  src: string;
+  label: string;
+  type: string;
+  role: "property" | "person" | "logo" | "background";
+  ratio: "Image";
+};
+
 export function mediaUrlForStoragePath(workspaceId: string, storagePath: string | null | undefined): string | null {
   const path = storagePath?.trim();
   if (!workspaceId || !path) return null;
@@ -20,6 +29,24 @@ export function assetUrlForRow(workspaceId: string, row: AdStudioBrandAssetRow):
   const sourceUrl = typeof row.source_url === "string" ? row.source_url.trim() : "";
   if (sourceUrl) return sourceUrl;
   return mediaUrlForStoragePath(workspaceId, typeof row.storage_path === "string" ? row.storage_path : null);
+}
+
+export function mediaLibraryAssetForRow(
+  workspaceId: string,
+  row: AdStudioBrandAssetRow,
+): AdStudioMediaLibraryAsset | null {
+  const src = assetUrlForRow(workspaceId, row);
+  if (!src) return null;
+
+  const type = String(row.asset_type ?? "");
+  return {
+    id: String(row.id ?? src),
+    src,
+    label: labelForAssetRow(row),
+    type,
+    role: roleForAssetType(type),
+    ratio: "Image",
+  };
 }
 
 export function applyBrandAssetRows(brandKit: AdStudioBrandKit, rows: AdStudioBrandAssetRow[]): AdStudioBrandKit {
@@ -70,6 +97,48 @@ export async function loadAdStudioBrandAssetRows(
 
   if (error) throw new Error(error.message);
   return data ?? [];
+}
+
+export async function loadAdStudioWorkspaceAssetRows(
+  supabase: { from: (table: string) => any },
+  workspaceId: string,
+): Promise<AdStudioBrandAssetRow[]> {
+  if (!workspaceId) return [];
+  const { data, error } = await supabase
+    .from("adstudio_brand_assets")
+    .select("*")
+    .eq("workspace_id", workspaceId)
+    .order("created_at", { ascending: false });
+
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+function roleForAssetType(assetType: string): AdStudioMediaLibraryAsset["role"] {
+  const type = assetType.toLowerCase();
+  if (type === "logo" || type === "primary_logo") return "logo";
+  if (type === "headshot" || type === "agent_headshot") return "person";
+  if (type === "office_image" || type === "team_image") return "background";
+  return "property";
+}
+
+function labelForAssetRow(row: AdStudioBrandAssetRow): string {
+  const metadata =
+    row.metadata_json && typeof row.metadata_json === "object" && !Array.isArray(row.metadata_json)
+      ? (row.metadata_json as Record<string, unknown>)
+      : {};
+  const fileName = typeof metadata.fileName === "string" ? metadata.fileName.trim() : "";
+  if (fileName) return fileName;
+
+  const storagePath = typeof row.storage_path === "string" ? row.storage_path.trim() : "";
+  if (storagePath) {
+    const tail = storagePath.split("/").pop() ?? "";
+    const name = tail.replace(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}-/i, "");
+    if (name) return name;
+  }
+
+  const type = String(row.asset_type ?? "").replace(/_/g, " ").trim();
+  return type ? type.charAt(0).toUpperCase() + type.slice(1) : "Image";
 }
 
 function pushUnique(target: string[], value: string) {

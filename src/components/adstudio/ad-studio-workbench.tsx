@@ -31,6 +31,7 @@ import type {
   AdStudioTemplate,
   FirstAdInput,
 } from "@/lib/adstudio";
+import type { AdStudioMediaLibraryAsset } from "@/lib/adstudio/assets";
 import { builtInAdStudioTemplates } from "@/lib/adstudio";
 import { isCloneCreative, primaryImageSource } from "@/lib/adstudio/creative-preview";
 
@@ -78,6 +79,7 @@ type AdStudioWorkbenchProps = {
   firstRun?: boolean;
   isSample?: boolean;
   showBrandSetupPrompt?: boolean;
+  initialMediaAssets?: AdStudioMediaLibraryAsset[];
 };
 
 type NavItem =
@@ -277,6 +279,7 @@ export function AdStudioWorkbench({
   firstRun = false,
   isSample = false,
   showBrandSetupPrompt = false,
+  initialMediaAssets = [],
 }: AdStudioWorkbenchProps) {
   const [pack, setPack] = useState(initialPack);
   const searchParams = useSearchParams();
@@ -461,9 +464,10 @@ export function AdStudioWorkbench({
     () =>
       dedupeAssetsBySrc([
         ...uploadedAssets,
+        ...initialMediaAssets,
         ...(workspaceMediaAssets.length > 0 ? workspaceMediaAssets : isSample ? MEDIA_ASSETS : []),
       ]),
-    [isSample, uploadedAssets, workspaceMediaAssets],
+    [initialMediaAssets, isSample, uploadedAssets, workspaceMediaAssets],
   );
 
   function selectMediaImage(src: string) {
