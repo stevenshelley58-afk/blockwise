@@ -349,11 +349,17 @@ export function AdStudioWorkbench({
     studio.setSaveState("saving");
   }
   const [generation, setGeneration] = useState<GenerationProgress | null>(null);
-  const [uploadedAssets, setUploadedAssets] = useState<Array<{ src: string; label: string; type: string; ratio: string }>>([]);
+  const [uploadedAssets, setUploadedAssets] = useState<
+    Array<{ src: string; fullSrc: string; label: string; type: string; ratio: string }>
+  >([]);
   const [loadedMediaAssets, setLoadedMediaAssets] = useState(initialMediaAssets);
   const [nextMediaCursor, setNextMediaCursor] = useState(initialMediaCursor);
   const [loadingMoreMedia, setLoadingMoreMedia] = useState(false);
-  const [pendingMediaReplacement, setPendingMediaReplacement] = useState<{ src: string; label: string } | null>(null);
+  // `src` identifies the selected tile in the grid; `fullSrc` is what the
+  // re-generation actually consumes (see LibraryAssetModel).
+  const [pendingMediaReplacement, setPendingMediaReplacement] = useState<
+    { src: string; fullSrc: string; label: string } | null
+  >(null);
   const [replacingMedia, setReplacingMedia] = useState(false);
   const [samplePickerOpen, setSamplePickerOpen] = useState(false);
   const [samplePickerInitialId, setSamplePickerInitialId] = useState<string | undefined>(undefined);
@@ -430,7 +436,8 @@ export function AdStudioWorkbench({
         setUploadedAssets((prev) =>
           prev.some((item) => item.src === asset.src)
             ? prev
-            : [{ src: asset.src, label: asset.label, type: "Uploaded", ratio: "Just now" }, ...prev],
+            // An upload's src is already the durable media-proxy source.
+            : [{ src: asset.src, fullSrc: asset.src, label: asset.label, type: "Uploaded", ratio: "Just now" }, ...prev],
         ),
     },
   );
@@ -443,7 +450,8 @@ export function AdStudioWorkbench({
       return; // replaceImage already surfaced the failure to the user
     }
     if (!uploaded) return;
-    setPendingMediaReplacement(uploaded);
+    // A fresh upload is already the durable media-proxy source.
+    setPendingMediaReplacement({ ...uploaded, fullSrc: uploaded.src });
     openMediaSheet();
   }
 
@@ -492,11 +500,11 @@ export function AdStudioWorkbench({
 
   function selectMediaImage(src: string) {
     const asset = mediaAssets.find((item) => item.src === src);
-    if (!asset || src === primaryImage) {
+    if (!asset || src === primaryImage || asset.fullSrc === primaryImage) {
       setPendingMediaReplacement(null);
       return;
     }
-    setPendingMediaReplacement({ src, label: asset.label });
+    setPendingMediaReplacement({ src, fullSrc: asset.fullSrc, label: asset.label });
     openMediaSheet();
   }
 
@@ -840,11 +848,11 @@ export function AdStudioWorkbench({
     try {
       const nextCreative = await requestCreativeEdit({
         creative: currentCreative,
-        mutation: { fieldKey: imageRegion.key, newImage: pendingMediaReplacement.src },
+        mutation: { fieldKey: imageRegion.key, newImage: pendingMediaReplacement.fullSrc },
         mutationId: crypto.randomUUID(),
       });
       updateCreative(nextCreative);
-      setPrimaryImage(pendingMediaReplacement.src);
+      setPrimaryImage(pendingMediaReplacement.fullSrc);
       setPrimaryImageName(pendingMediaReplacement.label);
       setPendingMediaReplacement(null);
       studio.showToast("New ad generated");

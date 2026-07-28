@@ -3,6 +3,7 @@ import { NextResponse, after, type NextRequest } from "next/server";
 import { recordWorkspaceFunnelEventBestEffort } from "@/lib/analytics/progressive-funnel";
 import { buildAdStudioLiveResult } from "@/lib/adstudio";
 import { errorResponse, readJsonBody, requireAdStudioRequest } from "@/lib/adstudio/http";
+import { validateFirstAd } from "@/lib/adstudio/first-ad-input";
 import { publicAdStudioGenerationError } from "@/lib/adstudio/generation-error";
 import {
   reserveAdStudioGenerationCredits,
@@ -17,7 +18,6 @@ import { compactAdStudioCampaignPackForTransport } from "@/lib/adstudio/persiste
 import { buildAdStudioCreativeLibrary } from "@/lib/adstudio/creative-library";
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
-import { FIRST_AD_FORMATS, type FirstAdInput } from "@/lib/adstudio";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -55,53 +55,6 @@ async function triggerTemplateGeneration(payload: {
 
 const inFlightGenerations = new Map<string, number>();
 const GENERATION_DEDUP_TTL_MS = 30_000;
-
-// Warm-lambda cache: once trigger.dev rejects the key as invalid, stop paying
-// the queue-insert + failed-trigger round trip on every generation. Fixing
-// the key requires a redeploy, which resets this.
-function isAdStudioImageSrc(value: string | undefined): boolean {
-  return Boolean(
-    value?.startsWith("data:image/") ||
-      value?.startsWith("/api/adstudio/media?") ||
-      value?.startsWith("/adstudio-samples/") ||
-      value?.startsWith("/ads/"),
-  );
-}
-
-function validateFirstAd(firstAd: FirstAdInput | undefined): string | null {
-  if (!firstAd) return "Choose an ad sample and add your assets before generating.";
-  if (!firstAd.description?.trim()) return "Add a short description so Blockwise knows what to write. Include the property, suburb, offer, or key selling point.";
-  if (firstAd.description.length > 500) return "Keep the short description to 500 characters or less.";
-  if (!isAdStudioImageSrc(firstAd.imageDataUrl)) return "Add a required image before generating the ad. Upload a file, choose from library, or generate an image.";
-  if (firstAd.templateCloneImage && !isAdStudioImageSrc(firstAd.templateCloneImage)) {
-    return "Generated template clone is invalid. Generate the ad again.";
-  }
-  for (const cloneImage of Object.values(firstAd.templateCloneImagesByFormat ?? {})) {
-    if (cloneImage && !isAdStudioImageSrc(cloneImage)) return "Generated template clone is invalid. Generate the ad again.";
-  }
-  for (const slotImage of Object.values(firstAd.imageDataUrls ?? {})) {
-    if (slotImage && !isAdStudioImageSrc(slotImage)) return "One of the selected template images is invalid. Replace it and try again.";
-  }
-  if (JSON.stringify(firstAd.formats) !== JSON.stringify(FIRST_AD_FORMATS)) {
-    return "First ad formats must be Story and Feed.";
-  }
-  if (!firstAd.templateId?.trim()) return "Selected sample was not found.";
-  if (firstAd.generationQuality && !["fast", "high"].includes(firstAd.generationQuality)) {
-    return "Choose Fast or High quality generation.";
-  }
-  if (firstAd.copy) {
-    const fields = [firstAd.copy.primaryText, firstAd.copy.headline, firstAd.copy.description, firstAd.copy.cta];
-    if (fields.some((field) => typeof field !== "string" || field.length > 500)) {
-      return "Generated copy is invalid. Generate the ad again.";
-    }
-  }
-  for (const value of Object.values(firstAd.onImageCopy ?? {})) {
-    if (typeof value !== "string" || value.length > 200) {
-      return "Keep each ad text field to 200 characters or less.";
-    }
-  }
-  return null;
-}
 
 function generationDedupKey(workspaceId: string, body: unknown): string {
   const text = JSON.stringify(body) ?? "";

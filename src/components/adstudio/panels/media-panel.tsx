@@ -54,7 +54,9 @@ export function MediaPanel({
   const [filter, setFilter] = useState<RoleFilter>("all");
   const [confirmOpen, setConfirmOpen] = useState(false);
 
-  const selectedAsset = mediaAssets.find((asset) => asset.src === primaryImage);
+  const selectedAsset = mediaAssets.find(
+    (asset) => asset.src === primaryImage || asset.fullSrc === primaryImage,
+  );
   const currentLabel = selectedAsset?.label ?? primaryImageName ?? "Uploaded image";
   const replacementAsset = mediaAssets.find((asset) => asset.src === selectedImageSrc);
 
@@ -115,7 +117,7 @@ export function MediaPanel({
         <div className="studio-media-grid">
           {visibleAssets.map((asset) => {
             const role = resolveRole(asset);
-            const inUse = primaryImage === asset.src;
+            const inUse = primaryImage === asset.src || primaryImage === asset.fullSrc;
             return (
               <button
                 className={`${inUse ? "active" : ""}${selectedImageSrc === asset.src ? " selected" : ""}`}

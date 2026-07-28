@@ -2,12 +2,21 @@ import type { AssetRole } from "@/components/adstudio/asset-roles";
 
 import { assetUrlForRow, type AdStudioBrandAssetRow } from "./assets.ts";
 import { creativeLibraryPreview } from "./creative-preview.ts";
+import { storagePathFromMediaSrc, workspaceMediaSrc } from "./image-src.ts";
 import { createAdStudioMediaUrls } from "./media-urls.ts";
 import { isExampleBrandKitSourceUrl, rowToCreative } from "./persistence.ts";
 
 export type LibraryAssetModel = {
   id: string;
+  /** Signed, downscaled URL for display in a grid. Expires; never generate from it. */
   src: string;
+  /**
+   * The durable full-resolution source to hand to the generator when this asset
+   * is picked for an ad: the auth-gated media proxy for anything we store, or
+   * the remote URL for an asset we only reference. Always a source
+   * `isAdStudioImageSrc` accepts.
+   */
+  fullSrc: string;
   label: string;
   type: string;
   role: AssetRole;
@@ -94,10 +103,14 @@ export async function loadAdStudioLibraryPage(input: {
       const raw = assetUrlForRow(input.workspaceId, row);
       const path = storagePathFromSource(input.workspaceId, raw);
       const src = path ? signed[path]?.grid : raw;
-      if (!src) continue;
+      // Picking a library image must send the original bytes to the generator,
+      // not the 640px signed render the grid displays.
+      const fullSrc = (path ? workspaceMediaSrc(input.workspaceId, path) : raw) ?? src;
+      if (!src || !fullSrc) continue;
       items.push({
         id: String(row.id ?? items.length),
         src,
+        fullSrc,
         label: labelForAssetRow(row),
         type: String(row.asset_type ?? ""),
         role: roleForAssetType(String(row.asset_type ?? "")),
@@ -166,8 +179,7 @@ function decodeCursor(value: string | null | undefined): Cursor | null {
 function storagePathFromSource(workspaceId: string, src: string | null): string | null {
   if (!src) return null;
   if (src.startsWith(`${workspaceId}/`) && !src.includes("..")) return src;
-  if (!src.startsWith("/api/adstudio/media?")) return null;
-  const path = new URL(src, "https://blockwise.invalid").searchParams.get("path");
+  const path = storagePathFromMediaSrc(src);
   return path?.startsWith(`${workspaceId}/`) && !path.includes("..") ? path : null;
 }
 

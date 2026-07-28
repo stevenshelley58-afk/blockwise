@@ -89,7 +89,8 @@ export function MediaLibrary({
     try {
       const result = await uploadAdStudioMedia({ file, workspaceId, brandKitId });
       setUploaded((previous) => [
-        { id: `upload-${Date.now()}`, src: result.src, label: file.name, type: "uploaded_asset", role: "property" },
+        // A fresh upload is already the durable media-proxy source.
+        { id: `upload-${Date.now()}`, src: result.src, fullSrc: result.src, label: file.name, type: "uploaded_asset", role: "property" },
         ...previous,
       ]);
       toast.success("Added");
