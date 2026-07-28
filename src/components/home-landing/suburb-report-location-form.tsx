@@ -56,7 +56,7 @@ export function SuburbReportLocationForm({ analyticsLocation, mobile = false }: 
         useBestGuess
         useBestGuessAsPlaceholder
       />
-      <p className="hw-report-search-note">Free report. No email, no sign-up, just your suburb.</p>
+      <p className="hw-report-search-note">Free report. No email, no sign-up.</p>
       {error ? <p className="hw-report-search-error" role="alert">{error}</p> : null}
     </div>
   );

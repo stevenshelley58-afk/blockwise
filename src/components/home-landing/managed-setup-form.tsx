@@ -105,7 +105,7 @@ export function ManagedSetupForm({ idPrefix, variant }: ManagedSetupFormProps) {
         data-reveal={mobile ? undefined : "up"}
         data-in="1"
       >
-        <div className="hw-ms-success-h">Thanks — we&rsquo;ve got it.</div>
+        <div className="hw-ms-success-h">Thanks, we&rsquo;ve got it.</div>
         <p className="hw-ms-success-b">
           We&rsquo;ll be in touch within one business day to book your 15-minute walkthrough.
         </p>
@@ -203,7 +203,7 @@ export function ManagedSetupForm({ idPrefix, variant }: ManagedSetupFormProps) {
           </p>
         ) : null}
         <button type="submit" className="hw-btn hw-btn--dark hwm-ms-submit" disabled={status === "submitting"}>
-          {status === "submitting" ? "Sending…" : "Request managed setup"}{" "}
+          {status === "submitting" ? "Sending…" : "Book a walkthrough"}{" "}
           <span className="hw-arr">→</span>
         </button>
         <div className="hwm-ms-fineprint">No obligation. We&rsquo;ll never share your details.</div>
@@ -236,7 +236,7 @@ export function ManagedSetupForm({ idPrefix, variant }: ManagedSetupFormProps) {
       ) : null}
       <div className="hw-ms-actions">
         <button type="submit" className="hw-btn hw-btn--dark hw-ms-submit" disabled={status === "submitting"}>
-          {status === "submitting" ? "Sending…" : "Request managed setup"}{" "}
+          {status === "submitting" ? "Sending…" : "Book a walkthrough"}{" "}
           <span className="hw-arr">→</span>
         </button>
         <span className="hw-ms-fineprint">No obligation. We&rsquo;ll never share your details.</span>

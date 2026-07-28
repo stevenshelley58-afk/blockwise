@@ -8,9 +8,21 @@ export function SiteHeader() {
   return (
     <header className="hw-header">
       <div className="hw-wide hw-header-inner">
-        <Link href="/" className="hw-logo">
-          <span className="hw-logo-mark" aria-hidden />
-          blockwise
+        <Link href="/" className="hw-logo" aria-label="Blockwise home">
+          <img
+            className="hw-logo-horizontal"
+            src="/brand/blockwise-logo.svg"
+            alt="blockwise"
+            width="420"
+            height="100"
+          />
+          <img
+            className="hw-logo-icon"
+            src="/brand/blockwise-icon-midnight.svg"
+            alt="blockwise"
+            width="1024"
+            height="1024"
+          />
         </Link>
         <nav className="hw-nav" aria-label="Main">
           <Link href="/#start">How it works</Link>
@@ -21,7 +33,7 @@ export function SiteHeader() {
         <div className="hw-header-actions">
           <SignInLink className="hw-login" />
           <CtaLink location="header" href="/signup" className="hw-btn hw-btn--dark">
-            Start with email
+            Start free
           </CtaLink>
         </div>
       </div>
@@ -34,7 +46,7 @@ export function SiteFooter() {
   return (
     <footer className="hw-footer">
       <div className="hw-wide hw-footer-statement-block">
-        <p className="hw-footer-statement">Your competitors are advertising. Are you?</p>
+        <p className="hw-footer-statement">Your competitors are still advertising.</p>
         <CtaLink location="footer" href="/signup" className="hw-btn hw-btn--light">
           Create three ads free <span className="hw-arr">→</span>
         </CtaLink>
@@ -43,8 +55,13 @@ export function SiteFooter() {
         <div className="hw-footer-rule" aria-hidden />
         <div className="hw-footer-row">
           <span className="hw-logo hw-logo--footer">
-            <span className="hw-logo-mark" aria-hidden />
-            blockwise
+            <img
+              className="hw-logo-horizontal"
+              src="/brand/blockwise-logo-white.svg"
+              alt="blockwise"
+              width="420"
+              height="100"
+            />
           </span>
           <nav className="hw-footer-links" aria-label="Footer">
             <Link href="/#start">How it works</Link>

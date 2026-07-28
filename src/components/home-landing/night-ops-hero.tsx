@@ -53,12 +53,37 @@ export function NightOpsHero() {
           <br />
           <span className="hw-no-accent">Are you?</span>
         </h1>
+        <p className="hw-no-lede">Meta ads built from what works in your suburb.</p>
+        {/* Mobile showcase: the suburb-framed map crop with the full boundary
+            visible (the desktop backdrop crops to a narrow slice on portrait).
+            The SVG uses the crop's viewBox so the trace stays aligned. */}
+        <picture className="hw-no-showcase" aria-hidden>
+          <img
+            src="/home/night-ops-map-mobile.webp"
+            alt=""
+            width={832}
+            height={541}
+            fetchPriority="high"
+            decoding="async"
+          />
+          <svg
+            className="hw-no-boundary"
+            viewBox="190 40 1058 688"
+            preserveAspectRatio="xMidYMid slice"
+            aria-hidden
+          >
+            <path className="hw-no-boundary-fill" d={BOUNDARY_D} />
+            <path className="hw-no-boundary-glow" d={BOUNDARY_D} />
+            <path className="hw-no-boundary-stroke" d={BOUNDARY_D} pathLength={1} />
+          </svg>
+        </picture>
         <div className="hw-no-form">
           <SuburbReportLocationForm analyticsLocation="hero" />
         </div>
       </div>
 
       <div className="hw-no-cards" aria-hidden>
+        <span className="hw-no-examples">Examples</span>
         <div className="hw-no-card hw-no-card--1">
           <p className="hw-no-card-k">Ads collected</p>
           <p className="hw-no-card-v">
@@ -80,7 +105,25 @@ export function NightOpsHero() {
         </div>
       </div>
 
-      <p className="hw-no-plate">Illustrative data · Perth metro</p>
+      <div className="hw-no-stats" aria-hidden>
+        <span className="hw-no-examples hw-no-examples--strip">Examples</span>
+        <div className="hw-no-stat">
+          <span className="hw-no-stat-v">
+            <CountUp to={1240} />
+          </span>
+          <span className="hw-no-stat-k">Ads tracked</span>
+        </div>
+        <div className="hw-no-stat">
+          <span className="hw-no-stat-v">
+            <CountUp to={27} />
+          </span>
+          <span className="hw-no-stat-k">Live now</span>
+        </div>
+        <div className="hw-no-stat">
+          <span className="hw-no-stat-v hw-no-stat-v--text">Free appraisal</span>
+          <span className="hw-no-stat-k">Top angle</span>
+        </div>
+      </div>
     </div>
   );
 }

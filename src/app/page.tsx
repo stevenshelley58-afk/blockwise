@@ -7,8 +7,8 @@ import {
   FreeTrial,
   ManagedSetup,
   PropertyCheck,
+  SelfServePricing,
   StartBand,
-  Updates,
   WorkflowBand,
 } from "@/components/home-landing/home-sections";
 import { NightOpsHero } from "@/components/home-landing/night-ops-hero";
@@ -32,9 +32,9 @@ export default function HomePage() {
         <section id="start"><StartBand /></section>
         <section id="workflow"><WorkflowBand /></section>
         <section id="control"><ControlFold /></section>
-        <section id="updates"><Updates /></section>
         <section id="property-check"><PropertyCheck /></section>
         <section id="free-trial"><FreeTrial /></section>
+        <section id="pricing"><SelfServePricing /></section>
         <section id="managed-setup"><ManagedSetup /></section>
         <section id="faq"><FaqSection /></section>
       </main>
