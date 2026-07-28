@@ -9,7 +9,7 @@ function read(path: string): string {
 test("mobile nav exposes the canvas-first Ad Studio sections", () => {
   const mobileBody = read("src/components/adstudio/ad-studio-workbench.tsx");
   const mediaPanel = read("src/components/adstudio/panels/media-panel.tsx");
-  const navBlocks = `${mobileBody.match(/const NAV_ITEMS:[\s\S]*?\];/)?.[0] ?? ""}\n${mobileBody.match(/const MOBILE_NAV:[\s\S]*?\];/)?.[0] ?? ""}`;
+  const navBlocks = `${mobileBody.match(/const NAV_ITEMS:[\s\S]*?\];/)?.[0] ?? ""}\n${mobileBody.match(/const MOBILE_NAV_IDS[\s\S]*?\);/)?.[0] ?? ""}`;
 
   assert.match(mobileBody, /studio\.mobileTab === "home"/);
   assert.doesNotMatch(mobileBody, /studio\.mobileTab === "media"/);
@@ -21,6 +21,8 @@ test("mobile nav exposes the canvas-first Ad Studio sections", () => {
   assert.match(mobileBody, /label: "Library"/);
   assert.match(mobileBody, /label: "Text"/);
   assert.match(mobileBody, /label: "Publish"/);
+  assert.match(mobileBody, /const MOBILE_NAV = NAV_ITEMS\.filter/);
+  assert.doesNotMatch(mobileBody, /label: "Review"/);
   assert.match(mobileBody, /label: "Brand Pack"/);
   assert.match(mobileBody, /label: "Settings"/);
   assert.doesNotMatch(mobileBody, /studio\.mobileTab === "campaign"/);
