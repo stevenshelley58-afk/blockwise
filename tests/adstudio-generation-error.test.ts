@@ -31,6 +31,17 @@ test("job polling and synchronous generation both sanitize provider errors", () 
   assert.match(campaignRoute, /publicAdStudioGenerationError\(error\)/);
 });
 
+test("credit reservation failures do not expose database internals to customers", () => {
+  const credits = readFileSync("src/lib/adstudio/generation-credits.ts", "utf8");
+
+  assert.match(credits, /adstudio generation credit reservation failed/);
+  assert.match(credits, /Blockwise couldn't start this ad\. Your details are still here\./);
+  assert.doesNotMatch(
+    credits,
+    /\{ error: error instanceof Error \? error\.message : "Render credits could not be reserved\." \}/,
+  );
+});
+
 test("production migration restores only the exact stale structured-copy override", () => {
   const migration = readFileSync(
     "supabase/migrations/202607220002_restore_structured_copy_direct_provider.sql",

@@ -11,6 +11,9 @@ import type { createSupabaseServerClient } from "../supabase/server.ts";
 type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 type SupabaseServiceClient = ReturnType<typeof createSupabaseServiceClient>;
 
+const CREDIT_RESERVATION_FAILURE =
+  "Blockwise couldn't start this ad. Your details are still here. Try again in a moment.";
+
 export type AdStudioGenerationCreditReservation = WorkspaceCreditReservation & {
   isTrialWorkspace: boolean;
 };
@@ -84,10 +87,11 @@ export async function reserveAdStudioGenerationCredits(input: {
         ),
       };
     }
+    console.error("adstudio generation credit reservation failed", error);
     return {
       ok: false,
       response: NextResponse.json(
-        { error: error instanceof Error ? error.message : "Render credits could not be reserved." },
+        { error: CREDIT_RESERVATION_FAILURE },
         { status: 500 },
       ),
     };

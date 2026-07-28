@@ -14,6 +14,8 @@ import {
 } from "../src/lib/credits/workspace-credits.ts";
 
 const migrationPath = "supabase/migrations/202607270002_progressive_activation_credit_ledger.sql";
+const creditQualificationMigrationPath =
+  "supabase/migrations/20260728085003_qualify_workspace_credit_wallet_updates.sql";
 const verifiedBootstrapMigrationPath =
   "supabase/migrations/20260727029000_verified_trial_workspace_bootstrap.sql";
 
@@ -46,6 +48,26 @@ test("credit migration installs one workspace-scoped append-only authority", () 
   assert.match(sql, /create or replace function public\.refund_trial_ad_pack_credit[\s\S]*refund_workspace_credit_reservation/i);
   assert.match(sql, /Remove them in a later[\s\S]*release/i);
   assert.match(sql, /get_trial_status[\s\S]*workspace_credit_wallets/i);
+});
+
+test("credit wallet mutations qualify columns that collide with RPC output names", () => {
+  const sql = readFileSync(creditQualificationMigrationPath, "utf8");
+
+  for (const rpc of [
+    "grant_workspace_credits",
+    "reserve_workspace_credits",
+    "settle_workspace_credit_reservation",
+    "refund_workspace_credit_reservation",
+  ]) {
+    assert.match(sql, new RegExp(`create or replace function public\\.${rpc}`, "i"));
+  }
+  assert.match(sql, /update public\.workspace_credit_wallets as w/i);
+  assert.match(sql, /set credits_reserved = w\.credits_reserved \+ p_credits/i);
+  assert.match(sql, /set credits_reserved = w\.credits_reserved - p_credits/i);
+  assert.match(sql, /credits_consumed = w\.credits_consumed \+ p_credits/i);
+  assert.match(sql, /set credits_expired = w\.credits_granted/i);
+  assert.doesNotMatch(sql, /set credits_reserved = credits_reserved/i);
+  assert.doesNotMatch(sql, /set credits_expired = credits_granted/i);
 });
 
 test("every credit replay binds its key to canonical request parameters", () => {

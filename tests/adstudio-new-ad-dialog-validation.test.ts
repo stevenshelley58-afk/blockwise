@@ -77,6 +77,17 @@ test("the server owns clone generation and the client waits for the finished ad"
   assert.match(generation, /persistAdStudioCampaignPack/);
 });
 
+test("complete customer text lets feed copy and image generation run together", () => {
+  const generation = readFileSync("src/lib/adstudio/generate-template-campaign.ts", "utf8");
+
+  assert.match(generation, /const copyPromise = providedCopy/);
+  assert.match(generation, /const earlyCopyResult = onImageComplete \? null : await copyPromise/);
+  assert.match(
+    generation,
+    /const \[feedRender, copyResult\] = await Promise\.all\(\[feedGenPromise, copyPromise\]\)/,
+  );
+});
+
 test("the customer chooses fast or high quality without provider jargon", () => {
   const dialog = readFileSync("src/components/adstudio/new-ad-dialog.tsx", "utf8");
   const types = readFileSync("src/lib/adstudio/types.ts", "utf8");

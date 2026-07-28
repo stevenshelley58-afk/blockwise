@@ -367,9 +367,9 @@ export async function runTemplateCampaignGeneration(
   );
   const providersPromise = resolveCloneProviders(generationQuality);
 
-  const copyResult = providedCopy
-    ? { onImage: customerOnImage, copy: providedCopy, source: "provided" as const }
-    : await generateAdStudioTemplateCopy({
+  const copyPromise = providedCopy
+    ? Promise.resolve({ onImage: customerOnImage, copy: providedCopy, source: "provided" as const })
+    : generateAdStudioTemplateCopy({
         workspaceId: input.workspaceId,
         userId: input.userId,
         correlationId,
@@ -392,19 +392,25 @@ export async function runTemplateCampaignGeneration(
         },
       });
 
-  // When the model ran, customer on-image values still win verbatim; when the
-  // customer supplied everything, copyResult.onImage IS the customer's values.
-  const onImageCopy = { ...copyResult.onImage, ...customerOnImage };
+  // Required on-image text is validated before submission. When it is already
+  // complete, image generation does not depend on the feed-copy model, so let
+  // both lanes run together. If a non-UI caller omits required text, preserve
+  // the safe fallback and wait for structured copy before building the clone.
+  const earlyCopyResult = onImageComplete ? null : await copyPromise;
+  const cloneOnImageCopy = {
+    ...(earlyCopyResult?.onImage ?? {}),
+    ...customerOnImage,
+  };
 
   // The image lane runs one native feed render and one recomposed 9:16 story
   // render in parallel; both persist as soon as they exist and region
   // detection starts the moment each render lands.
   const [referenceImage, providers] = await Promise.all([rasterPromise, providersPromise]);
-  const expectedCopy = resolveCloneCopy(template, onImageCopy);
+  const expectedCopy = resolveCloneCopy(template, cloneOnImageCopy);
   const cloneRequestsByFormat = buildTemplateCloneRequestsByFormat(template, {
     referenceImage,
     images: resolvedImages,
-    copy: onImageCopy,
+    copy: cloneOnImageCopy,
     brandHex: brandKit.colours.accent || brandKit.colours.primary,
   });
   const modelProfile = cloneModelProfileForQuality(generationQuality);
@@ -434,7 +440,7 @@ export async function runTemplateCampaignGeneration(
 
   // Await only the feed: generate → normalize → upload. Region detection
   // starts the instant the render exists, overlapping the upload + persist.
-  const feedRender = await feedGenPromise;
+  const [feedRender, copyResult] = await Promise.all([feedGenPromise, copyPromise]);
   const feedRegionsPromise = detectCloneRegions({
     workspaceId: input.workspaceId,
     userId: input.userId,
