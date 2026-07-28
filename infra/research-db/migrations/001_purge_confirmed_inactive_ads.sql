@@ -110,3 +110,5 @@ revoke all on function research.purge_confirmed_inactive_ads(integer, boolean)
   from public, anon, authenticated;
 grant execute on function research.purge_confirmed_inactive_ads(integer, boolean)
   to service_role;
+
+notify pgrst, 'reload schema';
