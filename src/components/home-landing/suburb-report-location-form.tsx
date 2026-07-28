@@ -10,10 +10,17 @@ import type { AdRadarSearchSuggestion } from "@/lib/research/ad-radar-search-sug
 
 type SuburbReportLocationFormProps = {
   analyticsLocation: string;
+  buttonLabel?: string;
   mobile?: boolean;
+  showNote?: boolean;
 };
 
-export function SuburbReportLocationForm({ analyticsLocation, mobile = false }: SuburbReportLocationFormProps) {
+export function SuburbReportLocationForm({
+  analyticsLocation,
+  buttonLabel = "Show me the ads →",
+  mobile = false,
+  showNote = true,
+}: SuburbReportLocationFormProps) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -44,7 +51,7 @@ export function SuburbReportLocationForm({ analyticsLocation, mobile = false }: 
   return (
     <div className={mobile ? "hwm-report-search" : "hw-report-search"}>
       <AdRadarLocationForm
-        buttonLabel="Show me the ads →"
+        buttonLabel={buttonLabel}
         initialNote=""
         initialValue=""
         inputLabel="Suburb or postcode"
@@ -56,35 +63,67 @@ export function SuburbReportLocationForm({ analyticsLocation, mobile = false }: 
         useBestGuess
         useBestGuessAsPlaceholder
       />
-      <p className="hw-report-search-note">Free report. No email, no sign-up.</p>
-      {error ? <p className="hw-report-search-error" role="alert">{error}</p> : null}
+      {showNote ? (
+        <p className="hw-report-search-note">
+          Free report. No email, no sign-up.
+        </p>
+      ) : null}
+      {error ? (
+        <p className="hw-report-search-error" role="alert">
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }
 
-async function resolveLocation(searchTerm: string): Promise<{ postcode: string; suburb: string | null } | null> {
+async function resolveLocation(
+  searchTerm: string,
+): Promise<{ postcode: string; suburb: string | null } | null> {
   const direct = parseLocation(searchTerm);
   if (direct) return direct;
 
-  const response = await fetch(`/api/research/ad-radar/suggestions?q=${encodeURIComponent(searchTerm)}`);
+  const response = await fetch(
+    `/api/research/ad-radar/suggestions?q=${encodeURIComponent(searchTerm)}`,
+  );
   if (!response.ok) return null;
-  const payload = await response.json() as { suggestions?: AdRadarSearchSuggestion[] };
-  const location = payload.suggestions?.find((suggestion) => suggestion.kind === "location");
-  return location ? parseLocation(`${location.mainText} ${location.secondaryText} ${location.searchTerm}`) : null;
+  const payload = (await response.json()) as {
+    suggestions?: AdRadarSearchSuggestion[];
+  };
+  const location = payload.suggestions?.find(
+    (suggestion) => suggestion.kind === "location",
+  );
+  return location
+    ? parseLocation(
+        `${location.mainText} ${location.secondaryText} ${location.searchTerm}`,
+      )
+    : null;
 }
 
-function parseLocation(value: string): { postcode: string; suburb: string | null } | null {
+function parseLocation(
+  value: string,
+): { postcode: string; suburb: string | null } | null {
   const postcode = value.match(/\b([0-9]{4})\b/)?.[1];
   if (!postcode) return null;
-  const beforePostcode = value.slice(0, value.indexOf(postcode)).replace(/,?\s*(WA|Western Australia)\s*$/i, "").trim();
+  const beforePostcode = value
+    .slice(0, value.indexOf(postcode))
+    .replace(/,?\s*(WA|Western Australia)\s*$/i, "")
+    .trim();
   const suburb = beforePostcode.split(",")[0]?.trim() || null;
   return { postcode, suburb };
 }
 
 function slugify(value: string): string {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
 }
 
 function fireSafe(event: string, properties: Record<string, string>) {
-  try { track(event, properties); } catch { /* analytics is best effort */ }
+  try {
+    track(event, properties);
+  } catch {
+    /* analytics is best effort */
+  }
 }
