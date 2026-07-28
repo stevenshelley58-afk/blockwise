@@ -95,6 +95,10 @@ function isPublicHttpsImage(src: string): boolean {
   // customer image reaches third-party model providers, so it must be TLS.
   if (url.protocol !== "https:") return false;
   if (url.username || url.password) return false;
+  // Remote SVGs would have to be fetched and rasterized by our server. Keep
+  // customer-controlled fetches out of that path; uploading the vector stores
+  // it behind the workspace-scoped media proxy instead.
+  if (/\.svg$/i.test(url.pathname)) return false;
 
   const hostname = url.hostname.toLowerCase();
   if (!hostname || hostname === "localhost" || hostname.endsWith(".localhost")) return false;

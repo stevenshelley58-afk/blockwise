@@ -55,6 +55,8 @@ test("sources the generator cannot use are refused", () => {
     "https://169.254.169.254/latest/meta-data/",
     "https://10.0.0.5/photo.jpg",
     "https://[::1]/photo.jpg",
+    "https://cdn.example.com/brand-logo.svg", // would require a customer-controlled server-side fetch
+    "https://cdn.example.com/brand-logo.SVG?version=2",
     SIGNED_URL, // our own bucket, signed: expires, and this one is a 640px render
   ]) {
     assert.equal(isAdStudioImageSrc(src), false, `expected ${String(src)} to be refused`);

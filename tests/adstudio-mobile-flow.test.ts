@@ -51,6 +51,9 @@ test("media library stages a replacement and confirms before generating a new ad
   assert.match(mediaPanel, /<DialogContent/);
   // The tile is keyed by the thumbnail `src`; the re-generation consumes `fullSrc`.
   assert.match(workbench, /setPendingMediaReplacement\(\{ src, fullSrc: asset\.fullSrc, label: asset\.label \}\)/);
+  assert.match(workbench, /src === primaryImage \|\| asset\.fullSrc === primaryImage/);
+  assert.match(mediaPanel, /asset\.src === primaryImage \|\| asset\.fullSrc === primaryImage/);
+  assert.match(mediaPanel, /primaryImage === asset\.src \|\| primaryImage === asset\.fullSrc/);
   assert.match(workbench, /currentCreative\.canvas\.cloneQa\?\.regions\.find\(\(region\) => region\.kind === "image"\)/);
   assert.match(workbench, /requestCreativeEdit\(\{/);
   assert.match(workbench, /newImage: pendingMediaReplacement\.fullSrc/);

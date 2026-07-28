@@ -11,6 +11,7 @@ export type AssetRole = "property" | "person" | "logo" | "background";
  *  workspace/brand-kit assets (which carry no explicit role yet). */
 export type MediaAsset = {
   src: string;
+  fullSrc?: string;
   label: string;
   type?: string;
   ratio?: string;

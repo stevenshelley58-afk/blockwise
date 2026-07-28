@@ -500,7 +500,7 @@ export function AdStudioWorkbench({
 
   function selectMediaImage(src: string) {
     const asset = mediaAssets.find((item) => item.src === src);
-    if (!asset || src === primaryImage) {
+    if (!asset || src === primaryImage || asset.fullSrc === primaryImage) {
       setPendingMediaReplacement(null);
       return;
     }
