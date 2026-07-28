@@ -137,3 +137,15 @@ test("mobile overflow exposes save draft", () => {
   assert.match(styles, /\.studio-more-menu \.studio-mobile-menu-save\{display:none\}/);
   assert.match(styles, /\.studio-more-menu \.studio-mobile-menu-save\{display:grid\}/);
 });
+
+test("mobile overflow exposes Brand Pack and campaign settings", () => {
+  const topbar = read("src/components/adstudio/topbar.tsx");
+  const workbench = read("src/components/adstudio/ad-studio-workbench.tsx");
+
+  assert.match(topbar, /onOpenBrand/);
+  assert.match(topbar, /Brand Pack/);
+  assert.match(topbar, /onOpenSettings/);
+  assert.match(topbar, /Campaign settings/);
+  assert.match(workbench, /onOpenBrand=\{\(\) => goToSection\("brand"\)\}/);
+  assert.match(workbench, /onOpenSettings=\{\(\) => goToSection\("settings"\)\}/);
+});

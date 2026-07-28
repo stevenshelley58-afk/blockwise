@@ -297,6 +297,7 @@ export function AdStudioWorkbench({
   initialMediaCursor = null,
 }: AdStudioWorkbenchProps) {
   const [pack, setPack] = useState(initialPack);
+  const canManageCampaign = pack.creatives.length > 0;
   const searchParams = useSearchParams();
   const openPublishOnLoad = searchParams.get("publish") === "1";
   const visibleBuiltInTemplates = useMemo(() => builtInAdStudioTemplates(), []);
@@ -1074,7 +1075,7 @@ export function AdStudioWorkbench({
           onChangeTargeting={updateCampaignTargeting}
           onChangeLeadForm={updateLeadForm}
           onExport={exportCreatives}
-          onDelete={deleteCampaign}
+          onDelete={canManageCampaign ? deleteCampaign : undefined}
           brandApproved={!brandIsDraft}
           exportStatus={exportStatus}
           onRetryExportFormat={(format) => void retryExportFormat(format)}
@@ -1123,7 +1124,9 @@ export function AdStudioWorkbench({
         showMore={studio.showMore}
         setShowMore={studio.setShowMore}
         onSave={saveDraft}
-        onDelete={deleteCampaign}
+        onDelete={canManageCampaign ? deleteCampaign : undefined}
+        onOpenBrand={() => goToSection("brand")}
+        onOpenSettings={() => goToSection("settings")}
         campaignId={pack.campaign.campaignId}
         showToast={studio.showToast}
       />
@@ -1299,7 +1302,7 @@ export function AdStudioWorkbench({
               onChangeTargeting={updateCampaignTargeting}
               onChangeLeadForm={updateLeadForm}
               onExport={exportCreatives}
-              onDelete={deleteCampaign}
+              onDelete={canManageCampaign ? deleteCampaign : undefined}
               brandApproved={!brandIsDraft}
               exportStatus={exportStatus}
               onRetryExportFormat={(format) => void retryExportFormat(format)}

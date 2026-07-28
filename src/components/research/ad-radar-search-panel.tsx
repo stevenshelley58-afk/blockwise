@@ -1,6 +1,6 @@
 "use client";
 
-import { Bookmark, ChevronDown, Clock3, SlidersHorizontal } from "lucide-react";
+import { Bookmark, ChevronDown, CircleAlert, Clock3, RotateCw, SlidersHorizontal } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
@@ -71,7 +71,9 @@ export function AdRadarSearchPanel({
   const [cards, setCards] = useState<CustomerMetaAdLibraryCard[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const requestRef = useRef<AbortController | null>(null);
 
   function doSearch(
     q: string,
@@ -80,8 +82,12 @@ export function AdRadarSearchPanel({
     activeFilters: Filters = filters,
   ) {
     if (timerRef.current) clearTimeout(timerRef.current);
+    requestRef.current?.abort();
+    const controller = new AbortController();
+    requestRef.current = controller;
+    setLoading(true);
+    setSearchError(null);
     timerRef.current = setTimeout(async () => {
-      setLoading(true);
       try {
         const params = new URLSearchParams({ q });
         if (activeSort !== "recent") params.set("sort", activeSort);
@@ -92,17 +98,33 @@ export function AdRadarSearchPanel({
         if (activeFilters.adType) params.set("adType", activeFilters.adType);
         if (activeFilters.format) params.set("format", activeFilters.format);
         if (activeFilters.hook) params.set("hook", activeFilters.hook);
-        const res = await fetch(`/api/research/ads/search?${params.toString()}`);
-        const data: SearchResponse = res.ok ? await res.json() : { cards: [] };
+        const res = await fetch(`/api/research/ads/search?${params.toString()}`, {
+          signal: controller.signal,
+        });
+        const data = (await res.json().catch(() => ({}))) as SearchResponse;
+        if (!res.ok) throw new Error(searchFailureMessage(res.status));
         const nextCards = data.cards ?? [];
         setCards(nextCards);
         setSearched(true);
+        setSearchError(null);
         // Accumulate agency/agent options across the query session so picking
         // one filter doesn't erase the others from the dropdowns.
         setAgencyOptions((prev) => mergeOptions(prev, nextCards.map((c) => c.agencyName)));
         setAgentOptions((prev) => mergeOptions(prev, nextCards.map((c) => c.agentName)));
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        setCards([]);
+        setSearched(true);
+        setSearchError(
+          error instanceof Error
+            ? error.message
+            : "Ad Radar couldn't load these results. Try the search again.",
+        );
       } finally {
-        setLoading(false);
+        if (requestRef.current === controller) {
+          requestRef.current = null;
+          setLoading(false);
+        }
       }
     }, 300);
   }
@@ -145,6 +167,13 @@ export function AdRadarSearchPanel({
       doSearch(autoSearchTerm, initialSort, initialIncludeSurrounding);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      requestRef.current?.abort();
+    };
   }, []);
 
   const activeFilterCount = useMemo(
@@ -334,7 +363,7 @@ export function AdRadarSearchPanel({
         </div>
       </section>
 
-      {searched ? (
+      {searched && !searchError ? (
         <section className="grid grid-cols-2 gap-3.5 xl:grid-cols-4">
           <StatTile label="Ads in view" value={String(cards.length)} note="Current matching ads" />
           <StatTile label="Advertisers" value={String(advertiserCount)} note="Pages with visible ads" />
@@ -343,7 +372,30 @@ export function AdRadarSearchPanel({
         </section>
       ) : null}
 
-      {searched ? (
+      {searchError ? (
+        <section
+          className="grid gap-3 rounded-(--r-card) border border-error/25 bg-error-soft px-5 py-4 text-error"
+          role="alert"
+          aria-live="assertive"
+        >
+          <div className="flex items-start gap-3">
+            <CircleAlert className="mt-0.5 shrink-0" size={18} aria-hidden />
+            <div className="min-w-0">
+              <h2 className="font-display text-[15.5px] font-extrabold">Ad Radar couldn&apos;t load these results</h2>
+              <p className="mt-1 text-xs leading-5">{searchError} Your search is still here.</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="inline-flex min-h-11 w-fit cursor-pointer items-center gap-2 rounded-full bg-(--ink) px-4 text-[12.5px] font-bold text-white hover:opacity-85"
+            onClick={() => doSearch(query, sort, includeSurrounding, filters)}
+            disabled={loading}
+          >
+            <RotateCw size={14} aria-hidden />
+            {loading ? "Trying again…" : "Try again"}
+          </button>
+        </section>
+      ) : searched ? (
         <section className="grid gap-3.5">
           <div>
             <h2 className="font-display text-[17px] font-extrabold tracking-[-0.015em]">
@@ -418,4 +470,14 @@ function formatDateTime(value: string): string {
 
 function unique(values: string[]): string[] {
   return Array.from(new Set(values));
+}
+
+function searchFailureMessage(status: number): string {
+  if (status === 401 || status === 403) {
+    return "Your Ad Radar access needs to be refreshed. Reload the page, then try again.";
+  }
+  if (status === 429) {
+    return "There are too many searches running right now. Wait a moment, then try again.";
+  }
+  return "The ad search service is temporarily unavailable. Try again in a moment.";
 }

@@ -45,6 +45,48 @@ test("the template gallery uses a two-column grid", () => {
     dialog,
     /\.studio-explore-grid\{display:grid;grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/,
   );
+  assert.match(
+    dialog,
+    /@media\(max-width:560px\)\{[\s\S]*?\.studio-explore-grid\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/,
+  );
+  assert.doesNotMatch(dialog, /\.studio-explore-grid\{grid-template-columns:1fr\}/);
+});
+
+test("listing extraction keeps template choice with the customer", () => {
+  const dialog = readFileSync("src/components/adstudio/new-ad-dialog.tsx", "utf8");
+  const fetchStart = dialog.indexOf("async function fetchListingDetails()");
+  const applyStart = dialog.indexOf("/** Apply extracted listing data", fetchStart);
+  const fetchBlock = dialog.slice(fetchStart, applyStart);
+
+  assert.ok(fetchStart > -1);
+  assert.ok(applyStart > fetchStart);
+  assert.match(fetchBlock, /setListingData\(result\.listing\)/);
+  assert.match(fetchBlock, /setListingBrief\(result\.brief/);
+  assert.match(fetchBlock, /setFilter\("listings"\)/);
+  assert.doesNotMatch(fetchBlock, /chooseTemplate\(/);
+  assert.match(dialog, /Listing details are ready\. Choose the template you want to use\./);
+});
+
+test("the brief comes before AI-generated ad copy", () => {
+  const dialog = readFileSync("src/components/adstudio/new-ad-dialog.tsx", "utf8");
+  const briefPosition = dialog.indexOf("studio-newad-brief-field");
+  const copyPosition = dialog.indexOf('aria-label="Ad copy"', briefPosition);
+
+  assert.ok(briefPosition > -1);
+  assert.ok(copyPosition > briefPosition);
+  assert.match(dialog, /Use the brief above to draft the ad copy/);
+});
+
+test("closing a changed ad asks before discarding it", () => {
+  const dialog = readFileSync("src/components/adstudio/new-ad-dialog.tsx", "utf8");
+
+  assert.match(dialog, /const hasUnsavedProgress = Boolean/);
+  assert.match(dialog, /if \(hasUnsavedProgress\) \{\s*setDiscardConfirmOpen\(true\)/);
+  assert.match(dialog, /<AlertDialog open=\{discardConfirmOpen\}/);
+  assert.match(dialog, /<AlertDialogContent/);
+  assert.match(dialog, /Discard this ad draft\?/);
+  assert.match(dialog, /Keep editing/);
+  assert.match(dialog, /Discard draft/);
 });
 
 test("missing customer inputs are shown together before generation", () => {
