@@ -161,10 +161,10 @@ EMPTY=
   );
 });
 
-test("Vercel release gate blocks deploys on env, test, typecheck, or build failures", () => {
+test("Vercel build command only builds; env, test, and typecheck gates run in CI", () => {
   const vercel = JSON.parse(readFileSync("vercel.json", "utf8")) as { buildCommand?: string };
 
-  assert.equal(vercel.buildCommand, "npm run verify-env && npm run check && npm run build");
+  assert.equal(vercel.buildCommand, "npm run build");
 });
 
 test("Vercel route bundles are loadable by the CommonJS serverless launcher", () => {
