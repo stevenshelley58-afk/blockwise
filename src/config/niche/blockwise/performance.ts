@@ -4,6 +4,7 @@ export const performance: PerformanceCopy = {
   title: "Performance",
   subtitle: "Spend, leads and cost per lead across your live ads.",
   ranges: { d7: "7 days", d30: "30 days", d90: "90 days" },
+  rangesShort: { d7: "7d", d30: "30d", d90: "90d" },
   charts: {
     spend: "Spend over time",
     leads: "Valid leads over time",

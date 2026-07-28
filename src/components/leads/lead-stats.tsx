@@ -25,7 +25,7 @@ export function LeadStats({
   const highIntentPct = total > 0 ? Math.round((highIntent / total) * 100) : 0;
 
   return (
-    <AnimatedGroup className="grid gap-3.5 sm:grid-cols-3" itemClassName="h-full">
+    <AnimatedGroup className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-3.5" itemClassName="h-full">
       <div className="rounded-(--r-card) border border-(--line) bg-card px-[18px] pt-[17px] pb-[15px] shadow-card">
         <span className="font-mono text-[9.5px] font-medium tracking-[0.12em] text-(--faint) uppercase">
           {copy.leads}

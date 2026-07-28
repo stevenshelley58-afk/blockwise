@@ -25,7 +25,7 @@ export function MetaKpiCard(props: {
       <div className="font-mono text-[9.5px] font-medium tracking-[0.12em] text-(--faint) uppercase">
         {props.label}
       </div>
-      <div className="mt-[7px] font-display text-[24px] font-extrabold tracking-[-0.02em] tabular-nums">
+      <div className="mt-[7px] font-display text-[21px] font-extrabold tracking-[-0.02em] tabular-nums sm:text-[24px]">
         {props.value}
       </div>
       <div className="mt-[7px] flex flex-wrap items-center gap-1.5">
@@ -40,7 +40,7 @@ export function MetaKpiCard(props: {
           </span>
         ) : null}
         {props.compareText ? (
-          <span className="text-[10.5px] font-medium text-(--faint)">{props.compareText}</span>
+          <span className="hidden text-[10.5px] font-medium text-(--faint) sm:inline">{props.compareText}</span>
         ) : null}
       </div>
       {props.progress != null ? (

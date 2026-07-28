@@ -313,7 +313,7 @@ export function AdRadarLocationForm({
 
       <p
         id={`${listId}-scope`}
-        className={isLanding ? "lp-search-scope" : "basis-full text-[11.5px] text-(--faint)"}
+        className={isLanding ? "lp-search-scope" : "sr-only"}
       >
         {niche.copy.adRadar.searchScope}
       </p>

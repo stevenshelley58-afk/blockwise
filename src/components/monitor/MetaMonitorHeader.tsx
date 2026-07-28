@@ -104,7 +104,8 @@ export function MetaMonitorHeader(props: {
               aria-pressed={option.value === props.rangeKey}
               onClick={() => props.onRangeChange(option.value)}
             >
-              {copy.ranges[option.key]}
+              <span className="sm:hidden">{copy.rangesShort[option.key]}</span>
+              <span className="hidden sm:inline">{copy.ranges[option.key]}</span>
             </button>
           ))}
 
@@ -113,7 +114,8 @@ export function MetaMonitorHeader(props: {
               className={`${activeMore || isCustom ? chipOn : chipOff} gap-1 outline-none focus-visible:border-(--ink) focus-visible:ring-2 focus-visible:ring-(--ink)/20`}
               aria-label={copy.moreRanges}
             >
-              {isCustom ? "Custom" : (activeMore?.label ?? copy.moreRanges)}
+              <span className="sm:hidden">{isCustom ? "Custom" : (activeMore?.label ?? "More")}</span>
+              <span className="hidden sm:inline">{isCustom ? "Custom" : (activeMore?.label ?? copy.moreRanges)}</span>
               <ChevronDown size={12} aria-hidden />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="min-w-[160px]">

@@ -45,6 +45,7 @@ export const blockwise: NicheConfig = {
       { href: "/self-serve", label: "Home" },
       { href: "/ad-studio", label: "Studio" },
       { href: "/ad-radar", label: "Radar" },
+      { href: "/results", label: "Results" },
       { href: "/leads", label: "Leads" },
     ],
   },

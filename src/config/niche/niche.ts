@@ -157,6 +157,8 @@ export type PerformanceCopy = {
   title: string;
   subtitle: string;
   ranges: { d7: string; d30: string; d90: string };
+  /** Compact labels for the mobile chip row, where the full words do not fit. */
+  rangesShort: { d7: string; d30: string; d90: string };
   charts: { spend: string; leads: string; cpl: string };
   cplGapNote: string;
   leadResults: { title: string; subtitle: string };
@@ -261,7 +263,10 @@ export type NicheConfig = {
   };
   nav: {
     items: NicheNavItem[];
-    /** The four primary mobile tabs (bottom tab bar). */
+    /**
+     * Primary mobile tabs (bottom tab bar). Five maximum — the shell appends a
+     * sixth "More" button, and six 9.5px labels is the limit at 360px.
+     */
     mobileTabs: { href: string; label: string }[];
   };
   features: NicheFeatures;
