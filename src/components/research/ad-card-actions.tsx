@@ -29,22 +29,24 @@ export function AdCardActions({
   libraryId: string | null;
 }) {
   const [status, setStatus] = useState<ActionStatus>("idle");
+  const [errorMessage, setErrorMessage] = useState("");
   const sourceUrl = libraryId ? `https://www.facebook.com/ads/library/?id=${encodeURIComponent(libraryId)}` : null;
   const canSave = isUuid(observedAdId);
 
   async function saveAd() {
     if (!canSave) return;
     setStatus("saving");
+    setErrorMessage("");
     try {
       const response = await fetch("/api/research/swipe-file", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ observedAdId }),
       });
-      const body = await response.json();
-      if (!response.ok) throw new Error(body.error || "Could not save ad.");
+      if (!response.ok) throw new Error(saveFailureMessage(response.status));
       setStatus("saved");
-    } catch {
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Could not save this ad. Try again.");
       setStatus("error");
     }
   }
@@ -71,21 +73,24 @@ export function AdCardActions({
         className={actionClass}
         type="button"
         onClick={saveAd}
-        disabled={!canSave || status === "saving"}
+        disabled={!canSave || status === "saving" || status === "saved"}
       >
-        <Bookmark size={14} aria-hidden /> {status === "saved" ? "Saved" : "Save"}
+        <Bookmark size={14} aria-hidden />{" "}
+        {status === "saved" ? "Saved" : status === "error" ? "Try saving again" : "Save"}
       </Button>
       <span
+        role="status"
+        aria-live="polite"
         className={`col-span-2 min-h-[18px] text-[11.5px] font-semibold sm:col-auto ${
           status === "error" ? "text-error" : "text-muted-foreground"
         }`}
       >
         {status === "saving"
-          ? "Saving"
+          ? "Saving…"
           : status === "error"
-            ? "Action failed"
+            ? errorMessage
             : !canSave
-              ? "Unavailable"
+              ? "This ad cannot be saved yet."
               : ""}
       </span>
     </div>
@@ -94,4 +99,10 @@ export function AdCardActions({
 
 function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(value);
+}
+
+function saveFailureMessage(status: number): string {
+  if (status === 401 || status === 403) return "Reload the page, then try saving again.";
+  if (status === 404) return "This ad is no longer available to save.";
+  return "Could not save this ad. Try again.";
 }

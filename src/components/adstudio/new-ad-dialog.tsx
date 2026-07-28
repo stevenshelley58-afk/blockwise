@@ -5,6 +5,17 @@ import type { FocusEvent, RefObject } from "react";
 import { AlertTriangle, ArrowLeft, ArrowUpRight, Image as ImageIcon, Link, Loader2, X } from "lucide-react";
 
 import { AssetUploadDropzone } from "@/components/asset-upload-dropzone";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import type { AdStudioBrandKit, AdStudioTemplate, FirstAdInput } from "@/lib/adstudio";
 import { resolveAdvertiserDomain } from "@/lib/adstudio/advertiser-domain";
 import type { ListingData } from "@/lib/adstudio/listing-extract";
@@ -587,6 +598,8 @@ export function NewAdDialog({
   const [listingLoading, setListingLoading] = useState(false);
   const [listingError, setListingError] = useState("");
   const [listingData, setListingData] = useState<ListingData | null>(null);
+  const [listingBrief, setListingBrief] = useState("");
+  const [listingPhotos, setListingPhotos] = useState<string[]>([]);
   // Nothing can be created until the customer chooses the sample to clone.
   const [templateId, setTemplateId] = useState<string | undefined>(undefined);
   const [description, setDescription] = useState("");
@@ -620,6 +633,7 @@ export function NewAdDialog({
   const [activeZone, setActiveZone] = useState<PreviewZoneKey | null>(null);
   const [peekCollapsed, setPeekCollapsed] = useState(false);
   const [isMobileLayout, setIsMobileLayout] = useState(false);
+  const [discardConfirmOpen, setDiscardConfirmOpen] = useState(false);
   const reducedMotion = usePrefersReducedMotion();
   const zoneMap = usePreviewZoneMap(dialogRef);
 
@@ -655,6 +669,10 @@ export function NewAdDialog({
   const customerCopyFields = useMemo(
     () => customerCopyFieldsForTemplate(selectedTemplate),
     [selectedTemplate],
+  );
+  const defaultOnImageCopy = useMemo(
+    () => brandTextDefaultsForTemplate(selectedTemplate, brandKit),
+    [brandKit, selectedTemplate],
   );
   const primaryImageSlot = imageRequirements.find((slot) => slot.required) ?? imageRequirements[0] ?? DEFAULT_IMAGE_SLOT;
   const activeImageSlot = imageRequirements.find((slot) => slot.id === activeImageSlotId) ?? primaryImageSlot;
@@ -699,16 +717,40 @@ export function NewAdDialog({
   const footerAlertTitle = visibleRequirementBlockers.length > 0
     ? "Add the missing details before generating"
     : "We couldn't create this ad";
+  const hasUnsavedProgress = Boolean(
+    listingUrl.trim() ||
+      listingData ||
+      (templateId && templateId !== initialTemplateId) ||
+      description.trim() ||
+      Object.keys(imageDataUrlsBySlot).length > 0 ||
+      Object.values(feedCopy).some((value) => value.trim()) ||
+      customerCopyFields.some(
+        (field) => (onImageCopy[field.key] ?? "") !== (defaultOnImageCopy[field.key] ?? ""),
+      ),
+  );
 
   const closeCurrentView = useCallback(() => {
+    if (discardConfirmOpen) {
+      setDiscardConfirmOpen(false);
+      return;
+    }
     if (step === "brief" && mediaSourceMode !== "details") {
       setMediaSourceMode("details");
       setError("");
       setShowRequirementsAlert(false);
       return;
     }
+    if (hasUnsavedProgress) {
+      setDiscardConfirmOpen(true);
+      return;
+    }
     onClose();
-  }, [mediaSourceMode, onClose, step]);
+  }, [discardConfirmOpen, hasUnsavedProgress, mediaSourceMode, onClose, step]);
+
+  function discardAndClose() {
+    setDiscardConfirmOpen(false);
+    onClose();
+  }
 
   useEffect(() => {
     if (!open) return;
@@ -727,6 +769,8 @@ export function NewAdDialog({
     setListingLoading(false);
     setListingError("");
     setListingData(null);
+    setListingBrief("");
+    setListingPhotos([]);
     // The customer supplies every declared image and text field. The selected
     // sample is only the visual anchor sent to the image model.
     setImageDataUrlsBySlot({});
@@ -741,6 +785,7 @@ export function NewAdDialog({
     setUploadingImage(false);
     setActiveZone(null);
     setPeekCollapsed(false);
+    setDiscardConfirmOpen(false);
     window.setTimeout(() => dialogRef.current?.focus(), 0);
   }, [open, initialTemplateId]);
 
@@ -834,7 +879,7 @@ export function NewAdDialog({
     setStep("brief");
     // Auto-fill from listing data if available
     if (listingData) {
-      applyListingData(listingData, template);
+      applyListingData(listingData, template, listingBrief, listingPhotos);
     }
   }
 
@@ -863,13 +908,11 @@ export function NewAdDialog({
         return;
       }
       setListingData(result.listing);
-      // Auto-select a listings template and advance
-      const listingTemplate = templates.find((t) => templateCategory(t.goal) === "listings") ?? templates[0];
-      if (listingTemplate) {
-        chooseTemplate(listingTemplate.id);
-        // Apply listing data to the chosen template
-        applyListingData(result.listing, listingTemplate, result.brief, result.photos);
-      }
+      setListingBrief(result.brief ?? "");
+      setListingPhotos(result.photos ?? result.listing.photos);
+      // Keep template choice with the customer. The extracted listing is
+      // applied only after they choose the sample they actually want to clone.
+      setFilter("listings");
     } catch {
       setListingError("Could not reach the listing service. Try again in a moment.");
     } finally {
@@ -1245,13 +1288,27 @@ export function NewAdDialog({
                 {listingData ? (
                   <span className="newad-url-chip">
                     <span>{listingData.address || listingData.suburb}{listingData.bedrooms != null ? ` · ${listingData.bedrooms} bed` : ""}{listingData.price ? ` · ${listingData.price}` : ""}</span>
-                    <button type="button" aria-label="Clear listing data" onClick={() => { setListingData(null); setListingUrl(""); setListingError(""); }}>
+                    <button
+                      type="button"
+                      aria-label="Clear listing data"
+                      onClick={() => {
+                        setListingData(null);
+                        setListingBrief("");
+                        setListingPhotos([]);
+                        setListingUrl("");
+                        setListingError("");
+                      }}
+                    >
                       <X aria-hidden size={13} />
                     </button>
                   </span>
                 ) : null}
               </div>
-              <p className="studio-explore-intro">Choose a template. The next step asks only for the images and exact text it requires.</p>
+              <p className="studio-explore-intro" role={listingData ? "status" : undefined}>
+                {listingData
+                  ? "Listing details are ready. Choose the template you want to use."
+                  : "Choose a template. The next step asks only for the images and exact text it requires."}
+              </p>
               <div className="studio-explore-filterbar">
                 <label className="studio-explore-filter">
                   <span>Category</span>
@@ -1376,6 +1433,28 @@ export function NewAdDialog({
                   </div>
                 </section>
               )}
+              <div className="studio-newad-field studio-newad-brief-field">
+                <div className="studio-newad-field-head">
+                  <label htmlFor={descriptionInputId}>{briefGuidance.fieldLabel}</label>
+                  <button type="button" onClick={useBriefExample}>Use example brief</button>
+                </div>
+                <textarea
+                  id={descriptionInputId}
+                  ref={descriptionRef}
+                  value={description}
+                  maxLength={500}
+                  rows={5}
+                  aria-invalid={hasDescriptionRequirement ? true : undefined}
+                  aria-describedby={hasDescriptionRequirement ? requirementsAlertId : undefined}
+                  onChange={(event) => {
+                    setShowRequirementsAlert(false);
+                    setDescription(event.target.value);
+                  }}
+                  placeholder={briefGuidance.placeholder}
+                />
+                <small className="studio-newad-field-help">{briefGuidance.helperText}</small>
+                <small className="studio-newad-field-count">{description.length}/500</small>
+              </div>
               <section className="studio-newad-copyfields" aria-label="Ad copy">
                 <div className="studio-newad-copyfields-head">
                   <span>
@@ -1403,7 +1482,7 @@ export function NewAdDialog({
                 </div>
                 {copyMode === "ai" && (
                   <div className="studio-newad-ai-copy">
-                    <p className="studio-newad-ai-hint">Write your brief above, then let AI draft the ad copy. You can still edit every field afterwards.</p>
+                    <p className="studio-newad-ai-hint">Use the brief above to draft the ad copy. You can still edit every field afterwards.</p>
                     <button
                       type="button"
                       className="studio-btn accent"
@@ -1461,28 +1540,6 @@ export function NewAdDialog({
                   })}
                 </div>
               </section>
-              <div className="studio-newad-field studio-newad-brief-field">
-                <div className="studio-newad-field-head">
-                  <label htmlFor={descriptionInputId}>{briefGuidance.fieldLabel}</label>
-                  <button type="button" onClick={useBriefExample}>Use example brief</button>
-                </div>
-                <textarea
-                  id={descriptionInputId}
-                  ref={descriptionRef}
-                  value={description}
-                  maxLength={500}
-                  rows={5}
-                  aria-invalid={hasDescriptionRequirement ? true : undefined}
-                  aria-describedby={hasDescriptionRequirement ? requirementsAlertId : undefined}
-                  onChange={(event) => {
-                    setShowRequirementsAlert(false);
-                    setDescription(event.target.value);
-                  }}
-                  placeholder={briefGuidance.placeholder}
-                />
-                <small className="studio-newad-field-help">{briefGuidance.helperText}</small>
-                <small className="studio-newad-field-count">{description.length}/500</small>
-              </div>
               <fieldset className="studio-newad-quality">
                 <legend>Generation quality</legend>
                 <div className="studio-newad-quality-options">
@@ -1605,6 +1662,29 @@ export function NewAdDialog({
             )}
           </div>
         )}
+        <AlertDialog open={discardConfirmOpen} onOpenChange={setDiscardConfirmOpen}>
+          <AlertDialogContent
+            size="sm"
+            overlayClassName="z-[250]"
+            className="z-[260] border-(--line) bg-white text-(--ink)"
+          >
+            <AlertDialogHeader>
+              <AlertDialogMedia className="bg-warning-soft text-warning">
+                <AlertTriangle aria-hidden />
+              </AlertDialogMedia>
+              <AlertDialogTitle>Discard this ad draft?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Your selected template, listing details, images and copy will be removed.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Keep editing</AlertDialogCancel>
+              <AlertDialogAction variant="destructive" onClick={discardAndClose}>
+                Discard draft
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );
@@ -1855,9 +1935,16 @@ button.studio-explore-card{padding:0;cursor:pointer}
   .studio-explore-filterbar{gap:8px}
   .studio-explore-filter{flex:1}
   .studio-explore-filter select{min-width:0;width:100%}
-  .studio-explore-grid{grid-template-columns:1fr}
-  .studio-explore-thumb{height:220px}
-  .studio-explore-thumb--sample{height:320px}
+  .studio-explore-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .studio-explore-card-head{padding:9px 9px 8px}
+  .studio-explore-card-head strong{font-size:12.5px}
+  .studio-explore-card-action{padding:10px 9px;font-size:12px}
+  .studio-template-feed-head{padding-inline:8px}
+  .studio-template-feed-primary{padding-inline:8px}
+  .studio-template-feed-link{padding-inline:8px}
+  .studio-template-feed-cta{padding-inline:7px;font-size:10.5px}
+  .studio-explore-thumb{height:180px}
+  .studio-explore-thumb--sample{height:240px}
   .studio-newad-library-grid{grid-template-columns:1fr}
   .studio-newad-copyfields-head,.studio-newad-field-head{align-items:stretch;flex-direction:column}
   .studio-newad-copyfields-head button{width:100%;white-space:normal}

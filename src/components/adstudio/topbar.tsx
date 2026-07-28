@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { Archive, Cloud, MoreHorizontal, Share2, Trash2 } from "lucide-react";
+import { Archive, Cloud, MoreHorizontal, Palette, Settings2, Share2, Trash2 } from "lucide-react";
 
 import { BlockwiseLogo } from "@/components/blockwise-logo";
 
@@ -14,6 +14,8 @@ type TopBarProps = {
   setShowMore: (value: boolean | ((prev: boolean) => boolean)) => void;
   onSave: () => void | Promise<unknown>;
   onDelete?: () => void;
+  onOpenBrand?: () => void;
+  onOpenSettings?: () => void;
   showToast?: (message: string) => void;
 };
 
@@ -25,6 +27,8 @@ export function TopBar({
   setShowMore,
   onSave,
   onDelete,
+  onOpenBrand,
+  onOpenSettings,
   showToast = () => {},
 }: TopBarProps) {
   const menuRef = useRef<HTMLDivElement>(null);
@@ -182,23 +186,53 @@ export function TopBar({
             <Share2 aria-hidden size={16} />
             Copy link
           </button>
-          <span className="studio-menu-line" />
-          <button type="button" role="menuitem" onClick={handleArchive}>
-            <Archive aria-hidden size={16} />
-            Archive campaign
-          </button>
-          <button
-            className="danger"
-            type="button"
-            role="menuitem"
-            onClick={() => {
-              setShowMore(false);
-              onDelete?.();
-            }}
-          >
-            <Trash2 aria-hidden size={16} />
-            Delete campaign
-          </button>
+          {onOpenBrand && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setShowMore(false);
+                onOpenBrand();
+              }}
+            >
+              <Palette aria-hidden size={16} />
+              Brand Pack
+            </button>
+          )}
+          {onOpenSettings && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setShowMore(false);
+                onOpenSettings();
+              }}
+            >
+              <Settings2 aria-hidden size={16} />
+              Campaign settings
+            </button>
+          )}
+          {onDelete && campaignId && <span className="studio-menu-line" />}
+          {onDelete && campaignId && (
+            <button type="button" role="menuitem" onClick={handleArchive}>
+              <Archive aria-hidden size={16} />
+              Archive campaign
+            </button>
+          )}
+          {onDelete && campaignId && (
+            <button
+              className="danger"
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setShowMore(false);
+                onDelete();
+              }}
+            >
+              <Trash2 aria-hidden size={16} />
+              Delete campaign
+            </button>
+          )}
         </div>
       )}
     </header>

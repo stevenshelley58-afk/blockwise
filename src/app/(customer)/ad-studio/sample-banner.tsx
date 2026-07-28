@@ -19,10 +19,10 @@ export function SampleBanner() {
         justifyContent: "space-between",
         gap: "12px",
         padding: "10px 16px",
-        background: "#FDF8EE",
-        borderBottom: "1px solid #F0E2BD",
+        background: "var(--ui-warning-soft)",
+        borderBottom: "1px solid color-mix(in srgb, var(--ui-warning) 24%, transparent)",
         fontSize: "14px",
-        color: "#8A5A00",
+        color: "var(--ui-warning)",
         lineHeight: 1.4,
       }}
       role="status"
@@ -36,7 +36,7 @@ export function SampleBanner() {
         href="/onboarding"
         style={{
           fontWeight: 700,
-          color: "#8A5A00",
+          color: "var(--ui-warning)",
           textDecoration: "underline",
           flexShrink: 0,
         }}
