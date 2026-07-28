@@ -99,7 +99,7 @@ create index customer_ad_radar_cards_last_seen_idx
 create index customer_ad_radar_cards_started_idx
   on public.customer_ad_radar_cards (ad_delivery_started_at asc nulls last);
 create index customer_ad_radar_cards_page_name_idx
-  on public.customer_ad_radar_cards using gin (page_name gin_trgm_ops);
+  on public.customer_ad_radar_cards using gin (page_name extensions.gin_trgm_ops);
 create index customer_ad_radar_cards_postcodes_idx
   on public.customer_ad_radar_cards using gin (postcodes);
 create index customer_ad_radar_cards_ad_area_postcodes_idx
