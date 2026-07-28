@@ -1,6 +1,6 @@
 {
   "framework": "nextjs",
-  "buildCommand": "npm run build",
+  "buildCommand": "npm run verify-env && npm run build",
   "installCommand": "npm install",
   "regions": ["syd1"],
   "crons": [
