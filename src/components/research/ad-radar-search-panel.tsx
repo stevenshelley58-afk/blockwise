@@ -43,11 +43,24 @@ type Props = {
   initialIncludeSurrounding: boolean;
   initialLocationLabel: string;
   initialNote: string;
+  /** Search fired on mount when the visitor did not type a query. */
+  autoSearchTerm?: string | null;
+  autoSearchLabel?: string | null;
+  autoSearchSource?: "brand_pack" | "location" | null;
 };
 
 type SearchResponse = { cards?: CustomerMetaAdLibraryCard[]; error?: string };
 
-export function AdRadarSearchPanel({ initialQuery, initialSort, initialIncludeSurrounding, initialLocationLabel, initialNote }: Props) {
+export function AdRadarSearchPanel({
+  initialQuery,
+  initialSort,
+  initialIncludeSurrounding,
+  initialLocationLabel,
+  initialNote,
+  autoSearchTerm = null,
+  autoSearchLabel = null,
+  autoSearchSource = null,
+}: Props) {
   const [query, setQuery] = useState(initialQuery);
   const [sort, setSort] = useState<ResearchSort>(initialSort);
   const [includeSurrounding, setIncludeSurrounding] = useState(initialIncludeSurrounding);
@@ -125,7 +138,12 @@ export function AdRadarSearchPanel({ initialQuery, initialSort, initialIncludeSu
   }
 
   useEffect(() => {
-    if (initialQuery) doSearch(initialQuery, initialSort, initialIncludeSurrounding);
+    if (initialQuery) {
+      doSearch(initialQuery, initialSort, initialIncludeSurrounding);
+    } else if (autoSearchTerm) {
+      // Lazy first paint: the panel renders immediately, results stream in.
+      doSearch(autoSearchTerm, initialSort, initialIncludeSurrounding);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -154,7 +172,7 @@ export function AdRadarSearchPanel({ initialQuery, initialSort, initialIncludeSu
         <AdRadarLocationForm
           buttonLabel={loading ? "Searching..." : "Search"}
           initialNote={initialNote}
-          initialValue={initialQuery || initialLocationLabel}
+          initialValue={initialQuery}
           inputLabel="Search Ad Radar"
           isSubmitting={loading}
           onSearch={onSearch}
@@ -167,45 +185,64 @@ export function AdRadarSearchPanel({ initialQuery, initialSort, initialIncludeSu
           <span className="text-[12.5px] font-bold text-foreground">{niche.copy.adRadar.includeSurrounding}</span>
         </label>
 
-        <div className="flex flex-wrap items-center gap-2.5 border-t border-(--line) pt-4">
-          <button
-            type="button"
-            aria-expanded={filtersOpen}
-            onClick={() => setFiltersOpen((open) => !open)}
-            className={ghostButtonClass}
-          >
-            <SlidersHorizontal size={15} aria-hidden />
-            Filters
-            {activeFilterCount > 0 ? (
-              <span className="inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-(--ink) px-1 text-[11px] font-bold text-white">
-                {activeFilterCount}
-              </span>
-            ) : null}
-            <ChevronDown
-              size={14}
-              aria-hidden
-              className={`text-(--faint) transition-transform duration-150 ${filtersOpen ? "rotate-180" : ""}`}
-            />
-          </button>
+        {/* Two rows at mobile: actions + freshness, then a full-width sort
+            segment. At >=640px both collapse back onto one line. */}
+        <div className="grid gap-2.5 border-t border-(--line) pt-4 sm:grid-cols-[auto_1fr] sm:items-center">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <button
+              type="button"
+              aria-expanded={filtersOpen}
+              onClick={() => setFiltersOpen((open) => !open)}
+              className={ghostButtonClass}
+            >
+              <SlidersHorizontal size={15} aria-hidden />
+              Filters
+              {activeFilterCount > 0 ? (
+                <span className="inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-(--ink) px-1 text-[11px] font-bold text-white">
+                  {activeFilterCount}
+                </span>
+              ) : null}
+              <ChevronDown
+                size={14}
+                aria-hidden
+                className={`text-(--faint) transition-transform duration-150 ${filtersOpen ? "rotate-180" : ""}`}
+              />
+            </button>
 
-          <div className="ml-auto flex flex-wrap items-center gap-2.5">
             <Link href="/ad-radar/swipe-file" className={ghostButtonClass}>
               <Bookmark size={13} aria-hidden />
               Swipe file
             </Link>
-            <span className="text-[11.5px] font-bold text-(--faint)">Sort</span>
-            <div
-              role="group"
-              aria-label="Sort ads"
-              className="inline-flex items-center rounded-full border border-(--line) bg-(--surface) p-0.5"
+
+            <span className="ml-auto flex min-w-0 items-center gap-1.5 text-[11.5px] text-(--faint) sm:hidden">
+              <Clock3 size={13} aria-hidden className="shrink-0" />
+              <span className="truncate">
+                {newestSeenAt ? `Last seen ${formatDateTime(newestSeenAt)}` : "No live observations yet"}
+              </span>
+            </span>
+          </div>
+
+          <div
+            role="group"
+            aria-label="Sort ads"
+            className="flex w-full items-center rounded-full border border-(--line) bg-(--surface) p-0.5 sm:ml-auto sm:w-auto"
+          >
+            <button
+              type="button"
+              aria-pressed={sort === "recent"}
+              onClick={() => onChangeSort("recent")}
+              className={`${sortChipClass(sort === "recent")} flex-1 sm:flex-none`}
             >
-              <button type="button" aria-pressed={sort === "recent"} onClick={() => onChangeSort("recent")} className={sortChipClass(sort === "recent")}>
-                Most recent
-              </button>
-              <button type="button" aria-pressed={sort === "longest"} onClick={() => onChangeSort("longest")} className={sortChipClass(sort === "longest")}>
-                Longest running
-              </button>
-            </div>
+              Most recent
+            </button>
+            <button
+              type="button"
+              aria-pressed={sort === "longest"}
+              onClick={() => onChangeSort("longest")}
+              className={`${sortChipClass(sort === "longest")} flex-1 sm:flex-none`}
+            >
+              Longest running
+            </button>
           </div>
         </div>
 
@@ -290,7 +327,8 @@ export function AdRadarSearchPanel({ initialQuery, initialSort, initialIncludeSu
           </div>
         ) : null}
 
-        <div className="flex items-center gap-1.5 text-[11.5px] text-(--faint)">
+        {/* Mobile shows this inline in the actions row above. */}
+        <div className="hidden items-center gap-1.5 text-[11.5px] text-(--faint) sm:flex">
           <Clock3 size={13} aria-hidden />
           {newestSeenAt ? `Last seen ${formatDateTime(newestSeenAt)}` : "No live observations yet"}
         </div>
@@ -309,9 +347,10 @@ export function AdRadarSearchPanel({ initialQuery, initialSort, initialIncludeSu
         <section className="grid gap-3.5">
           <div>
             <h2 className="font-display text-[17px] font-extrabold tracking-[-0.015em]">
-              {query ? `Results for "${query}"` : `Ads near ${initialLocationLabel}`}
+              {query ? `Results for "${query}"` : `Ads near ${autoSearchLabel ?? initialLocationLabel}`}
             </h2>
             <p className="mt-0.5 text-xs text-muted-foreground">
+              {!query && autoSearchSource === "brand_pack" ? "From your Brand Pack address. " : null}
               {cards.length} ad{cards.length === 1 ? "" : "s"} across {advertiserCount} advertiser page
               {advertiserCount === 1 ? "" : "s"}
               {activeFilterCount > 0 ? ` · ${activeFilterCount} filter${activeFilterCount === 1 ? "" : "s"} applied` : ""}.
