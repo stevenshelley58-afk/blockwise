@@ -274,7 +274,7 @@ export function SelfServeShell({
   );
 }
 
-// Mobile navigation for the self-serve shell: the four primary tabs from the
+// Mobile navigation for the self-serve shell: the five primary tabs from the
 // niche config (bottom tab bar, mockup pattern) plus a "More" sheet for the
 // remaining destinations. Hidden inside Ad Studio, which renders its own
 // studio navigation.
@@ -302,7 +302,7 @@ function SelfServeMobileNav({ account }: { account: Account }) {
     <>
       <nav
         aria-label="Primary mobile navigation"
-        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 gap-1 border-t border-border bg-card/95 px-2.5 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] backdrop-blur-2xl md:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-6 gap-0.5 border-t border-border bg-card/95 px-1.5 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] backdrop-blur-2xl md:hidden"
       >
         {tabItems.map((item) => {
           const Icon = selfServeIcons[item.href];
@@ -315,11 +315,11 @@ function SelfServeMobileNav({ account }: { account: Account }) {
               aria-current={active ? "page" : undefined}
               style={{ transitionTimingFunction: cssSpring }}
               className={cn(
-                "grid min-h-12 min-w-0 place-items-center gap-[3px] rounded-xl px-0.5 py-1 text-[10.5px] leading-[1.1] font-bold transition-[color,transform,background-color] duration-150 active:scale-[0.94] motion-reduce:transition-none",
+                "grid min-h-12 min-w-0 place-items-center gap-[3px] rounded-xl px-0.5 py-1 text-[9.5px] leading-[1.1] font-bold transition-[color,transform,background-color] duration-150 active:scale-[0.94] motion-reduce:transition-none",
                 active ? "bg-(--accent-tint) text-foreground" : "text-(--faint)",
               )}
             >
-              {Icon ? <Icon aria-hidden size={21} /> : null}
+              {Icon ? <Icon aria-hidden size={19} /> : null}
               <span className="max-w-full truncate">{tab?.label ?? item.label}</span>
             </Link>
           );
@@ -330,11 +330,11 @@ function SelfServeMobileNav({ account }: { account: Account }) {
           aria-expanded={moreOpen}
           style={{ transitionTimingFunction: cssSpring }}
           className={cn(
-            "grid min-h-12 min-w-0 cursor-pointer place-items-center gap-[3px] rounded-xl border-0 bg-transparent px-0.5 py-1 text-[10.5px] leading-[1.1] font-bold transition-[color,transform,background-color] duration-150 active:scale-[0.94] motion-reduce:transition-none",
+            "grid min-h-12 min-w-0 cursor-pointer place-items-center gap-[3px] rounded-xl border-0 bg-transparent px-0.5 py-1 text-[9.5px] leading-[1.1] font-bold transition-[color,transform,background-color] duration-150 active:scale-[0.94] motion-reduce:transition-none",
             moreOpen ? "bg-(--accent-tint) text-foreground" : "text-(--faint)",
           )}
         >
-          <MoreHorizontal aria-hidden size={22} />
+          <MoreHorizontal aria-hidden size={20} />
           <span>{copy.more}</span>
         </button>
       </nav>
