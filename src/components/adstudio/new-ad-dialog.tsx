@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import type { AdStudioBrandKit, AdStudioTemplate, FirstAdInput } from "@/lib/adstudio";
 import { resolveAdvertiserDomain } from "@/lib/adstudio/advertiser-domain";
+import { isAdStudioImageSrc, isTransientImagePreview } from "@/lib/adstudio/image-src.ts";
 import type { ListingData } from "@/lib/adstudio/listing-extract";
 import { mapListingToOnImageCopy } from "@/lib/adstudio/listing-extract";
 import { templatePreviewDataUrl } from "@/lib/adstudio/template-preview.ts";
@@ -44,7 +45,14 @@ type TemplateFilter = "all" | "listings" | "appraisals" | "market" | "sold";
 type MediaSourceMode = "details" | "library";
 type GenerationQuality = NonNullable<FirstAdInput["generationQuality"]>;
 type ImageLibraryAsset = {
+  /** Signed/downscaled URL used for the grid thumbnail. */
   src: string;
+  /**
+   * The source actually sent to the generator when this asset is picked. For a
+   * stored asset that is the durable `/api/adstudio/media?path=` proxy, not the
+   * expiring 640px render behind `src` — see `library-read-model.ts`.
+   */
+  fullSrc: string;
   label: string;
   type?: string;
   ratio?: string;
@@ -691,6 +699,20 @@ export function NewAdDialog({
       .map((slot) => slot.label),
     [imageDataUrls, imageRequirements],
   );
+  // A slot can be filled and still hold a source the generator cannot use. The
+  // server enforces the same contract, so catching it here keeps the customer
+  // in the dialog with a slot-specific message instead of a generic failure.
+  // An in-flight upload's blob: preview is excluded — `uploadingImage` already
+  // explains that one, and it resolves itself.
+  const unusableImageLabels = useMemo(
+    () => imageRequirements
+      .filter((slot) => {
+        const src = imageDataUrls[slot.id];
+        return Boolean(src) && !isTransientImagePreview(src) && !isAdStudioImageSrc(src);
+      })
+      .map((slot) => slot.label),
+    [imageDataUrls, imageRequirements],
+  );
   const missingCopyLabels = useMemo(
     () => customerCopyFields.filter((field) => field.required && !onImageCopy[field.key]?.trim()).map((field) => field.label),
     [customerCopyFields, onImageCopy],
@@ -698,6 +720,7 @@ export function NewAdDialog({
   const requirementBlockers = buildRequirementBlockers({
     description,
     missingImageLabels,
+    unusableImageLabels,
     missingCopyLabels,
     uploadingImage,
   });
@@ -942,6 +965,9 @@ export function NewAdDialog({
       for (let i = 1; i < photoUrls.length; i++) {
         rememberLibraryAsset({
           src: photoUrls[i],
+          // Portal photos are referenced where they are hosted; there is no
+          // downscaled variant to distinguish.
+          fullSrc: photoUrls[i],
           label: `${data.address || "Listing"} photo ${i + 1}`,
           type: "Listing",
           role: "property",
@@ -994,7 +1020,14 @@ export function NewAdDialog({
       // Blob preview served its purpose; swap to the real URL and release it.
       revokeSlotPreview(slotId);
       setSlotImage(slotId, uploaded.src, file.name);
-      rememberLibraryAsset({ src: uploaded.src, label: file.name, type: "Uploaded", ratio: "Just now", role: "property" });
+      rememberLibraryAsset({
+        src: uploaded.src,
+        fullSrc: uploaded.src,
+        label: file.name,
+        type: "Uploaded",
+        ratio: "Just now",
+        role: "property",
+      });
       setError("");
     } catch (caught) {
       revokeSlotPreview(slotId);
@@ -1035,7 +1068,7 @@ export function NewAdDialog({
   }
 
   function selectLibraryImage(asset: ImageLibraryAsset) {
-    setSlotImage(activeImageSlot.id, asset.src, asset.label);
+    setSlotImage(activeImageSlot.id, asset.fullSrc, asset.label);
     setMediaSourceMode("details");
     setError("");
   }
@@ -1139,7 +1172,13 @@ export function NewAdDialog({
 
   async function submit() {
     const trimmed = description.trim();
-    const blockers = buildRequirementBlockers({ description, missingImageLabels, missingCopyLabels, uploadingImage });
+    const blockers = buildRequirementBlockers({
+      description,
+      missingImageLabels,
+      unusableImageLabels,
+      missingCopyLabels,
+      uploadingImage,
+    });
     if (blockers.length > 0) {
       setShowRequirementsAlert(true);
       setError("");
@@ -1719,6 +1758,7 @@ function formatTrialCreditNote(status: TrialStatus | null): string {
 function buildRequirementBlockers(input: {
   description: string;
   missingImageLabels: string[];
+  unusableImageLabels?: string[];
   missingCopyLabels?: string[];
   uploadingImage: boolean;
 }): RequirementBlocker[] {
@@ -1752,6 +1792,17 @@ function buildRequirementBlockers(input: {
         input.missingImageLabels.length === 1
           ? `Add ${input.missingImageLabels[0]} before generating the ad. Upload a file or choose one from your library.`
           : `Add the required images before generating the ad: ${input.missingImageLabels.join(", ")}.`,
+    });
+  }
+
+  if (input.unusableImageLabels && input.unusableImageLabels.length > 0) {
+    blockers.push({
+      id: "unusable_image",
+      target: "images",
+      message:
+        input.unusableImageLabels.length === 1
+          ? `Blockwise can't read the image you picked for ${input.unusableImageLabels[0]}. Upload it again or choose another one from your library.`
+          : `Blockwise can't read the images you picked for ${input.unusableImageLabels.join(", ")}. Upload them again or choose others from your library.`,
     });
   }
 
