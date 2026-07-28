@@ -179,6 +179,8 @@ export async function AppShell({ children, requiredAccess = "authenticated" }: A
   if (variant === "self_serve") {
     return (
       <SelfServeShell
+        userId={claims.sub}
+        workspaceId={workspace?.id ?? ""}
         workspaceName={workspaceName}
         workspaceRegion={workspace?.region ?? "AU"}
         account={{

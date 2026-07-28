@@ -1,5 +1,6 @@
 import type { AdStudioFormat, AdStudioGoal, MetaLeadAdPack } from "./types.ts";
 import { RAW_ADSTUDIO_GALLERY_TEMPLATES } from "./template-gallery/index.ts";
+import { templateDisplaySrc } from "./template-display.ts";
 
 export type AdStudioTemplateImageInput = {
   key: string;
@@ -92,7 +93,13 @@ export function isBuiltInAdStudioTemplate(templateId: string | undefined): boole
 }
 
 export function builtInAdStudioTemplates(): AdStudioTemplate[] {
-  return [...AD_STUDIO_TEMPLATES];
+  return AD_STUDIO_TEMPLATES.map((template) => ({
+    ...template,
+    sample: {
+      ...template.sample,
+      thumbnailSrc: templateDisplaySrc(template, "640"),
+    },
+  }));
 }
 
 export function resolvableAdStudioTemplates(): AdStudioTemplate[] {

@@ -225,7 +225,7 @@ function Stage({ item, muted }: { item: CreativeViewerItem; muted: boolean }) {
         loop
         muted={muted}
         playsInline
-        preload="metadata"
+        preload="none"
       />
     );
   }

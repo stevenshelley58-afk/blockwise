@@ -50,13 +50,9 @@ import { COPY_LIMITS, seedCopy, toMetaCta, useCopy } from "./use-copy";
 import { MEDIA_ASSETS, useMedia } from "./use-media";
 import { useReadiness } from "./use-readiness";
 
-import { BrandPanel } from "./panels/brand-panel";
 import { CopyPanel } from "./panels/copy-panel";
 import { MediaPanel } from "./panels/media-panel";
-import { PublishSetupPanel } from "./panels/publish-panel";
-import { SettingsPanel } from "./panels/settings-panel";
 import { PanelHeader } from "./inspector";
-import { NewAdDialog } from "./new-ad-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -157,6 +153,22 @@ function PreviewFit({ children, enabled }: { children: ReactNode; enabled: boole
 const InPlaceAdEditor = dynamic(
   () => import("./canvas/in-place-ad-editor").then((mod) => mod.InPlaceAdEditor),
   { ssr: false, loading: () => <div className="studio-editor-loading">Loading editor...</div> },
+);
+const BrandPanel = dynamic(
+  () => import("./panels/brand-panel").then((mod) => mod.BrandPanel),
+  { ssr: false },
+);
+const PublishSetupPanel = dynamic(
+  () => import("./panels/publish-panel").then((mod) => mod.PublishSetupPanel),
+  { ssr: false },
+);
+const SettingsPanel = dynamic(
+  () => import("./panels/settings-panel").then((mod) => mod.SettingsPanel),
+  { ssr: false },
+);
+const NewAdDialog = dynamic(
+  () => import("./new-ad-dialog").then((mod) => mod.NewAdDialog),
+  { ssr: false },
 );
 
 const GOAL_LABELS: Record<string, string> = {

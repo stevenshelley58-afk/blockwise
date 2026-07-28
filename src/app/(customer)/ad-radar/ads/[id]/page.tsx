@@ -110,7 +110,7 @@ export default async function ResearchAdDetailPage({ params }: { params: Promise
         <div className="min-w-0">
           {ad.media[0] ? (
             ad.media[0].kind === "video" ? (
-              <video className={mediaClass} src={ad.media[0].url} controls preload="metadata" playsInline />
+              <video className={mediaClass} src={ad.media[0].url} controls preload="none" playsInline />
             ) : (
               // eslint-disable-next-line @next/next/no-img-element
               <img className={mediaClass} src={ad.media[0].url} alt={ad.creative.headline ?? ad.page.name} />

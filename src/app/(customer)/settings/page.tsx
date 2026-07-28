@@ -1,5 +1,5 @@
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
-import { resolveCustomerActivation } from "@/lib/activation/customer-activation";
+import { readCustomerActivation } from "@/lib/activation/customer-activation";
 import { niche } from "@/config/niche";
 import { GOOGLE_ADS_ENABLED } from "@/lib/config/feature-flags";
 import { listProviderConnections } from "@/lib/providers/provider-connections";
@@ -77,7 +77,7 @@ export default async function SettingsPage() {
       .order("period_end", { ascending: false })
       .limit(1)
       .maybeSingle(),
-    resolveCustomerActivation({ workspaceId: access.workspaceId, serviceSupabase: service }),
+    readCustomerActivation({ workspaceId: access.workspaceId, serviceSupabase: service }),
   ]);
 
   const w = (workspace as WorkspaceRow | null) ?? null;

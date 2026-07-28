@@ -34,6 +34,19 @@ const nextConfig: NextConfig = {
       { source: "/campaigns", destination: "/results", permanent: false },
     ];
   },
+  async headers() {
+    return [
+      {
+        source: "/adstudio-thumbnails/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

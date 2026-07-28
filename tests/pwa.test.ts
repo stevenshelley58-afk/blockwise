@@ -6,6 +6,8 @@ import manifest from "../src/app/manifest.ts";
 import {
   OFFLINE_FALLBACK_URL,
   STATIC_CACHE_NAME,
+  THUMBNAIL_CACHE_MAX_ENTRIES,
+  THUMBNAIL_CACHE_NAME,
   canUseOfflineFallbackForNavigation,
   createServiceWorkerSource,
   isCacheableStaticAssetRequest,
@@ -69,6 +71,9 @@ test("generated service worker source includes versioned cache and cleanup polic
   const source = createServiceWorkerSource();
 
   assert.match(source, new RegExp(`const STATIC_CACHE_NAME = "${STATIC_CACHE_NAME}"`));
+  assert.match(source, new RegExp(`const THUMBNAIL_CACHE_NAME = "${THUMBNAIL_CACHE_NAME}"`));
+  assert.match(source, new RegExp(`const THUMBNAIL_CACHE_MAX_ENTRIES = ${THUMBNAIL_CACHE_MAX_ENTRIES}`));
+  assert.match(source, /boundedThumbnailCacheFirst/);
   assert.match(source, new RegExp(`const OFFLINE_FALLBACK_URL = "${OFFLINE_FALLBACK_URL}"`));
   assert.match(source, /caches\.delete\(key\)/);
   assert.match(source, /request\.mode === "navigate"/);

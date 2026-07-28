@@ -1,12 +1,11 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { after, NextResponse, type NextRequest } from "next/server";
 
 import { recordWorkspaceFunnelEventBestEffort } from "@/lib/analytics/progressive-funnel";
 import { canManageProviderConnections } from "@/lib/auth/access-control";
 import { requireWorkspaceAccess } from "@/lib/auth/workspace-access";
-import { resolveMonitorDateRange } from "@/lib/monitor/dashboard-data";
+import { queueReportingRefresh } from "@/lib/meta-monitor/reporting-refresh-queue";
 import { exchangeProviderCode } from "@/lib/providers/oauth-handlers";
 import { upsertProviderConnectionWithTokens } from "@/lib/providers/provider-connections";
-import { syncProviderWorkspace } from "@/lib/providers/provider-sync";
 import { sanitizeOAuthReturnPath, verifyOAuthState } from "@/lib/providers/oauth-state";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
@@ -133,20 +132,15 @@ async function handleCallback(request: NextRequest) {
     );
   }
 
-  // Best-effort first sync so the dashboard shows real data immediately after
-  // connecting. A sync failure must NOT fail the connection itself.
-  try {
-    await syncProviderWorkspace({
-      supabase,
-      serviceSupabase,
+  // Connection completion never waits on Meta reporting. The results page
+  // keeps its last snapshot while Trigger refreshes it in the background.
+  after(async () => {
+    await queueReportingRefresh({
       workspaceId: verified.payload.workspaceId,
-      provider: "meta",
-      range: resolveMonitorDateRange("last_30"),
-      jobKey: "connect-auto-sync",
-    });
-  } catch {
-    // Connection is already saved; the first sync can be retried later.
-  }
+      range: "last_30",
+      reason: "connection",
+    }).catch(() => undefined);
+  });
 
   return NextResponse.redirect(
     providerReturnUrl(

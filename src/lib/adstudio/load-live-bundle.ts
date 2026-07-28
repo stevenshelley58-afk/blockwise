@@ -2,7 +2,7 @@ import type { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import { createEmptyAdStudioCampaignPack, listOfferTemplates } from "./index.ts";
 import { isFinishedCloneCreative } from "./clone-creative.ts";
-import { applyBrandAssetRows, loadAdStudioBrandAssetRows } from "./assets.ts";
+import { applyBrandAssetRows } from "./assets.ts";
 import { isExampleBrandKitSourceUrl, rowToBrandKit, rowToCampaignPack } from "./persistence.ts";
 import type { AdStudioBrandKit, AdStudioCampaignPack, AdStudioOfferTemplate } from "./types.ts";
 
@@ -53,50 +53,108 @@ export async function loadLiveAdStudioBundle(
 
   try {
     const offers = listOfferTemplates();
-
+    // Wave 1 contains only the essential rows needed to choose a resumable
+    // campaign or an approved brand-kit fallback.
     const campaignQuery = supabase.from("adstudio_campaigns").select("*").eq("workspace_id", workspaceId);
-    const { data: campaigns } = requestedCampaignId
-      ? await campaignQuery.eq("id", requestedCampaignId).limit(1)
-      : await campaignQuery.order("created_at", { ascending: false }).limit(10);
+    const [campaignResult, approvedBrandKitResult] = await Promise.all([
+      requestedCampaignId
+        ? campaignQuery.eq("id", requestedCampaignId).limit(1)
+        : campaignQuery.order("created_at", { ascending: false }).limit(10),
+      supabase
+        .from("adstudio_brand_kits")
+        .select("*")
+        .eq("workspace_id", workspaceId)
+        .eq("review_status", "approved")
+        .order("updated_at", { ascending: false })
+        .limit(10),
+    ]);
+    const campaigns = (campaignResult.data ?? []).filter(
+      (campaign) => String(campaign.status ?? "") !== "archived",
+    );
+    const campaignIds = campaigns.map((campaign) => String(campaign.id));
+    const brandKitIds = [
+      ...new Set([
+        ...campaigns.map((campaign) => String(campaign.brand_kit_id ?? "")).filter(Boolean),
+        ...(approvedBrandKitResult.data ?? []).map((row) => String(row.id)),
+      ]),
+    ];
 
-    for (const latestCampaign of campaigns ?? []) {
+    // Wave 2 bulk-loads every dependent row. No per-campaign or per-image
+    // queries are allowed in this path.
+    const [brandKitsResult, variantsResult, creativesResult, copyResult, complianceResult, assetsResult] =
+      await Promise.all([
+        brandKitIds.length
+          ? supabase
+              .from("adstudio_brand_kits")
+              .select("*")
+              .eq("workspace_id", workspaceId)
+              .in("id", brandKitIds)
+          : Promise.resolve({ data: [] }),
+        campaignIds.length
+          ? supabase
+              .from("adstudio_campaign_variants")
+              .select("*")
+              .eq("workspace_id", workspaceId)
+              .in("campaign_id", campaignIds)
+          : Promise.resolve({ data: [] }),
+        campaignIds.length
+          ? supabase
+              .from("adstudio_creatives")
+              .select("*")
+              .eq("workspace_id", workspaceId)
+              .in("campaign_id", campaignIds)
+          : Promise.resolve({ data: [] }),
+        campaignIds.length
+          ? supabase
+              .from("adstudio_platform_copy")
+              .select("*")
+              .eq("workspace_id", workspaceId)
+              .in("campaign_id", campaignIds)
+          : Promise.resolve({ data: [] }),
+        campaignIds.length
+          ? supabase
+              .from("adstudio_compliance_reports")
+              .select("*")
+              .eq("workspace_id", workspaceId)
+              .in("campaign_id", campaignIds)
+              .order("checked_at", { ascending: false })
+          : Promise.resolve({ data: [] }),
+        brandKitIds.length
+          ? supabase
+              .from("adstudio_brand_assets")
+              .select("*")
+              .eq("workspace_id", workspaceId)
+              .in("brand_kit_id", brandKitIds)
+              .order("created_at", { ascending: false })
+          : Promise.resolve({ data: [] }),
+      ]);
+    const brandKitById = new Map(
+      (brandKitsResult.data ?? []).map((row) => [String(row.id), row]),
+    );
+    const rowsForCampaign = (rows: Array<Record<string, unknown>>, campaignId: string) =>
+      rows.filter((row) => String(row.campaign_id ?? "") === campaignId);
+
+    for (const latestCampaign of campaigns) {
       if (String(latestCampaign.status ?? "") === "archived") continue;
 
       const campaignId = String(latestCampaign.id);
-      const [brandKitRow, variants, creatives, copy, compliance] = await Promise.all([
-        supabase
-          .from("adstudio_brand_kits")
-          .select("*")
-          .eq("workspace_id", workspaceId)
-          .eq("id", String(latestCampaign.brand_kit_id))
-          .maybeSingle(),
-        supabase.from("adstudio_campaign_variants").select("*").eq("workspace_id", workspaceId).eq("campaign_id", campaignId),
-        supabase.from("adstudio_creatives").select("*").eq("workspace_id", workspaceId).eq("campaign_id", campaignId),
-        supabase.from("adstudio_platform_copy").select("*").eq("workspace_id", workspaceId).eq("campaign_id", campaignId),
-        supabase
-          .from("adstudio_compliance_reports")
-          .select("*")
-          .eq("workspace_id", workspaceId)
-          .eq("campaign_id", campaignId)
-          .order("checked_at", { ascending: false })
-          .limit(1)
-          .maybeSingle(),
-      ]);
-
-      if (brandKitRow.data) {
+      const brandKitRow = brandKitById.get(String(latestCampaign.brand_kit_id));
+      if (brandKitRow) {
         const brandKit = applyBrandAssetRows(
-          rowToBrandKit(brandKitRow.data),
-          await loadAdStudioBrandAssetRows(supabase, workspaceId, String(latestCampaign.brand_kit_id)),
+          rowToBrandKit(brandKitRow),
+          (assetsResult.data ?? []).filter(
+            (row) => String(row.brand_kit_id ?? "") === String(latestCampaign.brand_kit_id),
+          ),
         );
         if (isExampleBrandKitSourceUrl(brandKit.source.url)) continue;
 
         const campaignPack = rowToCampaignPack({
           brandKit,
           campaign: latestCampaign,
-          variants: variants.data ?? [],
-          creatives: creatives.data ?? [],
-          copy: copy.data ?? [],
-          compliance: compliance.data ?? null,
+          variants: rowsForCampaign(variantsResult.data ?? [], campaignId),
+          creatives: rowsForCampaign(creativesResult.data ?? [], campaignId),
+          copy: rowsForCampaign(copyResult.data ?? [], campaignId),
+          compliance: rowsForCampaign(complianceResult.data ?? [], campaignId)[0] ?? null,
         });
 
         // A reconstructed pack must have at least one variant + copy pack to render.
@@ -112,21 +170,15 @@ export async function loadLiveAdStudioBundle(
     }
 
     // No usable campaign - try to seed from the workspace's most recent approved non-demo brand kit.
-    const { data: brandKitRows } = await supabase
-      .from("adstudio_brand_kits")
-      .select("*")
-      .eq("workspace_id", workspaceId)
-      .eq("review_status", "approved")
-      .order("updated_at", { ascending: false })
-      .limit(10);
-
-    const nonDemoRows = (brandKitRows ?? []).filter((row) => !isExampleBrandKitSourceUrl(String(row.source_url ?? "")));
+    const nonDemoRows = (approvedBrandKitResult.data ?? []).filter((row) => !isExampleBrandKitSourceUrl(String(row.source_url ?? "")));
     const latestBrandKitRow = nonDemoRows.find((row) => String(row.source_url ?? "").trim()) ?? nonDemoRows[0];
 
     if (latestBrandKitRow) {
       const brandKit = applyBrandAssetRows(
         rowToBrandKit(latestBrandKitRow),
-        await loadAdStudioBrandAssetRows(supabase, workspaceId, String(latestBrandKitRow.id)),
+        (assetsResult.data ?? []).filter(
+          (row) => String(row.brand_kit_id ?? "") === String(latestBrandKitRow.id),
+        ),
       );
       const campaignPack = createEmptyAdStudioCampaignPack({ workspaceId, brandKit });
 

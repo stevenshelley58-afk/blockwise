@@ -231,6 +231,34 @@ export async function resolveCustomerActivation(input: {
   return buildResolvedActivation(current, sources, repairedMilestones);
 }
 
+/**
+ * Fast customer-facing activation read. It reads the durable activation row
+ * only: source reconciliation, admin identity lookups, and repair writes are
+ * owned by the background task.
+ */
+export async function readCustomerActivation(input: {
+  workspaceId: string;
+  serviceSupabase?: ActivationServiceClient;
+}): Promise<ResolvedCustomerActivation> {
+  if (process.env.PROGRESSIVE_ONBOARDING_ENABLED !== "true") {
+    return unavailableActivation(input.workspaceId, "progressive_activation_disabled");
+  }
+
+  const service = input.serviceSupabase ?? createSupabaseServiceClient();
+  try {
+    const record = await loadActivationRecord(service, input.workspaceId);
+    if (!record) {
+      return unavailableActivation(input.workspaceId, "activation_foundation_unavailable");
+    }
+    return buildResolvedActivation(record, emptyAuthoritativeRows(), []);
+  } catch (error) {
+    if (error instanceof ActivationSourceUnavailableError) {
+      return unavailableActivation(input.workspaceId, "activation_foundation_unavailable");
+    }
+    throw error;
+  }
+}
+
 export function deriveAuthoritativeMilestones(
   sources: ActivationAuthoritativeRows,
 ): Partial<Record<ActivationMilestone, string>> {
@@ -411,6 +439,20 @@ function unavailableActivation(workspaceId: string, blocker: string): ResolvedCu
     operatorBlockers: [blocker],
     repairedMilestones: [],
     record,
+  };
+}
+
+function emptyAuthoritativeRows(): ActivationAuthoritativeRows {
+  return {
+    emailVerifiedAt: null,
+    workspace: {},
+    brandKits: [],
+    campaigns: [],
+    creatives: [],
+    providerConnections: [],
+    publishPlans: [],
+    bookings: [],
+    sourceBlockers: [],
   };
 }
 

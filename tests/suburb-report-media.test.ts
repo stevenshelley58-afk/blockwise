@@ -7,7 +7,7 @@ const source = readFileSync("src/app/suburb/[postcode]/report-client.tsx", "utf8
 test("suburb report video creatives render their stored media URL", () => {
   assert.match(
     source,
-    /<video\s+src=\{media\.url\}[\s\S]*\bcontrols\b[\s\S]*\bplaysInline\b[\s\S]*preload="metadata"/u,
+    /<video\s+src=\{media\.url\}[\s\S]*\bcontrols\b[\s\S]*\bplaysInline\b[\s\S]*preload="none"/u,
   );
   assert.doesNotMatch(
     source,

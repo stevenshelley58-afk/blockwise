@@ -311,7 +311,7 @@ function AdMedia({ card }: { card: PublicAdRadarCard }) {
     return (
       <div className="lp-adlib-media-frame">
         {media.kind === "video" ? (
-          <video className="lp-adlib-media" src={media.url} poster={media.posterUrl ?? undefined} controls preload="metadata" playsInline />
+          <video className="lp-adlib-media" src={media.url} poster={media.posterUrl ?? undefined} controls preload="none" playsInline />
         ) : (
           // eslint-disable-next-line @next/next/no-img-element
           <img className="lp-adlib-media" src={media.url} alt={card.headline ?? card.pageName} loading="lazy" />
@@ -325,7 +325,7 @@ function AdMedia({ card }: { card: PublicAdRadarCard }) {
       {card.media.map((media, index) => (
         <div className="lp-adlib-media-frame" key={`${media.url}:${index}`}>
           {media.kind === "video" ? (
-            <video className="lp-adlib-media" src={media.url} poster={media.posterUrl ?? undefined} controls preload="metadata" playsInline />
+            <video className="lp-adlib-media" src={media.url} poster={media.posterUrl ?? undefined} controls preload="none" playsInline />
           ) : (
             // eslint-disable-next-line @next/next/no-img-element
             <img className="lp-adlib-media" src={media.url} alt={`${card.headline ?? card.pageName} ${index + 1}`} loading="lazy" />

@@ -1,6 +1,7 @@
 import { executeMetaPlanMutation, type MetaPlanMutation, type MetaPlanMutationAction } from "./meta-mutations.ts";
 import { loadStoredProviderTokens } from "./provider-connections.ts";
 import { loadMetaPublishPlan } from "./meta-execution.ts";
+import { queueReportingRefresh } from "../meta-monitor/reporting-refresh-queue.ts";
 import type { createSupabaseServiceClient } from "../supabase/service.ts";
 import type { ApprovalStatus } from "../publishing/readiness.ts";
 
@@ -100,6 +101,16 @@ export async function executeMetaMutationById(input: {
         lastError: result.lastError,
       },
     });
+
+    if (result.status === "applied") {
+      await queueReportingRefresh({
+        workspaceId: input.workspaceId,
+        range: "last_30",
+        reason: "mutation",
+      }).catch((queueError) => {
+        console.warn("[meta-reporting] mutation refresh could not be queued", queueError);
+      });
+    }
 
     return updated;
   } catch (error) {

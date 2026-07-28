@@ -50,11 +50,14 @@ test("dynamic customer navigation has reusable loading boundaries and router cac
   assert.equal(existsSync("src/app/(customer)/template.tsx"), false);
 });
 
-test("Home and Performance expose separate database and provider timing spans", () => {
+test("Home and Performance read database snapshots without blocking on Meta", () => {
   const home = read("src/app/(customer)/self-serve/page.tsx");
+  const homeLoader = read("src/lib/home/home-dashboard-data.ts");
   const performance = read("src/app/(customer)/results/page.tsx");
 
   assert.match(home, /op: "db\.home_dashboard"/);
-  assert.match(home, /op: "provider\.meta"/);
-  assert.match(performance, /op: "provider\.meta"/);
+  assert.match(homeLoader, /loadReportingSnapshot/);
+  assert.match(performance, /op: "db\.reporting_snapshot"/);
+  assert.doesNotMatch(home, /op: "provider\.meta"/);
+  assert.doesNotMatch(performance, /op: "provider\.meta"/);
 });
