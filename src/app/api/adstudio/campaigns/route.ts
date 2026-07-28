@@ -30,7 +30,7 @@ export const maxDuration = 300;
 // (U+FEFF), which makes every trigger call throw "Cannot convert argument to
 // a ByteString" — the async path then silently degrades to sync forever.
 export function normaliseTriggerSecretKey(value: string | undefined): string {
-  return (value ?? "").replace(/[\\u200B-\\u200D\\uFEFF]/g, "").trim();
+  return (value ?? "").replace(/[​-‍﻿]/g, "").trim();
 }
 
 async function triggerTemplateGeneration(payload: {
