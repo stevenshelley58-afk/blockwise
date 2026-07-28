@@ -6,9 +6,16 @@ import { cn } from "@/lib/utils"
 
 function Table({ className, ...props }: React.ComponentProps<"table">) {
   return (
+    // [contain:inline-size] is load-bearing on mobile. Without it this
+    // container's min-content width is the table's, which propagates up to the
+    // nearest grid/flex item (panels have min-width:auto) and stretches that
+    // panel past the viewport. The container then measures as wide as the table,
+    // never becomes a scroll container, and the right-hand columns are
+    // unreachable at 390px. Containment decouples its inline size from its
+    // contents so the panel clamps and this element scrolls as intended.
     <div
       data-slot="table-container"
-      className="relative w-full overflow-x-auto"
+      className="relative w-full overflow-x-auto [contain:inline-size]"
     >
       <table
         data-slot="table"
