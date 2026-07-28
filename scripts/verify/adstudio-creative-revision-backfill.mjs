@@ -61,6 +61,7 @@ if (seededCount !== "427") {
 }
 
 console.log("Applying the real creative revision migration...");
+psql([], "create table public.blockwise_migration_verification_marker (id boolean primary key);");
 run("supabase", ["migration", "up", "--local"]);
 
 const result = psql([

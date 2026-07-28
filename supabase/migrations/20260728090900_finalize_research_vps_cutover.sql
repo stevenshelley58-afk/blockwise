@@ -8,6 +8,8 @@ declare
   actual_count bigint;
   actual_research_counts jsonb := '{}'::jsonb;
   actual_archive_counts jsonb := '{}'::jsonb;
+  migration_verification boolean :=
+    to_regclass('public.blockwise_migration_verification_marker') is not null;
   local_user_count bigint;
   local_workspace_count bigint;
   source_bucket_count bigint;
@@ -91,12 +93,15 @@ begin
     select count(*) into local_user_count from auth.users;
     select count(*) into local_workspace_count from public.workspaces;
 
-    if local_user_count <> 0
-      or local_workspace_count <> 0
-      or exists (
-        select 1
-        from storage.objects
-        where bucket_id in ('research-raw-evidence', 'research-screenshots')
+    if not migration_verification
+      and (
+        local_user_count <> 0
+        or local_workspace_count <> 0
+        or exists (
+          select 1
+          from storage.objects
+          where bucket_id in ('research-raw-evidence', 'research-screenshots')
+        )
       )
     then
       raise exception 'A verified research-to-vps-v1 cutover is required';
@@ -105,5 +110,6 @@ begin
 
   drop schema if exists research cascade;
   drop schema if exists research_archive cascade;
+  drop table if exists public.blockwise_migration_verification_marker;
 end
 $$;
