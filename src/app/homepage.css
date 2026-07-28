@@ -232,14 +232,47 @@ html, body { overflow-x: clip; }
 }
 .hw-login:hover { color: var(--hw-ink); }
 
-/* Mobile: the N9 header keeps logo + Log in + primary CTA. Only the nav
-   links collapse (all nav targets are repeated in the footer); the logo
-   swaps to the icon mark so everything fits at 320px. */
+/* Mobile: keep the two orientation links that matter before conversion,
+   while the account actions stay pinned to the right edge. */
 @media (max-width: 767.98px) {
-  .hw-nav { display: none; }
-  .hw-header-actions { margin-left: auto; gap: var(--hw-space-xs); }
+  .hw-header-inner { gap: var(--hw-space-2xs); }
+  .hw-nav {
+    display: flex;
+    gap: var(--hw-space-xs);
+    margin-left: auto;
+  }
+  .hw-nav a {
+    display: none;
+    align-items: center;
+    min-height: 44px;
+  }
+  .hw-nav a:first-child,
+  .hw-nav a:last-child { display: inline-flex; }
+  .hw-header-actions {
+    gap: var(--hw-space-2xs);
+    margin-left: 0;
+  }
   .hw-header .hw-logo-horizontal { display: none; }
   .hw-header .hw-logo-icon { display: block; }
+}
+
+@media (max-width: 379.98px) {
+  .hw-header-inner {
+    gap: 6px;
+    padding-inline: var(--hw-space-sm);
+  }
+  .hw-header .hw-logo-icon {
+    width: 26px;
+    height: 26px;
+  }
+  .hw-nav { gap: 6px; }
+  .hw-nav a,
+  .hw-login { font-size: 11px; }
+  .hw-header-actions { gap: 4px; }
+  .hw-header-actions .hw-btn {
+    padding-inline: 12px;
+    font-size: 11px;
+  }
 }
 
 /* ---------- Hero (#top) ---------- */
