@@ -1,5 +1,7 @@
 import type { AdStudioBrandKit } from "./types.ts";
 
+export const ADSTUDIO_EMBEDDED_ASSET_LIMIT = 24;
+
 export type AdStudioBrandAssetRow = {
   id?: unknown;
   asset_type?: unknown;
@@ -86,14 +88,17 @@ export async function loadAdStudioBrandAssetRows(
   supabase: { from: (table: string) => any },
   workspaceId: string,
   brandKitId: string,
+  limit?: number,
 ): Promise<AdStudioBrandAssetRow[]> {
   if (!workspaceId || !brandKitId) return [];
-  const { data, error } = await supabase
+  let query = supabase
     .from("adstudio_brand_assets")
     .select("*")
     .eq("workspace_id", workspaceId)
     .eq("brand_kit_id", brandKitId)
     .order("created_at", { ascending: false });
+  if (limit) query = query.limit(Math.max(1, limit));
+  const { data, error } = await query;
 
   if (error) throw new Error(error.message);
   return data ?? [];

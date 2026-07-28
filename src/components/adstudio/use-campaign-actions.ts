@@ -6,6 +6,7 @@ import type { AdStudioBrandKit, AdStudioCampaignPack, AdStudioFormat, AdStudioGo
 import { mergeDraftResponsePack } from "@/lib/adstudio/client-pack";
 import { isFinishedCloneCreative } from "@/lib/adstudio/clone-creative";
 import { findCopyLimitViolations } from "@/lib/adstudio/readiness";
+import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 import { offerIdForLabel } from "./template-offer-state";
 import type { CopyState } from "./use-copy";
@@ -19,9 +20,10 @@ export type GenerationProgress = {
   error: string | null;
 };
 
-// Async template generation (202 + job polling). Stages mirror the server-side
-// pipeline order in runTemplateCampaignGeneration and rotate by elapsed time.
-const TEMPLATE_JOB_POLL_INTERVAL_MS = 2_500;
+// Async template generation stages mirror the server-side pipeline order.
+// Realtime wakes the client when state changes; a slow fallback check keeps the
+// flow resilient if a websocket is unavailable.
+const TEMPLATE_JOB_FALLBACK_INTERVAL_MS = 30_000;
 const TEMPLATE_JOB_TIMEOUT_MS = 10 * 60_000;
 const TEMPLATE_JOB_PHASES: Array<{ label: string; atMs: number }> = [
   { label: "Writing copy...", atMs: 0 },
@@ -34,6 +36,7 @@ type CampaignJobStatus = {
   status: "queued" | "running" | "done" | "failed";
   error: string | null;
   campaign_id: string | null;
+  campaignPack?: AdStudioCampaignPack | null;
 };
 
 /** Per-format export progress so one slow/failed format never blocks the rest. */
@@ -207,8 +210,7 @@ export function useCampaignActions(s: CampaignActionsState) {
       let campaignPack: AdStudioCampaignPack;
       if (response.status === 202 && payload?.jobId) {
         // Async generation: the server runs copy → clone → persist in a
-        // background job (the advisory QA pass attaches afterwards); poll it
-        // and keep the staged-progress skeletons alive.
+        // background job (the advisory QA pass attaches afterwards).
         campaignPack = await waitForTemplateCampaignJob(String(payload.jobId), (phase) =>
           s.setGeneration({ phase, count: expectedCount, error: null }),
         );
@@ -366,47 +368,97 @@ export function useCampaignActions(s: CampaignActionsState) {
 }
 
 /**
- * Poll the async generation job until it lands, rotating honest stage labels by
- * elapsed time, then load the persisted campaign pack the job produced.
+ * Wait for the async generation job over Realtime, rotating honest phase
+ * labels locally. A 30-second status check is only a resilience fallback.
  */
 async function waitForTemplateCampaignJob(
   jobId: string,
   onPhase: (phase: string) => void,
 ): Promise<AdStudioCampaignPack> {
-  const startedAt = Date.now();
+  const supabase = createSupabaseBrowserClient();
+  onPhase(TEMPLATE_JOB_PHASES[0].label);
 
-  while (Date.now() - startedAt < TEMPLATE_JOB_TIMEOUT_MS) {
-    const elapsed = Date.now() - startedAt;
-    const phase =
-      [...TEMPLATE_JOB_PHASES].reverse().find((candidate) => elapsed >= candidate.atMs) ?? TEMPLATE_JOB_PHASES[0];
-    onPhase(phase.label);
+  return new Promise<AdStudioCampaignPack>((resolve, reject) => {
+    let settled = false;
+    let checking = false;
+    let checkQueued = false;
+    const phaseTimers = TEMPLATE_JOB_PHASES.slice(1).map((phase) =>
+      window.setTimeout(() => onPhase(phase.label), phase.atMs),
+    );
 
-    const response = await fetch(`/api/adstudio/jobs/${encodeURIComponent(jobId)}`, { cache: "no-store" });
-    const payload = (await response.json().catch(() => null)) as { job?: CampaignJobStatus; error?: string } | null;
-    if (!response.ok) throw new Error(payload?.error ?? "Could not check the ad generation job.");
+    const cleanup = () => {
+      phaseTimers.forEach((timer) => window.clearTimeout(timer));
+      window.clearInterval(fallbackTimer);
+      window.clearTimeout(timeoutTimer);
+      void supabase.removeChannel(channel);
+    };
+    const finish = (result: { pack?: AdStudioCampaignPack; error?: Error }) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      if (result.error) reject(result.error);
+      else if (result.pack) resolve(result.pack);
+    };
+    const checkStatus = async () => {
+      if (settled) return;
+      if (checking) {
+        checkQueued = true;
+        return;
+      }
+      checking = true;
+      try {
+        const response = await fetch(`/api/adstudio/jobs/${encodeURIComponent(jobId)}`, { cache: "no-store" });
+        const payload = (await response.json().catch(() => null)) as
+          | { job?: CampaignJobStatus; error?: string }
+          | null;
+        if (!response.ok) throw new Error(payload?.error ?? "Could not check the ad generation job.");
+        const job = payload?.job;
+        if (!job) throw new Error("The ad generation job was not found.");
+        if (job.status === "failed") {
+          finish({ error: new Error(job.error || "Ad generation failed. Please try again.") });
+        } else if (job.status === "done") {
+          if (!job.campaignPack) {
+            finish({ error: new Error("The generated ad could not be loaded. Reload Ad Studio to see it.") });
+          } else {
+            finish({ pack: job.campaignPack });
+          }
+        }
+      } catch (error) {
+        // Realtime or the fallback can retry transient transport failures.
+        if (error instanceof Error && /not found/i.test(error.message)) finish({ error });
+      } finally {
+        checking = false;
+        if (checkQueued && !settled) {
+          checkQueued = false;
+          void checkStatus();
+        }
+      }
+    };
 
-    const job = payload?.job;
-    if (!job) throw new Error("The ad generation job was not found.");
-    if (job.status === "failed") throw new Error(job.error || "Ad generation failed. Please try again.");
-    if (job.status === "done") {
-      if (!job.campaign_id) throw new Error("Generation finished but no campaign was returned.");
-      return loadCampaignPackById(job.campaign_id);
-    }
+    const channel = supabase
+      .channel(`adstudio-job-${jobId}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "adstudio_creative_jobs", filter: `id=eq.${jobId}` },
+        () => void checkStatus(),
+      )
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") void checkStatus();
+      });
+    const fallbackTimer = window.setInterval(() => void checkStatus(), TEMPLATE_JOB_FALLBACK_INTERVAL_MS);
+    const timeoutTimer = window.setTimeout(
+      () =>
+        finish({
+          error: new Error(
+            "Ad generation is taking longer than expected. Reload Ad Studio in a minute to see the result.",
+          ),
+        }),
+      TEMPLATE_JOB_TIMEOUT_MS,
+    );
 
-    await sleep(TEMPLATE_JOB_POLL_INTERVAL_MS);
-  }
-
-  throw new Error("Ad generation is taking longer than expected. Reload Ad Studio in a minute to see the result.");
-}
-
-async function loadCampaignPackById(campaignId: string): Promise<AdStudioCampaignPack> {
-  const response = await fetch(`/api/adstudio/campaigns/${encodeURIComponent(campaignId)}`, { cache: "no-store" });
-  const payload = (await response.json().catch(() => null)) as
-    | { campaignPack?: AdStudioCampaignPack | null; error?: string }
-    | null;
-  if (!response.ok) throw new Error(payload?.error ?? "Could not load the generated ad.");
-  if (!payload?.campaignPack) throw new Error("The generated ad could not be loaded. Reload Ad Studio to see it.");
-  return payload.campaignPack;
+    // Close the race between the 202 response and the subscription becoming live.
+    void checkStatus();
+  });
 }
 
 /** First persisted primary image in the pack (the clone render for template ads). */
@@ -416,10 +468,6 @@ function packPrimaryImage(pack: AdStudioCampaignPack): string | undefined {
     if (image?.content) return image.content;
   }
   return undefined;
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
 // Formats the browser renderer can actually export (see META_EXPORT_FORMATS).

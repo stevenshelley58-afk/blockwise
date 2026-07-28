@@ -42,21 +42,33 @@ export function TopBar({
   }, [showMore, setShowMore]);
 
   useEffect(() => {
-    fetch("/api/adstudio/campaigns", { cache: "no-store" })
-      .then((response) => response.json().catch(() => null))
-      .then((payload) => {
-        if (!Array.isArray(payload?.campaigns)) return;
-        setCampaigns(
-          payload.campaigns
-            .filter((campaign: { id?: unknown; status?: unknown }) => typeof campaign.id === "string" && campaign.status !== "archived")
-            .map((campaign: { id: string; name?: unknown; status?: unknown }) => ({
-              id: campaign.id,
-              name: typeof campaign.name === "string" ? campaign.name : "Campaign",
-              status: typeof campaign.status === "string" ? campaign.status : undefined,
-            })),
-        );
-      })
-      .catch(() => {});
+    const loadCampaigns = () => {
+      fetch("/api/adstudio/campaigns?limit=50", { cache: "no-store" })
+        .then((response) => response.json().catch(() => null))
+        .then((payload) => {
+          if (!Array.isArray(payload?.campaigns)) return;
+          setCampaigns(
+            payload.campaigns
+              .filter((campaign: { id?: unknown; status?: unknown }) => typeof campaign.id === "string" && campaign.status !== "archived")
+              .map((campaign: { id: string; name?: unknown; status?: unknown }) => ({
+                id: campaign.id,
+                name: typeof campaign.name === "string" ? campaign.name : "Campaign",
+                status: typeof campaign.status === "string" ? campaign.status : undefined,
+              })),
+          );
+        })
+        .catch(() => {});
+    };
+    const browser = window as Window & {
+      requestIdleCallback?: (callback: IdleRequestCallback, options?: IdleRequestOptions) => number;
+      cancelIdleCallback?: (id: number) => void;
+    };
+    if (browser.requestIdleCallback) {
+      const id = browser.requestIdleCallback(loadCampaigns, { timeout: 2_000 });
+      return () => browser.cancelIdleCallback?.(id);
+    }
+    const timer = window.setTimeout(loadCampaigns, 1_000);
+    return () => window.clearTimeout(timer);
   }, []);
 
   useEffect(() => {

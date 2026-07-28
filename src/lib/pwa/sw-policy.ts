@@ -2,15 +2,19 @@ export const PWA_CACHE_PREFIX = "blockwise-pwa";
 // Bump when shipped static assets under cached prefixes (e.g. /ads/) change at a
 // stable URL — the activate handler drops older caches, so devices refetch them
 // instead of serving a stale cache-first copy.
-export const PWA_CACHE_VERSION = "v3";
+export const PWA_CACHE_VERSION = "v4";
 export const STATIC_CACHE_NAME = `${PWA_CACHE_PREFIX}-${PWA_CACHE_VERSION}-static`;
 export const THUMBNAIL_CACHE_NAME = `${PWA_CACHE_PREFIX}-${PWA_CACHE_VERSION}-adstudio-thumbnails`;
+export const STATIC_CACHE_MAX_ENTRIES = 160;
 export const THUMBNAIL_CACHE_MAX_ENTRIES = 240;
 export const OFFLINE_FALLBACK_URL = "/offline.html";
 
 export const PRECACHE_URLS = [OFFLINE_FALLBACK_URL, "/icons/icon-192.png", "/icons/icon-512.png"] as const;
 
-export const EXCLUDED_PATH_PREFIXES = ["/api/", "/auth/", "/_next/data/"] as const;
+// Canonical samples are 1-3.5 MB generation inputs. The browser's normal HTTP
+// cache may retain them, but the service worker must not pin the whole 182 MB
+// library indefinitely.
+export const EXCLUDED_PATH_PREFIXES = ["/api/", "/auth/", "/_next/data/", "/adstudio-samples/"] as const;
 
 export const STATIC_ASSET_PATH_PREFIXES = ["/_next/static/", "/icons/", "/hero/", "/ads/"] as const;
 
@@ -135,6 +139,7 @@ export function createServiceWorkerSource(): string {
 const PWA_CACHE_PREFIX = ${JSON.stringify(PWA_CACHE_PREFIX)};
 const STATIC_CACHE_NAME = ${JSON.stringify(STATIC_CACHE_NAME)};
 const THUMBNAIL_CACHE_NAME = ${JSON.stringify(THUMBNAIL_CACHE_NAME)};
+const STATIC_CACHE_MAX_ENTRIES = ${JSON.stringify(STATIC_CACHE_MAX_ENTRIES)};
 const THUMBNAIL_CACHE_MAX_ENTRIES = ${JSON.stringify(THUMBNAIL_CACHE_MAX_ENTRIES)};
 const OFFLINE_FALLBACK_URL = ${JSON.stringify(OFFLINE_FALLBACK_URL)};
 const PRECACHE_URLS = ${JSON.stringify(PRECACHE_URLS)};
@@ -227,6 +232,8 @@ async function cacheFirst(request) {
   if (response.ok) {
     const cache = await caches.open(STATIC_CACHE_NAME);
     await cache.put(request, response.clone());
+    const keys = await cache.keys();
+    await Promise.all(keys.slice(0, Math.max(0, keys.length - STATIC_CACHE_MAX_ENTRIES)).map((key) => cache.delete(key)));
   }
   return response;
 }

@@ -35,7 +35,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   if (!data) return NextResponse.json({ error: "Job not found." }, { status: 404 });
 
-  // A finished job ships its campaign pack inline so the polling client can
+  // A finished job ships its campaign pack inline so the waiting client can
   // render the ad without a second round trip through the campaigns route.
   const campaignPack = data.status === "done" && data.campaign_id
     ? await loadAdStudioCampaignPack(access.supabase, access.access.workspaceId, String(data.campaign_id))
