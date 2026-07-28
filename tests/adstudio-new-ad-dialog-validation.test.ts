@@ -33,6 +33,20 @@ test("the customer flow uses template terminology and shared dropdown styling", 
   assert.match(styles, /\.studio-screen select:disabled/);
   assert.match(styles, /prefers-reduced-motion:reduce/);
 });
+
+test("the template gallery uses a two-column grid", () => {
+  const dialog = readFileSync("src/components/adstudio/new-ad-dialog.tsx", "utf8");
+
+  assert.match(
+    dialog,
+    /\.studio-explore-grid\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/,
+  );
+  assert.doesNotMatch(
+    dialog,
+    /\.studio-explore-grid\{display:grid;grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/,
+  );
+});
+
 test("missing customer inputs are shown together before generation", () => {
   const dialog = readFileSync("src/components/adstudio/new-ad-dialog.tsx", "utf8");
   const submit = dialog.slice(dialog.indexOf("async function submit()"), dialog.indexOf("const stepTitle ="));
