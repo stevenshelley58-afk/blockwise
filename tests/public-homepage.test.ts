@@ -70,15 +70,16 @@ test("landing page anchors, sections, and claims stay connected", () => {
 
   // One section element per anchor id; both breakpoint variants render inside
   // it, so every anchor resolves at desktop and mobile widths. The former
-  // #done-for-you fold was merged into #workflow (headline + approval panel).
+  // #updates band was merged into #control and the self-serve price panel
+  // ships as #pricing between #free-trial and #managed-setup.
   const expectedSections = [
     "top",
     "start",
     "workflow",
     "control",
-    "updates",
     "property-check",
     "free-trial",
+    "pricing",
     "managed-setup",
     "faq",
   ];
@@ -101,8 +102,6 @@ test("landing page anchors, sections, and claims stay connected", () => {
   );
   assert.match(combined, /Know the property before the call/);
   assert.match(combined, /Run a property check/);
-  // Nearby-ad disclaimer must ship with the ad-intelligence framing.
-  assert.match(combined, /Nearby-ad examples show activity signals, not results\./);
 
   const ids = [...combined.matchAll(/id="([^"]+)"/g)].map((match) => match[1]);
   assert.equal(new Set(ids).size, ids.length, "landing and setup form IDs must be unique");
@@ -153,10 +152,10 @@ test("public marketing copy states the approved progressive offer", () => {
 
   assert.match(home, /Nothing spends until you approve/i);
   assert.match(home, /Nothing spends before approval/i);
-  assert.match(home, /before and after approval/i);
+  assert.match(home, /Stay in control/i);
   assert.match(home, /Approve every ad before it goes live/i);
   assert.match(home, /Create three complete ads free/i);
-  assert.match(home, /Start with only your email/i);
+  assert.match(home, /Email only\. No card\./i);
   assert.match(pricing, /Create three complete Feed \+ Story ads with only your email/i);
   assert.match(pricing, /Meta ad spend is separate/i);
   assert.doesNotMatch(combined, /\$799/);
@@ -165,27 +164,21 @@ test("public marketing copy states the approved progressive offer", () => {
   assert.doesNotMatch(combined, /To launch from Blockwise/i);
 });
 
-test("homepage FAQ discloses billing triggers, credit expiry, cancellation, and managed scope", () => {
+test("homepage FAQ matches the approved flat-rate offer", () => {
   const faq = readFileSync("src/components/home-landing/data.ts", "utf8");
 
-  assert.match(faq, /US\$99 or A\$99 when your first campaign launches/i);
-  assert.match(faq, /seven days after checkout, whichever comes first/i);
-  assert.match(faq, /US\$499 or A\$499 each month until cancelled/i);
-  assert.match(faq, /market and local currency you confirm/i);
+  assert.match(faq, /pay Meta directly/i);
+  assert.match(faq, /Connect Meta when you want to go live/i);
+  assert.match(faq, /Nothing launches until you approve/i);
+  assert.match(faq, /Three complete Feed \+ Story ads, free/i);
+  assert.match(faq, /\$499\/mo from your first campaign launch/i);
+  assert.match(faq, /Cancel anytime/i);
+  assert.match(faq, /\$2,000\/mo flat, plus ad spend/i);
+  assert.match(faq, /weekly optimization for up to four campaigns/i);
 
-  assert.match(faq, /Credits expire at the end of that period/i);
-  assert.match(faq, /do not roll over or transfer/i);
-  assert.match(faq, /credits you have already paid for remain available until the current period ends/i);
-
-  assert.match(faq, /Deleting a profile, workspace, or creative is not a substitute for cancelling/i);
-  assert.match(faq, /paid access and remaining credits continue until the end of the current billing period/i);
-
-  assert.match(faq, /US\$1,500\/month in the United States/i);
-  assert.match(faq, /A\$2,500\/month in Australia/i);
-  assert.match(faq, /100 monthly render credits/i);
-  assert.match(faq, /weekly optimization of up to four live campaigns/i);
-  assert.match(faq, /You pay Meta directly/i);
-  assert.match(faq, /additional scope is confirmed and repriced during onboarding/i);
+  // The flat-rate homepage FAQ must not resurrect dual-currency offers.
+  assert.doesNotMatch(faq, /US\$/);
+  assert.doesNotMatch(faq, /A\$/);
 });
 
 test("pricing keeps US and AU offers explicit and accessible", () => {
