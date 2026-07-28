@@ -94,16 +94,8 @@ const NAV_ITEMS: NavItem[] = [
   { id: "settings", label: "Settings", icon: Settings2 },
 ];
 
-const MOBILE_NAV: Array<
-  | { id: import("./use-ad-studio").MobileTab | "samples"; label: string; icon: LucideIcon; href?: undefined }
-  | { id: "library"; label: string; icon: LucideIcon; href: string }
-> = [
-  { id: "home", label: "Home", icon: Home },
-  { id: "samples", label: "Create", icon: Plus },
-  { id: "library", label: "Library", icon: Images, href: "/ad-studio/library" },
-  { id: "text", label: "Text", icon: FileText },
-  { id: "publish", label: "Review", icon: Send },
-];
+const MOBILE_NAV_IDS = new Set<NavItem["id"]>(["home", "samples", "library", "text", "publish"]);
+const MOBILE_NAV = NAV_ITEMS.filter((item) => MOBILE_NAV_IDS.has(item.id));
 
 const PREVIEW_TO_AD_FORMAT: Record<PreviewFormat, AdStudioFormat> = {
   story: "9:16",
