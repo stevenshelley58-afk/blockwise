@@ -1,2 +1,4 @@
-W[​-‍-﻿]
+one\utwo
+three​four
+five\\u200Bsix
 END
