@@ -58,10 +58,8 @@ export function SuburbReportLocationForm({
         isSubmitting={isSubmitting}
         onEmptySearch={() => setError("Enter a suburb or postcode first.")}
         onSearch={(value) => void handleSearch(value)}
-        placeholder="Suburb or postcode"
+        placeholder="Enter suburb or postcode"
         surface="landing"
-        useBestGuess
-        useBestGuessAsPlaceholder
       />
       {showNote ? (
         <p className="hw-report-search-note">
