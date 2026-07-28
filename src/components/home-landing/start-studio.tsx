@@ -81,10 +81,7 @@ export function StartStudio() {
               transition={{ duration: 0.55, ease: EASE_OUT }}
             >
               <h2>Don&rsquo;t start from a blank page.</h2>
-              <p className="hw-sub">
-                Choose a proven template, or see an approach already working near you. Blockwise
-                adapts it to your listing and brand.
-              </p>
+              <p className="hw-sub">Pick a proven ad. We make it yours.</p>
             </motion.div>
 
             <div className="hw-studio-group hw-studio-group--templates">
@@ -119,7 +116,7 @@ export function StartStudio() {
 
             <div className="hw-studio-group hw-studio-group--nearby">
               <p className="hw-studio-group-label hw-studio-group-label--soft">
-                Or see what&rsquo;s working near you
+                Or see what&rsquo;s working near you <span className="hw-tag">Signals</span>
               </p>
               <motion.div
                 className="hw-studio-nearby"
@@ -147,10 +144,6 @@ export function StartStudio() {
                   );
                 })}
               </motion.div>
-              <p className="hw-disclaimer">
-                Nearby-ad examples show activity signals, not results. What runs is always your
-                call.
-              </p>
             </div>
 
           {/* ---- Right: the live preview ---- */}
@@ -162,14 +155,6 @@ export function StartStudio() {
               viewport={{ once: true, amount: 0.1 }}
               transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.1 }}
             >
-              <div className="hw-studio-bar">
-                <span className="hw-studio-bar-status">
-                  <span className="hw-studio-dot" aria-hidden />
-                  Ready to review
-                </span>
-                <span className="hw-studio-bar-tag">Your listing</span>
-              </div>
-
               <AnimatePresence mode="wait" initial={false}>
                 <motion.div
                   key={selected.id}
@@ -194,7 +179,7 @@ export function StartStudio() {
                 href="/signup"
                 className="hw-btn hw-btn--dark hw-studio-cta"
               >
-                Create my ad <span className="hw-arr">→</span>
+                Create three ads free <span className="hw-arr">→</span>
               </CtaLink>
               <p className="hw-note">Nothing spends until you approve.</p>
             </motion.div>

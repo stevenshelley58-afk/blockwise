@@ -1,6 +1,11 @@
 import { AdStudioWorkbench } from "@/components/adstudio/ad-studio-workbench";
 import { createEmptyAdStudioCampaignPack, listOfferTemplates, type AdStudioBrandKit } from "@/lib/adstudio";
-import { applyBrandAssetRows, loadAdStudioBrandAssetRows } from "@/lib/adstudio/assets";
+import {
+  applyBrandAssetRows,
+  loadAdStudioBrandAssetRows,
+  loadAdStudioWorkspaceAssetRows,
+  mediaLibraryAssetForRow,
+} from "@/lib/adstudio/assets";
 import { loadLiveAdStudioBundle } from "@/lib/adstudio/load-live-bundle";
 import { isExampleBrandKitSourceUrl, persistAdStudioBrandKit, rowToBrandKit } from "@/lib/adstudio/persistence";
 import { buildTrialFallbackBrandKit } from "@/lib/adstudio/trial-brand-kit";
@@ -24,7 +29,10 @@ export default async function AdStudioPage({ searchParams }: { searchParams?: Se
   const params = searchParams ? await searchParams : {};
   const { supabase, access } = await requirePageSurfaceAccess("adstudio");
   const requestedCampaignId = stringParam(params.campaignId);
-  const liveBundle = await loadLiveAdStudioBundle(supabase, access.workspaceId, requestedCampaignId);
+  const [liveBundle, workspaceAssetRows] = await Promise.all([
+    loadLiveAdStudioBundle(supabase, access.workspaceId, requestedCampaignId),
+    loadAdStudioWorkspaceAssetRows(supabase, access.workspaceId),
+  ]);
 
   // Softened gate: an extracted-but-unapproved kit lets the user straight into the
   // workbench as a "Draft brand" (publish stays blocked until approval).
@@ -43,6 +51,11 @@ export default async function AdStudioPage({ searchParams }: { searchParams?: Se
   const bundle = liveBundle ?? draftBundle ?? starterBundle;
   if (!bundle) throw new Error("Ad Studio could not prepare an empty workspace.");
   const showBrandSetupPrompt = !isSample && isStarterFallbackBrandKit(bundle.brandKit);
+  const initialMediaAssets = workspaceAssetRows.flatMap((row) => {
+    if (isExampleBrandKitSourceUrl(typeof row.source_url === "string" ? row.source_url : "")) return [];
+    const asset = mediaLibraryAssetForRow(access.workspaceId, row);
+    return asset ? [asset] : [];
+  });
 
   return (
     <>
@@ -56,6 +69,7 @@ export default async function AdStudioPage({ searchParams }: { searchParams?: Se
         firstRun={isFirstRunParam(params.first)}
         isSample={isSample}
         showBrandSetupPrompt={showBrandSetupPrompt}
+        initialMediaAssets={initialMediaAssets}
       />
     </>
   );

@@ -11,7 +11,7 @@ import {
 const read = (path: string) => readFileSync(path, "utf8");
 
 test("reporting snapshots are versioned, service-owned, and Realtime-invalidated", () => {
-  const migration = read("supabase/migrations/20260728065237_performance_read_models.sql");
+  const migration = read("supabase/migrations/20260728071845_performance_read_models.sql");
   assert.match(migration, /snapshot_version smallint not null default 1/);
   assert.match(migration, /unique index[\s\S]*workspace_id, provider, range_key/);
   assert.match(migration, /revoke all on table public\.reporting_snapshots from anon, authenticated/);

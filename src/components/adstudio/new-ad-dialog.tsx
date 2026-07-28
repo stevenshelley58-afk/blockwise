@@ -1709,7 +1709,7 @@ const EXPLORE_STYLES = `
 .studio-explore-filter span{font-size:12px;font-weight:700;color:var(--muted)}
 .studio-explore-filter select{min-width:150px}
 .studio-explore-count{flex:0 0 auto;font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
-.studio-explore-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;align-items:stretch}
+.studio-explore-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;align-items:stretch}
 .studio-explore-card{display:flex;min-width:0;flex-direction:column;border:1px solid var(--line-soft);border-radius:14px;background:#fff;box-shadow:var(--st-sh-1);overflow:hidden;color:var(--ink);font:inherit;text-align:left;transition:transform .15s,box-shadow .15s,border-color .15s}
 button.studio-explore-card{padding:0;cursor:pointer}
 .studio-explore-card:hover{transform:translateY(-2px);box-shadow:var(--st-sh-lift)}

@@ -11,6 +11,24 @@
   ],
   "headers": [
     {
+      "source": "/adstudio-samples/:path*",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=604800, stale-while-revalidate" }
+      ]
+    },
+    {
+      "source": "/home/:path*",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=604800, stale-while-revalidate" }
+      ]
+    },
+    {
+      "source": "/brand/:path*",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=2592000, stale-while-revalidate" }
+      ]
+    },
+    {
       "source": "/(.*)",
       "headers": [
         { "key": "X-Frame-Options", "value": "DENY" },
