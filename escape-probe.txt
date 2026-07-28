@@ -1,4 +1,2 @@
-one\utwo
-three​four
-five\\u200Bsix
+Z[​-‍-﻿]
 END
