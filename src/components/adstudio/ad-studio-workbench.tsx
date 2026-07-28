@@ -34,7 +34,8 @@ import type {
 import type { AdStudioMediaLibraryAsset } from "@/lib/adstudio/assets";
 import { builtInAdStudioTemplates } from "@/lib/adstudio";
 import { isCloneCreative, primaryImageSource } from "@/lib/adstudio/creative-preview";
-
+import type { LibraryAssetModel } from "@/lib/adstudio/library-read-model";
+import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 import { requestCreativeEdit } from "./canvas/creative-edit-client";
 import { FORMAT_META, MetaChromePreview, PreviewControls, VariantStrip } from "./preview";
@@ -76,6 +77,7 @@ type AdStudioWorkbenchProps = {
   isSample?: boolean;
   showBrandSetupPrompt?: boolean;
   initialMediaAssets?: AdStudioMediaLibraryAsset[];
+  initialMediaCursor?: string | null;
 };
 
 type NavItem =
@@ -292,6 +294,7 @@ export function AdStudioWorkbench({
   isSample = false,
   showBrandSetupPrompt = false,
   initialMediaAssets = [],
+  initialMediaCursor = null,
 }: AdStudioWorkbenchProps) {
   const [pack, setPack] = useState(initialPack);
   const searchParams = useSearchParams();
@@ -346,6 +349,9 @@ export function AdStudioWorkbench({
   }
   const [generation, setGeneration] = useState<GenerationProgress | null>(null);
   const [uploadedAssets, setUploadedAssets] = useState<Array<{ src: string; label: string; type: string; ratio: string }>>([]);
+  const [loadedMediaAssets, setLoadedMediaAssets] = useState(initialMediaAssets);
+  const [nextMediaCursor, setNextMediaCursor] = useState(initialMediaCursor);
+  const [loadingMoreMedia, setLoadingMoreMedia] = useState(false);
   const [pendingMediaReplacement, setPendingMediaReplacement] = useState<{ src: string; label: string } | null>(null);
   const [replacingMedia, setReplacingMedia] = useState(false);
   const [samplePickerOpen, setSamplePickerOpen] = useState(false);
@@ -440,30 +446,6 @@ export function AdStudioWorkbench({
     openMediaSheet();
   }
 
-  const workspaceMediaAssets = useMemo(
-    () =>
-      [
-        ...brandKit.assets.listingImages.map((src, index) => ({
-          src,
-          label: `Workspace image ${index + 1}`,
-          type: "Workspace asset",
-          ratio: "Image",
-        })),
-        ...brandKit.assets.officeImages.map((src, index) => ({
-          src,
-          label: `Office image ${index + 1}`,
-          type: "Brand asset",
-          ratio: "Image",
-        })),
-        ...brandKit.assets.headshots.map((src, index) => ({
-          src,
-          label: `Agent image ${index + 1}`,
-          type: "Brand asset",
-          ratio: "Image",
-        })),
-      ],
-    [brandKit.assets.headshots, brandKit.assets.listingImages, brandKit.assets.officeImages],
-  );
   // Uploads land at the front of the library so the image you just added is
   // visible and reselectable right away, not only after a reload.
   // Demo/sample imagery is only shown when viewing the sample workspace; real
@@ -476,11 +458,36 @@ export function AdStudioWorkbench({
     () =>
       dedupeAssetsBySrc([
         ...uploadedAssets,
-        ...initialMediaAssets,
-        ...(workspaceMediaAssets.length > 0 ? workspaceMediaAssets : isSample ? MEDIA_ASSETS : []),
+        ...loadedMediaAssets,
+        ...(isSample ? MEDIA_ASSETS : []),
       ]),
-    [initialMediaAssets, isSample, uploadedAssets, workspaceMediaAssets],
+    [isSample, loadedMediaAssets, uploadedAssets],
   );
+
+  async function loadMoreMediaAssets() {
+    if (!nextMediaCursor || loadingMoreMedia) return;
+    setLoadingMoreMedia(true);
+    try {
+      const params = new URLSearchParams({
+        wave: "library",
+        kind: "assets",
+        limit: "24",
+        cursor: nextMediaCursor,
+      });
+      const response = await fetch(`/api/adstudio/bootstrap?${params}`, { cache: "no-store" });
+      const page = (await response.json().catch(() => null)) as
+        | { items?: LibraryAssetModel[]; nextCursor?: string | null; error?: string }
+        | null;
+      if (!response.ok) throw new Error(page?.error ?? "Could not load more images.");
+      const nextAssets = (page?.items ?? []).map((asset) => ({ ...asset, ratio: "Image" as const }));
+      setLoadedMediaAssets((current) => dedupeAssetsBySrc([...current, ...nextAssets]));
+      setNextMediaCursor(page?.nextCursor ?? null);
+    } catch (error) {
+      studio.showToast(error instanceof Error ? error.message : "Could not load more images.");
+    } finally {
+      setLoadingMoreMedia(false);
+    }
+  }
 
   function selectMediaImage(src: string) {
     const asset = mediaAssets.find((item) => item.src === src);
@@ -728,26 +735,32 @@ export function AdStudioWorkbench({
   }, [setSaveState]);
 
   // The finished ad shows the moment its renders persist; region detection
-  // (editor regions + text values) attaches to the persisted creatives a few
-  // seconds later. Poll the campaign until the regions land, merging ONLY the
-  // missing cloneQa so concurrent local state is never clobbered.
+  // (editor regions + text values) attaches a few seconds later. Realtime wakes
+  // this client when the creative changes; merge ONLY missing cloneQa so
+  // concurrent local edits are never clobbered.
   const editorPreparing = pack.creatives.some(
     (creative) => isCloneCreative(creative) && !creative.canvas.cloneQa,
   );
   const editorPreparingCampaignId = editorPreparing ? pack.campaign.campaignId : null;
   useEffect(() => {
     if (!editorPreparingCampaignId) return;
+    const supabase = createSupabaseBrowserClient();
+    const abortController = new AbortController();
     let cancelled = false;
-    let attempts = 0;
-    let timer = 0;
+    let refreshing = false;
+    let refreshQueued = false;
 
-    const poll = async () => {
-      if (cancelled || attempts >= 40) return;
-      attempts += 1;
+    const refresh = async () => {
+      if (cancelled) return;
+      if (refreshing) {
+        refreshQueued = true;
+        return;
+      }
+      refreshing = true;
       try {
         const response = await fetch(
           `/api/adstudio/campaigns/${encodeURIComponent(editorPreparingCampaignId)}`,
-          { cache: "no-store" },
+          { cache: "no-store", signal: abortController.signal },
         );
         const payload = (await response.json().catch(() => null)) as
           | { campaignPack?: AdStudioCampaignPack | null }
@@ -770,15 +783,41 @@ export function AdStudioWorkbench({
           }));
         }
       } catch {
-        // Transient poll failure - the next tick retries.
+        // A later Realtime event or the low-frequency fallback can retry.
+      } finally {
+        refreshing = false;
+        if (refreshQueued && !cancelled) {
+          refreshQueued = false;
+          void refresh();
+        }
       }
-      if (!cancelled) timer = window.setTimeout(() => void poll(), 1500);
     };
 
-    timer = window.setTimeout(() => void poll(), 1000);
+    const channel = supabase
+      .channel(`adstudio-editor-${editorPreparingCampaignId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "adstudio_creatives",
+          filter: `campaign_id=eq.${editorPreparingCampaignId}`,
+        },
+        () => void refresh(),
+      )
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") void refresh();
+      });
+    const fallbackTimer = window.setInterval(() => {
+      if (document.visibilityState === "visible") void refresh();
+    }, 30_000);
+    void refresh();
+
     return () => {
       cancelled = true;
-      window.clearTimeout(timer);
+      abortController.abort();
+      window.clearInterval(fallbackTimer);
+      void supabase.removeChannel(channel);
     };
   }, [editorPreparingCampaignId]);
 
@@ -885,6 +924,9 @@ export function AdStudioWorkbench({
         onClearSelection={() => setPendingMediaReplacement(null)}
         onConfirmReplace={confirmMediaReplacement}
         mediaAssets={mediaAssets}
+        hasMoreAssets={Boolean(nextMediaCursor)}
+        loadingMoreAssets={loadingMoreMedia}
+        onLoadMoreAssets={loadMoreMediaAssets}
       />
     );
   }
@@ -1361,6 +1403,9 @@ export function AdStudioWorkbench({
         workspaceId={workspaceId}
         templates={adTemplates}
         mediaAssets={mediaAssets}
+        hasMoreMediaAssets={Boolean(nextMediaCursor)}
+        loadingMoreMediaAssets={loadingMoreMedia}
+        onLoadMoreMediaAssets={loadMoreMediaAssets}
         onGenerate={handleGenerateFirstAd}
         initialTemplateId={samplePickerInitialId}
       />

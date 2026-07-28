@@ -18,27 +18,17 @@ export async function GET(request: NextRequest, context: RouteContext) {
     return access.response;
   }
 
-  const [{ data: campaign, error }, { data: variants }, { data: creatives }, { data: copy }, { data: compliance }] =
-    await Promise.all([
-      access.supabase.from("adstudio_campaigns").select("*").eq("workspace_id", access.access.workspaceId).eq("id", id).maybeSingle(),
-      access.supabase.from("adstudio_campaign_variants").select("*").eq("workspace_id", access.access.workspaceId).eq("campaign_id", id),
-      access.supabase.from("adstudio_creatives").select("*").eq("workspace_id", access.access.workspaceId).eq("campaign_id", id),
-      access.supabase.from("adstudio_platform_copy").select("*").eq("workspace_id", access.access.workspaceId).eq("campaign_id", id),
-      access.supabase.from("adstudio_compliance_reports").select("*").eq("workspace_id", access.access.workspaceId).eq("campaign_id", id),
-    ]);
-
-  if (error) return errorResponse(error);
-  if (!campaign) return NextResponse.json({ error: "Campaign not found." }, { status: 404 });
-
-  const campaignPack = await loadAdStudioCampaignPack(access.supabase, access.access.workspaceId, id);
+  const campaignPack = await loadAdStudioCampaignPack(
+    access.supabase,
+    access.access.workspaceId,
+    id,
+  );
+  if (!campaignPack) {
+    return NextResponse.json({ error: "Campaign not found." }, { status: 404 });
+  }
 
   return NextResponse.json({
-    campaign,
-    variants,
-    creatives,
-    copy,
-    compliance,
-    campaignPack: campaignPack ? compactAdStudioCampaignPackForTransport(campaignPack) : null,
+    campaignPack: compactAdStudioCampaignPackForTransport(campaignPack),
   });
 }
 

@@ -29,6 +29,9 @@ type MediaPanelProps = {
   onSelectImage: (src: string) => void;
   onClearSelection: () => void;
   onConfirmReplace: () => void | Promise<void>;
+  hasMoreAssets?: boolean;
+  loadingMoreAssets?: boolean;
+  onLoadMoreAssets?: () => void | Promise<void>;
 };
 
 type RoleFilter = AssetRole | "all";
@@ -44,6 +47,9 @@ export function MediaPanel({
   onSelectImage,
   onClearSelection,
   onConfirmReplace,
+  hasMoreAssets = false,
+  loadingMoreAssets = false,
+  onLoadMoreAssets,
 }: MediaPanelProps) {
   const [filter, setFilter] = useState<RoleFilter>("all");
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -133,6 +139,18 @@ export function MediaPanel({
           <p>Upload a property photo, headshot or logo to use it in an ad.</p>
         </div>
       )}
+
+      {hasMoreAssets && onLoadMoreAssets ? (
+        <Button
+          className="w-full"
+          variant="outline"
+          type="button"
+          disabled={loadingMoreAssets}
+          onClick={() => void onLoadMoreAssets()}
+        >
+          {loadingMoreAssets ? "Loading…" : "Load more images"}
+        </Button>
+      ) : null}
 
       {replacementAsset ? (
         <section className="studio-media-replacement" aria-label="Selected replacement image">

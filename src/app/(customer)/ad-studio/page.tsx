@@ -1,11 +1,11 @@
 import { AdStudioWorkbench } from "@/components/adstudio/ad-studio-workbench";
 import { createEmptyAdStudioCampaignPack, listOfferTemplates, type AdStudioBrandKit } from "@/lib/adstudio";
 import {
+  ADSTUDIO_EMBEDDED_ASSET_LIMIT,
   applyBrandAssetRows,
   loadAdStudioBrandAssetRows,
-  loadAdStudioWorkspaceAssetRows,
-  mediaLibraryAssetForRow,
 } from "@/lib/adstudio/assets";
+import { loadAdStudioLibraryPage, type LibraryAssetModel } from "@/lib/adstudio/library-read-model";
 import { loadLiveAdStudioBundle } from "@/lib/adstudio/load-live-bundle";
 import { isExampleBrandKitSourceUrl, persistAdStudioBrandKit, rowToBrandKit } from "@/lib/adstudio/persistence";
 import { buildTrialFallbackBrandKit } from "@/lib/adstudio/trial-brand-kit";
@@ -29,9 +29,14 @@ export default async function AdStudioPage({ searchParams }: { searchParams?: Se
   const params = searchParams ? await searchParams : {};
   const { supabase, access } = await requirePageSurfaceAccess("adstudio");
   const requestedCampaignId = stringParam(params.campaignId);
-  const [liveBundle, workspaceAssetRows] = await Promise.all([
+  const [liveBundle, assetsPage] = await Promise.all([
     loadLiveAdStudioBundle(supabase, access.workspaceId, requestedCampaignId),
-    loadAdStudioWorkspaceAssetRows(supabase, access.workspaceId),
+    loadAdStudioLibraryPage({
+      supabase,
+      workspaceId: access.workspaceId,
+      kind: "assets",
+      limit: 24,
+    }),
   ]);
 
   // Softened gate: an extracted-but-unapproved kit lets the user straight into the
@@ -51,11 +56,10 @@ export default async function AdStudioPage({ searchParams }: { searchParams?: Se
   const bundle = liveBundle ?? draftBundle ?? starterBundle;
   if (!bundle) throw new Error("Ad Studio could not prepare an empty workspace.");
   const showBrandSetupPrompt = !isSample && isStarterFallbackBrandKit(bundle.brandKit);
-  const initialMediaAssets = workspaceAssetRows.flatMap((row) => {
-    if (isExampleBrandKitSourceUrl(typeof row.source_url === "string" ? row.source_url : "")) return [];
-    const asset = mediaLibraryAssetForRow(access.workspaceId, row);
-    return asset ? [asset] : [];
-  });
+  const initialMediaAssets = (assetsPage.items as LibraryAssetModel[]).map((asset) => ({
+    ...asset,
+    ratio: "Image" as const,
+  }));
 
   return (
     <>
@@ -70,6 +74,7 @@ export default async function AdStudioPage({ searchParams }: { searchParams?: Se
         isSample={isSample}
         showBrandSetupPrompt={showBrandSetupPrompt}
         initialMediaAssets={initialMediaAssets}
+        initialMediaCursor={assetsPage.nextCursor}
       />
     </>
   );
@@ -138,7 +143,12 @@ async function buildDraftBrandBundle(
 
     const brandKit = applyBrandAssetRows(
       rowToBrandKit(row),
-      await loadAdStudioBrandAssetRows(supabase, workspaceId, String(row.id)),
+      await loadAdStudioBrandAssetRows(
+        supabase,
+        workspaceId,
+        String(row.id),
+        ADSTUDIO_EMBEDDED_ASSET_LIMIT,
+      ),
     );
     // Approved kits are already handled by loadLiveAdStudioBundle.
     if (brandKit.reviewStatus === "approved") return null;

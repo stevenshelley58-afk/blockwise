@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono, Manrope } from "next/font/google";
 import Script from "next/script";
 import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 import { PageViewTracker } from "@/components/page-view-tracker";
 import { ConsentBanner } from "@/components/consent-banner";
@@ -127,6 +128,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <PageViewTracker />
         <ConsentBanner />
         <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );

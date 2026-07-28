@@ -133,16 +133,20 @@ export async function GET(request: NextRequest) {
     return context.response;
   }
 
+  const requestedLimit = Number.parseInt(request.nextUrl.searchParams.get("limit") ?? "50", 10);
+  const limit = Number.isFinite(requestedLimit) ? Math.min(100, Math.max(1, requestedLimit)) : 50;
+  const includeCreativeLibrary = request.nextUrl.searchParams.get("include") === "creativeLibrary";
   const { data, error } = await context.supabase
     .from("adstudio_campaigns")
-    .select("*")
+    .select("id,name,status,created_at,updated_at")
     .eq("workspace_id", context.access.workspaceId)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(limit);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   const campaigns = data ?? [];
-  if (request.nextUrl.searchParams.get("include") !== "creativeLibrary") {
+  if (!includeCreativeLibrary) {
     return NextResponse.json({ campaigns });
   }
   const campaignIds = campaigns.flatMap((campaign) => typeof campaign.id === "string" ? [campaign.id] : []);

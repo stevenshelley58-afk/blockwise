@@ -5,11 +5,14 @@ import test from "node:test";
 import manifest from "../src/app/manifest.ts";
 import {
   OFFLINE_FALLBACK_URL,
+  PWA_CACHE_VERSION,
+  STATIC_CACHE_MAX_ENTRIES,
   STATIC_CACHE_NAME,
   THUMBNAIL_CACHE_MAX_ENTRIES,
   THUMBNAIL_CACHE_NAME,
   canUseOfflineFallbackForNavigation,
   createServiceWorkerSource,
+  isExcludedServiceWorkerPath,
   isCacheableStaticAssetRequest,
 } from "../src/lib/pwa/sw-policy.ts";
 
@@ -48,6 +51,11 @@ test("service worker policy caches only same-origin static assets", () => {
   assert.equal(isCacheableStaticAssetRequest({ url: "/_next/static/chunks/app.js", destination: "script" }, ORIGIN), true);
   assert.equal(isCacheableStaticAssetRequest({ url: "/icons/icon-192.png", destination: "image" }, ORIGIN), true);
   assert.equal(isCacheableStaticAssetRequest({ url: "/hero/hero-wide.jpg", destination: "image" }, ORIGIN), true);
+  assert.equal(
+    isCacheableStaticAssetRequest({ url: "/adstudio-samples/sample.png", destination: "image" }, ORIGIN),
+    false,
+  );
+  assert.equal(isExcludedServiceWorkerPath("/adstudio-samples/sample.png"), true);
 
   assert.equal(isCacheableStaticAssetRequest({ url: "/api/report.png", destination: "image" }, ORIGIN), false);
   assert.equal(isCacheableStaticAssetRequest({ url: "/auth/callback.js", destination: "script" }, ORIGIN), false);
@@ -70,10 +78,13 @@ test("service worker policy uses offline fallback only for safe same-origin navi
 test("generated service worker source includes versioned cache and cleanup policy", () => {
   const source = createServiceWorkerSource();
 
+  assert.equal(PWA_CACHE_VERSION, "v4");
   assert.match(source, new RegExp(`const STATIC_CACHE_NAME = "${STATIC_CACHE_NAME}"`));
+  assert.match(source, new RegExp(`const STATIC_CACHE_MAX_ENTRIES = ${STATIC_CACHE_MAX_ENTRIES}`));
   assert.match(source, new RegExp(`const THUMBNAIL_CACHE_NAME = "${THUMBNAIL_CACHE_NAME}"`));
   assert.match(source, new RegExp(`const THUMBNAIL_CACHE_MAX_ENTRIES = ${THUMBNAIL_CACHE_MAX_ENTRIES}`));
   assert.match(source, /boundedThumbnailCacheFirst/);
+  assert.match(source, /keys\.length - STATIC_CACHE_MAX_ENTRIES/);
   assert.match(source, new RegExp(`const OFFLINE_FALLBACK_URL = "${OFFLINE_FALLBACK_URL}"`));
   assert.match(source, /caches\.delete\(key\)/);
   assert.match(source, /request\.mode === "navigate"/);

@@ -1,6 +1,10 @@
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
 
-import { applyBrandAssetRows, loadAdStudioBrandAssetRows } from "./assets.ts";
+import {
+  ADSTUDIO_EMBEDDED_ASSET_LIMIT,
+  applyBrandAssetRows,
+  loadAdStudioBrandAssetRows,
+} from "./assets.ts";
 import { normalizeCloneQa } from "./types.ts";
 import type {
   AdStudioBrandKit,
@@ -446,7 +450,12 @@ export async function loadAdStudioCampaignPack(
 
   const brandKit = applyBrandAssetRows(
     rowToBrandKit(brandKitRow.data),
-    await loadAdStudioBrandAssetRows(supabase, workspaceId, String(campaign.brand_kit_id)),
+    await loadAdStudioBrandAssetRows(
+      supabase,
+      workspaceId,
+      String(campaign.brand_kit_id),
+      ADSTUDIO_EMBEDDED_ASSET_LIMIT,
+    ),
   );
   const currentCreatives = filterCreativeRowsToDeclaredFormats(
     campaign,

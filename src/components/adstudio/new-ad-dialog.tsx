@@ -119,6 +119,9 @@ type NewAdDialogProps = {
   workspaceId: string;
   templates: AdStudioTemplate[];
   mediaAssets?: ImageLibraryAsset[];
+  hasMoreMediaAssets?: boolean;
+  loadingMoreMediaAssets?: boolean;
+  onLoadMoreMediaAssets?: () => void | Promise<void>;
   onGenerate: (input: FirstAdInput) => Promise<void>;
   /** Open directly on a selected gallery sample. */
   initialTemplateId?: string;
@@ -562,6 +565,9 @@ export function NewAdDialog({
   workspaceId,
   templates,
   mediaAssets = [],
+  hasMoreMediaAssets = false,
+  loadingMoreMediaAssets = false,
+  onLoadMoreMediaAssets,
   onGenerate,
   initialTemplateId,
 }: NewAdDialogProps) {
@@ -1544,6 +1550,16 @@ export function NewAdDialog({
                   ))}
                 </div>
               )}
+              {hasMoreMediaAssets && onLoadMoreMediaAssets ? (
+                <button
+                  className="studio-btn secondary block"
+                  type="button"
+                  disabled={loadingMoreMediaAssets}
+                  onClick={() => void onLoadMoreMediaAssets()}
+                >
+                  {loadingMoreMediaAssets ? "Loading…" : "Load more images"}
+                </button>
+              ) : null}
             </div>
           )}
 

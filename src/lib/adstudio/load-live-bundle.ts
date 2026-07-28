@@ -2,7 +2,7 @@ import type { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import { createEmptyAdStudioCampaignPack, listOfferTemplates } from "./index.ts";
 import { isFinishedCloneCreative } from "./clone-creative.ts";
-import { applyBrandAssetRows } from "./assets.ts";
+import { ADSTUDIO_EMBEDDED_ASSET_LIMIT, applyBrandAssetRows } from "./assets.ts";
 import { isExampleBrandKitSourceUrl, rowToBrandKit, rowToCampaignPack } from "./persistence.ts";
 import type { AdStudioBrandKit, AdStudioCampaignPack, AdStudioOfferTemplate } from "./types.ts";
 
@@ -144,7 +144,7 @@ export async function loadLiveAdStudioBundle(
           rowToBrandKit(brandKitRow),
           (assetsResult.data ?? []).filter(
             (row) => String(row.brand_kit_id ?? "") === String(latestCampaign.brand_kit_id),
-          ),
+          ).slice(0, ADSTUDIO_EMBEDDED_ASSET_LIMIT),
         );
         if (isExampleBrandKitSourceUrl(brandKit.source.url)) continue;
 
@@ -178,7 +178,7 @@ export async function loadLiveAdStudioBundle(
         rowToBrandKit(latestBrandKitRow),
         (assetsResult.data ?? []).filter(
           (row) => String(row.brand_kit_id ?? "") === String(latestBrandKitRow.id),
-        ),
+        ).slice(0, ADSTUDIO_EMBEDDED_ASSET_LIMIT),
       );
       const campaignPack = createEmptyAdStudioCampaignPack({ workspaceId, brandKit });
 
