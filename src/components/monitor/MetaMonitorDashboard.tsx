@@ -141,7 +141,7 @@ export function MetaMonitorDashboard({
   const summary = payload.summary;
 
   return (
-    <div className="mx-auto grid w-full max-w-[1120px] gap-3.5 px-4 pt-6 pb-28 md:px-6 md:pt-8 md:pb-16">
+    <div className="mx-auto grid w-full min-w-0 max-w-[1120px] gap-3.5 px-4 pt-6 pb-28 md:px-6 md:pt-8 md:pb-16">
       <MetaMonitorHeader
         range={payload.range}
         rangeKey={rangeKey}
