@@ -11,7 +11,7 @@ export const leads: LeadsCopy = {
   stats: {
     leads: "Leads",
     highIntent: "High intent",
-    duplicates: "Duplicates flagged",
+    duplicates: "Duplicates",
     duplicatesNote: "Matched by email or phone",
   },
   searchPlaceholder: "Search leads",
