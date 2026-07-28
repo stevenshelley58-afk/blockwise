@@ -161,10 +161,14 @@ EMPTY=
   );
 });
 
-test("Vercel release gate blocks deploys on env, test, typecheck, or build failures", () => {
+test("Vercel release gate still blocks deploys on missing or invalid env", () => {
+  // The test/typecheck half of the gate moved to CI (hard-reset-verification.yml)
+  // so a failing suite can no longer strand a half-built deploy. The env
+  // precondition stays on the build command: it is a deploy-time fact about the
+  // target environment that CI cannot check in its place.
   const vercel = JSON.parse(readFileSync("vercel.json", "utf8")) as { buildCommand?: string };
 
-  assert.equal(vercel.buildCommand, "npm run verify-env && npm run check && npm run build");
+  assert.equal(vercel.buildCommand, "npm run verify-env && npm run build");
 });
 
 test("Vercel route bundles are loadable by the CommonJS serverless launcher", () => {
