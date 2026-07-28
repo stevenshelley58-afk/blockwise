@@ -17,7 +17,7 @@ test("operator research health endpoint renders v_health as a red/green monitor 
 
 test("public research health endpoint is monitorable without exposing operator controls", () => {
   assert.doesNotMatch(publicRoute, /\brequireOperator\b/u, "public health route must be callable by an external monitor");
-  assert.match(publicRoute, /\bcreateSupabaseServiceClient\b/u, "public health route should read Supabase from the server side");
+  assert.match(publicRoute, /\bcreateResearchServiceClient\b/u, "public health route should read the private VPS database from the server side");
   assert.match(publicRoute, /\.schema\(["']research["']\)[\s\S]*\.from\(["']v_health["']\)/u, "public health route must read research.v_health");
   assert.match(publicRoute, /\bpaid_spend_without_ingest\b/u, "public health route must expose paid-spend failure as a red check");
   assert.match(publicRoute, /\{\s*status:\s*healthy\s*\?\s*200\s*:\s*503\s*\}/u, "public red research health must return HTTP 503");

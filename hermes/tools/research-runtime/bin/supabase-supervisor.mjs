@@ -3,10 +3,10 @@
 import { createHash, randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { lookup } from "node:dns/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import {
   CLASSIFIER_VERSION,
   assessCapturedImageQuality,
@@ -19,7 +19,13 @@ import {
   shouldWaitForMediaClassification,
 } from "./ad-classifier.mjs";
 import { CONTENT_RUN_JOB_TYPE, handleHermesContentRun } from "./content-engine.mjs";
-import { hermesSupabaseHeaders, resolveHermesSupabaseCredential } from "./supabase-credentials.mjs";
+import { runAdRadarAccuracyAudit } from "./ad-radar-accuracy-audit.mjs";
+import { publishCustomerReadModels } from "./customer-read-model-publisher.mjs";
+import {
+  hermesSupabaseHeaders,
+  resolveHermesCustomerSupabaseCredential,
+  resolveHermesSupabaseCredential,
+} from "./supabase-credentials.mjs";
 
 const DEFAULT_POSTCODES = ["ALL"];
 const COVERAGE_AUDITOR_JOB_TYPE = "blockwise-coverage-auditor";
@@ -59,6 +65,23 @@ if (!supabaseCredential) {
     "Missing HERMES_SUPABASE_SECRET_KEY/SUPABASE_SECRET_KEY or legacy Supabase service-role key",
   );
 }
+const customerSupabaseUrl = required("HERMES_CUSTOMER_SUPABASE_URL", env.SUPABASE_URL).replace(/\/+$/u, "");
+const customerSupabaseCredential = resolveHermesCustomerSupabaseCredential(env);
+if (!customerSupabaseCredential) {
+  throw new Error(
+    "Missing HERMES_CUSTOMER_SUPABASE_SECRET_KEY or HERMES_CUSTOMER_SUPABASE_SERVICE_ROLE_KEY",
+  );
+}
+const customerReadModelPublishIntervalMs = positiveInt(
+  "HERMES_CUSTOMER_READ_MODEL_PUBLISH_INTERVAL_SECONDS",
+  300,
+) * 1000;
+const accuracyAuditCheckIntervalMs = positiveInt(
+  "HERMES_ACCURACY_AUDIT_CHECK_INTERVAL_SECONDS",
+  3600,
+) * 1000;
+const accuracyAuditIntervalHours = positiveInt("HERMES_ACCURACY_AUDIT_INTERVAL_HOURS", 168);
+const rawEvidenceDir = env.HERMES_RAW_EVIDENCE_DIR || "/opt/research-raw-evidence";
 const mode = env.HERMES_RESEARCH_MODE === "build" ? "build" : "maintain";
 const workerId = env.HERMES_QUEUE_WORKER_ID || `hermes-research-${randomUUID()}`;
 const intervalMs = positiveInt("HERMES_QUEUE_LOOP_INTERVAL_MS", 60_000);
@@ -299,9 +322,9 @@ async function rest(schema, path, init = {}) {
 }
 
 async function storage(path, init = {}) {
-  const response = await fetch(`${supabaseUrl}/storage/v1/${path}`, {
+  const response = await fetch(`${customerSupabaseUrl}/storage/v1/${path}`, {
     ...init,
-    headers: hermesSupabaseHeaders(supabaseCredential, {
+    headers: hermesSupabaseHeaders(customerSupabaseCredential, {
       ...(init.headers || {}),
     }),
   });
@@ -4752,18 +4775,8 @@ async function ensureMediaBucket() {
 
 async function ensureRawEvidenceBucket() {
   if (rawEvidenceBucketEnsured) return;
-  try {
-    await storage(`bucket/${encode(RAW_EVIDENCE_BUCKET)}`);
-    rawEvidenceBucketEnsured = true;
-    return;
-  } catch {
-    await storage("bucket", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: json({ id: RAW_EVIDENCE_BUCKET, name: RAW_EVIDENCE_BUCKET, public: false, file_size_limit: 104_857_600 }),
-    });
-    rawEvidenceBucketEnsured = true;
-  }
+  await mkdir(rawEvidenceDir, { recursive: true });
+  rawEvidenceBucketEnsured = true;
 }
 
 async function safeWriteBrowserRawEvidence(kind, input, evidence) {
@@ -4776,31 +4789,30 @@ async function safeWriteBrowserRawEvidence(kind, input, evidence) {
 
 async function writeBrowserRawEvidence(kind, input, evidence) {
   await ensureRawEvidenceBucket();
-  const target = input.metaPageId
+  const rawTarget = input.metaPageId
     || [input.state, input.postcode, input.query ? hash(String(input.query)).slice(0, 12) : null]
       .filter(Boolean)
       .join("-")
     || "unknown-target";
+  const safePathSegment = (value) => String(value).replace(/[^a-zA-Z0-9._-]+/gu, "-").replace(/^\.+/u, "").slice(0, 160) || "unknown";
+  const target = safePathSegment(rawTarget);
   const objectPath = [
     "browser",
-    kind,
+    safePathSegment(kind),
     target,
     `${Date.now()}-${hash(json({ kind, input, evidence })).slice(0, 16)}.json`,
   ].join("/");
-  await uploadStorageObject(
-    RAW_EVIDENCE_BUCKET,
-    objectPath,
-    Buffer.from(json({ kind, input, evidence }), "utf8"),
-    "application/json",
-  );
+  const destination = join(rawEvidenceDir, ...objectPath.split("/"));
+  await mkdir(dirname(destination), { recursive: true });
+  await writeFile(destination, Buffer.from(json({ kind, input, evidence }), "utf8"), { mode: 0o600 });
   return { bucket: RAW_EVIDENCE_BUCKET, objectPath };
 }
 
 async function uploadStorageObject(bucket, objectPath, buffer, contentType) {
   const encodedObjectPath = objectPath.split("/").map(encode).join("/");
-  const response = await fetch(`${supabaseUrl}/storage/v1/object/${encode(bucket)}/${encodedObjectPath}`, {
+  const response = await fetch(`${customerSupabaseUrl}/storage/v1/object/${encode(bucket)}/${encodedObjectPath}`, {
     method: "POST",
-    headers: hermesSupabaseHeaders(supabaseCredential, {
+    headers: hermesSupabaseHeaders(customerSupabaseCredential, {
       "Content-Type": contentType,
       "x-upsert": "true",
     }),
@@ -4812,7 +4824,7 @@ async function uploadStorageObject(bucket, objectPath, buffer, contentType) {
 
 function storagePublicUrlForPath(objectPath) {
   if (!objectPath) return null;
-  return `${supabaseUrl}/storage/v1/object/public/${encode(mediaBucket)}/${String(objectPath).split("/").map(encode).join("/")}`;
+  return `${customerSupabaseUrl}/storage/v1/object/public/${encode(mediaBucket)}/${String(objectPath).split("/").map(encode).join("/")}`;
 }
 
 function extensionForContentType(contentType, kind) {
@@ -5246,6 +5258,8 @@ async function tick() {
   let supervisor = { policySeedCandidates: 0, policySeeded: 0, duePolicies: 0, enqueued: 0, recycledCensus: 0, deferredCensus: 0, adRefreshCandidates: 0, adRefreshEnqueued: 0, locationSearchCandidates: 0, locationSearchEnqueued: 0 };
   let watchdogs = {};
   let priorityContentHandled = 0;
+  let customerReadModels = { skipped: true, reason: "not_due" };
+  let accuracyAudit = { skipped: true, reason: "not_due" };
   try {
     const fastLaneJobs = await claimContentFastLaneJobs({ jobTypes: [CONTENT_RUN_JOB_TYPE], limit: 1 });
     await Promise.all(fastLaneJobs.map(processOneJob));
@@ -5270,7 +5284,47 @@ async function tick() {
   } catch (error) {
     log("watchdog phase failed after worker pass", { error: error.message }, "error");
   }
-  log("tick complete", { mode, workerId, buildRunId, priorityContentHandled, ...supervisor, handled, watchdogs });
+  try {
+    customerReadModels = await maybePublishCustomerReadModels();
+  } catch (error) {
+    customerReadModels = { skipped: false, error: error.message };
+    log("customer read model publish failed", { error: error.message }, "error");
+  }
+  try {
+    accuracyAudit = await maybeRunAccuracyAudit();
+  } catch (error) {
+    accuracyAudit = { skipped: false, error: error.message };
+    log("Ad Radar accuracy audit failed", { error: error.message }, "error");
+  }
+  log("tick complete", { mode, workerId, buildRunId, priorityContentHandled, ...supervisor, handled, watchdogs, customerReadModels, accuracyAudit });
+}
+
+let lastCustomerReadModelPublishAt = 0;
+let lastAccuracyAuditCheckAt = 0;
+
+async function maybePublishCustomerReadModels() {
+  const current = Date.now();
+  if (current - lastCustomerReadModelPublishAt < customerReadModelPublishIntervalMs) {
+    return { skipped: true, reason: "not_due" };
+  }
+  const result = await publishCustomerReadModels({ researchRest: rest, env, fetchImpl: fetch, now });
+  lastCustomerReadModelPublishAt = Date.now();
+  return result;
+}
+
+async function maybeRunAccuracyAudit() {
+  const current = Date.now();
+  if (current - lastAccuracyAuditCheckAt < accuracyAuditCheckIntervalMs) {
+    return { skipped: true, reason: "not_due" };
+  }
+  lastAccuracyAuditCheckAt = current;
+  return runAdRadarAccuracyAudit({
+    researchRest: rest,
+    env,
+    fetchImpl: fetch,
+    now,
+    intervalHours: accuracyAuditIntervalHours,
+  });
 }
 
 async function main() {

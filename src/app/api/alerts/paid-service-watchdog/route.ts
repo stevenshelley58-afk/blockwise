@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { runPaidServiceWatchdog } from "@/lib/alerts/paid-service-runner";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { createResearchServiceClient } from "@/lib/research/service";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -18,6 +18,6 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  const result = await runPaidServiceWatchdog(createSupabaseServiceClient());
+  const result = await runPaidServiceWatchdog(createResearchServiceClient());
   return NextResponse.json({ ok: true, ...result });
 }

@@ -1,5 +1,5 @@
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
-import { resolveCustomerActivation } from "@/lib/activation/customer-activation";
+import { readCustomerActivation } from "@/lib/activation/customer-activation";
 import { niche } from "@/config/niche";
 import { GOOGLE_ADS_ENABLED } from "@/lib/config/feature-flags";
 import { listProviderConnections } from "@/lib/providers/provider-connections";
@@ -47,7 +47,7 @@ type MemberRow = { profile_id: string; role: string; profiles: MemberProfile | M
 type InvitationRow = { id: string; email: string; role: string; expires_at: string };
 
 export default async function SettingsPage() {
-  const { supabase, access } = await requirePageSurfaceAccess("monitor");
+  const { supabase, access, auth } = await requirePageSurfaceAccess("monitor");
   const canManage = access.isOperator || access.role === "owner" || access.role === "admin";
   const service = createSupabaseServiceClient();
 
@@ -55,7 +55,6 @@ export default async function SettingsPage() {
     { data: profile },
     { data: workspace },
     connections,
-    { data: authData },
     { data: brandKit },
     { data: wallet },
     activation,
@@ -63,7 +62,6 @@ export default async function SettingsPage() {
     supabase.from("profiles").select("*").eq("id", access.userId).maybeSingle(),
     supabase.from("workspaces").select("*").eq("id", access.workspaceId).maybeSingle(),
     listProviderConnections(supabase, access.workspaceId),
-    supabase.auth.getUser(),
     supabase
       .from("adstudio_brand_kits")
       .select("source_url, review_status")
@@ -79,7 +77,7 @@ export default async function SettingsPage() {
       .order("period_end", { ascending: false })
       .limit(1)
       .maybeSingle(),
-    resolveCustomerActivation({ workspaceId: access.workspaceId, serviceSupabase: service }),
+    readCustomerActivation({ workspaceId: access.workspaceId, serviceSupabase: service }),
   ]);
 
   const w = (workspace as WorkspaceRow | null) ?? null;
@@ -149,8 +147,7 @@ export default async function SettingsPage() {
   const p = (profile as ProfileRow | null) ?? null;
   const pl = planData;
   const wsQuery = encodeURIComponent(access.workspaceId);
-  const authUser = authData.user;
-  const userMetadata = (authUser?.user_metadata ?? {}) as Record<string, unknown>;
+  const userMetadata = auth.claims?.user_metadata ?? {};
   const walletRow = (wallet ?? null) as {
     credits_granted?: number | null;
     credits_reserved?: number | null;
@@ -183,7 +180,9 @@ export default async function SettingsPage() {
             typeof userMetadata.timezone === "string"
               ? userMetadata.timezone
               : Intl.DateTimeFormat().resolvedOptions().timeZone,
-          emailVerified: Boolean(authUser?.email_confirmed_at),
+          // An authenticated email claim has already passed Supabase's sign-in
+          // policy; avoid a second Auth API lookup just to rediscover it.
+          emailVerified: Boolean(auth.claims?.email),
           notificationPreferences: p?.notification_preferences ?? {},
         }}
         workspace={{

@@ -16,7 +16,7 @@ import {
   Wallet,
   X,
 } from "lucide-react";
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { niche } from "@/config/niche";
@@ -27,6 +27,12 @@ import {
   type ResultsHierarchyStatus,
 } from "@/lib/meta-monitor/results-hierarchy";
 import type { AnglePerformance, MetaMonitorPayload, MonitorRange } from "@/lib/meta-monitor/types";
+import {
+  READ_MODEL_SCHEMA_VERSION,
+  readLocalReadModel,
+  writeLocalReadModel,
+} from "@/lib/read-models/browser-store";
+import { useReportingInvalidation } from "@/lib/read-models/use-reporting-invalidation";
 
 import { AdPerformanceCard, adCardDomId } from "./AdPerformanceCard";
 import { AdManagementControls, BudgetManagementControl } from "./AdManagementControls";
@@ -64,14 +70,24 @@ const noticeToneClass: Record<OAuthNotice["tone"], string> = {
 
 export function MetaMonitorDashboard({
   initialPayload,
+  initialEtag,
+  initialGeneratedAt,
+  userId,
+  workspaceId,
   metaConnectHref,
   oauthNotice,
 }: {
   initialPayload: MetaMonitorPayload;
+  initialEtag: string;
+  initialGeneratedAt: string;
+  userId: string;
+  workspaceId: string;
   metaConnectHref?: string;
   oauthNotice?: OAuthNotice | null;
 }) {
   const [payload, setPayload] = useState(initialPayload);
+  const [etag, setEtag] = useState(initialEtag);
+  const [generatedAt, setGeneratedAt] = useState(initialGeneratedAt);
   const [rangeKey, setRangeKey] = useState<MonitorRange>(initialPayload.range.key);
   const [customRange, setCustomRange] = useState<{ since: string; until: string }>({
     since: initialPayload.range.since,
@@ -81,10 +97,22 @@ export function MetaMonitorDashboard({
   const [error, setError] = useState<string | null>(null);
   const [noticeDismissed, setNoticeDismissed] = useState(false);
 
-  async function refresh(
+  const surfaceFor = useCallback((
+    nextRange: MonitorRange,
+    nextCustomRange: { since: string; until: string },
+  ) => {
+    const suffix =
+      nextRange === "custom"
+        ? `custom:${nextCustomRange.since}:${nextCustomRange.until}`
+        : nextRange;
+    return `performance:${suffix}` as const;
+  }, []);
+
+  const refresh = useCallback(async (
     nextRange: MonitorRange = rangeKey,
     nextCustomRange: { since: string; until: string } = customRange,
-  ) {
+    options: { manual?: boolean; cachedEtag?: string | null } = {},
+  ) => {
     setIsRefreshing(true);
     setError(null);
 
@@ -96,7 +124,19 @@ export function MetaMonitorDashboard({
         params.set("until", nextCustomRange.until);
       }
 
-      const response = await fetch(`/api/monitor-dashboard?${params.toString()}`, { cache: "no-store" });
+      const response = await fetch(`/api/monitor-dashboard?${params.toString()}`, {
+        method: options.manual ? "POST" : "GET",
+        cache: "no-store",
+        headers:
+          !options.manual && (options.cachedEtag ?? etag)
+            ? { "if-none-match": options.cachedEtag ?? etag }
+            : undefined,
+      });
+
+      if (response.status === 304) {
+        setIsRefreshing(false);
+        return;
+      }
 
       if (!response.ok) {
         const body = (await response.json().catch(() => null)) as { error?: string } | null;
@@ -104,17 +144,83 @@ export function MetaMonitorDashboard({
         throw new Error(body?.error ?? `Refresh failed with ${response.status}.`);
       }
 
-      setPayload((await response.json()) as MetaMonitorPayload);
+      const nextPayload = (await response.json()) as MetaMonitorPayload;
+      const nextEtag = response.headers.get("etag") ?? etag;
+      const nextGeneratedAt =
+        response.headers.get("x-bw-snapshot-generated-at") ?? new Date().toISOString();
+      if (!options.manual) {
+        setPayload(nextPayload);
+        setEtag(nextEtag);
+        setGeneratedAt(nextGeneratedAt);
+        await writeLocalReadModel({
+          schemaVersion: READ_MODEL_SCHEMA_VERSION,
+          userId,
+          workspaceId,
+          surface: surfaceFor(nextRange, nextCustomRange),
+          etag: nextEtag,
+          fetchedAt: nextGeneratedAt,
+          data: nextPayload,
+        });
+        setIsRefreshing(false);
+      } else {
+        window.setTimeout(() => setIsRefreshing(false), 30_000);
+      }
     } catch (refreshError) {
       setError(refreshError instanceof Error ? refreshError.message : "Refresh failed.");
-    } finally {
       setIsRefreshing(false);
     }
-  }
+  }, [customRange, etag, rangeKey, surfaceFor, userId, workspaceId]);
 
-  function handleRangeChange(nextRange: MonitorRange) {
+  useEffect(() => {
+    let cancelled = false;
+    const surface = surfaceFor(initialPayload.range.key, {
+      since: initialPayload.range.since,
+      until: initialPayload.range.until,
+    });
+    void (async () => {
+      const cached = await readLocalReadModel<MetaMonitorPayload>({ userId, workspaceId, surface });
+      if (
+        !cancelled &&
+        cached &&
+        Date.parse(cached.fetchedAt) > Date.parse(initialGeneratedAt)
+      ) {
+        setPayload(cached.data);
+        setEtag(cached.etag);
+        setGeneratedAt(cached.fetchedAt);
+      } else {
+        await writeLocalReadModel({
+          schemaVersion: READ_MODEL_SCHEMA_VERSION,
+          userId,
+          workspaceId,
+          surface,
+          etag: initialEtag,
+          fetchedAt: initialGeneratedAt,
+          data: initialPayload,
+        });
+      }
+    })().catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [initialEtag, initialGeneratedAt, initialPayload, surfaceFor, userId, workspaceId]);
+
+  const handleInvalidation = useCallback(() => {
+    void refresh(rangeKey, customRange, { cachedEtag: etag });
+  }, [customRange, etag, rangeKey, refresh]);
+  useReportingInvalidation({ workspaceId, onInvalidate: handleInvalidation });
+
+  async function handleRangeChange(nextRange: MonitorRange) {
     setRangeKey(nextRange);
-    void refresh(nextRange);
+    const surface = surfaceFor(nextRange, customRange);
+    const cached = await readLocalReadModel<MetaMonitorPayload>({ userId, workspaceId, surface }).catch(
+      () => null,
+    );
+    if (cached) {
+      setPayload(cached.data);
+      setEtag(cached.etag);
+      setGeneratedAt(cached.fetchedAt);
+    }
+    void refresh(nextRange, customRange, { cachedEtag: cached?.etag ?? null });
   }
 
   function handleCustomRangeChange(nextCustomRange: { since: string; until: string }) {
@@ -122,7 +228,7 @@ export function MetaMonitorDashboard({
     setCustomRange(nextCustomRange);
 
     if (nextCustomRange.since && nextCustomRange.until) {
-      void refresh("custom", nextCustomRange);
+      void refresh("custom", nextCustomRange, { cachedEtag: null });
     }
   }
 
@@ -146,12 +252,12 @@ export function MetaMonitorDashboard({
         range={payload.range}
         rangeKey={rangeKey}
         customRange={customRange}
-        lastSyncedAt={summary?.lastSyncedAt ?? null}
+        lastSyncedAt={summary?.lastSyncedAt ?? generatedAt}
         isRefreshing={isRefreshing}
         isSample={payload.source === "sample"}
         onRangeChange={handleRangeChange}
         onCustomRangeChange={handleCustomRangeChange}
-        onRefresh={() => void refresh()}
+        onRefresh={() => void refresh(rangeKey, customRange, { manual: true })}
       />
 
       {error ? (

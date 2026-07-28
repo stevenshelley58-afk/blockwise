@@ -1,12 +1,12 @@
 import { redirect } from "next/navigation";
 
 import type { ProductSurface } from "@/lib/auth/access-control";
-import { requireWorkspaceAccess } from "@/lib/auth/workspace-access";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getRequestAuthContext } from "@/lib/auth/request-context";
+import { requireWorkspaceAccessFromContext } from "@/lib/auth/workspace-access";
 
 export async function requirePageSurfaceAccess(surface: ProductSurface, requestedWorkspaceId?: string | null) {
-  const supabase = await createSupabaseServerClient();
-  const access = await requireWorkspaceAccess(supabase, {
+  const auth = await getRequestAuthContext();
+  const access = await requireWorkspaceAccessFromContext(auth, {
     surface,
     requestedWorkspaceId,
   });
@@ -16,7 +16,8 @@ export async function requirePageSurfaceAccess(surface: ProductSurface, requeste
   }
 
   return {
-    supabase,
+    supabase: auth.supabase,
     access: access.access,
+    auth,
   };
 }

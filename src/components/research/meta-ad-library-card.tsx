@@ -276,7 +276,7 @@ function MediaAsset({
         poster={media.posterUrl ?? undefined}
         aria-label={label}
         controls
-        preload="metadata"
+        preload="none"
         playsInline
       />
     );

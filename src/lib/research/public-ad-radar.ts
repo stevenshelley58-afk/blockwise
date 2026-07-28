@@ -321,8 +321,7 @@ async function fetchLongestRunningRows(
   limit: number,
 ): Promise<CustomerMetaAdLibraryCardRow[]> {
   const query = supabase
-    .schema("research")
-    .from("v_customer_meta_ad_library_cards")
+    .from("customer_ad_radar_cards")
     .select(CUSTOMER_META_AD_LIBRARY_CARD_SELECT)
     .eq("active_status", "active")
     .not("ad_delivery_started_at", "is", null)
@@ -460,8 +459,7 @@ async function fetchRows(
   applyFilter: (query: any) => any,
 ): Promise<CustomerMetaAdLibraryCardRow[]> {
   let query = supabase
-    .schema("research")
-    .from("v_customer_meta_ad_library_cards")
+    .from("customer_ad_radar_cards")
     .select(CUSTOMER_META_AD_LIBRARY_CARD_SELECT)
     .eq("active_status", "active")
     .order("last_seen_at", { ascending: false, nullsFirst: false })

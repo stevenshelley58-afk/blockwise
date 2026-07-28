@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { queueContentRun, rerunBodySchema } from "@/lib/content-engine";
 import { requireOperator } from "@/lib/operator/auth";
+import { createResearchServiceClient } from "@/lib/research/service";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const dynamic = "force-dynamic";
@@ -31,7 +32,7 @@ export async function POST(req: Request, context: RouteContext) {
   }
 
   const queued = await queueContentRun({
-    supabase: serviceSupabase as never,
+    researchSupabase: createResearchServiceClient() as never,
     workspaceId: String(run.workspace_id),
     runId: id,
     fromStep: parsed.data.fromStep,

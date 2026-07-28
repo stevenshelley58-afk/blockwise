@@ -24,7 +24,8 @@ export type AdRadarCardSearchFilters = {
 };
 
 type SearchSupabaseClient = {
-  schema: (schema: "research") => any;
+  from: (relation: string) => any;
+  rpc: (functionName: string, args: Record<string, unknown>) => any;
 };
 
 type SearchInput = {
@@ -234,7 +235,6 @@ async function loadRankedFullTextRows(
   rowLimit: number,
 ): Promise<CustomerMetaAdLibraryCardRow[] | null> {
   const { data, error } = await supabase
-    .schema("research")
     .rpc("search_customer_meta_ad_library_cards", {
       p_query: q,
       p_limit: rowLimit,
@@ -256,8 +256,7 @@ async function loadFallbackSearchRows(
   filters: AdRadarCardSearchFilters,
 ): Promise<SearchRowsResult> {
   let query = supabase
-    .schema("research")
-    .from("v_customer_meta_ad_library_cards")
+    .from("customer_ad_radar_cards")
     .select(CUSTOMER_META_AD_LIBRARY_CARD_SELECT)
     .or(buildFallbackSearchFilter(q));
   query = applyCardSearchFilters(query, filters);
@@ -279,8 +278,7 @@ async function fetchSearchRows(
   filters: AdRadarCardSearchFilters = {},
 ): Promise<CustomerMetaAdLibraryCardRow[]> {
   let query = supabase
-    .schema("research")
-    .from("v_customer_meta_ad_library_cards")
+    .from("customer_ad_radar_cards")
     .select(CUSTOMER_META_AD_LIBRARY_CARD_SELECT)
     .order(sort === "longest" ? "ad_delivery_started_at" : "last_seen_at", {
       ascending: sort === "longest",

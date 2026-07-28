@@ -10,6 +10,7 @@ import { resolveAdvertiserDomain } from "@/lib/adstudio/advertiser-domain";
 import type { ListingData } from "@/lib/adstudio/listing-extract";
 import { mapListingToOnImageCopy } from "@/lib/adstudio/listing-extract";
 import { templatePreviewDataUrl } from "@/lib/adstudio/template-preview.ts";
+import { templateThumbnailSrcSet } from "@/lib/adstudio/template-display.ts";
 import { AD_IMAGE_MAX_BYTES, AD_IMAGE_UPLOAD_TYPES } from "@/lib/upload/asset-file";
 
 import { uploadAdStudioMedia } from "./media-upload";
@@ -196,7 +197,17 @@ function TemplateAdPreview({ template, brandKit }: { template: AdStudioTemplate;
     return (
       <span className="studio-template-ad studio-template-ad--fullscreen">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img className="studio-template-story-media" src={previewSrc} alt="" loading="lazy" decoding="async" />
+        <img
+          className="studio-template-story-media"
+          src={previewSrc}
+          srcSet={templateThumbnailSrcSet(template)}
+          sizes="(max-width: 640px) 74vw, 320px"
+          width={template.dimensions.width}
+          height={template.dimensions.height}
+          alt=""
+          loading="lazy"
+          decoding="async"
+        />
         <span className="studio-template-story-shade" />
         <span className="studio-template-story-bars" aria-hidden>
           <i />
@@ -232,7 +243,16 @@ function TemplateAdPreview({ template, brandKit }: { template: AdStudioTemplate;
       <span className="studio-template-feed-primary">{copy.primaryText}</span>
       <span className="studio-template-feed-media">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={previewSrc} alt="" loading="lazy" decoding="async" />
+        <img
+          src={previewSrc}
+          srcSet={templateThumbnailSrcSet(template)}
+          sizes="(max-width: 640px) 74vw, 320px"
+          width={template.dimensions.width}
+          height={template.dimensions.height}
+          alt=""
+          loading="lazy"
+          decoding="async"
+        />
       </span>
       <span className="studio-template-feed-link">
         <span>

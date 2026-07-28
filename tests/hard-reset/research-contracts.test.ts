@@ -480,7 +480,7 @@ test("media asset contract is strict, durable, and surfaced to the research card
   assert.match(adSchema, /\bmediaAssetSchema\b/, "adCreativeSchema must use a named strict media asset schema");
   assert.doesNotMatch(adSchema, /mediaAssets:\s*z\.array\(\s*jsonbSchema\s*\)/, "mediaAssets must not be an untyped jsonb array");
   assert.match(read("src/app/api/research/ads/search/route.ts"), /searchCustomerMetaAdLibraryCards/, "customer research search API must delegate to the safe card search helper");
-  assert.match(read("src/lib/research/ad-radar-card-search.ts"), /v_customer_meta_ad_library_cards/, "customer research search helper must read the safe card view");
+  assert.match(read("src/lib/research/ad-radar-card-search.ts"), /customer_ad_radar_cards/, "customer research search helper must read the published customer table");
   assert.match(read("src/lib/research/customer-meta-card.ts"), /storagePath[\s\S]*sourceUrl|storagePath[\s\S]*url/, "card media resolver must prefer stored media before provider URLs");
 });
 

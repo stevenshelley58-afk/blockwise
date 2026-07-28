@@ -1,7 +1,10 @@
+import * as Sentry from "@sentry/nextjs";
+import { after } from "next/server";
+
 import { MetaMonitorDashboard, type OAuthNotice } from "@/components/monitor/MetaMonitorDashboard";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
-import { getResultsPayload } from "@/lib/meta-monitor/getResultsPayload";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { queueReportingRefresh } from "@/lib/meta-monitor/reporting-refresh-queue";
+import { loadReportingSnapshot } from "@/lib/meta-monitor/reporting-snapshots";
 
 export const dynamic = "force-dynamic";
 
@@ -53,18 +56,38 @@ export default async function ResultsPage({
 }) {
   const resolvedParams = await searchParams;
   const { supabase, access } = await requirePageSurfaceAccess("monitor");
-  const initialPayload = await getResultsPayload({
-    supabase,
-    serviceSupabase: createSupabaseServiceClient(),
-    workspaceId: access.workspaceId,
-    range: "last_30",
-  });
+  const reporting = await Sentry.startSpan(
+    {
+      name: "Load Performance reporting snapshot",
+      op: "db.reporting_snapshot",
+      attributes: { "workspace.id": access.workspaceId },
+    },
+    () =>
+      loadReportingSnapshot({
+        supabase,
+        workspaceId: access.workspaceId,
+        range: "last_30",
+      }),
+  );
+  if (reporting.needsRefresh) {
+    after(async () => {
+      await queueReportingRefresh({
+        workspaceId: access.workspaceId,
+        range: "last_30",
+        reason: "stale_navigation",
+      }).catch(() => undefined);
+    });
+  }
 
   const oauthNotice = resolveOAuthNotice(resolvedParams);
 
   return (
     <MetaMonitorDashboard
-      initialPayload={initialPayload}
+      initialPayload={reporting.snapshot.payload}
+      initialEtag={reporting.snapshot.etag}
+      initialGeneratedAt={reporting.snapshot.generatedAt}
+      userId={access.userId}
+      workspaceId={access.workspaceId}
       // Send Connect/Reconnect to Settings: the ad account, Page, lead
       // destination, and privacy policy have to be chosen there anyway.
       metaConnectHref="/settings"

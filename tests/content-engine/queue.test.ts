@@ -8,7 +8,7 @@ test("queueContentRun writes a Hermes research work_queue job instead of Trigger
   const supabase = createFakeSupabase();
 
   const queued = await queueContentRun({
-    supabase: supabase as never,
+    researchSupabase: supabase as never,
     workspaceId: "workspace-1",
     runId: "run-1",
     fromStep: "blockwise-blog-writer",

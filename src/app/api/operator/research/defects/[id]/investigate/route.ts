@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 
 import { requireOperator } from "@/lib/operator/auth";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { createResearchServiceClient } from "@/lib/research/service";
 
 export const dynamic = "force-dynamic";
 
 async function queueDefectInvestigation(
-  research: ReturnType<ReturnType<typeof createSupabaseServiceClient>["schema"]>,
+  research: ReturnType<ReturnType<typeof createResearchServiceClient>["schema"]>,
   defectId: string,
   operatorDecisionId: string | null,
 ) {
@@ -85,7 +85,7 @@ export async function POST(
   if (!guard.ok) return guard.response;
 
   const { id } = await params;
-  const research = createSupabaseServiceClient().schema("research");
+  const research = createResearchServiceClient().schema("research");
 
   const { data: defect, error: loadError } = await research
     .from("coverage_defects")

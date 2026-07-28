@@ -7,11 +7,20 @@ export function isLegacySupabaseJwt(value) {
 }
 
 export function resolveHermesSupabaseCredential(env = process.env) {
-  for (const source of ["HERMES_SUPABASE_SECRET_KEY", "SUPABASE_SECRET_KEY"]) {
+  for (const source of [
+    "HERMES_SUPABASE_SECRET_KEY",
+    "HERMES_SUPABASE_SERVICE_ROLE_KEY",
+    "SUPABASE_SECRET_KEY",
+    "SUPABASE_SERVICE_ROLE_KEY",
+  ]) {
     const value = clean(env[source]);
     if (value) return { value, kind: isLegacySupabaseJwt(value) ? "legacy_jwt" : "secret", source };
   }
-  for (const source of ["HERMES_SUPABASE_SERVICE_ROLE_KEY", "SUPABASE_SERVICE_ROLE_KEY"]) {
+  return null;
+}
+
+export function resolveHermesCustomerSupabaseCredential(env = process.env) {
+  for (const source of ["HERMES_CUSTOMER_SUPABASE_SECRET_KEY", "HERMES_CUSTOMER_SUPABASE_SERVICE_ROLE_KEY"]) {
     const value = clean(env[source]);
     if (value) return { value, kind: isLegacySupabaseJwt(value) ? "legacy_jwt" : "secret", source };
   }

@@ -15,7 +15,7 @@
  *   STEEL_CDP_URL        — http://blockwise-steel:9223
  *   RESIDENTIAL_PROXY_URL — optional residential proxy
  *   SUPABASE_URL         — Supabase project URL
- *   SUPABASE_SERVICE_ROLE_KEY — service role key for storage uploads
+ *   SUPABASE_SECRET_KEY or SUPABASE_SERVICE_ROLE_KEY — server credential for storage uploads
  *   PORT                 — listen port (default 8650)
  */
 
@@ -32,7 +32,10 @@ const OBSCURA_CDP_URL = process.env.OBSCURA_CDP_URL || "http://blockwise-obscura
 const STEEL_CDP_URL = process.env.STEEL_CDP_URL || "http://blockwise-steel:9223";
 const RESIDENTIAL_PROXY_URL = process.env.RESIDENTIAL_PROXY_URL || "";
 const SUPABASE_URL = process.env.SUPABASE_URL || "";
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+const SUPABASE_SERVER_CREDENTIAL =
+  process.env.SUPABASE_SECRET_KEY ||
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  "";
 const BUCKET = "adstudio-media";
 
 const STATIC_TIMEOUT_MS = 10_000;
@@ -79,8 +82,8 @@ const BROWSER_HEADERS = {
 
 let supabase = null;
 function getSupabase() {
-  if (!supabase && SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
-    supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+  if (!supabase && SUPABASE_URL && SUPABASE_SERVER_CREDENTIAL) {
+    supabase = createClient(SUPABASE_URL, SUPABASE_SERVER_CREDENTIAL, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
   }

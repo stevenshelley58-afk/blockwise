@@ -14,10 +14,10 @@ test("operator research table routes use the service-role research schema after 
   for (const routePath of serviceClientRoutes) {
     const route = readFileSync(routePath, "utf8");
     const guardIndex = route.indexOf("requireOperator()");
-    const serviceResearchIndex = route.indexOf('createSupabaseServiceClient().schema("research")');
+    const serviceResearchIndex = route.indexOf('createResearchServiceClient().schema("research")');
 
     assert.notEqual(guardIndex, -1, `${routePath} must keep the operator auth guard`);
-    assert.notEqual(serviceResearchIndex, -1, `${routePath} must use the service-role research schema client`);
+    assert.notEqual(serviceResearchIndex, -1, `${routePath} must use the private VPS research client`);
     assert.ok(
       serviceResearchIndex > guardIndex,
       `${routePath} must create the service-role research schema client after requireOperator()`,

@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { requireOperator } from "@/lib/operator/auth";
 import { validateOfficialMetaAdLibraryCoverage } from "@/lib/research/meta-official-api";
+import { createResearchServiceClient } from "@/lib/research/service";
 
 export const dynamic = "force-dynamic";
 
@@ -38,7 +39,7 @@ export async function POST(req: Request) {
     ...parsed.data,
   });
 
-  const { data, error } = await guard.supabase
+  const { data, error } = await createResearchServiceClient()
     .schema("research")
     .from("official_api_validation_runs")
     .insert({

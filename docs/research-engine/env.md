@@ -1,6 +1,6 @@
 # Research Engine Environment Variables
 
-Date: 2026-06-12
+Date: 2026-07-28
 
 This file documents the variables read by the active Hermes research runtime in
 `infra/coolify/docker-compose.research.yml`,
@@ -21,9 +21,16 @@ Do not print real secret values in logs or docs.
 | `HERMES_DEFAULT_MODEL` | Hermes resolver | Default non-image model slug. Defaults to `kimi-k2.6` (Moonshot/Kimi). Slugs route by prefix: `kimi-*`/`moonshot-*` -> Moonshot, `qwen-*` -> Alibaba DashScope. |
 | `MOONSHOT_API_KEY` | LLM resolver | Required. Authenticates Kimi/Moonshot models (`kimi-*`/`moonshot-*`) used for page resolution, classification, audits, investigations, and content generation. |
 | `DASHSCOPE_API_KEY` | LLM resolver | Required when any configured model is a `qwen-*` slug (e.g. `best_json`/`critic_review` defaults route here). |
-| `SUPABASE_URL` | Compose and supervisor | Passed through as `HERMES_SUPABASE_URL`. |
-| `SUPABASE_SECRET_KEY` | Compose and supervisor | Preferred current server credential; passed through as `HERMES_SUPABASE_SECRET_KEY`. |
-| `SUPABASE_SERVICE_ROLE_KEY` | Compose and supervisor | Legacy JWT fallback; passed through as `HERMES_SUPABASE_SERVICE_ROLE_KEY`. |
+| `HERMES_RESEARCH_DB_PASSWORD` | VPS Postgres and PostgREST | URL-safe password for the private `blockwise_research` database. |
+| `HERMES_RESEARCH_JWT_SECRET` | VPS PostgREST | At least 32 random bytes used only to verify private research API JWTs. |
+| `HERMES_RESEARCH_SERVICE_ROLE_KEY` | VPS PostgREST and Hermes | JWT signed by `HERMES_RESEARCH_JWT_SECRET` with `role=service_role`. |
+| `SUPABASE_URL` | Customer app and publisher | Blockwise customer Supabase only. Never use another product's project. |
+| `SUPABASE_SECRET_KEY` | Customer app and publisher | Preferred customer Supabase server credential. |
+| `SUPABASE_SERVICE_ROLE_KEY` | Customer app and publisher | Legacy customer Supabase service-role fallback. |
+
+Vercel and Trigger use `RESEARCH_API_URL=https://hermes.blockwise.sale/research`
+and `RESEARCH_API_SERVICE_KEY=<the VPS service-role JWT>` for authenticated
+operator-only research access. Browser clients never receive either value.
 
 ## Default Model Routing
 
@@ -96,16 +103,25 @@ fallback.
 | `HERMES_CENSUS_POLICY_SEED_BATCH_SIZE` | `500` build, `100` maintain | Census policy seed batch size. |
 | `HERMES_CENSUS_RECYCLE_BLOCKED_ENABLED` | enabled unless `false` | Allows blocked census work recycling. |
 
-## Storage
+## Research Database And Customer Publishing
 
 | Variable | Default | Notes |
 | --- | --- | --- |
-| `HERMES_SUPABASE_URL` | `SUPABASE_URL` | Supervisor accepts either variable, but compose sets both. |
-| `HERMES_SUPABASE_SECRET_KEY` | `SUPABASE_SECRET_KEY` | Preferred opaque server credential. Sent as `apikey` only. |
-| `HERMES_SUPABASE_SERVICE_ROLE_KEY` | `SUPABASE_SERVICE_ROLE_KEY` | Supervisor accepts either variable, but compose sets both. |
-| `HERMES_RESEARCH_AD_CREATIVES_BUCKET` | `research-ad-creatives` | Stored creative media bucket. |
-| `HERMES_RESEARCH_SCREENSHOTS_BUCKET` | `research-screenshots` | Screenshot bucket. |
-| `HERMES_RESEARCH_RAW_EVIDENCE_BUCKET` | `research-raw-evidence` | Raw provider evidence bucket. |
+| `HERMES_SUPABASE_URL` | `http://blockwise-research-gateway:3000` | Private VPS research REST gateway. |
+| `HERMES_SUPABASE_SERVICE_ROLE_KEY` | `HERMES_RESEARCH_SERVICE_ROLE_KEY` | Private VPS service JWT. |
+| `HERMES_CUSTOMER_SUPABASE_URL` | `SUPABASE_URL` | Blockwise customer Supabase used only for app-required projections and media. |
+| `HERMES_CUSTOMER_SUPABASE_SECRET_KEY` | `SUPABASE_SECRET_KEY` | Preferred customer publisher/storage credential. |
+| `HERMES_CUSTOMER_SUPABASE_SERVICE_ROLE_KEY` | `SUPABASE_SERVICE_ROLE_KEY` | Legacy customer publisher/storage fallback. |
+| `HERMES_CUSTOMER_READ_MODEL_PUBLISH_INTERVAL_SECONDS` | `300` | Publishes the customer-safe Ad Radar projection. |
+| `HERMES_RAW_EVIDENCE_DIR` | `/opt/research-raw-evidence` | Private VPS volume for raw provider/browser evidence. |
+| `HERMES_RESEARCH_AD_CREATIVES_BUCKET` | `research-ad-creatives` | Customer-visible creative media retained in Blockwise Supabase Storage. |
+| `HERMES_RESEARCH_SCREENSHOTS_BUCKET` | `research-screenshots` | Legacy empty bucket removed after cutover. |
+| `HERMES_RESEARCH_RAW_EVIDENCE_BUCKET` | `research-raw-evidence` | Migration source only; removed after its manifest is verified on the VPS. |
+
+The private research schema, work queue, decisions, ingest events, runtime
+settings, and raw evidence stay on the VPS. Customer Supabase contains only
+workspace/product tables, the denormalized `customer_ad_radar_*` read model,
+and media needed to render the app.
 
 ## Browser And Meta Capture
 

@@ -56,7 +56,10 @@ test("GitHub replays migrations and runs pgTAP before release jobs", () => {
   assert.match(workflow, /run:\s*supabase db start/);
   assert.match(workflow, /run:\s*npm run test:db/);
   assert.match(workflow, /if:\s*always\(\)[\s\S]*run:\s*supabase stop --no-backup/);
-  assert.match(packageJson, /"test:db":\s*"supabase db reset --local && supabase test db"/);
+  assert.match(
+    packageJson,
+    /"test:db":\s*"npx supabase db reset --local && npx supabase test db"/,
+  );
 });
 
 test("Trigger runbook lists required production task environment", () => {

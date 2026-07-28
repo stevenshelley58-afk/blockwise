@@ -1,6 +1,6 @@
-import type { createSupabaseServerClient } from "@/lib/supabase/server";
+import type { createResearchServiceClient } from "@/lib/research/service";
 
-type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
+type ResearchServiceClient = ReturnType<typeof createResearchServiceClient>;
 
 export const STYLE_EXTRACTOR_VERSION = "style-extractor";
 
@@ -41,7 +41,7 @@ type PersistStyleProfileResult = {
 // Write the style profile to research.ad_style_profiles and create the required
 // research.agent_decisions row. Returns both IDs on success.
 export async function persistStyleProfile(
-  supabase: SupabaseServerClient,
+  supabase: ResearchServiceClient,
   input: PersistStyleProfileInput,
 ): Promise<PersistStyleProfileResult> {
   const extractorVersion = input.extractorVersion ?? STYLE_EXTRACTOR_VERSION;

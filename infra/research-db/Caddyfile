@@ -1,0 +1,15 @@
+:3000 {
+	encode gzip
+
+	handle /health {
+		respond "ok" 200
+	}
+
+	handle_path /rest/v1/* {
+		reverse_proxy blockwise-research-rest:3000
+	}
+
+	handle {
+		respond "not found" 404
+	}
+}

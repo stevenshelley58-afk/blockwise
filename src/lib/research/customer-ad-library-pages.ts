@@ -63,7 +63,6 @@ export async function loadCustomerResearchAdDetail(
   adId: string,
 ): Promise<{ ad: ResearchAdApiRecord | null; versions: CustomerCreativeVersion[]; error: string | null }> {
   const { data: row, error } = await supabase
-    .schema("research")
     .from(CUSTOMER_RESEARCH_AD_HISTORY_VIEW)
     .select(RESEARCH_AD_SELECT)
     .eq("observed_ad_id", adId)
@@ -73,8 +72,7 @@ export async function loadCustomerResearchAdDetail(
   if (!row) return { ad: null, versions: [], error: null };
 
   const { data: versions } = await supabase
-    .schema("research")
-    .from("ad_creative_versions")
+    .from("customer_ad_radar_creative_versions")
     .select("id,version,creative_hash,format,headline,body,cta,ad_type,primary_intent,display_state,created_at")
     .eq("observed_ad_id", adId)
     .order("version", { ascending: false })
@@ -92,7 +90,6 @@ export async function loadCustomerAdvertiserAds(
   advertiserPageId: string,
 ): Promise<{ ads: ResearchAdApiRecord[]; error: string | null }> {
   const { data, error } = await supabase
-    .schema("research")
     .from(CUSTOMER_RESEARCH_AD_HISTORY_VIEW)
     .select(RESEARCH_AD_SELECT)
     .eq("advertiser_page_id", advertiserPageId)
@@ -123,7 +120,6 @@ export async function loadCustomerAdsByIds(
 ): Promise<ResearchAdApiRecord[]> {
   if (adIds.length === 0) return [];
   const { data } = await supabase
-    .schema("research")
     .from(CUSTOMER_RESEARCH_AD_HISTORY_VIEW)
     .select(RESEARCH_AD_SELECT)
     .in("observed_ad_id", adIds)

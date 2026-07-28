@@ -1,4 +1,4 @@
-import { createSupabaseServiceClient } from "../supabase/service.ts";
+import { createResearchServiceClient } from "./service.ts";
 import {
   CUSTOMER_META_AD_LIBRARY_CARD_SELECT,
   normaliseCustomerMetaAdLibraryCard,
@@ -71,7 +71,8 @@ export type DrainStatus = {
   adPreviews: DrainAdPreview[];
 };
 
-type ResearchClient = ReturnType<ReturnType<typeof createSupabaseServiceClient>["schema"]>;
+type ResearchServiceClient = ReturnType<typeof createResearchServiceClient>;
+type ResearchClient = ReturnType<ResearchServiceClient["schema"]>;
 
 type LatestAdFetch = {
   id: string;
@@ -182,7 +183,9 @@ export function computeDrainOverview(stages: DrainStage[]): DrainOverview {
   };
 }
 
-export async function loadResearchDrainStatus(supabase = createSupabaseServiceClient()): Promise<DrainStatus> {
+export async function loadResearchDrainStatus(
+  supabase: ResearchServiceClient = createResearchServiceClient(),
+): Promise<DrainStatus> {
   const research = supabase.schema("research");
   const sampledAt = new Date().toISOString();
   const completedSince = new Date(Date.now() - 60 * 60 * 1000).toISOString();

@@ -23,6 +23,7 @@ import {
   type FirstLiveCampaignStripeGateway,
 } from "../billing/first-live-campaign.ts";
 import { recordWorkspaceFunnelEventBestEffort } from "../analytics/progressive-funnel.ts";
+import { queueReportingRefresh } from "../meta-monitor/reporting-refresh-queue.ts";
 import { recordAuditLog } from "../supabase/audit.ts";
 import type { createSupabaseServiceClient } from "../supabase/service.ts";
 
@@ -112,6 +113,7 @@ export async function executeMetaPublishPlan(input: {
   const freeLive = await prepareFreeLiveConversion(input);
   if (input.plan.status === "paused_live") {
     await finalizeFreeLiveConversion(input, input.plan, freeLive);
+    await queueReportingRefreshAfterProviderChange(input.plan.workspaceId, "publish");
     return input.plan;
   }
 
@@ -205,7 +207,21 @@ export async function executeMetaPublishPlan(input: {
     throw new Error("Meta publish completed without a reconciled plan.");
   }
   await finalizeFreeLiveConversion(input, completedPlan, freeLive);
+  await queueReportingRefreshAfterProviderChange(completedPlan.workspaceId, "publish");
   return completedPlan;
+}
+
+async function queueReportingRefreshAfterProviderChange(
+  workspaceId: string,
+  reason: "publish" | "mutation",
+): Promise<void> {
+  await queueReportingRefresh({
+    workspaceId,
+    range: "last_30",
+    reason,
+  }).catch((error) => {
+    console.warn("[meta-reporting] background refresh could not be queued", error);
+  });
 }
 
 async function releasePreparedFreeLiveClaim(

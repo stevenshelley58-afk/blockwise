@@ -4,7 +4,7 @@ import { z } from "zod";
 
 import { requireOperator } from "@/lib/operator/auth";
 import { isMissingHermesSkillError, readHermesSkill, writeHermesSkill } from "@/lib/operator/hermes-assets";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { createResearchServiceClient } from "@/lib/research/service";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -65,7 +65,7 @@ export async function POST(
   if (!loaded.ok) return loaded.response;
   const current = loaded.skill;
   const proposedSha = createHash("sha256").update(parsed.data.content).digest("hex");
-  const research = createSupabaseServiceClient().schema("research");
+  const research = createResearchServiceClient().schema("research");
 
   if (process.env.VERCEL) {
     await research.from("agent_decisions").insert({

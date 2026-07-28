@@ -11,7 +11,13 @@ const nextConfig: NextConfig = {
   },
   // Tree-shake heavy barrel-export libs so only used modules ship to the client.
   // lucide-react is already optimized by Next's defaults; recharts is not.
-  experimental: { optimizePackageImports: ["recharts"] },
+  experimental: {
+    optimizePackageImports: ["recharts"],
+    staleTimes: {
+      dynamic: 30,
+      static: 180,
+    },
+  },
   async redirects() {
     return [
       {
@@ -26,6 +32,19 @@ const nextConfig: NextConfig = {
       { source: "/research", destination: "/ad-radar", permanent: false },
       { source: "/research/:path*", destination: "/ad-radar/:path*", permanent: false },
       { source: "/campaigns", destination: "/results", permanent: false },
+    ];
+  },
+  async headers() {
+    return [
+      {
+        source: "/adstudio-thumbnails/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+        ],
+      },
     ];
   },
 };

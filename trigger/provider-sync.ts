@@ -30,7 +30,9 @@ export const syncProviderReports = schedules.task({
     const { data: connections, error } = await serviceSupabase
       .from("provider_connections")
       .select("workspace_id,provider")
-      .in("provider", ["meta", "google"])
+      // Meta is owned by the 15-minute versioned read-model task. Keeping it
+      // here would duplicate provider traffic every six hours.
+      .eq("provider", "google")
       .eq("status", "connected");
 
     if (error) {

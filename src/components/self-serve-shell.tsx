@@ -3,13 +3,12 @@
 import { Download, LogOut, MoreHorizontal } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 
 import { BlockwiseLogo } from "@/components/blockwise-logo";
 import { CommandMenu } from "@/components/command-menu";
 import { SidebarThemeToggle } from "@/components/sidebar-theme-toggle";
 import { isItemActive, navByVariant, selfServeIcons, type NavItem } from "@/components/sidebar-nav";
-import { TrialStatusCard, type TrialStatus } from "@/components/trial-status-pill";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -43,11 +42,15 @@ import {
 } from "@/components/ui/sidebar";
 import { niche } from "@/config/niche";
 import { cssSpring } from "@/lib/motion";
+import { useSmartPrefetch } from "@/lib/navigation/use-smart-prefetch";
+import { purgeLocalReadModels, syncReadModelIdentity } from "@/lib/read-models/browser-store";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { cn } from "@/lib/utils";
 
 type SelfServeShellProps = {
   children: React.ReactNode;
+  userId: string;
+  workspaceId: string;
   workspaceName: string;
   workspaceRegion: string;
   account: {
@@ -55,7 +58,7 @@ type SelfServeShellProps = {
     name: string;
     role: string;
   };
-  initialTrialStatus: TrialStatus | null;
+  trialStatus: React.ReactNode;
 };
 
 type NavGroup = {
@@ -108,6 +111,7 @@ function useSignOut() {
   async function signOut() {
     setIsSigningOut(true);
     const supabase = createSupabaseBrowserClient();
+    await purgeLocalReadModels();
     await supabase.auth.signOut();
     router.replace("/login");
     router.refresh();
@@ -164,14 +168,21 @@ function AccountDropdown({ account }: { account: Account }) {
 
 export function SelfServeShell({
   children,
+  userId,
+  workspaceId,
   workspaceName,
   workspaceRegion,
   account,
-  initialTrialStatus,
+  trialStatus,
 }: SelfServeShellProps) {
   const pathname = usePathname() ?? "";
+  const { prefetchNow } = useSmartPrefetch();
   const groups = useMemo(() => groupNavItems(navByVariant.self_serve), []);
   const pageTitle = pageTitleForPath(pathname);
+
+  useEffect(() => {
+    void syncReadModelIdentity({ userId, workspaceId });
+  }, [userId, workspaceId]);
 
   return (
     <SidebarProvider
@@ -209,7 +220,14 @@ export function SelfServeShell({
                   return (
                     <SidebarMenuItem key={item.href}>
                       <SidebarMenuButton asChild isActive={active} tooltip={item.label}>
-                        <Link href={item.href} aria-current={active ? "page" : undefined}>
+                        <Link
+                          href={item.href}
+                          prefetch={false}
+                          aria-current={active ? "page" : undefined}
+                          onPointerEnter={() => prefetchNow(item.href)}
+                          onFocus={() => prefetchNow(item.href)}
+                          onTouchStart={() => prefetchNow(item.href)}
+                        >
                           <Icon aria-hidden />
                           <span>{item.label}</span>
                         </Link>
@@ -225,7 +243,7 @@ export function SelfServeShell({
           {/* Trial card lives in the sidebar footer; hidden when the rail is
               collapsed to icons. */}
           <div className="group-data-[collapsible=icon]:hidden">
-            <TrialStatusCard initialStatus={initialTrialStatus} />
+            {trialStatus}
           </div>
         </SidebarFooter>
         <SidebarRail />
@@ -282,6 +300,7 @@ function SelfServeMobileNav({ account }: { account: Account }) {
   const pathname = usePathname() ?? "";
   const [moreOpen, setMoreOpen] = useState(false);
   const { signOut, isSigningOut } = useSignOut();
+  const { prefetchNow } = useSmartPrefetch();
 
   const copy = niche.copy.shell;
 
@@ -312,7 +331,11 @@ function SelfServeMobileNav({ account }: { account: Account }) {
             <Link
               key={item.href}
               href={item.href}
+              prefetch={false}
               aria-current={active ? "page" : undefined}
+              onPointerEnter={() => prefetchNow(item.href)}
+              onFocus={() => prefetchNow(item.href)}
+              onTouchStart={() => prefetchNow(item.href)}
               style={{ transitionTimingFunction: cssSpring }}
               className={cn(
                 "grid min-h-12 min-w-0 place-items-center gap-[3px] rounded-xl px-0.5 py-1 text-[9.5px] leading-[1.1] font-bold transition-[color,transform,background-color] duration-150 active:scale-[0.94] motion-reduce:transition-none",
@@ -360,7 +383,11 @@ function SelfServeMobileNav({ account }: { account: Account }) {
                   <Link
                     key={item.href}
                     href={item.href}
+                    prefetch={false}
                     aria-current={active ? "page" : undefined}
+                    onPointerEnter={() => prefetchNow(item.href)}
+                    onFocus={() => prefetchNow(item.href)}
+                    onTouchStart={() => prefetchNow(item.href)}
                     onClick={() => setMoreOpen(false)}
                     className={cn(
                       "flex min-h-11 items-center gap-3 rounded-(--r-card) px-3 text-sm font-semibold",

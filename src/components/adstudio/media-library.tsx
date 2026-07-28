@@ -11,31 +11,21 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { AD_IMAGE_MAX_BYTES, AD_IMAGE_UPLOAD_TYPES, validateAssetUploadFile } from "@/lib/upload/asset-file";
+import type { LibraryAdModel, LibraryAssetModel } from "@/lib/adstudio/library-read-model";
 
 import { ROLE_META, ROLE_ORDER, resolveRole, type AssetRole } from "./asset-roles";
 import { uploadAdStudioMedia } from "./media-upload";
 
-export type LibraryAsset = {
-  id: string;
-  src: string;
-  label: string;
-  type: string;
-  role: AssetRole;
-};
-
-export type LibraryAd = {
-  creativeId: string;
-  campaignId: string;
-  campaignName: string;
-  src: string;
-  format: string;
-};
+export type LibraryAsset = LibraryAssetModel;
+export type LibraryAd = LibraryAdModel;
 
 type MediaLibraryProps = {
   workspaceId: string;
   brandKitId: string;
   assets: LibraryAsset[];
   ads: LibraryAd[];
+  nextAssetCursor: string | null;
+  nextAdCursor: string | null;
 };
 
 type RoleFilter = AssetRole | "all";
@@ -47,14 +37,26 @@ function formatLabel(format: string): string {
   return format || "Ad";
 }
 
-export function MediaLibrary({ workspaceId, brandKitId, assets, ads }: MediaLibraryProps) {
+export function MediaLibrary({
+  workspaceId,
+  brandKitId,
+  assets,
+  ads,
+  nextAssetCursor: initialAssetCursor,
+  nextAdCursor: initialAdCursor,
+}: MediaLibraryProps) {
   const [uploaded, setUploaded] = useState<LibraryAsset[]>([]);
+  const [loadedAssets, setLoadedAssets] = useState(assets);
+  const [loadedAds, setLoadedAds] = useState(ads);
+  const [nextAssetCursor, setNextAssetCursor] = useState(initialAssetCursor);
+  const [nextAdCursor, setNextAdCursor] = useState(initialAdCursor);
+  const [loadingMore, setLoadingMore] = useState<"assets" | "ads" | null>(null);
   const [filter, setFilter] = useState<RoleFilter>("all");
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fresh uploads land at the front so they are visible without a reload.
-  const allAssets = useMemo(() => [...uploaded, ...assets], [uploaded, assets]);
+  const allAssets = useMemo(() => [...uploaded, ...loadedAssets], [uploaded, loadedAssets]);
 
   const counts = useMemo(() => {
     const next: Record<AssetRole, number> = { property: 0, person: 0, logo: 0, background: 0 };
@@ -99,6 +101,32 @@ export function MediaLibrary({ workspaceId, brandKitId, assets, ads }: MediaLibr
     }
   }
 
+  async function loadMore(kind: "assets" | "ads") {
+    const cursor = kind === "assets" ? nextAssetCursor : nextAdCursor;
+    if (!cursor || loadingMore) return;
+    setLoadingMore(kind);
+    try {
+      const params = new URLSearchParams({ wave: "library", kind, limit: "24", cursor });
+      const response = await fetch(`/api/adstudio/bootstrap?${params}`, { cache: "no-store" });
+      if (!response.ok) throw new Error("Could not load more.");
+      const page = (await response.json()) as {
+        items: Array<LibraryAsset | LibraryAd>;
+        nextCursor: string | null;
+      };
+      if (kind === "assets") {
+        setLoadedAssets((current) => [...current, ...(page.items as LibraryAsset[])]);
+        setNextAssetCursor(page.nextCursor);
+      } else {
+        setLoadedAds((current) => [...current, ...(page.items as LibraryAd[])]);
+        setNextAdCursor(page.nextCursor);
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not load more.");
+    } finally {
+      setLoadingMore(null);
+    }
+  }
+
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-8 md:px-6">
       <Toaster richColors position="top-center" />
@@ -122,7 +150,7 @@ export function MediaLibrary({ workspaceId, brandKitId, assets, ads }: MediaLibr
       <Tabs defaultValue="assets">
         <TabsList>
           <TabsTrigger value="assets">Assets ({allAssets.length})</TabsTrigger>
-          <TabsTrigger value="ads">Ads ({ads.length})</TabsTrigger>
+          <TabsTrigger value="ads">Ads ({loadedAds.length})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="assets" className="mt-4">
@@ -148,7 +176,16 @@ export function MediaLibrary({ workspaceId, brandKitId, assets, ads }: MediaLibr
               {visibleAssets.map((asset) => (
                 <Card key={asset.id} className="gap-0 overflow-hidden py-0">
                   <div className="aspect-square w-full overflow-hidden bg-(--surface-subtle)">
-                    <img src={asset.src} alt={asset.label} loading="lazy" className="size-full object-cover" />
+                    <img
+                      src={asset.src}
+                      alt={asset.label}
+                      width={640}
+                      height={640}
+                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 240px"
+                      loading="lazy"
+                      decoding="async"
+                      className="size-full object-cover"
+                    />
                   </div>
                   <div className="px-3 py-2">
                     <p className="truncate text-xs font-medium">{asset.label}</p>
@@ -160,12 +197,19 @@ export function MediaLibrary({ workspaceId, brandKitId, assets, ads }: MediaLibr
           ) : (
             <EmptyState icon={<Images aria-hidden className="size-6" />} title="Upload your first image." />
           )}
+          {nextAssetCursor ? (
+            <div className="mt-5 flex justify-center">
+              <Button type="button" variant="outline" disabled={loadingMore !== null} onClick={() => void loadMore("assets")}>
+                {loadingMore === "assets" ? "Loading…" : "Load more"}
+              </Button>
+            </div>
+          ) : null}
         </TabsContent>
 
         <TabsContent value="ads" className="mt-4">
-          {ads.length > 0 ? (
+          {loadedAds.length > 0 ? (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-              {ads.map((ad) => (
+              {loadedAds.map((ad) => (
                 <Link
                   key={ad.creativeId}
                   href={`/ad-studio?campaignId=${encodeURIComponent(ad.campaignId)}`}
@@ -173,7 +217,16 @@ export function MediaLibrary({ workspaceId, brandKitId, assets, ads }: MediaLibr
                 >
                   <Card className="gap-0 overflow-hidden py-0 transition-shadow hover:shadow-md">
                     <div className="aspect-[4/5] w-full overflow-hidden bg-(--surface-subtle)">
-                      <img src={ad.src} alt={ad.campaignName} loading="lazy" className="size-full object-cover" />
+                      <img
+                        src={ad.src}
+                        alt={ad.campaignName}
+                        width={640}
+                        height={800}
+                        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 240px"
+                        loading="lazy"
+                        decoding="async"
+                        className="size-full object-cover"
+                      />
                     </div>
                     <div className="px-3 py-2">
                       <p className="truncate text-xs font-semibold">{ad.campaignName}</p>
@@ -197,6 +250,13 @@ export function MediaLibrary({ workspaceId, brandKitId, assets, ads }: MediaLibr
               }
             />
           )}
+          {nextAdCursor ? (
+            <div className="mt-5 flex justify-center">
+              <Button type="button" variant="outline" disabled={loadingMore !== null} onClick={() => void loadMore("ads")}>
+                {loadingMore === "ads" ? "Loading…" : "Load more"}
+              </Button>
+            </div>
+          ) : null}
         </TabsContent>
       </Tabs>
     </div>

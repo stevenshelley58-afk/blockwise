@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { requireOperator } from "@/lib/operator/auth";
 import { executeRefreshPostcode } from "@/lib/operator/postcode-refresh";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { createResearchServiceClient } from "@/lib/research/service";
 
 export const dynamic = "force-dynamic";
 
@@ -50,7 +50,7 @@ export async function POST(req: Request) {
   }
   const { scope, value } = parsed.data;
 
-  const research = createSupabaseServiceClient().schema("research");
+  const research = createResearchServiceClient().schema("research");
   let message: string | undefined;
 
   if (scope === "postcode") {

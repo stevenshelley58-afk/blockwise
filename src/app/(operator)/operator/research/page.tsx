@@ -13,13 +13,12 @@ import {
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
 import { logCaught } from "@/lib/log";
 import { listHermesSkills, type HermesSkillSummary } from "@/lib/operator/hermes-assets";
-import { createOperatorSupabaseServiceClient } from "@/lib/operator/service-role";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { createResearchServiceClient, tryCreateResearchServiceClient } from "@/lib/research/service";
 
 export const dynamic = "force-dynamic";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>> | Record<string, string | string[] | undefined>;
-type ResearchSupabaseClient = ReturnType<typeof createSupabaseServiceClient>;
+type ResearchSupabaseClient = ReturnType<typeof createResearchServiceClient>;
 
 type CoverageRow = {
   postcode: string;
@@ -310,7 +309,7 @@ function loadOfficialMetaApiStatus(): ConsoleOfficialMetaApi {
 
 export default async function OperatorResearchPage({ searchParams }: { searchParams?: SearchParams }) {
   await requirePageSurfaceAccess("operator");
-  const supabase = createOperatorSupabaseServiceClient();
+  const supabase = tryCreateResearchServiceClient();
   if (!supabase) {
     return (
       <main className="operator-os">

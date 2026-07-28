@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { purgeLocalReadModels } from "@/lib/read-models/browser-store";
 
 type AccountMenuProps = {
   email: string;
@@ -19,6 +20,7 @@ export function AccountMenu({ email, name, role }: AccountMenuProps) {
 
   async function signOut() {
     setIsSigningOut(true);
+    await purgeLocalReadModels();
     await supabase.auth.signOut();
     router.replace("/login");
     router.refresh();

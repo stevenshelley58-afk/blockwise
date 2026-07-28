@@ -1,6 +1,7 @@
 import { evaluatePublishReadiness, type ApprovalStatus, type ProviderConnectionStatus } from "../publishing/readiness.ts";
 import type { ComplianceStatus } from "../compliance/real-estate-policy.ts";
 import { buildLeadDedupeKey, findDuplicateLeadIds } from "../leads/dedupe.ts";
+import { createResearchServiceClient } from "../research/service.ts";
 import type { createSupabaseServerClient } from "../supabase/server.ts";
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
@@ -516,8 +517,8 @@ export async function listAiLedgerRows(supabase: SupabaseServerClient, workspace
   return buildAiLedgerRows((data ?? []) as AiLedgerRow[]);
 }
 
-export async function listResearchSignals(supabase: SupabaseServerClient, _workspaceId: string) {
-  const { data } = await supabase
+export async function listResearchSignals(_supabase: SupabaseServerClient, _workspaceId: string) {
+  const { data } = await createResearchServiceClient()
     .schema("research")
     .from("v_customer_meta_ad_library_cards")
     .select("page_name,library_id,headline,body,active_status,last_seen_at,ad_area_postcodes,service_area_postcodes")

@@ -8,7 +8,7 @@ import {
 export default function SelfServeLoading() {
   return (
     <SkeletonPage label="Home">
-      <SkeletonPageHead />
+      <SkeletonPageHead action={false} />
       <SkeletonStatRow />
       <div className="grid gap-3.5 lg:grid-cols-[3fr_2fr]">
         <SkeletonPanel />

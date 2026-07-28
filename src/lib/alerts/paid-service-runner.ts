@@ -21,14 +21,14 @@ export type PaidServiceWatchdogDeps = {
 };
 
 export async function runPaidServiceWatchdog(
-  supabase: SupabaseClient,
+  researchSupabase: SupabaseClient,
   deps: PaidServiceWatchdogDeps = {},
 ) {
   const collect = deps.collect ?? collectPaidServiceStatuses;
   const send = deps.send ?? sendPaidServiceAlert;
 
-  const statuses = await collect(supabase);
-  const previous = await loadPreviousWatchdogState(supabase);
+  const statuses = await collect(researchSupabase);
+  const previous = await loadPreviousWatchdogState(researchSupabase);
   const diff = diffForAlerts(previous, statuses);
   let delivery: { email: boolean; whatsapp: boolean } | null = null;
 
@@ -38,7 +38,7 @@ export async function runPaidServiceWatchdog(
     delivery = await send(formatAlert(diff, statuses));
   }
 
-  await saveWatchdogState(supabase, toState(statuses));
+  await saveWatchdogState(researchSupabase, toState(statuses));
 
   return {
     statuses,

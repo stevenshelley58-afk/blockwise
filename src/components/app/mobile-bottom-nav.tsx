@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { purgeLocalReadModels } from "@/lib/read-models/browser-store";
 import { isItemActive, navByVariant, type NavItem, type SidebarVariant } from "@/components/sidebar-nav";
 
 type MobileBottomNavProps = {
@@ -72,6 +73,7 @@ export function MobileBottomNav({ variant, account }: MobileBottomNavProps) {
   async function signOut() {
     setIsSigningOut(true);
     const supabase = createSupabaseBrowserClient();
+    await purgeLocalReadModels();
     await supabase.auth.signOut();
     router.replace("/login");
     router.refresh();

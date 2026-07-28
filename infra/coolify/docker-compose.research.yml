@@ -1,5 +1,3 @@
-version: "3.9"
-
 x-blockwise-research-reset:
   owner: "hermes"
   status: "hard-reset-runtime"
@@ -10,6 +8,118 @@ x-blockwise-research-reset:
     - "Pinned images are required. Do not deploy with floating tags."
 
 services:
+  research-db:
+    image: "postgres:17.6-alpine"
+    container_name: blockwise-research-db
+    restart: unless-stopped
+    shm_size: 512mb
+    environment:
+      POSTGRES_DB: blockwise_research
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${HERMES_RESEARCH_DB_PASSWORD:?Set HERMES_RESEARCH_DB_PASSWORD}
+    command:
+      - postgres
+      - -c
+      - shared_buffers=512MB
+      - -c
+      - effective_cache_size=2GB
+      - -c
+      - maintenance_work_mem=256MB
+      - -c
+      - work_mem=16MB
+      - -c
+      - max_connections=80
+      - -c
+      - checkpoint_completion_target=0.9
+      - -c
+      - wal_compression=on
+    volumes:
+      - research-db-data:/var/lib/postgresql/data
+      - ../../infra/research-db/init:/docker-entrypoint-initdb.d:ro
+    networks: [research]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d blockwise_research"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    logging:
+      driver: json-file
+      options: { max-size: "20m", max-file: "5" }
+
+  research-rest:
+    image: "postgrest/postgrest:v14.15"
+    container_name: blockwise-research-rest
+    restart: unless-stopped
+    depends_on:
+      research-db:
+        condition: service_healthy
+    environment:
+      PGRST_DB_URI: postgres://postgres:${HERMES_RESEARCH_DB_PASSWORD}@blockwise-research-db:5432/blockwise_research
+      PGRST_DB_SCHEMAS: research
+      PGRST_DB_EXTRA_SEARCH_PATH: public,extensions
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: ${HERMES_RESEARCH_JWT_SECRET:?Set HERMES_RESEARCH_JWT_SECRET}
+      PGRST_DB_POOL: "12"
+      PGRST_DB_POOL_ACQUISITION_TIMEOUT: "10"
+      PGRST_DB_POOL_MAX_IDLETIME: "60"
+      PGRST_SERVER_TIMING_ENABLED: "true"
+    expose: ["3000"]
+    networks: [research]
+    healthcheck:
+      test: ["CMD", "postgrest", "--help"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    logging:
+      driver: json-file
+      options: { max-size: "20m", max-file: "5" }
+
+  research-gateway:
+    image: "caddy:2.11.3-alpine"
+    container_name: blockwise-research-gateway
+    restart: unless-stopped
+    depends_on:
+      - research-rest
+    ports:
+      - "127.0.0.1:8652:3000"
+    volumes:
+      - ../../infra/research-db/Caddyfile:/etc/caddy/Caddyfile:ro
+    networks: [research]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+  research-backup:
+    image: "postgres:17.6-alpine"
+    container_name: blockwise-research-backup
+    restart: unless-stopped
+    depends_on:
+      research-db:
+        condition: service_healthy
+    environment:
+      PGHOST: blockwise-research-db
+      PGPORT: "5432"
+      PGDATABASE: blockwise_research
+      PGUSER: postgres
+      PGPASSWORD: ${HERMES_RESEARCH_DB_PASSWORD:?Set HERMES_RESEARCH_DB_PASSWORD}
+      RESEARCH_BACKUP_DIR: /backups
+      RESEARCH_BACKUP_RETENTION_DAYS: ${RESEARCH_BACKUP_RETENTION_DAYS:-14}
+      RESEARCH_BACKUP_INTERVAL_SECONDS: ${RESEARCH_BACKUP_INTERVAL_SECONDS:-86400}
+    entrypoint: ["/bin/sh", "/opt/blockwise/research-backup.sh"]
+    volumes:
+      - ../../scripts/vps/research-backup.sh:/opt/blockwise/research-backup.sh:ro
+      - /opt/blockwise-backups/research:/backups
+    networks: [research]
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
   steel:
     image: "${STEEL_IMAGE:?Set STEEL_IMAGE to a pinned steel-browser tag or digest}"
     container_name: blockwise-steel
@@ -28,21 +138,6 @@ services:
       driver: json-file
       options: { max-size: "20m", max-file: "5" }
 
-  obscura:
-    image: "${OBSCURA_IMAGE:?Set OBSCURA_IMAGE to a pinned obscura tag or digest}"
-    container_name: blockwise-obscura
-    restart: unless-stopped
-    command: ["serve", "--port", "9222", "--stealth", "--workers", "5"]
-    expose: ["9222"]
-    networks: [research]
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-    logging:
-      driver: json-file
-      options: { max-size: "20m", max-file: "5" }
-
   hermes:
     build:
       context: ../..
@@ -55,7 +150,7 @@ services:
     restart: unless-stopped
     depends_on:
       - steel
-      - obscura
+      - research-gateway
     ports:
       - "127.0.0.1:${HERMES_GATEWAY_HOST_PORT:-8642}:8642"
       - "127.0.0.1:${HERMES_DASHBOARD_HOST_PORT:-9119}:9119"
@@ -87,13 +182,20 @@ services:
       MEM0_API_KEY: ${MEM0_API_KEY}
       MEM0_PROJECT_ID: ${MEM0_PROJECT_ID:-blockwise-research}
       HERMES_REMOTE_BROWSER_CDP_URL: ${HERMES_REMOTE_BROWSER_CDP_URL:-http://blockwise-steel:9223}
-      HERMES_META_BROWSER_CDP_URL: ${HERMES_META_BROWSER_CDP_URL:-http://blockwise-obscura:9222}
+      HERMES_META_BROWSER_CDP_URL: ${HERMES_META_BROWSER_CDP_URL:-http://blockwise-steel:9223}
       SUPABASE_URL: ${SUPABASE_URL}
       SUPABASE_SECRET_KEY: ${SUPABASE_SECRET_KEY:-}
       SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-}
-      HERMES_SUPABASE_URL: ${SUPABASE_URL}
-      HERMES_SUPABASE_SECRET_KEY: ${HERMES_SUPABASE_SECRET_KEY:-${SUPABASE_SECRET_KEY:-}}
-      HERMES_SUPABASE_SERVICE_ROLE_KEY: ${HERMES_SUPABASE_SERVICE_ROLE_KEY:-${SUPABASE_SERVICE_ROLE_KEY:-}}
+      HERMES_SUPABASE_URL: http://blockwise-research-gateway:3000
+      HERMES_SUPABASE_SECRET_KEY: ""
+      HERMES_SUPABASE_SERVICE_ROLE_KEY: ${HERMES_RESEARCH_SERVICE_ROLE_KEY:?Set HERMES_RESEARCH_SERVICE_ROLE_KEY}
+      HERMES_CUSTOMER_SUPABASE_URL: ${SUPABASE_URL}
+      HERMES_CUSTOMER_SUPABASE_SECRET_KEY: ${SUPABASE_SECRET_KEY:-}
+      HERMES_CUSTOMER_SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-}
+      HERMES_CUSTOMER_READ_MODEL_PUBLISH_INTERVAL_SECONDS: ${HERMES_CUSTOMER_READ_MODEL_PUBLISH_INTERVAL_SECONDS:-300}
+      HERMES_ACCURACY_AUDIT_CHECK_INTERVAL_SECONDS: ${HERMES_ACCURACY_AUDIT_CHECK_INTERVAL_SECONDS:-3600}
+      HERMES_ACCURACY_AUDIT_INTERVAL_HOURS: ${HERMES_ACCURACY_AUDIT_INTERVAL_HOURS:-168}
+      HERMES_RAW_EVIDENCE_DIR: /opt/research-raw-evidence
       HERMES_RESEARCH_AD_CREATIVES_BUCKET: ${HERMES_RESEARCH_AD_CREATIVES_BUCKET:-research-ad-creatives}
       HERMES_RESEARCH_SCREENSHOTS_BUCKET: ${HERMES_RESEARCH_SCREENSHOTS_BUCKET:-research-screenshots}
       HERMES_RESEARCH_RAW_EVIDENCE_BUCKET: ${HERMES_RESEARCH_RAW_EVIDENCE_BUCKET:-research-raw-evidence}
@@ -132,8 +234,11 @@ services:
       HERMES_META_CAPTURE_PROXY_URL: ${HERMES_META_CAPTURE_PROXY_URL:-}
       RESIDENTIAL_PROXY_URL: ${RESIDENTIAL_PROXY_URL:-}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
+      ALERT_EMAIL_FROM: ${ALERT_EMAIL_FROM:-}
+      ALERT_EMAIL_TO: ${ALERT_EMAIL_TO:-}
     volumes:
       - hermes-data:/opt/data
+      - research-raw-evidence:/opt/research-raw-evidence
     networks: [research]
     healthcheck:
       test:
@@ -157,15 +262,15 @@ services:
     restart: unless-stopped
     depends_on:
       - steel
-      - obscura
     expose: ["8650"]
     environment:
       API_KEY: ${HERMES_API_SERVER_KEY}
-      OBSCURA_CDP_URL: http://blockwise-obscura:9222
+      OBSCURA_CDP_URL: http://blockwise-steel:9223
       STEEL_CDP_URL: http://blockwise-steel:9223
       RESIDENTIAL_PROXY_URL: ${RESIDENTIAL_PROXY_URL:-}
       SUPABASE_URL: ${SUPABASE_URL}
-      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-${HERMES_SUPABASE_SERVICE_ROLE_KEY:-}}
+      SUPABASE_SECRET_KEY: ${SUPABASE_SECRET_KEY:-}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-}
       PORT: "8650"
     networks: [research]
     deploy:
@@ -191,6 +296,8 @@ services:
 
 volumes:
   hermes-data:
+  research-db-data:
+  research-raw-evidence:
   steel-cache:
   uptime-data:
 

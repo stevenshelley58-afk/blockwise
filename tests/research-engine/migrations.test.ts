@@ -20,6 +20,30 @@ const mediaAssetsContentHashDedupeMigration = "supabase/migrations/202606150003_
 const adAttributionLinksMigration = "supabase/migrations/202606200004_research_ad_attribution_links.sql";
 const drainWorkQueueIndexesMigration = "supabase/migrations/20260621061000_research_drain_work_queue_indexes.sql";
 const tinyMediaRepairMigration = "supabase/migrations/202607150004_repair_tiny_ad_media.sql";
+const customerReadModelMigration = "supabase/migrations/20260728074225_customer_ad_radar_read_model.sql";
+
+test("customer Supabase keeps only the app-required Ad Radar projection", () => {
+  const sql = readFileSync(customerReadModelMigration, "utf8");
+
+  for (const table of [
+    "customer_ad_radar_cards",
+    "customer_ad_radar_creative_versions",
+    "customer_ad_radar_publications",
+    "infrastructure_cutovers",
+    "owned_ad_performance",
+  ]) {
+    assert.match(sql, new RegExp(`create table public\\.${table}`, "i"), `expected public.${table}`);
+  }
+  assert.match(sql, /alter table public\.customer_ad_radar_cards enable row level security/i);
+  assert.match(sql, /grant select on public\.customer_ad_radar_cards to anon, authenticated/i);
+  assert.match(sql, /grant all on public\.customer_ad_radar_cards to service_role/i);
+  assert.match(sql, /create or replace function public\.search_customer_meta_ad_library_cards/i);
+  assert.doesNotMatch(
+    sql,
+    /create table (?:public\.)?(?:work_queue|agent_decisions|ingest_events|runtime_settings)/i,
+    "private research runtime tables must not be recreated in customer Supabase",
+  );
+});
 
 test("tiny media repair archives bad rows and rebuilds every affected creative", () => {
   assert.equal(existsSync(tinyMediaRepairMigration), true, "tiny media repair migration must exist");

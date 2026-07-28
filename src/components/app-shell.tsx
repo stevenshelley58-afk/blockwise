@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ChevronRight } from "lucide-react";
+import { Suspense } from "react";
 
 import { AccountMenu } from "@/components/account-menu";
 import { MobileBottomNav } from "@/components/app/mobile-bottom-nav";
@@ -8,9 +9,9 @@ import { BlockwiseLogo } from "@/components/blockwise-logo";
 import { SelfServeShell } from "@/components/self-serve-shell";
 import { SidebarNav, type SidebarVariant } from "@/components/sidebar-nav";
 import { SidebarThemeToggle } from "@/components/sidebar-theme-toggle";
-import { TrialStatusPill, type TrialStatus } from "@/components/trial-status-pill";
+import { TrialStatusCard, TrialStatusPill, type TrialStatus } from "@/components/trial-status-pill";
+import { getRequestAuthContext } from "@/lib/auth/request-context";
 import { hasOperatorAccessFromRows } from "@/lib/auth/workspace-access";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type AppShellProps = {
   children: React.ReactNode;
@@ -75,7 +76,7 @@ function normalizeRpcTrialStatus(value: unknown): TrialStatus | null {
 }
 
 async function loadInitialTrialStatus(
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  supabase: Awaited<ReturnType<typeof getRequestAuthContext>>["supabase"],
   workspaceId: string | undefined,
   workspaceMode: "monitor" | "self_serve",
   isOperator: boolean,
@@ -126,24 +127,35 @@ async function loadInitialTrialStatus(
   }
 }
 
-export async function AppShell({ children, requiredAccess = "authenticated" }: AppShellProps) {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+async function DeferredTrialStatus({
+  supabase,
+  workspaceId,
+  workspaceMode,
+  isOperator,
+  presentation,
+}: {
+  supabase: Awaited<ReturnType<typeof getRequestAuthContext>>["supabase"];
+  workspaceId: string | undefined;
+  workspaceMode: "monitor" | "self_serve";
+  isOperator: boolean;
+  presentation: "card" | "pill";
+}) {
+  const status = await loadInitialTrialStatus(supabase, workspaceId, workspaceMode, isOperator);
 
-  if (!user) {
+  return presentation === "card" ? (
+    <TrialStatusCard initialStatus={status} />
+  ) : (
+    <TrialStatusPill initialStatus={status} />
+  );
+}
+
+export async function AppShell({ children, requiredAccess = "authenticated" }: AppShellProps) {
+  const auth = await getRequestAuthContext();
+  const { claims, memberships, profile, supabase } = auth;
+
+  if (!claims) {
     redirect("/login");
   }
-
-  const [{ data: profile }, { data: memberships }] = await Promise.all([
-    supabase.from("profiles").select("full_name,is_operator").eq("id", user.id).maybeSingle(),
-    supabase
-      .from("workspace_members")
-      .select("role, workspaces(id, name, mode, region)")
-      .eq("profile_id", user.id)
-      .order("created_at", { ascending: true }),
-  ]);
 
   const membershipRows = (memberships ?? []) as MembershipRow[];
   const isOperator = hasOperatorAccessFromRows(profile, membershipRows);
@@ -158,23 +170,35 @@ export async function AppShell({ children, requiredAccess = "authenticated" }: A
   const variant: SidebarVariant = isOperator ? "operator" : workspaceMode === "self_serve" ? "self_serve" : "monitor";
   const homeHref = isOperator ? "/operator" : "/self-serve";
   const workspaceName = isOperator ? "Operator Console" : workspace?.name ?? "Workspace";
-  const accountName = profile?.full_name ?? user.email ?? "Signed in";
+  const accountEmail = profile?.email ?? claims.email ?? "";
+  const accountName = profile?.full_name ?? accountEmail ?? "Signed in";
   const roleLabel = isOperator ? "operator" : primaryMembership?.role ?? "member";
-  const initialTrialStatus = await loadInitialTrialStatus(supabase, workspace?.id, workspaceMode, isOperator);
 
   // Self-serve workspaces render on the shadcn/ui shell; operator and monitor
   // workspaces keep the existing CSS shell until their own migrations.
   if (variant === "self_serve") {
     return (
       <SelfServeShell
+        userId={claims.sub}
+        workspaceId={workspace?.id ?? ""}
         workspaceName={workspaceName}
         workspaceRegion={workspace?.region ?? "AU"}
         account={{
-          email: user.email ?? "",
+          email: accountEmail,
           name: accountName,
           role: roleLabel,
         }}
-        initialTrialStatus={initialTrialStatus}
+        trialStatus={
+          <Suspense fallback={null}>
+            <DeferredTrialStatus
+              supabase={supabase}
+              workspaceId={workspace?.id}
+              workspaceMode={workspaceMode}
+              isOperator={isOperator}
+              presentation="card"
+            />
+          </Suspense>
+        }
       >
         {children}
       </SelfServeShell>
@@ -210,9 +234,17 @@ export async function AppShell({ children, requiredAccess = "authenticated" }: A
             {workspaceName} - {workspace?.region ?? "AU"}
           </span>
           <div className="topbar-actions">
-            <TrialStatusPill initialStatus={initialTrialStatus} />
+            <Suspense fallback={null}>
+              <DeferredTrialStatus
+                supabase={supabase}
+                workspaceId={workspace?.id}
+                workspaceMode={workspaceMode}
+                isOperator={isOperator}
+                presentation="pill"
+              />
+            </Suspense>
             <SidebarThemeToggle />
-            <AccountMenu email={user.email ?? ""} name={accountName} role={roleLabel} />
+            <AccountMenu email={accountEmail} name={accountName} role={roleLabel} />
           </div>
         </header>
         {children}
@@ -220,7 +252,7 @@ export async function AppShell({ children, requiredAccess = "authenticated" }: A
       <MobileBottomNav
         variant={variant}
         account={{
-          email: user.email ?? "",
+          email: accountEmail,
           name: accountName,
           role: roleLabel,
         }}

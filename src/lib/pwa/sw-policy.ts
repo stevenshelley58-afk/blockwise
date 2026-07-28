@@ -2,8 +2,10 @@ export const PWA_CACHE_PREFIX = "blockwise-pwa";
 // Bump when shipped static assets under cached prefixes (e.g. /ads/) change at a
 // stable URL — the activate handler drops older caches, so devices refetch them
 // instead of serving a stale cache-first copy.
-export const PWA_CACHE_VERSION = "v2";
+export const PWA_CACHE_VERSION = "v3";
 export const STATIC_CACHE_NAME = `${PWA_CACHE_PREFIX}-${PWA_CACHE_VERSION}-static`;
+export const THUMBNAIL_CACHE_NAME = `${PWA_CACHE_PREFIX}-${PWA_CACHE_VERSION}-adstudio-thumbnails`;
+export const THUMBNAIL_CACHE_MAX_ENTRIES = 240;
 export const OFFLINE_FALLBACK_URL = "/offline.html";
 
 export const PRECACHE_URLS = [OFFLINE_FALLBACK_URL, "/icons/icon-192.png", "/icons/icon-512.png"] as const;
@@ -95,12 +97,20 @@ export function isCacheableStaticAssetRequest(request: ServiceWorkerRequestLike,
   if (isProviderUrl(url) || isExcludedServiceWorkerPath(url.pathname)) {
     return false;
   }
+  if (isAdStudioThumbnailPath(url.pathname)) return false;
 
   if (request.mode === "navigate" || request.destination === "document") {
     return false;
   }
 
   return isStaticAssetPath(url.pathname, request.destination);
+}
+
+export function isAdStudioThumbnailPath(pathname: string): boolean {
+  return (
+    pathname.startsWith("/adstudio-thumbnails/") &&
+    (pathname.endsWith("-320.webp") || pathname.endsWith("-640.webp"))
+  );
 }
 
 export function canUseOfflineFallbackForNavigation(request: ServiceWorkerRequestLike, origin: string): boolean {
@@ -124,6 +134,8 @@ export function createServiceWorkerSource(): string {
   return `
 const PWA_CACHE_PREFIX = ${JSON.stringify(PWA_CACHE_PREFIX)};
 const STATIC_CACHE_NAME = ${JSON.stringify(STATIC_CACHE_NAME)};
+const THUMBNAIL_CACHE_NAME = ${JSON.stringify(THUMBNAIL_CACHE_NAME)};
+const THUMBNAIL_CACHE_MAX_ENTRIES = ${JSON.stringify(THUMBNAIL_CACHE_MAX_ENTRIES)};
 const OFFLINE_FALLBACK_URL = ${JSON.stringify(OFFLINE_FALLBACK_URL)};
 const PRECACHE_URLS = ${JSON.stringify(PRECACHE_URLS)};
 const EXCLUDED_PATH_PREFIXES = ${JSON.stringify(EXCLUDED_PATH_PREFIXES)};
@@ -174,12 +186,18 @@ function isCacheableStaticAssetRequest(request) {
   if (isProviderUrl(url) || isExcludedServiceWorkerPath(url.pathname)) {
     return false;
   }
+  if (isAdStudioThumbnailPath(url.pathname)) return false;
 
   if (request.mode === "navigate" || request.destination === "document") {
     return false;
   }
 
   return isStaticAssetPath(url.pathname, request.destination);
+}
+
+function isAdStudioThumbnailPath(pathname) {
+  return pathname.startsWith("/adstudio-thumbnails/") &&
+    (pathname.endsWith("-320.webp") || pathname.endsWith("-640.webp"));
 }
 
 function canUseOfflineFallbackForNavigation(request) {
@@ -213,6 +231,18 @@ async function cacheFirst(request) {
   return response;
 }
 
+async function boundedThumbnailCacheFirst(request) {
+  const cache = await caches.open(THUMBNAIL_CACHE_NAME);
+  const cached = await cache.match(request);
+  if (cached) return cached;
+  const response = await fetch(request);
+  if (!response.ok) return response;
+  await cache.put(request, response.clone());
+  const keys = await cache.keys();
+  await Promise.all(keys.slice(0, Math.max(0, keys.length - THUMBNAIL_CACHE_MAX_ENTRIES)).map((key) => cache.delete(key)));
+  return response;
+}
+
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches
@@ -227,7 +257,11 @@ self.addEventListener("activate", (event) => {
     (async () => {
       const keys = await caches.keys();
       await Promise.all(
-        keys.map((key) => (key.startsWith(PWA_CACHE_PREFIX) && key !== STATIC_CACHE_NAME ? caches.delete(key) : undefined)),
+        keys.map((key) =>
+          key.startsWith(PWA_CACHE_PREFIX) && key !== STATIC_CACHE_NAME && key !== THUMBNAIL_CACHE_NAME
+            ? caches.delete(key)
+            : undefined
+        ),
       );
       if (self.registration.navigationPreload) {
         await self.registration.navigationPreload.enable();
@@ -255,6 +289,10 @@ self.addEventListener("fetch", (event) => {
   }
 
   if (!isCacheableStaticAssetRequest(request)) {
+    const url = new URL(request.url);
+    if (request.method === "GET" && isSameOrigin(url) && isAdStudioThumbnailPath(url.pathname)) {
+      event.respondWith(boundedThumbnailCacheFirst(request));
+    }
     return;
   }
 
