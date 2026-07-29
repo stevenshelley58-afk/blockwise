@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 
-import { requireApiWorkspace } from "@/lib/auth/api-guards";
+import { featureDisabledResponse, requireApiWorkspace } from "@/lib/auth/api-guards";
 import {
   CUSTOMER_RESEARCH_AD_HISTORY_VIEW,
   RESEARCH_AD_SELECT,
@@ -18,6 +18,9 @@ const saveSchema = z.object({
 });
 
 export async function GET(request: NextRequest) {
+  const featureGate = featureDisabledResponse("adRadar");
+  if (featureGate) return featureGate;
+
   const guard = await requireApiWorkspace(request, "monitor");
   if (!guard.ok) return guard.response;
   const { supabase, access } = guard;
@@ -49,6 +52,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const featureGate = featureDisabledResponse("adRadar");
+  if (featureGate) return featureGate;
+
   const guard = await requireApiWorkspace(request, "monitor");
   if (!guard.ok) return guard.response;
   const { supabase, access } = guard;

@@ -82,12 +82,18 @@ export const home: HomeCopy = {
       href: "/ad-radar",
       title: "Ad Radar",
       subtitle: "See top-performing ads from agents near you.",
+      feature: "adRadar",
     },
     {
       href: "/property-check",
       title: "Property Check",
       subtitle: "Instant insights and ad ideas for any listing.",
       feature: "propertyCheck",
+    },
+    {
+      href: "/ad-studio/library",
+      title: "Ad library",
+      subtitle: "Browse your generated Feed and Story creatives.",
     },
   ],
 };

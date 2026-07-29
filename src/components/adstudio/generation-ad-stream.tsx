@@ -1,6 +1,6 @@
 "use client";
 
-import { ExternalLink, Forward, Image as ImageIcon, LoaderCircle, MessageCircle, MoreHorizontal, ThumbsUp } from "lucide-react";
+import { Forward, Image as ImageIcon, LoaderCircle, MessageCircle, MoreHorizontal, ThumbsUp } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { PublicAdRadarCard, PublicAdRadarResponse } from "@/lib/research/public-ad-radar";
@@ -10,7 +10,6 @@ import {
   GENERATION_AD_PAGE_SIZE,
   appendGenerationAds,
   generationAdMediaUrl,
-  generationAdRadarHref,
   hasGenerationAdImage,
 } from "./generation-ad-stream-data";
 
@@ -40,8 +39,6 @@ export function GenerationAdStream({ location, quality, titleId }: GenerationAdS
   const viewportRef = useRef<HTMLDivElement>(null);
   const interactionPausedRef = useRef(false);
   const loadingMoreRef = useRef(false);
-  const selectedTriggerRef = useRef<HTMLButtonElement | null>(null);
-  const stayButtonRef = useRef<HTMLButtonElement>(null);
   const fallbackRef = useRef<PublicAdRadarCard[]>([]);
   const [ads, setAds] = useState<PublicAdRadarCard[]>([]);
   const [locationLabel, setLocationLabel] = useState(location || "your area");
@@ -51,7 +48,6 @@ export function GenerationAdStream({ location, quality, titleId }: GenerationAdS
   const [loadingInitial, setLoadingInitial] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [radarUnavailable, setRadarUnavailable] = useState(false);
-  const [selectedAd, setSelectedAd] = useState<PublicAdRadarCard | null>(null);
   const [phaseIndex, setPhaseIndex] = useState(0);
 
   useEffect(() => {
@@ -166,24 +162,13 @@ export function GenerationAdStream({ location, quality, titleId }: GenerationAdS
   const displayAds = useMemo(() => (allLoaded && ads.length > 1 ? [...ads, ...ads] : ads), [ads, allLoaded]);
   const streamDescription = ads.length > 0
     ? `Showing ads around ${locationLabel}. When local results end, the longest-running property ads continue.`
-    : "Ad Radar is preparing property ads while generation continues.";
-
-  function chooseAd(card: PublicAdRadarCard, trigger: HTMLButtonElement) {
-    selectedTriggerRef.current = trigger;
-    setSelectedAd(card);
-    window.setTimeout(() => stayButtonRef.current?.focus(), 0);
-  }
-
-  function closePrompt() {
-    setSelectedAd(null);
-    window.setTimeout(() => selectedTriggerRef.current?.focus(), 0);
-  }
+    : "Live property ads are loading while generation continues.";
 
   return (
     <section className="studio-generation" aria-labelledby={titleId} aria-busy="true">
       <header className="studio-generation-head">
         <h2 id={titleId}>Your ad is being generated</h2>
-        <p>{quality === "fast" ? "Usually ready in about a minute." : "High-quality ads usually take 2–3 minutes."} Browse Ad Radar while Blockwise works.</p>
+        <p>{quality === "fast" ? "Usually ready in about a minute." : "High-quality ads usually take 2–3 minutes."} Watch live property ads from your area while Blockwise works.</p>
         <div className="studio-generation-phase" role="status" aria-live="polite">
           <LoaderCircle aria-hidden size={17} />
           <span>{PHASES[phaseIndex]}</span>
@@ -193,7 +178,7 @@ export function GenerationAdStream({ location, quality, titleId }: GenerationAdS
       <div className="studio-generation-radar">
         <div className="studio-generation-radar-head">
           <div>
-            <h3>{ads.length > 0 ? `Ads around ${locationLabel}` : "Loading Ad Radar"}</h3>
+            <h3>{ads.length > 0 ? `Ads around ${locationLabel}` : "Loading nearby property ads"}</h3>
             <p>{streamDescription}</p>
           </div>
           {loadingMore ? <span className="studio-generation-more">Loading more</span> : null}
@@ -225,7 +210,6 @@ export function GenerationAdStream({ location, quality, titleId }: GenerationAdS
                   card={card}
                   eager={index < 2}
                   key={`${card.id}-${index >= ads.length ? "repeat" : "primary"}`}
-                  onSelect={chooseAd}
                 />
               ))}
             </div>
@@ -235,37 +219,11 @@ export function GenerationAdStream({ location, quality, titleId }: GenerationAdS
         {!loadingInitial && ads.length === 0 ? (
           <div className="studio-generation-empty">
             <ImageIcon aria-hidden size={22} />
-            <strong>{radarUnavailable ? "Ad Radar is catching up" : "No local ads are available yet"}</strong>
+            <strong>{radarUnavailable ? "Live ads are catching up" : "No local ads are available yet"}</strong>
             <p>Your ad generation is unaffected and will finish normally.</p>
           </div>
         ) : null}
       </div>
-
-      {selectedAd ? (
-        <div
-          className="studio-generation-prompt-backdrop"
-          onMouseDown={(event) => event.target === event.currentTarget && closePrompt()}
-          onKeyDown={(event) => {
-            if (event.key === "Escape") {
-              event.preventDefault();
-              event.stopPropagation();
-              closePrompt();
-            }
-          }}
-        >
-          <div className="studio-generation-prompt" role="group" aria-labelledby="studio-generation-prompt-title">
-            <h3 id="studio-generation-prompt-title">Open this ad in Ad Radar?</h3>
-            <p>Your ad will keep generating in the background.</p>
-            <strong>{selectedAd.pageName}</strong>
-            <div>
-              <button ref={stayButtonRef} type="button" onClick={closePrompt}>Stay here</button>
-              <a href={generationAdRadarHref(selectedAd, location)} target="_blank" rel="noreferrer" onClick={() => setSelectedAd(null)}>
-                Open Ad Radar <ExternalLink aria-hidden size={14} />
-              </a>
-            </div>
-          </div>
-        </div>
-      ) : null}
     </section>
   );
 }
@@ -273,11 +231,9 @@ export function GenerationAdStream({ location, quality, titleId }: GenerationAdS
 function GenerationAdCard({
   card,
   eager,
-  onSelect,
 }: {
   card: PublicAdRadarCard;
   eager: boolean;
-  onSelect: (card: PublicAdRadarCard, trigger: HTMLButtonElement) => void;
 }) {
   const [mediaFailed, setMediaFailed] = useState(false);
   const [avatarFailed, setAvatarFailed] = useState(false);
@@ -291,7 +247,7 @@ function GenerationAdCard({
 
   return (
     <article className="studio-generation-card">
-      <button type="button" onClick={(event) => onSelect(card, event.currentTarget)} aria-label={`View ${card.pageName} ad in Ad Radar`}>
+      <div>
         <span className="studio-generation-card-head">
           <span className="studio-generation-avatar">
             {card.pageImageUrl && !avatarFailed
@@ -327,7 +283,7 @@ function GenerationAdCard({
           <span><MessageCircle size={16} /> Comment</span>
           <span><Forward size={16} /> Share</span>
         </span>
-      </button>
+      </div>
     </article>
   );
 }

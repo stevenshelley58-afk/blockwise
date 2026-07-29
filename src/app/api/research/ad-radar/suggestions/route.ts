@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { featureDisabledResponse } from "@/lib/auth/api-guards";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { loadAdvertiserSuggestions } from "@/lib/research/advertiser-autocomplete";
 import { suggestAdRadarLocations } from "@/lib/research/ad-radar-google-locations";
@@ -10,6 +11,9 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
+  const featureGate = featureDisabledResponse("adRadar", "suburbPages");
+  if (featureGate) return featureGate;
+
   const query = (request.nextUrl.searchParams.get("q") ?? "").replace(/[(),]/g, "").trim();
   if (query.length < 2) return NextResponse.json({ suggestions: [] });
 

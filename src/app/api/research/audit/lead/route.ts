@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 
+import { featureDisabledResponse } from "@/lib/auth/api-guards";
 import { sendDemoRequestNotification } from "@/lib/notify/demo-request-email";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
@@ -32,6 +33,9 @@ function clean(value: string | undefined): string | null {
 }
 
 export async function POST(request: NextRequest) {
+  const featureGate = featureDisabledResponse("suburbPages");
+  if (featureGate) return featureGate;
+
   let json: unknown;
   try {
     json = await request.json();

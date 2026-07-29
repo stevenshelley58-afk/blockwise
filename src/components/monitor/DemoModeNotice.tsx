@@ -1,6 +1,6 @@
 "use client";
 
-import { ChartNoAxesCombined, Plug, Radar, X } from "lucide-react";
+import { ChartNoAxesCombined, Plug, Star, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import {
@@ -129,8 +129,8 @@ export function DemoModeNotice({ metaConnectHref }: { metaConnectHref: string })
             <GuideStep icon={<ChartNoAxesCombined aria-hidden size={15} />} title="Watch Performance fill with your numbers">
               Spend, leads, cost per lead, and ad-by-ad performance — updated automatically.
             </GuideStep>
-            <GuideStep icon={<Radar aria-hidden size={15} />} title="Spy on competitors in Ad Radar">
-              See the real ads other agencies are running in your postcodes right now.
+            <GuideStep icon={<Star aria-hidden size={15} />} title="Create your next ad in Ad Studio">
+              Turn a proven template into on-brand Feed and Story creatives in minutes.
             </GuideStep>
           </ol>
 

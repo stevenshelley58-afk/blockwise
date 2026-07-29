@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 
 import { BlockwiseLogo } from "@/components/blockwise-logo";
 import {
@@ -11,6 +12,7 @@ import {
   TrackedDetails,
 } from "@/components/research/audit-conversion";
 import { AuditLeadForm } from "@/components/research/audit-lead-form";
+import { niche } from "@/config/niche";
 import {
   buildAdAudit,
   type AdAuditResult,
@@ -161,6 +163,8 @@ function buildCampaignPack(stats: AdAuditStats | null): CampaignCard[] {
 }
 
 export default async function AuditPage({ searchParams }: { searchParams?: SearchParams }) {
+  if (!niche.features.suburbPages) notFound();
+
   const params = searchParams ? await searchParams : {};
   const location = pickParam(params.location ?? params.q) || "Perth, WA";
 

@@ -1,4 +1,4 @@
-﻿export const STYLES = `
+export const STYLES = `
 .studio-screen{position:fixed;inset:0;z-index:100;display:flex;flex-direction:column;background:#f8fafc;color:var(--ink);font-size:14px;letter-spacing:0;
   --st-sh-1:0 1px 2px rgba(15,23,42,.05),0 0 0 1px rgba(15,23,42,.03);
   --st-sh-2:0 8px 28px rgba(15,23,42,.12),0 2px 6px rgba(15,23,42,.06);
@@ -706,8 +706,7 @@
 .studio-generation-viewport:focus-visible{box-shadow:inset 0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)}
 .studio-generation-track{width:max-content;height:100%;display:flex;align-items:stretch;gap:14px}
 .studio-generation-card{width:300px;width:clamp(240px,calc((100cqh - 200px)*.8),340px);min-height:0;height:100%;flex:0 0 auto;overflow:hidden;border-radius:9px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}
-.studio-generation-card>button{width:100%;height:100%;min-height:0;display:flex;flex-direction:column;border:0;background:#fff;color:#050505;padding:0;text-align:left}
-.studio-generation-card>button:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
+.studio-generation-card>div{width:100%;height:100%;min-height:0;display:flex;flex-direction:column;background:#fff;color:#050505;text-align:left}
 .studio-generation-card-head{min-width:0;display:grid;grid-template-columns:40px minmax(0,1fr) auto;align-items:center;gap:8px;padding:10px 12px 8px}
 .studio-generation-avatar{width:40px;height:40px;display:grid;place-items:center;overflow:hidden;border-radius:999px;background:#111827;color:#fff;font-size:15px;font-weight:700}
 .studio-generation-avatar img{width:100%;height:100%;display:block;object-fit:cover}

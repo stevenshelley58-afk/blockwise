@@ -7,7 +7,6 @@ const LIKELY_ROUTES: Record<string, readonly string[]> = {
   "/self-serve": ["/ad-studio", "/results"],
   "/ad-studio": ["/ad-studio/library", "/results"],
   "/results": ["/leads", "/ad-studio"],
-  "/ad-radar": ["/ad-studio", "/ad-radar/swipe-file"],
   "/settings": ["/self-serve", "/ad-studio"],
 };
 
