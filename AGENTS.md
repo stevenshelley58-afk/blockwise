@@ -28,7 +28,9 @@
   executes Apify or research scraping; it only reads research state from
   Supabase.
 - Provider tokens live in `private.provider_token_vault` and are only touched
-  through service-role code.
+  through service-role code via the `public.provider_token_vault_*` RPCs — the
+  `private` schema is not exposed through PostgREST, so never query it with
+  `.schema("private")`.
 
 ## AdStudio templates (the ad product)
 

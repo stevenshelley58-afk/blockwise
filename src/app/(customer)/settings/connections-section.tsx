@@ -43,10 +43,26 @@ type MetaSetupResponse = {
   blockers?: string[];
   ready?: boolean;
   assets?: MetaAssetCatalog | null;
+  assetsError?: string | null;
   error?: string;
 };
 
 const META_LEAD_DESTINATION_TYPES: MetaLeadDestinationType[] = ["manual", "webhook", "crm"];
+
+const FALLBACK_TIMEZONES = [
+  "Australia/Perth",
+  "Australia/Sydney",
+  "Australia/Melbourne",
+  "Australia/Brisbane",
+  "Pacific/Auckland",
+  "America/Los_Angeles",
+  "America/New_York",
+  "Europe/London",
+  "UTC",
+];
+
+const TIMEZONE_OPTIONS: string[] =
+  typeof Intl.supportedValuesOf === "function" ? Intl.supportedValuesOf("timeZone") : FALLBACK_TIMEZONES;
 
 const STATUS_LABELS: Record<string, string> = {
   connected: "Connected",
@@ -187,6 +203,7 @@ function emptyMetaSetup(): MetaSetup {
 function MetaSetupForm({ workspaceId, canManage }: { workspaceId: string; canManage: boolean }) {
   const [setup, setSetup] = useState<MetaSetup>(() => emptyMetaSetup());
   const [assets, setAssets] = useState<MetaAssetCatalog | null>(null);
+  const [assetsError, setAssetsError] = useState<string | null>(null);
   const [blockers, setBlockers] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -201,6 +218,7 @@ function MetaSetupForm({ workspaceId, canManage }: { workspaceId: string; canMan
         if (!active) return;
         if (data.setup) setSetup(normalizeMetaSetupForForm(data.setup));
         setAssets(data.assets ?? null);
+        setAssetsError(data.assetsError ?? null);
         setBlockers(data.blockers ?? []);
         setMessage(data.error ? { tone: "error", text: data.error } : null);
       })
@@ -262,8 +280,8 @@ function MetaSetupForm({ workspaceId, canManage }: { workspaceId: string; canMan
     }
   }
 
-  const selectedAccount = assets?.adAccounts.find((account) => account.id === setup.metaAdAccountId);
   const availableInstagramActors = assets?.instagramActors.filter((actor) => !actor.pageId || actor.pageId === setup.pageId) ?? [];
+  const timezoneOptions = setup.timezone && !TIMEZONE_OPTIONS.includes(setup.timezone) ? [setup.timezone, ...TIMEZONE_OPTIONS] : TIMEZONE_OPTIONS;
 
   return (
     <form className="flex flex-col gap-4 rounded-(--r-card) border border-(--line) bg-(--surface-subtle)/40 p-4" onSubmit={save}>
@@ -278,6 +296,9 @@ function MetaSetupForm({ workspaceId, canManage }: { workspaceId: string; canMan
       {loading ? (
         <p className="text-sm text-muted-foreground">Loading Meta assets.</p>
       ) : <>
+      {assetsError ? (
+        <p className="text-sm text-destructive">Couldn't load your Meta assets ({assetsError}). Reconnect Meta, or enter the IDs manually below.</p>
+      ) : null}
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="grid gap-2">
           <Label htmlFor="meta-meta-ad-account">Meta ad account</Label>
@@ -390,7 +411,12 @@ function MetaSetupForm({ workspaceId, canManage }: { workspaceId: string; canMan
         </div>
         <div className="grid gap-2">
           <Label htmlFor="meta-timezone">Timezone</Label>
-          <Input id="meta-timezone" value={setup.timezone} onChange={(e) => updateSetup({ timezone: e.target.value })} placeholder={selectedAccount?.timezone ?? "Australia/Perth"} disabled={!canManage} required />
+          <select id="meta-timezone" className={selectClass} value={setup.timezone} onChange={(e) => updateSetup({ timezone: e.target.value })} disabled={!canManage} required>
+            {setup.timezone ? null : <option value="">Select timezone</option>}
+            {timezoneOptions.map((timezone) => (
+              <option key={timezone} value={timezone}>{timezone.replace(/_/g, " ")}</option>
+            ))}
+          </select>
         </div>
       </div>
 

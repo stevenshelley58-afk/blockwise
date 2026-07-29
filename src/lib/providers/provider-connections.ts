@@ -76,14 +76,19 @@ export async function loadStoredProviderTokens(
   serviceSupabase: SupabaseServiceClient,
   connectionId: string,
 ): Promise<StoredProviderTokens> {
-  const { data } = await serviceSupabase
-    .schema("private")
-    .from("provider_token_vault")
-    .select("encrypted_access_token, encrypted_refresh_token, token_nonce")
-    .eq("provider_connection_id", connectionId)
-    .maybeSingle();
+  // The private schema is not exposed through PostgREST; the vault is only
+  // reachable through the service-role RPC. Errors must surface: treating a
+  // failed read as "no token" silently reports missing_token and degrades
+  // every token-dependent flow.
+  const { data, error } = await serviceSupabase.rpc("provider_token_vault_get", {
+    p_provider_connection_id: connectionId,
+  });
 
-  const row = data as VaultRow | null;
+  if (error) {
+    throw new Error(`provider_token_vault_get failed: ${error.message}`);
+  }
+
+  const row = (Array.isArray(data) ? (data[0] ?? null) : data) as VaultRow | null;
 
   if (!row?.token_nonce) {
     return { accessToken: null, refreshToken: null };
@@ -158,18 +163,14 @@ export async function upsertProviderConnectionWithTokens(input: {
     console.warn("[provider-connections] failed to demote sibling connection rows:", demoteError.message);
   }
 
-  const { error: vaultError } = await input.serviceSupabase.schema("private").from("provider_token_vault").upsert(
-    {
-      provider_connection_id: connection.id,
-      workspace_id: input.workspaceId,
-      encrypted_access_token: encryptedTokenToPostgresBytea(encryptedAccessToken),
-      encrypted_refresh_token: encryptedRefreshToken ? encryptedTokenToPostgresBytea(encryptedRefreshToken) : null,
-      token_nonce: encryptedAccessToken.nonce,
-      token_last_four: encryptedRefreshToken?.lastFour ?? encryptedAccessToken.lastFour,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "provider_connection_id" },
-  );
+  const { error: vaultError } = await input.serviceSupabase.rpc("provider_token_vault_upsert", {
+    p_provider_connection_id: connection.id,
+    p_workspace_id: input.workspaceId,
+    p_encrypted_access_token: encryptedTokenToPostgresBytea(encryptedAccessToken),
+    p_encrypted_refresh_token: encryptedRefreshToken ? encryptedTokenToPostgresBytea(encryptedRefreshToken) : null,
+    p_token_nonce: encryptedAccessToken.nonce,
+    p_token_last_four: encryptedRefreshToken?.lastFour ?? encryptedAccessToken.lastFour,
+  });
 
   if (vaultError) {
     throw new Error(vaultError.message);

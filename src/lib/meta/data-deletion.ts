@@ -254,17 +254,9 @@ async function disconnectProviderConnectionsForMetaUser(
   const processedAt = new Date().toISOString();
 
   for (const connection of matches) {
-    const { error: vaultError } = await supabase
-      .schema("private")
-      .from("provider_token_vault")
-      .update({
-        encrypted_access_token: null,
-        encrypted_refresh_token: null,
-        token_nonce: null,
-        token_last_four: null,
-        updated_at: processedAt,
-      })
-      .eq("provider_connection_id", connection.id);
+    const { error: vaultError } = await supabase.rpc("provider_token_vault_clear", {
+      p_provider_connection_id: connection.id,
+    });
 
     if (vaultError) {
       throw new Error(vaultError.message);
