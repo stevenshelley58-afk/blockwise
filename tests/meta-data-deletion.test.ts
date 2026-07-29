@@ -83,6 +83,6 @@ test("Meta data deletion route persists, exposes status lookup, and has a server
   assert.match(route, /loadDeletionStatus\(confirmationCode\)/);
   assert.match(helper, /\.from\("meta_data_deletion_requests"\)/);
   assert.match(helper, /\.from\("meta_leads"\)/);
-  assert.match(helper, /\.schema\("private"\)\s*[\s\S]*?\.from\("provider_token_vault"\)/);
+  assert.match(helper, /\.rpc\("provider_token_vault_clear"/);
   assert.match(page, /Deletion request status/);
 });

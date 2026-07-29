@@ -6,6 +6,7 @@ import {
   checkMetaConnectionHealth,
   fetchMetaAssetCatalog,
   pickDefaultMetaSetupFromAssets,
+  type MetaAssetCatalog,
 } from "@/lib/providers/meta-assets";
 import {
   resolveMetaConnectionSetup,
@@ -56,13 +57,22 @@ export async function GET(request: NextRequest) {
     accessToken: tokens.accessToken ?? "",
     tokenExpiresAt: connection.token_expires_at,
   });
-  const assets = tokens.accessToken
-    ? await fetchMetaAssetCatalog({
+  let assets: MetaAssetCatalog | null = null;
+  let assetsError: string | null = null;
+  if (tokens.accessToken) {
+    // The settings form degrades to manual ID entry when the catalog is
+    // unavailable, so the reason must reach the UI instead of being
+    // swallowed; silent nulls previously hid token and permission failures.
+    try {
+      assets = await fetchMetaAssetCatalog({
         accessToken: tokens.accessToken,
         selectedAdAccountId: storedSetup.metaAdAccountId,
         selectedPageId: storedSetup.pageId,
-      }).catch(() => null)
-    : null;
+      });
+    } catch (error) {
+      assetsError = error instanceof Error ? error.message : "Meta asset request failed.";
+    }
+  }
   const setup = mergeSetupWithAssetDefaults(storedSetup, assets ? pickDefaultMetaSetupFromAssets(assets) : null);
   const blockers = validateMetaConnectionSetup(setup);
 
@@ -87,6 +97,7 @@ export async function GET(request: NextRequest) {
     ready: blockers.length === 0 && health.status !== "needs_reconnect" && health.status !== "missing_token",
     health,
     assets,
+    assetsError,
   });
 }
 

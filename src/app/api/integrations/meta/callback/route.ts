@@ -76,35 +76,18 @@ async function handleCallback(request: NextRequest) {
 
   let exchangedAccountId: string | undefined;
 
+  let exchanged: Awaited<ReturnType<typeof exchangeProviderCode>>;
   try {
-    const exchanged = await exchangeProviderCode("meta", request, code);
-    exchangedAccountId = exchanged.externalAccountId;
-    await upsertProviderConnectionWithTokens({
-      serviceSupabase,
-      workspaceId: verified.payload.workspaceId,
-      userId: user.id,
-      provider: "meta",
-      status: exchanged.status,
-      scopes: exchanged.scopes,
-      externalAccountId: exchanged.externalAccountId,
-      externalAccountName: exchanged.externalAccountName,
-      accessToken: exchanged.accessToken,
-      refreshToken: exchanged.refreshToken,
-      metadata: exchanged.metadata,
-      tokenExpiresAt: exchanged.tokenExpiresAt,
-    });
-    await recordMetaConnected(
-      serviceSupabase,
-      verified.payload.workspaceId,
-      exchanged.status,
-      exchanged.externalAccountId,
-    );
+    exchanged = await exchangeProviderCode("meta", request, code);
   } catch (error) {
     // Duplicate callback requests (double navigation, browser re-requests)
     // re-exchange an already-used code, which Meta rejects. The first request
     // has usually saved the connection by then, so a duplicate must not
     // surface a false "connection failed" error. If a fresh connection exists
-    // for this workspace, treat the duplicate as a success.
+    // for this workspace, treat the duplicate as a success. This tolerance
+    // covers only the code exchange: a failure while persisting the
+    // connection or its tokens must surface as an error, not a silent
+    // "connected" without a stored token.
     const recent = await loadFreshMetaConnection(serviceSupabase, verified.payload.workspaceId);
 
     if (recent) {
@@ -126,6 +109,36 @@ async function handleCallback(request: NextRequest) {
       );
     }
 
+    const message = error instanceof Error ? error.message : "Meta connection failed.";
+    return NextResponse.redirect(
+      providerReturnUrl(verified.payload.returnPath, origin, { error: message }, verified.payload.campaignId ?? null),
+    );
+  }
+
+  exchangedAccountId = exchanged.externalAccountId;
+
+  try {
+    await upsertProviderConnectionWithTokens({
+      serviceSupabase,
+      workspaceId: verified.payload.workspaceId,
+      userId: user.id,
+      provider: "meta",
+      status: exchanged.status,
+      scopes: exchanged.scopes,
+      externalAccountId: exchanged.externalAccountId,
+      externalAccountName: exchanged.externalAccountName,
+      accessToken: exchanged.accessToken,
+      refreshToken: exchanged.refreshToken,
+      metadata: exchanged.metadata,
+      tokenExpiresAt: exchanged.tokenExpiresAt,
+    });
+    await recordMetaConnected(
+      serviceSupabase,
+      verified.payload.workspaceId,
+      exchanged.status,
+      exchanged.externalAccountId,
+    );
+  } catch (error) {
     const message = error instanceof Error ? error.message : "Meta connection failed.";
     return NextResponse.redirect(
       providerReturnUrl(verified.payload.returnPath, origin, { error: message }, verified.payload.campaignId ?? null),
