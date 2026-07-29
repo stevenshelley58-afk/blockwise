@@ -249,6 +249,11 @@ function matchRegionsToLines(textInputs, lines, imageWidth, imageHeight) {
         sample: input.sample,
         score: best.score,
         lowConfidence: best.score < LOW_CONFIDENCE_THRESHOLD,
+        // How many OCR lines the matched box spans — lets downstream glyph
+        // measurement divide the crop height back into a per-line figure
+        // for wrapped headlines/body copy instead of treating the whole
+        // multi-line block as one glyph row.
+        lineCount: best.end - best.start + 1,
         box: {
           x: best.left / imageWidth,
           y: best.top / imageHeight,
