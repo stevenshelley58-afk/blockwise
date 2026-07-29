@@ -130,5 +130,77 @@
         "body": "The agency will be in touch within 24 hours to arrange your free seller consultation."
       }
     }
+  },
+  "typography": {
+    "headline": {
+      "fontId": "manrope",
+      "family": "Manrope",
+      "fallbackFamily": "sans-serif",
+      "weight": 500,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.3061224432788343,
+      "lineHeight": 1.366,
+      "tracking": 0,
+      "align": "center",
+      "color": "#5f524a",
+      "fitScore": 0.841
+    },
+    "subheadline": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 600,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.5394736842105265,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "center",
+      "color": "#403e3c",
+      "fitScore": 0.593
+    },
+    "benefit_2": {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "fallbackFamily": "serif",
+      "weight": 600,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.32,
+      "lineHeight": 1.257,
+      "tracking": 0,
+      "align": "center",
+      "color": "#42413f",
+      "fitScore": 0.512
+    },
+    "benefit_3": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.5238096120245916,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "center",
+      "color": "#d1cecc",
+      "fitScore": 0.347
+    },
+    "benefit_1": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 600,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.546875,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "center",
+      "color": "#444240",
+      "fitScore": 0.525
+    }
   }
 }

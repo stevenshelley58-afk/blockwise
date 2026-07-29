@@ -148,5 +148,105 @@
         "body": "The agency will be in touch within 24 hours to introduce themselves and answer your questions."
       }
     }
+  },
+  "typography": {
+    "supporting_text": {
+      "fontId": "archivo",
+      "family": "Archivo",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "mixed",
+      "sizeRatio": 1.0960746233521657,
+      "lineHeight": 1.088,
+      "tracking": 0,
+      "align": "left",
+      "color": "#aca9a9",
+      "fitScore": 0.41
+    },
+    "headline": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.5238096002946857,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "center",
+      "color": "#26474d",
+      "fitScore": 0.41
+    },
+    "agency_name": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 400,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.5510204081632653,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "left",
+      "color": "#444345",
+      "fitScore": 0.521
+    },
+    "cta_text": {
+      "fontId": "poppins",
+      "family": "Poppins",
+      "fallbackFamily": "sans-serif",
+      "weight": 500,
+      "italic": false,
+      "case": "mixed",
+      "sizeRatio": 0.9540846750149076,
+      "lineHeight": 1.5,
+      "tracking": 0,
+      "align": "left",
+      "color": "#d9e6e9",
+      "fitScore": 0.602
+    },
+    "agent_title": {
+      "fontId": "manrope",
+      "family": "Manrope",
+      "fallbackFamily": "sans-serif",
+      "weight": 500,
+      "italic": false,
+      "case": "mixed",
+      "sizeRatio": 1.0004728132387706,
+      "lineHeight": 1.366,
+      "tracking": 0,
+      "align": "left",
+      "color": "#e3e4e4",
+      "fitScore": 0.598
+    },
+    "contact_number": {
+      "fontId": "roboto-slab",
+      "family": "Roboto Slab",
+      "fallbackFamily": "serif",
+      "weight": 800,
+      "italic": false,
+      "case": "none",
+      "sizeRatio": 1.3157894736842106,
+      "lineHeight": 1.31884765625,
+      "tracking": 0,
+      "align": "left",
+      "color": "#f0f5f6",
+      "fitScore": 0.456
+    },
+    "agent_name": {
+      "fontId": "oswald",
+      "family": "Oswald",
+      "fallbackFamily": "sans-serif",
+      "weight": 600,
+      "italic": false,
+      "case": "mixed",
+      "sizeRatio": 1.0135135135135136,
+      "lineHeight": 1.482,
+      "tracking": 0,
+      "align": "left",
+      "color": "#f3f3f3",
+      "fitScore": 0.594
+    }
   }
 }

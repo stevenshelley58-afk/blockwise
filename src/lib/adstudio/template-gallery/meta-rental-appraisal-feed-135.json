@@ -144,5 +144,105 @@
         "body": "The agency will be in touch within 24 hours to arrange your free rental appraisal."
       }
     }
+  },
+  "typography": {
+    "body": {
+      "fontId": "source-sans-3",
+      "family": "Source Sans 3",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "mixed",
+      "sizeRatio": 1.0317460317460319,
+      "lineHeight": 1.424,
+      "tracking": 0,
+      "align": "left",
+      "color": "#565a5f",
+      "fitScore": 0.587
+    },
+    "headline": {
+      "fontId": "manrope",
+      "family": "Manrope",
+      "fallbackFamily": "sans-serif",
+      "weight": 600,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.3061224104156475,
+      "lineHeight": 1.366,
+      "tracking": 0,
+      "align": "center",
+      "color": "#a6a092",
+      "fitScore": 0.231
+    },
+    "subheadline": {
+      "fontId": "nunito-sans",
+      "family": "Nunito Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 800,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.0727040816326532,
+      "lineHeight": 1.364,
+      "tracking": 0,
+      "align": "left",
+      "color": "#daac60",
+      "fitScore": 0.56
+    },
+    "cta": {
+      "fontId": "manrope",
+      "family": "Manrope",
+      "fallbackFamily": "sans-serif",
+      "weight": 800,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.3230490018148817,
+      "lineHeight": 1.366,
+      "tracking": 0,
+      "align": "left",
+      "color": "#1f3239",
+      "fitScore": 0.411
+    },
+    "benefit_3": {
+      "fontId": "manrope",
+      "family": "Manrope",
+      "fallbackFamily": "sans-serif",
+      "weight": 600,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.3376190476190473,
+      "lineHeight": 1.366,
+      "tracking": 0,
+      "align": "left",
+      "color": "#394648",
+      "fitScore": 0.984
+    },
+    "benefit_2": {
+      "fontId": "lora",
+      "family": "Lora",
+      "fallbackFamily": "serif",
+      "weight": 700,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.3663454410674574,
+      "lineHeight": 1.28,
+      "tracking": 0,
+      "align": "left",
+      "color": "#2a3c42",
+      "fitScore": 0.729
+    },
+    "benefit_1": {
+      "fontId": "oswald",
+      "family": "Oswald",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.2016010538582358,
+      "lineHeight": 1.482,
+      "tracking": 0,
+      "align": "left",
+      "color": "#314044",
+      "fitScore": 0.834
+    }
   }
 }

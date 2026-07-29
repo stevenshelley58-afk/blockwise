@@ -130,5 +130,91 @@
         "body": "The agency will be in touch within 24 hours to arrange your free seller consultation."
       }
     }
+  },
+  "typography": {
+    "agent_role": {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "fallbackFamily": "serif",
+      "weight": 700,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.3557422969187678,
+      "lineHeight": 1.257,
+      "tracking": 0,
+      "align": "center",
+      "color": "#474747",
+      "fitScore": 0.4
+    },
+    "headline": {
+      "fontId": "oswald",
+      "family": "Oswald",
+      "fallbackFamily": "sans-serif",
+      "weight": 400,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.1851852782239995,
+      "lineHeight": 1.482,
+      "tracking": 0,
+      "align": "center",
+      "color": "#252525",
+      "fitScore": 0.278
+    },
+    "subheadline": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 600,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.5664961636828645,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "center",
+      "color": "#313131",
+      "fitScore": 0.548
+    },
+    "website": {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "fallbackFamily": "serif",
+      "weight": 500,
+      "italic": false,
+      "case": "lower",
+      "sizeRatio": 1.1290322580645162,
+      "lineHeight": 1.257,
+      "tracking": 0,
+      "align": "left",
+      "color": "#505050",
+      "fitScore": 0.638
+    },
+    "phone": {
+      "fontId": "barlow-condensed",
+      "family": "Barlow Condensed",
+      "fallbackFamily": "sans-serif",
+      "weight": 800,
+      "italic": false,
+      "case": "none",
+      "sizeRatio": 1.3719999999999999,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "left",
+      "color": "#363f40",
+      "fitScore": 0.779
+    },
+    "agent_name": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 600,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.5394736842105265,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "center",
+      "color": "#2f2f2f",
+      "fitScore": 0.583
+    }
   }
 }

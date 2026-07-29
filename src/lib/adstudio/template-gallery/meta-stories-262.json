@@ -103,5 +103,49 @@
         "body": "The agency will be in touch within 24 hours to send you your free property guide."
       }
     }
+  },
+  "typography": {
+    "tip_text": {
+      "fontId": "source-sans-3",
+      "family": "Source Sans 3",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "mixed",
+      "sizeRatio": 1.0363837489943684,
+      "lineHeight": 1.424,
+      "tracking": 0,
+      "align": "center",
+      "color": "#d1d1d1",
+      "fitScore": 0.556
+    },
+    "contact_handle": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 600,
+      "italic": false,
+      "case": "lower",
+      "sizeRatio": 1.3255172413793102,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "center",
+      "color": "#d7d7d8",
+      "fitScore": 0.638
+    },
+    "main_heading": {
+      "fontId": "kanit",
+      "family": "Kanit",
+      "fallbackFamily": "sans-serif",
+      "weight": 900,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.52,
+      "lineHeight": 1.495,
+      "tracking": 0,
+      "align": "left",
+      "color": "#6f6458",
+      "fitScore": 0.133
+    }
   }
 }

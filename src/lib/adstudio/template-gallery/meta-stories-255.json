@@ -132,5 +132,91 @@
         "body": "The agency will be in touch within 24 hours to send you your free property guide."
       }
     }
+  },
+  "typography": {
+    "social_handle": {
+      "fontId": "plus-jakarta-sans",
+      "family": "Plus Jakarta Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 600,
+      "italic": false,
+      "case": "lower",
+      "sizeRatio": 1.0012771392081736,
+      "lineHeight": 1.26,
+      "tracking": 0,
+      "align": "center",
+      "color": "#787776",
+      "fitScore": 0.661
+    },
+    "agent_name": {
+      "fontId": "quicksand",
+      "family": "Quicksand",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "mixed",
+      "sizeRatio": 1.3261746143057502,
+      "lineHeight": 1.25,
+      "tracking": 0,
+      "align": "left",
+      "color": "#7e7c7b",
+      "fitScore": 0.59
+    },
+    "average_price": {
+      "fontId": "roboto-mono",
+      "family": "Roboto Mono",
+      "fallbackFamily": "monospace",
+      "weight": 600,
+      "italic": false,
+      "case": "none",
+      "sizeRatio": 1.0108173076923077,
+      "lineHeight": 1.31884765625,
+      "tracking": 0,
+      "align": "left",
+      "color": "#6c6b6c",
+      "fitScore": 0.608
+    },
+    "time_on_market": {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "fallbackFamily": "serif",
+      "weight": 800,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.1925465838509315,
+      "lineHeight": 1.257,
+      "tracking": 0,
+      "align": "left",
+      "color": "#6b6a6a",
+      "fitScore": 0.456
+    },
+    "new_listings": {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "fallbackFamily": "serif",
+      "weight": 800,
+      "italic": false,
+      "case": "none",
+      "sizeRatio": 1.224537037037037,
+      "lineHeight": 1.257,
+      "tracking": 0,
+      "align": "left",
+      "color": "#676667",
+      "fitScore": 0.428
+    },
+    "sold_listings": {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "fallbackFamily": "serif",
+      "weight": 800,
+      "italic": false,
+      "case": "none",
+      "sizeRatio": 1.391304347826087,
+      "lineHeight": 1.257,
+      "tracking": 0,
+      "align": "left",
+      "color": "#6f6e6f",
+      "fitScore": 0.35
+    }
   }
 }

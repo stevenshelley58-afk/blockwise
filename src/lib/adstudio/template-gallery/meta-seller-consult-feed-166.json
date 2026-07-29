@@ -151,5 +151,133 @@
         "body": "The agency will be in touch within 24 hours to arrange your free seller consultation."
       }
     }
+  },
+  "typography": {
+    "cta": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 700,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.5017857142857143,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "left",
+      "color": "#dfe1e3",
+      "fitScore": 0.45
+    },
+    "check_1": {
+      "fontId": "lora",
+      "family": "Lora",
+      "fallbackFamily": "serif",
+      "weight": 700,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.3212903225806452,
+      "lineHeight": 1.28,
+      "tracking": 0,
+      "align": "center",
+      "color": "#313132",
+      "fitScore": 0.446
+    },
+    "headline": {
+      "fontId": "quicksand",
+      "family": "Quicksand",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.3061224382702123,
+      "lineHeight": 1.25,
+      "tracking": 0,
+      "align": "center",
+      "color": "#1f3346",
+      "fitScore": 0.586
+    },
+    "check_4": {
+      "fontId": "kanit",
+      "family": "Kanit",
+      "fallbackFamily": "sans-serif",
+      "weight": 900,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.4914394419784398,
+      "lineHeight": 1.495,
+      "tracking": 0,
+      "align": "center",
+      "color": "#dedad6",
+      "fitScore": 0.168
+    },
+    "check_3": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 700,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.572964669738863,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "center",
+      "color": "#2d2d2d",
+      "fitScore": 0.438
+    },
+    "check_5": {
+      "fontId": "lora",
+      "family": "Lora",
+      "fallbackFamily": "serif",
+      "weight": 700,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.3212903225806452,
+      "lineHeight": 1.28,
+      "tracking": 0,
+      "align": "center",
+      "color": "#2f2f2f",
+      "fitScore": 0.428
+    },
+    "check_6": {
+      "fontId": "lora",
+      "family": "Lora",
+      "fallbackFamily": "serif",
+      "weight": 700,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.3212903225806452,
+      "lineHeight": 1.28,
+      "tracking": 0,
+      "align": "center",
+      "color": "#303030",
+      "fitScore": 0.435
+    },
+    "check_2": {
+      "fontId": "lora",
+      "family": "Lora",
+      "fallbackFamily": "serif",
+      "weight": 700,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.3212903225806452,
+      "lineHeight": 1.28,
+      "tracking": 0,
+      "align": "center",
+      "color": "#2c2c2c",
+      "fitScore": 0.422
+    },
+    "phone": {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "fallbackFamily": "serif",
+      "weight": 700,
+      "italic": false,
+      "case": "none",
+      "sizeRatio": 1.2562292358803988,
+      "lineHeight": 1.257,
+      "tracking": 0,
+      "align": "center",
+      "color": "#f0f1f2",
+      "fitScore": 0.462
+    }
   }
 }
