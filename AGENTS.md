@@ -47,8 +47,15 @@ Before creating, changing, or reviewing a template, follow
 4. Customer generation sends that public sample, the customer's declared image
    inputs, and their exact text through the same `buildCloneImageRequest`.
 5. The result is one finished image. Only after QA passes may the Stitch-style
-   editor target a text or image region; every edit uses the latest finished ad
-   as reference image 1 and preserves the rest.
+   editor target a text or image region; every edit is anchored on the latest
+   finished ad and preserves the rest. Image edits use it as reference image 1
+   for the image model. Text edits may instead composite deterministically from
+   derived editing layers (a text-free inpainted plate plus detected type
+   treatments, built in the background per finished render) — the browser
+   re-typesets the exact copy over the plate crop and the server clamps the
+   patch to the selected region. Layers are advisory and validity-tracked; when
+   stale, text edits fall back to the image-model path. The finished flat image
+   stays canonical everywhere.
 
 There is no alternate template version, layout recipe, layer-based creation
 path, or second full-ad generator. Diversity is measured by the AI ad-radar
