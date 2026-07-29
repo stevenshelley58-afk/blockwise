@@ -846,12 +846,12 @@ export function AdStudioWorkbench({
     studio.setBusy(true);
     studio.setBusyMessage("Generating a new ad with your image");
     try {
-      const nextCreative = await requestCreativeEdit({
+      const result = await requestCreativeEdit({
         creative: currentCreative,
         mutation: { fieldKey: imageRegion.key, newImage: pendingMediaReplacement.fullSrc },
         mutationId: crypto.randomUUID(),
       });
-      updateCreative(nextCreative);
+      updateCreative(result.creative);
       setPrimaryImage(pendingMediaReplacement.fullSrc);
       setPrimaryImageName(pendingMediaReplacement.label);
       setPendingMediaReplacement(null);
