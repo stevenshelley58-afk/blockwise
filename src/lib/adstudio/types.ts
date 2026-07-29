@@ -236,6 +236,44 @@ export type AdStudioCloneRegion = {
   box: { x: number; y: number; width: number; height: number };
 };
 
+/**
+ * Detected type treatment for one editable text region, used to re-typeset the
+ * customer's exact copy client-side (browsers have real fonts; serverless sharp
+ * has no fontconfig — see rasterize-reference.ts).
+ */
+export type AdStudioTextLayerStyle = {
+  /** Generic family category the client maps to a concrete font stack. */
+  family: "sans" | "serif" | "slab" | "condensed" | "rounded" | "script" | "mono";
+  weight: number;
+  italic: boolean;
+  uppercase: boolean;
+  /** Hex text colour sampled from the render. */
+  color: string;
+  align: "left" | "center" | "right";
+  letterSpacing: "normal" | "wide";
+};
+
+/**
+ * Derived editing layers for an AI-designed creative. The flat render stays
+ * canonical; these layers exist so text edits can composite deterministically
+ * (plate + re-typeset copy) instead of paying an image-model round trip.
+ */
+export type AdStudioTextLayers = {
+  status: "ready" | "failed";
+  builtAt: string;
+  /** Media path of the text-free background plate (text regions inpainted). */
+  plate: string;
+  /** Per-region detected type treatment, keyed by region key. */
+  styles: Record<string, AdStudioTextLayerStyle>;
+  /**
+   * Render refs (media paths) the plate is valid for. Composites are only
+   * taken against images in this list; anything else drops the layers and a
+   * background rebuild runs. Newest last, bounded.
+   */
+  validFor: string[];
+  model?: string;
+};
+
 /** Editor map for an AI-cloned creative: clickable regions + current text values. */
 export type AdStudioCloneQa = {
   regions: AdStudioCloneRegion[];
@@ -277,6 +315,8 @@ export type AdStudioCreative = {
     objects: AdStudioCanvasObject[];
     /** Present on AI-cloned creatives: editable-element regions + text values. */
     cloneQa?: AdStudioCloneQa;
+    /** Derived text-editing layers (plate + type treatments); absent until built. */
+    textLayers?: AdStudioTextLayers;
     /** Previous renders (media paths, newest last) for undo on clone edits. */
     renderHistory?: string[];
     /** Editor-map snapshots paired by index with renderHistory. */

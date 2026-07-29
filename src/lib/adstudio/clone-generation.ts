@@ -100,6 +100,44 @@ export async function normalizeCloneRenderAspect(
 }
 
 /**
+ * Build a same-size inpainting mask for one or more edit regions on a canvas
+ * of known dimensions — no image decode needed. Transparent pixels are
+ * repaintable; every opaque pixel must be preserved.
+ */
+export async function createRegionEditMaskForDimensions(
+  dimensions: { width: number; height: number },
+  boxes: Array<{ x: number; y: number; width: number; height: number }>,
+): Promise<string | undefined> {
+  const usable = boxes.filter((box) => box.width > 0 && box.height > 0);
+  if (usable.length === 0) return undefined;
+
+  // Give text antialiasing and image edges a small amount of breathing room.
+  const paddingX = 0.02;
+  const paddingY = 0.02;
+  const cutouts = usable.map((box) => {
+    const x = Math.max(0, Math.floor((box.x - paddingX) * dimensions.width));
+    const y = Math.max(0, Math.floor((box.y - paddingY) * dimensions.height));
+    const right = Math.min(dimensions.width, Math.ceil((box.x + box.width + paddingX) * dimensions.width));
+    const bottom = Math.min(dimensions.height, Math.ceil((box.y + box.height + paddingY) * dimensions.height));
+    const width = Math.max(1, right - x);
+    const height = Math.max(1, bottom - y);
+    return `<rect x="${x}" y="${y}" width="${width}" height="${height}" fill="black"/>`;
+  }).join("");
+  const svg = Buffer.from(
+    `<svg width="${dimensions.width}" height="${dimensions.height}" xmlns="http://www.w3.org/2000/svg">`
+      + '<defs><mask id="edit-region">'
+      + '<rect width="100%" height="100%" fill="white"/>'
+      + cutouts
+      + "</mask></defs>"
+      + '<rect width="100%" height="100%" fill="white" mask="url(#edit-region)"/>'
+      + "</svg>",
+  );
+  const { default: sharp } = await import("sharp");
+  const png = await sharp(svg).ensureAlpha().png({ compressionLevel: 1 }).toBuffer();
+  return `data:image/png;base64,${png.toString("base64")}`;
+}
+
+/**
  * Build a same-size inpainting mask for one QA-detected edit region.
  * Transparent pixels are repaintable; every opaque pixel must be preserved.
  */
@@ -122,27 +160,7 @@ export async function createCloneRegionEditMask(
   const { default: sharp } = await import("sharp");
   const metadata = await sharp(bytes).metadata();
   if (!metadata.width || !metadata.height) throw new Error("Creative image dimensions could not be read for editing.");
-
-  // Give text antialiasing and image edges a small amount of breathing room.
-  const paddingX = 0.02;
-  const paddingY = 0.02;
-  const x = Math.max(0, Math.floor((box.x - paddingX) * metadata.width));
-  const y = Math.max(0, Math.floor((box.y - paddingY) * metadata.height));
-  const right = Math.min(metadata.width, Math.ceil((box.x + box.width + paddingX) * metadata.width));
-  const bottom = Math.min(metadata.height, Math.ceil((box.y + box.height + paddingY) * metadata.height));
-  const width = Math.max(1, right - x);
-  const height = Math.max(1, bottom - y);
-  const svg = Buffer.from(
-    `<svg width="${metadata.width}" height="${metadata.height}" xmlns="http://www.w3.org/2000/svg">`
-      + '<defs><mask id="edit-region">'
-      + '<rect width="100%" height="100%" fill="white"/>'
-      + `<rect x="${x}" y="${y}" width="${width}" height="${height}" fill="black"/>`
-      + "</mask></defs>"
-      + '<rect width="100%" height="100%" fill="white" mask="url(#edit-region)"/>'
-      + "</svg>",
-  );
-  const png = await sharp(svg).ensureAlpha().png({ compressionLevel: 1 }).toBuffer();
-  return `data:image/png;base64,${png.toString("base64")}`;
+  return createRegionEditMaskForDimensions({ width: metadata.width, height: metadata.height }, [box]);
 }
 
 async function cloneImageBytes(assetUrl: string, fetchImpl: typeof fetch): Promise<Uint8Array> {
