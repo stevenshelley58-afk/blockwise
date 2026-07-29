@@ -132,5 +132,91 @@
         "body": "The agency will be in touch within 24 hours to arrange your free rental appraisal."
       }
     }
+  },
+  "typography": {
+    "description": {
+      "fontId": "kanit",
+      "family": "Kanit",
+      "fallbackFamily": "sans-serif",
+      "weight": 900,
+      "italic": false,
+      "case": "mixed",
+      "sizeRatio": 1.116332165233089,
+      "lineHeight": 1.495,
+      "tracking": 0,
+      "align": "center",
+      "color": "#c3c6ca",
+      "fitScore": 0.249
+    },
+    "features": {
+      "fontId": "titillium-web",
+      "family": "Titillium Web",
+      "fallbackFamily": "sans-serif",
+      "weight": 900,
+      "italic": false,
+      "case": "mixed",
+      "sizeRatio": 0.9642857142857143,
+      "lineHeight": 1.521,
+      "tracking": 0,
+      "align": "center",
+      "color": "#b4cfdb",
+      "fitScore": 0.207
+    },
+    "contact_email": {
+      "fontId": "raleway",
+      "family": "Raleway",
+      "fallbackFamily": "sans-serif",
+      "weight": 600,
+      "italic": false,
+      "case": "lower",
+      "sizeRatio": 1.0890756302521007,
+      "lineHeight": 1.174,
+      "tracking": 0,
+      "align": "left",
+      "color": "#585754",
+      "fitScore": 0.74
+    },
+    "agency_name": {
+      "fontId": "outfit",
+      "family": "Outfit",
+      "fallbackFamily": "sans-serif",
+      "weight": 600,
+      "italic": false,
+      "case": "mixed",
+      "sizeRatio": 1.0717165898617511,
+      "lineHeight": 1.26,
+      "tracking": 0,
+      "align": "left",
+      "color": "#68818b",
+      "fitScore": 0.722
+    },
+    "headline": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.5238095899101858,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "left",
+      "color": "#35322d",
+      "fitScore": 0.518
+    },
+    "contact_phone": {
+      "fontId": "kanit",
+      "family": "Kanit",
+      "fallbackFamily": "sans-serif",
+      "weight": 900,
+      "italic": false,
+      "case": "none",
+      "sizeRatio": 1.5057030983997277,
+      "lineHeight": 1.495,
+      "tracking": 0,
+      "align": "left",
+      "color": "#dfdfde",
+      "fitScore": 0.191
+    }
   }
 }

@@ -140,5 +140,91 @@
         "body": "The agency will be in touch within 24 hours to introduce themselves and answer your questions."
       }
     }
+  },
+  "typography": {
+    "headline": {
+      "fontId": "oswald",
+      "family": "Oswald",
+      "fallbackFamily": "sans-serif",
+      "weight": 400,
+      "italic": false,
+      "case": "mixed",
+      "sizeRatio": 0.9696970106464223,
+      "lineHeight": 1.482,
+      "tracking": 0,
+      "align": "left",
+      "color": "#707169",
+      "fitScore": 0.258
+    },
+    "company_name": {
+      "fontId": "titillium-web",
+      "family": "Titillium Web",
+      "fallbackFamily": "sans-serif",
+      "weight": 900,
+      "italic": false,
+      "case": "mixed",
+      "sizeRatio": 1.1287569573283858,
+      "lineHeight": 1.521,
+      "tracking": 0,
+      "align": "right",
+      "color": "#72777a",
+      "fitScore": 0.195
+    },
+    "website_url": {
+      "fontId": "kanit",
+      "family": "Kanit",
+      "fallbackFamily": "sans-serif",
+      "weight": 900,
+      "italic": false,
+      "case": "lower",
+      "sizeRatio": 1.1093795093795094,
+      "lineHeight": 1.495,
+      "tracking": 0,
+      "align": "left",
+      "color": "#cec5bc",
+      "fitScore": 0.498
+    },
+    "phone_number": {
+      "fontId": "kanit",
+      "family": "Kanit",
+      "fallbackFamily": "sans-serif",
+      "weight": 900,
+      "italic": false,
+      "case": "none",
+      "sizeRatio": 1.4871794871794872,
+      "lineHeight": 1.495,
+      "tracking": 0,
+      "align": "left",
+      "color": "#cec3b8",
+      "fitScore": 0.745
+    },
+    "cta_text": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 800,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.481025641025641,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "left",
+      "color": "#f4f3f3",
+      "fitScore": 0.428
+    },
+    "agent_name": {
+      "fontId": "roboto-condensed",
+      "family": "Roboto Condensed",
+      "fallbackFamily": "sans-serif",
+      "weight": 700,
+      "italic": false,
+      "case": "mixed",
+      "sizeRatio": 1.3095238095238095,
+      "lineHeight": 1.171875,
+      "tracking": 0,
+      "align": "left",
+      "color": "#4e4841",
+      "fitScore": 0.455
+    }
   }
 }

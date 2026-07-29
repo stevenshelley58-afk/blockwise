@@ -126,5 +126,63 @@
         "body": "The agency will be in touch within 24 hours to arrange your free rental appraisal."
       }
     }
+  },
+  "typography": {
+    "headline": {
+      "fontId": "montserrat",
+      "family": "Montserrat",
+      "fallbackFamily": "sans-serif",
+      "weight": 900,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.3544303797468353,
+      "lineHeight": 1.219,
+      "tracking": 0,
+      "align": "center",
+      "color": "#402f1f",
+      "fitScore": 0.298
+    },
+    "price_info": {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "fallbackFamily": "serif",
+      "weight": 400,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 0.9552238805970149,
+      "lineHeight": 1.257,
+      "tracking": 0,
+      "align": "center",
+      "color": "#b2a394",
+      "fitScore": 0.474
+    },
+    "feature_1": {
+      "fontId": "oswald",
+      "family": "Oswald",
+      "fallbackFamily": "sans-serif",
+      "weight": 500,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1,
+      "lineHeight": 1.482,
+      "tracking": 0,
+      "align": "center",
+      "color": "#66594b",
+      "fitScore": 0.406
+    },
+    "feature_2": {
+      "fontId": "manrope",
+      "family": "Manrope",
+      "fallbackFamily": "sans-serif",
+      "weight": 700,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.3230490018148817,
+      "lineHeight": 1.366,
+      "tracking": 0,
+      "align": "center",
+      "color": "#e2dfda",
+      "fitScore": 0.41
+    }
   }
 }

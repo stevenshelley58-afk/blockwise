@@ -188,5 +188,133 @@
         "body": "The agency will be in touch within 24 hours to discuss this property."
       }
     }
+  },
+  "typography": {
+    "agent_website": {
+      "fontId": "quicksand",
+      "family": "Quicksand",
+      "fallbackFamily": "sans-serif",
+      "weight": 700,
+      "italic": false,
+      "case": "lower",
+      "sizeRatio": 1.1025000000000003,
+      "lineHeight": 1.25,
+      "tracking": 0,
+      "align": "left",
+      "color": "#5d5a58",
+      "fitScore": 0.618
+    },
+    "features": {
+      "fontId": "manrope",
+      "family": "Manrope",
+      "fallbackFamily": "sans-serif",
+      "weight": 800,
+      "italic": false,
+      "case": "mixed",
+      "sizeRatio": 1.1911764705882353,
+      "lineHeight": 1.366,
+      "tracking": 0,
+      "align": "left",
+      "color": "#5d5c5b",
+      "fitScore": 0.711
+    },
+    "open_house_date": {
+      "fontId": "fira-sans",
+      "family": "Fira Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 900,
+      "italic": false,
+      "case": "mixed",
+      "sizeRatio": 1.0909090909090908,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "left",
+      "color": "#574f4a",
+      "fitScore": 0.444
+    },
+    "open_house_time": {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "fallbackFamily": "serif",
+      "weight": 500,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.2799999763866812,
+      "lineHeight": 1.257,
+      "tracking": 0,
+      "align": "left",
+      "color": "#a69f99",
+      "fitScore": 0.304
+    },
+    "brand_name": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 500,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.5162907268170427,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "left",
+      "color": "#564c47",
+      "fitScore": 0.672
+    },
+    "agent_name": {
+      "fontId": "manrope",
+      "family": "Manrope",
+      "fallbackFamily": "sans-serif",
+      "weight": 700,
+      "italic": false,
+      "case": "mixed",
+      "sizeRatio": 1,
+      "lineHeight": 1.366,
+      "tracking": 0,
+      "align": "left",
+      "color": "#545251",
+      "fitScore": 0.539
+    },
+    "area": {
+      "fontId": "rubik",
+      "family": "Rubik",
+      "fallbackFamily": "sans-serif",
+      "weight": 900,
+      "italic": false,
+      "case": "lower",
+      "sizeRatio": 1.0701020643081882,
+      "lineHeight": 1.185,
+      "tracking": 0,
+      "align": "center",
+      "color": "#c9c7bc",
+      "fitScore": 0.201
+    },
+    "bathrooms": {
+      "fontId": "playfair-display",
+      "family": "Playfair Display",
+      "fallbackFamily": "serif",
+      "weight": 800,
+      "italic": false,
+      "case": "mixed",
+      "sizeRatio": 1.121107266435986,
+      "lineHeight": 1.333,
+      "tracking": 0,
+      "align": "left",
+      "color": "#565556",
+      "fitScore": 0.372
+    },
+    "bedrooms": {
+      "fontId": "playfair-display",
+      "family": "Playfair Display",
+      "fallbackFamily": "serif",
+      "weight": 800,
+      "italic": false,
+      "case": "mixed",
+      "sizeRatio": 1.0030959752321982,
+      "lineHeight": 1.333,
+      "tracking": 0,
+      "align": "left",
+      "color": "#545455",
+      "fitScore": 0.44
+    }
   }
 }

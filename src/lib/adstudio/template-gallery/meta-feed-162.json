@@ -113,5 +113,63 @@
         "body": "The agency will be in touch within 24 hours to discuss this property."
       }
     }
+  },
+  "typography": {
+    "features": {
+      "fontId": "source-sans-3",
+      "family": "Source Sans 3",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1,
+      "lineHeight": 1.424,
+      "tracking": 0,
+      "align": "center",
+      "color": "#c8c7c5",
+      "fitScore": 0.615
+    },
+    "property_name": {
+      "fontId": "kanit",
+      "family": "Kanit",
+      "fallbackFamily": "sans-serif",
+      "weight": 900,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.4749163879598663,
+      "lineHeight": 1.495,
+      "tracking": 0,
+      "align": "center",
+      "color": "#828fa8",
+      "fitScore": 0.121
+    },
+    "main_cta": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 400,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.5194681861348525,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "left",
+      "color": "#b18053",
+      "fitScore": 0.443
+    },
+    "price_per_night": {
+      "fontId": "kanit",
+      "family": "Kanit",
+      "fallbackFamily": "sans-serif",
+      "weight": 900,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.214734950584007,
+      "lineHeight": 1.495,
+      "tracking": 0,
+      "align": "left",
+      "color": "#8f8b8e",
+      "fitScore": 0.109
+    }
   }
 }
