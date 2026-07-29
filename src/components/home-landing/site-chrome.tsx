@@ -65,7 +65,6 @@ export function SiteFooter() {
           </span>
           <nav className="hw-footer-links" aria-label="Footer">
             <Link href="/#start">How it works</Link>
-            <Link href="/#property-check">Property Check</Link>
             <Link href="/#free-trial">Start free</Link>
             <Link href="/pricing">Pricing</Link>
             <Link href="/guides">Guides</Link>
