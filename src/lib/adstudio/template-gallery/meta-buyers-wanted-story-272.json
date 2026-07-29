@@ -116,5 +116,63 @@
         "body": "The agency will be in touch within 24 hours to discuss this property."
       }
     }
+  },
+  "typography": {
+    "body": {
+      "fontId": "source-sans-3",
+      "family": "Source Sans 3",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "mixed",
+      "sizeRatio": 1.0268436578171092,
+      "lineHeight": 1.424,
+      "tracking": 0,
+      "align": "left",
+      "color": "#304476",
+      "fitScore": 0.576
+    },
+    "headline": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.523809541817182,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "center",
+      "color": "#a19da7",
+      "fitScore": 0.301
+    },
+    "subheadline": {
+      "fontId": "manrope",
+      "family": "Manrope",
+      "fallbackFamily": "sans-serif",
+      "weight": 800,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.2941176470588236,
+      "lineHeight": 1.366,
+      "tracking": 0,
+      "align": "center",
+      "color": "#154aa2",
+      "fitScore": 0.446
+    },
+    "website": {
+      "fontId": "quicksand",
+      "family": "Quicksand",
+      "fallbackFamily": "sans-serif",
+      "weight": 600,
+      "italic": false,
+      "case": "lower",
+      "sizeRatio": 1.3457595526561044,
+      "lineHeight": 1.25,
+      "tracking": 0,
+      "align": "center",
+      "color": "#193674",
+      "fitScore": 0.501
+    }
   }
 }

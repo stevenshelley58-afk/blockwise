@@ -137,5 +137,105 @@
         "body": "The agency will be in touch within 24 hours to discuss this property."
       }
     }
+  },
+  "typography": {
+    "body": {
+      "fontId": "jost",
+      "family": "Jost",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "mixed",
+      "sizeRatio": 0.9846311475409837,
+      "lineHeight": 1.445,
+      "tracking": 0,
+      "align": "left",
+      "color": "#afb2b9",
+      "fitScore": 0.655
+    },
+    "headline": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.523809503437309,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "center",
+      "color": "#f5f4f4",
+      "fitScore": 0.498
+    },
+    "subheadline": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.5417122040072857,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "left",
+      "color": "#dfad58",
+      "fitScore": 0.822
+    },
+    "cta": {
+      "fontId": "plus-jakarta-sans",
+      "family": "Plus Jakarta Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 600,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.2931616961789376,
+      "lineHeight": 1.26,
+      "tracking": 0,
+      "align": "center",
+      "color": "#7f7133",
+      "fitScore": 0.223
+    },
+    "benefit_1": {
+      "fontId": "mulish",
+      "family": "Mulish",
+      "fallbackFamily": "sans-serif",
+      "weight": 900,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.0975056689342404,
+      "lineHeight": 1.255,
+      "tracking": 0,
+      "align": "left",
+      "color": "#d0d3d9",
+      "fitScore": 0.428
+    },
+    "benefit_3": {
+      "fontId": "lato",
+      "family": "Lato",
+      "fallbackFamily": "sans-serif",
+      "weight": 900,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.4035087719298243,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "left",
+      "color": "#d7dadd",
+      "fitScore": 0.392
+    },
+    "benefit_2": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 400,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.5423128046078864,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "left",
+      "color": "#c7c0b2",
+      "fitScore": 0.624
+    }
   }
 }

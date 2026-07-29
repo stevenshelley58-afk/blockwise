@@ -116,5 +116,49 @@
         "body": "The agency will be in touch within 24 hours to discuss this property."
       }
     }
+  },
+  "typography": {
+    "body": {
+      "fontId": "kanit",
+      "family": "Kanit",
+      "fallbackFamily": "sans-serif",
+      "weight": 700,
+      "italic": false,
+      "case": "mixed",
+      "sizeRatio": 1.0705882352941176,
+      "lineHeight": 1.495,
+      "tracking": 0,
+      "align": "right",
+      "color": "#b2b5b6",
+      "fitScore": 0.222
+    },
+    "headline": {
+      "fontId": "oswald",
+      "family": "Oswald",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.2076923076923076,
+      "lineHeight": 1.482,
+      "tracking": 0,
+      "align": "center",
+      "color": "#0e2136",
+      "fitScore": 0.516
+    },
+    "subheadline": {
+      "fontId": "barlow-condensed",
+      "family": "Barlow Condensed",
+      "fallbackFamily": "sans-serif",
+      "weight": 800,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.3617021660378668,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "center",
+      "color": "#7f8783",
+      "fitScore": 0.23
+    }
   }
 }

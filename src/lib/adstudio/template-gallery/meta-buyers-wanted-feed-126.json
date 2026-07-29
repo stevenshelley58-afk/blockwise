@@ -116,5 +116,49 @@
         "body": "The agency will be in touch within 24 hours to discuss this property."
       }
     }
+  },
+  "typography": {
+    "body": {
+      "fontId": "source-sans-3",
+      "family": "Source Sans 3",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "mixed",
+      "sizeRatio": 1.0333333333333334,
+      "lineHeight": 1.424,
+      "tracking": 0,
+      "align": "left",
+      "color": "#363f50",
+      "fitScore": 0.542
+    },
+    "headline": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.5238095498373094,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "center",
+      "color": "#0c2035",
+      "fitScore": 0.456
+    },
+    "subheadline": {
+      "fontId": "manrope",
+      "family": "Manrope",
+      "fallbackFamily": "sans-serif",
+      "weight": 700,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.2857142857142858,
+      "lineHeight": 1.366,
+      "tracking": 0,
+      "align": "left",
+      "color": "#e7b44c",
+      "fitScore": 0.48
+    }
   }
 }
