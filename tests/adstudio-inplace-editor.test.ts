@@ -111,7 +111,9 @@ test("zoom is available for small targets: toolbar cycle, double-click, drag pan
 });
 
 test("element list shows real thumbnails", () => {
-  assert.match(editor, /regionThumbStyle\(src, region\.box\)/);
+  // stableSrc prefers the freshly-saved preview over a stale ref so the
+  // thumbnail never flashes outdated pixels right after an edit.
+  assert.match(editor, /regionThumbStyle\(stableSrc, region\.box\)/);
   assert.match(styles, /\.studio-inplace-thumb\{width:26px/);
   // Pending edits narrate what they are doing instead of a generic label.
   assert.match(editor, /truncateForStatus/);
