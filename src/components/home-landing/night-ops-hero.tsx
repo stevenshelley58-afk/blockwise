@@ -1,8 +1,7 @@
 import { getImageProps } from "next/image";
 
+import { CtaLink } from "@/components/landing/cta-link";
 import { CountUp } from "@/components/motion";
-
-import { SuburbReportLocationForm } from "./suburb-report-location-form";
 
 import "./night-ops-hero.css";
 
@@ -36,8 +35,7 @@ const { props: mobileMapProps } = getImageProps({
    The suburb boundary is baked into the map asset so it follows the real
    street grid (reads as an actual selected suburb). An SVG overlay re-traces
    that exact boundary on a loop: draw the outline → fill the area → fade out.
-   Copy + working suburb search sit left; illustrative metric cards float
-   right. */
+   Copy + signup CTA sit left; illustrative metric cards float right. */
 export function NightOpsHero() {
   return (
     <div className="hw-no">
@@ -87,37 +85,36 @@ export function NightOpsHero() {
           <span className="hw-no-accent">Are you?</span>
         </h1>
         <p className="hw-no-lede">
-          Meta ads built from what works in your suburb.
+          Proven Meta ad templates, made yours in minutes.
         </p>
         <div className="hw-no-form">
-          <SuburbReportLocationForm
-            analyticsLocation="hero"
-            buttonLabel="See ads now"
-            showNote={false}
-          />
+          <CtaLink location="hero" href="/signup" className="hw-btn hw-btn--light hw-no-cta">
+            Create three ads free <span className="hw-arr">→</span>
+          </CtaLink>
+          <p className="hw-no-note">Email only. No card.</p>
         </div>
       </div>
 
       <div className="hw-no-cards" aria-hidden>
         <span className="hw-no-examples">Examples</span>
         <div className="hw-no-card hw-no-card--1">
-          <p className="hw-no-card-k">Ads collected</p>
+          <p className="hw-no-card-k">Complete ads</p>
           <p className="hw-no-card-v">
-            <CountUp to={1240} />
+            <CountUp to={3} />
           </p>
-          <p className="hw-no-card-s">tracked all time</p>
+          <p className="hw-no-card-s">free before you pay</p>
         </div>
         <div className="hw-no-card hw-no-card--2">
-          <p className="hw-no-card-k">Live now</p>
+          <p className="hw-no-card-k">Renders monthly</p>
           <p className="hw-no-card-v">
-            <CountUp to={27} />
+            <CountUp to={100} />
           </p>
-          <p className="hw-no-card-s">running this week</p>
+          <p className="hw-no-card-s">on the $499 plan</p>
         </div>
         <div className="hw-no-card hw-no-card--3">
           <p className="hw-no-card-k">Top angle</p>
           <p className="hw-no-card-v hw-no-card-v--text">Free appraisal</p>
-          <p className="hw-no-card-s">used by 9 of 27 campaigns</p>
+          <p className="hw-no-card-s">proven seller-lead hook</p>
         </div>
       </div>
     </div>

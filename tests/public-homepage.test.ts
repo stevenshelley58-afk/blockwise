@@ -77,7 +77,6 @@ test("landing page anchors, sections, and claims stay connected", () => {
     "start",
     "workflow",
     "control",
-    "property-check",
     "free-trial",
     "pricing",
     "managed-setup",

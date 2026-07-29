@@ -6,7 +6,6 @@ import {
   FaqSection,
   FreeTrial,
   ManagedSetup,
-  PropertyCheck,
   SelfServePricing,
   StartBand,
   WorkflowBand,
@@ -32,7 +31,6 @@ export default function HomePage() {
         <section id="start"><StartBand /></section>
         <section id="workflow"><WorkflowBand /></section>
         <section id="control"><ControlFold /></section>
-        <section id="property-check"><PropertyCheck /></section>
         <section id="free-trial"><FreeTrial /></section>
         <section id="pricing"><SelfServePricing /></section>
         <section id="managed-setup"><ManagedSetup /></section>

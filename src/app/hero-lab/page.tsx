@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 
+import { niche } from "@/config/niche";
 import {
   HeroBoundaryDraw,
   HeroCinematic,
@@ -50,6 +52,8 @@ const VARIANTS = [
 ] as const;
 
 export default function HeroLabPage() {
+  if (!niche.features.suburbPages) notFound();
+
   return (
     <div className="hl-lab">
       <header className="hl-lab-intro">

@@ -220,6 +220,14 @@
 .hw-no-form {
   margin-top: 30px;
 }
+.hw-no-cta {
+  display: inline-flex;
+}
+.hw-no-note {
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: rgba(226, 235, 248, 0.72);
+}
 
 /* ---------- Desktop examples ---------- */
 

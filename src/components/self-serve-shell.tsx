@@ -321,7 +321,7 @@ function SelfServeMobileNav({ account }: { account: Account }) {
     <>
       <nav
         aria-label="Primary mobile navigation"
-        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-6 gap-0.5 border-t border-border bg-card/95 px-1.5 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] backdrop-blur-2xl md:hidden"
+        className={`fixed inset-x-0 bottom-0 z-40 grid ${tabItems.length >= 5 ? "grid-cols-6" : "grid-cols-5"} gap-0.5 border-t border-border bg-card/95 px-1.5 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] backdrop-blur-2xl md:hidden`}
       >
         {tabItems.map((item) => {
           const Icon = selfServeIcons[item.href];
