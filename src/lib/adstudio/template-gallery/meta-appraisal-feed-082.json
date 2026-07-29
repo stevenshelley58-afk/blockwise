@@ -137,5 +137,105 @@
         "body": "The agency will be in touch within 24 hours to arrange your free property appraisal."
       }
     }
+  },
+  "typography": {
+    "body": {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "fallbackFamily": "serif",
+      "weight": 800,
+      "italic": false,
+      "case": "mixed",
+      "sizeRatio": 1.1666666666666667,
+      "lineHeight": 1.257,
+      "tracking": 0,
+      "align": "left",
+      "color": "#454e57",
+      "fitScore": 0.422
+    },
+    "headline": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.5238095473213118,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "left",
+      "color": "#42493f",
+      "fitScore": 0.415
+    },
+    "subheadline": {
+      "fontId": "heebo",
+      "family": "Heebo",
+      "fallbackFamily": "sans-serif",
+      "weight": 800,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.2014285714285715,
+      "lineHeight": 1.46875,
+      "tracking": 0,
+      "align": "left",
+      "color": "#233644",
+      "fitScore": 0.415
+    },
+    "cta": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 800,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.4545454545454546,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "left",
+      "color": "#e2e4e6",
+      "fitScore": 0.389
+    },
+    "benefit_3": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 600,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.52,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "right",
+      "color": "#374a57",
+      "fitScore": 0.562
+    },
+    "benefit_1": {
+      "fontId": "rubik",
+      "family": "Rubik",
+      "fallbackFamily": "sans-serif",
+      "weight": 900,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.3777777777777778,
+      "lineHeight": 1.185,
+      "tracking": 0,
+      "align": "left",
+      "color": "#7dabd4",
+      "fitScore": 0.491
+    },
+    "benefit_2": {
+      "fontId": "dm-sans",
+      "family": "DM Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 900,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.4325396825396828,
+      "lineHeight": 1.302,
+      "tracking": 0,
+      "align": "left",
+      "color": "#243c4f",
+      "fitScore": 0.366
+    }
   }
 }

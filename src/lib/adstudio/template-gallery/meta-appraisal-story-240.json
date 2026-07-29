@@ -109,5 +109,63 @@
         "body": "The agency will be in touch within 24 hours to arrange your free property appraisal."
       }
     }
+  },
+  "typography": {
+    "headline": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.5238095334761623,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "center",
+      "color": "#f1f1f1",
+      "fitScore": 0.482
+    },
+    "subheadline": {
+      "fontId": "open-sans",
+      "family": "Open Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 600,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.125,
+      "lineHeight": 1.36181640625,
+      "tracking": 0,
+      "align": "center",
+      "color": "#dbdbdc",
+      "fitScore": 0.635
+    },
+    "cta": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 800,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.4545454545454546,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "center",
+      "color": "#2a2b2e",
+      "fitScore": 0.395
+    },
+    "website": {
+      "fontId": "saira",
+      "family": "Saira",
+      "fallbackFamily": "sans-serif",
+      "weight": 900,
+      "italic": false,
+      "case": "lower",
+      "sizeRatio": 1.3796926177878561,
+      "lineHeight": 1.574,
+      "tracking": 0,
+      "align": "center",
+      "color": "#78797b",
+      "fitScore": 0.246
+    }
   }
 }
