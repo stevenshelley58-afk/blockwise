@@ -37,35 +37,6 @@ export const HERO_RAIL = [
   { k: "Updates", v: "Daily email" },
 ] as const;
 
-export const RADAR_ADS = [
-  {
-    agency: "Your Agency",
-    copy: "What could your Mt Lawley home be worth?",
-    foot: "Free seller appraisal",
-    angle: "Free appraisal",
-    cta: "Learn more",
-    src: "/home/mt-lawley-federation.webp",
-  },
-  {
-    agency: "Your Agency",
-    copy: "Just listed in Subiaco.",
-    copyMobile: "Just listed in Subiaco. Be first through the door.",
-    foot: "View this property",
-    angle: "Just listed",
-    cta: "Learn more",
-    src: "/home/subiaco-townhouse.webp",
-  },
-  {
-    agency: "Your Agency",
-    copy: "Open home this Saturday.",
-    copyMobile: "Open home this Saturday. See inside before you go.",
-    foot: "See inside",
-    angle: "Open home",
-    cta: "Learn more",
-    src: "/home/open-home-living.webp",
-  },
-] as const;
-
 /**
  * Curated feed templates for the #start studio. Each entry references a real
  * AdStudio sample image directly (no gallery JSON in the landing bundle) and
