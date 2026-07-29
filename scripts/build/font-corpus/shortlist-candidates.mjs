@@ -88,6 +88,7 @@ export async function shortlistCandidates(profile, { limit = 40 } = {}) {
       ttfUrl: best.face.ttfUrl,
       woff2Url: best.face.woff2Url,
       thickness: best.face.thickness,
+      lineHeight: best.face.lineHeight,
       score,
     });
   }
