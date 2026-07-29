@@ -123,5 +123,91 @@
         "body": "The agency will be in touch within 24 hours to send you your free market report."
       }
     }
+  },
+  "typography": {
+    "subheadline": {
+      "fontId": "kanit",
+      "family": "Kanit",
+      "fallbackFamily": "sans-serif",
+      "weight": 900,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.500064926632905,
+      "lineHeight": 1.495,
+      "tracking": 0,
+      "align": "left",
+      "color": "#ecedee",
+      "fitScore": 0.107
+    },
+    "headline": {
+      "fontId": "oswald",
+      "family": "Oswald",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.2073481831757091,
+      "lineHeight": 1.482,
+      "tracking": 0,
+      "align": "center",
+      "color": "#1e252b",
+      "fitScore": 0.487
+    },
+    "stat_1": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 400,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.4881920247773905,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "center",
+      "color": "#454546",
+      "fitScore": 0.657
+    },
+    "stat_3": {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "fallbackFamily": "serif",
+      "weight": 800,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.3354700854700854,
+      "lineHeight": 1.257,
+      "tracking": 0,
+      "align": "center",
+      "color": "#444344",
+      "fitScore": 0.609
+    },
+    "stat_2": {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "fallbackFamily": "serif",
+      "weight": 800,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.3354700854700854,
+      "lineHeight": 1.257,
+      "tracking": 0,
+      "align": "center",
+      "color": "#404040",
+      "fitScore": 0.578
+    },
+    "stat_4": {
+      "fontId": "manrope",
+      "family": "Manrope",
+      "fallbackFamily": "sans-serif",
+      "weight": 800,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.3354700854700854,
+      "lineHeight": 1.366,
+      "tracking": 0,
+      "align": "left",
+      "color": "#403f40",
+      "fitScore": 0.407
+    }
   }
 }

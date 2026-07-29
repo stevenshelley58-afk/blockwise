@@ -137,5 +137,119 @@
         "body": "The agency will be in touch within 24 hours to send you your free market report."
       }
     }
+  },
+  "typography": {
+    "subheadline": {
+      "fontId": "manrope",
+      "family": "Manrope",
+      "fallbackFamily": "sans-serif",
+      "weight": 700,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.2857142857142858,
+      "lineHeight": 1.366,
+      "tracking": 0,
+      "align": "center",
+      "color": "#525252",
+      "fitScore": 0.422
+    },
+    "headline": {
+      "fontId": "plus-jakarta-sans",
+      "family": "Plus Jakarta Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 600,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.2857142857142858,
+      "lineHeight": 1.26,
+      "tracking": 0,
+      "align": "center",
+      "color": "#0e0e0e",
+      "fitScore": 0.399
+    },
+    "stat_1": {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "fallbackFamily": "serif",
+      "weight": 500,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.28,
+      "lineHeight": 1.257,
+      "tracking": 0,
+      "align": "center",
+      "color": "#5d655e",
+      "fitScore": 0.629
+    },
+    "stat_3": {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "fallbackFamily": "serif",
+      "weight": 800,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.3354700854700854,
+      "lineHeight": 1.257,
+      "tracking": 0,
+      "align": "left",
+      "color": "#353636",
+      "fitScore": 0.357
+    },
+    "stat_2": {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "fallbackFamily": "serif",
+      "weight": 800,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.3354700854700854,
+      "lineHeight": 1.257,
+      "tracking": 0,
+      "align": "center",
+      "color": "#353535",
+      "fitScore": 0.362
+    },
+    "stat_4": {
+      "fontId": "manrope",
+      "family": "Manrope",
+      "fallbackFamily": "sans-serif",
+      "weight": 800,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.3354700854700854,
+      "lineHeight": 1.366,
+      "tracking": 0,
+      "align": "left",
+      "color": "#303030",
+      "fitScore": 0.367
+    },
+    "stat_5": {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "fallbackFamily": "serif",
+      "weight": 800,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.3354700854700854,
+      "lineHeight": 1.257,
+      "tracking": 0,
+      "align": "center",
+      "color": "#2f2f2f",
+      "fitScore": 0.365
+    },
+    "stat_6": {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "fallbackFamily": "serif",
+      "weight": 800,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.3354700854700854,
+      "lineHeight": 1.257,
+      "tracking": 0,
+      "align": "left",
+      "color": "#2c2d2d",
+      "fitScore": 0.368
+    }
   }
 }

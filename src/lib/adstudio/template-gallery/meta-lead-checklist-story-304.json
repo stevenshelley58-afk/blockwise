@@ -144,5 +144,133 @@
         "body": "The agency will be in touch within 24 hours to send you your free property guide."
       }
     }
+  },
+  "typography": {
+    "headline": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.52380961018962,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "left",
+      "color": "#445369",
+      "fitScore": 0.342
+    },
+    "subheadline": {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "fallbackFamily": "serif",
+      "weight": 500,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.3121924548933843,
+      "lineHeight": 1.257,
+      "tracking": 0,
+      "align": "left",
+      "color": "#7b8286",
+      "fitScore": 0.412
+    },
+    "check_3": {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "fallbackFamily": "serif",
+      "weight": 600,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.2884615384615385,
+      "lineHeight": 1.257,
+      "tracking": 0,
+      "align": "center",
+      "color": "#202c41",
+      "fitScore": 0.608
+    },
+    "check_2": {
+      "fontId": "manrope",
+      "family": "Manrope",
+      "fallbackFamily": "sans-serif",
+      "weight": 600,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.3265306122448979,
+      "lineHeight": 1.366,
+      "tracking": 0,
+      "align": "center",
+      "color": "#1e2b40",
+      "fitScore": 0.613
+    },
+    "cta": {
+      "fontId": "poppins",
+      "family": "Poppins",
+      "fallbackFamily": "sans-serif",
+      "weight": 900,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.3704836334805752,
+      "lineHeight": 1.5,
+      "tracking": 0,
+      "align": "center",
+      "color": "#3b4b61",
+      "fitScore": 0.242
+    },
+    "check_1": {
+      "fontId": "manrope",
+      "family": "Manrope",
+      "fallbackFamily": "sans-serif",
+      "weight": 600,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.3403076923076924,
+      "lineHeight": 1.366,
+      "tracking": 0,
+      "align": "center",
+      "color": "#202c42",
+      "fitScore": 0.624
+    },
+    "benefit_3": {
+      "fontId": "oswald",
+      "family": "Oswald",
+      "fallbackFamily": "sans-serif",
+      "weight": 400,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.0138888888888888,
+      "lineHeight": 1.482,
+      "tracking": 0,
+      "align": "left",
+      "color": "#4a515e",
+      "fitScore": 0.612
+    },
+    "benefit_1": {
+      "fontId": "manrope",
+      "family": "Manrope",
+      "fallbackFamily": "sans-serif",
+      "weight": 700,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.3257575757575757,
+      "lineHeight": 1.366,
+      "tracking": 0,
+      "align": "left",
+      "color": "#4a5364",
+      "fitScore": 0.337
+    },
+    "benefit_2": {
+      "fontId": "lato",
+      "family": "Lato",
+      "fallbackFamily": "sans-serif",
+      "weight": 900,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.4012121212121211,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "left",
+      "color": "#858a94",
+      "fitScore": 0.243
+    }
   }
 }

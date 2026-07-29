@@ -151,5 +151,119 @@
         "body": "The agency will be in touch within 24 hours with off-market property alerts."
       }
     }
+  },
+  "typography": {
+    "headline": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.5238094822652395,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "center",
+      "color": "#ebe5d6",
+      "fitScore": 0.484
+    },
+    "subheadline": {
+      "fontId": "fira-sans",
+      "family": "Fira Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 900,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.0666666666666667,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "center",
+      "color": "#eccb92",
+      "fitScore": 0.506
+    },
+    "cta": {
+      "fontId": "kanit",
+      "family": "Kanit",
+      "fallbackFamily": "sans-serif",
+      "weight": 900,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.509315375982043,
+      "lineHeight": 1.495,
+      "tracking": 0,
+      "align": "center",
+      "color": "#82794a",
+      "fitScore": 0.195
+    },
+    "website": {
+      "fontId": "open-sans",
+      "family": "Open Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "lower",
+      "sizeRatio": 1.2556679455877224,
+      "lineHeight": 1.36181640625,
+      "tracking": 0,
+      "align": "left",
+      "color": "#c2bb97",
+      "fitScore": 0.644
+    },
+    "benefit_2": {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "fallbackFamily": "serif",
+      "weight": 900,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.3888888888888888,
+      "lineHeight": 1.257,
+      "tracking": 0,
+      "align": "center",
+      "color": "#3e2596",
+      "fitScore": 0.464
+    },
+    "benefit_3": {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "fallbackFamily": "serif",
+      "weight": 900,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.3888888888888888,
+      "lineHeight": 1.257,
+      "tracking": 0,
+      "align": "left",
+      "color": "#3e2495",
+      "fitScore": 0.437
+    },
+    "benefit_1": {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "fallbackFamily": "serif",
+      "weight": 900,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.3888888888888888,
+      "lineHeight": 1.257,
+      "tracking": 0,
+      "align": "left",
+      "color": "#3f2696",
+      "fitScore": 0.442
+    },
+    "phone": {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "fallbackFamily": "serif",
+      "weight": 800,
+      "italic": false,
+      "case": "none",
+      "sizeRatio": 1.2678260869565219,
+      "lineHeight": 1.257,
+      "tracking": 0,
+      "align": "left",
+      "color": "#d7d8c7",
+      "fitScore": 0.435
+    }
   }
 }

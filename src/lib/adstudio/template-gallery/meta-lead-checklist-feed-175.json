@@ -144,5 +144,105 @@
         "body": "The agency will be in touch within 24 hours to send you your free property guide."
       }
     }
+  },
+  "typography": {
+    "headline": {
+      "fontId": "plus-jakarta-sans",
+      "family": "Plus Jakarta Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 600,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.279999948000002,
+      "lineHeight": 1.26,
+      "tracking": 0,
+      "align": "center",
+      "color": "#7d7a76",
+      "fitScore": 0.335
+    },
+    "subheadline": {
+      "fontId": "kanit",
+      "family": "Kanit",
+      "fallbackFamily": "sans-serif",
+      "weight": 900,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.4915254237288134,
+      "lineHeight": 1.495,
+      "tracking": 0,
+      "align": "center",
+      "color": "#7d7876",
+      "fitScore": 0.43
+    },
+    "check_3": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 600,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.500709219858156,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "left",
+      "color": "#5b544d",
+      "fitScore": 0.513
+    },
+    "check_2": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 400,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.5121951219512195,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "left",
+      "color": "#59524b",
+      "fitScore": 0.728
+    },
+    "check_1": {
+      "fontId": "manrope",
+      "family": "Manrope",
+      "fallbackFamily": "sans-serif",
+      "weight": 800,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.3236914600550966,
+      "lineHeight": 1.366,
+      "tracking": 0,
+      "align": "left",
+      "color": "#575049",
+      "fitScore": 0.397
+    },
+    "check_4": {
+      "fontId": "manrope",
+      "family": "Manrope",
+      "fallbackFamily": "sans-serif",
+      "weight": 800,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.3236914600550966,
+      "lineHeight": 1.366,
+      "tracking": 0,
+      "align": "left",
+      "color": "#554f48",
+      "fitScore": 0.405
+    },
+    "check_5": {
+      "fontId": "nunito-sans",
+      "family": "Nunito Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 800,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.0677777777777782,
+      "lineHeight": 1.364,
+      "tracking": 0,
+      "align": "left",
+      "color": "#575049",
+      "fitScore": 0.5
+    }
   }
 }

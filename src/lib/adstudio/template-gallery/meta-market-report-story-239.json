@@ -137,5 +137,91 @@
         "body": "The agency will be in touch within 24 hours to send you your free market report."
       }
     }
+  },
+  "typography": {
+    "subheadline": {
+      "fontId": "plus-jakarta-sans",
+      "family": "Plus Jakarta Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 800,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.3493253373313343,
+      "lineHeight": 1.26,
+      "tracking": 0,
+      "align": "left",
+      "color": "#cccac8",
+      "fitScore": 0.415
+    },
+    "headline": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.5238095256814852,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "center",
+      "color": "#6a6141",
+      "fitScore": 0.357
+    },
+    "stat_1": {
+      "fontId": "oswald",
+      "family": "Oswald",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.1948051948051948,
+      "lineHeight": 1.482,
+      "tracking": 0,
+      "align": "left",
+      "color": "#877450",
+      "fitScore": 0.636
+    },
+    "stat_3": {
+      "fontId": "oswald",
+      "family": "Oswald",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.2033333333333336,
+      "lineHeight": 1.482,
+      "tracking": 0,
+      "align": "left",
+      "color": "#af9563",
+      "fitScore": 0.697
+    },
+    "stat_2": {
+      "fontId": "lora",
+      "family": "Lora",
+      "fallbackFamily": "serif",
+      "weight": 600,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.36,
+      "lineHeight": 1.28,
+      "tracking": 0,
+      "align": "left",
+      "color": "#d5b372",
+      "fitScore": 0.946
+    },
+    "stat_4": {
+      "fontId": "manrope",
+      "family": "Manrope",
+      "fallbackFamily": "sans-serif",
+      "weight": 700,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.3349206349206348,
+      "lineHeight": 1.366,
+      "tracking": 0,
+      "align": "left",
+      "color": "#c4a56a",
+      "fitScore": 0.436
+    }
   }
 }

@@ -109,5 +109,49 @@
         "body": "The agency will be in touch within 24 hours with off-market property alerts."
       }
     }
+  },
+  "typography": {
+    "body": {
+      "fontId": "kanit",
+      "family": "Kanit",
+      "fallbackFamily": "sans-serif",
+      "weight": 600,
+      "italic": false,
+      "case": "mixed",
+      "sizeRatio": 1.0963855421686748,
+      "lineHeight": 1.495,
+      "tracking": 0,
+      "align": "center",
+      "color": "#a29b85",
+      "fitScore": 0.23
+    },
+    "headline": {
+      "fontId": "plus-jakarta-sans",
+      "family": "Plus Jakarta Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 500,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.2800000895426007,
+      "lineHeight": 1.26,
+      "tracking": 0,
+      "align": "center",
+      "color": "#b4ad9f",
+      "fitScore": 0.302
+    },
+    "cta": {
+      "fontId": "barlow",
+      "family": "Barlow",
+      "fallbackFamily": "sans-serif",
+      "weight": 600,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.3894376248929488,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "center",
+      "color": "#736f55",
+      "fitScore": 0.233
+    }
   }
 }

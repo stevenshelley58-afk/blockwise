@@ -130,5 +130,63 @@
         "body": "The agency will be in touch within 24 hours with off-market property alerts."
       }
     }
+  },
+  "typography": {
+    "body": {
+      "fontId": "source-sans-3",
+      "family": "Source Sans 3",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "mixed",
+      "sizeRatio": 1.0277777777777777,
+      "lineHeight": 1.424,
+      "tracking": 0,
+      "align": "left",
+      "color": "#5b5b5c",
+      "fitScore": 0.616
+    },
+    "headline": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.5238095149843132,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "center",
+      "color": "#464747",
+      "fitScore": 0.585
+    },
+    "subheadline": {
+      "fontId": "fira-sans",
+      "family": "Fira Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 800,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.0666666666666667,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "left",
+      "color": "#848f97",
+      "fitScore": 0.55
+    },
+    "cta": {
+      "fontId": "lora",
+      "family": "Lora",
+      "fallbackFamily": "serif",
+      "weight": 600,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.374025974025974,
+      "lineHeight": 1.28,
+      "tracking": 0,
+      "align": "left",
+      "color": "#abac93",
+      "fitScore": 0.248
+    }
   }
 }
