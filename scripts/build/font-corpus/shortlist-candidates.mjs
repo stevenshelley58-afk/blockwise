@@ -35,6 +35,17 @@ const WEIGHT_BREAKPOINTS = [
   { maxRatio: Infinity, weight: 900 },
 ];
 
+// Every AdStudio gallery template's declared copy is English/Latin. Several
+// popular Google Fonts families are variants hinted/optimized for a
+// specific non-Latin script but still ship a Latin subset (so they're
+// technically usable and can even score well on thickness/width) — e.g.
+// "Noto Sans JP" renders Latin text fine, but picking a CJK-oriented family
+// for English marketing copy is a poor aesthetic match even when its raw
+// metrics line up. Exclude these by name rather than trying to detect
+// script intent from metadata that doesn't reliably encode it.
+const NON_LATIN_NAME_PATTERN =
+  /\b(JP|KR|SC|TC|HK|Devanagari|Gujarati|Gurmukhi|Bengali|Tamil|Telugu|Kannada|Malayalam|Oriya|Sinhala|Thai|Lao|Khmer|Myanmar|Georgian|Armenian|Hebrew|Arabic|Ethiopic|Cherokee|Nastaliq|Kufi|Naskh|Sans HK)\b/;
+
 function estimateTargetWeight(strokeToHeightRatio) {
   if (strokeToHeightRatio == null) return 400;
   const bucket = WEIGHT_BREAKPOINTS.find((b) => strokeToHeightRatio <= b.maxRatio);
@@ -60,6 +71,7 @@ export async function shortlistCandidates(profile, { limit = 40 } = {}) {
   const scored = [];
   for (const family of families) {
     if (family.isOpenSource === false) continue;
+    if (NON_LATIN_NAME_PATTERN.test(family.family)) continue;
     // Nearest available weight for this family (most families don't ship
     // all 9 CSS weights) — never hard-exclude a family just because it
     // lacks the exact target weight.
