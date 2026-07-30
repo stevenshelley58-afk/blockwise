@@ -108,7 +108,7 @@ export async function GET(request: NextRequest) {
   const [creativeResult, publishPlanResult] = await Promise.all([
     context.supabase
       .from("adstudio_creatives")
-      .select("campaign_id,format,canvas_json,preview_url,updated_at")
+      .select("campaign_id,variant_id,format,canvas_json,preview_url,updated_at")
       .eq("workspace_id", context.access.workspaceId)
       .in("campaign_id", campaignIds)
       .order("updated_at", { ascending: false }),
