@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { buildAdStudioCreativeLibrary } from "../src/lib/adstudio/creative-library.ts";
+import {
+  buildAdStudioCreativeLibrary,
+  buildAdStudioLibrarySelectionPack,
+} from "../src/lib/adstudio/creative-library.ts";
+import { buildCloneTestPack } from "./adstudio-clone-fixture.ts";
 
 test("creative library puts unpublished ads first and sorts each status newest first", () => {
   const library = buildAdStudioCreativeLibrary(
@@ -36,12 +40,14 @@ test("creative library prefers a Feed artwork preview and falls back safely", ()
     [
       {
         campaign_id: "campaign",
+        variant_id: "story-variant",
         format: "9:16",
         canvas_json: { objects: [{ role: "primary_image", content: "/story.jpg" }] },
         updated_at: "2026-07-22T03:00:00Z",
       },
       {
         campaign_id: "campaign",
+        variant_id: "feed-variant",
         format: "4:5",
         canvas_json: { objects: [{ role: "primary_image", content: "/feed.jpg" }] },
         updated_at: "2026-07-22T02:00:00Z",
@@ -51,6 +57,46 @@ test("creative library prefers a Feed artwork preview and falls back safely", ()
   );
 
   assert.equal(library[0]?.previewSrc, "/feed.jpg");
+  assert.equal(library[0]?.variantId, "feed-variant");
   assert.equal(library[0]?.format, "4:5");
   assert.equal(library[0]?.updatedAt, "2026-07-20T03:00:00Z");
+});
+
+test("library selections combine finished ads under the configured campaign and lead form", () => {
+  const basePack = buildCloneTestPack("workspace-library-selection");
+  const sourceA = buildCloneTestPack("workspace-library-selection-a");
+  const sourceB = structuredClone(buildCloneTestPack("workspace-library-selection-b"));
+  const sourceBVariantId = "variant-library-b";
+  sourceB.campaign.campaignId = "campaign-library-b";
+  sourceB.variants = sourceB.variants.map((variant) => ({
+    ...variant,
+    campaignId: sourceB.campaign.campaignId,
+    variantId: sourceBVariantId,
+  }));
+  sourceB.creatives = sourceB.creatives.map((creative) => ({
+    ...creative,
+    campaignId: sourceB.campaign.campaignId,
+    variantId: sourceBVariantId,
+  }));
+  sourceB.copyPacks = sourceB.copyPacks.map((copyPack) => ({
+    ...copyPack,
+    campaignId: sourceB.campaign.campaignId,
+    variantId: sourceBVariantId,
+  }));
+  basePack.copyPacks[0]!.meta.leadForm.headline = "Shared campaign form";
+
+  const combined = buildAdStudioLibrarySelectionPack(
+    basePack,
+    [sourceA, sourceB],
+    [
+      { campaignId: sourceA.campaign.campaignId, variantId: sourceA.variants[0]!.variantId },
+      { campaignId: sourceB.campaign.campaignId, variantId: sourceBVariantId },
+    ],
+  );
+
+  assert.equal(combined.campaign.campaignId, basePack.campaign.campaignId);
+  assert.equal(combined.variants.length, 2);
+  assert.equal(combined.creatives.length, 2);
+  assert.equal(combined.creatives.every((creative) => creative.format === "4:5"), true);
+  assert.equal(combined.copyPacks.every((copyPack) => copyPack.meta.leadForm.headline === "Shared campaign form"), true);
 });
