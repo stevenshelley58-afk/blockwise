@@ -6,7 +6,7 @@ import {
   type OperatorChatMessage,
   type OperatorProposedAction,
 } from "@/lib/operator/assistant";
-import { requireOperator } from "@/lib/operator/auth";
+import { requireAdRadarOperator as requireOperator } from "@/lib/operator/auth";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";

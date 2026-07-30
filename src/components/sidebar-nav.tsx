@@ -32,6 +32,7 @@ export type NavItem = {
   icon: NavIcon;
   /** Optional grouping label rendered above the item (starts a new section). */
   section?: string;
+  feature?: keyof typeof niche.features;
 };
 
 // Clean radar mark matching the self-serve mockup (circle + single sweep hand).
@@ -55,32 +56,22 @@ function RadarIcon({ size = 18, ...props }: { size?: number } & SVGProps<SVGSVGE
   );
 }
 
-const featureByHref: Record<string, keyof typeof niche.features> = {
-  "/ad-radar": "adRadar",
-  "/property-check": "propertyCheck",
-};
-
-function featureHidden(href: string) {
-  const feature = featureByHref[href];
-  return feature ? !niche.features[feature] : false;
-}
-
-const operatorNavItems: NavItem[] = [
+const operatorNavItems = ([
   { href: "/operator", label: "Operator", icon: LayoutGrid },
   { href: "/operator/customers", label: "Customers", icon: ContactRound },
   { href: "/operator/email", label: "Email", icon: Mail },
-  { href: "/operator/research", label: "Research Ops", icon: Activity },
+  { href: "/operator/research", label: "Research Ops", icon: Activity, feature: "adRadar" },
   { href: "/operator/analytics", label: "Site Analytics", icon: BarChart3 },
   { href: "/operator/database", label: "Database", icon: Database },
   { href: "/results", label: "Results", icon: LineChart },
-  { href: "/ad-radar", label: "Ad Radar", icon: RadarIcon },
+  { href: "/ad-radar", label: "Ad Radar", icon: RadarIcon, feature: "adRadar" },
   { href: "/ad-studio", label: "Ad Studio", icon: Star },
-  { href: "/property-check", label: "Property Check", icon: FileSearch },
+  { href: "/property-check", label: "Property Check", icon: FileSearch, feature: "propertyCheck" },
   { href: "/leads", label: "Leads", icon: UsersRound },
   { href: "/settings", label: "Settings", icon: Settings },
   { href: "/workforce", label: "Workforce", icon: Bot },
   { href: "/model-control", label: "Model Control", icon: Settings2 },
-].filter((item) => !featureHidden(item.href));
+] satisfies NavItem[]).filter((item) => !item.feature || niche.features[item.feature]);
 
 // Self-serve labels, order, and feature gating live in the niche config
 // (src/config/niche) — the white-label layer. Icons stay here, keyed by
@@ -103,14 +94,15 @@ const selfServeNavItems: NavItem[] = niche.nav.items
     label: item.label,
     icon: selfServeIcons[item.href] ?? LayoutGrid,
     section: item.section,
+    feature: item.feature,
   }));
 
-const monitorNavItems: NavItem[] = [
+const monitorNavItems = ([
   { href: "/results", label: "Results", icon: LineChart },
-  { href: "/ad-radar", label: "Ad Radar", icon: RadarIcon },
+  { href: "/ad-radar", label: "Ad Radar", icon: RadarIcon, feature: "adRadar" },
   { href: "/leads", label: "Leads", icon: UsersRound },
   { href: "/settings", label: "Settings", icon: Settings },
-].filter((item) => !featureHidden(item.href));
+] satisfies NavItem[]).filter((item) => !item.feature || niche.features[item.feature]);
 
 export const navByVariant: Record<SidebarVariant, NavItem[]> = {
   operator: operatorNavItems,

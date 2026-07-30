@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { adRadarDisabledResponse } from "../auth/api-guards.ts";
 import { hasOperatorAccessFromRows } from "../auth/workspace-access.ts";
 import { createSupabaseServerClient } from "../supabase/server.ts";
 
@@ -35,4 +36,11 @@ export async function requireOperator(): Promise<
     return { ok: false, response: NextResponse.json({ error: "forbidden" }, { status: 403 }) };
   }
   return { ok: true, supabase, email: user.email, userId: user.id };
+}
+
+/** Gate dormant research operations before creating an auth or database client. */
+export async function requireAdRadarOperator(): ReturnType<typeof requireOperator> {
+  const featureGate = adRadarDisabledResponse();
+  if (featureGate) return { ok: false, response: featureGate };
+  return requireOperator();
 }

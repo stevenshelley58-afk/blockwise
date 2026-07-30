@@ -40,6 +40,7 @@ test("public audit report route stays public and off the protected Ad Radar surf
     /requireWorkspaceAccess|requirePageSurfaceAccess|v_agent_ad_history|createSupabaseServerClient/,
   );
   assert.match(route, /createSupabaseServiceClient/);
+  assert.match(route, /featureDisabledResponse\("adRadar", "suburbPages"\)/);
 });
 
 test("landing page anchors, sections, and claims stay connected", () => {
