@@ -171,7 +171,8 @@
         "height": 0.040740740740740744
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/roboto-condensed-800.woff2"
     },
     "stat_1": {
       "fontId": "overlock",
@@ -194,7 +195,8 @@
         "height": 0.015555555555555555
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/overlock-900.woff2"
     },
     "stat_3": {
       "fontId": "overlock",
@@ -217,7 +219,8 @@
         "height": 0.015555555555555555
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/overlock-900.woff2"
     },
     "stat_2": {
       "fontId": "overlock",
@@ -240,7 +243,8 @@
         "height": 0.015555555555555555
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/overlock-900.woff2"
     },
     "stat_4": {
       "fontId": "overlock",
@@ -263,7 +267,8 @@
         "height": 0.016296296296296295
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/overlock-900.woff2"
     },
     "stat_5": {
       "fontId": "museomoderno",
@@ -286,7 +291,8 @@
         "height": 0.016296296296296295
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/museomoderno-900.woff2"
     },
     "stat_6": {
       "fontId": "elsie-swash-caps",
@@ -309,7 +315,32 @@
         "height": 0.015925925925925927
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/elsie-swash-caps-900.woff2"
+    },
+    "subheadline": {
+      "fontId": "overlock",
+      "family": "Overlock",
+      "fallbackFamily": "sans-serif",
+      "weight": 900,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 0.55,
+      "lineHeight": 1.2,
+      "tracking": 0.01,
+      "align": "left",
+      "color": "#3b3b3b",
+      "fitScore": 0.35,
+      "sampleBox": {
+        "x": 0.1,
+        "y": 0.3,
+        "width": 0.8,
+        "height": 0.04
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 0.55,
+      "measurementSource": "manual-estimate",
+      "fontFile": "/fonts/adstudio/overlock-900.woff2"
     }
   }
 }

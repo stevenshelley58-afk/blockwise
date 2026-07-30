@@ -284,7 +284,8 @@
           },
           "sizeRatio": 1.530505952380952
         }
-      ]
+      ],
+      "fontFile": "/fonts/adstudio/poppins-900.woff2"
     },
     "stat_1": {
       "fontId": "outfit",
@@ -404,7 +405,8 @@
           },
           "sizeRatio": 1.2783564814814816
         }
-      ]
+      ],
+      "fontFile": "/fonts/adstudio/londrina-solid-900.woff2"
     },
     "stat_2": {
       "fontId": "londrina-solid",
@@ -440,7 +442,8 @@
           },
           "sizeRatio": 1.2783564814814816
         }
-      ]
+      ],
+      "fontFile": "/fonts/adstudio/londrina-solid-900.woff2"
     }
   }
 }

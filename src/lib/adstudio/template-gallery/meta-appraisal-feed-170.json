@@ -207,7 +207,8 @@
           },
           "sizeRatio": 1.5986592320207187
         }
-      ]
+      ],
+      "fontFile": "/fonts/adstudio/roboto-condensed-800.woff2"
     },
     "subheadline": {
       "fontId": "dm-sans",
@@ -290,7 +291,8 @@
           },
           "sizeRatio": 0.7861229826690742
         }
-      ]
+      ],
+      "fontFile": "/fonts/adstudio/big-shoulders-300.woff2"
     },
     "cta": {
       "fontId": "londrina-shadow",
@@ -326,7 +328,8 @@
           },
           "sizeRatio": 1.2821821036106749
         }
-      ]
+      ],
+      "fontFile": "/fonts/adstudio/londrina-shadow-400.woff2"
     },
     "agent_name": {
       "fontId": "roboto",
@@ -374,6 +377,78 @@
         }
       ],
       "fontFile": "/fonts/adstudio/roboto-800.woff2"
+    },
+    "phone": {
+      "fontId": "roboto-condensed",
+      "family": "Roboto Condensed",
+      "fallbackFamily": "sans-serif",
+      "weight": 400,
+      "italic": false,
+      "case": "mixed",
+      "sizeRatio": 0.55,
+      "lineHeight": 1.2,
+      "tracking": 0.01,
+      "align": "center",
+      "color": "#0c1d27",
+      "fitScore": 0.35,
+      "sampleBox": {
+        "x": 0.1,
+        "y": 0.9,
+        "width": 0.8,
+        "height": 0.03
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 0.55,
+      "measurementSource": "manual-estimate",
+      "fontFile": "/fonts/adstudio/roboto-condensed-400.woff2"
+    },
+    "address": {
+      "fontId": "roboto-condensed",
+      "family": "Roboto Condensed",
+      "fallbackFamily": "sans-serif",
+      "weight": 400,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 0.5,
+      "lineHeight": 1.2,
+      "tracking": 0.01,
+      "align": "center",
+      "color": "#0c1d27",
+      "fitScore": 0.35,
+      "sampleBox": {
+        "x": 0.1,
+        "y": 0.93,
+        "width": 0.8,
+        "height": 0.03
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 0.55,
+      "measurementSource": "manual-estimate",
+      "fontFile": "/fonts/adstudio/roboto-condensed-400.woff2"
+    },
+    "website": {
+      "fontId": "roboto-condensed",
+      "family": "Roboto Condensed",
+      "fallbackFamily": "sans-serif",
+      "weight": 400,
+      "italic": false,
+      "case": "lower",
+      "sizeRatio": 0.45,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "center",
+      "color": "#0c1d27",
+      "fitScore": 0.35,
+      "sampleBox": {
+        "x": 0.1,
+        "y": 0.95,
+        "width": 0.8,
+        "height": 0.025
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 0.55,
+      "measurementSource": "manual-estimate",
+      "fontFile": "/fonts/adstudio/roboto-condensed-400.woff2"
     }
   }
 }

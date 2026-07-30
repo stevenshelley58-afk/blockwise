@@ -161,7 +161,8 @@
         "height": 0.096875
       },
       "sampleLineCount": 5,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/quicksand-300.woff2"
     },
     "headline": {
       "fontId": "smooch-sans",
@@ -183,7 +184,8 @@
         "height": 0.22135416666666666
       },
       "sampleLineCount": 3,
-      "detectionScore": 0.828
+      "detectionScore": 0.828,
+      "fontFile": "/fonts/adstudio/smooch-sans-300.woff2"
     },
     "agent_role": {
       "fontId": "manrope",
@@ -205,7 +207,8 @@
         "height": 0.011979166666666667
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/manrope-700.woff2"
     },
     "subheadline": {
       "fontId": "source-sans-3",
@@ -272,7 +275,8 @@
         "height": 0.013020833333333334
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/merriweather-700.woff2"
     },
     "phone": {
       "fontId": "raleway",
@@ -294,7 +298,8 @@
         "height": 0.012239583333333333
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/raleway-700.woff2"
     },
     "agent_name": {
       "fontId": "smooch-sans",
@@ -316,7 +321,8 @@
         "height": 0.02109375
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/smooch-sans-600.woff2"
     }
   },
   "deterministicEditing": {

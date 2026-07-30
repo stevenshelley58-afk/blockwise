@@ -138,7 +138,8 @@
         "height": 0.018518518518518517
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/merriweather-700.woff2"
     },
     "headline": {
       "fontId": "smooch-sans",
@@ -160,7 +161,8 @@
         "height": 0.2288888888888889
       },
       "sampleLineCount": 3,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/smooch-sans-300.woff2"
     },
     "website": {
       "fontId": "lora",
@@ -182,7 +184,8 @@
         "height": 0.015925925925925927
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/lora-700.woff2"
     },
     "phone": {
       "fontId": "playfair-display",
@@ -204,7 +207,8 @@
         "height": 0.017777777777777778
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/playfair-display-700.woff2"
     }
   }
 }

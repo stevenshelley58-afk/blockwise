@@ -131,6 +131,29 @@
       },
       "sampleLineCount": 3,
       "detectionScore": 1
+    },
+    "cta_text": {
+      "fontId": "source-sans-3",
+      "family": "Source Sans 3",
+      "fallbackFamily": "sans-serif",
+      "weight": 700,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 0.6,
+      "lineHeight": 1.2,
+      "tracking": 0.02,
+      "align": "center",
+      "color": "#232323",
+      "fitScore": 0.35,
+      "sampleBox": {
+        "x": 0.1,
+        "y": 0.8,
+        "width": 0.8,
+        "height": 0.05
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 0.55,
+      "measurementSource": "manual-estimate"
     }
   }
 }

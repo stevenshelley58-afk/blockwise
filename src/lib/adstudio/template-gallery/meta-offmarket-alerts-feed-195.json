@@ -161,7 +161,8 @@
         "height": 0.11962962962962963
       },
       "sampleLineCount": 2,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/smooch-sans-300.woff2"
     },
     "subheadline": {
       "fontId": "smooch-sans",
@@ -183,7 +184,8 @@
         "height": 0.024074074074074074
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/smooch-sans-700.woff2"
     },
     "cta": {
       "fontId": "smooch-sans",
@@ -205,7 +207,8 @@
         "height": 0.13296296296296295
       },
       "sampleLineCount": 5,
-      "detectionScore": 0.368
+      "detectionScore": 0.368,
+      "fontFile": "/fonts/adstudio/smooch-sans-300.woff2"
     }
   }
 }

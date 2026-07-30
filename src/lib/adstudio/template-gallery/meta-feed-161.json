@@ -122,7 +122,8 @@
         "height": 0.0203125
       },
       "sampleLineCount": 3,
-      "detectionScore": 0.364
+      "detectionScore": 0.364,
+      "fontFile": "/fonts/adstudio/kanit-900.woff2"
     }
   }
 }

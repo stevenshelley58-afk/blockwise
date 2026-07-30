@@ -138,7 +138,8 @@
         "height": 0.07148148148148148
       },
       "sampleLineCount": 3,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/quicksand-300.woff2"
     },
     "headline": {
       "fontId": "smooch-sans",
@@ -160,7 +161,8 @@
         "height": 0.19666666666666666
       },
       "sampleLineCount": 5,
-      "detectionScore": 0.886
+      "detectionScore": 0.886,
+      "fontFile": "/fonts/adstudio/smooch-sans-300.woff2"
     },
     "subheadline": {
       "fontId": "titillium-web",
@@ -182,7 +184,32 @@
         "height": 0.0937037037037037
       },
       "sampleLineCount": 3,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/titillium-web-900.woff2"
+    },
+    "cta": {
+      "fontId": "quicksand",
+      "family": "Quicksand",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 0.65,
+      "lineHeight": 1.2,
+      "tracking": 0.02,
+      "align": "center",
+      "color": "#4f4f50",
+      "fitScore": 0.35,
+      "sampleBox": {
+        "x": 0.1,
+        "y": 0.78,
+        "width": 0.8,
+        "height": 0.05
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 0.55,
+      "measurementSource": "manual-estimate",
+      "fontFile": "/fonts/adstudio/quicksand-300.woff2"
     }
   }
 }
