@@ -22,11 +22,11 @@ const AU_MANAGED_MONTHLY = formatBillingAmount(
 export const FAQ_DATA = [
   {
     q: "Who pays for ad spend?",
-    a: "You do. Ads run through your Meta ad account and you pay Meta directly.",
+    a: "We run the ads through your own Meta ad account, and you pay Meta directly. That keeps you in full control of your spend, and the campaign data stays with you.",
   },
   {
     q: "Do I need a Meta ad account?",
-    a: "Review your ads first. Connect Meta when you want to go live.",
+    a: "Yes. You’ll need a Meta ad account before your ads go live. If you don’t have one yet, book a walkthrough and we’ll guide you through the setup.",
   },
   {
     q: "Can I approve ads before they run?",
@@ -38,11 +38,15 @@ export const FAQ_DATA = [
   },
   {
     q: "When does the subscription start?",
-    a: `After Checkout, the seven-day billing trial ends when your first campaign launches or after seven days, whichever comes first. The first paid month is ${AU_FIRST_MONTH}, then ${AU_RENEWAL}/mo. Cancel anytime.`,
+    a: `Your subscription starts when your first campaign goes live, or seven days after checkout if you haven’t launched yet. Your first month is ${AU_FIRST_MONTH}, then ${AU_RENEWAL} per month. Cancel anytime.`,
   },
   {
     q: "What does managed include?",
-    a: `${AU_MANAGED_MONTHLY}/mo, plus ad spend. Includes self-serve access, launch and weekly optimization for up to four campaigns, one brand, one ad account, and a monthly report.`,
+    a: `Managed is ${AU_MANAGED_MONTHLY} per month, plus ad spend. It includes self-serve access, launch and weekly optimisation for up to four campaigns, technical and creative advice, and a monthly report for one brand and one Meta ad account. Cancel anytime.`,
+  },
+  {
+    q: "Will my ads sound like AI?",
+    a: "No AI slop. We’ve optimised our AI to write clear, persuasive copy, headlines and descriptions for you, your offer and your suburb.",
   },
 ] as const;
 
