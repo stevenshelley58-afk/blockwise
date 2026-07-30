@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
+  ArrowLeft,
   ArrowRight,
   Check,
   CircleAlert,
@@ -52,7 +53,6 @@ import { COPY_LIMITS, seedCopy, toMetaCta, useCopy } from "./use-copy";
 import { MEDIA_ASSETS, useMedia } from "./use-media";
 import { useReadiness } from "./use-readiness";
 
-import { CopyPanel } from "./panels/copy-panel";
 import { MediaPanel } from "./panels/media-panel";
 import { PanelHeader } from "./inspector";
 import { Badge } from "@/components/ui/badge";
@@ -88,13 +88,13 @@ const NAV_ITEMS: NavItem[] = [
   { id: "home", label: "Home", icon: Home },
   { id: "samples", label: "Create", icon: Plus },
   { id: "library", label: "Library", icon: Images, href: "/ad-studio/library" },
-  { id: "text", label: "Text", icon: FileText },
+  { id: "edit", label: "Edit", icon: FileText },
   { id: "publish", label: "Publish", icon: Send },
   { id: "brand", label: "Brand Pack", icon: SwatchBook },
   { id: "settings", label: "Settings", icon: Settings2 },
 ];
 
-const MOBILE_NAV_IDS = new Set<NavItem["id"]>(["home", "samples", "library", "text", "publish"]);
+const MOBILE_NAV_IDS = new Set<NavItem["id"]>(["home", "samples", "library", "edit", "publish"]);
 const MOBILE_NAV = NAV_ITEMS.filter((item) => MOBILE_NAV_IDS.has(item.id));
 
 const PREVIEW_TO_AD_FORMAT: Record<PreviewFormat, AdStudioFormat> = {
@@ -305,6 +305,7 @@ export function AdStudioWorkbench({
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(0);
   const [previewFormat, setPreviewFormat] = useState<PreviewFormat>("feed");
   const [selectedElement, setSelectedElement] = useState<SelectedElement>("canvas");
+  const [selectedCanvasRegionKey, setSelectedCanvasRegionKey] = useState<string | null>(null);
   const [campaignGoal, setCampaignGoal] = useState(() => initialCampaignGoal(initialPack));
   const [offerLabel, setOfferLabel] = useState(() => initialOfferLabel(initialPack, offers));
   const [market, setMarket] = useState(() => initialMarket(initialPack));
@@ -384,17 +385,8 @@ export function AdStudioWorkbench({
     copy,
     setCopy,
     updateCopy,
-    copyMode,
-    setCopyMode,
-    brief,
-    setBrief,
     generating,
-    feedback,
-    alternates,
-    generateCopy,
-    applyCopyAssist,
     patchCopyField,
-    applyAlternate,
   } = useCopy(initialPack, studio.setSaveState, studio.showToast, setSelectedElement);
 
   const copyContext = {
@@ -530,6 +522,7 @@ export function AdStudioWorkbench({
       return;
     }
     setSelectedElement("canvas");
+    setSelectedCanvasRegionKey(null);
     if (section !== "publish") setPublishCreativeSource("current");
     studio.setSection(section);
     studio.setMobileTab(section as import("./use-ad-studio").MobileTab);
@@ -721,6 +714,8 @@ export function AdStudioWorkbench({
     });
     setPack(nextPack);
     setSelectedVariantIndex(index);
+    setSelectedElement("canvas");
+    setSelectedCanvasRegionKey(null);
     setCopy(seedCopy(nextPack, index));
     if (variantImage) {
       setPrimaryImage(variantImage.src);
@@ -879,7 +874,10 @@ export function AdStudioWorkbench({
     await generateFirstAd(input);
     setPublishCreativeSource("current");
     setActiveSampleId(input.templateId);
-    openMediaSheet();
+    setSelectedElement("canvas");
+    setSelectedCanvasRegionKey(null);
+    studio.setSection("edit");
+    studio.setMobileTab("edit");
   }
 
   function renderTextLayerPanel(field: "primaryText" | "headline" | "description" | "cta") {
@@ -888,7 +886,17 @@ export function AdStudioWorkbench({
     const actions = field === "cta" ? ["Sharper", "More direct"] : ["Sharper", "More local", "More premium", "Less hype"];
     return (
       <>
-        <PanelHeader title="Text layer" detail="Edit the selected canvas text, or rewrite just this layer." />
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="w-fit px-0 text-muted-foreground hover:bg-transparent hover:text-foreground"
+          onClick={() => setSelectedElement("canvas")}
+        >
+          <ArrowLeft aria-hidden />
+          All editable areas
+        </Button>
+        <PanelHeader title={label} detail="Edit this part of the Meta ad copy. Your finished ad updates as you type." />
         <label className="studio-selected-text-field">
           <span>
             {label}
@@ -940,27 +948,97 @@ export function AdStudioWorkbench({
     );
   }
 
-  function renderTextPanel() {
+  function selectMetaCopyField(field: "primaryText" | "headline" | "description" | "cta") {
+    setSelectedCanvasRegionKey(null);
+    setSelectedElement(field);
+    studio.setSection("edit");
+    studio.setMobileTab("edit");
+  }
+
+  function selectCanvasRegion(key: string) {
+    setSelectedElement("canvas");
+    setSelectedCanvasRegionKey(key);
+  }
+
+  function renderEditOverview() {
+    const editableRegions = currentCreative?.canvas.cloneQa?.regions ?? [];
+    const textRegions = editableRegions.filter((region) => region.kind === "text");
+    const imageRegions = editableRegions.filter((region) => region.kind === "image");
+    const copyItems = [
+      { field: "primaryText" as const, label: "Primary text", value: copy.primaryText },
+      { field: "headline" as const, label: "Headline", value: copy.headline },
+      { field: "description" as const, label: "Description", value: copy.description },
+      { field: "cta" as const, label: "Call to action", value: copy.cta },
+    ];
+
+    return (
+      <div className="grid gap-6">
+        <PanelHeader title="Edit" detail="Select anything on the finished ad, or choose an editable area below." />
+
+        <section className="grid gap-2" aria-labelledby="studio-on-ad-heading">
+          <div className="flex items-center justify-between gap-3">
+            <h3 id="studio-on-ad-heading" className="m-0 text-sm font-bold text-foreground">On the image</h3>
+            {editorPreparing ? <Badge variant="secondary">Preparing</Badge> : null}
+          </div>
+          {editableRegions.length > 0 ? (
+            <div className="grid gap-1.5">
+              {[...textRegions, ...imageRegions].map((region) => (
+                <button
+                  key={`${region.kind}:${region.key}`}
+                  type="button"
+                  className="flex min-h-12 w-full items-center gap-3 rounded-(--r-card) border border-border bg-background px-3 py-2 text-left transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  onClick={() => selectCanvasRegion(region.key)}
+                >
+                  <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-muted text-foreground">
+                    {region.kind === "text" ? <FileText aria-hidden className="size-4" /> : <Images aria-hidden className="size-4" />}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <strong className="block truncate text-sm capitalize">{region.key.replace(/_/g, " ")}</strong>
+                    <small className="block text-xs text-muted-foreground">
+                      {region.kind === "text" ? "Text on the image" : "Image area"}
+                    </small>
+                  </span>
+                  <ArrowRight aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-(--r-card) border border-dashed border-border bg-muted/40 p-4">
+              <strong className="block text-sm">The finished ad is ready.</strong>
+              <p className="mb-0 mt-1 text-xs leading-5 text-muted-foreground">
+                {editorPreparing ? "Editable image areas are being attached now." : "This ad has no editable image areas."}
+              </p>
+            </div>
+          )}
+        </section>
+
+        <section className="grid gap-2" aria-labelledby="studio-ad-copy-heading">
+          <h3 id="studio-ad-copy-heading" className="m-0 text-sm font-bold text-foreground">Ad copy</h3>
+          <div className="grid gap-1.5">
+            {copyItems.map((item) => (
+              <button
+                key={item.field}
+                type="button"
+                className="flex min-h-12 w-full items-center gap-3 rounded-(--r-card) border border-border bg-background px-3 py-2 text-left transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                onClick={() => selectMetaCopyField(item.field)}
+              >
+                <span className="min-w-0 flex-1">
+                  <strong className="block text-xs text-muted-foreground">{item.label}</strong>
+                  <span className="block truncate text-sm font-medium text-foreground">{item.value || "Not set"}</span>
+                </span>
+                <ArrowRight aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+              </button>
+            ))}
+          </div>
+        </section>
+      </div>
+    );
+  }
+
+  function renderEditPanel() {
     const textField = copyFieldForSelectedElement(selectedElement);
     if (textField) return renderTextLayerPanel(textField);
-    return (
-      <CopyPanel
-        copy={copy}
-        updateCopy={updateCopy}
-        copyMode={copyMode}
-        setCopyMode={setCopyMode}
-        brief={brief}
-        setBrief={setBrief}
-        generating={generating}
-        feedback={feedback}
-        alternates={alternates}
-        context={copyContext}
-        onGenerate={(kind, context) => void generateCopy(kind, context, primaryImage)}
-        onAssist={(action, context) => void applyCopyAssist(action, context, primaryImage)}
-        onApplyAlternate={applyAlternate}
-        cloneCreative={currentCreative ? isCloneCreative(currentCreative) : false}
-      />
-    );
+    return renderEditOverview();
   }
 
   function renderEmptyPreview() {
@@ -993,12 +1071,18 @@ export function AdStudioWorkbench({
               destinationUrl={destinationUrl}
               copy={copy}
               format={previewFormat}
-              onSelectText={() => goToSection("text")}
+              selectedElement={selectedElement}
+              onSelectText={selectMetaCopyField}
             >
               <InPlaceAdEditor
                 creative={currentCreative}
                 onCreativeChange={updateCreative}
                 showToast={studio.showToast}
+                selectedRegionKey={selectedCanvasRegionKey}
+                onRegionSelectionChange={(key) => {
+                  setSelectedCanvasRegionKey(key);
+                  if (key) setSelectedElement("canvas");
+                }}
               />
             </MetaChromePreview>
           </PreviewFit>
@@ -1069,7 +1153,7 @@ export function AdStudioWorkbench({
   }
 
   function renderPanel() {
-    if (studio.section === "text") return renderTextPanel();
+    if (studio.section === "edit") return renderEditPanel();
     if (studio.section === "publish") {
       // M1: wire real props; H9: pass deleteCampaign
       return (
@@ -1107,7 +1191,7 @@ export function AdStudioWorkbench({
       <div className="studio-empty">
         <div className="studio-empty-ic"><Home aria-hidden size={22} /></div>
         <strong>Choose where to work</strong>
-        <p>Open Create, Library, Text, Publish, Brand Pack or Settings from the left rail.</p>
+        <p>Open Create, Library, Edit, Publish, Brand Pack or Settings from the left rail.</p>
       </div>
     );
   }
@@ -1139,7 +1223,7 @@ export function AdStudioWorkbench({
         showToast={studio.showToast}
       />
 
-      <div className="studio-desktop-body">
+      <div className="studio-desktop-body" data-section={studio.section}>
         {studio.section !== "publish" && <aside className="studio-rail" aria-label="Ad Studio sections">
           <span className="studio-rail-label">Create ad</span>
           {NAV_ITEMS.map((item) => {
@@ -1160,7 +1244,7 @@ export function AdStudioWorkbench({
             } else if (item.id === "publish") {
               const allDone = readinessItems.every((ri) => ri.state === "done");
               railState = allDone ? "done" : readinessItems.some((ri) => ri.state === "warn") ? "warn" : "todo";
-            } else if (item.id === "text") {
+            } else if (item.id === "edit") {
               const labels = ["Ad copy", "Call to action"];
               const relevant = readinessItems.filter((ri) => labels.includes(ri.label));
               if (relevant.length > 0) {
@@ -1187,7 +1271,7 @@ export function AdStudioWorkbench({
                 <span>{item.label}</span>
                 {railState === "done" && <Check aria-hidden size={13} style={{ color: "#006d38", marginLeft: "auto", flexShrink: 0 }} />}
                 {railState === "warn" && <CircleAlert aria-hidden size={13} style={{ color: "#8a5a00", marginLeft: "auto", flexShrink: 0 }} />}
-                {railState === "todo" && <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#dfe6f0", marginLeft: "auto", flexShrink: 0 }} />}
+                {railState === "todo" && <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--line-heavy)", marginLeft: "auto", flexShrink: 0 }} />}
               </button>
             );
           })}
@@ -1254,7 +1338,8 @@ export function AdStudioWorkbench({
                 onEditCopy={(index) => {
                   selectVariant(index);
                   setSelectedElement("headline");
-                  studio.setSection("text");
+                  setSelectedCanvasRegionKey(null);
+                  studio.setSection("edit");
                 }}
                 onReplaceImage={(index) => {
                   selectVariant(index);
@@ -1267,7 +1352,7 @@ export function AdStudioWorkbench({
         )}
       </div>
 
-      <div className="studio-mobile-body">
+      <div className="studio-mobile-body" data-section={studio.mobileTab}>
         {brandIsDraft && studio.mobileTab !== "home" && studio.mobileTab !== "publish" && (
           <Link href="/ad-studio/brand" className="studio-draft-brand-chip" style={{ marginTop: 14 }}>
             <CircleAlert aria-hidden size={15} />
@@ -1275,7 +1360,7 @@ export function AdStudioWorkbench({
           </Link>
         )}
 
-        {(studio.mobileTab === "text") && (
+        {(studio.mobileTab === "edit") && (
           <div className="studio-mobile-format-tabs">
             {(["story", "feed"] as PreviewFormat[]).map((item) => (
               <button className={previewFormat === item ? "active" : ""} key={item} type="button" onClick={() => setPreviewFormat(item)}>
@@ -1289,12 +1374,17 @@ export function AdStudioWorkbench({
           <div className="studio-mobile-panel">{renderHomePanel()}</div>
         )}
 
-        {(studio.mobileTab === "text") && (
+        {(studio.mobileTab === "edit") && (
           <>
             <div className="studio-mobile-preview-wrap">
               {renderCreativeEditor()}
             </div>
-            <div className="studio-mobile-panel">{renderPanel()}</div>
+            <div
+              className="studio-mobile-panel"
+              data-selected-copy={copyFieldForSelectedElement(selectedElement) ? "true" : undefined}
+            >
+              {renderPanel()}
+            </div>
           </>
         )}
 
@@ -1335,7 +1425,7 @@ export function AdStudioWorkbench({
           </div>
         )}
 
-        {(studio.mobileTab === "text") && (
+        {(studio.mobileTab === "edit") && (
           <div className="studio-mobile-variants">
             <VariantStrip
               variants={variants}

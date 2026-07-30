@@ -14,12 +14,12 @@ test("mobile nav exposes the canvas-first Ad Studio sections", () => {
   assert.match(mobileBody, /studio\.mobileTab === "home"/);
   assert.doesNotMatch(mobileBody, /studio\.mobileTab === "media"/);
   assert.match(mobileBody, /href: "\/ad-studio\/library"/);
-  assert.match(mobileBody, /studio\.mobileTab === "text"/);
+  assert.match(mobileBody, /studio\.mobileTab === "edit"/);
   assert.match(mobileBody, /label: "Home"/);
   assert.match(mobileBody, /label: "Create"/);
   assert.match(mobileBody, /samplePickerOpen/);
   assert.match(mobileBody, /label: "Library"/);
-  assert.match(mobileBody, /label: "Text"/);
+  assert.match(mobileBody, /label: "Edit"/);
   assert.match(mobileBody, /label: "Publish"/);
   assert.match(mobileBody, /const MOBILE_NAV = NAV_ITEMS\.filter/);
   assert.doesNotMatch(mobileBody, /label: "Review"/);
@@ -27,7 +27,7 @@ test("mobile nav exposes the canvas-first Ad Studio sections", () => {
   assert.match(mobileBody, /label: "Settings"/);
   assert.doesNotMatch(mobileBody, /studio\.mobileTab === "campaign"/);
   assert.doesNotMatch(mobileBody, /studio\.mobileTab === "design"/);
-  assert.doesNotMatch(navBlocks, /label: "Edit"/);
+  assert.doesNotMatch(navBlocks, /label: "Text"/);
   assert.doesNotMatch(navBlocks, /label: "Design"/);
   assert.match(mediaPanel, /studio-current-media/);
   assert.match(mediaPanel, /Upload image/);
@@ -129,6 +129,26 @@ test("mobile preview uses the same creative editor surface as desktop", () => {
   assert.match(workbench, /studio-mobile-preview-wrap[\s\S]*\{renderCreativeEditor\(\)\}/);
   assert.doesNotMatch(workbench, /renderFallbackPreview/);
   assert.match(styles, /studio-mobile-preview-wrap/);
+});
+
+test("Edit unifies finished-ad regions and Meta copy without reopening image replacement", () => {
+  const workbench = read("src/components/adstudio/ad-studio-workbench.tsx");
+  const studioState = read("src/components/adstudio/use-ad-studio.ts");
+  const editor = read("src/components/adstudio/canvas/in-place-ad-editor.tsx");
+
+  assert.match(studioState, /StudioSection[\s\S]*\| "edit"/);
+  assert.doesNotMatch(studioState, /\| "text"/);
+  assert.match(workbench, /function renderEditOverview\(\)/);
+  assert.match(workbench, /On the image/);
+  assert.match(workbench, /Ad copy/);
+  assert.match(workbench, /studio\.setSection\("edit"\)/);
+  assert.match(workbench, /studio\.setMobileTab\("edit"\)/);
+  assert.doesNotMatch(
+    workbench,
+    /async function handleGenerateFirstAd[\s\S]{0,260}openMediaSheet\(\)/,
+  );
+  assert.match(editor, /selectedRegionKey/);
+  assert.match(editor, /onRegionSelectionChange/);
 });
 
 test("mobile overflow exposes save draft", () => {

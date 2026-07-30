@@ -74,7 +74,7 @@ test("all editor controls meet the 44px target and adapt to a mobile sheet", () 
   assert.doesNotMatch(styles, /\.studio-inplace-region\{[^}]*min-width:44px/);
   assert.match(styles, /\.studio-inplace-toolbar button\{min-width:44px;min-height:44px/);
   assert.match(styles, /\.studio-inplace-inspector header button\{width:44px;height:44px/);
-  assert.match(styles, /@media\(max-width:1280px\)[\s\S]*\.studio-inplace-inspector\{top:auto/);
+  assert.match(styles, /@media\(max-width:900px\)[\s\S]*\.studio-inplace-inspector\{top:auto/);
   assert.match(styles, /@media\(prefers-reduced-motion:reduce\)/);
 });
 
