@@ -34,11 +34,12 @@ test("publish review state skips approval and submits directly", () => {
   assert.match(panel, /studio-review-creatives/);
 });
 
-test("publish budget supports presets, custom dates, and campaigns without an end date", () => {
+test("publish budget defaults to the free three-day campaign and supports paid schedules", () => {
   const panel = readFileSync("src/components/adstudio/panels/publish-panel.tsx", "utf8");
 
   assert.match(panel, /const BUDGET_PRESETS = \[10, 20, 50\]/);
-  assert.match(panel, /const DURATION_PRESETS = \[7, 14, 30\]/);
+  assert.match(panel, /const DURATION_PRESETS = \[3, 7, 14, 30\]/);
+  assert.match(panel, /useState<ScheduleMode>\("3"\)/);
   assert.match(panel, /Enter amount/);
   assert.match(panel, /Custom dates/);
   assert.match(panel, /Run until stopped/);

@@ -115,11 +115,13 @@ async function applyCheckoutCompleted(
   if (subscriptionId) patch.stripe_subscription_id = subscriptionId;
   if (metadataString(session, "offer_key")) patch.billing_offer_key = metadataString(session, "offer_key");
   if (metadataString(session, "offer_version")) patch.billing_offer_version = metadataString(session, "offer_version");
-  if ((metadataString(session, "offer_key") ?? "").startsWith("self_serve_")) {
-    patch.billing_access_state = "trialing";
-    patch.stripe_subscription_status = "trialing";
+  if (
+    (metadataString(session, "offer_key") ?? "").startsWith("self_serve_") &&
+    stringValue(session.payment_status) === "paid"
+  ) {
+    patch.billing_access_state = "paid";
+    patch.stripe_subscription_status = "active";
   }
-
   const workspaceIds = await updateWorkspace(service, { kind: "id", value: workspaceId }, patch, ordering);
   if (workspaceIds.length === 0) {
     return { outcome: "ignored", workspaceIds: [], reason: "checkout_workspace_not_found" };

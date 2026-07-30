@@ -106,7 +106,7 @@ test("landing page anchors, sections, and claims stay connected", () => {
   }
 
   assert.match(combined, /Your competitors are[\s\S]{0,80}advertising\./);
-  assert.match(combined, /Choose a real-estate ad layout/);
+  assert.match(combined, /Generate more leads with high-quality templates/);
   assert.doesNotMatch(
     combined,
     /daily emails?|proven|top-performing|everything included|what(?:&rsquo;|')s actually working/i,
@@ -161,11 +161,15 @@ test("public marketing copy states the approved progressive offer", () => {
 
   assert.match(home, /Nothing spends before approval/i);
   assert.match(home, /Stay in control/i);
-  assert.match(home, /Approve every ad before it goes live/i);
-  assert.match(home, /Create three complete ads free/i);
-  assert.match(home, /Email only\. No card\./i);
-  assert.match(pricing, /Create three complete Feed \+ Story ads with only your email/i);
+  assert.match(home, /Approve every ad before launch/i);
+  assert.match(home, /Create 3 ads free/i);
+  assert.match(home, /No credit card required/i);
+  assert.match(pricing, /Create three image ads with Feed and Story\/Reels-ready creative/i);
   assert.match(pricing, /Meta ad spend is separate/i);
+  const publicCopySource = combined
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/^\s*\/\/.*$/gm, "");
+  assert.doesNotMatch(publicCopySource, /—/);
   assert.doesNotMatch(combined, /\$799/);
   assert.doesNotMatch(combined, /Launch from Blockwise/);
   assert.doesNotMatch(combined, /create, approve, launch/i);
@@ -179,7 +183,7 @@ test("homepage CTA notes stay grouped and centered beneath their buttons", () =>
 
   assert.match(
     sections,
-    /className="hw-trial-cta"[\s\S]*className="hw-btn hw-btn--dark"[\s\S]*Email only\. No card\./,
+    /className="hw-trial-cta"[\s\S]*className="hw-btn hw-btn--dark"[\s\S]*No credit card required\./,
   );
   assert.match(heroCss, /\.hw-no-form\s*\{[^}]*display:\s*inline-grid;[^}]*justify-items:\s*center;/);
   assert.match(homepageCss, /\.hw-trial-cta\s*\{[^}]*display:\s*inline-grid;[^}]*justify-items:\s*center;/);
@@ -191,22 +195,23 @@ test("homepage FAQ matches the approved flat-rate offer", () => {
   const managed = getBillingOffer("AU", "managed");
 
   assert.match(faq, /pay Meta directly/i);
-  assert.match(faq, /full control of your spend/i);
-  assert.match(faq, /campaign data stays with you/i);
-  assert.match(faq, /guide you through the setup/i);
+  assert.match(faq, /keep your leads and campaign data if you cancel/i);
+  assert.match(faq, /Not to create your first three ads/i);
+  assert.match(faq, /help you set it up when you join/i);
   assert.match(faq, /Nothing launches until you approve/i);
-  assert.match(faq, /Three complete Feed \+ Story ads, free/i);
-  assert.match(faq, /starts when your first campaign goes live/i);
-  assert.match(faq, /seven days after checkout/i);
+  assert.match(faq, /Three image ads/i);
+  assert.match(faq, /run one three-day campaign free/i);
+  assert.match(faq, /does not start a Blockwise subscription/i);
+  assert.match(faq, /charged immediately/i);
   assert.equal(formatBillingAmount(selfServe.firstInvoiceAmount, selfServe.currency), "A$99");
   assert.equal(formatBillingAmount(selfServe.recurringAmount, selfServe.currency), "A$499");
   assert.equal(formatBillingAmount(managed.recurringAmount, managed.currency), "A$1,500");
-  assert.match(faq, /weekly optimisation for up to four campaigns/i);
-  assert.match(faq, /technical and creative advice/i);
+  assert.match(faq, /weekly optimisation/i);
+  assert.match(faq, /monthly performance report/i);
   assert.match(faq, /Cancel anytime/i);
-  assert.match(faq, /No AI slop/i);
-  assert.match(faq, /copy, headlines and descriptions/i);
-  assert.match(faq, /your suburb/i);
+  assert.match(faq, /without AI slop/i);
+  assert.match(faq, /review and edit every line before publishing/i);
+  assert.match(faq, /Video ads are coming soon/i);
   assert.match(faq, /getBillingOffer/);
   assert.doesNotMatch(faq, /US\$99|A\$99|US\$499|A\$499|US\$1,500|A\$2,500/);
 });
@@ -223,13 +228,13 @@ test("pricing keeps US and AU offers explicit and accessible", () => {
   assert.match(pricing, /getBillingOffer/);
   assert.match(pricing, /formatBillingAmount/);
   assert.match(pricing, /in either market/);
+  assert.match(pricing, /Blockwise Platform/);
   assert.doesNotMatch(pricing, /["'`]US\$[0-9]|["'`]A\$[0-9]/);
   assert.match(combined, /100 render credits/);
   assert.match(combined, /Up to 50 complete Feed \+ Story packs/);
   assert.match(combined, /Five named, email-verified team members/);
-  assert.match(combined, /One free live campaign setup/);
-  assert.match(combined, /Subscribe and book onboarding/);
-  assert.match(combined, /Book a call first/);
+  assert.match(combined, /One free three-day campaign before subscribing/);
+  assert.match(combined, /Book a 15-minute walkthrough/);
 });
 
 test("managed-setup form posts to the demo-request endpoint with an intact honeypot", () => {
@@ -259,14 +264,15 @@ test("legal pages rely on root title template and define page canonicals", () =>
   }
 });
 
-test("terms separate free creation from the post-Checkout billing trial", () => {
+test("terms separate the free campaign from the paid subscription", () => {
   const terms = readFileSync("src/app/(legal)/terms/page.tsx", "utf8");
 
-  assert.match(terms, /free creation allowance includes three complete Feed and Story ads before Checkout/i);
-  assert.match(terms, /starts a separate[\s\S]*seven-day billing trial/i);
-  assert.match(terms, /first campaign[\s\S]*launches or that billing trial ends/i);
+  assert.match(terms, /free creation allowance includes three image ads/i);
+  assert.match(terms, /run one campaign for up to three days/i);
+  assert.match(terms, /does not start a[\s\S]*subscription/i);
+  assert.match(terms, /charges \{FIRST_MONTH\} immediately/i);
   assert.match(terms, /getBillingOffer/);
-  assert.doesNotMatch(terms, /One live campaign setup is free/i);
+  assert.doesNotMatch(terms, /seven-day billing trial/i);
 });
 
 test("public pages identify the legal operator in server-rendered content", () => {

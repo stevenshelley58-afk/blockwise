@@ -18,11 +18,11 @@ function includesCopy(source: string, copy: string) {
   );
 }
 
-test("Terms state the exact self-serve trigger, credit, seat, and Meta-spend rules", () => {
+test("Terms state the exact platform trigger, credit, seat, and Meta-spend rules", () => {
   for (const required of [
-    "free creation allowance includes three complete Feed and Story ads before Checkout",
-    "seven-day billing trial",
-    "first campaign launches or that billing trial ends",
+    "free creation allowance includes three image ads with Feed and Story/Reels-ready creative before Checkout",
+    "run one campaign for up to three days",
+    "charges {FIRST_MONTH} immediately for the first paid month",
     "100 render credits per billing period",
     "Credits expire at the end of the",
     "do not roll over or transfer",

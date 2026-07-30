@@ -79,7 +79,10 @@ export function WorkflowBand() {
               </Fragment>
             ))}
           </h2>
-          <p className="hw-sub">We handle setup, creative, approvals and updates.</p>
+          <p className="hw-sub">
+            Blockwise brings creative, copy, approvals and campaign updates into one guided
+            workflow.
+          </p>
           <CtaLink location="workflow" href="/signup" className="hw-textlink hw-wf-cta">
             Create three ads free <span className="hw-arr">→</span>
           </CtaLink>
@@ -122,7 +125,10 @@ export function ControlFold() {
       <InView className="hw-wide hw-control-grid" threshold={0.18}>
         <div className="hw-control-rail">
           <h2>Stay in control.</h2>
-          <p className="hw-sub">A personal dashboard for ads, leads, spend, and approvals.</p>
+          <p className="hw-sub">
+            Review ads, leads, spend and approvals in one dashboard. Get an email when something
+            needs your attention.
+          </p>
           <ul className="hw-control-points">
             {CONTROL_POINTS.map((point) => (
               <li key={point}>
@@ -215,7 +221,7 @@ export function ControlFold() {
               </p>
               <p className="hw-email-line">
                 <span className="hw-line-dot hw-line-dot--faint" aria-hidden />
-                No Ads Manager login needed.
+                No need to check Ads Manager every day.
               </p>
             </div>
           </div>
@@ -230,25 +236,27 @@ export function ControlFold() {
 export function FreeTrial() {
   return (
     <div className="hw-band hw-band--wide hw-trial">
-      <h2>Create three complete ads free.</h2>
+      <h2>Create 3 ads free.</h2>
       <div className="hw-trial-cta">
         <CtaLink location="free_trial" href="/signup" className="hw-btn hw-btn--dark">
           Create three ads free <span className="hw-arr">→</span>
         </CtaLink>
-        <p className="hw-sub">Email only. No card.</p>
+        <p className="hw-sub">
+          Each ad includes Feed and Story/Reels-ready image creative. No credit card required.
+        </p>
       </div>
       <div className="hw-trial-facts">
         <div className="hw-trial-fact">
-          <h3>Three complete ads</h3>
-          <p>Finished Feed and Story creative in each.</p>
+          <h3>High-quality templates</h3>
+          <p>Choose a lead generation layout and make it yours.</p>
         </div>
         <div className="hw-trial-fact">
-          <h3>No card</h3>
-          <p>Checkout comes later, when you are ready to publish.</p>
+          <h3>Personalised AI copy</h3>
+          <p>Review and edit every line before publishing.</p>
         </div>
         <div className="hw-trial-fact">
-          <h3>One live setup free</h3>
-          <p>Ad spend is always paid to Meta.</p>
+          <h3>One 3-day campaign free</h3>
+          <p>No Blockwise fee. You pay Meta directly for ad spend.</p>
         </div>
       </div>
     </div>
@@ -261,7 +269,7 @@ export function SelfServePricing() {
   return (
     <div className="hw-fold hw-pricing">
       <div className="hw-band">
-        <h2>Self-serve.</h2>
+        <h2>Create, publish and track your Meta ads in one place.</h2>
         <div className="hw-price-panel">
           <div className="hw-price-lead">
             <span className="hw-price-num">
@@ -269,7 +277,8 @@ export function SelfServePricing() {
               <span className="hw-price-per">/mo</span>
             </span>
             <p className="hw-price-note">
-              First paid month {SELF_SERVE_FIRST_MONTH}. Ad spend paid to Meta directly.
+              Blockwise Platform. First month {SELF_SERVE_FIRST_MONTH}, charged when you
+              subscribe. Meta ad spend is billed separately by Meta.
             </p>
           </div>
           <div className="hw-price-facts">
@@ -315,27 +324,30 @@ export function ManagedSetup() {
         <div className="hw-ms-copy">
           <h2>Fully managed.</h2>
           <p className="hw-ms-price">
-            {MANAGED_MONTHLY}/mo <span>by market, plus ad spend</span>
+            {MANAGED_MONTHLY}/mo <span>plus Meta ad spend</span>
           </p>
-          <p className="hw-sub">Self-serve access plus hands-on launch and weekly optimization.</p>
+          <p className="hw-sub">
+            Everything in the Blockwise Platform, plus campaign launch, weekly optimisation and a
+            monthly performance report.
+          </p>
           <ul className="hw-control-points hw-control-points--ink">
             <li>
               <span className="hw-check" aria-hidden>
                 ✓
               </span>
-              The complete self-serve product
+              The complete Blockwise Platform
             </li>
             <li>
               <span className="hw-check" aria-hidden>
                 ✓
               </span>
-              Launch and weekly optimization, four campaigns
+              Campaign launch and weekly optimisation
             </li>
             <li>
               <span className="hw-check" aria-hidden>
                 ✓
               </span>
-              One brand, one ad account, monthly report
+              One brand, one ad account and a monthly performance report
             </li>
           </ul>
         </div>
@@ -358,7 +370,7 @@ export function FaqSection() {
           <span className="hw-faq-banner-b">15 minutes. First ads set up.</span>
         </span>
         <CtaLink location="faq_walkthrough" href="#managed-setup" className="hw-textlink">
-          Book a walkthrough <span className="hw-arr">→</span>
+          Book a 15-minute walkthrough <span className="hw-arr">→</span>
         </CtaLink>
       </div>
     </div>

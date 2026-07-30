@@ -109,7 +109,7 @@ export function resolveMetaFreeLiveClaimIdentity(input: {
 
   if (!metaBusinessId || !metaAdAccountId) {
     throw new Error(
-      "Reconnect Meta so Blockwise can verify the Business Portfolio and ad account for the free live-campaign setup.",
+      "Reconnect Meta so Blockwise can verify the Business Portfolio and ad account for the free three-day campaign.",
     );
   }
 

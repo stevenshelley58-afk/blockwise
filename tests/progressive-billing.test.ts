@@ -46,7 +46,7 @@ test("regional offer catalog keeps flat numeric prices and market-specific tax b
   assert.equal(currencyForMarket("AU"), "AUD");
 });
 
-test("self-serve Checkout collects a reusable card and applies the once-only discount after a seven-day trial", () => {
+test("Blockwise Platform Checkout charges the discounted first month immediately without a trial", () => {
   const result = buildCheckoutSessionRequest(
     {
       workspaceId: "workspace-1",
@@ -65,7 +65,11 @@ test("self-serve Checkout collects a reusable card and applies the once-only dis
 
   assert.equal(result.params["line_items[0][price]"], "price_self_us");
   assert.equal(result.params["discounts[0][coupon]"], "coupon_intro_us");
-  assert.equal(result.params["subscription_data[trial_period_days]"], 7);
+  assert.equal(result.params["subscription_data[trial_period_days]"], undefined);
+  assert.equal(
+    result.params["subscription_data[trial_settings][end_behavior][missing_payment_method]"],
+    undefined,
+  );
   assert.equal(result.params.payment_method_collection, "always");
   assert.equal(result.params.billing_address_collection, "required");
   assert.equal(result.params["automatic_tax[enabled]"], true);
@@ -76,7 +80,7 @@ test("self-serve Checkout collects a reusable card and applies the once-only dis
   assert.equal(result.params["metadata[renewal_amount]"], 49_900);
   assert.match(
     String(result.params["metadata[triggering_rule]"]),
-    /first campaign launches or the seven-day post-Checkout billing trial ends/,
+    /charged immediately when the customer subscribes/,
   );
   assert.equal(result.params["customer_update[address]"], "auto");
 });
@@ -183,7 +187,8 @@ test("billing domain applies a Checkout event once and records its accepted offe
   assert.equal(first.outcome, "applied");
   assert.equal(replay.outcome, "duplicate");
   assert.equal(mock.workspaceUpdates.length, 1);
-  assert.equal(mock.workspaceUpdates[0].patch.billing_access_state, "trialing");
+  assert.equal(mock.workspaceUpdates[0].patch.billing_access_state, "paid");
+  assert.equal(mock.workspaceUpdates[0].patch.stripe_subscription_status, "active");
   assert.equal(mock.acceptances.length, 1);
   assert.equal(mock.acceptances[0].offer_version, BILLING_OFFER_VERSION);
   assert.equal(mock.eventStatuses.get("evt_checkout"), "applied");
@@ -500,6 +505,7 @@ function checkoutEvent(id: string): StripeWebhookEvent {
         id: "cs_123",
         customer: "cus_123",
         subscription: "sub_123",
+        payment_status: "paid",
         client_reference_id: "workspace-1",
         metadata: {
           workspace_id: "workspace-1",

@@ -85,7 +85,8 @@ export function NightOpsHero() {
           <span className="hw-no-accent">Are you?</span>
         </h1>
         <p className="hw-no-lede">
-          Choose a real-estate ad layout, then add your own photos and exact copy.
+          Generate more leads with high-quality templates, personalised AI copy and simple
+          publishing. No more wrestling with Meta Ads Manager.
         </p>
         <div className="hw-no-form">
           <CtaLink location="hero" href="/signup" className="hw-btn hw-btn--light hw-no-cta">
@@ -98,23 +99,23 @@ export function NightOpsHero() {
       <div className="hw-no-cards" aria-hidden>
         <span className="hw-no-examples">Examples</span>
         <div className="hw-no-card hw-no-card--1">
-          <p className="hw-no-card-k">Complete ads</p>
+          <p className="hw-no-card-k">Ads free</p>
           <p className="hw-no-card-v">
             <CountUp to={3} />
           </p>
-          <p className="hw-no-card-s">free before you pay</p>
+          <p className="hw-no-card-s">Feed and Story creative included</p>
         </div>
         <div className="hw-no-card hw-no-card--2">
-          <p className="hw-no-card-k">Renders monthly</p>
+          <p className="hw-no-card-k">Ad packs</p>
           <p className="hw-no-card-v">
-            <CountUp to={100} />
+            <CountUp to={50} />
           </p>
-          <p className="hw-no-card-s">on the $499 plan</p>
+          <p className="hw-no-card-s">per paid month</p>
         </div>
         <div className="hw-no-card hw-no-card--3">
-          <p className="hw-no-card-k">Top angle</p>
+          <p className="hw-no-card-k">Example angle</p>
           <p className="hw-no-card-v hw-no-card-v--text">Free appraisal</p>
-          <p className="hw-no-card-s">seller-lead offer example</p>
+          <p className="hw-no-card-s">seller lead campaign</p>
         </div>
       </div>
     </div>
