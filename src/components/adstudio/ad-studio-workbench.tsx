@@ -11,11 +11,11 @@ import {
   Home,
   Images,
   LayoutGrid,
-  Palette,
   Plus,
   RefreshCw,
   Send,
   Settings2,
+  SwatchBook,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -90,7 +90,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: "library", label: "Library", icon: Images, href: "/ad-studio/library" },
   { id: "text", label: "Text", icon: FileText },
   { id: "publish", label: "Publish", icon: Send },
-  { id: "brand", label: "Brand Pack", icon: Palette },
+  { id: "brand", label: "Brand Pack", icon: SwatchBook },
   { id: "settings", label: "Settings", icon: Settings2 },
 ];
 
