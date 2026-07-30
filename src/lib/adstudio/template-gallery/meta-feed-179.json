@@ -173,5 +173,16 @@
       "detectionScore": 1,
       "fontFile": "/fonts/adstudio/oswald-300.woff2"
     }
+  },
+  "deterministicEditing": {
+    "status": "partial",
+    "imageBoxes": {
+      "main_image": {
+        "x": 0.232421875,
+        "y": 0.271875,
+        "width": 0.53515625,
+        "height": 0.4609375
+      }
+    }
   }
 }

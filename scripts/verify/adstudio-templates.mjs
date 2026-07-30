@@ -56,6 +56,7 @@ const lowFitScoreThreshold = 0.15;
 let typographyEntries = 0;
 let typographyLowFitEntries = 0;
 let typographyTextInputTotal = 0;
+const deterministicEditingCounts = { legacy: 0, partial: 0, ready: 0 };
 
 function fail(id, message) {
   failures.push(`${id}: ${message}`);
@@ -68,6 +69,119 @@ function sha256(path) {
 function publicPath(src) {
   if (typeof src !== "string" || !src.startsWith("/")) return null;
   return join(publicDir, ...src.slice(1).split("/"));
+}
+
+function isNormalizedBox(box) {
+  return Boolean(box)
+    && [box.x, box.y, box.width, box.height].every(Number.isFinite)
+    && box.x >= 0
+    && box.y >= 0
+    && box.width > 0
+    && box.height > 0
+    && box.x + box.width <= 1.001
+    && box.y + box.height <= 1.001;
+}
+
+function overlapRatio(left, right) {
+  const overlapWidth = Math.max(0, Math.min(left.x + left.width, right.x + right.width) - Math.max(left.x, right.x));
+  const overlapHeight = Math.max(0, Math.min(left.y + left.height, right.y + right.height) - Math.max(left.y, right.y));
+  const overlapArea = overlapWidth * overlapHeight;
+  const smallerArea = Math.min(left.width * left.height, right.width * right.height);
+  return smallerArea > 0 ? overlapArea / smallerArea : 0;
+}
+
+/**
+ * Deterministic editing is an opt-in release contract. A template without the
+ * marker can remain in the staged migration, but one marked ready must cover
+ * every declared customer input with offline, trustworthy editor evidence.
+ */
+function verifyDeterministicEditing(template, id, images, text) {
+  const editing = template.deterministicEditing;
+  const hasOfflineEvidence = editing !== undefined || template.typography !== undefined;
+  if (!editing) {
+    deterministicEditingCounts[hasOfflineEvidence ? "partial" : "legacy"] += 1;
+    return;
+  }
+  if (!(editing.status === "partial" || editing.status === "ready")) {
+    deterministicEditingCounts.partial += 1;
+    fail(id, "deterministicEditing.status must be partial or ready");
+    return;
+  }
+
+  const issues = [];
+  const textKeys = new Set((text ?? []).map((field) => field.key));
+  for (const field of text ?? []) {
+    const spec = template.typography?.[field.key];
+    if (!spec) {
+      issues.push(`text input ${field.key} has no typography spec`);
+      continue;
+    }
+    if (!isNormalizedBox(spec.sampleBox)) issues.push(`text input ${field.key} has no valid sampleBox`);
+    if (!Number.isFinite(spec.measurementVersion) || spec.measurementVersion < 2) {
+      issues.push(`text input ${field.key} uses a legacy typography measurement`);
+    }
+    if (spec.measurementSource !== "ocr-v2" && spec.measurementSource !== "manual-verified") {
+      issues.push(`text input ${field.key} has no verified measurement provenance`);
+    }
+    if (
+      !Array.isArray(spec.measuredLines)
+      || spec.measuredLines.length !== Math.max(1, spec.sampleLineCount)
+      || spec.measuredLines.some((line) => (
+        typeof line?.text !== "string"
+        || !line.text.trim()
+        || !isNormalizedBox(line.sampleBox)
+        || !Number.isFinite(line.sizeRatio)
+        || line.sizeRatio <= 0
+      ))
+    ) {
+      issues.push(`text input ${field.key} has no valid per-line typography evidence`);
+    }
+    if (spec.fitScore < MAGIC_LAYER_MIN_FONT_FIT || spec.detectionScore < MAGIC_LAYER_MIN_REGION_CONFIDENCE) {
+      issues.push(`text input ${field.key} does not meet the confidence threshold`);
+    }
+    if (!spec.fontFile?.trim()) issues.push(`text input ${field.key} has no self-hosted fontFile`);
+  }
+  for (const key of Object.keys(template.typography ?? {})) {
+    if (!textKeys.has(key)) issues.push(`typography.${key} does not match a declared text input`);
+  }
+  const textBoxes = (text ?? []).flatMap((field) => {
+    const box = template.typography?.[field.key]?.sampleBox;
+    return isNormalizedBox(box) ? [{ key: field.key, box }] : [];
+  });
+  for (let left = 0; left < textBoxes.length; left += 1) {
+    for (let right = left + 1; right < textBoxes.length; right += 1) {
+      if (overlapRatio(textBoxes[left].box, textBoxes[right].box) > 0.05) {
+        issues.push(`text inputs ${textBoxes[left].key} and ${textBoxes[right].key} have overlapping editor boxes`);
+      }
+    }
+  }
+
+  const imageKeys = new Set((images ?? []).map((field) => field.key));
+  for (const field of images ?? []) {
+    if (!isNormalizedBox(editing.imageBoxes?.[field.key])) {
+      issues.push(`image input ${field.key} has no valid editor hitbox`);
+    }
+  }
+  for (const key of Object.keys(editing.imageBoxes ?? {})) {
+    if (!imageKeys.has(key)) issues.push(`deterministicEditing.imageBoxes.${key} does not match a declared image input`);
+  }
+
+  if (editing.status === "partial") {
+    deterministicEditingCounts.partial += 1;
+    for (const [key, box] of Object.entries(editing.imageBoxes ?? {})) {
+      if (imageKeys.has(key) && !isNormalizedBox(box)) {
+        fail(id, `deterministic editing: image input ${key} has no valid editor hitbox`);
+      }
+    }
+    return;
+  }
+
+  if (issues.length) {
+    deterministicEditingCounts.partial += 1;
+    for (const issue of issues) fail(id, `deterministic editing: ${issue}`);
+  } else {
+    deterministicEditingCounts.ready += 1;
+  }
 }
 
 function findForbidden(value, path = "template") {
@@ -158,6 +272,8 @@ for (const { file, template } of templates) {
       }
     }
   }
+
+  verifyDeterministicEditing(template, id, images, text);
 
   if (template.meta?.platform !== "meta" || template.meta?.objective !== "OUTCOME_LEADS" || template.meta?.specialAdCategory !== "housing") {
     fail(id, "meta must describe a Meta OUTCOME_LEADS housing ad");
@@ -273,4 +389,6 @@ if (failures.length) {
 const typographyNote = typographyEntries > 0
   ? `, typography ${typographyEntries}/${typographyTextInputTotal} regions (${(typographyCoverage * 100).toFixed(1)}%, ${typographyLowFitEntries} below fitScore ${lowFitScoreThreshold})`
   : "";
-console.log(`AdStudio template gate passed - ${templates.length} template(s), ${intentCounts.size} distinct primary intent(s)${typographyNote}.`);
+console.log(
+  `AdStudio template gate passed - ${templates.length} template(s), ${intentCounts.size} distinct primary intent(s)${typographyNote}; deterministic editing ${deterministicEditingCounts.ready} ready, ${deterministicEditingCounts.partial} partial, ${deterministicEditingCounts.legacy} legacy.`,
+);

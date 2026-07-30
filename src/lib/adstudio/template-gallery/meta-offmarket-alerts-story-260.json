@@ -207,5 +207,22 @@
       "sampleLineCount": 4,
       "detectionScore": 0.421
     }
+  },
+  "deterministicEditing": {
+    "status": "partial",
+    "imageBoxes": {
+      "hero_graphic": {
+        "x": 0,
+        "y": 0.690625,
+        "width": 1,
+        "height": 0.309375
+      },
+      "agency_logo": {
+        "x": 0.4444444444444444,
+        "y": 0.044270833333333336,
+        "width": 0.1111111111111111,
+        "height": 0.059895833333333336
+      }
+    }
   }
 }

@@ -11,6 +11,7 @@ import {
 } from "@/lib/adstudio/generation-credits";
 import { refundOutstandingWorkspaceCredits } from "@/lib/credits/workspace-credits";
 import {
+  assertDeterministicFeedEditingReady,
   runTemplateCampaignGeneration,
   type CreateCampaignBody,
 } from "@/lib/adstudio/generate-template-campaign";
@@ -316,6 +317,14 @@ export async function POST(request: NextRequest) {
         region: context.access.region,
         creditReservation,
       });
+      if (result.requiresDeterministicEditing) {
+        await result.editingLayersTask;
+        await assertDeterministicFeedEditingReady({
+          supabase: context.supabase,
+          workspaceId: context.access.workspaceId,
+          campaignId: result.campaignId,
+        });
+      }
       await recordWorkspaceFunnelEventBestEffort(funnelService, {
         eventName: "first_generation_completed",
         workspaceId: context.access.workspaceId,
@@ -330,7 +339,9 @@ export async function POST(request: NextRequest) {
       // The customer has the ad and its prebuilt editor hit-boxes in this
       // response. Only the optional instant-edit plate and Story patch finish
       // in the background.
-      after(() => result.editingLayersTask);
+      if (!result.requiresDeterministicEditing) {
+        after(() => result.editingLayersTask);
+      }
       if (result.storyTask) after(() => result.storyTask);
 
       const liveResult = buildAdStudioLiveResult({

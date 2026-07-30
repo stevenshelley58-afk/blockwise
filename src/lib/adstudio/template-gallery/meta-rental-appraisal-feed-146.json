@@ -183,11 +183,11 @@
       "fitScore": 0.667,
       "sampleBox": {
         "x": 0.05694444444444444,
-        "y": 0.5996296296296296,
-        "width": 0.8930555555555556,
-        "height": 0.08888888888888889
+        "y": 0.6674074074074074,
+        "width": 0.5680555555555555,
+        "height": 0.021111111111111112
       },
-      "sampleLineCount": 3,
+      "sampleLineCount": 1,
       "detectionScore": 1,
       "fontFile": "/fonts/adstudio/oswald-300.woff2"
     },
@@ -251,11 +251,11 @@
       "fitScore": 0.626,
       "sampleBox": {
         "x": 0.39166666666666666,
-        "y": 0.7933333333333333,
-        "width": 0.37083333333333335,
-        "height": 0.03037037037037037
+        "y": 0.8096296296296296,
+        "width": 0.1912037037037037,
+        "height": 0.014074074074074074
       },
-      "sampleLineCount": 2,
+      "sampleLineCount": 1,
       "detectionScore": 1,
       "fontFile": "/fonts/adstudio/smooch-sans-400.woff2"
     },
@@ -280,6 +280,35 @@
       },
       "sampleLineCount": 1,
       "detectionScore": 1
+    }
+  },
+  "deterministicEditing": {
+    "status": "partial",
+    "imageBoxes": {
+      "property_photo_1": {
+        "x": 0.044444444444444446,
+        "y": 0.03777777777777778,
+        "width": 0.45555555555555555,
+        "height": 0.4540740740740741
+      },
+      "property_photo_2": {
+        "x": 0.5092592592592593,
+        "y": 0.03777777777777778,
+        "width": 0.44814814814814813,
+        "height": 0.23555555555555555
+      },
+      "property_photo_3": {
+        "x": 0.5092592592592593,
+        "y": 0.28,
+        "width": 0.44814814814814813,
+        "height": 0.21185185185185185
+      },
+      "agency_logo": {
+        "x": 0.15185185185185185,
+        "y": 0.8711111111111111,
+        "width": 0.09722222222222222,
+        "height": 0.07481481481481482
+      }
     }
   }
 }

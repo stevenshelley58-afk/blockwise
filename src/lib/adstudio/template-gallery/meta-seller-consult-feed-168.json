@@ -88,6 +88,23 @@
     "primary_intent": "seller_consultation",
     "property_or_agent_focus": "property"
   },
+  "deterministicEditing": {
+    "status": "partial",
+    "imageBoxes": {
+      "property_photo": {
+        "x": 0,
+        "y": 0.5740740740740741,
+        "width": 1,
+        "height": 0.42592592592592593
+      },
+      "agency_logo": {
+        "x": 0.812037037037037,
+        "y": 0.052592592592592594,
+        "width": 0.1388888888888889,
+        "height": 0.11259259259259259
+      }
+    }
+  },
   "meta": {
     "platform": "meta",
     "objective": "OUTCOME_LEADS",
@@ -141,10 +158,10 @@
       "sampleBox": {
         "x": 0.08055555555555556,
         "y": 0.06296296296296296,
-        "width": 0.8305555555555556,
+        "width": 0.7129629629629629,
         "height": 0.27925925925925926
       },
-      "sampleLineCount": 4,
+      "sampleLineCount": 2,
       "detectionScore": 0.864
     },
     "subheadline": {

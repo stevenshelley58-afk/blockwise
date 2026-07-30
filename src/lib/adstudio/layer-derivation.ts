@@ -11,6 +11,7 @@ import {
   derivePlateFromInpaint,
   textRegionsOf,
 } from "./text-layers.ts";
+import { buildingTextLayers } from "./text-layer-state.ts";
 import { resolveAdStudioImageForModel } from "./resolve-image-for-model.ts";
 import type { AdStudioTemplate } from "./templates.ts";
 import type { AdStudioCreative, AdStudioTextLayers } from "./types.ts";
@@ -32,9 +33,10 @@ async function imageDimensions(assetUrl: string): Promise<{ width: number; heigh
   return metadata.width && metadata.height ? { width: metadata.width, height: metadata.height } : null;
 }
 /**
- * Builds and stores the advisory plate for high-confidence text regions.
- * This runs after the finished clone exists; it never delays or modifies the
- * canonical ad render. A compare-and-swap prevents stale work from winning.
+ * Builds and stores the plate for high-confidence text regions after the
+ * canonical finished clone exists. Partial templates treat it as advisory;
+ * explicitly ready templates wait for it before release. A compare-and-swap
+ * prevents stale work from winning.
  */
 export async function deriveAndPersistTemplateTextLayers(input: {
   supabase: SupabaseClient;
@@ -49,20 +51,51 @@ export async function deriveAndPersistTemplateTextLayers(input: {
   currentImageUrl?: string;
   template: AdStudioTemplate;
 }): Promise<AdStudioTextLayers | null> {
+  try {
+    return await deriveTemplateTextLayers(input);
+  } catch (cause) {
+    const message = cause instanceof Error ? cause.message : "Plate construction failed.";
+    return persistLayerFailure(input, message);
+  }
+}
+
+async function deriveTemplateTextLayers(input: {
+  supabase: SupabaseClient;
+  workspaceId: string;
+  userId: string;
+  correlationId: string;
+  creativeId: string;
+  activeRevisionId: string | null;
+  format: string;
+  canvas: AdStudioCreative["canvas"];
+  currentImageRef: string;
+  currentImageUrl?: string;
+  template: AdStudioTemplate;
+}): Promise<AdStudioTextLayers | null> {
+  const existing = input.canvas.textLayers;
+  if (existing?.status === "ready" && existing.validFor.includes(input.currentImageRef)) {
+    return existing;
+  }
   const regions = textRegionsOf(input.canvas.cloneQa?.regions);
   const styles = buildTemplateTextLayerStyles(input.template, regions);
   const liveRegions = regions.filter((region) => styles[region.key]?.mode === "live");
-  if (liveRegions.length === 0) return null;
+  if (liveRegions.length === 0) {
+    return persistLayerFailure(input, "This template has no deterministic text regions for this render.");
+  }
 
   const currentImage = input.currentImageUrl
     ?? await resolveAdStudioImageForModel(input.supabase, input.workspaceId, input.currentImageRef);
-  if (!currentImage) return null;
+  if (!currentImage) return persistLayerFailure(input, "The finished render could not be loaded for plate construction.");
   const dimensions = await imageDimensions(currentImage);
-  if (!dimensions) return null;
+  if (!dimensions) return persistLayerFailure(input, "The finished render dimensions could not be read.");
 
   const textBoxes = liveRegions.map((region) => region.box);
   const maskImage = await createRegionEditMaskForDimensions(dimensions, textBoxes);
-  const providers = (await resolveCloneProviders()).sort(
+  // A plate is a masked utility render, not a second customer-facing ad.
+  // Use the same fast inpainting profile as targeted region edits. The
+  // previous default silently selected the final-quality provider, which
+  // took roughly 140-150 seconds per plate in production.
+  const providers = (await resolveCloneProviders("fast")).sort(
     (left, right) => Number(Boolean(right.capabilities.inpainting)) - Number(Boolean(left.capabilities.inpainting)),
   );
   const generated = await generateCloneWithCascade({
@@ -75,6 +108,7 @@ export async function deriveAndPersistTemplateTextLayers(input: {
     userId: input.userId,
     correlationId: input.correlationId,
     attempt: 1,
+    modelProfile: "image_draft",
   });
   const plateDataUrl = await derivePlateFromInpaint(currentImage, generated.assetUrl, textBoxes);
   const platePath = await persistCloneRender({
@@ -86,6 +120,8 @@ export async function deriveAndPersistTemplateTextLayers(input: {
   const textLayers: AdStudioTextLayers = {
     status: "ready",
     builtAt: new Date().toISOString(),
+    derivedFrom: input.currentImageRef,
+    deterministicOnly: input.canvas.textLayers?.deterministicOnly ?? false,
     plate: platePath,
     styles,
     validFor: [input.currentImageRef],
@@ -106,4 +142,31 @@ export async function deriveAndPersistTemplateTextLayers(input: {
   const { data, error } = await query.select("id");
   if (error || !data?.length) return null;
   return textLayers;
+}
+
+async function persistLayerFailure(
+  input: Parameters<typeof deriveTemplateTextLayers>[0],
+  error: string,
+): Promise<AdStudioTextLayers | null> {
+  const failed: AdStudioTextLayers = {
+    ...buildingTextLayers(
+      input.currentImageRef,
+      input.canvas.textLayers?.deterministicOnly ?? false,
+    ),
+    status: "failed",
+    error,
+  };
+  let query = input.supabase
+    .from("adstudio_creatives")
+    .update({
+      canvas_json: { ...input.canvas, textLayers: failed },
+      updated_at: new Date().toISOString(),
+    })
+    .eq("workspace_id", input.workspaceId)
+    .eq("id", input.creativeId);
+  query = input.activeRevisionId
+    ? query.eq("active_revision_id", input.activeRevisionId)
+    : query.is("active_revision_id", null);
+  const { data, error: persistError } = await query.select("id");
+  return persistError || !data?.length ? null : failed;
 }

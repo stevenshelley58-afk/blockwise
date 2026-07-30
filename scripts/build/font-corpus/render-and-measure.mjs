@@ -65,24 +65,53 @@ function chamferDistanceTransform(mask, width, height) {
 
 function measureRenderedMask(imageData, width, height) {
   const { data } = imageData;
-  const mask = new Uint8Array(width * height);
+  const coverageMask = new Uint8Array(width * height);
+  const strokeMask = new Uint8Array(width * height);
   let inkCount = 0;
+  let strokeCount = 0;
   for (let p = 0; p < width * height; p++) {
-    // Text is drawn pure black on pure white; alpha-blended edge pixels
-    // (anti-aliasing) land in between — threshold at mid-gray.
+    // Target profiles retain visibly anti-aliased edge pixels.  Mid-gray
+    // discarded those pixels from clean renders while keeping them in a
+    // textured source crop, systematically making clean geometric sans faces
+    // appear too light.  This threshold mirrors the source-profile contrast
+    // floor against a white card/paper background.
     const r = data[p * 4];
-    if (r < 128) {
-      mask[p] = 1;
+    if (r < 240) {
+      coverageMask[p] = 1;
       inkCount += 1;
     }
+    // Must mirror the target profile's opaque-core threshold. Coverage and
+    // thickness intentionally use different masks (see target extractor).
+    if (r < 128) {
+      strokeMask[p] = 1;
+      strokeCount += 1;
+    }
   }
-  if (inkCount < 4) return null;
+  if (inkCount < 4 || strokeCount < 4) return null;
 
-  const dist = chamferDistanceTransform(mask, width, height);
+  const dist = chamferDistanceTransform(strokeMask, width, height);
   let strokeSum = 0;
-  for (let p = 0; p < mask.length; p++) if (mask[p]) strokeSum += dist[p];
-  const strokeWidthPx = (strokeSum / inkCount) * 2;
-  const inkDensity = inkCount / (width * height);
+  for (let p = 0; p < strokeMask.length; p++) if (strokeMask[p]) strokeSum += dist[p];
+  const strokeWidthPx = (strokeSum / strokeCount) * 2;
+  // Density must describe the text treatment, not arbitrary canvas padding.
+  // The source profile measures its OCR text box; use the equivalent tight
+  // bounds for a candidate render so a serif does not win merely because its
+  // clean render happened to use a smaller empty canvas fraction.
+  let minX = width;
+  let minY = height;
+  let maxX = -1;
+  let maxY = -1;
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      if (!coverageMask[y * width + x]) continue;
+      minX = Math.min(minX, x);
+      minY = Math.min(minY, y);
+      maxX = Math.max(maxX, x);
+      maxY = Math.max(maxY, y);
+    }
+  }
+  const inkBoundsArea = Math.max(1, (maxX - minX + 1) * (maxY - minY + 1));
+  const inkDensity = inkCount / inkBoundsArea;
   return { inkDensity, strokeWidthPx };
 }
 
@@ -93,7 +122,39 @@ function measureRenderedMask(imageData, width, height) {
  * em-size vs. actual cap/ascender-descender height isn't 1:1 and varies per
  * family, so a single fixed-ratio guess isn't reliable across candidates).
  */
-export function renderAndMeasure(sampleText, alias, weight, targetGlyphHeightPx) {
+function wrapToDeclaredLines(context, sampleText, lineCount, targetTextWidthPx) {
+  const words = sampleText.trim().split(/\s+/u).filter(Boolean);
+  const count = Math.max(1, Math.min(lineCount, words.length));
+  if (count === 1) return [words.join(" ")];
+  const target = Math.max(1, targetTextWidthPx ?? context.measureText(words.join(" ")).width / count);
+  const memo = new Map();
+  const choose = (start, remaining) => {
+    const key = `${start}:${remaining}`;
+    if (memo.has(key)) return memo.get(key);
+    if (remaining === 1) {
+      const line = words.slice(start).join(" ");
+      const result = { cost: ((context.measureText(line).width - target) / target) ** 2, lines: [line] };
+      memo.set(key, result);
+      return result;
+    }
+    let winner = null;
+    for (let end = start + 1; end <= words.length - remaining + 1; end += 1) {
+      const line = words.slice(start, end).join(" ");
+      const rest = choose(end, remaining - 1);
+      const cost = ((context.measureText(line).width - target) / target) ** 2 + rest.cost;
+      if (!winner || cost < winner.cost) winner = { cost, lines: [line, ...rest.lines] };
+    }
+    memo.set(key, winner);
+    return winner;
+  };
+  return choose(0, count).lines;
+}
+
+export function renderAndMeasure(sampleText, alias, weight, targetGlyphHeightPx, {
+  lineCount = 1,
+  targetTextWidthPx = null,
+  lineHeight = 1.2,
+} = {}) {
   let fontSizePx = targetGlyphHeightPx;
   let measured = null;
 
@@ -109,8 +170,12 @@ export function renderAndMeasure(sampleText, alias, weight, targetGlyphHeightPx)
     measured = m;
   }
 
-  const width = Math.max(16, Math.ceil((measured.width ?? fontSizePx * sampleText.length * 0.6) + 20));
-  const height = Math.max(16, Math.ceil(fontSizePx * 1.8));
+  const layoutProbe = createCanvas(10, 10).getContext("2d");
+  layoutProbe.font = `${weight} ${fontSizePx}px "${alias}"`;
+  const lines = wrapToDeclaredLines(layoutProbe, sampleText, lineCount, targetTextWidthPx);
+  const lineWidths = lines.map((line) => layoutProbe.measureText(line).width);
+  const width = Math.max(16, Math.ceil(Math.max(...lineWidths, 0) + 20));
+  const height = Math.max(16, Math.ceil(fontSizePx * 1.8 + (lines.length - 1) * fontSizePx * lineHeight));
   const canvas = createCanvas(width, height);
   const ctx = canvas.getContext("2d");
   ctx.fillStyle = "#ffffff";
@@ -118,23 +183,27 @@ export function renderAndMeasure(sampleText, alias, weight, targetGlyphHeightPx)
   ctx.fillStyle = "#000000";
   ctx.font = `${weight} ${fontSizePx}px "${alias}"`;
   ctx.textBaseline = "alphabetic";
-  ctx.fillText(sampleText, 10, height * 0.75);
+  const firstBaseline = fontSizePx * 0.75;
+  lines.forEach((line, index) => {
+    ctx.fillText(line, 10, firstBaseline + index * fontSizePx * lineHeight);
+  });
 
   const imageData = ctx.getImageData(0, 0, width, height);
   const renderProfile = measureRenderedMask(imageData, width, height);
   if (!renderProfile) return null;
 
-  const finalMetrics = ctx.measureText(sampleText);
+  const finalMetrics = ctx.measureText(lines[0] ?? sampleText);
   const renderedHeightPx = (finalMetrics.actualBoundingBoxAscent ?? fontSizePx * 0.75) +
     (finalMetrics.actualBoundingBoxDescent ?? fontSizePx * 0.1);
 
   return {
     fontSizePx,
-    textWidthPx: finalMetrics.width,
+    textWidthPx: Math.max(...lineWidths, 0),
     glyphHeightPx: renderedHeightPx,
     inkDensity: renderProfile.inkDensity,
     strokeWidthPx: renderProfile.strokeWidthPx,
     strokeToHeightRatio: renderedHeightPx > 0 ? renderProfile.strokeWidthPx / renderedHeightPx : null,
-    widthPerChar: sampleText.length > 0 ? finalMetrics.width / sampleText.length : null,
+    widthPerChar: sampleText.length > 0 ? Math.max(...lineWidths, 0) / sampleText.length : null,
+    lines,
   };
 }

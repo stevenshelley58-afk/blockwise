@@ -176,11 +176,11 @@
       "fitScore": 0.515,
       "sampleBox": {
         "x": 0.18703703703703703,
-        "y": 0.10296296296296296,
+        "y": 0.14888888888888888,
         "width": 0.6462962962962963,
-        "height": 0.16037037037037036
+        "height": 0.11444444444444445
       },
-      "sampleLineCount": 3,
+      "sampleLineCount": 2,
       "detectionScore": 1
     },
     "email": {
@@ -273,6 +273,23 @@
       "sampleLineCount": 2,
       "detectionScore": 0.667,
       "fontFile": "/fonts/adstudio/roboto-slab-800.woff2"
+    }
+  },
+  "deterministicEditing": {
+    "status": "partial",
+    "imageBoxes": {
+      "suburb_aerial": {
+        "x": 0.05462962962962963,
+        "y": 0.40444444444444444,
+        "width": 0.8907407407407407,
+        "height": 0.33555555555555555
+      },
+      "agency_logo": {
+        "x": 0.44814814814814813,
+        "y": 0.04296296296296296,
+        "width": 0.10277777777777777,
+        "height": 0.08370370370370371
+      }
     }
   }
 }

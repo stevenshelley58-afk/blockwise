@@ -93,14 +93,14 @@ type CreativeLayersResponse = {
 
 /**
  * Ask the server to build (or return) the creative's text-editing layers.
- * Returns null on any failure — the editor keeps working through the model
- * path and simply tries again on the next render.
+ * Returns the persisted state, including `building`, so editor tabs converge
+ * on one durable background build instead of starting their own.
  */
 export async function requestCreativeLayers(creativeId: string): Promise<AdStudioTextLayers | null> {
   try {
     const response = await fetch(`/api/adstudio/creatives/${creativeId}/layers`, { method: "POST" });
     const data = (await response.json().catch(() => ({}))) as CreativeLayersResponse;
-    if (!response.ok || data.textLayers?.status !== "ready") return null;
+    if ((!response.ok && response.status !== 202) || !data.textLayers) return null;
     return data.textLayers;
   } catch {
     return null;

@@ -255,6 +255,13 @@ export type AdStudioTextLayerStyle = {
   italic: boolean;
   case: "upper" | "lower" | "mixed" | "none";
   sizeRatio: number;
+  sampleBox?: { x: number; y: number; width: number; height: number };
+  measuredLines?: Array<{
+    text: string;
+    sampleBox: { x: number; y: number; width: number; height: number };
+    sizeRatio: number;
+    scaleX?: number;
+  }>;
   lineHeight: number;
   tracking: number;
   color: string;
@@ -273,8 +280,21 @@ export type AdStudioTextLayerStyle = {
  * (plate + re-typeset copy) instead of paying an image-model round trip.
  */
 export type AdStudioTextLayers = {
-  status: "ready" | "failed";
+  /**
+   * `building` is persisted before the asynchronous plate request begins.
+   * It is a durable single-flight lease: a second editor tab must return this
+   * state rather than buying another inpaint request for the same render.
+   */
+  status: "building" | "ready" | "failed";
   builtAt: string;
+  /** Render the build was claimed for. A later render may safely claim anew. */
+  derivedFrom?: string;
+  /**
+   * Fully migrated templates never route text edits through the image model.
+   * While their plate is building the editor waits; once ready every declared
+   * text field must use a deterministic patch.
+   */
+  deterministicOnly?: boolean;
   /** Media path of the text-free background plate (text regions inpainted). */
   plate: string;
   /** Per-region detected type treatment, keyed by region key. */
@@ -286,6 +306,8 @@ export type AdStudioTextLayers = {
    */
   validFor: string[];
   model?: string;
+  /** Recoverable diagnostic only; a failed state is always eligible to retry. */
+  error?: string;
 };
 
 /** Editor map for an AI-cloned creative: clickable regions + current text values. */

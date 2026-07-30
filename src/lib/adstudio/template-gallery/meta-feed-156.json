@@ -275,5 +275,22 @@
       "sampleLineCount": 1,
       "detectionScore": 1
     }
+  },
+  "deterministicEditing": {
+    "status": "partial",
+    "imageBoxes": {
+      "background_property": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 0.48
+      },
+      "agent_photo": {
+        "x": 0.5361111111111111,
+        "y": 0.3725925925925926,
+        "width": 0.35648148148148145,
+        "height": 0.3296296296296296
+      }
+    }
   }
 }

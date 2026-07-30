@@ -74,6 +74,17 @@
     "primary_intent": "appraisal_leads",
     "property_or_agent_focus": "property"
   },
+  "deterministicEditing": {
+    "status": "partial",
+    "imageBoxes": {
+      "background_photo": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      }
+    }
+  },
   "meta": {
     "platform": "meta",
     "objective": "OUTCOME_LEADS",
@@ -125,12 +136,12 @@
       "color": "#f1f1f1",
       "fitScore": 0.482,
       "sampleBox": {
-        "x": 0.1398148148148148,
-        "y": 0.19635416666666666,
-        "width": 0.6476851851851851,
-        "height": 0.20286458333333332
+        "x": 0.26805555555555555,
+        "y": 0.18567708333333333,
+        "width": 0.5680555555555555,
+        "height": 0.21354166666666666
       },
-      "sampleLineCount": 6,
+      "sampleLineCount": 4,
       "detectionScore": 0.897
     },
     "subheadline": {
@@ -193,11 +204,11 @@
       "fitScore": 0.246,
       "sampleBox": {
         "x": 0.35694444444444445,
-        "y": 0.4979166666666667,
+        "y": 0.55234375,
         "width": 0.3162037037037037,
-        "height": 0.06692708333333333
+        "height": 0.0125
       },
-      "sampleLineCount": 2,
+      "sampleLineCount": 1,
       "detectionScore": 1
     }
   }

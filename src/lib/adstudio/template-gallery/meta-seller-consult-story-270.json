@@ -243,5 +243,28 @@
       "sampleLineCount": 1,
       "detectionScore": 1
     }
+  },
+  "deterministicEditing": {
+    "status": "partial",
+    "imageBoxes": {
+      "property_photo_1": {
+        "x": 0.001851851851851852,
+        "y": 0.19427083333333334,
+        "width": 0.49166666666666664,
+        "height": 0.4005208333333333
+      },
+      "property_photo_2": {
+        "x": 0.5064814814814815,
+        "y": 0.19427083333333334,
+        "width": 0.49166666666666664,
+        "height": 0.4005208333333333
+      },
+      "agency_logo": {
+        "x": 0.4287037037037037,
+        "y": 0.05416666666666667,
+        "width": 0.14,
+        "height": 0.0734375
+      }
+    }
   }
 }

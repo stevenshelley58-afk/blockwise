@@ -11,6 +11,7 @@ import {
   MAGIC_LAYER_MIN_FONT_FIT,
   MAGIC_LAYER_MIN_REGION_CONFIDENCE,
 } from "../../../src/lib/adstudio/magic-layers-config.mjs";
+import { parseArgs, selectTemplateFiles } from "./type-specs-args.mjs";
 
 const ROOT = process.cwd();
 const GALLERY_DIR = path.join(ROOT, "src/lib/adstudio/template-gallery");
@@ -31,8 +32,15 @@ function eligible(spec) {
 }
 
 async function main() {
+  const { help, templateIds } = parseArgs(process.argv.slice(2));
+  if (help) {
+    console.log("Usage: node scripts/build/font-corpus/build-runtime-fonts.mjs [--template <id[,id...]>]");
+    return;
+  }
   await mkdir(OUTPUT_DIR, { recursive: true });
-  const files = (await readdir(GALLERY_DIR)).filter((file) => file.endsWith(".json")).sort();
+  const allFiles = (await readdir(GALLERY_DIR)).filter((file) => file.endsWith(".json")).sort();
+  const files = selectTemplateFiles(allFiles, templateIds);
+  const targeted = templateIds.size > 0;
   const templates = [];
   const wanted = new Map();
   const excluded = new Map();
@@ -71,15 +79,33 @@ async function main() {
     }
   }
 
-  const manifest = [];
+  let existingManifest = { faces: [], excluded: [] };
+  if (targeted) {
+    try {
+      existingManifest = JSON.parse(await readFile(MANIFEST_PATH, "utf8"));
+    } catch {
+      // A targeted first run simply creates the manifest.
+    }
+  }
+  const downloadedFaces = [];
   for (const [name, face] of [...wanted.entries()].sort(([a], [b]) => a.localeCompare(b))) {
+    const existing = existingManifest.faces.find((entry) => entry.file === face.file);
+    if (existing) {
+      downloadedFaces.push(existing);
+      continue;
+    }
     const response = await fetch(face.sourceUrl);
     if (!response.ok) throw new Error(`Could not download ${face.sourceUrl} (${response.status})`);
     const bytes = Buffer.from(await response.arrayBuffer());
     await writeFile(path.join(OUTPUT_DIR, name), bytes);
-    manifest.push({ ...face, sha256: hash(bytes), bytes: bytes.byteLength });
+    downloadedFaces.push({ ...face, sha256: hash(bytes), bytes: bytes.byteLength });
   }
 
+  const manifest = targeted
+    ? [...new Map(
+        [...existingManifest.faces, ...downloadedFaces].map((face) => [face.file, face]),
+      ).values()].sort((left, right) => left.file.localeCompare(right.file))
+    : downloadedFaces;
   const available = new Set(manifest.map((face) => face.file));
   let liveRegions = 0;
   for (const { filePath, raw } of templates) {
@@ -102,10 +128,18 @@ async function main() {
         minRegionConfidence: MAGIC_LAYER_MIN_REGION_CONFIDENCE,
       },
       faces: manifest,
-      excluded: [...excluded.values()],
+      excluded: targeted
+        ? [...new Map(
+            [...(existingManifest.excluded ?? []), ...excluded.values()]
+              .map((entry) => [`${entry.fontId}:${entry.weight}:${entry.italic}`, entry]),
+          ).values()]
+        : [...excluded.values()],
     }, null, 2)}\n`,
   );
-  console.log(`Wrote ${manifest.length} self-hosted faces for ${liveRegions} high-confidence text regions.`);
+  console.log(
+    `${targeted ? "Updated" : "Wrote"} ${downloadedFaces.length} selected face(s) `
+    + `for ${liveRegions} high-confidence text region(s); manifest has ${manifest.length} face(s).`,
+  );
 }
 
 main().catch((error) => {

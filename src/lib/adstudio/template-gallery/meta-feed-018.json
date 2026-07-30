@@ -112,20 +112,120 @@
       }
     }
   },
+  "deterministicEditing": {
+    "status": "ready",
+    "imageBoxes": {
+      "main_property_image": {
+        "x": 0.576171875,
+        "y": 0.16875,
+        "width": 0.423828125,
+        "height": 0.59765625
+      }
+    }
+  },
   "typography": {
-    "headline_sub": {
-      "fontId": "merriweather",
-      "family": "Merriweather",
-      "fallbackFamily": "serif",
-      "weight": 500,
+    "headline_number": {
+      "fontId": "outfit",
+      "family": "Outfit",
+      "fallbackFamily": "sans-serif",
+      "weight": 600,
       "italic": false,
-      "case": "mixed",
-      "sizeRatio": 0.8962962962962961,
-      "lineHeight": 1.257,
+      "case": "upper",
+      "measurementVersion": 2,
+      "measurementSource": "manual-verified",
+      "sizeRatio": 1.3913043929635895,
+      "lineHeight": 1,
       "tracking": 0,
       "align": "left",
-      "color": "#68645b",
-      "fitScore": 0.707,
+      "color": "#535046",
+      "fitScore": 0.9,
+      "sampleBox": {
+        "x": 0.1689453125,
+        "y": 0.20703125,
+        "width": 0.1650390625,
+        "height": 0.175
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "measuredLines": [
+        {
+          "text": "5",
+          "sampleBox": {
+            "x": 0.1689453125,
+            "y": 0.20703125,
+            "width": 0.1650390625,
+            "height": 0.175
+          },
+          "sizeRatio": 1.3913043929635895,
+          "scaleX": 0.9956477926063692
+        }
+      ],
+      "fontFile": "/fonts/adstudio/outfit-600.woff2"
+    },
+    "headline_main": {
+      "fontId": "league-gothic",
+      "family": "League Gothic",
+      "fallbackFamily": "sans-serif",
+      "weight": 400,
+      "italic": false,
+      "case": "upper",
+      "measurementVersion": 2,
+      "measurementSource": "manual-verified",
+      "sizeRatio": 0.6025230532786886,
+      "lineHeight": 1,
+      "tracking": 0,
+      "align": "left",
+      "color": "#535046",
+      "fitScore": 0.9,
+      "sampleBox": {
+        "x": 0.0849609375,
+        "y": 0.465625,
+        "width": 0.43505859375,
+        "height": 0.24453125
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 1,
+      "measuredLines": [
+        {
+          "text": "SMART",
+          "sampleBox": {
+            "x": 0.08642578125,
+            "y": 0.465625,
+            "width": 0.3544921875,
+            "height": 0.13515625
+          },
+          "sizeRatio": 1.3307692307692307,
+          "scaleX": 0.8298660071710934
+        },
+        {
+          "text": "FIRST STEPS",
+          "sampleBox": {
+            "x": 0.0849609375,
+            "y": 0.61796875,
+            "width": 0.43505859375,
+            "height": 0.0921875
+          },
+          "sizeRatio": 1.3258426966292136,
+          "scaleX": 0.847360847658376
+        }
+      ],
+      "fontFile": "/fonts/adstudio/league-gothic-400.woff2"
+    },
+    "headline_sub": {
+      "fontId": "roboto-condensed",
+      "family": "Roboto Condensed",
+      "fallbackFamily": "sans-serif",
+      "weight": 400,
+      "italic": false,
+      "case": "mixed",
+      "measurementVersion": 2,
+      "measurementSource": "manual-verified",
+      "sizeRatio": 1.02648891966759,
+      "lineHeight": 1,
+      "tracking": 0,
+      "align": "left",
+      "color": "#6e6a61",
+      "fitScore": 0.85,
       "sampleBox": {
         "x": 0.0859375,
         "y": 0.7375,
@@ -134,51 +234,58 @@
       },
       "sampleLineCount": 1,
       "detectionScore": 1,
-      "fontFile": "/fonts/adstudio/merriweather-500.woff2"
+      "measuredLines": [
+        {
+          "text": "Before Buying a Home",
+          "sampleBox": {
+            "x": 0.0859375,
+            "y": 0.7375,
+            "width": 0.4326171875,
+            "height": 0.030078125
+          },
+          "sizeRatio": 1.02648891966759,
+          "scaleX": 1.258
+        }
+      ],
+      "fontFile": "/fonts/adstudio/roboto-condensed-400.woff2"
     },
     "contact_handle": {
-      "fontId": "kanit",
-      "family": "Kanit",
+      "fontId": "roboto-condensed",
+      "family": "Roboto Condensed",
       "fallbackFamily": "sans-serif",
-      "weight": 900,
+      "weight": 400,
       "italic": false,
       "case": "lower",
-      "sizeRatio": 1.1409382716049385,
-      "lineHeight": 1.495,
-      "tracking": 0,
-      "align": "center",
-      "color": "#eae7e0",
-      "fitScore": 0.08,
-      "sampleBox": {
-        "x": 0.0869140625,
-        "y": 0.7625,
-        "width": 0.828125,
-        "height": 0.103125
-      },
-      "sampleLineCount": 2,
-      "detectionScore": 1
-    },
-    "headline_main": {
-      "fontId": "heebo",
-      "family": "Heebo",
-      "fallbackFamily": "sans-serif",
-      "weight": 800,
-      "italic": false,
-      "case": "upper",
-      "sizeRatio": 1.3676470588235294,
-      "lineHeight": 1.46875,
+      "measurementVersion": 2,
+      "measurementSource": "manual-verified",
+      "sizeRatio": 1.0385395537525355,
+      "lineHeight": 1,
       "tracking": 0,
       "align": "left",
-      "color": "#a79e8f",
-      "fitScore": 0.235,
+      "color": "#716d64",
+      "fitScore": 0.85,
       "sampleBox": {
-        "x": 0.0849609375,
-        "y": 0.583203125,
-        "width": 0.69287109375,
-        "height": 0.126953125
+        "x": 0.0869140625,
+        "y": 0.840625,
+        "width": 0.33154296875,
+        "height": 0.025
       },
-      "sampleLineCount": 3,
-      "detectionScore": 0.706
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "measuredLines": [
+        {
+          "text": "@homeguide.example",
+          "sampleBox": {
+            "x": 0.0869140625,
+            "y": 0.840625,
+            "width": 0.33154296875,
+            "height": 0.025
+          },
+          "sizeRatio": 1.0385395537525355,
+          "scaleX": 1.14
+        }
+      ],
+      "fontFile": "/fonts/adstudio/roboto-condensed-400.woff2"
     }
   }
 }

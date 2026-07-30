@@ -83,6 +83,17 @@
     "primary_intent": "seller_leads",
     "property_or_agent_focus": "property"
   },
+  "deterministicEditing": {
+    "status": "partial",
+    "imageBoxes": {
+      "property_photo": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      }
+    }
+  },
   "meta": {
     "platform": "meta",
     "objective": "OUTCOME_LEADS",
@@ -158,11 +169,11 @@
       "fitScore": 0.252,
       "sampleBox": {
         "x": 0.0966796875,
-        "y": 0,
-        "width": 0.9033203125,
-        "height": 0.301171875
+        "y": 0.095703125,
+        "width": 0.4638671875,
+        "height": 0.1203125
       },
-      "sampleLineCount": 3,
+      "sampleLineCount": 2,
       "detectionScore": 1
     },
     "contact_phone": {
@@ -179,12 +190,12 @@
       "color": "#eeefef",
       "fitScore": 0.715,
       "sampleBox": {
-        "x": 0.09228515625,
-        "y": 0.264453125,
-        "width": 0.3388671875,
-        "height": 0.05859375
+        "x": 0.20458984375,
+        "y": 0.27578125,
+        "width": 0.2265625,
+        "height": 0.019140625
       },
-      "sampleLineCount": 2,
+      "sampleLineCount": 1,
       "detectionScore": 1,
       "fontFile": "/fonts/adstudio/oswald-700.woff2"
     },

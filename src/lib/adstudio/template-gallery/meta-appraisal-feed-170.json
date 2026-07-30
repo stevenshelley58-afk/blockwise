@@ -109,6 +109,23 @@
     "primary_intent": "appraisal_leads",
     "property_or_agent_focus": "agent"
   },
+  "deterministicEditing": {
+    "status": "partial",
+    "imageBoxes": {
+      "agent_portrait": {
+        "x": 0.54,
+        "y": 0.26,
+        "width": 0.46,
+        "height": 0.74
+      },
+      "agency_logo": {
+        "x": 0.575,
+        "y": 0.817,
+        "width": 0.137,
+        "height": 0.115
+      }
+    }
+  },
   "meta": {
     "platform": "meta",
     "objective": "OUTCOME_LEADS",
@@ -147,18 +164,19 @@
   },
   "typography": {
     "headline": {
-      "fontId": "merriweather",
-      "family": "Merriweather",
-      "fallbackFamily": "serif",
-      "weight": 300,
+      "fontId": "roboto-condensed",
+      "family": "Roboto Condensed",
+      "fallbackFamily": "sans-serif",
+      "weight": 800,
       "italic": false,
       "case": "upper",
-      "sizeRatio": 1.0929237732516421,
-      "lineHeight": 1.257,
+      "measurementVersion": 2,
+      "sizeRatio": 0.6818488943488944,
+      "lineHeight": 1.171875,
       "tracking": 0,
       "align": "left",
-      "color": "#1c2c35",
-      "fitScore": 0.359,
+      "color": "#0c1d27",
+      "fitScore": 0.533,
       "sampleBox": {
         "x": 0.10092592592592593,
         "y": 0.16444444444444445,
@@ -166,66 +184,128 @@
         "height": 0.12851851851851853
       },
       "sampleLineCount": 2,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "measurementSource": "ocr-v2",
+      "measuredLines": [
+        {
+          "text": "WHAT COULD YOUR",
+          "sampleBox": {
+            "x": 0.10092592592592593,
+            "y": 0.16444444444444445,
+            "width": 0.6699074074074074,
+            "height": 0.05555555555555555
+          },
+          "sizeRatio": 1.577343775593776
+        },
+        {
+          "text": "HOME BE WORTH?",
+          "sampleBox": {
+            "x": 0.10555555555555556,
+            "y": 0.23814814814814814,
+            "width": 0.600462962962963,
+            "height": 0.054814814814814816
+          },
+          "sizeRatio": 1.5986592320207187
+        }
+      ]
     },
     "subheadline": {
-      "fontId": "figtree",
-      "family": "Figtree",
+      "fontId": "dm-sans",
+      "family": "DM Sans",
       "fallbackFamily": "sans-serif",
-      "weight": 900,
+      "weight": 800,
       "italic": false,
       "case": "upper",
-      "sizeRatio": 1.3125,
-      "lineHeight": 1.2,
+      "measurementVersion": 2,
+      "sizeRatio": 1.2234169653524491,
+      "lineHeight": 1.302,
       "tracking": 0,
-      "align": "center",
-      "color": "#322c28",
-      "fitScore": 0.829,
+      "align": "left",
+      "color": "#262d30",
+      "fitScore": 0.898,
       "sampleBox": {
         "x": 0.10601851851851851,
-        "y": 0.31703703703703706,
-        "width": 0.7171296296296297,
-        "height": 0.04111111111111111
+        "y": 0.327037037037037,
+        "width": 0.4930555555555556,
+        "height": 0.023703703703703703
       },
-      "sampleLineCount": 2,
+      "sampleLineCount": 1,
       "detectionScore": 1,
-      "fontFile": "/fonts/adstudio/figtree-900.woff2"
+      "measurementSource": "ocr-v2",
+      "measuredLines": [
+        {
+          "text": "REQUEST A FREE APPRAISAL",
+          "sampleBox": {
+            "x": 0.10601851851851851,
+            "y": 0.327037037037037,
+            "width": 0.4930555555555556,
+            "height": 0.023703703703703703
+          },
+          "sizeRatio": 1.2234169653524491
+        }
+      ],
+      "fontFile": "/fonts/adstudio/dm-sans-800.woff2"
     },
     "email": {
-      "fontId": "oswald",
-      "family": "Oswald",
+      "fontId": "big-shoulders",
+      "family": "Big Shoulders",
       "fallbackFamily": "sans-serif",
       "weight": 300,
       "italic": false,
       "case": "lower",
-      "sizeRatio": 1.0001041341247527,
-      "lineHeight": 1.482,
-      "tracking": 0,
-      "align": "right",
-      "color": "#eaebed",
-      "fitScore": 0.599,
-      "sampleBox": {
-        "x": 0.7342592592592593,
-        "y": 0.847037037037037,
-        "width": 0.20277777777777778,
-        "height": 0.0637037037037037
-      },
-      "sampleLineCount": 2,
-      "detectionScore": 0.409
-    },
-    "cta": {
-      "fontId": "smooch-sans",
-      "family": "Smooch Sans",
-      "fallbackFamily": "sans-serif",
-      "weight": 300,
-      "italic": false,
-      "case": "upper",
-      "sizeRatio": 1.5277777777777777,
+      "measurementVersion": 2,
+      "sizeRatio": 0.49594335819391255,
       "lineHeight": 1.2,
       "tracking": 0,
+      "align": "right",
+      "color": "#e5d6b9",
+      "fitScore": 0.104,
+      "sampleBox": {
+        "x": 0.5916666666666667,
+        "y": 0.8355555555555556,
+        "width": 0.3449074074074074,
+        "height": 0.11037037037037037
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 0.364,
+      "measurementSource": "ocr-v2",
+      "measuredLines": [
+        {
+          "text": "ay a: MORGAN",
+          "sampleBox": {
+            "x": 0.5944444444444444,
+            "y": 0.8355555555555556,
+            "width": 0.3421296296296296,
+            "height": 0.11037037037037037
+          },
+          "sizeRatio": 0.49594335819391255
+        },
+        {
+          "text": "al",
+          "sampleBox": {
+            "x": 0.5916666666666667,
+            "y": 0.8362962962962963,
+            "width": 0.09259259259259259,
+            "height": 0.06962962962962962
+          },
+          "sizeRatio": 0.7861229826690742
+        }
+      ]
+    },
+    "cta": {
+      "fontId": "londrina-shadow",
+      "family": "Londrina Shadow",
+      "fallbackFamily": "sans-serif",
+      "weight": 400,
+      "italic": false,
+      "case": "upper",
+      "measurementVersion": 2,
+      "sizeRatio": 1.2821821036106749,
+      "lineHeight": 1.183,
+      "tracking": 0,
       "align": "left",
-      "color": "#34373a",
-      "fitScore": 0.546,
+      "color": "#3d4043",
+      "fitScore": 0.511,
       "sampleBox": {
         "x": 0.10185185185185185,
         "y": 0.40814814814814815,
@@ -233,30 +313,67 @@
         "height": 0.03666666666666667
       },
       "sampleLineCount": 1,
-      "detectionScore": 0.526
+      "detectionScore": 0.526,
+      "measurementSource": "ocr-v2",
+      "measuredLines": [
+        {
+          "text": "BOOK AVFKALSAL",
+          "sampleBox": {
+            "x": 0.10185185185185185,
+            "y": 0.40814814814814815,
+            "width": 0.4736111111111111,
+            "height": 0.03666666666666667
+          },
+          "sizeRatio": 1.2821821036106749
+        }
+      ]
     },
     "agent_name": {
-      "fontId": "smooch-sans",
-      "family": "Smooch Sans",
+      "fontId": "roboto",
+      "family": "Roboto",
       "fallbackFamily": "sans-serif",
-      "weight": 300,
+      "weight": 800,
       "italic": false,
       "case": "upper",
-      "sizeRatio": 1.5238095531928506,
-      "lineHeight": 1.2,
+      "measurementVersion": 2,
+      "sizeRatio": 0.6750493096646942,
+      "lineHeight": 1.171875,
       "tracking": 0,
       "align": "right",
-      "color": "#e4d8bf",
-      "fitScore": 0.6,
+      "color": "#e1e3e5",
+      "fitScore": 0.707,
       "sampleBox": {
-        "x": 0.5944444444444444,
-        "y": 0.8355555555555556,
-        "width": 0.3421296296296296,
-        "height": 0.11037037037037037
+        "x": 0.7342592592592593,
+        "y": 0.847037037037037,
+        "width": 0.20277777777777778,
+        "height": 0.0637037037037037
       },
-      "sampleLineCount": 1,
-      "detectionScore": 0.727,
-      "fontFile": "/fonts/adstudio/smooch-sans-300.woff2"
+      "sampleLineCount": 2,
+      "detectionScore": 1,
+      "measurementSource": "ocr-v2",
+      "measuredLines": [
+        {
+          "text": "ALEX",
+          "sampleBox": {
+            "x": 0.7342592592592593,
+            "y": 0.847037037037037,
+            "width": 0.11666666666666667,
+            "height": 0.027037037037037037
+          },
+          "sizeRatio": 1.5905271405798276
+        },
+        {
+          "text": "MORGAN",
+          "sampleBox": {
+            "x": 0.7356481481481482,
+            "y": 0.882962962962963,
+            "width": 0.2013888888888889,
+            "height": 0.027777777777777776
+          },
+          "sizeRatio": 1.5481130834976988
+        }
+      ],
+      "fontFile": "/fonts/adstudio/roboto-800.woff2"
     }
   }
 }
