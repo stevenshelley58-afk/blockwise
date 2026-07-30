@@ -1,32 +1,38 @@
-// Editable-region detection for AI-cloned creatives.
+// Editable regions for AI-cloned creatives.
 //
-// One vision call per render locates the clickable hit-boxes that power the
-// in-place editor. QA verdicts are gone — the customer gets the ad
-// immediately and fixes anything in place, with history/undo as the safety
-// net. What lives here:
-//   - detectCloneRegions: one vision call per render locates the editable
-//     hit-boxes. Never throws (returns []).
-//   - parseCloneRegions / boxFromRegionEntry: parse the vision response into
-//     normalized 0..1 editor boxes.
+// Customer generation does not run vision. Text hit-boxes are measured once
+// from the approved sample during the offline template build and copied into
+// each matching-format creative before it is persisted. The parsing helpers
+// remain for legacy rows and offline tooling.
 
-import { randomUUID } from "node:crypto";
-
-import { createTextProviderForCandidate } from "./ai-providers.ts";
-import type { TextProviderAdapter, TextProviderResponse } from "./providers.ts";
-import type { AdStudioCloneRegion } from "./types.ts";
-import {
-  isProviderFallbackEligible,
-  modelCandidateAttempts,
-  resolveRuntimeModelProfile,
-} from "../operator/prompts/model-profile-runtime.ts";
-import {
-  executeAdStudioProviderAttempt,
-  recordAdStudioProviderRun,
-  type ProviderRunAttempt,
-} from "../operator/prompts/redact-prompt-run.ts";
+import type { AdStudioTemplate } from "./templates.ts";
+import type { AdStudioCloneQa, AdStudioCloneRegion } from "./types.ts";
 
 export type CloneRegion = AdStudioCloneRegion;
 export type CloneBox = CloneRegion["box"];
+
+/**
+ * Build the editor map from the template's offline type-spec block. Regions
+ * are valid only for the template's native format: a separately recomposed
+ * format may move text and therefore needs its own offline template metadata.
+ */
+export function buildPrebuiltTemplateCloneQa(
+  template: AdStudioTemplate,
+  expectedCopy: Record<string, string>,
+  format: string,
+): AdStudioCloneQa | undefined {
+  if (format !== template.format) return undefined;
+  const regions = template.inputs.text.flatMap<AdStudioCloneRegion>((field) => {
+    const box = template.typography?.[field.key]?.sampleBox;
+    if (!box) return [];
+    return [{
+      key: field.key,
+      kind: "text",
+      box: { ...box },
+    }];
+  });
+  return regions.length > 0 ? { regions, copyValues: { ...expectedCopy } } : undefined;
+}
 
 function clamp01(value: unknown): number {
   const num = typeof value === "number" && Number.isFinite(value) ? value : 0;
@@ -85,130 +91,4 @@ export function parseCloneRegions(
     });
   }
   return regions;
-}
-
-export type DetectCloneRegionsInput = {
-  workspaceId: string;
-  userId: string;
-  correlationId?: string;
-  /** Model-readable image (data: URL or absolute http(s) URL). */
-  imageUrl: string;
-  /** Copy keys the creative declares; used to classify boxes as text/image. */
-  expectedCopy?: Record<string, string>;
-  /**
-   * Offline bounds from the approved sample. These are hints, never final
-   * clone coordinates: the vision pass must still inspect the finished render.
-   */
-  sampleTextBoxes?: Record<string, CloneBox>;
-  /** Distinguishes parallel feed/story region reservations for one generation. */
-  format?: string;
-};
-
-const REGION_DETECTION_SYSTEM = [
-  "You are locating the editable regions of an ad creative so a user can edit",
-  "them in place. Return ONLY JSON matching this exact shape:",
-  '{ "regions": [ { "box": [x1, y1, x2, y2], "key": "<short>", "kind": "text" } ] }',
-  "Each entry is one editable hit-box. \"box\" is [x1, y1, x2, y2] with every",
-  "value normalized to the 0..1 range relative to the full image (top-left",
-  "origin). \"key\" is a short snake_case identifier for the element. \"kind\"",
-  'is "text" for headlines, captions, prices, phone numbers and other editable',
-  'copy, or "image" for photos, logos and other image areas. Detect every',
-  "distinct editable element. Do not include any text outside the JSON object.",
-].join(" ");
-
-/**
- * One vision call per render: locates the editable hit-boxes that power
- * in-place editing. Mirrors the old QA request shape (imageUrl +
- * response_format json_object) but returns ONLY the regions array. On ANY
- * failure — provider misconfiguration, dispatch error, malformed JSON — it
- * returns [] so the main pipeline never breaks.
- */
-export async function detectCloneRegions(input: DetectCloneRegionsInput): Promise<CloneRegion[]> {
-  try {
-    const startedAt = Date.now();
-    const correlationId = input.correlationId ?? randomUUID();
-    const format = input.format ?? "clone";
-    const mutationId = `${correlationId}:adstudio.clone_regions:${format}`;
-    const expectedCopy = input.expectedCopy ?? {};
-    const sampleHints = Object.entries(input.sampleTextBoxes ?? {}).map(([key, box]) => ({
-      key,
-      expectedCopy: expectedCopy[key] ?? "",
-      sampleBox: [box.x, box.y, box.x + box.width, box.y + box.height],
-    }));
-    const userMessage = sampleHints.length > 0
-      ? `Locate the editable regions in this finished clone. The corresponding approved sample text boxes are hints only; inspect the actual clone and return its real boxes: ${JSON.stringify(sampleHints)}`
-      : "Locate the editable regions in this ad creative.";
-
-    const profile = await resolveRuntimeModelProfile("vision_classification");
-    const candidates = modelCandidateAttempts(profile);
-    const attempts: ProviderRunAttempt[] = [];
-    let output: TextProviderResponse | null = null;
-    let provider: TextProviderAdapter | null = null;
-    let modelName = "unavailable";
-    let lastError: unknown = null;
-
-    for (const [attemptIndex, candidate] of candidates.entries()) {
-      const candidateProvider = createTextProviderForCandidate(candidate);
-      try {
-        const execution = await executeAdStudioProviderAttempt<TextProviderResponse>({
-          workspaceId: input.workspaceId,
-          mutationId,
-          attemptIndex,
-          modelProfile: "vision_classification",
-          provider: candidateProvider,
-          execute: () => candidateProvider.generate({
-            system: REGION_DETECTION_SYSTEM,
-            schemaName: "metaLeadAdPack",
-            imageUrl: input.imageUrl,
-            messages: [{ role: "user", content: userMessage }],
-          }),
-        });
-        attempts.push(execution.attempt);
-        if (!execution.ok) {
-          lastError = execution.error;
-          if (!isProviderFallbackEligible(execution.error)) break;
-          continue;
-        }
-        output = execution.output;
-        provider = candidateProvider;
-        modelName = String(output.providerMetadata.model ?? candidate.model);
-        break;
-      } catch (error) {
-        lastError = error;
-        break;
-      }
-    }
-
-    await recordAdStudioProviderRun({
-      workspaceId: input.workspaceId,
-      userId: input.userId,
-      correlationId,
-      taskType: "adstudio.clone_regions",
-      modelProfile: "vision_classification",
-      mutationId,
-      prompt: {
-        system: REGION_DETECTION_SYSTEM,
-        user: userMessage,
-        fullPrompt: REGION_DETECTION_SYSTEM,
-        promptVersions: [],
-        fallbackPromptUsed: false,
-        warnings: [],
-      },
-      input: { format, sampleHintCount: sampleHints.length },
-      attempts,
-      latencyMs: Date.now() - startedAt,
-      providerName: provider?.providerName ?? "unavailable",
-      providerType: "text_generation",
-      modelName,
-      output,
-      status: output ? "completed" : "failed",
-      error: output ? undefined : lastError,
-    });
-
-    if (!output) return [];
-    const json = (output.json ?? {}) as Record<string, unknown>;
-    return parseCloneRegions(json.regions, expectedCopy);
-  } catch {
-    return [];
-  }
 }

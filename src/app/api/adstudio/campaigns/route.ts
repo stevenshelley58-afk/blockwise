@@ -328,10 +328,10 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // The customer has the ad in this response; region detection
-      // (editor hit-boxes) and the story (9:16) background patch run
-      // after the response is sent.
-      after(() => result.enrichRegions());
+      // The customer has the ad and its prebuilt editor hit-boxes in this
+      // response. Only the optional instant-edit plate and Story patch finish
+      // in the background.
+      after(() => result.editingLayersTask);
       if (result.storyTask) after(() => result.storyTask);
 
       const liveResult = buildAdStudioLiveResult({

@@ -95,8 +95,9 @@ export const generateAdStudioTemplateCampaignTask = task({
         },
       });
 
-      // Fire-and-forget region detection for the feed creative.
-      await result.enrichRegions();
+      // Regions were persisted with the feed. Finish the optional text-free
+      // plate in the background without gating ad or editor availability.
+      await result.editingLayersTask;
 
       // Await the story (9:16) background persist so it lands before the
       // trigger task completes (the job is already marked "done" above).
