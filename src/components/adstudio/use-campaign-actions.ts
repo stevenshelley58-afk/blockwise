@@ -225,7 +225,7 @@ export function useCampaignActions(s: CampaignActionsState) {
       s.setCopy(seedCopy(campaignPack));
       s.setPrimaryImage(input.templateCloneImage ?? packPrimaryImage(campaignPack) ?? input.imageDataUrl);
       s.setSaveState("saved");
-      s.setSection("media");
+      s.setSection("edit");
       s.showToast("Your ad is ready to edit");
       window.dispatchEvent(new Event("blockwise:trial-status-refresh"));
     } catch (error) {

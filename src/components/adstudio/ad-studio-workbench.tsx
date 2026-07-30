@@ -376,7 +376,12 @@ export function AdStudioWorkbench({
   const linkedSamplePromptedRef = useRef(false);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
 
-  const studio = useAdStudio(openPublishOnLoad ? "publish" : "home");
+  const initialStudioSection = openPublishOnLoad
+    ? "publish"
+    : initialPack.creatives.length > 0
+      ? "edit"
+      : "home";
+  const studio = useAdStudio(initialStudioSection);
   const { brand, initials } = useBrandKit(brandKit);
   // B2: an unapproved extracted kit can generate and edit, but is flagged as a
   // draft everywhere and keeps publish blocked until it is confirmed.
@@ -562,7 +567,7 @@ export function AdStudioWorkbench({
     setBusy: studio.setBusy,
     setBusyMessage: studio.setBusyMessage,
     setGeneration,
-    setSection: studio.setSection,
+    setSection: goToSection,
     showToast: studio.showToast,
   });
 
@@ -876,8 +881,6 @@ export function AdStudioWorkbench({
     setActiveSampleId(input.templateId);
     setSelectedElement("canvas");
     setSelectedCanvasRegionKey(null);
-    studio.setSection("edit");
-    studio.setMobileTab("edit");
   }
 
   function renderTextLayerPanel(field: "primaryText" | "headline" | "description" | "cta") {
@@ -951,8 +954,7 @@ export function AdStudioWorkbench({
   function selectMetaCopyField(field: "primaryText" | "headline" | "description" | "cta") {
     setSelectedCanvasRegionKey(null);
     setSelectedElement(field);
-    studio.setSection("edit");
-    studio.setMobileTab("edit");
+    goToSection("edit");
   }
 
   function selectCanvasRegion(key: string) {
@@ -1339,7 +1341,7 @@ export function AdStudioWorkbench({
                   selectVariant(index);
                   setSelectedElement("headline");
                   setSelectedCanvasRegionKey(null);
-                  studio.setSection("edit");
+                  goToSection("edit");
                 }}
                 onReplaceImage={(index) => {
                   selectVariant(index);
