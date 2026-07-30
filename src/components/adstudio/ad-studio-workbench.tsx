@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
   ArrowRight,
@@ -16,7 +16,6 @@ import {
   RefreshCw,
   Send,
   Settings2,
-  SwatchBook,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -90,7 +89,6 @@ const NAV_ITEMS: NavItem[] = [
   { id: "library", label: "Library", icon: Images, href: "/ad-studio/library" },
   { id: "edit", label: "Edit", icon: FileText },
   { id: "publish", label: "Publish", icon: Send },
-  { id: "brand", label: "Brand Pack", icon: SwatchBook },
   { id: "settings", label: "Settings", icon: Settings2 },
 ];
 
@@ -149,10 +147,6 @@ function PreviewFit({ children, enabled }: { children: ReactNode; enabled: boole
 const InPlaceAdEditor = dynamic(
   () => import("./canvas/in-place-ad-editor").then((mod) => mod.InPlaceAdEditor),
   { ssr: false, loading: () => <div className="studio-editor-loading">Loading editor...</div> },
-);
-const BrandPanel = dynamic(
-  () => import("./panels/brand-panel").then((mod) => mod.BrandPanel),
-  { ssr: false },
 );
 const PublishSetupPanel = dynamic(
   () => import("./panels/publish-panel").then((mod) => mod.PublishSetupPanel),
@@ -298,6 +292,7 @@ export function AdStudioWorkbench({
 }: AdStudioWorkbenchProps) {
   const [pack, setPack] = useState(initialPack);
   const canManageCampaign = pack.creatives.length > 0;
+  const router = useRouter();
   const searchParams = useSearchParams();
   const openPublishOnLoad = searchParams.get("publish") === "1";
   const visibleBuiltInTemplates = useMemo(() => builtInAdStudioTemplates(), []);
@@ -1107,7 +1102,7 @@ export function AdStudioWorkbench({
     const publishReady = !brandIsDraft && readinessItems.every((item) => item.state === "done");
 
     const steps = [
-      { label: "Brand", done: !brandIsDraft, onClick: () => goToSection("brand") },
+      { label: "Brand", done: !brandIsDraft, onClick: () => router.push("/ad-studio/brand") },
       { label: "Design", done: startingPointDone, onClick: () => openSamplePicker() },
       { label: "Media", done: mediaDone, onClick: () => openMediaSheet() },
       { label: "Publish", done: publishReady, onClick: () => goToSection("publish") },
@@ -1176,9 +1171,6 @@ export function AdStudioWorkbench({
         />
       );
     }
-    if (studio.section === "brand") {
-      return <BrandPanel brand={brand} brandKit={brandKit} />;
-    }
     if (studio.section === "settings") {
       return (
         <SettingsPanel
@@ -1193,7 +1185,7 @@ export function AdStudioWorkbench({
       <div className="studio-empty">
         <div className="studio-empty-ic"><Home aria-hidden size={22} /></div>
         <strong>Choose where to work</strong>
-        <p>Open Create, Library, Edit, Publish, Brand Pack or Settings from the left rail.</p>
+        <p>Open Create, Library, Edit, Publish or Settings from the left rail.</p>
       </div>
     );
   }
@@ -1219,7 +1211,6 @@ export function AdStudioWorkbench({
         setShowMore={studio.setShowMore}
         onSave={saveDraft}
         onDelete={canManageCampaign ? deleteCampaign : undefined}
-        onOpenBrand={() => goToSection("brand")}
         onOpenSettings={() => goToSection("settings")}
         campaignId={pack.campaign.campaignId}
         showToast={studio.showToast}
@@ -1241,9 +1232,7 @@ export function AdStudioWorkbench({
             }
 
             let railState: "done" | "warn" | "todo" | null = null;
-            if (item.id === "brand") {
-              railState = brandKit.reviewStatus === "approved" ? "done" : "warn";
-            } else if (item.id === "publish") {
+            if (item.id === "publish") {
               const allDone = readinessItems.every((ri) => ri.state === "done");
               railState = allDone ? "done" : readinessItems.some((ri) => ri.state === "warn") ? "warn" : "todo";
             } else if (item.id === "edit") {
@@ -1407,12 +1396,6 @@ export function AdStudioWorkbench({
               exportStatus={exportStatus}
               onRetryExportFormat={(format) => void retryExportFormat(format)}
             />
-          </div>
-        )}
-
-        {studio.mobileTab === "brand" && (
-          <div className="studio-mobile-panel">
-            <BrandPanel brand={brand} brandKit={brandKit} />
           </div>
         )}
 
