@@ -52,29 +52,56 @@ test("the template gallery uses a two-column grid", () => {
   assert.doesNotMatch(dialog, /\.studio-explore-grid\{grid-template-columns:1fr\}/);
 });
 
-test("listing extraction keeps template choice with the customer", () => {
+test("the create-ad flow does not expose the paused listing scraper", () => {
   const dialog = readFileSync("src/components/adstudio/new-ad-dialog.tsx", "utf8");
-  const fetchStart = dialog.indexOf("async function fetchListingDetails()");
-  const applyStart = dialog.indexOf("/** Apply extracted listing data", fetchStart);
-  const fetchBlock = dialog.slice(fetchStart, applyStart);
-
-  assert.ok(fetchStart > -1);
-  assert.ok(applyStart > fetchStart);
-  assert.match(fetchBlock, /setListingData\(result\.listing\)/);
-  assert.match(fetchBlock, /setListingBrief\(result\.brief/);
-  assert.match(fetchBlock, /setFilter\("listings"\)/);
-  assert.doesNotMatch(fetchBlock, /chooseTemplate\(/);
-  assert.match(dialog, /Listing details are ready\. Choose the template you want to use\./);
+  assert.doesNotMatch(dialog, /fetchListingDetails|listing-extract|newad-url-bar/);
+  assert.doesNotMatch(dialog, /Have a listing\?/);
 });
 
-test("the brief comes before AI-generated ad copy", () => {
+test("writing method and brief come before assets, with copy revealed after generation", () => {
   const dialog = readFileSync("src/components/adstudio/new-ad-dialog.tsx", "utf8");
-  const briefPosition = dialog.indexOf("studio-newad-brief-field");
-  const copyPosition = dialog.indexOf('aria-label="Ad copy"', briefPosition);
+  const methodPosition = dialog.indexOf("How would you like to write this ad?");
+  const briefPosition = dialog.indexOf("Tell us about the ad", methodPosition);
+  const assetsPosition = dialog.indexOf("Add the content for this template", briefPosition);
 
-  assert.ok(briefPosition > -1);
-  assert.ok(copyPosition > briefPosition);
-  assert.match(dialog, /Use the brief above to draft the ad copy/);
+  assert.ok(methodPosition > -1);
+  assert.ok(briefPosition > methodPosition);
+  assert.ok(assetsPosition > briefPosition);
+  assert.match(dialog, /\{\(copyMode === "write" \|\| copyGenerated\) && \(/);
+  assert.match(dialog, /Generating copy…/);
+  assert.doesNotMatch(dialog, /What should this ad communicate\?/);
+});
+
+test("the placement guide stays on the approved sample and highlights focused fields", () => {
+  const dialog = readFileSync("src/components/adstudio/new-ad-dialog.tsx", "utf8");
+
+  assert.match(dialog, /function NewAdPlacementGuide/);
+  assert.match(dialog, /templatePreviewSrc\(template, brandKit\)/);
+  assert.match(dialog, /template\.typography\?\.\[field\.key\]\?\.sampleBox/);
+  assert.match(dialog, /data-guide-zone/);
+  assert.match(dialog, /newad-sample-image-region/);
+  assert.match(dialog, /disabled=\{!copyFieldsVisible\}/);
+  assert.match(dialog, /copyFieldsVisible=\{copyMode === "write" \|\| copyGenerated\}/);
+  assert.doesNotMatch(dialog, /function NewAdLivePreview/);
+});
+
+test("copy fields show soft character limits and over-limit validation", () => {
+  const dialog = readFileSync("src/components/adstudio/new-ad-dialog.tsx", "utf8");
+
+  assert.match(dialog, /value\.length > limit/);
+  assert.match(dialog, /value\.length > field\.maxLength/);
+  assert.match(dialog, /overLimitLabels/);
+  assert.match(dialog, /character limit shown in red/);
+  assert.doesNotMatch(dialog, /maxLength=\{limit\}/);
+});
+
+test("writing choices use native radio behavior and guide highlights never loop", () => {
+  const dialog = readFileSync("src/components/adstudio/new-ad-dialog.tsx", "utf8");
+
+  assert.match(dialog, /type="radio"\s+name="new-ad-writing-method"/);
+  assert.doesNotMatch(dialog, /role="radio"/);
+  assert.doesNotMatch(dialog, /newad-zone-pulse|animation:newad-zone/);
+  assert.doesNotMatch(dialog, /rgba\(59,130,246/);
 });
 
 test("closing a changed ad asks before discarding it", () => {
