@@ -24,10 +24,29 @@ test("Brand Studio keeps setup optional and treats missing persistence as a fail
 test("approving sends the edited website through the canonical approval endpoint", () => {
   assert.match(source, /source:\s*\{\s*\.\.\.kit\.source,\s*url:\s*sourceUrl\s*\}/);
   assert.match(source, /`\/api\/adstudio\/brand-kits\/\$\{kit\.brandKitId\}\/approve`/);
-  assert.match(source, /method:\s*nextStatus \? "POST" : "PATCH"/);
-  assert.match(source, /\? \{ brandKit: submittedKit \}/);
+  assert.match(source, /method:\s*"POST"/);
+  assert.match(source, /body:\s*JSON\.stringify\(\{ brandKit: submittedKit \}\)/);
   assert.match(source, /const savedKit = requirePersistedBrandKit/);
   assert.match(source, /setScanUrl\(savedKit\.source\.url/);
+  assert.doesNotMatch(source, /Save draft/);
+  assert.match(source, /router\.replace\(returnTo\)/);
+  assert.match(source, /href=\{returnTo\}/);
+});
+
+test("Brand Studio accepts only an Ad Studio return path", () => {
+  assert.match(page, /safeAdStudioReturnTo/);
+  assert.match(page, /parsed\.pathname !== "\/ad-studio"/);
+  assert.match(page, /returnTo=\{safeAdStudioReturnTo\(params\.returnTo\)\}/);
+});
+
+test("Create New Ad receives the current Brand Pack for defaults and generation", () => {
+  const workbench = readFileSync("src/components/adstudio/ad-studio-workbench.tsx", "utf8");
+  const newAd = readFileSync("src/components/adstudio/new-ad-dialog.tsx", "utf8");
+
+  assert.match(workbench, /<NewAdDialog[\s\S]*brandKit=\{brandKit\}/);
+  assert.match(newAd, /brandTextDefaultsForTemplate\(selectedTemplate, brandKit\)/);
+  assert.match(newAd, /defaultImageForTemplateSlot\(slot, brandKit\)/);
+  assert.match(newAd, /brandKitId: brandKit\.brandKitId/);
 });
 
 test("Brand Studio reloads the newest workspace kit instead of a campaign-linked kit", () => {

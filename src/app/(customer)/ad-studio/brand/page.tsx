@@ -5,11 +5,27 @@ import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
 
 export const dynamic = "force-dynamic";
 
-export default async function BrandStudioPage() {
+type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+
+function safeAdStudioReturnTo(value: string | string[] | undefined): string {
+  const candidate = Array.isArray(value) ? value[0] : value;
+  if (!candidate) return "/ad-studio";
+
+  try {
+    const parsed = new URL(candidate, "https://blockwise.local");
+    if (parsed.origin !== "https://blockwise.local" || parsed.pathname !== "/ad-studio") return "/ad-studio";
+    return `${parsed.pathname}${parsed.search}`;
+  } catch {
+    return "/ad-studio";
+  }
+}
+
+export default async function BrandStudioPage({ searchParams }: { searchParams?: SearchParams }) {
+  const params = searchParams ? await searchParams : {};
   const { supabase, access } = await requirePageSurfaceAccess("adstudio");
   const brandKit = await loadLatestBrandKit(supabase, access.workspaceId);
 
-  return <BrandStudio brandKit={brandKit} />;
+  return <BrandStudio brandKit={brandKit} returnTo={safeAdStudioReturnTo(params.returnTo)} />;
 }
 
 async function loadLatestBrandKit(

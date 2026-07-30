@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { AssetUploadDropzone } from "@/components/asset-upload-dropzone";
@@ -267,7 +268,7 @@ function normalizedWebsiteUrl(value: string): string {
   return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
 }
 
-export function BrandStudio({ brandKit: initialKit }: { brandKit: AdStudioBrandKit | null }) {
+export function BrandStudio({ brandKit: initialKit, returnTo = "/ad-studio" }: { brandKit: AdStudioBrandKit | null; returnTo?: string }) {
   const [kit, setKit] = useState(initialKit);
   const [scanUrl, setScanUrl] = useState("");
   const [busy, setBusy] = useState(false);
@@ -303,7 +304,7 @@ export function BrandStudio({ brandKit: initialKit }: { brandKit: AdStudioBrandK
   }
 
   if (kit) {
-    return <BrandStudioEditor brandKit={kit} />;
+    return <BrandStudioEditor brandKit={kit} returnTo={returnTo} />;
   }
 
   return (
@@ -311,8 +312,8 @@ export function BrandStudio({ brandKit: initialKit }: { brandKit: AdStudioBrandK
       <style>{BRAND_STYLES}</style>
 
       <div className="bs-top">
-        <Link href="/ad-studio" className="back">
-          {"< Ad Studio"}
+        <Link href={returnTo} className="back">
+          {"< Close"}
         </Link>
         <h1>Brand Studio</h1>
         <div className="grow">{notice && <span className={`notice ${notice.tone}`}>{notice.text}</span>}</div>
@@ -357,11 +358,12 @@ export function BrandStudio({ brandKit: initialKit }: { brandKit: AdStudioBrandK
   );
 }
 
-function BrandStudioEditor({ brandKit: initialKit }: { brandKit: AdStudioBrandKit }) {
+function BrandStudioEditor({ brandKit: initialKit, returnTo }: { brandKit: AdStudioBrandKit; returnTo: string }) {
+  const router = useRouter();
   const [kit, setKit] = useState(initialKit);
   const [openSwatch, setOpenSwatch] = useState<ColourKey | null>(null);
   const [scanUrl, setScanUrl] = useState(() => initialKit.source.url.replace(/^https?:\/\//, ""));
-  const [busy, setBusy] = useState<"" | "scan" | "save" | "approve">("");
+  const [busy, setBusy] = useState<"" | "scan" | "approve">("");
   const [notice, setNotice] = useState<{ tone: "ok" | "err"; text: string } | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreviewUrl, setLogoPreviewUrl] = useState(initialKit.logos.primaryLogoUrl ?? "");
@@ -477,7 +479,7 @@ function BrandStudioEditor({ brandKit: initialKit }: { brandKit: AdStudioBrandKi
     }
   }
 
-  async function saveKit(nextStatus?: "approved") {
+  async function approveKit() {
     if (busy) return;
     const logoError = logoFile
       ? validateAssetUploadFile(logoFile, {
@@ -495,7 +497,7 @@ function BrandStudioEditor({ brandKit: initialKit }: { brandKit: AdStudioBrandKi
     }
 
     const logoToUpload = logoFile;
-    setBusy(nextStatus ? "approve" : "save");
+    setBusy("approve");
     try {
       const uploadedLogoUrl = logoToUpload ? await uploadLogoAsset(logoToUpload) : null;
       const nextLogos = uploadedLogoUrl
@@ -507,40 +509,19 @@ function BrandStudioEditor({ brandKit: initialKit }: { brandKit: AdStudioBrandKi
         source: { ...kit.source, url: sourceUrl },
         logos: nextLogos,
       };
-      const endpoint = nextStatus
-        ? `/api/adstudio/brand-kits/${kit.brandKitId}/approve`
-        : `/api/adstudio/brand-kits/${kit.brandKitId}`;
-      const res = await fetch(endpoint, {
-        method: nextStatus ? "POST" : "PATCH",
+      const res = await fetch(`/api/adstudio/brand-kits/${kit.brandKitId}/approve`, {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(
-          nextStatus
-            ? { brandKit: submittedKit }
-            : {
-                business_name: submittedKit.identity.businessName,
-                source_url: submittedKit.source.url,
-                market_region: submittedKit.identity.marketRegion,
-                identity_json: submittedKit.identity,
-                logos_json: submittedKit.logos,
-                colours_json: submittedKit.colours,
-                typography_json: submittedKit.typography,
-                tone_json: submittedKit.tone,
-                contact_json: submittedKit.contact,
-                compliance_json: submittedKit.compliance,
-              },
-        ),
+        body: JSON.stringify({ brandKit: submittedKit }),
       });
       const json = (await res.json().catch(() => ({}))) as BrandKitResponse;
-      const savedKit = requirePersistedBrandKit(json, res, nextStatus ? "Approval" : "Save");
+      const savedKit = requirePersistedBrandKit(json, res, "Approval");
       setKit(savedKit);
       setScanUrl(savedKit.source.url.replace(/^https?:\/\//, ""));
       setLogoPreviewUrl(savedKit.logos.primaryLogoUrl ?? "");
       setLogoFile(null);
-      if (nextStatus) {
-        flash("ok", logoToUpload ? "Brand kit approved - logo saved." : "Brand kit approved and ready to use.");
-      } else {
-        flash("ok", logoToUpload ? "Saved with logo." : "Saved.");
-      }
+      router.replace(returnTo);
+      router.refresh();
     } catch (error) {
       flash("err", error instanceof Error ? error.message : "Could not save the kit.");
     } finally {
@@ -558,17 +539,14 @@ function BrandStudioEditor({ brandKit: initialKit }: { brandKit: AdStudioBrandKi
       <style>{BRAND_STYLES}</style>
 
       <div className="bs-top">
-        <Link href="/ad-studio" className="back">
-          ‹ Ad Studio
+        <Link href={returnTo} className="back">
+          ‹ Close
         </Link>
         <h1>Brand Studio</h1>
         <span className={`chip ${approved ? "good" : "warn"}`}>{approved ? "✓ Approved" : "Pending review"}</span>
         <div className="grow">
           {notice && <span className={`notice ${notice.tone}`}>{notice.text}</span>}
-          <button className="btn sec" type="button" disabled={busy !== ""} onClick={() => void saveKit()}>
-            {busy === "save" ? "Saving…" : "Save draft"}
-          </button>
-          <button className="btn pri" type="button" disabled={busy !== ""} onClick={() => void saveKit("approved")}>
+          <button className="btn pri" type="button" disabled={busy !== ""} onClick={() => void approveKit()}>
             {busy === "approve" ? "Approving…" : "✓ Approve kit"}
           </button>
         </div>
