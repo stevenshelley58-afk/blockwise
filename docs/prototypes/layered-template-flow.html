@@ -5,6 +5,7 @@ OWN-WORLD: Blockwise's quiet operations desk—paper-white surfaces, near-black 
 STORY: Inspect the approved sample, verify the stripped plate, follow every prompt and payload, then edit the final composition live.
 FIRST VIEWPORT: The two-lane process graph leads; the selected stage's exact contract sits beside it, followed by the working layered render.
 FORM: An inspectable production worksheet, chosen directly from the user's precise request; no concept seed was needed for this narrow artifact.
+STATUS: Exploratory decision artifact only. The current production contract still requires buildCloneImageRequest to return one finished image before derived edit layers may exist.
 -->
 <html lang="en">
 <head>
@@ -138,6 +139,23 @@ FORM: An inspectable production worksheet, chosen directly from the user's preci
     .source-stamp strong { font-size: 15px; }
     .source-stamp span { color: var(--muted); font-size: 12px; }
     .hash { font-family: var(--mono); font-size: 11px; overflow-wrap: anywhere; }
+
+    .contract-banner {
+      margin: -10px 0 28px;
+      padding: 15px 17px;
+      color: var(--warning);
+      border: 1px solid rgba(138, 90, 0, .24);
+      border-radius: var(--radius);
+      background: var(--warning-soft);
+    }
+
+    .contract-banner strong {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--ink);
+    }
+
+    .contract-banner p { margin-bottom: 0; }
 
     .section-head {
       display: flex;
@@ -735,11 +753,21 @@ FORM: An inspectable production worksheet, chosen directly from the user's preci
       </aside>
     </header>
 
+    <aside class="contract-banner" aria-label="Production contract status">
+      <strong>Exploratory proof — not the current production generation path</strong>
+      <p>
+        Blockwise currently requires the approved public sample, declared customer images, and exact copy to pass
+        through <code>buildCloneImageRequest</code> and produce one canonical finished image. The parallel image-only
+        and DOM-text path below is the requested working hypothesis. It must not be wired into AdStudio or merged as
+        a production architecture until that owning product contract is deliberately changed.
+      </p>
+    </aside>
+
     <section aria-labelledby="flow-title">
       <div class="section-head">
         <div>
-          <h2 id="flow-title">The complete flow</h2>
-          <p>Select any stage to inspect the exact contract.</p>
+          <h2 id="flow-title">The requested alternative flow</h2>
+          <p>Select any stage to inspect the exact hypothesis and its evidence.</p>
         </div>
       </div>
 
@@ -771,8 +799,8 @@ FORM: An inspectable production worksheet, chosen directly from the user's preci
 
         <div class="lane">
           <div class="lane-label">
-            <strong>Customer run</strong>
-            <span>No discovery work</span>
+            <strong>Proposed customer run</strong>
+            <span>Hypothesis, not production</span>
           </div>
           <div class="flow-track" aria-label="Customer generation stages">
             <button class="flow-node" type="button" data-stage="brief" aria-pressed="false">
@@ -910,8 +938,9 @@ FORM: An inspectable production worksheet, chosen directly from the user's preci
     <p class="truth-note">
       <strong>What is real in this proof:</strong> the approved sample, its source hashes and declared inputs,
       the OCR coordinates, the AI-created text-free plate, the customer image-only clone, both exact image prompts,
-      and the live layered compositor. The copy-model prompt and the proposed complete type contract are the new
-      production design demonstrated here; they have not replaced the current production generator.
+      and the live layered compositor. The copy-model prompt and complete type contract are the requested alternative
+      hypothesis. They have not replaced the current production generator and cannot do so without changing the
+      canonical <code>buildCloneImageRequest</code> contract.
     </p>
   </main>
 
