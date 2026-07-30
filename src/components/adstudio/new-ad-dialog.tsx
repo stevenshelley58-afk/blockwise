@@ -1250,7 +1250,7 @@ export function NewAdDialog({
           aria-busy="true"
           tabIndex={-1}
         >
-          <GenerationProgress quality={generationQuality} titleId={titleId} />
+          <GenerationProgress quality={generationQuality} templates={templates} titleId={titleId} />
         </div>
       </div>
     );
