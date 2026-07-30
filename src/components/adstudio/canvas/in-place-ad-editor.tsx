@@ -13,7 +13,7 @@ import {
   type CreativeEditMutation,
 } from "./creative-edit-client";
 import {
-  DEFAULT_TEXT_LAYER_STYLE,
+  loadPatchFonts,
   loadPatchImage,
   PATCH_PADDING,
   renderTextPatch,
@@ -114,6 +114,7 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast }: InPla
   // The text patch drawn the moment the customer applies a text edit. It IS
   // the final pixels, so the edit reads as instant while the server saves.
   const [optimisticPatch, setOptimisticPatch] = useState<{ key: string; dataUrl: string; box: AdStudioCloneRegion["box"] } | null>(null);
+  const [loadedFontIds, setLoadedFontIds] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const textInputRef = useRef<HTMLTextAreaElement | null>(null);
   const frameRef = useRef<HTMLDivElement | null>(null);
@@ -196,6 +197,15 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast }: InPla
       .catch(() => undefined);
     return () => { cancelled = true; };
   }, [textLayers?.plate]);
+
+  useEffect(() => {
+    if (!textLayers) return;
+    let cancelled = false;
+    void loadPatchFonts(Object.values(textLayers.styles)).then((loaded) => {
+      if (!cancelled) setLoadedFontIds(loaded);
+    });
+    return () => { cancelled = true; };
+  }, [textLayers]);
 
   const updateElementScrollState = useCallback(() => {
     const list = elementListRef.current;
@@ -416,8 +426,10 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast }: InPla
       showToast("Type the replacement text first.");
       return;
     }
-    if (value.length > MAX_TEXT_LENGTH) {
-      showToast(`Keep the replacement text to ${MAX_TEXT_LENGTH} characters or less.`);
+    const style = textLayers?.styles[selectedRegion.key];
+    const maxLength = style?.maxLength ?? MAX_TEXT_LENGTH;
+    if (value.length > maxLength) {
+      showToast(`Keep the replacement text to ${maxLength} characters or less.`);
       return;
     }
 
@@ -425,13 +437,18 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast }: InPla
     // in the browser. The patch is shown immediately and sent to the server,
     // which composites it deterministically — no image model, ~1s to saved.
     let patchImage: string | undefined;
-    if (layersReady && textLayers) {
+    if (
+      layersReady
+      && textLayers
+      && style?.mode === "live"
+      && loadedFontIds.has(style.fontId)
+    ) {
       const plate = plateImagesRef.current.get(textLayers.plate);
       if (plate) {
         patchImage = renderTextPatch({
           plate,
           box: selectedRegion.box,
-          style: textLayers.styles[selectedRegion.key] ?? DEFAULT_TEXT_LAYER_STYLE,
+          style,
           text: value,
         }) ?? undefined;
       }
@@ -442,7 +459,7 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast }: InPla
     void performMutation(
       { action: "edit", fieldKey: selectedRegion.key, newValue: value, patchImage },
       "Text updated",
-      patchImage ? "Saving…" : `Writing "${truncateForStatus(value)}"…`,
+      patchImage ? "Saving…" : `Re-rendering "${truncateForStatus(value)}"…`,
     );
   }
 
@@ -691,17 +708,21 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast }: InPla
                 ref={textInputRef}
                 value={textDraft}
                 rows={4}
-                maxLength={MAX_TEXT_LENGTH}
+                maxLength={textLayers?.styles[selectedRegion.key]?.maxLength ?? MAX_TEXT_LENGTH}
                 disabled={busy}
                 onChange={(event) => setTextDraft(event.target.value)}
                 onKeyDown={handleEditorKeyDown}
               />
-              <small>{textDraft.length}/{MAX_TEXT_LENGTH}. Press Ctrl+Enter to apply.</small>
+              <small>
+                {textDraft.length}/{textLayers?.styles[selectedRegion.key]?.maxLength ?? MAX_TEXT_LENGTH}. Press Ctrl+Enter to apply.
+              </small>
               <button className="primary" type="button" onClick={applyTextEdit} disabled={busy || !textDraft.trim()}>
                 <Check aria-hidden size={16} />
                 Replace text
               </button>
-              {layersReady ? (
+              {layersReady
+                && textLayers?.styles[selectedRegion.key]?.mode === "live"
+                && loadedFontIds.has(textLayers.styles[selectedRegion.key]!.fontId) ? (
                 <small className="studio-inplace-instant" aria-live="polite">
                   <Sparkles aria-hidden size={12} />
                   Instant editing ready — text changes apply in about a second.

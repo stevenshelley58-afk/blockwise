@@ -158,7 +158,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#1c2c35",
-      "fitScore": 0.359
+      "fitScore": 0.359,
+      "sampleBox": {
+        "x": 0.10092592592592593,
+        "y": 0.16444444444444445,
+        "width": 0.6699074074074074,
+        "height": 0.12851851851851853
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 1
     },
     "subheadline": {
       "fontId": "figtree",
@@ -172,7 +180,16 @@
       "tracking": 0,
       "align": "center",
       "color": "#322c28",
-      "fitScore": 0.829
+      "fitScore": 0.829,
+      "sampleBox": {
+        "x": 0.10601851851851851,
+        "y": 0.31703703703703706,
+        "width": 0.7171296296296297,
+        "height": 0.04111111111111111
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/figtree-900.woff2"
     },
     "email": {
       "fontId": "oswald",
@@ -186,7 +203,15 @@
       "tracking": 0,
       "align": "right",
       "color": "#eaebed",
-      "fitScore": 0.599
+      "fitScore": 0.599,
+      "sampleBox": {
+        "x": 0.7342592592592593,
+        "y": 0.847037037037037,
+        "width": 0.20277777777777778,
+        "height": 0.0637037037037037
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 0.409
     },
     "cta": {
       "fontId": "smooch-sans",
@@ -200,7 +225,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#34373a",
-      "fitScore": 0.546
+      "fitScore": 0.546,
+      "sampleBox": {
+        "x": 0.10185185185185185,
+        "y": 0.40814814814814815,
+        "width": 0.4736111111111111,
+        "height": 0.03666666666666667
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 0.526
     },
     "agent_name": {
       "fontId": "smooch-sans",
@@ -214,7 +247,16 @@
       "tracking": 0,
       "align": "right",
       "color": "#e4d8bf",
-      "fitScore": 0.6
+      "fitScore": 0.6,
+      "sampleBox": {
+        "x": 0.5944444444444444,
+        "y": 0.8355555555555556,
+        "width": 0.3421296296296296,
+        "height": 0.11037037037037037
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 0.727,
+      "fontFile": "/fonts/adstudio/smooch-sans-300.woff2"
     }
   }
 }

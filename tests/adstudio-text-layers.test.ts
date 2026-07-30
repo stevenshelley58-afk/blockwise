@@ -4,16 +4,18 @@ import { readFileSync } from "node:fs";
 
 import {
   boxIntersectsTextRegions,
+  buildTemplateTextLayerStyles,
   extendTextLayersValidity,
-  parseTextLayerStyles,
   TEXT_LAYERS_VALID_FOR_LIMIT,
 } from "../src/lib/adstudio/text-layers.ts";
+import { resolveAdStudioTemplate } from "../src/lib/adstudio/templates.ts";
 import { paddedPixelRect } from "../src/lib/adstudio/region-edit.ts";
 import { paddedPatchRect } from "../src/components/adstudio/canvas/text-patch.ts";
 import type { AdStudioCloneRegion, AdStudioTextLayers } from "../src/lib/adstudio/types.ts";
 
 const editor = readFileSync("src/components/adstudio/canvas/in-place-ad-editor.tsx", "utf8");
 const layersRoute = readFileSync("src/app/api/adstudio/creatives/[id]/layers/route.ts", "utf8");
+const layerDerivation = readFileSync("src/lib/adstudio/layer-derivation.ts", "utf8");
 
 const regions: AdStudioCloneRegion[] = [
   { key: "headline", kind: "text", box: { x: 0.1, y: 0.1, width: 0.8, height: 0.1 } },
@@ -50,23 +52,20 @@ test("plate validity list dedupes, appends newest last, and stays bounded", () =
   assert.equal(bounded.validFor.at(-1), "new");
 });
 
-test("detected styles are clamped to safe values and unknown keys are dropped", () => {
-  const styles = parseTextLayerStyles({
-    styles: [
-      { key: "headline", family: "serif", weight: 800, italic: true, uppercase: true, color: "#123abc", align: "left", letterSpacing: "wide" },
-      { key: "headline_ghost", family: "serif", weight: 700, color: "#fff", align: "center" },
-      { key: "price", family: "comic", weight: 350, color: "not-a-colour", align: "diagonal", letterSpacing: "tight" },
-    ],
-  }, ["headline", "price"]);
-  assert.deepEqual(Object.keys(styles).sort(), ["headline", "price"]);
-  assert.deepEqual(styles.headline, {
-    family: "serif", weight: 800, italic: true, uppercase: true, color: "#123abc", align: "left", letterSpacing: "wide",
-  });
-  // Out-of-range values fall back to safe defaults rather than failing.
-  assert.deepEqual(styles.price, {
-    family: "sans", weight: 700, italic: false, uppercase: false, color: "#ffffff", align: "center", letterSpacing: "normal",
-  });
-  assert.deepEqual(parseTextLayerStyles(null, ["headline"]), {});
+test("runtime styles come from the approved template and low-confidence regions rerender", () => {
+  const template = resolveAdStudioTemplate("meta-agent-intro-feed-037");
+  assert.ok(template?.typography);
+  const cloneRegions = Object.entries(template.typography).map(([key, spec]) => ({
+    key,
+    kind: "text" as const,
+    box: spec.sampleBox,
+  }));
+  const styles = buildTemplateTextLayerStyles(template, cloneRegions);
+  assert.deepEqual(Object.keys(styles).sort(), cloneRegions.map((region) => region.key).sort());
+  for (const [key, style] of Object.entries(styles)) {
+    assert.equal(style.mode === "live", Boolean(style.fontFile));
+    assert.equal(style.sample, template.inputs.text.find((input) => input.key === key)?.sample);
+  }
 });
 
 test("client patch rect and server composite rect are the same pixels", () => {
@@ -100,10 +99,11 @@ test("editor builds layers in the background and applies text edits optimistical
 test("the decompose route protects the design and the budget", () => {
   // Only padded text-region rectangles may come from the inpaint model —
   // every other plate pixel is byte-for-byte the original render.
-  assert.match(layersRoute, /derivePlateFromInpaint/);
-  // The inpaint and the style read run together, not in sequence.
-  assert.match(layersRoute, /Promise\.all/);
+  assert.match(layerDerivation, /derivePlateFromInpaint/);
+  // Typography comes from the approved sample build, not a runtime style-read.
+  assert.match(layerDerivation, /buildTemplateTextLayerStyles/);
+  assert.doesNotMatch(layerDerivation, /detectTextLayerStyles/);
   // Rebuilds are rate limited and never clobber a render that moved on.
   assert.match(layersRoute, /ai-layer-decompose/);
-  assert.match(layersRoute, /eq\("active_revision_id", row\.active_revision_id\)/);
+  assert.match(layerDerivation, /active_revision_id/);
 });

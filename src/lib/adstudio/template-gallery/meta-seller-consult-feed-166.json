@@ -165,7 +165,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#dfe1e3",
-      "fitScore": 0.45
+      "fitScore": 0.45,
+      "sampleBox": {
+        "x": 0.3416666666666667,
+        "y": 0.8774074074074074,
+        "width": 0.4652777777777778,
+        "height": 0.01888888888888889
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     },
     "check_1": {
       "fontId": "lora",
@@ -179,7 +187,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#313132",
-      "fitScore": 0.446
+      "fitScore": 0.446,
+      "sampleBox": {
+        "x": 0.32407407407407407,
+        "y": 0.3440740740740741,
+        "width": 0.42916666666666664,
+        "height": 0.02074074074074074
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     },
     "headline": {
       "fontId": "quicksand",
@@ -193,7 +209,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#1f3346",
-      "fitScore": 0.586
+      "fitScore": 0.586,
+      "sampleBox": {
+        "x": 0.20555555555555555,
+        "y": 0.1451851851851852,
+        "width": 0.6976851851851852,
+        "height": 0.14185185185185184
+      },
+      "sampleLineCount": 3,
+      "detectionScore": 0.864
     },
     "check_4": {
       "fontId": "kanit",
@@ -207,7 +231,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#dedad6",
-      "fitScore": 0.168
+      "fitScore": 0.168,
+      "sampleBox": {
+        "x": 0.0375,
+        "y": 0.5014814814814815,
+        "width": 0.8888888888888888,
+        "height": 0.055185185185185184
+      },
+      "sampleLineCount": 3,
+      "detectionScore": 1
     },
     "check_3": {
       "fontId": "smooch-sans",
@@ -221,7 +253,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#2d2d2d",
-      "fitScore": 0.438
+      "fitScore": 0.438,
+      "sampleBox": {
+        "x": 0.325,
+        "y": 0.47185185185185186,
+        "width": 0.37407407407407406,
+        "height": 0.02074074074074074
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     },
     "check_5": {
       "fontId": "lora",
@@ -235,7 +275,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#2f2f2f",
-      "fitScore": 0.428
+      "fitScore": 0.428,
+      "sampleBox": {
+        "x": 0.325,
+        "y": 0.6,
+        "width": 0.38842592592592595,
+        "height": 0.02074074074074074
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     },
     "check_6": {
       "fontId": "lora",
@@ -249,7 +297,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#303030",
-      "fitScore": 0.435
+      "fitScore": 0.435,
+      "sampleBox": {
+        "x": 0.32407407407407407,
+        "y": 0.664074074074074,
+        "width": 0.37453703703703706,
+        "height": 0.021111111111111112
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     },
     "check_2": {
       "fontId": "lora",
@@ -263,7 +319,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#2c2c2c",
-      "fitScore": 0.422
+      "fitScore": 0.422,
+      "sampleBox": {
+        "x": 0.325,
+        "y": 0.40814814814814815,
+        "width": 0.3768518518518518,
+        "height": 0.02074074074074074
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     },
     "phone": {
       "fontId": "merriweather",
@@ -277,7 +341,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#f0f1f2",
-      "fitScore": 0.462
+      "fitScore": 0.462,
+      "sampleBox": {
+        "x": 0.34120370370370373,
+        "y": 0.912962962962963,
+        "width": 0.4074074074074074,
+        "height": 0.03666666666666667
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     }
   }
 }

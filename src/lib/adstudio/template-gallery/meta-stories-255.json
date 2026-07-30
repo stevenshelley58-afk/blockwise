@@ -146,7 +146,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#787776",
-      "fitScore": 0.661
+      "fitScore": 0.661,
+      "sampleBox": {
+        "x": 0.17626953125,
+        "y": 0.751953125,
+        "width": 0.6572265625,
+        "height": 0.015625
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 0.388
     },
     "agent_name": {
       "fontId": "quicksand",
@@ -160,7 +168,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#7e7c7b",
-      "fitScore": 0.59
+      "fitScore": 0.59,
+      "sampleBox": {
+        "x": 0.560546875,
+        "y": 0.8411458333333334,
+        "width": 0.29638671875,
+        "height": 0.06966145833333333
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 0.545
     },
     "average_price": {
       "fontId": "roboto-mono",
@@ -174,7 +190,16 @@
       "tracking": 0,
       "align": "left",
       "color": "#6c6b6c",
-      "fitScore": 0.608
+      "fitScore": 0.608,
+      "sampleBox": {
+        "x": 0.71630859375,
+        "y": 0.55859375,
+        "width": 0.12109375,
+        "height": 0.0166015625
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/roboto-mono-600.woff2"
     },
     "time_on_market": {
       "fontId": "merriweather",
@@ -188,7 +213,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#6b6a6a",
-      "fitScore": 0.456
+      "fitScore": 0.456,
+      "sampleBox": {
+        "x": 0.73876953125,
+        "y": 0.4973958333333333,
+        "width": 0.09814453125,
+        "height": 0.013020833333333334
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     },
     "new_listings": {
       "fontId": "merriweather",
@@ -202,7 +235,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#676667",
-      "fitScore": 0.428
+      "fitScore": 0.428,
+      "sampleBox": {
+        "x": 0.7939453125,
+        "y": 0.6223958333333334,
+        "width": 0.04443359375,
+        "height": 0.0126953125
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     },
     "sold_listings": {
       "fontId": "merriweather",
@@ -216,7 +257,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#6f6e6f",
-      "fitScore": 0.35
+      "fitScore": 0.35,
+      "sampleBox": {
+        "x": 0.80859375,
+        "y": 0.6803385416666666,
+        "width": 0.0283203125,
+        "height": 0.013020833333333334
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     }
   }
 }

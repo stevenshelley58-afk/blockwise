@@ -144,7 +144,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#474747",
-      "fitScore": 0.4
+      "fitScore": 0.4,
+      "sampleBox": {
+        "x": 0.3476851851851852,
+        "y": 0.38555555555555554,
+        "width": 0.31851851851851853,
+        "height": 0.013333333333333334
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     },
     "headline": {
       "fontId": "oswald",
@@ -158,7 +166,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#252525",
-      "fitScore": 0.278
+      "fitScore": 0.278,
+      "sampleBox": {
+        "x": 0.05324074074074074,
+        "y": 0.09111111111111111,
+        "width": 0.9004629629629629,
+        "height": 0.1362962962962963
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     },
     "subheadline": {
       "fontId": "smooch-sans",
@@ -172,7 +188,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#313131",
-      "fitScore": 0.548
+      "fitScore": 0.548,
+      "sampleBox": {
+        "x": 0.2537037037037037,
+        "y": 0.25666666666666665,
+        "width": 0.5032407407407408,
+        "height": 0.022962962962962963
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     },
     "website": {
       "fontId": "merriweather",
@@ -186,7 +210,16 @@
       "tracking": 0,
       "align": "left",
       "color": "#505050",
-      "fitScore": 0.638
+      "fitScore": 0.638,
+      "sampleBox": {
+        "x": 0.2601851851851852,
+        "y": 0.43037037037037035,
+        "width": 0.2824074074074074,
+        "height": 0.023333333333333334
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/merriweather-500.woff2"
     },
     "phone": {
       "fontId": "barlow-condensed",
@@ -200,7 +233,16 @@
       "tracking": 0,
       "align": "left",
       "color": "#363f40",
-      "fitScore": 0.779
+      "fitScore": 0.779,
+      "sampleBox": {
+        "x": 0.5856481481481481,
+        "y": 0.42592592592592593,
+        "width": 0.21342592592592594,
+        "height": 0.03222222222222222
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/barlow-condensed-800.woff2"
     },
     "agent_name": {
       "fontId": "smooch-sans",
@@ -214,7 +256,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#2f2f2f",
-      "fitScore": 0.583
+      "fitScore": 0.583,
+      "sampleBox": {
+        "x": 0.32314814814814813,
+        "y": 0.3433333333333333,
+        "width": 0.37037037037037035,
+        "height": 0.025925925925925925
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     }
   }
 }

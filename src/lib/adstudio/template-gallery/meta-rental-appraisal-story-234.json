@@ -130,7 +130,15 @@
       "tracking": 0,
       "align": "right",
       "color": "#8798a0",
-      "fitScore": 0.244
+      "fitScore": 0.244,
+      "sampleBox": {
+        "x": 0.1361111111111111,
+        "y": 0.25026041666666665,
+        "width": 0.8638888888888889,
+        "height": 0.05703125
+      },
+      "sampleLineCount": 4,
+      "detectionScore": 0.879
     },
     "headline": {
       "fontId": "smooch-sans",
@@ -144,7 +152,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#1c3c47",
-      "fitScore": 0.449
+      "fitScore": 0.449,
+      "sampleBox": {
+        "x": 0.13287037037037036,
+        "y": 0.08958333333333333,
+        "width": 0.6652777777777777,
+        "height": 0.12604166666666666
+      },
+      "sampleLineCount": 3,
+      "detectionScore": 1
     },
     "subheadline": {
       "fontId": "smooch-sans",
@@ -158,7 +174,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#22434e",
-      "fitScore": 0.433
+      "fitScore": 0.433,
+      "sampleBox": {
+        "x": 0.13657407407407407,
+        "y": 0.23828125,
+        "width": 0.5370370370370371,
+        "height": 0.015104166666666667
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     },
     "cta": {
       "fontId": "smooch-sans",
@@ -172,7 +196,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#eceff0",
-      "fitScore": 0.428
+      "fitScore": 0.428,
+      "sampleBox": {
+        "x": 0.2935185185185185,
+        "y": 0.9036458333333334,
+        "width": 0.5657407407407408,
+        "height": 0.017447916666666667
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     }
   }
 }

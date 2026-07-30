@@ -242,15 +242,24 @@ export type AdStudioCloneRegion = {
  * has no fontconfig — see rasterize-reference.ts).
  */
 export type AdStudioTextLayerStyle = {
-  /** Generic family category the client maps to a concrete font stack. */
-  family: "sans" | "serif" | "slab" | "condensed" | "rounded" | "script" | "mono";
+  fontId: string;
+  family: string;
+  fontFile?: string;
+  fallbackFamily: "serif" | "sans-serif" | "monospace" | "cursive";
   weight: number;
   italic: boolean;
-  uppercase: boolean;
-  /** Hex text colour sampled from the render. */
+  case: "upper" | "lower" | "mixed" | "none";
+  sizeRatio: number;
+  lineHeight: number;
+  tracking: number;
   color: string;
   align: "left" | "center" | "right";
-  letterSpacing: "normal" | "wide";
+  fitScore: number;
+  sampleLineCount: number;
+  sample: string;
+  maxLength: number;
+  /** Only live styles may use deterministic browser compositing. */
+  mode: "live" | "rerender";
 };
 
 /**

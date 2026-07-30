@@ -132,7 +132,16 @@
       "tracking": 0,
       "align": "left",
       "color": "#eaedec",
-      "fitScore": 0.734
+      "fitScore": 0.734,
+      "sampleBox": {
+        "x": 0.14013671875,
+        "y": 0.31015625,
+        "width": 0.39990234375,
+        "height": 0.025
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 0.864,
+      "fontFile": "/fonts/adstudio/poppins-700.woff2"
     },
     "main_heading": {
       "fontId": "barlow-condensed",
@@ -146,7 +155,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#677774",
-      "fitScore": 0.252
+      "fitScore": 0.252,
+      "sampleBox": {
+        "x": 0.0966796875,
+        "y": 0,
+        "width": 0.9033203125,
+        "height": 0.301171875
+      },
+      "sampleLineCount": 3,
+      "detectionScore": 1
     },
     "contact_phone": {
       "fontId": "oswald",
@@ -160,7 +177,16 @@
       "tracking": 0,
       "align": "left",
       "color": "#eeefef",
-      "fitScore": 0.715
+      "fitScore": 0.715,
+      "sampleBox": {
+        "x": 0.09228515625,
+        "y": 0.264453125,
+        "width": 0.3388671875,
+        "height": 0.05859375
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/oswald-700.woff2"
     },
     "price": {
       "fontId": "oswald",
@@ -174,7 +200,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#f1f2f1",
-      "fitScore": 0.542
+      "fitScore": 0.542,
+      "sampleBox": {
+        "x": 0.65234375,
+        "y": 0.284765625,
+        "width": 0.259765625,
+        "height": 0.0453125
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     }
   }
 }

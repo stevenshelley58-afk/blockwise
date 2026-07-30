@@ -202,7 +202,16 @@
       "tracking": 0,
       "align": "left",
       "color": "#5d5a58",
-      "fitScore": 0.618
+      "fitScore": 0.618,
+      "sampleBox": {
+        "x": 0.51416015625,
+        "y": 0.95078125,
+        "width": 0.205078125,
+        "height": 0.01328125
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/quicksand-700.woff2"
     },
     "features": {
       "fontId": "manrope",
@@ -216,7 +225,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#5d5c5b",
-      "fitScore": 0.711
+      "fitScore": 0.711,
+      "sampleBox": {
+        "x": 0.23828125,
+        "y": 0.9078125,
+        "width": 0.1708984375,
+        "height": 0.0109375
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 0.55
     },
     "open_house_date": {
       "fontId": "fira-sans",
@@ -230,7 +247,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#574f4a",
-      "fitScore": 0.444
+      "fitScore": 0.444,
+      "sampleBox": {
+        "x": 0.51416015625,
+        "y": 0.90703125,
+        "width": 0.20361328125,
+        "height": 0.015625
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 0.357
     },
     "open_house_time": {
       "fontId": "merriweather",
@@ -244,7 +269,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#a69f99",
-      "fitScore": 0.304
+      "fitScore": 0.304,
+      "sampleBox": {
+        "x": 0.6953125,
+        "y": 0.17890625,
+        "width": 0.212890625,
+        "height": 0.16640625
+      },
+      "sampleLineCount": 5,
+      "detectionScore": 0.385
     },
     "brand_name": {
       "fontId": "smooch-sans",
@@ -258,7 +291,16 @@
       "tracking": 0,
       "align": "left",
       "color": "#564c47",
-      "fitScore": 0.672
+      "fitScore": 0.672,
+      "sampleBox": {
+        "x": 0.05908203125,
+        "y": 0.035546875,
+        "width": 0.23486328125,
+        "height": 0.038671875
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 0.786,
+      "fontFile": "/fonts/adstudio/smooch-sans-500.woff2"
     },
     "agent_name": {
       "fontId": "manrope",
@@ -272,7 +314,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#545251",
-      "fitScore": 0.539
+      "fitScore": 0.539,
+      "sampleBox": {
+        "x": 0.51318359375,
+        "y": 0.883984375,
+        "width": 0.1142578125,
+        "height": 0.015234375
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     },
     "area": {
       "fontId": "rubik",
@@ -286,7 +336,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#c9c7bc",
-      "fitScore": 0.201
+      "fitScore": 0.201,
+      "sampleBox": {
+        "x": 0.10693359375,
+        "y": 0.711328125,
+        "width": 0.69189453125,
+        "height": 0.11328125
+      },
+      "sampleLineCount": 4,
+      "detectionScore": 0.9
     },
     "bathrooms": {
       "fontId": "playfair-display",
@@ -300,7 +358,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#565556",
-      "fitScore": 0.372
+      "fitScore": 0.372,
+      "sampleBox": {
+        "x": 0.2236328125,
+        "y": 0.811328125,
+        "width": 0.0625,
+        "height": 0.0109375
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     },
     "bedrooms": {
       "fontId": "playfair-display",
@@ -314,7 +380,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#545455",
-      "fitScore": 0.44
+      "fitScore": 0.44,
+      "sampleBox": {
+        "x": 0.1015625,
+        "y": 0.811328125,
+        "width": 0.056640625,
+        "height": 0.0109375
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     }
   }
 }

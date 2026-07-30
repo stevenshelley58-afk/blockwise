@@ -151,7 +151,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#525252",
-      "fitScore": 0.422
+      "fitScore": 0.422,
+      "sampleBox": {
+        "x": 0.2638888888888889,
+        "y": 0.13777777777777778,
+        "width": 0.5157407407407407,
+        "height": 0.023703703703703703
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     },
     "headline": {
       "fontId": "plus-jakarta-sans",
@@ -165,7 +173,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#0e0e0e",
-      "fitScore": 0.399
+      "fitScore": 0.399,
+      "sampleBox": {
+        "x": 0.10740740740740741,
+        "y": 0.07555555555555556,
+        "width": 0.8203703703703704,
+        "height": 0.040740740740740744
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     },
     "stat_1": {
       "fontId": "merriweather",
@@ -179,7 +195,16 @@
       "tracking": 0,
       "align": "center",
       "color": "#5d655e",
-      "fitScore": 0.629
+      "fitScore": 0.629,
+      "sampleBox": {
+        "x": 0.0763888888888889,
+        "y": 0.5703703703703704,
+        "width": 0.774537037037037,
+        "height": 0.14185185185185184
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/merriweather-500.woff2"
     },
     "stat_3": {
       "fontId": "merriweather",
@@ -193,7 +218,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#353636",
-      "fitScore": 0.357
+      "fitScore": 0.357,
+      "sampleBox": {
+        "x": 0.7037037037037037,
+        "y": 0.6966666666666667,
+        "width": 0.1685185185185185,
+        "height": 0.015555555555555555
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     },
     "stat_2": {
       "fontId": "merriweather",
@@ -207,7 +240,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#353535",
-      "fitScore": 0.362
+      "fitScore": 0.362,
+      "sampleBox": {
+        "x": 0.42453703703703705,
+        "y": 0.6966666666666667,
+        "width": 0.14166666666666666,
+        "height": 0.015555555555555555
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     },
     "stat_4": {
       "fontId": "manrope",
@@ -221,7 +262,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#303030",
-      "fitScore": 0.367
+      "fitScore": 0.367,
+      "sampleBox": {
+        "x": 0.11805555555555555,
+        "y": 0.8937037037037037,
+        "width": 0.15925925925925927,
+        "height": 0.016296296296296295
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     },
     "stat_5": {
       "fontId": "merriweather",
@@ -235,7 +284,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#2f2f2f",
-      "fitScore": 0.365
+      "fitScore": 0.365,
+      "sampleBox": {
+        "x": 0.425462962962963,
+        "y": 0.8937037037037037,
+        "width": 0.14027777777777778,
+        "height": 0.016296296296296295
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     },
     "stat_6": {
       "fontId": "merriweather",
@@ -249,7 +306,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#2c2d2d",
-      "fitScore": 0.368
+      "fitScore": 0.368,
+      "sampleBox": {
+        "x": 0.7064814814814815,
+        "y": 0.8937037037037037,
+        "width": 0.15555555555555556,
+        "height": 0.015925925925925927
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     }
   }
 }

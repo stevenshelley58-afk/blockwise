@@ -130,7 +130,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#363f50",
-      "fitScore": 0.542
+      "fitScore": 0.542,
+      "sampleBox": {
+        "x": 0.0912037037037037,
+        "y": 0.8051851851851852,
+        "width": 0.33055555555555555,
+        "height": 0.08
+      },
+      "sampleLineCount": 3,
+      "detectionScore": 1
     },
     "headline": {
       "fontId": "smooch-sans",
@@ -144,7 +152,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#0c2035",
-      "fitScore": 0.456
+      "fitScore": 0.456,
+      "sampleBox": {
+        "x": 0.08425925925925926,
+        "y": 0.5037037037037037,
+        "width": 0.7921296296296296,
+        "height": 0.21407407407407408
+      },
+      "sampleLineCount": 3,
+      "detectionScore": 1
     },
     "subheadline": {
       "fontId": "manrope",
@@ -158,7 +174,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#e7b44c",
-      "fitScore": 0.48
+      "fitScore": 0.48,
+      "sampleBox": {
+        "x": 0.09027777777777778,
+        "y": 0.7474074074074074,
+        "width": 0.6555555555555556,
+        "height": 0.023703703703703703
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     }
   }
 }

@@ -132,7 +132,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#433d31",
-      "fitScore": 0.638
+      "fitScore": 0.638,
+      "sampleBox": {
+        "x": 0.111328125,
+        "y": 0.633984375,
+        "width": 0.78515625,
+        "height": 0.21875
+      },
+      "sampleLineCount": 3,
+      "detectionScore": 0.833
     },
     "property_address": {
       "fontId": "merriweather",
@@ -146,7 +154,16 @@
       "tracking": 0,
       "align": "center",
       "color": "#585247",
-      "fitScore": 0.804
+      "fitScore": 0.804,
+      "sampleBox": {
+        "x": 0.244140625,
+        "y": 0.059765625,
+        "width": 0.5380859375,
+        "height": 0.017578125
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/merriweather-700.woff2"
     },
     "contact_email": {
       "fontId": "plus-jakarta-sans",
@@ -160,7 +177,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#5a5449",
-      "fitScore": 0.577
+      "fitScore": 0.577,
+      "sampleBox": {
+        "x": 0.1103515625,
+        "y": 0.894921875,
+        "width": 0.3125,
+        "height": 0.01875
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     },
     "contact_phone": {
       "fontId": "playfair-display",
@@ -174,7 +199,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#565146",
-      "fitScore": 0.447
+      "fitScore": 0.447,
+      "sampleBox": {
+        "x": 0.71728515625,
+        "y": 0.894921875,
+        "width": 0.16015625,
+        "height": 0.015234375
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     }
   }
 }

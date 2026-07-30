@@ -146,7 +146,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#4e483c",
-      "fitScore": 0.54
+      "fitScore": 0.54,
+      "sampleBox": {
+        "x": 0.69677734375,
+        "y": 0.09765625,
+        "width": 0.20751953125,
+        "height": 0.0375
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 1
     },
     "agent_email": {
       "fontId": "merriweather",
@@ -160,7 +168,16 @@
       "tracking": 0,
       "align": "left",
       "color": "#625c52",
-      "fitScore": 0.628
+      "fitScore": 0.628,
+      "sampleBox": {
+        "x": 0.6357421875,
+        "y": 0.90625,
+        "width": 0.271484375,
+        "height": 0.018359375
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/merriweather-600.woff2"
     },
     "agent_name": {
       "fontId": "merriweather",
@@ -174,7 +191,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#5d584d",
-      "fitScore": 0.407
+      "fitScore": 0.407,
+      "sampleBox": {
+        "x": 0.7470703125,
+        "y": 0.85859375,
+        "width": 0.1611328125,
+        "height": 0.01328125
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     },
     "contact_label": {
       "fontId": "oswald",
@@ -188,7 +213,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#2a2b28",
-      "fitScore": 0.324
+      "fitScore": 0.324,
+      "sampleBox": {
+        "x": 0.40478515625,
+        "y": 0.491796875,
+        "width": 0.05908203125,
+        "height": 0.087109375
+      },
+      "sampleLineCount": 3,
+      "detectionScore": 0.4
     },
     "headline": {
       "fontId": "oswald",
@@ -202,7 +235,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#beb6a6",
-      "fitScore": 0.256
+      "fitScore": 0.256,
+      "sampleBox": {
+        "x": 0.05615234375,
+        "y": 0.58125,
+        "width": 0.85693359375,
+        "height": 0.22421875
+      },
+      "sampleLineCount": 3,
+      "detectionScore": 0.556
     }
   }
 }

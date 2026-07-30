@@ -70,6 +70,14 @@ export type AdStudioTypeSpec = {
   align: "left" | "center" | "right";
   color: string;
   fitScore: number;
+  /** Text bounds measured once from the approved public sample. */
+  sampleBox: { x: number; y: number; width: number; height: number };
+  /** Number of wrapped lines in the approved sample copy. */
+  sampleLineCount: number;
+  /** OCR-to-declared-copy match confidence for sampleBox (0-1). */
+  detectionScore: number;
+  /** Self-hosted face used only when the fidelity gates pass. */
+  fontFile?: string;
 };
 
 /**

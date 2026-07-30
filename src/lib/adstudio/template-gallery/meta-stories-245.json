@@ -162,7 +162,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#aca9a9",
-      "fitScore": 0.41
+      "fitScore": 0.41,
+      "sampleBox": {
+        "x": 0.0849609375,
+        "y": 0.4498697916666667,
+        "width": 0.5908203125,
+        "height": 0.10904947916666667
+      },
+      "sampleLineCount": 5,
+      "detectionScore": 0.914
     },
     "headline": {
       "fontId": "smooch-sans",
@@ -176,7 +184,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#26474d",
-      "fitScore": 0.41
+      "fitScore": 0.41,
+      "sampleBox": {
+        "x": 0.0751953125,
+        "y": 0.14290364583333334,
+        "width": 0.8349609375,
+        "height": 0.2138671875
+      },
+      "sampleLineCount": 3,
+      "detectionScore": 0.968
     },
     "agency_name": {
       "fontId": "smooch-sans",
@@ -190,7 +206,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#444345",
-      "fitScore": 0.521
+      "fitScore": 0.521,
+      "sampleBox": {
+        "x": 0.2099609375,
+        "y": 0.061197916666666664,
+        "width": 0.24658203125,
+        "height": 0.04296875
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 0.889
     },
     "cta_text": {
       "fontId": "poppins",
@@ -204,7 +228,16 @@
       "tracking": 0,
       "align": "left",
       "color": "#d9e6e9",
-      "fitScore": 0.602
+      "fitScore": 0.602,
+      "sampleBox": {
+        "x": 0.20166015625,
+        "y": 0.8987630208333334,
+        "width": 0.32763671875,
+        "height": 0.0234375
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/poppins-500.woff2"
     },
     "agent_title": {
       "fontId": "manrope",
@@ -218,7 +251,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#e3e4e4",
-      "fitScore": 0.598
+      "fitScore": 0.598,
+      "sampleBox": {
+        "x": 0.083984375,
+        "y": 0.8050130208333334,
+        "width": 0.3271484375,
+        "height": 0.026041666666666668
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     },
     "contact_number": {
       "fontId": "roboto-slab",
@@ -232,7 +273,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#f0f5f6",
-      "fitScore": 0.456
+      "fitScore": 0.456,
+      "sampleBox": {
+        "x": 0.19970703125,
+        "y": 0.9329427083333334,
+        "width": 0.4375,
+        "height": 0.028645833333333332
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     },
     "agent_name": {
       "fontId": "oswald",
@@ -246,7 +295,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#f3f3f3",
-      "fitScore": 0.594
+      "fitScore": 0.594,
+      "sampleBox": {
+        "x": 0.08447265625,
+        "y": 0.7545572916666666,
+        "width": 0.4482421875,
+        "height": 0.042643229166666664
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     }
   }
 }

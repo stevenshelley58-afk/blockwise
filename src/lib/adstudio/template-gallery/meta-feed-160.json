@@ -138,7 +138,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#1b1b1b",
-      "fitScore": 0.573
+      "fitScore": 0.573,
+      "sampleBox": {
+        "x": 0.23193359375,
+        "y": 0.348046875,
+        "width": 0.51806640625,
+        "height": 0.233984375
+      },
+      "sampleLineCount": 4,
+      "detectionScore": 0.93
     },
     "profile_handle": {
       "fontId": "oswald",
@@ -152,7 +160,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#84745b",
-      "fitScore": 0.283
+      "fitScore": 0.283,
+      "sampleBox": {
+        "x": 0.00146484375,
+        "y": 0.148046875,
+        "width": 0.1591796875,
+        "height": 0.062109375
+      },
+      "sampleLineCount": 4,
+      "detectionScore": 0.389
     },
     "cta_button": {
       "fontId": "merriweather",
@@ -166,7 +182,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#e5e6e9",
-      "fitScore": 0.414
+      "fitScore": 0.414,
+      "sampleBox": {
+        "x": 0.2841796875,
+        "y": 0.66171875,
+        "width": 0.2890625,
+        "height": 0.01953125
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     },
     "share_prompt": {
       "fontId": "raleway",
@@ -180,7 +204,16 @@
       "tracking": 0,
       "align": "left",
       "color": "#ede7e0",
-      "fitScore": 0.605
+      "fitScore": 0.605,
+      "sampleBox": {
+        "x": 0.06298828125,
+        "y": 0.93515625,
+        "width": 0.24951171875,
+        "height": 0.02421875
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 0.842,
+      "fontFile": "/fonts/adstudio/raleway-600.woff2"
     },
     "save_prompt": {
       "fontId": "raleway",
@@ -194,7 +227,15 @@
       "tracking": 0,
       "align": "right",
       "color": "#cdc0b5",
-      "fitScore": 0.571
+      "fitScore": 0.571,
+      "sampleBox": {
+        "x": 0.7607421875,
+        "y": 0.9265625,
+        "width": 0.16748046875,
+        "height": 0.041796875
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     },
     "header": {
       "fontId": "merriweather",
@@ -208,7 +249,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#1d1d1d",
-      "fitScore": 0.413
+      "fitScore": 0.413,
+      "sampleBox": {
+        "x": 0.2333984375,
+        "y": 0.293359375,
+        "width": 0.228515625,
+        "height": 0.017578125
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     }
   }
 }

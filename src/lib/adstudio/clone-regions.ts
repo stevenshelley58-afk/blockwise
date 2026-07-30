@@ -95,6 +95,11 @@ export type DetectCloneRegionsInput = {
   imageUrl: string;
   /** Copy keys the creative declares; used to classify boxes as text/image. */
   expectedCopy?: Record<string, string>;
+  /**
+   * Offline bounds from the approved sample. These are hints, never final
+   * clone coordinates: the vision pass must still inspect the finished render.
+   */
+  sampleTextBoxes?: Record<string, CloneBox>;
   /** Distinguishes parallel feed/story region reservations for one generation. */
   format?: string;
 };
@@ -125,6 +130,14 @@ export async function detectCloneRegions(input: DetectCloneRegionsInput): Promis
     const format = input.format ?? "clone";
     const mutationId = `${correlationId}:adstudio.clone_regions:${format}`;
     const expectedCopy = input.expectedCopy ?? {};
+    const sampleHints = Object.entries(input.sampleTextBoxes ?? {}).map(([key, box]) => ({
+      key,
+      expectedCopy: expectedCopy[key] ?? "",
+      sampleBox: [box.x, box.y, box.x + box.width, box.y + box.height],
+    }));
+    const userMessage = sampleHints.length > 0
+      ? `Locate the editable regions in this finished clone. The corresponding approved sample text boxes are hints only; inspect the actual clone and return its real boxes: ${JSON.stringify(sampleHints)}`
+      : "Locate the editable regions in this ad creative.";
 
     const profile = await resolveRuntimeModelProfile("vision_classification");
     const candidates = modelCandidateAttempts(profile);
@@ -147,7 +160,7 @@ export async function detectCloneRegions(input: DetectCloneRegionsInput): Promis
             system: REGION_DETECTION_SYSTEM,
             schemaName: "metaLeadAdPack",
             imageUrl: input.imageUrl,
-            messages: [{ role: "user", content: "Locate the editable regions in this ad creative." }],
+            messages: [{ role: "user", content: userMessage }],
           }),
         });
         attempts.push(execution.attempt);
@@ -175,13 +188,13 @@ export async function detectCloneRegions(input: DetectCloneRegionsInput): Promis
       mutationId,
       prompt: {
         system: REGION_DETECTION_SYSTEM,
-        user: "Locate the editable regions in this ad creative.",
+        user: userMessage,
         fullPrompt: REGION_DETECTION_SYSTEM,
         promptVersions: [],
         fallbackPromptUsed: false,
         warnings: [],
       },
-      input: { format },
+      input: { format, sampleHintCount: sampleHints.length },
       attempts,
       latencyMs: Date.now() - startedAt,
       providerName: provider?.providerName ?? "unavailable",

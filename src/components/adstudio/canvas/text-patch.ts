@@ -7,6 +7,7 @@
 // overlay: what the customer sees instantly IS the final pixels.
 
 import type { AdStudioTextLayerStyle } from "@/lib/adstudio/types.ts";
+import { MAGIC_LAYER_MIN_AUTOFIT_RATIO } from "../../../lib/adstudio/magic-layers-config.mjs";
 
 type NormalizedBox = { x: number; y: number; width: number; height: number };
 
@@ -27,26 +28,6 @@ export function paddedPatchRect(box: NormalizedBox, imageWidth: number, imageHei
   };
 }
 
-const FONT_STACKS: Record<AdStudioTextLayerStyle["family"], string> = {
-  sans: "Arial, 'Helvetica Neue', Helvetica, sans-serif",
-  serif: "Georgia, 'Times New Roman', serif",
-  slab: "Rockwell, 'Roboto Slab', Georgia, serif",
-  condensed: "'Arial Narrow', 'Helvetica Neue', Arial, sans-serif",
-  rounded: "'Arial Rounded MT Bold', 'Segoe UI', Arial, sans-serif",
-  script: "'Segoe Script', 'Brush Script MT', cursive",
-  mono: "'Courier New', Courier, monospace",
-};
-
-export const DEFAULT_TEXT_LAYER_STYLE: AdStudioTextLayerStyle = {
-  family: "sans",
-  weight: 700,
-  italic: false,
-  uppercase: false,
-  color: "#ffffff",
-  align: "center",
-  letterSpacing: "normal",
-};
-
 export function loadPatchImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const image = new Image();
@@ -57,7 +38,7 @@ export function loadPatchImage(src: string): Promise<HTMLImageElement> {
 }
 
 function fontString(style: AdStudioTextLayerStyle, sizePx: number): string {
-  return `${style.italic ? "italic " : ""}${style.weight} ${sizePx}px ${FONT_STACKS[style.family]}`;
+  return `${style.italic ? "italic " : ""}${style.weight} ${sizePx}px "${style.fontId}", ${style.fallbackFamily}`;
 }
 
 function wrapToWidth(
@@ -94,6 +75,7 @@ export function renderTextPatch(input: {
   style: AdStudioTextLayerStyle;
   text: string;
 }): string | null {
+  if (input.style.mode !== "live" || !input.style.fontFile) return null;
   const imageWidth = input.plate.naturalWidth;
   const imageHeight = input.plate.naturalHeight;
   if (!imageWidth || !imageHeight) return null;
@@ -111,7 +93,11 @@ export function renderTextPatch(input: {
     0, 0, rect.width, rect.height,
   );
 
-  const value = input.style.uppercase ? input.text.toUpperCase() : input.text;
+  const value = input.style.case === "upper"
+    ? input.text.toUpperCase()
+    : input.style.case === "lower"
+      ? input.text.toLowerCase()
+      : input.text;
   // The writable area is the un-padded region box, in patch-local pixels.
   const inner = {
     left: Math.round(input.box.x * imageWidth) - rect.left,
@@ -120,28 +106,30 @@ export function renderTextPatch(input: {
     height: Math.max(1, Math.round(input.box.height * imageHeight)),
   };
   const maxTextWidth = inner.width * 0.98;
-  if ("letterSpacing" in context) {
-    context.letterSpacing = input.style.letterSpacing === "wide" ? "0.08em" : "0px";
-  }
+  if ("letterSpacing" in context) context.letterSpacing = `${input.style.tracking}em`;
 
-  // Fit: largest size where the wrapped copy fits the region both ways.
-  const lineHeightFactor = 1.16;
-  let fontSize = Math.min(220, Math.max(10, Math.floor(inner.height * 0.82)));
+  // Preserve the measured sample size and line count. Small copy variations
+  // may shrink to 88%; anything beyond that uses the clone model.
+  const lineHeightFactor = input.style.lineHeight;
+  const measuredSize = Math.max(1, inner.height * input.style.sizeRatio);
+  const minimumSize = measuredSize * MAGIC_LAYER_MIN_AUTOFIT_RATIO;
+  let fontSize = measuredSize;
   let lines: string[] = [];
-  for (; fontSize >= 10; fontSize -= 1) {
+  for (; fontSize >= minimumSize; fontSize -= 0.5) {
     context.font = fontString(input.style, fontSize);
     const candidate = wrapToWidth(context, value, maxTextWidth);
     if (candidate.length === 0) return null;
     const widest = Math.max(...candidate.map((line) => context.measureText(line).width));
-    if (widest <= maxTextWidth && candidate.length * fontSize * lineHeightFactor <= inner.height * 1.04) {
+    if (
+      widest <= maxTextWidth
+      && candidate.length <= input.style.sampleLineCount
+      && candidate.length * fontSize * lineHeightFactor <= inner.height * 1.02
+    ) {
       lines = candidate;
       break;
     }
   }
-  if (lines.length === 0) {
-    context.font = fontString(input.style, 10);
-    lines = wrapToWidth(context, value, maxTextWidth);
-  }
+  if (lines.length === 0) return null;
 
   context.fillStyle = input.style.color;
   context.textBaseline = "middle";
@@ -162,4 +150,31 @@ export function renderTextPatch(input: {
   } catch {
     return null;
   }
+}
+
+/** Load exact self-hosted faces before a live patch is permitted. */
+export async function loadPatchFonts(styles: AdStudioTextLayerStyle[]): Promise<Set<string>> {
+  const loaded = new Set<string>();
+  const unique = new Map<string, AdStudioTextLayerStyle>();
+  for (const style of styles) {
+    if (style.mode !== "live" || !style.fontFile) continue;
+    unique.set(`${style.fontId}:${style.weight}:${style.italic}`, style);
+  }
+  await Promise.all([...unique.values()].map(async (style) => {
+    try {
+      const face = new FontFace(
+        style.fontId,
+        `url("${style.fontFile}") format("woff2")`,
+        { weight: String(style.weight), style: style.italic ? "italic" : "normal" },
+      );
+      await face.load();
+      document.fonts.add(face);
+      const probe = `${style.italic ? "italic " : ""}${style.weight} 16px "${style.fontId}"`;
+      await document.fonts.load(probe, "Blockwise");
+      if (document.fonts.check(probe, "Blockwise")) loaded.add(style.fontId);
+    } catch {
+      // Missing faces remain on the model path.
+    }
+  }));
+  return loaded;
 }

@@ -125,7 +125,16 @@
       "tracking": 0,
       "align": "left",
       "color": "#68645b",
-      "fitScore": 0.707
+      "fitScore": 0.707,
+      "sampleBox": {
+        "x": 0.0859375,
+        "y": 0.7375,
+        "width": 0.4326171875,
+        "height": 0.030078125
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/merriweather-500.woff2"
     },
     "contact_handle": {
       "fontId": "kanit",
@@ -139,7 +148,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#eae7e0",
-      "fitScore": 0.08
+      "fitScore": 0.08,
+      "sampleBox": {
+        "x": 0.0869140625,
+        "y": 0.7625,
+        "width": 0.828125,
+        "height": 0.103125
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 1
     },
     "headline_main": {
       "fontId": "heebo",
@@ -153,7 +170,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#a79e8f",
-      "fitScore": 0.235
+      "fitScore": 0.235,
+      "sampleBox": {
+        "x": 0.0849609375,
+        "y": 0.583203125,
+        "width": 0.69287109375,
+        "height": 0.126953125
+      },
+      "sampleLineCount": 3,
+      "detectionScore": 0.706
     }
   }
 }

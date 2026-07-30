@@ -152,7 +152,16 @@
       "tracking": 0,
       "align": "left",
       "color": "#c2beba",
-      "fitScore": 0.674
+      "fitScore": 0.674,
+      "sampleBox": {
+        "x": 0.09228515625,
+        "y": 0.86796875,
+        "width": 0.490234375,
+        "height": 0.02109375
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 0.842,
+      "fontFile": "/fonts/adstudio/merriweather-600.woff2"
     },
     "address": {
       "fontId": "oswald",
@@ -166,7 +175,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#5c5247",
-      "fitScore": 0.296
+      "fitScore": 0.296,
+      "sampleBox": {
+        "x": 0.0927734375,
+        "y": 0.740625,
+        "width": 0.8056640625,
+        "height": 0.111328125
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 0.677
     },
     "agent_contact": {
       "fontId": "merriweather",
@@ -180,7 +197,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#c9c6c2",
-      "fitScore": 0.529
+      "fitScore": 0.529,
+      "sampleBox": {
+        "x": 0.091796875,
+        "y": 0.941796875,
+        "width": 0.45361328125,
+        "height": 0.016796875
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     },
     "asking_price": {
       "fontId": "plus-jakarta-sans",
@@ -194,7 +219,16 @@
       "tracking": 0,
       "align": "left",
       "color": "#c1beb9",
-      "fitScore": 0.627
+      "fitScore": 0.627,
+      "sampleBox": {
+        "x": 0.091796875,
+        "y": 0.905078125,
+        "width": 0.2080078125,
+        "height": 0.020703125
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/plus-jakarta-sans-600.woff2"
     },
     "headline": {
       "fontId": "oswald",
@@ -208,7 +242,16 @@
       "tracking": 0,
       "align": "center",
       "color": "#e0dad5",
-      "fitScore": 0.771
+      "fitScore": 0.771,
+      "sampleBox": {
+        "x": 0.2705078125,
+        "y": 0.0484375,
+        "width": 0.48095703125,
+        "height": 0.073828125
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/oswald-300.woff2"
     }
   }
 }

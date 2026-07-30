@@ -151,7 +151,16 @@
       "tracking": 0,
       "align": "left",
       "color": "#afb2b9",
-      "fitScore": 0.655
+      "fitScore": 0.655,
+      "sampleBox": {
+        "x": 0.08055555555555556,
+        "y": 0.35185185185185186,
+        "width": 0.39166666666666666,
+        "height": 0.04
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/jost-300.woff2"
     },
     "headline": {
       "fontId": "smooch-sans",
@@ -165,7 +174,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#f5f4f4",
-      "fitScore": 0.498
+      "fitScore": 0.498,
+      "sampleBox": {
+        "x": 0.07546296296296297,
+        "y": 0.06666666666666667,
+        "width": 0.7972222222222223,
+        "height": 0.20555555555555555
+      },
+      "sampleLineCount": 4,
+      "detectionScore": 1
     },
     "subheadline": {
       "fontId": "smooch-sans",
@@ -179,7 +196,16 @@
       "tracking": 0,
       "align": "left",
       "color": "#dfad58",
-      "fitScore": 0.822
+      "fitScore": 0.822,
+      "sampleBox": {
+        "x": 0.08101851851851852,
+        "y": 0.27185185185185184,
+        "width": 0.49212962962962964,
+        "height": 0.05925925925925926
+      },
+      "sampleLineCount": 4,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/smooch-sans-300.woff2"
     },
     "cta": {
       "fontId": "plus-jakarta-sans",
@@ -193,7 +219,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#7f7133",
-      "fitScore": 0.223
+      "fitScore": 0.223,
+      "sampleBox": {
+        "x": 0.2875,
+        "y": 0.8381481481481482,
+        "width": 0.43472222222222223,
+        "height": 0.09555555555555556
+      },
+      "sampleLineCount": 4,
+      "detectionScore": 1
     },
     "benefit_1": {
       "fontId": "mulish",
@@ -207,7 +241,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#d0d3d9",
-      "fitScore": 0.428
+      "fitScore": 0.428,
+      "sampleBox": {
+        "x": 0.19074074074074074,
+        "y": 0.5003703703703704,
+        "width": 0.18425925925925926,
+        "height": 0.013703703703703704
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     },
     "benefit_3": {
       "fontId": "lato",
@@ -221,7 +263,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#d7dadd",
-      "fitScore": 0.392
+      "fitScore": 0.392,
+      "sampleBox": {
+        "x": 0.19166666666666668,
+        "y": 0.66,
+        "width": 0.1925925925925926,
+        "height": 0.012222222222222223
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     },
     "benefit_2": {
       "fontId": "smooch-sans",
@@ -235,7 +285,16 @@
       "tracking": 0,
       "align": "left",
       "color": "#c7c0b2",
-      "fitScore": 0.624
+      "fitScore": 0.624,
+      "sampleBox": {
+        "x": 0.11944444444444445,
+        "y": 0.5681481481481482,
+        "width": 0.22870370370370371,
+        "height": 0.038148148148148146
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/smooch-sans-400.woff2"
     }
   }
 }

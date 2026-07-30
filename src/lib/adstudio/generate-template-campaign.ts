@@ -22,6 +22,7 @@ import {
   type CloneGenerationResult,
 } from "./clone-generation.ts";
 import { detectCloneRegions, type CloneRegion } from "./clone-regions.ts";
+import { deriveAndPersistTemplateTextLayers } from "./layer-derivation.ts";
 import { generateAdStudioTemplateCopy, type AdStudioCopyFields } from "./copy-generation.ts";
 import { buildCloneCampaignPack, buildCloneCreative } from "./clone-campaign.ts";
 import { persistAdStudioCampaignPack } from "./persistence.ts";
@@ -38,6 +39,7 @@ import { resolveAdStudioGenerationBrandKit } from "./trial-brand-kit.ts";
 import type {
   AdStudioBrandKit,
   AdStudioCampaignPack,
+  AdStudioCreative,
   FirstAdInput,
 } from "./types.ts";
 import { normalizeCloneQa } from "./types.ts";
@@ -181,11 +183,13 @@ export type CloneRegionsEnrichmentInput = {
   userId: string;
   correlationId: string;
   expectedCopy: Record<string, string>;
+  template: AdStudioTemplate;
   /** Primary format first. regionsPromise lets callers start the vision call
    * the moment the render exists, overlapping upload + persist. */
   renders: Array<{
     format: TemplateCloneRenderFormat;
     creativeId: string;
+    imageRef: string;
     imageUrl: string;
     regionsPromise?: Promise<CloneRegion[]>;
   }>;
@@ -211,13 +215,16 @@ export async function enrichCloneCreativesWithRegions(
         correlationId: input.correlationId,
         imageUrl: render.imageUrl,
         expectedCopy: input.expectedCopy,
+        sampleTextBoxes: Object.fromEntries(
+          Object.entries(input.template.typography ?? {}).map(([key, spec]) => [key, spec.sampleBox]),
+        ),
         format: render.format,
       }));
       if (regions.length === 0) return;
 
       const { data: row, error } = await supabase
         .from("adstudio_creatives")
-        .select("id, canvas_json")
+        .select("id, canvas_json, active_revision_id")
         .eq("workspace_id", input.workspaceId)
         .eq("id", render.creativeId)
         .maybeSingle();
@@ -226,11 +233,33 @@ export async function enrichCloneCreativesWithRegions(
       const existing = normalizeCloneQa(canvas.cloneQa);
       if (existing && existing.regions.length > 0) return;
       const cloneQa = { regions, copyValues: input.expectedCopy };
-      await supabase
+      const nextCanvas = { ...canvas, cloneQa } as AdStudioCreative["canvas"];
+      let updateQuery = supabase
         .from("adstudio_creatives")
-        .update({ canvas_json: { ...canvas, cloneQa }, updated_at: new Date().toISOString() })
+        .update({ canvas_json: nextCanvas, updated_at: new Date().toISOString() })
         .eq("workspace_id", input.workspaceId)
         .eq("id", render.creativeId);
+      updateQuery = row.active_revision_id
+        ? updateQuery.eq("active_revision_id", row.active_revision_id)
+        : updateQuery.is("active_revision_id", null);
+      const updated = await updateQuery.select("id");
+      if (updated.error || !updated.data?.length) return;
+
+      // The customer already has the finished ad. Prebuild the plate now in
+      // this background task so their first eligible edit is instant.
+      await deriveAndPersistTemplateTextLayers({
+        supabase,
+        workspaceId: input.workspaceId,
+        userId: input.userId,
+        correlationId: input.correlationId,
+        creativeId: render.creativeId,
+        activeRevisionId: row.active_revision_id,
+        format: render.format,
+        canvas: nextCanvas,
+        currentImageRef: render.imageRef,
+        currentImageUrl: render.imageUrl,
+        template: input.template,
+      });
     } catch {
       // Contained — never break the pipeline for a missing vision pass.
     }
@@ -441,6 +470,9 @@ export async function runTemplateCampaignGeneration(
     correlationId,
     imageUrl: feedRender.assetUrl,
     expectedCopy,
+    sampleTextBoxes: Object.fromEntries(
+      Object.entries(template.typography ?? {}).map(([key, spec]) => [key, spec.sampleBox]),
+    ),
     format: PRIMARY_CLONE_FORMAT,
   });
   const feedPersisted: PersistedCloneRender = {
@@ -518,9 +550,11 @@ export async function runTemplateCampaignGeneration(
           userId: input.userId,
           correlationId,
           expectedCopy,
+          template,
           renders: [{
             format: PRIMARY_CLONE_FORMAT,
             creativeId: feedCreative.creativeId,
+            imageRef: feedPersisted.image,
             imageUrl: feedRender.assetUrl,
             regionsPromise: feedRegionsPromise,
           }],
@@ -572,6 +606,9 @@ async function persistStoryInBackground(input: {
       correlationId: input.correlationId,
       imageUrl: storyRender.assetUrl,
       expectedCopy: input.expectedCopy,
+      sampleTextBoxes: Object.fromEntries(
+        Object.entries(input.template.typography ?? {}).map(([key, spec]) => [key, spec.sampleBox]),
+      ),
       format: STORY_CLONE_FORMAT,
     });
     const storyImage = await persistCloneRender({
@@ -639,9 +676,11 @@ async function persistStoryInBackground(input: {
       userId: input.userId,
       correlationId: input.correlationId,
       expectedCopy: input.expectedCopy,
+      template: input.template,
       renders: [{
         format: STORY_CLONE_FORMAT,
         creativeId: storyCreative.creativeId,
+        imageRef: storyImage,
         imageUrl: storyRender.assetUrl,
         regionsPromise: storyRegionsPromise,
       }],

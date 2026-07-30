@@ -9,7 +9,7 @@
 // is logged by name and reason in the run summary, not just dropped from
 // the count.
 
-import { readdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { detectTemplateRegions } from "./detect-regions.mjs";
 import { extractTargetProfile } from "./extract-target-profile.mjs";
@@ -17,6 +17,8 @@ import { matchFont } from "./match-font.mjs";
 
 const GALLERY_DIR = path.resolve(process.cwd(), "src/lib/adstudio/template-gallery");
 const REPORT_PATH = path.resolve(process.cwd(), ".cache/font-corpus/type-spec-report.json");
+
+const regionsOnly = process.argv.includes("--regions-only");
 
 async function processTemplate(templateId, raw) {
   const imageSrc = raw?.sample?.imageSrc;
@@ -34,6 +36,28 @@ async function processTemplate(templateId, raw) {
       skipped.push({ key: region.key, reason: "no detected box (OCR could not locate this region)" });
       continue;
     }
+    const regionMetadata = {
+      sampleBox: region.box,
+      sampleLineCount: Math.max(1, region.lineCount ?? 1),
+      detectionScore: Math.round(region.score * 1000) / 1000,
+    };
+    if (regionsOnly) {
+      const existing = raw.typography?.[region.key];
+      if (!existing) {
+        skipped.push({ key: region.key, reason: "no existing typeSpec to attach region metadata to" });
+        continue;
+      }
+      typography[region.key] = { ...existing, ...regionMetadata };
+      matches.push({
+        key: region.key,
+        fontId: existing.fontId,
+        weight: existing.weight,
+        fitScore: existing.fitScore,
+        regionScore: regionMetadata.detectionScore,
+        regionLowConfidence: Boolean(region.lowConfidence),
+      });
+      continue;
+    }
     const profile = await extractTargetProfile(templateId, region, imagePath, imageWidth, imageHeight);
     if (profile.error || profile.strokeToHeightRatio == null) {
       skipped.push({ key: region.key, reason: `profile extraction failed: ${profile.error ?? "no measurable ink"}` });
@@ -45,7 +69,7 @@ async function processTemplate(templateId, raw) {
       continue;
     }
     const { candidatesEvaluated, key, ...typeSpec } = spec;
-    typography[key] = typeSpec;
+    typography[key] = { ...typeSpec, ...regionMetadata };
     matches.push({
       key,
       fontId: typeSpec.fontId,
@@ -60,6 +84,7 @@ async function processTemplate(templateId, raw) {
 }
 
 async function main() {
+  await mkdir(path.dirname(REPORT_PATH), { recursive: true });
   const entries = await readdir(GALLERY_DIR, { withFileTypes: true });
   const templateFiles = entries
     .filter((e) => e.isFile() && e.name.endsWith(".json"))

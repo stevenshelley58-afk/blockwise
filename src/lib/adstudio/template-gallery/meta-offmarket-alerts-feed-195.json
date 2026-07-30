@@ -130,7 +130,16 @@
       "tracking": 0,
       "align": "right",
       "color": "#9da49f",
-      "fitScore": 0.722
+      "fitScore": 0.722,
+      "sampleBox": {
+        "x": 0.2740740740740741,
+        "y": 0.38074074074074077,
+        "width": 0.725925925925926,
+        "height": 0.057777777777777775
+      },
+      "sampleLineCount": 6,
+      "detectionScore": 0.868,
+      "fontFile": "/fonts/adstudio/oswald-400.woff2"
     },
     "headline": {
       "fontId": "smooch-sans",
@@ -144,7 +153,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#ebf1f7",
-      "fitScore": 0.568
+      "fitScore": 0.568,
+      "sampleBox": {
+        "x": 0.08935185185185185,
+        "y": 0.16666666666666666,
+        "width": 0.8356481481481481,
+        "height": 0.11962962962962963
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 1
     },
     "subheadline": {
       "fontId": "smooch-sans",
@@ -158,7 +175,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#dab873",
-      "fitScore": 0.508
+      "fitScore": 0.508,
+      "sampleBox": {
+        "x": 0.18611111111111112,
+        "y": 0.32296296296296295,
+        "width": 0.6564814814814814,
+        "height": 0.024074074074074074
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     },
     "cta": {
       "fontId": "smooch-sans",
@@ -172,7 +197,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#54492a",
-      "fitScore": 0.294
+      "fitScore": 0.294,
+      "sampleBox": {
+        "x": 0.3162037037037037,
+        "y": 0.7418518518518519,
+        "width": 0.5671296296296297,
+        "height": 0.13296296296296295
+      },
+      "sampleLineCount": 5,
+      "detectionScore": 0.368
     }
   }
 }

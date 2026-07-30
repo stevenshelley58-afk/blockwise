@@ -312,6 +312,14 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
 
   const layers = canvas.textLayers;
   const layersValidForCurrent = layers?.status === "ready" && layers.validFor.includes(currentImageRef);
+  const textStyle = layers?.styles[editFieldKey];
+  if (newValue && newValue.length > (textStyle?.maxLength ?? 200)) {
+    await releaseClaim();
+    return NextResponse.json(
+      { error: `Keep the new text to ${textStyle?.maxLength ?? 200} characters or less.` },
+      { status: 400 },
+    );
+  }
 
   // A text edit's new value IS the verified value — the copy editor map
   // updates deterministically either way, whether the pixels came from the
@@ -332,7 +340,7 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
     // Deterministic fast path: the browser already re-typeset the exact copy
     // over the plate crop; the server only clamps it to the selected region
     // and composites — a patch can never touch pixels a model edit couldn't.
-    if (!layers || !layersValidForCurrent) {
+    if (!layers || !layersValidForCurrent || textStyle?.mode !== "live" || !textStyle.fontFile) {
       await releaseClaim();
       return NextResponse.json(
         { code: "layers_stale", error: "Instant editing is not ready for this version yet." },

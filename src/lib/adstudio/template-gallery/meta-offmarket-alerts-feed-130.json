@@ -123,7 +123,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#a29b85",
-      "fitScore": 0.23
+      "fitScore": 0.23,
+      "sampleBox": {
+        "x": 0.24675925925925926,
+        "y": 0.5625925925925926,
+        "width": 0.5814814814814815,
+        "height": 0.11703703703703704
+      },
+      "sampleLineCount": 6,
+      "detectionScore": 0.905
     },
     "headline": {
       "fontId": "plus-jakarta-sans",
@@ -137,7 +145,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#b4ad9f",
-      "fitScore": 0.302
+      "fitScore": 0.302,
+      "sampleBox": {
+        "x": 0.1050925925925926,
+        "y": 0.2859259259259259,
+        "width": 0.8231481481481482,
+        "height": 0.21333333333333335
+      },
+      "sampleLineCount": 8,
+      "detectionScore": 0.818
     },
     "cta": {
       "fontId": "barlow",
@@ -151,7 +167,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#736f55",
-      "fitScore": 0.233
+      "fitScore": 0.233,
+      "sampleBox": {
+        "x": 0.13425925925925927,
+        "y": 0.67,
+        "width": 0.7842592592592592,
+        "height": 0.10111111111111111
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 1
     }
   }
 }

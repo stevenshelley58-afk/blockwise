@@ -19,21 +19,14 @@
 
 import type { ImageProviderRequest } from "./providers.ts";
 import type { AdStudioCloneRegion, AdStudioTextLayers, AdStudioTextLayerStyle } from "./types.ts";
+import type { AdStudioTemplate } from "./templates.ts";
 import { GLOBAL_CLONE_NEGATIVES } from "./reference-clone.ts";
 import { dataUrlToUploadBytes } from "./generated-media.ts";
 import { paddedPixelRect } from "./region-edit.ts";
-import { createTextProviderForCandidate } from "./ai-providers.ts";
-import type { TextProviderAdapter, TextProviderResponse } from "./providers.ts";
 import {
-  isProviderFallbackEligible,
-  modelCandidateAttempts,
-  resolveRuntimeModelProfile,
-} from "../operator/prompts/model-profile-runtime.ts";
-import {
-  executeAdStudioProviderAttempt,
-  recordAdStudioProviderRun,
-  type ProviderRunAttempt,
-} from "../operator/prompts/redact-prompt-run.ts";
+  MAGIC_LAYER_MIN_FONT_FIT,
+  MAGIC_LAYER_MIN_REGION_CONFIDENCE,
+} from "./magic-layers-config.mjs";
 
 type NormalizedBox = { x: number; y: number; width: number; height: number };
 
@@ -45,6 +38,48 @@ export const MAX_TEXT_PATCH_BYTES = 4 * 1024 * 1024;
 
 export function textRegionsOf(regions: AdStudioCloneRegion[] | undefined): AdStudioCloneRegion[] {
   return (regions ?? []).filter((region) => region.kind === "text" && region.box.width > 0 && region.box.height > 0);
+}
+
+/**
+ * Converts the offline template measurements into runtime styles. The
+ * finished clone's detected boxes remain authoritative; the sample boxes are
+ * build-time priors only. A region becomes live only when both independent
+ * confidence gates passed and its exact self-hosted face exists.
+ */
+export function buildTemplateTextLayerStyles(
+  template: AdStudioTemplate,
+  regions: AdStudioCloneRegion[],
+): Record<string, AdStudioTextLayerStyle> {
+  const textInputs = new Map(template.inputs.text.map((input) => [input.key, input]));
+  const styles: Record<string, AdStudioTextLayerStyle> = {};
+  for (const region of textRegionsOf(regions)) {
+    const spec = template.typography?.[region.key];
+    const input = textInputs.get(region.key);
+    if (!spec || !input) continue;
+    const live = spec.fitScore >= MAGIC_LAYER_MIN_FONT_FIT
+      && spec.detectionScore >= MAGIC_LAYER_MIN_REGION_CONFIDENCE
+      && Boolean(spec.fontFile);
+    styles[region.key] = {
+      fontId: spec.fontId,
+      family: spec.family,
+      fontFile: spec.fontFile,
+      fallbackFamily: spec.fallbackFamily,
+      weight: spec.weight,
+      italic: spec.italic,
+      case: spec.case,
+      sizeRatio: spec.sizeRatio,
+      lineHeight: spec.lineHeight,
+      tracking: spec.tracking,
+      color: spec.color,
+      align: spec.align,
+      fitScore: spec.fitScore,
+      sampleLineCount: spec.sampleLineCount,
+      sample: input.sample,
+      maxLength: input.maxLength,
+      mode: live ? "live" : "rerender",
+    };
+  }
+  return styles;
 }
 
 /** True when `box` (grown by the compositing tolerance) overlaps any text region. */
@@ -167,150 +202,4 @@ export async function compositeTextPatch(
     .png()
     .toBuffer();
   return `data:image/png;base64,${composited.toString("base64")}`;
-}
-
-const STYLE_DETECTION_SYSTEM = [
-  "You are reading the type treatment of specific text elements in a finished ad",
-  "creative so the exact copy can be re-typeset faithfully. Return ONLY JSON",
-  "matching this exact shape:",
-  '{ "styles": [ { "key": "<region key>", "family": "sans", "weight": 700,',
-  '"italic": false, "uppercase": false, "color": "#ffffff", "align": "center",',
-  '"letterSpacing": "normal" } ] }',
-  'For each requested key: "family" is one of sans, serif, slab, condensed,',
-  'rounded, script, mono — the closest generic category for the rendered font.',
-  '"weight" is 400, 500, 600, 700, or 800. "uppercase" is true when the text is',
-  'rendered in all capitals. "color" is the dominant hex colour of the letters',
-  '(not the background). "align" is the text alignment within its own block.',
-  '"letterSpacing" is "wide" only for visibly spaced-out type. Return one entry',
-  "per requested key and no text outside the JSON object.",
-].join(" ");
-
-const STYLE_FAMILIES = new Set(["sans", "serif", "slab", "condensed", "rounded", "script", "mono"]);
-const STYLE_WEIGHTS = new Set([400, 500, 600, 700, 800]);
-
-export function parseTextLayerStyles(raw: unknown, requestedKeys: string[]): Record<string, AdStudioTextLayerStyle> {
-  const keys = new Set(requestedKeys);
-  const styles: Record<string, AdStudioTextLayerStyle> = {};
-  const entries = raw && typeof raw === "object" && Array.isArray((raw as Record<string, unknown>).styles)
-    ? (raw as { styles: unknown[] }).styles
-    : [];
-  for (const entry of entries) {
-    if (!entry || typeof entry !== "object") continue;
-    const item = entry as Record<string, unknown>;
-    const key = typeof item.key === "string" ? item.key.trim() : "";
-    if (!key || !keys.has(key)) continue;
-    const family = typeof item.family === "string" && STYLE_FAMILIES.has(item.family)
-      ? item.family as AdStudioTextLayerStyle["family"]
-      : "sans";
-    const weight = typeof item.weight === "number" && STYLE_WEIGHTS.has(item.weight) ? item.weight : 700;
-    const color = typeof item.color === "string" && /^#[0-9a-f]{3,8}$/i.test(item.color.trim())
-      ? item.color.trim()
-      : "#ffffff";
-    const align = item.align === "left" || item.align === "right" ? item.align : "center";
-    styles[key] = {
-      family,
-      weight,
-      italic: item.italic === true,
-      uppercase: item.uppercase === true,
-      color,
-      align,
-      letterSpacing: item.letterSpacing === "wide" ? "wide" : "normal",
-    };
-  }
-  return styles;
-}
-
-export type DetectTextLayerStylesInput = {
-  workspaceId: string;
-  userId: string;
-  correlationId: string;
-  /** Model-readable image (data: URL or absolute http(s) URL). */
-  imageUrl: string;
-  regionKeys: string[];
-};
-
-/**
- * One vision call per decomposition: reads the type treatment of every text
- * region. Mirrors detectCloneRegions' shape. On ANY failure it returns {} so
- * the caller can fall back to defaults without breaking the pipeline.
- */
-export async function detectTextLayerStyles(
-  input: DetectTextLayerStylesInput,
-): Promise<Record<string, AdStudioTextLayerStyle>> {
-  if (input.regionKeys.length === 0) return {};
-  try {
-    const startedAt = Date.now();
-    const mutationId = `${input.correlationId}:adstudio.text_layer_styles`;
-    const profile = await resolveRuntimeModelProfile("vision_classification");
-    const candidates = modelCandidateAttempts(profile);
-    const attempts: ProviderRunAttempt[] = [];
-    let output: TextProviderResponse | null = null;
-    let provider: TextProviderAdapter | null = null;
-    let modelName = "unavailable";
-    let lastError: unknown = null;
-    const userMessage = `Read the type treatment of these text elements: ${input.regionKeys.join(", ")}.`;
-
-    for (const [attemptIndex, candidate] of candidates.entries()) {
-      const candidateProvider = createTextProviderForCandidate(candidate);
-      try {
-        const execution = await executeAdStudioProviderAttempt<TextProviderResponse>({
-          workspaceId: input.workspaceId,
-          mutationId,
-          attemptIndex,
-          modelProfile: "vision_classification",
-          provider: candidateProvider,
-          execute: () => candidateProvider.generate({
-            system: STYLE_DETECTION_SYSTEM,
-            schemaName: "metaLeadAdPack",
-            imageUrl: input.imageUrl,
-            messages: [{ role: "user", content: userMessage }],
-          }),
-        });
-        attempts.push(execution.attempt);
-        if (!execution.ok) {
-          lastError = execution.error;
-          if (!isProviderFallbackEligible(execution.error)) break;
-          continue;
-        }
-        output = execution.output;
-        provider = candidateProvider;
-        modelName = String(output.providerMetadata.model ?? candidate.model);
-        break;
-      } catch (error) {
-        lastError = error;
-        break;
-      }
-    }
-
-    await recordAdStudioProviderRun({
-      workspaceId: input.workspaceId,
-      userId: input.userId,
-      correlationId: input.correlationId,
-      taskType: "adstudio.text_layer_styles",
-      modelProfile: "vision_classification",
-      mutationId,
-      prompt: {
-        system: STYLE_DETECTION_SYSTEM,
-        user: userMessage,
-        fullPrompt: STYLE_DETECTION_SYSTEM,
-        promptVersions: [],
-        fallbackPromptUsed: false,
-        warnings: [],
-      },
-      input: { regionKeys: input.regionKeys },
-      attempts,
-      latencyMs: Date.now() - startedAt,
-      providerName: provider?.providerName ?? "unavailable",
-      providerType: "text_generation",
-      modelName,
-      output,
-      status: output ? "completed" : "failed",
-      error: output ? undefined : lastError,
-    });
-
-    if (!output) return {};
-    return parseTextLayerStyles(output.json, input.regionKeys);
-  } catch {
-    return {};
-  }
 }

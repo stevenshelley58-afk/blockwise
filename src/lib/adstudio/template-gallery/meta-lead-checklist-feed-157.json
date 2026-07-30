@@ -130,7 +130,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#4f4f50",
-      "fitScore": 0.578
+      "fitScore": 0.578,
+      "sampleBox": {
+        "x": 0.1986111111111111,
+        "y": 0.6166666666666667,
+        "width": 0.3907407407407407,
+        "height": 0.07148148148148148
+      },
+      "sampleLineCount": 3,
+      "detectionScore": 1
     },
     "headline": {
       "fontId": "smooch-sans",
@@ -144,7 +152,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#212224",
-      "fitScore": 0.59
+      "fitScore": 0.59,
+      "sampleBox": {
+        "x": 0.10833333333333334,
+        "y": 0.3414814814814815,
+        "width": 0.8537037037037037,
+        "height": 0.19666666666666666
+      },
+      "sampleLineCount": 5,
+      "detectionScore": 0.886
     },
     "subheadline": {
       "fontId": "titillium-web",
@@ -158,7 +174,15 @@
       "tracking": 0,
       "align": "right",
       "color": "#deddda",
-      "fitScore": 0.253
+      "fitScore": 0.253,
+      "sampleBox": {
+        "x": 0.1398148148148148,
+        "y": 0.49703703703703705,
+        "width": 0.8601851851851852,
+        "height": 0.0937037037037037
+      },
+      "sampleLineCount": 3,
+      "detectionScore": 1
     }
   }
 }

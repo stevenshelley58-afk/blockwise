@@ -151,7 +151,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#cccac8",
-      "fitScore": 0.415
+      "fitScore": 0.415,
+      "sampleBox": {
+        "x": 0.09814814814814815,
+        "y": 0.4830729166666667,
+        "width": 0.5300925925925926,
+        "height": 0.013802083333333333
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     },
     "headline": {
       "fontId": "smooch-sans",
@@ -165,7 +173,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#6a6141",
-      "fitScore": 0.357
+      "fitScore": 0.357,
+      "sampleBox": {
+        "x": 0.08935185185185185,
+        "y": 0.3802083333333333,
+        "width": 0.7291666666666666,
+        "height": 0.10442708333333334
+      },
+      "sampleLineCount": 7,
+      "detectionScore": 0.667
     },
     "stat_1": {
       "fontId": "oswald",
@@ -179,7 +195,16 @@
       "tracking": 0,
       "align": "left",
       "color": "#877450",
-      "fitScore": 0.636
+      "fitScore": 0.636,
+      "sampleBox": {
+        "x": 0.11296296296296296,
+        "y": 0.53515625,
+        "width": 0.5361111111111111,
+        "height": 0.04192708333333333
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 0.909,
+      "fontFile": "/fonts/adstudio/oswald-300.woff2"
     },
     "stat_3": {
       "fontId": "oswald",
@@ -193,7 +218,16 @@
       "tracking": 0,
       "align": "left",
       "color": "#af9563",
-      "fitScore": 0.697
+      "fitScore": 0.697,
+      "sampleBox": {
+        "x": 0.12037037037037036,
+        "y": 0.6786458333333333,
+        "width": 0.4361111111111111,
+        "height": 0.034375
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/oswald-300.woff2"
     },
     "stat_2": {
       "fontId": "lora",
@@ -207,7 +241,16 @@
       "tracking": 0,
       "align": "left",
       "color": "#d5b372",
-      "fitScore": 0.946
+      "fitScore": 0.946,
+      "sampleBox": {
+        "x": 0.12083333333333333,
+        "y": 0.6098958333333333,
+        "width": 0.37083333333333335,
+        "height": 0.03125
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/lora-600.woff2"
     },
     "stat_4": {
       "fontId": "manrope",
@@ -221,7 +264,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#c4a56a",
-      "fitScore": 0.436
+      "fitScore": 0.436,
+      "sampleBox": {
+        "x": 0.23703703703703705,
+        "y": 0.7604166666666666,
+        "width": 0.2833333333333333,
+        "height": 0.01328125
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     }
   }
 }

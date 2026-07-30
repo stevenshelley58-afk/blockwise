@@ -51,11 +51,13 @@ test("undo and redo restore instantly from the stored verdict and always succeed
   assert.doesNotMatch(route, /That version no longer passes/);
 });
 
-test("edits save always; every edit routes through the image model", () => {
+test("edits save always; only confidence-gated text edits bypass the image model", () => {
   // The destructive blur-and-generic-font RENDER fallback stays banned, and
-  // the deterministic text shortcut is gone too: all edits go through the
-  // image model so the original type treatment is retained.
+  // deterministic edits require a valid plate and a precomputed live style.
   assert.doesNotMatch(route, /renderExactCloneTextEdit/);
+  assert.match(route, /textStyle\?\.mode !== "live"/);
+  assert.match(route, /compositeTextPatch/);
+  // Every other edit keeps the scoped clone-model path.
   assert.match(route, /buildTargetedEditRequest/);
   assert.match(route, /cropRegionWithPadding/);
   assert.match(route, /compositeRegionBack/);

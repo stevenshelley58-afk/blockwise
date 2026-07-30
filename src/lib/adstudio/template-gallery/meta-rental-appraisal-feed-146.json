@@ -158,7 +158,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#ecd5a3",
-      "fitScore": 0.508
+      "fitScore": 0.508,
+      "sampleBox": {
+        "x": 0.05092592592592592,
+        "y": 0.5207407407407407,
+        "width": 0.8986111111111111,
+        "height": 0.11777777777777777
+      },
+      "sampleLineCount": 3,
+      "detectionScore": 0.943
     },
     "subheadline": {
       "fontId": "oswald",
@@ -172,7 +180,16 @@
       "tracking": 0,
       "align": "center",
       "color": "#c5ad74",
-      "fitScore": 0.667
+      "fitScore": 0.667,
+      "sampleBox": {
+        "x": 0.05694444444444444,
+        "y": 0.5996296296296296,
+        "width": 0.8930555555555556,
+        "height": 0.08888888888888889
+      },
+      "sampleLineCount": 3,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/oswald-300.woff2"
     },
     "cta": {
       "fontId": "quicksand",
@@ -186,7 +203,16 @@
       "tracking": 0,
       "align": "center",
       "color": "#172f3a",
-      "fitScore": 0.726
+      "fitScore": 0.726,
+      "sampleBox": {
+        "x": 0.15231481481481482,
+        "y": 0.8781481481481481,
+        "width": 0.6907407407407408,
+        "height": 0.06777777777777778
+      },
+      "sampleLineCount": 3,
+      "detectionScore": 0.778,
+      "fontFile": "/fonts/adstudio/quicksand-500.woff2"
     },
     "benefit_3": {
       "fontId": "lora",
@@ -200,7 +226,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#c2c8cc",
-      "fitScore": 0.428
+      "fitScore": 0.428,
+      "sampleBox": {
+        "x": 0.6532407407407408,
+        "y": 0.8096296296296296,
+        "width": 0.22824074074074074,
+        "height": 0.014074074074074074
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     },
     "benefit_2": {
       "fontId": "smooch-sans",
@@ -214,7 +248,16 @@
       "tracking": 0,
       "align": "left",
       "color": "#a3abaf",
-      "fitScore": 0.626
+      "fitScore": 0.626,
+      "sampleBox": {
+        "x": 0.39166666666666666,
+        "y": 0.7933333333333333,
+        "width": 0.37083333333333335,
+        "height": 0.03037037037037037
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/smooch-sans-400.woff2"
     },
     "benefit_1": {
       "fontId": "merriweather",
@@ -228,7 +271,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#c7ccd1",
-      "fitScore": 0.382
+      "fitScore": 0.382,
+      "sampleBox": {
+        "x": 0.1300925925925926,
+        "y": 0.81,
+        "width": 0.16574074074074074,
+        "height": 0.013333333333333334
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     }
   }
 }

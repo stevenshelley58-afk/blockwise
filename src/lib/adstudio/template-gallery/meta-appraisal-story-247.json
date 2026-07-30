@@ -153,7 +153,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#90918f",
-      "fitScore": 0.541
+      "fitScore": 0.541,
+      "sampleBox": {
+        "x": 0.09166666666666666,
+        "y": 0.6776041666666667,
+        "width": 0.5893518518518519,
+        "height": 0.096875
+      },
+      "sampleLineCount": 5,
+      "detectionScore": 1
     },
     "headline": {
       "fontId": "smooch-sans",
@@ -167,7 +175,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#f2f3f3",
-      "fitScore": 0.478
+      "fitScore": 0.478,
+      "sampleBox": {
+        "x": 0.09074074074074075,
+        "y": 0.45546875,
+        "width": 0.6226851851851852,
+        "height": 0.22135416666666666
+      },
+      "sampleLineCount": 3,
+      "detectionScore": 0.828
     },
     "agent_role": {
       "fontId": "manrope",
@@ -181,7 +197,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#cfd0d2",
-      "fitScore": 0.487
+      "fitScore": 0.487,
+      "sampleBox": {
+        "x": 0.09259259259259259,
+        "y": 0.85703125,
+        "width": 0.45416666666666666,
+        "height": 0.011979166666666667
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     },
     "subheadline": {
       "fontId": "source-sans-3",
@@ -195,7 +219,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#e1c709",
-      "fitScore": 0.581
+      "fitScore": 0.581,
+      "sampleBox": {
+        "x": 0.09444444444444444,
+        "y": 0.6653645833333334,
+        "width": 0.7064814814814815,
+        "height": 0.01953125
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     },
     "email": {
       "fontId": "lora",
@@ -209,7 +241,16 @@
       "tracking": 0,
       "align": "left",
       "color": "#bdbec0",
-      "fitScore": 0.647
+      "fitScore": 0.647,
+      "sampleBox": {
+        "x": 0.1310185185185185,
+        "y": 0.9203125,
+        "width": 0.3560185185185185,
+        "height": 0.016666666666666666
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/lora-600.woff2"
     },
     "website": {
       "fontId": "merriweather",
@@ -223,7 +264,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#c1c3c5",
-      "fitScore": 0.509
+      "fitScore": 0.509,
+      "sampleBox": {
+        "x": 0.16064814814814815,
+        "y": 0.95390625,
+        "width": 0.24675925925925926,
+        "height": 0.013020833333333334
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     },
     "phone": {
       "fontId": "raleway",
@@ -237,7 +286,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#cacccd",
-      "fitScore": 0.484
+      "fitScore": 0.484,
+      "sampleBox": {
+        "x": 0.16064814814814815,
+        "y": 0.8924479166666667,
+        "width": 0.17314814814814813,
+        "height": 0.012239583333333333
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     },
     "agent_name": {
       "fontId": "smooch-sans",
@@ -251,7 +308,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#e2c607",
-      "fitScore": 0.53
+      "fitScore": 0.53,
+      "sampleBox": {
+        "x": 0.0912037037037037,
+        "y": 0.821875,
+        "width": 0.3912037037037037,
+        "height": 0.02109375
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     }
   }
 }

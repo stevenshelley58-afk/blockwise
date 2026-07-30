@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "adstudio:build-type-specs": "node scripts/build/font-corpus/adstudio-type-specs.mjs",
+    "adstudio:build-type-regions": "node scripts/build/font-corpus/adstudio-type-specs.mjs --regions-only",
+    "adstudio:build-runtime-fonts": "node scripts/build/font-corpus/build-runtime-fonts.mjs",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",

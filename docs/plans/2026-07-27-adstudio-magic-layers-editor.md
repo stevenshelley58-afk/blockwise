@@ -1,6 +1,15 @@
 # Magic Layers — full editor plan
 
-Date: 2026-07-27 · Scope: the AdStudio text/image editing path (`text-layers.ts`, `region-edit.ts`, `creatives/[id]/{edit,layers}`, the editor UI) · Status: proposed, not started
+Date: 2026-07-27 · Scope: the AdStudio text/image editing path (`text-layers.ts`, `region-edit.ts`, `creatives/[id]/{edit,layers}`, the editor UI) · Status: implemented 2026-07-30
+
+Implementation note: all 71 templates now carry offline font matches, sample
+text bounds, line counts, and detection confidence. Exact licensed winner
+faces are self-hosted and hash-gated. The finished customer clone remains the
+canonical image; detected clone boxes remain authoritative and the sample
+bounds are priors only. High-confidence text regions get an eager background
+plate after generation, while every uncertain font, failed load, stale plate,
+or oversized copy uses the scoped clone-model edit path. No template creation
+or final generation recipe changed.
 
 **Relationship to Stage 2.** `docs/CLAUDE-CODE-PROMPT-STAGE2.md` puts layers derivation explicitly out of scope ("consume, don't change") and tells Stage 2 Phase 3 to *connect to* Magic Layers as it stands. That is the right call for Stage 2 — but Magic Layers as it stands renders every typeface as Arial, Georgia or Rockwell. If Phase 3 ships against today's derivation, the approved mockup's Edit surface will show correct layout with wrong type. **This plan is Stage 2a and must land before Stage 2 Phase 3.** It changes only `src/lib/adstudio/*` + the two API routes + `text-patch.ts`; it touches no studio UI structure, so the two workstreams do not collide.
 

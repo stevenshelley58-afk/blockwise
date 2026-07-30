@@ -151,7 +151,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#454e57",
-      "fitScore": 0.422
+      "fitScore": 0.422,
+      "sampleBox": {
+        "x": 0.12407407407407407,
+        "y": 0.8729629629629629,
+        "width": 0.4305555555555556,
+        "height": 0.012962962962962963
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     },
     "headline": {
       "fontId": "smooch-sans",
@@ -165,7 +173,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#42493f",
-      "fitScore": 0.415
+      "fitScore": 0.415,
+      "sampleBox": {
+        "x": 0.12083333333333333,
+        "y": 0.67,
+        "width": 0.44537037037037036,
+        "height": 0.14333333333333334
+      },
+      "sampleLineCount": 3,
+      "detectionScore": 1
     },
     "subheadline": {
       "fontId": "heebo",
@@ -179,7 +195,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#233644",
-      "fitScore": 0.415
+      "fitScore": 0.415,
+      "sampleBox": {
+        "x": 0.12407407407407407,
+        "y": 0.8388888888888889,
+        "width": 0.40185185185185185,
+        "height": 0.018518518518518517
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     },
     "cta": {
       "fontId": "smooch-sans",
@@ -193,7 +217,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#e2e4e6",
-      "fitScore": 0.389
+      "fitScore": 0.389,
+      "sampleBox": {
+        "x": 0.6569444444444444,
+        "y": 0.822962962962963,
+        "width": 0.19027777777777777,
+        "height": 0.02074074074074074
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 0.474
     },
     "benefit_3": {
       "fontId": "smooch-sans",
@@ -207,7 +239,15 @@
       "tracking": 0,
       "align": "right",
       "color": "#374a57",
-      "fitScore": 0.562
+      "fitScore": 0.562,
+      "sampleBox": {
+        "x": 0.7194444444444444,
+        "y": 0.17333333333333334,
+        "width": 0.20833333333333334,
+        "height": 0.025185185185185185
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     },
     "benefit_1": {
       "fontId": "rubik",
@@ -221,7 +261,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#7dabd4",
-      "fitScore": 0.491
+      "fitScore": 0.491,
+      "sampleBox": {
+        "x": 0.4601851851851852,
+        "y": 0.012222222222222223,
+        "width": 0.42268518518518516,
+        "height": 0.08037037037037037
+      },
+      "sampleLineCount": 3,
+      "detectionScore": 1
     },
     "benefit_2": {
       "fontId": "dm-sans",
@@ -235,7 +283,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#243c4f",
-      "fitScore": 0.366
+      "fitScore": 0.366,
+      "sampleBox": {
+        "x": 0.7356481481481482,
+        "y": 0.1237037037037037,
+        "width": 0.1574074074074074,
+        "height": 0.011481481481481481
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     }
   }
 }

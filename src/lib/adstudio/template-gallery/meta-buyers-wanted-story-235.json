@@ -130,7 +130,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#4b4a48",
-      "fitScore": 0.587
+      "fitScore": 0.587,
+      "sampleBox": {
+        "x": 0.25046296296296294,
+        "y": 0.2765625,
+        "width": 0.5078703703703704,
+        "height": 0.04973958333333333
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 1
     },
     "headline": {
       "fontId": "smooch-sans",
@@ -144,7 +152,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#100f0f",
-      "fitScore": 0.566
+      "fitScore": 0.566,
+      "sampleBox": {
+        "x": 0.09398148148148149,
+        "y": 0.13385416666666666,
+        "width": 0.8495370370370371,
+        "height": 0.07552083333333333
+      },
+      "sampleLineCount": 6,
+      "detectionScore": 0.729
     },
     "subheadline": {
       "fontId": "merriweather",
@@ -158,7 +174,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#886d35",
-      "fitScore": 0.476
+      "fitScore": 0.476,
+      "sampleBox": {
+        "x": 0.18055555555555555,
+        "y": 0.23619791666666667,
+        "width": 0.6712962962962963,
+        "height": 0.015364583333333333
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     },
     "cta": {
       "fontId": "kanit",
@@ -172,7 +196,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#bda781",
-      "fitScore": 0.142
+      "fitScore": 0.142,
+      "sampleBox": {
+        "x": 0.31296296296296294,
+        "y": 0.3203125,
+        "width": 0.4185185185185185,
+        "height": 0.06328125
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 1
     },
     "website": {
       "fontId": "smooch-sans",
@@ -186,7 +218,16 @@
       "tracking": 0,
       "align": "left",
       "color": "#4c3d2e",
-      "fitScore": 0.659
+      "fitScore": 0.659,
+      "sampleBox": {
+        "x": 0.4597222222222222,
+        "y": 0.9638020833333333,
+        "width": 0.2625,
+        "height": 0.022395833333333334
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 0.882,
+      "fontFile": "/fonts/adstudio/smooch-sans-400.woff2"
     }
   }
 }

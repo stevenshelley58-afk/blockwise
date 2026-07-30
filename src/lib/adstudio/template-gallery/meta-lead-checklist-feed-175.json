@@ -158,7 +158,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#7d7a76",
-      "fitScore": 0.335
+      "fitScore": 0.335,
+      "sampleBox": {
+        "x": 0.002777777777777778,
+        "y": 0.17925925925925926,
+        "width": 0.9768518518518519,
+        "height": 0.16
+      },
+      "sampleLineCount": 12,
+      "detectionScore": 0.568
     },
     "subheadline": {
       "fontId": "kanit",
@@ -172,7 +180,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#7d7876",
-      "fitScore": 0.43
+      "fitScore": 0.43,
+      "sampleBox": {
+        "x": 0.07731481481481481,
+        "y": 0.3337037037037037,
+        "width": 0.8115740740740741,
+        "height": 0.056666666666666664
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 1
     },
     "check_3": {
       "fontId": "smooch-sans",
@@ -186,7 +202,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#5b544d",
-      "fitScore": 0.513
+      "fitScore": 0.513,
+      "sampleBox": {
+        "x": 0.20092592592592592,
+        "y": 0.6666666666666666,
+        "width": 0.4685185185185185,
+        "height": 0.03
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     },
     "check_2": {
       "fontId": "smooch-sans",
@@ -200,7 +224,16 @@
       "tracking": 0,
       "align": "left",
       "color": "#59524b",
-      "fitScore": 0.728
+      "fitScore": 0.728,
+      "sampleBox": {
+        "x": 0.20092592592592592,
+        "y": 0.5922222222222222,
+        "width": 0.4708333333333333,
+        "height": 0.04
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/smooch-sans-400.woff2"
     },
     "check_1": {
       "fontId": "manrope",
@@ -214,7 +247,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#575049",
-      "fitScore": 0.397
+      "fitScore": 0.397,
+      "sampleBox": {
+        "x": 0.20092592592592592,
+        "y": 0.5144444444444445,
+        "width": 0.4351851851851852,
+        "height": 0.02
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     },
     "check_4": {
       "fontId": "manrope",
@@ -228,7 +269,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#554f48",
-      "fitScore": 0.405
+      "fitScore": 0.405,
+      "sampleBox": {
+        "x": 0.20046296296296295,
+        "y": 0.7437037037037038,
+        "width": 0.42083333333333334,
+        "height": 0.020370370370370372
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     },
     "check_5": {
       "fontId": "nunito-sans",
@@ -242,7 +291,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#575049",
-      "fitScore": 0.5
+      "fitScore": 0.5,
+      "sampleBox": {
+        "x": 0.19953703703703704,
+        "y": 0.8203703703703704,
+        "width": 0.4050925925925926,
+        "height": 0.02
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     }
   }
 }

@@ -137,7 +137,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#dfd1b6",
-      "fitScore": 0.252
+      "fitScore": 0.252,
+      "sampleBox": {
+        "x": 0.22870370370370371,
+        "y": 0.6207407407407407,
+        "width": 0.5912037037037037,
+        "height": 0.1559259259259259
+      },
+      "sampleLineCount": 5,
+      "detectionScore": 1
     },
     "headline": {
       "fontId": "oswald",
@@ -151,7 +159,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#0b0b0b",
-      "fitScore": 0.532
+      "fitScore": 0.532,
+      "sampleBox": {
+        "x": 0.09074074074074075,
+        "y": 0.08222222222222222,
+        "width": 0.8439814814814814,
+        "height": 0.10222222222222223
+      },
+      "sampleLineCount": 6,
+      "detectionScore": 0.704
     },
     "subheadline": {
       "fontId": "titillium-web",
@@ -165,7 +181,15 @@
       "tracking": 0,
       "align": "right",
       "color": "#dad6ce",
-      "fitScore": 0.242
+      "fitScore": 0.242,
+      "sampleBox": {
+        "x": 0.19074074074074074,
+        "y": 0.20222222222222222,
+        "width": 0.8092592592592592,
+        "height": 0.06777777777777778
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 0.826
     },
     "phone": {
       "fontId": "roboto-slab",
@@ -179,7 +203,16 @@
       "tracking": 0,
       "align": "center",
       "color": "#243b42",
-      "fitScore": 0.729
+      "fitScore": 0.729,
+      "sampleBox": {
+        "x": 0.17407407407407408,
+        "y": 0.8844444444444445,
+        "width": 0.6689814814814815,
+        "height": 0.05851851851851852
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/roboto-slab-800.woff2"
     },
     "cta": {
       "fontId": "smooch-sans",
@@ -193,7 +226,15 @@
       "tracking": 0,
       "align": "right",
       "color": "#2a2210",
-      "fitScore": 0.596
+      "fitScore": 0.596,
+      "sampleBox": {
+        "x": 0.2449074074074074,
+        "y": 0.14962962962962964,
+        "width": 0.687037037037037,
+        "height": 0.10111111111111111
+      },
+      "sampleLineCount": 5,
+      "detectionScore": 0.545
     }
   }
 }

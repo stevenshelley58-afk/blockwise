@@ -158,7 +158,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#565a5f",
-      "fitScore": 0.587
+      "fitScore": 0.587,
+      "sampleBox": {
+        "x": 0.044444444444444446,
+        "y": 0.562962962962963,
+        "width": 0.37546296296296294,
+        "height": 0.04296296296296296
+      },
+      "sampleLineCount": 4,
+      "detectionScore": 0.88
     },
     "headline": {
       "fontId": "manrope",
@@ -172,7 +180,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#a6a092",
-      "fitScore": 0.231
+      "fitScore": 0.231,
+      "sampleBox": {
+        "x": 0.041666666666666664,
+        "y": 0.2,
+        "width": 0.8527777777777777,
+        "height": 0.20666666666666667
+      },
+      "sampleLineCount": 12,
+      "detectionScore": 0.568
     },
     "subheadline": {
       "fontId": "nunito-sans",
@@ -186,7 +202,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#daac60",
-      "fitScore": 0.56
+      "fitScore": 0.56,
+      "sampleBox": {
+        "x": 0.044444444444444446,
+        "y": 0.4874074074074074,
+        "width": 0.42083333333333334,
+        "height": 0.018518518518518517
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     },
     "cta": {
       "fontId": "manrope",
@@ -200,7 +224,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#1f3239",
-      "fitScore": 0.411
+      "fitScore": 0.411,
+      "sampleBox": {
+        "x": 0.0763888888888889,
+        "y": 0.8925925925925926,
+        "width": 0.35185185185185186,
+        "height": 0.017407407407407406
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     },
     "benefit_3": {
       "fontId": "manrope",
@@ -214,7 +246,16 @@
       "tracking": 0,
       "align": "left",
       "color": "#394648",
-      "fitScore": 0.984
+      "fitScore": 0.984,
+      "sampleBox": {
+        "x": 0.04398148148148148,
+        "y": 0.7714814814814814,
+        "width": 0.5546296296296296,
+        "height": 0.06814814814814815
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/manrope-600.woff2"
     },
     "benefit_2": {
       "fontId": "lora",
@@ -228,7 +269,16 @@
       "tracking": 0,
       "align": "left",
       "color": "#2a3c42",
-      "fitScore": 0.729
+      "fitScore": 0.729,
+      "sampleBox": {
+        "x": 0.04398148148148148,
+        "y": 0.7033333333333334,
+        "width": 0.337037037037037,
+        "height": 0.06222222222222222
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/lora-700.woff2"
     },
     "benefit_1": {
       "fontId": "oswald",
@@ -242,7 +292,16 @@
       "tracking": 0,
       "align": "left",
       "color": "#314044",
-      "fitScore": 0.834
+      "fitScore": 0.834,
+      "sampleBox": {
+        "x": 0.04398148148148148,
+        "y": 0.5940740740740741,
+        "width": 0.30972222222222223,
+        "height": 0.09962962962962962
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/oswald-300.woff2"
     }
   }
 }

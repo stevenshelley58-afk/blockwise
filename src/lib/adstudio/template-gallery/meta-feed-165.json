@@ -140,7 +140,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#402f1f",
-      "fitScore": 0.298
+      "fitScore": 0.298,
+      "sampleBox": {
+        "x": 0.21630859375,
+        "y": 0.695703125,
+        "width": 0.58935546875,
+        "height": 0.07265625
+      },
+      "sampleLineCount": 3,
+      "detectionScore": 0.421
     },
     "price_info": {
       "fontId": "merriweather",
@@ -154,7 +162,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#b2a394",
-      "fitScore": 0.474
+      "fitScore": 0.474,
+      "sampleBox": {
+        "x": 0.2841796875,
+        "y": 0.665234375,
+        "width": 0.3603515625,
+        "height": 0.044140625
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 0.462
     },
     "feature_1": {
       "fontId": "oswald",
@@ -168,7 +184,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#66594b",
-      "fitScore": 0.406
+      "fitScore": 0.406,
+      "sampleBox": {
+        "x": 0.2021484375,
+        "y": 0.752734375,
+        "width": 0.62646484375,
+        "height": 0.048046875
+      },
+      "sampleLineCount": 3,
+      "detectionScore": 0.667
     },
     "feature_2": {
       "fontId": "manrope",
@@ -182,7 +206,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#e2dfda",
-      "fitScore": 0.41
+      "fitScore": 0.41,
+      "sampleBox": {
+        "x": 0.4287109375,
+        "y": 0.775390625,
+        "width": 0.1708984375,
+        "height": 0.018359375
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 0.8
     }
   }
 }

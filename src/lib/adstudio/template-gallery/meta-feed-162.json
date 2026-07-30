@@ -127,7 +127,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#c8c7c5",
-      "fitScore": 0.615
+      "fitScore": 0.615,
+      "sampleBox": {
+        "x": 0.0654296875,
+        "y": 0.755859375,
+        "width": 0.884765625,
+        "height": 0.197265625
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 0.4
     },
     "property_name": {
       "fontId": "kanit",
@@ -141,7 +149,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#828fa8",
-      "fitScore": 0.121
+      "fitScore": 0.121,
+      "sampleBox": {
+        "x": 0.16455078125,
+        "y": 0.11328125,
+        "width": 0.6767578125,
+        "height": 0.013671875
+      },
+      "sampleLineCount": 4,
+      "detectionScore": 0.375
     },
     "main_cta": {
       "fontId": "smooch-sans",
@@ -155,7 +171,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#b18053",
-      "fitScore": 0.443
+      "fitScore": 0.443,
+      "sampleBox": {
+        "x": 0.779296875,
+        "y": 0.3046875,
+        "width": 0.0556640625,
+        "height": 0.028515625
+      },
+      "sampleLineCount": 4,
+      "detectionScore": 0.357
     },
     "price_per_night": {
       "fontId": "kanit",
@@ -169,7 +193,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#8f8b8e",
-      "fitScore": 0.109
+      "fitScore": 0.109,
+      "sampleBox": {
+        "x": 0.26708984375,
+        "y": 0.123828125,
+        "width": 0.60400390625,
+        "height": 0.0359375
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 0.556
     }
   }
 }

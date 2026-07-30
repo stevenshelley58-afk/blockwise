@@ -123,7 +123,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#a8abb0",
-      "fitScore": 0.54
+      "fitScore": 0.54,
+      "sampleBox": {
+        "x": 0.2162037037037037,
+        "y": 0.74296875,
+        "width": 0.5703703703703704,
+        "height": 0.0890625
+      },
+      "sampleLineCount": 3,
+      "detectionScore": 1
     },
     "subheadline": {
       "fontId": "merriweather",
@@ -137,7 +145,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#c1aa93",
-      "fitScore": 0.455
+      "fitScore": 0.455,
+      "sampleBox": {
+        "x": 0.09861111111111111,
+        "y": 0.67734375,
+        "width": 0.8425925925925926,
+        "height": 0.017447916666666667
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     },
     "headline": {
       "fontId": "oswald",
@@ -151,7 +167,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#f5f5f5",
-      "fitScore": 0.452
+      "fitScore": 0.452,
+      "sampleBox": {
+        "x": 0.07453703703703704,
+        "y": 0.5380208333333333,
+        "width": 0.8736111111111111,
+        "height": 0.109375
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 1
     },
     "cta": {
       "fontId": "smooch-sans",
@@ -165,7 +189,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#ece9e8",
-      "fitScore": 0.459
+      "fitScore": 0.459,
+      "sampleBox": {
+        "x": 0.24259259259259258,
+        "y": 0.8924479166666667,
+        "width": 0.5138888888888888,
+        "height": 0.01875
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     }
   }
 }

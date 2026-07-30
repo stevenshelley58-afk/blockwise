@@ -165,7 +165,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#bbbdbb",
-      "fitScore": 0.294
+      "fitScore": 0.294,
+      "sampleBox": {
+        "x": 0.08703703703703704,
+        "y": 0.34270833333333334,
+        "width": 0.8537037037037037,
+        "height": 0.13958333333333334
+      },
+      "sampleLineCount": 4,
+      "detectionScore": 1
     },
     "subheadline": {
       "fontId": "merriweather",
@@ -179,7 +187,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#203849",
-      "fitScore": 0.483
+      "fitScore": 0.483,
+      "sampleBox": {
+        "x": 0.16944444444444445,
+        "y": 0.53046875,
+        "width": 0.6912037037037037,
+        "height": 0.0171875
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     },
     "check_3": {
       "fontId": "plus-jakarta-sans",
@@ -193,7 +209,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#243a4b",
-      "fitScore": 0.46
+      "fitScore": 0.46,
+      "sampleBox": {
+        "x": 0.25277777777777777,
+        "y": 0.8841145833333334,
+        "width": 0.4615740740740741,
+        "height": 0.013802083333333333
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     },
     "check_2": {
       "fontId": "plus-jakarta-sans",
@@ -207,7 +231,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#253c4d",
-      "fitScore": 0.458
+      "fitScore": 0.458,
+      "sampleBox": {
+        "x": 0.25277777777777777,
+        "y": 0.8341145833333333,
+        "width": 0.4537037037037037,
+        "height": 0.013802083333333333
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     },
     "check_1": {
       "fontId": "plus-jakarta-sans",
@@ -221,7 +253,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#253b4c",
-      "fitScore": 0.453
+      "fitScore": 0.453,
+      "sampleBox": {
+        "x": 0.25277777777777777,
+        "y": 0.784375,
+        "width": 0.425,
+        "height": 0.013541666666666667
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     },
     "benefit_3": {
       "fontId": "roboto-condensed",
@@ -235,7 +275,16 @@
       "tracking": 0,
       "align": "center",
       "color": "#31485a",
-      "fitScore": 0.753
+      "fitScore": 0.753,
+      "sampleBox": {
+        "x": 0.1486111111111111,
+        "y": 0.6997395833333333,
+        "width": 0.7180555555555556,
+        "height": 0.0109375
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 0.6,
+      "fontFile": "/fonts/adstudio/roboto-condensed-800.woff2"
     },
     "benefit_1": {
       "fontId": "lora",
@@ -249,7 +298,16 @@
       "tracking": 0,
       "align": "left",
       "color": "#273f4f",
-      "fitScore": 0.764
+      "fitScore": 0.764,
+      "sampleBox": {
+        "x": 0.14722222222222223,
+        "y": 0.7736979166666667,
+        "width": 0.5300925925925926,
+        "height": 0.036458333333333336
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 0.625,
+      "fontFile": "/fonts/adstudio/lora-600.woff2"
     },
     "benefit_2": {
       "fontId": "manrope",
@@ -263,7 +321,16 @@
       "tracking": 0,
       "align": "left",
       "color": "#273f50",
-      "fitScore": 0.794
+      "fitScore": 0.794,
+      "sampleBox": {
+        "x": 0.14722222222222223,
+        "y": 0.8229166666666666,
+        "width": 0.5587962962962963,
+        "height": 0.036458333333333336
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 0.68,
+      "fontFile": "/fonts/adstudio/manrope-600.woff2"
     }
   }
 }

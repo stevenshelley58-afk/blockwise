@@ -158,7 +158,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#445369",
-      "fitScore": 0.342
+      "fitScore": 0.342,
+      "sampleBox": {
+        "x": 0.08333333333333333,
+        "y": 0.06276041666666667,
+        "width": 0.6884259259259259,
+        "height": 0.25755208333333335
+      },
+      "sampleLineCount": 4,
+      "detectionScore": 1
     },
     "subheadline": {
       "fontId": "merriweather",
@@ -172,7 +180,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#7b8286",
-      "fitScore": 0.412
+      "fitScore": 0.412,
+      "sampleBox": {
+        "x": 0.1550925925925926,
+        "y": 0.34479166666666666,
+        "width": 0.4476851851851852,
+        "height": 0.05416666666666667
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 0.704
     },
     "check_3": {
       "fontId": "merriweather",
@@ -186,7 +202,16 @@
       "tracking": 0,
       "align": "center",
       "color": "#202c41",
-      "fitScore": 0.608
+      "fitScore": 0.608,
+      "sampleBox": {
+        "x": 0.18518518518518517,
+        "y": 0.7760416666666666,
+        "width": 0.5740740740740741,
+        "height": 0.030729166666666665
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/merriweather-600.woff2"
     },
     "check_2": {
       "fontId": "manrope",
@@ -200,7 +225,16 @@
       "tracking": 0,
       "align": "center",
       "color": "#1e2b40",
-      "fitScore": 0.613
+      "fitScore": 0.613,
+      "sampleBox": {
+        "x": 0.18564814814814815,
+        "y": 0.715625,
+        "width": 0.5625,
+        "height": 0.029947916666666668
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/manrope-600.woff2"
     },
     "cta": {
       "fontId": "poppins",
@@ -214,7 +248,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#3b4b61",
-      "fitScore": 0.242
+      "fitScore": 0.242,
+      "sampleBox": {
+        "x": 0.1935185185185185,
+        "y": 0.86953125,
+        "width": 0.612037037037037,
+        "height": 0.05
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     },
     "check_1": {
       "fontId": "manrope",
@@ -228,7 +270,16 @@
       "tracking": 0,
       "align": "center",
       "color": "#202c42",
-      "fitScore": 0.624
+      "fitScore": 0.624,
+      "sampleBox": {
+        "x": 0.18472222222222223,
+        "y": 0.6546875,
+        "width": 0.5430555555555555,
+        "height": 0.03046875
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/manrope-600.woff2"
     },
     "benefit_3": {
       "fontId": "oswald",
@@ -242,7 +293,16 @@
       "tracking": 0,
       "align": "left",
       "color": "#4a515e",
-      "fitScore": 0.612
+      "fitScore": 0.612,
+      "sampleBox": {
+        "x": 0.09444444444444444,
+        "y": 0.51875,
+        "width": 0.5689814814814815,
+        "height": 0.06588541666666667
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/oswald-400.woff2"
     },
     "benefit_1": {
       "fontId": "manrope",
@@ -256,7 +316,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#4a5364",
-      "fitScore": 0.337
+      "fitScore": 0.337,
+      "sampleBox": {
+        "x": 0.22407407407407406,
+        "y": 0.41692708333333334,
+        "width": 0.4041666666666667,
+        "height": 0.01640625
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     },
     "benefit_2": {
       "fontId": "lato",
@@ -270,7 +338,15 @@
       "tracking": 0,
       "align": "left",
       "color": "#858a94",
-      "fitScore": 0.243
+      "fitScore": 0.243,
+      "sampleBox": {
+        "x": 0.22407407407407406,
+        "y": 0.48489583333333336,
+        "width": 0.39305555555555555,
+        "height": 0.015885416666666666
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
     }
   }
 }

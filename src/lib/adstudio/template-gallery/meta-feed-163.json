@@ -111,7 +111,15 @@
       "tracking": 0,
       "align": "center",
       "color": "#232323",
-      "fitScore": 0.569
+      "fitScore": 0.569,
+      "sampleBox": {
+        "x": 0.2001953125,
+        "y": 0.3890625,
+        "width": 0.62646484375,
+        "height": 0.191796875
+      },
+      "sampleLineCount": 3,
+      "detectionScore": 1
     }
   }
 }
