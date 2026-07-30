@@ -46,15 +46,16 @@ test("Ad Radar save failures remain visible and retryable", () => {
   assert.doesNotMatch(actions, /Action failed/);
 });
 
-test("mobile Ad Studio overflow keeps campaign settings while Brand Pack stays in main navigation", () => {
+test("mobile Ad Studio overflow opens the canonical Brand Pack with return context", () => {
   const topbar = read("src/components/adstudio/topbar.tsx");
   const workbench = read("src/components/adstudio/ad-studio-workbench.tsx");
   const niche = read("src/config/niche/blockwise.ts");
 
-  assert.doesNotMatch(topbar, /onOpenBrand|Brand Pack/);
+  assert.match(topbar, /onOpenBrand|Brand Pack/);
   assert.match(topbar, /onOpenSettings/);
   assert.match(topbar, /Campaign settings/);
   assert.match(workbench, /onOpenSettings=\{\(\) => goToSection\("settings"\)\}/);
+  assert.match(workbench, /onOpenBrand=\{\(\) => router\.push\(brandHref\)\}/);
   assert.match(niche, /href: "\/ad-studio\/brand", label: "Brand Pack"/);
 });
 

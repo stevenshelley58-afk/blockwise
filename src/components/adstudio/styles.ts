@@ -34,6 +34,7 @@ export const STYLES = `
 .studio-more-menu button{min-height:40px;border:0;background:transparent;border-radius:8px;color:var(--ink);display:grid;grid-template-columns:22px 1fr 18px;align-items:center;gap:10px;padding:0 8px;text-align:left;font-weight:550}
 .studio-more-menu button:hover{background:var(--surface-subtle)}
 .studio-more-menu .studio-mobile-menu-save{display:none}
+.studio-more-menu .studio-mobile-menu-brand{display:none}
 .studio-more-menu .danger{color:#ba1a1a}
 .studio-menu-line{height:1px;background:var(--line-soft);margin:5px 0}
 .studio-desktop-body{flex:1;min-height:0;display:grid;grid-template-columns:216px minmax(300px,372px) minmax(520px,1fr);background:#f8fafc}
@@ -730,6 +731,7 @@ export const STYLES = `
   .studio-mobile-campaign-btn{width:100%;height:46px;border:1px solid var(--line);border-radius:10px;background:#fff;display:flex;align-items:center;gap:12px;padding:0 12px;font-weight:600;box-shadow:var(--st-sh-1);text-align:left}
   .studio-mobile-campaign-btn svg:last-child{margin-left:auto}
   .studio-more-menu .studio-mobile-menu-save{display:grid}
+  .studio-more-menu .studio-mobile-menu-brand{display:grid}
   .studio-mobile-sheet-backdrop{position:fixed;inset:0;z-index:180;background:rgba(15,23,42,.42);display:grid;align-items:end}
   .studio-mobile-sheet{width:100%;max-height:88vh;overflow:hidden;border-radius:16px 16px 0 0;background:#f8fafc;box-shadow:0 -16px 50px rgba(15,23,42,.22);display:flex;flex-direction:column}
   .studio-mobile-sheet-head{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:16px 18px;background:#fff;border-bottom:1px solid var(--line-soft)}

@@ -23,7 +23,7 @@ test("mobile nav exposes the canvas-first Ad Studio sections", () => {
   assert.match(mobileBody, /label: "Publish"/);
   assert.match(mobileBody, /const MOBILE_NAV = NAV_ITEMS\.filter/);
   assert.doesNotMatch(mobileBody, /label: "Review"/);
-  assert.doesNotMatch(navBlocks, /label: "Brand Pack"/);
+  assert.match(navBlocks, /label: "Brand Pack"/);
   assert.match(mobileBody, /label: "Settings"/);
   assert.doesNotMatch(mobileBody, /studio\.mobileTab === "campaign"/);
   assert.doesNotMatch(mobileBody, /studio\.mobileTab === "design"/);
@@ -102,16 +102,19 @@ test("mobile flow no longer exposes a separate ad details sheet", () => {
   assert.match(workbench, /studio\.saveState !== "saved"/);
 });
 
-test("Brand Pack stays in main navigation while campaign settings remain inside Ad Studio", () => {
+test("Ad Studio Brand Pack entry opens the canonical page and preserves workbench context", () => {
   const workbench = read("src/components/adstudio/ad-studio-workbench.tsx");
   const studioState = read("src/components/adstudio/use-ad-studio.ts");
   const niche = read("src/config/niche/blockwise.ts");
 
   assert.doesNotMatch(studioState, /\| "brand"/);
   assert.doesNotMatch(workbench, /BrandPanel/);
-  assert.doesNotMatch(workbench.match(/const NAV_ITEMS:[\s\S]*?\];/)?.[0] ?? "", /Brand Pack/);
+  assert.match(workbench.match(/const NAV_ITEMS:[\s\S]*?\];/)?.[0] ?? "", /Brand Pack/);
   assert.match(niche, /href: "\/ad-studio\/brand", label: "Brand Pack"/);
-  assert.match(workbench, /router\.push\("\/ad-studio\/brand"\)/);
+  assert.match(workbench, /brandHref = `\/ad-studio\/brand\?returnTo=/);
+  assert.match(workbench, /campaignId: pack\.campaign\.campaignId/);
+  assert.match(workbench, /section: studio\.section/);
+  assert.match(workbench, /onOpenBrand=\{\(\) => router\.push\(brandHref\)\}/);
   assert.match(workbench, /if \(studio\.section === "settings"\) \{[\s\S]*return \([\s\S]*<SettingsPanel/);
   assert.match(workbench, /studio\.mobileTab === "settings"[\s\S]*<SettingsPanel/);
 });
@@ -163,11 +166,13 @@ test("mobile overflow exposes save draft", () => {
   assert.match(styles, /\.studio-more-menu \.studio-mobile-menu-save\{display:grid\}/);
 });
 
-test("mobile overflow keeps campaign settings without duplicating Brand Pack", () => {
+test("mobile overflow opens the canonical Brand Pack and keeps campaign settings", () => {
   const topbar = read("src/components/adstudio/topbar.tsx");
   const workbench = read("src/components/adstudio/ad-studio-workbench.tsx");
 
-  assert.doesNotMatch(topbar, /onOpenBrand|Brand Pack/);
+  assert.match(topbar, /onOpenBrand/);
+  assert.match(topbar, /Brand Pack/);
+  assert.match(topbar, /studio-mobile-menu-brand/);
   assert.match(topbar, /onOpenSettings/);
   assert.match(topbar, /Campaign settings/);
   assert.match(workbench, /onOpenSettings=\{\(\) => goToSection\("settings"\)\}/);

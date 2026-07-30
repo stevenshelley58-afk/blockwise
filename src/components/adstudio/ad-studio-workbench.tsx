@@ -12,6 +12,7 @@ import {
   Home,
   Images,
   LayoutGrid,
+  Palette,
   Plus,
   RefreshCw,
   Send,
@@ -43,7 +44,7 @@ import type { PreviewFormat, SelectedElement } from "./preview";
 import { STYLES } from "./styles";
 import { initialOfferLabelForPack, labelForSelectedTemplate } from "./template-offer-state";
 import { TopBar } from "./topbar";
-import { useAdStudio } from "./use-ad-studio";
+import { useAdStudio, type StudioSection } from "./use-ad-studio";
 import { useBrandKit } from "./use-brand-kit";
 import { useCampaignActions } from "./use-campaign-actions";
 import type { GenerationProgress } from "./use-campaign-actions";
@@ -80,13 +81,14 @@ type AdStudioWorkbenchProps = {
 };
 
 type NavItem =
-  | { id: import("./use-ad-studio").StudioSection | "samples"; label: string; icon: LucideIcon; href?: undefined }
-  | { id: "library"; label: string; icon: LucideIcon; href: string };
+  | { id: StudioSection | "samples"; label: string; icon: LucideIcon; href?: undefined }
+  | { id: "library" | "brand"; label: string; icon: LucideIcon; href: string };
 
 const NAV_ITEMS: NavItem[] = [
   { id: "home", label: "Home", icon: Home },
   { id: "samples", label: "Create", icon: Plus },
   { id: "library", label: "Library", icon: Images, href: "/ad-studio/library" },
+  { id: "brand", label: "Brand Pack", icon: Palette, href: "/ad-studio/brand" },
   { id: "edit", label: "Edit", icon: FileText },
   { id: "publish", label: "Publish", icon: Send },
   { id: "settings", label: "Settings", icon: Settings2 },
@@ -101,6 +103,12 @@ const PREVIEW_TO_AD_FORMAT: Record<PreviewFormat, AdStudioFormat> = {
 };
 
 const MOBILE_WORKBENCH_QUERY = "(max-width: 900px)";
+
+function sectionFromQuery(value: string | null): StudioSection | null {
+  return value === "home" || value === "edit" || value === "publish" || value === "settings"
+    ? value
+    : null;
+}
 
 function PreviewFit({ children, enabled }: { children: ReactNode; enabled: boolean }) {
   const frameRef = useRef<HTMLDivElement>(null);
@@ -295,6 +303,7 @@ export function AdStudioWorkbench({
   const router = useRouter();
   const searchParams = useSearchParams();
   const openPublishOnLoad = searchParams.get("publish") === "1";
+  const returnSection = sectionFromQuery(searchParams.get("section"));
   const visibleBuiltInTemplates = useMemo(() => builtInAdStudioTemplates(), []);
   const [activeSampleId, setActiveSampleId] = useState<string | undefined>(undefined);
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(0);
@@ -373,10 +382,13 @@ export function AdStudioWorkbench({
 
   const initialStudioSection = openPublishOnLoad
     ? "publish"
-    : initialPack.creatives.length > 0
-      ? "edit"
-      : "home";
+    : returnSection ?? (initialPack.creatives.length > 0 ? "edit" : "home");
   const studio = useAdStudio(initialStudioSection);
+  const adStudioReturnParams = new URLSearchParams({
+    campaignId: pack.campaign.campaignId,
+    section: studio.section,
+  });
+  const brandHref = `/ad-studio/brand?returnTo=${encodeURIComponent(`/ad-studio?${adStudioReturnParams.toString()}`)}`;
   const { brand, initials } = useBrandKit(brandKit);
   // B2: an unapproved extracted kit can generate and edit, but is flagged as a
   // draft everywhere and keeps publish blocked until it is confirmed.
@@ -1102,7 +1114,7 @@ export function AdStudioWorkbench({
     const publishReady = !brandIsDraft && readinessItems.every((item) => item.state === "done");
 
     const steps = [
-      { label: "Brand", done: !brandIsDraft, onClick: () => router.push("/ad-studio/brand") },
+      { label: "Brand", done: !brandIsDraft, onClick: () => router.push(brandHref) },
       { label: "Design", done: startingPointDone, onClick: () => openSamplePicker() },
       { label: "Media", done: mediaDone, onClick: () => openMediaSheet() },
       { label: "Publish", done: publishReady, onClick: () => goToSection("publish") },
@@ -1211,6 +1223,7 @@ export function AdStudioWorkbench({
         setShowMore={studio.setShowMore}
         onSave={saveDraft}
         onDelete={canManageCampaign ? deleteCampaign : undefined}
+        onOpenBrand={() => router.push(brandHref)}
         onOpenSettings={() => goToSection("settings")}
         campaignId={pack.campaign.campaignId}
         showToast={studio.showToast}
@@ -1222,20 +1235,21 @@ export function AdStudioWorkbench({
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
 
-            if (item.id === "library") {
+            if (item.href) {
               return (
-                <Link key={item.id} href={item.href}>
+                <Link key={item.id} href={item.id === "brand" ? brandHref : item.href}>
                   <Icon aria-hidden size={18} />
                   <span>{item.label}</span>
                 </Link>
               );
             }
+            const sectionItemId = item.id;
 
             let railState: "done" | "warn" | "todo" | null = null;
-            if (item.id === "publish") {
+            if (sectionItemId === "publish") {
               const allDone = readinessItems.every((ri) => ri.state === "done");
               railState = allDone ? "done" : readinessItems.some((ri) => ri.state === "warn") ? "warn" : "todo";
-            } else if (item.id === "edit") {
+            } else if (sectionItemId === "edit") {
               const labels = ["Ad copy", "Call to action"];
               const relevant = readinessItems.filter((ri) => labels.includes(ri.label));
               if (relevant.length > 0) {
@@ -1247,15 +1261,16 @@ export function AdStudioWorkbench({
 
             return (
               <button
-                className={item.id === "samples" ? samplePickerOpen ? "active" : "" : studio.section === item.id ? "active" : ""}
-                key={item.id}
+                className={sectionItemId === "samples" ? samplePickerOpen ? "active" : "" : studio.section === sectionItemId ? "active" : ""}
+                key={sectionItemId}
                 type="button"
                 onClick={() => {
-                  if (item.id === "samples") {
+                  if (sectionItemId === "samples") {
                     openSamplePicker();
                     return;
                   }
-                  goToSection(item.id);
+                  if (sectionItemId === "library" || sectionItemId === "brand") return;
+                  goToSection(sectionItemId);
                 }}
               >
                 <Icon aria-hidden size={18} />
@@ -1271,7 +1286,7 @@ export function AdStudioWorkbench({
         {studio.section === "home" ? (
           <section className="studio-home-shell" aria-label="Ad Studio home">
             {brandIsDraft && (
-              <Link href="/ad-studio/brand" className="studio-draft-brand-chip">
+              <Link href={brandHref} className="studio-draft-brand-chip">
                 <CircleAlert aria-hidden size={15} />
                 <span><b>Draft brand in use.</b> You can create ads now - confirm your brand before publishing.</span>
               </Link>
@@ -1286,7 +1301,7 @@ export function AdStudioWorkbench({
           <>
             <section className="studio-left-panel" aria-label={`${studio.section} setup`}>
               {brandIsDraft && (
-                <Link href="/ad-studio/brand" className="studio-draft-brand-chip">
+                <Link href={brandHref} className="studio-draft-brand-chip">
                   <CircleAlert aria-hidden size={15} />
                   <span><b>Draft brand in use.</b> You can create ads now - confirm your brand before publishing.</span>
                 </Link>
@@ -1345,7 +1360,7 @@ export function AdStudioWorkbench({
 
       <div className="studio-mobile-body" data-section={studio.mobileTab}>
         {brandIsDraft && studio.mobileTab !== "home" && studio.mobileTab !== "publish" && (
-          <Link href="/ad-studio/brand" className="studio-draft-brand-chip" style={{ marginTop: 14 }}>
+          <Link href={brandHref} className="studio-draft-brand-chip" style={{ marginTop: 14 }}>
             <CircleAlert aria-hidden size={15} />
             <span><b>Draft brand in use.</b> Confirm your brand before publishing.</span>
           </Link>
@@ -1451,7 +1466,7 @@ export function AdStudioWorkbench({
       <nav className="studio-mobile-bottom" aria-label="Ad Studio mobile navigation">
         {MOBILE_NAV.map((item) => {
           const Icon = item.icon;
-          if (item.id === "library") {
+          if (item.href) {
             return (
               <Link key={item.id} href={item.href}>
                 <Icon aria-hidden size={22} />
@@ -1459,17 +1474,19 @@ export function AdStudioWorkbench({
               </Link>
             );
           }
+          const sectionItemId = item.id;
           return (
             <button
-              className={item.id === "samples" ? samplePickerOpen ? "active" : "" : studio.mobileTab === item.id ? "active" : ""}
-              key={item.id}
+              className={sectionItemId === "samples" ? samplePickerOpen ? "active" : "" : studio.mobileTab === sectionItemId ? "active" : ""}
+              key={sectionItemId}
               type="button"
               onClick={() => {
-                if (item.id === "samples") {
+                if (sectionItemId === "samples") {
                   openSamplePicker();
                   return;
                 }
-                goToSection(item.id);
+                if (sectionItemId === "library" || sectionItemId === "brand") return;
+                goToSection(sectionItemId);
               }}
             >
               <Icon aria-hidden size={22} />
@@ -1507,7 +1524,7 @@ export function AdStudioWorkbench({
           <DialogFooter>
             <Button variant="outline" type="button" onClick={skipBrandPrompt}>Skip for now</Button>
             <Button asChild type="button">
-              <Link href="/ad-studio/brand">Set brand</Link>
+              <Link href={brandHref}>Set brand</Link>
             </Button>
           </DialogFooter>
         </DialogContent>
