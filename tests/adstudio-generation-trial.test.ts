@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-import { buildTrialFallbackBrandKit } from "../src/lib/adstudio/trial-brand-kit.ts";
+import {
+  buildAdStudioFallbackBrandKit,
+  resolveAdStudioGenerationBrandKit,
+} from "../src/lib/adstudio/trial-brand-kit.ts";
 
 const campaignsRoute = "src/app/api/adstudio/campaigns/route.ts";
 const creditHelper = "src/lib/adstudio/generation-credits.ts";
@@ -103,23 +106,22 @@ test("draft route self-heals missing seeded campaigns instead of returning 404",
   assert.match(source, /persistAdStudioCampaignPack\(access\.supabase,\s*campaignPack,\s*access\.access\.userId\)/);
 });
 
-test("trial brand kit fallback is only available for trial workspaces", () => {
+test("brand kit fallback is available to every workspace and stays advisory", () => {
   const source = read(trialBrandKitHelper);
-  const nonTrialBranch = source.indexOf("if (!input.isTrialWorkspace)");
   const draftIndex = source.indexOf("const draftBrandKit = await loadDraftBrandKit");
-  const fallbackIndex = source.indexOf("buildTrialFallbackBrandKit");
+  const fallbackIndex = source.indexOf("buildAdStudioFallbackBrandKit");
 
-  assert.ok(nonTrialBranch > -1);
   assert.ok(draftIndex > -1);
   assert.ok(fallbackIndex > -1);
-  assert.ok(nonTrialBranch < fallbackIndex);
   assert.ok(draftIndex < fallbackIndex);
+  assert.doesNotMatch(source, /Approved brandKit is required/);
+  assert.doesNotMatch(source, /if \(!input\.isTrialWorkspace\)/);
   assert.match(source, /workspaceName/);
   assert.match(source, /region/);
 });
 
-test("fallback trial brand kit is approved and derived from workspace metadata", () => {
-  const brandKit = buildTrialFallbackBrandKit({
+test("fallback brand kit is a warning-state draft derived from workspace metadata", () => {
+  const brandKit = buildAdStudioFallbackBrandKit({
     workspaceId: "workspace_trial",
     workspaceName: "  Northstar Realty   Perth  ",
     region: "WA",
@@ -128,6 +130,51 @@ test("fallback trial brand kit is approved and derived from workspace metadata",
   assert.equal(brandKit.workspaceId, "workspace_trial");
   assert.equal(brandKit.identity.businessName, "Northstar Realty Perth");
   assert.equal(brandKit.identity.marketRegion, "WA");
-  assert.equal(brandKit.reviewStatus, "approved");
-  assert.ok(brandKit.lockedFields.includes("identity.businessName"));
+  assert.equal(brandKit.reviewStatus, "pending_user_review");
+  assert.deepEqual(brandKit.lockedFields, ["starter_brand"]);
+});
+
+test("generation persists and uses a warning-state fallback when no Brand Pack exists", async () => {
+  const writes: Record<string, unknown>[] = [];
+  const supabase = {
+    from() {
+      const query = {
+        select() {
+          return query;
+        },
+        eq() {
+          return query;
+        },
+        neq() {
+          return query;
+        },
+        order() {
+          return query;
+        },
+        async limit() {
+          return { data: [], error: null };
+        },
+        async upsert(row: Record<string, unknown>) {
+          writes.push(row);
+          return { data: [row], error: null };
+        },
+      };
+      return query;
+    },
+  };
+
+  const result = await resolveAdStudioGenerationBrandKit({
+    supabase: supabase as never,
+    workspaceId: "workspace_without_brand",
+    workspaceName: "No Brand Yet",
+    region: "WA",
+    userId: "user_123",
+  });
+
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+  assert.equal(result.brandKit.reviewStatus, "pending_user_review");
+  assert.equal(result.brandKit.identity.businessName, "No Brand Yet");
+  assert.equal(writes.length, 1);
+  assert.equal(writes[0]?.review_status, "pending_user_review");
 });

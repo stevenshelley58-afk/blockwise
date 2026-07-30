@@ -68,7 +68,6 @@ export const generateAdStudioTemplateCampaignTask = task({
         body: stored.body ?? payload.body,
         workspaceName: stored.workspaceName,
         region: stored.region,
-        isTrialWorkspace: reservation?.isTrialWorkspace ?? false,
         creditReservation: reservation ?? undefined,
       });
 

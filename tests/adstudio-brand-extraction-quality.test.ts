@@ -88,7 +88,7 @@ test("deduplicates copy repeated by responsive website markup", () => {
 test("Brand Studio replaces stale previews and never invents logo variants", () => {
   const source = readFileSync("src/components/adstudio/brand-studio.tsx", "utf8");
 
-  assert.match(source, /setLogoFile\(null\);[\s\S]*setLogoPreviewUrl\(json\.brandKit\.logos\.primaryLogoUrl \?\? ""\)/);
+  assert.match(source, /setLogoFile\(null\);[\s\S]*setLogoPreviewUrl\(scannedKit\.logos\.primaryLogoUrl \?\? ""\)/);
   assert.doesNotMatch(source, /\{initial\}★/);
   assert.match(source, /kit\.logos\.lightLogoUrl/);
   assert.match(source, /kit\.logos\.faviconUrl/);

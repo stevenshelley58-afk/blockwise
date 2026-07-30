@@ -80,8 +80,6 @@ export type RunTemplateCampaignGenerationInput = {
   body: CreateCampaignBody;
   workspaceName?: string;
   region?: string;
-  /** From the route's credit reservation; drives the trial fallback brand kit. */
-  isTrialWorkspace?: boolean;
   /** Server-owned two-render reservation settled independently by format. */
   creditReservation?: WorkspaceCreditReservation;
 };
@@ -275,8 +273,6 @@ export async function runTemplateCampaignGeneration(
     workspaceName: input.workspaceName,
     region: input.region,
     userId: input.userId,
-    submittedBrandKit: body.brandKit,
-    isTrialWorkspace: input.isTrialWorkspace ?? false,
   });
   if (!brandKitResult.ok) {
     throw new Error(brandKitResult.error);
