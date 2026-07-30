@@ -8,16 +8,21 @@ test("disabled feature route mapping covers public and operator research surface
   const routes = read("src/lib/features/route-availability.ts");
   const middleware = read("src/middleware.ts");
 
-  for (const route of [
+  const featureRoutes = [
     "/ad-radar", "/property-check", "/suburb", "/audit", "/hero-lab", "/operator/research",
+    "/api/operator/research",
     "/api/property-checks", "/api/research/ad-radar/suggestions", "/api/research/ads/search",
     "/api/research/advertisers/autocomplete", "/api/research/locations/autocomplete",
     "/api/research/locations/guess", "/api/research/swipe-file", "/api/research/audit/lead",
     "/api/research/audit/suggestions", "/api/research/local-ad-radar",
-  ]) {
+  ];
+  for (const route of featureRoutes) {
     assert.match(routes, new RegExp(`prefix: "${route.replaceAll("/", "\\/")}"`));
+  }
+  for (const route of featureRoutes.filter((route) => route !== "/api/operator/research")) {
     assert.match(middleware, new RegExp(route.replaceAll("/", "\\/")));
   }
+  assert.match(middleware, /\/api\/operator\/:path\*/);
   assert.match(middleware, /Cache-Control.*no-store/);
   assert.doesNotMatch(routes, /prefix: "\/api\/research"\s*,/);
 });
@@ -72,9 +77,26 @@ test("active Ad Studio generation has no local Ad Radar dependency", () => {
 test("operator research handlers share the pre-auth Ad Radar gate", () => {
   const operatorAuth = read("src/lib/operator/auth.ts");
   const apiFiles = [
-    "src/app/api/operator/research/jobs/route.ts",
-    "src/app/api/operator/research/refresh-now/route.ts",
+    "src/app/api/operator/research/ads/[id]/display-state/route.ts",
+    "src/app/api/operator/research/chat/route.ts",
+    "src/app/api/operator/research/coverage/route.ts",
+    "src/app/api/operator/research/defects/[id]/dismiss/route.ts",
     "src/app/api/operator/research/defects/[id]/investigate/route.ts",
+    "src/app/api/operator/research/defects/route.ts",
+    "src/app/api/operator/research/drain-status/route.ts",
+    "src/app/api/operator/research/files/route.ts",
+    "src/app/api/operator/research/health/route.ts",
+    "src/app/api/operator/research/jobs/[id]/requeue/route.ts",
+    "src/app/api/operator/research/jobs/[id]/route.ts",
+    "src/app/api/operator/research/jobs/route.ts",
+    "src/app/api/operator/research/kill-switch/route.ts",
+    "src/app/api/operator/research/meta-api-validation/route.ts",
+    "src/app/api/operator/research/policies/route.ts",
+    "src/app/api/operator/research/refresh-now/route.ts",
+    "src/app/api/operator/research/runs/[id]/raw/route.ts",
+    "src/app/api/operator/research/runs/route.ts",
+    "src/app/api/operator/research/skills/[slug]/route.ts",
+    "src/app/api/operator/research/skills/route.ts",
   ];
 
   assert.match(operatorAuth, /adRadarDisabledResponse\(\)/);
