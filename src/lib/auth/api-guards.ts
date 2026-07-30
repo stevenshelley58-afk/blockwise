@@ -18,7 +18,11 @@ export function featureDisabledResponse(
   const anyEnabled = flags.some((flag) => niche.features[flag]);
   return anyEnabled
     ? null
-    : NextResponse.json({ error: "Not found" }, { status: 404 });
+    : NextResponse.json({ error: "Not found" }, { status: 404, headers: { "Cache-Control": "no-store" } });
+}
+
+export function adRadarDisabledResponse(): NextResponse | null {
+  return featureDisabledResponse("adRadar");
 }
 
 export type ApiWorkspaceGuard =

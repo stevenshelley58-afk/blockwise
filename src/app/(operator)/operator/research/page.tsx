@@ -11,6 +11,8 @@ import {
   type ConsoleSkill,
 } from "@/components/operator/research-console";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
+import { niche } from "@/config/niche";
+import { notFound } from "next/navigation";
 import { logCaught } from "@/lib/log";
 import { listHermesSkills, type HermesSkillSummary } from "@/lib/operator/hermes-assets";
 import { createResearchServiceClient, tryCreateResearchServiceClient } from "@/lib/research/service";
@@ -308,6 +310,7 @@ function loadOfficialMetaApiStatus(): ConsoleOfficialMetaApi {
 }
 
 export default async function OperatorResearchPage({ searchParams }: { searchParams?: SearchParams }) {
+  if (!niche.features.adRadar) notFound();
   await requirePageSurfaceAccess("operator");
   const supabase = tryCreateResearchServiceClient();
   if (!supabase) {

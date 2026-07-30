@@ -11,9 +11,9 @@ import { FbAdCard } from "./fb-ad-card";
 /**
  * #start — the interactive studio band.
  *
- * One starting point in, one live ad out. A single strip of proven templates
+ * One starting point in, one live ad out. A single strip of curated templates
  * feeds the preview. Selecting any card animates the preview to that ad — the
- * "pick a proven ad, watch yours appear" loop that anchors the page.
+ * "pick a layout, watch yours appear" loop that anchors the page.
  *
  * Motion thesis: the preview swap on selection is the one authored moment
  * (AnimatePresence crossfade). Entrance and hover are quiet support. All
@@ -70,7 +70,7 @@ export function StartStudio() {
               transition={{ duration: 0.55, ease: EASE_OUT }}
             >
               <h2>Don&rsquo;t start from a blank page.</h2>
-              <p className="hw-sub">Pick a proven ad. We make it yours.</p>
+              <p className="hw-sub">Pick a layout. Add your own photos and copy.</p>
             </motion.div>
 
             <div className="hw-studio-group hw-studio-group--templates">

@@ -21,7 +21,7 @@ test("research engine README links only existing local docs", () => {
     assert.ok(existsSync(join(baseDir, link)), `missing linked doc: ${link}`);
   }
 
-  assert.match(readme, /HERMES_LOCATION_AD_SEARCH_ENABLED=true/);
+  assert.match(readme, /Location ad search is removed and remains disabled/);
   assert.doesNotMatch(readme, /Do not use broad location discovery/);
 });
 

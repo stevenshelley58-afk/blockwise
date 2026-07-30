@@ -2,6 +2,11 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
+import {
+  formatBillingAmount,
+  getBillingOffer,
+} from "../src/lib/billing/offers.ts";
+
 const terms = readFileSync("src/app/(legal)/terms/page.tsx", "utf8");
 const privacy = readFileSync("src/app/(legal)/privacy/page.tsx", "utf8");
 const deletion = readFileSync("src/app/(legal)/data-deletion/page.tsx", "utf8");
@@ -15,10 +20,9 @@ function includesCopy(source: string, copy: string) {
 
 test("Terms state the exact self-serve trigger, credit, seat, and Meta-spend rules", () => {
   for (const required of [
-    "three complete Feed and Story ad creations",
-    "seven-day trial",
-    "US$99/A$99 when the campaign launches or seven days after",
-    "US$499/A$499 monthly until cancelled",
+    "free creation allowance includes three complete Feed and Story ads before Checkout",
+    "seven-day billing trial",
+    "first campaign launches or that billing trial ends",
     "100 render credits per billing period",
     "Credits expire at the end of the",
     "do not roll over or transfer",
@@ -27,6 +31,16 @@ test("Terms state the exact self-serve trigger, credit, seat, and Meta-spend rul
   ]) {
     includesCopy(terms, required);
   }
+
+  assert.match(terms, /getBillingOffer/);
+  assert.equal(
+    formatBillingAmount(getBillingOffer("US", "self_serve").firstInvoiceAmount, "USD"),
+    "US$99",
+  );
+  assert.equal(
+    formatBillingAmount(getBillingOffer("AU", "self_serve").recurringAmount, "AUD"),
+    "A$499",
+  );
 });
 
 test("Terms distinguish managed scope and cancellation from deletion", () => {

@@ -23,7 +23,7 @@ export type BillingOffer = {
 };
 
 const SELF_SERVE_TRIGGER =
-  "The subscription starts when the first campaign launches or seven days after Checkout, whichever comes first.";
+  "The first paid month begins when the first campaign launches or the seven-day post-Checkout billing trial ends, whichever comes first.";
 
 export const BILLING_OFFERS: Readonly<Record<`${BillingProduct}_${BillingMarket}`, BillingOffer>> = {
   self_serve_US: {
@@ -41,7 +41,7 @@ export const BILLING_OFFERS: Readonly<Record<`${BillingProduct}_${BillingMarket}
     couponEnvKey: "STRIPE_SELF_SERVE_USD_INTRO_COUPON_ID",
     triggeringRule: SELF_SERVE_TRIGGER,
     checkoutDisclosure:
-      "One live campaign setup is free. Meta ad spend is separate. Your Blockwise subscription starts at US$99 when the campaign launches or seven days after checkout, whichever comes first, then renews at US$499 monthly until cancelled.",
+      "Creating three ads is free and does not require Checkout. After Checkout, the seven-day billing trial ends when the first campaign launches or after seven days, whichever comes first. The first paid month is US$99, then US$499 monthly until cancelled. Meta ad spend is separate.",
   },
   self_serve_AU: {
     key: "self_serve_AU",
@@ -58,7 +58,7 @@ export const BILLING_OFFERS: Readonly<Record<`${BillingProduct}_${BillingMarket}
     couponEnvKey: "STRIPE_SELF_SERVE_AUD_INTRO_COUPON_ID",
     triggeringRule: SELF_SERVE_TRIGGER,
     checkoutDisclosure:
-      "One live campaign setup is free. Meta ad spend is separate. Your Blockwise subscription starts at A$99 when the campaign launches or seven days after checkout, whichever comes first, then renews at A$499 monthly until cancelled.",
+      "Creating three ads is free and does not require Checkout. After Checkout, the seven-day billing trial ends when the first campaign launches or after seven days, whichever comes first. The first paid month is A$99, then A$499 monthly until cancelled. Meta ad spend is separate.",
   },
   managed_US: {
     key: "managed_US",
@@ -116,3 +116,9 @@ export function getBillingOffer(market: BillingMarket, product: BillingProduct):
   return BILLING_OFFERS[`${product}_${market}`];
 }
 
+export function formatBillingAmount(amount: number, currency: BillingCurrency): string {
+  const prefix = currency === "USD" ? "US$" : "A$";
+  return `${prefix}${new Intl.NumberFormat("en-US", {
+    maximumFractionDigits: 0,
+  }).format(amount / 100)}`;
+}
