@@ -2,6 +2,23 @@
  * Owner-approved content data for the public homepage.
  */
 
+import { formatBillingAmount, getBillingOffer } from "@/lib/billing/offers";
+
+const AU_SELF_SERVE = getBillingOffer("AU", "self_serve");
+const AU_MANAGED = getBillingOffer("AU", "managed");
+const AU_FIRST_MONTH = formatBillingAmount(
+  AU_SELF_SERVE.firstInvoiceAmount,
+  AU_SELF_SERVE.currency,
+);
+const AU_RENEWAL = formatBillingAmount(
+  AU_SELF_SERVE.recurringAmount,
+  AU_SELF_SERVE.currency,
+);
+const AU_MANAGED_MONTHLY = formatBillingAmount(
+  AU_MANAGED.recurringAmount,
+  AU_MANAGED.currency,
+);
+
 export const FAQ_DATA = [
   {
     q: "Who pays for ad spend?",
@@ -21,11 +38,11 @@ export const FAQ_DATA = [
   },
   {
     q: "When does the subscription start?",
-    a: "$499/mo from your first campaign launch. Cancel anytime.",
+    a: `After Checkout, the seven-day billing trial ends when your first campaign launches or after seven days, whichever comes first. The first paid month is ${AU_FIRST_MONTH}, then ${AU_RENEWAL}/mo. Cancel anytime.`,
   },
   {
     q: "What does managed include?",
-    a: "$2,000/mo flat, plus ad spend. Everything in self-serve, launch and weekly optimization for up to four campaigns, one brand, one ad account, monthly report.",
+    a: `${AU_MANAGED_MONTHLY}/mo, plus ad spend. Includes self-serve access, launch and weekly optimization for up to four campaigns, one brand, one ad account, and a monthly report.`,
   },
 ] as const;
 
@@ -34,7 +51,7 @@ export const HERO_RAIL = [
   { k: "Creative", v: "Prepared" },
   { k: "Lead form", v: "Ready" },
   { k: "Budget", v: "$25/day" },
-  { k: "Updates", v: "Daily email" },
+  { k: "Updates", v: "Dashboard" },
 ] as const;
 
 /**
@@ -90,23 +107,6 @@ export const START_TEMPLATES = [
     copy: "Meet your local agent. Trusted advice, real results, and a plan for your next move.",
     footHeading: "Meet your local agent",
     footSub: "Trusted local expertise",
-  },
-] as const;
-
-export const PROPERTY_USES = ["Seller prep", "Buyer questions", "Lead follow-up"] as const;
-
-export const PROPERTY_NOTES = [
-  {
-    text: "Corner lot in a dual-density area. Retain-and-build may apply.",
-    source: "Local planning scheme",
-  },
-  {
-    text: "Heritage overlay. External changes may need approval.",
-    source: "Heritage list",
-  },
-  {
-    text: "Front setback limits apply. Check before quoting works.",
-    source: "R-Codes",
   },
 ] as const;
 

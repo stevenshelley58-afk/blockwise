@@ -85,7 +85,7 @@ export function NightOpsHero() {
           <span className="hw-no-accent">Are you?</span>
         </h1>
         <p className="hw-no-lede">
-          Proven Meta ad templates, made yours in minutes.
+          Choose a real-estate ad layout, then add your own photos and exact copy.
         </p>
         <div className="hw-no-form">
           <CtaLink location="hero" href="/signup" className="hw-btn hw-btn--light hw-no-cta">
@@ -114,7 +114,7 @@ export function NightOpsHero() {
         <div className="hw-no-card hw-no-card--3">
           <p className="hw-no-card-k">Top angle</p>
           <p className="hw-no-card-v hw-no-card-v--text">Free appraisal</p>
-          <p className="hw-no-card-s">proven seller-lead hook</p>
+          <p className="hw-no-card-s">seller-lead offer example</p>
         </div>
       </div>
     </div>

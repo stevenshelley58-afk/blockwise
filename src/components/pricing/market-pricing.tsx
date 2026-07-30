@@ -4,25 +4,26 @@ import { Check } from "lucide-react";
 import { useState } from "react";
 
 import { CtaLink } from "@/components/landing/cta-link";
+import {
+  formatBillingAmount,
+  getBillingOffer,
+  type BillingMarket,
+} from "@/lib/billing/offers";
 
-type Market = "us" | "au";
+type Market = Lowercase<BillingMarket>;
 
 const OFFERS = {
   us: {
     name: "United States",
     shortName: "US",
-    firstMonth: "US$99",
-    renewal: "US$499",
-    managed: "US$1,500",
+    market: "US",
   },
   au: {
     name: "Australia",
     shortName: "AU",
-    firstMonth: "A$99",
-    renewal: "A$499",
-    managed: "A$2,500",
+    market: "AU",
   },
-} as const;
+} as const satisfies Record<Market, { name: string; shortName: string; market: BillingMarket }>;
 
 const SELF_SERVE_FEATURES = [
   "Three complete Feed + Story ads before payment",
@@ -35,7 +36,7 @@ const SELF_SERVE_FEATURES = [
 ] as const;
 
 const MANAGED_FEATURES = [
-  "Everything in self-serve",
+  "Self-serve product access",
   "Operator launch and weekly optimization",
   "Up to four live campaigns",
   "One brand and one Meta ad account",
@@ -44,7 +45,21 @@ const MANAGED_FEATURES = [
 
 export function MarketPricing() {
   const [market, setMarket] = useState<Market>("au");
-  const offer = OFFERS[market];
+  const marketDetails = OFFERS[market];
+  const selfServeOffer = getBillingOffer(marketDetails.market, "self_serve");
+  const managedOffer = getBillingOffer(marketDetails.market, "managed");
+  const firstMonth = formatBillingAmount(
+    selfServeOffer.firstInvoiceAmount,
+    selfServeOffer.currency,
+  );
+  const renewal = formatBillingAmount(
+    selfServeOffer.recurringAmount,
+    selfServeOffer.currency,
+  );
+  const managed = formatBillingAmount(
+    managedOffer.recurringAmount,
+    managedOffer.currency,
+  );
 
   return (
     <section className="pricing-offers" aria-label="Plans and market pricing">
@@ -81,15 +96,15 @@ export function MarketPricing() {
             </p>
           </div>
 
-          <div className="pricing-amount" aria-label={`${offer.firstMonth} first month, then ${offer.renewal} per month`}>
+          <div className="pricing-amount" aria-label={`${firstMonth} first month, then ${renewal} per month`}>
             <div>
               <span className="pricing-amount-label">First paid month</span>
-              <strong>{offer.firstMonth}</strong>
+              <strong>{firstMonth}</strong>
             </div>
             <span className="pricing-then" aria-hidden>then</span>
             <div>
               <span className="pricing-amount-label">Following months</span>
-              <strong>{offer.renewal}</strong>
+              <strong>{renewal}</strong>
               <span className="pricing-per">/month</span>
             </div>
           </div>
@@ -116,10 +131,7 @@ export function MarketPricing() {
           </div>
 
           <p className="pricing-consent-note">
-            One live campaign setup is free. Your Meta ad spend is separate. Your Blockwise
-            subscription starts at {offer.firstMonth} when the campaign launches or seven days
-            after checkout, whichever comes first, then renews at {offer.renewal} monthly until
-            cancelled.
+            {selfServeOffer.checkoutDisclosure}
           </p>
         </article>
 
@@ -128,7 +140,7 @@ export function MarketPricing() {
             <p className="pricing-kicker">Managed service</p>
             <h2 id="managed-title">Strategy and weekly optimization included.</h2>
             <p>
-              From <strong>{offer.managed}/month</strong>, plus Meta ad spend. Scope beyond the
+              From <strong>{managed}/month</strong>, plus Meta ad spend. Scope beyond the
               standard engagement is confirmed and repriced during onboarding.
             </p>
             <div className="pricing-managed-actions">

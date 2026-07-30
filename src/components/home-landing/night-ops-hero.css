@@ -556,7 +556,10 @@
     line-height: 1.02;
   }
   .hw-no-lede {
-    display: none;
+    display: block;
+    max-width: 34ch;
+    font-size: 15px;
+    line-height: 1.45;
   }
   .hw-no-content .hw-no-form {
     width: 100%;

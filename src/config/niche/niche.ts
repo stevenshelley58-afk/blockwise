@@ -45,7 +45,7 @@ export type ShellCopy = {
     ended: string;
     active: string;
     daysLeft: (days: number) => string;
-    packsLeft: (remaining: number, included: number) => string;
+    rendersLeft: (remaining: number, included: number) => string;
     used: (used: number) => string;
     upgrade: string;
   };

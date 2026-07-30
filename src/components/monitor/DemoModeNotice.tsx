@@ -130,7 +130,7 @@ export function DemoModeNotice({ metaConnectHref }: { metaConnectHref: string })
               Spend, leads, cost per lead, and ad-by-ad performance — updated automatically.
             </GuideStep>
             <GuideStep icon={<Star aria-hidden size={15} />} title="Create your next ad in Ad Studio">
-              Turn a proven template into on-brand Feed and Story creatives in minutes.
+              Turn a curated template into on-brand Feed and Story creatives in minutes.
             </GuideStep>
           </ol>
 

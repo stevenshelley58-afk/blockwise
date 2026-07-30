@@ -20,7 +20,7 @@ export function AccessUnavailableActions() {
   return (
     <div className="mt-1.5 flex flex-wrap gap-2.5">
       <button className="button" type="button" onClick={() => void signOutAndGo("signup")} disabled={Boolean(busyTarget)}>
-        {busyTarget === "signup" ? "Signing out..." : "Start a free trial"}
+        {busyTarget === "signup" ? "Signing out..." : "Create three ads free"}
       </button>
       <button className="button secondary" type="button" onClick={() => void signOutAndGo("login")} disabled={Boolean(busyTarget)}>
         {busyTarget === "login" ? "Signing out..." : "Use another account"}

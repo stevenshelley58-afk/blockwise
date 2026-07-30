@@ -69,7 +69,10 @@ test("self-serve Checkout collects a reusable card and applies the once-only dis
   assert.equal(result.params["metadata[offer_version]"], BILLING_OFFER_VERSION);
   assert.equal(result.params["metadata[first_invoice_amount]"], 9_900);
   assert.equal(result.params["metadata[renewal_amount]"], 49_900);
-  assert.match(String(result.params["metadata[triggering_rule]"]), /first campaign launches or seven days/);
+  assert.match(
+    String(result.params["metadata[triggering_rule]"]),
+    /first campaign launches or the seven-day post-Checkout billing trial ends/,
+  );
   assert.equal(result.params["customer_update[address]"], "auto");
 });
 

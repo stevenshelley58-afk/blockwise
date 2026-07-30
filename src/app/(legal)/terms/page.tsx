@@ -1,5 +1,18 @@
 import type { Metadata } from "next";
 
+import { formatBillingAmount, getBillingOffer } from "@/lib/billing/offers";
+
+const US_SELF_SERVE = getBillingOffer("US", "self_serve");
+const AU_SELF_SERVE = getBillingOffer("AU", "self_serve");
+const FIRST_MONTH = `${formatBillingAmount(
+  US_SELF_SERVE.firstInvoiceAmount,
+  US_SELF_SERVE.currency,
+)} / ${formatBillingAmount(AU_SELF_SERVE.firstInvoiceAmount, AU_SELF_SERVE.currency)}`;
+const RENEWAL = `${formatBillingAmount(
+  US_SELF_SERVE.recurringAmount,
+  US_SELF_SERVE.currency,
+)} / ${formatBillingAmount(AU_SELF_SERVE.recurringAmount, AU_SELF_SERVE.currency)}`;
+
 export const metadata: Metadata = {
   title: "Terms of Service",
   alternates: { canonical: "/terms" },
@@ -74,18 +87,16 @@ export default function TermsOfServicePage() {
         5. Self-serve trial, credits, and billing
       </h2>
       <p>
-        The self-serve trial includes three complete Feed and Story ad creations before payment. A
-        complete pack normally uses two render credits. You do not need a card to create, review, or
-        edit those ads. Failed or cancelled provider work is refunded to the applicable credit
-        balance.
+        The free creation allowance includes three complete Feed and Story ads before Checkout. A
+        complete ad normally uses two render credits. You do not need a card to create, review, or
+        edit those ads. Failed or cancelled provider work is refunded to the applicable credit balance.
       </p>
       <p>
-        When you choose to run an ad, Checkout collects a reusable payment method and starts a
-        seven-day trial. One live campaign setup is free. Your Meta ad spend is separate. Your
-        Blockwise subscription starts at US$99/A$99 when the campaign launches or seven days after
-        Checkout, whichever comes first, then renews at US$499/A$499 monthly until cancelled.
-        United States prices exclude applicable sales tax. Australian prices include GST where
-        Blockwise is required to collect it.
+        When you choose to publish, Checkout collects a reusable payment method and starts a separate
+        seven-day billing trial. The first paid month ({FIRST_MONTH}) begins when the first campaign
+        launches or that billing trial ends, whichever comes first, then renews at {RENEWAL} monthly
+        until cancelled. Your Meta ad spend is separate. United States prices exclude applicable
+        sales tax. Australian prices include GST where Blockwise is required to collect it.
       </p>
       <p>
         A paid self-serve subscription grants 100 render credits per billing period. A Feed render,

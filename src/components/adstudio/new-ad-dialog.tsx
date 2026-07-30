@@ -127,7 +127,7 @@ const TEMPLATE_FILTERS: ReadonlyArray<{ id: TemplateFilter; label: string }> = [
 
 type TrialStatus = {
   isTrial: boolean;
-  includedAdPacks: number;
+  includedRenders: number;
 };
 
 type NewAdDialogProps = {
@@ -1741,11 +1741,11 @@ function uploadActionText(slot: TemplateImageRequirement, slotCount: number): st
 }
 
 function formatTrialCreditNote(status: TrialStatus | null): string {
-  if (status?.isTrial && Number.isFinite(status.includedAdPacks) && status.includedAdPacks > 0) {
-    return `Uses 1 of ${status.includedAdPacks} free ad packs. No Meta account is needed until publish.`;
+  if (status?.isTrial && Number.isFinite(status.includedRenders) && status.includedRenders > 0) {
+    return `Uses 2 of ${status.includedRenders} free renders for one Feed + Story ad. No Meta account is needed until publish.`;
   }
 
-  return "Uses one ad pack. No Meta account is needed until publish.";
+  return "Uses two renders for one Feed + Story ad. No Meta account is needed until publish.";
 }
 
 function buildRequirementBlockers(input: {

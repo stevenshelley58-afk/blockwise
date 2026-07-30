@@ -6,18 +6,12 @@ import { useCallback, useEffect, useState } from "react";
 
 import { niche } from "@/config/niche";
 import { cssSpring } from "@/lib/motion";
+import {
+  adPacksForRenders,
+  type TrialStatus,
+} from "@/lib/trial/trial-status";
 
-export type TrialStatus = {
-  isTrial: boolean;
-  includedAdPacks: number;
-  usedAdPacks: number;
-  remainingAdPacks: number;
-  planName: string | null;
-  trialEndsAt: string | null;
-  trialDaysRemaining: number | null;
-  trialExpired: boolean;
-  upgradeHref: string;
-};
+export type { TrialStatus } from "@/lib/trial/trial-status";
 
 function useTrialStatus(initialStatus: TrialStatus | null) {
   const [status, setStatus] = useState<TrialStatus | null>(initialStatus);
@@ -73,8 +67,8 @@ export function TrialStatusCard({ initialStatus }: { initialStatus: TrialStatus 
   if (!status?.isTrial) return null;
 
   const copy = niche.copy.shell.trial;
-  const included = Math.max(1, status.includedAdPacks);
-  const remaining = Math.max(0, status.remainingAdPacks);
+  const included = Math.max(1, status.includedRenders);
+  const remaining = Math.max(0, status.remainingRenders);
   const fill = Math.min(100, Math.round((remaining / included) * 100));
 
   return (
@@ -90,7 +84,7 @@ export function TrialStatusCard({ initialStatus }: { initialStatus: TrialStatus 
       </p>
       <div
         role="progressbar"
-        aria-label={copy.packsLeft(remaining, included)}
+        aria-label={copy.rendersLeft(remaining, included)}
         aria-valuemin={0}
         aria-valuemax={included}
         aria-valuenow={remaining}
@@ -99,8 +93,9 @@ export function TrialStatusCard({ initialStatus }: { initialStatus: TrialStatus 
         <div
           className="h-full rounded-full bg-data motion-reduce:transition-none"
           style={{
-            width: meterOn ? `${fill}%` : "0%",
-            transition: `width 1s ${cssSpring}`,
+            transform: `scaleX(${meterOn ? fill / 100 : 0})`,
+            transformOrigin: "left",
+            transition: `transform 1s ${cssSpring}`,
           }}
         />
       </div>
@@ -129,9 +124,11 @@ export function TrialStatusPill({ initialStatus }: { initialStatus: TrialStatus 
 
   if (!status?.isTrial) return null;
 
-  const used = Math.max(0, status.usedAdPacks);
-  const included = Math.max(1, status.includedAdPacks);
-  const remaining = Math.max(0, status.remainingAdPacks);
+  const used = Math.max(0, status.usedRenders);
+  const included = Math.max(1, status.includedRenders);
+  const remaining = Math.max(0, status.remainingRenders);
+  const includedPacks = adPacksForRenders(included);
+  const remainingPacks = adPacksForRenders(remaining);
   const label = trialLabel(status);
 
   return (
@@ -161,9 +158,9 @@ export function TrialStatusPill({ initialStatus }: { initialStatus: TrialStatus 
       <span aria-hidden style={{ color: "var(--line)", fontWeight: 500 }}>
         |
       </span>
-      <span>{remaining}/{included} free ad packs left</span>
+      <span>{remainingPacks}/{includedPacks} free ad packs · {remaining}/{included} renders</span>
       <span aria-hidden className="hidden sm:inline" style={{ color: "var(--muted)", fontWeight: 550 }}>
-        {used} used
+        {used} renders used
       </span>
       <button
         type="button"

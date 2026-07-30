@@ -1,19 +1,29 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
 
-// The homepage renders from src/app/page.tsx plus the home-landing component
-// tree (desktop + mobile variants of every section). Guards that used to read
-// page.tsx alone now read the combined homepage source.
-const HOME_LANDING_DIR = "src/components/home-landing";
+import {
+  formatBillingAmount,
+  getBillingOffer,
+} from "../src/lib/billing/offers.ts";
+
+// Follow the active homepage imports deliberately. The home-landing directory
+// also owns dormant feature sections that are not rendered by src/app/page.tsx.
+const ACTIVE_HOME_SOURCES = [
+  "src/components/home-landing/site-chrome.tsx",
+  "src/components/home-landing/night-ops-hero.tsx",
+  "src/components/home-landing/home-sections.tsx",
+  "src/components/home-landing/start-studio.tsx",
+  "src/components/home-landing/data.ts",
+  "src/components/home-landing/fb-ad-card.tsx",
+  "src/components/home-landing/faq-accordion.tsx",
+  "src/components/home-landing/managed-setup-form.tsx",
+] as const;
 
 function readHomeSources(): { page: string; combined: string } {
   const page = readFileSync("src/app/page.tsx", "utf8");
-  const parts = readdirSync(HOME_LANDING_DIR)
-    .filter((file) => file.endsWith(".ts") || file.endsWith(".tsx"))
-    .sort()
-    .map((file) => readFileSync(path.join(HOME_LANDING_DIR, file), "utf8"));
+  const parts = ACTIVE_HOME_SOURCES.map((file) => readFileSync(file, "utf8"));
   return { page, combined: [page, ...parts].join("\n") };
 }
 
@@ -95,13 +105,12 @@ test("landing page anchors, sections, and claims stay connected", () => {
     previousIndex = index;
   }
 
-  assert.match(combined, /Your competitors are advertising\. Are&nbsp;you\?/);
-  assert.match(
+  assert.match(combined, /Your competitors are[\s\S]{0,80}advertising\./);
+  assert.match(combined, /Choose a real-estate ad layout/);
+  assert.doesNotMatch(
     combined,
-    /Ads built from what&rsquo;s actually working in your area\. Start getting leads today\./,
+    /daily emails?|proven|top-performing|everything included|what(?:&rsquo;|')s actually working/i,
   );
-  assert.match(combined, /Know the property before the call/);
-  assert.match(combined, /Run a property check/);
 
   const ids = [...combined.matchAll(/id="([^"]+)"/g)].map((match) => match[1]);
   assert.equal(new Set(ids).size, ids.length, "landing and setup form IDs must be unique");
@@ -150,7 +159,6 @@ test("public marketing copy states the approved progressive offer", () => {
   const layout = readFileSync("src/app/layout.tsx", "utf8");
   const combined = `${home}\n${pricing}\n${layout}`;
 
-  assert.match(home, /Nothing spends until you approve/i);
   assert.match(home, /Nothing spends before approval/i);
   assert.match(home, /Stay in control/i);
   assert.match(home, /Approve every ad before it goes live/i);
@@ -166,19 +174,20 @@ test("public marketing copy states the approved progressive offer", () => {
 
 test("homepage FAQ matches the approved flat-rate offer", () => {
   const faq = readFileSync("src/components/home-landing/data.ts", "utf8");
+  const selfServe = getBillingOffer("AU", "self_serve");
+  const managed = getBillingOffer("AU", "managed");
 
   assert.match(faq, /pay Meta directly/i);
   assert.match(faq, /Connect Meta when you want to go live/i);
   assert.match(faq, /Nothing launches until you approve/i);
   assert.match(faq, /Three complete Feed \+ Story ads, free/i);
-  assert.match(faq, /\$499\/mo from your first campaign launch/i);
-  assert.match(faq, /Cancel anytime/i);
-  assert.match(faq, /\$2,000\/mo flat, plus ad spend/i);
+  assert.match(faq, /seven-day billing trial/i);
+  assert.equal(formatBillingAmount(selfServe.firstInvoiceAmount, selfServe.currency), "A$99");
+  assert.equal(formatBillingAmount(selfServe.recurringAmount, selfServe.currency), "A$499");
+  assert.equal(formatBillingAmount(managed.recurringAmount, managed.currency), "A$2,500");
   assert.match(faq, /weekly optimization for up to four campaigns/i);
-
-  // The flat-rate homepage FAQ must not resurrect dual-currency offers.
-  assert.doesNotMatch(faq, /US\$/);
-  assert.doesNotMatch(faq, /A\$/);
+  assert.match(faq, /getBillingOffer/);
+  assert.doesNotMatch(faq, /US\$99|A\$99|US\$499|A\$499|US\$1,500|A\$2,500/);
 });
 
 test("pricing keeps US and AU offers explicit and accessible", () => {
@@ -190,12 +199,9 @@ test("pricing keeps US and AU offers explicit and accessible", () => {
   assert.match(pricing, /Choose your market/);
   assert.match(pricing, /United States/);
   assert.match(pricing, /Australia/);
-  assert.match(pricing, /US\$99/);
-  assert.match(pricing, /US\$499/);
-  assert.match(pricing, /A\$99/);
-  assert.match(pricing, /A\$499/);
-  assert.match(pricing, /US\$1,500/);
-  assert.match(pricing, /A\$2,500/);
+  assert.match(pricing, /getBillingOffer/);
+  assert.match(pricing, /formatBillingAmount/);
+  assert.doesNotMatch(pricing, /["'`]US\$[0-9]|["'`]A\$[0-9]/);
   assert.match(combined, /100 render credits/);
   assert.match(combined, /Up to 50 complete Feed \+ Story packs/);
   assert.match(combined, /Five named, email-verified team members/);
@@ -229,6 +235,16 @@ test("legal pages rely on root title template and define page canonicals", () =>
     assert.doesNotMatch(source, /title:\s*"[^"]*(?:·|Â·)\s*Blockwise"/);
     assert.match(source, new RegExp(`alternates:\\s*\\{\\s*canonical:\\s*"${canonical}"\\s*\\}`));
   }
+});
+
+test("terms separate free creation from the post-Checkout billing trial", () => {
+  const terms = readFileSync("src/app/(legal)/terms/page.tsx", "utf8");
+
+  assert.match(terms, /free creation allowance includes three complete Feed and Story ads before Checkout/i);
+  assert.match(terms, /starts a separate[\s\S]*seven-day billing trial/i);
+  assert.match(terms, /first campaign[\s\S]*launches or that billing trial ends/i);
+  assert.match(terms, /getBillingOffer/);
+  assert.doesNotMatch(terms, /One live campaign setup is free/i);
 });
 
 test("public pages identify the legal operator in server-rendered content", () => {
