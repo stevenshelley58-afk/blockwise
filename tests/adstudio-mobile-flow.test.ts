@@ -141,8 +141,12 @@ test("Edit unifies finished-ad regions and Meta copy without reopening image rep
   assert.match(workbench, /function renderEditOverview\(\)/);
   assert.match(workbench, /On the image/);
   assert.match(workbench, /Ad copy/);
-  assert.match(workbench, /studio\.setSection\("edit"\)/);
-  assert.match(workbench, /studio\.setMobileTab\("edit"\)/);
+  assert.match(workbench, /goToSection\("edit"\)/);
+  assert.match(workbench, /setSection: goToSection/);
+  assert.match(
+    workbench,
+    /initialPack\.creatives\.length > 0[\s\S]*\? "edit"[\s\S]*: "home"/,
+  );
   assert.doesNotMatch(
     workbench,
     /async function handleGenerateFirstAd[\s\S]{0,260}openMediaSheet\(\)/,

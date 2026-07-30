@@ -141,6 +141,8 @@ test("the server owns clone generation and the client waits for the finished ad"
   assert.doesNotMatch(route, /generateAdStudioCampaignPack\(\{/);
   assert.match(actions, /\/api\/adstudio\/jobs\//);
   assert.match(actions, /Your ad is ready to edit/);
+  assert.match(actions, /s\.setSection\("edit"\)/);
+  assert.doesNotMatch(actions, /s\.setSection\("media"\)/);
   assert.match(generation, /buildTemplateCloneRequestsByFormat/);
   assert.match(generation, /buildPrebuiltTemplateCloneQa/);
   assert.doesNotMatch(generation, /detectCloneRegions/);
