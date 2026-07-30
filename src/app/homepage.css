@@ -948,6 +948,15 @@ html, body { overflow-x: clip; }
 
 /* ---------- #free-trial ---------- */
 
+.hw-trial-cta {
+  display: inline-grid;
+  justify-items: center;
+  margin-top: var(--hw-space-sm);
+}
+.hw-trial-cta .hw-sub {
+  margin-top: var(--hw-space-xs);
+  text-align: center;
+}
 .hw-trial-facts {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

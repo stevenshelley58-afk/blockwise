@@ -172,6 +172,19 @@ test("public marketing copy states the approved progressive offer", () => {
   assert.doesNotMatch(combined, /To launch from Blockwise/i);
 });
 
+test("homepage CTA notes stay grouped and centered beneath their buttons", () => {
+  const sections = readFileSync("src/components/home-landing/home-sections.tsx", "utf8");
+  const heroCss = readFileSync("src/components/home-landing/night-ops-hero.css", "utf8");
+  const homepageCss = readFileSync("src/app/homepage.css", "utf8");
+
+  assert.match(
+    sections,
+    /className="hw-trial-cta"[\s\S]*className="hw-btn hw-btn--dark"[\s\S]*Email only\. No card\./,
+  );
+  assert.match(heroCss, /\.hw-no-form\s*\{[^}]*display:\s*inline-grid;[^}]*justify-items:\s*center;/);
+  assert.match(homepageCss, /\.hw-trial-cta\s*\{[^}]*display:\s*inline-grid;[^}]*justify-items:\s*center;/);
+});
+
 test("homepage FAQ matches the approved flat-rate offer", () => {
   const faq = readFileSync("src/components/home-landing/data.ts", "utf8");
   const selfServe = getBillingOffer("AU", "self_serve");

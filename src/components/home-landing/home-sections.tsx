@@ -231,10 +231,12 @@ export function FreeTrial() {
   return (
     <div className="hw-band hw-band--wide hw-trial">
       <h2>Create three complete ads free.</h2>
-      <p className="hw-sub">Email only. No card.</p>
-      <CtaLink location="free_trial" href="/signup" className="hw-btn hw-btn--dark">
-        Create three ads free <span className="hw-arr">→</span>
-      </CtaLink>
+      <div className="hw-trial-cta">
+        <CtaLink location="free_trial" href="/signup" className="hw-btn hw-btn--dark">
+          Create three ads free <span className="hw-arr">→</span>
+        </CtaLink>
+        <p className="hw-sub">Email only. No card.</p>
+      </div>
       <div className="hw-trial-facts">
         <div className="hw-trial-fact">
           <h3>Three complete ads</h3>
