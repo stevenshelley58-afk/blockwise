@@ -8,21 +8,43 @@ test("disabled feature route mapping covers public and operator research surface
   const routes = read("src/lib/features/route-availability.ts");
   const middleware = read("src/middleware.ts");
 
-  for (const route of ["/ad-radar", "/property-check", "/suburb", "/audit", "/hero-lab", "/operator/research"]) {
+  for (const route of [
+    "/ad-radar", "/property-check", "/suburb", "/audit", "/hero-lab", "/operator/research",
+    "/api/property-checks", "/api/research/ad-radar/suggestions", "/api/research/ads/search",
+    "/api/research/advertisers/autocomplete", "/api/research/locations/autocomplete",
+    "/api/research/locations/guess", "/api/research/swipe-file", "/api/research/audit/lead",
+    "/api/research/audit/suggestions", "/api/research/local-ad-radar",
+  ]) {
     assert.match(routes, new RegExp(`prefix: "${route.replaceAll("/", "\\/")}"`));
     assert.match(middleware, new RegExp(route.replaceAll("/", "\\/")));
   }
   assert.match(middleware, /Cache-Control.*no-store/);
+  assert.doesNotMatch(routes, /prefix: "\/api\/research"\s*,/);
 });
 
-test("local ad radar is feature-gated before its service client is created", () => {
-  const route = read("src/app/api/research/local-ad-radar/route.ts");
-  const gate = route.indexOf('featureDisabledResponse("adRadar", "suburbPages")');
-  const client = route.indexOf("createSupabaseServiceClient()");
+test("disabled customer APIs gate before auth, client, or provider work", () => {
+  const handlers = [
+    ["src/app/api/property-checks/route.ts", 'featureDisabledResponse("propertyCheck")', "requireApiWorkspace("],
+    ["src/app/api/property-checks/addresses/autocomplete/route.ts", 'featureDisabledResponse("propertyCheck")', "requireApiWorkspace("],
+    ["src/app/api/research/ad-radar/suggestions/route.ts", 'featureDisabledResponse("adRadar")', "createSupabaseServiceClient()"],
+    ["src/app/api/research/ads/search/route.ts", 'featureDisabledResponse("adRadar")', "requireApiWorkspace("],
+    ["src/app/api/research/advertisers/autocomplete/route.ts", 'featureDisabledResponse("adRadar")', "requireApiWorkspace("],
+    ["src/app/api/research/locations/autocomplete/route.ts", 'featureDisabledResponse("adRadar")', "createSupabaseServerClient()"],
+    ["src/app/api/research/locations/guess/route.ts", 'featureDisabledResponse("adRadar")', "resolveAdRadarLocationGuess("],
+    ["src/app/api/research/swipe-file/route.ts", 'featureDisabledResponse("adRadar")', "requireApiWorkspace("],
+    ["src/app/api/research/audit/lead/route.ts", 'featureDisabledResponse("suburbPages")', "request.json()"],
+    ["src/app/api/research/audit/suggestions/route.ts", 'featureDisabledResponse("suburbPages")', "createSupabaseServiceClient()"],
+    ["src/app/api/research/local-ad-radar/route.ts", 'featureDisabledResponse("adRadar", "suburbPages")', "createSupabaseServiceClient()"],
+  ] as const;
 
-  assert.ok(gate >= 0);
-  assert.ok(client >= 0);
-  assert.ok(gate < client);
+  for (const [file, gateText, clientText] of handlers) {
+    const route = read(file);
+    const gate = route.indexOf(gateText);
+    const client = route.indexOf(clientText, gate + gateText.length);
+    assert.ok(gate >= 0, `${file} needs its feature gate`);
+    assert.ok(client >= 0, `${file} needs its guarded client/provider/auth work`);
+    assert.ok(gate < client, `${file} must gate before ${clientText}`);
+  }
 });
 
 test("active navigation excludes disabled features rather than hiding hardcoded routes", () => {
@@ -43,6 +65,8 @@ test("active Ad Studio generation has no local Ad Radar dependency", () => {
   assert.match(dialog, /GenerationProgress/);
   assert.doesNotMatch(dialog, /GenerationAdStream|preloadGenerationAdStream|generationAdLocation|local-ad-radar/);
   assert.doesNotMatch(progress, /fetch\(|local-ad-radar|ad-radar/);
+  assert.doesNotMatch(progress, /useEffect|useState|setInterval|Running final checks/);
+  assert.match(progress, /Creating your Feed and Story ads/);
 });
 
 test("operator research handlers share the pre-auth Ad Radar gate", () => {

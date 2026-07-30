@@ -11,7 +11,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
-  const featureGate = featureDisabledResponse("adRadar", "suburbPages");
+  const featureGate = featureDisabledResponse("adRadar");
   if (featureGate) return featureGate;
 
   const query = (request.nextUrl.searchParams.get("q") ?? "").replace(/[(),]/g, "").trim();
