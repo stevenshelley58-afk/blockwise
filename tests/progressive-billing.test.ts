@@ -16,6 +16,7 @@ import {
   buildCheckoutSessionRequest,
   constructStripeWebhookEvent,
   StripeWebhookVerificationError,
+  validateStripePriceForOffer,
   type StripeWebhookEvent,
 } from "../src/lib/billing/stripe-scaffold.ts";
 
@@ -29,14 +30,18 @@ const billingEnv: NodeJS.ProcessEnv = {
   STRIPE_SELF_SERVE_AUD_INTRO_COUPON_ID: "coupon_intro_au",
 } as NodeJS.ProcessEnv;
 
-test("regional offer catalog encodes the approved US/AU amounts and tax behavior", () => {
+test("regional offer catalog keeps flat numeric prices and market-specific tax behavior", () => {
   assert.equal(BILLING_OFFERS.self_serve_US.firstInvoiceAmount, 9_900);
   assert.equal(BILLING_OFFERS.self_serve_US.recurringAmount, 49_900);
   assert.equal(BILLING_OFFERS.self_serve_US.discountAmount, 40_000);
   assert.equal(BILLING_OFFERS.self_serve_US.taxBehavior, "exclusive");
   assert.equal(BILLING_OFFERS.self_serve_AU.taxBehavior, "inclusive");
   assert.equal(BILLING_OFFERS.managed_US.recurringAmount, 150_000);
-  assert.equal(BILLING_OFFERS.managed_AU.recurringAmount, 250_000);
+  assert.equal(BILLING_OFFERS.managed_AU.recurringAmount, 150_000);
+  assert.equal(
+    BILLING_OFFERS.managed_US.recurringAmount,
+    BILLING_OFFERS.managed_AU.recurringAmount,
+  );
   assert.equal(currencyForMarket("US"), "USD");
   assert.equal(currencyForMarket("AU"), "AUD");
 });
@@ -94,8 +99,42 @@ test("managed Checkout uses the regional managed recurring price without a trial
   assert.equal(result.params["line_items[0][price]"], "price_managed_au");
   assert.equal(result.params["discounts[0][coupon]"], undefined);
   assert.equal(result.params["subscription_data[trial_period_days]"], undefined);
-  assert.equal(result.params["metadata[first_invoice_amount]"], 250_000);
+  assert.equal(result.params["metadata[first_invoice_amount]"], 150_000);
+  assert.equal(result.params["metadata[renewal_amount]"], 150_000);
   assert.match(String(result.params["custom_text[submit][message]"]), /Meta ad spend is separate/);
+});
+
+test("Checkout rejects a configured Stripe Price that disagrees with the accepted offer", () => {
+  const offer = BILLING_OFFERS.managed_AU;
+
+  assert.doesNotThrow(() =>
+    validateStripePriceForOffer(
+      {
+        id: "price_managed_au_flat",
+        active: true,
+        currency: "aud",
+        unit_amount: 150_000,
+        tax_behavior: "inclusive",
+        recurring: { interval: "month", interval_count: 1 },
+      },
+      offer,
+    ),
+  );
+  assert.throws(
+    () =>
+      validateStripePriceForOffer(
+        {
+          id: "price_managed_au_legacy",
+          active: true,
+          currency: "aud",
+          unit_amount: 250_000,
+          tax_behavior: "inclusive",
+          recurring: { interval: "month", interval_count: 1 },
+        },
+        offer,
+      ),
+    /does not match the managed_AU offer/,
+  );
 });
 
 test("Checkout refuses a currency that does not match the confirmed workspace market", () => {

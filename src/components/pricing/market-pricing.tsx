@@ -140,8 +140,8 @@ export function MarketPricing() {
             <p className="pricing-kicker">Managed service</p>
             <h2 id="managed-title">Strategy and weekly optimization included.</h2>
             <p>
-              From <strong>{managed}/month</strong>, plus Meta ad spend. Scope beyond the
-              standard engagement is confirmed and repriced during onboarding.
+              <strong>{managed}/month</strong> in either market, plus Meta ad spend. Additional
+              brands, ad accounts, or campaign volume require a written scope change.
             </p>
             <div className="pricing-managed-actions">
               <CtaLink

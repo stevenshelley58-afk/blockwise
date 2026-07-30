@@ -1,4 +1,4 @@
-export const BILLING_OFFER_VERSION = "2026-07-27";
+export const BILLING_OFFER_VERSION = "2026-07-30";
 
 export type BillingMarket = "US" | "AU";
 export type BillingCurrency = "USD" | "AUD";
@@ -83,8 +83,8 @@ export const BILLING_OFFERS: Readonly<Record<`${BillingProduct}_${BillingMarket}
     market: "AU",
     currency: "AUD",
     product: "managed",
-    recurringAmount: 250_000,
-    firstInvoiceAmount: 250_000,
+    recurringAmount: 150_000,
+    firstInvoiceAmount: 150_000,
     discountAmount: 0,
     trialDays: 0,
     taxBehavior: "inclusive",
@@ -92,7 +92,7 @@ export const BILLING_OFFERS: Readonly<Record<`${BillingProduct}_${BillingMarket}
     couponEnvKey: null,
     triggeringRule: "The managed service starts when its first invoice is paid.",
     checkoutDisclosure:
-      "Managed service starts at A$2,500 monthly. Meta ad spend is separate. Additional brands, ad accounts, or campaign volume require a written scope change.",
+      "Managed service is A$1,500 monthly. Meta ad spend is separate. Additional brands, ad accounts, or campaign volume require a written scope change.",
   },
 };
 
