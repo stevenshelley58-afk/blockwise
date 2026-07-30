@@ -5,12 +5,12 @@ import { useCallback, useRef, useState } from "react";
 export type StudioSection =
   | "home"
   | "media"
-  | "text"
+  | "edit"
   | "publish"
   | "brand"
   | "settings";
 export type SaveState = "saved" | "saving" | "error";
-export type MobileTab = "home" | "media" | "text" | "publish" | "brand" | "settings";
+export type MobileTab = "home" | "media" | "edit" | "publish" | "brand" | "settings";
 
 export function useAdStudio(initialSection: StudioSection = "home") {
   const [section, setSection] = useState<StudioSection>(initialSection);

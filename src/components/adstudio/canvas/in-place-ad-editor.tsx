@@ -23,6 +23,8 @@ export type InPlaceAdEditorProps = {
   creative: AdStudioCreative;
   onCreativeChange: (next: AdStudioCreative) => void;
   showToast: (msg: string) => void;
+  selectedRegionKey?: string | null;
+  onRegionSelectionChange?: (key: string | null) => void;
 };
 
 const MAX_TEXT_LENGTH = 200;
@@ -97,8 +99,15 @@ function readFileAsDataUrl(file: File): Promise<string> {
   });
 }
 
-export function InPlaceAdEditor({ creative, onCreativeChange, showToast }: InPlaceAdEditorProps) {
-  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+export function InPlaceAdEditor({
+  creative,
+  onCreativeChange,
+  showToast,
+  selectedRegionKey,
+  onRegionSelectionChange,
+}: InPlaceAdEditorProps) {
+  const [uncontrolledSelectedKey, setUncontrolledSelectedKey] = useState<string | null>(null);
+  const selectedKey = selectedRegionKey === undefined ? uncontrolledSelectedKey : selectedRegionKey;
   const [textDraft, setTextDraft] = useState("");
   const [instruction, setInstruction] = useState("");
   const [pendingKey, setPendingKey] = useState<string | null>(null);
@@ -123,6 +132,7 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast }: InPla
   const elementButtonRefs = useRef(new Map<string, HTMLButtonElement>());
   const regionButtonRefs = useRef(new Map<string, HTMLButtonElement>());
   const retryMutationRef = useRef<{ signature: string; mutationId: string } | null>(null);
+  const externalSelectionRef = useRef<string | null | undefined>(undefined);
   const layersRequestedForRef = useRef<string | null>(null);
   const plateImagesRef = useRef(new Map<string, HTMLImageElement>());
   const creativeRef = useRef(creative);
@@ -226,6 +236,18 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast }: InPla
   }, []);
 
   useEffect(() => {
+    if (selectedRegionKey === undefined || externalSelectionRef.current === selectedRegionKey) return;
+    externalSelectionRef.current = selectedRegionKey;
+    setInstruction("");
+    setTextDraft(
+      selectedRegionKey && selectedRegion?.kind === "text"
+        ? expectedTextForKey(creative, selectedRegionKey)
+        : "",
+    );
+    if (selectedRegionKey) scrollSelectedElementToEnd(selectedRegionKey);
+  }, [creative, scrollSelectedElementToEnd, selectedRegion, selectedRegionKey]);
+
+  useEffect(() => {
     const list = elementListRef.current;
     if (!list) return;
     updateElementScrollState();
@@ -318,7 +340,8 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast }: InPla
 
   function selectRegion(region: AdStudioCloneRegion) {
     if (busy) return;
-    setSelectedKey(region.key);
+    setUncontrolledSelectedKey(region.key);
+    onRegionSelectionChange?.(region.key);
     setInstruction("");
     setTextDraft(region.kind === "text" ? expectedTextForKey(creative, region.key) : "");
     scrollSelectedElementToEnd(region.key);
@@ -326,7 +349,8 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast }: InPla
 
   function closeInspector() {
     if (busy) return;
-    setSelectedKey(null);
+    setUncontrolledSelectedKey(null);
+    onRegionSelectionChange?.(null);
     setInstruction("");
   }
 
@@ -616,7 +640,8 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast }: InPla
           aria-pressed={comparePrevious}
           onClick={() => {
             setComparePrevious((current) => !current);
-            setSelectedKey(null);
+            setUncontrolledSelectedKey(null);
+            onRegionSelectionChange?.(null);
           }}
           disabled={busy || renderHistory.length === 0}
         >

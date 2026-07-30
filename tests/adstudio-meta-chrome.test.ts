@@ -39,10 +39,14 @@ test("chrome copy is the LIVE copy state, not re-derived from the pack", () => {
   assert.match(workbench, /<MetaChromePreview[\s\S]*?copy=\{copy\}[\s\S]*?>/);
 });
 
-test("primary text and headline/description click through to the Text panel", () => {
-  const copyButtons = preview.match(/studio-metachrome-copy" type="button" onClick=\{onSelectText\}/g) ?? [];
-  assert.equal(copyButtons.length, 3, "primary text, headline and description are all clickable");
-  assert.match(workbench, /onSelectText=\{\(\) => goToSection\("text"\)\}/);
+test("primary text, headline, description and CTA open their exact Edit field", () => {
+  assert.match(preview, /onSelectText\?\.\("primaryText"\)/);
+  assert.match(preview, /onSelectText\?\.\("headline"\)/);
+  assert.match(preview, /onSelectText\?\.\("description"\)/);
+  assert.match(preview, /onSelectText\?\.\("cta"\)/);
+  assert.match(preview, /data-selected=\{selectedElement === "headline"/);
+  assert.match(workbench, /onSelectText=\{selectMetaCopyField\}/);
+  assert.match(workbench, /selectedElement=\{selectedElement\}/);
 });
 
 test("workbench wraps the post-clone editor in MetaChromePreview", () => {
