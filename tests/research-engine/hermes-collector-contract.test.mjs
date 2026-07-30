@@ -526,8 +526,8 @@ test("Hermes coverage repair jobs are claimed and handled", () => {
   );
   assert.match(
     supervisor,
-    /HANDLED_JOB_TYPES\s*=\s*\[[\s\S]*COVERAGE_AUDITOR_JOB_TYPE[\s\S]*DEFECT_INVESTIGATOR_JOB_TYPE[\s\S]*\]/u,
-    "coverage jobs must be included in claim filters, otherwise the worker never sees them",
+    /AD_RADAR_JOB_TYPES\s*=\s*\[[\s\S]*COVERAGE_AUDITOR_JOB_TYPE[\s\S]*DEFECT_INVESTIGATOR_JOB_TYPE[\s\S]*\]/u,
+    "coverage jobs must remain claimable when Ad Radar is enabled",
   );
   assert.match(
     handleJob,

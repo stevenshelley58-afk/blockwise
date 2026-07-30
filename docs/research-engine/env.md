@@ -82,6 +82,8 @@ fallback.
 | Variable | Default | Notes |
 | --- | --- | --- |
 | `HERMES_RESEARCH_MODE` | `maintain` | `build` raises several queue and backfill defaults. |
+| `BLOCKWISE_RESEARCH_RUNTIME_ENABLED` | `true` | Global supervisor switch. Set `false` only to stop every runtime path, including content runs. |
+| `HERMES_AD_RADAR_ENABLED` | `false` | Launch-safe Ad Radar switch. When `false`, Hermes still processes `blockwise-content-run-orchestrator` jobs, but does not create or claim Ad Radar work, run watchdogs/backfills, publish the customer read model, audit accuracy, or purge inactive ads. Existing rows, objects, and queue items remain untouched. |
 | `HERMES_BUILD_CONCURRENCY` | `4` | Runtime config value. |
 | `HERMES_MAINTAIN_CONCURRENCY` | `1` | Runtime config value. |
 | `HERMES_COLLECTION_INTERVAL_SECONDS` | `900` | Runtime collection interval. |
@@ -144,12 +146,13 @@ and media needed to render the app.
 
 ## Location Ad Search
 
-Location ad search is enabled by default. Set
-`HERMES_LOCATION_AD_SEARCH_ENABLED=false` only as an operator kill switch.
+Location ad search has been removed. The census → page-resolver → ad-collector
+pipeline is the only discovery path; these retained variables are disabled and
+have no effect in the supervisor.
 
 | Variable | Default | Notes |
 | --- | --- | --- |
-| `HERMES_LOCATION_AD_SEARCH_ENABLED` | enabled unless `false` | Supervisor queues `blockwise-location-ad-search` work. |
+| `HERMES_LOCATION_AD_SEARCH_ENABLED` | `false` | Retained deployment compatibility setting; no location-search work is queued. |
 | `HERMES_LOCATION_AD_SEARCH_INTERVAL_MINUTES` | `720` | Location ad search cadence. |
 | `HERMES_LOCATION_AD_SEARCH_BATCH_SIZE` | `40` build, `12` maintain | Search batch size. |
 | `HERMES_LOCATION_AD_SEARCH_MAX_ACTIVE` | `120` build, `40` maintain | Active search cap. |

@@ -73,7 +73,10 @@ VPS_HEALTH_URLS=Hermes VPS|https://<vps-health-domain>/health,Steel CDP|https://
 
 Prefer off-box/public health URLs so the alert still fires if the VPS itself is
 down. The existing `/api/health/research` endpoint on Vercel remains the
-Supabase-backed research health surface for external uptime monitors.
+Supabase-backed research health surface for external uptime monitors when Ad
+Radar is enabled; while the launch feature flag is off it returns HTTP 200 with
+`status: "disabled"` without querying the research service, so monitors should
+treat that state as intentionally paused rather than unhealthy.
 
 ### 4a. Hermes-only Apify execution
 
