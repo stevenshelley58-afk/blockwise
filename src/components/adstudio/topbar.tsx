@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { Archive, Cloud, MoreHorizontal, Settings2, Share2, SwatchBook, Trash2 } from "lucide-react";
+import { Archive, Cloud, MoreHorizontal, Settings2, Share2, Trash2 } from "lucide-react";
 
 import { BlockwiseLogo } from "@/components/blockwise-logo";
 
@@ -14,7 +14,6 @@ type TopBarProps = {
   setShowMore: (value: boolean | ((prev: boolean) => boolean)) => void;
   onSave: () => void | Promise<unknown>;
   onDelete?: () => void;
-  onOpenBrand?: () => void;
   onOpenSettings?: () => void;
   showToast?: (message: string) => void;
 };
@@ -27,7 +26,6 @@ export function TopBar({
   setShowMore,
   onSave,
   onDelete,
-  onOpenBrand,
   onOpenSettings,
   showToast = () => {},
 }: TopBarProps) {
@@ -186,19 +184,6 @@ export function TopBar({
             <Share2 aria-hidden size={16} />
             Copy link
           </button>
-          {onOpenBrand && (
-            <button
-              type="button"
-              role="menuitem"
-              onClick={() => {
-                setShowMore(false);
-                onOpenBrand();
-              }}
-            >
-              <SwatchBook aria-hidden size={16} />
-              Brand Pack
-            </button>
-          )}
           {onOpenSettings && (
             <button
               type="button"
