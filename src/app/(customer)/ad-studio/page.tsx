@@ -8,7 +8,7 @@ import {
 import { loadAdStudioLibraryPage, type LibraryAssetModel } from "@/lib/adstudio/library-read-model";
 import { loadLiveAdStudioBundle } from "@/lib/adstudio/load-live-bundle";
 import { isExampleBrandKitSourceUrl, persistAdStudioBrandKit, rowToBrandKit } from "@/lib/adstudio/persistence";
-import { buildTrialFallbackBrandKit } from "@/lib/adstudio/trial-brand-kit";
+import { buildAdStudioFallbackBrandKit } from "@/lib/adstudio/trial-brand-kit";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
 
 import { SampleBanner } from "./sample-banner";
@@ -87,16 +87,11 @@ async function buildStarterBundle(input: {
   region?: string;
   userId: string;
 }) {
-  const brandKit = buildTrialFallbackBrandKit({
+  const starterBrandKit = buildAdStudioFallbackBrandKit({
     workspaceId: input.workspaceId,
     workspaceName: input.workspaceName,
     region: input.region,
   });
-  const starterBrandKit: AdStudioBrandKit = {
-    ...brandKit,
-    reviewStatus: "pending_user_review",
-    lockedFields: Array.from(new Set([...brandKit.lockedFields, "starter_brand"])),
-  };
   // Asset uploads are attached to a real brand-kit row. Persist the first-run
   // kit before rendering the upload UI so a new workspace can complete its
   // first clone without a separate Brand Studio round trip.

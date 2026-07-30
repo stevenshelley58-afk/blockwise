@@ -131,6 +131,19 @@ export async function loadLiveAdStudioBundle(
     const brandKitById = new Map(
       (brandKitsResult.data ?? []).map((row) => [String(row.id), row]),
     );
+    const nonDemoApprovedRows = (approvedBrandKitResult.data ?? []).filter(
+      (row) => !isExampleBrandKitSourceUrl(String(row.source_url ?? "")),
+    );
+    const latestApprovedBrandKitRow =
+      nonDemoApprovedRows.find((row) => String(row.source_url ?? "").trim()) ?? nonDemoApprovedRows[0];
+    const latestApprovedBrandKit = latestApprovedBrandKitRow
+      ? applyBrandAssetRows(
+          rowToBrandKit(latestApprovedBrandKitRow),
+          (assetsResult.data ?? []).filter(
+            (row) => String(row.brand_kit_id ?? "") === String(latestApprovedBrandKitRow.id),
+          ).slice(0, ADSTUDIO_EMBEDDED_ASSET_LIMIT),
+        )
+      : null;
     const rowsForCampaign = (rows: Array<Record<string, unknown>>, campaignId: string) =>
       rows.filter((row) => String(row.campaign_id ?? "") === campaignId);
 
@@ -164,25 +177,31 @@ export async function loadLiveAdStudioBundle(
           && campaignPack.creatives.length > 0
           && campaignPack.creatives.every(isFinishedCloneCreative)
         ) {
-          return { brandKit, campaignPack, offers, performance: EMPTY_PERFORMANCE, isLive: true };
+          return {
+            brandKit: latestApprovedBrandKit ?? brandKit,
+            campaignPack,
+            offers,
+            performance: EMPTY_PERFORMANCE,
+            isLive: true,
+          };
         }
       }
     }
 
     // No usable campaign - try to seed from the workspace's most recent approved non-demo brand kit.
-    const nonDemoRows = (approvedBrandKitResult.data ?? []).filter((row) => !isExampleBrandKitSourceUrl(String(row.source_url ?? "")));
-    const latestBrandKitRow = nonDemoRows.find((row) => String(row.source_url ?? "").trim()) ?? nonDemoRows[0];
+    if (latestApprovedBrandKit) {
+      const campaignPack = createEmptyAdStudioCampaignPack({
+        workspaceId,
+        brandKit: latestApprovedBrandKit,
+      });
 
-    if (latestBrandKitRow) {
-      const brandKit = applyBrandAssetRows(
-        rowToBrandKit(latestBrandKitRow),
-        (assetsResult.data ?? []).filter(
-          (row) => String(row.brand_kit_id ?? "") === String(latestBrandKitRow.id),
-        ).slice(0, ADSTUDIO_EMBEDDED_ASSET_LIMIT),
-      );
-      const campaignPack = createEmptyAdStudioCampaignPack({ workspaceId, brandKit });
-
-      return { brandKit, campaignPack, offers, performance: EMPTY_PERFORMANCE, isLive: true };
+      return {
+        brandKit: latestApprovedBrandKit,
+        campaignPack,
+        offers,
+        performance: EMPTY_PERFORMANCE,
+        isLive: true,
+      };
     }
 
     return null;

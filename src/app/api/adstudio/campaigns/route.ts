@@ -314,7 +314,6 @@ export async function POST(request: NextRequest) {
         body,
         workspaceName: context.access.workspaceName,
         region: context.access.region,
-        isTrialWorkspace: creditReservation.isTrialWorkspace,
         creditReservation,
       });
       await recordWorkspaceFunnelEventBestEffort(funnelService, {
