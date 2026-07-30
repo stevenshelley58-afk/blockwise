@@ -1,0 +1,1416 @@
+<!doctype html>
+<!--
+THESIS: Decompose a proven ad once, then make customer generation two visible parallel lanes instead of rediscovering the design after every render.
+OWN-WORLD: Blockwise's quiet operations desk—paper-white surfaces, near-black controls, one blue process line, compact mono evidence labels, and the real ad as the dominant artifact.
+STORY: Inspect the approved sample, verify the stripped plate, follow every prompt and payload, then edit the final composition live.
+FIRST VIEWPORT: The two-lane process graph leads; the selected stage's exact contract sits beside it, followed by the working layered render.
+FORM: An inspectable production worksheet, chosen directly from the user's precise request; no concept seed was needed for this narrow artifact.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Blockwise layered template flow — meta-feed-018</title>
+  <style>
+    @font-face {
+      font-family: "Demo Manrope";
+      src: url("../../public/fonts/adstudio/manrope-500.woff2") format("woff2");
+      font-weight: 500;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: "Demo Manrope";
+      src: url("../../public/fonts/adstudio/manrope-600.woff2") format("woff2");
+      font-weight: 600;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: "Demo Condensed";
+      src: url("../../public/fonts/adstudio/barlow-condensed-800.woff2") format("woff2");
+      font-weight: 800;
+      font-display: swap;
+    }
+
+    :root {
+      color-scheme: light;
+      --canvas: #f6f7f9;
+      --surface: #ffffff;
+      --surface-subtle: #f1f2f4;
+      --ink: #16181d;
+      --muted: #545a66;
+      --faint: #808693;
+      --line: #e3e6eb;
+      --line-heavy: #cbd0d8;
+      --data: #2a78d6;
+      --data-soft: rgba(42, 120, 214, .10);
+      --success: #006d38;
+      --success-soft: #ecfdf5;
+      --warning: #8a5a00;
+      --warning-soft: #fdf6e7;
+      --danger: #ba1a1a;
+      --shadow: 0 1px 2px rgba(16, 18, 23, .04), 0 12px 30px rgba(16, 18, 23, .07);
+      --radius: 16px;
+      --radius-lg: 22px;
+      --font: "Demo Manrope", Inter, ui-sans-serif, system-ui, sans-serif;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--canvas);
+      color: var(--ink);
+      font-family: var(--font);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    button, input, textarea { font: inherit; }
+
+    button {
+      min-height: 44px;
+      color: inherit;
+    }
+
+    button:focus-visible,
+    input:focus-visible,
+    textarea:focus-visible,
+    summary:focus-visible {
+      outline: 3px solid rgba(42, 120, 214, .35);
+      outline-offset: 2px;
+    }
+
+    .app {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 40px 0 72px;
+    }
+
+    .page-head {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: end;
+      gap: 28px;
+      margin-bottom: 30px;
+    }
+
+    .eyebrow {
+      margin: 0 0 9px;
+      color: var(--faint);
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    h1, h2, h3, p { margin-top: 0; }
+
+    h1 {
+      max-width: 780px;
+      margin-bottom: 12px;
+      font-size: clamp(34px, 5vw, 64px);
+      font-weight: 600;
+      line-height: 1.02;
+      letter-spacing: -.035em;
+      text-wrap: balance;
+    }
+
+    .lede {
+      max-width: 72ch;
+      margin-bottom: 0;
+      color: var(--muted);
+      font-size: 16px;
+    }
+
+    .source-stamp {
+      display: grid;
+      gap: 5px;
+      min-width: 250px;
+      padding: 15px 17px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+
+    .source-stamp strong { font-size: 15px; }
+    .source-stamp span { color: var(--muted); font-size: 12px; }
+    .hash { font-family: var(--mono); font-size: 11px; overflow-wrap: anywhere; }
+
+    .section-head {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 18px;
+      margin: 0 0 14px;
+    }
+
+    .section-head h2 {
+      margin-bottom: 3px;
+      font-size: 22px;
+      font-weight: 600;
+      letter-spacing: -.02em;
+    }
+
+    .section-head p {
+      margin-bottom: 0;
+      color: var(--muted);
+    }
+
+    .flow-shell {
+      margin-bottom: 30px;
+      padding: 24px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+
+    .lane {
+      display: grid;
+      grid-template-columns: 134px minmax(0, 1fr);
+      gap: 18px;
+      align-items: center;
+      padding: 18px 0;
+    }
+
+    .lane + .lane { border-top: 1px solid var(--line); }
+
+    .lane-label strong {
+      display: block;
+      margin-bottom: 3px;
+      font-size: 13px;
+    }
+
+    .lane-label span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .flow-track {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 28px;
+      position: relative;
+    }
+
+    .flow-track::before {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 6%;
+      right: 6%;
+      height: 2px;
+      background: var(--data);
+      transform: translateY(-50%);
+    }
+
+    .flow-node {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      min-height: 86px;
+      padding: 13px 14px;
+      text-align: left;
+      border: 1px solid var(--line-heavy);
+      border-radius: 14px;
+      background: var(--surface);
+      cursor: pointer;
+      transition: transform 180ms cubic-bezier(.22, 1.1, .36, 1), border-color 180ms ease, box-shadow 180ms ease;
+    }
+
+    .flow-node:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 24px rgba(16, 18, 23, .10);
+    }
+
+    .flow-node[aria-pressed="true"] {
+      border-color: var(--ink);
+      box-shadow: 0 0 0 2px var(--ink);
+    }
+
+    .flow-node small {
+      align-self: start;
+      color: var(--faint);
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .flow-node strong {
+      align-self: end;
+      font-size: 13px;
+      line-height: 1.25;
+    }
+
+    .flow-node[data-parallel]::after {
+      content: "parallel";
+      position: absolute;
+      top: -10px;
+      right: 8px;
+      padding: 2px 6px;
+      color: var(--data);
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      border: 1px solid rgba(42, 120, 214, .25);
+      border-radius: 999px;
+      background: #f7fbff;
+    }
+
+    .stage-inspector {
+      display: grid;
+      grid-template-columns: minmax(220px, .75fr) minmax(0, 1.25fr);
+      gap: 0;
+      overflow: hidden;
+      margin-top: 8px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface-subtle);
+    }
+
+    .stage-summary {
+      padding: 20px;
+      border-right: 1px solid var(--line);
+      background: var(--surface);
+    }
+
+    .stage-summary h3 {
+      margin-bottom: 8px;
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: -.015em;
+    }
+
+    .stage-summary p { color: var(--muted); }
+
+    .stage-meta {
+      display: grid;
+      gap: 8px;
+      margin: 18px 0 0;
+    }
+
+    .stage-meta div {
+      display: grid;
+      grid-template-columns: 86px minmax(0, 1fr);
+      gap: 10px;
+      font-size: 12px;
+    }
+
+    .stage-meta dt { color: var(--faint); }
+    .stage-meta dd { margin: 0; overflow-wrap: anywhere; }
+
+    .stage-contract {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      min-width: 0;
+    }
+
+    .contract-block {
+      min-width: 0;
+      padding: 18px;
+    }
+
+    .contract-block + .contract-block { border-left: 1px solid var(--line); }
+
+    .contract-label {
+      display: block;
+      margin-bottom: 9px;
+      color: var(--faint);
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+
+    pre {
+      max-height: 330px;
+      margin: 0;
+      overflow: auto;
+      padding: 14px;
+      color: #e8eaf0;
+      font: 11px/1.55 var(--mono);
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      border-radius: 12px;
+      background: #181b21;
+    }
+
+    .demo-grid {
+      display: grid;
+      grid-template-columns: minmax(360px, .9fr) minmax(360px, 1.1fr);
+      gap: 24px;
+      align-items: start;
+      margin-bottom: 34px;
+    }
+
+    .render-workspace,
+    .editor-workspace {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+
+    .render-workspace { padding: 18px; }
+    .editor-workspace { padding: 22px; }
+
+    .view-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-bottom: 15px;
+    }
+
+    .view-tab,
+    .preset-button {
+      padding: 0 13px;
+      border: 1px solid var(--line-heavy);
+      border-radius: 999px;
+      background: var(--surface);
+      cursor: pointer;
+    }
+
+    .view-tab[aria-pressed="true"] {
+      color: #fff;
+      border-color: var(--ink);
+      background: var(--ink);
+    }
+
+    .canvas-wrap {
+      width: min(100%, 550px);
+      margin: 0 auto;
+    }
+
+    .ad-canvas {
+      position: relative;
+      width: 100%;
+      overflow: hidden;
+      aspect-ratio: 4 / 5;
+      container-type: inline-size;
+      border: 1px solid var(--line-heavy);
+      border-radius: 18px;
+      background:
+        linear-gradient(45deg, #e8eaee 25%, transparent 25%),
+        linear-gradient(-45deg, #e8eaee 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #e8eaee 75%),
+        linear-gradient(-45deg, transparent 75%, #e8eaee 75%),
+        #f7f8fa;
+      background-position: 0 0, 0 10px, 10px -10px, -10px 0;
+      background-size: 20px 20px;
+    }
+
+    .ad-canvas img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: fill;
+    }
+
+    .source-image,
+    .plate-image,
+    .customer-image-output,
+    .text-overlay { transition: opacity 220ms ease; }
+
+    .text-overlay {
+      position: absolute;
+      inset: 0;
+      color: #4e4b43;
+      pointer-events: none;
+    }
+
+    .ad-number,
+    .ad-headline,
+    .ad-sub,
+    .ad-handle {
+      position: absolute;
+      margin: 0;
+    }
+
+    .ad-number {
+      left: 16.5%;
+      top: 18.9%;
+      width: 22%;
+      color: #4b493f;
+      font-family: "Demo Manrope", sans-serif;
+      font-size: 28cqi;
+      font-weight: 500;
+      line-height: 1;
+      letter-spacing: -.06em;
+      text-align: center;
+    }
+
+    .ad-headline {
+      left: 8.4%;
+      top: 45.8%;
+      width: 45%;
+      height: 27%;
+      color: #4f4c44;
+      font-family: "Demo Condensed", sans-serif;
+      font-size: 11.4cqi;
+      font-weight: 800;
+      line-height: .84;
+      letter-spacing: -.015em;
+      text-transform: uppercase;
+      overflow-wrap: normal;
+      overflow: hidden;
+    }
+
+    .ad-headline span {
+      display: block;
+      white-space: nowrap;
+    }
+
+    .ad-sub {
+      left: 8.6%;
+      top: 73.6%;
+      width: 44%;
+      color: #5d5a52;
+      font-size: 3.9cqi;
+      font-weight: 500;
+      line-height: 1.1;
+      white-space: nowrap;
+    }
+
+    .ad-handle {
+      left: 8.7%;
+      top: 83.5%;
+      width: 38%;
+      color: #5d5a52;
+      font-size: 3.25cqi;
+      font-weight: 500;
+      line-height: 1.1;
+      white-space: nowrap;
+    }
+
+    .ad-canvas[data-view="sample"] .plate-image,
+    .ad-canvas[data-view="sample"] .customer-image-output,
+    .ad-canvas[data-view="sample"] .text-overlay,
+    .ad-canvas:not([data-view="sample"]) .source-image,
+    .ad-canvas[data-view="plate"] .customer-image-output,
+    .ad-canvas[data-view="plate"] .text-overlay,
+    .ad-canvas[data-view="image"] .plate-image,
+    .ad-canvas[data-view="image"] .text-overlay,
+    .ad-canvas[data-view="text"] .source-image,
+    .ad-canvas[data-view="text"] .plate-image,
+    .ad-canvas[data-view="text"] .customer-image-output,
+    .ad-canvas[data-view="final"][data-base="customer"] .plate-image,
+    .ad-canvas[data-view="final"][data-base="sample"] .customer-image-output {
+      opacity: 0;
+    }
+
+    .ad-canvas[data-view="sample"] .source-image,
+    .ad-canvas[data-view="plate"] .plate-image,
+    .ad-canvas[data-view="image"] .customer-image-output,
+    .ad-canvas[data-view="text"] .text-overlay,
+    .ad-canvas[data-view="final"][data-base="customer"] .customer-image-output,
+    .ad-canvas[data-view="final"][data-base="sample"] .plate-image,
+    .ad-canvas[data-view="final"] .text-overlay {
+      opacity: 1;
+    }
+
+    .canvas-caption {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      margin-top: 11px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .canvas-caption strong { color: var(--ink); }
+
+    .editor-head {
+      display: flex;
+      align-items: start;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+
+    .editor-head h2 {
+      margin-bottom: 5px;
+      font-size: 22px;
+      font-weight: 600;
+      letter-spacing: -.02em;
+    }
+
+    .editor-head p { margin-bottom: 0; color: var(--muted); }
+
+    .ready-badge {
+      flex: 0 0 auto;
+      padding: 5px 9px;
+      color: var(--success);
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+      border: 1px solid rgba(0, 109, 56, .2);
+      border-radius: 999px;
+      background: var(--success-soft);
+    }
+
+    .preset-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 112px minmax(0, 1fr);
+      gap: 14px;
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+    }
+
+    .field-wide { grid-column: 1 / -1; }
+
+    .field label {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .field label span { color: var(--faint); font-weight: 500; }
+
+    input, textarea {
+      width: 100%;
+      min-height: 44px;
+      padding: 10px 12px;
+      color: var(--ink);
+      border: 1px solid var(--line-heavy);
+      border-radius: 12px;
+      background: var(--surface);
+    }
+
+    textarea {
+      min-height: 78px;
+      resize: vertical;
+    }
+
+    .contract-note {
+      margin: 18px 0;
+      padding: 13px 14px;
+      color: var(--warning);
+      border-radius: 12px;
+      background: var(--warning-soft);
+    }
+
+    .live-packet h3 {
+      margin-bottom: 8px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .live-packet pre { max-height: 235px; }
+
+    .dossier {
+      display: grid;
+      gap: 9px;
+    }
+
+    details {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--surface);
+    }
+
+    summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 50px;
+      padding: 0 16px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    summary::marker { content: ""; }
+    summary::after { content: "+"; color: var(--muted); font-size: 20px; }
+    details[open] summary::after { content: "–"; }
+
+    .detail-body {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      padding: 0 15px 15px;
+    }
+
+    .detail-body > div { min-width: 0; }
+
+    .truth-note {
+      margin-top: 26px;
+      padding: 16px 18px;
+      color: var(--muted);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--surface-subtle);
+    }
+
+    .truth-note strong { color: var(--ink); }
+
+    @media (max-width: 880px) {
+      .page-head,
+      .demo-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .source-stamp { min-width: 0; }
+      .lane { grid-template-columns: 1fr; align-items: start; }
+      .flow-track { gap: 12px; }
+      .stage-inspector { grid-template-columns: 1fr; }
+      .stage-summary { border-right: 0; border-bottom: 1px solid var(--line); }
+    }
+
+    @media (max-width: 640px) {
+      .app {
+        width: min(100% - 20px, 1180px);
+        padding-top: 24px;
+      }
+
+      h1 { font-size: 36px; }
+      .flow-shell { padding: 16px; }
+
+      .flow-track {
+        grid-template-columns: 1fr;
+        padding-left: 20px;
+      }
+
+      .flow-track::before {
+        top: 6%;
+        bottom: 6%;
+        left: 6px;
+        right: auto;
+        width: 2px;
+        height: auto;
+        transform: none;
+      }
+
+      .flow-node { min-height: 68px; }
+      .stage-contract,
+      .detail-body { grid-template-columns: 1fr; }
+      .contract-block + .contract-block { border-left: 0; border-top: 1px solid var(--line); }
+      .form-grid { grid-template-columns: 1fr; }
+      .field-wide { grid-column: auto; }
+      .render-workspace, .editor-workspace { padding: 14px; border-radius: 16px; }
+      .canvas-caption { display: grid; gap: 3px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        scroll-behavior: auto !important;
+        transition-duration: .01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="page-head">
+      <div>
+        <p class="eyebrow">Layered-template working proof</p>
+        <h1>Decompose once. Generate in parallel. Edit immediately.</h1>
+        <p class="lede">
+          A real, inspectable example using Blockwise template <strong>meta-feed-018</strong>.
+          Every model prompt, payload, image input, stored artifact, and deterministic step is disclosed below.
+        </p>
+      </div>
+      <aside class="source-stamp" aria-label="Approved sample provenance">
+        <strong>Approved public sample</strong>
+        <span>5 Costly Mistakes When Buying a Home</span>
+        <span>Actual file: 1024 × 1280 PNG</span>
+        <span class="hash">sha256 36447def…68c6a68</span>
+      </aside>
+    </header>
+
+    <section aria-labelledby="flow-title">
+      <div class="section-head">
+        <div>
+          <h2 id="flow-title">The complete flow</h2>
+          <p>Select any stage to inspect the exact contract.</p>
+        </div>
+      </div>
+
+      <div class="flow-shell">
+        <div class="lane">
+          <div class="lane-label">
+            <strong>Template build</strong>
+            <span>Run once, offline</span>
+          </div>
+          <div class="flow-track" aria-label="Template build stages">
+            <button class="flow-node" type="button" data-stage="source" aria-pressed="true">
+              <small>Real evidence</small>
+              <strong>Approved sample</strong>
+            </button>
+            <button class="flow-node" type="button" data-stage="extract" aria-pressed="false">
+              <small>Vision + OCR</small>
+              <strong>Extract contract</strong>
+            </button>
+            <button class="flow-node" type="button" data-stage="strip" aria-pressed="false">
+              <small>Image edit</small>
+              <strong>Strip all text</strong>
+            </button>
+            <button class="flow-node" type="button" data-stage="approve" aria-pressed="false">
+              <small>Deterministic</small>
+              <strong>Rebuild + approve</strong>
+            </button>
+          </div>
+        </div>
+
+        <div class="lane">
+          <div class="lane-label">
+            <strong>Customer run</strong>
+            <span>No discovery work</span>
+          </div>
+          <div class="flow-track" aria-label="Customer generation stages">
+            <button class="flow-node" type="button" data-stage="brief" aria-pressed="false">
+              <small>Customer data</small>
+              <strong>Brief + media</strong>
+            </button>
+            <button class="flow-node" type="button" data-stage="copy" data-parallel aria-pressed="false">
+              <small>Text model</small>
+              <strong>Structured copy</strong>
+            </button>
+            <button class="flow-node" type="button" data-stage="image" data-parallel aria-pressed="false">
+              <small>Image model</small>
+              <strong>Image-only clone</strong>
+            </button>
+            <button class="flow-node" type="button" data-stage="compose" aria-pressed="false">
+              <small>Local renderer</small>
+              <strong>Compose + edit</strong>
+            </button>
+          </div>
+        </div>
+
+        <div class="stage-inspector" aria-live="polite">
+          <div class="stage-summary">
+            <p class="eyebrow" id="stage-kicker">Template build · source</p>
+            <h3 id="stage-title">Approved sample</h3>
+            <p id="stage-description"></p>
+            <dl class="stage-meta" id="stage-meta"></dl>
+          </div>
+          <div class="stage-contract">
+            <div class="contract-block">
+              <span class="contract-label">Exact prompt</span>
+              <pre id="stage-prompt"></pre>
+            </div>
+            <div class="contract-block">
+              <span class="contract-label">Exact data / result</span>
+              <pre id="stage-data"></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section aria-labelledby="demo-title">
+      <div class="section-head">
+        <div>
+          <h2 id="demo-title">Working layered render</h2>
+          <p>Switch layers, change the copy, and see the final pixels update without another model call.</p>
+        </div>
+      </div>
+
+      <div class="demo-grid">
+        <div class="render-workspace">
+          <div class="view-tabs" role="group" aria-label="Render layer">
+            <button class="view-tab" type="button" data-view="sample" aria-pressed="false">Approved sample</button>
+            <button class="view-tab" type="button" data-view="plate" aria-pressed="false">Text-free plate</button>
+            <button class="view-tab" type="button" data-view="image" aria-pressed="false">Image-only clone</button>
+            <button class="view-tab" type="button" data-view="text" aria-pressed="false">Text layer</button>
+            <button class="view-tab" type="button" data-view="final" aria-pressed="true">Final composite</button>
+          </div>
+
+          <div class="canvas-wrap">
+            <div class="ad-canvas" id="ad-canvas" data-view="final" data-base="customer" aria-label="Layered ad render">
+              <img class="source-image" src="../../public/adstudio-samples/meta/meta-feed-018-sample.png" alt="Approved meta-feed-018 sample">
+              <img class="plate-image" src="./assets/meta-feed-018-text-free-4x5.png" alt="Actual generated text-free template plate">
+              <img class="customer-image-output" src="./assets/meta-feed-018-customer-image-only-4x5.png" alt="Actual customer property image-only clone with no text">
+              <div class="text-overlay" aria-label="Editable text overlay">
+                <div class="ad-number" id="render-number">3</div>
+                <div class="ad-headline" id="render-headline">SMART MOVES</div>
+                <div class="ad-sub" id="render-subline">Before Your Next Open Home</div>
+                <div class="ad-handle" id="render-handle">@northcoast.example</div>
+              </div>
+            </div>
+            <div class="canvas-caption">
+              <strong id="view-name">Final composite</strong>
+              <span id="view-description">Image-only clone + editable DOM text. No region detection.</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="editor-workspace">
+          <div class="editor-head">
+            <div>
+              <h2>Customer editor</h2>
+              <p>All four fields exist before customer generation begins.</p>
+            </div>
+            <span class="ready-badge">Editable now</span>
+          </div>
+
+          <div class="preset-row" aria-label="Copy presets">
+            <button class="preset-button" type="button" id="load-sample">Load sample reconstruction</button>
+            <button class="preset-button" type="button" id="load-customer">Load customer example</button>
+          </div>
+
+          <div class="form-grid">
+            <div class="field">
+              <label for="number">Number <span id="number-count">1/2</span></label>
+              <input id="number" maxlength="2" value="3">
+            </div>
+            <div class="field">
+              <label for="headline">Main headline <span id="headline-count">11/30</span></label>
+              <input id="headline" maxlength="30" value="SMART MOVES">
+            </div>
+            <div class="field field-wide">
+              <label for="subline">Supporting line <span id="subline-count">26/35</span></label>
+              <input id="subline" maxlength="35" value="Before Your Next Open Home">
+            </div>
+            <div class="field field-wide">
+              <label for="handle">Contact handle <span id="handle-count">19/30</span></label>
+              <input id="handle" maxlength="30" value="@northcoast.example">
+            </div>
+          </div>
+
+          <p class="contract-note">
+            The text model writes these strings. The browser renders them. The image model never receives or paints them.
+          </p>
+
+          <div class="live-packet">
+            <h3>Live compositor payload</h3>
+            <pre id="live-payload"></pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section aria-labelledby="dossier-title">
+      <div class="section-head">
+        <div>
+          <h2 id="dossier-title">Every prompt and payload</h2>
+          <p>The same contracts shown in the graph, kept together for implementation review.</p>
+        </div>
+      </div>
+      <div class="dossier" id="dossier"></div>
+    </section>
+
+    <p class="truth-note">
+      <strong>What is real in this proof:</strong> the approved sample, its source hashes and declared inputs,
+      the OCR coordinates, the AI-created text-free plate, the customer image-only clone, both exact image prompts,
+      and the live layered compositor. The copy-model prompt and the proposed complete type contract are the new
+      production design demonstrated here; they have not replaced the current production generator.
+    </p>
+  </main>
+
+  <script>
+    const noPrompt = "NO MODEL CALL\n\nThis stage is deterministic. It receives structured data and produces pixels or stored metadata locally.";
+
+    const stripPrompt = `Use case: precise-object-edit
+Asset type: canonical text-free template plate for an editable real-estate social ad
+Input image: Image 1 is the edit target and approved sample.
+Primary request: Remove only the four text elements from the ad: the large numeral "5"; the large condensed headline "SMART FIRST STEPS"; the supporting line "Before Buying a Home"; and the handle "@homeguide.example". Reconstruct the exact background underneath each removed text area.
+Constraints: Preserve the 1080×1350 composition, rounded outer border, warm textured paper, white rounded number capsule, blue-sky property photograph, all geometric shapes, margins, colors, lighting, texture, and the bottom-right arrow exactly. The white number capsule must remain but be empty. The property photograph must remain pixel-compositionally unchanged. Change only the four text regions.
+Avoid: no letters, numbers, symbols, glyphs, logos, watermarks, replacement copy, extra objects, layout changes, cropping, color shifts, or arrow changes.`;
+
+    const imageOnlyPrompt = `Use case: compositing
+Asset type: customer-specific image-only clone for an editable real-estate social ad
+Input images: Image 1 is the canonical text-free template plate and edit target. Image 2 is the customer's property photograph and supporting insert.
+Primary request: Preserve Image 1's exact 4:5 ad layout and replace only the existing property photograph inside the large rounded-right image window with Image 2. Crop Image 2 naturally to fill that exact window.
+Constraints: Keep the warm textured paper, empty white number capsule, rounded outer border, image-window geometry, margins, colours, and bottom-right arrow unchanged. Keep every area outside the property-image window unchanged. The result must contain no text layer because text is rendered separately by Blockwise.
+Avoid: no letters, numbers, symbols, glyphs, words, logos, watermarks, captions, signs, fake interface text, layout changes, new shapes, extra objects, or arrow changes.`;
+
+    const extractionPrompt = `SYSTEM
+You convert one approved ad sample into a reusable layered-template contract.
+Return JSON only. Detect every editable text string and replaceable image area.
+For each text field return: stable key, exact sample text, normalized box, font family,
+self-hosted font file, weight, case, color, alignment, size ratio, line height,
+tracking, line count, maximum length, and confidence. Do not invent fields.
+For each image field return: stable key, normalized box or mask, aspect, and crop rule.
+All coordinates are normalized to the full 4:5 canvas.
+
+USER
+Inspect approved sample meta-feed-018. Extract every visible editable text value and the
+single replaceable property image. Preserve the arrow and all decorative geometry as plate content.
+The output must contain four text fields: headline_number, headline_main, headline_sub,
+and contact_handle; and one image field: main_property_image.`;
+
+    const copyPrompt = `SYSTEM
+You write structured on-ad copy for one approved template.
+Return JSON only with exactly the declared keys. Respect maxLength for every field.
+Use the brief only for factual content. Do not add a price, date, claim, address, or contact detail
+that is not supplied. Do not write layout instructions; layout already belongs to the template.
+
+USER
+Template: meta-feed-018
+Goal: buyer education
+Required fields:
+- headline_number, maximum 2 characters
+- headline_main, maximum 30 characters
+- headline_sub, maximum 35 characters
+- contact_handle, maximum 30 characters
+Brief: "Create a calm buyer-education ad for a weekend open home. Use three practical steps.
+Use the supplied handle @northcoast.example."
+Return only the four text values.`;
+
+    const stages = {
+      source: {
+        kicker: "Template build · source",
+        title: "Approved sample",
+        description: "The public, safe reference that proves the intended composition before any decomposition work begins.",
+        owner: "Template builder",
+        frequency: "Once per template",
+        model: "None",
+        output: "Immutable source evidence",
+        prompt: noPrompt,
+        data: {
+          templateId: "meta-feed-018",
+          templateName: "5 Costly Mistakes When Buying a Home",
+          sample: {
+            file: "/public/adstudio-samples/meta/meta-feed-018-sample.png",
+            actualPixels: { width: 1024, height: 1280 },
+            declaredPixels: { width: 1080, height: 1350 },
+            contentHash: "36447def29a0b8d0c4262f52299ca1b08401f2203a7f0d1d0278b2cd068c6a68",
+            generatedBy: "reference_clone"
+          },
+          sourceAd: {
+            file: "01_feed_4x5_best/meta_018.png",
+            contentHash: "e67bfaec28cce6e1ea7cbddc6ed9e377533388484dce7d4cb98fa214c05f16f8"
+          },
+          classification: {
+            ad_type: "social_post",
+            primary_intent: "education",
+            property_or_agent_focus: "property"
+          }
+        }
+      },
+      extract: {
+        kicker: "Template build · extraction",
+        title: "Extract the complete layer contract",
+        description: "Vision and OCR run against the approved sample once. The stored contract becomes the only field list seen by copy generation and the compositor.",
+        owner: "Offline template builder",
+        frequency: "Once, then regression-gated",
+        model: "Vision + OCR",
+        output: "Text specs + image slot",
+        prompt: extractionPrompt,
+        data: {
+          input: {
+            image: "meta-feed-018-sample.png",
+            imageHash: "36447def29a0b8d0c4262f52299ca1b08401f2203a7f0d1d0278b2cd068c6a68",
+            canvas: { width: 1024, height: 1280, aspect: "4:5" }
+          },
+          output: {
+            imageSlots: [{
+              key: "main_property_image",
+              box: { x: 0.578, y: 0.170, width: 0.422, height: 0.595 },
+              crop: "cover",
+              required: true
+            }],
+            text: [
+              {
+                key: "headline_number",
+                sample: "5",
+                box: { x: 0.165, y: 0.198, width: 0.220, height: 0.190 },
+                family: "Demo Manrope",
+                fontFile: "/fonts/adstudio/manrope-500.woff2",
+                weight: 500, maxLength: 2, align: "center", case: "as-entered"
+              },
+              {
+                key: "headline_main",
+                sample: "SMART FIRST STEPS",
+                ocrBox: { x: 0.085, y: 0.466, width: 0.436, height: 0.244 },
+                family: "Demo Condensed",
+                fontFile: "/fonts/adstudio/barlow-condensed-800.woff2",
+                weight: 800, maxLength: 30, align: "left", case: "upper", lines: 2
+              },
+              {
+                key: "headline_sub",
+                sample: "Before Buying a Home",
+                ocrBox: { x: 0.086, y: 0.738, width: 0.433, height: 0.030 },
+                family: "Demo Manrope",
+                fontFile: "/fonts/adstudio/manrope-500.woff2",
+                weight: 500, maxLength: 35, align: "left", case: "as-entered", lines: 1
+              },
+              {
+                key: "contact_handle",
+                sample: "@homeguide.example",
+                ocrBox: { x: 0.087, y: 0.841, width: 0.331, height: 0.025 },
+                family: "Demo Manrope",
+                fontFile: "/fonts/adstudio/manrope-500.woff2",
+                weight: 500, maxLength: 30, align: "left", case: "lower", lines: 1
+              }
+            ]
+          },
+          productionGapFound: "The current stored metadata has no headline_number type spec and only one high-confidence exact-font match."
+        }
+      },
+      strip: {
+        kicker: "Template build · plate",
+        title: "Generate the canonical text-free plate",
+        description: "The four text regions are removed once. Shapes, texture, the image window, and the arrow remain part of the plate.",
+        owner: "Offline image edit",
+        frequency: "Once per approved template",
+        model: "Built-in image edit",
+        output: "Normalized 4:5 PNG plate",
+        prompt: stripPrompt,
+        data: {
+          request: {
+            editTarget: "/public/adstudio-samples/meta/meta-feed-018-sample.png",
+            inputHash: "36447def29a0b8d0c4262f52299ca1b08401f2203a7f0d1d0278b2cd068c6a68"
+          },
+          rawOutput: {
+            file: "meta-feed-018-text-free.png",
+            pixels: { width: 1122, height: 1402 },
+            sha256: "75acbd92ee97f522ace72953619023ccc871ecbd714adb4368ea4dd86333cd1d"
+          },
+          normalizedOutput: {
+            file: "meta-feed-018-text-free-4x5.png",
+            pixels: { width: 1024, height: 1280 },
+            sha256: "3abef5fc388292aa46ffd71a59a81a36edf31e9d0192e085672c2bca4b119f93"
+          }
+        }
+      },
+      approve: {
+        kicker: "Template build · gate",
+        title: "Rebuild and approve the template",
+        description: "The plate, sample copy, fonts, boxes, and image slot are recomposed. Visual comparison decides whether the template can ship.",
+        owner: "Deterministic QA",
+        frequency: "Once and on contract changes",
+        model: "None",
+        output: "Published layered template",
+        prompt: noPrompt,
+        data: {
+          inputs: [
+            "meta-feed-018-text-free-4x5.png",
+            "main_property_image sample asset",
+            "four stored text values",
+            "four stored type specifications"
+          ],
+          checks: [
+            "Every declared text field renders",
+            "No undeclared text remains baked into the plate",
+            "Image slot covers the intended property window",
+            "Reconstruction visually matches the approved sample",
+            "Source, plate, overlay, and reconstruction hashes differ as expected"
+          ],
+          browserRender: "The 'Load sample reconstruction' button on this page runs this composition."
+        }
+      },
+      brief: {
+        kicker: "Customer run · input",
+        title: "Receive the brief and customer media",
+        description: "The customer supplies business facts and the property image. No layout or region decisions are requested.",
+        owner: "Customer",
+        frequency: "Every generation",
+        model: "None",
+        output: "Validated structured input",
+        prompt: noPrompt,
+        data: {
+          templateId: "meta-feed-018",
+          brief: "Create a calm buyer-education ad for a weekend open home. Use three practical steps.",
+          customerImages: {
+            main_property_image: "/public/adstudio-samples/photos/int-living.png"
+          },
+          exactCustomerFacts: {
+            contact_handle: "@northcoast.example"
+          },
+          validation: {
+            requiredImagePresent: true,
+            allowedTextKeys: ["headline_number", "headline_main", "headline_sub", "contact_handle"]
+          }
+        }
+      },
+      copy: {
+        kicker: "Customer run · parallel lane A",
+        title: "Generate structured copy",
+        description: "The text model only decides strings. It never receives pixel coordinates and never paints words into an image.",
+        owner: "Text AI",
+        frequency: "Every generation",
+        model: "Structured text model",
+        output: "Four exact strings",
+        prompt: copyPrompt,
+        data: {
+          request: {
+            templateId: "meta-feed-018",
+            fieldContract: {
+              headline_number: { maxLength: 2, required: true },
+              headline_main: { maxLength: 30, required: true },
+              headline_sub: { maxLength: 35, required: true },
+              contact_handle: { maxLength: 30, required: false }
+            },
+            brief: "Create a calm buyer-education ad for a weekend open home. Use three practical steps.",
+            fixedFacts: { contact_handle: "@northcoast.example" }
+          },
+          response: {
+            headline_number: "3",
+            headline_main: "SMART MOVES",
+            headline_sub: "Before Your Next Open Home",
+            contact_handle: "@northcoast.example"
+          }
+        }
+      },
+      image: {
+        kicker: "Customer run · parallel lane B",
+        title: "Generate the image-only clone",
+        description: "The image model sees the clean plate and customer photo. It is explicitly prohibited from generating text.",
+        owner: "Image AI",
+        frequency: "Every generation",
+        model: "Built-in image edit",
+        output: "Customer image-only 4:5 PNG",
+        prompt: imageOnlyPrompt,
+        data: {
+          request: {
+            image1: {
+              role: "canonical text-free plate",
+              file: "meta-feed-018-text-free.png",
+              sha256: "75acbd92ee97f522ace72953619023ccc871ecbd714adb4368ea4dd86333cd1d"
+            },
+            image2: {
+              role: "customer property photograph",
+              file: "/public/adstudio-samples/photos/int-living.png"
+            }
+          },
+          rawOutput: {
+            file: "meta-feed-018-customer-image-only.png",
+            pixels: { width: 1086, height: 1448 },
+            sha256: "34462cc52a667ea9d32a91f1770c391f32db7a8c21de83eefe2097a986bf9009"
+          },
+          normalizedOutput: {
+            file: "meta-feed-018-customer-image-only-4x5.png",
+            pixels: { width: 1024, height: 1280 },
+            sha256: "f41e9bd65848761b3c2a8345499f1c760de484bb82dd6c5b3cf42bf7ec7ece0f",
+            containsText: false
+          }
+        }
+      },
+      compose: {
+        kicker: "Customer run · merge",
+        title: "Compose once, edit without AI",
+        description: "The browser/server compositor joins the image-only output with the four stored text styles. Every later text edit changes only structured data.",
+        owner: "Blockwise compositor",
+        frequency: "Initial render + each text edit",
+        model: "None",
+        output: "Editable final ad",
+        prompt: noPrompt,
+        data: {
+          layers: [
+            { z: 0, kind: "image", ref: "meta-feed-018-customer-image-only-4x5.png" },
+            { z: 1, kind: "text", key: "headline_number" },
+            { z: 2, kind: "text", key: "headline_main" },
+            { z: 3, kind: "text", key: "headline_sub" },
+            { z: 4, kind: "text", key: "contact_handle" }
+          ],
+          renderRule: "Use stored normalized boxes and self-hosted fonts. Clamp copy to maxLength. Never call a model for a text-only edit.",
+          workingProof: "Edit the fields above. The final composite updates synchronously."
+        }
+      }
+    };
+
+    const stageButtons = [...document.querySelectorAll(".flow-node")];
+    const stageKicker = document.getElementById("stage-kicker");
+    const stageTitle = document.getElementById("stage-title");
+    const stageDescription = document.getElementById("stage-description");
+    const stageMeta = document.getElementById("stage-meta");
+    const stagePrompt = document.getElementById("stage-prompt");
+    const stageData = document.getElementById("stage-data");
+
+    function renderStage(key) {
+      const stage = stages[key];
+      stageButtons.forEach((button) => {
+        button.setAttribute("aria-pressed", String(button.dataset.stage === key));
+      });
+      stageKicker.textContent = stage.kicker;
+      stageTitle.textContent = stage.title;
+      stageDescription.textContent = stage.description;
+      stageMeta.innerHTML = "";
+      [["Owner", stage.owner], ["Runs", stage.frequency], ["Model", stage.model], ["Output", stage.output]].forEach(([label, value]) => {
+        const row = document.createElement("div");
+        const term = document.createElement("dt");
+        const detail = document.createElement("dd");
+        term.textContent = label;
+        detail.textContent = value;
+        row.append(term, detail);
+        stageMeta.append(row);
+      });
+      stagePrompt.textContent = stage.prompt;
+      stageData.textContent = JSON.stringify(stage.data, null, 2);
+    }
+
+    stageButtons.forEach((button) => {
+      button.addEventListener("click", () => renderStage(button.dataset.stage));
+    });
+
+    const viewDescriptions = {
+      sample: ["Approved sample", "The immutable public reference before decomposition."],
+      plate: ["Text-free plate", "Actual AI edit output, normalized to 1024 × 1280."],
+      image: ["Image-only clone", "Actual customer property render with an explicit no-text contract."],
+      text: ["Editable text layer", "Four structured fields rendered over transparency."],
+      final: ["Final composite", "Image-only clone + editable DOM text. No region detection."]
+    };
+
+    const canvas = document.getElementById("ad-canvas");
+    const viewName = document.getElementById("view-name");
+    const viewDescription = document.getElementById("view-description");
+    document.querySelectorAll(".view-tab").forEach((button) => {
+      button.addEventListener("click", () => {
+        const view = button.dataset.view;
+        canvas.dataset.view = view;
+        document.querySelectorAll(".view-tab").forEach((item) => {
+          item.setAttribute("aria-pressed", String(item === button));
+        });
+        viewName.textContent = viewDescriptions[view][0];
+        viewDescription.textContent = viewDescriptions[view][1];
+      });
+    });
+
+    const fields = {
+      number: {
+        input: document.getElementById("number"),
+        render: document.getElementById("render-number"),
+        count: document.getElementById("number-count"),
+        key: "headline_number"
+      },
+      headline: {
+        input: document.getElementById("headline"),
+        render: document.getElementById("render-headline"),
+        count: document.getElementById("headline-count"),
+        key: "headline_main"
+      },
+      subline: {
+        input: document.getElementById("subline"),
+        render: document.getElementById("render-subline"),
+        count: document.getElementById("subline-count"),
+        key: "headline_sub"
+      },
+      handle: {
+        input: document.getElementById("handle"),
+        render: document.getElementById("render-handle"),
+        count: document.getElementById("handle-count"),
+        key: "contact_handle"
+      }
+    };
+
+    const livePayload = document.getElementById("live-payload");
+    const adCanvas = document.getElementById("ad-canvas");
+
+    function fitText(element, maximum, minimum, singleLine = false) {
+      let size = maximum;
+      element.style.fontSize = `${size}cqi`;
+      while (
+        size > minimum &&
+        (
+          element.scrollWidth > element.clientWidth + 1 ||
+          (!singleLine && element.scrollHeight > element.clientHeight + 1)
+        )
+      ) {
+        size = Math.max(minimum, size - .1);
+        element.style.fontSize = `${size}cqi`;
+      }
+    }
+
+    function renderHeadline(value) {
+      const words = value.trim().split(/\s+/).filter(Boolean);
+      const firstLine = document.createElement("span");
+      const secondLine = document.createElement("span");
+      firstLine.textContent = words.shift() || " ";
+      secondLine.textContent = words.join(" ") || " ";
+      fields.headline.render.replaceChildren(firstLine, document.createTextNode(" "), secondLine);
+    }
+
+    function updateRender() {
+      Object.values(fields).forEach(({ input, render, count, key }) => {
+        if (key === "headline_main") {
+          renderHeadline(input.value);
+        } else {
+          render.textContent = input.value || " ";
+        }
+        count.textContent = `${input.value.length}/${input.maxLength}`;
+      });
+      fitText(fields.headline.render, 11.4, 7.8);
+      fitText(fields.subline.render, 3.9, 2.7, true);
+      fitText(fields.handle.render, 3.25, 2.6, true);
+      const sampleBase = adCanvas.dataset.base === "sample";
+      livePayload.textContent = JSON.stringify({
+        templateId: "meta-feed-018",
+        imageLayer: {
+          ref: sampleBase
+            ? "./assets/meta-feed-018-text-free-4x5.png"
+            : "./assets/meta-feed-018-customer-image-only-4x5.png",
+          sha256: sampleBase
+            ? "3abef5fc388292aa46ffd71a59a81a36edf31e9d0192e085672c2bca4b119f93"
+            : "f41e9bd65848761b3c2a8345499f1c760de484bb82dd6c5b3cf42bf7ec7ece0f"
+        },
+        textLayers: Object.fromEntries(Object.values(fields).map(({ input, key }) => [key, input.value])),
+        compositor: {
+          mode: "deterministic",
+          modelCall: false,
+          outputAspect: "4:5",
+          editableImmediately: true
+        }
+      }, null, 2);
+    }
+
+    Object.values(fields).forEach(({ input }) => input.addEventListener("input", updateRender));
+
+    document.getElementById("load-sample").addEventListener("click", () => {
+      adCanvas.dataset.base = "sample";
+      fields.number.input.value = "5";
+      fields.headline.input.value = "SMART FIRST STEPS";
+      fields.subline.input.value = "Before Buying a Home";
+      fields.handle.input.value = "@homeguide.example";
+      updateRender();
+    });
+
+    document.getElementById("load-customer").addEventListener("click", () => {
+      adCanvas.dataset.base = "customer";
+      fields.number.input.value = "3";
+      fields.headline.input.value = "SMART MOVES";
+      fields.subline.input.value = "Before Your Next Open Home";
+      fields.handle.input.value = "@northcoast.example";
+      updateRender();
+    });
+
+    const dossier = document.getElementById("dossier");
+    Object.entries(stages).forEach(([key, stage], index) => {
+      const details = document.createElement("details");
+      if (index === 0) details.open = true;
+      const summary = document.createElement("summary");
+      summary.textContent = `${stage.kicker} — ${stage.title}`;
+      const body = document.createElement("div");
+      body.className = "detail-body";
+      const promptWrap = document.createElement("div");
+      const promptLabel = document.createElement("span");
+      promptLabel.className = "contract-label";
+      promptLabel.textContent = "Exact prompt";
+      const prompt = document.createElement("pre");
+      prompt.textContent = stage.prompt;
+      promptWrap.append(promptLabel, prompt);
+      const dataWrap = document.createElement("div");
+      const dataLabel = document.createElement("span");
+      dataLabel.className = "contract-label";
+      dataLabel.textContent = "Exact data / result";
+      const data = document.createElement("pre");
+      data.textContent = JSON.stringify(stage.data, null, 2);
+      dataWrap.append(dataLabel, data);
+      body.append(promptWrap, dataWrap);
+      details.append(summary, body);
+      dossier.append(details);
+    });
+
+    renderStage("source");
+    updateRender();
+  </script>
+</body>
+</html>
