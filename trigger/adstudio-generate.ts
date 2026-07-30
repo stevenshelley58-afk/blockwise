@@ -73,7 +73,7 @@ export const generateAdStudioTemplateCampaignTask = task({
       });
 
       // "done" the moment the feed (4:5) persists — the polling client shows
-      // the ad now. The story (9:16) render and region detection run after.
+      // the ad now. The Story render and advisory editing plate finish after.
       await supabase
         .from("adstudio_creative_jobs")
         .update({

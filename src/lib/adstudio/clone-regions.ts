@@ -12,23 +12,38 @@ export type CloneRegion = AdStudioCloneRegion;
 export type CloneBox = CloneRegion["box"];
 
 /**
- * Build the editor map from the template's offline type-spec block. Regions
- * are valid only for the template's native format: a separately recomposed
- * format may move text and therefore needs its own offline template metadata.
+ * Build the editor map from the template's offline type-spec block. Both
+ * supported canvases are 1080px wide. Story generation extends a Feed canvas
+ * equally above and below; Feed generation from a Story sample centre-crops.
+ * Applying that same deterministic transform keeps the offline boxes aligned
+ * without inspecting the customer's finished render.
  */
 export function buildPrebuiltTemplateCloneQa(
   template: AdStudioTemplate,
   expectedCopy: Record<string, string>,
   format: string,
 ): AdStudioCloneQa | undefined {
-  if (format !== template.format) return undefined;
+  const targetHeight = format === "4:5" ? 1350 : format === "9:16" ? 1920 : null;
+  if (!targetHeight) return undefined;
+  const sourceHeight = template.dimensions.height;
+  const verticalOffset = (targetHeight - sourceHeight) / 2;
   const regions = template.inputs.text.flatMap<AdStudioCloneRegion>((field) => {
-    const box = template.typography?.[field.key]?.sampleBox;
-    if (!box) return [];
+    const sampleBox = template.typography?.[field.key]?.sampleBox;
+    if (!sampleBox) return [];
+    const rawY = (sampleBox.y * sourceHeight + verticalOffset) / targetHeight;
+    const rawBottom = rawY + (sampleBox.height * sourceHeight) / targetHeight;
+    const y = Math.max(0, rawY);
+    const bottom = Math.min(1, rawBottom);
+    if (bottom <= y) return [];
     return [{
       key: field.key,
       kind: "text",
-      box: { ...box },
+      box: {
+        x: sampleBox.x,
+        y,
+        width: sampleBox.width,
+        height: bottom - y,
+      },
     }];
   });
   return regions.length > 0 ? { regions, copyValues: { ...expectedCopy } } : undefined;

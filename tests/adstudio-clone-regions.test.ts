@@ -52,7 +52,15 @@ test("native-format editor regions come from the offline template build without 
     ["headline_main", "headline_sub", "contact_handle"],
   );
   assert.ok(feedQa.regions.every((region) => region.kind === "text"));
-  assert.equal(buildPrebuiltTemplateCloneQa(template, copy, "9:16"), undefined);
+  const storyQa = buildPrebuiltTemplateCloneQa(template, copy, "9:16");
+  assert.ok(storyQa);
+  const sampleSubBox = template.typography?.headline_sub?.sampleBox;
+  const storySubBox = storyQa.regions.find((region) => region.key === "headline_sub")?.box;
+  assert.ok(sampleSubBox && storySubBox);
+  assert.equal(storySubBox.x, sampleSubBox.x);
+  assert.equal(storySubBox.width, sampleSubBox.width);
+  assert.equal(storySubBox.y, (sampleSubBox.y * 1350 + 285) / 1920);
+  assert.equal(storySubBox.height, (sampleSubBox.height * 1350) / 1920);
 });
 
 function roundedBox(box: { x: number; y: number; width: number; height: number } | undefined) {
