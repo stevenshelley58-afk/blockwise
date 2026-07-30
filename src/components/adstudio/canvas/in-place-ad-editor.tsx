@@ -6,7 +6,18 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, 
 import type { AdStudioCloneRegion, AdStudioCreative } from "@/lib/adstudio/types.ts";
 import { downscaleImageForUpload } from "@/lib/upload/asset-file";
 
-import { requestCreativeEdit, type CreativeEditMutation } from "./creative-edit-client";
+import {
+  CreativeEditError,
+  requestCreativeEdit,
+  requestCreativeLayers,
+  type CreativeEditMutation,
+} from "./creative-edit-client";
+import {
+  loadPatchFonts,
+  loadPatchImage,
+  PATCH_PADDING,
+  renderTextPatch,
+} from "./text-patch";
 
 export type InPlaceAdEditorProps = {
   creative: AdStudioCreative;
@@ -32,6 +43,20 @@ function regionStyle(region: AdStudioCloneRegion): CSSProperties {
     width: `${width * 100}%`,
     height: `${height * 100}%`,
     zIndex: region.kind === "text" ? 2 : 1,
+  };
+}
+
+/** The optimistic patch sits exactly on the region's padded composite rect. */
+function optimisticPatchStyle(box: AdStudioCloneRegion["box"]): CSSProperties {
+  const left = Math.max(0, box.x - PATCH_PADDING);
+  const top = Math.max(0, box.y - PATCH_PADDING);
+  const right = Math.min(1, box.x + box.width + PATCH_PADDING);
+  const bottom = Math.min(1, box.y + box.height + PATCH_PADDING);
+  return {
+    left: `${left * 100}%`,
+    top: `${top * 100}%`,
+    width: `${(right - left) * 100}%`,
+    height: `${(bottom - top) * 100}%`,
   };
 }
 
@@ -78,16 +103,18 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast }: InPla
   const [instruction, setInstruction] = useState("");
   const [pendingKey, setPendingKey] = useState<string | null>(null);
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
-  /** When a text edit is in flight, the new text is rendered immediately as a
-   * CSS overlay positioned over the region, so the user sees their edit
-   * instantly instead of waiting 10-30s for the image model. The overlay is
-   * replaced by the model's actual typeset version when the edit completes. */
-  const [pendingTextPreview, setPendingTextPreview] = useState<{ key: string; value: string } | null>(null);
   const [stillWorking, setStillWorking] = useState(false);
   const [comparePrevious, setComparePrevious] = useState(false);
   const [zoom, setZoom] = useState<number>(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [panning, setPanning] = useState(false);
+  // Finished pixels straight from the edit response — painted immediately so
+  // the customer never waits on the media proxy for a render they already own.
+  const [freshPreview, setFreshPreview] = useState<{ ref: string; dataUrl: string } | null>(null);
+  // The text patch drawn the moment the customer applies a text edit. It IS
+  // the final pixels, so the edit reads as instant while the server saves.
+  const [optimisticPatch, setOptimisticPatch] = useState<{ key: string; dataUrl: string; box: AdStudioCloneRegion["box"] } | null>(null);
+  const [loadedFontIds, setLoadedFontIds] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const textInputRef = useRef<HTMLTextAreaElement | null>(null);
   const frameRef = useRef<HTMLDivElement | null>(null);
@@ -96,6 +123,10 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast }: InPla
   const elementButtonRefs = useRef(new Map<string, HTMLButtonElement>());
   const regionButtonRefs = useRef(new Map<string, HTMLButtonElement>());
   const retryMutationRef = useRef<{ signature: string; mutationId: string } | null>(null);
+  const layersRequestedForRef = useRef<string | null>(null);
+  const plateImagesRef = useRef(new Map<string, HTMLImageElement>());
+  const creativeRef = useRef(creative);
+  creativeRef.current = creative;
   const [canScrollBackward, setCanScrollBackward] = useState(false);
   const [canScrollForward, setCanScrollForward] = useState(false);
 
@@ -104,7 +135,11 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast }: InPla
   const regions = creative.canvas.cloneQa?.regions ?? [];
   const renderHistory = creative.canvas.renderHistory ?? [];
   const redoHistory = creative.canvas.redoHistory ?? [];
-  const displaySrc = comparePrevious ? renderHistory.at(-1) ?? src : src;
+  const textLayers = creative.canvas.textLayers;
+  const layersReady = textLayers?.status === "ready" && textLayers.validFor.includes(src);
+  // Prefer the inlined finished pixels over a refetch of the same render.
+  const stableSrc = freshPreview && freshPreview.ref === src ? freshPreview.dataUrl : src;
+  const displaySrc = comparePrevious ? renderHistory.at(-1) ?? stableSrc : stableSrc;
   const busy = pendingKey !== null;
   const selectedRegion = useMemo(
     () => regions.find((region) => region.key === selectedKey),
@@ -129,6 +164,48 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast }: InPla
     setZoom(1);
     setPan({ x: 0, y: 0 });
   }, [src]);
+
+  // Background decomposition: build the text-free plate + type treatments the
+  // moment the editor opens (or a render invalidates them), so by the time the
+  // customer edits text the instant path is ready. Failures are silent — the
+  // model path keeps working either way.
+  useEffect(() => {
+    if (regions.length === 0 || busy) return;
+    if (!src || src.startsWith("data:")) return;
+    const current = creativeRef.current.canvas.textLayers;
+    if (current?.status === "ready" && current.validFor.includes(src)) return;
+    if (layersRequestedForRef.current === src) return;
+    layersRequestedForRef.current = src;
+    let cancelled = false;
+    void requestCreativeLayers(creative.creativeId).then((built) => {
+      if (cancelled || !built) return;
+      const latest = creativeRef.current;
+      const latestSrc = latest.canvas.objects[0]?.content ?? latest.canvas.objects[0]?.assetId ?? "";
+      if (!built.validFor.includes(latestSrc)) return;
+      onCreativeChange({ ...latest, canvas: { ...latest.canvas, textLayers: built } });
+    });
+    return () => { cancelled = true; };
+  }, [busy, creative.creativeId, onCreativeChange, regions.length, src]);
+
+  // Keep the plate decoded and ready so text patches render synchronously.
+  useEffect(() => {
+    const plate = textLayers?.plate;
+    if (!plate || plateImagesRef.current.has(plate)) return;
+    let cancelled = false;
+    void loadPatchImage(plate)
+      .then((image) => { if (!cancelled) plateImagesRef.current.set(plate, image); })
+      .catch(() => undefined);
+    return () => { cancelled = true; };
+  }, [textLayers?.plate]);
+
+  useEffect(() => {
+    if (!textLayers) return;
+    let cancelled = false;
+    void loadPatchFonts(Object.values(textLayers.styles)).then((loaded) => {
+      if (!cancelled) setLoadedFontIds(loaded);
+    });
+    return () => { cancelled = true; };
+  }, [textLayers]);
 
   const updateElementScrollState = useCallback(() => {
     const list = elementListRef.current;
@@ -189,25 +266,46 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast }: InPla
     retryMutationRef.current = { signature, mutationId };
     setPendingKey(mutation.fieldKey ?? mutation.action ?? "edit");
     setPendingLabel(progressLabel ?? null);
-    // For text edits, render the new value as an instant CSS overlay so the
-    // user sees their change immediately. The model pass replaces it.
-    if (mutation.action === "edit" && mutation.fieldKey && mutation.newValue) {
-      setPendingTextPreview({ key: mutation.fieldKey, value: mutation.newValue });
-    }
     try {
-      const next = await requestCreativeEdit({ creative, mutation, mutationId });
-      onCreativeChange(next);
+      let result;
+      try {
+        result = await requestCreativeEdit({ creative, mutation, mutationId });
+      } catch (error) {
+        // The instant path can go stale mid-flight (another device edited, or
+        // the plate is still building). Fall back to the model path once —
+        // the customer keeps their edit either way.
+        if (!(error instanceof CreativeEditError && error.code === "layers_stale" && mutation.patchImage)) {
+          throw error;
+        }
+        setOptimisticPatch(null);
+        setPendingLabel("Taking the long way…");
+        const fallback: CreativeEditMutation = { ...mutation, patchImage: undefined };
+        const fallbackId = crypto.randomUUID();
+        retryMutationRef.current = {
+          signature: JSON.stringify({
+            creativeId: creative.creativeId,
+            expectedRevisionId: creative.activeRevisionId,
+            mutation: fallback,
+          }),
+          mutationId: fallbackId,
+        };
+        result = await requestCreativeEdit({ creative, mutation: fallback, mutationId: fallbackId });
+      }
+      const nextObject = result.creative.canvas.objects[0];
+      const nextRef = nextObject?.content ?? nextObject?.assetId ?? "";
+      setFreshPreview(result.previewImage && nextRef ? { ref: nextRef, dataUrl: result.previewImage } : null);
+      onCreativeChange(result.creative);
       retryMutationRef.current = null;
       setInstruction("");
       showToast(successMessage);
     } catch (error) {
       showToast(error instanceof Error ? error.message : "The editor could not reach the server. Your previous version is unchanged.");
     } finally {
+      setOptimisticPatch(null);
       setPendingKey(null);
       setPendingLabel(null);
-      setPendingTextPreview(null);
     }
-  }, [cloneObject, creative, onCreativeChange, showToast]);
+  }, [creative, onCreativeChange, showToast]);
 
   function scrollElementList(direction: -1 | 1) {
     const list = elementListRef.current;
@@ -328,14 +426,40 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast }: InPla
       showToast("Type the replacement text first.");
       return;
     }
-    if (value.length > MAX_TEXT_LENGTH) {
-      showToast(`Keep the replacement text to ${MAX_TEXT_LENGTH} characters or less.`);
+    const style = textLayers?.styles[selectedRegion.key];
+    const maxLength = style?.maxLength ?? MAX_TEXT_LENGTH;
+    if (value.length > maxLength) {
+      showToast(`Keep the replacement text to ${maxLength} characters or less.`);
       return;
     }
+
+    // Instant path: re-typeset the exact copy over the plate crop right here
+    // in the browser. The patch is shown immediately and sent to the server,
+    // which composites it deterministically — no image model, ~1s to saved.
+    let patchImage: string | undefined;
+    if (
+      layersReady
+      && textLayers
+      && style?.mode === "live"
+      && loadedFontIds.has(style.fontId)
+    ) {
+      const plate = plateImagesRef.current.get(textLayers.plate);
+      if (plate) {
+        patchImage = renderTextPatch({
+          plate,
+          box: selectedRegion.box,
+          style,
+          text: value,
+        }) ?? undefined;
+      }
+    }
+    if (patchImage) {
+      setOptimisticPatch({ key: selectedRegion.key, dataUrl: patchImage, box: selectedRegion.box });
+    }
     void performMutation(
-      { action: "edit", fieldKey: selectedRegion.key, newValue: value },
+      { action: "edit", fieldKey: selectedRegion.key, newValue: value, patchImage },
       "Text updated",
-      `Writing "${truncateForStatus(value)}"…`,
+      patchImage ? "Saving…" : `Re-rendering "${truncateForStatus(value)}"…`,
     );
   }
 
@@ -432,6 +556,17 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast }: InPla
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={displaySrc} alt={comparePrevious ? "Previous ad version" : "AI-designed ad creative"} draggable={false} />
+          {optimisticPatch && !comparePrevious ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              className="studio-inplace-optimistic"
+              src={optimisticPatch.dataUrl}
+              style={optimisticPatchStyle(optimisticPatch.box)}
+              alt=""
+              aria-hidden
+              draggable={false}
+            />
+          ) : null}
           {regions.map((region, index) => {
             const pending = pendingKey === region.key;
             const selected = selectedKey === region.key;
@@ -447,6 +582,7 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast }: InPla
                 style={regionStyle(region)}
                 data-label={labelForRegionKey(region.key)}
                 data-pending={pending || undefined}
+                data-quiet={(pending && optimisticPatch?.key === region.key) || undefined}
                 data-selected={selected || undefined}
                 disabled={comparePrevious || (busy && !pending)}
                 aria-label={`Edit ${labelForRegionKey(region.key)}`}
@@ -461,22 +597,9 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast }: InPla
                   </span>
                 ) : null}
               </button>
-                );
-              })}
-              {pendingTextPreview ? (() => {
-                const region = regions.find((r) => r.key === pendingTextPreview.key);
-                if (!region) return null;
-                return (
-                  <div
-                    className="studio-inplace-text-preview"
-                    style={regionStyle(region)}
-                    aria-hidden
-                  >
-                    <span>{pendingTextPreview.value}</span>
-                  </div>
-                );
-              })() : null}
-              </div>
+            );
+          })}
+        </div>
       </div>
 
       <div className="studio-inplace-toolbar" aria-label="Edit history">
@@ -560,7 +683,7 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast }: InPla
                   onClick={() => selectRegion(region)}
                   disabled={busy}
                 >
-                  <i className="studio-inplace-thumb" style={regionThumbStyle(src, region.box)} aria-hidden />
+                  <i className="studio-inplace-thumb" style={regionThumbStyle(stableSrc, region.box)} aria-hidden />
                   {labelForRegionKey(region.key)}
                 </button>
               ))}
@@ -585,16 +708,26 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast }: InPla
                 ref={textInputRef}
                 value={textDraft}
                 rows={4}
-                maxLength={MAX_TEXT_LENGTH}
+                maxLength={textLayers?.styles[selectedRegion.key]?.maxLength ?? MAX_TEXT_LENGTH}
                 disabled={busy}
                 onChange={(event) => setTextDraft(event.target.value)}
                 onKeyDown={handleEditorKeyDown}
               />
-              <small>{textDraft.length}/{MAX_TEXT_LENGTH}. Press Ctrl+Enter to apply.</small>
+              <small>
+                {textDraft.length}/{textLayers?.styles[selectedRegion.key]?.maxLength ?? MAX_TEXT_LENGTH}. Press Ctrl+Enter to apply.
+              </small>
               <button className="primary" type="button" onClick={applyTextEdit} disabled={busy || !textDraft.trim()}>
                 <Check aria-hidden size={16} />
                 Replace text
               </button>
+              {layersReady
+                && textLayers?.styles[selectedRegion.key]?.mode === "live"
+                && loadedFontIds.has(textLayers.styles[selectedRegion.key]!.fontId) ? (
+                <small className="studio-inplace-instant" aria-live="polite">
+                  <Sparkles aria-hidden size={12} />
+                  Instant editing ready — text changes apply in about a second.
+                </small>
+              ) : null}
             </div>
           ) : (
             <div className="studio-inplace-field">
@@ -627,7 +760,7 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast }: InPla
           {busy ? (
             <div className="studio-inplace-progress" role="status" aria-live="polite">
               <Sparkles aria-hidden size={16} />
-              {stillWorking ? "Still working… this can take a minute." : "Creating the scoped edit…"}
+              {stillWorking ? "Still working… this can take a minute." : pendingLabel ?? "Creating the scoped edit…"}
             </div>
           ) : null}
         </aside>

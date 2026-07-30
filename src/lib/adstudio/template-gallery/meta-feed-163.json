@@ -97,5 +97,29 @@
         "body": "The agency will be in touch within 24 hours to discuss this property."
       }
     }
+  },
+  "typography": {
+    "main_question": {
+      "fontId": "source-sans-3",
+      "family": "Source Sans 3",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "mixed",
+      "sizeRatio": 1.032258064516129,
+      "lineHeight": 1.424,
+      "tracking": 0,
+      "align": "center",
+      "color": "#232323",
+      "fitScore": 0.569,
+      "sampleBox": {
+        "x": 0.2001953125,
+        "y": 0.3890625,
+        "width": 0.62646484375,
+        "height": 0.191796875
+      },
+      "sampleLineCount": 3,
+      "detectionScore": 1
+    }
   }
 }

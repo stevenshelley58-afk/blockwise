@@ -130,5 +130,166 @@
         "body": "The agency will be in touch within 24 hours to arrange your free property appraisal."
       }
     }
+  },
+  "typography": {
+    "headline": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.523809621999936,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "left",
+      "color": "#252322",
+      "fitScore": 0.518,
+      "sampleBox": {
+        "x": 0.08981481481481482,
+        "y": 0.13723958333333333,
+        "width": 0.549537037037037,
+        "height": 0.13359375
+      },
+      "sampleLineCount": 9,
+      "detectionScore": 0.707
+    },
+    "agent_role": {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "fallbackFamily": "serif",
+      "weight": 800,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.3529411764705883,
+      "lineHeight": 1.257,
+      "tracking": 0,
+      "align": "left",
+      "color": "#4d4b46",
+      "fitScore": 0.455,
+      "sampleBox": {
+        "x": 0.09768518518518518,
+        "y": 0.7932291666666667,
+        "width": 0.44351851851851853,
+        "height": 0.01015625
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 0.88
+    },
+    "subheadline": {
+      "fontId": "lora",
+      "family": "Lora",
+      "fallbackFamily": "serif",
+      "weight": 600,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.061524334251607,
+      "lineHeight": 1.28,
+      "tracking": 0,
+      "align": "left",
+      "color": "#42413d",
+      "fitScore": 0.752,
+      "sampleBox": {
+        "x": 0.09814814814814815,
+        "y": 0.28984375,
+        "width": 0.524074074074074,
+        "height": 0.015625
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/lora-600.woff2"
+    },
+    "email": {
+      "fontId": "roboto-condensed",
+      "family": "Roboto Condensed",
+      "fallbackFamily": "sans-serif",
+      "weight": 400,
+      "italic": false,
+      "case": "lower",
+      "sizeRatio": 1.0347800237812128,
+      "lineHeight": 1.171875,
+      "tracking": 0,
+      "align": "left",
+      "color": "#6e6b65",
+      "fitScore": 0.871,
+      "sampleBox": {
+        "x": 0.09166666666666666,
+        "y": 0.86484375,
+        "width": 0.48518518518518516,
+        "height": 0.0265625
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/roboto-condensed-400.woff2"
+    },
+    "website": {
+      "fontId": "lora",
+      "family": "Lora",
+      "fallbackFamily": "serif",
+      "weight": 700,
+      "italic": false,
+      "case": "lower",
+      "sizeRatio": 1.0833333333333333,
+      "lineHeight": 1.28,
+      "tracking": 0,
+      "align": "left",
+      "color": "#474541",
+      "fitScore": 0.669,
+      "sampleBox": {
+        "x": 0.16574074074074074,
+        "y": 0.90546875,
+        "width": 0.3106481481481482,
+        "height": 0.011458333333333333
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/lora-700.woff2"
+    },
+    "phone": {
+      "fontId": "raleway",
+      "family": "Raleway",
+      "fallbackFamily": "sans-serif",
+      "weight": 400,
+      "italic": false,
+      "case": "none",
+      "sizeRatio": 1.1768086544962812,
+      "lineHeight": 1.174,
+      "tracking": 0,
+      "align": "left",
+      "color": "#696661",
+      "fitScore": 0.75,
+      "sampleBox": {
+        "x": 0.09166666666666666,
+        "y": 0.834375,
+        "width": 0.30092592592592593,
+        "height": 0.0265625
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/raleway-400.woff2"
+    },
+    "agent_name": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 500,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.5162907268170427,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "left",
+      "color": "#242321",
+      "fitScore": 0.681,
+      "sampleBox": {
+        "x": 0.09212962962962963,
+        "y": 0.75,
+        "width": 0.4824074074074074,
+        "height": 0.025520833333333333
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/smooch-sans-500.woff2"
+    }
   }
 }

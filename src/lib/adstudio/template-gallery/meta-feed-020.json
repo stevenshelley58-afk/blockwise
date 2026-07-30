@@ -125,5 +125,118 @@
         "body": "The agency will be in touch within 24 hours to arrange your inspection."
       }
     }
+  },
+  "typography": {
+    "address": {
+      "fontId": "source-sans-3",
+      "family": "Source Sans 3",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "mixed",
+      "sizeRatio": 1.04,
+      "lineHeight": 1.424,
+      "tracking": 0,
+      "align": "left",
+      "color": "#b9b8b6",
+      "fitScore": 0.497,
+      "sampleBox": {
+        "x": 0.048828125,
+        "y": 0.434375,
+        "width": 0.3271484375,
+        "height": 0.053125
+      },
+      "sampleLineCount": 3,
+      "detectionScore": 1
+    },
+    "price": {
+      "fontId": "kanit",
+      "family": "Kanit",
+      "fallbackFamily": "sans-serif",
+      "weight": 900,
+      "italic": false,
+      "case": "mixed",
+      "sizeRatio": 1.1439075630252102,
+      "lineHeight": 1.495,
+      "tracking": 0,
+      "align": "center",
+      "color": "#64686a",
+      "fitScore": 0.261,
+      "sampleBox": {
+        "x": 0.138671875,
+        "y": 0.314453125,
+        "width": 0.7265625,
+        "height": 0.023046875
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 0.65
+    },
+    "website_handle": {
+      "fontId": "karla",
+      "family": "Karla",
+      "fallbackFamily": "sans-serif",
+      "weight": 600,
+      "italic": false,
+      "case": "lower",
+      "sizeRatio": 1.0596885813148786,
+      "lineHeight": 1.169,
+      "tracking": 0,
+      "align": "left",
+      "color": "#dfe2e2",
+      "fitScore": 0.613,
+      "sampleBox": {
+        "x": 0.13623046875,
+        "y": 0.890625,
+        "width": 0.349609375,
+        "height": 0.024609375
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/karla-600.woff2"
+    },
+    "phone": {
+      "fontId": "playfair-display",
+      "family": "Playfair Display",
+      "fallbackFamily": "serif",
+      "weight": 700,
+      "italic": false,
+      "case": "none",
+      "sizeRatio": 1.1111111111111112,
+      "lineHeight": 1.333,
+      "tracking": 0,
+      "align": "left",
+      "color": "#e3e6e5",
+      "fitScore": 0.433,
+      "sampleBox": {
+        "x": 0.1357421875,
+        "y": 0.85546875,
+        "width": 0.21044921875,
+        "height": 0.0203125
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
+    },
+    "headline": {
+      "fontId": "open-sans",
+      "family": "Open Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.0847457846291142,
+      "lineHeight": 1.36181640625,
+      "tracking": 0,
+      "align": "left",
+      "color": "#f3f5f5",
+      "fitScore": 0.563,
+      "sampleBox": {
+        "x": 0.13330078125,
+        "y": 0.099609375,
+        "width": 0.3720703125,
+        "height": 0.1734375
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 1
+    }
   }
 }

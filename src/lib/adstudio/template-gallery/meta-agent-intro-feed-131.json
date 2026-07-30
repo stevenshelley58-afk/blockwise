@@ -116,5 +116,95 @@
         "body": "The agency will be in touch within 24 hours to introduce themselves and answer your questions."
       }
     }
+  },
+  "typography": {
+    "body": {
+      "fontId": "rubik",
+      "family": "Rubik",
+      "fallbackFamily": "sans-serif",
+      "weight": 700,
+      "italic": false,
+      "case": "mixed",
+      "sizeRatio": 1.0254768574096305,
+      "lineHeight": 1.185,
+      "tracking": 0,
+      "align": "center",
+      "color": "#918a7e",
+      "fitScore": 0.287,
+      "sampleBox": {
+        "x": 0.09074074074074075,
+        "y": 0.42518518518518517,
+        "width": 0.8560185185185185,
+        "height": 0.08
+      },
+      "sampleLineCount": 5,
+      "detectionScore": 0.926
+    },
+    "headline": {
+      "fontId": "oswald",
+      "family": "Oswald",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.1851851698313578,
+      "lineHeight": 1.482,
+      "tracking": 0,
+      "align": "center",
+      "color": "#142c3a",
+      "fitScore": 0.472,
+      "sampleBox": {
+        "x": 0.08564814814814815,
+        "y": 0.20407407407407407,
+        "width": 0.8657407407407407,
+        "height": 0.1374074074074074
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 1
+    },
+    "subheadline": {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "fallbackFamily": "serif",
+      "weight": 800,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.3181818181818181,
+      "lineHeight": 1.257,
+      "tracking": 0,
+      "align": "left",
+      "color": "#a1732b",
+      "fitScore": 0.436,
+      "sampleBox": {
+        "x": 0.0912037037037037,
+        "y": 0.37333333333333335,
+        "width": 0.4689814814814815,
+        "height": 0.018518518518518517
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
+    },
+    "website": {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "fallbackFamily": "serif",
+      "weight": 700,
+      "italic": false,
+      "case": "lower",
+      "sizeRatio": 1.1290322580645162,
+      "lineHeight": 1.257,
+      "tracking": 0,
+      "align": "center",
+      "color": "#d5ad5f",
+      "fitScore": 0.523,
+      "sampleBox": {
+        "x": 0.3314814814814815,
+        "y": 0.9422222222222222,
+        "width": 0.33796296296296297,
+        "height": 0.022962962962962963
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
+    }
   }
 }

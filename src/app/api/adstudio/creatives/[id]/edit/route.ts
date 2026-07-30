@@ -17,7 +17,13 @@ import {
 import { errorResponse, readJsonBody, requireAdStudioRequest } from "@/lib/adstudio/http";
 import { buildTargetedEditRequest } from "@/lib/adstudio/reference-clone";
 import { resolveAdStudioImageForModel } from "@/lib/adstudio/resolve-image-for-model";
-import { normalizeCloneQa, type AdStudioCloneQa, type AdStudioCreative } from "@/lib/adstudio/types";
+import {
+  boxIntersectsTextRegions,
+  compositeTextPatch,
+  extendTextLayersValidity,
+  MAX_TEXT_PATCH_BYTES,
+} from "@/lib/adstudio/text-layers";
+import { normalizeCloneQa, type AdStudioCloneQa, type AdStudioCreative, type AdStudioTextLayers } from "@/lib/adstudio/types";
 import { checkRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
@@ -38,6 +44,14 @@ type TargetedEditBody = {
   newImage?: string;
   /** Natural-language direction applied only inside the selected region. */
   instruction?: string;
+  /**
+   * Client-rendered text patch (data URL) for the selected region — the
+   * browser re-typesets the exact copy over the plate crop with real fonts
+   * (serverless sharp has no fontconfig). When present and the creative's
+   * layers are valid, the edit composites deterministically with no
+   * image-model round trip.
+   */
+  patchImage?: string;
   expectedRevisionId?: string;
   mutationId?: string;
 };
@@ -45,16 +59,31 @@ type TargetedEditBody = {
 // Every saved edit is a final-quality render, never a disposable preview.
 const RENDER_HISTORY_LIMIT = 10;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+// base64 inflates bytes ~4/3; this bounds the decoded patch near MAX_TEXT_PATCH_BYTES.
+const MAX_TEXT_PATCH_DATAURL_LENGTH = Math.ceil((MAX_TEXT_PATCH_BYTES * 4) / 3) + 64;
 
 export async function POST(request: NextRequest, routeContext: RouteContext) {
   const { id } = await Promise.resolve(routeContext.params);
   const context = await requireAdStudioRequest(request);
   if (!context.ok) return context.response;
 
+  const body = await readJsonBody<TargetedEditBody>(request);
+  const action = body.action ?? "edit";
+  const fieldKey = body.fieldKey?.trim();
+  const newValue = body.newValue?.trim() ?? "";
+  const newImageRef = body.newImage?.trim();
+  const instruction = body.instruction?.trim() ?? "";
+  const patchImage = body.patchImage?.trim() || undefined;
+  const expectedRevisionId = body.expectedRevisionId?.trim() ?? "";
+  const mutationId = body.mutationId?.trim() ?? "";
+
+  // History restores and deterministic patch composites never call an image
+  // model, so they draw on a far cheaper budget than model-backed edits.
+  const usesImageModel = action === "edit" && !patchImage;
   const rateLimit = await checkRateLimit(context.supabase, context.access.workspaceId, context.access.userId, {
     windowSeconds: 3600,
-    maxRequests: 30,
-    bucket: "ai-clone-edit",
+    maxRequests: usesImageModel ? 30 : 120,
+    bucket: usesImageModel ? "ai-clone-edit" : "clone-edit-composite",
   });
   if (!rateLimit.ok) {
     return NextResponse.json(
@@ -63,14 +92,6 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
     );
   }
 
-  const body = await readJsonBody<TargetedEditBody>(request);
-  const action = body.action ?? "edit";
-  const fieldKey = body.fieldKey?.trim();
-  const newValue = body.newValue?.trim() ?? "";
-  const newImageRef = body.newImage?.trim();
-  const instruction = body.instruction?.trim() ?? "";
-  const expectedRevisionId = body.expectedRevisionId?.trim() ?? "";
-  const mutationId = body.mutationId?.trim() ?? "";
   if (!(action === "edit" || action === "undo" || action === "redo")) {
     return NextResponse.json({ error: "Unsupported edit action." }, { status: 400 });
   }
@@ -89,6 +110,12 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
   if (instruction.length > 500) {
     return NextResponse.json({ error: "Keep the edit direction to 500 characters or less." }, { status: 400 });
   }
+  if (patchImage && (!patchImage.startsWith("data:image/") || patchImage.length > MAX_TEXT_PATCH_DATAURL_LENGTH)) {
+    return NextResponse.json({ error: "The rendered text patch could not be read." }, { status: 400 });
+  }
+  if (patchImage && !newValue) {
+    return NextResponse.json({ error: "A text patch needs its exact replacement text." }, { status: 400 });
+  }
   if (!UUID_PATTERN.test(expectedRevisionId) || !UUID_PATTERN.test(mutationId)) {
     return NextResponse.json({ error: "Reload the ad before editing it." }, { status: 400 });
   }
@@ -102,6 +129,7 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
       newValue: newValue || null,
       newImage: newImageRef || null,
       instruction: instruction || null,
+      patchImage: patchImage ? createHash("sha256").update(patchImage).digest("hex") : null,
     }))
     .digest("hex");
 
@@ -173,10 +201,17 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
     // so restores are instant. A version saved before region detection landed
     // restores with the current map carried forward.
     const restoredQa: AdStudioCloneQa | undefined = targetQa ?? canvas.cloneQa;
+    // The plate only survives a restore when it is known-valid for the
+    // restored render; otherwise it drops and rebuilds in the background.
+    const restoredLayers: AdStudioTextLayers | undefined =
+      canvas.textLayers?.status === "ready" && canvas.textLayers.validFor.includes(targetImageRef)
+        ? canvas.textLayers
+        : undefined;
     const nextCanvas: AdStudioCreative["canvas"] = {
       ...canvas,
       objects: [{ ...cloneObject, content: targetImageRef, assetId: targetImageRef }],
       cloneQa: restoredQa,
+      textLayers: restoredLayers,
       renderHistory: action === "undo"
         ? sourceHistory.slice(0, -1)
         : [...(canvas.renderHistory ?? []), currentImageRef].filter(Boolean).slice(-RENDER_HISTORY_LIMIT),
@@ -211,6 +246,7 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
       creativeId: id,
       image: targetImageRef,
       qa: restoredQa,
+      textLayers: restoredLayers ?? null,
       renderHistory: nextCanvas.renderHistory,
       renderQaHistory: nextCanvas.renderQaHistory,
       redoHistory: nextCanvas.redoHistory,
@@ -268,11 +304,58 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
     await releaseClaim();
     return NextResponse.json({ error: "Use an image instruction or replacement image for this area." }, { status: 400 });
   }
+  if (patchImage && selectedRegion.kind !== "text") {
+    await releaseClaim();
+    return NextResponse.json({ error: "Text patches only apply to text areas." }, { status: 400 });
+  }
   const correlationId = mutationId;
+
+  const layers = canvas.textLayers;
+  const layersValidForCurrent = layers?.status === "ready" && layers.validFor.includes(currentImageRef);
+  const textStyle = layers?.styles[editFieldKey];
+  if (newValue && newValue.length > (textStyle?.maxLength ?? 200)) {
+    await releaseClaim();
+    return NextResponse.json(
+      { error: `Keep the new text to ${textStyle?.maxLength ?? 200} characters or less.` },
+      { status: 400 },
+    );
+  }
+
+  // A text edit's new value IS the verified value — the copy editor map
+  // updates deterministically either way, whether the pixels came from the
+  // patch path below or the image model. There is nothing to re-verify: the
+  // string the customer typed is, by construction, what is now on the ad.
+  const nextQa: AdStudioCloneQa | null = currentQa
+    ? {
+      ...currentQa,
+      copyValues: selectedRegion.kind === "text" && newValue
+        ? { ...currentQa.copyValues, [editFieldKey]: newValue }
+        : currentQa.copyValues,
+    }
+    : null;
 
   let qa: AdStudioCloneQa | null = null;
   let lastImage: { assetUrl: string; model: string; provider: string };
-  {
+  if (patchImage) {
+    // Deterministic fast path: the browser already re-typeset the exact copy
+    // over the plate crop; the server only clamps it to the selected region
+    // and composites — a patch can never touch pixels a model edit couldn't.
+    if (!layers || !layersValidForCurrent || textStyle?.mode !== "live" || !textStyle.fontFile) {
+      await releaseClaim();
+      return NextResponse.json(
+        { code: "layers_stale", error: "Instant editing is not ready for this version yet." },
+        { status: 409 },
+      );
+    }
+    try {
+      const composited = await compositeTextPatch(currentImage, patchImage, selectedRegion.box);
+      lastImage = { assetUrl: composited, model: "deterministic-text-patch", provider: "client-typeset" };
+    } catch (error) {
+      await releaseClaim();
+      return errorResponse(error, 400);
+    }
+    qa = nextQa;
+  } else {
     const fieldLabel = editFieldKey.replace(/_/g, " ");
     // Crop-region edit: send the model ONLY a padded window around the selected
     // region instead of the full ad. This drastically cuts model pixels (and
@@ -297,11 +380,12 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
       aspectRatio: String(row.format ?? "4:5"),
     });
     baseRequest.maskImage = await createCloneRegionEditMask(crop.croppedDataUrl, cropLocalBox);
-    // All edits go through the image model. A previous deterministic text
-    // fallback blurred the selected rectangle and painted generic Arial over
-    // the ad, permanently destroying the source design. The model retains the
-    // original type treatment, while compositing preserves the rest.
-    // Providers were resolved in parallel above to save serial latency.
+    // All edits that reach the model go through it so the original type
+    // treatment survives. (A long-gone deterministic fallback blurred the
+    // selected rectangle and painted generic Arial over the ad — the patch
+    // path above is different: it re-typesets over a clean inpainted plate
+    // with the detected type treatment, so nothing is blurred or painted
+    // over.) Providers were resolved in parallel above to save serial latency.
     const sortedProviders = providers.sort(
       (left, right) => Number(Boolean(right.capabilities.inpainting)) - Number(Boolean(left.capabilities.inpainting)),
     );
@@ -336,14 +420,7 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
     // string IS the new value — no model round-trip). Image edits carry the
     // editor map forward unchanged. History, Compare, and Undo are the safety
     // net either way.
-    qa = currentQa
-      ? {
-        ...currentQa,
-        copyValues: selectedRegion.kind === "text" && newValue
-          ? { ...currentQa.copyValues, [editFieldKey]: newValue }
-          : currentQa.copyValues,
-      }
-      : null;
+    qa = nextQa;
   }
 
   let image: string;
@@ -357,6 +434,17 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
   } catch (error) {
     await releaseClaim();
     return errorResponse(error, 500);
+  }
+
+  // Plate validity: a patch composite keeps the plate valid for the new
+  // render by construction. A model edit keeps it only when its region cannot
+  // have touched any text region; otherwise the layers drop and rebuild in
+  // the background.
+  let nextLayers: AdStudioTextLayers | undefined;
+  if (layers?.status === "ready" && layersValidForCurrent) {
+    if (patchImage || !boxIntersectsTextRegions(selectedRegion.box, currentQa?.regions)) {
+      nextLayers = extendTextLayersValidity(layers, image);
+    }
   }
 
   // Previous render goes to history (undo); the new render becomes current.
@@ -373,6 +461,7 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
     ...canvas,
     objects: [{ ...cloneObject, content: image, assetId: image }],
     cloneQa: qa ?? currentQa,
+    textLayers: nextLayers,
     renderHistory,
     renderQaHistory,
     redoHistory: [],
@@ -420,6 +509,7 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
     image,
     previewDataUrl,
     qa,
+    textLayers: nextLayers ?? null,
     renderHistory,
     renderQaHistory,
     redoHistory: [],
@@ -457,6 +547,7 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
       creativeId: id,
       image: completedImage,
       qa: completedCanvas.cloneQa,
+      textLayers: completedCanvas.textLayers ?? null,
       renderHistory: completedCanvas.renderHistory ?? [],
       renderQaHistory: completedCanvas.renderQaHistory ?? [],
       redoHistory: completedCanvas.redoHistory ?? [],

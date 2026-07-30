@@ -137,5 +137,162 @@
         "body": "The agency will be in touch within 24 hours to send you your free market report."
       }
     }
+  },
+  "typography": {
+    "body": {
+      "fontId": "raleway",
+      "family": "Raleway",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "mixed",
+      "sizeRatio": 1.0248437738149674,
+      "lineHeight": 1.174,
+      "tracking": 0,
+      "align": "center",
+      "color": "#d5e5e6",
+      "fitScore": 0.536,
+      "sampleBox": {
+        "x": 0.2324074074074074,
+        "y": 0.3074074074074074,
+        "width": 0.5634259259259259,
+        "height": 0.05333333333333334
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 1
+    },
+    "subheadline": {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "fallbackFamily": "serif",
+      "weight": 800,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.3473193473193472,
+      "lineHeight": 1.257,
+      "tracking": 0,
+      "align": "center",
+      "color": "#e4bf6f",
+      "fitScore": 0.502,
+      "sampleBox": {
+        "x": 0.19027777777777777,
+        "y": 0.2637037037037037,
+        "width": 0.6546296296296297,
+        "height": 0.022222222222222223
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
+    },
+    "headline": {
+      "fontId": "oswald",
+      "family": "Oswald",
+      "fallbackFamily": "sans-serif",
+      "weight": 400,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.2109230055658626,
+      "lineHeight": 1.482,
+      "tracking": 0,
+      "align": "center",
+      "color": "#eff3f4",
+      "fitScore": 0.406,
+      "sampleBox": {
+        "x": 0.026851851851851852,
+        "y": 0.12296296296296297,
+        "width": 0.8685185185185185,
+        "height": 0.11333333333333333
+      },
+      "sampleLineCount": 6,
+      "detectionScore": 0.694
+    },
+    "stat_1": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 400,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.5241702741702743,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "center",
+      "color": "#e1e4e6",
+      "fitScore": 0.634,
+      "sampleBox": {
+        "x": 0.11296296296296296,
+        "y": 0.8222222222222222,
+        "width": 0.725,
+        "height": 0.04296296296296296
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 0.65,
+      "fontFile": "/fonts/adstudio/smooch-sans-400.woff2"
+    },
+    "cta": {
+      "fontId": "lato",
+      "family": "Lato",
+      "fallbackFamily": "sans-serif",
+      "weight": 900,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.3793103448275863,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "center",
+      "color": "#142932",
+      "fitScore": 0.388,
+      "sampleBox": {
+        "x": 0.26064814814814813,
+        "y": 0.9255555555555556,
+        "width": 0.5078703703703704,
+        "height": 0.027037037037037037
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
+    },
+    "stat_3": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 500,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.5333333333333332,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "left",
+      "color": "#463b24",
+      "fitScore": 0.278,
+      "sampleBox": {
+        "x": 0.4009259259259259,
+        "y": 0.6229629629629629,
+        "width": 0.41388888888888886,
+        "height": 0.05962962962962963
+      },
+      "sampleLineCount": 4,
+      "detectionScore": 0.429
+    },
+    "stat_2": {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "fallbackFamily": "serif",
+      "weight": 900,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.3827160493827158,
+      "lineHeight": 1.257,
+      "tracking": 0,
+      "align": "left",
+      "color": "#dfe2e4",
+      "fitScore": 0.65,
+      "sampleBox": {
+        "x": 0.45185185185185184,
+        "y": 0.8474074074074074,
+        "width": 0.38333333333333336,
+        "height": 0.01814814814814815
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 0.583
+    }
   }
 }

@@ -140,5 +140,140 @@
         "body": "The agency will be in touch within 24 hours to introduce themselves and answer your questions."
       }
     }
+  },
+  "typography": {
+    "headline": {
+      "fontId": "oswald",
+      "family": "Oswald",
+      "fallbackFamily": "sans-serif",
+      "weight": 400,
+      "italic": false,
+      "case": "mixed",
+      "sizeRatio": 0.9696970106464223,
+      "lineHeight": 1.482,
+      "tracking": 0,
+      "align": "left",
+      "color": "#707169",
+      "fitScore": 0.258,
+      "sampleBox": {
+        "x": 0.10791015625,
+        "y": 0.241015625,
+        "width": 0.55908203125,
+        "height": 0.18359375
+      },
+      "sampleLineCount": 12,
+      "detectionScore": 0.452
+    },
+    "company_name": {
+      "fontId": "titillium-web",
+      "family": "Titillium Web",
+      "fallbackFamily": "sans-serif",
+      "weight": 900,
+      "italic": false,
+      "case": "mixed",
+      "sizeRatio": 1.1287569573283858,
+      "lineHeight": 1.521,
+      "tracking": 0,
+      "align": "right",
+      "color": "#72777a",
+      "fitScore": 0.195,
+      "sampleBox": {
+        "x": 0.12109375,
+        "y": 0.11875,
+        "width": 0.87890625,
+        "height": 0.053515625
+      },
+      "sampleLineCount": 3,
+      "detectionScore": 0.6
+    },
+    "website_url": {
+      "fontId": "kanit",
+      "family": "Kanit",
+      "fallbackFamily": "sans-serif",
+      "weight": 900,
+      "italic": false,
+      "case": "lower",
+      "sizeRatio": 1.1093795093795094,
+      "lineHeight": 1.495,
+      "tracking": 0,
+      "align": "left",
+      "color": "#cec5bc",
+      "fitScore": 0.498,
+      "sampleBox": {
+        "x": 0.48193359375,
+        "y": 0.9203125,
+        "width": 0.37841796875,
+        "height": 0.042578125
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 0.857
+    },
+    "phone_number": {
+      "fontId": "kanit",
+      "family": "Kanit",
+      "fallbackFamily": "sans-serif",
+      "weight": 900,
+      "italic": false,
+      "case": "none",
+      "sizeRatio": 1.4871794871794872,
+      "lineHeight": 1.495,
+      "tracking": 0,
+      "align": "left",
+      "color": "#cec3b8",
+      "fitScore": 0.745,
+      "sampleBox": {
+        "x": 0.09619140625,
+        "y": 0.921875,
+        "width": 0.24365234375,
+        "height": 0.039453125
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/kanit-900.woff2"
+    },
+    "cta_text": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 800,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.481025641025641,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "left",
+      "color": "#f4f3f3",
+      "fitScore": 0.428,
+      "sampleBox": {
+        "x": 0.609375,
+        "y": 0.843359375,
+        "width": 0.2958984375,
+        "height": 0.026953125
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
+    },
+    "agent_name": {
+      "fontId": "roboto-condensed",
+      "family": "Roboto Condensed",
+      "fallbackFamily": "sans-serif",
+      "weight": 700,
+      "italic": false,
+      "case": "mixed",
+      "sizeRatio": 1.3095238095238095,
+      "lineHeight": 1.171875,
+      "tracking": 0,
+      "align": "left",
+      "color": "#4e4841",
+      "fitScore": 0.455,
+      "sampleBox": {
+        "x": 0.119140625,
+        "y": 0.553515625,
+        "width": 0.3388671875,
+        "height": 0.03828125
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
+    }
   }
 }

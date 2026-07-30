@@ -137,5 +137,142 @@
         "body": "The agency will be in touch within 24 hours to send you your free market report."
       }
     }
+  },
+  "typography": {
+    "subheadline": {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "fallbackFamily": "serif",
+      "weight": 900,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.3351648351648353,
+      "lineHeight": 1.257,
+      "tracking": 0,
+      "align": "center",
+      "color": "#1b3345",
+      "fitScore": 0.458,
+      "sampleBox": {
+        "x": 0.2851851851851852,
+        "y": 0.2840740740740741,
+        "width": 0.4666666666666667,
+        "height": 0.017407407407407406
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
+    },
+    "headline": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.5238094911954372,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "center",
+      "color": "#102b3d",
+      "fitScore": 0.515,
+      "sampleBox": {
+        "x": 0.18703703703703703,
+        "y": 0.10296296296296296,
+        "width": 0.6462962962962963,
+        "height": 0.16037037037037036
+      },
+      "sampleLineCount": 3,
+      "detectionScore": 1
+    },
+    "email": {
+      "fontId": "oswald",
+      "family": "Oswald",
+      "fallbackFamily": "sans-serif",
+      "weight": 600,
+      "italic": false,
+      "case": "lower",
+      "sizeRatio": 0.9843915343915344,
+      "lineHeight": 1.482,
+      "tracking": 0,
+      "align": "center",
+      "color": "#233d52",
+      "fitScore": 0.915,
+      "sampleBox": {
+        "x": 0.13842592592592592,
+        "y": 0.9340740740740741,
+        "width": 0.7226851851851852,
+        "height": 0.03962962962962963
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 0.647,
+      "fontFile": "/fonts/adstudio/oswald-600.woff2"
+    },
+    "stat_1": {
+      "fontId": "libre-franklin",
+      "family": "Libre Franklin",
+      "fallbackFamily": "sans-serif",
+      "weight": 900,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.3827160493827158,
+      "lineHeight": 1.212,
+      "tracking": 0,
+      "align": "center",
+      "color": "#e8e6dd",
+      "fitScore": 0.676,
+      "sampleBox": {
+        "x": 0.2310185185185185,
+        "y": 0.8181481481481482,
+        "width": 0.5449074074074074,
+        "height": 0.017777777777777778
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 0.7,
+      "fontFile": "/fonts/adstudio/libre-franklin-900.woff2"
+    },
+    "cta": {
+      "fontId": "mulish",
+      "family": "Mulish",
+      "fallbackFamily": "sans-serif",
+      "weight": 900,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.4361851332398317,
+      "lineHeight": 1.255,
+      "tracking": 0,
+      "align": "center",
+      "color": "#112d41",
+      "fitScore": 0.422,
+      "sampleBox": {
+        "x": 0.2962962962962963,
+        "y": 0.8951851851851852,
+        "width": 0.42268518518518516,
+        "height": 0.02148148148148148
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
+    },
+    "stat_2": {
+      "fontId": "roboto-slab",
+      "family": "Roboto Slab",
+      "fallbackFamily": "serif",
+      "weight": 800,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.36992159657876,
+      "lineHeight": 1.31884765625,
+      "tracking": 0,
+      "align": "center",
+      "color": "#e1d9c5",
+      "fitScore": 0.773,
+      "sampleBox": {
+        "x": 0.16898148148148148,
+        "y": 0.7914814814814815,
+        "width": 0.6324074074074074,
+        "height": 0.04
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 0.667,
+      "fontFile": "/fonts/adstudio/roboto-slab-800.woff2"
+    }
   }
 }

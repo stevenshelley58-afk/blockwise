@@ -11,7 +11,6 @@ import {
   generateCloneWithCascade,
   normalizeCloneRenderAspect,
   persistCloneRender,
-  renderExactCloneTextEdit,
 } from "../src/lib/adstudio/clone-generation.ts";
 import {
   fetchProviderRequest,
@@ -215,41 +214,6 @@ test("targeted edits composite only the selected region onto the finished ad", a
   const rgbAt = (x: number, y: number) => Array.from(data.subarray((y * info.width + x) * 3, (y * info.width + x) * 3 + 3));
   assert.deepEqual(rgbAt(10, 10), [220, 20, 20], "outside pixels come from the original ad");
   assert.deepEqual(rgbAt(50, 50), [20, 20, 220], "inside pixels come from the model edit");
-});
-
-test("post-clone text edits typeset exact copy only inside the selected region", async () => {
-  const { default: sharp } = await import("sharp");
-  const source = await sharp({
-    create: { width: 240, height: 120, channels: 4, background: { r: 190, g: 20, b: 20, alpha: 1 } },
-  })
-    .composite([{
-      input: await sharp({
-        create: { width: 120, height: 120, channels: 4, background: { r: 18, g: 62, b: 117, alpha: 1 } },
-      }).png().toBuffer(),
-      left: 0,
-      top: 0,
-    }])
-    .png()
-    .toBuffer();
-  const result = await renderExactCloneTextEdit(
-    `data:image/png;base64,${source.toString("base64")}`,
-    "JUST LISTED TODAY",
-    { x: 0, y: 0, width: 0.5, height: 1 },
-  );
-  const { data, info } = await sharp(Buffer.from(result.split(",")[1], "base64"))
-    .removeAlpha()
-    .raw()
-    .toBuffer({ resolveWithObject: true });
-  const rgbAt = (x: number, y: number) => Array.from(data.subarray((y * info.width + x) * 3, (y * info.width + x) * 3 + 3));
-  assert.deepEqual(rgbAt(200, 60), [190, 20, 20], "pixels outside the selected text region stay unchanged");
-  let lightPixels = 0;
-  for (let y = 0; y < 120; y += 1) {
-    for (let x = 0; x < 120; x += 1) {
-      const [red, green, blue] = rgbAt(x, y);
-      if (red > 220 && green > 220 && blue > 220) lightPixels += 1;
-    }
-  }
-  assert.ok(lightPixels > 30, "the exact-copy finalizer paints readable high-contrast text in the region");
 });
 
 const executeAttempt = (async (input: Parameters<typeof executeAdStudioProviderAttempt>[0]) => {

@@ -144,5 +144,185 @@
         "body": "The agency will be in touch within 24 hours to introduce themselves and answer your questions."
       }
     }
+  },
+  "typography": {
+    "body": {
+      "fontId": "kanit",
+      "family": "Kanit",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "mixed",
+      "sizeRatio": 1.0847457319069873,
+      "lineHeight": 1.495,
+      "tracking": 0,
+      "align": "center",
+      "color": "#a29079",
+      "fitScore": 0.469,
+      "sampleBox": {
+        "x": 0.05925925925925926,
+        "y": 0.5145833333333333,
+        "width": 0.9185185185185185,
+        "height": 0.10598958333333333
+      },
+      "sampleLineCount": 12,
+      "detectionScore": 0.667
+    },
+    "headline": {
+      "fontId": "plus-jakarta-sans",
+      "family": "Plus Jakarta Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 800,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.3493253373313343,
+      "lineHeight": 1.26,
+      "tracking": 0,
+      "align": "left",
+      "color": "#24384c",
+      "fitScore": 0.429,
+      "sampleBox": {
+        "x": 0.13194444444444445,
+        "y": 0.07578125,
+        "width": 0.4981481481481482,
+        "height": 0.013541666666666667
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
+    },
+    "agent_role": {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "fallbackFamily": "serif",
+      "weight": 800,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.3354700854700854,
+      "lineHeight": 1.257,
+      "tracking": 0,
+      "align": "left",
+      "color": "#28394e",
+      "fitScore": 0.395,
+      "sampleBox": {
+        "x": 0.05740740740740741,
+        "y": 0.36015625,
+        "width": 0.34814814814814815,
+        "height": 0.011197916666666667
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
+    },
+    "subheadline": {
+      "fontId": "oswald",
+      "family": "Oswald",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.1851851434284126,
+      "lineHeight": 1.482,
+      "tracking": 0,
+      "align": "left",
+      "color": "#112a3e",
+      "fitScore": 0.471,
+      "sampleBox": {
+        "x": 0.05925925925925926,
+        "y": 0.13307291666666668,
+        "width": 0.6736111111111112,
+        "height": 0.11380208333333333
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 1
+    },
+    "email": {
+      "fontId": "roboto-condensed",
+      "family": "Roboto Condensed",
+      "fallbackFamily": "sans-serif",
+      "weight": 500,
+      "italic": false,
+      "case": "lower",
+      "sizeRatio": 1.030073513031856,
+      "lineHeight": 1.171875,
+      "tracking": 0,
+      "align": "left",
+      "color": "#d2c7ad",
+      "fitScore": 0.776,
+      "sampleBox": {
+        "x": 0.0587962962962963,
+        "y": 0.7734375,
+        "width": 0.4564814814814815,
+        "height": 0.031510416666666666
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/roboto-condensed-500.woff2"
+    },
+    "phone": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 700,
+      "italic": false,
+      "case": "none",
+      "sizeRatio": 1.5594497215853258,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "left",
+      "color": "#dfca9e",
+      "fitScore": 0.729,
+      "sampleBox": {
+        "x": 0.05925925925925926,
+        "y": 0.72265625,
+        "width": 0.287962962962963,
+        "height": 0.03177083333333333
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/smooch-sans-700.woff2"
+    },
+    "agent_name": {
+      "fontId": "roboto-slab",
+      "family": "Roboto Slab",
+      "fallbackFamily": "serif",
+      "weight": 900,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.3500986193293885,
+      "lineHeight": 1.31884765625,
+      "tracking": 0,
+      "align": "left",
+      "color": "#7c8894",
+      "fitScore": 0.24,
+      "sampleBox": {
+        "x": 0.05787037037037037,
+        "y": 0.32265625,
+        "width": 0.2967592592592593,
+        "height": 0.017447916666666667
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
+    },
+    "cta": {
+      "fontId": "plus-jakarta-sans",
+      "family": "Plus Jakarta Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 700,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.2682926829268293,
+      "lineHeight": 1.26,
+      "tracking": 0,
+      "align": "center",
+      "color": "#122939",
+      "fitScore": 0.45,
+      "sampleBox": {
+        "x": 0.32037037037037036,
+        "y": 0.8690104166666667,
+        "width": 0.36435185185185187,
+        "height": 0.02421875
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
+    }
   }
 }

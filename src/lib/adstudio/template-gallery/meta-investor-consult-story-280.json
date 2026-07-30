@@ -130,5 +130,140 @@
         "body": "The agency will be in touch within 24 hours to arrange your free rental appraisal."
       }
     }
+  },
+  "typography": {
+    "headline": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.523809483812699,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "left",
+      "color": "#4d5055",
+      "fitScore": 0.516,
+      "sampleBox": {
+        "x": 0.1037037037037037,
+        "y": 0.18697916666666667,
+        "width": 0.6337962962962963,
+        "height": 0.14765625
+      },
+      "sampleLineCount": 3,
+      "detectionScore": 1
+    },
+    "subheadline": {
+      "fontId": "open-sans",
+      "family": "Open Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 600,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.1418918918918919,
+      "lineHeight": 1.36181640625,
+      "tracking": 0,
+      "align": "left",
+      "color": "#565a5e",
+      "fitScore": 0.56,
+      "sampleBox": {
+        "x": 0.10740740740740741,
+        "y": 0.3536458333333333,
+        "width": 0.6231481481481481,
+        "height": 0.018489583333333334
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
+    },
+    "cta": {
+      "fontId": "cairo",
+      "family": "Cairo",
+      "fallbackFamily": "sans-serif",
+      "weight": 900,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.4206230529595014,
+      "lineHeight": 1.874,
+      "tracking": 0,
+      "align": "center",
+      "color": "#2b3d44",
+      "fitScore": 0.23,
+      "sampleBox": {
+        "x": 0.2125,
+        "y": 0.8989583333333333,
+        "width": 0.5773148148148148,
+        "height": 0.06822916666666666
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 0.87
+    },
+    "benefit_3": {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "fallbackFamily": "serif",
+      "weight": 700,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.32,
+      "lineHeight": 1.257,
+      "tracking": 0,
+      "align": "left",
+      "color": "#4c4c4c",
+      "fitScore": 0.401,
+      "sampleBox": {
+        "x": 0.24953703703703703,
+        "y": 0.6268229166666667,
+        "width": 0.35555555555555557,
+        "height": 0.015104166666666667
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
+    },
+    "benefit_2": {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "fallbackFamily": "serif",
+      "weight": 700,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.309462915601023,
+      "lineHeight": 1.257,
+      "tracking": 0,
+      "align": "left",
+      "color": "#5b5b5d",
+      "fitScore": 0.402,
+      "sampleBox": {
+        "x": 0.2462962962962963,
+        "y": 0.5354166666666667,
+        "width": 0.2949074074074074,
+        "height": 0.014583333333333334
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
+    },
+    "benefit_1": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.528301886792453,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "left",
+      "color": "#626568",
+      "fitScore": 0.735,
+      "sampleBox": {
+        "x": 0.12314814814814815,
+        "y": 0.4309895833333333,
+        "width": 0.38796296296296295,
+        "height": 0.03723958333333333
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/smooch-sans-300.woff2"
+    }
   }
 }

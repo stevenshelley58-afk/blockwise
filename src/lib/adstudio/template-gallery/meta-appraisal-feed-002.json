@@ -160,5 +160,208 @@
         "body": "The agency will be in touch within 24 hours to arrange your free property appraisal."
       }
     }
+  },
+  "typography": {
+    "body": {
+      "fontId": "kanit",
+      "family": "Kanit",
+      "fallbackFamily": "sans-serif",
+      "weight": 800,
+      "italic": false,
+      "case": "mixed",
+      "sizeRatio": 1.1094890510948905,
+      "lineHeight": 1.495,
+      "tracking": 0,
+      "align": "center",
+      "color": "#574947",
+      "fitScore": 0.647,
+      "sampleBox": {
+        "x": 0.09259259259259259,
+        "y": 0.6862962962962963,
+        "width": 0.8055555555555556,
+        "height": 0.09777777777777778
+      },
+      "sampleLineCount": 4,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/kanit-800.woff2"
+    },
+    "headline": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.5520833333333333,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "left",
+      "color": "#28404e",
+      "fitScore": 0.621,
+      "sampleBox": {
+        "x": 0.013888888888888888,
+        "y": 0.5137037037037037,
+        "width": 0.7902777777777777,
+        "height": 0.09592592592592593
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 0.967,
+      "fontFile": "/fonts/adstudio/smooch-sans-300.woff2"
+    },
+    "agent_role": {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "fallbackFamily": "serif",
+      "weight": 900,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.3392857142857144,
+      "lineHeight": 1.257,
+      "tracking": 0,
+      "align": "left",
+      "color": "#b9a15b",
+      "fitScore": 0.467,
+      "sampleBox": {
+        "x": 0.08333333333333333,
+        "y": 0.947037037037037,
+        "width": 0.2351851851851852,
+        "height": 0.008518518518518519
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
+    },
+    "trust_badge": {
+      "fontId": "kanit",
+      "family": "Kanit",
+      "fallbackFamily": "sans-serif",
+      "weight": 900,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.5,
+      "lineHeight": 1.495,
+      "tracking": 0,
+      "align": "center",
+      "color": "#f6f5f5",
+      "fitScore": 0.095,
+      "sampleBox": {
+        "x": 0.17037037037037037,
+        "y": 0.43037037037037035,
+        "width": 0.7388888888888889,
+        "height": 0.06481481481481481
+      },
+      "sampleLineCount": 4,
+      "detectionScore": 1
+    },
+    "subheadline": {
+      "fontId": "quicksand",
+      "family": "Quicksand",
+      "fallbackFamily": "sans-serif",
+      "weight": 600,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.1220779220779218,
+      "lineHeight": 1.25,
+      "tracking": 0,
+      "align": "left",
+      "color": "#e7bd71",
+      "fitScore": 0.679,
+      "sampleBox": {
+        "x": 0.09074074074074075,
+        "y": 0.6577777777777778,
+        "width": 0.5342592592592592,
+        "height": 0.024074074074074074
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/quicksand-600.woff2"
+    },
+    "email": {
+      "fontId": "open-sans",
+      "family": "Open Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 700,
+      "italic": false,
+      "case": "lower",
+      "sizeRatio": 1.0496031746031746,
+      "lineHeight": 1.36181640625,
+      "tracking": 0,
+      "align": "center",
+      "color": "#bcc3c8",
+      "fitScore": 0.584,
+      "sampleBox": {
+        "x": 0.4300925925925926,
+        "y": 0.8792592592592593,
+        "width": 0.2111111111111111,
+        "height": 0.014444444444444444
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
+    },
+    "phone": {
+      "fontId": "playfair-display",
+      "family": "Playfair Display",
+      "fallbackFamily": "serif",
+      "weight": 800,
+      "italic": false,
+      "case": "none",
+      "sizeRatio": 1.121107266435986,
+      "lineHeight": 1.333,
+      "tracking": 0,
+      "align": "center",
+      "color": "#c7cdd1",
+      "fitScore": 0.466,
+      "sampleBox": {
+        "x": 0.43148148148148147,
+        "y": 0.9107407407407407,
+        "width": 0.12037037037037036,
+        "height": 0.01074074074074074
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
+    },
+    "agent_name": {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "fallbackFamily": "serif",
+      "weight": 800,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.3351648351648353,
+      "lineHeight": 1.257,
+      "tracking": 0,
+      "align": "left",
+      "color": "#dfe3e5",
+      "fitScore": 0.46,
+      "sampleBox": {
+        "x": 0.08333333333333333,
+        "y": 0.9207407407407407,
+        "width": 0.23425925925925925,
+        "height": 0.017037037037037038
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
+    },
+    "social_handle": {
+      "fontId": "roboto-condensed",
+      "family": "Roboto Condensed",
+      "fallbackFamily": "sans-serif",
+      "weight": 700,
+      "italic": false,
+      "case": "lower",
+      "sizeRatio": 1.09297520661157,
+      "lineHeight": 1.171875,
+      "tracking": 0,
+      "align": "center",
+      "color": "#bac2c6",
+      "fitScore": 0.542,
+      "sampleBox": {
+        "x": 0.4310185185185185,
+        "y": 0.9418518518518518,
+        "width": 0.11527777777777778,
+        "height": 0.014444444444444444
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
+    }
   }
 }

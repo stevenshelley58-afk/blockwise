@@ -116,5 +116,96 @@
         "body": "The agency will be in touch within 24 hours with off-market property alerts."
       }
     }
+  },
+  "typography": {
+    "body": {
+      "fontId": "raleway",
+      "family": "Raleway",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "mixed",
+      "sizeRatio": 1.0133244503664223,
+      "lineHeight": 1.174,
+      "tracking": 0,
+      "align": "center",
+      "color": "#cacad2",
+      "fitScore": 0.604,
+      "sampleBox": {
+        "x": 0.2513888888888889,
+        "y": 0.34140625,
+        "width": 0.5370370370370371,
+        "height": 0.03567708333333333
+      },
+      "sampleLineCount": 9,
+      "detectionScore": 0.788,
+      "fontFile": "/fonts/adstudio/raleway-300.woff2"
+    },
+    "headline": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.5465116279069768,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "center",
+      "color": "#e7e7ea",
+      "fitScore": 0.662,
+      "sampleBox": {
+        "x": 0.2175925925925926,
+        "y": 0.16953125,
+        "width": 0.5967592592592592,
+        "height": 0.06015625
+      },
+      "sampleLineCount": 5,
+      "detectionScore": 0.472
+    },
+    "subheadline": {
+      "fontId": "noto-serif",
+      "family": "Noto Serif",
+      "fallbackFamily": "serif",
+      "weight": 800,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.0676470588235294,
+      "lineHeight": 1.362,
+      "tracking": 0,
+      "align": "center",
+      "color": "#dab979",
+      "fitScore": 0.511,
+      "sampleBox": {
+        "x": 0.21064814814814814,
+        "y": 0.3059895833333333,
+        "width": 0.6138888888888889,
+        "height": 0.015104166666666667
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
+    },
+    "cta": {
+      "fontId": "kanit",
+      "family": "Kanit",
+      "fallbackFamily": "sans-serif",
+      "weight": 900,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.4840425531914896,
+      "lineHeight": 1.495,
+      "tracking": 0,
+      "align": "left",
+      "color": "#a88d4e",
+      "fitScore": 0.232,
+      "sampleBox": {
+        "x": 0.11388888888888889,
+        "y": 0.9453125,
+        "width": 0.43287037037037035,
+        "height": 0.0421875
+      },
+      "sampleLineCount": 4,
+      "detectionScore": 0.421
+    }
   }
 }

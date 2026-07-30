@@ -123,5 +123,97 @@
         "body": "The agency will be in touch within 24 hours to arrange your free seller consultation."
       }
     }
+  },
+  "typography": {
+    "headline": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.5238094972059908,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "center",
+      "color": "#162734",
+      "fitScore": 0.424,
+      "sampleBox": {
+        "x": 0.08055555555555556,
+        "y": 0.06296296296296296,
+        "width": 0.8305555555555556,
+        "height": 0.27925925925925926
+      },
+      "sampleLineCount": 4,
+      "detectionScore": 0.864
+    },
+    "subheadline": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.54406364749082,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "center",
+      "color": "#202b38",
+      "fitScore": 0.619,
+      "sampleBox": {
+        "x": 0.07222222222222222,
+        "y": 0.3648148148148148,
+        "width": 0.8777777777777778,
+        "height": 0.05592592592592593
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 0.947,
+      "fontFile": "/fonts/adstudio/smooch-sans-300.woff2"
+    },
+    "phone": {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "fallbackFamily": "serif",
+      "weight": 700,
+      "italic": false,
+      "case": "none",
+      "sizeRatio": 1.2623274161735698,
+      "lineHeight": 1.257,
+      "tracking": 0,
+      "align": "left",
+      "color": "#202d35",
+      "fitScore": 0.668,
+      "sampleBox": {
+        "x": 0.0824074074074074,
+        "y": 0.45296296296296296,
+        "width": 0.37453703703703706,
+        "height": 0.05185185185185185
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/merriweather-700.woff2"
+    },
+    "social_handle": {
+      "fontId": "oswald",
+      "family": "Oswald",
+      "fallbackFamily": "sans-serif",
+      "weight": 500,
+      "italic": false,
+      "case": "lower",
+      "sizeRatio": 0.9782608695652174,
+      "lineHeight": 1.482,
+      "tracking": 0,
+      "align": "left",
+      "color": "#252f3b",
+      "fitScore": 0.574,
+      "sampleBox": {
+        "x": 0.6407407407407407,
+        "y": 0.4674074074074074,
+        "width": 0.24814814814814815,
+        "height": 0.028888888888888888
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
+    }
   }
 }

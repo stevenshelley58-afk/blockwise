@@ -138,5 +138,184 @@
         "body": "The agency will be in touch within 24 hours to send you your free property guide."
       }
     }
+  },
+  "typography": {
+    "headline": {
+      "fontId": "kanit",
+      "family": "Kanit",
+      "fallbackFamily": "sans-serif",
+      "weight": 800,
+      "italic": false,
+      "case": "mixed",
+      "sizeRatio": 1.1228070350978308,
+      "lineHeight": 1.495,
+      "tracking": 0,
+      "align": "center",
+      "color": "#beb6af",
+      "fitScore": 0.254,
+      "sampleBox": {
+        "x": 0.00634765625,
+        "y": 0.205078125,
+        "width": 0.9873046875,
+        "height": 0.330078125
+      },
+      "sampleLineCount": 12,
+      "detectionScore": 0.63
+    },
+    "tip_5": {
+      "fontId": "libre-franklin",
+      "family": "Libre Franklin",
+      "fallbackFamily": "sans-serif",
+      "weight": 800,
+      "italic": false,
+      "case": "mixed",
+      "sizeRatio": 1.09297520661157,
+      "lineHeight": 1.212,
+      "tracking": 0,
+      "align": "left",
+      "color": "#302f30",
+      "fitScore": 0.482,
+      "sampleBox": {
+        "x": 0.5419921875,
+        "y": 0.806640625,
+        "width": 0.21728515625,
+        "height": 0.015234375
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 0.708
+    },
+    "tip_1": {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "fallbackFamily": "serif",
+      "weight": 300,
+      "italic": false,
+      "case": "mixed",
+      "sizeRatio": 0.9445562262463671,
+      "lineHeight": 1.257,
+      "tracking": 0,
+      "align": "center",
+      "color": "#888888",
+      "fitScore": 0.719,
+      "sampleBox": {
+        "x": 0.15673828125,
+        "y": 0.653125,
+        "width": 0.7109375,
+        "height": 0.04453125
+      },
+      "sampleLineCount": 3,
+      "detectionScore": 0.545
+    },
+    "tip_2": {
+      "fontId": "roboto",
+      "family": "Roboto",
+      "fallbackFamily": "sans-serif",
+      "weight": 700,
+      "italic": false,
+      "case": "mixed",
+      "sizeRatio": 1.108374384236453,
+      "lineHeight": 1.171875,
+      "tracking": 0,
+      "align": "left",
+      "color": "#343434",
+      "fitScore": 0.837,
+      "sampleBox": {
+        "x": 0.14501953125,
+        "y": 0.702734375,
+        "width": 0.42626953125,
+        "height": 0.0203125
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 0.524
+    },
+    "tip_4": {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "fallbackFamily": "serif",
+      "weight": 800,
+      "italic": false,
+      "case": "mixed",
+      "sizeRatio": 1.1428571428571428,
+      "lineHeight": 1.257,
+      "tracking": 0,
+      "align": "left",
+      "color": "#323233",
+      "fitScore": 0.418,
+      "sampleBox": {
+        "x": 0.27490234375,
+        "y": 0.83203125,
+        "width": 0.140625,
+        "height": 0.015625
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 0.571
+    },
+    "tip_3": {
+      "fontId": "roboto",
+      "family": "Roboto",
+      "fallbackFamily": "sans-serif",
+      "weight": 700,
+      "italic": false,
+      "case": "mixed",
+      "sizeRatio": 1.108374384236453,
+      "lineHeight": 1.171875,
+      "tracking": 0,
+      "align": "left",
+      "color": "#323232",
+      "fitScore": 0.573,
+      "sampleBox": {
+        "x": 0.71044921875,
+        "y": 0.67734375,
+        "width": 0.171875,
+        "height": 0.0203125
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 0.6
+    },
+    "search_bar_text": {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "fallbackFamily": "serif",
+      "weight": 800,
+      "italic": false,
+      "case": "mixed",
+      "sizeRatio": 1.1666666666666667,
+      "lineHeight": 1.257,
+      "tracking": 0,
+      "align": "left",
+      "color": "#404040",
+      "fitScore": 0.474,
+      "sampleBox": {
+        "x": 0.23095703125,
+        "y": 0.1015625,
+        "width": 0.19873046875,
+        "height": 0.01328125
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
+    },
+    "handle": {
+      "fontId": "plus-jakarta-sans",
+      "family": "Plus Jakarta Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 600,
+      "italic": false,
+      "case": "lower",
+      "sizeRatio": 1.0012771392081736,
+      "lineHeight": 1.26,
+      "tracking": 0,
+      "align": "center",
+      "color": "#464646",
+      "fitScore": 0.618,
+      "sampleBox": {
+        "x": 0.3779296875,
+        "y": 0.9140625,
+        "width": 0.2451171875,
+        "height": 0.01875
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/plus-jakarta-sans-600.woff2"
+    }
   }
 }

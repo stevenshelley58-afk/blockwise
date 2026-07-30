@@ -24,6 +24,7 @@ export type RedactedProviderRunInput = {
     | "adstudio.clone"
     | "adstudio.clone_qa"
     | "adstudio.clone_regions"
+    | "adstudio.text_layer_styles"
     | "adstudio.background"
     | "adstudio.scoring";
   modelProfile: ModelProfileKey;

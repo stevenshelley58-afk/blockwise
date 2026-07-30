@@ -46,6 +46,41 @@ export type AdStudioTemplateMeta = MetaLeadAdPack & {
 };
 
 /**
+ * Per-text-region typography, built offline by
+ * scripts/build/font-corpus/adstudio-type-specs.mjs (see
+ * docs/plans/2026-07-27-adstudio-magic-layers-editor.md §7). This is a
+ * best-effort real-font match against the sample image, not a rendering
+ * recipe on its own — Phase 2 (the "mode: live|rerender" gating) decides
+ * when a region is trustworthy enough to re-typeset with it. `fitScore`
+ * (0-1, higher is better) tells that decision how close the pixel match
+ * actually was; a region the build script couldn't confidently detect or
+ * measure is simply absent from the map rather than given a guessed spec.
+ */
+export type AdStudioTypeSpec = {
+  fontId: string;
+  family: string;
+  fallbackFamily: "serif" | "sans-serif" | "monospace" | "cursive";
+  weight: number;
+  italic: boolean;
+  case: "upper" | "lower" | "mixed" | "none";
+  /** CSS font-size = (region box height in the consumer's own px) * sizeRatio. */
+  sizeRatio: number;
+  lineHeight: number;
+  tracking: number;
+  align: "left" | "center" | "right";
+  color: string;
+  fitScore: number;
+  /** Text bounds measured once from the approved public sample. */
+  sampleBox: { x: number; y: number; width: number; height: number };
+  /** Number of wrapped lines in the approved sample copy. */
+  sampleLineCount: number;
+  /** OCR-to-declared-copy match confidence for sampleBox (0-1). */
+  detectionScore: number;
+  /** Self-hosted face used only when the fidelity gates pass. */
+  fontFile?: string;
+};
+
+/**
  * The only AdStudio template contract.
  *
  * A template is a safe sample image plus the customer inputs needed to clone
@@ -74,6 +109,8 @@ export type AdStudioTemplate = {
   meta: AdStudioTemplateMeta;
   sourceAd: AdStudioTemplateSourceAd;
   classification: AdStudioTemplateClassification;
+  /** Keyed by inputs.text[].key. Absent entirely for templates the offline build hasn't covered yet. */
+  typography?: Record<string, AdStudioTypeSpec>;
 };
 
 export type AdStudioGalleryTemplate = AdStudioTemplate;

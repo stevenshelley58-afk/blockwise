@@ -103,5 +103,75 @@
         "body": "The agency will be in touch within 24 hours to send you your free property guide."
       }
     }
+  },
+  "typography": {
+    "caption": {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "fallbackFamily": "serif",
+      "weight": 500,
+      "italic": false,
+      "case": "lower",
+      "sizeRatio": 0.9268292682926829,
+      "lineHeight": 1.257,
+      "tracking": 0,
+      "align": "center",
+      "color": "#767676",
+      "fitScore": 0.72,
+      "sampleBox": {
+        "x": 0.34765625,
+        "y": 0.87421875,
+        "width": 0.32177734375,
+        "height": 0.0265625
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/merriweather-500.woff2"
+    },
+    "subheadline": {
+      "fontId": "oswald",
+      "family": "Oswald",
+      "fallbackFamily": "sans-serif",
+      "weight": 700,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.185185157423906,
+      "lineHeight": 1.482,
+      "tracking": 0,
+      "align": "center",
+      "color": "#b0b1a2",
+      "fitScore": 0.295,
+      "sampleBox": {
+        "x": 0.19775390625,
+        "y": 0.637890625,
+        "width": 0.62451171875,
+        "height": 0.193359375
+      },
+      "sampleLineCount": 3,
+      "detectionScore": 1
+    },
+    "headline": {
+      "fontId": "oswald",
+      "family": "Oswald",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.0163934426229508,
+      "lineHeight": 1.482,
+      "tracking": 0,
+      "align": "center",
+      "color": "#5f5e5e",
+      "fitScore": 0.784,
+      "sampleBox": {
+        "x": 0.138671875,
+        "y": 0.12578125,
+        "width": 0.74072265625,
+        "height": 0.084375
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/oswald-300.woff2"
+    }
   }
 }
