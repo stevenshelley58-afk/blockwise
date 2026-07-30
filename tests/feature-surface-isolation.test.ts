@@ -69,7 +69,7 @@ test("active Ad Studio generation has no local Ad Radar dependency", () => {
   const styles = read("src/components/adstudio/styles.ts");
 
   assert.match(dialog, /GenerationProgress/);
-  assert.match(dialog, /templates=\{templates\}/);
+  assert.match(dialog, /template=\{generationTemplate\}/);
   assert.doesNotMatch(dialog, /GenerationAdStream|preloadGenerationAdStream|generationAdLocation|local-ad-radar/);
   assert.doesNotMatch(progress, /fetch\(|local-ad-radar|ad-radar/);
   assert.doesNotMatch(progress, /useEffect|useState|setInterval|Running final checks/);
@@ -77,8 +77,13 @@ test("active Ad Studio generation has no local Ad Radar dependency", () => {
   assert.match(progress, /templateDisplaySrc/);
   assert.match(progress, /aria-hidden="true"/);
   assert.doesNotMatch(progress, /<(?:a|button)\b/);
+  assert.equal((progress.match(/<figure\b/g) ?? []).length, 1);
+  assert.doesNotMatch(progress, /\.map\(|SHOWCASE_LIMIT|showcase-track|showcase-set/);
   assert.match(styles, /\.studio-generation-showcase\{[^}]*pointer-events:none/);
-  assert.match(styles, /prefers-reduced-motion:reduce[\s\S]*studio-generation-showcase-track\{animation:none/);
+  assert.match(styles, /\.studio-generation-showcase\{[^}]*container-type:size[^}]*place-items:center/);
+  assert.match(styles, /\.studio-generation-showcase-card\{[^}]*100cqw[^}]*100cqh/);
+  assert.match(styles, /\.studio-generation-showcase-card img\{[^}]*object-fit:contain/);
+  assert.doesNotMatch(styles, /studio-generation-scroll|studio-generation-showcase-track|studio-generation-showcase-set/);
   assert.equal(existsSync("src/components/adstudio/generation-ad-stream.tsx"), false);
   assert.equal(existsSync("src/components/adstudio/generation-ad-stream-data.ts"), false);
 });

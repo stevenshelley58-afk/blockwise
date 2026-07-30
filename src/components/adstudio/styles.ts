@@ -683,8 +683,9 @@ export const STYLES = `
 .studio-newad-requirements p,.studio-newad-requirements ul{margin:0;color:#7f1d1d;font-size:12.8px;line-height:1.45}
 .studio-newad-requirements ul{display:grid;gap:5px;padding-left:18px}
 
-/* Generation wait state: approved public gallery samples drift past as a
-   non-interactive showcase until the finished ad replaces this dialog. */
+/* Generation wait state: keep one complete approved public sample visible
+   until the finished ad replaces this dialog. Container units bind the sample
+   to both axes, so neither a short desktop window nor a narrow phone crops it. */
 .studio-newad--generating{width:min(1180px,calc(100vw - 48px));height:min(820px,calc(100vh - 48px));height:min(820px,calc(100dvh - 48px));background:#f0f2f5}
 .studio-generation{position:relative;min-height:0;height:100%;display:grid;grid-template-rows:auto minmax(0,1fr);overflow:hidden}
 .studio-generation-head{display:grid;justify-items:center;gap:9px;border-bottom:1px solid var(--line-soft);background:#fff;padding:27px 24px 22px;text-align:center}
@@ -692,13 +693,10 @@ export const STYLES = `
 .studio-generation-head p{max-width:64ch;margin:0;color:var(--muted);font-size:13.5px;line-height:1.5}
 .studio-generation-phase{min-height:32px;display:inline-flex;align-items:center;gap:8px;border-radius:999px;background:var(--surface-subtle);color:var(--ink);padding:0 13px;font-size:12.5px;font-weight:700}
 .studio-generation-phase svg{animation:studio-spin 1.1s linear infinite}
-.studio-generation-showcase{min-width:0;min-height:0;display:flex;align-items:center;overflow:hidden;padding:24px 0;pointer-events:none;user-select:none}
-.studio-generation-showcase-track{width:max-content;height:min(100%,520px);display:flex;align-items:stretch;animation:studio-generation-scroll 82s linear infinite;will-change:transform}
-.studio-generation-showcase-set{height:100%;display:flex;align-items:stretch;gap:16px;padding-right:16px}
-.studio-generation-showcase-card{height:100%;aspect-ratio:4/5;flex:0 0 auto;overflow:hidden;margin:0;border-radius:12px;background:#fff;box-shadow:var(--st-sh-1)}
-.studio-generation-showcase-card[data-format="9:16"]{aspect-ratio:9/16}
-.studio-generation-showcase-card img{width:100%;height:100%;display:block;object-fit:cover}
-@keyframes studio-generation-scroll{to{transform:translateX(-50%)}}
+.studio-generation-showcase{min-width:0;min-height:0;container-type:size;display:grid;place-items:center;overflow:hidden;padding:24px;pointer-events:none;user-select:none}
+.studio-generation-showcase-card{width:min(416px,calc(100cqw - 48px),calc((100cqh - 48px)*.8));aspect-ratio:4/5;overflow:hidden;margin:0;border-radius:12px;background:#fff;box-shadow:var(--st-sh-1)}
+.studio-generation-showcase-card[data-format="9:16"]{width:min(293px,calc(100cqw - 48px),calc((100cqh - 48px)*.5625));aspect-ratio:9/16}
+.studio-generation-showcase-card img{width:100%;height:100%;display:block;object-fit:contain}
 
 @media(max-width:1180px){
   .studio-desktop-body{grid-template-columns:182px 286px minmax(360px,1fr)}
@@ -811,9 +809,7 @@ export const STYLES = `
   .studio-generation-head{gap:8px;padding:18px 16px 14px}
   .studio-generation-head h2{font-size:20px}
   .studio-generation-phase{padding-block:5px;line-height:1.25}
-  .studio-generation-showcase{padding:18px 0}
-  .studio-generation-showcase-track{height:min(100%,460px,calc((100vw - 42px)*1.25))}
-  .studio-generation-showcase-set{gap:12px;padding-right:12px}
+  .studio-generation-showcase{padding:18px}
   .studio-newad-sources{grid-template-columns:1fr}
   .studio-newad-source{min-height:112px}
   .studio-tpl-grid{grid-template-columns:repeat(2,1fr)}
@@ -892,8 +888,7 @@ export const STYLES = `
   .studio-inplace-inspector{top:auto;right:8px;bottom:86px;left:8px;width:auto;max-height:min(68vh,620px);border-radius:18px;padding:16px}
 }
 @media(prefers-reduced-motion:reduce){
-  .studio-generation-phase svg,.studio-generation-showcase-track{animation:none}
-  .studio-generation-showcase-set:nth-child(2){display:none}
+  .studio-generation-phase svg{animation:none}
 }
 @media(max-width:760px){
   .studio-inplace-toolbar{bottom:8px}
