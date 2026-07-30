@@ -9,9 +9,9 @@ import {
   LayoutGrid,
   LineChart,
   Mail,
+  Palette,
   Settings,
   Settings2,
-  Star,
   UserRound,
   ContactRound,
   UsersRound,
@@ -65,7 +65,7 @@ const operatorNavItems = ([
   { href: "/operator/database", label: "Database", icon: Database },
   { href: "/results", label: "Results", icon: LineChart },
   { href: "/ad-radar", label: "Ad Radar", icon: RadarIcon, feature: "adRadar" },
-  { href: "/ad-studio", label: "Ad Studio", icon: Star },
+  { href: "/ad-studio", label: "Ad Studio", icon: Palette },
   { href: "/property-check", label: "Property Check", icon: FileSearch, feature: "propertyCheck" },
   { href: "/leads", label: "Leads", icon: UsersRound },
   { href: "/settings", label: "Settings", icon: Settings },
@@ -78,7 +78,7 @@ const operatorNavItems = ([
 // route, because they are structural rather than niche identity.
 export const selfServeIcons: Record<string, NavIcon> = {
   "/self-serve": LayoutGrid,
-  "/ad-studio": Star,
+  "/ad-studio": Palette,
   "/results": LineChart,
   "/ad-radar": RadarIcon,
   "/property-check": FileSearch,
