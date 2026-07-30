@@ -191,14 +191,22 @@ test("homepage FAQ matches the approved flat-rate offer", () => {
   const managed = getBillingOffer("AU", "managed");
 
   assert.match(faq, /pay Meta directly/i);
-  assert.match(faq, /Connect Meta when you want to go live/i);
+  assert.match(faq, /full control of your spend/i);
+  assert.match(faq, /campaign data stays with you/i);
+  assert.match(faq, /guide you through the setup/i);
   assert.match(faq, /Nothing launches until you approve/i);
   assert.match(faq, /Three complete Feed \+ Story ads, free/i);
-  assert.match(faq, /seven-day billing trial/i);
+  assert.match(faq, /starts when your first campaign goes live/i);
+  assert.match(faq, /seven days after checkout/i);
   assert.equal(formatBillingAmount(selfServe.firstInvoiceAmount, selfServe.currency), "A$99");
   assert.equal(formatBillingAmount(selfServe.recurringAmount, selfServe.currency), "A$499");
   assert.equal(formatBillingAmount(managed.recurringAmount, managed.currency), "A$1,500");
-  assert.match(faq, /weekly optimization for up to four campaigns/i);
+  assert.match(faq, /weekly optimisation for up to four campaigns/i);
+  assert.match(faq, /technical and creative advice/i);
+  assert.match(faq, /Cancel anytime/i);
+  assert.match(faq, /No AI slop/i);
+  assert.match(faq, /copy, headlines and descriptions/i);
+  assert.match(faq, /your suburb/i);
   assert.match(faq, /getBillingOffer/);
   assert.doesNotMatch(faq, /US\$99|A\$99|US\$499|A\$499|US\$1,500|A\$2,500/);
 });
