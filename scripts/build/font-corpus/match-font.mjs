@@ -22,6 +22,10 @@ const RATIO_WEIGHT = 2;
 const DENSITY_WEIGHT = 1;
 const RATIO_SCALE = 0.05;
 const DENSITY_SCALE = 0.15;
+// Width is compared proportionally, rather than in pixels, because both the
+// OCR target and the candidate render are already at the target glyph height.
+// A 20% width mismatch is visually obvious in a constrained ad text box.
+const WIDTH_SCALE = 0.2;
 
 function categoryToGenericFamily(category) {
   switch (category) {
@@ -43,6 +47,16 @@ function inferAlign(box) {
 }
 
 /**
+ * Runtime receives the full region box, while matching normalizes a rendered
+ * face to one glyph row.  Convert between those coordinate systems here so
+ * multi-line fields render at the same per-line size as their offline match.
+ */
+export function sizeRatioForRegionBox(fontSizePx, glyphHeightPx, lineCount = 1) {
+  if (!fontSizePx || !glyphHeightPx) return null;
+  return fontSizePx / (glyphHeightPx * Math.max(1, lineCount));
+}
+
+/**
  * Matches one region's target profile against the font corpus. Returns
  * `null` (not a thrown error) when the region has no usable profile (e.g.
  * detect-regions never found a box) — callers decide whether that's a
@@ -58,6 +72,7 @@ export async function matchFont(profile, region, { shortlistLimit = 40 } = {}) {
   const targetRatio = profile.strokeToHeightRatio;
   const targetDensity = profile.inkDensity;
   const targetGlyphHeightPx = profile.glyphHeightPx;
+  const targetTextWidthPx = profile.textWidthPx;
 
   let winner = null;
   const attempted = [];
@@ -78,15 +93,22 @@ export async function matchFont(profile, region, { shortlistLimit = 40 } = {}) {
       continue;
     }
 
-    const rendered = renderAndMeasure(region.sample, alias, candidate.weight, targetGlyphHeightPx);
+    const rendered = renderAndMeasure(region.sample, alias, candidate.weight, targetGlyphHeightPx, {
+      lineCount: profile.lineCount,
+      targetTextWidthPx,
+      lineHeight: candidate.lineHeight ?? 1.2,
+    });
     if (!rendered || rendered.strokeToHeightRatio == null) continue;
 
     const ratioDelta = Math.abs(rendered.strokeToHeightRatio - targetRatio) / RATIO_SCALE;
     const densityDelta = Math.abs(rendered.inkDensity - targetDensity) / DENSITY_SCALE;
-    const distance = RATIO_WEIGHT * ratioDelta + DENSITY_WEIGHT * densityDelta;
+    const widthDelta = targetTextWidthPx && rendered.textWidthPx
+      ? Math.abs(rendered.textWidthPx - targetTextWidthPx) / targetTextWidthPx / WIDTH_SCALE
+      : 0;
+    const distance = RATIO_WEIGHT * ratioDelta + DENSITY_WEIGHT * densityDelta + widthDelta;
     const fitScore = 1 / (1 + distance);
 
-    attempted.push({ family: candidate.family, weight: candidate.weight, distance, fitScore });
+    attempted.push({ family: candidate.family, weight: candidate.weight, distance, fitScore, widthDelta });
     if (!winner || fitScore > winner.fitScore) {
       winner = { candidate, rendered, fitScore, distance };
     }
@@ -102,12 +124,14 @@ export async function matchFont(profile, region, { shortlistLimit = 40 } = {}) {
     weight: winner.candidate.weight,
     italic: false,
     case: profile.case,
-    // Ratio of the CSS font-size that produced the matching render to the
-    // *measured* target glyph height — a consumer with only the target
-    // glyph height in their own pixel space computes
-    // `fontSize = targetGlyphHeightPx * sizeRatio` to reproduce it at any
-    // resolution, independent of this build's absolute pixel scale.
-    sizeRatio: targetGlyphHeightPx ? winner.rendered.fontSizePx / targetGlyphHeightPx : null,
+    measurementVersion: 2,
+    // Runtime uses the full region-box height. The matcher normalizes one
+    // glyph row, so multi-line fields must include their known line count.
+    sizeRatio: sizeRatioForRegionBox(
+      winner.rendered.fontSizePx,
+      targetGlyphHeightPx,
+      profile.lineCount,
+    ),
     lineHeight: winner.candidate.lineHeight ?? 1.2,
     tracking: 0, // not measured — default normal tracking, documented gap
     align: inferAlign(region.box),

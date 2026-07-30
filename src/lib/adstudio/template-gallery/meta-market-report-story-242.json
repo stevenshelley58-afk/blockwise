@@ -325,5 +325,22 @@
       "detectionScore": 0.667,
       "fontFile": "/fonts/adstudio/merriweather-700.woff2"
     }
+  },
+  "deterministicEditing": {
+    "status": "partial",
+    "imageBoxes": {
+      "property_photo": {
+        "x": 0.5879629629629629,
+        "y": 0,
+        "width": 0.41203703703703703,
+        "height": 1
+      },
+      "agency_logo": {
+        "x": 0.22962962962962963,
+        "y": 0.1015625,
+        "width": 0.13333333333333333,
+        "height": 0.07291666666666667
+      }
+    }
   }
 }

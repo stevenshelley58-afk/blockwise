@@ -47,11 +47,27 @@ test("native-format editor regions come from the offline template build without 
   const feedQa = buildPrebuiltTemplateCloneQa(template, copy, "4:5");
   assert.ok(feedQa);
   assert.deepEqual(feedQa.copyValues, copy);
+  const expectedRegionKeys = [
+    ...template.inputs.text
+      .filter((field) => Boolean(template.typography?.[field.key]?.sampleBox))
+      .map((field) => field.key),
+    ...template.inputs.images
+      .filter((field) => Boolean(template.deterministicEditing?.imageBoxes[field.key]))
+      .map((field) => field.key),
+  ];
   assert.deepEqual(
     feedQa.regions.map((region) => region.key),
-    ["headline_main", "headline_sub", "contact_handle"],
+    expectedRegionKeys,
   );
-  assert.ok(feedQa.regions.every((region) => region.kind === "text"));
+  assert.ok(
+    feedQa.regions
+      .filter((region) => region.key !== "main_property_image")
+      .every((region) => region.kind === "text"),
+  );
+  assert.equal(
+    feedQa.regions.find((region) => region.key === "main_property_image")?.kind,
+    "image",
+  );
   const storyQa = buildPrebuiltTemplateCloneQa(template, copy, "9:16");
   assert.ok(storyQa);
   const sampleSubBox = template.typography?.headline_sub?.sampleBox;
@@ -61,6 +77,37 @@ test("native-format editor regions come from the offline template build without 
   assert.equal(storySubBox.width, sampleSubBox.width);
   assert.equal(storySubBox.y, (sampleSubBox.y * 1350 + 285) / 1920);
   assert.equal(storySubBox.height, (sampleSubBox.height * 1350) / 1920);
+});
+
+test("a migrated template carries its measured image hitboxes into both formats", () => {
+  const base = AD_STUDIO_TEMPLATES.find((entry) => entry.id === "meta-feed-018")!;
+  const template = {
+    ...base,
+    deterministicEditing: {
+      status: "ready" as const,
+      imageBoxes: {
+        main_property_image: {
+          x: 0.576172,
+          y: 0.16875,
+          width: 0.423828,
+          height: 0.597656,
+        },
+      },
+    },
+  };
+  const feed = buildPrebuiltTemplateCloneQa(template, {}, "4:5");
+  const story = buildPrebuiltTemplateCloneQa(template, {}, "9:16");
+  const feedImage = feed?.regions.find((region) => region.key === "main_property_image");
+  const storyImage = story?.regions.find((region) => region.key === "main_property_image");
+
+  assert.equal(feedImage?.kind, "image");
+  assert.deepEqual(feedImage?.box, template.deterministicEditing.imageBoxes.main_property_image);
+  assert.ok(storyImage);
+  assert.equal(storyImage.kind, "image");
+  assert.equal(storyImage.box.x, feedImage?.box.x);
+  assert.equal(storyImage.box.width, feedImage?.box.width);
+  assert.equal(storyImage.box.y, (feedImage!.box.y * 1350 + 285) / 1920);
+  assert.equal(storyImage.box.height, (feedImage!.box.height * 1350) / 1920);
 });
 
 function roundedBox(box: { x: number; y: number; width: number; height: number } | undefined) {

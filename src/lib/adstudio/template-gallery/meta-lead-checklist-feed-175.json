@@ -301,5 +301,22 @@
       "sampleLineCount": 1,
       "detectionScore": 1
     }
+  },
+  "deterministicEditing": {
+    "status": "partial",
+    "imageBoxes": {
+      "background_photo": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 0.4614814814814815
+      },
+      "agent_portrait": {
+        "x": 0.6351851851851852,
+        "y": 0.06296296296296296,
+        "width": 0.31666666666666665,
+        "height": 0.3985185185185185
+      }
+    }
   }
 }

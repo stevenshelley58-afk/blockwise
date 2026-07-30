@@ -33,7 +33,7 @@ import {
 } from "./reference-clone.ts";
 import { resolveAdStudioImageForModel } from "./resolve-image-for-model.ts";
 import { resolveApprovedAdStudioTemplate } from "./template-resolver.ts";
-import type { AdStudioTemplate } from "./templates.ts";
+import { deterministicEditingReadiness, type AdStudioTemplate } from "./templates.ts";
 import { resolveAdStudioGenerationBrandKit } from "./trial-brand-kit.ts";
 import type {
   AdStudioBrandKit,
@@ -89,6 +89,8 @@ export type RunTemplateCampaignGenerationResult = {
   campaignPack: AdStudioCampaignPack;
   /** Background construction of the optional instant text-editing plate. */
   editingLayersTask: Promise<void>;
+  /** Ready templates are not released to the customer until that task settles. */
+  requiresDeterministicEditing: boolean;
   /**
    * The story (9:16) render, generated in parallel with the feed, persists
    * and patches into the already-created campaign once it lands. Undefined
@@ -97,6 +99,31 @@ export type RunTemplateCampaignGenerationResult = {
    */
   storyTask?: Promise<void>;
 };
+
+export async function assertDeterministicFeedEditingReady(input: {
+  supabase: SupabaseGenerationClient;
+  workspaceId: string;
+  campaignId: string;
+}): Promise<void> {
+  const { data, error } = await input.supabase
+    .from("adstudio_creatives")
+    .select("canvas_json")
+    .eq("workspace_id", input.workspaceId)
+    .eq("campaign_id", input.campaignId)
+    .eq("format", PRIMARY_CLONE_FORMAT)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  const canvas = (data?.canvas_json ?? {}) as AdStudioCreative["canvas"];
+  const currentImage = canvas.objects?.[0]?.content ?? canvas.objects?.[0]?.assetId ?? "";
+  if (
+    !currentImage
+    || canvas.textLayers?.status !== "ready"
+    || !canvas.textLayers.deterministicOnly
+    || !canvas.textLayers.validFor.includes(currentImage)
+  ) {
+    throw new Error("The ad was created, but exact text editing did not finish preparing.");
+  }
+}
 
 const PRIMARY_CLONE_FORMAT = "4:5" as const;
 const STORY_CLONE_FORMAT = "9:16" as const;
@@ -183,9 +210,9 @@ export type CloneEditingLayersInput = {
 };
 
 /**
- * Build advisory text-free plates after the creative is already editable.
- * The clickable regions came from the offline template build and were stored
- * with the creative; this task does no vision or region discovery.
+ * Build text-free plates with no vision or region discovery. Partial
+ * templates keep this advisory and may fall back to a targeted model edit;
+ * explicitly ready templates wait for it before generation is released.
  */
 export async function prepareCloneCreativeTextLayers(
   input: CloneEditingLayersInput,
@@ -493,8 +520,9 @@ export async function runTemplateCampaignGeneration(
     console.error("adstudio: activation milestone repair deferred", error);
   }
 
-  // Regions are already in the persisted creative. Build only the advisory
-  // text-free plate in the background; this does not gate the editor.
+  // Regions are already in the persisted creative. The caller decides whether
+  // this plate remains advisory (partial template) or gates release (ready
+  // template).
   const feedCreative = feedPack.creatives.find((c) => c.format === PRIMARY_CLONE_FORMAT);
   const editingLayersTask = feedCreative
     ? prepareCloneCreativeTextLayers({
@@ -528,7 +556,13 @@ export async function runTemplateCampaignGeneration(
     creditReservation: input.creditReservation,
   });
 
-  return { campaignId: feedPack.campaign.campaignId, campaignPack: feedPack, editingLayersTask, storyTask };
+  return {
+    campaignId: feedPack.campaign.campaignId,
+    campaignPack: feedPack,
+    editingLayersTask,
+    requiresDeterministicEditing: deterministicEditingReadiness(template).status === "ready",
+    storyTask,
+  };
 }
 
 /**

@@ -253,5 +253,34 @@
       "detectionScore": 1,
       "fontFile": "/fonts/adstudio/oswald-300.woff2"
     }
+  },
+  "deterministicEditing": {
+    "status": "partial",
+    "imageBoxes": {
+      "main_photo": {
+        "x": 0.091796875,
+        "y": 0.1609375,
+        "width": 0.818359375,
+        "height": 0.39375
+      },
+      "interior_photo_1": {
+        "x": 0.091796875,
+        "y": 0.5625,
+        "width": 0.2724609375,
+        "height": 0.23359375
+      },
+      "interior_photo_2": {
+        "x": 0.3671875,
+        "y": 0.5625,
+        "width": 0.271484375,
+        "height": 0.23359375
+      },
+      "interior_photo_3": {
+        "x": 0.6416015625,
+        "y": 0.5625,
+        "width": 0.2685546875,
+        "height": 0.23359375
+      }
+    }
   }
 }

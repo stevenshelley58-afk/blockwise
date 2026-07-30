@@ -27,25 +27,36 @@ export function buildPrebuiltTemplateCloneQa(
   if (!targetHeight) return undefined;
   const sourceHeight = template.dimensions.height;
   const verticalOffset = (targetHeight - sourceHeight) / 2;
-  const regions = template.inputs.text.flatMap<AdStudioCloneRegion>((field) => {
-    const sampleBox = template.typography?.[field.key]?.sampleBox;
-    if (!sampleBox) return [];
+  const mapSampleBox = (sampleBox: CloneBox): CloneBox | null => {
     const rawY = (sampleBox.y * sourceHeight + verticalOffset) / targetHeight;
     const rawBottom = rawY + (sampleBox.height * sourceHeight) / targetHeight;
     const y = Math.max(0, rawY);
     const bottom = Math.min(1, rawBottom);
-    if (bottom <= y) return [];
+    if (bottom <= y) return null;
+    return {
+      x: sampleBox.x,
+      y,
+      width: sampleBox.width,
+      height: bottom - y,
+    };
+  };
+  const regions = template.inputs.text.flatMap<AdStudioCloneRegion>((field) => {
+    const sampleBox = template.typography?.[field.key]?.sampleBox;
+    if (!sampleBox) return [];
+    const box = mapSampleBox(sampleBox);
+    if (!box) return [];
     return [{
       key: field.key,
       kind: "text",
-      box: {
-        x: sampleBox.x,
-        y,
-        width: sampleBox.width,
-        height: bottom - y,
-      },
+      box,
     }];
   });
+  for (const field of template.inputs.images) {
+    const sampleBox = template.deterministicEditing?.imageBoxes[field.key];
+    if (!sampleBox) continue;
+    const box = mapSampleBox(sampleBox);
+    if (box) regions.push({ key: field.key, kind: "image", box });
+  }
   return regions.length > 0 ? { regions, copyValues: { ...expectedCopy } } : undefined;
 }
 

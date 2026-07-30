@@ -36,6 +36,8 @@ export const TEXT_LAYERS_VALID_FOR_LIMIT = 12;
 /** Patch uploads are one small region crop; anything bigger is not a patch. */
 export const MAX_TEXT_PATCH_BYTES = 4 * 1024 * 1024;
 
+export { buildingTextLayers } from "./text-layer-state.ts";
+
 export function textRegionsOf(regions: AdStudioCloneRegion[] | undefined): AdStudioCloneRegion[] {
   return (regions ?? []).filter((region) => region.kind === "text" && region.box.width > 0 && region.box.height > 0);
 }
@@ -68,6 +70,8 @@ export function buildTemplateTextLayerStyles(
       italic: spec.italic,
       case: spec.case,
       sizeRatio: spec.sizeRatio,
+      sampleBox: spec.sampleBox,
+      measuredLines: spec.measuredLines,
       lineHeight: spec.lineHeight,
       tracking: spec.tracking,
       color: spec.color,

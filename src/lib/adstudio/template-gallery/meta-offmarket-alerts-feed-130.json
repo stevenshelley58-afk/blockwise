@@ -177,5 +177,22 @@
       "sampleLineCount": 2,
       "detectionScore": 1
     }
+  },
+  "deterministicEditing": {
+    "status": "partial",
+    "imageBoxes": {
+      "property_photo": {
+        "x": 0.1111111111,
+        "y": 0.2777777778,
+        "width": 0.337962963,
+        "height": 0.542962963
+      },
+      "agency_logo": {
+        "x": 0.7814814815,
+        "y": 0.84,
+        "width": 0.1740740741,
+        "height": 0.137037037
+      }
+    }
   }
 }

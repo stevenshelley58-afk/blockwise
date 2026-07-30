@@ -3,6 +3,7 @@ import * as Sentry from "@sentry/nextjs";
 
 import { recordWorkspaceFunnelEventBestEffort } from "../src/lib/analytics/progressive-funnel.ts";
 import {
+  assertDeterministicFeedEditingReady,
   runTemplateCampaignGeneration,
   type CreateCampaignBody,
 } from "../src/lib/adstudio/generate-template-campaign.ts";
@@ -71,8 +72,19 @@ export const generateAdStudioTemplateCampaignTask = task({
         creditReservation: reservation ?? undefined,
       });
 
-      // "done" the moment the feed (4:5) persists — the polling client shows
-      // the ad now. The Story render and advisory editing plate finish after.
+      // A template may opt into the strict deterministic editor contract only
+      // after every declared field is prebuilt. For those templates, do not
+      // release the ad while its text-free plate is still building: the first
+      // screen the customer sees must already support the promised fast edit.
+      if (result.requiresDeterministicEditing) {
+        await result.editingLayersTask;
+        await assertDeterministicFeedEditingReady({
+          supabase,
+          workspaceId: payload.workspaceId,
+          campaignId: result.campaignId,
+        });
+      }
+
       await supabase
         .from("adstudio_creative_jobs")
         .update({
@@ -94,9 +106,10 @@ export const generateAdStudioTemplateCampaignTask = task({
         },
       });
 
-      // Regions were persisted with the feed. Finish the optional text-free
-      // plate in the background without gating ad or editor availability.
-      await result.editingLayersTask;
+      // Partial templates keep the legacy staged behaviour during migration.
+      if (!result.requiresDeterministicEditing) {
+        await result.editingLayersTask;
+      }
 
       // Await the story (9:16) background persist so it lands before the
       // trigger task completes (the job is already marked "done" above).

@@ -3,7 +3,12 @@ import { runAdStudioComplianceReview } from "./compliance.ts";
 import { deterministicUuid } from "./id.ts";
 import { labelForMetaCta } from "./meta-cta.ts";
 import { scoreAdStudioVariant } from "./scoring.ts";
-import { resolveAdStudioTemplate, type AdStudioGalleryTemplate } from "./templates.ts";
+import {
+  deterministicEditingReadiness,
+  resolveAdStudioTemplate,
+  type AdStudioGalleryTemplate,
+} from "./templates.ts";
+import { buildingTextLayers } from "./text-layer-state.ts";
 import type {
   AdStudioBrandKit,
   AdStudioCampaign,
@@ -244,6 +249,15 @@ export function buildCloneCreative(input: {
       height: size.height,
       backgroundAssetId: null,
       cloneQa: input.cloneQa,
+      // The post-persist background task owns this lease.  The editor sees it
+      // immediately and waits instead of racing the task with another plate
+      // inpaint request for this same finished clone.
+      textLayers: input.cloneQa?.regions.some((region) => region.kind === "text")
+        ? buildingTextLayers(
+          input.cloneImage,
+          deterministicEditingReadiness(input.template).status === "ready",
+        )
+        : undefined,
       objects: [{
         objectId: "template_clone_image",
         type: "image",

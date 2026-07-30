@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ChevronLeft, ChevronRight, ImagePlus, ListTree, Redo2, ScanEye, Sparkles, Undo2, WandSparkles, X, ZoomIn } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, ImagePlus, ListTree, Redo2, RefreshCw, ScanEye, Sparkles, Undo2, WandSparkles, X, ZoomIn } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from "react";
 
 import type { AdStudioCloneRegion, AdStudioCreative } from "@/lib/adstudio/types.ts";
@@ -124,6 +124,8 @@ export function InPlaceAdEditor({
   // the final pixels, so the edit reads as instant while the server saves.
   const [optimisticPatch, setOptimisticPatch] = useState<{ key: string; dataUrl: string; box: AdStudioCloneRegion["box"] } | null>(null);
   const [loadedFontIds, setLoadedFontIds] = useState<Set<string>>(new Set());
+  const [layerBuildIssue, setLayerBuildIssue] = useState<string | null>(null);
+  const [layerRetryToken, setLayerRetryToken] = useState(0);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const textInputRef = useRef<HTMLTextAreaElement | null>(null);
   const frameRef = useRef<HTMLDivElement | null>(null);
@@ -155,6 +157,14 @@ export function InPlaceAdEditor({
     () => regions.find((region) => region.key === selectedKey),
     [regions, selectedKey],
   );
+  const selectedTextStyle = selectedRegion?.kind === "text"
+    ? textLayers?.styles[selectedRegion.key]
+    : undefined;
+  const selectedTextInstantReady = Boolean(
+    layersReady
+    && selectedTextStyle?.mode === "live"
+    && loadedFontIds.has(selectedTextStyle.fontId),
+  );
 
   useEffect(() => {
     if (!busy) {
@@ -175,27 +185,69 @@ export function InPlaceAdEditor({
     setPan({ x: 0, y: 0 });
   }, [src]);
 
-  // Background decomposition: build the text-free plate + type treatments the
-  // moment the editor opens (or a render invalidates them), so by the time the
-  // customer edits text the instant path is ready. Failures are silent — the
-  // model path keeps working either way.
+  // Background decomposition: builds are claimed durably at render persistence.
+  // An editor opened while that claim is `building` observes it and never
+  // starts a second inpaint request for the same image.
   useEffect(() => {
     if (regions.length === 0 || busy) return;
     if (!src || src.startsWith("data:")) return;
     const current = creativeRef.current.canvas.textLayers;
     if (current?.status === "ready" && current.validFor.includes(src)) return;
+    if (current?.status === "building" && current.derivedFrom === src) {
+      // Polling this endpoint only reads the durable lease (202) until the
+      // worker persists `ready`; it never starts another model request.
+      let cancelled = false;
+      let retry: number | undefined;
+      const poll = () => {
+        retry = window.setTimeout(() => {
+        void requestCreativeLayers(creative.creativeId).then((built) => {
+          if (cancelled) return;
+          if (!built) {
+            setLayerBuildIssue("Exact text editing could not finish preparing.");
+            return;
+          }
+          if (built.status === "building") {
+            poll();
+            return;
+          }
+          const latest = creativeRef.current;
+          const latestSrc = latest.canvas.objects[0]?.content ?? latest.canvas.objects[0]?.assetId ?? "";
+          if (built.status === "ready" && !built.validFor.includes(latestSrc)) return;
+          setLayerBuildIssue(built.status === "failed"
+            ? built.error ?? "Exact text editing could not finish preparing."
+            : null);
+          onCreativeChange({ ...latest, canvas: { ...latest.canvas, textLayers: built } });
+        });
+        }, 2_000);
+      };
+      poll();
+      return () => {
+        cancelled = true;
+        if (retry !== undefined) window.clearTimeout(retry);
+      };
+    }
     if (layersRequestedForRef.current === src) return;
     layersRequestedForRef.current = src;
     let cancelled = false;
     void requestCreativeLayers(creative.creativeId).then((built) => {
-      if (cancelled || !built) return;
+      if (cancelled) return;
+      if (!built) {
+        setLayerBuildIssue("Exact text editing could not finish preparing.");
+        return;
+      }
       const latest = creativeRef.current;
       const latestSrc = latest.canvas.objects[0]?.content ?? latest.canvas.objects[0]?.assetId ?? "";
-      if (!built.validFor.includes(latestSrc)) return;
+      if (
+        (built.status === "ready" && !built.validFor.includes(latestSrc))
+        || (built.status === "building" && built.derivedFrom !== latestSrc)
+      ) return;
+      setLayerBuildIssue(built.status === "failed"
+        ? built.error ?? "Exact text editing could not finish preparing."
+        : null);
       onCreativeChange({ ...latest, canvas: { ...latest.canvas, textLayers: built } });
     });
     return () => { cancelled = true; };
-  }, [busy, creative.creativeId, onCreativeChange, regions.length, src]);
+  }, [busy, creative.creativeId, layerRetryToken, onCreativeChange, regions.length, src]);
 
   // Keep the plate decoded and ready so text patches render synchronously.
   useEffect(() => {
@@ -296,7 +348,10 @@ export function InPlaceAdEditor({
         // The instant path can go stale mid-flight (another device edited, or
         // the plate is still building). Fall back to the model path once —
         // the customer keeps their edit either way.
-        if (!(error instanceof CreativeEditError && error.code === "layers_stale" && mutation.patchImage)) {
+        if (
+          creative.canvas.textLayers?.deterministicOnly
+          || !(error instanceof CreativeEditError && error.code === "layers_stale" && mutation.patchImage)
+        ) {
           throw error;
         }
         setOptimisticPatch(null);
@@ -352,6 +407,12 @@ export function InPlaceAdEditor({
     setUncontrolledSelectedKey(null);
     onRegionSelectionChange?.(null);
     setInstruction("");
+  }
+
+  function retryLayerBuild() {
+    layersRequestedForRef.current = null;
+    setLayerBuildIssue(null);
+    setLayerRetryToken((current) => current + 1);
   }
 
   // Arrow keys walk the ad's elements in place; Escape releases the selection.
@@ -479,6 +540,10 @@ export function InPlaceAdEditor({
     }
     if (patchImage) {
       setOptimisticPatch({ key: selectedRegion.key, dataUrl: patchImage, box: selectedRegion.box });
+    }
+    if (textLayers?.deterministicOnly && !patchImage) {
+      showToast("This text area is still preparing. Wait a moment, then try again.");
+      return;
     }
     void performMutation(
       { action: "edit", fieldKey: selectedRegion.key, newValue: value, patchImage },
@@ -741,17 +806,34 @@ export function InPlaceAdEditor({
               <small>
                 {textDraft.length}/{textLayers?.styles[selectedRegion.key]?.maxLength ?? MAX_TEXT_LENGTH}. Press Ctrl+Enter to apply.
               </small>
-              <button className="primary" type="button" onClick={applyTextEdit} disabled={busy || !textDraft.trim()}>
+              <button
+                className="primary"
+                type="button"
+                onClick={applyTextEdit}
+                disabled={busy || !textDraft.trim() || Boolean(textLayers?.deterministicOnly && !selectedTextInstantReady)}
+              >
                 <Check aria-hidden size={16} />
                 Replace text
               </button>
-              {layersReady
-                && textLayers?.styles[selectedRegion.key]?.mode === "live"
-                && loadedFontIds.has(textLayers.styles[selectedRegion.key]!.fontId) ? (
+              {selectedTextInstantReady ? (
                 <small className="studio-inplace-instant" aria-live="polite">
                   <Sparkles aria-hidden size={12} />
                   Instant editing ready — text changes apply in about a second.
                 </small>
+              ) : textLayers?.deterministicOnly ? (
+                layerBuildIssue || textLayers.status === "failed" ? (
+                  <div aria-live="polite">
+                    <small>{layerBuildIssue ?? textLayers.error ?? "Exact text editing could not finish preparing."}</small>
+                    <button type="button" onClick={retryLayerBuild} disabled={busy}>
+                      <RefreshCw aria-hidden size={16} />
+                      Retry
+                    </button>
+                  </div>
+                ) : (
+                  <small aria-live="polite">
+                    Preparing exact text editing…
+                  </small>
+                )
               ) : null}
             </div>
           ) : (

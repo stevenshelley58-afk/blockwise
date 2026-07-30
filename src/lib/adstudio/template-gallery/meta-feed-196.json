@@ -268,5 +268,16 @@
       "sampleLineCount": 5,
       "detectionScore": 1
     }
+  },
+  "deterministicEditing": {
+    "status": "partial",
+    "imageBoxes": {
+      "main_property_image": {
+        "x": 0.16018518518518518,
+        "y": 0.18444444444444444,
+        "width": 0.7166666666666667,
+        "height": 0.5525925925925926
+      }
+    }
   }
 }

@@ -363,5 +363,28 @@
       "sampleLineCount": 1,
       "detectionScore": 1
     }
+  },
+  "deterministicEditing": {
+    "status": "partial",
+    "imageBoxes": {
+      "property_photo": {
+        "x": 0.012037037037037037,
+        "y": 0.008148148148148147,
+        "width": 0.975925925925926,
+        "height": 0.42814814814814817
+      },
+      "agent_portrait": {
+        "x": 0.7101851851851851,
+        "y": 0.5925925925925926,
+        "width": 0.2777777777777778,
+        "height": 0.3985185185185185
+      },
+      "agency_logo": {
+        "x": 0.7444444444444445,
+        "y": 0.35333333333333333,
+        "width": 0.2,
+        "height": 0.16
+      }
+    }
   }
 }
