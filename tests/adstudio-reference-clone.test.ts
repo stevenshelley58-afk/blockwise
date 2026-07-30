@@ -52,6 +52,24 @@ test("copy is exact, defaulted from safe sample values, and max-length bounded",
   assert.match(request.prompt, /render each value character-for-character exactly once/);
 });
 
+test("template colours are the default and preserve the approved sample palette", () => {
+  const request = buildCloneImageRequest(template, { images });
+  assert.match(request.prompt, /preserve the exact colour palette of reference image 1/i);
+  assert.match(request.prompt, /Do not recolour the design to match the supplied logo or Brand Pack/i);
+  assert.doesNotMatch(request.prompt, /adapt the design to this Brand Pack palette/i);
+});
+
+test("Brand Pack colours are applied only when the customer explicitly chooses them", () => {
+  const request = buildCloneImageRequest(template, {
+    images,
+    colourSource: "brand",
+    brandColours: ["primary #123456", "accent #FFCC00", "primary #123456"],
+  });
+  assert.match(request.prompt, /adapt the design to this Brand Pack palette/i);
+  assert.match(request.prompt, /primary #123456, accent #FFCC00/);
+  assert.match(request.prompt, /Preserve the reference design's contrast, hierarchy, typography, spacing, shapes, and image treatment/);
+});
+
 test("supplied photos carry the fit rule: extend past edges instead of cropping the subject", () => {
   const request = buildCloneImageRequest(template, { images });
   assert.ok(request.prompt.includes(PHOTO_FIT_RULE));

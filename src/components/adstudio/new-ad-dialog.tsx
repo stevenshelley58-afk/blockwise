@@ -41,6 +41,7 @@ type Step = "source" | "brief";
 type TemplateFilter = "all" | "listings" | "appraisals" | "market" | "sold";
 type MediaSourceMode = "details" | "library";
 type GenerationQuality = NonNullable<FirstAdInput["generationQuality"]>;
+type ColourSource = NonNullable<FirstAdInput["colourSource"]>;
 type ImageLibraryAsset = {
   /** Signed/downscaled URL used for the grid thumbnail. */
   src: string;
@@ -504,6 +505,7 @@ export function NewAdDialog({
   const [templateId, setTemplateId] = useState<string | undefined>(undefined);
   const [description, setDescription] = useState("");
   const [generationQuality, setGenerationQuality] = useState<GenerationQuality>("fast");
+  const [colourSource, setColourSource] = useState<ColourSource>("template");
   const [imageDataUrlsBySlot, setImageDataUrlsBySlot] = useState<Record<string, string>>({});
   // Point 9 — background image scaling: the slot shows a raw `URL.createObjectURL`
   // preview INSTANTLY while the heavier storage upload (which downscales big
@@ -644,6 +646,7 @@ export function NewAdDialog({
       description.trim() ||
       Object.keys(imageDataUrlsBySlot).length > 0 ||
       Object.values(feedCopy).some((value) => value.trim()) ||
+      colourSource !== "template" ||
       customerCopyFields.some(
         (field) => (onImageCopy[field.key] ?? "") !== (defaultOnImageCopy[field.key] ?? ""),
       ),
@@ -685,6 +688,7 @@ export function NewAdDialog({
     setFilter("all");
     setDescription("");
     setGenerationQuality("fast");
+    setColourSource("template");
     // The customer supplies every declared image and text field. The selected
     // sample is only the visual anchor sent to the image model.
     setImageDataUrlsBySlot({});
@@ -984,6 +988,11 @@ export function NewAdDialog({
     setError("");
   }
 
+  function selectColourSource(source: ColourSource) {
+    setColourSource(source);
+    setError("");
+  }
+
   async function submit() {
     const trimmed = effectiveDescription.trim();
     const blockers = buildRequirementBlockers({
@@ -1020,6 +1029,7 @@ export function NewAdDialog({
         templateId: selectedTemplate.id,
         description: trimmed,
         generationQuality,
+        colourSource,
         imageDataUrl,
         imageDataUrls,
         onImageCopy: Object.fromEntries(
@@ -1344,6 +1354,39 @@ export function NewAdDialog({
                     </div>
                   )}
                 </section>
+
+              <fieldset className="studio-newad-quality">
+                <legend>Colour scheme</legend>
+                <div className="studio-newad-quality-options">
+                  <label className={colourSource === "template" ? "is-selected" : undefined}>
+                    <input
+                      type="radio"
+                      name="colour-source"
+                      value="template"
+                      checked={colourSource === "template"}
+                      onChange={() => selectColourSource("template")}
+                    />
+                    <span>
+                      <strong>Template colours</strong>
+                      <small>Keep the selected ad&apos;s original colour scheme</small>
+                    </span>
+                    <em>Recommended</em>
+                  </label>
+                  <label className={colourSource === "brand" ? "is-selected" : undefined}>
+                    <input
+                      type="radio"
+                      name="colour-source"
+                      value="brand"
+                      checked={colourSource === "brand"}
+                      onChange={() => selectColourSource("brand")}
+                    />
+                    <span>
+                      <strong>Brand Pack colours</strong>
+                      <small>Adapt the ad to your saved brand palette</small>
+                    </span>
+                  </label>
+                </div>
+              </fieldset>
 
               <fieldset className="studio-newad-quality">
                 <legend>Generation quality</legend>

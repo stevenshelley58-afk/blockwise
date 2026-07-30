@@ -31,6 +31,11 @@ export type FirstAdInput = {
   description: string;
   /** Customer-facing render choice. Fast is the default for new ads. */
   generationQuality?: "fast" | "high";
+  /**
+   * Which palette the one canonical clone request preserves. Template is the
+   * default so existing approved samples do not change appearance.
+   */
+  colourSource?: "template" | "brand";
   imageDataUrl: string;
   imageDataUrls?: Partial<Record<string, string>>;
   /** Clone renders produced after the request is validated. */

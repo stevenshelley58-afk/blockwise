@@ -44,6 +44,9 @@ export function validateFirstAd(firstAd: FirstAdInput | undefined): string | nul
   if (firstAd.generationQuality && !["fast", "high"].includes(firstAd.generationQuality)) {
     return "Choose Fast or High quality generation.";
   }
+  if (firstAd.colourSource && !["template", "brand"].includes(firstAd.colourSource)) {
+    return "Choose the template colours or your Brand Pack colours.";
+  }
   if (firstAd.copy) {
     const fields = [firstAd.copy.primaryText, firstAd.copy.headline, firstAd.copy.description, firstAd.copy.cta];
     if (fields.some((field) => typeof field !== "string" || field.length > 500)) {

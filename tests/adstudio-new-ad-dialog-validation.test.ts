@@ -142,7 +142,8 @@ test("the server owns clone generation and the client waits for the finished ad"
   assert.match(actions, /\/api\/adstudio\/jobs\//);
   assert.match(actions, /Your ad is ready to edit/);
   assert.match(generation, /buildTemplateCloneRequestsByFormat/);
-  assert.match(generation, /detectCloneRegions/);
+  assert.match(generation, /buildPrebuiltTemplateCloneQa/);
+  assert.doesNotMatch(generation, /detectCloneRegions/);
   assert.match(generation, /persistAdStudioCampaignPack/);
 });
 
@@ -161,6 +162,21 @@ test("the customer chooses fast or high quality without provider jargon", () => 
   assert.match(dialog, /error \? "Try again" : "Generate ad"/);
   assert.match(dialog, /selectGenerationQuality/);
   assert.doesNotMatch(dialog, /Gemini|GPT Image|OpenAI|fal\.ai/);
+});
+
+test("the customer explicitly chooses template or Brand Pack colours", () => {
+  const dialog = readFileSync("src/components/adstudio/new-ad-dialog.tsx", "utf8");
+  const types = readFileSync("src/lib/adstudio/types.ts", "utf8");
+  const validation = readFileSync("src/lib/adstudio/first-ad-input.ts", "utf8");
+
+  assert.match(types, /colourSource\?:\s*"template" \| "brand"/);
+  assert.match(dialog, /legend>Colour scheme<\/legend>/);
+  assert.match(dialog, /Template colours/);
+  assert.match(dialog, /Keep the selected ad&apos;s original colour scheme/);
+  assert.match(dialog, /Brand Pack colours/);
+  assert.match(dialog, /setColourSource\("template"\)/);
+  assert.match(dialog, /colourSource,/);
+  assert.match(validation, /\["template", "brand"\]\.includes\(firstAd\.colourSource\)/);
 });
 
 test("the generation footer gives its status a full row on mobile", () => {
