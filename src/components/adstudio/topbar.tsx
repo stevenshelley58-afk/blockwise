@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { Archive, Cloud, MoreHorizontal, Palette, Settings2, Share2, Trash2 } from "lucide-react";
+import { Archive, Cloud, MoreHorizontal, Settings2, Share2, SwatchBook, Trash2 } from "lucide-react";
 
 import { BlockwiseLogo } from "@/components/blockwise-logo";
 
@@ -195,7 +195,7 @@ export function TopBar({
                 onOpenBrand();
               }}
             >
-              <Palette aria-hidden size={16} />
+              <SwatchBook aria-hidden size={16} />
               Brand Pack
             </button>
           )}
