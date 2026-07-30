@@ -2,6 +2,7 @@ import { ArrowRight, CalendarClock, Check, CircleDot, CreditCard, UsersRound } f
 import Link from "next/link";
 
 import { StatusPill } from "@/components/status-pill";
+import { formatBillingAmount, getBillingOffer } from "@/lib/billing/offers";
 
 export type ActivationCardData = {
   activation: {
@@ -185,13 +186,29 @@ function planLabel(state: string): string {
 }
 
 function billingTiming(plan: ActivationCardData["plan"]): string {
+  const offer = getBillingOffer(
+    plan.currency === "USD" ? "US" : "AU",
+    "self_serve",
+  );
+  const firstMonth = formatBillingAmount(
+    offer.firstInvoiceAmount,
+    offer.currency,
+  );
+  const renewal = formatBillingAmount(
+    offer.recurringAmount,
+    offer.currency,
+  );
+
   if (plan.accessState === "unbilled") {
-    return `${plan.currency === "USD" ? "US$" : "A$"}99 first month when you launch or seven days after Checkout.`;
+    return `Creating three ads is free. Checkout starts a seven-day billing trial; the first paid month is ${firstMonth}.`;
   }
   if (!plan.periodEnd) return "Billing timing will appear after Stripe confirms the subscription.";
   const date = formatDate(plan.periodEnd);
   if (plan.cancelAtPeriodEnd) return `Credits and access remain available until ${date}.`;
-  return `Next ${plan.currency === "USD" ? "US$" : "A$"}499 renewal: ${date}.`;
+  if (plan.accessState === "trialing") {
+    return `First paid month (${firstMonth}) begins by ${date}, or earlier when your first campaign launches.`;
+  }
+  return `Next ${renewal} renewal: ${date}.`;
 }
 
 function metaLabel(state: string): string {

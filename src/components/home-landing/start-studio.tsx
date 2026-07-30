@@ -5,23 +5,22 @@ import { AnimatePresence, MotionConfig, motion } from "motion/react";
 
 import { CtaLink } from "@/components/landing/cta-link";
 
-import { RADAR_ADS, START_TEMPLATES } from "./data";
+import { START_TEMPLATES } from "./data";
 import { FbAdCard } from "./fb-ad-card";
 
 /**
  * #start — the interactive studio band.
  *
- * One starting point in, one live ad out. A single strip of proven templates
- * (primary) and a compact strip of nearby examples (secondary) both feed the
- * same preview. Selecting any card animates the preview to that ad — the
- * "pick a proven ad, watch yours appear" loop that anchors the page.
+ * One starting point in, one live ad out. A single strip of curated templates
+ * feeds the preview. Selecting any card animates the preview to that ad — the
+ * "pick a layout, watch yours appear" loop that anchors the page.
  *
  * Motion thesis: the preview swap on selection is the one authored moment
  * (AnimatePresence crossfade). Entrance and hover are quiet support. All
  * motion honors prefers-reduced-motion via MotionConfig.
  */
 
-/** One selectable starting point — a curated template or a nearby example. */
+/** One selectable starting point — a curated template. */
 type StartPick = {
   id: string;
   label: string;
@@ -40,16 +39,6 @@ const TEMPLATES: StartPick[] = START_TEMPLATES.map((t) => ({
   footSub: t.footSub,
 }));
 
-const NEARBY: StartPick[] = RADAR_ADS.map((ad) => ({
-  id: `nearby-${ad.angle.toLowerCase().replace(/\s+/g, "-")}`,
-  label: ad.angle,
-  imageSrc: ad.src,
-  copy: ad.copy,
-  footHeading: ad.foot,
-}));
-
-const ALL_PICKS: StartPick[] = [...TEMPLATES, ...NEARBY];
-
 /** Confident deceleration shared by the band (matches --hw-ease). */
 const EASE_OUT: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
@@ -66,7 +55,7 @@ const cardVariants = {
 
 export function StartStudio() {
   const [selectedId, setSelectedId] = useState<string>(TEMPLATES[0].id);
-  const selected = ALL_PICKS.find((p) => p.id === selectedId) ?? TEMPLATES[0];
+  const selected = TEMPLATES.find((p) => p.id === selectedId) ?? TEMPLATES[0];
 
   return (
     <MotionConfig reducedMotion="user">
@@ -81,7 +70,7 @@ export function StartStudio() {
               transition={{ duration: 0.55, ease: EASE_OUT }}
             >
               <h2>Don&rsquo;t start from a blank page.</h2>
-              <p className="hw-sub">Pick a proven ad. We make it yours.</p>
+              <p className="hw-sub">Pick a layout. Add your own photos and copy.</p>
             </motion.div>
 
             <div className="hw-studio-group hw-studio-group--templates">
@@ -108,38 +97,6 @@ export function StartStudio() {
                         <img src={t.imageSrc} alt="" loading="lazy" />
                       </span>
                       <span className="hw-studio-card-label">{t.label}</span>
-                    </motion.button>
-                  );
-                })}
-              </motion.div>
-            </div>
-
-            <div className="hw-studio-group hw-studio-group--nearby">
-              <p className="hw-studio-group-label hw-studio-group-label--soft">
-                Or see what&rsquo;s working near you <span className="hw-tag">Signals</span>
-              </p>
-              <motion.div
-                className="hw-studio-nearby"
-                variants={stripVariants}
-                initial="hidden"
-                whileInView="show"
-                viewport={{ once: true, amount: 0.2 }}
-              >
-                {NEARBY.map((n) => {
-                  const active = n.id === selectedId;
-                  return (
-                    <motion.button
-                      key={n.id}
-                      type="button"
-                      variants={cardVariants}
-                      className={`hw-studio-chip${active ? " is-active" : ""}`}
-                      aria-pressed={active}
-                      onClick={() => setSelectedId(n.id)}
-                    >
-                      <span className="hw-studio-chip-thumb" aria-hidden>
-                        <img src={n.imageSrc} alt="" loading="lazy" />
-                      </span>
-                      <span className="hw-studio-chip-label">{n.label}</span>
                     </motion.button>
                   );
                 })}

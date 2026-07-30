@@ -2,7 +2,7 @@ import { SkeletonPage, SkeletonPageHead, SkeletonPanel } from "@/components/skel
 
 export default function PropertyCheckLoading() {
   return (
-    <SkeletonPage label="Property Check" width="max-w-4xl">
+    <SkeletonPage label="page" width="max-w-4xl">
       <SkeletonPageHead action={false} />
       <SkeletonPanel height="h-14" />
       <div className="grid gap-3.5 sm:grid-cols-2">

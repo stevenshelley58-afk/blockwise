@@ -55,7 +55,7 @@ export const home: HomeCopy = {
     readyTitle: "Ready to publish",
     readySubtitle: "Everything is connected. Turn your next listing into a live ad.",
     readyBody:
-      "Your brand pack is ready and Meta is connected. Pick a proven sample, add your listing photos, and Blockwise generates on-brand Feed and Story creatives.",
+      "Your brand pack is ready and Meta is connected. Pick a sample, add your listing photos, and Blockwise generates on-brand Feed and Story creatives.",
     adLibrary: "Ad library",
     viewPerformance: "View ad performance",
     steps: {
@@ -79,15 +79,9 @@ export const home: HomeCopy = {
   },
   quickActions: [
     {
-      href: "/ad-radar",
-      title: "Ad Radar",
-      subtitle: "See top-performing ads from agents near you.",
-    },
-    {
-      href: "/property-check",
-      title: "Property Check",
-      subtitle: "Instant insights and ad ideas for any listing.",
-      feature: "propertyCheck",
+      href: "/ad-studio/library",
+      title: "Ad Library",
+      subtitle: "Browse your generated Feed and Story creatives.",
     },
   ],
 };

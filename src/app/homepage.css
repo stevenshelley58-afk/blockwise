@@ -198,6 +198,11 @@ html, body { overflow-x: clip; }
   white-space: nowrap;
   flex: none;
 }
+.hw-header .hw-logo {
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+}
 .hw-logo-horizontal { display: block; height: 22px; width: auto; }
 .hw-logo-icon { display: none; height: 30px; width: 30px; }
 .hw-nav {
@@ -223,6 +228,9 @@ html, body { overflow-x: clip; }
 }
 .hw-nav + .hw-header-actions { margin-left: 0; }
 .hw-login {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   font-size: var(--hw-text-label);
   font-weight: 600;
   color: var(--hw-muted);
@@ -232,25 +240,15 @@ html, body { overflow-x: clip; }
 }
 .hw-login:hover { color: var(--hw-ink); }
 
-/* Mobile: keep the two orientation links that matter before conversion,
-   while the account actions stay pinned to the right edge. */
+/* Mobile: preserve one clear conversion path and full-size touch targets. */
 @media (max-width: 767.98px) {
   .hw-header-inner { gap: var(--hw-space-2xs); }
   .hw-nav {
-    display: flex;
-    gap: var(--hw-space-xs);
-    margin-left: auto;
-  }
-  .hw-nav a {
     display: none;
-    align-items: center;
-    min-height: 44px;
   }
-  .hw-nav a:first-child,
-  .hw-nav a:last-child { display: inline-flex; }
   .hw-header-actions {
     gap: var(--hw-space-2xs);
-    margin-left: 0;
+    margin-left: auto;
   }
   .hw-header .hw-logo-horizontal { display: none; }
   .hw-header .hw-logo-icon { display: block; }
@@ -272,6 +270,13 @@ html, body { overflow-x: clip; }
   .hw-header-actions .hw-btn {
     padding-inline: 12px;
     font-size: 11px;
+  }
+}
+
+/* Keep the initial mobile conversion action above the fixed consent choice. */
+@media (max-width: 767.98px) {
+  body:has(.consent-banner) .hw-page .hw-no-form {
+    margin-bottom: calc(164px + env(safe-area-inset-bottom));
   }
 }
 
@@ -474,8 +479,7 @@ html, body { overflow-x: clip; }
   grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
   grid-template-areas:
     "heading preview"
-    "templates preview"
-    "nearby preview";
+    "templates preview";
   column-gap: var(--hw-space-2xl);
   row-gap: var(--hw-space-lg);
   align-items: start;
@@ -483,7 +487,6 @@ html, body { overflow-x: clip; }
 }
 .hw-studio-heading { grid-area: heading; min-width: 0; }
 .hw-studio-group--templates { grid-area: templates; min-width: 0; }
-.hw-studio-group--nearby { grid-area: nearby; min-width: 0; }
 .hw-studio-group-label {
   font-size: var(--hw-text-label);
   font-weight: 600;
@@ -493,7 +496,6 @@ html, body { overflow-x: clip; }
   align-items: center;
   gap: 8px;
 }
-.hw-studio-group-label--soft { color: var(--hw-muted); }
 
 /* Template cards — the primary starting point. */
 .hw-studio-templates {
@@ -547,51 +549,7 @@ html, body { overflow-x: clip; }
   padding: 0 2px 2px;
 }
 
-/* Nearby examples — clearly secondary, compact centered chips. */
-.hw-studio-nearby {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 8px;
-}
-.hw-studio-chip {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 6px 12px 6px 6px;
-  background: var(--hw-surface);
-  border: 1px solid var(--hw-line);
-  border-radius: var(--hw-r-pill);
-  text-align: left;
-  font-family: inherit;
-  cursor: pointer;
-  flex: none;
-  transition:
-    border-color var(--hw-dur) var(--hw-ease),
-    box-shadow var(--hw-dur) var(--hw-ease);
-}
-.hw-studio-chip:hover { border-color: var(--hw-line-heavy); }
-.hw-studio-chip.is-active {
-  border-color: var(--hw-ink);
-  box-shadow: 0 0 0 1px var(--hw-ink);
-}
-.hw-studio-chip-thumb {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  overflow: hidden;
-  background: var(--hw-tint);
-  flex: none;
-}
-.hw-studio-chip-thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
-.hw-studio-chip-label {
-  font-size: 12.5px;
-  font-weight: 600;
-  color: var(--hw-ink);
-  white-space: nowrap;
-}
-
-/* Live preview — sticky on desktop, docks below the strips on mobile. */
+/* Live preview — sticky on desktop, docks below the strip on mobile. */
 .hw-studio-side {
   grid-area: preview;
   position: sticky;
@@ -614,7 +572,6 @@ html, body { overflow-x: clip; }
     grid-template-areas:
       "heading"
       "templates"
-      "nearby"
       "preview";
     column-gap: 0;
     row-gap: var(--hw-space-xl);
@@ -864,12 +821,11 @@ html, body { overflow-x: clip; }
   }
 }
 
-/* ---------- #control — daily email panel (accent card on the dark fold) ---------- */
+/* ---------- #control — results snapshot panel (accent card on the dark fold) ---------- */
 
 .hw-email {
   background: var(--hw-surface);
   border: 1px solid var(--hw-line);
-  border-top: 3px solid var(--hw-accent);
   border-radius: var(--hw-r-card);
   box-shadow: var(--hw-shadow-rest);
   padding: var(--hw-space-md);
@@ -992,6 +948,15 @@ html, body { overflow-x: clip; }
 
 /* ---------- #free-trial ---------- */
 
+.hw-trial-cta {
+  display: inline-grid;
+  justify-items: center;
+  margin-top: var(--hw-space-sm);
+}
+.hw-trial-cta .hw-sub {
+  margin-top: var(--hw-space-xs);
+  text-align: center;
+}
 .hw-trial-facts {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

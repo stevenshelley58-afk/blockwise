@@ -20,6 +20,7 @@ import {
 } from "./ad-classifier.mjs";
 import { CONTENT_RUN_JOB_TYPE, handleHermesContentRun } from "./content-engine.mjs";
 import { runAdRadarAccuracyAudit } from "./ad-radar-accuracy-audit.mjs";
+import { resolveAdRadarRuntime } from "./ad-radar-runtime-gate.mjs";
 import { publishCustomerReadModels } from "./customer-read-model-publisher.mjs";
 import { runInactiveAdPurge } from "./inactive-ad-purge.mjs";
 import {
@@ -31,7 +32,7 @@ import {
 const DEFAULT_POSTCODES = ["ALL"];
 const COVERAGE_AUDITOR_JOB_TYPE = "blockwise-coverage-auditor";
 const DEFECT_INVESTIGATOR_JOB_TYPE = "blockwise-defect-investigator";
-const HANDLED_JOB_TYPES = [
+const AD_RADAR_JOB_TYPES = [
   "blockwise-agent-census",
   "blockwise-page-resolver",
   "blockwise-ad-collector",
@@ -39,9 +40,13 @@ const HANDLED_JOB_TYPES = [
   "blockwise-ad-classifier",
   COVERAGE_AUDITOR_JOB_TYPE,
   DEFECT_INVESTIGATOR_JOB_TYPE,
-  CONTENT_RUN_JOB_TYPE,
 ];
 const env = process.env;
+const { adRadarEnabled, handledJobTypes: HANDLED_JOB_TYPES } = resolveAdRadarRuntime(
+  env,
+  CONTENT_RUN_JOB_TYPE,
+  AD_RADAR_JOB_TYPES,
+);
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const now = () => new Date().toISOString();
 const json = (value) => JSON.stringify(value);
@@ -5261,12 +5266,15 @@ async function claimContentFastLaneJobs({ jobTypes, limit }) {
 
 async function tick() {
   let buildRunId = null;
-  let supervisor = { policySeedCandidates: 0, policySeeded: 0, duePolicies: 0, enqueued: 0, recycledCensus: 0, deferredCensus: 0, adRefreshCandidates: 0, adRefreshEnqueued: 0, locationSearchCandidates: 0, locationSearchEnqueued: 0 };
-  let watchdogs = {};
+  const adRadarDisabled = { skipped: true, reason: "ad_radar_disabled", adRadarEnabled: false };
+  let supervisor = adRadarEnabled
+    ? { policySeedCandidates: 0, policySeeded: 0, duePolicies: 0, enqueued: 0, recycledCensus: 0, deferredCensus: 0, adRefreshCandidates: 0, adRefreshEnqueued: 0, locationSearchCandidates: 0, locationSearchEnqueued: 0 }
+    : adRadarDisabled;
+  let watchdogs = adRadarEnabled ? {} : adRadarDisabled;
   let priorityContentHandled = 0;
-  let customerReadModels = { skipped: true, reason: "not_due" };
-  let accuracyAudit = { skipped: true, reason: "not_due" };
-  let inactiveAdPurge = { skipped: true, reason: "not_due" };
+  let customerReadModels = adRadarEnabled ? { skipped: true, reason: "not_due" } : adRadarDisabled;
+  let accuracyAudit = adRadarEnabled ? { skipped: true, reason: "not_due" } : adRadarDisabled;
+  let inactiveAdPurge = adRadarEnabled ? { skipped: true, reason: "not_due" } : adRadarDisabled;
   try {
     const fastLaneJobs = await claimContentFastLaneJobs({ jobTypes: [CONTENT_RUN_JOB_TYPE], limit: 1 });
     await Promise.all(fastLaneJobs.map(processOneJob));
@@ -5274,42 +5282,48 @@ async function tick() {
   } catch (error) {
     log("priority content worker pass failed; continuing to supervisor", { error: error.message }, "error");
   }
-  try {
-    buildRunId = await ensureBuildRun();
-    const policySeed = await ensureSourceBackedRefreshPolicies();
-    const census = await enqueueDueCensusJobs(buildRunId);
-    await refreshMetaBrowserChallengeCooldownFromSettings();
-    const adRefresh = await enqueueDueAdPageRefreshJobs(buildRunId);
-    const locationSearch = await enqueueDueLocationAdSearchJobs(buildRunId);
-    supervisor = { ...policySeed, ...census, ...adRefresh, ...locationSearch };
-  } catch (error) {
-    log("supervisor phase failed; continuing to queue worker", { error: error.message }, "error");
+  if (adRadarEnabled) {
+    try {
+      buildRunId = await ensureBuildRun();
+      const policySeed = await ensureSourceBackedRefreshPolicies();
+      const census = await enqueueDueCensusJobs(buildRunId);
+      await refreshMetaBrowserChallengeCooldownFromSettings();
+      const adRefresh = await enqueueDueAdPageRefreshJobs(buildRunId);
+      const locationSearch = await enqueueDueLocationAdSearchJobs(buildRunId);
+      supervisor = { ...policySeed, ...census, ...adRefresh, ...locationSearch };
+    } catch (error) {
+      log("supervisor phase failed; continuing to queue worker", { error: error.message }, "error");
+    }
+  } else {
+    log("Ad Radar runtime phases skipped", { adRadarEnabled: false, reason: "HERMES_AD_RADAR_ENABLED=false" });
   }
   const handled = await processClaimedJobs();
-  try {
-    watchdogs = await runWatchdogs();
-  } catch (error) {
-    log("watchdog phase failed after worker pass", { error: error.message }, "error");
+  if (adRadarEnabled) {
+    try {
+      watchdogs = await runWatchdogs();
+    } catch (error) {
+      log("watchdog phase failed after worker pass", { error: error.message }, "error");
+    }
+    try {
+      customerReadModels = await maybePublishCustomerReadModels();
+    } catch (error) {
+      customerReadModels = { skipped: false, error: error.message };
+      log("customer read model publish failed", { error: error.message }, "error");
+    }
+    try {
+      accuracyAudit = await maybeRunAccuracyAudit();
+    } catch (error) {
+      accuracyAudit = { skipped: false, error: error.message };
+      log("Ad Radar accuracy audit failed", { error: error.message }, "error");
+    }
+    try {
+      inactiveAdPurge = await maybeRunInactiveAdPurge();
+    } catch (error) {
+      inactiveAdPurge = { skipped: false, error: error.message };
+      log("inactive-ad purge failed", { error: error.message }, "error");
+    }
   }
-  try {
-    customerReadModels = await maybePublishCustomerReadModels();
-  } catch (error) {
-    customerReadModels = { skipped: false, error: error.message };
-    log("customer read model publish failed", { error: error.message }, "error");
-  }
-  try {
-    accuracyAudit = await maybeRunAccuracyAudit();
-  } catch (error) {
-    accuracyAudit = { skipped: false, error: error.message };
-    log("Ad Radar accuracy audit failed", { error: error.message }, "error");
-  }
-  try {
-    inactiveAdPurge = await maybeRunInactiveAdPurge();
-  } catch (error) {
-    inactiveAdPurge = { skipped: false, error: error.message };
-    log("inactive-ad purge failed", { error: error.message }, "error");
-  }
-  log("tick complete", { mode, workerId, buildRunId, priorityContentHandled, ...supervisor, handled, watchdogs, customerReadModels, accuracyAudit, inactiveAdPurge });
+  log("tick complete", { mode, workerId, adRadarEnabled, buildRunId, priorityContentHandled, ...supervisor, handled, watchdogs, customerReadModels, accuracyAudit, inactiveAdPurge });
 }
 
 let lastCustomerReadModelPublishAt = 0;
@@ -5354,7 +5368,7 @@ async function maybeRunInactiveAdPurge() {
 }
 
 async function main() {
-  log("starting", { mode, workerId, intervalMs, targetPostcodes: targetPostcodeLog, targetStates, sourceBackedStates: enabledCensusSourceStates, claimLimit, maxJobsPerTick, censusSourceTemplates: sourceTemplates.length, postcodeSuburbs: postcodeSuburbIndex.size, censusQueuePriority, censusPolicyAutoSeedEnabled, censusPolicySeedBatchSize, censusRecycleBlockedEnabled, adPageRefreshEnabled, adPageRefreshIntervalMinutes, adPageRefreshBatchSize, adPageRefreshMaxActive });
+  log("starting", { mode, workerId, adRadarEnabled, handledJobTypes: HANDLED_JOB_TYPES, intervalMs, targetPostcodes: targetPostcodeLog, targetStates, sourceBackedStates: enabledCensusSourceStates, claimLimit, maxJobsPerTick, censusSourceTemplates: sourceTemplates.length, postcodeSuburbs: postcodeSuburbIndex.size, censusQueuePriority, censusPolicyAutoSeedEnabled, censusPolicySeedBatchSize, censusRecycleBlockedEnabled, adPageRefreshEnabled, adPageRefreshIntervalMinutes, adPageRefreshBatchSize, adPageRefreshMaxActive });
   for (;;) {
     try {
       await tick();

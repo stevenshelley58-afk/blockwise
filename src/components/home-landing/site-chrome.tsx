@@ -26,14 +26,13 @@ export function SiteHeader() {
         </Link>
         <nav className="hw-nav" aria-label="Main">
           <Link href="/#start">How it works</Link>
-          <Link href="/#property-check">Property Check</Link>
           <Link href="/pricing">Pricing</Link>
           <Link href="/guides">Guides</Link>
         </nav>
         <div className="hw-header-actions">
           <SignInLink className="hw-login" />
           <CtaLink location="header" href="/signup" className="hw-btn hw-btn--dark">
-            Start free
+            Create three ads free
           </CtaLink>
         </div>
       </div>
@@ -65,8 +64,7 @@ export function SiteFooter() {
           </span>
           <nav className="hw-footer-links" aria-label="Footer">
             <Link href="/#start">How it works</Link>
-            <Link href="/#property-check">Property Check</Link>
-            <Link href="/#free-trial">Start free</Link>
+            <Link href="/#free-trial">Create three ads free</Link>
             <Link href="/pricing">Pricing</Link>
             <Link href="/guides">Guides</Link>
             <Link href="/privacy">Privacy</Link>

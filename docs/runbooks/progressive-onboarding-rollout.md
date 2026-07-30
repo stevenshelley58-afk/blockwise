@@ -15,7 +15,7 @@ The offer contract is fixed:
 - Meta ad spend paid separately by the customer;
 - 100 monthly render credits, one workspace, one Brand Pack, one Meta Business
   Portfolio, one primary ad account, and five named verified members;
-- managed service from US$1,500 or A$2,500 monthly plus ad spend, with the scope
+- managed service at US$1,500 or A$1,500 monthly plus ad spend, with the scope
   in the Terms of Service.
 
 Do not publish the offer while entitlements, test billing, legal copy, and the
@@ -70,7 +70,8 @@ Configure test-mode resources before setting the billing flag:
 - recurring self-serve Prices: USD 499 tax-exclusive and AUD 499
   tax-inclusive;
 - once-only introductory Coupons: USD 400 off and AUD 400 off;
-- recurring managed Prices: USD 1,500 and AUD 2,500 base monthly prices;
+- recurring managed Prices: USD 1,500 tax-exclusive and AUD 1,500
+  tax-inclusive base monthly prices;
 - Stripe Tax, billing-address collection, applicable business tax-ID
   collection, receipts, and the seven-day trial reminder;
 - a Checkout subscription requiring a reusable payment method and using the

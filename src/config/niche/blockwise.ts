@@ -44,15 +44,14 @@ export const blockwise: NicheConfig = {
     mobileTabs: [
       { href: "/self-serve", label: "Home" },
       { href: "/ad-studio", label: "Studio" },
-      { href: "/ad-radar", label: "Radar" },
       { href: "/results", label: "Results" },
       { href: "/leads", label: "Leads" },
     ],
   },
   features: {
-    adRadar: true,
-    propertyCheck: true,
-    suburbPages: true,
+    adRadar: false,
+    propertyCheck: false,
+    suburbPages: false,
     guides: true,
   },
   copy: {

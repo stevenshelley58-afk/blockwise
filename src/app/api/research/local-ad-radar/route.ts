@@ -1,12 +1,15 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { loadPublicAdRadarCards } from "@/lib/research/public-ad-radar";
+import { featureDisabledResponse } from "@/lib/auth/api-guards";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function GET(request: NextRequest) {
+  const featureGate = featureDisabledResponse("adRadar", "suburbPages");
+  if (featureGate) return featureGate;
   const location = request.nextUrl.searchParams.get("location") ?? request.nextUrl.searchParams.get("q") ?? "";
 
   try {

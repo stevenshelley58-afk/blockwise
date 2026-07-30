@@ -2,7 +2,7 @@ import { SkeletonPage, SkeletonPageHead, SkeletonPanel } from "@/components/skel
 
 export default function AdRadarLoading() {
   return (
-    <SkeletonPage label="Ad Radar">
+    <SkeletonPage label="page">
       <SkeletonPageHead action={false} />
       <SkeletonPanel height="h-44" />
       <div className="grid gap-3.5 sm:grid-cols-2 xl:grid-cols-3">

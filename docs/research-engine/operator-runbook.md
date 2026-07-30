@@ -105,11 +105,14 @@ It does not delete observations, snapshots, creative versions, or media blobs.
 Use build mode only for bounded rebuilds:
 
 1. Set `HERMES_RESEARCH_MODE=build`.
-2. Keep `BLOCKWISE_RESEARCH_RUNTIME_ENABLED=false` until the operator is ready.
+2. Keep `HERMES_AD_RADAR_ENABLED=false` until the operator is ready. This
+   preserves the content-engine fast lane and leaves queued Ad Radar work
+   untouched while every Ad Radar phase is skipped.
 3. Run census for a specific state, postcode, or agency set.
 4. Resolve pages for verified entities.
 5. Collect only from resolved verified pages.
-6. Return to `HERMES_RESEARCH_MODE=maintain`.
+6. Set `HERMES_AD_RADAR_ENABLED=true` only for the approved bounded run, then
+   return it to `false` and return `HERMES_RESEARCH_MODE=maintain`.
 
 ## Emergency Stop
 

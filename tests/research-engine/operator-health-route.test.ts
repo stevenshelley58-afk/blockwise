@@ -17,6 +17,11 @@ test("operator research health endpoint renders v_health as a red/green monitor 
 
 test("public research health endpoint is monitorable without exposing operator controls", () => {
   assert.doesNotMatch(publicRoute, /\brequireOperator\b/u, "public health route must be callable by an external monitor");
+  const featureGate = publicRoute.indexOf("!niche.features.adRadar");
+  const serviceClient = publicRoute.indexOf("createResearchServiceClient()");
+  assert.ok(featureGate >= 0, "public health route must honor the Ad Radar feature gate");
+  assert.ok(featureGate < serviceClient, "disabled research health must not create a research service client");
+  assert.match(publicRoute, /status:\s*["']disabled["'][\s\S]*status:\s*200/u, "disabled research health must remain green for monitors");
   assert.match(publicRoute, /\bcreateResearchServiceClient\b/u, "public health route should read the private VPS database from the server side");
   assert.match(publicRoute, /\.schema\(["']research["']\)[\s\S]*\.from\(["']v_health["']\)/u, "public health route must read research.v_health");
   assert.match(publicRoute, /\bpaid_spend_without_ingest\b/u, "public health route must expose paid-spend failure as a red check");

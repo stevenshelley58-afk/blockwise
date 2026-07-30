@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { requireOperator } from "@/lib/operator/auth";
+import { requireAdRadarOperator as requireOperator } from "@/lib/operator/auth";
 import { validateOfficialMetaAdLibraryCoverage } from "@/lib/research/meta-official-api";
 import { createResearchServiceClient } from "@/lib/research/service";
 

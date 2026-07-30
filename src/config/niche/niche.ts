@@ -45,7 +45,7 @@ export type ShellCopy = {
     ended: string;
     active: string;
     daysLeft: (days: number) => string;
-    packsLeft: (remaining: number, included: number) => string;
+    rendersLeft: (remaining: number, included: number) => string;
     used: (used: number) => string;
     upgrade: string;
   };
@@ -267,7 +267,7 @@ export type NicheConfig = {
      * Primary mobile tabs (bottom tab bar). Five maximum — the shell appends a
      * sixth "More" button, and six 9.5px labels is the limit at 360px.
      */
-    mobileTabs: { href: string; label: string }[];
+    mobileTabs: NicheNavItem[];
   };
   features: NicheFeatures;
   copy: {

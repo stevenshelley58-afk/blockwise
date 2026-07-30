@@ -197,7 +197,7 @@ export default function CreativePortfolioGuidePage() {
                 <div className="bw-timeline">
                   <div><b>Week 1</b><span /><section><h3>Launch</h3><p>Publish a balanced set of distinct concepts. Do not launch all appraisal ads at once.</p></section></div>
                   <div><b>Week 2</b><span /><section><h3>Diagnose</h3><p>Check lead quality, contact rate and which messages attract each type of enquiry.</p></section></div>
-                  <div><b>Week 3</b><span /><section><h3>Expand</h3><p>Create a new execution of a proven concept. Do not duplicate the same ad.</p></section></div>
+                  <div><b>Week 3</b><span /><section><h3>Expand</h3><p>Create a new execution of a concept supported by your results. Do not duplicate the same ad.</p></section></div>
                   <div><b>Week 4</b><span /><section><h3>Replace</h3><p>Remove ads with consistently weak engagement or poor lead quality. Document what changed.</p></section></div>
                 </div>
               </section>

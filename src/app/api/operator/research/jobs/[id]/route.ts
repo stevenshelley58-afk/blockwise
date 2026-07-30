@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { requireOperator } from "@/lib/operator/auth";
+import { requireAdRadarOperator as requireOperator } from "@/lib/operator/auth";
 import { createResearchServiceClient } from "@/lib/research/service";
 
 export const dynamic = "force-dynamic";

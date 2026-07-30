@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { requireApiWorkspace } from "@/lib/auth/api-guards";
+import { featureDisabledResponse, requireApiWorkspace } from "@/lib/auth/api-guards";
 import { runDraftCheckPropertyCheck } from "@/lib/property-check/adapter";
 import { createPropertyCheckRecord, listPropertyChecks } from "@/lib/property-check/persistence";
 import { propertyCheckCreateSchema } from "@/lib/property-check/schema";
@@ -8,6 +8,9 @@ import { propertyCheckCreateSchema } from "@/lib/property-check/schema";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
+  const featureGate = featureDisabledResponse("propertyCheck");
+  if (featureGate) return featureGate;
+
   const context = await requireApiWorkspace(request, "property_check");
 
   if (!context.ok) {
@@ -24,6 +27,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const featureGate = featureDisabledResponse("propertyCheck");
+  if (featureGate) return featureGate;
+
   const context = await requireApiWorkspace(request, "property_check");
 
   if (!context.ok) {

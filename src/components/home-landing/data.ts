@@ -2,14 +2,31 @@
  * Owner-approved content data for the public homepage.
  */
 
+import { formatBillingAmount, getBillingOffer } from "@/lib/billing/offers";
+
+const AU_SELF_SERVE = getBillingOffer("AU", "self_serve");
+const AU_MANAGED = getBillingOffer("AU", "managed");
+const AU_FIRST_MONTH = formatBillingAmount(
+  AU_SELF_SERVE.firstInvoiceAmount,
+  AU_SELF_SERVE.currency,
+);
+const AU_RENEWAL = formatBillingAmount(
+  AU_SELF_SERVE.recurringAmount,
+  AU_SELF_SERVE.currency,
+);
+const AU_MANAGED_MONTHLY = formatBillingAmount(
+  AU_MANAGED.recurringAmount,
+  AU_MANAGED.currency,
+);
+
 export const FAQ_DATA = [
   {
     q: "Who pays for ad spend?",
-    a: "You do. Ads run through your Meta ad account and you pay Meta directly.",
+    a: "We run the ads through your own Meta ad account, and you pay Meta directly. That keeps you in full control of your spend, and the campaign data stays with you.",
   },
   {
     q: "Do I need a Meta ad account?",
-    a: "Review your ads first. Connect Meta when you want to go live.",
+    a: "Yes. You’ll need a Meta ad account before your ads go live. If you don’t have one yet, book a walkthrough and we’ll guide you through the setup.",
   },
   {
     q: "Can I approve ads before they run?",
@@ -21,11 +38,15 @@ export const FAQ_DATA = [
   },
   {
     q: "When does the subscription start?",
-    a: "$499/mo from your first campaign launch. Cancel anytime.",
+    a: `Your subscription starts when your first campaign goes live, or seven days after checkout if you haven’t launched yet. Your first month is ${AU_FIRST_MONTH}, then ${AU_RENEWAL} per month. Cancel anytime.`,
   },
   {
     q: "What does managed include?",
-    a: "$2,000/mo flat, plus ad spend. Everything in self-serve, launch and weekly optimization for up to four campaigns, one brand, one ad account, monthly report.",
+    a: `Managed is ${AU_MANAGED_MONTHLY} per month, plus ad spend. It includes self-serve access, launch and weekly optimisation for up to four campaigns, technical and creative advice, and a monthly report for one brand and one Meta ad account. Cancel anytime.`,
+  },
+  {
+    q: "Will my ads sound like AI?",
+    a: "No AI slop. We’ve optimised our AI to write clear, persuasive copy, headlines and descriptions for you, your offer and your suburb.",
   },
 ] as const;
 
@@ -34,36 +55,7 @@ export const HERO_RAIL = [
   { k: "Creative", v: "Prepared" },
   { k: "Lead form", v: "Ready" },
   { k: "Budget", v: "$25/day" },
-  { k: "Updates", v: "Daily email" },
-] as const;
-
-export const RADAR_ADS = [
-  {
-    agency: "Your Agency",
-    copy: "What could your Mt Lawley home be worth?",
-    foot: "Free seller appraisal",
-    angle: "Free appraisal",
-    cta: "Learn more",
-    src: "/home/mt-lawley-federation.webp",
-  },
-  {
-    agency: "Your Agency",
-    copy: "Just listed in Subiaco.",
-    copyMobile: "Just listed in Subiaco. Be first through the door.",
-    foot: "View this property",
-    angle: "Just listed",
-    cta: "Learn more",
-    src: "/home/subiaco-townhouse.webp",
-  },
-  {
-    agency: "Your Agency",
-    copy: "Open home this Saturday.",
-    copyMobile: "Open home this Saturday. See inside before you go.",
-    foot: "See inside",
-    angle: "Open home",
-    cta: "Learn more",
-    src: "/home/open-home-living.webp",
-  },
+  { k: "Updates", v: "Dashboard" },
 ] as const;
 
 /**
@@ -119,23 +111,6 @@ export const START_TEMPLATES = [
     copy: "Meet your local agent. Trusted advice, real results, and a plan for your next move.",
     footHeading: "Meet your local agent",
     footSub: "Trusted local expertise",
-  },
-] as const;
-
-export const PROPERTY_USES = ["Seller prep", "Buyer questions", "Lead follow-up"] as const;
-
-export const PROPERTY_NOTES = [
-  {
-    text: "Corner lot in a dual-density area. Retain-and-build may apply.",
-    source: "Local planning scheme",
-  },
-  {
-    text: "Heritage overlay. External changes may need approval.",
-    source: "Heritage list",
-  },
-  {
-    text: "Front setback limits apply. Check before quoting works.",
-    source: "R-Codes",
   },
 ] as const;
 

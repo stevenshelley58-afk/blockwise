@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { requireOperator } from "@/lib/operator/auth";
+import { requireAdRadarOperator as requireOperator } from "@/lib/operator/auth";
 import { isMissingHermesSkillError, readHermesSkill, writeHermesSkill } from "@/lib/operator/hermes-assets";
 import { createResearchServiceClient } from "@/lib/research/service";
 

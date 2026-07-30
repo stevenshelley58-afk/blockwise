@@ -17,7 +17,7 @@ export function GuidesShell({ children }: { children: ReactNode }) {
             <Link href="/pricing">Pricing</Link>
           </nav>
           <Link href="/signup" className="bw-guides-header-cta">
-            Start free trial
+            Create three ads free
           </Link>
         </div>
       </header>

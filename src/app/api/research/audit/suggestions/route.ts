@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { featureDisabledResponse } from "@/lib/auth/api-guards";
 import { buildAdAudit } from "@/lib/research/ad-audit";
 import { generateAuditSuggestions } from "@/lib/research/audit-suggestions";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
@@ -9,6 +10,9 @@ export const runtime = "nodejs";
 export const maxDuration = 30;
 
 export async function GET(request: NextRequest) {
+  const featureGate = featureDisabledResponse("suburbPages");
+  if (featureGate) return featureGate;
+
   const location =
     request.nextUrl.searchParams.get("location") ?? request.nextUrl.searchParams.get("q") ?? "";
 
