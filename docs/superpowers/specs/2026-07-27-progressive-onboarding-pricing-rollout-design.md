@@ -55,15 +55,15 @@ marks up or silently funds the customer's media spend.
 
 Managed service is separate from the self-serve entitlement:
 
-- United States: from $1,500/month plus ad spend;
-- Australia: from A$2,500/month plus ad spend;
+- United States: US$1,500/month plus ad spend;
+- Australia: A$1,500/month plus ad spend;
 - the customer may book a call before paying or pay and book onboarding
   immediately;
 - the base managed engagement includes the complete self-serve product,
   100 monthly render credits, one brand, one Meta ad account, operator launch
   and weekly optimization of up to four live campaigns, and a monthly report;
-- scope beyond the standard engagement is confirmed and repriced during
-  onboarding rather than being absorbed into self-serve support.
+- additional brands, ad accounts, or campaign volume require a written scope
+  change rather than being absorbed into self-serve support.
 
 The managed price is not implemented as additional self-serve credits. It is a
 distinct Stripe product and operator-managed service state.
@@ -288,8 +288,8 @@ Create separate Stripe products/prices for:
 
 - self-serve USD monthly: $499;
 - self-serve AUD monthly: A$499;
-- managed USD monthly: from $1,500;
-- managed AUD monthly: from A$2,500.
+- managed USD monthly: $1,500;
+- managed AUD monthly: A$1,500.
 
 Create market-specific once-only discounts:
 
@@ -382,7 +382,7 @@ campaign CTAs to state:
 - 100 monthly render credits and up to 50 complete Feed + Story packs;
 - five team members;
 - 99 first month, then 499 in local currency;
-- managed service starting prices;
+- managed service flat monthly fee in the workspace currency;
 - pay-and-book or call-first managed onboarding.
 
 Country switching must be explicit and accessible. Geolocation may choose the

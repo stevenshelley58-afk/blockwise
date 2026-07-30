@@ -200,7 +200,7 @@ test("homepage FAQ matches the approved flat-rate offer", () => {
   assert.match(faq, /seven days after checkout/i);
   assert.equal(formatBillingAmount(selfServe.firstInvoiceAmount, selfServe.currency), "A$99");
   assert.equal(formatBillingAmount(selfServe.recurringAmount, selfServe.currency), "A$499");
-  assert.equal(formatBillingAmount(managed.recurringAmount, managed.currency), "A$2,500");
+  assert.equal(formatBillingAmount(managed.recurringAmount, managed.currency), "A$1,500");
   assert.match(faq, /weekly optimisation for up to four campaigns/i);
   assert.match(faq, /technical and creative advice/i);
   assert.match(faq, /Cancel anytime/i);
@@ -222,6 +222,7 @@ test("pricing keeps US and AU offers explicit and accessible", () => {
   assert.match(pricing, /Australia/);
   assert.match(pricing, /getBillingOffer/);
   assert.match(pricing, /formatBillingAmount/);
+  assert.match(pricing, /in either market/);
   assert.doesNotMatch(pricing, /["'`]US\$[0-9]|["'`]A\$[0-9]/);
   assert.match(combined, /100 render credits/);
   assert.match(combined, /Up to 50 complete Feed \+ Story packs/);

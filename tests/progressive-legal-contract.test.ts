@@ -45,8 +45,7 @@ test("Terms state the exact self-serve trigger, credit, seat, and Meta-spend rul
 
 test("Terms distinguish managed scope and cancellation from deletion", () => {
   for (const required of [
-    "US$1,500 per month",
-    "A$2,500 per month",
+    "MANAGED_MONTHLY",
     "weekly optimization of up to",
     "four live campaigns",
     "monthly report",
@@ -55,6 +54,10 @@ test("Terms distinguish managed scope and cancellation from deletion", () => {
   ]) {
     includesCopy(terms, required);
   }
+  const usManaged = getBillingOffer("US", "managed");
+  const auManaged = getBillingOffer("AU", "managed");
+  assert.equal(formatBillingAmount(usManaged.recurringAmount, usManaged.currency), "US$1,500");
+  assert.equal(formatBillingAmount(auManaged.recurringAmount, auManaged.currency), "A$1,500");
 });
 
 test("Privacy discloses passwordless, billing, booking, and funnel data without raw-card claims", () => {
