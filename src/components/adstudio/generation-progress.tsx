@@ -5,19 +5,15 @@ import { LoaderCircle } from "lucide-react";
 import type { AdStudioTemplate } from "@/lib/adstudio";
 import { templateDisplaySrc } from "@/lib/adstudio/template-display.ts";
 
-const SHOWCASE_LIMIT = 16;
-
 export function GenerationProgress({
   quality,
-  templates,
+  template,
   titleId,
 }: {
   quality: "fast" | "high";
-  templates: AdStudioTemplate[];
+  template: AdStudioTemplate;
   titleId: string;
 }) {
-  const showcaseTemplates = templates.slice(0, SHOWCASE_LIMIT);
-
   return (
     <section className="studio-generation" aria-labelledby={titleId} aria-busy="true">
       <header className="studio-generation-head">
@@ -30,30 +26,18 @@ export function GenerationProgress({
       </header>
 
       <div className="studio-generation-showcase" aria-hidden="true">
-        <div className="studio-generation-showcase-track">
-          {[0, 1].map((copy) => (
-            <div className="studio-generation-showcase-set" key={copy}>
-              {showcaseTemplates.map((template, index) => (
-                <figure
-                  className="studio-generation-showcase-card"
-                  data-format={template.format}
-                  key={`${copy}-${template.id}`}
-                >
-                  <img
-                    src={templateDisplaySrc(template, "320")}
-                    srcSet={`${templateDisplaySrc(template, "320")} 320w, ${templateDisplaySrc(template, "640")} 640w`}
-                    sizes="(max-width: 900px) 78vw, 360px"
-                    alt=""
-                    draggable={false}
-                    loading={copy === 0 && index < 4 ? "eager" : "lazy"}
-                    decoding="async"
-                    fetchPriority={copy === 0 && index < 2 ? "high" : "low"}
-                  />
-                </figure>
-              ))}
-            </div>
-          ))}
-        </div>
+        <figure className="studio-generation-showcase-card" data-format={template.format}>
+          <img
+            src={templateDisplaySrc(template, "320")}
+            srcSet={`${templateDisplaySrc(template, "320")} 320w, ${templateDisplaySrc(template, "640")} 640w`}
+            sizes="(max-width: 900px) calc(100vw - 72px), 416px"
+            alt=""
+            draggable={false}
+            loading="eager"
+            decoding="async"
+            fetchPriority="high"
+          />
+        </figure>
       </div>
     </section>
   );

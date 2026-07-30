@@ -1061,8 +1061,9 @@ export function NewAdDialog({
       ? `Select an image for ${activeImageSlot.label}.`
       : trialCreditNote;
   const showFooter = step === "brief";
+  const generationTemplate = submitting ? selectedTemplate : null;
 
-  if (submitting) {
+  if (generationTemplate) {
     return (
       <div className="studio-newad-overlay">
         <div
@@ -1074,7 +1075,7 @@ export function NewAdDialog({
           aria-busy="true"
           tabIndex={-1}
         >
-          <GenerationProgress quality={generationQuality} templates={templates} titleId={titleId} />
+          <GenerationProgress quality={generationQuality} template={generationTemplate} titleId={titleId} />
         </div>
       </div>
     );
