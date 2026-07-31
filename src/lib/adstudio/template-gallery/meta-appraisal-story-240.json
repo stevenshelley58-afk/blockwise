@@ -142,7 +142,8 @@
         "height": 0.21354166666666666
       },
       "sampleLineCount": 4,
-      "detectionScore": 0.897
+      "detectionScore": 0.897,
+      "fontFile": "/fonts/adstudio/smooch-sans-300.woff2"
     },
     "subheadline": {
       "fontId": "open-sans",
@@ -187,7 +188,8 @@
         "height": 0.01484375
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/smooch-sans-800.woff2"
     },
     "website": {
       "fontId": "saira",
@@ -209,7 +211,8 @@
         "height": 0.0125
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/saira-900.woff2"
     }
   }
 }

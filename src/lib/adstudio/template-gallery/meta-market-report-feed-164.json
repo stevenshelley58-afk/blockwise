@@ -157,7 +157,8 @@
         "height": 0.016296296296296295
       },
       "sampleLineCount": 1,
-      "detectionScore": 0.692
+      "detectionScore": 0.692,
+      "fontFile": "/fonts/adstudio/merriweather-900.woff2"
     },
     "stat_1": {
       "fontId": "big-shoulders",
@@ -180,7 +181,8 @@
         "height": 0.04296296296296296
       },
       "sampleLineCount": 2,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/big-shoulders-800.woff2"
     },
     "stat_3": {
       "fontId": "grenze-gotisch",
@@ -203,7 +205,8 @@
         "height": 0.016296296296296295
       },
       "sampleLineCount": 1,
-      "detectionScore": 0.5
+      "detectionScore": 0.5,
+      "fontFile": "/fonts/adstudio/grenze-gotisch-900.woff2"
     },
     "stat_2": {
       "fontId": "big-shoulders",
@@ -226,7 +229,8 @@
         "height": 0.016296296296296295
       },
       "sampleLineCount": 1,
-      "detectionScore": 0.5
+      "detectionScore": 0.5,
+      "fontFile": "/fonts/adstudio/big-shoulders-900.woff2"
     },
     "stat_4": {
       "fontId": "big-shoulders",
@@ -249,7 +253,32 @@
         "height": 0.015925925925925927
       },
       "sampleLineCount": 1,
-      "detectionScore": 0.5
+      "detectionScore": 0.5,
+      "fontFile": "/fonts/adstudio/big-shoulders-900.woff2"
+    },
+    "headline": {
+      "fontId": "big-shoulders",
+      "family": "Big Shoulders",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 0.7,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "left",
+      "color": "#3c6062",
+      "fitScore": 0.35,
+      "sampleBox": {
+        "x": 0.1,
+        "y": 0.15,
+        "width": 0.8,
+        "height": 0.1
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 0.55,
+      "measurementSource": "manual-estimate",
+      "fontFile": "/fonts/adstudio/big-shoulders-300.woff2"
     }
   }
 }

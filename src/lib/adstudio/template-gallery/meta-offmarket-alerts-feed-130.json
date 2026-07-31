@@ -131,7 +131,8 @@
         "height": 0.11703703703703704
       },
       "sampleLineCount": 6,
-      "detectionScore": 0.905
+      "detectionScore": 0.905,
+      "fontFile": "/fonts/adstudio/kanit-600.woff2"
     },
     "headline": {
       "fontId": "plus-jakarta-sans",
@@ -153,7 +154,8 @@
         "height": 0.21333333333333335
       },
       "sampleLineCount": 8,
-      "detectionScore": 0.818
+      "detectionScore": 0.818,
+      "fontFile": "/fonts/adstudio/plus-jakarta-sans-500.woff2"
     },
     "cta": {
       "fontId": "barlow",
@@ -175,7 +177,8 @@
         "height": 0.10111111111111111
       },
       "sampleLineCount": 2,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/barlow-600.woff2"
     }
   },
   "deterministicEditing": {

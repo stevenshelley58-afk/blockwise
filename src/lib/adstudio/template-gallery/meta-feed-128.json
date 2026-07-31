@@ -202,7 +202,8 @@
         "height": 0.01875
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/plus-jakarta-sans-600.woff2"
     },
     "contact_phone": {
       "fontId": "playfair-display",
@@ -224,7 +225,8 @@
         "height": 0.015234375
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/playfair-display-700.woff2"
     }
   }
 }

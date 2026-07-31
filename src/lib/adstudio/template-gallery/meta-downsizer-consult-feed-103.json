@@ -159,7 +159,8 @@
         "height": 0.06222222222222222
       },
       "sampleLineCount": 3,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/quicksand-300.woff2"
     },
     "subheadline": {
       "fontId": "barlow-condensed",
@@ -181,7 +182,8 @@
         "height": 0.06962962962962962
       },
       "sampleLineCount": 3,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/barlow-condensed-800.woff2"
     },
     "headline": {
       "fontId": "barlow-condensed",
@@ -203,7 +205,8 @@
         "height": 0.18888888888888888
       },
       "sampleLineCount": 4,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/barlow-condensed-800.woff2"
     },
     "cta": {
       "fontId": "merriweather",
@@ -225,7 +228,8 @@
         "height": 0.014814814814814815
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/merriweather-800.woff2"
     },
     "website": {
       "fontId": "kanit",
@@ -247,7 +251,8 @@
         "height": 0.027777777777777776
       },
       "sampleLineCount": 2,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/kanit-900.woff2"
     },
     "phone": {
       "fontId": "merriweather",
@@ -269,7 +274,8 @@
         "height": 0.014444444444444444
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/merriweather-800.woff2"
     }
   }
 }

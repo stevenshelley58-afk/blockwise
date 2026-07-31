@@ -145,7 +145,8 @@
         "height": 0.1559259259259259
       },
       "sampleLineCount": 5,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/kanit-800.woff2"
     },
     "headline": {
       "fontId": "oswald",
@@ -167,7 +168,8 @@
         "height": 0.10222222222222223
       },
       "sampleLineCount": 6,
-      "detectionScore": 0.704
+      "detectionScore": 0.704,
+      "fontFile": "/fonts/adstudio/oswald-300.woff2"
     },
     "subheadline": {
       "fontId": "titillium-web",
@@ -189,7 +191,8 @@
         "height": 0.06777777777777778
       },
       "sampleLineCount": 2,
-      "detectionScore": 0.826
+      "detectionScore": 0.826,
+      "fontFile": "/fonts/adstudio/titillium-web-900.woff2"
     },
     "phone": {
       "fontId": "roboto-slab",
@@ -234,7 +237,8 @@
         "height": 0.10111111111111111
       },
       "sampleLineCount": 5,
-      "detectionScore": 0.545
+      "detectionScore": 0.545,
+      "fontFile": "/fonts/adstudio/smooch-sans-300.woff2"
     }
   },
   "deterministicEditing": {

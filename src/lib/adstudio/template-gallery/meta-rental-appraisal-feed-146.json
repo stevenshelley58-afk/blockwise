@@ -166,7 +166,8 @@
         "height": 0.11777777777777777
       },
       "sampleLineCount": 3,
-      "detectionScore": 0.943
+      "detectionScore": 0.943,
+      "fontFile": "/fonts/adstudio/smooch-sans-300.woff2"
     },
     "subheadline": {
       "fontId": "oswald",
@@ -234,7 +235,8 @@
         "height": 0.014074074074074074
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/lora-700.woff2"
     },
     "benefit_2": {
       "fontId": "smooch-sans",
@@ -279,7 +281,8 @@
         "height": 0.013333333333333334
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/merriweather-800.woff2"
     }
   },
   "deterministicEditing": {

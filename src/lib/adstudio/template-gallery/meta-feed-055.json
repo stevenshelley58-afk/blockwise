@@ -154,7 +154,8 @@
         "height": 0.0375
       },
       "sampleLineCount": 2,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/smooch-sans-400.woff2"
     },
     "agent_email": {
       "fontId": "merriweather",
@@ -199,7 +200,8 @@
         "height": 0.01328125
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/merriweather-800.woff2"
     },
     "contact_label": {
       "fontId": "oswald",
@@ -221,7 +223,8 @@
         "height": 0.087109375
       },
       "sampleLineCount": 3,
-      "detectionScore": 0.4
+      "detectionScore": 0.4,
+      "fontFile": "/fonts/adstudio/oswald-300.woff2"
     },
     "headline": {
       "fontId": "oswald",
@@ -243,7 +246,32 @@
         "height": 0.22421875
       },
       "sampleLineCount": 3,
-      "detectionScore": 0.556
+      "detectionScore": 0.556,
+      "fontFile": "/fonts/adstudio/oswald-600.woff2"
+    },
+    "agent_phone": {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "mixed",
+      "sizeRatio": 0.55,
+      "lineHeight": 1.2,
+      "tracking": 0.01,
+      "align": "center",
+      "color": "#4e483c",
+      "fitScore": 0.35,
+      "sampleBox": {
+        "x": 0.1,
+        "y": 0.9,
+        "width": 0.8,
+        "height": 0.03
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 0.55,
+      "measurementSource": "manual-estimate",
+      "fontFile": "/fonts/adstudio/merriweather-300.woff2"
     }
   }
 }

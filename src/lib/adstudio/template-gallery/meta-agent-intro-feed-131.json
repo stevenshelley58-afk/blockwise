@@ -138,7 +138,8 @@
         "height": 0.08
       },
       "sampleLineCount": 5,
-      "detectionScore": 0.926
+      "detectionScore": 0.926,
+      "fontFile": "/fonts/adstudio/rubik-700.woff2"
     },
     "headline": {
       "fontId": "oswald",
@@ -160,7 +161,8 @@
         "height": 0.1374074074074074
       },
       "sampleLineCount": 2,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/oswald-300.woff2"
     },
     "subheadline": {
       "fontId": "merriweather",
@@ -182,7 +184,8 @@
         "height": 0.018518518518518517
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/merriweather-800.woff2"
     },
     "website": {
       "fontId": "merriweather",
@@ -204,7 +207,8 @@
         "height": 0.022962962962962963
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/merriweather-700.woff2"
     }
   }
 }

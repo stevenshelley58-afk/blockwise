@@ -32,6 +32,18 @@ function template(root: string, n: number, intent = "listing") {
     sourceAd: { file: `${id}.png`, contentHash: hash(source) },
     classification: { ad_type: "listing", primary_intent: intent, property_or_agent_focus: "property" },
     meta: { platform: "meta", objective: "OUTCOME_LEADS", specialAdCategory: "housing" },
+    typography: {
+      headline: {
+        fontId: "TestFont", family: "TestFont", fallbackFamily: "sans-serif",
+        weight: 700, italic: false, case: "upper", sizeRatio: 0.05, lineHeight: 1.2,
+        tracking: 0, align: "center", color: "#000000",
+        fitScore: 0.1, detectionScore: 0.1,
+        sampleBox: { x: 0.1, y: 0.1, width: 0.8, height: 0.1 },
+        sampleLineCount: 1,
+        measuredLines: [{ text: "TEST", sampleBox: { x: 0.1, y: 0.1, width: 0.8, height: 0.1 }, sizeRatio: 0.05 }],
+        measurementVersion: 2, measurementSource: "ocr-v2",
+      },
+    },
   };
 }
 
@@ -85,5 +97,74 @@ test("semantic diversity still rejects a homogeneous gallery at scale", () => {
     const result = run(root);
     assert.notEqual(result.status, 0);
     assert.match(result.stderr, /DIVERSITY|dominates|distinct primary intents/i);
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test("deterministicOnly rejects a template with a text region missing fontFile", () => {
+  const root = fixtureRoot();
+  try {
+    const value = template(root, 1);
+    (value as any).deterministicOnly = true;
+    value.typography = {
+      headline: {
+        fontId: "TestFont", family: "TestFont", fallbackFamily: "sans-serif",
+        weight: 700, italic: false, case: "upper", sizeRatio: 0.05, lineHeight: 1.2,
+        tracking: 0, align: "center", color: "#000000",
+        fitScore: 0.8, detectionScore: 0.8,
+        sampleBox: { x: 0.1, y: 0.1, width: 0.8, height: 0.1 },
+        sampleLineCount: 1,
+        measuredLines: [{ text: "TEST", sampleBox: { x: 0.1, y: 0.1, width: 0.8, height: 0.1 }, sizeRatio: 0.05 }],
+        measurementVersion: 2, measurementSource: "ocr-v2",
+      },
+    };
+    writeFileSync(join(root, "gallery", "meta-feed-001.json"), JSON.stringify(value));
+    const result = run(root);
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /deterministicOnly.*fontFile|live gates.*fontFile/i);
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test("deterministicOnly accepts a template where all text regions pass live gates", () => {
+  const root = fixtureRoot();
+  try {
+    // Set up a minimal font manifest and font file so the live-gate is satisfied.
+    mkdirSync(join(root, "public", "fonts", "adstudio"), { recursive: true });
+    const fontContent = "fake-font-data";
+    const fontHash = hash(fontContent);
+    writeFileSync(join(root, "public", "fonts", "adstudio", "TestFont-Regular.woff2"), fontContent);
+    writeFileSync(join(root, "public", "fonts", "adstudio", "manifest.json"), JSON.stringify({
+      faces: [{ file: "/fonts/adstudio/TestFont-Regular.woff2", fontId: "TestFont", weight: 700, italic: false, sha256: fontHash }],
+      excluded: [],
+    }));
+
+    const value = template(root, 1);
+    (value as any).deterministicOnly = true;
+    (value as any).typography = {
+      headline: {
+        fontId: "TestFont", family: "TestFont", fallbackFamily: "sans-serif",
+        weight: 700, italic: false, case: "upper", sizeRatio: 0.05, lineHeight: 1.2,
+        tracking: 0, align: "center", color: "#000000",
+        fitScore: 0.8, detectionScore: 0.8,
+        fontFile: "/fonts/adstudio/TestFont-Regular.woff2",
+        sampleBox: { x: 0.1, y: 0.1, width: 0.8, height: 0.1 },
+        sampleLineCount: 1,
+        measuredLines: [{ text: "TEST", sampleBox: { x: 0.1, y: 0.1, width: 0.8, height: 0.1 }, sizeRatio: 0.05 }],
+        measurementVersion: 2, measurementSource: "ocr-v2",
+      },
+    };
+    writeFileSync(join(root, "gallery", "meta-feed-001.json"), JSON.stringify(value));
+    const result = run(root);
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test("templates without deterministicOnly always pass (assuming other gates pass)", () => {
+  const root = fixtureRoot();
+  try {
+    const value = template(root, 1);
+    // No deterministicOnly field at all
+    writeFileSync(join(root, "gallery", "meta-feed-001.json"), JSON.stringify(value));
+    const result = run(root);
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
   } finally { rmSync(root, { recursive: true, force: true }); }
 });

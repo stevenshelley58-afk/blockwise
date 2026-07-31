@@ -169,7 +169,8 @@
         "height": 0.023046875
       },
       "sampleLineCount": 2,
-      "detectionScore": 0.65
+      "detectionScore": 0.65,
+      "fontFile": "/fonts/adstudio/kanit-900.woff2"
     },
     "website_handle": {
       "fontId": "karla",
@@ -214,7 +215,8 @@
         "height": 0.0203125
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/playfair-display-700.woff2"
     },
     "headline": {
       "fontId": "open-sans",
@@ -236,7 +238,8 @@
         "height": 0.1734375
       },
       "sampleLineCount": 2,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/open-sans-300.woff2"
     }
   }
 }

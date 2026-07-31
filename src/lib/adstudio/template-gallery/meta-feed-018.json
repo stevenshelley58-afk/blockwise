@@ -5,6 +5,7 @@
   "offerId": "5-costly-mistakes-buying-home",
   "source": "builtin",
   "status": "approved",
+  "deterministicOnly": true,
   "format": "4:5",
   "dimensions": {
     "width": 1080,

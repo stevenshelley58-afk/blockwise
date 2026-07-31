@@ -154,7 +154,8 @@
         "height": 0.015625
       },
       "sampleLineCount": 1,
-      "detectionScore": 0.388
+      "detectionScore": 0.388,
+      "fontFile": "/fonts/adstudio/plus-jakarta-sans-600.woff2"
     },
     "agent_name": {
       "fontId": "quicksand",
@@ -176,7 +177,8 @@
         "height": 0.06966145833333333
       },
       "sampleLineCount": 1,
-      "detectionScore": 0.545
+      "detectionScore": 0.545,
+      "fontFile": "/fonts/adstudio/quicksand-300.woff2"
     },
     "average_price": {
       "fontId": "roboto-mono",
@@ -221,7 +223,8 @@
         "height": 0.013020833333333334
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/merriweather-800.woff2"
     },
     "new_listings": {
       "fontId": "merriweather",
@@ -243,7 +246,8 @@
         "height": 0.0126953125
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/merriweather-800.woff2"
     },
     "sold_listings": {
       "fontId": "merriweather",
@@ -265,7 +269,8 @@
         "height": 0.013020833333333334
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/merriweather-800.woff2"
     }
   }
 }

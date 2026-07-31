@@ -212,7 +212,8 @@
         "height": 0.13854166666666667
       },
       "sampleLineCount": 2,
-      "detectionScore": 0.842
+      "detectionScore": 0.842,
+      "fontFile": "/fonts/adstudio/smooch-sans-300.woff2"
     },
     "check_4": {
       "fontId": "smooch-sans",
@@ -234,7 +235,8 @@
         "height": 0.015885416666666666
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/smooch-sans-600.woff2"
     },
     "check_3": {
       "fontId": "smooch-sans",
@@ -256,7 +258,8 @@
         "height": 0.015885416666666666
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/smooch-sans-600.woff2"
     },
     "check_5": {
       "fontId": "smooch-sans",
@@ -323,14 +326,25 @@
         "height": 0.015885416666666666
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/smooch-sans-600.woff2"
     }
   },
   "deterministicEditing": {
     "status": "partial",
     "imageBoxes": {
-      "background_photo": { "x": 0, "y": 0, "width": 1, "height": 0.2979166667 },
-      "agency_logo": { "x": 0.0685185185, "y": 0.85625, "width": 0.1731481481, "height": 0.0979166667 }
+      "background_photo": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 0.2979166667
+      },
+      "agency_logo": {
+        "x": 0.0685185185,
+        "y": 0.85625,
+        "width": 0.1731481481,
+        "height": 0.0979166667
+      }
     }
   }
 }

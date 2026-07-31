@@ -184,7 +184,8 @@
         "height": 0.024074074074074074
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/manrope-800.woff2"
     },
     "cta": {
       "fontId": "manrope",
@@ -206,7 +207,8 @@
         "height": 0.021111111111111112
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/manrope-800.woff2"
     }
   },
   "deterministicEditing": {

@@ -173,7 +173,8 @@
         "height": 0.01888888888888889
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/smooch-sans-700.woff2"
     },
     "check_1": {
       "fontId": "lora",
@@ -195,7 +196,8 @@
         "height": 0.02074074074074074
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/lora-700.woff2"
     },
     "headline": {
       "fontId": "quicksand",
@@ -217,7 +219,8 @@
         "height": 0.14185185185185184
       },
       "sampleLineCount": 3,
-      "detectionScore": 0.864
+      "detectionScore": 0.864,
+      "fontFile": "/fonts/adstudio/quicksand-300.woff2"
     },
     "check_4": {
       "fontId": "kanit",
@@ -239,7 +242,8 @@
         "height": 0.055185185185185184
       },
       "sampleLineCount": 3,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/kanit-900.woff2"
     },
     "check_3": {
       "fontId": "smooch-sans",
@@ -261,7 +265,8 @@
         "height": 0.02074074074074074
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/smooch-sans-700.woff2"
     },
     "check_5": {
       "fontId": "lora",
@@ -283,7 +288,8 @@
         "height": 0.02074074074074074
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/lora-700.woff2"
     },
     "check_6": {
       "fontId": "lora",
@@ -305,7 +311,8 @@
         "height": 0.021111111111111112
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/lora-700.woff2"
     },
     "check_2": {
       "fontId": "lora",
@@ -327,7 +334,8 @@
         "height": 0.02074074074074074
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/lora-700.woff2"
     },
     "phone": {
       "fontId": "merriweather",
@@ -349,7 +357,8 @@
         "height": 0.03666666666666667
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/merriweather-700.woff2"
     }
   }
 }

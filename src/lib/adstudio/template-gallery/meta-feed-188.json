@@ -174,7 +174,8 @@
         "height": 0.1203125
       },
       "sampleLineCount": 2,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/barlow-condensed-800.woff2"
     },
     "contact_phone": {
       "fontId": "oswald",
@@ -219,7 +220,32 @@
         "height": 0.0453125
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/oswald-500.woff2"
+    },
+    "badge_text": {
+      "fontId": "oswald",
+      "family": "Oswald",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 0.55,
+      "lineHeight": 1.2,
+      "tracking": 0.03,
+      "align": "center",
+      "color": "#eaedec",
+      "fitScore": 0.35,
+      "sampleBox": {
+        "x": 0.1,
+        "y": 0.05,
+        "width": 0.8,
+        "height": 0.035
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 0.55,
+      "measurementSource": "manual-estimate",
+      "fontFile": "/fonts/adstudio/oswald-300.woff2"
     }
   }
 }

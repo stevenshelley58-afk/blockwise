@@ -166,7 +166,8 @@
         "height": 0.16
       },
       "sampleLineCount": 12,
-      "detectionScore": 0.568
+      "detectionScore": 0.568,
+      "fontFile": "/fonts/adstudio/plus-jakarta-sans-600.woff2"
     },
     "subheadline": {
       "fontId": "kanit",
@@ -188,7 +189,8 @@
         "height": 0.056666666666666664
       },
       "sampleLineCount": 2,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/kanit-900.woff2"
     },
     "check_3": {
       "fontId": "smooch-sans",
@@ -210,7 +212,8 @@
         "height": 0.03
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/smooch-sans-600.woff2"
     },
     "check_2": {
       "fontId": "smooch-sans",
@@ -255,7 +258,8 @@
         "height": 0.02
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/manrope-800.woff2"
     },
     "check_4": {
       "fontId": "manrope",
@@ -277,7 +281,8 @@
         "height": 0.020370370370370372
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/manrope-800.woff2"
     },
     "check_5": {
       "fontId": "nunito-sans",
@@ -299,7 +304,32 @@
         "height": 0.02
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/nunito-sans-800.woff2"
+    },
+    "cta": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 0.65,
+      "lineHeight": 1.2,
+      "tracking": 0.02,
+      "align": "center",
+      "color": "#575049",
+      "fitScore": 0.35,
+      "sampleBox": {
+        "x": 0.1,
+        "y": 0.78,
+        "width": 0.8,
+        "height": 0.05
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 0.55,
+      "measurementSource": "manual-estimate",
+      "fontFile": "/fonts/adstudio/smooch-sans-300.woff2"
     }
   },
   "deterministicEditing": {

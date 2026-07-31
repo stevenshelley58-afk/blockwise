@@ -146,7 +146,8 @@
         "height": 0.233984375
       },
       "sampleLineCount": 4,
-      "detectionScore": 0.93
+      "detectionScore": 0.93,
+      "fontFile": "/fonts/adstudio/quicksand-300.woff2"
     },
     "profile_handle": {
       "fontId": "oswald",
@@ -168,7 +169,8 @@
         "height": 0.062109375
       },
       "sampleLineCount": 4,
-      "detectionScore": 0.389
+      "detectionScore": 0.389,
+      "fontFile": "/fonts/adstudio/oswald-600.woff2"
     },
     "cta_button": {
       "fontId": "merriweather",
@@ -190,7 +192,8 @@
         "height": 0.01953125
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/merriweather-800.woff2"
     },
     "share_prompt": {
       "fontId": "raleway",
@@ -235,7 +238,8 @@
         "height": 0.041796875
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/raleway-400.woff2"
     },
     "header": {
       "fontId": "merriweather",
@@ -257,7 +261,8 @@
         "height": 0.017578125
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/merriweather-800.woff2"
     }
   },
   "deterministicEditing": {

@@ -162,7 +162,8 @@
         "height": 0.18359375
       },
       "sampleLineCount": 12,
-      "detectionScore": 0.452
+      "detectionScore": 0.452,
+      "fontFile": "/fonts/adstudio/oswald-400.woff2"
     },
     "company_name": {
       "fontId": "titillium-web",
@@ -184,7 +185,8 @@
         "height": 0.053515625
       },
       "sampleLineCount": 3,
-      "detectionScore": 0.6
+      "detectionScore": 0.6,
+      "fontFile": "/fonts/adstudio/titillium-web-900.woff2"
     },
     "website_url": {
       "fontId": "kanit",
@@ -206,7 +208,8 @@
         "height": 0.042578125
       },
       "sampleLineCount": 1,
-      "detectionScore": 0.857
+      "detectionScore": 0.857,
+      "fontFile": "/fonts/adstudio/kanit-900.woff2"
     },
     "phone_number": {
       "fontId": "kanit",
@@ -251,7 +254,8 @@
         "height": 0.026953125
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/smooch-sans-800.woff2"
     },
     "agent_name": {
       "fontId": "roboto-condensed",
@@ -273,7 +277,32 @@
         "height": 0.03828125
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/roboto-condensed-700.woff2"
+    },
+    "about_text": {
+      "fontId": "kanit",
+      "family": "Kanit",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "mixed",
+      "sizeRatio": 0.45,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "left",
+      "color": "#707169",
+      "fitScore": 0.35,
+      "sampleBox": {
+        "x": 0.1,
+        "y": 0.55,
+        "width": 0.8,
+        "height": 0.12
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 0.55,
+      "measurementSource": "manual-estimate",
+      "fontFile": "/fonts/adstudio/kanit-300.woff2"
     }
   },
   "deterministicEditing": {

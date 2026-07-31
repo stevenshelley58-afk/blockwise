@@ -219,7 +219,8 @@
         "height": 0.01796875
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/merriweather-700.woff2"
     },
     "website": {
       "fontId": "lora",
@@ -241,7 +242,8 @@
         "height": 0.012760416666666666
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/lora-700.woff2"
     }
   },
   "deterministicEditing": {
