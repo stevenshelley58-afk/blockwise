@@ -9,6 +9,10 @@ import {
   extendTextLayersValidity,
   TEXT_LAYERS_VALID_FOR_LIMIT,
 } from "../src/lib/adstudio/text-layers.ts";
+import {
+  MAGIC_LAYER_MIN_FONT_FIT,
+  MAGIC_LAYER_MIN_REGION_CONFIDENCE,
+} from "../src/lib/adstudio/magic-layers-config.mjs";
 import { resolveAdStudioTemplate } from "../src/lib/adstudio/templates.ts";
 import { paddedPixelRect } from "../src/lib/adstudio/region-edit.ts";
 import { paddedPatchRect } from "../src/components/adstudio/canvas/text-patch.ts";
@@ -101,7 +105,11 @@ test("runtime styles come from the approved template and low-confidence regions 
   const styles = buildTemplateTextLayerStyles(template, cloneRegions);
   assert.deepEqual(Object.keys(styles).sort(), cloneRegions.map((region) => region.key).sort());
   for (const [key, style] of Object.entries(styles)) {
-    assert.equal(style.mode === "live", Boolean(style.fontFile));
+    const spec = template.typography![key]!;
+    const expectedLive = spec.fitScore >= MAGIC_LAYER_MIN_FONT_FIT
+      && spec.detectionScore >= MAGIC_LAYER_MIN_REGION_CONFIDENCE
+      && Boolean(spec.fontFile);
+    assert.equal(style.mode === "live", expectedLive);
     assert.equal(style.sample, template.inputs.text.find((input) => input.key === key)?.sample);
   }
 });
