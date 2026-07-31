@@ -2,6 +2,15 @@ import { NextResponse } from "next/server";
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
+import {
+  applyTemplateReviewOverride,
+  deleteTemplateReviewOverride,
+  fetchTemplateReviewOverride,
+  findTypographyKeyWithoutTextInput,
+  upsertTemplateReviewOverride,
+  type TemplateReviewOverridePayload,
+} from "@/lib/adstudio/template-review-overrides";
+
 const GALLERY_DIR = path.join(
   process.cwd(),
   "src",
@@ -26,16 +35,30 @@ export async function GET(
     return NextResponse.json({ error: "Invalid template id" }, { status: 400 });
   }
 
+  let template: Record<string, unknown>;
   try {
     const raw = await readFile(filePath, "utf-8");
-    const template = JSON.parse(raw);
-    return NextResponse.json(template);
+    template = JSON.parse(raw) as Record<string, unknown>;
   } catch {
     return NextResponse.json(
       { error: "Template not found" },
       { status: 404 },
     );
   }
+
+  // Merge any saved override (Vercel saves land in Supabase, not on disk).
+  try {
+    const override = await fetchTemplateReviewOverride(id);
+    if (override) template = applyTemplateReviewOverride(template, override);
+  } catch (err) {
+    console.error("[template-review] override lookup error:", err);
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Override lookup failed" },
+      { status: 500 },
+    );
+  }
+
+  return NextResponse.json(template);
 }
 
 interface TypographyEntry {
@@ -84,49 +107,84 @@ export async function PUT(
     );
   }
 
+  let template: Record<string, unknown>;
   try {
     const raw = await readFile(filePath, "utf-8");
-    const template = JSON.parse(raw) as Record<string, unknown>;
-
-    if (body.typography) {
-      template.typography = body.typography;
-    }
-
-    if (body.textInputs) {
-      const inputs = (template.inputs ?? {}) as Record<string, unknown>;
-      inputs.text = body.textInputs;
-      template.inputs = inputs;
-    }
-
-    // Basic validation: ensure required fields still exist
-    const tplInputs = template.inputs as { text?: unknown[] } | undefined;
-    const textKeys = new Set(
-      (tplInputs?.text as Array<{ key: string }>)?.map((t) => t.key) ?? [],
-    );
-    const typoKeys = Object.keys(
-      (template.typography as Record<string, unknown>) ?? {},
-    );
-
-    // Every typography key should have a matching text input key
-    for (const tk of typoKeys) {
-      if (!textKeys.has(tk)) {
-        return NextResponse.json(
-          {
-            error: `Typography key "${tk}" has no matching text input`,
-          },
-          { status: 400 },
-        );
-      }
-    }
-
-    await writeFile(filePath, JSON.stringify(template, null, 2) + "\n", "utf-8");
-
-    return NextResponse.json({ ok: true, id });
-  } catch (err) {
-    console.error("[template-review] PUT error:", err);
+    template = JSON.parse(raw) as Record<string, unknown>;
+  } catch {
     return NextResponse.json(
-      { error: "Failed to update template" },
+      { error: "Template not found" },
+      { status: 404 },
+    );
+  }
+
+  // Layer any previously saved override under the incoming edit so partial
+  // bodies never resurrect stale on-disk state, then apply the edit itself.
+  let existingOverride: TemplateReviewOverridePayload | null = null;
+  try {
+    existingOverride = await fetchTemplateReviewOverride(id);
+  } catch (err) {
+    console.error("[template-review] override lookup error:", err);
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Override lookup failed" },
       { status: 500 },
     );
+  }
+  if (existingOverride) {
+    template = applyTemplateReviewOverride(template, existingOverride);
+  }
+  template = applyTemplateReviewOverride(template, {
+    typography: body.typography,
+    textInputs: body.textInputs,
+  });
+
+  // Basic validation: every typography key needs a matching text input key
+  const orphanKey = findTypographyKeyWithoutTextInput(template);
+  if (orphanKey) {
+    return NextResponse.json(
+      { error: `Typography key "${orphanKey}" has no matching text input` },
+      { status: 400 },
+    );
+  }
+
+  // Disk first (local dev); on Vercel the filesystem is read-only, so fall
+  // back to the Supabase override table.
+  try {
+    await writeFile(filePath, JSON.stringify(template, null, 2) + "\n", "utf-8");
+    // Disk is now canonical; drop a shadowing override if one exists.
+    let warning: string | undefined;
+    if (existingOverride) {
+      try {
+        await deleteTemplateReviewOverride(id);
+      } catch (err) {
+        console.error("[template-review] override cleanup error:", err);
+        warning = `Saved to disk, but the stale Supabase override could not be removed: ${
+          err instanceof Error ? err.message : String(err)
+        }`;
+      }
+    }
+    return NextResponse.json({ ok: true, id, storage: "disk", warning });
+  } catch (diskErr) {
+    try {
+      const payload: TemplateReviewOverridePayload = {
+        ...existingOverride,
+        ...(body.typography ? { typography: body.typography } : {}),
+        ...(body.textInputs ? { textInputs: body.textInputs } : {}),
+      };
+      await upsertTemplateReviewOverride(id, payload);
+      return NextResponse.json({ ok: true, id, storage: "supabase" });
+    } catch (supabaseErr) {
+      console.error("[template-review] PUT error:", diskErr, supabaseErr);
+      return NextResponse.json(
+        {
+          error: `Failed to update template. Disk: ${
+            diskErr instanceof Error ? diskErr.message : String(diskErr)
+          }. Supabase: ${
+            supabaseErr instanceof Error ? supabaseErr.message : String(supabaseErr)
+          }`,
+        },
+        { status: 500 },
+      );
+    }
   }
 }

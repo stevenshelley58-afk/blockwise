@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
+import {
+  applyTemplateReviewOverride,
+  fetchAllTemplateReviewOverrides,
+} from "@/lib/adstudio/template-review-overrides";
+
 const GALLERY_DIR = path.join(
   process.cwd(),
   "src",
@@ -37,9 +42,13 @@ export async function GET() {
 
     const templates: TemplateSummary[] = [];
 
+    // Saved edits on Vercel live in Supabase, not on disk; merge them in so
+    // the list counts reflect what the detail view shows.
+    const overrides = await fetchAllTemplateReviewOverrides();
+
     for (const file of files) {
       const raw = await readFile(path.join(GALLERY_DIR, file), "utf-8");
-      const tpl = JSON.parse(raw) as {
+      let tpl = JSON.parse(raw) as {
         id: string;
         name: string;
         format: string;
@@ -49,6 +58,9 @@ export async function GET() {
         inputs?: { text?: unknown[] };
         typography?: Record<string, { fontFile?: string }>;
       };
+
+      const override = overrides.get(tpl.id);
+      if (override) tpl = applyTemplateReviewOverride(tpl, override);
 
       const textInputs = tpl.inputs?.text ?? [];
       const typography = tpl.typography ?? {};
@@ -94,7 +106,11 @@ export async function GET() {
   } catch (err) {
     console.error("[template-review] GET list error:", err);
     return NextResponse.json(
-      { error: "Failed to read template gallery" },
+      {
+        error: `Failed to read template gallery: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      },
       { status: 500 },
     );
   }

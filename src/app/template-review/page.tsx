@@ -267,11 +267,23 @@ export default function TemplateReviewPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      toast.success("Saved successfully");
+      const data = (await res.json().catch(() => null)) as
+        | { ok?: boolean; storage?: string; warning?: string; error?: string }
+        | null;
+      if (!res.ok || !data?.ok) {
+        throw new Error(data?.error ?? `HTTP ${res.status}`);
+      }
+      toast.success(
+        data.storage === "supabase"
+          ? "Saved to Supabase overrides — run scripts/adstudio/apply-template-review-overrides.mjs to fold into git"
+          : "Saved to disk",
+      );
+      if (data.warning) toast.warning(data.warning);
       await fetchTemplates();
-    } catch {
-      toast.error("Save failed");
+    } catch (err) {
+      toast.error(
+        `Save failed: ${err instanceof Error ? err.message : String(err)}`,
+      );
     } finally {
       setSaving(false);
     }
