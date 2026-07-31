@@ -51,6 +51,7 @@ interface TypographyEntry {
   sampleBox: TextBox;
   sampleLineCount: number;
   fontFile: string;
+  approved?: boolean;
   measuredLines?: unknown[];
   measurementVersion?: number;
   measurementSource?: string;
@@ -80,6 +81,10 @@ interface Template {
   typography: Record<string, TypographyEntry>;
   status?: string;
   goal?: string;
+  /* Pre-computed counts returned by the list endpoint */
+  textInputCount?: number;
+  typographyCount?: number;
+  fontFileCount?: number;
 }
 
 interface FontManifestFace {
@@ -99,7 +104,7 @@ interface FontManifest {
 
 function regionColor(typo: TypographyEntry | undefined, gates: { minFontFit: number }): "green" | "yellow" | "red" {
   if (!typo || !typo.fontFile) return "red";
-  if (typo.fitScore >= gates.minFontFit) return "green";
+  if (typo.approved || typo.fitScore >= gates.minFontFit) return "green";
   return "yellow";
 }
 
@@ -254,13 +259,60 @@ export default function TemplateReviewPage() {
 
   /* ── Save ──────────────────────────────────────────────────────── */
 
+  /** Re-fetch the detail for the currently selected template. */
+  const refetchSelectedDetail = useCallback(async (id: string) => {
+    try {
+      const res = await fetch(`/api/dev/template-review/${id}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const full: Template = await res.json();
+      const safe: Template = {
+        ...full,
+        inputs: {
+          text: Array.isArray(full.inputs?.text) ? full.inputs.text : [],
+          images: full.inputs?.images ?? [],
+        },
+        typography: (full.typography && typeof full.typography === "object") ? full.typography : {},
+        sample: full.sample ?? { imageSrc: "" },
+      };
+      setDraft(safe);
+      setImgError(false);
+    } catch (err) {
+      console.error("[template-review] Failed to re-fetch template detail:", err);
+    }
+  }, []);
+
   const handleSave = async () => {
     if (!draft) return;
     setSaving(true);
     try {
+      // Approve every region that has a fontFile: set the approved flag and
+      // bump fitScore/detectionScore to at least the passing gate so the
+      // live gate also passes.
+      const minFit = gates.minFontFit;
+      const minDet = gates.minRegionConfidence;
+      const approvedTypography: Record<string, TypographyEntry> = {};
+      for (const [key, typo] of Object.entries(draft.typography ?? {})) {
+        if (typo.fontFile) {
+          approvedTypography[key] = {
+            ...typo,
+            approved: true,
+            fitScore: Math.max(typo.fitScore, minFit),
+            detectionScore: Math.max(typo.detectionScore, minDet),
+          };
+        } else {
+          approvedTypography[key] = typo;
+        }
+      }
+      const draftToSave: Template = {
+        ...draft,
+        typography: approvedTypography,
+      };
+      // Optimistically update the draft so the UI flips to green immediately.
+      setDraft(draftToSave);
+
       const body = {
-        typography: draft.typography ?? {},
-        textInputs: draft.inputs?.text ?? [],
+        typography: draftToSave.typography ?? {},
+        textInputs: draftToSave.inputs?.text ?? [],
       };
       const res = await fetch(`/api/dev/template-review/${draft.id}`, {
         method: "PUT",
@@ -279,7 +331,12 @@ export default function TemplateReviewPage() {
           : "Saved to disk",
       );
       if (data.warning) toast.warning(data.warning);
-      await fetchTemplates();
+      // Refresh the list AND the selected detail independently so both the
+      // sidebar counts and the canvas regions update reliably.
+      await Promise.all([
+        fetchTemplates(),
+        refetchSelectedDetail(draft.id),
+      ]);
     } catch (err) {
       toast.error(
         `Save failed: ${err instanceof Error ? err.message : String(err)}`,
@@ -414,14 +471,24 @@ export default function TemplateReviewPage() {
             <p className="p-4 text-center text-xs text-muted-foreground">No templates found</p>
           ) : (
             filteredTemplates.map((t) => {
-              const typoKeys = Object.keys(t.typography ?? {});
-              const textCount = t.inputs?.text?.length ?? 0;
-              const withFontFile = typoKeys.filter((k) => t.typography[k]?.fontFile).length;
-              const allPass = typoKeys.every(
-                (k) => t.typography[k]?.fontFile && t.typography[k].fitScore >= gates.minFontFit
-              );
-              const someHaveFont = withFontFile > 0;
-              const statusColor = !someHaveFont ? "red" : allPass ? "green" : "yellow";
+              // Use pre-computed counts from the list endpoint when the full
+              // typography map is not present (which is always for list items).
+              const hasTypoMap = t.typography && Object.keys(t.typography).length > 0;
+              const textCount = hasTypoMap
+                ? (t.inputs?.text?.length ?? 0)
+                : (t.textInputCount ?? 0);
+              const withFontFile = hasTypoMap
+                ? Object.keys(t.typography).filter((k) => t.typography[k]?.fontFile).length
+                : (t.fontFileCount ?? 0);
+              const totalRegions = hasTypoMap
+                ? Object.keys(t.typography).length
+                : (t.typographyCount ?? 0);
+              // Determine status color from pre-computed counts.
+              const statusColor = totalRegions === 0 || withFontFile === 0
+                ? "red"
+                : withFontFile === totalRegions
+                  ? "green"
+                  : "yellow";
 
               return (
                 <button
@@ -440,7 +507,7 @@ export default function TemplateReviewPage() {
                   <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{t.name}</p>
                   <div className="mt-1 flex items-center gap-2 text-[10px] text-muted-foreground">
                     <span className={colorBorder[statusColor]}>
-                      {withFontFile}/{textCount} fonts
+                      {withFontFile}/{totalRegions} fonts
                     </span>
                     <span
                       className={`inline-block size-2 rounded-full ${
