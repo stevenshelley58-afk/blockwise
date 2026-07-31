@@ -17,6 +17,7 @@ import { resolveAdStudioTemplate } from "../src/lib/adstudio/templates.ts";
 import { paddedPixelRect } from "../src/lib/adstudio/region-edit.ts";
 import { paddedPatchRect } from "../src/components/adstudio/canvas/text-patch.ts";
 import type { AdStudioCloneRegion, AdStudioTextLayers } from "../src/lib/adstudio/types.ts";
+import type { AdStudioTypeSpec } from "../src/lib/adstudio/templates.ts";
 
 const editor = readFileSync("src/components/adstudio/canvas/in-place-ad-editor.tsx", "utf8");
 const textPatch = readFileSync("src/components/adstudio/canvas/text-patch.ts", "utf8");
@@ -105,10 +106,10 @@ test("runtime styles come from the approved template and low-confidence regions 
   const styles = buildTemplateTextLayerStyles(template, cloneRegions);
   assert.deepEqual(Object.keys(styles).sort(), cloneRegions.map((region) => region.key).sort());
   for (const [key, style] of Object.entries(styles)) {
-    const spec = template.typography![key]!;
-    const expectedLive = spec.fitScore >= MAGIC_LAYER_MIN_FONT_FIT
-      && spec.detectionScore >= MAGIC_LAYER_MIN_REGION_CONFIDENCE
-      && Boolean(spec.fontFile);
+    const typo: AdStudioTypeSpec = template.typography![key]!;
+    const expectedLive = typo.fitScore >= MAGIC_LAYER_MIN_FONT_FIT
+      && typo.detectionScore >= MAGIC_LAYER_MIN_REGION_CONFIDENCE
+      && Boolean(typo.fontFile);
     assert.equal(style.mode === "live", expectedLive);
     assert.equal(style.sample, template.inputs.text.find((input) => input.key === key)?.sample);
   }
