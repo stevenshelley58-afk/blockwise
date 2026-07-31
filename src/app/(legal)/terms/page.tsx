@@ -102,19 +102,19 @@ export default function TermsOfServicePage() {
         You may run one campaign for up to three days without paying a Blockwise subscription fee.
         You remain responsible for the Meta ad spend. The free campaign does not start a
         subscription. If you subscribe, Checkout charges {FIRST_MONTH} immediately for the first
-        paid month, then the Blockwise Platform renews at {RENEWAL} monthly until cancelled. United
+        paid month, then Blockwise LeadGen renews at {RENEWAL} monthly until cancelled. United
         States prices exclude applicable sales tax. Australian prices include GST where Blockwise
         is required to collect it.
       </p>
       <p>
-        A paid Blockwise Platform subscription grants 100 render credits per billing period. A Feed render,
+        A paid Blockwise LeadGen subscription grants 100 render credits per billing period. A Feed render,
         Story render, AI image regeneration, or AI image edit uses one credit. Deterministic copy
         edits and deterministic text-layer patches use no credit. Credits expire at the end of the
         billing period and do not roll over or transfer. Inviting a team member does not add
         credits.
       </p>
       <p>
-        One Blockwise Platform subscription is for one workspace, one Brand Pack and primary website, one
+        One Blockwise LeadGen subscription is for one workspace, one Brand Pack and primary website, one
         country and billing currency, one Meta Business Portfolio, and one primary Meta ad account.
         Additional unrelated brands, Meta businesses, or client accounts require another paid
         workspace or a managed or agency agreement.
@@ -128,12 +128,12 @@ export default function TermsOfServicePage() {
         6. Managed service
       </h2>
       <p>
-        Managed service is separate from the Blockwise Platform and costs {MANAGED_MONTHLY} per month in the
+        Managed service is separate from Blockwise LeadGen and costs {MANAGED_MONTHLY} per month in the
         workspace billing currency, plus Meta ad spend. You may book a call before paying, or pay
         and book onboarding immediately.
       </p>
       <p>
-        The base managed engagement includes the complete Blockwise Platform, 100 monthly render
+        The base managed engagement includes the complete Blockwise LeadGen, 100 monthly render
         credits, one brand, one Meta ad account, operator launch and weekly optimization of up to
         four live campaigns, and a monthly report. Additional brands, ad accounts, campaign volume,
         or other work require a written scope change and may be repriced during onboarding.

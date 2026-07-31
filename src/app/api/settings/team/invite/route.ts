@@ -237,7 +237,7 @@ function reservationRejection(outcome: ReservationOutcome): { status: number; me
     case "seat_limit_reached":
       return { status: 409, message: "All five named seats are in use or reserved. Cancel an invitation or remove a member first." };
     case "paid_plan_required":
-      return { status: 403, message: "Team invitations unlock when the Blockwise Platform is active." };
+      return { status: 403, message: "Team invitations unlock when Blockwise LeadGen is active." };
     case "owner_required":
       return { status: 403, message: "Only the workspace owner can invite members." };
     case "invalid_email":

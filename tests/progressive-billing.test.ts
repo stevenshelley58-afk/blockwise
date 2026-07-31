@@ -31,11 +31,11 @@ const billingEnv: NodeJS.ProcessEnv = {
 } as NodeJS.ProcessEnv;
 
 test("regional offer catalog keeps flat numeric prices and market-specific tax behavior", () => {
-  assert.equal(BILLING_OFFERS.self_serve_US.firstInvoiceAmount, 9_900);
-  assert.equal(BILLING_OFFERS.self_serve_US.recurringAmount, 49_900);
+  assert.equal(BILLING_OFFERS.self_serve_US.firstInvoiceAmount, 8_900);
+  assert.equal(BILLING_OFFERS.self_serve_US.recurringAmount, 48_900);
   assert.equal(BILLING_OFFERS.self_serve_US.discountAmount, 40_000);
   assert.equal(BILLING_OFFERS.self_serve_US.taxBehavior, "exclusive");
-  assert.equal(BILLING_OFFERS.self_serve_AU.taxBehavior, "inclusive");
+  assert.equal(BILLING_OFFERS.self_serve_AU.taxBehavior, "exclusive");
   assert.equal(BILLING_OFFERS.managed_US.recurringAmount, 150_000);
   assert.equal(BILLING_OFFERS.managed_AU.recurringAmount, 150_000);
   assert.equal(
@@ -46,7 +46,7 @@ test("regional offer catalog keeps flat numeric prices and market-specific tax b
   assert.equal(currencyForMarket("AU"), "AUD");
 });
 
-test("Blockwise Platform Checkout charges the discounted first month immediately without a trial", () => {
+test("Blockwise LeadGen Checkout charges the discounted first month immediately without a trial", () => {
   const result = buildCheckoutSessionRequest(
     {
       workspaceId: "workspace-1",
@@ -76,8 +76,8 @@ test("Blockwise Platform Checkout charges the discounted first month immediately
   assert.equal(result.params["tax_id_collection[enabled]"], true);
   assert.equal(result.params["consent_collection[terms_of_service]"], "required");
   assert.equal(result.params["metadata[offer_version]"], BILLING_OFFER_VERSION);
-  assert.equal(result.params["metadata[first_invoice_amount]"], 9_900);
-  assert.equal(result.params["metadata[renewal_amount]"], 49_900);
+  assert.equal(result.params["metadata[first_invoice_amount]"], 8_900);
+  assert.equal(result.params["metadata[renewal_amount]"], 48_900);
   assert.match(
     String(result.params["metadata[triggering_rule]"]),
     /charged immediately when the customer subscribes/,
@@ -514,8 +514,8 @@ function checkoutEvent(id: string): StripeWebhookEvent {
           accepted_at: "2026-07-27T00:00:00.000Z",
           market: "US",
           currency: "USD",
-          first_invoice_amount: "9900",
-          renewal_amount: "49900",
+          first_invoice_amount: "8900",
+          renewal_amount: "48900",
           triggering_rule: "campaign launch or seven days",
         },
       },

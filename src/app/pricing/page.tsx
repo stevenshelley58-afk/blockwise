@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   title: "Pricing",
   alternates: { canonical: "/pricing" },
   description:
-    "Blockwise Platform and managed pricing for the United States and Australia. Create three ads and run one three-day campaign free before subscribing.",
+    "Blockwise LeadGen and managed pricing for the United States and Australia. Create three ads and run one three-day campaign free before subscribing.",
 };
 
 export default function PricingPage() {
@@ -42,7 +42,7 @@ export default function PricingPage() {
                 cancel Blockwise.
               </p>
               <p>
-                The Blockwise Platform covers one brand, one workspace, and one primary Meta ad account.
+                The Blockwise LeadGen covers one brand, one workspace, and one primary Meta ad account.
                 Additional brands or client accounts need another workspace or a managed
                 agreement.
               </p>
