@@ -277,7 +277,7 @@ export function SelfServePricing() {
               <span className="hw-price-per">/mo</span>
             </span>
             <p className="hw-price-note">
-              Blockwise Platform. First month {SELF_SERVE_FIRST_MONTH}, charged when you
+              Blockwise LeadGen. First month {SELF_SERVE_FIRST_MONTH}, charged when you
               subscribe. Meta ad spend is billed separately by Meta.
             </p>
           </div>
@@ -327,7 +327,7 @@ export function ManagedSetup() {
             {MANAGED_MONTHLY}/mo <span>plus Meta ad spend</span>
           </p>
           <p className="hw-sub">
-            Everything in the Blockwise Platform, plus campaign launch, weekly optimisation and a
+            Everything in Blockwise LeadGen, plus campaign launch, weekly optimisation and a
             monthly performance report.
           </p>
           <ul className="hw-control-points hw-control-points--ink">
@@ -335,7 +335,7 @@ export function ManagedSetup() {
               <span className="hw-check" aria-hidden>
                 ✓
               </span>
-              The complete Blockwise Platform
+              The complete Blockwise LeadGen
             </li>
             <li>
               <span className="hw-check" aria-hidden>

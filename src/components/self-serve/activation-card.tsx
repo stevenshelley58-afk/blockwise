@@ -178,7 +178,7 @@ function StatusCell({
 }
 
 function planLabel(state: string): string {
-  if (state === "paid") return "Blockwise Platform";
+  if (state === "paid") return "Blockwise LeadGen";
   if (state === "trialing") return "Existing billing trial";
   if (state === "payment_recovery") return "Payment needs attention";
   if (state === "canceled") return "Canceled";

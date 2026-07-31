@@ -36,7 +36,7 @@ const SELF_SERVE_FEATURES = [
 ] as const;
 
 const MANAGED_FEATURES = [
-  "Everything in the Blockwise Platform",
+  "Everything in Blockwise LeadGen",
   "Campaign launch and weekly optimisation",
   "Up to four live campaigns",
   "One brand and one Meta ad account",
@@ -88,7 +88,7 @@ export function MarketPricing() {
 
         <article className="pricing-self-serve" aria-labelledby="blockwise-platform-title">
           <div className="pricing-plan-intro">
-            <p className="pricing-kicker">Blockwise Platform</p>
+            <p className="pricing-kicker">Blockwise LeadGen</p>
             <h2 id="blockwise-platform-title">Create, publish and track your Meta ads in one place.</h2>
             <p>
               Start without a card and run one three-day campaign free. Subscribe only when you
@@ -110,7 +110,7 @@ export function MarketPricing() {
           </div>
 
           <div className="pricing-self-serve-body">
-            <ul aria-label="Blockwise Platform features">
+            <ul aria-label="Blockwise LeadGen features">
               {SELF_SERVE_FEATURES.map((feature) => (
                 <li key={feature}>
                   <Check aria-hidden size={17} strokeWidth={2.5} />

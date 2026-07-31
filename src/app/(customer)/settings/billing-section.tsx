@@ -43,6 +43,7 @@ export function BillingSection({
   const [billingEmail, setBillingEmail] = useState(workspace.billingEmail);
   const [busy, setBusy] = useState(false);
   const [portalBusy, setPortalBusy] = useState(false);
+  const [checkoutBusy, setCheckoutBusy] = useState(false);
   const [message, setMessage] = useState<Msg>(null);
   const packEstimate = usage.remaining == null ? null : Math.floor(usage.remaining / 2);
   const currencyMark = workspace.currency === "USD" ? "US$" : "A$";
@@ -86,12 +87,38 @@ export function BillingSection({
     }
   }
 
+  async function startCheckout() {
+    setCheckoutBusy(true);
+    setMessage(null);
+    try {
+      const res = await fetch("/api/settings/billing/checkout", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          workspaceId: workspace.id,
+          product: "self_serve",
+          clientMutationId: `sub-${workspace.id}-${Date.now()}`,
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { url?: string; error?: string; message?: string };
+      if (res.ok && data.url) {
+        window.location.href = data.url;
+        return;
+      }
+      setMessage({ tone: "error", text: data.message ?? data.error ?? "Couldn't start checkout right now." });
+    } catch {
+      setMessage({ tone: "error", text: "Couldn't start checkout right now." });
+    } finally {
+      setCheckoutBusy(false);
+    }
+  }
+
   return (
     <Section id="billing" title={niche.copy.settings.sections.billing}>
       <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
         <PlanTile
           label="Current plan"
-          value={workspace.billingAccessState === "paid" ? "Blockwise Platform" : plan?.name ?? "Free ads and campaign"}
+          value={workspace.billingAccessState === "paid" ? "Blockwise LeadGen" : plan?.name ?? "Free ads and campaign"}
           foot={
             <StatusPill tone={workspace.billingAccessState === "paid" ? "green" : workspace.billingAccessState === "payment_recovery" ? "rose" : "blue"}>
               {workspace.billingAccessState.replaceAll("_", " ")}
@@ -118,7 +145,7 @@ export function BillingSection({
           foot={
             workspace.cancelAtPeriodEnd
               ? "Already-paid credits remain until this date."
-              : `${currencyMark}499 each following month`
+              : `${currencyMark}489 each following month`
           }
         />
       </div>
@@ -185,7 +212,17 @@ export function BillingSection({
               </Button>
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">Billing management will appear here after your first paid plan is active.</p>
+            <div className="flex flex-wrap items-center justify-between gap-4 rounded-(--r-card) border border-(--line) bg-(--surface-subtle) p-4">
+              <div>
+                <h3 className="text-[13px] font-bold">Subscribe to Blockwise</h3>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {`${currencyMark}89 for your first month, then ${currencyMark}489/month. Cancel anytime.`}
+                </p>
+              </div>
+              <Button type="button" onClick={startCheckout} disabled={checkoutBusy}>
+                {checkoutBusy ? "Starting" : "Subscribe"}
+              </Button>
+            </div>
           )}
           <form className="grid gap-4" onSubmit={saveBillingEmail}>
             <div className="grid gap-2">

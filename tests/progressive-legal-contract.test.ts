@@ -35,11 +35,11 @@ test("Terms state the exact platform trigger, credit, seat, and Meta-spend rules
   assert.match(terms, /getBillingOffer/);
   assert.equal(
     formatBillingAmount(getBillingOffer("US", "self_serve").firstInvoiceAmount, "USD"),
-    "US$99",
+    "US$89",
   );
   assert.equal(
     formatBillingAmount(getBillingOffer("AU", "self_serve").recurringAmount, "AUD"),
-    "A$499",
+    "A$489",
   );
 });
 

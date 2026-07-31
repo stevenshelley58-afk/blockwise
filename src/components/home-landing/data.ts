@@ -42,7 +42,7 @@ export const FAQ_DATA = [
   },
   {
     q: "What does managed include?",
-    a: `Managed is ${AU_MANAGED_MONTHLY} per month, plus Meta ad spend. It includes everything in the Blockwise Platform, plus campaign launch, weekly optimisation and a monthly performance report.`,
+    a: `Managed is ${AU_MANAGED_MONTHLY} per month, plus Meta ad spend. It includes everything in Blockwise LeadGen, plus campaign launch, weekly optimisation and a monthly performance report.`,
   },
   {
     q: "Can I edit the copy before launch?",

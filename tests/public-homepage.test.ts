@@ -203,8 +203,8 @@ test("homepage FAQ matches the approved flat-rate offer", () => {
   assert.match(faq, /run one three-day campaign free/i);
   assert.match(faq, /does not start a Blockwise subscription/i);
   assert.match(faq, /charged immediately/i);
-  assert.equal(formatBillingAmount(selfServe.firstInvoiceAmount, selfServe.currency), "A$99");
-  assert.equal(formatBillingAmount(selfServe.recurringAmount, selfServe.currency), "A$499");
+  assert.equal(formatBillingAmount(selfServe.firstInvoiceAmount, selfServe.currency), "A$89");
+  assert.equal(formatBillingAmount(selfServe.recurringAmount, selfServe.currency), "A$489");
   assert.equal(formatBillingAmount(managed.recurringAmount, managed.currency), "A$1,500");
   assert.match(faq, /weekly optimisation/i);
   assert.match(faq, /monthly performance report/i);
@@ -228,7 +228,7 @@ test("pricing keeps US and AU offers explicit and accessible", () => {
   assert.match(pricing, /getBillingOffer/);
   assert.match(pricing, /formatBillingAmount/);
   assert.match(pricing, /in either market/);
-  assert.match(pricing, /Blockwise Platform/);
+  assert.match(pricing, /Blockwise LeadGen/);
   assert.doesNotMatch(pricing, /["'`]US\$[0-9]|["'`]A\$[0-9]/);
   assert.match(combined, /100 render credits/);
   assert.match(combined, /Up to 50 complete Feed \+ Story packs/);
