@@ -44,6 +44,7 @@ const diversityMinCount = 12;
 const minDistinctIntents = 5;
 const maxIntentShare = 0.5;
 const failures = [];
+const warnings = [];
 const templates = [];
 
 // Magic Layers typography coverage. Baseline set below the pipeline's
@@ -359,6 +360,37 @@ for (const { file, template } of templates) {
     }
   }
   typographyTextInputTotal += (text ?? []).length;
+
+  // deterministicOnly consistency gate. A template marked deterministicOnly: true
+  // promises every text input is fully deterministic — each must have a matching
+  // typography entry with a self-hosted fontFile and confidence scores that meet
+  // the live-gate thresholds. This is stricter than the per-template typography
+  // checks above, which allow partial coverage; deterministicOnly allows none.
+  if (template.deterministicOnly === true) {
+    for (const field of text ?? []) {
+      const spec = template.typography?.[field.key];
+      if (!spec) {
+        fail(id, `deterministicOnly: text input "${field.key}" has no matching typography entry`);
+        continue;
+      }
+      if (!spec.fontFile?.trim()) {
+        fail(id, `deterministicOnly: text input "${field.key}" typography entry has no fontFile`);
+      }
+      if (!Number.isFinite(spec.fitScore) || spec.fitScore < MAGIC_LAYER_MIN_FONT_FIT) {
+        fail(id, `deterministicOnly: text input "${field.key}" fitScore ${spec.fitScore} is below ${MAGIC_LAYER_MIN_FONT_FIT}`);
+      }
+      if (!Number.isFinite(spec.detectionScore) || spec.detectionScore < MAGIC_LAYER_MIN_REGION_CONFIDENCE) {
+        fail(id, `deterministicOnly: text input "${field.key}" detectionScore ${spec.detectionScore} is below ${MAGIC_LAYER_MIN_REGION_CONFIDENCE}`);
+      }
+    }
+  }
+
+  // Readiness evidence gate (warning, not hard fail). Evidence files are
+  // aspirational for older templates; their absence is noted but not blocking.
+  const evidencePath = join(galleryDir, "evidence", `${template.id}.json`);
+  if (!existsSync(evidencePath)) {
+    warnings.push(`${id}: no readiness evidence file at evidence/${template.id}.json`);
+  }
 }
 
 if (templates.length >= diversityMinCount) {
@@ -378,6 +410,17 @@ if (typographyCoverage < minTypographyCoverage) {
     "TYPOGRAPHY",
     `coverage regressed to ${(typographyCoverage * 100).toFixed(1)}% (${typographyEntries}/${typographyTextInputTotal}); minimum is ${(minTypographyCoverage * 100).toFixed(0)}%`,
   );
+}
+
+// derivedFrom / validFor contract (documentation, not enforced here):
+// Text layers use `derivedFrom` to track which render the plate was built from,
+// and `validFor` to limit which renders the plate can be applied to. This is
+// enforced at runtime in the editor (see src/lib/adstudio/text-layer-state.ts
+// and generate-template-campaign.ts). The verification script does not check
+// these fields because they are runtime canvas state, not template JSON fields.
+
+if (warnings.length) {
+  for (const warning of warnings) console.warn(`  warning: ${warning}`);
 }
 
 if (failures.length) {
