@@ -2,18 +2,20 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { requireOperator } from "@/lib/operator/auth";
 import { buildTemplateTrace } from "@/lib/operator/template-trace";
-import { detectCloneRegions } from "@/lib/adstudio/clone-regions";
+import { buildPrebuiltTemplateCloneQa } from "@/lib/adstudio/clone-regions";
 import { resolveCloneCopy } from "@/lib/adstudio/reference-clone";
-import { readFileSync, existsSync } from "node:fs";
-import { join, resolve } from "node:path";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
  * POST /api/operator/template-trace/[id]/detect-regions
- * Body: { imageUrl?: string }  — data URL or absolute URL to analyze.
- *        Defaults to the template's sample image (read from disk).
+ *
+ * Returns the editable text/image regions for a template. Customer generation
+ * is fully deterministic: boxes are measured once offline from the approved
+ * sample's type-spec and carried into each matching-format creative, so this
+ * mirrors exactly what generation uses (no live vision call). Body (optional):
+ * { format?: string } to preview regions mapped to another canvas (4:5 / 9:16).
  */
 export async function POST(
   request: NextRequest,
@@ -29,28 +31,11 @@ export async function POST(
   }
 
   const body = await request.json().catch(() => ({}));
-  let imageUrl: string = body.imageUrl ?? "";
-
-  // Default: read the sample from public/ and convert to data URL.
-  if (!imageUrl) {
-    const samplePath = join(resolve(process.cwd(), "public"), ...trace.sampleImagePath.slice(1).split("/"));
-    if (!existsSync(samplePath)) {
-      return NextResponse.json({ error: "Sample image not found on disk." }, { status: 404 });
-    }
-    const bytes = readFileSync(samplePath);
-    const ext = samplePath.split(".").pop()?.toLowerCase();
-    const mime = ext === "jpg" || ext === "jpeg" ? "image/jpeg" : ext === "webp" ? "image/webp" : "image/png";
-    imageUrl = `data:${mime};base64,${bytes.toString("base64")}`;
-  }
+  const format = typeof body.format === "string" && body.format ? body.format : trace.template.format;
 
   const expectedCopy = resolveCloneCopy(trace.template, {});
-  const regions = await detectCloneRegions({
-    workspaceId: "operator-trace",
-    userId: guard.userId,
-    imageUrl,
-    expectedCopy,
-    format: trace.template.format,
-  });
+  const qa = buildPrebuiltTemplateCloneQa(trace.template, expectedCopy, format);
+  const regions = qa?.regions ?? [];
 
-  return NextResponse.json({ regions, count: regions.length });
+  return NextResponse.json({ regions, count: regions.length, copyValues: qa?.copyValues ?? expectedCopy });
 }
