@@ -3,15 +3,16 @@ import test from "node:test";
 import { readFileSync } from "node:fs";
 
 import {
+  buildPrebuiltTemplateCloneQa,
   parseCloneRegions,
 } from "../src/lib/adstudio/clone-regions.ts";
+import { AD_STUDIO_TEMPLATES } from "../src/lib/adstudio/templates.ts";
 import {
   compositeCloneRegionEdit,
   createCloneRegionEditMask,
   generateCloneWithCascade,
   normalizeCloneRenderAspect,
   persistCloneRender,
-  renderExactCloneTextEdit,
 } from "../src/lib/adstudio/clone-generation.ts";
 import {
   fetchProviderRequest,
@@ -33,6 +34,80 @@ test("declared copy regions stay editable as text when vision misclassifies them
 
   assert.equal(regions.find((region) => region.key === "headline")?.kind, "text");
   assert.equal(regions.find((region) => region.key === "property_photo")?.kind, "image");
+});
+
+test("native-format editor regions come from the offline template build without vision", () => {
+  const template = AD_STUDIO_TEMPLATES.find((entry) => entry.id === "meta-feed-018")!;
+  const copy = {
+    headline_number: "5",
+    headline_main: "SMART FIRST STEPS",
+    headline_sub: "Before Buying a Home",
+    contact_handle: "@homeguide.example",
+  };
+  const feedQa = buildPrebuiltTemplateCloneQa(template, copy, "4:5");
+  assert.ok(feedQa);
+  assert.deepEqual(feedQa.copyValues, copy);
+  const expectedRegionKeys = [
+    ...template.inputs.text
+      .filter((field) => Boolean(template.typography?.[field.key]?.sampleBox))
+      .map((field) => field.key),
+    ...template.inputs.images
+      .filter((field) => Boolean(template.deterministicEditing?.imageBoxes[field.key]))
+      .map((field) => field.key),
+  ];
+  assert.deepEqual(
+    feedQa.regions.map((region) => region.key),
+    expectedRegionKeys,
+  );
+  assert.ok(
+    feedQa.regions
+      .filter((region) => region.key !== "main_property_image")
+      .every((region) => region.kind === "text"),
+  );
+  assert.equal(
+    feedQa.regions.find((region) => region.key === "main_property_image")?.kind,
+    "image",
+  );
+  const storyQa = buildPrebuiltTemplateCloneQa(template, copy, "9:16");
+  assert.ok(storyQa);
+  const sampleSubBox = template.typography?.headline_sub?.sampleBox;
+  const storySubBox = storyQa.regions.find((region) => region.key === "headline_sub")?.box;
+  assert.ok(sampleSubBox && storySubBox);
+  assert.equal(storySubBox.x, sampleSubBox.x);
+  assert.equal(storySubBox.width, sampleSubBox.width);
+  assert.equal(storySubBox.y, (sampleSubBox.y * 1350 + 285) / 1920);
+  assert.equal(storySubBox.height, (sampleSubBox.height * 1350) / 1920);
+});
+
+test("a migrated template carries its measured image hitboxes into both formats", () => {
+  const base = AD_STUDIO_TEMPLATES.find((entry) => entry.id === "meta-feed-018")!;
+  const template = {
+    ...base,
+    deterministicEditing: {
+      status: "ready" as const,
+      imageBoxes: {
+        main_property_image: {
+          x: 0.576172,
+          y: 0.16875,
+          width: 0.423828,
+          height: 0.597656,
+        },
+      },
+    },
+  };
+  const feed = buildPrebuiltTemplateCloneQa(template, {}, "4:5");
+  const story = buildPrebuiltTemplateCloneQa(template, {}, "9:16");
+  const feedImage = feed?.regions.find((region) => region.key === "main_property_image");
+  const storyImage = story?.regions.find((region) => region.key === "main_property_image");
+
+  assert.equal(feedImage?.kind, "image");
+  assert.deepEqual(feedImage?.box, template.deterministicEditing.imageBoxes.main_property_image);
+  assert.ok(storyImage);
+  assert.equal(storyImage.kind, "image");
+  assert.equal(storyImage.box.x, feedImage?.box.x);
+  assert.equal(storyImage.box.width, feedImage?.box.width);
+  assert.equal(storyImage.box.y, (feedImage!.box.y * 1350 + 285) / 1920);
+  assert.equal(storyImage.box.height, (feedImage!.box.height * 1350) / 1920);
 });
 
 function roundedBox(box: { x: number; y: number; width: number; height: number } | undefined) {
@@ -217,41 +292,6 @@ test("targeted edits composite only the selected region onto the finished ad", a
   assert.deepEqual(rgbAt(50, 50), [20, 20, 220], "inside pixels come from the model edit");
 });
 
-test("post-clone text edits typeset exact copy only inside the selected region", async () => {
-  const { default: sharp } = await import("sharp");
-  const source = await sharp({
-    create: { width: 240, height: 120, channels: 4, background: { r: 190, g: 20, b: 20, alpha: 1 } },
-  })
-    .composite([{
-      input: await sharp({
-        create: { width: 120, height: 120, channels: 4, background: { r: 18, g: 62, b: 117, alpha: 1 } },
-      }).png().toBuffer(),
-      left: 0,
-      top: 0,
-    }])
-    .png()
-    .toBuffer();
-  const result = await renderExactCloneTextEdit(
-    `data:image/png;base64,${source.toString("base64")}`,
-    "JUST LISTED TODAY",
-    { x: 0, y: 0, width: 0.5, height: 1 },
-  );
-  const { data, info } = await sharp(Buffer.from(result.split(",")[1], "base64"))
-    .removeAlpha()
-    .raw()
-    .toBuffer({ resolveWithObject: true });
-  const rgbAt = (x: number, y: number) => Array.from(data.subarray((y * info.width + x) * 3, (y * info.width + x) * 3 + 3));
-  assert.deepEqual(rgbAt(200, 60), [190, 20, 20], "pixels outside the selected text region stay unchanged");
-  let lightPixels = 0;
-  for (let y = 0; y < 120; y += 1) {
-    for (let x = 0; x < 120; x += 1) {
-      const [red, green, blue] = rgbAt(x, y);
-      if (red > 220 && green > 220 && blue > 220) lightPixels += 1;
-    }
-  }
-  assert.ok(lightPixels > 30, "the exact-copy finalizer paints readable high-contrast text in the region");
-});
-
 const executeAttempt = (async (input: Parameters<typeof executeAdStudioProviderAttempt>[0]) => {
   try {
     const output = await input.execute();
@@ -327,7 +367,7 @@ async function persistencePipelineFunction() {
   return fn as (input: unknown) => Promise<unknown>;
 }
 
-test("template campaign generation ships the render immediately with QA as advisory enrichment", () => {
+test("template campaign generation ships the render with its prebuilt editor map", () => {
   const pipeline = readFileSync("src/lib/adstudio/generate-template-campaign.ts", "utf8");
   const generation = readFileSync("src/lib/adstudio/clone-generation.ts", "utf8");
 
@@ -343,10 +383,12 @@ test("template campaign generation ships the render immediately with QA as advis
   assert.match(pipeline, /resolveCloneProviders\(generationQuality\)/);
   assert.doesNotMatch(pipeline, /createFalImageProvider|fal-image-provider|FAL_KEY/);
 
-  // The blocking QA gate is gone: no reroll corrections, no verification
-  // failures that eat the customer's wait. The vision pass survives as
-  // post-persist region detection that attaches editor regions.
-  assert.match(pipeline, /enrichCloneCreativesWithRegions/);
+  // The blocking QA gate and customer-time vision are gone. Native-format
+  // editor regions come from the template's offline type-spec block.
+  assert.match(pipeline, /buildPrebuiltTemplateCloneQa/);
+  assert.match(pipeline, /prepareCloneCreativeTextLayers/);
+  assert.doesNotMatch(pipeline, /detectCloneRegions/);
+  assert.doesNotMatch(pipeline, /vision_classification/);
   assert.doesNotMatch(pipeline, /cloneQaCorrectionPrompt/);
   assert.doesNotMatch(pipeline, /TemplateCampaignQaError/);
   assert.doesNotMatch(pipeline, /qa\.passed/);
@@ -663,19 +705,16 @@ test("targeted edit endpoint model-edits selected regions and verifies advisoril
   assert.doesNotMatch(route, /qa && !qa\.passed/);
 });
 
-test("template generation persists unreviewed renders and defers verdicts to enrichment", () => {
+test("template generation persists prebuilt editor regions with the finished render", () => {
   const builder = readFileSync("src/lib/adstudio/clone-campaign.ts", "utf8");
   const generation = readFileSync("src/lib/adstudio/generate-template-campaign.ts", "utf8");
 
-  // The pack builder still carries a verdict when one exists (saved campaigns,
-  // future callers), but generation no longer supplies one at build time.
+  // The pack builder carries the prebuilt map supplied by generation.
   assert.match(builder, /cloneQa: input\.firstAd\.templateCloneQaByFormat\?\.\[format\]/);
-  assert.doesNotMatch(generation, /templateCloneQaByFormat/);
+  assert.match(generation, /templateCloneQaByFormat/);
   assert.doesNotMatch(generation, /TemplateCampaignQaError/);
-  assert.match(generation, /enrichCloneCreativesWithRegions/);
-  // Enrichment is per-creative and guarded: it never clobbers regions a
-  // faster in-place edit already wrote.
-  assert.match(generation, /existing\.regions\.length > 0\) return/);
+  assert.match(generation, /buildPrebuiltTemplateCloneQa/);
+  assert.doesNotMatch(generation, /detectCloneRegions/);
 });
 
 test("provided copy updates metadata without creating a second image-generation path", () => {

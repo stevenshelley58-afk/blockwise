@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { niche } from "@/config/niche";
 import { createResearchServiceClient } from "@/lib/research/service";
 
 export const dynamic = "force-dynamic";
@@ -20,6 +21,10 @@ type PublicCheck = {
 };
 
 export async function GET(request: Request) {
+  if (!niche.features.adRadar) {
+    return NextResponse.json({ app: "blockwise", service: "research", status: "disabled" }, { status: 200 });
+  }
+
   const secret = process.env.CRON_SECRET;
   const authorization = request.headers.get("authorization");
   const authenticated = secret && authorization === `Bearer ${secret}`;

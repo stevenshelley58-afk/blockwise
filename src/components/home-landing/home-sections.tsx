@@ -1,65 +1,36 @@
 import { Fragment, type CSSProperties } from "react";
 
 import { CtaLink } from "@/components/landing/cta-link";
-import { CountUp, InView } from "@/components/motion";
+import { InView } from "@/components/motion";
+import { formatBillingAmount, getBillingOffer } from "@/lib/billing/offers";
 
 import {
   CHART_POINTS,
   CONTROL_POINTS,
   DASH_ROWS,
   HERO_RAIL,
-  PROPERTY_NOTES,
-  PROPERTY_USES,
 } from "./data";
 import { FbAdCard } from "./fb-ad-card";
 import { FaqAccordion } from "./faq-accordion";
 import { ManagedSetupForm } from "./managed-setup-form";
 import { StartStudio } from "./start-studio";
-import { SuburbReportLocationForm } from "./suburb-report-location-form";
 
-/* ---------- 6.2 #top — Hero (photographic fold) ---------- */
-
-export function Hero() {
-  return (
-    <div className="hw-hero">
-      <img
-        className="hw-hero-bg"
-        src="/home/home-dusk.webp"
-        alt=""
-        aria-hidden
-        fetchPriority="high"
-      />
-      <div className="hw-hero-scrim" aria-hidden />
-      <div className="hw-wide hw-hero-grid">
-        <div className="hw-hero-copy">
-          <p className="hw-eyebrow">Meta ads for real estate agents</p>
-          <h1 className="hw-h1">Your competitors are advertising. Are&nbsp;you?</h1>
-          <p className="hw-lede">
-            Ads built from what&rsquo;s actually working in your area. Start getting leads today.
-          </p>
-          <div className="hw-hero-form">
-            <SuburbReportLocationForm analyticsLocation="hero" />
-          </div>
-        </div>
-        <div className="hw-hero-review">
-          <p className="hw-status">
-            <span className="hw-status-dot" aria-hidden />
-            Ready to review
-          </p>
-          <FbAdCard
-            copy="Thinking of selling? Find out what your home could be worth with a free property appraisal."
-            photoSrc="/home/interior-styled.webp"
-            domain="YOURAGENCY.COM.AU"
-            footHeading="Find out what your home could be worth"
-            footSub="Book a free property appraisal"
-          />
-          <p className="hw-note">Nothing spends until you approve.</p>
-        </div>
-      </div>
-      <p className="hw-plate">Mt Lawley, WA · Seller-lead ad · Example</p>
-    </div>
-  );
-}
+const US_SELF_SERVE = getBillingOffer("US", "self_serve");
+const AU_SELF_SERVE = getBillingOffer("AU", "self_serve");
+const US_MANAGED = getBillingOffer("US", "managed");
+const AU_MANAGED = getBillingOffer("AU", "managed");
+const SELF_SERVE_RENEWAL = `${formatBillingAmount(
+  US_SELF_SERVE.recurringAmount,
+  US_SELF_SERVE.currency,
+)} / ${formatBillingAmount(AU_SELF_SERVE.recurringAmount, AU_SELF_SERVE.currency)}`;
+const SELF_SERVE_FIRST_MONTH = `${formatBillingAmount(
+  US_SELF_SERVE.firstInvoiceAmount,
+  US_SELF_SERVE.currency,
+)} / ${formatBillingAmount(AU_SELF_SERVE.firstInvoiceAmount, AU_SELF_SERVE.currency)}`;
+const MANAGED_MONTHLY = `${formatBillingAmount(
+  US_MANAGED.recurringAmount,
+  US_MANAGED.currency,
+)} / ${formatBillingAmount(AU_MANAGED.recurringAmount, AU_MANAGED.currency)}`;
 
 /* ---------- 6.3 #start — The start studio (client island) ---------- */
 
@@ -108,9 +79,12 @@ export function WorkflowBand() {
               </Fragment>
             ))}
           </h2>
-          <p className="hw-sub">We handle setup, creative, approvals and updates.</p>
+          <p className="hw-sub">
+            Blockwise brings creative, copy, approvals and campaign updates into one guided
+            workflow.
+          </p>
           <CtaLink location="workflow" href="/signup" className="hw-textlink hw-wf-cta">
-            Get your first ad prepared <span className="hw-arr">→</span>
+            Create three ads free <span className="hw-arr">→</span>
           </CtaLink>
         </div>
         <div className="hw-wf-panel">
@@ -143,7 +117,7 @@ export function WorkflowBand() {
   );
 }
 
-/* ---------- 6.6 #control — The dark fold (dashboard + daily email) ---------- */
+/* ---------- 6.6 #control — The dark fold (dashboard + results snapshot) ---------- */
 
 export function ControlFold() {
   return (
@@ -151,7 +125,10 @@ export function ControlFold() {
       <InView className="hw-wide hw-control-grid" threshold={0.18}>
         <div className="hw-control-rail">
           <h2>Stay in control.</h2>
-          <p className="hw-sub">Personal dashboard and daily emails.</p>
+          <p className="hw-sub">
+            Review ads, leads, spend and approvals in one dashboard. Get an email when something
+            needs your attention.
+          </p>
           <ul className="hw-control-points">
             {CONTROL_POINTS.map((point) => (
               <li key={point}>
@@ -215,10 +192,10 @@ export function ControlFold() {
           </div>
           <div className="hw-email">
             <div className="hw-email-head">
-              <span className="hw-email-head-h">Daily email</span>
-              <span className="hw-tag hw-tag--accent">Optional</span>
+              <span className="hw-email-head-h">Results snapshot</span>
+              <span className="hw-tag hw-tag--accent">Example</span>
             </div>
-            <p className="hw-email-title">Your ads yesterday</p>
+            <p className="hw-email-title">Workspace overview</p>
             <div className="hw-email-stats">
               <span className="hw-email-stat">
                 <span className="hw-email-stat-v">6</span>
@@ -244,7 +221,7 @@ export function ControlFold() {
               </p>
               <p className="hw-email-line">
                 <span className="hw-line-dot hw-line-dot--faint" aria-hidden />
-                No Ads Manager login needed.
+                No need to check Ads Manager every day.
               </p>
             </div>
           </div>
@@ -254,90 +231,32 @@ export function ControlFold() {
   );
 }
 
-/* ---------- 6.8 #property-check — Tinted split band ---------- */
-
-export function PropertyCheck() {
-  return (
-    <div className="hw-fold hw-pc">
-      <div className="hw-wide hw-pc-grid">
-        <div className="hw-pc-copy">
-          <h2>Know the property before the call</h2>
-          <p className="hw-sub">Zoning, overlays and red flags before you call.</p>
-          <div className="hw-pc-chips">
-            {PROPERTY_USES.map((use) => (
-              <span className="hw-pc-chip" key={use}>
-                {use}
-              </span>
-            ))}
-          </div>
-          <CtaLink
-            location="property_check"
-            href="/signup?source=property-check"
-            className="hw-textlink"
-          >
-            Run a property check <span className="hw-arr">→</span>
-          </CtaLink>
-        </div>
-        <div className="hw-pc-panel">
-          <div className="hw-pc-panel-head">
-            <span className="hw-pc-panel-addr">
-              14 Sample St, Mt Lawley WA <span className="hw-tag">Example</span>
-            </span>
-            <span className="hw-pc-panel-status">Check complete</span>
-          </div>
-          <div className="hw-pc-facts">
-            <span className="hw-pc-fact">
-              <span className="hw-pc-fact-k">Zoning</span>
-              <span className="hw-pc-fact-v">R20 / R40</span>
-            </span>
-            <span className="hw-pc-fact">
-              <span className="hw-pc-fact-k">Overlays</span>
-              <span className="hw-pc-fact-v">Heritage area</span>
-            </span>
-            <span className="hw-pc-fact">
-              <span className="hw-pc-fact-k">Subdivision</span>
-              <span className="hw-pc-fact-v hw-pc-fact-v--warning">Potential. Verify lot width.</span>
-            </span>
-          </div>
-          <ul className="hw-pc-notes">
-            {PROPERTY_NOTES.map((note) => (
-              <li key={note.text}>
-                <span className="hw-line-dot hw-line-dot--faint" aria-hidden />
-                <span>
-                  {note.text} <span className="hw-pc-note-src">{note.source}</span>
-                </span>
-              </li>
-            ))}
-          </ul>
-          <p className="hw-pc-panel-foot">Always confirm with the local planning authority.</p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 /* ---------- 6.9 #free-trial + #managed-setup ---------- */
 
 export function FreeTrial() {
   return (
     <div className="hw-band hw-band--wide hw-trial">
-      <h2>Create three complete ads free.</h2>
-      <p className="hw-sub">Email only. No card.</p>
-      <CtaLink location="free_trial" href="/signup" className="hw-btn hw-btn--dark">
-        Create three ads free <span className="hw-arr">→</span>
-      </CtaLink>
+      <h2>Create 3 ads free.</h2>
+      <div className="hw-trial-cta">
+        <CtaLink location="free_trial" href="/signup" className="hw-btn hw-btn--dark">
+          Create three ads free <span className="hw-arr">→</span>
+        </CtaLink>
+        <p className="hw-sub">
+          Each ad includes Feed and Story/Reels-ready image creative. No credit card required.
+        </p>
+      </div>
       <div className="hw-trial-facts">
         <div className="hw-trial-fact">
-          <h3>Three complete ads</h3>
-          <p>Finished Feed and Story creative in each.</p>
+          <h3>High-quality templates</h3>
+          <p>Choose a lead generation layout and make it yours.</p>
         </div>
         <div className="hw-trial-fact">
-          <h3>No card</h3>
-          <p>Pay only when you run a campaign.</p>
+          <h3>Personalised AI copy</h3>
+          <p>Review and edit every line before publishing.</p>
         </div>
         <div className="hw-trial-fact">
-          <h3>One live setup free</h3>
-          <p>Ad spend is always paid to Meta.</p>
+          <h3>One 3-day campaign free</h3>
+          <p>No Blockwise fee. You pay Meta directly for ad spend.</p>
         </div>
       </div>
     </div>
@@ -350,14 +269,17 @@ export function SelfServePricing() {
   return (
     <div className="hw-fold hw-pricing">
       <div className="hw-band">
-        <h2>Self-serve.</h2>
+        <h2>Create, publish and track your Meta ads in one place.</h2>
         <div className="hw-price-panel">
           <div className="hw-price-lead">
             <span className="hw-price-num">
-              $<CountUp to={499} />
+              {SELF_SERVE_RENEWAL}
               <span className="hw-price-per">/mo</span>
             </span>
-            <p className="hw-price-note">Ad spend paid to Meta directly.</p>
+            <p className="hw-price-note">
+              Blockwise Platform. First month {SELF_SERVE_FIRST_MONTH}, charged when you
+              subscribe. Meta ad spend is billed separately by Meta.
+            </p>
           </div>
           <div className="hw-price-facts">
             <span className="hw-price-fact">
@@ -402,27 +324,30 @@ export function ManagedSetup() {
         <div className="hw-ms-copy">
           <h2>Fully managed.</h2>
           <p className="hw-ms-price">
-            $2,000/mo <span>flat, plus ad spend</span>
+            {MANAGED_MONTHLY}/mo <span>plus Meta ad spend</span>
           </p>
-          <p className="hw-sub">Everything included. We manage your account end to end.</p>
+          <p className="hw-sub">
+            Everything in the Blockwise Platform, plus campaign launch, weekly optimisation and a
+            monthly performance report.
+          </p>
           <ul className="hw-control-points hw-control-points--ink">
             <li>
               <span className="hw-check" aria-hidden>
                 ✓
               </span>
-              The complete self-serve product
+              The complete Blockwise Platform
             </li>
             <li>
               <span className="hw-check" aria-hidden>
                 ✓
               </span>
-              Launch and weekly optimization, four campaigns
+              Campaign launch and weekly optimisation
             </li>
             <li>
               <span className="hw-check" aria-hidden>
                 ✓
               </span>
-              One brand, one ad account, monthly report
+              One brand, one ad account and a monthly performance report
             </li>
           </ul>
         </div>
@@ -445,7 +370,7 @@ export function FaqSection() {
           <span className="hw-faq-banner-b">15 minutes. First ads set up.</span>
         </span>
         <CtaLink location="faq_walkthrough" href="#managed-setup" className="hw-textlink">
-          Book a walkthrough <span className="hw-arr">→</span>
+          Book a 15-minute walkthrough <span className="hw-arr">→</span>
         </CtaLink>
       </div>
     </div>

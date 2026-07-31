@@ -144,5 +144,207 @@
         "body": "The agency will be in touch within 24 hours to arrange your free seller consultation."
       }
     }
+  },
+  "typography": {
+    "cta": {
+      "fontId": "raleway",
+      "family": "Raleway",
+      "fallbackFamily": "sans-serif",
+      "weight": 900,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.3617020308578727,
+      "lineHeight": 1.174,
+      "tracking": 0,
+      "align": "center",
+      "color": "#3d4e51",
+      "fitScore": 0.795,
+      "sampleBox": {
+        "x": 0.10185185185185185,
+        "y": 0.86484375,
+        "width": 0.8342592592592593,
+        "height": 0.08645833333333333
+      },
+      "sampleLineCount": 4,
+      "detectionScore": 0.813,
+      "fontFile": "/fonts/adstudio/raleway-900.woff2"
+    },
+    "check_1": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 600,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.5454545454545454,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "center",
+      "color": "#4f4f4e",
+      "fitScore": 0.621,
+      "sampleBox": {
+        "x": 0.1875,
+        "y": 0.51640625,
+        "width": 0.5231481481481481,
+        "height": 0.015885416666666666
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/smooch-sans-600.woff2"
+    },
+    "headline": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.5238094223673646,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "center",
+      "color": "#484747",
+      "fitScore": 0.587,
+      "sampleBox": {
+        "x": 0.0824074074074074,
+        "y": 0.33515625,
+        "width": 0.7875,
+        "height": 0.13854166666666667
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 0.842,
+      "fontFile": "/fonts/adstudio/smooch-sans-300.woff2"
+    },
+    "check_4": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 600,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.5454545454545454,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "left",
+      "color": "#4f4f4f",
+      "fitScore": 0.581,
+      "sampleBox": {
+        "x": 0.1875,
+        "y": 0.6682291666666667,
+        "width": 0.487962962962963,
+        "height": 0.015885416666666666
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/smooch-sans-600.woff2"
+    },
+    "check_3": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 600,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.5454545454545454,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "left",
+      "color": "#504f4f",
+      "fitScore": 0.573,
+      "sampleBox": {
+        "x": 0.18935185185185185,
+        "y": 0.6177083333333333,
+        "width": 0.46111111111111114,
+        "height": 0.015885416666666666
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/smooch-sans-600.woff2"
+    },
+    "check_5": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.5423728813559323,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "left",
+      "color": "#666666",
+      "fitScore": 0.751,
+      "sampleBox": {
+        "x": 0.10648148148148148,
+        "y": 0.7005208333333334,
+        "width": 0.5611111111111111,
+        "height": 0.04140625
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 0.857,
+      "fontFile": "/fonts/adstudio/smooch-sans-300.woff2"
+    },
+    "check_6": {
+      "fontId": "source-sans-3",
+      "family": "Source Sans 3",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.466860465116279,
+      "lineHeight": 1.424,
+      "tracking": 0,
+      "align": "left",
+      "color": "#676766",
+      "fitScore": 0.724,
+      "sampleBox": {
+        "x": 0.10416666666666667,
+        "y": 0.7515625,
+        "width": 0.55,
+        "height": 0.039322916666666666
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 0.857
+    },
+    "check_2": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 600,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.5454545454545454,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "left",
+      "color": "#504f4f",
+      "fitScore": 0.582,
+      "sampleBox": {
+        "x": 0.18935185185185185,
+        "y": 0.5669270833333333,
+        "width": 0.4601851851851852,
+        "height": 0.015885416666666666
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/smooch-sans-600.woff2"
+    }
+  },
+  "deterministicEditing": {
+    "status": "partial",
+    "imageBoxes": {
+      "background_photo": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 0.2979166667
+      },
+      "agency_logo": {
+        "x": 0.0685185185,
+        "y": 0.85625,
+        "width": 0.1731481481,
+        "height": 0.0979166667
+      }
+    }
   }
 }

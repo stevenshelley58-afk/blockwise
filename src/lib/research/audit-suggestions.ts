@@ -218,7 +218,7 @@ export function fallbackAuditSuggestions(result: AdAuditResult): AuditSuggestion
     );
   }
   if (topFormat) {
-    whatsWorking.push(`${topFormat.label} is the most common format locally (${topFormat.count} ads) — it's the proven baseline to match before you experiment.`);
+    whatsWorking.push(`${topFormat.label} is the most common format locally (${topFormat.count} ads) — it is the observed baseline to compare before you experiment.`);
   }
   if (topCta) {
     whatsWorking.push(`"${topCta.label}" is the most-used call to action in the area — a safe default that local buyers and sellers already respond to.`);

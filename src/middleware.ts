@@ -1,7 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { niche } from "@/config/niche";
+import { isFeatureRouteAvailable } from "@/lib/features/route-availability";
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  if (!isFeatureRouteAvailable(pathname, niche.features)) {
+    return NextResponse.json({ error: "Not found" }, { status: 404, headers: { "Cache-Control": "no-store" } });
+  }
   const isProtected =
     pathname.startsWith("/api/adstudio/") || pathname.startsWith("/api/operator/");
 
@@ -20,5 +25,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/api/adstudio/:path*", "/api/operator/:path*"],
+  matcher: ["/api/adstudio/:path*", "/api/operator/:path*", "/api/property-checks/:path*", "/api/research/ad-radar/suggestions", "/api/research/ads/search", "/api/research/advertisers/autocomplete", "/api/research/locations/autocomplete", "/api/research/locations/guess", "/api/research/swipe-file", "/api/research/audit/lead", "/api/research/audit/suggestions", "/api/research/local-ad-radar", "/ad-radar/:path*", "/property-check/:path*", "/suburb/:path*", "/audit", "/hero-lab", "/operator/research/:path*"],
 };

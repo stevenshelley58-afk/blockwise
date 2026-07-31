@@ -116,5 +116,99 @@
         "body": "The agency will be in touch within 24 hours to arrange your free rental appraisal."
       }
     }
+  },
+  "typography": {
+    "body": {
+      "fontId": "titillium-web",
+      "family": "Titillium Web",
+      "fallbackFamily": "sans-serif",
+      "weight": 900,
+      "italic": false,
+      "case": "mixed",
+      "sizeRatio": 1.1061946902654867,
+      "lineHeight": 1.521,
+      "tracking": 0,
+      "align": "right",
+      "color": "#8798a0",
+      "fitScore": 0.244,
+      "sampleBox": {
+        "x": 0.1361111111111111,
+        "y": 0.25026041666666665,
+        "width": 0.8638888888888889,
+        "height": 0.05703125
+      },
+      "sampleLineCount": 4,
+      "detectionScore": 0.879,
+      "fontFile": "/fonts/adstudio/titillium-web-900.woff2"
+    },
+    "headline": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.5238096353959145,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "center",
+      "color": "#1c3c47",
+      "fitScore": 0.449,
+      "sampleBox": {
+        "x": 0.13287037037037036,
+        "y": 0.08958333333333333,
+        "width": 0.6652777777777777,
+        "height": 0.12604166666666666
+      },
+      "sampleLineCount": 3,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/smooch-sans-300.woff2"
+    },
+    "subheadline": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 900,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.2692307692307692,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "left",
+      "color": "#22434e",
+      "fitScore": 0.433,
+      "sampleBox": {
+        "x": 0.13657407407407407,
+        "y": 0.23828125,
+        "width": 0.5370370370370371,
+        "height": 0.015104166666666667
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/smooch-sans-900.woff2"
+    },
+    "cta": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 800,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.48,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "left",
+      "color": "#eceff0",
+      "fitScore": 0.428,
+      "sampleBox": {
+        "x": 0.2935185185185185,
+        "y": 0.9036458333333334,
+        "width": 0.5657407407407408,
+        "height": 0.017447916666666667
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/smooch-sans-800.woff2"
+    }
   }
 }

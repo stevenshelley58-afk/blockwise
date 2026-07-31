@@ -85,12 +85,13 @@ type MetaChromePreviewProps = {
   format: PreviewFormat;
   brandKit: AdStudioBrandKit;
   destinationUrl?: string;
-  /** Live copy state — edits in the Text panel show up immediately. */
+  /** Live copy state — edits in the Edit inspector show up immediately. */
   copy: CopyState;
   /** The creative itself (the in-place clone editor); the chrome wraps, never replaces it. */
   children: ReactNode;
-  /** Clicking the primary text or headline/description focuses the Text panel. */
-  onSelectText?: () => void;
+  /** Clicking surrounding Meta copy focuses that exact field in Edit. */
+  onSelectText?: (element: Extract<SelectedElement, "primaryText" | "headline" | "description" | "cta">) => void;
+  selectedElement?: SelectedElement;
 };
 
 /**
@@ -100,7 +101,15 @@ type MetaChromePreviewProps = {
  * Story format overlays the chrome instead (avatar, progress bars, CTA pill)
  * with pointer-events disabled so in-place edit regions stay clickable.
  */
-export function MetaChromePreview({ format, brandKit, destinationUrl, copy, children, onSelectText }: MetaChromePreviewProps) {
+export function MetaChromePreview({
+  format,
+  brandKit,
+  destinationUrl,
+  copy,
+  children,
+  onSelectText,
+  selectedElement,
+}: MetaChromePreviewProps) {
   const pageName = metaPageName(brandKit);
   const domain = resolveAdvertiserDomain({ brandKit, finalUrls: [destinationUrl] });
   const ctaLabel = labelForMetaCta(toMetaCta(copy.cta));
@@ -145,21 +154,47 @@ export function MetaChromePreview({ format, brandKit, destinationUrl, copy, chil
           </div>
           <MoreHorizontal aria-hidden size={18} />
         </header>
-        <button className="studio-feed-primary studio-metachrome-copy" type="button" onClick={onSelectText}>
+        <button
+          className="studio-feed-primary studio-metachrome-copy"
+          type="button"
+          aria-pressed={selectedElement === "primaryText"}
+          data-selected={selectedElement === "primaryText" || undefined}
+          onClick={() => onSelectText?.("primaryText")}
+        >
           {primaryText}
         </button>
         <div className="studio-metachrome-media">{children}</div>
         <footer>
           <div>
             <small>{domain.host}</small>
-            <button className="studio-feed-headline studio-metachrome-copy" type="button" onClick={onSelectText}>
+            <button
+              className="studio-feed-headline studio-metachrome-copy"
+              type="button"
+              aria-pressed={selectedElement === "headline"}
+              data-selected={selectedElement === "headline" || undefined}
+              onClick={() => onSelectText?.("headline")}
+            >
               {copy.headline}
             </button>
-            <button className="studio-feed-desc studio-metachrome-copy" type="button" onClick={onSelectText}>
+            <button
+              className="studio-feed-desc studio-metachrome-copy"
+              type="button"
+              aria-pressed={selectedElement === "description"}
+              data-selected={selectedElement === "description" || undefined}
+              onClick={() => onSelectText?.("description")}
+            >
               {copy.description}
             </button>
           </div>
-          <span className="studio-feed-cta">{ctaLabel}</span>
+          <button
+            className="studio-feed-cta studio-metachrome-copy"
+            type="button"
+            aria-pressed={selectedElement === "cta"}
+            data-selected={selectedElement === "cta" || undefined}
+            onClick={() => onSelectText?.("cta")}
+          >
+            {ctaLabel}
+          </button>
         </footer>
       </article>
       {domain.setupNudge ? <p className="studio-metachrome-nudge">{domain.setupNudge}</p> : null}

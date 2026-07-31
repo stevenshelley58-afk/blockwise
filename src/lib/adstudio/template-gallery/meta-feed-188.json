@@ -83,6 +83,17 @@
     "primary_intent": "seller_leads",
     "property_or_agent_focus": "property"
   },
+  "deterministicEditing": {
+    "status": "partial",
+    "imageBoxes": {
+      "property_photo": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      }
+    }
+  },
   "meta": {
     "platform": "meta",
     "objective": "OUTCOME_LEADS",
@@ -117,6 +128,124 @@
         "title": "Request received",
         "body": "The agency will be in touch within 24 hours to arrange your free seller consultation."
       }
+    }
+  },
+  "typography": {
+    "contact_handle": {
+      "fontId": "poppins",
+      "family": "Poppins",
+      "fallbackFamily": "sans-serif",
+      "weight": 700,
+      "italic": false,
+      "case": "lower",
+      "sizeRatio": 0.9529411764705882,
+      "lineHeight": 1.5,
+      "tracking": 0,
+      "align": "left",
+      "color": "#eaedec",
+      "fitScore": 0.734,
+      "sampleBox": {
+        "x": 0.14013671875,
+        "y": 0.31015625,
+        "width": 0.39990234375,
+        "height": 0.025
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 0.864,
+      "fontFile": "/fonts/adstudio/poppins-700.woff2"
+    },
+    "main_heading": {
+      "fontId": "barlow-condensed",
+      "family": "Barlow Condensed",
+      "fallbackFamily": "sans-serif",
+      "weight": 800,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.3617020807214912,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "center",
+      "color": "#677774",
+      "fitScore": 0.252,
+      "sampleBox": {
+        "x": 0.0966796875,
+        "y": 0.095703125,
+        "width": 0.4638671875,
+        "height": 0.1203125
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/barlow-condensed-800.woff2"
+    },
+    "contact_phone": {
+      "fontId": "oswald",
+      "family": "Oswald",
+      "fallbackFamily": "sans-serif",
+      "weight": 700,
+      "italic": false,
+      "case": "none",
+      "sizeRatio": 1.1893463230672532,
+      "lineHeight": 1.482,
+      "tracking": 0,
+      "align": "left",
+      "color": "#eeefef",
+      "fitScore": 0.715,
+      "sampleBox": {
+        "x": 0.20458984375,
+        "y": 0.27578125,
+        "width": 0.2265625,
+        "height": 0.019140625
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/oswald-700.woff2"
+    },
+    "price": {
+      "fontId": "oswald",
+      "family": "Oswald",
+      "fallbackFamily": "sans-serif",
+      "weight": 500,
+      "italic": false,
+      "case": "none",
+      "sizeRatio": 0.9428571428571428,
+      "lineHeight": 1.482,
+      "tracking": 0,
+      "align": "left",
+      "color": "#f1f2f1",
+      "fitScore": 0.542,
+      "sampleBox": {
+        "x": 0.65234375,
+        "y": 0.284765625,
+        "width": 0.259765625,
+        "height": 0.0453125
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/oswald-500.woff2"
+    },
+    "badge_text": {
+      "fontId": "oswald",
+      "family": "Oswald",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 0.55,
+      "lineHeight": 1.2,
+      "tracking": 0.03,
+      "align": "center",
+      "color": "#eaedec",
+      "fitScore": 0.35,
+      "sampleBox": {
+        "x": 0.1,
+        "y": 0.05,
+        "width": 0.8,
+        "height": 0.035
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 0.55,
+      "measurementSource": "manual-estimate",
+      "fontFile": "/fonts/adstudio/oswald-300.woff2"
     }
   }
 }

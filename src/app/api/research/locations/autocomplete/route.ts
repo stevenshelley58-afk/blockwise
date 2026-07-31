@@ -1,11 +1,15 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { featureDisabledResponse } from "@/lib/auth/api-guards";
 import { suggestAdRadarLocations } from "@/lib/research/ad-radar-google-locations";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
 
 export async function GET(request: NextRequest) {
+  const featureGate = featureDisabledResponse("adRadar");
+  if (featureGate) return featureGate;
+
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {

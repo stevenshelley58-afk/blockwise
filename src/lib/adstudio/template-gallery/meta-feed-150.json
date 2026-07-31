@@ -138,5 +138,151 @@
         "body": "The agency will be in touch within 24 hours to discuss this property."
       }
     }
+  },
+  "typography": {
+    "property_details": {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "fallbackFamily": "serif",
+      "weight": 600,
+      "italic": false,
+      "case": "lower",
+      "sizeRatio": 0.9117647058823529,
+      "lineHeight": 1.257,
+      "tracking": 0,
+      "align": "left",
+      "color": "#c2beba",
+      "fitScore": 0.674,
+      "sampleBox": {
+        "x": 0.09228515625,
+        "y": 0.86796875,
+        "width": 0.490234375,
+        "height": 0.02109375
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 0.842,
+      "fontFile": "/fonts/adstudio/merriweather-600.woff2"
+    },
+    "address": {
+      "fontId": "oswald",
+      "family": "Oswald",
+      "fallbackFamily": "sans-serif",
+      "weight": 600,
+      "italic": false,
+      "case": "mixed",
+      "sizeRatio": 1.0314465408805031,
+      "lineHeight": 1.482,
+      "tracking": 0,
+      "align": "center",
+      "color": "#5c5247",
+      "fitScore": 0.296,
+      "sampleBox": {
+        "x": 0.0927734375,
+        "y": 0.740625,
+        "width": 0.8056640625,
+        "height": 0.111328125
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 0.677,
+      "fontFile": "/fonts/adstudio/oswald-600.woff2"
+    },
+    "agent_contact": {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "fallbackFamily": "serif",
+      "weight": 700,
+      "italic": false,
+      "case": "mixed",
+      "sizeRatio": 1.1904761904761905,
+      "lineHeight": 1.257,
+      "tracking": 0,
+      "align": "left",
+      "color": "#c9c6c2",
+      "fitScore": 0.529,
+      "sampleBox": {
+        "x": 0.091796875,
+        "y": 0.941796875,
+        "width": 0.45361328125,
+        "height": 0.016796875
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/merriweather-700.woff2"
+    },
+    "asking_price": {
+      "fontId": "plus-jakarta-sans",
+      "family": "Plus Jakarta Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 600,
+      "italic": false,
+      "case": "mixed",
+      "sizeRatio": 0.8823529411764706,
+      "lineHeight": 1.26,
+      "tracking": 0,
+      "align": "left",
+      "color": "#c1beb9",
+      "fitScore": 0.627,
+      "sampleBox": {
+        "x": 0.091796875,
+        "y": 0.905078125,
+        "width": 0.2080078125,
+        "height": 0.020703125
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/plus-jakarta-sans-600.woff2"
+    },
+    "headline": {
+      "fontId": "oswald",
+      "family": "Oswald",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "mixed",
+      "sizeRatio": 1.0003430531732418,
+      "lineHeight": 1.482,
+      "tracking": 0,
+      "align": "center",
+      "color": "#e0dad5",
+      "fitScore": 0.771,
+      "sampleBox": {
+        "x": 0.2705078125,
+        "y": 0.0484375,
+        "width": 0.48095703125,
+        "height": 0.073828125
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/oswald-300.woff2"
+    }
+  },
+  "deterministicEditing": {
+    "status": "partial",
+    "imageBoxes": {
+      "main_photo": {
+        "x": 0.091796875,
+        "y": 0.1609375,
+        "width": 0.818359375,
+        "height": 0.39375
+      },
+      "interior_photo_1": {
+        "x": 0.091796875,
+        "y": 0.5625,
+        "width": 0.2724609375,
+        "height": 0.23359375
+      },
+      "interior_photo_2": {
+        "x": 0.3671875,
+        "y": 0.5625,
+        "width": 0.271484375,
+        "height": 0.23359375
+      },
+      "interior_photo_3": {
+        "x": 0.6416015625,
+        "y": 0.5625,
+        "width": 0.2685546875,
+        "height": 0.23359375
+      }
+    }
   }
 }

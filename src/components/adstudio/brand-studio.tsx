@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { AssetUploadDropzone } from "@/components/asset-upload-dropzone";
@@ -242,7 +243,32 @@ const COLOUR_LABELS: Array<{ key: ColourKey; label: string }> = [
   { key: "text", label: "Text" },
 ];
 
-export function BrandStudio({ brandKit: initialKit }: { brandKit: AdStudioBrandKit | null }) {
+type BrandKitResponse = {
+  brandKit?: AdStudioBrandKit;
+  error?: string;
+  persistence?: {
+    status?: "persisted" | "not_persisted";
+    warning?: string;
+  };
+};
+
+function requirePersistedBrandKit(payload: BrandKitResponse, response: Response, action: string): AdStudioBrandKit {
+  if (!response.ok || !payload.brandKit) {
+    throw new Error(payload.error || `${action} failed (${response.status})`);
+  }
+  if (payload.persistence?.status === "not_persisted") {
+    throw new Error(payload.persistence.warning || `${action} could not be saved. Try again.`);
+  }
+  return payload.brandKit;
+}
+
+function normalizedWebsiteUrl(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+}
+
+export function BrandStudio({ brandKit: initialKit, returnTo = "/ad-studio" }: { brandKit: AdStudioBrandKit | null; returnTo?: string }) {
   const [kit, setKit] = useState(initialKit);
   const [scanUrl, setScanUrl] = useState("");
   const [busy, setBusy] = useState(false);
@@ -267,9 +293,8 @@ export function BrandStudio({ brandKit: initialKit }: { brandKit: AdStudioBrandK
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ websiteUrl }),
       });
-      const json = (await res.json().catch(() => ({}))) as { brandKit?: AdStudioBrandKit; error?: string };
-      if (!res.ok || !json.brandKit) throw new Error(json.error || `Scan failed (${res.status})`);
-      setKit(json.brandKit);
+      const json = (await res.json().catch(() => ({}))) as BrandKitResponse;
+      setKit(requirePersistedBrandKit(json, res, "Scan"));
       flash("ok", "Scan complete - kit updated from your site.");
     } catch (error) {
       flash("err", error instanceof Error ? error.message : "Could not scan the site.");
@@ -279,7 +304,7 @@ export function BrandStudio({ brandKit: initialKit }: { brandKit: AdStudioBrandK
   }
 
   if (kit) {
-    return <BrandStudioEditor brandKit={kit} />;
+    return <BrandStudioEditor brandKit={kit} returnTo={returnTo} />;
   }
 
   return (
@@ -287,8 +312,8 @@ export function BrandStudio({ brandKit: initialKit }: { brandKit: AdStudioBrandK
       <style>{BRAND_STYLES}</style>
 
       <div className="bs-top">
-        <Link href="/ad-studio" className="back">
-          {"< Ad Studio"}
+        <Link href={returnTo} className="back">
+          {"< Close"}
         </Link>
         <h1>Brand Studio</h1>
         <div className="grow">{notice && <span className={`notice ${notice.tone}`}>{notice.text}</span>}</div>
@@ -296,7 +321,7 @@ export function BrandStudio({ brandKit: initialKit }: { brandKit: AdStudioBrandK
 
       <div className="bs-empty">
         <div className="bs-empty-panel">
-          <span className="chip warn">Brand needed</span>
+          <span className="chip warn">Optional setup</span>
           <h2>Enter your website. We’ll build your brand kit.</h2>
           <form
             className="site-setup"
@@ -325,7 +350,7 @@ export function BrandStudio({ brandKit: initialKit }: { brandKit: AdStudioBrandK
                 {busy ? "Building your kit…" : "Build my brand kit"}
               </button>
             </div>
-            <small>That’s all we need to get started. You can change anything we find.</small>
+            <small>You can skip this and keep generating ads. Add it when you want consistent brand details.</small>
           </form>
         </div>
       </div>
@@ -333,11 +358,12 @@ export function BrandStudio({ brandKit: initialKit }: { brandKit: AdStudioBrandK
   );
 }
 
-function BrandStudioEditor({ brandKit: initialKit }: { brandKit: AdStudioBrandKit }) {
+function BrandStudioEditor({ brandKit: initialKit, returnTo }: { brandKit: AdStudioBrandKit; returnTo: string }) {
+  const router = useRouter();
   const [kit, setKit] = useState(initialKit);
   const [openSwatch, setOpenSwatch] = useState<ColourKey | null>(null);
   const [scanUrl, setScanUrl] = useState(() => initialKit.source.url.replace(/^https?:\/\//, ""));
-  const [busy, setBusy] = useState<"" | "scan" | "save" | "approve">("");
+  const [busy, setBusy] = useState<"" | "scan" | "approve">("");
   const [notice, setNotice] = useState<{ tone: "ok" | "err"; text: string } | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreviewUrl, setLogoPreviewUrl] = useState(initialKit.logos.primaryLogoUrl ?? "");
@@ -439,12 +465,12 @@ function BrandStudioEditor({ brandKit: initialKit }: { brandKit: AdStudioBrandKi
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ websiteUrl }),
       });
-      const json = (await res.json().catch(() => ({}))) as { brandKit?: AdStudioBrandKit; error?: string };
-      if (!res.ok || !json.brandKit) throw new Error(json.error || `Scan failed (${res.status})`);
-      setKit(json.brandKit);
+      const json = (await res.json().catch(() => ({}))) as BrandKitResponse;
+      const scannedKit = requirePersistedBrandKit(json, res, "Scan");
+      setKit(scannedKit);
       setLogoFile(null);
-      setLogoPreviewUrl(json.brandKit.logos.primaryLogoUrl ?? "");
-      setScanUrl(json.brandKit.source.url.replace(/^https?:\/\//, ""));
+      setLogoPreviewUrl(scannedKit.logos.primaryLogoUrl ?? "");
+      setScanUrl(scannedKit.source.url.replace(/^https?:\/\//, ""));
       flash("ok", "Scan complete — kit updated from your site.");
     } catch (error) {
       flash("err", error instanceof Error ? error.message : "Could not scan the site.");
@@ -453,7 +479,7 @@ function BrandStudioEditor({ brandKit: initialKit }: { brandKit: AdStudioBrandKi
     }
   }
 
-  async function saveKit(nextStatus?: "approved") {
+  async function approveKit() {
     if (busy) return;
     const logoError = logoFile
       ? validateAssetUploadFile(logoFile, {
@@ -471,44 +497,31 @@ function BrandStudioEditor({ brandKit: initialKit }: { brandKit: AdStudioBrandKi
     }
 
     const logoToUpload = logoFile;
-    setBusy(nextStatus ? "approve" : "save");
+    setBusy("approve");
     try {
       const uploadedLogoUrl = logoToUpload ? await uploadLogoAsset(logoToUpload) : null;
       const nextLogos = uploadedLogoUrl
         ? { ...kit.logos, primaryLogoUrl: uploadedLogoUrl }
         : kit.logos;
-      const res = await fetch(`/api/adstudio/brand-kits/${kit.brandKitId}`, {
-        method: "PATCH",
+      const sourceUrl = normalizedWebsiteUrl(scanUrl);
+      const submittedKit: AdStudioBrandKit = {
+        ...kit,
+        source: { ...kit.source, url: sourceUrl },
+        logos: nextLogos,
+      };
+      const res = await fetch(`/api/adstudio/brand-kits/${kit.brandKitId}/approve`, {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          business_name: kit.identity.businessName,
-          source_url: /^https?:\/\//.test(scanUrl) ? scanUrl : `https://${scanUrl}`,
-          market_region: kit.identity.marketRegion,
-          identity_json: kit.identity,
-          logos_json: nextLogos,
-          colours_json: kit.colours,
-          typography_json: kit.typography,
-          tone_json: kit.tone,
-          contact_json: kit.contact,
-          compliance_json: kit.compliance,
-          ...(nextStatus ? { review_status: nextStatus } : {}),
-        }),
+        body: JSON.stringify({ brandKit: submittedKit }),
       });
-      if (!res.ok) {
-        const json = (await res.json().catch(() => ({}))) as { error?: string };
-        throw new Error(json.error || `Save failed (${res.status})`);
-      }
-      if (uploadedLogoUrl) {
-        setKit((current) => ({ ...current, logos: { ...current.logos, primaryLogoUrl: uploadedLogoUrl } }));
-        setLogoPreviewUrl(uploadedLogoUrl);
-        setLogoFile(null);
-      }
-      if (nextStatus) {
-        setKit((current) => ({ ...current, reviewStatus: "approved" }));
-        flash("ok", logoToUpload ? "Brand kit approved - logo saved." : "Brand kit approved - it now guards every ad.");
-      } else {
-        flash("ok", logoToUpload ? "Saved with logo." : "Saved.");
-      }
+      const json = (await res.json().catch(() => ({}))) as BrandKitResponse;
+      const savedKit = requirePersistedBrandKit(json, res, "Approval");
+      setKit(savedKit);
+      setScanUrl(savedKit.source.url.replace(/^https?:\/\//, ""));
+      setLogoPreviewUrl(savedKit.logos.primaryLogoUrl ?? "");
+      setLogoFile(null);
+      router.replace(returnTo);
+      router.refresh();
     } catch (error) {
       flash("err", error instanceof Error ? error.message : "Could not save the kit.");
     } finally {
@@ -526,17 +539,14 @@ function BrandStudioEditor({ brandKit: initialKit }: { brandKit: AdStudioBrandKi
       <style>{BRAND_STYLES}</style>
 
       <div className="bs-top">
-        <Link href="/ad-studio" className="back">
-          ‹ Ad Studio
+        <Link href={returnTo} className="back">
+          ‹ Close
         </Link>
         <h1>Brand Studio</h1>
         <span className={`chip ${approved ? "good" : "warn"}`}>{approved ? "✓ Approved" : "Pending review"}</span>
         <div className="grow">
           {notice && <span className={`notice ${notice.tone}`}>{notice.text}</span>}
-          <button className="btn sec" type="button" disabled={busy !== ""} onClick={() => void saveKit()}>
-            {busy === "save" ? "Saving…" : "Save draft"}
-          </button>
-          <button className="btn pri" type="button" disabled={busy !== ""} onClick={() => void saveKit("approved")}>
+          <button className="btn pri" type="button" disabled={busy !== ""} onClick={() => void approveKit()}>
             {busy === "approve" ? "Approving…" : "✓ Approve kit"}
           </button>
         </div>

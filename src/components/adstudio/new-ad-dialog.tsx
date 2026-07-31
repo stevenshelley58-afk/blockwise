@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
-import type { FocusEvent, RefObject } from "react";
-import { AlertTriangle, ArrowLeft, ArrowUpRight, Image as ImageIcon, Link, Loader2, X } from "lucide-react";
+import type { FocusEvent } from "react";
+import { AlertTriangle, ArrowLeft, ArrowUpRight, Image as ImageIcon, Sparkles, X } from "lucide-react";
 
 import { AssetUploadDropzone } from "@/components/asset-upload-dropzone";
 import {
@@ -19,15 +19,12 @@ import {
 import type { AdStudioBrandKit, AdStudioTemplate, FirstAdInput } from "@/lib/adstudio";
 import { resolveAdvertiserDomain } from "@/lib/adstudio/advertiser-domain";
 import { isAdStudioImageSrc, isTransientImagePreview } from "@/lib/adstudio/image-src.ts";
-import type { ListingData } from "@/lib/adstudio/listing-extract";
-import { mapListingToOnImageCopy } from "@/lib/adstudio/listing-extract";
 import { templatePreviewDataUrl } from "@/lib/adstudio/template-preview.ts";
 import { templateThumbnailSrcSet } from "@/lib/adstudio/template-display.ts";
 import { AD_IMAGE_MAX_BYTES, AD_IMAGE_UPLOAD_TYPES } from "@/lib/upload/asset-file";
 
 import { uploadAdStudioMedia } from "./media-upload";
-import { GenerationAdStream, preloadGenerationAdStream } from "./generation-ad-stream";
-import { generationAdLocation } from "./generation-ad-stream-data";
+import { GenerationProgress } from "./generation-progress";
 import { briefGuidanceForTemplate } from "./new-ad-dialog-brief";
 import {
   DEFAULT_IMAGE_SLOT,
@@ -44,6 +41,7 @@ type Step = "source" | "brief";
 type TemplateFilter = "all" | "listings" | "appraisals" | "market" | "sold";
 type MediaSourceMode = "details" | "library";
 type GenerationQuality = NonNullable<FirstAdInput["generationQuality"]>;
+type ColourSource = NonNullable<FirstAdInput["colourSource"]>;
 type ImageLibraryAsset = {
   /** Signed/downscaled URL used for the grid thumbnail. */
   src: string;
@@ -94,11 +92,10 @@ const FEED_COPY_FIELDS: ReadonlyArray<{ key: FeedCopyFieldKey; label: string; hi
   { key: "cta", label: "Call to action", hint: "The button label" },
 ];
 
-type CopyMode = "ai" | "write" | "sample";
+type CopyMode = "ai" | "write";
 const COPY_MODES: ReadonlyArray<{ id: CopyMode; label: string }> = [
-  { id: "ai", label: "AI from brief" },
-  { id: "write", label: "Write my own" },
-  { id: "sample", label: "Use template sample" },
+  { id: "ai", label: "Help me write it" },
+  { id: "write", label: "I'll write it myself" },
 ];
 
 /**
@@ -114,10 +111,6 @@ const FEED_COPY_CTA_OPTIONS: ReadonlyArray<{ value: string; label: string }> = [
   { value: "GET_QUOTE", label: "Get quote" },
   { value: "BOOK_NOW", label: "Book now" },
 ];
-function ctaLabelFor(value: string): string {
-  return FEED_COPY_CTA_OPTIONS.find((option) => option.value === value)?.label ?? "Learn more";
-}
-
 const TEMPLATE_FILTERS: ReadonlyArray<{ id: TemplateFilter; label: string }> = [
   { id: "all", label: "All" },
   { id: "listings", label: "Listings" },
@@ -128,7 +121,7 @@ const TEMPLATE_FILTERS: ReadonlyArray<{ id: TemplateFilter; label: string }> = [
 
 type TrialStatus = {
   isTrial: boolean;
-  includedAdPacks: number;
+  includedRenders: number;
 };
 
 type NewAdDialogProps = {
@@ -327,155 +320,104 @@ function domainForPreview(brandKit: AdStudioBrandKit): string {
   return resolveAdvertiserDomain({ brandKit }).host;
 }
 
-/**
- * Canvas editor: which zone of the live preview each ad-copy field controls.
- * The on-image text fields (address, price, …) sit inside the ad creative
- * itself, so they map to no preview zone — their inputs are edited right on
- * top of the sample image by the generation pipeline.
- */
-type PreviewZoneKey = "primaryText" | "headline" | "description" | "cta";
-function previewZoneForInputId(id: string): PreviewZoneKey | null {
-  if (!id.startsWith("feedcopy-")) return null;
-  const zone = id.slice("feedcopy-".length);
-  return zone === "primaryText" || zone === "headline" || zone === "description" || zone === "cta"
-    ? zone
-    : null;
-}
+type GuideZone = `feed:${FeedCopyFieldKey}` | `text:${string}` | `image:${string}`;
 
-/**
- * Map every ad-copy input id to the DOM element that renders it in the live
- * preview. Rebuilt on any preview change so the active field's zone stays
- * highlighted and its text live-updated even while the dialog scrolls.
- */
-function usePreviewZoneMap(dialogRef: RefObject<HTMLDivElement | null>): Record<PreviewZoneKey, HTMLElement> {
-  const [zoneMap, setZoneMap] = useState<Record<PreviewZoneKey, HTMLElement>>({} as Record<PreviewZoneKey, HTMLElement>);
-  const [revision, setRevision] = useState(0);
-  useEffect(() => {
-    const root = dialogRef.current;
-    if (!root) return;
-    const observer = new MutationObserver(() => setRevision((current) => current + 1));
-    observer.observe(root, { childList: true, subtree: true, characterData: true });
-    return () => observer.disconnect();
-  }, [dialogRef]);
-  useEffect(() => {
-    const root = dialogRef.current;
-    if (!root) return;
-    const next = {} as Record<PreviewZoneKey, HTMLElement>;
-    for (const element of root.querySelectorAll<HTMLElement>("[data-preview-zone]")) {
-      const zone = element.dataset.previewZone as PreviewZoneKey;
-      if (zone in FEED_COPY_LIMITS) next[zone] = element;
-    }
-    setZoneMap(next);
-    // `revision` is deliberate: the map is rebuilt whenever the preview re-renders.
-  }, [dialogRef, revision]);
-  return zoneMap;
-}
-
-function usePrefersReducedMotion(): boolean {
-  const [reduced, setReduced] = useState(false);
-  useEffect(() => {
-    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const apply = () => setReduced(query.matches);
-    apply();
-    query.addEventListener("change", apply);
-    return () => query.removeEventListener("change", apply);
-  }, []);
-  return reduced;
-}
-
-/**
- * Canvas editor: the live Facebook/Instagram-style preview of the ad as the
- * customer writes it. Every copy region is a button — clicking it jumps
- * straight to the matching input (the ad is a second input surface). The
- * region tied to the focused field carries `.is-active`, so the customer
- * always sees exactly where their words land.
- */
-function NewAdLivePreview({
+function NewAdPlacementGuide({
   template,
   brandKit,
-  imageDataUrls,
-  primaryImageSlotId,
-  onImageCopy,
-  feedCopy,
   activeZone,
-  reducedMotion,
-  zoneMap,
+  copyFieldsVisible,
   onZoneClick,
 }: {
   template: AdStudioTemplate | undefined;
   brandKit: AdStudioBrandKit;
-  imageDataUrls: Record<string, string>;
-  primaryImageSlotId: string;
-  onImageCopy: Record<string, string>;
-  feedCopy: FeedCopy;
-  activeZone: PreviewZoneKey | null;
-  reducedMotion: boolean;
-  zoneMap: Record<PreviewZoneKey, HTMLElement>;
-  onZoneClick: (zone: PreviewZoneKey) => void;
+  activeZone: GuideZone | null;
+  copyFieldsVisible: boolean;
+  onZoneClick: (zone: GuideZone) => void;
 }) {
   const brandName = brandNameForPreview(brandKit);
   const brandInitial = initialForBrand(brandName);
   const domain = domainForPreview(brandKit);
   const sample = template ? templateAdCopy(template) : undefined;
-  const primaryText = feedCopy.primaryText.trim() || sample?.primaryText || "Your caption lands here — above the image, in the feed.";
-  const headline = feedCopy.headline.trim() || sample?.headline || "Your headline";
-  const description = feedCopy.description.trim() || sample?.description || "Supporting line";
-  const cta = ctaLabelFor(feedCopy.cta.trim());
-  const mediaSrc = imageDataUrls[primaryImageSlotId] ?? (template ? templatePreviewSrc(template, brandKit) : "");
+  const primaryText = sample?.primaryText || "Primary text";
+  const headline = sample?.headline || "Headline";
+  const description = sample?.description || "Description";
+  const cta = sample?.cta || "Learn more";
+  const mediaSrc = template ? templatePreviewSrc(template, brandKit) : "";
   const isFullscreen = template?.format === "9:16";
+  const primaryImageZone = template?.inputs.images[0]?.key
+    ? `image:${template.inputs.images[0].key}` as GuideZone
+    : null;
 
-  const zoneClass = (zone: PreviewZoneKey) =>
+  const zoneClass = (zone: GuideZone) =>
     `newad-pv-zone${activeZone === zone ? " is-active" : ""}`;
 
-  // Text that is burned into the ad image (the customer's "Text on the ad"
-  // fields). Shown as overlay chips so the preview still tells the story of
-  // what the finished creative will carry.
-  const onImageText = template
-    ? template.inputs.text
-        .map((field) => ({ key: field.key, label: field.label, value: onImageCopy[field.key]?.trim() || field.sample }))
-        .filter((field) => field.value)
-    : [];
-
-  const captionButton = (zone: PreviewZoneKey, content: string, ghost: boolean) => (
+  const captionButton = (zone: GuideZone, content: string) => (
     <button
       type="button"
       className={zoneClass(zone)}
-      data-preview-zone={zone}
+      data-preview-zone={zone.replace("feed:", "")}
       onClick={() => onZoneClick(zone)}
-      aria-label={`Edit ${zone === "primaryText" ? "primary text" : zone}`}
+      disabled={!copyFieldsVisible}
+      aria-label={copyFieldsVisible
+        ? `Show ${zone.replace("feed:", "")} field`
+        : `Generate or write copy to edit ${zone.replace("feed:", "")}`}
     >
-      <span className={ghost ? "is-ghost" : undefined}>{content}</span>
+      <span>{content}</span>
     </button>
   );
 
   return (
     <div className="newad-preview">
       <div className="newad-preview-cap">
-        <span>Live preview</span>
-        <span>{isFullscreen ? "Fullscreen ad" : "Feed ad"} · click any text to edit it</span>
+        <span>Where your content appears</span>
+        <span>Selected template</span>
       </div>
-      <div className={`newad-pv newad-pv--${isFullscreen ? "story" : "feed"}${reducedMotion ? " newad-pv--static" : ""}`}>
+      <div className={`newad-pv newad-pv--${isFullscreen ? "story" : "feed"}`}>
         {isFullscreen ? (
-          <div className="newad-pv-story">
+          <div className={`newad-pv-story${activeZone?.startsWith("image:") ? " is-active" : ""}`}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             {mediaSrc ? <img src={mediaSrc} alt="" loading="lazy" decoding="async" /> : <span className="newad-pv-story-ph" />}
             <span className="newad-pv-shade" aria-hidden />
+            {primaryImageZone ? (
+              <button
+                type="button"
+                className={`newad-sample-image-region${activeZone === primaryImageZone ? " is-active" : ""}`}
+                onClick={() => onZoneClick(primaryImageZone)}
+                aria-label="Show image field"
+              />
+            ) : null}
+            {template?.inputs.text.map((field) => {
+              const box = template.typography?.[field.key]?.sampleBox;
+              if (!box) return null;
+              const zone: GuideZone = `text:${field.key}`;
+              return (
+                <button
+                  key={field.key}
+                  type="button"
+                  className={`newad-sample-region${activeZone === zone ? " is-active" : ""}`}
+                  style={{
+                    left: `${box.x * 100}%`,
+                    top: `${box.y * 100}%`,
+                    width: `${box.width * 100}%`,
+                    height: `${box.height * 100}%`,
+                  }}
+                  onClick={() => onZoneClick(zone)}
+                  aria-label={`Show ${field.label} field`}
+                >
+                  <span>{field.label}</span>
+                </button>
+              );
+            })}
             <span className="newad-pv-story-top">
               <span className="studio-template-avatar">{brandInitial}</span>
               <span><strong>{brandName}</strong><small>Sponsored</small></span>
             </span>
-            {onImageText.length > 0 && (
-              <span className="newad-pv-chips" aria-hidden>
-                {onImageText.map((field) => (
-                  <span key={field.key} title={field.label}><b>{field.label}</b> {field.value}</span>
-                ))}
-              </span>
-            )}
             <span className="newad-pv-story-copy">
-              {captionButton("headline", headline, !feedCopy.headline.trim())}
-              {captionButton("primaryText", primaryText, !feedCopy.primaryText.trim())}
+              {captionButton("feed:headline", headline)}
+              {captionButton("feed:primaryText", primaryText)}
             </span>
-            {captionButton("cta", cta, false)}
+            {captionButton("feed:cta", cta)}
           </div>
         ) : (
           <div className="newad-pv-feed">
@@ -484,95 +426,52 @@ function NewAdLivePreview({
               <span><strong>{brandName}</strong><small>Sponsored</small></span>
               <span className="studio-template-dots" aria-hidden>···</span>
             </span>
-            {captionButton("primaryText", primaryText, !feedCopy.primaryText.trim())}
-            <span className="newad-pv-media">
+            {captionButton("feed:primaryText", primaryText)}
+            <span className={`newad-pv-media${activeZone?.startsWith("image:") ? " is-active" : ""}`}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               {mediaSrc ? <img src={mediaSrc} alt="" loading="lazy" decoding="async" /> : <span className="newad-pv-media-ph" />}
-              {onImageText.length > 0 && (
-                <span className="newad-pv-chips" aria-hidden>
-                  {onImageText.slice(0, 3).map((field) => (
-                    <span key={field.key} title={field.label}><b>{field.label}</b> {field.value}</span>
-                  ))}
-                </span>
-              )}
+              {primaryImageZone ? (
+                <button
+                  type="button"
+                  className={`newad-sample-image-region${activeZone === primaryImageZone ? " is-active" : ""}`}
+                  onClick={() => onZoneClick(primaryImageZone)}
+                  aria-label="Show image field"
+                />
+              ) : null}
+              {template?.inputs.text.map((field) => {
+                const box = template.typography?.[field.key]?.sampleBox;
+                if (!box) return null;
+                const zone: GuideZone = `text:${field.key}`;
+                return (
+                  <button
+                    key={field.key}
+                    type="button"
+                    className={`newad-sample-region${activeZone === zone ? " is-active" : ""}`}
+                    style={{
+                      left: `${box.x * 100}%`,
+                      top: `${box.y * 100}%`,
+                      width: `${box.width * 100}%`,
+                      height: `${box.height * 100}%`,
+                    }}
+                    onClick={() => onZoneClick(zone)}
+                    aria-label={`Show ${field.label} field`}
+                  >
+                    <span>{field.label}</span>
+                  </button>
+                );
+              })}
             </span>
             <span className="newad-pv-feed-link">
               <span>
                 <small>{domain}</small>
-                {captionButton("headline", headline, !feedCopy.headline.trim())}
-                {captionButton("description", description, !feedCopy.description.trim())}
+                {captionButton("feed:headline", headline)}
+                {captionButton("feed:description", description)}
               </span>
-              {captionButton("cta", cta, false)}
+              {captionButton("feed:cta", cta)}
             </span>
           </div>
         )}
       </div>
-      {activeZone && zoneMap[activeZone] ? (
-        <p className="newad-preview-hint">
-          Editing {activeZone === "primaryText" ? "primary text" : activeZone === "cta" ? "call to action" : activeZone}
-        </p>
-      ) : (
-        <p className="newad-preview-hint newad-preview-hint--idle">
-          Focus a field — the matching spot lights up here.
-        </p>
-      )}
-    </div>
-  );
-}
-
-/**
- * Canvas editor, small screens: the ad tucks into a sticky strip so the
- * keyboard never covers it. The strip shows the exact line the focused field
- * controls (live-updated); tap it to expand the full preview, or edit that
- * line directly from the strip.
- */
-function NewAdPreviewPeek({
-  collapsed,
-  activeZone,
-  feedCopy,
-  zoneMap,
-  onToggle,
-  onZoneClick,
-}: {
-  collapsed: boolean;
-  activeZone: PreviewZoneKey | null;
-  feedCopy: FeedCopy;
-  zoneMap: Record<PreviewZoneKey, HTMLElement>;
-  onToggle: () => void;
-  onZoneClick: (zone: PreviewZoneKey) => void;
-}) {
-  const zoneName =
-    activeZone === "primaryText" ? "Primary text"
-    : activeZone === "headline" ? "Headline"
-    : activeZone === "description" ? "Supporting line"
-    : activeZone === "cta" ? "Call to action"
-    : "Ad preview";
-  const zoneValue = activeZone ? feedCopy[activeZone] : "";
-
-  return (
-    <div className={`newad-peek${collapsed ? " is-collapsed" : ""}`}>
-      <button
-        type="button"
-        className="newad-peek-toggle"
-        onClick={onToggle}
-        aria-expanded={!collapsed}
-        aria-label={collapsed ? "Expand ad preview" : "Tuck ad preview"}
-      >
-        <span className="newad-peek-name">{zoneName}</span>
-        <span className={`newad-peek-caret${collapsed ? " is-closed" : ""}`} aria-hidden>▾</span>
-      </button>
-      {collapsed && activeZone && (
-        <button
-          type="button"
-          className="newad-peek-line"
-          onClick={() => onZoneClick(activeZone)}
-          aria-label={`Edit ${zoneName.toLowerCase()}`}
-        >
-          <span className={zoneValue.trim() ? undefined : "is-ghost"}>
-            {zoneValue.trim() || zoneMap[activeZone]?.textContent?.trim() || "—"}
-          </span>
-        </button>
-      )}
     </div>
   );
 }
@@ -596,22 +495,17 @@ export function NewAdDialog({
   const copyFieldIdPrefix = useId();
   const descriptionInputId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
   const descriptionRef = useRef<HTMLTextAreaElement>(null);
   const previousFocus = useRef<HTMLElement | null>(null);
   const latestMediaAssetsRef = useRef(mediaAssets);
   const [step, setStep] = useState<Step>("source");
   const [filter, setFilter] = useState<TemplateFilter>("all");
-  // Listing URL scrape state
-  const [listingUrl, setListingUrl] = useState("");
-  const [listingLoading, setListingLoading] = useState(false);
-  const [listingError, setListingError] = useState("");
-  const [listingData, setListingData] = useState<ListingData | null>(null);
-  const [listingBrief, setListingBrief] = useState("");
-  const [listingPhotos, setListingPhotos] = useState<string[]>([]);
   // Nothing can be created until the customer chooses the sample to clone.
   const [templateId, setTemplateId] = useState<string | undefined>(undefined);
   const [description, setDescription] = useState("");
   const [generationQuality, setGenerationQuality] = useState<GenerationQuality>("fast");
+  const [colourSource, setColourSource] = useState<ColourSource>("template");
   const [imageDataUrlsBySlot, setImageDataUrlsBySlot] = useState<Record<string, string>>({});
   // Point 9 — background image scaling: the slot shows a raw `URL.createObjectURL`
   // preview INSTANTLY while the heavier storage upload (which downscales big
@@ -620,6 +514,7 @@ export function NewAdDialog({
   // Preview object URLs are tracked so they can be revoked (no blob leaks).
   const previewUrlsRef = useRef<Record<string, string>>({});
   const [copyMode, setCopyMode] = useState<CopyMode>("ai");
+  const [copyGenerated, setCopyGenerated] = useState(false);
   const [feedCopy, setFeedCopy] = useState<FeedCopy>(EMPTY_FEED_COPY);
   const [generatingCopy, setGeneratingCopy] = useState(false);
   const [copyError, setCopyError] = useState<string | null>(null);
@@ -633,38 +528,20 @@ export function NewAdDialog({
   const [submitting, setSubmitting] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [trialCreditNote, setTrialCreditNote] = useState("Uses one ad pack. No Meta account is needed until publish.");
-  const adStreamLocation = useMemo(() => generationAdLocation(brandKit), [brandKit]);
 
-  // Canvas editor state: which preview zone the focused field controls, the
-  // responsive layout mode (split columns ≥860px, tucked peek below), and the
-  // mobile peek's collapsed state.
-  const [activeZone, setActiveZone] = useState<PreviewZoneKey | null>(null);
-  const [peekCollapsed, setPeekCollapsed] = useState(false);
-  const [isMobileLayout, setIsMobileLayout] = useState(false);
+  const [activeZone, setActiveZone] = useState<GuideZone | null>(null);
   const [discardConfirmOpen, setDiscardConfirmOpen] = useState(false);
-  const reducedMotion = usePrefersReducedMotion();
-  const zoneMap = usePreviewZoneMap(dialogRef);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const query = window.matchMedia("(max-width: 860px)");
-    const apply = () => setIsMobileLayout(query.matches);
-    apply();
-    query.addEventListener("change", apply);
-    return () => query.removeEventListener("change", apply);
-  }, []);
 
   const handleFormFocusCapture = useCallback((event: FocusEvent) => {
     const target = event.target instanceof HTMLElement ? event.target : null;
-    const zone = target ? previewZoneForInputId(target.id) : null;
-    setActiveZone(zone);
-    // Small screens: tuck the full preview into the sticky strip so the
-    // keyboard gets the space; the strip keeps showing the active line live.
-    if (zone && isMobileLayout) setPeekCollapsed(true);
-  }, [isMobileLayout]);
+    const zone = target?.closest<HTMLElement>("[data-guide-zone]")?.dataset.guideZone as GuideZone | undefined;
+    if (zone) setActiveZone(zone);
+  }, []);
 
-  const handleZoneClick = useCallback((zone: PreviewZoneKey) => {
-    document.getElementById(`feedcopy-${zone}`)?.focus();
+  const handleZoneClick = useCallback((zone: GuideZone) => {
+    const target = Array.from(dialogRef.current?.querySelectorAll<HTMLElement>("[data-guide-zone]") ?? [])
+      .find((element) => element.dataset.guideZone === zone);
+    (target?.matches("input, textarea, select, button") ? target : target?.querySelector<HTMLElement>("input, textarea, select, button"))?.focus();
   }, []);
 
   const selectedTemplate = templates.find((template) => template.id === templateId);
@@ -717,11 +594,35 @@ export function NewAdDialog({
     () => customerCopyFields.filter((field) => field.required && !onImageCopy[field.key]?.trim()).map((field) => field.label),
     [customerCopyFields, onImageCopy],
   );
+  const missingFeedCopyLabels = useMemo(() => {
+    if (copyMode === "ai") return copyGenerated ? [] : ["generated ad copy"];
+    return [
+      !feedCopy.primaryText.trim() ? "primary text" : "",
+      !feedCopy.headline.trim() ? "headline" : "",
+    ].filter(Boolean);
+  }, [copyGenerated, copyMode, feedCopy.headline, feedCopy.primaryText]);
+  const overLimitLabels = useMemo(
+    () => [
+      ...customerCopyFields
+        .filter((field) => (onImageCopy[field.key] ?? "").length > field.maxLength)
+        .map((field) => field.label),
+      ...FEED_COPY_FIELDS
+        .filter((field) => field.key !== "cta" && feedCopy[field.key].length > FEED_COPY_LIMITS[field.key])
+        .map((field) => field.label),
+    ],
+    [customerCopyFields, feedCopy, onImageCopy],
+  );
+  const effectiveDescription = copyMode === "ai"
+    ? description
+    : [feedCopy.primaryText, feedCopy.headline, feedCopy.description, ...Object.values(onImageCopy)].filter(Boolean).join(" ");
   const requirementBlockers = buildRequirementBlockers({
-    description,
+    description: effectiveDescription,
     missingImageLabels,
     unusableImageLabels,
     missingCopyLabels,
+    missingFeedCopyLabels,
+    overLimitLabels,
+    descriptionTooLong: copyMode === "ai" && description.length > 500,
     uploadingImage,
   });
   const visibleRequirementBlockers = showRequirementsAlert ? requirementBlockers : [];
@@ -741,12 +642,11 @@ export function NewAdDialog({
     ? "Add the missing details before generating"
     : "We couldn't create this ad";
   const hasUnsavedProgress = Boolean(
-    listingUrl.trim() ||
-      listingData ||
-      (templateId && templateId !== initialTemplateId) ||
+    (templateId && templateId !== initialTemplateId) ||
       description.trim() ||
       Object.keys(imageDataUrlsBySlot).length > 0 ||
       Object.values(feedCopy).some((value) => value.trim()) ||
+      colourSource !== "template" ||
       customerCopyFields.some(
         (field) => (onImageCopy[field.key] ?? "") !== (defaultOnImageCopy[field.key] ?? ""),
       ),
@@ -788,12 +688,7 @@ export function NewAdDialog({
     setFilter("all");
     setDescription("");
     setGenerationQuality("fast");
-    setListingUrl("");
-    setListingLoading(false);
-    setListingError("");
-    setListingData(null);
-    setListingBrief("");
-    setListingPhotos([]);
+    setColourSource("template");
     // The customer supplies every declared image and text field. The selected
     // sample is only the visual anchor sent to the image model.
     setImageDataUrlsBySlot({});
@@ -806,22 +701,25 @@ export function NewAdDialog({
     setError("");
     setShowRequirementsAlert(false);
     setUploadingImage(false);
+    setCopyMode("ai");
+    setCopyGenerated(false);
+    setFeedCopy(EMPTY_FEED_COPY);
+    setCopyError(null);
     setActiveZone(null);
-    setPeekCollapsed(false);
     setDiscardConfirmOpen(false);
     window.setTimeout(() => dialogRef.current?.focus(), 0);
   }, [open, initialTemplateId]);
+
+  useEffect(() => {
+    if (!open) return;
+    bodyRef.current?.scrollTo({ top: 0 });
+  }, [mediaSourceMode, open, step, templateId]);
 
   useEffect(() => {
     latestMediaAssetsRef.current = mediaAssets;
     if (!open) return;
     setDialogMediaAssets((current) => dedupeImageLibraryAssets([...current, ...mediaAssets]));
   }, [mediaAssets, open]);
-
-  useEffect(() => {
-    if (!open || step !== "brief") return;
-    preloadGenerationAdStream(adStreamLocation);
-  }, [adStreamLocation, open, step]);
 
   useEffect(() => {
     if (!open) return;
@@ -895,87 +793,12 @@ export function NewAdDialog({
     setOnImageCopy(brandTextDefaultsForTemplate(template, brandKit));
     setFeedCopy(EMPTY_FEED_COPY);
     setCopyMode("ai");
+    setCopyGenerated(false);
     setCopyError(null);
     setGeneratingCopy(false);
     setActiveImageSlotId(DEFAULT_IMAGE_SLOT.id);
     setMediaSourceMode("details");
     setStep("brief");
-    // Auto-fill from listing data if available
-    if (listingData) {
-      applyListingData(listingData, template, listingBrief, listingPhotos);
-    }
-  }
-
-  /** Fetch listing details from the VPS scraper via the Vercel proxy. */
-  async function fetchListingDetails() {
-    const trimmed = listingUrl.trim();
-    if (!trimmed) return;
-    setListingLoading(true);
-    setListingError("");
-    try {
-      const response = await fetch("/api/adstudio/listing-extract", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: trimmed }),
-      });
-      const result = (await response.json()) as {
-        ok: boolean;
-        listing?: ListingData;
-        brief?: string;
-        photos?: string[];
-        error?: string;
-        message?: string;
-      };
-      if (!response.ok || !result.ok || !result.listing) {
-        setListingError(result.message || "Could not fetch that listing. Try again or enter details manually.");
-        return;
-      }
-      setListingData(result.listing);
-      setListingBrief(result.brief ?? "");
-      setListingPhotos(result.photos ?? result.listing.photos);
-      // Keep template choice with the customer. The extracted listing is
-      // applied only after they choose the sample they actually want to clone.
-      setFilter("listings");
-    } catch {
-      setListingError("Could not reach the listing service. Try again in a moment.");
-    } finally {
-      setListingLoading(false);
-    }
-  }
-
-  /** Apply extracted listing data to the dialog fields. */
-  function applyListingData(
-    data: ListingData,
-    template: AdStudioTemplate,
-    brief?: string,
-    photos?: string[],
-  ) {
-    // Fill description with the brief
-    if (brief) setDescription(brief);
-    // Fill on-image copy fields
-    const fields = customerCopyFieldsForTemplate(template);
-    const mapped = mapListingToOnImageCopy(data, fields);
-    setOnImageCopy((current) => ({ ...current, ...mapped }));
-    // Set primary photo
-    const photoUrls = photos ?? data.photos;
-    if (photoUrls.length > 0) {
-      const primarySlot = imageRequirementsForTemplate(template).find((s) => s.required) ?? DEFAULT_IMAGE_SLOT;
-      setSlotImage(primarySlot.id, photoUrls[0], `${data.address || "Listing"} photo`);
-      // Add remaining photos to the library
-      for (let i = 1; i < photoUrls.length; i++) {
-        rememberLibraryAsset({
-          src: photoUrls[i],
-          // Portal photos are referenced where they are hosted; there is no
-          // downscaled variant to distinguish.
-          fullSrc: photoUrls[i],
-          label: `${data.address || "Listing"} photo ${i + 1}`,
-          type: "Listing",
-          role: "property",
-        });
-      }
-    }
-    // Set filter to listings
-    setFilter("listings");
   }
 
   function goBack() {
@@ -1090,11 +913,6 @@ export function NewAdDialog({
     setShowRequirementsAlert(false);
   }
 
-  function useBriefExample() {
-    setDescription(briefGuidance.placeholder.replace(/^Example:\s*/u, ""));
-    setShowRequirementsAlert(false);
-  }
-
   async function runAiCopy() {
     if (!selectedTemplate) return;
     if (!description.trim()) {
@@ -1139,7 +957,7 @@ export function NewAdDialog({
       if (result.onImage) {
         setOnImageCopy((current) => ({ ...current, ...result.onImage }));
       }
-      setCopyMode("write");
+      setCopyGenerated(true);
     } catch {
       setCopyError("Copy generation failed. Try again.");
     } finally {
@@ -1170,19 +988,27 @@ export function NewAdDialog({
     setError("");
   }
 
+  function selectColourSource(source: ColourSource) {
+    setColourSource(source);
+    setError("");
+  }
+
   async function submit() {
-    const trimmed = description.trim();
+    const trimmed = effectiveDescription.trim();
     const blockers = buildRequirementBlockers({
-      description,
+      description: effectiveDescription,
       missingImageLabels,
       unusableImageLabels,
       missingCopyLabels,
+      missingFeedCopyLabels,
+      overLimitLabels,
+      descriptionTooLong: copyMode === "ai" && description.length > 500,
       uploadingImage,
     });
     if (blockers.length > 0) {
       setShowRequirementsAlert(true);
       setError("");
-      if (blockers.some((blocker) => blocker.target === "description")) {
+      if (copyMode === "ai" && blockers.some((blocker) => blocker.target === "description")) {
         window.setTimeout(() => descriptionRef.current?.focus(), 0);
       }
       return;
@@ -1203,6 +1029,7 @@ export function NewAdDialog({
         templateId: selectedTemplate.id,
         description: trimmed,
         generationQuality,
+        colourSource,
         imageDataUrl,
         imageDataUrls,
         onImageCopy: Object.fromEntries(
@@ -1237,15 +1064,16 @@ export function NewAdDialog({
       ? "Choose a template"
       : mediaSourceMode === "library"
         ? "Choose from library"
-        : `${selectedTemplate?.name ?? "Template"} - add your assets`;
+        : "Create your ad";
 
   const footHint =
     mediaSourceMode === "library"
       ? `Select an image for ${activeImageSlot.label}.`
-      : "Blockwise will create your ad from the selected template, using your images and text.";
+      : trialCreditNote;
   const showFooter = step === "brief";
+  const generationTemplate = submitting ? selectedTemplate : null;
 
-  if (submitting) {
+  if (generationTemplate) {
     return (
       <div className="studio-newad-overlay">
         <div
@@ -1257,7 +1085,7 @@ export function NewAdDialog({
           aria-busy="true"
           tabIndex={-1}
         >
-          <GenerationAdStream location={adStreamLocation} quality={generationQuality} titleId={titleId} />
+          <GenerationProgress quality={generationQuality} template={generationTemplate} titleId={titleId} />
         </div>
       </div>
     );
@@ -1282,72 +1110,16 @@ export function NewAdDialog({
             </button>
           )}
           <div className="studio-newad-titleblock">
-            <span>Start an ad</span>
             <h2 id={titleId}>{stepTitle}</h2>
-            {mediaSourceMode === "library" ? (
-              <p>{activeImageSlot.label}</p>
-            ) : null}
           </div>
           <button className="studio-newad-x" type="button" aria-label="Close" onClick={closeCurrentView}>
             <X aria-hidden size={18} />
           </button>
         </div>
 
-        <div className="studio-newad-body">
+        <div ref={bodyRef} className="studio-newad-body">
           {step === "source" && (
             <div className="studio-explore">
-              {/* Listing URL scrape bar */}
-              <div className="newad-url-bar">
-                <label className="newad-url-label" htmlFor="listing-url-input">
-                  <Link aria-hidden size={15} />
-                  <span>Have a listing? Paste the URL and we&apos;ll fill in the details.</span>
-                </label>
-                <div className="newad-url-row">
-                  <input
-                    id="listing-url-input"
-                    type="url"
-                    className="newad-url-input"
-                    placeholder="https://www.realestate.com.au/property-house-wa-..."
-                    value={listingUrl}
-                    onChange={(event) => { setListingUrl(event.target.value); setListingError(""); }}
-                    onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); void fetchListingDetails(); } }}
-                    disabled={listingLoading}
-                  />
-                  <button
-                    type="button"
-                    className="newad-url-btn"
-                    onClick={() => void fetchListingDetails()}
-                    disabled={listingLoading || !listingUrl.trim()}
-                  >
-                    {listingLoading ? <Loader2 aria-hidden size={15} className="newad-url-spin" /> : null}
-                    {listingLoading ? "Fetching..." : "Fetch details"}
-                  </button>
-                </div>
-                {listingError ? <p className="newad-url-error">{listingError}</p> : null}
-                {listingData ? (
-                  <span className="newad-url-chip">
-                    <span>{listingData.address || listingData.suburb}{listingData.bedrooms != null ? ` · ${listingData.bedrooms} bed` : ""}{listingData.price ? ` · ${listingData.price}` : ""}</span>
-                    <button
-                      type="button"
-                      aria-label="Clear listing data"
-                      onClick={() => {
-                        setListingData(null);
-                        setListingBrief("");
-                        setListingPhotos([]);
-                        setListingUrl("");
-                        setListingError("");
-                      }}
-                    >
-                      <X aria-hidden size={13} />
-                    </button>
-                  </span>
-                ) : null}
-              </div>
-              <p className="studio-explore-intro" role={listingData ? "status" : undefined}>
-                {listingData
-                  ? "Listing details are ready. Choose the template you want to use."
-                  : "Choose a template. The next step asks only for the images and exact text it requires."}
-              </p>
               <div className="studio-explore-filterbar">
                 <label className="studio-explore-filter">
                   <span>Category</span>
@@ -1371,214 +1143,251 @@ export function NewAdDialog({
           )}
 
           {step === "brief" && mediaSourceMode === "details" && (
-            <div className={`studio-newad-canvas${isMobileLayout && peekCollapsed ? " is-peek-collapsed" : ""}`}>
-              {isMobileLayout && (
-                <NewAdPreviewPeek
-                  collapsed={peekCollapsed}
-                  activeZone={activeZone}
-                  feedCopy={feedCopy}
-                  zoneMap={zoneMap}
-                  onToggle={() => setPeekCollapsed((current) => !current)}
-                  onZoneClick={handleZoneClick}
-                />
-              )}
-              <div
-                className="studio-newad-own"
-                onFocusCapture={handleFormFocusCapture}
-              >
-              <p className="studio-newad-note">{briefGuidance.note} {trialCreditNote}</p>
-              <div className="studio-newad-upload-group">
-                {imageRequirements.map((slot) => (
-                  <div className="studio-newad-image-slot" key={slot.id}>
-                    {imageRequirements.length > 1 && (
-                      <div className="studio-newad-image-slot-head">
-                        <span>
-                          <strong>{slot.label}</strong>
-                          {slot.guidance ? <small>{slot.guidance}</small> : null}
-                        </span>
-                        {slot.required ? <em>Required</em> : null}
-                      </div>
-                    )}
-                    <AssetUploadDropzone
-                      className="studio-newad-upload"
-                      label={imageRequirements.length > 1 ? slot.label : "Upload one image"}
-                      actionText={uploadActionText(slot, imageRequirements.length)}
-                      helperText="JPG, PNG, or WebP / up to 8 MB"
-                      previewUrl={imageDataUrlsBySlot[slot.id] ?? defaultImageForTemplateSlot(slot, brandKit)}
-                      previewAlt=""
-                      fileName={imageNamesBySlot[slot.id] ?? defaultImageLabelForTemplateSlot(slot, brandKit)}
-                      acceptedTypes={AD_IMAGE_UPLOAD_TYPES}
-                      maxBytes={AD_IMAGE_MAX_BYTES}
-                      typeError="Use a JPG, PNG, or WebP image."
-                      sizeError="Use an image under 8 MB."
-                      capturePagePaste
-                      onFileAccepted={(file) => selectImage(file, slot.id)}
-                      onFileRejected={setError}
-                      onClear={() => {
-                        clearSlotImage(slot.id);
-                        setError("");
-                        setUploadingImage(false);
-                      }}
-                    />
-                    <div className="studio-newad-media-actions" aria-label={`${slot.label} source options`}>
-                      <button type="button" onClick={() => openLibrary(slot.id)}>
-                        <ImageIcon aria-hidden size={16} />
-                        Choose from library
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              {customerCopyFields.length > 0 && (
-                <section className="studio-newad-copyfields" aria-labelledby={copyFieldsTitleId}>
-                  <div className="studio-newad-copyfields-head">
-                    <span>
-                      <strong id={copyFieldsTitleId}>Text on the ad</strong>
-                      <small>Brand details are filled from your Brand Pack when available. Listing details stay blank.</small>
-                    </span>
-                    <button type="button" onClick={fillEmptyCopyFieldsWithExamples}>Fill empty fields with examples</button>
-                  </div>
-                  <div className="studio-newad-copyfields-list">
-                    {customerCopyFields.map((field) => {
-                      const inputId = `${copyFieldIdPrefix}-${field.key}`;
-                      const brandDefault = defaultTextForTemplateField(field, brandKit);
-                      const isBrandPrefilled = Boolean(brandDefault && onImageCopy[field.key] === brandDefault);
-                      return (
-                        <div className="studio-newad-field" key={field.key}>
-                          <div className="studio-newad-field-head">
-                            <label htmlFor={inputId}>
-                              {field.label}
-                              <small>Appears exactly as typed</small>
-                            </label>
-                            <span className="studio-newad-field-actions">
-                              {isBrandPrefilled ? <em>From Brand Pack</em> : null}
-                              <button type="button" onClick={() => useCopyExample(field)}>Use example</button>
-                            </span>
-                          </div>
-                          <input
-                            id={inputId}
-                            type="text"
-                            value={onImageCopy[field.key] ?? ""}
-                            maxLength={Math.min(field.maxLength, 200)}
-                            placeholder={field.sample}
-                            onChange={(event) => {
-                              setShowRequirementsAlert(false);
-                              setOnImageCopy((current) => ({ ...current, [field.key]: event.target.value }));
-                            }}
-                          />
-                        </div>
-                      );
-                    })}
+            <div className="studio-newad-canvas">
+              <div className="studio-newad-own" onFocusCapture={handleFormFocusCapture}>
+                <section className="newad-flow-section" aria-labelledby="newad-writing-method">
+                  <h3 id="newad-writing-method">How would you like to write this ad?</h3>
+                  <div className="studio-newad-copymodes" role="radiogroup" aria-label="Writing method">
+                    {COPY_MODES.map((mode) => (
+                      <label
+                        key={mode.id}
+                        className={copyMode === mode.id ? "studio-copymode-tab is-active" : "studio-copymode-tab"}
+                      >
+                        <input
+                          type="radio"
+                          name="new-ad-writing-method"
+                          value={mode.id}
+                          checked={copyMode === mode.id}
+                          onChange={() => {
+                            setCopyMode(mode.id);
+                            setCopyError(null);
+                            setShowRequirementsAlert(false);
+                          }}
+                        />
+                        {mode.id === "ai" ? <Sparkles aria-hidden size={17} /> : null}
+                        <span>{mode.label}</span>
+                        {mode.id === "ai" ? <em>Recommended</em> : null}
+                      </label>
+                    ))}
                   </div>
                 </section>
-              )}
-              <div className="studio-newad-field studio-newad-brief-field">
-                <div className="studio-newad-field-head">
-                  <label htmlFor={descriptionInputId}>{briefGuidance.fieldLabel}</label>
-                  <button type="button" onClick={useBriefExample}>Use example brief</button>
-                </div>
-                <textarea
-                  id={descriptionInputId}
-                  ref={descriptionRef}
-                  value={description}
-                  maxLength={500}
-                  rows={5}
-                  aria-invalid={hasDescriptionRequirement ? true : undefined}
-                  aria-describedby={hasDescriptionRequirement ? requirementsAlertId : undefined}
-                  onChange={(event) => {
-                    setShowRequirementsAlert(false);
-                    setDescription(event.target.value);
-                  }}
-                  placeholder={briefGuidance.placeholder}
-                />
-                <small className="studio-newad-field-help">{briefGuidance.helperText}</small>
-                <small className="studio-newad-field-count">{description.length}/500</small>
-              </div>
-              <section className="studio-newad-copyfields" aria-label="Ad copy">
-                <div className="studio-newad-copyfields-head">
-                  <span>
-                    <strong>Ad copy</strong>
-                    <small>The caption and button text that appear with your ad on Facebook and Instagram.</small>
-                  </span>
-                </div>
-                <div className="studio-newad-copymodes" role="tablist" aria-label="Copy source">
-                  {COPY_MODES.map((mode) => (
-                    <button
-                      key={mode.id}
-                      type="button"
-                      role="tab"
-                      aria-selected={copyMode === mode.id}
-                      className={copyMode === mode.id ? "studio-copymode-tab is-active" : "studio-copymode-tab"}
-                      onClick={() => {
-                        setCopyMode(mode.id);
-                        setCopyError(null);
-                        if (mode.id === "sample") useSampleCopy();
-                      }}
-                    >
-                      {mode.label}
-                    </button>
-                  ))}
-                </div>
+
                 {copyMode === "ai" && (
-                  <div className="studio-newad-ai-copy">
-                    <p className="studio-newad-ai-hint">Use the brief above to draft the ad copy. You can still edit every field afterwards.</p>
-                    <button
-                      type="button"
-                      className="studio-btn accent"
-                      onClick={() => void runAiCopy()}
-                      disabled={generatingCopy || !description.trim()}
-                    >
-                      {generatingCopy ? "Writing copy…" : "Write copy from brief"}
-                    </button>
-                    {copyError && <p className="studio-newad-copy-error" role="alert">{copyError}</p>}
-                  </div>
+                  <section className="newad-flow-section" aria-labelledby="newad-about-title">
+                    <div className="newad-flow-heading">
+                      <h3 id="newad-about-title">Tell us about the ad</h3>
+                      <span className={description.length > 500 ? "studio-newad-charcount is-over" : "studio-newad-charcount"} aria-live="polite">
+                        {description.length}/500
+                      </span>
+                    </div>
+                    <div className={description.length > 500 ? "studio-newad-field is-over" : "studio-newad-field"}>
+                      <label className="newad-sr-only" htmlFor={descriptionInputId}>Tell us about the ad</label>
+                      <textarea
+                        id={descriptionInputId}
+                        ref={descriptionRef}
+                        value={description}
+                        rows={5}
+                        aria-invalid={description.length > 500 || hasDescriptionRequirement ? true : undefined}
+                        aria-describedby={hasDescriptionRequirement ? requirementsAlertId : undefined}
+                        onChange={(event) => {
+                          setShowRequirementsAlert(false);
+                          setCopyGenerated(false);
+                          setDescription(event.target.value);
+                        }}
+                        placeholder={briefGuidance.placeholder}
+                      />
+                    </div>
+                    <div className="studio-newad-ai-copy">
+                      <button
+                        type="button"
+                        className="studio-btn accent"
+                        onClick={() => void runAiCopy()}
+                        disabled={generatingCopy || !description.trim() || description.length > 500}
+                      >
+                        <Sparkles aria-hidden size={16} />
+                        {generatingCopy ? "Generating copy…" : copyGenerated ? "Generate again" : "Generate copy"}
+                      </button>
+                      {copyError && <p className="studio-newad-copy-error" role="alert">{copyError}</p>}
+                    </div>
+                  </section>
                 )}
-                <div className="studio-newad-copyfields-list">
-                  {FEED_COPY_FIELDS.map((field) => {
-                    const inputId = `feedcopy-${field.key}`;
-                    const limit = FEED_COPY_LIMITS[field.key];
-                    const value = feedCopy[field.key];
-                    return (
-                      <div className="studio-newad-field" key={field.key}>
-                        <div className="studio-newad-field-head">
-                          <label htmlFor={inputId}>
-                            {field.label}
-                            <small>{field.hint}</small>
-                          </label>
-                          <span className="studio-newad-charcount" aria-live="polite">{field.key === "cta" ? ctaLabelFor(value) : `${value.length}/${limit}`}</span>
-                        </div>
-                        {field.key === "cta" ? (
-                          <select
-                            id={inputId}
-                            value={value}
-                            onChange={(event) => setFeedCopy((current) => ({ ...current, [field.key]: event.target.value }))}
-                          >
-                            {FEED_COPY_CTA_OPTIONS.map((option) => (
-                              <option key={option.value} value={option.value}>{option.label}</option>
-                            ))}
-                          </select>
-                        ) : field.multiline ? (
-                          <textarea
-                            id={inputId}
-                            rows={2}
-                            value={value}
-                            maxLength={limit}
-                            onChange={(event) => setFeedCopy((current) => ({ ...current, [field.key]: event.target.value }))}
-                          />
-                        ) : (
-                          <input
-                            id={inputId}
-                            type="text"
-                            value={value}
-                            maxLength={limit}
-                            onChange={(event) => setFeedCopy((current) => ({ ...current, [field.key]: event.target.value }))}
-                          />
+
+                {(copyMode === "write" || copyGenerated) && (
+                  <section className="newad-flow-section" aria-label="Editable ad copy">
+                    <div className="studio-newad-copyfields-list">
+                      {FEED_COPY_FIELDS.map((field) => {
+                        const inputId = `feedcopy-${field.key}`;
+                        const limit = FEED_COPY_LIMITS[field.key];
+                        const value = feedCopy[field.key];
+                        const isOver = field.key !== "cta" && value.length > limit;
+                        const zone: GuideZone = `feed:${field.key}`;
+                        return (
+                          <div className={isOver ? "studio-newad-field is-over" : "studio-newad-field"} key={field.key} data-guide-zone={zone}>
+                            <div className="studio-newad-field-head">
+                              <label htmlFor={inputId}>{field.label}</label>
+                              {field.key !== "cta" ? (
+                                <span className={isOver ? "studio-newad-charcount is-over" : "studio-newad-charcount"} aria-live="polite">
+                                  {value.length}/{limit}
+                                </span>
+                              ) : null}
+                            </div>
+                            {field.key === "cta" ? (
+                              <select
+                                id={inputId}
+                                value={value}
+                                onChange={(event) => setFeedCopy((current) => ({ ...current, [field.key]: event.target.value }))}
+                              >
+                                {FEED_COPY_CTA_OPTIONS.map((option) => (
+                                  <option key={option.value} value={option.value}>{option.label}</option>
+                                ))}
+                              </select>
+                            ) : field.multiline ? (
+                              <textarea
+                                id={inputId}
+                                rows={2}
+                                value={value}
+                                aria-invalid={isOver || undefined}
+                                onChange={(event) => setFeedCopy((current) => ({ ...current, [field.key]: event.target.value }))}
+                              />
+                            ) : (
+                              <input
+                                id={inputId}
+                                type="text"
+                                value={value}
+                                aria-invalid={isOver || undefined}
+                                onChange={(event) => setFeedCopy((current) => ({ ...current, [field.key]: event.target.value }))}
+                              />
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {copyMode === "write" ? (
+                      <button className="newad-use-sample" type="button" onClick={useSampleCopy}>Start with example copy</button>
+                    ) : null}
+                  </section>
+                )}
+
+                <section className="newad-flow-section" aria-labelledby="newad-template-content">
+                  <h3 id="newad-template-content">Add the content for this template</h3>
+                  <div className="studio-newad-upload-group">
+                    {imageRequirements.map((slot) => (
+                      <div className="studio-newad-image-slot" key={slot.id} data-guide-zone={`image:${slot.id}`}>
+                        {imageRequirements.length > 1 && (
+                          <div className="studio-newad-image-slot-head">
+                            <strong>{slot.label}</strong>
+                            {slot.required ? <em>Required</em> : null}
+                          </div>
                         )}
+                        <AssetUploadDropzone
+                          className="studio-newad-upload"
+                          label={imageRequirements.length > 1 ? slot.label : "Upload one image"}
+                          actionText={uploadActionText(slot, imageRequirements.length)}
+                          helperText="JPG, PNG, or WebP / up to 8 MB"
+                          previewUrl={imageDataUrlsBySlot[slot.id] ?? defaultImageForTemplateSlot(slot, brandKit)}
+                          previewAlt=""
+                          fileName={imageNamesBySlot[slot.id] ?? defaultImageLabelForTemplateSlot(slot, brandKit)}
+                          acceptedTypes={AD_IMAGE_UPLOAD_TYPES}
+                          maxBytes={AD_IMAGE_MAX_BYTES}
+                          typeError="Use a JPG, PNG, or WebP image."
+                          sizeError="Use an image under 8 MB."
+                          capturePagePaste
+                          onFileAccepted={(file) => selectImage(file, slot.id)}
+                          onFileRejected={setError}
+                          onClear={() => {
+                            clearSlotImage(slot.id);
+                            setError("");
+                            setUploadingImage(false);
+                          }}
+                        />
+                        <div className="studio-newad-media-actions" aria-label={`${slot.label} source options`}>
+                          <button type="button" onClick={() => openLibrary(slot.id)}>
+                            <ImageIcon aria-hidden size={16} />
+                            Choose from library
+                          </button>
+                        </div>
                       </div>
-                    );
-                  })}
+                    ))}
+                  </div>
+
+                  {customerCopyFields.length > 0 && (
+                    <div className="studio-newad-copyfields" aria-labelledby={copyFieldsTitleId}>
+                      <div className="studio-newad-copyfields-head">
+                        <strong id={copyFieldsTitleId}>Text on the ad</strong>
+                        <button type="button" onClick={fillEmptyCopyFieldsWithExamples}>Use examples</button>
+                      </div>
+                      <div className="studio-newad-copyfields-list">
+                        {customerCopyFields.map((field) => {
+                          const inputId = `${copyFieldIdPrefix}-${field.key}`;
+                          const value = onImageCopy[field.key] ?? "";
+                          const isOver = value.length > field.maxLength;
+                          const brandDefault = defaultTextForTemplateField(field, brandKit);
+                          const isBrandPrefilled = Boolean(brandDefault && value === brandDefault);
+                          const zone: GuideZone = `text:${field.key}`;
+                          return (
+                            <div className={isOver ? "studio-newad-field is-over" : "studio-newad-field"} key={field.key} data-guide-zone={zone}>
+                              <div className="studio-newad-field-head">
+                                <label htmlFor={inputId}>{field.label}</label>
+                                <span className="studio-newad-field-actions">
+                                  {isBrandPrefilled ? <em>From Brand Pack</em> : null}
+                                  <span className={isOver ? "studio-newad-charcount is-over" : "studio-newad-charcount"} aria-live="polite">
+                                    {value.length}/{field.maxLength}
+                                  </span>
+                                  <button type="button" onClick={() => useCopyExample(field)}>Use example</button>
+                                </span>
+                              </div>
+                              <input
+                                id={inputId}
+                                type="text"
+                                value={value}
+                                aria-invalid={isOver || undefined}
+                                placeholder={field.sample}
+                                onChange={(event) => {
+                                  setShowRequirementsAlert(false);
+                                  setOnImageCopy((current) => ({ ...current, [field.key]: event.target.value }));
+                                }}
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </section>
+
+              <fieldset className="studio-newad-quality">
+                <legend>Colour scheme</legend>
+                <div className="studio-newad-quality-options">
+                  <label className={colourSource === "template" ? "is-selected" : undefined}>
+                    <input
+                      type="radio"
+                      name="colour-source"
+                      value="template"
+                      checked={colourSource === "template"}
+                      onChange={() => selectColourSource("template")}
+                    />
+                    <span>
+                      <strong>Template colours</strong>
+                      <small>Keep the selected ad&apos;s original colour scheme</small>
+                    </span>
+                    <em>Recommended</em>
+                  </label>
+                  <label className={colourSource === "brand" ? "is-selected" : undefined}>
+                    <input
+                      type="radio"
+                      name="colour-source"
+                      value="brand"
+                      checked={colourSource === "brand"}
+                      onChange={() => selectColourSource("brand")}
+                    />
+                    <span>
+                      <strong>Brand Pack colours</strong>
+                      <small>Adapt the ad to your saved brand palette</small>
+                    </span>
+                  </label>
                 </div>
-              </section>
+              </fieldset>
+
               <fieldset className="studio-newad-quality">
                 <legend>Generation quality</legend>
                 <div className="studio-newad-quality-options">
@@ -1612,17 +1421,12 @@ export function NewAdDialog({
                 </div>
               </fieldset>
               </div>
-              <aside className="studio-newad-previewpane" aria-label="Live ad preview">
-                <NewAdLivePreview
+              <aside className="studio-newad-previewpane" aria-label="Template placement guide">
+                <NewAdPlacementGuide
                   template={selectedTemplate}
                   brandKit={brandKit}
-                  imageDataUrls={imageDataUrls}
-                  primaryImageSlotId={primaryImageSlot.id}
-                  onImageCopy={onImageCopy}
-                  feedCopy={feedCopy}
                   activeZone={activeZone}
-                  reducedMotion={reducedMotion}
-                  zoneMap={zoneMap}
+                  copyFieldsVisible={copyMode === "write" || copyGenerated}
                   onZoneClick={handleZoneClick}
                 />
               </aside>
@@ -1713,7 +1517,7 @@ export function NewAdDialog({
               </AlertDialogMedia>
               <AlertDialogTitle>Discard this ad draft?</AlertDialogTitle>
               <AlertDialogDescription>
-                Your selected template, listing details, images and copy will be removed.
+                Your selected template, images and copy will be removed.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -1748,11 +1552,11 @@ function uploadActionText(slot: TemplateImageRequirement, slotCount: number): st
 }
 
 function formatTrialCreditNote(status: TrialStatus | null): string {
-  if (status?.isTrial && Number.isFinite(status.includedAdPacks) && status.includedAdPacks > 0) {
-    return `Uses 1 of ${status.includedAdPacks} free ad packs. No Meta account is needed until publish.`;
+  if (status?.isTrial && Number.isFinite(status.includedRenders) && status.includedRenders > 0) {
+    return `Uses 2 of ${status.includedRenders} free renders for one Feed + Story ad. No Meta account is needed until publish.`;
   }
 
-  return "Uses one ad pack. No Meta account is needed until publish.";
+  return "Uses two renders for one Feed + Story ad. No Meta account is needed until publish.";
 }
 
 function buildRequirementBlockers(input: {
@@ -1760,6 +1564,9 @@ function buildRequirementBlockers(input: {
   missingImageLabels: string[];
   unusableImageLabels?: string[];
   missingCopyLabels?: string[];
+  missingFeedCopyLabels?: string[];
+  overLimitLabels?: string[];
+  descriptionTooLong?: boolean;
   uploadingImage: boolean;
 }): RequirementBlocker[] {
   const blockers: RequirementBlocker[] = [];
@@ -1773,6 +1580,24 @@ function buildRequirementBlockers(input: {
         input.missingCopyLabels.length === 1
           ? `Fill in ${input.missingCopyLabels[0]} — it appears on the ad exactly as you type it.`
           : `Fill in ${input.missingCopyLabels.join(", ")} — these appear on the ad exactly as you type them.`,
+    });
+  }
+
+  if (input.missingFeedCopyLabels && input.missingFeedCopyLabels.length > 0) {
+    blockers.push({
+      id: "missing_feed_copy",
+      target: "description",
+      message: input.missingFeedCopyLabels.includes("generated ad copy")
+        ? "Generate the ad copy, then review the editable fields."
+        : `Fill in ${input.missingFeedCopyLabels.join(" and ")} before generating the ad.`,
+    });
+  }
+
+  if (input.overLimitLabels && input.overLimitLabels.length > 0) {
+    blockers.push({
+      id: "copy_too_long",
+      target: "description",
+      message: `Shorten ${input.overLimitLabels.join(", ")} to the character limit shown in red.`,
     });
   }
 
@@ -1814,7 +1639,7 @@ function buildRequirementBlockers(input: {
     });
   }
 
-  if (input.description.length > 500) {
+  if (input.descriptionTooLong) {
     blockers.push({
       id: "description_too_long",
       target: "description",
@@ -1968,14 +1793,29 @@ button.studio-explore-card{padding:0;cursor:pointer}
 .studio-newad-library-grid span{display:grid;gap:2px;min-width:0}
 .studio-newad-library-grid strong{font-size:12.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .studio-newad-library-grid small{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.studio-newad-copymodes{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 4px}
-.studio-copymode-tab{border:1px solid var(--line-soft);border-radius:999px;background:transparent;color:var(--muted);font-size:13px;font-weight:600;padding:6px 14px;cursor:pointer;transition:all .15s ease}
-.studio-copymode-tab:hover{border-color:var(--line);color:var(--ink)}
-.studio-copymode-tab.is-active{border-color:var(--accent);color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,transparent)}
+.newad-sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+.studio-newad-own{display:grid;gap:26px}
+.newad-flow-section{display:grid;gap:14px;min-width:0}
+.newad-flow-section+.newad-flow-section{border-top:1px solid var(--line-soft);padding-top:24px}
+.newad-flow-section h3{margin:0;color:var(--ink);font-size:16px;font-weight:780;line-height:1.3;letter-spacing:-.01em}
+.newad-flow-heading{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.studio-newad-copymodes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:0}
+.studio-copymode-tab{min-height:72px;display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--ink);font:inherit;font-size:13.5px;font-weight:700;padding:13px 14px;text-align:left;cursor:pointer;transition:border-color .15s,background .15s,box-shadow .15s}
+.studio-copymode-tab:hover{border-color:#b8bec9;background:var(--accent-tint)}
+.studio-copymode-tab.is-active{border-color:var(--ink);color:var(--ink);background:#f6f7f9;box-shadow:0 0 0 1px var(--ink)}
+.studio-copymode-tab:focus-within{outline:2px solid var(--ink);outline-offset:2px}
+.studio-copymode-tab input{width:18px;height:18px;flex:0 0 auto;accent-color:var(--ink)}
+.studio-copymode-tab svg{flex:0 0 auto}
+.studio-copymode-tab span{min-width:0}
+.studio-copymode-tab em{margin-left:auto;border-radius:999px;background:var(--ink);color:#fff;padding:4px 7px;font-size:10.5px;font-style:normal;font-weight:700;white-space:nowrap}
 .studio-newad-ai-copy{display:grid;gap:10px;margin:8px 0 14px}
 .studio-newad-ai-hint{font-size:12.5px;line-height:1.5;color:var(--muted);margin:0}
 .studio-newad-copy-error{font-size:12.5px;color:var(--danger,#c0392b);margin:0}
 .studio-newad-charcount{font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.studio-newad-charcount.is-over,.studio-newad-field.is-over .studio-newad-charcount{color:#ba1a1a;font-weight:700}
+.studio-newad-field.is-over input,.studio-newad-field.is-over textarea{border-color:#ba1a1a;box-shadow:0 0 0 3px rgba(186,26,26,.12)}
+.newad-use-sample{justify-self:start;min-height:44px;border:0;background:transparent;color:var(--muted);font:inherit;font-size:12.5px;font-weight:700;padding:0 4px;cursor:pointer}
+.newad-use-sample:hover{color:var(--ink);text-decoration:underline}
 @media(max-width:900px){
   .studio-explore-grid{grid-template-columns:repeat(2,1fr);gap:12px}
   .studio-explore-thumb{height:210px}
@@ -2003,6 +1843,7 @@ button.studio-explore-card{padding:0;cursor:pointer}
   .studio-newad-field-head label{align-items:flex-start;flex-direction:column;gap:2px}
   .studio-newad-field-head>button{width:100%}
   .studio-newad-quality-options{grid-template-columns:1fr}
+  .studio-newad-copymodes{grid-template-columns:1fr}
 }
 
 /* ── Canvas editor: split form + live preview ─────────────────────────── */
@@ -2031,11 +1872,18 @@ button.studio-explore-card{padding:0;cursor:pointer}
 .newad-pv-feed-head .studio-template-dots{margin-left:auto;color:#64748b;font-size:18px;line-height:1}
 .newad-pv-feed .newad-pv-zone{padding:0 13px 10px;text-align:left;font-size:14px;line-height:1.36;color:#1d2129}
 .newad-pv-media{position:relative;display:block;background:#f1f5f9;border-top:1px solid #edf1f6;border-bottom:1px solid #edf1f6}
+.newad-pv-media.is-active{box-shadow:inset 0 0 0 3px var(--ink)}
 .newad-pv-media img{width:100%;aspect-ratio:4/5;object-fit:cover;display:block}
 .newad-pv-media-ph{display:block;width:100%;aspect-ratio:4/5;background:linear-gradient(135deg,#e8edf4,#dbe4ef)}
-.newad-pv-chips{position:absolute;left:10px;right:10px;bottom:10px;display:flex;flex-wrap:wrap;gap:5px}
-.newad-pv-chips span{max-width:100%;border-radius:999px;background:rgba(9,14,26,.72);color:#fff;font-size:10.5px;line-height:1.2;padding:4px 9px;backdrop-filter:blur(3px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.newad-pv-chips b{font-weight:800;opacity:.75;text-transform:uppercase;font-size:9px;letter-spacing:.4px}
+.newad-sample-image-region{position:absolute;z-index:1;inset:0;border:0;background:transparent;padding:0;cursor:pointer}
+.newad-sample-image-region:hover,.newad-sample-image-region:focus-visible{outline:2px solid var(--ink);outline-offset:-3px}
+.newad-sample-image-region.is-active{outline:3px solid var(--ink);outline-offset:-4px}
+.newad-sample-region{position:absolute;z-index:2;border:1.5px solid transparent;border-radius:6px;background:transparent;color:transparent;padding:0;cursor:pointer;transition:border-color .15s,box-shadow .15s}
+.newad-sample-region:hover{border-color:rgba(255,255,255,.9);box-shadow:0 0 0 2px rgba(22,24,29,.72)}
+.newad-sample-region.is-active{z-index:3;border-color:#fff;box-shadow:0 0 0 2px var(--ink),0 0 0 999px rgba(22,24,29,.34)}
+.newad-sample-region span{position:absolute;left:5px;top:5px;display:none;min-height:21px;align-items:center;border-radius:999px;background:var(--ink);color:#fff;padding:0 7px;font-size:9px;font-weight:750;white-space:nowrap}
+.newad-sample-region.is-active span{display:inline-flex}
+.newad-sample-region:focus-visible{outline:2px solid #fff;outline-offset:2px}
 .newad-pv-feed-link{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#f2f3f5;padding:11px 13px}
 .newad-pv-feed-link>span:first-child{display:grid;gap:3px;min-width:0}
 .newad-pv-feed-link small{font-size:9.5px;text-transform:uppercase;color:#64748b;letter-spacing:.3px}
@@ -2047,6 +1895,7 @@ button.studio-explore-card{padding:0;cursor:pointer}
 
 /* Fullscreen (story) placement */
 .newad-pv-story{position:relative;aspect-ratio:9/16;background:#0b1020;color:#fff;overflow:hidden}
+.newad-pv-story.is-active{box-shadow:inset 0 0 0 3px #fff}
 .newad-pv-story img,.newad-pv-story-ph{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
 .newad-pv-story-ph{background:linear-gradient(160deg,#16213a,#0b1020)}
 .newad-pv-shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(3,7,18,.5) 0%,rgba(3,7,18,.04) 40%,rgba(3,7,18,.78) 100%)}
@@ -2061,48 +1910,15 @@ button.studio-explore-card{padding:0;cursor:pointer}
 .newad-pv-story-copy .newad-pv-zone[data-preview-zone="primaryText"]{font-size:11.5px;line-height:1.34;color:rgba(255,255,255,.92)}
 .newad-pv-story .newad-pv-zone[data-preview-zone="cta"]{position:absolute;left:13px;right:13px;bottom:13px;z-index:2;min-height:36px;border-radius:999px;background:rgba(255,255,255,.95);color:#101827;display:grid;place-items:center;font-size:12.5px;font-weight:800;text-align:center;box-shadow:0 8px 18px rgba(0,0,0,.22)}
 .newad-pv-story .newad-pv-zone[data-preview-zone="cta"].is-active{background:rgba(255,255,255,1)}
-.newad-pv-story .newad-pv-zone[data-preview-zone="cta"]:hover{box-shadow:0 0 0 2px rgba(59,130,246,.8),0 8px 18px rgba(0,0,0,.22)}
+.newad-pv-story .newad-pv-zone[data-preview-zone="cta"]:hover{box-shadow:0 0 0 2px rgba(22,24,29,.8),0 8px 18px rgba(0,0,0,.22)}
 
 /* Editable zones */
 .newad-pv-zone{display:block;width:100%;border:0;background:none;font:inherit;color:inherit;padding:0;margin:0;text-align:left;cursor:pointer;border-radius:6px;transition:box-shadow .16s ease,background .16s ease,transform .16s ease}
-.newad-pv-zone:hover{box-shadow:0 0 0 1.5px rgba(59,130,246,.55)}
-.newad-pv-zone:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.newad-pv-zone.is-active{background:rgba(59,130,246,.09);box-shadow:0 0 0 2px rgba(59,130,246,.75);animation:newad-zone-pulse 1.5s ease-in-out infinite}
-.newad-pv--static .newad-pv-zone.is-active{animation:none}
+.newad-pv-zone:hover:not(:disabled){box-shadow:0 0 0 1.5px rgba(22,24,29,.55)}
+.newad-pv-zone:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.newad-pv-zone:disabled{cursor:default;opacity:.72}
+.newad-pv-zone.is-active{background:var(--surface-subtle);box-shadow:0 0 0 2px var(--ink)}
 .newad-pv-zone .is-ghost{color:#94a3b8;font-style:italic}
 .newad-pv-story .newad-pv-zone .is-ghost{color:rgba(255,255,255,.55)}
-@keyframes newad-zone-pulse{0%,100%{box-shadow:0 0 0 2px rgba(59,130,246,.75)}50%{box-shadow:0 0 0 5px rgba(59,130,246,.22)}}
-.newad-preview-hint{margin:0;font-size:12px;color:var(--accent);font-weight:650}
-.newad-preview-hint--idle{color:var(--muted);font-weight:500}
-
-/* Small-screen sticky peek strip */
-.newad-peek{position:sticky;top:0;z-index:6;display:grid;gap:6px;margin:-4px 0 12px;border:1px solid var(--line-soft);border-radius:12px;background:#fff;box-shadow:var(--st-sh-1);padding:9px 11px}
-.newad-peek-toggle{display:flex;align-items:center;justify-content:space-between;gap:10px;border:0;background:none;font:inherit;color:var(--ink);font-size:13px;font-weight:750;padding:2px 0;cursor:pointer}
-.newad-peek-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.newad-peek-caret{color:var(--muted);font-size:13px;transition:transform .18s ease}
-.newad-peek-caret.is-closed{transform:rotate(-90deg)}
-.newad-peek-line{border:1px solid var(--line-soft);border-radius:8px;background:var(--surface-subtle,#f8fafc);font:inherit;color:var(--ink);font-size:13px;line-height:1.4;padding:8px 10px;text-align:left;cursor:pointer;min-width:0}
-.newad-peek-line span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.newad-peek-line .is-ghost{color:#94a3b8;font-style:italic}
-.newad-peek-line:hover{border-color:#b8bec9}
-
-/* Listing URL scrape bar */
-.newad-url-bar{display:grid;gap:8px;padding:12px 14px;border:1px solid #d4e0ed;border-radius:12px;background:linear-gradient(135deg,#f0f7ff 0%,#f8fbff 100%)}
-.newad-url-label{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:700;color:#1e3a5f}
-.newad-url-label svg{flex:0 0 auto;color:#3b82f6}
-.newad-url-row{display:flex;gap:8px}
-.newad-url-input{flex:1;min-width:0;padding:9px 12px;border:1px solid #c8d6e5;border-radius:8px;font:inherit;font-size:13px;color:var(--ink);background:#fff;transition:border-color .15s}
-.newad-url-input:focus{outline:none;border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.12)}
-.newad-url-input:disabled{opacity:.6;cursor:not-allowed}
-.newad-url-btn{flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border:0;border-radius:8px;background:#1d4ed8;color:#fff;font:inherit;font-size:13px;font-weight:700;cursor:pointer;transition:background .15s,opacity .15s}
-.newad-url-btn:hover:not(:disabled){background:#1e40af}
-.newad-url-btn:disabled{opacity:.5;cursor:not-allowed}
-.newad-url-spin{animation:newad-spin 1s linear infinite}
-@keyframes newad-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
-.newad-url-error{margin:0;font-size:12.5px;color:#dc2626;font-weight:600;line-height:1.4}
-.newad-url-chip{display:inline-flex;align-items:center;gap:8px;padding:5px 10px;border-radius:999px;background:#dbeafe;color:#1e40af;font-size:12.5px;font-weight:650;max-width:100%}
-.newad-url-chip>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.newad-url-chip button{display:grid;place-items:center;border:0;background:none;padding:2px;cursor:pointer;color:#1e40af;border-radius:50%}
-.newad-url-chip button:hover{background:rgba(30,64,175,.12)}
 `;
 // NewAdDialog: choose one gallery sample, then provide its declared assets.

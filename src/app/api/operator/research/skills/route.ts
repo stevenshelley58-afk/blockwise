@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { requireOperator } from "@/lib/operator/auth";
+import { requireAdRadarOperator as requireOperator } from "@/lib/operator/auth";
 import { listHermesSkills } from "@/lib/operator/hermes-assets";
 
 export const dynamic = "force-dynamic";

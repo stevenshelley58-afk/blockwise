@@ -116,5 +116,100 @@
         "body": "The agency will be in touch within 24 hours to discuss this property."
       }
     }
+  },
+  "typography": {
+    "body": {
+      "fontId": "kanit",
+      "family": "Kanit",
+      "fallbackFamily": "sans-serif",
+      "weight": 700,
+      "italic": false,
+      "case": "mixed",
+      "sizeRatio": 1.0705882352941176,
+      "lineHeight": 1.495,
+      "tracking": 0,
+      "align": "right",
+      "color": "#b2b5b6",
+      "fitScore": 0.222,
+      "sampleBox": {
+        "x": 0.21388888888888888,
+        "y": 0.35518518518518516,
+        "width": 0.774537037037037,
+        "height": 0.1174074074074074
+      },
+      "sampleLineCount": 8,
+      "detectionScore": 0.829,
+      "fontFile": "/fonts/adstudio/kanit-700.woff2"
+    },
+    "headline": {
+      "fontId": "oswald",
+      "family": "Oswald",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.2076923076923076,
+      "lineHeight": 1.482,
+      "tracking": 0,
+      "align": "center",
+      "color": "#0e2136",
+      "fitScore": 0.516,
+      "sampleBox": {
+        "x": 0.08657407407407407,
+        "y": 0.17851851851851852,
+        "width": 0.8300925925925926,
+        "height": 0.10185185185185185
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/oswald-300.woff2"
+    },
+    "subheadline": {
+      "fontId": "barlow-condensed",
+      "family": "Barlow Condensed",
+      "fallbackFamily": "sans-serif",
+      "weight": 800,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.3617021660378668,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "center",
+      "color": "#7f8783",
+      "fitScore": 0.23,
+      "sampleBox": {
+        "x": 0.11064814814814815,
+        "y": 0.2651851851851852,
+        "width": 0.7111111111111111,
+        "height": 0.14148148148148149
+      },
+      "sampleLineCount": 3,
+      "detectionScore": 0.643,
+      "fontFile": "/fonts/adstudio/barlow-condensed-800.woff2"
+    },
+    "cta": {
+      "fontId": "kanit",
+      "family": "Kanit",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 0.65,
+      "lineHeight": 1.2,
+      "tracking": 0.02,
+      "align": "center",
+      "color": "#b2b5b6",
+      "fitScore": 0.35,
+      "sampleBox": {
+        "x": 0.1,
+        "y": 0.78,
+        "width": 0.8,
+        "height": 0.05
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 0.55,
+      "measurementSource": "manual-estimate",
+      "fontFile": "/fonts/adstudio/kanit-300.woff2"
+    }
   }
 }

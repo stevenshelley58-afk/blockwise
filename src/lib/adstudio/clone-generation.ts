@@ -100,6 +100,44 @@ export async function normalizeCloneRenderAspect(
 }
 
 /**
+ * Build a same-size inpainting mask for one or more edit regions on a canvas
+ * of known dimensions — no image decode needed. Transparent pixels are
+ * repaintable; every opaque pixel must be preserved.
+ */
+export async function createRegionEditMaskForDimensions(
+  dimensions: { width: number; height: number },
+  boxes: Array<{ x: number; y: number; width: number; height: number }>,
+): Promise<string | undefined> {
+  const usable = boxes.filter((box) => box.width > 0 && box.height > 0);
+  if (usable.length === 0) return undefined;
+
+  // Give text antialiasing and image edges a small amount of breathing room.
+  const paddingX = 0.02;
+  const paddingY = 0.02;
+  const cutouts = usable.map((box) => {
+    const x = Math.max(0, Math.floor((box.x - paddingX) * dimensions.width));
+    const y = Math.max(0, Math.floor((box.y - paddingY) * dimensions.height));
+    const right = Math.min(dimensions.width, Math.ceil((box.x + box.width + paddingX) * dimensions.width));
+    const bottom = Math.min(dimensions.height, Math.ceil((box.y + box.height + paddingY) * dimensions.height));
+    const width = Math.max(1, right - x);
+    const height = Math.max(1, bottom - y);
+    return `<rect x="${x}" y="${y}" width="${width}" height="${height}" fill="black"/>`;
+  }).join("");
+  const svg = Buffer.from(
+    `<svg width="${dimensions.width}" height="${dimensions.height}" xmlns="http://www.w3.org/2000/svg">`
+      + '<defs><mask id="edit-region">'
+      + '<rect width="100%" height="100%" fill="white"/>'
+      + cutouts
+      + "</mask></defs>"
+      + '<rect width="100%" height="100%" fill="white" mask="url(#edit-region)"/>'
+      + "</svg>",
+  );
+  const { default: sharp } = await import("sharp");
+  const png = await sharp(svg).ensureAlpha().png({ compressionLevel: 1 }).toBuffer();
+  return `data:image/png;base64,${png.toString("base64")}`;
+}
+
+/**
  * Build a same-size inpainting mask for one QA-detected edit region.
  * Transparent pixels are repaintable; every opaque pixel must be preserved.
  */
@@ -122,27 +160,7 @@ export async function createCloneRegionEditMask(
   const { default: sharp } = await import("sharp");
   const metadata = await sharp(bytes).metadata();
   if (!metadata.width || !metadata.height) throw new Error("Creative image dimensions could not be read for editing.");
-
-  // Give text antialiasing and image edges a small amount of breathing room.
-  const paddingX = 0.02;
-  const paddingY = 0.02;
-  const x = Math.max(0, Math.floor((box.x - paddingX) * metadata.width));
-  const y = Math.max(0, Math.floor((box.y - paddingY) * metadata.height));
-  const right = Math.min(metadata.width, Math.ceil((box.x + box.width + paddingX) * metadata.width));
-  const bottom = Math.min(metadata.height, Math.ceil((box.y + box.height + paddingY) * metadata.height));
-  const width = Math.max(1, right - x);
-  const height = Math.max(1, bottom - y);
-  const svg = Buffer.from(
-    `<svg width="${metadata.width}" height="${metadata.height}" xmlns="http://www.w3.org/2000/svg">`
-      + '<defs><mask id="edit-region">'
-      + '<rect width="100%" height="100%" fill="white"/>'
-      + `<rect x="${x}" y="${y}" width="${width}" height="${height}" fill="black"/>`
-      + "</mask></defs>"
-      + '<rect width="100%" height="100%" fill="white" mask="url(#edit-region)"/>'
-      + "</svg>",
-  );
-  const png = await sharp(svg).ensureAlpha().png({ compressionLevel: 1 }).toBuffer();
-  return `data:image/png;base64,${png.toString("base64")}`;
+  return createRegionEditMaskForDimensions({ width: metadata.width, height: metadata.height }, [box]);
 }
 
 async function cloneImageBytes(assetUrl: string, fetchImpl: typeof fetch): Promise<Uint8Array> {
@@ -190,111 +208,6 @@ export async function compositeCloneRegionEdit(
     .png({ compressionLevel: 1 })
     .toBuffer();
   return `data:image/png;base64,${composited.toString("base64")}`;
-}
-
-function escapeSvgText(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&apos;");
-}
-
-function wrapExactText(value: string, maxCharacters: number): string[] {
-  const words = value.trim().split(/\s+/u).filter(Boolean);
-  if (words.length === 0) return [];
-  const lines: string[] = [];
-  let line = "";
-  for (const word of words) {
-    const candidate = line ? `${line} ${word}` : word;
-    if (line && candidate.length > maxCharacters) {
-      lines.push(line);
-      line = word;
-    } else {
-      line = candidate;
-    }
-  }
-  if (line) lines.push(line);
-  return lines;
-}
-
-/**
- * Text generation can occasionally omit a word even after a guided retry.
- * Once the image model has supplied the visual treatment, this finalizer
- * clears only the selected text region and typesets the customer's exact copy
- * into it. The clone remains a flat finished ad; no edit layers exist before
- * generation and no pixels outside the selected post-clone region can change.
- */
-export async function renderExactCloneTextEdit(
-  editedAssetUrl: string,
-  value: string,
-  box?: { x: number; y: number; width: number; height: number },
-  fetchImpl: typeof fetch = fetch,
-): Promise<string> {
-  const exactValue = value.trim();
-  if (!exactValue || !box || box.width <= 0 || box.height <= 0) return editedAssetUrl;
-
-  const bytes = await cloneImageBytes(editedAssetUrl, fetchImpl);
-  const { default: sharp } = await import("sharp");
-  const source = sharp(bytes);
-  const metadata = await source.metadata();
-  if (!metadata.width || !metadata.height) throw new Error("Creative image dimensions could not be read for text editing.");
-
-  const left = Math.max(0, Math.floor(box.x * metadata.width));
-  const top = Math.max(0, Math.floor(box.y * metadata.height));
-  const right = Math.min(metadata.width, Math.ceil((box.x + box.width) * metadata.width));
-  const bottom = Math.min(metadata.height, Math.ceil((box.y + box.height) * metadata.height));
-  const width = Math.max(1, right - left);
-  const height = Math.max(1, bottom - top);
-  const region = await sharp(bytes).extract({ left, top, width, height }).ensureAlpha().png({ compressionLevel: 1 }).toBuffer();
-  const stats = await sharp(region).stats();
-  const red = Math.round(stats.channels[0]?.mean ?? 127);
-  const green = Math.round(stats.channels[1]?.mean ?? 127);
-  const blue = Math.round(stats.channels[2]?.mean ?? 127);
-  const luminance = 0.2126 * red + 0.7152 * green + 0.0722 * blue;
-  const foreground = luminance < 145 ? "#ffffff" : "#111827";
-  const shadow = luminance < 145 ? "#000000" : "#ffffff";
-  const innerWidth = Math.max(1, width * 0.88);
-  const innerHeight = Math.max(1, height * 0.78);
-
-  let fontSize = Math.min(96, Math.max(12, Math.floor(height * 0.58)));
-  let lines: string[] = [];
-  for (; fontSize >= 12; fontSize -= 1) {
-    const maxCharacters = Math.max(1, Math.floor(innerWidth / (fontSize * 0.62)));
-    const candidateLines = wrapExactText(exactValue, maxCharacters);
-    const widest = Math.max(...candidateLines.map((line) => line.length), 1) * fontSize * 0.62;
-    if (widest <= innerWidth && candidateLines.length * fontSize * 1.16 <= innerHeight) {
-      lines = candidateLines;
-      break;
-    }
-  }
-  if (lines.length === 0) {
-    fontSize = 12;
-    lines = wrapExactText(exactValue, Math.max(1, Math.floor(innerWidth / (fontSize * 0.62))));
-  }
-
-  const lineHeight = fontSize * 1.16;
-  const firstBaseline = height / 2 - ((lines.length - 1) * lineHeight) / 2 + fontSize * 0.34;
-  const tspans = lines
-    .map((line, index) => `<tspan x="${width / 2}" y="${firstBaseline + index * lineHeight}">${escapeSvgText(line)}</tspan>`)
-    .join("");
-  const svg = Buffer.from(
-    `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">`
-      + `<rect width="100%" height="100%" fill="rgb(${red},${green},${blue})" fill-opacity="0.82"/>`
-      + `<text text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="${fontSize}" font-weight="700" fill="${foreground}" stroke="${shadow}" stroke-opacity="0.18" stroke-width="1" paint-order="stroke" letter-spacing="0">${tspans}</text>`
-      + "</svg>",
-  );
-  const softened = await sharp(region)
-    .blur(Math.max(2, Math.min(12, Math.floor(Math.min(width, height) / 18))))
-    .composite([{ input: svg }])
-    .png({ compressionLevel: 1 })
-    .toBuffer();
-  const output = await sharp(bytes)
-    .composite([{ input: softened, left, top }])
-    .png({ compressionLevel: 1 })
-    .toBuffer();
-  return `data:image/png;base64,${output.toString("base64")}`;
 }
 
 export async function generateCloneWithCascade(input: {

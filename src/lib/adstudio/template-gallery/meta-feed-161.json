@@ -54,6 +54,17 @@
     "primary_intent": "attract_buyers",
     "property_or_agent_focus": "property"
   },
+  "deterministicEditing": {
+    "status": "partial",
+    "imageBoxes": {
+      "property_image": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      }
+    }
+  },
   "meta": {
     "platform": "meta",
     "objective": "OUTCOME_LEADS",
@@ -88,6 +99,31 @@
         "title": "Request received",
         "body": "The agency will be in touch within 24 hours to discuss this property."
       }
+    }
+  },
+  "typography": {
+    "headline": {
+      "fontId": "kanit",
+      "family": "Kanit",
+      "fallbackFamily": "sans-serif",
+      "weight": 900,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.5517241379310347,
+      "lineHeight": 1.495,
+      "tracking": 0,
+      "align": "center",
+      "color": "#1e1e1e",
+      "fitScore": 0.086,
+      "sampleBox": {
+        "x": 0.3349609375,
+        "y": 0.23671875,
+        "width": 0.3125,
+        "height": 0.0203125
+      },
+      "sampleLineCount": 3,
+      "detectionScore": 0.364,
+      "fontFile": "/fonts/adstudio/kanit-900.woff2"
     }
   }
 }

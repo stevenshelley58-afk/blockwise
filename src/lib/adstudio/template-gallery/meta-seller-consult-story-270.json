@@ -130,5 +130,143 @@
         "body": "The agency will be in touch within 24 hours to arrange your free seller consultation."
       }
     }
+  },
+  "typography": {
+    "body": {
+      "fontId": "source-sans-3",
+      "family": "Source Sans 3",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "mixed",
+      "sizeRatio": 1.0506329113924051,
+      "lineHeight": 1.424,
+      "tracking": 0,
+      "align": "center",
+      "color": "#5c6772",
+      "fitScore": 0.617,
+      "sampleBox": {
+        "x": 0.23194444444444445,
+        "y": 0.7822916666666667,
+        "width": 0.5444444444444444,
+        "height": 0.03828125
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 1
+    },
+    "cta": {
+      "fontId": "google-sans",
+      "family": "Google Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 700,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.2706766917293233,
+      "lineHeight": 1.252,
+      "tracking": 0,
+      "align": "center",
+      "color": "#d2d6d9",
+      "fitScore": 0.502,
+      "sampleBox": {
+        "x": 0.25925925925925924,
+        "y": 0.8734375,
+        "width": 0.4912037037037037,
+        "height": 0.01171875
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
+    },
+    "headline": {
+      "fontId": "manrope",
+      "family": "Manrope",
+      "fallbackFamily": "sans-serif",
+      "weight": 600,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.3337164750957855,
+      "lineHeight": 1.366,
+      "tracking": 0,
+      "align": "center",
+      "color": "#1d3443",
+      "fitScore": 0.672,
+      "sampleBox": {
+        "x": 0.11342592592592593,
+        "y": 0.665625,
+        "width": 0.7972222222222223,
+        "height": 0.026822916666666665
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/manrope-600.woff2"
+    },
+    "subheadline": {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "fallbackFamily": "serif",
+      "weight": 700,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.2767462422634834,
+      "lineHeight": 1.257,
+      "tracking": 0,
+      "align": "center",
+      "color": "#ebba57",
+      "fitScore": 0.595,
+      "sampleBox": {
+        "x": 0.21712962962962962,
+        "y": 0.7239583333333334,
+        "width": 0.5861111111111111,
+        "height": 0.01796875
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/merriweather-700.woff2"
+    },
+    "website": {
+      "fontId": "lora",
+      "family": "Lora",
+      "fallbackFamily": "serif",
+      "weight": 700,
+      "italic": false,
+      "case": "lower",
+      "sizeRatio": 1.0769230769230769,
+      "lineHeight": 1.28,
+      "tracking": 0,
+      "align": "center",
+      "color": "#505d69",
+      "fitScore": 0.598,
+      "sampleBox": {
+        "x": 0.35462962962962963,
+        "y": 0.94296875,
+        "width": 0.28703703703703703,
+        "height": 0.012760416666666666
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/lora-700.woff2"
+    }
+  },
+  "deterministicEditing": {
+    "status": "partial",
+    "imageBoxes": {
+      "property_photo_1": {
+        "x": 0.001851851851851852,
+        "y": 0.19427083333333334,
+        "width": 0.49166666666666664,
+        "height": 0.4005208333333333
+      },
+      "property_photo_2": {
+        "x": 0.5064814814814815,
+        "y": 0.19427083333333334,
+        "width": 0.49166666666666664,
+        "height": 0.4005208333333333
+      },
+      "agency_logo": {
+        "x": 0.4287037037037037,
+        "y": 0.05416666666666667,
+        "width": 0.14,
+        "height": 0.0734375
+      }
+    }
   }
 }

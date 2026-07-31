@@ -126,5 +126,147 @@
         "body": "The agency will be in touch within 24 hours to arrange your free rental appraisal."
       }
     }
+  },
+  "typography": {
+    "headline": {
+      "fontId": "montserrat",
+      "family": "Montserrat",
+      "fallbackFamily": "sans-serif",
+      "weight": 900,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.3544303797468353,
+      "lineHeight": 1.219,
+      "tracking": 0,
+      "align": "center",
+      "color": "#402f1f",
+      "fitScore": 0.298,
+      "sampleBox": {
+        "x": 0.21630859375,
+        "y": 0.695703125,
+        "width": 0.58935546875,
+        "height": 0.07265625
+      },
+      "sampleLineCount": 3,
+      "detectionScore": 0.421,
+      "fontFile": "/fonts/adstudio/montserrat-900.woff2"
+    },
+    "price_info": {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "fallbackFamily": "serif",
+      "weight": 400,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 0.9552238805970149,
+      "lineHeight": 1.257,
+      "tracking": 0,
+      "align": "center",
+      "color": "#b2a394",
+      "fitScore": 0.474,
+      "sampleBox": {
+        "x": 0.2841796875,
+        "y": 0.665234375,
+        "width": 0.3603515625,
+        "height": 0.044140625
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 0.462,
+      "fontFile": "/fonts/adstudio/merriweather-400.woff2"
+    },
+    "feature_1": {
+      "fontId": "oswald",
+      "family": "Oswald",
+      "fallbackFamily": "sans-serif",
+      "weight": 500,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1,
+      "lineHeight": 1.482,
+      "tracking": 0,
+      "align": "center",
+      "color": "#66594b",
+      "fitScore": 0.406,
+      "sampleBox": {
+        "x": 0.2021484375,
+        "y": 0.752734375,
+        "width": 0.62646484375,
+        "height": 0.048046875
+      },
+      "sampleLineCount": 3,
+      "detectionScore": 0.667,
+      "fontFile": "/fonts/adstudio/oswald-500.woff2"
+    },
+    "feature_2": {
+      "fontId": "manrope",
+      "family": "Manrope",
+      "fallbackFamily": "sans-serif",
+      "weight": 700,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.3230490018148817,
+      "lineHeight": 1.366,
+      "tracking": 0,
+      "align": "center",
+      "color": "#e2dfda",
+      "fitScore": 0.41,
+      "sampleBox": {
+        "x": 0.4287109375,
+        "y": 0.775390625,
+        "width": 0.1708984375,
+        "height": 0.018359375
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 0.8,
+      "fontFile": "/fonts/adstudio/manrope-700.woff2"
+    },
+    "feature_3": {
+      "fontId": "montserrat",
+      "family": "Montserrat",
+      "fallbackFamily": "sans-serif",
+      "weight": 900,
+      "italic": false,
+      "case": "mixed",
+      "sizeRatio": 0.5,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "left",
+      "color": "#402f1f",
+      "fitScore": 0.35,
+      "sampleBox": {
+        "x": 0.1,
+        "y": 0.6,
+        "width": 0.8,
+        "height": 0.06
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 0.55,
+      "measurementSource": "manual-estimate",
+      "fontFile": "/fonts/adstudio/montserrat-900.woff2"
+    },
+    "website": {
+      "fontId": "montserrat",
+      "family": "Montserrat",
+      "fallbackFamily": "sans-serif",
+      "weight": 900,
+      "italic": false,
+      "case": "lower",
+      "sizeRatio": 0.45,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "center",
+      "color": "#402f1f",
+      "fitScore": 0.35,
+      "sampleBox": {
+        "x": 0.1,
+        "y": 0.95,
+        "width": 0.8,
+        "height": 0.025
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 0.55,
+      "measurementSource": "manual-estimate",
+      "fontFile": "/fonts/adstudio/montserrat-900.woff2"
+    }
   }
 }

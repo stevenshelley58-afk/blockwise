@@ -10,7 +10,7 @@ import {
 const baseInput = {
   target_audience: "Australian real estate agents",
   business_goal: "Teach a practical idea and create qualified interest",
-  primary_cta: "Start a free Blockwise trial",
+  primary_cta: "Create three ads free",
   content_angle: "Extract the strongest useful argument",
   offer: "A practical Blockwise field guide",
 };

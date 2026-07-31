@@ -109,5 +109,93 @@
         "body": "The agency will be in touch within 24 hours with off-market property alerts."
       }
     }
+  },
+  "typography": {
+    "body": {
+      "fontId": "kanit",
+      "family": "Kanit",
+      "fallbackFamily": "sans-serif",
+      "weight": 600,
+      "italic": false,
+      "case": "mixed",
+      "sizeRatio": 1.0963855421686748,
+      "lineHeight": 1.495,
+      "tracking": 0,
+      "align": "center",
+      "color": "#a29b85",
+      "fitScore": 0.23,
+      "sampleBox": {
+        "x": 0.24675925925925926,
+        "y": 0.5625925925925926,
+        "width": 0.5814814814814815,
+        "height": 0.11703703703703704
+      },
+      "sampleLineCount": 6,
+      "detectionScore": 0.905,
+      "fontFile": "/fonts/adstudio/kanit-600.woff2"
+    },
+    "headline": {
+      "fontId": "plus-jakarta-sans",
+      "family": "Plus Jakarta Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 500,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.2800000895426007,
+      "lineHeight": 1.26,
+      "tracking": 0,
+      "align": "center",
+      "color": "#b4ad9f",
+      "fitScore": 0.302,
+      "sampleBox": {
+        "x": 0.1050925925925926,
+        "y": 0.2859259259259259,
+        "width": 0.8231481481481482,
+        "height": 0.21333333333333335
+      },
+      "sampleLineCount": 8,
+      "detectionScore": 0.818,
+      "fontFile": "/fonts/adstudio/plus-jakarta-sans-500.woff2"
+    },
+    "cta": {
+      "fontId": "barlow",
+      "family": "Barlow",
+      "fallbackFamily": "sans-serif",
+      "weight": 600,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.3894376248929488,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "center",
+      "color": "#736f55",
+      "fitScore": 0.233,
+      "sampleBox": {
+        "x": 0.13425925925925927,
+        "y": 0.67,
+        "width": 0.7842592592592592,
+        "height": 0.10111111111111111
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/barlow-600.woff2"
+    }
+  },
+  "deterministicEditing": {
+    "status": "partial",
+    "imageBoxes": {
+      "property_photo": {
+        "x": 0.1111111111,
+        "y": 0.2777777778,
+        "width": 0.337962963,
+        "height": 0.542962963
+      },
+      "agency_logo": {
+        "x": 0.7814814815,
+        "y": 0.84,
+        "width": 0.1740740741,
+        "height": 0.137037037
+      }
+    }
   }
 }

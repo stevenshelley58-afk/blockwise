@@ -32,7 +32,7 @@ const DEFAULT_FORM: CreateRunState = {
   topic: "",
   target_audience: "Real estate agents",
   business_goal: "Teach a practical idea and create qualified Blockwise interest",
-  primary_cta: "Start a free Blockwise trial",
+  primary_cta: "Create three ads free",
   content_angle: "Extract the strongest useful argument from the transcript",
   offer: "A practical Blockwise field guide",
   state_focus: "Nationwide",

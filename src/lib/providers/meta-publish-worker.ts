@@ -15,13 +15,20 @@ import {
   resolveMetaFreeLiveClaimIdentity,
   type MetaFreeLiveClaimIdentity,
 } from "./meta-free-live-claims.ts";
+import { loadMutation, updateMutation } from "./meta-mutation-worker.ts";
+import {
+  buildMetaPlanMutation,
+  executeMetaPlanMutation,
+} from "./meta-mutations.ts";
 import { loadStoredProviderTokens } from "./provider-connections.ts";
+import { deterministicUuid } from "../adstudio/id.ts";
 import {
   endTrialAfterFirstLiveCampaign,
   validateFirstLiveCampaignBilling,
   type FirstLiveCampaignBillingEligibility,
   type FirstLiveCampaignStripeGateway,
 } from "../billing/first-live-campaign.ts";
+import { BILLING_OFFER_VERSION } from "../billing/offers.ts";
 import { recordWorkspaceFunnelEventBestEffort } from "../analytics/progressive-funnel.ts";
 import { queueReportingRefresh } from "../meta-monitor/reporting-refresh-queue.ts";
 import { recordAuditLog } from "../supabase/audit.ts";
@@ -117,8 +124,12 @@ export async function executeMetaPublishPlan(input: {
     return input.plan;
   }
 
+  const scheduledPlan =
+    freeLive?.kind === "free_campaign"
+      ? applyThreeDayFreeCampaignSchedule(input.plan)
+      : input.plan;
   const publishingPlan: MetaPublishPlan = {
-    ...input.plan,
+    ...scheduledPlan,
     status: "publishing",
     updatedAt: new Date().toISOString(),
   };
@@ -240,8 +251,9 @@ async function releasePreparedFreeLiveClaim(
 }
 
 type PreparedFreeLiveConversion = {
+  kind: "free_campaign" | "legacy_trial";
   identity: MetaFreeLiveClaimIdentity;
-  billing: FirstLiveCampaignBillingEligibility;
+  billing: FirstLiveCampaignBillingEligibility | null;
   reservationKey: string;
   reserveMutationKey: string;
 };
@@ -251,25 +263,27 @@ async function prepareFreeLiveConversion(input: {
   plan: MetaPublishPlan;
   billingGateway?: FirstLiveCampaignStripeGateway;
 }): Promise<PreparedFreeLiveConversion | null> {
-  if (!(await workspaceNeedsFreeLiveConversion(input.serviceSupabase, input.plan.workspaceId))) {
+  const kind = await freeLiveMode(input.serviceSupabase, input.plan.workspaceId);
+  if (!kind) {
     return null;
   }
 
-  const [{ data: connection, error }, billing] = await Promise.all([
-    input.serviceSupabase
-      .from("provider_connections")
-      .select("metadata_json,external_account_id")
-      .eq("workspace_id", input.plan.workspaceId)
-      .eq("id", input.plan.providerConnectionId)
-      .eq("provider", "meta")
-      .single(),
-    validateFirstLiveCampaignBilling({
+  const { data: connection, error } = await input.serviceSupabase
+    .from("provider_connections")
+    .select("metadata_json,external_account_id")
+    .eq("workspace_id", input.plan.workspaceId)
+    .eq("id", input.plan.providerConnectionId)
+    .eq("provider", "meta")
+    .single();
+  const billing =
+    kind === "legacy_trial"
+      ? await validateFirstLiveCampaignBilling({
       service: input.serviceSupabase,
       workspaceId: input.plan.workspaceId,
       gateway: input.billingGateway,
       allowActive: input.plan.status === "paused_live",
-    }),
-  ]);
+        })
+      : null;
   if (error || !connection) {
     throw new Error(error?.message ?? "The Meta connection for this publish plan was not found.");
   }
@@ -295,12 +309,12 @@ async function prepareFreeLiveConversion(input: {
   if (!reservation.allowed) {
     throw new Error(
       reservation.reason === "already_claimed"
-        ? "This Meta Business Portfolio and ad account have already used their free live-campaign setup."
-        : "The free live-campaign setup is currently reserved by another publish.",
+        ? "This Meta Business Portfolio and ad account have already used their free three-day campaign."
+        : "The free three-day campaign is currently reserved by another publish.",
     );
   }
 
-  return { identity, billing, reservationKey, reserveMutationKey };
+  return { kind, identity, billing, reservationKey, reserveMutationKey };
 }
 
 async function finalizeFreeLiveConversion(
@@ -326,16 +340,21 @@ async function finalizeFreeLiveConversion(
     mutationKey: `${freeLive.reservationKey}:consume`,
   });
   if (!consumption.allowed) {
-    throw new Error("Meta published successfully, but the free live-campaign claim could not be consumed.");
+    throw new Error("Meta published successfully, but the free three-day campaign claim could not be consumed.");
   }
 
-  await endTrialAfterFirstLiveCampaign({
-    service: input.serviceSupabase,
-    workspaceId: completedPlan.workspaceId,
-    subscriptionId: freeLive.billing.subscriptionId,
-    idempotencyKey: `${consumption.claimId}:${completedPlan.planId}`,
-    gateway: input.billingGateway,
-  });
+  if (freeLive.billing) {
+    await endTrialAfterFirstLiveCampaign({
+      service: input.serviceSupabase,
+      workspaceId: completedPlan.workspaceId,
+      subscriptionId: freeLive.billing.subscriptionId,
+      idempotencyKey: `${consumption.claimId}:${completedPlan.planId}`,
+      gateway: input.billingGateway,
+    });
+  }
+  if (freeLive.kind === "free_campaign") {
+    await activateFreeCampaign(input, completedPlan);
+  }
   await recordWorkspaceFunnelEventBestEffort(input.serviceSupabase, {
     eventName: "free_campaign_launched",
     workspaceId: completedPlan.workspaceId,
@@ -343,22 +362,143 @@ async function finalizeFreeLiveConversion(
     properties: {
       plan_id: completedPlan.planId,
       claim_id: consumption.claimId,
+      free_campaign_days: freeLive.kind === "free_campaign" ? 3 : null,
     },
   });
 }
 
-async function workspaceNeedsFreeLiveConversion(
+async function activateFreeCampaign(
+  input: {
+    serviceSupabase: SupabaseServiceClient;
+    fetchImpl?: typeof fetch;
+  },
+  plan: MetaPublishPlan,
+) {
+  const mutationId = deterministicUuid(`${plan.planId}:free-campaign-activate`);
+  const built = buildMetaPlanMutation({
+    workspaceId: plan.workspaceId,
+    planId: plan.planId,
+    action: "activate",
+    payload: {
+      campaignId: plan.reconciledObjects.campaignId,
+      adSetIds: Object.values(plan.reconciledObjects.adSetIds),
+      adIds: Object.values(plan.reconciledObjects.adIds),
+    },
+    mutationId,
+  });
+  const { error: createError } = await input.serviceSupabase
+    .from("meta_publish_plan_mutations")
+    .upsert(
+      {
+        id: mutationId,
+        workspace_id: plan.workspaceId,
+        meta_publish_plan_id: plan.planId,
+        action: "activate",
+        status: "approved",
+        payload_json: built.payload,
+        approval_request_id: plan.approvalRequestId,
+        requested_by: null,
+        request_log_json: [],
+        response_log_json: [],
+        last_error: null,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "id", ignoreDuplicates: true },
+    );
+  if (createError) {
+    throw new Error(`The free campaign activation could not be prepared: ${createError.message}`);
+  }
+
+  const mutation = await loadMutation(
+    input.serviceSupabase,
+    plan.workspaceId,
+    mutationId,
+  );
+  if (mutation.status === "applied") return;
+
+  const tokens = await loadStoredProviderTokens(
+    input.serviceSupabase,
+    plan.providerConnectionId,
+  );
+  if (!tokens.accessToken) {
+    throw new Error("Meta access token is missing for the free campaign activation.");
+  }
+  const result = await executeMetaPlanMutation({
+    mutation,
+    approvalStatus: "approved",
+    accessToken: tokens.accessToken,
+    fetchImpl: input.fetchImpl,
+  });
+  const updated = {
+    ...mutation,
+    status: result.status,
+    requestLog: result.requestLog,
+    responseLog: result.responseLog,
+    lastError: result.lastError,
+    updatedAt: new Date().toISOString(),
+  };
+  await updateMutation(input.serviceSupabase, updated);
+
+  if (updated.status !== "applied") {
+    throw new Error(updated.lastError ?? "Meta could not activate the free three-day campaign.");
+  }
+}
+
+async function freeLiveMode(
   serviceSupabase: SupabaseServiceClient,
   workspaceId: string,
-): Promise<boolean> {
+): Promise<PreparedFreeLiveConversion["kind"] | null> {
   const { data, error } = await serviceSupabase
     .from("workspaces")
-    .select("billing_offer_key,stripe_subscription_status")
+    .select("billing_access_state,billing_offer_key,billing_offer_version,stripe_subscription_status")
     .eq("id", workspaceId)
     .single();
   if (error || !data) throw new Error(error?.message ?? "Workspace billing state could not be loaded.");
-  const row = data as { billing_offer_key: string | null; stripe_subscription_status: string | null };
-  return Boolean(row.billing_offer_key?.startsWith("self_serve_") && row.stripe_subscription_status === "trialing");
+  const row = data as {
+    billing_access_state: string | null;
+    billing_offer_key: string | null;
+    billing_offer_version: string | null;
+    stripe_subscription_status: string | null;
+  };
+
+  if (row.billing_access_state === "unbilled") {
+    return "free_campaign";
+  }
+  if (
+    row.billing_offer_key?.startsWith("self_serve_") &&
+    row.stripe_subscription_status === "trialing" &&
+    row.billing_offer_version !== BILLING_OFFER_VERSION
+  ) {
+    return "legacy_trial";
+  }
+  return null;
+}
+
+const FREE_CAMPAIGN_DURATION_MS = 3 * 24 * 60 * 60 * 1000;
+
+export function applyThreeDayFreeCampaignSchedule(
+  plan: MetaPublishPlan,
+  now = new Date(),
+): MetaPublishPlan {
+  const requestedStart = plan.controls.schedule?.startTime ?? plan.adSets[0]?.startTime ?? null;
+  const parsedStart = requestedStart ? Date.parse(requestedStart) : Number.NaN;
+  const startTime = Number.isFinite(parsedStart) ? requestedStart! : now.toISOString();
+  const endTime = new Date(
+    (Number.isFinite(parsedStart) ? parsedStart : now.getTime()) + FREE_CAMPAIGN_DURATION_MS,
+  ).toISOString();
+
+  return {
+    ...plan,
+    controls: {
+      ...plan.controls,
+      schedule: { startTime, endTime },
+    },
+    adSets: plan.adSets.map((adSet) => ({
+      ...adSet,
+      startTime,
+      endTime,
+    })),
+  };
 }
 
 /**

@@ -10,7 +10,10 @@ export type CloneInputs = {
   images: Record<string, string>;
   /** Exact visible text keyed by template.inputs.text[].key. */
   copy?: Record<string, string>;
-  brandHex?: string;
+  /** Template is the safe default and preserves the approved sample palette. */
+  colourSource?: "template" | "brand";
+  /** Labelled Brand Pack colours supplied only when colourSource is brand. */
+  brandColours?: string[];
   aspectRatio?: string;
   seed?: number;
 };
@@ -74,7 +77,11 @@ export function buildCloneImageRequest(template: AdStudioTemplate, inputs: Clone
   const suppliedImages = template.inputs.images.filter((input) => images[input.key]?.trim());
   const copy = resolveCloneCopy(template, inputs.copy);
   const aspectRatio = inputs.aspectRatio ?? template.format;
-  const brandHex = inputs.brandHex?.trim() || "use the supplied logo's brand colours";
+  const colourSource = inputs.colourSource ?? "template";
+  const brandColours = [...new Set((inputs.brandColours ?? []).map((colour) => colour.trim()).filter(Boolean))];
+  const colourInstruction = colourSource === "brand"
+    ? `Colour instruction: adapt the design to this Brand Pack palette: ${brandColours.join(", ") || "the colours visible in the supplied brand logo"}. Preserve the reference design's contrast, hierarchy, typography, spacing, shapes, and image treatment.`
+    : "Colour instruction: preserve the exact colour palette of reference image 1. Do not recolour the design to match the supplied logo or Brand Pack.";
 
   const assetLegend = [
     "Reference image 1 is the ad design to clone.",
@@ -94,7 +101,8 @@ export function buildCloneImageRequest(template: AdStudioTemplate, inputs: Clone
       ...(suppliedImages.length ? [PHOTO_FIT_RULE] : []),
       `Use these exact visible text values and no others: ${copyLegend}.`,
       "Every supplied text value is mandatory: render each value character-for-character exactly once, fully visible, and at a readable size.",
-      `Use ${brandHex}. Produce one finished ${aspectRatio} Meta real-estate ad with no Meta interface chrome.`,
+      colourInstruction,
+      `Produce one finished ${aspectRatio} Meta real-estate ad with no Meta interface chrome.`,
     ].join(" "),
     negativePrompt: GLOBAL_CLONE_NEGATIVES,
     referenceAssets: [referenceImage, ...suppliedImages.map((input) => images[input.key].trim())],

@@ -27,7 +27,29 @@ export type CroppedRegion = {
 
 // Same antialiasing/edge breathing room compositeCloneRegionEdit uses, so the
 // cropped path and the legacy full-image path composite identically.
-const COMPOSITE_PADDING = 0.02;
+export const COMPOSITE_PADDING = 0.02;
+
+/**
+ * The selected box in full-image pixels, grown by the compositing tolerance.
+ * Every composite path (model edits, deterministic text patches, plate
+ * derivation) uses this same rectangle so their pixels line up exactly.
+ */
+export function paddedPixelRect(
+  box: NormalizedBox,
+  imageWidth: number,
+  imageHeight: number,
+): CropRect {
+  const left = Math.max(0, Math.floor((box.x - COMPOSITE_PADDING) * imageWidth));
+  const top = Math.max(0, Math.floor((box.y - COMPOSITE_PADDING) * imageHeight));
+  const right = Math.min(imageWidth, Math.ceil((box.x + box.width + COMPOSITE_PADDING) * imageWidth));
+  const bottom = Math.min(imageHeight, Math.ceil((box.y + box.height + COMPOSITE_PADDING) * imageHeight));
+  return {
+    left,
+    top,
+    width: Math.max(1, right - left),
+    height: Math.max(1, bottom - top),
+  };
+}
 
 async function loadImageBytes(assetUrl: string, fetchImpl: typeof fetch): Promise<Uint8Array> {
   if (assetUrl.startsWith("data:image/")) return dataUrlToUploadBytes(assetUrl).bytes;
@@ -171,12 +193,11 @@ export async function compositeRegionBack(
 
   // Selected box in full-image pixels, grown by the compositing tolerance —
   // identical math to compositeCloneRegionEdit.
-  const fullLeft = Math.max(0, Math.floor((box.x - COMPOSITE_PADDING) * imageWidth));
-  const fullTop = Math.max(0, Math.floor((box.y - COMPOSITE_PADDING) * imageHeight));
-  const fullRight = Math.min(imageWidth, Math.ceil((box.x + box.width + COMPOSITE_PADDING) * imageWidth));
-  const fullBottom = Math.min(imageHeight, Math.ceil((box.y + box.height + COMPOSITE_PADDING) * imageHeight));
-  const fullWidth = Math.max(1, fullRight - fullLeft);
-  const fullHeight = Math.max(1, fullBottom - fullTop);
+  const full = paddedPixelRect(box, imageWidth, imageHeight);
+  const fullLeft = full.left;
+  const fullTop = full.top;
+  const fullRight = full.left + full.width;
+  const fullBottom = full.top + full.height;
 
   // Re-base that box into crop-local pixels and clamp to the crop bounds.
   const cropLocalLeft = clamp(fullLeft - cropRect.left, 0, cropRect.width - 1);

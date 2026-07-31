@@ -9,10 +9,11 @@ import {
   LayoutGrid,
   LineChart,
   Mail,
+  Palette,
   ScanSearch,
   Settings,
   Settings2,
-  Star,
+  Type,
   UserRound,
   ContactRound,
   UsersRound,
@@ -33,6 +34,7 @@ export type NavItem = {
   icon: NavIcon;
   /** Optional grouping label rendered above the item (starts a new section). */
   section?: string;
+  feature?: keyof typeof niche.features;
 };
 
 // Clean radar mark matching the self-serve mockup (circle + single sweep hand).
@@ -56,30 +58,31 @@ function RadarIcon({ size = 18, ...props }: { size?: number } & SVGProps<SVGSVGE
   );
 }
 
-const operatorNavItems: NavItem[] = [
+const operatorNavItems = ([
   { href: "/operator", label: "Operator", icon: LayoutGrid },
   { href: "/operator/customers", label: "Customers", icon: ContactRound },
   { href: "/operator/email", label: "Email", icon: Mail },
-  { href: "/operator/research", label: "Research Ops", icon: Activity },
+  { href: "/operator/research", label: "Research Ops", icon: Activity, feature: "adRadar" },
   { href: "/operator/analytics", label: "Site Analytics", icon: BarChart3 },
   { href: "/operator/database", label: "Database", icon: Database },
   { href: "/results", label: "Results", icon: LineChart },
-  { href: "/ad-radar", label: "Ad Radar", icon: RadarIcon },
-  { href: "/ad-studio", label: "Ad Studio", icon: Star },
+  { href: "/ad-radar", label: "Ad Radar", icon: RadarIcon, feature: "adRadar" },
+  { href: "/ad-studio", label: "Ad Studio", icon: Palette },
   { href: "/operator/template-trace", label: "Template Trace", icon: ScanSearch },
-  { href: "/property-check", label: "Property Check", icon: FileSearch },
+  { href: "/template-review", label: "Template Review", icon: Type },
+  { href: "/property-check", label: "Property Check", icon: FileSearch, feature: "propertyCheck" },
   { href: "/leads", label: "Leads", icon: UsersRound },
   { href: "/settings", label: "Settings", icon: Settings },
   { href: "/workforce", label: "Workforce", icon: Bot },
   { href: "/model-control", label: "Model Control", icon: Settings2 },
-];
+] satisfies NavItem[]).filter((item) => !item.feature || niche.features[item.feature]);
 
 // Self-serve labels, order, and feature gating live in the niche config
 // (src/config/niche) — the white-label layer. Icons stay here, keyed by
 // route, because they are structural rather than niche identity.
 export const selfServeIcons: Record<string, NavIcon> = {
   "/self-serve": LayoutGrid,
-  "/ad-studio": Star,
+  "/ad-studio": Palette,
   "/results": LineChart,
   "/ad-radar": RadarIcon,
   "/property-check": FileSearch,
@@ -95,14 +98,15 @@ const selfServeNavItems: NavItem[] = niche.nav.items
     label: item.label,
     icon: selfServeIcons[item.href] ?? LayoutGrid,
     section: item.section,
+    feature: item.feature,
   }));
 
-const monitorNavItems: NavItem[] = [
+const monitorNavItems = ([
   { href: "/results", label: "Results", icon: LineChart },
-  { href: "/ad-radar", label: "Ad Radar", icon: RadarIcon },
+  { href: "/ad-radar", label: "Ad Radar", icon: RadarIcon, feature: "adRadar" },
   { href: "/leads", label: "Leads", icon: UsersRound },
   { href: "/settings", label: "Settings", icon: Settings },
-];
+] satisfies NavItem[]).filter((item) => !item.feature || niche.features[item.feature]);
 
 export const navByVariant: Record<SidebarVariant, NavItem[]> = {
   operator: operatorNavItems,

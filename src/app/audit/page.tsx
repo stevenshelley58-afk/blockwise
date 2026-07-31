@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 
 import { BlockwiseLogo } from "@/components/blockwise-logo";
 import {
@@ -11,6 +12,7 @@ import {
   TrackedDetails,
 } from "@/components/research/audit-conversion";
 import { AuditLeadForm } from "@/components/research/audit-lead-form";
+import { niche } from "@/config/niche";
 import {
   buildAdAudit,
   type AdAuditResult,
@@ -161,6 +163,8 @@ function buildCampaignPack(stats: AdAuditStats | null): CampaignCard[] {
 }
 
 export default async function AuditPage({ searchParams }: { searchParams?: SearchParams }) {
+  if (!niche.features.suburbPages) notFound();
+
   const params = searchParams ? await searchParams : {};
   const location = pickParam(params.location ?? params.q) || "Perth, WA";
 
@@ -280,9 +284,9 @@ function Hero({
             <TrackedAnchor href={hasData ? "#evidence" : "#plan"} event="secondary_cta_clicked" data={{ ...analytics, placement: "hero" }} className="lp-btn lp-btn-ghost lp-btn-big">{hasData ? "See competitor evidence" : "See the campaign pack"}</TrackedAnchor>
           </div>
           <div className="trust-row">
-            <span className="trust-item"><span className="trust-dot" />7-day trial</span>
-            <span className="trust-item"><span className="trust-dot" />10 ad packs</span>
-            <span className="trust-item"><span className="trust-dot" />No card required</span>
+            <span className="trust-item"><span className="trust-dot" />Three ads before Checkout</span>
+            <span className="trust-item"><span className="trust-dot" />Six free renders</span>
+            <span className="trust-item"><span className="trust-dot" />No card to create</span>
             <span className="trust-item"><span className="trust-dot" />Approve before export</span>
           </div>
         </div>
@@ -421,7 +425,7 @@ function LeadSection({
         <div className="lead-panel">
           <p className="card-kicker">Your campaign plan</p>
           <h2>Get your {area} campaign plan.</h2>
-          <p>Tell us your goal and we build the angle, ad copy and lead form. Start a trial after, or book a 15-minute setup.</p>
+          <p>Tell us your goal and we build the angle, ad copy and lead form. Create your free ads after, or book a 15-minute setup.</p>
           <AuditLeadForm area={area} label={label} signupHref={href} metrics={metrics} analytics={analytics} />
         </div>
         <aside className="proof-box">
@@ -430,10 +434,10 @@ function LeadSection({
             <li>Blockwise drafts the campaign angle, ad copy and lead form.</li>
             <li>Your team reviews everything before it is exported.</li>
             <li>Campaigns run from your own Meta ad account.</li>
-            <li>The trial includes 10 ad packs and no card is required.</li>
+            <li>The free creation allowance includes six renders for three complete Feed + Story ads.</li>
           </ul>
           <div className="cta-row">
-            <AuditCtaButton href={href} event="signup_clicked" data={analytics} className="lp-btn lp-btn-light">Start a free trial instead</AuditCtaButton>
+            <AuditCtaButton href={href} event="signup_clicked" data={analytics} className="lp-btn lp-btn-light">Create three ads free</AuditCtaButton>
           </div>
         </aside>
       </div>

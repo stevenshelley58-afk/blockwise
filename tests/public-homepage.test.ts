@@ -1,19 +1,29 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
 
-// The homepage renders from src/app/page.tsx plus the home-landing component
-// tree (desktop + mobile variants of every section). Guards that used to read
-// page.tsx alone now read the combined homepage source.
-const HOME_LANDING_DIR = "src/components/home-landing";
+import {
+  formatBillingAmount,
+  getBillingOffer,
+} from "../src/lib/billing/offers.ts";
+
+// Follow the active homepage imports deliberately. The home-landing directory
+// also owns dormant feature sections that are not rendered by src/app/page.tsx.
+const ACTIVE_HOME_SOURCES = [
+  "src/components/home-landing/site-chrome.tsx",
+  "src/components/home-landing/night-ops-hero.tsx",
+  "src/components/home-landing/home-sections.tsx",
+  "src/components/home-landing/start-studio.tsx",
+  "src/components/home-landing/data.ts",
+  "src/components/home-landing/fb-ad-card.tsx",
+  "src/components/home-landing/faq-accordion.tsx",
+  "src/components/home-landing/managed-setup-form.tsx",
+] as const;
 
 function readHomeSources(): { page: string; combined: string } {
   const page = readFileSync("src/app/page.tsx", "utf8");
-  const parts = readdirSync(HOME_LANDING_DIR)
-    .filter((file) => file.endsWith(".ts") || file.endsWith(".tsx"))
-    .sort()
-    .map((file) => readFileSync(path.join(HOME_LANDING_DIR, file), "utf8"));
+  const parts = ACTIVE_HOME_SOURCES.map((file) => readFileSync(file, "utf8"));
   return { page, combined: [page, ...parts].join("\n") };
 }
 
@@ -40,6 +50,7 @@ test("public audit report route stays public and off the protected Ad Radar surf
     /requireWorkspaceAccess|requirePageSurfaceAccess|v_agent_ad_history|createSupabaseServerClient/,
   );
   assert.match(route, /createSupabaseServiceClient/);
+  assert.match(route, /featureDisabledResponse\("adRadar", "suburbPages"\)/);
 });
 
 test("landing page anchors, sections, and claims stay connected", () => {
@@ -77,7 +88,6 @@ test("landing page anchors, sections, and claims stay connected", () => {
     "start",
     "workflow",
     "control",
-    "property-check",
     "free-trial",
     "pricing",
     "managed-setup",
@@ -95,13 +105,12 @@ test("landing page anchors, sections, and claims stay connected", () => {
     previousIndex = index;
   }
 
-  assert.match(combined, /Your competitors are advertising\. Are&nbsp;you\?/);
-  assert.match(
+  assert.match(combined, /Your competitors are[\s\S]{0,80}advertising\./);
+  assert.match(combined, /Generate more leads with high-quality templates/);
+  assert.doesNotMatch(
     combined,
-    /Ads built from what&rsquo;s actually working in your area\. Start getting leads today\./,
+    /daily emails?|proven|top-performing|everything included|what(?:&rsquo;|')s actually working/i,
   );
-  assert.match(combined, /Know the property before the call/);
-  assert.match(combined, /Run a property check/);
 
   const ids = [...combined.matchAll(/id="([^"]+)"/g)].map((match) => match[1]);
   assert.equal(new Set(ids).size, ids.length, "landing and setup form IDs must be unique");
@@ -150,35 +159,61 @@ test("public marketing copy states the approved progressive offer", () => {
   const layout = readFileSync("src/app/layout.tsx", "utf8");
   const combined = `${home}\n${pricing}\n${layout}`;
 
-  assert.match(home, /Nothing spends until you approve/i);
   assert.match(home, /Nothing spends before approval/i);
   assert.match(home, /Stay in control/i);
-  assert.match(home, /Approve every ad before it goes live/i);
-  assert.match(home, /Create three complete ads free/i);
-  assert.match(home, /Email only\. No card\./i);
-  assert.match(pricing, /Create three complete Feed \+ Story ads with only your email/i);
+  assert.match(home, /Approve every ad before launch/i);
+  assert.match(home, /Create 3 ads free/i);
+  assert.match(home, /No credit card required/i);
+  assert.match(pricing, /Create three image ads with Feed and Story\/Reels-ready creative/i);
   assert.match(pricing, /Meta ad spend is separate/i);
+  const publicCopySource = combined
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/^\s*\/\/.*$/gm, "");
+  assert.doesNotMatch(publicCopySource, /—/);
   assert.doesNotMatch(combined, /\$799/);
   assert.doesNotMatch(combined, /Launch from Blockwise/);
   assert.doesNotMatch(combined, /create, approve, launch/i);
   assert.doesNotMatch(combined, /To launch from Blockwise/i);
 });
 
+test("homepage CTA notes stay grouped and centered beneath their buttons", () => {
+  const sections = readFileSync("src/components/home-landing/home-sections.tsx", "utf8");
+  const heroCss = readFileSync("src/components/home-landing/night-ops-hero.css", "utf8");
+  const homepageCss = readFileSync("src/app/homepage.css", "utf8");
+
+  assert.match(
+    sections,
+    /className="hw-trial-cta"[\s\S]*className="hw-btn hw-btn--dark"[\s\S]*No credit card required\./,
+  );
+  assert.match(heroCss, /\.hw-no-form\s*\{[^}]*display:\s*inline-grid;[^}]*justify-items:\s*center;/);
+  assert.match(homepageCss, /\.hw-trial-cta\s*\{[^}]*display:\s*inline-grid;[^}]*justify-items:\s*center;/);
+});
+
 test("homepage FAQ matches the approved flat-rate offer", () => {
   const faq = readFileSync("src/components/home-landing/data.ts", "utf8");
+  const selfServe = getBillingOffer("AU", "self_serve");
+  const managed = getBillingOffer("AU", "managed");
 
   assert.match(faq, /pay Meta directly/i);
-  assert.match(faq, /Connect Meta when you want to go live/i);
+  assert.match(faq, /keep your leads and campaign data if you cancel/i);
+  assert.match(faq, /Not to create your first three ads/i);
+  assert.match(faq, /help you set it up when you join/i);
   assert.match(faq, /Nothing launches until you approve/i);
-  assert.match(faq, /Three complete Feed \+ Story ads, free/i);
-  assert.match(faq, /\$499\/mo from your first campaign launch/i);
+  assert.match(faq, /Three image ads/i);
+  assert.match(faq, /run one three-day campaign free/i);
+  assert.match(faq, /does not start a Blockwise subscription/i);
+  assert.match(faq, /charged immediately/i);
+  assert.equal(formatBillingAmount(selfServe.firstInvoiceAmount, selfServe.currency), "A$99");
+  assert.equal(formatBillingAmount(selfServe.recurringAmount, selfServe.currency), "A$499");
+  assert.equal(formatBillingAmount(managed.recurringAmount, managed.currency), "A$1,500");
+  assert.match(faq, /weekly optimisation/i);
+  assert.match(faq, /monthly performance report/i);
   assert.match(faq, /Cancel anytime/i);
-  assert.match(faq, /\$2,000\/mo flat, plus ad spend/i);
-  assert.match(faq, /weekly optimization for up to four campaigns/i);
-
-  // The flat-rate homepage FAQ must not resurrect dual-currency offers.
-  assert.doesNotMatch(faq, /US\$/);
-  assert.doesNotMatch(faq, /A\$/);
+  assert.match(faq, /without AI slop/i);
+  assert.match(faq, /review and edit every line before publishing/i);
+  assert.match(faq, /Video ads are coming soon/i);
+  assert.match(faq, /getBillingOffer/);
+  assert.doesNotMatch(faq, /US\$99|A\$99|US\$499|A\$499|US\$1,500|A\$2,500/);
 });
 
 test("pricing keeps US and AU offers explicit and accessible", () => {
@@ -190,18 +225,16 @@ test("pricing keeps US and AU offers explicit and accessible", () => {
   assert.match(pricing, /Choose your market/);
   assert.match(pricing, /United States/);
   assert.match(pricing, /Australia/);
-  assert.match(pricing, /US\$99/);
-  assert.match(pricing, /US\$499/);
-  assert.match(pricing, /A\$99/);
-  assert.match(pricing, /A\$499/);
-  assert.match(pricing, /US\$1,500/);
-  assert.match(pricing, /A\$2,500/);
+  assert.match(pricing, /getBillingOffer/);
+  assert.match(pricing, /formatBillingAmount/);
+  assert.match(pricing, /in either market/);
+  assert.match(pricing, /Blockwise Platform/);
+  assert.doesNotMatch(pricing, /["'`]US\$[0-9]|["'`]A\$[0-9]/);
   assert.match(combined, /100 render credits/);
   assert.match(combined, /Up to 50 complete Feed \+ Story packs/);
   assert.match(combined, /Five named, email-verified team members/);
-  assert.match(combined, /One free live campaign setup/);
-  assert.match(combined, /Subscribe and book onboarding/);
-  assert.match(combined, /Book a call first/);
+  assert.match(combined, /One free three-day campaign before subscribing/);
+  assert.match(combined, /Book a 15-minute walkthrough/);
 });
 
 test("managed-setup form posts to the demo-request endpoint with an intact honeypot", () => {
@@ -229,6 +262,17 @@ test("legal pages rely on root title template and define page canonicals", () =>
     assert.doesNotMatch(source, /title:\s*"[^"]*(?:·|Â·)\s*Blockwise"/);
     assert.match(source, new RegExp(`alternates:\\s*\\{\\s*canonical:\\s*"${canonical}"\\s*\\}`));
   }
+});
+
+test("terms separate the free campaign from the paid subscription", () => {
+  const terms = readFileSync("src/app/(legal)/terms/page.tsx", "utf8");
+
+  assert.match(terms, /free creation allowance includes three image ads/i);
+  assert.match(terms, /run one campaign for up to three days/i);
+  assert.match(terms, /does not start a[\s\S]*subscription/i);
+  assert.match(terms, /charges \{FIRST_MONTH\} immediately/i);
+  assert.match(terms, /getBillingOffer/);
+  assert.doesNotMatch(terms, /seven-day billing trial/i);
 });
 
 test("public pages identify the legal operator in server-rendered content", () => {

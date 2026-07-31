@@ -60,7 +60,7 @@ export function SuburbReportClient(props: SuburbReportClientProps) {
           <span className="sr-live-chip"><span />{reportLabel}{coverageLabel ? "" : ` ${postcode}`} · live</span>
           <div className="sr-topbar-actions">
             <button className="sr-button sr-button-ghost" type="button" onClick={() => setEmailOpen(true)}>Email me this report</button>
-            <GateLink href={trialHref} intent="trial" postcode={postcode} className="sr-button sr-button-dark">Start free trial</GateLink>
+            <GateLink href={trialHref} intent="trial" postcode={postcode} className="sr-button sr-button-dark">Create three ads free</GateLink>
           </div>
         </div>
       </header>
@@ -148,7 +148,7 @@ function ReportAdCard({ ad, postcode, suburb, longestId, longestDays }: { ad: Pu
 }
 
 function EmptyState({ suburb, postcode, nearby, trialHref }: { suburb: string; postcode: string; nearby: NearbyArea[]; trialHref: string }) {
-  return <section className="sr-empty"><p className="sr-eyebrow">Coverage is still growing</p><h2>No live ads were observed for {suburb} today.</h2><p>That does not mean nobody is advertising. It means the current public dataset did not return a match for {postcode} or its surrounds.</p>{nearby.length ? <div><h3>Try a nearby report</h3>{nearby.map((area) => <Link key={area.postcode} href={`/suburb/${area.postcode}`}>{area.suburb} {area.postcode}<span>{area.count} ads</span></Link>)}</div> : null}<GateLink href={trialHref} intent="trial" postcode={postcode} className="sr-button sr-button-dark">Start free trial</GateLink></section>;
+  return <section className="sr-empty"><p className="sr-eyebrow">Coverage is still growing</p><h2>No live ads were observed for {suburb} today.</h2><p>That does not mean nobody is advertising. It means the current public dataset did not return a match for {postcode} or its surrounds.</p>{nearby.length ? <div><h3>Try a nearby report</h3>{nearby.map((area) => <Link key={area.postcode} href={`/suburb/${area.postcode}`}>{area.suburb} {area.postcode}<span>{area.count} ads</span></Link>)}</div> : null}<GateLink href={trialHref} intent="trial" postcode={postcode} className="sr-button sr-button-dark">Create three ads free</GateLink></section>;
 }
 
 function GateLink({ href, intent, postcode, className, children }: { href: string; intent: string; postcode: string; className?: string; children: React.ReactNode }) {

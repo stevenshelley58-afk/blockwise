@@ -139,5 +139,201 @@
         "body": "The agency will be in touch within 24 hours to arrange your free property appraisal."
       }
     }
+  },
+  "typography": {
+    "body": {
+      "fontId": "quicksand",
+      "family": "Quicksand",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "mixed",
+      "sizeRatio": 1.069675098684979,
+      "lineHeight": 1.25,
+      "tracking": 0,
+      "align": "left",
+      "color": "#90918f",
+      "fitScore": 0.541,
+      "sampleBox": {
+        "x": 0.09166666666666666,
+        "y": 0.6776041666666667,
+        "width": 0.5893518518518519,
+        "height": 0.096875
+      },
+      "sampleLineCount": 5,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/quicksand-300.woff2"
+    },
+    "headline": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.5238095326526355,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "left",
+      "color": "#f2f3f3",
+      "fitScore": 0.478,
+      "sampleBox": {
+        "x": 0.09074074074074075,
+        "y": 0.45546875,
+        "width": 0.6226851851851852,
+        "height": 0.22135416666666666
+      },
+      "sampleLineCount": 3,
+      "detectionScore": 0.828,
+      "fontFile": "/fonts/adstudio/smooch-sans-300.woff2"
+    },
+    "agent_role": {
+      "fontId": "manrope",
+      "family": "Manrope",
+      "fallbackFamily": "sans-serif",
+      "weight": 700,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.3230490018148817,
+      "lineHeight": 1.366,
+      "tracking": 0,
+      "align": "left",
+      "color": "#cfd0d2",
+      "fitScore": 0.487,
+      "sampleBox": {
+        "x": 0.09259259259259259,
+        "y": 0.85703125,
+        "width": 0.45416666666666666,
+        "height": 0.011979166666666667
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/manrope-700.woff2"
+    },
+    "subheadline": {
+      "fontId": "source-sans-3",
+      "family": "Source Sans 3",
+      "fallbackFamily": "sans-serif",
+      "weight": 600,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.2007142857142858,
+      "lineHeight": 1.424,
+      "tracking": 0,
+      "align": "center",
+      "color": "#e1c709",
+      "fitScore": 0.581,
+      "sampleBox": {
+        "x": 0.09444444444444444,
+        "y": 0.6653645833333334,
+        "width": 0.7064814814814815,
+        "height": 0.01953125
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1
+    },
+    "email": {
+      "fontId": "lora",
+      "family": "Lora",
+      "fallbackFamily": "serif",
+      "weight": 600,
+      "italic": false,
+      "case": "lower",
+      "sizeRatio": 0.9473684210526314,
+      "lineHeight": 1.28,
+      "tracking": 0,
+      "align": "left",
+      "color": "#bdbec0",
+      "fitScore": 0.647,
+      "sampleBox": {
+        "x": 0.1310185185185185,
+        "y": 0.9203125,
+        "width": 0.3560185185185185,
+        "height": 0.016666666666666666
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/lora-600.woff2"
+    },
+    "website": {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "fallbackFamily": "serif",
+      "weight": 700,
+      "italic": false,
+      "case": "lower",
+      "sizeRatio": 1.1153846153846154,
+      "lineHeight": 1.257,
+      "tracking": 0,
+      "align": "left",
+      "color": "#c1c3c5",
+      "fitScore": 0.509,
+      "sampleBox": {
+        "x": 0.16064814814814815,
+        "y": 0.95390625,
+        "width": 0.24675925925925926,
+        "height": 0.013020833333333334
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/merriweather-700.woff2"
+    },
+    "phone": {
+      "fontId": "raleway",
+      "family": "Raleway",
+      "fallbackFamily": "sans-serif",
+      "weight": 700,
+      "italic": false,
+      "case": "none",
+      "sizeRatio": 1.215,
+      "lineHeight": 1.174,
+      "tracking": 0,
+      "align": "left",
+      "color": "#cacccd",
+      "fitScore": 0.484,
+      "sampleBox": {
+        "x": 0.16064814814814815,
+        "y": 0.8924479166666667,
+        "width": 0.17314814814814813,
+        "height": 0.012239583333333333
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/raleway-700.woff2"
+    },
+    "agent_name": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 600,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.500709219858156,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "left",
+      "color": "#e2c607",
+      "fitScore": 0.53,
+      "sampleBox": {
+        "x": 0.0912037037037037,
+        "y": 0.821875,
+        "width": 0.3912037037037037,
+        "height": 0.02109375
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/smooch-sans-600.woff2"
+    }
+  },
+  "deterministicEditing": {
+    "status": "partial",
+    "imageBoxes": {
+      "agent_portrait": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 0.4578125
+      }
+    }
   }
 }

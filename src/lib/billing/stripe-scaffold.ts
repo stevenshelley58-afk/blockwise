@@ -11,6 +11,7 @@ import {
 
 const STRIPE_API_BASE = "https://api.stripe.com";
 const WEBHOOK_TOLERANCE_SECONDS = 300;
+const verifiedCheckoutPriceOffers = new Set<string>();
 
 export class BillingNotConfiguredError extends Error {
   constructor(message = "Billing is not connected yet.") {
@@ -185,8 +186,12 @@ export function buildCheckoutSessionRequest(
     ...(offer.product === "self_serve"
       ? {
           "discounts[0][coupon]": couponId,
-          "subscription_data[trial_period_days]": offer.trialDays,
-          "subscription_data[trial_settings][end_behavior][missing_payment_method]": "cancel",
+          ...(offer.trialDays > 0
+            ? {
+                "subscription_data[trial_period_days]": offer.trialDays,
+                "subscription_data[trial_settings][end_behavior][missing_payment_method]": "cancel",
+              }
+            : {}),
         }
       : {}),
   };
@@ -198,6 +203,7 @@ export function buildCheckoutSessionRequest(
 
 export async function createCheckoutSession(input: CheckoutSessionInput): Promise<BillingSessionResult> {
   const request = buildCheckoutSessionRequest(input);
+  await verifyCheckoutPrice(request);
   const session = await stripePost<CheckoutSessionResponse>(
     "/v1/checkout/sessions",
     request.params,
@@ -207,6 +213,28 @@ export async function createCheckoutSession(input: CheckoutSessionInput): Promis
     throw new Error("Stripe did not return a checkout URL.");
   }
   return { url: session.url };
+}
+
+export function validateStripePriceForOffer(price: StripeObject, offer: BillingOffer): void {
+  const priceId = typeof price.id === "string" ? price.id : "configured Stripe Price";
+  const recurring = isStripeObject(price.recurring) ? price.recurring : null;
+  const currency = typeof price.currency === "string" ? price.currency.toUpperCase() : null;
+  const unitAmount = typeof price.unit_amount === "number" ? price.unit_amount : null;
+  const taxBehavior = typeof price.tax_behavior === "string" ? price.tax_behavior : null;
+
+  if (
+    price.active !== true ||
+    currency !== offer.currency ||
+    unitAmount !== offer.recurringAmount ||
+    recurring?.interval !== "month" ||
+    (recurring.interval_count ?? 1) !== 1 ||
+    taxBehavior !== offer.taxBehavior
+  ) {
+    throw new BillingNotConfiguredError(
+      `${offer.priceEnvKey} (${priceId}) does not match the ${offer.key} offer: ` +
+        `${formatMinorAmount(offer.recurringAmount, offer.currency)} monthly, ${offer.taxBehavior} tax.`,
+    );
+  }
 }
 
 export async function retrieveStripeSubscription(subscriptionId: string): Promise<StripeObject> {
@@ -304,6 +332,30 @@ async function stripeGet<T>(path: string): Promise<T> {
   }
 
   return payload as T;
+}
+
+async function verifyCheckoutPrice(request: CheckoutSessionRequest): Promise<void> {
+  const priceId = request.params["line_items[0][price]"];
+  if (typeof priceId !== "string" || !/^price_[A-Za-z0-9]+$/.test(priceId)) {
+    throw new BillingNotConfiguredError(`${request.offer.priceEnvKey} is not a valid Stripe Price ID.`);
+  }
+  const verificationKey = `${request.offer.version}:${request.offer.key}:${priceId}`;
+  if (verifiedCheckoutPriceOffers.has(verificationKey)) return;
+
+  const price = await stripeGet<StripeObject>(`/v1/prices/${priceId}`);
+  validateStripePriceForOffer(price, request.offer);
+  verifiedCheckoutPriceOffers.add(verificationKey);
+}
+
+function isStripeObject(value: unknown): value is StripeObject {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function formatMinorAmount(amount: number, currency: BillingCurrency): string {
+  return `${currency} ${new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount / 100)}`;
 }
 
 function encodeStripeForm(params: StripeFormParams) {

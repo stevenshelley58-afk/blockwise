@@ -103,5 +103,75 @@
         "body": "The agency will be in touch within 24 hours to send you your free property guide."
       }
     }
+  },
+  "typography": {
+    "tip_text": {
+      "fontId": "source-sans-3",
+      "family": "Source Sans 3",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "mixed",
+      "sizeRatio": 1.0363837489943684,
+      "lineHeight": 1.424,
+      "tracking": 0,
+      "align": "center",
+      "color": "#d1d1d1",
+      "fitScore": 0.556,
+      "sampleBox": {
+        "x": 0.16943359375,
+        "y": 0.7584635416666666,
+        "width": 0.68798828125,
+        "height": 0.12858072916666666
+      },
+      "sampleLineCount": 4,
+      "detectionScore": 1
+    },
+    "contact_handle": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 600,
+      "italic": false,
+      "case": "lower",
+      "sizeRatio": 1.3255172413793102,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "center",
+      "color": "#d7d7d8",
+      "fitScore": 0.638,
+      "sampleBox": {
+        "x": 0.333984375,
+        "y": 0.9280598958333334,
+        "width": 0.32666015625,
+        "height": 0.017903645833333332
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/smooch-sans-600.woff2"
+    },
+    "main_heading": {
+      "fontId": "kanit",
+      "family": "Kanit",
+      "fallbackFamily": "sans-serif",
+      "weight": 900,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.52,
+      "lineHeight": 1.495,
+      "tracking": 0,
+      "align": "left",
+      "color": "#6f6458",
+      "fitScore": 0.133,
+      "sampleBox": {
+        "x": 0.267578125,
+        "y": 0.1416015625,
+        "width": 0.1533203125,
+        "height": 0.022135416666666668
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 0.444,
+      "fontFile": "/fonts/adstudio/kanit-900.woff2"
+    }
   }
 }

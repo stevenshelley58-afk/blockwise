@@ -74,6 +74,17 @@
     "primary_intent": "appraisal_leads",
     "property_or_agent_focus": "property"
   },
+  "deterministicEditing": {
+    "status": "partial",
+    "imageBoxes": {
+      "background_photo": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      }
+    }
+  },
   "meta": {
     "platform": "meta",
     "objective": "OUTCOME_LEADS",
@@ -108,6 +119,100 @@
         "title": "Request received",
         "body": "The agency will be in touch within 24 hours to arrange your free property appraisal."
       }
+    }
+  },
+  "typography": {
+    "headline": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.5238095334761623,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "center",
+      "color": "#f1f1f1",
+      "fitScore": 0.482,
+      "sampleBox": {
+        "x": 0.26805555555555555,
+        "y": 0.18567708333333333,
+        "width": 0.5680555555555555,
+        "height": 0.21354166666666666
+      },
+      "sampleLineCount": 4,
+      "detectionScore": 0.897,
+      "fontFile": "/fonts/adstudio/smooch-sans-300.woff2"
+    },
+    "subheadline": {
+      "fontId": "open-sans",
+      "family": "Open Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 600,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.125,
+      "lineHeight": 1.36181640625,
+      "tracking": 0,
+      "align": "center",
+      "color": "#dbdbdc",
+      "fitScore": 0.635,
+      "sampleBox": {
+        "x": 0.24768518518518517,
+        "y": 0.4270833333333333,
+        "width": 0.5666666666666667,
+        "height": 0.016927083333333332
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/open-sans-600.woff2"
+    },
+    "cta": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 800,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.4545454545454546,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "center",
+      "color": "#2a2b2e",
+      "fitScore": 0.395,
+      "sampleBox": {
+        "x": 0.3199074074074074,
+        "y": 0.490625,
+        "width": 0.39305555555555555,
+        "height": 0.01484375
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/smooch-sans-800.woff2"
+    },
+    "website": {
+      "fontId": "saira",
+      "family": "Saira",
+      "fallbackFamily": "sans-serif",
+      "weight": 900,
+      "italic": false,
+      "case": "lower",
+      "sizeRatio": 1.3796926177878561,
+      "lineHeight": 1.574,
+      "tracking": 0,
+      "align": "center",
+      "color": "#78797b",
+      "fitScore": 0.246,
+      "sampleBox": {
+        "x": 0.35694444444444445,
+        "y": 0.55234375,
+        "width": 0.3162037037037037,
+        "height": 0.0125
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/saira-900.woff2"
     }
   }
 }

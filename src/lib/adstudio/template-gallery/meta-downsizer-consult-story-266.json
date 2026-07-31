@@ -123,5 +123,122 @@
         "body": "The agency will be in touch within 24 hours to arrange your free downsizing consultation."
       }
     }
+  },
+  "typography": {
+    "body": {
+      "fontId": "quicksand",
+      "family": "Quicksand",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "mixed",
+      "sizeRatio": 1.0571904761904762,
+      "lineHeight": 1.25,
+      "tracking": 0,
+      "align": "center",
+      "color": "#d1cac1",
+      "fitScore": 0.534,
+      "sampleBox": {
+        "x": 0.2412037037037037,
+        "y": 0.8278645833333333,
+        "width": 0.525,
+        "height": 0.0671875
+      },
+      "sampleLineCount": 3,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/quicksand-300.woff2"
+    },
+    "subheadline": {
+      "fontId": "oswald",
+      "family": "Oswald",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.2124549328089151,
+      "lineHeight": 1.482,
+      "tracking": 0,
+      "align": "center",
+      "color": "#eae0d6",
+      "fitScore": 0.507,
+      "sampleBox": {
+        "x": 0.1884259259259259,
+        "y": 0.7380208333333333,
+        "width": 0.638425925925926,
+        "height": 0.06145833333333333
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/oswald-300.woff2"
+    },
+    "headline": {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "fallbackFamily": "serif",
+      "weight": 300,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.0918367346938775,
+      "lineHeight": 1.257,
+      "tracking": 0,
+      "align": "center",
+      "color": "#ede3d9",
+      "fitScore": 0.453,
+      "sampleBox": {
+        "x": 0.12083333333333333,
+        "y": 0.5966145833333333,
+        "width": 0.7759259259259259,
+        "height": 0.096875
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/merriweather-300.woff2"
+    },
+    "cta": {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "fallbackFamily": "serif",
+      "weight": 800,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.2767462422634834,
+      "lineHeight": 1.257,
+      "tracking": 0,
+      "align": "left",
+      "color": "#e6dcd1",
+      "fitScore": 0.418,
+      "sampleBox": {
+        "x": 0.30648148148148147,
+        "y": 0.92265625,
+        "width": 0.5393518518518519,
+        "height": 0.017708333333333333
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/merriweather-800.woff2"
+    },
+    "phone": {
+      "fontId": "plus-jakarta-sans",
+      "family": "Plus Jakarta Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 500,
+      "italic": false,
+      "case": "none",
+      "sizeRatio": 1.2903225806451613,
+      "lineHeight": 1.26,
+      "tracking": 0,
+      "align": "center",
+      "color": "#e5dcd1",
+      "fitScore": 0.533,
+      "sampleBox": {
+        "x": 0.30324074074074076,
+        "y": 0.953125,
+        "width": 0.5083333333333333,
+        "height": 0.03671875
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/plus-jakarta-sans-500.woff2"
+    }
   }
 }

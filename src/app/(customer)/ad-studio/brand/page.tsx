@@ -1,23 +1,34 @@
 import { BrandStudio } from "@/components/adstudio/brand-studio";
 import { applyBrandAssetRows, loadAdStudioBrandAssetRows } from "@/lib/adstudio/assets";
-import { loadLiveAdStudioBundle } from "@/lib/adstudio/load-live-bundle";
 import { isExampleBrandKitSourceUrl, rowToBrandKit } from "@/lib/adstudio/persistence";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
 
 export const dynamic = "force-dynamic";
 
-export default async function BrandStudioPage() {
-  const { supabase, access } = await requirePageSurfaceAccess("adstudio");
-  const liveBundle = await loadLiveAdStudioBundle(supabase, access.workspaceId);
-  // B2 (simplification): an extracted-but-unapproved kit must be editable here —
-  // previously unapproved users were shown the demo kit instead of their own.
-  const draftBrandKit = liveBundle ? null : await loadDraftBrandKit(supabase, access.workspaceId);
-  const brandKit = liveBundle?.brandKit ?? draftBrandKit;
+type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
-  return <BrandStudio brandKit={brandKit} />;
+function safeAdStudioReturnTo(value: string | string[] | undefined): string {
+  const candidate = Array.isArray(value) ? value[0] : value;
+  if (!candidate) return "/ad-studio";
+
+  try {
+    const parsed = new URL(candidate, "https://blockwise.local");
+    if (parsed.origin !== "https://blockwise.local" || parsed.pathname !== "/ad-studio") return "/ad-studio";
+    return `${parsed.pathname}${parsed.search}`;
+  } catch {
+    return "/ad-studio";
+  }
 }
 
-async function loadDraftBrandKit(
+export default async function BrandStudioPage({ searchParams }: { searchParams?: SearchParams }) {
+  const params = searchParams ? await searchParams : {};
+  const { supabase, access } = await requirePageSurfaceAccess("adstudio");
+  const brandKit = await loadLatestBrandKit(supabase, access.workspaceId);
+
+  return <BrandStudio brandKit={brandKit} returnTo={safeAdStudioReturnTo(params.returnTo)} />;
+}
+
+async function loadLatestBrandKit(
   supabase: Awaited<ReturnType<typeof import("@/lib/supabase/server").createSupabaseServerClient>>,
   workspaceId: string,
 ) {

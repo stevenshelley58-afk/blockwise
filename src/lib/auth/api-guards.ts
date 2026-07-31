@@ -2,9 +2,28 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import type { ProductSurface } from "@/lib/auth/access-control";
 import { requireWorkspaceAccess, type WorkspaceAccess } from "@/lib/auth/workspace-access";
+import { niche } from "@/config/niche";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
+
+/**
+ * Returns a 404 response when every named niche feature is disabled, or null
+ * when at least one is enabled. Call first in route handlers whose surface is
+ * hidden by the niche feature flags so gated APIs behave like the gated pages.
+ */
+export function featureDisabledResponse(
+  ...flags: (keyof typeof niche.features)[]
+): NextResponse | null {
+  const anyEnabled = flags.some((flag) => niche.features[flag]);
+  return anyEnabled
+    ? null
+    : NextResponse.json({ error: "Not found" }, { status: 404, headers: { "Cache-Control": "no-store" } });
+}
+
+export function adRadarDisabledResponse(): NextResponse | null {
+  return featureDisabledResponse("adRadar");
+}
 
 export type ApiWorkspaceGuard =
   | { ok: true; supabase: SupabaseServerClient; access: WorkspaceAccess }

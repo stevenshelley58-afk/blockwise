@@ -1,17 +1,17 @@
-import type { AdStudioCreative } from "@/lib/adstudio/types.ts";
+import type { AdStudioCreative, AdStudioTextLayers } from "@/lib/adstudio/types.ts";
 
 type CreativeEditResponse = {
   image?: string;
-  /** Data: URL preview for instant display — avoids a second round trip
-   * through the auth-gated media proxy. The canonical `image` path is still
-   * used for persistence/reload. */
-  previewDataUrl?: string;
+  /** Finished pixels inline — painted immediately, no media-proxy round trip. */
+  previewImage?: string;
   qa?: AdStudioCreative["canvas"]["cloneQa"];
+  textLayers?: AdStudioTextLayers | null;
   renderHistory?: string[];
   renderQaHistory?: NonNullable<AdStudioCreative["canvas"]["cloneQa"]>[];
   redoHistory?: string[];
   redoQaHistory?: NonNullable<AdStudioCreative["canvas"]["cloneQa"]>[];
   revisionId?: string;
+  code?: string;
   error?: string;
 };
 
@@ -21,15 +21,33 @@ export type CreativeEditMutation = {
   newValue?: string;
   newImage?: string;
   instruction?: string;
+  /** Client-rendered deterministic text patch (data URL) for the region. */
+  patchImage?: string;
+};
+
+export class CreativeEditError extends Error {
+  readonly code?: string;
+
+  constructor(message: string, code?: string) {
+    super(message);
+    this.name = "CreativeEditError";
+    this.code = code;
+  }
+}
+
+export type CreativeEditResult = {
+  creative: AdStudioCreative;
+  /** Data URL of the finished render when the server inlined it. */
+  previewImage?: string;
 };
 
 export async function requestCreativeEdit(input: {
   creative: AdStudioCreative;
   mutation: CreativeEditMutation;
   mutationId: string;
-}): Promise<AdStudioCreative> {
+}): Promise<CreativeEditResult> {
   const { creative, mutation, mutationId } = input;
-  if (!creative.activeRevisionId) throw new Error("This ad changed. Reload it before editing.");
+  if (!creative.activeRevisionId) throw new CreativeEditError("This ad changed. Reload it before editing.");
 
   const cloneObject = creative.canvas.objects[0];
   const response = await fetch(`/api/adstudio/creatives/${creative.creativeId}/edit`, {
@@ -43,24 +61,48 @@ export async function requestCreativeEdit(input: {
   });
   const data = (await response.json().catch(() => ({}))) as CreativeEditResponse;
   if (!response.ok || !data.image || !data.revisionId) {
-    throw new Error(data.error || "The edit did not pass the ad checks. Your previous version is unchanged.");
+    throw new CreativeEditError(
+      data.error || "The edit did not pass the ad checks. Your previous version is unchanged.",
+      data.code,
+    );
   }
 
   return {
-    ...creative,
-    activeRevisionId: data.revisionId,
-    canvas: {
-      ...creative.canvas,
-      // Use the data: URL for immediate pixel display; the canonical storage
-      // path is still set as content/assetId for reload/export/persistence.
-      // The browser paints the data URL instantly without a second fetch
-      // through the /api/adstudio/media auth proxy.
-      objects: [{ ...cloneObject, content: data.previewDataUrl ?? data.image, assetId: data.image }],
-      cloneQa: data.qa ?? creative.canvas.cloneQa,
-      renderHistory: data.renderHistory ?? creative.canvas.renderHistory,
-      renderQaHistory: data.renderQaHistory ?? creative.canvas.renderQaHistory,
-      redoHistory: data.redoHistory ?? creative.canvas.redoHistory,
-      redoQaHistory: data.redoQaHistory ?? creative.canvas.redoQaHistory,
+    creative: {
+      ...creative,
+      activeRevisionId: data.revisionId,
+      canvas: {
+        ...creative.canvas,
+        objects: [{ ...cloneObject, content: data.image, assetId: data.image }],
+        cloneQa: data.qa ?? creative.canvas.cloneQa,
+        textLayers: data.textLayers === null ? undefined : data.textLayers ?? creative.canvas.textLayers,
+        renderHistory: data.renderHistory ?? creative.canvas.renderHistory,
+        renderQaHistory: data.renderQaHistory ?? creative.canvas.renderQaHistory,
+        redoHistory: data.redoHistory ?? creative.canvas.redoHistory,
+        redoQaHistory: data.redoQaHistory ?? creative.canvas.redoQaHistory,
+      },
     },
+    previewImage: data.previewImage,
   };
+}
+
+type CreativeLayersResponse = {
+  textLayers?: AdStudioTextLayers;
+  error?: string;
+};
+
+/**
+ * Ask the server to build (or return) the creative's text-editing layers.
+ * Returns the persisted state, including `building`, so editor tabs converge
+ * on one durable background build instead of starting their own.
+ */
+export async function requestCreativeLayers(creativeId: string): Promise<AdStudioTextLayers | null> {
+  try {
+    const response = await fetch(`/api/adstudio/creatives/${creativeId}/layers`, { method: "POST" });
+    const data = (await response.json().catch(() => ({}))) as CreativeLayersResponse;
+    if ((!response.ok && response.status !== 202) || !data.textLayers) return null;
+    return data.textLayers;
+  } catch {
+    return null;
+  }
 }

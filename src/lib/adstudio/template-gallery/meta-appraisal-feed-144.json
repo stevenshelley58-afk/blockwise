@@ -116,5 +116,99 @@
         "body": "The agency will be in touch within 24 hours to arrange your free property appraisal."
       }
     }
+  },
+  "typography": {
+    "body": {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "fallbackFamily": "serif",
+      "weight": 700,
+      "italic": false,
+      "case": "mixed",
+      "sizeRatio": 1.2014285714285715,
+      "lineHeight": 1.257,
+      "tracking": 0,
+      "align": "left",
+      "color": "#4e4a49",
+      "fitScore": 0.466,
+      "sampleBox": {
+        "x": 0.07824074074074074,
+        "y": 0.8425925925925926,
+        "width": 0.6875,
+        "height": 0.018518518518518517
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/merriweather-700.woff2"
+    },
+    "headline": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.5238095238095237,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "left",
+      "color": "#353131",
+      "fitScore": 0.427,
+      "sampleBox": {
+        "x": 0.07037037037037037,
+        "y": 0.5811111111111111,
+        "width": 0.6796296296296296,
+        "height": 0.2288888888888889
+      },
+      "sampleLineCount": 3,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/smooch-sans-300.woff2"
+    },
+    "website": {
+      "fontId": "lora",
+      "family": "Lora",
+      "fallbackFamily": "serif",
+      "weight": 700,
+      "italic": false,
+      "case": "lower",
+      "sizeRatio": 1.1322463768115942,
+      "lineHeight": 1.28,
+      "tracking": 0,
+      "align": "right",
+      "color": "#cecbca",
+      "fitScore": 0.528,
+      "sampleBox": {
+        "x": 0.6847222222222222,
+        "y": 0.9474074074074074,
+        "width": 0.23703703703703705,
+        "height": 0.015925925925925927
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/lora-700.woff2"
+    },
+    "phone": {
+      "fontId": "playfair-display",
+      "family": "Playfair Display",
+      "fallbackFamily": "serif",
+      "weight": 700,
+      "italic": false,
+      "case": "none",
+      "sizeRatio": 1.0813793103448277,
+      "lineHeight": 1.333,
+      "tracking": 0,
+      "align": "left",
+      "color": "#d5d2d0",
+      "fitScore": 0.415,
+      "sampleBox": {
+        "x": 0.07824074074074074,
+        "y": 0.9422222222222222,
+        "width": 0.1865740740740741,
+        "height": 0.017777777777777778
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/playfair-display-700.woff2"
+    }
   }
 }

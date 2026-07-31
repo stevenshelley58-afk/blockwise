@@ -91,7 +91,7 @@ export function BillingSection({
       <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
         <PlanTile
           label="Current plan"
-          value={workspace.billingAccessState === "paid" ? "Self-serve paid" : plan?.name ?? "Creation trial"}
+          value={workspace.billingAccessState === "paid" ? "Blockwise Platform" : plan?.name ?? "Free ads and campaign"}
           foot={
             <StatusPill tone={workspace.billingAccessState === "paid" ? "green" : workspace.billingAccessState === "payment_recovery" ? "rose" : "blue"}>
               {workspace.billingAccessState.replaceAll("_", " ")}
@@ -201,7 +201,7 @@ export function BillingSection({
           <div className="flex flex-col gap-1">
             <h4 className="text-sm font-semibold">Need managed service?</h4>
             <p className="text-sm text-muted-foreground">
-              Compare managed service scope and regional starting prices.{" "}
+              Compare the managed service scope and flat monthly fee.{" "}
               <Link href="/pricing" className="font-semibold text-foreground underline underline-offset-4">
                 View managed service
               </Link>

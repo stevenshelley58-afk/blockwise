@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { requireApiWorkspace } from "@/lib/auth/api-guards";
+import { featureDisabledResponse, requireApiWorkspace } from "@/lib/auth/api-guards";
 import { checkRateLimit } from "@/lib/rate-limit";
 import {
   normaliseAdRadarCardSearchQuery,
@@ -12,6 +12,9 @@ import {
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
+  const featureGate = featureDisabledResponse("adRadar");
+  if (featureGate) return featureGate;
+
   const guard = await requireApiWorkspace(request, "monitor");
   if (!guard.ok) return guard.response;
   const { supabase, access } = guard;

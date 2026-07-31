@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { requireApiWorkspace } from "@/lib/auth/api-guards";
+import { featureDisabledResponse, requireApiWorkspace } from "@/lib/auth/api-guards";
 import { suggestPropertyAddresses } from "@/lib/property-check/address-autocomplete";
 import { checkRateLimit } from "@/lib/rate-limit";
 
@@ -8,6 +8,9 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function GET(request: NextRequest) {
+  const featureGate = featureDisabledResponse("propertyCheck");
+  if (featureGate) return featureGate;
+
   const context = await requireApiWorkspace(request, "property_check");
   if (!context.ok) return context.response;
 

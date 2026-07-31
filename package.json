@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "adstudio:build-type-specs": "node scripts/build/font-corpus/adstudio-type-specs.mjs",
+    "adstudio:build-type-regions": "node scripts/build/font-corpus/adstudio-type-specs.mjs --regions-only",
+    "adstudio:build-runtime-fonts": "node scripts/build/font-corpus/build-runtime-fonts.mjs",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
@@ -55,6 +58,7 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@napi-rs/canvas": "^1.0.3",
     "@playwright/test": "^1.53.0",
     "@trigger.dev/sdk": "4.4.6",
     "@types/canvas-confetti": "^1.9.0",
@@ -62,6 +66,8 @@
     "@types/react": "^19.0.12",
     "@types/react-dom": "^19.0.4",
     "@types/ws": "^8.18.1",
+    "google-font-metadata": "^6.0.8",
+    "opentype.js": "^2.0.0",
     "typescript": "^5.8.3"
   },
   "overrides": {

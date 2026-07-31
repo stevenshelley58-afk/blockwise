@@ -15,6 +15,8 @@ import {
   reserveMetaFreeLiveClaim,
   resolveMetaFreeLiveClaimIdentity,
 } from "../src/lib/providers/meta-free-live-claims.ts";
+import { applyThreeDayFreeCampaignSchedule } from "../src/lib/providers/meta-publish-worker.ts";
+import type { MetaPublishPlan } from "../src/lib/providers/meta-execution.ts";
 
 const migrationPath =
   "supabase/migrations/20260727023000_meta_free_live_claim_registry.sql";
@@ -160,7 +162,27 @@ test("billing service ends the trial once and treats Stripe active state as an i
   assert.equal(service.workspaceUpdates.length, 0);
 });
 
-test("publish worker persists reconciliation before claim consumption and trial end", () => {
+test("free campaign scheduling is fixed to three days without changing the paid plan path", () => {
+  const plan = {
+    controls: { schedule: { startTime: "2026-07-30T09:00:00.000Z", endTime: null } },
+    adSets: [
+      {
+        localId: "adset-1",
+        startTime: "2026-07-30T09:00:00.000Z",
+        endTime: null,
+      },
+    ],
+  } as MetaPublishPlan;
+
+  const scheduled = applyThreeDayFreeCampaignSchedule(plan);
+
+  assert.equal(scheduled.controls.schedule?.startTime, "2026-07-30T09:00:00.000Z");
+  assert.equal(scheduled.controls.schedule?.endTime, "2026-08-02T09:00:00.000Z");
+  assert.equal(scheduled.adSets[0].endTime, "2026-08-02T09:00:00.000Z");
+  assert.equal(plan.controls.schedule?.endTime, null);
+});
+
+test("publish worker persists reconciliation before claim consumption and preserves legacy trial finalization", () => {
   const source = readFileSync("src/lib/providers/meta-publish-worker.ts", "utf8");
   assert.match(
     source,
@@ -169,6 +191,16 @@ test("publish worker persists reconciliation before claim consumption and trial 
   assert.match(
     source,
     /consumeMetaFreeLiveClaim\([\s\S]*endTrialAfterFirstLiveCampaign\(/,
+  );
+  assert.match(source, /billing_access_state === "unbilled"[\s\S]*"free_campaign"/);
+  assert.match(source, /applyThreeDayFreeCampaignSchedule\(input\.plan\)/);
+  assert.match(
+    source,
+    /consumeMetaFreeLiveClaim\([\s\S]*activateFreeCampaign\(input, completedPlan\)/,
+  );
+  assert.match(
+    source,
+    /deterministicUuid\(`\$\{plan\.planId\}:free-campaign-activate`\)/,
   );
   assert.match(
     source,

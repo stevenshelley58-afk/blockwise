@@ -4,29 +4,30 @@ import { Check } from "lucide-react";
 import { useState } from "react";
 
 import { CtaLink } from "@/components/landing/cta-link";
+import {
+  formatBillingAmount,
+  getBillingOffer,
+  type BillingMarket,
+} from "@/lib/billing/offers";
 
-type Market = "us" | "au";
+type Market = Lowercase<BillingMarket>;
 
 const OFFERS = {
   us: {
     name: "United States",
     shortName: "US",
-    firstMonth: "US$99",
-    renewal: "US$499",
-    managed: "US$1,500",
+    market: "US",
   },
   au: {
     name: "Australia",
     shortName: "AU",
-    firstMonth: "A$99",
-    renewal: "A$499",
-    managed: "A$2,500",
+    market: "AU",
   },
-} as const;
+} as const satisfies Record<Market, { name: string; shortName: string; market: BillingMarket }>;
 
 const SELF_SERVE_FEATURES = [
-  "Three complete Feed + Story ads before payment",
-  "One free live campaign setup",
+  "Three image ads with Feed and Story/Reels-ready creative",
+  "One free three-day campaign before subscribing",
   "100 render credits each paid month",
   "Up to 50 complete Feed + Story packs",
   "One Brand Pack, workspace, and primary Meta ad account",
@@ -35,8 +36,8 @@ const SELF_SERVE_FEATURES = [
 ] as const;
 
 const MANAGED_FEATURES = [
-  "Everything in self-serve",
-  "Operator launch and weekly optimization",
+  "Everything in the Blockwise Platform",
+  "Campaign launch and weekly optimisation",
   "Up to four live campaigns",
   "One brand and one Meta ad account",
   "Monthly performance report",
@@ -44,7 +45,21 @@ const MANAGED_FEATURES = [
 
 export function MarketPricing() {
   const [market, setMarket] = useState<Market>("au");
-  const offer = OFFERS[market];
+  const marketDetails = OFFERS[market];
+  const selfServeOffer = getBillingOffer(marketDetails.market, "self_serve");
+  const managedOffer = getBillingOffer(marketDetails.market, "managed");
+  const firstMonth = formatBillingAmount(
+    selfServeOffer.firstInvoiceAmount,
+    selfServeOffer.currency,
+  );
+  const renewal = formatBillingAmount(
+    selfServeOffer.recurringAmount,
+    selfServeOffer.currency,
+  );
+  const managed = formatBillingAmount(
+    managedOffer.recurringAmount,
+    managedOffer.currency,
+  );
 
   return (
     <section className="pricing-offers" aria-label="Plans and market pricing">
@@ -71,31 +86,31 @@ export function MarketPricing() {
           </p>
         </fieldset>
 
-        <article className="pricing-self-serve" aria-labelledby="self-serve-title">
+        <article className="pricing-self-serve" aria-labelledby="blockwise-platform-title">
           <div className="pricing-plan-intro">
-            <p className="pricing-kicker">Self-serve with assistance</p>
-            <h2 id="self-serve-title">Build, publish, and track in one place.</h2>
+            <p className="pricing-kicker">Blockwise Platform</p>
+            <h2 id="blockwise-platform-title">Create, publish and track your Meta ads in one place.</h2>
             <p>
-              Start without a card. When you choose to run a campaign, checkout collects a payment
-              method and clearly shows the renewal schedule.
+              Start without a card and run one three-day campaign free. Subscribe only when you
+              want to continue.
             </p>
           </div>
 
-          <div className="pricing-amount" aria-label={`${offer.firstMonth} first month, then ${offer.renewal} per month`}>
+          <div className="pricing-amount" aria-label={`${firstMonth} first month, then ${renewal} per month`}>
             <div>
               <span className="pricing-amount-label">First paid month</span>
-              <strong>{offer.firstMonth}</strong>
+              <strong>{firstMonth}</strong>
             </div>
             <span className="pricing-then" aria-hidden>then</span>
             <div>
               <span className="pricing-amount-label">Following months</span>
-              <strong>{offer.renewal}</strong>
+              <strong>{renewal}</strong>
               <span className="pricing-per">/month</span>
             </div>
           </div>
 
           <div className="pricing-self-serve-body">
-            <ul aria-label="Self-serve plan features">
+            <ul aria-label="Blockwise Platform features">
               {SELF_SERVE_FEATURES.map((feature) => (
                 <li key={feature}>
                   <Check aria-hidden size={17} strokeWidth={2.5} />
@@ -116,35 +131,25 @@ export function MarketPricing() {
           </div>
 
           <p className="pricing-consent-note">
-            One live campaign setup is free. Your Meta ad spend is separate. Your Blockwise
-            subscription starts at {offer.firstMonth} when the campaign launches or seven days
-            after checkout, whichever comes first, then renews at {offer.renewal} monthly until
-            cancelled.
+            {selfServeOffer.checkoutDisclosure}
           </p>
         </article>
 
         <article className="pricing-managed" aria-labelledby="managed-title">
           <div className="pricing-managed-copy">
             <p className="pricing-kicker">Managed service</p>
-            <h2 id="managed-title">Strategy and weekly optimization included.</h2>
+            <h2 id="managed-title">Launch, weekly optimisation and reporting included.</h2>
             <p>
-              From <strong>{offer.managed}/month</strong>, plus Meta ad spend. Scope beyond the
-              standard engagement is confirmed and repriced during onboarding.
+              <strong>{managed}/month</strong> in either market, plus Meta ad spend. Additional
+              brands, ad accounts, or campaign volume require a written scope change.
             </p>
             <div className="pricing-managed-actions">
               <CtaLink
                 location={`pricing-managed-start-${market}`}
-                href={`/signup?offer=managed&market=${market}`}
+                href="/#managed-setup"
                 className="hw-btn hw-btn--dark"
               >
-                Subscribe and book onboarding
-              </CtaLink>
-              <CtaLink
-                location={`pricing-managed-call-${market}`}
-                href="/#managed-setup"
-                className="hw-btn hw-btn--outline"
-              >
-                Book a call first
+                Book a 15-minute walkthrough
               </CtaLink>
             </div>
           </div>

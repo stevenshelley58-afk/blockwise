@@ -34,11 +34,12 @@ test("publish review state skips approval and submits directly", () => {
   assert.match(panel, /studio-review-creatives/);
 });
 
-test("publish budget supports presets, custom dates, and campaigns without an end date", () => {
+test("publish budget defaults to the free three-day campaign and supports paid schedules", () => {
   const panel = readFileSync("src/components/adstudio/panels/publish-panel.tsx", "utf8");
 
   assert.match(panel, /const BUDGET_PRESETS = \[10, 20, 50\]/);
-  assert.match(panel, /const DURATION_PRESETS = \[7, 14, 30\]/);
+  assert.match(panel, /const DURATION_PRESETS = \[3, 7, 14, 30\]/);
+  assert.match(panel, /useState<ScheduleMode>\("3"\)/);
   assert.match(panel, /Enter amount/);
   assert.match(panel, /Custom dates/);
   assert.match(panel, /Run until stopped/);
@@ -105,18 +106,19 @@ test("Ad Studio UI presents the constrained campaign workspace", () => {
   assert.match(adstudio, /Create from the selected template/);
   assert.match(adstudio, /Campaign readiness/);
   assert.match(adstudio, /Export creatives/);
-  assert.match(adstudio, /const NAV_ITEMS:[\s\S]*id: "home"[\s\S]*id: "samples"[\s\S]*id: "library"[\s\S]*id: "text"[\s\S]*id: "publish"[\s\S]*id: "brand"[\s\S]*id: "settings"/);
+  assert.match(adstudio, /const NAV_ITEMS:[\s\S]*id: "home"[\s\S]*id: "samples"[\s\S]*id: "library"[\s\S]*id: "brand"[\s\S]*id: "edit"[\s\S]*id: "publish"[\s\S]*id: "settings"/);
   const navItems = adstudio.match(/const NAV_ITEMS:[\s\S]*?\];/)?.[0] ?? "";
   const mobileNavIds = adstudio.match(/const MOBILE_NAV_IDS[\s\S]*?\);/)?.[0] ?? "";
-  assert.match(mobileNavIds, /"home", "samples", "library", "text", "publish"/);
+  assert.match(mobileNavIds, /"home", "samples", "library", "edit", "publish"/);
   assert.doesNotMatch(mobileNavIds, /"brand"|"settings"|"campaign"|"design"/);
   assert.match(navItems, /id: "samples", label: "Create"/);
+  assert.match(navItems, /id: "edit", label: "Edit"/);
   assert.match(navItems, /id: "publish", label: "Publish"/);
   assert.match(adstudio, /const MOBILE_NAV = NAV_ITEMS\.filter/);
   assert.doesNotMatch(adstudio, /label: "Review"/);
   assert.doesNotMatch(adstudio, /const ADVANCED_NAV_ITEMS/);
   assert.doesNotMatch(adstudio, /label: "Ad"/);
-  assert.match(adstudio, /label: "Brand Pack"/);
+  assert.match(navItems, /id: "brand", label: "Brand Pack"/);
   assert.doesNotMatch(navItems, /label: "Brand"[,}]/);
   assert.doesNotMatch(navItems, /label: "Design"/);
   assert.match(adstudio, /studio-home-shell/);

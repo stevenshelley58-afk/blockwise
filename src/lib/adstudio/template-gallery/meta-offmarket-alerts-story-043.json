@@ -130,5 +130,98 @@
         "body": "The agency will be in touch within 24 hours with off-market property alerts."
       }
     }
+  },
+  "typography": {
+    "body": {
+      "fontId": "source-sans-3",
+      "family": "Source Sans 3",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "mixed",
+      "sizeRatio": 1.0277777777777777,
+      "lineHeight": 1.424,
+      "tracking": 0,
+      "align": "left",
+      "color": "#5b5b5c",
+      "fitScore": 0.616,
+      "sampleBox": {
+        "x": 0.06759259259259259,
+        "y": 0.34296875,
+        "width": 0.4703703703703704,
+        "height": 0.03333333333333333
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 1
+    },
+    "headline": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.5238095149843132,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "center",
+      "color": "#464747",
+      "fitScore": 0.585,
+      "sampleBox": {
+        "x": 0.06620370370370371,
+        "y": 0.058854166666666666,
+        "width": 0.7587962962962963,
+        "height": 0.22213541666666667
+      },
+      "sampleLineCount": 5,
+      "detectionScore": 0.972,
+      "fontFile": "/fonts/adstudio/smooch-sans-300.woff2"
+    },
+    "subheadline": {
+      "fontId": "fira-sans",
+      "family": "Fira Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 800,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.0666666666666667,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "left",
+      "color": "#848f97",
+      "fitScore": 0.55,
+      "sampleBox": {
+        "x": 0.06620370370370371,
+        "y": 0.3033854166666667,
+        "width": 0.6305555555555555,
+        "height": 0.01484375
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/fira-sans-800.woff2"
+    },
+    "cta": {
+      "fontId": "lora",
+      "family": "Lora",
+      "fallbackFamily": "serif",
+      "weight": 600,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.374025974025974,
+      "lineHeight": 1.28,
+      "tracking": 0,
+      "align": "left",
+      "color": "#abac93",
+      "fitScore": 0.248,
+      "sampleBox": {
+        "x": 0.20925925925925926,
+        "y": 0.82578125,
+        "width": 0.0912037037037037,
+        "height": 0.020833333333333332
+      },
+      "sampleLineCount": 3,
+      "detectionScore": 0.368,
+      "fontFile": "/fonts/adstudio/lora-600.woff2"
+    }
   }
 }

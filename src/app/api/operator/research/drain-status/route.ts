@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { requireOperator } from "@/lib/operator/auth";
+import { requireAdRadarOperator as requireOperator } from "@/lib/operator/auth";
 import { loadResearchDrainStatus } from "@/lib/research/drain-status";
 import { tryCreateResearchServiceClient } from "@/lib/research/service";
 

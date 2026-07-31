@@ -130,5 +130,146 @@
         "body": "The agency will be in touch within 24 hours to arrange your free seller consultation."
       }
     }
+  },
+  "typography": {
+    "headline": {
+      "fontId": "manrope",
+      "family": "Manrope",
+      "fallbackFamily": "sans-serif",
+      "weight": 500,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.3061224432788343,
+      "lineHeight": 1.366,
+      "tracking": 0,
+      "align": "center",
+      "color": "#5f524a",
+      "fitScore": 0.841,
+      "sampleBox": {
+        "x": 0.0824074074074074,
+        "y": 0.38723958333333336,
+        "width": 0.8671296296296296,
+        "height": 0.19661458333333334
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/manrope-500.woff2"
+    },
+    "subheadline": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 600,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.5394736842105265,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "center",
+      "color": "#403e3c",
+      "fitScore": 0.593,
+      "sampleBox": {
+        "x": 0.20833333333333334,
+        "y": 0.6049479166666667,
+        "width": 0.6199074074074075,
+        "height": 0.018229166666666668
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/smooch-sans-600.woff2"
+    },
+    "benefit_2": {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "fallbackFamily": "serif",
+      "weight": 600,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.32,
+      "lineHeight": 1.257,
+      "tracking": 0,
+      "align": "center",
+      "color": "#42413f",
+      "fitScore": 0.512,
+      "sampleBox": {
+        "x": 0.3212962962962963,
+        "y": 0.7510416666666667,
+        "width": 0.41064814814814815,
+        "height": 0.015104166666666667
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/merriweather-600.woff2"
+    },
+    "benefit_3": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.5238096120245916,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "center",
+      "color": "#d1cecc",
+      "fitScore": 0.347,
+      "sampleBox": {
+        "x": 0.24166666666666667,
+        "y": 0.7518229166666667,
+        "width": 0.47824074074074074,
+        "height": 0.08515625
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 0.813,
+      "fontFile": "/fonts/adstudio/smooch-sans-300.woff2"
+    },
+    "benefit_1": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 600,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.546875,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "center",
+      "color": "#444240",
+      "fitScore": 0.525,
+      "sampleBox": {
+        "x": 0.3212962962962963,
+        "y": 0.6799479166666667,
+        "width": 0.3453703703703704,
+        "height": 0.015104166666666667
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/smooch-sans-600.woff2"
+    },
+    "cta": {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 0.65,
+      "lineHeight": 1.2,
+      "tracking": 0.02,
+      "align": "center",
+      "color": "#5f524a",
+      "fitScore": 0.35,
+      "sampleBox": {
+        "x": 0.1,
+        "y": 0.78,
+        "width": 0.8,
+        "height": 0.05
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 0.55,
+      "measurementSource": "manual-estimate",
+      "fontFile": "/fonts/adstudio/smooch-sans-300.woff2"
+    }
   }
 }
