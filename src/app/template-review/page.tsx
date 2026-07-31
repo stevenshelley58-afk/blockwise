@@ -81,6 +81,7 @@ interface Template {
   typography: Record<string, TypographyEntry>;
   status?: string;
   goal?: string;
+  sourceAd?: { file: string; contentHash?: string };
   /* Pre-computed counts returned by the list endpoint */
   textInputCount?: number;
   typographyCount?: number;
@@ -139,7 +140,17 @@ export default function TemplateReviewPage() {
 
   // Canvas refs
   const canvasRef = useRef<HTMLDivElement>(null);
+  const sourceCanvasRef = useRef<HTMLDivElement>(null);
   const [imgSize, setImgSize] = useState({ w: 0, h: 0 });
+  const [srcImgSize, setSrcImgSize] = useState({ w: 0, h: 0 });
+
+  // Interaction state for drag/resize
+  type HandleDir = "tl" | "tc" | "tr" | "ml" | "mr" | "bl" | "bc" | "br";
+  const [interactionMode, setInteractionMode] = useState<"idle" | "dragging" | "resizing">("idle");
+  const [dragKey, setDragKey] = useState<string | null>(null);
+  const [resizeHandle, setResizeHandle] = useState<HandleDir | null>(null);
+  const [ptrStart, setPtrStart] = useState({ x: 0, y: 0 });
+  const [initBox, setInitBox] = useState<TextBox>({ x: 0, y: 0, width: 0, height: 0 });
 
   // Add-region form state
   const [newKey, setNewKey] = useState("");
@@ -255,6 +266,16 @@ export default function TemplateReviewPage() {
   const handleImgLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
     const img = e.currentTarget;
     setImgSize({ w: img.clientWidth, h: img.clientHeight });
+  };
+
+  const handleSrcImgLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const img = e.currentTarget;
+    setSrcImgSize({ w: img.clientWidth, h: img.clientHeight });
+  };
+
+  const getSourceImageUrl = () => {
+    if (!draft?.sourceAd?.file) return "";
+    return `/api/dev/source-ad?path=${encodeURIComponent(draft.sourceAd.file)}`;
   };
 
   /* ── Save ──────────────────────────────────────────────────────── */
@@ -435,14 +456,111 @@ export default function TemplateReviewPage() {
   const [drawStart, setDrawStart] = useState({ x: 0, y: 0 });
   const [drawCurrent, setDrawCurrent] = useState({ x: 0, y: 0 });
 
-  const normCoords = (e: React.MouseEvent) => {
-    const rect = canvasRef.current?.getBoundingClientRect();
-    if (!rect || !imgSize.w || !imgSize.h) return { nx: 0, ny: 0 };
+  const normCoords = (e: React.MouseEvent | React.PointerEvent, ref?: React.RefObject<HTMLDivElement | null>, size?: { w: number; h: number }) => {
+    const r = (ref ?? canvasRef).current?.getBoundingClientRect();
+    const s = size ?? imgSize;
+    if (!r || !s.w || !s.h) return { nx: 0, ny: 0 };
     return {
-      nx: Math.max(0, Math.min(1, (e.clientX - rect.left) / imgSize.w)),
-      ny: Math.max(0, Math.min(1, (e.clientY - rect.top) / imgSize.h)),
+      nx: Math.max(0, Math.min(1, (e.clientX - r.left) / s.w)),
+      ny: Math.max(0, Math.min(1, (e.clientY - r.top) / s.h)),
     };
   };
+
+  /* ── Drag & Resize handlers ─────────────────────────────────── */
+
+  const handleBoxPointerDown = (e: React.PointerEvent, key: string, box: TextBox) => {
+    e.stopPropagation();
+    e.preventDefault();
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    setSelectedKey(key);
+    setInteractionMode("dragging");
+    setDragKey(key);
+    setPtrStart({ x: e.clientX, y: e.clientY });
+    setInitBox({ ...box });
+  };
+
+  const handleResizePointerDown = (e: React.PointerEvent, key: string, box: TextBox, handle: HandleDir) => {
+    e.stopPropagation();
+    e.preventDefault();
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    setSelectedKey(key);
+    setInteractionMode("resizing");
+    setDragKey(key);
+    setResizeHandle(handle);
+    setPtrStart({ x: e.clientX, y: e.clientY });
+    setInitBox({ ...box });
+  };
+
+  const applyResize = (dx: number, dy: number) => {
+    if (!resizeHandle || !dragKey) return;
+    const b = { ...initBox };
+    const MIN = 0.01;
+    switch (resizeHandle) {
+      case "tl": b.x = Math.max(0, initBox.x + dx); b.y = Math.max(0, initBox.y + dy); b.width = initBox.width - (b.x - initBox.x); b.height = initBox.height - (b.y - initBox.y); break;
+      case "tc": b.y = Math.max(0, initBox.y + dy); b.height = initBox.height - (b.y - initBox.y); break;
+      case "tr": b.y = Math.max(0, initBox.y + dy); b.width = Math.max(MIN, initBox.width + dx); b.height = initBox.height - (b.y - initBox.y); break;
+      case "ml": b.x = Math.max(0, initBox.x + dx); b.width = initBox.width - (b.x - initBox.x); break;
+      case "mr": b.width = Math.max(MIN, initBox.width + dx); break;
+      case "bl": b.x = Math.max(0, initBox.x + dx); b.width = initBox.width - (b.x - initBox.x); b.height = Math.max(MIN, initBox.height + dy); break;
+      case "bc": b.height = Math.max(MIN, initBox.height + dy); break;
+      case "br": b.width = Math.max(MIN, initBox.width + dx); b.height = Math.max(MIN, initBox.height + dy); break;
+    }
+    b.width = Math.max(MIN, b.width);
+    b.height = Math.max(MIN, b.height);
+    b.x = Math.max(0, Math.min(1 - b.width, b.x));
+    b.y = Math.max(0, Math.min(1 - b.height, b.y));
+    updateSampleBox(dragKey, b);
+  };
+
+  const handleCanvasPointerMove = (e: React.PointerEvent) => {
+    if (interactionMode === "idle" || !dragKey) return;
+    const dx = (e.clientX - ptrStart.x) / (imgSize.w || 1);
+    const dy = (e.clientY - ptrStart.y) / (imgSize.h || 1);
+    if (interactionMode === "dragging") {
+      const newX = Math.max(0, Math.min(1 - initBox.width, initBox.x + dx));
+      const newY = Math.max(0, Math.min(1 - initBox.height, initBox.y + dy));
+      updateSampleBox(dragKey, { x: newX, y: newY });
+    } else if (interactionMode === "resizing") {
+      applyResize(dx, dy);
+    }
+  };
+
+  const handleCanvasPointerUp = () => {
+    if (interactionMode !== "idle") {
+      setInteractionMode("idle");
+      setDragKey(null);
+      setResizeHandle(null);
+    }
+  };
+
+  const handleBgPointerDown = (e: React.PointerEvent) => {
+    if ((e.target as HTMLElement).closest("[data-region-box]")) return;
+    const { nx, ny } = normCoords(e);
+    setDrawing(true);
+    setDrawStart({ x: nx, y: ny });
+    setDrawCurrent({ x: nx, y: ny });
+    setSelectedKey(null);
+  };
+
+  const handleBgPointerMove = (e: React.PointerEvent) => {
+    if (drawing) {
+      const { nx, ny } = normCoords(e);
+      setDrawCurrent({ x: nx, y: ny });
+    }
+  };
+
+  const handleBgPointerUp = () => {
+    if (drawing) {
+      setDrawing(false);
+      const x = Math.min(drawStart.x, drawCurrent.x);
+      const y = Math.min(drawStart.y, drawCurrent.y);
+      const w = Math.abs(drawCurrent.x - drawStart.x);
+      const h = Math.abs(drawCurrent.y - drawStart.y);
+      if (w > 0.01 && h > 0.01) setNewBox({ x, y, width: w, height: h });
+    }
+  };
+
+  const HANDLE_DIRS: HandleDir[] = ["tl", "tc", "tr", "ml", "mr", "bl", "bc", "br"];
 
   /* ── Render ────────────────────────────────────────────────────── */
 
@@ -537,94 +655,135 @@ export default function TemplateReviewPage() {
                 <span>{Object.keys(draft.typography ?? {}).length} regions</span>
               </div>
             </div>
-            <div className="flex flex-1 items-center justify-center overflow-auto p-4">
-              <div
-                ref={canvasRef}
-                className="relative"
-                style={{ maxWidth: "100%", maxHeight: "100%" }}
-                onMouseDown={(e) => {
-                  if (e.target === canvasRef.current || (e.target as HTMLElement).tagName === "IMG") {
-                    const { nx, ny } = normCoords(e);
-                    setDrawing(true);
-                    setDrawStart({ x: nx, y: ny });
-                    setDrawCurrent({ x: nx, y: ny });
-                  }
-                }}
-                onMouseMove={(e) => {
-                  if (drawing) {
-                    const { nx, ny } = normCoords(e);
-                    setDrawCurrent({ x: nx, y: ny });
-                  }
-                }}
-                onMouseUp={() => {
-                  if (drawing) {
-                    setDrawing(false);
-                    const x = Math.min(drawStart.x, drawCurrent.x);
-                    const y = Math.min(drawStart.y, drawCurrent.y);
-                    const w = Math.abs(drawCurrent.x - drawStart.x);
-                    const h = Math.abs(drawCurrent.y - drawStart.y);
-                    if (w > 0.01 && h > 0.01) {
-                      setNewBox({ x, y, width: w, height: h });
-                    }
-                  }
-                }}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={draft.sample?.imageSrc || ""}
-                  alt={draft.sample?.alt ?? "Template sample"}
-                  onLoad={handleImgLoad}
-                  onError={() => setImgError(true)}
-                  className="max-h-[calc(100vh-120px)] max-w-full object-contain"
-                  draggable={false}
-                  style={{ display: "block" }}
-                />
-                {imgError && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-muted/50 text-xs text-muted-foreground">
-                    Failed to load sample image
-                  </div>
-                )}
-                {/* Region overlays */}
-                {(Object.entries(draft.typography ?? {}) as [string, TypographyEntry | undefined][]).map(([key, typo]) => {
-                  if (!typo?.sampleBox) return null;
-                  const box = typo.sampleBox;
-                  // Validate coordinates are finite numbers
-                  if (!isFinite(box.x) || !isFinite(box.y) || !isFinite(box.width) || !isFinite(box.height)) return null;
-                  const c = regionColor(typo, gates);
-                  const isSelected = selectedKey === key;
-                  return (
-                    <button
-                      key={key}
-                      onClick={(e) => { e.stopPropagation(); setSelectedKey(key); }}
-                      className={`absolute cursor-pointer border-2 transition-all ${colorClasses[c]} ${
-                        isSelected ? "ring-2 ring-white" : "hover:brightness-125"
-                      }`}
-                      style={{
-                        left: `${box.x * 100}%`,
-                        top: `${box.y * 100}%`,
-                        width: `${box.width * 100}%`,
-                        height: `${box.height * 100}%`,
-                      }}
-                      title={`${key} (fit: ${typo.fitScore?.toFixed(2)})`}
-                    >
-                      <span className="absolute -top-4 left-0 text-[9px] font-bold leading-none drop-shadow-md">
-                        {key}
-                      </span>
-                    </button>
-                  );
-                })}
-                {/* Drawing rectangle */}
-                {drawing && (
-                  <div
-                    className="pointer-events-none absolute border-2 border-dashed border-cyan-400 bg-cyan-400/10"
-                    style={{
-                      left: `${Math.min(drawStart.x, drawCurrent.x) * 100}%`,
-                      top: `${Math.min(drawStart.y, drawCurrent.y) * 100}%`,
-                      width: `${Math.abs(drawCurrent.x - drawStart.x) * 100}%`,
-                      height: `${Math.abs(drawCurrent.y - drawStart.y) * 100}%`,
-                    }}
+            <div className="flex flex-1 gap-4 overflow-auto p-4">
+              {/* ─── Source / Reference Image ─── */}
+              <div className="flex flex-1 flex-col items-center justify-center min-w-0">
+                <span className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Source / Reference
+                </span>
+                <div
+                  ref={sourceCanvasRef}
+                  className="relative"
+                  style={{ maxWidth: "100%", maxHeight: "100%" }}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={getSourceImageUrl()}
+                    alt="Source ad reference"
+                    onLoad={handleSrcImgLoad}
+                    onError={() => {}}
+                    className="max-h-[calc(100vh-160px)] max-w-full object-contain"
+                    draggable={false}
+                    style={{ display: "block" }}
                   />
-                )}
+                  {!draft.sourceAd?.file && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-muted/50 text-xs text-muted-foreground">
+                      No source image available
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* ─── Generated Sample (interactive) ─── */}
+              <div className="flex flex-1 flex-col items-center justify-center min-w-0">
+                <span className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Generated Sample
+                </span>
+                <div
+                  ref={canvasRef}
+                  className="relative select-none"
+                  style={{ maxWidth: "100%", maxHeight: "100%", touchAction: "none" }}
+                  onPointerDown={handleBgPointerDown}
+                  onPointerMove={(e) => { handleCanvasPointerMove(e); handleBgPointerMove(e); }}
+                  onPointerUp={() => { handleCanvasPointerUp(); handleBgPointerUp(); }}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={draft.sample?.imageSrc || ""}
+                    alt={draft.sample?.alt ?? "Template sample"}
+                    onLoad={handleImgLoad}
+                    onError={() => setImgError(true)}
+                    className="max-h-[calc(100vh-160px)] max-w-full object-contain"
+                    draggable={false}
+                    style={{ display: "block" }}
+                  />
+                  {imgError && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-muted/50 text-xs text-muted-foreground">
+                      Failed to load sample image
+                    </div>
+                  )}
+                  {/* Region overlays */}
+                  {(Object.entries(draft.typography ?? {}) as [string, TypographyEntry | undefined][]).map(([key, typo]) => {
+                    if (!typo?.sampleBox) return null;
+                    const box = typo.sampleBox;
+                    if (!isFinite(box.x) || !isFinite(box.y) || !isFinite(box.width) || !isFinite(box.height)) return null;
+                    const c = regionColor(typo, gates);
+                    const isSelected = selectedKey === key;
+                    const isDraggingThis = dragKey === key && interactionMode !== "idle";
+                    return (
+                      <div
+                        key={key}
+                        data-region-box
+                        className={`absolute border-2 transition-colors ${colorClasses[c]} ${
+                          isSelected ? "ring-2 ring-white z-10" : "hover:brightness-125"
+                        } ${isDraggingThis ? "cursor-grabbing" : "cursor-grab"}`}
+                        style={{
+                          left: `${box.x * 100}%`,
+                          top: `${box.y * 100}%`,
+                          width: `${box.width * 100}%`,
+                          height: `${box.height * 100}%`,
+                        }}
+                        onPointerDown={(e) => handleBoxPointerDown(e, key, box)}
+                      >
+                        <span className="absolute -top-4 left-0 text-[9px] font-bold leading-none drop-shadow-md">
+                          {key}
+                        </span>
+                        {isSelected && (
+                          <span className="absolute -bottom-4 left-0 whitespace-nowrap rounded bg-black/80 px-1 py-0.5 text-[8px] font-mono text-white leading-none">
+                            x:{box.x.toFixed(3)} y:{box.y.toFixed(3)} w:{box.width.toFixed(3)} h:{box.height.toFixed(3)}
+                          </span>
+                        )}
+                        {isSelected && HANDLE_DIRS.map((h) => {
+                          const pos: Record<string, React.CSSProperties> = {
+                            tl: { left: -4, top: -4 },
+                            tc: { left: "50%", top: -4, transform: "translateX(-50%)" },
+                            tr: { right: -4, top: -4 },
+                            ml: { left: -4, top: "50%", transform: "translateY(-50%)" },
+                            mr: { right: -4, top: "50%", transform: "translateY(-50%)" },
+                            bl: { left: -4, bottom: -4 },
+                            bc: { left: "50%", bottom: -4, transform: "translateX(-50%)" },
+                            br: { right: -4, bottom: -4 },
+                          };
+                          const cursors: Record<string, string> = {
+                            tl: "nwse-resize", tc: "ns-resize", tr: "nesw-resize",
+                            ml: "ew-resize", mr: "ew-resize",
+                            bl: "nesw-resize", bc: "ns-resize", br: "nwse-resize",
+                          };
+                          return (
+                            <div
+                              key={h}
+                              className="absolute z-20 size-2.5 rounded-sm border border-white bg-white/90 shadow-sm"
+                              style={{ ...pos[h], cursor: cursors[h] }}
+                              onPointerDown={(e) => handleResizePointerDown(e, key, box, h)}
+                            />
+                          );
+                        })}
+                      </div>
+                    );
+                  })}
+                  {/* Drawing rectangle */}
+                  {drawing && (
+                    <div
+                      className="pointer-events-none absolute border-2 border-dashed border-cyan-400 bg-cyan-400/10"
+                      style={{
+                        left: `${Math.min(drawStart.x, drawCurrent.x) * 100}%`,
+                        top: `${Math.min(drawStart.y, drawCurrent.y) * 100}%`,
+                        width: `${Math.abs(drawCurrent.x - drawStart.x) * 100}%`,
+                        height: `${Math.abs(drawCurrent.y - drawStart.y) * 100}%`,
+                      }}
+                    />
+                  )}
+                </div>
               </div>
             </div>
           </>
