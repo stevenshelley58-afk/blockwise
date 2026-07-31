@@ -126,6 +126,8 @@ export default function TemplateReviewPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [imgError, setImgError] = useState(false);
 
   // Editable working copy of the selected template
   const [draft, setDraft] = useState<Template | null>(null);
@@ -172,12 +174,47 @@ export default function TemplateReviewPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Select template
+  // Select template — fetch full data from the detail API
   useEffect(() => {
-    if (selectedId) {
-      const t = templates.find((t) => t.id === selectedId);
-      if (t) setDraft(JSON.parse(JSON.stringify(t)));
-    }
+    if (!selectedId) return;
+    let cancelled = false;
+    setFetchError(null);
+    (async () => {
+      try {
+        const res = await fetch(`/api/dev/template-review/${selectedId}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const full: Template = await res.json();
+        if (cancelled) return;
+        // Ensure required shapes exist even if the API returns partial data
+        const safe: Template = {
+          ...full,
+          inputs: {
+            text: Array.isArray(full.inputs?.text) ? full.inputs.text : [],
+            images: full.inputs?.images ?? [],
+          },
+          typography: (full.typography && typeof full.typography === "object") ? full.typography : {},
+          sample: full.sample ?? { imageSrc: "" },
+        };
+        setDraft(safe);
+        // Reset image error state for new template
+        setImgError(false);
+      } catch (err) {
+        if (cancelled) return;
+        console.error("[template-review] Failed to fetch template detail:", err);
+        setFetchError(`Failed to load template: ${err instanceof Error ? err.message : String(err)}`);
+        // Fall back to list data so the page doesn't stay blank
+        const fallback = templates.find((t) => t.id === selectedId);
+        if (fallback) {
+          setDraft({
+            ...fallback,
+            inputs: { text: [], images: [] },
+            typography: {},
+            sample: fallback.sample ?? { imageSrc: "" },
+          });
+        }
+      }
+    })();
+    return () => { cancelled = true; };
   }, [selectedId, templates]);
 
   /* ── Derived ───────────────────────────────────────────────────── */
@@ -205,8 +242,8 @@ export default function TemplateReviewPage() {
     return seen;
   }, [manifest]);
 
-  const selectedTypography = draft && selectedKey ? draft.typography[selectedKey] : undefined;
-  const selectedTextInput = draft?.inputs.text.find((t) => t.key === selectedKey);
+  const selectedTypography = draft && selectedKey ? (draft.typography ?? {})[selectedKey] : undefined;
+  const selectedTextInput = draft?.inputs?.text?.find((t) => t.key === selectedKey);
 
   /* ── Image sizing ──────────────────────────────────────────────── */
 
@@ -222,8 +259,8 @@ export default function TemplateReviewPage() {
     setSaving(true);
     try {
       const body = {
-        typography: draft.typography,
-        textInputs: draft.inputs.text,
+        typography: draft.typography ?? {},
+        textInputs: draft.inputs?.text ?? [],
       };
       const res = await fetch(`/api/dev/template-review/${draft.id}`, {
         method: "PUT",
@@ -244,11 +281,13 @@ export default function TemplateReviewPage() {
 
   const updateTypo = (key: string, patch: Partial<TypographyEntry>) => {
     if (!draft) return;
+    const existing = (draft.typography ?? {})[key];
+    if (!existing) return;
     setDraft({
       ...draft,
       typography: {
         ...draft.typography,
-        [key]: { ...draft.typography[key], ...patch },
+        [key]: { ...existing, ...patch },
       },
     });
   };
@@ -261,13 +300,13 @@ export default function TemplateReviewPage() {
 
   const deleteRegion = (key: string) => {
     if (!draft) return;
-    const { [key]: _, ...rest } = draft.typography;
+    const { [key]: _, ...rest } = (draft.typography ?? {});
     setDraft({
       ...draft,
       typography: rest,
       inputs: {
         ...draft.inputs,
-        text: draft.inputs.text.filter((t) => t.key !== key),
+        text: (draft.inputs?.text ?? []).filter((t) => t.key !== key),
       },
     });
     setSelectedKey(null);
@@ -305,10 +344,10 @@ export default function TemplateReviewPage() {
     };
     setDraft({
       ...draft,
-      typography: { ...draft.typography, [newKey]: newTypo },
+      typography: { ...(draft.typography ?? {}), [newKey]: newTypo },
       inputs: {
         ...draft.inputs,
-        text: [...draft.inputs.text, newInput],
+        text: [...(draft.inputs?.text ?? []), newInput],
       },
     });
     setSelectedKey(newKey);
@@ -453,19 +492,27 @@ export default function TemplateReviewPage() {
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={draft.sample?.imageSrc}
+                  src={draft.sample?.imageSrc || ""}
                   alt={draft.sample?.alt ?? "Template sample"}
                   onLoad={handleImgLoad}
+                  onError={() => setImgError(true)}
                   className="max-h-[calc(100vh-120px)] max-w-full object-contain"
                   draggable={false}
                   style={{ display: "block" }}
                 />
+                {imgError && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-muted/50 text-xs text-muted-foreground">
+                    Failed to load sample image
+                  </div>
+                )}
                 {/* Region overlays */}
-                {Object.entries(draft.typography ?? {}).map(([key, typo]) => {
+                {(Object.entries(draft.typography ?? {}) as [string, TypographyEntry | undefined][]).map(([key, typo]) => {
                   if (!typo?.sampleBox) return null;
+                  const box = typo.sampleBox;
+                  // Validate coordinates are finite numbers
+                  if (!isFinite(box.x) || !isFinite(box.y) || !isFinite(box.width) || !isFinite(box.height)) return null;
                   const c = regionColor(typo, gates);
                   const isSelected = selectedKey === key;
-                  const box = typo.sampleBox;
                   return (
                     <button
                       key={key}
@@ -531,8 +578,8 @@ export default function TemplateReviewPage() {
                   Regions
                 </h3>
                 <div className="space-y-1">
-                  {draft.inputs.text.map((ti) => {
-                    const typo = draft.typography[ti.key];
+                  {(draft.inputs?.text ?? []).map((ti) => {
+                    const typo = (draft.typography ?? {})[ti.key];
                     const c = regionColor(typo, gates);
                     return (
                       <button
@@ -652,6 +699,12 @@ export default function TemplateReviewPage() {
                 </Dialog>
               </div>
 
+              {fetchError && (
+                <div className="mb-3 rounded border border-red-400/30 bg-red-400/10 p-2 text-[11px] text-red-300">
+                  {fetchError}
+                </div>
+              )}
+
               {/* Region editor */}
               {selectedTypography && selectedTextInput ? (
                 <RegionEditor
@@ -699,11 +752,17 @@ function RegionEditor({ inputDef, typo, fontFamilies, gates, onUpdate, onUpdateB
   // Load font for preview
   useEffect(() => {
     if (!typo.fontFile || !typo.family) return;
-    const fontFaceObj = new FontFace(typo.family, `url(${typo.fontFile})`);
-    fontFaceObj.load().then((f) => {
-      document.fonts.add(f);
-      drawPreview();
-    }).catch(() => {});
+    try {
+      const fontFaceObj = new FontFace(typo.family, `url(${typo.fontFile})`);
+      fontFaceObj.load().then((f) => {
+        document.fonts.add(f);
+        drawPreview();
+      }).catch((err) => {
+        console.warn("[template-review] Font load failed:", typo.fontFile, err);
+      });
+    } catch (err) {
+      console.warn("[template-review] FontFace creation failed:", typo.fontFile, err);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [typo.fontFile, typo.family]);
 
@@ -721,6 +780,7 @@ function RegionEditor({ inputDef, typo, fontFamilies, gates, onUpdate, onUpdateB
     const dpr = window.devicePixelRatio || 1;
     const w = canvas.clientWidth;
     const h = canvas.clientHeight;
+    if (!w || !h) return;
     canvas.width = w * dpr;
     canvas.height = h * dpr;
     ctx.scale(dpr, dpr);
@@ -728,9 +788,14 @@ function RegionEditor({ inputDef, typo, fontFamilies, gates, onUpdate, onUpdateB
     ctx.fillStyle = "#1a1a1a";
     ctx.fillRect(0, 0, w, h);
 
-    const fontSize = Math.round(typo.sizeRatio * 20);
+    const sizeRatio = isFinite(typo.sizeRatio) ? typo.sizeRatio : 0.8;
+    const fontSize = Math.round(sizeRatio * 20);
+    if (fontSize <= 0) return;
     const style = typo.italic ? "italic" : "normal";
-    ctx.font = `${style} ${typo.weight} ${fontSize}px "${typo.family}", ${typo.fallbackFamily ?? "sans-serif"}`;
+    const weight = isFinite(typo.weight) ? typo.weight : 400;
+    const family = typo.family || "sans-serif";
+    const fallback = typo.fallbackFamily || "sans-serif";
+    ctx.font = `${style} ${weight} ${fontSize}px "${family}", ${fallback}`;
     ctx.fillStyle = typo.color || "#ffffff";
     ctx.textBaseline = "top";
 
@@ -738,7 +803,8 @@ function RegionEditor({ inputDef, typo, fontFamilies, gates, onUpdate, onUpdateB
     if (typo.case === "upper") text = text.toUpperCase();
     else if (typo.case === "lower") text = text.toLowerCase();
 
-    const lineHeight = fontSize * (typo.lineHeight || 1.2);
+    const lh = isFinite(typo.lineHeight) ? typo.lineHeight : 1.2;
+    const lineHeight = fontSize * lh;
     const lines = text.split("\n");
     lines.forEach((line, i) => {
       ctx.fillText(line, 8, 8 + i * lineHeight);
@@ -1003,7 +1069,7 @@ function RegionEditor({ inputDef, typo, fontFamilies, gates, onUpdate, onUpdateB
                 step={0.001}
                 min={0}
                 max={1}
-                value={typo.sampleBox[prop]}
+                value={typo.sampleBox?.[prop] ?? 0}
                 onChange={(e) => onUpdateBox({ [prop]: Number(e.target.value) })}
               />
             </div>
