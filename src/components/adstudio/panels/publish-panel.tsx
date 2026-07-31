@@ -100,7 +100,7 @@ type PublishSetupPanelProps = {
 
 const STEPS = ["Campaign setup", "Creatives", "Lead form", "Budget", "Review", "Live"] as const;
 const BUDGET_PRESETS = [10, 20, 50] as const;
-const DURATION_PRESETS = [7, 14, 30] as const;
+const DURATION_PRESETS = [3, 7, 14, 30] as const;
 const MAX_LIBRARY_SELECTIONS = 6;
 
 type ScheduleMode = `${(typeof DURATION_PRESETS)[number]}` | "custom" | "ongoing";
@@ -220,7 +220,7 @@ export function PublishSetupPanel({
   const targetSuburbs = campaignPack.campaign.market.targetSuburbs ?? [];
   const targetSuburbKeys = targetSuburbs.map((location) => location.key).join("|");
   const includeSurroundingSuburbs = campaignPack.campaign.market.includeSurroundingSuburbs;
-  const [scheduleMode, setScheduleMode] = useState<ScheduleMode>("7");
+  const [scheduleMode, setScheduleMode] = useState<ScheduleMode>("3");
   const [customStartDate, setCustomStartDate] = useState("");
   const [customEndDate, setCustomEndDate] = useState("");
 
@@ -355,7 +355,7 @@ export function PublishSetupPanel({
         if (ticks > 60) {
           stopPolling();
           setPublishDone(false);
-          setPublishError("This is taking longer than expected. Check Performance in a few minutes — your ad may still finish publishing.");
+          setPublishError("This is taking longer than expected. Check Performance in a few minutes. Your ad may still finish publishing.");
           setPublishPhase("failed");
         }
       } else if (plan.status === "draft") {
@@ -542,7 +542,7 @@ export function PublishSetupPanel({
           // ~5 min soft cap. The plan is still queued/running — stop the spinner
           // and point the user to Results rather than spinning indefinitely.
           setPublishPhase("live");
-          setPublishMessage("Still processing on Meta — confirm in Performance shortly.");
+          setPublishMessage("Still processing on Meta. Confirm in Performance shortly.");
         }
       } catch {
         // Transient fetch error — keep polling.
@@ -589,7 +589,7 @@ export function PublishSetupPanel({
       const body = (await response.json().catch(() => ({}))) as PublishResponse;
       if (!response.ok) throw new Error(body.error ?? "Publish failed.");
 
-      if (body.providerWritesEnabled === false) throw new Error("Live publishing is not enabled yet — export your creatives to launch manually.");
+      if (body.providerWritesEnabled === false) throw new Error("Live publishing is not enabled yet. Export your creatives to launch manually.");
 
       const planStatus = body.metaPublishPlan?.status;
       const queued = Boolean(body.triggerRunId) || planStatus === "paused_live" || planStatus === "publishing";
@@ -1111,10 +1111,10 @@ export function PublishSetupPanel({
                 <span>{scheduleMode === "ongoing" ? "Daily spend limit" : "Planned spend"}</span>
                 <strong>
                   {scheduleMode === "ongoing"
-                    ? `$${Number.isFinite(dailyBudgetAud) ? dailyBudgetAud.toLocaleString("en-AU") : "—"} AUD / day`
+                    ? `$${Number.isFinite(dailyBudgetAud) ? dailyBudgetAud.toLocaleString("en-AU") : "--"} AUD / day`
                     : plannedSpend
                       ? `$${plannedSpend.toLocaleString("en-AU")} AUD`
-                      : "—"}
+                      : "--"}
                 </strong>
               </div>
             </section>
@@ -1234,7 +1234,7 @@ export function PublishSetupPanel({
                 <div className="studio-publish-success">
                   <span><Check aria-hidden size={24} /></span>
                   <strong>Ad submitted</strong>
-                  {publishedVariantCount && <small>{publishedVariantCount} creatives published (paused)</small>}
+                  {publishedVariantCount && <small>{publishedVariantCount} creatives submitted to Meta</small>}
                   <Link href="/results" className="studio-btn publish studio-live-results-btn">View in Performance <ChevronRight aria-hidden size={17} /></Link>
                 </div>
               )}

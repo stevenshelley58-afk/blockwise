@@ -1,4 +1,4 @@
-export const BILLING_OFFER_VERSION = "2026-07-30";
+export const BILLING_OFFER_VERSION = "2026-07-30-v2";
 
 export type BillingMarket = "US" | "AU";
 export type BillingCurrency = "USD" | "AUD";
@@ -23,7 +23,7 @@ export type BillingOffer = {
 };
 
 const SELF_SERVE_TRIGGER =
-  "The first paid month begins when the first campaign launches or the seven-day post-Checkout billing trial ends, whichever comes first.";
+  "The first paid month is charged immediately when the customer subscribes, then renews monthly until cancelled.";
 
 export const BILLING_OFFERS: Readonly<Record<`${BillingProduct}_${BillingMarket}`, BillingOffer>> = {
   self_serve_US: {
@@ -35,13 +35,13 @@ export const BILLING_OFFERS: Readonly<Record<`${BillingProduct}_${BillingMarket}
     recurringAmount: 49_900,
     firstInvoiceAmount: 9_900,
     discountAmount: 40_000,
-    trialDays: 7,
+    trialDays: 0,
     taxBehavior: "exclusive",
     priceEnvKey: "STRIPE_SELF_SERVE_USD_PRICE_ID",
     couponEnvKey: "STRIPE_SELF_SERVE_USD_INTRO_COUPON_ID",
     triggeringRule: SELF_SERVE_TRIGGER,
     checkoutDisclosure:
-      "Creating three ads is free and does not require Checkout. After Checkout, the seven-day billing trial ends when the first campaign launches or after seven days, whichever comes first. The first paid month is US$99, then US$499 monthly until cancelled. Meta ad spend is separate.",
+      "Your free three-day campaign does not start a Blockwise subscription. Meta ad spend is separate. US$99 is charged immediately when you subscribe for your first paid month, then the plan renews at US$499 monthly until cancelled.",
   },
   self_serve_AU: {
     key: "self_serve_AU",
@@ -52,13 +52,13 @@ export const BILLING_OFFERS: Readonly<Record<`${BillingProduct}_${BillingMarket}
     recurringAmount: 49_900,
     firstInvoiceAmount: 9_900,
     discountAmount: 40_000,
-    trialDays: 7,
+    trialDays: 0,
     taxBehavior: "inclusive",
     priceEnvKey: "STRIPE_SELF_SERVE_AUD_PRICE_ID",
     couponEnvKey: "STRIPE_SELF_SERVE_AUD_INTRO_COUPON_ID",
     triggeringRule: SELF_SERVE_TRIGGER,
     checkoutDisclosure:
-      "Creating three ads is free and does not require Checkout. After Checkout, the seven-day billing trial ends when the first campaign launches or after seven days, whichever comes first. The first paid month is A$99, then A$499 monthly until cancelled. Meta ad spend is separate.",
+      "Your free three-day campaign does not start a Blockwise subscription. Meta ad spend is separate. A$99 is charged immediately when you subscribe for your first paid month, then the plan renews at A$499 monthly until cancelled.",
   },
   managed_US: {
     key: "managed_US",

@@ -91,7 +91,7 @@ export function BillingSection({
       <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
         <PlanTile
           label="Current plan"
-          value={workspace.billingAccessState === "paid" ? "Self-serve paid" : plan?.name ?? "Creation trial"}
+          value={workspace.billingAccessState === "paid" ? "Blockwise Platform" : plan?.name ?? "Free ads and campaign"}
           foot={
             <StatusPill tone={workspace.billingAccessState === "paid" ? "green" : workspace.billingAccessState === "payment_recovery" ? "rose" : "blue"}>
               {workspace.billingAccessState.replaceAll("_", " ")}

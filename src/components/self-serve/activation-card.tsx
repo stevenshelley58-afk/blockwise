@@ -178,11 +178,11 @@ function StatusCell({
 }
 
 function planLabel(state: string): string {
-  if (state === "paid") return "Self-serve paid";
-  if (state === "trialing") return "Seven-day billing trial";
+  if (state === "paid") return "Blockwise Platform";
+  if (state === "trialing") return "Existing billing trial";
   if (state === "payment_recovery") return "Payment needs attention";
   if (state === "canceled") return "Canceled";
-  return "Free creation trial";
+  return "Free ads and campaign";
 }
 
 function billingTiming(plan: ActivationCardData["plan"]): string {
@@ -200,13 +200,13 @@ function billingTiming(plan: ActivationCardData["plan"]): string {
   );
 
   if (plan.accessState === "unbilled") {
-    return `Creating three ads is free. Checkout starts a seven-day billing trial; the first paid month is ${firstMonth}.`;
+    return `Create three ads and run one three-day campaign free. If you subscribe, ${firstMonth} is charged immediately for your first paid month.`;
   }
   if (!plan.periodEnd) return "Billing timing will appear after Stripe confirms the subscription.";
   const date = formatDate(plan.periodEnd);
   if (plan.cancelAtPeriodEnd) return `Credits and access remain available until ${date}.`;
   if (plan.accessState === "trialing") {
-    return `First paid month (${firstMonth}) begins by ${date}, or earlier when your first campaign launches.`;
+    return `Under your existing checkout terms, the first paid month (${firstMonth}) begins by ${date}, or earlier when your first campaign launches.`;
   }
   return `Next ${renewal} renewal: ${date}.`;
 }

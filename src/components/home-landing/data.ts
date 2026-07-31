@@ -22,11 +22,11 @@ const AU_MANAGED_MONTHLY = formatBillingAmount(
 export const FAQ_DATA = [
   {
     q: "Who pays for ad spend?",
-    a: "We run the ads through your own Meta ad account, and you pay Meta directly. That keeps you in full control of your spend, and the campaign data stays with you.",
+    a: "You pay Meta directly through your connected ad account. Blockwise never marks up or funds your ad spend. Because the campaigns run in your account, you keep your leads and campaign data if you cancel Blockwise.",
   },
   {
     q: "Do I need a Meta ad account?",
-    a: "Yes. You’ll need a Meta ad account before your ads go live. If you don’t have one yet, book a walkthrough and we’ll guide you through the setup.",
+    a: "Not to create your first three ads. Connect an eligible Meta ad account only when you’re ready to launch. If you need an account, we can help you set it up when you join.",
   },
   {
     q: "Can I approve ads before they run?",
@@ -34,19 +34,23 @@ export const FAQ_DATA = [
   },
   {
     q: "What do I get before paying?",
-    a: "Three complete Feed + Story ads, free. No card needed.",
+    a: "Three image ads, each with Feed and Story/Reels-ready creative. You can review and edit them without a card, then run one three-day campaign free. You still pay Meta directly for the ad spend.",
   },
   {
     q: "When does the subscription start?",
-    a: `Your subscription starts when your first campaign goes live, or seven days after checkout if you haven’t launched yet. Your first month is ${AU_FIRST_MONTH}, then ${AU_RENEWAL} per month. Cancel anytime.`,
+    a: `Your free three-day campaign does not start a Blockwise subscription. If you subscribe, your first paid month is ${AU_FIRST_MONTH}, charged immediately, then ${AU_RENEWAL} per month until cancelled. Cancel anytime.`,
   },
   {
     q: "What does managed include?",
-    a: `Managed is ${AU_MANAGED_MONTHLY} per month, plus ad spend. It includes self-serve access, launch and weekly optimisation for up to four campaigns, technical and creative advice, and a monthly report for one brand and one Meta ad account. Cancel anytime.`,
+    a: `Managed is ${AU_MANAGED_MONTHLY} per month, plus Meta ad spend. It includes everything in the Blockwise Platform, plus campaign launch, weekly optimisation and a monthly performance report.`,
   },
   {
-    q: "Will my ads sound like AI?",
-    a: "No AI slop. We’ve optimised our AI to write clear, persuasive copy, headlines and descriptions for you, your offer and your suburb.",
+    q: "Can I edit the copy before launch?",
+    a: "Yes. Our custom AI is trained to write clear, high-quality lead generation copy without AI slop. You can review and edit every line before publishing.",
+  },
+  {
+    q: "Does Blockwise create video ads?",
+    a: "Not yet. Blockwise currently creates image ads for Feed and Story/Reels placements. Video ads are coming soon.",
   },
 ] as const;
 
@@ -115,10 +119,10 @@ export const START_TEMPLATES = [
 ] as const;
 
 export const CONTROL_POINTS = [
-  "Approve every ad before it goes live",
-  "Use your own Meta ad account",
-  "Control the budget and schedule",
-  "See every result in one dashboard",
+  "Approve every ad before launch",
+  "Publish through your own Meta ad account",
+  "Set the budget and schedule",
+  "See leads, spend and results in one place",
 ] as const;
 
 export const DASH_ROWS = [

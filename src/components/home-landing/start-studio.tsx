@@ -70,7 +70,10 @@ export function StartStudio() {
               transition={{ duration: 0.55, ease: EASE_OUT }}
             >
               <h2>Don&rsquo;t start from a blank page.</h2>
-              <p className="hw-sub">Pick a layout. Add your own photos and copy.</p>
+              <p className="hw-sub">
+                Choose a high-quality template. Our trained AI writes personalised copy for your
+                agency and offer.
+              </p>
             </motion.div>
 
             <div className="hw-studio-group hw-studio-group--templates">

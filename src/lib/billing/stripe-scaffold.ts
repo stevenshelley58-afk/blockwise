@@ -186,8 +186,12 @@ export function buildCheckoutSessionRequest(
     ...(offer.product === "self_serve"
       ? {
           "discounts[0][coupon]": couponId,
-          "subscription_data[trial_period_days]": offer.trialDays,
-          "subscription_data[trial_settings][end_behavior][missing_payment_method]": "cancel",
+          ...(offer.trialDays > 0
+            ? {
+                "subscription_data[trial_period_days]": offer.trialDays,
+                "subscription_data[trial_settings][end_behavior][missing_payment_method]": "cancel",
+              }
+            : {}),
         }
       : {}),
   };

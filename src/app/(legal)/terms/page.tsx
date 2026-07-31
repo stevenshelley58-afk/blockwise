@@ -59,7 +59,7 @@ export default function TermsOfServicePage() {
       <p>
         New accounts start with an email address and a magic link or one-time code. Continuing from
         the email entry and signing in means you accept these terms and our{" "}
-        <a href="/privacy">Privacy Policy</a>. A self-serve trial has one owner. After payment, the
+        <a href="/privacy">Privacy Policy</a>. The free creation allowance has one owner. After payment, the
         workspace may have up to five named members, each using an individually verified email.
       </p>
 
@@ -90,29 +90,31 @@ export default function TermsOfServicePage() {
       </p>
 
       <h2 style={{ fontSize: 22, marginTop: 32, fontWeight: 600 }}>
-        5. Self-serve trial, credits, and billing
+        5. Free campaign, credits, and billing
       </h2>
       <p>
-        The free creation allowance includes three complete Feed and Story ads before Checkout. A
-        complete ad normally uses two render credits. You do not need a card to create, review, or
-        edit those ads. Failed or cancelled provider work is refunded to the applicable credit balance.
+        The free creation allowance includes three image ads with Feed and Story/Reels-ready
+        creative before Checkout. A complete ad normally uses two render credits. You do not need a
+        card to create, review, or edit those ads. Failed or cancelled provider work is refunded to
+        the applicable credit balance.
       </p>
       <p>
-        When you choose to publish, Checkout collects a reusable payment method and starts a separate
-        seven-day billing trial. The first paid month ({FIRST_MONTH}) begins when the first campaign
-        launches or that billing trial ends, whichever comes first, then renews at {RENEWAL} monthly
-        until cancelled. Your Meta ad spend is separate. United States prices exclude applicable
-        sales tax. Australian prices include GST where Blockwise is required to collect it.
+        You may run one campaign for up to three days without paying a Blockwise subscription fee.
+        You remain responsible for the Meta ad spend. The free campaign does not start a
+        subscription. If you subscribe, Checkout charges {FIRST_MONTH} immediately for the first
+        paid month, then the Blockwise Platform renews at {RENEWAL} monthly until cancelled. United
+        States prices exclude applicable sales tax. Australian prices include GST where Blockwise
+        is required to collect it.
       </p>
       <p>
-        A paid self-serve subscription grants 100 render credits per billing period. A Feed render,
+        A paid Blockwise Platform subscription grants 100 render credits per billing period. A Feed render,
         Story render, AI image regeneration, or AI image edit uses one credit. Deterministic copy
         edits and deterministic text-layer patches use no credit. Credits expire at the end of the
         billing period and do not roll over or transfer. Inviting a team member does not add
         credits.
       </p>
       <p>
-        One self-serve subscription is for one workspace, one Brand Pack and primary website, one
+        One Blockwise Platform subscription is for one workspace, one Brand Pack and primary website, one
         country and billing currency, one Meta Business Portfolio, and one primary Meta ad account.
         Additional unrelated brands, Meta businesses, or client accounts require another paid
         workspace or a managed or agency agreement.
@@ -126,12 +128,12 @@ export default function TermsOfServicePage() {
         6. Managed service
       </h2>
       <p>
-        Managed service is separate from self-serve and costs {MANAGED_MONTHLY} per month in the
+        Managed service is separate from the Blockwise Platform and costs {MANAGED_MONTHLY} per month in the
         workspace billing currency, plus Meta ad spend. You may book a call before paying, or pay
         and book onboarding immediately.
       </p>
       <p>
-        The base managed engagement includes the complete self-serve product, 100 monthly render
+        The base managed engagement includes the complete Blockwise Platform, 100 monthly render
         credits, one brand, one Meta ad account, operator launch and weekly optimization of up to
         four live campaigns, and a monthly report. Additional brands, ad accounts, campaign volume,
         or other work require a written scope change and may be repriced during onboarding.
