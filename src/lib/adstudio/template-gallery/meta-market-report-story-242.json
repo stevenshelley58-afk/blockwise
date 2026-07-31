@@ -189,7 +189,8 @@
         "height": 0.18125
       },
       "sampleLineCount": 7,
-      "detectionScore": 0.75
+      "detectionScore": 0.75,
+      "fontFile": "/fonts/adstudio/plus-jakarta-sans-500.woff2"
     },
     "stat_1": {
       "fontId": "kanit",
@@ -211,7 +212,8 @@
         "height": 0.023958333333333335
       },
       "sampleLineCount": 4,
-      "detectionScore": 0.65
+      "detectionScore": 0.65,
+      "fontFile": "/fonts/adstudio/kanit-900.woff2"
     },
     "cta": {
       "fontId": "kanit",
@@ -233,7 +235,8 @@
         "height": 0.013020833333333334
       },
       "sampleLineCount": 2,
-      "detectionScore": 0.684
+      "detectionScore": 0.684,
+      "fontFile": "/fonts/adstudio/kanit-900.woff2"
     },
     "website": {
       "fontId": "lora",
@@ -278,7 +281,8 @@
         "height": 0.011197916666666667
       },
       "sampleLineCount": 3,
-      "detectionScore": 0.643
+      "detectionScore": 0.643,
+      "fontFile": "/fonts/adstudio/merriweather-800.woff2"
     },
     "stat_2": {
       "fontId": "merriweather",
@@ -300,7 +304,8 @@
         "height": 0.01015625
       },
       "sampleLineCount": 1,
-      "detectionScore": 0.5
+      "detectionScore": 0.5,
+      "fontFile": "/fonts/adstudio/merriweather-800.woff2"
     },
     "stat_4": {
       "fontId": "merriweather",
@@ -324,6 +329,23 @@
       "sampleLineCount": 2,
       "detectionScore": 0.667,
       "fontFile": "/fonts/adstudio/merriweather-700.woff2"
+    }
+  },
+  "deterministicEditing": {
+    "status": "partial",
+    "imageBoxes": {
+      "property_photo": {
+        "x": 0.5879629629629629,
+        "y": 0,
+        "width": 0.41203703703703703,
+        "height": 1
+      },
+      "agency_logo": {
+        "x": 0.22962962962962963,
+        "y": 0.1015625,
+        "width": 0.13333333333333333,
+        "height": 0.07291666666666667
+      }
     }
   }
 }

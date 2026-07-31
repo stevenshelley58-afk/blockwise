@@ -203,7 +203,7 @@ describeAdStudioRealLoop("Ad Studio real loop", () => {
     await page.goto(`/ad-studio?campaignId=${encodeURIComponent(campaignId)}&workspaceId=${encodeURIComponent(workspaceId ?? "")}`);
     // Reload intentionally returns to Home. Reopen the post-clone editor before
     // asserting that the saved revision is the image mounted on its canvas.
-    await openPanel(page, "Text");
+    await openPanel(page, "Edit");
     await expect(page.locator(".studio-inplace-frame img").filter({ visible: true }).first()).toHaveAttribute(
       "src",
       editedImage,

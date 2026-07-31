@@ -109,6 +109,29 @@
     "primary_intent": "rental_appraisal",
     "property_or_agent_focus": "property"
   },
+  "deterministicEditing": {
+    "status": "partial",
+    "imageBoxes": {
+      "property_photo_1": {
+        "x": 0.49444444444444446,
+        "y": 0.040740740740740744,
+        "width": 0.5055555555555555,
+        "height": 0.45185185185185184
+      },
+      "property_photo_2": {
+        "x": 0.49444444444444446,
+        "y": 0.5037037037037037,
+        "width": 0.5055555555555555,
+        "height": 0.43333333333333335
+      },
+      "agency_logo": {
+        "x": 0.040740740740740744,
+        "y": 0.047407407407407405,
+        "width": 0.11481481481481481,
+        "height": 0.09259259259259259
+      }
+    }
+  },
   "meta": {
     "platform": "meta",
     "objective": "OUTCOME_LEADS",
@@ -165,7 +188,7 @@
         "width": 0.37546296296296294,
         "height": 0.04296296296296296
       },
-      "sampleLineCount": 4,
+      "sampleLineCount": 3,
       "detectionScore": 0.88
     },
     "headline": {
@@ -184,11 +207,12 @@
       "sampleBox": {
         "x": 0.041666666666666664,
         "y": 0.2,
-        "width": 0.8527777777777777,
-        "height": 0.20666666666666667
+        "width": 0.42685185185185187,
+        "height": 0.1874074074074074
       },
-      "sampleLineCount": 12,
-      "detectionScore": 0.568
+      "sampleLineCount": 3,
+      "detectionScore": 0.727,
+      "fontFile": "/fonts/adstudio/manrope-600.woff2"
     },
     "subheadline": {
       "fontId": "nunito-sans",
@@ -210,7 +234,8 @@
         "height": 0.018518518518518517
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/nunito-sans-800.woff2"
     },
     "cta": {
       "fontId": "manrope",
@@ -232,7 +257,8 @@
         "height": 0.017407407407407406
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/manrope-800.woff2"
     },
     "benefit_3": {
       "fontId": "manrope",
@@ -249,11 +275,11 @@
       "fitScore": 0.984,
       "sampleBox": {
         "x": 0.04398148148148148,
-        "y": 0.7714814814814814,
-        "width": 0.5546296296296296,
-        "height": 0.06814814814814815
+        "y": 0.7766666666666666,
+        "width": 0.3861111111111111,
+        "height": 0.06296296296296296
       },
-      "sampleLineCount": 2,
+      "sampleLineCount": 1,
       "detectionScore": 1,
       "fontFile": "/fonts/adstudio/manrope-600.woff2"
     },
@@ -271,10 +297,10 @@
       "color": "#2a3c42",
       "fitScore": 0.729,
       "sampleBox": {
-        "x": 0.04398148148148148,
-        "y": 0.7033333333333334,
-        "width": 0.337037037037037,
-        "height": 0.06222222222222222
+        "x": 0.14629629629629629,
+        "y": 0.7277777777777777,
+        "width": 0.23425925925925925,
+        "height": 0.015925925925925927
       },
       "sampleLineCount": 1,
       "detectionScore": 1,
@@ -294,12 +320,12 @@
       "color": "#314044",
       "fitScore": 0.834,
       "sampleBox": {
-        "x": 0.04398148148148148,
-        "y": 0.5940740740740741,
-        "width": 0.30972222222222223,
-        "height": 0.09962962962962962
+        "x": 0.14675925925925926,
+        "y": 0.6548148148148148,
+        "width": 0.20694444444444443,
+        "height": 0.016296296296296295
       },
-      "sampleLineCount": 2,
+      "sampleLineCount": 1,
       "detectionScore": 1,
       "fontFile": "/fonts/adstudio/oswald-300.woff2"
     }

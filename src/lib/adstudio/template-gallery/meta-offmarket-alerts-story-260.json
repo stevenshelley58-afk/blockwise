@@ -161,7 +161,8 @@
         "height": 0.06015625
       },
       "sampleLineCount": 5,
-      "detectionScore": 0.472
+      "detectionScore": 0.472,
+      "fontFile": "/fonts/adstudio/smooch-sans-300.woff2"
     },
     "subheadline": {
       "fontId": "noto-serif",
@@ -183,7 +184,8 @@
         "height": 0.015104166666666667
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/noto-serif-800.woff2"
     },
     "cta": {
       "fontId": "kanit",
@@ -205,7 +207,25 @@
         "height": 0.0421875
       },
       "sampleLineCount": 4,
-      "detectionScore": 0.421
+      "detectionScore": 0.421,
+      "fontFile": "/fonts/adstudio/kanit-900.woff2"
+    }
+  },
+  "deterministicEditing": {
+    "status": "partial",
+    "imageBoxes": {
+      "hero_graphic": {
+        "x": 0,
+        "y": 0.690625,
+        "width": 1,
+        "height": 0.309375
+      },
+      "agency_logo": {
+        "x": 0.4444444444444444,
+        "y": 0.044270833333333336,
+        "width": 0.1111111111111111,
+        "height": 0.059895833333333336
+      }
     }
   }
 }

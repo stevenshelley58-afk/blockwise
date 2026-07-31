@@ -152,7 +152,8 @@
         "height": 0.13359375
       },
       "sampleLineCount": 9,
-      "detectionScore": 0.707
+      "detectionScore": 0.707,
+      "fontFile": "/fonts/adstudio/smooch-sans-300.woff2"
     },
     "agent_role": {
       "fontId": "merriweather",
@@ -174,7 +175,8 @@
         "height": 0.01015625
       },
       "sampleLineCount": 1,
-      "detectionScore": 0.88
+      "detectionScore": 0.88,
+      "fontFile": "/fonts/adstudio/merriweather-800.woff2"
     },
     "subheadline": {
       "fontId": "lora",

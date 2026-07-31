@@ -152,7 +152,8 @@
         "height": 0.14765625
       },
       "sampleLineCount": 3,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/smooch-sans-300.woff2"
     },
     "subheadline": {
       "fontId": "open-sans",
@@ -174,7 +175,8 @@
         "height": 0.018489583333333334
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/open-sans-600.woff2"
     },
     "cta": {
       "fontId": "cairo",
@@ -196,7 +198,8 @@
         "height": 0.06822916666666666
       },
       "sampleLineCount": 1,
-      "detectionScore": 0.87
+      "detectionScore": 0.87,
+      "fontFile": "/fonts/adstudio/cairo-900.woff2"
     },
     "benefit_3": {
       "fontId": "merriweather",
@@ -218,7 +221,8 @@
         "height": 0.015104166666666667
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/merriweather-700.woff2"
     },
     "benefit_2": {
       "fontId": "merriweather",
@@ -240,7 +244,8 @@
         "height": 0.014583333333333334
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/merriweather-700.woff2"
     },
     "benefit_1": {
       "fontId": "smooch-sans",

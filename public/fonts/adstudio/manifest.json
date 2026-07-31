@@ -1,10 +1,70 @@
 {
-  "generatedAt": "2026-07-30T04:12:10.308Z",
+  "generatedAt": "2026-07-30T10:41:22.343Z",
   "gates": {
     "minFontFit": 0.6,
     "minRegionConfidence": 0.6
   },
   "faces": [
+    {
+      "file": "/fonts/adstudio/alegreya-400.woff2",
+      "fontId": "alegreya",
+      "family": "Alegreya",
+      "weight": 400,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/alegreya/v39/4UacrEBBsBhlBjvfkQjt71kZfyBzPgNG9hU4-6qj.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "fe33a80f1e2f7200d22980bb3838c168f1e7a36262a3e51ff73f47242e79c21f",
+      "bytes": 22872
+    },
+    {
+      "file": "/fonts/adstudio/amiri-700.woff2",
+      "fontId": "amiri",
+      "family": "Amiri",
+      "weight": 700,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/amiri/v30/J7acnpd8CGxBHp2VkaY_zp4.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "f53eb332acb23ec7e09e2487909c56cf841d649c970084d6a74d82aa9534f737",
+      "bytes": 20300
+    },
+    {
+      "file": "/fonts/adstudio/archivo-300.woff2",
+      "fontId": "archivo",
+      "family": "Archivo",
+      "weight": 300,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/archivo/v25/k3k6o8UDI-1M0wlSV9XAw6lQkqWY8Q82sJaRE-NWIDdgffTTajNZ-BdpF0s.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "cef4329971635da7cb76cc23116291cd988bb5b74958baf5b010a899fd8f73ca",
+      "bytes": 5620
+    },
+    {
+      "file": "/fonts/adstudio/arimo-600.woff2",
+      "fontId": "arimo",
+      "family": "Arimo",
+      "weight": 600,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/arimo/v36/P5sfzZCDf9_T_3cV7NCUECyoxNk3M8tcDRrBZQI.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "e56ba72ece2579125a34dda8b81f4a8692ee712757a5f5910dcf7c084cd0082e",
+      "bytes": 21188
+    },
+    {
+      "file": "/fonts/adstudio/barlow-600.woff2",
+      "fontId": "barlow",
+      "family": "Barlow",
+      "weight": 600,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/barlow/v13/7cHqv4kjgoGqM7E30-8s6FospT4.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "d9bb523921d15e2b3fca0b22860af8b6f4a878a54c0bddd7c522588988253943",
+      "bytes": 7896
+    },
     {
       "file": "/fonts/adstudio/barlow-condensed-800.woff2",
       "fontId": "barlow-condensed",
@@ -30,6 +90,102 @@
       "bytes": 21968
     },
     {
+      "file": "/fonts/adstudio/big-shoulders-300.woff2",
+      "fontId": "big-shoulders",
+      "family": "Big Shoulders",
+      "weight": 300,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/bigshoulders/v4/qFdk35CPh40oITJ69S3GFqy5-BQAcbz7z7beObrv_PytqyTi33thrko9FuPNCNk0HlY.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "1fafb8df64c87957813d45abc6fed00e1ae63db47879306f5e841dc196f112ea",
+      "bytes": 4592
+    },
+    {
+      "file": "/fonts/adstudio/big-shoulders-800.woff2",
+      "fontId": "big-shoulders",
+      "family": "Big Shoulders",
+      "weight": 800,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/bigshoulders/v4/qFdk35CPh40oITJ69S3GFqy5-BQAcbz7z7beObrv_PytqyTi33thrko9yOTNCNk0HlY.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "8c1ff1cbdb9ecb73647b797780c47f8b52505eb778eb1eb528e00f363467051e",
+      "bytes": 4604
+    },
+    {
+      "file": "/fonts/adstudio/big-shoulders-900.woff2",
+      "fontId": "big-shoulders",
+      "family": "Big Shoulders",
+      "weight": 900,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/bigshoulders/v4/qFdk35CPh40oITJ69S3GFqy5-BQAcbz7z7beObrv_PytqyTi33thrko94eTNCNk0HlY.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "6f1ae3155460dac4e4ae46797294035f705ceb0b4c8f02eb7c2eab7ecfcca946",
+      "bytes": 4612
+    },
+    {
+      "file": "/fonts/adstudio/cairo-900.woff2",
+      "fontId": "cairo",
+      "family": "Cairo",
+      "weight": 900,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/cairo/v31/SLXgc1nY6HkvangtZmpQdkhzfH5lkSs2SgRjCAGMQ1z0hEk5a1biLD-H.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "0260e5d40766ea0d2cde27055c0056a3fc7b8bbb79e0fc708fdb908d70b952d0",
+      "bytes": 14020
+    },
+    {
+      "file": "/fonts/adstudio/comfortaa-600.woff2",
+      "fontId": "comfortaa",
+      "family": "Comfortaa",
+      "weight": 600,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/comfortaa/v47/1Pt_g8LJRfWJmhDAuUsSQamb1W0lwk4S4bbLDrMfIA.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "c36fbad69b4ed515aaba38cd5671c0ad8f7b849887ed226a498a1e87f6b1e971",
+      "bytes": 13972
+    },
+    {
+      "file": "/fonts/adstudio/dm-sans-800.woff2",
+      "fontId": "dm-sans",
+      "family": "DM Sans",
+      "weight": 800,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/dmsans/v17/rP2tp2ywxg089UriI5-g4vlH9VoD8CmcqZG40F9JadbnoEwAIptRSW32.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "094c859b70f10e1e010d293381f5cd032ef9929380e2dca97d12a574c2ef5c0a",
+      "bytes": 14404
+    },
+    {
+      "file": "/fonts/adstudio/dm-sans-900.woff2",
+      "fontId": "dm-sans",
+      "family": "DM Sans",
+      "weight": 900,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/dmsans/v17/rP2tp2ywxg089UriI5-g4vlH9VoD8CmcqZG40F9JadbnoEwAC5tRR232VGM.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "cd8ca17438aa601dbdf94a2d244594938cad0e6ecd5ff95a8e796ce521232fa7",
+      "bytes": 7448
+    },
+    {
+      "file": "/fonts/adstudio/elsie-swash-caps-900.woff2",
+      "fontId": "elsie-swash-caps",
+      "family": "Elsie Swash Caps",
+      "weight": 900,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/elsieswashcaps/v25/845ENN8xGZyVX5MVo_upKf7KnjK0RW74PGSNT7aw.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "6070ac3c9803ef0d600c1da805ebd2d573c6e862b145da5f0f0bc060c4ccfbe9",
+      "bytes": 2872
+    },
+    {
       "file": "/fonts/adstudio/figtree-900.woff2",
       "fontId": "figtree",
       "family": "Figtree",
@@ -42,6 +198,90 @@
       "bytes": 11024
     },
     {
+      "file": "/fonts/adstudio/fira-sans-300.woff2",
+      "fontId": "fira-sans",
+      "family": "Fira Sans",
+      "weight": 300,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/firasans/v18/va9B4kDNxMZdWfMOD5VnPKreSxf6TF0.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "c3052e66783c8888c6b408f4ed9501c8848d3e4f5a1d1f463cda373a4fbff3e6",
+      "bytes": 17612
+    },
+    {
+      "file": "/fonts/adstudio/fira-sans-800.woff2",
+      "fontId": "fira-sans",
+      "family": "Fira Sans",
+      "weight": 800,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/firasans/v18/va9B4kDNxMZdWfMOD5VnMK7eSxf6TF0.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "de965f87e994407e0eb8e7dcacd559a16b3c98ecd2e67560cc64f576b28a0d07",
+      "bytes": 19588
+    },
+    {
+      "file": "/fonts/adstudio/fira-sans-900.woff2",
+      "fontId": "fira-sans",
+      "family": "Fira Sans",
+      "weight": 900,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/firasans/v18/va9B4kDNxMZdWfMOD5VnFK_eSxf6TF0.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "4dc02f5c207d2ff068cb622900e25b49310a3fab5632f0e3b8d0b95219efd2af",
+      "bytes": 19428
+    },
+    {
+      "file": "/fonts/adstudio/frank-ruhl-libre-900.woff2",
+      "fontId": "frank-ruhl-libre",
+      "family": "Frank Ruhl Libre",
+      "weight": 900,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/frankruhllibre/v23/j8_96_fAw7jrcalD7oKYNX0QfAnPcbzNEEB7OoicBw5sZmqXNRU.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "07bf8cdae1f309a16a002227c18f9b2aff83fbfae8e74a2d499561c865f08f0f",
+      "bytes": 14880
+    },
+    {
+      "file": "/fonts/adstudio/glegoo-700.woff2",
+      "fontId": "glegoo",
+      "family": "Glegoo",
+      "weight": 700,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/glegoo/v17/_Xmu-HQyrTKWaw2xN4aND65o.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "67b5f8c784c6901492dd6462787776d1a2f5afb4a06cb358d10d979eaefd183b",
+      "bytes": 17884
+    },
+    {
+      "file": "/fonts/adstudio/grenze-gotisch-900.woff2",
+      "fontId": "grenze-gotisch",
+      "family": "Grenze Gotisch",
+      "weight": 900,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/grenzegotisch/v20/Fh4hPjjqNDz1osh_jX9YfjudpBJBNV5y5wf_k1i5hjhkeIqcUPQ.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "fa08034a8904c2e9bc6c8663ad3d68e9b115014db2f9bf5d43b3cb7f8f33ce50",
+      "bytes": 5500
+    },
+    {
+      "file": "/fonts/adstudio/heebo-800.woff2",
+      "fontId": "heebo",
+      "family": "Heebo",
+      "weight": 800,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/heebo/v28/NGSpv5_NC0k9P_v6ZUCbLRAHxK1ECSusd0mm_00.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "2854acdc4dd10739eaa1daceb1a4373574523f70548128f05db6ce98ab908c5c",
+      "bytes": 5168
+    },
+    {
       "file": "/fonts/adstudio/jost-300.woff2",
       "fontId": "jost",
       "family": "Jost",
@@ -52,6 +292,42 @@
       "licenseUrl": "https://openfontlicense.org",
       "sha256": "4755701d1a52180592b7619acd5f7f7852beb54adb7ee282ea8ad1d1bcfb2ae6",
       "bytes": 9876
+    },
+    {
+      "file": "/fonts/adstudio/kanit-300.woff2",
+      "fontId": "kanit",
+      "family": "Kanit",
+      "weight": 300,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/kanit/v17/nKKU-Go6G5tXcr4-ORWzVaF5NQ.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "20aee722979a0f91b2baac3d0590a512b02fe00f80c454c07a178cc3964f33c2",
+      "bytes": 13156
+    },
+    {
+      "file": "/fonts/adstudio/kanit-600.woff2",
+      "fontId": "kanit",
+      "family": "Kanit",
+      "weight": 600,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/kanit/v17/nKKU-Go6G5tXcr5KPxWzVaF5NQ.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "ac40cf0d115bc06bdde46dcb264db6ea887d6eefe36f7f8286f3342f1facf078",
+      "bytes": 13784
+    },
+    {
+      "file": "/fonts/adstudio/kanit-700.woff2",
+      "fontId": "kanit",
+      "family": "Kanit",
+      "weight": 700,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/kanit/v17/nKKU-Go6G5tXcr4uPhWzVaF5NQ.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "20ee1ffc0cbccfc9e4b7d660d2937f82b75d0eb41354e71e22752495aa51f68a",
+      "bytes": 13488
     },
     {
       "file": "/fonts/adstudio/kanit-800.woff2",
@@ -90,6 +366,42 @@
       "bytes": 13432
     },
     {
+      "file": "/fonts/adstudio/lato-900.woff2",
+      "fontId": "lato",
+      "family": "Lato",
+      "weight": 900,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/lato/v25/S6u9w4BMUTPHh50XSwaPGR_p.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "e266d64fae0958748c289b2288e29991b4b8386eb4935517c4544a2478cfb703",
+      "bytes": 5640
+    },
+    {
+      "file": "/fonts/adstudio/league-gothic-400.woff2",
+      "fontId": "league-gothic",
+      "family": "League Gothic",
+      "weight": 400,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/leaguegothic/v13/qFdR35CBi4tvBz81xy7WG7ep-BQAY7Krj7feObpH_9ahg9U.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "44dceee4d918f5928d05ad0711d17e1edd421ce7fd7bed91d05642d8d693a8b1",
+      "bytes": 10436
+    },
+    {
+      "file": "/fonts/adstudio/libre-franklin-800.woff2",
+      "fontId": "libre-franklin",
+      "family": "Libre Franklin",
+      "weight": 800,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/librefranklin/v20/jizOREVItHgc8qDIbSTKq4XkRg8T88bjFuXOnduhrsKkDdDJX-I.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "a70e3e3e8897b2e52cf0e8cb2651b6ac6eaf1a16bdcb05106027a6e19c8d6488",
+      "bytes": 11496
+    },
+    {
       "file": "/fonts/adstudio/libre-franklin-900.woff2",
       "fontId": "libre-franklin",
       "family": "Libre Franklin",
@@ -100,6 +412,30 @@
       "licenseUrl": "https://openfontlicense.org",
       "sha256": "f8386fc03ba814a07ec894149767443c12c0745b11cab042ae76ac66c18f2955",
       "bytes": 15464
+    },
+    {
+      "file": "/fonts/adstudio/londrina-shadow-400.woff2",
+      "fontId": "londrina-shadow",
+      "family": "Londrina Shadow",
+      "weight": 400,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/londrinashadow/v28/oPWX_kB4kOQoWNJmjxLV5JuoCUlnQVyT.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "5f4f4d87135231b02577fd2ed96a9881b85b1a5c97b5ab3b683e94de713a7e99",
+      "bytes": 57928
+    },
+    {
+      "file": "/fonts/adstudio/londrina-solid-900.woff2",
+      "fontId": "londrina-solid",
+      "family": "Londrina Solid",
+      "weight": 900,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/londrinasolid/v19/flUiRq6sw40kQEJxWNgkLuudGfvdDwYzlZw.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "ed455d5fb4d1b1e9e1892db85d1026c9e435dc4412ede3244c7ff92ef8b50ad9",
+      "bytes": 32452
     },
     {
       "file": "/fonts/adstudio/lora-600.woff2",
@@ -126,6 +462,18 @@
       "bytes": 21044
     },
     {
+      "file": "/fonts/adstudio/manrope-400.woff2",
+      "fontId": "manrope",
+      "family": "Manrope",
+      "weight": 400,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/manrope/v20/xn7_YHE41ni1AdIRqAuZuw1Bx9mbZk79FN_P-bnBeA.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "2888616ddce6d7a011b083bc27527df3313f1df71dc54fd752a83f347f4e8e29",
+      "bytes": 1624
+    },
+    {
       "file": "/fonts/adstudio/manrope-500.woff2",
       "fontId": "manrope",
       "family": "Manrope",
@@ -150,6 +498,18 @@
       "bytes": 14172
     },
     {
+      "file": "/fonts/adstudio/manrope-700.woff2",
+      "fontId": "manrope",
+      "family": "Manrope",
+      "weight": 700,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/manrope/v20/xn7_YHE41ni1AdIRqAuZuw1Bx9mbZk4aE9_P-bnBeA.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "0dc9d9b75bffd07e25f727e8d67a39cc731e21c718b3b86267226bb4e2757813",
+      "bytes": 1568
+    },
+    {
       "file": "/fonts/adstudio/manrope-800.woff2",
       "fontId": "manrope",
       "family": "Manrope",
@@ -160,6 +520,42 @@
       "licenseUrl": "https://openfontlicense.org",
       "sha256": "74c161dbcbce7c3590803cc72dc1f63313c360e13367aba5075a7b7b3818ea49",
       "bytes": 13648
+    },
+    {
+      "file": "/fonts/adstudio/martel-600.woff2",
+      "fontId": "martel",
+      "family": "Martel",
+      "weight": 600,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/martel/v12/PN_yRfK9oXHga0XVuewqghzW.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "26a4087174dc5c9199182fbc7a9df7a746564e2882dd7b9bd44d50f585dac2c4",
+      "bytes": 18464
+    },
+    {
+      "file": "/fonts/adstudio/merriweather-300.woff2",
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "weight": 300,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/merriweather/v33/u-4D0qyriQwlOrhSvowK_l5UcA6zuSYEqOzpPe3HOZJ5eX1WtLaQwmYiScCmDxhtNOKl8yDrgCcaGV31GvU.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "f4b7d84d4c4bd217985b5f4a93d9e61f63670a2efc5a5e6048afd044bc921330",
+      "bytes": 17840
+    },
+    {
+      "file": "/fonts/adstudio/merriweather-400.woff2",
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "weight": 400,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/merriweather/v33/u-4D0qyriQwlOrhSvowK_l5UcA6zuSYEqOzpPe3HOZJ5eX1WtLaQwmYiScCmDxhtNOKl8yDr3icaGV31GvU.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "e96c559a8b1d6095d11a3f1b440354115235babfe1fa2d002d63d8eff3fa482d",
+      "bytes": 18600
     },
     {
       "file": "/fonts/adstudio/merriweather-500.woff2",
@@ -210,6 +606,90 @@
       "bytes": 48672
     },
     {
+      "file": "/fonts/adstudio/merriweather-900.woff2",
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "weight": 900,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/merriweather/v33/u-4D0qyriQwlOrhSvowK_l5UcA6zuSYEqOzpPe3HOZJ5eX1WtLaQwmYiScCmDxhtNOKl8yDrdyAaGV31GvU.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "f46470c4106fc6cf2a507991af1288bda867fddff87c4b919d8d39632b869fe4",
+      "bytes": 18220
+    },
+    {
+      "file": "/fonts/adstudio/montserrat-900.woff2",
+      "fontId": "montserrat",
+      "family": "Montserrat",
+      "weight": 900,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/montserrat/v31/JTUHjIg1_i6t8kCHKm4532VJOt5-QNFgpCvC73w0aXpsog.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "522cebe603650541da7c59fa833d4a5b110dee8fbc977c688ccb3b33ae2ac7f1",
+      "bytes": 11572
+    },
+    {
+      "file": "/fonts/adstudio/mulish-900.woff2",
+      "fontId": "mulish",
+      "family": "Mulish",
+      "weight": 900,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/mulish/v18/1Ptyg83HX_SGhgqO0yLcmjzUAuWexTpW8aqvG4w-.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "a0a2462f3ad2de62dcb61576815265a6807be84272b8449da90874c03f7ec45b",
+      "bytes": 8676
+    },
+    {
+      "file": "/fonts/adstudio/museomoderno-900.woff2",
+      "fontId": "museomoderno",
+      "family": "MuseoModerno",
+      "weight": 900,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/museomoderno/v29/zrf30HnU0_7wWdMrFcWqSEXPVyEaWJ55pTleMv9DieQQjNKl.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "d8051fa56a8d212376425d41560cff1b1f846a5964ed90530814247c0b8cc456",
+      "bytes": 3868
+    },
+    {
+      "file": "/fonts/adstudio/noto-serif-800.woff2",
+      "fontId": "noto-serif",
+      "family": "Noto Serif",
+      "weight": 800,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/notoserif/v33/ga6iaw1J5X9T9RW6j9bNVls-hfgvz8JcMofYTa32J4wsL2JAlAhZKFeTyscKtq8.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "9cc0044a3f473048140654632bdd703ce6b7379d8f00064b62e02ef3f6f33c0d",
+      "bytes": 28744
+    },
+    {
+      "file": "/fonts/adstudio/nunito-sans-400.woff2",
+      "fontId": "nunito-sans",
+      "family": "Nunito Sans",
+      "weight": 400,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/nunitosans/v19/pe1mMImSLYBIv1o4X1M8ce2xCx3yop4tQpF_MeTm0lfGWVpNn64CL7U8upHZIbMV51Q42ptCp5F5bxqqtQ1yiU4G1ilXs1Ul.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "d9976dd1dc9c0d65046b52810e7cc69cfc229ee9939628ffe637e17efe4ef1ed",
+      "bytes": 13892
+    },
+    {
+      "file": "/fonts/adstudio/nunito-sans-800.woff2",
+      "fontId": "nunito-sans",
+      "family": "Nunito Sans",
+      "weight": 800,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/nunitosans/v19/pe1mMImSLYBIv1o4X1M8ce2xCx3yop4tQpF_MeTm0lfGWVpNn64CL7U8upHZIbMV51Q42ptCp5F5bxqqtQ1yiU4GVi5XvlUlM_Y.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "f2615ce104011f8d6f8d07676254d79d22a6905a70ecbce3f980c2489bbbee47",
+      "bytes": 9064
+    },
+    {
       "file": "/fonts/adstudio/open-sans-300.woff2",
       "fontId": "open-sans",
       "family": "Open Sans",
@@ -234,6 +714,18 @@
       "bytes": 18620
     },
     {
+      "file": "/fonts/adstudio/open-sans-700.woff2",
+      "fontId": "open-sans",
+      "family": "Open Sans",
+      "weight": 700,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/opensans/v44/memSYaGs126MiZpBA-UvWbX2vVnXBbObj2OVZyOOSr4dVJWUgsg-1x4taVIGxA.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "ae07fab39888e22081b44db4133644d83a20be46b0e32fd65dea7c2e4b0ad864",
+      "bytes": 17520
+    },
+    {
       "file": "/fonts/adstudio/oswald-300.woff2",
       "fontId": "oswald",
       "family": "Oswald",
@@ -256,6 +748,18 @@
       "licenseUrl": "https://openfontlicense.org",
       "sha256": "e902b779e43944c300cf8ae5e4a1affa68cb8a823fd263dd2f479c4cdfbd213c",
       "bytes": 12248
+    },
+    {
+      "file": "/fonts/adstudio/oswald-500.woff2",
+      "fontId": "oswald",
+      "family": "Oswald",
+      "weight": 500,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/oswald/v57/TK3_WkUHHAIjg75cFRf3bXL8LICs18NvsUtiZTaR.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "8efb1f76958d3c975bda1db05402807c1cde0c9c910d6f5f9b1e3d255b0be78f",
+      "bytes": 8132
     },
     {
       "file": "/fonts/adstudio/oswald-600.woff2",
@@ -294,6 +798,66 @@
       "bytes": 14140
     },
     {
+      "file": "/fonts/adstudio/outfit-900.woff2",
+      "fontId": "outfit",
+      "family": "Outfit",
+      "weight": 900,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/outfit/v15/QGYyz_MVcBeNP4NjuGObqx1XmO1I4ZmyO4a0Ew.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "090bdae2e8f2fdc962732c8f918d57c5501737c6826be989bcd770860ec19f85",
+      "bytes": 13500
+    },
+    {
+      "file": "/fonts/adstudio/overlock-900.woff2",
+      "fontId": "overlock",
+      "family": "Overlock",
+      "weight": 900,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/overlock/v19/Z9XSDmdMWRiN1_T9Z7xaz_mFtry79Q.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "36ef05adf5480e16bf38b6d7482efdc6fd05c2a35a456580157a3e23df891020",
+      "bytes": 1676
+    },
+    {
+      "file": "/fonts/adstudio/playfair-display-700.woff2",
+      "fontId": "playfair-display",
+      "family": "Playfair Display",
+      "weight": 700,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/playfairdisplay/v40/nuFvD-vYSZviVYUb_rj3ij__anPXJzDwcbmjWBN2PKeiunDTbtPY_Q.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "cfbfb0e36791f82470367d25c5a8d498dc1561a7a66a4172b7c6df749fdf9894",
+      "bytes": 12360
+    },
+    {
+      "file": "/fonts/adstudio/playfair-display-800.woff2",
+      "fontId": "playfair-display",
+      "family": "Playfair Display",
+      "weight": 800,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/playfairdisplay/v40/nuFvD-vYSZviVYUb_rj3ij__anPXJzDwcbmjWBN2PKfFunDTbtPY_Q.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "b56fac55959b4ddf165c9f3666edd35de2792f3fd54177c3cb41ce44a98451c9",
+      "bytes": 12396
+    },
+    {
+      "file": "/fonts/adstudio/plus-jakarta-sans-500.woff2",
+      "fontId": "plus-jakarta-sans",
+      "family": "Plus Jakarta Sans",
+      "weight": 500,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/plusjakartasans/v12/LDIbaomQNQcsA88c7O9yZ4KMCoOg4IA6-91aHEjcWuA_m079QB_VIKg.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "579e73a04f73af905837351f4d529d94765af50d2faaaed8dfc4449872641849",
+      "bytes": 1072
+    },
+    {
       "file": "/fonts/adstudio/plus-jakarta-sans-600.woff2",
       "fontId": "plus-jakarta-sans",
       "family": "Plus Jakarta Sans",
@@ -304,6 +868,30 @@
       "licenseUrl": "https://openfontlicense.org",
       "sha256": "8872bb5c9111df9bd3162c2394aee6354d782b13408a4dd5bbf65c48207206e6",
       "bytes": 12188
+    },
+    {
+      "file": "/fonts/adstudio/plus-jakarta-sans-700.woff2",
+      "fontId": "plus-jakarta-sans",
+      "family": "Plus Jakarta Sans",
+      "weight": 700,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/plusjakartasans/v12/LDIbaomQNQcsA88c7O9yZ4KMCoOg4IA6-91aHEjcWuA_Tkn9QB_VIKg.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "eaeb36e3ca51e43f00783cfbdd980b8c307dce8c5ed3aafc5119ae1ca2566992",
+      "bytes": 1016
+    },
+    {
+      "file": "/fonts/adstudio/plus-jakarta-sans-800.woff2",
+      "fontId": "plus-jakarta-sans",
+      "family": "Plus Jakarta Sans",
+      "weight": 800,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/plusjakartasans/v12/LDIbaomQNQcsA88c7O9yZ4KMCoOg4IA6-91aHEjcWuA_KUn9QB_VIKg.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "6bb656316df8e693ae3fc77f12ad1d02ac318f8ab8c8b4bc761b6aa99d8ea7c1",
+      "bytes": 1036
     },
     {
       "file": "/fonts/adstudio/poppins-500.woff2",
@@ -328,6 +916,42 @@
       "licenseUrl": "https://openfontlicense.org",
       "sha256": "9338e65fc077355c7a87ae0d64cc101e23b9bf8ad78ae65f0f319c857311b526",
       "bytes": 7816
+    },
+    {
+      "file": "/fonts/adstudio/poppins-900.woff2",
+      "fontId": "poppins",
+      "family": "Poppins",
+      "weight": 900,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/poppins/v24/pxiByp8kv8JHgFVrLBT5Z11lFc-K.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "7e5f8b8628f6e5a751c907900f98f2a7396ecd08a6b5f6766cf6b564f4aa436c",
+      "bytes": 38192
+    },
+    {
+      "file": "/fonts/adstudio/pt-sans-700.woff2",
+      "fontId": "pt-sans",
+      "family": "PT Sans",
+      "weight": 700,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/ptsans/v18/jizfRExUiTo99u79B_mh0OOtLQ0Z.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "5da273f9411e641a407b6a6aa67874686ee2a4acded3fd217aa43841df945e53",
+      "bytes": 39584
+    },
+    {
+      "file": "/fonts/adstudio/quicksand-300.woff2",
+      "fontId": "quicksand",
+      "family": "Quicksand",
+      "weight": 300,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/quicksand/v37/6xK-dSZaM9iE8KbpRA_LJ3z8mH9BOJvgkKEo58m-wi40.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "55155473f87144632373d538eb042733b2c98e5aa31810a873b44ae4620c1f55",
+      "bytes": 5060
     },
     {
       "file": "/fonts/adstudio/quicksand-500.woff2",
@@ -402,6 +1026,18 @@
       "bytes": 22816
     },
     {
+      "file": "/fonts/adstudio/raleway-700.woff2",
+      "fontId": "raleway",
+      "family": "Raleway",
+      "weight": 700,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/raleway/v37/1Ptxg8zYS_SKggPN4iEgvnHyvveLxVs9pbCFPrEHJA.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "8209fde7819676437dabb77b206c763874a44106d88f1b72071ff5978431eb03",
+      "bytes": 13460
+    },
+    {
       "file": "/fonts/adstudio/raleway-900.woff2",
       "fontId": "raleway",
       "family": "Raleway",
@@ -412,6 +1048,42 @@
       "licenseUrl": "https://openfontlicense.org",
       "sha256": "90c26435c632fe30ab917e1093df51eea055f44e52018c113d7e6db98301231c",
       "bytes": 21976
+    },
+    {
+      "file": "/fonts/adstudio/roboto-600.woff2",
+      "fontId": "roboto",
+      "family": "Roboto",
+      "weight": 600,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/roboto/v50/KFOMCnqEu92Fr1ME7kSn66aGLdTylUAMQXC89YmC2DPNWuYaalmUiAo.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "7608821ae7a01e76cb42e6fda12421e5f546efd79bd51850b75d39831423f3cb",
+      "bytes": 20940
+    },
+    {
+      "file": "/fonts/adstudio/roboto-700.woff2",
+      "fontId": "roboto",
+      "family": "Roboto",
+      "weight": 700,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/roboto/v51/KFOMCnqEu92Fr1ME7kSn66aGLdTylUAMQXC89YmC2DPNWuYjalmZiArmlw.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "b64aec59c2342a732ec9a766e0846692dad652c571ca3bc7fd31bf53943887eb",
+      "bytes": 17620
+    },
+    {
+      "file": "/fonts/adstudio/roboto-800.woff2",
+      "fontId": "roboto",
+      "family": "Roboto",
+      "weight": 800,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/roboto/v50/KFOMCnqEu92Fr1ME7kSn66aGLdTylUAMQXC89YmC2DPNWuZEalmUiAo.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "f07d0c93a3147897fad7ae0f6d52fba153a1ecb5a73477b8741a9dbd4711e8fe",
+      "bytes": 20908
     },
     {
       "file": "/fonts/adstudio/roboto-condensed-400.woff2",
@@ -436,6 +1108,18 @@
       "licenseUrl": "https://openfontlicense.org",
       "sha256": "669bad4234158212f880cfa1241dc18866f748b5b52cdf4aaeb00c56cbd87352",
       "bytes": 21040
+    },
+    {
+      "file": "/fonts/adstudio/roboto-condensed-700.woff2",
+      "fontId": "roboto-condensed",
+      "family": "Roboto Condensed",
+      "weight": 700,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/robotocondensed/v31/ieVo2ZhZI2eCN5jzbjEETS9weq8-_d6T_POl0fRJeyVVpcBD5XxxKA.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "26bbae1360c000cd7127ad38e660b7c7165b18dd6abbe1c21830c1e066394434",
+      "bytes": 17496
     },
     {
       "file": "/fonts/adstudio/roboto-condensed-800.woff2",
@@ -472,6 +1156,54 @@
       "licenseUrl": "http://www.apache.org/licenses/LICENSE-2.0",
       "sha256": "554c88442931155d2f07608d29fc9d403962f934ec43ef9aff6823e9c2c25ac9",
       "bytes": 14376
+    },
+    {
+      "file": "/fonts/adstudio/roboto-slab-900.woff2",
+      "fontId": "roboto-slab",
+      "family": "Roboto Slab",
+      "weight": 900,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/robotoslab/v36/BngbUXZYTXPIvIBgJJSb6s3BzlRRfKOFbvjoJYOmYmRjRdE.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "88d27b763f182cef61d1c12de04b43b818e7e476bc251f5d52d243498c3c2431",
+      "bytes": 12884
+    },
+    {
+      "file": "/fonts/adstudio/rubik-700.woff2",
+      "fontId": "rubik",
+      "family": "Rubik",
+      "weight": 700,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/rubik/v31/iJWZBXyIfDnIV5PNhY1KTN7Z-Yh-4I-FUkU1Z4Y.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "5cab633c7644d8683dd78ca3fd63d05fa9ee2cc57b3401df7af6fcb62c83d4fa",
+      "bytes": 17660
+    },
+    {
+      "file": "/fonts/adstudio/rubik-900.woff2",
+      "fontId": "rubik",
+      "family": "Rubik",
+      "weight": 900,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/rubik/v31/iJWZBXyIfDnIV5PNhY1KTN7Z-Yh-ro-FUkU1Z4Y.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "bd8c4ce6b60dc7eb25ed8050b079fa529fe8f337a5ed4c0f141404e3197d725b",
+      "bytes": 15956
+    },
+    {
+      "file": "/fonts/adstudio/saira-900.woff2",
+      "fontId": "saira",
+      "family": "Saira",
+      "weight": 900,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/saira/v23/memWYa2wxmKQyPMrZX79wwYZQMhsyuShhKMjjbU9uXuA7_PFksAxljYm.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "c89cdac300402bbd22fd730c86d3438ccdaeef29742fd29e2787d91e6f1a3f80",
+      "bytes": 4888
     },
     {
       "file": "/fonts/adstudio/smooch-sans-300.woff2",
@@ -532,6 +1264,42 @@
       "licenseUrl": "https://openfontlicense.org",
       "sha256": "df39154519f213b8eecc77a8ac2af9e379aa0ae977e885864fe7bdd6cc2bdab4",
       "bytes": 11144
+    },
+    {
+      "file": "/fonts/adstudio/smooch-sans-800.woff2",
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "weight": 800,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/smoochsans/v15/c4mz1n5uGsXss2LJh1QH6b129FZvxPj6I4oiQUdYfqgfBlw.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "4d14d0d3c70f966b6559cf5dd372ab305045329521825596a317df392139e63a",
+      "bytes": 4516
+    },
+    {
+      "file": "/fonts/adstudio/smooch-sans-900.woff2",
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "weight": 900,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/smoochsans/v15/c4mz1n5uGsXss2LJh1QH6b129FZvxPj6I4oiaEdYfqgfBlw.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "7e498a0ef7e779b1cc92187c05f4b8cd69663efaf7d3cb253e8d55f1b705fe06",
+      "bytes": 4404
+    },
+    {
+      "file": "/fonts/adstudio/titillium-web-900.woff2",
+      "fontId": "titillium-web",
+      "family": "Titillium Web",
+      "weight": 900,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/titilliumweb/v19/NaPDcZTIAOhVxoMyOr9n_E7ffEDBGIVzY4SY.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "3fe189a0cc2445983db1f290cc5d8e372370d19df2afb08b90335b462f2cb867",
+      "bytes": 5524
     }
   ],
   "excluded": [

@@ -11,16 +11,20 @@
 
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { detectTemplateRegions } from "./detect-regions.mjs";
 import { extractTargetProfile } from "./extract-target-profile.mjs";
 import { matchFont } from "./match-font.mjs";
+import { parseArgs, selectTemplateFiles } from "./type-specs-args.mjs";
 
 const GALLERY_DIR = path.resolve(process.cwd(), "src/lib/adstudio/template-gallery");
 const REPORT_PATH = path.resolve(process.cwd(), ".cache/font-corpus/type-spec-report.json");
 
-const regionsOnly = process.argv.includes("--regions-only");
+export function measuredLineSizeRatio(fullBoxSizeRatio, lineCount) {
+  return fullBoxSizeRatio * Math.max(1, lineCount ?? 1);
+}
 
-async function processTemplate(templateId, raw) {
+async function processTemplate(templateId, raw, { regionsOnly }) {
   const imageSrc = raw?.sample?.imageSrc;
   const textInputs = raw?.inputs?.text ?? [];
   const imagePath = path.resolve(process.cwd(), "public", imageSrc.replace(/^\//, ""));
@@ -40,6 +44,13 @@ async function processTemplate(templateId, raw) {
       sampleBox: region.box,
       sampleLineCount: Math.max(1, region.lineCount ?? 1),
       detectionScore: Math.round(region.score * 1000) / 1000,
+      measurementSource: "ocr-v2",
+      measuredLines: (region.lineBoxes ?? []).map((sampleBox, index) => ({
+        text: region.lineTexts?.[index] ?? "",
+        sampleBox,
+        sizeRatio: 0,
+        scaleX: 1,
+      })),
     };
     if (regionsOnly) {
       const existing = raw.typography?.[region.key];
@@ -69,7 +80,17 @@ async function processTemplate(templateId, raw) {
       continue;
     }
     const { candidatesEvaluated, key, ...typeSpec } = spec;
-    typography[key] = { ...typeSpec, ...regionMetadata };
+    const measuredLines = regionMetadata.measuredLines.map((line) => ({
+      ...line,
+      // Each OCR line box already captures that line's own cap height. Use
+      // the face's font-size-to-glyph-height ratio for every line; multiplying
+      // the full-block ratio back by lineCount restores that glyph ratio.
+      // Scaling by unionBox/lineBox instead would make every line the same
+      // absolute font size and lose the sample's intentional hierarchy.
+      sizeRatio: measuredLineSizeRatio(typeSpec.sizeRatio, region.lineCount),
+      scaleX: line.scaleX ?? 1,
+    }));
+    typography[key] = { ...typeSpec, ...regionMetadata, measuredLines };
     matches.push({
       key,
       fontId: typeSpec.fontId,
@@ -84,15 +105,21 @@ async function processTemplate(templateId, raw) {
 }
 
 async function main() {
+  const { help, regionsOnly, templateIds } = parseArgs(process.argv.slice(2));
+  if (help) {
+    console.log("Usage: node scripts/build/font-corpus/adstudio-type-specs.mjs [--regions-only] [--template <id[,id...]>]");
+    return;
+  }
   await mkdir(path.dirname(REPORT_PATH), { recursive: true });
   const entries = await readdir(GALLERY_DIR, { withFileTypes: true });
-  const templateFiles = entries
+  const templateFiles = selectTemplateFiles(entries
     .filter((e) => e.isFile() && e.name.endsWith(".json"))
     .map((e) => e.name)
-    .sort();
+    .sort(), templateIds);
 
   const report = {
     generatedAt: new Date().toISOString(),
+    selection: templateIds.size ? [...templateIds].sort() : "all",
     templates: [],
     totals: { templates: 0, regions: 0, matched: 0, skipped: 0, fitScoreSum: 0 },
   };
@@ -109,7 +136,7 @@ async function main() {
 
     let result;
     try {
-      result = await processTemplate(templateId, raw);
+      result = await processTemplate(templateId, raw, { regionsOnly });
     } catch (error) {
       console.log(`ERROR ${templateId}: ${error.stack ?? error.message}`);
       report.templates.push({ templateId, error: error.message });
@@ -150,7 +177,9 @@ async function main() {
   console.log(`\nWrote ${REPORT_PATH}`);
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exit(1);
-});
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main().catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
+}

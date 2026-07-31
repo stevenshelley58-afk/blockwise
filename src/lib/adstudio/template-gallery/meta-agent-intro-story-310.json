@@ -166,7 +166,8 @@
         "height": 0.10598958333333333
       },
       "sampleLineCount": 12,
-      "detectionScore": 0.667
+      "detectionScore": 0.667,
+      "fontFile": "/fonts/adstudio/kanit-300.woff2"
     },
     "headline": {
       "fontId": "plus-jakarta-sans",
@@ -188,7 +189,8 @@
         "height": 0.013541666666666667
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/plus-jakarta-sans-800.woff2"
     },
     "agent_role": {
       "fontId": "merriweather",
@@ -210,7 +212,8 @@
         "height": 0.011197916666666667
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/merriweather-800.woff2"
     },
     "subheadline": {
       "fontId": "oswald",
@@ -232,7 +235,8 @@
         "height": 0.11380208333333333
       },
       "sampleLineCount": 2,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/oswald-300.woff2"
     },
     "email": {
       "fontId": "roboto-condensed",
@@ -300,7 +304,8 @@
         "height": 0.017447916666666667
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/roboto-slab-900.woff2"
     },
     "cta": {
       "fontId": "plus-jakarta-sans",
@@ -322,7 +327,8 @@
         "height": 0.02421875
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/plus-jakarta-sans-700.woff2"
     }
   }
 }

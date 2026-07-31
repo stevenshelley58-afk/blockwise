@@ -14,6 +14,10 @@ const execFileAsync = promisify(execFile);
 const CACHE_DIR = path.resolve(process.cwd(), ".cache/font-corpus/regions");
 const UPSCALE = 2;
 const MIN_WORD_CONF = 30;
+// Bump when the matching algorithm changes. Region geometry is input to the
+// persisted type specs, so reusing a cache made by an older matcher quietly
+// preserves precisely the bad boxes a rebuild is intended to correct.
+const REGION_DETECTION_VERSION = 6;
 // Below this contiguous-match score, treat the box as unreliable — flagged
 // in the output (`lowConfidence: true`) for a human/manual pass rather than
 // silently trusted, per the "no silent caps" build principle.
@@ -49,6 +53,15 @@ function similarity(a, b) {
   if (!na || !nb) return 0;
   const dist = levenshtein(na, nb);
   return 1 - dist / Math.max(na.length, nb.length);
+}
+
+function lineCanContribute(lineText, sample) {
+  const lineTokens = normalizeForMatch(lineText).split(" ").filter(Boolean);
+  const sampleTokens = normalizeForMatch(sample).split(" ").filter(Boolean);
+  if (!lineTokens.length || !sampleTokens.length) return false;
+  return lineTokens.some((lineToken) => sampleTokens.some((sampleToken) => {
+    return similarity(lineToken, sampleToken) >= 0.5;
+  }));
 }
 
 // Plain grayscale loses contrast for saturated colored text on a
@@ -210,7 +223,7 @@ function dedupeLines(lines) {
  * merge windows and keeping whichever contiguous run best matches the known
  * string. Greedy, in reading order, each OCR line consumed at most once.
  */
-function matchRegionsToLines(textInputs, lines, imageWidth, imageHeight) {
+export function matchRegionsToLines(textInputs, lines, imageWidth, imageHeight) {
   const used = new Array(lines.length).fill(false);
   const results = [];
   // Longer expected strings first: give body copy first pick of its lines
@@ -223,27 +236,61 @@ function matchRegionsToLines(textInputs, lines, imageWidth, imageHeight) {
       if (used[start]) continue;
       let mergedText = "";
       let left = Infinity, top = Infinity, right = -Infinity, bottom = -Infinity;
+      const included = [];
       // Window generous enough to bridge low-confidence noise lines that
       // survive MIN_WORD_CONF filtering but still sit between two real,
       // widely-separated lines (e.g. a 2-line wrapped headline with a few
       // stray low-conf photo-texture "words" detected in the gap) — the
       // best-scoring contiguous run still wins, so widening this doesn't
       // make unrelated far-away merges likelier to be picked.
-      for (let end = start; end < lines.length && end < start + 12; end++) {
-        if (used[end]) break;
-        mergedText = mergedText ? `${mergedText} ${lines[end].text}` : lines[end].text;
-        left = Math.min(left, lines[end].left);
-        top = Math.min(top, lines[end].top);
-        right = Math.max(right, lines[end].left + lines[end].width);
-        bottom = Math.max(bottom, lines[end].top + lines[end].height);
+      for (let cursor = start; cursor < lines.length && cursor < start + 12; cursor++) {
+        if (used[cursor]) break;
+        if (!lineCanContribute(lines[cursor].text, input.sample)) continue;
+        if (included.length) {
+          const previous = lines[included[included.length - 1]];
+          const gap = lines[cursor].top - (previous.top + previous.height);
+          if (gap > imageHeight * 0.12) break;
+        }
+        included.push(cursor);
+        mergedText = mergedText ? `${mergedText} ${lines[cursor].text}` : lines[cursor].text;
+        left = Math.min(left, lines[cursor].left);
+        top = Math.min(top, lines[cursor].top);
+        right = Math.max(right, lines[cursor].left + lines[cursor].width);
+        bottom = Math.max(bottom, lines[cursor].top + lines[cursor].height);
         const score = similarity(mergedText, input.sample);
-        if (!best || score > best.score) {
-          best = { score, start, end, left, top, width: right - left, height: bottom - top };
+        const candidate = {
+          score,
+          indices: [...included],
+          left,
+          top,
+          width: right - left,
+          height: bottom - top,
+        };
+        // OCR occasionally emits punctuation-only or duplicate fragments on
+        // the line before/after real copy. Appending one does not change the
+        // normalized string, so the former greedy `>` tie behaviour selected
+        // the first, larger window and gave a single field another field's
+        // geometry. On equal text confidence, prefer the tightest contiguous
+        // run, then the smallest physical crop. This preserves genuine
+        // wrapped copy while never inflating an exact one-line match.
+        const candidateLines = candidate.indices.length;
+        const bestLines = best ? best.indices.length : Infinity;
+        const candidateArea = candidate.width * candidate.height;
+        const bestArea = best ? best.width * best.height : Infinity;
+        if (
+          !best ||
+          score > best.score + 1e-9 ||
+          (Math.abs(score - best.score) <= 1e-9 && (
+            candidateLines < bestLines ||
+            (candidateLines === bestLines && candidateArea < bestArea)
+          ))
+        ) {
+          best = candidate;
         }
       }
     }
     if (best && best.score > 0.35) {
-      for (let i = best.start; i <= best.end; i++) used[i] = true;
+      for (const index of best.indices) used[index] = true;
       results.push({
         key: input.key,
         sample: input.sample,
@@ -253,7 +300,14 @@ function matchRegionsToLines(textInputs, lines, imageWidth, imageHeight) {
         // measurement divide the crop height back into a per-line figure
         // for wrapped headlines/body copy instead of treating the whole
         // multi-line block as one glyph row.
-        lineCount: best.end - best.start + 1,
+        lineCount: best.indices.length,
+        lineBoxes: best.indices.map((index) => ({
+          x: lines[index].left / imageWidth,
+          y: lines[index].top / imageHeight,
+          width: lines[index].width / imageWidth,
+          height: lines[index].height / imageHeight,
+        })),
+        lineTexts: best.indices.map((index) => lines[index].text),
         box: {
           x: best.left / imageWidth,
           y: best.top / imageHeight,
@@ -272,7 +326,7 @@ export async function detectTemplateRegions(templateId, imagePath, textInputs) {
   const cachePath = path.join(CACHE_DIR, `${templateId}.json`);
   try {
     const cached = JSON.parse(await readFile(cachePath, "utf8"));
-    return cached;
+    if (cached.buildVersion === REGION_DETECTION_VERSION) return cached;
   } catch { /* not cached */ }
 
   const pySize = `
@@ -288,8 +342,9 @@ print(img.shape[1], img.shape[0])
   const regions = matchRegionsToLines(textInputs, lines, imageWidth, imageHeight);
 
   await mkdir(CACHE_DIR, { recursive: true });
-  await writeFile(cachePath, JSON.stringify({ imageWidth, imageHeight, regions }, null, 2));
-  return { imageWidth, imageHeight, regions };
+  const result = { buildVersion: REGION_DETECTION_VERSION, imageWidth, imageHeight, regions };
+  await writeFile(cachePath, JSON.stringify(result, null, 2));
+  return result;
 }
 
 // CLI: node detect-regions.mjs <templateId> <imagePath> <sample.json with text inputs>

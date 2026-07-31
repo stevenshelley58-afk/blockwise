@@ -83,6 +83,23 @@
     "primary_intent": "seller_leads",
     "property_or_agent_focus": "property"
   },
+  "deterministicEditing": {
+    "status": "partial",
+    "imageBoxes": {
+      "property_photo": {
+        "x": 0.017578125,
+        "y": 0.1125,
+        "width": 0.96484375,
+        "height": 0.4734375
+      },
+      "agent_photo": {
+        "x": 0.662109375,
+        "y": 0.4984375,
+        "width": 0.216796875,
+        "height": 0.1734375
+      }
+    }
+  },
   "meta": {
     "platform": "meta",
     "objective": "OUTCOME_LEADS",
@@ -185,7 +202,8 @@
         "height": 0.01875
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/plus-jakarta-sans-600.woff2"
     },
     "contact_phone": {
       "fontId": "playfair-display",
@@ -207,7 +225,8 @@
         "height": 0.015234375
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/playfair-display-700.woff2"
     }
   }
 }

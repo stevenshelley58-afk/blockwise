@@ -6,10 +6,9 @@
 // copy (on-image fields + feed copy in one pass) -> reference clone renders
 // (feed + story) -> deterministic pack build -> provided-copy application ->
 // one transactional persist. The customer gets the finished ad the moment the
-// renders persist; region detection (the editor's clickable hit-boxes) starts
-// the instant a render exists and writes onto the persisted creatives — it
-// never blocks or rerolls a render. The editor's history (undo/compare) plus
-// in-place fixes are the safety net.
+// feed render persists, with native-format editor hit-boxes copied from the
+// template's offline type-spec block. No customer-time vision pass is needed.
+// The editor's history (undo/compare) plus in-place fixes are the safety net.
 import { randomUUID } from "node:crypto";
 
 import { applyProvidedCopyToCampaignPack } from "./campaign-copy-enrichment.ts";
@@ -21,7 +20,7 @@ import {
   resolveCloneProviders,
   type CloneGenerationResult,
 } from "./clone-generation.ts";
-import { detectCloneRegions, type CloneRegion } from "./clone-regions.ts";
+import { buildPrebuiltTemplateCloneQa } from "./clone-regions.ts";
 import { deriveAndPersistTemplateTextLayers } from "./layer-derivation.ts";
 import { generateAdStudioTemplateCopy, type AdStudioCopyFields } from "./copy-generation.ts";
 import { buildCloneCampaignPack, buildCloneCreative } from "./clone-campaign.ts";
@@ -34,7 +33,7 @@ import {
 } from "./reference-clone.ts";
 import { resolveAdStudioImageForModel } from "./resolve-image-for-model.ts";
 import { resolveApprovedAdStudioTemplate } from "./template-resolver.ts";
-import type { AdStudioTemplate } from "./templates.ts";
+import { deterministicEditingReadiness, type AdStudioTemplate } from "./templates.ts";
 import { resolveAdStudioGenerationBrandKit } from "./trial-brand-kit.ts";
 import type {
   AdStudioBrandKit,
@@ -42,7 +41,6 @@ import type {
   AdStudioCreative,
   FirstAdInput,
 } from "./types.ts";
-import { normalizeCloneQa } from "./types.ts";
 import type { ImageProviderAdapter, ImageProviderRequest } from "./providers.ts";
 import {
   refundWorkspaceCreditReservation,
@@ -82,8 +80,6 @@ export type RunTemplateCampaignGenerationInput = {
   body: CreateCampaignBody;
   workspaceName?: string;
   region?: string;
-  /** From the route's credit reservation; drives the trial fallback brand kit. */
-  isTrialWorkspace?: boolean;
   /** Server-owned two-render reservation settled independently by format. */
   creditReservation?: WorkspaceCreditReservation;
 };
@@ -91,13 +87,10 @@ export type RunTemplateCampaignGenerationInput = {
 export type RunTemplateCampaignGenerationResult = {
   campaignId: string;
   campaignPack: AdStudioCampaignPack;
-  /**
-   * Fire-and-forget region detection: after the customer has the ad, one
-   * vision call per format locates the editable hit-boxes and writes them
-   * onto the persisted creatives. Never throws; the main pipeline does not
-   * await the result.
-   */
-  enrichRegions: () => Promise<void>;
+  /** Background construction of the optional instant text-editing plate. */
+  editingLayersTask: Promise<void>;
+  /** Ready templates are not released to the customer until that task settles. */
+  requiresDeterministicEditing: boolean;
   /**
    * The story (9:16) render, generated in parallel with the feed, persists
    * and patches into the already-created campaign once it lands. Undefined
@@ -106,6 +99,31 @@ export type RunTemplateCampaignGenerationResult = {
    */
   storyTask?: Promise<void>;
 };
+
+export async function assertDeterministicFeedEditingReady(input: {
+  supabase: SupabaseGenerationClient;
+  workspaceId: string;
+  campaignId: string;
+}): Promise<void> {
+  const { data, error } = await input.supabase
+    .from("adstudio_creatives")
+    .select("canvas_json")
+    .eq("workspace_id", input.workspaceId)
+    .eq("campaign_id", input.campaignId)
+    .eq("format", PRIMARY_CLONE_FORMAT)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  const canvas = (data?.canvas_json ?? {}) as AdStudioCreative["canvas"];
+  const currentImage = canvas.objects?.[0]?.content ?? canvas.objects?.[0]?.assetId ?? "";
+  if (
+    !currentImage
+    || canvas.textLayers?.status !== "ready"
+    || !canvas.textLayers.deterministicOnly
+    || !canvas.textLayers.validFor.includes(currentImage)
+  ) {
+    throw new Error("The ad was created, but exact text editing did not finish preparing.");
+  }
+}
 
 const PRIMARY_CLONE_FORMAT = "4:5" as const;
 const STORY_CLONE_FORMAT = "9:16" as const;
@@ -149,8 +167,8 @@ type CloneRenderDependencies = {
 /**
  * One final-quality render per format: provider cascade (bounded fallback
  * inside) then an exact aspect crop. No vision gate, no reroll — the customer
- * sees this render as soon as it persists, and the editor regions are
- * detected in parallel via enrichCloneCreativesWithRegions.
+ * sees this render as soon as it persists. Editor regions are already present
+ * in the native-format template metadata; no customer-time vision is run.
  */
 export async function generateFinalCloneRender(input: {
   format: TemplateCloneRenderFormat;
@@ -177,51 +195,32 @@ export async function generateFinalCloneRender(input: {
   return { ...generated, assetUrl: exactAssetUrl, attempt: 1 };
 }
 
-export type CloneRegionsEnrichmentInput = {
+export type CloneEditingLayersInput = {
   supabase: SupabaseGenerationClient;
   workspaceId: string;
   userId: string;
   correlationId: string;
-  expectedCopy: Record<string, string>;
   template: AdStudioTemplate;
-  /** Primary format first. regionsPromise lets callers start the vision call
-   * the moment the render exists, overlapping upload + persist. */
   renders: Array<{
     format: TemplateCloneRenderFormat;
     creativeId: string;
     imageRef: string;
     imageUrl: string;
-    regionsPromise?: Promise<CloneRegion[]>;
   }>;
 };
 
 /**
- * Region detection write: one vision call per format produces the editor
- * regions + current text values, written onto the already-persisted
- * creatives. Failures are contained per format — the customer keeps the ad
- * either way, and a creative that already has regions (a fast in-place edit)
- * is never overwritten.
+ * Build text-free plates with no vision or region discovery. Partial
+ * templates keep this advisory and may fall back to a targeted model edit;
+ * explicitly ready templates wait for it before generation is released.
  */
-export async function enrichCloneCreativesWithRegions(
-  input: CloneRegionsEnrichmentInput,
+export async function prepareCloneCreativeTextLayers(
+  input: CloneEditingLayersInput,
 ): Promise<void> {
   const supabase = input.supabase as SupabaseServerClient;
 
   await Promise.all(input.renders.map(async (render) => {
     try {
-      const regions: CloneRegion[] = await (render.regionsPromise ?? detectCloneRegions({
-        workspaceId: input.workspaceId,
-        userId: input.userId,
-        correlationId: input.correlationId,
-        imageUrl: render.imageUrl,
-        expectedCopy: input.expectedCopy,
-        sampleTextBoxes: Object.fromEntries(
-          Object.entries(input.template.typography ?? {}).map(([key, spec]) => [key, spec.sampleBox]),
-        ),
-        format: render.format,
-      }));
-      if (regions.length === 0) return;
-
       const { data: row, error } = await supabase
         .from("adstudio_creatives")
         .select("id, canvas_json, active_revision_id")
@@ -229,24 +228,8 @@ export async function enrichCloneCreativesWithRegions(
         .eq("id", render.creativeId)
         .maybeSingle();
       if (error || !row) return;
-      const canvas = (row.canvas_json ?? {}) as Record<string, unknown>;
-      const existing = normalizeCloneQa(canvas.cloneQa);
-      if (existing && existing.regions.length > 0) return;
-      const cloneQa = { regions, copyValues: input.expectedCopy };
-      const nextCanvas = { ...canvas, cloneQa } as AdStudioCreative["canvas"];
-      let updateQuery = supabase
-        .from("adstudio_creatives")
-        .update({ canvas_json: nextCanvas, updated_at: new Date().toISOString() })
-        .eq("workspace_id", input.workspaceId)
-        .eq("id", render.creativeId);
-      updateQuery = row.active_revision_id
-        ? updateQuery.eq("active_revision_id", row.active_revision_id)
-        : updateQuery.is("active_revision_id", null);
-      const updated = await updateQuery.select("id");
-      if (updated.error || !updated.data?.length) return;
-
-      // The customer already has the finished ad. Prebuild the plate now in
-      // this background task so their first eligible edit is instant.
+      const canvas = (row.canvas_json ?? {}) as AdStudioCreative["canvas"];
+      if (!canvas.cloneQa?.regions.length) return;
       await deriveAndPersistTemplateTextLayers({
         supabase,
         workspaceId: input.workspaceId,
@@ -255,13 +238,13 @@ export async function enrichCloneCreativesWithRegions(
         creativeId: render.creativeId,
         activeRevisionId: row.active_revision_id,
         format: render.format,
-        canvas: nextCanvas,
+        canvas,
         currentImageRef: render.imageRef,
         currentImageUrl: render.imageUrl,
         template: input.template,
       });
     } catch {
-      // Contained — never break the pipeline for a missing vision pass.
+      // Advisory only — the targeted image-model edit remains available.
     }
   }));
 }
@@ -317,8 +300,6 @@ export async function runTemplateCampaignGeneration(
     workspaceName: input.workspaceName,
     region: input.region,
     userId: input.userId,
-    submittedBrandKit: body.brandKit,
-    isTrialWorkspace: input.isTrialWorkspace ?? false,
   });
   if (!brandKitResult.ok) {
     throw new Error(brandKitResult.error);
@@ -426,16 +407,25 @@ export async function runTemplateCampaignGeneration(
   const onImageCopy = { ...copyResult.onImage, ...customerOnImage };
 
   // The image lane runs one native feed render and one recomposed 9:16 story
-  // render in parallel; both persist as soon as they exist and region
-  // detection starts the moment each render lands.
+  // render in parallel. The matching-format editor map was measured offline.
   const [referenceImage, providers] = await Promise.all([rasterPromise, providersPromise]);
   const expectedCopy = resolveCloneCopy(template, onImageCopy);
   const cloneRequestsByFormat = buildTemplateCloneRequestsByFormat(template, {
     referenceImage,
     images: resolvedImages,
     copy: onImageCopy,
-    brandHex: brandKit.colours.accent || brandKit.colours.primary,
+    colourSource: firstAd.colourSource ?? "template",
+    brandColours: ([
+      ["primary", brandKit.colours.primary],
+      ["secondary", brandKit.colours.secondary],
+      ["accent", brandKit.colours.accent],
+      ["background", brandKit.colours.background],
+      ["text", brandKit.colours.text],
+    ] as const)
+      .filter(([, value]) => value.trim())
+      .map(([label, value]) => `${label} ${value.trim()}`),
   });
+  const feedCloneQa = buildPrebuiltTemplateCloneQa(template, expectedCopy, PRIMARY_CLONE_FORMAT);
   const modelProfile = cloneModelProfileForQuality(generationQuality);
   // --- Feed-first critical path (Point 8): both formats generate in parallel,
   // the customer gets the 4:5 ad the instant it persists, the 9:16 story
@@ -461,20 +451,8 @@ export async function runTemplateCampaignGeneration(
     modelProfile,
   });
 
-  // Await only the feed: generate → normalize → upload. Region detection
-  // starts the instant the render exists, overlapping the upload + persist.
+  // Await only the feed: generate → normalize → upload.
   const feedRender = await feedGenPromise;
-  const feedRegionsPromise = detectCloneRegions({
-    workspaceId: input.workspaceId,
-    userId: input.userId,
-    correlationId,
-    imageUrl: feedRender.assetUrl,
-    expectedCopy,
-    sampleTextBoxes: Object.fromEntries(
-      Object.entries(template.typography ?? {}).map(([key, spec]) => [key, spec.sampleBox]),
-    ),
-    format: PRIMARY_CLONE_FORMAT,
-  });
   const feedPersisted: PersistedCloneRender = {
     ...feedRender,
     image: await persistCloneRender({
@@ -503,6 +481,9 @@ export async function runTemplateCampaignGeneration(
         },
         templateCloneProvider: feedPersisted.provider,
         templateCloneModel: feedPersisted.model,
+        templateCloneQaByFormat: feedCloneQa
+          ? { [PRIMARY_CLONE_FORMAT]: feedCloneQa }
+          : undefined,
         copy: copyResult.copy,
       },
     }),
@@ -539,31 +520,29 @@ export async function runTemplateCampaignGeneration(
     console.error("adstudio: activation milestone repair deferred", error);
   }
 
-  // Region detection write for the feed creative (fires after the response;
-  // the vision call itself is already in flight).
+  // Regions are already in the persisted creative. The caller decides whether
+  // this plate remains advisory (partial template) or gates release (ready
+  // template).
   const feedCreative = feedPack.creatives.find((c) => c.format === PRIMARY_CLONE_FORMAT);
-  const enrichRegions = () =>
-    feedCreative
-      ? enrichCloneCreativesWithRegions({
+  const editingLayersTask = feedCreative
+    ? prepareCloneCreativeTextLayers({
           supabase: input.supabase,
           workspaceId: input.workspaceId,
           userId: input.userId,
           correlationId,
-          expectedCopy,
           template,
           renders: [{
             format: PRIMARY_CLONE_FORMAT,
             creativeId: feedCreative.creativeId,
             imageRef: feedPersisted.image,
             imageUrl: feedRender.assetUrl,
-            regionsPromise: feedRegionsPromise,
           }],
         })
-      : Promise.resolve();
+    : Promise.resolve();
 
   // Story background task: the story promise is already in flight (started
   // in parallel above). When it lands, persist it, patch the campaign, and
-  // run region detection for the story creative. Never throws outward.
+  // attach its native-format prebuilt regions. Never throws outward.
   const storyTask = persistStoryInBackground({
     supabase,
     workspaceId: input.workspaceId,
@@ -577,13 +556,19 @@ export async function runTemplateCampaignGeneration(
     creditReservation: input.creditReservation,
   });
 
-  return { campaignId: feedPack.campaign.campaignId, campaignPack: feedPack, enrichRegions, storyTask };
+  return {
+    campaignId: feedPack.campaign.campaignId,
+    campaignPack: feedPack,
+    editingLayersTask,
+    requiresDeterministicEditing: deterministicEditingReadiness(template).status === "ready",
+    storyTask,
+  };
 }
 
 /**
  * Awaits the in-flight story (9:16) render, persists it, patches the
- * already-created campaign row (adds the format + creative), and runs
- * region detection. All errors are contained — the feed ad stands alone.
+ * already-created campaign row (adds the format + creative), and prepares
+ * optional text layers. All errors are contained — the feed ad stands alone.
  */
 async function persistStoryInBackground(input: {
   supabase: SupabaseServerClient;
@@ -599,18 +584,6 @@ async function persistStoryInBackground(input: {
 }): Promise<void> {
   try {
     const storyRender = await input.storyGenPromise;
-    // Vision call starts now, overlapping the upload + row insert below.
-    const storyRegionsPromise = detectCloneRegions({
-      workspaceId: input.workspaceId,
-      userId: input.userId,
-      correlationId: input.correlationId,
-      imageUrl: storyRender.assetUrl,
-      expectedCopy: input.expectedCopy,
-      sampleTextBoxes: Object.fromEntries(
-        Object.entries(input.template.typography ?? {}).map(([key, spec]) => [key, spec.sampleBox]),
-      ),
-      format: STORY_CLONE_FORMAT,
-    });
     const storyImage = await persistCloneRender({
       supabase: input.supabase,
       workspaceId: input.workspaceId,
@@ -624,6 +597,11 @@ async function persistStoryInBackground(input: {
       template: input.template,
       format: STORY_CLONE_FORMAT,
       cloneImage: storyImage,
+      cloneQa: buildPrebuiltTemplateCloneQa(
+        input.template,
+        input.expectedCopy,
+        STORY_CLONE_FORMAT,
+      ),
     });
 
     // Patch the campaign: add the story format to the declared formats.
@@ -669,20 +647,17 @@ async function persistStoryInBackground(input: {
       });
     }
 
-    // Region detection write for the story creative (call already in flight).
-    await enrichCloneCreativesWithRegions({
+    await prepareCloneCreativeTextLayers({
       supabase: input.supabase,
       workspaceId: input.workspaceId,
       userId: input.userId,
       correlationId: input.correlationId,
-      expectedCopy: input.expectedCopy,
       template: input.template,
       renders: [{
         format: STORY_CLONE_FORMAT,
         creativeId: storyCreative.creativeId,
         imageRef: storyImage,
         imageUrl: storyRender.assetUrl,
-        regionsPromise: storyRegionsPromise,
       }],
     });
   } catch (error) {

@@ -4,18 +4,29 @@ import { readFileSync } from "node:fs";
 
 import {
   boxIntersectsTextRegions,
+  buildingTextLayers,
   buildTemplateTextLayerStyles,
   extendTextLayersValidity,
   TEXT_LAYERS_VALID_FOR_LIMIT,
 } from "../src/lib/adstudio/text-layers.ts";
+import {
+  MAGIC_LAYER_MIN_FONT_FIT,
+  MAGIC_LAYER_MIN_REGION_CONFIDENCE,
+} from "../src/lib/adstudio/magic-layers-config.mjs";
 import { resolveAdStudioTemplate } from "../src/lib/adstudio/templates.ts";
 import { paddedPixelRect } from "../src/lib/adstudio/region-edit.ts";
 import { paddedPatchRect } from "../src/components/adstudio/canvas/text-patch.ts";
 import type { AdStudioCloneRegion, AdStudioTextLayers } from "../src/lib/adstudio/types.ts";
+import type { AdStudioTypeSpec } from "../src/lib/adstudio/templates.ts";
 
 const editor = readFileSync("src/components/adstudio/canvas/in-place-ad-editor.tsx", "utf8");
+const textPatch = readFileSync("src/components/adstudio/canvas/text-patch.ts", "utf8");
 const layersRoute = readFileSync("src/app/api/adstudio/creatives/[id]/layers/route.ts", "utf8");
+const editRoute = readFileSync("src/app/api/adstudio/creatives/[id]/edit/route.ts", "utf8");
+const editClient = readFileSync("src/components/adstudio/canvas/creative-edit-client.ts", "utf8");
 const layerDerivation = readFileSync("src/lib/adstudio/layer-derivation.ts", "utf8");
+const cloneCampaign = readFileSync("src/lib/adstudio/clone-campaign.ts", "utf8");
+const triggerTask = readFileSync("trigger/adstudio-generate.ts", "utf8");
 
 const regions: AdStudioCloneRegion[] = [
   { key: "headline", kind: "text", box: { x: 0.1, y: 0.1, width: 0.8, height: 0.1 } },
@@ -52,6 +63,38 @@ test("plate validity list dedupes, appends newest last, and stays bounded", () =
   assert.equal(bounded.validFor.at(-1), "new");
 });
 
+test("a persisted building state is a durable single-flight lease", () => {
+  const building = buildingTextLayers("/api/adstudio/media?path=finished", true);
+  assert.equal(building.status, "building");
+  assert.equal(building.derivedFrom, "/api/adstudio/media?path=finished");
+  assert.equal(building.deterministicOnly, true);
+  assert.deepEqual(building.validFor, []);
+  assert.deepEqual(building.styles, {});
+  // Fresh clone rows receive the lease before their background task starts.
+  assert.match(cloneCampaign, /textLayers: input\.cloneQa\?\.regions\.some/);
+  assert.match(cloneCampaign, /buildingTextLayers\(\s*input\.cloneImage,/);
+  // A second editor observes that durable lease rather than issuing an image request.
+  assert.match(layersRoute, /existing\?\.status === "building"/);
+  assert.match(layersRoute, /status: 202/);
+  assert.match(layersRoute, /\.eq\("updated_at", row\.updated_at\)/);
+  // Existing ads are upgraded when their template becomes fully migrated;
+  // an old partial layer map cannot keep the legacy model edit path alive.
+  assert.match(layersRoute, /existing\.deterministicOnly && allTextStylesLive/);
+});
+
+test("a fully migrated template cannot silently fall back to image-model text editing", () => {
+  assert.match(editRoute, /layers\?\.deterministicOnly && !patchImage/);
+  assert.match(editRoute, /code: "layers_not_ready"/);
+  assert.match(editor, /textLayers\?\.deterministicOnly && !patchImage/);
+  assert.match(triggerTask, /assertDeterministicFeedEditingReady/);
+});
+
+test("instant text fitting uses painted glyph bounds rather than the oversized CSS em box", () => {
+  assert.match(textPatch, /actualBoundingBoxAscent \+ measurement\.actualBoundingBoxDescent/);
+  assert.match(textPatch, /paintedHeight <= inner\.height \* 1\.02/);
+  assert.doesNotMatch(textPatch, /candidate\.length \* fontSize \* lineHeightFactor <=/);
+});
+
 test("runtime styles come from the approved template and low-confidence regions rerender", () => {
   const template = resolveAdStudioTemplate("meta-agent-intro-feed-037");
   assert.ok(template?.typography);
@@ -63,7 +106,11 @@ test("runtime styles come from the approved template and low-confidence regions 
   const styles = buildTemplateTextLayerStyles(template, cloneRegions);
   assert.deepEqual(Object.keys(styles).sort(), cloneRegions.map((region) => region.key).sort());
   for (const [key, style] of Object.entries(styles)) {
-    assert.equal(style.mode === "live", Boolean(style.fontFile));
+    const typo: AdStudioTypeSpec = template.typography![key]!;
+    const expectedLive = typo.fitScore >= MAGIC_LAYER_MIN_FONT_FIT
+      && typo.detectionScore >= MAGIC_LAYER_MIN_REGION_CONFIDENCE
+      && Boolean(typo.fontFile);
+    assert.equal(style.mode === "live", expectedLive);
     assert.equal(style.sample, template.inputs.text.find((input) => input.key === key)?.sample);
   }
 });
@@ -91,6 +138,13 @@ test("editor builds layers in the background and applies text edits optimistical
   assert.match(editor, /setOptimisticPatch\(\{ key: selectedRegion\.key/);
   assert.match(editor, /studio-inplace-optimistic/);
   // Inlined finished pixels paint without a media-proxy round trip.
+  assert.match(editRoute, /previewImage,/);
+  assert.match(editClient, /previewImage: data\.previewImage/);
+  assert.doesNotMatch(editRoute, /previewDataUrl/);
+  // A failed build is recoverable without forcing the customer to reload.
+  assert.match(editor, /function retryLayerBuild\(\)/);
+  assert.match(editor, /setLayerRetryToken\(\(current\) => current \+ 1\)/);
+  assert.match(editor, /RefreshCw[\s\S]*Retry/);
   assert.match(editor, /freshPreview/);
   // A stale instant path falls back to the model path in the same gesture.
   assert.match(editor, /layers_stale/);
@@ -106,4 +160,5 @@ test("the decompose route protects the design and the budget", () => {
   // Rebuilds are rate limited and never clobber a render that moved on.
   assert.match(layersRoute, /ai-layer-decompose/);
   assert.match(layerDerivation, /active_revision_id/);
+  assert.match(layerDerivation, /persistLayerFailure/);
 });

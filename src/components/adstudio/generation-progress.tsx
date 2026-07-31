@@ -2,7 +2,18 @@
 
 import { LoaderCircle } from "lucide-react";
 
-export function GenerationProgress({ quality, titleId }: { quality: "fast" | "high"; titleId: string }) {
+import type { AdStudioTemplate } from "@/lib/adstudio";
+import { templateDisplaySrc } from "@/lib/adstudio/template-display.ts";
+
+export function GenerationProgress({
+  quality,
+  template,
+  titleId,
+}: {
+  quality: "fast" | "high";
+  template: AdStudioTemplate;
+  titleId: string;
+}) {
   return (
     <section className="studio-generation" aria-labelledby={titleId} aria-busy="true">
       <header className="studio-generation-head">
@@ -13,6 +24,21 @@ export function GenerationProgress({ quality, titleId }: { quality: "fast" | "hi
           <span>Creating your Feed and Story ads</span>
         </div>
       </header>
+
+      <div className="studio-generation-showcase" aria-hidden="true">
+        <figure className="studio-generation-showcase-card" data-format={template.format}>
+          <img
+            src={templateDisplaySrc(template, "320")}
+            srcSet={`${templateDisplaySrc(template, "320")} 320w, ${templateDisplaySrc(template, "640")} 640w`}
+            sizes="(max-width: 900px) calc(100vw - 72px), 416px"
+            alt=""
+            draggable={false}
+            loading="eager"
+            decoding="async"
+            fetchPriority="high"
+          />
+        </figure>
+      </div>
     </section>
   );
 }

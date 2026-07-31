@@ -131,7 +131,8 @@
         "height": 0.0890625
       },
       "sampleLineCount": 3,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/quicksand-300.woff2"
     },
     "subheadline": {
       "fontId": "merriweather",
@@ -153,7 +154,8 @@
         "height": 0.017447916666666667
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/merriweather-800.woff2"
     },
     "headline": {
       "fontId": "oswald",
@@ -175,7 +177,8 @@
         "height": 0.109375
       },
       "sampleLineCount": 2,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/oswald-300.woff2"
     },
     "cta": {
       "fontId": "smooch-sans",
@@ -197,7 +200,8 @@
         "height": 0.01875
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/smooch-sans-700.woff2"
     }
   }
 }

@@ -160,7 +160,8 @@
         "height": 0.330078125
       },
       "sampleLineCount": 12,
-      "detectionScore": 0.63
+      "detectionScore": 0.63,
+      "fontFile": "/fonts/adstudio/kanit-800.woff2"
     },
     "tip_5": {
       "fontId": "libre-franklin",
@@ -182,7 +183,8 @@
         "height": 0.015234375
       },
       "sampleLineCount": 1,
-      "detectionScore": 0.708
+      "detectionScore": 0.708,
+      "fontFile": "/fonts/adstudio/libre-franklin-800.woff2"
     },
     "tip_1": {
       "fontId": "merriweather",
@@ -204,7 +206,8 @@
         "height": 0.04453125
       },
       "sampleLineCount": 3,
-      "detectionScore": 0.545
+      "detectionScore": 0.545,
+      "fontFile": "/fonts/adstudio/merriweather-300.woff2"
     },
     "tip_2": {
       "fontId": "roboto",
@@ -226,7 +229,8 @@
         "height": 0.0203125
       },
       "sampleLineCount": 2,
-      "detectionScore": 0.524
+      "detectionScore": 0.524,
+      "fontFile": "/fonts/adstudio/roboto-700.woff2"
     },
     "tip_4": {
       "fontId": "merriweather",
@@ -248,7 +252,8 @@
         "height": 0.015625
       },
       "sampleLineCount": 1,
-      "detectionScore": 0.571
+      "detectionScore": 0.571,
+      "fontFile": "/fonts/adstudio/merriweather-800.woff2"
     },
     "tip_3": {
       "fontId": "roboto",
@@ -270,7 +275,8 @@
         "height": 0.0203125
       },
       "sampleLineCount": 1,
-      "detectionScore": 0.6
+      "detectionScore": 0.6,
+      "fontFile": "/fonts/adstudio/roboto-700.woff2"
     },
     "search_bar_text": {
       "fontId": "merriweather",
@@ -292,7 +298,8 @@
         "height": 0.01328125
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/merriweather-800.woff2"
     },
     "handle": {
       "fontId": "plus-jakarta-sans",

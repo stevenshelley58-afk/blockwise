@@ -12,6 +12,7 @@ import {
   CircleHelp,
   Download,
   Image as ImageIcon,
+  Images,
   RefreshCw,
   Send,
   Trash2,
@@ -21,6 +22,8 @@ import {
 import type { AdStudioCampaignPack, AdStudioFormat, AdStudioTargetLocation } from "@/lib/adstudio";
 import type { AdStudioCreativeLibraryItem } from "@/lib/adstudio/creative-library";
 import type { MetaPublishControls } from "@/lib/providers/meta-execution";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 
 import type { ExportFormatStatus } from "../use-campaign-actions";
 
@@ -98,6 +101,7 @@ type PublishSetupPanelProps = {
 const STEPS = ["Campaign setup", "Creatives", "Lead form", "Budget", "Review", "Live"] as const;
 const BUDGET_PRESETS = [10, 20, 50] as const;
 const DURATION_PRESETS = [3, 7, 14, 30] as const;
+const MAX_LIBRARY_SELECTIONS = 6;
 
 type ScheduleMode = `${(typeof DURATION_PRESETS)[number]}` | "custom" | "ongoing";
 
@@ -172,6 +176,7 @@ export function PublishSetupPanel({
   const [creativeLibraryLoading, setCreativeLibraryLoading] = useState(creativeSource === "library");
   const [creativeLibraryError, setCreativeLibraryError] = useState("");
   const [creativeLibraryRefresh, setCreativeLibraryRefresh] = useState(0);
+  const [selectedLibraryCampaignIds, setSelectedLibraryCampaignIds] = useState<ReadonlySet<string>>(new Set());
 
   useEffect(() => {
     if (creativeSource !== "library") return;
@@ -185,7 +190,15 @@ export function PublishSetupPanel({
         return Array.isArray(body?.creativeLibrary) ? body.creativeLibrary as AdStudioCreativeLibraryItem[] : [];
       })
       .then((items) => {
-        if (!cancelled) setCreativeLibrary(items);
+        if (!cancelled) {
+          setCreativeLibrary(items);
+          const selectableCampaignIds = new Set(
+            items.flatMap((item) => item.status === "unpublished" && item.variantId ? [item.campaignId] : []),
+          );
+          setSelectedLibraryCampaignIds((current) =>
+            new Set([...current].filter((campaignId) => selectableCampaignIds.has(campaignId))),
+          );
+        }
       })
       .catch(() => {
         if (!cancelled) setCreativeLibraryError("We couldn't load your ads. Check your connection and try again.");
@@ -373,11 +386,23 @@ export function PublishSetupPanel({
   const variants = campaignPack.variants;
   const selectedVariantIds = variants.map((variant) => variant.variantId).filter((id) => !deselectedVariantIds.has(id));
   const fullSelection = selectedVariantIds.length === variants.length;
-  const selectionHint = selectedVariantIds.length === 0
+  const currentSelectionHint = selectedVariantIds.length === 0
     ? "Select at least one creative."
     : !fullSelection && selectedVariantIds.length > 3
       ? "Select up to three creatives."
       : "";
+  const unpublishedCreativeLibrary = creativeLibrary.filter(
+    (item): item is AdStudioCreativeLibraryItem & { variantId: string } =>
+      item.status === "unpublished" && Boolean(item.variantId),
+  );
+  const selectedLibraryItems = unpublishedCreativeLibrary.filter(
+    (item) => selectedLibraryCampaignIds.has(item.campaignId) && item.variantId,
+  );
+  const librarySelectionHint = selectedLibraryItems.length === 0
+    ? "Select at least one creative."
+    : "";
+  const selectionHint = creativeSource === "library" ? librarySelectionHint : currentSelectionHint;
+  const selectedCreativeCount = creativeSource === "library" ? selectedLibraryItems.length : selectedVariantIds.length;
   const brandName = campaignPack.brandKit.identity.tradingName?.trim()
     || campaignPack.brandKit.identity.businessName
     || "Your brand";
@@ -386,7 +411,7 @@ export function PublishSetupPanel({
     ? Boolean(selectedCampaign)
     : targetSuburbs.length > 0 && includeSurroundingSuburbs !== undefined;
   const destinationReady = isWebUrl(destinationUrl);
-  const creativeStepReady = creativeSource === "current" && !selectionHint;
+  const creativeStepReady = !selectionHint;
   const selectedBudgetPreset = BUDGET_PRESETS.includes(dailyBudgetAud as (typeof BUDGET_PRESETS)[number])
     ? dailyBudgetAud
     : null;
@@ -425,6 +450,18 @@ export function PublishSetupPanel({
       const next = new Set(current);
       if (next.has(variantId)) next.delete(variantId);
       else next.add(variantId);
+      return next;
+    });
+  }
+
+  function toggleLibraryCreative(campaignId: string) {
+    setSelectedLibraryCampaignIds((current) => {
+      const next = new Set(current);
+      if (next.has(campaignId)) {
+        next.delete(campaignId);
+      } else if (next.size < MAX_LIBRARY_SELECTIONS) {
+        next.add(campaignId);
+      }
       return next;
     });
   }
@@ -537,7 +574,16 @@ export function PublishSetupPanel({
           controls: buildControls(),
           dryRun: false,
           ...(campaignMode === "existing" ? { existingMetaCampaignId: selectedMetaCampaignId } : {}),
-          ...(fullSelection ? {} : { variantIds: selectedVariantIds }),
+          ...(creativeSource === "library"
+            ? {
+                librarySelections: selectedLibraryItems.map((item) => ({
+                  campaignId: item.campaignId,
+                  variantId: item.variantId,
+                })),
+              }
+            : fullSelection
+              ? {}
+              : { variantIds: selectedVariantIds }),
         }),
       });
       const body = (await response.json().catch(() => ({}))) as PublishResponse;
@@ -815,8 +861,15 @@ export function PublishSetupPanel({
                 <div className="studio-ad-library" aria-live="polite">
                   <div className="studio-creative-intro">
                     <strong>Reuse an existing ad</strong>
-                    <span>Unpublished ads appear first. Each group is sorted newest to oldest.</span>
+                    <span>Select one or more unpublished ads to run together.</span>
                   </div>
+                  <p className="m-0 rounded-(--r-card) bg-(--surface-subtle) px-3 py-2.5 text-[13px] leading-5 text-(--muted)">
+                    All selected creatives will be added to{" "}
+                    <strong className="font-bold text-(--ink)">
+                      {campaignMode === "existing" ? selectedCampaign?.name ?? "the campaign you chose" : campaignPack.campaign.name}
+                    </strong>
+                    , the campaign from the previous step.
+                  </p>
                   {creativeLibraryLoading ? (
                     <div className="studio-ad-library-loading" role="status">
                       <RefreshCw aria-hidden size={18} />
@@ -828,15 +881,21 @@ export function PublishSetupPanel({
                       <span>{creativeLibraryError}</span>
                       <button type="button" onClick={() => setCreativeLibraryRefresh((value) => value + 1)}>Try again</button>
                     </div>
-                  ) : creativeLibrary.length === 0 ? (
+                  ) : unpublishedCreativeLibrary.length === 0 ? (
                     <div className="studio-publish-empty">
-                      <strong>No saved ads yet</strong>
-                      <span>Create an ad from a template, then return here to reuse it.</span>
+                      <strong>No unpublished ads</strong>
+                      <span>Open the full library to review published ads or create another ad.</span>
                     </div>
                   ) : (
                     <div className="studio-ad-library-list">
-                      {creativeLibrary.map((item) => (
-                        <article key={item.campaignId}>
+                      {unpublishedCreativeLibrary.map((item) => {
+                        const selected = selectedLibraryCampaignIds.has(item.campaignId);
+                        const disabled = !selected && selectedLibraryCampaignIds.size >= MAX_LIBRARY_SELECTIONS;
+                        return (
+                        <article
+                          className={selected ? "bg-(--surface-subtle)/55" : ""}
+                          key={item.campaignId}
+                        >
                           <CreativeThumbnail src={item.previewSrc} alt={`${item.name} ad preview`} compact />
                           <div className="studio-ad-library-copy">
                             <strong title={item.name}>{item.name}</strong>
@@ -844,12 +903,32 @@ export function PublishSetupPanel({
                           </div>
                           <span className={`studio-library-status ${item.status}`}>{capitalize(item.status)}</span>
                           <time dateTime={item.updatedAt ?? undefined}>Updated {formatDate(item.updatedAt)}</time>
-                          <Link href={`/ad-studio?campaignId=${encodeURIComponent(item.campaignId)}&publish=1`}>Use this ad</Link>
+                          <div className="flex min-h-11 items-center justify-end gap-3 max-[900px]:[grid-area:action]">
+                            <span className="whitespace-nowrap text-xs font-bold text-(--ink)">Use this ad</span>
+                            <Checkbox
+                              className="relative size-5 before:absolute before:-inset-3 before:content-['']"
+                              checked={selected}
+                              disabled={disabled}
+                              aria-label={`Use ${item.name}`}
+                              onCheckedChange={() => toggleLibraryCreative(item.campaignId)}
+                            />
+                          </div>
                         </article>
-                      ))}
+                      )})}
                     </div>
                   )}
+                  {selectedLibraryCampaignIds.size >= MAX_LIBRARY_SELECTIONS && (
+                    <p className="studio-field-error">
+                      <CircleAlert aria-hidden size={15} /> Select up to six creatives for one campaign.
+                    </p>
+                  )}
+                  <Button asChild variant="outline" size="lg" className="justify-self-start">
+                    <Link href="/ad-studio/library"><Images aria-hidden /> View full library</Link>
+                  </Button>
                 </div>
+              )}
+              {creativeSource === "library" && selectionHint && (
+                <p className="studio-field-error"><CircleAlert aria-hidden size={15} /> {selectionHint}</p>
               )}
             </section>
           )}
@@ -1046,7 +1125,7 @@ export function PublishSetupPanel({
               <h1 id="review-title">Review</h1>
               <div className="studio-review-list">
                 <div><span>Campaign</span><strong>{campaignMode === "existing" ? selectedCampaign?.name : campaignPack.campaign.name}</strong></div>
-                <div><span>Creatives</span><strong>{selectedVariantIds.length}</strong></div>
+                <div><span>Creatives</span><strong>{selectedCreativeCount}</strong></div>
                 <div><span>Lead form</span><strong>{leadForm.questions.filter((q) => q.trim()).length} question{leadForm.questions.filter((q) => q.trim()).length === 1 ? "" : "s"}</strong></div>
                 <div><span>Audience</span><strong>{campaignMode === "existing" ? "Existing campaign targeting" : formatTargetAudience(targetSuburbs, includeSurroundingSuburbs)}</strong></div>
                 <div><span>Budget</span><strong>${dailyBudgetAud}/day · {scheduleSummary}</strong></div>
@@ -1066,7 +1145,28 @@ export function PublishSetupPanel({
                   ))}
                 </div>
               </details>
-              {variants.length > 0 && (
+              {creativeSource === "library" && selectedLibraryItems.length > 0 && (
+                <div className="studio-review-creatives">
+                  <strong>Your {selectedLibraryItems.length === 1 ? "ad" : "ads"}</strong>
+                  <div className="grid gap-2">
+                    {selectedLibraryItems.map((item) => (
+                      <article
+                        className="grid min-w-0 grid-cols-[64px_minmax(0,1fr)] items-center gap-3 rounded-(--r-card) border border-(--line) p-2.5"
+                        key={item.campaignId}
+                      >
+                        <CreativeThumbnail src={item.previewSrc} alt={`${item.name} ad preview`} compact />
+                        <div className="grid min-w-0 gap-1">
+                          <strong className="truncate text-sm">{item.name}</strong>
+                          <span className="text-xs font-semibold text-(--muted)">
+                            {item.format ? formatCreativeFormat(item.format) : "Ad creative"}
+                          </span>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {creativeSource === "current" && variants.length > 0 && (
                 <div className="studio-review-creatives">
                   <strong>Your {selectedVariantIds.length === 1 ? "ad" : "ads"}</strong>
                   <div className="studio-creative-selection studio-creative-selection-visual">

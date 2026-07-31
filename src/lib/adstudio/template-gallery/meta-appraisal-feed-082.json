@@ -159,7 +159,8 @@
         "height": 0.012962962962962963
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/merriweather-800.woff2"
     },
     "headline": {
       "fontId": "smooch-sans",
@@ -181,7 +182,8 @@
         "height": 0.14333333333333334
       },
       "sampleLineCount": 3,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/smooch-sans-300.woff2"
     },
     "subheadline": {
       "fontId": "heebo",
@@ -203,7 +205,8 @@
         "height": 0.018518518518518517
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/heebo-800.woff2"
     },
     "cta": {
       "fontId": "smooch-sans",
@@ -225,7 +228,8 @@
         "height": 0.02074074074074074
       },
       "sampleLineCount": 1,
-      "detectionScore": 0.474
+      "detectionScore": 0.474,
+      "fontFile": "/fonts/adstudio/smooch-sans-800.woff2"
     },
     "benefit_3": {
       "fontId": "smooch-sans",
@@ -247,7 +251,8 @@
         "height": 0.025185185185185185
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/smooch-sans-600.woff2"
     },
     "benefit_1": {
       "fontId": "rubik",
@@ -269,7 +274,8 @@
         "height": 0.08037037037037037
       },
       "sampleLineCount": 3,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/rubik-900.woff2"
     },
     "benefit_2": {
       "fontId": "dm-sans",
@@ -291,7 +297,8 @@
         "height": 0.011481481481481481
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/dm-sans-900.woff2"
     }
   }
 }

@@ -102,6 +102,23 @@
     "primary_intent": "market_report_leads",
     "property_or_agent_focus": "property"
   },
+  "deterministicEditing": {
+    "status": "partial",
+    "imageBoxes": {
+      "property_photo": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      },
+      "agency_logo": {
+        "x": 0.787962962962963,
+        "y": 0,
+        "width": 0.14814814814814814,
+        "height": 0.13333333333333333
+      }
+    }
+  },
   "meta": {
     "platform": "meta",
     "objective": "OUTCOME_LEADS",
@@ -140,18 +157,19 @@
   },
   "typography": {
     "body": {
-      "fontId": "raleway",
-      "family": "Raleway",
+      "fontId": "roboto",
+      "family": "Roboto",
       "fallbackFamily": "sans-serif",
-      "weight": 300,
+      "weight": 600,
       "italic": false,
       "case": "mixed",
-      "sizeRatio": 1.0248437738149674,
-      "lineHeight": 1.174,
+      "measurementVersion": 2,
+      "sizeRatio": 0.53173828125,
+      "lineHeight": 1.171875,
       "tracking": 0,
       "align": "center",
-      "color": "#d5e5e6",
-      "fitScore": 0.536,
+      "color": "#d7e6e8",
+      "fitScore": 0.646,
       "sampleBox": {
         "x": 0.2324074074074074,
         "y": 0.3074074074074074,
@@ -159,21 +177,46 @@
         "height": 0.05333333333333334
       },
       "sampleLineCount": 2,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "measurementSource": "ocr-v2",
+      "measuredLines": [
+        {
+          "text": "Get the latest local sales, price trends",
+          "sampleBox": {
+            "x": 0.23333333333333334,
+            "y": 0.3074074074074074,
+            "width": 0.5615740740740741,
+            "height": 0.024444444444444446
+          },
+          "sizeRatio": 1.16015625
+        },
+        {
+          "text": "and buyer demand in one clear report.",
+          "sampleBox": {
+            "x": 0.2324074074074074,
+            "y": 0.3362962962962963,
+            "width": 0.5634259259259259,
+            "height": 0.024444444444444446
+          },
+          "sizeRatio": 1.16015625
+        }
+      ],
+      "fontFile": "/fonts/adstudio/roboto-600.woff2"
     },
     "subheadline": {
-      "fontId": "merriweather",
-      "family": "Merriweather",
+      "fontId": "frank-ruhl-libre",
+      "family": "Frank Ruhl Libre",
       "fallbackFamily": "serif",
-      "weight": 800,
+      "weight": 900,
       "italic": false,
       "case": "upper",
-      "sizeRatio": 1.3473193473193472,
-      "lineHeight": 1.257,
+      "measurementVersion": 2,
+      "sizeRatio": 1.382488479262673,
+      "lineHeight": 1.291,
       "tracking": 0,
       "align": "center",
       "color": "#e4bf6f",
-      "fitScore": 0.502,
+      "fitScore": 0.624,
       "sampleBox": {
         "x": 0.19027777777777777,
         "y": 0.2637037037037037,
@@ -181,66 +224,130 @@
         "height": 0.022222222222222223
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "measurementSource": "ocr-v2",
+      "measuredLines": [
+        {
+          "text": "LOCAL PRICES. CLEAR INSIGHT.",
+          "sampleBox": {
+            "x": 0.19027777777777777,
+            "y": 0.2637037037037037,
+            "width": 0.6546296296296297,
+            "height": 0.022222222222222223
+          },
+          "sizeRatio": 1.382488479262673
+        }
+      ],
+      "fontFile": "/fonts/adstudio/frank-ruhl-libre-900.woff2"
     },
     "headline": {
-      "fontId": "oswald",
-      "family": "Oswald",
-      "fallbackFamily": "sans-serif",
-      "weight": 400,
-      "italic": false,
-      "case": "upper",
-      "sizeRatio": 1.2109230055658626,
-      "lineHeight": 1.482,
-      "tracking": 0,
-      "align": "center",
-      "color": "#eff3f4",
-      "fitScore": 0.406,
-      "sampleBox": {
-        "x": 0.026851851851851852,
-        "y": 0.12296296296296297,
-        "width": 0.8685185185185185,
-        "height": 0.11333333333333333
-      },
-      "sampleLineCount": 6,
-      "detectionScore": 0.694
-    },
-    "stat_1": {
-      "fontId": "smooch-sans",
-      "family": "Smooch Sans",
-      "fallbackFamily": "sans-serif",
-      "weight": 400,
-      "italic": false,
-      "case": "upper",
-      "sizeRatio": 1.5241702741702743,
-      "lineHeight": 1.2,
-      "tracking": 0,
-      "align": "center",
-      "color": "#e1e4e6",
-      "fitScore": 0.634,
-      "sampleBox": {
-        "x": 0.11296296296296296,
-        "y": 0.8222222222222222,
-        "width": 0.725,
-        "height": 0.04296296296296296
-      },
-      "sampleLineCount": 2,
-      "detectionScore": 0.65,
-      "fontFile": "/fonts/adstudio/smooch-sans-400.woff2"
-    },
-    "cta": {
-      "fontId": "lato",
-      "family": "Lato",
+      "fontId": "poppins",
+      "family": "Poppins",
       "fallbackFamily": "sans-serif",
       "weight": 900,
       "italic": false,
       "case": "upper",
-      "sizeRatio": 1.3793103448275863,
+      "measurementVersion": 2,
+      "sizeRatio": 0.6752232142857142,
+      "lineHeight": 1.5,
+      "tracking": 0,
+      "align": "center",
+      "color": "#f5f7f8",
+      "fitScore": 0.499,
+      "sampleBox": {
+        "x": 0.1537037037037037,
+        "y": 0.12296296296296297,
+        "width": 0.7416666666666667,
+        "height": 0.11333333333333333
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 1,
+      "measurementSource": "ocr-v2",
+      "measuredLines": [
+        {
+          "text": "YOUR SUBURB",
+          "sampleBox": {
+            "x": 0.17314814814814813,
+            "y": 0.12296296296296297,
+            "width": 0.6592592592592592,
+            "height": 0.05185185185185185
+          },
+          "sizeRatio": 1.4758450255102038
+        },
+        {
+          "text": "MARKET UPDATE",
+          "sampleBox": {
+            "x": 0.1537037037037037,
+            "y": 0.1862962962962963,
+            "width": 0.7416666666666667,
+            "height": 0.05
+          },
+          "sizeRatio": 1.530505952380952
+        }
+      ],
+      "fontFile": "/fonts/adstudio/poppins-900.woff2"
+    },
+    "stat_1": {
+      "fontId": "outfit",
+      "family": "Outfit",
+      "fallbackFamily": "sans-serif",
+      "weight": 900,
+      "italic": false,
+      "case": "upper",
+      "measurementVersion": 2,
+      "sizeRatio": 0.6776470588235294,
+      "lineHeight": 1.26,
+      "tracking": 0,
+      "align": "left",
+      "color": "#d2d7d9",
+      "fitScore": 0.702,
+      "sampleBox": {
+        "x": 0.11296296296296296,
+        "y": 0.8218518518518518,
+        "width": 0.21203703703703702,
+        "height": 0.043333333333333335
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 1,
+      "measurementSource": "ocr-v2",
+      "measuredLines": [
+        {
+          "text": "CURRENT",
+          "sampleBox": {
+            "x": 0.14629629629629629,
+            "y": 0.8218518518518518,
+            "width": 0.14212962962962963,
+            "height": 0.017407407407407406
+          },
+          "sizeRatio": 1.6869086357947434
+        },
+        {
+          "text": "MEDIAN PRICE",
+          "sampleBox": {
+            "x": 0.11296296296296296,
+            "y": 0.847037037037037,
+            "width": 0.21203703703703702,
+            "height": 0.01814814814814815
+          },
+          "sizeRatio": 1.6180552220888353
+        }
+      ],
+      "fontFile": "/fonts/adstudio/outfit-900.woff2"
+    },
+    "cta": {
+      "fontId": "figtree",
+      "family": "Figtree",
+      "fallbackFamily": "sans-serif",
+      "weight": 900,
+      "italic": false,
+      "case": "upper",
+      "measurementVersion": 2,
+      "sizeRatio": 1.3484311740890689,
       "lineHeight": 1.2,
       "tracking": 0,
       "align": "center",
-      "color": "#142932",
-      "fitScore": 0.388,
+      "color": "#1a2d33",
+      "fitScore": 0.843,
       "sampleBox": {
         "x": 0.26064814814814813,
         "y": 0.9255555555555556,
@@ -248,51 +355,95 @@
         "height": 0.027037037037037037
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "measurementSource": "ocr-v2",
+      "measuredLines": [
+        {
+          "text": "GET THE FREE REPORT",
+          "sampleBox": {
+            "x": 0.26064814814814813,
+            "y": 0.9255555555555556,
+            "width": 0.5078703703703704,
+            "height": 0.027037037037037037
+          },
+          "sizeRatio": 1.3484311740890689
+        }
+      ],
+      "fontFile": "/fonts/adstudio/figtree-900.woff2"
     },
     "stat_3": {
-      "fontId": "smooch-sans",
-      "family": "Smooch Sans",
+      "fontId": "londrina-solid",
+      "family": "Londrina Solid",
       "fallbackFamily": "sans-serif",
-      "weight": 500,
-      "italic": false,
-      "case": "upper",
-      "sizeRatio": 1.5333333333333332,
-      "lineHeight": 1.2,
-      "tracking": 0,
-      "align": "left",
-      "color": "#463b24",
-      "fitScore": 0.278,
-      "sampleBox": {
-        "x": 0.4009259259259259,
-        "y": 0.6229629629629629,
-        "width": 0.41388888888888886,
-        "height": 0.05962962962962963
-      },
-      "sampleLineCount": 4,
-      "detectionScore": 0.429
-    },
-    "stat_2": {
-      "fontId": "merriweather",
-      "family": "Merriweather",
-      "fallbackFamily": "serif",
       "weight": 900,
       "italic": false,
       "case": "upper",
-      "sizeRatio": 1.3827160493827158,
-      "lineHeight": 1.257,
+      "measurementVersion": 2,
+      "sizeRatio": 1.2783564814814816,
+      "lineHeight": 1.183,
       "tracking": 0,
       "align": "left",
-      "color": "#dfe2e4",
-      "fitScore": 0.65,
+      "color": "#e1e4e6",
+      "fitScore": 0.248,
       "sampleBox": {
-        "x": 0.45185185185185184,
-        "y": 0.8474074074074074,
-        "width": 0.38333333333333336,
-        "height": 0.01814814814814815
+        "x": 0.7078703703703704,
+        "y": 0.8222222222222222,
+        "width": 0.1300925925925926,
+        "height": 0.017407407407407406
       },
-      "sampleLineCount": 2,
-      "detectionScore": 0.583
+      "sampleLineCount": 1,
+      "detectionScore": 0.5,
+      "measurementSource": "ocr-v2",
+      "measuredLines": [
+        {
+          "text": "DAYS ON",
+          "sampleBox": {
+            "x": 0.7078703703703704,
+            "y": 0.8222222222222222,
+            "width": 0.1300925925925926,
+            "height": 0.017407407407407406
+          },
+          "sizeRatio": 1.2783564814814816
+        }
+      ],
+      "fontFile": "/fonts/adstudio/londrina-solid-900.woff2"
+    },
+    "stat_2": {
+      "fontId": "londrina-solid",
+      "family": "Londrina Solid",
+      "fallbackFamily": "sans-serif",
+      "weight": 900,
+      "italic": false,
+      "case": "upper",
+      "measurementVersion": 2,
+      "sizeRatio": 1.2783564814814816,
+      "lineHeight": 1.183,
+      "tracking": 0,
+      "align": "center",
+      "color": "#dadddf",
+      "fitScore": 0.319,
+      "sampleBox": {
+        "x": 0.4398148148148148,
+        "y": 0.8222222222222222,
+        "width": 0.11898148148148148,
+        "height": 0.017407407407407406
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 0.5,
+      "measurementSource": "ocr-v2",
+      "measuredLines": [
+        {
+          "text": "RECENT",
+          "sampleBox": {
+            "x": 0.4398148148148148,
+            "y": 0.8222222222222222,
+            "width": 0.11898148148148148,
+            "height": 0.017407407407407406
+          },
+          "sizeRatio": 1.2783564814814816
+        }
+      ],
+      "fontFile": "/fonts/adstudio/londrina-solid-900.woff2"
     }
   }
 }

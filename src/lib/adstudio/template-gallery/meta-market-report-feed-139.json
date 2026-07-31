@@ -159,7 +159,8 @@
         "height": 0.017407407407407406
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/merriweather-900.woff2"
     },
     "headline": {
       "fontId": "smooch-sans",
@@ -176,12 +177,13 @@
       "fitScore": 0.515,
       "sampleBox": {
         "x": 0.18703703703703703,
-        "y": 0.10296296296296296,
+        "y": 0.14888888888888888,
         "width": 0.6462962962962963,
-        "height": 0.16037037037037036
+        "height": 0.11444444444444445
       },
-      "sampleLineCount": 3,
-      "detectionScore": 1
+      "sampleLineCount": 2,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/smooch-sans-300.woff2"
     },
     "email": {
       "fontId": "oswald",
@@ -249,7 +251,8 @@
         "height": 0.02148148148148148
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/mulish-900.woff2"
     },
     "stat_2": {
       "fontId": "roboto-slab",
@@ -273,6 +276,47 @@
       "sampleLineCount": 2,
       "detectionScore": 0.667,
       "fontFile": "/fonts/adstudio/roboto-slab-800.woff2"
+    },
+    "phone": {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "fallbackFamily": "sans-serif",
+      "weight": 300,
+      "italic": false,
+      "case": "mixed",
+      "sizeRatio": 0.55,
+      "lineHeight": 1.2,
+      "tracking": 0.01,
+      "align": "center",
+      "color": "#1b3345",
+      "fitScore": 0.35,
+      "sampleBox": {
+        "x": 0.1,
+        "y": 0.9,
+        "width": 0.8,
+        "height": 0.03
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 0.55,
+      "measurementSource": "manual-estimate",
+      "fontFile": "/fonts/adstudio/merriweather-300.woff2"
+    }
+  },
+  "deterministicEditing": {
+    "status": "partial",
+    "imageBoxes": {
+      "suburb_aerial": {
+        "x": 0.05462962962962963,
+        "y": 0.40444444444444444,
+        "width": 0.8907407407407407,
+        "height": 0.33555555555555555
+      },
+      "agency_logo": {
+        "x": 0.44814814814814813,
+        "y": 0.04296296296296296,
+        "width": 0.10277777777777777,
+        "height": 0.08370370370370371
+      }
     }
   }
 }

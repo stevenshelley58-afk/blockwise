@@ -157,7 +157,8 @@
         "height": 0.013671875
       },
       "sampleLineCount": 4,
-      "detectionScore": 0.375
+      "detectionScore": 0.375,
+      "fontFile": "/fonts/adstudio/kanit-900.woff2"
     },
     "main_cta": {
       "fontId": "smooch-sans",
@@ -179,7 +180,8 @@
         "height": 0.028515625
       },
       "sampleLineCount": 4,
-      "detectionScore": 0.357
+      "detectionScore": 0.357,
+      "fontFile": "/fonts/adstudio/smooch-sans-400.woff2"
     },
     "price_per_night": {
       "fontId": "kanit",
@@ -201,7 +203,8 @@
         "height": 0.0359375
       },
       "sampleLineCount": 2,
-      "detectionScore": 0.556
+      "detectionScore": 0.556,
+      "fontFile": "/fonts/adstudio/kanit-900.woff2"
     }
   }
 }

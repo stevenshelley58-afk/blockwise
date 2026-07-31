@@ -11,6 +11,7 @@ import {
 } from "@/lib/adstudio/generation-credits";
 import { refundOutstandingWorkspaceCredits } from "@/lib/credits/workspace-credits";
 import {
+  assertDeterministicFeedEditingReady,
   runTemplateCampaignGeneration,
   type CreateCampaignBody,
 } from "@/lib/adstudio/generate-template-campaign";
@@ -108,7 +109,7 @@ export async function GET(request: NextRequest) {
   const [creativeResult, publishPlanResult] = await Promise.all([
     context.supabase
       .from("adstudio_creatives")
-      .select("campaign_id,format,canvas_json,preview_url,updated_at")
+      .select("campaign_id,variant_id,format,canvas_json,preview_url,updated_at")
       .eq("workspace_id", context.access.workspaceId)
       .in("campaign_id", campaignIds)
       .order("updated_at", { ascending: false }),
@@ -314,9 +315,16 @@ export async function POST(request: NextRequest) {
         body,
         workspaceName: context.access.workspaceName,
         region: context.access.region,
-        isTrialWorkspace: creditReservation.isTrialWorkspace,
         creditReservation,
       });
+      if (result.requiresDeterministicEditing) {
+        await result.editingLayersTask;
+        await assertDeterministicFeedEditingReady({
+          supabase: context.supabase,
+          workspaceId: context.access.workspaceId,
+          campaignId: result.campaignId,
+        });
+      }
       await recordWorkspaceFunnelEventBestEffort(funnelService, {
         eventName: "first_generation_completed",
         workspaceId: context.access.workspaceId,
@@ -328,10 +336,12 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // The customer has the ad in this response; region detection
-      // (editor hit-boxes) and the story (9:16) background patch run
-      // after the response is sent.
-      after(() => result.enrichRegions());
+      // The customer has the ad and its prebuilt editor hit-boxes in this
+      // response. Only the optional instant-edit plate and Story patch finish
+      // in the background.
+      if (!result.requiresDeterministicEditing) {
+        after(() => result.editingLayersTask);
+      }
       if (result.storyTask) after(() => result.storyTask);
 
       const liveResult = buildAdStudioLiveResult({

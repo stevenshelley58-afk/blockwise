@@ -173,7 +173,8 @@
         "height": 0.13958333333333334
       },
       "sampleLineCount": 4,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/oswald-300.woff2"
     },
     "subheadline": {
       "fontId": "merriweather",
@@ -195,7 +196,8 @@
         "height": 0.0171875
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/merriweather-800.woff2"
     },
     "check_3": {
       "fontId": "plus-jakarta-sans",
@@ -217,7 +219,8 @@
         "height": 0.013802083333333333
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/plus-jakarta-sans-800.woff2"
     },
     "check_2": {
       "fontId": "plus-jakarta-sans",
@@ -239,7 +242,8 @@
         "height": 0.013802083333333333
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/plus-jakarta-sans-800.woff2"
     },
     "check_1": {
       "fontId": "plus-jakarta-sans",
@@ -261,7 +265,8 @@
         "height": 0.013541666666666667
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/plus-jakarta-sans-800.woff2"
     },
     "benefit_3": {
       "fontId": "roboto-condensed",
@@ -331,6 +336,30 @@
       "sampleLineCount": 1,
       "detectionScore": 0.68,
       "fontFile": "/fonts/adstudio/manrope-600.woff2"
+    },
+    "cta": {
+      "fontId": "plus-jakarta-sans",
+      "family": "Plus Jakarta Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 500,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 0.65,
+      "lineHeight": 1.2,
+      "tracking": 0.02,
+      "align": "center",
+      "color": "#bbbdbb",
+      "fitScore": 0.35,
+      "sampleBox": {
+        "x": 0.1,
+        "y": 0.78,
+        "width": 0.8,
+        "height": 0.05
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 0.55,
+      "measurementSource": "manual-estimate",
+      "fontFile": "/fonts/adstudio/plus-jakarta-sans-500.woff2"
     }
   }
 }

@@ -320,6 +320,16 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
       { status: 400 },
     );
   }
+  if (selectedRegion.kind === "text" && layers?.deterministicOnly && !patchImage) {
+    await releaseClaim();
+    return NextResponse.json(
+      {
+        code: "layers_not_ready",
+        error: "This text area is still preparing. Wait a moment, then apply the edit again.",
+      },
+      { status: 409 },
+    );
+  }
 
   // A text edit's new value IS the verified value — the copy editor map
   // updates deterministically either way, whether the pixels came from the
@@ -500,14 +510,14 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
   // path so the client can paint pixels immediately without a second round
   // trip through the auth-gated media proxy. The storage path remains the
   // source of truth for reload/export; the data URL is purely a display hint.
-  const previewDataUrl = lastImage.assetUrl.startsWith("data:image/")
+  const previewImage = lastImage.assetUrl.startsWith("data:image/")
     ? lastImage.assetUrl
     : undefined;
 
   return NextResponse.json({
     creativeId: id,
     image,
-    previewDataUrl,
+    previewImage,
     qa,
     textLayers: nextLayers ?? null,
     renderHistory,

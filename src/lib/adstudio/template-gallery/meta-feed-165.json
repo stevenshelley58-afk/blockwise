@@ -148,7 +148,8 @@
         "height": 0.07265625
       },
       "sampleLineCount": 3,
-      "detectionScore": 0.421
+      "detectionScore": 0.421,
+      "fontFile": "/fonts/adstudio/montserrat-900.woff2"
     },
     "price_info": {
       "fontId": "merriweather",
@@ -170,7 +171,8 @@
         "height": 0.044140625
       },
       "sampleLineCount": 1,
-      "detectionScore": 0.462
+      "detectionScore": 0.462,
+      "fontFile": "/fonts/adstudio/merriweather-400.woff2"
     },
     "feature_1": {
       "fontId": "oswald",
@@ -192,7 +194,8 @@
         "height": 0.048046875
       },
       "sampleLineCount": 3,
-      "detectionScore": 0.667
+      "detectionScore": 0.667,
+      "fontFile": "/fonts/adstudio/oswald-500.woff2"
     },
     "feature_2": {
       "fontId": "manrope",
@@ -214,7 +217,56 @@
         "height": 0.018359375
       },
       "sampleLineCount": 1,
-      "detectionScore": 0.8
+      "detectionScore": 0.8,
+      "fontFile": "/fonts/adstudio/manrope-700.woff2"
+    },
+    "feature_3": {
+      "fontId": "montserrat",
+      "family": "Montserrat",
+      "fallbackFamily": "sans-serif",
+      "weight": 900,
+      "italic": false,
+      "case": "mixed",
+      "sizeRatio": 0.5,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "left",
+      "color": "#402f1f",
+      "fitScore": 0.35,
+      "sampleBox": {
+        "x": 0.1,
+        "y": 0.6,
+        "width": 0.8,
+        "height": 0.06
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 0.55,
+      "measurementSource": "manual-estimate",
+      "fontFile": "/fonts/adstudio/montserrat-900.woff2"
+    },
+    "website": {
+      "fontId": "montserrat",
+      "family": "Montserrat",
+      "fallbackFamily": "sans-serif",
+      "weight": 900,
+      "italic": false,
+      "case": "lower",
+      "sizeRatio": 0.45,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "center",
+      "color": "#402f1f",
+      "fitScore": 0.35,
+      "sampleBox": {
+        "x": 0.1,
+        "y": 0.95,
+        "width": 0.8,
+        "height": 0.025
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 0.55,
+      "measurementSource": "manual-estimate",
+      "fontFile": "/fonts/adstudio/montserrat-900.woff2"
     }
   }
 }

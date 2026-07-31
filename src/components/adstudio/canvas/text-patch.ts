@@ -11,6 +11,8 @@ import { MAGIC_LAYER_MIN_AUTOFIT_RATIO } from "../../../lib/adstudio/magic-layer
 
 type NormalizedBox = { x: number; y: number; width: number; height: number };
 
+type MeasuredLine = { text: string; sampleBox: NormalizedBox; sizeRatio: number; scaleX?: number };
+
 /** Mirrors COMPOSITE_PADDING in region-edit.ts so patch pixels line up exactly. */
 export const PATCH_PADDING = 0.02;
 
@@ -26,6 +28,56 @@ export function paddedPatchRect(box: NormalizedBox, imageWidth: number, imageHei
     width: Math.max(1, right - left),
     height: Math.max(1, bottom - top),
   };
+}
+
+/** Maps an offline line box into the current render's selected region. */
+export function mapMeasuredLineBox(source: NormalizedBox, sampleRegion: NormalizedBox, currentRegion: NormalizedBox): NormalizedBox {
+  const width = Math.max(sampleRegion.width, Number.EPSILON);
+  const height = Math.max(sampleRegion.height, Number.EPSILON);
+  return {
+    x: currentRegion.x + ((source.x - sampleRegion.x) / width) * currentRegion.width,
+    y: currentRegion.y + ((source.y - sampleRegion.y) / height) * currentRegion.height,
+    width: (source.width / width) * currentRegion.width,
+    height: (source.height / height) * currentRegion.height,
+  };
+}
+
+/** Deterministic word partition; preserves the sample's measured line balance. */
+export function splitTextIntoMeasuredLines(
+  text: string,
+  measured: number | Array<Pick<MeasuredLine, "text">>,
+): string[] {
+  const words = text.trim().split(/\s+/u).filter(Boolean);
+  const templates = typeof measured === "number"
+    ? Array.from({ length: measured }, () => ({ text: "" }))
+    : measured;
+  const count = Math.max(1, Math.min(templates.length, words.length || 1));
+  if (count === 1) return [words.join(" ")];
+  const weights = templates.slice(0, count).map((line) => (
+    Math.max(1, line.text.trim().split(/\s+/u).filter(Boolean).length)
+  ));
+  const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
+  const lines: string[] = [];
+  let cursor = 0;
+  let cumulativeWeight = 0;
+  for (let line = 0; line < count; line += 1) {
+    cumulativeWeight += weights[line]!;
+    const remainingLines = count - line - 1;
+    const desiredEnd = line === count - 1
+      ? words.length
+      : Math.round((words.length * cumulativeWeight) / totalWeight);
+    const take = Math.max(1, Math.min(
+      desiredEnd - cursor,
+      words.length - cursor - remainingLines,
+    ));
+    lines.push(words.slice(cursor, cursor + take).join(" "));
+    cursor += take;
+  }
+  return lines;
+}
+
+export function scaledTextWidth(width: number, scaleX = 1): number {
+  return width * scaleX;
 }
 
 export function loadPatchImage(src: string): Promise<HTMLImageElement> {
@@ -108,6 +160,40 @@ export function renderTextPatch(input: {
   const maxTextWidth = inner.width * 0.98;
   if ("letterSpacing" in context) context.letterSpacing = `${input.style.tracking}em`;
 
+  const measuredLines = input.style.measuredLines as MeasuredLine[] | undefined;
+  if (measuredLines?.length) {
+    const values = splitTextIntoMeasuredLines(value, measuredLines);
+    context.fillStyle = input.style.color;
+    context.textBaseline = "middle";
+    context.textAlign = input.style.align;
+    for (let index = 0; index < measuredLines.length; index += 1) {
+      const source = measuredLines[index];
+      const box = mapMeasuredLineBox(source.sampleBox, input.style.sampleBox ?? input.box, input.box);
+      const local = {
+        left: Math.round(box.x * imageWidth) - rect.left,
+        top: Math.round(box.y * imageHeight) - rect.top,
+        width: Math.max(1, Math.round(box.width * imageWidth)),
+        height: Math.max(1, Math.round(box.height * imageHeight)),
+      };
+      let fontSize = Math.max(1, local.height * source.sizeRatio);
+      const minimum = fontSize * MAGIC_LAYER_MIN_AUTOFIT_RATIO;
+      const line = values[index] ?? "";
+      const scaleX = source.scaleX ?? 1;
+      for (; fontSize >= minimum; fontSize -= 0.5) {
+        context.font = fontString(input.style, fontSize);
+        if (scaledTextWidth(context.measureText(line).width, scaleX) <= local.width * 0.98) break;
+      }
+      if (fontSize < minimum) return null;
+      const x = input.style.align === "left" ? local.left + local.width * 0.01 : input.style.align === "right" ? local.left + local.width * 0.99 : local.left + local.width / 2;
+      context.save();
+      context.translate(x, local.top + local.height / 2);
+      context.scale(scaleX, 1);
+      context.fillText(line, 0, 0);
+      context.restore();
+    }
+    try { return canvas.toDataURL("image/png"); } catch { return null; }
+  }
+
   // Preserve the measured sample size and line count. Small copy variations
   // may shrink to 88%; anything beyond that uses the clone model.
   const lineHeightFactor = input.style.lineHeight;
@@ -119,11 +205,22 @@ export function renderTextPatch(input: {
     context.font = fontString(input.style, fontSize);
     const candidate = wrapToWidth(context, value, maxTextWidth);
     if (candidate.length === 0) return null;
-    const widest = Math.max(...candidate.map((line) => context.measureText(line).width));
+    const measurements = candidate.map((line) => context.measureText(line));
+    const widest = Math.max(...measurements.map((measurement) => measurement.width));
+    // The region box encloses visible glyph ink, not the CSS em line box.
+    // Comparing `fontSize * lineHeight` against that box rejected correctly
+    // measured faces (their em is normally 20-40% taller than their glyphs),
+    // so "live" fields silently fell back to the image model. Browser text
+    // metrics let us gate the pixels that will actually be painted.
+    const tallestInk = Math.max(...measurements.map((measurement) => {
+      const measured = measurement.actualBoundingBoxAscent + measurement.actualBoundingBoxDescent;
+      return Number.isFinite(measured) && measured > 0 ? measured : fontSize;
+    }));
+    const paintedHeight = tallestInk + (candidate.length - 1) * fontSize * lineHeightFactor;
     if (
       widest <= maxTextWidth
       && candidate.length <= input.style.sampleLineCount
-      && candidate.length * fontSize * lineHeightFactor <= inner.height * 1.02
+      && paintedHeight <= inner.height * 1.02
     ) {
       lines = candidate;
       break;

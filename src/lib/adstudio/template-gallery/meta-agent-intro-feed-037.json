@@ -184,7 +184,8 @@
         "height": 0.024074074074074074
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/manrope-800.woff2"
     },
     "cta": {
       "fontId": "manrope",
@@ -206,7 +207,25 @@
         "height": 0.021111111111111112
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/manrope-800.woff2"
+    }
+  },
+  "deterministicEditing": {
+    "status": "partial",
+    "imageBoxes": {
+      "property_photo": {
+        "x": 0.012037037037037037,
+        "y": 0.01037037037037037,
+        "width": 0.975925925925926,
+        "height": 0.44074074074074077
+      },
+      "agency_logo": {
+        "x": 0.7203703703703703,
+        "y": 0.7503703703703704,
+        "width": 0.2222222222222222,
+        "height": 0.18074074074074073
+      }
     }
   }
 }

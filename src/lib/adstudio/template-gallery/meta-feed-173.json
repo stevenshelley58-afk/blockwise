@@ -126,7 +126,8 @@
         "height": 0.087109375
       },
       "sampleLineCount": 3,
-      "detectionScore": 0.958
+      "detectionScore": 0.958,
+      "fontFile": "/fonts/adstudio/fira-sans-300.woff2"
     },
     "main_headline": {
       "fontId": "oswald",
@@ -148,7 +149,8 @@
         "height": 0.149609375
       },
       "sampleLineCount": 1,
-      "detectionScore": 0.545
+      "detectionScore": 0.545,
+      "fontFile": "/fonts/adstudio/oswald-400.woff2"
     },
     "headline_top": {
       "fontId": "smooch-sans",
@@ -170,7 +172,19 @@
         "height": 0.05234375
       },
       "sampleLineCount": 1,
-      "detectionScore": 0.917
+      "detectionScore": 0.917,
+      "fontFile": "/fonts/adstudio/smooch-sans-400.woff2"
+    }
+  },
+  "deterministicEditing": {
+    "status": "partial",
+    "imageBoxes": {
+      "main_property_image": {
+        "x": 0,
+        "y": 0.53515625,
+        "width": 1,
+        "height": 0.46484375
+      }
     }
   }
 }

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 const read = (file: string) => readFileSync(file, "utf8");
@@ -66,12 +66,26 @@ test("active navigation excludes disabled features rather than hiding hardcoded 
 test("active Ad Studio generation has no local Ad Radar dependency", () => {
   const dialog = read("src/components/adstudio/new-ad-dialog.tsx");
   const progress = read("src/components/adstudio/generation-progress.tsx");
+  const styles = read("src/components/adstudio/styles.ts");
 
   assert.match(dialog, /GenerationProgress/);
+  assert.match(dialog, /template=\{generationTemplate\}/);
   assert.doesNotMatch(dialog, /GenerationAdStream|preloadGenerationAdStream|generationAdLocation|local-ad-radar/);
   assert.doesNotMatch(progress, /fetch\(|local-ad-radar|ad-radar/);
   assert.doesNotMatch(progress, /useEffect|useState|setInterval|Running final checks/);
   assert.match(progress, /Creating your Feed and Story ads/);
+  assert.match(progress, /templateDisplaySrc/);
+  assert.match(progress, /aria-hidden="true"/);
+  assert.doesNotMatch(progress, /<(?:a|button)\b/);
+  assert.equal((progress.match(/<figure\b/g) ?? []).length, 1);
+  assert.doesNotMatch(progress, /\.map\(|SHOWCASE_LIMIT|showcase-track|showcase-set/);
+  assert.match(styles, /\.studio-generation-showcase\{[^}]*pointer-events:none/);
+  assert.match(styles, /\.studio-generation-showcase\{[^}]*container-type:size[^}]*place-items:center/);
+  assert.match(styles, /\.studio-generation-showcase-card\{[^}]*100cqw[^}]*100cqh/);
+  assert.match(styles, /\.studio-generation-showcase-card img\{[^}]*object-fit:contain/);
+  assert.doesNotMatch(styles, /studio-generation-scroll|studio-generation-showcase-track|studio-generation-showcase-set/);
+  assert.equal(existsSync("src/components/adstudio/generation-ad-stream.tsx"), false);
+  assert.equal(existsSync("src/components/adstudio/generation-ad-stream-data.ts"), false);
 });
 
 test("operator research handlers share the pre-auth Ad Radar gate", () => {

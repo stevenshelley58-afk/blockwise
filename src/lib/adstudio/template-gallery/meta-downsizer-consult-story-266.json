@@ -145,7 +145,8 @@
         "height": 0.0671875
       },
       "sampleLineCount": 3,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/quicksand-300.woff2"
     },
     "subheadline": {
       "fontId": "oswald",
@@ -167,7 +168,8 @@
         "height": 0.06145833333333333
       },
       "sampleLineCount": 2,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/oswald-300.woff2"
     },
     "headline": {
       "fontId": "merriweather",
@@ -189,7 +191,8 @@
         "height": 0.096875
       },
       "sampleLineCount": 2,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/merriweather-300.woff2"
     },
     "cta": {
       "fontId": "merriweather",
@@ -211,7 +214,8 @@
         "height": 0.017708333333333333
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/merriweather-800.woff2"
     },
     "phone": {
       "fontId": "plus-jakarta-sans",
@@ -233,7 +237,8 @@
         "height": 0.03671875
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/plus-jakarta-sans-500.woff2"
     }
   }
 }

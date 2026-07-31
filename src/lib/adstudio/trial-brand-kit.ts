@@ -1,7 +1,6 @@
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import { deterministicUuid } from "./id.ts";
-import { approveAdStudioBrandKitForUse } from "./live-workflow.ts";
 import { isExampleBrandKitSourceUrl, persistAdStudioBrandKit, rowToBrandKit } from "./persistence.ts";
 import type { AdStudioBrandKit } from "./types.ts";
 
@@ -13,8 +12,6 @@ type ResolveGenerationBrandKitInput = {
   workspaceName?: string;
   region?: string;
   userId: string;
-  submittedBrandKit?: AdStudioBrandKit;
-  isTrialWorkspace: boolean;
 };
 
 export async function resolveAdStudioGenerationBrandKit(input: ResolveGenerationBrandKitInput): Promise<{
@@ -27,36 +24,20 @@ export async function resolveAdStudioGenerationBrandKit(input: ResolveGeneration
 }> {
   const approvedBrandKit = await loadApprovedBrandKit(input.supabase, input.workspaceId);
 
-  if (!input.isTrialWorkspace) {
-    if (approvedBrandKit) {
-      return { ok: true, brandKit: approvedBrandKit };
-    }
-
-    // B2 (simplification): generation may run on the latest unapproved
-    // extracted kit (real draft status preserved); publish stays gated on
-    // approval via the readiness checks.
-    const draftBrandKit = await loadDraftBrandKit(input.supabase, input.workspaceId);
-
-    if (draftBrandKit) {
-      return { ok: true, brandKit: draftBrandKit };
-    }
-
-    return { ok: false, error: "Approved brandKit is required.", status: 400 };
-  }
-
   if (approvedBrandKit) {
     return { ok: true, brandKit: approvedBrandKit };
   }
 
-  // Onboarding saves the customer's first brand inputs as a draft. Trial
-  // generation should use that real kit before creating a generic fallback.
+  // A Brand Pack improves generation but never gates it. Prefer the latest
+  // customer draft, then create a neutral warning-state fallback when the
+  // workspace has not saved any brand details yet.
   const draftBrandKit = await loadDraftBrandKit(input.supabase, input.workspaceId);
 
   if (draftBrandKit) {
     return { ok: true, brandKit: draftBrandKit };
   }
 
-  const fallbackBrandKit = buildTrialFallbackBrandKit({
+  const fallbackBrandKit = buildAdStudioFallbackBrandKit({
     workspaceId: input.workspaceId,
     workspaceName: input.workspaceName,
     region: input.region,
@@ -70,14 +51,14 @@ export async function resolveAdStudioGenerationBrandKit(input: ResolveGeneration
   return { ok: true, brandKit: fallbackBrandKit };
 }
 
-export function buildTrialFallbackBrandKit(input: {
+export function buildAdStudioFallbackBrandKit(input: {
   workspaceId: string;
   workspaceName?: string;
   region?: string;
 }): AdStudioBrandKit {
   const businessName = cleanWorkspaceName(input.workspaceName);
   const fallback: AdStudioBrandKit = {
-    brandKitId: deterministicUuid(`${input.workspaceId}:trial-approved-brand-kit`),
+    brandKitId: deterministicUuid(`${input.workspaceId}:starter-brand-kit`),
     workspaceId: input.workspaceId,
     source: {
       type: "manual",
@@ -144,11 +125,11 @@ export function buildTrialFallbackBrandKit(input: {
       privacyPolicyUrl: null,
       termsUrl: null,
     },
-    reviewStatus: "approved",
-    lockedFields: [],
+    reviewStatus: "pending_user_review",
+    lockedFields: ["starter_brand"],
   };
 
-  return approveAdStudioBrandKitForUse(fallback);
+  return fallback;
 }
 
 async function loadApprovedBrandKit(

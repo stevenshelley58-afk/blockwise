@@ -133,7 +133,8 @@
         "height": 0.329296875
       },
       "sampleLineCount": 7,
-      "detectionScore": 0.929
+      "detectionScore": 0.929,
+      "fontFile": "/fonts/adstudio/manrope-400.woff2"
     },
     "subheadline": {
       "fontId": "arimo",
@@ -155,7 +156,8 @@
         "height": 0.025
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/arimo-600.woff2"
     },
     "brand_name": {
       "fontId": "merriweather",
@@ -177,7 +179,8 @@
         "height": 0.01796875
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/merriweather-800.woff2"
     },
     "cta": {
       "fontId": "merriweather",
@@ -199,7 +202,8 @@
         "height": 0.015625
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/merriweather-800.woff2"
     }
   }
 }

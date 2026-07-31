@@ -188,6 +188,7 @@ export function TopBar({
           </button>
           {onOpenBrand && (
             <button
+              className="studio-mobile-menu-brand"
               type="button"
               role="menuitem"
               onClick={() => {

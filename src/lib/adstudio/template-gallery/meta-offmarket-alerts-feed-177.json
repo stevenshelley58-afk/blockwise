@@ -173,7 +173,8 @@
         "height": 0.11148148148148149
       },
       "sampleLineCount": 2,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/smooch-sans-300.woff2"
     },
     "subheadline": {
       "fontId": "fira-sans",
@@ -195,7 +196,8 @@
         "height": 0.02074074074074074
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/fira-sans-900.woff2"
     },
     "cta": {
       "fontId": "kanit",
@@ -217,7 +219,8 @@
         "height": 0.053703703703703705
       },
       "sampleLineCount": 8,
-      "detectionScore": 0.391
+      "detectionScore": 0.391,
+      "fontFile": "/fonts/adstudio/kanit-900.woff2"
     },
     "website": {
       "fontId": "open-sans",
@@ -262,7 +265,8 @@
         "height": 0.012222222222222223
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/merriweather-900.woff2"
     },
     "benefit_3": {
       "fontId": "merriweather",
@@ -284,7 +288,8 @@
         "height": 0.012222222222222223
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/merriweather-900.woff2"
     },
     "benefit_1": {
       "fontId": "merriweather",
@@ -306,7 +311,8 @@
         "height": 0.012222222222222223
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/merriweather-900.woff2"
     },
     "phone": {
       "fontId": "merriweather",
@@ -328,7 +334,31 @@
         "height": 0.017037037037037038
       },
       "sampleLineCount": 1,
-      "detectionScore": 1
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/merriweather-800.woff2"
+    }
+  },
+  "deterministicEditing": {
+    "status": "partial",
+    "imageBoxes": {
+      "property_photo": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 0.725925925925926
+      },
+      "location_graphic": {
+        "x": 0,
+        "y": 0.725925925925926,
+        "width": 1,
+        "height": 0.16592592592592592
+      },
+      "agency_logo": {
+        "x": 0.8027777777777778,
+        "y": 0.8955555555555555,
+        "width": 0.13425925925925927,
+        "height": 0.10444444444444445
+      }
     }
   }
 }
