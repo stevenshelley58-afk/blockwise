@@ -6,6 +6,7 @@ import { checkMetaConnectionHealth } from "../src/lib/providers/meta-assets.ts";
 import { syncMetaLeadsForPlanById } from "../src/lib/providers/meta-leads-worker.ts";
 import { executeMetaMutationById } from "../src/lib/providers/meta-mutation-worker.ts";
 import { executeMetaPublishPlanById } from "../src/lib/providers/meta-publish-worker.ts";
+import { recoverStuckMetaPublishPlans } from "../src/lib/providers/meta-publish-queue.ts";
 import { loadStoredProviderTokens } from "../src/lib/providers/provider-connections.ts";
 import { createSupabaseServiceClient } from "../src/lib/supabase/service.ts";
 
@@ -206,3 +207,46 @@ export async function runScheduledMetaTokenHealthChecks(serviceSupabase: Supabas
     results,
   };
 }
+
+/**
+ * Watchdog: recover publish plans that got queued but whose Trigger.dev worker
+ * run never started/advanced (e.g. a deploy window swallowed the run).
+ *
+ * Runs every 5 minutes and re-queues any plan stuck in `approved` for longer
+ * than 5 minutes. Bounded by maxAttempts inside the recovery helper so a plan
+ * that keeps failing is surfaced to an operator instead of looping forever.
+ */
+export const scheduledMetaPublishWatchdogTask = schedules.task({
+  id: "publish.meta.watchdog.scheduled",
+  cron: {
+    pattern: "*/5 * * * *",
+    timezone: "Australia/Perth",
+  },
+  run: async () => {
+    const result = await recoverStuckMetaPublishPlans({
+      stuckMinutes: 5,
+      maxAttempts: 3,
+    });
+
+    if (result.recovered > 0) {
+      console.info(
+        `[meta-publish-watchdog] recovered ${result.recovered} stuck plan(s): ${result.recoveredPlanIds.join(", ")}`,
+      );
+    }
+    if (result.exhausted > 0) {
+      console.warn(
+        `[meta-publish-watchdog] ${result.exhausted} plan(s) exhausted the retry budget and need operator review`,
+      );
+    }
+    for (const message of result.errors) {
+      console.error(`[meta-publish-watchdog] ${message}`);
+    }
+
+    return {
+      scanned: result.scanned,
+      recovered: result.recovered,
+      exhausted: result.exhausted,
+      errors: result.errors,
+    };
+  },
+});
