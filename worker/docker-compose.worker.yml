@@ -1,0 +1,33 @@
+# VPS background worker — Trigger.dev replacement.
+#
+# Deployed via Coolify alongside the research stack on /srv/blockwise. Env is
+# supplied from the same deploy .env that feeds the research services.
+#
+# Build context is the repo root (worker/index.ts imports src/lib/**):
+#   docker compose -f worker/docker-compose.worker.yml build
+#
+# Multiple replicas are safe: claim_job uses FOR UPDATE SKIP LOCKED, so no two
+# workers grab the same job. Run 1 replica until throughput demands more.
+
+services:
+  blockwise-worker:
+    build:
+      context: ..
+      dockerfile: worker/Dockerfile
+    image: "${BLOCKWISE_WORKER_IMAGE:-blockwise/worker:latest}"
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      TOKEN_ENCRYPTION_KEY: ${TOKEN_ENCRYPTION_KEY}
+      # Tuning (all have safe defaults in worker/index.ts)
+      WORKER_POLL_IDLE_MS: ${WORKER_POLL_IDLE_MS:-3000}
+      WORKER_POLL_BUSY_MS: ${WORKER_POLL_BUSY_MS:-250}
+      WORKER_LEASE_SECONDS: ${WORKER_LEASE_SECONDS:-600}
+      WORKER_REAP_INTERVAL_MS: ${WORKER_REAP_INTERVAL_MS:-60000}
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
