@@ -246,6 +246,86 @@ test("exact provider-hosted clone renders become owned bytes and persist to work
   assert.equal(stored, `/api/adstudio/media?path=${encodeURIComponent(uploadedPath)}`);
 });
 
+test("persistCloneRender retries a transient storage failure and surfaces the real error", async () => {
+  const tinyPng = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mNk+M8AAAMBAQDJ/pLvAAAAAElFTkSuQmCC";
+  let attempts = 0;
+  let stored = "";
+  const supabase = {
+    storage: {
+      from(bucket: string) {
+        assert.equal(bucket, "workspace-artifacts");
+        return {
+          async upload(path: string, _bytes: Uint8Array, _options: { contentType: string; upsert: boolean }) {
+            attempts += 1;
+            stored = path;
+            if (attempts < 3) return { error: { message: "upstream connection reset" } };
+            return { error: null };
+          },
+        };
+      },
+    },
+  };
+
+  const result = await persistCloneRender({
+    supabase,
+    workspaceId: "workspace_retry",
+    assetUrl: tinyPng,
+    fileNameSeed: "transient-clone",
+  });
+  assert.equal(attempts, 3, "should succeed on the third attempt");
+  assert.equal(result, `/api/adstudio/media?path=${encodeURIComponent(stored)}`);
+
+  // When every attempt fails, the real Supabase message is preserved (not swallowed).
+  let failAttempts = 0;
+  const failingSupabase = {
+    storage: {
+      from() {
+        return {
+          async upload() {
+            failAttempts += 1;
+            return { error: { message: "bucket quota exceeded" } };
+          },
+        };
+      },
+    },
+  };
+  await assert.rejects(
+    () => persistCloneRender({
+      supabase: failingSupabase,
+      workspaceId: "workspace_retry",
+      assetUrl: tinyPng,
+      fileNameSeed: "doomed-clone",
+    }),
+    /bucket quota exceeded/,
+  );
+  assert.equal(failAttempts, 3, "should exhaust all retry attempts");
+});
+
+test("persistCloneRender treats a duplicate-object error as success", async () => {
+  const tinyPng = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mNk+M8AAAMBAQDJ/pLvAAAAAElFTkSuQmCC";
+  let attempts = 0;
+  const supabase = {
+    storage: {
+      from() {
+        return {
+          async upload() {
+            attempts += 1;
+            return { error: { message: "The resource already exists" } };
+          },
+        };
+      },
+    },
+  };
+  const result = await persistCloneRender({
+    supabase,
+    workspaceId: "workspace_dup",
+    assetUrl: tinyPng,
+    fileNameSeed: "dup-clone",
+  });
+  assert.equal(attempts, 1, "duplicate means a prior attempt landed; no further retries");
+  assert.match(result, /^\/api\/adstudio\/media\?path=/);
+});
+
 test("targeted edit masks preserve the full ad outside the selected QA region", async () => {
   const { default: sharp } = await import("sharp");
   const creative = await sharp({

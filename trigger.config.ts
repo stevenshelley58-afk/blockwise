@@ -1,6 +1,9 @@
 import { defineConfig } from "@trigger.dev/sdk/v3";
 import { captureTriggerException, initTriggerSentry } from "./trigger/sentry";
 
+// Touched 2026-08-01 to redeploy the tasks with the storage-upload retry
+// fix bundled (src/lib/adstudio/clone-generation.ts) — the deploy workflow's
+// paths filter only watches trigger/** and this file.
 // Touched 2026-07-25 to redeploy the tasks with the gpt-5.x reasoning_effort
 // fix (src/lib/adstudio/ai-providers.ts) bundled — the deploy workflow's
 // paths filter only watches trigger/** and this file.
