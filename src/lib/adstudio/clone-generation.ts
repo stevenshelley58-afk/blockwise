@@ -337,13 +337,13 @@ export async function persistCloneRender(input: {
   fileNameSeed: string;
   fetchImpl?: typeof fetch;
 }): Promise<string> {
-  if (!input.assetUrl) throw new Error("Generated image could not be stored.");
+  if (!input.assetUrl) throw new Error("Generated image could not be stored (provider returned no asset URL).");
   let decoded: ReturnType<typeof dataUrlToUploadBytes>;
   if (input.assetUrl.startsWith("data:image/")) {
     decoded = dataUrlToUploadBytes(input.assetUrl);
   } else {
     const response = await (input.fetchImpl ?? fetch)(input.assetUrl);
-    if (!response.ok) throw new Error("Generated image could not be stored.");
+    if (!response.ok) throw new Error(`Generated image could not be stored (fetch failed: HTTP ${response.status}).`);
     const source = new Uint8Array(await response.arrayBuffer());
     const { default: sharp } = await import("sharp");
     const png = await sharp(source).png({ compressionLevel: 1 }).toBuffer();
@@ -354,9 +354,35 @@ export async function persistCloneRender(input: {
     };
   }
   const storagePath = `${input.workspaceId}/adstudio/clones/${input.fileNameSeed}.${decoded.extension}`;
-  const { error } = await input.supabase.storage
-    .from("workspace-artifacts")
-    .upload(storagePath, decoded.bytes, { contentType: decoded.contentType, upsert: false });
-  if (error) throw new Error("Generated image could not be stored.");
-  return `/api/adstudio/media?path=${encodeURIComponent(storagePath)}`;
+  // The upload is the step most exposed to transient infrastructure blips
+  // (a ~2MB PUT over the Trigger.dev runner's network). A single failed PUT
+  // used to kill the whole ad with a swallowed error; retry it a few times and
+  // surface the real Supabase message so the next failure is diagnosable.
+  const maxUploadAttempts = 3;
+  let uploadError: { message: string; statusCode?: string } | null = null;
+  for (let attempt = 1; attempt <= maxUploadAttempts; attempt += 1) {
+    const { error } = await input.supabase.storage
+      .from("workspace-artifacts")
+      .upload(storagePath, decoded.bytes, { contentType: decoded.contentType, upsert: false });
+    if (!error) {
+      return `/api/adstudio/media?path=${encodeURIComponent(storagePath)}`;
+    }
+    uploadError = error;
+    // A duplicate-object error means a previous attempt actually landed; treat
+    // it as success rather than burning the remaining retries.
+    const duplicate = /already exists|duplicate|23505/i.test(error.message ?? "");
+    if (duplicate) {
+      return `/api/adstudio/media?path=${encodeURIComponent(storagePath)}`;
+    }
+    console.error(
+      `persistCloneRender upload attempt ${attempt}/${maxUploadAttempts} failed`,
+      { storagePath, bytes: decoded.bytes.byteLength, error },
+    );
+    if (attempt < maxUploadAttempts) {
+      await new Promise((resolve) => setTimeout(resolve, 500 * attempt));
+    }
+  }
+  throw new Error(
+    `Generated image could not be stored (${uploadError?.message ?? "unknown storage error"}).`,
+  );
 }
