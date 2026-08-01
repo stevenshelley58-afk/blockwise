@@ -1,0 +1,34 @@
+# VPS background worker — Trigger.dev replacement. MANAGED deployment.
+#
+# Replaces the unmanaged `mystifying_bose` docker-run worker (no restart policy)
+# with a restart-protected compose service. Runs the committed source via
+# blockwise/worker:cutover-test. Secrets come from ./.env (key = value), never
+# baked into the image.
+#
+# SAFETY: BLOCKWISE_ENABLE_PROVIDER_WRITES is intentionally ABSENT here. Every
+# worker module no-ops on provider writes unless that flag is "true", so this
+# worker processes jobs and updates job_queue state but performs NO Meta writes
+# until an operator deliberately adds BLOCKWISE_ENABLE_PROVIDER_WRITES=true
+# after the read-only de-risk probe and the producer cutover are verified.
+#
+#   cd /srv/blockwise/worker-deploy
+#   docker compose -f docker-compose.worker.yml up -d
+#
+# claim_job is FOR UPDATE SKIP LOCKED, so multiple replicas are safe; run 1.
+services:
+  blockwise-worker:
+    image: "blockwise/worker:cutover-test"
+    restart: unless-stopped
+    env_file:
+      - ./.env
+    environment:
+      # Tuning (all have safe defaults in worker/index.ts)
+      WORKER_POLL_IDLE_MS: ${WORKER_POLL_IDLE_MS:-3000}
+      WORKER_POLL_BUSY_MS: ${WORKER_POLL_BUSY_MS:-250}
+      WORKER_LEASE_SECONDS: ${WORKER_LEASE_SECONDS:-600}
+      WORKER_REAP_INTERVAL_MS: ${WORKER_REAP_INTERVAL_MS:-60000}
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
