@@ -62,6 +62,16 @@ async function resolveHandler(kind: string): Promise<Handler | null> {
           attemptId: String(payload.attemptId),
         });
     }
+    case "reporting.refresh": {
+      const { refreshReportingSnapshot } = await import("../src/lib/meta-monitor/reporting-snapshots.ts");
+      return (payload, supabase) =>
+        refreshReportingSnapshot({
+          serviceSupabase: supabase,
+          workspaceId: String(payload.workspaceId),
+          range: String(payload.range) as import("../src/lib/meta-monitor/types.ts").MonitorRange,
+          customRange: payload.customRange as import("../src/lib/meta-monitor/types.ts").MonitorCustomRange | undefined,
+        });
+    }
     // Phase 2: decouple these from @trigger.dev/sdk, then enable.
     // case "publish.meta.execute": { ... }
     // case "publish.meta.mutate": { ... }
