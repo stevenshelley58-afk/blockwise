@@ -39,6 +39,13 @@ test("image profiles only surface image-capable models", () => {
   assert.ok(options.every((option) => option.supportsImageOutput));
 });
 
+test("image catalog carries current Gemini image pricing", () => {
+  const option = getCuratedModelOptionsForProfile("image_final")
+    .find((candidate) => candidate.provider === "google" && candidate.model === "gemini-3.1-flash-image");
+
+  assert.equal(option?.imageUsdPerUnit, 0.067);
+});
+
 test("a catalog model is accepted with its real pricing preserved", () => {
   const result = validateModelProfileSelection("cheap_draft_text", {
     provider: "deepseek",

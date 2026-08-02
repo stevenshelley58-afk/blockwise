@@ -54,6 +54,19 @@ test("fast image generation defaults to the benchmarked Gemini edit model", () =
 
   assert.equal(resolved.primary.provider, "google");
   assert.equal(resolved.primary.model, "gemini-3.1-flash-image");
+  assert.equal(resolved.primary.imageUsdPerUnit, 0.067);
+});
+
+test("final image generation uses Gemini with GPT Image 2 as the provider-diverse fallback", () => {
+  const resolved = resolveModelProfile("image_final");
+
+  assert.equal(resolved.primary.provider, "google");
+  assert.equal(resolved.primary.model, "gemini-3.1-flash-image");
+  assert.equal(resolved.primary.imageUsdPerUnit, 0.067);
+  assert.deepEqual(
+    resolved.fallbacks.map((candidate) => [candidate.provider, candidate.model]),
+    [["openai", "gpt-image-2"]],
+  );
 });
 
 test("resolveEffectiveModelProfile accepts Azure OpenAI deployment overrides", () => {
@@ -104,7 +117,7 @@ test("estimateRunCostUsd accounts for text input, text output, and image units",
     imageUnits: 2,
   });
 
-  assert.equal(cost, 0.447);
+  assert.equal(cost, 0.1365);
 });
 
 test("resolveModelProfileForData removes public-only fallbacks for sensitive client data", () => {

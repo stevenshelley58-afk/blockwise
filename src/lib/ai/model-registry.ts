@@ -1,6 +1,6 @@
 import type { WorkforceDataClass } from "../workforce/permissions.ts";
 
-// "google" = Google AI Studio direct (free tier, OpenAI-compatible endpoint);
+// "google" = Google AI Studio direct via the Gemini Interactions API.
 export type ModelProvider = "openai" | "azure" | "google" | "deepseek";
 
 export type ModelProfileKey =
@@ -209,7 +209,7 @@ const MODEL_PROFILES: Record<ModelProfileKey, ModelProfile> = {
       model: "gemini-3.1-flash-image",
       inputUsdPerMillionTokens: 0.5,
       outputUsdPerMillionTokens: 3,
-      imageUsdPerUnit: 0.04,
+      imageUsdPerUnit: 0.067,
       supportsStructuredOutput: false,
       maxContextTokens: 131_072,
       maxLatencyMs: 30_000,
@@ -225,22 +225,22 @@ const MODEL_PROFILES: Record<ModelProfileKey, ModelProfile> = {
     maxRunCostUsd: 2,
     defaultTemperature: 0.65,
     primary: {
-      provider: "openai",
-      model: "gpt-image-2",
-      inputUsdPerMillionTokens: 5,
-      outputUsdPerMillionTokens: 30,
-      imageUsdPerUnit: 0.211,
+      provider: "google",
+      model: "gemini-3.1-flash-image",
+      inputUsdPerMillionTokens: 0.5,
+      outputUsdPerMillionTokens: 3,
+      imageUsdPerUnit: 0.067,
       supportsStructuredOutput: false,
-      maxContextTokens: 16_000,
-      maxLatencyMs: 60_000,
+      maxContextTokens: 131_072,
+      maxLatencyMs: 30_000,
     },
     fallbacks: [
       {
         provider: "openai",
-        model: "gpt-image-1.5",
+        model: "gpt-image-2",
         inputUsdPerMillionTokens: 5,
-        outputUsdPerMillionTokens: 10,
-        imageUsdPerUnit: 0.133,
+        outputUsdPerMillionTokens: 30,
+        imageUsdPerUnit: 0.211,
         supportsStructuredOutput: false,
         maxContextTokens: 16_000,
         maxLatencyMs: 60_000,

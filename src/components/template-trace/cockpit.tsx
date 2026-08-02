@@ -409,7 +409,7 @@ export function TemplateTraceCockpit({ traceId }: { traceId: string }) {
               <span>Model quality</span>
               <select value={quality} onChange={(e) => setQuality(e.target.value as "fast" | "high")}>
                 <option value="fast">image_draft — Gemini flash (fast, ~5s)</option>
-                <option value="high">image_final — GPT (quality, ~15s)</option>
+                <option value="high">image_final — Gemini flash (client-ready)</option>
               </select>
             </label>
             <button className="tt-btn tt-btn-primary" onClick={handleRegen} disabled={regenerating}>

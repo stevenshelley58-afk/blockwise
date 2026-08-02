@@ -190,10 +190,10 @@ const MODEL_CATALOG: ModelCatalogOption[] = [
   {
     provider: "google",
     model: "gemini-3.1-flash-image",
-    label: "gemini-3.1-flash-image · draft images",
+    label: "gemini-3.1-flash-image · best-value client-ready images",
     inputUsdPerMillionTokens: 0.5,
     outputUsdPerMillionTokens: 3,
-    imageUsdPerUnit: 0.04,
+    imageUsdPerUnit: 0.067,
     maxContextTokens: 131_072,
     supportsStructuredOutput: false,
     supportsVisionInput: true,
@@ -202,7 +202,7 @@ const MODEL_CATALOG: ModelCatalogOption[] = [
   {
     provider: "openai",
     model: "gpt-image-2",
-    label: "gpt-image-2 · client-ready images",
+    label: "gpt-image-2 · premium image fallback",
     inputUsdPerMillionTokens: 5,
     outputUsdPerMillionTokens: 30,
     imageUsdPerUnit: 0.211,
