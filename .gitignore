@@ -53,3 +53,26 @@ _ad/
 # the winning typeSpecs + subset woff2 faces this script produces get
 # committed, not the raw corpus metadata or intermediate OCR region cache).
 .cache/font-corpus/
+
+# Scratch / temp / local-only agent state (never commit)
+.tmp-*
+*.tmp
+~WRL*.tmp
+.qoder/
+.hallmark/
+.hermes/
+.vscode/
+.worktrees/
+tmp/
+screenshots/
+video/
+video-capture.mjs
+mockups/
+agent-os/
+blockwise-logo-pack/
+*.patch
+_to_delete/
+App review/
+video-styles/
+Steven_Shelley_Resume.*
+record-meta-segments.cmd
