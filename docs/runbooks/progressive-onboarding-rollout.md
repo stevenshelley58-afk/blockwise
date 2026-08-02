@@ -44,7 +44,7 @@ checks pass.
 
 Apply and record these migrations in timestamp order:
 
-1. `202607270001_progressive_activation_credit_ledger.sql`
+1. `202607270002_progressive_activation_credit_ledger.sql`
 2. `20260727022000_progressive_billing_foundation.sql`
 3. `20260727023000_meta_free_live_claim_registry.sql`
 4. `20260727024000_onboarding_booking_foundation.sql`
