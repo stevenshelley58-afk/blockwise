@@ -473,11 +473,11 @@ const TT_CSS = `
 .tt-toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; }
 .tt-seg { display: inline-flex; border: 1px solid var(--border-soft, #333); border-radius: 8px; overflow: hidden; }
 .tt-seg button { background: none; border: none; color: inherit; padding: 5px 12px; font-size: 13px; cursor: pointer; }
-.tt-seg button.on { background: var(--accent-strong); color: #0a0a0a; font-weight: 600; }
+.tt-seg button.on { background: var(--accent-strong); color: #fff; font-weight: 600; }
 .tt-btn { background: none; border: 1px solid var(--border-soft, #444); color: inherit; padding: 6px 14px; border-radius: 8px; font-size: 13px; cursor: pointer; }
 .tt-btn:hover:not(:disabled) { border-color: var(--accent-strong); }
 .tt-btn:disabled { opacity: 0.5; cursor: default; }
-.tt-btn-primary { background: var(--accent-strong); color: #0a0a0a; border-color: var(--accent-strong); font-weight: 600; }
+.tt-btn-primary { background: var(--accent-strong); color: #fff; border-color: var(--accent-strong); font-weight: 600; }
 
 .tt-compare { max-width: 540px; margin: 0 auto; }
 .tt-canvas { position: relative; width: 100%; overflow: hidden; border-radius: 10px; border: 1px solid var(--border-soft, #333); background: #111; }
@@ -509,7 +509,7 @@ const TT_CSS = `
 .tt-regen-controls { display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; }
 .tt-field { display: flex; flex-direction: column; gap: 5px; font-size: 13px; }
 .tt-field > span { opacity: 0.8; }
-.tt-field input, .tt-field select { background: #0d0d0d; border: 1px solid var(--border-soft, #333); border-radius: 7px; padding: 8px 10px; color: inherit; font-size: 14px; min-width: 220px; }
+.tt-field input, .tt-field select { background: var(--surface-subtle); border: 1px solid var(--line); border-radius: 7px; padding: 8px 10px; color: var(--ink); font-size: 14px; min-width: 220px; }
 .tt-copyedits { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
 .tt-swatch { display: inline-block; width: 14px; height: 14px; border-radius: 3px; }
 .tt-regen-result { margin-top: 20px; }
