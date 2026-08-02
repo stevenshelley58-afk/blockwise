@@ -20,13 +20,31 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
     && groupadd -r worker && useradd -r -g worker worker
 
 WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
-COPY package.json ./
-COPY src ./src
-COPY worker ./worker
+ARG GIT_SHA
+ARG BUILD_DATE
+LABEL org.opencontainers.image.title="Blockwise provider worker" \
+      org.opencontainers.image.source="https://github.com/stevenshelley58-afk/blockwise" \
+      org.opencontainers.image.revision="${GIT_SHA}" \
+      org.opencontainers.image.created="${BUILD_DATE}"
+
+RUN node -e 'const [sha, date] = process.argv.slice(1); if (!/^[0-9a-f]{40}$/.test(sha ?? "")) throw new Error("GIT_SHA must be a full lowercase Git SHA"); if (!date || Number.isNaN(Date.parse(date))) throw new Error("BUILD_DATE must be an ISO timestamp")' "$GIT_SHA" "$BUILD_DATE" \
+    && printf '%s\n' "$GIT_SHA" > /app/REVISION \
+    && chmod 0444 /app/REVISION
+
+# Git checkout modes depend on the caller's umask. Set image ownership
+# explicitly so the non-root runtime can always traverse and read its source.
+COPY --from=deps --chown=worker:worker /app/node_modules ./node_modules
+COPY --chown=worker:worker package.json ./
+COPY --chown=worker:worker src ./src
+COPY --chown=worker:worker worker ./worker
 
 USER worker
 ENV NODE_ENV=production
+ENV BLOCKWISE_WORKER_REVISION="${GIT_SHA}"
+
+RUN test -r worker/index.ts \
+    && test -r src/lib/providers/meta-publish-worker.ts \
+    && test -r src/lib/meta-monitor/reporting-snapshots.ts
 
 # tini reaps zombies / forwards signals so compose stop kills the worker cleanly.
 ENTRYPOINT ["tini", "--"]

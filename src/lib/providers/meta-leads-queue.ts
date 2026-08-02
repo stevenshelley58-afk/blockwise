@@ -6,6 +6,7 @@ export async function queueMetaLeadSync(input: {
   since?: string | null;
 }) {
   return enqueueQueuedJob({
+    workspaceId: input.workspaceId,
     kind: "sync.meta.leads",
     payload: {
       workspaceId: input.workspaceId,

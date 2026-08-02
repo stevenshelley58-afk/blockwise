@@ -9,6 +9,10 @@ import { DEFAULT_META_GRAPH_VERSION } from "./meta-graph-version.ts";
 
 type SupabaseServiceClient = ReturnType<typeof createSupabaseServiceClient>;
 
+const META_PROVIDER_OBJECT_NAME_MAX_LENGTH = 255;
+const META_AD_CREATIVE_NAME_MAX_LENGTH = 100;
+const META_HOUSING_MIN_RADIUS_KM = 25;
+
 export type MetaExecutionAdapter = "marketing_api" | "ads_cli" | "ads_mcp";
 export type MetaPublishPlanStatus = "draft" | "approved" | "publishing" | "paused_live" | "failed";
 
@@ -61,6 +65,8 @@ export type MetaPublishCampaignPlan = {
   objective: "OUTCOME_LEADS";
   status: "PAUSED";
   specialAdCategories: ["HOUSING"];
+  specialAdCategoryCountries: string[];
+  budgetMode: "campaign" | "adset";
 };
 
 export type MetaPublishAdSetPlan = {
@@ -201,6 +207,8 @@ export type MetaPublishExecutionResult = Pick<
 
 export type MetaPublishExecutionInput = {
   accessToken: string;
+  /** Resolved transiently from the user token; never persisted in a plan or log. */
+  pageAccessToken?: string;
   graphVersion?: string;
   fetchImpl?: typeof fetch;
   /**
@@ -222,13 +230,14 @@ export type MetaExecutionAdapterImplementation = {
   diagnostics: (plan: MetaPublishPlan) => Promise<Record<string, unknown>>;
 };
 
-export function buildMetaPlanIdempotencyKey(input: {
+function buildMetaPlanIdempotencyKey(input: {
   workspaceId: string;
   adStudioCampaignId: string;
   adapter: MetaExecutionAdapter;
   approvalRequestId?: string | null;
   existingMetaCampaignId?: string | null;
   variantIds?: string[];
+  executionFingerprint: string;
 }) {
   const selectedVariants = [...new Set(input.variantIds ?? [])].sort();
   const selectionKey = selectedVariants.length > 0
@@ -242,7 +251,43 @@ export function buildMetaPlanIdempotencyKey(input: {
     input.approvalRequestId ?? "draft",
     input.existingMetaCampaignId ? `campaign_${input.existingMetaCampaignId}` : "campaign_new",
     selectionKey,
+    `execution_${input.executionFingerprint}`,
   ].join(":");
+}
+
+function hashMetaExecutionSpec(value: unknown): string {
+  return createHash("sha256")
+    .update(JSON.stringify(canonicalizeMetaExecutionValue(value)))
+    .digest("hex")
+    .slice(0, 32);
+}
+
+function canonicalizeMetaExecutionValue(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(canonicalizeMetaExecutionValue);
+  }
+  if (!value || typeof value !== "object") {
+    return value;
+  }
+
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>)
+      .filter(([, entry]) => entry !== undefined)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, entry]) => [key, canonicalizeMetaExecutionValue(entry)]),
+  );
+}
+
+export function hasExplicitMetaPublishAudience(controls: MetaPublishControls | undefined): boolean {
+  const geo = controls?.geo;
+  if (!geo) return false;
+  if (geo.type === "cities") {
+    return geo.locations.length > 0 && typeof geo.includeSurroundingSuburbs === "boolean";
+  }
+  if (geo.type === "custom_radius") {
+    return Number.isFinite(geo.latitude) && Number.isFinite(geo.longitude) && Number.isFinite(geo.radiusKm) && geo.radiusKm > 0;
+  }
+  return false;
 }
 
 export function buildMetaPublishPlan(input: {
@@ -256,6 +301,7 @@ export function buildMetaPublishPlan(input: {
   legacyCampaignId?: string | null;
   adStudioExportId?: string | null;
   existingMetaCampaignId?: string | null;
+  existingMetaCampaignBudgetMode?: "campaign" | "adset";
   /**
    * A/B publish (A6): when set, only these variants are planned — one campaign,
    * one ad set, one tagged ad per variant. Absent/empty keeps the existing
@@ -269,21 +315,49 @@ export function buildMetaPublishPlan(input: {
   const abTest = selectedVariantIds.length > 0;
   const campaignPack = abTest ? filterPackToVariants(input.campaignPack, selectedVariantIds) : input.campaignPack;
   const controls = normalizeMetaPublishControls(input.controls, campaignPack);
-  const idempotencyKey = buildMetaPlanIdempotencyKey({
-    workspaceId: input.workspaceId,
-    adStudioCampaignId: campaignPack.campaign.campaignId,
-    adapter,
-    approvalRequestId: input.approvalRequestId,
-    existingMetaCampaignId: input.existingMetaCampaignId,
-    variantIds: abTest ? selectedVariantIds : undefined,
-  });
+  const setup = normalizeMetaConnectionSetup(input.setup);
+  const existingMetaCampaignId = input.existingMetaCampaignId?.trim() || null;
   const campaign: MetaPublishCampaignPlan = {
     localId: "campaign_main",
     name: campaignPack.campaign.name,
     objective: "OUTCOME_LEADS",
     status: "PAUSED",
     specialAdCategories: ["HOUSING"],
+    specialAdCategoryCountries: [campaignPack.campaign.market.country.trim().toUpperCase()],
+    budgetMode: existingMetaCampaignId
+      ? (input.existingMetaCampaignBudgetMode ?? "campaign")
+      : "campaign",
   };
+  const adSets = buildAdSetPlans(campaignPack, controls);
+  const leadForms = buildLeadFormPlans(campaignPack, setup, controls.destinationUrl);
+  const creatives = buildCreativePlans(campaignPack, setup);
+  const ads = buildAdPlans(campaignPack);
+  const tracking: MetaPublishTrackingPlan = {
+    utmSource: "meta",
+    utmMedium: "paid_social",
+    utmCampaign: slug(campaignPack.campaign.name),
+    utmContentPrefix: slug(campaignPack.campaign.market.suburb),
+  };
+  const executionFingerprint = hashMetaExecutionSpec({
+    providerConnectionId: input.connectionId,
+    setup,
+    controls,
+    campaign,
+    adSets,
+    leadForms,
+    creatives,
+    ads,
+    tracking,
+  });
+  const idempotencyKey = buildMetaPlanIdempotencyKey({
+    workspaceId: input.workspaceId,
+    adStudioCampaignId: campaignPack.campaign.campaignId,
+    adapter,
+    approvalRequestId: input.approvalRequestId,
+    existingMetaCampaignId,
+    variantIds: abTest ? selectedVariantIds : undefined,
+    executionFingerprint,
+  });
 
   return {
     planId: deterministicUuid(`meta_publish_plan:${idempotencyKey}`),
@@ -296,24 +370,19 @@ export function buildMetaPublishPlan(input: {
     adapter,
     status: "draft",
     idempotencyKey,
-    setup: normalizeMetaConnectionSetup(input.setup),
+    setup,
     controls,
     campaign,
-    adSets: buildAdSetPlans(campaignPack, controls),
-    leadForms: buildLeadFormPlans(campaignPack, input.setup, controls.destinationUrl),
-    creatives: buildCreativePlans(campaignPack, input.setup),
-    ads: buildAdPlans(campaignPack),
-    tracking: {
-      utmSource: "meta",
-      utmMedium: "paid_social",
-      utmCampaign: slug(campaignPack.campaign.name),
-      utmContentPrefix: slug(campaignPack.campaign.market.suburb),
-    },
+    adSets,
+    leadForms,
+    creatives,
+    ads,
+    tracking,
     requestLog: [],
     responseLog: [],
     reconciledObjects: {
       ...emptyReconciledObjects(),
-      ...(input.existingMetaCampaignId?.trim() ? { campaignId: input.existingMetaCampaignId.trim() } : {}),
+      ...(existingMetaCampaignId ? { campaignId: existingMetaCampaignId } : {}),
     },
     lastError: null,
     createdAt: now,
@@ -564,7 +633,7 @@ async function publishWithMarketingApi(
           objective: plan.campaign.objective,
           status: "PAUSED",
           special_ad_categories: plan.campaign.specialAdCategories,
-          budget_strategy: "CAMPAIGN",
+          special_ad_category_country: plan.campaign.specialAdCategoryCountries,
           daily_budget: String(plan.controls.dailyBudgetMinorUnits ?? 2000),
         });
         reconciledObjects.campaignId = requireMetaId(response, "campaign");
@@ -584,34 +653,43 @@ async function publishWithMarketingApi(
             `lead_form.${leadForm.localId}.reconcile_missing`,
             `/${plan.setup.pageId}/leadgen_forms`,
             providerName,
+            input.pageAccessToken ?? input.accessToken,
           )
         : null;
       if (existingId) {
         reconciledObjects.leadFormIds[leadForm.localId] = existingId;
       } else {
-        const response = await postMetaObject(input, requestLog, responseLog, `lead_form.${leadForm.localId}`, `/${plan.setup.pageId}/leadgen_forms`, {
-          name: providerName,
-          follow_up_action_url: leadForm.thankYouWebsiteUrl,
-          privacy_policy: {
-            url: leadForm.privacyPolicyUrl,
-            link_text: "Privacy Policy",
+        const response = await postMetaObject(
+          input,
+          requestLog,
+          responseLog,
+          `lead_form.${leadForm.localId}`,
+          `/${plan.setup.pageId}/leadgen_forms`,
+          {
+            name: providerName,
+            follow_up_action_url: leadForm.thankYouWebsiteUrl,
+            privacy_policy: {
+              url: leadForm.privacyPolicyUrl,
+              link_text: "Privacy Policy",
+            },
+            is_optimized_for_quality: true,
+            questions: [
+              { type: "FIRST_NAME", key: "first_name" },
+              { type: "LAST_NAME", key: "last_name" },
+              { type: "EMAIL", key: "email" },
+              { type: "PHONE", key: "phone" },
+              ...leadForm.questions.map((question, qi) => ({ type: "CUSTOM", key: `custom_${qi + 1}`, label: question })),
+            ],
+            thank_you_page: {
+              title: leadForm.thankYouTitle,
+              body: leadForm.thankYouBody,
+              button_text: "Visit website",
+              button_type: "VIEW_WEBSITE",
+              website_url: leadForm.thankYouWebsiteUrl,
+            },
           },
-          is_optimized_for_quality: true,
-          questions: [
-            { type: "FIRST_NAME", key: "first_name" },
-            { type: "LAST_NAME", key: "last_name" },
-            { type: "EMAIL", key: "email" },
-            { type: "PHONE", key: "phone" },
-            ...leadForm.questions.map((question, qi) => ({ type: "CUSTOM", key: `custom_${qi + 1}`, label: question })),
-          ],
-          thank_you_page: {
-            title: leadForm.thankYouTitle,
-            body: leadForm.thankYouBody,
-            button_text: "Visit website",
-            button_type: "VIEW_WEBSITE",
-            website_url: leadForm.thankYouWebsiteUrl,
-          },
-        });
+          input.pageAccessToken ?? input.accessToken,
+        );
         reconciledObjects.leadFormIds[leadForm.localId] = requireMetaId(response, "lead form");
       }
       await checkpointMetaPublishProgress(input, requestLog, responseLog, reconciledObjects);
@@ -639,9 +717,11 @@ async function publishWithMarketingApi(
           campaign_id: reconciledObjects.campaignId,
           billing_event: adSet.billingEvent,
           optimization_goal: adSet.optimizationGoal,
+          destination_type: "ON_AD",
+          promoted_object: { page_id: plan.setup.pageId },
           targeting: adSet.targeting,
           status: "PAUSED",
-          ...(plan.setup.pixelId ? { promoted_object: { pixel_id: plan.setup.pixelId, custom_event_type: "Lead" } } : {}),
+          ...(plan.campaign.budgetMode === "adset" ? { daily_budget: String(adSet.dailyBudgetMinorUnits) } : {}),
           ...(adSet.startTime ? { start_time: adSet.startTime } : {}),
           ...(adSet.endTime ? { end_time: adSet.endTime } : {}),
         });
@@ -653,7 +733,12 @@ async function publishWithMarketingApi(
     for (const creative of plan.creatives) {
       if (reconciledObjects.creativeIds[creative.localId]) continue;
 
-      const providerName = buildMetaProviderObjectName(plan, creative.localId, creative.name);
+      const providerName = buildMetaProviderObjectName(
+        plan,
+        creative.localId,
+        creative.name,
+        META_AD_CREATIVE_NAME_MAX_LENGTH,
+      );
       const existingId = input.reconcileMissingObjects
         ? await findMetaObjectByName(
             input,
@@ -675,7 +760,7 @@ async function publishWithMarketingApi(
           name: providerName,
           object_story_spec: {
             page_id: creative.pageId,
-            ...(creative.instagramActorId ? { instagram_actor_id: creative.instagramActorId } : {}),
+            ...(creative.instagramActorId ? { instagram_user_id: creative.instagramActorId } : {}),
             link_data: {
               message: creative.primaryText,
               name: creative.headline,
@@ -758,7 +843,6 @@ async function resolveCreativeImageHash(
 
   const filename = creative.asset.filename ?? `${creative.localId}.png`;
   const response = await postMetaObject(input, requestLog, responseLog, `asset.${creative.localId}`, `/${plan.setup.metaAdAccountId}/adimages`, {
-    filename,
     bytes: creative.asset.bytesBase64,
   });
 
@@ -798,6 +882,7 @@ async function postMetaObject(
   step: string,
   path: string,
   body: Record<string, unknown>,
+  accessToken = input.accessToken,
 ) {
   const createdAt = new Date().toISOString();
   requestLog.push({ step, method: "POST", path, body: redactMetaRequestBody(body), createdAt });
@@ -805,10 +890,11 @@ async function postMetaObject(
   const response = await (input.fetchImpl ?? fetch)(`https://graph.facebook.com/${input.graphVersion ?? DEFAULT_META_GRAPH_VERSION}${path}`, {
     method: "POST",
     headers: {
-      authorization: `Bearer ${input.accessToken}`,
+      authorization: `Bearer ${accessToken}`,
       "content-type": "application/json",
     },
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(30_000),
   });
   const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
 
@@ -846,9 +932,15 @@ async function checkpointMetaPublishProgress(
   });
 }
 
-function buildMetaProviderObjectName(plan: MetaPublishPlan, localId: string, displayName: string) {
+function buildMetaProviderObjectName(
+  plan: MetaPublishPlan,
+  localId: string,
+  displayName: string,
+  maxLength = META_PROVIDER_OBJECT_NAME_MAX_LENGTH,
+) {
   const marker = `[BW:${plan.planId}:${localId}]`;
-  const prefix = displayName.trim().slice(0, Math.max(0, 255 - marker.length - 1));
+  const effectiveMaxLength = Math.max(marker.length, Math.floor(maxLength));
+  const prefix = displayName.trim().slice(0, Math.max(0, effectiveMaxLength - marker.length - 1));
   return `${prefix} ${marker}`.trim();
 }
 
@@ -859,39 +951,55 @@ async function findMetaObjectByName(
   step: string,
   edgePath: string,
   providerName: string,
+  accessToken = input.accessToken,
 ): Promise<string | null> {
-  const path = `${edgePath}?fields=id,name&limit=100`;
-  const createdAt = new Date().toISOString();
-  requestLog.push({ step, method: "GET", path, createdAt });
+  let after: string | null = null;
 
-  const response = await (input.fetchImpl ?? fetch)(`https://graph.facebook.com/${input.graphVersion ?? DEFAULT_META_GRAPH_VERSION}${path}`, {
-    method: "GET",
-    headers: { authorization: `Bearer ${input.accessToken}` },
-  });
-  const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
-  const rows = Array.isArray(payload.data) ? payload.data : [];
-  const match = rows.find((item): item is { id: string; name: string } => {
-    if (!item || typeof item !== "object") return false;
-    const row = item as Record<string, unknown>;
-    return typeof row.id === "string" && row.name === providerName;
-  });
-  responseLog.push({
-    step,
-    method: "GET",
-    path,
-    response: response.ok
-      ? { returnedObjectCount: rows.length, matchedObjectId: match?.id ?? null }
-      : payload,
-    status: response.status,
-    createdAt: new Date().toISOString(),
-  });
+  for (let pageNumber = 1; pageNumber <= 100; pageNumber += 1) {
+    const params = new URLSearchParams({ fields: "id,name", limit: "100" });
+    if (after) params.set("after", after);
+    const path = `${edgePath}?${params.toString()}`;
+    const createdAt = new Date().toISOString();
+    requestLog.push({ step, method: "GET", path, createdAt });
 
-  if (!response.ok) {
-    const error = payload.error as { message?: string } | undefined;
-    throw new Error(error?.message ?? `Meta reconciliation ${step} failed with ${response.status}.`);
+    const response = await (input.fetchImpl ?? fetch)(`https://graph.facebook.com/${input.graphVersion ?? DEFAULT_META_GRAPH_VERSION}${path}`, {
+      method: "GET",
+      headers: { authorization: `Bearer ${accessToken}` },
+      signal: AbortSignal.timeout(30_000),
+    });
+    const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+    const rows = Array.isArray(payload.data) ? payload.data : [];
+    const match = rows.find((item): item is { id: string; name: string } => {
+      if (!item || typeof item !== "object") return false;
+      const row = item as Record<string, unknown>;
+      return typeof row.id === "string" && row.name === providerName;
+    });
+    responseLog.push({
+      step,
+      method: "GET",
+      path,
+      response: response.ok
+        ? { pageNumber, returnedObjectCount: rows.length, matchedObjectId: match?.id ?? null }
+        : payload,
+      status: response.status,
+      createdAt: new Date().toISOString(),
+    });
+
+    if (!response.ok) {
+      const error = payload.error as { message?: string } | undefined;
+      throw new Error(error?.message ?? `Meta reconciliation ${step} failed with ${response.status}.`);
+    }
+    if (match) return match.id;
+
+    const paging = payload.paging && typeof payload.paging === "object"
+      ? payload.paging as { cursors?: { after?: unknown } }
+      : null;
+    const nextAfter = paging?.cursors?.after;
+    if (typeof nextAfter !== "string" || !nextAfter || nextAfter === after) return null;
+    after = nextAfter;
   }
 
-  return match?.id ?? null;
+  throw new Error(`Meta reconciliation ${step} exceeded 10,000 objects; refusing to create a possible duplicate.`);
 }
 
 /** Keep persisted request logs small and free of image payloads. */
@@ -915,6 +1023,7 @@ async function getMetaObjectStatus(
   const response = await (input.fetchImpl ?? fetch)(`https://graph.facebook.com/${input.graphVersion ?? DEFAULT_META_GRAPH_VERSION}${path}`, {
     method: "GET",
     headers: { authorization: `Bearer ${input.accessToken}` },
+    signal: AbortSignal.timeout(30_000),
   });
   const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
 
@@ -973,7 +1082,7 @@ function buildTargeting(controls: MetaPublishControls): Record<string, unknown> 
         cities: controls.geo.locations.map((location) => ({
           key: location.key,
           ...(controls.geo?.type === "cities" && controls.geo.includeSurroundingSuburbs
-            ? { radius: 10, distance_unit: "kilometer" }
+            ? { radius: META_HOUSING_MIN_RADIUS_KM, distance_unit: "kilometer" }
             : {}),
         })),
         location_types: ["home", "recent"],
@@ -984,7 +1093,7 @@ function buildTargeting(controls: MetaPublishControls): Record<string, unknown> 
             {
               latitude: controls.geo.latitude,
               longitude: controls.geo.longitude,
-              radius: controls.geo.radiusKm,
+              radius: Math.max(META_HOUSING_MIN_RADIUS_KM, controls.geo.radiusKm),
               distance_unit: "kilometer",
             },
           ],
@@ -1252,6 +1361,15 @@ type MetaPublishPlanRow = {
 
 function rowToPlan(row: MetaPublishPlanRow): MetaPublishPlan {
   const planJson = row.plan_json ?? {};
+  const campaignDefaults: MetaPublishCampaignPlan = {
+    localId: "campaign_main",
+    name: "Meta campaign",
+    objective: "OUTCOME_LEADS",
+    status: "PAUSED",
+    specialAdCategories: ["HOUSING"],
+    specialAdCategoryCountries: ["AU"],
+    budgetMode: "campaign",
+  };
 
   return {
     planId: row.id,
@@ -1275,13 +1393,9 @@ function rowToPlan(row: MetaPublishPlanRow): MetaPublishPlan {
       timezone: row.timezone,
     }),
     controls: planJson.controls ?? {},
-    campaign: planJson.campaign ?? {
-      localId: "campaign_main",
-      name: "Meta campaign",
-      objective: "OUTCOME_LEADS",
-      status: "PAUSED",
-      specialAdCategories: ["HOUSING"],
-    },
+    // Plans persisted before these fields were added remain executable with
+    // explicit safe defaults rather than emitting undefined Meta parameters.
+    campaign: { ...campaignDefaults, ...(planJson.campaign ?? {}) },
     adSets: planJson.adSets ?? [],
     leadForms: planJson.leadForms ?? [],
     creatives: planJson.creatives ?? [],

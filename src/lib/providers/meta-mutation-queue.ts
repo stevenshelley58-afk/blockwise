@@ -7,6 +7,7 @@ import type { MetaPlanMutation } from "./meta-mutations.ts";
  */
 export async function queueMetaMutationExecution(mutation: Pick<MetaPlanMutation, "workspaceId" | "mutationId">) {
   return enqueueQueuedJob({
+    workspaceId: mutation.workspaceId,
     kind: "publish.meta.mutate",
     payload: { workspaceId: mutation.workspaceId, mutationId: mutation.mutationId },
     maxAttempts: 3,

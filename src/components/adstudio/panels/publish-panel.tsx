@@ -73,6 +73,8 @@ type PublishResponse = {
 type PublishPlanStatus = {
   status?: string;
   lastError?: string | null;
+  queueStatus?: string | null;
+  queueError?: string | null;
   reconciledObjects?: {
     campaigns: number;
     leadForms: number;
@@ -337,10 +339,10 @@ export function PublishSetupPanel({
       const plan = (await response.json().catch(() => ({}))) as PublishPlanStatus;
       if (cancelled) return;
 
-      if (plan.status === "failed") {
+      if (plan.status === "failed" || plan.queueStatus === "failed") {
         stopPolling();
         setPublishDone(false);
-        setPublishError(plan.lastError ?? "Meta publish failed.");
+        setPublishError(plan.queueError ?? plan.lastError ?? "Meta publish failed.");
         setPublishPhase("failed");
       } else if (plan.status === "paused_live") {
         stopPolling();
@@ -407,9 +409,8 @@ export function PublishSetupPanel({
     || campaignPack.brandKit.identity.businessName
     || "Your brand";
   const selectedCampaign = metaCampaigns?.campaigns?.find((campaign) => campaign.id === selectedMetaCampaignId);
-  const campaignStepReady = campaignMode === "existing"
-    ? Boolean(selectedCampaign)
-    : targetSuburbs.length > 0 && includeSurroundingSuburbs !== undefined;
+  const audienceReady = targetSuburbs.length > 0 && includeSurroundingSuburbs !== undefined;
+  const campaignStepReady = audienceReady && (campaignMode === "new" || Boolean(selectedCampaign));
   const destinationReady = isWebUrl(destinationUrl);
   const creativeStepReady = !selectionHint;
   const selectedBudgetPreset = BUDGET_PRESETS.includes(dailyBudgetAud as (typeof BUDGET_PRESETS)[number])
@@ -428,6 +429,12 @@ export function PublishSetupPanel({
         : ""
     : "";
   const budgetStepReady = !budgetError && !scheduleError;
+  const publishReady = allMet
+    && campaignStepReady
+    && creativeStepReady
+    && leadFormStepReady
+    && destinationReady
+    && budgetStepReady;
   const presetDurationDays = scheduleMode === "custom" || scheduleMode === "ongoing"
     ? null
     : Number(scheduleMode);
@@ -504,7 +511,7 @@ export function PublishSetupPanel({
     return {
       dailyBudgetMinorUnits: Math.max(1, Math.round(dailyBudgetAud * 100)),
       destinationUrl,
-      geo: campaignMode === "new" && targetSuburbs.length > 0
+      geo: targetSuburbs.length > 0
         ? { type: "cities", locations: targetSuburbs, includeSurroundingSuburbs: includeSurroundingSuburbs === true }
         : { type: "country", country: campaignPack.campaign.market.country },
       schedule: { startTime, endTime },
@@ -516,49 +523,8 @@ export function PublishSetupPanel({
     };
   }
 
-  // Poll the publish plan status until it reaches a terminal state. The submit
-  // handler only confirms the run was queued; the VPS worker resolves
-  // asynchronously, so without polling the "Creating your paused ads on Meta"
-  // spinner would spin forever even on a successful publish.
-  useEffect(() => {
-    if (publishPhase !== "creating" || !publishPlanId) return;
-
-    let cancelled = false;
-    let attempts = 0;
-
-    const poll = async () => {
-      try {
-        const response = await fetch(`/api/integrations/meta/publish-plans/${publishPlanId}`, { cache: "no-store" });
-        const body = (await response.json().catch(() => ({}))) as { status?: string; lastError?: string | null };
-        if (cancelled) return;
-
-        if (body.status === "paused_live" || body.status === "completed") {
-          setPublishPhase("live");
-          setPublishMessage("Ad submitted");
-        } else if (body.status === "failed") {
-          setPublishPhase("failed");
-          setPublishError(body.lastError || "Meta rejected the publish. Check your ad account and try again.");
-        } else if (++attempts >= 100) {
-          // ~5 min soft cap. The plan is still queued/running — stop the spinner
-          // and point the user to Results rather than spinning indefinitely.
-          setPublishPhase("live");
-          setPublishMessage("Still processing on Meta. Confirm in Performance shortly.");
-        }
-      } catch {
-        // Transient fetch error — keep polling.
-      }
-    };
-
-    poll();
-    const interval = window.setInterval(poll, 3000);
-    return () => {
-      cancelled = true;
-      window.clearInterval(interval);
-    };
-  }, [publishPhase, publishPlanId]);
-
-  async function handlePublishLive() {
-    if (!allMet || selectionHint || !campaignStepReady || !destinationReady || !budgetStepReady) return;
+  async function handlePublishLive(): Promise<boolean> {
+    if (!publishReady) return false;
     setPublishing(true);
     setPublishError("");
     setPublishDone(false);
@@ -605,12 +571,21 @@ export function PublishSetupPanel({
       setPublishMessage(planStatus === "paused_live" ? "Ad submitted" : "Creating your paused ads on Meta");
       setPublishDone(true);
       setPublishPhase(planStatus === "paused_live" ? "live" : "creating");
+      return true;
     } catch (error) {
       setPublishError(error instanceof Error ? error.message : "Publish failed.");
       setPublishDone(false);
       setPublishPhase("failed");
+      return false;
     } finally {
       setPublishing(false);
+    }
+  }
+
+  async function handlePublishAndAdvance() {
+    const accepted = await handlePublishLive();
+    if (accepted) {
+      setStepIndex((index) => Math.min(STEPS.length - 1, index + 1));
     }
   }
 
@@ -722,63 +697,63 @@ export function PublishSetupPanel({
                     <span>{campaignPack.campaign.name}</span>
                     <span className="studio-status-chip paused">paused</span>
                   </div>
-
-                  <div className="studio-targeting-setup">
-                    <div className="studio-targeting-heading">
-                      <strong>Target suburbs</strong>
-                      <span>Choose every suburb this campaign should reach.</span>
-                    </div>
-                    {targetSuburbs.length > 0 && (
-                      <div className="studio-targeting-chips" aria-label="Selected target suburbs">
-                        {targetSuburbs.map((location) => (
-                          <span key={location.key}>
-                            {location.name}{location.region ? `, ${location.region}` : ""}
-                            <button type="button" aria-label={`Remove ${location.name}`} onClick={() => removeTargetSuburb(location.key)}>
-                              <X aria-hidden size={14} />
-                            </button>
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                    <div className="studio-targeting-search">
-                      <label htmlFor="campaign-target-suburb">Search for a suburb</label>
-                      <input
-                        id="campaign-target-suburb"
-                        type="search"
-                        autoComplete="off"
-                        value={targetQuery}
-                        placeholder="Start typing a suburb"
-                        aria-describedby={targetSuggestionsError ? "campaign-target-error" : undefined}
-                        onChange={(event) => setTargetQuery(event.target.value)}
-                      />
-                      {targetSuggestionsLoading && <span className="studio-targeting-loading"><RefreshCw aria-hidden size={15} /> Searching Meta</span>}
-                      {!targetSuggestionsLoading && targetSuggestions.length > 0 && (
-                        <div className="studio-targeting-results" role="listbox" aria-label="Suburb suggestions">
-                          {targetSuggestions.map((location) => (
-                            <button key={location.key} type="button" role="option" aria-selected="false" onClick={() => addTargetSuburb(location)}>
-                              <strong>{location.name}</strong>
-                              <span>{location.region ?? "Australia"}</span>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                      {targetSuggestionsError && <p id="campaign-target-error" className="studio-field-error"><CircleAlert aria-hidden size={15} /> {targetSuggestionsError}</p>}
-                    </div>
-
-                    <fieldset className="studio-surrounding-choice">
-                      <legend>Include surrounding suburbs?</legend>
-                      <label className={includeSurroundingSuburbs === true ? "selected" : ""}>
-                        <input type="radio" name="surrounding-suburbs" checked={includeSurroundingSuburbs === true} onChange={() => chooseSurroundingSuburbs(true)} />
-                        <span><strong>Yes, include nearby suburbs</strong><small>Add a 10 km area around each selected suburb.</small></span>
-                      </label>
-                      <label className={includeSurroundingSuburbs === false ? "selected" : ""}>
-                        <input type="radio" name="surrounding-suburbs" checked={includeSurroundingSuburbs === false} onChange={() => chooseSurroundingSuburbs(false)} />
-                        <span><strong>No, selected suburbs only</strong><small>Keep targeting to the suburbs listed above.</small></span>
-                      </label>
-                    </fieldset>
-                  </div>
                 </div>
               )}
+
+              <div className="studio-targeting-setup">
+                <div className="studio-targeting-heading">
+                  <strong>Target suburbs</strong>
+                  <span>Choose every suburb this ad set should reach.</span>
+                </div>
+                {targetSuburbs.length > 0 && (
+                  <div className="studio-targeting-chips" aria-label="Selected target suburbs">
+                    {targetSuburbs.map((location) => (
+                      <span key={location.key}>
+                        {location.name}{location.region ? `, ${location.region}` : ""}
+                        <button type="button" aria-label={`Remove ${location.name}`} onClick={() => removeTargetSuburb(location.key)}>
+                          <X aria-hidden size={14} />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <div className="studio-targeting-search">
+                  <label htmlFor="campaign-target-suburb">Search for a suburb</label>
+                  <input
+                    id="campaign-target-suburb"
+                    type="search"
+                    autoComplete="off"
+                    value={targetQuery}
+                    placeholder="Start typing a suburb"
+                    aria-describedby={targetSuggestionsError ? "campaign-target-error" : undefined}
+                    onChange={(event) => setTargetQuery(event.target.value)}
+                  />
+                  {targetSuggestionsLoading && <span className="studio-targeting-loading"><RefreshCw aria-hidden size={15} /> Searching Meta</span>}
+                  {!targetSuggestionsLoading && targetSuggestions.length > 0 && (
+                    <div className="studio-targeting-results" role="listbox" aria-label="Suburb suggestions">
+                      {targetSuggestions.map((location) => (
+                        <button key={location.key} type="button" role="option" aria-selected="false" onClick={() => addTargetSuburb(location)}>
+                          <strong>{location.name}</strong>
+                          <span>{location.region ?? "Australia"}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {targetSuggestionsError && <p id="campaign-target-error" className="studio-field-error"><CircleAlert aria-hidden size={15} /> {targetSuggestionsError}</p>}
+                </div>
+
+                <fieldset className="studio-surrounding-choice">
+                  <legend>Include surrounding suburbs?</legend>
+                  <label className={includeSurroundingSuburbs === true ? "selected" : ""}>
+                    <input type="radio" name="surrounding-suburbs" checked={includeSurroundingSuburbs === true} onChange={() => chooseSurroundingSuburbs(true)} />
+                    <span><strong>Yes, include nearby suburbs</strong><small>Add a 25 km area around each selected suburb.</small></span>
+                  </label>
+                  <label className={includeSurroundingSuburbs === false ? "selected" : ""}>
+                    <input type="radio" name="surrounding-suburbs" checked={includeSurroundingSuburbs === false} onChange={() => chooseSurroundingSuburbs(false)} />
+                    <span><strong>No, selected suburbs only</strong><small>Keep targeting to the suburbs listed above.</small></span>
+                  </label>
+                </fieldset>
+              </div>
 
               <label className="studio-publish-field">
                 <span>Destination URL</span>
@@ -1127,7 +1102,7 @@ export function PublishSetupPanel({
                 <div><span>Campaign</span><strong>{campaignMode === "existing" ? selectedCampaign?.name : campaignPack.campaign.name}</strong></div>
                 <div><span>Creatives</span><strong>{selectedCreativeCount}</strong></div>
                 <div><span>Lead form</span><strong>{leadForm.questions.filter((q) => q.trim()).length} question{leadForm.questions.filter((q) => q.trim()).length === 1 ? "" : "s"}</strong></div>
-                <div><span>Audience</span><strong>{campaignMode === "existing" ? "Existing campaign targeting" : formatTargetAudience(targetSuburbs, includeSurroundingSuburbs)}</strong></div>
+                <div><span>Audience</span><strong>{formatTargetAudience(targetSuburbs, includeSurroundingSuburbs)}</strong></div>
                 <div><span>Budget</span><strong>${dailyBudgetAud}/day · {scheduleSummary}</strong></div>
               </div>
               <details className="studio-readiness-details" open={!allMet}>
@@ -1244,7 +1219,7 @@ export function PublishSetupPanel({
                     <CircleAlert aria-hidden size={20} />
                     <span><strong>Publish failed</strong><small>{publishError || "Something went wrong submitting to Meta."}</small></span>
                   </div>
-                  <button className="studio-btn publish studio-publish-retry" type="button" disabled={publishing} onClick={handlePublishLive}><Send aria-hidden size={17} /> Try again</button>
+                  <button className="studio-btn publish studio-publish-retry" type="button" disabled={publishing} onClick={() => void handlePublishLive()}><Send aria-hidden size={17} /> Try again</button>
                 </>
               )}
 
@@ -1270,8 +1245,8 @@ export function PublishSetupPanel({
             <button
               type="button"
               className="studio-publish-continue"
-              disabled={stepIndex === 4 ? (!allMet || publishing || Boolean(selectionHint)) : continueDisabled}
-              onClick={stepIndex === 4 ? () => { void handlePublishLive(); setStepIndex((index) => Math.min(STEPS.length - 1, index + 1)); } : () => setStepIndex((index) => Math.min(STEPS.length - 1, index + 1))}
+              disabled={stepIndex === 4 ? (!publishReady || publishing) : continueDisabled}
+              onClick={stepIndex === 4 ? () => void handlePublishAndAdvance() : () => setStepIndex((index) => Math.min(STEPS.length - 1, index + 1))}
             >
               {stepIndex === 4 ? <>{publishing ? <RefreshCw aria-hidden size={17} /> : <Send aria-hidden size={17} />} {publishing ? "Submitting..." : "Submit & go live"} <ChevronRight aria-hidden size={17} /></> : <>Continue to {STEPS[stepIndex + 1]?.toLowerCase()} <ChevronRight aria-hidden size={17} /></>}
             </button>

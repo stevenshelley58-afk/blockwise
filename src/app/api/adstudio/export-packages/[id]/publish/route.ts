@@ -17,6 +17,7 @@ import {
 } from "@/lib/providers/publishing-adapters";
 import {
   buildMetaPublishPlan,
+  hasExplicitMetaPublishAudience,
   loadMetaPublishPlanByIdempotencyKey,
   persistMetaPublishPlan,
   resolveMetaConnectionSetup,
@@ -27,14 +28,20 @@ import {
   type MetaPublishControls,
   type MetaPublishPlan,
 } from "@/lib/providers/meta-execution";
-import { queueMetaPublishPlanExecution } from "@/lib/providers/meta-publish-queue";
+import {
+  hasActiveMetaPublishPlanExecution,
+  queueMetaPublishPlanExecution,
+} from "@/lib/providers/meta-publish-queue";
 import {
   listProviderConnections,
   loadStoredProviderTokens,
   type ProviderConnectionMetadata,
 } from "@/lib/providers/provider-connections";
 import { checkMetaConnectionHealth } from "@/lib/providers/meta-assets";
-import { fetchEligibleMetaCampaigns } from "@/lib/providers/meta-campaigns";
+import {
+  fetchEligibleMetaCampaigns,
+  metaExistingCampaignReuseIssue,
+} from "@/lib/providers/meta-campaigns";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -151,6 +158,13 @@ export async function POST(request: NextRequest, context: RouteContext) {
   }
 
   const basePack = body.campaignPack;
+  const existingMetaCampaignId = body.existingMetaCampaignId?.trim() || null;
+  if (existingMetaCampaignId && !hasExplicitMetaPublishAudience(body.controls)) {
+    return NextResponse.json(
+      { error: "Choose the audience for the new ad set before using an existing Meta campaign." },
+      { status: 422 },
+    );
+  }
   const librarySelections = normalizeLibrarySelections(body.librarySelections);
   if (librarySelections instanceof NextResponse) return librarySelections;
 
@@ -203,6 +217,29 @@ export async function POST(request: NextRequest, context: RouteContext) {
     return NextResponse.json({ error: persistResult.error.message }, { status: 500 });
   }
 
+  if (existingMetaCampaignId) {
+    const { data: workspaceBilling, error: workspaceBillingError } = await serviceSupabase
+      .from("workspaces")
+      .select("billing_access_state,billing_offer_key,billing_offer_version,stripe_subscription_status")
+      .eq("id", access.access.workspaceId)
+      .single();
+    if (workspaceBillingError || !workspaceBilling) {
+      return NextResponse.json(
+        { error: "Campaign eligibility could not be verified. Try again in a moment." },
+        { status: 503 },
+      );
+    }
+    const reuseIssue = metaExistingCampaignReuseIssue({
+      billingAccessState: workspaceBilling.billing_access_state,
+      billingOfferKey: workspaceBilling.billing_offer_key,
+      billingOfferVersion: workspaceBilling.billing_offer_version,
+      stripeSubscriptionStatus: workspaceBilling.stripe_subscription_status,
+    });
+    if (reuseIssue) {
+      return NextResponse.json({ error: reuseIssue }, { status: 422 });
+    }
+  }
+
   const [existingApproval, connections] = await Promise.all([
     loadApprovalStatus(access.supabase, access.access.workspaceId, [pack.campaign.campaignId, id]),
     listProviderConnections(access.supabase, access.access.workspaceId),
@@ -212,7 +249,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     connections.find((connection) => connection.provider === "meta" && (connection.status === "connected" || connection.status === "needs_attention"))
     ?? connections.find((connection) => connection.provider === "meta");
   const googleConnection = connections.find((connection) => connection.provider === "google");
-  const existingMetaCampaignId = body.existingMetaCampaignId?.trim() || null;
+  let existingMetaCampaignBudgetMode: "campaign" | "adset" | undefined;
 
   if (existingMetaCampaignId) {
     if (!metaConnection?.externalAccountId) {
@@ -228,9 +265,11 @@ export async function POST(request: NextRequest, context: RouteContext) {
       accessToken: tokens.accessToken,
       accountId: metaConnection.externalAccountId,
     }).catch(() => []);
-    if (!eligibleCampaigns.some((campaign) => campaign.id === existingMetaCampaignId)) {
+    const selectedExistingCampaign = eligibleCampaigns.find((campaign) => campaign.id === existingMetaCampaignId);
+    if (!selectedExistingCampaign) {
       return NextResponse.json({ error: "Choose an active or paused housing lead campaign from the connected Meta account." }, { status: 422 });
     }
+    existingMetaCampaignBudgetMode = selectedExistingCampaign.budgetMode;
   }
   // Reconcile the Meta connection from live health/setup rather than the stale
   // stored status (see reconcileMetaConnectionStatus).
@@ -267,6 +306,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
           ? pack.variants.map((variant) => variant.variantId)
           : body.variantIds,
         existingMetaCampaignId,
+        existingMetaCampaignBudgetMode,
       })
     : null;
   let metaPublishPlan = metaPublishPlanResult?.plan ?? null;
@@ -290,35 +330,51 @@ export async function POST(request: NextRequest, context: RouteContext) {
   const blockers = uniqueStrings([...metaReadiness.blockers, ...adapterBlockers]);
   const publishReady = blockers.length === 0;
   let queueJobId: string | null = null;
+  const activePublishJob = metaPublishPlan && (
+    metaPublishPlan.status === "approved" || metaPublishPlan.status === "publishing"
+  )
+    ? await hasActiveMetaPublishPlanExecution({
+        serviceSupabase,
+        workspaceId: metaPublishPlan.workspaceId,
+        planId: metaPublishPlan.planId,
+      })
+    : false;
 
   if (
     publishReady &&
     !body.dryRun &&
     writesEnabled &&
     metaPublishPlan?.adapter === "marketing_api" &&
-    !metaPublishPlanResult?.reusedActivePlan
+    metaPublishPlan.status !== "paused_live" &&
+    (!metaPublishPlanResult?.reusedActivePlan || !activePublishJob)
   ) {
-    const approvedPlan: MetaPublishPlan = {
-      ...metaPublishPlan,
-      status: "approved",
-      updatedAt: new Date().toISOString(),
-    };
-    await persistMetaPublishPlan(serviceSupabase, approvedPlan, access.access.userId);
+    const queuedPlan: MetaPublishPlan = metaPublishPlan.status === "publishing"
+      ? metaPublishPlan
+      : {
+          ...metaPublishPlan,
+          status: "approved",
+          lastError: null,
+          updatedAt: new Date().toISOString(),
+        };
+    if (queuedPlan.status === "approved") {
+      await persistMetaPublishPlan(serviceSupabase, queuedPlan, access.access.userId);
+    }
 
     try {
-      const run = await queueMetaPublishPlanExecution(approvedPlan);
+      const run = await queueMetaPublishPlanExecution(queuedPlan);
       queueJobId = run.id ?? null;
-      metaPublishPlan = approvedPlan;
+      metaPublishPlan = queuedPlan;
     } catch (error) {
-      // Without this, the plan stays "approved" with no queued run and every
-      // retry is treated as a duplicate — mark it failed so retries requeue.
-      const failedPlan: MetaPublishPlan = {
-        ...approvedPlan,
-        status: "failed",
+      // A never-started plan is safe to fail and rebuild. A publishing plan may
+      // already own provider objects, so keep it reconcilable instead of
+      // claiming that no provider mutation occurred.
+      const queueFailedPlan: MetaPublishPlan = {
+        ...queuedPlan,
+        status: queuedPlan.status === "publishing" ? "publishing" : "failed",
         lastError: error instanceof Error ? error.message : "Publish could not be queued.",
         updatedAt: new Date().toISOString(),
       };
-      await persistMetaPublishPlan(serviceSupabase, failedPlan, access.access.userId);
+      await persistMetaPublishPlan(serviceSupabase, queueFailedPlan, access.access.userId);
 
       return NextResponse.json(
         { error: "Your ad could not be submitted to Meta. Try again in a moment." },
@@ -399,6 +455,7 @@ async function createAndPersistMetaPlan(input: {
   requestApproval: boolean;
   variantIds?: string[];
   existingMetaCampaignId?: string | null;
+  existingMetaCampaignBudgetMode?: "campaign" | "adset";
 }): Promise<MetaPlanPersistenceResult> {
   const setup = mergeConnectionSetup(
     resolveMetaConnectionSetup(input.connection.metadata, input.connection.externalAccountId),
@@ -447,6 +504,7 @@ async function createAndPersistMetaPlan(input: {
     approvalRequestId: approval.id,
     variantIds: input.variantIds,
     existingMetaCampaignId: input.existingMetaCampaignId,
+    existingMetaCampaignBudgetMode: input.existingMetaCampaignBudgetMode,
   });
 
   if (approval.id) {
@@ -474,10 +532,25 @@ async function createAndPersistMetaPlan(input: {
     idempotencyKey: persistedPlan.idempotencyKey,
   });
 
-  // Only in-flight or completed plans are reused as-is. "approved" is not
-  // treated as active: a plan can be stranded there when queueing failed, and
-  // reusing it would silently skip the requeue forever.
-  if (existingPlan && (existingPlan.status === "publishing" || existingPlan.status === "paused_live")) {
+  // Reuse completed/provider-ambiguous plans, and reuse an approved plan only
+  // while its queue row is genuinely active. This prevents a second click from
+  // overwriting an in-flight plan to draft, while still repairing an approved
+  // plan whose enqueue failed or whose queue row became terminal.
+  const existingApprovedJobActive = existingPlan?.status === "approved"
+    ? await hasActiveMetaPublishPlanExecution({
+        serviceSupabase: input.serviceSupabase,
+        workspaceId: input.workspaceId,
+        planId: existingPlan.planId,
+      })
+    : false;
+  if (
+    existingPlan &&
+    (
+      existingPlan.status === "publishing" ||
+      existingPlan.status === "paused_live" ||
+      existingApprovedJobActive
+    )
+  ) {
     return { plan: existingPlan, approval, reusedActivePlan: true };
   }
 

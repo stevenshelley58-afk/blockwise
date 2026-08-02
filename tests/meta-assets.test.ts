@@ -5,6 +5,7 @@ import {
   checkMetaConnectionHealth,
   fetchMetaAssetCatalog,
   pickDefaultMetaSetupFromAssets,
+  resolveMetaPageAccessToken,
 } from "../src/lib/providers/meta-assets.ts";
 
 test("fetchMetaAssetCatalog returns selectable ad accounts, pages, instagram actors, pixels, and lead forms", async () => {
@@ -95,6 +96,34 @@ test("checkMetaConnectionHealth marks expired or rejected Meta tokens as needing
 
   assert.equal(expired.status, "needs_reconnect");
   assert.equal(rejected.status, "needs_reconnect");
+});
+
+test("resolveMetaPageAccessToken finds the selected Page without persisting or putting credentials in the URL", async () => {
+  const requests: Array<{ url: string; authorization: string | null }> = [];
+  const token = await resolveMetaPageAccessToken({
+    accessToken: "user_token",
+    pageId: "page_200",
+    fetchImpl: async (input, init) => {
+      const url = String(input);
+      requests.push({
+        url,
+        authorization: new Headers(init?.headers).get("authorization"),
+      });
+      if (!url.includes("after=cursor_1")) {
+        return json({
+          data: [{ id: "page_100", access_token: "other_page_token" }],
+          paging: { cursors: { after: "cursor_1" } },
+        });
+      }
+      return json({ data: [{ id: "page_200", access_token: "selected_page_token" }] });
+    },
+  });
+
+  assert.equal(token, "selected_page_token");
+  assert.equal(requests.length, 2);
+  assert.equal(requests.every((request) => request.authorization === "Bearer user_token"), true);
+  assert.equal(requests.some((request) => request.url.includes("user_token")), false);
+  assert.equal(requests.some((request) => request.url.includes("selected_page_token")), false);
 });
 
 function json(value: unknown, status = 200) {

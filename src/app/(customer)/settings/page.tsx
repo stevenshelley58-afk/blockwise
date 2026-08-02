@@ -180,7 +180,7 @@ export default async function SettingsPage() {
             typeof userMetadata.timezone === "string"
               ? userMetadata.timezone
               : Intl.DateTimeFormat().resolvedOptions().timeZone,
-          emailVerified: userMetadata.email_verified === true,
+          emailVerified: Boolean(auth.claims?.email),
           notificationPreferences: p?.notification_preferences ?? {},
         }}
         workspace={{

@@ -9,15 +9,27 @@ test("double-publish reuses an active plan and avoids duplicate queue dispatch",
   const source = readFileSync(publishRoute, "utf8");
 
   assert.match(source, /loadMetaPublishPlanByIdempotencyKey/);
-  // In-flight and completed plans are reused as-is. "approved" is deliberately
-  // NOT reused: a plan can be stranded there when queueing fails, and reusing
-  // it would skip the requeue forever.
-  assert.match(source, /existingPlan\.status === "publishing" \|\| existingPlan\.status === "paused_live"/);
+  assert.match(source, /existingApprovedJobActive/);
+  assert.match(source, /existingPlan\.status === "publishing"/);
+  assert.match(source, /existingPlan\.status === "paused_live"/);
   assert.match(source, /return \{ plan: existingPlan, approval, reusedActivePlan: true \}/);
   assert.match(source, /!metaPublishPlanResult\?\.reusedActivePlan/);
   assert.match(source, /requestLog: existingPlan\.requestLog/);
   assert.match(source, /responseLog: existingPlan\.responseLog/);
   assert.match(source, /reconciledObjects: existingPlan\.reconciledObjects/);
+});
+
+test("existing campaigns require a declared audience and cannot use free auto-activation", () => {
+  const route = readFileSync(publishRoute, "utf8");
+  const panel = readFileSync("src/components/adstudio/panels/publish-panel.tsx", "utf8");
+
+  assert.match(route, /existingMetaCampaignId && !hasExplicitMetaPublishAudience\(body\.controls\)/);
+  assert.match(route, /\.from\("workspaces"\)[\s\S]*\.eq\("id", access\.access\.workspaceId\)/);
+  assert.match(route, /metaExistingCampaignReuseIssue\(\{[\s\S]*billingOfferVersion:[\s\S]*stripeSubscriptionStatus:/);
+  assert.match(panel, /const campaignStepReady = audienceReady && \(campaignMode === "new" \|\| Boolean\(selectedCampaign\)\)/);
+  assert.match(panel, /geo: targetSuburbs\.length > 0/);
+  assert.doesNotMatch(panel, /Existing campaign targeting/);
+  assert.match(panel, /Add a 25 km area around each selected suburb/);
 });
 
 test("provider workers and approval queueing are guarded by provider writes kill switch", () => {
@@ -36,14 +48,18 @@ test("provider workers and approval queueing are guarded by provider writes kill
   assert.match(approvals, /approval was not queued/);
 });
 
-test("approval route queues provider work before persisting approved status", () => {
+test("approval and executable target state are durable before queue dispatch", () => {
   const source = readFileSync(approvalsRoute, "utf8");
   const queueIndex = source.indexOf("queueJobId = await queueApprovedTarget");
-  const updateIndex = source.indexOf('.from("approval_requests")', queueIndex);
+  const approvalUpdateIndex = source.indexOf('.from("approval_requests")');
+  const planPersistIndex = source.indexOf("await persistMetaPublishPlan");
+  const planQueueIndex = source.indexOf("await queueMetaPublishPlanExecution");
 
   assert.notEqual(queueIndex, -1);
-  assert.notEqual(updateIndex, -1);
-  assert.ok(queueIndex < updateIndex);
+  assert.notEqual(approvalUpdateIndex, -1);
+  assert.ok(approvalUpdateIndex < queueIndex);
+  assert.ok(planPersistIndex < planQueueIndex);
+  assert.match(source, /approval_execution_queue_failed/);
   assert.match(source, /status: 502/);
 });
 

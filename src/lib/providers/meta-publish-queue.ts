@@ -13,6 +13,7 @@ import { loadMetaPublishPlan, type MetaPublishPlan } from "./meta-execution.ts";
  */
 export async function queueMetaPublishPlanExecution(plan: MetaPublishPlan) {
   return enqueueQueuedJob({
+    workspaceId: plan.workspaceId,
     kind: "publish.meta.execute",
     payload: { workspaceId: plan.workspaceId, planId: plan.planId },
     maxAttempts: 3,
@@ -20,38 +21,64 @@ export async function queueMetaPublishPlanExecution(plan: MetaPublishPlan) {
   });
 }
 
+export async function hasActiveMetaPublishPlanExecution(input: {
+  serviceSupabase?: ReturnType<typeof createSupabaseServiceClient>;
+  workspaceId: string;
+  planId: string;
+}): Promise<boolean> {
+  const state = await loadLatestMetaPublishPlanQueueState(input);
+  return state?.status === "pending" || state?.status === "processing";
+}
+
+export async function loadLatestMetaPublishPlanQueueState(input: {
+  serviceSupabase?: ReturnType<typeof createSupabaseServiceClient>;
+  workspaceId: string;
+  planId: string;
+}): Promise<{ status: "pending" | "processing" | "completed" | "failed"; lastError: string | null } | null> {
+  const supabase = input.serviceSupabase ?? createSupabaseServiceClient();
+  const { data, error } = await supabase
+    .from("job_queue")
+    .select("status,last_error")
+    .eq("workspace_id", input.workspaceId)
+    .eq("kind", "publish.meta.execute")
+    .eq("dedupe_key", `publish.meta.execute:${input.planId}`)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Failed to inspect the publish queue: ${error.message}`);
+  }
+
+  if (!data) return null;
+  return {
+    status: data.status as "pending" | "processing" | "completed" | "failed",
+    lastError: typeof data.last_error === "string" ? data.last_error : null,
+  };
+}
+
 /**
- * Watchdog recovery: find publish plans stuck in `approved` (queued but never
- * executed) and re-enqueue them for execution.
+ * Watchdog recovery: find approved plans that were never queued and enqueue
+ * them. A publishing plan is provider-ambiguous and is deliberately
+ * quarantined for an explicit user retry after its queue budget is exhausted.
  *
- * A plan counts as "stuck" when it has been `approved` longer than
- * `stuckMinutes` with no progress. Recovery is bounded by `maxAttempts`, and
- * the attempt count comes from this watchdog's own recovery audit trail —
- * once exhausted, the plan is moved to `failed` (retryable from Ad Studio) so
- * it stops being rescanned, and the exhaustion is audited for an operator.
- *
- * Re-enqueueing is duplicate-safe at the queue layer: enqueue_job reuses a
- * pending/processing job with the same dedupe key instead of inserting a
- * duplicate.
+ * The queue is the sole retry authority. Historical watchdog audit rows never
+ * consume a new publish's retry budget. Active jobs are left untouched.
  */
 export interface RecoverStuckPublishPlansResult {
   scanned: number;
   recovered: number;
-  exhausted: number;
   errors: string[];
   recoveredPlanIds: string[];
 }
 
 export async function recoverStuckMetaPublishPlans(options?: {
   stuckMinutes?: number;
-  maxAttempts?: number;
 }): Promise<RecoverStuckPublishPlansResult> {
   const stuckMinutes = options?.stuckMinutes ?? 5;
-  const maxAttempts = options?.maxAttempts ?? 3;
   const result: RecoverStuckPublishPlansResult = {
     scanned: 0,
     recovered: 0,
-    exhausted: 0,
     errors: [],
     recoveredPlanIds: [],
   };
@@ -59,7 +86,7 @@ export async function recoverStuckMetaPublishPlans(options?: {
   const supabase = createSupabaseServiceClient();
   const cutoff = new Date(Date.now() - stuckMinutes * 60_000).toISOString();
 
-  // Stuck = approved (queued) and untouched for longer than the window.
+  // Stuck = approved but never queued, and untouched beyond the window.
   const { data: rows, error: listError } = await supabase
     .from("meta_publish_plans")
     .select("*")
@@ -79,52 +106,12 @@ export async function recoverStuckMetaPublishPlans(options?: {
     if (!planId || !workspaceId) continue;
 
     try {
-      // Count prior recoveries from the watchdog's own audit trail. (The
-      // previous implementation queried publish_statuses by a column that does
-      // not exist; the error was swallowed, the count was always zero, and a
-      // permanently failing plan was re-queued every five minutes forever.)
-      const { count, error: attemptsError } = await supabase
-        .from("audit_logs")
-        .select("id", { count: "exact", head: true })
-        .eq("workspace_id", workspaceId)
-        .eq("action", "meta.publish.watchdog.recover")
-        .eq("target_type", "meta_publish_plan")
-        .eq("target_id", planId);
-
-      if (attemptsError) {
-        throw new Error(`Failed to count recovery attempts: ${attemptsError.message}`);
-      }
-
-      const attemptCount = count ?? 0;
-
-      // Exhausted the retry budget: move the plan out of "approved" so it is
-      // not rescanned forever, surface the failure, and stop.
-      if (attemptCount >= maxAttempts) {
-        result.exhausted += 1;
-        await supabase
-          .from("meta_publish_plans")
-          .update({
-            status: "failed",
-            last_error: `Publish did not complete after ${attemptCount} automatic recovery attempts. Open Ad Studio and publish again.`,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", planId)
-          .eq("workspace_id", workspaceId);
-        await recordAuditLog(supabase, {
-          workspaceId,
-          actorProfileId: null,
-          action: "meta.publish.watchdog.exhausted",
-          targetType: "meta_publish_plan",
-          targetId: planId,
-          metadata: {
-            attemptCount,
-            maxAttempts,
-            lastError: typeof row.last_error === "string" ? row.last_error : null,
-          },
-          correlationId: randomUUID(),
-        });
-        continue;
-      }
+      const active = await hasActiveMetaPublishPlanExecution({
+        serviceSupabase: supabase,
+        workspaceId,
+        planId,
+      });
+      if (active) continue;
 
       const plan = await loadMetaPublishPlan(supabase, { workspaceId, planId });
 
@@ -139,9 +126,8 @@ export async function recoverStuckMetaPublishPlans(options?: {
         targetType: "meta_publish_plan",
         targetId: planId,
         metadata: {
-          priorAttemptCount: attemptCount,
-          maxAttempts,
           stuckMinutes,
+          planStatus: row.status,
         },
         correlationId: randomUUID(),
       });

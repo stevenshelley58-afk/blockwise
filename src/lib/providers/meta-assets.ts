@@ -163,6 +163,51 @@ export async function checkMetaConnectionHealth(input: FetchInput & { tokenExpir
   return { status: "healthy", checkedAt, message: null, expiresAt };
 }
 
+/**
+ * Resolve the selected Page token only for the duration of a publish. Page
+ * tokens are provider credentials: callers must never persist or return it.
+ */
+export async function resolveMetaPageAccessToken(
+  input: FetchInput & { pageId: string },
+): Promise<string> {
+  const pageId = input.pageId.trim();
+  if (!pageId) throw new Error("Meta Page is not configured.");
+
+  const fetchImpl = input.fetchImpl ?? fetch;
+  let after: string | null = null;
+
+  for (let pageNumber = 1; pageNumber <= 100; pageNumber += 1) {
+    const url = new URL(`https://graph.facebook.com/${input.graphVersion ?? DEFAULT_META_GRAPH_VERSION}/me/accounts`);
+    url.searchParams.set("fields", "id,access_token");
+    url.searchParams.set("limit", "100");
+    if (after) url.searchParams.set("after", after);
+
+    const response = await fetchImpl(url.toString(), {
+      method: "GET",
+      headers: { authorization: `Bearer ${input.accessToken}` },
+      signal: AbortSignal.timeout(30_000),
+    });
+    const payload = (await response.json().catch(() => ({}))) as {
+      data?: Array<{ id?: string; access_token?: string }>;
+      paging?: { cursors?: { after?: string } };
+      error?: { message?: string };
+    };
+    if (!response.ok) {
+      throw new Error(payload.error?.message ?? `Meta Page access request failed with ${response.status}.`);
+    }
+
+    const selectedPage = (payload.data ?? []).find((page) => page.id === pageId);
+    const pageAccessToken = selectedPage?.access_token?.trim();
+    if (pageAccessToken) return pageAccessToken;
+
+    const nextAfter = payload.paging?.cursors?.after;
+    if (!nextAfter || nextAfter === after) break;
+    after = nextAfter;
+  }
+
+  throw new Error("Meta did not return access for the selected Page. Reconnect Meta and try again.");
+}
+
 async function fetchMetaList<T>(input: FetchInput, path: string, params: Record<string, string>): Promise<T[]> {
   const payload = await fetchMetaObject<MetaListResponse<T>>(input, path, params);
 
@@ -179,7 +224,10 @@ async function fetchMetaObject<T = Record<string, unknown>>(input: FetchInput, p
 
   url.searchParams.set("access_token", input.accessToken);
 
-  const response = await fetchImpl(url.toString(), { method: "GET" });
+  const response = await fetchImpl(url.toString(), {
+    method: "GET",
+    signal: AbortSignal.timeout(30_000),
+  });
   const payload = (await response.json().catch(() => ({}))) as MetaListResponse<T> & T;
 
   if (!response.ok) {
