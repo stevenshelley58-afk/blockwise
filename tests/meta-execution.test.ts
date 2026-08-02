@@ -73,6 +73,7 @@ test("buildMetaPublishPlan creates a deterministic paused Meta plan", () => {
   assert.equal(plan.idempotencyKey, duplicatePlan.idempotencyKey);
   assert.equal(plan.planId, duplicatePlan.planId);
   assert.equal(plan.campaign.status, "PAUSED");
+  assert.equal("bidStrategy" in plan.campaign, false);
   assert.deepEqual(plan.campaign.specialAdCategories, ["HOUSING"]);
   assert.equal(plan.adSets.length, 1);
   assert.ok(plan.ads.length <= 6);
@@ -580,6 +581,7 @@ test("marketing_api adapter emits the strict Meta v23 lead-ad request contract",
   const post = (suffix: string) => requests.find((request) => request.method === "POST" && request.path.endsWith(suffix));
   const campaign = post("/campaigns")!;
   assert.deepEqual(Object.keys(campaign.body).sort(), [
+    "bid_strategy",
     "daily_budget",
     "name",
     "objective",
@@ -588,6 +590,7 @@ test("marketing_api adapter emits the strict Meta v23 lead-ad request contract",
     "status",
   ]);
   assert.deepEqual(campaign.body.special_ad_category_country, ["AU"]);
+  assert.equal(campaign.body.bid_strategy, "LOWEST_COST_WITHOUT_CAP");
   assert.equal("budget_strategy" in campaign.body, false);
 
   const leadForm = post("/leadgen_forms")!;
@@ -625,6 +628,445 @@ test("marketing_api adapter emits the strict Meta v23 lead-ad request contract",
   assert.equal(JSON.stringify(result).includes("page_token"), false);
 });
 
+test("marketing_api adapter repairs only an owned partial campaign that predates the bid strategy contract", async () => {
+  const plan = buildMetaPublishPlan({
+    workspaceId: "workspace_demo",
+    campaignPack: buildPack(),
+    connectionId: "connection_123",
+    setup,
+    controls,
+    approvalRequestId: "approval_123",
+  });
+  const campaignId = "owned_campaign";
+  const providerName = `${plan.campaign.name} [BW:${plan.planId}:${plan.campaign.localId}]`;
+  let campaignBidStrategy = "LOWEST_COST_WITH_BID_CAP";
+  const posts: Array<{ path: string; body: Record<string, unknown> }> = [];
+  const requests: Array<{ path: string; method: string }> = [];
+  const fetchImpl = async (input: string | URL | Request, init?: RequestInit) => {
+    const url = new URL(String(input));
+    const method = init?.method ?? "GET";
+    requests.push({ path: `${url.pathname}${url.search}`, method });
+    if (method === "POST") {
+      const body = JSON.parse(String(init?.body ?? "{}")) as Record<string, unknown>;
+      posts.push({ path: url.pathname, body });
+      if (url.pathname.endsWith(`/${campaignId}`)) {
+        campaignBidStrategy = String(body.bid_strategy);
+      }
+      return new Response(
+        JSON.stringify(url.pathname.endsWith(`/${campaignId}`) ? { success: true } : { id: "adset_1" }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      );
+    }
+    if (url.pathname.endsWith(`/${campaignId}/adsets`)) {
+      return new Response(JSON.stringify({ data: [] }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }
+    if (url.searchParams.get("fields")?.includes("bid_strategy")) {
+      return new Response(JSON.stringify({
+        id: campaignId,
+        name: providerName,
+        account_id: "123",
+        daily_budget: "7500",
+        lifetime_budget: "0",
+        bid_strategy: campaignBidStrategy,
+        effective_status: "PAUSED",
+        configured_status: "PAUSED",
+      }), { status: 200, headers: { "content-type": "application/json" } });
+    }
+    return new Response(JSON.stringify({
+      id: url.pathname.split("/").at(-1),
+      effective_status: "PAUSED",
+      configured_status: "PAUSED",
+    }), { status: 200, headers: { "content-type": "application/json" } });
+  };
+
+  const result = await createMetaExecutionAdapter("marketing_api").publish(
+    {
+      ...plan,
+      status: "publishing",
+      leadForms: [],
+      creatives: [],
+      ads: [],
+      requestLog: [{
+        step: "campaign.create",
+        method: "POST",
+        path: `/${setup.metaAdAccountId}/campaigns`,
+        body: { name: providerName, status: "PAUSED" },
+        createdAt: "2026-08-02T00:00:00.000Z",
+      }],
+      responseLog: [{
+        step: "campaign.create",
+        method: "POST",
+        path: `/${setup.metaAdAccountId}/campaigns`,
+        response: { id: campaignId },
+        status: 200,
+        createdAt: "2026-08-02T00:00:01.000Z",
+      }],
+      reconciledObjects: {
+        ...plan.reconciledObjects,
+        campaignId,
+      },
+    },
+    { accessToken: "user_token", fetchImpl },
+  );
+
+  assert.equal(result.status, "paused_live", result.lastError ?? undefined);
+  assert.equal(posts[0]?.path.endsWith(`/${campaignId}`), true);
+  assert.deepEqual(posts[0]?.body, {
+    bid_strategy: "LOWEST_COST_WITHOUT_CAP",
+    status: "PAUSED",
+  });
+  assert.equal(posts[1]?.path.endsWith("/adsets"), true);
+  assert.equal(
+    requests.filter((request) => request.method === "GET" && request.path.includes("bid_strategy")).length,
+    2,
+  );
+  assert.equal(
+    requests.some((request) => request.path.endsWith("/adsets?fields=id,configured_status,status&limit=100")),
+    true,
+  );
+});
+
+test("marketing_api adapter refuses to repair a legacy campaign when any safety proof fails", async () => {
+  const plan = buildMetaPublishPlan({
+    workspaceId: "workspace_demo",
+    campaignPack: buildPack(),
+    connectionId: "connection_123",
+    setup,
+    controls,
+    approvalRequestId: "approval_123",
+  });
+  const campaignId = "owned_campaign";
+  const providerName = `${plan.campaign.name} [BW:${plan.planId}:${plan.campaign.localId}]`;
+  const cases: Array<{
+    label: string;
+    campaignState?: Record<string, unknown>;
+    liveAdSets?: Array<{ id: string }>;
+    localAdSetIds?: Record<string, string>;
+    responsePath?: string;
+    responseStatus?: number;
+  }> = [
+    { label: "name mismatch", campaignState: { name: "Someone else's campaign" } },
+    { label: "account mismatch", campaignState: { account_id: "999" } },
+    { label: "active campaign", campaignState: { configured_status: "ACTIVE", effective_status: "ACTIVE" } },
+    { label: "live ad set", liveAdSets: [{ id: "live_adset" }] },
+    { label: "locally reconciled ad set", localAdSetIds: { adset_primary: "known_adset" } },
+    { label: "budget mismatch", campaignState: { daily_budget: "9000" } },
+    { label: "wrong response path", responsePath: "/act_other/campaigns" },
+    { label: "rejected creation response", responseStatus: 400 },
+  ];
+
+  for (const scenario of cases) {
+    let postCount = 0;
+    const fetchImpl = async (input: string | URL | Request, init?: RequestInit) => {
+      const url = new URL(String(input));
+      if ((init?.method ?? "GET") === "POST") {
+        postCount += 1;
+        return new Response(JSON.stringify({ success: true }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      }
+      if (url.pathname.endsWith(`/${campaignId}/adsets`)) {
+        return new Response(JSON.stringify({ data: scenario.liveAdSets ?? [] }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      }
+      return new Response(JSON.stringify({
+        id: campaignId,
+        name: providerName,
+        account_id: "123",
+        daily_budget: "7500",
+        lifetime_budget: "0",
+        bid_strategy: "LOWEST_COST_WITH_BID_CAP",
+        configured_status: "PAUSED",
+        effective_status: "PAUSED",
+        ...(scenario.campaignState ?? {}),
+      }), { status: 200, headers: { "content-type": "application/json" } });
+    };
+
+    const result = await createMetaExecutionAdapter("marketing_api").publish(
+      {
+        ...plan,
+        status: "publishing",
+        requestLog: [{
+          step: "campaign.create",
+          method: "POST",
+          path: `/${setup.metaAdAccountId}/campaigns`,
+          body: { name: providerName, status: "PAUSED" },
+          createdAt: "2026-08-02T00:00:00.000Z",
+        }],
+        responseLog: [{
+          step: "campaign.create",
+          method: "POST",
+          path: scenario.responsePath ?? `/${setup.metaAdAccountId}/campaigns`,
+          response: { id: campaignId },
+          status: scenario.responseStatus ?? 200,
+          createdAt: "2026-08-02T00:00:01.000Z",
+        }],
+        reconciledObjects: {
+          ...plan.reconciledObjects,
+          campaignId,
+          adSetIds: scenario.localAdSetIds ?? {},
+        },
+      },
+      { accessToken: "user_token", fetchImpl },
+    );
+
+    assert.equal(result.status, "failed", scenario.label);
+    assert.match(result.lastError ?? "", /refusing|did not/i, scenario.label);
+    assert.equal(postCount, 0, scenario.label);
+  }
+});
+
+test("marketing_api adapter blocks child writes when Meta does not confirm the repaired strategy", async () => {
+  const plan = buildMetaPublishPlan({
+    workspaceId: "workspace_demo",
+    campaignPack: buildPack(),
+    connectionId: "connection_123",
+    setup,
+    controls,
+    approvalRequestId: "approval_123",
+  });
+  const campaignId = "owned_campaign";
+  const providerName = `${plan.campaign.name} [BW:${plan.planId}:${plan.campaign.localId}]`;
+  const postPaths: string[] = [];
+  const fetchImpl = async (input: string | URL | Request, init?: RequestInit) => {
+    const url = new URL(String(input));
+    if ((init?.method ?? "GET") === "POST") {
+      postPaths.push(url.pathname);
+      return new Response(JSON.stringify({ success: true }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }
+    if (url.pathname.endsWith(`/${campaignId}/adsets`)) {
+      return new Response(JSON.stringify({ data: [] }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }
+    return new Response(JSON.stringify({
+      id: campaignId,
+      name: providerName,
+      account_id: "123",
+      daily_budget: "7500",
+      lifetime_budget: "0",
+      bid_strategy: "LOWEST_COST_WITH_BID_CAP",
+      configured_status: "PAUSED",
+      effective_status: "PAUSED",
+    }), { status: 200, headers: { "content-type": "application/json" } });
+  };
+
+  const result = await createMetaExecutionAdapter("marketing_api").publish(
+    {
+      ...plan,
+      status: "publishing",
+      requestLog: [{
+        step: "campaign.create",
+        method: "POST",
+        path: `/${setup.metaAdAccountId}/campaigns`,
+        body: { name: providerName, status: "PAUSED" },
+        createdAt: "2026-08-02T00:00:00.000Z",
+      }],
+      responseLog: [{
+        step: "campaign.create",
+        method: "POST",
+        path: `/${setup.metaAdAccountId}/campaigns`,
+        response: { id: campaignId },
+        status: 200,
+        createdAt: "2026-08-02T00:00:01.000Z",
+      }],
+      reconciledObjects: { ...plan.reconciledObjects, campaignId },
+    },
+    { accessToken: "user_token", fetchImpl },
+  );
+
+  assert.equal(result.status, "failed");
+  assert.match(result.lastError ?? "", /did not confirm/i);
+  assert.equal(postPaths.length, 1);
+  assert.equal(postPaths[0]?.endsWith(`/${campaignId}`), true);
+});
+
+test("marketing_api adapter resumes an already corrected legacy campaign without patching it again", async () => {
+  const plan = buildMetaPublishPlan({
+    workspaceId: "workspace_demo",
+    campaignPack: buildPack(),
+    connectionId: "connection_123",
+    setup,
+    controls,
+    approvalRequestId: "approval_123",
+  });
+  const campaignId = "owned_campaign";
+  const providerName = `${plan.campaign.name} [BW:${plan.planId}:${plan.campaign.localId}]`;
+  const postPaths: string[] = [];
+  const fetchImpl = async (input: string | URL | Request, init?: RequestInit) => {
+    const url = new URL(String(input));
+    if ((init?.method ?? "GET") === "POST") {
+      postPaths.push(url.pathname);
+      return new Response(JSON.stringify({ id: "adset_1" }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }
+    if (url.searchParams.get("fields")?.includes("bid_strategy")) {
+      return new Response(JSON.stringify({
+        id: campaignId,
+        name: providerName,
+        account_id: "123",
+        daily_budget: "7500",
+        lifetime_budget: "0",
+        bid_strategy: "LOWEST_COST_WITHOUT_CAP",
+        configured_status: "PAUSED",
+        effective_status: "PAUSED",
+      }), { status: 200, headers: { "content-type": "application/json" } });
+    }
+    if (url.pathname.endsWith(`/${campaignId}/adsets`)) {
+      return new Response(JSON.stringify({ data: [] }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }
+    return new Response(JSON.stringify({ id: campaignId, configured_status: "PAUSED", effective_status: "PAUSED" }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  };
+
+  const result = await createMetaExecutionAdapter("marketing_api").publish(
+    {
+      ...plan,
+      status: "publishing",
+      leadForms: [],
+      creatives: [],
+      ads: [],
+      requestLog: [{
+        step: "campaign.create",
+        method: "POST",
+        path: `/${setup.metaAdAccountId}/campaigns`,
+        body: { name: providerName, status: "PAUSED" },
+        createdAt: "2026-08-02T00:00:00.000Z",
+      }],
+      responseLog: [{
+        step: "campaign.create",
+        method: "POST",
+        path: `/${setup.metaAdAccountId}/campaigns`,
+        response: { id: campaignId },
+        status: 200,
+        createdAt: "2026-08-02T00:00:01.000Z",
+      }],
+      reconciledObjects: { ...plan.reconciledObjects, campaignId },
+    },
+    { accessToken: "user_token", fetchImpl },
+  );
+
+  assert.equal(result.status, "paused_live", result.lastError ?? undefined);
+  assert.equal(postPaths.length, 1);
+  assert.equal(postPaths[0]?.endsWith(`/${setup.metaAdAccountId}/adsets`), true);
+});
+
+test("marketing_api adapter blocks an incompatible selected campaign before any child write", async () => {
+  const campaignBudgetPlan = buildMetaPublishPlan({
+    workspaceId: "workspace_demo",
+    campaignPack: buildPack(),
+    connectionId: "connection_123",
+    setup,
+    controls,
+    approvalRequestId: "approval_123",
+    existingMetaCampaignId: "selected_campaign",
+  });
+  const adSetBudgetPlan = buildMetaPublishPlan({
+    workspaceId: "workspace_demo",
+    campaignPack: buildPack(),
+    connectionId: "connection_123",
+    setup,
+    controls,
+    approvalRequestId: "approval_123",
+    existingMetaCampaignId: "selected_campaign",
+    existingMetaCampaignBudgetMode: "adset",
+  });
+  const scenarios = [
+    {
+      label: "campaign bid cap",
+      plan: campaignBudgetPlan,
+      state: { account_id: "123", daily_budget: "7500", bid_strategy: "LOWEST_COST_WITH_BID_CAP" },
+    },
+    {
+      label: "account mismatch",
+      plan: campaignBudgetPlan,
+      state: { account_id: "999", daily_budget: "7500", bid_strategy: "LOWEST_COST_WITHOUT_CAP" },
+    },
+    {
+      label: "campaign changed to ad-set budget",
+      plan: campaignBudgetPlan,
+      state: { account_id: "123", daily_budget: "0", bid_strategy: "LOWEST_COST_WITHOUT_CAP" },
+    },
+    {
+      label: "ad-set changed to campaign budget",
+      plan: adSetBudgetPlan,
+      state: { account_id: "123", daily_budget: "7500", bid_strategy: "LOWEST_COST_WITHOUT_CAP" },
+    },
+  ];
+
+  for (const scenario of scenarios) {
+    let postCount = 0;
+    const result = await createMetaExecutionAdapter("marketing_api").publish(
+      { ...scenario.plan, status: "approved" },
+      {
+        accessToken: "user_token",
+        fetchImpl: async (_input, init) => {
+          if ((init?.method ?? "GET") === "POST") postCount += 1;
+          return new Response(JSON.stringify({
+            id: "selected_campaign",
+            lifetime_budget: "0",
+            configured_status: "PAUSED",
+            effective_status: "PAUSED",
+            ...scenario.state,
+          }), { status: 200, headers: { "content-type": "application/json" } });
+        },
+      },
+    );
+
+    assert.equal(result.status, "failed", scenario.label);
+    assert.match(result.lastError ?? "", /refusing|did not/i, scenario.label);
+    assert.equal(postCount, 0, scenario.label);
+  }
+});
+
+test("marketing_api adapter preserves Meta's actionable provider error", async () => {
+  const plan = buildMetaPublishPlan({
+    workspaceId: "workspace_demo",
+    campaignPack: buildPack(),
+    connectionId: "connection_123",
+    setup,
+    controls,
+    approvalRequestId: "approval_123",
+    existingMetaCampaignId: "existing_campaign",
+  });
+  const result = await createMetaExecutionAdapter("marketing_api").publish(
+    { ...plan, status: "approved", leadForms: [], creatives: [], ads: [] },
+    {
+      accessToken: "user_token",
+      fetchImpl: async () => new Response(JSON.stringify({
+        error: {
+          message: "Invalid parameter",
+          error_user_title: "Bid Amount Required For The Bid Strategy Provided",
+          error_user_msg: "Provide a bid cap or use lowest cost without a cap.",
+        },
+      }), { status: 400, headers: { "content-type": "application/json" } }),
+    },
+  );
+
+  assert.equal(result.status, "failed");
+  assert.equal(
+    result.lastError,
+    "Bid Amount Required For The Bid Strategy Provided: Provide a bid cap or use lowest cost without a cap.",
+  );
+});
+
 test("marketing_api adapter caps AdCreative names at Meta's 100-character limit", async () => {
   const pack = buildPack();
   pack.campaign.name = "Long Meta creative name ".repeat(12);
@@ -648,7 +1090,15 @@ test("marketing_api adapter caps AdCreative names at Meta's 100-character limit"
         headers: { "content-type": "application/json" },
       });
     }
-    return new Response(JSON.stringify({ id: "campaign_1", effective_status: "PAUSED", configured_status: "PAUSED" }), {
+    return new Response(JSON.stringify({
+      id: "campaign_1",
+      account_id: "123",
+      daily_budget: "2000",
+      lifetime_budget: "0",
+      bid_strategy: "LOWEST_COST_WITHOUT_CAP",
+      effective_status: "PAUSED",
+      configured_status: "PAUSED",
+    }), {
       status: 200,
       headers: { "content-type": "application/json" },
     });
@@ -690,9 +1140,11 @@ test("marketing_api adapter puts the selected budget on an existing ad-set-budge
     existingMetaCampaignBudgetMode: "adset",
   });
   const adSetBodies: Array<Record<string, unknown>> = [];
+  const postPaths: string[] = [];
   const fetchImpl = async (input: string | URL | Request, init?: RequestInit) => {
     const url = String(input);
     if ((init?.method ?? "GET") === "POST") {
+      postPaths.push(new URL(url).pathname);
       adSetBodies.push(JSON.parse(String(init?.body ?? "{}")) as Record<string, unknown>);
       return new Response(JSON.stringify({ id: "adset_1" }), {
         status: 200,
@@ -701,6 +1153,9 @@ test("marketing_api adapter puts the selected budget on an existing ad-set-budge
     }
     return new Response(JSON.stringify({
       id: url.split("/").at(-1)?.split("?")[0],
+      account_id: "123",
+      daily_budget: "0",
+      lifetime_budget: "0",
       effective_status: "PAUSED",
     }), { status: 200, headers: { "content-type": "application/json" } });
   };
@@ -711,6 +1166,8 @@ test("marketing_api adapter puts the selected budget on an existing ad-set-budge
   );
 
   assert.equal(result.status, "paused_live", result.lastError ?? undefined);
+  assert.equal(postPaths.includes("/existing_campaign"), false);
+  assert.equal(adSetBodies[0]?.bid_strategy, "LOWEST_COST_WITHOUT_CAP");
   assert.equal(adSetBodies[0]?.daily_budget, "7500");
   assert.deepEqual(adSetBodies[0]?.promoted_object, { page_id: "page_123" });
 });
@@ -740,7 +1197,22 @@ test("marketing_api reconciliation paginates before deciding a deterministic obj
         data: [{ id: "campaign_existing", name: providerName }],
       }), { status: 200, headers: { "content-type": "application/json" } });
     }
-    return new Response(JSON.stringify({ id: "campaign_existing", effective_status: "PAUSED" }), {
+    if (url.includes("/campaign_existing/adsets?")) {
+      return new Response(JSON.stringify({ data: [] }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }
+    return new Response(JSON.stringify({
+      id: "campaign_existing",
+      name: providerName,
+      account_id: "123",
+      daily_budget: "2000",
+      lifetime_budget: "0",
+      bid_strategy: "LOWEST_COST_WITHOUT_CAP",
+      effective_status: "PAUSED",
+      configured_status: "PAUSED",
+    }), {
       status: 200,
       headers: { "content-type": "application/json" },
     });
@@ -772,7 +1244,14 @@ test("marketing_api adapter resumes partial publishes without recreating reconci
     requested.push({ url: String(url), method });
 
     if (method === "GET") {
-      return new Response(JSON.stringify({ id: String(url).split("/").at(-1)?.split("?")[0], effective_status: "PAUSED" }), {
+      return new Response(JSON.stringify({
+        id: String(url).split("/").at(-1)?.split("?")[0],
+        account_id: "123",
+        daily_budget: "2000",
+        lifetime_budget: "0",
+        bid_strategy: "LOWEST_COST_WITHOUT_CAP",
+        effective_status: "PAUSED",
+      }), {
         status: 200,
         headers: { "content-type": "application/json" },
       });
@@ -852,8 +1331,19 @@ test("marketing_api adapter reconciles a provider success after its local checkp
         headers: { "content-type": "application/json" },
       });
     }
+    if (String(url).includes("/meta_campaign_existing/adsets?")) {
+      return new Response(JSON.stringify({ data: [] }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }
     return new Response(JSON.stringify({
       id: "meta_campaign_existing",
+      name: providerName,
+      account_id: "123",
+      daily_budget: "2000",
+      lifetime_budget: "0",
+      bid_strategy: "LOWEST_COST_WITHOUT_CAP",
       effective_status: "PAUSED",
       configured_status: "PAUSED",
     }), {

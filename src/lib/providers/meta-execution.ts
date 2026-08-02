@@ -12,6 +12,7 @@ type SupabaseServiceClient = ReturnType<typeof createSupabaseServiceClient>;
 const META_PROVIDER_OBJECT_NAME_MAX_LENGTH = 255;
 const META_AD_CREATIVE_NAME_MAX_LENGTH = 100;
 const META_HOUSING_MIN_RADIUS_KM = 25;
+const META_LOWEST_COST_BID_STRATEGY = "LOWEST_COST_WITHOUT_CAP";
 
 export type MetaExecutionAdapter = "marketing_api" | "ads_cli" | "ads_mcp";
 export type MetaPublishPlanStatus = "draft" | "approved" | "publishing" | "paused_live" | "failed";
@@ -634,11 +635,33 @@ async function publishWithMarketingApi(
           status: "PAUSED",
           special_ad_categories: plan.campaign.specialAdCategories,
           special_ad_category_country: plan.campaign.specialAdCategoryCountries,
+          bid_strategy: META_LOWEST_COST_BID_STRATEGY,
           daily_budget: String(plan.controls.dailyBudgetMinorUnits ?? 2000),
         });
         reconciledObjects.campaignId = requireMetaId(response, "campaign");
       }
       await checkpointMetaPublishProgress(input, requestLog, responseLog, reconciledObjects);
+    }
+
+    if (reconciledObjects.campaignId) {
+      const repairedBidStrategy = await repairOwnedCampaignBidStrategyIfNeeded(
+        plan,
+        input,
+        requestLog,
+        responseLog,
+        reconciledObjects,
+        reconciledObjects.campaignId,
+      );
+      if (repairedBidStrategy) {
+        await checkpointMetaPublishProgress(input, requestLog, responseLog, reconciledObjects);
+      }
+      await assertSelectedCampaignBidStrategyIsCompatible(
+        plan,
+        input,
+        requestLog,
+        responseLog,
+        reconciledObjects.campaignId,
+      );
     }
 
     for (const leadForm of plan.leadForms) {
@@ -721,7 +744,12 @@ async function publishWithMarketingApi(
           promoted_object: { page_id: plan.setup.pageId },
           targeting: adSet.targeting,
           status: "PAUSED",
-          ...(plan.campaign.budgetMode === "adset" ? { daily_budget: String(adSet.dailyBudgetMinorUnits) } : {}),
+          ...(plan.campaign.budgetMode === "adset"
+            ? {
+                bid_strategy: META_LOWEST_COST_BID_STRATEGY,
+                daily_budget: String(adSet.dailyBudgetMinorUnits),
+              }
+            : {}),
           ...(adSet.startTime ? { start_time: adSet.startTime } : {}),
           ...(adSet.endTime ? { end_time: adSet.endTime } : {}),
         });
@@ -901,11 +929,21 @@ async function postMetaObject(
   responseLog.push({ step, method: "POST", path, response: payload, status: response.status, createdAt: new Date().toISOString() });
 
   if (!response.ok) {
-    const error = payload.error as { message?: string } | undefined;
-    throw new Error(error?.message ?? `Meta request ${step} failed with ${response.status}.`);
+    throw new Error(metaProviderErrorMessage(payload, `Meta request ${step} failed with ${response.status}.`));
   }
 
   return payload;
+}
+
+function metaProviderErrorMessage(payload: Record<string, unknown>, fallback: string) {
+  const error = payload.error as {
+    message?: string;
+    error_user_msg?: string;
+    error_user_title?: string;
+  } | undefined;
+  const detail = optionalString(error?.error_user_msg) ?? optionalString(error?.message);
+  const title = optionalString(error?.error_user_title);
+  return title && detail ? `${title}: ${detail}` : detail ?? fallback;
 }
 
 async function checkpointMetaPublishProgress(
@@ -942,6 +980,291 @@ function buildMetaProviderObjectName(
   const effectiveMaxLength = Math.max(marker.length, Math.floor(maxLength));
   const prefix = displayName.trim().slice(0, Math.max(0, effectiveMaxLength - marker.length - 1));
   return `${prefix} ${marker}`.trim();
+}
+
+async function repairOwnedCampaignBidStrategyIfNeeded(
+  plan: MetaPublishPlan,
+  input: MetaPublishExecutionInput,
+  requestLog: MetaProviderLogEntry[],
+  responseLog: MetaProviderLogEntry[],
+  reconciledObjects: MetaReconciledObjects,
+  campaignId: string,
+): Promise<boolean> {
+  const ownership = getCampaignOwnershipEvidence(plan, requestLog, responseLog, campaignId);
+  if (!ownership.ownedByPlan || !ownership.predatesBidStrategyContract) return false;
+  if (plan.status !== "publishing") {
+    throw new Error("The legacy Blockwise campaign is not in a resumable publish state; refusing to change its bid strategy.");
+  }
+
+  const before = await getMetaCampaignBidStrategy(
+    input,
+    requestLog,
+    responseLog,
+    "campaign.bid_strategy_repair.preflight",
+    campaignId,
+  );
+  assertCampaignAccountMatches(plan.setup.metaAdAccountId, before);
+  assertOwnedCampaignIsPaused(ownership.expectedName, before);
+  assertOwnedCampaignBudgetMatches(plan, before);
+  await assertOwnedCampaignAdSetsMatch(input, requestLog, responseLog, reconciledObjects, campaignId);
+  if (before.bidStrategy === META_LOWEST_COST_BID_STRATEGY) return false;
+  if (before.bidStrategy !== "LOWEST_COST_WITH_BID_CAP") {
+    throw new Error(
+      `The paused Blockwise campaign has unexpected bid strategy ${before.bidStrategy ?? "UNKNOWN"}; refusing to change it.`,
+    );
+  }
+  if (Object.keys(reconciledObjects.adSetIds).length > 0 || Object.keys(reconciledObjects.adIds).length > 0) {
+    throw new Error("The legacy Blockwise campaign already has reconciled delivery objects; refusing to change its bid strategy.");
+  }
+
+  await postMetaObject(
+    input,
+    requestLog,
+    responseLog,
+    "campaign.bid_strategy_repair",
+    `/${campaignId}`,
+    {
+      bid_strategy: META_LOWEST_COST_BID_STRATEGY,
+      status: "PAUSED",
+    },
+  );
+
+  const after = await getMetaCampaignBidStrategy(
+    input,
+    requestLog,
+    responseLog,
+    "campaign.bid_strategy_repair.verify",
+    campaignId,
+  );
+  assertCampaignAccountMatches(plan.setup.metaAdAccountId, after);
+  assertOwnedCampaignIsPaused(ownership.expectedName, after);
+  assertOwnedCampaignBudgetMatches(plan, after);
+  if (after.bidStrategy !== META_LOWEST_COST_BID_STRATEGY) {
+    throw new Error("Meta did not confirm the safe lowest-cost bid strategy for the paused Blockwise campaign.");
+  }
+  return true;
+}
+
+async function assertSelectedCampaignBidStrategyIsCompatible(
+  plan: MetaPublishPlan,
+  input: MetaPublishExecutionInput,
+  requestLog: MetaProviderLogEntry[],
+  responseLog: MetaProviderLogEntry[],
+  campaignId: string,
+) {
+  const ownership = getCampaignOwnershipEvidence(plan, requestLog, responseLog, campaignId);
+  if (ownership.ownedByPlan) return;
+
+  const state = await getMetaCampaignBidStrategy(
+    input,
+    requestLog,
+    responseLog,
+    "campaign.selected_bid_strategy.preflight",
+    campaignId,
+  );
+  assertCampaignAccountMatches(plan.setup.metaAdAccountId, state);
+  const liveBudgetMode = hasMetaCampaignBudget(state) ? "campaign" : "adset";
+  if (liveBudgetMode !== plan.campaign.budgetMode) {
+    throw new Error(
+      `The selected Meta campaign now uses ${liveBudgetMode}-level budgeting, not ${plan.campaign.budgetMode}-level budgeting. ` +
+      "Choose it again before publishing; Blockwise did not write any child objects.",
+    );
+  }
+  if (liveBudgetMode === "campaign" && state.bidStrategy !== META_LOWEST_COST_BID_STRATEGY) {
+    throw new Error(
+      `The selected Meta campaign uses ${state.bidStrategy ?? "an unknown bid strategy"}. ` +
+      "Choose a campaign using lowest cost without a cap before publishing; Blockwise did not change it.",
+    );
+  }
+}
+
+function getCampaignOwnershipEvidence(
+  plan: MetaPublishPlan,
+  requestLog: MetaProviderLogEntry[],
+  responseLog: MetaProviderLogEntry[],
+  campaignId: string,
+) {
+  const expectedName = buildMetaProviderObjectName(plan, plan.campaign.localId, plan.campaign.name);
+  const creationRequest = requestLog.find(
+    (entry) =>
+      entry.step === "campaign.create" &&
+      entry.method === "POST" &&
+      entry.path === `/${plan.setup.metaAdAccountId}/campaigns` &&
+      entry.body?.name === expectedName,
+  );
+  const createdByPlan = Boolean(creationRequest) && responseLog.some(
+    (entry) =>
+      entry.step === "campaign.create" &&
+      entry.method === "POST" &&
+      entry.path === `/${plan.setup.metaAdAccountId}/campaigns` &&
+      isSuccessfulMetaResponse(entry) &&
+      entry.response?.id === campaignId,
+  );
+  const reconcileRequested = requestLog.some(
+    (entry) =>
+      entry.step === "campaign.reconcile_missing" &&
+      entry.method === "GET" &&
+      entry.path.startsWith(`/${plan.setup.metaAdAccountId}/campaigns?`),
+  );
+  const reconciledByExactMarker = reconcileRequested && responseLog.some(
+    (entry) =>
+      entry.step === "campaign.reconcile_missing" &&
+      entry.method === "GET" &&
+      entry.path.startsWith(`/${plan.setup.metaAdAccountId}/campaigns?`) &&
+      isSuccessfulMetaResponse(entry) &&
+      entry.response?.matchedObjectId === campaignId,
+  );
+  const ownedByPlan = createdByPlan || reconciledByExactMarker;
+
+  return {
+    expectedName,
+    ownedByPlan,
+    predatesBidStrategyContract: ownedByPlan && (
+      !creationRequest || !Object.prototype.hasOwnProperty.call(creationRequest.body ?? {}, "bid_strategy")
+    ),
+  };
+}
+
+type MetaCampaignBidStrategyState = {
+  name: string | null;
+  accountId: string | null;
+  dailyBudgetMinorUnits: number | null;
+  lifetimeBudgetMinorUnits: number | null;
+  configuredStatus: string | null;
+  effectiveStatus: string | null;
+  bidStrategy: string | null;
+};
+
+async function getMetaCampaignBidStrategy(
+  input: MetaPublishExecutionInput,
+  requestLog: MetaProviderLogEntry[],
+  responseLog: MetaProviderLogEntry[],
+  step: string,
+  campaignId: string,
+): Promise<MetaCampaignBidStrategyState> {
+  const path = `/${campaignId}?fields=id,name,account_id,daily_budget,lifetime_budget,status,effective_status,configured_status,bid_strategy`;
+  const createdAt = new Date().toISOString();
+  requestLog.push({ step, method: "GET", path, createdAt });
+  const response = await (input.fetchImpl ?? fetch)(
+    `https://graph.facebook.com/${input.graphVersion ?? DEFAULT_META_GRAPH_VERSION}${path}`,
+    {
+      method: "GET",
+      headers: { authorization: `Bearer ${input.accessToken}` },
+      signal: AbortSignal.timeout(30_000),
+    },
+  );
+  const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+  responseLog.push({
+    step,
+    method: "GET",
+    path,
+    response: payload,
+    status: response.status,
+    createdAt: new Date().toISOString(),
+  });
+  if (!response.ok) {
+    throw new Error(metaProviderErrorMessage(payload, `Meta campaign verification failed with ${response.status}.`));
+  }
+  return {
+    name: optionalString(payload.name),
+    accountId: optionalString(payload.account_id),
+    dailyBudgetMinorUnits: optionalMetaBudget(payload.daily_budget),
+    lifetimeBudgetMinorUnits: optionalMetaBudget(payload.lifetime_budget),
+    configuredStatus: optionalString(payload.configured_status ?? payload.status),
+    effectiveStatus: optionalString(payload.effective_status ?? payload.status),
+    bidStrategy: optionalString(payload.bid_strategy),
+  };
+}
+
+async function assertOwnedCampaignAdSetsMatch(
+  input: MetaPublishExecutionInput,
+  requestLog: MetaProviderLogEntry[],
+  responseLog: MetaProviderLogEntry[],
+  reconciledObjects: MetaReconciledObjects,
+  campaignId: string,
+) {
+  const step = "campaign.bid_strategy_repair.adsets_preflight";
+  const path = `/${campaignId}/adsets?fields=id,configured_status,status&limit=100`;
+  const createdAt = new Date().toISOString();
+  requestLog.push({ step, method: "GET", path, createdAt });
+  const response = await (input.fetchImpl ?? fetch)(
+    `https://graph.facebook.com/${input.graphVersion ?? DEFAULT_META_GRAPH_VERSION}${path}`,
+    {
+      method: "GET",
+      headers: { authorization: `Bearer ${input.accessToken}` },
+      signal: AbortSignal.timeout(30_000),
+    },
+  );
+  const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+  const rawRows = Array.isArray(payload.data) ? payload.data : null;
+  const rows = rawRows
+    ? rawRows.flatMap((row): Array<{ id: string; configuredStatus: string | null }> => {
+        if (!row || typeof row !== "object") return [];
+        const record = row as Record<string, unknown>;
+        const id = optionalString(record.id);
+        return id ? [{ id, configuredStatus: optionalString(record.configured_status ?? record.status) }] : [];
+      })
+    : [];
+  responseLog.push({
+    step,
+    method: "GET",
+    path,
+    response: response.ok ? { returnedObjectCount: rawRows?.length ?? null } : payload,
+    status: response.status,
+    createdAt: new Date().toISOString(),
+  });
+  if (!response.ok) {
+    throw new Error(metaProviderErrorMessage(payload, `Meta campaign ad-set verification failed with ${response.status}.`));
+  }
+  if (!rawRows || rows.length !== rawRows.length) {
+    throw new Error("Meta returned an invalid live ad-set inventory; refusing to continue.");
+  }
+  const paging = payload.paging && typeof payload.paging === "object"
+    ? payload.paging as { next?: unknown }
+    : null;
+  if (typeof paging?.next === "string" && paging.next) {
+    throw new Error("The legacy Blockwise campaign has more live ad sets than can be safely verified; refusing to continue.");
+  }
+  const expectedIds = new Set(Object.values(reconciledObjects.adSetIds));
+  if (
+    rows.length !== expectedIds.size ||
+    rows.some((row) => !expectedIds.has(row.id) || row.configuredStatus !== "PAUSED")
+  ) {
+    throw new Error("The legacy Blockwise campaign's live ad sets do not match its paused reconciled objects; refusing to continue.");
+  }
+}
+
+function isSuccessfulMetaResponse(entry: MetaProviderLogEntry) {
+  return typeof entry.status === "number" && entry.status >= 200 && entry.status < 300;
+}
+
+function hasMetaCampaignBudget(state: MetaCampaignBidStrategyState) {
+  return (state.dailyBudgetMinorUnits ?? 0) > 0 || (state.lifetimeBudgetMinorUnits ?? 0) > 0;
+}
+
+function assertOwnedCampaignBudgetMatches(plan: MetaPublishPlan, state: MetaCampaignBidStrategyState) {
+  const expectedDailyBudget = Math.round(plan.controls.dailyBudgetMinorUnits ?? 2000);
+  if (
+    state.dailyBudgetMinorUnits !== expectedDailyBudget ||
+    (state.lifetimeBudgetMinorUnits ?? 0) !== 0
+  ) {
+    throw new Error("The paused Blockwise campaign budget no longer matches its approved plan; refusing to continue.");
+  }
+}
+
+function assertCampaignAccountMatches(expectedAccountId: string, state: MetaCampaignBidStrategyState) {
+  if (!state.accountId || normalizeMetaAccountId(state.accountId) !== normalizeMetaAccountId(expectedAccountId)) {
+    throw new Error("The Meta campaign does not belong to the configured ad account; refusing to publish into it.");
+  }
+}
+
+function assertOwnedCampaignIsPaused(expectedName: string, state: MetaCampaignBidStrategyState) {
+  if (state.name !== expectedName) {
+    throw new Error("Meta campaign ownership could not be verified; refusing to change its bid strategy.");
+  }
+  if (state.configuredStatus !== "PAUSED" || state.effectiveStatus !== "PAUSED") {
+    throw new Error("The Blockwise campaign is not paused; refusing to change its bid strategy.");
+  }
 }
 
 async function findMetaObjectByName(
@@ -1440,6 +1763,12 @@ function normalizeMetaAccountId(value: string): string {
 
 function optionalString(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function optionalMetaBudget(value: unknown): number | null {
+  if (value === null || value === undefined || value === "") return null;
+  const budget = Number(value);
+  return Number.isFinite(budget) && budget >= 0 ? budget : null;
 }
 
 function normalizeMetaLeadDestinationType(value: unknown): MetaLeadDestination["type"] {
