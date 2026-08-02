@@ -192,12 +192,8 @@ export async function executeMetaPublishPlan(input: {
     return input.plan;
   }
 
-  const scheduledPlan =
-    freeLive?.kind === "free_campaign"
-      ? applyThreeDayFreeCampaignSchedule(input.plan)
-      : input.plan;
   const publishingPlan: MetaPublishPlan = {
-    ...scheduledPlan,
+    ...input.plan,
     status: "publishing",
     updatedAt: new Date().toISOString(),
   };
@@ -404,8 +400,8 @@ async function prepareFreeLiveConversion(input: {
   if (!reservation.allowed) {
     throw new Error(
       reservation.reason === "already_claimed"
-        ? "This Meta Business Portfolio and ad account have already used their free three-day campaign."
-        : "The free three-day campaign is currently reserved by another publish.",
+        ? "This Meta Business Portfolio and ad account have already used their free live campaign setup."
+        : "The free live campaign setup is currently reserved by another publish.",
     );
   }
 
@@ -521,7 +517,7 @@ async function finalizeFreeLiveConversion(
     mutationKey: `${freeLive.reservationKey}:consume`,
   });
   if (!consumption.allowed) {
-    throw new Error("Meta published successfully, but the free three-day campaign claim could not be consumed.");
+    throw new Error("Meta published successfully, but the free live campaign setup claim could not be consumed.");
   }
 
   if (freeLive.billing) {
@@ -540,7 +536,7 @@ async function finalizeFreeLiveConversion(
     properties: {
       plan_id: completedPlan.planId,
       claim_id: consumption.claimId,
-      free_campaign_days: freeLive.kind === "free_campaign" ? 3 : null,
+      free_campaign_days: freeLive.kind === "free_campaign" ? plannedCampaignDurationDays(completedPlan) : null,
     },
   });
 }
@@ -642,7 +638,7 @@ async function activateFreeCampaign(
   await updateMutation(input.serviceSupabase, updated);
 
   if (updated.status !== "applied") {
-    throw new Error(updated.lastError ?? "Meta could not activate the free three-day campaign.");
+    throw new Error(updated.lastError ?? "Meta could not activate the free live campaign.");
   }
 }
 
@@ -676,31 +672,13 @@ async function freeLiveMode(
   return null;
 }
 
-const FREE_CAMPAIGN_DURATION_MS = 3 * 24 * 60 * 60 * 1000;
-
-export function applyThreeDayFreeCampaignSchedule(
-  plan: MetaPublishPlan,
-  now = new Date(),
-): MetaPublishPlan {
-  const requestedStart = plan.controls.schedule?.startTime ?? plan.adSets[0]?.startTime ?? null;
-  const parsedStart = requestedStart ? Date.parse(requestedStart) : Number.NaN;
-  const startTime = Number.isFinite(parsedStart) ? requestedStart! : now.toISOString();
-  const endTime = new Date(
-    (Number.isFinite(parsedStart) ? parsedStart : now.getTime()) + FREE_CAMPAIGN_DURATION_MS,
-  ).toISOString();
-
-  return {
-    ...plan,
-    controls: {
-      ...plan.controls,
-      schedule: { startTime, endTime },
-    },
-    adSets: plan.adSets.map((adSet) => ({
-      ...adSet,
-      startTime,
-      endTime,
-    })),
-  };
+function plannedCampaignDurationDays(plan: MetaPublishPlan): number | null {
+  const startTime = plan.controls.schedule?.startTime ?? plan.adSets[0]?.startTime ?? null;
+  const endTime = plan.controls.schedule?.endTime ?? plan.adSets[0]?.endTime ?? null;
+  const start = startTime ? Date.parse(startTime) : Number.NaN;
+  const end = endTime ? Date.parse(endTime) : Number.NaN;
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return null;
+  return Math.max(1, Math.ceil((end - start) / 86_400_000));
 }
 
 /**

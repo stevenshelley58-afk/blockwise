@@ -62,7 +62,7 @@ export function metaExistingCampaignReuseIssue(input: {
     && input.billingOfferVersion !== BILLING_OFFER_VERSION
   );
   return automaticallyActivates
-    ? "Your free three-day campaign must use a new Meta campaign so its budget, schedule, and activation stay isolated."
+    ? "Your free live campaign setup must use a new Meta campaign so its budget, schedule, and activation stay isolated."
     : null;
 }
 

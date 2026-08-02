@@ -162,6 +162,9 @@ test("billing service ends the trial once and treats Stripe active state as an i
 
 test("publish worker withholds entitlement, trial end, and visible success until activation finishes", () => {
   const source = readFileSync("src/lib/providers/meta-publish-worker.ts", "utf8");
+  assert.match(source, /const publishingPlan: MetaPublishPlan = \{[\s\S]*\.\.\.input\.plan,[\s\S]*status: "publishing"/);
+  assert.doesNotMatch(source, /applyThreeDayFreeCampaignSchedule|FREE_CAMPAIGN_DURATION_MS/);
+  assert.match(source, /free_campaign_days: freeLive\.kind === "free_campaign" \? plannedCampaignDurationDays\(completedPlan\) : null/);
   assert.match(
     source,
     /updateMetaPublishPlanExecution\(input\.serviceSupabase, durableProviderPlan\)[\s\S]*finalizeFreeLiveConversion\(input, completedPlan, freeLive\)[\s\S]*updateMetaPublishPlanExecution\(input\.serviceSupabase, completedPlan\)/,

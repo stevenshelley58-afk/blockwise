@@ -205,7 +205,7 @@ export async function PATCH(request: NextRequest) {
   // Merge into the existing meta object instead of replacing it: OAuth writes
   // identity fields there (metaBusinessId, metaBusinessName, tokenExpiresAt)
   // that the setup shape does not carry. Replacing the object wiped the
-  // Business Portfolio id, which broke the free three-day campaign claim.
+  // Business Portfolio id, which broke the free live campaign setup claim.
   const previousMeta =
     connection.metadata_json?.meta &&
     typeof connection.metadata_json.meta === "object" &&

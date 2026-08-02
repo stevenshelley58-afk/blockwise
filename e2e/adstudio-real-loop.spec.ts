@@ -257,16 +257,18 @@ async function assertBlockwiseCampaignPreset(page: Page) {
   ]) {
     await page.setViewportSize(viewport);
     await expect(page.getByRole("heading", { name: "Budget", exact: true })).toBeVisible();
-    const threeDays = page.getByRole("button", { name: /^3 days/i });
     const sevenDays = page.getByRole("button", { name: /^7 days/i });
+    const thirtyDays = page.getByRole("button", { name: /^30 days/i });
+    const ninetyDays = page.getByRole("button", { name: /^90 days/i });
     const custom = page.getByRole("button", { name: /^Custom/i });
-    await expect(threeDays).toHaveAttribute("aria-pressed", "true");
+    await expect(thirtyDays).toHaveAttribute("aria-pressed", "true");
     await expect(sevenDays).toBeVisible();
+    await expect(ninetyDays).toBeVisible();
     await custom.click();
     await expect(page.getByLabel("Campaign end date")).toBeVisible();
     await page.getByRole("radio", { name: "Run until stopped" }).check();
     await expect(page.getByText("No fixed total", { exact: true })).toBeVisible();
-    await threeDays.click();
+    await thirtyDays.click();
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth),
       `Campaign duration should not overflow at ${viewport.width}x${viewport.height}`,

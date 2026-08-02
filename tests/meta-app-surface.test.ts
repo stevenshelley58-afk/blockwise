@@ -75,7 +75,8 @@ test("Blockwise Campaign preset owns Meta setup while customers choose budget an
 
   assert.match(panel, /const STEPS = \["Audience", "Ads", "Budget", "Review", "Live"\]/);
   assert.match(panel, /const BUDGET_PRESETS = \[10, 20, 50\]/);
-  assert.match(panel, /const DURATION_PRESETS = \[3, 7\]/);
+  assert.match(panel, /const DURATION_PRESETS = \[7, 30, 90\]/);
+  assert.match(panel, /useState<DurationMode>\("30"\)/);
   assert.match(panel, /Blockwise Campaign/);
   assert.match(panel, /Managed for you/);
   assert.match(panel, /includeSurroundingSuburbs: true/);
