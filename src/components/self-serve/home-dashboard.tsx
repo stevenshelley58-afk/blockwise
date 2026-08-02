@@ -1,13 +1,13 @@
 "use client";
 
 /*
- * Home dashboard (Premium v2 mockup): activation leads until the first
- * campaign is live; outcome KPIs lead after that. The server page hands down
- * a plain `HomeData` payload — this component owns layout, motion and copy
+ * Home dashboard (Premium v2 mockup): outcome-first KPI row, performance
+ * snapshot chart, setup card and quick actions. The server page hands down a
+ * plain `HomeData` payload — this component owns layout, motion and copy
  * (all of it from the niche config; customer pages carry zero niche nouns).
  *
- * Data honesty: KPI and chart surfaces render only after the workspace has a
- * server-confirmed live campaign. Demo/sample data never reaches Home.
+ * Data honesty: KPIs render live Meta numbers or honest zeros. Demo/sample
+ * data never reaches Home.
  */
 
 import { useEffect, useState } from "react";
@@ -156,78 +156,6 @@ export function HomeDashboard({ data }: { data: HomeData }) {
 
   const sparkPoints = (performance?.daily ?? []).map((point) => point.leads);
   const adsLiveValue = ads.live ?? ads.created;
-  const isLive = Boolean(data.activation.milestones.first_campaign_live);
-
-  const kpis = (
-    <AnimatedGroup className="grid grid-cols-2 gap-3.5 xl:grid-cols-4" itemClassName="h-full">
-      <StatCard
-        label={copy.kpis.leads}
-        icon={<UsersRound size={15} strokeWidth={1.8} />}
-        foot={
-          <>
-            <span>{copy.kpis.vsPrior}</span>
-            <Sparkline points={sparkPoints} />
-          </>
-        }
-      >
-        <AnimatedNumber value={performance?.leads ?? 0} springOptions={COUNT_SPRING} />
-        <DeltaBadge current={performance?.leads ?? 0} previous={performance?.previousLeads ?? null} />
-      </StatCard>
-
-      <StatCard
-        label={copy.kpis.costPerLead}
-        icon={<CircleDollarSign size={15} strokeWidth={1.8} />}
-        foot={<span>{copy.kpis.vsPrior}</span>}
-      >
-        {performance?.cpl != null ? (
-          <AnimatedNumber value={performance.cpl} format={money} springOptions={COUNT_SPRING} />
-        ) : (
-          <span aria-label="No cost data yet">—</span>
-        )}
-        <DeltaBadge current={performance?.cpl ?? null} previous={performance?.previousCpl ?? null} downIsGood />
-      </StatCard>
-
-      <StatCard
-        label={ads.live != null ? copy.kpis.adsLive : copy.kpis.adsCreated}
-        icon={<Megaphone size={15} strokeWidth={1.8} />}
-        foot={
-          <span>{ads.created > 0 ? copy.kpis.publishedThisWeek(ads.publishedThisWeek) : copy.kpis.noAdsYet}</span>
-        }
-      >
-        <AnimatedNumber value={adsLiveValue} springOptions={COUNT_SPRING} />
-        {ads.live != null && (
-          <span className="font-sans text-[13px] font-medium tracking-normal text-muted-foreground">
-            {copy.kpis.adsLiveUnit(ads.created)}
-          </span>
-        )}
-      </StatCard>
-
-      <StatCard
-        label="Render credits"
-        icon={<Sparkles size={15} strokeWidth={1.8} />}
-        foot={
-          <div className="w-full">
-            {credits.remaining != null && credits.granted != null ? (
-              <CreditMeter remaining={credits.remaining} granted={credits.granted} />
-            ) : (
-              <span>Issued after entitlement setup</span>
-            )}
-          </div>
-        }
-      >
-        {credits.remaining != null ? (
-          <>
-            <AnimatedNumber value={credits.remaining} springOptions={COUNT_SPRING} />
-            <span className="font-sans text-[13px] font-medium tracking-normal text-muted-foreground">
-              / {credits.granted ?? credits.remaining}
-            </span>
-          </>
-        ) : (
-          <span aria-label="Credits not issued yet">—</span>
-        )}
-      </StatCard>
-    </AnimatedGroup>
-  );
 
   return (
     <div className="mx-auto w-full max-w-[1120px] px-4 pt-6 pb-28 md:px-6 md:pt-8 md:pb-16">
@@ -245,17 +173,84 @@ export function HomeDashboard({ data }: { data: HomeData }) {
           </div>
         </div>
 
-        {isLive ? kpis : <ActivationCard data={data} />}
+        {/* KPI row */}
+        <AnimatedGroup className="grid grid-cols-2 gap-3.5 xl:grid-cols-4" itemClassName="h-full">
+          <StatCard
+            label={copy.kpis.leads}
+            icon={<UsersRound size={15} strokeWidth={1.8} />}
+            foot={
+              <>
+                <span>{copy.kpis.vsPrior}</span>
+                <Sparkline points={sparkPoints} />
+              </>
+            }
+          >
+            <AnimatedNumber value={performance?.leads ?? 0} springOptions={COUNT_SPRING} />
+            <DeltaBadge current={performance?.leads ?? 0} previous={performance?.previousLeads ?? null} />
+          </StatCard>
 
-        {isLive ? (
-          <AnimatedGroup className="grid gap-3.5 lg:grid-cols-[3fr_2fr]" itemClassName="h-full">
-            <ActivationCard data={data} />
-            <HomePerformanceChart daily={performance?.daily ?? null} />
-          </AnimatedGroup>
-        ) : null}
+          <StatCard
+            label={copy.kpis.costPerLead}
+            icon={<CircleDollarSign size={15} strokeWidth={1.8} />}
+            foot={<span>{copy.kpis.vsPrior}</span>}
+          >
+            {performance?.cpl != null ? (
+              <AnimatedNumber value={performance.cpl} format={money} springOptions={COUNT_SPRING} />
+            ) : (
+              <span aria-label="No cost data yet">—</span>
+            )}
+            <DeltaBadge current={performance?.cpl ?? null} previous={performance?.previousCpl ?? null} downIsGood />
+          </StatCard>
 
-        {/* One full-width library action keeps the next choice obvious. */}
-        <AnimatedGroup className="grid gap-3.5" itemClassName="h-full">
+          <StatCard
+            label={ads.live != null ? copy.kpis.adsLive : copy.kpis.adsCreated}
+            icon={<Megaphone size={15} strokeWidth={1.8} />}
+            foot={
+              <span>{ads.created > 0 ? copy.kpis.publishedThisWeek(ads.publishedThisWeek) : copy.kpis.noAdsYet}</span>
+            }
+          >
+            <AnimatedNumber value={adsLiveValue} springOptions={COUNT_SPRING} />
+            {ads.live != null && (
+              <span className="font-sans text-[13px] font-medium tracking-normal text-muted-foreground">
+                {copy.kpis.adsLiveUnit(ads.created)}
+              </span>
+            )}
+          </StatCard>
+
+          <StatCard
+            label="Render credits"
+            icon={<Sparkles size={15} strokeWidth={1.8} />}
+            foot={
+              <div className="w-full">
+                {credits.remaining != null && credits.granted != null ? (
+                  <CreditMeter remaining={credits.remaining} granted={credits.granted} />
+                ) : (
+                  <span>Issued after entitlement setup</span>
+                )}
+              </div>
+            }
+          >
+            {credits.remaining != null ? (
+              <>
+                <AnimatedNumber value={credits.remaining} springOptions={COUNT_SPRING} />
+                <span className="font-sans text-[13px] font-medium tracking-normal text-muted-foreground">
+                  / {credits.granted ?? credits.remaining}
+                </span>
+              </>
+            ) : (
+              <span aria-label="Credits not issued yet">—</span>
+            )}
+          </StatCard>
+        </AnimatedGroup>
+
+        {/* One server-resolved activation card remains dominant; performance is secondary. */}
+        <AnimatedGroup className="grid gap-3.5 lg:grid-cols-[3fr_2fr]" itemClassName="h-full">
+          <ActivationCard data={data} />
+          <HomePerformanceChart daily={performance?.daily ?? null} />
+        </AnimatedGroup>
+
+        {/* Quick actions */}
+        <AnimatedGroup className="grid gap-3.5 sm:grid-cols-2" itemClassName="h-full">
           {quickActions.map((action) => {
             const Icon = selfServeIcons[action.href] ?? ArrowRight;
             return (

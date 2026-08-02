@@ -5,6 +5,8 @@ import { canManageProviderConnections } from "@/lib/auth/access-control";
 import { requireWorkspaceAccess } from "@/lib/auth/workspace-access";
 import { queueReportingRefresh } from "@/lib/meta-monitor/reporting-refresh-queue";
 import { exchangeProviderCode } from "@/lib/providers/oauth-handlers";
+import { syncProviderWorkspace } from "@/lib/providers/provider-sync";
+import { resolveMonitorDateRange } from "@/lib/monitor/dashboard-data";
 import { upsertProviderConnectionWithTokens } from "@/lib/providers/provider-connections";
 import { sanitizeOAuthReturnPath, verifyOAuthState } from "@/lib/providers/oauth-state";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -143,6 +145,22 @@ async function handleCallback(request: NextRequest) {
     return NextResponse.redirect(
       providerReturnUrl(verified.payload.returnPath, origin, { error: message }, verified.payload.campaignId ?? null),
     );
+  }
+
+  // Best-effort first sync so the dashboard shows real data immediately after
+  // connecting. A sync failure must NOT fail the connection itself.
+  try {
+    await syncProviderWorkspace({
+      supabase,
+      serviceSupabase,
+      workspaceId: verified.payload.workspaceId,
+      provider: "meta",
+      range: resolveMonitorDateRange("last_30", new Date()),
+    }).catch((syncError) => {
+      console.error("[meta-callback] best-effort sync failed:", syncError);
+    });
+  } catch {
+    // non-fatal
   }
 
   // Connection completion never waits on Meta reporting. The results page

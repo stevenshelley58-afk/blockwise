@@ -1,4 +1,4 @@
-export const BILLING_OFFER_VERSION = "2026-07-30-v2";
+export const BILLING_OFFER_VERSION = "2026-07-27";
 
 export type BillingMarket = "US" | "AU";
 export type BillingCurrency = "USD" | "AUD";
@@ -23,7 +23,7 @@ export type BillingOffer = {
 };
 
 const SELF_SERVE_TRIGGER =
-  "The first paid month is charged immediately when the customer subscribes, then renews monthly until cancelled.";
+  "The subscription starts when the first campaign launches or seven days after Checkout, whichever comes first.";
 
 export const BILLING_OFFERS: Readonly<Record<`${BillingProduct}_${BillingMarket}`, BillingOffer>> = {
   self_serve_US: {
@@ -32,16 +32,16 @@ export const BILLING_OFFERS: Readonly<Record<`${BillingProduct}_${BillingMarket}
     market: "US",
     currency: "USD",
     product: "self_serve",
-    recurringAmount: 48_900,
-    firstInvoiceAmount: 8_900,
+    recurringAmount: 49_900,
+    firstInvoiceAmount: 9_900,
     discountAmount: 40_000,
-    trialDays: 0,
+    trialDays: 7,
     taxBehavior: "exclusive",
     priceEnvKey: "STRIPE_SELF_SERVE_USD_PRICE_ID",
     couponEnvKey: "STRIPE_SELF_SERVE_USD_INTRO_COUPON_ID",
     triggeringRule: SELF_SERVE_TRIGGER,
     checkoutDisclosure:
-      "Your free three-day campaign does not start a Blockwise subscription. Meta ad spend is separate. US$89 is charged immediately when you subscribe for your first paid month, then the plan renews at US$489 monthly until cancelled.",
+      "One live campaign setup is free. Meta ad spend is separate. Your Blockwise subscription starts at US$99 when the campaign launches or seven days after checkout, whichever comes first, then renews at US$499 monthly until cancelled.",
   },
   self_serve_AU: {
     key: "self_serve_AU",
@@ -49,16 +49,16 @@ export const BILLING_OFFERS: Readonly<Record<`${BillingProduct}_${BillingMarket}
     market: "AU",
     currency: "AUD",
     product: "self_serve",
-    recurringAmount: 48_900,
-    firstInvoiceAmount: 8_900,
+    recurringAmount: 49_900,
+    firstInvoiceAmount: 9_900,
     discountAmount: 40_000,
-    trialDays: 0,
-    taxBehavior: "exclusive",
+    trialDays: 7,
+    taxBehavior: "inclusive",
     priceEnvKey: "STRIPE_SELF_SERVE_AUD_PRICE_ID",
     couponEnvKey: "STRIPE_SELF_SERVE_AUD_INTRO_COUPON_ID",
     triggeringRule: SELF_SERVE_TRIGGER,
     checkoutDisclosure:
-      "Your free three-day campaign does not start a Blockwise subscription. Meta ad spend is separate. A$89 is charged immediately when you subscribe for your first paid month, then the plan renews at A$489 monthly until cancelled.",
+      "One live campaign setup is free. Meta ad spend is separate. Your Blockwise subscription starts at A$99 when the campaign launches or seven days after checkout, whichever comes first, then renews at A$499 monthly until cancelled.",
   },
   managed_US: {
     key: "managed_US",
@@ -83,8 +83,8 @@ export const BILLING_OFFERS: Readonly<Record<`${BillingProduct}_${BillingMarket}
     market: "AU",
     currency: "AUD",
     product: "managed",
-    recurringAmount: 150_000,
-    firstInvoiceAmount: 150_000,
+    recurringAmount: 250_000,
+    firstInvoiceAmount: 250_000,
     discountAmount: 0,
     trialDays: 0,
     taxBehavior: "inclusive",
@@ -92,7 +92,7 @@ export const BILLING_OFFERS: Readonly<Record<`${BillingProduct}_${BillingMarket}
     couponEnvKey: null,
     triggeringRule: "The managed service starts when its first invoice is paid.",
     checkoutDisclosure:
-      "Managed service is A$1,500 monthly. Meta ad spend is separate. Additional brands, ad accounts, or campaign volume require a written scope change.",
+      "Managed service starts at A$2,500 monthly. Meta ad spend is separate. Additional brands, ad accounts, or campaign volume require a written scope change.",
   },
 };
 
@@ -116,9 +116,3 @@ export function getBillingOffer(market: BillingMarket, product: BillingProduct):
   return BILLING_OFFERS[`${product}_${market}`];
 }
 
-export function formatBillingAmount(amount: number, currency: BillingCurrency): string {
-  const prefix = currency === "USD" ? "US$" : "A$";
-  return `${prefix}${new Intl.NumberFormat("en-US", {
-    maximumFractionDigits: 0,
-  }).format(amount / 100)}`;
-}

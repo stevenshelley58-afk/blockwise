@@ -2,7 +2,6 @@ import { ArrowRight, CalendarClock, Check, CircleDot, CreditCard, UsersRound } f
 import Link from "next/link";
 
 import { StatusPill } from "@/components/status-pill";
-import { formatBillingAmount, getBillingOffer } from "@/lib/billing/offers";
 
 export type ActivationCardData = {
   activation: {
@@ -178,37 +177,21 @@ function StatusCell({
 }
 
 function planLabel(state: string): string {
-  if (state === "paid") return "Blockwise LeadGen";
-  if (state === "trialing") return "Existing billing trial";
+  if (state === "paid") return "Self-serve paid";
+  if (state === "trialing") return "Seven-day billing trial";
   if (state === "payment_recovery") return "Payment needs attention";
   if (state === "canceled") return "Canceled";
-  return "Free ads and campaign";
+  return "Free creation trial";
 }
 
 function billingTiming(plan: ActivationCardData["plan"]): string {
-  const offer = getBillingOffer(
-    plan.currency === "USD" ? "US" : "AU",
-    "self_serve",
-  );
-  const firstMonth = formatBillingAmount(
-    offer.firstInvoiceAmount,
-    offer.currency,
-  );
-  const renewal = formatBillingAmount(
-    offer.recurringAmount,
-    offer.currency,
-  );
-
   if (plan.accessState === "unbilled") {
-    return `Create three ads and run one three-day campaign free. If you subscribe, ${firstMonth} is charged immediately for your first paid month.`;
+    return `${plan.currency === "USD" ? "US$" : "A$"}99 first month when you launch or seven days after Checkout.`;
   }
   if (!plan.periodEnd) return "Billing timing will appear after Stripe confirms the subscription.";
   const date = formatDate(plan.periodEnd);
   if (plan.cancelAtPeriodEnd) return `Credits and access remain available until ${date}.`;
-  if (plan.accessState === "trialing") {
-    return `Under your existing checkout terms, the first paid month (${firstMonth}) begins by ${date}, or earlier when your first campaign launches.`;
-  }
-  return `Next ${renewal} renewal: ${date}.`;
+  return `Next ${plan.currency === "USD" ? "US$" : "A$"}499 renewal: ${date}.`;
 }
 
 function metaLabel(state: string): string {

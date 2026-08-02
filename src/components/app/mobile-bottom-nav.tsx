@@ -6,9 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
-import { purgeLocalReadModels } from "@/lib/read-models/browser-store";
 import { isItemActive, navByVariant, type NavItem, type SidebarVariant } from "@/components/sidebar-nav";
-import { niche } from "@/config/niche";
 
 type MobileBottomNavProps = {
   variant: SidebarVariant;
@@ -23,8 +21,9 @@ type MobileNavItem = NavItem & {
   mobileLabel?: string;
 };
 
-const primaryHrefsByVariant: Record<Exclude<SidebarVariant, "self_serve">, string[]> = {
+const primaryHrefsByVariant: Record<SidebarVariant, string[]> = {
   monitor: ["/results", "/ad-radar", "/leads", "/settings"],
+  self_serve: ["/ad-studio", "/ad-radar", "/results", "/leads"],
   operator: ["/operator", "/operator/customers", "/operator/research"],
 };
 
@@ -37,9 +36,7 @@ const mobileLabels: Record<string, string> = {
 
 function mobileItemsForVariant(variant: SidebarVariant): { primaryItems: MobileNavItem[]; overflowItems: MobileNavItem[] } {
   const allItems = navByVariant[variant];
-  const primaryHrefs = variant === "self_serve"
-    ? niche.nav.mobileTabs.filter((item) => !item.feature || niche.features[item.feature]).map((item) => item.href)
-    : primaryHrefsByVariant[variant];
+  const primaryHrefs = primaryHrefsByVariant[variant];
   const primaryItems = primaryHrefs
     .map((href) => allItems.find((item) => item.href === href))
     .filter((item): item is NavItem => Boolean(item))
@@ -75,7 +72,6 @@ export function MobileBottomNav({ variant, account }: MobileBottomNavProps) {
   async function signOut() {
     setIsSigningOut(true);
     const supabase = createSupabaseBrowserClient();
-    await purgeLocalReadModels();
     await supabase.auth.signOut();
     router.replace("/login");
     router.refresh();

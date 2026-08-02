@@ -13,7 +13,7 @@ import {
   settleWorkspaceCreditReservation,
 } from "../src/lib/credits/workspace-credits.ts";
 
-const migrationPath = "supabase/migrations/202607270002_progressive_activation_credit_ledger.sql";
+const migrationPath = "supabase/migrations/202607270001_progressive_activation_credit_ledger.sql";
 const verifiedBootstrapMigrationPath =
   "supabase/migrations/20260727029000_verified_trial_workspace_bootstrap.sql";
 

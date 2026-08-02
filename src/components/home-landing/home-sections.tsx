@@ -2,35 +2,64 @@ import { Fragment, type CSSProperties } from "react";
 
 import { CtaLink } from "@/components/landing/cta-link";
 import { InView } from "@/components/motion";
-import { formatBillingAmount, getBillingOffer } from "@/lib/billing/offers";
 
 import {
   CHART_POINTS,
   CONTROL_POINTS,
   DASH_ROWS,
   HERO_RAIL,
+  PROPERTY_NOTES,
+  PROPERTY_USES,
 } from "./data";
 import { FbAdCard } from "./fb-ad-card";
 import { FaqAccordion } from "./faq-accordion";
 import { ManagedSetupForm } from "./managed-setup-form";
 import { StartStudio } from "./start-studio";
+import { SuburbReportLocationForm } from "./suburb-report-location-form";
 
-const US_SELF_SERVE = getBillingOffer("US", "self_serve");
-const AU_SELF_SERVE = getBillingOffer("AU", "self_serve");
-const US_MANAGED = getBillingOffer("US", "managed");
-const AU_MANAGED = getBillingOffer("AU", "managed");
-const SELF_SERVE_RENEWAL = `${formatBillingAmount(
-  US_SELF_SERVE.recurringAmount,
-  US_SELF_SERVE.currency,
-)} / ${formatBillingAmount(AU_SELF_SERVE.recurringAmount, AU_SELF_SERVE.currency)}`;
-const SELF_SERVE_FIRST_MONTH = `${formatBillingAmount(
-  US_SELF_SERVE.firstInvoiceAmount,
-  US_SELF_SERVE.currency,
-)} / ${formatBillingAmount(AU_SELF_SERVE.firstInvoiceAmount, AU_SELF_SERVE.currency)}`;
-const MANAGED_MONTHLY = `${formatBillingAmount(
-  US_MANAGED.recurringAmount,
-  US_MANAGED.currency,
-)} / ${formatBillingAmount(AU_MANAGED.recurringAmount, AU_MANAGED.currency)}`;
+/* ---------- 6.2 #top — Hero (photographic fold) ---------- */
+
+export function Hero() {
+  return (
+    <div className="hw-hero">
+      <img
+        className="hw-hero-bg"
+        src="/home/home-dusk.webp"
+        alt=""
+        aria-hidden
+        fetchPriority="high"
+      />
+      <div className="hw-hero-scrim" aria-hidden />
+      <div className="hw-wide hw-hero-grid">
+        <div className="hw-hero-copy">
+          <p className="hw-eyebrow">Meta ads for real estate agents</p>
+          <h1 className="hw-h1">Your competitors are advertising. Are&nbsp;you?</h1>
+          <p className="hw-lede">
+            Ads built from what&rsquo;s actually working in your area. Start getting leads today.
+          </p>
+          <div className="hw-hero-form">
+            <SuburbReportLocationForm analyticsLocation="hero" />
+          </div>
+        </div>
+        <div className="hw-hero-review">
+          <p className="hw-status">
+            <span className="hw-status-dot" aria-hidden />
+            Ready to review
+          </p>
+          <FbAdCard
+            copy="Thinking of selling? Find out what your home could be worth with a free property appraisal."
+            photoSrc="/home/interior-styled.webp"
+            domain="YOURAGENCY.COM.AU"
+            footHeading="Find out what your home could be worth"
+            footSub="Book a free property appraisal"
+          />
+          <p className="hw-note">Nothing spends until you approve.</p>
+        </div>
+      </div>
+      <p className="hw-plate">Mt Lawley, WA · Seller-lead ad · Example</p>
+    </div>
+  );
+}
 
 /* ---------- 6.3 #start — The start studio (client island) ---------- */
 
@@ -80,11 +109,11 @@ export function WorkflowBand() {
             ))}
           </h2>
           <p className="hw-sub">
-            Blockwise brings creative, copy, approvals and campaign updates into one guided
-            workflow.
+            Blockwise handles the setup, creative, approvals and updates so agents can stay out of
+            Ads Manager.
           </p>
           <CtaLink location="workflow" href="/signup" className="hw-textlink hw-wf-cta">
-            Create three ads free <span className="hw-arr">→</span>
+            Get your first ad prepared <span className="hw-arr">→</span>
           </CtaLink>
         </div>
         <div className="hw-wf-panel">
@@ -107,9 +136,13 @@ export function WorkflowBand() {
               </div>
             ))}
           </dl>
-          <span className="hw-btn hw-btn--dark hw-wf-approve" aria-hidden>
+          <CtaLink
+            location="done_for_you_approve"
+            href="/signup"
+            className="hw-btn hw-btn--dark hw-wf-approve"
+          >
             Approve
-          </span>
+          </CtaLink>
           <p className="hw-note">Nothing spends before approval.</p>
         </div>
       </InView>
@@ -117,17 +150,16 @@ export function WorkflowBand() {
   );
 }
 
-/* ---------- 6.6 #control — The dark fold (dashboard + results snapshot) ---------- */
+/* ---------- 6.6 #control — The dark fold ---------- */
 
 export function ControlFold() {
   return (
     <div className="hw-fold hw-control">
-      <InView className="hw-wide hw-control-grid" threshold={0.18}>
+      <div className="hw-wide hw-control-grid">
         <div className="hw-control-rail">
-          <h2>Stay in control.</h2>
+          <h2>You stay in control before and after approval.</h2>
           <p className="hw-sub">
-            Review ads, leads, spend and approvals in one dashboard. Get an email when something
-            needs your attention.
+            Review what goes live, then track spend, leads and status from one clean dashboard.
           </p>
           <ul className="hw-control-points">
             {CONTROL_POINTS.map((point) => (
@@ -140,93 +172,172 @@ export function ControlFold() {
             ))}
           </ul>
         </div>
-        <div className="hw-control-panels">
-          <div className="hw-dash">
-            <div className="hw-dash-head">
-              <span className="hw-dash-head-l">
-                <span className="hw-dash-title">Control dashboard</span>
-                <span className="hw-dash-sub">Every ad in one place · Example data</span>
-              </span>
-              <span className="hw-tag">Example</span>
-            </div>
-            <div className="hw-dash-chart">
-              <div className="hw-dash-chart-labels">
-                <span>Leads · last 14 days</span>
-                <span>Mt Lawley appraisal</span>
-              </div>
-              <svg viewBox="0 0 560 90" preserveAspectRatio="none" aria-hidden className="hw-dash-svg">
-                <line x1="0" y1="89" x2="560" y2="89" stroke="var(--hw-inv-line)" strokeWidth="1" />
-                <polyline
-                  points={CHART_POINTS}
-                  pathLength={1}
-                  fill="none"
-                  stroke="var(--hw-accent-bright)"
-                  strokeWidth="1.5"
-                />
-              </svg>
-            </div>
-            <div className="hw-dash-table">
-              <div className="hw-dash-row hw-dash-row--head">
-                <span>Ad</span>
-                <span>Status</span>
-                <span className="hw-dash-col-clicks">Clicks</span>
-                <span>Leads</span>
-                <span>Spend</span>
-              </div>
-              {DASH_ROWS.map((row) => (
-                <div className="hw-dash-row" key={row.name}>
-                  <span className="hw-dash-name">
-                    <span className="hw-dash-name-h">{row.name}</span>
-                    <span className="hw-dash-name-sub">{row.sub}</span>
-                  </span>
-                  <span className={`hw-dash-status hw-dash-status--${row.tone}`}>
-                    <span className="hw-dash-dot" aria-hidden />
-                    {row.status}
-                  </span>
-                  <span className="hw-dash-num hw-dash-col-clicks">{row.clicks}</span>
-                  <span className="hw-dash-num">{row.leads}</span>
-                  <span className="hw-dash-num">{row.spend}</span>
-                </div>
-              ))}
-            </div>
+        <div className="hw-dash">
+          <div className="hw-dash-head">
+            <span className="hw-dash-head-l">
+              <span className="hw-dash-title">Control dashboard</span>
+              <span className="hw-dash-sub">Every ad in one place · Example data</span>
+            </span>
+            <CtaLink location="control_dashboard" href="/signup" className="hw-btn hw-btn--light">
+              Create ad
+            </CtaLink>
           </div>
-          <div className="hw-email">
-            <div className="hw-email-head">
-              <span className="hw-email-head-h">Results snapshot</span>
-              <span className="hw-tag hw-tag--accent">Example</span>
+          <div className="hw-dash-chart">
+            <div className="hw-dash-chart-labels">
+              <span>Leads · last 14 days</span>
+              <span>Mt Lawley appraisal</span>
             </div>
-            <p className="hw-email-title">Workspace overview</p>
-            <div className="hw-email-stats">
-              <span className="hw-email-stat">
-                <span className="hw-email-stat-v">6</span>
-                <span className="hw-email-stat-k">New leads</span>
-              </span>
-              <span className="hw-email-stat">
-                <span className="hw-email-stat-v">$41</span>
-                <span className="hw-email-stat-k">Spend</span>
-              </span>
-              <span className="hw-email-stat">
-                <span className="hw-email-stat-v">118</span>
-                <span className="hw-email-stat-k">Clicks</span>
-              </span>
+            <svg viewBox="0 0 560 90" preserveAspectRatio="none" aria-hidden className="hw-dash-svg">
+              <line x1="0" y1="89" x2="560" y2="89" stroke="var(--hw-inv-line)" strokeWidth="1" />
+              <polyline
+                points={CHART_POINTS}
+                fill="none"
+                stroke="#f6f7f9"
+                strokeOpacity="0.9"
+                strokeWidth="1.5"
+              />
+            </svg>
+          </div>
+          <div className="hw-dash-table">
+            <div className="hw-dash-row hw-dash-row--head">
+              <span>Ad</span>
+              <span>Status</span>
+              <span className="hw-dash-col-clicks">Clicks</span>
+              <span>Leads</span>
+              <span>Spend</span>
             </div>
-            <div className="hw-email-lines">
-              <p className="hw-email-line">
-                <span className="hw-line-dot hw-line-dot--success" aria-hidden />
-                Free appraisal ad is live.
-              </p>
-              <p className="hw-email-line">
-                <span className="hw-line-dot hw-line-dot--warning" aria-hidden />
-                Market update ad needs approval.
-              </p>
-              <p className="hw-email-line">
-                <span className="hw-line-dot hw-line-dot--faint" aria-hidden />
-                No need to check Ads Manager every day.
-              </p>
-            </div>
+            {DASH_ROWS.map((row) => (
+              <div className="hw-dash-row" key={row.name}>
+                <span className="hw-dash-name">
+                  <span className="hw-dash-name-h">{row.name}</span>
+                  <span className="hw-dash-name-sub">{row.sub}</span>
+                </span>
+                <span className={`hw-dash-status hw-dash-status--${row.tone}`}>
+                  <span className="hw-dash-dot" aria-hidden />
+                  {row.status}
+                </span>
+                <span className="hw-dash-num hw-dash-col-clicks">{row.clicks}</span>
+                <span className="hw-dash-num">{row.leads}</span>
+                <span className="hw-dash-num">{row.spend}</span>
+              </div>
+            ))}
           </div>
         </div>
-      </InView>
+      </div>
+    </div>
+  );
+}
+
+/* ---------- 6.7 #updates — Daily email band ---------- */
+
+export function Updates() {
+  return (
+    <div className="hw-band hw-updates">
+      <h2>Updates where agents actually check.</h2>
+      <p className="hw-sub">Open Blockwise for the detail. Get the short version by email.</p>
+      <div className="hw-email">
+        <div className="hw-email-head">
+          <span className="hw-email-head-h">Daily email</span>
+          <span className="hw-tag">Optional</span>
+        </div>
+        <p className="hw-email-title">Your ads yesterday</p>
+        <div className="hw-email-stats">
+          <span className="hw-email-stat">
+            <span className="hw-email-stat-v">6</span>
+            <span className="hw-email-stat-k">New leads</span>
+          </span>
+          <span className="hw-email-stat">
+            <span className="hw-email-stat-v">$41</span>
+            <span className="hw-email-stat-k">Spend</span>
+          </span>
+          <span className="hw-email-stat">
+            <span className="hw-email-stat-v">118</span>
+            <span className="hw-email-stat-k">Clicks</span>
+          </span>
+        </div>
+        <div className="hw-email-lines">
+          <p className="hw-email-line">
+            <span className="hw-line-dot hw-line-dot--success" aria-hidden />
+            Free appraisal ad is live.
+          </p>
+          <p className="hw-email-line">
+            <span className="hw-line-dot hw-line-dot--warning" aria-hidden />
+            Market update ad needs approval.
+          </p>
+          <p className="hw-email-line">
+            <span className="hw-line-dot hw-line-dot--faint" aria-hidden />
+            No Ads Manager login needed.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------- 6.8 #property-check — Tinted split band ---------- */
+
+export function PropertyCheck() {
+  return (
+    <div className="hw-fold hw-pc">
+      <div className="hw-wide hw-pc-grid">
+        <div className="hw-pc-copy">
+          <h2>Know the property before the call</h2>
+          <p className="hw-sub">
+            Check zoning, overlays, subdivision potential, renovation limits, and planning red
+            flags before speaking to a seller, buyer, or investor.
+          </p>
+          <div className="hw-pc-uses">
+            {PROPERTY_USES.map((use) => (
+              <div className="hw-pc-use" key={use.title}>
+                <h3>{use.title}</h3>
+                <p>{use.body}</p>
+              </div>
+            ))}
+          </div>
+          <CtaLink
+            location="property_check"
+            href="/signup?source=property-check"
+            className="hw-textlink"
+          >
+            Run a property check <span className="hw-arr">→</span>
+          </CtaLink>
+        </div>
+        <div className="hw-pc-panel">
+          <div className="hw-pc-panel-head">
+            <span className="hw-pc-panel-addr">
+              14 Sample St, Mt Lawley WA <span className="hw-tag">Example</span>
+            </span>
+            <span className="hw-pc-panel-status">Check complete</span>
+          </div>
+          <div className="hw-pc-facts">
+            <span className="hw-pc-fact">
+              <span className="hw-pc-fact-k">Zoning</span>
+              <span className="hw-pc-fact-v">R20 / R40</span>
+            </span>
+            <span className="hw-pc-fact">
+              <span className="hw-pc-fact-k">Overlays</span>
+              <span className="hw-pc-fact-v">Heritage area</span>
+            </span>
+            <span className="hw-pc-fact">
+              <span className="hw-pc-fact-k">Subdivision</span>
+              <span className="hw-pc-fact-v hw-pc-fact-v--warning">Potential — verify lot width</span>
+            </span>
+          </div>
+          <ul className="hw-pc-notes">
+            {PROPERTY_NOTES.map((note) => (
+              <li key={note.text}>
+                <span className="hw-line-dot hw-line-dot--faint" aria-hidden />
+                <span>
+                  {note.text} — <span className="hw-pc-note-src">{note.source}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="hw-pc-panel-foot">
+            Source-cited notes for call prep. Always confirm with the local planning authority.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
@@ -236,82 +347,27 @@ export function ControlFold() {
 export function FreeTrial() {
   return (
     <div className="hw-band hw-band--wide hw-trial">
-      <h2>Create 3 ads free.</h2>
-      <div className="hw-trial-cta">
-        <CtaLink location="free_trial" href="/signup" className="hw-btn hw-btn--dark">
-          Create three ads free <span className="hw-arr">→</span>
-        </CtaLink>
-        <p className="hw-sub">
-          Each ad includes Feed and Story/Reels-ready image creative. No credit card required.
-        </p>
-      </div>
+      <h2>Create three complete ads free.</h2>
+      <p className="hw-sub">
+        Start with only your email. Build and review three Feed + Story ad packs before connecting
+        Meta or adding a card.
+      </p>
+      <CtaLink location="free_trial" href="/signup" className="hw-btn hw-btn--dark">
+        Continue with email <span className="hw-arr">→</span>
+      </CtaLink>
       <div className="hw-trial-facts">
         <div className="hw-trial-fact">
-          <h3>High-quality templates</h3>
-          <p>Choose a lead generation layout and make it yours.</p>
+          <h3>Three complete ads</h3>
+          <p>Each includes a finished Feed and Story creative.</p>
         </div>
         <div className="hw-trial-fact">
-          <h3>Personalised AI copy</h3>
-          <p>Review and edit every line before publishing.</p>
+          <h3>No card</h3>
+          <p>Add payment details only when you choose to run a campaign.</p>
         </div>
         <div className="hw-trial-fact">
-          <h3>One 3-day campaign free</h3>
-          <p>No Blockwise fee. You pay Meta directly for ad spend.</p>
+          <h3>One live setup free</h3>
+          <p>Your Meta ad spend is always paid separately to Meta.</p>
         </div>
-      </div>
-    </div>
-  );
-}
-
-/* ---------- 6.9b #pricing — Self-serve price panel ---------- */
-
-export function SelfServePricing() {
-  return (
-    <div className="hw-fold hw-pricing">
-      <div className="hw-band">
-        <h2>Create, publish and track your Meta ads in one place.</h2>
-        <div className="hw-price-panel">
-          <div className="hw-price-lead">
-            <span className="hw-price-num">
-              {SELF_SERVE_RENEWAL}
-              <span className="hw-price-per">/mo</span>
-            </span>
-            <p className="hw-price-note">
-              Blockwise LeadGen. First month {SELF_SERVE_FIRST_MONTH}, charged when you
-              subscribe. Meta ad spend is billed separately by Meta.
-            </p>
-          </div>
-          <div className="hw-price-facts">
-            <span className="hw-price-fact">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="var(--hw-accent)" strokeWidth="1.5" aria-hidden>
-                <path d="M8 1.5l6 3.2-6 3.2-6-3.2L8 1.5z" />
-                <path d="M2 8.2l6 3.2 6-3.2M2 11.4l6 3.2 6-3.2" />
-              </svg>
-              100 renders monthly
-            </span>
-            <span className="hw-price-fact">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="var(--hw-accent)" strokeWidth="1.5" aria-hidden>
-                <rect x="1.5" y="1.5" width="5.6" height="5.6" rx="1" />
-                <rect x="8.9" y="1.5" width="5.6" height="5.6" rx="1" />
-                <rect x="1.5" y="8.9" width="5.6" height="5.6" rx="1" />
-                <rect x="8.9" y="8.9" width="5.6" height="5.6" rx="1" />
-              </svg>
-              Up to 50 Feed + Story packs
-            </span>
-            <span className="hw-price-fact">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="var(--hw-accent)" strokeWidth="1.5" aria-hidden>
-                <circle cx="5.5" cy="5" r="2.5" />
-                <path d="M1.5 13.5c0-2.2 1.8-4 4-4s4 1.8 4 4" />
-                <circle cx="11.5" cy="5.5" r="2" />
-                <path d="M11 9.7c1.9.3 3.5 1.8 3.5 3.8" />
-              </svg>
-              5 team seats
-            </span>
-          </div>
-        </div>
-        <CtaLink location="pricing" href="/signup" className="hw-btn hw-btn--dark hw-price-cta">
-          Create three ads free <span className="hw-arr">→</span>
-        </CtaLink>
       </div>
     </div>
   );
@@ -322,32 +378,29 @@ export function ManagedSetup() {
     <div className="hw-fold hw-ms">
       <div className="hw-wide hw-ms-grid">
         <div className="hw-ms-copy">
-          <h2>Fully managed.</h2>
-          <p className="hw-ms-price">
-            {MANAGED_MONTHLY}/mo <span>plus Meta ad spend</span>
-          </p>
+          <h2>Want Blockwise to run it with you?</h2>
           <p className="hw-sub">
-            Everything in Blockwise LeadGen, plus campaign launch, weekly optimisation and a
-            monthly performance report.
+            Managed service starts at US$1,500/month or A$2,500/month, plus ad spend. Book a call
+            before paying, or start managed onboarding and book immediately.
           </p>
           <ul className="hw-control-points hw-control-points--ink">
             <li>
               <span className="hw-check" aria-hidden>
                 ✓
               </span>
-              The complete Blockwise LeadGen
+              The complete self-serve product
             </li>
             <li>
               <span className="hw-check" aria-hidden>
                 ✓
               </span>
-              Campaign launch and weekly optimisation
+              Launch and weekly optimization for up to four live campaigns
             </li>
             <li>
               <span className="hw-check" aria-hidden>
                 ✓
               </span>
-              One brand, one ad account and a monthly performance report
+              One brand, one Meta ad account, and a monthly report
             </li>
           </ul>
         </div>
@@ -362,15 +415,18 @@ export function ManagedSetup() {
 export function FaqSection() {
   return (
     <div className="hw-band hw-faq">
-      <h2>FAQ</h2>
+      <h2>The bits agents ask about.</h2>
       <FaqAccordion idPrefix="faq-d" withReveal={false} />
       <div className="hw-faq-banner">
         <span className="hw-faq-banner-copy">
-          <span className="hw-faq-banner-h">Need a hand?</span>
-          <span className="hw-faq-banner-b">15 minutes. First ads set up.</span>
+          <span className="hw-faq-banner-h">Need a hand getting started?</span>
+          <span className="hw-faq-banner-b">
+            Book a 15-minute walkthrough. We&rsquo;ll set up your first ads, connect your ad
+            account and get everything ready for final setup.
+          </span>
         </span>
         <CtaLink location="faq_walkthrough" href="#managed-setup" className="hw-textlink">
-          Book a 15-minute walkthrough <span className="hw-arr">→</span>
+          Book a walkthrough <span className="hw-arr">→</span>
         </CtaLink>
       </div>
     </div>

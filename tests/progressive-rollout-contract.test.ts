@@ -29,7 +29,7 @@ test("progressive rollout flags are documented with fail-closed defaults", () =>
 
 test("runbook orders every progressive migration before exposure", () => {
   const migrations = [
-    "202607270002_progressive_activation_credit_ledger.sql",
+    "202607270001_progressive_activation_credit_ledger.sql",
     "20260727022000_progressive_billing_foundation.sql",
     "20260727023000_meta_free_live_claim_registry.sql",
     "20260727024000_onboarding_booking_foundation.sql",

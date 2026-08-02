@@ -16,7 +16,6 @@ import {
   buildCheckoutSessionRequest,
   constructStripeWebhookEvent,
   StripeWebhookVerificationError,
-  validateStripePriceForOffer,
   type StripeWebhookEvent,
 } from "../src/lib/billing/stripe-scaffold.ts";
 
@@ -30,23 +29,19 @@ const billingEnv: NodeJS.ProcessEnv = {
   STRIPE_SELF_SERVE_AUD_INTRO_COUPON_ID: "coupon_intro_au",
 } as NodeJS.ProcessEnv;
 
-test("regional offer catalog keeps flat numeric prices and market-specific tax behavior", () => {
-  assert.equal(BILLING_OFFERS.self_serve_US.firstInvoiceAmount, 8_900);
-  assert.equal(BILLING_OFFERS.self_serve_US.recurringAmount, 48_900);
+test("regional offer catalog encodes the approved US/AU amounts and tax behavior", () => {
+  assert.equal(BILLING_OFFERS.self_serve_US.firstInvoiceAmount, 9_900);
+  assert.equal(BILLING_OFFERS.self_serve_US.recurringAmount, 49_900);
   assert.equal(BILLING_OFFERS.self_serve_US.discountAmount, 40_000);
   assert.equal(BILLING_OFFERS.self_serve_US.taxBehavior, "exclusive");
-  assert.equal(BILLING_OFFERS.self_serve_AU.taxBehavior, "exclusive");
+  assert.equal(BILLING_OFFERS.self_serve_AU.taxBehavior, "inclusive");
   assert.equal(BILLING_OFFERS.managed_US.recurringAmount, 150_000);
-  assert.equal(BILLING_OFFERS.managed_AU.recurringAmount, 150_000);
-  assert.equal(
-    BILLING_OFFERS.managed_US.recurringAmount,
-    BILLING_OFFERS.managed_AU.recurringAmount,
-  );
+  assert.equal(BILLING_OFFERS.managed_AU.recurringAmount, 250_000);
   assert.equal(currencyForMarket("US"), "USD");
   assert.equal(currencyForMarket("AU"), "AUD");
 });
 
-test("Blockwise LeadGen Checkout charges the discounted first month immediately without a trial", () => {
+test("self-serve Checkout collects a reusable card and applies the once-only discount after a seven-day trial", () => {
   const result = buildCheckoutSessionRequest(
     {
       workspaceId: "workspace-1",
@@ -65,23 +60,16 @@ test("Blockwise LeadGen Checkout charges the discounted first month immediately 
 
   assert.equal(result.params["line_items[0][price]"], "price_self_us");
   assert.equal(result.params["discounts[0][coupon]"], "coupon_intro_us");
-  assert.equal(result.params["subscription_data[trial_period_days]"], undefined);
-  assert.equal(
-    result.params["subscription_data[trial_settings][end_behavior][missing_payment_method]"],
-    undefined,
-  );
+  assert.equal(result.params["subscription_data[trial_period_days]"], 7);
   assert.equal(result.params.payment_method_collection, "always");
   assert.equal(result.params.billing_address_collection, "required");
   assert.equal(result.params["automatic_tax[enabled]"], true);
   assert.equal(result.params["tax_id_collection[enabled]"], true);
   assert.equal(result.params["consent_collection[terms_of_service]"], "required");
   assert.equal(result.params["metadata[offer_version]"], BILLING_OFFER_VERSION);
-  assert.equal(result.params["metadata[first_invoice_amount]"], 8_900);
-  assert.equal(result.params["metadata[renewal_amount]"], 48_900);
-  assert.match(
-    String(result.params["metadata[triggering_rule]"]),
-    /charged immediately when the customer subscribes/,
-  );
+  assert.equal(result.params["metadata[first_invoice_amount]"], 9_900);
+  assert.equal(result.params["metadata[renewal_amount]"], 49_900);
+  assert.match(String(result.params["metadata[triggering_rule]"]), /first campaign launches or seven days/);
   assert.equal(result.params["customer_update[address]"], "auto");
 });
 
@@ -103,42 +91,8 @@ test("managed Checkout uses the regional managed recurring price without a trial
   assert.equal(result.params["line_items[0][price]"], "price_managed_au");
   assert.equal(result.params["discounts[0][coupon]"], undefined);
   assert.equal(result.params["subscription_data[trial_period_days]"], undefined);
-  assert.equal(result.params["metadata[first_invoice_amount]"], 150_000);
-  assert.equal(result.params["metadata[renewal_amount]"], 150_000);
+  assert.equal(result.params["metadata[first_invoice_amount]"], 250_000);
   assert.match(String(result.params["custom_text[submit][message]"]), /Meta ad spend is separate/);
-});
-
-test("Checkout rejects a configured Stripe Price that disagrees with the accepted offer", () => {
-  const offer = BILLING_OFFERS.managed_AU;
-
-  assert.doesNotThrow(() =>
-    validateStripePriceForOffer(
-      {
-        id: "price_managed_au_flat",
-        active: true,
-        currency: "aud",
-        unit_amount: 150_000,
-        tax_behavior: "inclusive",
-        recurring: { interval: "month", interval_count: 1 },
-      },
-      offer,
-    ),
-  );
-  assert.throws(
-    () =>
-      validateStripePriceForOffer(
-        {
-          id: "price_managed_au_legacy",
-          active: true,
-          currency: "aud",
-          unit_amount: 250_000,
-          tax_behavior: "inclusive",
-          recurring: { interval: "month", interval_count: 1 },
-        },
-        offer,
-      ),
-    /does not match the managed_AU offer/,
-  );
 });
 
 test("Checkout refuses a currency that does not match the confirmed workspace market", () => {
@@ -187,8 +141,7 @@ test("billing domain applies a Checkout event once and records its accepted offe
   assert.equal(first.outcome, "applied");
   assert.equal(replay.outcome, "duplicate");
   assert.equal(mock.workspaceUpdates.length, 1);
-  assert.equal(mock.workspaceUpdates[0].patch.billing_access_state, "paid");
-  assert.equal(mock.workspaceUpdates[0].patch.stripe_subscription_status, "active");
+  assert.equal(mock.workspaceUpdates[0].patch.billing_access_state, "trialing");
   assert.equal(mock.acceptances.length, 1);
   assert.equal(mock.acceptances[0].offer_version, BILLING_OFFER_VERSION);
   assert.equal(mock.eventStatuses.get("evt_checkout"), "applied");
@@ -505,7 +458,6 @@ function checkoutEvent(id: string): StripeWebhookEvent {
         id: "cs_123",
         customer: "cus_123",
         subscription: "sub_123",
-        payment_status: "paid",
         client_reference_id: "workspace-1",
         metadata: {
           workspace_id: "workspace-1",
@@ -514,8 +466,8 @@ function checkoutEvent(id: string): StripeWebhookEvent {
           accepted_at: "2026-07-27T00:00:00.000Z",
           market: "US",
           currency: "USD",
-          first_invoice_amount: "8900",
-          renewal_amount: "48900",
+          first_invoice_amount: "9900",
+          renewal_amount: "49900",
           triggering_rule: "campaign launch or seven days",
         },
       },

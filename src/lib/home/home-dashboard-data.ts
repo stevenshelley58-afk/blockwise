@@ -1,5 +1,5 @@
 import type { HomeData } from "@/components/self-serve/home-dashboard";
-import { readCustomerActivation } from "@/lib/activation/customer-activation";
+import { resolveCustomerActivation } from "@/lib/activation/customer-activation";
 import { loadReportingSnapshot } from "@/lib/meta-monitor/reporting-snapshots";
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { createSupabaseServiceClient } from "@/lib/supabase/service";
@@ -55,7 +55,7 @@ export async function loadHomeDashboardData(input: {
         .order("period_end", { ascending: false })
         .limit(1)
         .maybeSingle(),
-      readCustomerActivation({
+      resolveCustomerActivation({
         workspaceId: input.workspaceId,
         serviceSupabase: input.serviceSupabase,
       }),
@@ -101,8 +101,8 @@ export async function loadHomeDashboardData(input: {
           spend: results.summary.spend,
           previousLeads: results.summary.previousPeriod?.leads ?? null,
           previousSpend: results.summary.previousPeriod?.spend ?? null,
-          daily: results.daily.map((point) => ({ date: point.date, leads: point.leads })),
-          adsLive: results.ads.filter((ad) => ad.status === "ACTIVE").length,
+          daily: results.daily.map((point: { date: string; leads: number }) => ({ date: point.date, leads: point.leads })),
+          adsLive: results.ads.filter((ad: { status: string }) => ad.status === "ACTIVE").length,
         }
       : null;
 

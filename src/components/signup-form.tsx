@@ -8,16 +8,9 @@ import {
   hasTurnstileSiteKey,
   TurnstileVerification,
 } from "@/components/auth/turnstile-verification";
-import type { BillingMarket, BillingProduct } from "@/lib/billing/offers";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
-export function SignupForm({
-  requestedOffer,
-  requestedMarket,
-}: {
-  requestedOffer?: BillingProduct | null;
-  requestedMarket?: BillingMarket | null;
-}) {
+export function SignupForm() {
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const [turnstileToken, setTurnstileToken] = useState("");
   const [turnstileResetSignal, setTurnstileResetSignal] = useState(0);
@@ -57,24 +50,15 @@ export function SignupForm({
     }
 
     setIsSubmitting(true);
-    const nextParams = new URLSearchParams();
-    if (requestedOffer) nextParams.set("offer", requestedOffer.replace("_", "-"));
-    if (requestedMarket) nextParams.set("market", requestedMarket.toLowerCase());
-    const serializedNextParams = nextParams.toString();
-    const nextPath = `/self-serve${serializedNextParams ? `?${serializedNextParams}` : ""}`;
-    const confirmUrl = new URL("/auth/confirm", location.origin);
-    confirmUrl.searchParams.set("next", nextPath);
 
     const { error: signUpError } = await supabase.auth.signInWithOtp({
       email,
       options: {
         captchaToken: turnstileToken,
-        emailRedirectTo: confirmUrl.toString(),
+        emailRedirectTo: `${location.origin}/auth/confirm?next=/self-serve?confirmed=1`,
         shouldCreateUser: true,
         data: {
-          signup_flow: requestedOffer === "managed" ? "managed" : "trial_self_serve",
-          requested_offer: requestedOffer ?? "self_serve",
-          requested_market: requestedMarket ?? null,
+          signup_flow: "trial_self_serve",
         },
       },
     });

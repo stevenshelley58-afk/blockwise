@@ -42,7 +42,7 @@ export async function validateFirstLiveCampaignBilling(input: {
   const subscription = await gateway.retrieveSubscription(subscriptionId);
   const status = stringValue(subscription.status);
   if (status !== "trialing" && !(input.allowActive && status === "active")) {
-    throw new Error("Your existing Blockwise billing trial must still be active before this campaign is published.");
+    throw new Error("The Blockwise subscription must be trialing before the free live campaign is published.");
   }
   if (status === "trialing" && !hasReusablePaymentMethod(subscription)) {
     throw new Error("Add a reusable payment method before publishing the first live campaign.");

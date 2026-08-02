@@ -22,7 +22,7 @@ test("workspace settings show early-access review copy instead of a dead approva
   assert.match(sources[1], /All campaigns are reviewed before going live during early access\./);
 });
 
-test("billing settings prefer friendly portal messages and offer self-serve subscribe until Stripe exists", () => {
+test("billing settings prefer friendly portal messages and hide billing management until Stripe exists", () => {
   const source = [
     read("src/app/(customer)/settings/settings-view.tsx"),
     read("src/app/(customer)/settings/billing-section.tsx"),
@@ -31,9 +31,7 @@ test("billing settings prefer friendly portal messages and offer self-serve subs
   assert.match(source, /message\?: string/);
   assert.match(source, /data\.message \?\? data\.error \?\? "Billing isn't connected yet\."/);
   assert.match(source, /workspace\.stripeCustomerId \?/);
-  assert.match(source, /Subscribe to Blockwise/);
-  assert.match(source, /for your first month, then/);
-  assert.match(source, /Cancel anytime\./);
+  assert.match(source, /Billing management will appear here after your first paid plan is active\./);
   assert.match(source, /Usage this period/);
   assert.match(source, /workspace\.billingAccessState === "paid"/);
   assert.match(source, /complete Feed \+ Story packs/);

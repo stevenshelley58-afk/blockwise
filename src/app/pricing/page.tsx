@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   title: "Pricing",
   alternates: { canonical: "/pricing" },
   description:
-    "Blockwise LeadGen and managed pricing for the United States and Australia. Create three ads and run one three-day campaign free before subscribing.",
+    "Blockwise self-serve and managed pricing for the United States and Australia. Create three complete ads free before adding a card.",
 };
 
 export default function PricingPage() {
@@ -21,10 +21,10 @@ export default function PricingPage() {
         <section className="pricing-hero" aria-labelledby="pricing-title">
           <div className="pricing-shell">
             <p className="pricing-kicker">Pricing</p>
-            <h1 id="pricing-title">Start with three ads and a three-day campaign.</h1>
+            <h1 id="pricing-title">Start with the ad. Pay when you want to run it.</h1>
             <p className="pricing-lead">
-              Create three image ads with Feed and Story/Reels-ready creative, then run one
-              campaign free for three days. No card is needed until you choose to subscribe.
+              Create three complete Feed + Story ads with only your email. Add a card when you
+              choose to launch, with one live campaign setup included.
             </p>
           </div>
         </section>
@@ -37,12 +37,10 @@ export default function PricingPage() {
             <div>
               <p>
                 Meta ad spend is separate from every Blockwise plan. You pay Meta directly from
-                your connected ad account. Blockwise never marks up or funds that spend. Because
-                the campaigns run in your account, you keep your leads and campaign data if you
-                cancel Blockwise.
+                your connected ad account; Blockwise never marks up or silently funds that spend.
               </p>
               <p>
-                The Blockwise LeadGen covers one brand, one workspace, and one primary Meta ad account.
+                Self-serve covers one brand, one workspace, and one primary Meta ad account.
                 Additional brands or client accounts need another workspace or a managed
                 agreement.
               </p>

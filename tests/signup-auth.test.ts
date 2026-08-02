@@ -29,11 +29,8 @@ test("signup starts or resumes an account with one passwordless email field", ()
   assert.match(source, /captchaToken:\s*turnstileToken/i);
   assert.match(source, /signInWithOtp\(\{/i);
   assert.match(source, /shouldCreateUser:\s*true/i);
-  assert.match(source, /confirmUrl\.searchParams\.set\("next", nextPath\)/i);
-  assert.match(source, /emailRedirectTo:\s*confirmUrl\.toString\(\)/i);
-  assert.match(source, /requestedOffer === "managed" \? "managed" : "trial_self_serve"/i);
-  assert.match(source, /requested_offer:\s*requestedOffer \?\? "self_serve"/i);
-  assert.match(source, /requested_market:\s*requestedMarket \?\? null/i);
+  assert.match(source, /emailRedirectTo:\s*`\$\{location\.origin\}\/auth\/confirm\?next=\/self-serve\?confirmed=1`/i);
+  assert.match(source, /signup_flow:\s*"trial_self_serve"/i);
   assert.match(source, /name="company_website"/i);
   assert.match(source, /signup-honeypot/i);
   assert.match(source, /By continuing, you accept the/i);
@@ -51,10 +48,7 @@ test("signup page redirects authenticated users and renders the signup form", ()
 
   assert.match(source, /supabase\.auth\.getUser\(\)/i);
   assert.match(source, /redirect\("\/home"\)/i);
-  assert.match(source, /<SignupForm requestedOffer=\{offer\} requestedMarket=\{market\} \/>/i);
-  assert.match(source, /Start managed onboarding/i);
-  assert.match(source, /summarizeOffer\(offer, market\)/i);
-  assert.match(source, /formatBillingAmount/i);
+  assert.match(source, /<SignupForm \/>/i);
 });
 
 test("confirm route verifies token hash and only redirects to safe relative next paths", () => {
@@ -92,7 +86,7 @@ test("login page points new clients to signup", () => {
   assert.match(source, /error === "confirm_failed"/);
   assert.match(source, /That confirmation link is invalid or expired/);
   assert.match(source, /href="\/signup"/);
-  assert.match(source, /Create three ads free/i);
+  assert.match(source, /Start free trial/i);
 });
 
 test("login form keeps email validation while identifying the account field to password managers", () => {
