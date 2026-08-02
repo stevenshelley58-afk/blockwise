@@ -45,7 +45,7 @@ export async function POST(req: Request) {
 
   try {
     const queued = await queueContentRun({
-      supabase: serviceSupabase as never,
+      researchSupabase: serviceSupabase as never,
       workspaceId: access.workspaceId,
       runId: run.id,
     });
