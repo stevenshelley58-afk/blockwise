@@ -34,6 +34,7 @@ const MAX_COMPLETION_TOKENS = 4096;
 const OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions";
 const OPENAI_IMAGE_URL = "https://api.openai.com/v1/images/generations";
 const OPENAI_IMAGE_EDITS_URL = "https://api.openai.com/v1/images/edits";
+const DEEPSEEK_CHAT_URL = "https://api.deepseek.com/chat/completions";
 const AZURE_OPENAI_DEFAULT_API_VERSION = "2024-10-21";
 // best now, cost-tune later — gpt-image-2 processes inputs at max fidelity regardless.
 const DEFAULT_OPENAI_IMAGE_QUALITY = "high";
@@ -345,12 +346,39 @@ function createGoogleAiTextProvider(options: ProviderOptions = {}): TextProvider
   };
 }
 
+// DeepSeek is OpenAI chat-completions compatible (same request/response shape,
+// plus json_object response format), so it rides the standard postChatCompletion
+// path. deepseek-chat is the general model; deepseek-reasoner is the R1
+// reasoning model (temperature-restricted — handled in supportsCustomTemperature).
+function createDeepSeekTextProvider(options: ProviderOptions = {}): TextProviderAdapter {
+  const env = options.env ?? process.env;
+  const model = options.model ?? env.BLOCKWISE_DEEPSEEK_TEXT_MODEL ?? "deepseek-chat";
+  const fetchImpl = options.fetchImpl ?? fetch;
+
+  return {
+    providerName: "deepseek",
+    providerType: "text_generation",
+    capabilities: { structuredJson: true, longContext: true },
+    async generate(input) {
+      const apiKey = env.DEEPSEEK_API_KEY;
+      if (!apiKey) throw preflightError("DEEPSEEK_API_KEY is not configured.");
+      // DeepSeek has no vision input, so any imageUrl on the request must not be
+      // forwarded as a multimodal part (it would 400). Strip it here; the caller
+      // should never route a vision profile to DeepSeek in the first place.
+      const textInput = input.imageUrl ? { ...input, imageUrl: undefined } : input;
+      return postChatCompletion({ url: DEEPSEEK_CHAT_URL, apiKey, model, input: textInput, fetchImpl });
+    },
+  };
+}
+
 export function createTextProviderForCandidate(candidate: ModelCandidate, options: ProviderOptions = {}): TextProviderAdapter {
   let provider: TextProviderAdapter;
   if (candidate.provider === "azure") {
     provider = createAzureOpenAiTextProvider({ ...options, model: candidate.model });
   } else if (candidate.provider === "google") {
     provider = createGoogleAiTextProvider({ ...options, model: candidate.model });
+  } else if (candidate.provider === "deepseek") {
+    provider = createDeepSeekTextProvider({ ...options, model: candidate.model });
   } else {
     provider = createOpenAiTextProvider({ ...options, model: candidate.model });
   }
@@ -379,6 +407,12 @@ async function postChatCompletion(input: {
 }): Promise<TextProviderResponse> {
   const includeModelInBody = input.includeModelInBody ?? true;
   const reasoningEffort = minimalReasoningEffort(input.model);
+  // DeepSeek R1 (deepseek-reasoner) rejects both response_format and the
+  // OpenAI-specific max_completion_tokens param — it only understands
+  // max_tokens and emits JSON in plain text. Everything else (incl. deepseek-chat,
+  // gpt-5*, o*) accepts json_object + the temperature-restricted token param.
+  const customTemp = supportsCustomTemperature(input.model);
+  const deepseekReasoner = isDeepSeekReasoner(input.model);
   const response = await fetchProviderRequest(input.fetchImpl, input.url, {
     method: "POST",
     headers: {
@@ -389,18 +423,19 @@ async function postChatCompletion(input: {
     body: JSON.stringify({
       ...(includeModelInBody ? { model: input.model } : {}),
       messages: buildChatMessages(input.input),
-      response_format: { type: "json_object" },
-      // Reasoning models (gpt-5*, o*) accept only the default temperature and
-      // reject the request outright when any other value is sent.
-      ...(supportsCustomTemperature(input.model) ? { temperature: 0.4 } : {}),
+      ...(deepseekReasoner ? {} : { response_format: { type: "json_object" } }),
+      // Reasoning models (gpt-5*, o*, deepseek-reasoner) accept only the default
+      // temperature and reject the request outright when any other value is sent.
+      ...(customTemp ? { temperature: 0.4 } : {}),
       // Reasoning models (gpt-5.x): use the cheapest thinking tier so the small
       // structured outputs return fast and cheap.
       ...(reasoningEffort ? { reasoning_effort: reasoningEffort } : {}),
       // Without an explicit cap the provider reserves credits for the model's
       // absolute max completion (65k+ tokens) — requests fail on low balances
       // and a bad loop can drain the account. Copy/QA outputs are small JSON;
-      // 4096 is generous. Reasoning models only accept max_completion_tokens.
-      ...(supportsCustomTemperature(input.model)
+      // 4096 is generous. OpenAI reasoning models (gpt-5*/o*) only accept
+      // max_completion_tokens; DeepSeek R1 + everything else accepts max_tokens.
+      ...(customTemp || deepseekReasoner
         ? { max_tokens: MAX_COMPLETION_TOKENS }
         : { max_completion_tokens: MAX_COMPLETION_TOKENS }),
     }),
@@ -542,7 +577,19 @@ function isProviderFallbackEligibleStatus(status: number): boolean {
 
 function supportsCustomTemperature(model: string): boolean {
   const name = model.split("/").pop() ?? model;
-  return !/^(gpt-5|o\d)/i.test(name);
+  // DeepSeek's reasoning model (deepseek-reasoner / R1 family) rejects a custom
+  // temperature and only accepts max_tokens, like OpenAI's gpt-5* / o* reasoning
+  // models reject temperature too — so it takes the same no-temperature path.
+  return !/^(gpt-5|o\d|deepseek-reasoner)/i.test(name);
+}
+
+// DeepSeek's R1 reasoning model (deepseek-reasoner) rejects response_format
+// (no json_object support) and does not accept the OpenAI-specific
+// max_completion_tokens param — it only understands max_tokens. deepseek-chat
+// is unaffected and behaves like OpenAI here.
+function isDeepSeekReasoner(model: string): boolean {
+  const name = model.split("/").pop() ?? model;
+  return /^deepseek-reasoner/i.test(name);
 }
 
 // Reasoning models (gpt-5.x) think before answering; the copy/QA outputs are

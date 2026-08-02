@@ -18,8 +18,36 @@ import { createResearchServiceClient } from "@/lib/research/service";
  */
 
 const OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions";
-const MODEL = process.env.OPERATOR_ASSISTANT_MODEL ?? "gpt-4.1-mini";
+const DEEPSEEK_CHAT_URL = "https://api.deepseek.com/chat/completions";
 const MAX_ITERATIONS = 6;
+
+// Prefer DeepSeek when its key is configured (cheaper, and its tool-calling is
+// reliable enough for these simple, non-strict schemas — the operator still
+// confirms every action and malformed args are caught by safeParseArgs). Fall
+// back to OpenAI otherwise. Resolved once at import so every loop iteration
+// stays consistent.
+type AssistantBackend = {
+  url: string;
+  model: string;
+  keyEnv: "DEEPSEEK_API_KEY" | "OPENAI_API_KEY";
+};
+
+function resolveBackend(): AssistantBackend {
+  if (process.env.DEEPSEEK_API_KEY) {
+    return {
+      url: DEEPSEEK_CHAT_URL,
+      model: process.env.OPERATOR_ASSISTANT_MODEL ?? "deepseek-chat",
+      keyEnv: "DEEPSEEK_API_KEY",
+    };
+  }
+  return {
+    url: OPENAI_CHAT_URL,
+    model: process.env.OPERATOR_ASSISTANT_MODEL ?? "gpt-4.1-mini",
+    keyEnv: "OPENAI_API_KEY",
+  };
+}
+
+const BACKEND = resolveBackend();
 
 type ResearchClient = ReturnType<ReturnType<typeof createResearchServiceClient>["schema"]>;
 
@@ -532,9 +560,9 @@ async function executeAction(research: ResearchClient, action: OperatorProposedA
 
 // ---------- model loop ----------
 
-async function callOpenAi(messages: OrMessage[], allowTools: boolean): Promise<OrAssistantMessage> {
+async function callModel(messages: OrMessage[], allowTools: boolean): Promise<OrAssistantMessage> {
   const body: Record<string, unknown> = {
-    model: MODEL,
+    model: BACKEND.model,
     messages,
     temperature: 0.2,
   };
@@ -542,11 +570,12 @@ async function callOpenAi(messages: OrMessage[], allowTools: boolean): Promise<O
     body.tools = TOOL_SPECS;
     body.tool_choice = "auto";
   }
-  const response = await fetch(OPENAI_CHAT_URL, {
+  const apiKey = process.env[BACKEND.keyEnv];
+  const response = await fetch(BACKEND.url, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+      Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify(body),
   });
@@ -571,10 +600,10 @@ export async function runOperatorAssistant(input: {
     return { answer };
   }
 
-  if (!process.env.OPENAI_API_KEY) {
+  if (!process.env[BACKEND.keyEnv]) {
     return {
       answer:
-        "I can't reach a model yet — OPENAI_API_KEY isn't set in this environment. Add it (and optionally OPERATOR_ASSISTANT_MODEL) and I'll be able to chat and drive Hermes.",
+        "I can't reach a model yet — set DEEPSEEK_API_KEY (preferred) or OPENAI_API_KEY in this environment, and I'll be able to chat and drive Hermes.",
     };
   }
 
@@ -584,7 +613,7 @@ export async function runOperatorAssistant(input: {
   ];
 
   for (let iteration = 0; iteration < MAX_ITERATIONS; iteration += 1) {
-    const message = await callOpenAi(conversation, true);
+    const message = await callModel(conversation, true);
     const toolCalls = message.tool_calls ?? [];
 
     if (toolCalls.length === 0) {
@@ -597,7 +626,9 @@ export async function runOperatorAssistant(input: {
     if (actionCall) {
       const proposal = await buildProposal(research, actionCall.function.name, safeParseArgs(actionCall.function.arguments));
       if ("error" in proposal) {
-        return { answer: (message.content ?? "").trim() ? `${message.content}\n\n${proposal.error}` : proposal.error };
+        return { answer: (message.content ?? "").trim() ? `${message.content}
+
+${proposal.error}` : proposal.error };
       }
       const lead = (message.content ?? "").trim();
       return { answer: lead || proposal.summary, proposedAction: proposal };
@@ -609,6 +640,6 @@ export async function runOperatorAssistant(input: {
     }
   }
 
-  const closing = await callOpenAi(conversation, false);
+  const closing = await callModel(conversation, false);
   return { answer: (closing.content ?? "").trim() || "I pulled the data but couldn't compose a reply — try asking again more specifically." };
 }

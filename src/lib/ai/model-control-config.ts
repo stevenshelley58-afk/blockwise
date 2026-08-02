@@ -122,9 +122,128 @@ const PROFILE_SECTION_MAP: Array<{
   },
 ];
 
-export function getCuratedModelOptionsForProfile(_profileKey: ModelProfileKey): ModelCatalogOption[] {
-  // No curated third-party catalog options remain.
-  return [];
+// Curated catalog of known-good models the operator can switch any compatible
+// profile to. Pricing is pre-filled from provider list prices so the per-run
+// cost caps stay accurate. Capability flags drive which profiles each model is
+// offered for (see getCuratedModelOptionsForProfile) and gate custom entries.
+const MODEL_CATALOG: ModelCatalogOption[] = [
+  {
+    provider: "deepseek",
+    model: "deepseek-chat",
+    label: "deepseek-chat · cheapest text (no client PII)",
+    inputUsdPerMillionTokens: 0.27,
+    outputUsdPerMillionTokens: 1.1,
+    imageUsdPerUnit: 0,
+    maxContextTokens: 128_000,
+    supportsStructuredOutput: true,
+    supportsVisionInput: false,
+    supportsImageOutput: false,
+  },
+  {
+    provider: "google",
+    model: "gemini-2.0-flash-001",
+    label: "gemini-2.0-flash · budget all-rounder",
+    inputUsdPerMillionTokens: 0.1,
+    outputUsdPerMillionTokens: 0.4,
+    imageUsdPerUnit: 0,
+    maxContextTokens: 1_000_000,
+    supportsStructuredOutput: true,
+    supportsVisionInput: true,
+    supportsImageOutput: false,
+  },
+  {
+    provider: "google",
+    model: "gemini-2.5-flash",
+    label: "gemini-2.5-flash · best-value vision",
+    inputUsdPerMillionTokens: 0.3,
+    outputUsdPerMillionTokens: 2.5,
+    imageUsdPerUnit: 0,
+    maxContextTokens: 1_000_000,
+    supportsStructuredOutput: true,
+    supportsVisionInput: true,
+    supportsImageOutput: false,
+  },
+  {
+    provider: "openai",
+    model: "gpt-4.1",
+    label: "gpt-4.1 · reliable structured output",
+    inputUsdPerMillionTokens: 2,
+    outputUsdPerMillionTokens: 8,
+    imageUsdPerUnit: 0,
+    maxContextTokens: 128_000,
+    supportsStructuredOutput: true,
+    supportsVisionInput: true,
+    supportsImageOutput: false,
+  },
+  {
+    provider: "openai",
+    model: "gpt-5.5",
+    label: "gpt-5.5 · flagship reasoning",
+    inputUsdPerMillionTokens: 5,
+    outputUsdPerMillionTokens: 30,
+    imageUsdPerUnit: 0,
+    maxContextTokens: 1_000_000,
+    supportsStructuredOutput: true,
+    supportsVisionInput: true,
+    supportsImageOutput: false,
+  },
+  {
+    provider: "google",
+    model: "gemini-3.1-flash-image",
+    label: "gemini-3.1-flash-image · draft images",
+    inputUsdPerMillionTokens: 0.5,
+    outputUsdPerMillionTokens: 3,
+    imageUsdPerUnit: 0.04,
+    maxContextTokens: 131_072,
+    supportsStructuredOutput: false,
+    supportsVisionInput: true,
+    supportsImageOutput: true,
+  },
+  {
+    provider: "openai",
+    model: "gpt-image-2",
+    label: "gpt-image-2 · client-ready images",
+    inputUsdPerMillionTokens: 5,
+    outputUsdPerMillionTokens: 30,
+    imageUsdPerUnit: 0.211,
+    maxContextTokens: 16_000,
+    supportsStructuredOutput: false,
+    supportsVisionInput: true,
+    supportsImageOutput: true,
+  },
+  {
+    provider: "openai",
+    model: "gpt-image-1.5",
+    label: "gpt-image-1.5 · cheaper final images",
+    inputUsdPerMillionTokens: 5,
+    outputUsdPerMillionTokens: 10,
+    imageUsdPerUnit: 0.133,
+    maxContextTokens: 16_000,
+    supportsStructuredOutput: false,
+    supportsVisionInput: true,
+    supportsImageOutput: true,
+  },
+];
+
+const IMAGE_PROFILE_KEYS: ModelProfileKey[] = ["image_draft", "image_final"];
+
+function isImageProfileKey(profileKey: ModelProfileKey): boolean {
+  return IMAGE_PROFILE_KEYS.includes(profileKey);
+}
+
+export function getCuratedModelOptionsForProfile(profileKey: ModelProfileKey): ModelCatalogOption[] {
+  const imageProfile = isImageProfileKey(profileKey);
+  const visionProfile = profileKey === "vision_classification";
+  const requiresStructured = listModelProfiles().find((profile) => profile.key === profileKey)?.requiresStructuredOutput ?? false;
+
+  return MODEL_CATALOG.filter((option) => {
+    if (imageProfile) return option.supportsImageOutput;
+    // Text profiles never surface image-only generators.
+    if (option.supportsImageOutput) return false;
+    if (requiresStructured && !option.supportsStructuredOutput) return false;
+    if (visionProfile && !option.supportsVisionInput) return false;
+    return true;
+  });
 }
 
 export function getCuratedModelOptionsWithCatalog(
@@ -139,7 +258,17 @@ export function getCuratedModelOptionsWithCatalog(
   }));
 }
 
-const SAVED_PROVIDERS: ModelProvider[] = ["openai", "azure", "google"];
+const SAVED_PROVIDERS: ModelProvider[] = ["openai", "azure", "google", "deepseek"];
+
+// A custom model the operator types in by hand carries no persisted pricing, so
+// we assume provider list prices are roughly right and let the per-run cost cap
+// do the guarding. These defaults are intentionally conservative.
+const CUSTOM_MODEL_DEFAULTS = {
+  inputUsdPerMillionTokens: 3,
+  outputUsdPerMillionTokens: 15,
+  imageUsdPerUnit: 0.05,
+  maxContextTokens: 128_000,
+};
 
 export function validateModelProfileSelection(
   profileKeyValue: string,
@@ -171,27 +300,61 @@ export function validateModelProfileSelection(
 
   const provider = request.provider as ModelProvider;
   const normalizedModel = normalizeModelSlug(provider, request.model.trim());
-
-  // Validate against the profile's own configured candidates (primary + fallbacks).
   const profile = listModelProfiles().find((candidate) => candidate.key === profileKeyValue);
-  const candidates = profile ? [profile.primary, ...profile.fallbacks] : [];
-  const matched = candidates.find(
-    (candidate) =>
-      candidate.provider === provider && normalizeModelSlug(candidate.provider, candidate.model) === normalizedModel,
-  );
+  const profileKey = profileKeyValue as ModelProfileKey;
 
-  if (!matched) {
+  // 1) Curated catalog (or an already-configured primary/fallback) wins so the
+  //    saved row carries real pricing and capability flags.
+  const catalogMatch = [
+    ...getCuratedModelOptionsForProfile(profileKey),
+    ...(profile ? [profile.primary, ...profile.fallbacks].map((candidate) => modelCandidateToOption(candidate, "Approved")) : []),
+  ].find((option) => option.provider === provider && normalizeModelSlug(option.provider, option.model) === normalizedModel);
+
+  if (catalogMatch) {
+    return { ok: true, option: catalogMatch };
+  }
+
+  // 2) Custom escape hatch: the operator explicitly typed a model id that is not
+  //    in the catalog. Guard only on the profile's hard capability requirements;
+  //    a free-text model id is otherwise trusted to exist at the provider.
+  const capabilityViolation = capabilityViolationForProfile(profileKey, provider);
+  if (capabilityViolation) {
     return {
       ok: false,
       status: 400,
-      error: `${normalizedModel} is not approved for ${profile?.label ?? profileKeyValue}.`,
+      error: `${provider} cannot serve ${profile?.label ?? profileKey}: ${capabilityViolation}.`,
     };
   }
 
   return {
     ok: true,
-    option: modelCandidateToOption(matched, "Approved"),
+    option: {
+      provider,
+      model: normalizedModel,
+      label: `${normalizedModel} (custom)`,
+      inputUsdPerMillionTokens: CUSTOM_MODEL_DEFAULTS.inputUsdPerMillionTokens,
+      outputUsdPerMillionTokens: CUSTOM_MODEL_DEFAULTS.outputUsdPerMillionTokens,
+      imageUsdPerUnit: isImageProfileKey(profileKey) ? CUSTOM_MODEL_DEFAULTS.imageUsdPerUnit : 0,
+      maxContextTokens: CUSTOM_MODEL_DEFAULTS.maxContextTokens,
+      supportsStructuredOutput: !isImageProfileKey(profileKey),
+      supportsVisionInput: !isImageProfileKey(profileKey),
+      supportsImageOutput: isImageProfileKey(profileKey),
+    },
   };
+}
+
+// Hard capability gates that a custom model must clear for a profile. Returning
+// a human-readable reason (or null) keeps the API error actionable.
+function capabilityViolationForProfile(profileKey: ModelProfileKey, provider: ModelProvider): string | null {
+  if (profileKey === "vision_classification" && provider === "deepseek") {
+    return "deepseek has no vision input";
+  }
+
+  if (isImageProfileKey(profileKey) && !(provider === "openai" || provider === "google")) {
+    return "only openai and google generate images";
+  }
+
+  return null;
 }
 
 export function buildModelProfileVersionInsert(

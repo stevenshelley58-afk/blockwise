@@ -1,7 +1,7 @@
 import type { WorkforceDataClass } from "../workforce/permissions.ts";
 
 // "google" = Google AI Studio direct (free tier, OpenAI-compatible endpoint);
-export type ModelProvider = "openai" | "azure" | "google";
+export type ModelProvider = "openai" | "azure" | "google" | "deepseek";
 
 export type ModelProfileKey =
   | "cheap_draft_text"
@@ -70,6 +70,11 @@ const PROVIDER_CLIENT_DATA_POLICY: Record<ModelProvider, "allowed" | "public_onl
   openai: "allowed",
   azure: "allowed",
   google: "allowed",
+  // DeepSeek's default API terms permit use of inputs for model improvement
+  // unless an enterprise opt-out is in place, so it is restricted to
+  // non-sensitive (public / internal) data. Sensitive client data (lead PII,
+  // provider tokens) stays on the approved providers above.
+  deepseek: "public_only",
 };
 
 const MODEL_PROFILES: Record<ModelProfileKey, ModelProfile> = {
@@ -82,10 +87,10 @@ const MODEL_PROFILES: Record<ModelProfileKey, ModelProfile> = {
     maxRunCostUsd: 0.08,
     defaultTemperature: 0.7,
     primary: {
-      provider: "openai",
-      model: "gpt-4.1-mini",
-      inputUsdPerMillionTokens: 0.4,
-      outputUsdPerMillionTokens: 1.6,
+      provider: "deepseek",
+      model: "deepseek-chat",
+      inputUsdPerMillionTokens: 0.27,
+      outputUsdPerMillionTokens: 1.1,
       imageUsdPerUnit: 0,
       supportsStructuredOutput: true,
       maxContextTokens: 128_000,
@@ -113,13 +118,13 @@ const MODEL_PROFILES: Record<ModelProfileKey, ModelProfile> = {
     maxRunCostUsd: 0.75,
     defaultTemperature: 0.5,
     primary: {
-      provider: "openai",
-      model: "gpt-5.5",
-      inputUsdPerMillionTokens: 5,
-      outputUsdPerMillionTokens: 30,
+      provider: "deepseek",
+      model: "deepseek-chat",
+      inputUsdPerMillionTokens: 0.27,
+      outputUsdPerMillionTokens: 1.1,
       imageUsdPerUnit: 0,
       supportsStructuredOutput: true,
-      maxContextTokens: 1_000_000,
+      maxContextTokens: 128_000,
       maxLatencyMs: 12_000,
     },
     fallbacks: [],
@@ -251,10 +256,10 @@ const MODEL_PROFILES: Record<ModelProfileKey, ModelProfile> = {
     maxRunCostUsd: 0.4,
     defaultTemperature: 0.1,
     primary: {
-      provider: "openai",
-      model: "gpt-4.1-mini",
-      inputUsdPerMillionTokens: 0.4,
-      outputUsdPerMillionTokens: 1.6,
+      provider: "deepseek",
+      model: "deepseek-chat",
+      inputUsdPerMillionTokens: 0.27,
+      outputUsdPerMillionTokens: 1.1,
       imageUsdPerUnit: 0,
       supportsStructuredOutput: true,
       maxContextTokens: 128_000,

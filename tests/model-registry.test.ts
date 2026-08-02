@@ -39,8 +39,8 @@ test("vision_classification defaults to Gemini vision with an OpenAI fallback", 
 test("client-facing strategy profile uses the premium copywriting model", () => {
   const resolved = resolveModelProfile("high_quality_strategy");
 
-  assert.equal(resolved.primary.provider, "openai");
-  assert.equal(resolved.primary.model, "gpt-5.5");
+  assert.equal(resolved.primary.provider, "deepseek");
+  assert.equal(resolved.primary.model, "deepseek-chat");
   assert.deepEqual(resolved.fallbacks, []);
 });
 

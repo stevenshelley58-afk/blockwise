@@ -22,6 +22,14 @@ type RowStatus = {
 
 type ActiveCandidate = ModelControlProfileRow["active"];
 
+const CUSTOM_SENTINEL = "__custom__";
+const CUSTOM_PROVIDERS = [
+  { value: "openai", label: "OpenAI" },
+  { value: "google", label: "Google" },
+  { value: "deepseek", label: "DeepSeek" },
+  { value: "azure", label: "Azure OpenAI" },
+] as const;
+
 export function ModelControlPanel({ initialData }: ModelControlPanelProps) {
   const [sections, setSections] = useState<ModelControlSection[]>(initialData.sections);
   const [selectedByProfile, setSelectedByProfile] = useState<Record<string, string>>(() =>
@@ -31,6 +39,7 @@ export function ModelControlPanel({ initialData }: ModelControlPanelProps) {
       ),
     ),
   );
+  const [customByProfile, setCustomByProfile] = useState<Record<string, { provider: string; model: string }>>({});
   const [pendingByProfile, setPendingByProfile] = useState<Record<string, boolean>>({});
   const [statusByProfile, setStatusByProfile] = useState<Record<string, RowStatus>>({});
 
@@ -39,10 +48,22 @@ export function ModelControlPanel({ initialData }: ModelControlPanelProps) {
     [sections],
   );
 
-  async function saveProfile(profile: ModelControlProfileRow) {
-    const option = getSelectedOption(profile, selectedByProfile[profile.key]);
+  function resolveSelection(profile: ModelControlProfileRow): { provider: string; model: string } | null {
+    const selected = selectedByProfile[profile.key];
+    if (selected === CUSTOM_SENTINEL) {
+      const custom = customByProfile[profile.key];
+      const model = custom?.model?.trim();
+      if (!custom?.provider || !model) return null;
+      return { provider: custom.provider, model };
+    }
+    const option = getSelectedOption(profile, selected);
+    return option ? { provider: option.provider, model: option.model } : null;
+  }
 
-    if (!option) {
+  async function saveProfile(profile: ModelControlProfileRow) {
+    const selection = resolveSelection(profile);
+
+    if (!selection) {
       setStatusByProfile((current) => ({
         ...current,
         [profile.key]: {
@@ -59,7 +80,7 @@ export function ModelControlPanel({ initialData }: ModelControlPanelProps) {
       const response = await fetch(`/api/model-profiles/${profile.key}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ provider: option.provider, model: option.model }),
+        body: JSON.stringify({ provider: selection.provider, model: selection.model }),
       });
       const payload = (await response.json()) as { active?: ActiveCandidate; error?: string };
 
@@ -69,6 +90,7 @@ export function ModelControlPanel({ initialData }: ModelControlPanelProps) {
 
       const active = payload.active;
       setSections((current) => updateProfileActiveCandidate(current, profile.key, active));
+      setSelectedByProfile((current) => ({ ...current, [profile.key]: encodeOption(active.provider, active.model) }));
       setStatusByProfile((current) => ({
         ...current,
         [profile.key]: {
@@ -90,9 +112,9 @@ export function ModelControlPanel({ initialData }: ModelControlPanelProps) {
   }
 
   async function testProfile(profile: ModelControlProfileRow) {
-    const option = getSelectedOption(profile, selectedByProfile[profile.key]);
+    const selection = resolveSelection(profile);
 
-    if (!option) {
+    if (!selection) {
       setStatusByProfile((current) => ({
         ...current,
         [profile.key]: {
@@ -109,7 +131,7 @@ export function ModelControlPanel({ initialData }: ModelControlPanelProps) {
       const response = await fetch(`/api/model-profiles/${profile.key}/test`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ provider: option.provider, model: option.model }),
+        body: JSON.stringify({ provider: selection.provider, model: selection.model }),
       });
       const payload = (await response.json()) as { content?: string; error?: string };
 
@@ -177,8 +199,14 @@ export function ModelControlPanel({ initialData }: ModelControlPanelProps) {
               <tbody>
                 {section.profiles.map((profile) => {
                   const selected = selectedByProfile[profile.key];
+                  const isCustom = selected === CUSTOM_SENTINEL;
+                  const custom = customByProfile[profile.key];
                   const option = getSelectedOption(profile, selected);
-                  const changed = selected !== encodeOption(profile.active.provider, profile.active.model);
+                  const activeEncoded = encodeOption(profile.active.provider, profile.active.model);
+                  const customModelTyped = Boolean(custom?.model?.trim());
+                  const changed = isCustom
+                    ? customModelTyped
+                    : selected !== activeEncoded;
                   const pending = Boolean(pendingByProfile[profile.key]);
                   const rowStatus = statusByProfile[profile.key];
 
@@ -208,17 +236,69 @@ export function ModelControlPanel({ initialData }: ModelControlPanelProps) {
                               {candidate.label}
                             </option>
                           ))}
+                          <option value={CUSTOM_SENTINEL}>Custom model…</option>
                         </select>
-                        <p className="item-meta">
-                          {option?.provider ?? profile.active.provider} / {option?.model ?? profile.active.model}
-                        </p>
+                        {isCustom ? (
+                          <div className="model-custom">
+                            <label className="sr-only" htmlFor={`${profile.key}-custom-provider`}>
+                              Provider for custom {profile.label} model
+                            </label>
+                            <select
+                              className="model-select"
+                              id={`${profile.key}-custom-provider`}
+                              value={custom?.provider ?? CUSTOM_PROVIDERS[0].value}
+                              onChange={(event) =>
+                                setCustomByProfile((current) => ({
+                                  ...current,
+                                  [profile.key]: {
+                                    provider: event.target.value,
+                                    model: current[profile.key]?.model ?? "",
+                                  },
+                                }))
+                              }
+                            >
+                              {CUSTOM_PROVIDERS.map((provider) => (
+                                <option value={provider.value} key={provider.value}>
+                                  {provider.label}
+                                </option>
+                              ))}
+                            </select>
+                            <label className="sr-only" htmlFor={`${profile.key}-custom-model`}>
+                              Model id for custom {profile.label} model
+                            </label>
+                            <input
+                              className="model-input"
+                              id={`${profile.key}-custom-model`}
+                              type="text"
+                              placeholder="e.g. gpt-4o"
+                              value={custom?.model ?? ""}
+                              onChange={(event) =>
+                                setCustomByProfile((current) => ({
+                                  ...current,
+                                  [profile.key]: {
+                                    provider: current[profile.key]?.provider ?? CUSTOM_PROVIDERS[0].value,
+                                    model: event.target.value,
+                                  },
+                                }))
+                              }
+                            />
+                          </div>
+                        ) : (
+                          <p className="item-meta">
+                            {option?.provider ?? profile.active.provider} / {option?.model ?? profile.active.model}
+                          </p>
+                        )}
                       </td>
                       <td data-label="Cost and context">
-                        <div className="model-meta-grid">
-                          <span>${formatCost(option?.inputUsdPerMillionTokens ?? profile.active.inputUsdPerMillionTokens)} in</span>
-                          <span>${formatCost(option?.outputUsdPerMillionTokens ?? profile.active.outputUsdPerMillionTokens)} out</span>
-                          <span>{formatTokens(option?.maxContextTokens ?? profile.active.maxContextTokens)} ctx</span>
-                        </div>
+                        {isCustom ? (
+                          <p className="item-meta">Priced at conservative defaults; run-cost cap still guards spend.</p>
+                        ) : (
+                          <div className="model-meta-grid">
+                            <span>${formatCost(option?.inputUsdPerMillionTokens ?? profile.active.inputUsdPerMillionTokens)} in</span>
+                            <span>${formatCost(option?.outputUsdPerMillionTokens ?? profile.active.outputUsdPerMillionTokens)} out</span>
+                            <span>{formatTokens(option?.maxContextTokens ?? profile.active.maxContextTokens)} ctx</span>
+                          </div>
+                        )}
                       </td>
                       <td data-label="Fallbacks">
                         <span>{profile.fallbacks.length}</span>

@@ -3,13 +3,16 @@ import { z } from "zod";
 import type { AdAuditResult, AdAuditStats } from "./ad-audit.ts";
 
 /**
- * AI marketing suggestions for the Local Ad Market Audit. Uses OpenAI when
- * OPENAI_API_KEY is set, and always falls back to deterministic, data-grounded
- * advice so the audit renders even when the model is unavailable.
+ * AI marketing suggestions for the Local Ad Market Audit. Prefers DeepSeek when
+ * DEEPSEEK_API_KEY is set, falls back to OpenAI when only OPENAI_API_KEY is
+ * present, and always falls back to deterministic, data-grounded advice so the
+ * audit renders even when no model is available.
  */
 
 const OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions";
-const DEFAULT_MODEL = "gpt-4.1-mini";
+const DEEPSEEK_CHAT_URL = "https://api.deepseek.com/chat/completions";
+const OPENAI_DEFAULT_MODEL = "gpt-4.1-mini";
+const DEEPSEEK_DEFAULT_MODEL = "deepseek-chat";
 const REQUEST_TIMEOUT_MS = 22_000;
 const MAX_OUTPUT_TOKENS = 1100;
 
@@ -47,14 +50,16 @@ export async function generateAuditSuggestions(
   options: { signal?: AbortSignal; env?: NodeJS.ProcessEnv } = {},
 ): Promise<AuditSuggestionResult> {
   const env = options.env ?? process.env;
-  const apiKey = env.OPENAI_API_KEY?.trim();
+  const deepseekKey = env.DEEPSEEK_API_KEY?.trim();
+  const openaiKey = env.OPENAI_API_KEY?.trim();
+  const apiKey = deepseekKey ?? openaiKey;
 
   if (!apiKey || result.stats.totals.detected === 0) {
     return { suggestions: fallbackAuditSuggestions(result), source: "fallback" };
   }
 
   try {
-    const suggestions = await requestOpenAiSuggestions(result, apiKey, env, options.signal);
+    const suggestions = await requestSuggestions(result, apiKey, deepseekKey ? "deepseek" : "openai", env, options.signal);
     return { suggestions, source: "ai" };
   } catch (error) {
     console.error("audit suggestions: AI generation failed, using fallback", error);
@@ -62,13 +67,18 @@ export async function generateAuditSuggestions(
   }
 }
 
-async function requestOpenAiSuggestions(
+async function requestSuggestions(
   result: AdAuditResult,
   apiKey: string,
+  provider: "deepseek" | "openai",
   env: NodeJS.ProcessEnv,
   externalSignal?: AbortSignal,
 ): Promise<AuditSuggestions> {
-  const model = env.BLOCKWISE_AUDIT_MODEL?.trim() || DEFAULT_MODEL;
+  const model =
+    provider === "deepseek"
+      ? env.BLOCKWISE_AUDIT_MODEL?.trim() || DEEPSEEK_DEFAULT_MODEL
+      : env.BLOCKWISE_AUDIT_MODEL?.trim() || OPENAI_DEFAULT_MODEL;
+  const url = provider === "deepseek" ? DEEPSEEK_CHAT_URL : OPENAI_CHAT_URL;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   if (externalSignal) {
