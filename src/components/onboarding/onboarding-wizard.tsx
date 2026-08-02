@@ -444,6 +444,12 @@ export function OnboardingWizard({ workspaceId, country, brandKit, canConfirmMar
               Brand Pack approved
             </h2>
             <p className="mt-1 text-[13px] text-muted-foreground">Opening Ad Studio…</p>
+            <Link
+              className="mt-3 inline-flex items-center gap-1.5 text-[12.5px] font-bold underline-offset-4 hover:underline"
+              href="/connect-meta"
+            >
+              Connect your Meta ad account <ArrowRight size={14} aria-hidden />
+            </Link>
           </div>
         </div>
       ) : null}

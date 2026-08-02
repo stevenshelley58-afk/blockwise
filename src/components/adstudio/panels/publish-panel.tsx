@@ -774,7 +774,11 @@ export function PublishSetupPanel({
                 <span className={metaCampaigns?.connected ? "studio-connected" : "studio-disconnected"}>
                   {metaCampaigns?.connected ? "Connected" : "Not connected"}
                 </span>
-                <Link href="/settings#connections">Settings</Link>
+                {metaCampaigns?.connected ? (
+                  <Link href="/settings#connections">Settings</Link>
+                ) : (
+                  <Link href="/connect-meta">Connect Meta</Link>
+                )}
               </div>
 
               <details className="studio-publish-help">

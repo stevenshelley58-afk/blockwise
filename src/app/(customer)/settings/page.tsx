@@ -245,7 +245,7 @@ export default async function SettingsPage() {
         isOperator={access.isOperator}
         canManage={canManage}
         googleAdsEnabled={GOOGLE_ADS_ENABLED}
-        metaConnectHref={`/api/integrations/meta/connect?workspaceId=${wsQuery}`}
+        metaConnectHref={`/connect-meta?workspaceId=${wsQuery}`}
         googleConnectHref={`/api/integrations/google/connect?workspaceId=${wsQuery}`}
       />
     </main>

@@ -88,9 +88,8 @@ export default async function ResultsPage({
       initialGeneratedAt={reporting.snapshot.generatedAt}
       userId={access.userId}
       workspaceId={access.workspaceId}
-      // Send Connect/Reconnect to Settings: the ad account, Page, lead
-      // destination, and privacy policy have to be chosen there anyway.
-      metaConnectHref="/settings"
+      // Partner-access connect: one guided page handles share → poll → claim.
+      metaConnectHref="/connect-meta"
       oauthNotice={oauthNotice}
     />
   );
