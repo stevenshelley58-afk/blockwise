@@ -372,3 +372,38 @@ test("preflight loads publish and reporting handlers without printing credential
   assert.equal(report.handlers["reporting.refresh"], "loaded");
   assert.equal(report.routing.vpsOnly, true);
 });
+
+test("preflight does not block non-legacy jobs when optional Stripe billing is unavailable", () => {
+  const revision = "b".repeat(40);
+  const workerPath = fileURLToPath(new URL("../worker/index.ts", import.meta.url));
+  const env: NodeJS.ProcessEnv = {
+    ...process.env,
+    BLOCKWISE_WORKER_REVISION: revision,
+    BLOCKWISE_ENABLE_PROVIDER_WRITES: "true",
+    SUPABASE_URL: "https://worker-preflight.invalid",
+    SUPABASE_SECRET_KEY: "preflight-secret",
+    TOKEN_ENCRYPTION_KEY: "preflight-secret",
+  };
+  delete env.STRIPE_SECRET_KEY;
+
+  const result = spawnSync(
+    process.execPath,
+    [
+      "--disable-warning=ExperimentalWarning",
+      "--disable-warning=MODULE_TYPELESS_PACKAGE_JSON",
+      workerPath,
+      "--preflight",
+      "--expect-revision",
+      revision,
+    ],
+    { encoding: "utf8", env },
+  );
+
+  assert.equal(result.status, 0, result.stderr);
+  const report = JSON.parse(result.stdout) as {
+    status: string;
+    runtime: { stripeSecretKeyPresent: boolean };
+  };
+  assert.equal(report.status, "ready");
+  assert.equal(report.runtime.stripeSecretKeyPresent, false);
+});
