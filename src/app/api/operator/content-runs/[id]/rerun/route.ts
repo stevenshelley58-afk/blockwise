@@ -31,7 +31,7 @@ export async function POST(req: Request, context: RouteContext) {
   }
 
   const queued = await queueContentRun({
-    supabase: serviceSupabase as never,
+    researchSupabase: serviceSupabase as never,
     workspaceId: String(run.workspace_id),
     runId: id,
     fromStep: parsed.data.fromStep,
