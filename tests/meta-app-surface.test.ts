@@ -30,7 +30,7 @@ test("publish review state skips approval and submits directly", () => {
   assert.doesNotMatch(panel, /needsApprovalReview/);
   assert.doesNotMatch(panel, /Send for review/);
   assert.doesNotMatch(panel, /requestApproval: true/);
-  assert.match(panel, /Launch 3-day campaign/);
+  assert.match(panel, /Launch campaign/);
   assert.match(panel, /studio-review-creatives/);
 });
 
@@ -70,18 +70,23 @@ test("publish submit shares one readiness gate and advances only after server ac
   assert.doesNotMatch(panel, /Still processing on Meta\. Confirm in Performance shortly\./);
 });
 
-test("Blockwise Campaign preset owns Meta setup and asks for the minimum customer choices", () => {
+test("Blockwise Campaign preset owns Meta setup while customers choose budget and duration", () => {
   const panel = readFileSync("src/components/adstudio/panels/publish-panel.tsx", "utf8");
 
   assert.match(panel, /const STEPS = \["Audience", "Ads", "Budget", "Review", "Live"\]/);
   assert.match(panel, /const BUDGET_PRESETS = \[10, 20, 50\]/);
+  assert.match(panel, /const DURATION_PRESETS = \[3, 7\]/);
   assert.match(panel, /Blockwise Campaign/);
   assert.match(panel, /Managed for you/);
   assert.match(panel, /includeSurroundingSuburbs: true/);
-  assert.match(panel, /end\.setDate\(start\.getDate\(\) \+ 3\)/);
+  assert.match(panel, /Campaign duration/);
+  assert.match(panel, /End on a date/);
+  assert.match(panel, /Run until stopped/);
+  assert.match(panel, /type="date"/);
+  assert.match(panel, /customDurationMode === "ongoing" \? null : customEndTime/);
   assert.match(panel, /Enter amount/);
-  assert.match(panel, /Maximum three-day spend/);
-  assert.doesNotMatch(panel, /Use existing|existingMetaCampaignId|Custom dates|Run until stopped/);
+  assert.match(panel, /Estimated maximum spend/);
+  assert.doesNotMatch(panel, /Use existing|existingMetaCampaignId/);
 });
 
 test("Meta setup API captures concrete lead delivery endpoint config", () => {
