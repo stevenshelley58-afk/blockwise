@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-import * as Sentry from "@sentry/nextjs";
+import * as Sentry from "@sentry/core";
 
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { createSupabaseServiceClient } from "@/lib/supabase/service";

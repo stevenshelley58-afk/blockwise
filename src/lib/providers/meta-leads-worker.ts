@@ -13,6 +13,7 @@ export async function syncMetaLeadsForPlanById(input: {
   workspaceId: string;
   planId: string;
   since?: string | null;
+  fetchImpl?: typeof fetch;
 }) {
   const plan = await loadMetaPublishPlan(input.serviceSupabase, {
     workspaceId: input.workspaceId,
@@ -36,6 +37,7 @@ export async function syncMetaLeadsForPlanById(input: {
     leadDestination: plan.setup.leadDestination,
     repository: createSupabaseMetaLeadRepository(input.serviceSupabase, plan.legacyCampaignId),
     since: input.since,
+    fetchImpl: input.fetchImpl,
   });
 }
 

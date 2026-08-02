@@ -160,15 +160,20 @@ test("billing service ends the trial once and treats Stripe active state as an i
   assert.equal(service.workspaceUpdates.length, 0);
 });
 
-test("publish worker persists reconciliation before claim consumption and trial end", () => {
+test("publish worker withholds entitlement, trial end, and visible success until activation finishes", () => {
   const source = readFileSync("src/lib/providers/meta-publish-worker.ts", "utf8");
   assert.match(
     source,
-    /updateMetaPublishPlanExecution\(input\.serviceSupabase, completedPlan\)[\s\S]*finalizeFreeLiveConversion\(input, completedPlan, freeLive\)/,
+    /updateMetaPublishPlanExecution\(input\.serviceSupabase, durableProviderPlan\)[\s\S]*finalizeFreeLiveConversion\(input, completedPlan, freeLive\)[\s\S]*updateMetaPublishPlanExecution\(input\.serviceSupabase, completedPlan\)/,
   );
   assert.match(
     source,
-    /consumeMetaFreeLiveClaim\([\s\S]*endTrialAfterFirstLiveCampaign\(/,
+    /await activateFreeCampaign\(input, completedPlan\)[\s\S]*consumeMetaFreeLiveClaim\([\s\S]*endTrialAfterFirstLiveCampaign\(/,
+  );
+  assert.doesNotMatch(source, /if \(freeLive\.kind === "free_campaign"\) \{\s*await activateFreeCampaign/);
+  assert.match(
+    source,
+    /const applyingMutation = \{[\s\S]*status: "applying"[\s\S]*await updateMutation\(input\.serviceSupabase, applyingMutation\)[\s\S]*onCheckpoint:[\s\S]*updateMutation\(input\.serviceSupabase/,
   );
   assert.match(
     source,
@@ -180,6 +185,18 @@ test("publish worker persists reconciliation before claim consumption and trial 
   );
   assert.match(source, /onCheckpoint:[\s\S]*updateMetaPublishPlanExecution/);
   assert.match(source, /if \(input\.plan\.status === "paused_live"\)[\s\S]*finalizeFreeLiveConversion/);
+  assert.match(
+    source,
+    /if \(input\.plan\.status === "approved"\)[\s\S]*const retryablePlan:[\s\S]*\.\.\.input\.plan,[\s\S]*lastError:[\s\S]*throw error/,
+  );
+  assert.match(
+    source,
+    /status: input\.plan\.status === "publishing" \? "publishing" : "approved"/,
+  );
+  assert.doesNotMatch(
+    source,
+    /if \(input\.plan\.status === "approved"\)[\s\S]{0,400}status: "failed"/,
+  );
 });
 
 function workspaceBillingService() {

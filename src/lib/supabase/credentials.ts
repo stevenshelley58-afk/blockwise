@@ -52,7 +52,12 @@ export function supabaseServerCredentialHeaders(
 export function createSupabaseServerFetch(
   credential: SupabaseServerCredential,
   fetchImpl: typeof fetch = fetch,
+  timeoutMs = 30_000,
 ): typeof fetch {
+  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
+    throw new Error("Supabase server request timeout must be positive.");
+  }
+
   return async (input, init) => {
     const headers = new Headers(
       init?.headers ?? (typeof Request !== "undefined" && input instanceof Request ? input.headers : undefined),
@@ -65,6 +70,22 @@ export function createSupabaseServerFetch(
       headers.delete("Authorization");
     }
 
-    return fetchImpl(input, { ...init, headers });
+    const inheritedSignal = init?.signal ?? (
+      typeof Request !== "undefined" && input instanceof Request ? input.signal : undefined
+    );
+    const timeoutController = new AbortController();
+    const timeout = setTimeout(
+      () => timeoutController.abort(new Error(`Supabase request timed out after ${timeoutMs}ms.`)),
+      timeoutMs,
+    );
+    const signal = inheritedSignal
+      ? AbortSignal.any([inheritedSignal, timeoutController.signal])
+      : timeoutController.signal;
+
+    try {
+      return await fetchImpl(input, { ...init, headers, signal });
+    } finally {
+      clearTimeout(timeout);
+    }
   };
 }

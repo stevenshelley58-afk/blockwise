@@ -21,6 +21,7 @@ import {
   executeMetaPlanMutation,
 } from "./meta-mutations.ts";
 import { DEFAULT_META_GRAPH_VERSION } from "./meta-graph-version.ts";
+import { resolveMetaPageAccessToken } from "./meta-assets.ts";
 import { loadStoredProviderTokens } from "./provider-connections.ts";
 import { deterministicUuid } from "../adstudio/id.ts";
 import {
@@ -71,11 +72,52 @@ export function metaProviderMutationMayHaveOccurred(input: {
   return [...requestCounts].some(([key, count]) => count > (responseCounts.get(key) ?? 0));
 }
 
+/**
+ * Retry provider failures that are explicitly transient or have no response.
+ * A rate limit or failed GET is safe to retry without claiming that Meta
+ * created an object; an unanswered POST is handled separately as ambiguous.
+ */
+export function metaProviderFailureShouldRetry(input: {
+  requestLog: MetaProviderLogEntry[];
+  responseLog: MetaProviderLogEntry[];
+}) {
+  for (const response of input.responseLog) {
+    if (response.status === 429 || (typeof response.status === "number" && response.status >= 500)) {
+      return true;
+    }
+    const body = response.response;
+    if (body && typeof body === "object" && !Array.isArray(body)) {
+      const error = (body as Record<string, unknown>).error;
+      if (
+        error &&
+        typeof error === "object" &&
+        !Array.isArray(error) &&
+        (error as Record<string, unknown>).is_transient === true
+      ) {
+        return true;
+      }
+    }
+  }
+
+  const responseCounts = new Map<string, number>();
+  for (const response of input.responseLog) {
+    const key = `${response.method}:${response.step}:${response.path}`;
+    responseCounts.set(key, (responseCounts.get(key) ?? 0) + 1);
+  }
+  const requestCounts = new Map<string, number>();
+  for (const request of input.requestLog) {
+    const key = `${request.method}:${request.step}:${request.path}`;
+    requestCounts.set(key, (requestCounts.get(key) ?? 0) + 1);
+  }
+  return [...requestCounts].some(([key, count]) => count > (responseCounts.get(key) ?? 0));
+}
+
 export async function executeMetaPublishPlanById(input: {
   serviceSupabase: SupabaseServiceClient;
   workspaceId: string;
   planId: string;
   fetchImpl?: typeof fetch;
+  compensationFetchImpl?: typeof fetch;
   billingGateway?: FirstLiveCampaignStripeGateway;
 }) {
   const plan = await loadMetaPublishPlan(input.serviceSupabase, {
@@ -100,6 +142,7 @@ export async function executeMetaPublishPlanById(input: {
     serviceSupabase: input.serviceSupabase,
     plan,
     fetchImpl: input.fetchImpl,
+    compensationFetchImpl: input.compensationFetchImpl,
     billingGateway: input.billingGateway,
   });
 }
@@ -108,6 +151,7 @@ export async function executeMetaPublishPlan(input: {
   serviceSupabase: SupabaseServiceClient;
   plan: MetaPublishPlan;
   fetchImpl?: typeof fetch;
+  compensationFetchImpl?: typeof fetch;
   billingGateway?: FirstLiveCampaignStripeGateway;
 }) {
   if (
@@ -122,21 +166,17 @@ export async function executeMetaPublishPlan(input: {
   try {
     freeLive = await prepareFreeLiveConversion(input);
   } catch (error) {
-    // Pre-flight failures (billing lookup, claim identity, claim reservation)
-    // used to escape without touching the plan: it sat in "approved" with no
-    // last_error anywhere while the worker crash-looped invisibly. Record the
-    // failure on first execution so the UI and operators see the real reason,
-    // then rethrow for the queue's retry accounting. Plans that already
-    // published (publishing/paused_live) are never rewritten to failed here.
+    // Record the exact pre-flight failure, but leave an approved plan eligible
+    // for the queue's remaining attempts. fail_job_v2 is the sole authority
+    // that moves it to failed when the final attempt is exhausted.
     if (input.plan.status === "approved") {
-      const failedPlan: MetaPublishPlan = {
+      const retryablePlan: MetaPublishPlan = {
         ...input.plan,
-        status: "failed",
         lastError: error instanceof Error ? error.message : "Meta publish pre-flight failed.",
         updatedAt: new Date().toISOString(),
       };
-      await updateMetaPublishPlanExecution(input.serviceSupabase, failedPlan);
-      await persistPublishAudit(input.serviceSupabase, failedPlan);
+      await updateMetaPublishPlanExecution(input.serviceSupabase, retryablePlan);
+      await persistPublishAudit(input.serviceSupabase, retryablePlan);
     }
     throw error;
   }
@@ -165,12 +205,18 @@ export async function executeMetaPublishPlan(input: {
     if (!tokens.accessToken) {
       throw new Error("Meta access token is missing.");
     }
+    const pageAccessToken = await resolveMetaPageAccessToken({
+      accessToken: tokens.accessToken,
+      pageId: publishingPlan.setup.pageId,
+      fetchImpl: input.fetchImpl,
+    });
 
     // Resolve storage-sourced creative images to inline bytes in memory only —
     // executionPlan is never persisted, so image payloads stay out of the DB.
     const executionPlan = await resolveStorageCreativeAssets(input.serviceSupabase, publishingPlan);
     const result = await createMetaExecutionAdapter(publishingPlan.adapter).publish(executionPlan, {
       accessToken: tokens.accessToken,
+      pageAccessToken,
       fetchImpl: input.fetchImpl,
       reconcileMissingObjects: input.plan.status === "publishing",
       onCheckpoint: async (checkpoint) => {
@@ -183,10 +229,19 @@ export async function executeMetaPublishPlan(input: {
     providerResult = result;
     completedPlan = applyMetaPublishExecutionResult(publishingPlan, result);
 
-    await updateMetaPublishPlanExecution(input.serviceSupabase, completedPlan);
-    await persistPublishAudit(input.serviceSupabase, completedPlan);
+    // Provider objects are durable, but "paused_live" is user-visible success.
+    // Keep the plan in publishing until claim/billing/activation finalization
+    // has also succeeded; retries reconcile the object IDs persisted here.
+    const durableProviderPlan: MetaPublishPlan = completedPlan.status === "paused_live"
+      ? { ...completedPlan, status: "publishing" }
+      : completedPlan;
+    await updateMetaPublishPlanExecution(input.serviceSupabase, durableProviderPlan);
+    await persistPublishAudit(input.serviceSupabase, durableProviderPlan);
     if (completedPlan.status !== "paused_live") {
-      if (metaProviderMutationMayHaveOccurred(completedPlan)) {
+      if (
+        metaProviderMutationMayHaveOccurred(completedPlan) ||
+        metaProviderFailureShouldRetry(completedPlan)
+      ) {
         throw new Error(completedPlan.lastError ?? "Meta publish requires provider reconciliation.");
       }
       if (freeLive) {
@@ -221,25 +276,26 @@ export async function executeMetaPublishPlan(input: {
         console.error("[meta-publish] free-live reservation release failed:", releaseError);
       });
     }
-    const failedPlan: MetaPublishPlan = {
+    const retryablePlan: MetaPublishPlan = {
       ...publishingPlan,
-      status: "failed",
+      status: input.plan.status === "publishing" ? "publishing" : "approved",
       lastError: error instanceof Error ? error.message : "Meta publish worker failed.",
       updatedAt: new Date().toISOString(),
     };
-    await updateMetaPublishPlanExecution(input.serviceSupabase, failedPlan);
-    await persistPublishAudit(input.serviceSupabase, failedPlan);
+    await updateMetaPublishPlanExecution(input.serviceSupabase, retryablePlan);
+    await persistPublishAudit(input.serviceSupabase, retryablePlan);
     throw error;
   }
 
-  // Provider reconciliation is durable before the global claim is consumed.
-  // Billing finalization intentionally lives outside the provider failure
-  // catch: a Stripe retry must never rewrite a successful Meta plan to failed
-  // or release a claim for objects that now exist.
+  // Provider reconciliation is durable before finalization. User-visible
+  // success is persisted only after claim/billing/free-campaign activation is
+  // complete, so the UI cannot report a paused campaign as live.
   if (!completedPlan) {
     throw new Error("Meta publish completed without a reconciled plan.");
   }
   await finalizeFreeLiveConversion(input, completedPlan, freeLive);
+  await updateMetaPublishPlanExecution(input.serviceSupabase, completedPlan);
+  await persistPublishAudit(input.serviceSupabase, completedPlan);
   await queueReportingRefreshAfterProviderChange(completedPlan.workspaceId, "publish");
   return completedPlan;
 }
@@ -381,8 +437,11 @@ async function backfillMetaFreeLiveClaimIdentity(
   const fetchImpl = input.fetchImpl ?? fetch;
   const url = new URL(`https://graph.facebook.com/${DEFAULT_META_GRAPH_VERSION}/${adAccountId}`);
   url.searchParams.set("fields", "business{id,name}");
-  url.searchParams.set("access_token", tokens.accessToken);
-  const response = await fetchImpl(url.toString(), { method: "GET" });
+  const response = await fetchImpl(url.toString(), {
+    method: "GET",
+    headers: { authorization: `Bearer ${tokens.accessToken}` },
+    signal: AbortSignal.timeout(30_000),
+  });
   const payload = (await response.json().catch(() => ({}))) as {
     business?: { id?: string; name?: string | null } | null;
   };
@@ -400,7 +459,7 @@ async function backfillMetaFreeLiveClaimIdentity(
     metaBusinessId: businessId,
     ...(payload.business?.name ? { metaBusinessName: payload.business.name } : {}),
   };
-  await input.serviceSupabase
+  const { error: updateError } = await input.serviceSupabase
     .from("provider_connections")
     .update({
       metadata_json: { ...(row.metadata_json ?? {}), meta: patchedMeta },
@@ -409,6 +468,9 @@ async function backfillMetaFreeLiveClaimIdentity(
     .eq("id", input.plan.providerConnectionId)
     .eq("workspace_id", input.plan.workspaceId)
     .eq("provider", "meta");
+  if (updateError) {
+    throw new Error(`Meta Business Portfolio backfill could not be saved: ${updateError.message}`);
+  }
 
   return resolveMetaFreeLiveClaimIdentity({
     metadata: { meta: patchedMeta },
@@ -420,6 +482,8 @@ async function finalizeFreeLiveConversion(
   input: {
     serviceSupabase: SupabaseServiceClient;
     plan: MetaPublishPlan;
+    fetchImpl?: typeof fetch;
+    compensationFetchImpl?: typeof fetch;
     billingGateway?: FirstLiveCampaignStripeGateway;
   },
   completedPlan: MetaPublishPlan,
@@ -429,6 +493,12 @@ async function finalizeFreeLiveConversion(
   if (completedPlan.status !== "paused_live" || !completedPlan.reconciledObjects.campaignId) {
     throw new Error("Meta publish did not reconcile a campaign, so the free live claim was not consumed.");
   }
+
+  // Activation is the irreversible provider boundary for a free publish. Do
+  // not consume the once-only claim or end a legacy trial until every child
+  // and the campaign have activated successfully. The deterministic mutation
+  // makes this safe to resume if claim or billing finalization later retries.
+  await activateFreeCampaign(input, completedPlan);
 
   const consumption = await consumeMetaFreeLiveClaim({
     service: input.serviceSupabase,
@@ -451,9 +521,6 @@ async function finalizeFreeLiveConversion(
       gateway: input.billingGateway,
     });
   }
-  if (freeLive.kind === "free_campaign") {
-    await activateFreeCampaign(input, completedPlan);
-  }
   await recordWorkspaceFunnelEventBestEffort(input.serviceSupabase, {
     eventName: "free_campaign_launched",
     workspaceId: completedPlan.workspaceId,
@@ -470,6 +537,7 @@ async function activateFreeCampaign(
   input: {
     serviceSupabase: SupabaseServiceClient;
     fetchImpl?: typeof fetch;
+    compensationFetchImpl?: typeof fetch;
   },
   plan: MetaPublishPlan,
 ) {
@@ -515,21 +583,44 @@ async function activateFreeCampaign(
   );
   if (mutation.status === "applied") return;
 
+  const applyingMutation = {
+    ...mutation,
+    status: "applying" as const,
+    lastError: null,
+    updatedAt: new Date().toISOString(),
+  };
+  await updateMutation(input.serviceSupabase, applyingMutation);
+
   const tokens = await loadStoredProviderTokens(
     input.serviceSupabase,
     plan.providerConnectionId,
   );
   if (!tokens.accessToken) {
-    throw new Error("Meta access token is missing for the free campaign activation.");
+    const message = "Meta access token is missing for the free campaign activation.";
+    await updateMutation(input.serviceSupabase, {
+      ...applyingMutation,
+      status: "failed",
+      lastError: message,
+      updatedAt: new Date().toISOString(),
+    });
+    throw new Error(message);
   }
   const result = await executeMetaPlanMutation({
-    mutation,
+    mutation: applyingMutation,
     approvalStatus: "approved",
     accessToken: tokens.accessToken,
     fetchImpl: input.fetchImpl,
+    compensationFetchImpl: input.compensationFetchImpl,
+    onCheckpoint: async (checkpoint) => {
+      await updateMutation(input.serviceSupabase, {
+        ...applyingMutation,
+        ...checkpoint,
+        updatedAt: new Date().toISOString(),
+      });
+    },
   });
   const updated = {
-    ...mutation,
+    ...applyingMutation,
     status: result.status,
     requestLog: result.requestLog,
     responseLog: result.responseLog,

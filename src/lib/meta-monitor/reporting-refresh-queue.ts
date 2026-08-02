@@ -16,6 +16,7 @@ export async function queueReportingRefresh(input: {
   const rangeKey = reportingRangeKey(input.range, input.customRange);
 
   return enqueueQueuedJob({
+    workspaceId: input.workspaceId,
     kind: "reporting.refresh",
     payload: {
       workspaceId: input.workspaceId,

@@ -34,6 +34,42 @@ test("publish review state skips approval and submits directly", () => {
   assert.match(panel, /studio-review-creatives/);
 });
 
+test("publish submit shares one readiness gate and advances only after server acceptance", () => {
+  const panel = readFileSync("src/components/adstudio/panels/publish-panel.tsx", "utf8");
+  const statusRoute = readFileSync("src/app/api/integrations/meta/publish-plans/[id]/route.ts", "utf8");
+  const publishRoute = readFileSync("src/app/api/adstudio/export-packages/[id]/publish/route.ts", "utf8");
+  const queue = readFileSync("src/lib/providers/meta-publish-queue.ts", "utf8");
+  const readinessGate = panel.match(/const publishReady = [\s\S]*?;/)?.[0] ?? "";
+
+  assert.match(readinessGate, /allMet/);
+  assert.match(readinessGate, /campaignStepReady/);
+  assert.match(readinessGate, /creativeStepReady/);
+  assert.match(readinessGate, /leadFormStepReady/);
+  assert.match(readinessGate, /destinationReady/);
+  assert.match(readinessGate, /budgetStepReady/);
+  assert.match(panel, /async function handlePublishLive\(\): Promise<boolean> \{[\s\S]*?if \(!publishReady\) return false;/);
+  assert.match(panel, /setPublishPhase\(planStatus === "paused_live" \? "live" : "creating"\);\s*return true;/);
+  assert.match(panel, /catch \(error\) \{[\s\S]*?setPublishPhase\("failed"\);\s*return false;/);
+  assert.match(panel, /const accepted = await handlePublishLive\(\);\s*if \(accepted\) \{\s*setStepIndex/);
+  assert.match(panel, /disabled=\{stepIndex === 4 \? \(!publishReady \|\| publishing\) : continueDisabled\}/);
+  assert.doesNotMatch(panel, /void handlePublishLive\(\);\s*setStepIndex/);
+  assert.equal(panel.match(/\/api\/integrations\/meta\/publish-plans/g)?.length, 1);
+  assert.match(panel, /plan\.status === "failed" \|\| plan\.queueStatus === "failed"/);
+  assert.match(statusRoute, /queueStatus: queue\?\.status/);
+  assert.match(statusRoute, /queueError: queue\?\.lastError/);
+  assert.match(
+    publishRoute,
+    /existingPlan\?\.status === "approved"[\s\S]*hasActiveMetaPublishPlanExecution[\s\S]*existingApprovedJobActive/,
+  );
+  assert.match(
+    publishRoute,
+    /metaPublishPlan\.status === "approved" \|\| metaPublishPlan\.status === "publishing"/,
+  );
+  assert.match(queue, /\.eq\("status", "approved"\)/);
+  assert.doesNotMatch(queue, /\.in\("status", \["approved", "publishing"\]\)/);
+  assert.doesNotMatch(panel, /Still processing on Meta\. Confirm in Performance shortly\./);
+});
+
 test("publish budget defaults to the free three-day campaign and supports paid schedules", () => {
   const panel = readFileSync("src/components/adstudio/panels/publish-panel.tsx", "utf8");
 

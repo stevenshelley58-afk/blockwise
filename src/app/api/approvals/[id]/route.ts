@@ -62,22 +62,25 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
   let queueJobId: string | null = null;
 
-  if (body.status === "approved") {
-    try {
-      queueJobId = await queueApprovedTarget({
-        serviceSupabase,
-        approval: currentApproval as ApprovalTarget,
-        workspaceId: access.access.workspaceId,
-        userId: access.access.userId,
-      });
-    } catch (error) {
-      return NextResponse.json(
-        { error: error instanceof Error ? error.message : "Unable to queue approval execution." },
-        { status: 502 },
-      );
-    }
+  if (
+    body.status === "approved" &&
+    isProviderWriteTarget((currentApproval as ApprovalTarget).target_type) &&
+    !providerWritesEnabled()
+  ) {
+    await persistProviderWritesDisabledState({
+      serviceSupabase,
+      approval: currentApproval as ApprovalTarget,
+      workspaceId: access.access.workspaceId,
+      userId: access.access.userId,
+    });
+    return NextResponse.json(
+      { error: "Provider writes are disabled by BLOCKWISE_ENABLE_PROVIDER_WRITES; approval was not queued." },
+      { status: 503 },
+    );
   }
 
+  // Approval is authoritative worker input. Commit it before enqueueing so a
+  // fast worker can never observe the old requested state.
   const { data: approval, error } = await serviceSupabase
     .from("approval_requests")
     .update({
@@ -107,6 +110,32 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     },
   });
 
+  if (body.status === "approved") {
+    try {
+      queueJobId = await queueApprovedTarget({
+        serviceSupabase,
+        approval: approval as ApprovalTarget,
+        workspaceId: access.access.workspaceId,
+        userId: access.access.userId,
+      });
+    } catch (queueError) {
+      const message = queueError instanceof Error ? queueError.message : "Unable to queue approval execution.";
+      await serviceSupabase.from("audit_logs").insert({
+        workspace_id: access.access.workspaceId,
+        actor_profile_id: access.access.userId,
+        action: "approval_execution_queue_failed",
+        target_type: "approval_request",
+        target_id: approval.id,
+        metadata: {
+          targetType: approval.target_type,
+          targetId: approval.target_id,
+          message,
+        },
+      });
+      return NextResponse.json({ error: message, approval }, { status: 502 });
+    }
+  }
+
   return NextResponse.json({
     approval,
     queueJobId,
@@ -129,6 +158,13 @@ async function queueApprovedTarget(input: {
   }
 
   if (input.approval.target_type === "meta_publish_plan_mutation") {
+    const { error } = await input.serviceSupabase
+      .from("meta_publish_plan_mutations")
+      .update({ status: "approved", last_error: null, updated_at: new Date().toISOString() })
+      .eq("workspace_id", input.workspaceId)
+      .eq("id", input.approval.target_id);
+    if (error) throw new Error(error.message);
+
     const queued = await queueMetaMutationExecution({
       workspaceId: input.workspaceId,
       mutationId: input.approval.target_id,
@@ -148,8 +184,8 @@ async function queueApprovedTarget(input: {
       approvalRequestId: input.approval.id,
       updatedAt: new Date().toISOString(),
     };
-    const queued = await queueMetaPublishPlanExecution(approvedPlan);
     await persistMetaPublishPlan(input.serviceSupabase, approvedPlan, input.userId);
+    const queued = await queueMetaPublishPlanExecution(approvedPlan);
 
     return queued.id ?? null;
   }

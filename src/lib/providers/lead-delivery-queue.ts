@@ -5,6 +5,7 @@ export async function queueLeadDeliveryAttempt(input: {
   attemptId: string;
 }) {
   return enqueueQueuedJob({
+    workspaceId: input.workspaceId,
     kind: "deliver.lead",
     payload: { workspaceId: input.workspaceId, attemptId: input.attemptId },
     maxAttempts: 3,

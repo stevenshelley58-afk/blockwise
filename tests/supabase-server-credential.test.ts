@@ -98,6 +98,22 @@ test("legacy transport preserves exact apikey and bearer headers", async () => {
   assert.equal(captured[1].get("Authorization"), "Bearer unrelated-user-jwt");
 });
 
+test("server transport bounds requests that never resolve", async () => {
+  const credential = resolveSupabaseServerCredential({ SUPABASE_SECRET_KEY: "sb_secret_test" })!;
+  const wrapped = createSupabaseServerFetch(
+    credential,
+    async (_input, init) => new Promise((_resolve, reject) => {
+      init?.signal?.addEventListener("abort", () => reject(init.signal?.reason), { once: true });
+    }),
+    10,
+  );
+
+  await assert.rejects(
+    wrapped("https://project.supabase.co/rest/v1/rpc/heartbeat_job", { method: "POST" }),
+    /timed out|timeout|aborted/i,
+  );
+});
+
 test("service client REST, Storage, and Auth admin calls use opaque-safe transport", async () => {
   const requests: Array<{ url: string; headers: Headers }> = [];
   const client = createSupabaseServiceClient({

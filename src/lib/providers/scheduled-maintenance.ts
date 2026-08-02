@@ -106,6 +106,7 @@ export async function queueScheduledProviderMaintenance(service: ServiceSupabase
         return await query as unknown as ScheduledPage<ScheduledConnectionRow>;
       },
       handlePage: async (rows) => recordResults(await Promise.allSettled(rows.map((row) => enqueueQueuedJob({
+        workspaceId: row.workspace_id,
         kind: "check.meta.token-health",
         payload: { workspaceId: row.workspace_id, connectionId: row.id },
         maxAttempts: 3,
@@ -125,6 +126,7 @@ export async function queueScheduledProviderMaintenance(service: ServiceSupabase
         return await query as unknown as ScheduledPage<ScheduledConnectionRow>;
       },
       handlePage: async (rows) => recordResults(await Promise.allSettled(rows.map((row) => enqueueQueuedJob({
+        workspaceId: row.workspace_id,
         kind: "sync.provider.reports",
         payload: { workspaceId: row.workspace_id, provider: "google" },
         maxAttempts: 3,
@@ -169,6 +171,7 @@ export async function queueScheduledPerformanceReadModels(service: ServiceSupaba
             return true;
           });
         recordResults(await Promise.allSettled(workspaceIds.map((workspaceId) => enqueueQueuedJob({
+          workspaceId,
           kind: "reporting.refresh",
           payload: { workspaceId, range: "last_30" },
           maxAttempts: 3,
@@ -187,6 +190,7 @@ export async function queueScheduledPerformanceReadModels(service: ServiceSupaba
         return await query as unknown as ScheduledPage<{ id: string }>;
       },
       handlePage: async (rows) => recordResults(await Promise.allSettled(rows.map((row) => enqueueQueuedJob({
+        workspaceId: row.id,
         kind: "reconcile.customer.activation",
         payload: { workspaceId: row.id },
         maxAttempts: 3,
@@ -203,5 +207,7 @@ export async function queueScheduledPerformanceReadModels(service: ServiceSupaba
 }
 
 export async function runScheduledMetaPublishWatchdog() {
-  return recoverStuckMetaPublishPlans({ stuckMinutes: 5, maxAttempts: 3 });
+  // queueMetaPublishPlanExecution owns the three-attempt budget; fail_job_v2
+  // and reap_stale_jobs enforce that cap for both handled failures and crashes.
+  return recoverStuckMetaPublishPlans({ stuckMinutes: 5 });
 }

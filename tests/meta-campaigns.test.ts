@@ -2,10 +2,23 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  fetchEligibleMetaCampaigns,
   fetchMetaTargetingLocations,
+  metaExistingCampaignReuseIssue,
   normalizeEligibleMetaCampaigns,
   normalizeMetaTargetingLocations,
 } from "../src/lib/providers/meta-campaigns.ts";
+
+test("free three-day publishing requires an isolated new Meta campaign", () => {
+  assert.match(metaExistingCampaignReuseIssue({ billingAccessState: "unbilled" }) ?? "", /must use a new Meta campaign/);
+  assert.match(metaExistingCampaignReuseIssue({
+    billingAccessState: "trialing",
+    billingOfferKey: "self_serve_au_monthly",
+    billingOfferVersion: "legacy-offer",
+    stripeSubscriptionStatus: "trialing",
+  }) ?? "", /must use a new Meta campaign/);
+  assert.equal(metaExistingCampaignReuseIssue({ billingAccessState: "active" }), null);
+});
 
 test("normalizeEligibleMetaCampaigns keeps reusable lead campaigns only", () => {
   const campaigns = normalizeEligibleMetaCampaigns([
@@ -15,6 +28,7 @@ test("normalizeEligibleMetaCampaigns keeps reusable lead campaigns only", () => 
       objective: "OUTCOME_LEADS",
       effective_status: "ACTIVE",
       special_ad_categories: ["HOUSING"],
+      daily_budget: "2500",
       updated_time: "2026-07-20T00:00:00Z",
     },
     {
@@ -50,6 +64,33 @@ test("normalizeEligibleMetaCampaigns keeps reusable lead campaigns only", () => 
 
   assert.deepEqual(campaigns.map((campaign) => campaign.id), ["lead_paused", "lead_active"]);
   assert.deepEqual(campaigns.map((campaign) => campaign.status), ["paused", "active"]);
+  assert.deepEqual(campaigns.map((campaign) => campaign.budgetMode), ["adset", "campaign"]);
+});
+
+test("fetchEligibleMetaCampaigns requests budget ownership fields", async () => {
+  let requestedUrl = "";
+  const campaigns = await fetchEligibleMetaCampaigns({
+    accessToken: "secret-token",
+    accountId: "123",
+    fetchImpl: async (input) => {
+      requestedUrl = String(input);
+      return new Response(JSON.stringify({
+        data: [{
+          id: "campaign_1",
+          name: "Housing leads",
+          objective: "OUTCOME_LEADS",
+          configured_status: "PAUSED",
+          special_ad_categories: ["HOUSING"],
+          lifetime_budget: "9000",
+        }],
+      }), { status: 200, headers: { "content-type": "application/json" } });
+    },
+  });
+
+  const fields = new URL(requestedUrl).searchParams.get("fields") ?? "";
+  assert.match(fields, /daily_budget/);
+  assert.match(fields, /lifetime_budget/);
+  assert.equal(campaigns[0]?.budgetMode, "campaign");
 });
 
 test("normalizeMetaTargetingLocations keeps unique targetable Australian suburbs", () => {

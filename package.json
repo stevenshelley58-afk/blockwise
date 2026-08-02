@@ -28,6 +28,7 @@
     "seed:test-users": "node scripts/seed-test-users.mjs"
   },
   "dependencies": {
+    "@sentry/core": "^10.69.0",
     "@sentry/nextjs": "^10.69.0",
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.49.8",

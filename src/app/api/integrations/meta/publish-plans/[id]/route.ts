@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { requireWorkspaceAccess } from "@/lib/auth/workspace-access";
 import { loadMetaPublishPlan } from "@/lib/providers/meta-execution";
+import { loadLatestMetaPublishPlanQueueState } from "@/lib/providers/meta-publish-queue";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
@@ -25,7 +26,13 @@ export async function GET(request: NextRequest, context: RouteContext) {
   }
 
   try {
-    const plan = await loadMetaPublishPlan(createSupabaseServiceClient(), {
+    const service = createSupabaseServiceClient();
+    const plan = await loadMetaPublishPlan(service, {
+      workspaceId: access.access.workspaceId,
+      planId: id,
+    });
+    const queue = await loadLatestMetaPublishPlanQueueState({
+      serviceSupabase: service,
       workspaceId: access.access.workspaceId,
       planId: id,
     });
@@ -33,6 +40,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
     return NextResponse.json({
       status: plan.status,
       lastError: plan.lastError,
+      queueStatus: queue?.status ?? null,
+      queueError: queue?.lastError ?? null,
       reconciledObjects: {
         campaigns: plan.reconciledObjects.campaignId ? 1 : 0,
         leadForms: Object.keys(plan.reconciledObjects.leadFormIds).length,

@@ -1,31 +1,28 @@
-# VPS background worker for durable provider and recovery jobs.
+# Canonical VPS deployment for the Supabase job_queue worker.
 #
-# Deployed via Coolify alongside the research stack on /srv/blockwise. Env is
-# supplied from the same deploy .env that feeds the research services.
-#
-# Build context is the repo root (worker/index.ts imports src/lib/**):
-#   docker compose -f worker/docker-compose.worker.yml build
-#
-# Multiple replicas are safe: claim_job uses FOR UPDATE SKIP LOCKED, so no two
-# workers grab the same job. Run 1 replica until throughput demands more.
+# The image is built and preflighted separately, then selected by its full Git
+# SHA tag. There is deliberately no build section or mutable image fallback:
+# Compose must never rebuild or silently select latest during a restart.
 
 services:
   blockwise-worker:
-    build:
-      context: ..
-      dockerfile: worker/Dockerfile
-    image: "${BLOCKWISE_WORKER_IMAGE:-blockwise/worker:latest}"
+    image: "${BLOCKWISE_WORKER_IMAGE:?Set BLOCKWISE_WORKER_IMAGE to blockwise/worker:<full-git-sha>}"
     restart: unless-stopped
+    env_file:
+      - "${BLOCKWISE_WORKER_ENV_FILE:?Set BLOCKWISE_WORKER_ENV_FILE to the absolute worker env path}"
     environment:
-      NEXT_PUBLIC_SUPABASE_URL: ${SUPABASE_URL}
-      SUPABASE_URL: ${SUPABASE_URL}
-      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
-      TOKEN_ENCRYPTION_KEY: ${TOKEN_ENCRYPTION_KEY}
-      # Tuning (all have safe defaults in worker/index.ts)
+      BLOCKWISE_WORKER_EXPECTED_REVISION: "${BLOCKWISE_WORKER_EXPECTED_REVISION:?Set the full expected Git SHA}"
       WORKER_POLL_IDLE_MS: ${WORKER_POLL_IDLE_MS:-3000}
       WORKER_POLL_BUSY_MS: ${WORKER_POLL_BUSY_MS:-250}
       WORKER_LEASE_SECONDS: ${WORKER_LEASE_SECONDS:-600}
+      WORKER_HEARTBEAT_INTERVAL_MS: ${WORKER_HEARTBEAT_INTERVAL_MS:-200000}
       WORKER_REAP_INTERVAL_MS: ${WORKER_REAP_INTERVAL_MS:-60000}
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 30s
     logging:
       driver: json-file
       options:
