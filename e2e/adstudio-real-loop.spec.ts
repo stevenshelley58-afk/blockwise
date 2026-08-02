@@ -211,6 +211,7 @@ describeAdStudioRealLoop("Ad Studio real loop", () => {
     );
 
     await openPanel(page, "Publish");
+    await assertBlockwiseCampaignPreset(page);
     await exportCreatives(page);
   });
 });
@@ -251,6 +252,25 @@ async function openNewAd(page: Page) {
   const browse = page.getByRole("button", { name: /browse|create new/i }).first();
   await expect(browse).toBeEnabled({ timeout: 30_000 });
   await browse.click();
+}
+
+async function assertBlockwiseCampaignPreset(page: Page) {
+  for (const viewport of [
+    { width: 1440, height: 900 },
+    { width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await expect(page.getByRole("heading", { name: "Choose your audience" })).toBeVisible();
+    await expect(page.getByText("Blockwise Campaign", { exact: true })).toBeVisible();
+    await expect(page.getByText("Managed for you", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: /use existing|create new/i })).toHaveCount(0);
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth),
+      `Blockwise Campaign should not overflow at ${viewport.width}x${viewport.height}`,
+    ).toBe(true);
+  }
+  await expect(page.locator(".studio-publish-mobile-progress")).toHaveAttribute("aria-label", "Step 1 of 5");
+  await page.setViewportSize({ width: 1440, height: 900 });
 }
 
 // Async recovery: poll the jobs endpoint with the page's session until the
