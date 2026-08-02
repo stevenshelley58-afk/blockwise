@@ -228,12 +228,7 @@ export function buildMetaPlanIdempotencyKey(input: {
   adapter: MetaExecutionAdapter;
   approvalRequestId?: string | null;
   existingMetaCampaignId?: string | null;
-  variantIds?: string[];
 }) {
-  const selectedVariants = [...new Set(input.variantIds ?? [])].sort();
-  const selectionKey = selectedVariants.length > 0
-    ? `creatives_${createHash("sha256").update(selectedVariants.join(":")).digest("hex").slice(0, 16)}`
-    : "creatives_all";
   return [
     "meta_publish",
     input.workspaceId,
@@ -241,7 +236,6 @@ export function buildMetaPlanIdempotencyKey(input: {
     input.adapter,
     input.approvalRequestId ?? "draft",
     input.existingMetaCampaignId ? `campaign_${input.existingMetaCampaignId}` : "campaign_new",
-    selectionKey,
   ].join(":");
 }
 
@@ -275,7 +269,6 @@ export function buildMetaPublishPlan(input: {
     adapter,
     approvalRequestId: input.approvalRequestId,
     existingMetaCampaignId: input.existingMetaCampaignId,
-    variantIds: abTest ? selectedVariantIds : undefined,
   });
   const campaign: MetaPublishCampaignPlan = {
     localId: "campaign_main",
@@ -426,26 +419,6 @@ export function applyMetaPublishExecutionResult(
   return {
     ...plan,
     ...result,
-  };
-}
-
-export function buildMetaPublishTaskOptions(input: {
-  workspaceId: string;
-  planId: string;
-  idempotencyKey: string;
-  /**
-   * Distinguishes submit attempts (use the plan's updatedAt). Without it, a
-   * retry after a failed run reuses the trigger.dev idempotency key and gets
-   * the cached original run back — nothing executes and the plan sits at
-   * "approved" forever. The concurrencyKey still serialises runs per plan.
-   */
-  attemptKey?: string | null;
-}) {
-  return {
-    idempotencyKey: input.attemptKey ? `${input.idempotencyKey}:${input.attemptKey}` : input.idempotencyKey,
-    concurrencyKey: `meta-publish:${input.workspaceId}:${input.idempotencyKey}`,
-    tags: ["meta-publish", input.workspaceId, input.planId],
-    maxAttempts: 3,
   };
 }
 

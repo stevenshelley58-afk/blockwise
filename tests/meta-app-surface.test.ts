@@ -34,12 +34,11 @@ test("publish review state skips approval and submits directly", () => {
   assert.match(panel, /studio-review-creatives/);
 });
 
-test("publish budget defaults to the free three-day campaign and supports paid schedules", () => {
+test("publish budget supports presets, custom dates, and campaigns without an end date", () => {
   const panel = readFileSync("src/components/adstudio/panels/publish-panel.tsx", "utf8");
 
   assert.match(panel, /const BUDGET_PRESETS = \[10, 20, 50\]/);
-  assert.match(panel, /const DURATION_PRESETS = \[3, 7, 14, 30\]/);
-  assert.match(panel, /useState<ScheduleMode>\("3"\)/);
+  assert.match(panel, /const DURATION_PRESETS = \[7, 14, 30\]/);
   assert.match(panel, /Enter amount/);
   assert.match(panel, /Custom dates/);
   assert.match(panel, /Run until stopped/);
@@ -106,19 +105,18 @@ test("Ad Studio UI presents the constrained campaign workspace", () => {
   assert.match(adstudio, /Create from the selected template/);
   assert.match(adstudio, /Campaign readiness/);
   assert.match(adstudio, /Export creatives/);
-  assert.match(adstudio, /const NAV_ITEMS:[\s\S]*id: "home"[\s\S]*id: "samples"[\s\S]*id: "library"[\s\S]*id: "brand"[\s\S]*id: "edit"[\s\S]*id: "publish"[\s\S]*id: "settings"/);
+  assert.match(adstudio, /const NAV_ITEMS:[\s\S]*id: "home"[\s\S]*id: "samples"[\s\S]*id: "library"[\s\S]*id: "text"[\s\S]*id: "publish"[\s\S]*id: "brand"[\s\S]*id: "settings"/);
   const navItems = adstudio.match(/const NAV_ITEMS:[\s\S]*?\];/)?.[0] ?? "";
-  const mobileNavIds = adstudio.match(/const MOBILE_NAV_IDS[\s\S]*?\);/)?.[0] ?? "";
-  assert.match(mobileNavIds, /"home", "samples", "library", "edit", "publish"/);
-  assert.doesNotMatch(mobileNavIds, /"brand"|"settings"|"campaign"|"design"/);
-  assert.match(navItems, /id: "samples", label: "Create"/);
-  assert.match(navItems, /id: "edit", label: "Edit"/);
-  assert.match(navItems, /id: "publish", label: "Publish"/);
-  assert.match(adstudio, /const MOBILE_NAV = NAV_ITEMS\.filter/);
-  assert.doesNotMatch(adstudio, /label: "Review"/);
+  const mobileNav = adstudio.match(/const MOBILE_NAV:[\s\S]*?\];/)?.[0] ?? "";
+  assert.match(mobileNav, /id: "home"[\s\S]*id: "samples"[\s\S]*id: "library"[\s\S]*id: "text"[\s\S]*id: "publish"/);
+  assert.doesNotMatch(mobileNav, /id: "brand"|id: "settings"/);
+  assert.match(mobileNav, /label: "Create"/);
+  assert.match(mobileNav, /label: "Review"/);
+  assert.doesNotMatch(mobileNav, /id: "campaign"/);
+  assert.doesNotMatch(mobileNav, /id: "design"/);
   assert.doesNotMatch(adstudio, /const ADVANCED_NAV_ITEMS/);
   assert.doesNotMatch(adstudio, /label: "Ad"/);
-  assert.match(navItems, /id: "brand", label: "Brand Pack"/);
+  assert.match(adstudio, /label: "Brand Pack"/);
   assert.doesNotMatch(navItems, /label: "Brand"[,}]/);
   assert.doesNotMatch(navItems, /label: "Design"/);
   assert.match(adstudio, /studio-home-shell/);
@@ -133,14 +131,17 @@ test("Ad Studio UI presents the constrained campaign workspace", () => {
   assert.doesNotMatch(adstudio, /setPlatform\("google"\)/);
 });
 
-test("Trigger includes scheduled Meta lead sync and token health checks", () => {
-  const trigger = readFileSync("trigger/meta-publish.ts", "utf8");
+test("Vercel Cron queues scheduled Meta lead sync and token health work for the VPS", () => {
+  const maintenance = readFileSync("src/lib/providers/scheduled-maintenance.ts", "utf8");
+  const worker = readFileSync("worker/index.ts", "utf8");
+  const vercel = readFileSync("vercel.json", "utf8");
 
-  assert.match(trigger, /schedules\.task/);
-  assert.match(trigger, /sync\.meta\.leads\.scheduled/);
-  assert.match(trigger, /check\.meta\.token-health\.scheduled/);
-  assert.match(trigger, /runScheduledMetaLeadSyncs/);
-  assert.match(trigger, /runScheduledMetaTokenHealthChecks/);
+  assert.match(maintenance, /queueScheduledMetaLeadSyncs/);
+  assert.match(maintenance, /check\.meta\.token-health/);
+  assert.match(worker, /case "sync\.meta\.leads"/);
+  assert.match(worker, /case "check\.meta\.token-health"/);
+  assert.match(vercel, /\/api\/cron\/meta-leads/);
+  assert.match(vercel, /\/api\/cron\/provider-maintenance/);
 });
 
 test("operator sidebar does not hardcode Hermes runtime health", () => {

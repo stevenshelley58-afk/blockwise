@@ -160,7 +160,6 @@ export default function PrivacyPolicyPage() {
       <ul>
         <li>Vercel (application hosting)</li>
         <li>Supabase (authentication, application database, encrypted storage)</li>
-        <li>Trigger.dev (background job execution)</li>
         <li>Stripe (Checkout, payment methods, tax calculation, subscriptions, and receipts)</li>
         <li>Cal.com (hosted onboarding scheduling)</li>
         <li>Meta (connected business assets, campaign delivery, lead forms, and reporting)</li>

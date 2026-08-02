@@ -37,6 +37,6 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
   return NextResponse.json({
     planId: plan.planId,
-    triggerRunId: queued.id ?? null,
+    queueJobId: queued.id ?? null,
   });
 }

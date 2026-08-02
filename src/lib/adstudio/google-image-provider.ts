@@ -35,6 +35,7 @@ export function createGoogleImageProvider(
         throw new ProviderRequestError("GOOGLE_AI_API_KEY is not configured.", {
           requestSubmitted: false,
           retryable: false,
+          fallbackEligible: true,
         });
       }
       if (!input.referenceAssets.length) {
@@ -96,6 +97,7 @@ export function createGoogleImageProvider(
         throw new ProviderRequestError("Google image response did not contain an image.", {
           requestSubmitted: true,
           retryable: false,
+          fallbackEligible: true,
           providerRequestId: payload.id,
         });
       }
@@ -154,5 +156,5 @@ function isRetryableProviderStatus(status: number): boolean {
 }
 
 function isProviderFallbackEligibleStatus(status: number): boolean {
-  return status === 402 || isRetryableProviderStatus(status);
+  return [401, 402, 403, 404].includes(status) || isRetryableProviderStatus(status);
 }

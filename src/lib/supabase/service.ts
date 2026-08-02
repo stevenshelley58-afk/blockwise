@@ -28,10 +28,9 @@ export function createSupabaseServiceClient(options: {
     global: {
       fetch: createSupabaseServerFetch(credential, options.fetchImpl),
     },
-    // Trigger.dev currently runs this task on Node 21, which predates the
-    // native WebSocket constructor expected by supabase-js. Service clients
-    // do not subscribe to Realtime, but supabase-js still resolves a transport
-    // during construction, so provide the standard server implementation.
+    // Service clients do not subscribe to Realtime, but supabase-js still
+    // resolves a transport during construction. Provide the standard server
+    // implementation so Vercel and the VPS use the same client contract.
     realtime: {
       transport: WebSocket as unknown as typeof globalThis.WebSocket,
     },

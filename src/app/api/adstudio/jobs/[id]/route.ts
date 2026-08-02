@@ -13,7 +13,7 @@ type RouteContext = {
 
 /**
  * Workspace-scoped status for an async generation job (see
- * trigger/adstudio-generate.ts). Reads run on the user-scoped client, so the
+ * the VPS queue worker). Reads run on the user-scoped client, so the
  * member SELECT policy on adstudio_creative_jobs applies; writes stay
  * service-role only.
  */
@@ -35,7 +35,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   if (!data) return NextResponse.json({ error: "Job not found." }, { status: 404 });
 
-  // A finished job ships its campaign pack inline so the waiting client can
+  // A finished job ships its campaign pack inline so the polling client can
   // render the ad without a second round trip through the campaigns route.
   const campaignPack = data.status === "done" && data.campaign_id
     ? await loadAdStudioCampaignPack(access.supabase, access.access.workspaceId, String(data.campaign_id))

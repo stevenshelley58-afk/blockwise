@@ -39,8 +39,8 @@ test("vision_classification defaults to Gemini vision with an OpenAI fallback", 
 test("client-facing strategy profile uses the premium copywriting model", () => {
   const resolved = resolveModelProfile("high_quality_strategy");
 
-  assert.equal(resolved.primary.provider, "deepseek");
-  assert.equal(resolved.primary.model, "deepseek-chat");
+  assert.equal(resolved.primary.provider, "openai");
+  assert.equal(resolved.primary.model, "gpt-5.5");
   assert.deepEqual(resolved.fallbacks, []);
 });
 
@@ -54,6 +54,15 @@ test("fast image generation defaults to the benchmarked Gemini edit model", () =
 
   assert.equal(resolved.primary.provider, "google");
   assert.equal(resolved.primary.model, "gemini-3.1-flash-image");
+  assert.deepEqual(resolved.fallbacks.map((candidate) => candidate.model), ["gpt-image-2"]);
+});
+
+test("final image generation uses Gemini first and OpenAI only as fallback", () => {
+  const resolved = resolveModelProfile("image_final");
+  assert.equal(resolved.primary.provider, "google");
+  assert.equal(resolved.primary.model, "gemini-3.1-flash-image");
+  assert.equal(resolved.fallbacks[0].provider, "openai");
+  assert.equal(resolved.fallbacks[0].model, "gpt-image-2");
 });
 
 test("resolveEffectiveModelProfile accepts Azure OpenAI deployment overrides", () => {
@@ -104,7 +113,7 @@ test("estimateRunCostUsd accounts for text input, text output, and image units",
     imageUnits: 2,
   });
 
-  assert.equal(cost, 0.447);
+  assert.equal(cost, 0.1365);
 });
 
 test("resolveModelProfileForData removes public-only fallbacks for sensitive client data", () => {

@@ -6,12 +6,7 @@ import { enqueueQueuedJob } from "./job-queue-enqueue.ts";
 import { loadMetaPublishPlan, type MetaPublishPlan } from "./meta-execution.ts";
 
 /**
- * Publish execution runs on the VPS job_queue worker, not Trigger.dev.
- *
- * Trigger.dev stranded publish runs on every deploy (a killed run held the
- * per-plan concurrency slot forever) and its idempotency cache handed dead
- * cached runs back to retries, so a stuck plan could never actually requeue.
- * The Supabase job_queue has neither failure mode: a pending job with the same
+ * Publish execution runs on the VPS job_queue worker. A pending job with the same
  * dedupe key is reused instead of duplicated, fail_job retries with backoff up
  * to max_attempts, and reap_stale_jobs returns jobs held by a dead worker to
  * pending (see supabase/migrations/20260801030000_job_queue.sql).

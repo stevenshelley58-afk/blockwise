@@ -7,7 +7,7 @@ type AuditClient = {
 export type AuditLogEntry = {
   /** null for platform-level actions not scoped to a workspace (e.g. research jobs). */
   workspaceId: string | null;
-  /** null for system actors (trigger.dev tasks, workers running service-role). */
+  /** null for system actors (Vercel crons and VPS workers using service-role). */
   actorProfileId: string | null;
   action: string;
   targetType: string;

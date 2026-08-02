@@ -12,19 +12,13 @@ test("Next client Sentry initialization lives in the native instrumentation clie
   assert.match(client, /replaysOnErrorSampleRate:\s*1\.0/);
 });
 
-test("Trigger runtime initializes and captures task failures through Sentry", () => {
-  const config = readFileSync("trigger.config.ts", "utf8");
-  const helper = readFileSync("trigger/sentry.ts", "utf8");
+test("VPS queue runtime durably records and logs task failures", () => {
+  const worker = readFileSync("worker/index.ts", "utf8");
 
-  assert.match(config, /initTriggerSentry/);
-  assert.match(config, /project:\s*"configured-by-trigger-cli-project-ref"/);
-  assert.doesNotMatch(config, /process\.env\.TRIGGER_PROJECT/);
-  assert.doesNotMatch(config, /BLOCKWISE_TRIGGER_PROJECT_REF/);
-  assert.doesNotMatch(config, /proj_[a-z0-9]+/);
-  assert.match(config, /onFailure:\s*async\s*\(\{\s*error,\s*task\s*\}\)/);
-  assert.match(config, /captureTriggerException\(error,\s*task\)/);
-  assert.doesNotMatch(config, /proj_blockwise_local/);
-  assert.match(helper, /Sentry\.init\(/);
-  assert.match(helper, /process\.env\.SENTRY_DSN \?\? process\.env\.NEXT_PUBLIC_SENTRY_DSN/);
-  assert.match(helper, /Sentry\.captureException\(error\)/);
+  assert.equal(existsSync("trigger.config.ts"), false);
+  assert.equal(existsSync("trigger"), false);
+  assert.match(worker, /supabase\.rpc\("fail_job"/);
+  assert.match(worker, /log\(`job \$\{job\.id\} \(\$\{job\.kind\}\)/);
+  assert.match(worker, /console\.error\("\[worker\] fatal:"/);
+  assert.match(worker, /reap_stale_jobs/);
 });

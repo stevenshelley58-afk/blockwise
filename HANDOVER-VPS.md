@@ -38,7 +38,7 @@ gh pr create \
 Nine new migrations must be applied to production:
 
 ```
-202607270001_progressive_activation_credit_ledger.sql
+202607270002_progressive_activation_credit_ledger.sql
 20260727022000_progressive_billing_foundation.sql
 20260727023000_meta_free_live_claim_registry.sql
 20260727024000_onboarding_booking_foundation.sql
@@ -61,13 +61,13 @@ vercel deploy --prod
 
 Or merge the PR and let Vercel auto-deploy.
 
-### 4. Confirm Trigger.dev Task Registration
+### 4. Confirm VPS Queue Worker Registration
 
-After deployment, verify that Trigger.dev tasks registered correctly:
+After deployment, verify that VPS queue handlers registered correctly:
 
-- Check the Trigger.dev dashboard for the project
-- Confirm `adstudio-generate` task is registered
-- Look for any registration errors in deployment logs
+- Check the managed worker service logs
+- Confirm `adstudio.generate.template` jobs are claimed
+- Look for unknown-kind or startup errors in the worker logs
 
 ### 5. Vercel Preview Inspection
 

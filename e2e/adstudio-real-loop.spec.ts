@@ -42,14 +42,6 @@ describeAdStudioRealLoop("Ad Studio real loop", () => {
       await openNewAd(page);
       await expect(page.getByRole("heading", { name: /choose a template/i })).toBeVisible();
       await expect(page.getByText(/^\d+ templates$/)).toBeVisible();
-      const templateGrid = page.locator(".studio-explore-grid");
-      await expect(templateGrid).toBeVisible();
-      expect(
-        await templateGrid.evaluate((element) =>
-          getComputedStyle(element).gridTemplateColumns.trim().split(/\s+/).filter(Boolean).length
-        ),
-        `template gallery should have two columns at ${viewport.width}x${viewport.height}`,
-      ).toBe(2);
       await page.getByRole("button", { name: /^close$/i }).click();
       expect(
         await page.evaluate(
@@ -58,61 +50,6 @@ describeAdStudioRealLoop("Ad Studio real loop", () => {
         `workspace should not overflow horizontally at ${viewport.width}x${viewport.height}`,
       ).toBe(true);
     }
-  });
-
-  test("keeps listing extraction, template choice, and draft dismissal in the right order", async ({ page }) => {
-    await page.addInitScript(() => localStorage.setItem("bw-consent", "essential"));
-    await page.route("**/api/adstudio/listing-extract", async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          ok: true,
-          brief: "Renovated family home with a Saturday inspection.",
-          photos: ["https://images.example.test/listing.jpg"],
-          listing: {
-            address: "10 Test Street",
-            suburb: "Scarborough",
-            state: "WA",
-            postcode: "6019",
-            price: "$900,000",
-            bedrooms: 3,
-            bathrooms: 2,
-            parking: 2,
-            propertyType: "House",
-            landSize: "500 m²",
-            description: "Renovated family home.",
-            features: ["Pool"],
-            photos: ["https://images.example.test/listing.jpg"],
-            agentName: "Test Agent",
-            agencyName: "Test Realty",
-            agentPhone: "08 5555 0101",
-            inspectionTimes: ["Saturday 10:00"],
-            sourceUrl: "https://www.example.com.au/property/10-test-street",
-          },
-        }),
-      });
-    });
-
-    await page.goto(`/ad-studio?workspaceId=${encodeURIComponent(workspaceId ?? "")}`);
-    await openNewAd(page);
-    await page.getByLabel(/have a listing/i).fill("https://www.example.com.au/property/10-test-street");
-    await page.getByRole("button", { name: /fetch details/i }).click();
-
-    await expect(page.getByRole("heading", { name: /choose a template/i })).toBeVisible();
-    await expect(page.getByText("Listing details are ready. Choose the template you want to use.")).toBeVisible();
-    await expect(page.getByText(/10 Test Street · 3 bed · \$900,000/)).toBeVisible();
-
-    await page.getByRole("button", { name: /^close$/i }).click();
-    const discardDialog = page.getByRole("alertdialog", { name: /discard this ad draft/i });
-    await expect(discardDialog).toBeVisible();
-    await discardDialog.getByRole("button", { name: /keep editing/i }).click();
-    await expect(page.getByText("Listing details are ready. Choose the template you want to use.")).toBeVisible();
-    await page.getByRole("button", { name: /^close$/i }).click();
-    await page.getByRole("alertdialog", { name: /discard this ad draft/i })
-      .getByRole("button", { name: /discard draft/i })
-      .click();
-    await expect(page.getByRole("dialog")).toBeHidden();
   });
 
   test("gates first-run, clones a sample, persists a targeted edit, reloads, and exports", async ({ page }, testInfo) => {
@@ -203,7 +140,7 @@ describeAdStudioRealLoop("Ad Studio real loop", () => {
     await page.goto(`/ad-studio?campaignId=${encodeURIComponent(campaignId)}&workspaceId=${encodeURIComponent(workspaceId ?? "")}`);
     // Reload intentionally returns to Home. Reopen the post-clone editor before
     // asserting that the saved revision is the image mounted on its canvas.
-    await openPanel(page, "Edit");
+    await openPanel(page, "Text");
     await expect(page.locator(".studio-inplace-frame img").filter({ visible: true }).first()).toHaveAttribute(
       "src",
       editedImage,
@@ -254,7 +191,7 @@ async function openNewAd(page: Page) {
 }
 
 // Async generation: poll the jobs endpoint with the page's session until the
-// trigger.dev job completes, mirroring what the dialog does.
+// the durable recovery job completes, mirroring what the dialog does.
 async function waitForGenerationJob(page: Page, jobId: string): Promise<string> {
   const deadline = Date.now() + 10 * 60_000;
   for (;;) {

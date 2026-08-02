@@ -7,7 +7,6 @@ import {
   queueContentRun,
 } from "@/lib/content-engine";
 import { requireOperator } from "@/lib/operator/auth";
-import { createResearchServiceClient } from "@/lib/research/service";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const dynamic = "force-dynamic";
@@ -46,7 +45,7 @@ export async function POST(req: Request) {
 
   try {
     const queued = await queueContentRun({
-      researchSupabase: createResearchServiceClient() as never,
+      supabase: serviceSupabase as never,
       workspaceId: access.workspaceId,
       runId: run.id,
     });
@@ -55,7 +54,7 @@ export async function POST(req: Request) {
     queueError = error instanceof Error ? error.message : "Unable to queue content run.";
   }
 
-  return NextResponse.json({ run, queueJobId, triggerRunId: queueJobId, queueError }, { status: queueError ? 202 : 201 });
+  return NextResponse.json({ run, queueJobId, queueError }, { status: queueError ? 202 : 201 });
 }
 
 async function resolveOperatorWorkspace(supabase: Awaited<ReturnType<typeof import("@/lib/supabase/server").createSupabaseServerClient>>) {

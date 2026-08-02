@@ -15,6 +15,7 @@ import {
   recordAdStudioProviderRun,
   type ProviderRunAttempt,
 } from "../operator/prompts/redact-prompt-run.ts";
+import { emitModelFallbackAlert } from "../alerts/model-fallback-alert.ts";
 
 export type AdGenerationQuality = "fast" | "high";
 
@@ -222,6 +223,7 @@ export async function generateCloneWithCascade(input: {
     executeAttempt: typeof executeAdStudioProviderAttempt;
     recordRun: typeof recordAdStudioProviderRun;
   };
+  fallbackAlert?: typeof emitModelFallbackAlert;
 }): Promise<CloneGenerationResult> {
   const startedAt = Date.now();
   const mutationId = `${input.correlationId}:adstudio.clone:${input.attempt}:${input.request.aspectRatio}`;
@@ -236,6 +238,7 @@ export async function generateCloneWithCascade(input: {
   };
   let lastError: unknown = null;
   let providerAttemptCount = 0;
+  let fallbackAlertTask: Promise<unknown> | null = null;
   const accounting = input.accounting ?? {
     executeAttempt: executeAdStudioProviderAttempt,
     recordRun: recordAdStudioProviderRun,
@@ -262,6 +265,19 @@ export async function generateCloneWithCascade(input: {
       if (!execution.ok) {
         lastError = execution.error;
         if (!isProviderFallbackEligible(execution.error)) break;
+        const fallback = input.providers[attemptIndex + 1];
+        if (fallback) {
+          // Start email before OpenAI so delivery overlaps the fallback render.
+          // The promise is joined before returning, preventing a Vercel
+          // shutdown from dropping the user's per-fallback notification.
+          fallbackAlertTask = (input.fallbackAlert ?? emitModelFallbackAlert)({
+            eventId: `${mutationId}:provider:${attemptIndex}`,
+            stage: `adstudio.image.${input.request.aspectRatio}`,
+            fromModel: provider.accounting?.model ?? provider.providerName,
+            toModel: fallback.accounting?.model ?? fallback.providerName,
+            reason: fallbackReason(execution.error),
+          });
+        }
         continue;
       }
       result = execution.output;
@@ -270,6 +286,7 @@ export async function generateCloneWithCascade(input: {
       break;
     }
     if (!result) continue;
+    if (fallbackAlertTask) await fallbackAlertTask;
     // A durable finalization failure is not a provider failure and must never
     // enter the fallback loop or be retried with a different payload.
     await accounting.recordRun({
@@ -297,6 +314,7 @@ export async function generateCloneWithCascade(input: {
     };
   }
 
+  if (fallbackAlertTask) await fallbackAlertTask;
   await accounting.recordRun({
     workspaceId: input.workspaceId,
     userId: input.userId,
@@ -317,6 +335,12 @@ export async function generateCloneWithCascade(input: {
   });
   if (lastError instanceof ProviderRunPersistenceError) throw lastError;
   throw new CloneGenerationError(lastError, providerAttemptCount);
+}
+
+function fallbackReason(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  return "Primary image provider failed.";
 }
 
 /** Persist every generated render to workspace storage, including provider-hosted URLs. */
@@ -355,7 +379,7 @@ export async function persistCloneRender(input: {
   }
   const storagePath = `${input.workspaceId}/adstudio/clones/${input.fileNameSeed}.${decoded.extension}`;
   // The upload is the step most exposed to transient infrastructure blips
-  // (a ~2MB PUT over the Trigger.dev runner's network). A single failed PUT
+  // (a ~2MB PUT over the active compute network). A single failed PUT
   // used to kill the whole ad with a swallowed error; retry it a few times and
   // surface the real Supabase message so the next failure is diagnosable.
   const maxUploadAttempts = 3;

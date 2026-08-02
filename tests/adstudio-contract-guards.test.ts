@@ -39,13 +39,14 @@ test("campaign creation has one template clone pipeline", () => {
   assert.doesNotMatch(client, /variantCount|generateVariantsForAngle|onRegenerate/);
 });
 
-test("Trigger dispatch uses the cleaned production key explicitly", () => {
+test("campaign generation uses Vercel inline with delayed VPS recovery", () => {
   const route = readFileSync("src/app/api/adstudio/campaigns/route.ts", "utf8");
 
-  assert.doesNotMatch(route, /@trigger\.dev\/sdk\/v3/);
-  assert.match(route, /normaliseTriggerSecretKey/);
-  assert.match(route, /configure\(\{\s*secretKey/);
-  assert.match(route, /await import\("@trigger\.dev\/sdk"\)/);
+  assert.doesNotMatch(route, /@trigger\.dev|triggerTemplateGeneration|TRIGGER_SECRET_KEY/);
+  assert.match(route, /await runTemplateCampaignGeneration/);
+  assert.match(route, /kind: "adstudio\.generate\.template"/);
+  assert.match(route, /GENERATION_RECOVERY_DELAY_MS/);
+  assert.match(route, /service\.rpc\("complete_job"/);
 });
 
 test("the one full-ad request consumes sample, assets, and exact copy", () => {

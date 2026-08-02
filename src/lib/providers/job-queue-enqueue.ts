@@ -1,43 +1,9 @@
 import { createSupabaseServiceClient } from "../supabase/service.ts";
 
 /**
- * Reversible producer-cutover switch for the Trigger.dev → VPS job_queue
- * migration.
- *
- * `BLOCKWISE_QUEUED_KINDS` is a comma-separated list of job kinds whose
- * producers should route to the Supabase `job_queue` (consumed by the VPS
- * worker) instead of Trigger.dev. Adding a kind flips its traffic to the
- * worker; removing it falls back to Trigger. Both paths are safe to coexist:
- * the worker only processes rows it claims from `job_queue`, and Trigger never
- * sees those rows, so there is no double-processing window.
- *
- * Producers run on Vercel API routes, which already hold the service-role key
- * needed to call `enqueue_job` (the queue RPCs are service-role only, mirroring
- * the provider_token_vault posture). Enqueuing is just a row insert — the
- * actual provider work still happens on the VPS worker, keeping Vercel free of
- * long-running provider calls.
+ * Enqueue provider/background work for the VPS worker. Producers on Vercel do
+ * only the service-role RPC; the durable queue owns retries and leases.
  */
-/**
- * Kinds that are permanently cut over to the VPS worker, independent of
- * `BLOCKWISE_QUEUED_KINDS`. Publish and mutations moved off Trigger.dev
- * because every deploy stranded their in-flight runs behind the per-key
- * concurrency slot; the Trigger task definitions for these kinds are deleted,
- * so this routing is deliberately not env-reversible.
- */
-const ALWAYS_QUEUED_KINDS = new Set(["publish.meta.execute", "publish.meta.mutate"]);
-
-export function isQueuedKind(kind: string): boolean {
-  if (ALWAYS_QUEUED_KINDS.has(kind)) {
-    return true;
-  }
-
-  const list = process.env.BLOCKWISE_QUEUED_KINDS ?? "";
-  return list
-    .split(",")
-    .map((token) => token.trim())
-    .filter(Boolean)
-    .includes(kind);
-}
 
 export async function enqueueQueuedJob(input: {
   kind: string;

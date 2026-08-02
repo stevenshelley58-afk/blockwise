@@ -60,11 +60,11 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     return NextResponse.json({ error: loadError?.message ?? "Approval request was not found." }, { status: 404 });
   }
 
-  let triggerRunId: string | null = null;
+  let queueJobId: string | null = null;
 
   if (body.status === "approved") {
     try {
-      triggerRunId = await queueApprovedTarget({
+      queueJobId = await queueApprovedTarget({
         serviceSupabase,
         approval: currentApproval as ApprovalTarget,
         workspaceId: access.access.workspaceId,
@@ -109,7 +109,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
   return NextResponse.json({
     approval,
-    triggerRunId,
+    queueJobId,
   });
 }
 

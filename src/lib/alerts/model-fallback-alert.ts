@@ -6,8 +6,8 @@
  * the model the operator picked in the console is failing — usually exhausted
  * credits, a rejected key, or rate limiting — so the owner should know.
  *
- * De-duplicated by (stage + toModel) within a rolling window so a burst of
- * requests all hitting the same dead primary produces one email, not hundreds.
+ * De-duplicated by the caller's event id within a rolling window. A retry of
+ * the same event sends once; every distinct customer fallback still emails.
  * Delivery reuses sendPaidServiceAlert (email + WhatsApp), so the owner-recipient
  * resolution in notify.ts applies here too.
  */
@@ -15,6 +15,8 @@
 import { sendPaidServiceAlert, type AlertMessage } from "./notify.ts";
 
 export type ModelFallbackEvent = {
+  /** Stable id for this provider handoff (not the whole model outage). */
+  eventId?: string;
   /** Generation stage, e.g. "adstudio.copy" or "adstudio.image". */
   stage: string;
   /** The operator-selected primary model that failed. */
@@ -46,14 +48,21 @@ const DEFAULT_DEDUPE_WINDOW_MS = 60 * 60 * 1000;
 
 const lastSentAt = new Map<string, number>();
 
-export function dedupeKeyForFallback(event: Pick<ModelFallbackEvent, "stage" | "toModel">): string {
-  return `${event.stage}::${event.toModel}`;
+export function dedupeKeyForFallback(
+  event: Pick<ModelFallbackEvent, "eventId" | "stage" | "toModel">,
+): string {
+  return event.eventId?.trim()
+    ? `event::${event.eventId.trim()}`
+    : `${event.stage}::${event.toModel}`;
 }
 
 export function buildModelFallbackAlert(event: ModelFallbackEvent): AlertMessage {
   const reason = truncate((event.reason ?? "").trim() || "unknown error", REASON_MAX);
   return {
     subject: `[Blockwise model fallback] ${event.stage}: ${event.fromModel} → ${event.toModel}`,
+    ...(event.eventId
+      ? { idempotencyKey: `model-fallback/${event.eventId}`.slice(0, 256) }
+      : {}),
     text: [
       `Stage: ${event.stage}`,
       `Primary model failed: ${event.fromModel}`,

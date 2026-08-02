@@ -11,6 +11,7 @@ import {
 
 test("buildModelFallbackAlert names the stage, both models, and the reason", () => {
   const message = buildModelFallbackAlert({
+    eventId: "run-1:4x5",
     stage: "adstudio.copy",
     fromModel: "gpt-5.5",
     toModel: "openai/gpt-5.5",
@@ -23,6 +24,7 @@ test("buildModelFallbackAlert names the stage, both models, and the reason", () 
   assert.match(message.text, /Primary model failed: gpt-5\.5/);
   assert.match(message.text, /Now serving with: openai\/gpt-5\.5/);
   assert.match(message.text, /Reason: 429 rate limited/);
+  assert.equal(message.idempotencyKey, "model-fallback/run-1:4x5");
 });
 
 test("buildModelFallbackAlert truncates an overlong reason", () => {
@@ -42,6 +44,33 @@ test("dedupeKeyForFallback keys on stage + target model", () => {
     dedupeKeyForFallback({ stage: "adstudio.copy", toModel: "env_default" }),
     "adstudio.copy::env_default",
   );
+});
+
+test("dedupeKeyForFallback uses the event id so every distinct fallback alerts", async () => {
+  resetModelFallbackAlertDedupe();
+  assert.equal(
+    dedupeKeyForFallback({
+      eventId: "run-1:4x5",
+      stage: "adstudio.image.4:5",
+      toModel: "gpt-image-2",
+    }),
+    "event::run-1:4x5",
+  );
+  let sent = 0;
+  const send = async () => {
+    sent += 1;
+    return { email: true, whatsapp: false };
+  };
+  const base = {
+    stage: "adstudio.image.4:5",
+    fromModel: "gemini-3.1-flash-image",
+    toModel: "gpt-image-2",
+    reason: "429",
+  };
+  await emitModelFallbackAlert({ ...base, eventId: "run-1:4x5" }, { send, now: () => 1 });
+  await emitModelFallbackAlert({ ...base, eventId: "run-1:4x5" }, { send, now: () => 1 });
+  await emitModelFallbackAlert({ ...base, eventId: "run-2:4x5" }, { send, now: () => 1 });
+  assert.equal(sent, 2, "same event retries once; separate customer fallbacks each email");
 });
 
 test("emitModelFallbackAlert sends once and then de-dupes within the window", async () => {

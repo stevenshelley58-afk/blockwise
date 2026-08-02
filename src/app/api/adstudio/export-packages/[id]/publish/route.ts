@@ -3,11 +3,7 @@ import { randomUUID } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { requireAdStudioRequest } from "@/lib/adstudio/http";
-import {
-  buildAdStudioLibrarySelectionPack,
-  type AdStudioCreativeLibrarySelection,
-} from "@/lib/adstudio/creative-library";
-import { loadAdStudioCampaignPack, persistAdStudioCampaignPack } from "@/lib/adstudio/persistence";
+import { persistAdStudioCampaignPack } from "@/lib/adstudio/persistence";
 import { findPackCopyLimitViolations } from "@/lib/adstudio/readiness";
 import type { AdStudioCampaignPack } from "@/lib/adstudio";
 import type { ApprovalStatus, ProviderConnectionStatus } from "@/lib/publishing/readiness";
@@ -53,7 +49,6 @@ type PublishBody = {
   controls?: MetaPublishControls;
   /** A/B publish (A6): plan only these variants — one ad set, one tagged ad per variant. Absent = full pack (unchanged). */
   variantIds?: string[];
-  librarySelections?: AdStudioCreativeLibrarySelection[];
   existingMetaCampaignId?: string;
 };
 
@@ -150,42 +145,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     return NextResponse.json({ error: "campaignPack is required." }, { status: 400 });
   }
 
-  const basePack = body.campaignPack;
-  const librarySelections = normalizeLibrarySelections(body.librarySelections);
-  if (librarySelections instanceof NextResponse) return librarySelections;
-
-  const sourcePacks = librarySelections.length > 0
-    ? await Promise.all(
-        [...new Set(librarySelections.map((selection) => selection.campaignId))]
-          .map((campaignId) => loadAdStudioCampaignPack(
-            access.supabase,
-            access.access.workspaceId,
-            campaignId,
-          )),
-      )
-    : [];
-  if (sourcePacks.some((pack) => pack === null)) {
-    return NextResponse.json(
-      { error: "One of the selected ads is no longer available. Refresh the page and choose it again." },
-      { status: 422 },
-    );
-  }
-
-  let pack = basePack;
-  if (librarySelections.length > 0) {
-    try {
-      pack = buildAdStudioLibrarySelectionPack(
-        basePack,
-        sourcePacks.filter((sourcePack): sourcePack is AdStudioCampaignPack => sourcePack !== null),
-        librarySelections,
-      );
-    } catch (error) {
-      return NextResponse.json(
-        { error: error instanceof Error ? error.message : "The selected ads could not be prepared." },
-        { status: 422 },
-      );
-    }
-  }
+  const pack = body.campaignPack;
 
   // Over-limit copy gets rejected or truncated by Meta — block, don't warn.
   const copyViolations = findPackCopyLimitViolations(pack);
@@ -197,7 +157,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
   }
 
   const serviceSupabase = createSupabaseServiceClient();
-  const persistResult = await persistAdStudioCampaignPack(access.supabase, basePack, access.access.userId);
+  const persistResult = await persistAdStudioCampaignPack(access.supabase, pack, access.access.userId);
 
   if (persistResult.error) {
     return NextResponse.json({ error: persistResult.error.message }, { status: 500 });
@@ -263,9 +223,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
         setupPatch: body.metaSetup,
         controls: body.controls,
         requestApproval: !body.dryRun,
-        variantIds: librarySelections.length > 0
-          ? pack.variants.map((variant) => variant.variantId)
-          : body.variantIds,
+        variantIds: body.variantIds,
         existingMetaCampaignId,
       })
     : null;
@@ -289,7 +247,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     : [];
   const blockers = uniqueStrings([...metaReadiness.blockers, ...adapterBlockers]);
   const publishReady = blockers.length === 0;
-  let triggerRunId: string | null = null;
+  let queueJobId: string | null = null;
 
   if (
     publishReady &&
@@ -307,7 +265,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
     try {
       const run = await queueMetaPublishPlanExecution(approvedPlan);
-      triggerRunId = run.id ?? null;
+      queueJobId = run.id ?? null;
       metaPublishPlan = approvedPlan;
     } catch (error) {
       // Without this, the plan stays "approved" with no queued run and every
@@ -354,36 +312,8 @@ export async function POST(request: NextRequest, context: RouteContext) {
             .filter((variantId): variantId is string => Boolean(variantId)),
         }
       : null,
-    triggerRunId,
+    queueJobId,
   });
-}
-
-function normalizeLibrarySelections(
-  value: PublishBody["librarySelections"],
-): AdStudioCreativeLibrarySelection[] | NextResponse {
-  if (value === undefined) return [];
-  if (!Array.isArray(value)) {
-    return NextResponse.json({ error: "Selected ads are invalid." }, { status: 400 });
-  }
-
-  const normalized = value.flatMap((selection) => {
-    const campaignId = selection?.campaignId?.trim();
-    const variantId = selection?.variantId?.trim();
-    return campaignId && variantId ? [{ campaignId, variantId }] : [];
-  });
-  if (normalized.length !== value.length) {
-    return NextResponse.json({ error: "Selected ads are invalid." }, { status: 400 });
-  }
-  if (normalized.length > 6) {
-    return NextResponse.json({ error: "Select up to six ads for one campaign." }, { status: 422 });
-  }
-
-  const unique = new Set(normalized.map((selection) => `${selection.campaignId}:${selection.variantId}`));
-  if (unique.size !== normalized.length) {
-    return NextResponse.json({ error: "Choose each saved ad only once." }, { status: 422 });
-  }
-
-  return normalized;
 }
 
 async function createAndPersistMetaPlan(input: {

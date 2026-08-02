@@ -25,12 +25,10 @@
     "verify-env:first-tester": "node scripts/verify-env.mjs --first-tester",
     "adstudio:create-template": "node scripts/adstudio/create-template.mjs",
     "adstudio:build-display-variants": "node scripts/adstudio/build-display-variants.mjs",
-    "seed:test-users": "node scripts/seed-test-users.mjs",
-    "trigger:dev": "node scripts/run-trigger-with-project-ref.mjs dev",
-    "trigger:deploy": "node scripts/run-trigger-with-project-ref.mjs deploy"
+    "seed:test-users": "node scripts/seed-test-users.mjs"
   },
   "dependencies": {
-    "@sentry/nextjs": "^9.0.0",
+    "@sentry/nextjs": "^10.69.0",
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.49.8",
     "@tailwindcss/postcss": "^4.3.3",
@@ -61,7 +59,6 @@
   "devDependencies": {
     "@napi-rs/canvas": "^1.0.3",
     "@playwright/test": "^1.53.0",
-    "@trigger.dev/sdk": "4.4.6",
     "@types/canvas-confetti": "^1.9.0",
     "@types/node": "^22.15.30",
     "@types/react": "^19.0.12",
