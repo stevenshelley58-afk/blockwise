@@ -110,7 +110,7 @@ is no longer an emergency (see §7).
 `agent_decisions` is the classifier's working-out. **9 tables have foreign keys into it**, so the
 purge explicitly skips any row still referenced by `advertiser_pages`, `ad_creatives`,
 `ad_quality_scores`, `coverage_audits`, `coverage_defects`, `ad_style_profiles`,
-`ad_template_candidates`, `creative_skeletons`, `ingest_events`, or a superseding decision.
+the then-current research derivation tables, `ingest_events`, or a superseding decision.
 
 ### What was deliberately NOT done: `work_queue`
 

@@ -83,7 +83,7 @@ UX-6 brand gate nav   (independent)
 UX-7 empty states     (independent)
 UX-8 small polish     (independent; do last)
                        ↓
-O-1 Sentry            →  O-2 trigger alerts
+O-1 Sentry            →  O-2 orchestration alerts
 O-3 team invite       (independent of Sentry)
 O-4 rollback doc      (independent; do before O-2 so you have it if O-2 surfaces a fire)
 O-5 PWA verify        (independent)

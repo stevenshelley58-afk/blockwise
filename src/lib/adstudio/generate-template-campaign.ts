@@ -23,7 +23,7 @@ import { buildPrebuiltTemplateCloneQa } from "./clone-regions.ts";
 import { deriveAndPersistTemplateTextLayers } from "./layer-derivation.ts";
 import { generateAdStudioTemplateCopy, type AdStudioCopyFields } from "./copy-generation.ts";
 import { buildCloneCampaignPack, buildCloneCreative } from "./clone-campaign.ts";
-import { persistAdStudioCampaignPack } from "./persistence.ts";
+import { loadAdStudioCampaignPack, persistAdStudioCampaignPack } from "./persistence.ts";
 import { ensureRasterReferenceImage } from "./rasterize-reference.ts";
 import {
   buildCloneImageRequest,
@@ -81,6 +81,10 @@ export type RunTemplateCampaignGenerationInput = {
   region?: string;
   /** Server-owned two-render reservation settled independently by format. */
   creditReservation?: WorkspaceCreditReservation;
+  /** Stable run identifier persisted before provider work starts. */
+  correlationId?: string;
+  /** Deterministic campaign checkpoint used to resume after a function crash. */
+  expectedCampaignId?: string;
 };
 
 export type RunTemplateCampaignGenerationResult = {
@@ -123,6 +127,49 @@ export async function assertDeterministicFeedEditingReady(input: {
   ) {
     throw new Error("The ad was created, but exact text editing did not finish preparing.");
   }
+}
+
+async function resumePersistedTemplateCampaign(input: {
+  supabase: SupabaseGenerationClient;
+  workspaceId: string;
+  userId: string;
+  correlationId: string;
+  expectedCampaignId: string;
+  template: AdStudioTemplate;
+}): Promise<RunTemplateCampaignGenerationResult | null> {
+  const campaignPack = await loadAdStudioCampaignPack(
+    input.supabase as SupabaseServerClient,
+    input.workspaceId,
+    input.expectedCampaignId,
+  );
+  if (!campaignPack) return null;
+
+  const feedCreative = campaignPack.creatives.find((creative) => creative.format === PRIMARY_CLONE_FORMAT);
+  const imageRef = feedCreative?.canvas.objects.find((object) => object.role === "primary_image")?.content
+    ?? feedCreative?.canvas.objects.find((object) => object.role === "primary_image")?.assetId;
+  if (!feedCreative || !imageRef) {
+    throw new Error("The persisted generation checkpoint has no finished Feed creative.");
+  }
+
+  const editingLayersTask = prepareCloneCreativeTextLayers({
+    supabase: input.supabase,
+    workspaceId: input.workspaceId,
+    userId: input.userId,
+    correlationId: input.correlationId,
+    template: input.template,
+    renders: [{
+      format: PRIMARY_CLONE_FORMAT,
+      creativeId: feedCreative.creativeId,
+      imageRef,
+    }],
+  });
+
+  return {
+    campaignId: campaignPack.campaign.campaignId,
+    campaignPack,
+    editingLayersTask,
+    requiresDeterministicEditing: deterministicEditingReadiness(input.template).status === "ready",
+  };
 }
 
 const PRIMARY_CLONE_FORMAT = "4:5" as const;
@@ -217,7 +264,7 @@ export type CloneEditingLayersInput = {
     format: TemplateCloneRenderFormat;
     creativeId: string;
     imageRef: string;
-    imageUrl: string;
+    imageUrl?: string;
   }>;
 };
 
@@ -305,6 +352,22 @@ export async function runTemplateCampaignGeneration(
   const template = await resolveApprovedAdStudioTemplate({
     templateId: firstAd.templateId,
   });
+  const correlationId = input.correlationId ?? randomUUID();
+
+  // The route persists this deterministic ID before any provider call. If
+  // Vercel dies after the transactional Feed save, the VPS resumes the saved
+  // campaign and its editor preparation instead of buying the same image again.
+  if (input.expectedCampaignId) {
+    const resumed = await resumePersistedTemplateCampaign({
+      supabase: input.supabase,
+      workspaceId: input.workspaceId,
+      userId: input.userId,
+      correlationId,
+      expectedCampaignId: input.expectedCampaignId,
+      template,
+    });
+    if (resumed) return resumed;
+  }
 
   const brandKitResult = await resolveAdStudioGenerationBrandKit({
     supabase,
@@ -348,7 +411,6 @@ export async function runTemplateCampaignGeneration(
     throw new Error(`Missing required image: ${missingSlot.label}`);
   }
 
-  const correlationId = randomUUID();
   const sourceImageUrl = primarySlot ? resolvedImages[primarySlot.key] : Object.values(resolvedImages)[0];
 
   // Customer-typed on-image values (price, address, phone…) override the

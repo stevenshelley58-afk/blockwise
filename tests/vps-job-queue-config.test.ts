@@ -18,6 +18,7 @@ test("the external task runner is absent and background work uses the VPS queue"
     "sync.meta.leads",
     "deliver.lead",
     "reporting.refresh",
+    "reconcile.customer.activation",
     "check.meta.token-health",
     "sync.provider.reports",
   ]) {
@@ -25,6 +26,7 @@ test("the external task runner is absent and background work uses the VPS queue"
   }
   assert.match(vercel, /\/api\/cron\/meta-leads/);
   assert.match(vercel, /\/api\/cron\/provider-maintenance/);
+  assert.match(vercel, /\/api\/cron\/performance-read-models/);
   assert.match(vercel, /\/api\/cron\/meta-publish-watchdog/);
 });
 

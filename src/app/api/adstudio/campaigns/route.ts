@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import { NextResponse, after, type NextRequest } from "next/server";
 
 import { recordWorkspaceFunnelEventBestEffort } from "@/lib/analytics/progressive-funnel";
@@ -16,6 +18,7 @@ import {
   type CreateCampaignBody,
 } from "@/lib/adstudio/generate-template-campaign";
 import { compactAdStudioCampaignPackForTransport } from "@/lib/adstudio/persistence";
+import { resolveCloneCampaignId } from "@/lib/adstudio/clone-campaign";
 import { buildAdStudioCreativeLibrary } from "@/lib/adstudio/creative-library";
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
@@ -223,6 +226,13 @@ export async function POST(request: NextRequest) {
     {
       const origin = request.nextUrl.origin;
       const service = createSupabaseServiceClient();
+      const correlationId = randomUUID();
+      const expectedCampaignId = resolveCloneCampaignId({
+        workspaceId: context.access.workspaceId,
+        templateId: body.firstAd!.templateId,
+        suburb: body.suburb ?? "Scarborough",
+        description: body.firstAd!.description,
+      });
       const inserted = await service
         .from("adstudio_creative_jobs")
         .insert({
@@ -237,6 +247,8 @@ export async function POST(request: NextRequest) {
             reservation: creditReservation,
             workspaceName: context.access.workspaceName,
             region: context.access.region,
+            correlationId,
+            expectedCampaignId,
           },
         })
         .select("id")
@@ -278,6 +290,8 @@ export async function POST(request: NextRequest) {
         workspaceName: context.access.workspaceName,
         region: context.access.region,
         creditReservation,
+        correlationId,
+        expectedCampaignId,
       });
       if (result.requiresDeterministicEditing) {
         await result.editingLayersTask;

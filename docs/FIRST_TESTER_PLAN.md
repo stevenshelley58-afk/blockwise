@@ -91,12 +91,12 @@ The theme: never show the tester a state that is fake, dead, or unactionable.
 ### T2-3: Re-publish after approval wipes reconciliation state and double-publishes to Meta 🔴 HIGH
 - **Files:** `src/app/api/adstudio/export-packages/[id]/publish/route.ts` (~92–129), `src/lib/providers/meta-publish-queue.ts`
 - **Problem:** A second Publish click rebuilds the plan (resetting `reconciledObjects` to empty), upserts over the same row, and re-queues — the worker re-creates the full campaign tree on Meta.
-- **Fix:** Before persisting, load the existing plan for the same idempotency key; if status is `approved`/`publishing`/`paused_live`, return it as-is. When rebuilding a draft, carry forward reconciled objects/logs. Pass `idempotencyKey: plan.idempotencyKey` to `tasks.trigger`.
+- **Fix:** Before persisting, load the existing plan for the same idempotency key; if status is `approved`/`publishing`/`paused_live`, return it as-is. When rebuilding a draft, carry forward reconciled objects/logs. Enqueue with `plan.idempotencyKey` as the durable queue dedupe key.
 - **Accept:** Unit test: double-publish returns the same plan, single queue dispatch.
 
 ### T2-4: Publish plans stuck in "publishing"/"applying" forever when a worker throws 🔴 HIGH
 - **Files:** `src/lib/providers/meta-publish-worker.ts` (~41–57), `src/lib/providers/meta-mutation-worker.ts` (~40–49), `src/app/api/approvals/[id]/route.ts` (~70–96)
-- **Fix:** try/catch around the worker bodies after marking `publishing`/`applying`: on throw, persist status `failed` + `lastError`, rethrow. In the approvals route, queue FIRST (in try/catch), only persist `approved` after `tasks.trigger` succeeds; on queue failure return 502 "Approved, but job dispatch failed — retry from Approvals."
+- **Fix:** try/catch around the worker bodies after marking `publishing`/`applying`: on throw, persist status `failed` + `lastError`, rethrow. In the approvals route, queue FIRST (in try/catch), only persist `approved` after the durable enqueue succeeds; on queue failure return 502 "Approved, but job dispatch failed — retry from Approvals."
 - **Accept:** Forced token-missing failure leaves the plan `failed` with a readable lastError, not zombie `publishing`.
 
 ### T2-5: BLOCKWISE_ENABLE_PROVIDER_WRITES kill switch doesn't actually kill 🔴 HIGH

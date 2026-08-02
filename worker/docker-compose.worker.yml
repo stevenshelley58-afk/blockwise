@@ -1,4 +1,4 @@
-# VPS background worker — Trigger.dev replacement.
+# VPS background worker for durable provider and recovery jobs.
 #
 # Deployed via Coolify alongside the research stack on /srv/blockwise. Env is
 # supplied from the same deploy .env that feeds the research services.

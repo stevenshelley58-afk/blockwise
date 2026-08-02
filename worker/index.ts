@@ -64,6 +64,8 @@ async function resolveHandler(kind: string): Promise<Handler | null> {
           reservation?: import("../src/lib/adstudio/generation-credits.ts").AdStudioGenerationCreditReservation | null;
           workspaceName?: string;
           region?: string;
+          correlationId?: string;
+          expectedCampaignId?: string;
         };
         if (!stored.body) throw new Error("Ad Studio recovery job has no generation body.");
         const reservation = stored.reservation ?? undefined;
@@ -90,6 +92,8 @@ async function resolveHandler(kind: string): Promise<Handler | null> {
             workspaceName: stored.workspaceName,
             region: stored.region,
             creditReservation: reservation,
+            correlationId: stored.correlationId,
+            expectedCampaignId: stored.expectedCampaignId,
           });
         } catch (error) {
           // Generation mutates the reservation as each format settles. Persist
@@ -181,6 +185,18 @@ async function resolveHandler(kind: string): Promise<Handler | null> {
           range: String(payload.range) as import("../src/lib/meta-monitor/types.ts").MonitorRange,
           customRange: payload.customRange as import("../src/lib/meta-monitor/types.ts").MonitorCustomRange | undefined,
         });
+    }
+    case "reconcile.customer.activation": {
+      const { resolveCustomerActivation } = await import("../src/lib/activation/customer-activation.ts");
+      return (payload, supabase) => {
+        const workspaceId = String(payload.workspaceId ?? "");
+        if (!workspaceId) throw new Error("Customer activation payload is incomplete.");
+        return resolveCustomerActivation({
+          workspaceId,
+          serviceSupabase: supabase,
+          repair: true,
+        });
+      };
     }
     case "check.meta.token-health": {
       const { checkMetaConnectionHealth } = await import("../src/lib/providers/meta-assets.ts");

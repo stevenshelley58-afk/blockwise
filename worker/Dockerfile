@@ -1,4 +1,4 @@
-# VPS background worker — Trigger.dev replacement.
+# VPS background worker for durable provider and recovery jobs.
 #
 # Runs worker/index.ts directly on Node 22's native type-stripping (same as the
 # repo's test runner), so there is no build step: the image ships the TS source

@@ -100,6 +100,7 @@ export async function sendAlertWhatsApp(message: AlertMessage): Promise<boolean>
   try {
     const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
       method: "POST",
+      signal: AbortSignal.timeout(5_000),
       headers: {
         Authorization: `Basic ${Buffer.from(`${sid}:${token}`).toString("base64")}`,
         "Content-Type": "application/x-www-form-urlencoded",

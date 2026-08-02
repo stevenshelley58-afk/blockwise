@@ -18,6 +18,10 @@
       "schedule": "*/15 * * * *"
     },
     {
+      "path": "/api/cron/performance-read-models",
+      "schedule": "*/15 * * * *"
+    },
+    {
       "path": "/api/cron/provider-maintenance",
       "schedule": "0 */6 * * *"
     },

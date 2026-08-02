@@ -41,12 +41,23 @@ test("campaign creation has one template clone pipeline", () => {
 
 test("campaign generation uses Vercel inline with delayed VPS recovery", () => {
   const route = readFileSync("src/app/api/adstudio/campaigns/route.ts", "utf8");
+  const generation = readFileSync("src/lib/adstudio/generate-template-campaign.ts", "utf8");
+  const worker = readFileSync("worker/index.ts", "utf8");
 
   assert.doesNotMatch(route, /@trigger\.dev|triggerTemplateGeneration|TRIGGER_SECRET_KEY/);
   assert.match(route, /await runTemplateCampaignGeneration/);
   assert.match(route, /kind: "adstudio\.generate\.template"/);
   assert.match(route, /GENERATION_RECOVERY_DELAY_MS/);
   assert.match(route, /service\.rpc\("complete_job"/);
+  assert.match(route, /expectedCampaignId/);
+  assert.match(route, /correlationId/);
+  assert.match(worker, /expectedCampaignId: stored\.expectedCampaignId/);
+
+  const pipeline = generation.slice(generation.indexOf("export async function runTemplateCampaignGeneration"));
+  assert.ok(
+    pipeline.indexOf("resumePersistedTemplateCampaign") < pipeline.indexOf("resolveCloneProviders"),
+    "a persisted Feed checkpoint must be resumed before any image provider is resolved",
+  );
 });
 
 test("the one full-ad request consumes sample, assets, and exact copy", () => {

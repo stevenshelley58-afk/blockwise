@@ -101,6 +101,29 @@ test("buildMetaPublishPlan reuses an explicitly selected Meta campaign", () => {
   assert.notEqual(existingCampaignPlan.planId, newCampaignPlan.planId);
 });
 
+test("buildMetaPublishPlan gives different creative selections different idempotency keys", () => {
+  const pack = buildPack();
+  const firstVariantId = pack.variants[0]!.variantId;
+  const fullPlan = buildMetaPublishPlan({
+    workspaceId: "workspace_demo",
+    campaignPack: pack,
+    connectionId: "connection_123",
+    setup,
+    approvalRequestId: "approval_123",
+  });
+  const selectedPlan = buildMetaPublishPlan({
+    workspaceId: "workspace_demo",
+    campaignPack: pack,
+    connectionId: "connection_123",
+    setup,
+    approvalRequestId: "approval_123",
+    variantIds: [firstVariantId],
+  });
+
+  assert.notEqual(selectedPlan.idempotencyKey, fullPlan.idempotencyKey);
+  assert.match(selectedPlan.idempotencyKey, /creatives_[a-f0-9]{16}$/);
+});
+
 test("buildMetaPublishPlan applies user budget, geo, schedule, and placement controls", () => {
   const plan = buildMetaPublishPlan({
     workspaceId: "workspace_demo",
