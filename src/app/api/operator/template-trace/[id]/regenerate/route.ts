@@ -48,6 +48,22 @@ export async function POST(
 
   const quality: AdGenerationQuality = body.quality === "high" ? "high" : "fast";
 
+  // Provider accounting is workspace-scoped and backed by UUID foreign keys.
+  // Attribute this operator-only test render to the operator's real workspace
+  // instead of inventing a synthetic identifier that the ledger cannot store.
+  const { data: membership, error: membershipError } = await guard.supabase
+    .from("workspace_members")
+    .select("workspace_id")
+    .eq("profile_id", guard.userId)
+    .limit(1)
+    .maybeSingle();
+  if (membershipError || !membership?.workspace_id) {
+    return NextResponse.json(
+      { error: "A workspace membership is required to account for this test render." },
+      { status: 409 },
+    );
+  }
+
   // Read the sample image from disk as a data URL (the reference design).
   const samplePath = join(resolve(process.cwd(), "public"), ...trace.sampleImagePath.slice(1).split("/"));
   if (!existsSync(samplePath)) {
@@ -76,7 +92,7 @@ export async function POST(
     const result = await generateCloneWithCascade({
       providers,
       request: cloneRequest,
-      workspaceId: "operator-trace",
+      workspaceId: membership.workspace_id,
       userId: guard.userId,
       correlationId,
       attempt: 1,
