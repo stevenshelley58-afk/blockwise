@@ -73,6 +73,7 @@ test("buildMetaPublishPlan creates a deterministic paused Meta plan", () => {
   assert.equal(plan.idempotencyKey, duplicatePlan.idempotencyKey);
   assert.equal(plan.planId, duplicatePlan.planId);
   assert.equal(plan.campaign.status, "PAUSED");
+  assert.equal(plan.campaign.bidStrategy, "LOWEST_COST_WITHOUT_CAP");
   assert.deepEqual(plan.campaign.specialAdCategories, ["HOUSING"]);
   assert.equal(plan.adSets.length, 1);
   assert.ok(plan.ads.length <= 6);
@@ -580,6 +581,7 @@ test("marketing_api adapter emits the strict Meta v23 lead-ad request contract",
   const post = (suffix: string) => requests.find((request) => request.method === "POST" && request.path.endsWith(suffix));
   const campaign = post("/campaigns")!;
   assert.deepEqual(Object.keys(campaign.body).sort(), [
+    "bid_strategy",
     "daily_budget",
     "name",
     "objective",
@@ -588,6 +590,7 @@ test("marketing_api adapter emits the strict Meta v23 lead-ad request contract",
     "status",
   ]);
   assert.deepEqual(campaign.body.special_ad_category_country, ["AU"]);
+  assert.equal(campaign.body.bid_strategy, "LOWEST_COST_WITHOUT_CAP");
   assert.equal("budget_strategy" in campaign.body, false);
 
   const leadForm = post("/leadgen_forms")!;
@@ -623,6 +626,75 @@ test("marketing_api adapter emits the strict Meta v23 lead-ad request contract",
   });
   assert.equal(JSON.stringify(result).includes("user_token"), false);
   assert.equal(JSON.stringify(result).includes("page_token"), false);
+});
+
+test("marketing_api adapter repairs legacy Blockwise campaign bidding before retrying the ad set", async () => {
+  const plan = buildMetaPublishPlan({
+    workspaceId: "workspace_demo",
+    campaignPack: buildPack(),
+    connectionId: "connection_123",
+    setup,
+    controls,
+    approvalRequestId: "approval_123",
+  });
+  const posts: Array<{ path: string; body: Record<string, unknown> }> = [];
+  const fetchImpl = async (input: string | URL | Request, init?: RequestInit) => {
+    const url = new URL(String(input));
+    const method = init?.method ?? "GET";
+    if (method === "POST") {
+      const body = JSON.parse(String(init?.body ?? "{}")) as Record<string, unknown>;
+      posts.push({ path: url.pathname, body });
+      return new Response(JSON.stringify(url.pathname.endsWith("/adsets") ? { id: "adset_1" } : { success: true }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }
+    return new Response(JSON.stringify({
+      id: url.pathname.split("/").at(-1),
+      effective_status: "PAUSED",
+      configured_status: "PAUSED",
+    }), { status: 200, headers: { "content-type": "application/json" } });
+  };
+
+  const result = await createMetaExecutionAdapter("marketing_api").publish(
+    {
+      ...plan,
+      status: "publishing",
+      leadForms: [],
+      creatives: [],
+      ads: [],
+      requestLog: [{
+        step: "campaign.create",
+        method: "POST",
+        path: "/act_123/campaigns",
+        body: { daily_budget: "7500" },
+        createdAt: "2026-08-02T14:40:00.000Z",
+      }],
+      responseLog: [{
+        step: "campaign.create",
+        method: "POST",
+        path: "/act_123/campaigns",
+        status: 200,
+        response: { id: "legacy_campaign" },
+        createdAt: "2026-08-02T14:40:01.000Z",
+      }],
+      reconciledObjects: {
+        campaignId: "legacy_campaign",
+        leadFormIds: {},
+        adSetIds: {},
+        creativeIds: {},
+        adIds: {},
+      },
+    },
+    { accessToken: "user_token", fetchImpl, reconcileMissingObjects: true },
+  );
+
+  assert.equal(result.status, "paused_live", result.lastError ?? undefined);
+  assert.deepEqual(posts[0], {
+    path: "/v23.0/legacy_campaign",
+    body: { bid_strategy: "LOWEST_COST_WITHOUT_CAP" },
+  });
+  assert.equal(posts[1]?.path.endsWith("/adsets"), true);
 });
 
 test("marketing_api adapter caps AdCreative names at Meta's 100-character limit", async () => {

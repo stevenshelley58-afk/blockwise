@@ -63,6 +63,7 @@ export type MetaPublishCampaignPlan = {
   localId: string;
   name: string;
   objective: "OUTCOME_LEADS";
+  bidStrategy: "LOWEST_COST_WITHOUT_CAP";
   status: "PAUSED";
   specialAdCategories: ["HOUSING"];
   specialAdCategoryCountries: string[];
@@ -321,6 +322,7 @@ export function buildMetaPublishPlan(input: {
     localId: "campaign_main",
     name: campaignPack.campaign.name,
     objective: "OUTCOME_LEADS",
+    bidStrategy: "LOWEST_COST_WITHOUT_CAP",
     status: "PAUSED",
     specialAdCategories: ["HOUSING"],
     specialAdCategoryCountries: [campaignPack.campaign.market.country.trim().toUpperCase()],
@@ -631,6 +633,7 @@ async function publishWithMarketingApi(
         const response = await postMetaObject(input, requestLog, responseLog, "campaign.create", `/${plan.setup.metaAdAccountId}/campaigns`, {
           name: providerName,
           objective: plan.campaign.objective,
+          bid_strategy: plan.campaign.bidStrategy,
           status: "PAUSED",
           special_ad_categories: plan.campaign.specialAdCategories,
           special_ad_category_country: plan.campaign.specialAdCategoryCountries,
@@ -638,6 +641,31 @@ async function publishWithMarketingApi(
         });
         reconciledObjects.campaignId = requireMetaId(response, "campaign");
       }
+      await checkpointMetaPublishProgress(input, requestLog, responseLog, reconciledObjects);
+    }
+
+    // Plans created before the Blockwise Campaign preset omitted bid_strategy.
+    // Meta accepted the paused campaign but later interpreted the campaign as
+    // bid-capped and rejected the ad set because no bid_amount was present.
+    // Repair only campaigns that this plan itself created; existing customer
+    // campaigns have no campaign.create entry and must never be rewritten.
+    const legacyCampaignCreate = requestLog.find((entry) =>
+      entry.step === "campaign.create" && entry.method === "POST"
+    );
+    const bidStrategyAlreadyConfirmed = requestLog.some((entry) =>
+      (entry.step === "campaign.create" || entry.step === "campaign.bid_strategy")
+      && entry.method === "POST"
+      && entry.body?.bid_strategy === plan.campaign.bidStrategy
+    );
+    if (legacyCampaignCreate && !bidStrategyAlreadyConfirmed) {
+      await postMetaObject(
+        input,
+        requestLog,
+        responseLog,
+        "campaign.bid_strategy",
+        `/${reconciledObjects.campaignId}`,
+        { bid_strategy: plan.campaign.bidStrategy },
+      );
       await checkpointMetaPublishProgress(input, requestLog, responseLog, reconciledObjects);
     }
 
@@ -1365,6 +1393,7 @@ function rowToPlan(row: MetaPublishPlanRow): MetaPublishPlan {
     localId: "campaign_main",
     name: "Meta campaign",
     objective: "OUTCOME_LEADS",
+    bidStrategy: "LOWEST_COST_WITHOUT_CAP",
     status: "PAUSED",
     specialAdCategories: ["HOUSING"],
     specialAdCategoryCountries: ["AU"],

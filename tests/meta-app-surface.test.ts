@@ -30,7 +30,7 @@ test("publish review state skips approval and submits directly", () => {
   assert.doesNotMatch(panel, /needsApprovalReview/);
   assert.doesNotMatch(panel, /Send for review/);
   assert.doesNotMatch(panel, /requestApproval: true/);
-  assert.match(panel, /Submit & go live/);
+  assert.match(panel, /Launch 3-day campaign/);
   assert.match(panel, /studio-review-creatives/);
 });
 
@@ -51,7 +51,7 @@ test("publish submit shares one readiness gate and advances only after server ac
   assert.match(panel, /setPublishPhase\(planStatus === "paused_live" \? "live" : "creating"\);\s*return true;/);
   assert.match(panel, /catch \(error\) \{[\s\S]*?setPublishPhase\("failed"\);\s*return false;/);
   assert.match(panel, /const accepted = await handlePublishLive\(\);\s*if \(accepted\) \{\s*setStepIndex/);
-  assert.match(panel, /disabled=\{stepIndex === 4 \? \(!publishReady \|\| publishing\) : continueDisabled\}/);
+  assert.match(panel, /disabled=\{stepIndex === 3 \? \(!publishReady \|\| publishing\) : continueDisabled\}/);
   assert.doesNotMatch(panel, /void handlePublishLive\(\);\s*setStepIndex/);
   assert.equal(panel.match(/\/api\/integrations\/meta\/publish-plans/g)?.length, 1);
   assert.match(panel, /plan\.status === "failed" \|\| plan\.queueStatus === "failed"/);
@@ -70,18 +70,18 @@ test("publish submit shares one readiness gate and advances only after server ac
   assert.doesNotMatch(panel, /Still processing on Meta\. Confirm in Performance shortly\./);
 });
 
-test("publish budget defaults to the free three-day campaign and supports paid schedules", () => {
+test("Blockwise Campaign preset owns Meta setup and asks for the minimum customer choices", () => {
   const panel = readFileSync("src/components/adstudio/panels/publish-panel.tsx", "utf8");
 
+  assert.match(panel, /const STEPS = \["Audience", "Ads", "Budget", "Review", "Live"\]/);
   assert.match(panel, /const BUDGET_PRESETS = \[10, 20, 50\]/);
-  assert.match(panel, /const DURATION_PRESETS = \[3, 7, 14, 30\]/);
-  assert.match(panel, /useState<ScheduleMode>\("3"\)/);
+  assert.match(panel, /Blockwise Campaign/);
+  assert.match(panel, /Managed for you/);
+  assert.match(panel, /includeSurroundingSuburbs: true/);
+  assert.match(panel, /end\.setDate\(start\.getDate\(\) \+ 3\)/);
   assert.match(panel, /Enter amount/);
-  assert.match(panel, /Custom dates/);
-  assert.match(panel, /Run until stopped/);
-  assert.match(panel, /scheduleMode === "ongoing"[\s\S]*?null/);
-  assert.match(panel, /End date must be after the start date/);
-  assert.match(panel, /end\.setDate\(end\.getDate\(\) \+ 6\)/);
+  assert.match(panel, /Maximum three-day spend/);
+  assert.doesNotMatch(panel, /Use existing|existingMetaCampaignId|Custom dates|Run until stopped/);
 });
 
 test("Meta setup API captures concrete lead delivery endpoint config", () => {

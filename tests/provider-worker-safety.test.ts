@@ -19,17 +19,17 @@ test("double-publish reuses an active plan and avoids duplicate queue dispatch",
   assert.match(source, /reconciledObjects: existingPlan\.reconciledObjects/);
 });
 
-test("existing campaigns require a declared audience and cannot use free auto-activation", () => {
+test("the preset campaign requires a declared audience and keeps legacy reuse guarded", () => {
   const route = readFileSync(publishRoute, "utf8");
   const panel = readFileSync("src/components/adstudio/panels/publish-panel.tsx", "utf8");
 
   assert.match(route, /existingMetaCampaignId && !hasExplicitMetaPublishAudience\(body\.controls\)/);
   assert.match(route, /\.from\("workspaces"\)[\s\S]*\.eq\("id", access\.access\.workspaceId\)/);
   assert.match(route, /metaExistingCampaignReuseIssue\(\{[\s\S]*billingOfferVersion:[\s\S]*stripeSubscriptionStatus:/);
-  assert.match(panel, /const campaignStepReady = audienceReady && \(campaignMode === "new" \|\| Boolean\(selectedCampaign\)\)/);
+  assert.match(panel, /const campaignStepReady = audienceReady;/);
   assert.match(panel, /geo: targetSuburbs\.length > 0/);
-  assert.doesNotMatch(panel, /Existing campaign targeting/);
-  assert.match(panel, /Add a 25 km area around each selected suburb/);
+  assert.doesNotMatch(panel, /existingMetaCampaignId|campaignMode|selectedCampaign/);
+  assert.match(panel, /Blockwise uses Meta's housing-safe 25 km area around each selected suburb/);
 });
 
 test("provider workers and approval queueing are guarded by provider writes kill switch", () => {

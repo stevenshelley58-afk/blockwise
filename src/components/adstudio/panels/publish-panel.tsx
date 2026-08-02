@@ -9,7 +9,6 @@ import {
   ChevronLeft,
   ChevronRight,
   CircleAlert,
-  CircleHelp,
   Download,
   Image as ImageIcon,
   Images,
@@ -35,20 +34,9 @@ type ReadinessEntry = {
   blocked?: boolean;
 };
 
-type MetaCampaign = {
-  id: string;
-  name: string;
-  status: "active" | "paused";
-  objective: "leads";
-  createdAt: string | null;
-  updatedAt: string | null;
-};
-
 type MetaCampaignsResponse = {
   connected?: boolean;
   account?: { id: string; name: string };
-  campaigns?: MetaCampaign[];
-  issue?: string;
 };
 
 type MetaTargetingLocationsResponse = {
@@ -100,28 +88,9 @@ type PublishSetupPanelProps = {
   onRetryExportFormat?: (format: AdStudioFormat) => void;
 };
 
-const STEPS = ["Campaign setup", "Creatives", "Lead form", "Budget", "Review", "Live"] as const;
+const STEPS = ["Audience", "Ads", "Budget", "Review", "Live"] as const;
 const BUDGET_PRESETS = [10, 20, 50] as const;
-const DURATION_PRESETS = [3, 7, 14, 30] as const;
 const MAX_LIBRARY_SELECTIONS = 6;
-
-type ScheduleMode = `${(typeof DURATION_PRESETS)[number]}` | "custom" | "ongoing";
-
-function formatLocalDateInput(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function dateInputToIso(value: string, endOfDay = false): string | null {
-  const [year, month, day] = value.split("-").map(Number);
-  if (!year || !month || !day) return null;
-  const date = endOfDay
-    ? new Date(year, month - 1, day, 23, 59, 59, 999)
-    : new Date(year, month - 1, day);
-  return Number.isNaN(date.getTime()) ? null : date.toISOString();
-}
 
 export function PublishSetupPanel({
   campaignId,
@@ -146,7 +115,7 @@ export function PublishSetupPanel({
     thankYouTitle: leadFormTemplate?.thankYouScreen.title ?? "",
     thankYouBody: leadFormTemplate?.thankYouScreen.body ?? "",
   }));
-  const leadFormStepReady = leadForm.headline.trim().length > 0 && leadForm.questions.filter((q) => q.trim()).length > 0;
+  const leadFormStepReady = leadForm.headline.trim().length > 0;
   function updateLeadForm(patch: Partial<typeof leadForm>) {
     setLeadForm((prev) => {
       const next = { ...prev, ...patch };
@@ -158,12 +127,7 @@ export function PublishSetupPanel({
       return next;
     });
   }
-  const [campaignMode, setCampaignMode] = useState<"existing" | "new">("new");
-  const [selectedMetaCampaignId, setSelectedMetaCampaignId] = useState("");
-  const [expandedMetaCampaignId, setExpandedMetaCampaignId] = useState("");
   const [metaCampaigns, setMetaCampaigns] = useState<MetaCampaignsResponse | null>(null);
-  const [metaCampaignsLoading, setMetaCampaignsLoading] = useState(true);
-  const [metaCampaignRefresh, setMetaCampaignRefresh] = useState(0);
   const [readiness, setReadiness] = useState<ReadinessEntry[] | null>(null);
   const [publishing, setPublishing] = useState(false);
   const [publishError, setPublishError] = useState("");
@@ -221,31 +185,24 @@ export function PublishSetupPanel({
 
   const targetSuburbs = campaignPack.campaign.market.targetSuburbs ?? [];
   const targetSuburbKeys = targetSuburbs.map((location) => location.key).join("|");
-  const includeSurroundingSuburbs = campaignPack.campaign.market.includeSurroundingSuburbs;
-  const [scheduleMode, setScheduleMode] = useState<ScheduleMode>("3");
-  const [customStartDate, setCustomStartDate] = useState("");
-  const [customEndDate, setCustomEndDate] = useState("");
+  const includeSurroundingSuburbs = campaignPack.campaign.market.includeSurroundingSuburbs ?? true;
 
   useEffect(() => {
     let cancelled = false;
-    setMetaCampaignsLoading(true);
     fetch("/api/adstudio/meta-campaigns")
       .then(async (response) => ({ response, body: (await response.json().catch(() => ({}))) as MetaCampaignsResponse }))
       .then(({ response, body }) => {
         if (cancelled) return;
-        setMetaCampaigns(response.ok ? body : { campaigns: [], issue: "Campaigns could not be loaded." });
+        setMetaCampaigns(response.ok ? body : {});
       })
       .catch(() => {
-        if (!cancelled) setMetaCampaigns({ campaigns: [], issue: "Campaigns could not be loaded." });
-      })
-      .finally(() => {
-        if (!cancelled) setMetaCampaignsLoading(false);
+        if (!cancelled) setMetaCampaigns({});
       });
 
     return () => {
       cancelled = true;
     };
-  }, [metaCampaignRefresh]);
+  }, []);
 
   useEffect(() => {
     const query = targetQuery.trim();
@@ -408,49 +365,25 @@ export function PublishSetupPanel({
   const brandName = campaignPack.brandKit.identity.tradingName?.trim()
     || campaignPack.brandKit.identity.businessName
     || "Your brand";
-  const selectedCampaign = metaCampaigns?.campaigns?.find((campaign) => campaign.id === selectedMetaCampaignId);
-  const audienceReady = targetSuburbs.length > 0 && includeSurroundingSuburbs !== undefined;
-  const campaignStepReady = audienceReady && (campaignMode === "new" || Boolean(selectedCampaign));
+  const audienceReady = targetSuburbs.length > 0;
+  const campaignStepReady = audienceReady;
   const destinationReady = isWebUrl(destinationUrl);
   const creativeStepReady = !selectionHint;
   const selectedBudgetPreset = BUDGET_PRESETS.includes(dailyBudgetAud as (typeof BUDGET_PRESETS)[number])
     ? dailyBudgetAud
     : null;
-  const parsedCustomStart = dateInputToIso(customStartDate);
-  const parsedCustomEnd = dateInputToIso(customEndDate, true);
   const budgetError = Number.isFinite(dailyBudgetAud) && dailyBudgetAud >= 1
     ? ""
     : "Enter a daily budget of at least $1.";
-  const scheduleError = scheduleMode === "custom"
-    ? !parsedCustomStart || !parsedCustomEnd
-      ? "Choose both a start date and an end date."
-      : new Date(parsedCustomEnd).getTime() <= new Date(parsedCustomStart).getTime()
-        ? "End date must be after the start date."
-        : ""
-    : "";
-  const budgetStepReady = !budgetError && !scheduleError;
+  const budgetStepReady = !budgetError;
   const publishReady = allMet
     && campaignStepReady
     && creativeStepReady
     && leadFormStepReady
     && destinationReady
     && budgetStepReady;
-  const presetDurationDays = scheduleMode === "custom" || scheduleMode === "ongoing"
-    ? null
-    : Number(scheduleMode);
-  const customDurationDays = parsedCustomStart && parsedCustomEnd
-    ? Math.max(1, Math.ceil((new Date(parsedCustomEnd).getTime() - new Date(parsedCustomStart).getTime()) / 86_400_000))
-    : null;
-  const plannedSpend = !budgetError
-    ? dailyBudgetAud * (presetDurationDays ?? customDurationDays ?? 0)
-    : null;
-  const scheduleSummary = scheduleMode === "ongoing"
-    ? "Runs until stopped"
-    : scheduleMode === "custom"
-      ? customStartDate && customEndDate
-        ? `${formatInputDate(customStartDate)} to ${formatInputDate(customEndDate)}`
-        : "Custom dates"
-      : `${scheduleMode} days`;
+  const plannedSpend = !budgetError ? dailyBudgetAud * 3 : null;
+  const scheduleSummary = "3 days";
 
   function toggleVariant(variantId: string) {
     setDeselectedVariantIds((current) => {
@@ -483,38 +416,17 @@ export function PublishSetupPanel({
     onChangeTargeting?.(targetSuburbs.filter((location) => location.key !== key), includeSurroundingSuburbs);
   }
 
-  function chooseSurroundingSuburbs(value: boolean) {
-    onChangeTargeting?.(targetSuburbs, value);
-  }
-
-  function chooseSchedule(mode: ScheduleMode) {
-    if (mode === "custom" && (!customStartDate || !customEndDate)) {
-      const start = new Date();
-      const end = new Date(start);
-      end.setDate(end.getDate() + 6);
-      setCustomStartDate(formatLocalDateInput(start));
-      setCustomEndDate(formatLocalDateInput(end));
-    }
-    setScheduleMode(mode);
-  }
-
   function buildControls(): MetaPublishControls {
     const start = new Date();
     const end = new Date(start);
-    if (presetDurationDays) end.setDate(start.getDate() + presetDurationDays);
-    const startTime = scheduleMode === "custom" ? parsedCustomStart : start.toISOString();
-    const endTime = scheduleMode === "ongoing"
-      ? null
-      : scheduleMode === "custom"
-        ? parsedCustomEnd
-        : end.toISOString();
+    end.setDate(start.getDate() + 3);
     return {
       dailyBudgetMinorUnits: Math.max(1, Math.round(dailyBudgetAud * 100)),
       destinationUrl,
       geo: targetSuburbs.length > 0
-        ? { type: "cities", locations: targetSuburbs, includeSurroundingSuburbs: includeSurroundingSuburbs === true }
+        ? { type: "cities", locations: targetSuburbs, includeSurroundingSuburbs: true }
         : { type: "country", country: campaignPack.campaign.market.country },
-      schedule: { startTime, endTime },
+      schedule: { startTime: start.toISOString(), endTime: end.toISOString() },
       placements: {
         publisherPlatforms: ["facebook", "instagram"],
         facebookPositions: [],
@@ -539,7 +451,6 @@ export function PublishSetupPanel({
           campaignPack,
           controls: buildControls(),
           dryRun: false,
-          ...(campaignMode === "existing" ? { existingMetaCampaignId: selectedMetaCampaignId } : {}),
           ...(creativeSource === "library"
             ? {
                 librarySelections: selectedLibraryItems.map((item) => ({
@@ -594,10 +505,8 @@ export function PublishSetupPanel({
     : stepIndex === 1
       ? !creativeStepReady
       : stepIndex === 2
-        ? !leadFormStepReady
-        : stepIndex === 3
-          ? !budgetStepReady
-          : false;
+        ? !budgetStepReady
+        : false;
 
   return (
     <div className="studio-publish-flow">
@@ -625,80 +534,24 @@ export function PublishSetupPanel({
         <div className="studio-publish-content">
           {stepIndex === 0 && (
             <section className="studio-publish-screen" aria-labelledby="campaign-setup-title">
-              <h1 id="campaign-setup-title">Campaign setup</h1>
+              <h1 id="campaign-setup-title">Choose your audience</h1>
+              <p className="m-0 text-sm leading-6 text-(--muted)">
+                Blockwise will create and manage a new Meta leads campaign using our recommended real-estate settings.
+              </p>
 
-              <div className="studio-segmented" aria-label="Campaign choice">
-                <button type="button" className={campaignMode === "existing" ? "active" : ""} onClick={() => setCampaignMode("existing")}>
-                  {campaignMode === "existing" && <Check aria-hidden size={15} />}
-                  Use existing
-                </button>
-                <button type="button" className={campaignMode === "new" ? "active" : ""} onClick={() => setCampaignMode("new")}>
-                  Create new
-                </button>
+              <div className="grid gap-3 rounded-(--r-card) border border-(--line) bg-(--surface-subtle) p-4">
+                <div className="flex items-center gap-3">
+                  <span className="grid size-10 shrink-0 place-items-center rounded-full bg-(--ink) text-white"><Building2 aria-hidden size={18} /></span>
+                  <span className="grid min-w-0 gap-0.5">
+                    <strong className="text-sm text-(--ink)">Blockwise Campaign</strong>
+                    <small className="text-xs font-semibold text-(--muted)">Leads · Housing · Facebook and Instagram</small>
+                  </span>
+                  <span className="ml-auto rounded-full bg-(--ui-success-soft) px-2.5 py-1 text-[11px] font-bold text-(--ui-success)">Managed for you</span>
+                </div>
+                <p className="m-0 text-[13px] leading-5 text-(--muted)">
+                  We set the bidding, placements, lead optimization and campaign structure. You only confirm who should see the ads and where enquiries should go.
+                </p>
               </div>
-
-              {campaignMode === "existing" ? (
-                <div className="studio-publish-choice">
-                  <h2>Use an existing campaign</h2>
-                  {metaCampaignsLoading ? (
-                    <div className="studio-publish-loading"><RefreshCw aria-hidden size={17} /> Loading campaigns</div>
-                  ) : (metaCampaigns?.campaigns?.length ?? 0) > 0 ? (
-                    <div className="studio-campaign-list">
-                      {metaCampaigns?.campaigns?.map((campaign) => {
-                        const expanded = expandedMetaCampaignId === campaign.id;
-                        return (
-                          <article className={selectedMetaCampaignId === campaign.id ? "selected" : ""} key={campaign.id}>
-                            <div className="studio-campaign-row">
-                              <label>
-                                <input
-                                  type="radio"
-                                  name="meta-campaign"
-                                  value={campaign.id}
-                                  checked={selectedMetaCampaignId === campaign.id}
-                                  onChange={() => setSelectedMetaCampaignId(campaign.id)}
-                                />
-                                <span>{campaign.name}</span>
-                              </label>
-                              <span className={`studio-status-chip ${campaign.status}`}>{campaign.status}</span>
-                              <button
-                                type="button"
-                                aria-label={`${expanded ? "Hide" : "Show"} details for ${campaign.name}`}
-                                aria-expanded={expanded}
-                                onClick={() => setExpandedMetaCampaignId(expanded ? "" : campaign.id)}
-                              >
-                                <ChevronDown aria-hidden size={17} />
-                              </button>
-                            </div>
-                            {expanded && (
-                              <dl className="studio-campaign-details">
-                                <div><dt>Goal</dt><dd>Leads</dd></div>
-                                <div><dt>Status</dt><dd>{capitalize(campaign.status)}</dd></div>
-                                <div><dt>Updated</dt><dd>{formatDate(campaign.updatedAt ?? campaign.createdAt)}</dd></div>
-                              </dl>
-                            )}
-                          </article>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="studio-publish-empty">
-                      <strong>No reusable lead campaigns</strong>
-                      <span>{metaCampaigns?.issue ?? "Create a new campaign to continue."}</span>
-                      {metaCampaigns?.issue && (
-                        <button type="button" onClick={() => setMetaCampaignRefresh((value) => value + 1)}>Retry</button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="studio-publish-choice">
-                  <h2>Create a new campaign</h2>
-                  <div className="studio-new-campaign-row">
-                    <span>{campaignPack.campaign.name}</span>
-                    <span className="studio-status-chip paused">paused</span>
-                  </div>
-                </div>
-              )}
 
               <div className="studio-targeting-setup">
                 <div className="studio-targeting-heading">
@@ -742,17 +595,10 @@ export function PublishSetupPanel({
                   {targetSuggestionsError && <p id="campaign-target-error" className="studio-field-error"><CircleAlert aria-hidden size={15} /> {targetSuggestionsError}</p>}
                 </div>
 
-                <fieldset className="studio-surrounding-choice">
-                  <legend>Include surrounding suburbs?</legend>
-                  <label className={includeSurroundingSuburbs === true ? "selected" : ""}>
-                    <input type="radio" name="surrounding-suburbs" checked={includeSurroundingSuburbs === true} onChange={() => chooseSurroundingSuburbs(true)} />
-                    <span><strong>Yes, include nearby suburbs</strong><small>Add a 25 km area around each selected suburb.</small></span>
-                  </label>
-                  <label className={includeSurroundingSuburbs === false ? "selected" : ""}>
-                    <input type="radio" name="surrounding-suburbs" checked={includeSurroundingSuburbs === false} onChange={() => chooseSurroundingSuburbs(false)} />
-                    <span><strong>No, selected suburbs only</strong><small>Keep targeting to the suburbs listed above.</small></span>
-                  </label>
-                </fieldset>
+                <div className="flex items-start gap-2 rounded-(--r-card) bg-(--surface-subtle) px-3 py-2.5 text-[13px] leading-5 text-(--muted)">
+                  <Check aria-hidden className="mt-0.5 shrink-0 text-(--ui-success)" size={16} />
+                  <span><strong className="text-(--ink)">Nearby areas included automatically.</strong> Blockwise uses Meta's housing-safe 25 km area around each selected suburb.</span>
+                </div>
               </div>
 
               <label className="studio-publish-field">
@@ -781,18 +627,6 @@ export function PublishSetupPanel({
                 )}
               </div>
 
-              <details className="studio-publish-help">
-                <summary>
-                  <CircleHelp aria-hidden size={18} />
-                  <span><strong>Questions about campaigns?</strong><small>Short answers and the full guide</small></span>
-                  <ChevronDown aria-hidden size={17} />
-                </summary>
-                <div>
-                  <p><b>Use existing</b> when it already has the same lead goal.</p>
-                  <p><b>Create new</b> when the goal or setup is different.</p>
-                  <Link href="/guides/sold-price-list-seller-leads">Read the campaign guide</Link>
-                </div>
-              </details>
             </section>
           )}
 
@@ -844,10 +678,7 @@ export function PublishSetupPanel({
                   </div>
                   <p className="m-0 rounded-(--r-card) bg-(--surface-subtle) px-3 py-2.5 text-[13px] leading-5 text-(--muted)">
                     All selected creatives will be added to{" "}
-                    <strong className="font-bold text-(--ink)">
-                      {campaignMode === "existing" ? selectedCampaign?.name ?? "the campaign you chose" : campaignPack.campaign.name}
-                    </strong>
-                    , the campaign from the previous step.
+                    <strong className="font-bold text-(--ink)">a new Blockwise Campaign</strong>.
                   </p>
                   {creativeLibraryLoading ? (
                     <div className="studio-ad-library-loading" role="status">
@@ -913,78 +744,11 @@ export function PublishSetupPanel({
           )}
 
           {stepIndex === 2 && (
-            <section className="studio-publish-screen" aria-labelledby="leadform-title">
-              <h1 id="leadform-title">Lead form</h1>
-              <p className="studio-leadform-intro">This is the form people see when they tap your ad. Confirm the questions, or edit them before publishing.</p>
-
-              <label className="studio-publish-field">
-                <span>Form headline</span>
-                <input
-                  type="text"
-                  value={leadForm.headline}
-                  placeholder="Request the property details"
-                  aria-invalid={!leadForm.headline.trim()}
-                  onChange={(event) => updateLeadForm({ headline: event.target.value })}
-                />
-              </label>
-
-              <div className="studio-leadform-questions">
-                <strong>Questions</strong>
-                <span className="studio-leadform-hint">Standard fields (name, email) are added automatically by Meta. Add your custom questions below.</span>
-                {leadForm.questions.map((question, index) => (
-                  <div className="studio-leadform-q-row" key={index}>
-                    <input
-                      type="text"
-                      value={question}
-                      placeholder="e.g. What is your best contact number?"
-                      onChange={(event) => {
-                        const questions = [...leadForm.questions];
-                        questions[index] = event.target.value;
-                        updateLeadForm({ questions });
-                      }}
-                    />
-                    <button type="button" className="studio-leadform-del" aria-label={`Remove question ${index + 1}`} onClick={() => {
-                      const questions = leadForm.questions.filter((_, i) => i !== index);
-                      updateLeadForm({ questions });
-                    }}>&times;</button>
-                  </div>
-                ))}
-                {leadForm.questions.length < 5 && (
-                  <button type="button" className="studio-leadform-add" onClick={() => {
-                    updateLeadForm({ questions: [...leadForm.questions, ""] });
-                  }}>+ Add a question</button>
-                )}
-                {leadForm.questions.length >= 5 && (
-                  <span className="studio-leadform-max">Maximum 5 custom questions (Meta limit).</span>
-                )}
-              </div>
-
-              <div className="studio-publish-field-grid">
-                <label className="studio-publish-field">
-                  <span>Thank-you title</span>
-                  <input
-                    type="text"
-                    value={leadForm.thankYouTitle}
-                    placeholder="Request received"
-                    onChange={(event) => updateLeadForm({ thankYouTitle: event.target.value })}
-                  />
-                </label>
-                <label className="studio-publish-field">
-                  <span>Thank-you message</span>
-                  <input
-                    type="text"
-                    value={leadForm.thankYouBody}
-                    placeholder="The agency will be in touch shortly."
-                    onChange={(event) => updateLeadForm({ thankYouBody: event.target.value })}
-                  />
-                </label>
-              </div>
-            </section>
-          )}
-
-          {stepIndex === 3 && (
             <section className="studio-publish-screen" aria-labelledby="budget-title">
               <h1 id="budget-title">Budget</h1>
+              <p className="m-0 text-sm leading-6 text-(--muted)">
+                Every Blockwise Campaign runs for three days. Choose the daily limit and we will stop it automatically.
+              </p>
 
               <fieldset className="studio-budget-section">
                 <legend>Daily budget <span>AUD</span></legend>
@@ -1022,93 +786,66 @@ export function PublishSetupPanel({
                 {budgetError && <p className="studio-field-error" id="budget-error">{budgetError}</p>}
               </fieldset>
 
-              <fieldset className="studio-budget-section">
-                <legend>Schedule</legend>
-                <div className="studio-duration-presets" aria-label="Schedule presets">
-                  {DURATION_PRESETS.map((days) => {
-                    const value = String(days) as ScheduleMode;
-                    return (
-                      <button
-                        key={days}
-                        type="button"
-                        className={scheduleMode === value ? "selected" : ""}
-                        aria-pressed={scheduleMode === value}
-                        onClick={() => chooseSchedule(value)}
-                      >
-                        {days} days
-                      </button>
-                    );
-                  })}
-                  <button
-                    type="button"
-                    className={scheduleMode === "custom" ? "selected" : ""}
-                    aria-pressed={scheduleMode === "custom"}
-                    onClick={() => chooseSchedule("custom")}
-                  >
-                    Custom dates
-                  </button>
-                </div>
-
-                {scheduleMode === "custom" && (
-                  <div className="studio-date-range">
-                    <label>
-                      <span>Start date</span>
-                      <input
-                        type="date"
-                        value={customStartDate}
-                        aria-invalid={Boolean(scheduleError)}
-                        onChange={(event) => setCustomStartDate(event.target.value)}
-                      />
-                    </label>
-                    <label>
-                      <span>End date</span>
-                      <input
-                        type="date"
-                        min={customStartDate || undefined}
-                        value={customEndDate}
-                        aria-invalid={Boolean(scheduleError)}
-                        aria-describedby={scheduleError ? "schedule-error" : undefined}
-                        onChange={(event) => setCustomEndDate(event.target.value)}
-                      />
-                    </label>
-                  </div>
-                )}
-
-                <button
-                  type="button"
-                  className={`studio-run-ongoing ${scheduleMode === "ongoing" ? "selected" : ""}`}
-                  aria-pressed={scheduleMode === "ongoing"}
-                  onClick={() => chooseSchedule("ongoing")}
-                >
-                  <span aria-hidden />
-                  <span><strong>Run until stopped</strong><small>No end date. Pause the campaign whenever you need to.</small></span>
-                </button>
-                {scheduleError && <p className="studio-field-error" id="schedule-error">{scheduleError}</p>}
-              </fieldset>
-
               <div className="studio-publish-total">
-                <span>{scheduleMode === "ongoing" ? "Daily spend limit" : "Planned spend"}</span>
-                <strong>
-                  {scheduleMode === "ongoing"
-                    ? `$${Number.isFinite(dailyBudgetAud) ? dailyBudgetAud.toLocaleString("en-AU") : "--"} AUD / day`
-                    : plannedSpend
-                      ? `$${plannedSpend.toLocaleString("en-AU")} AUD`
-                      : "--"}
-                </strong>
+                <span>Maximum three-day spend</span>
+                <strong>{plannedSpend ? `$${plannedSpend.toLocaleString("en-AU")} AUD` : "--"}</strong>
               </div>
             </section>
           )}
 
-          {stepIndex === 4 && (
+          {stepIndex === 3 && (
             <section className="studio-publish-screen" aria-labelledby="review-title">
               <h1 id="review-title">Review</h1>
               <div className="studio-review-list">
-                <div><span>Campaign</span><strong>{campaignMode === "existing" ? selectedCampaign?.name : campaignPack.campaign.name}</strong></div>
+                <div><span>Campaign</span><strong>Blockwise Campaign</strong></div>
                 <div><span>Creatives</span><strong>{selectedCreativeCount}</strong></div>
-                <div><span>Lead form</span><strong>{leadForm.questions.filter((q) => q.trim()).length} question{leadForm.questions.filter((q) => q.trim()).length === 1 ? "" : "s"}</strong></div>
+                <div><span>Lead form</span><strong>Prepared for you</strong></div>
                 <div><span>Audience</span><strong>{formatTargetAudience(targetSuburbs, includeSurroundingSuburbs)}</strong></div>
                 <div><span>Budget</span><strong>${dailyBudgetAud}/day · {scheduleSummary}</strong></div>
               </div>
+              <details className="studio-readiness-details">
+                <summary>
+                  <span>Lead form</span>
+                  <strong className={leadFormStepReady ? "ready" : "needs-work"}>{leadFormStepReady ? "Blockwise default" : "Needs attention"}</strong>
+                  <ChevronDown aria-hidden size={17} />
+                </summary>
+                <div className="grid gap-4">
+                  <p className="m-0 text-[13px] leading-5 text-(--muted)">Name, email and phone are collected automatically. You can edit the generated form if needed.</p>
+                  <label className="studio-publish-field">
+                    <span>Form headline</span>
+                    <input
+                      type="text"
+                      value={leadForm.headline}
+                      placeholder="Request the property details"
+                      aria-invalid={!leadForm.headline.trim()}
+                      onChange={(event) => updateLeadForm({ headline: event.target.value })}
+                    />
+                  </label>
+                  <div className="studio-leadform-questions">
+                    <strong>Extra questions</strong>
+                    {leadForm.questions.map((question, index) => (
+                      <div className="studio-leadform-q-row" key={index}>
+                        <input
+                          type="text"
+                          value={question}
+                          placeholder="e.g. What is your best contact number?"
+                          onChange={(event) => {
+                            const questions = [...leadForm.questions];
+                            questions[index] = event.target.value;
+                            updateLeadForm({ questions });
+                          }}
+                        />
+                        <button type="button" className="studio-leadform-del" aria-label={`Remove question ${index + 1}`} onClick={() => {
+                          updateLeadForm({ questions: leadForm.questions.filter((_, itemIndex) => itemIndex !== index) });
+                        }}>&times;</button>
+                      </div>
+                    ))}
+                    {leadForm.questions.length < 5 && (
+                      <button type="button" className="studio-leadform-add" onClick={() => updateLeadForm({ questions: [...leadForm.questions, ""] })}>+ Add a question</button>
+                    )}
+                  </div>
+                </div>
+              </details>
               <details className="studio-readiness-details" open={!allMet}>
                 <summary>
                   <span>Readiness</span>
@@ -1182,11 +919,11 @@ export function PublishSetupPanel({
                   ))}
                 </div>
               )}
-              {publishError && stepIndex === 4 && <p className="studio-publish-error">{publishError}</p>}
+              {publishError && stepIndex === 3 && <p className="studio-publish-error">{publishError}</p>}
             </section>
           )}
 
-          {stepIndex === 5 && (
+          {stepIndex === 4 && (
             <section className="studio-publish-screen studio-live-screen" aria-labelledby="live-title">
               <h1 id="live-title">Live</h1>
               {publishPhase === "idle" && !publishDone && !publishing && (
@@ -1249,10 +986,10 @@ export function PublishSetupPanel({
             <button
               type="button"
               className="studio-publish-continue"
-              disabled={stepIndex === 4 ? (!publishReady || publishing) : continueDisabled}
-              onClick={stepIndex === 4 ? () => void handlePublishAndAdvance() : () => setStepIndex((index) => Math.min(STEPS.length - 1, index + 1))}
+              disabled={stepIndex === 3 ? (!publishReady || publishing) : continueDisabled}
+              onClick={stepIndex === 3 ? () => void handlePublishAndAdvance() : () => setStepIndex((index) => Math.min(STEPS.length - 1, index + 1))}
             >
-              {stepIndex === 4 ? <>{publishing ? <RefreshCw aria-hidden size={17} /> : <Send aria-hidden size={17} />} {publishing ? "Submitting..." : "Submit & go live"} <ChevronRight aria-hidden size={17} /></> : <>Continue to {STEPS[stepIndex + 1]?.toLowerCase()} <ChevronRight aria-hidden size={17} /></>}
+              {stepIndex === 3 ? <>{publishing ? <RefreshCw aria-hidden size={17} /> : <Send aria-hidden size={17} />} {publishing ? "Submitting..." : "Launch 3-day campaign"} <ChevronRight aria-hidden size={17} /></> : <>Continue to {STEPS[stepIndex + 1]?.toLowerCase()} <ChevronRight aria-hidden size={17} /></>}
             </button>
           )}
         </footer>
@@ -1324,9 +1061,4 @@ function formatTargetAudience(locations: AdStudioTargetLocation[], includeSurrou
   if (locations.length === 0) return "No suburbs selected";
   const names = locations.map((location) => location.name).join(", ");
   return includeSurroundingSuburbs ? `${names} + nearby suburbs` : names;
-}
-
-function formatInputDate(value: string) {
-  const iso = dateInputToIso(value);
-  return iso ? formatDate(iso) : value;
 }
