@@ -36,7 +36,7 @@ export function BlockwiseLogo({
           .filter(Boolean)
           .join(" ")}
       >
-        <span aria-hidden="true" className="inline-block size-7 shrink-0 text-inherit">
+        <span aria-hidden="true" className="inline-block size-7 shrink-0 text-(--color-accent)">
           <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" role="presentation" className="block size-full">
             {FILLED_CELLS.map(([x, y]) => (
               <rect key={`${x}-${y}`} x={x * 34} y={y * 34} width={28} height={28} rx={4.5} fill="currentColor" />
@@ -44,7 +44,7 @@ export function BlockwiseLogo({
           </svg>
         </span>
         {showWordmark ? (
-          <span className="text-[20px] font-bold tracking-[-0.035em] text-inherit">blockwise</span>
+          <span className="text-[20px] font-semibold tracking-[-0.025em] text-inherit">blockwise</span>
         ) : null}
       </span>
     );

@@ -1,6 +1,6 @@
 /*
  * White-label niche layer. This directory is the ONLY place niche identity —
- * product nouns, industry copy, the vivid data hue, nav labels, and feature
+ * product nouns, industry copy, nav labels, and feature
  * flags — may live. Customer pages and components reference `niche.*` instead
  * of writing niche nouns inline, so cloning the product for a new vertical
  * means writing a sibling config folder and flipping the export in
@@ -254,12 +254,6 @@ export type NicheConfig = {
     /** Geographic unit: "suburb" (Blockwise) / "area". */
     area: string;
     areas: string;
-  };
-  theme: {
-    /** The one vivid data hue — charts, meters, sparklines only. */
-    data: string;
-    dataSoft: string;
-    dataTrack: string;
   };
   nav: {
     items: NicheNavItem[];

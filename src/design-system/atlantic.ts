@@ -1,0 +1,36 @@
+export const atlantic = {
+  color: {
+    white: "#FFFFFF",
+    blueWhite: "#F8FAFD",
+    navigation: "#F3F7FB",
+    border: "#D5E1ED",
+    borderStrong: "#B5C4D3",
+    ink: "#112A46",
+    muted: "#65768A",
+    subtle: "#8292A5",
+    shell: "#06111F",
+    sunken: "#040C17",
+    rail: "#081A2E",
+    card: "#0A213A",
+    darkBorder: "#173854",
+    darkBorderStrong: "#245072",
+    darkText: "#F4F8FC",
+    darkMuted: "#91A8BE",
+    darkSubtle: "#718AA2",
+    signal: "#F23B1D",
+    signalUi: "#FF5A36",
+    acid: "#B8F238",
+    running: "#6F9DF2",
+    warning: "#F3BD4A",
+    danger: "#EF5B5B",
+  },
+  space: [0, 4, 8, 12, 16, 20, 24, 32, 40, 48, 64] as const,
+  radius: { indicator: 4, control: 8, card: 12, panel: 16, overlay: 24, full: 9999 },
+  breakpoint: { compact: 600, tablet: 768, desktop: 1024, wide: 1440 },
+  motion: {
+    duration: { fast: 140, normal: 220, slow: 360 },
+    easing: { standard: "cubic-bezier(0.2, 0, 0, 1)", spring: "cubic-bezier(0.16, 1, 0.3, 1)" },
+  },
+} as const;
+
+export type AtlanticTokens = typeof atlantic;

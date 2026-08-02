@@ -1,8 +1,7 @@
 /* ============================================================
    Night Ops hero — production homepage fold (#top).
    Dark map with a baked-in suburb boundary. Self-contained:
-   tokens scoped to .hw-no. Display: Manrope · Body: Inter
-   (from the :root font variables set in app/layout).
+   Atlantic navy field with vermilion scope tracing.
    ============================================================ */
 
 .hw-no {
@@ -11,31 +10,30 @@
   display: flex;
   align-items: center;
   min-height: 94svh;
-  background: #070d18;
-  color: #e8ecf3;
+  background: var(--atlantic-shell);
+  color: var(--atlantic-dark-text);
   font-family: var(--no-body);
   -webkit-font-smoothing: antialiased;
 
-  --no-accent: #006bff;
-  --no-accent-bright: #4d94ff;
-  --no-ease: cubic-bezier(0.16, 1, 0.3, 1);
-  --no-display:
-    var(--font-manrope), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --no-body: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --no-accent: var(--atlantic-signal);
+  --no-accent-bright: var(--atlantic-signal-ui);
+  --no-ease: var(--motion-ease-spring);
+  --no-display: var(--font-display);
+  --no-body: var(--font-sans);
 
   /* dark glass suburb-search theme */
-  --no-pill-bg: rgba(10, 20, 38, 0.72);
-  --no-pill-fg: #eef3fb;
-  --no-pill-ph: #7c8db0;
-  --no-pill-border: rgba(120, 170, 255, 0.28);
-  --no-pill-shadow: 0 16px 40px -18px rgba(0, 0, 0, 0.7);
-  --no-note-fg: rgba(200, 214, 238, 0.66);
-  --no-sug-bg: #0d1830;
-  --no-sug-fg: #e8eefb;
-  --no-sug-border: rgba(120, 170, 255, 0.2);
-  --no-sug-line: rgba(120, 170, 255, 0.1);
-  --no-sug-hover: rgba(0, 107, 255, 0.16);
-  --no-sug-muted: #8fa3c8;
+  --no-pill-bg: rgb(4 12 23 / 78%);
+  --no-pill-fg: var(--atlantic-dark-text);
+  --no-pill-ph: var(--atlantic-dark-subtle);
+  --no-pill-border: rgb(255 90 54 / 34%);
+  --no-pill-shadow: var(--elevation-md);
+  --no-note-fg: var(--atlantic-dark-muted);
+  --no-sug-bg: var(--atlantic-card);
+  --no-sug-fg: var(--atlantic-dark-text);
+  --no-sug-border: var(--atlantic-dark-border-strong);
+  --no-sug-line: var(--atlantic-dark-border);
+  --no-sug-hover: rgb(255 90 54 / 14%);
+  --no-sug-muted: var(--atlantic-dark-muted);
 }
 .hw-no img {
   display: block;
@@ -61,17 +59,17 @@
   background:
     radial-gradient(
       120% 90% at 78% 40%,
-      rgba(0, 40, 90, 0.18),
+      rgb(255 90 54 / 8%),
       transparent 55%
     ),
     linear-gradient(
       90deg,
-      rgba(5, 9, 17, 0.92) 0%,
-      rgba(5, 9, 17, 0.72) 38%,
-      rgba(5, 9, 17, 0.16) 70%,
-      rgba(5, 9, 17, 0) 100%
+      rgb(6 17 31 / 96%) 0%,
+      rgb(6 17 31 / 78%) 38%,
+      rgb(6 17 31 / 22%) 70%,
+      rgb(6 17 31 / 0%) 100%
     ),
-    linear-gradient(0deg, rgba(5, 9, 17, 0.6), transparent 32%);
+    linear-gradient(0deg, rgb(6 17 31 / 68%), transparent 32%);
 }
 
 /* ---------- Animated suburb boundary ----------
@@ -92,7 +90,7 @@
   display: none;
 }
 .hw-no-boundary-fill {
-  fill: rgba(0, 107, 255, 0.16);
+  fill: rgb(242 59 29 / 13%);
   opacity: 0;
   animation: no-boundary-fill 7s ease-in-out infinite;
 }
@@ -100,7 +98,7 @@
    loop. Opacity-only animation on a filtered element = safely composited. */
 .hw-no-boundary-glow {
   fill: none;
-  stroke: rgba(0, 107, 255, 0.6);
+  stroke: rgb(255 90 54 / 68%);
   stroke-width: 9;
   stroke-linejoin: round;
   stroke-linecap: round;
@@ -113,7 +111,7 @@
    browsers). Bright core so the trace reads over the baked blue boundary. */
 .hw-no-boundary-stroke {
   fill: none;
-  stroke: #d6e7ff;
+  stroke: var(--atlantic-dark-text);
   stroke-width: 3;
   stroke-linejoin: round;
   stroke-linecap: round;
@@ -205,7 +203,7 @@
   line-height: 1.05;
   letter-spacing: -0.028em;
   font-weight: 800;
-  color: #fff;
+  color: var(--atlantic-dark-text);
 }
 .hw-no-accent {
   color: var(--no-accent-bright);
@@ -215,7 +213,7 @@
   max-width: 40ch;
   font-size: 17px;
   line-height: 1.5;
-  color: rgba(226, 235, 248, 0.92);
+  color: var(--atlantic-dark-text);
 }
 .hw-no-form {
   display: inline-grid;
@@ -228,72 +226,84 @@
 .hw-no-note {
   margin: 10px 0 0;
   font-size: 13px;
-  color: rgba(226, 235, 248, 0.72);
+  color: var(--atlantic-dark-muted);
 }
 
-/* ---------- Desktop examples ---------- */
+/* ---------- Desktop operational receipt ---------- */
 
-.hw-no-examples {
-  position: absolute;
-  top: -11px;
-  right: 18px;
-  z-index: 2;
-  display: inline-block;
-  background: rgba(13, 24, 42, 0.7);
-  border: 1px solid rgba(120, 170, 255, 0.25);
-  border-radius: 9999px;
-  padding: 3px 10px;
-  font-size: 11px;
-  font-weight: 600;
-  color: #9db8e8;
-  white-space: nowrap;
-}
-/* ---------- Metric cards ---------- */
-
-.hw-no-cards {
+.hw-no-proof {
   position: absolute;
   z-index: 6;
   right: clamp(24px, 6vw, 88px);
   top: 50%;
   transform: translateY(-50%);
+  width: min(360px, calc(100vw - 48px));
+  border: 1px solid var(--atlantic-dark-border-strong);
+  border-radius: var(--radius-panel);
+  background: var(--atlantic-rail);
+  box-shadow: var(--elevation-lg);
+  padding: 20px;
+}
+.hw-no-proof-head,
+.hw-no-proof-foot,
+.hw-no-proof dl > div {
   display: flex;
-  flex-direction: column;
-  gap: 18px;
-  width: 300px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
 }
-.hw-no-card {
-  padding: 20px 22px;
-  border-radius: 18px;
-  background: rgba(13, 24, 42, 0.55);
-  border: 1px solid rgba(120, 170, 255, 0.18);
-  backdrop-filter: blur(16px);
-  box-shadow: 0 24px 60px -24px rgba(0, 0, 0, 0.6);
-}
-.hw-no-card-k {
-  margin: 0;
-  font-size: 11.5px;
-  font-weight: 650;
-  letter-spacing: 0.1em;
+.hw-no-proof-head span,
+.hw-no-proof dt {
+  color: var(--atlantic-dark-muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: #7fa6e8;
 }
-.hw-no-card-v {
-  margin: 8px 0 4px;
-  font-family: var(--no-display);
-  font-size: 34px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  color: #fff;
-  font-variant-numeric: tabular-nums;
+.hw-no-proof-head strong {
+  color: var(--atlantic-acid);
+  font-size: 12px;
+  font-weight: 600;
 }
-.hw-no-card-v--text {
-  font-size: 21px;
-  letter-spacing: -0.01em;
+.hw-no-proof h2 {
+  margin: 34px 0 8px;
+  color: var(--atlantic-dark-text);
+  font-size: 24px;
+  font-weight: 650;
+  letter-spacing: -0.025em;
 }
-.hw-no-card-s {
+.hw-no-proof > p {
   margin: 0;
-  font-size: 12.5px;
-  color: #93a5c4;
+  color: var(--atlantic-dark-muted);
+  font-size: 14px;
+}
+.hw-no-proof dl {
+  display: grid;
+  gap: 0;
+  margin: 28px 0 0;
+}
+.hw-no-proof dl > div {
+  min-height: 44px;
+  border-top: 1px solid var(--atlantic-dark-border);
+}
+.hw-no-proof dd {
+  margin: 0;
+  color: var(--atlantic-dark-text);
+  font-size: 13px;
+  font-weight: 600;
+}
+.hw-no-proof-foot {
+  justify-content: flex-start;
+  min-height: 44px;
+  margin: 16px -20px -20px;
+  border-top: 1px solid rgb(184 242 56 / 32%);
+  border-radius: 0 0 var(--radius-panel) var(--radius-panel);
+  background: rgb(184 242 56 / 8%);
+  padding: 0 20px;
+  color: var(--atlantic-acid);
+  font-size: 12px;
+  font-weight: 600;
 }
 
 /* ---------- Dark suburb-search form theme ----------
@@ -327,7 +337,6 @@
   border: 1px solid var(--no-pill-border);
   color: var(--no-pill-fg);
   box-shadow: var(--no-pill-shadow);
-  backdrop-filter: blur(10px);
   transition:
     border-color 0.2s var(--no-ease),
     box-shadow 0.2s var(--no-ease);
@@ -335,12 +344,12 @@
 .hw-no .hw-report-search .lp-location-pill:focus-within {
   border-color: var(--no-accent);
   box-shadow:
-    0 0 0 4px rgba(0, 107, 255, 0.16),
+    var(--focus-ring),
     var(--no-pill-shadow);
 }
 .hw-no .hw-report-search .lp-location-pill > svg {
   flex: none;
-  color: #9db8e8;
+  color: var(--atlantic-dark-muted);
   opacity: 0.7;
 }
 .hw-no .hw-report-search .lp-location-pill input {
@@ -368,20 +377,20 @@
   border: 0;
   border-radius: 16px;
   background: var(--no-accent);
-  color: #fff;
+  color: var(--color-accent-content);
   font-family: inherit;
   font-size: 15px;
   font-weight: 650;
   white-space: nowrap;
   cursor: pointer;
-  box-shadow: 0 16px 32px -14px rgba(0, 107, 255, 0.55);
+  box-shadow: var(--elevation-md);
   transition:
     background 0.2s var(--no-ease),
     transform 0.2s var(--no-ease),
     box-shadow 0.2s var(--no-ease);
 }
 .hw-no .hw-report-search .lp-btn:hover {
-  background: #0055d4;
+  background: var(--color-accent-hover);
   transform: translateY(-1px);
 }
 .hw-no .hw-report-search .lp-btn:active {
@@ -407,7 +416,7 @@
   border-radius: 14px;
   background: var(--no-sug-bg);
   border: 1px solid var(--no-sug-border);
-  box-shadow: 0 26px 64px -22px rgba(9, 24, 44, 0.4);
+  box-shadow: var(--elevation-lg);
 }
 .hw-no .hw-report-search .lp-location-option {
   width: 100%;
@@ -467,7 +476,7 @@
 .hw-no .hw-report-search-error {
   margin: 8px 2px 0;
   font-size: 13px;
-  color: #ff6b6b;
+  color: var(--atlantic-danger);
 }
 
 /* ---------- Entrance (CSS-only, SSR-safe) ---------- */
@@ -477,6 +486,9 @@
     opacity: 1;
     transform: none;
   }
+}
+@keyframes no-fade {
+  to { opacity: 1; }
 }
 .hw-no-content > * {
   opacity: 0;
@@ -495,19 +507,9 @@
 .hw-no-content > *:nth-child(4) {
   animation-delay: 0.44s;
 }
-.hw-no-card {
+.hw-no-proof {
   opacity: 0;
-  transform: translateY(26px);
-  animation: no-rise 0.8s var(--no-ease) forwards;
-}
-.hw-no-card--1 {
-  animation-delay: 0.4s;
-}
-.hw-no-card--2 {
-  animation-delay: 0.55s;
-}
-.hw-no-card--3 {
-  animation-delay: 0.7s;
+  animation: no-fade 0.36s var(--no-ease) 0.22s forwards;
 }
 
 /* ---------- Responsive ---------- */
@@ -525,16 +527,16 @@
     background:
       linear-gradient(
         180deg,
-        rgba(5, 9, 17, 0.92) 0%,
-        rgba(5, 9, 17, 0.56) 23%,
-        rgba(5, 9, 17, 0.08) 48%,
-        rgba(5, 9, 17, 0.18) 67%,
-        rgba(5, 9, 17, 0.94) 100%
+        rgb(6 17 31 / 96%) 0%,
+        rgb(6 17 31 / 64%) 23%,
+        rgb(6 17 31 / 12%) 48%,
+        rgb(6 17 31 / 22%) 67%,
+        rgb(6 17 31 / 96%) 100%
       ),
       radial-gradient(
         90% 60% at 50% 50%,
-        rgba(0, 40, 90, 0),
-        rgba(5, 9, 17, 0.26)
+        rgb(255 90 54 / 0%),
+        rgb(6 17 31 / 30%)
       );
   }
   .hw-no-boundary--desktop {
@@ -568,7 +570,7 @@
     margin-top: auto;
     padding-top: 28px;
   }
-  .hw-no-cards {
+  .hw-no-proof {
     display: none;
   }
 }
@@ -597,10 +599,13 @@
     animation: none !important;
     transition: none !important;
   }
-  .hw-no-content > *,
-  .hw-no-card {
+  .hw-no-content > * {
     opacity: 1 !important;
     transform: none !important;
+  }
+  .hw-no-proof {
+    opacity: 1 !important;
+    transform: translateY(-50%) !important;
   }
   /* show the suburb as quietly selected (drawn outline + bloom + soft fill), no loop */
   .hw-no-boundary-stroke {

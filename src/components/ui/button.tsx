@@ -5,36 +5,36 @@ import { Slot } from "radix-ui"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex shrink-0 items-center justify-center gap-2 rounded-full text-sm font-medium whitespace-nowrap transition-all outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-md text-sm font-semibold whitespace-nowrap transition-[background-color,border-color,color,box-shadow,transform] duration-[var(--duration-fast)] outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/30 disabled:pointer-events-none disabled:opacity-50 active:translate-y-px motion-reduce:transition-none motion-reduce:active:translate-y-0 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
         default: "bg-primary text-primary-foreground hover:bg-primary/90",
+        signal: "bg-(--color-accent) text-(--color-accent-content) hover:bg-(--color-accent-hover)",
         destructive:
           "bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:bg-destructive/60 dark:focus-visible:ring-destructive/40",
         outline:
-          "border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
+          "border border-(--color-border-strong) bg-background hover:bg-accent hover:text-accent-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost:
           "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
         link: "text-primary underline-offset-4 hover:underline",
-        // Premium v2 "ghost button": full pill on Clean Surface with a Control
-        // Line boundary and ink label (DESIGN.md §7 Controls). Pair with
-        // `size="pill"` for the 36px toolbar/page-head control.
+        // Atlantic bordered control on a raised surface. The legacy variant
+        // name remains API-compatible; its geometry is intentionally rectangular.
         "ghost-pill":
-          "cursor-pointer border border-(--line-heavy) bg-card text-foreground hover:bg-(--surface-subtle) hover:shadow-card disabled:opacity-60",
+          "cursor-pointer rounded-(--r-ctl) border border-(--line-heavy) bg-card text-foreground hover:bg-muted disabled:opacity-60",
       },
       size: {
-        default: "h-9 px-4 py-2 has-[>svg]:px-3",
-        xs: "h-6 gap-1 rounded-full px-2 text-xs has-[>svg]:px-1.5 [&_svg:not([class*='size-'])]:size-3",
-        sm: "h-8 gap-1.5 rounded-full px-3 has-[>svg]:px-2.5",
-        lg: "h-10 rounded-full px-6 has-[>svg]:px-4",
-        pill: "h-9 gap-2 rounded-full px-3.5 text-[12.5px] font-bold",
-        icon: "size-9",
-        "icon-xs": "size-6 rounded-full [&_svg:not([class*='size-'])]:size-3",
-        "icon-sm": "size-8",
-        "icon-lg": "size-10",
+        default: "h-10 px-4 py-2 has-[>svg]:px-3",
+        xs: "min-h-8 gap-1 rounded-(--r-ctl) px-2 text-xs has-[>svg]:px-1.5 [&_svg:not([class*='size-'])]:size-3",
+        sm: "min-h-9 gap-1.5 rounded-(--r-ctl) px-3 has-[>svg]:px-2.5",
+        lg: "h-12 rounded-(--r-card) px-6 has-[>svg]:px-4",
+        pill: "h-10 gap-2 rounded-(--r-ctl) px-3.5 text-[12px] font-semibold",
+        icon: "size-10",
+        "icon-xs": "size-8 rounded-(--r-ctl) [&_svg:not([class*='size-'])]:size-3",
+        "icon-sm": "size-9 rounded-(--r-ctl)",
+        "icon-lg": "size-12 rounded-(--r-card)",
       },
     },
     defaultVariants: {

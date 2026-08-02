@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
+import { Button } from "@/components/ui/button";
+
 const CONSENT_KEY = "bw-consent";
 
 export type ConsentStatus = "granted" | "essential";
@@ -54,20 +56,24 @@ export function ConsentBanner() {
   if (!visible) return null;
 
   return (
-    <div className="consent-banner" role="region" aria-label="Cookie consent">
-      <p className="consent-banner__text">
+    <div
+      className="consent-banner tw fixed inset-x-0 bottom-0 z-100 flex flex-wrap items-center gap-4 border-t border-border bg-card px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] text-card-foreground shadow-float"
+      role="region"
+      aria-label="Cookie consent"
+    >
+      <p className="min-w-50 flex-1 text-sm leading-6 text-muted-foreground">
         We use cookies to understand how visitors use Blockwise and to improve our ads.{" "}
-        <Link href="/privacy" className="consent-banner__link">
+        <Link href="/privacy" className="font-semibold text-foreground underline underline-offset-4">
           Privacy policy
         </Link>
       </p>
-      <div className="consent-banner__actions">
-        <button type="button" className="consent-banner__btn consent-banner__btn--primary" onClick={handleAccept}>
+      <div className="flex shrink-0 flex-wrap gap-2">
+        <Button type="button" variant="signal" onClick={handleAccept}>
           Accept all
-        </button>
-        <button type="button" className="consent-banner__btn consent-banner__btn--secondary" onClick={handleEssential}>
+        </Button>
+        <Button type="button" variant="outline" onClick={handleEssential}>
           Essential only
-        </button>
+        </Button>
       </div>
     </div>
   );

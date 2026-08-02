@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, JetBrains_Mono, Manrope } from "next/font/google";
+import { IBM_Plex_Mono, Inter } from "next/font/google";
 import Script from "next/script";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
@@ -8,11 +8,10 @@ import { PageViewTracker } from "@/components/page-view-tracker";
 import { ConsentBanner } from "@/components/consent-banner";
 import { ServiceWorkerRegistrar } from "@/components/pwa/ServiceWorkerRegistrar";
 
-// globals.css and landing.css are imported by tailwind.css into the `legacy`
-// cascade layer so Tailwind utilities win on the rebuilt customer surface.
-// theme-monochrome.css stays last and unlayered — it is the token override.
+// Structural legacy selectors stay in a low cascade layer; Atlantic is the
+// single unlayered visual authority shared by every surface.
 import "./tailwind.css";
-import "./theme-monochrome.css";
+import "@/design-system/atlantic.css";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -20,15 +19,10 @@ const inter = Inter({
   display: "swap",
 });
 
-const manrope = Manrope({
+const ibmPlexMono = IBM_Plex_Mono({
   subsets: ["latin"],
-  variable: "--font-manrope",
-  display: "swap",
-});
-
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ["latin"],
-  variable: "--font-jetbrains",
+  weight: ["400", "500", "600"],
+  variable: "--font-ibm-plex-mono",
   display: "swap",
 });
 
@@ -85,14 +79,14 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html
       lang="en-AU"
-      className={`${inter.variable} ${manrope.variable} ${jetbrainsMono.variable}`}
-      data-sidebar-theme="light"
+      className={`${inter.variable} ${ibmPlexMono.variable}`}
+      data-theme="light"
       suppressHydrationWarning
     >
       <head>
-        {/* Set sidebar theme before paint to avoid a flash */}
-        <Script id="sidebar-theme-init" strategy="beforeInteractive">
-          {`try{var t=localStorage.getItem('bw-sidebar')||'light';document.documentElement.setAttribute('data-sidebar-theme',t);}catch(e){}`}
+        {/* Set the Atlantic light condition before paint to avoid a flash. */}
+        <Script id="atlantic-theme-init" strategy="beforeInteractive">
+          {`try{var t=localStorage.getItem('bw-theme')||'light';document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light');}catch(e){}`}
         </Script>
       </head>
       <body>

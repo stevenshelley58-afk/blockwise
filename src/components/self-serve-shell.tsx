@@ -3,7 +3,7 @@
 import { Download, LogOut, MoreHorizontal } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { BlockwiseLogo } from "@/components/blockwise-logo";
 import { CommandMenu } from "@/components/command-menu";
@@ -185,16 +185,7 @@ export function SelfServeShell({
   }, [userId, workspaceId]);
 
   return (
-    <SidebarProvider
-      className="tw"
-      style={
-        {
-          "--ui-data": niche.theme.data,
-          "--ui-data-soft": niche.theme.dataSoft,
-          "--ui-data-track": niche.theme.dataTrack,
-        } as CSSProperties
-      }
-    >
+    <SidebarProvider className="tw bg-background">
       <Sidebar collapsible="icon">
         <SidebarHeader className="p-3">
           <Link
@@ -250,7 +241,7 @@ export function SelfServeShell({
       </Sidebar>
 
       <SidebarInset className="pb-[calc(4.75rem+env(safe-area-inset-bottom))] md:pb-0">
-        <header className="sticky top-0 z-20 flex min-h-[54px] items-center gap-2.5 border-b border-border bg-background/85 px-4 pt-[env(safe-area-inset-top)] backdrop-blur-md md:min-h-[60px] md:gap-3.5 md:px-7">
+        <header className="sticky top-0 z-20 flex min-h-[54px] items-center gap-2.5 border-b border-border bg-card px-4 pt-[env(safe-area-inset-top)] md:min-h-[60px] md:gap-3.5 md:px-7">
           <SidebarTrigger className="-ml-1 hidden md:inline-flex" />
 
           {/* Desktop: workspace / page breadcrumb */}
@@ -321,7 +312,7 @@ function SelfServeMobileNav({ account }: { account: Account }) {
     <>
       <nav
         aria-label="Primary mobile navigation"
-        className={`fixed inset-x-0 bottom-0 z-40 grid ${tabItems.length >= 5 ? "grid-cols-6" : "grid-cols-5"} gap-0.5 border-t border-border bg-card/95 px-1.5 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] backdrop-blur-2xl md:hidden`}
+        className={`fixed inset-x-0 bottom-0 z-40 grid ${tabItems.length >= 5 ? "grid-cols-6" : "grid-cols-5"} gap-0.5 border-t border-border bg-sidebar px-1.5 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] md:hidden`}
       >
         {tabItems.map((item) => {
           const Icon = selfServeIcons[item.href];

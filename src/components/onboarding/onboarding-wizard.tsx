@@ -10,6 +10,7 @@ import { Confetti } from "@/components/ui/confetti";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { niche } from "@/config/niche";
+import { atlantic } from "@/design-system/atlantic";
 import { useReducedMotion } from "@/lib/motion";
 
 type Market = "AU" | "US";
@@ -433,7 +434,7 @@ export function OnboardingWizard({ workspaceId, country, brandKit, canConfirmMar
               spread: 70,
               startVelocity: 30,
               origin: { y: 0.55 },
-              colors: [niche.theme.data, "#16181d", "#9aa0ad"],
+              colors: [atlantic.color.signal, atlantic.color.acid, atlantic.color.shell],
             }}
           />
           <div className="relative rounded-(--r-panel) border border-(--line) bg-(--surface) px-9 py-7 text-center shadow-float">

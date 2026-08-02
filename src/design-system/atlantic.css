@@ -1,0 +1,219 @@
+/*
+ * THESIS: Blockwise becomes an Atlantic command deck for advertising work; it refuses the generic monochrome card-grid dashboard.
+ * OWN-WORLD: Blue-white and layered navy surfaces, vermilion signal controls, acid verified state, Inter, IBM Plex Mono, hairlines, and restrained corners.
+ * STORY: Users see scope and state, take one clear action, then verify the evidence without leaving the operating surface.
+ * FIRST VIEWPORT: Marketing opens on a deep Atlantic proof surface; the product opens as navigation, workspace, and contextual state with a visible signal action.
+ * FORM: User-pinned FRANK Atlantic 1.1 reference, adapted to Blockwise product truth; no concept seed or competing visual language.
+ */
+
+:root,
+[data-theme="light"] {
+  color-scheme: light;
+
+  /* Atlantic primitives */
+  --atlantic-white: #ffffff;
+  --atlantic-blue-white: #f8fafd;
+  --atlantic-navigation: #f3f7fb;
+  --atlantic-border: #d5e1ed;
+  --atlantic-border-strong: #b5c4d3;
+  --atlantic-ink: #112a46;
+  --atlantic-shell: #06111f;
+  --atlantic-sunken: #040c17;
+  --atlantic-rail: #081a2e;
+  --atlantic-card: #0a213a;
+  --atlantic-dark-border: #173854;
+  --atlantic-dark-border-strong: #245072;
+  --atlantic-dark-text: #f4f8fc;
+  --atlantic-dark-muted: #91a8be;
+  --atlantic-dark-subtle: #718aa2;
+  --atlantic-signal: #f23b1d;
+  --atlantic-signal-ui: #ff5a36;
+  --atlantic-acid: #b8f238;
+  --atlantic-running: #6f9df2;
+  --atlantic-warning: #f3bd4a;
+  --atlantic-danger: #ef5b5b;
+
+  /* Semantic light theme */
+  --color-bg: var(--atlantic-white);
+  --color-surface: var(--atlantic-blue-white);
+  --color-surface-raised: var(--atlantic-white);
+  --color-surface-sunken: var(--atlantic-navigation);
+  --color-navigation: var(--atlantic-navigation);
+  --color-frame: var(--atlantic-blue-white);
+  --color-text: var(--atlantic-ink);
+  --color-text-muted: #65768a;
+  --color-text-subtle: #8292a5;
+  --color-text-inverse: var(--atlantic-dark-text);
+  --color-border: var(--atlantic-border);
+  --color-border-strong: var(--atlantic-border-strong);
+  --color-focus: var(--atlantic-signal);
+  --color-accent: var(--atlantic-signal);
+  --color-accent-hover: #d83219;
+  --color-accent-pressed: #bd2914;
+  --color-accent-content: var(--atlantic-shell);
+  --color-accent-tint: #fff0ec;
+  --color-verified: #587e10;
+  --color-verified-fill: var(--atlantic-acid);
+  --color-verified-soft: #f1f9df;
+  --color-running: #3e69bd;
+  --color-running-soft: #edf3ff;
+  --color-warning: #8c5b08;
+  --color-warning-soft: #fff5da;
+  --color-critical: #b52d34;
+  --color-critical-soft: #fff0f0;
+  --color-central-composer: var(--atlantic-shell);
+  --color-central-composer-text: var(--atlantic-dark-text);
+
+  /* Type */
+  --font-sans: var(--font-inter), Inter, ui-sans-serif, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-display: var(--font-sans);
+  --font-mono: var(--font-ibm-plex-mono), "IBM Plex Mono", ui-monospace,
+    SFMono-Regular, Consolas, monospace;
+
+  /* Spacing and geometry */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --radius-indicator: 4px;
+  --radius-control: 8px;
+  --radius-card: 12px;
+  --radius-panel: 16px;
+  --radius-overlay: 24px;
+  --radius-full: 9999px;
+  --radius-xs: var(--radius-indicator);
+  --radius-sm: var(--radius-control);
+  --radius-md: var(--radius-card);
+  --radius-lg: var(--radius-panel);
+  --radius-xl: var(--radius-overlay);
+
+  /* Depth and motion */
+  --elevation-xs: 0 1px 2px rgb(6 17 31 / 6%);
+  --elevation-sm: 0 4px 12px rgb(6 17 31 / 8%);
+  --elevation-md: 0 12px 34px rgb(6 17 31 / 12%);
+  --elevation-lg: 0 24px 64px rgb(6 17 31 / 16%);
+  --shadow-xs: var(--elevation-xs);
+  --shadow-sm: var(--elevation-sm);
+  --shadow-md: var(--elevation-md);
+  --shadow-lg: var(--elevation-lg);
+  --focus-ring: 0 0 0 3px rgb(242 59 29 / 28%);
+  --motion-duration-fast: 140ms;
+  --motion-duration-normal: 220ms;
+  --motion-duration-slow: 360ms;
+  --motion-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --motion-ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-fast: var(--motion-duration-fast);
+  --duration-normal: var(--motion-duration-normal);
+  --duration-slow: var(--motion-duration-slow);
+  --ease-standard: var(--motion-ease-standard);
+  --ease-spring: var(--motion-ease-spring);
+
+  /* Layout */
+  --layout-rail: 240px;
+  --layout-frame: 320px;
+  --layout-reading: 760px;
+  --layout-content: 1600px;
+  --touch-target: 44px;
+
+  /* Compatibility aliases for legacy selectors. These resolve to Atlantic;
+     they are not a second palette. */
+  --bg: var(--color-bg);
+  --surface: var(--color-surface-raised);
+  --surface-subtle: var(--color-surface);
+  --ink: var(--color-text);
+  --muted: var(--color-text-muted);
+  --faint: var(--color-text-subtle);
+  --line: var(--color-border);
+  --line-soft: color-mix(in srgb, var(--color-border) 58%, var(--color-bg));
+  --line-heavy: var(--color-border-strong);
+  --accent: var(--color-accent);
+  --accent-strong: var(--color-accent-hover);
+  --accent-press: var(--color-accent-pressed);
+  --accent-tint: var(--color-accent-tint);
+  --blue: var(--color-accent);
+  --green: var(--color-verified);
+  --green-bright: var(--color-verified-fill);
+  --green-soft: var(--color-verified-soft);
+  --amber: var(--color-warning);
+  --rose: var(--color-critical);
+  --rose-soft: var(--color-critical-soft);
+  --shadow: var(--shadow-xs);
+  --shadow-float: var(--shadow-md);
+  --ring: var(--focus-ring);
+  --r-ctl: var(--radius-sm);
+  --r-card: var(--radius-md);
+  --r-panel: var(--radius-lg);
+  --r-chip: var(--radius-full);
+
+  /* Shell aliases */
+  --side-bg: var(--color-navigation);
+  --side-ink: var(--color-text-muted);
+  --side-ink-active: var(--color-text);
+  --side-line: var(--color-border);
+  --side-cap: var(--color-text-subtle);
+  --side-active-bg: var(--color-accent-tint);
+  --side-hover-bg: var(--color-surface);
+  --brand-ink: var(--color-text);
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --color-bg: var(--atlantic-shell);
+  --color-surface: var(--atlantic-rail);
+  --color-surface-raised: var(--atlantic-card);
+  --color-surface-sunken: var(--atlantic-sunken);
+  --color-navigation: var(--atlantic-rail);
+  --color-frame: var(--atlantic-card);
+  --color-text: var(--atlantic-dark-text);
+  --color-text-muted: var(--atlantic-dark-muted);
+  --color-text-subtle: var(--atlantic-dark-subtle);
+  --color-text-inverse: var(--atlantic-ink);
+  --color-border: var(--atlantic-dark-border);
+  --color-border-strong: var(--atlantic-dark-border-strong);
+  --color-focus: var(--atlantic-signal-ui);
+  --color-accent: var(--atlantic-signal-ui);
+  --color-accent-hover: #ff7255;
+  --color-accent-pressed: #e94729;
+  --color-accent-content: var(--atlantic-shell);
+  --color-accent-tint: #351b1a;
+  --color-verified: var(--atlantic-acid);
+  --color-verified-fill: var(--atlantic-acid);
+  --color-verified-soft: #1d3015;
+  --color-running: var(--atlantic-running);
+  --color-running-soft: #102b4d;
+  --color-warning: var(--atlantic-warning);
+  --color-warning-soft: #392b0d;
+  --color-critical: var(--atlantic-danger);
+  --color-critical-soft: #3b171b;
+  --color-central-composer: var(--atlantic-sunken);
+  --color-central-composer-text: var(--atlantic-dark-text);
+  --elevation-xs: 0 1px 2px rgb(0 0 0 / 16%);
+  --elevation-sm: 0 4px 12px rgb(0 0 0 / 20%);
+  --elevation-md: 0 12px 34px rgb(0 0 0 / 24%);
+  --elevation-lg: 0 24px 64px rgb(0 0 0 / 34%);
+  --focus-ring: 0 0 0 3px rgb(255 90 54 / 32%);
+}
+
+@media (min-width: 1440px) {
+  :root {
+    --layout-frame: 360px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

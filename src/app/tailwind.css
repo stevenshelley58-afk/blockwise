@@ -1,57 +1,17 @@
 /*
- * Blockwise × shadcn/ui token bridge.
+ * Atlantic × shadcn/ui bridge.
  *
- * Tailwind v4 is loaded WITHOUT preflight (theme + utilities only) so none of
- * the ~8k lines of existing hand-written CSS are restyled — utilities are
- * strictly opt-in. Every shadcn theme variable is namespaced `--ui-*` to avoid
- * colliding with Blockwise's existing `--accent`, `--muted`, and `--ring`
- * tokens, and is bridged onto the existing Blockwise design tokens so shadcn
- * components look native from day one.
- *
- * shadcn components live under a `.tw` wrapper (the customer layout root),
- * which gets a scoped preflight (see the `preflight` layer below).
+ * Tailwind v4 runs without global preflight so the legacy operator selectors
+ * keep their structural behavior. Customer UI lives under `.tw`; both paths
+ * resolve visual decisions through src/design-system/atlantic.css.
  */
 
-/*
- * Cascade layers. `legacy` is declared FIRST so everything in it loses to the
- * Tailwind layers regardless of specificity.
- *
- * This is load-bearing. globals.css styles bare element selectors (h1, h2, p,
- * table, …) and was previously unlayered — and unlayered CSS beats ALL layered
- * CSS no matter how specific the layered rule is. That silently overrode every
- * Tailwind utility on the rebuilt customer surface: an `<h1 class="text-[24px]
- * font-extrabold">` rendered at the legacy 32px/700, not the Premium v2 ramp.
- *
- * Importing the legacy sheets into a lower layer fixes the customer surface
- * without touching operator/monitor, which use only legacy classes: relative
- * order and specificity inside the layer are preserved, so those surfaces
- * cascade exactly as before.
- *
- * theme-monochrome.css deliberately stays unlayered (imported after this file
- * in layout.tsx) — it is the token override that must keep winning, and its
- * presentational rules are scoped to legacy-only classes.
- */
 @layer preflight, legacy, theme, base, components, utilities;
 @import "./globals.css" layer(legacy);
 @import "./landing.css" layer(legacy);
 @import "tailwindcss/theme.css" layer(theme);
 @import "tailwindcss/utilities.css" layer(utilities);
 
-/*
- * Scoped preflight for the customer surface (`.tw`) and portaled shadcn
- * overlays (`[data-slot]`).
- *
- * Tailwind is loaded WITHOUT global preflight so the legacy surfaces
- * (operator / monitor / landing / auth) keep UA defaults. But the rebuilt
- * customer surface is authored against preflight semantics — without these
- * resets every element under `.tw` rendered the UA default `medium` border
- * the moment `border-style: solid` was applied (the wireframe-box look), and
- * sidebar `<ul>`s kept their UA bullets and indent.
- *
- * This lives in the `preflight` layer, declared BELOW `legacy`, so the legacy
- * classes still used inside the customer surface (Ad Studio et al.) and every
- * Tailwind utility override it — exactly the contract real preflight has.
- */
 @layer preflight {
   .tw,
   .tw *,
@@ -126,94 +86,61 @@
   }
 }
 
-/*
- * Class-based dark variant. shadcn components ship `dark:` utilities, but
- * Blockwise is light-only; making `dark` class-based (instead of the default
- * media-query) keeps those utilities inert unless a `.dark` ancestor exists —
- * which we never add.
- */
-@custom-variant dark (&:is(.dark *));
+@custom-variant dark (&:is([data-theme="dark"] *));
 
-/*
- * Keep Blockwise's font stack. `theme.css` above declares its own default
- * `--font-sans`, which `globals.css`'s `body` would otherwise pick up. A
- * non-default `@theme` block overrides the `@theme default` value, keeping the
- * rendered font identical to today.
- */
 @theme {
-  --font-sans: var(--font-inter), Inter, ui-sans-serif, system-ui, -apple-system,
-    BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --font-display: var(--font-manrope), Manrope, var(--font-inter), Inter,
-    ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-jetbrains), "JetBrains Mono", ui-monospace, SFMono-Regular,
-    Menlo, Consolas, monospace;
-
-  /* Premium v2 finish: layered soft shadows and the spring curve, exposed as
-     `shadow-card` / `shadow-float` / `ease-spring` utilities. */
-  --shadow-card: 0 1px 2px rgba(16, 18, 23, 0.04), 0 8px 24px rgba(16, 18, 23, 0.06);
-  --shadow-float: 0 2px 4px rgba(16, 18, 23, 0.05), 0 16px 40px rgba(16, 18, 23, 0.1);
-  --ease-spring: cubic-bezier(0.22, 1.1, 0.36, 1);
+  --font-sans: var(--font-inter), Inter, ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-inter), Inter, ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-ibm-plex-mono), "IBM Plex Mono", ui-monospace,
+    SFMono-Regular, Consolas, monospace;
+  --shadow-xs: var(--elevation-xs);
+  --shadow-card: var(--elevation-xs);
+  --shadow-float: var(--elevation-md);
+  --ease-spring: var(--motion-ease-spring);
 }
 
-/* shadcn theme variables, namespaced and bridged onto Blockwise tokens. */
 :root {
-  --ui-background: var(--bg);
-  --ui-foreground: var(--ink);
-  --ui-card: var(--surface);
-  --ui-card-foreground: var(--ink);
-  --ui-popover: var(--surface);
-  --ui-popover-foreground: var(--ink);
-  --ui-primary: var(--accent);
-  --ui-primary-foreground: #ffffff;
-  --ui-secondary: var(--surface-subtle);
-  --ui-secondary-foreground: var(--ink);
-  --ui-muted: var(--surface-subtle);
-  --ui-muted-foreground: var(--muted);
-  --ui-accent: var(--accent-tint);
-  --ui-accent-foreground: var(--accent);
-  --ui-destructive: var(--rose);
-  --ui-destructive-foreground: #ffffff;
-  --ui-border: var(--line);
-  --ui-input: var(--line);
-  --ui-ring: rgba(18, 62, 117, 0.35);
-  --ui-radius: 12px;
+  --ui-background: var(--color-bg);
+  --ui-foreground: var(--color-text);
+  --ui-card: var(--color-surface-raised);
+  --ui-card-foreground: var(--color-text);
+  --ui-popover: var(--color-surface-raised);
+  --ui-popover-foreground: var(--color-text);
+  --ui-primary: var(--color-text);
+  --ui-primary-foreground: var(--color-text-inverse);
+  --ui-secondary: var(--color-surface);
+  --ui-secondary-foreground: var(--color-text);
+  --ui-muted: var(--color-surface);
+  --ui-muted-foreground: var(--color-text-muted);
+  --ui-accent: var(--color-accent-tint);
+  --ui-accent-foreground: var(--color-text);
+  --ui-destructive: var(--color-critical);
+  --ui-destructive-foreground: var(--color-text-inverse);
+  --ui-border: var(--color-border);
+  --ui-input: var(--color-border-strong);
+  --ui-ring: var(--color-focus);
+  --ui-radius: var(--radius-md);
 
-  /* shadcn Sidebar, bridged onto Blockwise's existing `--side-*` tokens so the
-     navy/light sidebar theme toggle keeps working. */
-  --ui-sidebar: var(--side-bg);
-  --ui-sidebar-foreground: var(--side-ink);
-  --ui-sidebar-primary: var(--side-active-bg);
-  --ui-sidebar-primary-foreground: var(--side-ink-active);
-  /* shadcn uses `sidebar-accent` for both hover and the active (current page)
-     menu item; map it to Blockwise's active background so the current page
-     stands out, with the active ink on top. */
-  --ui-sidebar-accent: var(--side-active-bg);
-  --ui-sidebar-accent-foreground: var(--side-ink-active);
-  --ui-sidebar-border: var(--side-line);
-  --ui-sidebar-ring: var(--ui-ring);
+  --ui-sidebar: var(--color-navigation);
+  --ui-sidebar-foreground: var(--color-text-muted);
+  --ui-sidebar-primary: var(--color-accent);
+  --ui-sidebar-primary-foreground: var(--color-accent-content);
+  --ui-sidebar-accent: var(--color-accent-tint);
+  --ui-sidebar-accent-foreground: var(--color-text);
+  --ui-sidebar-border: var(--color-border);
+  --ui-sidebar-ring: var(--color-focus);
 
-  /* Premium v2: the one vivid data voice (charts, meters, sparklines only —
-     never UI chrome or text). Defaults to the Blockwise hue; the customer
-     layout overrides these three from src/config/niche for white-labeling. */
-  --ui-data: #2a78d6;
-  --ui-data-soft: rgba(42, 120, 214, 0.1);
-  --ui-data-track: rgba(42, 120, 214, 0.16);
-
-  /* Semantic status colors, bridged onto the Blockwise palette. Status only —
-     they never decorate headings, cards, or illustrations. */
-  --ui-success: var(--green, #006d38);
-  --ui-success-soft: var(--green-soft, #e9f6ef);
-  --ui-warning: var(--amber, #8a5a00);
-  --ui-warning-soft: #fdf6e7;
-  --ui-error: var(--rose, #ba1a1a);
-  --ui-error-soft: var(--rose-soft, #ffdad6);
+  --ui-data: var(--color-running);
+  --ui-data-soft: var(--color-running-soft);
+  --ui-data-track: color-mix(in srgb, var(--color-running) 20%, transparent);
+  --ui-success: var(--color-verified);
+  --ui-success-soft: var(--color-verified-soft);
+  --ui-warning: var(--color-warning);
+  --ui-warning-soft: var(--color-warning-soft);
+  --ui-error: var(--color-critical);
+  --ui-error-soft: var(--color-critical-soft);
 }
 
-/*
- * Point Tailwind's colour/radius utilities at the namespaced variables.
- * `inline` makes the generated utilities reference `var(--ui-*)` directly so
- * components resolve to Blockwise's tokens at runtime.
- */
 @theme inline {
   --color-background: var(--ui-background);
   --color-foreground: var(--ui-foreground);
@@ -235,10 +162,10 @@
   --color-input: var(--ui-input);
   --color-ring: var(--ui-ring);
 
-  --radius-sm: calc(var(--ui-radius) - 4px);
-  --radius-md: calc(var(--ui-radius) - 2px);
-  --radius-lg: var(--ui-radius);
-  --radius-xl: calc(var(--ui-radius) + 4px);
+  --radius-sm: var(--radius-control);
+  --radius-md: var(--radius-card);
+  --radius-lg: var(--radius-panel);
+  --radius-xl: var(--radius-overlay);
 
   --color-sidebar: var(--ui-sidebar);
   --color-sidebar-foreground: var(--ui-sidebar-foreground);
@@ -260,12 +187,6 @@
   --color-error-soft: var(--ui-error-soft);
 }
 
-/*
- * Base look for the customer surface root. The border/box resets that used to
- * live here moved to the `preflight` layer above — in `base` they outranked
- * the `legacy` layer, and they were missing `border-width: 0`, which is what
- * drew a UA-default border around every element on the rebuilt surface.
- */
 @layer base {
   .tw {
     background-color: var(--ui-background);

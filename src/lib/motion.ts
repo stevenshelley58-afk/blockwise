@@ -1,7 +1,6 @@
 /*
- * Blockwise motion vocabulary — the single source of spring values, durations
- * and entrance variants for the customer surface. Pages and components import
- * from here and never define their own timings (docs/REBUILD-PLAN.md §4).
+ * Atlantic motion vocabulary. Pages and components import from here instead
+ * of inventing route-local timings.
  *
  * Reduced motion: gate transforms with `useReducedMotion` (re-exported below).
  * Reduced = opacity-only, no transforms, numbers render their final value
@@ -24,9 +23,9 @@ export const springs = {
 
 /** Durations in seconds. Nothing in the customer surface moves slower than `entrance`. */
 export const durations = {
-  micro: 0.15,
-  state: 0.25,
-  entrance: 0.35,
+  micro: 0.14,
+  state: 0.22,
+  entrance: 0.36,
 } as const;
 
 /** Gap between sibling entrances, seconds (12px rise + fade, once per navigation). */
@@ -36,7 +35,7 @@ export const staggerInterval = 0.04;
 export const countUpDuration = 0.9;
 
 /** CSS-side spring curve for `transition`/`animation` shorthands (matches the mockup). */
-export const cssSpring = "cubic-bezier(0.22, 1.1, 0.36, 1)";
+export const cssSpring = "cubic-bezier(0.16, 1, 0.3, 1)";
 
 /** Card and list-item entrance: 12px rise + fade. */
 export const rise: Variants = {

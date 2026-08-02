@@ -101,10 +101,10 @@ test("landing page anchors, sections, and claims stay connected", () => {
   );
   assert.match(combined, /Know the property before the call/);
   assert.match(combined, /Run a property check/);
-  // Illustrative dashboard and offer values must be labelled as examples so
-  // prospects cannot mistake them for promised customer results.
-  assert.match(combined, />Examples</);
-  assert.match(combined, /Example angle/);
+  // Illustrative workflow and dashboard values must be labelled as examples
+  // so prospects cannot mistake them for promised customer results.
+  assert.match(combined, /aria-label="Example ad pack status"/);
+  assert.match(combined, /Ad pack · example/);
   assert.match(combined, /Example data/);
 
   const ids = [...combined.matchAll(/id="([^"]+)"/g)].map((match) => match[1]);

@@ -25,5 +25,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/api/adstudio/:path*", "/api/operator/:path*", "/api/property-checks/:path*", "/api/research/ad-radar/suggestions", "/api/research/ads/search", "/api/research/advertisers/autocomplete", "/api/research/locations/autocomplete", "/api/research/locations/guess", "/api/research/swipe-file", "/api/research/audit/lead", "/api/research/audit/suggestions", "/api/research/local-ad-radar", "/ad-radar/:path*", "/property-check/:path*", "/suburb/:path*", "/audit", "/hero-lab", "/operator/research/:path*"],
+  matcher: ["/api/adstudio/:path*", "/api/operator/:path*", "/api/property-checks/:path*", "/api/research/ad-radar/suggestions", "/api/research/ads/search", "/api/research/advertisers/autocomplete", "/api/research/locations/autocomplete", "/api/research/locations/guess", "/api/research/swipe-file", "/api/research/audit/lead", "/api/research/audit/suggestions", "/api/research/local-ad-radar", "/ad-radar/:path*", "/property-check/:path*", "/suburb/:path*", "/audit", "/operator/research/:path*"],
 };

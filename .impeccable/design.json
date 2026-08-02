@@ -1,78 +1,36 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-07-13T04:50:00Z",
-  "title": "Design System: Blockwise",
+  "generatedAt": "2026-08-03T00:00:00Z",
+  "title": "Design System: Blockwise Atlantic",
   "extensions": {
     "colorMeta": {
-      "primary": {
-        "role": "primary",
-        "displayName": "Operations Ink",
-        "canonical": "#16181d",
-        "tonalRamp": ["#090a0c", "#16181d", "#30343c", "#545a66", "#777e8b", "#9aa0ad", "#d3d7df", "#f1f2f4"]
-      },
-      "canvas": {
-        "role": "neutral",
-        "displayName": "Work Canvas",
-        "canonical": "#f6f7f9",
-        "tonalRamp": ["#16181d", "#30343c", "#545a66", "#777e8b", "#9aa0ad", "#d3d7df", "#e9ebef", "#f6f7f9"]
-      },
-      "success": {
-        "role": "secondary",
-        "displayName": "Verified Green",
-        "canonical": "#006d38",
-        "tonalRamp": ["#00210d", "#003919", "#005227", "#006d38", "#2b8652", "#61a378", "#9bc3a5", "#d7eadb"]
-      },
-      "warning": {
-        "role": "secondary",
-        "displayName": "Attention Amber",
-        "canonical": "#8a5a00",
-        "tonalRamp": ["#291900", "#452a00", "#653f00", "#8a5a00", "#aa7725", "#ca9954", "#e5bd88", "#f8e3c0"]
-      },
-      "danger": {
-        "role": "secondary",
-        "displayName": "Blocking Red",
-        "canonical": "#ba1a1a",
-        "tonalRamp": ["#410002", "#690005", "#93000a", "#ba1a1a", "#de3730", "#ff5449", "#ff897d", "#ffdad6"]
-      }
+      "signal": { "role": "primary", "displayName": "Blockwise Signal", "canonical": "#F23B1D", "tonalRamp": ["#35110B", "#6D1B0E", "#A42A14", "#F23B1D", "#FF7255", "#FFA08B", "#FFD0C5", "#FFF0EC"] },
+      "atlantic-shell": { "role": "neutral", "displayName": "Atlantic Shell", "canonical": "#06111F", "tonalRamp": ["#040C17", "#06111F", "#081A2E", "#0A213A", "#173854", "#245072", "#91A8BE", "#F4F8FC"] },
+      "blue-white": { "role": "neutral", "displayName": "Blue-White Surface", "canonical": "#F8FAFD", "tonalRamp": ["#112A46", "#31506F", "#65768A", "#91A8BE", "#B5C4D3", "#D5E1ED", "#F3F7FB", "#F8FAFD"] },
+      "acid-verified": { "role": "secondary", "displayName": "Acid Verified", "canonical": "#B8F238", "tonalRamp": ["#1D3015", "#365514", "#587E10", "#7EAB20", "#B8F238", "#CEF778", "#E3FAAF", "#F1F9DF"] },
+      "running-blue": { "role": "secondary", "displayName": "Running Blue", "canonical": "#6F9DF2", "tonalRamp": ["#102B4D", "#1C4778", "#3E69BD", "#6F9DF2", "#98B9F5", "#BED1F7", "#DEE9FB", "#EDF3FF"] }
     },
     "typographyMeta": {
-      "headline": { "displayName": "Headline", "purpose": "The dominant page or task heading." },
-      "title": { "displayName": "Title", "purpose": "Panel and section ownership." },
-      "body": { "displayName": "Body", "purpose": "Instructions, descriptions, and product copy." },
-      "label": { "displayName": "Label", "purpose": "Controls, fields, metadata, and status." }
+      "display": { "displayName": "Display", "purpose": "Marketing and meaningful empty-state moments." },
+      "headline": { "displayName": "Headline", "purpose": "The single dominant screen title." },
+      "body": { "displayName": "Body", "purpose": "Product instructions, explanations, and reading." },
+      "mono-label": { "displayName": "Operational Label", "purpose": "Short machine state, timestamp, source, and table metadata." }
     },
     "shadows": [
-      {
-        "name": "resting-surface",
-        "value": "0 1px 2px rgba(16,18,23,.04), 0 5px 18px rgba(16,18,23,.05)",
-        "purpose": "Separates a primary panel from the work canvas when border and tone are insufficient."
-      },
-      {
-        "name": "floating-surface",
-        "value": "0 10px 30px rgba(16,18,23,.09)",
-        "purpose": "Menus, dialogs, and intentionally raised interaction surfaces."
-      },
-      {
-        "name": "focus-ring",
-        "value": "0 0 0 3px rgba(22,24,29,.14)",
-        "purpose": "Canonical visible keyboard focus treatment."
-      }
+      { "name": "floating", "value": "0 12px 34px rgb(6 17 31 / 12%)", "purpose": "Menus and temporary floating controls only." },
+      { "name": "overlay", "value": "0 24px 64px rgb(6 17 31 / 16%)", "purpose": "Sheets and modal decisions." },
+      { "name": "focus", "value": "0 0 0 3px rgb(242 59 29 / 28%)", "purpose": "Canonical keyboard focus halo." }
     ],
     "motion": [
-      {
-        "name": "state-fast",
-        "value": "150ms ease-out",
-        "purpose": "Hover, selection, and compact control feedback."
-      },
-      {
-        "name": "state-standard",
-        "value": "200ms ease-out",
-        "purpose": "Panel, menu, and progress-state transitions."
-      }
+      { "name": "fast", "value": "140ms cubic-bezier(0.2, 0, 0, 1)", "purpose": "Hover and focus feedback." },
+      { "name": "normal", "value": "220ms cubic-bezier(0.2, 0, 0, 1)", "purpose": "Selection and panel state changes." },
+      { "name": "slow", "value": "360ms cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "Sheets and composed entrances." }
     ],
     "breakpoints": [
-      { "name": "mobile", "value": "640px" },
-      { "name": "wide", "value": "1240px" }
+      { "name": "compact", "value": "600px" },
+      { "name": "tablet", "value": "768px" },
+      { "name": "desktop", "value": "1024px" },
+      { "name": "wide", "value": "1440px" }
     ]
   },
   "components": [
@@ -80,82 +38,60 @@
       "name": "Primary Button",
       "kind": "button",
       "refersTo": "button-primary",
-      "description": "The single dominant action on a task surface.",
-      "html": "<button class=\"ds-button-primary\">Save changes</button>",
-      "css": ".ds-button-primary{min-height:44px;border:1px solid var(--accent,#16181d);border-radius:9999px;background:var(--accent,#16181d);color:#fff;padding:0 18px;font:600 12.5px/1.4 Inter,system-ui,sans-serif;cursor:pointer;transition:background 150ms ease-out,border-color 150ms ease-out}.ds-button-primary:hover{background:var(--accent-strong,#0b0c10);border-color:var(--accent-strong,#0b0c10)}.ds-button-primary:focus-visible{outline:none;box-shadow:var(--ring,0 0 0 3px rgba(22,24,29,.14))}.ds-button-primary:active{background:var(--accent-press,#000)}"
+      "description": "The dominant action within one operational region.",
+      "html": "<button class=\"ds-button-primary\">Review creative</button>",
+      "css": ".ds-button-primary{min-height:44px;border:1px solid var(--color-text,#112a46);border-radius:var(--radius-sm,8px);background:var(--color-text,#112a46);color:var(--color-text-inverse,#f4f8fc);padding:0 16px;font:600 12px/1.3 Inter,system-ui,sans-serif;cursor:pointer;transition:background 140ms cubic-bezier(.2,0,0,1),border-color 140ms cubic-bezier(.2,0,0,1)}.ds-button-primary:hover{background:color-mix(in srgb,var(--color-text,#112a46) 88%,white)}.ds-button-primary:focus-visible{outline:none;box-shadow:var(--focus-ring,0 0 0 3px rgb(242 59 29 / 28%))}.ds-button-primary:active{transform:translateY(1px)}"
     },
     {
-      "name": "Secondary Button",
+      "name": "Signal Button",
       "kind": "button",
-      "refersTo": "button-secondary",
-      "description": "A supporting action that does not compete with the primary task.",
-      "html": "<button class=\"ds-button-secondary\">View details</button>",
-      "css": ".ds-button-secondary{min-height:44px;border:1px solid var(--line-heavy,#d3d7df);border-radius:9999px;background:var(--surface,#fff);color:var(--ink,#16181d);padding:0 18px;font:600 12.5px/1.4 Inter,system-ui,sans-serif;cursor:pointer;transition:background 150ms ease-out}.ds-button-secondary:hover{background:var(--surface-subtle,#f1f2f4)}.ds-button-secondary:focus-visible{outline:none;box-shadow:var(--ring,0 0 0 3px rgba(22,24,29,.14))}.ds-button-secondary:active{background:var(--line,#e9ebef)}"
+      "refersTo": "button-signal",
+      "description": "Consequential forward motion such as create, send, publish, or approve.",
+      "html": "<button class=\"ds-button-signal\">Create ad</button>",
+      "css": ".ds-button-signal{min-height:44px;border:1px solid var(--color-accent,#f23b1d);border-radius:var(--radius-sm,8px);background:var(--color-accent,#f23b1d);color:var(--color-accent-content,#06111f);padding:0 16px;font:600 12px/1.3 Inter,system-ui,sans-serif;cursor:pointer;transition:background 140ms cubic-bezier(.2,0,0,1)}.ds-button-signal:hover{background:var(--color-accent-hover,#d83219)}.ds-button-signal:focus-visible{outline:none;box-shadow:var(--focus-ring,0 0 0 3px rgb(242 59 29 / 28%))}.ds-button-signal:active{background:var(--color-accent-pressed,#bd2914)}"
     },
     {
       "name": "Text Field",
       "kind": "input",
       "refersTo": "input",
-      "description": "A labelled, familiar field with visible focus.",
+      "description": "A persistent-label field with Atlantic focus treatment.",
       "html": "<label class=\"ds-field\"><span>Campaign name</span><input value=\"Scarborough appraisal\" /></label>",
-      "css": ".ds-field{display:grid;gap:6px;color:var(--ink,#16181d);font:600 12.5px/1.4 Inter,system-ui,sans-serif}.ds-field input{min-height:44px;border:1px solid var(--line-heavy,#d3d7df);border-radius:var(--r-ctl,10px);background:var(--surface,#fff);color:var(--ink,#16181d);padding:0 12px;font:400 15px/1.5 Inter,system-ui,sans-serif}.ds-field input:hover{border-color:var(--muted,#545a66)}.ds-field input:focus-visible{outline:none;border-color:var(--accent,#16181d);box-shadow:var(--ring,0 0 0 3px rgba(22,24,29,.14))}"
+      "css": ".ds-field{display:grid;gap:6px;color:var(--color-text,#112a46);font:600 12px/1.3 Inter,system-ui,sans-serif}.ds-field input{min-height:44px;border:1px solid var(--color-border-strong,#b5c4d3);border-radius:var(--radius-md,12px);background:var(--color-surface-raised,#fff);color:var(--color-text,#112a46);padding:0 12px;font:400 14px/1.5 Inter,system-ui,sans-serif}.ds-field input:hover{border-color:var(--color-text-muted,#65768a)}.ds-field input:focus-visible{outline:none;border-color:var(--color-focus,#f23b1d);box-shadow:var(--focus-ring,0 0 0 3px rgb(242 59 29 / 28%))}"
     },
     {
-      "name": "Work Panel",
+      "name": "Work Card",
       "kind": "card",
-      "refersTo": "panel",
-      "description": "A compact task container over the neutral work canvas.",
-      "html": "<section class=\"ds-panel\"><strong>Review both formats</strong><p>Feed is ready. Story needs another check.</p></section>",
-      "css": ".ds-panel{border:1px solid var(--line,#e9ebef);border-radius:var(--r-card,16px);background:var(--surface,#fff);color:var(--ink,#16181d);padding:16px;box-shadow:var(--shadow,0 1px 2px rgba(16,18,23,.04));font-family:Inter,system-ui,sans-serif}.ds-panel strong{font:700 15px/1.3 Manrope,Inter,system-ui,sans-serif}.ds-panel p{margin:6px 0 0;color:var(--muted,#545a66);font:400 14px/1.5 Inter,system-ui,sans-serif}.ds-panel:focus-within{box-shadow:var(--ring,0 0 0 3px rgba(22,24,29,.14))}"
+      "refersTo": "card",
+      "description": "A flat Atlantic layer for one coherent task or state.",
+      "html": "<section class=\"ds-card\"><strong>Review both formats</strong><p>Feed is ready. Story needs another check.</p></section>",
+      "css": ".ds-card{border:1px solid var(--color-border,#d5e1ed);border-radius:var(--radius-md,12px);background:var(--color-surface,#f8fafd);color:var(--color-text,#112a46);padding:16px;font-family:Inter,system-ui,sans-serif}.ds-card strong{font:600 18px/1.3 Inter,system-ui,sans-serif}.ds-card p{margin:6px 0 0;color:var(--color-text-muted,#65768a);font:400 14px/1.5 Inter,system-ui,sans-serif}"
     },
     {
       "name": "Navigation Item",
       "kind": "nav",
-      "description": "A familiar route link with one unambiguous current state.",
-      "html": "<nav class=\"ds-nav\"><a href=\"#\">Templates</a><a class=\"is-active\" href=\"#\">Review</a></nav>",
-      "css": ".ds-nav{display:grid;gap:4px;width:180px;font-family:Inter,system-ui,sans-serif}.ds-nav a{min-height:44px;display:flex;align-items:center;border-radius:var(--r-ctl,10px);color:var(--muted,#545a66);padding:0 12px;text-decoration:none;font-size:13.5px;font-weight:600;transition:background 150ms ease-out,color 150ms ease-out}.ds-nav a:hover{background:var(--surface-subtle,#f1f2f4);color:var(--ink,#16181d)}.ds-nav a:focus-visible{outline:none;box-shadow:var(--ring,0 0 0 3px rgba(22,24,29,.14))}.ds-nav a.is-active{background:var(--accent,#16181d);color:#fff}"
+      "description": "A scoped route link with a signal-tinted current state.",
+      "html": "<nav class=\"ds-nav\"><a href=\"#\">Ad Studio</a><a class=\"is-active\" href=\"#\">Performance</a></nav>",
+      "css": ".ds-nav{display:grid;gap:4px;width:190px;font-family:Inter,system-ui,sans-serif}.ds-nav a{min-height:44px;display:flex;align-items:center;border:1px solid transparent;border-radius:var(--radius-sm,8px);color:var(--color-text-muted,#65768a);padding:0 12px;text-decoration:none;font-size:13px;font-weight:600;transition:background 140ms cubic-bezier(.2,0,0,1),color 140ms cubic-bezier(.2,0,0,1)}.ds-nav a:hover{background:var(--color-surface,#f8fafd);color:var(--color-text,#112a46)}.ds-nav a:focus-visible{outline:none;box-shadow:var(--focus-ring,0 0 0 3px rgb(242 59 29 / 28%))}.ds-nav a.is-active{border-color:color-mix(in srgb,var(--color-accent,#f23b1d) 36%,var(--color-border,#d5e1ed));background:var(--color-accent-tint,#fff0ec);color:var(--color-text,#112a46)}"
     },
     {
-      "name": "Review Status",
+      "name": "Verified Status",
       "kind": "chip",
-      "description": "A semantic status that always includes readable text.",
-      "html": "<span class=\"ds-status\">Needs review</span>",
-      "css": ".ds-status{display:inline-flex;min-height:28px;align-items:center;border:1px solid rgba(138,90,0,.28);border-radius:9999px;background:#fff7e6;color:var(--warning,#8a5a00);padding:0 10px;font:700 12px/1 Inter,system-ui,sans-serif}.ds-status:focus-visible{outline:none;box-shadow:var(--ring,0 0 0 3px rgba(22,24,29,.14))}"
+      "description": "A labelled completion state; acid is never used without text or a check.",
+      "html": "<span class=\"ds-status\">✓ Verified</span>",
+      "css": ".ds-status{display:inline-flex;min-height:28px;align-items:center;gap:6px;border:1px solid color-mix(in srgb,var(--color-verified,#587e10) 34%,transparent);border-radius:9999px;background:var(--color-verified-soft,#f1f9df);color:var(--color-verified,#587e10);padding:0 10px;font:600 12px/1 Inter,system-ui,sans-serif}.ds-status:focus-visible{outline:none;box-shadow:var(--focus-ring,0 0 0 3px rgb(242 59 29 / 28%))}"
     }
   ],
   "narrative": {
-    "northStar": "The Quiet Operations Desk",
-    "overview": "Blockwise is a calm operations desk for real-estate ad execution. Neutral layers, a single near-black action accent, familiar controls, and explicit system state keep attention on finishing trustworthy work.",
-    "keyCharacteristics": [
-      "quiet, neutral work surfaces",
-      "strong hierarchy with one dominant action or read",
-      "familiar controls with complete interaction states",
-      "honest progress, conflict, error, and partial-success feedback",
-      "compact information density without crowding"
-    ],
+    "northStar": "The Atlantic Advertising Desk",
+    "overview": "Blockwise is a calm command deck for creating, reviewing, publishing, and verifying real-estate advertising. Blue-white work surfaces keep long sessions clear; layered navy creates a grounded control environment; vermilion marks identity, focus, and consequential forward action. The same token roles, typography, geometry, focus, state, and responsive behavior govern every product surface.",
+    "keyCharacteristics": ["blue-white light surfaces and layered Atlantic navy dark surfaces", "one vermilion identity/action signal", "acid green reserved for verified or actively healthy state", "Inter interface type with IBM Plex Mono operational metadata", "restrained 8/12/16px geometry with hairlines before shadows", "state communicated with text or icons, never color alone"],
     "rules": [
-      { "name": "The One Voice Rule", "body": "Operations Ink is the only general action accent.", "section": "colors" },
-      { "name": "The Semantic Color Rule", "body": "Green, amber, and red communicate state and never decorate.", "section": "colors" },
-      { "name": "The Product Type Rule", "body": "Display typography stops at headings.", "section": "typography" },
-      { "name": "The Sentence Case Rule", "body": "Labels and actions use sentence case; uppercase is reserved for short source-native metadata.", "section": "typography" },
-      { "name": "The Flat-First Rule", "body": "If border and tonal layer explain hierarchy, do not add a shadow.", "section": "elevation" }
+      { "name": "The Signal Rule", "body": "Vermilion marks Blockwise, focus, selection, and consequential action; it does not decorate headings, charts, or card collections.", "section": "colors" },
+      { "name": "The Truthful State Rule", "body": "Running, waiting, verified, blocked, and failed always pair color with a readable label or icon.", "section": "colors" },
+      { "name": "The Operational Mono Rule", "body": "Monospace communicates measurement, provenance, or machine state; it is never a decorative technology costume.", "section": "typography" },
+      { "name": "The Hairline-First Rule", "body": "If tone and a 1px boundary establish the layer, no shadow is added.", "section": "elevation" }
     ],
-    "dos": [
-      "Do make one next action or operational read visibly dominant.",
-      "Do use the shared near-black accent, neutral layers, radius scale, Inter, and Manrope before adding route-local values.",
-      "Do provide default, hover, focus, active, disabled, loading, error, and success states for every interactive component.",
-      "Do use 150 to 250 millisecond state transitions and honor reduced motion.",
-      "Do keep touch targets at least 44 by 44 pixels even when the visible control is compact.",
-      "Do show partial success, stale formats, QA blockers, and retry state with explicit text."
-    ],
-    "donts": [
-      "Don't build menu-heavy SaaS dashboards that offer several equivalent starting points.",
-      "Don't use generic AI styling: gradient text, decorative glass, cream SaaS palettes, repetitive card grids, or gratuitous motion.",
-      "Don't expose design-tool complexity, layers, provider jargon, model controls, or implementation vocabulary to ordinary AdStudio users.",
-      "Don't make template galleries whose ads share one layout skeleton or visual archetype.",
-      "Don't imply success while generation, QA, persistence, or export is incomplete or stale.",
-      "Don't create parallel component, token, typography, or navigation systems across product surfaces.",
-      "Don't use colored side-stripe card accents, gradient text, default glassmorphism, decorative hero metrics, or nested cards."
-    ]
+    "dos": ["Do consume semantic Atlantic variables or shadcn tokens instead of literal palette values.", "Do keep the next useful action and the current system state visible.", "Do use borders and tonal layering before shadows.", "Do preserve 44×44px mobile targets, visible focus, reduced motion, and reflow to 320px.", "Do provide loading, empty, success, error, disabled, and partial-success states."],
+    "donts": ["Don't introduce route-local palettes, typography systems, radius scales, navigation grammars, or token overrides.", "Don't use pure black, gradient text, decorative glass, cream SaaS styling, or generic neon AI chrome.", "Don't use vermilion as chart decoration or acid green outside verified/healthy state.", "Don't turn product surfaces into repetitive same-size card grids or expose internal provider/model language to customers.", "Don't communicate success while generation, QA, persistence, publication, or export remains incomplete."]
   }
 }

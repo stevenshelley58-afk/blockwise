@@ -1,37 +1,34 @@
-/* Hallmark · genre: modern-minimal · macrostructure: Photographic (Night Ops hero, mobile suburb showcase) · theme: design-system (DESIGN.md ink + #006bff accent) · nav: N9 · footer: Ft5 · enrichment: real ad renders (832w WebP) · designed-as-app */
+/* Blockwise Atlantic · photographic evidence led marketing surface. */
 
 /* ---------- Tokens ---------- */
 
 .hw-page {
-  /* ink & neutrals (DESIGN.md) */
-  --hw-ink: #16181d;
-  --hw-ink-strong: #0b0c10;
-  --hw-press: #000000;
-  --hw-tint: #f1f2f4;
-  --hw-canvas: #f6f7f9;
-  --hw-surface: #ffffff;
-  --hw-muted: #545a66;
-  --hw-faint: #9aa0ad;
-  --hw-line: #e9ebef;
-  --hw-line-heavy: #d3d7df;
-  /* single accent (hero blue) */
-  --hw-accent: #006bff;
-  --hw-accent-bright: #4d94ff;
-  --hw-accent-tint: rgba(0, 107, 255, 0.12);
-  /* semantic (status text only) */
-  --hw-success: #006d38;
-  --hw-warning: #8a5a00;
-  --hw-danger: #ba1a1a;
+  --hw-ink: var(--color-text);
+  --hw-ink-strong: var(--atlantic-shell);
+  --hw-press: var(--color-accent-pressed);
+  --hw-tint: var(--color-surface);
+  --hw-canvas: var(--color-bg);
+  --hw-surface: var(--color-surface-raised);
+  --hw-muted: var(--color-text-muted);
+  --hw-faint: var(--color-text-subtle);
+  --hw-line: var(--color-border);
+  --hw-line-heavy: var(--color-border-strong);
+  --hw-accent: var(--color-accent);
+  --hw-accent-bright: var(--atlantic-signal-ui);
+  --hw-accent-tint: var(--color-accent-tint);
+  --hw-success: var(--color-verified);
+  --hw-warning: var(--color-warning);
+  --hw-danger: var(--color-critical);
   /* dark-fold inverses */
-  --hw-inv-text: #f6f7f9;
-  --hw-inv-muted: rgba(246, 247, 249, 0.64);
-  --hw-inv-line: rgba(246, 247, 249, 0.16);
+  --hw-inv-text: var(--atlantic-dark-text);
+  --hw-inv-muted: var(--atlantic-dark-muted);
+  --hw-inv-line: var(--atlantic-dark-border);
   /* hero scrim */
-  --hw-scrim: rgba(11, 12, 16, 0.55);
-  --hw-scrim-soft: rgba(11, 12, 16, 0);
+  --hw-scrim: rgb(6 17 31 / 72%);
+  --hw-scrim-soft: rgb(6 17 31 / 0%);
   /* type — families are set by next/font variables in page.tsx */
-  --hw-font-display: var(--font-manrope), Inter, ui-sans-serif, system-ui, sans-serif;
-  --hw-font-body: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --hw-font-display: var(--font-display);
+  --hw-font-body: var(--font-sans);
   --hw-text-display: clamp(2.375rem, 4.5vw + 0.75rem, 4rem);   /* hero H1 */
   --hw-text-h2: clamp(1.625rem, 2.2vw + 0.6rem, 2.375rem);      /* section H2 */
   --hw-text-h3: 1.25rem;
@@ -44,14 +41,14 @@
   --hw-space-md: 24px;  --hw-space-lg: 32px; --hw-space-xl: 48px;
   --hw-space-2xl: 72px; --hw-space-3xl: 112px;
   /* radius (DESIGN.md) */
-  --hw-r-control: 10px; --hw-r-card: 16px; --hw-r-panel: 20px; --hw-r-pill: 9999px;
+  --hw-r-control: var(--radius-control); --hw-r-card: var(--radius-card); --hw-r-panel: var(--radius-panel); --hw-r-pill: var(--radius-full);
   /* elevation (DESIGN.md) */
-  --hw-shadow-rest: 0 1px 2px rgba(16, 18, 23, 0.04), 0 5px 18px rgba(16, 18, 23, 0.05);
-  --hw-shadow-float: 0 10px 30px rgba(16, 18, 23, 0.09);
-  --hw-focus-ring: 0 0 0 3px rgba(22, 24, 29, 0.14);
+  --hw-shadow-rest: var(--elevation-xs);
+  --hw-shadow-float: var(--elevation-md);
+  --hw-focus-ring: var(--focus-ring);
   /* motion */
-  --hw-ease: cubic-bezier(0.16, 1, 0.3, 1);
-  --hw-dur: 200ms;
+  --hw-ease: var(--motion-ease-standard);
+  --hw-dur: var(--motion-duration-normal);
 }
 
 /* ---------- Base ---------- */
@@ -111,7 +108,7 @@ html, body { overflow-x: clip; }
   height: 44px;
   padding: 0 20px;
   border: 1px solid transparent;
-  border-radius: var(--hw-r-pill);
+  border-radius: var(--hw-r-control);
   font-family: var(--hw-font-body);
   font-size: var(--hw-text-label);
   font-weight: 600;
@@ -121,8 +118,8 @@ html, body { overflow-x: clip; }
   cursor: pointer;
   transition: background var(--hw-dur) var(--hw-ease), border-color var(--hw-dur) var(--hw-ease);
 }
-.hw-btn--dark { background: var(--hw-ink); color: var(--hw-surface); }
-.hw-btn--dark:hover { background: var(--hw-ink-strong); }
+.hw-btn--dark { background: var(--hw-accent); color: var(--color-accent-content); }
+.hw-btn--dark:hover { background: var(--color-accent-hover); }
 .hw-btn--dark:active { background: var(--hw-press); }
 .hw-btn--dark:disabled { opacity: 0.5; pointer-events: none; }
 .hw-btn--light { background: var(--hw-surface); color: var(--hw-ink); }

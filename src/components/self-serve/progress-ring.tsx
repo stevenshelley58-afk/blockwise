@@ -1,7 +1,7 @@
 "use client";
 
 /*
- * Simple progress ring matching the Premium v2 mockup: data-track circle,
+ * Simple progress ring matching the Atlantic mockup: data-track circle,
  * data-hue fill, dashoffset animated on mount with the shared spring curve.
  * Reduced motion renders the final arc instantly.
  */

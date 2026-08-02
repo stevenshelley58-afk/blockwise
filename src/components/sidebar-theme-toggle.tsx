@@ -3,9 +3,9 @@
 import { Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 
-type SidebarTheme = "dark" | "light";
+type AtlanticTheme = "dark" | "light";
 
-const STORAGE_KEY = "bw-sidebar";
+const STORAGE_KEY = "bw-theme";
 
 /**
  * `tokens` renders the control with Tailwind utilities instead of the
@@ -14,20 +14,20 @@ const STORAGE_KEY = "bw-sidebar";
  * class until their own migration.
  */
 export function SidebarThemeToggle({ tokens = false }: { tokens?: boolean } = {}) {
-  const [theme, setTheme] = useState<SidebarTheme>("light");
+  const [theme, setTheme] = useState<AtlanticTheme>("light");
 
   // Sync from the attribute set by the pre-paint inline script.
   useEffect(() => {
-    const current = document.documentElement.getAttribute("data-sidebar-theme");
+    const current = document.documentElement.getAttribute("data-theme");
     if (current === "light" || current === "dark") {
       setTheme(current);
     }
   }, []);
 
   function toggle() {
-    const next: SidebarTheme = theme === "dark" ? "light" : "dark";
+    const next: AtlanticTheme = theme === "dark" ? "light" : "dark";
     setTheme(next);
-    document.documentElement.setAttribute("data-sidebar-theme", next);
+    document.documentElement.setAttribute("data-theme", next);
     try {
       localStorage.setItem(STORAGE_KEY, next);
     } catch {
@@ -35,13 +35,13 @@ export function SidebarThemeToggle({ tokens = false }: { tokens?: boolean } = {}
     }
   }
 
-  const nextLabel = theme === "dark" ? "Switch to light sidebar" : "Switch to dark sidebar";
+  const nextLabel = theme === "dark" ? "Switch to light theme" : "Switch to dark theme";
 
   return (
     <button
       className={
         tokens
-          ? "inline-grid size-9 cursor-pointer place-items-center rounded-(--r-control) border border-border bg-card text-muted-foreground transition-[color,border-color,background-color] duration-150 hover:border-(--line-heavy) hover:bg-(--surface-subtle) hover:text-foreground focus-visible:border-(--line-heavy) focus-visible:text-foreground focus-visible:outline-none"
+          ? "inline-grid size-10 cursor-pointer place-items-center rounded-(--r-ctl) border border-border bg-card text-muted-foreground transition-[color,border-color,background-color] duration-[var(--duration-fast)] hover:border-(--line-heavy) hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/30"
           : "icon-button"
       }
       type="button"

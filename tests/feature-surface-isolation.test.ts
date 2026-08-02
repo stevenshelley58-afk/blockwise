@@ -9,7 +9,7 @@ test("disabled feature route mapping covers public and operator research surface
   const middleware = read("src/middleware.ts");
 
   const featureRoutes = [
-    "/ad-radar", "/property-check", "/suburb", "/audit", "/hero-lab", "/operator/research",
+    "/ad-radar", "/property-check", "/suburb", "/audit", "/operator/research",
     "/api/operator/research",
     "/api/property-checks", "/api/research/ad-radar/suggestions", "/api/research/ads/search",
     "/api/research/advertisers/autocomplete", "/api/research/locations/autocomplete",

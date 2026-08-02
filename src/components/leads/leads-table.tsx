@@ -1,7 +1,7 @@
 "use client";
 
 /*
- * Leads registry (Premium v2 mockup): toolbar (search, quality filter chips,
+ * Leads registry (Atlantic mockup): toolbar (search, quality filter chips,
  * CSV export), sortable TanStack table on desktop, app-like card list on
  * mobile, numbered pager. Copy is config-driven; the server page hands down
  * plain serialisable rows.

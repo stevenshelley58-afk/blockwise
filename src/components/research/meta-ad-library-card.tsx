@@ -7,12 +7,12 @@ import {
 } from "@/lib/research/customer-meta-card";
 
 /*
- * Ad Radar result card, rebuilt on the Premium v2 token bridge. The legacy
+ * Ad Radar result card, rebuilt on the Atlantic token bridge. The legacy
  * `.meta-ad-*` rules in globals.css are unlayered, so any left on this element
  * would beat every Tailwind utility applied to it — the card is now fully
  * self-contained. Layout, density, and the mobile behaviour of the original
  * rules are preserved; only the register (radius, elevation, type scale,
- * status tokens) moves to Premium v2.
+ * status tokens) moves to Atlantic.
  *
  * The 640px breakpoint below mirrors the legacy `@media (max-width: 640px)`
  * block: base classes are the mobile treatment, `sm:` restores desktop.

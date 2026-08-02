@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { ArrowRight, RefreshCw } from "lucide-react";
 import Link from "next/link";
@@ -52,7 +52,7 @@ function trialLabel(status: TrialStatus): string {
 }
 
 /**
- * Premium v2 trial card for the self-serve sidebar footer (mockup target):
+ * Atlantic trial card for the self-serve sidebar footer (mockup target):
  * label row, ad-pack meter in the data hue, upgrade CTA with arrow nudge.
  */
 export function TrialStatusCard({ initialStatus }: { initialStatus: TrialStatus | null }) {

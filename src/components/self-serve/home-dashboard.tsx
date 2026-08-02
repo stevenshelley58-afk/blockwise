@@ -1,7 +1,7 @@
 "use client";
 
 /*
- * Home dashboard (Premium v2 mockup): outcome-first KPI row, performance
+ * Home dashboard (Atlantic mockup): outcome-first KPI row, performance
  * snapshot chart, setup card and quick actions. The server page hands down a
  * plain `HomeData` payload — this component owns layout, motion and copy
  * (all of it from the niche config; customer pages carry zero niche nouns).

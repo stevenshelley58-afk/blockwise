@@ -48,7 +48,7 @@ import { SuburbBarChart } from "./SuburbBarChart";
 const SmoothAreaChart = dynamic(() => import("./SmoothAreaChart").then((m) => m.SmoothAreaChart), { ssr: false });
 const BudgetPacingChart = dynamic(() => import("./BudgetPacingChart").then((m) => m.BudgetPacingChart), { ssr: false });
 
-// One data colour across every chart (Premium V2 restraint). Green is reserved
+// One data colour across every chart (Atlantic restraint). Verified is reserved
 // for positive deltas in the KPI strip, not used as a series colour.
 const DATA_HUE = "var(--ui-data)";
 

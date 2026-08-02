@@ -25,11 +25,6 @@ export const blockwise: NicheConfig = {
     area: "suburb",
     areas: "suburbs",
   },
-  theme: {
-    data: "#2a78d6",
-    dataSoft: "rgba(42, 120, 214, 0.10)",
-    dataTrack: "rgba(42, 120, 214, 0.16)",
-  },
   nav: {
     items: [
       { href: "/self-serve", label: "Home" },

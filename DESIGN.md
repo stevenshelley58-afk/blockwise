@@ -1,419 +1,233 @@
 ---
-name: Blockwise
-description: Calm, exact tools for real-estate ad execution — Premium v2 register
+name: Blockwise Atlantic
+description: A calm Atlantic command deck for trustworthy real-estate advertising work
 colors:
-  primary: "#16181d"
-  primary-strong: "#0b0c10"
-  primary-press: "#000000"
-  primary-tint: "#f1f2f4"
-  canvas: "#f6f7f9"
-  surface: "#ffffff"
-  surface-subtle: "#f1f2f4"
-  ink: "#16181d"
-  muted: "#545a66"
-  faint: "#9aa0ad"
-  line: "#e9ebef"
-  line-heavy: "#d3d7df"
-  accent-tint: "#f1f2f4"
-  data: "#2a78d6"
-  data-soft: "rgba(42,120,214,0.10)"
-  data-track: "rgba(42,120,214,0.16)"
-  success: "#006d38"
-  success-soft: "#ecfdf5"
-  warning: "#8a5a00"
-  warning-soft: "#fdf6e7"
-  danger: "#ba1a1a"
-  danger-soft: "#ffdad6"
+  signal: "#F23B1D"
+  signal-dark: "#FF5A36"
+  atlantic-shell: "#06111F"
+  atlantic-rail: "#081A2E"
+  atlantic-card: "#0A213A"
+  clear-white: "#FFFFFF"
+  blue-white: "#F8FAFD"
+  navigation-mist: "#F3F7FB"
+  atlantic-ink: "#112A46"
+  muted-navy: "#65768A"
+  hairline: "#D5E1ED"
+  acid-verified: "#B8F238"
+  running-blue: "#6F9DF2"
+  waiting-amber: "#F3BD4A"
+  critical-red: "#EF5B5B"
 typography:
+  display:
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "clamp(2.5rem, 5vw, 5rem)"
+    fontWeight: 600
+    lineHeight: 1.15
+    letterSpacing: "-0.03em"
   headline:
-    fontFamily: "Manrope, Inter, ui-sans-serif, system-ui, sans-serif"
-    fontSize: "27px"
-    fontSizeMobile: "24px"
-    fontWeight: 800
-    lineHeight: "1.15"
-    letterSpacing: "-0.02em"
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "clamp(1.75rem, 3vw, 2.5rem)"
+    fontWeight: 650
+    lineHeight: 1.2
+    letterSpacing: "-0.025em"
   title:
-    fontFamily: "Manrope, Inter, ui-sans-serif, system-ui, sans-serif"
-    fontSize: "15.5px"
-    fontWeight: 800
-    lineHeight: "1.25"
-    letterSpacing: "-0.015em"
-  stat:
-    fontFamily: "Manrope, Inter, ui-sans-serif, system-ui, sans-serif"
-    fontSize: "24px"
-    fontWeight: 800
-    lineHeight: "1.1"
-    letterSpacing: "-0.02em"
-  section:
-    fontFamily: "Manrope, Inter, ui-sans-serif, system-ui, sans-serif"
-    fontSize: "17px"
-    fontWeight: 800
-    lineHeight: "1.3"
-    letterSpacing: "-0.015em"
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "18px"
+    fontWeight: 600
+    lineHeight: 1.3
   body:
     fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif"
-    fontSize: "13.5px"
+    fontSize: "14px"
     fontWeight: 400
-    lineHeight: "1.5"
-    letterSpacing: "0"
+    lineHeight: 1.5
   label:
     fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif"
-    fontSize: "12.5px"
+    fontSize: "12px"
     fontWeight: 600
-    lineHeight: "1.4"
-    letterSpacing: "0"
-  micro:
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif"
-    fontSize: "11.5px"
-    fontWeight: 500
-    lineHeight: "1.4"
-    letterSpacing: "0"
-  badge:
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif"
-    fontSize: "10.5px"
-    fontWeight: 700
-    lineHeight: "1.1"
-    letterSpacing: "0"
-  wordmark:
-    fontFamily: "Manrope, Inter, ui-sans-serif, system-ui, sans-serif"
-    fontSize: "20px"
-    fontWeight: 700
-    lineHeight: "1"
-    letterSpacing: "-0.035em"
-  eyebrow:
-    fontFamily: "JetBrains Mono, ui-monospace, monospace"
-    fontSize: "9.5px"
-    fontWeight: 500
-    lineHeight: "1.2"
+    lineHeight: 1.3
+  mono-label:
+    fontFamily: "IBM Plex Mono, ui-monospace, monospace"
+    fontSize: "10px"
+    fontWeight: 600
+    lineHeight: 1.3
     letterSpacing: "0.12em"
 rounded:
-  control: "10px"
-  card: "16px"
-  panel: "20px"
-  pill: "9999px"
+  indicator: "4px"
+  control: "8px"
+  card: "12px"
+  panel: "16px"
+  overlay: "24px"
+  full: "9999px"
 spacing:
-  compact: "8px"
-  control: "12px"
-  content: "16px"
-  section: "24px"
-  page: "32px"
-shadow:
-  card: "0 1px 2px rgba(16,18,23,0.04), 0 8px 24px rgba(16,18,23,0.06)"
-  float: "0 2px 4px rgba(16,18,23,0.05), 0 16px 40px rgba(16,18,23,0.10)"
-motion:
-  ease-spring: "cubic-bezier(0.22, 1.1, 0.36, 1)"
-  duration-micro: "150ms"
-  duration-state: "250ms"
-  duration-entrance: "350ms"
+  xs: "4px"
+  sm: "8px"
+  md: "12px"
+  lg: "16px"
+  xl: "24px"
+  2xl: "32px"
+  3xl: "48px"
+  4xl: "64px"
 components:
   button-primary:
-    backgroundColor: "{colors.ink}"
-    textColor: "#ffffff"
+    backgroundColor: "{colors.atlantic-ink}"
+    textColor: "{colors.clear-white}"
     typography: "{typography.label}"
-    rounded: "{rounded.pill}"
+    rounded: "{rounded.control}"
     padding: "0 16px"
-    height: "36px"
-  button-secondary:
-    backgroundColor: "{colors.surface}"
-    textColor: "{colors.ink}"
+    height: "40px"
+  button-signal:
+    backgroundColor: "{colors.signal}"
+    textColor: "{colors.atlantic-shell}"
     typography: "{typography.label}"
-    rounded: "{rounded.pill}"
-    padding: "0 14px"
-    height: "36px"
+    rounded: "{rounded.control}"
+    padding: "0 16px"
+    height: "40px"
   input:
-    backgroundColor: "{colors.surface}"
-    textColor: "{colors.ink}"
+    backgroundColor: "{colors.clear-white}"
+    textColor: "{colors.atlantic-ink}"
     typography: "{typography.body}"
     rounded: "{rounded.card}"
     padding: "0 12px"
-    height: "36px"
-  panel:
-    backgroundColor: "{colors.surface}"
-    textColor: "{colors.ink}"
-    rounded: "{rounded.panel}"
-    padding: "20px"
-    border: "1px solid {colors.line}"
-    shadow: "{shadow.card}"
+    height: "44px"
+  card:
+    backgroundColor: "{colors.blue-white}"
+    textColor: "{colors.atlantic-ink}"
+    rounded: "{rounded.card}"
+    padding: "16px"
 ---
 
-# Design System: Blockwise — Premium v2
+# Design System: Blockwise Atlantic
 
-## 1. Overview
+## Overview
 
-**Creative North Star: "The Quiet Operations Desk"**
+**Creative North Star: "The Atlantic Advertising Desk"**
 
-Blockwise is a work-focused product used while a real-estate team is preparing,
-checking, or improving live advertising. The interface should feel like a calm
-operations desk: the next action is obvious, system state is legible, and visual
-craft supports the work without competing with it.
+Blockwise is a calm command deck for creating, reviewing, publishing, and verifying real-estate advertising. Blue-white work surfaces keep long sessions clear; layered navy creates a grounded control environment; vermilion marks identity, focus, and consequential forward action.
 
-**Premium v2** is the owner-approved evolution of that register. It keeps the
-near-black one-voice accent, neutral surfaces, Manrope/Inter type, compact
-radius scale, and operational density — and adds exactly three things:
-
-1. **One vivid, niche-configurable data hue** for charts, meters, and
-   sparklines only (`#2a78d6` for Blockwise).
-2. **A spring motion system** — brief, purposeful, reduced-motion aware.
-3. **Complete loading, empty, and success states** for every data surface.
-
-Premium v2 is not a redesign. It is the same quiet register with a data voice,
-a motion grammar, and no dead ends.
-
-The system rejects parallel visual languages. The customer surface consumes one
-token and component vocabulary. A surface may be purpose-built, but it may not
-introduce a new accent family, radius scale, typography system, or navigation
-grammar.
+The system is one visual language across marketing, customer, operator, monitor, legal, and editorial surfaces. Product content and density may change by job, but token roles, typography, geometry, focus, state, and responsive behavior do not.
 
 **Key Characteristics:**
 
-- quiet, neutral work surfaces with soft layered elevation
-- strong hierarchy with one dominant action or read
-- a single vivid data hue reserved for quantitative display
-- brief spring motion that explains state, never decorates
-- honest progress, conflict, error, and partial-success feedback
-- complete loading/empty/success states — no dead ends
-- compact information density without crowding
+- blue-white light surfaces and layered Atlantic navy dark surfaces
+- one vermilion identity/action signal
+- acid green reserved for verified or actively healthy state
+- Inter interface type with IBM Plex Mono operational metadata
+- restrained 8/12/16px geometry with hairlines before shadows
+- state communicated with text or icons, never color alone
 
-## 2. Colors
+## Colors
 
-The palette is near-monochrome and operational. Primary ink and action color are
-the same near-black; separation comes from neutral layers, borders, spacing, and
-soft layered shadows.
+Atlantic is a restrained navy system expressed under two light conditions. The frontmatter tokens are normative; `src/design-system/atlantic.css` is the runtime source.
 
 ### Primary
 
-- **Operations Ink** (`--ink`): primary buttons, active navigation, selected
-  states, and the strongest text. Its rarity preserves action hierarchy.
-- **Selection Mist** (`--accent-tint`): selected rows, quiet hover surfaces, and
-  low-emphasis action context.
+- **Blockwise Signal:** Identity, focus, selected emphasis, and consequential forward action. It is never a decorative wash.
+- **Atlantic Shell:** The deep command surface, central composer, and dark-mode canvas. Pure black is not part of the interface palette.
+
+### Secondary
+
+- **Acid Verified:** Verified, complete, or actively healthy state only.
+- **Running Blue:** Running or in-progress state and quantitative display.
+- **Waiting Amber:** Review, waiting, and approval state.
+- **Critical Red:** Failure and destructive action.
 
 ### Neutral
 
-- **Work Canvas** (`--bg`): the page and workbench background.
-- **Clean Surface** (`--surface`): controls, panels, dialogs, and editable
-  regions.
-- **Subtle Surface** (`--surface-subtle`): inset wells, secondary tiles, and
-  quiet grouping.
-- **Body Slate** (`--muted`): supporting text that still meets contrast targets.
-- **Quiet Slate** (`--faint`): nonessential metadata only, never body copy or
-  form placeholders. Also the voice for mono eyebrows and table headers.
-- **Hairline** (`--line`) and **Control Line** (`--line-heavy`): structural
-  borders and input boundaries.
+- **Clear White / Blue-White / Navigation Mist:** Base, raised, and sunken light-mode layers.
+- **Atlantic Rail / Atlantic Card:** Standard and raised dark-mode layers.
+- **Atlantic Ink / Muted Navy / Hairline:** Primary text, supporting text, and persistent structure.
 
-### The Data Hue (new in v2)
+**The Signal Rule.** Vermilion marks Blockwise, focus, selection, and consequential action; it does not decorate headings, charts, or card collections.
 
-- **Data Blue** (`--ui-data`, `#2a78d6`): the one vivid voice. Used **only** for
-  charts, meters, sparklines, and quantitative trend display. Soft tints
-  (`--ui-data-soft`, `--ui-data-track`) back chart fills and meter tracks.
-- The data hue is **niche-configurable**: the customer layout overrides the three
-  `--ui-data*` variables from `src/config/niche` for white-labeling.
-- **The Data Hue Rule.** The data hue never appears in UI chrome, buttons,
-  navigation, headings, or body text. If a number isn't being plotted, metered,
-  or trended, it doesn't get the data hue.
+**The Truthful State Rule.** Running, waiting, verified, blocked, and failed always pair color with a readable label or icon.
 
-### Secondary (status)
+## Typography
 
-- **Verified Green** (`--ui-success` / `--ui-success-soft`): accepted, connected,
-  completed states.
-- **Attention Amber** (`--ui-warning` / `--ui-warning-soft`): review-required
-  states that are not failures.
-- **Blocking Red** (`--ui-error` / `--ui-error-soft`): destructive actions and
-  release-blocking errors.
+**Display Font:** Inter (with native system sans fallback)
+**Body Font:** Inter (with native system sans fallback)
+**Operational Font:** IBM Plex Mono (with native monospace fallback)
 
-**The One Voice Rule.** Operations Ink is the only general action accent. The
-data hue is the only vivid display accent. Do not introduce a third.
-
-**The Semantic Color Rule.** Green, amber, and red communicate state. They never
-decorate headings, cards, or illustrations.
-
-## 3. Typography
-
-**Display Font:** Manrope (with Inter and system sans fallbacks) — `font-display`
-**Body Font:** Inter (with system sans fallbacks) — `font-sans`
-**Metadata Font:** JetBrains Mono — `font-mono`, for eyebrows and table headers
-
-**Character:** Manrope gives page and panel headings firm, compact authority at
-extrabold weight with tight tracking. Inter carries controls, copy, and data.
-JetBrains Mono carries tiny uppercase metadata (eyebrows, table column headers,
-step counters) at wide tracking — the signature Premium v2 detail.
+Inter keeps the product direct and legible across dense control surfaces and public explanations. IBM Plex Mono is limited to short operational labels, timestamps, table headers, and evidence metadata.
 
 ### Hierarchy
 
-- **Page heading** (`font-display`, 24→27px, 800, `-0.02em`): the single dominant
-  heading on a task surface.
-- **Panel title** (`font-display`, 15.5px, 800, `-0.015em`): panel and section
-  ownership.
-- **Stat value** (`font-display`, 24→26px, 800, `-0.02em`, `tabular-nums`): KPI
-  numbers. Always tabular-nums so digits align.
-- **Body** (Inter, 13px, 400, 1.5): instructions, descriptions, product copy.
-- **Label** (Inter, 12.5px, 600): controls and fields.
-- **Eyebrow / table header** (JetBrains Mono, 9.5px, 500, `0.12em`, uppercase):
-  section eyebrows and `<th>` cells.
+- **Display** (600, 40–80px fluid, 1.15): marketing and meaningful empty-state moments; maximum 6rem.
+- **Headline** (650, 28–40px fluid, 1.2): the single screen title.
+- **Title** (600, 18–28px, 1.25–1.3): section and panel ownership.
+- **Body large** (400, 16px, 1.55): persuasive and long-form reading.
+- **Body** (400, 14px, 1.5): standard product copy; keep readable measures near 65–75ch.
+- **Label** (600, 12px, 1.3): controls and states.
+- **Mono label** (600, 10–11px, 0.12–0.16em): uppercase operational metadata only.
 
-**The Product Type Rule.** Display typography stops at headings and stat values.
-Buttons, labels, data, and navigation use the body family.
+**The Operational Mono Rule.** Monospace communicates measurement, provenance, or machine state; it is never a decorative technology costume.
 
-**The Sentence Case Rule.** Labels and actions use sentence case. Uppercase is
-reserved for the mono eyebrow/table-header voice.
+## Layout
 
-## 4. Elevation
+The product scales from one focused surface on compact screens to a 240px rail, fluid workspace, and optional 320–360px contextual frame on desktop. Reading width caps near 760px while work canvases may grow to 1600px. The base rhythm is 4px, with 8, 12, 16, 24, 32, 48, and 64px preferred jumps.
 
-Blockwise uses tonal layering and one-pixel boundaries first, with two soft
-layered shadows for resting and floating surfaces. Elevation must explain
-stacking or interaction, not decorate a card grid.
+- **0–599px:** top bar, one task surface, bottom navigation, 44px minimum targets.
+- **600–767px:** wider compact composition and full-width sheets.
+- **768–1023px:** collapsible rail and contextual drawers.
+- **1024–1439px:** persistent 240px rail and workspace.
+- **1440px+:** 360px optional frame; shell caps at 1600px.
 
-### Shadow Vocabulary
+Mobile reorganizes information instead of shrinking controls. Tables become labeled cards unless side-by-side comparison is essential.
 
-- **Resting surface** (`shadow-card`): panels and stat tiles that need separation
-  from Work Canvas. `0 1px 2px rgba(16,18,23,.04), 0 8px 24px rgba(16,18,23,.06)`.
-- **Floating surface** (`shadow-float`): dialogs, menus, dropdowns, and raised
-  interactive surfaces. `0 2px 4px rgba(16,18,23,.05), 0 16px 40px rgba(16,18,23,.10)`.
+## Elevation & Depth
 
-**The Flat-First Rule.** If border and tonal layer explain the hierarchy, do not
-add a shadow. Nested card shadows are prohibited.
+Persistent structure uses adjacent tonal layers and 1px semantic borders. Shadows are reserved for floating menus, sheets, dialogs, and temporary elevation; resting cards remain flat when border and tone already explain the hierarchy.
 
-**The Lift Rule.** Interactive cards may lift on hover (`-translate-y-0.5` +
-`shadow-float`, 200ms) — but only cards that are genuinely clickable, and always
-gated behind `motion-reduce:hover:translate-y-0`.
+- **Inline:** 1px semantic hairline.
+- **Floating:** `0 12px 34px rgb(6 17 31 / 12%)`.
+- **Overlay:** `0 24px 64px rgb(6 17 31 / 16%)`.
+- **Focus:** 3px vermilion halo plus border contrast.
 
-## 5. Motion (new in v2)
+**The Hairline-First Rule.** If tone and a 1px boundary establish the layer, no shadow is added.
 
-Motion explains state and directs attention. It is brief, spring-tuned, and
-always honors `prefers-reduced-motion`. The single source of truth is
-`src/lib/motion.ts` — pages and components import from there and never define
-their own timings.
+## Shapes
 
-### The Motion Vocabulary
+Atlantic uses 4px for indicators, 8px for compact controls and list selections, 12px for fields/cards/menus, 16px for primary panels and work composers, and 20–24px for sheets/modals. Full pills are limited to avatars, status dots, and genuinely compact chips; buttons are not universal pills.
 
-- **Springs:** `snappy` (micro-interactions), `gentle` (entrances), `slow`
-  (progress bars and meters).
-- **Durations:** `micro` 150ms, `state` 250ms, `entrance` 350ms. Nothing in the
-  customer surface moves slower than `entrance`.
-- **Entrance:** a 12px rise + fade (`rise`), staggered 40ms between siblings,
-  once per navigation. Reduced motion swaps to an opacity-only fade.
-- **Count-up:** KPI numbers count up over 900ms; under reduced motion they render
-  their final value instantly.
-- **CSS spring curve:** `cubic-bezier(0.22, 1.1, 0.36, 1)` (`ease-spring`).
+## Components
 
-### The Motion Rules
+### Buttons
 
-- Nothing loops. Nothing exceeds the entrance duration (count-up aside).
-- Hover lift is reserved for genuinely interactive cards.
-- There is exactly **one confetti moment** — the first-run handoff into Ad
-  Studio. It is brief, never loops, and is skipped entirely under reduced motion.
-- Every transform is gated: `useReducedMotion` for motion/react, the
-  `motion-reduce:` variant for CSS.
+- **Primary:** Atlantic ink on light surfaces and cool white on dark surfaces; one dominant action per region.
+- **Signal:** Vermilion with deep Atlantic text; reserved for forward/consequential action.
+- **Secondary:** Transparent or raised surface with a strong border.
+- **Destructive:** Critical red plus an explicit destructive verb.
+- **States:** 140ms hover/focus, 220ms state change, 3px visible focus, 44px compact target.
 
-## 6. States (new in v2)
+### Cards / Containers
 
-Every data surface ships a complete set of states. A surface that can load, be
-empty, succeed, or fail must render all four — no dead ends.
+Cards use a 12px corner, semantic surface, 1px boundary, and 16–20px padding. Primary panels use a 16px corner. Nested card shadows are prohibited.
 
-- **Loading:** token skeletons (`animate-pulse` blocks in the panel/card radius)
-  that mirror the loaded layout. Route-level `loading.tsx` for first paint.
-- **Empty:** a dashed-border well (`border-dashed border-(--line-heavy)
-  bg-(--surface-subtle)/50`, centered) with a display title, a one-line
-  explanation, and — where there is a next action — a primary button.
-- **Success:** brief inline confirmation in `text-success` (bold 12.5px). Never
-  a toast for something the user must act on.
-- **Error:** inline `text-error` message for recoverable failures; a soft error
-  card (`border-error/25 bg-error-soft`) for blockers. Always say what to do
-  next.
+### Inputs / Fields
 
-## 7. Components — the Premium v2 vocabulary
+Fields keep persistent labels, reserve help/error space, use a 12px corner, and show a vermilion focus halo. Placeholders never replace labels.
 
-The canonical implementation is **shadcn/ui on Tailwind v4**, bridged onto the
-Blockwise tokens via `src/app/tailwind.css`. Reach for a shadcn primitive before
-hand-building; use the token utilities below for layout and bespoke surfaces.
+### Navigation
 
-### Layout
+Active location uses shape, label, and a signal tint or border—not color alone. Desktop uses a persistent/collapsible rail; mobile uses no more than five primary destinations plus More.
 
-- **Page container:** `mx-auto w-full max-w-[1120px] px-4 pt-6 pb-28 md:px-6
-  md:pt-8 md:pb-16` (narrow surfaces use `max-w-[880px]`/`max-w-[720px]`;
-  stacked mains add `grid gap-3.5`). The deep mobile bottom padding clears the
-  bottom nav.
-- **Panel:** `rounded-(--r-panel) border border-(--line) bg-(--surface) p-5
-  shadow-card`. Title in the panel-title voice.
-- **Stat tile:** `rounded-(--r-card) border border-(--line) bg-(--surface)
-  px-[18px] pt-[17px] pb-[15px] shadow-card` — mono eyebrow label, display
-  tabular value, muted foot.
+### Status
 
-### Controls
+Running, verifying, verified, waiting, blocked, and failed variants always include readable text. Determinate progress uses a bar plus percentage or step count; indeterminate work uses text and a restrained state indicator.
 
-- **Ink button:** full pill, Operations Ink background, white label, 36px.
-  Hover opacity, active scale — no bounce.
-- **Ghost button:** full pill, Clean Surface, Control Line boundary, ink label.
-- **Chip / filter pill:** full pill 34px; selected = ink background + white text,
-  unselected = surface + hairline.
-- **Input / select:** Clean Surface, hairline border, `card` radius, 36px, ink
-  border on focus. Selects pair with a faint chevron.
-
-### Page head
-
-- Mono eyebrow (`font-mono 9.5px 0.12em uppercase text-(--faint)`), display h1,
-  muted lead. This replaces the legacy `.page-heading` on the customer surface.
-
-### Tables
-
-- Mono uppercase `9.5px` headers in `text-(--faint)`; rows on Clean Surface;
-  horizontal scroll wrapper (`-mx-5 overflow-x-auto px-5` + `min-w-[…]`) so
-  tables never squeeze on mobile.
-
-## 8. Do's and Don'ts
+## Do's and Don'ts
 
 ### Do:
 
-- **Do** make one next action or operational read visibly dominant.
-- **Do** use the shared ink accent, neutral layers, radius scale, Manrope/Inter,
-  and the mono eyebrow voice before adding route-local values.
-- **Do** reserve the data hue for charts, meters, and sparklines.
-- **Do** provide loading, empty, success, and error states for every data
-  surface.
-- **Do** use the motion vocabulary from `src/lib/motion.ts` and honor reduced
-  motion.
-- **Do** keep touch targets at least 44 by 44 pixels even when the visible
-  control is compact; no horizontal scroll at 320px.
-- **Do** source customer-facing copy from `src/config/niche` — no niche nouns
-  (real-estate, suburb, listing) in page components.
+- **Do** consume semantic Atlantic variables or shadcn tokens instead of literal palette values.
+- **Do** keep the next useful action and the current system state visible.
+- **Do** use borders and tonal layering before shadows.
+- **Do** preserve 44×44px mobile targets, visible focus, reduced motion, and reflow to 320px.
+- **Do** provide loading, empty, success, error, disabled, and partial-success states.
 
 ### Don't:
 
-- **Don't** build menu-heavy SaaS dashboards with several equivalent starting
-  points.
-- **Don't** use generic AI styling: gradient text, decorative glass, cream SaaS
-  palettes, repetitive card grids, or gratuitous motion.
-- **Don't** use the data hue in chrome, buttons, headings, or body text.
-- **Don't** add looping or ambient animation, or more than one confetti moment.
-- **Don't** introduce new global CSS classes or a parallel component set on the
-  customer surface.
-- **Don't** create parallel component, token, typography, or navigation systems
-  across product surfaces.
-- **Don't** use colored side-stripe card accents, gradient text, default
-  glassmorphism, decorative hero metrics, or nested cards.
-
-## 9. Implementation Governance
-
-The canonical implementation of this design system for the customer
-(self-serve) surface is **shadcn/ui on Tailwind v4**. The primitives in
-`src/components/ui/` are the shared vocabulary for buttons, cards, dialogs,
-sheets, tables, selects, inputs, and navigation. They are wired to the
-Blockwise tokens through the bridge in `src/app/tailwind.css` (the `--ui-*`
-variables map onto the palette, radius, and type defined above).
-
-- Build customer-facing UI from the shadcn primitives and Tailwind utilities;
-  do not introduce new global CSS classes or a parallel component set.
-- Keep the token bridge as the single source of truth: shadcn semantic tokens
-  (`background`, `foreground`, `primary`, `muted`, `border`, etc.) resolve to
-  the Blockwise values in this document, so a token change here propagates.
-- The data hue (`--ui-data*`) is overridden per-niche from `src/config/niche` in
-  the customer layout — never hardcode a chart color in a component.
-- Customer pages contain zero niche nouns; all surface copy flows from
-  `src/config/niche` so the same shell white-labels.
-- Operator and monitor surfaces remain on the existing CSS shell until their
-  own migration; the two systems coexist via the scoped, no-preflight Tailwind
-  setup (`.tw` wrapper) and must not be mixed within one route.
-- Motion timings come from `src/lib/motion.ts` only; nothing loops, nothing
-  exceeds the entrance duration, and everything honors `prefers-reduced-motion`.
-- This register remains "the quiet operations desk": shadcn is the delivery
-  mechanism, the data hue is the only vivid voice, and restraint still governs
-  every component choice.
+- **Don't** introduce route-local palettes, typography systems, radius scales, navigation grammars, or token overrides.
+- **Don't** use pure black, gradient text, decorative glass, cream SaaS styling, or generic neon AI chrome.
+- **Don't** use vermilion as chart decoration or acid green outside verified/healthy state.
+- **Don't** turn product surfaces into repetitive same-size card grids or expose internal provider/model language to customers.
+- **Don't** communicate success while generation, QA, persistence, publication, or export remains incomplete.

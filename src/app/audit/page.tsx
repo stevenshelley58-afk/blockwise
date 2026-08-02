@@ -203,7 +203,7 @@ export default async function AuditPage({ searchParams }: { searchParams?: Searc
   };
 
   return (
-    <div className="audit-page">
+    <div className="audit-page lp">
       <header className="site-header">
         <div className="container nav">
           <Link className="brand" href="/" aria-label="Blockwise home"><BlockwiseLogo /></Link>

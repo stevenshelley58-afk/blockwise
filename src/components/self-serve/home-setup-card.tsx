@@ -1,7 +1,7 @@
 "use client";
 
 /*
- * Home setup card (Premium v2 mockup): animated progress ring + three-step
+ * Home setup card (Atlantic mockup): animated progress ring + three-step
  * checklist (brand pack → connect Meta → first ad) with drawn checks, an
  * "Up next" highlight, and a ready-to-publish state once everything is done.
  * All copy comes from the niche config — no product nouns live here.

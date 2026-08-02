@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 type ActionStatus = "idle" | "saving" | "saved" | "error";
 
 /*
- * Ad card action row. Rebuilt on the shadcn Button + Premium v2 tokens — the
+ * Ad card action row. Rebuilt on the shadcn Button + Atlantic tokens — the
  * legacy `.button secondary` / `.meta-ad-card-actions` rules live in the
  * unlayered globals.css and would beat every utility applied here. The row
  * itself carries no border or padding: each host surface (result card, swipe
