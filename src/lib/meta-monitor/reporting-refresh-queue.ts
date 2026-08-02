@@ -1,5 +1,3 @@
-import { tasks } from "@trigger.dev/sdk/v3";
-
 import { enqueueQueuedJob, isQueuedKind } from "../providers/job-queue-enqueue.ts";
 
 import type { MonitorCustomRange, MonitorRange } from "../meta-monitor/types.ts";
@@ -30,6 +28,12 @@ export async function queueReportingRefresh(input: {
       dedupeKey: `reporting:${input.workspaceId}:${rangeKey}:${input.reason}:${bucket}`,
     });
   }
+
+  // Lazy import: @trigger.dev/sdk is a devDependency and is not installed in
+  // the VPS worker image (npm ci --omit=dev). The worker reaches this module
+  // through the publish/mutation workers, so a static import would crash the
+  // worker the moment a publish job loads its handler.
+  const { tasks } = await import("@trigger.dev/sdk/v3");
 
   return tasks.trigger(
     "refresh.meta.reporting",

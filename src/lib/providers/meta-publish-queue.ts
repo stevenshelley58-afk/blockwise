@@ -1,40 +1,43 @@
 import { randomUUID } from "node:crypto";
-import { tasks } from "@trigger.dev/sdk/v3";
 
 import { recordAuditLog } from "../supabase/audit.ts";
 import { createSupabaseServiceClient } from "../supabase/service.ts";
-import { buildMetaPublishTaskOptions, loadMetaPublishPlan, type MetaPublishPlan } from "./meta-execution.ts";
+import { enqueueQueuedJob } from "./job-queue-enqueue.ts";
+import { loadMetaPublishPlan, type MetaPublishPlan } from "./meta-execution.ts";
 
+/**
+ * Publish execution runs on the VPS job_queue worker, not Trigger.dev.
+ *
+ * Trigger.dev stranded publish runs on every deploy (a killed run held the
+ * per-plan concurrency slot forever) and its idempotency cache handed dead
+ * cached runs back to retries, so a stuck plan could never actually requeue.
+ * The Supabase job_queue has neither failure mode: a pending job with the same
+ * dedupe key is reused instead of duplicated, fail_job retries with backoff up
+ * to max_attempts, and reap_stale_jobs returns jobs held by a dead worker to
+ * pending (see supabase/migrations/20260801030000_job_queue.sql).
+ */
 export async function queueMetaPublishPlanExecution(plan: MetaPublishPlan) {
-  return tasks.trigger(
-    "publish.meta.execute",
-    {
-      workspaceId: plan.workspaceId,
-      planId: plan.planId,
-    },
-    buildMetaPublishTaskOptions({
-      workspaceId: plan.workspaceId,
-      planId: plan.planId,
-      idempotencyKey: plan.idempotencyKey,
-      attemptKey: plan.updatedAt,
-    }),
-  );
+  return enqueueQueuedJob({
+    kind: "publish.meta.execute",
+    payload: { workspaceId: plan.workspaceId, planId: plan.planId },
+    maxAttempts: 3,
+    dedupeKey: `publish.meta.execute:${plan.planId}`,
+  });
 }
 
 /**
- * Watchdog recovery: find publish plans stuck in `approved` (queued but the
- * Trigger.dev worker never picked them up) and re-queue them for execution.
+ * Watchdog recovery: find publish plans stuck in `approved` (queued but never
+ * executed) and re-enqueue them for execution.
  *
  * A plan counts as "stuck" when it has been `approved` longer than
- * `stuckMinutes` with no progress — i.e. the enqueue fired but the worker run
- * never started/advanced. Recovery is bounded by `maxAttempts` to avoid an
- * infinite re-queue loop if the worker keeps failing; once exhausted, the plan
- * is left in `approved` and flagged in the audit log so an operator sees it.
+ * `stuckMinutes` with no progress. Recovery is bounded by `maxAttempts`, and
+ * the attempt count comes from this watchdog's own recovery audit trail —
+ * once exhausted, the plan is moved to `failed` (retryable from Ad Studio) so
+ * it stops being rescanned, and the exhaustion is audited for an operator.
  *
- * Re-queueing is duplicate-safe: the Trigger.dev attemptKey embeds the plan's
- * `updated_at` (milliseconds), and `applyMetaPublishExecutionResult` always
- * writes a fresh `updated_at`, so every recovery pass enqueues a NEW attempt
- * rather than returning a cached dead run.
+ * Re-enqueueing is duplicate-safe at the queue layer: enqueue_job reuses a
+ * pending/processing job with the same dedupe key instead of inserting a
+ * duplicate.
  */
 export interface RecoverStuckPublishPlansResult {
   scanned: number;
@@ -81,21 +84,37 @@ export async function recoverStuckMetaPublishPlans(options?: {
     if (!planId || !workspaceId) continue;
 
     try {
-      const attempts = await supabase
-        .from("publish_statuses")
-        .select("status, error_message")
-        .eq("publish_plan_id", planId)
-        .order("created_at", { ascending: false });
+      // Count prior recoveries from the watchdog's own audit trail. (The
+      // previous implementation queried publish_statuses by a column that does
+      // not exist; the error was swallowed, the count was always zero, and a
+      // permanently failing plan was re-queued every five minutes forever.)
+      const { count, error: attemptsError } = await supabase
+        .from("audit_logs")
+        .select("id", { count: "exact", head: true })
+        .eq("workspace_id", workspaceId)
+        .eq("action", "meta.publish.watchdog.recover")
+        .eq("target_type", "meta_publish_plan")
+        .eq("target_id", planId);
 
-      const history = (attempts.data ?? []) as Array<{
-        status: string;
-        error_message: string | null;
-      }>;
-      const attemptCount = history.length;
+      if (attemptsError) {
+        throw new Error(`Failed to count recovery attempts: ${attemptsError.message}`);
+      }
 
-      // Exhausted the retry budget: stop re-queueing, surface for an operator.
+      const attemptCount = count ?? 0;
+
+      // Exhausted the retry budget: move the plan out of "approved" so it is
+      // not rescanned forever, surface the failure, and stop.
       if (attemptCount >= maxAttempts) {
         result.exhausted += 1;
+        await supabase
+          .from("meta_publish_plans")
+          .update({
+            status: "failed",
+            last_error: `Publish did not complete after ${attemptCount} automatic recovery attempts. Open Ad Studio and publish again.`,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", planId)
+          .eq("workspace_id", workspaceId);
         await recordAuditLog(supabase, {
           workspaceId,
           actorProfileId: null,
@@ -105,7 +124,7 @@ export async function recoverStuckMetaPublishPlans(options?: {
           metadata: {
             attemptCount,
             maxAttempts,
-            lastError: history[0]?.error_message ?? null,
+            lastError: typeof row.last_error === "string" ? row.last_error : null,
           },
           correlationId: randomUUID(),
         });
