@@ -20,12 +20,14 @@ import { resolve } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import { pathToFileURL } from "node:url";
 
+import { resolveSupabaseServerCredential } from "../src/lib/supabase/credentials.ts";
 import { createSupabaseServiceClient } from "../src/lib/supabase/service.ts";
 
 type ServiceSupabase = ReturnType<typeof createSupabaseServiceClient>;
 type HandlerExecutionContext = {
   signal: AbortSignal;
   fetchImpl: typeof fetch;
+  metaActivationCompensationFetchImpl?: typeof fetch;
 };
 type Handler = (
   payload: Record<string, unknown>,
@@ -73,7 +75,9 @@ export async function resolveHandler(kind: string): Promise<Handler | null> {
           .maybeSingle();
         if (job.error) throw new Error(job.error.message);
         if (!job.data) throw new Error(`Ad Studio job ${creativeJobId} was not found.`);
-        if (job.data.status === "done") return { campaignId: job.data.campaign_id };
+        if (job.data.status === "done" || job.data.status === "failed") {
+          return { campaignId: job.data.campaign_id };
+        }
 
         const stored = (job.data.payload ?? {}) as {
           body?: import("../src/lib/adstudio/generate-template-campaign.ts").CreateCampaignBody;
@@ -284,6 +288,7 @@ export async function resolveHandler(kind: string): Promise<Handler | null> {
           workspaceId: String(payload.workspaceId),
           planId: String(payload.planId),
           fetchImpl: context.fetchImpl,
+          compensationFetchImpl: context.metaActivationCompensationFetchImpl,
         });
     }
     case "publish.meta.mutate": {
@@ -294,6 +299,7 @@ export async function resolveHandler(kind: string): Promise<Handler | null> {
           workspaceId: String(payload.workspaceId),
           mutationId: String(payload.mutationId),
           fetchImpl: context.fetchImpl,
+          compensationFetchImpl: context.metaActivationCompensationFetchImpl,
         });
     }
     default:
@@ -309,6 +315,8 @@ const HEARTBEAT_EVERY_MS = positiveNumber(
   "WORKER_HEARTBEAT_INTERVAL_MS",
   Math.max(1_000, Math.floor((LEASE_SECONDS * 1_000) / 3)),
 );
+const META_ACTIVATION_COMPENSATION_REQUEST_TIMEOUT_MS = 30_000;
+const LEASE_LOSS_HANDLER_DRAIN_TIMEOUT_MS = 100_000;
 
 if (HEARTBEAT_EVERY_MS >= LEASE_SECONDS * 1_000) {
   throw new Error("WORKER_HEARTBEAT_INTERVAL_MS must be shorter than WORKER_LEASE_SECONDS.");
@@ -365,9 +373,13 @@ export async function runOnce(
     if (!handler) {
       throw new Error(`No handler registered for job kind "${job.kind}".`);
     }
+    const fetchImpl = createLeaseGuardedFetch(heartbeat.signal, options.fetchImpl);
     await handler(job.payload ?? {}, supabase, {
       signal: heartbeat.signal,
-      fetchImpl: createLeaseGuardedFetch(heartbeat.signal, options.fetchImpl),
+      fetchImpl,
+      ...(job.kind === "publish.meta.execute" || job.kind === "publish.meta.mutate"
+        ? { metaActivationCompensationFetchImpl: createMetaActivationCompensationFetch(options.fetchImpl) }
+        : {}),
     });
   })();
 
@@ -379,9 +391,19 @@ export async function runOnce(
 
   const heartbeatError = await heartbeat.stop();
   if (heartbeatError) {
-    // Once ownership is uncertain, never settle this lease and never permit
-    // another provider request. The database reaper owns recovery from here.
-    void handlerPromise.catch(() => undefined);
+    // Never settle a lost lease. Ordinary provider I/O has already been
+    // aborted, but an activation handler may still be completing its bounded,
+    // PAUSE-only compensation. Wait for that safety path before this worker
+    // can claim another job.
+    try {
+      await withTimeout(
+        handlerPromise.then(() => undefined, () => undefined),
+        LEASE_LOSS_HANDLER_DRAIN_TIMEOUT_MS,
+        `Lease-loss handler drain timed out after ${LEASE_LOSS_HANDLER_DRAIN_TIMEOUT_MS}ms.`,
+      );
+    } catch (drainError) {
+      log(`job ${job.id} lease-loss drain error: ${toError(drainError).message}`);
+    }
     throw heartbeatError;
   }
 
@@ -541,6 +563,57 @@ function createLeaseGuardedFetch(signal: AbortSignal, fetchImpl: typeof fetch = 
   };
 }
 
+/**
+ * Emergency transport for Meta activation rollback only. It deliberately does
+ * not inherit the lost queue lease signal, but it rejects every operation
+ * except a PAUSED status write or the matching status verification read.
+ */
+function createMetaActivationCompensationFetch(fetchImpl: typeof fetch = fetch): typeof fetch {
+  return async (input, init) => {
+    if (typeof input !== "string" && !(input instanceof URL)) {
+      throw new Error("Meta activation compensation requires an explicit Graph API URL.");
+    }
+
+    const url = new URL(String(input));
+    const pathParts = url.pathname.split("/").filter(Boolean);
+    const targetsMetaObject =
+      url.protocol === "https:" &&
+      url.hostname === "graph.facebook.com" &&
+      pathParts.length === 2 &&
+      /^v\d+\.\d+$/u.test(pathParts[0] ?? "") &&
+      /^\d+$/u.test(pathParts[1] ?? "");
+    const method = (init?.method ?? "GET").toUpperCase();
+    let permitted = false;
+
+    if (targetsMetaObject && method === "POST" && url.search === "" && typeof init?.body === "string") {
+      try {
+        const body = JSON.parse(init.body) as Record<string, unknown>;
+        permitted = Object.keys(body).length === 1 && body.status === "PAUSED";
+      } catch {
+        permitted = false;
+      }
+    } else if (targetsMetaObject && method === "GET" && init?.body == null) {
+      permitted =
+        url.searchParams.size === 1 &&
+        url.searchParams.get("fields") === "configured_status,effective_status,status";
+    }
+
+    if (!permitted) {
+      throw new Error(
+        "Meta activation compensation permits only PAUSED writes and status verification reads.",
+      );
+    }
+
+    const requestSignal = init?.signal;
+    const timeoutSignal = AbortSignal.timeout(META_ACTIVATION_COMPENSATION_REQUEST_TIMEOUT_MS);
+    return fetchImpl(input, {
+      ...init,
+      redirect: "error",
+      signal: requestSignal ? AbortSignal.any([requestSignal, timeoutSignal]) : timeoutSignal,
+    });
+  };
+}
+
 async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
@@ -643,8 +716,7 @@ export async function preflightWorker(expectedRevision?: string): Promise<Worker
 
   const providerWritesEnabled = process.env.BLOCKWISE_ENABLE_PROVIDER_WRITES === "true";
   const supabaseUrlPresent = hasValue(process.env.NEXT_PUBLIC_SUPABASE_URL) || hasValue(process.env.SUPABASE_URL);
-  const supabaseCredentialPresent =
-    hasValue(process.env.SUPABASE_SECRET_KEY) || hasValue(process.env.SUPABASE_SERVICE_ROLE_KEY);
+  const supabaseCredentialPresent = Boolean(resolveSupabaseServerCredential());
   const tokenEncryptionKeyPresent = hasValue(process.env.TOKEN_ENCRYPTION_KEY);
   const stripeSecretKeyPresent = hasValue(process.env.STRIPE_SECRET_KEY);
 

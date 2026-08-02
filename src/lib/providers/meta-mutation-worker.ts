@@ -32,6 +32,7 @@ export async function executeMetaMutationById(input: {
   workspaceId: string;
   mutationId: string;
   fetchImpl?: typeof fetch;
+  compensationFetchImpl?: typeof fetch;
 }) {
   const mutation = await loadMutation(input.serviceSupabase, input.workspaceId, input.mutationId);
 
@@ -80,6 +81,7 @@ export async function executeMetaMutationById(input: {
       approvalStatus,
       accessToken: tokens.accessToken,
       fetchImpl: input.fetchImpl,
+      compensationFetchImpl: input.compensationFetchImpl,
     });
     const updated = {
       ...mutation,

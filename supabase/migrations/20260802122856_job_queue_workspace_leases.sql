@@ -335,6 +335,35 @@ begin
 end;
 $$;
 
+-- Producers may withdraw delayed recovery work only before it is claimed.
+-- Processing jobs remain exclusively owned by the worker lease contract.
+create or replace function public.cancel_job_v2(
+  p_workspace_id uuid,
+  p_id uuid
+)
+returns boolean
+language sql
+security definer
+set search_path = ''
+as $$
+  with cancelled as (
+    update public.job_queue as j
+    set
+      status = 'completed',
+      claimed_at = null,
+      completed_at = now(),
+      last_error = null,
+      lease_token = null,
+      lease_expires_at = null,
+      updated_at = now()
+    where j.workspace_id = p_workspace_id
+      and j.id = p_id
+      and j.status = 'pending'
+    returning 1
+  )
+  select exists(select 1 from cancelled);
+$$;
+
 -- Temporary producer compatibility overload. It remains safe because it can
 -- only resolve workspace identity through an existing workspace row, then
 -- delegates to the explicit RPC above.
@@ -852,6 +881,8 @@ $$;
 revoke execute on function public.enqueue_job_v2(
   uuid, text, jsonb, int, timestamptz, text
 ) from public, anon, authenticated;
+revoke execute on function public.cancel_job_v2(uuid, uuid)
+  from public, anon, authenticated;
 revoke execute on function public.enqueue_job(
   text, jsonb, int, timestamptz, text
 ) from public, anon, authenticated;
@@ -875,6 +906,8 @@ revoke execute on function public.reap_stale_jobs(int)
 grant execute on function public.enqueue_job_v2(
   uuid, text, jsonb, int, timestamptz, text
 ) to service_role;
+grant execute on function public.cancel_job_v2(uuid, uuid)
+  to service_role;
 grant execute on function public.enqueue_job(
   text, jsonb, int, timestamptz, text
 ) to service_role;

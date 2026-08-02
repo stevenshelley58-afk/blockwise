@@ -48,7 +48,8 @@ test("campaign generation uses Vercel inline with delayed VPS recovery", () => {
   assert.match(route, /await runTemplateCampaignGeneration/);
   assert.match(route, /kind: "adstudio\.generate\.template"/);
   assert.match(route, /GENERATION_RECOVERY_DELAY_MS/);
-  assert.match(route, /service\.rpc\("complete_job"/);
+  assert.match(route, /cancelQueuedJob\(\{/);
+  assert.doesNotMatch(route, /service\.rpc\("complete_job"/);
   assert.match(route, /expectedCampaignId/);
   assert.match(route, /correlationId/);
   assert.match(worker, /expectedCampaignId: stored\.expectedCampaignId/);

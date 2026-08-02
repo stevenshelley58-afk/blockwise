@@ -117,6 +117,7 @@ export async function executeMetaPublishPlanById(input: {
   workspaceId: string;
   planId: string;
   fetchImpl?: typeof fetch;
+  compensationFetchImpl?: typeof fetch;
   billingGateway?: FirstLiveCampaignStripeGateway;
 }) {
   const plan = await loadMetaPublishPlan(input.serviceSupabase, {
@@ -141,6 +142,7 @@ export async function executeMetaPublishPlanById(input: {
     serviceSupabase: input.serviceSupabase,
     plan,
     fetchImpl: input.fetchImpl,
+    compensationFetchImpl: input.compensationFetchImpl,
     billingGateway: input.billingGateway,
   });
 }
@@ -149,6 +151,7 @@ export async function executeMetaPublishPlan(input: {
   serviceSupabase: SupabaseServiceClient;
   plan: MetaPublishPlan;
   fetchImpl?: typeof fetch;
+  compensationFetchImpl?: typeof fetch;
   billingGateway?: FirstLiveCampaignStripeGateway;
 }) {
   if (
@@ -479,6 +482,8 @@ async function finalizeFreeLiveConversion(
   input: {
     serviceSupabase: SupabaseServiceClient;
     plan: MetaPublishPlan;
+    fetchImpl?: typeof fetch;
+    compensationFetchImpl?: typeof fetch;
     billingGateway?: FirstLiveCampaignStripeGateway;
   },
   completedPlan: MetaPublishPlan,
@@ -532,6 +537,7 @@ async function activateFreeCampaign(
   input: {
     serviceSupabase: SupabaseServiceClient;
     fetchImpl?: typeof fetch;
+    compensationFetchImpl?: typeof fetch;
   },
   plan: MetaPublishPlan,
 ) {
@@ -604,6 +610,7 @@ async function activateFreeCampaign(
     approvalStatus: "approved",
     accessToken: tokens.accessToken,
     fetchImpl: input.fetchImpl,
+    compensationFetchImpl: input.compensationFetchImpl,
     onCheckpoint: async (checkpoint) => {
       await updateMutation(input.serviceSupabase, {
         ...applyingMutation,

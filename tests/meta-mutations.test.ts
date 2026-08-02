@@ -10,10 +10,156 @@ import {
 test("Meta mutation provider requests have a bounded timeout", () => {
   const source = readFileSync("src/lib/providers/meta-mutations.ts", "utf8");
   assert.match(source, /META_MUTATION_REQUEST_TIMEOUT_MS = 30_000/);
+  assert.match(source, /META_ACTIVATION_COMPENSATION_TIMEOUT_MS = 90_000/);
   assert.equal(
-    source.match(/signal: AbortSignal\.timeout\(META_MUTATION_REQUEST_TIMEOUT_MS\)/g)?.length,
+    source.match(/signal: metaMutationRequestSignal\(input\.operationSignal\)/g)?.length,
     2,
   );
+});
+
+test("activation rollback uses only the dedicated compensation transport", async () => {
+  const mutation = buildMetaPlanMutation({
+    workspaceId: "workspace_demo",
+    planId: "plan_123",
+    action: "activate",
+    payload: {
+      campaignId: "1001",
+      adSetIds: ["1002"],
+    },
+  });
+  const ordinaryRequests: Array<{ objectId: string; method: string; status?: unknown }> = [];
+  const compensationRequests: Array<{ objectId: string; method: string; status?: unknown }> = [];
+
+  const responseFor = async (
+    target: typeof ordinaryRequests,
+    input: string | URL | Request,
+    init?: RequestInit,
+  ) => {
+    const objectId = new URL(String(input)).pathname.split("/").at(-1) ?? "";
+    const body = JSON.parse(String(init?.body ?? "{}")) as Record<string, unknown>;
+    target.push({ objectId, method: init?.method ?? "GET", status: body.status });
+    if (init?.method === "GET") {
+      return new Response(JSON.stringify({ configured_status: "PAUSED" }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }
+    return new Response(JSON.stringify({ success: true }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  };
+
+  const result = await executeMetaPlanMutation({
+    mutation,
+    approvalStatus: "approved",
+    accessToken: "token",
+    fetchImpl: async (input, init) => {
+      const body = JSON.parse(String(init?.body ?? "{}")) as Record<string, unknown>;
+      if (body.status === "ACTIVE") {
+        ordinaryRequests.push({
+          objectId: new URL(String(input)).pathname.split("/").at(-1) ?? "",
+          method: init?.method ?? "GET",
+          status: body.status,
+        });
+        throw new Error("ordinary activation transport failed");
+      }
+      return responseFor(ordinaryRequests, input, init);
+    },
+    compensationFetchImpl: (input, init) => responseFor(compensationRequests, input, init),
+  });
+
+  assert.equal(result.status, "failed");
+  assert.equal(result.lastError, "ordinary activation transport failed");
+  assert.deepEqual(
+    compensationRequests.filter((request) => request.method === "POST"),
+    [
+      { objectId: "1001", method: "POST", status: "PAUSED" },
+      { objectId: "1002", method: "POST", status: "PAUSED" },
+    ],
+  );
+  assert.equal(compensationRequests.some((request) => request.status === "ACTIVE"), false);
+  assert.equal(
+    ordinaryRequests.some((request) => request.status === "PAUSED" && request.objectId === "1002"),
+    false,
+  );
+});
+
+test("a hung Supabase checkpoint cannot delay the emergency campaign PAUSE", async () => {
+  const mutation = buildMetaPlanMutation({
+    workspaceId: "workspace_demo",
+    planId: "plan_123",
+    action: "activate",
+    payload: {
+      campaignId: "1001",
+      adSetIds: ["1002"],
+    },
+  });
+  let compensationStarted = false;
+  let checkpointCalls = 0;
+  let checkpointCallsAtCompensationStart = 0;
+  let observeCampaignPause!: () => void;
+  const campaignPauseObserved = new Promise<void>((resolve) => {
+    observeCampaignPause = resolve;
+  });
+  const compensationPosts: string[] = [];
+
+  const providerFetch: typeof fetch = async (input, init) => {
+    const objectId = new URL(String(input)).pathname.split("/").at(-1) ?? "";
+    const body = JSON.parse(String(init?.body ?? "{}")) as Record<string, unknown>;
+    if (body.status === "ACTIVE") {
+      compensationStarted = true;
+      checkpointCallsAtCompensationStart = checkpointCalls;
+      throw new Error("activation transport lost its lease");
+    }
+    if (compensationStarted && init?.method === "POST") {
+      compensationPosts.push(objectId);
+      if (objectId === "1001") observeCampaignPause();
+    }
+    if (init?.method === "GET") {
+      return new Response(JSON.stringify({ configured_status: "PAUSED" }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }
+    return new Response(JSON.stringify({ success: true }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  };
+
+  const execution = executeMetaPlanMutation({
+    mutation,
+    approvalStatus: "approved",
+    accessToken: "token",
+    fetchImpl: providerFetch,
+    compensationFetchImpl: providerFetch,
+    onCheckpoint: async () => {
+      checkpointCalls += 1;
+      if (compensationStarted) await new Promise<void>(() => undefined);
+    },
+  });
+
+  const within = async <T>(promise: Promise<T>, message: string): Promise<T> => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      return await Promise.race([
+        promise,
+        new Promise<never>((_resolve, reject) => {
+          timer = setTimeout(() => reject(new Error(message)), 500);
+        }),
+      ]);
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+  };
+
+  await within(campaignPauseObserved, "emergency campaign PAUSE was blocked by its checkpoint");
+  const result = await within(execution, "activation compensation remained blocked by its checkpoint");
+
+  assert.equal(result.status, "failed");
+  assert.deepEqual(compensationPosts, ["1001", "1002"]);
+  assert.equal(checkpointCalls, checkpointCallsAtCompensationStart);
 });
 
 test("buildMetaPlanMutation creates a separate approval-gated activation request", () => {

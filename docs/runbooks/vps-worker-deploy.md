@@ -11,14 +11,19 @@ deploys do not build or restart this worker.
 Queue lease changes use an expand/deploy/contract rollout:
 
 1. Apply and verify migration A, which adds the workspace-fenced v2 RPCs
-   `claim_job_v2`, `heartbeat_job`, `complete_job_v2`, and `fail_job_v2` while
-   retaining the legacy RPCs.
-2. Build, preflight, and deploy the v2 worker from an exact merged Git SHA.
-3. Confirm the worker claims, heartbeats, and settles jobs with the v2 RPCs.
-4. Only then apply migration B, which removes the legacy claim/settlement RPCs.
+   `enqueue_job_v2`, `cancel_job_v2`, `claim_job_v2`, `heartbeat_job`,
+   `complete_job_v2`, and `fail_job_v2` while retaining the legacy RPCs.
+2. Deploy and verify the exact green, merged Vercel revision that produces jobs
+   through `enqueue_job_v2`/`cancel_job_v2`.
+3. Build, preflight, and deploy the v2 worker from that same merged Git SHA.
+4. Confirm the web app enqueues through the v2 producer RPCs and the worker
+   claims, heartbeats, and settles through the v2 lease RPCs.
+5. Only then apply migration B, which removes the legacy producer, claim, and
+   settlement RPCs.
 
 Do not reverse steps 1 and 2. Do not apply migration B while a legacy worker
-could still be running; that removes its ability to settle a claimed job.
+could still be running or an old Vercel deployment can still serve traffic;
+that would remove RPCs either runtime still needs.
 
 ## Runtime environment
 
@@ -132,11 +137,13 @@ docker compose --project-name worker-deploy \
   -f "$COMPOSE_FILE" logs --tail 30 blockwise-worker
 ```
 
-The startup line must contain `revision=<REVISION>`. There must be no
-`claim_job_v2 failed`, heartbeat, lost-lease, or settlement errors. Confirm a
+The startup line must contain `revision=<REVISION>`. The production Vercel
+deployment must report the same Git SHA and be READY before migration B. There
+must be no `claim_job_v2 failed`, heartbeat, lost-lease, or settlement errors. Confirm a
 real `reporting.refresh` job for a known workspace reaches `completed` before
 applying migration B. Use reporting for this rollout proof; do not create a
-campaign publish merely to test the queue lease. Confirm the job's attempt used
+campaign publish merely to test the queue lease. Enqueue that proof through
+the deployed web producer or `enqueue_job_v2`, then confirm the attempt used
 the v2 claim, heartbeat, and settlement path in worker logs and queue state.
 
 ## Rollback window
@@ -144,5 +151,6 @@ the v2 claim, heartbeat, and settlement path in worker logs and queue state.
 Capture the currently running image and its revision before recreation if a
 known-good v2 image already exists. Roll back by selecting that immutable image
 and revision through the same Compose command. After migration B, never roll
-back to a legacy worker; only another worker that uses the v2 RPCs can safely
-claim and settle jobs.
+back to a legacy worker or a Vercel revision that uses the legacy producer RPC;
+only web and worker revisions that use the v2 contracts can safely enqueue,
+claim, and settle jobs.

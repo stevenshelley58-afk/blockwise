@@ -22,7 +22,10 @@ import { resolveCloneCampaignId } from "@/lib/adstudio/clone-campaign";
 import { buildAdStudioCreativeLibrary } from "@/lib/adstudio/creative-library";
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
-import { enqueueQueuedJob } from "@/lib/providers/job-queue-enqueue";
+import {
+  cancelQueuedJob,
+  enqueueQueuedJob,
+} from "@/lib/providers/job-queue-enqueue";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -259,6 +262,7 @@ export async function POST(request: NextRequest) {
       creativeJobId = String(inserted.data.id);
 
       const recovery = await enqueueQueuedJob({
+        workspaceId: context.access.workspaceId,
         kind: "adstudio.generate.template",
         payload: {
           workspaceId: context.access.workspaceId,
@@ -316,10 +320,12 @@ export async function POST(request: NextRequest) {
         console.error("adstudio creative job completion update failed", completedJob.error.message);
       }
       if (recoveryQueueJobId) {
-        const cancelled = await service.rpc("complete_job", { p_id: recoveryQueueJobId });
-        if (cancelled.error) {
-          console.error("adstudio recovery cancellation failed", cancelled.error.message);
-        }
+        await cancelGenerationRecoveryBestEffort({
+          serviceSupabase: service,
+          workspaceId: context.access.workspaceId,
+          jobId: recoveryQueueJobId,
+          failureContext: "after inline completion",
+        });
       }
       await recordWorkspaceFunnelEventBestEffort(funnelService, {
         eventName: "first_generation_completed",
@@ -358,8 +364,12 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     const service = createSupabaseServiceClient();
     if (recoveryQueueJobId) {
-      const cancelled = await service.rpc("complete_job", { p_id: recoveryQueueJobId });
-      if (cancelled.error) console.error("adstudio recovery cancellation after failure failed", cancelled.error.message);
+      await cancelGenerationRecoveryBestEffort({
+        serviceSupabase: service,
+        workspaceId: context.access.workspaceId,
+        jobId: recoveryQueueJobId,
+        failureContext: "after inline failure",
+      });
     }
     if (creativeJobId) {
       const failedJob = await service
@@ -383,6 +393,31 @@ export async function POST(request: NextRequest) {
   } finally {
     inFlightGenerations.delete(dedupKey);
     await releaseGenerationLock(context.supabase, dedupKey);
+  }
+}
+
+async function cancelGenerationRecoveryBestEffort(input: {
+  serviceSupabase: ReturnType<typeof createSupabaseServiceClient>;
+  workspaceId: string;
+  jobId: string;
+  failureContext: string;
+}): Promise<void> {
+  try {
+    const cancelled = await cancelQueuedJob({
+      serviceSupabase: input.serviceSupabase,
+      workspaceId: input.workspaceId,
+      jobId: input.jobId,
+    });
+    if (!cancelled) {
+      console.warn(
+        `adstudio recovery cancellation ${input.failureContext} found no pending job`,
+      );
+    }
+  } catch (error) {
+    console.error(
+      `adstudio recovery cancellation ${input.failureContext} failed`,
+      error instanceof Error ? error.message : String(error),
+    );
   }
 }
 

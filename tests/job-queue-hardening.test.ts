@@ -102,6 +102,10 @@ test("v2 queue RPCs use UUID ids and the exact workspace lease contract", () => 
   );
   assert.match(
     rollingMigration,
+    /function public\.cancel_job_v2\(\s*p_workspace_id uuid,\s*p_id uuid\s*\)[\s\S]*j\.workspace_id = p_workspace_id[\s\S]*j\.id = p_id[\s\S]*j\.status = 'pending'/,
+  );
+  assert.match(
+    rollingMigration,
     /function public\.fail_job_v2\(\s*p_workspace_id uuid,\s*p_id uuid,\s*p_lease_token uuid,\s*p_error text/,
   );
   assert.doesNotMatch(rollingMigration, /queue_id bigint|\bid bigint,/);
@@ -160,6 +164,7 @@ test("RPC and table access stays service-role-only", () => {
   for (const signature of [
     "claim_job_v2(text, integer)",
     "heartbeat_job(uuid, uuid, uuid, integer)",
+    "cancel_job_v2(uuid, uuid)",
     "complete_job_v2(uuid, uuid, uuid)",
     "fail_job_v2(uuid, uuid, uuid, text)",
   ]) {
@@ -215,6 +220,11 @@ test("every queue producer passes workspace identity explicitly", () => {
   assert.match(enqueueHelper, /workspaceId: string/);
   assert.match(enqueueHelper, /rpc\("enqueue_job_v2"/);
   assert.match(enqueueHelper, /p_workspace_id: input\.workspaceId/);
+  assert.match(enqueueHelper, /rpc\("cancel_job_v2"/);
+  assert.match(
+    enqueueHelper,
+    /cancelQueuedJob[\s\S]*p_workspace_id: input\.workspaceId[\s\S]*p_id: input\.jobId/,
+  );
   assert.doesNotMatch(
     rollingMigration,
     /function public\.enqueue_job\(\s*p_workspace_id uuid/,
@@ -226,6 +236,8 @@ test("every queue producer passes workspace identity explicitly", () => {
     "src/lib/providers/meta-leads-queue.ts",
     "src/lib/providers/meta-publish-queue.ts",
     "src/lib/meta-monitor/reporting-refresh-queue.ts",
+    "src/lib/providers/scheduled-maintenance.ts",
+    "src/app/api/adstudio/campaigns/route.ts",
   ]) {
     const source = readFileSync(path, "utf8");
     assert.match(
@@ -234,4 +246,32 @@ test("every queue producer passes workspace identity explicitly", () => {
       `${path} must pass workspaceId separately from payload`,
     );
   }
+});
+
+test("the publish queue remains the sole capped retry authority", () => {
+  const maintenance = readFileSync(
+    "src/lib/providers/scheduled-maintenance.ts",
+    "utf8",
+  );
+  const publishQueue = readFileSync(
+    "src/lib/providers/meta-publish-queue.ts",
+    "utf8",
+  );
+
+  assert.match(
+    maintenance,
+    /recoverStuckMetaPublishPlans\(\{ stuckMinutes: 5 \}\)/,
+  );
+  assert.doesNotMatch(
+    maintenance,
+    /recoverStuckMetaPublishPlans\(\{[^}]*maxAttempts/,
+  );
+  assert.match(
+    publishQueue,
+    /queueMetaPublishPlanExecution[\s\S]*maxAttempts: 3/,
+  );
+  assert.match(
+    rollingMigration,
+    /reap_stale_jobs[\s\S]*v_job\.attempts >= v_job\.max_attempts/,
+  );
 });

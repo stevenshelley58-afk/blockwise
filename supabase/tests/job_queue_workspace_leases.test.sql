@@ -1,7 +1,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(43);
+select plan(52);
 
 insert into public.workspaces (id, name, mode, region)
 values
@@ -153,6 +153,10 @@ select ok(
   'workspace-explicit producer RPC is available'
 );
 select ok(
+  to_regprocedure('public.cancel_job_v2(uuid,uuid)') is not null,
+  'workspace-explicit pending-job cancellation RPC is available'
+);
+select ok(
   not has_function_privilege(
     'anon',
     'public.claim_job_v2(text,integer)',
@@ -167,6 +171,14 @@ select ok(
     'EXECUTE'
   ),
   'authenticated users cannot settle jobs'
+);
+select ok(
+  not has_function_privilege(
+    'authenticated',
+    'public.cancel_job_v2(uuid,uuid)',
+    'EXECUTE'
+  ),
+  'authenticated users cannot cancel queued jobs'
 );
 select ok(
   not has_table_privilege('anon', 'public.job_queue', 'SELECT'),
@@ -230,6 +242,70 @@ select ok(
   ),
   'service role can call the unique workspace-explicit producer RPC'
 );
+select ok(
+  has_function_privilege(
+    'service_role',
+    'public.cancel_job_v2(uuid,uuid)',
+    'EXECUTE'
+  ),
+  'service role can cancel a pending job with an explicit workspace fence'
+);
+
+insert into queue_test_ids (name, id)
+values (
+  'cancel',
+  public.enqueue_job_v2(
+    '71111111-1111-4111-8111-111111111111',
+    'test.cancel',
+    '{}'::jsonb,
+    2,
+    now() + interval '1 hour',
+    'queue-test-cancel'
+  )
+);
+select is(
+  public.cancel_job_v2(
+    '72222222-2222-4222-8222-222222222222',
+    (select id from queue_test_ids where name = 'cancel')
+  ),
+  false,
+  'cancellation rejects the wrong workspace'
+);
+select ok(
+  exists (
+    select 1
+    from public.job_queue
+    where id = (select id from queue_test_ids where name = 'cancel')
+      and status = 'pending'
+  ),
+  'wrong-workspace cancellation leaves the pending job untouched'
+);
+select is(
+  public.cancel_job_v2(
+    '71111111-1111-4111-8111-111111111111',
+    (select id from queue_test_ids where name = 'cancel')
+  ),
+  true,
+  'matching workspace cancellation settles a pending job'
+);
+select ok(
+  exists (
+    select 1
+    from public.job_queue
+    where id = (select id from queue_test_ids where name = 'cancel')
+      and status = 'completed'
+      and completed_at is not null
+  ),
+  'successful cancellation stores a completed terminal state'
+);
+select is(
+  public.cancel_job_v2(
+    '71111111-1111-4111-8111-111111111111',
+    (select id from queue_test_ids where name = 'cancel')
+  ),
+  false,
+  'a terminal job cannot be cancelled twice'
+);
 
 insert into queue_test_ids (name, id)
 values
@@ -264,6 +340,15 @@ select isnt(
 create temporary table complete_claim
 on commit drop
 as select * from public.claim_job_v2('test.complete', 600);
+
+select is(
+  public.cancel_job_v2(
+    '71111111-1111-4111-8111-111111111111',
+    (select id from complete_claim)
+  ),
+  false,
+  'a processing job can only be settled by its matching worker lease'
+);
 
 select is(
   (select workspace_id from complete_claim),

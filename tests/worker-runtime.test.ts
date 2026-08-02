@@ -3,6 +3,10 @@ import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
 
+import {
+  buildMetaPlanMutation,
+  executeMetaPlanMutation,
+} from "../src/lib/providers/meta-mutations.ts";
 import { runOnce } from "../worker/index.ts";
 
 type RpcCall = { name: string; args: Record<string, unknown> };
@@ -133,6 +137,122 @@ test("lease loss aborts in-flight provider I/O and is never settled by the stale
   assert.equal(calls.some((call) => call.name === "fail_job_v2"), false);
 });
 
+test("lease loss waits for bounded PAUSE-only Meta activation compensation", async () => {
+  let leaseLost = false;
+  const { calls, service } = fakeService(async (name) => {
+    if (name === "claim_job_v2") return { data: [claimedJob("publish.meta.mutate")], error: null };
+    if (name === "heartbeat_job") {
+      leaseLost = true;
+      return { data: false, error: null };
+    }
+    throw new Error(`Unexpected RPC ${name}`);
+  });
+  const afterLeaseLoss: Array<{
+    objectId: string;
+    method: string;
+    status?: unknown;
+    redirect?: RequestRedirect;
+  }> = [];
+  let ordinaryActiveRequestAborted = false;
+  let handlerFinished = false;
+
+  const providerFetch: typeof fetch = async (input, init) => {
+    const url = new URL(String(input));
+    const objectId = url.pathname.split("/").at(-1) ?? "";
+    const body = JSON.parse(String(init?.body ?? "{}")) as Record<string, unknown>;
+
+    if (body.status === "ACTIVE") {
+      return new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () => {
+          ordinaryActiveRequestAborted = true;
+          reject(init.signal?.reason);
+        }, { once: true });
+      });
+    }
+
+    if (leaseLost) {
+      afterLeaseLoss.push({
+        objectId,
+        method: init?.method ?? "GET",
+        status: body.status,
+        redirect: init?.redirect,
+      });
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    if (init?.method === "GET") {
+      return new Response(JSON.stringify({ configured_status: "PAUSED" }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }
+    return new Response(JSON.stringify({ success: true }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  };
+
+  await assert.rejects(
+    runOnce(service, {
+      heartbeatEveryMs: 5,
+      heartbeatTimeoutMs: 50,
+      leaseSeconds: 30,
+      fetchImpl: providerFetch,
+      resolveHandler: async () => async (_payload, _service, context) => {
+        const mutation = buildMetaPlanMutation({
+          workspaceId,
+          planId: "44444444-4444-4444-8444-444444444444",
+          action: "activate",
+          payload: { campaignId: "1001", adSetIds: ["1002"] },
+        });
+        const result = await executeMetaPlanMutation({
+          mutation,
+          approvalStatus: "approved",
+          accessToken: "token",
+          fetchImpl: context.fetchImpl,
+          compensationFetchImpl: context.metaActivationCompensationFetchImpl,
+        });
+        assert.equal(result.status, "failed");
+        const compensationFetchImpl = context.metaActivationCompensationFetchImpl;
+        assert.ok(compensationFetchImpl);
+        for (const [url, init] of [
+          [
+            "https://graph.facebook.com/v23.0/1001",
+            { method: "POST", body: JSON.stringify({ status: "ACTIVE" }) },
+          ],
+          [
+            "https://example.invalid/v23.0/1001",
+            { method: "POST", body: JSON.stringify({ status: "PAUSED" }) },
+          ],
+          [
+            "https://graph.facebook.com/v23.0/1001",
+            { method: "DELETE" },
+          ],
+        ] as const) {
+          await assert.rejects(
+            compensationFetchImpl(url, init),
+            /permits only PAUSED writes/,
+          );
+        }
+        handlerFinished = true;
+      },
+    }),
+    /heartbeat_job lost the lease/,
+  );
+
+  assert.equal(ordinaryActiveRequestAborted, true);
+  assert.equal(handlerFinished, true, "runOnce must drain activation compensation before returning");
+  assert.deepEqual(
+    afterLeaseLoss.filter((request) => request.method === "POST"),
+    [
+      { objectId: "1001", method: "POST", status: "PAUSED", redirect: "error" },
+      { objectId: "1002", method: "POST", status: "PAUSED", redirect: "error" },
+    ],
+  );
+  assert.equal(afterLeaseLoss.every((request) => request.redirect === "error"), true);
+  assert.equal(calls.some((call) => call.name === "complete_job_v2"), false);
+  assert.equal(calls.some((call) => call.name === "fail_job_v2"), false);
+});
+
 test("a never-resolving heartbeat cannot freeze worker shutdown or completion", async () => {
   const { calls, service } = fakeService(async (name) => {
     if (name === "claim_job_v2") return { data: [claimedJob("reporting.refresh")], error: null };
@@ -229,7 +349,7 @@ test("preflight loads publish and reporting handlers without printing credential
         ...process.env,
         BLOCKWISE_WORKER_REVISION: revision,
         BLOCKWISE_ENABLE_PROVIDER_WRITES: "true",
-        BLOCKWISE_QUEUED_KINDS: "reporting.refresh",
+        BLOCKWISE_QUEUED_KINDS: "",
         SUPABASE_URL: "https://worker-preflight.invalid",
         SUPABASE_SECRET_KEY: secretSentinel,
         TOKEN_ENCRYPTION_KEY: secretSentinel,
@@ -244,36 +364,11 @@ test("preflight loads publish and reporting handlers without printing credential
     status: string;
     revision: string;
     handlers: Record<string, string>;
+    routing: { vpsOnly: boolean };
   };
   assert.equal(report.status, "ready");
   assert.equal(report.revision, revision);
   assert.equal(report.handlers["publish.meta.execute"], "loaded");
   assert.equal(report.handlers["reporting.refresh"], "loaded");
-});
-
-test("preflight fails closed when reporting.refresh is not queue-routed", () => {
-  const revision = "b".repeat(40);
-  const workerPath = fileURLToPath(new URL("../worker/index.ts", import.meta.url));
-  const secretSentinel = "must-not-appear-in-output";
-  const result = spawnSync(
-    process.execPath,
-    [workerPath, "--preflight", "--expect-revision", revision],
-    {
-      encoding: "utf8",
-      env: {
-        ...process.env,
-        BLOCKWISE_WORKER_REVISION: revision,
-        BLOCKWISE_ENABLE_PROVIDER_WRITES: "true",
-        BLOCKWISE_QUEUED_KINDS: "",
-        SUPABASE_URL: "https://worker-preflight.invalid",
-        SUPABASE_SECRET_KEY: secretSentinel,
-        TOKEN_ENCRYPTION_KEY: secretSentinel,
-        STRIPE_SECRET_KEY: secretSentinel,
-      },
-    },
-  );
-
-  assert.notEqual(result.status, 0);
-  assert.match(result.stderr, /BLOCKWISE_QUEUED_KINDS=reporting\.refresh/);
-  assert.equal(`${result.stdout}${result.stderr}`.includes(secretSentinel), false);
+  assert.equal(report.routing.vpsOnly, true);
 });
