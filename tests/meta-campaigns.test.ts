@@ -9,7 +9,7 @@ import {
   normalizeMetaTargetingLocations,
 } from "../src/lib/providers/meta-campaigns.ts";
 
-test("free three-day publishing requires an isolated new Meta campaign", () => {
+test("a free live campaign setup requires an isolated new Meta campaign", () => {
   assert.match(metaExistingCampaignReuseIssue({ billingAccessState: "unbilled" }) ?? "", /must use a new Meta campaign/);
   assert.match(metaExistingCampaignReuseIssue({
     billingAccessState: "trialing",

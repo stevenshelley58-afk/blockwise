@@ -90,7 +90,7 @@ type PublishSetupPanelProps = {
 
 const STEPS = ["Audience", "Ads", "Budget", "Review", "Live"] as const;
 const BUDGET_PRESETS = [10, 20, 50] as const;
-const DURATION_PRESETS = [3, 7] as const;
+const DURATION_PRESETS = [7, 30, 90] as const;
 const MAX_LIBRARY_SELECTIONS = 6;
 
 type DurationMode = `${(typeof DURATION_PRESETS)[number]}` | "custom";
@@ -156,11 +156,11 @@ export function PublishSetupPanel({
   const [deselectedVariantIds, setDeselectedVariantIds] = useState<ReadonlySet<string>>(new Set());
   const [publishedVariantCount, setPublishedVariantCount] = useState<number | null>(null);
   const [dailyBudgetAud, setDailyBudgetAud] = useState(20);
-  const [durationMode, setDurationMode] = useState<DurationMode>("3");
+  const [durationMode, setDurationMode] = useState<DurationMode>("30");
   const [customDurationMode, setCustomDurationMode] = useState<CustomDurationMode>("date");
   const [customEndDate, setCustomEndDate] = useState(() => {
     const end = new Date();
-    end.setDate(end.getDate() + 7);
+    end.setDate(end.getDate() + 30);
     return formatDateInputValue(end);
   });
   const [creativeLibrary, setCreativeLibrary] = useState<AdStudioCreativeLibraryItem[]>([]);
@@ -845,7 +845,7 @@ export function PublishSetupPanel({
 
               <fieldset className="studio-budget-section">
                 <legend>Duration</legend>
-                <div className="studio-budget-presets" aria-label="Campaign duration">
+                <div className="studio-duration-presets" aria-label="Campaign duration">
                   {DURATION_PRESETS.map((days) => (
                     <button
                       key={days}
@@ -854,8 +854,7 @@ export function PublishSetupPanel({
                       aria-pressed={durationMode === String(days)}
                       onClick={() => setDurationMode(String(days) as DurationMode)}
                     >
-                      <strong>{days} days</strong>
-                      <span>{days === 3 ? "Quick test" : "More time to learn"}</span>
+                      {days} days
                     </button>
                   ))}
                   <button
@@ -864,8 +863,7 @@ export function PublishSetupPanel({
                     aria-pressed={durationMode === "custom"}
                     onClick={() => setDurationMode("custom")}
                   >
-                    <strong>Custom</strong>
-                    <span>Choose when it ends</span>
+                    Custom
                   </button>
                 </div>
 
