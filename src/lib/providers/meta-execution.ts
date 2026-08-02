@@ -64,6 +64,7 @@ export type MetaPublishCampaignPlan = {
   localId: string;
   name: string;
   objective: "OUTCOME_LEADS";
+  bidStrategy: "LOWEST_COST_WITHOUT_CAP";
   status: "PAUSED";
   specialAdCategories: ["HOUSING"];
   specialAdCategoryCountries: string[];
@@ -322,6 +323,7 @@ export function buildMetaPublishPlan(input: {
     localId: "campaign_main",
     name: campaignPack.campaign.name,
     objective: "OUTCOME_LEADS",
+    bidStrategy: "LOWEST_COST_WITHOUT_CAP",
     status: "PAUSED",
     specialAdCategories: ["HOUSING"],
     specialAdCategoryCountries: [campaignPack.campaign.market.country.trim().toUpperCase()],
@@ -632,6 +634,7 @@ async function publishWithMarketingApi(
         const response = await postMetaObject(input, requestLog, responseLog, "campaign.create", `/${plan.setup.metaAdAccountId}/campaigns`, {
           name: providerName,
           objective: plan.campaign.objective,
+          bid_strategy: plan.campaign.bidStrategy,
           status: "PAUSED",
           special_ad_categories: plan.campaign.specialAdCategories,
           special_ad_category_country: plan.campaign.specialAdCategoryCountries,
@@ -1688,6 +1691,7 @@ function rowToPlan(row: MetaPublishPlanRow): MetaPublishPlan {
     localId: "campaign_main",
     name: "Meta campaign",
     objective: "OUTCOME_LEADS",
+    bidStrategy: "LOWEST_COST_WITHOUT_CAP",
     status: "PAUSED",
     specialAdCategories: ["HOUSING"],
     specialAdCategoryCountries: ["AU"],
