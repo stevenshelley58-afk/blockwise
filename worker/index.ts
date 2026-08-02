@@ -11,11 +11,11 @@
  * (reap_stale_jobs) returns any job held by a dead worker back to pending. The
  * whole "stranded by deploy" failure class disappears.
  *
- * Phase 1 scope: the on-demand provider jobs that are cleanly importable from
- * src/lib WITHOUT pulling in @trigger.dev/sdk. The publish/mutation workers
- * still import queueReportingRefresh (Trigger-coupled) and are wired up in
- * Phase 2 after that coupling is cut. Nothing in this file touches production
- * until a producer is flipped from tasks.trigger() to enqueue_job() in Phase 2.
+ * Scope: all on-demand provider jobs, including publish and mutations. The
+ * former Trigger coupling (queueReportingRefresh statically importing
+ * @trigger.dev/sdk, which is a devDependency and absent from this image) was
+ * cut by lazy-importing the SDK only on the Trigger fallback path — see
+ * src/lib/meta-monitor/reporting-refresh-queue.ts.
  *
  * Handler modules are loaded DYNAMICALLY (only when their job kind is claimed)
  * so the Trigger-coupled modules never load unless their jobs are actually
@@ -37,9 +37,8 @@ interface ClaimedJob {
 }
 
 /**
- * Dynamic dispatch: each kind lazy-imports its worker module so the import
- * graph only reaches @trigger.dev/sdk when a Trigger-coupled job is actually
- * claimed. Phase 1 enqueues only sync.meta.leads and deliver.lead.
+ * Dynamic dispatch: each kind lazy-imports its worker module so handler code
+ * only loads when its job kind is actually claimed.
  */
 async function resolveHandler(kind: string): Promise<Handler | null> {
   switch (kind) {
@@ -72,9 +71,24 @@ async function resolveHandler(kind: string): Promise<Handler | null> {
           customRange: payload.customRange as import("../src/lib/meta-monitor/types.ts").MonitorCustomRange | undefined,
         });
     }
-    // Phase 2: decouple these from @trigger.dev/sdk, then enable.
-    // case "publish.meta.execute": { ... }
-    // case "publish.meta.mutate": { ... }
+    case "publish.meta.execute": {
+      const { executeMetaPublishPlanById } = await import("../src/lib/providers/meta-publish-worker.ts");
+      return (payload, supabase) =>
+        executeMetaPublishPlanById({
+          serviceSupabase: supabase,
+          workspaceId: String(payload.workspaceId),
+          planId: String(payload.planId),
+        });
+    }
+    case "publish.meta.mutate": {
+      const { executeMetaMutationById } = await import("../src/lib/providers/meta-mutation-worker.ts");
+      return (payload, supabase) =>
+        executeMetaMutationById({
+          serviceSupabase: supabase,
+          workspaceId: String(payload.workspaceId),
+          mutationId: String(payload.mutationId),
+        });
+    }
     default:
       return null;
   }

@@ -4,23 +4,11 @@ import * as Sentry from "@sentry/nextjs";
 import { executeLeadDeliveryAttemptById } from "../src/lib/providers/lead-delivery-worker.ts";
 import { checkMetaConnectionHealth } from "../src/lib/providers/meta-assets.ts";
 import { syncMetaLeadsForPlanById } from "../src/lib/providers/meta-leads-worker.ts";
-import { executeMetaMutationById } from "../src/lib/providers/meta-mutation-worker.ts";
-import { executeMetaPublishPlanById } from "../src/lib/providers/meta-publish-worker.ts";
 import { recoverStuckMetaPublishPlans } from "../src/lib/providers/meta-publish-queue.ts";
 import { loadStoredProviderTokens } from "../src/lib/providers/provider-connections.ts";
 import { createSupabaseServiceClient } from "../src/lib/supabase/service.ts";
 
 type SupabaseServiceClient = ReturnType<typeof createSupabaseServiceClient>;
-
-type MetaPublishPayload = {
-  workspaceId: string;
-  planId: string;
-};
-
-type MetaMutationPayload = {
-  workspaceId: string;
-  mutationId: string;
-};
 
 type MetaLeadSyncPayload = {
   workspaceId: string;
@@ -49,29 +37,10 @@ type ScheduledMetaConnectionRow = {
   token_expires_at: string | null;
 };
 
-export const executeMetaPublishPlanTask = task({
-  id: "publish.meta.execute",
-  // concurrencyKey (per plan) copies this queue, so at most one publish run
-  // executes per plan at a time. Without the limit, a retry that overlaps a
-  // backlogged run could create the campaign on Meta twice.
-  queue: { concurrencyLimit: 1 },
-  run: async (payload: MetaPublishPayload) =>
-    executeMetaPublishPlanById({
-      serviceSupabase: createSupabaseServiceClient(),
-      workspaceId: payload.workspaceId,
-      planId: payload.planId,
-    }),
-});
-
-export const executeMetaMutationTask = task({
-  id: "publish.meta.mutate",
-  run: async (payload: MetaMutationPayload) =>
-    executeMetaMutationById({
-      serviceSupabase: createSupabaseServiceClient(),
-      workspaceId: payload.workspaceId,
-      mutationId: payload.mutationId,
-    }),
-});
+// publish.meta.execute and publish.meta.mutate are deliberately NOT Trigger
+// tasks anymore: they run on the VPS job_queue worker (worker/index.ts).
+// Trigger stranded their in-flight runs on every deploy behind the per-key
+// concurrency slot, which left plans stuck in "approved" forever.
 
 export const syncMetaLeadsTask = task({
   id: "sync.meta.leads",
@@ -209,8 +178,8 @@ export async function runScheduledMetaTokenHealthChecks(serviceSupabase: Supabas
 }
 
 /**
- * Watchdog: recover publish plans that got queued but whose Trigger.dev worker
- * run never started/advanced (e.g. a deploy window swallowed the run).
+ * Watchdog: recover publish plans that got queued but whose worker run
+ * never started/advanced (e.g. a deploy window swallowed the run).
  *
  * Runs every 5 minutes and re-queues any plan stuck in `approved` for longer
  * than 5 minutes. Bounded by maxAttempts inside the recovery helper so a plan
