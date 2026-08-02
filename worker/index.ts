@@ -691,7 +691,7 @@ type WorkerPreflightReport = {
     supabaseUrlPresent: true;
     supabaseCredentialPresent: true;
     tokenEncryptionKeyPresent: true;
-    stripeSecretKeyPresent: true;
+    stripeSecretKeyPresent: boolean;
   };
 };
 
@@ -725,7 +725,6 @@ export async function preflightWorker(expectedRevision?: string): Promise<Worker
   if (!supabaseUrlPresent) missing.push("SUPABASE_URL or NEXT_PUBLIC_SUPABASE_URL");
   if (!supabaseCredentialPresent) missing.push("SUPABASE_SECRET_KEY or SUPABASE_SERVICE_ROLE_KEY");
   if (!tokenEncryptionKeyPresent) missing.push("TOKEN_ENCRYPTION_KEY");
-  if (!stripeSecretKeyPresent) missing.push("STRIPE_SECRET_KEY");
   if (missing.length > 0) {
     throw new Error(`Worker preflight failed; missing: ${missing.join(", ")}.`);
   }
@@ -743,7 +742,7 @@ export async function preflightWorker(expectedRevision?: string): Promise<Worker
       supabaseUrlPresent: true,
       supabaseCredentialPresent: true,
       tokenEncryptionKeyPresent: true,
-      stripeSecretKeyPresent: true,
+      stripeSecretKeyPresent,
     },
   };
 }

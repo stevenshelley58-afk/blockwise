@@ -33,8 +33,15 @@ Keep the production values in `/srv/blockwise/worker-deploy/.env` with mode
 - `NEXT_PUBLIC_SUPABASE_URL` or `SUPABASE_URL`
 - `SUPABASE_SECRET_KEY` or `SUPABASE_SERVICE_ROLE_KEY`
 - `TOKEN_ENCRYPTION_KEY` (must match Vercel so stored provider tokens decrypt)
-- `STRIPE_SECRET_KEY` (required for legacy-trial publication)
 - `BLOCKWISE_ENABLE_PROVIDER_WRITES=true`
+
+`STRIPE_SECRET_KEY` is conditionally required only while a workspace can still
+use the legacy-trial publication path. It is not a process-start requirement:
+reporting, unbilled free-campaign publication, and ordinary paid publication do
+not call Stripe. A legacy-trial publish with no key fails closed during billing
+validation, before any Meta provider write. Before intentionally supporting a
+legacy-trial workspace, provision the key on the VPS and confirm the preflight
+report says `"stripeSecretKeyPresent":true`.
 
 Never print this file, run `docker inspect` against a container's environment,
 or run plain `docker compose config`; those commands can expose secrets. The
@@ -88,8 +95,8 @@ test "$(docker image inspect \
 The preflight runs as the image's non-root user with no network, no writable
 filesystem, and no Linux capabilities. It loads the real publish and reporting
 handlers, verifies required environment names, and compares the embedded
-revision. Its JSON output contains booleans and the Git SHA only; it never
-prints credentials.
+revision. Its JSON output contains booleans, including optional legacy Stripe
+availability, and the Git SHA only; it never prints credentials.
 
 ```bash
 docker run --rm \
