@@ -91,7 +91,25 @@ type PublishSetupPanelProps = {
 
 const STEPS = ["Audience", "Ads", "Budget", "Review", "Live"] as const;
 const BUDGET_PRESETS = [10, 20, 50] as const;
+const DURATION_PRESETS = [3, 7] as const;
 const MAX_LIBRARY_SELECTIONS = 6;
+
+type DurationMode = `${(typeof DURATION_PRESETS)[number]}` | "custom";
+type CustomDurationMode = "date" | "ongoing";
+
+function formatDateInputValue(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function dateInputToEndOfDayIso(value: string) {
+  const [year, month, day] = value.split("-").map(Number);
+  if (!year || !month || !day) return null;
+  const date = new Date(year, month - 1, day, 23, 59, 59, 999);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
 
 export function PublishSetupPanel({
   campaignId,
@@ -139,6 +157,13 @@ export function PublishSetupPanel({
   const [deselectedVariantIds, setDeselectedVariantIds] = useState<ReadonlySet<string>>(new Set());
   const [publishedVariantCount, setPublishedVariantCount] = useState<number | null>(null);
   const [dailyBudgetAud, setDailyBudgetAud] = useState(20);
+  const [durationMode, setDurationMode] = useState<DurationMode>("3");
+  const [customDurationMode, setCustomDurationMode] = useState<CustomDurationMode>("date");
+  const [customEndDate, setCustomEndDate] = useState(() => {
+    const end = new Date();
+    end.setDate(end.getDate() + 7);
+    return formatDateInputValue(end);
+  });
   const [creativeLibrary, setCreativeLibrary] = useState<AdStudioCreativeLibraryItem[]>([]);
   const [creativeLibraryLoading, setCreativeLibraryLoading] = useState(creativeSource === "library");
   const [creativeLibraryError, setCreativeLibraryError] = useState("");
@@ -383,15 +408,43 @@ export function PublishSetupPanel({
   const budgetError = Number.isFinite(dailyBudgetAud) && dailyBudgetAud >= 1
     ? ""
     : "Enter a daily budget of at least $1.";
-  const budgetStepReady = !budgetError;
+  const customEndTime = durationMode === "custom" && customDurationMode === "date"
+    ? dateInputToEndOfDayIso(customEndDate)
+    : null;
+  const scheduleError = durationMode === "custom" && customDurationMode === "date"
+    ? !customEndTime
+      ? "Choose an end date."
+      : new Date(customEndTime).getTime() <= Date.now()
+        ? "Choose a future end date."
+        : ""
+    : "";
+  const budgetStepReady = !budgetError && !scheduleError;
   const publishReady = allMet
     && campaignStepReady
     && creativeStepReady
     && leadFormStepReady
     && destinationReady
     && budgetStepReady;
-  const plannedSpend = !budgetError ? dailyBudgetAud * 3 : null;
-  const scheduleSummary = "3 days";
+  const plannedDurationDays = durationMode === "custom"
+    ? customDurationMode === "date" && customEndTime
+      ? Math.max(1, Math.ceil((new Date(customEndTime).getTime() - Date.now()) / 86_400_000))
+      : null
+    : Number(durationMode);
+  const plannedSpend = !budgetError && plannedDurationDays
+    ? dailyBudgetAud * plannedDurationDays
+    : null;
+  const scheduleSummary = durationMode === "custom"
+    ? customDurationMode === "ongoing"
+      ? "Until stopped"
+      : customEndTime
+        ? `Until ${new Intl.DateTimeFormat("en-AU", { day: "numeric", month: "short", year: "numeric" }).format(new Date(customEndTime))}`
+        : "Choose an end date"
+    : `${durationMode} days`;
+  const minimumEndDate = (() => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return formatDateInputValue(tomorrow);
+  })();
 
   function toggleVariant(variantId: string) {
     setDeselectedVariantIds((current) => {
@@ -426,15 +479,19 @@ export function PublishSetupPanel({
 
   function buildControls(): MetaPublishControls {
     const start = new Date();
-    const end = new Date(start);
-    end.setDate(start.getDate() + 3);
+    const presetDuration = durationMode === "custom" ? null : Number(durationMode);
+    const presetEnd = presetDuration ? new Date(start) : null;
+    if (presetEnd && presetDuration) presetEnd.setDate(start.getDate() + presetDuration);
+    const endTime = durationMode === "custom"
+      ? customDurationMode === "ongoing" ? null : customEndTime
+      : presetEnd?.toISOString() ?? null;
     return {
       dailyBudgetMinorUnits: Math.max(1, Math.round(dailyBudgetAud * 100)),
       destinationUrl,
       geo: targetSuburbs.length > 0
         ? { type: "cities", locations: targetSuburbs, includeSurroundingSuburbs: true }
         : { type: "country", country: campaignPack.campaign.market.country },
-      schedule: { startTime: start.toISOString(), endTime: end.toISOString() },
+      schedule: { startTime: start.toISOString(), endTime },
       placements: {
         publisherPlatforms: ["facebook", "instagram"],
         facebookPositions: [],
@@ -755,7 +812,7 @@ export function PublishSetupPanel({
             <section className="studio-publish-screen" aria-labelledby="budget-title">
               <h1 id="budget-title">Budget</h1>
               <p className="m-0 text-sm leading-6 text-(--muted)">
-                Every Blockwise Campaign runs for three days. Choose the daily limit and we will stop it automatically.
+                Choose how much to spend each day and how long the campaign should run.
               </p>
 
               <fieldset className="studio-budget-section">
@@ -794,9 +851,77 @@ export function PublishSetupPanel({
                 {budgetError && <p className="studio-field-error" id="budget-error">{budgetError}</p>}
               </fieldset>
 
+              <fieldset className="studio-budget-section">
+                <legend>Duration</legend>
+                <div className="studio-budget-presets" aria-label="Campaign duration">
+                  {DURATION_PRESETS.map((days) => (
+                    <button
+                      key={days}
+                      type="button"
+                      className={durationMode === String(days) ? "selected" : ""}
+                      aria-pressed={durationMode === String(days)}
+                      onClick={() => setDurationMode(String(days) as DurationMode)}
+                    >
+                      <strong>{days} days</strong>
+                      <span>{days === 3 ? "Quick test" : "More time to learn"}</span>
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    className={durationMode === "custom" ? "selected" : ""}
+                    aria-pressed={durationMode === "custom"}
+                    onClick={() => setDurationMode("custom")}
+                  >
+                    <strong>Custom</strong>
+                    <span>Choose when it ends</span>
+                  </button>
+                </div>
+
+                {durationMode === "custom" && (
+                  <div className="grid gap-3 rounded-(--r-card) border border-(--line) bg-(--surface-subtle) p-4">
+                    <div className="grid gap-2">
+                      <label className="flex cursor-pointer items-center gap-3 text-sm font-semibold text-(--ink)">
+                        <input
+                          className="accent-(--ui-primary)"
+                          type="radio"
+                          name="custom-duration"
+                          value="date"
+                          checked={customDurationMode === "date"}
+                          onChange={() => setCustomDurationMode("date")}
+                        />
+                        End on a date
+                      </label>
+                      <input
+                        className="h-11 w-full rounded-(--r-card) border border-(--line) bg-(--surface) px-3 text-sm text-(--ink) disabled:cursor-not-allowed disabled:opacity-50"
+                        type="date"
+                        min={minimumEndDate}
+                        value={customEndDate}
+                        disabled={customDurationMode !== "date"}
+                        aria-label="Campaign end date"
+                        aria-invalid={Boolean(scheduleError)}
+                        aria-describedby={scheduleError ? "schedule-error" : undefined}
+                        onChange={(event) => setCustomEndDate(event.target.value)}
+                      />
+                    </div>
+                    <label className="flex cursor-pointer items-center gap-3 text-sm font-semibold text-(--ink)">
+                      <input
+                        className="accent-(--ui-primary)"
+                        type="radio"
+                        name="custom-duration"
+                        value="ongoing"
+                        checked={customDurationMode === "ongoing"}
+                        onChange={() => setCustomDurationMode("ongoing")}
+                      />
+                      Run until stopped
+                    </label>
+                  </div>
+                )}
+                {scheduleError && <p className="studio-field-error" id="schedule-error">{scheduleError}</p>}
+              </fieldset>
+
               <div className="studio-publish-total">
-                <span>Maximum three-day spend</span>
-                <strong>{plannedSpend ? `$${plannedSpend.toLocaleString("en-AU")} AUD` : "--"}</strong>
+                <span>{plannedDurationDays ? "Estimated maximum spend" : "Estimated total spend"}</span>
+                <strong>{plannedSpend !== null ? `$${plannedSpend.toLocaleString("en-AU")} AUD` : "No fixed total"}</strong>
               </div>
             </section>
           )}
@@ -997,7 +1122,7 @@ export function PublishSetupPanel({
               disabled={stepIndex === 3 ? (!publishReady || publishing) : continueDisabled}
               onClick={stepIndex === 3 ? () => void handlePublishAndAdvance() : () => setStepIndex((index) => Math.min(STEPS.length - 1, index + 1))}
             >
-              {stepIndex === 3 ? <>{publishing ? <RefreshCw aria-hidden size={17} /> : <Send aria-hidden size={17} />} {publishing ? "Submitting..." : "Launch 3-day campaign"} <ChevronRight aria-hidden size={17} /></> : <>Continue to {STEPS[stepIndex + 1]?.toLowerCase()} <ChevronRight aria-hidden size={17} /></>}
+              {stepIndex === 3 ? <>{publishing ? <RefreshCw aria-hidden size={17} /> : <Send aria-hidden size={17} />} {publishing ? "Submitting..." : "Launch campaign"} <ChevronRight aria-hidden size={17} /></> : <>Continue to {STEPS[stepIndex + 1]?.toLowerCase()} <ChevronRight aria-hidden size={17} /></>}
             </button>
           )}
         </footer>
