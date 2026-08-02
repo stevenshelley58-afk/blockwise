@@ -168,9 +168,19 @@ export async function PATCH(request: NextRequest) {
     nextAccountName = nextAccountName ?? nextSetup.metaAdAccountId;
   }
 
+  // Merge into the existing meta object instead of replacing it: OAuth writes
+  // identity fields there (metaBusinessId, metaBusinessName, tokenExpiresAt)
+  // that the setup shape does not carry. Replacing the object wiped the
+  // Business Portfolio id, which broke the free three-day campaign claim.
+  const previousMeta =
+    connection.metadata_json?.meta &&
+    typeof connection.metadata_json.meta === "object" &&
+    !Array.isArray(connection.metadata_json.meta)
+      ? (connection.metadata_json.meta as Record<string, unknown>)
+      : {};
   const nextMetadata = {
     ...(connection.metadata_json ?? {}),
-    meta: nextSetup,
+    meta: { ...previousMeta, ...nextSetup },
   };
   const { error } = await serviceSupabase
     .from("provider_connections")

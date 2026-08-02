@@ -20,6 +20,7 @@ import {
   buildMetaPlanMutation,
   executeMetaPlanMutation,
 } from "./meta-mutations.ts";
+import { DEFAULT_META_GRAPH_VERSION } from "./meta-graph-version.ts";
 import { loadStoredProviderTokens } from "./provider-connections.ts";
 import { deterministicUuid } from "../adstudio/id.ts";
 import {
@@ -117,7 +118,28 @@ export async function executeMetaPublishPlan(input: {
     throw new Error("Meta publish plan must be approved before worker execution.");
   }
 
-  const freeLive = await prepareFreeLiveConversion(input);
+  let freeLive: PreparedFreeLiveConversion | null;
+  try {
+    freeLive = await prepareFreeLiveConversion(input);
+  } catch (error) {
+    // Pre-flight failures (billing lookup, claim identity, claim reservation)
+    // used to escape without touching the plan: it sat in "approved" with no
+    // last_error anywhere while the worker crash-looped invisibly. Record the
+    // failure on first execution so the UI and operators see the real reason,
+    // then rethrow for the queue's retry accounting. Plans that already
+    // published (publishing/paused_live) are never rewritten to failed here.
+    if (input.plan.status === "approved") {
+      const failedPlan: MetaPublishPlan = {
+        ...input.plan,
+        status: "failed",
+        lastError: error instanceof Error ? error.message : "Meta publish pre-flight failed.",
+        updatedAt: new Date().toISOString(),
+      };
+      await updateMetaPublishPlanExecution(input.serviceSupabase, failedPlan);
+      await persistPublishAudit(input.serviceSupabase, failedPlan);
+    }
+    throw error;
+  }
   if (input.plan.status === "paused_live") {
     await finalizeFreeLiveConversion(input, input.plan, freeLive);
     await queueReportingRefreshAfterProviderChange(input.plan.workspaceId, "publish");
@@ -292,10 +314,15 @@ async function prepareFreeLiveConversion(input: {
     metadata_json: Record<string, unknown> | null;
     external_account_id: string | null;
   };
-  const identity = resolveMetaFreeLiveClaimIdentity({
-    metadata: row.metadata_json,
-    fallbackAdAccountId: input.plan.setup.metaAdAccountId || row.external_account_id,
-  });
+  let identity: MetaFreeLiveClaimIdentity;
+  try {
+    identity = resolveMetaFreeLiveClaimIdentity({
+      metadata: row.metadata_json,
+      fallbackAdAccountId: input.plan.setup.metaAdAccountId || row.external_account_id,
+    });
+  } catch (identityError) {
+    identity = await backfillMetaFreeLiveClaimIdentity(input, row, identityError);
+  }
   const reservationKey = metaFreeLiveReservationKey(input.plan.planId);
   const reserveMutationKey = `${reservationKey}:reserve:${input.plan.updatedAt}`;
   const reservation = await reserveMetaFreeLiveClaim({
@@ -315,6 +342,78 @@ async function prepareFreeLiveConversion(input: {
   }
 
   return { kind, identity, billing, reservationKey, reserveMutationKey };
+}
+
+/**
+ * The Business Portfolio id is captured at OAuth time (fetchMetaAdAccounts
+ * requests business{id,name}), but connections created before that capture
+ * existed — or whose metadata.meta was rewritten by a Settings save, which
+ * used to replace the whole object — are missing it. That dead-ended every
+ * free-campaign publish with a "reconnect Meta" error that reconnecting could
+ * not actually fix. Resolve the id from the Graph API with the stored token,
+ * persist it back onto the connection so every later read has it, and let the
+ * publish continue. If Graph reports no Business Portfolio for the ad account,
+ * the original error is rethrown — the claim registry requires the real id.
+ */
+async function backfillMetaFreeLiveClaimIdentity(
+  input: {
+    serviceSupabase: SupabaseServiceClient;
+    plan: MetaPublishPlan;
+    fetchImpl?: typeof fetch;
+  },
+  row: {
+    metadata_json: Record<string, unknown> | null;
+    external_account_id: string | null;
+  },
+  originalError: unknown,
+): Promise<MetaFreeLiveClaimIdentity> {
+  const rawAccountId = (input.plan.setup.metaAdAccountId || row.external_account_id || "").trim();
+  const adAccountId = rawAccountId && !rawAccountId.startsWith("act_") ? `act_${rawAccountId}` : rawAccountId;
+  if (!adAccountId) {
+    throw originalError;
+  }
+
+  const tokens = await loadStoredProviderTokens(input.serviceSupabase, input.plan.providerConnectionId);
+  if (!tokens.accessToken) {
+    throw originalError;
+  }
+
+  const fetchImpl = input.fetchImpl ?? fetch;
+  const url = new URL(`https://graph.facebook.com/${DEFAULT_META_GRAPH_VERSION}/${adAccountId}`);
+  url.searchParams.set("fields", "business{id,name}");
+  url.searchParams.set("access_token", tokens.accessToken);
+  const response = await fetchImpl(url.toString(), { method: "GET" });
+  const payload = (await response.json().catch(() => ({}))) as {
+    business?: { id?: string; name?: string | null } | null;
+  };
+  const businessId = response.ok ? payload.business?.id?.trim() ?? "" : "";
+  if (!businessId) {
+    throw originalError;
+  }
+
+  const previousMeta =
+    row.metadata_json?.meta && typeof row.metadata_json.meta === "object" && !Array.isArray(row.metadata_json.meta)
+      ? (row.metadata_json.meta as Record<string, unknown>)
+      : {};
+  const patchedMeta = {
+    ...previousMeta,
+    metaBusinessId: businessId,
+    ...(payload.business?.name ? { metaBusinessName: payload.business.name } : {}),
+  };
+  await input.serviceSupabase
+    .from("provider_connections")
+    .update({
+      metadata_json: { ...(row.metadata_json ?? {}), meta: patchedMeta },
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", input.plan.providerConnectionId)
+    .eq("workspace_id", input.plan.workspaceId)
+    .eq("provider", "meta");
+
+  return resolveMetaFreeLiveClaimIdentity({
+    metadata: { meta: patchedMeta },
+    fallbackAdAccountId: adAccountId,
+  });
 }
 
 async function finalizeFreeLiveConversion(

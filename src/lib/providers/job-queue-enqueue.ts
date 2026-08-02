@@ -17,7 +17,20 @@ import { createSupabaseServiceClient } from "../supabase/service.ts";
  * actual provider work still happens on the VPS worker, keeping Vercel free of
  * long-running provider calls.
  */
+/**
+ * Kinds that are permanently cut over to the VPS worker, independent of
+ * `BLOCKWISE_QUEUED_KINDS`. Publish and mutations moved off Trigger.dev
+ * because every deploy stranded their in-flight runs behind the per-key
+ * concurrency slot; the Trigger task definitions for these kinds are deleted,
+ * so this routing is deliberately not env-reversible.
+ */
+const ALWAYS_QUEUED_KINDS = new Set(["publish.meta.execute", "publish.meta.mutate"]);
+
 export function isQueuedKind(kind: string): boolean {
+  if (ALWAYS_QUEUED_KINDS.has(kind)) {
+    return true;
+  }
+
   const list = process.env.BLOCKWISE_QUEUED_KINDS ?? "";
   return list
     .split(",")

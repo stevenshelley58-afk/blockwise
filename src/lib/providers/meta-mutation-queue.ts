@@ -1,18 +1,17 @@
-import { tasks } from "@trigger.dev/sdk/v3";
-
+import { enqueueQueuedJob } from "./job-queue-enqueue.ts";
 import type { MetaPlanMutation } from "./meta-mutations.ts";
 
+/**
+ * Mutations run on the VPS job_queue worker, not Trigger.dev — same rationale
+ * as queueMetaPublishPlanExecution (deploys stranded Trigger runs behind the
+ * per-key concurrency slot). The dedupe key collapses repeat enqueues of the
+ * same mutation while one is still pending.
+ */
 export async function queueMetaMutationExecution(mutation: Pick<MetaPlanMutation, "workspaceId" | "mutationId">) {
-  return tasks.trigger(
-    "publish.meta.mutate",
-    {
-      workspaceId: mutation.workspaceId,
-      mutationId: mutation.mutationId,
-    },
-    {
-      concurrencyKey: `meta-mutation:${mutation.workspaceId}:${mutation.mutationId}`,
-      tags: ["meta-mutation", mutation.workspaceId, mutation.mutationId],
-      maxAttempts: 3,
-    },
-  );
+  return enqueueQueuedJob({
+    kind: "publish.meta.mutate",
+    payload: { workspaceId: mutation.workspaceId, mutationId: mutation.mutationId },
+    maxAttempts: 3,
+    dedupeKey: `publish.meta.mutate:${mutation.mutationId}`,
+  });
 }
