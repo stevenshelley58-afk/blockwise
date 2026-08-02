@@ -95,8 +95,8 @@ from research.observed_ads oa
 join research.advertiser_pages ap on ap.id = oa.advertiser_page_id
 left join research.ad_creatives ac on ac.observed_ad_id = oa.id
 left join lateral (
-  select array_agg(distinct p) as postcodes
-  from research.ad_area_matches aam, unnest(aam.postcodes) p
+  select array_agg(distinct aam.postcode) filter (where aam.postcode is not null) as postcodes
+  from research.ad_area_matches aam
   where aam.observed_ad_id = oa.id
 ) am on true
 where ac.display_state = 'displayable'
