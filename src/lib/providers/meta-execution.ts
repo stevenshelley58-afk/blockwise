@@ -429,26 +429,6 @@ export function applyMetaPublishExecutionResult(
   };
 }
 
-export function buildMetaPublishTaskOptions(input: {
-  workspaceId: string;
-  planId: string;
-  idempotencyKey: string;
-  /**
-   * Distinguishes submit attempts (use the plan's updatedAt). Without it, a
-   * retry after a failed run reuses the trigger.dev idempotency key and gets
-   * the cached original run back — nothing executes and the plan sits at
-   * "approved" forever. The concurrencyKey still serialises runs per plan.
-   */
-  attemptKey?: string | null;
-}) {
-  return {
-    idempotencyKey: input.attemptKey ? `${input.idempotencyKey}:${input.attemptKey}` : input.idempotencyKey,
-    concurrencyKey: `meta-publish:${input.workspaceId}:${input.idempotencyKey}`,
-    tags: ["meta-publish", input.workspaceId, input.planId],
-    maxAttempts: 3,
-  };
-}
-
 export async function persistMetaPublishPlan(serviceSupabase: SupabaseServiceClient, plan: MetaPublishPlan, userId: string) {
   const { data, error } = await serviceSupabase
     .from("meta_publish_plans")

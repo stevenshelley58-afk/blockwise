@@ -68,13 +68,13 @@ test("generation helper checks confirmed identity before the shared reserve RPC"
 
 test("Feed and Story settle independently and Story failure refunds only its render", () => {
   const pipeline = read("src/lib/adstudio/generate-template-campaign.ts");
-  const trigger = read("trigger/adstudio-generate.ts");
+  const worker = read("worker/index.ts");
 
   assert.match(pipeline, /:settle:4x5/);
   assert.match(pipeline, /:settle:9x16/);
   assert.match(pipeline, /credits:\s*1[\s\S]*:refund:9x16/);
   assert.match(pipeline, /story_render_failed/);
-  assert.match(trigger, /refundOutstandingWorkspaceCredits/);
+  assert.match(worker, /refundOutstandingWorkspaceCredits/);
 });
 
 test("campaign-pack persistence is transactional and surfaces errors", () => {

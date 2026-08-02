@@ -36,6 +36,18 @@ export type BuildCloneCampaignPackInput = {
   firstAd: FirstAdInput;
 };
 
+export function resolveCloneCampaignId(input: {
+  workspaceId: string;
+  templateId: string;
+  suburb: string;
+  description: string;
+}): string {
+  const template = requireGalleryTemplate(input.templateId);
+  return deterministicUuid(
+    `${input.workspaceId}:${template.id}:${input.suburb}:${input.description}`,
+  );
+}
+
 function buildLeadFormCopy(template: AdStudioGalleryTemplate, brandKit: AdStudioBrandKit): {
     headline: string;
     questions: string[];
@@ -95,9 +107,12 @@ export function buildCloneCampaignPack(input: BuildCloneCampaignPackInput): AdSt
     throw new Error("The finished feed (4:5) clone is required before an ad can be created.");
   }
 
-  const campaignId = deterministicUuid(
-    `${input.workspaceId}:${template.id}:${input.suburb}:${input.firstAd.description}`,
-  );
+  const campaignId = resolveCloneCampaignId({
+    workspaceId: input.workspaceId,
+    templateId: template.id,
+    suburb: input.suburb,
+    description: input.firstAd.description,
+  });
   const readyFormats = CLONE_FORMATS.filter((format) => Boolean(cloneImages[format]));
   const campaign: AdStudioCampaign = {
     campaignId,

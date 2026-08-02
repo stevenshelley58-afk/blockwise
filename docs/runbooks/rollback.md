@@ -1,152 +1,79 @@
 # Rollback Runbook
 
-Use this document when a production deployment needs to be reversed, provider
-writes need to be stopped, or Trigger.dev work needs to be paused.
+Use this when a production deployment must be reversed, provider writes must
+stop, or queued work must be paused.
 
-## Current Export And Publish Posture
+## Current Runtime Posture
 
-Manual Ad Studio export is not a provider write. If export package generation or
-download breaks, rollback the Vercel app deployment; there are no Meta objects
-to clean up from export alone.
+- Vercel serves the app and runs customer-critical Ad Studio generation inline.
+- Supabase owns Auth, Postgres, RLS, Storage, and the durable `job_queue`.
+- The VPS `job_queue` worker owns Meta publishing, mutations, lead delivery,
+  reporting/provider maintenance, and Ad Studio crash recovery.
+- Vercel Cron routes enqueue scheduled work; they do not execute provider writes.
+- Meta campaigns, ad sets, creatives, lead forms, and ads are created paused.
 
-Live publish is separate from export:
-
-- Customer action prepares a Meta publish plan and can request approval.
-- Provider writes must be enabled with `BLOCKWISE_ENABLE_PROVIDER_WRITES=true`.
-- The Meta publish worker only executes approved plans.
-- Created Meta campaign, ad set, creative, lead form, and ad objects are created
-  paused.
-- Activation and budget mutations require separate approved mutation requests.
-- Meta lead retrieval is a manual sync action.
-- Non-manual lead delivery requires approval and the provider-write flag.
-- Manual lead destinations stay in manual review and do not call external lead
-  destinations.
-
-Rollback decisions should start from that distinction: broken export is an app
-rollback; runaway Meta mutation or lead delivery starts with provider writes
-off and Trigger schedules paused.
+Manual Ad Studio export is not a provider write. If export generation or
+download breaks, roll back Vercel; there are no Meta objects to clean up from
+export alone.
 
 ## 1. Vercel Instant Rollback
 
-Fastest path when the wrong web app code is live. No local deployment is
-required.
-
-1. Go to **Vercel Dashboard -> blockwise -> Deployments**.
+1. Open **Vercel Dashboard → blockwise → Deployments**.
 2. Find the last known-good deployment by timestamp and git SHA.
-3. Choose **Promote to Production** for that deployment.
-4. Confirm. Traffic shifts without a rebuild.
+3. Choose **Promote to Production**.
+4. Verify the Production URL and `/api/health`.
 
-Verify from the Production URL and Vercel dashboard. Do not use localhost as
-rollback acceptance evidence.
+Do not use localhost as rollback acceptance evidence.
 
 ## 2. Kill Provider Writes
 
-Use when a good or bad deploy is mutating Meta objects or delivering leads and
-you need a safe mode before the full rollback decision.
-
-Set this in both Vercel Production and the matching Trigger.dev environment:
+Set this in the VPS worker deployment and Vercel Production:
 
 ```bash
 BLOCKWISE_ENABLE_PROVIDER_WRITES=false
 ```
 
-Then redeploy the web app through Vercel and redeploy Trigger.dev tasks so both
-request routes and workers receive the same value.
-
-```bash
-npm run trigger:deploy
-```
-
-The flag is checked in:
-
-- Vercel routes that queue or prepare provider work.
-- Trigger workers for Meta publish, Meta mutation, and lead delivery.
-- Lead delivery workers before non-manual CRM/webhook calls.
+Restart the VPS worker after changing its environment and redeploy/promote the
+Vercel app if its environment changed. The flag is checked before Meta publish,
+Meta mutation, and non-manual lead delivery.
 
 Re-enable only after the incident is understood and approval-gated publish
-checks pass:
+checks pass.
 
-```bash
-BLOCKWISE_ENABLE_PROVIDER_WRITES=true
-npm run trigger:deploy
-```
+## 3. Pause Scheduled Or Queued Work
 
-## 3. Pause Trigger.dev Schedules
+- Disable the affected Vercel Cron entry in `vercel.json` and deploy, or pause
+  Cron from the Vercel dashboard.
+- Stop the VPS worker to halt all queue consumption.
+- To stop only provider writes while retaining read/reporting jobs, leave the
+  worker running and use `BLOCKWISE_ENABLE_PROVIDER_WRITES=false`.
+- Inspect `public.job_queue` for pending, processing, or failed jobs. Preserve
+  rows during incidents for audit and recovery.
 
-Use when scheduled tasks are causing harm or obscuring rollback verification.
+After changing `worker/**` or a module imported by the worker, deploy committed
+source with `docs/runbooks/vps-worker-deploy.md`.
 
-1. Open **Trigger.dev Dashboard -> blockwise project -> Schedules**.
-2. Pause or disable active schedules:
-   - `sync.meta.leads.scheduled`
-   - `check.meta.token-health.scheduled`
-   - `sync-provider-reports`
-   - `paid-service-watchdog`
-3. In-flight runs may finish; no new scheduled runs should start.
-
-On-demand tasks are triggered by app routes or operator actions. Stop those by
-setting `BLOCKWISE_ENABLE_PROVIDER_WRITES=false`, rolling back Vercel, or
-deploying a code fix.
-
-## 4. Trigger.dev Deployments And Env
-
-Trigger.dev tasks deploy automatically after the GitHub `main` branch checks
-pass. The workflow job is `trigger-deploy`; it depends on `contracts` and runs
-`npm run trigger:deploy` only on pushes to `main`.
-
-The workflow requires these GitHub secrets:
-
-- `TRIGGER_ACCESS_TOKEN`
-- `TRIGGER_PROJECT_ID`
-
-Missing `TRIGGER_PROJECT_ID` is a hard failure in the GitHub deploy workflow.
-`trigger.config.ts` also pins Blockwise's non-secret Trigger project ref because
-Trigger.dev imports the config inside the managed deployment build without
-exposing the workflow env as process env.
-
-Keep these variables set in the Trigger.dev project environment that matches
-Production:
-
-- `TRIGGER_PROJECT_ID`
-- `SUPABASE_URL`
-- `SUPABASE_SECRET_KEY` (preferred) or legacy `SUPABASE_SERVICE_ROLE_KEY`
-- `META_APP_ID`
-- `META_APP_SECRET`
-- `TOKEN_ENCRYPTION_KEY`
-- `BLOCKWISE_ENABLE_PROVIDER_WRITES`
-- `SENTRY_DSN` or `NEXT_PUBLIC_SENTRY_DSN`
-
-After changing any of those values, redeploy tasks with
-`npm run trigger:deploy` or wait for the next successful `main` push.
-
-## 5. Pause Or Delete Runaway Meta Campaign Objects
-
-Use when Meta campaign objects were created and need to be stopped immediately.
-
-Via Ads Manager:
+## 4. Pause Runaway Meta Objects
 
 1. Open [Meta Ads Manager](https://adsmanager.facebook.com/) and select the
    affected ad account.
-2. Filter campaigns by the bad deploy window.
-3. Select suspect campaigns and pause them. Delete only when they must not
-   resume.
-4. Repeat for orphaned ad sets or ads under those campaigns.
+2. Filter campaigns by the incident window.
+3. Pause suspect campaigns. Delete only when they must never resume.
+4. Repeat for orphaned ad sets or ads.
 
-Provider writes off prevents more Blockwise-created objects, but it does not
-pause objects already created in Meta.
-
-Verify in Ads Manager that spend stopped accruing.
+Provider writes off prevents more Blockwise-created objects, but does not pause
+objects already created on Meta.
 
 ## Quick Reference
 
 | Symptom | First action |
 | --- | --- |
-| Manual export package is broken | Vercel instant rollback |
 | Wrong app code is live | Vercel instant rollback |
-| Provider mutations are running unexpectedly | Set `BLOCKWISE_ENABLE_PROVIDER_WRITES=false` in Vercel and Trigger.dev, then redeploy both |
-| Lead delivery is calling a wrong CRM/webhook | Set provider writes off and pause relevant Trigger activity |
-| Scheduled tasks loop or create noise | Pause Trigger.dev schedules |
-| Trigger tasks failed to deploy | Check GitHub `trigger-deploy` job, GitHub secrets, and Trigger env |
-| Meta campaigns spend unexpectedly | Pause in Ads Manager and set provider writes off |
+| Provider mutations are unexpected | Set `BLOCKWISE_ENABLE_PROVIDER_WRITES=false` and restart the VPS worker |
+| Lead delivery targets the wrong destination | Provider writes off, then inspect `job_queue` |
+| Scheduled tasks loop | Pause the relevant Vercel Cron |
+| Queue work is unsafe | Stop the VPS worker |
+| Meta spend is unexpected | Pause objects in Ads Manager and disable provider writes |
 
-After any rollback, open a postmortem in `docs/runbooks/` and note what broke,
-when it was detected, rollback steps taken, and follow-up prevention.
+After any rollback, record the incident window, affected workspaces/jobs,
+actions taken, and the prevention change.

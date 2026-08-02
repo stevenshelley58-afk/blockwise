@@ -46,7 +46,7 @@ test("production readiness references real release commands", () => {
 
   assert.match(readiness, /There is no `lint` script and no `audit:repo` script/);
   assert.match(readiness, /npm run verify:hard-reset/);
-  assert.match(readiness, /npm run trigger:deploy/);
+  assert.match(readiness, /VPS.*job_queue.*worker/);
   assert.match(readiness, /paid-service watchdog as the Vercel Cron configured in\s+`vercel\.json`/);
   assert.doesNotMatch(readiness, /Verify Trigger\.dev deployed tasks[^\r\n]*(?:\r?\n {2}[^\r\n]*)*paid-service watchdog/);
 });
@@ -57,11 +57,11 @@ test("launch plan is marked superseded", () => {
   assert.match(launchPlan.slice(0, 200), /Superseded: use `docs\/runbooks\/production-readiness\.md`/);
 });
 
-test("rollback documents export, publish, and Trigger deploy posture", () => {
+test("rollback documents export, publish, and VPS worker posture", () => {
   const rollback = read("docs/runbooks/rollback.md");
 
   assert.match(rollback, /Manual Ad Studio export is not a provider write/);
   assert.match(rollback, /created\s+paused/i);
-  assert.match(rollback, /trigger-deploy/);
-  assert.match(rollback, /Missing `TRIGGER_PROJECT_ID` is a hard failure in the GitHub deploy workflow/);
+  assert.match(rollback, /VPS.*job_queue.*worker/);
+  assert.match(rollback, /BLOCKWISE_ENABLE_PROVIDER_WRITES=false/);
 });

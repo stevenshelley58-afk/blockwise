@@ -1,5 +1,6 @@
 {
   "framework": "nextjs",
+  "fluid": true,
   "buildCommand": "npm run build",
   "installCommand": "npm install",
   "regions": ["syd1"],
@@ -7,27 +8,29 @@
     {
       "path": "/api/alerts/paid-service-watchdog",
       "schedule": "0 */2 * * *"
+    },
+    {
+      "path": "/api/cron/meta-publish-watchdog",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/meta-leads",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/performance-read-models",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/provider-maintenance",
+      "schedule": "0 */6 * * *"
+    },
+    {
+      "path": "/api/cron/ad-radar-accuracy",
+      "schedule": "0 0 * * 1"
     }
   ],
   "headers": [
-    {
-      "source": "/adstudio-samples/:path*",
-      "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=604800, stale-while-revalidate" }
-      ]
-    },
-    {
-      "source": "/home/:path*",
-      "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=604800, stale-while-revalidate" }
-      ]
-    },
-    {
-      "source": "/brand/:path*",
-      "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=2592000, stale-while-revalidate" }
-      ]
-    },
     {
       "source": "/(.*)",
       "headers": [

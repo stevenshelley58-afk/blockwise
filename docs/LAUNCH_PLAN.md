@@ -201,12 +201,12 @@ Work through phases in order. Each task has an ID, files, the problem, the fix, 
 ## Phase 4 — Ops & monitoring (first week of traffic)
 
 ### O-1: Error monitoring (Sentry) 🔴 HIGH `[OWNER-AUTHORIZED — new dependency]` ✅ DONE 2026-06-10
-- **Problem:** `NEXT_PUBLIC_SENTRY_DSN` is in `.env.example` but `@sentry/nextjs` isn't installed; failures in Stripe webhooks and Trigger.dev jobs vanish into ephemeral logs.
-- **Fix:** `npm install @sentry/nextjs`, run the wizard, set DSN in Vercel. Capture exceptions in: Stripe webhook handler, every Trigger.dev task `catch` block (`trigger/meta-publish.ts`, `trigger/provider-sync.ts`, lead-sync, watchdog), and the global error boundary.
-- **Accept:** A thrown test error appears in Sentry from (a) an API route, (b) a Trigger.dev task.
+- **Problem:** `NEXT_PUBLIC_SENTRY_DSN` is in `.env.example` but `@sentry/nextjs` isn't installed; failures in Stripe webhooks and queued VPS jobs vanish into ephemeral logs.
+- **Fix:** `npm install @sentry/nextjs`, run the wizard, set DSN in Vercel. Capture exceptions in the Stripe webhook handler, provider workers, the VPS queue loop, and the global error boundary.
+- **Accept:** A thrown test error appears in Sentry from an API route and the queue worker.
 
-### O-2: Trigger.dev failure alerting 🟠 MEDIUM
-- **Fix:** Enable failure email/Slack alerts in the Trigger.dev dashboard (owner action) + Sentry capture from O-1. Wire `SECURITY_AUDIT_LOG_DRAIN_URL` if available.
+### O-2: Queue-worker failure alerting 🟠 MEDIUM
+- **Fix:** Alert on terminal `job_queue` failures and retain Sentry capture from O-1. Wire `SECURITY_AUDIT_LOG_DRAIN_URL` if available.
 - **Accept:** A forced task failure produces an alert.
 
 ### O-3: Team invite actually invites 🟠 MEDIUM ✅ DONE 2026-06-10
@@ -215,7 +215,7 @@ Work through phases in order. Each task has an ID, files, the problem, the fix, 
 - **Accept:** Inviting a fresh email delivers an invite email; user can set password and land in the workspace.
 
 ### O-4: Rollback runbook 🟡 LOW ✅ DONE 2026-06-10
-- **Fix:** Create `docs/runbooks/rollback.md`: (1) Vercel instant rollback steps, (2) set `BLOCKWISE_ENABLE_PROVIDER_WRITES=false` + redeploy, (3) pause Trigger.dev schedules, (4) pause/delete runaway Meta campaign objects in Ads Manager.
+- **Fix:** Create `docs/runbooks/rollback.md`: (1) Vercel instant rollback steps, (2) set `BLOCKWISE_ENABLE_PROVIDER_WRITES=false` + redeploy, (3) pause Vercel Cron schedules and the VPS worker, (4) pause/delete runaway Meta campaign objects in Ads Manager.
 
 ### O-5: Verify PWA or hide it 🟡 LOW
 - **Fix:** On the production URL, check DevTools → Application → Service Workers. If the SW doesn't register/work offline, remove the PWA `start_url` redirect from `manifest.ts` until it's ready.
@@ -229,7 +229,7 @@ Work through phases in order. Each task has an ID, files, the problem, the fix, 
 3. **Meta App Review:** complete review (privacy policy ✅, data deletion URL ✅ already live), verify OAuth → publish → paused-campaign on a Preview URL, then set `BLOCKWISE_ENABLE_PROVIDER_WRITES=true`. Until then, customers cannot publish — the README warning stands.
 4. **Decide pricing** for A-4 (the agent will use a TODO placeholder otherwise).
 5. **Social profiles:** create LinkedIn + Facebook/Instagram pages (you're selling a Meta-ads product — buyers will check), then have the agent swap footer spans for links (A-7b).
-6. **Trigger.dev dashboard:** enable failure notifications (O-2).
+6. **Queue monitoring:** enable terminal VPS `job_queue` failure notifications (O-2).
 7. **Rotate the VPS SSH key** if there is any chance `.secrets/vps_key` was ever committed or shared (check `git log --all -- .secrets/` — P0-1 protects the future, not the past).
 
 ---
@@ -246,4 +246,4 @@ Work through phases in order. Each task has an ID, files, the problem, the fix, 
 
 ## What is already good — do not break
 
-Stripe webhook signature verification; OAuth state HMAC + token vault (`private.provider_token_vault`) + AES-256-GCM token crypto; RLS with workspace isolation on every workspace table; cron watchdog bearer-token gating; Meta data-deletion HMAC callback; redirect sanitization in auth confirm; media path-traversal checks; operator/workforce layouts gated server-side; actionable empty states on leads/results/swipe-file; disabled-while-submitting on all forms; SEO metadata/robots/sitemap; substantive legal pages; Turnstile + honeypot on signup; Trigger.dev job suite.
+Stripe webhook signature verification; OAuth state HMAC + token vault (`private.provider_token_vault`) + AES-256-GCM token crypto; RLS with workspace isolation on every workspace table; cron watchdog bearer-token gating; Meta data-deletion HMAC callback; redirect sanitization in auth confirm; media path-traversal checks; operator/workforce layouts gated server-side; actionable empty states on leads/results/swipe-file; disabled-while-submitting on all forms; SEO metadata/robots/sitemap; substantive legal pages; Turnstile + honeypot on signup; durable VPS `job_queue` suite.

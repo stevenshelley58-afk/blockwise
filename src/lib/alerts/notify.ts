@@ -18,6 +18,8 @@
 export type AlertMessage = {
   subject: string;
   text: string;
+  /** Stable per-event key: retries deliver one email, separate events do not collapse. */
+  idempotencyKey?: string;
 };
 
 // Last-resort owner inbox so low-credit / fallback alerts still land even when no
@@ -55,9 +57,11 @@ export async function sendAlertEmail(message: AlertMessage): Promise<boolean> {
   try {
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
+      signal: AbortSignal.timeout(5_000),
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
+        ...(message.idempotencyKey ? { "Idempotency-Key": message.idempotencyKey } : {}),
       },
       body: JSON.stringify({
         from,
@@ -96,6 +100,7 @@ export async function sendAlertWhatsApp(message: AlertMessage): Promise<boolean>
   try {
     const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
       method: "POST",
+      signal: AbortSignal.timeout(5_000),
       headers: {
         Authorization: `Basic ${Buffer.from(`${sid}:${token}`).toString("base64")}`,
         "Content-Type": "application/x-www-form-urlencoded",

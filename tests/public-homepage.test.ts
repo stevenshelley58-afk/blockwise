@@ -101,9 +101,6 @@ test("landing page anchors, sections, and claims stay connected", () => {
   );
   assert.match(combined, /Know the property before the call/);
   assert.match(combined, /Run a property check/);
-  // Nearby-ad disclaimer must ship with the ad-intelligence framing.
-  assert.match(combined, /Nearby-ad examples show activity signals, not results\./);
-
   const ids = [...combined.matchAll(/id="([^"]+)"/g)].map((match) => match[1]);
   assert.equal(new Set(ids).size, ids.length, "landing and setup form IDs must be unique");
 

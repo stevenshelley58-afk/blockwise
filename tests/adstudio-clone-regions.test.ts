@@ -550,6 +550,7 @@ test("clone generation does not fallback after a non-retryable provider failure"
 
 test("clone generation falls back when a provider account is depleted", async () => {
   let fallbackCalls = 0;
+  const alertEvents: Array<Record<string, unknown>> = [];
   const primary = accountedImageProvider("primary", async () => {
     throw new ProviderRequestError("Insufficient credits", {
       requestSubmitted: true,
@@ -576,10 +577,43 @@ test("clone generation falls back when a provider account is depleted", async ()
     correlationId: "depleted-primary-clone",
     attempt: 1,
     accounting: { executeAttempt, recordRun: async () => {} },
+    fallbackAlert: async (event) => {
+      alertEvents.push(event as unknown as Record<string, unknown>);
+      return { sent: true, deduped: false };
+    },
   });
 
   assert.equal(result.provider, "fallback");
   assert.equal(fallbackCalls, 1);
+  assert.equal(alertEvents[0]?.fromModel, "primary-model");
+  assert.equal(alertEvents[0]?.toModel, "fallback-model");
+  assert.equal(alertEvents[0]?.eventId, "depleted-primary-clone:adstudio.clone:1:4:5:provider:0");
+});
+
+test("story starts only after Feed provider output is ready", async () => {
+  const { startStoryAfterFeed } = await import("../src/lib/adstudio/generate-template-campaign.ts");
+  const events: string[] = [];
+  let resolveFeed!: () => void;
+  const feedReady = new Promise<void>((resolve) => { resolveFeed = resolve; });
+  const scheduled = startStoryAfterFeed({
+    generateFeed: async () => {
+      events.push("feed:start");
+      await feedReady;
+      events.push("feed:done");
+      return "feed";
+    },
+    generateStory: async () => {
+      events.push("story:start");
+      return "story";
+    },
+  });
+  await Promise.resolve();
+  assert.deepEqual(events, ["feed:start"]);
+  resolveFeed();
+  const result = await scheduled;
+  assert.deepEqual(events, ["feed:start", "feed:done", "story:start"]);
+  assert.equal(result.feed, "feed");
+  assert.equal(await result.storyTask, "story");
 });
 
 test("clone generation invokes one fallback after a retryable provider failure", async () => {

@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import { NextResponse, after, type NextRequest } from "next/server";
 
 import { recordWorkspaceFunnelEventBestEffort } from "@/lib/analytics/progressive-funnel";
@@ -16,9 +18,11 @@ import {
   type CreateCampaignBody,
 } from "@/lib/adstudio/generate-template-campaign";
 import { compactAdStudioCampaignPackForTransport } from "@/lib/adstudio/persistence";
+import { resolveCloneCampaignId } from "@/lib/adstudio/clone-campaign";
 import { buildAdStudioCreativeLibrary } from "@/lib/adstudio/creative-library";
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { enqueueQueuedJob } from "@/lib/providers/job-queue-enqueue";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -27,35 +31,12 @@ export const dynamic = "force-dynamic";
 // 300 is the Pro plan ceiling.
 export const maxDuration = 300;
 
-// Secrets pasted into the Vercel dashboard can pick up an invisible BOM
-// (U+FEFF), which makes every trigger call throw "Cannot convert argument to
-// a ByteString" — the async path then silently degrades to sync forever.
-export function normaliseTriggerSecretKey(value: string | undefined): string {
-  return (value ?? "").replace(/[\u200B-\u200D\uFEFF]/g, "").trim();
-}
-
-async function triggerTemplateGeneration(payload: {
-  workspaceId: string;
-  userId: string;
-  jobId: string;
-  origin: string;
-  body: CreateCampaignBody;
-}): Promise<void> {
-  const secretKey = normaliseTriggerSecretKey(process.env.TRIGGER_SECRET_KEY);
-  if (!secretKey) throw new Error("Trigger.dev is not configured.");
-
-  // Import after normalisation so the SDK cannot capture an invalid raw key.
-  const { configure, tasks } = await import("@trigger.dev/sdk");
-  configure({ secretKey });
-  await tasks.trigger("adstudio.generate.template", payload, {
-    idempotencyKey: payload.jobId,
-    tags: ["adstudio-generate", payload.workspaceId, payload.jobId],
-    maxAttempts: 1,
-  });
-}
-
 const inFlightGenerations = new Map<string, number>();
-const GENERATION_DEDUP_TTL_MS = 30_000;
+// This must exceed the whole Vercel render window. A 30-second lock allowed a
+// retry to start while the median image request was still running, producing
+// duplicate provider spend and competing with the original render.
+const GENERATION_DEDUP_TTL_MS = 15 * 60_000;
+const GENERATION_RECOVERY_DELAY_MS = 5 * 60_000 + 15_000;
 
 function generationDedupKey(workspaceId: string, body: unknown): string {
   const text = JSON.stringify(body) ?? "";
@@ -207,6 +188,8 @@ export async function POST(request: NextRequest) {
 
   inFlightGenerations.set(dedupKey, Date.now());
   let creditReservation: AdStudioGenerationCreditReservation | null = null;
+  let creativeJobId: string | null = null;
+  let recoveryQueueJobId: string | null = null;
 
   try {
     const firstAdError = validateFirstAd(body.firstAd);
@@ -236,70 +219,61 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Copy, clone, QA, and persistence run as one server-owned operation. The
-    // whole copy → clone → QA → persist pipeline runs server-side. Normally as
-    // a trigger.dev job (202 + polling — kills the 120s ceiling); inline only
-    // when trigger is not configured or ADSTUDIO_SYNC_GENERATE=1 (local/dev).
+    // Vercel owns the customer-critical path so there is no queue/poll delay:
+    // copy → feed clone → persist returns in this request. A delayed copy of
+    // the same idempotent job sits in Supabase for the VPS worker to recover
+    // only if this function is killed before it can cancel that row.
     {
       const origin = request.nextUrl.origin;
-
-      if (normaliseTriggerSecretKey(process.env.TRIGGER_SECRET_KEY) && process.env.ADSTUDIO_SYNC_GENERATE !== "1") {
-        const service = createSupabaseServiceClient();
-        const inserted = await service
-          .from("adstudio_creative_jobs")
-          .insert({
-            workspace_id: context.access.workspaceId,
-            created_by: context.access.userId,
-            status: "queued",
-            kind: "template_campaign",
-            headline: body.firstAd!.description.slice(0, 200),
-            // The task refunds the reservation on failure; the route cannot —
-            // it has already returned 202 by then.
-            payload: {
-              body,
-              reservation: creditReservation,
-              workspaceName: context.access.workspaceName,
-              region: context.access.region,
-            },
-          })
-          .select("id")
-          .single();
-
-        if (inserted.error) {
-          throw new Error(`Could not queue the generation job (${inserted.error.message}).`);
-        }
-
-        const jobId = String(inserted.data.id);
-
-        try {
-          await triggerTemplateGeneration({
-            workspaceId: context.access.workspaceId,
-            userId: context.access.userId,
-            jobId,
-            origin,
+      const service = createSupabaseServiceClient();
+      const correlationId = randomUUID();
+      const expectedCampaignId = resolveCloneCampaignId({
+        workspaceId: context.access.workspaceId,
+        templateId: body.firstAd!.templateId,
+        suburb: body.suburb ?? "Scarborough",
+        description: body.firstAd!.description,
+      });
+      const inserted = await service
+        .from("adstudio_creative_jobs")
+        .insert({
+          workspace_id: context.access.workspaceId,
+          created_by: context.access.userId,
+          status: "running",
+          attempts: 1,
+          kind: "template_campaign",
+          headline: body.firstAd!.description.slice(0, 200),
+          payload: {
             body,
-          });
-          await recordFirstGenerationStarted(
-            funnelService,
-            context.access.workspaceId,
-            creditMutationKey,
-            "trigger",
-          );
-        } catch (error) {
-          // Fail quickly instead of hiding a queue fault behind a multi-minute
-          // synchronous request. The customer can retry without a lost credit.
-          console.error("adstudio.generate.template trigger failed", error);
-          await service
-            .from("adstudio_creative_jobs")
-            .update({ status: "failed", error: "The background generation job could not be started.", updated_at: new Date().toISOString() })
-            .eq("id", jobId)
-            .eq("workspace_id", context.access.workspaceId);
-          throw new Error("Ad generation could not start. Please try again in a moment.");
-        }
-
-        // The generation lock is released in finally; Trigger owns the long run.
-        return NextResponse.json({ jobId }, { status: 202 });
+            reservation: creditReservation,
+            workspaceName: context.access.workspaceName,
+            region: context.access.region,
+            correlationId,
+            expectedCampaignId,
+          },
+        })
+        .select("id")
+        .single();
+      if (inserted.error) {
+        throw new Error(`Could not create the generation job (${inserted.error.message}).`);
       }
+      creativeJobId = String(inserted.data.id);
+
+      const recovery = await enqueueQueuedJob({
+        kind: "adstudio.generate.template",
+        payload: {
+          workspaceId: context.access.workspaceId,
+          userId: context.access.userId,
+          creativeJobId,
+          origin,
+        },
+        // A caught generation failure is final and refunds immediately. The
+        // queue's lease reaper still retries a worker process crash because no
+        // fail_job call occurs in that case.
+        maxAttempts: 1,
+        runAfter: new Date(Date.now() + GENERATION_RECOVERY_DELAY_MS),
+        dedupeKey: `adstudio.generate.template:${creativeJobId}`,
+      });
+      recoveryQueueJobId = recovery.id;
 
       await recordFirstGenerationStarted(
         funnelService,
@@ -316,6 +290,8 @@ export async function POST(request: NextRequest) {
         workspaceName: context.access.workspaceName,
         region: context.access.region,
         creditReservation,
+        correlationId,
+        expectedCampaignId,
       });
       if (result.requiresDeterministicEditing) {
         await result.editingLayersTask;
@@ -324,6 +300,26 @@ export async function POST(request: NextRequest) {
           workspaceId: context.access.workspaceId,
           campaignId: result.campaignId,
         });
+      }
+      const completedAt = new Date().toISOString();
+      const completedJob = await service
+        .from("adstudio_creative_jobs")
+        .update({
+          status: "done",
+          campaign_id: result.campaignId,
+          error: null,
+          updated_at: completedAt,
+        })
+        .eq("id", creativeJobId)
+        .eq("workspace_id", context.access.workspaceId);
+      if (completedJob.error) {
+        console.error("adstudio creative job completion update failed", completedJob.error.message);
+      }
+      if (recoveryQueueJobId) {
+        const cancelled = await service.rpc("complete_job", { p_id: recoveryQueueJobId });
+        if (cancelled.error) {
+          console.error("adstudio recovery cancellation failed", cancelled.error.message);
+        }
       }
       await recordWorkspaceFunnelEventBestEffort(funnelService, {
         eventName: "first_generation_completed",
@@ -353,12 +349,30 @@ export async function POST(request: NextRequest) {
           campaignPack: liveResult.data,
           data: liveResult.data,
           persistence: liveResult.persistence,
+          jobId: creativeJobId,
         },
         { status: 201 },
       );
     }
 
   } catch (error) {
+    const service = createSupabaseServiceClient();
+    if (recoveryQueueJobId) {
+      const cancelled = await service.rpc("complete_job", { p_id: recoveryQueueJobId });
+      if (cancelled.error) console.error("adstudio recovery cancellation after failure failed", cancelled.error.message);
+    }
+    if (creativeJobId) {
+      const failedJob = await service
+        .from("adstudio_creative_jobs")
+        .update({
+          status: "failed",
+          error: error instanceof Error ? error.message : "Ad generation failed.",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", creativeJobId)
+        .eq("workspace_id", context.access.workspaceId);
+      if (failedJob.error) console.error("adstudio creative job failure update failed", failedJob.error.message);
+    }
     await refundOutstandingWorkspaceCredits({
       reservation: creditReservation,
       mutationKey: `${creditReservation?.mutationKey ?? creditMutationKey}:refund:route-failure`,
@@ -376,7 +390,7 @@ async function recordFirstGenerationStarted(
   service: ReturnType<typeof createSupabaseServiceClient>,
   workspaceId: string,
   mutationKey: string,
-  execution: "trigger" | "inline",
+  execution: "inline" | "vps_recovery",
 ): Promise<void> {
   await recordWorkspaceFunnelEventBestEffort(service, {
     eventName: "first_generation_started",

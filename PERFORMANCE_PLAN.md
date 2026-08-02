@@ -18,7 +18,7 @@ Every claim below traces to a file:line or a live query. Prices verified against
 | 5 | **175KB of CSS shipped as JavaScript strings** (`src/components/adstudio/styles.ts` alone is 114KB) + **255KB of render-blocking CSS on every route** including `/login`. Mechanical fixes. | Code | S–M | ★★★☆☆ |
 | 6 | **Measure before/after:** enable Vercel Speed Insights, reset `pg_stat_statements`, set a TTFB/LCP baseline so you can prove each change worked. | Process | S | prereq |
 
-**What's already right (don't spend time here):** Vercel `syd1` ↔ Supabase `ap-southeast-2` region alignment is correct; `src/middleware.ts` is a cookie-presence check with zero network I/O; recharts is properly code-split behind `dynamic()`; main ad generation correctly runs async on Trigger.dev (202 + poll); ad-studio media has `immutable` cache headers; `/guides` pages use `next/image` correctly; auth context is `React.cache()`-memoized for server components.
+**What's already right (don't spend time here):** Vercel `syd1` ↔ Supabase `ap-southeast-2` region alignment is correct; `src/middleware.ts` is a cookie-presence check with zero network I/O; recharts is properly code-split behind `dynamic()`; customer-critical Feed generation runs inline on Vercel with delayed VPS recovery; ad-studio media has `immutable` cache headers; `/guides` pages use `next/image` correctly; auth context is `React.cache()`-memoized for server components.
 
 ---
 
@@ -211,9 +211,9 @@ Current: **Micro-class compute** (60 conns / 256MB shared_buffers / ~1GB RAM), 9
 The VPS (Hermes + Steel + Uptime-Kuma at 76.13.209.160) does not serve a single user request — upgrading it cannot make the app faster. Its impact on the app is entirely through the shared database, which the split above removes. Before spending anything: `ssh` in, `docker stats`, and check it isn't CPU/RAM-bound for its *own* job (capture throughput). Your capture docs already say the bottleneck is proxy/IP discipline, not compute ("never raise concurrency on one IP", `docs/plans/2026-07-20-meta-capture-rebuild-model-cutover.md:33-36`).
 Also reduce its DB chatter at the source: `HERMES_QUEUE_LOOP_INTERVAL_MS` effective 10s in compose → 30–60s in `maintain` mode costs nothing in freshness, and fixing drain-status-style exact counts applies to any worker-side counting too.
 
-### Trigger.dev — fine as-is
+### Durable orchestration — keep the split
 
-`maxDuration: 900` and externalized Playwright are sensible. No plan change indicated.
+Vercel owns the customer-critical Feed response. Supabase `job_queue` plus the VPS worker own crash recovery and provider jobs, while Vercel Cron only enqueues scheduled work. This split keeps queue latency out of ad creation without sacrificing durability.
 
 ---
 

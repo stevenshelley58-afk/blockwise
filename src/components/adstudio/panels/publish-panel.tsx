@@ -60,7 +60,7 @@ type PublishResponse = {
   publishReady?: boolean;
   blockers?: string[];
   providerWritesEnabled?: boolean;
-  triggerRunId?: string | null;
+  queueJobId?: string | null;
   metaPublishPlan?: {
     id?: string;
     status?: string;
@@ -517,7 +517,7 @@ export function PublishSetupPanel({
   }
 
   // Poll the publish plan status until it reaches a terminal state. The submit
-  // handler only confirms the run was queued; the trigger.dev worker resolves
+  // handler only confirms the run was queued; the VPS worker resolves
   // asynchronously, so without polling the "Creating your paused ads on Meta"
   // spinner would spin forever even on a successful publish.
   useEffect(() => {
@@ -592,7 +592,7 @@ export function PublishSetupPanel({
       if (body.providerWritesEnabled === false) throw new Error("Live publishing is not enabled yet. Export your creatives to launch manually.");
 
       const planStatus = body.metaPublishPlan?.status;
-      const queued = Boolean(body.triggerRunId) || planStatus === "paused_live" || planStatus === "publishing";
+      const queued = Boolean(body.queueJobId) || planStatus === "paused_live" || planStatus === "publishing";
       if (!queued) {
         // The server declined to queue the publish — show the real blockers
         // instead of pretending the submission is in progress.

@@ -55,10 +55,10 @@
 - **Accept:** Unit test: re-syncing the same lead twice records exactly one delivery attempt.
 
 ### T1-7: Scheduled provider-report sync fails on every run (snake_case/camelCase) 🔴 BLOCKER
-- **Files:** `trigger/provider-sync.ts` (~18–34)
+- **Files:** provider maintenance queue producer and VPS worker handler
 - **Problem:** Selects `workspace_id` then reads `connection.workspaceId` (undefined) → NOT NULL violation in `sync_runs` → the 6-hourly job fails for every connected workspace; `last_sync_at` in Settings goes permanently stale.
 - **Fix:** Replace the unsafe cast with explicit mapping `{ workspaceId: c.workspace_id, provider: c.provider }`. Add a regression test feeding a snake_case row through.
-- **Accept:** Test passes; deployed task run succeeds in the Trigger.dev dashboard.
+- **Accept:** Test passes; the deployed VPS queue job succeeds and is recorded in `job_queue`.
 
 ### T1-8: Generation routes have no `maxDuration` — Vercel timeout mid-generation silently burns a trial credit 🔴 BLOCKER
 - **Files:** `src/app/api/adstudio/campaigns/route.ts`, `src/app/api/adstudio/campaigns/[id]/generate/route.ts`, `src/app/api/adstudio/copy/route.ts`
@@ -84,25 +84,25 @@ The theme: never show the tester a state that is fake, dead, or unactionable.
 
 ### T2-2: "Published" success banner is dishonest; no plan status surface; failures invisible 🔴 HIGH
 - **Files:** `src/components/adstudio/panels/publish-panel.tsx` (~172–175, 323–327), new `src/app/api/integrations/meta/publish-plans/[id]/route.ts`
-- **Problem:** A non-null triggerRunId renders "Published", but the plan is only QUEUED; the worker creates everything PAUSED on Meta. No GET endpoint exists for plan status, nothing polls, worker failures never reach the tester. Dead client checks reference fields the route never returns.
+- **Problem:** A non-null queue job ID renders "Published", but the plan is only QUEUED; the worker creates everything PAUSED on Meta. No GET endpoint exists for plan status, nothing polls, worker failures never reach the tester. Dead client checks reference fields the route never returns.
 - **Fix:** Add `GET /api/integrations/meta/publish-plans/[id]` returning `{status, lastError, reconciledObjects counts}`. In the panel: after queueing show "Queued — creating your paused Meta campaign", poll the GET, then "Live on Meta (paused) — activate after review" for `paused_live`, and surface `lastError` for failed. Delete the dead `body.status` checks.
 - **Accept:** Panel reflects real plan state transitions; a forced worker failure surfaces in the UI.
 
 ### T2-3: Re-publish after approval wipes reconciliation state and double-publishes to Meta 🔴 HIGH
 - **Files:** `src/app/api/adstudio/export-packages/[id]/publish/route.ts` (~92–129), `src/lib/providers/meta-publish-queue.ts`
 - **Problem:** A second Publish click rebuilds the plan (resetting `reconciledObjects` to empty), upserts over the same row, and re-queues — the worker re-creates the full campaign tree on Meta.
-- **Fix:** Before persisting, load the existing plan for the same idempotency key; if status is `approved`/`publishing`/`paused_live`, return it as-is. When rebuilding a draft, carry forward reconciled objects/logs. Pass `idempotencyKey: plan.idempotencyKey` to `tasks.trigger`.
+- **Fix:** Before persisting, load the existing plan for the same idempotency key; if status is `approved`/`publishing`/`paused_live`, return it as-is. When rebuilding a draft, carry forward reconciled objects/logs. Enqueue with `plan.idempotencyKey` as the durable queue dedupe key.
 - **Accept:** Unit test: double-publish returns the same plan, single queue dispatch.
 
 ### T2-4: Publish plans stuck in "publishing"/"applying" forever when a worker throws 🔴 HIGH
 - **Files:** `src/lib/providers/meta-publish-worker.ts` (~41–57), `src/lib/providers/meta-mutation-worker.ts` (~40–49), `src/app/api/approvals/[id]/route.ts` (~70–96)
-- **Fix:** try/catch around the worker bodies after marking `publishing`/`applying`: on throw, persist status `failed` + `lastError`, rethrow. In the approvals route, queue FIRST (in try/catch), only persist `approved` after `tasks.trigger` succeeds; on queue failure return 502 "Approved, but job dispatch failed — retry from Approvals."
+- **Fix:** try/catch around the worker bodies after marking `publishing`/`applying`: on throw, persist status `failed` + `lastError`, rethrow. In the approvals route, queue FIRST (in try/catch), only persist `approved` after the durable enqueue succeeds; on queue failure return 502 "Approved, but job dispatch failed — retry from Approvals."
 - **Accept:** Forced token-missing failure leaves the plan `failed` with a readable lastError, not zombie `publishing`.
 
 ### T2-5: BLOCKWISE_ENABLE_PROVIDER_WRITES kill switch doesn't actually kill 🔴 HIGH
 - **Files:** `src/lib/providers/meta-publish-worker.ts`, `src/lib/providers/meta-mutation-worker.ts`, `src/lib/providers/lead-delivery-worker.ts`, `src/app/api/approvals/[id]/route.ts`, `docs/runbooks/rollback.md`
 - **Problem:** The rollback runbook claims workers short-circuit when the flag is false; grep shows the flag is only read in two Vercel routes. Approving a plan executes real Meta writes regardless.
-- **Fix:** Guard at the top of each worker `executeXById`: flag !== "true" → persist "Provider writes are disabled" result without calling Meta (never leaving `publishing` status). Gate the queueing branches in the approvals route the same way. Update rollback.md to note the flag must be set in BOTH Vercel and the Trigger.dev project env.
+- **Fix:** Guard at the top of each worker `executeXById`: flag !== "true" → persist "Provider writes are disabled" result without calling Meta (never leaving `publishing` status). Gate the queueing branches in the approvals route the same way. Update rollback.md to note the flag must be set in both Vercel and the VPS worker environment.
 - **Accept:** With flag off, approving a plan does not hit Meta and records a clear skipped state.
 
 ### T2-6: Approvals are invisible to everyone who needs them 🔴 HIGH
@@ -210,7 +210,7 @@ List per review: `bulk-generate`, `campaigns/[id]/generate` + `regenerate` + `va
 - Customer: `/api/leads`, `/api/compliance` (hardcoded sample-sentence demo), `/api/approvals` GET, `/api/model-profiles` root GET, `/api/provider-sync`, `/api/operator/content-runs/[id]`, `/api/research/ads` + `[id]` (keep `export` only if you wire an "Export CSV" button).
 - Operator research: `jobs/[id]/retry` (weaker duplicate of requeue) and the other server-rendered-console duplicates listed in the review, OR document the keepers as curl/ops endpoints in a runbook. Keep `/api/operator/research/health` (tested) — document it.
 - Dead modules: `src/lib/research/supabase-writer.ts` (zero importers).
-- Trigger: delete `trigger/adstudio.ts` (14 stub tasks, never triggered, several fabricate success), `runAgentWorkflow` in `trigger/agent-workforce.ts` (fakes completed agent runs with confidence 0.8), `syncProviderWorkspaceTask` (never triggered). Update rollback.md's task list.
+- Legacy task runner: delete unused stub tasks and keep only real queue handlers. Update rollback.md's task list.
 - Repo debris: `git rm .write-test`; trim `.vercelignore` (drop `$null` and the deleted html files).
 - **Accept:** `npm run check` green; grep confirms no imports of deleted files.
 
@@ -224,10 +224,10 @@ List per review: `bulk-generate`, `campaigns/[id]/generate` + `regenerate` + `va
 
 ## Phase 4 — Observability, CI, and deploy truth
 
-### T4-1: Sentry is half-dead — client never initialized, Trigger.dev runtime never initialized 🔴 HIGH
-- **Files:** `next.config.ts`, `sentry.client.config.ts` (dead), `sentry.server.config.ts` (dead), `src/instrumentation.ts`, new `src/instrumentation-client.ts`, `trigger.config.ts`
-- **Fix:** (a) Move the client init into `src/instrumentation-client.ts` (Next 16 loads it natively); delete both dead `sentry.*.config.ts` files (server init already lives in `src/instrumentation.ts`). (b) Add a Sentry init hook in `trigger.config.ts` (`@sentry/node`, DSN from env) and set the DSN in the Trigger.dev project env — every `Sentry.captureException` in `trigger/` is currently a silent no-op.
-- **Accept:** A thrown test error from (a) a client component and (b) a Trigger.dev task appears in Sentry on Preview.
+### T4-1: Sentry is half-dead — client and VPS worker failures need coverage 🔴 HIGH
+- **Files:** `next.config.ts`, `sentry.client.config.ts` (dead), `sentry.server.config.ts` (dead), `src/instrumentation.ts`, new `src/instrumentation-client.ts`, `worker/index.ts`
+- **Fix:** (a) Move the client init into `src/instrumentation-client.ts` (Next 16 loads it natively); delete both dead `sentry.*.config.ts` files (server init already lives in `src/instrumentation.ts`). (b) Alert on terminal queue failures and capture fatal worker errors.
+- **Accept:** A thrown test error from a client component and a failed VPS queue job is observable.
 
 ### T4-2: Make GitHub CI actually run the test suite 🔴 HIGH
 - **Files:** `.github/workflows/hard-reset-verification.yml`, `package.json`
@@ -240,8 +240,8 @@ List per review: `bulk-generate`, `campaigns/[id]/generate` + `regenerate` + `va
 - **Fix:** Point Playwright at the PR's Vercel Preview (wait-for-vercel-preview action → `PLAYWRIGHT_BASE_URL`), set the `BLOCKWISE_DEV_PASSWORD` repo secret, seed test users once against Preview's Supabase, add a fail-if-zero-tests-ran guard, and rewrite `platform.spec.ts` against the current UI. **If that can't be done now, delete the e2e CI job** so the checks list stops advertising a gate that tests nothing.
 - **Accept:** e2e job either executes >0 real tests against a deployment, or is gone.
 
-### T4-4: Trigger.dev deploys are manual and undocumented 🟠 MEDIUM
-- **Fix:** Add a CI job running `npx trigger.dev deploy` on pushes to main (TRIGGER_ACCESS_TOKEN secret). Remove the `proj_blockwise_local` fallback in `trigger.config.ts` (missing TRIGGER_PROJECT_ID should fail loudly). Add a runbook section listing the env vars the Trigger.dev project needs (Supabase URL + service key, META_APP_ID/SECRET, TOKEN_ENCRYPTION_KEY, BLOCKWISE_ENABLE_PROVIDER_WRITES, Sentry DSN).
+### T4-4: VPS worker deploys are manual and undocumented 🟠 MEDIUM
+- **Fix:** Keep the committed worker image and deployment runbook current. Document the VPS worker variables: Supabase URL + service key, Meta credentials, token encryption key, provider-write flag, and Sentry DSN.
 
 ### T4-5: Fix Vercel Preview env + the red PR checks 🟠 MEDIUM (owner-assisted)
 - **Problem:** `verify-env` hard-fails Preview builds until all 11 required vars exist in Preview scope — every PR shows a red Vercel check and no preview URL (known issue, see memory).
@@ -251,7 +251,7 @@ List per review: `bulk-generate`, `campaigns/[id]/generate` + `regenerate` + `va
 ### T4-6: .env.example / verify-env truth sweep 🟡 LOW
 - Remove dead vars: `SUPABASE_DB_URL`, `SUPABASE_JWT_SECRET`, `SENTRY_AUTH_TOKEN`, PostHog pair (nothing reads them; no posthog-js dep — also delete the PostHog mentions in `docs/deployment/vercel.md` and `docs/runbooks/paid-service-alerts.md`), `AGENT_ALLOWED_OUTBOUND_DOMAINS` + `SECURITY_AUDIT_LOG_DRAIN_URL` from RECOMMENDED_SECURITY_ENV_KEYS (+ tests).
 - Add vars code actually reads: `CLOUDFLARE_AI_GATEWAY_URL/TOKEN`, `OPERATOR_EMAILS`, `BLOCKWISE_DEV_PASSWORD`, `GOOGLE_ADS_ENABLED`, `META_MONITOR_BUDGET_AUD`, sample-data knob.
-- Fix the watchdog comment (it's a Vercel cron, not a Trigger.dev schedule) in `.env.example` and `rollback.md`; note CRON_SECRET as required for the watchdog + health detail.
+- Fix the watchdog comment in `.env.example` and `rollback.md`; note `CRON_SECRET` as required for the Vercel Cron watchdog and health detail.
 - Reword the misleading TURNSTILE_SECRET_KEY comment (it lives in the Supabase dashboard, not the app).
 
 ### T4-7: Login/forgot-password may be missing the Turnstile captchaToken 🟠 MEDIUM (verify first)
@@ -325,7 +325,7 @@ List per review: `bulk-generate`, `campaigns/[id]/generate` + `regenerate` + `va
 
 1. **Decide pricing:** PR #29 raises $500 → $799/month and is green but unmerged; prod shows $500. Merge it or close it before the tester sees the price.
 2. **Vercel Preview env vars** (unblocks T4-5 and green PR checks).
-3. **Trigger.dev:** confirm project env vars (incl. `BLOCKWISE_ENABLE_PROVIDER_WRITES`, Sentry DSN) and enable failure alerts in the dashboard.
+3. **VPS worker:** confirm environment variables (including `BLOCKWISE_ENABLE_PROVIDER_WRITES` and Sentry DSN) and enable terminal queue-failure alerts.
 4. **Demo-request notifications:** set `RESEND_API_KEY` / `DEMO_NOTIFY_FROM` / `DEMO_NOTIFY_TO`, verify sender domain, test the live form (LAUNCH_PLAN A-6, still open).
 5. **Confirm Supabase captcha setting** (T4-7) and test login on prod.
 6. **Canonical domain decision:** 308-redirect `blockwise-tan.vercel.app` → `blockwise.sale` (or vice versa).
@@ -341,6 +341,6 @@ List per review: `bulk-generate`, `campaigns/[id]/generate` + `regenerate` + `va
 2. Fresh-user run on PRODUCTION: signup → Turnstile renders → confirm email → land on `/self-serve` (same origin, one hop) → onboarding (brand colour persists into ads) → first ad generates → edit + autosave works (no "Campaign not found") → trial pill decrements → Ad Radar search (no duplicates, media renders) → publish panel shows the honest export/coming-soon state → Settings shows no raw enums/jargon.
 3. Lead path (if Meta connected): lead appears with email/phone, delivery state visible, no approval flood after 30+ minutes.
 4. `/api/health` returns generic JSON; `/api/health/research` not red.
-5. Force one error in a client component, an API route, and a Trigger.dev task — all three appear in Sentry.
+5. Force one error in a client component, an API route, and a VPS queue job — all three are observable.
 6. Operator account: sees the tester's workspace in /approvals, AI ledger, and runs.
 7. Pricing page shows the decided price; legal pages titled correctly.

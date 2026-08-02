@@ -23,7 +23,7 @@ These package scripts exist and are the release command set:
 | `npm run build` | Next.js production build |
 | `npm run verify-env` | Required env-var validation |
 | `npm run verify-env:first-tester` | Required first-tester service env validation |
-| `npm run trigger:deploy` | Trigger.dev task deployment |
+| VPS worker deploy runbook | Deploy committed queue-worker source |
 
 There is no `lint` script and no `audit:repo` script. Do not reference either
 as a release gate unless a later task adds real package scripts.
@@ -33,10 +33,8 @@ as a release gate unless a later task adds real package scripts.
 - [x] `next.config.ts` no longer uses `typescript.ignoreBuildErrors`.
 - [x] GitHub CI runs `npm run verify:hard-reset`, `npm run typecheck`,
   `npm test`, and `npm run build`.
-- [x] GitHub deploys Trigger.dev tasks after `main` branch checks pass through
-  the `trigger-deploy` job.
-- [x] `trigger.config.ts` pins the non-secret Trigger project ref and GitHub CI
-  fails fast when Trigger deploy secrets are missing.
+- [x] Supabase `job_queue` and the VPS worker own durable jobs and retries.
+- [x] Vercel Cron owns scheduled enqueueing.
 - [x] `/api/health` has public/basic and bearer-token detailed modes.
 - [x] Google Ads env vars are provider-readiness fields, not top-level fatal
   env failures.
@@ -48,14 +46,14 @@ as a release gate unless a later task adds real package scripts.
   workers check approval/provider-write posture before external writes.
 - [x] Manual export remains separate from live provider publish.
 - [x] Rollback runbook exists for Vercel rollback, provider-write disablement,
-  Trigger schedules/deployments, and Meta object cleanup.
+  VPS queue/worker control, and Meta object cleanup.
 - [x] Research runtime docs reflect Hermes as the active runtime owner.
 
 ## P0 - Must Finish Before Launch
 
 - [ ] Vercel Preview and Production env vars are complete and non-placeholder:
   `OPENROUTER_API_KEY`, `OPENAI_API_KEY`, Supabase URL/anon/service-role keys,
-  `TOKEN_ENCRYPTION_KEY`, Trigger keys, `META_APP_ID`, `META_APP_SECRET`,
+  `TOKEN_ENCRYPTION_KEY`, `META_APP_ID`, `META_APP_SECRET`,
   `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `NEXT_PUBLIC_SENTRY_DSN`, `CRON_SECRET`,
   and notification/provider keys needed for the enabled flows.
 - [ ] Vercel deployment logs show the configured build command runs the real
@@ -92,8 +90,8 @@ as a release gate unless a later task adds real package scripts.
   objects must not be labelled live.
 - [ ] Human approval is verified for publish, activation, budget changes, lead
   export, and non-manual lead delivery.
-- [ ] `BLOCKWISE_ENABLE_PROVIDER_WRITES=false` remains set in Vercel and
-  Trigger.dev until Meta publish and approval checks pass on Vercel.
+- [ ] `BLOCKWISE_ENABLE_PROVIDER_WRITES=false` remains set in Vercel and on
+  the VPS worker until Meta publish and approval checks pass on Vercel.
 - [ ] Data deletion is verified end to end: workspace deletion, Meta
   data-deletion callback, provider token deletion, lead deletion/anonymisation,
   audit retention, and backup retention match the public policy.
@@ -130,9 +128,7 @@ as a release gate unless a later task adds real package scripts.
   supported.
 - [ ] Put operator/admin/workforce surfaces behind production access controls
   such as Cloudflare Zero Trust, SSO, and MFA.
-- [ ] Verify Trigger.dev deployed tasks in the dashboard: Meta publish, Meta
-  mutation, scheduled lead sync, token health, lead delivery, provider sync,
-  and retry/failure visibility.
+- [ ] Verify the VPS `job_queue` worker: Meta publish, Meta mutation, scheduled lead sync, token health, lead delivery, provider sync, Ad Studio recovery, and retry/failure visibility.
 - [ ] Verify the paid-service watchdog as the Vercel Cron configured in
   `vercel.json` for `/api/alerts/paid-service-watchdog`.
 - [ ] Configure Sentry, analytics, audit log drain, and production alerting for
@@ -161,7 +157,7 @@ as a release gate unless a later task adds real package scripts.
 - [ ] Production URL is recorded.
 - [ ] Vercel deployment ID is recorded.
 - [ ] Supabase project and migration version are recorded.
-- [ ] Trigger.dev project and deployed task version are recorded.
+- [ ] VPS worker image/source SHA and deployed version are recorded.
 - [ ] Meta app ID, Graph API version, approved permissions, and App Review
   approval date are recorded.
 - [ ] `BLOCKWISE_ENABLE_PROVIDER_WRITES=true` change is approved by an operator
@@ -173,4 +169,4 @@ as a release gate unless a later task adds real package scripts.
 
 Blockwise is live only when the P0 list is complete, the final sign-off fields
 are recorded, and provider writes are deliberately enabled in both Vercel and
-Trigger.dev after approval-gated Meta publish checks pass.
+the VPS worker after approval-gated Meta publish checks pass.

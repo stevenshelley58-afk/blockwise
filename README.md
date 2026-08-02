@@ -6,7 +6,7 @@ Blockwise is a real estate lead-generation platform with Monitor, Self-Serve, Op
 
 - Next.js App Router hosted on Vercel
 - Supabase Auth, Postgres, RLS, and Storage
-- Trigger.dev for durable jobs and schedules
+- Supabase `job_queue` plus a VPS worker for durable jobs; Vercel Cron for schedules
 - OpenAI direct and OpenRouter-routed model profiles with operator-controlled swapping
 
 ## Local Setup
@@ -44,3 +44,4 @@ Security hardening docs live in `docs/security/agent-safety.md` and `docs/securi
 - `/approvals` human approval gates
 - `/agents` agent workforce runs and permissions
 - `/model-control` grouped model profile dropdowns, OpenRouter readiness, and AI ledger
+

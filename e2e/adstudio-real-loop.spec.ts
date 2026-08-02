@@ -253,8 +253,8 @@ async function openNewAd(page: Page) {
   await browse.click();
 }
 
-// Async generation: poll the jobs endpoint with the page's session until the
-// trigger.dev job completes, mirroring what the dialog does.
+// Async recovery: poll the jobs endpoint with the page's session until the
+// durable job completes, mirroring the fallback path in the dialog.
 async function waitForGenerationJob(page: Page, jobId: string): Promise<string> {
   const deadline = Date.now() + 10 * 60_000;
   for (;;) {

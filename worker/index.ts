@@ -1,25 +1,17 @@
 /**
- * VPS background worker — the Trigger.dev replacement.
+ * VPS background worker for durable provider and recovery jobs.
  *
  * Polls public.job_queue (via the service-role RPCs added in
  * 20260801030000_job_queue.sql), claims one due job at a time, dispatches to the
- * SAME worker functions the Trigger tasks call, and records success/failure.
+ * the same provider worker functions as the web app, and records success/failure.
  *
- * Why this exists: Trigger.dev strands in-flight provider jobs on every deploy
- * because a killed run holds the per-plan concurrency lock forever. A worker on
- * the VPS is never redeployed when Blockwise ships, and its lease reaper
+ * A worker on the VPS is not redeployed when the web app ships, and its lease reaper
  * (reap_stale_jobs) returns any job held by a dead worker back to pending. The
  * whole "stranded by deploy" failure class disappears.
  *
  * Scope: all on-demand provider jobs, including publish and mutations. The
- * former Trigger coupling (queueReportingRefresh statically importing
- * @trigger.dev/sdk, which is a devDependency and absent from this image) was
- * cut by lazy-importing the SDK only on the Trigger fallback path — see
- * src/lib/meta-monitor/reporting-refresh-queue.ts.
- *
  * Handler modules are loaded DYNAMICALLY (only when their job kind is claimed)
- * so the Trigger-coupled modules never load unless their jobs are actually
- * enqueued. This keeps the prod image free of @trigger.dev/sdk.
+ * so provider code only loads when its job is actually claimed.
  */
 import { setTimeout as sleep } from "node:timers/promises";
 
@@ -42,6 +34,129 @@ interface ClaimedJob {
  */
 async function resolveHandler(kind: string): Promise<Handler | null> {
   switch (kind) {
+    case "adstudio.generate.template": {
+      const { recordWorkspaceFunnelEventBestEffort } = await import("../src/lib/analytics/progressive-funnel.ts");
+      const {
+        assertDeterministicFeedEditingReady,
+        runTemplateCampaignGeneration,
+      } = await import("../src/lib/adstudio/generate-template-campaign.ts");
+      return async (payload, supabase) => {
+        const workspaceId = String(payload.workspaceId ?? "");
+        const userId = String(payload.userId ?? "");
+        const creativeJobId = String(payload.creativeJobId ?? "");
+        const origin = String(payload.origin ?? "");
+        if (!workspaceId || !userId || !creativeJobId || !origin) {
+          throw new Error("Ad Studio recovery payload is incomplete.");
+        }
+
+        const job = await supabase
+          .from("adstudio_creative_jobs")
+          .select("id,status,attempts,payload,campaign_id")
+          .eq("workspace_id", workspaceId)
+          .eq("id", creativeJobId)
+          .maybeSingle();
+        if (job.error) throw new Error(job.error.message);
+        if (!job.data) throw new Error(`Ad Studio job ${creativeJobId} was not found.`);
+        if (job.data.status === "done") return { campaignId: job.data.campaign_id };
+
+        const stored = (job.data.payload ?? {}) as {
+          body?: import("../src/lib/adstudio/generate-template-campaign.ts").CreateCampaignBody;
+          reservation?: import("../src/lib/adstudio/generation-credits.ts").AdStudioGenerationCreditReservation | null;
+          workspaceName?: string;
+          region?: string;
+          correlationId?: string;
+          expectedCampaignId?: string;
+        };
+        if (!stored.body) throw new Error("Ad Studio recovery job has no generation body.");
+        const reservation = stored.reservation ?? undefined;
+
+        await supabase
+          .from("adstudio_creative_jobs")
+          .update({
+            status: "running",
+            attempts: (Number(job.data.attempts) || 0) + 1,
+            error: null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("workspace_id", workspaceId)
+          .eq("id", creativeJobId);
+
+        let result: Awaited<ReturnType<typeof runTemplateCampaignGeneration>>;
+        try {
+          result = await runTemplateCampaignGeneration({
+            supabase,
+            workspaceId,
+            userId,
+            origin,
+            body: stored.body,
+            workspaceName: stored.workspaceName,
+            region: stored.region,
+            creditReservation: reservation,
+            correlationId: stored.correlationId,
+            expectedCampaignId: stored.expectedCampaignId,
+          });
+        } catch (error) {
+          // Generation mutates the reservation as each format settles. Persist
+          // that live balance so final failure handling refunds only credits
+          // that are still outstanding, never a successfully-created Feed.
+          await supabase
+            .from("adstudio_creative_jobs")
+            .update({
+              payload: { ...stored, reservation: reservation ?? null },
+              updated_at: new Date().toISOString(),
+            })
+            .eq("workspace_id", workspaceId)
+            .eq("id", creativeJobId);
+          throw error;
+        }
+        if (result.requiresDeterministicEditing) {
+          try {
+            await result.editingLayersTask;
+            await assertDeterministicFeedEditingReady({
+              supabase,
+              workspaceId,
+              campaignId: result.campaignId,
+            });
+          } catch (error) {
+            await supabase
+              .from("adstudio_creative_jobs")
+              .update({
+                payload: { ...stored, reservation: reservation ?? null },
+                updated_at: new Date().toISOString(),
+              })
+              .eq("workspace_id", workspaceId)
+              .eq("id", creativeJobId);
+            throw error;
+          }
+        }
+
+        const completed = await supabase
+          .from("adstudio_creative_jobs")
+          .update({
+            status: "done",
+            campaign_id: result.campaignId,
+            error: null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("workspace_id", workspaceId)
+          .eq("id", creativeJobId);
+        if (completed.error) throw new Error(completed.error.message);
+
+        await recordWorkspaceFunnelEventBestEffort(supabase, {
+          eventName: "first_generation_completed",
+          workspaceId,
+          idempotencyKey: `activation:${workspaceId}:first-generation-completed`,
+          properties: {
+            mutation_key: reservation?.mutationKey ?? creativeJobId,
+            campaign_id: result.campaignId,
+            execution: "vps_recovery",
+          },
+        });
+        if (!result.requiresDeterministicEditing) await result.editingLayersTask;
+        if (result.storyTask) await result.storyTask;
+        return { campaignId: result.campaignId };
+      };
+    }
     case "sync.meta.leads": {
       const { syncMetaLeadsForPlanById } = await import("../src/lib/providers/meta-leads-worker.ts");
       return (payload, supabase) =>
@@ -70,6 +185,78 @@ async function resolveHandler(kind: string): Promise<Handler | null> {
           range: String(payload.range) as import("../src/lib/meta-monitor/types.ts").MonitorRange,
           customRange: payload.customRange as import("../src/lib/meta-monitor/types.ts").MonitorCustomRange | undefined,
         });
+    }
+    case "reconcile.customer.activation": {
+      const { resolveCustomerActivation } = await import("../src/lib/activation/customer-activation.ts");
+      return (payload, supabase) => {
+        const workspaceId = String(payload.workspaceId ?? "");
+        if (!workspaceId) throw new Error("Customer activation payload is incomplete.");
+        return resolveCustomerActivation({
+          workspaceId,
+          serviceSupabase: supabase,
+          repair: true,
+        });
+      };
+    }
+    case "check.meta.token-health": {
+      const { checkMetaConnectionHealth } = await import("../src/lib/providers/meta-assets.ts");
+      const { loadStoredProviderTokens } = await import("../src/lib/providers/provider-connections.ts");
+      return async (payload, supabase) => {
+        const workspaceId = String(payload.workspaceId ?? "");
+        const connectionId = String(payload.connectionId ?? "");
+        if (!workspaceId || !connectionId) throw new Error("Meta token-health payload is incomplete.");
+
+        const connection = await supabase
+          .from("provider_connections")
+          .select("id,workspace_id,token_expires_at")
+          .eq("workspace_id", workspaceId)
+          .eq("id", connectionId)
+          .eq("provider", "meta")
+          .maybeSingle();
+        if (connection.error) throw new Error(connection.error.message);
+        if (!connection.data) throw new Error(`Meta connection ${connectionId} was not found.`);
+
+        const tokens = await loadStoredProviderTokens(supabase, connectionId);
+        const health = await checkMetaConnectionHealth({
+          accessToken: tokens.accessToken ?? "",
+          tokenExpiresAt: connection.data.token_expires_at,
+        });
+        const status = health.status === "needs_reconnect" || health.status === "missing_token"
+          ? "needs_attention"
+          : "connected";
+        const updated = await supabase
+          .from("provider_connections")
+          .update({
+            status,
+            health_status: health.status,
+            health_checked_at: health.checkedAt,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("workspace_id", workspaceId)
+          .eq("id", connectionId)
+          .eq("provider", "meta");
+        if (updated.error) throw new Error(updated.error.message);
+        return health;
+      };
+    }
+    case "sync.provider.reports": {
+      const { resolveMonitorDateRange } = await import("../src/lib/monitor/dashboard-data.ts");
+      const { syncProviderWorkspace } = await import("../src/lib/providers/provider-sync.ts");
+      return (payload, supabase) => {
+        const workspaceId = String(payload.workspaceId ?? "");
+        const provider = String(payload.provider ?? "");
+        if (!workspaceId || provider !== "google") {
+          throw new Error("Provider report-sync payload is invalid.");
+        }
+        return syncProviderWorkspace({
+          supabase: supabase as never,
+          serviceSupabase: supabase,
+          workspaceId,
+          provider,
+          range: resolveMonitorDateRange("last_30"),
+          jobKey: "sync-provider-reports",
+        });
+      };
     }
     case "publish.meta.execute": {
       const { executeMetaPublishPlanById } = await import("../src/lib/providers/meta-publish-worker.ts");
@@ -136,9 +323,45 @@ async function runOnce(supabase: ServiceSupabase): Promise<boolean> {
       p_id: job.id,
       p_error: message,
     });
+    if (job.kind === "adstudio.generate.template" && String(outcome) === "failed") {
+      await finalizeAdStudioGenerationFailure(job.payload, message, supabase);
+    }
     log(`job ${job.id} (${job.kind}) ${String(outcome)}: ${message}`);
   }
   return true;
+}
+
+async function finalizeAdStudioGenerationFailure(
+  payload: Record<string, unknown>,
+  message: string,
+  supabase: ServiceSupabase,
+): Promise<void> {
+  const workspaceId = String(payload.workspaceId ?? "");
+  const creativeJobId = String(payload.creativeJobId ?? "");
+  if (!workspaceId || !creativeJobId) return;
+
+  const job = await supabase
+    .from("adstudio_creative_jobs")
+    .select("status,payload")
+    .eq("workspace_id", workspaceId)
+    .eq("id", creativeJobId)
+    .maybeSingle();
+  if (!job.data || job.data.status === "done" || job.data.status === "failed") return;
+  const stored = (job.data.payload ?? {}) as {
+    reservation?: import("../src/lib/adstudio/generation-credits.ts").AdStudioGenerationCreditReservation | null;
+  };
+  const { refundOutstandingWorkspaceCredits } = await import("../src/lib/credits/workspace-credits.ts");
+  await refundOutstandingWorkspaceCredits({
+    reservation: stored.reservation ?? null,
+    mutationKey: `${stored.reservation?.mutationKey ?? creativeJobId}:refund:vps-recovery-failure`,
+    reason: "generation_vps_recovery_failed",
+    serviceSupabase: supabase,
+  });
+  await supabase
+    .from("adstudio_creative_jobs")
+    .update({ status: "failed", error: message, updated_at: new Date().toISOString() })
+    .eq("workspace_id", workspaceId)
+    .eq("id", creativeJobId);
 }
 
 async function reap(supabase: ServiceSupabase) {
@@ -163,7 +386,7 @@ async function main() {
   );
 
   // Periodic reaper: self-heal jobs held by a dead worker. This is the core
-  // recovery mechanism that Trigger.dev lacked.
+  // recovery mechanism for a worker crash or host restart.
   const reaper = setInterval(() => void reap(supabase), REAP_EVERY_MS);
   reaper.unref?.();
   await reap(supabase);

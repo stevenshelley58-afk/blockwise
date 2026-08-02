@@ -13,7 +13,7 @@ Blockwise is organized around a few shared primitives rather than separate produ
 ## Data Flow
 
 1. A workspace is created with a mode, plan, region, members, and provider connections.
-2. Trigger.dev jobs sync provider data into reporting snapshots and lead tables.
+2. VPS queue jobs sync provider data into reporting snapshots and lead tables.
 3. Research and agent jobs write observed ads, source evidence, classifications, artifacts, and reviews.
 4. Self-Serve workflows create ideas, lead magnets, campaign drafts, creative files, and approval requests.
 5. AI work resolves a model profile, records usage in `ai_runs` and `ai_usage_ledger`, and blocks expensive or unsafe outputs.
@@ -24,5 +24,6 @@ Blockwise is organized around a few shared primitives rather than separate produ
 
 - Vercel handles Next.js pages and request/response route handlers.
 - Supabase handles Auth, Postgres, RLS, Storage, and workspace isolation.
-- Trigger.dev handles durable jobs, schedules, retries, provider syncs, and agent orchestration.
+- Supabase `job_queue` and the VPS worker handle durable jobs, retries, and provider syncs; Vercel Cron enqueues schedules.
 - External agent runtimes are adapters and must use scoped Blockwise APIs.
+

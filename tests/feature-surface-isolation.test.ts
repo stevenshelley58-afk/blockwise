@@ -55,9 +55,11 @@ test("disabled customer APIs gate before auth, client, or provider work", () => 
 test("active navigation excludes disabled features rather than hiding hardcoded routes", () => {
   const navigation = read("src/components/sidebar-nav.tsx");
   const mobile = read("src/components/app/mobile-bottom-nav.tsx");
+  const nicheConfig = read("src/config/niche/blockwise.ts");
 
-  assert.match(navigation, /feature: "adRadar"/);
-  assert.match(navigation, /feature: "propertyCheck"/);
+  assert.match(nicheConfig, /feature: "adRadar"/);
+  assert.match(nicheConfig, /feature: "propertyCheck"/);
+  assert.match(navigation, /niche\.nav\.items/);
   assert.match(navigation, /!item\.feature \|\| niche\.features\[item\.feature\]/);
   assert.doesNotMatch(mobile, /self_serve:\s*\[[^\]]*\/ad-radar/);
   assert.match(mobile, /niche\.nav\.mobileTabs/);

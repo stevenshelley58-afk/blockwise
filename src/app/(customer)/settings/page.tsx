@@ -47,7 +47,7 @@ type MemberRow = { profile_id: string; role: string; profiles: MemberProfile | M
 type InvitationRow = { id: string; email: string; role: string; expires_at: string };
 
 export default async function SettingsPage() {
-  const { supabase, access } = await requirePageSurfaceAccess("monitor");
+  const { supabase, access, auth } = await requirePageSurfaceAccess("monitor");
   const canManage = access.isOperator || access.role === "owner" || access.role === "admin";
   const service = createSupabaseServiceClient();
 
@@ -55,7 +55,6 @@ export default async function SettingsPage() {
     { data: profile },
     { data: workspace },
     connections,
-    { data: authData },
     { data: brandKit },
     { data: wallet },
     activation,
@@ -63,7 +62,6 @@ export default async function SettingsPage() {
     supabase.from("profiles").select("*").eq("id", access.userId).maybeSingle(),
     supabase.from("workspaces").select("*").eq("id", access.workspaceId).maybeSingle(),
     listProviderConnections(supabase, access.workspaceId),
-    supabase.auth.getUser(),
     supabase
       .from("adstudio_brand_kits")
       .select("source_url, review_status")
@@ -149,8 +147,7 @@ export default async function SettingsPage() {
   const p = (profile as ProfileRow | null) ?? null;
   const pl = planData;
   const wsQuery = encodeURIComponent(access.workspaceId);
-  const authUser = authData.user;
-  const userMetadata = (authUser?.user_metadata ?? {}) as Record<string, unknown>;
+  const userMetadata = auth.claims?.user_metadata ?? {};
   const walletRow = (wallet ?? null) as {
     credits_granted?: number | null;
     credits_reserved?: number | null;
@@ -175,7 +172,7 @@ export default async function SettingsPage() {
         <h1 className="font-display text-[24px] font-extrabold tracking-[-0.02em] md:text-[27px]">{niche.copy.settings.title}</h1>
       </header>
       <SettingsView
-        user={{ id: access.userId, email: p?.email ?? "" }}
+        user={{ id: access.userId, email: p?.email ?? auth.claims?.email ?? "" }}
         profile={{
           fullName: p?.full_name ?? "",
           phone: typeof userMetadata.phone === "string" ? userMetadata.phone : "",
@@ -183,7 +180,7 @@ export default async function SettingsPage() {
             typeof userMetadata.timezone === "string"
               ? userMetadata.timezone
               : Intl.DateTimeFormat().resolvedOptions().timeZone,
-          emailVerified: Boolean(authUser?.email_confirmed_at),
+          emailVerified: userMetadata.email_verified === true,
           notificationPreferences: p?.notification_preferences ?? {},
         }}
         workspace={{

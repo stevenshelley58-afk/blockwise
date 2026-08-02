@@ -289,7 +289,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     : [];
   const blockers = uniqueStrings([...metaReadiness.blockers, ...adapterBlockers]);
   const publishReady = blockers.length === 0;
-  let triggerRunId: string | null = null;
+  let queueJobId: string | null = null;
 
   if (
     publishReady &&
@@ -307,7 +307,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
     try {
       const run = await queueMetaPublishPlanExecution(approvedPlan);
-      triggerRunId = run.id ?? null;
+      queueJobId = run.id ?? null;
       metaPublishPlan = approvedPlan;
     } catch (error) {
       // Without this, the plan stays "approved" with no queued run and every
@@ -354,7 +354,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
             .filter((variantId): variantId is string => Boolean(variantId)),
         }
       : null,
-    triggerRunId,
+    queueJobId,
   });
 }
 

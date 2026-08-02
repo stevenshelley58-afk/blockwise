@@ -1,4 +1,4 @@
-# VPS background worker — Trigger.dev replacement. MANAGED deployment.
+# VPS background worker for durable provider and recovery jobs. MANAGED deployment.
 #
 # Replaces the unmanaged `mystifying_bose` docker-run worker (no restart policy)
 # with a restart-protected compose service. Runs the committed source via

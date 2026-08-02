@@ -1,6 +1,5 @@
 // The complete server-side template-campaign generation pipeline, callable from
-// the campaigns POST route (synchronous fallback) or the trigger.dev task
-// "adstudio.generate.template" (the normal async path; no 120s route ceiling).
+// the Vercel campaigns route (customer fast path) or the VPS recovery worker.
 //
 // Order matters and is the product: brand kit -> slot images -> brief-grounded
 // copy (on-image fields + feed copy in one pass) -> reference clone renders
@@ -24,7 +23,7 @@ import { buildPrebuiltTemplateCloneQa } from "./clone-regions.ts";
 import { deriveAndPersistTemplateTextLayers } from "./layer-derivation.ts";
 import { generateAdStudioTemplateCopy, type AdStudioCopyFields } from "./copy-generation.ts";
 import { buildCloneCampaignPack, buildCloneCreative } from "./clone-campaign.ts";
-import { persistAdStudioCampaignPack } from "./persistence.ts";
+import { loadAdStudioCampaignPack, persistAdStudioCampaignPack } from "./persistence.ts";
 import { ensureRasterReferenceImage } from "./rasterize-reference.ts";
 import {
   buildCloneImageRequest,
@@ -82,6 +81,10 @@ export type RunTemplateCampaignGenerationInput = {
   region?: string;
   /** Server-owned two-render reservation settled independently by format. */
   creditReservation?: WorkspaceCreditReservation;
+  /** Stable run identifier persisted before provider work starts. */
+  correlationId?: string;
+  /** Deterministic campaign checkpoint used to resume after a function crash. */
+  expectedCampaignId?: string;
 };
 
 export type RunTemplateCampaignGenerationResult = {
@@ -92,10 +95,11 @@ export type RunTemplateCampaignGenerationResult = {
   /** Ready templates are not released to the customer until that task settles. */
   requiresDeterministicEditing: boolean;
   /**
-   * The story (9:16) render, generated in parallel with the feed, persists
+   * The story (9:16) render starts after the provider returns the feed, then
+   * overlaps feed persistence and response preparation.
    * and patches into the already-created campaign once it lands. Undefined
    * when the story render failed during generation (feed stands alone).
-   * Callers schedule this via `after()` (route) or await it (trigger task).
+   * Callers schedule this via `after()` (route) or await it (VPS recovery).
    */
   storyTask?: Promise<void>;
 };
@@ -125,6 +129,49 @@ export async function assertDeterministicFeedEditingReady(input: {
   }
 }
 
+async function resumePersistedTemplateCampaign(input: {
+  supabase: SupabaseGenerationClient;
+  workspaceId: string;
+  userId: string;
+  correlationId: string;
+  expectedCampaignId: string;
+  template: AdStudioTemplate;
+}): Promise<RunTemplateCampaignGenerationResult | null> {
+  const campaignPack = await loadAdStudioCampaignPack(
+    input.supabase as SupabaseServerClient,
+    input.workspaceId,
+    input.expectedCampaignId,
+  );
+  if (!campaignPack) return null;
+
+  const feedCreative = campaignPack.creatives.find((creative) => creative.format === PRIMARY_CLONE_FORMAT);
+  const imageRef = feedCreative?.canvas.objects.find((object) => object.role === "primary_image")?.content
+    ?? feedCreative?.canvas.objects.find((object) => object.role === "primary_image")?.assetId;
+  if (!feedCreative || !imageRef) {
+    throw new Error("The persisted generation checkpoint has no finished Feed creative.");
+  }
+
+  const editingLayersTask = prepareCloneCreativeTextLayers({
+    supabase: input.supabase,
+    workspaceId: input.workspaceId,
+    userId: input.userId,
+    correlationId: input.correlationId,
+    template: input.template,
+    renders: [{
+      format: PRIMARY_CLONE_FORMAT,
+      creativeId: feedCreative.creativeId,
+      imageRef,
+    }],
+  });
+
+  return {
+    campaignId: campaignPack.campaign.campaignId,
+    campaignPack,
+    editingLayersTask,
+    requiresDeterministicEditing: deterministicEditingReadiness(input.template).status === "ready",
+  };
+}
+
 const PRIMARY_CLONE_FORMAT = "4:5" as const;
 const STORY_CLONE_FORMAT = "9:16" as const;
 const STORY_RECOMPOSE_PROMPT =
@@ -139,6 +186,18 @@ type GeneratedCloneRender = CloneGenerationResult & {
 type PersistedCloneRender = GeneratedCloneRender & {
   image: string;
 };
+
+export async function startStoryAfterFeed<Feed, Story>(input: {
+  generateFeed(): Promise<Feed>;
+  generateStory(): Promise<Story>;
+}): Promise<{ feed: Feed; storyTask: Promise<Story> }> {
+  const feed = await input.generateFeed();
+  const storyTask = input.generateStory();
+  // The caller can still fail while persisting Feed. Attach a handler now so
+  // Story rejection is never unhandled, while preserving it for the later await.
+  void storyTask.catch(() => undefined);
+  return { feed, storyTask };
+}
 
 export function buildTemplateCloneRequestsByFormat(
   template: AdStudioTemplate,
@@ -205,7 +264,7 @@ export type CloneEditingLayersInput = {
     format: TemplateCloneRenderFormat;
     creativeId: string;
     imageRef: string;
-    imageUrl: string;
+    imageUrl?: string;
   }>;
 };
 
@@ -293,6 +352,22 @@ export async function runTemplateCampaignGeneration(
   const template = await resolveApprovedAdStudioTemplate({
     templateId: firstAd.templateId,
   });
+  const correlationId = input.correlationId ?? randomUUID();
+
+  // The route persists this deterministic ID before any provider call. If
+  // Vercel dies after the transactional Feed save, the VPS resumes the saved
+  // campaign and its editor preparation instead of buying the same image again.
+  if (input.expectedCampaignId) {
+    const resumed = await resumePersistedTemplateCampaign({
+      supabase: input.supabase,
+      workspaceId: input.workspaceId,
+      userId: input.userId,
+      correlationId,
+      expectedCampaignId: input.expectedCampaignId,
+      template,
+    });
+    if (resumed) return resumed;
+  }
 
   const brandKitResult = await resolveAdStudioGenerationBrandKit({
     supabase,
@@ -336,7 +411,6 @@ export async function runTemplateCampaignGeneration(
     throw new Error(`Missing required image: ${missingSlot.label}`);
   }
 
-  const correlationId = randomUUID();
   const sourceImageUrl = primarySlot ? resolvedImages[primarySlot.key] : Object.values(resolvedImages)[0];
 
   // Customer-typed on-image values (price, address, phone…) override the
@@ -406,8 +480,9 @@ export async function runTemplateCampaignGeneration(
   // customer supplied everything, copyResult.onImage IS the customer's values.
   const onImageCopy = { ...copyResult.onImage, ...customerOnImage };
 
-  // The image lane runs one native feed render and one recomposed 9:16 story
-  // render in parallel. The matching-format editor map was measured offline.
+  // The image lane prioritises the customer-visible feed, then starts the
+  // recomposed 9:16 story while Feed persistence continues. The matching-format
+  // editor map was measured offline.
   const [referenceImage, providers] = await Promise.all([rasterPromise, providersPromise]);
   const expectedCopy = resolveCloneCopy(template, onImageCopy);
   const cloneRequestsByFormat = buildTemplateCloneRequestsByFormat(template, {
@@ -427,32 +502,32 @@ export async function runTemplateCampaignGeneration(
   });
   const feedCloneQa = buildPrebuiltTemplateCloneQa(template, expectedCopy, PRIMARY_CLONE_FORMAT);
   const modelProfile = cloneModelProfileForQuality(generationQuality);
-  // --- Feed-first critical path (Point 8): both formats generate in parallel,
-  // the customer gets the 4:5 ad the instant it persists, the 9:16 story
-  // patches into the already-created campaign in the background. ---
-
-  // Generation is the slow part — start both NOW.
-  const feedGenPromise = generateFinalCloneRender({
-    format: PRIMARY_CLONE_FORMAT,
-    providers,
-    request: cloneRequestsByFormat[PRIMARY_CLONE_FORMAT],
-    workspaceId: input.workspaceId,
-    userId: input.userId,
-    correlationId,
-    modelProfile,
+  // --- Feed-first critical path: give Gemini the Feed request exclusively so
+  // it does not compete with Story for provider quota or bandwidth. Once the
+  // Feed bytes arrive, Story starts and overlaps normalization/upload/DB work.
+  // This improves time-to-first-ad while still reducing two-format wall time. ---
+  const { feed: feedRender, storyTask: storyGenPromise } = await startStoryAfterFeed({
+    generateFeed: () => generateFinalCloneRender({
+      format: PRIMARY_CLONE_FORMAT,
+      providers,
+      request: cloneRequestsByFormat[PRIMARY_CLONE_FORMAT],
+      workspaceId: input.workspaceId,
+      userId: input.userId,
+      correlationId,
+      modelProfile,
+    }),
+    generateStory: () => generateFinalCloneRender({
+      format: STORY_CLONE_FORMAT,
+      providers,
+      request: cloneRequestsByFormat[STORY_CLONE_FORMAT],
+      workspaceId: input.workspaceId,
+      userId: input.userId,
+      correlationId,
+      modelProfile,
+    }),
   });
-  const storyGenPromise = generateFinalCloneRender({
-    format: STORY_CLONE_FORMAT,
-    providers,
-    request: cloneRequestsByFormat[STORY_CLONE_FORMAT],
-    workspaceId: input.workspaceId,
-    userId: input.userId,
-    correlationId,
-    modelProfile,
-  });
 
-  // Await only the feed: generate → normalize → upload.
-  const feedRender = await feedGenPromise;
+  // Story is now rendering while the feed uploads.
   const feedPersisted: PersistedCloneRender = {
     ...feedRender,
     image: await persistCloneRender({
@@ -540,8 +615,8 @@ export async function runTemplateCampaignGeneration(
         })
     : Promise.resolve();
 
-  // Story background task: the story promise is already in flight (started
-  // in parallel above). When it lands, persist it, patch the campaign, and
+  // Story background task: the story promise is already in flight. When it
+  // lands, persist it, patch the campaign, and
   // attach its native-format prebuilt regions. Never throws outward.
   const storyTask = persistStoryInBackground({
     supabase,

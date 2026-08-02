@@ -38,7 +38,7 @@ test("provider workers and approval queueing are guarded by provider writes kill
 
 test("approval route queues provider work before persisting approved status", () => {
   const source = readFileSync(approvalsRoute, "utf8");
-  const queueIndex = source.indexOf("triggerRunId = await queueApprovedTarget");
+  const queueIndex = source.indexOf("queueJobId = await queueApprovedTarget");
   const updateIndex = source.indexOf('.from("approval_requests")', queueIndex);
 
   assert.notEqual(queueIndex, -1);

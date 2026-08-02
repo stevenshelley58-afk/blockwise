@@ -126,7 +126,7 @@ test("missing customer inputs are shown together before generation", () => {
   assert.match(submit, /buildRequirementBlockers/);
 });
 
-test("the server owns clone generation and the client waits for the finished ad", () => {
+test("the server owns clone generation and returns the finished editable ad inline", () => {
   const dialog = readFileSync("src/components/adstudio/new-ad-dialog.tsx", "utf8");
   const actions = readFileSync("src/components/adstudio/use-campaign-actions.ts", "utf8");
   const route = readFileSync("src/app/api/adstudio/campaigns/route.ts", "utf8");
@@ -137,9 +137,10 @@ test("the server owns clone generation and the client waits for the finished ad"
   // clone rendering is.
   assert.doesNotMatch(dialog, /templateCloneImage/);
   assert.match(route, /runTemplateCampaignGeneration/);
-  assert.match(route, /status: 202/);
+  assert.match(route, /status: 201/);
+  assert.match(route, /adstudio\.generate\.template/);
   assert.doesNotMatch(route, /generateAdStudioCampaignPack\(\{/);
-  assert.match(actions, /\/api\/adstudio\/jobs\//);
+  assert.match(actions, /payload\.campaignPack/);
   assert.match(actions, /Your ad is ready to edit/);
   assert.match(actions, /s\.setSection\("edit"\)/);
   assert.doesNotMatch(actions, /s\.setSection\("media"\)/);

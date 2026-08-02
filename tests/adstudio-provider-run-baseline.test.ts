@@ -460,11 +460,12 @@ test("profile resolution uses active persisted primaries and committed runtime d
   assert.equal(draft.primary.provider, "openrouter");
   assert.equal(draft.primary.model, "google/gemini-2.5-flash-image");
   assert.match(draft.activeVersionIdSha256, /^[a-f0-9]{64}$/);
-  assert.deepEqual(draft.fallbacks, []);
+  assert.equal(draft.fallbacks[0].model, "gpt-image-2");
 
   const final = evidence.find((profile: { profileKey: string }) => profile.profileKey === "image_final");
   assert.equal(final.source, "default");
-  assert.equal(final.primary.model, "gpt-image-2");
+  assert.equal(final.primary.model, "gemini-3.1-flash-image");
+  assert.equal(final.fallbacks[0].model, "gpt-image-2");
   assert.equal(final.activeVersionIdSha256, null);
   assert.doesNotMatch(JSON.stringify(evidence), new RegExp(rawVersionId));
 });

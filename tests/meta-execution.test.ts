@@ -3,7 +3,6 @@ import test from "node:test";
 
 import { buildCloneTestPack } from "./adstudio-clone-fixture.ts";
 import {
-  buildMetaPublishTaskOptions,
   buildMetaPlanIdempotencyKey,
   buildMetaPublishPlan,
   createMetaExecutionAdapter,
@@ -300,26 +299,6 @@ test("marketing_api adapter links ads to the destination URL, not the privacy po
   const linkData = (creativeCreate?.body.object_story_spec as Record<string, unknown>).link_data as Record<string, unknown>;
   assert.ok(String(linkData.link).startsWith("https://agency.example/appraisal?"));
   assert.match(String(linkData.link), /utm_source=meta/);
-});
-
-test("buildMetaPublishTaskOptions varies the trigger idempotency key per attempt", () => {
-  const first = buildMetaPublishTaskOptions({
-    workspaceId: "workspace_demo",
-    planId: "plan_1",
-    idempotencyKey: "meta_publish:key",
-    attemptKey: "2026-07-25T01:00:00.000Z",
-  });
-  const retry = buildMetaPublishTaskOptions({
-    workspaceId: "workspace_demo",
-    planId: "plan_1",
-    idempotencyKey: "meta_publish:key",
-    attemptKey: "2026-07-25T01:05:00.000Z",
-  });
-
-  // A retry after failure must queue a fresh run instead of getting the
-  // cached original back, while the concurrency key still serialises the plan.
-  assert.notEqual(first.idempotencyKey, retry.idempotencyKey);
-  assert.equal(first.concurrencyKey, retry.concurrencyKey);
 });
 
 test("validateMetaConnectionSetup requires production Meta assets", () => {
@@ -650,20 +629,4 @@ test("marketing_api adapter reconciles Meta object state after publish", async (
   assert.equal(result.status, "paused_live");
   assert.equal(methods.includes("GET"), true);
   assert.equal(result.reconciledObjects.objectStatuses?.campaign?.effectiveStatus, "PAUSED");
-});
-
-test("buildMetaPublishTaskOptions keeps worker runs idempotent per plan", () => {
-  assert.deepEqual(
-    buildMetaPublishTaskOptions({
-      workspaceId: "workspace_demo",
-      planId: "plan_123",
-      idempotencyKey: "meta:marketing_api:key",
-    }),
-    {
-      idempotencyKey: "meta:marketing_api:key",
-      concurrencyKey: "meta-publish:workspace_demo:meta:marketing_api:key",
-      tags: ["meta-publish", "workspace_demo", "plan_123"],
-      maxAttempts: 3,
-    },
-  );
 });

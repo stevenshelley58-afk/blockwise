@@ -133,14 +133,23 @@ test("Ad Studio UI presents the constrained campaign workspace", () => {
   assert.doesNotMatch(adstudio, /setPlatform\("google"\)/);
 });
 
-test("Trigger includes scheduled Meta lead sync and token health checks", () => {
-  const trigger = readFileSync("trigger/meta-publish.ts", "utf8");
+test("Vercel Cron paginates provider work into the VPS queue", () => {
+  const maintenance = readFileSync("src/lib/providers/scheduled-maintenance.ts", "utf8");
+  const worker = readFileSync("worker/index.ts", "utf8");
+  const vercel = readFileSync("vercel.json", "utf8");
 
-  assert.match(trigger, /schedules\.task/);
-  assert.match(trigger, /sync\.meta\.leads\.scheduled/);
-  assert.match(trigger, /check\.meta\.token-health\.scheduled/);
-  assert.match(trigger, /runScheduledMetaLeadSyncs/);
-  assert.match(trigger, /runScheduledMetaTokenHealthChecks/);
+  assert.match(maintenance, /queueScheduledMetaLeadSyncs/);
+  assert.match(maintenance, /queueScheduledPerformanceReadModels/);
+  assert.match(maintenance, /check\.meta\.token-health/);
+  assert.match(maintenance, /scanScheduledRowsById/);
+  assert.match(maintenance, /\.gt\("id", afterId\)/);
+  assert.doesNotMatch(maintenance, /\.limit\(100\)/);
+  assert.match(worker, /case "sync\.meta\.leads"/);
+  assert.match(worker, /case "check\.meta\.token-health"/);
+  assert.match(worker, /case "reconcile\.customer\.activation"/);
+  assert.match(vercel, /\/api\/cron\/meta-leads/);
+  assert.match(vercel, /\/api\/cron\/provider-maintenance/);
+  assert.match(vercel, /\/api\/cron\/performance-read-models/);
 });
 
 test("operator sidebar does not hardcode Hermes runtime health", () => {

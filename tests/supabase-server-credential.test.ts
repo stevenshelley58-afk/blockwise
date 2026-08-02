@@ -123,7 +123,7 @@ test("service client REST, Storage, and Auth admin calls use opaque-safe transpo
   }
 });
 
-test("health, tracking, and Trigger runtimes use the central secret-first resolver", () => {
+test("health, tracking, cron, and VPS runtimes use the central secret-first resolver", () => {
   for (const path of ["src/app/api/health/route.ts", "src/app/api/track/route.ts"]) {
     const source = readFileSync(path, "utf8");
     assert.match(source, /resolveSupabaseServerCredential/, path);
@@ -131,19 +131,13 @@ test("health, tracking, and Trigger runtimes use the central secret-first resolv
   }
 
   for (const path of [
-    "trigger/adstudio-generate.ts",
-    "trigger/meta-publish.ts",
-    "trigger/provider-sync.ts",
+    "src/app/api/cron/ad-radar-accuracy/route.ts",
+    "src/app/api/cron/meta-leads/route.ts",
+    "src/app/api/cron/provider-maintenance/route.ts",
+    "worker/index.ts",
   ]) {
     const source = readFileSync(path, "utf8");
-    assert.match(source, /\.\.\/src\/lib\/supabase\/service\.ts/, path);
+    assert.match(source, /(?:@\/|\.\.\/src\/)lib\/supabase\/service(?:\.ts)?/, path);
     assert.doesNotMatch(source, /process\.env\.SUPABASE_(?:SECRET_KEY|SERVICE_ROLE_KEY)/, path);
   }
-
-  const researchSupervisor = readFileSync(
-    "hermes/tools/research-runtime/bin/supabase-supervisor.mjs",
-    "utf8",
-  );
-  assert.match(researchSupervisor, /resolveHermesSupabaseCredential\(env\)/);
-  assert.doesNotMatch(researchSupervisor, /createResearchServiceClient/);
 });

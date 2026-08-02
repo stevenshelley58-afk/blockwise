@@ -232,7 +232,7 @@ ledger. It must not remain as a parallel source of truth.
 
 Generation reserves the exact number of renders before dispatch. Successful
 provider calls settle reservations; failure paths refund them. Duplicate HTTP,
-Trigger.dev, or webhook delivery returns the original ledger result.
+queue retries or webhook delivery returns the original ledger result.
 
 ## 5. Identity, Team, and Anti-Sharing Controls
 
@@ -738,8 +738,8 @@ Production/preview:
 - final production smoke on `blockwise.sale`.
 
 Runtime acceptance occurs on Vercel Preview or Production URLs, never
-localhost. Supabase migrations, Stripe webhooks, and any Trigger.dev tasks are
-deployed and confirmed before production promotion.
+localhost. Supabase migrations, Stripe webhooks, Vercel Cron routes, and VPS
+queue handlers are deployed and confirmed before production promotion.
 
 ## 16. Explicit Non-goals
 

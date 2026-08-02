@@ -83,7 +83,7 @@ UX-6 brand gate nav   (independent)
 UX-7 empty states     (independent)
 UX-8 small polish     (independent; do last)
                        ↓
-O-1 Sentry            →  O-2 trigger alerts
+O-1 Sentry            →  O-2 orchestration alerts
 O-3 team invite       (independent of Sentry)
 O-4 rollback doc      (independent; do before O-2 so you have it if O-2 surfaces a fire)
 O-5 PWA verify        (independent)
@@ -167,7 +167,7 @@ From `LAUNCH_PLAN.md` "What is already good":
 - SEO metadata/robots/sitemap
 - Substantive legal pages
 - Turnstile + honeypot on signup
-- Trigger.dev job suite
+- Durable VPS `job_queue` suite
 
 **If a task asks you to touch one of these to "fix" something, stop and check.** Either the task is wrong, or you're about to break a working security control. The launch plan was reviewed; if it lists these as "good," trust that.
 
@@ -317,7 +317,7 @@ If any of these fail, **don't ship**. The whole point of the gate is to catch it
 >
 > Phase 3 (8 tasks, ~2 days) is UX — dead routes, jargon in settings, empty states, login form.
 >
-> Phase 4 (5 tasks, ~1 day) is ops — Sentry, Trigger.dev alerts, team invite, rollback runbook.
+> Phase 4 (5 tasks, ~1 day) is ops — Sentry, queue-worker alerts, team invite, rollback runbook.
 >
 > Phase 5 is owner-only — Stripe setup, Meta app review, env vars, pricing decision.
 >
