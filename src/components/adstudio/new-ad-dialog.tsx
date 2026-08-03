@@ -747,6 +747,7 @@ export function NewAdDialog({
     function handleKey(event: KeyboardEvent) {
       if (event.key === "Escape") {
         event.preventDefault();
+        if (submitting) return;
         closeCurrentView();
       }
       if (event.key === "Tab") trapFocus(event);
@@ -756,7 +757,7 @@ export function NewAdDialog({
       document.removeEventListener("keydown", handleKey);
       previousFocus.current?.focus();
     };
-  }, [closeCurrentView, open]);
+  }, [closeCurrentView, open, submitting]);
 
   if (!open) return null;
 

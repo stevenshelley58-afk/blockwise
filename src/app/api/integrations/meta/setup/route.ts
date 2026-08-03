@@ -37,6 +37,9 @@ export async function GET(request: NextRequest) {
 
   if (!guard.ok) return guard.response;
   const { access } = guard;
+  if (!canManageProviderConnections(access)) {
+    return NextResponse.json({ error: "Provider connection management is not allowed." }, { status: 403 });
+  }
 
   const serviceSupabase = createSupabaseServiceClient();
   const connection = await loadMetaConnection(serviceSupabase, access.workspaceId);
@@ -69,6 +72,16 @@ export async function GET(request: NextRequest) {
         selectedAdAccountId: storedSetup.metaAdAccountId,
         selectedPageId: storedSetup.pageId,
       });
+      if (isPartnerConnection(connection)) {
+        const assignment = await loadPartnerAssignment(serviceSupabase, access.workspaceId);
+        assets = assignment ? {
+          ...assets,
+          adAccounts: assets.adAccounts.filter((account) => account.id === assignment.ad_account_id),
+          pages: assets.pages.filter((page) => page.id === assignment.page_id),
+          instagramActors: assets.instagramActors.filter((actor) => actor.pageId === assignment.page_id),
+          leadForms: assets.leadForms.filter((form) => form.pageId === assignment.page_id),
+        } : { ...assets, adAccounts: [], pages: [], instagramActors: [], pixels: [], leadForms: [] };
+      }
     } catch (error) {
       assetsError = error instanceof Error ? error.message : "Meta asset request failed.";
     }
@@ -124,6 +137,35 @@ export async function PATCH(request: NextRequest) {
   const blockers = validateMetaConnectionSetup(nextSetup);
   const accountChanged = Boolean(nextSetup.metaAdAccountId) && nextSetup.metaAdAccountId !== connection.external_account_id;
 
+  const tokens = await loadStoredProviderTokens(serviceSupabase, connection.id);
+  if (!tokens.accessToken) {
+    return NextResponse.json({ error: "Meta access has expired. Reconnect Meta first." }, { status: 409 });
+  }
+  const assets = await fetchMetaAssetCatalog({
+    accessToken: tokens.accessToken,
+    selectedAdAccountId: nextSetup.metaAdAccountId,
+    selectedPageId: nextSetup.pageId,
+  }).catch(() => null);
+  if (!assets?.adAccounts.some((account) => account.id === nextSetup.metaAdAccountId)) {
+    return NextResponse.json({ error: "The connected Meta token cannot access that ad account." }, { status: 409 });
+  }
+  if (!assets.pages.some((page) => page.id === nextSetup.pageId)) {
+    return NextResponse.json({ error: "The connected Meta token cannot access that Page." }, { status: 409 });
+  }
+  if (isPartnerConnection(connection)) {
+    const assignment = await loadPartnerAssignment(serviceSupabase, access.workspaceId);
+    if (
+      !assignment ||
+      assignment.ad_account_id !== nextSetup.metaAdAccountId ||
+      assignment.page_id !== nextSetup.pageId
+    ) {
+      return NextResponse.json(
+        { error: "That Meta account and Page are not assigned to this workspace." },
+        { status: 403 },
+      );
+    }
+  }
+
   // Switching the ad account can collide with a historical row that already
   // holds the target account id (unique workspace+provider+account). Those
   // rows are FK-referenced by publish plans, so archive them (rename +
@@ -156,15 +198,7 @@ export async function PATCH(request: NextRequest) {
   // asset catalog gives the human name, falling back to the account id.
   let nextAccountName: string | null = null;
   if (accountChanged) {
-    const tokens = await loadStoredProviderTokens(serviceSupabase, connection.id);
-    if (tokens.accessToken) {
-      const assets = await fetchMetaAssetCatalog({
-        accessToken: tokens.accessToken,
-        selectedAdAccountId: nextSetup.metaAdAccountId,
-        selectedPageId: nextSetup.pageId,
-      }).catch(() => null);
-      nextAccountName = assets?.adAccounts.find((account) => account.id === nextSetup.metaAdAccountId)?.name ?? null;
-    }
+    nextAccountName = assets.adAccounts.find((account) => account.id === nextSetup.metaAdAccountId)?.name ?? null;
     nextAccountName = nextAccountName ?? nextSetup.metaAdAccountId;
   }
 
@@ -205,6 +239,23 @@ export async function PATCH(request: NextRequest) {
     blockers,
     ready: blockers.length === 0,
   });
+}
+
+function isPartnerConnection(connection: MetaConnectionRow): boolean {
+  return connection.metadata_json?.connectionMethod === "partner_access";
+}
+
+async function loadPartnerAssignment(
+  serviceSupabase: ReturnType<typeof createSupabaseServiceClient>,
+  workspaceId: string,
+): Promise<{ ad_account_id: string; page_id: string } | null> {
+  const { data, error } = await serviceSupabase
+    .from("meta_partner_account_assignments")
+    .select("ad_account_id,page_id")
+    .eq("workspace_id", workspaceId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data as { ad_account_id: string; page_id: string } | null;
 }
 
 async function loadMetaConnection(

@@ -110,8 +110,8 @@ export default function TermsOfServicePage() {
       </h2>
       <p>
         Managed service is separate from self-serve and starts at US$1,500 per month in the United
-        States or A$2,500 per month in Australia, plus Meta ad spend. You may book a call before
-        paying, or pay and book onboarding immediately.
+        States or A$2,500 per month in Australia, plus Meta ad spend. Book a call first so
+        Blockwise can confirm the service scope and onboarding plan before payment.
       </p>
       <p>
         The base managed engagement includes the complete self-serve product, 100 monthly render

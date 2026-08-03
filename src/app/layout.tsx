@@ -6,6 +6,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 
 import { PageViewTracker } from "@/components/page-view-tracker";
 import { ConsentBanner } from "@/components/consent-banner";
+import { MarketingAnalytics } from "@/components/marketing-analytics";
 import { ServiceWorkerRegistrar } from "@/components/pwa/ServiceWorkerRegistrar";
 
 // globals.css and landing.css are imported by tailwind.css into the `legacy`
@@ -96,33 +97,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         </Script>
       </head>
       <body>
-        {/* Meta Pixel Code — consent default deny (GDPR/PECR) */}
-        <Script id="meta-pixel" strategy="afterInteractive">
-          {`!function(f,b,e,v,n,t,s)
-          {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-          n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-          if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-          n.queue=[];t=b.createElement(e);t.async=!0;
-          t.src=v;s=b.getElementsByTagName(e)[0];
-          s.parentNode.insertBefore(t,s)}(window,document,'script',
-          'https://connect.facebook.net/en_US/fbevents.js');
-          fbq('consent', 'default', {ad_storage: 'denied', analytics_storage: 'denied'});
-          fbq('init', '${META_PIXEL_ID}');
-          fbq('track', 'PageView');`}
-        </Script>
-        {/* End Meta Pixel Code */}
-        {GOOGLE_ADS_ID ? (
-          <>
-            <Script
-              id="gtag-base"
-              src={`https://www.googletagmanager.com/gtag/js?id=${GOOGLE_ADS_ID}`}
-              strategy="afterInteractive"
-            />
-            <Script id="gtag-init" strategy="afterInteractive">
-              {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','${GOOGLE_ADS_ID}',{ad_storage:'denied',analytics_storage:'denied'});`}
-            </Script>
-          </>
-        ) : null}
+        <MarketingAnalytics metaPixelId={META_PIXEL_ID} googleAdsId={GOOGLE_ADS_ID} />
         {children}
         <ServiceWorkerRegistrar />
         <PageViewTracker />

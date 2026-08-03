@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { queueScheduledPerformanceReadModels } from "@/lib/providers/scheduled-maintenance";
+import { queueScheduledActivationReconciliations } from "@/lib/providers/scheduled-maintenance";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const dynamic = "force-dynamic";
@@ -13,9 +13,8 @@ export async function GET(request: Request) {
   if (request.headers.get("authorization") !== `Bearer ${secret}`) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
-
   return NextResponse.json({
     ok: true,
-    ...await queueScheduledPerformanceReadModels(createSupabaseServiceClient()),
+    ...await queueScheduledActivationReconciliations(createSupabaseServiceClient()),
   });
 }

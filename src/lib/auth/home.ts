@@ -10,9 +10,9 @@ type HomeMembershipRow = {
 };
 
 /**
- * Resolves where a signed-in user should land: operators -> /operator,
- * everyone else -> /self-serve. New workspaces see the self-serve first-run
- * path until they connect and publish.
+ * Resolves where a signed-in user should land from the workspace they actually
+ * belong to. Operators use the operator console, self-serve customers use the
+ * builder, and monitor-only customers use reporting.
  */
 export async function resolveHomePath(supabase: SupabaseServerClient): Promise<string> {
   const {
@@ -38,5 +38,7 @@ export async function resolveHomePath(supabase: SupabaseServerClient): Promise<s
     return "/operator";
   }
 
-  return "/self-serve";
+  const firstWorkspace = rows[0]?.workspaces;
+  const mode = Array.isArray(firstWorkspace) ? firstWorkspace[0]?.mode : firstWorkspace?.mode;
+  return mode === "monitor" ? "/results" : "/self-serve";
 }

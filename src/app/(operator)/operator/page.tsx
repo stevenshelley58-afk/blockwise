@@ -1,4 +1,4 @@
-import { AlertTriangle, CheckCircle2, ClipboardCheck, RadioTower, UsersRound } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ClipboardCheck, Mail, RadioTower, UsersRound } from "lucide-react";
 
 import { MetricCard } from "@/components/metric-card";
 import { PageHeading } from "@/components/page-heading";
@@ -25,6 +25,49 @@ export default async function OperatorConsolePage() {
         <MetricCard icon={RadioTower} label="Provider issues" value={overview.metrics.providerIssues} note="Connections needing attention" />
         <MetricCard icon={ClipboardCheck} label="Pending approvals" value={overview.metrics.pendingApprovals} note="Human gates awaiting review" />
         <MetricCard icon={AlertTriangle} label="Leads" value={overview.metrics.leads} note="Live lead records across workspaces" />
+        <MetricCard icon={Mail} label="Inbound requests" value={overview.metrics.demoRequests} note="Demo and campaign-plan requests" />
+      </section>
+
+      <section className="panel">
+        <h2>Inbound Requests</h2>
+        {overview.demoRequests.length === 0 ? (
+          <p className="item-meta">No demo or campaign-plan requests yet.</p>
+        ) : (
+          <table className="table responsive-card-table">
+            <thead>
+              <tr>
+                <th>Prospect</th>
+                <th>Contact</th>
+                <th>Area</th>
+                <th>Source</th>
+                <th>Operator alert</th>
+                <th>Customer email</th>
+                <th>Received</th>
+              </tr>
+            </thead>
+            <tbody>
+              {overview.demoRequests.map((request) => (
+                <tr key={request.id}>
+                  <td data-label="Prospect">{request.name}<br /><span className="item-meta">{request.agency}</span></td>
+                  <td data-label="Contact"><a href={`mailto:${request.email}`}>{request.email}</a><br /><span className="item-meta">{request.phone}</span></td>
+                  <td data-label="Area">{request.suburb}</td>
+                  <td data-label="Source">{request.source}</td>
+                  <td data-label="Operator alert">
+                    <StatusPill tone={request.notificationStatus === "sent" ? "green" : request.notificationStatus === "failed" ? "rose" : "amber"}>
+                      {request.notificationStatus}
+                    </StatusPill>
+                  </td>
+                  <td data-label="Customer email">
+                    <StatusPill tone={request.customerEmailStatus === "sent" ? "green" : request.customerEmailStatus === "failed" ? "rose" : "blue"}>
+                      {request.customerEmailStatus.replace("_", " ")}
+                    </StatusPill>
+                  </td>
+                  <td data-label="Received">{request.createdAt ? new Date(request.createdAt).toLocaleString("en-AU") : "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </section>
 
       <section className="split">

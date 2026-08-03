@@ -210,8 +210,8 @@ test("pricing keeps US and AU offers explicit and accessible", () => {
   assert.match(combined, /Up to 50 complete Feed \+ Story packs/);
   assert.match(combined, /Five named, email-verified team members/);
   assert.match(combined, /One free live campaign setup/);
-  assert.match(combined, /Subscribe and book onboarding/);
-  assert.match(combined, /Book a call first/);
+  assert.match(combined, /Book a managed-service call/);
+  assert.doesNotMatch(combined, /Subscribe and book onboarding/);
 });
 
 test("managed-setup form posts to the demo-request endpoint with an intact honeypot", () => {

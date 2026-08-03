@@ -25,6 +25,7 @@ function applyConsent(status: ConsentStatus): void {
   } catch {
     // best-effort
   }
+  window.dispatchEvent(new CustomEvent("blockwise:consent-changed", { detail: { status } }));
 }
 
 export function ConsentBanner() {

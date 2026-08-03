@@ -55,7 +55,7 @@ export function SignupForm() {
       email,
       options: {
         captchaToken: turnstileToken,
-        emailRedirectTo: `${location.origin}/auth/confirm?next=/self-serve?confirmed=1`,
+        emailRedirectTo: `${location.origin}/auth/confirm?next=/self-serve&flow=signup`,
         shouldCreateUser: true,
         data: {
           signup_flow: "trial_self_serve",

@@ -1,18 +1,8 @@
-/**
- * Sends a notification email when a demo request is submitted, using the
- * Resend REST API (https://resend.com/docs/api-reference/emails/send-email).
- *
- * This calls Resend's HTTP endpoint directly with fetch, so it works on the
- * Vercel Node runtime with no extra npm dependency.
- *
- * Required environment variables (set these in Vercel):
- *   RESEND_API_KEY      – API key from the Resend dashboard
- *   DEMO_NOTIFY_FROM    – verified sender on your domain, e.g. "Blockwise <notifications@blockwise.sale>"
- *   DEMO_NOTIFY_TO       – where to send the alert, e.g. "hello@blockwise.sale"
- *
- * If any of these are missing the function is a no-op (returns false) so a
- * missing config never breaks form submission.
- */
+import {
+  getOperatorMailboxConfig,
+  parseEmailRecipients,
+  sendOperatorEmail,
+} from "@/lib/operator/email-service";
 
 export type DemoRequestNotification = {
   name: string;
@@ -23,69 +13,117 @@ export type DemoRequestNotification = {
   message?: string | null;
 };
 
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
+export type AuditCampaignPlan = DemoRequestNotification & {
+  goal?: string | null;
+  detectedAds?: number;
+  activeAds?: number;
+  advertisers?: number;
+  topPlatform?: string | null;
+  topFormat?: string | null;
+  topAngles?: string | null;
+  reportUrl: string;
+};
+
+export type EmailDeliveryResult = {
+  sent: boolean;
+  messageId: string | null;
+  error: string | null;
+};
 
 export async function sendDemoRequestNotification(
   lead: DemoRequestNotification,
-): Promise<boolean> {
-  const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.DEMO_NOTIFY_FROM;
-  const to = process.env.DEMO_NOTIFY_TO;
-
-  if (!apiKey || !from || !to) {
-    // Notifications not configured — submissions still land in the database.
-    return false;
+): Promise<EmailDeliveryResult> {
+  const recipients = parseEmailRecipients(
+    process.env.DEMO_NOTIFY_TO || process.env.ALERT_EMAIL_TO || "",
+  );
+  if (!getOperatorMailboxConfig().configured || recipients.length === 0) {
+    return { sent: false, messageId: null, error: "Operator email notification is not configured." };
   }
 
-  const rows: Array<[string, string | null | undefined]> = [
-    ["Name", lead.name],
-    ["Email", lead.email],
-    ["Agency", lead.agency],
-    ["Phone", lead.phone],
-    ["Suburb", lead.suburb],
-    ["Message", lead.message],
-  ];
-
-  const visible = rows.filter(([, v]) => v);
-  const textBody = visible.map(([k, v]) => `${k}: ${v}`).join("\n");
-  const htmlBody = `<h2>New Blockwise demo request</h2><table cellpadding="6" style="font-family:system-ui,sans-serif;font-size:14px;border-collapse:collapse">${visible
-    .map(
-      ([k, v]) =>
-        `<tr><td style="color:#475569">${k}</td><td><strong>${escapeHtml(String(v))}</strong></td></tr>`,
-    )
-    .join("")}</table>`;
+  const lines = [
+    `Name: ${lead.name}`,
+    `Email: ${lead.email}`,
+    lead.agency ? `Agency: ${lead.agency}` : null,
+    lead.phone ? `Phone: ${lead.phone}` : null,
+    lead.suburb ? `Suburb: ${lead.suburb}` : null,
+    lead.message ? `Message: ${lead.message}` : null,
+  ].filter((line): line is string => Boolean(line));
 
   try {
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from,
-        to: [to],
-        subject: `New demo request — ${lead.name}${lead.suburb ? ` (${lead.suburb})` : ""}`,
-        html: htmlBody,
-        text: textBody,
-        // Replies go straight to the prospect.
-        reply_to: lead.email,
-      }),
+    const result = await sendOperatorEmail({
+      to: recipients,
+      subject: `New demo request — ${lead.name}${lead.suburb ? ` (${lead.suburb})` : ""}`,
+      text: lines.join("\n"),
+      replyTo: lead.email,
     });
-
-    if (!res.ok) {
-      console.error("Resend email send failed", res.status, await res.text().catch(() => ""));
-      return false;
-    }
-    return true;
-  } catch (err) {
-    console.error("Resend email send threw", err);
-    return false;
+    return { sent: true, messageId: result.id, error: null };
+  } catch (error) {
+    return { sent: false, messageId: null, error: deliveryError(error) };
   }
+}
+
+export async function sendAuditCampaignPlanEmail(
+  lead: AuditCampaignPlan,
+): Promise<EmailDeliveryResult> {
+  if (!getOperatorMailboxConfig().configured) {
+    return { sent: false, messageId: null, error: "Campaign-plan email is not configured." };
+  }
+
+  const place = lead.suburb?.trim() || "local";
+  const goal = campaignGoalLabel(lead.goal);
+  const snapshot = [
+    lead.detectedAds != null ? `${lead.detectedAds} ads detected` : null,
+    lead.activeAds != null ? `${lead.activeAds} active` : null,
+    lead.advertisers != null ? `${lead.advertisers} advertisers` : null,
+  ].filter((part): part is string => Boolean(part)).join(" · ");
+  const creativeDirection = [lead.topAngles, lead.topFormat, lead.topPlatform]
+    .map((value) => value?.trim())
+    .filter((value): value is string => Boolean(value))
+    .join(" · ");
+
+  const text = [
+    `Your ${place} campaign plan`,
+    "",
+    `Goal: ${goal}`,
+    snapshot ? `Observed market: ${snapshot}` : null,
+    creativeDirection ? `Observed creative direction: ${creativeDirection}` : null,
+    "",
+    "Recommended first campaign",
+    `Run one ${goal.toLowerCase()} campaign with a finished Feed and Story ad, a short Meta lead form, and one clear call to action. Start with a bounded local budget, review the claims and brand details, then publish from your own Meta ad account.`,
+    "",
+    "Launch checklist",
+    "1. Confirm the offer, audience and location.",
+    "2. Review both Feed and Story artwork.",
+    "3. Connect the correct Meta ad account and Page.",
+    "4. Confirm budget, schedule and lead-form questions.",
+    "5. Approve the final campaign before it goes live.",
+    "",
+    `Open the live market report: ${lead.reportUrl}`,
+    "",
+    "You requested this one-off plan from Blockwise. Reply to this email if you want help setting it up.",
+  ].filter((line): line is string => line !== null);
+
+  try {
+    const result = await sendOperatorEmail({
+      to: [lead.email],
+      subject: `Your ${place} campaign plan`,
+      text: text.join("\n"),
+    });
+    return { sent: true, messageId: result.id, error: null };
+  } catch (error) {
+    return { sent: false, messageId: null, error: deliveryError(error) };
+  }
+}
+
+function campaignGoalLabel(goal: string | null | undefined): string {
+  if (goal === "vendor_leads") return "Vendor leads";
+  if (goal === "buyer_leads") return "Buyer leads";
+  if (goal === "listing_promotion") return "Listing promotion";
+  if (goal === "market_update") return "Market update";
+  return "Local lead generation";
+}
+
+function deliveryError(error: unknown): string {
+  const message = error instanceof Error ? error.message : "Email delivery failed.";
+  return message.slice(0, 500);
 }

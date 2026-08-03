@@ -381,7 +381,7 @@ export function ManagedSetup() {
           <h2>Want Blockwise to run it with you?</h2>
           <p className="hw-sub">
             Managed service starts at US$1,500/month or A$2,500/month, plus ad spend. Book a call
-            before paying, or start managed onboarding and book immediately.
+            so we can confirm the scope and onboarding plan before you pay.
           </p>
           <ul className="hw-control-points hw-control-points--ink">
             <li>

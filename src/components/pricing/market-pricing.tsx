@@ -133,18 +133,11 @@ export function MarketPricing() {
             </p>
             <div className="pricing-managed-actions">
               <CtaLink
-                location={`pricing-managed-start-${market}`}
-                href={`/signup?offer=managed&market=${market}`}
-                className="hw-btn hw-btn--dark"
-              >
-                Subscribe and book onboarding
-              </CtaLink>
-              <CtaLink
                 location={`pricing-managed-call-${market}`}
                 href="/#managed-setup"
-                className="hw-btn hw-btn--outline"
+                className="hw-btn hw-btn--dark"
               >
-                Book a call first
+                Book a managed-service call
               </CtaLink>
             </div>
           </div>

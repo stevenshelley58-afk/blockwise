@@ -80,15 +80,15 @@ export function DangerSection({ supabase, router, workspaceId }: { supabase: SB;
       <Dialog open={confirmDeleteOpen} onOpenChange={(open) => setConfirmDeleteOpen(open)}>
         <DialogContent showCloseButton={false} className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Delete your account?</DialogTitle>
-            <DialogDescription>This will permanently delete your account and all data. This cannot be undone.</DialogDescription>
+            <DialogTitle>Request workspace deletion?</DialogTitle>
+            <DialogDescription>We will verify the request, stop active services, and permanently delete the workspace data within the period stated in our Privacy Policy.</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" type="button" onClick={() => setConfirmDeleteOpen(false)}>
               Cancel
             </Button>
             <Button variant="destructive" type="button" onClick={confirmDeletion}>
-              Delete my account
+              Submit deletion request
             </Button>
           </DialogFooter>
         </DialogContent>

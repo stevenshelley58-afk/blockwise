@@ -289,6 +289,7 @@ export async function resolveHandler(kind: string): Promise<Handler | null> {
           planId: String(payload.planId),
           fetchImpl: context.fetchImpl,
           compensationFetchImpl: context.metaActivationCompensationFetchImpl,
+          signal: context.signal,
         });
     }
     case "publish.meta.mutate": {
@@ -317,6 +318,8 @@ const HEARTBEAT_EVERY_MS = positiveNumber(
 );
 const META_ACTIVATION_COMPENSATION_REQUEST_TIMEOUT_MS = 30_000;
 const LEASE_LOSS_HANDLER_DRAIN_TIMEOUT_MS = 100_000;
+const JOB_EXECUTION_TIMEOUT_MS = positiveNumber("WORKER_JOB_TIMEOUT_MS", 15 * 60_000);
+const JOB_TIMEOUT_HANDLER_DRAIN_MS = 30_000;
 
 if (HEARTBEAT_EVERY_MS >= LEASE_SECONDS * 1_000) {
   throw new Error("WORKER_HEARTBEAT_INTERVAL_MS must be shorter than WORKER_LEASE_SECONDS.");
@@ -335,6 +338,8 @@ export async function runOnce(
     heartbeatTimeoutMs?: number;
     leaseSeconds?: number;
     fetchImpl?: typeof fetch;
+    executionTimeoutMs?: number;
+    shutdownSignal?: AbortSignal;
   } = {},
 ): Promise<boolean> {
   const leaseSeconds = options.leaseSeconds ?? LEASE_SECONDS;
@@ -366,6 +371,11 @@ export async function runOnce(
     leaseSeconds,
     timeoutMs: options.heartbeatTimeoutMs,
   });
+  const executionController = new AbortController();
+  const executionTimeoutMs = options.executionTimeoutMs ?? JOB_EXECUTION_TIMEOUT_MS;
+  const executionSignals = [heartbeat.signal, executionController.signal];
+  if (options.shutdownSignal) executionSignals.push(options.shutdownSignal);
+  const executionSignal = AbortSignal.any(executionSignals);
   let executionError: Error | null = null;
   const handlerPromise = (async () => {
     assertPayloadWorkspace(job);
@@ -373,9 +383,9 @@ export async function runOnce(
     if (!handler) {
       throw new Error(`No handler registered for job kind "${job.kind}".`);
     }
-    const fetchImpl = createLeaseGuardedFetch(heartbeat.signal, options.fetchImpl);
+    const fetchImpl = createLeaseGuardedFetch(executionSignal, options.fetchImpl);
     await handler(job.payload ?? {}, supabase, {
-      signal: heartbeat.signal,
+      signal: executionSignal,
       fetchImpl,
       ...(job.kind === "publish.meta.execute" || job.kind === "publish.meta.mutate"
         ? { metaActivationCompensationFetchImpl: createMetaActivationCompensationFetch(options.fetchImpl) }
@@ -383,10 +393,18 @@ export async function runOnce(
     });
   })();
 
+  const timeoutError = new Error(`Job execution timed out after ${executionTimeoutMs}ms.`);
+  const executionTimeout = setTimeout(() => executionController.abort(timeoutError), executionTimeoutMs);
+  const executionTimedOut = new Promise<never>((_resolve, reject) => {
+    executionController.signal.addEventListener("abort", () => reject(executionController.signal.reason), { once: true });
+  });
+
   try {
-    await Promise.race([handlerPromise, heartbeat.whenLost]);
+    await Promise.race([handlerPromise, heartbeat.whenLost, executionTimedOut]);
   } catch (err) {
     executionError = toError(err);
+  } finally {
+    clearTimeout(executionTimeout);
   }
 
   const heartbeatError = await heartbeat.stop();
@@ -402,12 +420,27 @@ export async function runOnce(
         `Lease-loss handler drain timed out after ${LEASE_LOSS_HANDLER_DRAIN_TIMEOUT_MS}ms.`,
       );
     } catch (drainError) {
-      log(`job ${job.id} lease-loss drain error: ${toError(drainError).message}`);
+      throw new WorkerRestartRequiredError(
+        `Job ${job.id} did not stop after lease loss: ${toError(drainError).message}`,
+      );
     }
     throw heartbeatError;
   }
 
   if (executionError) {
+    if (executionController.signal.aborted) {
+      try {
+        await withTimeout(
+          handlerPromise.then(() => undefined, () => undefined),
+          JOB_TIMEOUT_HANDLER_DRAIN_MS,
+          `Timed-out handler did not stop within ${JOB_TIMEOUT_HANDLER_DRAIN_MS}ms.`,
+        );
+      } catch (drainError) {
+        throw new WorkerRestartRequiredError(
+          `Job ${job.id} remained active after timeout: ${toError(drainError).message}`,
+        );
+      }
+    }
     const outcome = await settleFailedJob(supabase, job, executionError.message);
     if (job.kind === "adstudio.generate.template" && outcome === "failed") {
       await finalizeAdStudioGenerationFailure(job.payload, executionError.message, supabase);
@@ -549,6 +582,7 @@ async function heartbeatJob(
 }
 
 class LeaseLostError extends Error {}
+class WorkerRestartRequiredError extends Error {}
 
 function createLeaseGuardedFetch(signal: AbortSignal, fetchImpl: typeof fetch = fetch): typeof fetch {
   return async (input, init) => {
@@ -805,6 +839,18 @@ async function main() {
   await preflightWorker(expectedRevision);
 
   const supabase = createSupabaseServiceClient();
+  const shutdownController = new AbortController();
+  let shutdownRequested = false;
+  const requestShutdown = (signal: string) => {
+    if (shutdownRequested) return;
+    shutdownRequested = true;
+    log(`${signal} received; stopping after the current job is safely released`);
+    shutdownController.abort(new Error(`Worker shutdown requested by ${signal}.`));
+  };
+  const onSigterm = () => requestShutdown("SIGTERM");
+  const onSigint = () => requestShutdown("SIGINT");
+  process.on("SIGTERM", onSigterm);
+  process.on("SIGINT", onSigint);
   log(
     `starting: revision=${expectedRevision} pollIdle=${POLL_IDLE_MS}ms pollBusy=${POLL_BUSY_MS}ms lease=${LEASE_SECONDS}s heartbeatEvery=${HEARTBEAT_EVERY_MS}ms reapEvery=${REAP_EVERY_MS}ms`,
   );
@@ -819,14 +865,21 @@ async function main() {
   // LOCKED), so multiple worker replicas can run this same loop without
   // double-processing. One job at a time keeps provider side-effects ordered
   // per worker and bounded.
-  for (;;) {
-    try {
-      const did = await runOnce(supabase);
-      await sleep(did ? POLL_BUSY_MS : POLL_IDLE_MS);
-    } catch (err) {
-      log(`loop error: ${err instanceof Error ? err.message : String(err)}`);
-      await sleep(POLL_IDLE_MS);
+  try {
+    while (!shutdownRequested) {
+      try {
+        const did = await runOnce(supabase, { shutdownSignal: shutdownController.signal });
+        if (!shutdownRequested) await sleep(did ? POLL_BUSY_MS : POLL_IDLE_MS);
+      } catch (err) {
+        if (err instanceof WorkerRestartRequiredError) throw err;
+        log(`loop error: ${err instanceof Error ? err.message : String(err)}`);
+        if (!shutdownRequested) await sleep(POLL_IDLE_MS);
+      }
     }
+  } finally {
+    clearInterval(reaper);
+    process.off("SIGTERM", onSigterm);
+    process.off("SIGINT", onSigint);
   }
 }
 
@@ -852,6 +905,10 @@ async function entrypoint(args: string[]): Promise<void> {
 
 const isMain = Boolean(process.argv[1]) && import.meta.url === pathToFileURL(resolve(process.argv[1])).href;
 if (isMain) {
+  process.on("unhandledRejection", (reason) => {
+    console.error("[worker] unhandled rejection:", reason);
+    process.exit(1);
+  });
   entrypoint(process.argv.slice(2)).catch((err) => {
     console.error("[worker] fatal:", err);
     process.exit(1);

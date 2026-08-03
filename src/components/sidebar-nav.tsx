@@ -70,7 +70,11 @@ const operatorNavItems: NavItem[] = [
   { href: "/settings", label: "Settings", icon: Settings },
   { href: "/workforce", label: "Workforce", icon: Bot },
   { href: "/model-control", label: "Model Control", icon: Settings2 },
-];
+].filter((item) => {
+  if (item.href === "/ad-radar") return niche.features.adRadar;
+  if (item.href === "/property-check") return niche.features.propertyCheck;
+  return true;
+});
 
 // Self-serve labels, order, and feature gating live in the niche config
 // (src/config/niche) — the white-label layer. Icons stay here, keyed by
@@ -100,7 +104,7 @@ const monitorNavItems: NavItem[] = [
   { href: "/ad-radar", label: "Ad Radar", icon: RadarIcon },
   { href: "/leads", label: "Leads", icon: UsersRound },
   { href: "/settings", label: "Settings", icon: Settings },
-];
+].filter((item) => item.href !== "/ad-radar" || niche.features.adRadar);
 
 export const navByVariant: Record<SidebarVariant, NavItem[]> = {
   operator: operatorNavItems,

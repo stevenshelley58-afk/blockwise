@@ -25,6 +25,10 @@ export default function ResetPasswordPage() {
       setExpired(true);
     }, 30000);
 
+    void supabase.auth.getUser().then(({ data, error: userError }) => {
+      if (!userError && data.user) setIsReady(true);
+    });
+
     return () => {
       listener.subscription.unsubscribe();
       clearTimeout(timer);
@@ -37,6 +41,11 @@ export default function ResetPasswordPage() {
 
     if (newPassword !== confirmPassword) {
       setError("Passwords do not match.");
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      setError("Use at least 8 characters.");
       return;
     }
 
@@ -87,6 +96,7 @@ export default function ResetPasswordPage() {
                 value={newPassword}
                 onChange={(event) => setNewPassword(event.target.value)}
                 autoComplete="new-password"
+                minLength={8}
                 required
               />
             </label>
@@ -97,6 +107,7 @@ export default function ResetPasswordPage() {
                 value={confirmPassword}
                 onChange={(event) => setConfirmPassword(event.target.value)}
                 autoComplete="new-password"
+                minLength={8}
                 required
               />
             </label>

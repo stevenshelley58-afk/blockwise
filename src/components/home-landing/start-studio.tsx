@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { AnimatePresence, MotionConfig, motion } from "motion/react";
+import Image from "next/image";
 
 import { CtaLink } from "@/components/landing/cta-link";
 
@@ -97,7 +98,7 @@ export function StartStudio() {
                       onClick={() => setSelectedId(t.id)}
                     >
                       <span className="hw-studio-card-thumb" aria-hidden>
-                        <img src={t.imageSrc} alt="" loading="lazy" />
+                        <Image src={t.imageSrc} alt="" fill sizes="(max-width: 600px) 36vw, (max-width: 960px) 22vw, 130px" />
                       </span>
                       <span className="hw-studio-card-label">{t.label}</span>
                     </motion.button>

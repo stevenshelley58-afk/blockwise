@@ -8,6 +8,7 @@ import { loadOperatorCustomerDetail } from "@/lib/operator/customers";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 import { CustomerActions } from "./customer-actions";
+import { MetaPartnerAssignment } from "./meta-partner-assignment";
 
 export const dynamic = "force-dynamic";
 
@@ -67,6 +68,7 @@ export default async function OperatorCustomerDetailPage({ params }: PageProps) 
       </section>
 
       <CustomerActions workspaceId={workspaceId} />
+      <MetaPartnerAssignment workspaceId={workspaceId} />
 
       <DetailPanel id="activation" title="Activation timeline">
         <KeyValueTable rows={timestampEntries(detail.activation ?? {})} empty="No activation record is available." />

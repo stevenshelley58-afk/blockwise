@@ -3,7 +3,6 @@ import { z } from "zod";
 
 import { sendDemoRequestNotification } from "@/lib/notify/demo-request-email";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const runtime = "nodejs";
@@ -64,8 +63,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.from("demo_requests").insert({
+  const { data: inserted, error } = await serviceClient.from("demo_requests").insert({
     name: parsed.data.name,
     agency: clean(parsed.data.agency),
     email: parsed.data.email,
@@ -75,7 +73,7 @@ export async function POST(request: NextRequest) {
     source: "landing",
     user_agent: request.headers.get("user-agent"),
     referrer: request.headers.get("referer"),
-  });
+  }).select("id").single();
 
   if (error) {
     console.error("demo-request insert failed", error);
@@ -85,19 +83,28 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Fire-and-forget notification. A failure here must not affect the response —
-  // the lead is already safely stored in the database.
-  try {
-    await sendDemoRequestNotification({
-      name: parsed.data.name,
-      email: parsed.data.email,
-      agency: clean(parsed.data.agency),
-      phone: clean(parsed.data.phone),
-      suburb: clean(parsed.data.suburb),
-      message: clean(parsed.data.message),
-    });
-  } catch (notifyError) {
-    console.error("demo-request notification failed", notifyError);
+  const notification = await sendDemoRequestNotification({
+    name: parsed.data.name,
+    email: parsed.data.email,
+    agency: clean(parsed.data.agency),
+    phone: clean(parsed.data.phone),
+    suburb: clean(parsed.data.suburb),
+    message: clean(parsed.data.message),
+  });
+  const { error: notificationUpdateError } = await serviceClient
+    .from("demo_requests")
+    .update({
+      operator_notification_status: notification.sent ? "sent" : "failed",
+      operator_notified_at: notification.sent ? new Date().toISOString() : null,
+      operator_notification_error: notification.error,
+      operator_notification_message_id: notification.messageId,
+    })
+    .eq("id", inserted.id);
+  if (notificationUpdateError) {
+    console.error("demo-request notification status update failed", notificationUpdateError);
+  }
+  if (!notification.sent) {
+    console.error("demo-request notification failed", notification.error);
   }
 
   return NextResponse.json({ ok: true });

@@ -163,6 +163,7 @@ async function resumePersistedTemplateCampaign(input: {
       imageRef,
     }],
   });
+  void editingLayersTask.catch(() => undefined);
 
   return {
     campaignId: campaignPack.campaign.campaignId,
@@ -614,6 +615,7 @@ export async function runTemplateCampaignGeneration(
           }],
         })
     : Promise.resolve();
+  void editingLayersTask.catch(() => undefined);
 
   // Story background task: the story promise is already in flight. When it
   // lands, persist it, patch the campaign, and

@@ -76,9 +76,9 @@ export async function fetchMetaLeadFormLeads(input: {
 }): Promise<NormalizedMetaLead[]> {
   const groups = await Promise.all(
     input.formIds.map(async (formId) => {
-      const payload = await fetchMetaLeadList(input, formId);
+      const leads = await fetchMetaLeadList(input, formId);
 
-      return (payload.data ?? []).map((lead) => normalizeMetaLead({ ...lead, form_id: lead.form_id ?? formId }));
+      return leads.map((lead) => normalizeMetaLead({ ...lead, form_id: lead.form_id ?? formId }));
     }),
   );
 
@@ -171,7 +171,7 @@ async function fetchMetaLeadList(
     fetchImpl?: typeof fetch;
   },
   formId: string,
-): Promise<{ data?: RawMetaLead[]; error?: { message?: string } }> {
+): Promise<RawMetaLead[]> {
   const fetchImpl = input.fetchImpl ?? fetch;
   const url = new URL(`https://graph.facebook.com/${input.graphVersion ?? DEFAULT_META_GRAPH_VERSION}/${formId}/leads`);
   url.searchParams.set("fields", "id,created_time,ad_id,adset_id,campaign_id,form_id,field_data");
@@ -179,17 +179,38 @@ async function fetchMetaLeadList(
   url.searchParams.set("access_token", input.accessToken);
 
   if (input.since) {
-    url.searchParams.set("filtering", JSON.stringify([{ field: "time_created", operator: "GREATER_THAN", value: input.since }]));
+    const sinceMs = Date.parse(input.since);
+    if (!Number.isFinite(sinceMs)) throw new Error("Meta lead sync received an invalid since timestamp.");
+    url.searchParams.set(
+      "filtering",
+      JSON.stringify([{ field: "time_created", operator: "GREATER_THAN", value: Math.floor(sinceMs / 1000) }]),
+    );
   }
 
-  const response = await fetchImpl(url.toString(), { method: "GET" });
-  const payload = (await response.json().catch(() => ({}))) as { data?: RawMetaLead[]; error?: { message?: string } };
+  const leads: RawMetaLead[] = [];
+  let nextUrl: string | null = url.toString();
+  for (let page = 0; nextUrl && page < 100; page += 1) {
+    const requestUrl = new URL(nextUrl);
+    if (requestUrl.protocol !== "https:" || requestUrl.hostname !== "graph.facebook.com") {
+      throw new Error("Meta returned an invalid lead pagination URL.");
+    }
+    const response = await fetchImpl(requestUrl.toString(), { method: "GET" });
+    const payload = (await response.json().catch(() => ({}))) as {
+      data?: RawMetaLead[];
+      error?: { message?: string };
+      paging?: { next?: string };
+    };
 
-  if (!response.ok) {
-    throw new Error(payload.error?.message ?? `Meta lead fetch failed with ${response.status}.`);
+    if (!response.ok) {
+      throw new Error(payload.error?.message ?? `Meta lead fetch failed with ${response.status}.`);
+    }
+
+    leads.push(...(payload.data ?? []));
+    nextUrl = payload.paging?.next ?? null;
   }
 
-  return payload;
+  if (nextUrl) throw new Error("Meta lead pagination exceeded 100 pages.");
+  return leads;
 }
 
 function normalizeFieldName(value: string): string {

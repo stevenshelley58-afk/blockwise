@@ -25,6 +25,7 @@ export function LeadQualitySelect({
 }) {
   const [selected, setSelected] = useState(value);
   const [lastSaved, setLastSaved] = useState(value);
+  const [saveError, setSaveError] = useState("");
   const [isPending, startTransition] = useTransition();
 
   return (
@@ -45,17 +46,19 @@ export function LeadQualitySelect({
         onChange={(event) => {
           const next = event.target.value as LeadQualityLabel;
           setSelected(next);
+          setSaveError("");
           startTransition(async () => {
-            const response = await fetch(`/api/leads/${encodeURIComponent(leadId)}/quality`, {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ workspaceId, label: next }),
-            });
-
-            if (response.ok) {
+            try {
+              const response = await fetch(`/api/leads/${encodeURIComponent(leadId)}/quality`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ workspaceId, label: next }),
+              });
+              if (!response.ok) throw new Error("Lead quality could not be saved.");
               setLastSaved(next);
-            } else {
+            } catch {
               setSelected(lastSaved);
+              setSaveError("Lead quality could not be saved. Try again.");
             }
           });
         }}
@@ -75,6 +78,7 @@ export function LeadQualitySelect({
         strokeWidth={2.5}
         className="pointer-events-none absolute top-1/2 right-[9px] -translate-y-1/2 text-(--faint)"
       />
+      {saveError ? <span className="sr-only" role="alert">{saveError}</span> : null}
     </span>
   );
 }

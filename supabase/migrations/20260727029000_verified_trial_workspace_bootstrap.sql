@@ -86,7 +86,7 @@ begin
   if v_workspace_id is not null then
     insert into public.customer_activations (workspace_id)
     values (v_workspace_id)
-    on conflict (workspace_id) do nothing;
+    on conflict on constraint customer_activations_pkey do nothing;
 
     perform public.record_customer_activation_milestone(
       v_workspace_id,
@@ -193,11 +193,11 @@ begin
 
   insert into public.workspace_members (workspace_id, profile_id, role)
   values (v_workspace_id, p_verified_user_id, 'owner')
-  on conflict (workspace_id, profile_id) do nothing;
+  on conflict on constraint workspace_members_pkey do nothing;
 
   insert into public.customer_activations (workspace_id)
   values (v_workspace_id)
-  on conflict (workspace_id) do nothing;
+  on conflict on constraint customer_activations_pkey do nothing;
 
   perform public.record_customer_activation_milestone(
     v_workspace_id,

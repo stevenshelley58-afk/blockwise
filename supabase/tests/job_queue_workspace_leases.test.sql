@@ -687,10 +687,10 @@ select ok(
     from public.meta_publish_plans
     where id = '77777777-7777-4777-8777-777777777777'
       and workspace_id = '71111111-1111-4111-8111-111111111111'
-      and status = 'publishing'
+      and status = 'failed'
       and last_error = 'Job lease expired before settlement.'
   ),
-  'reaping preserves publishing reconciliation state and records the lease error'
+  'reaping closes an exhausted publish plan and records the lease error'
 );
 
 insert into queue_test_ids (name, id)

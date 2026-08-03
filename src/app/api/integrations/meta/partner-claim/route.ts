@@ -10,6 +10,7 @@ import {
   META_PARTNER_SCOPES,
   verifyPartnerAccountAccess,
 } from "@/lib/providers/meta-partner";
+import { resolveMetaPageAccessToken } from "@/lib/providers/meta-assets";
 import { upsertProviderConnectionWithTokens } from "@/lib/providers/provider-connections";
 import { syncProviderWorkspace } from "@/lib/providers/provider-sync";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
@@ -24,6 +25,15 @@ type ClaimBody = {
   adAccountName?: string;
   currency?: string;
   timezone?: string;
+};
+
+type AssignmentRow = {
+  ad_account_id: string;
+  ad_account_name: string;
+  page_id: string;
+  page_name: string;
+  currency: string;
+  timezone: string;
 };
 
 /**
@@ -60,6 +70,22 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const serviceSupabase = createSupabaseServiceClient();
+  const { data: assignmentData, error: assignmentError } = await serviceSupabase
+    .from("meta_partner_account_assignments")
+    .select("ad_account_id,ad_account_name,page_id,page_name,currency,timezone")
+    .eq("workspace_id", access.workspaceId)
+    .maybeSingle();
+  if (assignmentError) return NextResponse.json({ error: assignmentError.message }, { status: 500 });
+  const assignment = assignmentData as AssignmentRow | null;
+  const normalizedAccountId = adAccountId.startsWith("act_") ? adAccountId : `act_${adAccountId}`;
+  if (!assignment || assignment.ad_account_id !== normalizedAccountId) {
+    return NextResponse.json(
+      { error: "That Meta account has not been verified for this workspace. Contact Blockwise support." },
+      { status: 403 },
+    );
+  }
+
   // Refuse to persist a connection for an account the token cannot act on.
   // Covers view-only shares and shares revoked before the customer confirmed.
   let accessible = false;
@@ -78,12 +104,18 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const normalizedAccountId = adAccountId.startsWith("act_") ? adAccountId : `act_${adAccountId}`;
-  const accountName = body.adAccountName?.trim() || normalizedAccountId;
-  const currency = body.currency?.trim() || "AUD";
-  const timezone = body.timezone?.trim() || "Australia/Perth";
+  try {
+    await resolveMetaPageAccessToken({ accessToken: config.systemToken, pageId: assignment.page_id });
+  } catch {
+    return NextResponse.json(
+      { error: "Blockwise does not have Page access for this workspace. Share the Page and ask support to verify it." },
+      { status: 409 },
+    );
+  }
 
-  const serviceSupabase = createSupabaseServiceClient();
+  const accountName = assignment.ad_account_name;
+  const currency = assignment.currency;
+  const timezone = assignment.timezone;
 
   try {
     await upsertProviderConnectionWithTokens({
@@ -105,7 +137,7 @@ export async function POST(request: NextRequest) {
           metaAdAccountId: normalizedAccountId,
           metaBusinessId: config.businessId,
           metaBusinessName: "",
-          pageId: "",
+          pageId: assignment.page_id,
           instagramActorId: null,
           pixelId: null,
           leadDestination: { type: "manual", label: "Manual review", config: { endpoint: "" } },

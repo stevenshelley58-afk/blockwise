@@ -228,9 +228,9 @@ function primaryImageForVariant(
 ): { src: string; label: string } | null {
   if (!variantId) return null;
   const creative =
-    (format ? pack.creatives.find((item) => item.variantId === variantId && item.format === format) : null) ??
-    pack.creatives.find((item) => item.variantId === variantId && item.format === "9:16") ??
-    pack.creatives.find((item) => item.variantId === variantId);
+    (format
+      ? pack.creatives.find((item) => item.variantId === variantId && item.format === format)
+      : pack.creatives.find((item) => item.variantId === variantId));
   return primaryImageFromCreative(creative);
 }
 
@@ -677,12 +677,10 @@ export function AdStudioWorkbench({
   const editorFormat = PREVIEW_TO_AD_FORMAT[previewFormat];
   const currentCreative = useMemo(() => {
     const variantId = selectedVariant?.variantId;
-    return (
-      pack.creatives.find((creative) => creative.variantId === variantId && creative.format === editorFormat) ??
-      pack.creatives.find((creative) => creative.format === editorFormat) ??
-      pack.creatives[0] ??
-      null
-    );
+    if (!variantId) return null;
+    return pack.creatives.find(
+      (creative) => creative.variantId === variantId && creative.format === editorFormat,
+    ) ?? null;
   }, [editorFormat, pack.creatives, selectedVariant?.variantId]);
 
 
@@ -757,7 +755,12 @@ export function AdStudioWorkbench({
   const editorPreparing = pack.creatives.some(
     (creative) => isCloneCreative(creative) && !creative.canvas.cloneQa,
   );
-  const editorPreparingCampaignId = editorPreparing ? pack.campaign.campaignId : null;
+  const selectedFormatMissing = Boolean(
+    selectedVariant?.variantId &&
+      pack.creatives.some((creative) => creative.variantId === selectedVariant.variantId) &&
+      !currentCreative,
+  );
+  const editorPreparingCampaignId = editorPreparing || selectedFormatMissing ? pack.campaign.campaignId : null;
   useEffect(() => {
     if (!editorPreparingCampaignId) return;
     const supabase = createSupabaseBrowserClient();
@@ -787,15 +790,20 @@ export function AdStudioWorkbench({
             creative.canvas.cloneQa ? [[creative.creativeId, creative.canvas.cloneQa] as const] : [],
           ),
         );
-        if (!cancelled && qaByCreative.size > 0) {
+        if (!cancelled && freshCreatives.length > 0) {
           setPack((current) => ({
             ...current,
-            creatives: current.creatives.map((creative) => {
-              const qa = qaByCreative.get(creative.creativeId);
-              return qa && !creative.canvas.cloneQa
-                ? { ...creative, canvas: { ...creative.canvas, cloneQa: qa } }
-                : creative;
-            }),
+            creatives: [
+              ...current.creatives.map((creative) => {
+                const qa = qaByCreative.get(creative.creativeId);
+                return qa && !creative.canvas.cloneQa
+                  ? { ...creative, canvas: { ...creative.canvas, cloneQa: qa } }
+                  : creative;
+              }),
+              ...freshCreatives.filter(
+                (fresh) => !current.creatives.some((creative) => creative.creativeId === fresh.creativeId),
+              ),
+            ],
           }));
         }
       } catch {
@@ -814,7 +822,7 @@ export function AdStudioWorkbench({
       .on(
         "postgres_changes",
         {
-          event: "UPDATE",
+          event: "*",
           schema: "public",
           table: "adstudio_creatives",
           filter: `campaign_id=eq.${editorPreparingCampaignId}`,
@@ -839,13 +847,28 @@ export function AdStudioWorkbench({
 
   async function confirmMediaReplacement() {
     if (!pendingMediaReplacement) return;
-    if (!currentCreative || !isCloneCreative(currentCreative)) {
+    const variantId = selectedVariant?.variantId;
+    const targetCreatives = pack.creatives.filter(
+      (creative) => creative.variantId === variantId && isCloneCreative(creative),
+    );
+    if (!variantId || targetCreatives.length === 0) {
       studio.showToast("Generate an ad before replacing its image.");
       return;
     }
-    const imageRegion = currentCreative.canvas.cloneQa?.regions.find((region) => region.kind === "image");
-    if (!imageRegion) {
-      studio.showToast("This ad does not have an editable image region.");
+    const requiredFormats: AdStudioFormat[] = ["4:5", "9:16"];
+    const missingFormats = requiredFormats.filter(
+      (targetFormat) => !targetCreatives.some((creative) => creative.format === targetFormat),
+    );
+    if (missingFormats.length > 0) {
+      studio.showToast("Wait for both Feed and Story to finish before replacing the image.");
+      return;
+    }
+    const editTargets = targetCreatives.flatMap((creative) => {
+      const imageRegion = creative.canvas.cloneQa?.regions.find((region) => region.kind === "image");
+      return imageRegion ? [{ creative, imageRegion }] : [];
+    });
+    if (editTargets.length !== targetCreatives.length) {
+      studio.showToast("Image editing is still preparing for one of the formats.");
       return;
     }
 
@@ -853,12 +876,22 @@ export function AdStudioWorkbench({
     studio.setBusy(true);
     studio.setBusyMessage("Generating a new ad with your image");
     try {
-      const result = await requestCreativeEdit({
-        creative: currentCreative,
-        mutation: { fieldKey: imageRegion.key, newImage: pendingMediaReplacement.fullSrc },
-        mutationId: crypto.randomUUID(),
+      const results = await Promise.allSettled(
+        editTargets.map(({ creative, imageRegion }) => requestCreativeEdit({
+          creative,
+          mutation: { fieldKey: imageRegion.key, newImage: pendingMediaReplacement.fullSrc },
+          mutationId: crypto.randomUUID(),
+        })),
+      );
+      results.forEach((result) => {
+        if (result.status === "fulfilled") updateCreative(result.value.creative);
       });
-      updateCreative(result.creative);
+      const failedFormats = results.flatMap((result, index) =>
+        result.status === "rejected" ? [editTargets[index]?.creative.format] : [],
+      ).filter((value): value is AdStudioFormat => Boolean(value));
+      if (failedFormats.length > 0) {
+        throw new Error(`${failedFormats.join(" and ")} could not be updated. Retry the image replacement.`);
+      }
       setPrimaryImage(pendingMediaReplacement.fullSrc);
       setPrimaryImageName(pendingMediaReplacement.label);
       setPendingMediaReplacement(null);
@@ -1063,7 +1096,18 @@ export function AdStudioWorkbench({
   }
 
   function renderCreativeEditor() {
-    if (!currentCreative) return renderEmptyPreview();
+    if (!currentCreative) {
+      if (selectedFormatMissing) {
+        return (
+          <div className="studio-empty" role="status">
+            <div className="studio-empty-ic"><RefreshCw aria-hidden size={22} /></div>
+            <strong>{format.label} is still rendering.</strong>
+            <span>The finished format will appear here automatically.</span>
+          </div>
+        );
+      }
+      return renderEmptyPreview();
+    }
 
     // AI-designed clone: one flat image with the copy baked into the pixels.
     // The layer editor would silently no-op on it, so edit in place instead —
@@ -1084,6 +1128,7 @@ export function AdStudioWorkbench({
               onSelectText={selectMetaCopyField}
             >
               <InPlaceAdEditor
+                key={currentCreative.creativeId}
                 creative={currentCreative}
                 onCreativeChange={updateCreative}
                 showToast={studio.showToast}
@@ -1366,7 +1411,7 @@ export function AdStudioWorkbench({
           </Link>
         )}
 
-        {(studio.mobileTab === "edit") && (
+        {studio.mobileTab === "edit" && isMobileViewport && (
           <div className="studio-mobile-format-tabs">
             {(["story", "feed"] as PreviewFormat[]).map((item) => (
               <button className={previewFormat === item ? "active" : ""} key={item} type="button" onClick={() => setPreviewFormat(item)}>
@@ -1380,7 +1425,7 @@ export function AdStudioWorkbench({
           <div className="studio-mobile-panel">{renderHomePanel()}</div>
         )}
 
-        {(studio.mobileTab === "edit") && (
+        {studio.mobileTab === "edit" && isMobileViewport && (
           <>
             <div className="studio-mobile-preview-wrap">
               {renderCreativeEditor()}
@@ -1425,7 +1470,7 @@ export function AdStudioWorkbench({
           </div>
         )}
 
-        {(studio.mobileTab === "edit") && (
+        {studio.mobileTab === "edit" && isMobileViewport && (
           <div className="studio-mobile-variants">
             <VariantStrip
               variants={variants}

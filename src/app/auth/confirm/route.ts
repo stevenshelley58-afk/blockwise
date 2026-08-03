@@ -32,26 +32,25 @@ function confirmFailedRedirect(request: NextRequest) {
 }
 
 function bootstrapFailedRedirect(request: NextRequest) {
-  return NextResponse.redirect(new URL("/login?error=workspace_bootstrap_failed", request.url));
+  return NextResponse.redirect(new URL("/access-unavailable?reason=workspace_bootstrap_failed", request.url));
 }
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const token_hash = requestUrl.searchParams.get("token_hash");
   const type = requestUrl.searchParams.get("type");
+  const code = requestUrl.searchParams.get("code");
+  const flow = requestUrl.searchParams.get("flow");
   const next = sanitizeNextPath(requestUrl.searchParams.get("next"));
 
-  if (!token_hash || !type) {
-    return confirmFailedRedirect(request);
-  }
-
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.auth.verifyOtp({
-    token_hash,
-    type: type as EmailOtpType,
-  });
+  const authError = code
+    ? (await supabase.auth.exchangeCodeForSession(code)).error
+    : token_hash && type
+      ? (await supabase.auth.verifyOtp({ token_hash, type: type as EmailOtpType })).error
+      : new Error("Confirmation parameters are missing.");
 
-  if (error) {
+  if (authError) {
     return confirmFailedRedirect(request);
   }
 
@@ -61,6 +60,12 @@ export async function GET(request: NextRequest) {
   } = await supabase.auth.getUser();
   if (userError || !user) {
     return confirmFailedRedirect(request);
+  }
+
+  const isRecovery = flow === "recovery" || type === "recovery";
+  const isSignup = flow === "signup" || type === "signup";
+  if (isRecovery) {
+    return NextResponse.redirect(new URL(next, requestUrl.origin));
   }
 
   const service = createSupabaseServiceClient();
@@ -80,14 +85,15 @@ export async function GET(request: NextRequest) {
     country: null,
     acquisitionSource: "unattributed",
     idempotencyKey: `auth:verified:${user.id}:${workspaceId ?? "unassigned"}`,
-    properties: { auth_type: type },
+    properties: { auth_type: type ?? flow ?? "pkce" },
   });
 
-  const redirectPath = type === "signup" ? appendConfirmed(next) : next;
+  const redirectPath = isSignup ? appendConfirmed(next) : next;
   return NextResponse.redirect(new URL(redirectPath, requestUrl.origin));
 }
 
 function appendConfirmed(path: string): string {
-  const sep = path.includes("?") ? "&" : "?";
-  return `${path}${sep}confirmed=1`;
+  const url = new URL(path, SAFE_REDIRECT_ORIGIN);
+  url.searchParams.set("confirmed", "1");
+  return `${url.pathname}${url.search}${url.hash}`;
 }

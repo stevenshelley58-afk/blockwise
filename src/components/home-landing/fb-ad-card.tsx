@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 type FbAdCardProps = {
   copy: string;
   photoSrc: string;
@@ -22,7 +24,7 @@ export function FbAdCard({ copy, photoSrc, photoAlt, domain, footHeading, footSu
         </span>
       </div>
       <p className="hw-fbad-copy">{copy}</p>
-      <div className="hw-fbad-photo"><img src={photoSrc} alt={photoAlt ?? ""} /></div>
+      <div className="hw-fbad-photo"><Image src={photoSrc} alt={photoAlt ?? ""} fill sizes="(max-width: 960px) 92vw, 520px" /></div>
       <div className="hw-fbad-foot">
         <span className="hw-fbad-foot-l">
           <span className="hw-fbad-domain">{domain}</span>
