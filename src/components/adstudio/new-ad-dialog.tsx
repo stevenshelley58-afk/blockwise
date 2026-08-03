@@ -192,6 +192,7 @@ function TemplateChoiceCard({
         </span>
       </span>
       <TemplateAdPreview template={template} brandKit={brandKit} />
+      <span className="studio-explore-card-use" aria-hidden>Use</span>
       <span className="studio-explore-card-action">
         <span>Use this template</span>
         <ArrowUpRight aria-hidden size={15} />
@@ -1823,18 +1824,32 @@ button.studio-explore-card{padding:0;cursor:pointer}
   .studio-explore-thumb--sample{height:286px}
   .studio-newad-library-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
-/* Desktop: 4 templates visible as 2×2 with no scrolling. Media height tracks
-   the viewport so two card rows always fit inside the dialog. */
+/* Desktop gallery: true-aspect-ratio Meta-style ad cards. Row height tracks
+   the viewport so exactly two rows are visible; columns fill the width. */
 @media(min-width:901px){
-  .studio-explore{gap:12px}
-  .studio-explore-grid{gap:12px}
-  .studio-explore-card-head{padding:8px 12px}
-  .studio-explore-card-action{padding:9px 12px;font-size:12.5px}
-  .studio-template-feed-head{padding:8px 11px 6px}
-  .studio-template-feed-primary{padding:0 11px 7px;font-size:11.5px;line-height:1.3;-webkit-line-clamp:2}
-  .studio-template-feed-link{padding:8px 11px}
-  .studio-template-feed-media img{max-height:max(120px,min(340px,calc(50dvh - 400px)))}
-  .studio-template-ad--fullscreen{align-self:center;height:max(120px,min(340px,calc(50dvh - 400px)));width:max(67.5px,min(191.25px,calc(28.125dvh - 225px)));margin:8px}
+  /* Two full rows always visible; row height tracks viewport height.
+     Card chrome is pinned (head 42 + feed-head 45 + primary 26 + link 48 +
+     2px borders = 163px for feed; head 42 + 12px story margins + 2px
+     borders = 68px for fullscreen) so media boxes hit exact 4:5 / 9:16. */
+  .studio-explore-grid{--row-h:clamp(240px,calc(50dvh - 114px),444px);display:flex;flex-wrap:wrap;align-content:flex-start;gap:12px}
+  .studio-explore-card--template{position:relative;flex:0 0 auto;height:var(--row-h)}
+  .studio-explore-card--template .studio-explore-card-action{display:none}
+  .studio-explore-card--template .studio-explore-card-head{height:42px;padding:7px 10px 6px;overflow:hidden}
+  .studio-explore-card--template .studio-explore-card-head strong{font-size:12.5px}
+  .studio-explore-card--template .studio-explore-card-head small{font-size:10px}
+  .studio-explore-card--feed{width:calc((var(--row-h) - 165px)*0.8 + 2px)}
+  .studio-explore-card--feed .studio-template-feed-head{height:45px;overflow:hidden}
+  .studio-explore-card--feed .studio-template-feed-primary{display:block;height:26px;padding:0 10px 6px;font-size:11px;line-height:1.45;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .studio-explore-card--feed .studio-template-feed-media{height:calc(var(--row-h) - 163px)}
+  .studio-explore-card--feed .studio-template-feed-media img{height:100%;aspect-ratio:auto}
+  .studio-explore-card--feed .studio-template-feed-link{height:48px;padding:6px 10px;overflow:hidden}
+  .studio-explore-card--feed .studio-template-feed-link small{font-size:9px}
+  .studio-explore-card--feed .studio-template-feed-link strong{font-size:11.5px;-webkit-line-clamp:1}
+  .studio-explore-card--feed .studio-template-feed-link em{display:none}
+  .studio-explore-card--feed .studio-template-feed-cta{padding:5px 8px;font-size:10.5px}
+  .studio-explore-card--fullscreen{width:calc((var(--row-h) - 68px)*0.5625 + 26px)}
+  .studio-explore-card-use{position:absolute;top:9px;right:9px;z-index:3;border-radius:999px;background:rgba(15,23,42,.82);color:#fff;font-size:11px;font-weight:750;padding:6px 11px;opacity:0;transform:translateY(-3px);transition:opacity .15s,transform .15s;pointer-events:none;box-shadow:0 4px 12px rgba(0,0,0,.25)}
+  .studio-explore-card--template:hover .studio-explore-card-use,.studio-explore-card--template:focus-visible .studio-explore-card-use{opacity:1;transform:none}
 }
 @media(max-width:560px){
   .studio-explore-filterbar{gap:8px}
