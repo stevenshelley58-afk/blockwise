@@ -6,7 +6,7 @@ const read = (file: string) => readFileSync(file, "utf8");
 
 test("disabled feature route mapping covers public and operator research surfaces", () => {
   const routes = read("src/lib/features/route-availability.ts");
-  const middleware = read("src/middleware.ts");
+  const middleware = read("src/proxy.ts");
 
   const featureRoutes = [
     "/ad-radar", "/property-check", "/suburb", "/audit", "/hero-lab", "/operator/research",
@@ -19,10 +19,8 @@ test("disabled feature route mapping covers public and operator research surface
   for (const route of featureRoutes) {
     assert.match(routes, new RegExp(`prefix: "${route.replaceAll("/", "\\/")}"`));
   }
-  for (const route of featureRoutes.filter((route) => route !== "/api/operator/research")) {
-    assert.match(middleware, new RegExp(route.replaceAll("/", "\\/")));
-  }
-  assert.match(middleware, /\/api\/operator\/:path\*/);
+  assert.match(middleware, /isFeatureRouteAvailable\(pathname, niche\.features\)/);
+  assert.match(middleware, /matcher:/);
   assert.match(middleware, /Cache-Control.*no-store/);
   assert.doesNotMatch(routes, /prefix: "\/api\/research"\s*,/);
 });

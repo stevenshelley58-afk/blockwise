@@ -54,11 +54,16 @@ export async function POST(request: NextRequest) {
 
   try {
     await recordDeletionRequest(userId, confirmationCode, parsed.payload);
+  } catch (error) {
+    console.error("[meta-data-deletion] failed to persist deletion request", error);
+    return NextResponse.json({ error: "Deletion request could not be recorded." }, { status: 500 });
+  }
+
+  try {
     await processMetaDataDeletionRequest(confirmationCode);
   } catch (error) {
-    // We still return success to Meta; failing the callback would just cause Meta
-    // to retry the same request later. We log the failure for our own follow-up.
-    console.error("[meta-data-deletion] failed to persist deletion request", error);
+    // The durable request remains visible as failed for operator follow-up.
+    console.error("[meta-data-deletion] deletion processing failed", error);
   }
 
   const origin = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? request.nextUrl.origin;

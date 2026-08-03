@@ -90,7 +90,7 @@ export async function AppShell({ children, requiredAccess = "authenticated" }: A
   }
 
   const variant: SidebarVariant = isOperator ? "operator" : workspaceMode === "self_serve" ? "self_serve" : "monitor";
-  const homeHref = isOperator ? "/operator" : "/self-serve";
+  const homeHref = isOperator ? "/operator" : workspaceMode === "self_serve" ? "/self-serve" : "/results";
   const workspaceName = isOperator ? "Operator Console" : workspace?.name ?? "Workspace";
   const accountEmail = profile?.email ?? claims.email ?? "";
   const accountName = profile?.full_name ?? accountEmail ?? "Signed in";

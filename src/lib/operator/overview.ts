@@ -78,6 +78,19 @@ type LeadDeliveryAttemptRow = {
   created_at?: string | null;
 };
 
+type DemoRequestRow = {
+  id: string;
+  created_at?: string | null;
+  name?: string | null;
+  agency?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  suburb?: string | null;
+  source?: string | null;
+  operator_notification_status?: string | null;
+  customer_email_status?: string | null;
+};
+
 export const LEAD_QUALITY_LABELS = ["valid", "invalid", "high_intent"] as const;
 
 export type LeadQualityLabel = (typeof LEAD_QUALITY_LABELS)[number];
@@ -322,12 +335,14 @@ export function buildResearchSignals(rows: ResearchSignalRow[]) {
 export function buildOperatorOverview(input: {
   workspaceCount: number;
   leadCount: number;
+  demoRequestCount: number;
   pendingApprovalCount: number;
   providerIssueCount: number;
   workspaces: WorkspaceOverviewRow[];
   providerConnections: ProviderConnectionRow[];
   approvals: ApprovalRow[];
   recentLeads: LeadRow[];
+  demoRequests: DemoRequestRow[];
   agentRuns: AgentRunRow[];
 }) {
   const providersByWorkspace = new Map<string, ProviderConnectionRow[]>();
@@ -403,6 +418,7 @@ export function buildOperatorOverview(input: {
     metrics: {
       workspaces: String(input.workspaceCount),
       leads: String(input.leadCount),
+      demoRequests: String(input.demoRequestCount),
       pendingApprovals: String(input.pendingApprovalCount),
       providerIssues: String(input.providerIssueCount),
     },
@@ -410,6 +426,18 @@ export function buildOperatorOverview(input: {
     providerHealthRows,
     approvalRows: buildApprovalRows(input.approvals).slice(0, 5),
     recentActivity,
+    demoRequests: input.demoRequests.map((request) => ({
+      id: request.id,
+      createdAt: request.created_at ?? null,
+      name: request.name ?? request.agency ?? "Unknown prospect",
+      agency: request.agency ?? "—",
+      email: request.email ?? "—",
+      phone: request.phone ?? "—",
+      suburb: request.suburb ?? "—",
+      source: request.source ?? "landing",
+      notificationStatus: request.operator_notification_status ?? "pending",
+      customerEmailStatus: request.customer_email_status ?? "not_required",
+    })),
   };
 }
 
@@ -431,41 +459,61 @@ export async function listCampaignReadinessRows(supabase: SupabaseServerClient, 
 }
 
 export async function listLeadRowsWithDedupe(supabase: SupabaseServerClient, workspaceId: string) {
-  const { data: leads } = await supabase
-    .from("leads")
-    .select("id,full_name,email,phone,suburb,provider,created_at")
-    .eq("workspace_id", workspaceId)
-    .order("created_at", { ascending: false });
-  const leadIds = ((leads ?? []) as LeadRow[]).map((lead) => lead.id);
+  const leads = await loadAllPages<LeadRow>(async (from, to) => {
+    const { data, error } = await supabase
+      .from("leads")
+      .select("id,full_name,email,phone,suburb,provider,created_at")
+      .eq("workspace_id", workspaceId)
+      .order("created_at", { ascending: false })
+      .range(from, to);
+    return { data: (data ?? []) as LeadRow[], error };
+  });
 
-  if (leadIds.length === 0) {
+  if (leads.length === 0) {
     return buildLeadRowsWithDedupe({ leads: [] });
   }
 
-  const [{ data: labels }, { data: attributions }, { data: dedupeRecords }, { data: deliveryAttempts }] = await Promise.all([
-    supabase
-      .from("lead_quality_labels")
-      .select("lead_id,label,created_at")
-      .eq("workspace_id", workspaceId)
-      .in("lead_id", leadIds)
-      .order("created_at", { ascending: false }),
-    supabase.from("lead_source_attribution").select("lead_id,source").eq("workspace_id", workspaceId).in("lead_id", leadIds),
-    supabase.from("lead_dedupe_records").select("lead_id,duplicate_of_lead_id").eq("workspace_id", workspaceId).in("lead_id", leadIds),
-    supabase
-      .from("lead_delivery_attempts")
-      .select("lead_id,status,destination_label,created_at")
-      .eq("workspace_id", workspaceId)
-      .in("lead_id", leadIds)
-      .order("created_at", { ascending: false }),
+  const [labels, attributions, dedupeRecords, deliveryAttempts] = await Promise.all([
+    loadAllPages<LeadLabelRow>(async (from, to) => {
+      const { data, error } = await supabase.from("lead_quality_labels").select("lead_id,label,created_at").eq("workspace_id", workspaceId).order("created_at", { ascending: false }).range(from, to);
+      return { data: (data ?? []) as LeadLabelRow[], error };
+    }),
+    loadAllPages<LeadAttributionRow>(async (from, to) => {
+      const { data, error } = await supabase.from("lead_source_attribution").select("lead_id,source").eq("workspace_id", workspaceId).range(from, to);
+      return { data: (data ?? []) as LeadAttributionRow[], error };
+    }),
+    loadAllPages<LeadDedupeRow>(async (from, to) => {
+      const { data, error } = await supabase.from("lead_dedupe_records").select("lead_id,duplicate_of_lead_id").eq("workspace_id", workspaceId).range(from, to);
+      return { data: (data ?? []) as LeadDedupeRow[], error };
+    }),
+    loadAllPages<LeadDeliveryAttemptRow>(async (from, to) => {
+      const { data, error } = await supabase.from("lead_delivery_attempts").select("lead_id,status,destination_label,created_at").eq("workspace_id", workspaceId).order("created_at", { ascending: false }).range(from, to);
+      return { data: (data ?? []) as LeadDeliveryAttemptRow[], error };
+    }),
   ]);
 
   return buildLeadRowsWithDedupe({
-    leads: (leads ?? []) as LeadRow[],
-    labels: (labels ?? []) as LeadLabelRow[],
-    attributions: (attributions ?? []) as LeadAttributionRow[],
-    dedupeRecords: (dedupeRecords ?? []) as LeadDedupeRow[],
-    deliveryAttempts: (deliveryAttempts ?? []) as LeadDeliveryAttemptRow[],
+    leads,
+    labels,
+    attributions,
+    dedupeRecords,
+    deliveryAttempts,
   });
+}
+
+async function loadAllPages<T>(
+  loadPage: (from: number, to: number) => Promise<{ data: T[]; error: { message: string } | null }>,
+): Promise<T[]> {
+  const pageSize = 500;
+  const rows: T[] = [];
+  for (let page = 0; page < 100; page += 1) {
+    const from = page * pageSize;
+    const result = await loadPage(from, from + pageSize - 1);
+    if (result.error) throw new Error(result.error.message);
+    rows.push(...result.data);
+    if (result.data.length < pageSize) return rows;
+  }
+  throw new Error("Lead list exceeded the supported 50,000-row window.");
 }
 
 export async function listAgentRunRows(supabase: SupabaseServerClient, workspaceId?: string) {
@@ -532,16 +580,19 @@ export async function loadOperatorOverview(supabase: SupabaseServerClient) {
   const [
     { count: workspaceCount },
     { count: leadCount },
+    { count: demoRequestCount },
     { count: pendingApprovalCount },
     { count: providerIssueCount },
     { data: workspaces },
     { data: providerConnections },
     { data: approvals },
     { data: recentLeads },
+    { data: demoRequests },
     { data: agentRuns },
   ] = await Promise.all([
     supabase.from("workspaces").select("id", { count: "exact", head: true }),
     supabase.from("leads").select("id", { count: "exact", head: true }),
+    supabase.from("demo_requests").select("id", { count: "exact", head: true }),
     supabase.from("approval_requests").select("id", { count: "exact", head: true }).eq("status", "requested"),
     supabase.from("provider_connections").select("id", { count: "exact", head: true }).in("status", ["needs_attention", "not_connected"]),
     supabase
@@ -565,6 +616,11 @@ export async function loadOperatorOverview(supabase: SupabaseServerClient) {
       .order("created_at", { ascending: false })
       .limit(25),
     supabase
+      .from("demo_requests")
+      .select("id,created_at,name,agency,email,phone,suburb,source,operator_notification_status,customer_email_status")
+      .order("created_at", { ascending: false })
+      .limit(25),
+    supabase
       .from("agent_runs")
       .select("id,status,task,confidence,error_message,created_at,workspaces(name),agent_definitions(name)")
       .order("created_at", { ascending: false })
@@ -574,12 +630,14 @@ export async function loadOperatorOverview(supabase: SupabaseServerClient) {
   return buildOperatorOverview({
     workspaceCount: workspaceCount ?? 0,
     leadCount: leadCount ?? 0,
+    demoRequestCount: demoRequestCount ?? 0,
     pendingApprovalCount: pendingApprovalCount ?? 0,
     providerIssueCount: providerIssueCount ?? 0,
     workspaces: (workspaces ?? []) as WorkspaceOverviewRow[],
     providerConnections: (providerConnections ?? []) as ProviderConnectionRow[],
     approvals: (approvals ?? []) as ApprovalRow[],
     recentLeads: (recentLeads ?? []) as LeadRow[],
+    demoRequests: (demoRequests ?? []) as DemoRequestRow[],
     agentRuns: (agentRuns ?? []) as AgentRunRow[],
   });
 }

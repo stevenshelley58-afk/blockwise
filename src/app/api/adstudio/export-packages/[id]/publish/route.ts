@@ -388,6 +388,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     publishReady,
     blockers,
     providerWritesEnabled: writesEnabled,
+    activePublishJob,
     publishRequests,
     providerPayloadReadiness,
     metaPublishPlan: metaPublishPlan

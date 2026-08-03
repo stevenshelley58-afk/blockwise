@@ -1,7 +1,8 @@
 import { enqueueQueuedJob } from "./job-queue-enqueue.ts";
 import { queueMetaLeadSync } from "./meta-leads-queue.ts";
 import { recoverStuckMetaPublishPlans } from "./meta-publish-queue.ts";
-import type { createSupabaseServiceClient } from "../supabase/service.ts";
+import { sendAlertEmail } from "../alerts/notify.ts";
+import { createSupabaseServiceClient } from "../supabase/service.ts";
 
 type ServiceSupabase = ReturnType<typeof createSupabaseServiceClient>;
 
@@ -149,8 +150,7 @@ export async function queueScheduledPerformanceReadModels(service: ServiceSupaba
     failed += results.filter((result) => result.status === "rejected").length;
   };
 
-  const [reportingScanned, activationScanned] = await Promise.all([
-    scanScheduledRowsById<ScheduledConnectionRow>({
+  const reportingScanned = await scanScheduledRowsById<ScheduledConnectionRow>({
       fetchPage: async (afterId, limit) => {
         let query = service
           .from("provider_connections")
@@ -178,8 +178,20 @@ export async function queueScheduledPerformanceReadModels(service: ServiceSupaba
           dedupeKey: `reporting-refresh:${workspaceId}:last-30:${bucket}`,
         }))));
       },
-    }),
-    scanScheduledRowsById<{ id: string }>({
+    });
+
+  return {
+    scanned: reportingScanned,
+    queued,
+    failed,
+  };
+}
+
+export async function queueScheduledActivationReconciliations(service: ServiceSupabase) {
+  const bucket = Math.floor(Date.now() / (24 * 60 * 60_000));
+  let queued = 0;
+  let failed = 0;
+  const scanned = await scanScheduledRowsById<{ id: string }>({
       fetchPage: async (afterId, limit) => {
         let query = service
           .from("workspaces")
@@ -189,25 +201,47 @@ export async function queueScheduledPerformanceReadModels(service: ServiceSupaba
         if (afterId) query = query.gt("id", afterId);
         return await query as unknown as ScheduledPage<{ id: string }>;
       },
-      handlePage: async (rows) => recordResults(await Promise.allSettled(rows.map((row) => enqueueQueuedJob({
-        workspaceId: row.id,
-        kind: "reconcile.customer.activation",
-        payload: { workspaceId: row.id },
-        maxAttempts: 3,
-        dedupeKey: `activation-reconcile:${row.id}:${bucket}`,
-      })))),
-    }),
-  ]);
+      handlePage: async (rows) => {
+        const results = await Promise.allSettled(rows.map((row) => enqueueQueuedJob({
+          workspaceId: row.id,
+          kind: "reconcile.customer.activation",
+          payload: { workspaceId: row.id },
+          maxAttempts: 3,
+          dedupeKey: `activation-reconcile:${row.id}:${bucket}`,
+        })));
+        queued += results.filter((result) => result.status === "fulfilled").length;
+        failed += results.filter((result) => result.status === "rejected").length;
+      },
+    });
 
-  return {
-    scanned: reportingScanned + activationScanned,
-    queued,
-    failed,
-  };
+  return { scanned, queued, failed };
 }
 
 export async function runScheduledMetaPublishWatchdog() {
-  // queueMetaPublishPlanExecution owns the three-attempt budget; fail_job_v2
-  // and reap_stale_jobs enforce that cap for both handled failures and crashes.
-  return recoverStuckMetaPublishPlans({ stuckMinutes: 5 });
+  const service = createSupabaseServiceClient();
+  const [{ data: reaped, error: reapError }, recovery] = await Promise.all([
+    service.rpc("reap_stale_jobs", { p_lease_seconds: 600 }),
+    recoverStuckMetaPublishPlans({ stuckMinutes: 5 }),
+  ]);
+  if (reapError) throw new Error(`Queue reaper failed: ${reapError.message}`);
+
+  const cutoff = new Date(Date.now() - 10 * 60_000).toISOString();
+  const { data: stalled, error: stalledError } = await service
+    .from("job_queue")
+    .select("id,kind,status,created_at,claimed_at,last_error")
+    .in("status", ["pending", "processing"])
+    .lt("created_at", cutoff)
+    .order("created_at", { ascending: true })
+    .limit(25);
+  if (stalledError) throw new Error(`Queue watchdog failed: ${stalledError.message}`);
+  if ((stalled?.length ?? 0) > 0) {
+    const oldest = stalled?.[0];
+    await sendAlertEmail({
+      subject: `[Blockwise CRITICAL] ${stalled?.length} background job(s) stalled`,
+      text: (stalled ?? []).map((job) => `${job.kind} · ${job.status} · created ${job.created_at}${job.last_error ? ` · ${job.last_error}` : ""}`).join("\n"),
+      idempotencyKey: `queue-stalled:${oldest?.id}:${oldest?.status}`,
+    });
+  }
+
+  return { ...recovery, reaped: Number(reaped ?? 0), stalled: stalled?.length ?? 0 };
 }

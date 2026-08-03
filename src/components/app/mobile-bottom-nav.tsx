@@ -23,7 +23,7 @@ type MobileNavItem = NavItem & {
 };
 
 const primaryHrefsByVariant: Partial<Record<SidebarVariant, string[]>> = {
-  monitor: ["/results", "/ad-radar", "/leads", "/settings"],
+  monitor: ["/results", "/leads", "/settings"],
   operator: ["/operator", "/operator/customers", "/operator/research"],
 };
 

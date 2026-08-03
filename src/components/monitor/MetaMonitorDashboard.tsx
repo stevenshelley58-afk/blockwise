@@ -16,7 +16,7 @@ import {
   Wallet,
   X,
 } from "lucide-react";
-import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { niche } from "@/config/niche";
@@ -96,6 +96,8 @@ export function MetaMonitorDashboard({
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [noticeDismissed, setNoticeDismissed] = useState(false);
+  const refreshRequestRef = useRef(0);
+  const refreshControllerRef = useRef<AbortController | null>(null);
 
   const surfaceFor = useCallback((
     nextRange: MonitorRange,
@@ -113,6 +115,11 @@ export function MetaMonitorDashboard({
     nextCustomRange: { since: string; until: string } = customRange,
     options: { manual?: boolean; cachedEtag?: string | null } = {},
   ) => {
+    const requestId = refreshRequestRef.current + 1;
+    refreshRequestRef.current = requestId;
+    refreshControllerRef.current?.abort();
+    const controller = new AbortController();
+    refreshControllerRef.current = controller;
     setIsRefreshing(true);
     setError(null);
 
@@ -131,10 +138,11 @@ export function MetaMonitorDashboard({
           !options.manual && (options.cachedEtag ?? etag)
             ? { "if-none-match": options.cachedEtag ?? etag }
             : undefined,
+        signal: controller.signal,
       });
 
       if (response.status === 304) {
-        setIsRefreshing(false);
+        if (requestId === refreshRequestRef.current) setIsRefreshing(false);
         return;
       }
 
@@ -148,6 +156,7 @@ export function MetaMonitorDashboard({
       const nextEtag = response.headers.get("etag") ?? etag;
       const nextGeneratedAt =
         response.headers.get("x-bw-snapshot-generated-at") ?? new Date().toISOString();
+      if (requestId !== refreshRequestRef.current) return;
       if (!options.manual) {
         setPayload(nextPayload);
         setEtag(nextEtag);
@@ -163,9 +172,10 @@ export function MetaMonitorDashboard({
         });
         setIsRefreshing(false);
       } else {
-        window.setTimeout(() => setIsRefreshing(false), 30_000);
+        setIsRefreshing(false);
       }
     } catch (refreshError) {
+      if (controller.signal.aborted || requestId !== refreshRequestRef.current) return;
       setError(refreshError instanceof Error ? refreshError.message : "Refresh failed.");
       setIsRefreshing(false);
     }

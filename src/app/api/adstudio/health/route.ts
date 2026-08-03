@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { requireOperator } from "@/lib/operator/auth";
 import {
   createImageProviderForCandidate,
   createTextProviderForCandidate,
@@ -27,6 +28,9 @@ type AdStudioHealth = {
 };
 
 export async function GET() {
+  const operator = await requireOperator();
+  if (!operator.ok) return operator.response;
+
   const [openai, google, image] = await Promise.all([
     checkTextProvider("openai"),
     checkTextProvider("google"),

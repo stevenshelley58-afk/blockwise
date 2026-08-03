@@ -70,8 +70,8 @@ export default async function DataDeletionPage({ searchParams }: PageProps) {
       </h2>
       <ol>
         <li>Sign in to your Blockwise workspace.</li>
-        <li>Open Workspace Settings → Danger Zone → Delete Workspace.</li>
-        <li>Type your workspace name to confirm.</li>
+        <li>Open Workspace Settings → Danger Zone → Request deletion.</li>
+        <li>Confirm the deletion request. Only the workspace owner can submit it.</li>
       </ol>
       <p>
         Blockwise will permanently delete your workspace, all configuration, all stored Meta tokens,

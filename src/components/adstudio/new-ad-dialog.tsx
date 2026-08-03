@@ -746,6 +746,7 @@ export function NewAdDialog({
     function handleKey(event: KeyboardEvent) {
       if (event.key === "Escape") {
         event.preventDefault();
+        if (submitting) return;
         closeCurrentView();
       }
       if (event.key === "Tab") trapFocus(event);
@@ -755,7 +756,7 @@ export function NewAdDialog({
       document.removeEventListener("keydown", handleKey);
       previousFocus.current?.focus();
     };
-  }, [closeCurrentView, open]);
+  }, [closeCurrentView, open, submitting]);
 
   if (!open) return null;
 
@@ -1833,7 +1834,7 @@ button.studio-explore-card{padding:0;cursor:pointer}
   .studio-template-feed-primary{padding:0 11px 7px;font-size:11.5px;line-height:1.3;-webkit-line-clamp:2}
   .studio-template-feed-link{padding:8px 11px}
   .studio-template-feed-media img{max-height:max(120px,min(340px,calc(50dvh - 400px)))}
-  .studio-template-ad--fullscreen{margin:8px auto;max-height:max(120px,min(340px,calc(50dvh - 400px)))}
+  .studio-template-ad--fullscreen{align-self:center;height:max(120px,min(340px,calc(50dvh - 400px)));width:max(67.5px,min(191.25px,calc(28.125dvh - 225px)));margin:8px}
 }
 @media(max-width:560px){
   .studio-explore-filterbar{gap:8px}

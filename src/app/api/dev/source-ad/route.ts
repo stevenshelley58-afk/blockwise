@@ -5,6 +5,10 @@ import path from "node:path";
 const CANDIDATES_DIR = path.join(process.cwd(), "meta_ad_candidates");
 
 export async function GET(req: Request) {
+  if (process.env.NODE_ENV === "production") {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
   const { searchParams } = new URL(req.url);
   const filePath = searchParams.get("path");
   if (!filePath) {

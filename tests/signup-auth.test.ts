@@ -29,7 +29,7 @@ test("signup starts or resumes an account with one passwordless email field", ()
   assert.match(source, /captchaToken:\s*turnstileToken/i);
   assert.match(source, /signInWithOtp\(\{/i);
   assert.match(source, /shouldCreateUser:\s*true/i);
-  assert.match(source, /emailRedirectTo:\s*`\$\{location\.origin\}\/auth\/confirm\?next=\/self-serve\?confirmed=1`/i);
+  assert.match(source, /emailRedirectTo:\s*`\$\{location\.origin\}\/auth\/confirm\?next=\/self-serve&flow=signup`/i);
   assert.match(source, /signup_flow:\s*"trial_self_serve"/i);
   assert.match(source, /name="company_website"/i);
   assert.match(source, /signup-honeypot/i);
@@ -58,6 +58,8 @@ test("confirm route verifies token hash and only redirects to safe relative next
   assert.match(source, /searchParams\.get\("type"\)/);
   assert.match(source, /searchParams\.get\("next"\)/);
   assert.match(source, /verifyOtp\(\{/);
+  assert.match(source, /exchangeCodeForSession\(code\)/);
+  assert.match(source, /type === "recovery"/);
   assert.match(source, /function sanitizeNextPath/i);
   assert.match(source, /const DEFAULT_NEXT_PATH = "\/self-serve"/);
   assert.match(source, /new URL\(redirectPath,\s*requestUrl\.origin\)/);

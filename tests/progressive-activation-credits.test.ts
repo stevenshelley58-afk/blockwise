@@ -251,18 +251,37 @@ test("activation derives repairs only from owning source rows", () => {
   assert.equal(derived.country_confirmed, "2026-07-27T01:30:00.000Z");
 });
 
-test("activation rollout defaults safely to the live home route while the flag is off", async () => {
-  const previous = process.env.PROGRESSIVE_ONBOARDING_ENABLED;
-  delete process.env.PROGRESSIVE_ONBOARDING_ENABLED;
-  try {
-    const result = await resolveCustomerActivation({ workspaceId: "workspace-1" });
-    assert.equal(result.currentStage, "complete");
-    assert.equal(result.resumePath, "/self-serve");
-    assert.deepEqual(result.operatorBlockers, ["progressive_activation_disabled"]);
-  } finally {
-    if (previous === undefined) delete process.env.PROGRESSIVE_ONBOARDING_ENABLED;
-    else process.env.PROGRESSIVE_ONBOARDING_ENABLED = previous;
-  }
+test("activation always derives the real next onboarding step", async () => {
+  const query = {
+    select() { return this; },
+    eq() { return this; },
+    async maybeSingle() {
+      return {
+        data: { workspace_id: "workspace-1", email_verified_at: "2026-08-03T00:00:00.000Z" },
+        error: null,
+      };
+    },
+  };
+  const service = { from() { return query; } };
+  const result = await resolveCustomerActivation({
+    workspaceId: "workspace-1",
+    serviceSupabase: service as never,
+    authoritativeRows: {
+      workspace: {},
+      emailVerifiedAt: "2026-08-03T00:00:00.000Z",
+      brandKits: [],
+      campaigns: [],
+      creatives: [],
+      providerConnections: [],
+      publishPlans: [],
+      bookings: [],
+    },
+    repair: false,
+  });
+
+  assert.equal(result.currentStage, "confirm_country");
+  assert.equal(result.resumePath, "/onboarding");
+  assert.deepEqual(result.operatorBlockers, []);
 });
 
 test("verified bootstrap disables auth insert provisioning and resumes idempotently", () => {
@@ -272,6 +291,9 @@ test("verified bootstrap disables auth insert provisioning and resumes idempoten
   assert.match(sql, /handle_trial_self_serve_signup[\s\S]*return new/i);
   assert.match(sql, /drop trigger if exists provision_workspace_activation_foundation on public\.workspaces/i);
   assert.match(sql, /create or replace function public\.bootstrap_verified_trial_workspace/i);
+  assert.match(sql, /on conflict on constraint workspace_members_pkey do nothing/i);
+  assert.match(sql, /on conflict on constraint customer_activations_pkey do nothing/i);
+  assert.doesNotMatch(sql, /on conflict \(workspace_id(?:, profile_id)?\) do nothing/i);
   const verifiedIndex = sql.indexOf("v_verified_at is null");
   const workspaceInsertIndex = sql.indexOf("insert into public.workspaces");
   assert.ok(verifiedIndex > -1 && workspaceInsertIndex > verifiedIndex);

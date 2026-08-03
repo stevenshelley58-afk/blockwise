@@ -11,7 +11,7 @@ import { createSupabaseServiceClient } from "@/lib/supabase/service";
 export const dynamic = "force-dynamic";
 
 export default async function BookingPage() {
-  const { supabase, access } = await requirePageSurfaceAccess("self_serve");
+  const { supabase, access, auth } = await requirePageSurfaceAccess("self_serve");
   const service = createSupabaseServiceClient();
   const [{ data: workspace }, booking] = await Promise.all([
     supabase
@@ -22,11 +22,14 @@ export default async function BookingPage() {
     getLatestOnboardingBooking({ workspaceId: access.workspaceId, serviceSupabase: service }),
   ]);
   const market = normalizeBookingMarket(workspace?.country_code ?? workspace?.region ?? access.region);
+  const timeZone = resolveTimeZone(auth.claims?.user_metadata?.timezone, market);
   const configured = Boolean(getHostedBookingUrl(market));
   const scheduled = booking?.scheduledStartAt
     ? new Intl.DateTimeFormat(market === "US" ? "en-US" : "en-AU", {
         dateStyle: "full",
         timeStyle: "short",
+        timeZone,
+        timeZoneName: "short",
       }).format(new Date(booking.scheduledStartAt))
     : null;
 
@@ -93,4 +96,17 @@ export default async function BookingPage() {
       )}
     </main>
   );
+}
+
+function resolveTimeZone(value: unknown, market: "AU" | "US") {
+  const candidate = typeof value === "string" ? value.trim() : "";
+  if (candidate) {
+    try {
+      new Intl.DateTimeFormat("en", { timeZone: candidate }).format();
+      return candidate;
+    } catch {
+      // Fall through to the market default for malformed legacy metadata.
+    }
+  }
+  return market === "US" ? "America/New_York" : "Australia/Sydney";
 }

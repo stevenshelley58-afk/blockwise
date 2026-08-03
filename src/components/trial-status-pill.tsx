@@ -25,6 +25,8 @@ function useTrialStatus(initialStatus: TrialStatus | null) {
       if (response.ok) {
         setStatus(payload.trial ?? null);
       }
+    } catch {
+      // Keep the last server-confirmed value; a later refresh can recover.
     } finally {
       setRefreshing(false);
     }

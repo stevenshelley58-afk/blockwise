@@ -188,10 +188,6 @@ export async function resolveCustomerActivation(input: {
   authoritativeRows?: ActivationAuthoritativeRows;
   repair?: boolean;
 }): Promise<ResolvedCustomerActivation> {
-  if (!input.authoritativeRows && process.env.PROGRESSIVE_ONBOARDING_ENABLED !== "true") {
-    return unavailableActivation(input.workspaceId, "progressive_activation_disabled");
-  }
-
   const service = input.serviceSupabase ?? createSupabaseServiceClient();
   let record: CustomerActivationRecord | null;
   let sources: ActivationAuthoritativeRows;

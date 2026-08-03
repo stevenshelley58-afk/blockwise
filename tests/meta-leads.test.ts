@@ -32,13 +32,18 @@ test("normalizeMetaLead maps Meta field_data into Blockwise lead identity", () =
 });
 
 test("fetchMetaLeadFormLeads reads leads for reconciled lead forms", async () => {
+  const requestedUrls: string[] = [];
   const leads = await fetchMetaLeadFormLeads({
     accessToken: "token",
     formIds: ["form_123"],
     since: "2026-06-01T00:00:00.000Z",
     fetchImpl: async (url) => {
+      requestedUrls.push(String(url));
       assert.match(String(url), /form_123\/leads/);
       assert.match(String(url), /filtering=/);
+
+      const filtering = JSON.parse(new URL(String(url)).searchParams.get("filtering") ?? "[]") as Array<{ value: unknown }>;
+      assert.equal(filtering[0]?.value, 1780272000);
 
       return new Response(
         JSON.stringify({
@@ -58,6 +63,29 @@ test("fetchMetaLeadFormLeads reads leads for reconciled lead forms", async () =>
 
   assert.equal(leads.length, 1);
   assert.equal(leads[0]?.externalId, "lead_123");
+  assert.equal(requestedUrls.length, 1);
+});
+
+test("fetchMetaLeadFormLeads follows Meta pagination", async () => {
+  let calls = 0;
+  const leads = await fetchMetaLeadFormLeads({
+    accessToken: "token",
+    formIds: ["form_123"],
+    fetchImpl: async () => {
+      calls += 1;
+      return new Response(
+        JSON.stringify(
+          calls === 1
+            ? { data: [{ id: "lead_1" }], paging: { next: "https://graph.facebook.com/v23.0/form_123/leads?after=cursor" } }
+            : { data: [{ id: "lead_2" }] },
+        ),
+        { status: 200, headers: { "content-type": "application/json" } },
+      );
+    },
+  });
+
+  assert.deepEqual(leads.map((lead) => lead.externalId), ["lead_1", "lead_2"]);
+  assert.equal(calls, 2);
 });
 
 test("buildLeadDeliveryActions creates auditable CRM, webhook, or manual actions", () => {

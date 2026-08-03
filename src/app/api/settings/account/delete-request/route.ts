@@ -15,26 +15,33 @@ export async function POST(request: NextRequest) {
 
   if (!guard.ok) return guard.response;
   const { access } = guard;
-
-  const service = createSupabaseServiceClient();
-  const { error } = await service.from("audit_logs").insert({
-    workspace_id: access.workspaceId,
-    actor_profile_id: access.userId,
-    action: "account_deletion_requested",
-    target_type: "account",
-    target_id: access.userId,
-    metadata: { requestedAt: new Date().toISOString(), role: access.role },
-  });
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  if (access.role !== "owner") {
+    return NextResponse.json({ error: "Only the workspace owner can request workspace deletion." }, { status: 403 });
   }
 
-  // Best-effort: delete the auth user via service role. If this fails the audit row
-  // still exists as a paper trail and the request is considered received.
-  const { error: deleteError } = await service.auth.admin.deleteUser(access.userId);
-  if (deleteError) {
-    console.error("[delete-request] auth.admin.deleteUser failed:", deleteError.message);
+  const service = createSupabaseServiceClient();
+  const requestedAt = new Date().toISOString();
+  const [{ error }, { error: auditError }] = await Promise.all([
+    service.from("account_deletion_requests").upsert({
+      workspace_id: access.workspaceId,
+      requested_by: access.userId,
+      status: "requested",
+      requested_at: requestedAt,
+      updated_at: requestedAt,
+    }, { onConflict: "workspace_id", ignoreDuplicates: false }),
+    service.from("audit_logs").insert({
+      workspace_id: access.workspaceId,
+      actor_profile_id: access.userId,
+      action: "account_deletion_requested",
+      target_type: "workspace",
+      target_id: access.workspaceId,
+      metadata: { requestedAt, role: access.role },
+    }),
+  ]);
+
+  if (error || auditError) {
+    console.error("[delete-request] persistence failed", error ?? auditError);
+    return NextResponse.json({ error: (error ?? auditError)?.message ?? "Deletion request failed." }, { status: 500 });
   }
 
   return NextResponse.json({ ok: true });

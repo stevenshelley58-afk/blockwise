@@ -60,6 +60,7 @@ type PublishResponse = {
   publishReady?: boolean;
   blockers?: string[];
   providerWritesEnabled?: boolean;
+  activePublishJob?: boolean;
   queueJobId?: string | null;
   metaPublishPlan?: {
     id?: string;
@@ -284,10 +285,12 @@ export function PublishSetupPanel({
 
   useEffect(() => {
     if (!campaignId) return;
-    fetch(`/api/adstudio/publish-readiness?campaignId=${encodeURIComponent(campaignId)}`)
-      .then((response) => response.json().catch(() => null))
-      .then((data) => {
-        if (!data) return;
+    const controller = new AbortController();
+    setReadiness(null);
+    fetch(`/api/adstudio/publish-readiness?campaignId=${encodeURIComponent(campaignId)}`, { signal: controller.signal })
+      .then(async (response) => {
+        const data = await response.json().catch(() => null);
+        if (!response.ok || !data) throw new Error("Publish readiness could not be verified.");
         const source = Array.isArray(data)
           ? data
           : Array.isArray(data.items)
@@ -303,7 +306,12 @@ export function PublishSetupPanel({
           blocked: item.blocked,
         })));
       })
-      .catch(() => setReadiness([]));
+      .catch(() => {
+        if (!controller.signal.aborted) {
+          setReadiness([{ id: "readiness_unavailable", label: "Verify publish readiness", met: false, blocked: true }]);
+        }
+      });
+    return () => controller.abort();
   }, [campaignId]);
 
   useEffect(() => {
@@ -558,7 +566,7 @@ export function PublishSetupPanel({
       if (body.providerWritesEnabled === false) throw new Error("Live publishing is not enabled yet. Export your creatives to launch manually.");
 
       const planStatus = body.metaPublishPlan?.status;
-      const queued = Boolean(body.queueJobId) || planStatus === "paused_live" || planStatus === "publishing";
+      const queued = Boolean(body.queueJobId) || Boolean(body.activePublishJob) || planStatus === "paused_live" || planStatus === "publishing";
       if (!queued) {
         // The server declined to queue the publish — show the real blockers
         // instead of pretending the submission is in progress.

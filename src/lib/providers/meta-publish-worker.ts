@@ -119,11 +119,13 @@ export async function executeMetaPublishPlanById(input: {
   fetchImpl?: typeof fetch;
   compensationFetchImpl?: typeof fetch;
   billingGateway?: FirstLiveCampaignStripeGateway;
+  signal?: AbortSignal;
 }) {
   const plan = await loadMetaPublishPlan(input.serviceSupabase, {
     workspaceId: input.workspaceId,
     planId: input.planId,
   });
+  input.signal?.throwIfAborted();
 
   if (!providerWritesEnabled()) {
     const failedPlan: MetaPublishPlan = {
@@ -144,6 +146,7 @@ export async function executeMetaPublishPlanById(input: {
     fetchImpl: input.fetchImpl,
     compensationFetchImpl: input.compensationFetchImpl,
     billingGateway: input.billingGateway,
+    signal: input.signal,
   });
 }
 
@@ -153,7 +156,9 @@ export async function executeMetaPublishPlan(input: {
   fetchImpl?: typeof fetch;
   compensationFetchImpl?: typeof fetch;
   billingGateway?: FirstLiveCampaignStripeGateway;
+  signal?: AbortSignal;
 }) {
+  input.signal?.throwIfAborted();
   if (
     input.plan.status !== "approved" &&
     input.plan.status !== "publishing" &&
@@ -175,6 +180,7 @@ export async function executeMetaPublishPlan(input: {
         lastError: error instanceof Error ? error.message : "Meta publish pre-flight failed.",
         updatedAt: new Date().toISOString(),
       };
+      input.signal?.throwIfAborted();
       await updateMetaPublishPlanExecution(input.serviceSupabase, retryablePlan);
       await persistPublishAudit(input.serviceSupabase, retryablePlan);
     }
@@ -199,6 +205,7 @@ export async function executeMetaPublishPlan(input: {
   let completedPlan: MetaPublishPlan | null = null;
   let providerResult: MetaPublishExecutionResult | null = null;
   try {
+    input.signal?.throwIfAborted();
     await updateMetaPublishPlanExecution(input.serviceSupabase, publishingPlan);
     const tokens = await loadStoredProviderTokens(input.serviceSupabase, publishingPlan.providerConnectionId);
 
@@ -220,6 +227,7 @@ export async function executeMetaPublishPlan(input: {
       fetchImpl: input.fetchImpl,
       reconcileMissingObjects: input.plan.status === "publishing",
       onCheckpoint: async (checkpoint) => {
+        input.signal?.throwIfAborted();
         await updateMetaPublishPlanExecution(
           input.serviceSupabase,
           applyMetaPublishExecutionResult(publishingPlan, checkpoint),
@@ -235,6 +243,7 @@ export async function executeMetaPublishPlan(input: {
     const durableProviderPlan: MetaPublishPlan = completedPlan.status === "paused_live"
       ? { ...completedPlan, status: "publishing" }
       : completedPlan;
+    input.signal?.throwIfAborted();
     await updateMetaPublishPlanExecution(input.serviceSupabase, durableProviderPlan);
     await persistPublishAudit(input.serviceSupabase, durableProviderPlan);
     if (completedPlan.status !== "paused_live") {
@@ -252,6 +261,7 @@ export async function executeMetaPublishPlan(input: {
       return completedPlan;
     }
   } catch (error) {
+    input.signal?.throwIfAborted();
     const providerState = completedPlan ?? providerResult;
     if (providerState && metaProviderMutationMayHaveOccurred(providerState)) {
       const reconciliationPlan: MetaPublishPlan = {
@@ -293,7 +303,9 @@ export async function executeMetaPublishPlan(input: {
   if (!completedPlan) {
     throw new Error("Meta publish completed without a reconciled plan.");
   }
+  input.signal?.throwIfAborted();
   await finalizeFreeLiveConversion(input, completedPlan, freeLive);
+  input.signal?.throwIfAborted();
   await updateMetaPublishPlanExecution(input.serviceSupabase, completedPlan);
   await persistPublishAudit(input.serviceSupabase, completedPlan);
   await queueReportingRefreshAfterProviderChange(completedPlan.workspaceId, "publish");

@@ -257,10 +257,6 @@ export function useCampaignActions(s: CampaignActionsState) {
         primaryImage: options.primaryImageOverride,
         offerLabel: options.offerLabelOverride,
       });
-      if (currentPack.creatives.length === 0 || !currentPack.creatives.every(isFinishedCloneCreative)) {
-        s.setSaveState("saved");
-        return true;
-      }
       const draftPack = compactPackForDraft(currentPack, options.variantIdOverride ?? currentVariant?.variantId);
       const payload = await postJson<{ campaignPack: AdStudioCampaignPack }>(
         `/api/adstudio/campaigns/${currentPack.campaign.campaignId}/draft`,
@@ -299,6 +295,12 @@ export function useCampaignActions(s: CampaignActionsState) {
       const formats = exportableFormats(exportPack);
       if (formats.length === 0) throw new Error("Export failed — please retry.");
 
+      setExportStatus(formats.map((format) => ({
+        format,
+        label: exportFormatLabel(format),
+        state: "rendering",
+      })));
+
       if (!exportPack.creatives.every(isFinishedCloneCreative)) {
         throw new Error("Create an ad from a sample before exporting.");
       }
@@ -306,6 +308,7 @@ export function useCampaignActions(s: CampaignActionsState) {
       setExportStatus(null);
       s.showToast("Creative export downloaded");
     } catch (error) {
+      setExportStatus((current) => current?.map((entry) => ({ ...entry, state: "failed" })) ?? null);
       s.showToast(getMessage(error));
     } finally {
       s.setBusy(false);
@@ -355,7 +358,6 @@ export function useCampaignActions(s: CampaignActionsState) {
     if (typeof navigator === "undefined" || typeof navigator.sendBeacon !== "function") return false;
     try {
       const currentPack = buildCurrentPack({});
-      if (currentPack.creatives.length === 0 || !currentPack.creatives.every(isFinishedCloneCreative)) return false;
       const draftPack = compactPackForDraft(currentPack, currentVariant?.variantId);
       const body = new Blob([JSON.stringify({ campaignPack: draftPack })], { type: "application/json" });
       return navigator.sendBeacon(`/api/adstudio/campaigns/${currentPack.campaign.campaignId}/draft`, body);
@@ -529,6 +531,7 @@ function compactPackForDraft(pack: AdStudioCampaignPack, variantId: string | und
     ...pack,
     creatives: pack.creatives
       .filter((creative) => !variantId || creative.variantId === variantId)
+      .filter(isFinishedCloneCreative)
       .map(stripRenderState)
       .map(stripDuplicateDraftImage()),
   };

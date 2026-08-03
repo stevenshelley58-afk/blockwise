@@ -7,7 +7,7 @@ import { resolveAdRadarLocationSearch, resolveAdRadarPostcodeSuburbs } from "@/l
 import { loadPublicAdRadarCards } from "@/lib/research/public-ad-radar";
 import type { PublicAdRadarResponse } from "@/lib/research/public-ad-radar";
 import { buildSuburbReportInsights } from "@/lib/research/suburb-report-insights";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 import { SuburbReportClient } from "./report-client";
 import "./suburb-report.css";
@@ -25,7 +25,7 @@ const loadReport = cache(async (postcode: string) => {
   const locationLabel = location.terms.find((term) => !/^\d{4}$/.test(term) && !/^(WA|Western Australia)$/i.test(term)) || location.label;
   const areaSuburbs = orderPostcodeSuburbs(resolveAdRadarPostcodeSuburbs(postcode), locationLabel);
   try {
-    const supabase = await createSupabaseServerClient();
+    const supabase = createSupabaseServiceClient();
     const response = await loadAllPublicAds(supabase, postcode, true);
     return { response, areaSuburbs, label: locationLabel };
   } catch (error) {
@@ -88,7 +88,7 @@ async function loadNearby(postcode: string) {
     ? [{ postcode: "6158", suburb: "East Fremantle" }, { postcode: "6159", suburb: "North Fremantle" }, { postcode: "6162", suburb: "South Fremantle" }]
     : [{ postcode: "6000", suburb: "Perth" }, { postcode: "6008", suburb: "Subiaco" }, { postcode: "6050", suburb: "Mount Lawley" }];
   try {
-    const supabase = await createSupabaseServerClient();
+    const supabase = createSupabaseServiceClient();
     return await Promise.all(fallback.map(async (area) => {
       const result = await loadPublicAdRadarCards(supabase, { location: area.postcode, limit: 36, sort: "longest" });
       return { ...area, count: result.ads.length };
@@ -128,7 +128,7 @@ function cleanSlug(value: string | undefined) {
 }
 
 async function loadAllPublicAds(
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  supabase: ReturnType<typeof createSupabaseServiceClient>,
   postcode: string,
   includeSurroundingSuburbs: boolean,
 ): Promise<PublicAdRadarResponse> {

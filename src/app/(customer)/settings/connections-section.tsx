@@ -108,33 +108,36 @@ export function ConnectionsSection({
   async function disconnect(provider: string, label: string) {
     setBusyProvider(provider);
     setMessage(null);
-    if (provider === "meta") {
-      // Use the server-side route so the Meta app grant is also revoked.
-      const res = await fetch("/api/integrations/meta/disconnect", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ workspaceId }),
+    try {
+      if (provider === "meta") {
+        // Use the server-side route so the Meta app grant is also revoked.
+        const res = await fetch("/api/integrations/meta/disconnect", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ workspaceId }),
+        });
+        if (!res.ok) {
+          const data = (await res.json().catch(() => ({}))) as { error?: string };
+          throw new Error(data.error ?? `Couldn't disconnect ${label}.`);
+        }
+      } else {
+        const { error } = await supabase
+          .from("provider_connections")
+          .update({ status: "revoked", updated_at: new Date().toISOString() })
+          .eq("workspace_id", workspaceId)
+          .eq("provider", provider);
+        if (error) throw error;
+      }
+      setMessage({ tone: "success", text: `${label} disconnected.` });
+      router.refresh();
+    } catch (error) {
+      setMessage({
+        tone: "error",
+        text: error instanceof Error ? error.message : `Couldn't disconnect ${label}.`,
       });
+    } finally {
       setBusyProvider(null);
-      if (!res.ok) {
-        const data = (await res.json().catch(() => ({}))) as { error?: string };
-        setMessage({ tone: "error", text: data.error ?? `Couldn't disconnect ${label}.` });
-        return;
-      }
-    } else {
-      const { error } = await supabase
-        .from("provider_connections")
-        .update({ status: "revoked", updated_at: new Date().toISOString() })
-        .eq("workspace_id", workspaceId)
-        .eq("provider", provider);
-      setBusyProvider(null);
-      if (error) {
-        setMessage({ tone: "error", text: `Couldn't disconnect ${label}.` });
-        return;
-      }
     }
-    setMessage({ tone: "success", text: `${label} disconnected.` });
-    router.refresh();
   }
 
   return (
@@ -173,8 +176,11 @@ export function ConnectionsSection({
                 </Button>
               )}
             </div>
-            {prov.key === "meta" && connected ? (
+            {prov.key === "meta" && connected && canManage ? (
               <MetaSetupForm workspaceId={workspaceId} canManage={canManage} />
+            ) : null}
+            {prov.key === "meta" && connected && !canManage ? (
+              <p className="text-sm text-muted-foreground">An owner or admin can view and change Meta publishing assets.</p>
             ) : null}
             {prov.key === "meta" && !connected ? (
               <p className="text-sm text-muted-foreground">Connect Meta first, then choose the ad account, Page, lead destination, and privacy policy used for publishing.</p>

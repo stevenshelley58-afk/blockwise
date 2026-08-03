@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 const CAPTURED_WINDOW_DAYS = 30;
 
 export default async function LeadsPage() {
-  const { supabase, access } = await requirePageSurfaceAccess("monitor");
+  const { supabase, access, auth } = await requirePageSurfaceAccess("monitor");
   const { rows } = await listLeadRowsWithDedupe(supabase, access.workspaceId);
   // `listLeadRowsWithDedupe` returns every lead in the workspace, so the
   // headline count has to be derived here or the "last 30 days" claim lies.
@@ -38,7 +38,7 @@ export default async function LeadsPage() {
         new Intl.DateTimeFormat("en-AU", {
           dateStyle: "medium",
           timeStyle: "short",
-          timeZone: "Australia/Perth",
+          timeZone: resolveTimeZone(auth.claims?.user_metadata?.timezone, access.region),
         }).format(new Date(lastSyncedAt)),
       )
     : niche.copy.leads.neverSynced;
@@ -84,6 +84,19 @@ export default async function LeadsPage() {
       </div>
     </main>
   );
+}
+
+function resolveTimeZone(value: unknown, region: string | undefined) {
+  const candidate = typeof value === "string" ? value.trim() : "";
+  if (candidate) {
+    try {
+      new Intl.DateTimeFormat("en", { timeZone: candidate }).format();
+      return candidate;
+    } catch {
+      // Fall through to the workspace-region default.
+    }
+  }
+  return region === "US" ? "America/New_York" : "Australia/Sydney";
 }
 
 function leadQualityValue(value: string | null | undefined): LeadListItem["quality"] {
