@@ -176,109 +176,46 @@ function TemplateChoiceCard({
   onSelect: (id: string) => void;
 }) {
   const isFullscreen = template.format === "9:16";
-  const placementLabel = isFullscreen ? "Fullscreen ad" : "Feed ad";
+  const formatLabel = isFullscreen ? "Story · 9:16" : "Feed · 4:5";
+  const copy = templateAdCopy(template);
 
   return (
     <button
       type="button"
-      className={`studio-explore-card studio-explore-card--template${isFullscreen ? " studio-explore-card--fullscreen" : " studio-explore-card--feed"}`}
-      aria-label={`Use ${template.name} ${placementLabel.toLowerCase()} template`}
+      className="studio-explore-card studio-explore-card--template"
+      aria-label={`Use ${template.name} ${formatLabel} template`}
       onClick={() => onSelect(template.id)}
     >
-      <span className="studio-explore-card-head">
-        <span>
+      <span className="studio-template-media">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={templatePreviewSrc(template, brandKit)}
+          srcSet={templateThumbnailSrcSet(template)}
+          sizes="(max-width: 900px) 44vw, 300px"
+          width={template.dimensions.width}
+          height={template.dimensions.height}
+          alt={`${template.name} ${formatLabel} creative preview`}
+          loading="lazy"
+          decoding="async"
+        />
+      </span>
+      <span className="studio-template-info">
+        <span className="studio-template-info-top">
           <strong>{template.name}</strong>
-          <small>{placementLabel}</small>
+          <small>{formatLabel}</small>
+        </span>
+        <span className="studio-template-info-copy">{copy.primaryText}</span>
+        <span className="studio-template-info-meta">
+          <span>{copy.headline}</span>
+          <span className="studio-template-info-cta">{copy.cta}</span>
         </span>
       </span>
-      <TemplateAdPreview template={template} brandKit={brandKit} />
       <span className="studio-explore-card-use" aria-hidden>Use</span>
       <span className="studio-explore-card-action">
         <span>Use this template</span>
         <ArrowUpRight aria-hidden size={15} />
       </span>
     </button>
-  );
-}
-
-function TemplateAdPreview({ template, brandKit }: { template: AdStudioTemplate; brandKit: AdStudioBrandKit }) {
-  const previewSrc = templatePreviewSrc(template, brandKit);
-  const copy = templateAdCopy(template);
-  const brandName = brandNameForPreview(brandKit);
-  const brandInitial = initialForBrand(brandName);
-  const domain = domainForPreview(brandKit);
-  const isFullscreen = template.format === "9:16";
-
-  if (isFullscreen) {
-    return (
-      <span className="studio-template-ad studio-template-ad--fullscreen">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          className="studio-template-story-media"
-          src={previewSrc}
-          srcSet={templateThumbnailSrcSet(template)}
-          sizes="(max-width: 640px) 74vw, 320px"
-          width={template.dimensions.width}
-          height={template.dimensions.height}
-          alt=""
-          loading="lazy"
-          decoding="async"
-        />
-        <span className="studio-template-story-shade" />
-        <span className="studio-template-story-bars" aria-hidden>
-          <i />
-          <i />
-          <i />
-        </span>
-        <span className="studio-template-story-top">
-          <span className="studio-template-avatar">{brandInitial}</span>
-          <span>
-            <strong>{brandName}</strong>
-            <small>Sponsored</small>
-          </span>
-        </span>
-        <span className="studio-template-story-copy">
-          <strong>{copy.headline}</strong>
-          <span>{copy.primaryText}</span>
-        </span>
-        <span className="studio-template-story-cta">{copy.cta}</span>
-      </span>
-    );
-  }
-
-  return (
-    <span className="studio-template-ad studio-template-ad--feed">
-      <span className="studio-template-feed-head">
-        <span className="studio-template-avatar">{brandInitial}</span>
-        <span>
-          <strong>{brandName}</strong>
-          <small>Sponsored</small>
-        </span>
-        <span className="studio-template-dots" aria-hidden>...</span>
-      </span>
-      <span className="studio-template-feed-primary">{copy.primaryText}</span>
-      <span className="studio-template-feed-media">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={previewSrc}
-          srcSet={templateThumbnailSrcSet(template)}
-          sizes="(max-width: 640px) 74vw, 320px"
-          width={template.dimensions.width}
-          height={template.dimensions.height}
-          alt=""
-          loading="lazy"
-          decoding="async"
-        />
-      </span>
-      <span className="studio-template-feed-link">
-        <span>
-          <small>{domain}</small>
-          <strong>{copy.headline}</strong>
-          {copy.description ? <em>{copy.description}</em> : null}
-        </span>
-        <span className="studio-template-feed-cta">{copy.cta}</span>
-      </span>
-    </span>
   );
 }
 
@@ -1690,43 +1627,24 @@ button.studio-explore-card{padding:0;cursor:pointer}
 .studio-explore-card:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .studio-explore-card--template{border-color:#d9e2ed;background:#fff}
 .studio-explore-card--template:hover{border-color:#b9c7d8}
-.studio-explore-card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 12px 10px;border-bottom:1px solid var(--line-soft)}
-.studio-explore-card-head>span:first-child{display:grid;gap:2px;min-width:0}
-.studio-explore-card-head strong{font-size:13.5px;font-weight:760;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.studio-explore-card-head small{font-size:11.5px;font-weight:700;color:var(--muted);line-height:1.1}
 .studio-explore-card-action{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:auto;border-top:1px solid var(--line-soft);padding:11px 12px;color:#001b3d;font-size:13px;font-weight:760}
 .studio-explore-card-action svg{flex:0 0 auto}
-.studio-template-ad{display:block;min-width:0}
+/* Clean template cards: creative preview (true aspect ratio, no crop),
+   then title + format label + the actual ad copy underneath. */
 .studio-template-avatar{flex:0 0 auto;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:#123e75;color:#fff;font-size:12px;font-weight:800}
-.studio-template-ad--feed{background:#fff}
-.studio-template-feed-head{display:flex;align-items:center;gap:8px;padding:10px 11px 7px}
-.studio-template-feed-head>span:nth-child(2){display:grid;gap:1px;min-width:0}
-.studio-template-feed-head strong{font-size:12.5px;font-weight:760;line-height:1.12;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.studio-template-feed-head small{font-size:10.5px;color:#64748b;line-height:1.1}
 .studio-template-dots{margin-left:auto;color:#64748b;font-size:18px;line-height:1;letter-spacing:0}
-.studio-template-feed-primary{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;padding:0 11px 9px;color:#111827;font-size:12px;line-height:1.35}
-.studio-template-feed-media{display:block;background:#f1f5f9;border-top:1px solid #edf1f6;border-bottom:1px solid #edf1f6}
-.studio-template-feed-media img{width:100%;aspect-ratio:4/5;object-fit:cover;display:block}
-.studio-template-feed-link{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 11px;background:#f2f3f5}
-.studio-template-feed-link>span:first-child{display:grid;gap:2px;min-width:0}
-.studio-template-feed-link small{font-size:9.5px;text-transform:uppercase;color:#64748b;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.studio-template-feed-link strong{font-size:12.5px;font-weight:760;line-height:1.14;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.studio-template-feed-link em{font-style:normal;font-size:11px;color:#64748b;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.studio-template-feed-cta{flex:0 0 auto;border-radius:6px;background:#e4e6eb;color:#172033;font-size:11.5px;font-weight:760;padding:7px 10px;white-space:nowrap}
-.studio-template-ad--fullscreen{position:relative;aspect-ratio:9/16;margin:12px;border-radius:13px;overflow:hidden;background:#0b1020;color:#fff;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12),0 14px 28px rgba(15,23,42,.18)}
-.studio-template-story-media{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
-.studio-template-story-shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(3,7,18,.56) 0%,rgba(3,7,18,.06) 38%,rgba(3,7,18,.76) 100%)}
-.studio-template-story-bars{position:absolute;left:10px;right:10px;top:9px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
-.studio-template-story-bars i{display:block;height:2px;border-radius:999px;background:rgba(255,255,255,.6)}
-.studio-template-story-top{position:absolute;left:11px;right:11px;top:18px;display:flex;align-items:center;gap:8px}
-.studio-template-story-top .studio-template-avatar{width:26px;height:26px;background:rgba(255,255,255,.94);color:#111827}
-.studio-template-story-top>span:nth-child(2){display:grid;gap:1px;min-width:0;text-shadow:0 1px 4px rgba(0,0,0,.45)}
-.studio-template-story-top strong{font-size:11.5px;font-weight:760;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.studio-template-story-top small{font-size:9.5px;color:rgba(255,255,255,.78);line-height:1.1}
-.studio-template-story-copy{position:absolute;left:13px;right:13px;bottom:60px;display:grid;gap:6px;text-shadow:0 2px 10px rgba(0,0,0,.55)}
-.studio-template-story-copy strong{font-size:19px;font-weight:820;line-height:1.04;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
-.studio-template-story-copy span{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;font-size:11.5px;line-height:1.32;color:rgba(255,255,255,.9)}
-.studio-template-story-cta{position:absolute;left:13px;right:13px;bottom:13px;min-height:34px;border-radius:999px;background:rgba(255,255,255,.95);color:#101827;display:grid;place-items:center;font-size:12px;font-weight:800;box-shadow:0 8px 18px rgba(0,0,0,.22)}
+.studio-template-media{display:grid;place-items:center;padding:14px;background:#eef2f7}
+.studio-template-media img{width:auto;max-width:100%;max-height:300px;object-fit:contain;display:block;border-radius:8px;box-shadow:0 10px 24px rgba(15,23,42,.14)}
+.studio-template-info{display:grid;gap:6px;padding:12px 14px 14px}
+.studio-template-info-top{display:flex;align-items:baseline;justify-content:space-between;gap:10px;min-width:0}
+.studio-template-info-top strong{font-size:13.5px;font-weight:760;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.studio-template-info-top small{flex:0 0 auto;font-size:11px;font-weight:700;color:var(--muted)}
+.studio-template-info-copy{font-size:12px;line-height:1.4;color:var(--ink);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.studio-template-info-meta{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}
+.studio-template-info-meta>span:first-child{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.studio-template-info-cta{flex:0 0 auto;border-radius:6px;background:#e4e6eb;color:#172033;font-size:11px;font-weight:760;padding:4px 9px;white-space:nowrap}
+.studio-explore-card-use{position:absolute;top:9px;right:9px;z-index:3;border-radius:999px;background:rgba(15,23,42,.82);color:#fff;font-size:11px;font-weight:750;padding:6px 11px;opacity:0;transform:translateY(-3px);transition:opacity .15s,transform .15s;pointer-events:none;box-shadow:0 4px 12px rgba(0,0,0,.25)}
+.studio-explore-card--template:hover .studio-explore-card-use,.studio-explore-card--template:focus-visible .studio-explore-card-use{opacity:1;transform:none}
 .studio-explore-thumb{position:relative;height:236px;display:grid;place-items:center;overflow:hidden;background:#eef2f7}
 .studio-explore-thumb--sample{height:326px;background:linear-gradient(180deg,#f8fafc 0%,#e8edf4 100%)}
 .studio-explore-thumb img{max-width:calc(100% - 24px);max-height:calc(100% - 20px);object-fit:contain;background:#fff;border-radius:12px;box-shadow:0 14px 34px rgba(15,23,42,.18);display:block}
@@ -1824,45 +1742,27 @@ button.studio-explore-card{padding:0;cursor:pointer}
   .studio-explore-thumb--sample{height:286px}
   .studio-newad-library-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
-/* Desktop gallery: true-aspect-ratio Meta-style ad cards. Row height tracks
-   the viewport so exactly two rows are visible; columns fill the width. */
+/* Desktop gallery: clean preview cards (image-2 style) with the ad copy
+   underneath. 4 columns, exactly two full rows visible inside the dialog;
+   remaining templates scroll. Creatives keep their true aspect ratio
+   (4:5 feed / 9:16 story) and are letterboxed, never cropped.
+   Row budget = (dialog − head 62 − body padding 44 − filter 19 −
+   gaps 28) / 2, capped at 464px once the dialog stops growing. */
 @media(min-width:901px){
-  /* Two full rows always visible; row height tracks viewport height.
-     Card chrome is pinned (head 42 + feed-head 45 + primary 26 + link 48 +
-     2px borders = 163px for feed; head 42 + 12px story margins + 2px
-     borders = 68px for fullscreen) so media boxes hit exact 4:5 / 9:16. */
-  .studio-explore-grid{--row-h:clamp(240px,calc(50dvh - 114px),444px);display:flex;flex-wrap:wrap;align-content:flex-start;gap:12px}
-  .studio-explore-card--template{position:relative;flex:0 0 auto;height:var(--row-h)}
+  .studio-explore-grid{--row-h:clamp(280px,calc(50vh - 101px),464px);grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+  .studio-explore-card--template{position:relative;height:var(--row-h)}
   .studio-explore-card--template .studio-explore-card-action{display:none}
-  .studio-explore-card--template .studio-explore-card-head{height:42px;padding:7px 10px 6px;overflow:hidden}
-  .studio-explore-card--template .studio-explore-card-head strong{font-size:12.5px}
-  .studio-explore-card--template .studio-explore-card-head small{font-size:10px}
-  .studio-explore-card--feed{width:calc((var(--row-h) - 165px)*0.8 + 2px)}
-  .studio-explore-card--feed .studio-template-feed-head{height:45px;overflow:hidden}
-  .studio-explore-card--feed .studio-template-feed-primary{display:block;height:26px;padding:0 10px 6px;font-size:11px;line-height:1.45;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .studio-explore-card--feed .studio-template-feed-media{height:calc(var(--row-h) - 163px)}
-  .studio-explore-card--feed .studio-template-feed-media img{height:100%;aspect-ratio:auto}
-  .studio-explore-card--feed .studio-template-feed-link{height:48px;padding:6px 10px;overflow:hidden}
-  .studio-explore-card--feed .studio-template-feed-link small{font-size:9px}
-  .studio-explore-card--feed .studio-template-feed-link strong{font-size:11.5px;-webkit-line-clamp:1}
-  .studio-explore-card--feed .studio-template-feed-link em{display:none}
-  .studio-explore-card--feed .studio-template-feed-cta{padding:5px 8px;font-size:10.5px}
-  .studio-explore-card--fullscreen{width:calc((var(--row-h) - 68px)*0.5625 + 26px)}
-  .studio-explore-card-use{position:absolute;top:9px;right:9px;z-index:3;border-radius:999px;background:rgba(15,23,42,.82);color:#fff;font-size:11px;font-weight:750;padding:6px 11px;opacity:0;transform:translateY(-3px);transition:opacity .15s,transform .15s;pointer-events:none;box-shadow:0 4px 12px rgba(0,0,0,.25)}
-  .studio-explore-card--template:hover .studio-explore-card-use,.studio-explore-card--template:focus-visible .studio-explore-card-use{opacity:1;transform:none}
+  .studio-template-media{height:auto;flex:1;min-height:0;overflow:hidden}
+  .studio-template-media img{max-width:100%;max-height:100%}
 }
 @media(max-width:560px){
   .studio-explore-filterbar{gap:8px}
   .studio-explore-filter{flex:1}
   .studio-explore-filter select{min-width:0;width:100%}
   .studio-explore-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-  .studio-explore-card-head{padding:9px 9px 8px}
-  .studio-explore-card-head strong{font-size:12.5px}
   .studio-explore-card-action{padding:10px 9px;font-size:12px}
-  .studio-template-feed-head{padding-inline:8px}
-  .studio-template-feed-primary{padding-inline:8px}
-  .studio-template-feed-link{padding-inline:8px}
-  .studio-template-feed-cta{padding-inline:7px;font-size:10.5px}
+  .studio-template-media{padding:10px}
+  .studio-template-info{padding:10px 11px 12px}
   .studio-explore-thumb{height:180px}
   .studio-explore-thumb--sample{height:240px}
   .studio-newad-library-grid{grid-template-columns:1fr}
