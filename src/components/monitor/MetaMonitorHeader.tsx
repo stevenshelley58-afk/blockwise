@@ -1,25 +1,14 @@
-import { ChevronDown, RefreshCw } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { niche } from "@/config/niche";
 import type { MonitorDateRange, MonitorRange } from "@/lib/meta-monitor/types";
 
-/** Primary chip presets; everything else lives in the overflow menu. */
-const PRIMARY_RANGES: Array<{ value: MonitorRange; key: "d7" | "d30" | "d90" }> = [
+/** The only range options: three presets plus custom. */
+const RANGE_OPTIONS: Array<{ value: MonitorRange; key: "d7" | "d30" | "d90" | null }> = [
   { value: "last_7", key: "d7" },
   { value: "last_30", key: "d30" },
   { value: "last_90", key: "d90" },
-];
-
-const MORE_RANGES: Array<{ value: MonitorRange; label: string }> = [
-  { value: "today", label: "Today" },
-  { value: "yesterday", label: "Yesterday" },
-  { value: "maximum", label: "Maximum" },
+  { value: "custom", key: null },
 ];
 
 // 34px visual height with a pseudo-element expanding the hit area to the 44px
@@ -57,7 +46,6 @@ export function MetaMonitorHeader(props: {
   onRefresh: () => void;
 }) {
   const copy = niche.copy.performance;
-  const activeMore = MORE_RANGES.find((option) => option.value === props.rangeKey);
   const isCustom = props.rangeKey === "custom";
 
   return (
@@ -96,50 +84,30 @@ export function MetaMonitorHeader(props: {
           role="group"
           aria-label={`Date range, ${formatRangeSpan(props.range)}`}
         >
-          {PRIMARY_RANGES.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              className={option.value === props.rangeKey ? chipOn : chipOff}
-              aria-pressed={option.value === props.rangeKey}
-              onClick={() => props.onRangeChange(option.value)}
-            >
-              <span className="sm:hidden">{copy.rangesShort[option.key]}</span>
-              <span className="hidden sm:inline">{copy.ranges[option.key]}</span>
-            </button>
-          ))}
-
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              className={`${activeMore || isCustom ? chipOn : chipOff} gap-1 outline-none focus-visible:border-(--ink) focus-visible:ring-2 focus-visible:ring-(--ink)/20`}
-              aria-label={copy.moreRanges}
-            >
-              <span className="sm:hidden">{isCustom ? "Custom" : (activeMore?.label ?? "More")}</span>
-              <span className="hidden sm:inline">{isCustom ? "Custom" : (activeMore?.label ?? copy.moreRanges)}</span>
-              <ChevronDown size={12} aria-hidden />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="min-w-[160px]">
-              {MORE_RANGES.map((option) => (
-                <DropdownMenuItem
-                  key={option.value}
-                  onClick={() => props.onRangeChange(option.value)}
-                  className="text-xs font-semibold"
-                >
-                  {option.label}
-                  {option.value === props.rangeKey ? (
-                    <span className="ml-auto size-1.5 rounded-full bg-(--ink)" aria-hidden />
-                  ) : null}
-                </DropdownMenuItem>
-              ))}
-              <DropdownMenuItem
+          {RANGE_OPTIONS.map((option) =>
+            option.key === null ? (
+              <button
+                key={option.value}
+                type="button"
+                className={isCustom ? chipOn : chipOff}
+                aria-pressed={isCustom}
                 onClick={() => props.onCustomRangeChange(props.customRange)}
-                className="text-xs font-semibold"
               >
-                Custom range
-                {isCustom ? <span className="ml-auto size-1.5 rounded-full bg-(--ink)" aria-hidden /> : null}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                {copy.customRange}
+              </button>
+            ) : (
+              <button
+                key={option.value}
+                type="button"
+                className={option.value === props.rangeKey ? chipOn : chipOff}
+                aria-pressed={option.value === props.rangeKey}
+                onClick={() => props.onRangeChange(option.value)}
+              >
+                <span className="sm:hidden">{copy.rangesShort[option.key]}</span>
+                <span className="hidden sm:inline">{copy.ranges[option.key]}</span>
+              </button>
+            ),
+          )}
         </div>
 
         {isCustom ? (
