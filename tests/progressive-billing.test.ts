@@ -93,6 +93,7 @@ test("managed Checkout uses the regional managed recurring price without a trial
   assert.equal(result.params["subscription_data[trial_period_days]"], undefined);
   assert.equal(result.params["metadata[first_invoice_amount]"], 250_000);
   assert.match(String(result.params["custom_text[submit][message]"]), /Meta ad spend is separate/);
+  assert.equal(result.params["managed_payments[enabled]"], false);
 });
 
 test("Checkout refuses a currency that does not match the confirmed workspace market", () => {

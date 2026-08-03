@@ -174,6 +174,7 @@ export function buildCheckoutSessionRequest(
     billing_address_collection: "required",
     "tax_id_collection[enabled]": true,
     "consent_collection[terms_of_service]": "required",
+    "managed_payments[enabled]": false,
     "custom_text[submit][message]": offer.checkoutDisclosure,
     payment_method_collection: "always",
     ...(stripeCustomerId
