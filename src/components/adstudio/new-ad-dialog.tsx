@@ -1822,6 +1822,19 @@ button.studio-explore-card{padding:0;cursor:pointer}
   .studio-explore-thumb--sample{height:286px}
   .studio-newad-library-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
+/* Desktop: 4 templates visible as 2×2 with no scrolling. Media height tracks
+   the viewport so two card rows always fit inside the dialog. */
+@media(min-width:901px){
+  .studio-explore{gap:12px}
+  .studio-explore-grid{gap:12px}
+  .studio-explore-card-head{padding:8px 12px}
+  .studio-explore-card-action{padding:9px 12px;font-size:12.5px}
+  .studio-template-feed-head{padding:8px 11px 6px}
+  .studio-template-feed-primary{padding:0 11px 7px;font-size:11.5px;line-height:1.3;-webkit-line-clamp:2}
+  .studio-template-feed-link{padding:8px 11px}
+  .studio-template-feed-media img{max-height:max(120px,min(340px,calc(50dvh - 400px)))}
+  .studio-template-ad--fullscreen{margin:8px auto;max-height:max(120px,min(340px,calc(50dvh - 400px)))}
+}
 @media(max-width:560px){
   .studio-explore-filterbar{gap:8px}
   .studio-explore-filter{flex:1}

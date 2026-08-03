@@ -627,7 +627,7 @@ export const STYLES = `
 .studio-btn.accent:hover{background:var(--accent-strong);border-color:var(--accent-strong)}
 .studio-btn.accent:disabled{opacity:.5}
 .studio-newad-overlay{position:fixed;inset:0;z-index:230;background:rgba(15,23,42,.58);display:grid;place-items:center;padding:24px}
-.studio-newad{width:min(1160px,calc(100vw - 48px));max-height:min(880px,calc(100vh - 48px));display:flex;flex-direction:column;overflow:hidden;border:0;border-radius:16px;background:#f8fafc;box-shadow:0 24px 80px rgba(10,15,30,.4)}
+.studio-newad{width:min(1160px,calc(100vw - 48px));max-height:min(1080px,calc(100vh - 48px));display:flex;flex-direction:column;overflow:hidden;border:0;border-radius:16px;background:#f8fafc;box-shadow:0 24px 80px rgba(10,15,30,.4)}
 .studio-newad-head{display:flex;align-items:center;gap:14px;padding:20px 26px 16px;background:#fff;border-bottom:1px solid var(--line-soft)}
 .studio-newad-titleblock{display:grid;gap:6px;min-width:0}
 .studio-newad-titleblock>span{font-size:11px;font-weight:800;letter-spacing:1.8px;text-transform:uppercase;color:var(--accent)}
