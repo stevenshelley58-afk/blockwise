@@ -168,7 +168,7 @@ export type PerformanceCopy = {
   demoChip: string;
   refresh: string;
   refreshing: string;
-  moreRanges: string;
+  customRange: string;
   states: {
     disconnectedTitle: string;
     disconnectedBody: string;

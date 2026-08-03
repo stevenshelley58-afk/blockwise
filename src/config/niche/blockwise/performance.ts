@@ -24,7 +24,7 @@ export const performance: PerformanceCopy = {
   demoChip: "Demo data",
   refresh: "Refresh",
   refreshing: "Refreshing",
-  moreRanges: "More ranges",
+  customRange: "Custom",
   states: {
     disconnectedTitle: "Connect Meta to see results",
     disconnectedBody:
