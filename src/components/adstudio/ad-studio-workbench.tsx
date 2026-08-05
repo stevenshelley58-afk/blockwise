@@ -529,10 +529,6 @@ export function AdStudioWorkbench({
   }
 
   function goToSection(section: import("./use-ad-studio").StudioSection) {
-    if (section === "media") {
-      openMediaSheet();
-      return;
-    }
     setSelectedElement("canvas");
     setSelectedCanvasRegionKey(null);
     if (section !== "publish") setPublishCreativeSource("current");

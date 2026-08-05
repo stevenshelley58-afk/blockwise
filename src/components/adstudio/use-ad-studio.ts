@@ -4,7 +4,6 @@ import { useCallback, useRef, useState } from "react";
 
 export type StudioSection =
   | "home"
-  | "media"
   | "edit"
   | "publish"
   | "settings";
