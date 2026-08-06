@@ -179,13 +179,32 @@ function inkHeight(ctx: Canvas2DLike, text: string, fontSize: number): number {
   return fontSize;
 }
 
+/**
+ * textBaseline "middle" centres the EM box, whose ink sits asymmetrically and
+ * differently on each font engine (freetype vs Chrome). Offsetting by half the
+ * ink's own asymmetry centres the INK instead, so both backends place glyphs
+ * on the same pixels — the parity gate compares rendered ink, not em theory.
+ */
+function inkCenterOffset(ctx: Canvas2DLike, text: string): number {
+  const metrics = ctx.measureText(text);
+  const ascent = metrics.actualBoundingBoxAscent;
+  const descent = metrics.actualBoundingBoxDescent;
+  if (typeof ascent === "number" && typeof descent === "number" && Number.isFinite(ascent) && Number.isFinite(descent)) {
+    return (descent - ascent) / 2;
+  }
+  return 0;
+}
+
 function boxPx(box: NormBox, layout: TemplateLayout): { left: number; top: number; width: number; height: number } {
-  return {
-    left: box.x * layout.width,
-    top: box.y * layout.height,
-    width: box.width * layout.width,
-    height: box.height * layout.height,
-  };
+  // Snap to whole device pixels. Fractional drawImage destinations resample
+  // differently on each backend — snapping makes the slot/patch output
+  // byte-comparable in the parity gate and crisper on screen. Deterministic:
+  // same doc always rounds the same way.
+  const left = Math.round(box.x * layout.width);
+  const top = Math.round(box.y * layout.height);
+  const right = Math.round((box.x + box.width) * layout.width);
+  const bottom = Math.round((box.y + box.height) * layout.height);
+  return { left, top, width: right - left, height: bottom - top };
 }
 
 function applyGradient(
@@ -287,7 +306,7 @@ function drawTextLayer(
           ? lineRect.left + lineRect.width * 0.99
           : lineRect.left + lineRect.width / 2;
       ctx.save();
-      ctx.translate(x, lineRect.top + lineRect.height / 2);
+      ctx.translate(x, lineRect.top + lineRect.height / 2 - inkCenterOffset(ctx, lineValue));
       ctx.scale(scale, 1);
       applyEffectsAndDraw(ctx, layer, lineValue, 0, 0, fontSize, lineTracking, align, color, {
         left: lineRect.left,
@@ -333,8 +352,9 @@ function drawTextLayer(
   const firstCenter = rect.top + rect.height / 2 - ((lines.length - 1) * lineHeight) / 2;
   const lineTracking = layer.typo.tracking * fontSize;
   ctx.font = fontString(layer, fontSize);
+  const inkOffset = inkCenterOffset(ctx, lines[0] ?? "");
   lines.forEach((line, index) => {
-    applyEffectsAndDraw(ctx, layer, line, anchorX, firstCenter + index * lineHeight, fontSize, lineTracking, align, color, rect);
+    applyEffectsAndDraw(ctx, layer, line, anchorX, firstCenter + index * lineHeight - inkOffset, fontSize, lineTracking, align, color, rect);
   });
   ctx.restore();
 }

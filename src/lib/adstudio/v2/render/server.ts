@@ -15,7 +15,7 @@ import { fileURLToPath } from "node:url";
 import type { AdDocInstance, AdTemplateDocV2 } from "../template-doc.ts";
 import { TEMPLATE_FORMAT_DIMENSIONS } from "../template-doc.ts";
 import { loadSlotImageNode, loadTemplateAssetNode, type NodeCanvasImage } from "./assets.ts";
-import { registerNodeFonts } from "./fonts.ts";
+import { getNapiCanvas, registerNodeFonts } from "./fonts.ts";
 import { renderAdDoc, type AdDocFormat, type AdDocLayoutKey } from "./render-doc.ts";
 import type { RenderedAssets } from "./types.ts";
 
@@ -124,7 +124,7 @@ export async function renderAdDocToPng(
   format: AdDocFormat,
   options: RenderAdDocOptions = {},
 ): Promise<Buffer> {
-  const { Canvas } = await import("@napi-rs/canvas");
+  const { Canvas } = await getNapiCanvas();
   const repoRoot = options.repoRoot ?? repoRootFromHere();
   const dims = TEMPLATE_FORMAT_DIMENSIONS[format];
   const layoutKey: AdDocLayoutKey = format === "4:5" ? "feed" : "story";

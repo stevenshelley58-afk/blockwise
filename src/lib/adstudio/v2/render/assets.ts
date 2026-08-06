@@ -9,6 +9,8 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
+import { getNapiCanvas } from "./fonts.ts";
+
 /**
  * Resolve a rooted public path ("/fonts/adstudio/…" or
  * "/adstudio-templates/<id>/plate-feed.webp") against the repo root.
@@ -40,7 +42,7 @@ export async function loadTemplateAssetNode(
   publicSrc: string,
   expectedSha256: string,
 ): Promise<NodeCanvasImage> {
-  const { loadImage } = await import("@napi-rs/canvas");
+  const { loadImage } = await getNapiCanvas();
   const absolute = resolvePublicPath(repoRoot, publicSrc);
   const bytes = await readFile(absolute);
   await verifySha256(bytes, expectedSha256, publicSrc);
@@ -53,7 +55,7 @@ export async function loadTemplateAssetNode(
  * decode failure throws — generation surfaces it as a 400-class error.
  */
 export async function loadSlotImageNode(bytes: Buffer, label: string): Promise<NodeCanvasImage> {
-  const { loadImage } = await import("@napi-rs/canvas");
+  const { loadImage } = await getNapiCanvas();
   try {
     const image = await loadImage(bytes);
     return image as unknown as NodeCanvasImage;

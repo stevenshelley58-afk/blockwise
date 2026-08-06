@@ -4,6 +4,10 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
   typedRoutes: true,
+  // Native pixel backend of the AdStudio v2 renderer. Must be required at
+  // runtime from node_modules, never bundled — its prebuilt .node binary and
+  // platform package resolution break inside webpack output.
+  serverExternalPackages: ["@napi-rs/canvas"],
   outputFileTracingIncludes: {
     "/operator/research": ["./hermes/skills/**/*"],
     "/api/operator/research/skills": ["./hermes/skills/**/*"],
