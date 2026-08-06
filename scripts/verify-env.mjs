@@ -49,6 +49,18 @@ if (firstTesterMode && readiness.firstTester.invalid.length > 0) {
   process.exit(1);
 }
 
+// AdStudio v2 rollout flags (plan §11) are optional; when present they must
+// be explicit booleans — a typo'd flag silently leaves the v1 path running.
+const ADSTUDIO_V2_FLAG_KEYS = ["ADSTUDIO_TEMPLATES_V2", "META_ASSET_FEED_ENABLED"];
+const badFlags = ADSTUDIO_V2_FLAG_KEYS.filter((key) => {
+  const value = env[key]?.trim().toLowerCase();
+  return value !== undefined && value !== "" && value !== "true" && value !== "false" && value !== "1" && value !== "0";
+});
+if (badFlags.length > 0) {
+  console.error(`Invalid AdStudio v2 flag value(s) (use true/false): ${badFlags.join(", ")}`);
+  process.exit(1);
+}
+
 console.log("All required Blockwise environment variables are present and non-placeholder.");
 
 if (firstTesterMode) {

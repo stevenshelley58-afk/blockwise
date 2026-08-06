@@ -6,6 +6,7 @@ import {
   loadAdStudioBrandAssetRows,
 } from "./assets.ts";
 import { normalizeCloneQa } from "./types.ts";
+import { isAdDocInstanceShape } from "./v2/template-doc.ts";
 import type {
   AdStudioBrandKit,
   AdStudioCampaign,
@@ -307,10 +308,16 @@ export function rowToCreative(row: Record<string, unknown>): AdStudioCreative {
     backgroundAssetId: null,
     objects: [],
   };
-  // Legacy rows carry verdict-era { copyChecks, passed… } blobs under cloneQa;
-  // normalize to the lean { regions, copyValues } editor map on read.
-  const cloneQa = normalizeCloneQa(rawCanvas.cloneQa);
-  const canvas = cloneQa ? { ...rawCanvas, cloneQa } : rawCanvas;
+  // v2 instance docs are canonical as stored — no v1 normalization may touch
+  // them (and later v1-only logic must keep respecting this same guard).
+  const canvas = isAdDocInstanceShape(rawCanvas)
+    ? rawCanvas
+    : (() => {
+        // Legacy rows carry verdict-era { copyChecks, passed… } blobs under
+        // cloneQa; normalize to the lean { regions, copyValues } editor map.
+        const cloneQa = normalizeCloneQa(rawCanvas.cloneQa);
+        return cloneQa ? { ...rawCanvas, cloneQa } : rawCanvas;
+      })();
 
   return {
     creativeId: String(row.id),
