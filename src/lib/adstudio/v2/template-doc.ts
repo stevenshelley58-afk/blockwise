@@ -162,14 +162,15 @@ export type TemplateLayer = ImageSlotLayer | TextLayer | OverlayPatchLayer;
 
 export type TemplateLayout = {
   format: "4:5" | "9:16";
-  width: 1080;
-  height: 1350 | 1920;
-  /**
-   * Full-bleed raster: the SOURCE ad with text regions inpainted away and slot
-   * regions left as-is (slots draw OVER the plate). Restyle palette remaps are
-   * applied where the operator recolours plate elements. Lossless WebP.
-   */
+  width: 1080; height: 1350 | 1920;
+  /** Full-bleed raster: the SOURCE ad with text regions inpainted away and slot regions
+   *  left as-is (slots draw OVER the plate). Restyle palette remaps are applied where the
+   *  operator recolours plate elements (deterministic hue remap, recorded in restyle).
+   *  Lossless WebP. */
   plate: { src: string; sha256: string };
+  /** True for the source-native surface (story-first sources); absent for
+   *  derived band layouts and feeds. */
+  native?: boolean;
   /** z-ordered ABOVE the plate, ascending. */
   layers: TemplateLayer[];
 };
@@ -465,6 +466,9 @@ const templateLayoutSchema = z
     height: z.union([z.literal(1350), z.literal(1920)]),
     plate: z.object({ src: publicPathSchema, sha256: sha256Schema }),
     layers: z.array(templateLayerSchema),
+    /** True when the layout is the source-native surface (decomposed from a
+     *  9:16 source); absent for feeds and derived band layouts. */
+    native: z.boolean().optional(),
   })
   .refine(
     (layout) => layout.height === TEMPLATE_FORMAT_DIMENSIONS[layout.format].height,
@@ -753,9 +757,12 @@ function checkTextOverlap(doc: TemplateDocShape, ctx: z.RefinementCtx): void {
 
 /**
  * Meta crops the top 250 px and bottom 340 px of a story behind its own chrome.
- * Text there is not "a bit tight" — it is invisible.
+ * Text there is not "a bit tight" — it is invisible. Draft/qa docs may carry
+ * source-native text there (a design decision the Studio resolves before
+ * ready); the shipped status is what the hard rule guards.
  */
 function checkStorySafeZones(doc: TemplateDocShape, ctx: z.RefinementCtx): void {
+  if (doc.exactness.status !== "ready") return;
   const story = doc.formats.story;
   if (!story) return;
   for (const [index, layer] of story.layers.entries()) {

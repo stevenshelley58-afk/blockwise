@@ -35,11 +35,12 @@ import { templateDocV2Schema } from "../../src/lib/adstudio/v2/template-doc.ts";
 const root = process.cwd();
 const galleryDir = resolve(process.env.ADSTUDIO_GALLERY_V2_DIR ?? join(root, "src", "lib", "adstudio", "template-gallery-v2"));
 const v1GalleryDir = resolve(join(root, "src", "lib", "adstudio", "template-gallery"));
-const publicDir = resolve(join(root, "public"));
+const publicDir = resolve(process.env.ADSTUDIO_PUBLIC_DIR ?? join(root, "public"));
 const v2PublicDir = join(publicDir, "adstudio-templates");
 const fontManifestPath = join(publicDir, "fonts", "adstudio", "manifest.json");
 
 const failures = [];
+const warnings = [];
 function fail(message) {
   failures.push(message);
 }
@@ -173,7 +174,7 @@ for (const doc of docs) {
   const layouts = [doc.formats.feed, doc.formats.story].filter(Boolean);
   // Story-first sources derive the 4:5 feed as a centred band; inputs whose
   // boxes fall outside the band legitimately have no layer on that surface.
-  const storyFirst = Boolean(doc.formats.story && doc.formats.story.format === "9:16");
+  const storyFirst = Boolean(doc.formats.story?.native);
 
   // 4. contract: no orphans between inputs and layers, per format.
   for (const layout of layouts) {
@@ -197,14 +198,20 @@ for (const doc of docs) {
       if (!derivedSurface && !slotKeys.has(input.key)) fail(`${doc.id}: image input "${input.key}" has no slot in ${layout.format}`);
     }
 
-    // 5. story safe zones (qa+ready)
+    // 5. story safe zones. Hard fail for ready docs (the shipped surface);
+    // Studio-level warnings for qa docs (design guidance, §5.2/Appendix A).
     if (layout.format === "9:16" && status !== "draft") {
       for (const layer of layout.layers) {
         if (layer.type !== "text" && layer.type !== "image_slot") continue;
         const top = layer.box.y * 1920;
         const bottom = (layer.box.y + layer.box.height) * 1920;
-        if (top < STORY_TOP_PX) fail(`${doc.id}: layer ${layer.id} intrudes into the story top safe zone (${Math.round(top)}px < ${STORY_TOP_PX}px)`);
-        if (bottom > 1920 - STORY_BOTTOM_PX) fail(`${doc.id}: layer ${layer.id} intrudes into the story bottom safe zone (${Math.round(bottom)}px > ${1920 - STORY_BOTTOM_PX}px)`);
+        const intrudes = top < STORY_TOP_PX || bottom > 1920 - STORY_BOTTOM_PX;
+        if (!intrudes) continue;
+        if (status === "ready") {
+          fail(`${doc.id}: layer ${layer.id} intrudes into the story safe zones (${Math.round(top)}..${Math.round(bottom)}px)`);
+        } else {
+          warnings.push(`${doc.id}: ${layer.id} sits in a story safe zone — Studio must move it or bake before ready`);
+        }
       }
     }
   }
@@ -402,6 +409,7 @@ if (failures.length > 0) {
   for (const message of failures.slice(0, 40)) console.error(`  - ${message}`);
   process.exit(1);
 }
+for (const message of warnings.slice(0, 20)) console.warn(`  ! ${message}`);
 const byStatus = docs.reduce((acc, doc) => {
   acc[doc.exactness.status] = (acc[doc.exactness.status] ?? 0) + 1;
   return acc;

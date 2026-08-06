@@ -24,9 +24,11 @@ import { fileURLToPath } from "node:url";
 import sharp from "sharp";
 
 const root = process.cwd();
-const v1Gallery = resolve(join(root, "src", "lib", "adstudio", "template-gallery"));
-const v2Gallery = resolve(join(root, "src", "lib", "adstudio", "template-gallery-v2"));
-const publicV2 = resolve(join(root, "public", "adstudio-templates"));
+// Env-overridable so tests run against a scratch copy (idempotence test is
+// hermetic — never races the live gallery or the batch pipeline).
+const v1Gallery = resolve(process.env.ADSTUDIO_V1_GALLERY ?? join(root, "src", "lib", "adstudio", "template-gallery"));
+const v2Gallery = resolve(process.env.ADSTUDIO_V2_GALLERY ?? join(root, "src", "lib", "adstudio", "template-gallery-v2"));
+const publicV2 = resolve(process.env.ADSTUDIO_PUBLIC_V2 ?? join(root, "public", "adstudio-templates"));
 const fontManifestPath = join(root, "public", "fonts", "adstudio", "manifest.json");
 const fontManifest = existsSync(fontManifestPath)
   ? JSON.parse(readFileSync(fontManifestPath, "utf8"))
@@ -201,7 +203,7 @@ function v1ToV2(v1, id, from) {
               })
               .filter(Boolean),
           },
-          story: layout,
+          story: { ...layout, native: true },
         }
       : { feed: layout },
     inputs: {
@@ -290,8 +292,7 @@ async function storyDraft(id) {
   const doc = readJson(docPath);
   // Story-first sources: decompose wrote the true story plate from the
   // source; never overwrite it with a band-extended feed.
-  const storyFirst = Boolean(doc.formats.story && doc.formats.story.format === "9:16"
-    && !/^0+$/.test(doc.formats.story.plate.sha256 ?? ""));
+  const storyFirst = Boolean(doc.formats.story?.native);
   if (storyFirst) {
     console.log(`story-draft ${id}: story-first source — keeping the decomposed story plate`);
     return;
@@ -378,7 +379,7 @@ async function decompose(id) {
 
   const meta = await sharp(sourceBytes).metadata();
   const sourceDims = { width: meta.width, height: meta.height };
-  const isStoryFirst = Boolean(doc.formats.story && doc.formats.story.format === "9:16");
+  const isStoryFirst = Boolean(doc.formats.story?.native);
   const layout = isStoryFirst ? doc.formats.story : doc.formats.feed;
   const layoutDims = { width: layout.width, height: layout.height };
   // The OpenAI mask is free-form (the model resamples internally); the
@@ -587,7 +588,7 @@ async function restyle(id) {
   // Public sample = deterministic render of the restyled doc with safe copy.
   // Story-first templates render the sample at their native 9:16 layout
   // (the 4:5 band boxes are derived and can degenerate); feed-first at 4:5.
-  const isStoryFirst = Boolean(doc.formats.story && doc.formats.story.format === "9:16");
+  const isStoryFirst = Boolean(doc.formats.story?.native);
   const sampleFormat = isStoryFirst ? "9:16" : "4:5";
   const { renderAdDocToPng } = await import("../../../src/lib/adstudio/v2/render/server.ts");
   const instance = {
@@ -632,7 +633,7 @@ async function check(id) {
   const sourceValues = evidence.sourceValues ?? {};
   const sourceBytes = readFileSync(join(root, "meta_ad_candidates", doc.provenance.sourceAd.file));
 
-  const isStoryFirst = Boolean(doc.formats.story && doc.formats.story.format === "9:16");
+  const isStoryFirst = Boolean(doc.formats.story?.native);
   const layout = isStoryFirst ? doc.formats.story : doc.formats.feed;
   const W = layout.width;
   const H = layout.height;
