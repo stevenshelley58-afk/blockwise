@@ -5,6 +5,8 @@
 // size/align steppers; studio (Template Studio, Track C) will reuse these
 // with full typo controls layered on top.
 
+import { useEffect, useState } from "react";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -100,32 +102,65 @@ export function EditorPanels({
   }
 
   if (layer.type === "image_slot") {
-    const imageValue = instance.values.images[layer.inputKey];
-    return (
-      <div className="flex flex-col gap-4 p-4">
-        <div className="flex flex-col gap-1.5">
-          <Label>Zoom {Math.round((imageValue?.zoom ?? 1) * 100) / 100}×</Label>
-          <Slider
-            min={1}
-            max={3}
-            step={0.05}
-            value={[imageValue?.zoom ?? 1]}
-            onValueChange={([zoom]) =>
-              edit({ type: "image-focal", key: layer.inputKey, focal: imageValue?.focal ?? layer.focal ?? { x: 0.5, y: 0.5 }, zoom }, `zoom-${layer.inputKey}`)
-            }
-          />
-          <small className="text-[11px] text-[var(--muted,#8a94a3)]">
-            Drag the photo to reposition. Replace it from your media library.
-          </small>
-        </div>
-        {denied ? <p role="alert" className="text-[var(--danger,#e5484d)] text-sm">{denied}</p> : null}
-      </div>
-    );
+    return <SlotPanel layer={layer} instance={instance} edit={edit} denied={denied} />;
   }
 
   return (
     <div className="p-4 text-sm text-[var(--muted,#8a94a3)]">
       Overlay patch{mode === "guided" ? " — locked in guided mode" : ""}.
+    </div>
+  );
+}
+
+function SlotPanel({
+  layer,
+  instance,
+  edit,
+  denied,
+}: {
+  layer: Extract<import("@/lib/adstudio/v2/template-doc").TemplateLayer, { type: "image_slot" }>;
+  instance: AdDocInstance;
+  edit: (action: EditorAction, gestureId?: string) => void;
+  denied: string | null;
+}) {
+  const imageValue = instance.values.images[layer.inputKey];
+  const [imageStatus, setImageStatus] = useState<"ok" | "low" | "none">("none");
+  // Low-res guard (§7): warn when the customer photo falls below the slot's
+  // declared minimum; the runtime hard floor lives in generate.ts.
+  useEffect(() => {
+    const src = imageValue?.src;
+    if (!src) return;
+    const img = new Image();
+    img.onload = () => {
+      const min = layer.minSourcePx ?? { width: 540, height: 675 };
+      setImageStatus(img.naturalWidth < min.width || img.naturalHeight < min.height ? "low" : "ok");
+    };
+    img.src = src.startsWith("data:") || src.startsWith("http") ? src : `/api/adstudio/media?path=${encodeURIComponent(src)}`;
+  }, [imageValue?.src, layer.minSourcePx?.width, layer.minSourcePx?.height]);
+
+  return (
+    <div className="flex flex-col gap-4 p-4">
+      <div className="flex flex-col gap-1.5">
+        <Label>Zoom {Math.round((imageValue?.zoom ?? 1) * 100) / 100}×</Label>
+        <Slider
+          min={1}
+          max={3}
+          step={0.05}
+          value={[imageValue?.zoom ?? 1]}
+          onValueChange={([zoom]) =>
+            edit({ type: "image-focal", key: layer.inputKey, focal: imageValue?.focal ?? layer.focal ?? { x: 0.5, y: 0.5 }, zoom }, `zoom-${layer.inputKey}`)
+          }
+        />
+        <small className="text-[11px] text-[var(--muted,#8a94a3)]">
+          Drag the photo to reposition. Replace it from your media library.
+        </small>
+        {imageStatus === "low" ? (
+          <p role="alert" className="text-[13px] font-semibold text-[var(--danger,#e5484d)]">
+            This photo is below the slot's minimum resolution — it may look soft in the published ad.
+          </p>
+        ) : null}
+      </div>
+      {denied ? <p role="alert" className="text-[var(--danger,#e5484d)] text-sm">{denied}</p> : null}
     </div>
   );
 }

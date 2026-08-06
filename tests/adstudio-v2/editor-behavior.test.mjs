@@ -46,8 +46,11 @@ test("panels: zoom slider and low-res guidance for slots", () => {
 });
 
 test("guided guard rails: whitelist + palette-only colours (state law)", () => {
-  assert.match(hook, /guardAction/);
+  // The hook's reducer delegates every edit to guardAction — the single
+  // source of the guided law.
+  assert.match(hook, /makeEditorReducer/);
   const state = readFileSync("src/lib/adstudio/v2/editor-state.ts", "utf8");
   assert.match(state, /GUIDED_OVERRIDE_OPS = \["color"\]/);
   assert.match(state, /lockedLayerIds/);
+  assert.match(state, /palette\.includes\(action\.color\)/);
 });
