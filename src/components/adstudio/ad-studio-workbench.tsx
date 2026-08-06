@@ -41,6 +41,8 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { requestCreativeEdit } from "./canvas/creative-edit-client";
 import { FORMAT_META, MetaChromePreview, PreviewControls, VariantStrip } from "./preview";
 import { MetaFrame } from "./meta-frame/meta-frame";
+import { V2EditorStage } from "./editor/v2-editor-stage";
+import { isAdDocInstanceShape, type AdDocInstance } from "@/lib/adstudio/v2/template-doc";
 import type { PreviewFormat, SelectedElement } from "./preview";
 import { STYLES } from "./styles";
 import { initialOfferLabelForPack, labelForSelectedTemplate } from "./template-offer-state";
@@ -1116,6 +1118,21 @@ export function AdStudioWorkbench({
     // text above the creative, headline/description strip, real CTA enum label)
     // so the stage shows the ad exactly as Meta renders it.
     if (isCloneCreative(currentCreative)) {
+      // Track A: v2 instance docs edit in the Konva editor inside the same
+      // Meta frame; saves go through /doc (server render + CAS revision).
+      if (useV2Frames && isAdDocInstanceShape(currentCreative.canvas as unknown)) {
+        return (
+          <div className="studio-clone-editor-wrap">
+            <V2EditorStage
+              creativeId={currentCreative.creativeId}
+              instance={currentCreative.canvas as unknown as AdDocInstance}
+              activeRevisionId={currentCreative.activeRevisionId ?? null}
+              brandKit={brandKit}
+              brandPalette={[brandKit.colours.primary, brandKit.colours.secondary, brandKit.colours.accent]}
+            />
+          </div>
+        );
+      }
       // ADSTUDIO_TEMPLATES_V2: the new placement frames wrap the editor; the
       // publish-review picker (Phase 2) will mount the full six-placement set.
       const cloneEditor = (
