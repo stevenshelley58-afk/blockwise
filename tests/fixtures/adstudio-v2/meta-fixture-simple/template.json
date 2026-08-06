@@ -1,0 +1,267 @@
+{
+  "schema": "adstudio.template.v2",
+  "id": "meta-fixture-simple",
+  "name": "Fixture Simple",
+  "goal": "seller_leads",
+  "offerId": "fixture-offer",
+  "category": "fixture",
+  "tags": [
+    "fixture"
+  ],
+  "audienceIntent": "sellers",
+  "classification": {
+    "ad_type": "single_image",
+    "primary_intent": "lead_gen",
+    "property_or_agent_focus": "property"
+  },
+  "provenance": {
+    "sourceAd": {
+      "file": "meta_ad_candidates/meta-fixture-simple-source.png",
+      "contentHash": "31f9c3045f805cc241cae1efe4802dde100c442a087c87e47f4ccc94cd483101"
+    },
+    "sample": {
+      "imageSrc": "/adstudio-templates/meta-fixture-simple/sample.png",
+      "contentHash": "0891034c2ccacb47fb1e1039489761f868be9aba60f9d0603b0dbea0b3f1da8b",
+      "generatedBy": "deterministic_render"
+    },
+    "decomposedFrom": "source"
+  },
+  "restyle": {
+    "paletteMap": {},
+    "replacedAssets": [],
+    "note": "draft fixture — restyle recorded at ready time"
+  },
+  "fonts": [
+    {
+      "fontId": "alegreya",
+      "family": "Alegreya",
+      "weight": 400,
+      "italic": false,
+      "file": "/fonts/adstudio/alegreya-400.woff2",
+      "sha256": "fe33a80f1e2f7200d22980bb3838c168f1e7a36262a3e51ff73f47242e79c21f"
+    }
+  ],
+  "formats": {
+    "feed": {
+      "format": "4:5",
+      "width": 1080,
+      "height": 1350,
+      "plate": {
+        "src": "/plates/fixture-simple-feed.png",
+        "sha256": "5ed74412c4f83367e971785c9d7616299bdd0c6e1f80b0bf09ad0b99b01df94c"
+      },
+      "layers": [
+        {
+          "id": "slot-photo",
+          "z": 1,
+          "type": "image_slot",
+          "inputKey": "photo",
+          "fit": "cover",
+          "box": {
+            "x": 0.05,
+            "y": 0.05,
+            "width": 0.9,
+            "height": 0.45
+          },
+          "focal": {
+            "x": 0.5,
+            "y": 0.4
+          },
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 972,
+            "height": 608
+          }
+        },
+        {
+          "id": "text-headline",
+          "z": 2,
+          "type": "text",
+          "inputKey": "headline",
+          "box": {
+            "x": 0.05,
+            "y": 0.55,
+            "width": 0.9,
+            "height": 0.14
+          },
+          "typo": {
+            "fontId": "alegreya",
+            "family": "Alegreya",
+            "fallbackFamily": "serif",
+            "weight": 400,
+            "italic": false,
+            "case": "none",
+            "lineHeight": 1.1,
+            "tracking": 0,
+            "align": "left",
+            "sizeRatio": 0.42,
+            "color": "#1e293b",
+            "measuredLines": [
+              {
+                "text": "Find your",
+                "box": {
+                  "x": 0.05,
+                  "y": 0.55,
+                  "width": 0.9,
+                  "height": 0.07
+                },
+                "sizeRatio": 0.8
+              },
+              {
+                "text": "place",
+                "box": {
+                  "x": 0.05,
+                  "y": 0.625,
+                  "width": 0.9,
+                  "height": 0.055
+                },
+                "sizeRatio": 0.7
+              }
+            ]
+          },
+          "constraints": {
+            "maxLength": 40,
+            "maxLines": 2,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.92,
+            "detectionScore": 0.9,
+            "source": "ocr-v2",
+            "version": 2
+          }
+        },
+        {
+          "id": "text-subline",
+          "z": 3,
+          "type": "text",
+          "inputKey": "subline",
+          "box": {
+            "x": 0.05,
+            "y": 0.74,
+            "width": 0.9,
+            "height": 0.1
+          },
+          "typo": {
+            "fontId": "alegreya",
+            "family": "Alegreya",
+            "fallbackFamily": "serif",
+            "weight": 400,
+            "italic": false,
+            "case": "none",
+            "lineHeight": 1.1,
+            "tracking": 0,
+            "align": "left",
+            "sizeRatio": 0.34,
+            "color": "#475569"
+          },
+          "constraints": {
+            "maxLength": 80,
+            "maxLines": 2,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.92,
+            "detectionScore": 0.9,
+            "source": "ocr-v2",
+            "version": 2
+          }
+        }
+      ]
+    }
+  },
+  "inputs": {
+    "images": [
+      {
+        "key": "photo",
+        "label": "Property photo",
+        "required": true,
+        "aspect": "landscape",
+        "description": "A street or facade shot"
+      }
+    ],
+    "text": [
+      {
+        "key": "headline",
+        "label": "Headline",
+        "required": true,
+        "maxLength": 40,
+        "sample": "Find your place"
+      },
+      {
+        "key": "subline",
+        "label": "Supporting line",
+        "required": true,
+        "maxLength": 80,
+        "sample": "Homes matched to you"
+      }
+    ]
+  },
+  "publish": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "apiVersionMin": "v26.0",
+    "copy": {
+      "primaryText": [
+        "Find your next home with a local expert."
+      ],
+      "headlines": [
+        "Free home appraisal"
+      ],
+      "descriptions": [
+        "Book in 30 seconds."
+      ]
+    },
+    "cta": "GET_QUOTE",
+    "leadForm": {
+      "headline": "Get your free appraisal",
+      "questions": [
+        "What is your property worth?"
+      ],
+      "thankYou": {
+        "title": "Thanks!",
+        "body": "We will be in touch within one business day."
+      }
+    },
+    "placements": {
+      "publisherPlatforms": [
+        "facebook",
+        "instagram"
+      ],
+      "facebookPositions": [
+        "feed",
+        "story"
+      ],
+      "instagramPositions": [
+        "stream",
+        "story"
+      ]
+    },
+    "formatRouting": {
+      "feed": "4:5",
+      "story": null
+    },
+    "creativeFeatures": {
+      "adapt_to_placement": "OPT_OUT",
+      "image_touchups": "OPT_OUT",
+      "text_optimizations": "OPT_OUT"
+    },
+    "previewFormats": [
+      "MOBILE_FEED_STANDARD",
+      "INSTAGRAM_STORY"
+    ]
+  },
+  "editPolicy": {
+    "mode": "guided",
+    "advancedUnlockable": true,
+    "lockedLayerIds": []
+  },
+  "exactness": {
+    "status": "draft",
+    "residuals": {},
+    "bakedTextKeys": []
+  }
+}

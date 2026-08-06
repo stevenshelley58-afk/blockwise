@@ -1,0 +1,267 @@
+{
+  "schema": "adstudio.template.v2",
+  "id": "meta-fixture-story",
+  "name": "Fixture Story",
+  "goal": "buyer_leads",
+  "offerId": "fixture-offer",
+  "category": "fixture",
+  "tags": [
+    "fixture",
+    "story"
+  ],
+  "audienceIntent": "buyers",
+  "classification": {
+    "ad_type": "single_image",
+    "primary_intent": "lead_gen",
+    "property_or_agent_focus": "property"
+  },
+  "provenance": {
+    "sourceAd": {
+      "file": "meta_ad_candidates/meta-fixture-story-source.png",
+      "contentHash": "a9c59a472e9bc27fe4fd68a344b60601a6eb8b121760f9480cc3d738a4c3abe8"
+    },
+    "sample": {
+      "imageSrc": "/adstudio-templates/meta-fixture-story/sample.png",
+      "contentHash": "ba57e3fc78bd9fad91f1d6ca177a5beaa97504b2faf7332a0d186a763ad1e97e",
+      "generatedBy": "deterministic_render"
+    },
+    "decomposedFrom": "source"
+  },
+  "restyle": {
+    "paletteMap": {
+      "#e11d48": "#1d4ed8"
+    },
+    "replacedAssets": [
+      "photo"
+    ],
+    "note": "fixture restyle: palette remap + generic photo"
+  },
+  "fonts": [
+    {
+      "fontId": "alegreya",
+      "family": "Alegreya",
+      "weight": 400,
+      "italic": false,
+      "file": "/fonts/adstudio/alegreya-400.woff2",
+      "sha256": "fe33a80f1e2f7200d22980bb3838c168f1e7a36262a3e51ff73f47242e79c21f"
+    }
+  ],
+  "formats": {
+    "feed": {
+      "format": "4:5",
+      "width": 1080,
+      "height": 1350,
+      "plate": {
+        "src": "/plates/fixture-story-feed.png",
+        "sha256": "35eb22c3328d37a6c696854501814535125d36f0f7f292f8570b6302c7c555ae"
+      },
+      "layers": [
+        {
+          "id": "feed-slot-photo",
+          "z": 1,
+          "type": "image_slot",
+          "inputKey": "photo",
+          "fit": "cover",
+          "box": {
+            "x": 0.06,
+            "y": 0.06,
+            "width": 0.88,
+            "height": 0.5
+          },
+          "mask": {
+            "kind": "ellipse"
+          }
+        },
+        {
+          "id": "feed-text-headline",
+          "z": 2,
+          "type": "text",
+          "inputKey": "headline",
+          "box": {
+            "x": 0.06,
+            "y": 0.62,
+            "width": 0.88,
+            "height": 0.12
+          },
+          "typo": {
+            "fontId": "alegreya",
+            "family": "Alegreya",
+            "fallbackFamily": "serif",
+            "weight": 400,
+            "italic": false,
+            "case": "none",
+            "lineHeight": 1.1,
+            "tracking": 0,
+            "align": "center",
+            "sizeRatio": 0.45,
+            "color": "#065f46"
+          },
+          "constraints": {
+            "maxLength": 36,
+            "maxLines": 2,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.92,
+            "detectionScore": 0.9,
+            "source": "ocr-v2",
+            "version": 2
+          }
+        }
+      ]
+    },
+    "story": {
+      "format": "9:16",
+      "width": 1080,
+      "height": 1920,
+      "plate": {
+        "src": "/plates/fixture-story-story.png",
+        "sha256": "7094ca3d9a8ce2b53948d2c1bd78cab34adde85734ace619c961b7167a481a5d"
+      },
+      "layers": [
+        {
+          "id": "story-slot-photo",
+          "z": 1,
+          "type": "image_slot",
+          "inputKey": "photo",
+          "fit": "cover",
+          "box": {
+            "x": 0.1,
+            "y": 0.2,
+            "width": 0.8,
+            "height": 0.35
+          },
+          "mask": {
+            "kind": "rect"
+          }
+        },
+        {
+          "id": "story-text-headline",
+          "z": 2,
+          "type": "text",
+          "inputKey": "headline",
+          "box": {
+            "x": 0.1,
+            "y": 0.6,
+            "width": 0.8,
+            "height": 0.1
+          },
+          "typo": {
+            "fontId": "alegreya",
+            "family": "Alegreya",
+            "fallbackFamily": "serif",
+            "weight": 400,
+            "italic": false,
+            "case": "none",
+            "lineHeight": 1.1,
+            "tracking": 0,
+            "align": "center",
+            "sizeRatio": 0.45,
+            "color": "#065f46"
+          },
+          "constraints": {
+            "maxLength": 36,
+            "maxLines": 2,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.92,
+            "detectionScore": 0.9,
+            "source": "ocr-v2",
+            "version": 2
+          }
+        }
+      ]
+    }
+  },
+  "inputs": {
+    "images": [
+      {
+        "key": "photo",
+        "label": "Property photo",
+        "required": true,
+        "aspect": "landscape",
+        "description": "Street shot"
+      }
+    ],
+    "text": [
+      {
+        "key": "headline",
+        "label": "Headline",
+        "required": true,
+        "maxLength": 36,
+        "sample": "Your next address"
+      }
+    ]
+  },
+  "publish": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "apiVersionMin": "v26.0",
+    "copy": {
+      "primaryText": [
+        "Find your next home with a local expert."
+      ],
+      "headlines": [
+        "Free home appraisal"
+      ],
+      "descriptions": [
+        "Book in 30 seconds."
+      ]
+    },
+    "cta": "GET_QUOTE",
+    "leadForm": {
+      "headline": "Get your free appraisal",
+      "questions": [
+        "What is your property worth?"
+      ],
+      "thankYou": {
+        "title": "Thanks!",
+        "body": "We will be in touch within one business day."
+      }
+    },
+    "placements": {
+      "publisherPlatforms": [
+        "facebook",
+        "instagram"
+      ],
+      "facebookPositions": [
+        "feed",
+        "story"
+      ],
+      "instagramPositions": [
+        "stream",
+        "story"
+      ]
+    },
+    "formatRouting": {
+      "feed": "4:5",
+      "story": "9:16"
+    },
+    "creativeFeatures": {
+      "adapt_to_placement": "OPT_OUT",
+      "image_touchups": "OPT_OUT",
+      "text_optimizations": "OPT_OUT"
+    },
+    "previewFormats": [
+      "MOBILE_FEED_STANDARD",
+      "INSTAGRAM_STORY"
+    ]
+  },
+  "editPolicy": {
+    "mode": "guided",
+    "advancedUnlockable": true,
+    "lockedLayerIds": []
+  },
+  "exactness": {
+    "status": "ready",
+    "residuals": {
+      "feed-text-headline": 0.05,
+      "story-text-headline": 0.06
+    },
+    "bakedTextKeys": [],
+    "qaBy": "fixture-qa",
+    "qaAt": "2026-08-05T00:00:00.000Z"
+  }
+}

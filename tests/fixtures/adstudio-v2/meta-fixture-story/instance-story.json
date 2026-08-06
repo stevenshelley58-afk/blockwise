@@ -1,0 +1,33 @@
+{
+  "schema": "adstudio.instance.v2",
+  "templateId": "meta-fixture-story",
+  "templateHash": "61d3b26453262216de62b0c45de49f5e62f5b801f63ff4379aa8300395afdb2f",
+  "format": "9:16",
+  "values": {
+    "images": {
+      "photo": {
+        "src": "fixture:/slots/photo-landscape.png",
+        "focal": {
+          "x": 0.5,
+          "y": 0.5
+        },
+        "zoom": 1
+      }
+    },
+    "text": {
+      "headline": "Your next address"
+    }
+  },
+  "overrides": [
+    {
+      "layerId": "story-text-headline",
+      "op": "move",
+      "box": {
+        "x": 0.1,
+        "y": 0.62,
+        "width": 0.8,
+        "height": 0.1
+      }
+    }
+  ]
+}

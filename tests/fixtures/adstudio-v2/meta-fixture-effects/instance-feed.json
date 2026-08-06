@@ -1,0 +1,34 @@
+{
+  "schema": "adstudio.instance.v2",
+  "templateId": "meta-fixture-effects",
+  "templateHash": "becb786e463d242b93d3d3f971da6272360d9648c2bb5e00b3640706bc0e4be1",
+  "format": "4:5",
+  "values": {
+    "images": {
+      "photo": {
+        "src": "fixture:/slots/photo-landscape.png",
+        "focal": {
+          "x": 0.5,
+          "y": 0.5
+        },
+        "zoom": 1
+      }
+    },
+    "text": {
+      "headline": "Book an appraisal",
+      "ctaLine": "Free this month"
+    }
+  },
+  "overrides": [
+    {
+      "layerId": "text-headline",
+      "op": "color",
+      "color": "#fbbf24"
+    },
+    {
+      "layerId": "text-cta",
+      "op": "align",
+      "align": "left"
+    }
+  ]
+}

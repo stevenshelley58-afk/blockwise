@@ -1,0 +1,269 @@
+{
+  "schema": "adstudio.template.v2",
+  "id": "meta-fixture-effects",
+  "name": "Fixture Effects",
+  "goal": "appraisal_bookings",
+  "offerId": "fixture-offer",
+  "category": "fixture",
+  "tags": [
+    "fixture"
+  ],
+  "audienceIntent": "sellers",
+  "classification": {
+    "ad_type": "single_image",
+    "primary_intent": "lead_gen",
+    "property_or_agent_focus": "agent"
+  },
+  "provenance": {
+    "sourceAd": {
+      "file": "meta_ad_candidates/meta-fixture-effects-source.png",
+      "contentHash": "d13a0a3fd791a0e4d7cb5458d7ff126a3d5e38c6a15689e4ac023c524275baeb"
+    },
+    "sample": {
+      "imageSrc": "/adstudio-templates/meta-fixture-effects/sample.png",
+      "contentHash": "97211d9a9b5ad7d83484e58d7a74d6b383d7f2ffc176cc80961abe5c82e0b45a",
+      "generatedBy": "deterministic_render"
+    },
+    "decomposedFrom": "source"
+  },
+  "restyle": {
+    "paletteMap": {},
+    "replacedAssets": []
+  },
+  "fonts": [
+    {
+      "fontId": "alegreya",
+      "family": "Alegreya",
+      "weight": 400,
+      "italic": false,
+      "file": "/fonts/adstudio/alegreya-400.woff2",
+      "sha256": "fe33a80f1e2f7200d22980bb3838c168f1e7a36262a3e51ff73f47242e79c21f"
+    }
+  ],
+  "formats": {
+    "feed": {
+      "format": "4:5",
+      "width": 1080,
+      "height": 1350,
+      "plate": {
+        "src": "/plates/fixture-effects-feed.png",
+        "sha256": "539b73cf9101034fcd25170ded36af84ac60b2e8b6a2e88fbc59bf1700e6f869"
+      },
+      "layers": [
+        {
+          "id": "slot-photo",
+          "z": 1,
+          "type": "image_slot",
+          "inputKey": "photo",
+          "fit": "cover",
+          "box": {
+            "x": 0.08,
+            "y": 0.22,
+            "width": 0.84,
+            "height": 0.4
+          },
+          "mask": {
+            "kind": "rounded",
+            "radius": 40
+          }
+        },
+        {
+          "id": "patch-badge",
+          "z": 2,
+          "type": "overlay_patch",
+          "box": {
+            "x": 0.35,
+            "y": 0.04,
+            "width": 0.3,
+            "height": 0.1185
+          },
+          "src": "/patches/fixture-effects-badge.png",
+          "sha256": "33a61fb4b1183a8b601642357623f656f91918f64ce1e75cd55c5f1f5c7ea182"
+        },
+        {
+          "id": "text-headline",
+          "z": 3,
+          "type": "text",
+          "inputKey": "headline",
+          "box": {
+            "x": 0.08,
+            "y": 0.68,
+            "width": 0.84,
+            "height": 0.12
+          },
+          "typo": {
+            "fontId": "alegreya",
+            "family": "Alegreya",
+            "fallbackFamily": "serif",
+            "weight": 400,
+            "italic": false,
+            "case": "upper",
+            "lineHeight": 1.1,
+            "tracking": 0,
+            "align": "center",
+            "sizeRatio": 0.5,
+            "color": "#f8fafc",
+            "effects": {
+              "stroke": {
+                "color": "#0f172a",
+                "widthRatio": 0.02
+              },
+              "shadow": {
+                "color": "#000000",
+                "blurRatio": 0.12,
+                "dx": 0.02,
+                "dy": 0.03
+              }
+            }
+          },
+          "constraints": {
+            "maxLength": 32,
+            "maxLines": 2,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.92,
+            "detectionScore": 0.9,
+            "source": "ocr-v2",
+            "version": 2
+          }
+        },
+        {
+          "id": "text-cta",
+          "z": 4,
+          "type": "text",
+          "inputKey": "ctaLine",
+          "box": {
+            "x": 0.08,
+            "y": 0.84,
+            "width": 0.84,
+            "height": 0.08
+          },
+          "typo": {
+            "fontId": "alegreya",
+            "family": "Alegreya",
+            "fallbackFamily": "serif",
+            "weight": 400,
+            "italic": false,
+            "case": "none",
+            "lineHeight": 1.1,
+            "tracking": 0,
+            "align": "center",
+            "sizeRatio": 0.4,
+            "color": "#f59e0b",
+            "effects": {
+              "gradientFill": {
+                "from": "#f59e0b",
+                "to": "#ef4444",
+                "angleDeg": 0
+              }
+            }
+          },
+          "constraints": {
+            "maxLength": 40,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.92,
+            "detectionScore": 0.9,
+            "source": "ocr-v2",
+            "version": 2
+          }
+        }
+      ]
+    }
+  },
+  "inputs": {
+    "images": [
+      {
+        "key": "photo",
+        "label": "Property photo",
+        "required": true,
+        "aspect": "landscape",
+        "description": "Facade or interior"
+      }
+    ],
+    "text": [
+      {
+        "key": "headline",
+        "label": "Headline",
+        "required": true,
+        "maxLength": 32,
+        "sample": "Book an appraisal"
+      },
+      {
+        "key": "ctaLine",
+        "label": "CTA line",
+        "required": true,
+        "maxLength": 40,
+        "sample": "Free this month"
+      }
+    ]
+  },
+  "publish": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "apiVersionMin": "v26.0",
+    "copy": {
+      "primaryText": [
+        "Find your next home with a local expert."
+      ],
+      "headlines": [
+        "Free home appraisal"
+      ],
+      "descriptions": [
+        "Book in 30 seconds."
+      ]
+    },
+    "cta": "GET_QUOTE",
+    "leadForm": {
+      "headline": "Get your free appraisal",
+      "questions": [
+        "What is your property worth?"
+      ],
+      "thankYou": {
+        "title": "Thanks!",
+        "body": "We will be in touch within one business day."
+      }
+    },
+    "placements": {
+      "publisherPlatforms": [
+        "facebook",
+        "instagram"
+      ],
+      "facebookPositions": [
+        "feed",
+        "story"
+      ],
+      "instagramPositions": [
+        "stream",
+        "story"
+      ]
+    },
+    "formatRouting": {
+      "feed": "4:5",
+      "story": null
+    },
+    "creativeFeatures": {
+      "adapt_to_placement": "OPT_OUT",
+      "image_touchups": "OPT_OUT",
+      "text_optimizations": "OPT_OUT"
+    },
+    "previewFormats": [
+      "MOBILE_FEED_STANDARD",
+      "INSTAGRAM_STORY"
+    ]
+  },
+  "editPolicy": {
+    "mode": "guided",
+    "advancedUnlockable": true,
+    "lockedLayerIds": []
+  },
+  "exactness": {
+    "status": "draft",
+    "residuals": {},
+    "bakedTextKeys": []
+  }
+}
