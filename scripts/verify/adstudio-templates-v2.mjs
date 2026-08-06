@@ -267,7 +267,13 @@ for (const doc of docs) {
     }
   }
 
-  if (status === "draft") continue; // plates land at decompose time
+  // Drafts: assets land during the pipeline; register their paths so the
+  // orphan sweep doesn't flag mid-pipeline files (sha checks skipped).
+  if (status === "draft") {
+    for (const layout of layouts) referencedFiles.add(layout.plate.src);
+    if (doc.provenance.sample.imageSrc) referencedFiles.add(doc.provenance.sample.imageSrc);
+    continue; // plates land at decompose time
+  }
 
   for (const layout of layouts) {
     const platePath = join(publicDir, layout.plate.src.replace(/^\//, ""));
