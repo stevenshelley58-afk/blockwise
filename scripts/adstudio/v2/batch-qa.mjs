@@ -14,7 +14,7 @@ const ids = readdirSync(gallery, { withFileTypes: true })
   .sort();
 
 const summary = { ok: [], failed: {} };
-const steps = ["decompose", "story-draft", "restyle", "check"];
+const steps = ["migrate-v1", "decompose", "story-draft", "restyle", "check"];
 
 for (const id of ids) {
   for (const step of steps) {
