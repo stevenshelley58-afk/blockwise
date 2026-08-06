@@ -342,6 +342,53 @@ if (docs.length > 0) {
   }
 }
 
+// ── 9. renderer smoke for ready templates: both formats + stress matrix ───
+if (docs.some((doc) => doc.exactness.status === "ready")) {
+  const { renderAdDocToPng } = await import("../../src/lib/adstudio/v2/render/server.ts");
+  for (const doc of docs.filter((entry) => entry.exactness.status === "ready")) {
+    const values = {
+      images: {},
+      text: Object.fromEntries(doc.inputs.text.map((input) => [input.key, input.sample])),
+    };
+    for (const [key, layout] of [["feed", doc.formats.feed], ["story", doc.formats.story]]) {
+      if (!layout) continue;
+      try {
+        const png = await renderAdDocToPng(doc, {
+          schema: "adstudio.instance.v2",
+          templateId: doc.id,
+          templateHash: "0".repeat(64),
+          format: layout.format,
+          values,
+          overrides: [],
+        }, layout.format);
+        if (!png || png.length < 1000) fail(`${doc.id}: ${key} smoke render produced no image`);
+      } catch (error) {
+        fail(`${doc.id}: ${key} smoke render threw: ${error?.message ?? error}`);
+      }
+    }
+    const editable = doc.inputs.text.filter((input) => !doc.exactness.bakedTextKeys.includes(input.key));
+    for (const [name, textValues] of [
+      ["longest", Object.fromEntries(editable.map((input) => [input.key, "W".repeat(input.maxLength)]))],
+      ["one-char", Object.fromEntries(editable.map((input) => [input.key, "W"]))],
+    ]) {
+      try {
+        await renderAdDocToPng(doc, {
+          schema: "adstudio.instance.v2",
+          templateId: doc.id,
+          templateHash: "0".repeat(64),
+          format: doc.formats.feed.format,
+          values: { images: {}, text: textValues },
+          overrides: [],
+        }, doc.formats.feed.format);
+      } catch (error) {
+        if (error?.name !== "RenderFitError") {
+          fail(`${doc.id}: stress ${name} threw non-fit error: ${error?.message ?? error}`);
+        }
+      }
+    }
+  }
+}
+
 // ─── report ─────────────────────────────────────────────────────────────────
 
 if (failures.length > 0) {
