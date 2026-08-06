@@ -152,14 +152,18 @@ function v1ToV2(v1, id, from) {
   }
 
   const fontRemaps = [];
-  const fonts = [...new Set(Object.values(v1.typography ?? {}).map((typo) => typo.fontId))].map((fontId) => {
-    const typo = Object.values(v1.typography ?? {}).find((entry) => entry.fontId === fontId);
+  // One entry per (fontId, weight, italic) the layers actually use — the
+  // schema requires every layer typo to resolve against fonts[].
+  const fonts = [...new Map(Object.values(v1.typography ?? {}).map((typo) => [
+    `${typo.fontId}@${typo.weight}@${Boolean(typo.italic)}`,
+    typo,
+  ])).values()].map((typo) => {
     return resolveFont(
-      fontId,
-      typo?.family ?? fontId,
-      typo?.weight ?? 400,
-      Boolean(typo?.italic),
-      typo?.fallbackFamily ?? "sans-serif",
+      typo.fontId,
+      typo.family ?? typo.fontId,
+      typo.weight ?? 400,
+      Boolean(typo.italic),
+      typo.fallbackFamily ?? "sans-serif",
       fontRemaps,
     );
   });

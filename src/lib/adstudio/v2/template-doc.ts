@@ -736,10 +736,14 @@ function checkFontResolution(doc: TemplateDocShape, ctx: z.RefinementCtx): void 
   }
 }
 
-/** Overlapping text boxes mean one of the two measurements is wrong. */
+/** Overlapping text boxes mean one of the two measurements is wrong.
+ *  Baked text is source pixels (not an editable box), so overlaps between
+ *  baked regions are the source's own design and stay out of this rule. */
 function checkTextOverlap(doc: TemplateDocShape, ctx: z.RefinementCtx): void {
   for (const [formatKey, layout] of formatEntries(doc)) {
-    const texts = layout.layers.filter((layer): layer is TextLayer => layer.type === "text");
+    const texts = layout.layers.filter(
+      (layer): layer is TextLayer => layer.type === "text" && !doc.exactness.bakedTextKeys.includes(layer.inputKey),
+    );
     for (let left = 0; left < texts.length; left += 1) {
       for (let right = left + 1; right < texts.length; right += 1) {
         const ratio = boxOverlapRatio(texts[left]!.box, texts[right]!.box);
