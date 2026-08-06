@@ -394,7 +394,20 @@ async function decompose(id) {
   const inpaintMask = await buildInpaintMask(sourceDims, boxes);
 
   console.log(`decompose ${id}: one masked gpt-image-2 call for ${boxes.length} text region(s)…`);
-  const inpainted = await inpaintTextRegions(env, sourceBytes, inpaintMask);
+  // Inpaint with retries: 70+ sequential image edits can trip provider rate
+  // limits; back off and retry rather than fail a template.
+  let inpainted = null;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      inpainted = await inpaintTextRegions(env, sourceBytes, inpaintMask);
+      break;
+    } catch (error) {
+      const message = error?.message ?? "";
+      const retryable = /429|5\d\d|rate|quota|temporar/i.test(message);
+      if (!retryable || attempt === 3) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 20_000 * attempt));
+    }
+  }
   const inpaintedLayout = await sharp(inpainted).resize(layoutDims.width, layoutDims.height, { fit: "fill" }).png().toBuffer();
   const compositeMask = await buildCompositeMask(layoutDims, boxes);
   const platePng = await sharp(sourceLayout)
