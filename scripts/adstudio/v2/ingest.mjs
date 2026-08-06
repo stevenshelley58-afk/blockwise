@@ -60,6 +60,16 @@ function pickAvailableFace(fontId, weight, italic) {
 function resolveFont(fontId, family, weight, italic, fallbackFamily, remaps) {
   const existing = manifestFaces.find((face) => face.fontId === fontId && face.weight === weight && Boolean(face.italic) === Boolean(italic));
   if (existing) return { fontId, family, weight, italic, file: existing.file, sha256: existing.sha256 };
+  // Family exists but not at this weight/style: ship the nearest weight of
+  // the SAME family (the layer and fonts[] stay consistent), recorded.
+  const familyFaces = manifestFaces.filter((face) => face.fontId === fontId && Boolean(face.italic) === Boolean(italic));
+  if (familyFaces.length > 0) {
+    const nearest = familyFaces.reduce((best, face) =>
+      Math.abs(face.weight - weight) < Math.abs(best.weight - weight) ? face : best,
+    );
+    remaps.push(`${fontId}@${weight} -> ${nearest.fontId}@${nearest.weight}`);
+    return { fontId: nearest.fontId, family: nearest.family, weight: nearest.weight, italic: Boolean(nearest.italic), file: nearest.file, sha256: nearest.sha256 };
+  }
   const target = FONT_REMAP[fontId] ?? FALLBACK_FAMILY[fallbackFamily] ?? "arimo";
   const face = pickAvailableFace(target, weight, italic);
   if (!face) {
@@ -243,13 +253,14 @@ import { mapStoryBoxToFeed, STORY_DERIVED_FEED_TOP, STORY_DERIVED_FEED_BOTTOM } 
 const STORY_TOP_PX = STORY_DERIVED_FEED_TOP;
 const STORY_BOTTOM_PX = STORY_DERIVED_FEED_BOTTOM;
 
-function migrateOne(id, from) {
+function migrateOne(id, from, force = false) {
   const v1Path = join(v1Gallery, `${id}.json`);
   if (!existsSync(v1Path)) throw new Error(`no v1 template ${id}`);
   // Never clobber QA progress: once a doc has left draft (decompose/restyle
-  // ran), re-running migrate --all must leave it untouched.
+  // ran), re-running migrate --all must leave it untouched. --force rebuilds
+  // after pipeline fixes (the operator's explicit opt-in).
   const existingPath = join(v2Gallery, id, "template.json");
-  if (existsSync(existingPath)) {
+  if (!force && existsSync(existingPath)) {
     const existing = readJson(existingPath);
     if (existing.exactness?.status && existing.exactness.status !== "draft") return false;
   }
@@ -313,15 +324,16 @@ async function storyDraft(id) {
 if (command === "migrate-v1") {
   const id = argValue("--id");
   const from = argValue("--from") ?? "source";
+  const force = args.includes("--force");
   if (args.includes("--all")) {
     const ids = readdirSync(v1Gallery).filter((file) => file.endsWith(".json")).map((file) => file.replace(/\.json$/, ""));
-    for (const templateId of ids) migrateOne(templateId, from);
+    for (const templateId of ids) migrateOne(templateId, from, force);
     console.log(`migrate-v1 --all: ${ids.length} drafts written to template-gallery-v2`);
   } else if (id) {
-    migrateOne(id, from);
+    migrateOne(id, from, force);
     console.log(`migrate-v1 ${id}: draft written`);
   } else {
-    console.error("usage: ingest.mjs migrate-v1 (--id <id> | --all) [--from source|sample]");
+    console.error("usage: ingest.mjs migrate-v1 (--id <id> | --all) [--from source|sample] [--force]");
     process.exit(2);
   }
 } else if (command === "story-draft") {
@@ -396,20 +408,24 @@ async function decompose(id) {
   await writePlate(platePng, layout);
   let finalPng = platePng;
 
-  const buildTextLayer = ([key, typo], index) => ({
-    id: `text-${key}`,
-    type: "text",
-    z: 10 + index,
-    inputKey: key,
-    box: typo.sampleBox,
-    typo: {
-      fontId: typo.fontId,
-      family: typo.family,
-      fallbackFamily: typo.fallbackFamily ?? "sans-serif",
-      weight: typo.weight,
-      italic: Boolean(typo.italic),
-      case: typo.case ?? "none",
-      sizeRatio: typo.sizeRatio,
+  const buildTextLayer = ([key, typo], index) => {
+    // The layer must reference the SAME resolved corpus face recorded in
+    // fonts[] (gate: every typo resolves to a fonts[] entry).
+    const resolved = resolveFont(typo.fontId, typo.family, typo.weight, Boolean(typo.italic), typo.fallbackFamily ?? "sans-serif", []);
+    return {
+      id: `text-${key}`,
+      type: "text",
+      z: 10 + index,
+      inputKey: key,
+      box: typo.sampleBox,
+      typo: {
+        fontId: resolved.fontId,
+        family: resolved.family,
+        fallbackFamily: typo.fallbackFamily ?? "sans-serif",
+        weight: resolved.weight,
+        italic: resolved.italic,
+        case: typo.case ?? "none",
+        sizeRatio: typo.sizeRatio,
       lineHeight: typo.lineHeight ?? 1,
       tracking: typo.tracking ?? 0,
       align: typo.align ?? "left",
@@ -434,7 +450,8 @@ async function decompose(id) {
       source: typo.measurementSource === "manual-verified" ? "manual-verified" : "ocr-v2",
       version: typo.measurementVersion ?? 1,
     },
-  });
+    };
+  };
   const entries = Object.entries(v1.typography ?? {});
 
   // Fit-verify each text key with a probe render (font metrics only, §0):

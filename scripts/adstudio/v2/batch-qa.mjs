@@ -18,7 +18,9 @@ const steps = ["migrate-v1", "decompose", "story-draft", "restyle", "check"];
 
 for (const id of ids) {
   for (const step of steps) {
-    const result = spawnSync(process.execPath, [join(process.cwd(), "scripts", "adstudio", "v2", "ingest.mjs"), step, "--id", id], {
+    const stepArgs = [join(process.cwd(), "scripts", "adstudio", "v2", "ingest.mjs"), step, "--id", id];
+    if (step === "migrate-v1" && process.env.BATCH_FORCE === "1") stepArgs.push("--force");
+    const result = spawnSync(process.execPath, stepArgs, {
       encoding: "utf8",
       timeout: 240_000,
     });
