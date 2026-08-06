@@ -28,6 +28,7 @@ export function EditorRoot({ template, instance, mode = "guided", brandPalette =
   const editor = useEditorDoc({ template, instance, mode, brandPalette, onSave });
   const [format, setFormat] = useState<"4:5" | "9:16">(instance.format === "9:16" ? "9:16" : "4:5");
   const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null);
+  const [editingTextId, setEditingTextId] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [containerSize, setContainerSize] = useState({ width: 540, height: 675 });
@@ -47,6 +48,32 @@ export function EditorRoot({ template, instance, mode = "guided", brandPalette =
   const aspect = layout ? layout.height / layout.width : 1.25;
   const stageWidth = Math.min(containerSize.width, (containerSize.height - 8) / aspect);
   const stageHeight = stageWidth * aspect;
+
+  // A11y contract (parity with the in-place editor): arrow keys walk the
+  // layers in z order, Escape cancels/deselects, Enter opens the text
+  // overlay on the selected text layer.
+  const onKeyDown = (event: React.KeyboardEvent) => {
+    if (editingTextId) return; // the textarea owns keys while open
+    const layers = layout ? [...layout.layers].sort((a, b) => a.z - b.z) : [];
+    if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
+      event.preventDefault();
+      if (layers.length === 0) return;
+      const index = layers.findIndex((layer) => layer.id === selectedLayerId);
+      const delta = event.key === "ArrowRight" ? 1 : -1;
+      const next = layers[(index + delta + layers.length) % layers.length];
+      setSelectedLayerId(next.id);
+    } else if (event.key === "Escape") {
+      setSelectedLayerId(null);
+    } else if (event.key === "Enter") {
+      const layer = layers.find((candidate) => candidate.id === selectedLayerId);
+      if (layer?.type === "text") setEditingTextId(layer.id);
+    }
+  };
+
+  const editingLayer = layout?.layers.find((layer) => layer.id === editingTextId && layer.type === "text");
+  const editingInput = editingLayer?.type === "text"
+    ? template.inputs.text.find((input) => input.key === editingLayer.inputKey)
+    : undefined;
 
   const onMoveLayer = useCallback(
     (layerId: string, box: { x: number; y: number; width: number; height: number }, gestureId: string) => {
@@ -105,7 +132,10 @@ export function EditorRoot({ template, instance, mode = "guided", brandPalette =
       <div className="flex min-h-0 flex-1">
         <div
           ref={containerRef}
-          className="flex min-w-0 flex-1 items-center justify-center overflow-hidden p-3"
+          tabIndex={0}
+          onKeyDown={onKeyDown}
+          aria-label="Ad editor canvas. Arrow keys walk layers, Enter edits text, Escape deselects."
+          className="flex min-w-0 flex-1 items-center justify-center overflow-hidden p-3 focus:outline-none"
         >
           {layout ? (
             <EditorCanvas
@@ -116,6 +146,14 @@ export function EditorRoot({ template, instance, mode = "guided", brandPalette =
               selectedLayerId={selectedLayerId}
               onSelectLayer={setSelectedLayerId}
               onMoveLayer={onMoveLayer}
+              onOpenTextEditor={(layerId) => setEditingTextId(layerId)}
+              editingTextId={editingTextId}
+              onCommitTextEdit={(layer, value) => {
+                editor.edit({ type: "set-text", key: layer.inputKey, value }, `text-${layer.id}`);
+                setEditingTextId(null);
+              }}
+              onCancelTextEdit={() => setEditingTextId(null)}
+              editingInput={editingInput}
               stageScale={zoom}
               width={stageWidth}
               height={stageHeight}

@@ -5,11 +5,12 @@
 // the browser render-doc to the server), so the canvas approximates with the
 // same typography math, never defines truth.
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Group, Image as KonvaImage, Layer, Rect, Stage, Text } from "react-konva";
 import useImage from "use-image";
 
 import { useAssetUrl } from "./use-asset-url";
+import { TextEditOverlay } from "./text-edit-overlay";
 import { focalCoverSourceRect } from "@/lib/adstudio/v2/render/cover-crop.ts";
 import type {
   AdDocInstance,
@@ -29,6 +30,11 @@ type EditorCanvasProps = {
   selectedLayerId: string | null;
   onSelectLayer: (layerId: string | null) => void;
   onMoveLayer: (layerId: string, box: { x: number; y: number; width: number; height: number }, gestureId: string) => void;
+  onOpenTextEditor: (layerId: string) => void;
+  editingTextId: string | null;
+  onCommitTextEdit: (layer: TextLayer, value: string) => void;
+  onCancelTextEdit: () => void;
+  editingInput?: { maxLength: number } | undefined;
   stageScale: number;
   width: number;
   height: number;
@@ -47,6 +53,7 @@ function PlateAndSlots({
   selectedLayerId,
   onSelectLayer,
   onMoveLayer,
+  onOpenTextEditor,
 }: {
   template: AdTemplateDocV2;
   instance: AdDocInstance;
@@ -55,6 +62,7 @@ function PlateAndSlots({
   selectedLayerId: string | null;
   onSelectLayer: (id: string | null) => void;
   onMoveLayer: EditorCanvasProps["onMoveLayer"];
+  onOpenTextEditor: (id: string) => void;
 }) {
   return (
     <>
@@ -118,6 +126,7 @@ function PlateAndSlots({
               selected={selected}
               mode={mode}
               onSelectLayer={onSelectLayer}
+              onOpenTextEditor={onOpenTextEditor}
             />
           );
         })}
@@ -255,6 +264,7 @@ function TextNode({
   selected,
   mode,
   onSelectLayer,
+  onOpenTextEditor,
 }: {
   layer: TextLayer;
   instance: AdDocInstance;
@@ -268,6 +278,7 @@ function TextNode({
   selected: boolean;
   mode: EditorMode;
   onSelectLayer: (id: string | null) => void;
+  onOpenTextEditor: (id: string) => void;
 }) {
   const text = instance.values.text[layer.inputKey] ?? "";
   const sizeRatio = sizeRatioOverride ?? layer.typo.sizeRatio;
@@ -276,7 +287,8 @@ function TextNode({
   const gradient = effects?.gradientFill;
 
   return (
-    <Group x={left} y={top} onTap={() => onSelectLayer(layer.id)} onClick={() => onSelectLayer(layer.id)}>
+    <Group x={left} y={top} onTap={() => onSelectLayer(layer.id)} onClick={() => onSelectLayer(layer.id)}
+      onDblClick={() => onOpenTextEditor(layer.id)} onDblTap={() => onOpenTextEditor(layer.id)}>
       <Text
         text={text}
         width={width}
@@ -336,12 +348,17 @@ export function EditorCanvas(props: EditorCanvasProps) {
         selectedLayerId={props.selectedLayerId}
         onSelectLayer={props.onSelectLayer}
         onMoveLayer={props.onMoveLayer}
+        onOpenTextEditor={props.onOpenTextEditor}
       />
     ) : null),
-    [layout, instance, props.mode, props.selectedLayerId, props.onSelectLayer, props.onMoveLayer, template],
+    [layout, instance, props.mode, props.selectedLayerId, props.onSelectLayer, props.onMoveLayer, props.onOpenTextEditor, template],
   );
 
   if (!layout) return null;
+
+  const editingLayer = props.editingTextId
+    ? (layout.layers.find((layer) => layer.id === props.editingTextId && layer.type === "text") as TextLayer | undefined)
+    : undefined;
 
   return (
     <Stage
@@ -359,7 +376,28 @@ export function EditorCanvas(props: EditorCanvasProps) {
       onClick={() => props.onSelectLayer(null)}
       className="bg-[#0b0e12]"
     >
-      <Layer>{content}</Layer>
+      <Layer>
+        {content}
+        {editingLayer ? (() => {
+          const overrides = layerOverrides(instance, editingLayer.id);
+          const box = overrides.box ?? editingLayer.box;
+          return (
+            <TextEditOverlay
+              x={box.x * layout.width * (width / layout.width) * stageScale + stagePos.x}
+              y={box.y * layout.height * (width / layout.width) * stageScale + stagePos.y}
+              width={box.width * width * stageScale}
+              height={box.height * layout.height * stageScale}
+              value={instance.values.text[editingLayer.inputKey] ?? ""}
+              maxLength={props.editingInput?.maxLength ?? 60}
+              align={overrides.align ?? editingLayer.typo.align}
+              fontSize={box.height * layout.height * (overrides.sizeRatio ?? editingLayer.typo.sizeRatio) * (width / layout.width) * stageScale}
+              fontFamily={editingLayer.typo.family}
+              onCommit={(value) => props.onCommitTextEdit(editingLayer, value)}
+              onCancel={props.onCancelTextEdit}
+            />
+          );
+        })() : null}
+      </Layer>
     </Stage>
   );
 }
