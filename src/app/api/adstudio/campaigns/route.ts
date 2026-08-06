@@ -17,7 +17,11 @@ import {
   runTemplateCampaignGeneration,
   type CreateCampaignBody,
 } from "@/lib/adstudio/generate-template-campaign";
-import { compactAdStudioCampaignPackForTransport } from "@/lib/adstudio/persistence";
+import { adstudioTemplatesV2Enabled } from "@/lib/adstudio/v2/flags";
+import { generateV2Campaign, V2GenerationError } from "@/lib/adstudio/v2/generate.ts";
+import { resolveReadyTemplateV2 } from "@/lib/adstudio/v2/template-resolver.ts";
+import { resolveAdStudioGenerationBrandKit } from "@/lib/adstudio/trial-brand-kit";
+import { compactAdStudioCampaignPackForTransport, persistAdStudioCampaignPack } from "@/lib/adstudio/persistence";
 import { resolveCloneCampaignId } from "@/lib/adstudio/clone-campaign";
 import { buildAdStudioCreativeLibrary } from "@/lib/adstudio/creative-library";
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -212,6 +216,65 @@ export async function POST(request: NextRequest) {
 
     creditReservation = creditGate.reservation;
     const funnelService = createSupabaseServiceClient();
+
+    // Track E (§6): the deterministic v2 path. Ready templates render inline
+    // in <2s with zero render credits; the v1 job/clone pipeline below stays
+    // untouched for non-ready templates and until cutover.
+    if (adstudioTemplatesV2Enabled()) {
+      const v2Template = resolveReadyTemplateV2(body.firstAd!.templateId);
+      if (v2Template) {
+        try {
+          const brandKitResult = await resolveAdStudioGenerationBrandKit({
+            supabase: context.supabase,
+            workspaceId: context.access.workspaceId,
+            workspaceName: context.access.workspaceName,
+            region: context.access.region,
+            userId: context.access.userId,
+          });
+          if (!brandKitResult.ok) {
+            throw new V2GenerationError(brandKitResult.error, 422);
+          }
+          const v2 = await generateV2Campaign({
+            workspaceId: context.access.workspaceId,
+            userId: context.access.userId,
+            template: v2Template,
+            brandKit: brandKitResult.brandKit,
+            firstAd: body.firstAd!,
+            suburb: body.suburb,
+            city: body.city,
+            state: body.state,
+            supabase: createSupabaseServiceClient() as never,
+          });
+          await persistAdStudioCampaignPack(context.supabase, v2.pack, context.access.userId);
+          await refundOutstandingWorkspaceCredits({
+            reservation: creditReservation,
+            mutationKey: `${creditMutationKey}:v2_zero_render_credits`,
+            reason: "v2_renders_cost_zero",
+          });
+          const liveResult = buildAdStudioLiveResult({
+            data: compactAdStudioCampaignPackForTransport(v2.pack),
+          });
+          return NextResponse.json(
+            {
+              campaignPack: liveResult.data,
+              data: liveResult.data,
+              persistence: liveResult.persistence,
+              v2: true,
+              renderMs: v2.renderMs,
+              warnings: v2.warnings,
+            },
+            { status: 201 },
+          );
+        } catch (error) {
+          if (error instanceof V2GenerationError) {
+            return errorResponse(new Error(error.message), error.status);
+          }
+          throw error;
+        }
+      }
+      // Template not ready yet: fall through to the v1 pipeline (rollout is
+      // per-template during the transition, per §12 Track G).
+    }
     await recordWorkspaceFunnelEventBestEffort(funnelService, {
       eventName: "template_selected",
       workspaceId: context.access.workspaceId,
