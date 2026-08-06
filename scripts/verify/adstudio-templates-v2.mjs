@@ -306,8 +306,13 @@ if (existsSync(v2PublicDir)) {
   const walk = (dir, prefix) => {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
       const src = `${prefix}/${entry.name}`;
-      if (entry.isDirectory()) walk(join(dir, entry.name), src);
-      else if (!referencedFiles.has(src)) fail(`orphaned file under public/adstudio-templates: ${src}`);
+      if (entry.isDirectory()) {
+        // __smoke__ holds the deploy render-smoke fixture, not gallery assets.
+        if (entry.name === "__smoke__") continue;
+        walk(join(dir, entry.name), src);
+      } else if (!referencedFiles.has(src)) {
+        fail(`orphaned file under public/adstudio-templates: ${src}`);
+      }
     }
   };
   walk(v2PublicDir, "/adstudio-templates");
