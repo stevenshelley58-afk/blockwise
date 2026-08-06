@@ -493,6 +493,33 @@ async function decompose(id) {
 
   // Baked keys keep the ORIGINAL pixels: paste the source crop back over the
   // inpainted plate for exactly those boxes, then rewrite plate + sha.
+  // Whole-doc validation first: probes pass in isolation but the combined
+  // render can still refuse (block-wrap shares the line budget), so bake
+  // until the combined render accepts the fitted set.
+  const sampleFor = (key, typo) =>
+    v1.inputs?.text?.find((input) => input.key === key)?.sample ?? typo.sample ?? "";
+  for (;;) {
+    const probe = JSON.parse(JSON.stringify(doc));
+    probe.formats[isStoryFirst ? "story" : "feed"].layers = fitted.map(buildTextLayer);
+    probe.exactness.bakedTextKeys = unfit.map(([key]) => key);
+    const probeInstance = {
+      schema: "adstudio.instance.v2",
+      templateId: id,
+      templateHash: "0".repeat(64),
+      format: layout.format,
+      values: { images: {}, text: Object.fromEntries(fitted.map(([key, typo]) => [key, sampleFor(key, typo)])) },
+      overrides: [],
+    };
+    try {
+      await renderAdDocToPng(probe, probeInstance, layout.format);
+      break;
+    } catch (error) {
+      if (error?.name !== "RenderFitError" || fitted.length === 0) throw error;
+      const idx = fitted.findIndex(([key]) => key === error.inputKey);
+      const moved = idx >= 0 ? fitted.splice(idx, 1)[0] : fitted.pop();
+      unfit.push(moved);
+    }
+  }
   if (unfit.length > 0) {
     const bakeMask = await buildCompositeMask(layoutDims, unfit.map(([, typo]) => typo.sampleBox));
     const cut = await sharp(sourceLayout).composite([{ input: bakeMask, blend: "dest-in" }]).png().toBuffer();
