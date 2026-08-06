@@ -12,6 +12,14 @@ const nextConfig: NextConfig = {
     "/operator/research": ["./hermes/skills/**/*"],
     "/api/operator/research/skills": ["./hermes/skills/**/*"],
     "/api/operator/research/skills/[slug]": ["./hermes/skills/**/*"],
+    // The renderer requires @napi-rs/canvas at runtime from node_modules;
+    // serverExternalPackages keeps it out of the bundle, and this copies the
+    // package + linux prebuilt binary into the deploy (smoke, /doc,
+    // campaigns all render).
+    "/api/*": [
+      "./node_modules/@napi-rs/canvas/**/*",
+      "./node_modules/@napi-rs/canvas-linux-x64-gnu/**/*",
+    ],
   },
   // Tree-shake heavy barrel-export libs so only used modules ship to the client.
   // lucide-react is already optimized by Next's defaults; recharts is not.
