@@ -26,6 +26,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 
 import type { ExportFormatStatus } from "../use-campaign-actions";
+import { PublishReviewV2, V2RenderFrames } from "./publish-review-v2";
 
 type ReadinessEntry = {
   id?: string;
@@ -807,6 +808,7 @@ export function PublishSetupPanel({
           {stepIndex === 1 && (
             <section className="studio-publish-screen" aria-labelledby="creatives-title">
               <h1 id="creatives-title">Creatives</h1>
+              <V2RenderFrames pack={campaignPack} brandKit={campaignPack.brandKit} />
               {creativeSource === "current" ? (
                 <>
                   <div className="studio-creative-intro">
@@ -1110,6 +1112,7 @@ export function PublishSetupPanel({
           {stepIndex === 4 && (
             <section className="studio-publish-screen" aria-labelledby="review-title">
               <h1 id="review-title">Review</h1>
+              <PublishReviewV2 pack={campaignPack} brandKit={campaignPack.brandKit} />
               <div className="studio-review-list">
                 <div><span>Campaign</span><strong>{campaignMode === "existing" ? selectedCampaign?.name : campaignPack.campaign.name}</strong></div>
                 <div><span>Creatives</span><strong>{selectedCreativeCount}</strong></div>

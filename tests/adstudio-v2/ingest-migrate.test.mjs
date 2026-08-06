@@ -22,14 +22,14 @@ test("migrate-v1 is idempotent: running it twice yields identical output", () =>
   assert.equal(second, first);
 });
 
-test("creative-feature keys are in lockstep between ingest and publish", () => {
+test("creative-feature keys are in lockstep between ingest and the shared v2 list", () => {
   const ingest = readFileSync(join("scripts", "adstudio", "v2", "ingest.mjs"), "utf8");
-  const publish = readFileSync(join("src", "lib", "providers", "meta-execution.ts"), "utf8");
+  const shared = readFileSync(join("src", "lib", "adstudio", "v2", "creative-features.ts"), "utf8");
   const extract = (source) => {
     const match = source.match(/CREATIVE_FEATURE(?:_KEYS)? = \[([\s\S]*?)\]/);
     return [...(match?.[1] ?? "").matchAll(/"([a-z_]+)"/g)].map((m) => m[1]).sort();
   };
-  assert.deepEqual(extract(ingest), extract(publish));
+  assert.deepEqual(extract(ingest), extract(shared));
 });
 
 test("the v2 gate passes on the migrated drafts", () => {

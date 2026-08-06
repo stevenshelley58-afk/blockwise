@@ -16,33 +16,10 @@ const META_AD_CREATIVE_NAME_MAX_LENGTH = 100;
 const META_HOUSING_MIN_RADIUS_KM = 25;
 const META_LOWEST_COST_BID_STRATEGY = "LOWEST_COST_WITHOUT_CAP";
 
-/**
- * Advantage+ creative feature keys known as of Graph v26 (Appendix A). The
- * template declares enrollment per key; everything not explicitly OPT_IN is
- * sent OPT_OUT so "preview = what Meta renders". Meta renames these
- * periodically — unknown-key errors are dropped at payload build (logged),
- * never fatal.
- */
-export const META_CREATIVE_FEATURE_KEYS = [
-  "adapt_to_placement",
-  "image_touchups",
-  "image_templates",
-  "inline_comment",
-  "enhance_cta",
-  "text_optimizations",
-  "image_animation",
-  "image_background_gen",
-  "video_auto_crop",
-  "translate_voiceover",
-  "text_translation",
-  "media_type_automation",
-  "product_extensions",
-] as const;
-
-/** Default: every enhancement explicitly OPT_OUT. */
-export function buildDefaultMetaCreativeFeatures(): Record<string, "OPT_IN" | "OPT_OUT"> {
-  return Object.fromEntries(META_CREATIVE_FEATURE_KEYS.map((key) => [key, "OPT_OUT" as const]));
-}
+// Advantage+ feature keys + default enrollment live in the shared v2 module;
+// re-exported so existing importers keep working.
+import { META_CREATIVE_FEATURE_KEYS, buildDefaultMetaCreativeFeatures } from "../adstudio/v2/creative-features.ts";
+export { META_CREATIVE_FEATURE_KEYS, buildDefaultMetaCreativeFeatures };
 
 /**
  * Placement positions each asset_feed customization rule covers. Ad set
