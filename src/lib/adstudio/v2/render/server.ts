@@ -10,6 +10,7 @@
 // storage/network access that lives one level up (v2/generate.ts), so the
 // renderer stays pure.
 
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { AdDocInstance, AdTemplateDocV2 } from "../template-doc.ts";
@@ -19,11 +20,19 @@ import { getNapiCanvas, registerNodeFonts } from "./fonts.ts";
 import { renderAdDoc, type AdDocFormat, type AdDocLayoutKey } from "./render-doc.ts";
 import type { RenderedAssets } from "./types.ts";
 
-/** Repo root derived from this file's location — works on Vercel + VPS too. */
+/**
+ * Repo root derivation that survives bundling. Walking up from the module
+ * file works when the file tree is intact (local, VPS); under Turbopack on
+ * Vercel the compiled chunk's import.meta.url no longer maps to the source
+ * tree, so the marker check falls back to process.cwd() (/var/task), where
+ * Next places the project files including public/.
+ */
 export function repoRootFromHere(): string {
   const here = fileURLToPath(import.meta.url);
-  // src/lib/adstudio/v2/render/server.ts → five levels up is the repo root.
-  return join(here, "..", "..", "..", "..", "..");
+  const fromModule = join(here, "..", "..", "..", "..", "..");
+  if (existsSync(join(fromModule, "public", "fonts", "adstudio"))) return fromModule;
+  if (existsSync(join(process.cwd(), "public", "fonts", "adstudio"))) return process.cwd();
+  return fromModule;
 }
 
 const registeredFontDirs = new Set<string>();
