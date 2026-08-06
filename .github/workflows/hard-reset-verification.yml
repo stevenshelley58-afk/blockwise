@@ -37,6 +37,18 @@ jobs:
       - name: Run full test suite
         run: npm test
 
+      - name: Install Chromium for render parity
+        run: npx playwright install chromium --with-deps
+
+      - name: Run render parity (hard gate, plan section 4)
+        run: npm run test:render-parity
+        env:
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
+          NEXT_PUBLIC_SUPABASE_URL: https://dummy-project.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: dummy-anon-key
+          SUPABASE_SERVICE_ROLE_KEY: dummy-service-role-key
+          TOKEN_ENCRYPTION_KEY: "0000000000000000000000000000000000000000000000000000000000000000"
+
       - name: Build
         run: npm run build
         env:
