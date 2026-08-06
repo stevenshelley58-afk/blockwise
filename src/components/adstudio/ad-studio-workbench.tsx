@@ -40,6 +40,7 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 import { requestCreativeEdit } from "./canvas/creative-edit-client";
 import { FORMAT_META, MetaChromePreview, PreviewControls, VariantStrip } from "./preview";
+import { MetaFrame } from "./meta-frame/meta-frame";
 import type { PreviewFormat, SelectedElement } from "./preview";
 import { STYLES } from "./styles";
 import { initialOfferLabelForPack, labelForSelectedTemplate } from "./template-offer-state";
@@ -78,6 +79,8 @@ type AdStudioWorkbenchProps = {
   showBrandSetupPrompt?: boolean;
   initialMediaAssets?: AdStudioMediaLibraryAsset[];
   initialMediaCursor?: string | null;
+  /** ADSTUDIO_TEMPLATES_V2: wrap the editor in the new Meta placement frames. */
+  useV2Frames?: boolean;
 };
 
 type NavItem =
@@ -297,6 +300,7 @@ export function AdStudioWorkbench({
   showBrandSetupPrompt = false,
   initialMediaAssets = [],
   initialMediaCursor = null,
+  useV2Frames = false,
 }: AdStudioWorkbenchProps) {
   const [pack, setPack] = useState(initialPack);
   const canManageCampaign = pack.creatives.length > 0;
@@ -1112,29 +1116,48 @@ export function AdStudioWorkbench({
     // text above the creative, headline/description strip, real CTA enum label)
     // so the stage shows the ad exactly as Meta renders it.
     if (isCloneCreative(currentCreative)) {
+      // ADSTUDIO_TEMPLATES_V2: the new placement frames wrap the editor; the
+      // publish-review picker (Phase 2) will mount the full six-placement set.
+      const cloneEditor = (
+        <InPlaceAdEditor
+          key={currentCreative.creativeId}
+          creative={currentCreative}
+          onCreativeChange={updateCreative}
+          showToast={studio.showToast}
+          selectedRegionKey={selectedCanvasRegionKey}
+          onRegionSelectionChange={(key) => {
+            setSelectedCanvasRegionKey(key);
+            if (key) setSelectedElement("canvas");
+          }}
+        />
+      );
+      const frameChrome = useV2Frames ? (
+        <MetaFrame
+          brandKit={brandKit}
+          destinationUrl={destinationUrl}
+          copy={copy}
+          placement={previewFormat === "story" ? "ig-story" : "fb-feed-mobile"}
+          selectedElement={selectedElement}
+          onSelectText={selectMetaCopyField}
+        >
+          {cloneEditor}
+        </MetaFrame>
+      ) : (
+        <MetaChromePreview
+          brandKit={brandKit}
+          destinationUrl={destinationUrl}
+          copy={copy}
+          format={previewFormat}
+          selectedElement={selectedElement}
+          onSelectText={selectMetaCopyField}
+        >
+          {cloneEditor}
+        </MetaChromePreview>
+      );
       return (
         <div className="studio-clone-editor-wrap">
           <PreviewFit enabled={!isMobileViewport}>
-            <MetaChromePreview
-              brandKit={brandKit}
-              destinationUrl={destinationUrl}
-              copy={copy}
-              format={previewFormat}
-              selectedElement={selectedElement}
-              onSelectText={selectMetaCopyField}
-            >
-              <InPlaceAdEditor
-                key={currentCreative.creativeId}
-                creative={currentCreative}
-                onCreativeChange={updateCreative}
-                showToast={studio.showToast}
-                selectedRegionKey={selectedCanvasRegionKey}
-                onRegionSelectionChange={(key) => {
-                  setSelectedCanvasRegionKey(key);
-                  if (key) setSelectedElement("canvas");
-                }}
-              />
-            </MetaChromePreview>
+            {frameChrome}
           </PreviewFit>
           {currentCreative.canvas.cloneQa?.regions.length ? (
             <p className="studio-metachrome-edit-hint">Select text or an image on the ad, or open Edit elements.</p>
