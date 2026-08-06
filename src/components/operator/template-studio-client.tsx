@@ -97,6 +97,23 @@ export function TemplateStudioScreen({ id }: { id: string }) {
     [report],
   );
 
+  const [stress, setStress] = useState<Array<{ name: string; dataUrl: string }>>([]);
+  const [stressRunning, setStressRunning] = useState(false);
+  const runStress = async () => {
+    setStressRunning(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/operator/template-studio/${id}?action=stress`, { method: "POST" });
+      const payload = (await response.json()) as { renders?: Array<{ name: string; dataUrl: string }>; error?: string };
+      if (!response.ok || !payload.renders) throw new Error(payload.error ?? "Stress failed.");
+      setStress(payload.renders);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Stress failed.");
+    } finally {
+      setStressRunning(false);
+    }
+  };
+
   if (error) return <p className="text-sm text-[var(--danger,#e5484d)]">{error}</p>;
   if (!doc) return <p className="text-sm text-[var(--muted)]">Loading template…</p>;
 
@@ -122,8 +139,30 @@ export function TemplateStudioScreen({ id }: { id: string }) {
           <button className="studio-btn secondary" type="button" onClick={check} disabled={checking}>
             {checking ? "Running gate…" : "Run check"}
           </button>
+          <button className="studio-btn secondary" type="button" onClick={runStress} disabled={stressRunning}>
+            {stressRunning ? "Rendering stress…" : "Stress preview"}
+          </button>
         </div>
       </header>
+
+      {stress.length > 0 ? (
+        <section className="rounded-(--r-card) border border-[var(--line)] p-3">
+          <strong className="text-sm">Stress preview matrix</strong>
+          <div className="mt-2 flex flex-wrap gap-3">
+            {stress.map((item) =>
+              item.dataUrl ? (
+                <figure key={item.name} className="m-0">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={item.dataUrl} alt={`Stress render: ${item.name}`} className="h-64 w-auto rounded border border-[var(--line)]" />
+                  <figcaption className="text-[11px] font-semibold text-[var(--muted)]">{item.name}</figcaption>
+                </figure>
+              ) : (
+                <p key={item.name} className="text-[13px] font-semibold text-[var(--danger,#e5484d)]">{item.name}</p>
+              ),
+            )}
+          </div>
+        </section>
+      ) : null}
 
       {report ? (
         <section className="rounded-(--r-card) border border-[var(--line)] p-3 text-xs">

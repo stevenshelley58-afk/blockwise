@@ -84,5 +84,37 @@ export async function POST(request: NextRequest, context: Context) {
     }
   }
 
+  if (action === "stress") {
+    // Stress preview matrix (§5.2): longest legal copy and one-char copy per
+    // field, rendered as PNG strips for the operator's eyes before ready.
+    try {
+      const { renderAdDocToPng } = await import("@/lib/adstudio/v2/render/server.ts");
+      const editable = doc.inputs.text.filter((input) => !doc.exactness.bakedTextKeys.includes(input.key));
+      const variants: Array<[string, Record<string, string>]> = [
+        ["longest", Object.fromEntries(editable.map((input) => [input.key, input.sample.slice(0, input.maxLength)]))],
+        ["one-char", Object.fromEntries(editable.map((input) => [input.key, "W"]))],
+      ];
+      const renders: Array<{ name: string; dataUrl: string }> = [];
+      for (const [name, textValues] of variants) {
+        try {
+          const png = await renderAdDocToPng(doc, {
+            schema: "adstudio.instance.v2",
+            templateId: doc.id,
+            templateHash: "0".repeat(64),
+            format: doc.formats.feed.format,
+            values: { images: {}, text: textValues },
+            overrides: [],
+          }, doc.formats.feed.format);
+          renders.push({ name, dataUrl: `data:image/png;base64,${png.toString("base64")}` });
+        } catch (error) {
+          renders.push({ name: `${name} (refused: ${(error as Error).name})`, dataUrl: "" });
+        }
+      }
+      return NextResponse.json({ renders });
+    } catch (error) {
+      return NextResponse.json({ error: error instanceof Error ? error.message : "Stress render failed." }, { status: 422 });
+    }
+  }
+
   return NextResponse.json({ error: "unknown action" }, { status: 400 });
 }
