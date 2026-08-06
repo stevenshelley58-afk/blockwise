@@ -12,7 +12,7 @@ import {
   compositePlateFromSource,
   TEXT_MASK_PADDING,
 } from "../../scripts/adstudio/v2/lib/decompose.mjs";
-import { extendPlateToStory, repositionLayersForStory } from "../../scripts/adstudio/v2/lib/story.mjs";
+import { extendPlateToStory, mapStoryBoxToFeed, repositionLayersForStory } from "../../scripts/adstudio/v2/lib/story.mjs";
 
 const DIMS = { width: 1080, height: 1350 };
 const BOX = { x: 0.1, y: 0.4, width: 0.8, height: 0.2 };
@@ -84,4 +84,16 @@ test("repositionLayersForStory maps feed boxes into the safe zones", async () =>
   const bottomNorm = (1920 - 340) / 1920;
   assert.ok(moved.box.y >= topNorm - 1e-9, "top inside safe zone");
   assert.ok(moved.box.y + moved.box.height <= bottomNorm + 1e-9, "bottom inside safe zone");
+});
+
+test("mapStoryBoxToFeed: centred box maps into the band, off-band boxes drop", () => {
+  const centred = mapStoryBoxToFeed({ x: 0.1, y: 0.4, width: 0.8, height: 0.2 });
+  assert.ok(centred, "centred box survives");
+  assert.ok(centred.y >= 0 && centred.y + centred.height <= 1, "normalized");
+
+  const topOnly = mapStoryBoxToFeed({ x: 0.1, y: 0.02, width: 0.8, height: 0.05 });
+  assert.equal(topOnly, null, "box above the band drops");
+
+  const bottomOnly = mapStoryBoxToFeed({ x: 0.1, y: 0.92, width: 0.8, height: 0.06 });
+  assert.equal(bottomOnly, null, "box below the band drops");
 });

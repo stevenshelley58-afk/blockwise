@@ -238,29 +238,10 @@ function v1ToV2(v1, id, from) {
   };
 }
 
-// Story canvases are 1920 tall; a derived 4:5 feed is the centred 1350 band.
-const STORY_TOP_PX = 285;
-const STORY_BOTTOM_PX = 1635;
-
-/** Normalized box mapped from a 9:16 source into the derived 4:5 band, or
- *  null when less than 20% of the box survives the crop (it legitimately
- *  does not exist on the feed surface). */
-function mapStoryBoxToFeed(box) {
-  const y1px = box.y * 1920;
-  const y2px = (box.y + box.height) * 1920;
-  const interTop = Math.max(y1px, STORY_TOP_PX);
-  const interBottom = Math.min(y2px, STORY_BOTTOM_PX);
-  const inter = Math.max(0, interBottom - interTop);
-  if (inter < 0.2 * (y2px - y1px)) return null;
-  const y = (interTop - STORY_TOP_PX) / 1350;
-  const height = Math.min(1 - y, inter / 1350);
-  return {
-    x: Math.min(1, Math.max(0, box.x)),
-    y,
-    width: Math.min(1 - Math.min(1, Math.max(0, box.x)), Math.max(0.02, box.width)),
-    height: Math.max(0.02, height),
-  };
-}
+// ── story-first mapping lives in lib/story.mjs (unit-tested there) ────────
+import { mapStoryBoxToFeed, STORY_DERIVED_FEED_TOP, STORY_DERIVED_FEED_BOTTOM } from "./lib/story.mjs";
+const STORY_TOP_PX = STORY_DERIVED_FEED_TOP;
+const STORY_BOTTOM_PX = STORY_DERIVED_FEED_BOTTOM;
 
 function migrateOne(id, from) {
   const v1Path = join(v1Gallery, `${id}.json`);

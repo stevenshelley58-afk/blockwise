@@ -8,6 +8,31 @@ import sharp from "sharp";
 export const STORY_SAFE_TOP = 250;
 export const STORY_SAFE_BOTTOM = 340;
 
+// The derived 4:5 feed for a story-first source is the centred 1350 band of
+// the 1920 canvas (outside the UI safe zones).
+export const STORY_DERIVED_FEED_TOP = 285;
+export const STORY_DERIVED_FEED_BOTTOM = 1635;
+
+/** Normalized box mapped from a 9:16 source into the derived 4:5 band, or
+ *  null when less than 20% of the box survives the crop (it legitimately
+ *  does not exist on the feed surface). */
+export function mapStoryBoxToFeed(box) {
+  const y1px = box.y * 1920;
+  const y2px = (box.y + box.height) * 1920;
+  const interTop = Math.max(y1px, STORY_DERIVED_FEED_TOP);
+  const interBottom = Math.min(y2px, STORY_DERIVED_FEED_BOTTOM);
+  const inter = Math.max(0, interBottom - interTop);
+  if (inter < 0.2 * (y2px - y1px)) return null;
+  const y = (interTop - STORY_DERIVED_FEED_TOP) / 1350;
+  const height = Math.min(1 - y, inter / 1350);
+  return {
+    x: Math.min(1, Math.max(0, box.x)),
+    y,
+    width: Math.min(1 - Math.min(1, Math.max(0, box.x)), Math.max(0.02, box.width)),
+    height: Math.max(0.02, height),
+  };
+}
+
 export async function extendPlateToStory(feedPlateBytes, feedWidth = 1080, feedHeight = 1350) {
   const width = 1080;
   const height = 1920;
