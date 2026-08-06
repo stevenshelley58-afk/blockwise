@@ -19,6 +19,7 @@ import {
 import type { AdStudioBrandKit, AdStudioTemplate, FirstAdInput } from "@/lib/adstudio";
 import { resolveAdvertiserDomain } from "@/lib/adstudio/advertiser-domain";
 import { isAdStudioImageSrc, isTransientImagePreview } from "@/lib/adstudio/image-src.ts";
+import { labelForMetaCta } from "@/lib/adstudio/meta-cta.ts";
 import { templatePreviewDataUrl } from "@/lib/adstudio/template-preview.ts";
 import { templateThumbnailSrcSet } from "@/lib/adstudio/template-display.ts";
 import { AD_IMAGE_MAX_BYTES, AD_IMAGE_UPLOAD_TYPES } from "@/lib/upload/asset-file";
@@ -99,17 +100,17 @@ const COPY_MODES: ReadonlyArray<{ id: CopyMode; label: string }> = [
 ];
 
 /**
- * Every Meta CTA option that survives the server's 24-char clamp
- * (src/lib/adstudio/copy-generation.ts). The preview renders the same label
- * that Ad Studio's publish flow shows on the button.
+ * Meta's documented lead-ads CTA subset (Track D / Appendix A). Anything
+ * outside it is either remapped at payload build (CONTACT_US → LEARN_MORE)
+ * or never offered here.
  */
 const FEED_COPY_CTA_OPTIONS: ReadonlyArray<{ value: string; label: string }> = [
   { value: "LEARN_MORE", label: "Learn more" },
-  { value: "CONTACT_US", label: "Contact us" },
-  { value: "SIGN_UP", label: "Sign up" },
-  { value: "DOWNLOAD", label: "Download" },
   { value: "GET_QUOTE", label: "Get quote" },
-  { value: "BOOK_NOW", label: "Book now" },
+  { value: "SIGN_UP", label: "Sign up" },
+  { value: "APPLY_NOW", label: "Apply now" },
+  { value: "DOWNLOAD", label: "Download" },
+  { value: "SUBSCRIBE", label: "Subscribe" },
 ];
 const TEMPLATE_FILTERS: ReadonlyArray<{ id: TemplateFilter; label: string }> = [
   { id: "all", label: "All" },
@@ -233,17 +234,9 @@ function cleanText(value: string | null | undefined): string {
 }
 
 function metaCtaLabel(value: string | undefined): string {
-  switch (value) {
-    case "CONTACT_US":
-      return "Contact us";
-    case "DOWNLOAD":
-      return "Download";
-    case "SIGN_UP":
-      return "Sign up";
-    case "LEARN_MORE":
-    default:
-      return "Learn more";
-  }
+  // Delegates to the single CTA label map; legacy CONTACT_US displays as
+  // "Contact us" even though it can no longer be sent to Meta.
+  return labelForMetaCta(value);
 }
 
 function brandNameForPreview(brandKit: AdStudioBrandKit): string {

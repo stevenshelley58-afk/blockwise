@@ -2,6 +2,8 @@ import { createHash } from "node:crypto";
 
 import type { AdStudioCampaignPack } from "../adstudio/index.ts";
 import { deterministicUuid } from "../adstudio/id.ts";
+import { remapLegacyMetaCta } from "../adstudio/meta-cta.ts";
+import { metaAssetFeedEnabled } from "../adstudio/v2/flags.ts";
 import { evaluatePublishReadiness, type ApprovalStatus, type ProviderConnectionStatus } from "../publishing/readiness.ts";
 import type { ComplianceStatus } from "../compliance/real-estate-policy.ts";
 import type { createSupabaseServiceClient } from "../supabase/service.ts";
@@ -13,6 +15,51 @@ const META_PROVIDER_OBJECT_NAME_MAX_LENGTH = 255;
 const META_AD_CREATIVE_NAME_MAX_LENGTH = 100;
 const META_HOUSING_MIN_RADIUS_KM = 25;
 const META_LOWEST_COST_BID_STRATEGY = "LOWEST_COST_WITHOUT_CAP";
+
+/**
+ * Advantage+ creative feature keys known as of Graph v26 (Appendix A). The
+ * template declares enrollment per key; everything not explicitly OPT_IN is
+ * sent OPT_OUT so "preview = what Meta renders". Meta renames these
+ * periodically — unknown-key errors are dropped at payload build (logged),
+ * never fatal.
+ */
+export const META_CREATIVE_FEATURE_KEYS = [
+  "adapt_to_placement",
+  "image_touchups",
+  "image_templates",
+  "inline_comment",
+  "enhance_cta",
+  "text_optimizations",
+  "image_animation",
+  "image_background_gen",
+  "video_auto_crop",
+  "translate_voiceover",
+  "text_translation",
+  "media_type_automation",
+  "product_extensions",
+] as const;
+
+/** Default: every enhancement explicitly OPT_OUT. */
+export function buildDefaultMetaCreativeFeatures(): Record<string, "OPT_IN" | "OPT_OUT"> {
+  return Object.fromEntries(META_CREATIVE_FEATURE_KEYS.map((key) => [key, "OPT_OUT" as const]));
+}
+
+/**
+ * Placement positions each asset_feed customization rule covers. Ad set
+ * targeting must be a superset of every rule position while the flag is on.
+ */
+const ASSET_FEED_RULE_POSITIONS = {
+  feed: {
+    publisherPlatforms: ["facebook", "instagram"],
+    facebookPositions: ["feed", "marketplace", "video_feeds", "search"],
+    instagramPositions: ["stream", "explore", "explore_home", "profile_feed", "ig_search"],
+  },
+  story: {
+    publisherPlatforms: ["facebook", "instagram"],
+    facebookPositions: ["story"],
+    instagramPositions: ["story"],
+  },
+} as const;
 
 export type MetaExecutionAdapter = "marketing_api" | "ads_cli" | "ads_mcp";
 export type MetaPublishPlanStatus = "draft" | "approved" | "publishing" | "paused_live" | "failed";
@@ -120,6 +167,12 @@ export type MetaPublishCreativePlan = {
   adStudioCreativeId: string | null;
   format: string | null;
   asset?: MetaCreativeAssetPlan | null;
+  /**
+   * v2: per-format render assets for the two-image asset_feed path. Feed is
+   * the 4:5 canonical render; story the 9:16 one. Null until Track E feeds
+   * real values from the instance doc.
+   */
+  formatAssets?: { feed: MetaCreativeAssetPlan | null; story: MetaCreativeAssetPlan | null } | null;
 };
 
 export type MetaAdVariantTag = {
@@ -193,6 +246,10 @@ export type MetaPublishPlan = {
   creatives: MetaPublishCreativePlan[];
   ads: MetaPublishAdPlan[];
   tracking: MetaPublishTrackingPlan;
+  /** Explicit Advantage+ enrollment from the template publish block; null = all OPT_OUT defaults. */
+  creativeFeatures: Record<string, "OPT_IN" | "OPT_OUT"> | null;
+  /** Snapshot of META_ASSET_FEED_ENABLED at plan build — payloads never read process env at execution time. */
+  assetFeedEnabled: boolean;
   requestLog: MetaProviderLogEntry[];
   responseLog: MetaProviderLogEntry[];
   reconciledObjects: MetaReconciledObjects;
@@ -333,6 +390,14 @@ export function buildMetaPublishPlan(input: {
   const leadForms = buildLeadFormPlans(campaignPack, setup, controls.destinationUrl);
   const creatives = buildCreativePlans(campaignPack, setup);
   const ads = buildAdPlans(campaignPack);
+  const creativeFeatures = buildDefaultMetaCreativeFeatures();
+  const assetFeedEnabled = metaAssetFeedEnabled()
+    && creatives.some((creative) => creative.formatAssets?.story);
+  if (assetFeedEnabled) {
+    for (const adSet of adSets) {
+      adSet.targeting = unionAssetFeedPositions(adSet.targeting);
+    }
+  }
   const tracking: MetaPublishTrackingPlan = {
     utmSource: "meta",
     utmMedium: "paid_social",
@@ -349,6 +414,8 @@ export function buildMetaPublishPlan(input: {
     creatives,
     ads,
     tracking,
+    creativeFeatures,
+    assetFeedEnabled,
   });
   const idempotencyKey = buildMetaPlanIdempotencyKey({
     workspaceId: input.workspaceId,
@@ -379,6 +446,8 @@ export function buildMetaPublishPlan(input: {
     creatives,
     ads,
     tracking,
+    creativeFeatures,
+    assetFeedEnabled,
     requestLog: [],
     responseLog: [],
     reconciledObjects: {
@@ -781,10 +850,18 @@ async function publishWithMarketingApi(
         reconciledObjects.creativeIds[creative.localId] = existingId;
       } else {
         const imageHash = await resolveCreativeImageHash(plan, creative, input, requestLog, responseLog);
+        // Two-image path: flag on AND this creative carries a story render.
+        // The combined lead-ad + asset_feed shape is probe-gated (§9.2) —
+        // until the probe passes, the flag must stay off in production.
+        const useAssetFeed = plan.assetFeedEnabled && Boolean(creative.formatAssets?.story);
+        const storyHash = useAssetFeed
+          ? await resolveStoryImageHash(plan, creative, input, requestLog, responseLog)
+          : null;
         const leadFormId = reconciledObjects.leadFormIds[creative.leadFormLocalId];
         const linkBase = plan.controls.destinationUrl?.trim() || plan.setup.privacyPolicyUrl;
         const utmLink = buildUtmLink(linkBase, plan.tracking, creative.localId);
-        const response = await postMetaObject(input, requestLog, responseLog, `creative.${creative.localId}`, `/${plan.setup.metaAdAccountId}/adcreatives`, {
+        const degreesOfFreedom = buildDegreesOfFreedomSpec(plan.creativeFeatures);
+        const payload: Record<string, unknown> = {
           name: providerName,
           object_story_spec: {
             page_id: creative.pageId,
@@ -795,6 +872,9 @@ async function publishWithMarketingApi(
               description: creative.description,
               link: utmLink,
               ...(imageHash ? { image_hash: imageHash } : {}),
+              ...(useAssetFeed && imageHash && storyHash ? {
+                asset_feed_spec: buildAssetFeedSpec(imageHash, storyHash),
+              } : {}),
               call_to_action: {
                 type: creative.cta,
                 value: {
@@ -803,7 +883,9 @@ async function publishWithMarketingApi(
               },
             },
           },
-        });
+          ...degreesOfFreedom,
+        };
+        const response = await postMetaObject(input, requestLog, responseLog, `creative.${creative.localId}`, `/${plan.setup.metaAdAccountId}/adcreatives`, payload);
         reconciledObjects.creativeIds[creative.localId] = requireMetaId(response, "creative");
       }
       await checkpointMetaPublishProgress(input, requestLog, responseLog, reconciledObjects);
@@ -878,6 +960,89 @@ async function resolveCreativeImageHash(
   const fromMap = imageMap?.[filename]?.hash ?? Object.values(imageMap ?? {})[0]?.hash;
 
   return fromMap ?? (typeof response.hash === "string" ? response.hash : null);
+}
+
+/**
+ * Upload the 9:16 render for the asset_feed path. The feed image already
+ * resolves through resolveCreativeImageHash; the story render lives under
+ * formatAssets.story and uploads with its own /adimages call so both hashes
+ * are account-scoped and reusable.
+ */
+async function resolveStoryImageHash(
+  plan: MetaPublishPlan,
+  creative: MetaPublishCreativePlan,
+  input: MetaPublishExecutionInput,
+  requestLog: MetaProviderLogEntry[],
+  responseLog: MetaProviderLogEntry[],
+): Promise<string | null> {
+  const story = creative.formatAssets?.story;
+  if (!story) return null;
+  if (story.imageHash) return story.imageHash;
+  if (story.type !== "image" || story.source !== "inline" || !story.bytesBase64) return null;
+
+  const filename = story.filename ?? `${creative.localId}-story.png`;
+  const response = await postMetaObject(input, requestLog, responseLog, `asset.${creative.localId}.story`, `/${plan.setup.metaAdAccountId}/adimages`, {
+    bytes: story.bytesBase64,
+  });
+  const imageMap = response.images as Record<string, { hash?: string }> | undefined;
+  return imageMap?.[filename]?.hash ?? Object.values(imageMap ?? {})[0]?.hash ?? (typeof response.hash === "string" ? response.hash : null);
+}
+
+function buildAssetFeedSpec(feedHash: string, storyHash: string): Record<string, unknown> {
+  return {
+    images: [
+      { hash: feedHash, adlabels: [{ name: "feed_image" }] },
+      { hash: storyHash, adlabels: [{ name: "story_image" }] },
+    ],
+    ad_formats: ["SINGLE_IMAGE"],
+    optimization_type: "PLACEMENT",
+    asset_customization_rules: [
+      {
+        customization_spec: {
+          publisher_platforms: [...ASSET_FEED_RULE_POSITIONS.feed.publisherPlatforms],
+          facebook_positions: [...ASSET_FEED_RULE_POSITIONS.feed.facebookPositions],
+          instagram_positions: [...ASSET_FEED_RULE_POSITIONS.feed.instagramPositions],
+        },
+        image_label: { name: "feed_image" },
+        priority: 1,
+      },
+      {
+        customization_spec: {
+          publisher_platforms: [...ASSET_FEED_RULE_POSITIONS.story.publisherPlatforms],
+          facebook_positions: [...ASSET_FEED_RULE_POSITIONS.story.facebookPositions],
+          instagram_positions: [...ASSET_FEED_RULE_POSITIONS.story.instagramPositions],
+        },
+        image_label: { name: "story_image" },
+        priority: 2,
+      },
+    ],
+  };
+}
+
+/**
+ * Explicit Advantage+ enrollment: what the template declares, everything
+ * else OPT_OUT. Keys Meta no longer accepts are dropped with a log line
+ * (Meta renames these periodically; a stale key must not kill a publish).
+ */
+function buildDegreesOfFreedomSpec(
+  templateFeatures: Record<string, "OPT_IN" | "OPT_OUT"> | null,
+): Record<string, unknown> {
+  const features: Record<string, { enroll_status: string }> = {};
+  for (const key of META_CREATIVE_FEATURE_KEYS) {
+    features[key] = { enroll_status: templateFeatures?.[key] ?? "OPT_OUT" };
+  }
+  for (const [key, value] of Object.entries(templateFeatures ?? {})) {
+    if (!(key in features)) {
+      console.warn(`[meta-execution] unknown Advantage+ feature key "${key}" from template; dropping from degrees_of_freedom_spec.`);
+      continue;
+    }
+    features[key] = { enroll_status: value };
+  }
+  return {
+    degrees_of_freedom_spec: {
+      creative_features_spec: features,
+    },
+  };
 }
 
 async function reconcileMetaObjects(
@@ -1364,6 +1529,21 @@ async function getMetaObjectStatus(
   };
 }
 
+function unionAssetFeedPositions(targeting: Record<string, unknown>): Record<string, unknown> {
+  // Ad set placements must cover every asset_feed rule position. Merge the
+  // rule positions with whatever the operator selected; publisher platforms
+  // stay as the operator chose (rules never add a platform that wasn't asked
+  // for beyond facebook/instagram, which are the only ones the rules use).
+  const existingFb = Array.isArray(targeting.facebook_positions) ? (targeting.facebook_positions as string[]) : [];
+  const existingIg = Array.isArray(targeting.instagram_positions) ? (targeting.instagram_positions as string[]) : [];
+  const fb = [...new Set([...existingFb, ...ASSET_FEED_RULE_POSITIONS.feed.facebookPositions, ...ASSET_FEED_RULE_POSITIONS.story.facebookPositions])];
+  const ig = [...new Set([...existingIg, ...ASSET_FEED_RULE_POSITIONS.feed.instagramPositions, ...ASSET_FEED_RULE_POSITIONS.story.instagramPositions])];
+  const platforms = Array.isArray(targeting.publisher_platforms) && (targeting.publisher_platforms as string[]).length > 0
+    ? targeting.publisher_platforms
+    : ["facebook", "instagram"];
+  return { ...targeting, publisher_platforms: platforms, facebook_positions: fb, instagram_positions: ig };
+}
+
 function buildAdSetPlans(pack: AdStudioCampaignPack, controls: MetaPublishControls): MetaPublishAdSetPlan[] {
   const suburb = pack.campaign.market.suburb;
   const targeting = buildTargeting(controls);
@@ -1460,13 +1640,45 @@ function buildCreativePlans(pack: AdStudioCampaignPack, setup: MetaConnectionSet
       headline: copy.meta.headlines[0] ?? pack.campaign.name,
       primaryText: copy.meta.primaryText[0] ?? pack.campaign.name,
       description: copy.meta.descriptions[0] ?? pack.campaign.audienceIntent,
-      cta: copy.meta.cta,
+      // Legacy packs may carry CONTACT_US (undocumented for lead ads); the
+      // remap happens here, at payload-plan time, with a logged warning.
+      cta: remapLegacyMetaCta(copy.meta.cta),
       leadFormLocalId: `form_${index + 1}`,
       adStudioCreativeId: creative?.creativeId ?? null,
       format: creative?.format ?? null,
       asset: creative ? buildCreativeImageAsset(creative) : null,
+      formatAssets: creative ? buildFormatAssets(creative) : null,
     };
   });
+}
+
+/**
+ * v2 creatives store the canonical server renders per format under
+ * canvas.renders (Track E). Absent today, this returns nulls and the publish
+ * stays on the single-image path.
+ */
+function buildFormatAssets(creative: AdStudioCampaignPack["creatives"][number]): { feed: MetaCreativeAssetPlan | null; story: MetaCreativeAssetPlan | null } | null {
+  const renders = (creative.canvas as { renders?: Record<string, string> }).renders;
+  if (!renders || (typeof renders.feed !== "string" && typeof renders.story !== "string")) return null;
+
+  const toAsset = (reference: string | undefined): MetaCreativeAssetPlan | null => {
+    if (!reference?.trim()) return null;
+    const storagePath = reference.startsWith("/api/adstudio/media?")
+      ? new URL(reference, "https://blockwise.invalid").searchParams.get("path")
+      : isHttpUrl(reference) || reference.startsWith("data:")
+        ? null
+        : reference;
+    if (!storagePath) return null;
+    return {
+      type: "image",
+      source: "storage",
+      mimeType: "image/png",
+      filename: `${creative.creativeId}-${storagePath.includes("story") ? "story" : "feed"}.png`,
+      storagePath,
+    };
+  };
+
+  return { feed: toAsset(renders.feed), story: toAsset(renders.story) };
 }
 
 /**
@@ -1673,6 +1885,8 @@ type MetaPublishPlanRow = {
     ads?: MetaPublishAdPlan[];
     tracking?: MetaPublishTrackingPlan;
     controls?: MetaPublishControls;
+    creativeFeatures?: Record<string, "OPT_IN" | "OPT_OUT"> | null;
+    assetFeedEnabled?: boolean;
   };
   request_log_json: MetaProviderLogEntry[] | null;
   response_log_json: MetaProviderLogEntry[] | null;
@@ -1729,6 +1943,11 @@ function rowToPlan(row: MetaPublishPlanRow): MetaPublishPlan {
       utmCampaign: "meta-campaign",
       utmContentPrefix: "meta",
     },
+    // Plans stored before Track D have no enrollment snapshot: the explicit
+    // all-OPT_OUT default is exactly what they would have published anyway
+    // (Meta's unenrolled behaviour), so replaying them is safe.
+    creativeFeatures: planJson.creativeFeatures ?? null,
+    assetFeedEnabled: planJson.assetFeedEnabled ?? false,
     requestLog: row.request_log_json ?? [],
     responseLog: row.response_log_json ?? [],
     reconciledObjects: row.reconciled_objects_json ?? emptyReconciledObjects(),

@@ -713,31 +713,33 @@ async function resolveStorageCreativeAssets(
   serviceSupabase: SupabaseServiceClient,
   plan: MetaPublishPlan,
 ): Promise<MetaPublishPlan> {
-  const creatives = await Promise.all(plan.creatives.map(async (creative) => {
-    const asset = creative.asset;
-    if (!asset || asset.source !== "storage" || !asset.storagePath || asset.bytesBase64 || asset.imageHash) {
-      return creative;
-    }
-
-    const storagePath = asset.storagePath;
+  const downloadAsset = async (asset: NonNullable<MetaPublishPlan["creatives"][number]["asset"]>, name: string) => {
+    const storagePath = asset.storagePath ?? "";
     if (!storagePath.startsWith(`${plan.workspaceId}/`) || storagePath.includes("..")) {
-      throw new Error(`The finished ad image for ${creative.name} is outside this workspace.`);
+      throw new Error(`The finished ad image for ${name} is outside this workspace.`);
     }
 
     const { data, error } = await serviceSupabase.storage.from("workspace-artifacts").download(storagePath);
     if (error || !data) {
-      throw new Error(`The finished ad image for ${creative.name} could not be loaded. Regenerate the ad and try again.`);
+      throw new Error(`The finished ad image for ${name} could not be loaded. Regenerate the ad and try again.`);
     }
 
     const bytes = Buffer.from(await data.arrayBuffer());
+    return { ...asset, source: "inline" as const, bytesBase64: bytes.toString("base64") };
+  };
+
+  const creatives = await Promise.all(plan.creatives.map(async (creative) => {
+    const needsFeed = creative.asset && creative.asset.source === "storage" && creative.asset.storagePath && !creative.asset.bytesBase64 && !creative.asset.imageHash;
+    const needsStory = creative.formatAssets?.story && creative.formatAssets.story.source === "storage" && creative.formatAssets.story.storagePath
+      && !creative.formatAssets.story.bytesBase64 && !creative.formatAssets.story.imageHash;
+    if (!needsFeed && !needsStory) return creative;
 
     return {
       ...creative,
-      asset: {
-        ...asset,
-        source: "inline" as const,
-        bytesBase64: bytes.toString("base64"),
-      },
+      asset: needsFeed ? await downloadAsset(creative.asset!, creative.name) : creative.asset,
+      formatAssets: creative.formatAssets && needsStory
+        ? { ...creative.formatAssets, story: await downloadAsset(creative.formatAssets.story!, `${creative.name} (story)`) }
+        : creative.formatAssets,
     };
   }));
 

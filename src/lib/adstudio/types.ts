@@ -375,7 +375,7 @@ export const metaLeadAdPackSchema = z.object({
   primaryText: z.array(z.string()).min(1),
   headlines: z.array(z.string()).min(1),
   descriptions: z.array(z.string()).min(1),
-  cta: z.enum(["LEARN_MORE", "SIGN_UP", "DOWNLOAD", "CONTACT_US"]),
+  cta: z.enum(["LEARN_MORE", "SIGN_UP", "GET_QUOTE", "APPLY_NOW", "DOWNLOAD", "SUBSCRIBE"]),
   leadForm: z.object({
     headline: z.string().min(1),
     questions: z.array(z.string()),

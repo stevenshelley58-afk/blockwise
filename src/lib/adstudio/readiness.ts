@@ -100,7 +100,9 @@ export function buildReadinessItems(input: {
 }
 
 function ctaState(label: string): ReadinessItem["state"] {
-  return ["SIGN_UP", "DOWNLOAD", "CONTACT_US", "LEARN_MORE"].includes(toMetaCta(label)) ? "done" : "warn";
+  // Meta's documented lead-ads CTA subset; anything outside it lands on a
+  // real enum via toMetaCta, so "done" means the label maps cleanly.
+  return ["LEARN_MORE", "SIGN_UP", "GET_QUOTE", "APPLY_NOW", "DOWNLOAD", "SUBSCRIBE"].includes(toMetaCta(label)) ? "done" : "warn";
 }
 
 function complianceDetail(status: AdStudioCampaignPack["compliance"]["status"]): string {
