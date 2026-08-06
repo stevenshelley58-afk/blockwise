@@ -4,6 +4,7 @@ import { requireOperator } from "@/lib/operator/auth";
 import {
   approveTemplate,
   runFidelityCheck,
+  runRestyle,
   studioWritesAllowed,
   writeTemplateDoc,
 } from "@/lib/adstudio/v2/studio";
@@ -84,9 +85,17 @@ export async function POST(request: NextRequest, context: Context) {
     }
   }
 
+  // Restyle (D5): deterministic palette remap + sample render, headless.
+  if (action === "restyle") {
+    try {
+      const result = await runRestyle(doc);
+      return NextResponse.json({ ok: true, ...result });
+    } catch (error) {
+      return NextResponse.json({ error: error instanceof Error ? error.message : "Restyle failed." }, { status: 422 });
+    }
+  }
+
   if (action === "stress") {
-    // Stress preview matrix (§5.2): longest legal copy and one-char copy per
-    // field, rendered as PNG strips for the operator's eyes before ready.
     try {
       const { renderAdDocToPng } = await import("@/lib/adstudio/v2/render/server.ts");
       const editable = doc.inputs.text.filter((input) => !doc.exactness.bakedTextKeys.includes(input.key));

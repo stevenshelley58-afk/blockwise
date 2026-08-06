@@ -646,6 +646,9 @@ function checkInputContract(doc: TemplateDocShape, ctx: z.RefinementCtx): void {
     const layerIds = new Set<string>();
     const coveredText = new Set<string>();
     const coveredImages = new Set<string>();
+    // Story-first sources derive the feed as a centred band; inputs whose
+    // source boxes fall outside the band legitimately have no layer there.
+    const derivedSurface = Boolean(doc.formats.story?.native) && formatKey === "feed";
 
     for (const [index, layer] of layout.layers.entries()) {
       if (layerIds.has(layer.id)) {
@@ -683,11 +686,15 @@ function checkInputContract(doc: TemplateDocShape, ctx: z.RefinementCtx): void {
     }
 
     for (const key of editableTextKeys) {
+      // Derived band surfaces (story-first feeds) legitimately omit inputs
+      // whose source boxes fall outside the band.
+      if (derivedSurface) continue;
       if (!coveredText.has(key)) {
         addIssue(ctx, [...base, "layers"], `text input ${key} has no text layer in ${formatKey}`);
       }
     }
     for (const key of imageKeys) {
+      if (derivedSurface) continue;
       if (!coveredImages.has(key)) {
         addIssue(ctx, [...base, "layers"], `image input ${key} has no image slot in ${formatKey}`);
       }

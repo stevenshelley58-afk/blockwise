@@ -164,6 +164,56 @@ export async function approveTemplate(doc: AdTemplateDocV2, qaBy: string, confir
   return { ok: true as const, residuals: check.residuals };
 }
 
+/** D5 restyle, headless: deterministic palette remap + generic slot assets +
+ *  safe copy, then the public sample as a deterministic render. Refuses when
+ *  the sample would equal the source (no distance, no restyle). */
+export async function runRestyle(doc: AdTemplateDocV2) {
+  const paletteMap: Record<string, string> = {};
+  for (const layout of [doc.formats.feed, doc.formats.story]) {
+    if (!layout) continue;
+    for (const layer of layout.layers) {
+      if (layer.type !== "text") continue;
+      const from = layer.typo.color;
+      if (!paletteMap[from]) paletteMap[from] = "#1f242b";
+    }
+  }
+  for (const layout of [doc.formats.feed, doc.formats.story]) {
+    if (!layout) continue;
+    for (const layer of layout.layers) {
+      if (layer.type === "text") layer.typo.color = paletteMap[layer.typo.color] ?? layer.typo.color;
+    }
+  }
+  doc.restyle = { ...doc.restyle, paletteMap, replacedAssets: doc.inputs.images.map((image) => image.key) };
+
+  const isStoryFirst = Boolean(doc.formats.story?.native);
+  const sampleFormat = isStoryFirst ? "9:16" : "4:5";
+  const png = await renderAdDocToPng(doc, {
+    schema: "adstudio.instance.v2",
+    templateId: doc.id,
+    templateHash: "0".repeat(64),
+    format: sampleFormat,
+    values: { images: {}, text: Object.fromEntries(doc.inputs.text.map((input) => [input.key, input.sample])) },
+    overrides: [],
+  }, sampleFormat);
+  const { createHash } = await import("node:crypto");
+  const contentHash = createHash("sha256").update(png).digest("hex");
+  if (contentHash === doc.provenance.sourceAd.contentHash) {
+    throw new Error("restyle produced a sample identical to the source — distance is required (D5)");
+  }
+  doc.provenance.sample = {
+    imageSrc: `/adstudio-templates/${doc.id}/sample.png`,
+    contentHash,
+    generatedBy: "deterministic_render",
+  };
+  const { default: sharp } = await import("sharp");
+  const samplePath = join(resolve(process.cwd()), "public", "adstudio-templates", doc.id, "sample.png");
+  const { mkdirSync: mkdir } = await import("node:fs").then((fs) => fs);
+  mkdir(samplePath.replace(/[\\/][^\\/]+$/, ""), { recursive: true });
+  await sharp(png).png().toFile(samplePath);
+  writeTemplateDoc(doc.id, doc);
+  return { sample: doc.provenance.sample, sourceHash: doc.provenance.sourceAd.contentHash };
+}
+
 /** DEV-ONLY writer — the route guards NODE_ENV; production never writes. */
 export function writeTemplateDoc(id: string, doc: AdTemplateDocV2) {
   const dir = join(templateGalleryV2Dir(), id);

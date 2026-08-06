@@ -99,6 +99,21 @@ export function TemplateStudioScreen({ id }: { id: string }) {
 
   const [stress, setStress] = useState<Array<{ name: string; dataUrl: string }>>([]);
   const [stressRunning, setStressRunning] = useState(false);
+  const [restyleRunning, setRestyleRunning] = useState(false);
+  const restyle = async () => {
+    setRestyleRunning(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/operator/template-studio/${id}?action=restyle`, { method: "POST" });
+      const payload = (await response.json()) as { ok?: boolean; error?: string };
+      if (!response.ok || !payload.ok) throw new Error(payload.error ?? "Restyle failed.");
+      await load();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Restyle failed.");
+    } finally {
+      setRestyleRunning(false);
+    }
+  };
   const runStress = async () => {
     setStressRunning(true);
     setError(null);
@@ -141,6 +156,9 @@ export function TemplateStudioScreen({ id }: { id: string }) {
           </button>
           <button className="studio-btn secondary" type="button" onClick={runStress} disabled={stressRunning}>
             {stressRunning ? "Rendering stress…" : "Stress preview"}
+          </button>
+          <button className="studio-btn secondary" type="button" onClick={restyle} disabled={restyleRunning}>
+            {restyleRunning ? "Restyling…" : "Restyle (D5)"}
           </button>
         </div>
       </header>
