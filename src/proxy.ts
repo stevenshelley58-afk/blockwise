@@ -9,7 +9,9 @@ const AUTHENTICATED_API_PREFIXES = ["/api/adstudio/", "/api/operator/"] as const
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (process.env.NODE_ENV === "production" && pathname.startsWith("/api/dev/")) {
+  // Dev tooling (render harness, render smoke) may run on localhost and on
+  // flag-gated Preview deploys; it must never exist on production.
+  if (process.env.VERCEL_ENV === "production" && pathname.startsWith("/api/dev/")) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
