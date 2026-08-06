@@ -125,6 +125,19 @@ export async function approveTemplate(doc: AdTemplateDocV2, qaBy: string, confir
   const problems: string[] = [];
   if (!confirmed) problems.push("confirmation checkbox required");
   if (!doc.formats.story) problems.push("story layout required");
+
+  // Effective minSourcePx defaults: the slot's own px size at canvas res.
+  for (const layout of [doc.formats.feed, doc.formats.story]) {
+    if (!layout) continue;
+    for (const layer of layout.layers) {
+      if (layer.type === "image_slot" && !layer.minSourcePx) {
+        layer.minSourcePx = {
+          width: Math.round(layer.box.width * layout.width),
+          height: Math.round(layer.box.height * layout.height),
+        };
+      }
+    }
+  }
   const restyleTrivial =
     Object.keys(doc.restyle?.paletteMap ?? {}).length === 0
     && (doc.restyle?.replacedAssets ?? []).length === 0;
