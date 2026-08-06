@@ -176,7 +176,24 @@ function v1ToV2(v1, id, from) {
         : `migrated from v1 (${from}); restyle pass pending in Studio`,
     },
     fonts,
-    formats: isStory ? { feed: layout } : { feed: layout },
+    formats: isStory
+      ? {
+          feed: {
+            format: "4:5",
+            width: 1080,
+            height: 1350,
+            plate: { src: `/adstudio-templates/${id}/plate-feed.webp`, sha256: "0".repeat(64) },
+            layers: layout.layers
+              .map((layer) => {
+                if (layer.type !== "image_slot") return layer;
+                const mapped = mapStoryBoxToFeed(layer.box);
+                return mapped ? { ...layer, box: mapped } : null;
+              })
+              .filter(Boolean),
+          },
+          story: layout,
+        }
+      : { feed: layout },
     inputs: {
       images: Object.entries(v1.deterministicEditing?.imageBoxes ?? {}).map(([key]) => ({
         key,
@@ -221,6 +238,30 @@ function v1ToV2(v1, id, from) {
   };
 }
 
+// Story canvases are 1920 tall; a derived 4:5 feed is the centred 1350 band.
+const STORY_TOP_PX = 285;
+const STORY_BOTTOM_PX = 1635;
+
+/** Normalized box mapped from a 9:16 source into the derived 4:5 band, or
+ *  null when less than 20% of the box survives the crop (it legitimately
+ *  does not exist on the feed surface). */
+function mapStoryBoxToFeed(box) {
+  const y1px = box.y * 1920;
+  const y2px = (box.y + box.height) * 1920;
+  const interTop = Math.max(y1px, STORY_TOP_PX);
+  const interBottom = Math.min(y2px, STORY_BOTTOM_PX);
+  const inter = Math.max(0, interBottom - interTop);
+  if (inter < 0.2 * (y2px - y1px)) return null;
+  const y = (interTop - STORY_TOP_PX) / 1350;
+  const height = Math.min(1 - y, inter / 1350);
+  return {
+    x: Math.min(1, Math.max(0, box.x)),
+    y,
+    width: Math.min(1 - Math.min(1, Math.max(0, box.x)), Math.max(0.02, box.width)),
+    height: Math.max(0.02, height),
+  };
+}
+
 function migrateOne(id, from) {
   const v1Path = join(v1Gallery, `${id}.json`);
   if (!existsSync(v1Path)) throw new Error(`no v1 template ${id}`);
@@ -255,6 +296,14 @@ async function storyDraft(id) {
   const { extendPlateToStory, repositionLayersForStory } = await import("./lib/story.mjs");
   const docPath = join(v2Gallery, id, "template.json");
   const doc = readJson(docPath);
+  // Story-first sources: decompose wrote the true story plate from the
+  // source; never overwrite it with a band-extended feed.
+  const storyFirst = Boolean(doc.formats.story && doc.formats.story.format === "9:16"
+    && !/^0+$/.test(doc.formats.story.plate.sha256 ?? ""));
+  if (storyFirst) {
+    console.log(`story-draft ${id}: story-first source — keeping the decomposed story plate`);
+    return;
+  }
   const feedPlatePath = join(publicV2, id, "plate-feed.webp");
   if (!existsSync(feedPlatePath)) throw new Error(`plate-feed missing for ${id} — run decompose first`);
   const feedBytes = readFileSync(feedPlatePath);
@@ -336,7 +385,8 @@ async function decompose(id) {
 
   const meta = await sharp(sourceBytes).metadata();
   const sourceDims = { width: meta.width, height: meta.height };
-  const layout = doc.formats.feed;
+  const isStoryFirst = Boolean(doc.formats.story && doc.formats.story.format === "9:16");
+  const layout = isStoryFirst ? doc.formats.story : doc.formats.feed;
   const layoutDims = { width: layout.width, height: layout.height };
   // The OpenAI mask is free-form (the model resamples internally); the
   // truth-preserving composite happens at LAYOUT dims so the plate and the
@@ -355,14 +405,15 @@ async function decompose(id) {
     .toBuffer();
 
   const publicDir = join(publicV2, id);
-  const writePlate = async (png) => {
-    const { webp, sha } = await writeLosslessWebp(png, join(publicDir, "plate-feed.webp"));
-    layout.plate.sha256 = sha;
-    return webp;
+  const plateFile = (fmt) => (fmt === "9:16" ? "plate-story.webp" : "plate-feed.webp");
+  const writePlate = async (png, target) => {
+    const { sha } = await writeLosslessWebp(png, join(publicDir, plateFile(target.format)));
+    target.plate.sha256 = sha;
   };
   // Write BEFORE the fit probes: the renderer verifies the plate's sha256 on
   // disk, so the doc and the file must agree when the probes run.
-  let finalPlate = await writePlate(platePng);
+  await writePlate(platePng, layout);
+  let finalPng = platePng;
 
   const buildTextLayer = ([key, typo], index) => ({
     id: `text-${key}`,
@@ -382,14 +433,16 @@ async function decompose(id) {
       tracking: typo.tracking ?? 0,
       align: typo.align ?? "left",
       color: typo.color,
-      measuredLines: (typo.measuredLines ?? []).map((line) => ({
-        text: line.text,
-        box: line.sampleBox,
-        sizeRatio: line.sizeRatio,
-        ...(line.scaleX !== undefined ? { scaleX: line.scaleX } : {}),
-      })),
-    },
-    constraints: {
+      ...(typo.measuredLines?.length
+        ? { measuredLines: typo.measuredLines.map((line) => ({
+            text: line.text,
+            box: line.sampleBox,
+            sizeRatio: line.sizeRatio,
+            ...(line.scaleX !== undefined ? { scaleX: line.scaleX } : {}),
+          })) }
+        : {}),
+      },
+      constraints: {
       maxLength: v1.inputs?.text?.find((input) => input.key === key)?.maxLength ?? 60,
       maxLines: typo.sampleLineCount ?? 3,
       autoFitMinRatio: 0.85,
@@ -411,13 +464,13 @@ async function decompose(id) {
   const unfit = [];
   for (const entry of entries) {
     const probe = JSON.parse(JSON.stringify(doc));
-    probe.formats.feed.layers = [buildTextLayer(entry, 0)];
+    probe.formats[isStoryFirst ? "story" : "feed"].layers = [buildTextLayer(entry, 0)];
     probe.exactness.bakedTextKeys = [];
     const probeInstance = {
       schema: "adstudio.instance.v2",
       templateId: id,
       templateHash: "0".repeat(64),
-      format: "4:5",
+      format: layout.format,
       // Probe with the SAME value later renders will see (inputs sample is
       // what restyle/Studio hand the renderer), else the verification lies.
       values: {
@@ -432,7 +485,7 @@ async function decompose(id) {
       overrides: [],
     };
     try {
-      await renderAdDocToPng(probe, probeInstance, "4:5");
+      await renderAdDocToPng(probe, probeInstance, layout.format);
       fitted.push(entry);
     } catch (error) {
       if (error?.name === "RenderFitError") unfit.push(entry);
@@ -445,18 +498,33 @@ async function decompose(id) {
   if (unfit.length > 0) {
     const bakeMask = await buildCompositeMask(layoutDims, unfit.map(([, typo]) => typo.sampleBox));
     const cut = await sharp(sourceLayout).composite([{ input: bakeMask, blend: "dest-in" }]).png().toBuffer();
-    finalPlate = await writePlate(await sharp(platePng).composite([{ input: cut, blend: "over" }]).png().toBuffer());
+    finalPng = await sharp(platePng).composite([{ input: cut, blend: "over" }]).png().toBuffer();
+    await writePlate(finalPng, layout);
   }
 
   layout.layers = [
     ...layout.layers.filter((layer) => layer.type !== "text"),
     ...fitted.map(buildTextLayer),
   ];
+  // Story-first sources: the 4:5 feed is the centred band cropped from the
+  // story plate, with the fitted text boxes mapped into band coordinates.
+  if (isStoryFirst) {
+    const feed = doc.formats.feed;
+    feed.layers = [
+      ...feed.layers.filter((layer) => layer.type !== "text"),
+      ...fitted.map((entry, index) => {
+        const mapped = mapStoryBoxToFeed(entry[1].sampleBox);
+        return mapped ? { ...buildTextLayer(entry, index), box: mapped } : null;
+      }).filter(Boolean),
+    ];
+    const feedPng = await sharp(finalPng).extract({ left: 0, top: STORY_TOP_PX, width: 1080, height: 1350 }).png().toBuffer();
+    await writePlate(feedPng, feed);
+  }
   doc.exactness.bakedTextKeys = unfit.map(([key]) => key);
   doc.exactness.status = "qa";
   writeFileSync(docPath, `${JSON.stringify(doc, null, 2)}\n`);
   console.log(
-    `decompose ${id}: plate written (${finalPlate.length} bytes); ${fitted.length} editable, `
+    `decompose ${id}: plate written (${finalPng.length} bytes); ${fitted.length} editable, `
     + `${unfit.length} baked (${unfit.map(([key]) => key).join(", ") || "none"}), status=qa`,
   );
 }
@@ -492,12 +560,16 @@ async function restyle(id) {
   };
 
   // Public sample = deterministic render of the restyled doc with safe copy.
+  // Story-first templates render the sample at their native 9:16 layout
+  // (the 4:5 band boxes are derived and can degenerate); feed-first at 4:5.
+  const isStoryFirst = Boolean(doc.formats.story && doc.formats.story.format === "9:16");
+  const sampleFormat = isStoryFirst ? "9:16" : "4:5";
   const { renderAdDocToPng } = await import("../../../src/lib/adstudio/v2/render/server.ts");
   const instance = {
     schema: "adstudio.instance.v2",
     templateId: id,
     templateHash: "0".repeat(64),
-    format: "4:5",
+    format: sampleFormat,
     values: {
       images: {},
       // Safe copy = the template's own measured sample values (they fit the
@@ -506,7 +578,7 @@ async function restyle(id) {
     },
     overrides: [],
   };
-  const png = await renderAdDocToPng(doc, instance, "4:5");
+  const png = await renderAdDocToPng(doc, instance, sampleFormat);
   const { sha256Hex } = await import("./lib/decompose.mjs");
   const samplePath = join(publicV2, id, "sample.png");
   mkdirSync(join(publicV2, id), { recursive: true });
@@ -535,19 +607,22 @@ async function check(id) {
   const sourceValues = evidence.sourceValues ?? {};
   const sourceBytes = readFileSync(join(root, "meta_ad_candidates", doc.provenance.sourceAd.file));
 
+  const isStoryFirst = Boolean(doc.formats.story && doc.formats.story.format === "9:16");
+  const layout = isStoryFirst ? doc.formats.story : doc.formats.feed;
+  const W = layout.width;
+  const H = layout.height;
   const instance = {
     schema: "adstudio.instance.v2",
     templateId: id,
     templateHash: "0".repeat(64),
-    format: "4:5",
+    format: layout.format,
     values: { images: {}, text: sourceValues },
     overrides: [],
   };
-  const rendered = await renderAdDocToPng(doc, instance, "4:5");
+  const rendered = await renderAdDocToPng(doc, instance, layout.format);
   const renderedRaw = await sharp(rendered).raw().ensureAlpha().toBuffer();
-  const source = await sharp(sourceBytes).resize(1080, 1350, { fit: "fill" }).raw().ensureAlpha().toBuffer();
+  const source = await sharp(sourceBytes).resize(W, H, { fit: "fill" }).raw().ensureAlpha().toBuffer();
 
-  const layout = doc.formats.feed;
   // Exclusion padding must match the inpaint mask's padding (TEXT_MASK_PADDING):
   // inside the cleanup annulus the model legitimately repaints text AA, so the
   // byte-identical guarantee applies outside the padded text boxes.
@@ -561,18 +636,19 @@ async function check(id) {
   })();
   // Fitted layers AND baked keys get padded exclusions: baked boxes hold the
   // source pixels through a mask composite whose AA ring differs from the raw
-  // resize by a pixel or two at the cut edge.
-  const bakePad = Math.ceil(TEXT_MASK_PADDING * Math.max(1080, 1350));
+  // resize by a pixel or two at the cut edge. (v1 boxes are in the source's
+  // own coordinates, i.e. the primary layout's.)
+  const bakePad = Math.ceil(TEXT_MASK_PADDING * Math.max(W, H));
   const bakedBoxes = (doc.exactness.bakedTextKeys ?? [])
     .filter((key) => v1Typo[key]?.sampleBox)
     .map((key) => {
       const b = v1Typo[key].sampleBox;
       return {
         id: `baked-${key}`,
-        x: Math.max(0, Math.floor(b.x * 1080) - bakePad),
-        y: Math.max(0, Math.floor(b.y * 1350) - bakePad),
-        w: Math.min(1080, Math.ceil(b.width * 1080) + bakePad * 2),
-        h: Math.min(1350, Math.ceil(b.height * 1350) + bakePad * 2),
+        x: Math.max(0, Math.floor(b.x * W) - bakePad),
+        y: Math.max(0, Math.floor(b.y * H) - bakePad),
+        w: Math.min(W, Math.ceil(b.width * W) + bakePad * 2),
+        h: Math.min(H, Math.ceil(b.height * H) + bakePad * 2),
       };
     });
   const paddedBoxes = [
@@ -581,18 +657,18 @@ async function check(id) {
     .filter((layer) => layer.type === "text")
     .map((layer) => {
       const effects = layer.typo.effects;
-      const bh = layer.box.height * 1350;
-      const bw = layer.box.width * 1080;
+      const bh = layer.box.height * H;
+      const bw = layer.box.width * W;
       const spread = Math.ceil(
         (effects?.shadow ? effects.shadow.blurRatio * bh + Math.abs(effects.shadow.dx) * bw + Math.abs(effects.shadow.dy) * bh : 0)
         + (effects?.stroke ? effects.stroke.widthRatio * bh : 0),
-      ) + Math.ceil(TEXT_MASK_PADDING * Math.max(1080, 1350));
+      ) + Math.ceil(TEXT_MASK_PADDING * Math.max(W, H));
       return {
         id: layer.id,
-        x: Math.max(0, Math.floor(layer.box.x * 1080) - spread),
-        y: Math.max(0, Math.floor(layer.box.y * 1350) - spread),
-        w: Math.min(1080, Math.ceil(layer.box.width * 1080) + spread * 2),
-        h: Math.min(1350, Math.ceil(layer.box.height * 1350) + spread * 2),
+        x: Math.max(0, Math.floor(layer.box.x * W) - spread),
+        y: Math.max(0, Math.floor(layer.box.y * H) - spread),
+        w: Math.min(W, Math.ceil(layer.box.width * W) + spread * 2),
+        h: Math.min(H, Math.ceil(layer.box.height * H) + spread * 2),
       };
     }),
   ];
@@ -604,10 +680,10 @@ async function check(id) {
   let dMinY = Infinity;
   let dMaxX = -1;
   let dMaxY = -1;
-  for (let y = 0; y < 1350; y += 1) {
-    for (let x = 0; x < 1080; x += 1) {
+  for (let y = 0; y < H; y += 1) {
+    for (let x = 0; x < W; x += 1) {
       if (inBox(x, y)) continue;
-      const i = (y * 1080 + x) * 4;
+      const i = (y * W + x) * 4;
       outsidePixels += 1;
       if (renderedRaw[i] !== source[i] || renderedRaw[i + 1] !== source[i + 1] || renderedRaw[i + 2] !== source[i + 2]) {
         outsideDiffs += 1;
@@ -626,7 +702,7 @@ async function check(id) {
     let count = 0;
     for (let y = b.y; y < b.y + b.h; y += 2) {
       for (let x = b.x; x < b.x + b.w; x += 2) {
-        const i = (y * 1080 + x) * 4;
+        const i = (y * W + x) * 4;
         const ga = 0.2126 * renderedRaw[i] + 0.7152 * renderedRaw[i + 1] + 0.0722 * renderedRaw[i + 2];
         const gb = 0.2126 * source[i] + 0.7152 * source[i + 1] + 0.0722 * source[i + 2];
         const d = (ga - gb) / 255;
@@ -648,7 +724,7 @@ async function check(id) {
     ["one-char", Object.fromEntries(editable.map((input) => [input.key, "W"]))],
   ]) {
     try {
-      await renderAdDocToPng(doc, { ...instance, values: { images: {}, text: values } }, "4:5");
+      await renderAdDocToPng(doc, { ...instance, values: { images: {}, text: values } }, layout.format);
       stress.push(`${name}: renders`);
     } catch (error) {
       stress.push(`${name}: ${error?.name === "RenderFitError" ? "refused (tighten constraints or bake)" : (error?.message ?? "threw")}`);

@@ -171,13 +171,17 @@ const referencedFiles = new Set();
 for (const doc of docs) {
   const status = doc.exactness.status;
   const layouts = [doc.formats.feed, doc.formats.story].filter(Boolean);
+  // Story-first sources derive the 4:5 feed as a centred band; inputs whose
+  // boxes fall outside the band legitimately have no layer on that surface.
+  const storyFirst = Boolean(doc.formats.story && doc.formats.story.format === "9:16");
 
   // 4. contract: no orphans between inputs and layers, per format.
   for (const layout of layouts) {
+    const derivedSurface = storyFirst && layout.format === "4:5";
     const textKeys = new Set(layout.layers.filter((l) => l.type === "text").map((l) => l.inputKey));
     const slotKeys = new Set(layout.layers.filter((l) => l.type === "image_slot").map((l) => l.inputKey));
     for (const input of doc.inputs.text) {
-      if (!doc.exactness.bakedTextKeys.includes(input.key) && !textKeys.has(input.key)) {
+      if (!derivedSurface && !doc.exactness.bakedTextKeys.includes(input.key) && !textKeys.has(input.key)) {
         fail(`${doc.id}: text input "${input.key}" has no text layer in ${layout.format}`);
       }
     }
@@ -190,7 +194,7 @@ for (const doc of docs) {
       }
     }
     for (const input of doc.inputs.images) {
-      if (!slotKeys.has(input.key)) fail(`${doc.id}: image input "${input.key}" has no slot in ${layout.format}`);
+      if (!derivedSurface && !slotKeys.has(input.key)) fail(`${doc.id}: image input "${input.key}" has no slot in ${layout.format}`);
     }
 
     // 5. story safe zones (qa+ready)
