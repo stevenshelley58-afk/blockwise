@@ -46,6 +46,36 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: dummy-service-role-key
           TOKEN_ENCRYPTION_KEY: "0000000000000000000000000000000000000000000000000000000000000000"
 
+  render-parity:
+    name: Browser/server render parity (hard gate, plan section 4)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium for Playwright
+        run: npx playwright install chromium --with-deps
+
+      - name: Run render parity
+        run: npm run test:render-parity
+        env:
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
+          NEXT_PUBLIC_SUPABASE_URL: https://dummy-project.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: dummy-anon-key
+          SUPABASE_SERVICE_ROLE_KEY: dummy-service-role-key
+          TOKEN_ENCRYPTION_KEY: "0000000000000000000000000000000000000000000000000000000000000000"
+
   database-contracts:
     name: Database migration and pgTAP checks
     runs-on: ubuntu-latest

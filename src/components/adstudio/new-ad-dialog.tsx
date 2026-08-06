@@ -243,10 +243,6 @@ function brandNameForPreview(brandKit: AdStudioBrandKit): string {
   return brandKit.identity.tradingName || brandKit.identity.businessName || "Your agency";
 }
 
-function initialForBrand(brandName: string): string {
-  return (brandName.trim().charAt(0) || "B").toUpperCase();
-}
-
 function domainForPreview(brandKit: AdStudioBrandKit): string {
   return resolveAdvertiserDomain({ brandKit }).host;
 }
@@ -267,7 +263,6 @@ function NewAdPlacementGuide({
   onZoneClick: (zone: GuideZone) => void;
 }) {
   const brandName = brandNameForPreview(brandKit);
-  const brandInitial = initialForBrand(brandName);
   const domain = domainForPreview(brandKit);
   const sample = template ? templateAdCopy(template) : undefined;
   const primaryText = sample?.primaryText || "Primary text";
@@ -341,7 +336,6 @@ function NewAdPlacementGuide({
               );
             })}
             <span className="newad-pv-story-top">
-              <span className="studio-template-avatar">{brandInitial}</span>
               <span><strong>{brandName}</strong><small>Sponsored</small></span>
             </span>
             <span className="newad-pv-story-copy">
@@ -353,9 +347,7 @@ function NewAdPlacementGuide({
         ) : (
           <div className="newad-pv-feed">
             <span className="newad-pv-feed-head">
-              <span className="studio-template-avatar">{brandInitial}</span>
               <span><strong>{brandName}</strong><small>Sponsored</small></span>
-              <span className="studio-template-dots" aria-hidden>···</span>
             </span>
             {captionButton("feed:primaryText", primaryText)}
             <span className={`newad-pv-media${activeZone?.startsWith("image:") ? " is-active" : ""}`}>
