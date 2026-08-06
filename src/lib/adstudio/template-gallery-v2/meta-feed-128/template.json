@@ -1,0 +1,243 @@
+{
+  "schema": "adstudio.template.v2",
+  "id": "meta-feed-128",
+  "name": "Just Sold Announcement - New Chapter",
+  "goal": "seller_leads",
+  "offerId": "just-sold-announcement-001",
+  "category": "just_sold",
+  "tags": [
+    "just sold",
+    "seller leads",
+    "real estate",
+    "announcement",
+    "new chapter"
+  ],
+  "audienceIntent": "Showcase a recently sold property and attract new seller leads.",
+  "classification": {
+    "ad_type": "just_sold",
+    "primary_intent": "seller_leads",
+    "property_or_agent_focus": "property"
+  },
+  "provenance": {
+    "sourceAd": {
+      "file": "01_feed_4x5_best/meta_128.png",
+      "contentHash": "c37d0b77e60869df409e48ff386281f60f5f62a5b876fb069395446eecf43baf"
+    },
+    "sample": {
+      "imageSrc": "/adstudio-samples/meta/meta-feed-128-sample.png",
+      "contentHash": "19442d8ce4449cb24413aa148cc38b8b22e69c2c360402633436c4c0e4011789",
+      "generatedBy": "deterministic_render"
+    },
+    "decomposedFrom": "source"
+  },
+  "restyle": {
+    "paletteMap": {},
+    "replacedAssets": [],
+    "note": "migrated from v1 (source); font remaps: source-sans-3 -> arimo; restyle pass pending in Studio"
+  },
+  "fonts": [
+    {
+      "fontId": "arimo",
+      "family": "Arimo",
+      "weight": 600,
+      "italic": false,
+      "file": "/fonts/adstudio/arimo-600.woff2",
+      "sha256": "e56ba72ece2579125a34dda8b81f4a8692ee712757a5f5910dcf7c084cd0082e"
+    },
+    {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "weight": 700,
+      "italic": false,
+      "file": "/fonts/adstudio/merriweather-700.woff2",
+      "sha256": "4e1ab49396c02be0d9a2a25eed7bc73781c047d85fcb5dfc2889873eaf992b09"
+    },
+    {
+      "fontId": "plus-jakarta-sans",
+      "family": "Plus Jakarta Sans",
+      "weight": 600,
+      "italic": false,
+      "file": "/fonts/adstudio/plus-jakarta-sans-600.woff2",
+      "sha256": "8872bb5c9111df9bd3162c2394aee6354d782b13408a4dd5bbf65c48207206e6"
+    },
+    {
+      "fontId": "playfair-display",
+      "family": "Playfair Display",
+      "weight": 700,
+      "italic": false,
+      "file": "/fonts/adstudio/playfair-display-700.woff2",
+      "sha256": "cfbfb0e36791f82470367d25c5a8d498dc1561a7a66a4172b7c6df749fdf9894"
+    }
+  ],
+  "formats": {
+    "feed": {
+      "format": "4:5",
+      "width": 1080,
+      "height": 1350,
+      "plate": {
+        "src": "/adstudio-templates/meta-feed-128/plate-feed.webp",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "layers": [
+        {
+          "id": "slot-property_photo",
+          "type": "image_slot",
+          "z": 2,
+          "inputKey": "property_photo",
+          "fit": "cover",
+          "box": {
+            "x": 0.017578125,
+            "y": 0.1125,
+            "width": 0.96484375,
+            "height": 0.4734375
+          },
+          "mask": {
+            "kind": "rect"
+          }
+        },
+        {
+          "id": "slot-agent_photo",
+          "type": "image_slot",
+          "z": 3,
+          "inputKey": "agent_photo",
+          "fit": "cover",
+          "box": {
+            "x": 0.662109375,
+            "y": 0.4984375,
+            "width": 0.216796875,
+            "height": 0.1734375
+          },
+          "mask": {
+            "kind": "rect"
+          }
+        }
+      ]
+    }
+  },
+  "inputs": {
+    "images": [
+      {
+        "key": "property_photo",
+        "label": "property photo",
+        "required": true,
+        "aspect": "portrait",
+        "description": "Customer photo drawn into the declared slot."
+      },
+      {
+        "key": "agent_photo",
+        "label": "agent photo",
+        "required": true,
+        "aspect": "portrait",
+        "description": "Customer photo drawn into the declared slot."
+      }
+    ],
+    "text": [
+      {
+        "key": "main_message",
+        "label": "Main Message",
+        "required": true,
+        "maxLength": 60,
+        "sample": "Just Sold! A new chapter begins."
+      },
+      {
+        "key": "property_address",
+        "label": "Property Address",
+        "required": true,
+        "maxLength": 60,
+        "sample": "8 MARINE TERRACE, COTTESLOE WA"
+      },
+      {
+        "key": "contact_email",
+        "label": "Contact Email",
+        "required": true,
+        "maxLength": 40,
+        "sample": "hello@cedarcoast.example"
+      },
+      {
+        "key": "contact_phone",
+        "label": "Contact Phone",
+        "required": true,
+        "maxLength": 20,
+        "sample": "08 6102 1840"
+      }
+    ]
+  },
+  "publish": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "apiVersionMin": "v26.0",
+    "copy": {
+      "primaryText": [
+        "Ask for the property details."
+      ],
+      "headlines": [
+        "Property details"
+      ],
+      "descriptions": [
+        "Request more information"
+      ]
+    },
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Request your free seller consultation",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "thankYou": {
+        "title": "Thanks",
+        "body": "We'll be in touch."
+      }
+    },
+    "placements": {
+      "publisherPlatforms": [
+        "facebook",
+        "instagram"
+      ],
+      "facebookPositions": [
+        "feed"
+      ],
+      "instagramPositions": [
+        "stream"
+      ]
+    },
+    "formatRouting": {
+      "feed": "4:5",
+      "story": null
+    },
+    "creativeFeatures": {
+      "adapt_to_placement": "OPT_OUT",
+      "image_touchups": "OPT_OUT",
+      "image_templates": "OPT_OUT",
+      "inline_comment": "OPT_OUT",
+      "enhance_cta": "OPT_OUT",
+      "text_optimizations": "OPT_OUT",
+      "image_animation": "OPT_OUT",
+      "image_background_gen": "OPT_OUT",
+      "video_auto_crop": "OPT_OUT",
+      "translate_voiceover": "OPT_OUT",
+      "text_translation": "OPT_OUT",
+      "media_type_automation": "OPT_OUT",
+      "product_extensions": "OPT_OUT"
+    },
+    "previewFormats": [
+      "MOBILE_FEED_STANDARD",
+      "INSTAGRAM_STANDARD"
+    ]
+  },
+  "editPolicy": {
+    "mode": "guided",
+    "advancedUnlockable": true,
+    "lockedLayerIds": []
+  },
+  "exactness": {
+    "status": "draft",
+    "residuals": {},
+    "bakedTextKeys": [
+      "main_message",
+      "property_address",
+      "contact_email",
+      "contact_phone"
+    ]
+  }
+}

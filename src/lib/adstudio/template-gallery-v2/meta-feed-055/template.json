@@ -1,0 +1,203 @@
+{
+  "schema": "adstudio.template.v2",
+  "id": "meta-feed-055",
+  "name": "Just Sold - A New Chapter Starts Here",
+  "goal": "seller_leads",
+  "offerId": "just-sold-2024",
+  "category": "just_sold",
+  "tags": [
+    "just sold",
+    "recent sale",
+    "seller leads",
+    "real estate",
+    "agent branding"
+  ],
+  "audienceIntent": "Homeowners interested in selling or learning about recent sales in their area.",
+  "classification": {
+    "ad_type": "just_sold",
+    "primary_intent": "seller_leads",
+    "property_or_agent_focus": "property"
+  },
+  "provenance": {
+    "sourceAd": {
+      "file": "01_feed_4x5_best/meta_055.png",
+      "contentHash": "82c1f3f48d910b3daeaf4d347fabce2ed5c56721287e03826c5d8184368c10b9"
+    },
+    "sample": {
+      "imageSrc": "/adstudio-samples/meta/meta-feed-055-sample.png",
+      "contentHash": "3e48b6c81d41097fae6f39fabfc6cb104ab17e33a2c0c9adfc2403dd79312eb6",
+      "generatedBy": "deterministic_render"
+    },
+    "decomposedFrom": "source"
+  },
+  "restyle": {
+    "paletteMap": {},
+    "replacedAssets": [],
+    "note": "migrated from v1 (source); restyle pass pending in Studio"
+  },
+  "fonts": [
+    {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "weight": 400,
+      "italic": false,
+      "file": "/fonts/adstudio/smooch-sans-400.woff2",
+      "sha256": "a1b64ed5521846da168a3a1907019f6ee8699958c6807b8d33d962d33153cff8"
+    },
+    {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "weight": 600,
+      "italic": false,
+      "file": "/fonts/adstudio/merriweather-600.woff2",
+      "sha256": "3ef93c94387a5a08bbe3115b15b912ea9ed27cae4d5b7db869dc07c443fadc4c"
+    },
+    {
+      "fontId": "oswald",
+      "family": "Oswald",
+      "weight": 300,
+      "italic": false,
+      "file": "/fonts/adstudio/oswald-300.woff2",
+      "sha256": "84f168468881f1ae6cf11573f3befa2e83f2067e914a57dad0233e3a772e76f7"
+    }
+  ],
+  "formats": {
+    "feed": {
+      "format": "4:5",
+      "width": 1080,
+      "height": 1350,
+      "plate": {
+        "src": "/adstudio-templates/meta-feed-055/plate-feed.webp",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "layers": []
+    }
+  },
+  "inputs": {
+    "images": [],
+    "text": [
+      {
+        "key": "subheadline",
+        "label": "Subheadline",
+        "required": true,
+        "maxLength": 40,
+        "sample": "A NEW CHAPTER STARTS HERE"
+      },
+      {
+        "key": "agent_email",
+        "label": "Agent Email",
+        "required": true,
+        "maxLength": 40,
+        "sample": "hello@bennett.example"
+      },
+      {
+        "key": "agent_name",
+        "label": "Agent Name",
+        "required": true,
+        "maxLength": 30,
+        "sample": "AVA BENNETT"
+      },
+      {
+        "key": "contact_label",
+        "label": "Contact Label",
+        "required": true,
+        "maxLength": 20,
+        "sample": "contact me"
+      },
+      {
+        "key": "headline",
+        "label": "Headline",
+        "required": true,
+        "maxLength": 20,
+        "sample": "Just sold"
+      },
+      {
+        "key": "agent_phone",
+        "label": "Agent Phone Number",
+        "required": true,
+        "maxLength": 20,
+        "sample": "+123-555-0155"
+      }
+    ]
+  },
+  "publish": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "apiVersionMin": "v26.0",
+    "copy": {
+      "primaryText": [
+        "Ask for the property details."
+      ],
+      "headlines": [
+        "Property details"
+      ],
+      "descriptions": [
+        "Request more information"
+      ]
+    },
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Request your free seller consultation",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "thankYou": {
+        "title": "Thanks",
+        "body": "We'll be in touch."
+      }
+    },
+    "placements": {
+      "publisherPlatforms": [
+        "facebook",
+        "instagram"
+      ],
+      "facebookPositions": [
+        "feed"
+      ],
+      "instagramPositions": [
+        "stream"
+      ]
+    },
+    "formatRouting": {
+      "feed": "4:5",
+      "story": null
+    },
+    "creativeFeatures": {
+      "adapt_to_placement": "OPT_OUT",
+      "image_touchups": "OPT_OUT",
+      "image_templates": "OPT_OUT",
+      "inline_comment": "OPT_OUT",
+      "enhance_cta": "OPT_OUT",
+      "text_optimizations": "OPT_OUT",
+      "image_animation": "OPT_OUT",
+      "image_background_gen": "OPT_OUT",
+      "video_auto_crop": "OPT_OUT",
+      "translate_voiceover": "OPT_OUT",
+      "text_translation": "OPT_OUT",
+      "media_type_automation": "OPT_OUT",
+      "product_extensions": "OPT_OUT"
+    },
+    "previewFormats": [
+      "MOBILE_FEED_STANDARD",
+      "INSTAGRAM_STANDARD"
+    ]
+  },
+  "editPolicy": {
+    "mode": "guided",
+    "advancedUnlockable": true,
+    "lockedLayerIds": []
+  },
+  "exactness": {
+    "status": "draft",
+    "residuals": {},
+    "bakedTextKeys": [
+      "subheadline",
+      "agent_email",
+      "agent_name",
+      "contact_label",
+      "headline",
+      "agent_phone"
+    ]
+  }
+}

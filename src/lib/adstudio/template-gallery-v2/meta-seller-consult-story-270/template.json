@@ -1,0 +1,280 @@
+{
+  "schema": "adstudio.template.v2",
+  "id": "meta-seller-consult-story-270",
+  "name": "Seller Consultation — Story 270",
+  "goal": "seller_leads",
+  "offerId": "seller-consultation",
+  "category": "seller-lead-generation",
+  "tags": [
+    "seller-consult",
+    "lead-generation",
+    "story"
+  ],
+  "audienceIntent": "Homeowners thinking about selling and seeking expert guidance",
+  "classification": {
+    "ad_type": "lead_generation",
+    "primary_intent": "seller_consultation",
+    "property_or_agent_focus": "property"
+  },
+  "provenance": {
+    "sourceAd": {
+      "file": "02_stories_reels_9x16/meta_270.png",
+      "contentHash": "7690271f39f161134f97a8debdb403ccf4d6da32990da3d1770b636aaecbd915"
+    },
+    "sample": {
+      "imageSrc": "/adstudio-samples/meta/meta-seller-consult-story-270-sample.png",
+      "contentHash": "40c9043ba3c591b5cf43cf3a34221b9d66512c674799886a2192fbd8c62ebbad",
+      "generatedBy": "deterministic_render"
+    },
+    "decomposedFrom": "source"
+  },
+  "restyle": {
+    "paletteMap": {},
+    "replacedAssets": [],
+    "note": "migrated from v1 (source); font remaps: source-sans-3 -> arimo, google-sans -> arimo; restyle pass pending in Studio"
+  },
+  "fonts": [
+    {
+      "fontId": "arimo",
+      "family": "Arimo",
+      "weight": 600,
+      "italic": false,
+      "file": "/fonts/adstudio/arimo-600.woff2",
+      "sha256": "e56ba72ece2579125a34dda8b81f4a8692ee712757a5f5910dcf7c084cd0082e"
+    },
+    {
+      "fontId": "arimo",
+      "family": "Arimo",
+      "weight": 600,
+      "italic": false,
+      "file": "/fonts/adstudio/arimo-600.woff2",
+      "sha256": "e56ba72ece2579125a34dda8b81f4a8692ee712757a5f5910dcf7c084cd0082e"
+    },
+    {
+      "fontId": "manrope",
+      "family": "Manrope",
+      "weight": 600,
+      "italic": false,
+      "file": "/fonts/adstudio/manrope-600.woff2",
+      "sha256": "f7ac6258da20ab7541939b59851155753d1d24f1b30cbcb949077a3faa3d1593"
+    },
+    {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "weight": 700,
+      "italic": false,
+      "file": "/fonts/adstudio/merriweather-700.woff2",
+      "sha256": "4e1ab49396c02be0d9a2a25eed7bc73781c047d85fcb5dfc2889873eaf992b09"
+    },
+    {
+      "fontId": "lora",
+      "family": "Lora",
+      "weight": 700,
+      "italic": false,
+      "file": "/fonts/adstudio/lora-700.woff2",
+      "sha256": "c05fd5289492ed310ed882259b944ca5287e76e572a65d92d3941f9f44f0342a"
+    }
+  ],
+  "formats": {
+    "feed": {
+      "format": "9:16",
+      "width": 1080,
+      "height": 1920,
+      "plate": {
+        "src": "/adstudio-templates/meta-seller-consult-story-270/plate-story.webp",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "layers": [
+        {
+          "id": "slot-property_photo_1",
+          "type": "image_slot",
+          "z": 2,
+          "inputKey": "property_photo_1",
+          "fit": "cover",
+          "box": {
+            "x": 0.001851851851851852,
+            "y": 0.19427083333333334,
+            "width": 0.49166666666666664,
+            "height": 0.4005208333333333
+          },
+          "mask": {
+            "kind": "rect"
+          }
+        },
+        {
+          "id": "slot-property_photo_2",
+          "type": "image_slot",
+          "z": 3,
+          "inputKey": "property_photo_2",
+          "fit": "cover",
+          "box": {
+            "x": 0.5064814814814815,
+            "y": 0.19427083333333334,
+            "width": 0.49166666666666664,
+            "height": 0.4005208333333333
+          },
+          "mask": {
+            "kind": "rect"
+          }
+        },
+        {
+          "id": "slot-agency_logo",
+          "type": "image_slot",
+          "z": 4,
+          "inputKey": "agency_logo",
+          "fit": "cover",
+          "box": {
+            "x": 0.4287037037037037,
+            "y": 0.05416666666666667,
+            "width": 0.14,
+            "height": 0.0734375
+          },
+          "mask": {
+            "kind": "rect"
+          }
+        }
+      ]
+    }
+  },
+  "inputs": {
+    "images": [
+      {
+        "key": "property_photo_1",
+        "label": "property photo 1",
+        "required": true,
+        "aspect": "portrait",
+        "description": "Customer photo drawn into the declared slot."
+      },
+      {
+        "key": "property_photo_2",
+        "label": "property photo 2",
+        "required": true,
+        "aspect": "portrait",
+        "description": "Customer photo drawn into the declared slot."
+      },
+      {
+        "key": "agency_logo",
+        "label": "agency logo",
+        "required": true,
+        "aspect": "portrait",
+        "description": "Customer photo drawn into the declared slot."
+      }
+    ],
+    "text": [
+      {
+        "key": "body",
+        "label": "Body",
+        "required": true,
+        "maxLength": 90,
+        "sample": "Book a no-pressure seller consultation with a local property specialist."
+      },
+      {
+        "key": "cta",
+        "label": "Cta",
+        "required": true,
+        "maxLength": 44,
+        "sample": "BOOK A SELLER CONSULTATION"
+      },
+      {
+        "key": "headline",
+        "label": "Headline",
+        "required": true,
+        "maxLength": 38,
+        "sample": "THINKING OF SELLING?"
+      },
+      {
+        "key": "subheadline",
+        "label": "Subheadline",
+        "required": true,
+        "maxLength": 37,
+        "sample": "PLAN YOUR NEXT MOVE"
+      },
+      {
+        "key": "website",
+        "label": "Website",
+        "required": true,
+        "maxLength": 35,
+        "sample": "youragency.com.au"
+      }
+    ]
+  },
+  "publish": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "apiVersionMin": "v26.0",
+    "copy": {
+      "primaryText": [
+        "Ask for the property details."
+      ],
+      "headlines": [
+        "Property details"
+      ],
+      "descriptions": [
+        "Request more information"
+      ]
+    },
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Request your free seller consultation",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "thankYou": {
+        "title": "Thanks",
+        "body": "We'll be in touch."
+      }
+    },
+    "placements": {
+      "publisherPlatforms": [
+        "facebook",
+        "instagram"
+      ],
+      "facebookPositions": [
+        "feed"
+      ],
+      "instagramPositions": [
+        "stream"
+      ]
+    },
+    "formatRouting": {
+      "feed": "4:5",
+      "story": null
+    },
+    "creativeFeatures": {
+      "adapt_to_placement": "OPT_OUT",
+      "image_touchups": "OPT_OUT",
+      "image_templates": "OPT_OUT",
+      "inline_comment": "OPT_OUT",
+      "enhance_cta": "OPT_OUT",
+      "text_optimizations": "OPT_OUT",
+      "image_animation": "OPT_OUT",
+      "image_background_gen": "OPT_OUT",
+      "video_auto_crop": "OPT_OUT",
+      "translate_voiceover": "OPT_OUT",
+      "text_translation": "OPT_OUT",
+      "media_type_automation": "OPT_OUT",
+      "product_extensions": "OPT_OUT"
+    },
+    "previewFormats": [
+      "MOBILE_FEED_STANDARD",
+      "INSTAGRAM_STANDARD"
+    ]
+  },
+  "editPolicy": {
+    "mode": "guided",
+    "advancedUnlockable": true,
+    "lockedLayerIds": []
+  },
+  "exactness": {
+    "status": "draft",
+    "residuals": {},
+    "bakedTextKeys": [
+      "body",
+      "cta",
+      "headline",
+      "subheadline",
+      "website"
+    ]
+  }
+}

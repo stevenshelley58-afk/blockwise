@@ -1,0 +1,273 @@
+{
+  "schema": "adstudio.template.v2",
+  "id": "meta-buyers-wanted-feed-192",
+  "name": "Active Buyers Wanted — Feed 192",
+  "goal": "seller_leads",
+  "offerId": "active-buyers-in-your-area",
+  "category": "buyer-demand-lead-generation",
+  "tags": [
+    "buyers-wanted",
+    "lead-generation",
+    "feed"
+  ],
+  "audienceIntent": "Homeowners who may sell when matched with active local buyers",
+  "classification": {
+    "ad_type": "lead_generation",
+    "primary_intent": "buyers_wanted",
+    "property_or_agent_focus": "property"
+  },
+  "provenance": {
+    "sourceAd": {
+      "file": "01_feed_4x5_best/meta_192.png",
+      "contentHash": "3622fe6198b9b09421b46326fe90740bd6b6a5570881338034c7cce47a62d74a"
+    },
+    "sample": {
+      "imageSrc": "/adstudio-samples/meta/meta-buyers-wanted-feed-192-sample.png",
+      "contentHash": "84a48ecd6574814a6a5bbca6f354366269ff08610d6da541d9b5c8278556392c",
+      "generatedBy": "deterministic_render"
+    },
+    "decomposedFrom": "source"
+  },
+  "restyle": {
+    "paletteMap": {},
+    "replacedAssets": [],
+    "note": "migrated from v1 (source); restyle pass pending in Studio"
+  },
+  "fonts": [
+    {
+      "fontId": "jost",
+      "family": "Jost",
+      "weight": 300,
+      "italic": false,
+      "file": "/fonts/adstudio/jost-300.woff2",
+      "sha256": "4755701d1a52180592b7619acd5f7f7852beb54adb7ee282ea8ad1d1bcfb2ae6"
+    },
+    {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "weight": 300,
+      "italic": false,
+      "file": "/fonts/adstudio/smooch-sans-300.woff2",
+      "sha256": "24c4dda0d38ff3000dbaf5c37b0035fc51791a693cc68101d14acb16c8504cb6"
+    },
+    {
+      "fontId": "plus-jakarta-sans",
+      "family": "Plus Jakarta Sans",
+      "weight": 600,
+      "italic": false,
+      "file": "/fonts/adstudio/plus-jakarta-sans-600.woff2",
+      "sha256": "8872bb5c9111df9bd3162c2394aee6354d782b13408a4dd5bbf65c48207206e6"
+    },
+    {
+      "fontId": "mulish",
+      "family": "Mulish",
+      "weight": 900,
+      "italic": false,
+      "file": "/fonts/adstudio/mulish-900.woff2",
+      "sha256": "a0a2462f3ad2de62dcb61576815265a6807be84272b8449da90874c03f7ec45b"
+    },
+    {
+      "fontId": "lato",
+      "family": "Lato",
+      "weight": 900,
+      "italic": false,
+      "file": "/fonts/adstudio/lato-900.woff2",
+      "sha256": "e266d64fae0958748c289b2288e29991b4b8386eb4935517c4544a2478cfb703"
+    }
+  ],
+  "formats": {
+    "feed": {
+      "format": "4:5",
+      "width": 1080,
+      "height": 1350,
+      "plate": {
+        "src": "/adstudio-templates/meta-buyers-wanted-feed-192/plate-feed.webp",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "layers": [
+        {
+          "id": "slot-property_photo",
+          "type": "image_slot",
+          "z": 2,
+          "inputKey": "property_photo",
+          "fit": "cover",
+          "box": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "mask": {
+            "kind": "rect"
+          }
+        },
+        {
+          "id": "slot-agency_logo",
+          "type": "image_slot",
+          "z": 3,
+          "inputKey": "agency_logo",
+          "fit": "cover",
+          "box": {
+            "x": 0.8027777777777778,
+            "y": 0.04962962962962963,
+            "width": 0.13333333333333333,
+            "height": 0.10666666666666667
+          },
+          "mask": {
+            "kind": "rect"
+          }
+        }
+      ]
+    }
+  },
+  "inputs": {
+    "images": [
+      {
+        "key": "property_photo",
+        "label": "property photo",
+        "required": true,
+        "aspect": "portrait",
+        "description": "Customer photo drawn into the declared slot."
+      },
+      {
+        "key": "agency_logo",
+        "label": "agency logo",
+        "required": true,
+        "aspect": "portrait",
+        "description": "Customer photo drawn into the declared slot."
+      }
+    ],
+    "text": [
+      {
+        "key": "body",
+        "label": "Body",
+        "required": true,
+        "maxLength": 77,
+        "sample": "We are speaking with qualified buyers looking in your area."
+      },
+      {
+        "key": "headline",
+        "label": "Headline",
+        "required": true,
+        "maxLength": 53,
+        "sample": "ACTIVE BUYERS WANT HOMES LIKE YOURS"
+      },
+      {
+        "key": "subheadline",
+        "label": "Subheadline",
+        "required": true,
+        "maxLength": 46,
+        "sample": "SEE IF YOUR PROPERTY MATCHES"
+      },
+      {
+        "key": "cta",
+        "label": "Cta",
+        "required": true,
+        "maxLength": 36,
+        "sample": "CHECK BUYER DEMAND"
+      },
+      {
+        "key": "benefit_1",
+        "label": "Benefit 1",
+        "required": true,
+        "maxLength": 34,
+        "sample": "QUALIFIED BUYERS"
+      },
+      {
+        "key": "benefit_3",
+        "label": "Benefit 3",
+        "required": true,
+        "maxLength": 34,
+        "sample": "NO-PRESSURE CHAT"
+      },
+      {
+        "key": "benefit_2",
+        "label": "Benefit 2",
+        "required": true,
+        "maxLength": 30,
+        "sample": "LOCAL DEMAND"
+      }
+    ]
+  },
+  "publish": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "apiVersionMin": "v26.0",
+    "copy": {
+      "primaryText": [
+        "Ask for the property details."
+      ],
+      "headlines": [
+        "Property details"
+      ],
+      "descriptions": [
+        "Request more information"
+      ]
+    },
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Register your interest in this property",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "thankYou": {
+        "title": "Thanks",
+        "body": "We'll be in touch."
+      }
+    },
+    "placements": {
+      "publisherPlatforms": [
+        "facebook",
+        "instagram"
+      ],
+      "facebookPositions": [
+        "feed"
+      ],
+      "instagramPositions": [
+        "stream"
+      ]
+    },
+    "formatRouting": {
+      "feed": "4:5",
+      "story": null
+    },
+    "creativeFeatures": {
+      "adapt_to_placement": "OPT_OUT",
+      "image_touchups": "OPT_OUT",
+      "image_templates": "OPT_OUT",
+      "inline_comment": "OPT_OUT",
+      "enhance_cta": "OPT_OUT",
+      "text_optimizations": "OPT_OUT",
+      "image_animation": "OPT_OUT",
+      "image_background_gen": "OPT_OUT",
+      "video_auto_crop": "OPT_OUT",
+      "translate_voiceover": "OPT_OUT",
+      "text_translation": "OPT_OUT",
+      "media_type_automation": "OPT_OUT",
+      "product_extensions": "OPT_OUT"
+    },
+    "previewFormats": [
+      "MOBILE_FEED_STANDARD",
+      "INSTAGRAM_STANDARD"
+    ]
+  },
+  "editPolicy": {
+    "mode": "guided",
+    "advancedUnlockable": true,
+    "lockedLayerIds": []
+  },
+  "exactness": {
+    "status": "draft",
+    "residuals": {},
+    "bakedTextKeys": [
+      "body",
+      "headline",
+      "subheadline",
+      "cta",
+      "benefit_1",
+      "benefit_3",
+      "benefit_2"
+    ]
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "migratedFrom": "v1",
+  "source": "source",
+  "sourceValues": {
+    "main_message": "",
+    "property_address": "",
+    "contact_email": "",
+    "contact_phone": ""
+  },
+  "textBoxes": {
+    "main_message": {
+      "x": 0.111328125,
+      "y": 0.633984375,
+      "width": 0.78515625,
+      "height": 0.21875
+    },
+    "property_address": {
+      "x": 0.244140625,
+      "y": 0.059765625,
+      "width": 0.5380859375,
+      "height": 0.017578125
+    },
+    "contact_email": {
+      "x": 0.1103515625,
+      "y": 0.894921875,
+      "width": 0.3125,
+      "height": 0.01875
+    },
+    "contact_phone": {
+      "x": 0.71728515625,
+      "y": 0.894921875,
+      "width": 0.16015625,
+      "height": 0.015234375
+    }
+  }
+}

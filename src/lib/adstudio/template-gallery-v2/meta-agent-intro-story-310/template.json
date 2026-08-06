@@ -1,0 +1,249 @@
+{
+  "schema": "adstudio.template.v2",
+  "id": "meta-agent-intro-story-310",
+  "name": "Meet Your Local Agent — Story 310",
+  "goal": "seller_leads",
+  "offerId": "agent-introduction-call",
+  "category": "agent-introduction-lead-generation",
+  "tags": [
+    "agent-intro",
+    "lead-generation",
+    "story"
+  ],
+  "audienceIntent": "Local property owners seeking a trusted agent relationship",
+  "classification": {
+    "ad_type": "lead_generation",
+    "primary_intent": "agent_introduction",
+    "property_or_agent_focus": "property"
+  },
+  "provenance": {
+    "sourceAd": {
+      "file": "02_stories_reels_9x16/meta_310.png",
+      "contentHash": "d57e9f8f071b1961ba9f429072f93b92a1f4d471f849fa5aac16c132816d98ea"
+    },
+    "sample": {
+      "imageSrc": "/adstudio-samples/meta/meta-agent-intro-story-310-sample.png",
+      "contentHash": "071bcd9f0e4a73fb4a547550383990eb5bc6d867bf6687744bd240791a0b9a7a",
+      "generatedBy": "deterministic_render"
+    },
+    "decomposedFrom": "source"
+  },
+  "restyle": {
+    "paletteMap": {},
+    "replacedAssets": [],
+    "note": "migrated from v1 (source); restyle pass pending in Studio"
+  },
+  "fonts": [
+    {
+      "fontId": "kanit",
+      "family": "Kanit",
+      "weight": 300,
+      "italic": false,
+      "file": "/fonts/adstudio/kanit-300.woff2",
+      "sha256": "20aee722979a0f91b2baac3d0590a512b02fe00f80c454c07a178cc3964f33c2"
+    },
+    {
+      "fontId": "plus-jakarta-sans",
+      "family": "Plus Jakarta Sans",
+      "weight": 800,
+      "italic": false,
+      "file": "/fonts/adstudio/plus-jakarta-sans-800.woff2",
+      "sha256": "6bb656316df8e693ae3fc77f12ad1d02ac318f8ab8c8b4bc761b6aa99d8ea7c1"
+    },
+    {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "weight": 800,
+      "italic": false,
+      "file": "/fonts/adstudio/merriweather-800.woff2",
+      "sha256": "234916daa3dd072625fad30f1ae31d989c101bcd73ae8f29023cfbbc9a711c8a"
+    },
+    {
+      "fontId": "oswald",
+      "family": "Oswald",
+      "weight": 300,
+      "italic": false,
+      "file": "/fonts/adstudio/oswald-300.woff2",
+      "sha256": "84f168468881f1ae6cf11573f3befa2e83f2067e914a57dad0233e3a772e76f7"
+    },
+    {
+      "fontId": "roboto-condensed",
+      "family": "Roboto Condensed",
+      "weight": 500,
+      "italic": false,
+      "file": "/fonts/adstudio/roboto-condensed-500.woff2",
+      "sha256": "669bad4234158212f880cfa1241dc18866f748b5b52cdf4aaeb00c56cbd87352"
+    },
+    {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "weight": 700,
+      "italic": false,
+      "file": "/fonts/adstudio/smooch-sans-700.woff2",
+      "sha256": "df39154519f213b8eecc77a8ac2af9e379aa0ae977e885864fe7bdd6cc2bdab4"
+    },
+    {
+      "fontId": "roboto-slab",
+      "family": "Roboto Slab",
+      "weight": 900,
+      "italic": false,
+      "file": "/fonts/adstudio/roboto-slab-900.woff2",
+      "sha256": "88d27b763f182cef61d1c12de04b43b818e7e476bc251f5d52d243498c3c2431"
+    }
+  ],
+  "formats": {
+    "feed": {
+      "format": "9:16",
+      "width": 1080,
+      "height": 1920,
+      "plate": {
+        "src": "/adstudio-templates/meta-agent-intro-story-310/plate-story.webp",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "layers": []
+    }
+  },
+  "inputs": {
+    "images": [],
+    "text": [
+      {
+        "key": "body",
+        "label": "Body",
+        "required": true,
+        "maxLength": 95,
+        "sample": "Local insight, clear advice and a practical plan for your next property move."
+      },
+      {
+        "key": "headline",
+        "label": "Headline",
+        "required": true,
+        "maxLength": 45,
+        "sample": "YOUR LOCAL PROPERTY PARTNER"
+      },
+      {
+        "key": "agent_role",
+        "label": "Agent Role",
+        "required": true,
+        "maxLength": 43,
+        "sample": "LOCAL PROPERTY SPECIALIST"
+      },
+      {
+        "key": "subheadline",
+        "label": "Subheadline",
+        "required": true,
+        "maxLength": 41,
+        "sample": "BOOK A NO-PRESSURE CALL"
+      },
+      {
+        "key": "email",
+        "label": "Email",
+        "required": true,
+        "maxLength": 40,
+        "sample": "alex@youragency.com.au"
+      },
+      {
+        "key": "phone",
+        "label": "Phone",
+        "required": true,
+        "maxLength": 30,
+        "sample": "0400 123 456"
+      },
+      {
+        "key": "agent_name",
+        "label": "Agent Name",
+        "required": true,
+        "maxLength": 29,
+        "sample": "ALEX MORGAN"
+      },
+      {
+        "key": "cta",
+        "label": "Cta",
+        "required": true,
+        "maxLength": 29,
+        "sample": "BOOK A CALL"
+      }
+    ]
+  },
+  "publish": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "apiVersionMin": "v26.0",
+    "copy": {
+      "primaryText": [
+        "Ask for the property details."
+      ],
+      "headlines": [
+        "Property details"
+      ],
+      "descriptions": [
+        "Request more information"
+      ]
+    },
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Connect with your local agent",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "thankYou": {
+        "title": "Thanks",
+        "body": "We'll be in touch."
+      }
+    },
+    "placements": {
+      "publisherPlatforms": [
+        "facebook",
+        "instagram"
+      ],
+      "facebookPositions": [
+        "feed"
+      ],
+      "instagramPositions": [
+        "stream"
+      ]
+    },
+    "formatRouting": {
+      "feed": "4:5",
+      "story": null
+    },
+    "creativeFeatures": {
+      "adapt_to_placement": "OPT_OUT",
+      "image_touchups": "OPT_OUT",
+      "image_templates": "OPT_OUT",
+      "inline_comment": "OPT_OUT",
+      "enhance_cta": "OPT_OUT",
+      "text_optimizations": "OPT_OUT",
+      "image_animation": "OPT_OUT",
+      "image_background_gen": "OPT_OUT",
+      "video_auto_crop": "OPT_OUT",
+      "translate_voiceover": "OPT_OUT",
+      "text_translation": "OPT_OUT",
+      "media_type_automation": "OPT_OUT",
+      "product_extensions": "OPT_OUT"
+    },
+    "previewFormats": [
+      "MOBILE_FEED_STANDARD",
+      "INSTAGRAM_STANDARD"
+    ]
+  },
+  "editPolicy": {
+    "mode": "guided",
+    "advancedUnlockable": true,
+    "lockedLayerIds": []
+  },
+  "exactness": {
+    "status": "draft",
+    "residuals": {},
+    "bakedTextKeys": [
+      "body",
+      "headline",
+      "agent_role",
+      "subheadline",
+      "email",
+      "phone",
+      "agent_name",
+      "cta"
+    ]
+  }
+}

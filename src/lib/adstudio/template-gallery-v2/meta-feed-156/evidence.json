@@ -1,0 +1,57 @@
+{
+  "migratedFrom": "v1",
+  "source": "source",
+  "sourceValues": {
+    "headline": "",
+    "company_name": "",
+    "website_url": "",
+    "phone_number": "",
+    "cta_text": "",
+    "agent_name": "",
+    "about_text": ""
+  },
+  "textBoxes": {
+    "headline": {
+      "x": 0.10791015625,
+      "y": 0.241015625,
+      "width": 0.55908203125,
+      "height": 0.18359375
+    },
+    "company_name": {
+      "x": 0.12109375,
+      "y": 0.11875,
+      "width": 0.87890625,
+      "height": 0.053515625
+    },
+    "website_url": {
+      "x": 0.48193359375,
+      "y": 0.9203125,
+      "width": 0.37841796875,
+      "height": 0.042578125
+    },
+    "phone_number": {
+      "x": 0.09619140625,
+      "y": 0.921875,
+      "width": 0.24365234375,
+      "height": 0.039453125
+    },
+    "cta_text": {
+      "x": 0.609375,
+      "y": 0.843359375,
+      "width": 0.2958984375,
+      "height": 0.026953125
+    },
+    "agent_name": {
+      "x": 0.119140625,
+      "y": 0.553515625,
+      "width": 0.3388671875,
+      "height": 0.03828125
+    },
+    "about_text": {
+      "x": 0.1,
+      "y": 0.55,
+      "width": 0.8,
+      "height": 0.12
+    }
+  }
+}

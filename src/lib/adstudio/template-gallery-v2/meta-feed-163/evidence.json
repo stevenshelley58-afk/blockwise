@@ -1,0 +1,22 @@
+{
+  "migratedFrom": "v1",
+  "source": "source",
+  "sourceValues": {
+    "main_question": "",
+    "cta_text": ""
+  },
+  "textBoxes": {
+    "main_question": {
+      "x": 0.2001953125,
+      "y": 0.3890625,
+      "width": 0.62646484375,
+      "height": 0.191796875
+    },
+    "cta_text": {
+      "x": 0.1,
+      "y": 0.8,
+      "width": 0.8,
+      "height": 0.05
+    }
+  }
+}

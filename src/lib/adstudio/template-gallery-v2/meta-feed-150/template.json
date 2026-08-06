@@ -1,0 +1,288 @@
+{
+  "schema": "adstudio.template.v2",
+  "id": "meta-feed-150",
+  "name": "New Listing - 123 Anywhere St.",
+  "goal": "buyer_leads",
+  "offerId": "meta-feed-150",
+  "category": "residential_listing",
+  "tags": [
+    "new listing",
+    "for sale",
+    "residential",
+    "buyer leads"
+  ],
+  "audienceIntent": "Attract buyers interested in a newly listed residential property.",
+  "classification": {
+    "ad_type": "property_listing",
+    "primary_intent": "buyer_leads",
+    "property_or_agent_focus": "property"
+  },
+  "provenance": {
+    "sourceAd": {
+      "file": "01_feed_4x5_best/meta_150.png",
+      "contentHash": "f8ac3bf2b46c2819b6dfa359c663fe62747f96392cc181cf8ba12866b460fa80"
+    },
+    "sample": {
+      "imageSrc": "/adstudio-samples/meta/meta-feed-150-sample.png",
+      "contentHash": "c2dda343b9c01ff3c7e8f9abcb9b4d6a996ce50b5f695894bfb0d7fb2d5f5c96",
+      "generatedBy": "deterministic_render"
+    },
+    "decomposedFrom": "source"
+  },
+  "restyle": {
+    "paletteMap": {},
+    "replacedAssets": [],
+    "note": "migrated from v1 (source); restyle pass pending in Studio"
+  },
+  "fonts": [
+    {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "weight": 600,
+      "italic": false,
+      "file": "/fonts/adstudio/merriweather-600.woff2",
+      "sha256": "3ef93c94387a5a08bbe3115b15b912ea9ed27cae4d5b7db869dc07c443fadc4c"
+    },
+    {
+      "fontId": "oswald",
+      "family": "Oswald",
+      "weight": 600,
+      "italic": false,
+      "file": "/fonts/adstudio/oswald-600.woff2",
+      "sha256": "f6cb541f4d9794b86145c9c3e7d778ffb78c92f8180c577e245238991503da6f"
+    },
+    {
+      "fontId": "plus-jakarta-sans",
+      "family": "Plus Jakarta Sans",
+      "weight": 600,
+      "italic": false,
+      "file": "/fonts/adstudio/plus-jakarta-sans-600.woff2",
+      "sha256": "8872bb5c9111df9bd3162c2394aee6354d782b13408a4dd5bbf65c48207206e6"
+    }
+  ],
+  "formats": {
+    "feed": {
+      "format": "4:5",
+      "width": 1080,
+      "height": 1350,
+      "plate": {
+        "src": "/adstudio-templates/meta-feed-150/plate-feed.webp",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "layers": [
+        {
+          "id": "slot-main_photo",
+          "type": "image_slot",
+          "z": 2,
+          "inputKey": "main_photo",
+          "fit": "cover",
+          "box": {
+            "x": 0.091796875,
+            "y": 0.1609375,
+            "width": 0.818359375,
+            "height": 0.39375
+          },
+          "mask": {
+            "kind": "rect"
+          }
+        },
+        {
+          "id": "slot-interior_photo_1",
+          "type": "image_slot",
+          "z": 3,
+          "inputKey": "interior_photo_1",
+          "fit": "cover",
+          "box": {
+            "x": 0.091796875,
+            "y": 0.5625,
+            "width": 0.2724609375,
+            "height": 0.23359375
+          },
+          "mask": {
+            "kind": "rect"
+          }
+        },
+        {
+          "id": "slot-interior_photo_2",
+          "type": "image_slot",
+          "z": 4,
+          "inputKey": "interior_photo_2",
+          "fit": "cover",
+          "box": {
+            "x": 0.3671875,
+            "y": 0.5625,
+            "width": 0.271484375,
+            "height": 0.23359375
+          },
+          "mask": {
+            "kind": "rect"
+          }
+        },
+        {
+          "id": "slot-interior_photo_3",
+          "type": "image_slot",
+          "z": 5,
+          "inputKey": "interior_photo_3",
+          "fit": "cover",
+          "box": {
+            "x": 0.6416015625,
+            "y": 0.5625,
+            "width": 0.2685546875,
+            "height": 0.23359375
+          },
+          "mask": {
+            "kind": "rect"
+          }
+        }
+      ]
+    }
+  },
+  "inputs": {
+    "images": [
+      {
+        "key": "main_photo",
+        "label": "main photo",
+        "required": true,
+        "aspect": "portrait",
+        "description": "Customer photo drawn into the declared slot."
+      },
+      {
+        "key": "interior_photo_1",
+        "label": "interior photo 1",
+        "required": true,
+        "aspect": "portrait",
+        "description": "Customer photo drawn into the declared slot."
+      },
+      {
+        "key": "interior_photo_2",
+        "label": "interior photo 2",
+        "required": true,
+        "aspect": "portrait",
+        "description": "Customer photo drawn into the declared slot."
+      },
+      {
+        "key": "interior_photo_3",
+        "label": "interior photo 3",
+        "required": true,
+        "aspect": "portrait",
+        "description": "Customer photo drawn into the declared slot."
+      }
+    ],
+    "text": [
+      {
+        "key": "property_details",
+        "label": "Property Details",
+        "required": true,
+        "maxLength": 60,
+        "sample": "4 bed · 3 bath · 1,850 sqft · 9,400 sqft lot"
+      },
+      {
+        "key": "address",
+        "label": "Property Address",
+        "required": true,
+        "maxLength": 60,
+        "sample": "14 Alder Lane, Greenvale, WA 6210"
+      },
+      {
+        "key": "agent_contact",
+        "label": "Agent Contact",
+        "required": true,
+        "maxLength": 50,
+        "sample": "Contact Amelia Hart +123-555-0182"
+      },
+      {
+        "key": "asking_price",
+        "label": "Asking Price",
+        "required": true,
+        "maxLength": 30,
+        "sample": "Asking $915,000"
+      },
+      {
+        "key": "headline",
+        "label": "Headline",
+        "required": true,
+        "maxLength": 30,
+        "sample": "New Listing"
+      }
+    ]
+  },
+  "publish": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "apiVersionMin": "v26.0",
+    "copy": {
+      "primaryText": [
+        "Ask for the property details."
+      ],
+      "headlines": [
+        "Property details"
+      ],
+      "descriptions": [
+        "Request more information"
+      ]
+    },
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Register your interest in this property",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "thankYou": {
+        "title": "Thanks",
+        "body": "We'll be in touch."
+      }
+    },
+    "placements": {
+      "publisherPlatforms": [
+        "facebook",
+        "instagram"
+      ],
+      "facebookPositions": [
+        "feed"
+      ],
+      "instagramPositions": [
+        "stream"
+      ]
+    },
+    "formatRouting": {
+      "feed": "4:5",
+      "story": null
+    },
+    "creativeFeatures": {
+      "adapt_to_placement": "OPT_OUT",
+      "image_touchups": "OPT_OUT",
+      "image_templates": "OPT_OUT",
+      "inline_comment": "OPT_OUT",
+      "enhance_cta": "OPT_OUT",
+      "text_optimizations": "OPT_OUT",
+      "image_animation": "OPT_OUT",
+      "image_background_gen": "OPT_OUT",
+      "video_auto_crop": "OPT_OUT",
+      "translate_voiceover": "OPT_OUT",
+      "text_translation": "OPT_OUT",
+      "media_type_automation": "OPT_OUT",
+      "product_extensions": "OPT_OUT"
+    },
+    "previewFormats": [
+      "MOBILE_FEED_STANDARD",
+      "INSTAGRAM_STANDARD"
+    ]
+  },
+  "editPolicy": {
+    "mode": "guided",
+    "advancedUnlockable": true,
+    "lockedLayerIds": []
+  },
+  "exactness": {
+    "status": "draft",
+    "residuals": {},
+    "bakedTextKeys": [
+      "property_details",
+      "address",
+      "agent_contact",
+      "asking_price",
+      "headline"
+    ]
+  }
+}

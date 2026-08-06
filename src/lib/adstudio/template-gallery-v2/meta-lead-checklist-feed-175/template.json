@@ -1,0 +1,281 @@
+{
+  "schema": "adstudio.template.v2",
+  "id": "meta-lead-checklist-feed-175",
+  "name": "Free Property Checklist — Feed 175",
+  "goal": "seller_leads",
+  "offerId": "property-checklist-lead-magnet",
+  "category": "educational-lead-generation",
+  "tags": [
+    "education",
+    "lead-generation",
+    "feed"
+  ],
+  "audienceIntent": "Property owners seeking practical guidance before their next move",
+  "classification": {
+    "ad_type": "lead_generation",
+    "primary_intent": "educational_lead_magnet",
+    "property_or_agent_focus": "agent"
+  },
+  "provenance": {
+    "sourceAd": {
+      "file": "01_feed_4x5_best/meta_175.png",
+      "contentHash": "3d3d5f69f07ddd969642bf29599af92075c1bdae063c76359e7fb8d634640756"
+    },
+    "sample": {
+      "imageSrc": "/adstudio-samples/meta/meta-lead-checklist-feed-175-sample.png",
+      "contentHash": "e3ef77155bb018c7b4bd9909c0bf8f042003517c247740d385bfd3ada256700b",
+      "generatedBy": "deterministic_render"
+    },
+    "decomposedFrom": "source"
+  },
+  "restyle": {
+    "paletteMap": {},
+    "replacedAssets": [],
+    "note": "migrated from v1 (source); restyle pass pending in Studio"
+  },
+  "fonts": [
+    {
+      "fontId": "plus-jakarta-sans",
+      "family": "Plus Jakarta Sans",
+      "weight": 600,
+      "italic": false,
+      "file": "/fonts/adstudio/plus-jakarta-sans-600.woff2",
+      "sha256": "8872bb5c9111df9bd3162c2394aee6354d782b13408a4dd5bbf65c48207206e6"
+    },
+    {
+      "fontId": "kanit",
+      "family": "Kanit",
+      "weight": 900,
+      "italic": false,
+      "file": "/fonts/adstudio/kanit-900.woff2",
+      "sha256": "f001e4c46c00f65965198ba7547aadd375aa6222feff177c57c943d3bf6794d3"
+    },
+    {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "weight": 600,
+      "italic": false,
+      "file": "/fonts/adstudio/smooch-sans-600.woff2",
+      "sha256": "499a1b5ee30d8ae62e01c6698e32ef7448925327a92fbe69c2dd7af8800dd3b1"
+    },
+    {
+      "fontId": "manrope",
+      "family": "Manrope",
+      "weight": 800,
+      "italic": false,
+      "file": "/fonts/adstudio/manrope-800.woff2",
+      "sha256": "74c161dbcbce7c3590803cc72dc1f63313c360e13367aba5075a7b7b3818ea49"
+    },
+    {
+      "fontId": "nunito-sans",
+      "family": "Nunito Sans",
+      "weight": 800,
+      "italic": false,
+      "file": "/fonts/adstudio/nunito-sans-800.woff2",
+      "sha256": "f2615ce104011f8d6f8d07676254d79d22a6905a70ecbce3f980c2489bbbee47"
+    }
+  ],
+  "formats": {
+    "feed": {
+      "format": "4:5",
+      "width": 1080,
+      "height": 1350,
+      "plate": {
+        "src": "/adstudio-templates/meta-lead-checklist-feed-175/plate-feed.webp",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "layers": [
+        {
+          "id": "slot-background_photo",
+          "type": "image_slot",
+          "z": 2,
+          "inputKey": "background_photo",
+          "fit": "cover",
+          "box": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 0.4614814814814815
+          },
+          "mask": {
+            "kind": "rect"
+          }
+        },
+        {
+          "id": "slot-agent_portrait",
+          "type": "image_slot",
+          "z": 3,
+          "inputKey": "agent_portrait",
+          "fit": "cover",
+          "box": {
+            "x": 0.6351851851851852,
+            "y": 0.06296296296296296,
+            "width": 0.31666666666666665,
+            "height": 0.3985185185185185
+          },
+          "mask": {
+            "kind": "rect"
+          }
+        }
+      ]
+    }
+  },
+  "inputs": {
+    "images": [
+      {
+        "key": "background_photo",
+        "label": "background photo",
+        "required": true,
+        "aspect": "portrait",
+        "description": "Customer photo drawn into the declared slot."
+      },
+      {
+        "key": "agent_portrait",
+        "label": "agent portrait",
+        "required": true,
+        "aspect": "portrait",
+        "description": "Customer photo drawn into the declared slot."
+      }
+    ],
+    "text": [
+      {
+        "key": "headline",
+        "label": "Headline",
+        "required": true,
+        "maxLength": 50,
+        "sample": "FREE PROPERTY PLANNING CHECKLIST"
+      },
+      {
+        "key": "subheadline",
+        "label": "Subheadline",
+        "required": true,
+        "maxLength": 45,
+        "sample": "MAKE YOUR NEXT MOVE CLEARER"
+      },
+      {
+        "key": "check_3",
+        "label": "Check 3",
+        "required": true,
+        "maxLength": 41,
+        "sample": "REVIEW LOCAL CONDITIONS"
+      },
+      {
+        "key": "check_2",
+        "label": "Check 2",
+        "required": true,
+        "maxLength": 40,
+        "sample": "UNDERSTAND YOUR TIMING"
+      },
+      {
+        "key": "check_1",
+        "label": "Check 1",
+        "required": true,
+        "maxLength": 39,
+        "sample": "PREPARE YOUR PROPERTY"
+      },
+      {
+        "key": "check_4",
+        "label": "Check 4",
+        "required": true,
+        "maxLength": 38,
+        "sample": "COMPARE YOUR OPTIONS"
+      },
+      {
+        "key": "check_5",
+        "label": "Check 5",
+        "required": true,
+        "maxLength": 38,
+        "sample": "ASK BETTER QUESTIONS"
+      },
+      {
+        "key": "cta",
+        "label": "Cta",
+        "required": true,
+        "maxLength": 40,
+        "sample": "GET THE FREE CHECKLIST"
+      }
+    ]
+  },
+  "publish": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "apiVersionMin": "v26.0",
+    "copy": {
+      "primaryText": [
+        "Ask for the property details."
+      ],
+      "headlines": [
+        "Property details"
+      ],
+      "descriptions": [
+        "Request more information"
+      ]
+    },
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Get your free property guide",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "thankYou": {
+        "title": "Thanks",
+        "body": "We'll be in touch."
+      }
+    },
+    "placements": {
+      "publisherPlatforms": [
+        "facebook",
+        "instagram"
+      ],
+      "facebookPositions": [
+        "feed"
+      ],
+      "instagramPositions": [
+        "stream"
+      ]
+    },
+    "formatRouting": {
+      "feed": "4:5",
+      "story": null
+    },
+    "creativeFeatures": {
+      "adapt_to_placement": "OPT_OUT",
+      "image_touchups": "OPT_OUT",
+      "image_templates": "OPT_OUT",
+      "inline_comment": "OPT_OUT",
+      "enhance_cta": "OPT_OUT",
+      "text_optimizations": "OPT_OUT",
+      "image_animation": "OPT_OUT",
+      "image_background_gen": "OPT_OUT",
+      "video_auto_crop": "OPT_OUT",
+      "translate_voiceover": "OPT_OUT",
+      "text_translation": "OPT_OUT",
+      "media_type_automation": "OPT_OUT",
+      "product_extensions": "OPT_OUT"
+    },
+    "previewFormats": [
+      "MOBILE_FEED_STANDARD",
+      "INSTAGRAM_STANDARD"
+    ]
+  },
+  "editPolicy": {
+    "mode": "guided",
+    "advancedUnlockable": true,
+    "lockedLayerIds": []
+  },
+  "exactness": {
+    "status": "draft",
+    "residuals": {},
+    "bakedTextKeys": [
+      "headline",
+      "subheadline",
+      "check_3",
+      "check_2",
+      "check_1",
+      "check_4",
+      "check_5",
+      "cta"
+    ]
+  }
+}

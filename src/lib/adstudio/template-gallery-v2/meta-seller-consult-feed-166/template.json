@@ -1,0 +1,241 @@
+{
+  "schema": "adstudio.template.v2",
+  "id": "meta-seller-consult-feed-166",
+  "name": "Seller Consultation — Feed 166",
+  "goal": "seller_leads",
+  "offerId": "seller-consultation",
+  "category": "seller-lead-generation",
+  "tags": [
+    "seller-consult",
+    "lead-generation",
+    "feed"
+  ],
+  "audienceIntent": "Homeowners thinking about selling and seeking expert guidance",
+  "classification": {
+    "ad_type": "lead_generation",
+    "primary_intent": "seller_consultation",
+    "property_or_agent_focus": "property"
+  },
+  "provenance": {
+    "sourceAd": {
+      "file": "01_feed_4x5_best/meta_166.png",
+      "contentHash": "8d5be92bce991e7e107b8aa93ced81c46a8d1b0445759cdc831d4ffc8bb60d0b"
+    },
+    "sample": {
+      "imageSrc": "/adstudio-samples/meta/meta-seller-consult-feed-166-sample.png",
+      "contentHash": "e734f93c52aeac753f78935639efb663cf6286065e50438d27f97da6883e549a",
+      "generatedBy": "deterministic_render"
+    },
+    "decomposedFrom": "source"
+  },
+  "restyle": {
+    "paletteMap": {},
+    "replacedAssets": [],
+    "note": "migrated from v1 (source); restyle pass pending in Studio"
+  },
+  "fonts": [
+    {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "weight": 700,
+      "italic": false,
+      "file": "/fonts/adstudio/smooch-sans-700.woff2",
+      "sha256": "df39154519f213b8eecc77a8ac2af9e379aa0ae977e885864fe7bdd6cc2bdab4"
+    },
+    {
+      "fontId": "lora",
+      "family": "Lora",
+      "weight": 700,
+      "italic": false,
+      "file": "/fonts/adstudio/lora-700.woff2",
+      "sha256": "c05fd5289492ed310ed882259b944ca5287e76e572a65d92d3941f9f44f0342a"
+    },
+    {
+      "fontId": "quicksand",
+      "family": "Quicksand",
+      "weight": 300,
+      "italic": false,
+      "file": "/fonts/adstudio/quicksand-300.woff2",
+      "sha256": "55155473f87144632373d538eb042733b2c98e5aa31810a873b44ae4620c1f55"
+    },
+    {
+      "fontId": "kanit",
+      "family": "Kanit",
+      "weight": 900,
+      "italic": false,
+      "file": "/fonts/adstudio/kanit-900.woff2",
+      "sha256": "f001e4c46c00f65965198ba7547aadd375aa6222feff177c57c943d3bf6794d3"
+    },
+    {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "weight": 700,
+      "italic": false,
+      "file": "/fonts/adstudio/merriweather-700.woff2",
+      "sha256": "4e1ab49396c02be0d9a2a25eed7bc73781c047d85fcb5dfc2889873eaf992b09"
+    }
+  ],
+  "formats": {
+    "feed": {
+      "format": "4:5",
+      "width": 1080,
+      "height": 1350,
+      "plate": {
+        "src": "/adstudio-templates/meta-seller-consult-feed-166/plate-feed.webp",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "layers": []
+    }
+  },
+  "inputs": {
+    "images": [],
+    "text": [
+      {
+        "key": "cta",
+        "label": "Cta",
+        "required": true,
+        "maxLength": 44,
+        "sample": "BOOK A SELLER CONSULTATION"
+      },
+      {
+        "key": "check_1",
+        "label": "Check 1",
+        "required": true,
+        "maxLength": 39,
+        "sample": "CLARIFY YOUR TIMELINE"
+      },
+      {
+        "key": "headline",
+        "label": "Headline",
+        "required": true,
+        "maxLength": 38,
+        "sample": "THINKING OF SELLING?"
+      },
+      {
+        "key": "check_4",
+        "label": "Check 4",
+        "required": true,
+        "maxLength": 38,
+        "sample": "SET A PRICE STRATEGY"
+      },
+      {
+        "key": "check_3",
+        "label": "Check 3",
+        "required": true,
+        "maxLength": 36,
+        "sample": "REVIEW LOCAL SALES"
+      },
+      {
+        "key": "check_5",
+        "label": "Check 5",
+        "required": true,
+        "maxLength": 36,
+        "sample": "PLAN YOUR CAMPAIGN"
+      },
+      {
+        "key": "check_6",
+        "label": "Check 6",
+        "required": true,
+        "maxLength": 36,
+        "sample": "CONFIRM NEXT STEPS"
+      },
+      {
+        "key": "check_2",
+        "label": "Check 2",
+        "required": true,
+        "maxLength": 35,
+        "sample": "PREPARE YOUR HOME"
+      },
+      {
+        "key": "phone",
+        "label": "Phone",
+        "required": true,
+        "maxLength": 30,
+        "sample": "0400 123 456"
+      }
+    ]
+  },
+  "publish": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "apiVersionMin": "v26.0",
+    "copy": {
+      "primaryText": [
+        "Ask for the property details."
+      ],
+      "headlines": [
+        "Property details"
+      ],
+      "descriptions": [
+        "Request more information"
+      ]
+    },
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Request your free seller consultation",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "thankYou": {
+        "title": "Thanks",
+        "body": "We'll be in touch."
+      }
+    },
+    "placements": {
+      "publisherPlatforms": [
+        "facebook",
+        "instagram"
+      ],
+      "facebookPositions": [
+        "feed"
+      ],
+      "instagramPositions": [
+        "stream"
+      ]
+    },
+    "formatRouting": {
+      "feed": "4:5",
+      "story": null
+    },
+    "creativeFeatures": {
+      "adapt_to_placement": "OPT_OUT",
+      "image_touchups": "OPT_OUT",
+      "image_templates": "OPT_OUT",
+      "inline_comment": "OPT_OUT",
+      "enhance_cta": "OPT_OUT",
+      "text_optimizations": "OPT_OUT",
+      "image_animation": "OPT_OUT",
+      "image_background_gen": "OPT_OUT",
+      "video_auto_crop": "OPT_OUT",
+      "translate_voiceover": "OPT_OUT",
+      "text_translation": "OPT_OUT",
+      "media_type_automation": "OPT_OUT",
+      "product_extensions": "OPT_OUT"
+    },
+    "previewFormats": [
+      "MOBILE_FEED_STANDARD",
+      "INSTAGRAM_STANDARD"
+    ]
+  },
+  "editPolicy": {
+    "mode": "guided",
+    "advancedUnlockable": true,
+    "lockedLayerIds": []
+  },
+  "exactness": {
+    "status": "draft",
+    "residuals": {},
+    "bakedTextKeys": [
+      "cta",
+      "check_1",
+      "headline",
+      "check_4",
+      "check_3",
+      "check_5",
+      "check_6",
+      "check_2",
+      "phone"
+    ]
+  }
+}

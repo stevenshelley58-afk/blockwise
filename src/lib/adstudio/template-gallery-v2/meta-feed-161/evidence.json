@@ -1,0 +1,15 @@
+{
+  "migratedFrom": "v1",
+  "source": "source",
+  "sourceValues": {
+    "headline": ""
+  },
+  "textBoxes": {
+    "headline": {
+      "x": 0.3349609375,
+      "y": 0.23671875,
+      "width": 0.3125,
+      "height": 0.0203125
+    }
+  }
+}

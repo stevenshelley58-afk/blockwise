@@ -1,0 +1,49 @@
+// Track C contracts: migrate-v1 is idempotent (§14), the creative-feature key
+// list stays in lockstep between ingest and meta-execution, and the v2 gate
+// passes on the migrated gallery.
+
+import assert from "node:assert/strict";
+import { execSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import test from "node:test";
+
+function galleryHash() {
+  return execSync(
+    "cd src/lib/adstudio/template-gallery-v2 && find . -type f -print0 | sort -z | xargs -0 sha256sum | sha256sum",
+  ).toString().trim();
+}
+
+test("migrate-v1 is idempotent: running it twice yields identical output", () => {
+  execSync("node scripts/adstudio/v2/ingest.mjs migrate-v1 --all --from source");
+  const first = galleryHash();
+  execSync("node scripts/adstudio/v2/ingest.mjs migrate-v1 --all --from source");
+  const second = galleryHash();
+  assert.equal(second, first);
+});
+
+test("creative-feature keys are in lockstep between ingest and publish", () => {
+  const ingest = readFileSync(join("scripts", "adstudio", "v2", "ingest.mjs"), "utf8");
+  const publish = readFileSync(join("src", "lib", "providers", "meta-execution.ts"), "utf8");
+  const extract = (source) => {
+    const match = source.match(/CREATIVE_FEATURE(?:_KEYS)? = \[([\s\S]*?)\]/);
+    return [...(match?.[1] ?? "").matchAll(/"([a-z_]+)"/g)].map((m) => m[1]).sort();
+  };
+  assert.deepEqual(extract(ingest), extract(publish));
+});
+
+test("the v2 gate passes on the migrated drafts", () => {
+  const output = execSync("node scripts/verify/adstudio-templates-v2.mjs 2>/dev/null || true").toString();
+  assert.match(output, /template\(s\) checked/);
+  assert.doesNotMatch(output, /failure\(s\)/);
+});
+
+test("migrated drafts keep the fidelity inputs the gate needs", () => {
+  const doc = JSON.parse(readFileSync("src/lib/adstudio/template-gallery-v2/meta-feed-018/template.json", "utf8"));
+  assert.equal(doc.schema, "adstudio.template.v2");
+  assert.equal(doc.provenance.decomposedFrom, "source");
+  assert.ok(doc.exactness.bakedTextKeys.length > 0, "pre-inpaint text is baked, never approximate");
+  assert.ok(doc.publish.creativeFeatures.adapt_to_placement === "OPT_OUT");
+  const evidence = JSON.parse(readFileSync("src/lib/adstudio/template-gallery-v2/meta-feed-018/evidence.json", "utf8"));
+  assert.ok(evidence.sourceValues, "fidelity gate reads the source's own copy from evidence");
+});

@@ -1,0 +1,330 @@
+{
+  "schema": "adstudio.template.v2",
+  "id": "meta-appraisal-feed-002",
+  "name": "Free Appraisal — Trusted Local Agent",
+  "goal": "appraisal_bookings",
+  "offerId": "free-property-appraisal",
+  "category": "appraisal-lead-generation",
+  "tags": [
+    "appraisal",
+    "home-valuation",
+    "seller-leads",
+    "agent",
+    "feed"
+  ],
+  "audienceIntent": "Homeowners considering selling or curious about their property's current value",
+  "classification": {
+    "ad_type": "lead_generation",
+    "primary_intent": "appraisal_leads",
+    "property_or_agent_focus": "agent"
+  },
+  "provenance": {
+    "sourceAd": {
+      "file": "01_feed_4x5_best/meta_002.png",
+      "contentHash": "a88fd2cb75d114774bd46f9b10bd1385583523054be384a437577e83e1fb2a26"
+    },
+    "sample": {
+      "imageSrc": "/adstudio-samples/meta/meta-appraisal-feed-002-sample.png",
+      "contentHash": "f1eef3fb49b782ab7666cd14a7f793151f5fd439c724085ce68996e9ebb24f78",
+      "generatedBy": "deterministic_render"
+    },
+    "decomposedFrom": "source"
+  },
+  "restyle": {
+    "paletteMap": {},
+    "replacedAssets": [],
+    "note": "migrated from v1 (source); restyle pass pending in Studio"
+  },
+  "fonts": [
+    {
+      "fontId": "kanit",
+      "family": "Kanit",
+      "weight": 800,
+      "italic": false,
+      "file": "/fonts/adstudio/kanit-800.woff2",
+      "sha256": "69135716e3246d03252eedbc4b49092fd07b1691211dd5c8e6a099efaa2e1e59"
+    },
+    {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "weight": 300,
+      "italic": false,
+      "file": "/fonts/adstudio/smooch-sans-300.woff2",
+      "sha256": "24c4dda0d38ff3000dbaf5c37b0035fc51791a693cc68101d14acb16c8504cb6"
+    },
+    {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "weight": 900,
+      "italic": false,
+      "file": "/fonts/adstudio/merriweather-900.woff2",
+      "sha256": "f46470c4106fc6cf2a507991af1288bda867fddff87c4b919d8d39632b869fe4"
+    },
+    {
+      "fontId": "quicksand",
+      "family": "Quicksand",
+      "weight": 600,
+      "italic": false,
+      "file": "/fonts/adstudio/quicksand-600.woff2",
+      "sha256": "d7b2a752a20177cbd2a98775062aca67795b79bda8a98dfe863cd4d7b3e701a2"
+    },
+    {
+      "fontId": "open-sans",
+      "family": "Open Sans",
+      "weight": 700,
+      "italic": false,
+      "file": "/fonts/adstudio/open-sans-700.woff2",
+      "sha256": "ae07fab39888e22081b44db4133644d83a20be46b0e32fd65dea7c2e4b0ad864"
+    },
+    {
+      "fontId": "playfair-display",
+      "family": "Playfair Display",
+      "weight": 800,
+      "italic": false,
+      "file": "/fonts/adstudio/playfair-display-800.woff2",
+      "sha256": "b56fac55959b4ddf165c9f3666edd35de2792f3fd54177c3cb41ce44a98451c9"
+    },
+    {
+      "fontId": "roboto-condensed",
+      "family": "Roboto Condensed",
+      "weight": 700,
+      "italic": false,
+      "file": "/fonts/adstudio/roboto-condensed-700.woff2",
+      "sha256": "26bbae1360c000cd7127ad38e660b7c7165b18dd6abbe1c21830c1e066394434"
+    }
+  ],
+  "formats": {
+    "feed": {
+      "format": "4:5",
+      "width": 1080,
+      "height": 1350,
+      "plate": {
+        "src": "/adstudio-templates/meta-appraisal-feed-002/plate-feed.webp",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "layers": [
+        {
+          "id": "slot-property_photo",
+          "type": "image_slot",
+          "z": 2,
+          "inputKey": "property_photo",
+          "fit": "cover",
+          "box": {
+            "x": 0.012037037037037037,
+            "y": 0.008148148148148147,
+            "width": 0.975925925925926,
+            "height": 0.42814814814814817
+          },
+          "mask": {
+            "kind": "rect"
+          }
+        },
+        {
+          "id": "slot-agent_portrait",
+          "type": "image_slot",
+          "z": 3,
+          "inputKey": "agent_portrait",
+          "fit": "cover",
+          "box": {
+            "x": 0.7101851851851851,
+            "y": 0.5925925925925926,
+            "width": 0.2777777777777778,
+            "height": 0.3985185185185185
+          },
+          "mask": {
+            "kind": "rect"
+          }
+        },
+        {
+          "id": "slot-agency_logo",
+          "type": "image_slot",
+          "z": 4,
+          "inputKey": "agency_logo",
+          "fit": "cover",
+          "box": {
+            "x": 0.7444444444444445,
+            "y": 0.35333333333333333,
+            "width": 0.2,
+            "height": 0.16
+          },
+          "mask": {
+            "kind": "rect"
+          }
+        }
+      ]
+    }
+  },
+  "inputs": {
+    "images": [
+      {
+        "key": "property_photo",
+        "label": "property photo",
+        "required": true,
+        "aspect": "portrait",
+        "description": "Customer photo drawn into the declared slot."
+      },
+      {
+        "key": "agent_portrait",
+        "label": "agent portrait",
+        "required": true,
+        "aspect": "portrait",
+        "description": "Customer photo drawn into the declared slot."
+      },
+      {
+        "key": "agency_logo",
+        "label": "agency logo",
+        "required": true,
+        "aspect": "portrait",
+        "description": "Customer photo drawn into the declared slot."
+      }
+    ],
+    "text": [
+      {
+        "key": "body",
+        "label": "Body copy",
+        "required": true,
+        "maxLength": 150,
+        "sample": "Get a clear, local view of your property's current market value and the opportunities available to you."
+      },
+      {
+        "key": "headline",
+        "label": "Headline",
+        "required": true,
+        "maxLength": 38,
+        "sample": "WHAT COULD YOUR HOME BE WORTH?"
+      },
+      {
+        "key": "agent_role",
+        "label": "Agent role",
+        "required": true,
+        "maxLength": 32,
+        "sample": "LOCAL PROPERTY SPECIALIST"
+      },
+      {
+        "key": "trust_badge",
+        "label": "Trust badge",
+        "required": true,
+        "maxLength": 28,
+        "sample": "YOUR LOCAL PROPERTY TEAM"
+      },
+      {
+        "key": "subheadline",
+        "label": "Subheadline",
+        "required": true,
+        "maxLength": 30,
+        "sample": "REQUEST A FREE APPRAISAL"
+      },
+      {
+        "key": "email",
+        "label": "Email",
+        "required": true,
+        "maxLength": 44,
+        "sample": "alex@youragency.com.au"
+      },
+      {
+        "key": "phone",
+        "label": "Phone",
+        "required": true,
+        "maxLength": 20,
+        "sample": "0400 123 456"
+      },
+      {
+        "key": "agent_name",
+        "label": "Agent name",
+        "required": true,
+        "maxLength": 32,
+        "sample": "ALEX MORGAN"
+      },
+      {
+        "key": "social_handle",
+        "label": "Social handle",
+        "required": true,
+        "maxLength": 32,
+        "sample": "@youragency"
+      }
+    ]
+  },
+  "publish": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "apiVersionMin": "v26.0",
+    "copy": {
+      "primaryText": [
+        "Ask for the property details."
+      ],
+      "headlines": [
+        "Property details"
+      ],
+      "descriptions": [
+        "Request more information"
+      ]
+    },
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Request your free property appraisal",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "thankYou": {
+        "title": "Thanks",
+        "body": "We'll be in touch."
+      }
+    },
+    "placements": {
+      "publisherPlatforms": [
+        "facebook",
+        "instagram"
+      ],
+      "facebookPositions": [
+        "feed"
+      ],
+      "instagramPositions": [
+        "stream"
+      ]
+    },
+    "formatRouting": {
+      "feed": "4:5",
+      "story": null
+    },
+    "creativeFeatures": {
+      "adapt_to_placement": "OPT_OUT",
+      "image_touchups": "OPT_OUT",
+      "image_templates": "OPT_OUT",
+      "inline_comment": "OPT_OUT",
+      "enhance_cta": "OPT_OUT",
+      "text_optimizations": "OPT_OUT",
+      "image_animation": "OPT_OUT",
+      "image_background_gen": "OPT_OUT",
+      "video_auto_crop": "OPT_OUT",
+      "translate_voiceover": "OPT_OUT",
+      "text_translation": "OPT_OUT",
+      "media_type_automation": "OPT_OUT",
+      "product_extensions": "OPT_OUT"
+    },
+    "previewFormats": [
+      "MOBILE_FEED_STANDARD",
+      "INSTAGRAM_STANDARD"
+    ]
+  },
+  "editPolicy": {
+    "mode": "guided",
+    "advancedUnlockable": true,
+    "lockedLayerIds": []
+  },
+  "exactness": {
+    "status": "draft",
+    "residuals": {},
+    "bakedTextKeys": [
+      "body",
+      "headline",
+      "agent_role",
+      "trust_badge",
+      "subheadline",
+      "email",
+      "phone",
+      "agent_name",
+      "social_handle"
+    ]
+  }
+}

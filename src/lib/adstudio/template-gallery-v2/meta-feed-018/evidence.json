@@ -1,0 +1,36 @@
+{
+  "migratedFrom": "v1",
+  "source": "source",
+  "sourceValues": {
+    "headline_number": "5",
+    "headline_main": "SMART FIRST STEPS",
+    "headline_sub": "Before Buying a Home",
+    "contact_handle": "@homeguide.example"
+  },
+  "textBoxes": {
+    "headline_number": {
+      "x": 0.1689453125,
+      "y": 0.20703125,
+      "width": 0.1650390625,
+      "height": 0.175
+    },
+    "headline_main": {
+      "x": 0.0849609375,
+      "y": 0.465625,
+      "width": 0.43505859375,
+      "height": 0.24453125
+    },
+    "headline_sub": {
+      "x": 0.0859375,
+      "y": 0.7375,
+      "width": 0.4326171875,
+      "height": 0.030078125
+    },
+    "contact_handle": {
+      "x": 0.0869140625,
+      "y": 0.840625,
+      "width": 0.33154296875,
+      "height": 0.025
+    }
+  }
+}

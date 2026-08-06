@@ -1,0 +1,64 @@
+{
+  "migratedFrom": "v1",
+  "source": "source",
+  "sourceValues": {
+    "headline": "WHAT COULD YOUR HOME BE WORTH?",
+    "subheadline": "REQUEST A FREE APPRAISAL",
+    "email": "ay a: MORGAN al",
+    "cta": "BOOK AVFKALSAL",
+    "agent_name": "ALEX MORGAN",
+    "phone": "",
+    "address": "",
+    "website": ""
+  },
+  "textBoxes": {
+    "headline": {
+      "x": 0.10092592592592593,
+      "y": 0.16444444444444445,
+      "width": 0.6699074074074074,
+      "height": 0.12851851851851853
+    },
+    "subheadline": {
+      "x": 0.10601851851851851,
+      "y": 0.327037037037037,
+      "width": 0.4930555555555556,
+      "height": 0.023703703703703703
+    },
+    "email": {
+      "x": 0.5916666666666667,
+      "y": 0.8355555555555556,
+      "width": 0.3449074074074074,
+      "height": 0.11037037037037037
+    },
+    "cta": {
+      "x": 0.10185185185185185,
+      "y": 0.40814814814814815,
+      "width": 0.4736111111111111,
+      "height": 0.03666666666666667
+    },
+    "agent_name": {
+      "x": 0.7342592592592593,
+      "y": 0.847037037037037,
+      "width": 0.20277777777777778,
+      "height": 0.0637037037037037
+    },
+    "phone": {
+      "x": 0.1,
+      "y": 0.9,
+      "width": 0.8,
+      "height": 0.03
+    },
+    "address": {
+      "x": 0.1,
+      "y": 0.93,
+      "width": 0.8,
+      "height": 0.03
+    },
+    "website": {
+      "x": 0.1,
+      "y": 0.95,
+      "width": 0.8,
+      "height": 0.025
+    }
+  }
+}

@@ -1,0 +1,57 @@
+{
+  "migratedFrom": "v1",
+  "source": "source",
+  "sourceValues": {
+    "body": "Get the latest local sales, price trends and buyer demand in one clear report.",
+    "subheadline": "LOCAL PRICES. CLEAR INSIGHT.",
+    "headline": "YOUR SUBURB MARKET UPDATE",
+    "stat_1": "CURRENT MEDIAN PRICE",
+    "cta": "GET THE FREE REPORT",
+    "stat_3": "DAYS ON",
+    "stat_2": "RECENT"
+  },
+  "textBoxes": {
+    "body": {
+      "x": 0.2324074074074074,
+      "y": 0.3074074074074074,
+      "width": 0.5634259259259259,
+      "height": 0.05333333333333334
+    },
+    "subheadline": {
+      "x": 0.19027777777777777,
+      "y": 0.2637037037037037,
+      "width": 0.6546296296296297,
+      "height": 0.022222222222222223
+    },
+    "headline": {
+      "x": 0.1537037037037037,
+      "y": 0.12296296296296297,
+      "width": 0.7416666666666667,
+      "height": 0.11333333333333333
+    },
+    "stat_1": {
+      "x": 0.11296296296296296,
+      "y": 0.8218518518518518,
+      "width": 0.21203703703703702,
+      "height": 0.043333333333333335
+    },
+    "cta": {
+      "x": 0.26064814814814813,
+      "y": 0.9255555555555556,
+      "width": 0.5078703703703704,
+      "height": 0.027037037037037037
+    },
+    "stat_3": {
+      "x": 0.7078703703703704,
+      "y": 0.8222222222222222,
+      "width": 0.1300925925925926,
+      "height": 0.017407407407407406
+    },
+    "stat_2": {
+      "x": 0.4398148148148148,
+      "y": 0.8222222222222222,
+      "width": 0.11898148148148148,
+      "height": 0.017407407407407406
+    }
+  }
+}
