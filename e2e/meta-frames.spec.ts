@@ -11,9 +11,8 @@ test.use({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
 
 for (const placement of PLACEMENTS) {
   test(`frame ${placement} matches the design baseline`, async ({ page }) => {
-    // Dev-only harness renders each frame with a neutral plate (no secrets).
-    test.skip(!process.env.ADSTUDIO_FRAMES_DEV_URL, "Set ADSTUDIO_FRAMES_DEV_URL (local dev server) for frame snapshots.");
-    await page.goto(`${process.env.ADSTUDIO_FRAMES_DEV_URL}/dev/meta-frames?placement=${placement}`);
+    // baseURL comes from playwright.frames.config.ts (own dev server).
+    await page.goto(`/dev/meta-frames?placement=${placement}`);
     await expect(page.locator("main")).toHaveScreenshot(`meta-frame-${placement}.png`, {
       maxDiffPixelRatio: 0.01,
     });

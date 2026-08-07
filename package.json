@@ -26,7 +26,8 @@
     "adstudio:create-template": "node scripts/adstudio/create-template.mjs",
     "adstudio:build-display-variants": "node scripts/adstudio/build-display-variants.mjs",
     "seed:test-users": "node scripts/seed-test-users.mjs",
-    "test:render-parity": "playwright test --config tests/render-parity/playwright.parity.config.ts"
+    "test:render-parity": "playwright test --config tests/render-parity/playwright.parity.config.ts",
+    "test:frames": "playwright test --config e2e/playwright.frames.config.ts"
   },
   "dependencies": {
     "@napi-rs/canvas": "^1.0.3",
