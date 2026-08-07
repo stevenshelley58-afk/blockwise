@@ -44,8 +44,19 @@ for (const id of ids) {
       continue;
     }
     if (doc.exactness.status === "ready") {
-      summary.skipped.push(`${id} (already ready)`);
-      continue;
+      // Revalidate ready docs (some approvals predate the residual-clamp fix
+      // and may carry contaminated nulls/over-threshold editables). The law:
+      // ready requires residuals <= threshold; repair honestly or demote.
+      const recheck = await runFidelityCheck(doc);
+      const over = Object.entries(recheck.residuals)
+        .filter(([, residual]) => residual > recheck.threshold)
+        .map(([layerId]) => layerId);
+      if (over.length === 0) {
+        summary.skipped.push(`${id} (ready, revalidated)`);
+        continue;
+      }
+      doc.exactness.status = "qa";
+      // fall through to the bake/restyle/approve flow below
     }
 
     // Drafts without plates (no budget for inpaint): heal with --no-inpaint.
@@ -59,27 +70,40 @@ for (const id of ids) {
 
     // 1. fidelity check
     let check = await runFidelityCheck(doc);
-    // 2. bake over-threshold editable keys
-    const over = Object.entries(check.residuals)
-      .filter(([, residual]) => residual > check.threshold)
-      .map(([layerId]) => layerId);
-    for (const layerId of over) {
-      const key = layerId.replace(/^text-/, "");
-      if (doc.exactness.bakedTextKeys.includes(key)) continue;
-      const layer = doc.formats.feed.layers.find((layer) => layer.id === layerId);
-      if (!layer || layer.type !== "text") continue;
-      const fresh = await runBake(doc, key, true);
-      doc = { ...doc, exactness: { ...doc.exactness, bakedTextKeys: fresh.baked } };
-    }
-    // 3. restyle with the post-bake layers
-    await runRestyle(doc);
-    doc = loadTemplateV2(id) ?? doc;
-    // 4. re-check then approve (gate re-verifies everything)
-    check = await runFidelityCheck(doc);
-    const stillOver = Object.entries(check.residuals).filter(([, r]) => r > check.threshold);
-    if (stillOver.length > 0) {
-      summary.failed[id] = `residuals over after bake: ${stillOver.map(([k]) => k).join(", ")}`;
-      continue;
+    // 2. repair loop: bake over-threshold editables AND overlap violators
+    // (the designed escape hatch — source pixels stay; nothing ships
+    // approximately right). Bounded: the source's own design wins after 4
+    // rounds and the doc remains qa for the human review.
+    for (let round = 0; round < 4; round += 1) {
+      const over = Object.entries(check.residuals)
+        .filter(([, residual]) => residual > check.threshold)
+        .map(([layerId]) => layerId);
+      // Overlap violations surface in the schema; detect them cheaply here.
+      const overlaps: string[] = [];
+      const primaryLayout = doc.formats.story?.native ? doc.formats.story : doc.formats.feed;
+      const texts = primaryLayout.layers.filter((layer) => layer.type === "text" && !doc.exactness.bakedTextKeys.includes(layer.inputKey));
+      for (let left = 0; left < texts.length; left += 1) {
+        for (let right = left + 1; right < texts.length; right += 1) {
+          const a = texts[left].box;
+          const b = texts[right].box;
+          const ix = Math.max(0, Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x));
+          const iy = Math.max(0, Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y));
+          const inter = ix * iy;
+          const smaller = Math.min(a.width * a.height, b.width * b.height);
+          if (smaller > 0 && inter / smaller > 0.05) overlaps.push(texts[right].id);
+        }
+      }
+      const toBake = [...new Set([...over, ...overlaps])]
+        .map((layerId) => ({ layerId, key: layerId.replace(/^text-/, "") }))
+        .filter(({ key }) => !doc.exactness.bakedTextKeys.includes(key));
+      if (toBake.length === 0) break;
+      for (const { key } of toBake) {
+        const result = await runBake(doc, key, true);
+        doc = { ...doc, exactness: { ...doc.exactness, bakedTextKeys: result.baked } };
+      }
+      await runRestyle(doc);
+      doc = loadTemplateV2(id) ?? doc;
+      check = await runFidelityCheck(doc);
     }
     const result = await approveTemplate(doc, QA_BY, true);
     if (!result.ok) {
