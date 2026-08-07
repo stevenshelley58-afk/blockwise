@@ -81,7 +81,10 @@ type AdStudioWorkbenchProps = {
   showBrandSetupPrompt?: boolean;
   initialMediaAssets?: AdStudioMediaLibraryAsset[];
   initialMediaCursor?: string | null;
-  /** ADSTUDIO_TEMPLATES_V2: wrap the editor in the new Meta placement frames. */
+  /** ADSTUDIO_TEMPLATES_V2: serve the ready v2 gallery, adapted to the v1
+   *  template shape the dialog already renders. */
+  v2Templates?: AdStudioTemplate[];
+  /** ADSTUDIO_TEMPLATES_V2: wrap the editor in the new placement frames. */
   useV2Frames?: boolean;
 };
 
@@ -302,6 +305,7 @@ export function AdStudioWorkbench({
   showBrandSetupPrompt = false,
   initialMediaAssets = [],
   initialMediaCursor = null,
+  v2Templates = [],
   useV2Frames = false,
 }: AdStudioWorkbenchProps) {
   const [pack, setPack] = useState(initialPack);
@@ -418,7 +422,7 @@ export function AdStudioWorkbench({
     preferredPhrases: brandKit.tone.preferredPhrases,
     neverSay: brandKit.tone.avoid,
   };
-  const adTemplates = visibleBuiltInTemplates;
+  const adTemplates = v2Templates.length > 0 ? v2Templates : visibleBuiltInTemplates;
 
   useEffect(() => {
     const query = window.matchMedia(MOBILE_WORKBENCH_QUERY);
