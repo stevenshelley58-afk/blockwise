@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { requireOperator } from "@/lib/operator/auth";
 import {
   approveTemplate,
+  runBake,
   runFidelityCheck,
   runRestyle,
   studioWritesAllowed,
@@ -82,6 +83,17 @@ export async function POST(request: NextRequest, context: Context) {
       return NextResponse.json(result);
     } catch (error) {
       return NextResponse.json({ ok: false, problems: [error instanceof Error ? error.message : "Approve failed."] }, { status: 422 });
+    }
+  }
+
+  if (action === "bake" || action === "unbake") {
+    const key = new URL(request.url).searchParams.get("key");
+    if (!key) return NextResponse.json({ error: "key required" }, { status: 400 });
+    try {
+      const result = await runBake(doc, key, action === "bake");
+      return NextResponse.json({ ok: true, ...result });
+    } catch (error) {
+      return NextResponse.json({ error: error instanceof Error ? error.message : "Bake failed." }, { status: 422 });
     }
   }
 

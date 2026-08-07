@@ -98,10 +98,12 @@ export async function runFidelityCheck(doc: AdTemplateDocV2) {
   const residuals: Record<string, number> = {};
   for (const layer of textLayers) {
     const box = padded(layer);
+    const yEnd = Math.min(1350, box.y + box.height);
+    const xEnd = Math.min(1080, box.x + box.width);
     let sum = 0;
     let count = 0;
-    for (let y = box.y; y < box.y + box.height; y += 2) {
-      for (let x = box.x; x < box.x + box.width; x += 2) {
+    for (let y = box.y; y < yEnd; y += 2) {
+      for (let x = box.x; x < xEnd; x += 2) {
         const i = (y * 1080 + x) * 4;
         const greyA = 0.2126 * rendered[i] + 0.7152 * rendered[i + 1] + 0.0722 * rendered[i + 2];
         const greyB = 0.2126 * source[i] + 0.7152 * source[i + 1] + 0.0722 * source[i + 2];
@@ -162,6 +164,97 @@ export async function approveTemplate(doc: AdTemplateDocV2, qaBy: string, confir
   };
   writeTemplateDoc(doc.id, doc);
   return { ok: true as const, residuals: check.residuals };
+}
+
+/** §5.2 bake lever: mark an over-threshold key as baked (source pixels stay,
+ *  layer removed from every layout, plate rebuilt with the original pixels
+ *  over that box) or un-bake it (layer restored from the v1 typography). */
+export async function runBake(doc: AdTemplateDocV2, key: string, bake: boolean) {
+  const { default: sharp } = await import("sharp");
+  const { readFileSync, writeFileSync: write } = await import("node:fs");
+  const isBaked = doc.exactness.bakedTextKeys.includes(key);
+  if (bake && isBaked) throw new Error(`${key} is already baked`);
+  if (!bake && !isBaked) throw new Error(`${key} is not baked`);
+
+  const v1 = JSON.parse(readFileSync(join(process.cwd(), "src", "lib", "adstudio", "template-gallery", `${doc.id}.json`), "utf8"));
+  const typo = (v1.typography ?? {})[key];
+  if (!typo) throw new Error(`${key} has no v1 typography to (un)bake`);
+
+  doc.exactness.bakedTextKeys = bake
+    ? [...doc.exactness.bakedTextKeys, key]
+    : doc.exactness.bakedTextKeys.filter((candidate) => candidate !== key);
+
+  for (const layout of [doc.formats.feed, doc.formats.story]) {
+    if (!layout) continue;
+    if (bake) {
+      layout.layers = layout.layers.filter((layer) => !(layer.type === "text" && layer.inputKey === key));
+    } else {
+      const font = doc.fonts.find((face) => face.fontId === typo.fontId) ?? doc.fonts[0];
+      if (!font) throw new Error(`${typo.fontId} not in fonts[]; re-migrate or add the font first`);
+      layout.layers = [
+        ...layout.layers,
+        {
+          id: `text-${key}`,
+          type: "text",
+          z: 10 + layout.layers.length,
+          inputKey: key,
+          box: typo.sampleBox,
+          typo: {
+            fontId: font.fontId,
+            family: font.family,
+            fallbackFamily: typo.fallbackFamily ?? "sans-serif",
+            weight: font.weight,
+            italic: font.italic,
+            case: typo.case ?? "none",
+            sizeRatio: typo.sizeRatio,
+            lineHeight: typo.lineHeight ?? 1,
+            tracking: typo.tracking ?? 0,
+            align: typo.align ?? "left",
+            color: typo.color,
+          },
+          constraints: {
+            maxLength: ((v1.inputs?.text ?? []) as Array<{ key?: string; maxLength?: number }>).find((input) => input.key === key)?.maxLength ?? 60,
+            maxLines: typo.sampleLineCount ?? 3,
+            autoFitMinRatio: 0.85,
+          },
+          measurement: {
+            fitScore: typo.fitScore ?? 0,
+            detectionScore: typo.detectionScore ?? 0,
+            source: typo.measurementSource === "manual-verified" ? "manual-verified" : "ocr-v2",
+            version: typo.measurementVersion ?? 1,
+          },
+        } as TextLayer,
+      ];
+    }
+  }
+
+  // Bake rebuilds the plates with the source's original pixels over the box.
+  if (bake) {
+    if (!doc.provenance.sourceAd.file) throw new Error(`${doc.id} has no source file to bake from`);
+    const sourceBytes = readFileSync(join(process.cwd(), "meta_ad_candidates", doc.provenance.sourceAd.file));
+    for (const layout of [doc.formats.feed, doc.formats.story]) {
+      if (!layout) continue;
+      const W = layout.width;
+      const H = layout.height;
+      const b = typo.sampleBox;
+      const pad = Math.ceil(0.035 * Math.max(W, H));
+      const maskSvg = Buffer.from(
+        `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">`
+          + `<rect x="${Math.max(0, Math.floor(b.x * W) - pad)}" y="${Math.max(0, Math.floor(b.y * H) - pad)}" `
+          + `width="${Math.min(W, Math.ceil(b.width * W) + pad * 2)}" height="${Math.min(H, Math.ceil(b.height * H) + pad * 2)}" fill="white"/></svg>`,
+      );
+      const sourceLayout = await sharp(sourceBytes).resize(W, H, { fit: "fill" }).png().toBuffer();
+      const currentPlate = readFileSync(join(process.cwd(), "public", "adstudio-templates", doc.id, layout === doc.formats.feed ? "plate-feed.webp" : "plate-story.webp"));
+      const cut = await sharp(sourceLayout).composite([{ input: maskSvg, blend: "dest-in" }]).png().toBuffer();
+      const rebuilt = await sharp(currentPlate).composite([{ input: cut, blend: "over" }]).webp({ lossless: true }).toBuffer();
+      const plateFile = layout === doc.formats.feed ? "plate-feed.webp" : "plate-story.webp";
+      const platePath = join(process.cwd(), "public", "adstudio-templates", doc.id, plateFile);
+      write(platePath, rebuilt);
+      layout.plate.sha256 = (await import("node:crypto")).createHash("sha256").update(rebuilt).digest("hex");
+    }
+  }
+  writeTemplateDoc(doc.id, doc);
+  return { baked: doc.exactness.bakedTextKeys };
 }
 
 /** D5 restyle, headless: deterministic palette remap + generic slot assets +

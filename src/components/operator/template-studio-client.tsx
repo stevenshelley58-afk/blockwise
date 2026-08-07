@@ -9,7 +9,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { EditorRoot } from "@/components/adstudio/editor/editor-root";
-import type { AdTemplateDocV2 } from "@/lib/adstudio/v2/template-doc";
+import type { AdTemplateDocV2, TextLayer } from "@/lib/adstudio/v2/template-doc";
 
 export function TemplateStudioScreen({ id }: { id: string }) {
   const [doc, setDoc] = useState<AdTemplateDocV2 | null>(null);
@@ -221,6 +221,9 @@ export function TemplateStudioScreen({ id }: { id: string }) {
         </div>
       </div>
 
+      <FontPickerSection doc={doc} onPatched={load} />
+      <BakeSection doc={doc} onPatched={load} />
+
       <section className="grid gap-2 rounded-(--r-card) border border-[var(--line)] p-3">
         <label className="flex items-center gap-2 text-sm font-semibold">
           <input type="checkbox" checked={confirm} onChange={(event) => setConfirm(event.target.checked)} />
@@ -240,5 +243,112 @@ export function TemplateStudioScreen({ id }: { id: string }) {
         </button>
       </section>
     </div>
+  );
+}
+
+/** §5.2 font picker: per text layer, re-seed the typo from the template's
+ *  committed fonts (the corpus shortlist lives in the manifest). Saves the
+ *  patched template through the dev-only PATCH; re-runs on reload. */
+function FontPickerSection({ doc, onPatched }: { doc: AdTemplateDocV2; onPatched: () => Promise<void> }) {
+  const textLayers = (doc.formats.feed?.layers ?? []).filter((layer): layer is TextLayer => layer.type === "text");
+  const [busy, setBusy] = useState(false);
+
+  const setFont = async (layerId: string, fontId: string) => {
+    const face = doc.fonts.find((candidate) => candidate.fontId === fontId);
+    if (!face) return;
+    setBusy(true);
+    try {
+      for (const layoutKey of ["feed", "story"] as const) {
+        const layout = doc.formats[layoutKey];
+        if (!layout) continue;
+        const layer = layout.layers.find((candidate) => candidate.id === layerId);
+        if (layer?.type === "text") {
+          layer.typo = { ...layer.typo, fontId: face.fontId, family: face.family, weight: face.weight, italic: face.italic };
+        }
+      }
+      const response = await fetch(`/api/operator/template-studio/${doc.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(doc),
+      });
+      if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error ?? "Patch failed.");
+      await onPatched();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (textLayers.length === 0) return null;
+  return (
+    <section className="grid gap-3 rounded-(--r-card) border border-[var(--line)] p-3">
+      <strong className="text-sm">Font picker (Studio)</strong>
+      <div className="grid gap-2">
+        {textLayers.map((layer) => (
+          <div key={layer.id} className="flex items-center gap-2 text-[13px]">
+            <span className="w-40 truncate font-semibold">{layer.inputKey}</span>
+            <select
+              className="rounded-md border border-[var(--line)] bg-transparent px-2 py-1 text-[13px]"
+              value={layer.typo.fontId}
+              disabled={busy}
+              onChange={(event) => void setFont(layer.id, event.target.value)}
+            >
+              {doc.fonts.map((face) => (
+                <option key={face.fontId} value={face.fontId}>
+                  {face.family} {face.weight}{face.italic ? " italic" : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+
+/** §5.2 bake lever: over-threshold keys become source pixels. The server
+ *  removes the layer, rebuilds the plate with the baked pixels, and can
+ *  un-bake from the v1 typography (the source of truth). */
+function BakeSection({ doc, onPatched }: { doc: AdTemplateDocV2; onPatched: () => Promise<void> }) {
+  const [busyKey, setBusyKey] = useState<string | null>(null);
+
+  const toggle = async (key: string, layerId: string | null, bake: boolean) => {
+    setBusyKey(key);
+    try {
+      const response = await fetch(`/api/operator/template-studio/${doc.id}?action=${bake ? "bake" : "unbake"}&key=${encodeURIComponent(key)}`, { method: "POST" });
+      if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error ?? "Bake failed.");
+      await onPatched();
+    } finally {
+      setBusyKey(null);
+    }
+  };
+
+  return (
+    <section className="grid gap-3 rounded-(--r-card) border border-[var(--line)] p-3">
+      <strong className="text-sm">Bake / un-bake (fidelity escape hatch)</strong>
+      <div className="grid gap-2">
+        {doc.inputs.text.map((input) => {
+          const baked = doc.exactness.bakedTextKeys.includes(input.key);
+          const layerId = (doc.formats.feed?.layers ?? []).find((layer) => layer.type === "text" && layer.inputKey === input.key)?.id ?? null;
+          const residual = (doc.exactness.residuals ?? {})[layerId ?? ""];
+          return (
+            <div key={input.key} className="flex items-center gap-2 text-[13px]">
+              <span className="w-40 truncate font-semibold">{input.key}</span>
+              <span className={typeof residual === "number" && residual > 0.14 ? "text-[var(--danger,#e5484d)]" : "text-[var(--muted)]"}>
+                {typeof residual === "number" ? residual.toFixed(3) : baked ? "baked" : "—"}
+              </span>
+              <button
+                className="studio-btn secondary"
+                type="button"
+                disabled={busyKey === input.key}
+                onClick={() => void toggle(input.key, layerId, !baked)}
+              >
+                {baked ? "Un-bake" : "Mark baked"}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </section>
   );
 }

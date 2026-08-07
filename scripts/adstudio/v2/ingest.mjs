@@ -741,10 +741,15 @@ async function check(id) {
   const residuals = {};
   const bakedResiduals = {};
   for (const b of paddedBoxes) {
+    // Clamp the iteration range: padded boxes can overrun the buffer edges
+    // (the pad clamps the height, not the range), and out-of-range reads are
+    // undefined -> NaN residuals.
+    const yEnd = Math.min(H, b.y + b.h);
+    const xEnd = Math.min(W, b.x + b.w);
     let sum = 0;
     let count = 0;
-    for (let y = b.y; y < b.y + b.h; y += 2) {
-      for (let x = b.x; x < b.x + b.w; x += 2) {
+    for (let y = b.y; y < yEnd; y += 2) {
+      for (let x = b.x; x < xEnd; x += 2) {
         const i = (y * W + x) * 4;
         const ga = 0.2126 * renderedRaw[i] + 0.7152 * renderedRaw[i + 1] + 0.0722 * renderedRaw[i + 2];
         const gb = 0.2126 * source[i] + 0.7152 * source[i + 1] + 0.0722 * source[i + 2];
