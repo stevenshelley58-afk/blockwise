@@ -15,7 +15,7 @@ const { runFidelityCheck, runBake, runRestyle, approveTemplate } = await import(
   "../../../src/lib/adstudio/v2/studio.ts"
 );
 const { loadTemplateV2 } = await import("../../../src/lib/adstudio/v2/template-resolver.ts");
-const { readdirSync } = await import("node:fs");
+const { readdirSync, readFileSync, writeFileSync, existsSync } = await import("node:fs");
 const { join } = await import("node:path");
 
 const gallery = join(process.cwd(), "src", "lib", "adstudio", "template-gallery-v2");
@@ -36,9 +36,36 @@ const runStep = (step, id, extra = []) => {
 
 const summary = { approved: [], skipped: [], failed: {} };
 
+// loadTemplateV2 validates; docs carrying stale (pre-clamp) residuals throw.
+// Auto-QA is the repair tool, so it falls back to the in-memory doc.
+const loadSafe = (tid) => {
+  try {
+    return loadTemplateV2(tid);
+  } catch {
+    return null;
+  }
+};
+
 for (const id of ids) {
   try {
-    let doc = loadTemplateV2(id);
+    let doc = null;
+    try {
+      doc = loadTemplateV2(id);
+    } catch {
+      // Corrupted docs (stale null residuals from the pre-clamp era) can't
+      // parse; sanitize the residuals (they recompute) and reload.
+      const rawPath = join(gallery, id, "template.json");
+      if (existsSync(rawPath)) {
+        const raw = JSON.parse(readFileSync(rawPath, "utf8"));
+        if (raw?.schema === "adstudio.template.v2" && raw.exactness) {
+          raw.exactness.residuals = Object.fromEntries(
+            Object.entries(raw.exactness.residuals ?? {}).filter(([, value]) => typeof value === "number"),
+          );
+          writeFileSync(rawPath, `${JSON.stringify(raw, null, 2)}\n`);
+          doc = loadSafe(id);
+        }
+      }
+    }
     if (!doc) {
       summary.skipped.push(id);
       continue;
@@ -65,11 +92,13 @@ for (const id of ids) {
       runStep("story-draft", id);
       runStep("restyle", id);
       runStep("check", id);
-      doc = loadTemplateV2(id) ?? doc;
+      doc = loadSafe(id) ?? doc;
     }
 
     // 1. fidelity check
     let check = await runFidelityCheck(doc);
+    // Persist fresh residuals so later writes never re-save stale nulls.
+    doc.exactness.residuals = check.residuals;
     // 2. repair loop: bake over-threshold editables AND overlap violators
     // (the designed escape hatch — source pixels stay; nothing ships
     // approximately right). Bounded: the source's own design wins after 4
@@ -79,7 +108,7 @@ for (const id of ids) {
         .filter(([, residual]) => residual > check.threshold)
         .map(([layerId]) => layerId);
       // Overlap violations surface in the schema; detect them cheaply here.
-      const overlaps: string[] = [];
+      const overlaps = [];
       const primaryLayout = doc.formats.story?.native ? doc.formats.story : doc.formats.feed;
       const texts = primaryLayout.layers.filter((layer) => layer.type === "text" && !doc.exactness.bakedTextKeys.includes(layer.inputKey));
       for (let left = 0; left < texts.length; left += 1) {
@@ -102,8 +131,9 @@ for (const id of ids) {
         doc = { ...doc, exactness: { ...doc.exactness, bakedTextKeys: result.baked } };
       }
       await runRestyle(doc);
-      doc = loadTemplateV2(id) ?? doc;
+      doc = loadSafe(id) ?? doc;
       check = await runFidelityCheck(doc);
+      doc.exactness.residuals = check.residuals;
     }
     const result = await approveTemplate(doc, QA_BY, true);
     if (!result.ok) {
