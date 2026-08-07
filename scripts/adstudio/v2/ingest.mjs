@@ -386,6 +386,31 @@ async function decompose(id) {
   const isStoryFirst = Boolean(doc.formats.story?.native);
   const layout = isStoryFirst ? doc.formats.story : doc.formats.feed;
   const layoutDims = { width: layout.width, height: layout.height };
+
+  // --no-inpaint: no image-model budget. Honest fallback (§0 escape hatch):
+  // plates are the source's own pixels; EVERY text key is baked (not
+  // editable). Nothing ships "approximately right"; topping up the OpenAI
+  // account and re-running decompose unbakes via runBake(key, false).
+  const noInpaint = args.includes("--no-inpaint");
+  if (noInpaint) {
+    const sourceLayout = await sharp(sourceBytes).resize(layoutDims.width, layoutDims.height, { fit: "fill" }).png().toBuffer();
+    const publicDir = join(publicV2, id);
+    const { writeLosslessWebp } = await import("./lib/decompose.mjs");
+    const { webp, sha } = await writeLosslessWebp(sourceLayout, join(publicDir, isStoryFirst ? "plate-story.webp" : "plate-feed.webp"));
+    layout.plate.sha256 = sha;
+    if (isStoryFirst) {
+      const feedPng = await sharp(sourceLayout).extract({ left: 0, top: STORY_TOP_PX, width: 1080, height: 1350 }).png().toBuffer();
+      const feed = await writeLosslessWebp(feedPng, join(publicDir, "plate-feed.webp"));
+      doc.formats.feed.plate.sha256 = feed.sha;
+    }
+    layout.layers = layout.layers.filter((layer) => layer.type !== "text");
+    if (isStoryFirst) doc.formats.feed.layers = doc.formats.feed.layers.filter((layer) => layer.type !== "text");
+    doc.exactness.bakedTextKeys = [...new Set([...doc.exactness.bakedTextKeys, ...Object.keys(v1.typography ?? {})])];
+    doc.exactness.status = "qa";
+    writeFileSync(docPath, `${JSON.stringify(doc, null, 2)}\n`);
+    console.log(`decompose ${id} (--no-inpaint): plates are source pixels; all ${Object.keys(v1.typography ?? {}).length} text key(s) baked, status=qa`);
+    return;
+  }
   // The OpenAI mask is free-form (the model resamples internally); the
   // truth-preserving composite happens at LAYOUT dims so the plate and the
   // gate's source comparison share one resize chain — outside the holes the
