@@ -23,7 +23,7 @@
     },
     "sample": {
       "imageSrc": "/adstudio-templates/meta-buyers-wanted-feed-126/sample.png",
-      "contentHash": "4af689d64403e0cd32b48d67fee40f37f55a9db013f904c51fb3e0c68498ed3d",
+      "contentHash": "513115cb9f57743f013ce4279d3fa767551a074b66783de28a629ef68867bd8c",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
@@ -76,45 +76,9 @@
       "height": 1350,
       "plate": {
         "src": "/adstudio-templates/meta-buyers-wanted-feed-126/plate-feed.webp",
-        "sha256": "47613a2b821e899ea41f35848672e4b82e72a757375760f35e28dd8401967236"
+        "sha256": "4523cc9e95a4079680edc07d91eb5ac3bc5cdc3f2fcb23200dd73a8f91cc8d40"
       },
       "layers": [
-        {
-          "id": "text-subheadline",
-          "z": 10,
-          "box": {
-            "x": 0.09027777777777778,
-            "y": 0.7474074074074074,
-            "width": 0.6555555555555556,
-            "height": 0.023703703703703703
-          },
-          "type": "text",
-          "inputKey": "subheadline",
-          "typo": {
-            "fontId": "manrope",
-            "family": "Manrope",
-            "fallbackFamily": "sans-serif",
-            "weight": 700,
-            "italic": false,
-            "case": "upper",
-            "sizeRatio": 1.2857142857142858,
-            "lineHeight": 1.366,
-            "tracking": 0,
-            "align": "left",
-            "color": "#1f242b"
-          },
-          "constraints": {
-            "maxLength": 46,
-            "maxLines": 1,
-            "autoFitMinRatio": 0.85
-          },
-          "measurement": {
-            "fitScore": 0.48,
-            "detectionScore": 1,
-            "source": "ocr-v2",
-            "version": 1
-          }
-        },
         {
           "id": "text-cta",
           "z": 11,
@@ -159,45 +123,9 @@
       "height": 1920,
       "plate": {
         "src": "/adstudio-templates/meta-buyers-wanted-feed-126/plate-story.webp",
-        "sha256": "bb2f4e8c7c56be901ce547dab05e9d1b29f99e1a17cc543c5eb8390e8fdb3bb9"
+        "sha256": "fa612a8536ff44a9e89b9e131effef6147765b3d97b046e2d3f2d89d2bfa71a6"
       },
       "layers": [
-        {
-          "id": "text-subheadline",
-          "z": 10,
-          "box": {
-            "x": 0.09027777777777778,
-            "y": 0.6479436728395062,
-            "width": 0.6555555555555556,
-            "height": 0.016419753086419752
-          },
-          "type": "text",
-          "inputKey": "subheadline",
-          "typo": {
-            "fontId": "manrope",
-            "family": "Manrope",
-            "fallbackFamily": "sans-serif",
-            "weight": 700,
-            "italic": false,
-            "case": "upper",
-            "sizeRatio": 1.2857142857142858,
-            "lineHeight": 1.366,
-            "tracking": 0,
-            "align": "left",
-            "color": "#1f242b"
-          },
-          "constraints": {
-            "maxLength": 46,
-            "maxLines": 1,
-            "autoFitMinRatio": 0.85
-          },
-          "measurement": {
-            "fitScore": 0.48,
-            "detectionScore": 1,
-            "source": "ocr-v2",
-            "version": 1
-          }
-        },
         {
           "id": "text-cta",
           "z": 11,
@@ -340,12 +268,15 @@
   },
   "exactness": {
     "status": "ready",
-    "residuals": {},
+    "residuals": {
+      "text-cta": 0.07573075096365413
+    },
     "bakedTextKeys": [
       "body",
-      "headline"
+      "headline",
+      "subheadline"
     ],
     "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
-    "qaAt": "2026-08-07T08:17:35.566Z"
+    "qaAt": "2026-08-07T12:21:08.645Z"
   }
 }

@@ -23,7 +23,7 @@
     },
     "sample": {
       "imageSrc": "/adstudio-templates/meta-seller-consult-feed-174/sample.png",
-      "contentHash": "8af8b899caa6b76e6cb7ee9e2ee9fd675c19271c7c786578284e5edee772af72",
+      "contentHash": "50f203ed9a9ff40d7f4cb38a6644d80ab8aafcb2e2d577638991388db60c8b0e",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
@@ -31,7 +31,10 @@
   "restyle": {
     "paletteMap": {},
     "replacedAssets": [],
-    "note": "migrated from v1 (source); restyle pass pending in Studio"
+    "note": "migrated from v1 (source); restyle pass pending in Studio auto-QA default plate remap (owner-delegated 2026-08-06)",
+    "plateRemap": {
+      "hue": 12
+    }
   },
   "fonts": [
     {
@@ -66,7 +69,7 @@
       "height": 1350,
       "plate": {
         "src": "/adstudio-templates/meta-seller-consult-feed-174/plate-feed.webp",
-        "sha256": "5697576cdc2c701d847af5a174e96eba9b8b49f2f9446dc8595dafa4621215db"
+        "sha256": "2eef987e137f558a3139d55e00b08dece7c1fd35a9de69b0b6c6c43e5e413d8e"
       },
       "layers": []
     },
@@ -76,7 +79,7 @@
       "height": 1920,
       "plate": {
         "src": "/adstudio-templates/meta-seller-consult-feed-174/plate-story.webp",
-        "sha256": "510f9dc86df29230e993a48a151fadff4486ca0f338005f81a683e58c3140634"
+        "sha256": "2d27731be9b20dde4b15a0cd86d118e91a6a543e7270ed96514657385bdcb6c8"
       },
       "layers": []
     }
@@ -183,13 +186,15 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "qa",
+    "status": "ready",
     "residuals": {},
     "bakedTextKeys": [
       "body",
       "headline",
       "subheadline",
       "cta"
-    ]
+    ],
+    "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
+    "qaAt": "2026-08-07T11:29:00.828Z"
   }
 }

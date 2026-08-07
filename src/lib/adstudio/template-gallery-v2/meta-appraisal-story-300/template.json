@@ -23,7 +23,7 @@
     },
     "sample": {
       "imageSrc": "/adstudio-templates/meta-appraisal-story-300/sample.png",
-      "contentHash": "a3ed9d0c2c737c1ecd56d5ddc4c900e68945719d2638310d8c4f828f300c4e8c",
+      "contentHash": "2cd61ab883f5989c803eee7371e47964d8b0a4742d7d4ef611d73fb9b50d7089",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
@@ -100,7 +100,7 @@
       "height": 1350,
       "plate": {
         "src": "/adstudio-templates/meta-appraisal-story-300/plate-feed.webp",
-        "sha256": "c9d8bbd511935b85a862ca9602397d7e52ce6ebef6b7d4da1ec67f913cd4b1d6"
+        "sha256": "836ee72da4ec9cc9db26f4448d62b1fcd25549722a66195203c3d1174a10679c"
       },
       "layers": [
         {
@@ -176,42 +176,6 @@
           }
         },
         {
-          "id": "text-phone",
-          "z": 14,
-          "box": {
-            "x": 0.09166666666666666,
-            "y": 0.9755555555555555,
-            "width": 0.30092592592592593,
-            "height": 0.024444444444444446
-          },
-          "type": "text",
-          "inputKey": "phone",
-          "typo": {
-            "fontId": "raleway",
-            "family": "Raleway",
-            "fallbackFamily": "sans-serif",
-            "weight": 400,
-            "italic": false,
-            "case": "none",
-            "sizeRatio": 1.1768086544962812,
-            "lineHeight": 1.174,
-            "tracking": 0,
-            "align": "left",
-            "color": "#1f242b"
-          },
-          "constraints": {
-            "maxLength": 30,
-            "maxLines": 1,
-            "autoFitMinRatio": 0.85
-          },
-          "measurement": {
-            "fitScore": 0.75,
-            "detectionScore": 1,
-            "source": "ocr-v2",
-            "version": 1
-          }
-        },
-        {
           "id": "text-agent_name",
           "z": 15,
           "box": {
@@ -255,7 +219,7 @@
       "height": 1920,
       "plate": {
         "src": "/adstudio-templates/meta-appraisal-story-300/plate-story.webp",
-        "sha256": "a6e2f4ead7c25abe2a8567c7fda22a3988a2590743d98627d9db38c099810a2a"
+        "sha256": "61109573bae0310c81741e5a5c885fdb00508aefa9cc439459cf4017598353a5"
       },
       "layers": [
         {
@@ -325,114 +289,6 @@
           },
           "measurement": {
             "fitScore": 0.752,
-            "detectionScore": 1,
-            "source": "ocr-v2",
-            "version": 1
-          }
-        },
-        {
-          "id": "text-email",
-          "z": 12,
-          "box": {
-            "x": 0.09166666666666666,
-            "y": 0.86484375,
-            "width": 0.48518518518518516,
-            "height": 0.0265625
-          },
-          "type": "text",
-          "inputKey": "email",
-          "typo": {
-            "fontId": "roboto-condensed",
-            "family": "Roboto Condensed",
-            "fallbackFamily": "sans-serif",
-            "weight": 400,
-            "italic": false,
-            "case": "lower",
-            "sizeRatio": 1.0347800237812128,
-            "lineHeight": 1.171875,
-            "tracking": 0,
-            "align": "left",
-            "color": "#1f242b"
-          },
-          "constraints": {
-            "maxLength": 40,
-            "maxLines": 1,
-            "autoFitMinRatio": 0.85
-          },
-          "measurement": {
-            "fitScore": 0.871,
-            "detectionScore": 1,
-            "source": "ocr-v2",
-            "version": 1
-          }
-        },
-        {
-          "id": "text-website",
-          "z": 13,
-          "box": {
-            "x": 0.16574074074074074,
-            "y": 0.90546875,
-            "width": 0.3106481481481482,
-            "height": 0.011458333333333333
-          },
-          "type": "text",
-          "inputKey": "website",
-          "typo": {
-            "fontId": "lora",
-            "family": "Lora",
-            "fallbackFamily": "serif",
-            "weight": 700,
-            "italic": false,
-            "case": "lower",
-            "sizeRatio": 1.0833333333333333,
-            "lineHeight": 1.28,
-            "tracking": 0,
-            "align": "left",
-            "color": "#1f242b"
-          },
-          "constraints": {
-            "maxLength": 35,
-            "maxLines": 1,
-            "autoFitMinRatio": 0.85
-          },
-          "measurement": {
-            "fitScore": 0.669,
-            "detectionScore": 1,
-            "source": "ocr-v2",
-            "version": 1
-          }
-        },
-        {
-          "id": "text-phone",
-          "z": 14,
-          "box": {
-            "x": 0.09166666666666666,
-            "y": 0.834375,
-            "width": 0.30092592592592593,
-            "height": 0.0265625
-          },
-          "type": "text",
-          "inputKey": "phone",
-          "typo": {
-            "fontId": "raleway",
-            "family": "Raleway",
-            "fallbackFamily": "sans-serif",
-            "weight": 400,
-            "italic": false,
-            "case": "none",
-            "sizeRatio": 1.1768086544962812,
-            "lineHeight": 1.174,
-            "tracking": 0,
-            "align": "left",
-            "color": "#1f242b"
-          },
-          "constraints": {
-            "maxLength": 30,
-            "maxLines": 1,
-            "autoFitMinRatio": 0.85
-          },
-          "measurement": {
-            "fitScore": 0.75,
             "detectionScore": 1,
             "source": "ocr-v2",
             "version": 1
@@ -602,11 +458,18 @@
   },
   "exactness": {
     "status": "ready",
-    "residuals": {},
+    "residuals": {
+      "text-agent_role": 0.1210181937218929,
+      "text-subheadline": 0.005494364121208373,
+      "text-agent_name": 0.13589793169372189
+    },
     "bakedTextKeys": [
-      "headline"
+      "headline",
+      "phone",
+      "email",
+      "website"
     ],
     "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
-    "qaAt": "2026-08-07T08:17:34.407Z"
+    "qaAt": "2026-08-07T12:15:01.206Z"
   }
 }

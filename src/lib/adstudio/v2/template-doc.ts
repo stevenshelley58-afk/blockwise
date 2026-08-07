@@ -199,6 +199,9 @@ export type AdTemplateDocV2 = {
   restyle: {
     /** #source -> #safe colour remaps applied to text/effects */
     paletteMap: Record<string, string>;
+    /** Deterministic plate remap (hue degrees) — the D5 distance mechanism
+     *  for fully-baked docs (no editable text to recolour). */
+    plateRemap?: { hue: number };
     /** slot inputKeys filled with generic assets in the sample */
     replacedAssets: string[];
     note?: string;
@@ -548,6 +551,9 @@ const templateDocShapeSchema = z.object({
   }),
   restyle: z.object({
     paletteMap: z.record(hexColorSchema, hexColorSchema),
+    /** Optional deterministic plate remap (hue degrees) — the D5 distance
+     *  mechanism for fully-baked docs (no editable text to recolour). */
+    plateRemap: z.object({ hue: z.number() }).optional(),
     replacedAssets: z.array(nonEmptyString),
     note: z.string().optional(),
   }),
@@ -792,6 +798,7 @@ function checkStorySafeZones(doc: TemplateDocShape, ctx: z.RefinementCtx): void 
 /** Restyle evidence: a palette remap, or generic assets in every required slot. */
 export function hasNonTrivialRestyle(doc: Pick<AdTemplateDocV2, "restyle" | "inputs">): boolean {
   if (Object.keys(doc.restyle.paletteMap).length > 0) return true;
+  if (doc.restyle.plateRemap) return true;
   const requiredImageKeys = doc.inputs.images.filter((input) => input.required).map((input) => input.key);
   if (requiredImageKeys.length === 0) return false;
   const replaced = new Set(doc.restyle.replacedAssets);

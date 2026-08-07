@@ -25,7 +25,7 @@
     },
     "sample": {
       "imageSrc": "/adstudio-templates/meta-stories-255/sample.png",
-      "contentHash": "6c0a62eeda5d32b64bee88ae83df051a46f38e3c270105ac352dd58cdff397a4",
+      "contentHash": "41eed4ac4904fdb9b304540ad160f8b450f672a2c299ab7d5b48b2755f9f79a6",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
@@ -33,7 +33,10 @@
   "restyle": {
     "paletteMap": {},
     "replacedAssets": [],
-    "note": "migrated from v1 (source); restyle pass pending in Studio"
+    "note": "migrated from v1 (source); restyle pass pending in Studio auto-QA default plate remap (owner-delegated 2026-08-06)",
+    "plateRemap": {
+      "hue": 12
+    }
   },
   "fonts": [
     {
@@ -76,7 +79,7 @@
       "height": 1350,
       "plate": {
         "src": "/adstudio-templates/meta-stories-255/plate-feed.webp",
-        "sha256": "fbe7bb91d4d20ae6f4017f37ce96967e72db56ef9293c57687e7b726585cb90c"
+        "sha256": "ae022bfdf3ed6ee7fc163499484777e44f4674692261804169d9b2bfe5522d45"
       },
       "layers": []
     },
@@ -86,7 +89,7 @@
       "height": 1920,
       "plate": {
         "src": "/adstudio-templates/meta-stories-255/plate-story.webp",
-        "sha256": "82bff13d57c64e1d7aa430f1870e12c7998726e66cb570a0275da6d83ba7cd75"
+        "sha256": "53d8eb7f53871b376f006651bddd559b557bf06d2370053885fed64054d11b97"
       },
       "layers": [],
       "native": true
@@ -208,7 +211,7 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "qa",
+    "status": "ready",
     "residuals": {},
     "bakedTextKeys": [
       "social_handle",
@@ -217,6 +220,8 @@
       "time_on_market",
       "new_listings",
       "sold_listings"
-    ]
+    ],
+    "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
+    "qaAt": "2026-08-07T11:29:14.570Z"
   }
 }

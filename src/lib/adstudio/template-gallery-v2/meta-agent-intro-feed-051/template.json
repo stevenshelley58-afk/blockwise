@@ -23,7 +23,7 @@
     },
     "sample": {
       "imageSrc": "/adstudio-templates/meta-agent-intro-feed-051/sample.png",
-      "contentHash": "560c69de01cbba5a13e81e943b988ec641a2edd8237483f5405e3f9d4ec5c4e0",
+      "contentHash": "14b9965f3d29c5b026012dc0b2c097f2706852f085f98a0c56c1215567903e2e",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
@@ -87,7 +87,7 @@
       "height": 1350,
       "plate": {
         "src": "/adstudio-templates/meta-agent-intro-feed-051/plate-feed.webp",
-        "sha256": "ed6748580b8acbbe5f39714baf7ca48c2cdfffd0ab2bae554bd03b6cfda642f7"
+        "sha256": "1374fcbec8ebaa9d99a5c07930825b925ece185df49ff9de27a8a1bf39a4a1e4"
       },
       "layers": [
         {
@@ -128,42 +128,6 @@
           "minSourcePx": {
             "width": 209,
             "height": 217
-          }
-        },
-        {
-          "id": "text-phone",
-          "z": 10,
-          "box": {
-            "x": 0.17407407407407408,
-            "y": 0.8844444444444445,
-            "width": 0.6689814814814815,
-            "height": 0.05851851851851852
-          },
-          "type": "text",
-          "inputKey": "phone",
-          "typo": {
-            "fontId": "roboto-slab",
-            "family": "Roboto Slab",
-            "fallbackFamily": "serif",
-            "weight": 800,
-            "italic": false,
-            "case": "none",
-            "sizeRatio": 1.3582089552238805,
-            "lineHeight": 1.31884765625,
-            "tracking": 0,
-            "align": "center",
-            "color": "#1f242b"
-          },
-          "constraints": {
-            "maxLength": 30,
-            "maxLines": 2,
-            "autoFitMinRatio": 0.85
-          },
-          "measurement": {
-            "fitScore": 0.729,
-            "detectionScore": 1,
-            "source": "ocr-v2",
-            "version": 1
           }
         },
         {
@@ -210,7 +174,7 @@
       "height": 1920,
       "plate": {
         "src": "/adstudio-templates/meta-agent-intro-feed-051/plate-story.webp",
-        "sha256": "a4c773807c65f6505b43a66eaefcba608a47036b509798e215fcf5f3a53f6ccc"
+        "sha256": "94000bec81508811dee91e6a66ffd9c8b7509380f8d39f14db1768cbd519d7cf"
       },
       "layers": [
         {
@@ -251,42 +215,6 @@
           "minSourcePx": {
             "width": 209,
             "height": 214
-          }
-        },
-        {
-          "id": "text-phone",
-          "z": 10,
-          "box": {
-            "x": 0.17407407407407408,
-            "y": 0.7428703703703704,
-            "width": 0.6689814814814815,
-            "height": 0.04053626543209876
-          },
-          "type": "text",
-          "inputKey": "phone",
-          "typo": {
-            "fontId": "roboto-slab",
-            "family": "Roboto Slab",
-            "fallbackFamily": "serif",
-            "weight": 800,
-            "italic": false,
-            "case": "none",
-            "sizeRatio": 1.3582089552238805,
-            "lineHeight": 1.31884765625,
-            "tracking": 0,
-            "align": "center",
-            "color": "#1f242b"
-          },
-          "constraints": {
-            "maxLength": 30,
-            "maxLines": 2,
-            "autoFitMinRatio": 0.85
-          },
-          "measurement": {
-            "fitScore": 0.729,
-            "detectionScore": 1,
-            "source": "ocr-v2",
-            "version": 1
           }
         },
         {
@@ -453,13 +381,16 @@
   },
   "exactness": {
     "status": "ready",
-    "residuals": {},
+    "residuals": {
+      "text-cta": 0
+    },
     "bakedTextKeys": [
       "body",
       "headline",
-      "subheadline"
+      "subheadline",
+      "phone"
     ],
     "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
-    "qaAt": "2026-08-07T08:17:15.834Z"
+    "qaAt": "2026-08-07T12:20:11.629Z"
   }
 }

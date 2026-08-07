@@ -23,7 +23,7 @@
     },
     "sample": {
       "imageSrc": "/adstudio-templates/meta-appraisal-feed-144/sample.png",
-      "contentHash": "8bff917a9e18b090c21a4892b2ef16f6eeef6d601d72855d46f3d7cf3f0c6f7f",
+      "contentHash": "671903603d5e2a78f1e0af5af0a0c4848493134becde67204afbd2dd6d553e5a",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
@@ -76,7 +76,7 @@
       "height": 1350,
       "plate": {
         "src": "/adstudio-templates/meta-appraisal-feed-144/plate-feed.webp",
-        "sha256": "85ed48a4bb51e0b9786c02112999ec914522f47232f008c4350766e83e41b9f7"
+        "sha256": "f6ae364dd280e56c718d4eeb063b27267703ccc4c0aefd9385e2900160f0a076"
       },
       "layers": [
         {
@@ -114,78 +114,6 @@
             "source": "ocr-v2",
             "version": 1
           }
-        },
-        {
-          "id": "text-website",
-          "z": 11,
-          "box": {
-            "x": 0.6847222222222222,
-            "y": 0.9474074074074074,
-            "width": 0.23703703703703705,
-            "height": 0.015925925925925927
-          },
-          "type": "text",
-          "inputKey": "website",
-          "typo": {
-            "fontId": "lora",
-            "family": "Lora",
-            "fallbackFamily": "serif",
-            "weight": 700,
-            "italic": false,
-            "case": "lower",
-            "sizeRatio": 1.1322463768115942,
-            "lineHeight": 1.28,
-            "tracking": 0,
-            "align": "right",
-            "color": "#1f242b"
-          },
-          "constraints": {
-            "maxLength": 35,
-            "maxLines": 1,
-            "autoFitMinRatio": 0.85
-          },
-          "measurement": {
-            "fitScore": 0.528,
-            "detectionScore": 1,
-            "source": "ocr-v2",
-            "version": 1
-          }
-        },
-        {
-          "id": "text-phone",
-          "z": 12,
-          "box": {
-            "x": 0.07824074074074074,
-            "y": 0.9422222222222222,
-            "width": 0.1865740740740741,
-            "height": 0.017777777777777778
-          },
-          "type": "text",
-          "inputKey": "phone",
-          "typo": {
-            "fontId": "playfair-display",
-            "family": "Playfair Display",
-            "fallbackFamily": "serif",
-            "weight": 700,
-            "italic": false,
-            "case": "none",
-            "sizeRatio": 1.0813793103448277,
-            "lineHeight": 1.333,
-            "tracking": 0,
-            "align": "left",
-            "color": "#1f242b"
-          },
-          "constraints": {
-            "maxLength": 30,
-            "maxLines": 1,
-            "autoFitMinRatio": 0.85
-          },
-          "measurement": {
-            "fitScore": 0.415,
-            "detectionScore": 1,
-            "source": "ocr-v2",
-            "version": 1
-          }
         }
       ]
     },
@@ -195,7 +123,7 @@
       "height": 1920,
       "plate": {
         "src": "/adstudio-templates/meta-appraisal-feed-144/plate-story.webp",
-        "sha256": "d1e082c8c58c3103004ebdbab7ef7fce9ef70c41aba5538100966d603e7479cf"
+        "sha256": "d047f1d8602f9110b0549df3eab8faf1d50df8cbe9f021e96e33095a76fbd989"
       },
       "layers": [
         {
@@ -229,78 +157,6 @@
           },
           "measurement": {
             "fitScore": 0.466,
-            "detectionScore": 1,
-            "source": "ocr-v2",
-            "version": 1
-          }
-        },
-        {
-          "id": "text-website",
-          "z": 11,
-          "box": {
-            "x": 0.6847222222222222,
-            "y": 0.7864853395061728,
-            "width": 0.23703703703703705,
-            "height": 0.01103202160493827
-          },
-          "type": "text",
-          "inputKey": "website",
-          "typo": {
-            "fontId": "lora",
-            "family": "Lora",
-            "fallbackFamily": "serif",
-            "weight": 700,
-            "italic": false,
-            "case": "lower",
-            "sizeRatio": 1.1322463768115942,
-            "lineHeight": 1.28,
-            "tracking": 0,
-            "align": "right",
-            "color": "#1f242b"
-          },
-          "constraints": {
-            "maxLength": 35,
-            "maxLines": 1,
-            "autoFitMinRatio": 0.85
-          },
-          "measurement": {
-            "fitScore": 0.528,
-            "detectionScore": 1,
-            "source": "ocr-v2",
-            "version": 1
-          }
-        },
-        {
-          "id": "text-phone",
-          "z": 12,
-          "box": {
-            "x": 0.07824074074074074,
-            "y": 0.7828935185185184,
-            "width": 0.1865740740740741,
-            "height": 0.012314814814814813
-          },
-          "type": "text",
-          "inputKey": "phone",
-          "typo": {
-            "fontId": "playfair-display",
-            "family": "Playfair Display",
-            "fallbackFamily": "serif",
-            "weight": 700,
-            "italic": false,
-            "case": "none",
-            "sizeRatio": 1.0813793103448277,
-            "lineHeight": 1.333,
-            "tracking": 0,
-            "align": "left",
-            "color": "#1f242b"
-          },
-          "constraints": {
-            "maxLength": 30,
-            "maxLines": 1,
-            "autoFitMinRatio": 0.85
-          },
-          "measurement": {
-            "fitScore": 0.415,
             "detectionScore": 1,
             "source": "ocr-v2",
             "version": 1
@@ -412,11 +268,15 @@
   },
   "exactness": {
     "status": "ready",
-    "residuals": {},
+    "residuals": {
+      "text-body": 0.005951254515739563
+    },
     "bakedTextKeys": [
-      "headline"
+      "headline",
+      "website",
+      "phone"
     ],
     "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
-    "qaAt": "2026-08-07T08:17:25.238Z"
+    "qaAt": "2026-08-07T12:20:49.316Z"
   }
 }

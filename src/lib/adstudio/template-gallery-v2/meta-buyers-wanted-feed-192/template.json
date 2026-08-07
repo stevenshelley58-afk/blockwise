@@ -23,7 +23,7 @@
     },
     "sample": {
       "imageSrc": "/adstudio-templates/meta-buyers-wanted-feed-192/sample.png",
-      "contentHash": "63e22de0e908abb44551125210927e5ffb0ed95072d8892fa850bdb69b325ce0",
+      "contentHash": "2014b41cacc19cbb23655a9012fab36701371f00d7cbc4ce7ff663841864cc3c",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
@@ -95,7 +95,7 @@
       "height": 1350,
       "plate": {
         "src": "/adstudio-templates/meta-buyers-wanted-feed-192/plate-feed.webp",
-        "sha256": "5ef3c8ffaf92d327aca9227eb04dc5321c6a5ca48a2b06fb3d29c89d1f45ef05"
+        "sha256": "4fce588aa7a8c2ebcbf6a62dd0487daa0535a556fb2a514fc77488c81f8b1285"
       },
       "layers": [
         {
@@ -136,42 +136,6 @@
           "minSourcePx": {
             "width": 144,
             "height": 144
-          }
-        },
-        {
-          "id": "text-benefit_1",
-          "z": 10,
-          "box": {
-            "x": 0.19074074074074074,
-            "y": 0.5003703703703704,
-            "width": 0.18425925925925926,
-            "height": 0.013703703703703704
-          },
-          "type": "text",
-          "inputKey": "benefit_1",
-          "typo": {
-            "fontId": "mulish",
-            "family": "Mulish",
-            "fallbackFamily": "sans-serif",
-            "weight": 900,
-            "italic": false,
-            "case": "upper",
-            "sizeRatio": 1.0975056689342404,
-            "lineHeight": 1.255,
-            "tracking": 0,
-            "align": "left",
-            "color": "#1f242b"
-          },
-          "constraints": {
-            "maxLength": 34,
-            "maxLines": 1,
-            "autoFitMinRatio": 0.85
-          },
-          "measurement": {
-            "fitScore": 0.428,
-            "detectionScore": 1,
-            "source": "ocr-v2",
-            "version": 1
           }
         },
         {
@@ -218,7 +182,7 @@
       "height": 1920,
       "plate": {
         "src": "/adstudio-templates/meta-buyers-wanted-feed-192/plate-story.webp",
-        "sha256": "a9619abf268b3dd1cb2ac625780b54c68c28e4b5f84099d853ed496f1497988f"
+        "sha256": "94a814e903e0b9eb7e540bd166a7e5bab96aecc34fd8bc3500b5ed50c34cc9d5"
       },
       "layers": [
         {
@@ -259,42 +223,6 @@
           "minSourcePx": {
             "width": 144,
             "height": 142
-          }
-        },
-        {
-          "id": "text-benefit_1",
-          "z": 10,
-          "box": {
-            "x": 0.19074074074074074,
-            "y": 0.47681905864197527,
-            "width": 0.18425925925925926,
-            "height": 0.009492669753086418
-          },
-          "type": "text",
-          "inputKey": "benefit_1",
-          "typo": {
-            "fontId": "mulish",
-            "family": "Mulish",
-            "fallbackFamily": "sans-serif",
-            "weight": 900,
-            "italic": false,
-            "case": "upper",
-            "sizeRatio": 1.0975056689342404,
-            "lineHeight": 1.255,
-            "tracking": 0,
-            "align": "left",
-            "color": "#1f242b"
-          },
-          "constraints": {
-            "maxLength": 34,
-            "maxLines": 1,
-            "autoFitMinRatio": 0.85
-          },
-          "measurement": {
-            "fitScore": 0.428,
-            "detectionScore": 1,
-            "source": "ocr-v2",
-            "version": 1
           }
         },
         {
@@ -475,15 +403,18 @@
   },
   "exactness": {
     "status": "ready",
-    "residuals": {},
+    "residuals": {
+      "text-benefit_3": 0.06375581356772894
+    },
     "bakedTextKeys": [
       "body",
       "headline",
       "subheadline",
       "cta",
-      "benefit_2"
+      "benefit_2",
+      "benefit_1"
     ],
     "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
-    "qaAt": "2026-08-07T08:17:38.499Z"
+    "qaAt": "2026-08-07T12:21:28.309Z"
   }
 }

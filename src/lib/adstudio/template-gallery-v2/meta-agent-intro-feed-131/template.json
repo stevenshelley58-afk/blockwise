@@ -23,7 +23,7 @@
     },
     "sample": {
       "imageSrc": "/adstudio-templates/meta-agent-intro-feed-131/sample.png",
-      "contentHash": "f8613bb49efdf73a32953bebb17737e807125eb02461dc33cdedab37cceed1aa",
+      "contentHash": "dbff95ac7293bd464652313f8ed3372744cfadcb35d04195641c51ce2a462d04",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
@@ -76,7 +76,7 @@
       "height": 1350,
       "plate": {
         "src": "/adstudio-templates/meta-agent-intro-feed-131/plate-feed.webp",
-        "sha256": "c65e1c648b9678119330da266f34cb354dc8741a9a4c09f0afe5abe323589f74"
+        "sha256": "a3e68c716a0899fc0e75741bbc1028ccf7b2666a41e97df0ae958d6524607503"
       },
       "layers": [
         {
@@ -114,42 +114,6 @@
             "source": "ocr-v2",
             "version": 1
           }
-        },
-        {
-          "id": "text-website",
-          "z": 11,
-          "box": {
-            "x": 0.3314814814814815,
-            "y": 0.9422222222222222,
-            "width": 0.33796296296296297,
-            "height": 0.022962962962962963
-          },
-          "type": "text",
-          "inputKey": "website",
-          "typo": {
-            "fontId": "merriweather",
-            "family": "Merriweather",
-            "fallbackFamily": "serif",
-            "weight": 700,
-            "italic": false,
-            "case": "lower",
-            "sizeRatio": 1.1290322580645162,
-            "lineHeight": 1.257,
-            "tracking": 0,
-            "align": "center",
-            "color": "#1f242b"
-          },
-          "constraints": {
-            "maxLength": 35,
-            "maxLines": 1,
-            "autoFitMinRatio": 0.85
-          },
-          "measurement": {
-            "fitScore": 0.523,
-            "detectionScore": 1,
-            "source": "ocr-v2",
-            "version": 1
-          }
         }
       ]
     },
@@ -159,7 +123,7 @@
       "height": 1920,
       "plate": {
         "src": "/adstudio-templates/meta-agent-intro-feed-131/plate-story.webp",
-        "sha256": "ec557d43a1299a7e3bdd79ed1471d8128315ee187d716c028c3a6d5b3971d0ce"
+        "sha256": "21c85b289278764c33ba5b521bae5dd879edf6d489dbeb52838a8b0f667c229b"
       },
       "layers": [
         {
@@ -193,42 +157,6 @@
           },
           "measurement": {
             "fitScore": 0.436,
-            "detectionScore": 1,
-            "source": "ocr-v2",
-            "version": 1
-          }
-        },
-        {
-          "id": "text-website",
-          "z": 11,
-          "box": {
-            "x": 0.3314814814814815,
-            "y": 0.7828935185185184,
-            "width": 0.33796296296296297,
-            "height": 0.015906635802469135
-          },
-          "type": "text",
-          "inputKey": "website",
-          "typo": {
-            "fontId": "merriweather",
-            "family": "Merriweather",
-            "fallbackFamily": "serif",
-            "weight": 700,
-            "italic": false,
-            "case": "lower",
-            "sizeRatio": 1.1290322580645162,
-            "lineHeight": 1.257,
-            "tracking": 0,
-            "align": "center",
-            "color": "#1f242b"
-          },
-          "constraints": {
-            "maxLength": 35,
-            "maxLines": 1,
-            "autoFitMinRatio": 0.85
-          },
-          "measurement": {
-            "fitScore": 0.523,
             "detectionScore": 1,
             "source": "ocr-v2",
             "version": 1
@@ -340,12 +268,15 @@
   },
   "exactness": {
     "status": "ready",
-    "residuals": {},
+    "residuals": {
+      "text-subheadline": 0.04679281819607112
+    },
     "bakedTextKeys": [
       "body",
-      "headline"
+      "headline",
+      "website"
     ],
     "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
-    "qaAt": "2026-08-07T08:17:17.115Z"
+    "qaAt": "2026-08-07T12:20:22.715Z"
   }
 }

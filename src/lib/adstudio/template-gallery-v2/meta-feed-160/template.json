@@ -24,19 +24,20 @@
     },
     "sample": {
       "imageSrc": "/adstudio-templates/meta-feed-160/sample.png",
-      "contentHash": "20663618af5823b6fe09adc314eff2a8333e0f78f64fdaf8d6101509c59eabe6",
+      "contentHash": "536ab5b1c56df3cf7ddee2a89e619f1ff76c4983f532ae18252740ef3533b80d",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
   },
   "restyle": {
-    "paletteMap": {
-      "#1f242b": "#1f242b"
-    },
+    "paletteMap": {},
     "replacedAssets": [
       "background_photo"
     ],
-    "note": "migrated from v1 (source); restyle pass pending in Studio"
+    "note": "migrated from v1 (source); restyle pass pending in Studio auto-QA default plate remap (owner-delegated 2026-08-06)",
+    "plateRemap": {
+      "hue": 12
+    }
   },
   "fonts": [
     {
@@ -87,7 +88,7 @@
       "height": 1350,
       "plate": {
         "src": "/adstudio-templates/meta-feed-160/plate-feed.webp",
-        "sha256": "59f9058d762936af8eb320b85af1231f3d838d380c8c5ee7b7418703d51b2c83"
+        "sha256": "48a3ba5a6edd25fb0a09d85dff94b03b9df67ce7ce483898ebd407bd0ee073d9"
       },
       "layers": [
         {
@@ -109,114 +110,6 @@
             "width": 1080,
             "height": 1350
           }
-        },
-        {
-          "id": "text-cta_button",
-          "z": 10,
-          "box": {
-            "x": 0.2841796875,
-            "y": 0.66171875,
-            "width": 0.2890625,
-            "height": 0.01953125
-          },
-          "type": "text",
-          "inputKey": "cta_button",
-          "typo": {
-            "fontId": "merriweather",
-            "family": "Merriweather",
-            "fallbackFamily": "serif",
-            "weight": 800,
-            "italic": false,
-            "case": "upper",
-            "sizeRatio": 1.3059006211180126,
-            "lineHeight": 1.257,
-            "tracking": 0,
-            "align": "left",
-            "color": "#1f242b"
-          },
-          "constraints": {
-            "maxLength": 30,
-            "maxLines": 1,
-            "autoFitMinRatio": 0.85
-          },
-          "measurement": {
-            "fitScore": 0.414,
-            "detectionScore": 1,
-            "source": "ocr-v2",
-            "version": 1
-          }
-        },
-        {
-          "id": "text-share_prompt",
-          "z": 11,
-          "box": {
-            "x": 0.06298828125,
-            "y": 0.93515625,
-            "width": 0.24951171875,
-            "height": 0.02421875
-          },
-          "type": "text",
-          "inputKey": "share_prompt",
-          "typo": {
-            "fontId": "raleway",
-            "family": "Raleway",
-            "fallbackFamily": "sans-serif",
-            "weight": 600,
-            "italic": false,
-            "case": "mixed",
-            "sizeRatio": 1.0596885813148786,
-            "lineHeight": 1.174,
-            "tracking": 0,
-            "align": "left",
-            "color": "#1f242b"
-          },
-          "constraints": {
-            "maxLength": 25,
-            "maxLines": 1,
-            "autoFitMinRatio": 0.85
-          },
-          "measurement": {
-            "fitScore": 0.605,
-            "detectionScore": 0.842,
-            "source": "ocr-v2",
-            "version": 1
-          }
-        },
-        {
-          "id": "text-header",
-          "z": 12,
-          "box": {
-            "x": 0.2333984375,
-            "y": 0.293359375,
-            "width": 0.228515625,
-            "height": 0.017578125
-          },
-          "type": "text",
-          "inputKey": "header",
-          "typo": {
-            "fontId": "merriweather",
-            "family": "Merriweather",
-            "fallbackFamily": "serif",
-            "weight": 800,
-            "italic": false,
-            "case": "upper",
-            "sizeRatio": 1.3520000000000003,
-            "lineHeight": 1.257,
-            "tracking": 0,
-            "align": "left",
-            "color": "#1f242b"
-          },
-          "constraints": {
-            "maxLength": 25,
-            "maxLines": 1,
-            "autoFitMinRatio": 0.85
-          },
-          "measurement": {
-            "fitScore": 0.413,
-            "detectionScore": 1,
-            "source": "ocr-v2",
-            "version": 1
-          }
         }
       ]
     },
@@ -226,7 +119,7 @@
       "height": 1920,
       "plate": {
         "src": "/adstudio-templates/meta-feed-160/plate-story.webp",
-        "sha256": "596dc4ad94bf8041c825e54528a26c1a8f6b2e7ed2cd3abe5b998de6f813d0c1"
+        "sha256": "7c33c3b912b8aba3ddff24f7ae45d45fdf2cd9ae481d892678de78c9a5c6d62a"
       },
       "layers": [
         {
@@ -247,114 +140,6 @@
           "minSourcePx": {
             "width": 1080,
             "height": 1330
-          }
-        },
-        {
-          "id": "text-cta_button",
-          "z": 10,
-          "box": {
-            "x": 0.2841796875,
-            "y": 0.58858642578125,
-            "width": 0.2890625,
-            "height": 0.013529459635416664
-          },
-          "type": "text",
-          "inputKey": "cta_button",
-          "typo": {
-            "fontId": "merriweather",
-            "family": "Merriweather",
-            "fallbackFamily": "serif",
-            "weight": 800,
-            "italic": false,
-            "case": "upper",
-            "sizeRatio": 1.3059006211180126,
-            "lineHeight": 1.257,
-            "tracking": 0,
-            "align": "left",
-            "color": "#1f242b"
-          },
-          "constraints": {
-            "maxLength": 30,
-            "maxLines": 1,
-            "autoFitMinRatio": 0.85
-          },
-          "measurement": {
-            "fitScore": 0.414,
-            "detectionScore": 1,
-            "source": "ocr-v2",
-            "version": 1
-          }
-        },
-        {
-          "id": "text-share_prompt",
-          "z": 11,
-          "box": {
-            "x": 0.06298828125,
-            "y": 0.7779988606770833,
-            "width": 0.24951171875,
-            "height": 0.016776529947916664
-          },
-          "type": "text",
-          "inputKey": "share_prompt",
-          "typo": {
-            "fontId": "raleway",
-            "family": "Raleway",
-            "fallbackFamily": "sans-serif",
-            "weight": 600,
-            "italic": false,
-            "case": "mixed",
-            "sizeRatio": 1.0596885813148786,
-            "lineHeight": 1.174,
-            "tracking": 0,
-            "align": "left",
-            "color": "#1f242b"
-          },
-          "constraints": {
-            "maxLength": 25,
-            "maxLines": 1,
-            "autoFitMinRatio": 0.85
-          },
-          "measurement": {
-            "fitScore": 0.605,
-            "detectionScore": 0.842,
-            "source": "ocr-v2",
-            "version": 1
-          }
-        },
-        {
-          "id": "text-header",
-          "z": 12,
-          "box": {
-            "x": 0.2333984375,
-            "y": 0.33342081705729165,
-            "width": 0.228515625,
-            "height": 0.012176513671874998
-          },
-          "type": "text",
-          "inputKey": "header",
-          "typo": {
-            "fontId": "merriweather",
-            "family": "Merriweather",
-            "fallbackFamily": "serif",
-            "weight": 800,
-            "italic": false,
-            "case": "upper",
-            "sizeRatio": 1.3520000000000003,
-            "lineHeight": 1.257,
-            "tracking": 0,
-            "align": "left",
-            "color": "#1f242b"
-          },
-          "constraints": {
-            "maxLength": 25,
-            "maxLines": 1,
-            "autoFitMinRatio": 0.85
-          },
-          "measurement": {
-            "fitScore": 0.413,
-            "detectionScore": 1,
-            "source": "ocr-v2",
-            "version": 1
           }
         }
       ]
@@ -489,9 +274,12 @@
     "bakedTextKeys": [
       "main_title",
       "profile_handle",
-      "save_prompt"
+      "save_prompt",
+      "cta_button",
+      "share_prompt",
+      "header"
     ],
     "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
-    "qaAt": "2026-08-07T08:17:56.056Z"
+    "qaAt": "2026-08-07T12:22:45.742Z"
   }
 }

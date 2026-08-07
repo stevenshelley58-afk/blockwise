@@ -23,7 +23,7 @@
     },
     "sample": {
       "imageSrc": "/adstudio-templates/meta-downsizer-consult-story-314/sample.png",
-      "contentHash": "d48ca54a0f5a46ee45973b9bc02318223a101e9135a509dd26631ee6fec4e1b2",
+      "contentHash": "322602a088cc98568a2f273eb54049b325dcf8cce35b2f38fc294cdb57b3bd3b",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
@@ -76,7 +76,7 @@
       "height": 1350,
       "plate": {
         "src": "/adstudio-templates/meta-downsizer-consult-story-314/plate-feed.webp",
-        "sha256": "e9e70896dd762970afd7bba7d1b2c2862d5b10497b609fa92991daaa8ca624cc"
+        "sha256": "cd08b70f573743c8c9ff89bfb993abc4f38ca6292670c5ec636f61bf14ba0ba7"
       },
       "layers": [
         {
@@ -123,7 +123,7 @@
       "height": 1920,
       "plate": {
         "src": "/adstudio-templates/meta-downsizer-consult-story-314/plate-story.webp",
-        "sha256": "ac589c91325aa97798ee7fb490bab4222ba47ef9659cfdc4fef9c59f34362d71"
+        "sha256": "29aa3df2720c7beb950851fe09ef9b70ec690a9df626086e37384beccdf4b44c"
       },
       "layers": [
         {
@@ -157,42 +157,6 @@
           },
           "measurement": {
             "fitScore": 0.455,
-            "detectionScore": 1,
-            "source": "ocr-v2",
-            "version": 1
-          }
-        },
-        {
-          "id": "text-cta",
-          "z": 11,
-          "box": {
-            "x": 0.24259259259259258,
-            "y": 0.8924479166666667,
-            "width": 0.5138888888888888,
-            "height": 0.01875
-          },
-          "type": "text",
-          "inputKey": "cta",
-          "typo": {
-            "fontId": "smooch-sans",
-            "family": "Smooch Sans",
-            "fallbackFamily": "sans-serif",
-            "weight": 700,
-            "italic": false,
-            "case": "upper",
-            "sizeRatio": 1.5194681861348525,
-            "lineHeight": 1.2,
-            "tracking": 0,
-            "align": "center",
-            "color": "#1f242b"
-          },
-          "constraints": {
-            "maxLength": 39,
-            "maxLines": 1,
-            "autoFitMinRatio": 0.85
-          },
-          "measurement": {
-            "fitScore": 0.459,
             "detectionScore": 1,
             "source": "ocr-v2",
             "version": 1
@@ -305,12 +269,15 @@
   },
   "exactness": {
     "status": "ready",
-    "residuals": {},
+    "residuals": {
+      "text-subheadline": 0.08782192616721989
+    },
     "bakedTextKeys": [
       "body",
-      "headline"
+      "headline",
+      "cta"
     ],
     "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
-    "qaAt": "2026-08-07T08:17:43.391Z"
+    "qaAt": "2026-08-07T12:15:24.677Z"
   }
 }

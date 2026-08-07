@@ -200,13 +200,24 @@ for (const id of ids) {
       check = await runFidelityCheck(doc);
       doc.exactness.residuals = check.residuals;
     }
+    // D5: approve requires real restyle distance; produce it deterministically
+    // (default plate remap) when absent. Docs without a story layout still
+    // stay qa — the plan makes story authorship a human decision.
+    const restyleTrivial =
+      Object.keys(doc.restyle?.paletteMap ?? {}).length === 0
+      && !doc.restyle?.plateRemap
+      && (doc.restyle?.replacedAssets ?? []).length === 0;
+    if (restyleTrivial) {
+      await runRestyle(doc);
+      doc = loadSafe(id) ?? doc;
+    }
     const result = await approveTemplate(doc, QA_BY, true);
     if (!result.ok) {
       summary.failed[id] = result.problems.join("; ");
       continue;
     }
     summary.approved.push(id);
-    process.stdout.write(`${id} approved (${over.length} baked)\n`);
+    process.stdout.write(`${id} approved (baked: ${doc.exactness.bakedTextKeys.length})\n`);
   } catch (error) {
     summary.failed[id] = error?.message ?? String(error);
     process.stdout.write(`${id} FAILED: ${summary.failed[id].slice(0, 120)}\n`);

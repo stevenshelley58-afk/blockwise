@@ -23,7 +23,7 @@
     },
     "sample": {
       "imageSrc": "/adstudio-templates/meta-appraisal-story-240/sample.png",
-      "contentHash": "5010946d3b2911b10916c1271e805a27c42c145969bc500e83a95377e8106816",
+      "contentHash": "1484ce171e3c4cf765d869d755dfe057a9de2cb2d1f4b296878dd94c2063e7d0",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
@@ -78,7 +78,7 @@
       "height": 1350,
       "plate": {
         "src": "/adstudio-templates/meta-appraisal-story-240/plate-feed.webp",
-        "sha256": "0893c54f4f79d1d43d71e7d6f776f656f6912aed7310b658c37fc3d3ddbb0fe7"
+        "sha256": "1644e43b6d86131f4c033c12f7c9571272d9a5350e986ce112edc028aa662b9d"
       },
       "layers": [
         {
@@ -138,42 +138,6 @@
           }
         },
         {
-          "id": "text-cta",
-          "z": 11,
-          "box": {
-            "x": 0.3199074074074074,
-            "y": 0.4866666666666667,
-            "width": 0.39305555555555555,
-            "height": 0.021111111111111112
-          },
-          "type": "text",
-          "inputKey": "cta",
-          "typo": {
-            "fontId": "smooch-sans",
-            "family": "Smooch Sans",
-            "fallbackFamily": "sans-serif",
-            "weight": 800,
-            "italic": false,
-            "case": "upper",
-            "sizeRatio": 1.4545454545454546,
-            "lineHeight": 1.2,
-            "tracking": 0,
-            "align": "center",
-            "color": "#1f242b"
-          },
-          "constraints": {
-            "maxLength": 37,
-            "maxLines": 1,
-            "autoFitMinRatio": 0.85
-          },
-          "measurement": {
-            "fitScore": 0.395,
-            "detectionScore": 1,
-            "source": "ocr-v2",
-            "version": 1
-          }
-        },
-        {
           "id": "text-website",
           "z": 12,
           "box": {
@@ -217,7 +181,7 @@
       "height": 1920,
       "plate": {
         "src": "/adstudio-templates/meta-appraisal-story-240/plate-story.webp",
-        "sha256": "e143806d7807f8033492626893fa2a7b8fd3c765be92c3f5fb5f8329fde1888a"
+        "sha256": "7268e77f30077c16d8130e3406077c70eed894df4d4e7eb71222cbdef795ac95"
       },
       "layers": [
         {
@@ -271,42 +235,6 @@
           },
           "measurement": {
             "fitScore": 0.635,
-            "detectionScore": 1,
-            "source": "ocr-v2",
-            "version": 1
-          }
-        },
-        {
-          "id": "text-cta",
-          "z": 11,
-          "box": {
-            "x": 0.3199074074074074,
-            "y": 0.490625,
-            "width": 0.39305555555555555,
-            "height": 0.01484375
-          },
-          "type": "text",
-          "inputKey": "cta",
-          "typo": {
-            "fontId": "smooch-sans",
-            "family": "Smooch Sans",
-            "fallbackFamily": "sans-serif",
-            "weight": 800,
-            "italic": false,
-            "case": "upper",
-            "sizeRatio": 1.4545454545454546,
-            "lineHeight": 1.2,
-            "tracking": 0,
-            "align": "center",
-            "color": "#1f242b"
-          },
-          "constraints": {
-            "maxLength": 37,
-            "maxLines": 1,
-            "autoFitMinRatio": 0.85
-          },
-          "measurement": {
-            "fitScore": 0.395,
             "detectionScore": 1,
             "source": "ocr-v2",
             "version": 1
@@ -463,11 +391,15 @@
   },
   "exactness": {
     "status": "ready",
-    "residuals": {},
+    "residuals": {
+      "text-subheadline": 0.1338882049362788,
+      "text-website": 0.05964861590903582
+    },
     "bakedTextKeys": [
-      "headline"
+      "headline",
+      "cta"
     ],
     "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
-    "qaAt": "2026-08-07T08:17:28.925Z"
+    "qaAt": "2026-08-07T12:06:16.213Z"
   }
 }

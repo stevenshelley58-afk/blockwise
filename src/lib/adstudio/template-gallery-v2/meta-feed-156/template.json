@@ -26,7 +26,7 @@
     },
     "sample": {
       "imageSrc": "/adstudio-templates/meta-feed-156/sample.png",
-      "contentHash": "916d10b932ae24e3ade378c0efc2cb2badbdcd8b8a1106dea5ce68e71224dd5d",
+      "contentHash": "f13ee0a6081f73f8aa6422b7e0ace19a7a54bc87ebc36df1328789978149edee",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
@@ -98,7 +98,7 @@
       "height": 1350,
       "plate": {
         "src": "/adstudio-templates/meta-feed-156/plate-feed.webp",
-        "sha256": "b29b18d743d7015487de43b6ed36fb5a8f871d796ea9878b9cd18769f4c649ef"
+        "sha256": "cedb11247b9e329b685c0b1752a891c0ec8f662d9fdce361e7b933aeaae6f36a"
       },
       "layers": [
         {
@@ -139,78 +139,6 @@
           "minSourcePx": {
             "width": 385,
             "height": 445
-          }
-        },
-        {
-          "id": "text-company_name",
-          "z": 10,
-          "box": {
-            "x": 0.12109375,
-            "y": 0.11875,
-            "width": 0.87890625,
-            "height": 0.053515625
-          },
-          "type": "text",
-          "inputKey": "company_name",
-          "typo": {
-            "fontId": "titillium-web",
-            "family": "Titillium Web",
-            "fallbackFamily": "sans-serif",
-            "weight": 900,
-            "italic": false,
-            "case": "mixed",
-            "sizeRatio": 1.1287569573283858,
-            "lineHeight": 1.521,
-            "tracking": 0,
-            "align": "right",
-            "color": "#1f242b"
-          },
-          "constraints": {
-            "maxLength": 40,
-            "maxLines": 3,
-            "autoFitMinRatio": 0.85
-          },
-          "measurement": {
-            "fitScore": 0.195,
-            "detectionScore": 0.6,
-            "source": "ocr-v2",
-            "version": 1
-          }
-        },
-        {
-          "id": "text-cta_text",
-          "z": 11,
-          "box": {
-            "x": 0.609375,
-            "y": 0.843359375,
-            "width": 0.2958984375,
-            "height": 0.026953125
-          },
-          "type": "text",
-          "inputKey": "cta_text",
-          "typo": {
-            "fontId": "smooch-sans",
-            "family": "Smooch Sans",
-            "fallbackFamily": "sans-serif",
-            "weight": 800,
-            "italic": false,
-            "case": "upper",
-            "sizeRatio": 1.481025641025641,
-            "lineHeight": 1.2,
-            "tracking": 0,
-            "align": "left",
-            "color": "#1f242b"
-          },
-          "constraints": {
-            "maxLength": 25,
-            "maxLines": 1,
-            "autoFitMinRatio": 0.85
-          },
-          "measurement": {
-            "fitScore": 0.428,
-            "detectionScore": 1,
-            "source": "ocr-v2",
-            "version": 1
           }
         },
         {
@@ -257,7 +185,7 @@
       "height": 1920,
       "plate": {
         "src": "/adstudio-templates/meta-feed-156/plate-story.webp",
-        "sha256": "84b540738ad42b37cfa8d35ad5d3c54ad06ea9bee121c8cb88b62b50bff329f5"
+        "sha256": "8158e7aff0f0eab36fef8c0018bef4dba836f57ad4a554e3d0f39fe8c7795857"
       },
       "layers": [
         {
@@ -298,78 +226,6 @@
           "minSourcePx": {
             "width": 385,
             "height": 438
-          }
-        },
-        {
-          "id": "text-company_name",
-          "z": 10,
-          "box": {
-            "x": 0.12109375,
-            "y": 0.21246744791666666,
-            "width": 0.87890625,
-            "height": 0.03707071940104166
-          },
-          "type": "text",
-          "inputKey": "company_name",
-          "typo": {
-            "fontId": "titillium-web",
-            "family": "Titillium Web",
-            "fallbackFamily": "sans-serif",
-            "weight": 900,
-            "italic": false,
-            "case": "mixed",
-            "sizeRatio": 1.1287569573283858,
-            "lineHeight": 1.521,
-            "tracking": 0,
-            "align": "right",
-            "color": "#1f242b"
-          },
-          "constraints": {
-            "maxLength": 40,
-            "maxLines": 3,
-            "autoFitMinRatio": 0.85
-          },
-          "measurement": {
-            "fitScore": 0.195,
-            "detectionScore": 0.6,
-            "source": "ocr-v2",
-            "version": 1
-          }
-        },
-        {
-          "id": "text-cta_text",
-          "z": 11,
-          "box": {
-            "x": 0.609375,
-            "y": 0.714410400390625,
-            "width": 0.2958984375,
-            "height": 0.018670654296875
-          },
-          "type": "text",
-          "inputKey": "cta_text",
-          "typo": {
-            "fontId": "smooch-sans",
-            "family": "Smooch Sans",
-            "fallbackFamily": "sans-serif",
-            "weight": 800,
-            "italic": false,
-            "case": "upper",
-            "sizeRatio": 1.481025641025641,
-            "lineHeight": 1.2,
-            "tracking": 0,
-            "align": "left",
-            "color": "#1f242b"
-          },
-          "constraints": {
-            "maxLength": 25,
-            "maxLines": 1,
-            "autoFitMinRatio": 0.85
-          },
-          "measurement": {
-            "fitScore": 0.428,
-            "detectionScore": 1,
-            "source": "ocr-v2",
-            "version": 1
           }
         },
         {
@@ -550,14 +406,18 @@
   },
   "exactness": {
     "status": "ready",
-    "residuals": {},
+    "residuals": {
+      "text-agent_name": 0
+    },
     "bakedTextKeys": [
       "headline",
       "website_url",
       "phone_number",
-      "about_text"
+      "about_text",
+      "company_name",
+      "cta_text"
     ],
     "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
-    "qaAt": "2026-08-07T08:17:54.901Z"
+    "qaAt": "2026-08-07T12:22:33.229Z"
   }
 }

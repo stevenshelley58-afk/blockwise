@@ -25,7 +25,7 @@
     },
     "sample": {
       "imageSrc": "/adstudio-templates/meta-appraisal-story-247/sample.png",
-      "contentHash": "e18f7ce5b14e77609c76dc38731c3367f70e28f0e44ca822d078917a87115480",
+      "contentHash": "775aced67248cbac570e45f37d7615c9d0cb39760e6e4d59d944995917aaa5f9",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
@@ -112,7 +112,7 @@
       "height": 1350,
       "plate": {
         "src": "/adstudio-templates/meta-appraisal-story-247/plate-feed.webp",
-        "sha256": "2e163f763a51e11a8263a77767fa2d07e6d112dcd0a984a76d804636b166e7b3"
+        "sha256": "2121d3481482abceb6c46cd4b505c80b0946dacf6c7102cea09e6a537b0e18ba"
       },
       "layers": [
         {
@@ -170,42 +170,6 @@
             "source": "ocr-v2",
             "version": 1
           }
-        },
-        {
-          "id": "text-agent_name",
-          "z": 15,
-          "box": {
-            "x": 0.0912037037037037,
-            "y": 0.9577777777777777,
-            "width": 0.3912037037037037,
-            "height": 0.03
-          },
-          "type": "text",
-          "inputKey": "agent_name",
-          "typo": {
-            "fontId": "smooch-sans",
-            "family": "Smooch Sans",
-            "fallbackFamily": "sans-serif",
-            "weight": 600,
-            "italic": false,
-            "case": "upper",
-            "sizeRatio": 1.500709219858156,
-            "lineHeight": 1.2,
-            "tracking": 0,
-            "align": "left",
-            "color": "#1f242b"
-          },
-          "constraints": {
-            "maxLength": 32,
-            "maxLines": 1,
-            "autoFitMinRatio": 0.85
-          },
-          "measurement": {
-            "fitScore": 0.53,
-            "detectionScore": 1,
-            "source": "ocr-v2",
-            "version": 1
-          }
         }
       ]
     },
@@ -215,7 +179,7 @@
       "height": 1920,
       "plate": {
         "src": "/adstudio-templates/meta-appraisal-story-247/plate-story.webp",
-        "sha256": "cc91aea4b27c250994fb7c717e0d6968d236d64a6df5708641c03b7d027b2e2a"
+        "sha256": "e55024267778c0be0ee5c7aedda7eb37adfb35729ac6c6fbddab50d7e8d939b7"
       },
       "layers": [
         {
@@ -236,42 +200,6 @@
           "minSourcePx": {
             "width": 1080,
             "height": 879
-          }
-        },
-        {
-          "id": "text-agent_role",
-          "z": 10,
-          "box": {
-            "x": 0.09259259259259259,
-            "y": 0.85703125,
-            "width": 0.45416666666666666,
-            "height": 0.011979166666666667
-          },
-          "type": "text",
-          "inputKey": "agent_role",
-          "typo": {
-            "fontId": "manrope",
-            "family": "Manrope",
-            "fallbackFamily": "sans-serif",
-            "weight": 700,
-            "italic": false,
-            "case": "upper",
-            "sizeRatio": 1.3230490018148817,
-            "lineHeight": 1.366,
-            "tracking": 0,
-            "align": "left",
-            "color": "#1f242b"
-          },
-          "constraints": {
-            "maxLength": 32,
-            "maxLines": 1,
-            "autoFitMinRatio": 0.85
-          },
-          "measurement": {
-            "fitScore": 0.487,
-            "detectionScore": 1,
-            "source": "ocr-v2",
-            "version": 1
           }
         },
         {
@@ -305,150 +233,6 @@
           },
           "measurement": {
             "fitScore": 0.581,
-            "detectionScore": 1,
-            "source": "ocr-v2",
-            "version": 1
-          }
-        },
-        {
-          "id": "text-email",
-          "z": 12,
-          "box": {
-            "x": 0.1310185185185185,
-            "y": 0.9203125,
-            "width": 0.3560185185185185,
-            "height": 0.016666666666666666
-          },
-          "type": "text",
-          "inputKey": "email",
-          "typo": {
-            "fontId": "lora",
-            "family": "Lora",
-            "fallbackFamily": "serif",
-            "weight": 600,
-            "italic": false,
-            "case": "lower",
-            "sizeRatio": 0.9473684210526314,
-            "lineHeight": 1.28,
-            "tracking": 0,
-            "align": "left",
-            "color": "#1f242b"
-          },
-          "constraints": {
-            "maxLength": 44,
-            "maxLines": 1,
-            "autoFitMinRatio": 0.85
-          },
-          "measurement": {
-            "fitScore": 0.647,
-            "detectionScore": 1,
-            "source": "ocr-v2",
-            "version": 1
-          }
-        },
-        {
-          "id": "text-website",
-          "z": 13,
-          "box": {
-            "x": 0.16064814814814815,
-            "y": 0.95390625,
-            "width": 0.24675925925925926,
-            "height": 0.013020833333333334
-          },
-          "type": "text",
-          "inputKey": "website",
-          "typo": {
-            "fontId": "merriweather",
-            "family": "Merriweather",
-            "fallbackFamily": "serif",
-            "weight": 700,
-            "italic": false,
-            "case": "lower",
-            "sizeRatio": 1.1153846153846154,
-            "lineHeight": 1.257,
-            "tracking": 0,
-            "align": "left",
-            "color": "#1f242b"
-          },
-          "constraints": {
-            "maxLength": 38,
-            "maxLines": 1,
-            "autoFitMinRatio": 0.85
-          },
-          "measurement": {
-            "fitScore": 0.509,
-            "detectionScore": 1,
-            "source": "ocr-v2",
-            "version": 1
-          }
-        },
-        {
-          "id": "text-phone",
-          "z": 14,
-          "box": {
-            "x": 0.16064814814814815,
-            "y": 0.8924479166666667,
-            "width": 0.17314814814814813,
-            "height": 0.012239583333333333
-          },
-          "type": "text",
-          "inputKey": "phone",
-          "typo": {
-            "fontId": "raleway",
-            "family": "Raleway",
-            "fallbackFamily": "sans-serif",
-            "weight": 700,
-            "italic": false,
-            "case": "none",
-            "sizeRatio": 1.215,
-            "lineHeight": 1.174,
-            "tracking": 0,
-            "align": "left",
-            "color": "#1f242b"
-          },
-          "constraints": {
-            "maxLength": 20,
-            "maxLines": 1,
-            "autoFitMinRatio": 0.85
-          },
-          "measurement": {
-            "fitScore": 0.484,
-            "detectionScore": 1,
-            "source": "ocr-v2",
-            "version": 1
-          }
-        },
-        {
-          "id": "text-agent_name",
-          "z": 15,
-          "box": {
-            "x": 0.0912037037037037,
-            "y": 0.821875,
-            "width": 0.3912037037037037,
-            "height": 0.02109375
-          },
-          "type": "text",
-          "inputKey": "agent_name",
-          "typo": {
-            "fontId": "smooch-sans",
-            "family": "Smooch Sans",
-            "fallbackFamily": "sans-serif",
-            "weight": 600,
-            "italic": false,
-            "case": "upper",
-            "sizeRatio": 1.500709219858156,
-            "lineHeight": 1.2,
-            "tracking": 0,
-            "align": "left",
-            "color": "#1f242b"
-          },
-          "constraints": {
-            "maxLength": 32,
-            "maxLines": 1,
-            "autoFitMinRatio": 0.85
-          },
-          "measurement": {
-            "fitScore": 0.53,
             "detectionScore": 1,
             "source": "ocr-v2",
             "version": 1
@@ -597,12 +381,19 @@
   },
   "exactness": {
     "status": "ready",
-    "residuals": {},
+    "residuals": {
+      "text-subheadline": 0.03692430556299331
+    },
     "bakedTextKeys": [
       "body",
-      "headline"
+      "headline",
+      "agent_name",
+      "agent_role",
+      "email",
+      "website",
+      "phone"
     ],
     "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
-    "qaAt": "2026-08-07T08:17:30.224Z"
+    "qaAt": "2026-08-07T12:06:32.278Z"
   }
 }

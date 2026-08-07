@@ -83,10 +83,10 @@ export async function runFidelityCheck(doc: AdTemplateDocV2) {
   const rendered = await renderAdDocToPng(doc, instance, "4:5");
 
   const { default: sharp } = await import("sharp");
-  // The recorded restyle plate remap (hue+N) is the byte baseline when
+  // The recorded restyle plate remap (hue degrees) is the byte baseline when
   // present; otherwise the raw resized source. Order matches restyle:
   // resize first, then hue remap.
-  const hueShift = Number((doc.restyle?.paletteMap?.plate ?? "").replace("hue+", "")) || 0;
+  const hueShift = doc.restyle?.plateRemap?.hue ?? 0;
   const baseline = async (W: number, H: number) => {
     const resized = await sharp(sourceBytes).resize(W, H, { fit: "fill" }).png().toBuffer();
     return hueShift
@@ -183,6 +183,19 @@ export async function approveTemplate(doc: AdTemplateDocV2, qaBy: string, confir
   if (doc.provenance.sample.contentHash === doc.provenance.sourceAd.contentHash) {
     problems.push("sample hash equals source hash");
   }
+  // Safe zones (hard at ready, matching the schema): editable text may not sit
+  // in the story top 250 / bottom 340. Baked text is source pixels (design).
+  const story = doc.formats.story;
+  if (story) {
+    for (const layer of story.layers) {
+      if (layer.type !== "text" || doc.exactness.bakedTextKeys.includes(layer.inputKey)) continue;
+      const top = layer.box.y * story.height;
+      const bottom = (layer.box.y + layer.box.height) * story.height;
+      if (top < 250) problems.push(`story safe zone: ${layer.id} in top ${Math.round(top)}px`);
+      if (bottom > story.height - 340) problems.push(`story safe zone: ${layer.id} in bottom (${Math.round(bottom)}px)`);
+    }
+  }
+
   const check = await runFidelityCheck(doc);
   for (const [layerId, residual] of Object.entries(check.residuals)) {
     if (residual > check.threshold) {
@@ -286,7 +299,7 @@ export async function runBake(doc: AdTemplateDocV2, key: string, bake: boolean) 
       // Preserve the recorded restyle plate remap: re-apply it to the baked
       // cut before compositing (runRestyle recorded it verbatim).
       const cut = await sharp(sourceLayout).composite([{ input: maskSvg, blend: "dest-in" }]).png().toBuffer();
-      const hueShift = Number((doc.restyle?.paletteMap?.plate ?? "").replace("hue+", "")) || 0;
+      const hueShift = doc.restyle?.plateRemap?.hue ?? 0;
       const bakedCut = hueShift
         ? await sharp(cut).modulate({ hue: hueShift }).png().toBuffer()
         : cut;
@@ -330,7 +343,6 @@ export async function runRestyle(doc: AdTemplateDocV2) {
     const { default: sharp } = await import("sharp");
     const { readFileSync, writeFileSync: write } = await import("node:fs");
     const { createHash } = await import("node:crypto");
-    paletteMap["plate"] = "hue+12";
     for (const [layout, file] of [
       [doc.formats.feed, "plate-feed.webp"],
       [doc.formats.story, "plate-story.webp"],
@@ -342,13 +354,14 @@ export async function runRestyle(doc: AdTemplateDocV2) {
       write(platePath, remapped);
       layout.plate.sha256 = createHash("sha256").update(remapped).digest("hex");
     }
+    doc.restyle.plateRemap = { hue: 12 };
   }
 
   doc.restyle = {
     ...doc.restyle,
     paletteMap,
     replacedAssets: doc.inputs.images.map((image) => image.key),
-    note: paletteMap.plate ? `${doc.restyle.note ?? ""} auto-QA default plate remap (owner-delegated 2026-08-06)`.trim() : doc.restyle.note,
+    note: doc.restyle.plateRemap ? `${doc.restyle.note ?? ""} auto-QA default plate remap (owner-delegated 2026-08-06)`.trim() : doc.restyle.note,
   };
 
   const isStoryFirst = Boolean(doc.formats.story?.native);

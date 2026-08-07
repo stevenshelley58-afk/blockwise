@@ -707,7 +707,12 @@
   },
   "exactness": {
     "status": "ready",
-    "residuals": {},
+    "residuals": {
+      "text-subheadline": 0,
+      "text-phone": 0,
+      "text-agent_name": 0,
+      "text-social_handle": 0.09901405268987352
+    },
     "bakedTextKeys": [
       "body",
       "headline",

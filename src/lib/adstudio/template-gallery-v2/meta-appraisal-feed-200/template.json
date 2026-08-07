@@ -96,7 +96,7 @@
       "height": 1350,
       "plate": {
         "src": "/adstudio-templates/meta-appraisal-feed-200/plate-feed.webp",
-        "sha256": "c4698cc5365fe36bf14dc057a37b582ef75f8bb41fb74b34f7379a173eea2211"
+        "sha256": "9ecbf2c7a4bb9780125e58588fe3f5962dde3ae8159405472b6339eee631eafa"
       },
       "layers": [
         {
@@ -232,42 +232,6 @@
           }
         },
         {
-          "id": "text-phone",
-          "z": 12,
-          "box": {
-            "x": 0.47314814814814815,
-            "y": 0.8462962962962963,
-            "width": 0.2518518518518518,
-            "height": 0.035925925925925924
-          },
-          "type": "text",
-          "inputKey": "phone",
-          "typo": {
-            "fontId": "smooch-sans",
-            "family": "Smooch Sans",
-            "fallbackFamily": "sans-serif",
-            "weight": 400,
-            "italic": false,
-            "case": "none",
-            "sizeRatio": 1.588235294117647,
-            "lineHeight": 1.2,
-            "tracking": 0,
-            "align": "left",
-            "color": "#1f242b"
-          },
-          "constraints": {
-            "maxLength": 30,
-            "maxLines": 1,
-            "autoFitMinRatio": 0.85
-          },
-          "measurement": {
-            "fitScore": 0.645,
-            "detectionScore": 1,
-            "source": "ocr-v2",
-            "version": 1
-          }
-        },
-        {
           "id": "text-agent_name",
           "z": 13,
           "box": {
@@ -311,7 +275,7 @@
       "height": 1920,
       "plate": {
         "src": "/adstudio-templates/meta-appraisal-feed-200/plate-story.webp",
-        "sha256": "7537ac042df6329448860ad10a712dbcb268b975d531541b80298cacf98353ae"
+        "sha256": "08607fda3b95121c21b1e835100fcb134c573fd31c3960eba5749f8eca05e488"
       },
       "layers": [
         {
@@ -442,42 +406,6 @@
           "measurement": {
             "fitScore": 0.866,
             "detectionScore": 0.625,
-            "source": "ocr-v2",
-            "version": 1
-          }
-        },
-        {
-          "id": "text-phone",
-          "z": 12,
-          "box": {
-            "x": 0.47314814814814815,
-            "y": 0.7164448302469135,
-            "width": 0.2518518518518518,
-            "height": 0.024886188271604933
-          },
-          "type": "text",
-          "inputKey": "phone",
-          "typo": {
-            "fontId": "smooch-sans",
-            "family": "Smooch Sans",
-            "fallbackFamily": "sans-serif",
-            "weight": 400,
-            "italic": false,
-            "case": "none",
-            "sizeRatio": 1.588235294117647,
-            "lineHeight": 1.2,
-            "tracking": 0,
-            "align": "left",
-            "color": "#1f242b"
-          },
-          "constraints": {
-            "maxLength": 30,
-            "maxLines": 1,
-            "autoFitMinRatio": 0.85
-          },
-          "measurement": {
-            "fitScore": 0.645,
-            "detectionScore": 1,
             "source": "ocr-v2",
             "version": 1
           }
@@ -660,12 +588,17 @@
   },
   "exactness": {
     "status": "ready",
-    "residuals": {},
+    "residuals": {
+      "text-agent_role": 0.1326068967954601,
+      "text-subheadline": 0.13971626051012814,
+      "text-agent_name": 0.00411323439027767
+    },
     "bakedTextKeys": [
       "headline",
-      "cta"
+      "cta",
+      "phone"
     ],
     "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
-    "qaAt": "2026-08-07T08:17:27.073Z"
+    "qaAt": "2026-08-07T11:38:16.734Z"
   }
 }
