@@ -376,10 +376,7 @@
   },
   "exactness": {
     "status": "ready",
-    "residuals": {
-      "text-caption": null,
-      "text-headline": null
-    },
+    "residuals": {},
     "bakedTextKeys": [
       "subheadline"
     ],

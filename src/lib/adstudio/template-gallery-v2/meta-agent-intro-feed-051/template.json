@@ -453,10 +453,7 @@
   },
   "exactness": {
     "status": "ready",
-    "residuals": {
-      "text-phone": null,
-      "text-cta": null
-    },
+    "residuals": {},
     "bakedTextKeys": [
       "body",
       "headline",

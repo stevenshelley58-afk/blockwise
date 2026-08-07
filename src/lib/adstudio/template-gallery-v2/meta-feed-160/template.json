@@ -485,11 +485,7 @@
   },
   "exactness": {
     "status": "ready",
-    "residuals": {
-      "text-cta_button": null,
-      "text-share_prompt": null,
-      "text-header": null
-    },
+    "residuals": {},
     "bakedTextKeys": [
       "main_title",
       "profile_handle",

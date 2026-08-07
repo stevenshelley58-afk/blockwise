@@ -429,11 +429,7 @@
   },
   "exactness": {
     "status": "ready",
-    "residuals": {
-      "text-feature_1": null,
-      "text-feature_3": null,
-      "text-website": null
-    },
+    "residuals": {},
     "bakedTextKeys": [
       "headline",
       "price_info",

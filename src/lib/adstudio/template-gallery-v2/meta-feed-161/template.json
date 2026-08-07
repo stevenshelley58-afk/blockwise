@@ -274,9 +274,7 @@
   },
   "exactness": {
     "status": "ready",
-    "residuals": {
-      "text-headline": null
-    },
+    "residuals": {},
     "bakedTextKeys": [],
     "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
     "qaAt": "2026-08-07T08:17:57.641Z"

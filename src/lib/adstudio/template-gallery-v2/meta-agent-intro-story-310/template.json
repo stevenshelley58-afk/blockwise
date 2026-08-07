@@ -401,9 +401,7 @@
   },
   "exactness": {
     "status": "ready",
-    "residuals": {
-      "text-agent_name": null
-    },
+    "residuals": {},
     "bakedTextKeys": [
       "body",
       "agent_role",

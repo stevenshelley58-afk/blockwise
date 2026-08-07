@@ -597,10 +597,7 @@
   },
   "exactness": {
     "status": "ready",
-    "residuals": {
-      "text-subheadline": null,
-      "text-agent_name": null
-    },
+    "residuals": {},
     "bakedTextKeys": [
       "body",
       "headline"

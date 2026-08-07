@@ -111,42 +111,6 @@
             "source": "ocr-v2",
             "version": 1
           }
-        },
-        {
-          "id": "text-price_per_night",
-          "type": "text",
-          "z": 11,
-          "inputKey": "price_per_night",
-          "box": {
-            "x": 0.26708984375,
-            "y": 0.123828125,
-            "width": 0.60400390625,
-            "height": 0.0359375
-          },
-          "typo": {
-            "fontId": "kanit",
-            "family": "Kanit",
-            "fallbackFamily": "sans-serif",
-            "weight": 900,
-            "italic": false,
-            "case": "upper",
-            "sizeRatio": 1.214734950584007,
-            "lineHeight": 1.495,
-            "tracking": 0,
-            "align": "left",
-            "color": "#1f242b"
-          },
-          "constraints": {
-            "maxLength": 20,
-            "maxLines": 2,
-            "autoFitMinRatio": 0.85
-          },
-          "measurement": {
-            "fitScore": 0.109,
-            "detectionScore": 0.556,
-            "source": "ocr-v2",
-            "version": 1
-          }
         }
       ]
     },
@@ -191,42 +155,6 @@
           "measurement": {
             "fitScore": 0.121,
             "detectionScore": 0.375,
-            "source": "ocr-v2",
-            "version": 1
-          }
-        },
-        {
-          "id": "text-price_per_night",
-          "type": "text",
-          "z": 11,
-          "inputKey": "price_per_night",
-          "box": {
-            "x": 0.26708984375,
-            "y": 0.215985107421875,
-            "width": 0.60400390625,
-            "height": 0.024894205729166664
-          },
-          "typo": {
-            "fontId": "kanit",
-            "family": "Kanit",
-            "fallbackFamily": "sans-serif",
-            "weight": 900,
-            "italic": false,
-            "case": "upper",
-            "sizeRatio": 1.214734950584007,
-            "lineHeight": 1.495,
-            "tracking": 0,
-            "align": "left",
-            "color": "#1f242b"
-          },
-          "constraints": {
-            "maxLength": 20,
-            "maxLines": 2,
-            "autoFitMinRatio": 0.85
-          },
-          "measurement": {
-            "fitScore": 0.109,
-            "detectionScore": 0.556,
             "source": "ocr-v2",
             "version": 1
           }
@@ -343,7 +271,8 @@
     },
     "bakedTextKeys": [
       "features",
-      "main_cta"
+      "main_cta",
+      "price_per_night"
     ]
   }
 }

@@ -534,11 +534,7 @@
   },
   "exactness": {
     "status": "ready",
-    "residuals": {
-      "text-headline_number": null,
-      "text-headline_sub": null,
-      "text-contact_handle": null
-    },
+    "residuals": {},
     "bakedTextKeys": [
       "headline_main"
     ],

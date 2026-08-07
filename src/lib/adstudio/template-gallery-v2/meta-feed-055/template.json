@@ -170,42 +170,6 @@
             "source": "ocr-v2",
             "version": 1
           }
-        },
-        {
-          "id": "text-agent_phone",
-          "type": "text",
-          "z": 12,
-          "inputKey": "agent_phone",
-          "box": {
-            "x": 0.1,
-            "y": 0.9,
-            "width": 0.8,
-            "height": 0.03
-          },
-          "typo": {
-            "fontId": "merriweather",
-            "family": "Merriweather",
-            "fallbackFamily": "sans-serif",
-            "weight": 300,
-            "italic": false,
-            "case": "mixed",
-            "sizeRatio": 0.55,
-            "lineHeight": 1.2,
-            "tracking": 0.01,
-            "align": "center",
-            "color": "#1f242b"
-          },
-          "constraints": {
-            "maxLength": 20,
-            "maxLines": 1,
-            "autoFitMinRatio": 0.85
-          },
-          "measurement": {
-            "fitScore": 0.35,
-            "detectionScore": 0.55,
-            "source": "ocr-v2",
-            "version": 1
-          }
         }
       ]
     },
@@ -286,42 +250,6 @@
           "measurement": {
             "fitScore": 0.407,
             "detectionScore": 1,
-            "source": "ocr-v2",
-            "version": 1
-          }
-        },
-        {
-          "id": "text-agent_phone",
-          "type": "text",
-          "z": 12,
-          "inputKey": "agent_phone",
-          "box": {
-            "x": 0.1,
-            "y": 0.7536458333333333,
-            "width": 0.8,
-            "height": 0.020781249999999998
-          },
-          "typo": {
-            "fontId": "merriweather",
-            "family": "Merriweather",
-            "fallbackFamily": "sans-serif",
-            "weight": 300,
-            "italic": false,
-            "case": "mixed",
-            "sizeRatio": 0.55,
-            "lineHeight": 1.2,
-            "tracking": 0.01,
-            "align": "center",
-            "color": "#1f242b"
-          },
-          "constraints": {
-            "maxLength": 20,
-            "maxLines": 1,
-            "autoFitMinRatio": 0.85
-          },
-          "measurement": {
-            "fitScore": 0.35,
-            "detectionScore": 0.55,
             "source": "ocr-v2",
             "version": 1
           }
@@ -454,7 +382,8 @@
     "bakedTextKeys": [
       "subheadline",
       "contact_label",
-      "headline"
+      "headline",
+      "agent_phone"
     ]
   }
 }

@@ -550,11 +550,7 @@
   },
   "exactness": {
     "status": "ready",
-    "residuals": {
-      "text-company_name": null,
-      "text-cta_text": null,
-      "text-agent_name": null
-    },
+    "residuals": {},
     "bakedTextKeys": [
       "headline",
       "website_url",

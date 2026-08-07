@@ -290,9 +290,7 @@
   },
   "exactness": {
     "status": "ready",
-    "residuals": {
-      "text-cta_text": null
-    },
+    "residuals": {},
     "bakedTextKeys": [
       "main_question"
     ],

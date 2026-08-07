@@ -278,7 +278,7 @@ function FontPickerSection({ doc, onPatched }: { doc: AdTemplateDocV2; onPatched
     }
   };
 
-  if (textLayers.length === 0) return null;
+  if (doc.inputs.text.length === 0) return null;
   return (
     <section className="grid gap-3 rounded-(--r-card) border border-[var(--line)] p-3">
       <strong className="text-sm">Font picker (Studio)</strong>

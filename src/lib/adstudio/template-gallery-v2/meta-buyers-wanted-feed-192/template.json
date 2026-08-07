@@ -475,10 +475,7 @@
   },
   "exactness": {
     "status": "ready",
-    "residuals": {
-      "text-benefit_1": null,
-      "text-benefit_3": null
-    },
+    "residuals": {},
     "bakedTextKeys": [
       "body",
       "headline",

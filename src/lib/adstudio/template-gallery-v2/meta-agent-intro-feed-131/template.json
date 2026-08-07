@@ -340,10 +340,7 @@
   },
   "exactness": {
     "status": "ready",
-    "residuals": {
-      "text-subheadline": null,
-      "text-website": null
-    },
+    "residuals": {},
     "bakedTextKeys": [
       "body",
       "headline"

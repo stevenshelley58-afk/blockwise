@@ -299,42 +299,6 @@
             "source": "ocr-v2",
             "version": 1
           }
-        },
-        {
-          "id": "text-website",
-          "type": "text",
-          "z": 14,
-          "inputKey": "website",
-          "box": {
-            "x": 0.1,
-            "y": 0.95,
-            "width": 0.8,
-            "height": 0.025
-          },
-          "typo": {
-            "fontId": "roboto-condensed",
-            "family": "Roboto Condensed",
-            "fallbackFamily": "sans-serif",
-            "weight": 400,
-            "italic": false,
-            "case": "lower",
-            "sizeRatio": 0.45,
-            "lineHeight": 1.2,
-            "tracking": 0,
-            "align": "center",
-            "color": "#1f242b"
-          },
-          "constraints": {
-            "maxLength": 35,
-            "maxLines": 1,
-            "autoFitMinRatio": 0.85
-          },
-          "measurement": {
-            "fitScore": 0.35,
-            "detectionScore": 0.55,
-            "source": "ocr-v2",
-            "version": 1
-          }
         }
       ]
     },
@@ -546,42 +510,6 @@
             "source": "ocr-v2",
             "version": 1
           }
-        },
-        {
-          "id": "text-website",
-          "type": "text",
-          "z": 14,
-          "inputKey": "website",
-          "box": {
-            "x": 0.1,
-            "y": 0.7882812499999999,
-            "width": 0.8,
-            "height": 0.01731770833333333
-          },
-          "typo": {
-            "fontId": "roboto-condensed",
-            "family": "Roboto Condensed",
-            "fallbackFamily": "sans-serif",
-            "weight": 400,
-            "italic": false,
-            "case": "lower",
-            "sizeRatio": 0.45,
-            "lineHeight": 1.2,
-            "tracking": 0,
-            "align": "center",
-            "color": "#1f242b"
-          },
-          "constraints": {
-            "maxLength": 35,
-            "maxLines": 1,
-            "autoFitMinRatio": 0.85
-          },
-          "measurement": {
-            "fitScore": 0.35,
-            "detectionScore": 0.55,
-            "source": "ocr-v2",
-            "version": 1
-          }
         }
       ]
     }
@@ -742,7 +670,8 @@
     "bakedTextKeys": [
       "headline",
       "email",
-      "agent_name"
+      "agent_name",
+      "website"
     ]
   }
 }

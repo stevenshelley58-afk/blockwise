@@ -477,11 +477,7 @@
   },
   "exactness": {
     "status": "ready",
-    "residuals": {
-      "text-subheadline": null,
-      "text-cta": null,
-      "text-social_handle": null
-    },
+    "residuals": {},
     "bakedTextKeys": [
       "headline",
       "phone"

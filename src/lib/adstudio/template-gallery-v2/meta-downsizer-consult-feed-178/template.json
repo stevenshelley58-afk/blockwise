@@ -232,42 +232,6 @@
             "source": "ocr-v2",
             "version": 1
           }
-        },
-        {
-          "id": "text-cta",
-          "type": "text",
-          "z": 13,
-          "inputKey": "cta",
-          "box": {
-            "x": 0.1,
-            "y": 0.78,
-            "width": 0.8,
-            "height": 0.05
-          },
-          "typo": {
-            "fontId": "smooch-sans",
-            "family": "Smooch Sans",
-            "fallbackFamily": "sans-serif",
-            "weight": 300,
-            "italic": false,
-            "case": "upper",
-            "sizeRatio": 0.65,
-            "lineHeight": 1.2,
-            "tracking": 0.02,
-            "align": "center",
-            "color": "#1f242b"
-          },
-          "constraints": {
-            "maxLength": 39,
-            "maxLines": 1,
-            "autoFitMinRatio": 0.85
-          },
-          "measurement": {
-            "fitScore": 0.35,
-            "detectionScore": 0.55,
-            "source": "ocr-v2",
-            "version": 1
-          }
         }
       ]
     },
@@ -416,42 +380,6 @@
           "measurement": {
             "fitScore": 0.425,
             "detectionScore": 1,
-            "source": "ocr-v2",
-            "version": 1
-          }
-        },
-        {
-          "id": "text-cta",
-          "type": "text",
-          "z": 13,
-          "inputKey": "cta",
-          "box": {
-            "x": 0.1,
-            "y": 0.6705208333333333,
-            "width": 0.8,
-            "height": 0.03463541666666666
-          },
-          "typo": {
-            "fontId": "smooch-sans",
-            "family": "Smooch Sans",
-            "fallbackFamily": "sans-serif",
-            "weight": 300,
-            "italic": false,
-            "case": "upper",
-            "sizeRatio": 0.65,
-            "lineHeight": 1.2,
-            "tracking": 0.02,
-            "align": "center",
-            "color": "#1f242b"
-          },
-          "constraints": {
-            "maxLength": 39,
-            "maxLines": 1,
-            "autoFitMinRatio": 0.85
-          },
-          "measurement": {
-            "fitScore": 0.35,
-            "detectionScore": 0.55,
             "source": "ocr-v2",
             "version": 1
           }
@@ -607,7 +535,8 @@
     "bakedTextKeys": [
       "body",
       "headline",
-      "benefit_1"
+      "benefit_1",
+      "cta"
     ]
   }
 }

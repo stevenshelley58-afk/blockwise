@@ -431,8 +431,8 @@
   "exactness": {
     "status": "ready",
     "residuals": {
-      "text-subheadline": null,
-      "text-cta": null
+      "text-subheadline": 0.2708298023831702,
+      "text-cta": 0.5419123459592053
     },
     "bakedTextKeys": [
       "body",

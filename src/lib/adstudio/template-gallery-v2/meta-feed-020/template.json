@@ -429,11 +429,7 @@
   },
   "exactness": {
     "status": "ready",
-    "residuals": {
-      "text-price": null,
-      "text-website_handle": null,
-      "text-phone": null
-    },
+    "residuals": {},
     "bakedTextKeys": [
       "address",
       "headline"

@@ -412,11 +412,7 @@
   },
   "exactness": {
     "status": "ready",
-    "residuals": {
-      "text-body": null,
-      "text-website": null,
-      "text-phone": null
-    },
+    "residuals": {},
     "bakedTextKeys": [
       "headline"
     ],

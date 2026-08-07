@@ -13,9 +13,15 @@ test.beforeEach(async ({ page }) => {
   await page.goto(`${baseUrl}/login`);
   await page.locator("#login-email").fill(devEmail);
   await page.locator("#login-password").fill(devPassword!);
-  await page.getByRole("button", { name: "Sign in" }).click();
+  // Cold dev server compiles the page on first visit; click once hydrated,
+  // retry once if the handler wasn't attached yet.
+  await page.locator("#login-password").press("Enter").catch(() => undefined);
+  await page.waitForTimeout(1500);
+  if (page.url().includes("/login")) {
+    await page.getByRole("button", { name: "Sign in" }).click({ force: true });
+  }
   // Post-login landing is /home by design; the specs navigate explicitly.
-  await expect(page).not.toHaveURL(/\/login/);
+  await expect(page).not.toHaveURL(/\/login/, { timeout: 30000 });
 });
 
 test("queue lists v2 drafts with status and intent", async ({ page }) => {

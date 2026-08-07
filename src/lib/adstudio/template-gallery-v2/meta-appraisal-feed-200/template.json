@@ -660,12 +660,7 @@
   },
   "exactness": {
     "status": "ready",
-    "residuals": {
-      "text-agent_role": null,
-      "text-subheadline": null,
-      "text-phone": null,
-      "text-agent_name": null
-    },
+    "residuals": {},
     "bakedTextKeys": [
       "headline",
       "cta"

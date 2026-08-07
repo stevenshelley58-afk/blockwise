@@ -83,8 +83,44 @@ for (const id of ids) {
           raw.exactness.residuals = Object.fromEntries(
             Object.entries(raw.exactness.residuals ?? {}).filter(([, value]) => typeof value === "number"),
           );
+          // Overlapping editables also make the schema throw; bake one side of
+          // each pair so the doc loads and the normal repair loop takes over.
+          const originalBaked = new Set(raw.exactness.bakedTextKeys ?? []);
+          const baked = new Set(originalBaked);
+          for (const layout of [raw.formats?.feed, raw.formats?.story]) {
+            if (!layout) continue;
+            const texts = (layout.layers ?? []).filter((layer) => layer.type === "text" && !baked.has(layer.inputKey));
+            for (let left = 0; left < texts.length; left += 1) {
+              for (let right = left + 1; right < texts.length; right += 1) {
+                const a = texts[left].box;
+                const b = texts[right].box;
+                const ix = Math.max(0, Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x));
+                const iy = Math.max(0, Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y));
+                const inter = ix * iy;
+                const smaller = Math.min(a.width * a.height, b.width * b.height);
+                if (smaller > 0 && inter / smaller > 0.05) baked.add(texts[right].inputKey);
+              }
+            }
+            layout.layers = (layout.layers ?? []).filter(
+              (layer) => !(layer.type === "text" && baked.has(layer.inputKey)),
+            );
+          }
+          const newlyBaked = [...baked].filter((key) => !originalBaked.has(key));
+          raw.exactness.bakedTextKeys = [...baked];
           writeFileSync(rawPath, `${JSON.stringify(raw, null, 2)}\n`);
           doc = loadSafe(id);
+          // Raw baking removed layers without rebuilding the plate with the
+          // source pixels; unbake now so the repair loop's runBake(redo)
+          // rebuilds the plate honestly.
+          for (const key of newlyBaked) {
+            if (!doc) break;
+            try {
+              const un = await runBake(doc, key, false);
+              doc = { ...doc, exactness: { ...doc.exactness, bakedTextKeys: un.baked } };
+            } catch {
+              // leave as-is; the repair loop will take over
+            }
+          }
         }
       }
     }
