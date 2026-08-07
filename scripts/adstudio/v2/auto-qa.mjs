@@ -36,6 +36,28 @@ const runStep = (step, id, extra = []) => {
 
 const summary = { approved: [], skipped: [], failed: {} };
 
+// Editable text layers whose boxes overlap by more than 5% of the smaller box
+// on any layout — the schema forbids them; the repair loop bakes one of them.
+const overlapViolators = (doc) => {
+  const out = [];
+  for (const layout of [doc.formats.feed, doc.formats.story]) {
+    if (!layout) continue;
+    const texts = layout.layers.filter((layer) => layer.type === "text" && !doc.exactness.bakedTextKeys.includes(layer.inputKey));
+    for (let left = 0; left < texts.length; left += 1) {
+      for (let right = left + 1; right < texts.length; right += 1) {
+        const a = texts[left].box;
+        const b = texts[right].box;
+        const ix = Math.max(0, Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x));
+        const iy = Math.max(0, Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y));
+        const inter = ix * iy;
+        const smaller = Math.min(a.width * a.height, b.width * b.height);
+        if (smaller > 0 && inter / smaller > 0.05) out.push(texts[right].id);
+      }
+    }
+  }
+  return out;
+};
+
 // loadTemplateV2 validates; docs carrying stale (pre-clamp) residuals throw.
 // Auto-QA is the repair tool, so it falls back to the in-memory doc.
 const loadSafe = (tid) => {
@@ -73,12 +95,14 @@ for (const id of ids) {
     if (doc.exactness.status === "ready") {
       // Revalidate ready docs (some approvals predate the residual-clamp fix
       // and may carry contaminated nulls/over-threshold editables). The law:
-      // ready requires residuals <= threshold; repair honestly or demote.
+      // ready requires residuals <= threshold AND no schema violations
+      // (overlapping editables); repair honestly or demote.
       const recheck = await runFidelityCheck(doc);
       const over = Object.entries(recheck.residuals)
         .filter(([, residual]) => residual > recheck.threshold)
         .map(([layerId]) => layerId);
-      if (over.length === 0) {
+      const overlaps = overlapViolators(doc);
+      if (over.length === 0 && overlaps.length === 0) {
         summary.skipped.push(`${id} (ready, revalidated)`);
         continue;
       }
@@ -107,21 +131,8 @@ for (const id of ids) {
       const over = Object.entries(check.residuals)
         .filter(([, residual]) => residual > check.threshold)
         .map(([layerId]) => layerId);
-      // Overlap violations surface in the schema; detect them cheaply here.
-      const overlaps = [];
-      const primaryLayout = doc.formats.story?.native ? doc.formats.story : doc.formats.feed;
-      const texts = primaryLayout.layers.filter((layer) => layer.type === "text" && !doc.exactness.bakedTextKeys.includes(layer.inputKey));
-      for (let left = 0; left < texts.length; left += 1) {
-        for (let right = left + 1; right < texts.length; right += 1) {
-          const a = texts[left].box;
-          const b = texts[right].box;
-          const ix = Math.max(0, Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x));
-          const iy = Math.max(0, Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y));
-          const inter = ix * iy;
-          const smaller = Math.min(a.width * a.height, b.width * b.height);
-          if (smaller > 0 && inter / smaller > 0.05) overlaps.push(texts[right].id);
-        }
-      }
+      // Overlap violations surface in the schema; repair by baking one side.
+      const overlaps = overlapViolators(doc);
       const toBake = [...new Set([...over, ...overlaps])]
         .map((layerId) => ({ layerId, key: layerId.replace(/^text-/, "") }))
         .filter(({ key }) => !doc.exactness.bakedTextKeys.includes(key));

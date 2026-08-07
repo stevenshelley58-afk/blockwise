@@ -85,38 +85,59 @@ export async function runFidelityCheck(doc: AdTemplateDocV2) {
   const { default: sharp } = await import("sharp");
   const source = await sharp(sourceBytes).resize(1080, 1350, { fit: "fill" }).raw().ensureAlpha().toBuffer();
   const textLayers = doc.formats.feed.layers.filter((layer): layer is TextLayer => layer.type === "text");
-  const padded = (layer: TextLayer) => {
-    const pad = 8;
-    return {
-      x: Math.max(0, Math.floor(layer.box.x * 1080) - pad),
-      y: Math.max(0, Math.floor(layer.box.y * 1350) - pad),
-      width: Math.min(1080, Math.ceil(layer.box.width * 1080) + pad * 2),
-      height: Math.min(1350, Math.ceil(layer.box.height * 1350) + pad * 2),
-    };
+
+  const computeResiduals = (renderedRaw: Uint8Array, sourceRaw: Uint8Array, W: number, H: number, layers: TextLayer[], pad: number) => {
+    const residuals: Record<string, number> = {};
+    for (const layer of layers) {
+      const box = {
+        x: Math.max(0, Math.floor(layer.box.x * W) - pad),
+        y: Math.max(0, Math.floor(layer.box.y * H) - pad),
+        width: Math.min(W, Math.ceil(layer.box.width * W) + pad * 2),
+        height: Math.min(H, Math.ceil(layer.box.height * H) + pad * 2),
+      };
+      const yEnd = Math.min(H, box.y + box.height);
+      const xEnd = Math.min(W, box.x + box.width);
+      let sum = 0;
+      let count = 0;
+      for (let y = box.y; y < yEnd; y += 2) {
+        for (let x = box.x; x < xEnd; x += 2) {
+          const i = (y * W + x) * 4;
+          const greyA = 0.2126 * renderedRaw[i] + 0.7152 * renderedRaw[i + 1] + 0.0722 * renderedRaw[i + 2];
+          const greyB = 0.2126 * sourceRaw[i] + 0.7152 * sourceRaw[i + 1] + 0.0722 * sourceRaw[i + 2];
+          const delta = (greyA - greyB) / 255;
+          sum += delta * delta;
+          count += 1;
+        }
+      }
+      residuals[layer.id] = count > 0 ? Math.sqrt(sum / count) : 0;
+    }
+    return residuals;
   };
 
-  const residuals: Record<string, number> = {};
-  for (const layer of textLayers) {
-    const box = padded(layer);
-    const yEnd = Math.min(1350, box.y + box.height);
-    const xEnd = Math.min(1080, box.x + box.width);
-    let sum = 0;
-    let count = 0;
-    for (let y = box.y; y < yEnd; y += 2) {
-      for (let x = box.x; x < xEnd; x += 2) {
-        const i = (y * 1080 + x) * 4;
-        const greyA = 0.2126 * rendered[i] + 0.7152 * rendered[i + 1] + 0.0722 * rendered[i + 2];
-        const greyB = 0.2126 * source[i] + 0.7152 * source[i + 1] + 0.0722 * source[i + 2];
-        const delta = (greyA - greyB) / 255;
-        sum += delta * delta;
-        count += 1;
-      }
-    }
-    residuals[layer.id] = count > 0 ? Math.sqrt(sum / count) : 0;
-  }
-  return { residuals, threshold: RESIDUAL_THRESHOLD };
-}
+  const residuals = computeResiduals(
+    await sharp(rendered).raw().ensureAlpha().toBuffer(),
+    source,
+    1080,
+    1350,
+    textLayers,
+    8,
+  );
 
+  // Native story layout: the schema requires a residual for every text layer
+  // in every layout, so record the story surface too (compared against the
+  // full-height source).
+  if (doc.formats.story?.native) {
+    const storyRendered = await renderAdDocToPng(doc, { ...instance, format: "9:16" }, "9:16");
+    const storySource = await sharp(sourceBytes).resize(1080, 1920, { fit: "fill" }).raw().ensureAlpha().toBuffer();
+    const storyLayers = doc.formats.story.layers.filter((layer): layer is TextLayer => layer.type === "text");
+    Object.assign(
+      residuals,
+      computeResiduals(await sharp(storyRendered).raw().ensureAlpha().toBuffer(), storySource, 1080, 1920, storyLayers, 8),
+    );
+  }
+
+  return { residuals, threshold: 0.14 };
+}
 /**
  * Approve (human sign-off gate): re-runs the check and enforces the law —
  * story present, restyle non-trivial, sample != source, residuals under the
