@@ -384,11 +384,10 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "qa",
+    "status": "ready",
     "residuals": {
-      "text-body": 0.06862734228202792,
-      "text-subheadline": 0.015023694105477175,
-      "text-benefit_2": 0.06499353307158212
+      "text-body": 0.018896409477723756,
+      "text-subheadline": 0.012637351688325532
     },
     "bakedTextKeys": [
       "headline",
@@ -396,6 +395,8 @@
       "benefit_3",
       "benefit_1",
       "benefit_2"
-    ]
+    ],
+    "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
+    "qaAt": "2026-08-07T11:03:09.881Z"
   }
 }

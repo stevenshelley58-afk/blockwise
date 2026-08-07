@@ -107,6 +107,10 @@
           "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 884,
+            "height": 532
           }
         },
         {
@@ -123,6 +127,10 @@
           "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 294,
+            "height": 315
           }
         },
         {
@@ -139,6 +147,10 @@
           "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 293,
+            "height": 315
           }
         },
         {
@@ -155,6 +167,10 @@
           "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 290,
+            "height": 315
           }
         },
         {
@@ -290,6 +306,10 @@
           "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 884,
+            "height": 524
           }
         },
         {
@@ -306,6 +326,10 @@
           "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 294,
+            "height": 311
           }
         },
         {
@@ -322,6 +346,10 @@
           "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 293,
+            "height": 311
           }
         },
         {
@@ -338,6 +366,10 @@
           "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 290,
+            "height": 311
           }
         },
         {
@@ -589,16 +621,17 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "qa",
+    "status": "ready",
     "residuals": {
-      "text-property_details": 0.0906327149789858,
-      "text-agent_contact": 0.2693268307735819,
-      "text-asking_price": 0.08565273793208857,
-      "text-headline": 0.22731231721643502
+      "text-property_details": 0.09021725016499554,
+      "text-agent_contact": 0.009622042414741228,
+      "text-asking_price": 0.10454250380137163
     },
     "bakedTextKeys": [
       "address",
       "headline"
-    ]
+    ],
+    "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
+    "qaAt": "2026-08-07T11:03:44.127Z"
   }
 }

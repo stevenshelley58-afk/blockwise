@@ -80,8 +80,13 @@ for (const id of ids) {
       if (existsSync(rawPath)) {
         const raw = JSON.parse(readFileSync(rawPath, "utf8"));
         if (raw?.schema === "adstudio.template.v2" && raw.exactness) {
+          const liveLayerIds = new Set(
+            [...(raw.formats?.feed?.layers ?? []), ...(raw.formats?.story?.layers ?? [])].map((layer) => layer.id),
+          );
           raw.exactness.residuals = Object.fromEntries(
-            Object.entries(raw.exactness.residuals ?? {}).filter(([, value]) => typeof value === "number"),
+            Object.entries(raw.exactness.residuals ?? {}).filter(
+              ([layerId, value]) => typeof value === "number" && liveLayerIds.has(layerId),
+            ),
           );
           // Overlapping editables also make the schema throw; bake one side of
           // each pair so the doc loads and the normal repair loop takes over.
@@ -106,6 +111,7 @@ for (const id of ids) {
             );
           }
           const newlyBaked = [...baked].filter((key) => !originalBaked.has(key));
+          for (const key of newlyBaked) delete raw.exactness.residuals?.[`text-${key}`];
           raw.exactness.bakedTextKeys = [...baked];
           writeFileSync(rawPath, `${JSON.stringify(raw, null, 2)}\n`);
           doc = loadSafe(id);
@@ -120,6 +126,14 @@ for (const id of ids) {
             } catch {
               // leave as-is; the repair loop will take over
             }
+          }
+          // The restored layers need recorded residuals for the schema;
+          // recompute and persist before reloading.
+          if (doc) {
+            const refreshed = await runFidelityCheck(doc);
+            doc.exactness.residuals = refreshed.residuals;
+            writeFileSync(rawPath, `${JSON.stringify(doc, null, 2)}\n`);
+            doc = loadSafe(id);
           }
         }
       }
@@ -139,6 +153,10 @@ for (const id of ids) {
         .map(([layerId]) => layerId);
       const overlaps = overlapViolators(doc);
       if (over.length === 0 && overlaps.length === 0) {
+        // Persist the fresh residuals so stale (pre-clamp) keys never linger
+        // on disk (schema requires every residual to be a live layer id).
+        doc.exactness.residuals = recheck.residuals;
+        writeFileSync(join(gallery, id, "template.json"), `${JSON.stringify(doc, null, 2)}\n`);
         summary.skipped.push(`${id} (ready, revalidated)`);
         continue;
       }

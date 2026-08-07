@@ -23,17 +23,13 @@
     },
     "sample": {
       "imageSrc": "/adstudio-templates/meta-buyers-wanted-story-272/sample.png",
-      "contentHash": "54880161ace963f3fe1574f9213e2b84c0941b3845f822e535a4139dc1d764fd",
+      "contentHash": "66f30428599a310b0688eacbabbd860b2dcd01ec7a2e1e893e584129c4f97576",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
   },
   "restyle": {
-    "paletteMap": {
-      "#154aa2": "#1f242b",
-      "#304476": "#1f242b",
-      "#193674": "#1f242b"
-    },
+    "paletteMap": {},
     "replacedAssets": [],
     "note": "migrated from v1 (source); font remaps: source-sans-3 -> arimo; restyle pass pending in Studio"
   },
@@ -86,46 +82,9 @@
       "height": 1350,
       "plate": {
         "src": "/adstudio-templates/meta-buyers-wanted-story-272/plate-feed.webp",
-        "sha256": "3a04a6e3a5968699f910def98280f6201d690bb32a41aadfb1bd3f7c0acd0405"
+        "sha256": "3544b171abb9347c6a697219a4c57a06f5c12f6e1e5f155b01e6b8f5d9921b11"
       },
-      "layers": [
-        {
-          "id": "text-subheadline",
-          "type": "text",
-          "z": 10,
-          "inputKey": "subheadline",
-          "box": {
-            "x": 0.11018518518518519,
-            "y": 0.9022222222222223,
-            "width": 0.8037037037037037,
-            "height": 0.028148148148148148
-          },
-          "typo": {
-            "fontId": "manrope",
-            "family": "Manrope",
-            "fallbackFamily": "sans-serif",
-            "weight": 800,
-            "italic": false,
-            "case": "upper",
-            "sizeRatio": 1.2941176470588236,
-            "lineHeight": 1.366,
-            "tracking": 0,
-            "align": "center",
-            "color": "#1f242b"
-          },
-          "constraints": {
-            "maxLength": 46,
-            "maxLines": 1,
-            "autoFitMinRatio": 0.85
-          },
-          "measurement": {
-            "fitScore": 0.446,
-            "detectionScore": 1,
-            "source": "ocr-v2",
-            "version": 1
-          }
-        }
-      ]
+      "layers": []
     },
     "story": {
       "format": "9:16",
@@ -133,82 +92,9 @@
       "height": 1920,
       "plate": {
         "src": "/adstudio-templates/meta-buyers-wanted-story-272/plate-story.webp",
-        "sha256": "38a494b97b6f5b7c7b963146803522f666b590cddda221f3198a6610ca9af3c5"
+        "sha256": "007da1f3e409b70a6e0bbfe9e8e8530808d87c7151b89a6a87f43e97b2cd0d6e"
       },
-      "layers": [
-        {
-          "id": "text-subheadline",
-          "type": "text",
-          "z": 10,
-          "inputKey": "subheadline",
-          "box": {
-            "x": 0.11018518518518519,
-            "y": 0.7828125,
-            "width": 0.8037037037037037,
-            "height": 0.019791666666666666
-          },
-          "typo": {
-            "fontId": "manrope",
-            "family": "Manrope",
-            "fallbackFamily": "sans-serif",
-            "weight": 800,
-            "italic": false,
-            "case": "upper",
-            "sizeRatio": 1.2941176470588236,
-            "lineHeight": 1.366,
-            "tracking": 0,
-            "align": "center",
-            "color": "#1f242b"
-          },
-          "constraints": {
-            "maxLength": 46,
-            "maxLines": 1,
-            "autoFitMinRatio": 0.85
-          },
-          "measurement": {
-            "fitScore": 0.446,
-            "detectionScore": 1,
-            "source": "ocr-v2",
-            "version": 1
-          }
-        },
-        {
-          "id": "text-website",
-          "type": "text",
-          "z": 11,
-          "inputKey": "website",
-          "box": {
-            "x": 0.31805555555555554,
-            "y": 0.058854166666666666,
-            "width": 0.375,
-            "height": 0.01796875
-          },
-          "typo": {
-            "fontId": "quicksand",
-            "family": "Quicksand",
-            "fallbackFamily": "sans-serif",
-            "weight": 600,
-            "italic": false,
-            "case": "lower",
-            "sizeRatio": 1.3457595526561044,
-            "lineHeight": 1.25,
-            "tracking": 0,
-            "align": "center",
-            "color": "#1f242b"
-          },
-          "constraints": {
-            "maxLength": 35,
-            "maxLines": 1,
-            "autoFitMinRatio": 0.85
-          },
-          "measurement": {
-            "fitScore": 0.501,
-            "detectionScore": 1,
-            "source": "ocr-v2",
-            "version": 1
-          }
-        }
-      ],
+      "layers": [],
       "native": true
     }
   },
@@ -322,15 +208,13 @@
   },
   "exactness": {
     "status": "qa",
-    "residuals": {
-      "text-subheadline": 0.25212031985130834,
-      "text-website": 0.11824397527173232,
-      "text-cta": 0.27114175459127277
-    },
+    "residuals": {},
     "bakedTextKeys": [
       "body",
       "headline",
-      "cta"
+      "cta",
+      "subheadline",
+      "website"
     ]
   }
 }

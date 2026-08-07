@@ -25,17 +25,14 @@
     },
     "sample": {
       "imageSrc": "/adstudio-templates/meta-feed-151/sample.png",
-      "contentHash": "7ee4751151ef307e9e90a60fd8f93ddece9ed75467e7e7b3d5eec6e8698f6388",
+      "contentHash": "377592fe036f48ffb6179610583d5dc0620a9585199308526f63b1ef724d0d4d",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
   },
   "restyle": {
     "paletteMap": {
-      "#5d5a58": "#1f242b",
-      "#5d5c5b": "#1f242b",
-      "#565556": "#1f242b",
-      "#545455": "#1f242b"
+      "#1f242b": "#1f242b"
     },
     "replacedAssets": [
       "main_exterior",
@@ -127,100 +124,120 @@
       "height": 1350,
       "plate": {
         "src": "/adstudio-templates/meta-feed-151/plate-feed.webp",
-        "sha256": "99092e4c95fb4e84465e5495e24ada948bb1da9751ae7224e7e75c61c64f0a94"
+        "sha256": "0c14ad7cf05e4b5559f0e219e0df275432e880d3f5a7ee51aa5a4cd4e4021d43"
       },
       "layers": [
         {
           "id": "slot-main_exterior",
-          "type": "image_slot",
           "z": 2,
-          "inputKey": "main_exterior",
-          "fit": "cover",
           "box": {
             "x": 0,
             "y": 0.2451851851851852,
             "width": 0.6388888888888888,
             "height": 0.45555555555555555
           },
+          "type": "image_slot",
+          "inputKey": "main_exterior",
+          "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 690,
+            "height": 615
           }
         },
         {
           "id": "slot-interior_1",
-          "type": "image_slot",
           "z": 3,
-          "inputKey": "interior_1",
-          "fit": "cover",
           "box": {
             "x": 0.6546296296296297,
             "y": 0.22444444444444445,
             "width": 0.24351851851851852,
             "height": 0.17037037037037037
           },
+          "type": "image_slot",
+          "inputKey": "interior_1",
+          "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 263,
+            "height": 230
           }
         },
         {
           "id": "slot-interior_2",
-          "type": "image_slot",
           "z": 4,
-          "inputKey": "interior_2",
-          "fit": "cover",
           "box": {
             "x": 0.6546296296296297,
             "y": 0.4022222222222222,
             "width": 0.24351851851851852,
             "height": 0.16074074074074074
           },
+          "type": "image_slot",
+          "inputKey": "interior_2",
+          "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 263,
+            "height": 217
           }
         },
         {
           "id": "slot-interior_3",
-          "type": "image_slot",
           "z": 5,
-          "inputKey": "interior_3",
-          "fit": "cover",
           "box": {
             "x": 0.6546296296296297,
             "y": 0.5718518518518518,
             "width": 0.24351851851851852,
             "height": 0.16592592592592592
           },
+          "type": "image_slot",
+          "inputKey": "interior_3",
+          "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 263,
+            "height": 224
           }
         },
         {
           "id": "slot-agent_photo",
-          "type": "image_slot",
           "z": 6,
-          "inputKey": "agent_photo",
-          "fit": "cover",
           "box": {
             "x": 0.7055555555555556,
             "y": 0.7651851851851852,
             "width": 0.1824074074074074,
             "height": 0.15925925925925927
           },
+          "type": "image_slot",
+          "inputKey": "agent_photo",
+          "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 197,
+            "height": 215
           }
         },
         {
           "id": "text-agent_website",
-          "type": "text",
           "z": 10,
-          "inputKey": "agent_website",
           "box": {
             "x": 0.51416015625,
             "y": 0.95078125,
             "width": 0.205078125,
             "height": 0.01328125
           },
+          "type": "text",
+          "inputKey": "agent_website",
           "typo": {
             "fontId": "quicksand",
             "family": "Quicksand",
@@ -247,52 +264,16 @@
           }
         },
         {
-          "id": "text-features",
-          "type": "text",
-          "z": 11,
-          "inputKey": "features",
-          "box": {
-            "x": 0.23828125,
-            "y": 0.9078125,
-            "width": 0.1708984375,
-            "height": 0.0109375
-          },
-          "typo": {
-            "fontId": "manrope",
-            "family": "Manrope",
-            "fallbackFamily": "sans-serif",
-            "weight": 800,
-            "italic": false,
-            "case": "mixed",
-            "sizeRatio": 1.1911764705882353,
-            "lineHeight": 1.366,
-            "tracking": 0,
-            "align": "left",
-            "color": "#1f242b"
-          },
-          "constraints": {
-            "maxLength": 50,
-            "maxLines": 2,
-            "autoFitMinRatio": 0.85
-          },
-          "measurement": {
-            "fitScore": 0.711,
-            "detectionScore": 0.55,
-            "source": "ocr-v2",
-            "version": 1
-          }
-        },
-        {
           "id": "text-bathrooms",
-          "type": "text",
           "z": 12,
-          "inputKey": "bathrooms",
           "box": {
             "x": 0.2236328125,
             "y": 0.811328125,
             "width": 0.0625,
             "height": 0.0109375
           },
+          "type": "text",
+          "inputKey": "bathrooms",
           "typo": {
             "fontId": "playfair-display",
             "family": "Playfair Display",
@@ -320,15 +301,15 @@
         },
         {
           "id": "text-bedrooms",
-          "type": "text",
           "z": 13,
-          "inputKey": "bedrooms",
           "box": {
             "x": 0.1015625,
             "y": 0.811328125,
             "width": 0.056640625,
             "height": 0.0109375
           },
+          "type": "text",
+          "inputKey": "bedrooms",
           "typo": {
             "fontId": "playfair-display",
             "family": "Playfair Display",
@@ -350,42 +331,6 @@
           "measurement": {
             "fitScore": 0.44,
             "detectionScore": 1,
-            "source": "ocr-v2",
-            "version": 1
-          }
-        },
-        {
-          "id": "text-listing_price",
-          "type": "text",
-          "z": 14,
-          "inputKey": "listing_price",
-          "box": {
-            "x": 0.1,
-            "y": 0.5,
-            "width": 0.8,
-            "height": 0.06
-          },
-          "typo": {
-            "fontId": "manrope",
-            "family": "Manrope",
-            "fallbackFamily": "sans-serif",
-            "weight": 400,
-            "italic": false,
-            "case": "mixed",
-            "sizeRatio": 0.7,
-            "lineHeight": 1.2,
-            "tracking": 0,
-            "align": "left",
-            "color": "#1f242b"
-          },
-          "constraints": {
-            "maxLength": 20,
-            "maxLines": 1,
-            "autoFitMinRatio": 0.85
-          },
-          "measurement": {
-            "fitScore": 0.35,
-            "detectionScore": 0.55,
             "source": "ocr-v2",
             "version": 1
           }
@@ -398,100 +343,120 @@
       "height": 1920,
       "plate": {
         "src": "/adstudio-templates/meta-feed-151/plate-story.webp",
-        "sha256": "a1ed21e50c8be4c38c158263931ec6cd180483715c37b09c3f52e6cbabfd211d"
+        "sha256": "0f94f7c2bfe9590a1c2bb9079b553cb9dd9b1c3458215456f3b2f4ee5f53aac1"
       },
       "layers": [
         {
           "id": "slot-main_exterior",
-          "type": "image_slot",
           "z": 2,
-          "inputKey": "main_exterior",
-          "fit": "cover",
           "box": {
             "x": 0,
             "y": 0.3000501543209877,
             "width": 0.6388888888888888,
             "height": 0.3155671296296296
           },
+          "type": "image_slot",
+          "inputKey": "main_exterior",
+          "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 690,
+            "height": 606
           }
         },
         {
           "id": "slot-interior_1",
-          "type": "image_slot",
           "z": 3,
-          "inputKey": "interior_1",
-          "fit": "cover",
           "box": {
             "x": 0.6546296296296297,
             "y": 0.2856828703703703,
             "width": 0.24351851851851852,
             "height": 0.11801697530864196
           },
+          "type": "image_slot",
+          "inputKey": "interior_1",
+          "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 263,
+            "height": 227
           }
         },
         {
           "id": "slot-interior_2",
-          "type": "image_slot",
           "z": 4,
-          "inputKey": "interior_2",
-          "fit": "cover",
           "box": {
             "x": 0.6546296296296297,
             "y": 0.40883101851851844,
             "width": 0.24351851851851852,
             "height": 0.11134645061728393
           },
+          "type": "image_slot",
+          "inputKey": "interior_2",
+          "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 263,
+            "height": 214
           }
         },
         {
           "id": "slot-interior_3",
-          "type": "image_slot",
           "z": 5,
-          "inputKey": "interior_3",
-          "fit": "cover",
           "box": {
             "x": 0.6546296296296297,
             "y": 0.5263348765432099,
             "width": 0.24351851851851852,
             "height": 0.11493827160493826
           },
+          "type": "image_slot",
+          "inputKey": "interior_3",
+          "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 263,
+            "height": 221
           }
         },
         {
           "id": "slot-agent_photo",
-          "type": "image_slot",
           "z": 6,
-          "inputKey": "agent_photo",
-          "fit": "cover",
           "box": {
             "x": 0.7055555555555556,
             "y": 0.6602584876543209,
             "width": 0.1824074074074074,
             "height": 0.1103202160493827
           },
+          "type": "image_slot",
+          "inputKey": "agent_photo",
+          "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 197,
+            "height": 212
           }
         },
         {
           "id": "text-agent_website",
-          "type": "text",
           "z": 10,
-          "inputKey": "agent_website",
           "box": {
             "x": 0.51416015625,
             "y": 0.7888224283854166,
             "width": 0.205078125,
             "height": 0.009200032552083333
           },
+          "type": "text",
+          "inputKey": "agent_website",
           "typo": {
             "fontId": "quicksand",
             "family": "Quicksand",
@@ -518,52 +483,16 @@
           }
         },
         {
-          "id": "text-features",
-          "type": "text",
-          "z": 11,
-          "inputKey": "features",
-          "box": {
-            "x": 0.23828125,
-            "y": 0.7590576171875,
-            "width": 0.1708984375,
-            "height": 0.007576497395833332
-          },
-          "typo": {
-            "fontId": "manrope",
-            "family": "Manrope",
-            "fallbackFamily": "sans-serif",
-            "weight": 800,
-            "italic": false,
-            "case": "mixed",
-            "sizeRatio": 1.1911764705882353,
-            "lineHeight": 1.366,
-            "tracking": 0,
-            "align": "left",
-            "color": "#1f242b"
-          },
-          "constraints": {
-            "maxLength": 50,
-            "maxLines": 2,
-            "autoFitMinRatio": 0.85
-          },
-          "measurement": {
-            "fitScore": 0.711,
-            "detectionScore": 0.55,
-            "source": "ocr-v2",
-            "version": 1
-          }
-        },
-        {
           "id": "text-bathrooms",
-          "type": "text",
           "z": 12,
-          "inputKey": "bathrooms",
           "box": {
             "x": 0.2236328125,
             "y": 0.6922220865885416,
             "width": 0.0625,
             "height": 0.007576497395833332
           },
+          "type": "text",
+          "inputKey": "bathrooms",
           "typo": {
             "fontId": "playfair-display",
             "family": "Playfair Display",
@@ -591,15 +520,15 @@
         },
         {
           "id": "text-bedrooms",
-          "type": "text",
           "z": 13,
-          "inputKey": "bedrooms",
           "box": {
             "x": 0.1015625,
             "y": 0.6922220865885416,
             "width": 0.056640625,
             "height": 0.007576497395833332
           },
+          "type": "text",
+          "inputKey": "bedrooms",
           "typo": {
             "fontId": "playfair-display",
             "family": "Playfair Display",
@@ -621,42 +550,6 @@
           "measurement": {
             "fitScore": 0.44,
             "detectionScore": 1,
-            "source": "ocr-v2",
-            "version": 1
-          }
-        },
-        {
-          "id": "text-listing_price",
-          "type": "text",
-          "z": 14,
-          "inputKey": "listing_price",
-          "box": {
-            "x": 0.1,
-            "y": 0.4765625,
-            "width": 0.8,
-            "height": 0.041562499999999995
-          },
-          "typo": {
-            "fontId": "manrope",
-            "family": "Manrope",
-            "fallbackFamily": "sans-serif",
-            "weight": 400,
-            "italic": false,
-            "case": "mixed",
-            "sizeRatio": 0.7,
-            "lineHeight": 1.2,
-            "tracking": 0,
-            "align": "left",
-            "color": "#1f242b"
-          },
-          "constraints": {
-            "maxLength": 20,
-            "maxLines": 1,
-            "autoFitMinRatio": 0.85
-          },
-          "measurement": {
-            "fitScore": 0.35,
-            "detectionScore": 0.55,
             "source": "ocr-v2",
             "version": 1
           }
@@ -851,14 +744,11 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "qa",
+    "status": "ready",
     "residuals": {
-      "text-agent_website": 0.10211521566166863,
-      "text-features": 0.14119755509427281,
+      "text-agent_website": 0.07897189792356855,
       "text-bathrooms": 0,
-      "text-bedrooms": 0.006049340358162807,
-      "text-listing_price": 0.2978740065450391,
-      "text-agent_phone": 0.09397698543506804
+      "text-bedrooms": 0
     },
     "bakedTextKeys": [
       "open_house_date",
@@ -866,7 +756,11 @@
       "brand_name",
       "agent_name",
       "area",
-      "agent_phone"
-    ]
+      "agent_phone",
+      "features",
+      "listing_price"
+    ],
+    "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
+    "qaAt": "2026-08-07T11:03:51.888Z"
   }
 }

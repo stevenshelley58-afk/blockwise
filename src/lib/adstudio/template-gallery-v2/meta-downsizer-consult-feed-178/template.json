@@ -95,47 +95,55 @@
       "layers": [
         {
           "id": "slot-background_photo",
-          "type": "image_slot",
           "z": 2,
-          "inputKey": "background_photo",
-          "fit": "cover",
           "box": {
             "x": 0,
             "y": 0,
             "width": 1,
             "height": 1
           },
+          "type": "image_slot",
+          "inputKey": "background_photo",
+          "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 1080,
+            "height": 1350
           }
         },
         {
           "id": "slot-agency_logo",
-          "type": "image_slot",
           "z": 3,
-          "inputKey": "agency_logo",
-          "fit": "cover",
           "box": {
             "x": 0.7888888888888889,
             "y": 0.84,
             "width": 0.14166666666666666,
             "height": 0.11481481481481481
           },
+          "type": "image_slot",
+          "inputKey": "agency_logo",
+          "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 153,
+            "height": 155
           }
         },
         {
           "id": "text-subheadline",
-          "type": "text",
           "z": 10,
-          "inputKey": "subheadline",
           "box": {
             "x": 0.09027777777777778,
             "y": 0.7933333333333333,
             "width": 0.6893518518518519,
             "height": 0.018518518518518517
           },
+          "type": "text",
+          "inputKey": "subheadline",
           "typo": {
             "fontId": "smooch-sans",
             "family": "Smooch Sans",
@@ -163,15 +171,15 @@
         },
         {
           "id": "text-benefit_3",
-          "type": "text",
           "z": 11,
-          "inputKey": "benefit_3",
           "box": {
             "x": 0.6680555555555555,
             "y": 0.07296296296296297,
             "width": 0.25833333333333336,
             "height": 0.014444444444444444
           },
+          "type": "text",
+          "inputKey": "benefit_3",
           "typo": {
             "fontId": "merriweather",
             "family": "Merriweather",
@@ -199,15 +207,15 @@
         },
         {
           "id": "text-benefit_2",
-          "type": "text",
           "z": 12,
-          "inputKey": "benefit_2",
           "box": {
             "x": 0.40185185185185185,
             "y": 0.07296296296296297,
             "width": 0.1550925925925926,
             "height": 0.014444444444444444
           },
+          "type": "text",
+          "inputKey": "benefit_2",
           "typo": {
             "fontId": "merriweather",
             "family": "Merriweather",
@@ -246,47 +254,55 @@
       "layers": [
         {
           "id": "slot-background_photo",
-          "type": "image_slot",
           "z": 2,
-          "inputKey": "background_photo",
-          "fit": "cover",
           "box": {
             "x": 0,
             "y": 0.13020833333333334,
             "width": 1,
             "height": 0.6927083333333333
           },
+          "type": "image_slot",
+          "inputKey": "background_photo",
+          "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 1080,
+            "height": 1330
           }
         },
         {
           "id": "slot-agency_logo",
-          "type": "image_slot",
           "z": 3,
-          "inputKey": "agency_logo",
-          "fit": "cover",
           "box": {
             "x": 0.7888888888888889,
             "y": 0.7120833333333333,
             "width": 0.14166666666666666,
             "height": 0.07953317901234568
           },
+          "type": "image_slot",
+          "inputKey": "agency_logo",
+          "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 153,
+            "height": 153
           }
         },
         {
           "id": "text-subheadline",
-          "type": "text",
           "z": 10,
-          "inputKey": "subheadline",
           "box": {
             "x": 0.09027777777777778,
             "y": 0.6797569444444445,
             "width": 0.6893518518518519,
             "height": 0.01282793209876543
           },
+          "type": "text",
+          "inputKey": "subheadline",
           "typo": {
             "fontId": "smooch-sans",
             "family": "Smooch Sans",
@@ -314,15 +330,15 @@
         },
         {
           "id": "text-benefit_3",
-          "type": "text",
           "z": 11,
-          "inputKey": "benefit_3",
           "box": {
             "x": 0.6680555555555555,
             "y": 0.18075038580246913,
             "width": 0.25833333333333336,
             "height": 0.010005787037037035
           },
+          "type": "text",
+          "inputKey": "benefit_3",
           "typo": {
             "fontId": "merriweather",
             "family": "Merriweather",
@@ -350,15 +366,15 @@
         },
         {
           "id": "text-benefit_2",
-          "type": "text",
           "z": 12,
-          "inputKey": "benefit_2",
           "box": {
             "x": 0.40185185185185185,
             "y": 0.18075038580246913,
             "width": 0.1550925925925926,
             "height": 0.010005787037037035
           },
+          "type": "text",
+          "inputKey": "benefit_2",
           "typo": {
             "fontId": "merriweather",
             "family": "Merriweather",
@@ -525,18 +541,19 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "qa",
+    "status": "ready",
     "residuals": {
-      "text-subheadline": 0.06924899317569748,
-      "text-benefit_3": 0.09635350069836075,
-      "text-benefit_2": 0.11747701041943405,
-      "text-cta": 0.06947324691450839
+      "text-subheadline": 0.05996816162465266,
+      "text-benefit_3": 0.035674831387706024,
+      "text-benefit_2": 0.06308935598315389
     },
     "bakedTextKeys": [
       "body",
       "headline",
       "benefit_1",
       "cta"
-    ]
+    ],
+    "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
+    "qaAt": "2026-08-07T11:03:33.709Z"
   }
 }

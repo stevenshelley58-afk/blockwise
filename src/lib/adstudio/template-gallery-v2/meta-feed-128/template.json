@@ -25,7 +25,7 @@
     },
     "sample": {
       "imageSrc": "/adstudio-templates/meta-feed-128/sample.png",
-      "contentHash": "e8eba79c4390ac0b1cdfd35ea758142627c9a2ad31f025e660ca09ab23d4bd7c",
+      "contentHash": "762826211bc1a69bad62716ddc784b5d9e5b3a3eb4d25263b5cea0b8f236d9e2",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
@@ -81,7 +81,7 @@
       "height": 1350,
       "plate": {
         "src": "/adstudio-templates/meta-feed-128/plate-feed.webp",
-        "sha256": "8b3917f5b8e40cfc485d2904fcf657b0bbb5ba470d8e06e9a82c64c60cc8f48a"
+        "sha256": "53d5c36d56d717c80c817e087bc46ac190cd0564d1baec2ac34695a41bc553d3"
       },
       "layers": [
         {
@@ -98,6 +98,10 @@
           "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 1042,
+            "height": 639
           }
         },
         {
@@ -114,42 +118,10 @@
           "fit": "cover",
           "mask": {
             "kind": "rect"
-          }
-        },
-        {
-          "id": "text-contact_email",
-          "z": 11,
-          "box": {
-            "x": 0.1103515625,
-            "y": 0.894921875,
-            "width": 0.3125,
-            "height": 0.01875
           },
-          "type": "text",
-          "inputKey": "contact_email",
-          "typo": {
-            "fontId": "plus-jakarta-sans",
-            "family": "Plus Jakarta Sans",
-            "fallbackFamily": "sans-serif",
-            "weight": 600,
-            "italic": false,
-            "case": "lower",
-            "sizeRatio": 1.0012771392081736,
-            "lineHeight": 1.26,
-            "tracking": 0,
-            "align": "left",
-            "color": "#1f242b"
-          },
-          "constraints": {
-            "maxLength": 40,
-            "maxLines": 1,
-            "autoFitMinRatio": 0.85
-          },
-          "measurement": {
-            "fitScore": 0.577,
-            "detectionScore": 1,
-            "source": "ocr-v2",
-            "version": 1
+          "minSourcePx": {
+            "width": 234,
+            "height": 234
           }
         },
         {
@@ -196,7 +168,7 @@
       "height": 1920,
       "plate": {
         "src": "/adstudio-templates/meta-feed-128/plate-story.webp",
-        "sha256": "87e8da29dcb24e722eeaf01e1c985a6ce4c403b8d4eeadf3e875754fa8ac53b0"
+        "sha256": "566646ec4606d8ef4fe9eb1ae1a4e81c60a717e90cfd2f8abade221c4e4a6421"
       },
       "layers": [
         {
@@ -213,6 +185,10 @@
           "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 1042,
+            "height": 630
           }
         },
         {
@@ -229,42 +205,10 @@
           "fit": "cover",
           "mask": {
             "kind": "rect"
-          }
-        },
-        {
-          "id": "text-contact_email",
-          "z": 11,
-          "box": {
-            "x": 0.1103515625,
-            "y": 0.7501281738281249,
-            "width": 0.3125,
-            "height": 0.012988281249999999
           },
-          "type": "text",
-          "inputKey": "contact_email",
-          "typo": {
-            "fontId": "plus-jakarta-sans",
-            "family": "Plus Jakarta Sans",
-            "fallbackFamily": "sans-serif",
-            "weight": 600,
-            "italic": false,
-            "case": "lower",
-            "sizeRatio": 1.0012771392081736,
-            "lineHeight": 1.26,
-            "tracking": 0,
-            "align": "left",
-            "color": "#1f242b"
-          },
-          "constraints": {
-            "maxLength": 40,
-            "maxLines": 1,
-            "autoFitMinRatio": 0.85
-          },
-          "measurement": {
-            "fitScore": 0.577,
-            "detectionScore": 1,
-            "source": "ocr-v2",
-            "version": 1
+          "minSourcePx": {
+            "width": 234,
+            "height": 231
           }
         },
         {
@@ -423,15 +367,16 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "qa",
+    "status": "ready",
     "residuals": {
-      "text-property_address": 0.11989797222318646,
-      "text-contact_email": 0.0843414038963482,
-      "text-contact_phone": 0.04879914910835874
+      "text-contact_phone": 0.09188479609284698
     },
     "bakedTextKeys": [
       "main_message",
-      "property_address"
-    ]
+      "property_address",
+      "contact_email"
+    ],
+    "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
+    "qaAt": "2026-08-07T11:03:42.636Z"
   }
 }

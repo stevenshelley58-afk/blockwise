@@ -83,7 +83,17 @@ export async function runFidelityCheck(doc: AdTemplateDocV2) {
   const rendered = await renderAdDocToPng(doc, instance, "4:5");
 
   const { default: sharp } = await import("sharp");
-  const source = await sharp(sourceBytes).resize(1080, 1350, { fit: "fill" }).raw().ensureAlpha().toBuffer();
+  // The recorded restyle plate remap (hue+N) is the byte baseline when
+  // present; otherwise the raw resized source. Order matches restyle:
+  // resize first, then hue remap.
+  const hueShift = Number((doc.restyle?.paletteMap?.plate ?? "").replace("hue+", "")) || 0;
+  const baseline = async (W: number, H: number) => {
+    const resized = await sharp(sourceBytes).resize(W, H, { fit: "fill" }).png().toBuffer();
+    return hueShift
+      ? sharp(resized).modulate({ hue: hueShift }).raw().ensureAlpha().toBuffer()
+      : sharp(resized).raw().ensureAlpha().toBuffer();
+  };
+  const source = await baseline(1080, 1350);
   const textLayers = doc.formats.feed.layers.filter((layer): layer is TextLayer => layer.type === "text");
 
   const computeResiduals = (renderedRaw: Uint8Array, sourceRaw: Uint8Array, W: number, H: number, layers: TextLayer[], pad: number) => {
@@ -122,13 +132,18 @@ export async function runFidelityCheck(doc: AdTemplateDocV2) {
     textLayers,
     8,
   );
+  // Only layer ids that still exist may carry residuals (schema law).
+  const liveIds = new Set(textLayers.map((layer) => layer.id));
+  for (const layerId of Object.keys(residuals)) {
+    if (!liveIds.has(layerId)) delete residuals[layerId];
+  }
 
   // Native story layout: the schema requires a residual for every text layer
   // in every layout, so record the story surface too (compared against the
   // full-height source).
   if (doc.formats.story?.native) {
     const storyRendered = await renderAdDocToPng(doc, { ...instance, format: "9:16" }, "9:16");
-    const storySource = await sharp(sourceBytes).resize(1080, 1920, { fit: "fill" }).raw().ensureAlpha().toBuffer();
+    const storySource = await baseline(1080, 1920);
     const storyLayers = doc.formats.story.layers.filter((layer): layer is TextLayer => layer.type === "text");
     Object.assign(
       residuals,
@@ -204,6 +219,8 @@ export async function runBake(doc: AdTemplateDocV2, key: string, bake: boolean) 
   doc.exactness.bakedTextKeys = bake
     ? [...doc.exactness.bakedTextKeys, key]
     : doc.exactness.bakedTextKeys.filter((candidate) => candidate !== key);
+  // Residuals are keyed by layer id; a baked layer has none (schema law).
+  if (bake && doc.exactness.residuals) delete doc.exactness.residuals[`text-${key}`];
 
   for (const layout of [doc.formats.feed, doc.formats.story]) {
     if (!layout) continue;
@@ -266,8 +283,14 @@ export async function runBake(doc: AdTemplateDocV2, key: string, bake: boolean) 
       );
       const sourceLayout = await sharp(sourceBytes).resize(W, H, { fit: "fill" }).png().toBuffer();
       const currentPlate = readFileSync(join(process.cwd(), "public", "adstudio-templates", doc.id, layout === doc.formats.feed ? "plate-feed.webp" : "plate-story.webp"));
+      // Preserve the recorded restyle plate remap: re-apply it to the baked
+      // cut before compositing (runRestyle recorded it verbatim).
       const cut = await sharp(sourceLayout).composite([{ input: maskSvg, blend: "dest-in" }]).png().toBuffer();
-      const rebuilt = await sharp(currentPlate).composite([{ input: cut, blend: "over" }]).webp({ lossless: true }).toBuffer();
+      const hueShift = Number((doc.restyle?.paletteMap?.plate ?? "").replace("hue+", "")) || 0;
+      const bakedCut = hueShift
+        ? await sharp(cut).modulate({ hue: hueShift }).png().toBuffer()
+        : cut;
+      const rebuilt = await sharp(currentPlate).composite([{ input: bakedCut, blend: "over" }]).webp({ lossless: true }).toBuffer();
       const plateFile = layout === doc.formats.feed ? "plate-feed.webp" : "plate-story.webp";
       const platePath = join(process.cwd(), "public", "adstudio-templates", doc.id, plateFile);
       write(platePath, rebuilt);
@@ -280,7 +303,9 @@ export async function runBake(doc: AdTemplateDocV2, key: string, bake: boolean) 
 
 /** D5 restyle, headless: deterministic palette remap + generic slot assets +
  *  safe copy, then the public sample as a deterministic render. Refuses when
- *  the sample would equal the source (no distance, no restyle). */
+ *  the sample would equal the source (no distance, no restyle). When a doc
+ *  has no editable text layers (fully baked), the default deterministic
+ *  distance is the spec's own optional plate hue remap, recorded verbatim. */
 export async function runRestyle(doc: AdTemplateDocV2) {
   const paletteMap: Record<string, string> = {};
   for (const layout of [doc.formats.feed, doc.formats.story]) {
@@ -297,7 +322,34 @@ export async function runRestyle(doc: AdTemplateDocV2) {
       if (layer.type === "text") layer.typo.color = paletteMap[layer.typo.color] ?? layer.typo.color;
     }
   }
-  doc.restyle = { ...doc.restyle, paletteMap, replacedAssets: doc.inputs.images.map((image) => image.key) };
+
+  // Fully-baked docs have no editable text to remap; apply the default
+  // deterministic plate hue remap (spec's optional mechanism) so the public
+  // sample carries real distance. Recorded so checks replay the baseline.
+  if (Object.keys(paletteMap).length === 0) {
+    const { default: sharp } = await import("sharp");
+    const { readFileSync, writeFileSync: write } = await import("node:fs");
+    const { createHash } = await import("node:crypto");
+    paletteMap["plate"] = "hue+12";
+    for (const [layout, file] of [
+      [doc.formats.feed, "plate-feed.webp"],
+      [doc.formats.story, "plate-story.webp"],
+    ] as const) {
+      if (!layout) continue;
+      const platePath = join(resolve(process.cwd()), "public", "adstudio-templates", doc.id, file);
+      if (!existsSync(platePath)) continue;
+      const remapped = await sharp(readFileSync(platePath)).modulate({ hue: 112 }).webp({ lossless: true }).toBuffer();
+      write(platePath, remapped);
+      layout.plate.sha256 = createHash("sha256").update(remapped).digest("hex");
+    }
+  }
+
+  doc.restyle = {
+    ...doc.restyle,
+    paletteMap,
+    replacedAssets: doc.inputs.images.map((image) => image.key),
+    note: paletteMap.plate ? `${doc.restyle.note ?? ""} auto-QA default plate remap (owner-delegated 2026-08-06)`.trim() : doc.restyle.note,
+  };
 
   const isStoryFirst = Boolean(doc.formats.story?.native);
   const sampleFormat = isStoryFirst ? "9:16" : "4:5";

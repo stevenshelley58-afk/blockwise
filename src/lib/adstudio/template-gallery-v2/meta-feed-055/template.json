@@ -25,16 +25,14 @@
     },
     "sample": {
       "imageSrc": "/adstudio-templates/meta-feed-055/sample.png",
-      "contentHash": "9d4a7ed38c86829739f2a228037f6139d60cd9739ce0bd9b55638a5d17cf35c8",
+      "contentHash": "c7727681d3b4be387c3475ced99ec82666eef9c50e32ca7ae53ca44e6e449444",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
   },
   "restyle": {
     "paletteMap": {
-      "#625c52": "#1f242b",
-      "#5d584d": "#1f242b",
-      "#4e483c": "#1f242b"
+      "#1f242b": "#1f242b"
     },
     "replacedAssets": [],
     "note": "migrated from v1 (source); restyle pass pending in Studio"
@@ -96,20 +94,20 @@
       "height": 1350,
       "plate": {
         "src": "/adstudio-templates/meta-feed-055/plate-feed.webp",
-        "sha256": "3520b3bc166ba52bc48e93f075ac5a34030c3dd069068c9b3a1d7f442926e2f0"
+        "sha256": "d70ab4d89dc12e59a77c2975d9e27ff3893f81333260f093d011ccecfe2bc132"
       },
       "layers": [
         {
           "id": "text-agent_email",
-          "type": "text",
           "z": 10,
-          "inputKey": "agent_email",
           "box": {
             "x": 0.6357421875,
             "y": 0.90625,
             "width": 0.271484375,
             "height": 0.018359375
           },
+          "type": "text",
+          "inputKey": "agent_email",
           "typo": {
             "fontId": "merriweather",
             "family": "Merriweather",
@@ -130,42 +128,6 @@
           },
           "measurement": {
             "fitScore": 0.628,
-            "detectionScore": 1,
-            "source": "ocr-v2",
-            "version": 1
-          }
-        },
-        {
-          "id": "text-agent_name",
-          "type": "text",
-          "z": 11,
-          "inputKey": "agent_name",
-          "box": {
-            "x": 0.7470703125,
-            "y": 0.85859375,
-            "width": 0.1611328125,
-            "height": 0.01328125
-          },
-          "typo": {
-            "fontId": "merriweather",
-            "family": "Merriweather",
-            "fallbackFamily": "serif",
-            "weight": 800,
-            "italic": false,
-            "case": "upper",
-            "sizeRatio": 1.3125,
-            "lineHeight": 1.257,
-            "tracking": 0,
-            "align": "left",
-            "color": "#1f242b"
-          },
-          "constraints": {
-            "maxLength": 30,
-            "maxLines": 1,
-            "autoFitMinRatio": 0.85
-          },
-          "measurement": {
-            "fitScore": 0.407,
             "detectionScore": 1,
             "source": "ocr-v2",
             "version": 1
@@ -179,20 +141,20 @@
       "height": 1920,
       "plate": {
         "src": "/adstudio-templates/meta-feed-055/plate-story.webp",
-        "sha256": "222e0d1d5c3911554ac9f6724767509be23b94adc4f1a1e1f59a1ccdf73768c5"
+        "sha256": "bbd10640dcea77bd9afec65762ac0856904d4327cc05c3dffea10cdc747b5459"
       },
       "layers": [
         {
           "id": "text-agent_email",
-          "type": "text",
           "z": 10,
-          "inputKey": "agent_email",
           "box": {
             "x": 0.6357421875,
             "y": 0.7579752604166666,
             "width": 0.271484375,
             "height": 0.012717692057291665
           },
+          "type": "text",
+          "inputKey": "agent_email",
           "typo": {
             "fontId": "merriweather",
             "family": "Merriweather",
@@ -213,42 +175,6 @@
           },
           "measurement": {
             "fitScore": 0.628,
-            "detectionScore": 1,
-            "source": "ocr-v2",
-            "version": 1
-          }
-        },
-        {
-          "id": "text-agent_name",
-          "type": "text",
-          "z": 11,
-          "inputKey": "agent_name",
-          "box": {
-            "x": 0.7470703125,
-            "y": 0.72496337890625,
-            "width": 0.1611328125,
-            "height": 0.009200032552083333
-          },
-          "typo": {
-            "fontId": "merriweather",
-            "family": "Merriweather",
-            "fallbackFamily": "serif",
-            "weight": 800,
-            "italic": false,
-            "case": "upper",
-            "sizeRatio": 1.3125,
-            "lineHeight": 1.257,
-            "tracking": 0,
-            "align": "left",
-            "color": "#1f242b"
-          },
-          "constraints": {
-            "maxLength": 30,
-            "maxLines": 1,
-            "autoFitMinRatio": 0.85
-          },
-          "measurement": {
-            "fitScore": 0.407,
             "detectionScore": 1,
             "source": "ocr-v2",
             "version": 1
@@ -373,17 +299,18 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "qa",
+    "status": "ready",
     "residuals": {
-      "text-agent_email": 0.10581456275013557,
-      "text-agent_name": 0.1440812374814528,
-      "text-agent_phone": 0.08658435493369017
+      "text-agent_email": 0.06959895479452333
     },
     "bakedTextKeys": [
       "subheadline",
       "contact_label",
       "headline",
-      "agent_phone"
-    ]
+      "agent_phone",
+      "agent_name"
+    ],
+    "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
+    "qaAt": "2026-08-07T11:03:37.887Z"
   }
 }

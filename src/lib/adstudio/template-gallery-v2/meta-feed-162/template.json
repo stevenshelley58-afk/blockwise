@@ -78,15 +78,15 @@
       "layers": [
         {
           "id": "text-property_name",
-          "type": "text",
           "z": 10,
-          "inputKey": "property_name",
           "box": {
             "x": 0.16455078125,
             "y": 0.11328125,
             "width": 0.6767578125,
             "height": 0.013671875
           },
+          "type": "text",
+          "inputKey": "property_name",
           "typo": {
             "fontId": "kanit",
             "family": "Kanit",
@@ -125,15 +125,15 @@
       "layers": [
         {
           "id": "text-property_name",
-          "type": "text",
           "z": 10,
-          "inputKey": "property_name",
           "box": {
             "x": 0.16455078125,
             "y": 0.20867919921875,
             "width": 0.6767578125,
             "height": 0.009470621744791666
           },
+          "type": "text",
+          "inputKey": "property_name",
           "typo": {
             "fontId": "kanit",
             "family": "Kanit",
@@ -264,15 +264,16 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "qa",
+    "status": "ready",
     "residuals": {
-      "text-property_name": 0.10833370050306701,
-      "text-price_per_night": 0.12721452365815245
+      "text-property_name": 0.11113745613052661
     },
     "bakedTextKeys": [
       "features",
       "main_cta",
       "price_per_night"
-    ]
+    ],
+    "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
+    "qaAt": "2026-08-07T11:03:58.539Z"
   }
 }
