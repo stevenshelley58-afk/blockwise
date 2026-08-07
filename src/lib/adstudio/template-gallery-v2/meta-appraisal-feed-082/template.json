@@ -23,7 +23,7 @@
     },
     "sample": {
       "imageSrc": "/adstudio-templates/meta-appraisal-feed-082/sample.png",
-      "contentHash": "62f64ce76443ede0fc79267254a96acf0032ab88c20c787c17f5cbfa592eda50",
+      "contentHash": "3d4522d4d29dbb556482a05cefe549c2598cb364a37742c0fd6ca06960f5f949",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"

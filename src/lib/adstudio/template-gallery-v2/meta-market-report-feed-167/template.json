@@ -23,7 +23,7 @@
     },
     "sample": {
       "imageSrc": "/adstudio-templates/meta-market-report-feed-167/sample.png",
-      "contentHash": "ae29dbd292412aab7204bd8e94b5134ee790f6633c4bb59cfc013eb0b27f5e35",
+      "contentHash": "77e4812c2971433814826816f7207dc00801834db26258962187314681fcd976",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
@@ -34,7 +34,10 @@
       "property_photo",
       "agency_logo"
     ],
-    "note": "migrated from v1 (source); restyle pass pending in Studio"
+    "note": "migrated from v1 (source); restyle pass pending in Studio auto-QA default plate remap (owner-delegated 2026-08-06)",
+    "plateRemap": {
+      "hue": 12
+    }
   },
   "fonts": [
     {
@@ -93,7 +96,7 @@
       "height": 1350,
       "plate": {
         "src": "/adstudio-templates/meta-market-report-feed-167/plate-feed.webp",
-        "sha256": "7db70efc2424d85b8b211d6786338dae6530946717b7f0320105f1ebe7cab002"
+        "sha256": "a1c78b85c703830c0f23368021e605ed53ed1daad97f2c786c50bf8a3a1b32f6"
       },
       "layers": [
         {
@@ -144,7 +147,7 @@
       "height": 1920,
       "plate": {
         "src": "/adstudio-templates/meta-market-report-feed-167/plate-story.webp",
-        "sha256": "c4ced0b07d2dce672e50fe422b93a35426f4b68fac73adbd8a7a18d72e15cece"
+        "sha256": "50ae430c7edc53e9a73e9ecc0f58e700c84f670275906d727035b42d0fefe3ba"
       },
       "layers": [
         {

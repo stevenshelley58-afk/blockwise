@@ -23,7 +23,7 @@
     },
     "sample": {
       "imageSrc": "/adstudio-templates/meta-lead-checklist-feed-175/sample.png",
-      "contentHash": "75e0d39b2027909d9df281b65665db60857467600df8acbe7c6cd86c6142042d",
+      "contentHash": "5ec425a5b2f8576c4f24c2460034919f3e1d9b7ed9ca01f5923b75bd5a5ffcad",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
@@ -34,7 +34,10 @@
       "background_photo",
       "agent_portrait"
     ],
-    "note": "migrated from v1 (source); restyle pass pending in Studio"
+    "note": "migrated from v1 (source); restyle pass pending in Studio auto-QA default plate remap (owner-delegated 2026-08-06)",
+    "plateRemap": {
+      "hue": 12
+    }
   },
   "fonts": [
     {
@@ -101,7 +104,7 @@
       "height": 1350,
       "plate": {
         "src": "/adstudio-templates/meta-lead-checklist-feed-175/plate-feed.webp",
-        "sha256": "725b8391ba2f741336de575dce1c89537a88a2ff8d720d003ac7d7e6d4aa0597"
+        "sha256": "8ad502941c5fbce4c7a254a3d7829e8cd11891b39a6f75a2afde985f8cfddf0e"
       },
       "layers": [
         {
@@ -152,7 +155,7 @@
       "height": 1920,
       "plate": {
         "src": "/adstudio-templates/meta-lead-checklist-feed-175/plate-story.webp",
-        "sha256": "c53df43d369e2ed092230ef7e4f5fec080973d69710fdf47f158c7aff4466d5f"
+        "sha256": "de849437155ebe0b1a9d2b21618ceb6a1dfda161e083b0401f974fc92031692f"
       },
       "layers": [
         {

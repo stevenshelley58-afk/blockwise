@@ -178,6 +178,7 @@ export async function approveTemplate(doc: AdTemplateDocV2, qaBy: string, confir
   }
   const restyleTrivial =
     Object.keys(doc.restyle?.paletteMap ?? {}).length === 0
+    && !doc.restyle?.plateRemap
     && (doc.restyle?.replacedAssets ?? []).length === 0;
   if (restyleTrivial) problems.push("restyle evidence trivial (D5)");
   if (doc.provenance.sample.contentHash === doc.provenance.sourceAd.contentHash) {
@@ -337,9 +338,10 @@ export async function runRestyle(doc: AdTemplateDocV2) {
   }
 
   // Fully-baked docs have no editable text to remap; apply the default
-  // deterministic plate hue remap (spec's optional mechanism) so the public
-  // sample carries real distance. Recorded so checks replay the baseline.
-  if (Object.keys(paletteMap).length === 0) {
+  // deterministic plate hue remap ONCE (spec's optional mechanism) so the
+  // public sample carries real distance. Recorded so checks replay the
+  // baseline; idempotent — never re-remap an already-recorded plate.
+  if (Object.keys(paletteMap).length === 0 && !doc.restyle.plateRemap) {
     const { default: sharp } = await import("sharp");
     const { readFileSync, writeFileSync: write } = await import("node:fs");
     const { createHash } = await import("node:crypto");
@@ -388,7 +390,10 @@ export async function runRestyle(doc: AdTemplateDocV2) {
   const samplePath = join(resolve(process.cwd()), "public", "adstudio-templates", doc.id, "sample.png");
   const { mkdirSync: mkdir } = await import("node:fs").then((fs) => fs);
   mkdir(samplePath.replace(/[\\/][^\\/]+$/, ""), { recursive: true });
-  await sharp(png).png().toFile(samplePath);
+  // Write the render bytes verbatim: the declared hash is sha(png), so any
+  // re-encode would break the identity contract.
+  await import("node:fs").then((fs) => fs.writeFileSync(samplePath, png));
+  void sharp;
   writeTemplateDoc(doc.id, doc);
   return { sample: doc.provenance.sample, sourceHash: doc.provenance.sourceAd.contentHash };
 }

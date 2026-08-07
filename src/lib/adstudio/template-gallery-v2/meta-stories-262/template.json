@@ -24,7 +24,7 @@
     },
     "sample": {
       "imageSrc": "/adstudio-templates/meta-stories-262/sample.png",
-      "contentHash": "994c648cc2193c03f6aff9768f75b7a842b749de83a9fea5372afb8d099e7b27",
+      "contentHash": "5585a6a47fb662c1aa5cfe81c34f33a387d904eec1e06f20aca97e9c3dfe93a7",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
@@ -32,7 +32,7 @@
   "restyle": {
     "paletteMap": {},
     "replacedAssets": [],
-    "note": "migrated from v1 (source); font remaps: source-sans-3 -> arimo; restyle pass pending in Studio auto-QA default plate remap (owner-delegated 2026-08-06)",
+    "note": "migrated from v1 (source); font remaps: source-sans-3 -> arimo; restyle pass pending in Studio auto-QA default plate remap (owner-delegated 2026-08-06) auto-QA default plate remap (owner-delegated 2026-08-06) auto-QA default plate remap (owner-delegated 2026-08-06)",
     "plateRemap": {
       "hue": 12
     }
@@ -70,7 +70,7 @@
       "height": 1350,
       "plate": {
         "src": "/adstudio-templates/meta-stories-262/plate-feed.webp",
-        "sha256": "6c2b46a33aca0c10fe355e500f75c3cfc1e34c39795b6c440759e547b8096ee0"
+        "sha256": "ebe5a180fc645f9d44003fe41625c6bd352ed885099cae4082e48db00cc9f8aa"
       },
       "layers": []
     },
@@ -80,7 +80,7 @@
       "height": 1920,
       "plate": {
         "src": "/adstudio-templates/meta-stories-262/plate-story.webp",
-        "sha256": "9c7e87295854611045029928a64bf2af55b9978a57c2120b552ae0e95443c760"
+        "sha256": "7d2a7607d28bc8932c4aa53a1a42ee01f6f104ab9c9d543d1e47cbbb80b07336"
       },
       "layers": [],
       "native": true

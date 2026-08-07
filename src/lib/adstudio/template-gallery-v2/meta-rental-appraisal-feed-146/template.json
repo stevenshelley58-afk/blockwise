@@ -23,7 +23,7 @@
     },
     "sample": {
       "imageSrc": "/adstudio-templates/meta-rental-appraisal-feed-146/sample.png",
-      "contentHash": "47acc6b68109672efda3eb3e74948720436604f2dd2acb2a00040adf87131212",
+      "contentHash": "320ef813d953ce206c1f7a5712e81eefb51c305b815756f5f093d4dcf2ecbd25",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
@@ -36,7 +36,10 @@
       "property_photo_3",
       "agency_logo"
     ],
-    "note": "migrated from v1 (source); restyle pass pending in Studio"
+    "note": "migrated from v1 (source); restyle pass pending in Studio auto-QA default plate remap (owner-delegated 2026-08-06)",
+    "plateRemap": {
+      "hue": 12
+    }
   },
   "fonts": [
     {
@@ -95,7 +98,7 @@
       "height": 1350,
       "plate": {
         "src": "/adstudio-templates/meta-rental-appraisal-feed-146/plate-feed.webp",
-        "sha256": "9d4f2686ca892f923487373432a015fc79180144639986b1dd1ca0fa8d66d63e"
+        "sha256": "fbc1e9f0915e00aac195b03bf34dad77a04c8b38cad38e995c88dab87b788919"
       },
       "layers": [
         {
@@ -186,7 +189,7 @@
       "height": 1920,
       "plate": {
         "src": "/adstudio-templates/meta-rental-appraisal-feed-146/plate-story.webp",
-        "sha256": "ccc7e092c7f20e4316f01c4572d5c9369027d0dc9df7a5ba8857652ee037737a"
+        "sha256": "4bf184266142765c0f25d51809fdd64b8e30e9bbc3b21fa1d9ceb86460050161"
       },
       "layers": [
         {

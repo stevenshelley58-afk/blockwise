@@ -23,7 +23,7 @@
     },
     "sample": {
       "imageSrc": "/adstudio-templates/meta-seller-consult-story-270/sample.png",
-      "contentHash": "4242c1340b4db8cf46091a8e528d10c728fec68740e1f5d1ad49c94c1b2baee5",
+      "contentHash": "13eeeaa30c149984966d84a18532a0855a22e3d327094889ab0036e006025484",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
@@ -35,7 +35,10 @@
       "property_photo_2",
       "agency_logo"
     ],
-    "note": "migrated from v1 (source); font remaps: source-sans-3 -> arimo, google-sans -> arimo; restyle pass pending in Studio"
+    "note": "migrated from v1 (source); font remaps: source-sans-3 -> arimo, google-sans -> arimo; restyle pass pending in Studio auto-QA default plate remap (owner-delegated 2026-08-06)",
+    "plateRemap": {
+      "hue": 12
+    }
   },
   "fonts": [
     {
@@ -86,7 +89,7 @@
       "height": 1350,
       "plate": {
         "src": "/adstudio-templates/meta-seller-consult-story-270/plate-feed.webp",
-        "sha256": "eef8016129c816a58edd1cb02e7d26bdb743b8665027b0e0262e5aba9d2a688b"
+        "sha256": "320c9c00c96b54d573671b7311265210e4195f7b1e313f8fb4baa08ff4f3acdf"
       },
       "layers": [
         {
@@ -137,7 +140,7 @@
       "height": 1920,
       "plate": {
         "src": "/adstudio-templates/meta-seller-consult-story-270/plate-story.webp",
-        "sha256": "55ab117e2271c5262cd7dbce2371037d633802ab373346aff3658c2a696fc64a"
+        "sha256": "1f27f1c05b95ea1664041dc207cbe263f27e9d37e2d9aadc1f83d322c352982c"
       },
       "layers": [
         {

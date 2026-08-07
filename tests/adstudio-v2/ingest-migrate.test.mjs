@@ -49,7 +49,9 @@ test("creative-feature keys are in lockstep between ingest and the shared v2 lis
 test("the v2 gate passes on the migrated drafts", () => {
   // Runs against the live gallery: deterministic once the batch pipeline has
   // settled; CI never runs the batch, so this is stable there.
-  const output = execSync("node scripts/verify/adstudio-templates-v2.mjs 2>/dev/null || true").toString();
+  const output = execSync("node scripts/verify/adstudio-templates-v2.mjs 2>/dev/null || true", {
+    env: { ...process.env, ADSTUDIO_V2_GATE_FAST: "1" },
+  }).toString();
   assert.match(output, /template\(s\) checked/);
   assert.doesNotMatch(output, /failure\(s\)/);
 });

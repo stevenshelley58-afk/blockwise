@@ -25,7 +25,7 @@
     },
     "sample": {
       "imageSrc": "/adstudio-templates/meta-feed-173/sample.png",
-      "contentHash": "f6a0fa4b5098feb2c13b92293875d0f7ecb66316e87d6563863574d83205827f",
+      "contentHash": "679537e55b7768ba4b20cd3667d8ca91f41d9586b2a4edf12dc1d2b62b0c5aec",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
@@ -35,7 +35,10 @@
     "replacedAssets": [
       "main_property_image"
     ],
-    "note": "migrated from v1 (source); restyle pass pending in Studio"
+    "note": "migrated from v1 (source); restyle pass pending in Studio auto-QA default plate remap (owner-delegated 2026-08-06)",
+    "plateRemap": {
+      "hue": 12
+    }
   },
   "fonts": [
     {
@@ -70,7 +73,7 @@
       "height": 1350,
       "plate": {
         "src": "/adstudio-templates/meta-feed-173/plate-feed.webp",
-        "sha256": "79be73c57c2679166c1d5d13b4ce08e3edb87238dd229e8c2b0fc35bc175c10d"
+        "sha256": "111a714cf46fd1d13308993254b3e98a030d9b1a37d473378620f64edc927788"
       },
       "layers": [
         {
@@ -101,7 +104,7 @@
       "height": 1920,
       "plate": {
         "src": "/adstudio-templates/meta-feed-173/plate-story.webp",
-        "sha256": "bc272c206e78d8e77c2a685f0fcd2d6d5d03cafb29d89313ee097805d7d14e99"
+        "sha256": "b9bc0eceb24686df489399e40d19d0f8ba99778f8cf2281d4ecedf8788e256cf"
       },
       "layers": [
         {

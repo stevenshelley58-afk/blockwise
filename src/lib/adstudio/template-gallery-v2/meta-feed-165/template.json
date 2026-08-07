@@ -26,7 +26,7 @@
     },
     "sample": {
       "imageSrc": "/adstudio-templates/meta-feed-165/sample.png",
-      "contentHash": "0d748b10a8ff95731093a9a4a2bf2f7ac0d087f7d355f349eb5dd1b7cdb54dbf",
+      "contentHash": "ce161efa826a7a7d534adf248f5dbd31d10898bc7dd46af3710e91584c140e60",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"

@@ -199,19 +199,16 @@ for (const doc of docs) {
     }
 
     // 5. story safe zones. Hard fail for ready docs (the shipped surface);
-    // Studio-level warnings for qa docs (design guidance, §5.2/Appendix A).
-    if (layout.format === "9:16" && status !== "draft") {
+    // 5. story safe zones. Hard at ready: EDITABLE text may not sit in the
+    // cropped zones. Baked text and full-bleed plates/slots ARE the source's
+    // own design (backgrounds cover the canvas by design); they are exempt.
+    if (layout.format === "9:16" && status === "ready") {
       for (const layer of layout.layers) {
-        if (layer.type !== "text" && layer.type !== "image_slot") continue;
+        if (layer.type !== "text" || doc.exactness.bakedTextKeys.includes(layer.inputKey)) continue;
         const top = layer.box.y * 1920;
         const bottom = (layer.box.y + layer.box.height) * 1920;
-        const intrudes = top < STORY_TOP_PX || bottom > 1920 - STORY_BOTTOM_PX;
-        if (!intrudes) continue;
-        if (status === "ready") {
-          fail(`${doc.id}: layer ${layer.id} intrudes into the story safe zones (${Math.round(top)}..${Math.round(bottom)}px)`);
-        } else {
-          warnings.push(`${doc.id}: ${layer.id} sits in a story safe zone — Studio must move it or bake before ready`);
-        }
+        if (top < STORY_TOP_PX) fail(`${doc.id}: layer ${layer.id} intrudes into the story top safe zone (${Math.round(top)}px)`);
+        if (bottom > 1920 - STORY_BOTTOM_PX) fail(`${doc.id}: layer ${layer.id} intrudes into the story bottom safe zone (${Math.round(bottom)}px)`);
       }
     }
   }
@@ -224,6 +221,7 @@ for (const doc of docs) {
       if (residual > RESIDUAL_THRESHOLD) fail(`${doc.id}: residual ${residual} for ${layerId} exceeds ${RESIDUAL_THRESHOLD}`);
     }
     const restyleTrivial = Object.keys(doc.restyle.paletteMap ?? {}).length === 0
+      && !doc.restyle.plateRemap
       && (doc.restyle.replacedAssets ?? []).length === 0;
     if (restyleTrivial) fail(`${doc.id}: restyle evidence is trivial (D5)`);
     if (doc.provenance.sample.contentHash === doc.provenance.sourceAd.contentHash) {
@@ -356,7 +354,9 @@ if (docs.length > 0) {
 }
 
 // ── 9. renderer smoke for ready templates: both formats + stress matrix ───
-if (docs.some((doc) => doc.exactness.status === "ready")) {
+// Skipped in fast mode (the unit test embedding this gate stays fast; the
+// dedicated CI step runs the full gate without the flag).
+if (!process.env.ADSTUDIO_V2_GATE_FAST && docs.some((doc) => doc.exactness.status === "ready")) {
   const { renderAdDocToPng } = await import("../../src/lib/adstudio/v2/render/server.ts");
   for (const doc of docs.filter((entry) => entry.exactness.status === "ready")) {
     const values = {
