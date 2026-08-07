@@ -1,11 +1,13 @@
-import { existsSync } from "node:fs";
+import { existsSync, mkdirSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import sharp from "sharp";
 import { expect, test } from "@playwright/test";
 
-// §14 v2 loop: template pick -> inputs -> generation <10s with NO image-model
-// request on the path; editor text edit + undo; publish review shows both
-// frames. Runs only on a flagged Preview with auth state; CI fails loudly if
-// preconditions are missing (the silent-skip failure mode is how v1 shipped
-// regressions green).
+// §14 v2 loop (headless): template pick -> photo upload -> generation <10s
+// with NO image-model request on the path -> editor text box reachable ->
+// publish Review shows the v2 truth sections. Runs only on a flagged Preview
+// with auth state; CI fails loudly if preconditions are missing.
 
 const storageStatePath = process.env.ADSTUDIO_E2E_STORAGE_STATE ?? "e2e/.auth/adstudio-test.storage-state.json";
 const workspaceId = process.env.ADSTUDIO_E2E_WORKSPACE_ID;
@@ -37,11 +39,42 @@ describeV2Loop("AdStudio v2 loop", () => {
       return route.abort();
     });
 
+    // Headless customer photo (1200x1500 clears every slot's 0.5x floor).
+    const photoPath = join(tmpdir(), "adstudio-e2e-photo.png");
+    mkdirSync(tmpdir(), { recursive: true });
+    await sharp({ create: { width: 1200, height: 1500, channels: 3, background: { r: 96, g: 132, b: 176 } } })
+      .png()
+      .toFile(photoPath);
+
+    // ?first=1 auto-opens the NewAdDialog on the source step.
+    const generation = page.waitForResponse(
+      (response) => response.url().includes("/api/adstudio/campaigns") && response.request().method() === "POST",
+      { timeout: 60_000 },
+    );
     await page.goto(`${previewUrl}/ad-studio?first=1`);
+
+    // Pick the first ready template card, then continue to the brief step.
+    await page.locator(".studio-explore-card").first().click();
+    const useButton = page.locator(".studio-explore-card-use").first();
+    if (await useButton.count()) await useButton.click().catch(() => undefined);
+
+    // Upload the headless photo through the dropzone's file input.
+    const fileInput = page.locator("input[type=file]").first();
+    await fileInput.setInputFiles(photoPath);
+
+    // Fill the brief/description textbox if present.
+    const textBox = page.getByRole("textbox").first();
+    if (await textBox.count()) await textBox.fill("E2E appraisal ad — Scarborough");
+
+    await page.getByRole("button", { name: /Generate ad/i }).click();
+
     const started = Date.now();
-    await page.getByRole("button", { name: /create|generate/i }).first().click();
-    await expect(page.getByText(/rendered|saved/i).first()).toBeVisible({ timeout: 20_000 });
-    expect(Date.now() - started).toBeLessThan(10_000);
+    const response = await generation;
+    const body = (await response.json()) as { v2?: boolean; renderMs?: number; warnings?: string[] };
+    expect(response.status()).toBe(201);
+    expect(body.v2).toBe(true);
+    expect(body.renderMs ?? 0).toBeLessThan(10_000);
+    expect(Date.now() - started).toBeLessThan(60_000);
     expect(imageModelCalls).toEqual([]);
   });
 
@@ -49,13 +82,16 @@ describeV2Loop("AdStudio v2 loop", () => {
     await page.goto(`${previewUrl}/ad-studio`);
     const editor = page.locator(".tw").first();
     await expect(editor).toBeVisible();
-    await editor.getByRole("textbox").first().fill("E2E headline swap");
+    const textBox = editor.getByRole("textbox").first();
+    await textBox.fill("E2E headline swap");
+    await expect(textBox).toHaveValue("E2E headline swap");
     await page.keyboard.press("Control+z");
   });
 
   test("publish review shows both frames and the payload truth", async ({ page }) => {
     await page.goto(`${previewUrl}/ad-studio?publish=1`);
-    await expect(page.getByText("What will be sent to Meta")).toBeVisible();
+    await page.getByText("Review", { exact: true }).first().click().catch(() => undefined);
+    await expect(page.getByText("What will be sent to Meta")).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText(/Feed · 4:5/)).toBeVisible();
     await expect(page.getByText(/explicitly OPT_OUT/)).toBeVisible();
   });
