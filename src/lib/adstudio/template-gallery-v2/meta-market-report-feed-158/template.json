@@ -22,15 +22,17 @@
       "contentHash": "482c522fe77b8482c61e4a65332b9045de278a5a3dd77ba1c062c83c4ae5cd47"
     },
     "sample": {
-      "imageSrc": "/adstudio-samples/meta/meta-market-report-feed-158-sample.png",
-      "contentHash": "fedb0308689541652e2d39ad6bba8324763dc45bd6979133d241cb632b2f9328",
+      "imageSrc": "/adstudio-templates/meta-market-report-feed-158/sample.png",
+      "contentHash": "a5145d897cc30d5671ad23402b0a6527831d18a2ee2f58c12f097f0dff5fc75f",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
   },
   "restyle": {
     "paletteMap": {},
-    "replacedAssets": [],
+    "replacedAssets": [
+      "market_graphic"
+    ],
     "note": "migrated from v1 (source); restyle pass pending in Studio"
   },
   "fonts": [
@@ -74,23 +76,58 @@
       "height": 1350,
       "plate": {
         "src": "/adstudio-templates/meta-market-report-feed-158/plate-feed.webp",
-        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        "sha256": "882f8911ea589cc93076b6af22e5885422a478dfe5a53e3e6ff1a2a5d1d7f9c5"
       },
       "layers": [
         {
           "id": "slot-market_graphic",
-          "type": "image_slot",
           "z": 2,
-          "inputKey": "market_graphic",
-          "fit": "cover",
           "box": {
             "x": 0.014814814814814815,
             "y": 0.2,
             "width": 0.9703703703703703,
             "height": 0.3214814814814815
           },
+          "type": "image_slot",
+          "inputKey": "market_graphic",
+          "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 1048,
+            "height": 434
+          }
+        }
+      ]
+    },
+    "story": {
+      "format": "9:16",
+      "width": 1080,
+      "height": 1920,
+      "plate": {
+        "src": "/adstudio-templates/meta-market-report-feed-158/plate-story.webp",
+        "sha256": "acb401c59d00e7af59870fe7f35f7eec867ed2e2bd35fccfcab939cf7c5a3f06"
+      },
+      "layers": [
+        {
+          "id": "slot-market_graphic",
+          "z": 2,
+          "box": {
+            "x": 0.014814814814814815,
+            "y": 0.26875,
+            "width": 0.9703703703703703,
+            "height": 0.22269290123456786
+          },
+          "type": "image_slot",
+          "inputKey": "market_graphic",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 1048,
+            "height": 428
           }
         }
       ]
@@ -206,7 +243,7 @@
     },
     "formatRouting": {
       "feed": "4:5",
-      "story": null
+      "story": "9:16"
     },
     "creativeFeatures": {
       "adapt_to_placement": "OPT_OUT",
@@ -234,7 +271,7 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "draft",
+    "status": "ready",
     "residuals": {},
     "bakedTextKeys": [
       "headline",
@@ -245,6 +282,8 @@
       "stat_5",
       "stat_6",
       "subheadline"
-    ]
+    ],
+    "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
+    "qaAt": "2026-08-07T08:29:23.729Z"
   }
 }

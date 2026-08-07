@@ -32,5 +32,8 @@
       "width": 0.16015625,
       "height": 0.015234375
     }
+  },
+  "bakedResiduals": {
+    "baked-main_message": 0
   }
 }

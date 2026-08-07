@@ -23,14 +23,16 @@
       "contentHash": "86e3bed929d7cdad06e487f758db7a7476e2452c43b4ffe78a1046b488ef43f1"
     },
     "sample": {
-      "imageSrc": "/adstudio-samples/meta/meta-feed-020-sample.png",
-      "contentHash": "0899efc11fc68e177c731321421454f0001a393bbc8b0211dafad4a7f3b89347",
+      "imageSrc": "/adstudio-templates/meta-feed-020/sample.png",
+      "contentHash": "3d19a74e80b40e2d12bb616b65ae9b1b178139e980c926717a9d2a6d23984603",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
   },
   "restyle": {
-    "paletteMap": {},
+    "paletteMap": {
+      "#1f242b": "#1f242b"
+    },
     "replacedAssets": [],
     "note": "migrated from v1 (source); font remaps: source-sans-3 -> arimo; restyle pass pending in Studio"
   },
@@ -83,9 +85,237 @@
       "height": 1350,
       "plate": {
         "src": "/adstudio-templates/meta-feed-020/plate-feed.webp",
-        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        "sha256": "3ee70ce9cc3e3e6e24e0110b4fa26a437817b385e2549acb2d929a794ca744eb"
       },
-      "layers": []
+      "layers": [
+        {
+          "id": "text-price",
+          "z": 10,
+          "box": {
+            "x": 0.138671875,
+            "y": 0.314453125,
+            "width": 0.7265625,
+            "height": 0.023046875
+          },
+          "type": "text",
+          "inputKey": "price",
+          "typo": {
+            "fontId": "kanit",
+            "family": "Kanit",
+            "fallbackFamily": "sans-serif",
+            "weight": 900,
+            "italic": false,
+            "case": "mixed",
+            "sizeRatio": 1.1439075630252102,
+            "lineHeight": 1.495,
+            "tracking": 0,
+            "align": "center",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 24,
+            "maxLines": 2,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.261,
+            "detectionScore": 0.65,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        },
+        {
+          "id": "text-website_handle",
+          "z": 11,
+          "box": {
+            "x": 0.13623046875,
+            "y": 0.890625,
+            "width": 0.349609375,
+            "height": 0.024609375
+          },
+          "type": "text",
+          "inputKey": "website_handle",
+          "typo": {
+            "fontId": "karla",
+            "family": "Karla",
+            "fallbackFamily": "sans-serif",
+            "weight": 600,
+            "italic": false,
+            "case": "lower",
+            "sizeRatio": 1.0596885813148786,
+            "lineHeight": 1.169,
+            "tracking": 0,
+            "align": "left",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 40,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.613,
+            "detectionScore": 1,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        },
+        {
+          "id": "text-phone",
+          "z": 12,
+          "box": {
+            "x": 0.1357421875,
+            "y": 0.85546875,
+            "width": 0.21044921875,
+            "height": 0.0203125
+          },
+          "type": "text",
+          "inputKey": "phone",
+          "typo": {
+            "fontId": "playfair-display",
+            "family": "Playfair Display",
+            "fallbackFamily": "serif",
+            "weight": 700,
+            "italic": false,
+            "case": "none",
+            "sizeRatio": 1.1111111111111112,
+            "lineHeight": 1.333,
+            "tracking": 0,
+            "align": "left",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 24,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.433,
+            "detectionScore": 1,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        }
+      ]
+    },
+    "story": {
+      "format": "9:16",
+      "width": 1080,
+      "height": 1920,
+      "plate": {
+        "src": "/adstudio-templates/meta-feed-020/plate-story.webp",
+        "sha256": "a981beb73e67b21bbb28181c7c81249a3a21a33f99807ab3478ad628c250ba53"
+      },
+      "layers": [
+        {
+          "id": "text-price",
+          "z": 10,
+          "box": {
+            "x": 0.138671875,
+            "y": 0.34803263346354163,
+            "width": 0.7265625,
+            "height": 0.015964762369791666
+          },
+          "type": "text",
+          "inputKey": "price",
+          "typo": {
+            "fontId": "kanit",
+            "family": "Kanit",
+            "fallbackFamily": "sans-serif",
+            "weight": 900,
+            "italic": false,
+            "case": "mixed",
+            "sizeRatio": 1.1439075630252102,
+            "lineHeight": 1.495,
+            "tracking": 0,
+            "align": "center",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 24,
+            "maxLines": 2,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.261,
+            "detectionScore": 0.65,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        },
+        {
+          "id": "text-website_handle",
+          "z": 11,
+          "box": {
+            "x": 0.13623046875,
+            "y": 0.7471516927083333,
+            "width": 0.349609375,
+            "height": 0.017047119140624997
+          },
+          "type": "text",
+          "inputKey": "website_handle",
+          "typo": {
+            "fontId": "karla",
+            "family": "Karla",
+            "fallbackFamily": "sans-serif",
+            "weight": 600,
+            "italic": false,
+            "case": "lower",
+            "sizeRatio": 1.0596885813148786,
+            "lineHeight": 1.169,
+            "tracking": 0,
+            "align": "left",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 40,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.613,
+            "detectionScore": 1,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        },
+        {
+          "id": "text-phone",
+          "z": 12,
+          "box": {
+            "x": 0.1357421875,
+            "y": 0.7227986653645833,
+            "width": 0.21044921875,
+            "height": 0.014070638020833331
+          },
+          "type": "text",
+          "inputKey": "phone",
+          "typo": {
+            "fontId": "playfair-display",
+            "family": "Playfair Display",
+            "fallbackFamily": "serif",
+            "weight": 700,
+            "italic": false,
+            "case": "none",
+            "sizeRatio": 1.1111111111111112,
+            "lineHeight": 1.333,
+            "tracking": 0,
+            "align": "left",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 24,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.433,
+            "detectionScore": 1,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        }
+      ]
     }
   },
   "inputs": {
@@ -170,7 +400,7 @@
     },
     "formatRouting": {
       "feed": "4:5",
-      "story": null
+      "story": "9:16"
     },
     "creativeFeatures": {
       "adapt_to_placement": "OPT_OUT",
@@ -198,14 +428,17 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "draft",
-    "residuals": {},
+    "status": "ready",
+    "residuals": {
+      "text-price": null,
+      "text-website_handle": null,
+      "text-phone": null
+    },
     "bakedTextKeys": [
       "address",
-      "price",
-      "website_handle",
-      "phone",
       "headline"
-    ]
+    ],
+    "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
+    "qaAt": "2026-08-07T08:17:45.879Z"
   }
 }

@@ -22,8 +22,8 @@
       "contentHash": "1d264a515215d94a8a47386b36922b672cfe7cac055a0bd362ccc11865afe962"
     },
     "sample": {
-      "imageSrc": "/adstudio-samples/meta/meta-offmarket-alerts-story-043-sample.png",
-      "contentHash": "fca038bcca9f29f441749cb6e68f60c01b3510f245c871d8bff11bfebd7c7c5c",
+      "imageSrc": "/adstudio-templates/meta-offmarket-alerts-story-043/sample.png",
+      "contentHash": "8cf5c53bfd80b7131b61949b5b4a4af69bd169076ec3791a93a027cdc5db6df7",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
@@ -69,14 +69,25 @@
   ],
   "formats": {
     "feed": {
+      "format": "4:5",
+      "width": 1080,
+      "height": 1350,
+      "plate": {
+        "src": "/adstudio-templates/meta-offmarket-alerts-story-043/plate-feed.webp",
+        "sha256": "5d4b0788f1437b14659f3ec00f779be03473e0979aa80858fe106c78da55a56b"
+      },
+      "layers": []
+    },
+    "story": {
       "format": "9:16",
       "width": 1080,
       "height": 1920,
       "plate": {
         "src": "/adstudio-templates/meta-offmarket-alerts-story-043/plate-story.webp",
-        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        "sha256": "f8d2f3ca84f79f2a17fde347ffd3d9f98e6c69a144c9ab07925d1c2ae94d64e3"
       },
-      "layers": []
+      "layers": [],
+      "native": true
     }
   },
   "inputs": {
@@ -181,7 +192,7 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "draft",
+    "status": "qa",
     "residuals": {},
     "bakedTextKeys": [
       "body",

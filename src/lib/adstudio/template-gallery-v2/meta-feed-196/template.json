@@ -24,15 +24,17 @@
       "contentHash": "3e79bb4507c70b4e79ed826a21261dc7c97bfa5459c7fe5a9df08500b980b00f"
     },
     "sample": {
-      "imageSrc": "/adstudio-samples/meta/meta-feed-196-sample.png",
-      "contentHash": "6a8d3005d44b556658403b2f921ae86056a460c8285030802c115169fdcd210e",
+      "imageSrc": "/adstudio-templates/meta-feed-196/sample.png",
+      "contentHash": "cddb7831bcff710db96712ed44e9e80ae1f86e090d9cf52c3d3b91d58ce990ed",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
   },
   "restyle": {
     "paletteMap": {},
-    "replacedAssets": [],
+    "replacedAssets": [
+      "main_property_image"
+    ],
     "note": "migrated from v1 (source); restyle pass pending in Studio"
   },
   "fonts": [
@@ -75,6 +77,14 @@
       "italic": false,
       "file": "/fonts/adstudio/smooch-sans-300.woff2",
       "sha256": "24c4dda0d38ff3000dbaf5c37b0035fc51791a693cc68101d14acb16c8504cb6"
+    },
+    {
+      "fontId": "kanit",
+      "family": "Kanit",
+      "weight": 300,
+      "italic": false,
+      "file": "/fonts/adstudio/kanit-300.woff2",
+      "sha256": "20aee722979a0f91b2baac3d0590a512b02fe00f80c454c07a178cc3964f33c2"
     }
   ],
   "formats": {
@@ -84,23 +94,58 @@
       "height": 1350,
       "plate": {
         "src": "/adstudio-templates/meta-feed-196/plate-feed.webp",
-        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        "sha256": "a655abce1e6b3609df6c710420aa4cef74f4406ee7e49e5bb1669320d415acb1"
       },
       "layers": [
         {
           "id": "slot-main_property_image",
-          "type": "image_slot",
           "z": 2,
-          "inputKey": "main_property_image",
-          "fit": "cover",
           "box": {
             "x": 0.16018518518518518,
             "y": 0.18444444444444444,
             "width": 0.7166666666666667,
             "height": 0.5525925925925926
           },
+          "type": "image_slot",
+          "inputKey": "main_property_image",
+          "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 774,
+            "height": 746
+          }
+        }
+      ]
+    },
+    "story": {
+      "format": "9:16",
+      "width": 1080,
+      "height": 1920,
+      "plate": {
+        "src": "/adstudio-templates/meta-feed-196/plate-story.webp",
+        "sha256": "a0998e4c2767443cb3561c20ae2574cc9bbdc66e79ac56947c9e1ec2a3217310"
+      },
+      "layers": [
+        {
+          "id": "slot-main_property_image",
+          "z": 2,
+          "box": {
+            "x": 0.16018518518518518,
+            "y": 0.257974537037037,
+            "width": 0.7166666666666667,
+            "height": 0.3827854938271605
+          },
+          "type": "image_slot",
+          "inputKey": "main_property_image",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 774,
+            "height": 735
           }
         }
       ]
@@ -209,7 +254,7 @@
     },
     "formatRouting": {
       "feed": "4:5",
-      "story": null
+      "story": "9:16"
     },
     "creativeFeatures": {
       "adapt_to_placement": "OPT_OUT",
@@ -237,7 +282,7 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "draft",
+    "status": "ready",
     "residuals": {},
     "bakedTextKeys": [
       "description",
@@ -247,6 +292,8 @@
       "headline",
       "contact_phone",
       "cta_button"
-    ]
+    ],
+    "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
+    "qaAt": "2026-08-07T08:20:22.825Z"
   }
 }

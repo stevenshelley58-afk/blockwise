@@ -22,15 +22,18 @@
       "contentHash": "095d0d876a1461184e3391a777128e95fac220a1ca002cd6211915d9cf9dcb83"
     },
     "sample": {
-      "imageSrc": "/adstudio-samples/meta/meta-seller-consult-feed-097-sample.png",
-      "contentHash": "e5f5c79cf1406642a592ca040d4b93a2ac7dca8d79e0ac4c437c2a8f70a337ec",
+      "imageSrc": "/adstudio-templates/meta-seller-consult-feed-097/sample.png",
+      "contentHash": "3d4c5423b2abcecbc5cbe4bb152e0f32f093cd971d59ccd1908ec0a37177b2d4",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
   },
   "restyle": {
     "paletteMap": {},
-    "replacedAssets": [],
+    "replacedAssets": [
+      "property_photo",
+      "agency_logo"
+    ],
     "note": "migrated from v1 (source); restyle pass pending in Studio"
   },
   "fonts": [
@@ -59,6 +62,14 @@
       "sha256": "499a1b5ee30d8ae62e01c6698e32ef7448925327a92fbe69c2dd7af8800dd3b1"
     },
     {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "weight": 500,
+      "italic": false,
+      "file": "/fonts/adstudio/merriweather-500.woff2",
+      "sha256": "0b573a833832b8cafdcb3beeb64b2f4d524b7ca908c7d2232c2d78610b2c8ebd"
+    },
+    {
       "fontId": "barlow-condensed",
       "family": "Barlow Condensed",
       "weight": 800,
@@ -74,39 +85,98 @@
       "height": 1350,
       "plate": {
         "src": "/adstudio-templates/meta-seller-consult-feed-097/plate-feed.webp",
-        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        "sha256": "9ab385729950580eafda85a09bfcf40747e0af1077e7571ecb9cf892421691b3"
       },
       "layers": [
         {
           "id": "slot-property_photo",
-          "type": "image_slot",
           "z": 2,
-          "inputKey": "property_photo",
-          "fit": "cover",
           "box": {
             "x": 0.0185185185,
             "y": 0.4888888889,
             "width": 0.962962963,
             "height": 0.4933333333
           },
+          "type": "image_slot",
+          "inputKey": "property_photo",
+          "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 1040,
+            "height": 666
           }
         },
         {
           "id": "slot-agency_logo",
-          "type": "image_slot",
           "z": 3,
-          "inputKey": "agency_logo",
-          "fit": "cover",
           "box": {
             "x": 0.7074074074,
             "y": 0.7985185185,
             "width": 0.2740740741,
             "height": 0.1674074074
           },
+          "type": "image_slot",
+          "inputKey": "agency_logo",
+          "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 296,
+            "height": 226
+          }
+        }
+      ]
+    },
+    "story": {
+      "format": "9:16",
+      "width": 1080,
+      "height": 1920,
+      "plate": {
+        "src": "/adstudio-templates/meta-seller-consult-feed-097/plate-story.webp",
+        "sha256": "f34330219ca51acc8824dfde5461298a393737480bbf4bcc25b92cfaa2517ad2"
+      },
+      "layers": [
+        {
+          "id": "slot-property_photo",
+          "z": 2,
+          "box": {
+            "x": 0.0185185185,
+            "y": 0.46886574074843745,
+            "width": 0.962962963,
+            "height": 0.3417361110880208
+          },
+          "type": "image_slot",
+          "inputKey": "property_photo",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 1040,
+            "height": 656
+          }
+        },
+        {
+          "id": "slot-agency_logo",
+          "z": 3,
+          "box": {
+            "x": 0.7074074074,
+            "y": 0.6833487654192708,
+            "width": 0.2740740741,
+            "height": 0.11596450616770833
+          },
+          "type": "image_slot",
+          "inputKey": "agency_logo",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 296,
+            "height": 223
           }
         }
       ]
@@ -215,7 +285,7 @@
     },
     "formatRouting": {
       "feed": "4:5",
-      "story": null
+      "story": "9:16"
     },
     "creativeFeatures": {
       "adapt_to_placement": "OPT_OUT",
@@ -243,7 +313,7 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "draft",
+    "status": "ready",
     "residuals": {},
     "bakedTextKeys": [
       "agent_role",
@@ -252,6 +322,8 @@
       "website",
       "phone",
       "agent_name"
-    ]
+    ],
+    "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
+    "qaAt": "2026-08-07T08:44:07.809Z"
   }
 }

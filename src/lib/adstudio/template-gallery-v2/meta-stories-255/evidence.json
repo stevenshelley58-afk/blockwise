@@ -46,5 +46,13 @@
       "width": 0.0283203125,
       "height": 0.013020833333333334
     }
+  },
+  "bakedResiduals": {
+    "baked-social_handle": 0,
+    "baked-agent_name": 0,
+    "baked-average_price": 0,
+    "baked-time_on_market": 0,
+    "baked-new_listings": 0,
+    "baked-sold_listings": 0
   }
 }

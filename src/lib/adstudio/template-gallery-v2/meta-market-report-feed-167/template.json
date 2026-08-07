@@ -22,15 +22,18 @@
       "contentHash": "9551c77edfd63e065f5f6bdc00d574e2864a765e1447c33b8be4bc6cf5651fa8"
     },
     "sample": {
-      "imageSrc": "/adstudio-samples/meta/meta-market-report-feed-167-sample.png",
-      "contentHash": "bedb82480af22ee68f223c668d7a92c1f51e751fd66b87475d2f0fd72811c0e2",
+      "imageSrc": "/adstudio-templates/meta-market-report-feed-167/sample.png",
+      "contentHash": "ae29dbd292412aab7204bd8e94b5134ee790f6633c4bb59cfc013eb0b27f5e35",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
   },
   "restyle": {
     "paletteMap": {},
-    "replacedAssets": [],
+    "replacedAssets": [
+      "property_photo",
+      "agency_logo"
+    ],
     "note": "migrated from v1 (source); restyle pass pending in Studio"
   },
   "fonts": [
@@ -90,39 +93,98 @@
       "height": 1350,
       "plate": {
         "src": "/adstudio-templates/meta-market-report-feed-167/plate-feed.webp",
-        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        "sha256": "7db70efc2424d85b8b211d6786338dae6530946717b7f0320105f1ebe7cab002"
       },
       "layers": [
         {
           "id": "slot-property_photo",
-          "type": "image_slot",
           "z": 2,
-          "inputKey": "property_photo",
-          "fit": "cover",
           "box": {
             "x": 0,
             "y": 0,
             "width": 1,
             "height": 1
           },
+          "type": "image_slot",
+          "inputKey": "property_photo",
+          "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 1080,
+            "height": 1350
           }
         },
         {
           "id": "slot-agency_logo",
-          "type": "image_slot",
           "z": 3,
-          "inputKey": "agency_logo",
-          "fit": "cover",
           "box": {
             "x": 0.787962962962963,
             "y": 0,
             "width": 0.14814814814814814,
             "height": 0.13333333333333333
           },
+          "type": "image_slot",
+          "inputKey": "agency_logo",
+          "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 160,
+            "height": 180
+          }
+        }
+      ]
+    },
+    "story": {
+      "format": "9:16",
+      "width": 1080,
+      "height": 1920,
+      "plate": {
+        "src": "/adstudio-templates/meta-market-report-feed-167/plate-story.webp",
+        "sha256": "c4ced0b07d2dce672e50fe422b93a35426f4b68fac73adbd8a7a18d72e15cece"
+      },
+      "layers": [
+        {
+          "id": "slot-property_photo",
+          "z": 2,
+          "box": {
+            "x": 0,
+            "y": 0.13020833333333334,
+            "width": 1,
+            "height": 0.6927083333333333
+          },
+          "type": "image_slot",
+          "inputKey": "property_photo",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 1080,
+            "height": 1330
+          }
+        },
+        {
+          "id": "slot-agency_logo",
+          "z": 3,
+          "box": {
+            "x": 0.787962962962963,
+            "y": 0.13020833333333334,
+            "width": 0.14814814814814814,
+            "height": 0.0923611111111111
+          },
+          "type": "image_slot",
+          "inputKey": "agency_logo",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 160,
+            "height": 177
           }
         }
       ]
@@ -238,7 +300,7 @@
     },
     "formatRouting": {
       "feed": "4:5",
-      "story": null
+      "story": "9:16"
     },
     "creativeFeatures": {
       "adapt_to_placement": "OPT_OUT",
@@ -266,7 +328,7 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "draft",
+    "status": "ready",
     "residuals": {},
     "bakedTextKeys": [
       "body",
@@ -276,6 +338,8 @@
       "cta",
       "stat_3",
       "stat_2"
-    ]
+    ],
+    "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
+    "qaAt": "2026-08-07T08:31:38.133Z"
   }
 }

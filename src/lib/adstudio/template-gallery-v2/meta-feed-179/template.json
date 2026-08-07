@@ -23,15 +23,19 @@
       "contentHash": "2e09d7c15fb81cfb38591c945f5f2f24aac492b26cce2149e4274119efbb8cbc"
     },
     "sample": {
-      "imageSrc": "/adstudio-samples/meta/meta-feed-179-sample.png",
-      "contentHash": "51f01be37693adcefa4ae36b6ad232b6363c8d5138634b835b14b73de6c93cb7",
+      "imageSrc": "/adstudio-templates/meta-feed-179/sample.png",
+      "contentHash": "1b097aec55678cdafe2ace8294ab77161604e4832d5b97d8b5ca3841a0a04a90",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
   },
   "restyle": {
-    "paletteMap": {},
-    "replacedAssets": [],
+    "paletteMap": {
+      "#1f242b": "#1f242b"
+    },
+    "replacedAssets": [
+      "main_image"
+    ],
     "note": "migrated from v1 (source); restyle pass pending in Studio"
   },
   "fonts": [
@@ -50,6 +54,14 @@
       "italic": false,
       "file": "/fonts/adstudio/oswald-700.woff2",
       "sha256": "aae665c75af89ea7cb7d8ccc8b0911ea72267442ebcd84f6e3efa041ad3b3c16"
+    },
+    {
+      "fontId": "oswald",
+      "family": "Oswald",
+      "weight": 300,
+      "italic": false,
+      "file": "/fonts/adstudio/oswald-300.woff2",
+      "sha256": "84f168468881f1ae6cf11573f3befa2e83f2067e914a57dad0233e3a772e76f7"
     }
   ],
   "formats": {
@@ -59,23 +71,202 @@
       "height": 1350,
       "plate": {
         "src": "/adstudio-templates/meta-feed-179/plate-feed.webp",
-        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        "sha256": "d875dd917915fd5349957f40599633ec0c0e32526ee22acad8bebe5859d63ea7"
       },
       "layers": [
         {
           "id": "slot-main_image",
-          "type": "image_slot",
           "z": 2,
-          "inputKey": "main_image",
-          "fit": "cover",
           "box": {
             "x": 0.232421875,
             "y": 0.271875,
             "width": 0.53515625,
             "height": 0.4609375
           },
+          "type": "image_slot",
+          "inputKey": "main_image",
+          "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 578,
+            "height": 622
+          }
+        },
+        {
+          "id": "text-caption",
+          "z": 10,
+          "box": {
+            "x": 0.34765625,
+            "y": 0.87421875,
+            "width": 0.32177734375,
+            "height": 0.0265625
+          },
+          "type": "text",
+          "inputKey": "caption",
+          "typo": {
+            "fontId": "merriweather",
+            "family": "Merriweather",
+            "fallbackFamily": "serif",
+            "weight": 500,
+            "italic": false,
+            "case": "lower",
+            "sizeRatio": 0.9268292682926829,
+            "lineHeight": 1.257,
+            "tracking": 0,
+            "align": "center",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 30,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.72,
+            "detectionScore": 1,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        },
+        {
+          "id": "text-headline",
+          "z": 11,
+          "box": {
+            "x": 0.138671875,
+            "y": 0.12578125,
+            "width": 0.74072265625,
+            "height": 0.084375
+          },
+          "type": "text",
+          "inputKey": "headline",
+          "typo": {
+            "fontId": "oswald",
+            "family": "Oswald",
+            "fallbackFamily": "sans-serif",
+            "weight": 300,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 1.0163934426229508,
+            "lineHeight": 1.482,
+            "tracking": 0,
+            "align": "center",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 30,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.784,
+            "detectionScore": 1,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        }
+      ]
+    },
+    "story": {
+      "format": "9:16",
+      "width": 1080,
+      "height": 1920,
+      "plate": {
+        "src": "/adstudio-templates/meta-feed-179/plate-story.webp",
+        "sha256": "cb9c2fdb276c38ef679df0458ed0d0464fb7e09b8af37dfdf49154fb0c7c8780"
+      },
+      "layers": [
+        {
+          "id": "slot-main_image",
+          "z": 2,
+          "box": {
+            "x": 0.232421875,
+            "y": 0.3185384114583333,
+            "width": 0.53515625,
+            "height": 0.3192952473958333
+          },
+          "type": "image_slot",
+          "inputKey": "main_image",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 578,
+            "height": 613
+          }
+        },
+        {
+          "id": "text-caption",
+          "z": 10,
+          "box": {
+            "x": 0.34765625,
+            "y": 0.7357869466145833,
+            "width": 0.32177734375,
+            "height": 0.018400065104166665
+          },
+          "type": "text",
+          "inputKey": "caption",
+          "typo": {
+            "fontId": "merriweather",
+            "family": "Merriweather",
+            "fallbackFamily": "serif",
+            "weight": 500,
+            "italic": false,
+            "case": "lower",
+            "sizeRatio": 0.9268292682926829,
+            "lineHeight": 1.257,
+            "tracking": 0,
+            "align": "center",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 30,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.72,
+            "detectionScore": 1,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        },
+        {
+          "id": "text-headline",
+          "z": 11,
+          "box": {
+            "x": 0.138671875,
+            "y": 0.21733805338541667,
+            "width": 0.74072265625,
+            "height": 0.058447265624999994
+          },
+          "type": "text",
+          "inputKey": "headline",
+          "typo": {
+            "fontId": "oswald",
+            "family": "Oswald",
+            "fallbackFamily": "sans-serif",
+            "weight": 300,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 1.0163934426229508,
+            "lineHeight": 1.482,
+            "tracking": 0,
+            "align": "center",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 30,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.784,
+            "detectionScore": 1,
+            "source": "ocr-v2",
+            "version": 1
           }
         }
       ]
@@ -156,7 +347,7 @@
     },
     "formatRouting": {
       "feed": "4:5",
-      "story": null
+      "story": "9:16"
     },
     "creativeFeatures": {
       "adapt_to_placement": "OPT_OUT",
@@ -184,12 +375,15 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "draft",
-    "residuals": {},
+    "status": "ready",
+    "residuals": {
+      "text-caption": null,
+      "text-headline": null
+    },
     "bakedTextKeys": [
-      "caption",
-      "subheadline",
-      "headline"
-    ]
+      "subheadline"
+    ],
+    "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
+    "qaAt": "2026-08-07T08:18:02.432Z"
   }
 }

@@ -26,8 +26,8 @@
       "contentHash": "b6d85d3015a97438faaf619b460f78f24ebc4c0d22a3e471575d105d6f65141e"
     },
     "sample": {
-      "imageSrc": "/adstudio-samples/meta/meta-stories-245-sample.png",
-      "contentHash": "0cce6e6b8be766b169feaa10292176372e0f5db5b26c83855a6e92e83b70c894",
+      "imageSrc": "/adstudio-templates/meta-stories-245/sample.png",
+      "contentHash": "0f6edcee71f9ea27a176bbad93df4d1a338aa591be0fc48cf1f7126fb38aea3d",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
@@ -53,6 +53,14 @@
       "italic": false,
       "file": "/fonts/adstudio/smooch-sans-300.woff2",
       "sha256": "24c4dda0d38ff3000dbaf5c37b0035fc51791a693cc68101d14acb16c8504cb6"
+    },
+    {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "weight": 400,
+      "italic": false,
+      "file": "/fonts/adstudio/smooch-sans-400.woff2",
+      "sha256": "a1b64ed5521846da168a3a1907019f6ee8699958c6807b8d33d962d33153cff8"
     },
     {
       "fontId": "poppins",
@@ -89,14 +97,25 @@
   ],
   "formats": {
     "feed": {
+      "format": "4:5",
+      "width": 1080,
+      "height": 1350,
+      "plate": {
+        "src": "/adstudio-templates/meta-stories-245/plate-feed.webp",
+        "sha256": "e274a77085317e24bf6c7ab903d39f87cdcb49aa740d40b93ee211016327d21b"
+      },
+      "layers": []
+    },
+    "story": {
       "format": "9:16",
       "width": 1080,
       "height": 1920,
       "plate": {
         "src": "/adstudio-templates/meta-stories-245/plate-story.webp",
-        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        "sha256": "aeebcd3a248b86d211e46b05811d66decb558aae54c5bfcad8641ded3f4ebef5"
       },
-      "layers": []
+      "layers": [],
+      "native": true
     }
   },
   "inputs": {
@@ -229,7 +248,7 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "draft",
+    "status": "qa",
     "residuals": {},
     "bakedTextKeys": [
       "supporting_text",

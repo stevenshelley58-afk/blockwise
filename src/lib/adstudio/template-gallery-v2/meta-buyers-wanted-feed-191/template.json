@@ -22,14 +22,16 @@
       "contentHash": "4f3fd9b46206cf815a3a5750ac1e3d26cc81cd9bba6f0f6f3821e5cad816ad5c"
     },
     "sample": {
-      "imageSrc": "/adstudio-samples/meta/meta-buyers-wanted-feed-191-sample.png",
-      "contentHash": "d88bb211a8582dc5f50987723df3016ed44565785c823551e5e1b8a2173d09ca",
+      "imageSrc": "/adstudio-templates/meta-buyers-wanted-feed-191/sample.png",
+      "contentHash": "087f4be0e8a92ff41243e5bf633e554c6d53f0a45a2f1ea80128a70a1ec4633a",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
   },
   "restyle": {
-    "paletteMap": {},
+    "paletteMap": {
+      "#1f242b": "#1f242b"
+    },
     "replacedAssets": [],
     "note": "migrated from v1 (source); restyle pass pending in Studio"
   },
@@ -57,6 +59,14 @@
       "italic": false,
       "file": "/fonts/adstudio/barlow-condensed-800.woff2",
       "sha256": "2515494e8cc2ca07c86ea78766cfa104b796aa6ed5d66821c01d51dbb0b52bce"
+    },
+    {
+      "fontId": "kanit",
+      "family": "Kanit",
+      "weight": 300,
+      "italic": false,
+      "file": "/fonts/adstudio/kanit-300.woff2",
+      "sha256": "20aee722979a0f91b2baac3d0590a512b02fe00f80c454c07a178cc3964f33c2"
     }
   ],
   "formats": {
@@ -66,9 +76,93 @@
       "height": 1350,
       "plate": {
         "src": "/adstudio-templates/meta-buyers-wanted-feed-191/plate-feed.webp",
-        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        "sha256": "054fa917ecbd9450e3f0b419a98f88f3627ab8586b1ac9f19170b842d93e5a05"
       },
-      "layers": []
+      "layers": [
+        {
+          "id": "text-cta",
+          "z": 10,
+          "box": {
+            "x": 0.1,
+            "y": 0.78,
+            "width": 0.8,
+            "height": 0.05
+          },
+          "type": "text",
+          "inputKey": "cta",
+          "typo": {
+            "fontId": "kanit",
+            "family": "Kanit",
+            "fallbackFamily": "sans-serif",
+            "weight": 300,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 0.65,
+            "lineHeight": 1.2,
+            "tracking": 0.02,
+            "align": "center",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 36,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.35,
+            "detectionScore": 0.55,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        }
+      ]
+    },
+    "story": {
+      "format": "9:16",
+      "width": 1080,
+      "height": 1920,
+      "plate": {
+        "src": "/adstudio-templates/meta-buyers-wanted-feed-191/plate-story.webp",
+        "sha256": "a7dc5ef40f417cfb6b28cb06dafc8745b8693cc50af87dac26527d074e17bbca"
+      },
+      "layers": [
+        {
+          "id": "text-cta",
+          "z": 10,
+          "box": {
+            "x": 0.1,
+            "y": 0.6705208333333333,
+            "width": 0.8,
+            "height": 0.03463541666666666
+          },
+          "type": "text",
+          "inputKey": "cta",
+          "typo": {
+            "fontId": "kanit",
+            "family": "Kanit",
+            "fallbackFamily": "sans-serif",
+            "weight": 300,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 0.65,
+            "lineHeight": 1.2,
+            "tracking": 0.02,
+            "align": "center",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 36,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.35,
+            "detectionScore": 0.55,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        }
+      ]
     }
   },
   "inputs": {
@@ -145,7 +239,7 @@
     },
     "formatRouting": {
       "feed": "4:5",
-      "story": null
+      "story": "9:16"
     },
     "creativeFeatures": {
       "adapt_to_placement": "OPT_OUT",
@@ -173,13 +267,16 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "draft",
-    "residuals": {},
+    "status": "ready",
+    "residuals": {
+      "text-cta": null
+    },
     "bakedTextKeys": [
       "body",
       "headline",
-      "subheadline",
-      "cta"
-    ]
+      "subheadline"
+    ],
+    "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
+    "qaAt": "2026-08-07T08:17:36.642Z"
   }
 }

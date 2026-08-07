@@ -22,15 +22,18 @@
       "contentHash": "0f66fdfa9a3efa10b3f74b9f8a60422ef1dc6d0bf97c15447d10c7f2f80c8e8e"
     },
     "sample": {
-      "imageSrc": "/adstudio-samples/meta/meta-offmarket-alerts-story-260-sample.png",
-      "contentHash": "8c0ddb9e34a5f9dbfdd6290ee1a5c3600f7e90c7bfdffeecae71567476f3cfdc",
+      "imageSrc": "/adstudio-templates/meta-offmarket-alerts-story-260/sample.png",
+      "contentHash": "1ad69877bfb0370382b15ddc5a8ec46ba47c80b57e67f2b2e676461e2ac9ef40",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
   },
   "restyle": {
     "paletteMap": {},
-    "replacedAssets": [],
+    "replacedAssets": [
+      "hero_graphic",
+      "agency_logo"
+    ],
     "note": "migrated from v1 (source); restyle pass pending in Studio"
   },
   "fonts": [
@@ -69,47 +72,87 @@
   ],
   "formats": {
     "feed": {
+      "format": "4:5",
+      "width": 1080,
+      "height": 1350,
+      "plate": {
+        "src": "/adstudio-templates/meta-offmarket-alerts-story-260/plate-feed.webp",
+        "sha256": "8595c0fddd8a1282a6e5badbbffe6a8913f99bb4d84bd13da0e9b4af74e41647"
+      },
+      "layers": [
+        {
+          "id": "slot-hero_graphic",
+          "z": 2,
+          "box": {
+            "x": 0,
+            "y": 0.7711111111111111,
+            "width": 1,
+            "height": 0.2288888888888889
+          },
+          "type": "image_slot",
+          "inputKey": "hero_graphic",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 1080,
+            "height": 309
+          }
+        }
+      ]
+    },
+    "story": {
       "format": "9:16",
       "width": 1080,
       "height": 1920,
       "plate": {
         "src": "/adstudio-templates/meta-offmarket-alerts-story-260/plate-story.webp",
-        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        "sha256": "0855c0f6fa89d3d975b27bd22c940bacb974bcd58184c757f5bcff45ff2c53ef"
       },
       "layers": [
         {
           "id": "slot-hero_graphic",
-          "type": "image_slot",
           "z": 2,
-          "inputKey": "hero_graphic",
-          "fit": "cover",
           "box": {
             "x": 0,
             "y": 0.690625,
             "width": 1,
             "height": 0.309375
           },
+          "type": "image_slot",
+          "inputKey": "hero_graphic",
+          "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 1080,
+            "height": 594
           }
         },
         {
           "id": "slot-agency_logo",
-          "type": "image_slot",
           "z": 3,
-          "inputKey": "agency_logo",
-          "fit": "cover",
           "box": {
             "x": 0.4444444444444444,
             "y": 0.044270833333333336,
             "width": 0.1111111111111111,
             "height": 0.059895833333333336
           },
+          "type": "image_slot",
+          "inputKey": "agency_logo",
+          "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 120,
+            "height": 115
           }
         }
-      ]
+      ],
+      "native": true
     }
   },
   "inputs": {
@@ -229,13 +272,15 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "draft",
+    "status": "ready",
     "residuals": {},
     "bakedTextKeys": [
       "body",
       "headline",
       "subheadline",
       "cta"
-    ]
+    ],
+    "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
+    "qaAt": "2026-08-07T08:39:33.720Z"
   }
 }

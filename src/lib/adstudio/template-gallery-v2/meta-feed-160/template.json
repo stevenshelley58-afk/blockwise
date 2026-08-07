@@ -23,15 +23,19 @@
       "contentHash": "bf822ee54607bafdb6aad3907a99fccfb6a348a48b846d3e64e3193e35562866"
     },
     "sample": {
-      "imageSrc": "/adstudio-samples/meta/meta-feed-160-sample.png",
-      "contentHash": "f9742a8a8de22cd7fe896034666cc82393ea55434b6f0dd56054cb73e2967c4c",
+      "imageSrc": "/adstudio-templates/meta-feed-160/sample.png",
+      "contentHash": "20663618af5823b6fe09adc314eff2a8333e0f78f64fdaf8d6101509c59eabe6",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
   },
   "restyle": {
-    "paletteMap": {},
-    "replacedAssets": [],
+    "paletteMap": {
+      "#1f242b": "#1f242b"
+    },
+    "replacedAssets": [
+      "background_photo"
+    ],
     "note": "migrated from v1 (source); restyle pass pending in Studio"
   },
   "fonts": [
@@ -66,6 +70,14 @@
       "italic": false,
       "file": "/fonts/adstudio/raleway-600.woff2",
       "sha256": "0a66971e5a13d918e9b8cddd1da9a2490694c8f508f3546e4b200d700c7a136b"
+    },
+    {
+      "fontId": "raleway",
+      "family": "Raleway",
+      "weight": 400,
+      "italic": false,
+      "file": "/fonts/adstudio/raleway-400.woff2",
+      "sha256": "2318962e7930f55b45907ee85a6b6165ca3bba437b05ca17068a5c876d3de18b"
     }
   ],
   "formats": {
@@ -75,23 +87,274 @@
       "height": 1350,
       "plate": {
         "src": "/adstudio-templates/meta-feed-160/plate-feed.webp",
-        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        "sha256": "59f9058d762936af8eb320b85af1231f3d838d380c8c5ee7b7418703d51b2c83"
       },
       "layers": [
         {
           "id": "slot-background_photo",
-          "type": "image_slot",
           "z": 2,
-          "inputKey": "background_photo",
-          "fit": "cover",
           "box": {
             "x": 0,
             "y": 0,
             "width": 1,
             "height": 1
           },
+          "type": "image_slot",
+          "inputKey": "background_photo",
+          "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 1080,
+            "height": 1350
+          }
+        },
+        {
+          "id": "text-cta_button",
+          "z": 10,
+          "box": {
+            "x": 0.2841796875,
+            "y": 0.66171875,
+            "width": 0.2890625,
+            "height": 0.01953125
+          },
+          "type": "text",
+          "inputKey": "cta_button",
+          "typo": {
+            "fontId": "merriweather",
+            "family": "Merriweather",
+            "fallbackFamily": "serif",
+            "weight": 800,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 1.3059006211180126,
+            "lineHeight": 1.257,
+            "tracking": 0,
+            "align": "left",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 30,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.414,
+            "detectionScore": 1,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        },
+        {
+          "id": "text-share_prompt",
+          "z": 11,
+          "box": {
+            "x": 0.06298828125,
+            "y": 0.93515625,
+            "width": 0.24951171875,
+            "height": 0.02421875
+          },
+          "type": "text",
+          "inputKey": "share_prompt",
+          "typo": {
+            "fontId": "raleway",
+            "family": "Raleway",
+            "fallbackFamily": "sans-serif",
+            "weight": 600,
+            "italic": false,
+            "case": "mixed",
+            "sizeRatio": 1.0596885813148786,
+            "lineHeight": 1.174,
+            "tracking": 0,
+            "align": "left",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 25,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.605,
+            "detectionScore": 0.842,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        },
+        {
+          "id": "text-header",
+          "z": 12,
+          "box": {
+            "x": 0.2333984375,
+            "y": 0.293359375,
+            "width": 0.228515625,
+            "height": 0.017578125
+          },
+          "type": "text",
+          "inputKey": "header",
+          "typo": {
+            "fontId": "merriweather",
+            "family": "Merriweather",
+            "fallbackFamily": "serif",
+            "weight": 800,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 1.3520000000000003,
+            "lineHeight": 1.257,
+            "tracking": 0,
+            "align": "left",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 25,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.413,
+            "detectionScore": 1,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        }
+      ]
+    },
+    "story": {
+      "format": "9:16",
+      "width": 1080,
+      "height": 1920,
+      "plate": {
+        "src": "/adstudio-templates/meta-feed-160/plate-story.webp",
+        "sha256": "596dc4ad94bf8041c825e54528a26c1a8f6b2e7ed2cd3abe5b998de6f813d0c1"
+      },
+      "layers": [
+        {
+          "id": "slot-background_photo",
+          "z": 2,
+          "box": {
+            "x": 0,
+            "y": 0.13020833333333334,
+            "width": 1,
+            "height": 0.6927083333333333
+          },
+          "type": "image_slot",
+          "inputKey": "background_photo",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 1080,
+            "height": 1330
+          }
+        },
+        {
+          "id": "text-cta_button",
+          "z": 10,
+          "box": {
+            "x": 0.2841796875,
+            "y": 0.58858642578125,
+            "width": 0.2890625,
+            "height": 0.013529459635416664
+          },
+          "type": "text",
+          "inputKey": "cta_button",
+          "typo": {
+            "fontId": "merriweather",
+            "family": "Merriweather",
+            "fallbackFamily": "serif",
+            "weight": 800,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 1.3059006211180126,
+            "lineHeight": 1.257,
+            "tracking": 0,
+            "align": "left",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 30,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.414,
+            "detectionScore": 1,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        },
+        {
+          "id": "text-share_prompt",
+          "z": 11,
+          "box": {
+            "x": 0.06298828125,
+            "y": 0.7779988606770833,
+            "width": 0.24951171875,
+            "height": 0.016776529947916664
+          },
+          "type": "text",
+          "inputKey": "share_prompt",
+          "typo": {
+            "fontId": "raleway",
+            "family": "Raleway",
+            "fallbackFamily": "sans-serif",
+            "weight": 600,
+            "italic": false,
+            "case": "mixed",
+            "sizeRatio": 1.0596885813148786,
+            "lineHeight": 1.174,
+            "tracking": 0,
+            "align": "left",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 25,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.605,
+            "detectionScore": 0.842,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        },
+        {
+          "id": "text-header",
+          "z": 12,
+          "box": {
+            "x": 0.2333984375,
+            "y": 0.33342081705729165,
+            "width": 0.228515625,
+            "height": 0.012176513671874998
+          },
+          "type": "text",
+          "inputKey": "header",
+          "typo": {
+            "fontId": "merriweather",
+            "family": "Merriweather",
+            "fallbackFamily": "serif",
+            "weight": 800,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 1.3520000000000003,
+            "lineHeight": 1.257,
+            "tracking": 0,
+            "align": "left",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 25,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.413,
+            "detectionScore": 1,
+            "source": "ocr-v2",
+            "version": 1
           }
         }
       ]
@@ -193,7 +456,7 @@
     },
     "formatRouting": {
       "feed": "4:5",
-      "story": null
+      "story": "9:16"
     },
     "creativeFeatures": {
       "adapt_to_placement": "OPT_OUT",
@@ -221,15 +484,18 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "draft",
-    "residuals": {},
+    "status": "ready",
+    "residuals": {
+      "text-cta_button": null,
+      "text-share_prompt": null,
+      "text-header": null
+    },
     "bakedTextKeys": [
       "main_title",
       "profile_handle",
-      "cta_button",
-      "share_prompt",
-      "save_prompt",
-      "header"
-    ]
+      "save_prompt"
+    ],
+    "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
+    "qaAt": "2026-08-07T08:17:56.056Z"
   }
 }

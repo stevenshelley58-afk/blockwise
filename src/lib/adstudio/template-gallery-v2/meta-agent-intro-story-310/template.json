@@ -22,14 +22,16 @@
       "contentHash": "d57e9f8f071b1961ba9f429072f93b92a1f4d471f849fa5aac16c132816d98ea"
     },
     "sample": {
-      "imageSrc": "/adstudio-samples/meta/meta-agent-intro-story-310-sample.png",
-      "contentHash": "071bcd9f0e4a73fb4a547550383990eb5bc6d867bf6687744bd240791a0b9a7a",
+      "imageSrc": "/adstudio-templates/meta-agent-intro-story-310/sample.png",
+      "contentHash": "2370b8476562b3a8a4f72ab57fc98b565faaea55416ad241e0fbb2667cd3ddf0",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
   },
   "restyle": {
-    "paletteMap": {},
+    "paletteMap": {
+      "#1f242b": "#1f242b"
+    },
     "replacedAssets": [],
     "note": "migrated from v1 (source); restyle pass pending in Studio"
   },
@@ -89,18 +91,183 @@
       "italic": false,
       "file": "/fonts/adstudio/roboto-slab-900.woff2",
       "sha256": "88d27b763f182cef61d1c12de04b43b818e7e476bc251f5d52d243498c3c2431"
+    },
+    {
+      "fontId": "plus-jakarta-sans",
+      "family": "Plus Jakarta Sans",
+      "weight": 700,
+      "italic": false,
+      "file": "/fonts/adstudio/plus-jakarta-sans-700.woff2",
+      "sha256": "eaeb36e3ca51e43f00783cfbdd980b8c307dce8c5ed3aafc5119ae1ca2566992"
     }
   ],
   "formats": {
     "feed": {
+      "format": "4:5",
+      "width": 1080,
+      "height": 1350,
+      "plate": {
+        "src": "/adstudio-templates/meta-agent-intro-story-310/plate-feed.webp",
+        "sha256": "5e0d337588650379793aec5f3c92c7acac1630294ef7497faea0cfc15ea460f1"
+      },
+      "layers": [
+        {
+          "id": "text-agent_name",
+          "z": 11,
+          "box": {
+            "x": 0.05787037037037037,
+            "y": 0.2477777777777778,
+            "width": 0.2967592592592593,
+            "height": 0.024814814814814814
+          },
+          "type": "text",
+          "inputKey": "agent_name",
+          "typo": {
+            "fontId": "roboto-slab",
+            "family": "Roboto Slab",
+            "fallbackFamily": "serif",
+            "weight": 900,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 1.3500986193293885,
+            "lineHeight": 1.31884765625,
+            "tracking": 0,
+            "align": "left",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 29,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.24,
+            "detectionScore": 1,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        }
+      ]
+    },
+    "story": {
       "format": "9:16",
       "width": 1080,
       "height": 1920,
       "plate": {
         "src": "/adstudio-templates/meta-agent-intro-story-310/plate-story.webp",
-        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        "sha256": "23b80b95639c0f05c3f2523cc63e89b0def3c7f802b7231f7eb3d9f74e59c75f"
       },
-      "layers": []
+      "layers": [
+        {
+          "id": "text-headline",
+          "z": 10,
+          "box": {
+            "x": 0.13194444444444445,
+            "y": 0.07578125,
+            "width": 0.4981481481481482,
+            "height": 0.013541666666666667
+          },
+          "type": "text",
+          "inputKey": "headline",
+          "typo": {
+            "fontId": "plus-jakarta-sans",
+            "family": "Plus Jakarta Sans",
+            "fallbackFamily": "sans-serif",
+            "weight": 800,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 1.3493253373313343,
+            "lineHeight": 1.26,
+            "tracking": 0,
+            "align": "left",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 45,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.429,
+            "detectionScore": 1,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        },
+        {
+          "id": "text-agent_name",
+          "z": 11,
+          "box": {
+            "x": 0.05787037037037037,
+            "y": 0.32265625,
+            "width": 0.2967592592592593,
+            "height": 0.017447916666666667
+          },
+          "type": "text",
+          "inputKey": "agent_name",
+          "typo": {
+            "fontId": "roboto-slab",
+            "family": "Roboto Slab",
+            "fallbackFamily": "serif",
+            "weight": 900,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 1.3500986193293885,
+            "lineHeight": 1.31884765625,
+            "tracking": 0,
+            "align": "left",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 29,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.24,
+            "detectionScore": 1,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        },
+        {
+          "id": "text-cta",
+          "z": 12,
+          "box": {
+            "x": 0.32037037037037036,
+            "y": 0.8690104166666667,
+            "width": 0.36435185185185187,
+            "height": 0.02421875
+          },
+          "type": "text",
+          "inputKey": "cta",
+          "typo": {
+            "fontId": "plus-jakarta-sans",
+            "family": "Plus Jakarta Sans",
+            "fallbackFamily": "sans-serif",
+            "weight": 700,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 1.2682926829268293,
+            "lineHeight": 1.26,
+            "tracking": 0,
+            "align": "center",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 29,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.45,
+            "detectionScore": 1,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        }
+      ],
+      "native": true
     }
   },
   "inputs": {
@@ -233,17 +400,18 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "draft",
-    "residuals": {},
+    "status": "ready",
+    "residuals": {
+      "text-agent_name": null
+    },
     "bakedTextKeys": [
       "body",
-      "headline",
       "agent_role",
       "subheadline",
       "email",
-      "phone",
-      "agent_name",
-      "cta"
-    ]
+      "phone"
+    ],
+    "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
+    "qaAt": "2026-08-07T08:17:18.586Z"
   }
 }

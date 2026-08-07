@@ -22,15 +22,23 @@
       "contentHash": "8bace755ebc058a3c26ac189e8c39ce3934db8b35be83a11311a49269fc83cb1"
     },
     "sample": {
-      "imageSrc": "/adstudio-samples/meta/meta-downsizer-consult-feed-178-sample.png",
-      "contentHash": "9186e39bafffcb4f87d8240a8926c6a3bab023ea530e5c03a1d6d001d30d7539",
+      "imageSrc": "/adstudio-templates/meta-downsizer-consult-feed-178/sample.png",
+      "contentHash": "2a9932e0f615b078b786d4101dc246d89b3ba6f1e37561d88e3ef444f3e5f15d",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
   },
   "restyle": {
-    "paletteMap": {},
-    "replacedAssets": [],
+    "paletteMap": {
+      "#e6bb63": "#1f242b",
+      "#e4e1df": "#1f242b",
+      "#e9e6e4": "#1f242b",
+      "#a3998b": "#1f242b"
+    },
+    "replacedAssets": [
+      "background_photo",
+      "agency_logo"
+    ],
     "note": "migrated from v1 (source); font remaps: source-sans-3 -> arimo; restyle pass pending in Studio"
   },
   "fonts": [
@@ -51,12 +59,28 @@
       "sha256": "4d14d0d3c70f966b6559cf5dd372ab305045329521825596a317df392139e63a"
     },
     {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "weight": 300,
+      "italic": false,
+      "file": "/fonts/adstudio/smooch-sans-300.woff2",
+      "sha256": "24c4dda0d38ff3000dbaf5c37b0035fc51791a693cc68101d14acb16c8504cb6"
+    },
+    {
       "fontId": "merriweather",
       "family": "Merriweather",
       "weight": 800,
       "italic": false,
       "file": "/fonts/adstudio/merriweather-800.woff2",
       "sha256": "234916daa3dd072625fad30f1ae31d989c101bcd73ae8f29023cfbbc9a711c8a"
+    },
+    {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "weight": 400,
+      "italic": false,
+      "file": "/fonts/adstudio/smooch-sans-400.woff2",
+      "sha256": "a1b64ed5521846da168a3a1907019f6ee8699958c6807b8d33d962d33153cff8"
     }
   ],
   "formats": {
@@ -66,7 +90,7 @@
       "height": 1350,
       "plate": {
         "src": "/adstudio-templates/meta-downsizer-consult-feed-178/plate-feed.webp",
-        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        "sha256": "b780a183c2ab337e1cd6f9637fcc63825a0b0f2ef7e9ac37f8a6bbb246f78bfe"
       },
       "layers": [
         {
@@ -99,6 +123,337 @@
           },
           "mask": {
             "kind": "rect"
+          }
+        },
+        {
+          "id": "text-subheadline",
+          "type": "text",
+          "z": 10,
+          "inputKey": "subheadline",
+          "box": {
+            "x": 0.09027777777777778,
+            "y": 0.7933333333333333,
+            "width": 0.6893518518518519,
+            "height": 0.018518518518518517
+          },
+          "typo": {
+            "fontId": "smooch-sans",
+            "family": "Smooch Sans",
+            "fallbackFamily": "sans-serif",
+            "weight": 800,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 1.5808270676691731,
+            "lineHeight": 1.2,
+            "tracking": 0,
+            "align": "left",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 53,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.434,
+            "detectionScore": 1,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        },
+        {
+          "id": "text-benefit_3",
+          "type": "text",
+          "z": 11,
+          "inputKey": "benefit_3",
+          "box": {
+            "x": 0.6680555555555555,
+            "y": 0.07296296296296297,
+            "width": 0.25833333333333336,
+            "height": 0.014444444444444444
+          },
+          "typo": {
+            "fontId": "merriweather",
+            "family": "Merriweather",
+            "fallbackFamily": "serif",
+            "weight": 800,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 1.3529411764705883,
+            "lineHeight": 1.257,
+            "tracking": 0,
+            "align": "right",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 35,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.423,
+            "detectionScore": 1,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        },
+        {
+          "id": "text-benefit_2",
+          "type": "text",
+          "z": 12,
+          "inputKey": "benefit_2",
+          "box": {
+            "x": 0.40185185185185185,
+            "y": 0.07296296296296297,
+            "width": 0.1550925925925926,
+            "height": 0.014444444444444444
+          },
+          "typo": {
+            "fontId": "merriweather",
+            "family": "Merriweather",
+            "fallbackFamily": "serif",
+            "weight": 800,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 1.3529411764705883,
+            "lineHeight": 1.257,
+            "tracking": 0,
+            "align": "center",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 28,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.425,
+            "detectionScore": 1,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        },
+        {
+          "id": "text-cta",
+          "type": "text",
+          "z": 13,
+          "inputKey": "cta",
+          "box": {
+            "x": 0.1,
+            "y": 0.78,
+            "width": 0.8,
+            "height": 0.05
+          },
+          "typo": {
+            "fontId": "smooch-sans",
+            "family": "Smooch Sans",
+            "fallbackFamily": "sans-serif",
+            "weight": 300,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 0.65,
+            "lineHeight": 1.2,
+            "tracking": 0.02,
+            "align": "center",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 39,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.35,
+            "detectionScore": 0.55,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        }
+      ]
+    },
+    "story": {
+      "format": "9:16",
+      "width": 1080,
+      "height": 1920,
+      "plate": {
+        "src": "/adstudio-templates/meta-downsizer-consult-feed-178/plate-story.webp",
+        "sha256": "a2df9b9b5a7ff074682f82da0fe946409af1c3b592ad264c940ad1c17bc14396"
+      },
+      "layers": [
+        {
+          "id": "slot-background_photo",
+          "type": "image_slot",
+          "z": 2,
+          "inputKey": "background_photo",
+          "fit": "cover",
+          "box": {
+            "x": 0,
+            "y": 0.13020833333333334,
+            "width": 1,
+            "height": 0.6927083333333333
+          },
+          "mask": {
+            "kind": "rect"
+          }
+        },
+        {
+          "id": "slot-agency_logo",
+          "type": "image_slot",
+          "z": 3,
+          "inputKey": "agency_logo",
+          "fit": "cover",
+          "box": {
+            "x": 0.7888888888888889,
+            "y": 0.7120833333333333,
+            "width": 0.14166666666666666,
+            "height": 0.07953317901234568
+          },
+          "mask": {
+            "kind": "rect"
+          }
+        },
+        {
+          "id": "text-subheadline",
+          "type": "text",
+          "z": 10,
+          "inputKey": "subheadline",
+          "box": {
+            "x": 0.09027777777777778,
+            "y": 0.6797569444444445,
+            "width": 0.6893518518518519,
+            "height": 0.01282793209876543
+          },
+          "typo": {
+            "fontId": "smooch-sans",
+            "family": "Smooch Sans",
+            "fallbackFamily": "sans-serif",
+            "weight": 800,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 1.5808270676691731,
+            "lineHeight": 1.2,
+            "tracking": 0,
+            "align": "left",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 53,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.434,
+            "detectionScore": 1,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        },
+        {
+          "id": "text-benefit_3",
+          "type": "text",
+          "z": 11,
+          "inputKey": "benefit_3",
+          "box": {
+            "x": 0.6680555555555555,
+            "y": 0.18075038580246913,
+            "width": 0.25833333333333336,
+            "height": 0.010005787037037035
+          },
+          "typo": {
+            "fontId": "merriweather",
+            "family": "Merriweather",
+            "fallbackFamily": "serif",
+            "weight": 800,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 1.3529411764705883,
+            "lineHeight": 1.257,
+            "tracking": 0,
+            "align": "right",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 35,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.423,
+            "detectionScore": 1,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        },
+        {
+          "id": "text-benefit_2",
+          "type": "text",
+          "z": 12,
+          "inputKey": "benefit_2",
+          "box": {
+            "x": 0.40185185185185185,
+            "y": 0.18075038580246913,
+            "width": 0.1550925925925926,
+            "height": 0.010005787037037035
+          },
+          "typo": {
+            "fontId": "merriweather",
+            "family": "Merriweather",
+            "fallbackFamily": "serif",
+            "weight": 800,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 1.3529411764705883,
+            "lineHeight": 1.257,
+            "tracking": 0,
+            "align": "center",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 28,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.425,
+            "detectionScore": 1,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        },
+        {
+          "id": "text-cta",
+          "type": "text",
+          "z": 13,
+          "inputKey": "cta",
+          "box": {
+            "x": 0.1,
+            "y": 0.6705208333333333,
+            "width": 0.8,
+            "height": 0.03463541666666666
+          },
+          "typo": {
+            "fontId": "smooch-sans",
+            "family": "Smooch Sans",
+            "fallbackFamily": "sans-serif",
+            "weight": 300,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 0.65,
+            "lineHeight": 1.2,
+            "tracking": 0.02,
+            "align": "center",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 39,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.35,
+            "detectionScore": 0.55,
+            "source": "ocr-v2",
+            "version": 1
           }
         }
       ]
@@ -214,7 +569,7 @@
     },
     "formatRouting": {
       "feed": "4:5",
-      "story": null
+      "story": "9:16"
     },
     "creativeFeatures": {
       "adapt_to_placement": "OPT_OUT",
@@ -242,16 +597,17 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "draft",
-    "residuals": {},
+    "status": "qa",
+    "residuals": {
+      "text-subheadline": 0.06924899317569748,
+      "text-benefit_3": 0.09635350069836075,
+      "text-benefit_2": 0.11747701041943405,
+      "text-cta": 0.06947324691450839
+    },
     "bakedTextKeys": [
       "body",
-      "subheadline",
       "headline",
-      "benefit_3",
-      "benefit_1",
-      "benefit_2",
-      "cta"
+      "benefit_1"
     ]
   }
 }

@@ -22,15 +22,18 @@
       "contentHash": "e67fa125ceae87e45080bb42f65f84e59d22c62d913582fe201fffdb7c9155b9"
     },
     "sample": {
-      "imageSrc": "/adstudio-samples/meta/meta-offmarket-alerts-feed-130-sample.png",
-      "contentHash": "b0bb808e7012fa214616e43564a3541afabe23064c7bf05a0391f1ca640b5460",
+      "imageSrc": "/adstudio-templates/meta-offmarket-alerts-feed-130/sample.png",
+      "contentHash": "7608f5acf0359a1e0dea15a20293da43992919b143d54317ef8d54e747299749",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
   },
   "restyle": {
     "paletteMap": {},
-    "replacedAssets": [],
+    "replacedAssets": [
+      "property_photo",
+      "agency_logo"
+    ],
     "note": "migrated from v1 (source); restyle pass pending in Studio"
   },
   "fonts": [
@@ -66,39 +69,98 @@
       "height": 1350,
       "plate": {
         "src": "/adstudio-templates/meta-offmarket-alerts-feed-130/plate-feed.webp",
-        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        "sha256": "7600020e383183feb9fe935904f489f06b50d9d038042a6b48cc78776f7d51f9"
       },
       "layers": [
         {
           "id": "slot-property_photo",
-          "type": "image_slot",
           "z": 2,
-          "inputKey": "property_photo",
-          "fit": "cover",
           "box": {
             "x": 0.1111111111,
             "y": 0.2777777778,
             "width": 0.337962963,
             "height": 0.542962963
           },
+          "type": "image_slot",
+          "inputKey": "property_photo",
+          "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 365,
+            "height": 733
           }
         },
         {
           "id": "slot-agency_logo",
-          "type": "image_slot",
           "z": 3,
-          "inputKey": "agency_logo",
-          "fit": "cover",
           "box": {
             "x": 0.7814814815,
             "y": 0.84,
             "width": 0.1740740741,
             "height": 0.137037037
           },
+          "type": "image_slot",
+          "inputKey": "agency_logo",
+          "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 188,
+            "height": 185
+          }
+        }
+      ]
+    },
+    "story": {
+      "format": "9:16",
+      "width": 1080,
+      "height": 1920,
+      "plate": {
+        "src": "/adstudio-templates/meta-offmarket-alerts-feed-130/plate-story.webp",
+        "sha256": "a74dc4ae7b3683eeb8e136fa46bb8d76bebe09da01b43a8dbc36bae74bc71ceb"
+      },
+      "layers": [
+        {
+          "id": "slot-property_photo",
+          "z": 2,
+          "box": {
+            "x": 0.1111111111,
+            "y": 0.32262731483020834,
+            "width": 0.337962963,
+            "height": 0.3761149691614583
+          },
+          "type": "image_slot",
+          "inputKey": "property_photo",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 365,
+            "height": 722
+          }
+        },
+        {
+          "id": "slot-agency_logo",
+          "z": 3,
+          "box": {
+            "x": 0.7814814815,
+            "y": 0.7120833333333333,
+            "width": 0.1740740741,
+            "height": 0.09492669750520832
+          },
+          "type": "image_slot",
+          "inputKey": "agency_logo",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 188,
+            "height": 182
           }
         }
       ]
@@ -186,7 +248,7 @@
     },
     "formatRouting": {
       "feed": "4:5",
-      "story": null
+      "story": "9:16"
     },
     "creativeFeatures": {
       "adapt_to_placement": "OPT_OUT",
@@ -214,12 +276,14 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "draft",
+    "status": "ready",
     "residuals": {},
     "bakedTextKeys": [
       "body",
       "headline",
       "cta"
-    ]
+    ],
+    "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
+    "qaAt": "2026-08-07T08:35:02.539Z"
   }
 }

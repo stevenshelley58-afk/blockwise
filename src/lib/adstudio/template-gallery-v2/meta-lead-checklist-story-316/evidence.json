@@ -67,5 +67,16 @@
       "width": 0.8,
       "height": 0.05
     }
+  },
+  "bakedResiduals": {
+    "baked-headline": 0,
+    "baked-subheadline": 0,
+    "baked-check_3": 0,
+    "baked-check_2": 0,
+    "baked-check_1": 0,
+    "baked-benefit_3": 0,
+    "baked-benefit_1": 0,
+    "baked-benefit_2": 0,
+    "baked-cta": 0
   }
 }

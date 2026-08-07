@@ -46,5 +46,10 @@
       "width": 0.228515625,
       "height": 0.017578125
     }
+  },
+  "bakedResiduals": {
+    "baked-main_title": 0.026686231809209367,
+    "baked-profile_handle": 0,
+    "baked-save_prompt": 0
   }
 }

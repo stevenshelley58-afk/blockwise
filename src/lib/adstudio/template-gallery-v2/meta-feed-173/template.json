@@ -24,15 +24,17 @@
       "contentHash": "62af7a0e093d06a1eda25d187c05fafad4db95a82523f714dcfcffba44aa68cc"
     },
     "sample": {
-      "imageSrc": "/adstudio-samples/meta/meta-feed-173-sample.png",
-      "contentHash": "9385a07d2f3ca2e7c548f29f6e16a89f21486395cb9d14c4187d47fcba0c5e35",
+      "imageSrc": "/adstudio-templates/meta-feed-173/sample.png",
+      "contentHash": "f6a0fa4b5098feb2c13b92293875d0f7ecb66316e87d6563863574d83205827f",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
   },
   "restyle": {
     "paletteMap": {},
-    "replacedAssets": [],
+    "replacedAssets": [
+      "main_property_image"
+    ],
     "note": "migrated from v1 (source); restyle pass pending in Studio"
   },
   "fonts": [
@@ -68,23 +70,58 @@
       "height": 1350,
       "plate": {
         "src": "/adstudio-templates/meta-feed-173/plate-feed.webp",
-        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        "sha256": "79be73c57c2679166c1d5d13b4ce08e3edb87238dd229e8c2b0fc35bc175c10d"
       },
       "layers": [
         {
           "id": "slot-main_property_image",
-          "type": "image_slot",
           "z": 2,
-          "inputKey": "main_property_image",
-          "fit": "cover",
           "box": {
             "x": 0,
             "y": 0.53515625,
             "width": 1,
             "height": 0.46484375
           },
+          "type": "image_slot",
+          "inputKey": "main_property_image",
+          "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 1080,
+            "height": 628
+          }
+        }
+      ]
+    },
+    "story": {
+      "format": "9:16",
+      "width": 1080,
+      "height": 1920,
+      "plate": {
+        "src": "/adstudio-templates/meta-feed-173/plate-story.webp",
+        "sha256": "bc272c206e78d8e77c2a685f0fcd2d6d5d03cafb29d89313ee097805d7d14e99"
+      },
+      "layers": [
+        {
+          "id": "slot-main_property_image",
+          "z": 2,
+          "box": {
+            "x": 0,
+            "y": 0.50091552734375,
+            "width": 1,
+            "height": 0.32200113932291663
+          },
+          "type": "image_slot",
+          "inputKey": "main_property_image",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 1080,
+            "height": 618
           }
         }
       ]
@@ -165,7 +202,7 @@
     },
     "formatRouting": {
       "feed": "4:5",
-      "story": null
+      "story": "9:16"
     },
     "creativeFeatures": {
       "adapt_to_placement": "OPT_OUT",
@@ -193,12 +230,14 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "draft",
+    "status": "ready",
     "residuals": {},
     "bakedTextKeys": [
       "subheadline",
       "main_headline",
       "headline_top"
-    ]
+    ],
+    "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
+    "qaAt": "2026-08-07T08:18:01.577Z"
   }
 }

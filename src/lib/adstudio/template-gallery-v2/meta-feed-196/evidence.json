@@ -53,5 +53,14 @@
       "width": 0.8,
       "height": 0.05
     }
+  },
+  "bakedResiduals": {
+    "baked-description": 0,
+    "baked-features": 0,
+    "baked-contact_email": 0,
+    "baked-agency_name": 0,
+    "baked-headline": 0,
+    "baked-contact_phone": 0,
+    "baked-cta_button": 0
   }
 }

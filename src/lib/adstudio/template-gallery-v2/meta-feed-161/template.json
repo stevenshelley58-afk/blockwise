@@ -23,15 +23,19 @@
       "contentHash": "7624e985946df2cc7803477fb635cb6e48589c75b4faf4da53eb2093d36a15a6"
     },
     "sample": {
-      "imageSrc": "/adstudio-samples/meta/meta-feed-161-sample.png",
-      "contentHash": "4615a6b7adf9e3b4b5289c76a623f0faef6c1048be75aae4e7e6a42905693d24",
+      "imageSrc": "/adstudio-templates/meta-feed-161/sample.png",
+      "contentHash": "540c9991209604da145a98d6b52399de0dbd6911566d210f9b7ad8cdb3088384",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
   },
   "restyle": {
-    "paletteMap": {},
-    "replacedAssets": [],
+    "paletteMap": {
+      "#1f242b": "#1f242b"
+    },
+    "replacedAssets": [
+      "property_image"
+    ],
     "note": "migrated from v1 (source); restyle pass pending in Studio"
   },
   "fonts": [
@@ -51,23 +55,130 @@
       "height": 1350,
       "plate": {
         "src": "/adstudio-templates/meta-feed-161/plate-feed.webp",
-        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        "sha256": "5e30c26186c2542ff80722eca30429b8bdee31d2c7f78a03768f548249629d2b"
       },
       "layers": [
         {
           "id": "slot-property_image",
-          "type": "image_slot",
           "z": 2,
-          "inputKey": "property_image",
-          "fit": "cover",
           "box": {
             "x": 0,
             "y": 0,
             "width": 1,
             "height": 1
           },
+          "type": "image_slot",
+          "inputKey": "property_image",
+          "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 1080,
+            "height": 1350
+          }
+        },
+        {
+          "id": "text-headline",
+          "z": 10,
+          "box": {
+            "x": 0.3349609375,
+            "y": 0.23671875,
+            "width": 0.3125,
+            "height": 0.0203125
+          },
+          "type": "text",
+          "inputKey": "headline",
+          "typo": {
+            "fontId": "kanit",
+            "family": "Kanit",
+            "fallbackFamily": "sans-serif",
+            "weight": 900,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 1.5517241379310347,
+            "lineHeight": 1.495,
+            "tracking": 0,
+            "align": "center",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 20,
+            "maxLines": 3,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.086,
+            "detectionScore": 0.364,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        }
+      ]
+    },
+    "story": {
+      "format": "9:16",
+      "width": 1080,
+      "height": 1920,
+      "plate": {
+        "src": "/adstudio-templates/meta-feed-161/plate-story.webp",
+        "sha256": "c0ad34713f5a369507025a3e26b568949cfbe4fd73b5809b6624c1d84ae873cb"
+      },
+      "layers": [
+        {
+          "id": "slot-property_image",
+          "z": 2,
+          "box": {
+            "x": 0,
+            "y": 0.13020833333333334,
+            "width": 1,
+            "height": 0.6927083333333333
+          },
+          "type": "image_slot",
+          "inputKey": "property_image",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 1080,
+            "height": 1330
+          }
+        },
+        {
+          "id": "text-headline",
+          "z": 10,
+          "box": {
+            "x": 0.3349609375,
+            "y": 0.29418538411458334,
+            "width": 0.3125,
+            "height": 0.014070638020833331
+          },
+          "type": "text",
+          "inputKey": "headline",
+          "typo": {
+            "fontId": "kanit",
+            "family": "Kanit",
+            "fallbackFamily": "sans-serif",
+            "weight": 900,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 1.5517241379310347,
+            "lineHeight": 1.495,
+            "tracking": 0,
+            "align": "center",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 20,
+            "maxLines": 3,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.086,
+            "detectionScore": 0.364,
+            "source": "ocr-v2",
+            "version": 1
           }
         }
       ]
@@ -134,7 +245,7 @@
     },
     "formatRouting": {
       "feed": "4:5",
-      "story": null
+      "story": "9:16"
     },
     "creativeFeatures": {
       "adapt_to_placement": "OPT_OUT",
@@ -162,10 +273,12 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "draft",
-    "residuals": {},
-    "bakedTextKeys": [
-      "headline"
-    ]
+    "status": "ready",
+    "residuals": {
+      "text-headline": null
+    },
+    "bakedTextKeys": [],
+    "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
+    "qaAt": "2026-08-07T08:17:57.641Z"
   }
 }

@@ -22,14 +22,16 @@
       "contentHash": "5db9bbfba2ed48dd9432aca11c264433a89e3ca5e651105eabbf397f8bfe1a53"
     },
     "sample": {
-      "imageSrc": "/adstudio-samples/meta/meta-downsizer-consult-story-314-sample.png",
-      "contentHash": "bc29bcd19b971491ab192378313030d896a5a390d870ba13ab69522e6d5e8b20",
+      "imageSrc": "/adstudio-templates/meta-downsizer-consult-story-314/sample.png",
+      "contentHash": "d48ca54a0f5a46ee45973b9bc02318223a101e9135a509dd26631ee6fec4e1b2",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
   },
   "restyle": {
-    "paletteMap": {},
+    "paletteMap": {
+      "#1f242b": "#1f242b"
+    },
     "replacedAssets": [],
     "note": "migrated from v1 (source); restyle pass pending in Studio"
   },
@@ -69,14 +71,135 @@
   ],
   "formats": {
     "feed": {
+      "format": "4:5",
+      "width": 1080,
+      "height": 1350,
+      "plate": {
+        "src": "/adstudio-templates/meta-downsizer-consult-story-314/plate-feed.webp",
+        "sha256": "e9e70896dd762970afd7bba7d1b2c2862d5b10497b609fa92991daaa8ca624cc"
+      },
+      "layers": [
+        {
+          "id": "text-subheadline",
+          "z": 10,
+          "box": {
+            "x": 0.09861111111111111,
+            "y": 0.7522222222222222,
+            "width": 0.8425925925925926,
+            "height": 0.024814814814814814
+          },
+          "type": "text",
+          "inputKey": "subheadline",
+          "typo": {
+            "fontId": "merriweather",
+            "family": "Merriweather",
+            "fallbackFamily": "serif",
+            "weight": 800,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 1.3000949667616335,
+            "lineHeight": 1.257,
+            "tracking": 0,
+            "align": "center",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 53,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.455,
+            "detectionScore": 1,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        }
+      ]
+    },
+    "story": {
       "format": "9:16",
       "width": 1080,
       "height": 1920,
       "plate": {
         "src": "/adstudio-templates/meta-downsizer-consult-story-314/plate-story.webp",
-        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        "sha256": "ac589c91325aa97798ee7fb490bab4222ba47ef9659cfdc4fef9c59f34362d71"
       },
-      "layers": []
+      "layers": [
+        {
+          "id": "text-subheadline",
+          "z": 10,
+          "box": {
+            "x": 0.09861111111111111,
+            "y": 0.67734375,
+            "width": 0.8425925925925926,
+            "height": 0.017447916666666667
+          },
+          "type": "text",
+          "inputKey": "subheadline",
+          "typo": {
+            "fontId": "merriweather",
+            "family": "Merriweather",
+            "fallbackFamily": "serif",
+            "weight": 800,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 1.3000949667616335,
+            "lineHeight": 1.257,
+            "tracking": 0,
+            "align": "center",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 53,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.455,
+            "detectionScore": 1,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        },
+        {
+          "id": "text-cta",
+          "z": 11,
+          "box": {
+            "x": 0.24259259259259258,
+            "y": 0.8924479166666667,
+            "width": 0.5138888888888888,
+            "height": 0.01875
+          },
+          "type": "text",
+          "inputKey": "cta",
+          "typo": {
+            "fontId": "smooch-sans",
+            "family": "Smooch Sans",
+            "fallbackFamily": "sans-serif",
+            "weight": 700,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 1.5194681861348525,
+            "lineHeight": 1.2,
+            "tracking": 0,
+            "align": "center",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 39,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.459,
+            "detectionScore": 1,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        }
+      ],
+      "native": true
     }
   },
   "inputs": {
@@ -181,13 +304,15 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "draft",
-    "residuals": {},
+    "status": "ready",
+    "residuals": {
+      "text-subheadline": null
+    },
     "bakedTextKeys": [
       "body",
-      "subheadline",
-      "headline",
-      "cta"
-    ]
+      "headline"
+    ],
+    "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
+    "qaAt": "2026-08-07T08:17:43.391Z"
   }
 }

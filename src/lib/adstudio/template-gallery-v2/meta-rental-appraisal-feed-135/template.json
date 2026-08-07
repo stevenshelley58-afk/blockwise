@@ -22,15 +22,19 @@
       "contentHash": "3887515659e605eb00b0a80140629a2e6d8e2f60502276b820d9254ad85cd6ee"
     },
     "sample": {
-      "imageSrc": "/adstudio-samples/meta/meta-rental-appraisal-feed-135-sample.png",
-      "contentHash": "8f909f4b8f396a6d3fa1a3940fccb64292ac3df511761d2d8b72b6b39f0ca8de",
+      "imageSrc": "/adstudio-templates/meta-rental-appraisal-feed-135/sample.png",
+      "contentHash": "046123679f0ade0389880c08e62a7dc5a54655c3980f11ecd4c27c8971671ece",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
   },
   "restyle": {
     "paletteMap": {},
-    "replacedAssets": [],
+    "replacedAssets": [
+      "property_photo_1",
+      "property_photo_2",
+      "agency_logo"
+    ],
     "note": "migrated from v1 (source); font remaps: source-sans-3 -> arimo; restyle pass pending in Studio"
   },
   "fonts": [
@@ -59,6 +63,14 @@
       "sha256": "f2615ce104011f8d6f8d07676254d79d22a6905a70ecbce3f980c2489bbbee47"
     },
     {
+      "fontId": "manrope",
+      "family": "Manrope",
+      "weight": 800,
+      "italic": false,
+      "file": "/fonts/adstudio/manrope-800.woff2",
+      "sha256": "74c161dbcbce7c3590803cc72dc1f63313c360e13367aba5075a7b7b3818ea49"
+    },
+    {
       "fontId": "lora",
       "family": "Lora",
       "weight": 700,
@@ -82,55 +94,138 @@
       "height": 1350,
       "plate": {
         "src": "/adstudio-templates/meta-rental-appraisal-feed-135/plate-feed.webp",
-        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        "sha256": "14f8bb79ea1d8e4653974ba6aa3965249f5e3c7bb7fa23c810cae2782895bf18"
       },
       "layers": [
         {
           "id": "slot-property_photo_1",
-          "type": "image_slot",
           "z": 2,
-          "inputKey": "property_photo_1",
-          "fit": "cover",
           "box": {
             "x": 0.49444444444444446,
             "y": 0.040740740740740744,
             "width": 0.5055555555555555,
             "height": 0.45185185185185184
           },
+          "type": "image_slot",
+          "inputKey": "property_photo_1",
+          "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 546,
+            "height": 610
           }
         },
         {
           "id": "slot-property_photo_2",
-          "type": "image_slot",
           "z": 3,
-          "inputKey": "property_photo_2",
-          "fit": "cover",
           "box": {
             "x": 0.49444444444444446,
             "y": 0.5037037037037037,
             "width": 0.5055555555555555,
             "height": 0.43333333333333335
           },
+          "type": "image_slot",
+          "inputKey": "property_photo_2",
+          "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 546,
+            "height": 585
           }
         },
         {
           "id": "slot-agency_logo",
-          "type": "image_slot",
           "z": 4,
-          "inputKey": "agency_logo",
-          "fit": "cover",
           "box": {
             "x": 0.040740740740740744,
             "y": 0.047407407407407405,
             "width": 0.11481481481481481,
             "height": 0.09259259259259259
           },
+          "type": "image_slot",
+          "inputKey": "agency_logo",
+          "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 124,
+            "height": 125
+          }
+        }
+      ]
+    },
+    "story": {
+      "format": "9:16",
+      "width": 1080,
+      "height": 1920,
+      "plate": {
+        "src": "/adstudio-templates/meta-rental-appraisal-feed-135/plate-story.webp",
+        "sha256": "0e6dcafaa5fd8a8001d8476db4a730934051c741e746a13031408a3e512a4cde"
+      },
+      "layers": [
+        {
+          "id": "slot-property_photo_1",
+          "z": 2,
+          "box": {
+            "x": 0.49444444444444446,
+            "y": 0.1584297839506173,
+            "width": 0.5055555555555555,
+            "height": 0.3130015432098765
+          },
+          "type": "image_slot",
+          "inputKey": "property_photo_1",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 546,
+            "height": 601
+          }
+        },
+        {
+          "id": "slot-property_photo_2",
+          "z": 3,
+          "box": {
+            "x": 0.49444444444444446,
+            "y": 0.479128086419753,
+            "width": 0.5055555555555555,
+            "height": 0.30017361111111107
+          },
+          "type": "image_slot",
+          "inputKey": "property_photo_2",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 546,
+            "height": 576
+          }
+        },
+        {
+          "id": "slot-agency_logo",
+          "z": 4,
+          "box": {
+            "x": 0.040740740740740744,
+            "y": 0.16304783950617285,
+            "width": 0.11481481481481481,
+            "height": 0.06413966049382715
+          },
+          "type": "image_slot",
+          "inputKey": "agency_logo",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 124,
+            "height": 123
           }
         }
       ]
@@ -253,7 +348,7 @@
     },
     "formatRouting": {
       "feed": "4:5",
-      "story": null
+      "story": "9:16"
     },
     "creativeFeatures": {
       "adapt_to_placement": "OPT_OUT",
@@ -281,7 +376,7 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "draft",
+    "status": "ready",
     "residuals": {},
     "bakedTextKeys": [
       "body",
@@ -291,6 +386,8 @@
       "benefit_3",
       "benefit_2",
       "benefit_1"
-    ]
+    ],
+    "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
+    "qaAt": "2026-08-07T08:40:40.201Z"
   }
 }

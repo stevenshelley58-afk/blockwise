@@ -22,15 +22,22 @@
       "contentHash": "c6e9860bd5ef6cf323e5c43180e1e481e1a97fc03ceec98f5db1c8b445fb96cc"
     },
     "sample": {
-      "imageSrc": "/adstudio-samples/meta/meta-appraisal-feed-170-sample.png",
-      "contentHash": "99fc76b3d61e1f61e7fe07f93d1b8bb9b45ae514af31f578e56b6714b8aa7674",
+      "imageSrc": "/adstudio-templates/meta-appraisal-feed-170/sample.png",
+      "contentHash": "b7bd0e2ca4247606d96b4c0b9d411b9694b05da7954951fe5ac13017f59a76e1",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
   },
   "restyle": {
-    "paletteMap": {},
-    "replacedAssets": [],
+    "paletteMap": {
+      "#262d30": "#1f242b",
+      "#3d4043": "#1f242b",
+      "#0c1d27": "#1f242b"
+    },
+    "replacedAssets": [
+      "agent_portrait",
+      "agency_logo"
+    ],
     "note": "migrated from v1 (source); restyle pass pending in Studio"
   },
   "fonts": [
@@ -73,6 +80,14 @@
       "italic": false,
       "file": "/fonts/adstudio/roboto-800.woff2",
       "sha256": "f07d0c93a3147897fad7ae0f6d52fba153a1ecb5a73477b8741a9dbd4711e8fe"
+    },
+    {
+      "fontId": "roboto-condensed",
+      "family": "Roboto Condensed",
+      "weight": 400,
+      "italic": false,
+      "file": "/fonts/adstudio/roboto-condensed-400.woff2",
+      "sha256": "543c03fff71d1b39590af102e0852c2dbce46f4dbe4faaebafbef6edc82e78f5"
     }
   ],
   "formats": {
@@ -82,7 +97,7 @@
       "height": 1350,
       "plate": {
         "src": "/adstudio-templates/meta-appraisal-feed-170/plate-feed.webp",
-        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        "sha256": "2cc0fa84c4db7b1116971125b8aaac99af915fadc0145a45a7a2ee51d368eb4f"
       },
       "layers": [
         {
@@ -115,6 +130,457 @@
           },
           "mask": {
             "kind": "rect"
+          }
+        },
+        {
+          "id": "text-subheadline",
+          "type": "text",
+          "z": 10,
+          "inputKey": "subheadline",
+          "box": {
+            "x": 0.10601851851851851,
+            "y": 0.327037037037037,
+            "width": 0.4930555555555556,
+            "height": 0.023703703703703703
+          },
+          "typo": {
+            "fontId": "dm-sans",
+            "family": "DM Sans",
+            "fallbackFamily": "sans-serif",
+            "weight": 800,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 1.2234169653524491,
+            "lineHeight": 1.302,
+            "tracking": 0,
+            "align": "left",
+            "color": "#1f242b",
+            "measuredLines": [
+              {
+                "text": "REQUEST A FREE APPRAISAL",
+                "box": {
+                  "x": 0.10601851851851851,
+                  "y": 0.327037037037037,
+                  "width": 0.4930555555555556,
+                  "height": 0.023703703703703703
+                },
+                "sizeRatio": 1.2234169653524491
+              }
+            ]
+          },
+          "constraints": {
+            "maxLength": 42,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.898,
+            "detectionScore": 1,
+            "source": "ocr-v2",
+            "version": 2
+          }
+        },
+        {
+          "id": "text-cta",
+          "type": "text",
+          "z": 11,
+          "inputKey": "cta",
+          "box": {
+            "x": 0.10185185185185185,
+            "y": 0.40814814814814815,
+            "width": 0.4736111111111111,
+            "height": 0.03666666666666667
+          },
+          "typo": {
+            "fontId": "londrina-shadow",
+            "family": "Londrina Shadow",
+            "fallbackFamily": "sans-serif",
+            "weight": 400,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 1.2821821036106749,
+            "lineHeight": 1.183,
+            "tracking": 0,
+            "align": "left",
+            "color": "#1f242b",
+            "measuredLines": [
+              {
+                "text": "BOOK AVFKALSAL",
+                "box": {
+                  "x": 0.10185185185185185,
+                  "y": 0.40814814814814815,
+                  "width": 0.4736111111111111,
+                  "height": 0.03666666666666667
+                },
+                "sizeRatio": 1.2821821036106749
+              }
+            ]
+          },
+          "constraints": {
+            "maxLength": 37,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.511,
+            "detectionScore": 0.526,
+            "source": "ocr-v2",
+            "version": 2
+          }
+        },
+        {
+          "id": "text-phone",
+          "type": "text",
+          "z": 12,
+          "inputKey": "phone",
+          "box": {
+            "x": 0.1,
+            "y": 0.9,
+            "width": 0.8,
+            "height": 0.03
+          },
+          "typo": {
+            "fontId": "roboto-condensed",
+            "family": "Roboto Condensed",
+            "fallbackFamily": "sans-serif",
+            "weight": 400,
+            "italic": false,
+            "case": "mixed",
+            "sizeRatio": 0.55,
+            "lineHeight": 1.2,
+            "tracking": 0.01,
+            "align": "center",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 30,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.35,
+            "detectionScore": 0.55,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        },
+        {
+          "id": "text-address",
+          "type": "text",
+          "z": 13,
+          "inputKey": "address",
+          "box": {
+            "x": 0.1,
+            "y": 0.93,
+            "width": 0.8,
+            "height": 0.03
+          },
+          "typo": {
+            "fontId": "roboto-condensed",
+            "family": "Roboto Condensed",
+            "fallbackFamily": "sans-serif",
+            "weight": 400,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 0.5,
+            "lineHeight": 1.2,
+            "tracking": 0.01,
+            "align": "center",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 33,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.35,
+            "detectionScore": 0.55,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        },
+        {
+          "id": "text-website",
+          "type": "text",
+          "z": 14,
+          "inputKey": "website",
+          "box": {
+            "x": 0.1,
+            "y": 0.95,
+            "width": 0.8,
+            "height": 0.025
+          },
+          "typo": {
+            "fontId": "roboto-condensed",
+            "family": "Roboto Condensed",
+            "fallbackFamily": "sans-serif",
+            "weight": 400,
+            "italic": false,
+            "case": "lower",
+            "sizeRatio": 0.45,
+            "lineHeight": 1.2,
+            "tracking": 0,
+            "align": "center",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 35,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.35,
+            "detectionScore": 0.55,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        }
+      ]
+    },
+    "story": {
+      "format": "9:16",
+      "width": 1080,
+      "height": 1920,
+      "plate": {
+        "src": "/adstudio-templates/meta-appraisal-feed-170/plate-story.webp",
+        "sha256": "4c9fce8f79fd9813d026fa30f63e75d1b33b1f767f4bf7615b228c0cc0d14d9a"
+      },
+      "layers": [
+        {
+          "id": "slot-agent_portrait",
+          "type": "image_slot",
+          "z": 2,
+          "inputKey": "agent_portrait",
+          "fit": "cover",
+          "box": {
+            "x": 0.54,
+            "y": 0.3103125,
+            "width": 0.46,
+            "height": 0.5126041666666666
+          },
+          "mask": {
+            "kind": "rect"
+          }
+        },
+        {
+          "id": "slot-agency_logo",
+          "type": "image_slot",
+          "z": 3,
+          "inputKey": "agency_logo",
+          "fit": "cover",
+          "box": {
+            "x": 0.575,
+            "y": 0.6961510416666666,
+            "width": 0.137,
+            "height": 0.07966145833333332
+          },
+          "mask": {
+            "kind": "rect"
+          }
+        },
+        {
+          "id": "text-subheadline",
+          "type": "text",
+          "z": 10,
+          "inputKey": "subheadline",
+          "box": {
+            "x": 0.10601851851851851,
+            "y": 0.3567496141975308,
+            "width": 0.4930555555555556,
+            "height": 0.016419753086419752
+          },
+          "typo": {
+            "fontId": "dm-sans",
+            "family": "DM Sans",
+            "fallbackFamily": "sans-serif",
+            "weight": 800,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 1.2234169653524491,
+            "lineHeight": 1.302,
+            "tracking": 0,
+            "align": "left",
+            "color": "#1f242b",
+            "measuredLines": [
+              {
+                "text": "REQUEST A FREE APPRAISAL",
+                "box": {
+                  "x": 0.10601851851851851,
+                  "y": 0.327037037037037,
+                  "width": 0.4930555555555556,
+                  "height": 0.023703703703703703
+                },
+                "sizeRatio": 1.2234169653524491
+              }
+            ]
+          },
+          "constraints": {
+            "maxLength": 42,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.898,
+            "detectionScore": 1,
+            "source": "ocr-v2",
+            "version": 2
+          }
+        },
+        {
+          "id": "text-cta",
+          "type": "text",
+          "z": 11,
+          "inputKey": "cta",
+          "box": {
+            "x": 0.10185185185185185,
+            "y": 0.4129359567901234,
+            "width": 0.4736111111111111,
+            "height": 0.025399305555555553
+          },
+          "typo": {
+            "fontId": "londrina-shadow",
+            "family": "Londrina Shadow",
+            "fallbackFamily": "sans-serif",
+            "weight": 400,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 1.2821821036106749,
+            "lineHeight": 1.183,
+            "tracking": 0,
+            "align": "left",
+            "color": "#1f242b",
+            "measuredLines": [
+              {
+                "text": "BOOK AVFKALSAL",
+                "box": {
+                  "x": 0.10185185185185185,
+                  "y": 0.40814814814814815,
+                  "width": 0.4736111111111111,
+                  "height": 0.03666666666666667
+                },
+                "sizeRatio": 1.2821821036106749
+              }
+            ]
+          },
+          "constraints": {
+            "maxLength": 37,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.511,
+            "detectionScore": 0.526,
+            "source": "ocr-v2",
+            "version": 2
+          }
+        },
+        {
+          "id": "text-phone",
+          "type": "text",
+          "z": 12,
+          "inputKey": "phone",
+          "box": {
+            "x": 0.1,
+            "y": 0.7536458333333333,
+            "width": 0.8,
+            "height": 0.020781249999999998
+          },
+          "typo": {
+            "fontId": "roboto-condensed",
+            "family": "Roboto Condensed",
+            "fallbackFamily": "sans-serif",
+            "weight": 400,
+            "italic": false,
+            "case": "mixed",
+            "sizeRatio": 0.55,
+            "lineHeight": 1.2,
+            "tracking": 0.01,
+            "align": "center",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 30,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.35,
+            "detectionScore": 0.55,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        },
+        {
+          "id": "text-address",
+          "type": "text",
+          "z": 13,
+          "inputKey": "address",
+          "box": {
+            "x": 0.1,
+            "y": 0.7744270833333333,
+            "width": 0.8,
+            "height": 0.020781249999999998
+          },
+          "typo": {
+            "fontId": "roboto-condensed",
+            "family": "Roboto Condensed",
+            "fallbackFamily": "sans-serif",
+            "weight": 400,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 0.5,
+            "lineHeight": 1.2,
+            "tracking": 0.01,
+            "align": "center",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 33,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.35,
+            "detectionScore": 0.55,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        },
+        {
+          "id": "text-website",
+          "type": "text",
+          "z": 14,
+          "inputKey": "website",
+          "box": {
+            "x": 0.1,
+            "y": 0.7882812499999999,
+            "width": 0.8,
+            "height": 0.01731770833333333
+          },
+          "typo": {
+            "fontId": "roboto-condensed",
+            "family": "Roboto Condensed",
+            "fallbackFamily": "sans-serif",
+            "weight": 400,
+            "italic": false,
+            "case": "lower",
+            "sizeRatio": 0.45,
+            "lineHeight": 1.2,
+            "tracking": 0,
+            "align": "center",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 35,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.35,
+            "detectionScore": 0.55,
+            "source": "ocr-v2",
+            "version": 1
           }
         }
       ]
@@ -237,7 +703,7 @@
     },
     "formatRouting": {
       "feed": "4:5",
-      "story": null
+      "story": "9:16"
     },
     "creativeFeatures": {
       "adapt_to_placement": "OPT_OUT",
@@ -265,17 +731,18 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "draft",
-    "residuals": {},
+    "status": "qa",
+    "residuals": {
+      "text-subheadline": 0.21651141264576404,
+      "text-cta": 0.1447954445920581,
+      "text-phone": 0.3556442785090347,
+      "text-address": 0.2790755350504795,
+      "text-website": 0.2060107281852342
+    },
     "bakedTextKeys": [
       "headline",
-      "subheadline",
       "email",
-      "cta",
-      "agent_name",
-      "phone",
-      "address",
-      "website"
+      "agent_name"
     ]
   }
 }

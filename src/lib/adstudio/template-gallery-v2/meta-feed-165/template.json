@@ -25,14 +25,16 @@
       "contentHash": "5c69e93a6b2d9ce1bd86dce78f6c0ef6d1bcd84506bde6066dd9b6eeb901b123"
     },
     "sample": {
-      "imageSrc": "/adstudio-samples/meta/meta-feed-165-sample.png",
-      "contentHash": "8d60c203de0b052f3dbeb5ccd567cc6df757277bb726f5b665120f51393ee98f",
+      "imageSrc": "/adstudio-templates/meta-feed-165/sample.png",
+      "contentHash": "0d748b10a8ff95731093a9a4a2bf2f7ac0d087f7d355f349eb5dd1b7cdb54dbf",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
   },
   "restyle": {
-    "paletteMap": {},
+    "paletteMap": {
+      "#1f242b": "#1f242b"
+    },
     "replacedAssets": [],
     "note": "migrated from v1 (source); restyle pass pending in Studio"
   },
@@ -77,9 +79,237 @@
       "height": 1350,
       "plate": {
         "src": "/adstudio-templates/meta-feed-165/plate-feed.webp",
-        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        "sha256": "c589b1b3fdfa0b0ffefca9b37a72db0fe3e4943873c9097aa4f7d7e12889589e"
       },
-      "layers": []
+      "layers": [
+        {
+          "id": "text-feature_1",
+          "z": 10,
+          "box": {
+            "x": 0.2021484375,
+            "y": 0.752734375,
+            "width": 0.62646484375,
+            "height": 0.048046875
+          },
+          "type": "text",
+          "inputKey": "feature_1",
+          "typo": {
+            "fontId": "oswald",
+            "family": "Oswald",
+            "fallbackFamily": "sans-serif",
+            "weight": 500,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 1,
+            "lineHeight": 1.482,
+            "tracking": 0,
+            "align": "center",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 20,
+            "maxLines": 3,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.406,
+            "detectionScore": 0.667,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        },
+        {
+          "id": "text-feature_3",
+          "z": 11,
+          "box": {
+            "x": 0.1,
+            "y": 0.6,
+            "width": 0.8,
+            "height": 0.06
+          },
+          "type": "text",
+          "inputKey": "feature_3",
+          "typo": {
+            "fontId": "montserrat",
+            "family": "Montserrat",
+            "fallbackFamily": "sans-serif",
+            "weight": 900,
+            "italic": false,
+            "case": "mixed",
+            "sizeRatio": 0.5,
+            "lineHeight": 1.2,
+            "tracking": 0,
+            "align": "left",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 20,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.35,
+            "detectionScore": 0.55,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        },
+        {
+          "id": "text-website",
+          "z": 12,
+          "box": {
+            "x": 0.1,
+            "y": 0.95,
+            "width": 0.8,
+            "height": 0.025
+          },
+          "type": "text",
+          "inputKey": "website",
+          "typo": {
+            "fontId": "montserrat",
+            "family": "Montserrat",
+            "fallbackFamily": "sans-serif",
+            "weight": 900,
+            "italic": false,
+            "case": "lower",
+            "sizeRatio": 0.45,
+            "lineHeight": 1.2,
+            "tracking": 0,
+            "align": "center",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 50,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.35,
+            "detectionScore": 0.55,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        }
+      ]
+    },
+    "story": {
+      "format": "9:16",
+      "width": 1080,
+      "height": 1920,
+      "plate": {
+        "src": "/adstudio-templates/meta-feed-165/plate-story.webp",
+        "sha256": "e773e2e7709e1344efc935e814b8b1504357f6d5d682e5f952b421e865dde3e0"
+      },
+      "layers": [
+        {
+          "id": "text-feature_1",
+          "z": 10,
+          "box": {
+            "x": 0.2021484375,
+            "y": 0.6516337076822916,
+            "width": 0.62646484375,
+            "height": 0.033282470703125
+          },
+          "type": "text",
+          "inputKey": "feature_1",
+          "typo": {
+            "fontId": "oswald",
+            "family": "Oswald",
+            "fallbackFamily": "sans-serif",
+            "weight": 500,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 1,
+            "lineHeight": 1.482,
+            "tracking": 0,
+            "align": "center",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 20,
+            "maxLines": 3,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.406,
+            "detectionScore": 0.667,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        },
+        {
+          "id": "text-feature_3",
+          "z": 11,
+          "box": {
+            "x": 0.1,
+            "y": 0.5458333333333333,
+            "width": 0.8,
+            "height": 0.041562499999999995
+          },
+          "type": "text",
+          "inputKey": "feature_3",
+          "typo": {
+            "fontId": "montserrat",
+            "family": "Montserrat",
+            "fallbackFamily": "sans-serif",
+            "weight": 900,
+            "italic": false,
+            "case": "mixed",
+            "sizeRatio": 0.5,
+            "lineHeight": 1.2,
+            "tracking": 0,
+            "align": "left",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 20,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.35,
+            "detectionScore": 0.55,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        },
+        {
+          "id": "text-website",
+          "z": 12,
+          "box": {
+            "x": 0.1,
+            "y": 0.7882812499999999,
+            "width": 0.8,
+            "height": 0.01731770833333333
+          },
+          "type": "text",
+          "inputKey": "website",
+          "typo": {
+            "fontId": "montserrat",
+            "family": "Montserrat",
+            "fallbackFamily": "sans-serif",
+            "weight": 900,
+            "italic": false,
+            "case": "lower",
+            "sizeRatio": 0.45,
+            "lineHeight": 1.2,
+            "tracking": 0,
+            "align": "center",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 50,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.35,
+            "detectionScore": 0.55,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        }
+      ]
     }
   },
   "inputs": {
@@ -170,7 +400,7 @@
     },
     "formatRouting": {
       "feed": "4:5",
-      "story": null
+      "story": "9:16"
     },
     "creativeFeatures": {
       "adapt_to_placement": "OPT_OUT",
@@ -198,15 +428,18 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "draft",
-    "residuals": {},
+    "status": "ready",
+    "residuals": {
+      "text-feature_1": null,
+      "text-feature_3": null,
+      "text-website": null
+    },
     "bakedTextKeys": [
       "headline",
       "price_info",
-      "feature_1",
-      "feature_2",
-      "feature_3",
-      "website"
-    ]
+      "feature_2"
+    ],
+    "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
+    "qaAt": "2026-08-07T08:18:00.293Z"
   }
 }

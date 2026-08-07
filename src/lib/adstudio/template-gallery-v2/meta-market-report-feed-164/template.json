@@ -22,15 +22,17 @@
       "contentHash": "152a128aafd4d60567da3794f14cb02dbd7105f6913c73317f70ec8b786c655b"
     },
     "sample": {
-      "imageSrc": "/adstudio-samples/meta/meta-market-report-feed-164-sample.png",
-      "contentHash": "73a6694942890c9dc6ebd9527acc3c3bb33c1a39850fae97506fb00f44cf0cc9",
+      "imageSrc": "/adstudio-templates/meta-market-report-feed-164/sample.png",
+      "contentHash": "d38db0303df175ac987756e677f9ded0a4a25e35862539301a0af2541a5e365f",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
   },
   "restyle": {
     "paletteMap": {},
-    "replacedAssets": [],
+    "replacedAssets": [
+      "chart_graphic"
+    ],
     "note": "migrated from v1 (source); restyle pass pending in Studio"
   },
   "fonts": [
@@ -57,6 +59,22 @@
       "italic": false,
       "file": "/fonts/adstudio/grenze-gotisch-900.woff2",
       "sha256": "fa08034a8904c2e9bc6c8663ad3d68e9b115014db2f9bf5d43b3cb7f8f33ce50"
+    },
+    {
+      "fontId": "big-shoulders",
+      "family": "Big Shoulders",
+      "weight": 900,
+      "italic": false,
+      "file": "/fonts/adstudio/big-shoulders-900.woff2",
+      "sha256": "6f1ae3155460dac4e4ae46797294035f705ceb0b4c8f02eb7c2eab7ecfcca946"
+    },
+    {
+      "fontId": "big-shoulders",
+      "family": "Big Shoulders",
+      "weight": 300,
+      "italic": false,
+      "file": "/fonts/adstudio/big-shoulders-300.woff2",
+      "sha256": "1fafb8df64c87957813d45abc6fed00e1ae63db47879306f5e841dc196f112ea"
     }
   ],
   "formats": {
@@ -66,23 +84,58 @@
       "height": 1350,
       "plate": {
         "src": "/adstudio-templates/meta-market-report-feed-164/plate-feed.webp",
-        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        "sha256": "c76dad83aba355a8e19c81ee75516fd1662eec532f74d6564b02c572df9b6258"
       },
       "layers": [
         {
           "id": "slot-chart_graphic",
-          "type": "image_slot",
           "z": 2,
-          "inputKey": "chart_graphic",
-          "fit": "cover",
           "box": {
             "x": 0.012962962962962963,
             "y": 0.2859259259259259,
             "width": 0.9740740740740741,
             "height": 0.4666666666666667
           },
+          "type": "image_slot",
+          "inputKey": "chart_graphic",
+          "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 1052,
+            "height": 630
+          }
+        }
+      ]
+    },
+    "story": {
+      "format": "9:16",
+      "width": 1080,
+      "height": 1920,
+      "plate": {
+        "src": "/adstudio-templates/meta-market-report-feed-164/plate-story.webp",
+        "sha256": "476706694b25af6a9b8fabf8014e35cfda3393a58fcb86aed00a64e030c9743b"
+      },
+      "layers": [
+        {
+          "id": "slot-chart_graphic",
+          "z": 2,
+          "box": {
+            "x": 0.012962962962962963,
+            "y": 0.32827160493827157,
+            "width": 0.9740740740740741,
+            "height": 0.32326388888888885
+          },
+          "type": "image_slot",
+          "inputKey": "chart_graphic",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 1052,
+            "height": 621
           }
         }
       ]
@@ -184,7 +237,7 @@
     },
     "formatRouting": {
       "feed": "4:5",
-      "story": null
+      "story": "9:16"
     },
     "creativeFeatures": {
       "adapt_to_placement": "OPT_OUT",
@@ -212,7 +265,7 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "draft",
+    "status": "ready",
     "residuals": {},
     "bakedTextKeys": [
       "subheadline",
@@ -221,6 +274,8 @@
       "stat_2",
       "stat_4",
       "headline"
-    ]
+    ],
+    "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
+    "qaAt": "2026-08-07T08:30:28.691Z"
   }
 }

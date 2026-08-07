@@ -81,5 +81,12 @@
       "width": 0.8,
       "height": 0.03
     }
+  },
+  "bakedResiduals": {
+    "baked-open_house_date": 0.028410591092806758,
+    "baked-open_house_time": 0,
+    "baked-brand_name": 0,
+    "baked-agent_name": 0.02731869934707753,
+    "baked-area": 0.0017499552743411582
   }
 }

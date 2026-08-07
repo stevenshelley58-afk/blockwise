@@ -22,14 +22,16 @@
       "contentHash": "ee5e022ddeb1aec7e767858ea93e0664b85ac0a435d2115856b7340c700b272f"
     },
     "sample": {
-      "imageSrc": "/adstudio-samples/meta/meta-downsizer-consult-story-266-sample.png",
-      "contentHash": "e2e1ddd7861ce0641a3183aa6c2be689ed225499e077dac56e35ef0b2d72511c",
+      "imageSrc": "/adstudio-templates/meta-downsizer-consult-story-266/sample.png",
+      "contentHash": "c1c7285feae3653edc2a88264f67af77d12b35a0e281c67a7e4c2fd428dee49e",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
   },
   "restyle": {
-    "paletteMap": {},
+    "paletteMap": {
+      "#1f242b": "#1f242b"
+    },
     "replacedAssets": [],
     "note": "migrated from v1 (source); restyle pass pending in Studio"
   },
@@ -59,6 +61,14 @@
       "sha256": "f4b7d84d4c4bd217985b5f4a93d9e61f63670a2efc5a5e6048afd044bc921330"
     },
     {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "weight": 800,
+      "italic": false,
+      "file": "/fonts/adstudio/merriweather-800.woff2",
+      "sha256": "234916daa3dd072625fad30f1ae31d989c101bcd73ae8f29023cfbbc9a711c8a"
+    },
+    {
       "fontId": "plus-jakarta-sans",
       "family": "Plus Jakarta Sans",
       "weight": 500,
@@ -69,14 +79,98 @@
   ],
   "formats": {
     "feed": {
+      "format": "4:5",
+      "width": 1080,
+      "height": 1350,
+      "plate": {
+        "src": "/adstudio-templates/meta-downsizer-consult-story-266/plate-feed.webp",
+        "sha256": "bc96a59237dbd5068348933db2bd38f9227b1a4c177ee7cc2660141fe9b7a25a"
+      },
+      "layers": []
+    },
+    "story": {
       "format": "9:16",
       "width": 1080,
       "height": 1920,
       "plate": {
         "src": "/adstudio-templates/meta-downsizer-consult-story-266/plate-story.webp",
-        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        "sha256": "a7fc1090faed8a69131b71033d69e7af82e7e4d862a68e393a1e3f1f601c4669"
       },
-      "layers": []
+      "layers": [
+        {
+          "id": "text-cta",
+          "z": 10,
+          "box": {
+            "x": 0.30648148148148147,
+            "y": 0.92265625,
+            "width": 0.5393518518518519,
+            "height": 0.017708333333333333
+          },
+          "type": "text",
+          "inputKey": "cta",
+          "typo": {
+            "fontId": "merriweather",
+            "family": "Merriweather",
+            "fallbackFamily": "serif",
+            "weight": 800,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 1.2767462422634834,
+            "lineHeight": 1.257,
+            "tracking": 0,
+            "align": "left",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 39,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.418,
+            "detectionScore": 1,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        },
+        {
+          "id": "text-phone",
+          "z": 11,
+          "box": {
+            "x": 0.30324074074074076,
+            "y": 0.953125,
+            "width": 0.5083333333333333,
+            "height": 0.03671875
+          },
+          "type": "text",
+          "inputKey": "phone",
+          "typo": {
+            "fontId": "plus-jakarta-sans",
+            "family": "Plus Jakarta Sans",
+            "fallbackFamily": "sans-serif",
+            "weight": 500,
+            "italic": false,
+            "case": "none",
+            "sizeRatio": 1.2903225806451613,
+            "lineHeight": 1.26,
+            "tracking": 0,
+            "align": "center",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 30,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.533,
+            "detectionScore": 1,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        }
+      ],
+      "native": true
     }
   },
   "inputs": {
@@ -188,14 +282,14 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "draft",
+    "status": "ready",
     "residuals": {},
     "bakedTextKeys": [
       "body",
       "subheadline",
-      "headline",
-      "cta",
-      "phone"
-    ]
+      "headline"
+    ],
+    "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
+    "qaAt": "2026-08-07T08:17:41.945Z"
   }
 }

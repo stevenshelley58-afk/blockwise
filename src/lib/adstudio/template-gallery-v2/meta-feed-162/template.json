@@ -26,14 +26,17 @@
       "contentHash": "70d1efbae33cb4121acd82cead76daa3189a611d3deb3c6e10e9e08f490d4880"
     },
     "sample": {
-      "imageSrc": "/adstudio-samples/meta/meta-feed-162-sample.png",
-      "contentHash": "c16f70b6f1dbe660638ed5c6f711902637cd9c7723d0c3e9afe80baf3582ccaf",
+      "imageSrc": "/adstudio-templates/meta-feed-162/sample.png",
+      "contentHash": "faacb0bd20d8b83e6a9d064298a0a4629ca1f35d4774bd20255087cbc6c82c2c",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
   },
   "restyle": {
-    "paletteMap": {},
+    "paletteMap": {
+      "#828fa8": "#1f242b",
+      "#8f8b8e": "#1f242b"
+    },
     "replacedAssets": [],
     "note": "migrated from v1 (source); font remaps: source-sans-3 -> arimo; restyle pass pending in Studio"
   },
@@ -70,9 +73,165 @@
       "height": 1350,
       "plate": {
         "src": "/adstudio-templates/meta-feed-162/plate-feed.webp",
-        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        "sha256": "79cf4d580e397eb447340936e8a7aee27edc8422f0d3fec7a3cc9ad6d7493378"
       },
-      "layers": []
+      "layers": [
+        {
+          "id": "text-property_name",
+          "type": "text",
+          "z": 10,
+          "inputKey": "property_name",
+          "box": {
+            "x": 0.16455078125,
+            "y": 0.11328125,
+            "width": 0.6767578125,
+            "height": 0.013671875
+          },
+          "typo": {
+            "fontId": "kanit",
+            "family": "Kanit",
+            "fallbackFamily": "sans-serif",
+            "weight": 900,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 1.4749163879598663,
+            "lineHeight": 1.495,
+            "tracking": 0,
+            "align": "center",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 40,
+            "maxLines": 4,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.121,
+            "detectionScore": 0.375,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        },
+        {
+          "id": "text-price_per_night",
+          "type": "text",
+          "z": 11,
+          "inputKey": "price_per_night",
+          "box": {
+            "x": 0.26708984375,
+            "y": 0.123828125,
+            "width": 0.60400390625,
+            "height": 0.0359375
+          },
+          "typo": {
+            "fontId": "kanit",
+            "family": "Kanit",
+            "fallbackFamily": "sans-serif",
+            "weight": 900,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 1.214734950584007,
+            "lineHeight": 1.495,
+            "tracking": 0,
+            "align": "left",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 20,
+            "maxLines": 2,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.109,
+            "detectionScore": 0.556,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        }
+      ]
+    },
+    "story": {
+      "format": "9:16",
+      "width": 1080,
+      "height": 1920,
+      "plate": {
+        "src": "/adstudio-templates/meta-feed-162/plate-story.webp",
+        "sha256": "f5252bd213e01b00c632e5e51e9885119f264bc7bb67e5b3ba58e1f8ab589703"
+      },
+      "layers": [
+        {
+          "id": "text-property_name",
+          "type": "text",
+          "z": 10,
+          "inputKey": "property_name",
+          "box": {
+            "x": 0.16455078125,
+            "y": 0.20867919921875,
+            "width": 0.6767578125,
+            "height": 0.009470621744791666
+          },
+          "typo": {
+            "fontId": "kanit",
+            "family": "Kanit",
+            "fallbackFamily": "sans-serif",
+            "weight": 900,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 1.4749163879598663,
+            "lineHeight": 1.495,
+            "tracking": 0,
+            "align": "center",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 40,
+            "maxLines": 4,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.121,
+            "detectionScore": 0.375,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        },
+        {
+          "id": "text-price_per_night",
+          "type": "text",
+          "z": 11,
+          "inputKey": "price_per_night",
+          "box": {
+            "x": 0.26708984375,
+            "y": 0.215985107421875,
+            "width": 0.60400390625,
+            "height": 0.024894205729166664
+          },
+          "typo": {
+            "fontId": "kanit",
+            "family": "Kanit",
+            "fallbackFamily": "sans-serif",
+            "weight": 900,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 1.214734950584007,
+            "lineHeight": 1.495,
+            "tracking": 0,
+            "align": "left",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 20,
+            "maxLines": 2,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.109,
+            "detectionScore": 0.556,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        }
+      ]
     }
   },
   "inputs": {
@@ -149,7 +308,7 @@
     },
     "formatRouting": {
       "feed": "4:5",
-      "story": null
+      "story": "9:16"
     },
     "creativeFeatures": {
       "adapt_to_placement": "OPT_OUT",
@@ -177,13 +336,14 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "draft",
-    "residuals": {},
+    "status": "qa",
+    "residuals": {
+      "text-property_name": 0.10833370050306701,
+      "text-price_per_night": 0.12721452365815245
+    },
     "bakedTextKeys": [
       "features",
-      "property_name",
-      "main_cta",
-      "price_per_night"
+      "main_cta"
     ]
   }
 }

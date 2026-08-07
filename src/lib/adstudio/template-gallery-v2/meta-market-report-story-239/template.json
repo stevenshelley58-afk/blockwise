@@ -22,15 +22,18 @@
       "contentHash": "e6e021c986a14db8db5bc5150cd789aac6d86187f419969e76e0e511e5406e85"
     },
     "sample": {
-      "imageSrc": "/adstudio-samples/meta/meta-market-report-story-239-sample.png",
-      "contentHash": "da4287e771fef5b2267e5a939d29a0beeab8d21ed67c72eb0428ca437b01615b",
+      "imageSrc": "/adstudio-templates/meta-market-report-story-239/sample.png",
+      "contentHash": "37aa1ede5a3bfa7ce26cb455b11cb4ae401d1d8d6fc1f66b998833457d5bc2fa",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
   },
   "restyle": {
     "paletteMap": {},
-    "replacedAssets": [],
+    "replacedAssets": [
+      "background_photo",
+      "agency_logo"
+    ],
     "note": "migrated from v1 (source); restyle pass pending in Studio"
   },
   "fonts": [
@@ -77,47 +80,87 @@
   ],
   "formats": {
     "feed": {
+      "format": "4:5",
+      "width": 1080,
+      "height": 1350,
+      "plate": {
+        "src": "/adstudio-templates/meta-market-report-story-239/plate-feed.webp",
+        "sha256": "6f8e842429977a12a349f9732a2e00b681f4669754f5cea84a4f923000e28564"
+      },
+      "layers": [
+        {
+          "id": "slot-background_photo",
+          "z": 2,
+          "box": {
+            "x": 0.018518518518518517,
+            "y": 0,
+            "width": 0.9629629629629629,
+            "height": 1
+          },
+          "type": "image_slot",
+          "inputKey": "background_photo",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 1040,
+            "height": 1350
+          }
+        }
+      ]
+    },
+    "story": {
       "format": "9:16",
       "width": 1080,
       "height": 1920,
       "plate": {
         "src": "/adstudio-templates/meta-market-report-story-239/plate-story.webp",
-        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        "sha256": "94470a97a58edf6f21e6a4f6598b30511f0179303ab8c62a5023e72359ddc7b9"
       },
       "layers": [
         {
           "id": "slot-background_photo",
-          "type": "image_slot",
           "z": 2,
-          "inputKey": "background_photo",
-          "fit": "cover",
           "box": {
             "x": 0.018518518518518517,
             "y": 0.010416666666666666,
             "width": 0.9629629629629629,
             "height": 0.9791666666666666
           },
+          "type": "image_slot",
+          "inputKey": "background_photo",
+          "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 1040,
+            "height": 1880
           }
         },
         {
           "id": "slot-agency_logo",
-          "type": "image_slot",
           "z": 3,
-          "inputKey": "agency_logo",
-          "fit": "cover",
           "box": {
             "x": 0.7148148148148148,
             "y": 0.834375,
             "width": 0.2222222222222222,
             "height": 0.12708333333333333
           },
+          "type": "image_slot",
+          "inputKey": "agency_logo",
+          "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 240,
+            "height": 244
           }
         }
-      ]
+      ],
+      "native": true
     }
   },
   "inputs": {
@@ -258,7 +301,7 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "draft",
+    "status": "ready",
     "residuals": {},
     "bakedTextKeys": [
       "subheadline",
@@ -268,6 +311,8 @@
       "stat_2",
       "stat_4",
       "cta"
-    ]
+    ],
+    "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
+    "qaAt": "2026-08-07T08:32:46.605Z"
   }
 }

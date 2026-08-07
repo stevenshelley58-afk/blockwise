@@ -22,15 +22,20 @@
       "contentHash": "97e3301b3358d5b8bff7330b99502b73c8e201d361789deb2967f65dab0888fd"
     },
     "sample": {
-      "imageSrc": "/adstudio-samples/meta/meta-rental-appraisal-feed-146-sample.png",
-      "contentHash": "50876ddb0a5b4729059c664858aa9e9ddc0c14dfadc5279366329e71089e6a96",
+      "imageSrc": "/adstudio-templates/meta-rental-appraisal-feed-146/sample.png",
+      "contentHash": "47acc6b68109672efda3eb3e74948720436604f2dd2acb2a00040adf87131212",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
   },
   "restyle": {
     "paletteMap": {},
-    "replacedAssets": [],
+    "replacedAssets": [
+      "property_photo_1",
+      "property_photo_2",
+      "property_photo_3",
+      "agency_logo"
+    ],
     "note": "migrated from v1 (source); restyle pass pending in Studio"
   },
   "fonts": [
@@ -67,6 +72,14 @@
       "sha256": "c05fd5289492ed310ed882259b944ca5287e76e572a65d92d3941f9f44f0342a"
     },
     {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "weight": 400,
+      "italic": false,
+      "file": "/fonts/adstudio/smooch-sans-400.woff2",
+      "sha256": "a1b64ed5521846da168a3a1907019f6ee8699958c6807b8d33d962d33153cff8"
+    },
+    {
       "fontId": "merriweather",
       "family": "Merriweather",
       "weight": 800,
@@ -82,71 +95,178 @@
       "height": 1350,
       "plate": {
         "src": "/adstudio-templates/meta-rental-appraisal-feed-146/plate-feed.webp",
-        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        "sha256": "9d4f2686ca892f923487373432a015fc79180144639986b1dd1ca0fa8d66d63e"
       },
       "layers": [
         {
           "id": "slot-property_photo_1",
-          "type": "image_slot",
           "z": 2,
-          "inputKey": "property_photo_1",
-          "fit": "cover",
           "box": {
             "x": 0.044444444444444446,
             "y": 0.03777777777777778,
             "width": 0.45555555555555555,
             "height": 0.4540740740740741
           },
+          "type": "image_slot",
+          "inputKey": "property_photo_1",
+          "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 492,
+            "height": 613
           }
         },
         {
           "id": "slot-property_photo_2",
-          "type": "image_slot",
           "z": 3,
-          "inputKey": "property_photo_2",
-          "fit": "cover",
           "box": {
             "x": 0.5092592592592593,
             "y": 0.03777777777777778,
             "width": 0.44814814814814813,
             "height": 0.23555555555555555
           },
+          "type": "image_slot",
+          "inputKey": "property_photo_2",
+          "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 484,
+            "height": 318
           }
         },
         {
           "id": "slot-property_photo_3",
-          "type": "image_slot",
           "z": 4,
-          "inputKey": "property_photo_3",
-          "fit": "cover",
           "box": {
             "x": 0.5092592592592593,
             "y": 0.28,
             "width": 0.44814814814814813,
             "height": 0.21185185185185185
           },
+          "type": "image_slot",
+          "inputKey": "property_photo_3",
+          "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 484,
+            "height": 286
           }
         },
         {
           "id": "slot-agency_logo",
-          "type": "image_slot",
           "z": 5,
-          "inputKey": "agency_logo",
-          "fit": "cover",
           "box": {
             "x": 0.15185185185185185,
             "y": 0.8711111111111111,
             "width": 0.09722222222222222,
             "height": 0.07481481481481482
           },
+          "type": "image_slot",
+          "inputKey": "agency_logo",
+          "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 105,
+            "height": 101
+          }
+        }
+      ]
+    },
+    "story": {
+      "format": "9:16",
+      "width": 1080,
+      "height": 1920,
+      "plate": {
+        "src": "/adstudio-templates/meta-rental-appraisal-feed-146/plate-story.webp",
+        "sha256": "ccc7e092c7f20e4316f01c4572d5c9369027d0dc9df7a5ba8857652ee037737a"
+      },
+      "layers": [
+        {
+          "id": "slot-property_photo_1",
+          "z": 2,
+          "box": {
+            "x": 0.044444444444444446,
+            "y": 0.15637731481481482,
+            "width": 0.45555555555555555,
+            "height": 0.3145408950617284
+          },
+          "type": "image_slot",
+          "inputKey": "property_photo_1",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 492,
+            "height": 604
+          }
+        },
+        {
+          "id": "slot-property_photo_2",
+          "z": 3,
+          "box": {
+            "x": 0.5092592592592593,
+            "y": 0.15637731481481482,
+            "width": 0.44814814814814813,
+            "height": 0.16317129629629626
+          },
+          "type": "image_slot",
+          "inputKey": "property_photo_2",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 484,
+            "height": 313
+          }
+        },
+        {
+          "id": "slot-property_photo_3",
+          "z": 4,
+          "box": {
+            "x": 0.5092592592592593,
+            "y": 0.3241666666666667,
+            "width": 0.44814814814814813,
+            "height": 0.14675154320987652
+          },
+          "type": "image_slot",
+          "inputKey": "property_photo_3",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 484,
+            "height": 282
+          }
+        },
+        {
+          "id": "slot-agency_logo",
+          "z": 5,
+          "box": {
+            "x": 0.15185185185185185,
+            "y": 0.7336342592592592,
+            "width": 0.09722222222222222,
+            "height": 0.05182484567901234
+          },
+          "type": "image_slot",
+          "inputKey": "agency_logo",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 105,
+            "height": 100
           }
         }
       ]
@@ -269,7 +389,7 @@
     },
     "formatRouting": {
       "feed": "4:5",
-      "story": null
+      "story": "9:16"
     },
     "creativeFeatures": {
       "adapt_to_placement": "OPT_OUT",
@@ -297,7 +417,7 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "draft",
+    "status": "ready",
     "residuals": {},
     "bakedTextKeys": [
       "headline",
@@ -306,6 +426,8 @@
       "benefit_3",
       "benefit_2",
       "benefit_1"
-    ]
+    ],
+    "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
+    "qaAt": "2026-08-07T08:41:48.912Z"
   }
 }

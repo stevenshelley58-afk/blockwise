@@ -24,15 +24,20 @@
       "contentHash": "c37d0b77e60869df409e48ff386281f60f5f62a5b876fb069395446eecf43baf"
     },
     "sample": {
-      "imageSrc": "/adstudio-samples/meta/meta-feed-128-sample.png",
-      "contentHash": "19442d8ce4449cb24413aa148cc38b8b22e69c2c360402633436c4c0e4011789",
+      "imageSrc": "/adstudio-templates/meta-feed-128/sample.png",
+      "contentHash": "e8eba79c4390ac0b1cdfd35ea758142627c9a2ad31f025e660ca09ab23d4bd7c",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
   },
   "restyle": {
-    "paletteMap": {},
-    "replacedAssets": [],
+    "paletteMap": {
+      "#1f242b": "#1f242b"
+    },
+    "replacedAssets": [
+      "property_photo",
+      "agent_photo"
+    ],
     "note": "migrated from v1 (source); font remaps: source-sans-3 -> arimo; restyle pass pending in Studio"
   },
   "fonts": [
@@ -76,39 +81,226 @@
       "height": 1350,
       "plate": {
         "src": "/adstudio-templates/meta-feed-128/plate-feed.webp",
-        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        "sha256": "8b3917f5b8e40cfc485d2904fcf657b0bbb5ba470d8e06e9a82c64c60cc8f48a"
       },
       "layers": [
         {
           "id": "slot-property_photo",
-          "type": "image_slot",
           "z": 2,
-          "inputKey": "property_photo",
-          "fit": "cover",
           "box": {
             "x": 0.017578125,
             "y": 0.1125,
             "width": 0.96484375,
             "height": 0.4734375
           },
+          "type": "image_slot",
+          "inputKey": "property_photo",
+          "fit": "cover",
           "mask": {
             "kind": "rect"
           }
         },
         {
           "id": "slot-agent_photo",
-          "type": "image_slot",
           "z": 3,
-          "inputKey": "agent_photo",
-          "fit": "cover",
           "box": {
             "x": 0.662109375,
             "y": 0.4984375,
             "width": 0.216796875,
             "height": 0.1734375
           },
+          "type": "image_slot",
+          "inputKey": "agent_photo",
+          "fit": "cover",
           "mask": {
             "kind": "rect"
+          }
+        },
+        {
+          "id": "text-contact_email",
+          "z": 11,
+          "box": {
+            "x": 0.1103515625,
+            "y": 0.894921875,
+            "width": 0.3125,
+            "height": 0.01875
+          },
+          "type": "text",
+          "inputKey": "contact_email",
+          "typo": {
+            "fontId": "plus-jakarta-sans",
+            "family": "Plus Jakarta Sans",
+            "fallbackFamily": "sans-serif",
+            "weight": 600,
+            "italic": false,
+            "case": "lower",
+            "sizeRatio": 1.0012771392081736,
+            "lineHeight": 1.26,
+            "tracking": 0,
+            "align": "left",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 40,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.577,
+            "detectionScore": 1,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        },
+        {
+          "id": "text-contact_phone",
+          "z": 12,
+          "box": {
+            "x": 0.71728515625,
+            "y": 0.894921875,
+            "width": 0.16015625,
+            "height": 0.015234375
+          },
+          "type": "text",
+          "inputKey": "contact_phone",
+          "typo": {
+            "fontId": "playfair-display",
+            "family": "Playfair Display",
+            "fallbackFamily": "serif",
+            "weight": 700,
+            "italic": false,
+            "case": "none",
+            "sizeRatio": 1.1020833333333333,
+            "lineHeight": 1.333,
+            "tracking": 0,
+            "align": "left",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 20,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.447,
+            "detectionScore": 1,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        }
+      ]
+    },
+    "story": {
+      "format": "9:16",
+      "width": 1080,
+      "height": 1920,
+      "plate": {
+        "src": "/adstudio-templates/meta-feed-128/plate-story.webp",
+        "sha256": "87e8da29dcb24e722eeaf01e1c985a6ce4c403b8d4eeadf3e875754fa8ac53b0"
+      },
+      "layers": [
+        {
+          "id": "slot-property_photo",
+          "z": 2,
+          "box": {
+            "x": 0.017578125,
+            "y": 0.20813802083333333,
+            "width": 0.96484375,
+            "height": 0.3279541015625
+          },
+          "type": "image_slot",
+          "inputKey": "property_photo",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          }
+        },
+        {
+          "id": "slot-agent_photo",
+          "z": 3,
+          "box": {
+            "x": 0.662109375,
+            "y": 0.47548014322916665,
+            "width": 0.216796875,
+            "height": 0.12014160156249998
+          },
+          "type": "image_slot",
+          "inputKey": "agent_photo",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          }
+        },
+        {
+          "id": "text-contact_email",
+          "z": 11,
+          "box": {
+            "x": 0.1103515625,
+            "y": 0.7501281738281249,
+            "width": 0.3125,
+            "height": 0.012988281249999999
+          },
+          "type": "text",
+          "inputKey": "contact_email",
+          "typo": {
+            "fontId": "plus-jakarta-sans",
+            "family": "Plus Jakarta Sans",
+            "fallbackFamily": "sans-serif",
+            "weight": 600,
+            "italic": false,
+            "case": "lower",
+            "sizeRatio": 1.0012771392081736,
+            "lineHeight": 1.26,
+            "tracking": 0,
+            "align": "left",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 40,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.577,
+            "detectionScore": 1,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        },
+        {
+          "id": "text-contact_phone",
+          "z": 12,
+          "box": {
+            "x": 0.71728515625,
+            "y": 0.7501281738281249,
+            "width": 0.16015625,
+            "height": 0.010552978515624999
+          },
+          "type": "text",
+          "inputKey": "contact_phone",
+          "typo": {
+            "fontId": "playfair-display",
+            "family": "Playfair Display",
+            "fallbackFamily": "serif",
+            "weight": 700,
+            "italic": false,
+            "case": "none",
+            "sizeRatio": 1.1020833333333333,
+            "lineHeight": 1.333,
+            "tracking": 0,
+            "align": "left",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 20,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.447,
+            "detectionScore": 1,
+            "source": "ocr-v2",
+            "version": 1
           }
         }
       ]
@@ -203,7 +395,7 @@
     },
     "formatRouting": {
       "feed": "4:5",
-      "story": null
+      "story": "9:16"
     },
     "creativeFeatures": {
       "adapt_to_placement": "OPT_OUT",
@@ -231,13 +423,15 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "draft",
-    "residuals": {},
+    "status": "qa",
+    "residuals": {
+      "text-property_address": 0.11989797222318646,
+      "text-contact_email": 0.0843414038963482,
+      "text-contact_phone": 0.04879914910835874
+    },
     "bakedTextKeys": [
       "main_message",
-      "property_address",
-      "contact_email",
-      "contact_phone"
+      "property_address"
     ]
   }
 }

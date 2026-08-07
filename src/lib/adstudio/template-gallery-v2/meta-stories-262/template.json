@@ -23,8 +23,8 @@
       "contentHash": "27a5dc43ed7c200505f876d6a46ad8b8dc792c31e85d2ae9803c209540d2b21e"
     },
     "sample": {
-      "imageSrc": "/adstudio-samples/meta/meta-stories-262-sample.png",
-      "contentHash": "fd076c2d1f5551069fe186239419507d4184c5344fdc8066d846c8e4e0663db9",
+      "imageSrc": "/adstudio-templates/meta-stories-262/sample.png",
+      "contentHash": "faee5ca0cd75d7c8941a46246de33a84f2f80ff92a868d5e10cf97afb6987f99",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
@@ -62,14 +62,25 @@
   ],
   "formats": {
     "feed": {
+      "format": "4:5",
+      "width": 1080,
+      "height": 1350,
+      "plate": {
+        "src": "/adstudio-templates/meta-stories-262/plate-feed.webp",
+        "sha256": "0483ae9aca7d9e71befbe10978ea484d3966b3ab1c1f7ff973333a570c4e2996"
+      },
+      "layers": []
+    },
+    "story": {
       "format": "9:16",
       "width": 1080,
       "height": 1920,
       "plate": {
         "src": "/adstudio-templates/meta-stories-262/plate-story.webp",
-        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        "sha256": "2005788a3d94cce5624471dfb42958fea9fc1e1b1eca0b525ecce18b8e850b43"
       },
-      "layers": []
+      "layers": [],
+      "native": true
     }
   },
   "inputs": {
@@ -167,7 +178,7 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "draft",
+    "status": "qa",
     "residuals": {},
     "bakedTextKeys": [
       "tip_text",

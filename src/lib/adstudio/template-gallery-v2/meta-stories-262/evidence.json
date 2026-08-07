@@ -25,5 +25,10 @@
       "width": 0.1533203125,
       "height": 0.022135416666666668
     }
+  },
+  "bakedResiduals": {
+    "baked-tip_text": 0,
+    "baked-contact_handle": 0,
+    "baked-main_heading": 0
   }
 }

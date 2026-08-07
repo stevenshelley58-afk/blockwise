@@ -22,8 +22,8 @@
       "contentHash": "734493860d8f77ea56d93cfc13019004ceb32e2b5c8c14bd9f90ba71ad7db3ce"
     },
     "sample": {
-      "imageSrc": "/adstudio-samples/meta/meta-investor-consult-story-280-sample.png",
-      "contentHash": "5c9f563d4657a43bc9b69c18b03381209970ecd189a24f599ced6b3284150c54",
+      "imageSrc": "/adstudio-templates/meta-investor-consult-story-280/sample.png",
+      "contentHash": "ef7effb19fa0ad95f9bd60f791db7609080054cee142e6aee9b8473fbad88c5b",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
@@ -69,14 +69,25 @@
   ],
   "formats": {
     "feed": {
+      "format": "4:5",
+      "width": 1080,
+      "height": 1350,
+      "plate": {
+        "src": "/adstudio-templates/meta-investor-consult-story-280/plate-feed.webp",
+        "sha256": "649baebfc0451359cf032610cca2922e2fe6f8f96c763a55995408930f97e10a"
+      },
+      "layers": []
+    },
+    "story": {
       "format": "9:16",
       "width": 1080,
       "height": 1920,
       "plate": {
         "src": "/adstudio-templates/meta-investor-consult-story-280/plate-story.webp",
-        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        "sha256": "b37d0d23b7d443eeb3ad78d58a33fb26255c6fd4f170bbfe99eac092dda968b0"
       },
-      "layers": []
+      "layers": [],
+      "native": true
     }
   },
   "inputs": {
@@ -195,7 +206,7 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "draft",
+    "status": "qa",
     "residuals": {},
     "bakedTextKeys": [
       "headline",

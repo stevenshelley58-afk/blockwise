@@ -22,8 +22,8 @@
       "contentHash": "3e8c84ef23578e2299a69975fbff29919f0e6196917ee4de7271d6810434e27c"
     },
     "sample": {
-      "imageSrc": "/adstudio-samples/meta/meta-seller-consult-feed-155-sample.png",
-      "contentHash": "10cd219b6db79f766a2ca5546359b680002ce02262bedebc13e53c203769d4cc",
+      "imageSrc": "/adstudio-templates/meta-seller-consult-feed-155/sample.png",
+      "contentHash": "b5faa448918a14893e6f0fcbc0c144e10a861678a618d5a283d6a2232279f9e2",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
@@ -81,6 +81,14 @@
       "italic": false,
       "file": "/fonts/adstudio/merriweather-800.woff2",
       "sha256": "234916daa3dd072625fad30f1ae31d989c101bcd73ae8f29023cfbbc9a711c8a"
+    },
+    {
+      "fontId": "plus-jakarta-sans",
+      "family": "Plus Jakarta Sans",
+      "weight": 700,
+      "italic": false,
+      "file": "/fonts/adstudio/plus-jakarta-sans-700.woff2",
+      "sha256": "eaeb36e3ca51e43f00783cfbdd980b8c307dce8c5ed3aafc5119ae1ca2566992"
     }
   ],
   "formats": {
@@ -90,7 +98,17 @@
       "height": 1350,
       "plate": {
         "src": "/adstudio-templates/meta-seller-consult-feed-155/plate-feed.webp",
-        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        "sha256": "a82b6661b329ad6400578ea831f77919126625926efdcd60167be626c081ea03"
+      },
+      "layers": []
+    },
+    "story": {
+      "format": "9:16",
+      "width": 1080,
+      "height": 1920,
+      "plate": {
+        "src": "/adstudio-templates/meta-seller-consult-feed-155/plate-story.webp",
+        "sha256": "339415c4eaae8f5086ca85752ad1dfb26882bff43ed24608c084df8353df929a"
       },
       "layers": []
     }
@@ -197,7 +215,7 @@
     },
     "formatRouting": {
       "feed": "4:5",
-      "story": null
+      "story": "9:16"
     },
     "creativeFeatures": {
       "adapt_to_placement": "OPT_OUT",
@@ -225,7 +243,7 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "draft",
+    "status": "qa",
     "residuals": {},
     "bakedTextKeys": [
       "body",

@@ -24,18 +24,30 @@
       "contentHash": "e68fdf0593a884a5ee9661eea428a717e8623a9d7667dfbb0cdb993250715503"
     },
     "sample": {
-      "imageSrc": "/adstudio-samples/meta/meta-feed-163-sample.png",
-      "contentHash": "4cd35561f6f138b87c766570b5bf079d1ddec21a88b97066b039dd9cc2df2374",
+      "imageSrc": "/adstudio-templates/meta-feed-163/sample.png",
+      "contentHash": "1c67d0d45321b1b0d1fb790c157b2996b8d162ceb491448f2542bf0af9d85204",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
   },
   "restyle": {
-    "paletteMap": {},
-    "replacedAssets": [],
+    "paletteMap": {
+      "#1f242b": "#1f242b"
+    },
+    "replacedAssets": [
+      "agent_photo"
+    ],
     "note": "migrated from v1 (source); font remaps: source-sans-3 -> arimo; restyle pass pending in Studio"
   },
   "fonts": [
+    {
+      "fontId": "arimo",
+      "family": "Arimo",
+      "weight": 600,
+      "italic": false,
+      "file": "/fonts/adstudio/arimo-600.woff2",
+      "sha256": "e56ba72ece2579125a34dda8b81f4a8692ee712757a5f5910dcf7c084cd0082e"
+    },
     {
       "fontId": "arimo",
       "family": "Arimo",
@@ -52,23 +64,130 @@
       "height": 1350,
       "plate": {
         "src": "/adstudio-templates/meta-feed-163/plate-feed.webp",
-        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        "sha256": "a223da053f35fd0d24130b9c0ec4f6d06550b457b0c026ecab0ad6a809eb831c"
       },
       "layers": [
         {
           "id": "slot-agent_photo",
-          "type": "image_slot",
           "z": 2,
-          "inputKey": "agent_photo",
-          "fit": "cover",
           "box": {
             "x": 0.4130859375,
             "y": 0.21640625,
             "width": 0.16796875,
             "height": 0.134375
           },
+          "type": "image_slot",
+          "inputKey": "agent_photo",
+          "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 181,
+            "height": 181
+          }
+        },
+        {
+          "id": "text-cta_text",
+          "z": 10,
+          "box": {
+            "x": 0.1,
+            "y": 0.8,
+            "width": 0.8,
+            "height": 0.05
+          },
+          "type": "text",
+          "inputKey": "cta_text",
+          "typo": {
+            "fontId": "arimo",
+            "family": "Arimo",
+            "fallbackFamily": "sans-serif",
+            "weight": 600,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 0.6,
+            "lineHeight": 1.2,
+            "tracking": 0.02,
+            "align": "center",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 60,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.35,
+            "detectionScore": 0.55,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        }
+      ]
+    },
+    "story": {
+      "format": "9:16",
+      "width": 1080,
+      "height": 1920,
+      "plate": {
+        "src": "/adstudio-templates/meta-feed-163/plate-story.webp",
+        "sha256": "6b193e4634e1a093186bde4524c04df2ef8fd3ce4b49911966f41e82f8814629"
+      },
+      "layers": [
+        {
+          "id": "slot-agent_photo",
+          "z": 2,
+          "box": {
+            "x": 0.4130859375,
+            "y": 0.28011474609375,
+            "width": 0.16796875,
+            "height": 0.09308268229166665
+          },
+          "type": "image_slot",
+          "inputKey": "agent_photo",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 181,
+            "height": 179
+          }
+        },
+        {
+          "id": "text-cta_text",
+          "z": 10,
+          "box": {
+            "x": 0.1,
+            "y": 0.684375,
+            "width": 0.8,
+            "height": 0.03463541666666666
+          },
+          "type": "text",
+          "inputKey": "cta_text",
+          "typo": {
+            "fontId": "arimo",
+            "family": "Arimo",
+            "fallbackFamily": "sans-serif",
+            "weight": 600,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 0.6,
+            "lineHeight": 1.2,
+            "tracking": 0.02,
+            "align": "center",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 60,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.35,
+            "detectionScore": 0.55,
+            "source": "ocr-v2",
+            "version": 1
           }
         }
       ]
@@ -142,7 +261,7 @@
     },
     "formatRouting": {
       "feed": "4:5",
-      "story": null
+      "story": "9:16"
     },
     "creativeFeatures": {
       "adapt_to_placement": "OPT_OUT",
@@ -170,11 +289,14 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "draft",
-    "residuals": {},
+    "status": "ready",
+    "residuals": {
+      "text-cta_text": null
+    },
     "bakedTextKeys": [
-      "main_question",
-      "cta_text"
-    ]
+      "main_question"
+    ],
+    "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
+    "qaAt": "2026-08-07T08:17:58.438Z"
   }
 }

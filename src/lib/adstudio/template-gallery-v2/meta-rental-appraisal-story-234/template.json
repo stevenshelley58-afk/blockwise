@@ -22,8 +22,8 @@
       "contentHash": "f2be96eafb7a0a77341c9c73464b1161866f08bb968348474de50a0cac173ccd"
     },
     "sample": {
-      "imageSrc": "/adstudio-samples/meta/meta-rental-appraisal-story-234-sample.png",
-      "contentHash": "17987becc85c6e0fc32c737a5685a48e006da709a1dade9625e958f780f6e92f",
+      "imageSrc": "/adstudio-templates/meta-rental-appraisal-story-234/sample.png",
+      "contentHash": "6a8c2f7a70c8ffac9f10a599a5b076edc21e3b2cf09010d64962d04d407238eb",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
@@ -49,18 +49,45 @@
       "italic": false,
       "file": "/fonts/adstudio/smooch-sans-300.woff2",
       "sha256": "24c4dda0d38ff3000dbaf5c37b0035fc51791a693cc68101d14acb16c8504cb6"
+    },
+    {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "weight": 900,
+      "italic": false,
+      "file": "/fonts/adstudio/smooch-sans-900.woff2",
+      "sha256": "7e498a0ef7e779b1cc92187c05f4b8cd69663efaf7d3cb253e8d55f1b705fe06"
+    },
+    {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "weight": 800,
+      "italic": false,
+      "file": "/fonts/adstudio/smooch-sans-800.woff2",
+      "sha256": "4d14d0d3c70f966b6559cf5dd372ab305045329521825596a317df392139e63a"
     }
   ],
   "formats": {
     "feed": {
+      "format": "4:5",
+      "width": 1080,
+      "height": 1350,
+      "plate": {
+        "src": "/adstudio-templates/meta-rental-appraisal-story-234/plate-feed.webp",
+        "sha256": "edcc64717d29a3dded88a312ebd04cb7222e0aaf6c8c094130aae2ab7bac953a"
+      },
+      "layers": []
+    },
+    "story": {
       "format": "9:16",
       "width": 1080,
       "height": 1920,
       "plate": {
         "src": "/adstudio-templates/meta-rental-appraisal-story-234/plate-story.webp",
-        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        "sha256": "0e0d3c1c7d6a9f9be93cc86e03c894c66b11039c0905f6a30c858a1a9ee00bf4"
       },
-      "layers": []
+      "layers": [],
+      "native": true
     }
   },
   "inputs": {
@@ -165,7 +192,7 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "draft",
+    "status": "qa",
     "residuals": {},
     "bakedTextKeys": [
       "body",

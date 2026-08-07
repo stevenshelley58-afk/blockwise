@@ -22,15 +22,18 @@
       "contentHash": "0eee2af2e649a1fc4f2c543cce4de3ac75baef44a6309f54e07280bd833066eb"
     },
     "sample": {
-      "imageSrc": "/adstudio-samples/meta/meta-market-report-story-242-sample.png",
-      "contentHash": "86e66da7bdfc40012731fd81f74614bc1ba7ea8d5753c2f741acbb4dbbc12185",
+      "imageSrc": "/adstudio-templates/meta-market-report-story-242/sample.png",
+      "contentHash": "95f989fa5dc364fcfe0b9474aad0647daf049f897fd88ebed8554c72964c01a5",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
   },
   "restyle": {
     "paletteMap": {},
-    "replacedAssets": [],
+    "replacedAssets": [
+      "property_photo",
+      "agency_logo"
+    ],
     "note": "migrated from v1 (source); restyle pass pending in Studio"
   },
   "fonts": [
@@ -73,51 +76,119 @@
       "italic": false,
       "file": "/fonts/adstudio/merriweather-800.woff2",
       "sha256": "234916daa3dd072625fad30f1ae31d989c101bcd73ae8f29023cfbbc9a711c8a"
+    },
+    {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "weight": 700,
+      "italic": false,
+      "file": "/fonts/adstudio/merriweather-700.woff2",
+      "sha256": "4e1ab49396c02be0d9a2a25eed7bc73781c047d85fcb5dfc2889873eaf992b09"
     }
   ],
   "formats": {
     "feed": {
-      "format": "9:16",
+      "format": "4:5",
       "width": 1080,
-      "height": 1920,
+      "height": 1350,
       "plate": {
-        "src": "/adstudio-templates/meta-market-report-story-242/plate-story.webp",
-        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        "src": "/adstudio-templates/meta-market-report-story-242/plate-feed.webp",
+        "sha256": "4b1fc244b894c0347ee2eee5805147033ad941b55c4567bb7e966c24ab79dd3a"
       },
       "layers": [
         {
           "id": "slot-property_photo",
-          "type": "image_slot",
           "z": 2,
-          "inputKey": "property_photo",
-          "fit": "cover",
           "box": {
             "x": 0.5879629629629629,
             "y": 0,
             "width": 0.41203703703703703,
             "height": 1
           },
+          "type": "image_slot",
+          "inputKey": "property_photo",
+          "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 445,
+            "height": 1350
           }
         },
         {
           "id": "slot-agency_logo",
-          "type": "image_slot",
           "z": 3,
+          "box": {
+            "x": 0.22962962962962963,
+            "y": 0,
+            "width": 0.13333333333333333,
+            "height": 0.03703703703703708
+          },
+          "type": "image_slot",
           "inputKey": "agency_logo",
           "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 144,
+            "height": 50
+          }
+        }
+      ]
+    },
+    "story": {
+      "format": "9:16",
+      "width": 1080,
+      "height": 1920,
+      "plate": {
+        "src": "/adstudio-templates/meta-market-report-story-242/plate-story.webp",
+        "sha256": "721598864ab791531c875cc42c7c20a60633690e05763a6fbd09588ef2ccac46"
+      },
+      "layers": [
+        {
+          "id": "slot-property_photo",
+          "z": 2,
+          "box": {
+            "x": 0.5879629629629629,
+            "y": 0,
+            "width": 0.41203703703703703,
+            "height": 1
+          },
+          "type": "image_slot",
+          "inputKey": "property_photo",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 445,
+            "height": 1920
+          }
+        },
+        {
+          "id": "slot-agency_logo",
+          "z": 3,
           "box": {
             "x": 0.22962962962962963,
             "y": 0.1015625,
             "width": 0.13333333333333333,
             "height": 0.07291666666666667
           },
+          "type": "image_slot",
+          "inputKey": "agency_logo",
+          "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 144,
+            "height": 140
           }
         }
-      ]
+      ],
+      "native": true
     }
   },
   "inputs": {
@@ -265,7 +336,7 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "draft",
+    "status": "ready",
     "residuals": {},
     "bakedTextKeys": [
       "subheadline",
@@ -276,6 +347,8 @@
       "stat_3",
       "stat_2",
       "stat_4"
-    ]
+    ],
+    "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
+    "qaAt": "2026-08-07T08:33:53.383Z"
   }
 }

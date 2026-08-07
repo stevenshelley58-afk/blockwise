@@ -22,8 +22,8 @@
       "contentHash": "3220c9384dd6f8bc19bea23b86edc3215ab1132acf717f480c24b9e86d7fef2a"
     },
     "sample": {
-      "imageSrc": "/adstudio-samples/meta/meta-lead-checklist-story-316-sample.png",
-      "contentHash": "b97602fa4522579f5c206ab82ad24a611ac49cbcef1cd2e3c1f67a970cb019da",
+      "imageSrc": "/adstudio-templates/meta-lead-checklist-story-316/sample.png",
+      "contentHash": "57b164a06a67233b5f0471cc752ce24c48208e1011bcb09f3f4d4a3270dab557",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
@@ -81,18 +81,37 @@
       "italic": false,
       "file": "/fonts/adstudio/manrope-600.woff2",
       "sha256": "f7ac6258da20ab7541939b59851155753d1d24f1b30cbcb949077a3faa3d1593"
+    },
+    {
+      "fontId": "plus-jakarta-sans",
+      "family": "Plus Jakarta Sans",
+      "weight": 500,
+      "italic": false,
+      "file": "/fonts/adstudio/plus-jakarta-sans-500.woff2",
+      "sha256": "579e73a04f73af905837351f4d529d94765af50d2faaaed8dfc4449872641849"
     }
   ],
   "formats": {
     "feed": {
+      "format": "4:5",
+      "width": 1080,
+      "height": 1350,
+      "plate": {
+        "src": "/adstudio-templates/meta-lead-checklist-story-316/plate-feed.webp",
+        "sha256": "a38274946586121391c1b96f1bd23e6ae1a5e1ec7179aae144d913c48f44072e"
+      },
+      "layers": []
+    },
+    "story": {
       "format": "9:16",
       "width": 1080,
       "height": 1920,
       "plate": {
         "src": "/adstudio-templates/meta-lead-checklist-story-316/plate-story.webp",
-        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        "sha256": "8f8e4594bab2c7ab2ac58bc5e86709bc427fed0beb4cb78f287f88722e18475f"
       },
-      "layers": []
+      "layers": [],
+      "native": true
     }
   },
   "inputs": {
@@ -232,7 +251,7 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "draft",
+    "status": "qa",
     "residuals": {},
     "bakedTextKeys": [
       "headline",

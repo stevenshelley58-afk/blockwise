@@ -23,8 +23,8 @@
       "contentHash": "3096e3d51610baab87bb2d4145f4dc102b77496c5b902d8ec4b1b7c5e22476aa"
     },
     "sample": {
-      "imageSrc": "/adstudio-samples/meta/meta-feed-197-sample.png",
-      "contentHash": "3728e44b6eb934e232f8a271e60286ff955cd39d6ef92cb8e4170ab5a59d61bf",
+      "imageSrc": "/adstudio-templates/meta-feed-197/sample.png",
+      "contentHash": "d04fe399da2bd8fdcd3be2e3f16ffae34aabc71d40b97b7bf016de358a0ddfce",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
@@ -68,6 +68,14 @@
       "sha256": "b64aec59c2342a732ec9a766e0846692dad652c571ca3bc7fd31bf53943887eb"
     },
     {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "weight": 800,
+      "italic": false,
+      "file": "/fonts/adstudio/merriweather-800.woff2",
+      "sha256": "234916daa3dd072625fad30f1ae31d989c101bcd73ae8f29023cfbbc9a711c8a"
+    },
+    {
       "fontId": "plus-jakarta-sans",
       "family": "Plus Jakarta Sans",
       "weight": 600,
@@ -83,7 +91,7 @@
       "height": 1350,
       "plate": {
         "src": "/adstudio-templates/meta-feed-197/plate-feed.webp",
-        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        "sha256": "8ae17b8b5deadf05d2b3921644b8a87ae509409c3a27cf32baa01e1319d4d6c9"
       },
       "layers": []
     }
@@ -218,7 +226,7 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "draft",
+    "status": "qa",
     "residuals": {},
     "bakedTextKeys": [
       "headline",

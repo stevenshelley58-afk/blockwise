@@ -22,14 +22,18 @@
       "contentHash": "0adb3e7ec349be0a9203dd2e25ffa3bf17aedc60b4cc399cc3ea3a9fce98c00d"
     },
     "sample": {
-      "imageSrc": "/adstudio-samples/meta/meta-buyers-wanted-story-272-sample.png",
-      "contentHash": "050567bfb9034fb5d5fc3974a13f030e8e82c288eea1f5ddec6b93057a18635b",
+      "imageSrc": "/adstudio-templates/meta-buyers-wanted-story-272/sample.png",
+      "contentHash": "54880161ace963f3fe1574f9213e2b84c0941b3845f822e535a4139dc1d764fd",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
   },
   "restyle": {
-    "paletteMap": {},
+    "paletteMap": {
+      "#154aa2": "#1f242b",
+      "#304476": "#1f242b",
+      "#193674": "#1f242b"
+    },
     "replacedAssets": [],
     "note": "migrated from v1 (source); font remaps: source-sans-3 -> arimo; restyle pass pending in Studio"
   },
@@ -65,18 +69,219 @@
       "italic": false,
       "file": "/fonts/adstudio/quicksand-600.woff2",
       "sha256": "d7b2a752a20177cbd2a98775062aca67795b79bda8a98dfe863cd4d7b3e701a2"
+    },
+    {
+      "fontId": "arimo",
+      "family": "Arimo",
+      "weight": 600,
+      "italic": false,
+      "file": "/fonts/adstudio/arimo-600.woff2",
+      "sha256": "e56ba72ece2579125a34dda8b81f4a8692ee712757a5f5910dcf7c084cd0082e"
     }
   ],
   "formats": {
     "feed": {
+      "format": "4:5",
+      "width": 1080,
+      "height": 1350,
+      "plate": {
+        "src": "/adstudio-templates/meta-buyers-wanted-story-272/plate-feed.webp",
+        "sha256": "3a04a6e3a5968699f910def98280f6201d690bb32a41aadfb1bd3f7c0acd0405"
+      },
+      "layers": [
+        {
+          "id": "text-subheadline",
+          "type": "text",
+          "z": 10,
+          "inputKey": "subheadline",
+          "box": {
+            "x": 0.11018518518518519,
+            "y": 0.9022222222222223,
+            "width": 0.8037037037037037,
+            "height": 0.028148148148148148
+          },
+          "typo": {
+            "fontId": "manrope",
+            "family": "Manrope",
+            "fallbackFamily": "sans-serif",
+            "weight": 800,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 1.2941176470588236,
+            "lineHeight": 1.366,
+            "tracking": 0,
+            "align": "center",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 46,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.446,
+            "detectionScore": 1,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        },
+        {
+          "id": "text-cta",
+          "type": "text",
+          "z": 12,
+          "inputKey": "cta",
+          "box": {
+            "x": 0.1,
+            "y": 0.8982222222222224,
+            "width": 0.8,
+            "height": 0.07111111111111111
+          },
+          "typo": {
+            "fontId": "arimo",
+            "family": "Arimo",
+            "fallbackFamily": "sans-serif",
+            "weight": 600,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 0.65,
+            "lineHeight": 1.2,
+            "tracking": 0.02,
+            "align": "center",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 36,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.35,
+            "detectionScore": 0.55,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        }
+      ]
+    },
+    "story": {
       "format": "9:16",
       "width": 1080,
       "height": 1920,
       "plate": {
         "src": "/adstudio-templates/meta-buyers-wanted-story-272/plate-story.webp",
-        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        "sha256": "38a494b97b6f5b7c7b963146803522f666b590cddda221f3198a6610ca9af3c5"
       },
-      "layers": []
+      "layers": [
+        {
+          "id": "text-subheadline",
+          "type": "text",
+          "z": 10,
+          "inputKey": "subheadline",
+          "box": {
+            "x": 0.11018518518518519,
+            "y": 0.7828125,
+            "width": 0.8037037037037037,
+            "height": 0.019791666666666666
+          },
+          "typo": {
+            "fontId": "manrope",
+            "family": "Manrope",
+            "fallbackFamily": "sans-serif",
+            "weight": 800,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 1.2941176470588236,
+            "lineHeight": 1.366,
+            "tracking": 0,
+            "align": "center",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 46,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.446,
+            "detectionScore": 1,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        },
+        {
+          "id": "text-website",
+          "type": "text",
+          "z": 11,
+          "inputKey": "website",
+          "box": {
+            "x": 0.31805555555555554,
+            "y": 0.058854166666666666,
+            "width": 0.375,
+            "height": 0.01796875
+          },
+          "typo": {
+            "fontId": "quicksand",
+            "family": "Quicksand",
+            "fallbackFamily": "sans-serif",
+            "weight": 600,
+            "italic": false,
+            "case": "lower",
+            "sizeRatio": 1.3457595526561044,
+            "lineHeight": 1.25,
+            "tracking": 0,
+            "align": "center",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 35,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.501,
+            "detectionScore": 1,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        },
+        {
+          "id": "text-cta",
+          "type": "text",
+          "z": 12,
+          "inputKey": "cta",
+          "box": {
+            "x": 0.1,
+            "y": 0.78,
+            "width": 0.8,
+            "height": 0.05
+          },
+          "typo": {
+            "fontId": "arimo",
+            "family": "Arimo",
+            "fallbackFamily": "sans-serif",
+            "weight": 600,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 0.65,
+            "lineHeight": 1.2,
+            "tracking": 0.02,
+            "align": "center",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 36,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.35,
+            "detectionScore": 0.55,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        }
+      ],
+      "native": true
     }
   },
   "inputs": {
@@ -188,14 +393,15 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "draft",
-    "residuals": {},
+    "status": "qa",
+    "residuals": {
+      "text-subheadline": 0.25212031985130834,
+      "text-website": 0.11824397527173232,
+      "text-cta": 0.27114175459127277
+    },
     "bakedTextKeys": [
       "body",
-      "headline",
-      "subheadline",
-      "website",
-      "cta"
+      "headline"
     ]
   }
 }

@@ -22,15 +22,17 @@
       "contentHash": "15db4d72f3b3af099d5555e5271a0f1cccd86d65068a4f7e2257742f1fcb1597"
     },
     "sample": {
-      "imageSrc": "/adstudio-samples/meta/meta-lead-checklist-story-304-sample.png",
-      "contentHash": "0d8bd8b9ee1737615e2023050eb26699d568a2cfa857dc4e2608eeca9f446d8c",
+      "imageSrc": "/adstudio-templates/meta-lead-checklist-story-304/sample.png",
+      "contentHash": "da35ef52133fd86c7ea105a9794cffc9712831dc67da2429c9329320cfe79676",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
   },
   "restyle": {
     "paletteMap": {},
-    "replacedAssets": [],
+    "replacedAssets": [
+      "background_photo"
+    ],
     "note": "migrated from v1 (source); restyle pass pending in Studio"
   },
   "fonts": [
@@ -49,6 +51,14 @@
       "italic": false,
       "file": "/fonts/adstudio/merriweather-500.woff2",
       "sha256": "0b573a833832b8cafdcb3beeb64b2f4d524b7ca908c7d2232c2d78610b2c8ebd"
+    },
+    {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "weight": 600,
+      "italic": false,
+      "file": "/fonts/adstudio/merriweather-600.woff2",
+      "sha256": "3ef93c94387a5a08bbe3115b15b912ea9ed27cae4d5b7db869dc07c443fadc4c"
     },
     {
       "fontId": "manrope",
@@ -75,6 +85,14 @@
       "sha256": "e902b779e43944c300cf8ae5e4a1affa68cb8a823fd263dd2f479c4cdfbd213c"
     },
     {
+      "fontId": "manrope",
+      "family": "Manrope",
+      "weight": 700,
+      "italic": false,
+      "file": "/fonts/adstudio/manrope-700.woff2",
+      "sha256": "0dc9d9b75bffd07e25f727e8d67a39cc731e21c718b3b86267226bb4e2757813"
+    },
+    {
       "fontId": "lato",
       "family": "Lato",
       "weight": 900,
@@ -85,31 +103,67 @@
   ],
   "formats": {
     "feed": {
-      "format": "9:16",
+      "format": "4:5",
       "width": 1080,
-      "height": 1920,
+      "height": 1350,
       "plate": {
-        "src": "/adstudio-templates/meta-lead-checklist-story-304/plate-story.webp",
-        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        "src": "/adstudio-templates/meta-lead-checklist-story-304/plate-feed.webp",
+        "sha256": "a2e3be7e1fa3b6f46d9ed145b1b64864095feb8c9890f9f20340b65b0f507255"
       },
       "layers": [
         {
           "id": "slot-background_photo",
-          "type": "image_slot",
           "z": 2,
-          "inputKey": "background_photo",
-          "fit": "cover",
           "box": {
             "x": 0,
             "y": 0,
             "width": 1,
             "height": 1
           },
+          "type": "image_slot",
+          "inputKey": "background_photo",
+          "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 1080,
+            "height": 1350
           }
         }
       ]
+    },
+    "story": {
+      "format": "9:16",
+      "width": 1080,
+      "height": 1920,
+      "plate": {
+        "src": "/adstudio-templates/meta-lead-checklist-story-304/plate-story.webp",
+        "sha256": "94ceef3e09e559161bf0068585874d3e05909b112d263b64e527232760acf40a"
+      },
+      "layers": [
+        {
+          "id": "slot-background_photo",
+          "z": 2,
+          "box": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "type": "image_slot",
+          "inputKey": "background_photo",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 1080,
+            "height": 1920
+          }
+        }
+      ],
+      "native": true
     }
   },
   "inputs": {
@@ -257,7 +311,7 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "draft",
+    "status": "ready",
     "residuals": {},
     "bakedTextKeys": [
       "headline",
@@ -269,6 +323,8 @@
       "benefit_3",
       "benefit_1",
       "benefit_2"
-    ]
+    ],
+    "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
+    "qaAt": "2026-08-07T08:26:01.666Z"
   }
 }

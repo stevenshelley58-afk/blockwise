@@ -22,15 +22,18 @@
       "contentHash": "4d627695b6ee3ca05db7a3c263bdbb544860a95f49e672f148d0b1d8ed02b328"
     },
     "sample": {
-      "imageSrc": "/adstudio-samples/meta/meta-market-report-feed-139-sample.png",
-      "contentHash": "1bc17d5b3853282a479c74709653e2f322bd6b074bd61e6827f8b2f19255ed7d",
+      "imageSrc": "/adstudio-templates/meta-market-report-feed-139/sample.png",
+      "contentHash": "41798da2f17f5b196bdff18edfc8a6d8364154f7ebe8014ea17e1f8e045a13ab",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
   },
   "restyle": {
     "paletteMap": {},
-    "replacedAssets": [],
+    "replacedAssets": [
+      "suburb_aerial",
+      "agency_logo"
+    ],
     "note": "migrated from v1 (source); restyle pass pending in Studio"
   },
   "fonts": [
@@ -81,6 +84,14 @@
       "italic": false,
       "file": "/fonts/adstudio/roboto-slab-800.woff2",
       "sha256": "554c88442931155d2f07608d29fc9d403962f934ec43ef9aff6823e9c2c25ac9"
+    },
+    {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "weight": 300,
+      "italic": false,
+      "file": "/fonts/adstudio/merriweather-300.woff2",
+      "sha256": "f4b7d84d4c4bd217985b5f4a93d9e61f63670a2efc5a5e6048afd044bc921330"
     }
   ],
   "formats": {
@@ -90,39 +101,98 @@
       "height": 1350,
       "plate": {
         "src": "/adstudio-templates/meta-market-report-feed-139/plate-feed.webp",
-        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        "sha256": "7b966c05bc313750c54f50c9bee4b6ca335100d5a9ac53a0d47c5376c74a0bc5"
       },
       "layers": [
         {
           "id": "slot-suburb_aerial",
-          "type": "image_slot",
           "z": 2,
-          "inputKey": "suburb_aerial",
-          "fit": "cover",
           "box": {
             "x": 0.05462962962962963,
             "y": 0.40444444444444444,
             "width": 0.8907407407407407,
             "height": 0.33555555555555555
           },
+          "type": "image_slot",
+          "inputKey": "suburb_aerial",
+          "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 962,
+            "height": 453
           }
         },
         {
           "id": "slot-agency_logo",
-          "type": "image_slot",
           "z": 3,
-          "inputKey": "agency_logo",
-          "fit": "cover",
           "box": {
             "x": 0.44814814814814813,
             "y": 0.04296296296296296,
             "width": 0.10277777777777777,
             "height": 0.08370370370370371
           },
+          "type": "image_slot",
+          "inputKey": "agency_logo",
+          "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 111,
+            "height": 113
+          }
+        }
+      ]
+    },
+    "story": {
+      "format": "9:16",
+      "width": 1080,
+      "height": 1920,
+      "plate": {
+        "src": "/adstudio-templates/meta-market-report-feed-139/plate-story.webp",
+        "sha256": "c31b28d59ea4246eb1284fdbb908c1019c425db37669b5cd4e4b0772ba3ce272"
+      },
+      "layers": [
+        {
+          "id": "slot-suburb_aerial",
+          "z": 2,
+          "box": {
+            "x": 0.05462962962962963,
+            "y": 0.4103703703703704,
+            "width": 0.8907407407407407,
+            "height": 0.2324421296296296
+          },
+          "type": "image_slot",
+          "inputKey": "suburb_aerial",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 962,
+            "height": 446
+          }
+        },
+        {
+          "id": "slot-agency_logo",
+          "z": 3,
+          "box": {
+            "x": 0.44814814814814813,
+            "y": 0.15996913580246913,
+            "width": 0.10277777777777777,
+            "height": 0.05798225308641975
+          },
+          "type": "image_slot",
+          "inputKey": "agency_logo",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 111,
+            "height": 111
           }
         }
       ]
@@ -238,7 +308,7 @@
     },
     "formatRouting": {
       "feed": "4:5",
-      "story": null
+      "story": "9:16"
     },
     "creativeFeatures": {
       "adapt_to_placement": "OPT_OUT",
@@ -266,7 +336,7 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "draft",
+    "status": "ready",
     "residuals": {},
     "bakedTextKeys": [
       "subheadline",
@@ -276,6 +346,8 @@
       "cta",
       "stat_2",
       "phone"
-    ]
+    ],
+    "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
+    "qaAt": "2026-08-07T08:28:18.176Z"
   }
 }

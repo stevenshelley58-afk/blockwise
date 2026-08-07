@@ -46,5 +46,10 @@
       "width": 0.8,
       "height": 0.025
     }
+  },
+  "bakedResiduals": {
+    "baked-headline": 0.012371652528087534,
+    "baked-price_info": 0.009124674958779975,
+    "baked-feature_2": 0.014860115637098294
   }
 }

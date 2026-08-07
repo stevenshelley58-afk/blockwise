@@ -24,15 +24,17 @@
       "contentHash": "e746739b1e5f57dd69a58fcf3b5a583eb1964b470e578b5dfd79b1533788341a"
     },
     "sample": {
-      "imageSrc": "/adstudio-samples/meta/meta-feed-188-sample.png",
-      "contentHash": "7c1b39837ef9ad924efb5be343c9a30895be4f8d79fb939cd9a5c817d35e43d3",
+      "imageSrc": "/adstudio-templates/meta-feed-188/sample.png",
+      "contentHash": "3f97ca3a7eba03e1659bcd767cc66cdb14183939afaca24d04c640e2d5a9afc1",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
   },
   "restyle": {
     "paletteMap": {},
-    "replacedAssets": [],
+    "replacedAssets": [
+      "property_photo"
+    ],
     "note": "migrated from v1 (source); restyle pass pending in Studio"
   },
   "fonts": [
@@ -59,6 +61,22 @@
       "italic": false,
       "file": "/fonts/adstudio/oswald-700.woff2",
       "sha256": "aae665c75af89ea7cb7d8ccc8b0911ea72267442ebcd84f6e3efa041ad3b3c16"
+    },
+    {
+      "fontId": "oswald",
+      "family": "Oswald",
+      "weight": 500,
+      "italic": false,
+      "file": "/fonts/adstudio/oswald-500.woff2",
+      "sha256": "8efb1f76958d3c975bda1db05402807c1cde0c9c910d6f5f9b1e3d255b0be78f"
+    },
+    {
+      "fontId": "oswald",
+      "family": "Oswald",
+      "weight": 300,
+      "italic": false,
+      "file": "/fonts/adstudio/oswald-300.woff2",
+      "sha256": "84f168468881f1ae6cf11573f3befa2e83f2067e914a57dad0233e3a772e76f7"
     }
   ],
   "formats": {
@@ -68,23 +86,58 @@
       "height": 1350,
       "plate": {
         "src": "/adstudio-templates/meta-feed-188/plate-feed.webp",
-        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        "sha256": "0f07dc965fc682429e839bfcba5954fb5121f23e2dbe61313a3956de99e35d2d"
       },
       "layers": [
         {
           "id": "slot-property_photo",
-          "type": "image_slot",
           "z": 2,
-          "inputKey": "property_photo",
-          "fit": "cover",
           "box": {
             "x": 0,
             "y": 0,
             "width": 1,
             "height": 1
           },
+          "type": "image_slot",
+          "inputKey": "property_photo",
+          "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 1080,
+            "height": 1350
+          }
+        }
+      ]
+    },
+    "story": {
+      "format": "9:16",
+      "width": 1080,
+      "height": 1920,
+      "plate": {
+        "src": "/adstudio-templates/meta-feed-188/plate-story.webp",
+        "sha256": "23a308a3a9431745c15c55b30e32c32907c03c805ffae71b707ef6c7a2b653c6"
+      },
+      "layers": [
+        {
+          "id": "slot-property_photo",
+          "z": 2,
+          "box": {
+            "x": 0,
+            "y": 0.13020833333333334,
+            "width": 1,
+            "height": 0.6927083333333333
+          },
+          "type": "image_slot",
+          "inputKey": "property_photo",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 1080,
+            "height": 1330
           }
         }
       ]
@@ -179,7 +232,7 @@
     },
     "formatRouting": {
       "feed": "4:5",
-      "story": null
+      "story": "9:16"
     },
     "creativeFeatures": {
       "adapt_to_placement": "OPT_OUT",
@@ -207,7 +260,7 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "draft",
+    "status": "ready",
     "residuals": {},
     "bakedTextKeys": [
       "contact_handle",
@@ -215,6 +268,8 @@
       "contact_phone",
       "price",
       "badge_text"
-    ]
+    ],
+    "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
+    "qaAt": "2026-08-07T08:19:13.844Z"
   }
 }

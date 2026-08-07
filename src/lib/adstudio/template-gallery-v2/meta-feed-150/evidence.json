@@ -39,5 +39,8 @@
       "width": 0.48095703125,
       "height": 0.073828125
     }
+  },
+  "bakedResiduals": {
+    "baked-address": 0
   }
 }

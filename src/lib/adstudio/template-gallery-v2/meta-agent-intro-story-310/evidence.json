@@ -60,5 +60,12 @@
       "width": 0.36435185185185187,
       "height": 0.02421875
     }
+  },
+  "bakedResiduals": {
+    "baked-body": 0,
+    "baked-agent_role": 0.0028801540112818507,
+    "baked-subheadline": 0.0003542255311921827,
+    "baked-email": 0.00028471332821473097,
+    "baked-phone": 0
   }
 }

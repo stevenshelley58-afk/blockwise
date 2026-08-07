@@ -22,15 +22,21 @@
       "contentHash": "9f7909390f4a5cd3168f80ae24d5dccd1ebf3ba852e6c67a2e5cd53cce88cc01"
     },
     "sample": {
-      "imageSrc": "/adstudio-samples/meta/meta-appraisal-feed-200-sample.png",
-      "contentHash": "c69880e33dec10dccd185f504158556870b3e1e81125543bba9c715dfe9ed4b5",
+      "imageSrc": "/adstudio-templates/meta-appraisal-feed-200/sample.png",
+      "contentHash": "650d462281d89a8d5d6dfff7b761e78e81372b048e9f54b784e71f275b7f6458",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
   },
   "restyle": {
-    "paletteMap": {},
-    "replacedAssets": [],
+    "paletteMap": {
+      "#1f242b": "#1f242b"
+    },
+    "replacedAssets": [
+      "property_photo",
+      "agent_portrait",
+      "agency_logo"
+    ],
     "note": "migrated from v1 (source); restyle pass pending in Studio"
   },
   "fonts": [
@@ -65,6 +71,22 @@
       "italic": false,
       "file": "/fonts/adstudio/oswald-700.woff2",
       "sha256": "aae665c75af89ea7cb7d8ccc8b0911ea72267442ebcd84f6e3efa041ad3b3c16"
+    },
+    {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "weight": 400,
+      "italic": false,
+      "file": "/fonts/adstudio/smooch-sans-400.woff2",
+      "sha256": "a1b64ed5521846da168a3a1907019f6ee8699958c6807b8d33d962d33153cff8"
+    },
+    {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "weight": 600,
+      "italic": false,
+      "file": "/fonts/adstudio/merriweather-600.woff2",
+      "sha256": "3ef93c94387a5a08bbe3115b15b912ea9ed27cae4d5b7db869dc07c443fadc4c"
     }
   ],
   "formats": {
@@ -74,55 +96,426 @@
       "height": 1350,
       "plate": {
         "src": "/adstudio-templates/meta-appraisal-feed-200/plate-feed.webp",
-        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        "sha256": "c4698cc5365fe36bf14dc057a37b582ef75f8bb41fb74b34f7379a173eea2211"
       },
       "layers": [
         {
           "id": "slot-property_photo",
-          "type": "image_slot",
           "z": 2,
-          "inputKey": "property_photo",
-          "fit": "cover",
           "box": {
             "x": 0,
             "y": 0,
             "width": 1,
             "height": 0.43703703703703706
           },
+          "type": "image_slot",
+          "inputKey": "property_photo",
+          "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 1080,
+            "height": 590
           }
         },
         {
           "id": "slot-agent_portrait",
-          "type": "image_slot",
           "z": 3,
-          "inputKey": "agent_portrait",
-          "fit": "cover",
           "box": {
             "x": 0.1175925925925926,
             "y": 0.677037037037037,
             "width": 0.2962962962962963,
             "height": 0.27925925925925926
           },
+          "type": "image_slot",
+          "inputKey": "agent_portrait",
+          "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 320,
+            "height": 377
           }
         },
         {
           "id": "slot-agency_logo",
-          "type": "image_slot",
           "z": 4,
-          "inputKey": "agency_logo",
-          "fit": "cover",
           "box": {
             "x": 0.4722222222222222,
             "y": 0.6785185185185185,
             "width": 0.08888888888888889,
             "height": 0.06666666666666667
           },
+          "type": "image_slot",
+          "inputKey": "agency_logo",
+          "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 96,
+            "height": 90
+          }
+        },
+        {
+          "id": "text-agent_role",
+          "z": 10,
+          "box": {
+            "x": 0.475,
+            "y": 0.812962962962963,
+            "width": 0.3731481481481482,
+            "height": 0.014444444444444444
+          },
+          "type": "text",
+          "inputKey": "agent_role",
+          "typo": {
+            "fontId": "merriweather",
+            "family": "Merriweather",
+            "fallbackFamily": "serif",
+            "weight": 800,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 1.3529411764705883,
+            "lineHeight": 1.257,
+            "tracking": 0,
+            "align": "left",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 43,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.408,
+            "detectionScore": 1,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        },
+        {
+          "id": "text-subheadline",
+          "z": 11,
+          "box": {
+            "x": 0.4601851851851852,
+            "y": 0.6155555555555555,
+            "width": 0.4625,
+            "height": 0.02259259259259259
+          },
+          "type": "text",
+          "inputKey": "subheadline",
+          "typo": {
+            "fontId": "lora",
+            "family": "Lora",
+            "fallbackFamily": "serif",
+            "weight": 700,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 1.061524334251607,
+            "lineHeight": 1.28,
+            "tracking": 0,
+            "align": "right",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 42,
+            "maxLines": 2,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.866,
+            "detectionScore": 0.625,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        },
+        {
+          "id": "text-phone",
+          "z": 12,
+          "box": {
+            "x": 0.47314814814814815,
+            "y": 0.8462962962962963,
+            "width": 0.2518518518518518,
+            "height": 0.035925925925925924
+          },
+          "type": "text",
+          "inputKey": "phone",
+          "typo": {
+            "fontId": "smooch-sans",
+            "family": "Smooch Sans",
+            "fallbackFamily": "sans-serif",
+            "weight": 400,
+            "italic": false,
+            "case": "none",
+            "sizeRatio": 1.588235294117647,
+            "lineHeight": 1.2,
+            "tracking": 0,
+            "align": "left",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 30,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.645,
+            "detectionScore": 1,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        },
+        {
+          "id": "text-agent_name",
+          "z": 13,
+          "box": {
+            "x": 0.47314814814814815,
+            "y": 0.7670370370370371,
+            "width": 0.33935185185185185,
+            "height": 0.027037037037037037
+          },
+          "type": "text",
+          "inputKey": "agent_name",
+          "typo": {
+            "fontId": "merriweather",
+            "family": "Merriweather",
+            "fallbackFamily": "serif",
+            "weight": 600,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 1.300813008130081,
+            "lineHeight": 1.257,
+            "tracking": 0,
+            "align": "left",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 29,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.583,
+            "detectionScore": 1,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        }
+      ]
+    },
+    "story": {
+      "format": "9:16",
+      "width": 1080,
+      "height": 1920,
+      "plate": {
+        "src": "/adstudio-templates/meta-appraisal-feed-200/plate-story.webp",
+        "sha256": "7537ac042df6329448860ad10a712dbcb268b975d531541b80298cacf98353ae"
+      },
+      "layers": [
+        {
+          "id": "slot-property_photo",
+          "z": 2,
+          "box": {
+            "x": 0,
+            "y": 0.13020833333333334,
+            "width": 1,
+            "height": 0.3027391975308642
+          },
+          "type": "image_slot",
+          "inputKey": "property_photo",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 1080,
+            "height": 581
+          }
+        },
+        {
+          "id": "slot-agent_portrait",
+          "z": 3,
+          "box": {
+            "x": 0.1175925925925926,
+            "y": 0.5991975308641975,
+            "width": 0.2962962962962963,
+            "height": 0.1934452160493827
+          },
+          "type": "image_slot",
+          "inputKey": "agent_portrait",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 320,
+            "height": 371
+          }
+        },
+        {
+          "id": "slot-agency_logo",
+          "z": 4,
+          "box": {
+            "x": 0.4722222222222222,
+            "y": 0.6002237654320988,
+            "width": 0.08888888888888889,
+            "height": 0.04618055555555555
+          },
+          "type": "image_slot",
+          "inputKey": "agency_logo",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 96,
+            "height": 89
+          }
+        },
+        {
+          "id": "text-agent_role",
+          "z": 10,
+          "box": {
+            "x": 0.475,
+            "y": 0.6933545524691358,
+            "width": 0.3731481481481482,
+            "height": 0.010005787037037035
+          },
+          "type": "text",
+          "inputKey": "agent_role",
+          "typo": {
+            "fontId": "merriweather",
+            "family": "Merriweather",
+            "fallbackFamily": "serif",
+            "weight": 800,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 1.3529411764705883,
+            "lineHeight": 1.257,
+            "tracking": 0,
+            "align": "left",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 43,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.408,
+            "detectionScore": 1,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        },
+        {
+          "id": "text-subheadline",
+          "z": 11,
+          "box": {
+            "x": 0.4601851851851852,
+            "y": 0.5566087962962962,
+            "width": 0.4625,
+            "height": 0.015650077160493825
+          },
+          "type": "text",
+          "inputKey": "subheadline",
+          "typo": {
+            "fontId": "lora",
+            "family": "Lora",
+            "fallbackFamily": "serif",
+            "weight": 700,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 1.061524334251607,
+            "lineHeight": 1.28,
+            "tracking": 0,
+            "align": "right",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 42,
+            "maxLines": 2,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.866,
+            "detectionScore": 0.625,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        },
+        {
+          "id": "text-phone",
+          "z": 12,
+          "box": {
+            "x": 0.47314814814814815,
+            "y": 0.7164448302469135,
+            "width": 0.2518518518518518,
+            "height": 0.024886188271604933
+          },
+          "type": "text",
+          "inputKey": "phone",
+          "typo": {
+            "fontId": "smooch-sans",
+            "family": "Smooch Sans",
+            "fallbackFamily": "sans-serif",
+            "weight": 400,
+            "italic": false,
+            "case": "none",
+            "sizeRatio": 1.588235294117647,
+            "lineHeight": 1.2,
+            "tracking": 0,
+            "align": "left",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 30,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.645,
+            "detectionScore": 1,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        },
+        {
+          "id": "text-agent_name",
+          "z": 13,
+          "box": {
+            "x": 0.47314814814814815,
+            "y": 0.6615412808641975,
+            "width": 0.33935185185185185,
+            "height": 0.01872878086419753
+          },
+          "type": "text",
+          "inputKey": "agent_name",
+          "typo": {
+            "fontId": "merriweather",
+            "family": "Merriweather",
+            "fallbackFamily": "serif",
+            "weight": 600,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 1.300813008130081,
+            "lineHeight": 1.257,
+            "tracking": 0,
+            "align": "left",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 29,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.583,
+            "detectionScore": 1,
+            "source": "ocr-v2",
+            "version": 1
           }
         }
       ]
@@ -238,7 +631,7 @@
     },
     "formatRouting": {
       "feed": "4:5",
-      "story": null
+      "story": "9:16"
     },
     "creativeFeatures": {
       "adapt_to_placement": "OPT_OUT",
@@ -266,15 +659,18 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "draft",
-    "residuals": {},
+    "status": "ready",
+    "residuals": {
+      "text-agent_role": null,
+      "text-subheadline": null,
+      "text-phone": null,
+      "text-agent_name": null
+    },
     "bakedTextKeys": [
       "headline",
-      "agent_role",
-      "subheadline",
-      "cta",
-      "phone",
-      "agent_name"
-    ]
+      "cta"
+    ],
+    "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
+    "qaAt": "2026-08-07T08:17:27.073Z"
   }
 }

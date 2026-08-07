@@ -22,8 +22,8 @@
       "contentHash": "9b6e5b39b6aeb5e9bf15d5e180d435ff4dda3b331144535d8651f905517dbc19"
     },
     "sample": {
-      "imageSrc": "/adstudio-samples/meta/meta-lead-checklist-feed-157-sample.png",
-      "contentHash": "4942183d3e6ca300d37d2e5020fd47509f086deca2cc33907c861e45f3d931d2",
+      "imageSrc": "/adstudio-templates/meta-lead-checklist-feed-157/sample.png",
+      "contentHash": "b92a26c1809f55b7c23fc74bdc7da1256a578f2a60c771aa77b57adeb0fd253a",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
@@ -66,7 +66,17 @@
       "height": 1350,
       "plate": {
         "src": "/adstudio-templates/meta-lead-checklist-feed-157/plate-feed.webp",
-        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        "sha256": "f17357d68b64757636a63982fd02d4451bcbfb7d1499e1b411b9ec0c7717ad1f"
+      },
+      "layers": []
+    },
+    "story": {
+      "format": "9:16",
+      "width": 1080,
+      "height": 1920,
+      "plate": {
+        "src": "/adstudio-templates/meta-lead-checklist-feed-157/plate-story.webp",
+        "sha256": "9de222b86aba371a1f9ebc1b1005f01f0d16dba4eb06fe0eef7f5618ed083ffd"
       },
       "layers": []
     }
@@ -145,7 +155,7 @@
     },
     "formatRouting": {
       "feed": "4:5",
-      "story": null
+      "story": "9:16"
     },
     "creativeFeatures": {
       "adapt_to_placement": "OPT_OUT",
@@ -173,7 +183,7 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "draft",
+    "status": "qa",
     "residuals": {},
     "bakedTextKeys": [
       "body",

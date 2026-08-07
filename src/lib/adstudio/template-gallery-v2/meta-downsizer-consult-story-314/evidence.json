@@ -32,5 +32,9 @@
       "width": 0.5138888888888888,
       "height": 0.01875
     }
+  },
+  "bakedResiduals": {
+    "baked-body": 0.018406792168571197,
+    "baked-headline": 0
   }
 }

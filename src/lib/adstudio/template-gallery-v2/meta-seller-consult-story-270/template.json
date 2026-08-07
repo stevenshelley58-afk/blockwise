@@ -22,15 +22,19 @@
       "contentHash": "7690271f39f161134f97a8debdb403ccf4d6da32990da3d1770b636aaecbd915"
     },
     "sample": {
-      "imageSrc": "/adstudio-samples/meta/meta-seller-consult-story-270-sample.png",
-      "contentHash": "40c9043ba3c591b5cf43cf3a34221b9d66512c674799886a2192fbd8c62ebbad",
+      "imageSrc": "/adstudio-templates/meta-seller-consult-story-270/sample.png",
+      "contentHash": "4242c1340b4db8cf46091a8e528d10c728fec68740e1f5d1ad49c94c1b2baee5",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
   },
   "restyle": {
     "paletteMap": {},
-    "replacedAssets": [],
+    "replacedAssets": [
+      "property_photo_1",
+      "property_photo_2",
+      "agency_logo"
+    ],
     "note": "migrated from v1 (source); font remaps: source-sans-3 -> arimo, google-sans -> arimo; restyle pass pending in Studio"
   },
   "fonts": [
@@ -77,63 +81,127 @@
   ],
   "formats": {
     "feed": {
+      "format": "4:5",
+      "width": 1080,
+      "height": 1350,
+      "plate": {
+        "src": "/adstudio-templates/meta-seller-consult-story-270/plate-feed.webp",
+        "sha256": "eef8016129c816a58edd1cb02e7d26bdb743b8665027b0e0262e5aba9d2a688b"
+      },
+      "layers": [
+        {
+          "id": "slot-property_photo_1",
+          "z": 2,
+          "box": {
+            "x": 0.001851851851851852,
+            "y": 0.06518518518518518,
+            "width": 0.49166666666666664,
+            "height": 0.5696296296296296
+          },
+          "type": "image_slot",
+          "inputKey": "property_photo_1",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 531,
+            "height": 769
+          }
+        },
+        {
+          "id": "slot-property_photo_2",
+          "z": 3,
+          "box": {
+            "x": 0.5064814814814815,
+            "y": 0.06518518518518518,
+            "width": 0.49166666666666664,
+            "height": 0.5696296296296296
+          },
+          "type": "image_slot",
+          "inputKey": "property_photo_2",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 531,
+            "height": 769
+          }
+        }
+      ]
+    },
+    "story": {
       "format": "9:16",
       "width": 1080,
       "height": 1920,
       "plate": {
         "src": "/adstudio-templates/meta-seller-consult-story-270/plate-story.webp",
-        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        "sha256": "55ab117e2271c5262cd7dbce2371037d633802ab373346aff3658c2a696fc64a"
       },
       "layers": [
         {
           "id": "slot-property_photo_1",
-          "type": "image_slot",
           "z": 2,
-          "inputKey": "property_photo_1",
-          "fit": "cover",
           "box": {
             "x": 0.001851851851851852,
             "y": 0.19427083333333334,
             "width": 0.49166666666666664,
             "height": 0.4005208333333333
           },
+          "type": "image_slot",
+          "inputKey": "property_photo_1",
+          "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 531,
+            "height": 769
           }
         },
         {
           "id": "slot-property_photo_2",
-          "type": "image_slot",
           "z": 3,
-          "inputKey": "property_photo_2",
-          "fit": "cover",
           "box": {
             "x": 0.5064814814814815,
             "y": 0.19427083333333334,
             "width": 0.49166666666666664,
             "height": 0.4005208333333333
           },
+          "type": "image_slot",
+          "inputKey": "property_photo_2",
+          "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 531,
+            "height": 769
           }
         },
         {
           "id": "slot-agency_logo",
-          "type": "image_slot",
           "z": 4,
-          "inputKey": "agency_logo",
-          "fit": "cover",
           "box": {
             "x": 0.4287037037037037,
             "y": 0.05416666666666667,
             "width": 0.14,
             "height": 0.0734375
           },
+          "type": "image_slot",
+          "inputKey": "agency_logo",
+          "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 151,
+            "height": 141
           }
         }
-      ]
+      ],
+      "native": true
     }
   },
   "inputs": {
@@ -267,7 +335,7 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "draft",
+    "status": "ready",
     "residuals": {},
     "bakedTextKeys": [
       "body",
@@ -275,6 +343,8 @@
       "headline",
       "subheadline",
       "website"
-    ]
+    ],
+    "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
+    "qaAt": "2026-08-07T08:51:06.730Z"
   }
 }

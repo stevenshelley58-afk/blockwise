@@ -22,15 +22,18 @@
       "contentHash": "53180b93a24e4fa628bef61fa7c491e8586c53589622bb6699d1fdef9bb85b98"
     },
     "sample": {
-      "imageSrc": "/adstudio-samples/meta/meta-seller-consult-feed-168-sample.png",
-      "contentHash": "b4bdf9a924d4bd9a67b633a4d469f429ea2da2fc8a216cb9a143f7a264c5c57b",
+      "imageSrc": "/adstudio-templates/meta-seller-consult-feed-168/sample.png",
+      "contentHash": "2091e81d42b3843c12172a064ac402fcec81a28ca4334fb71558ee97791cd5b2",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
   },
   "restyle": {
     "paletteMap": {},
-    "replacedAssets": [],
+    "replacedAssets": [
+      "property_photo",
+      "agency_logo"
+    ],
     "note": "migrated from v1 (source); restyle pass pending in Studio"
   },
   "fonts": [
@@ -66,39 +69,98 @@
       "height": 1350,
       "plate": {
         "src": "/adstudio-templates/meta-seller-consult-feed-168/plate-feed.webp",
-        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        "sha256": "2fe51dbcafb83a6eb876e6b444bd4386946cbec8a4b86798b1ed5c29352130ae"
       },
       "layers": [
         {
           "id": "slot-property_photo",
-          "type": "image_slot",
           "z": 2,
-          "inputKey": "property_photo",
-          "fit": "cover",
           "box": {
             "x": 0,
             "y": 0.5740740740740741,
             "width": 1,
             "height": 0.42592592592592593
           },
+          "type": "image_slot",
+          "inputKey": "property_photo",
+          "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 1080,
+            "height": 575
           }
         },
         {
           "id": "slot-agency_logo",
-          "type": "image_slot",
           "z": 3,
-          "inputKey": "agency_logo",
-          "fit": "cover",
           "box": {
             "x": 0.812037037037037,
             "y": 0.052592592592592594,
             "width": 0.1388888888888889,
             "height": 0.11259259259259259
           },
+          "type": "image_slot",
+          "inputKey": "agency_logo",
+          "fit": "cover",
           "mask": {
             "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 150,
+            "height": 152
+          }
+        }
+      ]
+    },
+    "story": {
+      "format": "9:16",
+      "width": 1080,
+      "height": 1920,
+      "plate": {
+        "src": "/adstudio-templates/meta-seller-consult-feed-168/plate-story.webp",
+        "sha256": "d6f0e51ee1646637a561a2953f9cc01ce77d2ce64d4263b3fc2ef258cac3bbfc"
+      },
+      "layers": [
+        {
+          "id": "slot-property_photo",
+          "z": 2,
+          "box": {
+            "x": 0,
+            "y": 0.5278742283950617,
+            "width": 1,
+            "height": 0.2950424382716049
+          },
+          "type": "image_slot",
+          "inputKey": "property_photo",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 1080,
+            "height": 566
+          }
+        },
+        {
+          "id": "slot-agency_logo",
+          "z": 3,
+          "box": {
+            "x": 0.812037037037037,
+            "y": 0.16663966049382717,
+            "width": 0.1388888888888889,
+            "height": 0.07799382716049381
+          },
+          "type": "image_slot",
+          "inputKey": "agency_logo",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 150,
+            "height": 150
           }
         }
       ]
@@ -200,7 +262,7 @@
     },
     "formatRouting": {
       "feed": "4:5",
-      "story": null
+      "story": "9:16"
     },
     "creativeFeatures": {
       "adapt_to_placement": "OPT_OUT",
@@ -228,7 +290,7 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "draft",
+    "status": "ready",
     "residuals": {},
     "bakedTextKeys": [
       "headline",
@@ -236,6 +298,8 @@
       "phone",
       "social_handle",
       "cta"
-    ]
+    ],
+    "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
+    "qaAt": "2026-08-07T08:47:43.145Z"
   }
 }
