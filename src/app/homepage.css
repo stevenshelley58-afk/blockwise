@@ -193,6 +193,7 @@ html, body { overflow-x: clip; }
 .hw-logo {
   display: inline-flex;
   align-items: center;
+  gap: var(--hw-space-2xs);
   color: var(--hw-ink);
   text-decoration: none;
   white-space: nowrap;
@@ -203,8 +204,15 @@ html, body { overflow-x: clip; }
   min-width: 44px;
   min-height: 44px;
 }
-.hw-logo-horizontal { display: block; height: 22px; width: auto; }
-.hw-logo-icon { display: none; height: 30px; width: 30px; }
+.hw-logo-mark {
+  display: inline-block;
+  flex: none;
+  width: 22px;
+  height: 22px;
+  background-color: currentColor;
+  -webkit-mask: url("/brand/blockwise-icon-midnight.svg") center / contain no-repeat;
+  mask: url("/brand/blockwise-icon-midnight.svg") center / contain no-repeat;
+}
 .hw-nav {
   display: flex;
   align-items: center;
@@ -250,8 +258,7 @@ html, body { overflow-x: clip; }
     gap: var(--hw-space-2xs);
     margin-left: auto;
   }
-  .hw-header .hw-logo-horizontal { display: none; }
-  .hw-header .hw-logo-icon { display: block; }
+  .hw-nav + .hw-header-actions { margin-left: auto; }
 }
 
 @media (max-width: 379.98px) {
@@ -259,7 +266,7 @@ html, body { overflow-x: clip; }
     gap: 6px;
     padding-inline: var(--hw-space-sm);
   }
-  .hw-header .hw-logo-icon {
+  .hw-header .hw-logo-mark {
     width: 26px;
     height: 26px;
   }
