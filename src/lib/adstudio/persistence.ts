@@ -5,7 +5,9 @@ import {
   applyBrandAssetRows,
   loadAdStudioBrandAssetRows,
 } from "./assets.ts";
+import { canvasDimensions, creativeDimensions, isLegacyCreative } from "./creative-preview.ts";
 import { normalizeCloneQa } from "./types.ts";
+import { isAdDocInstanceShape } from "./v2/template-doc.ts";
 import type {
   AdStudioBrandKit,
   AdStudioCampaign,
@@ -152,8 +154,7 @@ export async function persistAdStudioCampaignPack(
       campaign_id: creative.campaignId,
       variant_id: creative.variantId,
       format: creative.format,
-      width: creative.canvas.width,
-      height: creative.canvas.height,
+      ...creativeDimensions(creative),
       canvas_json: creative.canvas,
       render_status: "rendered",
       preview_svg: null,
@@ -236,6 +237,10 @@ function compactCreativeCanvas(
   creativeCanvas: AdStudioCreative["canvas"],
   keepPrimaryImage: boolean,
 ): AdStudioCreative["canvas"] {
+  // The v2 document is the canonical render contract. It does not have (and
+  // must never acquire) legacy canvas objects during persistence compaction.
+  if (isAdDocInstanceShape(creativeCanvas)) return creativeCanvas;
+
   return {
     ...creativeCanvas,
     objects: creativeCanvas.objects.map((object) => {
@@ -246,6 +251,7 @@ function compactCreativeCanvas(
 }
 
 function primaryImageSource(creative: AdStudioCreative): string | undefined {
+  if (!isLegacyCreative(creative)) return undefined;
   const image = creative.canvas.objects.find((object) => object.role === "primary_image");
   return image?.content || image?.assetId;
 }
@@ -307,10 +313,17 @@ export function rowToCreative(row: Record<string, unknown>): AdStudioCreative {
     backgroundAssetId: null,
     objects: [],
   };
-  // Legacy rows carry verdict-era { copyChecks, passed… } blobs under cloneQa;
-  // normalize to the lean { regions, copyValues } editor map on read.
-  const cloneQa = normalizeCloneQa(rawCanvas.cloneQa);
-  const canvas = cloneQa ? { ...rawCanvas, cloneQa } : rawCanvas;
+  // v2 instance docs are canonical as stored — no v1 normalization may touch
+  // them (and later v1-only logic must keep respecting this same guard).
+  const canvas = isAdDocInstanceShape(rawCanvas)
+    ? rawCanvas
+    : (() => {
+        // Legacy rows carry verdict-era { copyChecks, passed… } blobs under
+        // cloneQa; normalize to the lean { regions, copyValues } editor map.
+        const cloneQa = normalizeCloneQa(rawCanvas.cloneQa);
+        return cloneQa ? { ...rawCanvas, cloneQa } : rawCanvas;
+      })();
+  const dimensions = canvasDimensions(canvas);
 
   return {
     creativeId: String(row.id),
@@ -320,7 +333,7 @@ export function rowToCreative(row: Record<string, unknown>): AdStudioCreative {
     format: row.format as AdStudioCreative["format"],
     canvas,
     safeZones: {
-      metaStory: canvas.height >= canvas.width,
+      metaStory: dimensions.height >= dimensions.width,
       googleDemandGen: true,
     },
     previewSvg: String(row.preview_svg ?? ""),

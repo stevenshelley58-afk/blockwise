@@ -51,12 +51,13 @@ about evidence, risk, and system state.
    not a menu of tools.
 2. Show evidence and state honestly. Partial success, stale formats, QA blockers,
    retries, and export readiness must be visible and recoverable.
-3. Preserve diversity from real ads. Vision extracts each source ad's required
-   customer assets and text; the image model clones the approved sample instead
-   of rebuilding it from a shared layout recipe.
-4. Clone first, edit second. Creation sends the sample and customer inputs to the
-   image model as one request. Editing is enabled only on the finished clone and
-   uses that latest image as its anchor.
+3. Preserve diversity and craft from real ads. Vision extracts each source ad's
+   customer inputs; the template's layers are decomposed directly from that ad —
+   never from a shared layout recipe — so every pixel the customer doesn't
+   replace is the original hand-made design.
+4. Decompose once, render deterministically. Creation and editing are instant,
+   exact renders of the layered template with the customer's assets and copy. No
+   generative model touches a customer's ad pixels.
 5. Reduce user decisions before adding polish. Delete duplicate navigation,
    repeated controls, and internal terminology before adding new UI.
 6. Keep craft subordinate to the work. Strong hierarchy, restrained color,

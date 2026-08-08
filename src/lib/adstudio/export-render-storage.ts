@@ -1,5 +1,7 @@
 import type { CreativeExportRender } from "./creative-export.ts";
+import { creativeDimensions, isLegacyCreative } from "./creative-preview.ts";
 import type { AdStudioCampaignPack } from "./types.ts";
+import { isAdDocInstanceShape } from "./v2/template-doc.ts";
 
 function isWorkspaceStoragePath(path: string, workspaceId: string): boolean {
   return Boolean(workspaceId) && path.startsWith(`${workspaceId}/`) && !path.includes("..");
@@ -13,14 +15,23 @@ export async function renderStoredFlatCloneExports(
 ): Promise<CreativeExportRender[]> {
   const renders: CreativeExportRender[] = [];
   for (const creative of pack.creatives) {
-    const clone = creative.canvas.objects.length === 1
-      && creative.canvas.objects[0]?.objectId === "template_clone_image"
-      ? creative.canvas.objects[0]
-      : null;
-    if (!clone) continue;
+    let storagePath: string | null;
+    if (isAdDocInstanceShape(creative.canvas)) {
+      storagePath = creative.canvas.format === "9:16"
+        ? creative.canvas.renders?.story ?? null
+        : creative.canvas.renders?.feed ?? null;
+    } else {
+      const clone = creative.canvas.objects.length === 1
+        && creative.canvas.objects[0]?.objectId === "template_clone_image"
+        ? creative.canvas.objects[0]
+        : null;
+      storagePath = clone
+        ? cloneStoragePath(clone.content?.trim() || clone.assetId?.trim() || "")
+        : null;
+    }
+    if (!storagePath && isLegacyCreative(creative)) continue;
 
-    // The storage reference can be held in either clone field after autosave.
-    const storagePath = cloneStoragePath(clone.content?.trim() || clone.assetId?.trim() || "");
+    // V1 stores a flat clone; v2 stores the canonical deterministic render.
     if (!storagePath || !isWorkspaceStoragePath(storagePath, workspaceId)) {
       throw new Error("The approved ad render was not found.");
     }
@@ -29,8 +40,9 @@ export async function renderStoredFlatCloneExports(
 
     const source = Buffer.from(await data.arrayBuffer());
     const { default: sharp } = await import("sharp");
+    const dimensions = creativeDimensions(creative);
     const normalized = await sharp(source)
-      .resize(creative.canvas.width, creative.canvas.height, { fit: "cover", position: "centre" })
+      .resize(dimensions.width, dimensions.height, { fit: "cover", position: "centre" })
       .png()
       .toBuffer();
     const [png, jpeg] = await Promise.all([
@@ -61,8 +73,7 @@ function flatCloneRender(
     creativeId: creative.creativeId,
     variantId: creative.variantId,
     format: creative.format,
-    width: creative.canvas.width,
-    height: creative.canvas.height,
+    ...creativeDimensions(creative),
     mimeType,
     dataUrl: `data:${mimeType};base64,${bytes.toString("base64")}`,
   };

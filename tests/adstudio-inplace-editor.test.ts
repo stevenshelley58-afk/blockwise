@@ -79,7 +79,11 @@ test("all editor controls meet the 44px target and adapt to a mobile sheet", () 
 });
 
 test("workbench embeds the editor in Meta chrome with honest selection guidance", () => {
-  assert.match(workbench, /<MetaChromePreview[\s\S]*?<InPlaceAdEditor[\s\S]*?<\/MetaChromePreview>/);
+  // Track B: chrome wrapping now goes through the extracted cloneEditor +
+  // frameChrome pair (MetaFrame behind the v2 flag, MetaChromePreview
+  // otherwise) — the editor still lives inside the chrome, never bare.
+  assert.match(workbench, /const cloneEditor = \(\s*<InPlaceAdEditor/);
+  assert.match(workbench, /<MetaChromePreview[\s\S]*?\{cloneEditor\}[\s\S]*?<\/MetaChromePreview>/);
   assert.match(workbench, /Select text or an image on the ad, or open Edit elements\./);
   assert.match(workbench, /onCreativeChange=\{updateCreative\}/);
   // The QA-warnings strip and preparing spinner are gone: the finished ad

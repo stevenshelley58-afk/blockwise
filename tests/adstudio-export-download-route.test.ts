@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { isCloneCreative } from "../src/lib/adstudio/creative-preview.ts";
+
 import {
   handleAdStudioExportDownload,
   type ExportDownloadDependencies,
@@ -108,7 +110,8 @@ test("authoritative flat clone exports approved server-side renders without trus
       renderFlatClones: async (_store, receivedWorkspaceId, receivedPack) => {
         flatRenderCalls += 1;
         assert.equal(receivedWorkspaceId, workspaceId);
-        assert.equal(receivedPack.creatives[0].canvas.objects[0].objectId, "template_clone_image");
+        const creative = receivedPack.creatives[0];
+        assert.ok(creative && isCloneCreative(creative));
         return approvedRenders;
       },
       buildPackage: async (_pack, options) => {

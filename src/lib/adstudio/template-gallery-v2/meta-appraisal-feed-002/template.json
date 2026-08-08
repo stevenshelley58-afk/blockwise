@@ -1,0 +1,722 @@
+{
+  "schema": "adstudio.template.v2",
+  "id": "meta-appraisal-feed-002",
+  "name": "Free Appraisal — Trusted Local Agent",
+  "goal": "appraisal_bookings",
+  "offerId": "free-property-appraisal",
+  "category": "appraisal-lead-generation",
+  "tags": [
+    "appraisal",
+    "home-valuation",
+    "seller-leads",
+    "agent",
+    "feed"
+  ],
+  "audienceIntent": "Homeowners considering selling or curious about their property's current value",
+  "classification": {
+    "ad_type": "lead_generation",
+    "primary_intent": "appraisal_leads",
+    "property_or_agent_focus": "agent"
+  },
+  "provenance": {
+    "sourceAd": {
+      "file": "01_feed_4x5_best/meta_002.png",
+      "contentHash": "a88fd2cb75d114774bd46f9b10bd1385583523054be384a437577e83e1fb2a26"
+    },
+    "sample": {
+      "imageSrc": "/adstudio-templates/meta-appraisal-feed-002/sample.png",
+      "contentHash": "a57007a311a191d02da57c1caa1b8ccd39135e216d7cc585b267876bbe9d2696",
+      "generatedBy": "deterministic_render"
+    },
+    "decomposedFrom": "source"
+  },
+  "restyle": {
+    "paletteMap": {},
+    "replacedAssets": [
+      "property_photo",
+      "agent_portrait",
+      "agency_logo"
+    ],
+    "note": "migrated from v1 (source); restyle pass pending in Studio"
+  },
+  "fonts": [
+    {
+      "fontId": "kanit",
+      "family": "Kanit",
+      "weight": 800,
+      "italic": false,
+      "file": "/fonts/adstudio/kanit-800.woff2",
+      "sha256": "69135716e3246d03252eedbc4b49092fd07b1691211dd5c8e6a099efaa2e1e59"
+    },
+    {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "weight": 300,
+      "italic": false,
+      "file": "/fonts/adstudio/smooch-sans-300.woff2",
+      "sha256": "24c4dda0d38ff3000dbaf5c37b0035fc51791a693cc68101d14acb16c8504cb6"
+    },
+    {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "weight": 900,
+      "italic": false,
+      "file": "/fonts/adstudio/merriweather-900.woff2",
+      "sha256": "f46470c4106fc6cf2a507991af1288bda867fddff87c4b919d8d39632b869fe4"
+    },
+    {
+      "fontId": "kanit",
+      "family": "Kanit",
+      "weight": 900,
+      "italic": false,
+      "file": "/fonts/adstudio/kanit-900.woff2",
+      "sha256": "f001e4c46c00f65965198ba7547aadd375aa6222feff177c57c943d3bf6794d3"
+    },
+    {
+      "fontId": "quicksand",
+      "family": "Quicksand",
+      "weight": 600,
+      "italic": false,
+      "file": "/fonts/adstudio/quicksand-600.woff2",
+      "sha256": "d7b2a752a20177cbd2a98775062aca67795b79bda8a98dfe863cd4d7b3e701a2"
+    },
+    {
+      "fontId": "open-sans",
+      "family": "Open Sans",
+      "weight": 700,
+      "italic": false,
+      "file": "/fonts/adstudio/open-sans-700.woff2",
+      "sha256": "ae07fab39888e22081b44db4133644d83a20be46b0e32fd65dea7c2e4b0ad864"
+    },
+    {
+      "fontId": "playfair-display",
+      "family": "Playfair Display",
+      "weight": 800,
+      "italic": false,
+      "file": "/fonts/adstudio/playfair-display-800.woff2",
+      "sha256": "b56fac55959b4ddf165c9f3666edd35de2792f3fd54177c3cb41ce44a98451c9"
+    },
+    {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "weight": 800,
+      "italic": false,
+      "file": "/fonts/adstudio/merriweather-800.woff2",
+      "sha256": "234916daa3dd072625fad30f1ae31d989c101bcd73ae8f29023cfbbc9a711c8a"
+    },
+    {
+      "fontId": "roboto-condensed",
+      "family": "Roboto Condensed",
+      "weight": 700,
+      "italic": false,
+      "file": "/fonts/adstudio/roboto-condensed-700.woff2",
+      "sha256": "26bbae1360c000cd7127ad38e660b7c7165b18dd6abbe1c21830c1e066394434"
+    }
+  ],
+  "formats": {
+    "feed": {
+      "format": "4:5",
+      "width": 1080,
+      "height": 1350,
+      "plate": {
+        "src": "/adstudio-templates/meta-appraisal-feed-002/plate-feed.webp",
+        "sha256": "35436414270e677eccb2b3b5c69dc6545720fb3dd05fef6f86ec7c03554d951d"
+      },
+      "layers": [
+        {
+          "id": "slot-property_photo",
+          "z": 2,
+          "box": {
+            "x": 0.012037037037037037,
+            "y": 0.008148148148148147,
+            "width": 0.975925925925926,
+            "height": 0.42814814814814817
+          },
+          "type": "image_slot",
+          "inputKey": "property_photo",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 1054,
+            "height": 578
+          }
+        },
+        {
+          "id": "slot-agent_portrait",
+          "z": 3,
+          "box": {
+            "x": 0.7101851851851851,
+            "y": 0.5925925925925926,
+            "width": 0.2777777777777778,
+            "height": 0.3985185185185185
+          },
+          "type": "image_slot",
+          "inputKey": "agent_portrait",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 300,
+            "height": 538
+          }
+        },
+        {
+          "id": "slot-agency_logo",
+          "z": 4,
+          "box": {
+            "x": 0.7444444444444445,
+            "y": 0.35333333333333333,
+            "width": 0.2,
+            "height": 0.16
+          },
+          "type": "image_slot",
+          "inputKey": "agency_logo",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 216,
+            "height": 216
+          }
+        },
+        {
+          "id": "text-subheadline",
+          "z": 10,
+          "box": {
+            "x": 0.09074074074074075,
+            "y": 0.6577777777777778,
+            "width": 0.5342592592592592,
+            "height": 0.024074074074074074
+          },
+          "type": "text",
+          "inputKey": "subheadline",
+          "typo": {
+            "fontId": "quicksand",
+            "family": "Quicksand",
+            "fallbackFamily": "sans-serif",
+            "weight": 600,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 1.1220779220779218,
+            "lineHeight": 1.25,
+            "tracking": 0,
+            "align": "left",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 30,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.679,
+            "detectionScore": 1,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        },
+        {
+          "id": "text-phone",
+          "z": 11,
+          "box": {
+            "x": 0.43148148148148147,
+            "y": 0.9107407407407407,
+            "width": 0.12037037037037036,
+            "height": 0.01074074074074074
+          },
+          "type": "text",
+          "inputKey": "phone",
+          "typo": {
+            "fontId": "playfair-display",
+            "family": "Playfair Display",
+            "fallbackFamily": "serif",
+            "weight": 800,
+            "italic": false,
+            "case": "none",
+            "sizeRatio": 1.121107266435986,
+            "lineHeight": 1.333,
+            "tracking": 0,
+            "align": "center",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 20,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.466,
+            "detectionScore": 1,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        },
+        {
+          "id": "text-agent_name",
+          "z": 12,
+          "box": {
+            "x": 0.08333333333333333,
+            "y": 0.9207407407407407,
+            "width": 0.23425925925925925,
+            "height": 0.017037037037037038
+          },
+          "type": "text",
+          "inputKey": "agent_name",
+          "typo": {
+            "fontId": "merriweather",
+            "family": "Merriweather",
+            "fallbackFamily": "serif",
+            "weight": 800,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 1.3351648351648353,
+            "lineHeight": 1.257,
+            "tracking": 0,
+            "align": "left",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 32,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.46,
+            "detectionScore": 1,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        },
+        {
+          "id": "text-social_handle",
+          "z": 13,
+          "box": {
+            "x": 0.4310185185185185,
+            "y": 0.9418518518518518,
+            "width": 0.11527777777777778,
+            "height": 0.014444444444444444
+          },
+          "type": "text",
+          "inputKey": "social_handle",
+          "typo": {
+            "fontId": "roboto-condensed",
+            "family": "Roboto Condensed",
+            "fallbackFamily": "sans-serif",
+            "weight": 700,
+            "italic": false,
+            "case": "lower",
+            "sizeRatio": 1.09297520661157,
+            "lineHeight": 1.171875,
+            "tracking": 0,
+            "align": "center",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 32,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.542,
+            "detectionScore": 1,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        }
+      ]
+    },
+    "story": {
+      "format": "9:16",
+      "width": 1080,
+      "height": 1920,
+      "plate": {
+        "src": "/adstudio-templates/meta-appraisal-feed-002/plate-story.webp",
+        "sha256": "567e79046f50895231b5b61a73c75d26aaa69aa3fde7334e000f0ea96d808994"
+      },
+      "layers": [
+        {
+          "id": "slot-property_photo",
+          "z": 2,
+          "box": {
+            "x": 0.012037037037037037,
+            "y": 0.13585262345679014,
+            "width": 0.975925925925926,
+            "height": 0.29658179012345676
+          },
+          "type": "image_slot",
+          "inputKey": "property_photo",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 1054,
+            "height": 569
+          }
+        },
+        {
+          "id": "slot-agent_portrait",
+          "z": 3,
+          "box": {
+            "x": 0.7101851851851851,
+            "y": 0.5407021604938271,
+            "width": 0.2777777777777778,
+            "height": 0.27605709876543205
+          },
+          "type": "image_slot",
+          "inputKey": "agent_portrait",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 300,
+            "height": 530
+          }
+        },
+        {
+          "id": "slot-agency_logo",
+          "z": 4,
+          "box": {
+            "x": 0.7444444444444445,
+            "y": 0.3749652777777778,
+            "width": 0.2,
+            "height": 0.11083333333333333
+          },
+          "type": "image_slot",
+          "inputKey": "agency_logo",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 216,
+            "height": 213
+          }
+        },
+        {
+          "id": "text-subheadline",
+          "z": 10,
+          "box": {
+            "x": 0.09074074074074075,
+            "y": 0.5858564814814815,
+            "width": 0.5342592592592592,
+            "height": 0.01667631172839506
+          },
+          "type": "text",
+          "inputKey": "subheadline",
+          "typo": {
+            "fontId": "quicksand",
+            "family": "Quicksand",
+            "fallbackFamily": "sans-serif",
+            "weight": 600,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 1.1220779220779218,
+            "lineHeight": 1.25,
+            "tracking": 0,
+            "align": "left",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 30,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.679,
+            "detectionScore": 1,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        },
+        {
+          "id": "text-phone",
+          "z": 11,
+          "box": {
+            "x": 0.43148148148148147,
+            "y": 0.7610860339506172,
+            "width": 0.12037037037037036,
+            "height": 0.007440200617283949
+          },
+          "type": "text",
+          "inputKey": "phone",
+          "typo": {
+            "fontId": "playfair-display",
+            "family": "Playfair Display",
+            "fallbackFamily": "serif",
+            "weight": 800,
+            "italic": false,
+            "case": "none",
+            "sizeRatio": 1.121107266435986,
+            "lineHeight": 1.333,
+            "tracking": 0,
+            "align": "center",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 20,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.466,
+            "detectionScore": 1,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        },
+        {
+          "id": "text-agent_name",
+          "z": 12,
+          "box": {
+            "x": 0.08333333333333333,
+            "y": 0.7680131172839506,
+            "width": 0.23425925925925925,
+            "height": 0.011801697530864196
+          },
+          "type": "text",
+          "inputKey": "agent_name",
+          "typo": {
+            "fontId": "merriweather",
+            "family": "Merriweather",
+            "fallbackFamily": "serif",
+            "weight": 800,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 1.3351648351648353,
+            "lineHeight": 1.257,
+            "tracking": 0,
+            "align": "left",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 32,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.46,
+            "detectionScore": 1,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        },
+        {
+          "id": "text-social_handle",
+          "z": 13,
+          "box": {
+            "x": 0.4310185185185185,
+            "y": 0.7826369598765431,
+            "width": 0.11527777777777778,
+            "height": 0.010005787037037035
+          },
+          "type": "text",
+          "inputKey": "social_handle",
+          "typo": {
+            "fontId": "roboto-condensed",
+            "family": "Roboto Condensed",
+            "fallbackFamily": "sans-serif",
+            "weight": 700,
+            "italic": false,
+            "case": "lower",
+            "sizeRatio": 1.09297520661157,
+            "lineHeight": 1.171875,
+            "tracking": 0,
+            "align": "center",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 32,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.542,
+            "detectionScore": 1,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        }
+      ]
+    }
+  },
+  "inputs": {
+    "images": [
+      {
+        "key": "property_photo",
+        "label": "property photo",
+        "required": true,
+        "aspect": "portrait",
+        "description": "Customer photo drawn into the declared slot."
+      },
+      {
+        "key": "agent_portrait",
+        "label": "agent portrait",
+        "required": true,
+        "aspect": "portrait",
+        "description": "Customer photo drawn into the declared slot."
+      },
+      {
+        "key": "agency_logo",
+        "label": "agency logo",
+        "required": true,
+        "aspect": "portrait",
+        "description": "Customer photo drawn into the declared slot."
+      }
+    ],
+    "text": [
+      {
+        "key": "body",
+        "label": "Body copy",
+        "required": true,
+        "maxLength": 150,
+        "sample": "Get a clear, local view of your property's current market value and the opportunities available to you."
+      },
+      {
+        "key": "headline",
+        "label": "Headline",
+        "required": true,
+        "maxLength": 38,
+        "sample": "WHAT COULD YOUR HOME BE WORTH?"
+      },
+      {
+        "key": "agent_role",
+        "label": "Agent role",
+        "required": true,
+        "maxLength": 32,
+        "sample": "LOCAL PROPERTY SPECIALIST"
+      },
+      {
+        "key": "trust_badge",
+        "label": "Trust badge",
+        "required": true,
+        "maxLength": 28,
+        "sample": "YOUR LOCAL PROPERTY TEAM"
+      },
+      {
+        "key": "subheadline",
+        "label": "Subheadline",
+        "required": true,
+        "maxLength": 30,
+        "sample": "REQUEST A FREE APPRAISAL"
+      },
+      {
+        "key": "email",
+        "label": "Email",
+        "required": true,
+        "maxLength": 44,
+        "sample": "alex@youragency.com.au"
+      },
+      {
+        "key": "phone",
+        "label": "Phone",
+        "required": true,
+        "maxLength": 20,
+        "sample": "0400 123 456"
+      },
+      {
+        "key": "agent_name",
+        "label": "Agent name",
+        "required": true,
+        "maxLength": 32,
+        "sample": "ALEX MORGAN"
+      },
+      {
+        "key": "social_handle",
+        "label": "Social handle",
+        "required": true,
+        "maxLength": 32,
+        "sample": "@youragency"
+      }
+    ]
+  },
+  "publish": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "apiVersionMin": "v26.0",
+    "copy": {
+      "primaryText": [
+        "Ask for the property details."
+      ],
+      "headlines": [
+        "Property details"
+      ],
+      "descriptions": [
+        "Request more information"
+      ]
+    },
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Request your free property appraisal",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "thankYou": {
+        "title": "Thanks",
+        "body": "We'll be in touch."
+      }
+    },
+    "placements": {
+      "publisherPlatforms": [
+        "facebook",
+        "instagram"
+      ],
+      "facebookPositions": [
+        "feed"
+      ],
+      "instagramPositions": [
+        "stream"
+      ]
+    },
+    "formatRouting": {
+      "feed": "4:5",
+      "story": "9:16"
+    },
+    "creativeFeatures": {
+      "adapt_to_placement": "OPT_OUT",
+      "image_touchups": "OPT_OUT",
+      "image_templates": "OPT_OUT",
+      "inline_comment": "OPT_OUT",
+      "enhance_cta": "OPT_OUT",
+      "text_optimizations": "OPT_OUT",
+      "image_animation": "OPT_OUT",
+      "image_background_gen": "OPT_OUT",
+      "video_auto_crop": "OPT_OUT",
+      "translate_voiceover": "OPT_OUT",
+      "text_translation": "OPT_OUT",
+      "media_type_automation": "OPT_OUT",
+      "product_extensions": "OPT_OUT"
+    },
+    "previewFormats": [
+      "MOBILE_FEED_STANDARD",
+      "INSTAGRAM_STANDARD"
+    ]
+  },
+  "editPolicy": {
+    "mode": "guided",
+    "advancedUnlockable": true,
+    "lockedLayerIds": []
+  },
+  "exactness": {
+    "status": "qa",
+    "residuals": {
+      "text-subheadline": 0,
+      "text-phone": 0,
+      "text-agent_name": 0,
+      "text-social_handle": 0.09901405268987352
+    },
+    "bakedTextKeys": [
+      "body",
+      "headline",
+      "agent_role",
+      "trust_badge",
+      "email"
+    ]
+  }
+}

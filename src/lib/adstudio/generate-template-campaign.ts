@@ -11,6 +11,7 @@
 import { randomUUID } from "node:crypto";
 
 import { applyProvidedCopyToCampaignPack } from "./campaign-copy-enrichment.ts";
+import { creativeDimensions, isLegacyCreative } from "./creative-preview.ts";
 import {
   cloneModelProfileForQuality,
   generateCloneWithCascade,
@@ -117,7 +118,11 @@ export async function assertDeterministicFeedEditingReady(input: {
     .eq("format", PRIMARY_CLONE_FORMAT)
     .maybeSingle();
   if (error) throw new Error(error.message);
-  const canvas = (data?.canvas_json ?? {}) as AdStudioCreative["canvas"];
+  const storedCreative = { canvas: (data?.canvas_json ?? {}) as AdStudioCreative["canvas"] } as AdStudioCreative;
+  if (!isLegacyCreative(storedCreative)) {
+    throw new Error("Deterministic v2 documents do not use legacy clone editing layers.");
+  }
+  const canvas = storedCreative.canvas;
   const currentImage = canvas.objects?.[0]?.content ?? canvas.objects?.[0]?.assetId ?? "";
   if (
     !currentImage
@@ -145,8 +150,10 @@ async function resumePersistedTemplateCampaign(input: {
   if (!campaignPack) return null;
 
   const feedCreative = campaignPack.creatives.find((creative) => creative.format === PRIMARY_CLONE_FORMAT);
-  const imageRef = feedCreative?.canvas.objects.find((object) => object.role === "primary_image")?.content
-    ?? feedCreative?.canvas.objects.find((object) => object.role === "primary_image")?.assetId;
+  const imageRef = feedCreative && isLegacyCreative(feedCreative)
+    ? feedCreative.canvas.objects.find((object) => object.role === "primary_image")?.content
+      ?? feedCreative.canvas.objects.find((object) => object.role === "primary_image")?.assetId
+    : undefined;
   if (!feedCreative || !imageRef) {
     throw new Error("The persisted generation checkpoint has no finished Feed creative.");
   }
@@ -288,7 +295,9 @@ export async function prepareCloneCreativeTextLayers(
         .eq("id", render.creativeId)
         .maybeSingle();
       if (error || !row) return;
-      const canvas = (row.canvas_json ?? {}) as AdStudioCreative["canvas"];
+      const storedCreative = { canvas: (row.canvas_json ?? {}) as AdStudioCreative["canvas"] } as AdStudioCreative;
+      if (!isLegacyCreative(storedCreative)) return;
+      const canvas = storedCreative.canvas;
       if (!canvas.cloneQa?.regions.length) return;
       await deriveAndPersistTemplateTextLayers({
         supabase,
@@ -706,8 +715,7 @@ async function persistStoryInBackground(input: {
       campaign_id: input.campaignId,
       variant_id: input.variantId,
       format: STORY_CLONE_FORMAT,
-      width: storyCreative.canvas.width,
-      height: storyCreative.canvas.height,
+      ...creativeDimensions(storyCreative),
       canvas_json: storyCreative.canvas,
       render_status: "rendered",
       preview_svg: null,

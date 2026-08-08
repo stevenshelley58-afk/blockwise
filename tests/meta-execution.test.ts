@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { buildCloneTestPack } from "./adstudio-clone-fixture.ts";
+import { isLegacyCreative } from "../src/lib/adstudio/creative-preview.ts";
 import {
   buildMetaPublishPlan,
   createMetaExecutionAdapter,
@@ -143,8 +144,10 @@ test("buildMetaPublishPlan fingerprints every provider execution input", () => {
   const changedCopyPack = buildPack();
   changedCopyPack.copyPacks[0]!.meta.primaryText[0] = "Updated provider copy";
   const changedAssetPack = buildPack();
-  const changedImage = changedAssetPack.creatives[0]!.canvas.objects.find((object) => object.objectId === "template_clone_image")
-    ?? changedAssetPack.creatives[0]!.canvas.objects.find((object) => object.role === "primary_image");
+  const changedCreative = changedAssetPack.creatives[0]!;
+  assert.ok(isLegacyCreative(changedCreative));
+  const changedImage = changedCreative.canvas.objects.find((object) => object.objectId === "template_clone_image")
+    ?? changedCreative.canvas.objects.find((object) => object.role === "primary_image");
   assert.ok(changedImage);
   changedImage.content = "data:image/png;base64,dXBkYXRlZA==";
 
@@ -283,17 +286,20 @@ test("buildMetaPublishPlan resolves stored clone references to storage assets", 
   const pack = buildPack();
   const storedPack = {
     ...pack,
-    creatives: pack.creatives.map((creative) => ({
-      ...creative,
-      canvas: {
-        ...creative.canvas,
-        objects: creative.canvas.objects.map((object) => (
-          object.objectId === "template_clone_image"
-            ? { ...object, content: "/api/adstudio/media?path=workspace_demo%2Fclones%2Fad.png", assetId: "" }
-            : object
-        )),
-      },
-    })),
+    creatives: pack.creatives.map((creative) => {
+      assert.ok(isLegacyCreative(creative));
+      return {
+        ...creative,
+        canvas: {
+          ...creative.canvas,
+          objects: creative.canvas.objects.map((object) => (
+            object.objectId === "template_clone_image"
+              ? { ...object, content: "/api/adstudio/media?path=workspace_demo%2Fclones%2Fad.png", assetId: "" }
+              : object
+          )),
+        },
+      };
+    }),
   };
   const plan = buildMetaPublishPlan({
     workspaceId: "workspace_demo",

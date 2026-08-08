@@ -1,0 +1,55 @@
+{
+  "migratedFrom": "v1",
+  "source": "source",
+  "sourceValues": {
+    "main_title": "",
+    "profile_handle": "",
+    "cta_button": "",
+    "share_prompt": "",
+    "save_prompt": "",
+    "header": ""
+  },
+  "textBoxes": {
+    "main_title": {
+      "x": 0.23193359375,
+      "y": 0.348046875,
+      "width": 0.51806640625,
+      "height": 0.233984375
+    },
+    "profile_handle": {
+      "x": 0.00146484375,
+      "y": 0.148046875,
+      "width": 0.1591796875,
+      "height": 0.062109375
+    },
+    "cta_button": {
+      "x": 0.2841796875,
+      "y": 0.66171875,
+      "width": 0.2890625,
+      "height": 0.01953125
+    },
+    "share_prompt": {
+      "x": 0.06298828125,
+      "y": 0.93515625,
+      "width": 0.24951171875,
+      "height": 0.02421875
+    },
+    "save_prompt": {
+      "x": 0.7607421875,
+      "y": 0.9265625,
+      "width": 0.16748046875,
+      "height": 0.041796875
+    },
+    "header": {
+      "x": 0.2333984375,
+      "y": 0.293359375,
+      "width": 0.228515625,
+      "height": 0.017578125
+    }
+  },
+  "bakedResiduals": {
+    "baked-main_title": 0.026686231809209367,
+    "baked-profile_handle": 0,
+    "baked-save_prompt": 0
+  }
+}

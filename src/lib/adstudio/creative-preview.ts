@@ -1,8 +1,37 @@
-import type { AdStudioCreative } from "./types.ts";
+import type {
+  AdStudioCreative,
+  AdStudioLegacyCreative,
+  AdStudioLegacyCanvas,
+} from "./types.ts";
+import { isAdDocInstanceShape, TEMPLATE_FORMAT_DIMENSIONS } from "./v2/template-doc.ts";
+
+export function isLegacyCreative(creative: AdStudioCreative): creative is AdStudioLegacyCreative {
+  return !isAdDocInstanceShape(creative.canvas);
+}
+
+export function legacyCanvas(
+  creative: AdStudioCreative,
+): AdStudioLegacyCanvas | null {
+  return isLegacyCreative(creative) ? creative.canvas : null;
+}
+
+export function canvasDimensions(canvas: AdStudioCreative["canvas"]): { width: number; height: number } {
+  if (isAdDocInstanceShape(canvas)) {
+    return TEMPLATE_FORMAT_DIMENSIONS[canvas.format];
+  }
+  return { width: canvas.width, height: canvas.height };
+}
+
+export function creativeDimensions(
+  creative: Pick<AdStudioCreative, "canvas">,
+): { width: number; height: number } {
+  return canvasDimensions(creative.canvas);
+}
 
 /** A reference-clone creative: a single flat image with copy baked into pixels. */
-export function isCloneCreative(creative: AdStudioCreative): boolean {
+export function isCloneCreative(creative: AdStudioCreative): creative is AdStudioLegacyCreative {
   return (
+    isLegacyCreative(creative) &&
     creative.canvas.objects.length === 1 &&
     creative.canvas.objects[0]?.objectId === "template_clone_image"
   );
@@ -10,6 +39,13 @@ export function isCloneCreative(creative: AdStudioCreative): boolean {
 
 /** The primary image source (URL / storage path / data URL) of a creative, if any. */
 export function primaryImageSource(creative: AdStudioCreative | null | undefined): string | null {
+  if (!creative) return null;
+  if (isAdDocInstanceShape(creative.canvas)) {
+    const path = creative.canvas.format === "9:16"
+      ? creative.canvas.renders?.story
+      : creative.canvas.renders?.feed;
+    return path ? `/api/adstudio/media?path=${encodeURIComponent(path)}` : null;
+  }
   const imageObject = creative?.canvas.objects.find((object) => object.role === "primary_image");
   const src = imageObject?.content || imageObject?.assetId;
   return src || null;

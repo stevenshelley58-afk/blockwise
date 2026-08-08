@@ -34,12 +34,15 @@ import type {
 } from "@/lib/adstudio";
 import type { AdStudioMediaLibraryAsset } from "@/lib/adstudio/assets";
 import { builtInAdStudioTemplates } from "@/lib/adstudio";
-import { isCloneCreative, primaryImageSource } from "@/lib/adstudio/creative-preview";
+import { isCloneCreative, isLegacyCreative, primaryImageSource } from "@/lib/adstudio/creative-preview";
 import type { LibraryAssetModel } from "@/lib/adstudio/library-read-model";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 import { requestCreativeEdit } from "./canvas/creative-edit-client";
 import { FORMAT_META, MetaChromePreview, PreviewControls, VariantStrip } from "./preview";
+import { MetaFrame } from "./meta-frame/meta-frame";
+import { V2EditorStage } from "./editor/v2-editor-stage";
+import { isAdDocInstanceShape } from "@/lib/adstudio/v2/template-doc";
 import type { PreviewFormat, SelectedElement } from "./preview";
 import { STYLES } from "./styles";
 import { initialOfferLabelForPack, labelForSelectedTemplate } from "./template-offer-state";
@@ -78,6 +81,11 @@ type AdStudioWorkbenchProps = {
   showBrandSetupPrompt?: boolean;
   initialMediaAssets?: AdStudioMediaLibraryAsset[];
   initialMediaCursor?: string | null;
+  /** ADSTUDIO_TEMPLATES_V2: serve the ready v2 gallery, adapted to the v1
+   *  template shape the dialog already renders. */
+  v2Templates?: AdStudioTemplate[];
+  /** ADSTUDIO_TEMPLATES_V2: wrap the editor in the new placement frames. */
+  useV2Frames?: boolean;
 };
 
 type NavItem =
@@ -297,6 +305,8 @@ export function AdStudioWorkbench({
   showBrandSetupPrompt = false,
   initialMediaAssets = [],
   initialMediaCursor = null,
+  v2Templates = [],
+  useV2Frames = false,
 }: AdStudioWorkbenchProps) {
   const [pack, setPack] = useState(initialPack);
   const canManageCampaign = pack.creatives.length > 0;
@@ -412,7 +422,9 @@ export function AdStudioWorkbench({
     preferredPhrases: brandKit.tone.preferredPhrases,
     neverSay: brandKit.tone.avoid,
   };
-  const adTemplates = visibleBuiltInTemplates;
+  // Once the v2 cutover is active, an empty approved gallery must stay empty.
+  // Falling back to built-ins would let customers create legacy creatives.
+  const adTemplates = useV2Frames ? v2Templates : v2Templates.length > 0 ? v2Templates : visibleBuiltInTemplates;
 
   useEffect(() => {
     const query = window.matchMedia(MOBILE_WORKBENCH_QUERY);
@@ -529,10 +541,6 @@ export function AdStudioWorkbench({
   }
 
   function goToSection(section: import("./use-ad-studio").StudioSection) {
-    if (section === "media") {
-      openMediaSheet();
-      return;
-    }
     setSelectedElement("canvas");
     setSelectedCanvasRegionKey(null);
     if (section !== "publish") setPublishCreativeSource("current");
@@ -753,7 +761,7 @@ export function AdStudioWorkbench({
   // this client when the creative changes; merge ONLY missing cloneQa so
   // concurrent local edits are never clobbered.
   const editorPreparing = pack.creatives.some(
-    (creative) => isCloneCreative(creative) && !creative.canvas.cloneQa,
+    (creative) => isLegacyCreative(creative) && isCloneCreative(creative) && !creative.canvas.cloneQa,
   );
   const selectedFormatMissing = Boolean(
     selectedVariant?.variantId &&
@@ -787,7 +795,9 @@ export function AdStudioWorkbench({
         const freshCreatives = payload?.campaignPack?.creatives ?? [];
         const qaByCreative = new Map(
           freshCreatives.flatMap((creative) =>
-            creative.canvas.cloneQa ? [[creative.creativeId, creative.canvas.cloneQa] as const] : [],
+            isLegacyCreative(creative) && creative.canvas.cloneQa
+              ? [[creative.creativeId, creative.canvas.cloneQa] as const]
+              : [],
           ),
         );
         if (!cancelled && freshCreatives.length > 0) {
@@ -796,7 +806,7 @@ export function AdStudioWorkbench({
             creatives: [
               ...current.creatives.map((creative) => {
                 const qa = qaByCreative.get(creative.creativeId);
-                return qa && !creative.canvas.cloneQa
+                return isLegacyCreative(creative) && qa && !creative.canvas.cloneQa
                   ? { ...creative, canvas: { ...creative.canvas, cloneQa: qa } }
                   : creative;
               }),
@@ -847,10 +857,14 @@ export function AdStudioWorkbench({
 
   async function confirmMediaReplacement() {
     if (!pendingMediaReplacement) return;
+    if (currentCreative && !isLegacyCreative(currentCreative)) {
+      studio.showToast("Edit images directly on the ad canvas.");
+      return;
+    }
     const variantId = selectedVariant?.variantId;
-    const targetCreatives = pack.creatives.filter(
-      (creative) => creative.variantId === variantId && isCloneCreative(creative),
-    );
+    const targetCreatives = pack.creatives
+      .filter((creative) => creative.variantId === variantId)
+      .filter(isCloneCreative);
     if (!variantId || targetCreatives.length === 0) {
       studio.showToast("Generate an ad before replacing its image.");
       return;
@@ -1003,7 +1017,9 @@ export function AdStudioWorkbench({
   }
 
   function renderEditOverview() {
-    const editableRegions = currentCreative?.canvas.cloneQa?.regions ?? [];
+    const editableRegions = currentCreative && isLegacyCreative(currentCreative)
+      ? currentCreative.canvas.cloneQa?.regions ?? []
+      : [];
     const textRegions = editableRegions.filter((region) => region.kind === "text");
     const imageRegions = editableRegions.filter((region) => region.kind === "image");
     const copyItems = [
@@ -1109,6 +1125,29 @@ export function AdStudioWorkbench({
       return renderEmptyPreview();
     }
 
+    // V2 documents must reach their editor before any legacy canvas path.
+    if (useV2Frames && isAdDocInstanceShape(currentCreative.canvas)) {
+      return (
+        <div className="studio-clone-editor-wrap">
+          <V2EditorStage
+            key={currentCreative.creativeId}
+            creativeId={currentCreative.creativeId}
+            instance={currentCreative.canvas}
+            activeRevisionId={currentCreative.activeRevisionId ?? null}
+            brandKit={brandKit}
+            brandPalette={[brandKit.colours.primary, brandKit.colours.secondary, brandKit.colours.accent]}
+            onSaved={({ instance, activeRevisionId }) => {
+              updateCreative({
+                ...currentCreative,
+                canvas: instance,
+                activeRevisionId,
+              });
+            }}
+          />
+        </div>
+      );
+    }
+
     // AI-designed clone: one flat image with the copy baked into the pixels.
     // The layer editor would silently no-op on it, so edit in place instead —
     // hit-targets from the QA regions drive the targeted edit endpoint.
@@ -1116,29 +1155,48 @@ export function AdStudioWorkbench({
     // text above the creative, headline/description strip, real CTA enum label)
     // so the stage shows the ad exactly as Meta renders it.
     if (isCloneCreative(currentCreative)) {
+      // ADSTUDIO_TEMPLATES_V2: the new placement frames wrap the editor; the
+      // publish-review picker (Phase 2) will mount the full six-placement set.
+      const cloneEditor = (
+        <InPlaceAdEditor
+          key={currentCreative.creativeId}
+          creative={currentCreative}
+          onCreativeChange={updateCreative}
+          showToast={studio.showToast}
+          selectedRegionKey={selectedCanvasRegionKey}
+          onRegionSelectionChange={(key) => {
+            setSelectedCanvasRegionKey(key);
+            if (key) setSelectedElement("canvas");
+          }}
+        />
+      );
+      const frameChrome = useV2Frames ? (
+        <MetaFrame
+          brandKit={brandKit}
+          destinationUrl={destinationUrl}
+          copy={copy}
+          placement={previewFormat === "story" ? "ig-story" : "fb-feed-mobile"}
+          selectedElement={selectedElement}
+          onSelectText={selectMetaCopyField}
+        >
+          {cloneEditor}
+        </MetaFrame>
+      ) : (
+        <MetaChromePreview
+          brandKit={brandKit}
+          destinationUrl={destinationUrl}
+          copy={copy}
+          format={previewFormat}
+          selectedElement={selectedElement}
+          onSelectText={selectMetaCopyField}
+        >
+          {cloneEditor}
+        </MetaChromePreview>
+      );
       return (
         <div className="studio-clone-editor-wrap">
           <PreviewFit enabled={!isMobileViewport}>
-            <MetaChromePreview
-              brandKit={brandKit}
-              destinationUrl={destinationUrl}
-              copy={copy}
-              format={previewFormat}
-              selectedElement={selectedElement}
-              onSelectText={selectMetaCopyField}
-            >
-              <InPlaceAdEditor
-                key={currentCreative.creativeId}
-                creative={currentCreative}
-                onCreativeChange={updateCreative}
-                showToast={studio.showToast}
-                selectedRegionKey={selectedCanvasRegionKey}
-                onRegionSelectionChange={(key) => {
-                  setSelectedCanvasRegionKey(key);
-                  if (key) setSelectedElement("canvas");
-                }}
-              />
-            </MetaChromePreview>
+            {frameChrome}
           </PreviewFit>
           {currentCreative.canvas.cloneQa?.regions.length ? (
             <p className="studio-metachrome-edit-hint">Select text or an image on the ad, or open Edit elements.</p>

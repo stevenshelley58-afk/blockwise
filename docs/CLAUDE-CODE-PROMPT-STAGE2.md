@@ -24,8 +24,8 @@ Old studio components that the new surfaces replace get deleted in the final pha
 
 ## Read these first, in order
 
-1. `AGENTS.md` — binding. The AdStudio template process (one pipeline through `buildCloneImageRequest`, no alternate generators, verify gates never weakened) and the mandatory `$impeccable` UI workflow both apply to every phase here.
-2. `hermes/skills/adstudio-template-builder/SKILL.md` — the template process in full.
+1. `AGENTS.md` — binding. The AdStudio template process (one layered template contract, one deterministic renderer, no full-ad image generation, verify gates never weakened) and the mandatory `$impeccable` UI workflow both apply to every phase here.
+2. `hermes/skills/adstudio-template-builder-v2/SKILL.md` — the template process in full.
 3. `mockups/adstudio-mockup.html` — the approved target. Open it in a browser at desktop and ~390px. Click through everything: Create's three entry points, the template flow (Browse → photos → brand vs template colours → generate), Edit (editor left, pixel-true Meta/IG preview right, live copy binding, AI rewrite chips, connected image editor), Library (Ads/Assets/Listings), Publish (review → live, statuses flipping everywhere), Settings (synced), the black rail with the Blockwise button home, and the mobile tab bar.
 4. `docs/REBUILD-PLAN.md` + `docs/CLAUDE-CODE-PROMPT.md` — what Stage 1 built and the standing decisions (component sourcing, motion rules, config rules). All still binding.
 5. Current studio code: `src/app/(customer)/ad-studio/**`, `src/components/adstudio/**`, `src/lib/adstudio/**` — map what exists before changing anything.
