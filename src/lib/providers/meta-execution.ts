@@ -331,7 +331,7 @@ export function buildMetaPublishPlan(input: {
   };
   const adSets = buildAdSetPlans(campaignPack, controls);
   const leadForms = buildLeadFormPlans(campaignPack, setup, controls.destinationUrl);
-  const creatives = buildCreativePlans(campaignPack, setup);
+  const creatives = buildCreativePlans(campaignPack, setup, leadForms, controls.destinationUrl);
   const ads = buildAdPlans(campaignPack);
   const tracking: MetaPublishTrackingPlan = {
     utmSource: "meta",
@@ -410,7 +410,15 @@ function filterPackToVariants(pack: AdStudioCampaignPack, variantIds: string[]):
 export function validateMetaConnectionSetup(setup: MetaConnectionSetup): string[] {
   const blockers: string[] = [];
 
-  if (!setup.metaAdAccountId.trim()) blockers.push("Meta ad account is not configured.");
+  const adAccountId = setup.metaAdAccountId.trim();
+  if (!adAccountId) {
+    blockers.push("Meta ad account is not configured.");
+  } else if (!/^(act_)?\d+$/i.test(adAccountId)) {
+    // Legacy connections can carry the "meta_account_pending" sentinel as the
+    // external account id; publishing against it would hit the Graph API with
+    // /act_meta_account_pending/... and fail with a raw provider error.
+    blockers.push("Meta ad account is not configured.");
+  }
   if (!setup.pageId.trim()) blockers.push("Meta Page is not configured.");
   if (!setup.leadDestination.type || !setup.leadDestination.label.trim()) blockers.push("Meta lead destination is not configured.");
   if (setup.leadDestination.type !== "manual" && !setup.leadDestination.config?.endpoint?.trim()) {
@@ -1402,11 +1410,14 @@ function buildUtmLink(baseUrl: string, tracking: MetaPublishTrackingPlan, creati
 function buildTargeting(controls: MetaPublishControls): Record<string, unknown> {
   const geoLocations = controls.geo?.type === "cities" && controls.geo.locations.length > 0
     ? {
+        // HOUSING special-ad-category targeting requires a minimum radius
+        // around city/suburb pins; omitting it gets the ad set rejected, so the
+        // minimum is always applied ("selected suburbs only" simply means the
+        // user picked their own pins rather than a broader recommendation).
         cities: controls.geo.locations.map((location) => ({
           key: location.key,
-          ...(controls.geo?.type === "cities" && controls.geo.includeSurroundingSuburbs
-            ? { radius: META_HOUSING_MIN_RADIUS_KM, distance_unit: "kilometer" }
-            : {}),
+          radius: META_HOUSING_MIN_RADIUS_KM,
+          distance_unit: "kilometer",
         })),
         location_types: ["home", "recent"],
       }
@@ -1435,22 +1446,125 @@ function buildTargeting(controls: MetaPublishControls): Record<string, unknown> 
   };
 }
 
+/**
+ * Meta rejects lead forms whose questions repeat a label ("Duplicate question
+ * label"), including collisions with the built-in FIRST_NAME/LAST_NAME/EMAIL/
+ * PHONE fields the publish request always adds. Historical packs also carry a
+ * doubled phone question from an earlier copy bug, so every plan build and
+ * plan load runs through this normaliser.
+ */
+const META_BUILT_IN_QUESTION_LABELS = new Set([
+  "first name",
+  "last name",
+  "full name",
+  "name",
+  "email",
+  "email address",
+  "phone",
+  "phone number",
+]);
+
+export function normalizeMetaLeadFormQuestions(questions: readonly string[] | null | undefined): string[] {
+  const seen = new Set<string>();
+  const normalized: string[] = [];
+
+  for (const raw of questions ?? []) {
+    if (typeof raw !== "string") continue;
+    const question = raw.trim();
+    if (!question) continue;
+    const key = question.toLowerCase().replace(/\s+/g, " ").replace(/[?.!]+$/, "");
+    if (META_BUILT_IN_QUESTION_LABELS.has(key)) continue;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    normalized.push(question);
+  }
+
+  // Meta allows at most 5 custom questions per lead form.
+  return normalized.slice(0, 5);
+}
+
 function buildLeadFormPlans(pack: AdStudioCampaignPack, setup: MetaConnectionSetup, destinationUrl?: string): MetaPublishLeadFormPlan[] {
-  return pack.copyPacks.slice(0, 6).map((copy, index) => ({
+  const forms = pack.copyPacks.slice(0, 6).map((copy, index) => ({
     localId: `form_${index + 1}`,
     name: `${pack.campaign.market.suburb} ${copy.meta.leadForm.headline}`,
     headline: copy.meta.leadForm.headline,
-    questions: copy.meta.leadForm.questions,
+    questions: normalizeMetaLeadFormQuestions(copy.meta.leadForm.questions),
     privacyPolicyUrl: setup.privacyPolicyUrl,
     thankYouTitle: copy.meta.leadForm.thankYouScreen.title,
     thankYouBody: copy.meta.leadForm.thankYouScreen.body,
     thankYouWebsiteUrl: destinationUrl ?? setup.privacyPolicyUrl,
   }));
+
+  // Identical specs collapse into one form so a multi-creative publish doesn't
+  // create N byte-identical leadgen forms on the customer's Page (leads would
+  // arrive split across duplicates). Creatives remap via metaLeadFormLocalIdMap.
+  const byContent = new Map<string, MetaPublishLeadFormPlan>();
+  for (const form of forms) {
+    const signature = JSON.stringify([
+      form.headline,
+      form.questions,
+      form.privacyPolicyUrl,
+      form.thankYouTitle,
+      form.thankYouBody,
+      form.thankYouWebsiteUrl,
+    ]);
+    if (!byContent.has(signature)) {
+      byContent.set(signature, form);
+    }
+  }
+
+  return [...byContent.values()];
 }
 
-function buildCreativePlans(pack: AdStudioCampaignPack, setup: MetaConnectionSetup): MetaPublishCreativePlan[] {
+/**
+ * Maps each copy pack index to the lead form that survived deduplication in
+ * buildLeadFormPlans, so creatives always reference a form that exists.
+ */
+function resolveLeadFormLocalIdForIndex(leadForms: MetaPublishLeadFormPlan[], pack: AdStudioCampaignPack, setup: MetaConnectionSetup, destinationUrl: string | undefined, index: number): string {
+  const copy = pack.copyPacks[index];
+  if (!copy) return leadForms[0]?.localId ?? "form_1";
+
+  const questions = normalizeMetaLeadFormQuestions(copy.meta.leadForm.questions);
+  const signature = JSON.stringify([
+    copy.meta.leadForm.headline,
+    questions,
+    setup.privacyPolicyUrl,
+    copy.meta.leadForm.thankYouScreen.title,
+    copy.meta.leadForm.thankYouScreen.body,
+    destinationUrl ?? setup.privacyPolicyUrl,
+  ]);
+
+  for (const form of leadForms) {
+    const formSignature = JSON.stringify([
+      form.headline,
+      form.questions,
+      form.privacyPolicyUrl,
+      form.thankYouTitle,
+      form.thankYouBody,
+      form.thankYouWebsiteUrl,
+    ]);
+    if (formSignature === signature) return form.localId;
+  }
+
+  return leadForms[0]?.localId ?? "form_1";
+}
+
+function buildCreativePlans(
+  pack: AdStudioCampaignPack,
+  setup: MetaConnectionSetup,
+  leadForms: MetaPublishLeadFormPlan[],
+  destinationUrl?: string,
+): MetaPublishCreativePlan[] {
   return pack.copyPacks.slice(0, 6).map((copy, index) => {
-    const creative = pack.creatives.find((item) => item.variantId === copy.variantId) ?? pack.creatives[index] ?? null;
+    // Prefer the Feed (4:5) render for the link-ad creative; a variant can also
+    // carry a 9:16 Story render which must not become the Feed image.
+    const variantCreatives = pack.creatives.filter((item) => item.variantId === copy.variantId);
+    const creative =
+      variantCreatives.find((item) => item.format === "4:5")
+      ?? variantCreatives[0]
+      ?? pack.creatives.find((item) => item.format === "4:5")
+      ?? pack.creatives[index]
+      ?? null;
 
     return {
       localId: `creative_${index + 1}`,
@@ -1461,7 +1575,7 @@ function buildCreativePlans(pack: AdStudioCampaignPack, setup: MetaConnectionSet
       primaryText: copy.meta.primaryText[0] ?? pack.campaign.name,
       description: copy.meta.descriptions[0] ?? pack.campaign.audienceIntent,
       cta: copy.meta.cta,
-      leadFormLocalId: `form_${index + 1}`,
+      leadFormLocalId: resolveLeadFormLocalIdForIndex(leadForms, pack, setup, destinationUrl, index),
       adStudioCreativeId: creative?.creativeId ?? null,
       format: creative?.format ?? null,
       asset: creative ? buildCreativeImageAsset(creative) : null,
@@ -1720,7 +1834,12 @@ function rowToPlan(row: MetaPublishPlanRow): MetaPublishPlan {
     // explicit safe defaults rather than emitting undefined Meta parameters.
     campaign: { ...campaignDefaults, ...(planJson.campaign ?? {}) },
     adSets: planJson.adSets ?? [],
-    leadForms: planJson.leadForms ?? [],
+    // Older persisted plans can carry duplicate lead-form questions which Meta
+    // rejects at creation time; normalise on load so retries succeed.
+    leadForms: (planJson.leadForms ?? []).map((form) => ({
+      ...form,
+      questions: normalizeMetaLeadFormQuestions(form.questions),
+    })),
     creatives: planJson.creatives ?? [],
     ads: planJson.ads ?? [],
     tracking: planJson.tracking ?? {
