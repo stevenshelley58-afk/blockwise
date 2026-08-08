@@ -1,0 +1,278 @@
+{
+  "schema": "adstudio.template.v2",
+  "id": "meta-agent-intro-feed-131",
+  "name": "Meet Your Local Agent — Feed 131",
+  "goal": "seller_leads",
+  "offerId": "agent-introduction-call",
+  "category": "agent-introduction-lead-generation",
+  "tags": [
+    "agent-intro",
+    "lead-generation",
+    "feed"
+  ],
+  "audienceIntent": "Local property owners seeking a trusted agent relationship",
+  "classification": {
+    "ad_type": "lead_generation",
+    "primary_intent": "agent_introduction",
+    "property_or_agent_focus": "property"
+  },
+  "provenance": {
+    "sourceAd": {
+      "file": "01_feed_4x5_best/meta_131.png",
+      "contentHash": "d09b5fb2f23fcb6aa57e8726f3fab3b02123fbcb3e5a9831775e95537486398e"
+    },
+    "sample": {
+      "imageSrc": "/adstudio-templates/meta-agent-intro-feed-131/sample.png",
+      "contentHash": "dbff95ac7293bd464652313f8ed3372744cfadcb35d04195641c51ce2a462d04",
+      "generatedBy": "deterministic_render"
+    },
+    "decomposedFrom": "source"
+  },
+  "restyle": {
+    "paletteMap": {},
+    "replacedAssets": [],
+    "note": "migrated from v1 (source); restyle pass pending in Studio"
+  },
+  "fonts": [
+    {
+      "fontId": "rubik",
+      "family": "Rubik",
+      "weight": 700,
+      "italic": false,
+      "file": "/fonts/adstudio/rubik-700.woff2",
+      "sha256": "5cab633c7644d8683dd78ca3fd63d05fa9ee2cc57b3401df7af6fcb62c83d4fa"
+    },
+    {
+      "fontId": "oswald",
+      "family": "Oswald",
+      "weight": 300,
+      "italic": false,
+      "file": "/fonts/adstudio/oswald-300.woff2",
+      "sha256": "84f168468881f1ae6cf11573f3befa2e83f2067e914a57dad0233e3a772e76f7"
+    },
+    {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "weight": 800,
+      "italic": false,
+      "file": "/fonts/adstudio/merriweather-800.woff2",
+      "sha256": "234916daa3dd072625fad30f1ae31d989c101bcd73ae8f29023cfbbc9a711c8a"
+    },
+    {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "weight": 700,
+      "italic": false,
+      "file": "/fonts/adstudio/merriweather-700.woff2",
+      "sha256": "4e1ab49396c02be0d9a2a25eed7bc73781c047d85fcb5dfc2889873eaf992b09"
+    }
+  ],
+  "formats": {
+    "feed": {
+      "format": "4:5",
+      "width": 1080,
+      "height": 1350,
+      "plate": {
+        "src": "/adstudio-templates/meta-agent-intro-feed-131/plate-feed.webp",
+        "sha256": "a3e68c716a0899fc0e75741bbc1028ccf7b2666a41e97df0ae958d6524607503"
+      },
+      "layers": [
+        {
+          "id": "text-subheadline",
+          "z": 10,
+          "box": {
+            "x": 0.0912037037037037,
+            "y": 0.37333333333333335,
+            "width": 0.4689814814814815,
+            "height": 0.018518518518518517
+          },
+          "type": "text",
+          "inputKey": "subheadline",
+          "typo": {
+            "fontId": "merriweather",
+            "family": "Merriweather",
+            "fallbackFamily": "serif",
+            "weight": 800,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 1.3181818181818181,
+            "lineHeight": 1.257,
+            "tracking": 0,
+            "align": "left",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 41,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.436,
+            "detectionScore": 1,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        }
+      ]
+    },
+    "story": {
+      "format": "9:16",
+      "width": 1080,
+      "height": 1920,
+      "plate": {
+        "src": "/adstudio-templates/meta-agent-intro-feed-131/plate-story.webp",
+        "sha256": "21c85b289278764c33ba5b521bae5dd879edf6d489dbeb52838a8b0f667c229b"
+      },
+      "layers": [
+        {
+          "id": "text-subheadline",
+          "z": 10,
+          "box": {
+            "x": 0.0912037037037037,
+            "y": 0.3888194444444444,
+            "width": 0.4689814814814815,
+            "height": 0.01282793209876543
+          },
+          "type": "text",
+          "inputKey": "subheadline",
+          "typo": {
+            "fontId": "merriweather",
+            "family": "Merriweather",
+            "fallbackFamily": "serif",
+            "weight": 800,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 1.3181818181818181,
+            "lineHeight": 1.257,
+            "tracking": 0,
+            "align": "left",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 41,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.436,
+            "detectionScore": 1,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        }
+      ]
+    }
+  },
+  "inputs": {
+    "images": [],
+    "text": [
+      {
+        "key": "body",
+        "label": "Body",
+        "required": true,
+        "maxLength": 95,
+        "sample": "Local insight, clear advice and a practical plan for your next property move."
+      },
+      {
+        "key": "headline",
+        "label": "Headline",
+        "required": true,
+        "maxLength": 45,
+        "sample": "YOUR LOCAL PROPERTY PARTNER"
+      },
+      {
+        "key": "subheadline",
+        "label": "Subheadline",
+        "required": true,
+        "maxLength": 41,
+        "sample": "BOOK A NO-PRESSURE CALL"
+      },
+      {
+        "key": "website",
+        "label": "Website",
+        "required": true,
+        "maxLength": 35,
+        "sample": "youragency.com.au"
+      }
+    ]
+  },
+  "publish": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "apiVersionMin": "v26.0",
+    "copy": {
+      "primaryText": [
+        "Ask for the property details."
+      ],
+      "headlines": [
+        "Property details"
+      ],
+      "descriptions": [
+        "Request more information"
+      ]
+    },
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Connect with your local agent",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "thankYou": {
+        "title": "Thanks",
+        "body": "We'll be in touch."
+      }
+    },
+    "placements": {
+      "publisherPlatforms": [
+        "facebook",
+        "instagram"
+      ],
+      "facebookPositions": [
+        "feed"
+      ],
+      "instagramPositions": [
+        "stream"
+      ]
+    },
+    "formatRouting": {
+      "feed": "4:5",
+      "story": "9:16"
+    },
+    "creativeFeatures": {
+      "adapt_to_placement": "OPT_OUT",
+      "image_touchups": "OPT_OUT",
+      "image_templates": "OPT_OUT",
+      "inline_comment": "OPT_OUT",
+      "enhance_cta": "OPT_OUT",
+      "text_optimizations": "OPT_OUT",
+      "image_animation": "OPT_OUT",
+      "image_background_gen": "OPT_OUT",
+      "video_auto_crop": "OPT_OUT",
+      "translate_voiceover": "OPT_OUT",
+      "text_translation": "OPT_OUT",
+      "media_type_automation": "OPT_OUT",
+      "product_extensions": "OPT_OUT"
+    },
+    "previewFormats": [
+      "MOBILE_FEED_STANDARD",
+      "INSTAGRAM_STANDARD"
+    ]
+  },
+  "editPolicy": {
+    "mode": "guided",
+    "advancedUnlockable": true,
+    "lockedLayerIds": []
+  },
+  "exactness": {
+    "status": "qa",
+    "residuals": {
+      "text-subheadline": 0.04679281819607112
+    },
+    "bakedTextKeys": [
+      "body",
+      "headline",
+      "website"
+    ]
+  }
+}

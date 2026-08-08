@@ -1,0 +1,23 @@
+{
+  "schema": "adstudio.instance.v2",
+  "templateId": "meta-fixture-simple",
+  "templateHash": "eafe0197650b98f1020e4378b3dc745b0bfb70e6b713b54270f93c4d47f977b8",
+  "format": "4:5",
+  "values": {
+    "images": {
+      "photo": {
+        "src": "fixture:/slots/photo-landscape.png",
+        "focal": {
+          "x": 0.5,
+          "y": 0.5
+        },
+        "zoom": 1
+      }
+    },
+    "text": {
+      "headline": "Find your place",
+      "subline": "Homes matched to you"
+    }
+  },
+  "overrides": []
+}

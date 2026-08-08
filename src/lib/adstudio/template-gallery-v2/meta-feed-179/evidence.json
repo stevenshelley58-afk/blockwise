@@ -1,0 +1,32 @@
+{
+  "migratedFrom": "v1",
+  "source": "source",
+  "sourceValues": {
+    "caption": "",
+    "subheadline": "",
+    "headline": ""
+  },
+  "textBoxes": {
+    "caption": {
+      "x": 0.34765625,
+      "y": 0.87421875,
+      "width": 0.32177734375,
+      "height": 0.0265625
+    },
+    "subheadline": {
+      "x": 0.19775390625,
+      "y": 0.637890625,
+      "width": 0.62451171875,
+      "height": 0.193359375
+    },
+    "headline": {
+      "x": 0.138671875,
+      "y": 0.12578125,
+      "width": 0.74072265625,
+      "height": 0.084375
+    }
+  },
+  "bakedResiduals": {
+    "baked-subheadline": 0
+  }
+}

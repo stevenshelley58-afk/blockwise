@@ -6,6 +6,8 @@ import {
   MAGIC_LAYER_MIN_REGION_CONFIDENCE,
 } from "./magic-layers-config.mjs";
 
+const SOURCE_AD_FILE_PATTERN = /^[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+\.(?:jpe?g|png|webp)$/i;
+
 export type AdStudioTemplateImageInput = {
   key: string;
   label: string;
@@ -295,6 +297,9 @@ export function validateGalleryTemplate(raw: AdStudioTemplate): AdStudioTemplate
   if (!isSha256(raw?.sample?.contentHash)) errors.push("sample.contentHash must be a SHA-256 hash");
   if (raw?.sourceAd?.contentHash === raw?.sample?.contentHash) errors.push("gallery sample must not be the source ad");
   if (!raw?.sourceAd?.creativeId && !raw?.sourceAd?.file) errors.push("sourceAd provenance is required");
+  if (raw?.sourceAd?.file && !SOURCE_AD_FILE_PATTERN.test(raw.sourceAd.file)) {
+    errors.push("sourceAd.file must stay inside the image provenance archive");
+  }
   if (!Array.isArray(raw?.inputs?.images) || raw.inputs.images.length === 0) errors.push("at least one image input is required");
   if (!raw?.inputs?.images?.some((input) => input.required)) errors.push("at least one image input must be required");
   validateUniqueKeys(raw?.inputs?.images ?? [], "image", errors);

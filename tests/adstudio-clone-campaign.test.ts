@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { buildCloneCampaignPack, createEmptyAdStudioCampaignPack, extractBrandKitFromWebsite } from "../src/lib/adstudio/index.ts";
+import { isCloneCreative } from "../src/lib/adstudio/creative-preview.ts";
 import { buildCloneTestPack } from "./adstudio-clone-fixture.ts";
 
 test("empty AdStudio state contains no synthetic ad", () => {
@@ -21,8 +22,7 @@ test("clone campaign contains exactly one ad in the two finished formats", () =>
   const pack = buildCloneTestPack();
   assert.equal(pack.variants.length, 1);
   assert.deepEqual(pack.creatives.map((creative) => creative.format).sort(), ["4:5", "9:16"]);
-  assert.equal(pack.creatives.every((creative) => creative.canvas.objects.length === 1), true);
-  assert.equal(pack.creatives.every((creative) => creative.canvas.objects[0]?.objectId === "template_clone_image"), true);
+  assert.equal(pack.creatives.every(isCloneCreative), true);
 });
 
 test("clone campaign refuses to create an ad before the feed (4:5) clone exists", () => {

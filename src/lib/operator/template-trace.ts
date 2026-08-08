@@ -1,9 +1,6 @@
 // Server-side trace assembly for the operator template-trace inspector.
 // Pure read-only reconstruction of the clone pipeline for any gallery template.
 
-import { readFileSync, existsSync } from "node:fs";
-import { join, resolve } from "node:path";
-
 import {
   resolveAdStudioTemplate,
   resolvableAdStudioTemplates,
@@ -16,8 +13,6 @@ import {
   PHOTO_FIT_RULE,
   resolveCloneCopy,
 } from "../adstudio/reference-clone.ts";
-
-const SOURCE_DIR = resolve(process.cwd(), "meta_ad_candidates");
 
 // ---------------------------------------------------------------------------
 // List
@@ -68,9 +63,6 @@ export type TemplateTraceDetail = {
   resolvedCopy: Record<string, string>;
   /** Example targeted-edit prompt for the first text field. */
   editPromptExample: string | null;
-  /** Whether the source PNG exists on disk. */
-  sourceImageAvailable: boolean;
-  sourceImagePath: string | null;
   sampleImagePath: string;
 };
 
@@ -111,11 +103,6 @@ export function buildTemplateTrace(templateId: string): TemplateTraceDetail | nu
     ),
   ];
 
-  const sourceRelativePath = template.sourceAd.file ?? null;
-  const sourceAbsolutePath = sourceRelativePath
-    ? join(SOURCE_DIR, ...sourceRelativePath.split("/"))
-    : null;
-
   return {
     template,
     clonePrompt: request.prompt,
@@ -124,21 +111,6 @@ export function buildTemplateTrace(templateId: string): TemplateTraceDetail | nu
     referenceAssetOrder,
     resolvedCopy,
     editPromptExample,
-    sourceImageAvailable: sourceAbsolutePath ? existsSync(sourceAbsolutePath) : false,
-    sourceImagePath: sourceAbsolutePath,
     sampleImagePath: template.sample.imageSrc,
   };
-}
-
-// ---------------------------------------------------------------------------
-// Source image bytes
-// ---------------------------------------------------------------------------
-
-export function readSourceImageBytes(templateId: string): { bytes: Buffer; contentType: string } | null {
-  const trace = buildTemplateTrace(templateId);
-  if (!trace?.sourceImagePath || !existsSync(trace.sourceImagePath)) return null;
-  const bytes = readFileSync(trace.sourceImagePath);
-  const ext = trace.sourceImagePath.split(".").pop()?.toLowerCase();
-  const contentType = ext === "jpg" || ext === "jpeg" ? "image/jpeg" : ext === "webp" ? "image/webp" : "image/png";
-  return { bytes, contentType };
 }

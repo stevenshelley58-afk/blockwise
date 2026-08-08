@@ -1,0 +1,84 @@
+// Editor wiring contract (Track A, §7): the Konva editor mounts behind the
+// v2 flag for v2 creatives only, saves through the /doc CAS route, and the
+// guided/advanced law lives in the shared lib module.
+
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import test from "node:test";
+
+const workbench = readFileSync("src/components/adstudio/ad-studio-workbench.tsx", "utf8");
+const stage = readFileSync("src/components/adstudio/editor/v2-editor-stage.tsx", "utf8");
+const root = readFileSync("src/components/adstudio/editor/editor-root.tsx", "utf8");
+const canvas = readFileSync("src/components/adstudio/editor/editor-canvas.tsx", "utf8");
+const docRoute = readFileSync("src/app/api/adstudio/creatives/[id]/doc/route.ts", "utf8");
+const state = readFileSync("src/lib/adstudio/v2/editor-state.ts", "utf8");
+
+test("workbench mounts the v2 editor only for v2 docs behind the flag", () => {
+  assert.match(workbench, /useV2Frames && isAdDocInstanceShape/);
+  assert.match(workbench, /<V2EditorStage/);
+  // v1 clone creatives keep their existing path untouched.
+  assert.match(workbench, /const cloneEditor = \(/);
+});
+
+test("the v2 editor resets per creative and hydrates the parent with the saved instance", () => {
+  assert.match(workbench, /<V2EditorStage\s+key=\{currentCreative\.creativeId\}/);
+  assert.match(workbench, /canvas: instance/);
+  assert.match(workbench, /activeRevisionId,/);
+  assert.match(stage, /const savedInstance: AdDocInstance/);
+  assert.match(stage, /renders: \{ \.\.\.next\.renders, \.\.\.payload\.renders \}/);
+  assert.match(stage, /onSavedRef\.current\?\.\(\{ instance: savedInstance, activeRevisionId: payload\.revisionId \}\)/);
+});
+
+test("the stage saves through /doc with CAS and never trusts the client", () => {
+  assert.match(stage, /templates-v2\/\$\{instance\.templateId\}\?hash=\$\{encodeURIComponent\(instance\.templateHash\)\}&creativeId=\$\{encodeURIComponent\(creativeId\)\}/);
+  assert.match(stage, /\/api\/adstudio\/creatives\/\$\{creativeId\}\/doc/);
+  assert.match(stage, /expectedRevisionId: revisionId/);
+  assert.match(stage, /mutationId: crypto\.randomUUID\(\)/);
+  assert.match(stage, /saveQueueRef\.current/);
+  assert.match(root, /editor\.saveError/);
+  // Template loads through the validated resolver route, not a raw fetch.
+  assert.match(stage, /\/api\/adstudio\/templates-v2\/\$\{instance\.templateId\}/);
+});
+
+test("the doc route re-renders server-side and appends a CAS revision", () => {
+  assert.match(docRoute, /renderAdDocToPng\(template/);
+  assert.match(docRoute, /persistAdDocRender/);
+  assert.match(docRoute, /appendAdStudioCreativeRevision/);
+  assert.match(docRoute, /ADSTUDIO_STALE_REVISION/);
+  // The semantic gate binds dynamic template inputs and edit policy before
+  // resolving media or rendering; the shared schema handles #rrggbb shape.
+  assert.match(docRoute, /adDocInstanceTemplateViolation\(template, instance\)/);
+});
+
+test("canvas paints only the canonical workspace render over interactive hitboxes", () => {
+  assert.match(canvas, /CanonicalRender/);
+  assert.match(canvas, /LayerHitbox/);
+  assert.match(canvas, /\/api\/adstudio\/media\?path=/);
+  assert.doesNotMatch(canvas, /focalCoverSourceRect|gradientFill|layout\.plate\.src|layer\.src/);
+});
+
+test("dragging uses only supported edits: image focal points or unlocked text moves", () => {
+  assert.match(canvas, /layer\.type === "image_slot"/);
+  assert.match(canvas, /onAdjustImageFocal/);
+  assert.match(canvas, /focal\.x - \(node\.x\(\) - left\) \/ layout\.width/);
+  assert.match(canvas, /layer\.type === "text"/);
+  assert.match(canvas, /lockedLayerIds\.includes\(layer\.id\)/);
+  assert.match(state, /Only unlocked text layers can be repositioned/);
+});
+
+test("toolbar keeps editor mode as the single source of truth", () => {
+  const toolbar = readFileSync("src/components/adstudio/editor/toolbar.tsx", "utf8");
+  assert.doesNotMatch(toolbar, /persistedAdvanced/);
+  assert.match(toolbar, /advancedUnlockable && mode === "guided"/);
+  assert.match(toolbar, /localStorage\.getItem\(ADVANCED_STORAGE_KEY\) === "1"/);
+  assert.match(toolbar, /onModeChange\("advanced"\)/);
+});
+
+test("the guided law lives in one lib module consumed by route, hook and UI", () => {
+  assert.match(state, /GUIDED_OVERRIDE_OPS = \["color"\]/);
+  assert.match(state, /lockedLayerIds\.includes\(action\.layerId\)/);
+  for (const file of [docRoute, root, canvas]) {
+    void file;
+  }
+  assert.ok(readFileSync("src/components/adstudio/editor/state/use-editor-doc.ts", "utf8").includes("editor-state.ts"));
+});

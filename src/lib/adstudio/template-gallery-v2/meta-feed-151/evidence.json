@@ -1,0 +1,92 @@
+{
+  "migratedFrom": "v1",
+  "source": "source",
+  "sourceValues": {
+    "agent_website": "",
+    "features": "",
+    "open_house_date": "",
+    "open_house_time": "",
+    "brand_name": "",
+    "agent_name": "",
+    "area": "",
+    "bathrooms": "",
+    "bedrooms": "",
+    "listing_price": "",
+    "agent_phone": ""
+  },
+  "textBoxes": {
+    "agent_website": {
+      "x": 0.51416015625,
+      "y": 0.95078125,
+      "width": 0.205078125,
+      "height": 0.01328125
+    },
+    "features": {
+      "x": 0.23828125,
+      "y": 0.9078125,
+      "width": 0.1708984375,
+      "height": 0.0109375
+    },
+    "open_house_date": {
+      "x": 0.51416015625,
+      "y": 0.90703125,
+      "width": 0.20361328125,
+      "height": 0.015625
+    },
+    "open_house_time": {
+      "x": 0.6953125,
+      "y": 0.17890625,
+      "width": 0.212890625,
+      "height": 0.16640625
+    },
+    "brand_name": {
+      "x": 0.05908203125,
+      "y": 0.035546875,
+      "width": 0.23486328125,
+      "height": 0.038671875
+    },
+    "agent_name": {
+      "x": 0.51318359375,
+      "y": 0.883984375,
+      "width": 0.1142578125,
+      "height": 0.015234375
+    },
+    "area": {
+      "x": 0.10693359375,
+      "y": 0.711328125,
+      "width": 0.69189453125,
+      "height": 0.11328125
+    },
+    "bathrooms": {
+      "x": 0.2236328125,
+      "y": 0.811328125,
+      "width": 0.0625,
+      "height": 0.0109375
+    },
+    "bedrooms": {
+      "x": 0.1015625,
+      "y": 0.811328125,
+      "width": 0.056640625,
+      "height": 0.0109375
+    },
+    "listing_price": {
+      "x": 0.1,
+      "y": 0.5,
+      "width": 0.8,
+      "height": 0.06
+    },
+    "agent_phone": {
+      "x": 0.1,
+      "y": 0.9,
+      "width": 0.8,
+      "height": 0.03
+    }
+  },
+  "bakedResiduals": {
+    "baked-open_house_date": 0.028410591092806758,
+    "baked-open_house_time": 0,
+    "baked-brand_name": 0,
+    "baked-agent_name": 0.02731869934707753,
+    "baked-area": 0.0017499552743411582
+  }
+}

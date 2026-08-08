@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import type { AdDocInstance } from "./v2/template-doc.ts";
+
 export const adStudioGoalSchema = z.enum([
   "seller_leads",
   "appraisal_bookings",
@@ -337,6 +339,25 @@ export function normalizeCloneQa(raw: unknown): AdStudioCloneQa | undefined {
   return { regions, copyValues };
 }
 
+export type AdStudioLegacyCanvas = {
+  width: number;
+  height: number;
+  backgroundAssetId: string | null;
+  objects: AdStudioCanvasObject[];
+  /** Present on AI-cloned creatives: editable-element regions + text values. */
+  cloneQa?: AdStudioCloneQa;
+  /** Derived text-editing layers (plate + type treatments); absent until built. */
+  textLayers?: AdStudioTextLayers;
+  /** Previous renders (media paths, newest last) for undo on clone edits. */
+  renderHistory?: string[];
+  /** Editor-map snapshots paired by index with renderHistory. */
+  renderQaHistory?: AdStudioCloneQa[];
+  /** Renders made available after undo; cleared by the next new edit. */
+  redoHistory?: string[];
+  /** Editor-map snapshots paired by index with redoHistory. */
+  redoQaHistory?: AdStudioCloneQa[];
+};
+
 export type AdStudioCreative = {
   creativeId: string;
   /** Server-issued compare-and-swap base for immutable targeted edits. */
@@ -344,24 +365,8 @@ export type AdStudioCreative = {
   campaignId: string;
   variantId: string;
   format: AdStudioFormat;
-  canvas: {
-    width: number;
-    height: number;
-    backgroundAssetId: string | null;
-    objects: AdStudioCanvasObject[];
-    /** Present on AI-cloned creatives: editable-element regions + text values. */
-    cloneQa?: AdStudioCloneQa;
-    /** Derived text-editing layers (plate + type treatments); absent until built. */
-    textLayers?: AdStudioTextLayers;
-    /** Previous renders (media paths, newest last) for undo on clone edits. */
-    renderHistory?: string[];
-    /** Editor-map snapshots paired by index with renderHistory. */
-    renderQaHistory?: AdStudioCloneQa[];
-    /** Renders made available after undo; cleared by the next new edit. */
-    redoHistory?: string[];
-    /** Editor-map snapshots paired by index with redoHistory. */
-    redoQaHistory?: AdStudioCloneQa[];
-  };
+  /** `schema` discriminates deterministic v2 documents from legacy canvases. */
+  canvas: AdStudioLegacyCanvas | AdDocInstance;
   safeZones: {
     metaStory: boolean;
     googleDemandGen: boolean;
@@ -369,13 +374,15 @@ export type AdStudioCreative = {
   previewSvg: string;
 };
 
+export type AdStudioLegacyCreative = AdStudioCreative & { canvas: AdStudioLegacyCanvas };
+
 export const metaLeadAdPackSchema = z.object({
   platform: z.literal("meta"),
   specialAdCategory: z.union([z.literal("housing"), z.null()]),
   primaryText: z.array(z.string()).min(1),
   headlines: z.array(z.string()).min(1),
   descriptions: z.array(z.string()).min(1),
-  cta: z.enum(["LEARN_MORE", "SIGN_UP", "DOWNLOAD", "CONTACT_US"]),
+  cta: z.enum(["LEARN_MORE", "SIGN_UP", "GET_QUOTE", "APPLY_NOW", "DOWNLOAD", "SUBSCRIBE"]),
   leadForm: z.object({
     headline: z.string().min(1),
     questions: z.array(z.string()),

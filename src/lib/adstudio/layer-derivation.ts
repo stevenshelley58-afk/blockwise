@@ -13,8 +13,9 @@ import {
 } from "./text-layers.ts";
 import { buildingTextLayers } from "./text-layer-state.ts";
 import { resolveAdStudioImageForModel } from "./resolve-image-for-model.ts";
+import { isAdDocInstanceShape } from "./v2/template-doc.ts";
 import type { AdStudioTemplate } from "./templates.ts";
-import type { AdStudioCreative, AdStudioTextLayers } from "./types.ts";
+import type { AdStudioCreative, AdStudioLegacyCanvas, AdStudioTextLayers } from "./types.ts";
 import type { createSupabaseServerClient } from "../supabase/server.ts";
 
 type SupabaseClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
@@ -51,11 +52,14 @@ export async function deriveAndPersistTemplateTextLayers(input: {
   currentImageUrl?: string;
   template: AdStudioTemplate;
 }): Promise<AdStudioTextLayers | null> {
+  if (isAdDocInstanceShape(input.canvas)) {
+    throw new Error("Deterministic v2 documents do not support legacy clone text-layer derivation.");
+  }
   try {
-    return await deriveTemplateTextLayers(input);
+    return await deriveTemplateTextLayers(input as Omit<typeof input, "canvas"> & { canvas: AdStudioLegacyCanvas });
   } catch (cause) {
     const message = cause instanceof Error ? cause.message : "Plate construction failed.";
-    return persistLayerFailure(input, message);
+    return persistLayerFailure(input as Omit<typeof input, "canvas"> & { canvas: AdStudioLegacyCanvas }, message);
   }
 }
 
@@ -67,7 +71,7 @@ async function deriveTemplateTextLayers(input: {
   creativeId: string;
   activeRevisionId: string | null;
   format: string;
-  canvas: AdStudioCreative["canvas"];
+  canvas: AdStudioLegacyCanvas;
   currentImageRef: string;
   currentImageUrl?: string;
   template: AdStudioTemplate;

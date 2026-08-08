@@ -1,0 +1,171 @@
+{
+  "schema": "adstudio.template.v2",
+  "id": "meta-feed-161",
+  "name": "New Listing Announcement",
+  "goal": "buyer_leads",
+  "offerId": "new-listing-inquiry",
+  "category": "property_listing",
+  "tags": [
+    "new listing",
+    "property",
+    "real estate",
+    "announcement"
+  ],
+  "audienceIntent": "Generate qualified buyer enquiries for a newly listed property.",
+  "classification": {
+    "ad_type": "property_listing",
+    "primary_intent": "listing_inquiry",
+    "property_or_agent_focus": "property"
+  },
+  "provenance": {
+    "sourceAd": {
+      "file": "01_feed_4x5_best/meta_161.png",
+      "contentHash": "7624e985946df2cc7803477fb635cb6e48589c75b4faf4da53eb2093d36a15a6"
+    },
+    "sample": {
+      "imageSrc": "/adstudio-samples/meta/meta-feed-161-sample.png",
+      "contentHash": "4615a6b7adf9e3b4b5289c76a623f0faef6c1048be75aae4e7e6a42905693d24",
+      "generatedBy": "deterministic_render"
+    },
+    "decomposedFrom": "source"
+  },
+  "restyle": {
+    "paletteMap": {},
+    "replacedAssets": [],
+    "note": "migrated from v1 (source); restyle pass pending in Studio"
+  },
+  "fonts": [
+    {
+      "fontId": "montserrat",
+      "family": "Montserrat",
+      "weight": 600,
+      "italic": false,
+      "file": "/fonts/adstudio/montserrat-600.woff2",
+      "sha256": "d857325c360f7128b347ca924c1974967aaa886ba47dad22e4042d6c38b26a83"
+    }
+  ],
+  "formats": {
+    "feed": {
+      "format": "4:5",
+      "width": 1080,
+      "height": 1350,
+      "plate": {
+        "src": "/adstudio-templates/meta-feed-161/plate-feed.webp",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "layers": [
+        {
+          "id": "slot-property_image",
+          "z": 2,
+          "box": {
+            "x": 0.025692,
+            "y": 0.020767,
+            "width": 0.948617,
+            "height": 0.958466
+          },
+          "type": "image_slot",
+          "inputKey": "property_image",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          }
+        }
+      ]
+    }
+  },
+  "inputs": {
+    "images": [
+      {
+        "key": "property_image",
+        "label": "property image",
+        "required": true,
+        "aspect": "portrait",
+        "description": "Customer photo drawn into the declared slot."
+      }
+    ],
+    "text": [
+      {
+        "key": "headline",
+        "label": "Headline",
+        "required": true,
+        "maxLength": 11,
+        "sample": "JUST\nLISTED"
+      }
+    ]
+  },
+  "publish": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "apiVersionMin": "v26.0",
+    "copy": {
+      "primaryText": [
+        "A new listing just landed. Get the address, price guide and inspection times."
+      ],
+      "headlines": [
+        "See the new listing"
+      ],
+      "descriptions": [
+        "Request property details"
+      ]
+    },
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Register your interest in this property",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "thankYou": {
+        "title": "Thanks",
+        "body": "We'll be in touch."
+      }
+    },
+    "placements": {
+      "publisherPlatforms": [
+        "facebook",
+        "instagram"
+      ],
+      "facebookPositions": [
+        "feed"
+      ],
+      "instagramPositions": [
+        "stream"
+      ]
+    },
+    "formatRouting": {
+      "feed": "4:5",
+      "story": null
+    },
+    "creativeFeatures": {
+      "adapt_to_placement": "OPT_OUT",
+      "image_touchups": "OPT_OUT",
+      "image_templates": "OPT_OUT",
+      "inline_comment": "OPT_OUT",
+      "enhance_cta": "OPT_OUT",
+      "text_optimizations": "OPT_OUT",
+      "image_animation": "OPT_OUT",
+      "image_background_gen": "OPT_OUT",
+      "video_auto_crop": "OPT_OUT",
+      "translate_voiceover": "OPT_OUT",
+      "text_translation": "OPT_OUT",
+      "media_type_automation": "OPT_OUT",
+      "product_extensions": "OPT_OUT"
+    },
+    "previewFormats": [
+      "MOBILE_FEED_STANDARD",
+      "INSTAGRAM_STANDARD"
+    ]
+  },
+  "editPolicy": {
+    "mode": "guided",
+    "advancedUnlockable": true,
+    "lockedLayerIds": []
+  },
+  "exactness": {
+    "status": "draft",
+    "residuals": {},
+    "bakedTextKeys": [
+      "headline"
+    ]
+  }
+}

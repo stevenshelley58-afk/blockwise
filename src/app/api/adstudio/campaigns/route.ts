@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 
 import { NextResponse, after, type NextRequest } from "next/server";
 
@@ -17,7 +17,11 @@ import {
   runTemplateCampaignGeneration,
   type CreateCampaignBody,
 } from "@/lib/adstudio/generate-template-campaign";
-import { compactAdStudioCampaignPackForTransport } from "@/lib/adstudio/persistence";
+import { adstudioTemplatesV2Enabled } from "@/lib/adstudio/v2/flags";
+import { generateV2Campaign, V2GenerationError } from "@/lib/adstudio/v2/generate.ts";
+import { resolveReadyTemplateV2 } from "@/lib/adstudio/v2/template-resolver.ts";
+import { resolveAdStudioGenerationBrandKit } from "@/lib/adstudio/trial-brand-kit";
+import { compactAdStudioCampaignPackForTransport, persistAdStudioCampaignPack } from "@/lib/adstudio/persistence";
 import { resolveCloneCampaignId } from "@/lib/adstudio/clone-campaign";
 import { buildAdStudioCreativeLibrary } from "@/lib/adstudio/creative-library";
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -43,22 +47,29 @@ const GENERATION_RECOVERY_DELAY_MS = 5 * 60_000 + 15_000;
 
 function generationDedupKey(workspaceId: string, body: unknown): string {
   const text = JSON.stringify(body) ?? "";
-  let hash = 5381;
-  for (let index = 0; index < text.length; index += 1) {
-    hash = ((hash << 5) + hash + text.charCodeAt(index)) | 0;
-  }
-  return `${workspaceId}:${hash}`;
+  const fingerprint = createHash("sha256").update(text).digest("hex");
+  return `${workspaceId}:${fingerprint}`;
+}
+
+function normalizedGenerationMutationId(
+  request: NextRequest,
+  body: CreateCampaignBody,
+): string | null {
+  const supplied = body.clientMutationId ?? request.headers.get("idempotency-key");
+  const normalized = supplied?.trim().replace(/[^a-zA-Z0-9:_-]/g, "").slice(0, 160);
+  return normalized || null;
 }
 
 function generationCreditMutationKey(
-  request: NextRequest,
-  body: CreateCampaignBody,
   workspaceId: string,
   dedupKey: string,
+  clientMutationId: string | null,
 ): string {
-  const supplied = body.clientMutationId ?? request.headers.get("idempotency-key");
-  const normalized = supplied?.trim().replace(/[^a-zA-Z0-9:_-]/g, "").slice(0, 160);
-  if (normalized) return `adstudio-generation:${workspaceId}:${normalized}`;
+  // Bind a caller token to the exact request fingerprint. Reusing a token for
+  // different content can therefore never overwrite the first campaign.
+  if (clientMutationId) {
+    return `adstudio-generation:${workspaceId}:${clientMutationId}:${dedupKey}`;
+  }
 
   const bucket = Math.floor(Date.now() / GENERATION_DEDUP_TTL_MS);
   return `adstudio-generation:${dedupKey}:${bucket}`;
@@ -167,11 +178,11 @@ export async function POST(request: NextRequest) {
 
   const body = await readJsonBody<CreateCampaignBody>(request);
   const dedupKey = generationDedupKey(context.access.workspaceId, body);
+  const clientMutationId = normalizedGenerationMutationId(request, body);
   const creditMutationKey = generationCreditMutationKey(
-    request,
-    body,
     context.access.workspaceId,
     dedupKey,
+    clientMutationId,
   );
   const inFlightSince = inFlightGenerations.get(dedupKey);
 
@@ -199,19 +210,107 @@ export async function POST(request: NextRequest) {
     if (firstAdError) {
       return NextResponse.json({ error: firstAdError }, { status: 400 });
     }
-    const creditGate = await reserveAdStudioGenerationCredits({
-      supabase: context.supabase,
-      workspaceId: context.access.workspaceId,
-      actorProfileId: context.access.userId,
-      mutationKey: creditMutationKey,
-    });
+    // Track E (§6): resolve the v2 template BEFORE reserving credits. The v2
+    // path renders free (0 credits) and must not hit the credit gate (402 on
+    // empty trials). The reservation only applies to the v1 image-model path.
+    const v2Enabled = adstudioTemplatesV2Enabled();
+    const v2Template = v2Enabled
+      ? resolveReadyTemplateV2(body.firstAd!.templateId)
+      : null;
 
-    if (!creditGate.ok) {
-      return creditGate.response;
+    // Cutover is one-way. When v2 is enabled, a missing or QA template must
+    // fail closed rather than silently spending credits on the legacy
+    // whole-ad image generator.
+    if (v2Enabled && !v2Template) {
+      return NextResponse.json(
+        { error: "That design is still being quality-checked. Choose an approved design and try again." },
+        { status: 409 },
+      );
     }
 
-    creditReservation = creditGate.reservation;
+    if (v2Template && !clientMutationId) {
+      return NextResponse.json(
+        { error: "This ad request needs an idempotency key. Refresh and try again." },
+        { status: 400 },
+      );
+    }
+
+    if (!v2Template) {
+      const creditGate = await reserveAdStudioGenerationCredits({
+        supabase: context.supabase,
+        workspaceId: context.access.workspaceId,
+        actorProfileId: context.access.userId,
+        mutationKey: creditMutationKey,
+      });
+      if (!creditGate.ok) {
+        return creditGate.response;
+      }
+      creditReservation = creditGate.reservation;
+    }
     const funnelService = createSupabaseServiceClient();
+
+    if (v2Template) {
+        try {
+          const brandKitResult = await resolveAdStudioGenerationBrandKit({
+            supabase: context.supabase,
+            workspaceId: context.access.workspaceId,
+            workspaceName: context.access.workspaceName,
+            region: context.access.region,
+            userId: context.access.userId,
+          });
+          if (!brandKitResult.ok) {
+            throw new V2GenerationError(brandKitResult.error, 422);
+          }
+          const v2 = await generateV2Campaign({
+            workspaceId: context.access.workspaceId,
+            userId: context.access.userId,
+            generationKey: creditMutationKey,
+            template: v2Template,
+            brandKit: brandKitResult.brandKit,
+            firstAd: body.firstAd!,
+            // V2 consumes its declared customer inputs separately from the
+            // legacy first-ad envelope. Keep every supplied slot and exact
+            // customer copy intact instead of falling back to the first image.
+            images: body.firstAd!.imageDataUrls,
+            text: body.firstAd!.onImageCopy,
+            suburb: body.suburb,
+            city: body.city,
+            state: body.state,
+            supabase: createSupabaseServiceClient(),
+          });
+          const persisted = await persistAdStudioCampaignPack(context.supabase, v2.pack, context.access.userId);
+          if (persisted.error) {
+            throw new Error(
+              `Your ad was rendered but could not be saved (${persisted.error.message}). Please try again.`,
+            );
+          }
+          await refundOutstandingWorkspaceCredits({
+            reservation: creditReservation,
+            mutationKey: `${creditMutationKey}:v2_zero_render_credits`,
+            reason: "v2_renders_cost_zero",
+          });
+          const liveResult = buildAdStudioLiveResult({
+            data: compactAdStudioCampaignPackForTransport(v2.pack),
+          });
+          return NextResponse.json(
+            {
+              campaignPack: liveResult.data,
+              data: liveResult.data,
+              persistence: liveResult.persistence,
+              v2: true,
+              renderMs: v2.renderMs,
+              warnings: v2.warnings,
+            },
+            { status: 201 },
+          );
+        } catch (error) {
+          if (error instanceof V2GenerationError) {
+            return errorResponse(new Error(error.message), error.status);
+          }
+          throw error;
+        }
+    }
+    // With the v2 flag off, the established v1 customer flow remains live.
     await recordWorkspaceFunnelEventBestEffort(funnelService, {
       eventName: "template_selected",
       workspaceId: context.access.workspaceId,
@@ -293,7 +392,7 @@ export async function POST(request: NextRequest) {
         body,
         workspaceName: context.access.workspaceName,
         region: context.access.region,
-        creditReservation,
+        creditReservation: creditReservation ?? undefined,
         correlationId,
         expectedCampaignId,
       });

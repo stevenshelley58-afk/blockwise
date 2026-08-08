@@ -5,6 +5,7 @@ import { useRef, useState } from "react";
 import type { AdStudioBrandKit, AdStudioCampaignPack, AdStudioFormat, AdStudioGoal, AdStudioOfferTemplate, FirstAdInput } from "@/lib/adstudio";
 import { mergeDraftResponsePack } from "@/lib/adstudio/client-pack";
 import { isFinishedCloneCreative } from "@/lib/adstudio/clone-creative";
+import { isLegacyCreative, primaryImageSource } from "@/lib/adstudio/creative-preview";
 import { findCopyLimitViolations } from "@/lib/adstudio/readiness";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
@@ -106,6 +107,7 @@ export function useCampaignActions(s: CampaignActionsState) {
   // In-flight guards: a double-click (or re-entrant call) must never fire a
   // second upstream generation/export while the first is still running.
   const generateInFlightRef = useRef(false);
+  const pendingGenerationRef = useRef<{ requestKey: string; mutationId: string } | null>(null);
   const exportInFlightRef = useRef(false);
   // Per-format export progress; null when no export is showing status.
   const [exportStatus, setExportStatus] = useState<ExportFormatStatus[] | null>(null);
@@ -192,14 +194,23 @@ export function useCampaignActions(s: CampaignActionsState) {
 
     try {
       const m = parseMarket();
+      const requestInput = {
+        firstAd: input,
+        suburb: m.suburb,
+        city: m.city,
+        state: m.state,
+      };
+      const requestKey = JSON.stringify(requestInput);
+      if (pendingGenerationRef.current?.requestKey !== requestKey) {
+        pendingGenerationRef.current = { requestKey, mutationId: crypto.randomUUID() };
+      }
+      const clientMutationId = pendingGenerationRef.current.mutationId;
       const response = await fetch("/api/adstudio/campaigns", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          firstAd: input,
-          suburb: m.suburb,
-          city: m.city,
-          state: m.state,
+          ...requestInput,
+          clientMutationId,
         }),
       });
       const payload = (await response.json().catch(() => null)) as
@@ -227,6 +238,7 @@ export function useCampaignActions(s: CampaignActionsState) {
       s.setSaveState("saved");
       s.setSection("edit");
       s.showToast("Your ad is ready to edit");
+      pendingGenerationRef.current = null;
       window.dispatchEvent(new Event("blockwise:trial-status-refresh"));
     } catch (error) {
       // The New Ad dialog shows this error inline, so clear the skeletons.
@@ -301,7 +313,7 @@ export function useCampaignActions(s: CampaignActionsState) {
         state: "rendering",
       })));
 
-      if (!exportPack.creatives.every(isFinishedCloneCreative)) {
+      if (!exportPack.creatives.every(isFinishedCreative)) {
         throw new Error("Create an ad from a sample before exporting.");
       }
       await downloadExportZip(currentPack.campaign.campaignId, currentPack.campaign.name, exportPack);
@@ -328,7 +340,7 @@ export function useCampaignActions(s: CampaignActionsState) {
       const currentPack = buildCurrentPack();
       const exportPack = packForVariant(currentPack, currentVariant?.variantId);
       const formatPack = { ...exportPack, creatives: exportPack.creatives.filter((creative) => creative.format === format) };
-      if (formatPack.creatives.length === 0 || !formatPack.creatives.every(isFinishedCloneCreative)) {
+      if (formatPack.creatives.length === 0 || !formatPack.creatives.every(isFinishedCreative)) {
         throw new Error(`${exportFormatLabel(format)} render failed — please retry.`);
       }
       await downloadExportZip(
@@ -466,10 +478,16 @@ async function waitForTemplateCampaignJob(
 /** First persisted primary image in the pack (the clone render for template ads). */
 function packPrimaryImage(pack: AdStudioCampaignPack): string | undefined {
   for (const creative of pack.creatives) {
-    const image = creative.canvas.objects.find((object) => object.role === "primary_image");
-    if (image?.content) return image.content;
+    const image = primaryImageSource(creative);
+    if (image) return image;
   }
   return undefined;
+}
+
+function isFinishedCreative(creative: AdStudioCampaignPack["creatives"][number]): boolean {
+  return isLegacyCreative(creative)
+    ? isFinishedCloneCreative(creative)
+    : Boolean(primaryImageSource(creative));
 }
 
 // Formats the browser renderer can actually export (see META_EXPORT_FORMATS).
@@ -531,7 +549,7 @@ function compactPackForDraft(pack: AdStudioCampaignPack, variantId: string | und
     ...pack,
     creatives: pack.creatives
       .filter((creative) => !variantId || creative.variantId === variantId)
-      .filter(isFinishedCloneCreative)
+      .filter(isFinishedCreative)
       .map(stripRenderState)
       .map(stripDuplicateDraftImage()),
   };
@@ -560,6 +578,8 @@ function stripRenderState(creative: AdStudioCampaignPack["creatives"][number]): 
 function stripDuplicateDraftImage() {
   const keptByVariantAndSource = new Set<string>();
   return (creative: AdStudioCampaignPack["creatives"][number]): AdStudioCampaignPack["creatives"][number] => {
+    if (!isLegacyCreative(creative)) return creative;
+
     // A cloned ad is one authoritative raster, not a browser-rendered layer
     // tree. Its storage pointer must survive every autosave and reload.
     if (

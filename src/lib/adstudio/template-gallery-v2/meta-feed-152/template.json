@@ -1,0 +1,199 @@
+{
+  "schema": "adstudio.template.v2",
+  "id": "meta-feed-152",
+  "name": "Smart Tips for Home Buyers",
+  "goal": "buyer_leads",
+  "offerId": "smart-tips-home-buyers-001",
+  "category": "real_estate",
+  "tags": [
+    "home buyers",
+    "real estate tips",
+    "buyer advice",
+    "property purchase",
+    "mistake avoidance"
+  ],
+  "audienceIntent": "People looking for advice and tips to buy a home and avoid costly mistakes.",
+  "classification": {
+    "ad_type": "single_image",
+    "primary_intent": "educate_buyers",
+    "property_or_agent_focus": "property"
+  },
+  "provenance": {
+    "sourceAd": {
+      "file": "01_feed_4x5_best/meta_152.png",
+      "contentHash": "365aa30a9da93245638a9d4daee66694b189677bde9cef052688ff49ceb6e803"
+    },
+    "sample": {
+      "imageSrc": "/adstudio-templates/meta-feed-152/sample.png",
+      "contentHash": "887ca3e61afcc5b80b97c841aedd792f8aad8584b054b7da9c70b2f3ca9cb0de",
+      "generatedBy": "deterministic_render"
+    },
+    "decomposedFrom": "source"
+  },
+  "restyle": {
+    "paletteMap": {},
+    "plateRemap": {
+      "hue": 12
+    },
+    "replacedAssets": []
+  },
+  "fonts": [
+    {
+      "fontId": "manrope",
+      "family": "Manrope",
+      "weight": 400,
+      "italic": false,
+      "file": "/fonts/adstudio/manrope-400.woff2",
+      "sha256": "2888616ddce6d7a011b083bc27527df3313f1df71dc54fd752a83f347f4e8e29"
+    },
+    {
+      "fontId": "arimo",
+      "family": "Arimo",
+      "weight": 600,
+      "italic": false,
+      "file": "/fonts/adstudio/arimo-600.woff2",
+      "sha256": "e56ba72ece2579125a34dda8b81f4a8692ee712757a5f5910dcf7c084cd0082e"
+    },
+    {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "weight": 800,
+      "italic": false,
+      "file": "/fonts/adstudio/merriweather-800.woff2",
+      "sha256": "234916daa3dd072625fad30f1ae31d989c101bcd73ae8f29023cfbbc9a711c8a"
+    }
+  ],
+  "formats": {
+    "feed": {
+      "format": "4:5",
+      "width": 1080,
+      "height": 1350,
+      "plate": {
+        "src": "/adstudio-templates/meta-feed-152/plate-feed.webp",
+        "sha256": "46e097c9d0ced7502abf826d4025a611bd6fa1169571d11d57c9038a3e0b4ae4"
+      },
+      "layers": []
+    },
+    "story": {
+      "format": "9:16",
+      "width": 1080,
+      "height": 1920,
+      "plate": {
+        "src": "/adstudio-templates/meta-feed-152/plate-story.webp",
+        "sha256": "2287498baf1b6611b70b9f0ba508b318801ef0df2988753a7de88faa50b5315c"
+      },
+      "layers": []
+    }
+  },
+  "inputs": {
+    "images": [],
+    "text": [
+      {
+        "key": "headline",
+        "label": "Headline",
+        "required": true,
+        "maxLength": 40,
+        "sample": "SMART TIPS FOR HOME BUYERS"
+      },
+      {
+        "key": "subheadline",
+        "label": "Subheadline",
+        "required": true,
+        "maxLength": 30,
+        "sample": "Avoid Costly Mistakes"
+      },
+      {
+        "key": "brand_name",
+        "label": "Brand Name",
+        "required": true,
+        "maxLength": 20,
+        "sample": "HAVENFIELD"
+      },
+      {
+        "key": "cta",
+        "label": "Call to Action",
+        "required": true,
+        "maxLength": 15,
+        "sample": "Learn More"
+      }
+    ]
+  },
+  "publish": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "apiVersionMin": "v26.0",
+    "copy": {
+      "primaryText": [
+        "Ask for the property details."
+      ],
+      "headlines": [
+        "Property details"
+      ],
+      "descriptions": [
+        "Request more information"
+      ]
+    },
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Register your interest in this property",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "thankYou": {
+        "title": "Thanks",
+        "body": "We'll be in touch."
+      }
+    },
+    "placements": {
+      "publisherPlatforms": [
+        "facebook",
+        "instagram"
+      ],
+      "facebookPositions": [
+        "feed"
+      ],
+      "instagramPositions": [
+        "stream"
+      ]
+    },
+    "formatRouting": {
+      "feed": "4:5",
+      "story": "9:16"
+    },
+    "creativeFeatures": {
+      "adapt_to_placement": "OPT_OUT",
+      "image_touchups": "OPT_OUT",
+      "image_templates": "OPT_OUT",
+      "inline_comment": "OPT_OUT",
+      "enhance_cta": "OPT_OUT",
+      "text_optimizations": "OPT_OUT",
+      "image_animation": "OPT_OUT",
+      "image_background_gen": "OPT_OUT",
+      "video_auto_crop": "OPT_OUT",
+      "translate_voiceover": "OPT_OUT",
+      "text_translation": "OPT_OUT",
+      "media_type_automation": "OPT_OUT",
+      "product_extensions": "OPT_OUT"
+    },
+    "previewFormats": [
+      "MOBILE_FEED_STANDARD",
+      "INSTAGRAM_STANDARD"
+    ]
+  },
+  "editPolicy": {
+    "mode": "guided",
+    "advancedUnlockable": true,
+    "lockedLayerIds": []
+  },
+  "exactness": {
+    "status": "qa",
+    "residuals": {},
+    "bakedTextKeys": [
+      "headline",
+      "subheadline",
+      "brand_name",
+      "cta"
+    ]
+  }
+}

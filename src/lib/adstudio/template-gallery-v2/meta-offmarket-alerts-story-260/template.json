@@ -1,0 +1,286 @@
+{
+  "schema": "adstudio.template.v2",
+  "id": "meta-offmarket-alerts-story-260",
+  "name": "Off-Market Property Alerts — Story 260",
+  "goal": "buyer_leads",
+  "offerId": "off-market-property-alerts",
+  "category": "buyer-registration-lead-generation",
+  "tags": [
+    "offmarket-alerts",
+    "lead-generation",
+    "story"
+  ],
+  "audienceIntent": "Buyers wanting early access to local off-market opportunities",
+  "classification": {
+    "ad_type": "lead_generation",
+    "primary_intent": "off_market_buyer_registration",
+    "property_or_agent_focus": "property"
+  },
+  "provenance": {
+    "sourceAd": {
+      "file": "02_stories_reels_9x16/meta_260.png",
+      "contentHash": "0f66fdfa9a3efa10b3f74b9f8a60422ef1dc6d0bf97c15447d10c7f2f80c8e8e"
+    },
+    "sample": {
+      "imageSrc": "/adstudio-templates/meta-offmarket-alerts-story-260/sample.png",
+      "contentHash": "18555b9b80e693da2c77ca59e498c6f497cee55a8d436ad7e8334957dd40ab81",
+      "generatedBy": "deterministic_render"
+    },
+    "decomposedFrom": "source"
+  },
+  "restyle": {
+    "paletteMap": {},
+    "plateRemap": {
+      "hue": 12
+    },
+    "replacedAssets": [
+      "hero_graphic",
+      "agency_logo"
+    ]
+  },
+  "fonts": [
+    {
+      "fontId": "raleway",
+      "family": "Raleway",
+      "weight": 300,
+      "italic": false,
+      "file": "/fonts/adstudio/raleway-300.woff2",
+      "sha256": "29b33111553400c5bbdf516802bc44904a6350e6aa2e6d3ec2aa39506210736b"
+    },
+    {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "weight": 300,
+      "italic": false,
+      "file": "/fonts/adstudio/smooch-sans-300.woff2",
+      "sha256": "24c4dda0d38ff3000dbaf5c37b0035fc51791a693cc68101d14acb16c8504cb6"
+    },
+    {
+      "fontId": "noto-serif",
+      "family": "Noto Serif",
+      "weight": 800,
+      "italic": false,
+      "file": "/fonts/adstudio/noto-serif-800.woff2",
+      "sha256": "9cc0044a3f473048140654632bdd703ce6b7379d8f00064b62e02ef3f6f33c0d"
+    },
+    {
+      "fontId": "kanit",
+      "family": "Kanit",
+      "weight": 900,
+      "italic": false,
+      "file": "/fonts/adstudio/kanit-900.woff2",
+      "sha256": "f001e4c46c00f65965198ba7547aadd375aa6222feff177c57c943d3bf6794d3"
+    }
+  ],
+  "formats": {
+    "feed": {
+      "format": "4:5",
+      "width": 1080,
+      "height": 1350,
+      "plate": {
+        "src": "/adstudio-templates/meta-offmarket-alerts-story-260/plate-feed.webp",
+        "sha256": "93191cda4bbed1e951bcc06c0d9be91d88b3aeaa7ef914bcfee18b5fc78012cc"
+      },
+      "layers": [
+        {
+          "id": "slot-hero_graphic",
+          "z": 2,
+          "box": {
+            "x": 0,
+            "y": 0.7711111111111111,
+            "width": 1,
+            "height": 0.2288888888888889
+          },
+          "type": "image_slot",
+          "inputKey": "hero_graphic",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 1080,
+            "height": 309
+          }
+        }
+      ]
+    },
+    "story": {
+      "format": "9:16",
+      "width": 1080,
+      "height": 1920,
+      "plate": {
+        "src": "/adstudio-templates/meta-offmarket-alerts-story-260/plate-story.webp",
+        "sha256": "8c7538ecdb6a5b3ecfd769b155eb1f464d76cb240b81b2ea837edfcf4ae86117"
+      },
+      "layers": [
+        {
+          "id": "slot-hero_graphic",
+          "z": 2,
+          "box": {
+            "x": 0,
+            "y": 0.690625,
+            "width": 1,
+            "height": 0.309375
+          },
+          "type": "image_slot",
+          "inputKey": "hero_graphic",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 1080,
+            "height": 594
+          }
+        },
+        {
+          "id": "slot-agency_logo",
+          "z": 3,
+          "box": {
+            "x": 0.4444444444444444,
+            "y": 0.044270833333333336,
+            "width": 0.1111111111111111,
+            "height": 0.059895833333333336
+          },
+          "type": "image_slot",
+          "inputKey": "agency_logo",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 120,
+            "height": 115
+          }
+        }
+      ],
+      "native": true
+    }
+  },
+  "inputs": {
+    "images": [
+      {
+        "key": "hero_graphic",
+        "label": "hero graphic",
+        "required": true,
+        "aspect": "portrait",
+        "description": "Customer photo drawn into the declared slot."
+      },
+      {
+        "key": "agency_logo",
+        "label": "agency logo",
+        "required": true,
+        "aspect": "portrait",
+        "description": "Customer photo drawn into the declared slot."
+      }
+    ],
+    "text": [
+      {
+        "key": "body",
+        "label": "Body",
+        "required": true,
+        "maxLength": 86,
+        "sample": "Register your preferences and hear about suitable local homes first."
+      },
+      {
+        "key": "headline",
+        "label": "Headline",
+        "required": true,
+        "maxLength": 54,
+        "sample": "SEE HOMES BEFORE THEY HIT THE MARKET"
+      },
+      {
+        "key": "subheadline",
+        "label": "Subheadline",
+        "required": true,
+        "maxLength": 44,
+        "sample": "JOIN OUR OFF-MARKET ALERTS"
+      },
+      {
+        "key": "cta",
+        "label": "Cta",
+        "required": true,
+        "maxLength": 37,
+        "sample": "REGISTER FOR ALERTS"
+      }
+    ]
+  },
+  "publish": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "apiVersionMin": "v26.0",
+    "copy": {
+      "primaryText": [
+        "Ask for the property details."
+      ],
+      "headlines": [
+        "Property details"
+      ],
+      "descriptions": [
+        "Request more information"
+      ]
+    },
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Request off-market property alerts",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "thankYou": {
+        "title": "Thanks",
+        "body": "We'll be in touch."
+      }
+    },
+    "placements": {
+      "publisherPlatforms": [
+        "facebook",
+        "instagram"
+      ],
+      "facebookPositions": [
+        "feed"
+      ],
+      "instagramPositions": [
+        "stream"
+      ]
+    },
+    "formatRouting": {
+      "feed": "4:5",
+      "story": null
+    },
+    "creativeFeatures": {
+      "adapt_to_placement": "OPT_OUT",
+      "image_touchups": "OPT_OUT",
+      "image_templates": "OPT_OUT",
+      "inline_comment": "OPT_OUT",
+      "enhance_cta": "OPT_OUT",
+      "text_optimizations": "OPT_OUT",
+      "image_animation": "OPT_OUT",
+      "image_background_gen": "OPT_OUT",
+      "video_auto_crop": "OPT_OUT",
+      "translate_voiceover": "OPT_OUT",
+      "text_translation": "OPT_OUT",
+      "media_type_automation": "OPT_OUT",
+      "product_extensions": "OPT_OUT"
+    },
+    "previewFormats": [
+      "MOBILE_FEED_STANDARD",
+      "INSTAGRAM_STANDARD"
+    ]
+  },
+  "editPolicy": {
+    "mode": "guided",
+    "advancedUnlockable": true,
+    "lockedLayerIds": []
+  },
+  "exactness": {
+    "status": "qa",
+    "residuals": {},
+    "bakedTextKeys": [
+      "body",
+      "headline",
+      "subheadline",
+      "cta"
+    ]
+  }
+}

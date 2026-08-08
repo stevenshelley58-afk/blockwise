@@ -29,6 +29,13 @@ test("results shows zero-safe provider reporting", async ({ page }) => {
   await expect(page.getByText("Google")).toBeVisible();
 });
 
+test("template studio queue lists v2 drafts with status and intent", async ({ page }) => {
+  await page.goto("/operator/template-studio");
+
+  await expect(page.getByRole("heading", { name: "Template Studio" })).toBeVisible();
+  await expect(page.getByRole("link", { name: /^meta-/ }).first()).toBeVisible();
+});
+
 test("self-serve includes campaign drafting workflow", async ({ page }) => {
   await page.goto("/self-serve");
 
