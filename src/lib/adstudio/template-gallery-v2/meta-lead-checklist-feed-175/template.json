@@ -30,14 +30,14 @@
   },
   "restyle": {
     "paletteMap": {},
+    "plateRemap": {
+      "hue": 12
+    },
     "replacedAssets": [
       "background_photo",
       "agent_portrait"
     ],
-    "note": "migrated from v1 (source); restyle pass pending in Studio auto-QA default plate remap (owner-delegated 2026-08-06)",
-    "plateRemap": {
-      "hue": 12
-    }
+    "note": "migrated from v1 (source); restyle pass pending in Studio auto-QA default plate remap (owner-delegated 2026-08-06)"
   },
   "fonts": [
     {
