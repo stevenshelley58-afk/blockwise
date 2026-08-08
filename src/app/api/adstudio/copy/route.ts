@@ -6,6 +6,7 @@ import {
   type AdStudioCopyRequestBody,
   type AdStudioTemplateCopyFieldSpec,
 } from "@/lib/adstudio/copy-generation";
+import { publicAdStudioGenerationError } from "@/lib/adstudio/generation-error";
 import { readJsonBody, requireAdStudioRequest } from "@/lib/adstudio/http";
 import { resolveAdStudioImageForModel } from "@/lib/adstudio/resolve-image-for-model";
 
@@ -62,8 +63,11 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(result);
   } catch (error) {
+    // Never surface raw provider/cascade errors (they can include model names,
+    // quota text, and API vocabulary) — log for operators, sanitise for users.
+    console.error("adstudio copy generation failed", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Copy generation failed." },
+      { error: publicAdStudioGenerationError(error) },
       { status: 502 },
     );
   }

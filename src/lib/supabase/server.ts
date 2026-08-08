@@ -9,7 +9,7 @@ type CookieToSet = {
 };
 
 function cleanSupabaseEnv(value?: string) {
-  return value?.replace(/^\uFEFF/, "").trim() ?? "";
+  return value?.replace(/^﻿/, "").trim() ?? "";
 }
 
 export async function createSupabaseServerClient() {
@@ -17,7 +17,7 @@ export async function createSupabaseServerClient() {
 
   return createServerClient(
     cleanSupabaseEnv(process.env.NEXT_PUBLIC_SUPABASE_URL),
-    cleanSupabaseEnv(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY),
+    cleanSupabaseEnv(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY),
     {
       cookies: {
         getAll() {

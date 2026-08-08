@@ -2,7 +2,9 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { requireAdStudioRequest } from "@/lib/adstudio/http";
 import { listProviderConnections } from "@/lib/providers/provider-connections";
+import { reconcileMetaConnectionStatus } from "@/lib/providers/meta-connection-health";
 import { resolveMetaConnectionSetup, validateMetaConnectionSetup } from "@/lib/providers/meta-execution";
+import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,8 +20,11 @@ type ProviderReadiness = {
  *
  * Reports whether the workspace is set up to publish live ads to Meta
  * WITHOUT creating anything. Live publishing stays gated behind
- * BLOCKWISE_ENABLE_PROVIDER_WRITES plus connected accounts and platform app
- * review. This endpoint never writes to a provider.
+ * BLOCKWISE_ENABLE_PROVIDER_WRITES plus connected accounts. This endpoint
+ * never writes to a provider, but it does self-heal the stored connection
+ * status from live token health — otherwise a stale "needs_attention" flag
+ * disables the Submit button, and the publish POST that would have repaired
+ * the flag can never be sent.
  */
 export async function GET(request: NextRequest) {
   const context = await requireAdStudioRequest(request);
@@ -35,10 +40,19 @@ export async function GET(request: NextRequest) {
     connections.find((connection) => connection.provider === "meta" && (connection.status === "connected" || connection.status === "needs_attention"))
     ?? connections.find((connection) => connection.provider === "meta");
   const metaSetup = resolveMetaConnectionSetup(metaConnection?.metadata ?? {}, metaConnection?.externalAccountId);
-  const metaSetupBlockers = metaConnection?.status === "connected" ? validateMetaConnectionSetup(metaSetup) : [];
+  const metaStatus = metaConnection
+    ? await reconcileMetaConnectionStatus(createSupabaseServiceClient(), metaConnection)
+    : "not_connected";
+  // Setup blockers are shown for any USABLE connection — hiding them while the
+  // status is "needs_attention" (exactly when they explain what needs
+  // attention) left users reconnecting in circles with no way forward. A
+  // deliberately disconnected row shows only the connect step.
+  const metaSetupBlockers = metaConnection && metaStatus !== "not_connected"
+    ? validateMetaConnectionSetup(metaSetup)
+    : [];
   const metaReadiness: ProviderReadiness = {
-    connected: metaConnection?.status === "connected",
-    status: metaConnection?.status ?? "not_connected",
+    connected: metaStatus === "connected",
+    status: metaStatus,
     accountId: metaConnection?.externalAccountId ?? null,
   };
 
@@ -46,10 +60,10 @@ export async function GET(request: NextRequest) {
     {
       id: "meta_connected",
       label: "Connect a Meta ad account",
-      done: metaReadiness.connected,
+      done: metaStatus === "connected",
       automatic: true,
     },
-    ...(metaReadiness.connected && metaSetupBlockers.length === 0
+    ...(metaConnection && metaStatus !== "not_connected" && metaSetupBlockers.length === 0
       ? [{
           id: "meta_setup",
           label: "Complete Meta publishing setup",
@@ -66,7 +80,7 @@ export async function GET(request: NextRequest) {
       id: "provider_writes",
       label: writesEnabled
         ? "Live publishing enabled"
-        : "Live publishing unavailable",
+        : "Live publishing is in final platform review — export your creatives, or check back soon.",
       done: writesEnabled,
       automatic: true,
       blocked: !writesEnabled,

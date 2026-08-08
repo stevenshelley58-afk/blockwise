@@ -1,12 +1,14 @@
 import { createBrowserClient } from "@supabase/ssr";
 
 function cleanSupabaseEnv(value?: string) {
-  return value?.replace(/^\uFEFF/, "").trim();
+  return value?.replace(/^﻿/, "").trim();
 }
 
 export function createSupabaseBrowserClient() {
   const supabaseUrl = cleanSupabaseEnv(process.env.NEXT_PUBLIC_SUPABASE_URL);
-  const supabaseAnonKey = cleanSupabaseEnv(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+  const supabaseAnonKey = cleanSupabaseEnv(
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+  );
 
   if (!supabaseUrl || !supabaseAnonKey) {
     if (typeof window === "undefined") {

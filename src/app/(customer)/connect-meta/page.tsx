@@ -8,11 +8,19 @@ export const dynamic = "force-dynamic";
 
 type MetaConnectionRow = { status: string };
 
-export default async function ConnectMetaPage() {
+type ConnectMetaPageProps = {
+  searchParams?: Promise<Record<string, string | string[] | undefined>> | Record<string, string | string[] | undefined>;
+};
+
+export default async function ConnectMetaPage({ searchParams }: ConnectMetaPageProps) {
   const { supabase, access } = await requirePageSurfaceAccess("monitor");
+  const params = searchParams ? await Promise.resolve(searchParams) : {};
+  const reconnect = params.reconnect === "1" || params.reconnect === "true";
 
   // Build once, redirect when done: an already-connected workspace has no
   // reason to sit on the connect page, so send it to finish publishing setup.
+  // ?reconnect=1 (the Settings "Reconnect" button) skips the redirect —
+  // otherwise Settings → Reconnect → here → Settings is an instant bounce loop.
   const { data } = await supabase
     .from("provider_connections")
     .select("status")
@@ -22,7 +30,7 @@ export default async function ConnectMetaPage() {
     .limit(1);
 
   const latest = (data?.[0] ?? null) as MetaConnectionRow | null;
-  if (latest && latest.status === "connected") {
+  if (latest && latest.status === "connected" && !reconnect) {
     redirect("/settings#connections");
   }
 

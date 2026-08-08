@@ -28,13 +28,13 @@ test("no divergent CTA keyword maps remain", () => {
 
 test("over-limit copy blocks export and publish", () => {
   const violations = findCopyLimitViolations({
-    primaryText: "x".repeat(130),
+    primaryText: "x".repeat(510),
     headline: "ok",
     description: "ok",
     cta: "ok",
   });
   assert.equal(violations.length, 1);
-  assert.match(violations[0], /primaryText is 130 characters \(Meta limit 125\)/);
+  assert.match(violations[0], /primaryText is 510 characters \(Meta limit 500\)/);
 
   const packViolations = findPackCopyLimitViolations({
     copyPacks: [
