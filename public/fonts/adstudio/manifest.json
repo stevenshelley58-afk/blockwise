@@ -618,6 +618,18 @@
       "bytes": 18220
     },
     {
+      "file": "/fonts/adstudio/montserrat-600.woff2",
+      "fontId": "montserrat",
+      "family": "Montserrat",
+      "weight": 600,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/montserrat/v31/JTUHjIg1_i6t8kCHKm4532VJOt5-QNFgpCu173w5aXo.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "d857325c360f7128b347ca924c1974967aaa886ba47dad22e4042d6c38b26a83",
+      "bytes": 18688
+    },
+    {
       "file": "/fonts/adstudio/montserrat-900.woff2",
       "fontId": "montserrat",
       "family": "Montserrat",
@@ -820,6 +832,18 @@
       "licenseUrl": "https://openfontlicense.org",
       "sha256": "36ef05adf5480e16bf38b6d7482efdc6fd05c2a35a456580157a3e23df891020",
       "bytes": 1676
+    },
+    {
+      "file": "/fonts/adstudio/playfair-display-400.woff2",
+      "fontId": "playfair-display",
+      "family": "Playfair Display",
+      "weight": 400,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/playfairdisplay/v40/nuFvD-vYSZviVYUb_rj3ij__anPXJzDwcbmjWBN2PKdFvXDXbtM.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "1fe9ad5d8b2ebd8ecb8fbd05bed1e3fdfa52dae3f1a04e1c219918442fe9394d",
+      "bytes": 21856
     },
     {
       "file": "/fonts/adstudio/playfair-display-700.woff2",

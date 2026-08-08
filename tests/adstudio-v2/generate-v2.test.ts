@@ -92,6 +92,7 @@ test("happy path: inline renders feed + story, instance docs canonical, warnings
   // Publish defaults prefilled from the template's publish block.
   assert.equal(result.pack.copyPacks[0].meta.cta, template.publish.cta);
   assert.equal(result.pack.campaign.templateKey, fixtureId);
+  assert.deepEqual(result.pack.campaign.templateSnapshot?.publish, template.publish);
 });
 
 test("over-limit copy is a 400 with guidance — never truncated", async () => {

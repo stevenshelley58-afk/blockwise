@@ -137,6 +137,23 @@ test("splitTextIntoMeasuredLines collapses to one line for one word", () => {
   assert.deepEqual(lines, ["Sale"]);
 });
 
+test("splitTextIntoMeasuredLines distributes long unbroken copy by source line weight", () => {
+  const lines = splitTextIntoMeasuredLines("WWWWWWWWWWWWWWWW", [
+    { text: "SMART" },
+    { text: "FIRST STEPS" },
+  ]);
+  assert.deepEqual(lines, ["WWWWW", "WWWWWWWWWWW"]);
+});
+
+test("splitTextIntoMeasuredLines never splits a grapheme cluster", () => {
+  const developer = "👩🏽‍💻";
+  const lines = splitTextIntoMeasuredLines(developer.repeat(7), [
+    { text: "AA" },
+    { text: "BBBB" },
+  ]);
+  assert.deepEqual(lines, [developer.repeat(2), developer.repeat(5)]);
+});
+
 // ─── full server renders ─────────────────────────────────────────────────────
 
 test("renderAdDocToPng: effects fixture renders at exact 1080×1350", async () => {
@@ -170,6 +187,17 @@ test("renderAdDocToPng: deterministic — identical bytes twice", async () => {
 test("renderAdDocToPng: template-only (null instance) uses sample copy", async () => {
   const { doc } = loadFixture("meta-fixture-simple");
   const png = await renderAdDocToPng(doc, null, "4:5", {
+    repoRoot: fixtureRoot, fontsDir, resolveSlotSrc,
+  });
+  assert.deepEqual(pngDimensions(png), TEMPLATE_FORMAT_DIMENSIONS["4:5"]);
+});
+
+test("renderAdDocToPng: asymmetric image-slot corners render on the canonical server path", async () => {
+  const { doc, instances } = loadFixture("meta-fixture-simple");
+  const asymmetric = structuredClone(doc);
+  const slot = asymmetric.formats.feed.layers.find((layer: any) => layer.type === "image_slot");
+  slot.mask = { kind: "rounded", radius: [0, 32, 96, 16] };
+  const png = await renderAdDocToPng(asymmetric, instances.feed, "4:5", {
     repoRoot: fixtureRoot, fontsDir, resolveSlotSrc,
   });
   assert.deepEqual(pngDimensions(png), TEMPLATE_FORMAT_DIMENSIONS["4:5"]);

@@ -4,11 +4,11 @@
 // machine/VPS, never Vercel. Subcommands:
 //
 //   analyse --source <path> --id <id>
-//   decompose --id <id>          (needs OPENAI_API_KEY: gpt-image-2 masked
-//                                 text-region inpaint; WITHOUT the key the
-//                                 text layers are emitted BAKED — honest §0
-//                                 escape hatch, never approximate)
-//   restyle --id <id>
+//   decompose --id <id> [--inpainted <path>]
+//                                (gpt-image-2 masked text-region cleanup, or
+//                                 a supplied text-free reconstruction; only
+//                                 declared masks are composited into the source)
+//   restyle --id <id>           (disabled: complete safe assets + copy in Studio)
 //   story-draft --id <id>        (deterministic sharp band-extend)
 //   check --id <id>              (fidelity gate, §10.2)
 //   migrate-v1 --id <id> | --all [--from source|sample]
@@ -27,7 +27,11 @@ const root = process.cwd();
 // Env-overridable so tests run against a scratch copy (idempotence test is
 // hermetic — never races the live gallery or the batch pipeline).
 const v1Gallery = resolve(process.env.ADSTUDIO_V1_GALLERY ?? join(root, "src", "lib", "adstudio", "template-gallery"));
-const v2Gallery = resolve(process.env.ADSTUDIO_V2_GALLERY ?? join(root, "src", "lib", "adstudio", "template-gallery-v2"));
+const v2Gallery = resolve(process.env.ADSTUDIO_V2_GALLERY ?? process.env.ADSTUDIO_GALLERY_V2_DIR ?? join(root, "src", "lib", "adstudio", "template-gallery-v2"));
+// Shared v2 helpers resolve the gallery through this canonical variable. Keep
+// the legacy ingest override working while ensuring every command addresses
+// the same document directory.
+process.env.ADSTUDIO_GALLERY_V2_DIR ??= v2Gallery;
 const publicV2 = resolve(process.env.ADSTUDIO_PUBLIC_V2 ?? join(root, "public", "adstudio-templates"));
 const fontManifestPath = join(root, "public", "fonts", "adstudio", "manifest.json");
 const fontManifest = existsSync(fontManifestPath)
@@ -292,6 +296,7 @@ function migrateOne(id, from, force = false) {
 
 async function storyDraft(id) {
   const { extendPlateToStory, repositionLayersForStory } = await import("./lib/story.mjs");
+  const { writeTemplateDoc } = await import("../../../src/lib/adstudio/v2/studio.ts");
   const docPath = join(v2Gallery, id, "template.json");
   const doc = readJson(docPath);
   // Story-first sources: decompose wrote the true story plate from the
@@ -320,7 +325,7 @@ async function storyDraft(id) {
   };
   doc.formats.story = storyLayout;
   doc.publish.formatRouting.story = "9:16";
-  writeJson(docPath, doc);
+  writeTemplateDoc(doc.id, doc);
   console.log(`story-draft ${id}: safe-zone layout written`);
 }
 
@@ -347,18 +352,17 @@ if (command === "migrate-v1") {
   await storyDraft(id);
 } else if (command === "decompose") {
   const id = argValue("--id");
-  if (!id) { console.error("usage: ingest.mjs decompose --id <id>"); process.exit(2); }
+  if (!id) { console.error("usage: ingest.mjs decompose --id <id> [--inpainted <path>]"); process.exit(2); }
   await decompose(id);
 } else if (command === "restyle") {
-  const id = argValue("--id");
-  if (!id) { console.error("usage: ingest.mjs restyle --id <id>"); process.exit(2); }
-  await restyle(id);
+  console.error("restyle is intentionally disabled: select verified generic assets and explicit safe copy in Template Studio, then run its canonical restyle action.");
+  process.exit(2);
 } else if (command === "check") {
   const id = argValue("--id");
   if (!id) { console.error("usage: ingest.mjs check --id <id>"); process.exit(2); }
   await check(id);
 } else {
-  console.error("usage: ingest.mjs <migrate-v1|story-draft|decompose|restyle|check> --id <id>");
+  console.error("usage: ingest.mjs <migrate-v1|story-draft|decompose|check> --id <id> [--inpainted <path> for decompose] (restyle is Studio-only)");
   process.exit(2);
 }
 
@@ -366,6 +370,7 @@ if (command === "migrate-v1") {
 
 async function decompose(id) {
   const { envFromDotfiles, buildInpaintMask, buildCompositeMask, inpaintTextRegions, compositePlateFromSource, writeLosslessWebp } = await import("./lib/decompose.mjs");
+  const { writeTemplateDoc } = await import("../../../src/lib/adstudio/v2/studio.ts");
   const env = envFromDotfiles(root);
   const docPath = join(v2Gallery, id, "template.json");
   if (!existsSync(docPath)) throw new Error(`run migrate-v1 first: ${id}`);
@@ -378,7 +383,13 @@ async function decompose(id) {
   const evidencePath = join(v2Gallery, id, "evidence.json");
   const evidence = existsSync(evidencePath) ? JSON.parse(readFileSync(evidencePath, "utf8")) : {};
   const v1 = JSON.parse(readFileSync(join(v1Gallery, `${id}.json`), "utf8"));
-  const boxes = Object.values(v1.typography ?? {}).map((typo) => typo.sampleBox).filter(Boolean);
+  // A multi-line text field often has a loose parent sampleBox spanning
+  // whitespace between lines. Sending that entire parent box to the image
+  // model needlessly lets it alter non-text pixels. Use the measured line
+  // geometry whenever it exists; only old single-box measurements fall back
+  // to the parent. The same exact boxes drive both the provider mask and the
+  // truth-preserving composite below.
+  const boxes = collectTextMaskBoxes(v1.typography ?? {});
   if (boxes.length === 0) throw new Error(`${id}: no measured text boxes in v1 typography`);
 
   const meta = await sharp(sourceBytes).metadata();
@@ -407,7 +418,7 @@ async function decompose(id) {
     if (isStoryFirst) doc.formats.feed.layers = doc.formats.feed.layers.filter((layer) => layer.type !== "text");
     doc.exactness.bakedTextKeys = [...new Set([...doc.exactness.bakedTextKeys, ...Object.keys(v1.typography ?? {})])];
     doc.exactness.status = "qa";
-    writeFileSync(docPath, `${JSON.stringify(doc, null, 2)}\n`);
+    writeTemplateDoc(id, doc);
     console.log(`decompose ${id} (--no-inpaint): plates are source pixels; all ${Object.keys(v1.typography ?? {}).length} text key(s) baked, status=qa`);
     return;
   }
@@ -418,11 +429,15 @@ async function decompose(id) {
   const sourceLayout = await sharp(sourceBytes).resize(layoutDims.width, layoutDims.height, { fit: "fill" }).png().toBuffer();
   const inpaintMask = await buildInpaintMask(sourceDims, boxes);
 
-  console.log(`decompose ${id}: one masked gpt-image-2 call for ${boxes.length} text region(s)…`);
+  console.log(`decompose ${id}: reconstructing ${boxes.length} declared text region(s)…`);
   // Inpaint with retries: 70+ sequential image edits can trip provider rate
   // limits; back off and retry rather than fail a template.
-  let inpainted = null;
-  for (let attempt = 1; attempt <= 3; attempt += 1) {
+  const suppliedInpaintPath = argValue("--inpainted");
+  let inpainted = suppliedInpaintPath ? readFileSync(resolve(suppliedInpaintPath)) : null;
+  if (suppliedInpaintPath) {
+    console.log(`decompose ${id}: using supplied text-free reconstruction; source pixels still win outside the declared masks`);
+  }
+  for (let attempt = 1; !inpainted && attempt <= 3; attempt += 1) {
     try {
       inpainted = await inpaintTextRegions(env, sourceBytes, inpaintMask);
       break;
@@ -485,7 +500,7 @@ async function decompose(id) {
       constraints: {
       maxLength: v1.inputs?.text?.find((input) => input.key === key)?.maxLength ?? 60,
       maxLines: typo.sampleLineCount ?? 3,
-      autoFitMinRatio: 0.85,
+            autoFitMinRatio: typo.autoFitMinRatio ?? 0.85,
     },
     measurement: {
       fitScore: typo.fitScore ?? 0,
@@ -587,230 +602,90 @@ async function decompose(id) {
     ];
     const feedPng = await sharp(finalPng).extract({ left: 0, top: STORY_TOP_PX, width: 1080, height: 1350 }).png().toBuffer();
     await writePlate(feedPng, feed);
+  } else {
+    // Any existing story is derived from the previous feed state. Remove it
+    // before publishing the rebuilt native surface; story-draft will create a
+    // fresh safe-zone mapping from these exact layers and plate bytes.
+    delete doc.formats.story;
+    doc.publish.formatRouting.story = null;
   }
   doc.exactness.bakedTextKeys = unfit.map(([key]) => key);
   doc.exactness.status = "qa";
-  writeFileSync(docPath, `${JSON.stringify(doc, null, 2)}\n`);
+  writeTemplateDoc(id, doc);
   console.log(
     `decompose ${id}: plate written (${finalPng.length} bytes); ${fitted.length} editable, `
     + `${unfit.length} baked (${unfit.map(([key]) => key).join(", ") || "none"}), status=qa`,
   );
 }
 
-// ── restyle: deterministic safe palette + generic sample render (D5) ───────
-
-async function restyle(id) {
-  const docPath = join(v2Gallery, id, "template.json");
-  if (!existsSync(docPath)) throw new Error(`run migrate-v1 first: ${id}`);
-  const doc = JSON.parse(readFileSync(docPath, "utf8"));
-
-  // Deterministic safe-palette remap: every distinct text colour maps to a
-  // neutral dark; recorded so the gate and the render share it exactly.
-  const paletteMap = {};
-  for (const layout of [doc.formats.feed, doc.formats.story]) {
-    if (!layout) continue;
-    for (const layer of layout.layers) {
-      if (layer.type !== "text") continue;
-      const from = layer.typo.color;
-      if (!paletteMap[from]) paletteMap[from] = "#1f242b";
-    }
-  }
-  for (const layout of [doc.formats.feed, doc.formats.story]) {
-    if (!layout) continue;
-    for (const layer of layout.layers) {
-      if (layer.type === "text") layer.typo.color = paletteMap[layer.typo.color] ?? layer.typo.color;
-    }
-  }
-  doc.restyle = {
-    ...doc.restyle,
-    paletteMap,
-    replacedAssets: doc.inputs.images.map((image) => image.key),
-  };
-
-  // Public sample = deterministic render of the restyled doc with safe copy.
-  // Story-first templates render the sample at their native 9:16 layout
-  // (the 4:5 band boxes are derived and can degenerate); feed-first at 4:5.
-  const isStoryFirst = Boolean(doc.formats.story?.native);
-  const sampleFormat = isStoryFirst ? "9:16" : "4:5";
-  const { renderAdDocToPng } = await import("../../../src/lib/adstudio/v2/render/server.ts");
-  const instance = {
-    schema: "adstudio.instance.v2",
-    templateId: id,
-    templateHash: "0".repeat(64),
-    format: sampleFormat,
-    values: {
-      images: {},
-      // Safe copy = the template's own measured sample values (they fit the
-      // measured boxes by construction; RenderFitError refuses anything else).
-      text: Object.fromEntries(doc.inputs.text.map((input) => [input.key, input.sample])),
-    },
-    overrides: [],
-  };
-  const png = await renderAdDocToPng(doc, instance, sampleFormat);
-  const { sha256Hex } = await import("./lib/decompose.mjs");
-  const samplePath = join(publicV2, id, "sample.png");
-  mkdirSync(join(publicV2, id), { recursive: true });
-  writeFileSync(samplePath, png);
-  const contentHash = await sha256Hex(png);
-  doc.provenance.sample = {
-    imageSrc: `/adstudio-templates/${id}/sample.png`,
-    contentHash,
-    generatedBy: "deterministic_render",
-  };
-  if (contentHash === doc.provenance.sourceAd.contentHash) {
-    throw new Error("restyle produced a sample identical to the source — distance is required (D5)");
-  }
-  writeFileSync(docPath, `${JSON.stringify(doc, null, 2)}\n`);
-  console.log(`restyle ${id}: palette remapped (${Object.keys(paletteMap).length} colour(s)), sample rendered ${png.length} bytes, hash differs from source`);
+function isNormalizedBox(box) {
+  return Boolean(box)
+    && [box.x, box.y, box.width, box.height].every(Number.isFinite)
+    && box.width > 0
+    && box.height > 0
+    && box.x >= 0
+    && box.y >= 0
+    && box.x + box.width <= 1
+    && box.y + box.height <= 1;
 }
 
-// ── check: the fidelity gate (§10.2) — source values vs the source ad ──────
+function collectTextMaskBoxes(typography) {
+  const boxes = [];
+  const seen = new Set();
+  for (const [key, typo] of Object.entries(typography)) {
+    const measuredLines = Array.isArray(typo?.measuredLines) ? typo.measuredLines : [];
+    const candidates = measuredLines.length > 0
+      ? measuredLines.map((line) => line?.sampleBox)
+      : [typo?.sampleBox];
+    for (const box of candidates) {
+      if (!isNormalizedBox(box)) {
+        const source = measuredLines.length > 0 ? "measured line" : "sample";
+        throw new Error(`${key}: invalid ${source} box for text inpaint mask`);
+      }
+      // Overlapping lines should remain separate, but exact duplicates only
+      // enlarge neither the provider hole nor the composite region.
+      const fingerprint = [box.x, box.y, box.width, box.height].map((value) => value.toFixed(9)).join(":");
+      if (!seen.has(fingerprint)) {
+        seen.add(fingerprint);
+        boxes.push(box);
+      }
+    }
+  }
+  if (boxes.length === 0) throw new Error("no measured text boxes in v1 typography");
+  return boxes;
+}
+
+// ── check: read-only fidelity and stress gates ──────────────────────────────
 
 async function check(id) {
-  const { renderAdDocToPng } = await import("../../../src/lib/adstudio/v2/render/server.ts");
   const docPath = join(v2Gallery, id, "template.json");
+  if (!existsSync(docPath)) throw new Error(`template not found: ${id}`);
   const doc = JSON.parse(readFileSync(docPath, "utf8"));
-  const evidencePath = join(v2Gallery, id, "evidence.json");
-  const evidence = existsSync(evidencePath) ? JSON.parse(readFileSync(evidencePath, "utf8")) : {};
-  const sourceValues = evidence.sourceValues ?? {};
-  const sourceBytes = readFileSync(join(root, "meta_ad_candidates", doc.provenance.sourceAd.file));
+  const { runFidelityCheck } = await import("../../../src/lib/adstudio/v2/studio.ts");
+  const { runStressMatrix } = await import("../../../src/lib/adstudio/v2/fidelity-stress.ts");
 
-  const isStoryFirst = Boolean(doc.formats.story?.native);
-  const layout = isStoryFirst ? doc.formats.story : doc.formats.feed;
-  const W = layout.width;
-  const H = layout.height;
-  const instance = {
-    schema: "adstudio.instance.v2",
-    templateId: id,
-    templateHash: "0".repeat(64),
-    format: layout.format,
-    values: { images: {}, text: sourceValues },
-    overrides: [],
-  };
-  const rendered = await renderAdDocToPng(doc, instance, layout.format);
-  const renderedRaw = await sharp(rendered).raw().ensureAlpha().toBuffer();
-  const source = await sharp(sourceBytes).resize(W, H, { fit: "fill" }).raw().ensureAlpha().toBuffer();
-
-  // Exclusion padding must match the inpaint mask's padding (TEXT_MASK_PADDING):
-  // inside the cleanup annulus the model legitimately repaints text AA, so the
-  // byte-identical guarantee applies outside the padded text boxes.
-  const { TEXT_MASK_PADDING } = await import("./lib/decompose.mjs");
-  const v1Typo = (() => {
-    try {
-      return JSON.parse(readFileSync(join(v1Gallery, `${id}.json`), "utf8")).typography ?? {};
-    } catch {
-      return {};
-    }
-  })();
-  // Fitted layers AND baked keys get padded exclusions: baked boxes hold the
-  // source pixels through a mask composite whose AA ring differs from the raw
-  // resize by a pixel or two at the cut edge. (v1 boxes are in the source's
-  // own coordinates, i.e. the primary layout's.)
-  const bakePad = Math.ceil(TEXT_MASK_PADDING * Math.max(W, H));
-  const bakedBoxes = (doc.exactness.bakedTextKeys ?? [])
-    .filter((key) => v1Typo[key]?.sampleBox)
-    .map((key) => {
-      const b = v1Typo[key].sampleBox;
-      return {
-        id: `baked-${key}`,
-        x: Math.max(0, Math.floor(b.x * W) - bakePad),
-        y: Math.max(0, Math.floor(b.y * H) - bakePad),
-        w: Math.min(W, Math.ceil(b.width * W) + bakePad * 2),
-        h: Math.min(H, Math.ceil(b.height * H) + bakePad * 2),
-      };
-    });
-  const paddedBoxes = [
-    ...bakedBoxes,
-    ...layout.layers
-    .filter((layer) => layer.type === "text")
-    .map((layer) => {
-      const effects = layer.typo.effects;
-      const bh = layer.box.height * H;
-      const bw = layer.box.width * W;
-      const spread = Math.ceil(
-        (effects?.shadow ? effects.shadow.blurRatio * bh + Math.abs(effects.shadow.dx) * bw + Math.abs(effects.shadow.dy) * bh : 0)
-        + (effects?.stroke ? effects.stroke.widthRatio * bh : 0),
-      ) + Math.ceil(TEXT_MASK_PADDING * Math.max(W, H));
-      return {
-        id: layer.id,
-        x: Math.max(0, Math.floor(layer.box.x * W) - spread),
-        y: Math.max(0, Math.floor(layer.box.y * H) - spread),
-        w: Math.min(W, Math.ceil(layer.box.width * W) + spread * 2),
-        h: Math.min(H, Math.ceil(layer.box.height * H) + spread * 2),
-      };
-    }),
-  ];
-  const inBox = (x, y) => paddedBoxes.some((b) => x >= b.x && x < b.x + b.w && y >= b.y && y < b.y + b.h);
-
-  let outsideDiffs = 0;
-  let outsidePixels = 0;
-  let dMinX = Infinity;
-  let dMinY = Infinity;
-  let dMaxX = -1;
-  let dMaxY = -1;
-  for (let y = 0; y < H; y += 1) {
-    for (let x = 0; x < W; x += 1) {
-      if (inBox(x, y)) continue;
-      const i = (y * W + x) * 4;
-      outsidePixels += 1;
-      if (renderedRaw[i] !== source[i] || renderedRaw[i + 1] !== source[i + 1] || renderedRaw[i + 2] !== source[i + 2]) {
-        outsideDiffs += 1;
-        if (x < dMinX) dMinX = x;
-        if (y < dMinY) dMinY = y;
-        if (x > dMaxX) dMaxX = x;
-        if (y > dMaxY) dMaxY = y;
-      }
-    }
+  // These helpers are deliberately read-only. Studio approval is the sole
+  // path that records residual or stress evidence on a template document.
+  const [fidelityResult, stressResult] = await Promise.allSettled([
+    runFidelityCheck(doc),
+    runStressMatrix(doc),
+  ]);
+  const failures = [];
+  if (fidelityResult.status === "rejected") {
+    failures.push(`fidelity: ${fidelityResult.reason instanceof Error ? fidelityResult.reason.message : String(fidelityResult.reason)}`);
+  } else {
+    const overThreshold = Object.entries(fidelityResult.value.residuals)
+      .filter(([, residual]) => residual > fidelityResult.value.threshold)
+      .map(([layerId, residual]) => `${layerId}=${residual.toFixed(3)}`);
+    if (overThreshold.length > 0) failures.push(`fidelity residuals exceed ${fidelityResult.value.threshold}: ${overThreshold.join(", ")}`);
   }
-
-  const residuals = {};
-  const bakedResiduals = {};
-  for (const b of paddedBoxes) {
-    // Clamp the iteration range: padded boxes can overrun the buffer edges
-    // (the pad clamps the height, not the range), and out-of-range reads are
-    // undefined -> NaN residuals.
-    const yEnd = Math.min(H, b.y + b.h);
-    const xEnd = Math.min(W, b.x + b.w);
-    let sum = 0;
-    let count = 0;
-    for (let y = b.y; y < yEnd; y += 2) {
-      for (let x = b.x; x < xEnd; x += 2) {
-        const i = (y * W + x) * 4;
-        const ga = 0.2126 * renderedRaw[i] + 0.7152 * renderedRaw[i + 1] + 0.0722 * renderedRaw[i + 2];
-        const gb = 0.2126 * source[i] + 0.7152 * source[i + 1] + 0.0722 * source[i + 2];
-        const d = (ga - gb) / 255;
-        sum += d * d;
-        count += 1;
-      }
-    }
-    const rmse = count > 0 ? Math.sqrt(sum / count) : 0;
-    if (b.id.startsWith("baked-")) bakedResiduals[b.id] = rmse;
-    else residuals[b.id] = rmse;
+  if (stressResult.status === "rejected") {
+    failures.push(`stress: ${stressResult.reason instanceof Error ? stressResult.reason.message : String(stressResult.reason)}`);
   }
+  if (failures.length > 0) throw new Error(`check ${id} failed — ${failures.join("; ")}`);
 
-  // Stress matrix: longest legal copy and one-char copy must render (or be
-  // honestly refused by RenderFitError — never silently microtype).
-  const editable = doc.inputs.text.filter((input) => !doc.exactness.bakedTextKeys.includes(input.key));
-  const stress = [];
-  for (const [name, values] of [
-    ["longest", Object.fromEntries(editable.map((input) => [input.key, "W".repeat(input.maxLength)]))],
-    ["one-char", Object.fromEntries(editable.map((input) => [input.key, "W"]))],
-  ]) {
-    try {
-      await renderAdDocToPng(doc, { ...instance, values: { images: {}, text: values } }, layout.format);
-      stress.push(`${name}: renders`);
-    } catch (error) {
-      stress.push(`${name}: ${error?.name === "RenderFitError" ? "refused (tighten constraints or bake)" : (error?.message ?? "threw")}`);
-    }
-  }
-
-  doc.exactness.residuals = residuals;
-  writeFileSync(docPath, `${JSON.stringify(doc, null, 2)}\n`);
-  // Baked-region plate quality is provenance evidence, not layer residuals
-  // (the schema keys residuals by layer id only).
-  const evidenceOut = { ...evidence, bakedResiduals };
-  writeFileSync(evidencePath, `${JSON.stringify(evidenceOut, null, 2)}\n`);
-  console.log(`check ${id}: outside-box diffs ${outsideDiffs}/${outsidePixels} (must be 0)` + (outsideDiffs > 0 ? ` diff bbox ${dMinX},${dMinY}-${dMaxX},${dMaxY}` : ""));
-  console.log(`  residuals (<=0.14 to ship editable): ${JSON.stringify(Object.fromEntries(Object.entries(residuals).map(([key, value]) => [key, Number(value.toFixed(3))])))}`);
-  console.log(`  stress: ${stress.join(" | ")}`);
+  const residuals = Object.fromEntries(Object.entries(fidelityResult.value.residuals)
+    .map(([layerId, residual]) => [layerId, Number(residual.toFixed(4))]));
+  console.log(`check ${id}: fidelity template=${fidelityResult.value.residualEvidence.templateHash} source=${fidelityResult.value.residualEvidence.sourceContentHash} residuals=${JSON.stringify(residuals)}`);
+  console.log(`check ${id}: stress template=${stressResult.value.templateHash} matrix=${stressResult.value.hash} renders=${stressResult.value.entries.length}`);
 }

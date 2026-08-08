@@ -45,6 +45,7 @@ export type Canvas2DLike = {
   beginPath(): void;
   closePath(): void;
   moveTo(x: number, y: number): void;
+  lineTo(x: number, y: number): void;
   rect(x: number, y: number, width: number, height: number): void;
   arc(x: number, y: number, radius: number, startAngle: number, endAngle: number): void;
   ellipse(

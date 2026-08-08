@@ -15,7 +15,7 @@ import type {
   FirstAdInput,
 } from "../types.ts";
 import { hashTemplateDoc } from "./template-hash.ts";
-import type { AdDocInstance, AdTemplateDocV2 } from "./template-doc.ts";
+import type { AdDocInstance, AdTemplateDocV2, TemplatePublishDefaults } from "./template-doc.ts";
 import { renderAdDocToPng } from "./render/server.ts";
 import { persistAdDocRender } from "./media.ts";
 
@@ -89,6 +89,35 @@ async function focalFromBytes(bytes: Buffer, width: number, height: number) {
 
 function dataUrlFromRef(ref: string): string | null {
   return ref.startsWith("data:image/") ? ref : null;
+}
+
+/**
+ * Persist the validated publish contract with the generated campaign. Publish
+ * workers must never reload a mutable template doc to learn how this ad was
+ * approved to run.
+ */
+function snapshotPublishDefaults(publish: TemplatePublishDefaults): TemplatePublishDefaults {
+  return {
+    ...publish,
+    copy: {
+      primaryText: [...publish.copy.primaryText],
+      headlines: [...publish.copy.headlines],
+      descriptions: [...publish.copy.descriptions],
+    },
+    leadForm: {
+      ...publish.leadForm,
+      questions: [...publish.leadForm.questions],
+      thankYou: { ...publish.leadForm.thankYou },
+    },
+    placements: {
+      publisherPlatforms: [...publish.placements.publisherPlatforms],
+      facebookPositions: [...publish.placements.facebookPositions],
+      instagramPositions: [...publish.placements.instagramPositions],
+    },
+    formatRouting: { ...publish.formatRouting },
+    creativeFeatures: { ...publish.creativeFeatures },
+    previewFormats: [...publish.previewFormats],
+  };
 }
 
 export async function generateV2Campaign(input: V2GenerationInput): Promise<V2GenerationResult> {
@@ -303,11 +332,16 @@ export async function generateV2Campaign(input: V2GenerationInput): Promise<V2Ge
       audienceIntent: template.audienceIntent,
       offerId: template.offerId,
       templateKey: template.id,
-      // v2 docs ship through the operator ingestion pipeline; the v2 identity
-      // itself lives in templateSnapshot (schema + hash).
+      // The full validated publish block is immutable campaign input. Meta
+      // publishing reads this snapshot, never the mutable template gallery.
       templateSource: "operator",
       sourceObservedAdId: template.provenance.sourceAd.creativeId ?? null,
-      templateSnapshot: { schema: template.schema, id: template.id, templateHash },
+      templateSnapshot: {
+        schema: template.schema,
+        id: template.id,
+        templateHash,
+        publish: snapshotPublishDefaults(template.publish),
+      },
       platforms: ["meta"],
       creativeFormats: storyInstance ? ["4:5", "9:16"] : ["4:5"],
       status: "draft",

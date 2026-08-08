@@ -17,9 +17,9 @@
 //   4. contract — keys unique, no orphans between inputs and layers.
 //   5. safe zones (qa+ready) — no text/slot content in top 250 / bottom 340
 //                 of story layouts; Reels 672 warning.
-//   6. ready evidence — qaBy/qaAt, residuals <= threshold, story present,
-//                 restyle non-trivial + sample != source, minSourcePx on
-//                 every slot.
+//   6. ready evidence — authenticated curation + human review, exact native
+//                 fidelity, complete replayable stress matrix, safe public
+//                 sample, and minSourcePx on every slot.
 //   7. publish block — CTA in lead subset, copy <=5 within 125/40/90,
 //                 lead-form questions, placements cover formatRouting,
 //                 creativeFeatures covers the full known list.
@@ -30,7 +30,9 @@ import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 
-import { templateDocV2Schema } from "../../src/lib/adstudio/v2/template-doc.ts";
+import { fidelityTemplateHash, nativeSurfaceFor, runNativeSurfaceFidelity, runStressMatrix } from "../../src/lib/adstudio/v2/fidelity-stress.ts";
+import { hashCanonicalJson } from "../../src/lib/adstudio/v2/template-hash.ts";
+import { hasNonTrivialRestyle, normalizeCanonicalJson, templateDocV2Schema } from "../../src/lib/adstudio/v2/template-doc.ts";
 
 const root = process.cwd();
 const galleryDir = resolve(process.env.ADSTUDIO_GALLERY_V2_DIR ?? join(root, "src", "lib", "adstudio", "template-gallery-v2"));
@@ -63,6 +65,10 @@ const LEAD_CTA_SUBSET = new Set(["LEARN_MORE", "SIGN_UP", "GET_QUOTE", "APPLY_NO
 const STORY_TOP_PX = 250;
 const STORY_BOTTOM_PX = 340;
 const RESIDUAL_THRESHOLD = 0.14;
+const OPERATOR_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const OPERATOR_USER_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const STRESS_SCENARIOS = ["longest-copy", "one-character-copy", "minimum-resolution", "all-portrait", "all-landscape"];
+const STRESS_FORMATS = ["4:5", "9:16"];
 
 // ─── load docs ──────────────────────────────────────────────────────────────
 
@@ -131,6 +137,48 @@ for (const doc of docs) {
 
 function sha256File(path) {
   return createHash("sha256").update(readFileSync(path)).digest("hex");
+}
+
+function readEvidence(id) {
+  const path = join(galleryDir, id, "evidence.json");
+  if (!existsSync(path)) return null;
+  try {
+    return JSON.parse(readFileSync(path, "utf8"));
+  } catch {
+    return null;
+  }
+}
+
+function canonicalEqual(left, right) {
+  return normalizeCanonicalJson(left) === normalizeCanonicalJson(right);
+}
+
+function isIsoTimestamp(value) {
+  return typeof value === "string" && !Number.isNaN(Date.parse(value));
+}
+
+function expectedNativeTextLayers(doc) {
+  const nativeSurface = nativeSurfaceFor(doc);
+  const layout = doc.formats[nativeSurface];
+  const baked = new Set(doc.exactness.bakedTextKeys);
+  return {
+    nativeSurface,
+    layers: layout.layers.filter((layer) => layer.type === "text" && !baked.has(layer.inputKey)),
+  };
+}
+
+function hasExactlyKeys(record, keys) {
+  const actual = Object.keys(record ?? {}).sort();
+  const expected = [...keys].sort();
+  return actual.length === expected.length && actual.every((key, index) => key === expected[index]);
+}
+
+function sourcePathFor(doc) {
+  const file = doc.provenance.sourceAd.file;
+  if (!file) return null;
+  const sourceRoot = resolve(root, "meta_ad_candidates");
+  const path = resolve(sourceRoot, file);
+  return path.startsWith(`${sourceRoot}/`) && existsSync(path) ? path : null;
 }
 
 function readPngLikeDimensions(path) {
@@ -215,17 +263,107 @@ for (const doc of docs) {
 
   // 6. ready evidence
   if (status === "ready") {
-    if (!doc.exactness.qaBy || !doc.exactness.qaAt) fail(`${doc.id}: ready requires qaBy/qaAt`);
     if (!doc.formats.story) fail(`${doc.id}: ready requires a story layout`);
+    if (doc.exactness.bakedTextKeys.length > 0) fail(`${doc.id}: ready cannot expose baked source text`);
+    const editable = doc.inputs.text.filter((input) => !doc.exactness.bakedTextKeys.includes(input.key));
+    if (editable.length === 0) fail(`${doc.id}: ready requires at least one customer-visible editable text field`);
+
+    const evidence = readEvidence(doc.id);
+    for (const input of editable) {
+      if (typeof evidence?.sourceValues?.[input.key] !== "string" || evidence.sourceValues[input.key].trim().length === 0) {
+        fail(`${doc.id}: editable text ${input.key} lacks a non-blank sourceValues record`);
+      }
+      if (typeof input.sample !== "string" || input.sample.trim().length === 0) {
+        fail(`${doc.id}: editable text ${input.key} has blank public sample copy`);
+      } else if (input.sample.trim() === evidence?.sourceValues?.[input.key]?.trim()) {
+        fail(`${doc.id}: editable text ${input.key} public sample copy still equals private source text`);
+      }
+    }
+    const curation = evidence?.sourceCuration;
+    if (!curation?.accepted
+      || !OPERATOR_USER_ID.test(curation.reviewerUserId ?? "")
+      || !OPERATOR_EMAIL.test(curation.reviewerEmail ?? "")
+      || !isIsoTimestamp(curation.reviewedAt)
+      || !curation.classification
+      || !String(curation.rationale ?? "").trim()) {
+      fail(`${doc.id}: ready requires accepted sourceCuration with authenticated reviewerUserId, reviewerEmail, timestamp, classification, and rationale`);
+    } else if (!canonicalEqual(curation.classification, doc.classification)) {
+      fail(`${doc.id}: sourceCuration classification does not match template classification`);
+    }
+
+    const residualEvidence = doc.exactness.residualEvidence;
+    if (!residualEvidence) {
+      fail(`${doc.id}: ready requires replay-bound residual evidence`);
+    } else {
+      if (residualEvidence.sourceContentHash !== doc.provenance.sourceAd.contentHash) fail(`${doc.id}: residual evidence source hash is stale`);
+      if (residualEvidence.templateHash !== fidelityTemplateHash(doc)) fail(`${doc.id}: residual evidence template hash is stale`);
+      if (!isIsoTimestamp(residualEvidence.checkedAt)) fail(`${doc.id}: residual evidence timestamp is invalid`);
+      const native = expectedNativeTextLayers(doc);
+      if (residualEvidence.nativeSurface !== native.nativeSurface) {
+        fail(`${doc.id}: fidelity evidence must cover native ${native.nativeSurface}, never a derived surface`);
+      }
+      const nativeLayerIds = native.layers.map((layer) => layer.id);
+      if (!hasExactlyKeys(residualEvidence.residuals, nativeLayerIds)) {
+        fail(`${doc.id}: native residual evidence must contain exactly every editable ${native.nativeSurface} text layer`);
+      }
+      if (!canonicalEqual(doc.exactness.residuals, residualEvidence.residuals)) {
+        fail(`${doc.id}: residual summary must exactly match replay-bound native residual evidence`);
+      }
+      if (residualEvidence.outside.differingPixels !== 0 || residualEvidence.outside.differingBounds !== null || residualEvidence.outside.totalPixels <= 0) {
+        fail(`${doc.id}: native fidelity changed pixels outside editable text regions`);
+      }
+      for (const [layerId, residual] of Object.entries(residualEvidence.residuals)) {
+        if (residual > RESIDUAL_THRESHOLD) fail(`${doc.id}: native residual ${residual} for ${layerId} exceeds ${RESIDUAL_THRESHOLD}`);
+      }
+    }
     for (const [layerId, residual] of Object.entries(doc.exactness.residuals)) {
       if (residual > RESIDUAL_THRESHOLD) fail(`${doc.id}: residual ${residual} for ${layerId} exceeds ${RESIDUAL_THRESHOLD}`);
     }
-    const restyleTrivial = Object.keys(doc.restyle.paletteMap ?? {}).length === 0
-      && !doc.restyle.plateRemap
-      && (doc.restyle.replacedAssets ?? []).length === 0;
-    if (restyleTrivial) fail(`${doc.id}: restyle evidence is trivial (D5)`);
+    if (!hasNonTrivialRestyle(doc)) fail(`${doc.id}: restyle is incomplete: every declared image input needs one hashed safe replacement asset`);
+    const replacementKeys = (doc.restyle.safeReplacementAssets ?? []).map((asset) => asset.inputKey);
+    if (!hasExactlyKeys(Object.fromEntries(replacementKeys.map((key) => [key, true])), doc.inputs.images.map((input) => input.key))
+      || new Set(replacementKeys).size !== replacementKeys.length) {
+      fail(`${doc.id}: safe replacement assets must map one-to-one to declared image inputs`);
+    }
+    for (const asset of doc.restyle.safeReplacementAssets ?? []) {
+      const path = join(publicDir, asset.src.replace(/^\//, ""));
+      if (!existsSync(path)) fail(`${doc.id}: safe replacement asset missing at ${asset.src}`);
+      else if (sha256File(path) !== asset.sha256) fail(`${doc.id}: safe replacement asset sha256 mismatch for ${asset.src}`);
+    }
     if (doc.provenance.sample.contentHash === doc.provenance.sourceAd.contentHash) {
       fail(`${doc.id}: sample hash equals source hash`);
+    }
+    const stressEvidence = doc.exactness.stressEvidence;
+    if (!stressEvidence) {
+      fail(`${doc.id}: ready requires the complete stress preview evidence`);
+    } else {
+      if (stressEvidence.templateHash !== fidelityTemplateHash(doc)) fail(`${doc.id}: stress evidence template hash is stale`);
+      if (!isIsoTimestamp(stressEvidence.checkedAt)) fail(`${doc.id}: stress evidence timestamp is invalid`);
+      const expectedStressEntries = STRESS_SCENARIOS.flatMap((scenario) => STRESS_FORMATS.map((format) => `${format}:${scenario}`));
+      const actualStressEntries = stressEvidence.entries.map((entry) => `${entry.format}:${entry.scenario}`);
+      if (stressEvidence.entries.length !== 10 || !hasExactlyKeys(Object.fromEntries(actualStressEntries.map((entry) => [entry, true])), expectedStressEntries)
+        || new Set(actualStressEntries).size !== actualStressEntries.length) {
+        fail(`${doc.id}: stress evidence must contain exactly ten feed/story × five-scenario entries`);
+      }
+      const canonicalMatrixHash = hashCanonicalJson({ templateHash: stressEvidence.templateHash, entries: stressEvidence.entries });
+      if (stressEvidence.matrixHash !== canonicalMatrixHash) fail(`${doc.id}: stress evidence matrix hash is stale or fabricated`);
+    }
+    const reviewEvidence = doc.exactness.reviewEvidence;
+    if (!reviewEvidence) {
+      fail(`${doc.id}: ready requires authenticated human review evidence`);
+    } else {
+      if (!OPERATOR_USER_ID.test(reviewEvidence.reviewerUserId) || !OPERATOR_EMAIL.test(reviewEvidence.reviewerEmail) || !isIsoTimestamp(reviewEvidence.reviewedAt)
+        || reviewEvidence.confirmation !== "inspected-at-100-percent") {
+        fail(`${doc.id}: review evidence requires authenticated reviewerUserId, reviewerEmail, timestamp, and 100% confirmation`);
+      }
+      if (reviewEvidence.templateHash !== fidelityTemplateHash(doc)
+        || reviewEvidence.sourceContentHash !== doc.provenance.sourceAd.contentHash
+        || reviewEvidence.sampleContentHash !== doc.provenance.sample.contentHash) {
+        fail(`${doc.id}: review evidence is not bound to the current template, source, and sample`);
+      }
+      if (curation && reviewEvidence.sourceCurationHash !== hashCanonicalJson(curation)) fail(`${doc.id}: review evidence source curation hash is stale`);
+      if (residualEvidence && reviewEvidence.fidelityEvidenceHash !== hashCanonicalJson(residualEvidence)) fail(`${doc.id}: review evidence fidelity hash is stale`);
+      if (stressEvidence && reviewEvidence.stressEvidenceHash !== hashCanonicalJson(stressEvidence)) fail(`${doc.id}: review evidence stress hash is stale`);
     }
     for (const layout of layouts) {
       for (const layer of layout.layers) {
@@ -353,12 +491,34 @@ if (docs.length > 0) {
   }
 }
 
-// ── 9. renderer smoke for ready templates: both formats + stress matrix ───
+// ── 9. replay the ready evidence, then render both formats + stress matrix ──
 // Skipped in fast mode (the unit test embedding this gate stays fast; the
-// dedicated CI step runs the full gate without the flag).
+// dedicated CI step runs the full gate without the flag). Stored evidence is
+// still fully hash-checked above in fast mode; this path independently reruns
+// the native fidelity and stress matrix so a hand-written report cannot pass.
 if (!process.env.ADSTUDIO_V2_GATE_FAST && docs.some((doc) => doc.exactness.status === "ready")) {
   const { renderAdDocToPng } = await import("../../src/lib/adstudio/v2/render/server.ts");
   for (const doc of docs.filter((entry) => entry.exactness.status === "ready")) {
+    const evidence = readEvidence(doc.id);
+    const residualEvidence = doc.exactness.residualEvidence;
+    const stressEvidence = doc.exactness.stressEvidence;
+    const sourcePath = sourcePathFor(doc);
+    if (!sourcePath || !residualEvidence) {
+      fail(`${doc.id}: ready fidelity replay requires the recorded local source asset and residual evidence`);
+    } else {
+      try {
+        const replay = await runNativeSurfaceFidelity(doc, {
+          sourceBytes: readFileSync(sourcePath),
+          sourceValues: evidence?.sourceValues ?? {},
+          checkedAt: residualEvidence.checkedAt,
+        });
+        if (!canonicalEqual(replay, residualEvidence)) {
+          fail(`${doc.id}: native fidelity replay does not match recorded residual evidence`);
+        }
+      } catch (error) {
+        fail(`${doc.id}: native fidelity replay failed: ${error?.message ?? error}`);
+      }
+    }
     const values = {
       images: {},
       text: Object.fromEntries(doc.inputs.text.map((input) => [input.key, input.sample])),
@@ -379,25 +539,13 @@ if (!process.env.ADSTUDIO_V2_GATE_FAST && docs.some((doc) => doc.exactness.statu
         fail(`${doc.id}: ${key} smoke render threw: ${error?.message ?? error}`);
       }
     }
-    const editable = doc.inputs.text.filter((input) => !doc.exactness.bakedTextKeys.includes(input.key));
-    for (const [name, textValues] of [
-      ["longest", Object.fromEntries(editable.map((input) => [input.key, "W".repeat(input.maxLength)]))],
-      ["one-char", Object.fromEntries(editable.map((input) => [input.key, "W"]))],
-    ]) {
-      try {
-        await renderAdDocToPng(doc, {
-          schema: "adstudio.instance.v2",
-          templateId: doc.id,
-          templateHash: "0".repeat(64),
-          format: doc.formats.feed.format,
-          values: { images: {}, text: textValues },
-          overrides: [],
-        }, doc.formats.feed.format);
-      } catch (error) {
-        if (error?.name !== "RenderFitError") {
-          fail(`${doc.id}: stress ${name} threw non-fit error: ${error?.message ?? error}`);
-        }
+    try {
+      const replay = await runStressMatrix(doc);
+      if (!stressEvidence || replay.hash !== stressEvidence.matrixHash || !canonicalEqual(replay.entries, stressEvidence.entries)) {
+        fail(`${doc.id}: stress matrix replay does not match recorded evidence`);
       }
+    } catch (error) {
+      fail(`${doc.id}: stress matrix replay threw: ${error?.message ?? error}`);
     }
   }
 }

@@ -29,9 +29,7 @@
     "decomposedFrom": "source"
   },
   "restyle": {
-    "paletteMap": {
-      "#1f242b": "#1f242b"
-    },
+    "paletteMap": {},
     "replacedAssets": [],
     "note": "migrated from v1 (source); restyle pass pending in Studio"
   },
@@ -385,7 +383,7 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "ready",
+    "status": "qa",
     "residuals": {
       "text-subheadline": 0.005494364121208373,
       "text-agent_name": 0.11390848382960436
@@ -396,8 +394,6 @@
       "email",
       "website",
       "agent_role"
-    ],
-    "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
-    "qaAt": "2026-08-07T12:15:01.206Z"
+    ]
   }
 }

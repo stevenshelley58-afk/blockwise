@@ -3,13 +3,14 @@ import { NextResponse, type NextRequest } from "next/server";
 import { requireAdStudioRequest } from "@/lib/adstudio/http";
 import { loadLiveAdStudioBundle } from "@/lib/adstudio/load-live-bundle";
 import {
+  adDocInstanceTemplateViolation,
   adDocInstanceSchema,
   isAdDocInstanceShape,
   type AdDocInstance,
 } from "@/lib/adstudio/v2/template-doc";
-import { loadTemplateV2 } from "@/lib/adstudio/v2/template-resolver";
+import { loadTemplateV2ByHash, matchesAdDocTemplatePin } from "@/lib/adstudio/v2/template-resolver";
 import { renderAdDocToPng } from "@/lib/adstudio/v2/render/server.ts";
-import { persistAdDocRender } from "@/lib/adstudio/v2/media.ts";
+import { AdDocSlotMediaError, persistAdDocRender, resolveAdDocSlotBytes } from "@/lib/adstudio/v2/media.ts";
 import {
   appendAdStudioCreativeRevision,
   executeAdStudioCreativeRevisionMutation,
@@ -54,30 +55,47 @@ export async function POST(request: NextRequest, routeContext: { params: Promise
   }
   const instance: AdDocInstance = parsed.data;
 
-  const template = loadTemplateV2(instance.templateId);
-  if (!template) {
-    return NextResponse.json({ error: "Unknown template for this ad." }, { status: 404 });
+  // Validate the current, workspace-scoped creative before doing any media
+  // resolution, render, storage write, or mutation claim. The CAS RPC below
+  // remains the authority for freshness; this check only establishes that the
+  // submitted document is editing this creative's immutable template pin.
+  const { data: creative, error: creativeError } = await access.supabase
+    .from("adstudio_creatives")
+    .select("canvas_json")
+    .eq("workspace_id", access.access.workspaceId)
+    .eq("id", id)
+    .maybeSingle();
+  if (creativeError) {
+    return NextResponse.json({ error: "The ad could not be loaded." }, { status: 500 });
+  }
+  if (!creative) return NextResponse.json({ error: "Ad not found." }, { status: 404 });
+  if (!matchesAdDocTemplatePin(creative.canvas_json, instance)) {
+    return NextResponse.json({ error: "ADSTUDIO_TEMPLATE_PIN_MISMATCH" }, { status: 409 });
   }
 
-  // Server-side floor: overrides may only touch real, unlocked layers;
-  // colours must be #rrggbb. (Guided-mode whitelists are UI-level; the doc
-  // schema already bounds ops/keys.)
-  const layerIds = new Set(
-    [template.formats.feed, template.formats.story].flatMap((layout) => layout?.layers.map((layer) => layer.id) ?? []),
-  );
-  for (const override of instance.overrides) {
-    if (!layerIds.has(override.layerId)) {
-      return NextResponse.json({ error: `Unknown layer ${override.layerId}.` }, { status: 422 });
-    }
-    if (template.editPolicy.lockedLayerIds.includes(override.layerId)) {
-      return NextResponse.json({ error: `Layer ${override.layerId} is locked by the template.` }, { status: 422 });
-    }
-    if (override.op === "color" && !/^#[0-9a-f]{6}$/i.test(override.color)) {
-      return NextResponse.json({ error: "Colours must be #rrggbb." }, { status: 422 });
-    }
+  const template = loadTemplateV2ByHash(instance.templateId, instance.templateHash);
+  if (!template) {
+    return NextResponse.json({ error: "ADSTUDIO_TEMPLATE_VERSION_UNAVAILABLE" }, { status: 409 });
   }
+
+  const violation = adDocInstanceTemplateViolation(template, instance);
+  if (violation) return NextResponse.json({ error: violation }, { status: 422 });
 
   const serviceSupabase = createSupabaseServiceClient();
+  let slotBytes: Map<string, Buffer>;
+  try {
+    slotBytes = await resolveAdDocSlotBytes({
+      supabase: serviceSupabase,
+      workspaceId: access.access.workspaceId,
+      template,
+      instance,
+    });
+  } catch (error) {
+    if (error instanceof AdDocSlotMediaError) {
+      return NextResponse.json({ error: error.message }, { status: 422 });
+    }
+    throw error;
+  }
   const { createHash } = await import("node:crypto");
   const requestHash = createHash("sha256").update(JSON.stringify(body.instance)).digest("hex");
   const claim = await executeAdStudioCreativeRevisionMutation(
@@ -97,7 +115,7 @@ export async function POST(request: NextRequest, routeContext: { params: Promise
         ...(template.formats.story ? ([["story", "9:16"]] as Array<["story", "9:16"]>) : []),
       ];
       for (const [slot, format] of formats) {
-        const png = await renderAdDocToPng(template, { ...instance, format }, format);
+        const png = await renderAdDocToPng(template, { ...instance, format }, format, { slotBytes });
         const storagePath = await persistAdDocRender({
           supabase: serviceSupabase as never,
           workspaceId: access.access.workspaceId,

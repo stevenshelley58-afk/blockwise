@@ -7,6 +7,7 @@
     "adstudio:build-type-regions": "node scripts/build/font-corpus/adstudio-type-specs.mjs --regions-only",
     "adstudio:build-runtime-fonts": "node scripts/build/font-corpus/build-runtime-fonts.mjs",
     "dev": "next dev",
+    "prebuild": "node scripts/verify/adstudio-templates-v2.mjs",
     "build": "next build",
     "start": "next start",
     "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test tests/*.test.ts tests/**/*.test.ts tests/**/*.test.mjs",

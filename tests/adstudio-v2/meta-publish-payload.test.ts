@@ -52,6 +52,57 @@ function buildPackWithLegacyCta() {
   return pack;
 }
 
+function buildV2PublishPack() {
+  const pack = buildCloneTestPack("workspace_demo");
+  const base = pack.creatives[0];
+  const renders = {
+    feed: "workspace_demo/adstudio/renders/v2-feed.png",
+    story: "workspace_demo/adstudio/renders/v2-story.png",
+  };
+  const instance = {
+    schema: "adstudio.instance.v2" as const,
+    templateId: "meta-publish-fixture",
+    templateHash: "a".repeat(64),
+    format: "4:5" as const,
+    values: { images: {}, text: {} },
+    overrides: [],
+    renders,
+  };
+  pack.creatives = [
+    { ...base, creativeId: "creative-v2-feed", format: "4:5", canvas: instance as never },
+    { ...base, creativeId: "creative-v2-story", format: "9:16", canvas: { ...instance, format: "9:16" } as never },
+  ];
+  pack.campaign.templateSnapshot = {
+    schema: "adstudio.template.v2",
+    id: "meta-publish-fixture",
+    templateHash: "a".repeat(64),
+    publish: {
+      cta: "DOWNLOAD",
+      leadForm: {
+        headline: "Snapshot lead form",
+        questions: ["Which suburb are you considering?"],
+        thankYou: { title: "Snapshot received", body: "We will call shortly." },
+      },
+      placements: {
+        publisherPlatforms: ["instagram"],
+        facebookPositions: [],
+        instagramPositions: ["story"],
+      },
+      formatRouting: { feed: "4:5", story: "9:16" },
+      creativeFeatures: {
+        ...Object.fromEntries(META_CREATIVE_FEATURE_KEYS.map((key) => [key, "OPT_OUT"])),
+        adapt_to_placement: "OPT_IN",
+        image_touchups: "OPT_IN",
+      },
+    },
+  };
+  // v2 publish must use the immutable validated snapshot, not mutable pack
+  // copy values that happen to be persisted beside it.
+  pack.copyPacks[0].meta.cta = "LEARN_MORE";
+  pack.copyPacks[0].meta.leadForm.headline = "Mutable lead form";
+  return pack;
+}
+
 function inlineAsset(filename: string) {
   return { type: "image", source: "inline", mimeType: "image/png", filename, bytesBase64: "iVBORw0KGgo=" } as const;
 }
@@ -100,6 +151,70 @@ function creativeBodies(captured: Captured[]): Array<Record<string, unknown>> {
     .filter((c) => c.url.includes("/adcreatives"))
     .map((c) => c.body);
 }
+
+test("v2 publish plan uses canonical feed/story renders and its publish snapshot", () => {
+  const plan = buildMetaPublishPlan({
+    workspaceId: "workspace_demo",
+    campaignPack: buildV2PublishPack(),
+    connectionId: "connection_123",
+    setup,
+  });
+
+  const creative = plan.creatives[0];
+  assert.equal(creative.asset?.storagePath, "workspace_demo/adstudio/renders/v2-feed.png");
+  assert.equal(creative.formatAssets?.feed?.storagePath, "workspace_demo/adstudio/renders/v2-feed.png");
+  assert.equal(creative.formatAssets?.story?.storagePath, "workspace_demo/adstudio/renders/v2-story.png");
+  assert.equal(creative.cta, "DOWNLOAD");
+  assert.equal(plan.leadForms[0].headline, "Snapshot lead form");
+  assert.deepEqual(plan.controls.placements, {
+    publisherPlatforms: ["instagram"],
+    facebookPositions: [],
+    instagramPositions: ["story"],
+  });
+  assert.equal(plan.creativeFeatures?.adapt_to_placement, "OPT_IN");
+  assert.equal(plan.creativeFeatures?.image_touchups, "OPT_IN");
+});
+
+test("v2 format routing can exclude a story asset without touching the feed render", () => {
+  const pack = buildV2PublishPack();
+  const snapshot = pack.campaign.templateSnapshot as { publish: { formatRouting: { story: "9:16" | null } } };
+  snapshot.publish.formatRouting.story = null;
+
+  const plan = buildMetaPublishPlan({
+    workspaceId: "workspace_demo",
+    campaignPack: pack,
+    connectionId: "connection_123",
+    setup,
+  });
+
+  assert.equal(plan.creatives[0].asset?.storagePath, "workspace_demo/adstudio/renders/v2-feed.png");
+  assert.equal(plan.creatives[0].formatAssets?.feed?.storagePath, "workspace_demo/adstudio/renders/v2-feed.png");
+  assert.equal(plan.creatives[0].formatAssets?.story, null);
+});
+
+test("v2 publishing fails closed when the immutable enhancement controls are incomplete", () => {
+  const pack = buildV2PublishPack();
+  const snapshot = pack.campaign.templateSnapshot as { publish: { creativeFeatures: Record<string, string> } };
+  delete snapshot.publish.creativeFeatures.image_background_gen;
+
+  assert.throws(
+    () => buildMetaPublishPlan({ workspaceId: "workspace_demo", campaignPack: pack, connectionId: "connection_123", setup }),
+    /invalid template publish snapshot/,
+  );
+});
+
+test("v1 canvas publishing remains on its legacy image path", () => {
+  const plan = buildMetaPublishPlan({
+    workspaceId: "workspace_demo",
+    campaignPack: buildCloneTestPack("workspace_demo"),
+    connectionId: "connection_123",
+    setup,
+  });
+
+  assert.equal(plan.creatives[0].asset?.source, "inline");
+  assert.equal(plan.creatives[0].asset?.bytesBase64, "ZmVlZA==");
+  assert.equal(plan.creatives[0].formatAssets, null);
+});
 
 test("payload snapshot: flag off → single image, no asset_feed, all enhancements OPT_OUT", async () => {
   const plan = buildMetaPublishPlan({

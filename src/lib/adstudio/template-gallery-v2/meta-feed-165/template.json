@@ -32,9 +32,7 @@
     "decomposedFrom": "source"
   },
   "restyle": {
-    "paletteMap": {
-      "#1f242b": "#1f242b"
-    },
+    "paletteMap": {},
     "replacedAssets": [],
     "note": "migrated from v1 (source); restyle pass pending in Studio"
   },
@@ -428,7 +426,7 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "ready",
+    "status": "qa",
     "residuals": {
       "text-feature_1": 0.0240420367675148,
       "text-feature_3": 0.09245278728051108,
@@ -438,8 +436,6 @@
       "headline",
       "price_info",
       "feature_2"
-    ],
-    "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
-    "qaAt": "2026-08-07T08:18:00.293Z"
+    ]
   }
 }

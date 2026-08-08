@@ -29,9 +29,7 @@
     "decomposedFrom": "source"
   },
   "restyle": {
-    "paletteMap": {
-      "#1f242b": "#1f242b"
-    },
+    "paletteMap": {},
     "replacedAssets": [
       "background_photo"
     ],
@@ -390,7 +388,7 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "ready",
+    "status": "qa",
     "residuals": {
       "text-subheadline": 0.1338882049362788,
       "text-website": 0.05964861590903582
@@ -398,8 +396,6 @@
     "bakedTextKeys": [
       "headline",
       "cta"
-    ],
-    "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
-    "qaAt": "2026-08-07T12:06:16.213Z"
+    ]
   }
 }

@@ -31,9 +31,7 @@
     "decomposedFrom": "source"
   },
   "restyle": {
-    "paletteMap": {
-      "#1f242b": "#1f242b"
-    },
+    "paletteMap": {},
     "replacedAssets": [
       "property_photo",
       "agent_photo"
@@ -367,7 +365,7 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "ready",
+    "status": "qa",
     "residuals": {
       "text-contact_phone": 0.09188479609284698
     },
@@ -375,8 +373,6 @@
       "main_message",
       "property_address",
       "contact_email"
-    ],
-    "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
-    "qaAt": "2026-08-07T11:03:42.636Z"
+    ]
   }
 }

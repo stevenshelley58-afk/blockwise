@@ -31,9 +31,7 @@
     "decomposedFrom": "source"
   },
   "restyle": {
-    "paletteMap": {
-      "#1f242b": "#1f242b"
-    },
+    "paletteMap": {},
     "replacedAssets": [
       "main_exterior",
       "interior_1",
@@ -744,7 +742,7 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "ready",
+    "status": "qa",
     "residuals": {
       "text-agent_website": 0.07897189792356855,
       "text-bathrooms": 0,
@@ -759,8 +757,6 @@
       "agent_phone",
       "features",
       "listing_price"
-    ],
-    "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
-    "qaAt": "2026-08-07T11:03:51.888Z"
+    ]
   }
 }

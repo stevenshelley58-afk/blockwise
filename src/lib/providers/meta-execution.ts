@@ -1,9 +1,10 @@
 import { createHash } from "node:crypto";
 
-import type { AdStudioCampaignPack } from "../adstudio/index.ts";
+import type { AdStudioCampaignPack, AdStudioCreative } from "../adstudio/index.ts";
 import { deterministicUuid } from "../adstudio/id.ts";
 import { remapLegacyMetaCta } from "../adstudio/meta-cta.ts";
 import { metaAssetFeedEnabled } from "../adstudio/v2/flags.ts";
+import type { AdDocInstance, TemplatePublishDefaults } from "../adstudio/v2/template-doc.ts";
 import { evaluatePublishReadiness, type ApprovalStatus, type ProviderConnectionStatus } from "../publishing/readiness.ts";
 import type { ComplianceStatus } from "../compliance/real-estate-policy.ts";
 import type { createSupabaseServiceClient } from "../supabase/service.ts";
@@ -349,7 +350,8 @@ export function buildMetaPublishPlan(input: {
   const selectedVariantIds = (input.variantIds ?? []).filter((id) => typeof id === "string" && id.trim().length > 0);
   const abTest = selectedVariantIds.length > 0;
   const campaignPack = abTest ? filterPackToVariants(input.campaignPack, selectedVariantIds) : input.campaignPack;
-  const controls = normalizeMetaPublishControls(input.controls, campaignPack);
+  const templatePublish = readV2TemplatePublish(campaignPack);
+  const controls = normalizeMetaPublishControls(input.controls, campaignPack, templatePublish?.placements);
   const setup = normalizeMetaConnectionSetup(input.setup);
   const existingMetaCampaignId = input.existingMetaCampaignId?.trim() || null;
   const campaign: MetaPublishCampaignPlan = {
@@ -364,10 +366,10 @@ export function buildMetaPublishPlan(input: {
       : "campaign",
   };
   const adSets = buildAdSetPlans(campaignPack, controls);
-  const leadForms = buildLeadFormPlans(campaignPack, setup, controls.destinationUrl);
-  const creatives = buildCreativePlans(campaignPack, setup);
+  const leadForms = buildLeadFormPlans(campaignPack, setup, controls.destinationUrl, templatePublish);
+  const creatives = buildCreativePlans(campaignPack, setup, templatePublish);
   const ads = buildAdPlans(campaignPack);
-  const creativeFeatures = buildDefaultMetaCreativeFeatures();
+  const creativeFeatures = templatePublish?.creativeFeatures ?? buildDefaultMetaCreativeFeatures();
   const assetFeedEnabled = metaAssetFeedEnabled()
     && creatives.some((creative) => creative.formatAssets?.story);
   if (assetFeedEnabled) {
@@ -1592,22 +1594,105 @@ function buildTargeting(controls: MetaPublishControls): Record<string, unknown> 
   };
 }
 
-function buildLeadFormPlans(pack: AdStudioCampaignPack, setup: MetaConnectionSetup, destinationUrl?: string): MetaPublishLeadFormPlan[] {
-  return pack.copyPacks.slice(0, 6).map((copy, index) => ({
-    localId: `form_${index + 1}`,
-    name: `${pack.campaign.market.suburb} ${copy.meta.leadForm.headline}`,
-    headline: copy.meta.leadForm.headline,
-    questions: copy.meta.leadForm.questions,
-    privacyPolicyUrl: setup.privacyPolicyUrl,
-    thankYouTitle: copy.meta.leadForm.thankYouScreen.title,
-    thankYouBody: copy.meta.leadForm.thankYouScreen.body,
-    thankYouWebsiteUrl: destinationUrl ?? setup.privacyPolicyUrl,
-  }));
+type V2TemplatePublishPlan = Pick<
+  TemplatePublishDefaults,
+  "cta" | "leadForm" | "placements" | "formatRouting" | "creativeFeatures"
+>;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
-function buildCreativePlans(pack: AdStudioCampaignPack, setup: MetaConnectionSetup): MetaPublishCreativePlan[] {
+/** Read only the persisted, validated v2 publish contract — never the gallery. */
+function readV2TemplatePublish(pack: AdStudioCampaignPack): V2TemplatePublishPlan | null {
+  const snapshot = pack.campaign.templateSnapshot;
+  if (!isRecord(snapshot) || snapshot.schema !== "adstudio.template.v2") return null;
+  if (!isRecord(snapshot.publish)) {
+    throw new Error("This v2 campaign is missing its immutable template publish snapshot. Regenerate it before publishing.");
+  }
+
+  const publish = snapshot.publish;
+  const placements = publish.placements;
+  const routing = publish.formatRouting;
+  const leadForm = publish.leadForm;
+  const creativeFeatureKeys = isRecord(publish.creativeFeatures)
+    ? Object.keys(publish.creativeFeatures)
+    : [];
+  if (
+    typeof publish.cta !== "string"
+    || !isRecord(placements)
+    || !Array.isArray(placements.publisherPlatforms)
+    || !placements.publisherPlatforms.every((value) => value === "facebook" || value === "instagram")
+    || !Array.isArray(placements.facebookPositions)
+    || !placements.facebookPositions.every((value) => typeof value === "string")
+    || !Array.isArray(placements.instagramPositions)
+    || !placements.instagramPositions.every((value) => typeof value === "string")
+    || !isRecord(routing)
+    || routing.feed !== "4:5"
+    || (routing.story !== "9:16" && routing.story !== null)
+    || !isRecord(leadForm)
+    || typeof leadForm.headline !== "string"
+    || !Array.isArray(leadForm.questions)
+    || !leadForm.questions.every((value) => typeof value === "string")
+    || !isRecord(leadForm.thankYou)
+    || typeof leadForm.thankYou.title !== "string"
+    || typeof leadForm.thankYou.body !== "string"
+    || !isRecord(publish.creativeFeatures)
+    || creativeFeatureKeys.length !== META_CREATIVE_FEATURE_KEYS.length
+    || !META_CREATIVE_FEATURE_KEYS.every((key) => creativeFeatureKeys.includes(key))
+    || !Object.values(publish.creativeFeatures).every((value) => value === "OPT_IN" || value === "OPT_OUT")
+  ) {
+    throw new Error("This v2 campaign has an invalid template publish snapshot. Regenerate it before publishing.");
+  }
+
+  return {
+    cta: publish.cta as V2TemplatePublishPlan["cta"],
+    leadForm: {
+      headline: leadForm.headline,
+      questions: [...leadForm.questions] as string[],
+      thankYou: {
+        title: leadForm.thankYou.title,
+        body: leadForm.thankYou.body,
+      },
+    },
+    placements: {
+      publisherPlatforms: [...placements.publisherPlatforms] as Array<"facebook" | "instagram">,
+      facebookPositions: [...placements.facebookPositions] as string[],
+      instagramPositions: [...placements.instagramPositions] as string[],
+    },
+    formatRouting: { feed: "4:5", story: routing.story },
+    creativeFeatures: { ...publish.creativeFeatures } as Record<string, "OPT_IN" | "OPT_OUT">,
+  };
+}
+
+function buildLeadFormPlans(
+  pack: AdStudioCampaignPack,
+  setup: MetaConnectionSetup,
+  destinationUrl?: string,
+  templatePublish?: V2TemplatePublishPlan | null,
+): MetaPublishLeadFormPlan[] {
   return pack.copyPacks.slice(0, 6).map((copy, index) => {
-    const creative = pack.creatives.find((item) => item.variantId === copy.variantId) ?? pack.creatives[index] ?? null;
+    const leadForm = templatePublish?.leadForm;
+    return {
+      localId: `form_${index + 1}`,
+      name: `${pack.campaign.market.suburb} ${leadForm?.headline ?? copy.meta.leadForm.headline}`,
+      headline: leadForm?.headline ?? copy.meta.leadForm.headline,
+      questions: leadForm?.questions ?? copy.meta.leadForm.questions,
+      privacyPolicyUrl: setup.privacyPolicyUrl,
+      thankYouTitle: leadForm?.thankYou.title ?? copy.meta.leadForm.thankYouScreen.title,
+      thankYouBody: leadForm?.thankYou.body ?? copy.meta.leadForm.thankYouScreen.body,
+      thankYouWebsiteUrl: destinationUrl ?? setup.privacyPolicyUrl,
+    };
+  });
+}
+
+function buildCreativePlans(
+  pack: AdStudioCampaignPack,
+  setup: MetaConnectionSetup,
+  templatePublish?: V2TemplatePublishPlan | null,
+): MetaPublishCreativePlan[] {
+  return pack.copyPacks.slice(0, 6).map((copy, index) => {
+    const creative = selectCreativeForPublish(pack, copy.variantId, index);
 
     return {
       localId: `creative_${index + 1}`,
@@ -1619,14 +1704,24 @@ function buildCreativePlans(pack: AdStudioCampaignPack, setup: MetaConnectionSet
       description: copy.meta.descriptions[0] ?? pack.campaign.audienceIntent,
       // Legacy packs may carry CONTACT_US (undocumented for lead ads); the
       // remap happens here, at payload-plan time, with a logged warning.
-      cta: remapLegacyMetaCta(copy.meta.cta),
+      cta: remapLegacyMetaCta(templatePublish?.cta ?? copy.meta.cta),
       leadFormLocalId: `form_${index + 1}`,
       adStudioCreativeId: creative?.creativeId ?? null,
       format: creative?.format ?? null,
       asset: creative ? buildCreativeImageAsset(creative) : null,
-      formatAssets: creative ? buildFormatAssets(creative) : null,
+      formatAssets: creative ? buildFormatAssets(creative, templatePublish?.formatRouting) : null,
     };
   });
+}
+
+function selectCreativeForPublish(pack: AdStudioCampaignPack, variantId: string, index: number): AdStudioCreative | null {
+  const matchingVariant = pack.creatives.filter((creative) => creative.variantId === variantId);
+  // A v2 instance stores the canonical feed and story renders together. Pick
+  // its feed creative as the primary asset regardless of array order.
+  return matchingVariant.find((creative) => isAdDocInstanceCanvas(creative.canvas) && creative.format === "4:5")
+    ?? matchingVariant[0]
+    ?? pack.creatives[index]
+    ?? null;
 }
 
 /**
@@ -1634,28 +1729,16 @@ function buildCreativePlans(pack: AdStudioCampaignPack, setup: MetaConnectionSet
  * canvas.renders (Track E). Absent today, this returns nulls and the publish
  * stays on the single-image path.
  */
-function buildFormatAssets(creative: AdStudioCampaignPack["creatives"][number]): { feed: MetaCreativeAssetPlan | null; story: MetaCreativeAssetPlan | null } | null {
-  const renders = (creative.canvas as { renders?: Record<string, string> }).renders;
+function buildFormatAssets(
+  creative: AdStudioCampaignPack["creatives"][number],
+  formatRouting?: TemplatePublishDefaults["formatRouting"],
+): { feed: MetaCreativeAssetPlan | null; story: MetaCreativeAssetPlan | null } | null {
+  const renders = canvasRenderReferences(creative.canvas);
   if (!renders || (typeof renders.feed !== "string" && typeof renders.story !== "string")) return null;
-
-  const toAsset = (reference: string | undefined): MetaCreativeAssetPlan | null => {
-    if (!reference?.trim()) return null;
-    const storagePath = reference.startsWith("/api/adstudio/media?")
-      ? new URL(reference, "https://blockwise.invalid").searchParams.get("path")
-      : isHttpUrl(reference) || reference.startsWith("data:")
-        ? null
-        : reference;
-    if (!storagePath) return null;
-    return {
-      type: "image",
-      source: "storage",
-      mimeType: "image/png",
-      filename: `${creative.creativeId}-${storagePath.includes("story") ? "story" : "feed"}.png`,
-      storagePath,
-    };
+  return {
+    feed: buildRenderedImageAsset(creative.creativeId, "feed", renders.feed),
+    story: formatRouting?.story === null ? null : buildRenderedImageAsset(creative.creativeId, "story", renders.story),
   };
-
-  return { feed: toAsset(renders.feed), story: toAsset(renders.story) };
 }
 
 /**
@@ -1666,6 +1749,10 @@ function buildFormatAssets(creative: AdStudioCampaignPack["creatives"][number]):
  * publish worker just before upload, so plans stay small in the database.
  */
 function buildCreativeImageAsset(creative: AdStudioCampaignPack["creatives"][number]): MetaCreativeAssetPlan | null {
+  if (isAdDocInstanceCanvas(creative.canvas)) {
+    return buildRenderedImageAsset(creative.creativeId, "feed", creative.canvas.renders?.feed);
+  }
+
   const imageObject = creative.canvas.objects.find((object) => object.objectId === "template_clone_image")
     ?? creative.canvas.objects.find((object) => object.role === "primary_image");
   const reference = imageObject?.content?.trim() || imageObject?.assetId?.trim() || "";
@@ -1696,6 +1783,57 @@ function buildCreativeImageAsset(creative: AdStudioCampaignPack["creatives"][num
     source: "storage",
     mimeType: "image/png",
     filename: `${creative.creativeId}.png`,
+    storagePath,
+  };
+}
+
+function isAdDocInstanceCanvas(canvas: unknown): canvas is AdDocInstance {
+  return isRecord(canvas)
+    && canvas.schema === "adstudio.instance.v2"
+    && typeof canvas.templateId === "string"
+    && typeof canvas.templateHash === "string"
+    && (canvas.format === "4:5" || canvas.format === "9:16")
+    && isRecord(canvas.values)
+    && Array.isArray(canvas.overrides);
+}
+
+function canvasRenderReferences(canvas: unknown): { feed?: string; story?: string } | null {
+  if (!isRecord(canvas) || !isRecord(canvas.renders)) return null;
+  const feed = typeof canvas.renders.feed === "string" ? canvas.renders.feed : undefined;
+  const story = typeof canvas.renders.story === "string" ? canvas.renders.story : undefined;
+  return feed || story ? { feed, story } : null;
+}
+
+function buildRenderedImageAsset(
+  creativeId: string,
+  format: "feed" | "story",
+  reference: string | undefined,
+): MetaCreativeAssetPlan | null {
+  if (!reference?.trim()) return null;
+
+  const dataUrlMatch = reference.match(/^data:(image\/[a-z0-9.+-]+);base64,(.+)$/i);
+  if (dataUrlMatch) {
+    return {
+      type: "image",
+      source: "inline",
+      mimeType: dataUrlMatch[1],
+      filename: `${creativeId}-${format}.${dataUrlMatch[1] === "image/jpeg" ? "jpg" : "png"}`,
+      bytesBase64: dataUrlMatch[2],
+    };
+  }
+
+  const storagePath = reference.startsWith("/api/adstudio/media?")
+    ? new URL(reference, "https://blockwise.invalid").searchParams.get("path")
+    : isHttpUrl(reference) || reference.startsWith("data:")
+      ? null
+      : reference;
+  if (!storagePath) return null;
+
+  return {
+    type: "image",
+    source: "storage",
+    mimeType: "image/png",
+    filename: `${creativeId}-${format}.png`,
     storagePath,
   };
 }
@@ -1750,7 +1888,11 @@ export function buildAdVariantTagSuffix(tag: MetaAdVariantTag): string {
   return ` | bw:${parts.join(";")}`;
 }
 
-function normalizeMetaPublishControls(controls: MetaPublishControls | undefined, pack: AdStudioCampaignPack): MetaPublishControls {
+function normalizeMetaPublishControls(
+  controls: MetaPublishControls | undefined,
+  pack: AdStudioCampaignPack,
+  templatePlacements?: TemplatePublishDefaults["placements"],
+): MetaPublishControls {
   const destinationUrl = controls?.destinationUrl?.trim();
 
   return {
@@ -1764,9 +1906,15 @@ function normalizeMetaPublishControls(controls: MetaPublishControls | undefined,
       endTime: controls?.schedule?.endTime ?? null,
     },
     placements: {
-      publisherPlatforms: controls?.placements?.publisherPlatforms?.length ? controls.placements.publisherPlatforms : ["facebook", "instagram"],
-      facebookPositions: controls?.placements?.facebookPositions ?? [],
-      instagramPositions: controls?.placements?.instagramPositions ?? [],
+      publisherPlatforms: controls?.placements?.publisherPlatforms?.length
+        ? controls.placements.publisherPlatforms
+        : templatePlacements?.publisherPlatforms ?? ["facebook", "instagram"],
+      facebookPositions: controls?.placements
+        ? controls.placements.facebookPositions ?? []
+        : templatePlacements?.facebookPositions ?? [],
+      instagramPositions: controls?.placements
+        ? controls.placements.instagramPositions ?? []
+        : templatePlacements?.instagramPositions ?? [],
     },
   };
 }

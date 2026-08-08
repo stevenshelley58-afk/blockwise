@@ -29,9 +29,7 @@
     "decomposedFrom": "source"
   },
   "restyle": {
-    "paletteMap": {
-      "#1f242b": "#1f242b"
-    },
+    "paletteMap": {},
     "replacedAssets": [
       "background_photo"
     ],
@@ -333,7 +331,7 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "ready",
+    "status": "qa",
     "residuals": {
       "text-subheadline": 0.003229989002118354
     },
@@ -342,8 +340,6 @@
       "headline",
       "cta",
       "website"
-    ],
-    "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
-    "qaAt": "2026-08-07T08:17:39.282Z"
+    ]
   }
 }

@@ -541,7 +541,7 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "ready",
+    "status": "qa",
     "residuals": {
       "text-subheadline": 0.05996816162465266,
       "text-benefit_3": 0.035674831387706024,
@@ -552,8 +552,6 @@
       "headline",
       "benefit_1",
       "cta"
-    ],
-    "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
-    "qaAt": "2026-08-07T11:03:33.709Z"
+    ]
   }
 }

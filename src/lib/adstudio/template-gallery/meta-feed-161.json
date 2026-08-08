@@ -2,7 +2,7 @@
   "id": "meta-feed-161",
   "name": "New Listing Announcement",
   "goal": "buyer_leads",
-  "offerId": "new-listing-001",
+  "offerId": "new-listing-inquiry",
   "source": "builtin",
   "status": "approved",
   "format": "4:5",
@@ -10,8 +10,8 @@
     "width": 1080,
     "height": 1350
   },
-  "audienceIntent": "Attract buyers interested in a newly listed property",
-  "category": "listing",
+  "audienceIntent": "Generate qualified buyer enquiries for a newly listed property.",
+  "category": "property_listing",
   "tags": [
     "new listing",
     "property",
@@ -31,16 +31,16 @@
         "key": "property_image",
         "label": "Property Image",
         "required": true,
-        "aspect": "landscape",
-        "description": "A clear, attractive photo of the newly listed property."
+        "aspect": "portrait",
+        "description": "A portrait or near-square exterior photo with the property centred behind the headline."
       }
     ],
     "text": [
       {
         "key": "headline",
         "label": "Headline",
-        "maxLength": 20,
-        "sample": "NEW LISTING",
+        "maxLength": 11,
+        "sample": "JUST\nLISTED",
         "required": true
       }
     ]
@@ -50,18 +50,18 @@
     "contentHash": "7624e985946df2cc7803477fb635cb6e48589c75b4faf4da53eb2093d36a15a6"
   },
   "classification": {
-    "ad_type": "image_text_overlay",
-    "primary_intent": "attract_buyers",
+    "ad_type": "property_listing",
+    "primary_intent": "listing_inquiry",
     "property_or_agent_focus": "property"
   },
   "deterministicEditing": {
-    "status": "partial",
+    "status": "ready",
     "imageBoxes": {
       "property_image": {
-        "x": 0,
-        "y": 0,
-        "width": 1,
-        "height": 1
+        "x": 0.025692,
+        "y": 0.020767,
+        "width": 0.948617,
+        "height": 0.958466
       }
     }
   },
@@ -80,13 +80,13 @@
       "stream"
     ],
     "primaryText": [
-      "Ask for the property details."
+      "A new listing just landed. Get the address, price guide and inspection times."
     ],
     "headlines": [
-      "Property details"
+      "See the new listing"
     ],
     "descriptions": [
-      "Request more information"
+      "Request property details"
     ],
     "cta": "LEARN_MORE",
     "leadForm": {
@@ -103,27 +103,54 @@
   },
   "typography": {
     "headline": {
-      "fontId": "kanit",
-      "family": "Kanit",
+      "fontId": "montserrat",
+      "family": "Montserrat",
       "fallbackFamily": "sans-serif",
-      "weight": 900,
+      "weight": 600,
       "italic": false,
       "case": "upper",
-      "sizeRatio": 1.5517241379310347,
-      "lineHeight": 1.495,
-      "tracking": 0,
+      "measurementVersion": 2,
+      "measurementSource": "manual-verified",
+      "sizeRatio": 0.62,
+      "lineHeight": 1,
+      "tracking": 0.075,
+      "autoFitMinRatio": 0.45,
       "align": "center",
-      "color": "#1e1e1e",
-      "fitScore": 0.086,
+      "color": "#ffffff",
+      "fitScore": 0.9,
       "sampleBox": {
-        "x": 0.3349609375,
-        "y": 0.23671875,
-        "width": 0.3125,
-        "height": 0.0203125
+        "x": 0.114625,
+        "y": 0.388,
+        "width": 0.766798,
+        "height": 0.220347
       },
-      "sampleLineCount": 3,
-      "detectionScore": 0.364,
-      "fontFile": "/fonts/adstudio/kanit-900.woff2"
+      "sampleLineCount": 2,
+      "detectionScore": 1,
+      "measuredLines": [
+        {
+          "text": "NEW",
+          "sampleBox": {
+            "x": 0.284585,
+            "y": 0.388,
+            "width": 0.43083,
+            "height": 0.095847
+          },
+          "sizeRatio": 1.25,
+          "scaleX": 1.14
+        },
+        {
+          "text": "LISTING",
+          "sampleBox": {
+            "x": 0.114625,
+            "y": 0.5125,
+            "width": 0.766798,
+            "height": 0.095847
+          },
+          "sizeRatio": 1.25,
+          "scaleX": 1.14
+        }
+      ],
+      "fontFile": "/fonts/adstudio/montserrat-600.woff2"
     }
   }
 }

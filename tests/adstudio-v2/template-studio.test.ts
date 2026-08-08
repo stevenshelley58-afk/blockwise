@@ -23,10 +23,20 @@ test("studio API is operator-gated and dev-only for writes", () => {
 test("approve enforces the human sign-off and the full gate", () => {
   assert.match(studioLib, /confirmation checkbox required/);
   assert.match(studioLib, /story layout required/);
-  assert.match(studioLib, /restyle evidence trivial \(D5\)/);
+  assert.match(studioLib, /public sample is missing hashed safe replacement assets/);
   assert.match(studioLib, /exceeds/);
-  assert.match(studioLib, /qaBy,/);
-  assert.match(studioLib, /qaAt: new Date\(\)\.toISOString\(\)/);
+  assert.match(studioLib, /reviewEvidence/);
+  assert.match(studioLib, /reviewerUserId/);
+  assert.match(studioLib, /authenticated operator user ID and email/);
+  assert.match(studioLib, /customer-visible editable text field/);
+  assert.match(studioLib, /sourceValues\.\$\{key\}/);
+});
+
+test("restyle only uses verified generic assets and exact safe copy", () => {
+  assert.match(studioLib, /buildRestyleSampleRenderInput/);
+  assert.match(studioLib, /safe sample copy for \$\{field\.key\} must differ/);
+  assert.match(studioLib, /choose a verified safe replacement photo/);
+  assert.match(studioLib, /hashed safe replacement assets/);
 });
 
 test("the studio screen wires diff, check, and the required confirmation", () => {
@@ -34,6 +44,7 @@ test("the studio screen wires diff, check, and the required confirmation", () =>
   assert.match(screen, /action=check/);
   assert.match(screen, /action=approve/);
   assert.match(screen, /Inspected at 100% zoom; a designer would ship this\./);
-  // Approve is disabled until the human ticks the box.
-  assert.match(screen, /disabled=\{!confirm \|\| checking \|\| saving\}/);
+  // Approval remains disabled until the human confirms every bound gate and
+  // no fidelity region exceeds the release threshold.
+  assert.match(screen, /disabled=\{!confirm \|\| !sourceCurated \|\| !report \|\| report\.outsideDifferingPixels !== 0 \|\| overThreshold\.length > 0 \|\| !stressMatrixHash \|\| checking\}/);
 });

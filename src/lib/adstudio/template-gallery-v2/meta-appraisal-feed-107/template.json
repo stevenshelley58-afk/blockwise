@@ -29,9 +29,7 @@
     "decomposedFrom": "source"
   },
   "restyle": {
-    "paletteMap": {
-      "#1f242b": "#1f242b"
-    },
+    "paletteMap": {},
     "replacedAssets": [
       "property_photo"
     ],
@@ -332,7 +330,7 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "ready",
+    "status": "qa",
     "residuals": {
       "text-social_handle": 0.009258988323482131
     },
@@ -341,8 +339,6 @@
       "phone",
       "subheadline",
       "cta"
-    ],
-    "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
-    "qaAt": "2026-08-07T12:20:37.471Z"
+    ]
   }
 }

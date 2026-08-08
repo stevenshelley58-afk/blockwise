@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-// Track F batch: run decompose → story-draft → restyle → check over every
-// v2 draft. Per-template error isolation; summary at the end. Build-time
-// only (uses OPENAI_API_KEY for one masked inpaint per template).
+// Track F batch: run migrate → decompose → story-draft → check over every
+// v2 draft. Restyle is deliberately omitted: it needs an operator's explicit
+// safe assets and safe copy in Template Studio, never fabricated batch data.
 
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
@@ -14,7 +14,7 @@ const ids = readdirSync(gallery, { withFileTypes: true })
   .sort();
 
 const summary = { ok: [], failed: {} };
-const steps = ["migrate-v1", "decompose", "story-draft", "restyle", "check"];
+const steps = ["migrate-v1", "decompose", "story-draft", "check"];
 
 for (const id of ids) {
   for (const step of steps) {
@@ -33,5 +33,6 @@ for (const id of ids) {
   process.stdout.write(`${summary.ok.length + Object.keys(summary.failed).length}/${ids.length} ${id} ${summary.failed[id] ? `FAIL@${summary.failed[id].step}` : "ok"}\n`);
 }
 
-console.log(`\nBATCH DONE: ${summary.ok.length} ok, ${Object.keys(summary.failed).length} failed`);
+console.log(`\nBATCH DONE: ${summary.ok.length} prepared, ${Object.keys(summary.failed).length} failed`);
+console.log("Prepared templates still require explicit Studio restyle and human QA before they can be ready.");
 for (const [id, info] of Object.entries(summary.failed)) console.log(`  ${id}: ${info.step} — ${info.error.slice(0, 200)}`);

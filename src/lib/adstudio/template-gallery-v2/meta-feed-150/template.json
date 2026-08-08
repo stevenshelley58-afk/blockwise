@@ -30,9 +30,7 @@
     "decomposedFrom": "source"
   },
   "restyle": {
-    "paletteMap": {
-      "#1f242b": "#1f242b"
-    },
+    "paletteMap": {},
     "replacedAssets": [
       "main_photo",
       "interior_photo_1",
@@ -621,7 +619,7 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "ready",
+    "status": "qa",
     "residuals": {
       "text-property_details": 0.09021725016499554,
       "text-agent_contact": 0.009622042414741228,
@@ -630,8 +628,6 @@
     "bakedTextKeys": [
       "address",
       "headline"
-    ],
-    "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
-    "qaAt": "2026-08-07T11:03:44.127Z"
+    ]
   }
 }

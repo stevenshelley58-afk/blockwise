@@ -3,18 +3,18 @@
   "id": "meta-feed-161",
   "name": "New Listing Announcement",
   "goal": "buyer_leads",
-  "offerId": "new-listing-001",
-  "category": "listing",
+  "offerId": "new-listing-inquiry",
+  "category": "property_listing",
   "tags": [
     "new listing",
     "property",
     "real estate",
     "announcement"
   ],
-  "audienceIntent": "Attract buyers interested in a newly listed property",
+  "audienceIntent": "Generate qualified buyer enquiries for a newly listed property.",
   "classification": {
-    "ad_type": "image_text_overlay",
-    "primary_intent": "attract_buyers",
+    "ad_type": "property_listing",
+    "primary_intent": "listing_inquiry",
     "property_or_agent_focus": "property"
   },
   "provenance": {
@@ -23,29 +23,25 @@
       "contentHash": "7624e985946df2cc7803477fb635cb6e48589c75b4faf4da53eb2093d36a15a6"
     },
     "sample": {
-      "imageSrc": "/adstudio-templates/meta-feed-161/sample.png",
-      "contentHash": "656db906ea30eb9be8ea58442a78af7ec76971dca8454726e46c3ae88a070b26",
+      "imageSrc": "/adstudio-samples/meta/meta-feed-161-sample.png",
+      "contentHash": "4615a6b7adf9e3b4b5289c76a623f0faef6c1048be75aae4e7e6a42905693d24",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
   },
   "restyle": {
-    "paletteMap": {
-      "#1f242b": "#1f242b"
-    },
-    "replacedAssets": [
-      "property_image"
-    ],
+    "paletteMap": {},
+    "replacedAssets": [],
     "note": "migrated from v1 (source); restyle pass pending in Studio"
   },
   "fonts": [
     {
-      "fontId": "kanit",
-      "family": "Kanit",
-      "weight": 900,
+      "fontId": "montserrat",
+      "family": "Montserrat",
+      "weight": 600,
       "italic": false,
-      "file": "/fonts/adstudio/kanit-900.woff2",
-      "sha256": "f001e4c46c00f65965198ba7547aadd375aa6222feff177c57c943d3bf6794d3"
+      "file": "/fonts/adstudio/montserrat-600.woff2",
+      "sha256": "d857325c360f7128b347ca924c1974967aaa886ba47dad22e4042d6c38b26a83"
     }
   ],
   "formats": {
@@ -55,63 +51,88 @@
       "height": 1350,
       "plate": {
         "src": "/adstudio-templates/meta-feed-161/plate-feed.webp",
-        "sha256": "5e30c26186c2542ff80722eca30429b8bdee31d2c7f78a03768f548249629d2b"
+        "sha256": "3f67cdf872c11bbb218acf4f0900d10331d792bf271413891107f588d2d9ac71"
       },
       "layers": [
         {
           "id": "slot-property_image",
           "z": 2,
           "box": {
-            "x": 0,
-            "y": 0,
-            "width": 1,
-            "height": 1
+            "x": 0.025692,
+            "y": 0.020767,
+            "width": 0.948617,
+            "height": 0.958466
           },
           "type": "image_slot",
           "inputKey": "property_image",
           "fit": "cover",
           "mask": {
-            "kind": "rect"
+            "kind": "rounded",
+            "radius": 73
           },
           "minSourcePx": {
-            "width": 1080,
-            "height": 1350
+            "width": 1025,
+            "height": 1294
           }
         },
         {
           "id": "text-headline",
           "z": 10,
           "box": {
-            "x": 0.3349609375,
-            "y": 0.23671875,
-            "width": 0.3125,
-            "height": 0.0203125
+            "x": 0.114625,
+            "y": 0.388,
+            "width": 0.766798,
+            "height": 0.220347
           },
           "type": "text",
           "inputKey": "headline",
           "typo": {
-            "fontId": "kanit",
-            "family": "Kanit",
+            "fontId": "montserrat",
+            "family": "Montserrat",
             "fallbackFamily": "sans-serif",
-            "weight": 900,
+            "weight": 600,
             "italic": false,
             "case": "upper",
-            "sizeRatio": 1.5517241379310347,
-            "lineHeight": 1.495,
-            "tracking": 0,
+            "sizeRatio": 0.62,
+            "lineHeight": 1,
+            "tracking": 0.075,
             "align": "center",
-            "color": "#1f242b"
+            "color": "#ffffff",
+            "measuredLines": [
+              {
+                "text": "NEW",
+                "box": {
+                  "x": 0.284585,
+                  "y": 0.388,
+                  "width": 0.43083,
+                  "height": 0.095847
+                },
+                "sizeRatio": 1.25,
+                "scaleX": 1.14
+              },
+              {
+                "text": "LISTING",
+                "box": {
+                  "x": 0.114625,
+                  "y": 0.5125,
+                  "width": 0.766798,
+                  "height": 0.095847
+                },
+                "sizeRatio": 1.25,
+                "scaleX": 1.14
+              }
+            ]
           },
           "constraints": {
-            "maxLength": 20,
-            "maxLines": 3,
-            "autoFitMinRatio": 0.85
+            "maxLength": 11,
+            "maxLines": 2,
+            "autoFitMinRatio": 0.45
           },
           "measurement": {
-            "fitScore": 0.086,
-            "detectionScore": 0.364,
-            "source": "ocr-v2",
-            "version": 1
+            "fitScore": 0.9,
+            "detectionScore": 1,
+            "source": "manual-verified",
+            "version": 2
           }
         }
       ]
@@ -122,63 +143,88 @@
       "height": 1920,
       "plate": {
         "src": "/adstudio-templates/meta-feed-161/plate-story.webp",
-        "sha256": "c0ad34713f5a369507025a3e26b568949cfbe4fd73b5809b6624c1d84ae873cb"
+        "sha256": "683e7eca6be37c1802f425fc721257eb94c6647132ae2a5275b83659ef3f92a6"
       },
       "layers": [
         {
           "id": "slot-property_image",
           "z": 2,
           "box": {
-            "x": 0,
-            "y": 0.13020833333333334,
-            "width": 1,
-            "height": 0.6927083333333333
+            "x": 0.025692,
+            "y": 0.14459380729166668,
+            "width": 0.948617,
+            "height": 0.6639373854166666
           },
           "type": "image_slot",
           "inputKey": "property_image",
           "fit": "cover",
           "mask": {
-            "kind": "rect"
+            "kind": "rounded",
+            "radius": 73
           },
           "minSourcePx": {
-            "width": 1080,
-            "height": 1330
+            "width": 1025,
+            "height": 1294
           }
         },
         {
           "id": "text-headline",
           "z": 10,
           "box": {
-            "x": 0.3349609375,
-            "y": 0.29418538411458334,
-            "width": 0.3125,
-            "height": 0.014070638020833331
+            "x": 0.114625,
+            "y": 0.39897916666666666,
+            "width": 0.766798,
+            "height": 0.15263620312499998
           },
           "type": "text",
           "inputKey": "headline",
           "typo": {
-            "fontId": "kanit",
-            "family": "Kanit",
+            "fontId": "montserrat",
+            "family": "Montserrat",
             "fallbackFamily": "sans-serif",
-            "weight": 900,
+            "weight": 600,
             "italic": false,
             "case": "upper",
-            "sizeRatio": 1.5517241379310347,
-            "lineHeight": 1.495,
-            "tracking": 0,
+            "sizeRatio": 0.62,
+            "lineHeight": 1,
+            "tracking": 0.075,
             "align": "center",
-            "color": "#1f242b"
+            "color": "#ffffff",
+            "measuredLines": [
+              {
+                "text": "NEW",
+                "box": {
+                  "x": 0.284585,
+                  "y": 0.39897916666666666,
+                  "width": 0.43083,
+                  "height": 0.066394015625
+                },
+                "sizeRatio": 1.25,
+                "scaleX": 1.14
+              },
+              {
+                "text": "LISTING",
+                "box": {
+                  "x": 0.114625,
+                  "y": 0.48522135416666656,
+                  "width": 0.766798,
+                  "height": 0.066394015625
+                },
+                "sizeRatio": 1.25,
+                "scaleX": 1.14
+              }
+            ]
           },
           "constraints": {
-            "maxLength": 20,
-            "maxLines": 3,
-            "autoFitMinRatio": 0.85
+            "maxLength": 11,
+            "maxLines": 2,
+            "autoFitMinRatio": 0.45
           },
           "measurement": {
-            "fitScore": 0.086,
-            "detectionScore": 0.364,
-            "source": "ocr-v2",
-            "version": 1
+            "fitScore": 0.9,
+            "detectionScore": 1,
+            "source": "manual-verified",
+            "version": 2
           }
         }
       ]
@@ -199,8 +245,8 @@
         "key": "headline",
         "label": "Headline",
         "required": true,
-        "maxLength": 20,
-        "sample": "NEW LISTING"
+        "maxLength": 11,
+        "sample": "JUST\nLISTED"
       }
     ]
   },
@@ -211,13 +257,13 @@
     "apiVersionMin": "v26.0",
     "copy": {
       "primaryText": [
-        "Ask for the property details."
+        "A new listing just landed. Get the address, price guide and inspection times."
       ],
       "headlines": [
-        "Property details"
+        "See the new listing"
       ],
       "descriptions": [
-        "Request more information"
+        "Request property details"
       ]
     },
     "cta": "LEARN_MORE",
@@ -273,12 +319,8 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "ready",
-    "residuals": {
-      "text-headline": 0.0487272594987815
-    },
-    "bakedTextKeys": [],
-    "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
-    "qaAt": "2026-08-07T08:17:57.641Z"
+    "status": "qa",
+    "residuals": {},
+    "bakedTextKeys": []
   }
 }

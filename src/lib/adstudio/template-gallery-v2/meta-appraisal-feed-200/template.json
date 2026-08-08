@@ -29,9 +29,7 @@
     "decomposedFrom": "source"
   },
   "restyle": {
-    "paletteMap": {
-      "#1f242b": "#1f242b"
-    },
+    "paletteMap": {},
     "replacedAssets": [
       "property_photo",
       "agent_portrait",
@@ -587,7 +585,7 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "ready",
+    "status": "qa",
     "residuals": {
       "text-agent_role": 0.1326068967954601,
       "text-subheadline": 0.13971626051012814,
@@ -597,8 +595,6 @@
       "headline",
       "cta",
       "phone"
-    ],
-    "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
-    "qaAt": "2026-08-07T11:38:16.734Z"
+    ]
   }
 }

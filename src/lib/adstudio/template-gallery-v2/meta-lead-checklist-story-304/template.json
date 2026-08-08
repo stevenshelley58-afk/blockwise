@@ -35,8 +35,7 @@
     },
     "replacedAssets": [
       "background_photo"
-    ],
-    "note": "migrated from v1 (source); restyle pass pending in Studio auto-QA default plate remap (owner-delegated 2026-08-06)"
+    ]
   },
   "fonts": [
     {
@@ -314,7 +313,7 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "ready",
+    "status": "qa",
     "residuals": {},
     "bakedTextKeys": [
       "headline",
@@ -326,8 +325,6 @@
       "benefit_3",
       "benefit_1",
       "benefit_2"
-    ],
-    "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
-    "qaAt": "2026-08-07T08:26:01.666Z"
+    ]
   }
 }

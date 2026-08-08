@@ -9,9 +9,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import type { AdDocInstance, AdTemplateDocV2 } from "@/lib/adstudio/v2/template-doc";
+import type { AdDocInstance, AdTemplateDocV2, NormBox } from "@/lib/adstudio/v2/template-doc";
 
 import { EditorCanvas } from "./editor-canvas";
+import { clampEditorNormBox } from "./geometry";
 import { EditorPanels } from "./panels";
 import { EditorToolbar } from "./toolbar";
 import { useEditorDoc } from "./state/use-editor-doc";
@@ -76,18 +77,13 @@ export function EditorRoot({ template, instance, mode = "guided", brandPalette =
     : undefined;
 
   const onMoveLayer = useCallback(
-    (layerId: string, box: { x: number; y: number; width: number; height: number }, gestureId: string) => {
+    (layerId: string, box: NormBox, gestureId: string) => {
       editor.edit(
         {
           type: "override",
           layerId,
           op: "move",
-          box: {
-            x: Math.min(0.95, Math.max(0.0, box.x / 1080)),
-            y: Math.min(0.95, Math.max(0.0, box.y / 1350)),
-            width: Math.min(1, Math.max(0.05, box.width / 1080)),
-            height: Math.min(1, Math.max(0.05, box.height / 1350)),
-          },
+          box: clampEditorNormBox(box),
           mode: editor.mode,
         },
         gestureId,

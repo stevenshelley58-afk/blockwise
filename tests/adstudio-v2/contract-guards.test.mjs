@@ -10,6 +10,13 @@ import test from "node:test";
 
 const read = (p) => readFileSync(p, "utf8");
 
+test("normal production builds run the v2 template evidence gate before Next compiles", () => {
+  const scripts = JSON.parse(read("package.json")).scripts;
+
+  assert.equal(scripts.prebuild, "node scripts/verify/adstudio-templates-v2.mjs");
+  assert.equal(scripts.build, "next build");
+});
+
 // Only real imports count — comments mentioning old modules must not trip
 // the law. Matches import statements, dynamic imports and require() calls.
 const IMAGE_MODEL_IMPORT = /(^|[^/\w])(import[\s{]|from\s|require\(|await import\()[^\n]*(ai-providers|clone-generation|reference-clone)/m;
@@ -65,10 +72,54 @@ test("v2 generation is flag-gated and zero-credit at the campaigns route", () =>
   assert.match(route, /v2_renders_cost_zero/);
 });
 
+test("the public v2 template endpoint fails closed for QA templates", () => {
+  const route = read("src/app/api/adstudio/templates-v2/[id]/route.ts");
+  assert.match(route, /resolveReadyTemplateV2/);
+  assert.doesNotMatch(route, /loadTemplateV2/);
+  assert.match(route, /if \(!template\) return NextResponse\.json\([^\n]+status: 404/);
+});
+
+test("source-derived plates and patches cannot bypass authentication as static files", () => {
+  const proxy = read("src/proxy.ts");
+  assert.match(proxy, /TEMPLATE_ASSET_PREFIX = "\/adstudio-templates\/"/);
+  assert.match(proxy, /filename\.startsWith\("plate-"\)/);
+  assert.match(proxy, /filename\.startsWith\("patch-"\)/);
+  assert.match(proxy, /optimizedPath && isSourceDerivedTemplateAsset\(optimizedPath\)/);
+  assert.match(proxy, /status: 404/);
+  assert.match(proxy, /"\/_next\/image"/);
+  assert.match(proxy, /"\/adstudio-templates\/:path\*"/);
+});
+
+test("safe gallery samples stay public while source-derived assets stay private", () => {
+  const proxy = read("src/proxy.ts");
+  assert.doesNotMatch(proxy, /filename\.startsWith\("sample/);
+  assert.match(proxy, /isSourceDerivedTemplateAsset\(pathname\)/);
+});
+
 test("the doc contract is the single v2 schema source", () => {
   const contract = read("src/lib/adstudio/v2/template-doc.ts");
   assert.match(contract, /templateDocV2Schema/);
   assert.match(contract, /adDocInstanceSchema/);
   const gate = read("scripts/verify/adstudio-templates-v2.mjs");
   assert.match(gate, /templateDocV2Schema/);
+});
+
+test("truth gate rejects vacuous ready evidence and treats every stress failure as a failure", () => {
+  const gate = read("scripts/verify/adstudio-templates-v2.mjs");
+  assert.match(gate, /sourceCuration/);
+  assert.match(gate, /lacks a non-blank sourceValues record/);
+  assert.match(gate, /reviewerUserId/);
+  assert.match(gate, /native fidelity changed pixels outside editable text regions/);
+  assert.match(gate, /stress evidence matrix hash is stale or fabricated/);
+  assert.match(gate, /runNativeSurfaceFidelity/);
+  assert.match(gate, /runStressMatrix/);
+  assert.doesNotMatch(gate, /error\?\.name !== "RenderFitError"/);
+});
+
+test("auto QA is advisory and cannot impersonate a human approval", () => {
+  const autoQa = read("scripts/adstudio/v2/auto-qa.mjs");
+  assert.doesNotMatch(autoQa, /approveTemplate/);
+  assert.doesNotMatch(autoQa, /status\s*=\s*["']ready/);
+  assert.doesNotMatch(autoQa, /writeFileSync/);
+  assert.match(autoQa, /no docs changed and none approved/);
 });

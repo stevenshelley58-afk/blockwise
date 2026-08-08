@@ -46,6 +46,14 @@ test("creative-feature keys are in lockstep between ingest and the shared v2 lis
   assert.deepEqual(extract(ingest), extract(shared));
 });
 
+test("decompose masks measured text lines instead of each loose parent text box", () => {
+  const ingest = readFileSync(join("scripts", "adstudio", "v2", "ingest.mjs"), "utf8");
+  assert.match(ingest, /const boxes = collectTextMaskBoxes\(v1\.typography \?\? \{\}\);/);
+  assert.match(ingest, /measuredLines\.map\(\(line\) => line\?\.sampleBox\)/);
+  assert.match(ingest, /measuredLines\.length > 0\s*\?\s*measuredLines/);
+  assert.match(ingest, /invalid \$\{source\} box for text inpaint mask/);
+});
+
 test("the v2 gate passes on the migrated drafts", () => {
   // Runs against the live gallery: deterministic once the batch pipeline has
   // settled; CI never runs the batch, so this is stable there.
@@ -60,8 +68,21 @@ test("migrated drafts keep the fidelity inputs the gate needs", () => {
   const doc = JSON.parse(readFileSync("src/lib/adstudio/template-gallery-v2/meta-feed-018/template.json", "utf8"));
   assert.equal(doc.schema, "adstudio.template.v2");
   assert.equal(doc.provenance.decomposedFrom, "source");
-  assert.ok(doc.exactness.bakedTextKeys.length > 0, "pre-inpaint text is baked, never approximate");
+  const representedTextKeys = new Set([
+    ...doc.exactness.bakedTextKeys,
+    ...doc.formats.feed.layers.filter((layer) => layer.type === "text").map((layer) => layer.inputKey),
+  ]);
+  assert.deepEqual(
+    [...doc.inputs.text.map((input) => input.key).sort()],
+    [...representedTextKeys].sort(),
+    "every declared copy field is either an editable measured layer or honestly baked",
+  );
   assert.ok(doc.publish.creativeFeatures.adapt_to_placement === "OPT_OUT");
   const evidence = JSON.parse(readFileSync("src/lib/adstudio/template-gallery-v2/meta-feed-018/evidence.json", "utf8"));
-  assert.ok(evidence.sourceValues, "fidelity gate reads the source's own copy from evidence");
+  assert.deepEqual(
+    Object.keys(evidence.sourceValues).sort(),
+    doc.inputs.text.map((input) => input.key).sort(),
+    "fidelity gate has one source value for every declared copy field",
+  );
+  assert.ok(Object.values(evidence.sourceValues).every((value) => typeof value === "string" && value.length > 0));
 });

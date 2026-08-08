@@ -264,7 +264,7 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "ready",
+    "status": "qa",
     "residuals": {
       "text-property_name": 0.11113745613052661
     },
@@ -272,8 +272,6 @@
       "features",
       "main_cta",
       "price_per_night"
-    ],
-    "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
-    "qaAt": "2026-08-07T11:03:58.539Z"
+    ]
   }
 }

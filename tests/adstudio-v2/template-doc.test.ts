@@ -10,6 +10,7 @@ import { join } from "node:path";
 import test from "node:test";
 
 import {
+  adDocInstanceTemplateViolation,
   adDocInstanceSchema,
   boxOverlapRatio,
   hasNonTrivialRestyle,
@@ -19,6 +20,8 @@ import {
   storySafeZoneViolation,
   templateDocV2Schema,
 } from "../../src/lib/adstudio/v2/template-doc.ts";
+import { fidelityTemplateHash } from "../../src/lib/adstudio/v2/fidelity-stress.ts";
+import { hashCanonicalJson } from "../../src/lib/adstudio/v2/template-hash.ts";
 
 const fixtureRoot = join(process.cwd(), "tests", "fixtures", "adstudio-v2");
 
@@ -45,11 +48,46 @@ test("valid fixture parses: meta-fixture-story (ready, feed+story)", () => {
   assert.equal(result.success, true, JSON.stringify(result.success ? null : result.error.issues));
 });
 
+test("synthetic ready fixture binds its review hashes without claiming a real approval", () => {
+  const doc = loadDoc("meta-fixture-story");
+  const evidence = JSON.parse(readFileSync(join(fixtureRoot, "meta-fixture-story", "evidence.json"), "utf8"));
+  const review = doc.exactness.reviewEvidence;
+  assert.match(review.reviewerUserId, /^[0-9a-f-]{36}$/i);
+  assert.equal(review.templateHash, fidelityTemplateHash(doc));
+  assert.equal(review.sourceCurationHash, hashCanonicalJson(evidence.sourceCuration));
+  assert.equal(review.fidelityEvidenceHash, hashCanonicalJson(doc.exactness.residualEvidence));
+  assert.equal(review.stressEvidenceHash, hashCanonicalJson(doc.exactness.stressEvidence));
+  assert.equal(doc.exactness.stressEvidence.entries.length, 10);
+});
+
 test("valid fixtures parse: simple and effects drafts", () => {
   for (const id of ["meta-fixture-simple", "meta-fixture-effects"]) {
     const result = templateDocV2Schema.safeParse(loadDoc(id));
     assert.equal(result.success, true, `${id}: ${result.success ? "" : JSON.stringify(result.error.issues)}`);
   }
+});
+
+test("rounded image masks accept asymmetric corner radii", () => {
+  const doc = loadDoc("meta-fixture-simple");
+  const slot = doc.formats.feed.layers.find((layer: any) => layer.type === "image_slot");
+  slot.mask = { kind: "rounded", radius: [0, 36, 72, 18] };
+  const result = templateDocV2Schema.safeParse(doc);
+  assert.equal(result.success, true, result.success ? "" : JSON.stringify(result.error.issues));
+});
+
+test("rounded image masks reject malformed or all-zero corner radii", async () => {
+  await expectRuleViolation(
+    "meta-fixture-simple",
+    (doc) => {
+      const slot = doc.formats.feed.layers.find((layer: any) => layer.type === "image_slot");
+      slot.mask = { kind: "rounded", radius: [0, 0, 0, 0] };
+    },
+    /at least one positive/,
+  );
+  const malformed = loadDoc("meta-fixture-simple");
+  const slot = malformed.formats.feed.layers.find((layer: any) => layer.type === "image_slot");
+  slot.mask = { kind: "rounded", radius: [4, 8, 12] };
+  assert.equal(templateDocV2Schema.safeParse(malformed).success, false);
 });
 
 // ─── identity rules ──────────────────────────────────────────────────────────
@@ -241,18 +279,51 @@ test("rule: ready without a story layout fails", async () => {
   );
 });
 
-test("rule: ready without qaBy/qaAt fails", async () => {
+test("rule: ready without authenticated review evidence fails", async () => {
   await expectRuleViolation(
     "meta-fixture-story",
-    (doc) => { delete doc.exactness.qaBy; delete doc.exactness.qaAt; },
-    /requires qaBy/,
+    (doc) => { delete doc.exactness.reviewEvidence; },
+    /authenticated human review evidence/,
+  );
+});
+
+test("rule: delegated prose is not an authenticated reviewer identity", async () => {
+  await expectRuleViolation(
+    "meta-fixture-story",
+    (doc) => { doc.exactness.reviewEvidence.reviewerUserId = "owner-delegated auto-QA — review pending"; },
+    /uuid/,
+  );
+});
+
+test("rule: ready needs residual evidence for every editable native text layer", async () => {
+  await expectRuleViolation(
+    "meta-fixture-story",
+    (doc) => { doc.exactness.residualEvidence.nativeSurface = "story"; },
+    /native fidelity must cover feed/,
+  );
+});
+
+test("rule: ready must leave at least one text field customer-editable", async () => {
+  await expectRuleViolation(
+    "meta-fixture-story",
+    (doc) => {
+      doc.exactness.bakedTextKeys = ["headline"];
+      doc.formats.feed.layers = doc.formats.feed.layers.filter((layer: any) => layer.type !== "text");
+      doc.formats.story.layers = doc.formats.story.layers.filter((layer: any) => layer.type !== "text");
+      doc.exactness.residuals = {};
+      doc.exactness.residualEvidence.residuals = {};
+    },
+    /customer-visible editable text field/,
   );
 });
 
 test("rule: ready with a residual over the threshold fails", async () => {
   await expectRuleViolation(
     "meta-fixture-story",
-    (doc) => { doc.exactness.residuals["feed-text-headline"] = 0.5; },
+    (doc) => {
+      doc.exactness.residuals["feed-text-headline"] = 0.5;
+      doc.exactness.residualEvidence.residuals["feed-text-headline"] = 0.5;
+    },
     /exceeds/,
   );
 });
@@ -260,7 +331,7 @@ test("rule: ready with a residual over the threshold fails", async () => {
 test("rule: ready with a missing residual fails", async () => {
   await expectRuleViolation(
     "meta-fixture-story",
-    (doc) => { doc.exactness.residuals = {}; },
+    (doc) => { doc.exactness.residuals = {}; doc.exactness.residualEvidence.residuals = {}; },
     /no recorded residual/,
   );
 });
@@ -277,7 +348,15 @@ test("rule: ready with trivial restyle fails", async () => {
   await expectRuleViolation(
     "meta-fixture-story",
     (doc) => { doc.restyle = { paletteMap: {}, replacedAssets: [] }; },
-    /non-trivial restyle/,
+    /hashed safe replacement assets/,
+  );
+});
+
+test("rule: identity palette maps fail", async () => {
+  await expectRuleViolation(
+    "meta-fixture-story",
+    (doc) => { doc.restyle.paletteMap = { "#e11d48": "#e11d48" }; },
+    /identity colour transform/,
   );
 });
 
@@ -351,6 +430,58 @@ test("instance: color override must be a valid hex", () => {
   assert.equal(adDocInstanceSchema.safeParse(instance).success, false);
 });
 
+test("instance save validation binds dynamic inputs, required copy, and text-only edit policy", () => {
+  const template = templateDocV2Schema.parse(loadDoc("meta-fixture-story"));
+  const base = adDocInstanceSchema.parse(JSON.parse(readFileSync(
+    join(fixtureRoot, "meta-fixture-story", "instance-feed.json"),
+    "utf8",
+  )));
+  assert.equal(adDocInstanceTemplateViolation(template, base), null);
+
+  const unknownText = structuredClone(base);
+  unknownText.values.text.unexpected = "no";
+  assert.match(adDocInstanceTemplateViolation(template, unknownText) ?? "", /Unknown text input/);
+
+  const omittedRequiredText = structuredClone(base);
+  delete omittedRequiredText.values.text.headline;
+  assert.match(adDocInstanceTemplateViolation(template, omittedRequiredText) ?? "", /Provide text/);
+
+  const tooLongText = structuredClone(base);
+  tooLongText.values.text.headline = "x".repeat(37);
+  assert.match(adDocInstanceTemplateViolation(template, tooLongText) ?? "", /36-character limit/);
+
+  const unknownImage = structuredClone(base);
+  unknownImage.values.images.unexpected = { src: "x" };
+  assert.match(adDocInstanceTemplateViolation(template, unknownImage) ?? "", /Unknown image input/);
+
+  const imageOverride = structuredClone(base);
+  imageOverride.overrides = [{ layerId: "feed-slot-photo", op: "color", color: "#123456" }];
+  assert.match(adDocInstanceTemplateViolation(template, imageOverride) ?? "", /Only text layers/);
+
+  const duplicateOverride = structuredClone(base);
+  duplicateOverride.overrides = [
+    { layerId: "feed-text-headline", op: "align", align: "left" },
+    { layerId: "feed-text-headline", op: "align", align: "right" },
+  ];
+  assert.match(adDocInstanceTemplateViolation(template, duplicateOverride) ?? "", /Duplicate align/);
+
+  const noAdvanced = structuredClone(template);
+  noAdvanced.editPolicy.advancedUnlockable = false;
+  const move = structuredClone(base);
+  move.overrides = [{ layerId: "feed-text-headline", op: "move", box: { x: 0.1, y: 0.6, width: 0.8, height: 0.1 } }];
+  assert.match(adDocInstanceTemplateViolation(noAdvanced, move) ?? "", /does not allow advanced/);
+});
+
+test("instance schema rejects undeclared structural fields and unsafe font-size overrides", () => {
+  const instance = JSON.parse(readFileSync(join(fixtureRoot, "meta-fixture-story", "instance-feed.json"), "utf8"));
+  instance.values.unexpected = true;
+  assert.equal(adDocInstanceSchema.safeParse(instance).success, false);
+
+  const unsafeOverride = JSON.parse(readFileSync(join(fixtureRoot, "meta-fixture-story", "instance-feed.json"), "utf8"));
+  unsafeOverride.overrides = [{ layerId: "feed-text-headline", op: "font-size", sizeRatio: 1.21 }];
+  assert.equal(adDocInstanceSchema.safeParse(unsafeOverride).success, false);
+});
+
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
 test("isNormalizedBox accepts valid, rejects degenerate/escaping", () => {
@@ -374,13 +505,15 @@ test("storySafeZoneViolation flags both bands at 1920", () => {
   assert.equal(storySafeZoneViolation({ x: 0.1, y: 0.5, width: 0.8, height: 0.1 }, 1920), null);
 });
 
-test("hasNonTrivialRestyle: palette OR full required-slot replacement", () => {
+test("hasNonTrivialRestyle: every declared image needs a hashed replacement asset", () => {
   const inputs = {
     images: [{ key: "photo", label: "p", required: true, description: "d" }],
     text: [],
   };
-  assert.equal(hasNonTrivialRestyle({ restyle: { paletteMap: { "#a00000": "#0000aa" }, replacedAssets: [] }, inputs }), true);
-  assert.equal(hasNonTrivialRestyle({ restyle: { paletteMap: {}, replacedAssets: ["photo"] }, inputs }), true);
+  const safeReplacementAssets = [{ inputKey: "photo", src: "/safe.png", sha256: "a".repeat(64) }];
+  assert.equal(hasNonTrivialRestyle({ restyle: { paletteMap: { "#a00000": "#0000aa" }, replacedAssets: [], safeReplacementAssets }, inputs }), true);
+  assert.equal(hasNonTrivialRestyle({ restyle: { paletteMap: { "#a00000": "#a00000" }, replacedAssets: [], safeReplacementAssets }, inputs }), true);
+  assert.equal(hasNonTrivialRestyle({ restyle: { paletteMap: { "#a00000": "#0000aa" }, replacedAssets: [] }, inputs }), false);
   assert.equal(hasNonTrivialRestyle({ restyle: { paletteMap: {}, replacedAssets: [] }, inputs }), false);
 });
 

@@ -32,9 +32,7 @@
     "decomposedFrom": "source"
   },
   "restyle": {
-    "paletteMap": {
-      "#1f242b": "#1f242b"
-    },
+    "paletteMap": {},
     "replacedAssets": [
       "background_property",
       "agent_photo"
@@ -405,7 +403,7 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "ready",
+    "status": "qa",
     "residuals": {
       "text-agent_name": 0
     },
@@ -416,8 +414,6 @@
       "about_text",
       "company_name",
       "cta_text"
-    ],
-    "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
-    "qaAt": "2026-08-07T12:22:33.229Z"
+    ]
   }
 }

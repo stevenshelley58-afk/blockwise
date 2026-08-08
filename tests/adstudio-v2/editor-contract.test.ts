@@ -33,9 +33,9 @@ test("the doc route re-renders server-side and appends a CAS revision", () => {
   assert.match(docRoute, /persistAdDocRender/);
   assert.match(docRoute, /appendAdStudioCreativeRevision/);
   assert.match(docRoute, /ADSTUDIO_STALE_REVISION/);
-  // Server-side floor: locked layers and #rrggbb colours rejected.
-  assert.match(docRoute, /lockedLayerIds\.includes\(override\.layerId\)/);
-  assert.match(docRoute, /#\[0-9a-f\]\{6\}/);
+  // The semantic gate binds dynamic template inputs and edit policy before
+  // resolving media or rendering; the shared schema handles #rrggbb shape.
+  assert.match(docRoute, /adDocInstanceTemplateViolation\(template, instance\)/);
 });
 
 test("canvas renders the shared typography/effects contract, not its own", () => {

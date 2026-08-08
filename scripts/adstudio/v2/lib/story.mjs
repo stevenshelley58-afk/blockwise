@@ -76,10 +76,28 @@ export function repositionLayersForStory(layers) {
   const safeTopNorm = STORY_SAFE_TOP / 1920;
   const safeBottomNorm = (1920 - STORY_SAFE_BOTTOM) / 1920;
   const usable = safeBottomNorm - safeTopNorm;
+  const mapBox = (box) => ({
+    ...box,
+    y: safeTopNorm + box.y * usable,
+    height: box.height * usable,
+  });
 
   return layers.map((layer) => {
-    const y = safeTopNorm + layer.box.y * usable;
-    const height = layer.box.height * usable;
-    return { ...layer, box: { ...layer.box, y, height } };
+    const measuredLines = layer.typo?.measuredLines;
+    return {
+      ...layer,
+      box: mapBox(layer.box),
+      ...(measuredLines
+        ? {
+          typo: {
+            ...layer.typo,
+            measuredLines: measuredLines.map((line) => ({
+              ...line,
+              box: mapBox(line.box),
+            })),
+          },
+        }
+        : {}),
+    };
   });
 }

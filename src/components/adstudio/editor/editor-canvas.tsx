@@ -10,12 +10,14 @@ import { Group, Image as KonvaImage, Layer, Rect, Stage, Text } from "react-konv
 import useImage from "use-image";
 
 import { useAssetUrl } from "./use-asset-url";
+import { layoutPixelsToNormBox } from "./geometry";
 import { TextEditOverlay } from "./text-edit-overlay";
 import { focalCoverSourceRect } from "@/lib/adstudio/v2/render/cover-crop.ts";
 import type {
   AdDocInstance,
   AdTemplateDocV2,
   ImageSlotLayer,
+  NormBox,
   OverlayPatchLayer,
   TextLayer,
 } from "@/lib/adstudio/v2/template-doc";
@@ -29,7 +31,8 @@ type EditorCanvasProps = {
   format: "4:5" | "9:16";
   selectedLayerId: string | null;
   onSelectLayer: (layerId: string | null) => void;
-  onMoveLayer: (layerId: string, box: { x: number; y: number; width: number; height: number }, gestureId: string) => void;
+  /** Normalized against the active layout; EditorRoot persists this unchanged except for one clamp. */
+  onMoveLayer: (layerId: string, box: NormBox, gestureId: string) => void;
   onOpenTextEditor: (layerId: string) => void;
   editingTextId: string | null;
   onCommitTextEdit: (layer: TextLayer, value: string) => void;
@@ -83,6 +86,7 @@ function PlateAndSlots({
               <SlotNode
                 key={layer.id}
                 layer={layer}
+                layout={layout}
                 instance={instance}
                 left={left}
                 top={top}
@@ -100,6 +104,7 @@ function PlateAndSlots({
               <PatchNode
                 key={layer.id}
                 layer={layer}
+                layout={layout}
                 left={left}
                 top={top}
                 width={width}
@@ -142,6 +147,7 @@ function PlateImage({ src, width, height }: { src: string; width: number; height
 
 function SlotNode({
   layer,
+  layout,
   instance,
   left,
   top,
@@ -153,6 +159,7 @@ function SlotNode({
   onMoveLayer,
 }: {
   layer: ImageSlotLayer;
+  layout: { width: number; height: number };
   instance: AdDocInstance;
   left: number;
   top: number;
@@ -164,7 +171,11 @@ function SlotNode({
   onMoveLayer: EditorCanvasProps["onMoveLayer"];
 }) {
   const src = instance.values.images[layer.inputKey]?.src;
-  const url = src ? (src.startsWith("data:") || src.startsWith("http") ? src : `/api/adstudio/media?path=${encodeURIComponent(src)}`) : null;
+  const url = src
+    ? (src.startsWith("data:") || src.startsWith("http") || src.startsWith("/api/adstudio/media?")
+      ? src
+      : `/api/adstudio/media?path=${encodeURIComponent(src)}`)
+    : null;
   const [image] = useImage(url ?? "");
   const focal = instance.values.images[layer.inputKey]?.focal ?? layer.focal ?? { x: 0.5, y: 0.5 };
   const zoom = instance.values.images[layer.inputKey]?.zoom ?? 1;
@@ -174,6 +185,11 @@ function SlotNode({
     : null;
 
   const draggable = mode !== "guided";
+  // Konva accepts either a uniform radius or [TL, TR, BR, BL], matching the
+  // server renderer and preserving asymmetric source image frames.
+  const cornerRadius = layer.mask.kind === "rounded"
+    ? layer.mask.radius ?? 24
+    : layer.mask.kind === "ellipse" ? height / 2 : 0;
 
   return (
     <Group
@@ -182,7 +198,7 @@ function SlotNode({
       draggable={draggable}
       onDragEnd={(event) => {
         const node = event.target;
-        onMoveLayer(layer.id, { x: node.x() / 1080, y: node.y() / 1350, width, height }, `drag-${layer.id}`);
+        onMoveLayer(layer.id, layoutPixelsToNormBox(layout, { x: node.x(), y: node.y(), width, height }), `drag-${layer.id}`);
         node.position({ x: left, y: top });
       }}
       onTap={() => onSelectLayer(layer.id)}
@@ -196,7 +212,7 @@ function SlotNode({
           width={width}
           height={height}
           crop={{ x: srcRect.sx, y: srcRect.sy, width: srcRect.sw, height: srcRect.sh }}
-          cornerRadius={layer.mask.kind === "rounded" ? layer.mask.radius ?? 24 : layer.mask.kind === "ellipse" ? height / 2 : 0}
+          cornerRadius={cornerRadius}
         />
       ) : (
         <Rect width={width} height={height} fill="#22303f" opacity={0.5} />
@@ -210,6 +226,7 @@ function SlotNode({
 
 function PatchNode({
   layer,
+  layout,
   left,
   top,
   width,
@@ -220,6 +237,7 @@ function PatchNode({
   onMoveLayer,
 }: {
   layer: OverlayPatchLayer;
+  layout: { width: number; height: number };
   left: number;
   top: number;
   width: number;
@@ -239,7 +257,7 @@ function PatchNode({
       draggable={draggable}
       onDragEnd={(event) => {
         const node = event.target;
-        onMoveLayer(layer.id, { x: node.x() / 1080, y: node.y() / 1350, width, height }, `drag-${layer.id}`);
+        onMoveLayer(layer.id, layoutPixelsToNormBox(layout, { x: node.x(), y: node.y(), width, height }), `drag-${layer.id}`);
         node.position({ x: left, y: top });
       }}
       onTap={() => onSelectLayer(layer.id)}

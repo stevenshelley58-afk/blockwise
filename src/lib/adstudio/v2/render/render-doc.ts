@@ -14,6 +14,8 @@
 import type {
   AdDocInstance,
   AdTemplateDocV2,
+  CornerRadii,
+  ImageSlotMask,
   NormBox,
   TemplateLayer,
   TemplateLayout,
@@ -116,6 +118,19 @@ function drawTrackedText(
   ctx.textAlign = previousAlign;
 }
 
+function graphemes(value: string): string[] {
+  // Array.from is code-point-safe, but an editable headline may contain joined
+  // emoji or combining marks. Segment them as the user sees them before we
+  // ever split an unbroken string across measured source rows.
+  if (typeof Intl.Segmenter === "function") {
+    return Array.from(
+      new Intl.Segmenter(undefined, { granularity: "grapheme" }).segment(value),
+      ({ segment }) => segment,
+    );
+  }
+  return Array.from(value);
+}
+
 /** Deterministic word partition; preserves the sample's measured line balance. */
 export function splitTextIntoMeasuredLines(
   text: string,
@@ -125,6 +140,44 @@ export function splitTextIntoMeasuredLines(
   const templates = typeof measured === "number"
     ? Array.from({ length: measured }, () => ({ text: "" }))
     : measured;
+  const unbroken = words.length === 1 ? graphemes(words[0]!) : null;
+  const templateGraphemeWeights = templates.map((line) => Math.max(
+    1,
+    graphemes(line.text.trim()).filter((grapheme) => !/^\s$/u.test(grapheme)).length,
+  ));
+
+  // Word partitioning cannot help a legal headline such as WWWWW… . Split it
+  // only when it exceeds the source lockup's combined character capacity; a
+  // short single word remains a single line. The same source-derived weights
+  // decide the split, so we retain the original line balance without lowering
+  // any fit floor.
+  if (unbroken && templates.length > 1) {
+    const count = Math.min(templates.length, unbroken.length);
+    const weights = templateGraphemeWeights.slice(0, count);
+    const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
+    // Keep ordinary one-word copy intact. A string has to be long enough to
+    // make every measured row meaningful before we convert it to a lockup.
+    const minimumSplitLength = Math.max(6, count * 3);
+    if (unbroken.length > totalWeight && unbroken.length >= minimumSplitLength) {
+      const lines: string[] = [];
+      let cursor = 0;
+      let cumulativeWeight = 0;
+      for (let line = 0; line < count; line += 1) {
+        cumulativeWeight += weights[line]!;
+        const remainingLines = count - line - 1;
+        const desiredEnd = line === count - 1
+          ? unbroken.length
+          : Math.round((unbroken.length * cumulativeWeight) / totalWeight);
+        const take = Math.max(1, Math.min(
+          desiredEnd - cursor,
+          unbroken.length - cursor - remainingLines,
+        ));
+        lines.push(unbroken.slice(cursor, cursor + take).join(""));
+        cursor += take;
+      }
+      return lines;
+    }
+  }
   const count = Math.max(1, Math.min(templates.length, words.length || 1));
   if (count === 1) return [words.join(" ")];
   const weights = templates.slice(0, count).map((line) => (
@@ -392,6 +445,23 @@ function applyEffectsAndDraw(
   const previousFill = ctx.fillStyle;
   applyGradient(ctx, layer, rect, color);
   drawTrackedText(ctx, line, x, y, tracking, align, "fill");
+  // Stabilize glyph edges across Skia (browser) and FreeType (server). Both
+  // engines receive the same four sub-pixel taps after the opaque centre
+  // draw; interiors remain unchanged while edge coverage converges instead
+  // of depending on either backend's single-sample hinting decision.
+  ctx.shadowColor = "rgba(0,0,0,0)";
+  ctx.shadowBlur = 0;
+  ctx.shadowOffsetX = 0;
+  ctx.shadowOffsetY = 0;
+  ctx.globalAlpha = 0.14;
+  drawTrackedText(ctx, line, x - 0.35, y, tracking, align, "fill");
+  drawTrackedText(ctx, line, x + 0.35, y, tracking, align, "fill");
+  drawTrackedText(ctx, line, x, y - 0.35, tracking, align, "fill");
+  drawTrackedText(ctx, line, x, y + 0.35, tracking, align, "fill");
+  drawTrackedText(ctx, line, x - 0.25, y - 0.25, tracking, align, "fill");
+  drawTrackedText(ctx, line, x + 0.25, y - 0.25, tracking, align, "fill");
+  drawTrackedText(ctx, line, x - 0.25, y + 0.25, tracking, align, "fill");
+  drawTrackedText(ctx, line, x + 0.25, y + 0.25, tracking, align, "fill");
   ctx.fillStyle = previousFill;
   ctx.restore();
 }
@@ -399,7 +469,7 @@ function applyEffectsAndDraw(
 function clipMaskPath(
   ctx: Canvas2DLike,
   rect: { left: number; top: number; width: number; height: number },
-  mask: { kind: "rect" | "rounded" | "ellipse"; radius?: number },
+  mask: ImageSlotMask,
 ): void {
   ctx.beginPath();
   if (mask.kind === "ellipse") {
@@ -415,8 +485,14 @@ function clipMaskPath(
   } else if (mask.kind === "rounded") {
     // Radius is specified at 1080w; every layout is 1080 wide, but clamp
     // defensively so a too-large radius can never invert the path.
-    const radius = Math.min(mask.radius ?? 0, rect.width / 2, rect.height / 2);
-    roundedRectPath(ctx, rect.left, rect.top, rect.width, rect.height, radius);
+    if (typeof mask.radius === "number" || mask.radius === undefined) {
+      const radius = Math.min(mask.radius ?? 0, rect.width / 2, rect.height / 2);
+      // Keep the legacy command sequence byte-for-byte stable for the many
+      // existing templates which use one uniform radius.
+      roundedRectPath(ctx, rect.left, rect.top, rect.width, rect.height, radius);
+    } else {
+      roundedRectCornersPath(ctx, rect.left, rect.top, rect.width, rect.height, mask.radius);
+    }
   } else {
     ctx.rect(rect.left, rect.top, rect.width, rect.height);
   }
@@ -437,6 +513,46 @@ function roundedRectPath(
   ctx.arc(x + width - r, y + height - r, r, 0, Math.PI / 2);
   ctx.arc(x + r, y + height - r, r, Math.PI / 2, Math.PI);
   ctx.arc(x + r, y + r, r, Math.PI, (3 * Math.PI) / 2);
+  ctx.closePath();
+}
+
+/**
+ * CSS-like corner-radius normalization: no adjacent pair may consume more
+ * than an edge. This preserves the authored corner proportions even when an
+ * operator moves or shrinks an image slot in the editor.
+ */
+function clampCornerRadii(width: number, height: number, radii: CornerRadii): CornerRadii {
+  const [topLeft, topRight, bottomRight, bottomLeft] = radii.map((radius) => (
+    Math.max(0, Math.min(radius, width / 2, height / 2))
+  )) as CornerRadii;
+  const scale = Math.min(
+    1,
+    width / Math.max(1, topLeft + topRight),
+    width / Math.max(1, bottomLeft + bottomRight),
+    height / Math.max(1, topLeft + bottomLeft),
+    height / Math.max(1, topRight + bottomRight),
+  );
+  return [topLeft * scale, topRight * scale, bottomRight * scale, bottomLeft * scale];
+}
+
+function roundedRectCornersPath(
+  ctx: Canvas2DLike,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radii: CornerRadii,
+): void {
+  const [topLeft, topRight, bottomRight, bottomLeft] = clampCornerRadii(width, height, radii);
+  ctx.moveTo(x + topLeft, y);
+  ctx.lineTo(x + width - topRight, y);
+  ctx.arc(x + width - topRight, y + topRight, topRight, -Math.PI / 2, 0);
+  ctx.lineTo(x + width, y + height - bottomRight);
+  ctx.arc(x + width - bottomRight, y + height - bottomRight, bottomRight, 0, Math.PI / 2);
+  ctx.lineTo(x + bottomLeft, y + height);
+  ctx.arc(x + bottomLeft, y + height - bottomLeft, bottomLeft, Math.PI / 2, Math.PI);
+  ctx.lineTo(x, y + topLeft);
+  ctx.arc(x + topLeft, y + topLeft, topLeft, Math.PI, (3 * Math.PI) / 2);
   ctx.closePath();
 }
 

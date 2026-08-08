@@ -31,9 +31,7 @@
     "decomposedFrom": "source"
   },
   "restyle": {
-    "paletteMap": {
-      "#1f242b": "#1f242b"
-    },
+    "paletteMap": {},
     "replacedAssets": [
       "agent_portrait"
     ],
@@ -380,7 +378,7 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "ready",
+    "status": "qa",
     "residuals": {
       "text-subheadline": 0.03692430556299331
     },
@@ -392,8 +390,6 @@
       "email",
       "website",
       "phone"
-    ],
-    "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
-    "qaAt": "2026-08-07T12:06:32.278Z"
+    ]
   }
 }

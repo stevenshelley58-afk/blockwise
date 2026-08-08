@@ -157,6 +157,75 @@ const PROVENANCE = (id) => ({
 
 const EDIT_POLICY = { mode: "guided", advancedUnlockable: true, lockedLayerIds: [] };
 
+// Generic, visibly distinct customer-safe asset used only by the synthetic
+// ready fixture. It is written before the doc so the fixture records its real
+// bytes rather than a made-up replacement-asset hash.
+const safeFixturePhoto = writePng("slots/photo-landscape.png", paintPhoto(1600, 1000, "#7c8db0", "#f8fafc"));
+
+function fidelityHash(doc) {
+  return sha256(normalizeCanonicalJson({
+    ...doc,
+    exactness: { bakedTextKeys: [...doc.exactness.bakedTextKeys].sort() },
+  }));
+}
+
+function evidenceHash(value) {
+  return sha256(normalizeCanonicalJson(value));
+}
+
+function attachSyntheticReadyEvidence(doc) {
+  const sourceCuration = {
+    accepted: true,
+    reviewerUserId: "6d0dd487-0c2d-4c7e-bfcc-5d55c9e2b04c",
+    reviewerEmail: "fixture-qa@example.com",
+    reviewedAt: "2026-08-05T00:00:00.000Z",
+    classification: doc.classification,
+    rationale: "Synthetic fixture source accepted for contract-only tests.",
+  };
+  const sourceValues = { headline: "Private source headline" };
+  const templateHash = fidelityHash(doc);
+  const residualEvidence = {
+    sourceContentHash: doc.provenance.sourceAd.contentHash,
+    templateHash,
+    checkedAt: "2026-08-05T00:00:00.000Z",
+    nativeSurface: "feed",
+    residuals: { "feed-text-headline": 0.05 },
+    outside: { totalPixels: 1234567, differingPixels: 0, differingBounds: null },
+  };
+  const entries = ["longest-copy", "one-character-copy", "minimum-resolution", "all-portrait", "all-landscape"]
+    .flatMap((scenario) => ["4:5", "9:16"].map((format) => ({
+      format,
+      scenario,
+      renderHash: HEX_64(`${doc.id}:stress:${format}:${scenario}`),
+    })));
+  const stressEvidence = {
+    templateHash,
+    checkedAt: "2026-08-05T00:00:00.000Z",
+    matrixHash: evidenceHash({ templateHash, entries }),
+    entries,
+  };
+  doc.exactness = {
+    status: "ready",
+    residuals: residualEvidence.residuals,
+    bakedTextKeys: [],
+    residualEvidence,
+    stressEvidence,
+    reviewEvidence: {
+      reviewerUserId: sourceCuration.reviewerUserId,
+      reviewerEmail: sourceCuration.reviewerEmail,
+      reviewedAt: "2026-08-05T00:00:00.000Z",
+      confirmation: "inspected-at-100-percent",
+      templateHash,
+      sourceContentHash: doc.provenance.sourceAd.contentHash,
+      sampleContentHash: doc.provenance.sample.contentHash,
+      sourceCurationHash: evidenceHash(sourceCuration),
+      fidelityEvidenceHash: evidenceHash(residualEvidence),
+      stressEvidenceHash: evidenceHash(stressEvidence),
+    },
+  };
+  return { sourceValues, sourceCuration };
+}
+
 // ─── fixture-simple ──────────────────────────────────────────────────────────
 
 const simplePlate = writePng("plates/fixture-simple-feed.png", paintPlate(1080, 1350, {
@@ -365,6 +434,7 @@ const storyDoc = {
   restyle: {
     paletteMap: { "#e11d48": "#1d4ed8" },
     replacedAssets: ["photo"],
+    safeReplacementAssets: [{ inputKey: "photo", src: safeFixturePhoto.src, sha256: safeFixturePhoto.sha256 }],
     note: "fixture restyle: palette remap + generic photo",
   },
   fonts: FONTS,
@@ -431,17 +501,10 @@ const storyDoc = {
   },
   publish: publishBlock({ story: true }),
   editPolicy: EDIT_POLICY,
-  exactness: {
-    status: "ready",
-    residuals: {
-      "feed-text-headline": 0.05,
-      "story-text-headline": 0.06,
-    },
-    bakedTextKeys: [],
-    qaBy: "fixture-qa",
-    qaAt: "2026-08-05T00:00:00.000Z",
-  },
+  exactness: { status: "qa", residuals: {}, bakedTextKeys: [] },
 };
+
+const storyEvidence = attachSyntheticReadyEvidence(storyDoc);
 
 // ─── instances ───────────────────────────────────────────────────────────────
 
@@ -489,7 +552,6 @@ const fixtures = [
 
 // ─── slot photos (customer-side test inputs) ─────────────────────────────────
 
-writePng("slots/photo-landscape.png", paintPhoto(1600, 1000, "#7c8db0", "#f8fafc"));
 writePng("slots/photo-portrait.png", paintPhoto(1000, 1600, "#b08d7c", "#f8fafc"));
 writePng("slots/photo-square.png", paintPhoto(1200, 1200, "#7cb08d", "#f8fafc"));
 
@@ -499,6 +561,9 @@ for (const { doc, instances } of fixtures) {
   templateDocV2Schema.parse(doc);
   mkdirSync(join(here, doc.id), { recursive: true });
   writeFileSync(join(here, doc.id, "template.json"), `${JSON.stringify(doc, null, 2)}\n`);
+  if (doc.id === storyDoc.id) {
+    writeFileSync(join(here, doc.id, "evidence.json"), `${JSON.stringify(storyEvidence, null, 2)}\n`);
+  }
   for (const { name, instance } of instances) {
     adDocInstanceSchema.parse(instance);
     writeFileSync(join(here, doc.id, `instance-${name}.json`), `${JSON.stringify(instance, null, 2)}\n`);

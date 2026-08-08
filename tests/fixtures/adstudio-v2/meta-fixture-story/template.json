@@ -34,6 +34,13 @@
     "replacedAssets": [
       "photo"
     ],
+    "safeReplacementAssets": [
+      {
+        "inputKey": "photo",
+        "src": "/slots/photo-landscape.png",
+        "sha256": "3023e5565818c2daacd305899537bdc29293a5384dfd722c4839a51605a448d0"
+      }
+    ],
     "note": "fixture restyle: palette remap + generic photo"
   },
   "fonts": [
@@ -257,11 +264,91 @@
   "exactness": {
     "status": "ready",
     "residuals": {
-      "feed-text-headline": 0.05,
-      "story-text-headline": 0.06
+      "feed-text-headline": 0.05
     },
     "bakedTextKeys": [],
-    "qaBy": "fixture-qa",
-    "qaAt": "2026-08-05T00:00:00.000Z"
+    "residualEvidence": {
+      "sourceContentHash": "a9c59a472e9bc27fe4fd68a344b60601a6eb8b121760f9480cc3d738a4c3abe8",
+      "templateHash": "1a6ae4ae25341f9190264e53db496c3247f5e1f960588c31c182f09c50fe4a8d",
+      "checkedAt": "2026-08-05T00:00:00.000Z",
+      "nativeSurface": "feed",
+      "residuals": {
+        "feed-text-headline": 0.05
+      },
+      "outside": {
+        "totalPixels": 1234567,
+        "differingPixels": 0,
+        "differingBounds": null
+      }
+    },
+    "stressEvidence": {
+      "templateHash": "1a6ae4ae25341f9190264e53db496c3247f5e1f960588c31c182f09c50fe4a8d",
+      "checkedAt": "2026-08-05T00:00:00.000Z",
+      "matrixHash": "dfbc764960d4f3fde77856c292a0d3f91175b5bf0a870904fe3aed04cb5d8a5a",
+      "entries": [
+        {
+          "format": "4:5",
+          "scenario": "longest-copy",
+          "renderHash": "4c150a083141b3e6510c34ff6e2ca0b440135861efcea3ff02c0e03c05a60b3f"
+        },
+        {
+          "format": "9:16",
+          "scenario": "longest-copy",
+          "renderHash": "9e8ccbb40624666f9abaab10ae3fb509922d055c70e4cb5db809e68217c9b20b"
+        },
+        {
+          "format": "4:5",
+          "scenario": "one-character-copy",
+          "renderHash": "4aa3562c66292ebce688d5ffc07cb3913b0a0d73183376010b806c00c6a6e487"
+        },
+        {
+          "format": "9:16",
+          "scenario": "one-character-copy",
+          "renderHash": "41058b6758c245eb30bcb1b79ce441f82442ac8436089384c1c8096b8ba2d5dc"
+        },
+        {
+          "format": "4:5",
+          "scenario": "minimum-resolution",
+          "renderHash": "f20003e497124964a6bce826516edad1ebf6ca82d0a682f9ae94d9ddf74bec8b"
+        },
+        {
+          "format": "9:16",
+          "scenario": "minimum-resolution",
+          "renderHash": "2d21b893e37f59cc1dd63e8341dd239fd02484899509447bfa58db612d260a51"
+        },
+        {
+          "format": "4:5",
+          "scenario": "all-portrait",
+          "renderHash": "5b6390b248b90af55b29bee84effbeb1748d9f05dfd2aebc64ef026c48ca616f"
+        },
+        {
+          "format": "9:16",
+          "scenario": "all-portrait",
+          "renderHash": "7399d91901886354268b90b77bb7ab23dcd33ea079873e317d0200239ae1e410"
+        },
+        {
+          "format": "4:5",
+          "scenario": "all-landscape",
+          "renderHash": "92f68dc9ef3483c7fc8cb96679e79441c6958b653d8c065da5120592ab195dc3"
+        },
+        {
+          "format": "9:16",
+          "scenario": "all-landscape",
+          "renderHash": "769ca2ed30503e4297c1b5ec9bb166e2e2ceca5aa6e07de3061e69f06dca4c64"
+        }
+      ]
+    },
+    "reviewEvidence": {
+      "reviewerUserId": "6d0dd487-0c2d-4c7e-bfcc-5d55c9e2b04c",
+      "reviewerEmail": "fixture-qa@example.com",
+      "reviewedAt": "2026-08-05T00:00:00.000Z",
+      "confirmation": "inspected-at-100-percent",
+      "templateHash": "1a6ae4ae25341f9190264e53db496c3247f5e1f960588c31c182f09c50fe4a8d",
+      "sourceContentHash": "a9c59a472e9bc27fe4fd68a344b60601a6eb8b121760f9480cc3d738a4c3abe8",
+      "sampleContentHash": "ba57e3fc78bd9fad91f1d6ca177a5beaa97504b2faf7332a0d186a763ad1e97e",
+      "sourceCurationHash": "f42ee5c6102692fe01f619c8e6dd50aa6306c6c5390ea77338cc91791877c592",
+      "fidelityEvidenceHash": "1d7f5de18235b20e3317f88ffec4828c8e52a48027bb728441934f449dfa40cc",
+      "stressEvidenceHash": "537e9b82609f3a92004852c0059839d0868ede61f0a17bfb008c724014d1f719"
+    }
   }
 }

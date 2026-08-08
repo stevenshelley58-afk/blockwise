@@ -11,7 +11,11 @@ import sharp from "sharp";
 
 import { hashCanonicalJson } from "../../../../src/lib/adstudio/v2/template-hash.ts";
 
-export const TEXT_MASK_PADDING = 0.035;
+// Measured boxes already hug the source glyphs. A 2% guard clears antialiasing
+// and shadows without needlessly replacing the surrounding designer pixels.
+// The fidelity exclusion remains wider (3.5%), so every permitted edit stays
+// strictly inside the gate's declared text region.
+export const TEXT_MASK_PADDING = 0.02;
 
 export function envFromDotfiles(root) {
   const env = { ...process.env };
@@ -75,10 +79,22 @@ export async function buildCompositeMask(dimensions, boxes) {
 export async function inpaintTextRegions(env, sourceBytes, maskBytes) {
   const apiKey = env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_API_KEY is not configured.");
-  const model = env.BLOCKWISE_OPENAI_IMAGE_MODEL ?? "gpt-image-2";
+  const model = env.BLOCKWISE_OPENAI_IMAGE_MODEL || "gpt-image-2-2026-04-21";
+  const metadata = await sharp(sourceBytes).metadata();
+  const width = Math.max(16, Math.round((metadata.width ?? 1024) / 16) * 16);
+  const height = Math.max(16, Math.round((metadata.height ?? 1024) / 16) * 16);
   const form = new FormData();
   form.append("model", model);
-  form.append("prompt", "Remove all text, lettering and logotype from the transparent masked regions, reconstructing the underlying background artwork seamlessly. Every pixel outside the masked regions must stay exactly as it is.");
+  form.append("prompt", [
+    "Edit only the transparent masked regions of this real estate advertisement.",
+    "Remove every visible letter, numeral, punctuation mark, wordmark, and text-shaped artifact inside those regions.",
+    "Reconstruct the exact underlying local background: continue nearby photography, gradients, paper texture, shadows, panel edges, borders, and straight lines with seamless continuity.",
+    "Do not add replacement text, symbols, logos, people, objects, decorative flourishes, or new layout elements.",
+    "The repaired regions must look like the clean designer background that existed before typography was added.",
+  ].join(" "));
+  form.append("quality", "high");
+  form.append("size", `${width}x${height}`);
+  form.append("output_format", "png");
   form.append("image", new Blob([new Uint8Array(sourceBytes)], { type: "image/png" }), "source.png");
   form.append("mask", new Blob([new Uint8Array(maskBytes)], { type: "image/png" }), "mask.png");
   const response = await fetch(env.CLOUDFLARE_AI_GATEWAY_URL?.includes("/images/generations")

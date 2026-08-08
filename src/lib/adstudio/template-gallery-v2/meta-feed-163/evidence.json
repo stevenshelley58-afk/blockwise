@@ -2,24 +2,21 @@
   "migratedFrom": "v1",
   "source": "source",
   "sourceValues": {
-    "main_question": "",
-    "cta_text": ""
+    "main_question": "What questions do you have about the home buying process?",
+    "cta_text": "Let me know in the comments!"
   },
   "textBoxes": {
     "main_question": {
-      "x": 0.2001953125,
-      "y": 0.3890625,
-      "width": 0.62646484375,
-      "height": 0.191796875
+      "x": 0.1897,
+      "y": 0.40096,
+      "width": 0.6206,
+      "height": 0.16773
     },
     "cta_text": {
-      "x": 0.1,
-      "y": 0.8,
-      "width": 0.8,
-      "height": 0.05
+      "x": 0.2372,
+      "y": 0.6534,
+      "width": 0.5277,
+      "height": 0.0256
     }
-  },
-  "bakedResiduals": {
-    "baked-main_question": 0
   }
 }

@@ -86,6 +86,42 @@ test("repositionLayersForStory maps feed boxes into the safe zones", async () =>
   assert.ok(moved.box.y + moved.box.height <= bottomNorm + 1e-9, "bottom inside safe zone");
 });
 
+test("repositionLayersForStory maps measured text lines with their parent layer", () => {
+  const layers = [{
+    id: "headline",
+    kind: "text",
+    box: { x: 0.1, y: 0.2, width: 0.8, height: 0.3 },
+    typo: {
+      family: "Inter",
+      measuredLines: [
+        { text: "FIRST", box: { x: 0.12, y: 0.22, width: 0.4, height: 0.08 }, sizeRatio: 1.1 },
+        { text: "HOME", box: { x: 0.12, y: 0.34, width: 0.5, height: 0.09 }, sizeRatio: 0.9, scaleX: 0.95 },
+      ],
+    },
+  }, {
+    id: "image",
+    kind: "image",
+    box: { x: 0.2, y: 0.6, width: 0.5, height: 0.2 },
+  }];
+  const [text, image] = repositionLayersForStory(layers);
+  const usable = (1920 - 340 - 250) / 1920;
+  const top = 250 / 1920;
+
+  const firstLine = text.typo.measuredLines[0].box;
+  assert.equal(firstLine.x, 0.12);
+  assert.equal(firstLine.width, 0.4);
+  assert.ok(Math.abs(firstLine.y - (top + 0.22 * usable)) < 1e-12);
+  assert.ok(Math.abs(firstLine.height - 0.08 * usable) < 1e-12);
+  assert.equal(text.typo.measuredLines[1].scaleX, 0.95, "line styling survives mapping");
+  assert.equal(image.kind, "image", "non-text layers keep their fields");
+  assert.equal(image.typo, undefined, "non-text layers do not gain text geometry");
+  assert.equal(image.box.x, 0.2);
+  assert.equal(image.box.width, 0.5);
+  assert.ok(Math.abs(image.box.y - (top + 0.6 * usable)) < 1e-12);
+  assert.ok(Math.abs(image.box.height - 0.2 * usable) < 1e-12);
+  assert.deepEqual(layers[0].typo.measuredLines[0].box, { x: 0.12, y: 0.22, width: 0.4, height: 0.08 }, "input remains immutable");
+});
+
 test("mapStoryBoxToFeed: centred box maps into the band, off-band boxes drop", () => {
   const centred = mapStoryBoxToFeed({ x: 0.1, y: 0.4, width: 0.8, height: 0.2 });
   assert.ok(centred, "centred box survives");

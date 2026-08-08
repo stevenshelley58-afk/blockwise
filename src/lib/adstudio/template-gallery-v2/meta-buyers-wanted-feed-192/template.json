@@ -29,9 +29,7 @@
     "decomposedFrom": "source"
   },
   "restyle": {
-    "paletteMap": {
-      "#1f242b": "#1f242b"
-    },
+    "paletteMap": {},
     "replacedAssets": [
       "property_photo",
       "agency_logo"
@@ -402,7 +400,7 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "ready",
+    "status": "qa",
     "residuals": {
       "text-benefit_3": 0.06375581356772894
     },
@@ -413,8 +411,6 @@
       "cta",
       "benefit_2",
       "benefit_1"
-    ],
-    "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
-    "qaAt": "2026-08-07T12:21:28.309Z"
+    ]
   }
 }

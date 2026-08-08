@@ -3,12 +3,15 @@ import { NextResponse, type NextRequest } from "next/server";
 import { requireOperator } from "@/lib/operator/auth";
 import {
   approveTemplate,
+  recordSourceCuration,
   runBake,
   runFidelityCheck,
   runRestyle,
+  sourceCurationStatus,
   studioWritesAllowed,
   writeTemplateDoc,
 } from "@/lib/adstudio/v2/studio";
+import { runStressMatrix } from "@/lib/adstudio/v2/fidelity-stress";
 import { loadTemplateV2 } from "@/lib/adstudio/v2/template-resolver";
 import { templateDocV2Schema } from "@/lib/adstudio/v2/template-doc";
 
@@ -21,13 +24,16 @@ export const maxDuration = 120;
 
 type Context = { params: Promise<{ id: string }> };
 
-export async function GET(_request: NextRequest, context: Context) {
+export async function GET(request: NextRequest, context: Context) {
   const auth = await requireOperator();
   if (!auth.ok) return auth.response;
   const { id } = await context.params;
   try {
     const doc = loadTemplateV2(id);
     if (!doc) return NextResponse.json({ error: "Unknown template." }, { status: 404 });
+    if (new URL(request.url).searchParams.get("view") === "review") {
+      return NextResponse.json({ doc, sourceCuration: sourceCurationStatus(doc) });
+    }
     return NextResponse.json(doc);
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Broken template." }, { status: 500 });
@@ -67,8 +73,6 @@ export async function POST(request: NextRequest, context: Context) {
   if (action === "check") {
     try {
       const check = await runFidelityCheck(doc);
-      doc.exactness = { ...doc.exactness, residuals: check.residuals };
-      writeTemplateDoc(id, doc);
       return NextResponse.json(check);
     } catch (error) {
       return NextResponse.json({ error: error instanceof Error ? error.message : "Check failed." }, { status: 422 });
@@ -76,13 +80,39 @@ export async function POST(request: NextRequest, context: Context) {
   }
 
   if (action === "approve") {
-    const body = (await request.json().catch(() => null)) as { confirmed?: boolean } | null;
+    const body = (await request.json().catch(() => null)) as {
+      confirmed?: boolean;
+      templateHash?: string;
+      stressMatrixHash?: string;
+    } | null;
     try {
-      const result = await approveTemplate(doc, auth.email, Boolean(body?.confirmed));
+      const result = await approveTemplate(
+        doc,
+        { userId: auth.userId, email: auth.email },
+        {
+          confirmed: Boolean(body?.confirmed),
+          templateHash: body?.templateHash,
+          stressMatrixHash: body?.stressMatrixHash,
+        },
+      );
       if (!result.ok) return NextResponse.json(result, { status: 422 });
       return NextResponse.json(result);
     } catch (error) {
       return NextResponse.json({ ok: false, problems: [error instanceof Error ? error.message : "Approve failed."] }, { status: 422 });
+    }
+  }
+
+  if (action === "curate") {
+    const body = (await request.json().catch(() => null)) as { rationale?: string } | null;
+    try {
+      const sourceCuration = recordSourceCuration(
+        doc,
+        { userId: auth.userId, email: auth.email },
+        body?.rationale ?? "",
+      );
+      return NextResponse.json({ ok: true, sourceCuration });
+    } catch (error) {
+      return NextResponse.json({ error: error instanceof Error ? error.message : "Source curation failed." }, { status: 422 });
     }
   }
 
@@ -99,8 +129,12 @@ export async function POST(request: NextRequest, context: Context) {
 
   // Restyle (D5): deterministic palette remap + sample render, headless.
   if (action === "restyle") {
+    const body = (await request.json().catch(() => null)) as {
+      text?: Record<string, string>;
+      assets?: Record<string, string>;
+    } | null;
     try {
-      const result = await runRestyle(doc);
+      const result = await runRestyle(doc, { text: body?.text ?? {}, assets: body?.assets ?? {} });
       return NextResponse.json({ ok: true, ...result });
     } catch (error) {
       return NextResponse.json({ error: error instanceof Error ? error.message : "Restyle failed." }, { status: 422 });
@@ -109,29 +143,16 @@ export async function POST(request: NextRequest, context: Context) {
 
   if (action === "stress") {
     try {
-      const { renderAdDocToPng } = await import("@/lib/adstudio/v2/render/server.ts");
-      const editable = doc.inputs.text.filter((input) => !doc.exactness.bakedTextKeys.includes(input.key));
-      const variants: Array<[string, Record<string, string>]> = [
-        ["longest", Object.fromEntries(editable.map((input) => [input.key, input.sample.slice(0, input.maxLength)]))],
-        ["one-char", Object.fromEntries(editable.map((input) => [input.key, "W"]))],
-      ];
       const renders: Array<{ name: string; dataUrl: string }> = [];
-      for (const [name, textValues] of variants) {
-        try {
-          const png = await renderAdDocToPng(doc, {
-            schema: "adstudio.instance.v2",
-            templateId: doc.id,
-            templateHash: "0".repeat(64),
-            format: doc.formats.feed.format,
-            values: { images: {}, text: textValues },
-            overrides: [],
-          }, doc.formats.feed.format);
-          renders.push({ name, dataUrl: `data:image/png;base64,${png.toString("base64")}` });
-        } catch (error) {
-          renders.push({ name: `${name} (refused: ${(error as Error).name})`, dataUrl: "" });
-        }
-      }
-      return NextResponse.json({ renders });
+      const matrix = await runStressMatrix(doc, {
+        onRender(entry, png) {
+          renders.push({
+            name: `${entry.scenario} · ${entry.format}`,
+            dataUrl: `data:image/png;base64,${png.toString("base64")}`,
+          });
+        },
+      });
+      return NextResponse.json({ renders, matrixHash: matrix.hash, templateHash: matrix.templateHash });
     } catch (error) {
       return NextResponse.json({ error: error instanceof Error ? error.message : "Stress render failed." }, { status: 422 });
     }

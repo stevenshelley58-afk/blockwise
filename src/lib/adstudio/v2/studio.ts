@@ -5,16 +5,141 @@
 // ad — proving the template can reproduce the designer's ad before it
 // reproduces anyone else's (D5).
 
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 
+import {
+  fidelityTemplateHash,
+  runNativeSurfaceFidelity,
+  runStressMatrix,
+} from "./fidelity-stress.ts";
+import { buildRestyleSampleRenderInput } from "./restyle-assets.ts";
 import { renderAdDocToPng } from "./render/server.ts";
+import { hashCanonicalJson } from "./template-hash.ts";
+import { snapshotTemplateBeforeWrite } from "./template-history.ts";
 import { templateGalleryV2Dir } from "./template-resolver.ts";
-import type { AdDocInstance, AdTemplateDocV2, TextLayer } from "./template-doc.ts";
+import { hasNonTrivialRestyle, normalizeCanonicalJson, templateDocV2Schema, type AdTemplateDocV2, type TextLayer } from "./template-doc.ts";
 
 const repoRoot = resolve(process.cwd());
 const SOURCE_DIR = join(repoRoot, "meta_ad_candidates");
 const RESIDUAL_THRESHOLD = 0.14;
+const OPERATOR_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const OPERATOR_USER_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const SAFE_PUBLIC_ASSET = /^\/adstudio-safe-assets\/[a-z0-9-]+\.webp$/;
+
+export type TemplateReviewer = { userId: string; email: string };
+
+type TemplateEvidence = {
+  sourceValues?: Record<string, string>;
+  sourceCuration?: {
+    accepted: boolean;
+    reviewerUserId: string;
+    reviewerEmail: string;
+    reviewedAt: string;
+    classification: AdTemplateDocV2["classification"];
+    rationale: string;
+  };
+  [key: string]: unknown;
+};
+
+function evidencePathFor(doc: Pick<AdTemplateDocV2, "id">): string {
+  return join(templateGalleryV2Dir(), doc.id, "evidence.json");
+}
+
+function evidenceFor(doc: Pick<AdTemplateDocV2, "id">): TemplateEvidence {
+  const path = evidencePathFor(doc);
+  return existsSync(path) ? JSON.parse(readFileSync(path, "utf8")) as TemplateEvidence : {};
+}
+
+function editableTextKeys(doc: AdTemplateDocV2): string[] {
+  const baked = new Set(doc.exactness.bakedTextKeys);
+  return doc.inputs.text.map((input) => input.key).filter((key) => !baked.has(key));
+}
+
+function sourceValuesFor(doc: AdTemplateDocV2): Record<string, string> {
+  const sourceValues = evidenceFor(doc).sourceValues ?? {};
+  for (const key of editableTextKeys(doc)) {
+    if (typeof sourceValues[key] !== "string" || sourceValues[key].trim().length === 0) {
+      throw new Error(`sourceValues.${key} must contain the source ad's visible text before fidelity can run`);
+    }
+  }
+  return sourceValues;
+}
+
+function sourceCurationProblem(doc: AdTemplateDocV2): string | null {
+  const curation = evidenceFor(doc).sourceCuration;
+  if (!curation?.accepted
+    || !OPERATOR_USER_ID.test(curation.reviewerUserId ?? "")
+    || !OPERATOR_EMAIL.test(curation.reviewerEmail ?? "")
+    || typeof curation.reviewedAt !== "string"
+    || Number.isNaN(Date.parse(curation.reviewedAt))
+    || !curation.classification
+    || !String(curation.rationale ?? "").trim()) {
+    return "ready requires accepted source curation with authenticated reviewer, timestamp, classification, and rationale";
+  }
+  if (normalizeCanonicalJson(curation.classification) !== normalizeCanonicalJson(doc.classification)) {
+    return "source curation classification does not match template classification";
+  }
+  return null;
+}
+
+function sourceCurationFor(doc: AdTemplateDocV2) {
+  const curation = evidenceFor(doc).sourceCuration;
+  if (!curation) throw new Error("source curation evidence is missing");
+  return curation;
+}
+
+export function sourceCurationStatus(doc: AdTemplateDocV2) {
+  return evidenceFor(doc).sourceCuration ?? null;
+}
+
+export function recordSourceCuration(doc: AdTemplateDocV2, reviewer: TemplateReviewer, rationale: string) {
+  if (!OPERATOR_USER_ID.test(reviewer.userId) || !OPERATOR_EMAIL.test(reviewer.email)) {
+    throw new Error("source curation requires an authenticated operator identity");
+  }
+  if (!rationale.trim()) throw new Error("source curation requires a concise quality rationale");
+  const path = evidencePathFor(doc);
+  const evidence = evidenceFor(doc);
+  const sourceCuration = {
+    accepted: true,
+    reviewerUserId: reviewer.userId,
+    reviewerEmail: reviewer.email,
+    reviewedAt: new Date().toISOString(),
+    classification: doc.classification,
+    rationale: rationale.trim(),
+  };
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, `${JSON.stringify({ ...evidence, sourceCuration }, null, 2)}\n`);
+  return sourceCuration;
+}
+
+function safeSampleCopyProblems(doc: AdTemplateDocV2): string[] {
+  const sourceValues = sourceValuesFor(doc);
+  const problems: string[] = [];
+  for (const input of doc.inputs.text) {
+    if (doc.exactness.bakedTextKeys.includes(input.key)) continue;
+    if (!input.sample.trim()) problems.push(`safe sample copy for ${input.key} is blank`);
+    if (input.sample.trim() === sourceValues[input.key]?.trim()) {
+      problems.push(`safe sample copy for ${input.key} still equals the private source text`);
+    }
+  }
+  return problems;
+}
+
+function safeReplacementAssetProblems(doc: AdTemplateDocV2): string[] {
+  const problems: string[] = [];
+  for (const asset of doc.restyle.safeReplacementAssets ?? []) {
+    const path = join(resolve(process.cwd()), "public", asset.src.replace(/^\//, ""));
+    if (!existsSync(path)) {
+      problems.push(`safe replacement asset missing: ${asset.src}`);
+      continue;
+    }
+    const actual = createHash("sha256").update(readFileSync(path)).digest("hex");
+    if (actual !== asset.sha256) problems.push(`safe replacement asset hash mismatch: ${asset.src}`);
+  }
+  return problems;
+}
 
 export function studioQueue() {
   const galleryDir = templateGalleryV2Dir();
@@ -59,128 +184,53 @@ function sourceAdBytes(doc: AdTemplateDocV2): Buffer | null {
  * Returns the per-layer report.
  */
 export async function runFidelityCheck(doc: AdTemplateDocV2) {
-  const evidencePath = join(templateGalleryV2Dir(), doc.id, "evidence.json");
-  const sourceValues = existsSync(evidencePath)
-    ? (JSON.parse(readFileSync(evidencePath, "utf8")).sourceValues ?? {})
-    : {};
+  const sourceValues = sourceValuesFor(doc);
   const sourceBytes = sourceAdBytes(doc);
   if (!sourceBytes) {
     throw new Error(`source ad missing for ${doc.id} (${doc.provenance.sourceAd.file ?? "no file"})`);
   }
-
-  const instance: AdDocInstance = {
-    schema: "adstudio.instance.v2",
-    templateId: doc.id,
-    templateHash: "0".repeat(64),
-    format: "4:5",
-    values: {
-      images: {}, // plates/slots carry the source pixels; the check compares layout+type
-      text: sourceValues,
-    },
-    overrides: [],
+  const result = await runNativeSurfaceFidelity(doc, { sourceBytes, sourceValues });
+  return {
+    residuals: result.residuals,
+    threshold: RESIDUAL_THRESHOLD,
+    residualEvidence: result,
   };
-
-  const rendered = await renderAdDocToPng(doc, instance, "4:5");
-
-  const { default: sharp } = await import("sharp");
-  // The recorded restyle plate remap (hue degrees) is the byte baseline when
-  // present; otherwise the raw resized source. Order matches restyle:
-  // resize first, then hue remap.
-  const hueShift = doc.restyle?.plateRemap?.hue ?? 0;
-  const baseline = async (W: number, H: number) => {
-    const resized = await sharp(sourceBytes).resize(W, H, { fit: "fill" }).png().toBuffer();
-    return hueShift
-      ? sharp(resized).modulate({ hue: hueShift }).raw().ensureAlpha().toBuffer()
-      : sharp(resized).raw().ensureAlpha().toBuffer();
-  };
-  const source = await baseline(1080, 1350);
-  const textLayers = doc.formats.feed.layers.filter((layer): layer is TextLayer => layer.type === "text");
-
-  const computeResiduals = (renderedRaw: Uint8Array, sourceRaw: Uint8Array, W: number, H: number, layers: TextLayer[], pad: number) => {
-    const residuals: Record<string, number> = {};
-    for (const layer of layers) {
-      const box = {
-        x: Math.max(0, Math.floor(layer.box.x * W) - pad),
-        y: Math.max(0, Math.floor(layer.box.y * H) - pad),
-        width: Math.min(W, Math.ceil(layer.box.width * W) + pad * 2),
-        height: Math.min(H, Math.ceil(layer.box.height * H) + pad * 2),
-      };
-      const yEnd = Math.min(H, box.y + box.height);
-      const xEnd = Math.min(W, box.x + box.width);
-      let sum = 0;
-      let count = 0;
-      for (let y = box.y; y < yEnd; y += 2) {
-        for (let x = box.x; x < xEnd; x += 2) {
-          const i = (y * W + x) * 4;
-          const greyA = 0.2126 * renderedRaw[i] + 0.7152 * renderedRaw[i + 1] + 0.0722 * renderedRaw[i + 2];
-          const greyB = 0.2126 * sourceRaw[i] + 0.7152 * sourceRaw[i + 1] + 0.0722 * sourceRaw[i + 2];
-          const delta = (greyA - greyB) / 255;
-          sum += delta * delta;
-          count += 1;
-        }
-      }
-      residuals[layer.id] = count > 0 ? Math.sqrt(sum / count) : 0;
-    }
-    return residuals;
-  };
-
-  const residuals = computeResiduals(
-    await sharp(rendered).raw().ensureAlpha().toBuffer(),
-    source,
-    1080,
-    1350,
-    textLayers,
-    8,
-  );
-  // Only layer ids that still exist may carry residuals (schema law).
-  const liveIds = new Set(textLayers.map((layer) => layer.id));
-  for (const layerId of Object.keys(residuals)) {
-    if (!liveIds.has(layerId)) delete residuals[layerId];
-  }
-
-  // Native story layout: the schema requires a residual for every text layer
-  // in every layout, so record the story surface too (compared against the
-  // full-height source).
-  if (doc.formats.story?.native) {
-    const storyRendered = await renderAdDocToPng(doc, { ...instance, format: "9:16" }, "9:16");
-    const storySource = await baseline(1080, 1920);
-    const storyLayers = doc.formats.story.layers.filter((layer): layer is TextLayer => layer.type === "text");
-    Object.assign(
-      residuals,
-      computeResiduals(await sharp(storyRendered).raw().ensureAlpha().toBuffer(), storySource, 1080, 1920, storyLayers, 8),
-    );
-  }
-
-  return { residuals, threshold: 0.14 };
 }
 /**
  * Approve (human sign-off gate): re-runs the check and enforces the law —
  * story present, restyle non-trivial, sample != source, residuals under the
- * threshold, and the operator's required confirmation. The AI critic never
- * approves; only this call stamps qaBy/qaAt.
+ * threshold, and the operator's required confirmation bound to the exact
+ * fidelity and stress hashes they inspected. The AI critic never approves.
  */
-export async function approveTemplate(doc: AdTemplateDocV2, qaBy: string, confirmed: boolean) {
+export async function approveTemplate(
+  doc: AdTemplateDocV2,
+  reviewer: TemplateReviewer,
+  confirmation: { confirmed: boolean; templateHash?: string; stressMatrixHash?: string },
+) {
   const problems: string[] = [];
-  if (!confirmed) problems.push("confirmation checkbox required");
+  if (!confirmation.confirmed) problems.push("confirmation checkbox required");
+  if (!OPERATOR_USER_ID.test(reviewer.userId) || !OPERATOR_EMAIL.test(reviewer.email)) {
+    problems.push("approval requires the authenticated operator user ID and email");
+  }
   if (!doc.formats.story) problems.push("story layout required");
+  if (editableTextKeys(doc).length === 0) problems.push("ready requires at least one customer-visible editable text field");
+  if (doc.exactness.bakedTextKeys.length > 0) problems.push("ready cannot expose source text as baked pixels");
 
-  // Effective minSourcePx defaults: the slot's own px size at canvas res.
+  // Image quality is a template authoring decision, not something approval
+  // silently repairs after the reviewer has inspected a different document.
   for (const layout of [doc.formats.feed, doc.formats.story]) {
     if (!layout) continue;
     for (const layer of layout.layers) {
       if (layer.type === "image_slot" && !layer.minSourcePx) {
-        layer.minSourcePx = {
-          width: Math.round(layer.box.width * layout.width),
-          height: Math.round(layer.box.height * layout.height),
-        };
+        problems.push(`slot ${layer.id} requires minSourcePx before review`);
       }
     }
   }
-  const restyleTrivial =
-    Object.keys(doc.restyle?.paletteMap ?? {}).length === 0
-    && !doc.restyle?.plateRemap
-    && (doc.restyle?.replacedAssets ?? []).length === 0;
-  if (restyleTrivial) problems.push("restyle evidence trivial (D5)");
+  if (!hasNonTrivialRestyle(doc)) problems.push("public sample is missing hashed safe replacement assets");
+  problems.push(...safeReplacementAssetProblems(doc));
+  problems.push(...safeSampleCopyProblems(doc));
+  const curationProblem = sourceCurationProblem(doc);
+  if (curationProblem) problems.push(curationProblem);
   if (doc.provenance.sample.contentHash === doc.provenance.sourceAd.contentHash) {
     problems.push("sample hash equals source hash");
   }
@@ -197,23 +247,62 @@ export async function approveTemplate(doc: AdTemplateDocV2, qaBy: string, confir
     }
   }
 
-  const check = await runFidelityCheck(doc);
+  let check: Awaited<ReturnType<typeof runFidelityCheck>>;
+  let stress: Awaited<ReturnType<typeof runStressMatrix>>;
+  try {
+    check = await runFidelityCheck(doc);
+  } catch (error) {
+    problems.push(error instanceof Error ? error.message : "fidelity check failed");
+    return { ok: false as const, problems, residuals: {} };
+  }
   for (const [layerId, residual] of Object.entries(check.residuals)) {
     if (residual > check.threshold) {
       problems.push(`residual ${residual.toFixed(3)} for ${layerId} exceeds ${check.threshold}`);
     }
   }
+  try {
+    stress = await runStressMatrix(doc);
+  } catch (error) {
+    problems.push(error instanceof Error ? error.message : "stress matrix failed");
+    return { ok: false as const, problems, residuals: check.residuals };
+  }
+  if (confirmation.templateHash !== check.residualEvidence.templateHash) {
+    problems.push("reviewed template hash is missing or stale; rerun Check in Studio");
+  }
+  if (confirmation.stressMatrixHash !== stress.hash) {
+    problems.push("reviewed stress matrix hash is missing or stale; inspect the full Stress preview in Studio");
+  }
   if (problems.length > 0) return { ok: false as const, problems, residuals: check.residuals };
 
+  const reviewedAt = new Date().toISOString();
+  const stressEvidence = {
+    templateHash: stress.templateHash,
+    checkedAt: reviewedAt,
+    matrixHash: stress.hash,
+    entries: stress.entries,
+  };
+  const sourceCuration = sourceCurationFor(doc);
   doc.exactness = {
     ...doc.exactness,
     status: "ready",
     residuals: check.residuals,
-    qaBy,
-    qaAt: new Date().toISOString(),
+    residualEvidence: check.residualEvidence,
+    stressEvidence,
+    reviewEvidence: {
+      reviewerUserId: reviewer.userId,
+      reviewerEmail: reviewer.email,
+      reviewedAt,
+      confirmation: "inspected-at-100-percent",
+      templateHash: check.residualEvidence.templateHash,
+      sourceContentHash: doc.provenance.sourceAd.contentHash,
+      sampleContentHash: doc.provenance.sample.contentHash,
+      sourceCurationHash: hashCanonicalJson(sourceCuration),
+      fidelityEvidenceHash: hashCanonicalJson(check.residualEvidence),
+      stressEvidenceHash: hashCanonicalJson(stressEvidence),
+    },
   };
   writeTemplateDoc(doc.id, doc);
-  return { ok: true as const, residuals: check.residuals };
+  return { ok: true as const, residuals: check.residuals, stressMatrixHash: stress.hash };
 }
 
 /** §5.2 bake lever: mark an over-threshold key as baked (source pixels stay,
@@ -315,68 +404,56 @@ export async function runBake(doc: AdTemplateDocV2, key: string, bake: boolean) 
   return { baked: doc.exactness.bakedTextKeys };
 }
 
-/** D5 restyle, headless: deterministic palette remap + generic slot assets +
- *  safe copy, then the public sample as a deterministic render. Refuses when
- *  the sample would equal the source (no distance, no restyle). When a doc
- *  has no editable text layers (fully baked), the default deterministic
- *  distance is the spec's own optional plate hue remap, recorded verbatim. */
-export async function runRestyle(doc: AdTemplateDocV2) {
-  const paletteMap: Record<string, string> = {};
-  for (const layout of [doc.formats.feed, doc.formats.story]) {
-    if (!layout) continue;
-    for (const layer of layout.layers) {
-      if (layer.type !== "text") continue;
-      const from = layer.typo.color;
-      if (!paletteMap[from]) paletteMap[from] = "#1f242b";
+/**
+ * Build the safe public sample through the same deterministic renderer that
+ * customers use. It preserves the source design; distance comes from explicit
+ * safe copy and verified replacement photos, never a mandatory hue gimmick.
+ */
+export async function runRestyle(
+  doc: AdTemplateDocV2,
+  input: { text: Record<string, string>; assets: Record<string, string> },
+) {
+  const sourceValues = sourceValuesFor(doc);
+  for (const field of doc.inputs.text) {
+    const value = input.text[field.key];
+    if (typeof value !== "string" || (field.required && !value.trim())) {
+      throw new Error(`safe sample copy is required for ${field.key}`);
     }
-  }
-  for (const layout of [doc.formats.feed, doc.formats.story]) {
-    if (!layout) continue;
-    for (const layer of layout.layers) {
-      if (layer.type === "text") layer.typo.color = paletteMap[layer.typo.color] ?? layer.typo.color;
+    if (value.length > field.maxLength) {
+      throw new Error(`safe sample copy for ${field.key} exceeds ${field.maxLength} characters`);
     }
-  }
-
-  // Fully-baked docs have no editable text to remap; apply the default
-  // deterministic plate hue remap ONCE (spec's optional mechanism) so the
-  // public sample carries real distance. Recorded so checks replay the
-  // baseline; idempotent — never re-remap an already-recorded plate.
-  if (Object.keys(paletteMap).length === 0 && !doc.restyle.plateRemap) {
-    const { default: sharp } = await import("sharp");
-    const { readFileSync, writeFileSync: write } = await import("node:fs");
-    const { createHash } = await import("node:crypto");
-    for (const [layout, file] of [
-      [doc.formats.feed, "plate-feed.webp"],
-      [doc.formats.story, "plate-story.webp"],
-    ] as const) {
-      if (!layout) continue;
-      const platePath = join(resolve(process.cwd()), "public", "adstudio-templates", doc.id, file);
-      if (!existsSync(platePath)) continue;
-      const remapped = await sharp(readFileSync(platePath)).modulate({ hue: 112 }).webp({ lossless: true }).toBuffer();
-      write(platePath, remapped);
-      layout.plate.sha256 = createHash("sha256").update(remapped).digest("hex");
+    if (!doc.exactness.bakedTextKeys.includes(field.key) && value.trim() === sourceValues[field.key]?.trim()) {
+      throw new Error(`safe sample copy for ${field.key} must differ from the private source text`);
     }
-    doc.restyle.plateRemap = { hue: 12 };
+    field.sample = value;
   }
 
+  const safeReplacementAssets = doc.inputs.images.map((field) => {
+    const src = input.assets[field.key];
+    if (!src || !SAFE_PUBLIC_ASSET.test(src)) {
+      throw new Error(`choose a verified safe replacement photo for ${field.key}`);
+    }
+    const path = join(repoRoot, "public", src.slice(1));
+    if (!existsSync(path)) throw new Error(`safe replacement asset missing: ${src}`);
+    return { inputKey: field.key, src, sha256: createHash("sha256").update(readFileSync(path)).digest("hex") };
+  });
   doc.restyle = {
     ...doc.restyle,
-    paletteMap,
-    replacedAssets: doc.inputs.images.map((image) => image.key),
-    note: doc.restyle.plateRemap ? `${doc.restyle.note ?? ""} auto-QA default plate remap (owner-delegated 2026-08-06)`.trim() : doc.restyle.note,
+    paletteMap: Object.fromEntries(Object.entries(doc.restyle.paletteMap).filter(([from, to]) => from !== to)),
+    replacedAssets: doc.inputs.images.map((field) => field.key),
+    safeReplacementAssets,
+    note: "Public sample uses operator-supplied safe copy and hash-verified synthetic replacement photography.",
+  };
+  doc.exactness = {
+    status: "qa",
+    residuals: {},
+    bakedTextKeys: [...doc.exactness.bakedTextKeys],
   };
 
   const isStoryFirst = Boolean(doc.formats.story?.native);
   const sampleFormat = isStoryFirst ? "9:16" : "4:5";
-  const png = await renderAdDocToPng(doc, {
-    schema: "adstudio.instance.v2",
-    templateId: doc.id,
-    templateHash: "0".repeat(64),
-    format: sampleFormat,
-    values: { images: {}, text: Object.fromEntries(doc.inputs.text.map((input) => [input.key, input.sample])) },
-    overrides: [],
-  }, sampleFormat);
-  const { createHash } = await import("node:crypto");
+  const renderInput = buildRestyleSampleRenderInput({ doc, format: sampleFormat, text: input.text, repoRoot });
+  const png = await renderAdDocToPng(doc, renderInput.instance, sampleFormat, { slotBytes: renderInput.slotBytes });
   const contentHash = createHash("sha256").update(png).digest("hex");
   if (contentHash === doc.provenance.sourceAd.contentHash) {
     throw new Error("restyle produced a sample identical to the source — distance is required (D5)");
@@ -386,23 +463,33 @@ export async function runRestyle(doc: AdTemplateDocV2) {
     contentHash,
     generatedBy: "deterministic_render",
   };
-  const { default: sharp } = await import("sharp");
   const samplePath = join(resolve(process.cwd()), "public", "adstudio-templates", doc.id, "sample.png");
-  const { mkdirSync: mkdir } = await import("node:fs").then((fs) => fs);
-  mkdir(samplePath.replace(/[\\/][^\\/]+$/, ""), { recursive: true });
+  mkdirSync(dirname(samplePath), { recursive: true });
   // Write the render bytes verbatim: the declared hash is sha(png), so any
   // re-encode would break the identity contract.
-  await import("node:fs").then((fs) => fs.writeFileSync(samplePath, png));
-  void sharp;
+  writeFileSync(samplePath, png);
   writeTemplateDoc(doc.id, doc);
   return { sample: doc.provenance.sample, sourceHash: doc.provenance.sourceAd.contentHash };
 }
 
 /** DEV-ONLY writer — the route guards NODE_ENV; production never writes. */
 export function writeTemplateDoc(id: string, doc: AdTemplateDocV2) {
+  const parsed = templateDocV2Schema.safeParse(doc);
+  if (!parsed.success) {
+    throw new Error(`refusing to write invalid template ${id}: ${parsed.error.issues[0]?.message}`);
+  }
+  if (parsed.data.id !== id) throw new Error(`refusing to write ${parsed.data.id} into ${id}`);
   const dir = join(templateGalleryV2Dir(), id);
   mkdirSync(dir, { recursive: true });
-  writeFileSync(join(dir, "template.json"), `${JSON.stringify(doc, null, 2)}\n`);
+  snapshotTemplateBeforeWrite(dir, parsed.data);
+  const target = join(dir, "template.json");
+  const temporary = join(dir, `.template.${process.pid}.${Math.random().toString(16).slice(2)}.tmp`);
+  writeFileSync(temporary, `${JSON.stringify(parsed.data, null, 2)}\n`, { flag: "wx" });
+  try {
+    renameSync(temporary, target);
+  } finally {
+    if (existsSync(temporary)) unlinkSync(temporary);
+  }
 }
 
 export function studioWritesAllowed() {

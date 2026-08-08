@@ -25,20 +25,24 @@
     },
     "sample": {
       "imageSrc": "/adstudio-templates/meta-feed-018/sample.png",
-      "contentHash": "1f1bb052cf4f96cba395277d5a28ebba7df760af4b8ba4dfeb6d156aff563e8b",
+      "contentHash": "4f2c4fd545a742f6a779d9c02a0c8133a36971a158d63cdc57a55b55c99b7269",
       "generatedBy": "deterministic_render"
     },
     "decomposedFrom": "source"
   },
   "restyle": {
     "paletteMap": {},
-    "plateRemap": {
-      "hue": 12
-    },
     "replacedAssets": [
       "main_property_image"
     ],
-    "note": "migrated from v1 (source); restyle pass pending in Studio auto-QA default plate remap (owner-delegated 2026-08-06) auto-QA default plate remap (owner-delegated 2026-08-06) auto-QA default plate remap (owner-delegated 2026-08-06) auto-QA default plate remap (owner-delegated 2026-08-06) auto-QA default plate remap (owner-delegated 2026-08-06)"
+    "safeReplacementAssets": [
+      {
+        "inputKey": "main_property_image",
+        "src": "/adstudio-safe-assets/warm-contemporary-interior.webp",
+        "sha256": "2e22bf1f995adae986202416624dc0166f7d30e7cc6eca0c4cad9fb0b0095cd8"
+      }
+    ],
+    "note": "Public sample uses operator-supplied safe copy and hash-verified synthetic replacement photography."
   },
   "fonts": [
     {
@@ -73,27 +77,240 @@
       "height": 1350,
       "plate": {
         "src": "/adstudio-templates/meta-feed-018/plate-feed.webp",
-        "sha256": "ce617d75856024ef6ff885781ea30e4a0357ac0e3aea8f8f5b84b6468875a907"
+        "sha256": "df67d1a5e90484f34055492428037aad72c1c033b233e560af760200df062536"
       },
       "layers": [
         {
           "id": "slot-main_property_image",
           "z": 2,
           "box": {
-            "x": 0.576171875,
-            "y": 0.16875,
-            "width": 0.423828125,
-            "height": 0.59765625
+            "x": 0.580318,
+            "y": 0.196262,
+            "width": 0.400868,
+            "height": 0.545561
           },
           "type": "image_slot",
           "inputKey": "main_property_image",
           "fit": "cover",
           "mask": {
-            "kind": "rect"
+            "kind": "rounded",
+            "radius": [
+              109,
+              0,
+              109,
+              0
+            ]
           },
           "minSourcePx": {
-            "width": 458,
-            "height": 807
+            "width": 433,
+            "height": 737
+          }
+        },
+        {
+          "id": "text-headline_number",
+          "z": 10,
+          "box": {
+            "x": 0.1745,
+            "y": 0.235,
+            "width": 0.1650390625,
+            "height": 0.175
+          },
+          "type": "text",
+          "inputKey": "headline_number",
+          "typo": {
+            "fontId": "outfit",
+            "family": "Outfit",
+            "fallbackFamily": "sans-serif",
+            "weight": 600,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 1.3913043929635895,
+            "lineHeight": 1,
+            "tracking": 0,
+            "align": "left",
+            "color": "#535046",
+            "measuredLines": [
+              {
+                "text": "5",
+                "box": {
+                  "x": 0.1745,
+                  "y": 0.239125,
+                  "width": 0.1650390625,
+                  "height": 0.175
+                },
+                "sizeRatio": 1.4313043929635896,
+                "scaleX": 1.08
+              }
+            ]
+          },
+          "constraints": {
+            "maxLength": 1,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.45
+          },
+          "measurement": {
+            "fitScore": 0.9,
+            "detectionScore": 1,
+            "source": "manual-verified",
+            "version": 2
+          }
+        },
+        {
+          "id": "text-headline_main",
+          "z": 11,
+          "box": {
+            "x": 0.103,
+            "y": 0.456,
+            "width": 0.43505859375,
+            "height": 0.235
+          },
+          "type": "text",
+          "inputKey": "headline_main",
+          "typo": {
+            "fontId": "league-gothic",
+            "family": "League Gothic",
+            "fallbackFamily": "sans-serif",
+            "weight": 400,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 0.6025230532786886,
+            "lineHeight": 1,
+            "tracking": 0,
+            "align": "left",
+            "color": "#535046",
+            "measuredLines": [
+              {
+                "text": "SMART",
+                "box": {
+                  "x": 0.0978,
+                  "y": 0.4541,
+                  "width": 0.41,
+                  "height": 0.13515625
+                },
+                "sizeRatio": 1.589,
+                "scaleX": 1.036
+              },
+              {
+                "text": "FIRST STEPS",
+                "box": {
+                  "x": 0.0992,
+                  "y": 0.599,
+                  "width": 0.43505859375,
+                  "height": 0.0921875
+                },
+                "sizeRatio": 1.3708426966292138,
+                "scaleX": 0.986
+              }
+            ]
+          },
+          "constraints": {
+            "maxLength": 16,
+            "maxLines": 2,
+            "autoFitMinRatio": 0.45
+          },
+          "measurement": {
+            "fitScore": 0.9,
+            "detectionScore": 1,
+            "source": "manual-verified",
+            "version": 2
+          }
+        },
+        {
+          "id": "text-headline_sub",
+          "z": 12,
+          "box": {
+            "x": 0.1063,
+            "y": 0.7123,
+            "width": 0.4326171875,
+            "height": 0.030078125
+          },
+          "type": "text",
+          "inputKey": "headline_sub",
+          "typo": {
+            "fontId": "roboto-condensed",
+            "family": "Roboto Condensed",
+            "fallbackFamily": "sans-serif",
+            "weight": 400,
+            "italic": false,
+            "case": "mixed",
+            "sizeRatio": 1.02648891966759,
+            "lineHeight": 1,
+            "tracking": 0,
+            "align": "left",
+            "color": "#6e6a61",
+            "measuredLines": [
+              {
+                "text": "Before Buying a Home",
+                "box": {
+                  "x": 0.1063,
+                  "y": 0.7123,
+                  "width": 0.4326171875,
+                  "height": 0.030078125
+                },
+                "sizeRatio": 1.02648891966759,
+                "scaleX": 1.35
+              }
+            ]
+          },
+          "constraints": {
+            "maxLength": 23,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.5
+          },
+          "measurement": {
+            "fitScore": 0.85,
+            "detectionScore": 1,
+            "source": "manual-verified",
+            "version": 2
+          }
+        },
+        {
+          "id": "text-contact_handle",
+          "z": 13,
+          "box": {
+            "x": 0.107,
+            "y": 0.8248,
+            "width": 0.33154296875,
+            "height": 0.025
+          },
+          "type": "text",
+          "inputKey": "contact_handle",
+          "typo": {
+            "fontId": "roboto-condensed",
+            "family": "Roboto Condensed",
+            "fallbackFamily": "sans-serif",
+            "weight": 400,
+            "italic": false,
+            "case": "lower",
+            "sizeRatio": 1.0385395537525355,
+            "lineHeight": 1,
+            "tracking": 0,
+            "align": "left",
+            "color": "#716d64",
+            "measuredLines": [
+              {
+                "text": "@homeguide.example",
+                "box": {
+                  "x": 0.107,
+                  "y": 0.8248,
+                  "width": 0.33154296875,
+                  "height": 0.025
+                },
+                "sizeRatio": 1.0385395537525355,
+                "scaleX": 1.14
+              }
+            ]
+          },
+          "constraints": {
+            "maxLength": 18,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.65
+          },
+          "measurement": {
+            "fitScore": 0.85,
+            "detectionScore": 1,
+            "source": "manual-verified",
+            "version": 2
           }
         }
       ]
@@ -104,27 +321,240 @@
       "height": 1920,
       "plate": {
         "src": "/adstudio-templates/meta-feed-018/plate-story.webp",
-        "sha256": "bb17fb05ac30ee63ca026d0708e0676593289dde01433ba820f26cc39f094b29"
+        "sha256": "43c8906f57f43d7c94d1753484d6b17240a218bf242820ec05f0cd2dc434929e"
       },
       "layers": [
         {
           "id": "slot-main_property_image",
           "z": 2,
           "box": {
-            "x": 0.576171875,
-            "y": 0.24710286458333333,
-            "width": 0.423828125,
-            "height": 0.41400146484374994
+            "x": 0.580318,
+            "y": 0.26616065624999996,
+            "width": 0.400868,
+            "height": 0.3779146510416666
           },
           "type": "image_slot",
           "inputKey": "main_property_image",
           "fit": "cover",
           "mask": {
-            "kind": "rect"
+            "kind": "rounded",
+            "radius": [
+              109,
+              0,
+              109,
+              0
+            ]
           },
           "minSourcePx": {
-            "width": 458,
-            "height": 795
+            "width": 433,
+            "height": 737
+          }
+        },
+        {
+          "id": "text-headline_number",
+          "z": 10,
+          "box": {
+            "x": 0.1745,
+            "y": 0.29299479166666664,
+            "width": 0.1650390625,
+            "height": 0.12122395833333331
+          },
+          "type": "text",
+          "inputKey": "headline_number",
+          "typo": {
+            "fontId": "outfit",
+            "family": "Outfit",
+            "fallbackFamily": "sans-serif",
+            "weight": 600,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 1.3913043929635895,
+            "lineHeight": 1,
+            "tracking": 0,
+            "align": "left",
+            "color": "#535046",
+            "measuredLines": [
+              {
+                "text": "5",
+                "box": {
+                  "x": 0.1745,
+                  "y": 0.2958522135416667,
+                  "width": 0.1650390625,
+                  "height": 0.12122395833333331
+                },
+                "sizeRatio": 1.4313043929635896,
+                "scaleX": 1.08
+              }
+            ]
+          },
+          "constraints": {
+            "maxLength": 1,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.45
+          },
+          "measurement": {
+            "fitScore": 0.9,
+            "detectionScore": 1,
+            "source": "manual-verified",
+            "version": 2
+          }
+        },
+        {
+          "id": "text-headline_main",
+          "z": 11,
+          "box": {
+            "x": 0.103,
+            "y": 0.4460833333333333,
+            "width": 0.43505859375,
+            "height": 0.1627864583333333
+          },
+          "type": "text",
+          "inputKey": "headline_main",
+          "typo": {
+            "fontId": "league-gothic",
+            "family": "League Gothic",
+            "fallbackFamily": "sans-serif",
+            "weight": 400,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 0.6025230532786886,
+            "lineHeight": 1,
+            "tracking": 0,
+            "align": "left",
+            "color": "#535046",
+            "measuredLines": [
+              {
+                "text": "SMART",
+                "box": {
+                  "x": 0.0978,
+                  "y": 0.4447671875,
+                  "width": 0.41,
+                  "height": 0.09362386067708332
+                },
+                "sizeRatio": 1.589,
+                "scaleX": 1.036
+              },
+              {
+                "text": "FIRST STEPS",
+                "box": {
+                  "x": 0.0992,
+                  "y": 0.5451406249999999,
+                  "width": 0.43505859375,
+                  "height": 0.06385904947916667
+                },
+                "sizeRatio": 1.3708426966292138,
+                "scaleX": 0.986
+              }
+            ]
+          },
+          "constraints": {
+            "maxLength": 16,
+            "maxLines": 2,
+            "autoFitMinRatio": 0.45
+          },
+          "measurement": {
+            "fitScore": 0.9,
+            "detectionScore": 1,
+            "source": "manual-verified",
+            "version": 2
+          }
+        },
+        {
+          "id": "text-headline_sub",
+          "z": 12,
+          "box": {
+            "x": 0.1063,
+            "y": 0.6236244791666666,
+            "width": 0.4326171875,
+            "height": 0.020835367838541664
+          },
+          "type": "text",
+          "inputKey": "headline_sub",
+          "typo": {
+            "fontId": "roboto-condensed",
+            "family": "Roboto Condensed",
+            "fallbackFamily": "sans-serif",
+            "weight": 400,
+            "italic": false,
+            "case": "mixed",
+            "sizeRatio": 1.02648891966759,
+            "lineHeight": 1,
+            "tracking": 0,
+            "align": "left",
+            "color": "#6e6a61",
+            "measuredLines": [
+              {
+                "text": "Before Buying a Home",
+                "box": {
+                  "x": 0.1063,
+                  "y": 0.6236244791666666,
+                  "width": 0.4326171875,
+                  "height": 0.020835367838541664
+                },
+                "sizeRatio": 1.02648891966759,
+                "scaleX": 1.35
+              }
+            ]
+          },
+          "constraints": {
+            "maxLength": 23,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.5
+          },
+          "measurement": {
+            "fitScore": 0.85,
+            "detectionScore": 1,
+            "source": "manual-verified",
+            "version": 2
+          }
+        },
+        {
+          "id": "text-contact_handle",
+          "z": 13,
+          "box": {
+            "x": 0.107,
+            "y": 0.7015541666666666,
+            "width": 0.33154296875,
+            "height": 0.01731770833333333
+          },
+          "type": "text",
+          "inputKey": "contact_handle",
+          "typo": {
+            "fontId": "roboto-condensed",
+            "family": "Roboto Condensed",
+            "fallbackFamily": "sans-serif",
+            "weight": 400,
+            "italic": false,
+            "case": "lower",
+            "sizeRatio": 1.0385395537525355,
+            "lineHeight": 1,
+            "tracking": 0,
+            "align": "left",
+            "color": "#716d64",
+            "measuredLines": [
+              {
+                "text": "@homeguide.example",
+                "box": {
+                  "x": 0.107,
+                  "y": 0.7015541666666666,
+                  "width": 0.33154296875,
+                  "height": 0.01731770833333333
+                },
+                "sizeRatio": 1.0385395537525355,
+                "scaleX": 1.14
+              }
+            ]
+          },
+          "constraints": {
+            "maxLength": 18,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.65
+          },
+          "measurement": {
+            "fitScore": 0.85,
+            "detectionScore": 1,
+            "source": "manual-verified",
+            "version": 2
           }
         }
       ]
@@ -145,28 +575,28 @@
         "key": "headline_number",
         "label": "Headline Number",
         "required": true,
-        "maxLength": 2,
-        "sample": "5"
+        "maxLength": 1,
+        "sample": "7"
       },
       {
         "key": "headline_main",
         "label": "Headline Main",
         "required": true,
-        "maxLength": 30,
-        "sample": "SMART FIRST STEPS"
+        "maxLength": 16,
+        "sample": "BUYER MISTAKES"
       },
       {
         "key": "headline_sub",
         "label": "Headline Sub",
         "required": true,
-        "maxLength": 35,
-        "sample": "Before Buying a Home"
+        "maxLength": 23,
+        "sample": "Before Your First Offer"
       },
       {
         "key": "contact_handle",
         "label": "Contact Handle",
         "required": true,
-        "maxLength": 30,
+        "maxLength": 18,
         "sample": "@homeguide.example"
       }
     ]
@@ -178,24 +608,25 @@
     "apiVersionMin": "v26.0",
     "copy": {
       "primaryText": [
-        "Ask for the property details."
+        "Avoid the mistakes that cost buyers time and money. Get the 7-point checklist before you make your first offer."
       ],
       "headlines": [
-        "Property details"
+        "Avoid 7 Costly Buyer Mistakes"
       ],
       "descriptions": [
-        "Request more information"
+        "Get the free first-offer checklist"
       ]
     },
     "cta": "LEARN_MORE",
     "leadForm": {
-      "headline": "Get your free property guide",
+      "headline": "Get the 7-point buyer checklist",
       "questions": [
+        "What stage are you at in your home-buying journey?",
         "What is your best contact number?"
       ],
       "thankYou": {
-        "title": "Thanks",
-        "body": "We'll be in touch."
+        "title": "Your checklist is requested",
+        "body": "Thanks. We'll follow up with the checklist and the clearest next step for your search."
       }
     },
     "placements": {
@@ -240,15 +671,8 @@
     "lockedLayerIds": []
   },
   "exactness": {
-    "status": "ready",
+    "status": "qa",
     "residuals": {},
-    "bakedTextKeys": [
-      "headline_main",
-      "headline_number",
-      "headline_sub",
-      "contact_handle"
-    ],
-    "qaBy": "owner-delegated auto-QA (Steven, 2026-08-06) — review pending",
-    "qaAt": "2026-08-07T12:22:03.928Z"
+    "bakedTextKeys": []
   }
 }

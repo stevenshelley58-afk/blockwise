@@ -72,6 +72,14 @@ export type MetaLeadCta = (typeof META_LEAD_CTA_VALUES)[number];
 /** All boxes normalized 0..1 against the layout's width/height. */
 export type NormBox = { x: number; y: number; width: number; height: number };
 
+/** Corner radii in px at the 1080px-wide authored surface: TL, TR, BR, BL. */
+export type CornerRadii = [number, number, number, number];
+export type ImageSlotMask = {
+  kind: "rect" | "rounded" | "ellipse";
+  /** A number keeps legacy uniform rounding; a tuple permits asymmetric source shapes. */
+  radius?: number | CornerRadii;
+};
+
 // ─── template doc ────────────────────────────────────────────────────────────
 
 export type TemplatePublishDefaults = {
@@ -106,7 +114,7 @@ export type ImageSlotLayer = TemplateLayerBase & {
   fit: "cover";
   /** Default focal point for the cover crop; customer can pan/zoom within the slot. */
   focal?: { x: number; y: number };
-  mask: { kind: "rect" | "rounded" | "ellipse"; radius?: number };
+  mask: ImageSlotMask;
   /**
    * Minimum customer-photo resolution; default = the slot's own px size at
    * canvas res. Below 1.0x is an editor warning; below 0.5x a hard block.
@@ -201,9 +209,15 @@ export type AdTemplateDocV2 = {
     paletteMap: Record<string, string>;
     /** Deterministic plate remap (hue degrees) — the D5 distance mechanism
      *  for fully-baked docs (no editable text to recolour). */
-    plateRemap?: { hue: number };
+    plateRemap?: { hue: number; appliedHue?: number };
     /** slot inputKeys filled with generic assets in the sample */
     replacedAssets: string[];
+    /**
+     * The actual safe assets used for the public sample. `replacedAssets` is
+     * retained for old drafts, but cannot establish a ready restyle: names
+     * alone do not prove what pixels were used.
+     */
+    safeReplacementAssets?: Array<{ inputKey: string; src: string; sha256: string }>;
     note?: string;
   };
 
@@ -248,10 +262,49 @@ export type AdTemplateDocV2 = {
     status: "draft" | "qa" | "ready";
     /** Per text-LAYER-ID residual from the gate (0 = identical, lower is better). */
     residuals: Record<string, number>;
+    /**
+     * Replay-bound fidelity evidence. The legacy residual summary remains for
+     * Studio badges; readiness relies on this per-surface record so a shared
+     * layer id cannot hide an unchecked format.
+     */
+    residualEvidence?: {
+      sourceContentHash: string;
+      templateHash: string;
+      checkedAt: string;
+      nativeSurface: "feed" | "story";
+      residuals: Record<string, number>;
+      outside: {
+        totalPixels: number;
+        differingPixels: number;
+        differingBounds: { x: number; y: number; width: number; height: number } | null;
+      };
+    };
+    /** Deterministic feed/story copy + image stress renders. */
+    stressEvidence?: {
+      templateHash: string;
+      checkedAt: string;
+      matrixHash: string;
+      entries: Array<{
+        format: "4:5" | "9:16";
+        scenario: "longest-copy" | "one-character-copy" | "minimum-resolution" | "all-portrait" | "all-landscape";
+        renderHash: string;
+      }>;
+    };
     /** Regions deliberately left as original pixels (not editable). */
     bakedTextKeys: string[];
-    qaBy?: string;
-    qaAt?: string;
+    /** Authenticated human sign-off, bound to the exact evidence inspected. */
+    reviewEvidence?: {
+      reviewerUserId: string;
+      reviewerEmail: string;
+      reviewedAt: string;
+      confirmation: "inspected-at-100-percent";
+      templateHash: string;
+      sourceContentHash: string;
+      sampleContentHash: string;
+      sourceCurationHash: string;
+      fidelityEvidenceHash: string;
+      stressEvidenceHash: string;
+    };
   };
 };
 
@@ -357,6 +410,8 @@ const sha256Schema = z.string().regex(/^[0-9a-f]{64}$/, "must be a lowercase sha
 const unitScoreSchema = z.number().min(0).max(1);
 const publicPathSchema = z.string().regex(/^\/[^\s]+$/, "must be a rooted public path");
 const nonEmptyString = z.string().min(1);
+/** Template Studio passes requireOperator().email; no prose delegation may be stamped as approval. */
+const operatorEmailSchema = z.string().email().max(320);
 
 const normBoxSchema = z
   .object({
@@ -365,9 +420,17 @@ const normBoxSchema = z
     width: z.number(),
     height: z.number(),
   })
+  .strict()
   .refine(isNormalizedBox, "box must be normalized 0..1 and non-degenerate");
 
-const focalSchema = z.object({ x: unitScoreSchema, y: unitScoreSchema });
+const focalSchema = z.object({ x: unitScoreSchema, y: unitScoreSchema }).strict();
+const cornerRadiiSchema = z
+  .tuple([z.number().nonnegative(), z.number().nonnegative(), z.number().nonnegative(), z.number().nonnegative()])
+  .refine((radii) => radii.some((radius) => radius > 0), "corner radii need at least one positive value");
+const imageSlotMaskSchema = z.object({
+  kind: z.enum(["rect", "rounded", "ellipse"]),
+  radius: z.union([z.number().positive(), cornerRadiiSchema]).optional(),
+});
 
 const layerBaseShape = {
   id: nonEmptyString,
@@ -383,10 +446,7 @@ const imageSlotLayerSchema = z
     inputKey: nonEmptyString,
     fit: z.literal("cover"),
     focal: focalSchema.optional(),
-    mask: z.object({
-      kind: z.enum(["rect", "rounded", "ellipse"]),
-      radius: z.number().positive().optional(),
-    }),
+    mask: imageSlotMaskSchema,
     minSourcePx: z
       .object({ width: z.number().int().positive(), height: z.number().int().positive() })
       .optional(),
@@ -550,11 +610,22 @@ const templateDocShapeSchema = z.object({
     decomposedFrom: z.literal("source"),
   }),
   restyle: z.object({
-    paletteMap: z.record(hexColorSchema, hexColorSchema),
+    paletteMap: z.record(hexColorSchema, hexColorSchema).refine(
+      (map) => Object.entries(map).every(([from, to]) => from !== to),
+      "paletteMap cannot contain an identity colour transform",
+    ),
     /** Optional deterministic plate remap (hue degrees) — the D5 distance
      *  mechanism for fully-baked docs (no editable text to recolour). */
-    plateRemap: z.object({ hue: z.number() }).optional(),
+    plateRemap: z.object({
+      hue: z.number().finite().refine((hue) => ((hue % 360) + 360) % 360 !== 0, "plateRemap hue must change pixels"),
+      appliedHue: z.number().finite().optional(),
+    }).optional(),
     replacedAssets: z.array(nonEmptyString),
+    safeReplacementAssets: z.array(z.object({
+      inputKey: nonEmptyString,
+      src: publicPathSchema,
+      sha256: sha256Schema,
+    })).optional(),
     note: z.string().optional(),
   }),
   fonts: z.array(
@@ -597,9 +668,46 @@ const templateDocShapeSchema = z.object({
   exactness: z.object({
     status: z.enum(["draft", "qa", "ready"]),
     residuals: z.record(z.string(), unitScoreSchema),
+    residualEvidence: z.object({
+      sourceContentHash: sha256Schema,
+      templateHash: sha256Schema,
+      checkedAt: z.string().datetime(),
+      nativeSurface: z.enum(["feed", "story"]),
+      residuals: z.record(z.string(), unitScoreSchema),
+      outside: z.object({
+        totalPixels: z.number().int().nonnegative(),
+        differingPixels: z.number().int().nonnegative(),
+        differingBounds: z.object({
+          x: z.number().int().nonnegative(),
+          y: z.number().int().nonnegative(),
+          width: z.number().int().positive(),
+          height: z.number().int().positive(),
+        }).nullable(),
+      }),
+    }).optional(),
+    stressEvidence: z.object({
+      templateHash: sha256Schema,
+      checkedAt: z.string().datetime(),
+      matrixHash: sha256Schema,
+      entries: z.array(z.object({
+        format: z.enum(["4:5", "9:16"]),
+        scenario: z.enum(["longest-copy", "one-character-copy", "minimum-resolution", "all-portrait", "all-landscape"]),
+        renderHash: sha256Schema,
+      })),
+    }).optional(),
     bakedTextKeys: z.array(nonEmptyString),
-    qaBy: nonEmptyString.optional(),
-    qaAt: z.string().datetime().optional(),
+    reviewEvidence: z.object({
+      reviewerUserId: z.string().uuid(),
+      reviewerEmail: operatorEmailSchema,
+      reviewedAt: z.string().datetime(),
+      confirmation: z.literal("inspected-at-100-percent"),
+      templateHash: sha256Schema,
+      sourceContentHash: sha256Schema,
+      sampleContentHash: sha256Schema,
+      sourceCurationHash: sha256Schema,
+      fidelityEvidenceHash: sha256Schema,
+      stressEvidenceHash: sha256Schema,
+    }).optional(),
   }),
 });
 
@@ -795,14 +903,14 @@ function checkStorySafeZones(doc: TemplateDocShape, ctx: z.RefinementCtx): void 
   }
 }
 
-/** Restyle evidence: a palette remap, or generic assets in every required slot. */
+/** Public-sample distance: every source image is replaced; copy is verified separately. */
 export function hasNonTrivialRestyle(doc: Pick<AdTemplateDocV2, "restyle" | "inputs">): boolean {
-  if (Object.keys(doc.restyle.paletteMap).length > 0) return true;
-  if (doc.restyle.plateRemap) return true;
-  const requiredImageKeys = doc.inputs.images.filter((input) => input.required).map((input) => input.key);
-  if (requiredImageKeys.length === 0) return false;
-  const replaced = new Set(doc.restyle.replacedAssets);
-  return requiredImageKeys.every((key) => replaced.has(key));
+  // Recolouring a strong source design is never mandatory. Exact safe image
+  // bytes plus safe copy are sufficient distance from the private source.
+  const assets = doc.restyle.safeReplacementAssets ?? [];
+  const byKey = new Map(assets.map((asset) => [asset.inputKey, asset]));
+  return byKey.size === doc.inputs.images.length
+    && doc.inputs.images.every((input) => byKey.has(input.key));
 }
 
 /**
@@ -813,43 +921,65 @@ export function hasNonTrivialRestyle(doc: Pick<AdTemplateDocV2, "restyle" | "inp
 function checkReadyImplications(doc: TemplateDocShape, ctx: z.RefinementCtx): void {
   if (doc.exactness.status !== "ready") return;
 
+  if (!doc.inputs.text.some((input) => !doc.exactness.bakedTextKeys.includes(input.key))) {
+    addIssue(ctx, ["inputs", "text"], 'status "ready" requires at least one customer-visible editable text field');
+  }
+
   if (!doc.formats.story) {
     addIssue(ctx, ["formats", "story"], 'status "ready" requires an authored story layout');
   }
-  if (!doc.exactness.qaBy) {
-    addIssue(ctx, ["exactness", "qaBy"], 'status "ready" requires qaBy — a person approves, not the AI critic');
-  }
-  if (!doc.exactness.qaAt) {
-    addIssue(ctx, ["exactness", "qaAt"], 'status "ready" requires qaAt');
+  if (doc.exactness.bakedTextKeys.length > 0) {
+    addIssue(ctx, ["exactness", "bakedTextKeys"], 'status "ready" cannot expose source text as baked pixels');
   }
 
-  for (const [formatKey, layout] of formatEntries(doc)) {
-    for (const [index, layer] of layout.layers.entries()) {
-      if (layer.type !== "text") continue;
-      const residual = doc.exactness.residuals[layer.id];
+  const reviewEvidence = doc.exactness.reviewEvidence;
+  if (!reviewEvidence) {
+    addIssue(ctx, ["exactness", "reviewEvidence"], 'status "ready" requires authenticated human review evidence');
+  }
+
+  const residualEvidence = doc.exactness.residualEvidence;
+  if (!residualEvidence) {
+    addIssue(ctx, ["exactness", "residualEvidence"], 'status "ready" requires replay-bound residual evidence');
+  }
+
+  const nativeSurface: FormatKey = doc.formats.story?.native === true ? "story" : "feed";
+  const nativeLayout = doc.formats[nativeSurface] as TemplateLayout;
+  if (residualEvidence && residualEvidence.nativeSurface !== nativeSurface) {
+    addIssue(ctx, ["exactness", "residualEvidence", "nativeSurface"], `native fidelity must cover ${nativeSurface}`);
+  }
+  if (residualEvidence?.outside.differingPixels !== 0 || residualEvidence?.outside.differingBounds !== null) {
+    addIssue(ctx, ["exactness", "residualEvidence", "outside"], "native fidelity changed pixels outside editable text regions");
+  }
+  for (const [index, layer] of nativeLayout.layers.entries()) {
+      if (layer.type !== "text" || doc.exactness.bakedTextKeys.includes(layer.inputKey)) continue;
+      const residual = residualEvidence?.residuals[layer.id] ?? doc.exactness.residuals[layer.id];
       if (residual === undefined) {
         addIssue(
           ctx,
           ["exactness", "residuals"],
-          `text layer ${layer.id} (${formatKey}) has no recorded residual`,
+          `native text layer ${layer.id} (${nativeSurface}) has no recorded residual`,
         );
         continue;
       }
       if (residual > TEMPLATE_RESIDUAL_MAX) {
         addIssue(
           ctx,
-          ["formats", formatKey, "layers", index],
+          ["formats", nativeSurface, "layers", index],
           `text layer ${layer.id} residual ${residual} exceeds ${TEMPLATE_RESIDUAL_MAX} — fix the spec or mark it baked`,
         );
       }
-    }
+  }
+
+  const stressEvidence = doc.exactness.stressEvidence;
+  if (!stressEvidence || stressEvidence.entries.length !== 10) {
+    addIssue(ctx, ["exactness", "stressEvidence"], 'status "ready" requires all ten feed/story stress renders');
   }
 
   if (!hasNonTrivialRestyle(doc as unknown as AdTemplateDocV2)) {
     addIssue(
       ctx,
       ["restyle"],
-      'status "ready" requires non-trivial restyle evidence: a non-empty paletteMap or generic assets in every required slot',
+      'status "ready" requires hashed safe replacement assets for every declared image input',
     );
   }
 
@@ -859,6 +989,18 @@ function checkReadyImplications(doc: TemplateDocShape, ctx: z.RefinementCtx): vo
       ["provenance", "sample", "contentHash"],
       "the public sample hash must differ from the source ad hash",
     );
+  }
+
+  if (reviewEvidence) {
+    if (reviewEvidence.templateHash !== residualEvidence?.templateHash || reviewEvidence.templateHash !== stressEvidence?.templateHash) {
+      addIssue(ctx, ["exactness", "reviewEvidence", "templateHash"], "human review is not bound to the current fidelity and stress evidence");
+    }
+    if (reviewEvidence.sourceContentHash !== doc.provenance.sourceAd.contentHash) {
+      addIssue(ctx, ["exactness", "reviewEvidence", "sourceContentHash"], "human review source hash is stale");
+    }
+    if (reviewEvidence.sampleContentHash !== doc.provenance.sample.contentHash) {
+      addIssue(ctx, ["exactness", "reviewEvidence", "sampleContentHash"], "human review sample hash is stale");
+    }
   }
 }
 
@@ -884,24 +1026,94 @@ export const adDocInstanceSchema = z.object({
         src: nonEmptyString,
         focal: focalSchema.optional(),
         zoom: z.number().min(1).max(3).optional(),
-      }),
+      }).strict(),
     ),
     text: z.record(z.string(), z.string()),
-  }),
+  }).strict(),
   overrides: z.array(
     z.discriminatedUnion("op", [
-      z.object({ layerId: nonEmptyString, op: z.literal("move"), box: normBoxSchema }),
-      z.object({ layerId: nonEmptyString, op: z.literal("font-size"), sizeRatio: z.number().positive() }),
+      z.object({ layerId: nonEmptyString, op: z.literal("move"), box: normBoxSchema }).strict(),
+      z.object({ layerId: nonEmptyString, op: z.literal("font-size"), sizeRatio: z.number().finite().min(0.2).max(1.2) }).strict(),
       z.object({
         layerId: nonEmptyString,
         op: z.literal("align"),
         align: z.enum(["left", "center", "right"]),
-      }),
-      z.object({ layerId: nonEmptyString, op: z.literal("color"), color: hexColorSchema }),
+      }).strict(),
+      z.object({ layerId: nonEmptyString, op: z.literal("color"), color: hexColorSchema }).strict(),
     ]),
   ),
-  renders: z.object({ feed: z.string().optional(), story: z.string().optional() }).optional(),
-});
+  renders: z.object({ feed: z.string().optional(), story: z.string().optional() }).strict().optional(),
+}).strict();
+
+/**
+ * Route-side semantic validation for an instance after its structural schema
+ * has parsed. A record schema cannot know a particular template's dynamic
+ * input keys, so keep that authority here rather than allowing the renderer
+ * to silently fall back to sample copy.
+ */
+export function adDocInstanceTemplateViolation(template: AdTemplateDocV2, instance: AdDocInstance): string | null {
+  if (instance.format === "9:16" && !template.formats.story) {
+    return "This template has no story layout.";
+  }
+
+  const imageInputs = new Map(template.inputs.images.map((input) => [input.key, input]));
+  const bakedText = new Set(template.exactness.bakedTextKeys);
+  const textInputs = new Map(
+    template.inputs.text
+      .filter((input) => !bakedText.has(input.key))
+      .map((input) => [input.key, input]),
+  );
+
+  for (const key of Object.keys(instance.values.images)) {
+    if (!imageInputs.has(key)) return `Unknown image input "${key}".`;
+  }
+  for (const input of imageInputs.values()) {
+    const value = instance.values.images[input.key];
+    if (input.required && (!value || !value.src.trim())) {
+      return `Add the required photo for "${input.label}" before saving.`;
+    }
+  }
+
+  for (const key of Object.keys(instance.values.text)) {
+    if (!textInputs.has(key)) return `Unknown text input "${key}".`;
+  }
+  for (const input of textInputs.values()) {
+    const value = instance.values.text[input.key];
+    if (value !== undefined && value.length > input.maxLength) {
+      return `Text for "${input.label}" exceeds its ${input.maxLength}-character limit.`;
+    }
+    // Explicit values for every rendered text field prevent the renderer's
+    // sample fallback from becoming customer-facing copy. Optional text may
+    // intentionally be blank; required text may not.
+    if (value === undefined) return `Provide text for "${input.label}" before saving.`;
+    if (input.required && value.trim().length === 0) {
+      return `Provide text for "${input.label}" before saving.`;
+    }
+  }
+
+  const layers = new Map<string, TemplateLayer>();
+  for (const layout of [template.formats.feed, template.formats.story]) {
+    for (const layer of layout?.layers ?? []) layers.set(layer.id, layer);
+  }
+  const seenOverrides = new Set<string>();
+  for (const override of instance.overrides) {
+    const layer = layers.get(override.layerId);
+    if (!layer) return `Unknown layer ${override.layerId}.`;
+    if (template.editPolicy.lockedLayerIds.includes(override.layerId)) {
+      return `Layer ${override.layerId} is locked by the template.`;
+    }
+    if (layer.type !== "text") {
+      return `Only text layers can be overridden.`;
+    }
+    if (override.op !== "color" && !template.editPolicy.advancedUnlockable) {
+      return "This template does not allow advanced layer edits.";
+    }
+    const overrideKey = `${override.layerId}:${override.op}`;
+    if (seenOverrides.has(overrideKey)) return `Duplicate ${override.op} override for ${override.layerId}.`;
+    seenOverrides.add(overrideKey);
+  }
+  return null;
+}
 
 /** Cheap tag check for persistence read paths that must not mangle a v2 doc. */
 export function isAdDocInstanceShape(value: unknown): value is AdDocInstance {
