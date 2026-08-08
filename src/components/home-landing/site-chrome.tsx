@@ -21,7 +21,7 @@ export function SiteHeader() {
         <div className="hw-header-actions">
           <SignInLink className="hw-login" />
           <CtaLink location="header" href="/signup" className="hw-btn hw-btn--dark">
-            Start with email
+            Free trial
           </CtaLink>
         </div>
       </div>
