@@ -13,7 +13,11 @@ const storageStatePath = process.env.ADSTUDIO_E2E_STORAGE_STATE ?? "e2e/.auth/ad
 const workspaceId = process.env.ADSTUDIO_E2E_WORKSPACE_ID;
 const previewUrl = process.env.PLAYWRIGHT_BASE_URL;
 const v2Enabled = process.env.ADSTUDIO_E2E_V2 === "1";
-const canRun = Boolean(previewUrl && workspaceId && v2Enabled && existsSync(storageStatePath));
+// Storage state is per-origin; the loop logs in each run with the seeded creds
+// so it works against any Preview host.
+const e2eEmail = process.env.ADSTUDIO_E2E_EMAIL ?? "adstudio-e2e@blockwise.test";
+const e2ePassword = process.env.ADSTUDIO_E2E_PASSWORD;
+const canRun = Boolean(previewUrl && workspaceId && v2Enabled && e2ePassword);
 
 if (!canRun && process.env.CI) {
   test("AdStudio v2 loop preconditions are present in CI", () => {
@@ -21,7 +25,7 @@ if (!canRun && process.env.CI) {
       !previewUrl && "PLAYWRIGHT_BASE_URL",
       !workspaceId && "ADSTUDIO_E2E_WORKSPACE_ID",
       !v2Enabled && "ADSTUDIO_E2E_V2=1 (Preview env has ADSTUDIO_TEMPLATES_V2=true)",
-      !existsSync(storageStatePath) && `auth storage state at ${storageStatePath}`,
+      !e2ePassword && "ADSTUDIO_E2E_PASSWORD",
     ].filter(Boolean);
     throw new Error(`AdStudio v2 e2e cannot run in CI — missing: ${missing.join(", ")}.`);
   });
@@ -30,7 +34,13 @@ if (!canRun && process.env.CI) {
 const describeV2Loop = canRun ? test.describe : test.describe.skip;
 
 describeV2Loop("AdStudio v2 loop", () => {
-  test.use({ storageState: storageStatePath });
+  test.beforeEach(async ({ page }) => {
+    await page.goto(`${previewUrl}/login`);
+    await page.locator("#login-email").fill(e2eEmail);
+    await page.locator("#login-password").fill(e2ePassword!);
+    await page.getByRole("button", { name: "Sign in" }).click();
+    await page.waitForURL(/(home|ad-studio|self-serve)/, { timeout: 45_000 });
+  });
 
   test("generation is deterministic, fast, and image-model-free", async ({ page }) => {
     const imageModelCalls: string[] = [];
@@ -46,12 +56,12 @@ describeV2Loop("AdStudio v2 loop", () => {
       .png()
       .toFile(photoPath);
 
-    // ?first=1 auto-opens the NewAdDialog on the source step.
+    // ?newAd=1 auto-opens the NewAdDialog on the source step.
     const generation = page.waitForResponse(
       (response) => response.url().includes("/api/adstudio/campaigns") && response.request().method() === "POST",
       { timeout: 60_000 },
     );
-    await page.goto(`${previewUrl}/ad-studio?first=1`);
+    await page.goto(`${previewUrl}/ad-studio?newAd=1`);
 
     // Pick the first ready template card, then continue to the brief step.
     await page.locator(".studio-explore-card").first().click();

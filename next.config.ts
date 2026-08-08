@@ -19,6 +19,10 @@ const nextConfig: NextConfig = {
     "/api/*": [
       "./node_modules/@napi-rs/canvas/**/*",
       "./node_modules/@napi-rs/canvas-linux-x64-gnu/**/*",
+      "./src/lib/adstudio/template-gallery-v2/**/*",
+    ],
+    "/ad-studio": [
+      "./src/lib/adstudio/template-gallery-v2/**/*",
     ],
   },
   // Tree-shake heavy barrel-export libs so only used modules ship to the client.
