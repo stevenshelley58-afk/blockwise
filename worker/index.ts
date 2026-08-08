@@ -741,7 +741,19 @@ export async function preflightWorker(expectedRevision?: string): Promise<Worker
     assertExpectedRevision(expectedRevision, revision);
   }
 
-  for (const kind of ["publish.meta.execute", "reporting.refresh"] as const) {
+  // Resolve EVERY handler at boot: a broken import graph in any handler must
+  // fail the deploy, not burn queue attempts at first claim in production.
+  for (const kind of [
+    "publish.meta.execute",
+    "publish.meta.mutate",
+    "reporting.refresh",
+    "sync.meta.leads",
+    "deliver.lead",
+    "sync.provider.reports",
+    "check.meta.token-health",
+    "reconcile.customer.activation",
+    "adstudio.generate.template",
+  ] as const) {
     const handler = await resolveHandler(kind);
     if (!handler) {
       throw new Error(`Worker preflight could not resolve ${kind}.`);
