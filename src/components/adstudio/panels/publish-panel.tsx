@@ -74,6 +74,7 @@ type PublishResponse = {
 type PublishPlanStatus = {
   status?: string;
   lastError?: string | null;
+  friendlyError?: string | null;
   queueStatus?: string | null;
   queueError?: string | null;
   reconciledObjects?: {
@@ -350,7 +351,7 @@ export function PublishSetupPanel({
       if (plan.status === "failed" || plan.queueStatus === "failed") {
         stopPolling();
         setPublishDone(false);
-        setPublishError(plan.queueError ?? plan.lastError ?? "Meta publish failed.");
+        setPublishError(plan.friendlyError ?? plan.queueError ?? plan.lastError ?? "Meta publish failed.");
         setPublishPhase("failed");
       } else if (plan.status === "paused_live") {
         stopPolling();
@@ -358,14 +359,23 @@ export function PublishSetupPanel({
         setPublishPhase("live");
       } else if (plan.status === "publishing" || plan.status === "approved") {
         const ads = plan.reconciledObjects?.ads ?? 0;
-        setPublishMessage(ads > 0 ? `Creating ${ads} paused ad${ads === 1 ? "" : "s"} on Meta` : "Creating your paused ads on Meta");
+        setPublishMessage(
+          plan.status === "approved" && plan.queueStatus !== "processing"
+            ? "Queued — waiting for the publisher to pick this up"
+            : ads > 0
+              ? `Creating ${ads} paused ad${ads === 1 ? "" : "s"} on Meta`
+              : "Creating your paused ads on Meta",
+        );
         setPublishPhase("creating");
         // A publish normally completes well inside 5 minutes. Past that,
         // stop the spinner and be honest instead of spinning forever.
         if (ticks > 60) {
           stopPolling();
           setPublishDone(false);
-          setPublishError("This is taking longer than expected. Check Performance in a few minutes. Your ad may still finish publishing.");
+          setPublishError(
+            plan.friendlyError
+              ?? "This is taking longer than expected. Check Performance in a few minutes. Your ad may still finish publishing.",
+          );
           setPublishPhase("failed");
         }
       } else if (plan.status === "draft") {
@@ -392,14 +402,19 @@ export function PublishSetupPanel({
     : { id: "brand_kit_approved", label: "Confirm brand kit", met: false };
   const checklist = [...(brandItem ? [brandItem] : []), ...(readiness ?? [])];
   const blockingItems = checklist.filter((item) => !item.met);
+  // Platform-blocked items (e.g. live publishing disabled while the platform
+  // is in review) are not resolvable by the user — surface them as an info
+  // state with Export as the path forward rather than a broken checklist.
+  const userBlockingItems = blockingItems.filter((item) => !item.blocked);
+  const platformBlockedItems = blockingItems.filter((item) => item.blocked);
   const allMet = readiness !== null && blockingItems.length === 0;
   const variants = campaignPack.variants;
   const selectedVariantIds = variants.map((variant) => variant.variantId).filter((id) => !deselectedVariantIds.has(id));
   const fullSelection = selectedVariantIds.length === variants.length;
   const currentSelectionHint = selectedVariantIds.length === 0
     ? "Select at least one creative."
-    : !fullSelection && selectedVariantIds.length > 3
-      ? "Select up to three creatives."
+    : !fullSelection && selectedVariantIds.length > MAX_LIBRARY_SELECTIONS
+      ? `Select up to ${MAX_LIBRARY_SELECTIONS} creatives.`
       : "";
   const unpublishedCreativeLibrary = creativeLibrary.filter(
     (item): item is AdStudioCreativeLibraryItem & { variantId: string } =>
@@ -1120,16 +1135,29 @@ export function PublishSetupPanel({
               <details className="studio-readiness-details" open={!allMet}>
                 <summary>
                   <span>Readiness</span>
-                  <strong className={allMet ? "ready" : "needs-work"}>{readiness === null ? "Checking" : allMet ? "Ready" : blockingItems.map((item) => item.label).join(", ")}</strong>
+                  <strong className={allMet ? "ready" : "needs-work"}>
+                    {readiness === null
+                      ? "Checking"
+                      : allMet
+                        ? "Ready"
+                        : userBlockingItems.length > 0
+                          ? userBlockingItems.map((item) => item.label).join(", ")
+                          : "Live publishing not available yet"}
+                  </strong>
                   <ChevronDown aria-hidden size={17} />
                 </summary>
                 <div>
                   {checklist.map((item) => (
                     <p key={item.id ?? item.label}>
-                      {item.met ? <Check aria-hidden size={15} /> : <CircleAlert aria-hidden size={15} />}
+                      {item.met ? <Check aria-hidden size={15} /> : item.blocked ? <CircleHelp aria-hidden size={15} /> : <CircleAlert aria-hidden size={15} />}
                       {item.label}
                     </p>
                   ))}
+                  {userBlockingItems.length === 0 && platformBlockedItems.length > 0 && (
+                    <p className="studio-readiness-note">
+                      Everything on your side is done — use <strong>Export creatives</strong> below to launch manually while live publishing opens up.
+                    </p>
+                  )}
                 </div>
               </details>
               {creativeSource === "library" && selectedLibraryItems.length > 0 && (
@@ -1222,6 +1250,10 @@ export function PublishSetupPanel({
                   <span><Check aria-hidden size={24} /></span>
                   <strong>Ad submitted</strong>
                   {publishedVariantCount && <small>{publishedVariantCount} creatives submitted to Meta</small>}
+                  <small>
+                    Your campaign is on Meta. Free-trial campaigns go live automatically;
+                    otherwise it starts paused — activate it from Performance when you&apos;re ready.
+                  </small>
                   <Link href="/results" className="studio-btn publish studio-live-results-btn">View in Performance <ChevronRight aria-hidden size={17} /></Link>
                 </div>
               )}
