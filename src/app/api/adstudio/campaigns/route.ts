@@ -203,26 +203,28 @@ export async function POST(request: NextRequest) {
     if (firstAdError) {
       return NextResponse.json({ error: firstAdError }, { status: 400 });
     }
-    const creditGate = await reserveAdStudioGenerationCredits({
-      supabase: context.supabase,
-      workspaceId: context.access.workspaceId,
-      actorProfileId: context.access.userId,
-      mutationKey: creditMutationKey,
-    });
+    // Track E (§6): resolve the v2 template BEFORE reserving credits. The v2
+    // path renders free (0 credits) and must not hit the credit gate (402 on
+    // empty trials). The reservation only applies to the v1 image-model path.
+    const v2Template = adstudioTemplatesV2Enabled()
+      ? resolveReadyTemplateV2(body.firstAd!.templateId)
+      : null;
 
-    if (!creditGate.ok) {
-      return creditGate.response;
+    if (!v2Template) {
+      const creditGate = await reserveAdStudioGenerationCredits({
+        supabase: context.supabase,
+        workspaceId: context.access.workspaceId,
+        actorProfileId: context.access.userId,
+        mutationKey: creditMutationKey,
+      });
+      if (!creditGate.ok) {
+        return creditGate.response;
+      }
+      creditReservation = creditGate.reservation;
     }
-
-    creditReservation = creditGate.reservation;
     const funnelService = createSupabaseServiceClient();
 
-    // Track E (§6): the deterministic v2 path. Ready templates render inline
-    // in <2s with zero render credits; the v1 job/clone pipeline below stays
-    // untouched for non-ready templates and until cutover.
-    if (adstudioTemplatesV2Enabled()) {
-      const v2Template = resolveReadyTemplateV2(body.firstAd!.templateId);
-      if (v2Template) {
+    if (v2Template) {
         try {
           const brandKitResult = await resolveAdStudioGenerationBrandKit({
             supabase: context.supabase,
@@ -271,10 +273,9 @@ export async function POST(request: NextRequest) {
           }
           throw error;
         }
-      }
-      // Template not ready yet: fall through to the v1 pipeline (rollout is
-      // per-template during the transition, per §12 Track G).
     }
+    // Template not ready yet: fall through to the v1 pipeline (rollout is
+    // per-template during the transition, per §12 Track G).
     await recordWorkspaceFunnelEventBestEffort(funnelService, {
       eventName: "template_selected",
       workspaceId: context.access.workspaceId,
@@ -356,7 +357,7 @@ export async function POST(request: NextRequest) {
         body,
         workspaceName: context.access.workspaceName,
         region: context.access.region,
-        creditReservation,
+        creditReservation: creditReservation ?? undefined,
         correlationId,
         expectedCampaignId,
       });
