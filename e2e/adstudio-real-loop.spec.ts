@@ -112,16 +112,18 @@ describeAdStudioRealLoop("Ad Studio real loop", () => {
       testInfo.outputPath("listing.png"),
       testInfo.outputPath("logo.png"),
     );
+    // Exercise the supported manual-copy path so this image-generation test
+    // does not spend a separate model call generating prose first.
+    await page.getByRole("radio", { name: /i'll write it myself/i }).check();
+    const feedCopy = page.getByRole("region", { name: /editable ad copy/i });
+    await feedCopy.getByLabel("Primary text", { exact: true }).fill(
+      "See this renovated Scarborough home this weekend. Spacious modern living for family comfort.",
+    );
+    await feedCopy.getByLabel("Headline", { exact: true }).fill("Open Home This Saturday");
+    await feedCopy.getByLabel("Description", { exact: true }).fill(
+      "Renovated family home open this Saturday in Scarborough",
+    );
     await fillCustomerCopyFields(page);
-    // Some templates have an additional prose brief and some, including the
-    // locked 037 clone, consist only of exact on-image copy fields.
-    const optionalBrief = page
-      .getByRole("dialog")
-      .getByRole("textbox", { name: /details|description/i })
-      .first();
-    if (await optionalBrief.isVisible().catch(() => false)) {
-      await optionalBrief.fill("Open home this Saturday, renovated family home in Scarborough.");
-    }
     const generationResponse = page.waitForResponse(
       (response) => {
         const url = new URL(response.url());
