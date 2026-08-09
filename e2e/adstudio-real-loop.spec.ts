@@ -1,6 +1,8 @@
 import { existsSync, readFileSync } from "node:fs";
 import { test, expect, type Page } from "@playwright/test";
 
+import { readAdStudioCreativeJobStatus } from "../src/lib/adstudio/job-status.ts";
+
 const storageStatePath =
   process.env.ADSTUDIO_E2E_STORAGE_STATE ?? "e2e/.auth/adstudio-test.storage-state.json";
 const workspaceId = process.env.ADSTUDIO_E2E_WORKSPACE_ID;
@@ -234,7 +236,8 @@ async function waitForGenerationJob(page: Page, jobId: string): Promise<string> 
   for (;;) {
     const response = await page.request.get(`/api/adstudio/jobs/${encodeURIComponent(jobId)}`);
     expect(response.ok(), await response.text()).toBe(true);
-    const job = (await response.json()) as { status?: string; error?: string | null; campaign_id?: string | null };
+    const job = readAdStudioCreativeJobStatus(await response.json());
+    if (!job) throw new Error("Generation job returned an invalid status response.");
     if (job.status === "done" && job.campaign_id) return job.campaign_id;
     if (job.status === "failed") throw new Error(`Generation job failed: ${job.error ?? "unknown error"}`);
     if (Date.now() > deadline) throw new Error("Generation job did not finish within 10 minutes.");

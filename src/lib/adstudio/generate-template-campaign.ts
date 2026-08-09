@@ -21,6 +21,7 @@ import {
 import {
   MAX_RUNTIME_CLONE_CANDIDATES,
   TemplateCampaignQaError,
+  cloneCorrectionForNextCandidate,
   cloneQualityPassed,
   reviewCloneCandidate,
 } from "./clone-quality-gate.ts";
@@ -339,8 +340,8 @@ export async function generateFinalCloneRender(input: {
     if (accepted) {
       return { ...generated, assetUrl: exactAssetUrl, attempt, qualityReview: lastReview };
     }
-    const correction = lastReview.suggestedCorrection.trim();
-    if (!correction || attempt === MAX_RUNTIME_CLONE_CANDIDATES) break;
+    if (attempt === MAX_RUNTIME_CLONE_CANDIDATES) break;
+    const correction = cloneCorrectionForNextCandidate(lastReview);
     request = { ...input.buildCorrectedRequest(correction), signal: input.signal };
   }
   throw new TemplateCampaignQaError(
