@@ -5,6 +5,7 @@ import { useRef, useState } from "react";
 import type { AdStudioBrandKit, AdStudioCampaignPack, AdStudioFormat, AdStudioGoal, AdStudioOfferTemplate, FirstAdInput } from "@/lib/adstudio";
 import { mergeDraftResponsePack } from "@/lib/adstudio/client-pack";
 import { isFinishedCloneCreative } from "@/lib/adstudio/clone-creative";
+import { readAdStudioCreativeJobStatus } from "@/lib/adstudio/job-status";
 import { findCopyLimitViolations } from "@/lib/adstudio/readiness";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
@@ -30,14 +31,6 @@ const TEMPLATE_JOB_PHASES: Array<{ label: string; atMs: number }> = [
   { label: "Designing your ad...", atMs: 15_000 },
   { label: "Saving your ad...", atMs: 60_000 },
 ];
-
-type CampaignJobStatus = {
-  id: string;
-  status: "queued" | "running" | "done" | "failed";
-  error: string | null;
-  campaign_id: string | null;
-  campaignPack?: AdStudioCampaignPack | null;
-};
 
 /** Per-format export progress so one slow/failed format never blocks the rest. */
 export type ExportFormatStatus = {
@@ -410,11 +403,12 @@ async function waitForTemplateCampaignJob(
       checking = true;
       try {
         const response = await fetch(`/api/adstudio/jobs/${encodeURIComponent(jobId)}`, { cache: "no-store" });
-        const payload = (await response.json().catch(() => null)) as
-          | { job?: CampaignJobStatus; error?: string }
-          | null;
-        if (!response.ok) throw new Error(payload?.error ?? "Could not check the ad generation job.");
-        const job = payload?.job;
+        const payload = (await response.json().catch(() => null)) as unknown;
+        const responseError = payload && typeof payload === "object" && typeof (payload as { error?: unknown }).error === "string"
+          ? (payload as { error: string }).error
+          : "Could not check the ad generation job.";
+        if (!response.ok) throw new Error(responseError);
+        const job = readAdStudioCreativeJobStatus<AdStudioCampaignPack>(payload);
         if (!job) throw new Error("The ad generation job was not found.");
         if (job.status === "failed") {
           finish({ error: new Error(job.error || "Ad generation failed. Please try again.") });

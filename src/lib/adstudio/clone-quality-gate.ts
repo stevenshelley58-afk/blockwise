@@ -113,9 +113,9 @@ export function cloneQualityPassed(input: {
     && input.review.excludedContentInfluencedScore === false
     && Object.entries(input.expectedCopy).every(([key, expected]) => {
       const check = copyChecks.get(key);
-      return check?.exact === true
-        && check.expected === expected
-        && check.rendered === expected;
+      return Boolean(check)
+        && visibleCopyText(check!.expected) === visibleCopyText(expected)
+        && visibleCopyText(check!.rendered) === visibleCopyText(expected);
     })
     && input.expectedAssetKeys.every((key) => {
       const check = assetChecks.get(key);
@@ -123,6 +123,45 @@ export function cloneQualityPassed(input: {
     })
     && input.review.identityLeakage.length === 0
     && input.review.defects.length === 0;
+}
+
+/**
+ * Line wrapping is layout, not a change to the customer's visible wording.
+ * Collapse only whitespace that vision OCR inserts between otherwise exact
+ * visible tokens; punctuation, spelling, symbols, and ordering stay strict.
+ */
+function visibleCopyText(value: string): string {
+  return value.trim().replace(/\s+/gu, " ");
+}
+
+/**
+ * A sub-threshold vision review must always drive the next paid candidate.
+ * Some strict-schema models leave suggestedCorrection blank while describing
+ * the mismatch precisely in their rationales. Preserve that image-model
+ * diagnosis instead of ending the quality loop early or inventing a layout.
+ */
+export function cloneCorrectionForNextCandidate(review: AdStudioCloneQualityReview): string {
+  const explicit = review.suggestedCorrection.trim();
+  if (explicit) return explicit.slice(0, 2_400);
+
+  const findings = [
+    review.qualityRationale.trim()
+      ? `Correct the image-model review findings: ${review.qualityRationale.trim()}`
+      : `Raise reusable-system likeness from ${review.adSystemLikenessScore}/10 and standalone quality from ${review.standaloneAdQualityScore}/10 by matching reference image 1 more faithfully.`,
+    review.defects.length ? `Remove these visible defects: ${review.defects.join("; ")}.` : "",
+    review.identityLeakage.length ? `Remove this reference identity leakage: ${review.identityLeakage.join("; ")}.` : "",
+    review.copyChecks.some((check) => visibleCopyText(check.rendered) !== visibleCopyText(check.expected))
+      ? "Restore every supplied visible word, symbol, and punctuation mark exactly; natural line wrapping inside the reference text box is allowed."
+      : "",
+    review.assetChecks.some((check) => !check.used || !check.faithful)
+      ? "Use every supplied replacement asset faithfully in its matching reference slot without warping it."
+      : "",
+    review.includedRationale.trim()
+      ? `Preserve everything the image-model review says already matches: ${review.includedRationale.trim()}`
+      : "",
+  ].filter(Boolean).join(" ");
+
+  return findings.slice(0, 2_400);
 }
 
 export async function reviewCloneCandidate(input: {
@@ -157,11 +196,13 @@ export async function reviewCloneCandidate(input: {
     "The image is a two-panel contact sheet: approved public sample on the left, customer candidate on the right.",
     "Score the reusable ad system, not replaceable property/photo subject matter, logo identity, or copy wording.",
     "Do score canvas/panel geometry, borders, margins, image crop and effects, logo displayed footprint/anchor, text-block bounds and line rhythm, typography treatment, hierarchy, whitespace, palette, CTA and footer treatment.",
+    "Different customer copy lengths may wrap to a different natural line count. Do not penalize that fact alone: score whether the replacement occupies the same text-box anchor and outer bounds with faithful type treatment and natural spacing. Never split a word unnaturally just to mimic the sample line count.",
+    "For copyChecks, compare visible words, punctuation, symbols, and order after collapsing layout whitespace. OCR line breaks and repeated spaces are not changed copy; score their visual rhythm under ad-system likeness instead.",
     `Expected exact copy: ${JSON.stringify(input.expectedCopy)}.`,
     `Required replaced asset regions: ${JSON.stringify(input.expectedAssetKeys)}. An asset is used only if the candidate visibly replaces the corresponding sample asset; faithful means visibly clean and unwarped.`,
     `Bind the JSON to schemaVersion 1, templateId ${input.templateId}, format ${input.format}, attempt ${input.attempt}, referenceHash ${contact.referenceHash}, candidateHash ${contact.candidateHash}, requestHash ${requestHash}.`,
     "adSystemLikenessScore and standaloneAdQualityScore must each be JSON numbers on a 0-10 scale, never percentages or strings.",
-    "Return only the current adStudioCloneQualityReview JSON schema and every one of its fields. Do not return regions or any legacy QA shape. On failure, suggestedCorrection must be a concise actionable edit for the next full clone; on pass it may be empty.",
+    "Return only the current adStudioCloneQualityReview JSON schema and every one of its fields. Do not return regions or any legacy QA shape. Whenever either score or any exactness/asset/defect/leakage gate fails, suggestedCorrection must be a non-empty concise actionable visual edit for the next full clone; only a passing review may leave it empty.",
   ].join("\n");
   const prompt = {
     system: `${section.body}\n\n${contract}`,
