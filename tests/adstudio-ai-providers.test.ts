@@ -352,6 +352,31 @@ test("priced OpenAI image candidate uses GPT Image 2", async () => {
   assert.equal(output.usage?.inputTokens, undefined);
 });
 
+test("GPT Image 2 generations use the exact AdStudio canvas instead of a crop-prone native portrait", async () => {
+  for (const [aspectRatio, expectedSize] of [
+    ["4:5", "1024x1280"],
+    ["9:16", "864x1536"],
+  ] as const) {
+    let dispatchedBody: Record<string, unknown> | undefined;
+    const provider = createImageProviderForCandidate(candidate("openai", "gpt-image-2"), {
+      env: { OPENAI_API_KEY: "oa_test" },
+      fetchImpl: async (_url, init) => {
+        dispatchedBody = JSON.parse(String(init?.body));
+        return new Response(JSON.stringify({ data: [{ b64_json: "aW1hZ2U=" }] }), { status: 200 });
+      },
+    });
+
+    await provider.generate({
+      prompt: "Premium local real estate creative",
+      referenceAssets: [],
+      aspectRatio,
+      stylePreset: "real_estate_photography",
+    });
+
+    assert.equal(dispatchedBody?.size, expectedSize);
+  }
+});
+
 test("OpenAI 2xx response without an image preserves submitted billing evidence", async () => {
   const provider = createImageProviderForCandidate(candidate("openai", "gpt-image-2"), {
     env: { OPENAI_API_KEY: "oa_test" },
@@ -604,7 +629,7 @@ test("priced OpenAI image candidate sends locked-template reference work to imag
   const output = await provider.generate({
     prompt: "Prepare this listing photo for a locked template frame",
     referenceAssets: ["data:image/png;base64,aW1hZ2U="],
-    aspectRatio: "1:1",
+    aspectRatio: "4:5",
     stylePreset: "locked_template_photo_prep",
     requiresReferenceAssets: true,
     signal: abortController.signal,
@@ -619,7 +644,7 @@ test("priced OpenAI image candidate sends locked-template reference work to imag
 
   const body = calls[0].init.body as FormData;
   assert.equal(body.get("model"), "gpt-image-2");
-  assert.equal(body.get("size"), "1024x1024");
+  assert.equal(body.get("size"), "1024x1280");
   assert.equal(body.get("quality"), "high");
   assert.equal(body.get("n"), "1");
   assert.ok(body.get("image") instanceof Blob);
@@ -652,7 +677,30 @@ test("priced OpenAI image candidate attaches a mask when one is supplied", async
 
   const body = calls[0].init.body as FormData;
   assert.ok(body.get("mask"), "mask must be attached when provided");
-  assert.equal(body.get("size"), "1024x1536");
+  assert.equal(body.get("size"), "864x1536");
+});
+
+test("older GPT Image models retain their native portrait canvas", async () => {
+  for (const aspectRatio of ["4:5", "9:16"] as const) {
+    let dispatchedBody: FormData | undefined;
+    const provider = createImageProviderForCandidate(candidate("openai", "gpt-image-1-mini"), {
+      env: { OPENAI_API_KEY: "oa_test" },
+      fetchImpl: async (_url, init) => {
+        dispatchedBody = init?.body as FormData;
+        return new Response(JSON.stringify({ data: [{ b64_json: "aW1hZ2U=" }] }), { status: 200 });
+      },
+    });
+
+    await provider.generate({
+      prompt: "Prepare this listing photo",
+      referenceAssets: ["data:image/png;base64,aW1hZ2U="],
+      aspectRatio,
+      stylePreset: "locked_template_photo_prep",
+      requiresReferenceAssets: true,
+    });
+
+    assert.equal(dispatchedBody?.get("size"), "1024x1536");
+  }
 });
 
 test("priced OpenAI image candidate honours quality tier and the Cloudflare gateway for edits", async () => {

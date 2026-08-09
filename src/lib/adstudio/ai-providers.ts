@@ -173,7 +173,7 @@ function createOpenAiImageProvider(options: ProviderOptions = {}): ImageProvider
             body: JSON.stringify({
               model,
               prompt: buildImagePrompt(input),
-              size: imageSizeForAspect(input.aspectRatio),
+              size: imageSizeForAspect(input.aspectRatio, model),
               quality,
               n: 1,
             }),
@@ -303,11 +303,7 @@ async function postOpenAiImageEdit(input: {
     });
   };
 
-  return send(imageSizeForAspect(input.input.aspectRatio));
-
-  // Supported size sets differ per model generation (e.g. gpt-image-1-mini
-  // rejects 1024x1280 while gpt-image-2 accepts it). On that specific error,
-  // retry once with "auto" — the model picks the nearest size to the inputs.
+  return send(imageSizeForAspect(input.input.aspectRatio, input.model));
 }
 
 // Resolves a reference (data: URL or http(s) URL) to a Blob for multipart upload.
@@ -795,10 +791,18 @@ function extractImageUrl(content: unknown): string | undefined {
   return undefined;
 }
 
-function imageSizeForAspect(aspectRatio: string): string {
-  // OpenAI's image endpoints accept only these native canvases. AdStudio's
-  // exact placement ratio remains in the prompt and the clone pipeline crops
-  // the returned native canvas to that ratio before QA and persistence.
+function imageSizeForAspect(aspectRatio: string, model: string): string {
+  // GPT Image 2 accepts flexible dimensions when both edges are multiples of
+  // 16 and the documented pixel/ratio limits are respected. Generate on the
+  // final canvas so clone geometry reaches visual QA without a destructive
+  // centre crop. Older GPT Image models retain their native supported sizes.
+  if (model === "gpt-image-2") {
+    if (aspectRatio === "4:5") return "1024x1280";
+    if (aspectRatio === "9:16") return "864x1536";
+    if (aspectRatio === "1.91:1") return "1952x1024";
+    return "1024x1024";
+  }
+
   if (aspectRatio === "1:1") return "1024x1024";
   if (aspectRatio === "1.91:1") return "1536x1024";
   return "1024x1536";
