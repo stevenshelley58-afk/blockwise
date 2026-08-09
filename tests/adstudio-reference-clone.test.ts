@@ -47,6 +47,24 @@ test("reference order is design first, then declared customer assets", () => {
   assert.match(request.prompt, /replacement image subject is intentionally different/);
   assert.match(request.prompt, /reference image slot is immovable/);
   assert.match(request.prompt, /Do not redesign, modernise, simplify/);
+  const sectionHeadings = [
+    "TASK",
+    "DESIGN BLUEPRINT — REFERENCE IMAGE 1",
+    "REFERENCE ASSETS — ORDER IS EXACT",
+    "PHOTO FIT",
+    "EXACT VISIBLE TEXT — USE NO OTHER TEXT",
+    "COLOUR",
+    "OUTPUT",
+  ];
+  assert.equal(request.prompt.startsWith("TASK\n"), true);
+  for (let index = 1; index < sectionHeadings.length; index += 1) {
+    assert.ok(
+      request.prompt.indexOf(sectionHeadings[index - 1]) < request.prompt.indexOf(sectionHeadings[index]),
+      `${sectionHeadings[index]} must follow ${sectionHeadings[index - 1]}`,
+    );
+  }
+  assert.match(request.prompt, /REFERENCE ASSETS — ORDER IS EXACT\n- Reference image 1/u);
+  assert.match(request.prompt, /EXACT VISIBLE TEXT — USE NO OTHER TEXT\n[\s\S]*\n- /u);
 });
 
 test("replacement wording and logos preserve the approved design footprint", () => {
@@ -93,7 +111,7 @@ test("a rejected gallery candidate can feed one model-suggested correction back 
     images,
     reviewCorrection: "Reduce the logo and match the quieter CTA treatment.",
   });
-  assert.match(request.prompt, /Image-model QA correction from the previous candidate/);
+  assert.match(request.prompt, /PREVIOUS IMAGE-MODEL QA CORRECTION/);
   assert.match(request.prompt, /Reduce the logo and match the quieter CTA treatment/);
   assert.match(request.prompt, /do not authorize any other redesign/i);
   assert.deepEqual(request.referenceAssets, [template.sample.imageSrc, images.property_photo, images.brand_logo]);

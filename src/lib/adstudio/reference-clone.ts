@@ -46,7 +46,7 @@ export const AD_SYSTEM_CLONE_CONTRACT = [
   "Every reference image slot is immovable: preserve its exact position, width, height, mask, and boundary even when the replacement asset has a different aspect ratio. Fit, crop, or naturally extend the replacement only inside that fixed slot; never enlarge, shrink, or move the slot or displace surrounding text and footer elements to accommodate the asset.",
   "The replacement image subject is intentionally different and must not be made to resemble the subject in reference image 1.",
   "Do not redesign, modernise, simplify, decorate, rebalance, or reinterpret the composition.",
-].join(" ");
+].map((instruction) => `- ${instruction}`).join("\n");
 
 /**
  * How a supplied photo is fitted into the design's photo area when their aspect
@@ -109,26 +109,46 @@ export function buildCloneImageRequest(template: AdStudioTemplate, inputs: Clone
     ...suppliedImages.map(
       (input, index) => `Reference image ${index + 2} is ${input.description}. Replace the matching asset in the design with it.`,
     ),
-  ].join(" ");
+  ].map((instruction) => `- ${instruction}`).join("\n");
   const copyLegend = template.inputs.text
-    .map((field) => `${field.label}: "${copy[field.key]}"`)
-    .join("; ");
+    .map((field) => `- ${field.label}: "${copy[field.key]}"`)
+    .join("\n");
 
   return {
     prompt: [
-      "Clone reference image 1 as closely as possible.",
-      AD_SYSTEM_CLONE_CONTRACT,
+      [
+        "TASK",
+        "Clone reference image 1 as closely as possible into one finished Meta real-estate ad.",
+      ].join("\n"),
+      [
+        "DESIGN BLUEPRINT — REFERENCE IMAGE 1",
+        AD_SYSTEM_CLONE_CONTRACT,
+      ].join("\n"),
       ...(reviewCorrection
-        ? [`Image-model QA correction from the previous candidate: ${reviewCorrection} Apply only these corrections to make this clone more faithful to reference image 1; they do not authorize any other redesign.`]
+        ? [[
+            "PREVIOUS IMAGE-MODEL QA CORRECTION",
+            reviewCorrection,
+            "Apply only this correction to make the clone more faithful to reference image 1. These corrections do not authorize any other redesign.",
+          ].join("\n")]
         : []),
-      assetLegend,
-      "Customer asset replacement is mandatory: reference image 1 controls the design only; never retain a source image where a supplied replacement asset belongs.",
-      ...(suppliedImages.length ? [PHOTO_FIT_RULE] : []),
-      `Use these exact visible text values and no others: ${copyLegend}.`,
-      "Every supplied text value is mandatory: render each value character-for-character exactly once, fully visible, and at a readable size.",
-      colourInstruction,
-      `Produce one finished ${aspectRatio} Meta real-estate ad with no Meta interface chrome.`,
-    ].join(" "),
+      [
+        "REFERENCE ASSETS — ORDER IS EXACT",
+        assetLegend,
+        "Customer asset replacement is mandatory. Reference image 1 controls the design only; never retain a source image where a supplied replacement asset belongs.",
+      ].join("\n"),
+      ...(suppliedImages.length ? [["PHOTO FIT", PHOTO_FIT_RULE].join("\n")] : []),
+      [
+        "EXACT VISIBLE TEXT — USE NO OTHER TEXT",
+        "Use these exact visible text values and no others:",
+        copyLegend,
+        "Every supplied text value is mandatory: render each value character-for-character exactly once, fully visible, and at a readable size.",
+      ].join("\n"),
+      ["COLOUR", colourInstruction].join("\n"),
+      [
+        "OUTPUT",
+        `Produce one finished ${aspectRatio} Meta real-estate ad with no Meta interface chrome.`,
+      ].join("\n"),
+    ].join("\n\n"),
     negativePrompt: GLOBAL_CLONE_NEGATIVES,
     referenceAssets: [referenceImage, ...suppliedImages.map((input) => images[input.key].trim())],
     aspectRatio,
