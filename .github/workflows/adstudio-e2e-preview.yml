@@ -28,6 +28,11 @@ on:
         description: "Deployment URL to run the real loop against (e.g. a Vercel preview URL)"
         required: true
         type: string
+      auth_base_url:
+        description: "Optional captcha-free Preview used only to authenticate before testing Production"
+        required: false
+        default: ""
+        type: string
 
 concurrency:
   group: adstudio-e2e-${{ github.run_id }}
@@ -40,6 +45,7 @@ jobs:
     timeout-minutes: 25
     env:
       PLAYWRIGHT_BASE_URL: ${{ inputs.base_url }}
+      ADSTUDIO_E2E_LOGIN_URL: ${{ inputs.auth_base_url || inputs.base_url }}
       ADSTUDIO_E2E_WORKSPACE_ID: 00000000-0000-4000-8000-0000000000e2
       ADSTUDIO_E2E_EMAIL: adstudio-e2e@blockwise.test
       ADSTUDIO_E2E_PASSWORD: ${{ secrets.ADSTUDIO_E2E_PASSWORD }}
