@@ -81,7 +81,7 @@
             "x": 0.012037037037037037,
             "y": 0.01037037037037037,
             "width": 0.975925925925926,
-            "height": 0.46
+            "height": 0.48592592592592593
           },
           "type": "image_slot",
           "inputKey": "property_photo",
@@ -104,10 +104,10 @@
           "id": "slot-agency_logo",
           "z": 4,
           "box": {
-            "x": 0.7240740740740741,
-            "y": 0.8392592592592593,
-            "width": 0.07407407407407407,
-            "height": 0.05925925925925926
+            "x": 0.7407407407407407,
+            "y": 0.8355555555555556,
+            "width": 0.040740740740740744,
+            "height": 0.06666666666666667
           },
           "type": "image_slot",
           "inputKey": "agency_logo",
@@ -116,8 +116,8 @@
             "kind": "rect"
           },
           "minSourcePx": {
-            "width": 80,
-            "height": 80
+            "width": 44,
+            "height": 90
           }
         },
         {
@@ -130,8 +130,8 @@
             "height": 1
           },
           "type": "overlay_patch",
-          "src": "/adstudio-templates/meta-agent-intro-feed-037/patch-feed-finish.svg",
-          "sha256": "5249091a6a107f62badbb2f1ca3ede8452f194aeb775282fb22f12d87a3d55d4"
+          "src": "/adstudio-templates/meta-agent-intro-feed-037/patch-feed-finish.png",
+          "sha256": "4f56926e4c8c63d5d1fa7713be41180b0513198389491a977f60fb52a2102cb9"
         }
       ]
     },
