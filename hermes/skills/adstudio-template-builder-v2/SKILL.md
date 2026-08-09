@@ -116,7 +116,8 @@ Vercel (the OpenCV/tesseract/rembg dependencies do not exist there).
 | 3. restyle | `restyle --id <id>` | Applies the Studio-recorded `restyle` block headlessly (palette remap, generic slot assets, safe copy), renders the **public sample** via `render/server.ts`, back-fills `provenance.sample.contentHash`. Fails if the sample hash equals the source hash or the restyle evidence is trivial. |
 | 4. story-draft | `story-draft --id <id>` | 9:16 draft: plate extended to 1920 (sampled-edge blur-extend by default; `--ai-extend` outpaints the margin bands only), layers repositioned into Meta safe zones. |
 | 5. check | `check --id <id>` | **The source-replay integrity gate.** Renders the doc with `sourceValues` + the source photos and compares against the source ad to verify decomposition. This is not a customer-result likeness score. Runs the stress matrix and writes `exactness.residuals`. |
-| 6. Studio QA | `/operator/template-studio/<id>` | Human confirms fonts, nudges boxes, marks overlay patches, completes the restyle tab, signs off the stress preview, and approves. |
+| 6. subject-invariance | `node scripts/adstudio/v2/subject-invariance.mjs --id <id>` | Renders the fixed hashed grey, grid/gradient, and unrelated-photo corpus through the canonical renderer; rejects source pixels in static assets, non-deterministic renders, and changes outside declared image/effect dependencies. Produces the immutable visual-review contact sheet and rubric. |
+| 7. Studio QA | `/operator/template-studio/<id>` | Human confirms fonts, nudges boxes, marks overlay patches, completes the restyle tab, signs off the stress preview, and approves. |
 | — | `migrate-v1 --id <id>\|--all [--from source\|sample]` | Builds a v2 draft from an existing v1 template (reuses `typography`, `deterministicEditing.imageBoxes`, `meta`). |
 | — | `emit-fonts` | Extends the runtime font manifest to cover v2 docs (same manifest, same license gating). |
 
@@ -163,12 +164,13 @@ Template fidelity has two distinct gates that must not be conflated:
    images. This verifies that the decomposition and renderer can reproduce the
    designer's ad. It is an implementation-integrity gate, not evidence that a
    customer image should resemble the source image.
-2. **Substitution fidelity** is mandatory Studio QA evidence: render mid-grey,
+2. **Substitution fidelity** is mandatory Studio QA evidence: run
+   `scripts/adstudio/v2/subject-invariance.mjs` to render the fixed mid-grey,
    grid/gradient, and unrelated customer images. It measures the reusable ad
    system and image effects while explicitly excluding image-subject
-   similarity. Until the CLI records these probes automatically, attach the
-   renders and measurements to the template evidence and keep the template in
-   `qa` when they are missing.
+   similarity. Attach the generated renders, measurements, and immutable
+   candidate hashes to the template evidence; keep the template in `qa` when
+   they are missing or stale.
 
 Source replay thresholds:
 
