@@ -1,6 +1,9 @@
 import { randomUUID } from "node:crypto";
 
-import { createTextProviderForCandidate } from "./ai-providers.ts";
+import {
+  createTextProviderForCandidate,
+  type ProviderEnvironment,
+} from "./ai-providers.ts";
 import type { TextProviderAdapter, TextProviderResponse } from "./providers.ts";
 import { emitModelFallbackAlert } from "../alerts/model-fallback-alert.ts";
 import { assembleMetaCopyPrompt } from "../operator/prompts/assemble-prompt.ts";
@@ -53,6 +56,9 @@ export type AdStudioCopyGenerationInput = AdStudioCopyRequestBody & {
   workspaceId: string;
   userId: string;
   correlationId?: string;
+  /** Explicit service-runtime credentials; web requests use process.env. */
+  providerEnv?: ProviderEnvironment;
+  signal?: AbortSignal;
 };
 
 export type AdStudioCopyGenerationResponse = {
@@ -119,7 +125,7 @@ export async function generateAdStudioCopy(
     generation = await generateCopyWithProfile(assembled.system, userPrompt, imageUrl, {
       workspaceId: input.workspaceId,
       mutationId,
-    });
+    }, input.providerEnv, input.signal);
     const output = generation.output;
     const json = (output.json ?? {}) as Record<string, unknown>;
     const current = input.copy ?? {};
@@ -201,6 +207,9 @@ export type AdStudioTemplateCopyInput = {
   fields: AdStudioTemplateCopyFieldSpec[];
   sourceImageUrl?: string;
   context?: AdStudioCopyRequestBody["context"];
+  /** Explicit service-runtime credentials; web requests use process.env. */
+  providerEnv?: ProviderEnvironment;
+  signal?: AbortSignal;
 };
 
 export type AdStudioTemplateCopyResponse = {
@@ -260,7 +269,7 @@ export async function generateAdStudioTemplateCopy(
     generation = await generateCopyWithProfile(assembled.system, userPrompt, imageUrl, {
       workspaceId: input.workspaceId,
       mutationId,
-    });
+    }, input.providerEnv, input.signal);
     const json = (generation.output.json ?? {}) as Record<string, unknown>;
     const onImageRaw = (json.onImage ?? {}) as Record<string, unknown>;
     const onImage: Record<string, string> = {};
@@ -364,13 +373,15 @@ async function generateCopyWithProfile(
   user: string,
   imageUrl?: string,
   reservation?: { workspaceId: string; mutationId: string },
+  providerEnv?: ProviderEnvironment,
+  signal?: AbortSignal,
 ): Promise<CopyGenerationResult> {
   const profile = await resolveRuntimeModelProfile("structured_json");
   const candidates = modelCandidateAttempts(profile);
   const attempts: CopyGenerationResult["attempts"] = [];
 
   for (const [index, candidate] of candidates.entries()) {
-    const provider = createTextProviderForCandidate(candidate);
+    const provider = createTextProviderForCandidate(candidate, { env: providerEnv });
     if (!reservation) {
       throw new Error("Provider accounting reservation context is required.");
     }
@@ -387,6 +398,7 @@ async function generateCopyWithProfile(
           schemaName: "metaLeadAdPack",
           messages: [{ role: "user", content: user }],
           imageUrl,
+          signal,
         }),
       });
     } catch (error) {

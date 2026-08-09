@@ -27,6 +27,7 @@ const editClient = readFileSync("src/components/adstudio/canvas/creative-edit-cl
 const layerDerivation = readFileSync("src/lib/adstudio/layer-derivation.ts", "utf8");
 const cloneCampaign = readFileSync("src/lib/adstudio/clone-campaign.ts", "utf8");
 const generationRoute = readFileSync("src/app/api/adstudio/campaigns/route.ts", "utf8");
+const generationWorker = readFileSync("worker/index.ts", "utf8");
 
 const regions: AdStudioCloneRegion[] = [
   { key: "headline", kind: "text", box: { x: 0.1, y: 0.1, width: 0.8, height: 0.1 } },
@@ -86,7 +87,8 @@ test("a fully migrated template cannot silently fall back to image-model text ed
   assert.match(editRoute, /layers\?\.deterministicOnly && !patchImage/);
   assert.match(editRoute, /code: "layers_not_ready"/);
   assert.match(editor, /textLayers\?\.deterministicOnly && !patchImage/);
-  assert.match(generationRoute, /assertDeterministicFeedEditingReady/);
+  assert.doesNotMatch(generationRoute, /assertDeterministicFeedEditingReady/);
+  assert.match(generationWorker, /assertDeterministicFeedEditingReady/);
 });
 
 test("instant text fitting uses painted glyph bounds rather than the oversized CSS em box", () => {

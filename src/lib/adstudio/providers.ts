@@ -35,6 +35,7 @@ export type TextProviderRequest = {
    * user message for vision-capable models. Ignored by text-only providers.
    */
   imageUrl?: string;
+  signal?: AbortSignal;
 };
 
 export type TextProviderResponse = {

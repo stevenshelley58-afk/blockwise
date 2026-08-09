@@ -25,12 +25,14 @@ test("old ad and template creation endpoints stay deleted", () => {
 
 test("campaign creation has one template clone pipeline", () => {
   const route = readFileSync("src/app/api/adstudio/campaigns/route.ts", "utf8");
+  const worker = readFileSync("worker/index.ts", "utf8");
   const generation = readFileSync("src/lib/adstudio/clone-generation.ts", "utf8");
-  assert.match(route, /runTemplateCampaignGeneration/);
+  assert.doesNotMatch(route, /runTemplateCampaignGeneration/);
+  assert.match(worker, /runTemplateCampaignGeneration/);
   assert.doesNotMatch(route, /generateAdStudioCampaignPack\(\{|generate-options|template-photo-prep/);
   assert.match(generation, /fast:\s*"image_draft"/);
   assert.match(generation, /high:\s*"image_final"/);
-  assert.match(generation, /resolveCloneProviders\(quality/);
+  assert.match(generation, /resolveCloneProviders\([\s\S]*quality: AdGenerationQuality/);
   assert.doesNotMatch(generation, /CloneTier|tier:/);
 
   const client = readFileSync("src/components/adstudio/use-campaign-actions.ts", "utf8");
@@ -39,20 +41,22 @@ test("campaign creation has one template clone pipeline", () => {
   assert.doesNotMatch(client, /variantCount|generateVariantsForAngle|onRegenerate/);
 });
 
-test("campaign generation uses Vercel inline with delayed VPS recovery", () => {
+test("campaign generation uses the durable VPS queue from the start", () => {
   const route = readFileSync("src/app/api/adstudio/campaigns/route.ts", "utf8");
   const generation = readFileSync("src/lib/adstudio/generate-template-campaign.ts", "utf8");
   const worker = readFileSync("worker/index.ts", "utf8");
 
   assert.doesNotMatch(route, /@trigger\.dev|triggerTemplateGeneration|TRIGGER_SECRET_KEY/);
-  assert.match(route, /await runTemplateCampaignGeneration/);
+  assert.doesNotMatch(route, /runTemplateCampaignGeneration/);
   assert.match(route, /kind: "adstudio\.generate\.template"/);
-  assert.match(route, /GENERATION_RECOVERY_DELAY_MS/);
-  assert.match(route, /cancelQueuedJob\(\{/);
+  assert.match(route, /runAfter: new Date\(\)/);
+  assert.match(route, /status: 202/);
+  assert.match(route, /generationDedupKey: dedupKey/);
   assert.doesNotMatch(route, /service\.rpc\("complete_job"/);
   assert.match(route, /expectedCampaignId/);
   assert.match(route, /correlationId/);
   assert.match(worker, /expectedCampaignId: stored\.expectedCampaignId/);
+  assert.match(worker, /releaseAdStudioGenerationLock/);
 
   const pipeline = generation.slice(generation.indexOf("export async function runTemplateCampaignGeneration"));
   assert.ok(

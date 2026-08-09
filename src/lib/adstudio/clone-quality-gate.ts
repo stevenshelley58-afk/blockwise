@@ -1,6 +1,9 @@
 import { createHash } from "node:crypto";
 
-import { createTextProviderForCandidate } from "./ai-providers.ts";
+import {
+  createTextProviderForCandidate,
+  type ProviderEnvironment,
+} from "./ai-providers.ts";
 import { dataUrlToUploadBytes } from "./generated-media.ts";
 import type { ImageProviderRequest, TextProviderResponse } from "./providers.ts";
 import {
@@ -134,6 +137,9 @@ export async function reviewCloneCandidate(input: {
   workspaceId: string;
   userId: string;
   correlationId: string;
+  /** Explicit service-runtime credentials; web requests use process.env. */
+  providerEnv?: ProviderEnvironment;
+  signal?: AbortSignal;
 }, dependencies: {
   fetchImpl?: typeof fetch;
   contactSheet?: typeof buildCloneQualityContactSheet;
@@ -176,7 +182,7 @@ export async function reviewCloneCandidate(input: {
   let schemaError: CloneQualitySchemaError | null = null;
 
   for (const [attemptIndex, candidate] of modelCandidateAttempts(profile).entries()) {
-    const provider = createTextProviderForCandidate(candidate);
+    const provider = createTextProviderForCandidate(candidate, { env: input.providerEnv });
     if (!provider.capabilities.visionInput) continue;
     const execution = await executeAdStudioProviderAttempt<TextProviderResponse>({
       workspaceId: input.workspaceId,
@@ -189,6 +195,7 @@ export async function reviewCloneCandidate(input: {
         schemaName: "adStudioCloneQualityReview",
         messages: [{ role: "user", content: prompt.user }],
         imageUrl: contact.imageUrl,
+        signal: input.signal,
       }),
     });
     attempts.push(execution.attempt);

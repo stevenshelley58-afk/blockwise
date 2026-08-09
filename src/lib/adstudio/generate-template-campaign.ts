@@ -28,6 +28,10 @@ import { buildPrebuiltTemplateCloneQa } from "./clone-regions.ts";
 import { deriveAndPersistTemplateTextLayers } from "./layer-derivation.ts";
 import { generateAdStudioTemplateCopy, type AdStudioCopyFields } from "./copy-generation.ts";
 import { buildCloneCampaignPack, buildCloneCreative } from "./clone-campaign.ts";
+import {
+  recordCloneCandidateAudit,
+  type CloneCandidateAuditClient,
+} from "./clone-candidate-audit.ts";
 import { loadAdStudioCampaignPack, persistAdStudioCampaignPack } from "./persistence.ts";
 import { ensureRasterReferenceImage } from "./rasterize-reference.ts";
 import {
@@ -47,6 +51,7 @@ import type {
   AdStudioCloneQualityReview,
 } from "./types.ts";
 import type { ImageProviderAdapter, ImageProviderRequest } from "./providers.ts";
+import type { ProviderEnvironment } from "./ai-providers.ts";
 import {
   refundWorkspaceCreditReservation,
   settleWorkspaceCreditReservation,
@@ -91,6 +96,10 @@ export type RunTemplateCampaignGenerationInput = {
   correlationId?: string;
   /** Deterministic campaign checkpoint used to resume after a function crash. */
   expectedCampaignId?: string;
+  /** Explicit service-runtime credentials; Vercel requests use process.env. */
+  providerEnv?: ProviderEnvironment;
+  /** Worker lease/timeout cancellation propagated to every paid provider. */
+  signal?: AbortSignal;
 };
 
 export type RunTemplateCampaignGenerationResult = {
@@ -250,6 +259,15 @@ export async function generateFinalCloneRender(input: {
   userId: string;
   correlationId: string;
   modelProfile?: "image_draft" | "image_final";
+  providerEnv?: ProviderEnvironment;
+  signal?: AbortSignal;
+  recordCandidate?(candidate: {
+    attempt: number;
+    request: ImageProviderRequest;
+    candidateImage: string;
+    review: AdStudioCloneQualityReview;
+    accepted: boolean;
+  }): Promise<void>;
 }, dependencies: CloneRenderDependencies = {}): Promise<GeneratedCloneRender> {
   const generate = dependencies.generate ?? generateCloneWithCascade;
   const normalize = dependencies.normalize ?? normalizeCloneRenderAspect;
@@ -258,7 +276,11 @@ export async function generateFinalCloneRender(input: {
   let lastReview: AdStudioCloneQualityReview | undefined;
 
   for (let attempt = 1; attempt <= MAX_RUNTIME_CLONE_CANDIDATES; attempt += 1) {
-    const candidateRequest = { ...request, seed: (request.seed ?? 0) + attempt };
+    const candidateRequest = {
+      ...request,
+      seed: (request.seed ?? 0) + attempt,
+      signal: input.signal ?? request.signal,
+    };
     // A provider that produced a valid image but missed visual QA will not
     // enter the technical fallback inside generateCloneWithCascade. Give the
     // independently priced fallback model the corrected request on later
@@ -291,13 +313,35 @@ export async function generateFinalCloneRender(input: {
       workspaceId: input.workspaceId,
       userId: input.userId,
       correlationId: input.correlationId,
+      providerEnv: input.providerEnv,
+      signal: input.signal,
     });
-    if (cloneQualityPassed({ review: lastReview, expectedCopy: input.expectedCopy, expectedAssetKeys: input.expectedAssetKeys })) {
+    const accepted = cloneQualityPassed({
+      review: lastReview,
+      expectedCopy: input.expectedCopy,
+      expectedAssetKeys: input.expectedAssetKeys,
+    });
+    if (input.recordCandidate) {
+      try {
+        await input.recordCandidate({
+          attempt,
+          request: candidateRequest,
+          candidateImage: exactAssetUrl,
+          review: lastReview,
+          accepted,
+        });
+      } catch (error) {
+        // Evidence must survive whenever storage is healthy, but a transient
+        // audit upload must not discard an otherwise accepted customer ad.
+        console.error("Clone candidate audit failed", error);
+      }
+    }
+    if (accepted) {
       return { ...generated, assetUrl: exactAssetUrl, attempt, qualityReview: lastReview };
     }
     const correction = lastReview.suggestedCorrection.trim();
     if (!correction || attempt === MAX_RUNTIME_CLONE_CANDIDATES) break;
-    request = input.buildCorrectedRequest(correction);
+    request = { ...input.buildCorrectedRequest(correction), signal: input.signal };
   }
   throw new TemplateCampaignQaError(
     `The ad did not reach ${input.format} likeness quality after ${MAX_RUNTIME_CLONE_CANDIDATES} candidates.`,
@@ -503,7 +547,7 @@ export async function runTemplateCampaignGeneration(
   const rasterPromise = ensureRasterReferenceImage(
     new URL(template.sample.imageSrc, input.origin).toString(),
   );
-  const providersPromise = resolveCloneProviders(generationQuality);
+  const providersPromise = resolveCloneProviders(generationQuality, input.providerEnv);
 
   const copyResult = providedCopy
     ? { onImage: customerOnImage, copy: providedCopy, source: "provided" as const }
@@ -519,6 +563,8 @@ export async function runTemplateCampaignGeneration(
           sample: field.sample,
         })),
         sourceImageUrl,
+        providerEnv: input.providerEnv,
+        signal: input.signal,
         context: {
           goal: template.goal,
           templateName: template.name,
@@ -555,7 +601,11 @@ export async function runTemplateCampaignGeneration(
       .filter(([, value]) => value.trim())
       .map(([label, value]) => `${label} ${value.trim()}`),
   };
-  const cloneRequestsByFormat = buildTemplateCloneRequestsByFormat(template, cloneInputs);
+  const builtCloneRequests = buildTemplateCloneRequestsByFormat(template, cloneInputs);
+  const cloneRequestsByFormat: Record<TemplateCloneRenderFormat, ImageProviderRequest> = {
+    [PRIMARY_CLONE_FORMAT]: { ...builtCloneRequests[PRIMARY_CLONE_FORMAT], signal: input.signal },
+    [STORY_CLONE_FORMAT]: { ...builtCloneRequests[STORY_CLONE_FORMAT], signal: input.signal },
+  };
   const feedCloneQa = buildPrebuiltTemplateCloneQa(template, expectedCopy, PRIMARY_CLONE_FORMAT);
   const modelProfile = cloneModelProfileForQuality(generationQuality);
   // Review every customer/brand asset actually supplied, not just required
@@ -564,6 +614,22 @@ export async function runTemplateCampaignGeneration(
   const expectedAssetKeys = template.inputs.images
     .filter((slot) => Boolean(resolvedImages[slot.key]))
     .map((slot) => slot.key);
+  const candidateAudit = (format: TemplateCloneRenderFormat) => async (candidate: {
+    attempt: number;
+    request: ImageProviderRequest;
+    candidateImage: string;
+    review: AdStudioCloneQualityReview;
+    accepted: boolean;
+  }) => {
+    await recordCloneCandidateAudit({
+      supabase: input.supabase as unknown as CloneCandidateAuditClient,
+      workspaceId: input.workspaceId,
+      correlationId,
+      templateId: template.id,
+      format,
+      ...candidate,
+    });
+  };
   // --- Feed-first critical path: give Gemini the Feed request exclusively so
   // it does not compete with Story for provider quota or bandwidth. Once the
   // Feed is accepted, Story starts and overlaps upload/DB work.
@@ -585,6 +651,9 @@ export async function runTemplateCampaignGeneration(
       userId: input.userId,
       correlationId,
       modelProfile,
+      providerEnv: input.providerEnv,
+      signal: input.signal,
+      recordCandidate: candidateAudit(PRIMARY_CLONE_FORMAT),
     }),
     generateStory: () => generateFinalCloneRender({
       format: STORY_CLONE_FORMAT,
@@ -602,6 +671,9 @@ export async function runTemplateCampaignGeneration(
       userId: input.userId,
       correlationId,
       modelProfile,
+      providerEnv: input.providerEnv,
+      signal: input.signal,
+      recordCandidate: candidateAudit(STORY_CLONE_FORMAT),
     }),
   });
 

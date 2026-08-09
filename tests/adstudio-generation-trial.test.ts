@@ -30,12 +30,11 @@ test("campaign generation route uses the shared render-credit reservation", () =
   assert.match(read("src/lib/adstudio/generate-template-campaign.ts"), /resolveAdStudioGenerationBrandKit/);
 });
 
-test("generation success response keeps the existing fields without a trial block", () => {
+test("generation enqueue response returns the durable job without a trial block", () => {
   const source = read(campaignsRoute);
 
-  assert.match(source, /campaignPack:\s*liveResult\.data/);
-  assert.match(source, /data:\s*liveResult\.data/);
-  assert.match(source, /persistence:\s*liveResult\.persistence/);
+  assert.match(source, /NextResponse\.json\(\{ jobId: creativeJobId \}, \{ status: 202 \}\)/);
+  assert.doesNotMatch(source, /campaignPack:\s*liveResult\.data/);
   assert.doesNotMatch(source, /\btrial\s*:/);
 });
 

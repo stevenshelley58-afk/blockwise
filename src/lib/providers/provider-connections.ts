@@ -32,6 +32,8 @@ export type StoredProviderTokens = {
   refreshToken: string | null;
 };
 
+export type RuntimeProvider = "openai";
+
 type ProviderConnectionRow = {
   id: string;
   workspace_id: string;
@@ -52,6 +54,8 @@ type VaultRow = {
   encrypted_refresh_token: string | Uint8Array | ArrayBuffer | null;
   token_nonce: string | null;
 };
+
+type RuntimeVaultRow = Pick<VaultRow, "encrypted_access_token" | "token_nonce">;
 
 export async function listProviderConnections(
   supabase: SupabaseServerClient,
@@ -98,6 +102,47 @@ export async function loadStoredProviderTokens(
     accessToken: decryptOptionalToken(row.encrypted_access_token, row.token_nonce),
     refreshToken: decryptOptionalToken(row.encrypted_refresh_token, row.token_nonce),
   };
+}
+
+/**
+ * Read one platform-owned provider credential for a service runtime. This is
+ * deliberately separate from workspace OAuth connections: the credential is
+ * service-scoped, service-role-only, encrypted by TOKEN_ENCRYPTION_KEY, and
+ * never copied into a VPS environment file.
+ */
+export async function loadRuntimeProviderToken(
+  serviceSupabase: SupabaseServiceClient,
+  provider: RuntimeProvider,
+): Promise<string | null> {
+  const { data, error } = await serviceSupabase.rpc("runtime_provider_token_vault_get", {
+    p_runtime_provider: provider,
+  });
+
+  if (error) {
+    throw new Error(`runtime_provider_token_vault_get failed: ${error.message}`);
+  }
+
+  const row = (Array.isArray(data) ? (data[0] ?? null) : data) as RuntimeVaultRow | null;
+  if (!row?.token_nonce) return null;
+  return decryptOptionalToken(row.encrypted_access_token, row.token_nonce);
+}
+
+/** Server-only provisioning path used by release operations. */
+export async function upsertRuntimeProviderToken(input: {
+  serviceSupabase: SupabaseServiceClient;
+  provider: RuntimeProvider;
+  accessToken: string;
+}): Promise<void> {
+  const accessToken = input.accessToken.trim();
+  if (!accessToken) throw new Error("Runtime provider token cannot be empty.");
+  const encrypted = encryptToken(accessToken);
+  const { error } = await input.serviceSupabase.rpc("runtime_provider_token_vault_upsert", {
+    p_runtime_provider: input.provider,
+    p_encrypted_access_token: encryptedTokenToPostgresBytea(encrypted),
+    p_token_nonce: encrypted.nonce,
+    p_token_last_four: encrypted.lastFour,
+  });
+  if (error) throw new Error(`runtime_provider_token_vault_upsert failed: ${error.message}`);
 }
 
 export async function upsertProviderConnectionWithTokens(input: {

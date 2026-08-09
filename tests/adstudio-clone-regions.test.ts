@@ -466,7 +466,7 @@ test("template campaign generation quality-gates the render before its prebuilt 
   assert.match(generation, /recordAdStudioProviderRun/);
   assert.match(generation, /output: result/);
   assert.match(pipeline, /const generationQuality = "high" as const/);
-  assert.match(pipeline, /resolveCloneProviders\(generationQuality\)/);
+  assert.match(pipeline, /resolveCloneProviders\(generationQuality, input\.providerEnv\)/);
   assert.doesNotMatch(pipeline, /createFalImageProvider|fal-image-provider|FAL_KEY/);
 
   // A cheap subject-invariant vision gate blocks poor candidates before
@@ -718,8 +718,14 @@ test("final clone renders once when the blocking quality review passes", async (
   const render = await finalRenderFunction();
   let generateCalls = 0;
   let normalizedFrom = "";
+  const audited: Array<Record<string, unknown>> = [];
 
-  const result = await render(finalRenderInput([]), {
+  const result = await render({
+    ...finalRenderInput([]),
+    recordCandidate: async (candidate: Record<string, unknown>) => {
+      audited.push(candidate);
+    },
+  }, {
     generate: async () => {
       generateCalls += 1;
       return {
@@ -757,6 +763,57 @@ test("final clone renders once when the blocking quality review passes", async (
   assert.equal(generateCalls, 1);
   assert.equal(normalizedFrom, "data:image/png;base64,cmF3:4:5");
   assert.equal(result.assetUrl, "data:image/png;base64,ZXhhY3Q=");
+  assert.equal(audited.length, 1);
+  assert.equal(audited[0]?.accepted, true);
+  assert.equal(audited[0]?.candidateImage, "data:image/png;base64,ZXhhY3Q=");
+});
+
+test("every paid candidate is audited before a rejected render is corrected", async () => {
+  const render = await finalRenderFunction();
+  const prompts: string[] = [];
+  const audited: Array<{ attempt: number; accepted: boolean }> = [];
+
+  await render({
+    ...finalRenderInput([]),
+    recordCandidate: async (candidate: { attempt: number; accepted: boolean }) => {
+      audited.push({ attempt: candidate.attempt, accepted: candidate.accepted });
+    },
+  }, {
+    generate: async (input: { request: { prompt: string } }) => {
+      prompts.push(input.request.prompt);
+      return {
+        assetUrl: `data:image/png;base64,${input.request.prompt === "clone" ? "MQ==" : "Mg=="}`,
+        model: "image-model",
+        provider: "primary",
+        providerAttemptCount: 1,
+      };
+    },
+    review: async (input: { attempt: number }) => ({
+      schemaVersion: 1,
+      templateId: "template-test",
+      format: "4:5",
+      attempt: input.attempt,
+      referenceHash: "a".repeat(64),
+      candidateHash: "b".repeat(64),
+      requestHash: "c".repeat(64),
+      adSystemLikenessScore: input.attempt === 1 ? 8.8 : 9.6,
+      standaloneAdQualityScore: 9.4,
+      excludedContentInfluencedScore: false,
+      copyChecks: [],
+      assetChecks: [],
+      identityLeakage: [],
+      defects: [],
+      includedRationale: "reviewed",
+      qualityRationale: "clean",
+      suggestedCorrection: input.attempt === 1 ? "restore geometry" : "",
+    }),
+  });
+
+  assert.deepEqual(prompts, ["clone", "corrected clone"]);
+  assert.deepEqual(audited, [
+    { attempt: 1, accepted: false },
+    { attempt: 2, accepted: true },
+  ]);
 });
 
 test("provider cascade failures still fail the render honestly", async () => {

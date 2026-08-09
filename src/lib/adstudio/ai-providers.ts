@@ -16,10 +16,10 @@ import type {
   TextProviderResponse,
 } from "./providers.ts";
 
-type EnvLike = Partial<Record<string, string>>;
+export type ProviderEnvironment = Partial<Record<string, string>>;
 
 type ProviderOptions = {
-  env?: EnvLike;
+  env?: ProviderEnvironment;
   fetchImpl?: typeof fetch;
   model?: string;
   /** OpenAI image quality tier ("low" | "medium" | "high" | "auto"). */
@@ -117,7 +117,7 @@ function createAzureOpenAiTextProvider(options: ProviderOptions = {}): TextProvi
   };
 }
 
-export function resolveAzureOpenAiChatUrl(env: EnvLike, deployment: string): string {
+export function resolveAzureOpenAiChatUrl(env: ProviderEnvironment, deployment: string): string {
   if (env.AZURE_OPENAI_CHAT_COMPLETIONS_URL) return env.AZURE_OPENAI_CHAT_COMPLETIONS_URL;
 
   const endpoint = env.AZURE_OPENAI_ENDPOINT?.replace(/\/+$/u, "");
@@ -233,7 +233,7 @@ function createOpenAiImageProvider(options: ProviderOptions = {}): ImageProvider
 }
 
 /** Resolves the /images/edits endpoint, honouring a Cloudflare AI Gateway URL. */
-export function resolveOpenAiImageEditsUrl(env: EnvLike): string {
+export function resolveOpenAiImageEditsUrl(env: ProviderEnvironment): string {
   const gateway = env.CLOUDFLARE_AI_GATEWAY_URL;
   if (!gateway) return OPENAI_IMAGE_EDITS_URL;
   // A real gateway mirrors the OpenAI path (…/openai/images/generations); swap the
@@ -249,7 +249,7 @@ export function resolveOpenAiImageEditsUrl(env: EnvLike): string {
 }
 
 async function postOpenAiImageEdit(input: {
-  env: EnvLike;
+  env: ProviderEnvironment;
   apiKey: string;
   model: string;
   quality: string;
@@ -414,6 +414,7 @@ async function postChatCompletion(input: {
   const deepseekReasoner = isDeepSeekReasoner(input.model);
   const response = await fetchProviderRequest(input.fetchImpl, input.url, {
     method: "POST",
+    signal: input.input.signal,
     headers: {
       ...(input.authHeader === false ? {} : { Authorization: `Bearer ${input.apiKey}` }),
       "Content-Type": "application/json",
@@ -748,7 +749,7 @@ function parseJson(rawText: string): unknown {
   }
 }
 
-function gatewayHeaders(env: EnvLike): Record<string, string> {
+function gatewayHeaders(env: ProviderEnvironment): Record<string, string> {
   return env.CLOUDFLARE_AI_GATEWAY_TOKEN
     ? { "cf-aig-authorization": `Bearer ${env.CLOUDFLARE_AI_GATEWAY_TOKEN}` }
     : {};

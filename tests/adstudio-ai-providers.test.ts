@@ -556,6 +556,32 @@ test("a pre-aborted provider signal never dispatches", async () => {
   assert.equal(calls, 0);
 });
 
+test("a pre-aborted worker signal also stops paid copy and vision requests before dispatch", async () => {
+  let calls = 0;
+  const abortController = new AbortController();
+  abortController.abort(new Error("lease lost"));
+  const provider = createTextProviderForCandidate(candidate("openai", "gpt-5.5"), {
+    env: { OPENAI_API_KEY: "oa_test" },
+    fetchImpl: async () => {
+      calls += 1;
+      return new Response("{}", { status: 200 });
+    },
+  });
+
+  await assert.rejects(() => provider.generate({
+    system: "Return JSON.",
+    messages: [{ role: "user", content: "Review." }],
+    schemaName: "metaLeadAdPack",
+    signal: abortController.signal,
+  }), (error: unknown) => {
+    assert.ok(error instanceof ProviderRequestError);
+    assert.equal(error.requestSubmitted, false);
+    assert.equal(error.retryable, false);
+    return true;
+  });
+  assert.equal(calls, 0);
+});
+
 test("reference acquisition failures remain unsubmitted and non-retryable", async () => {
   let calls = 0;
   const provider = createImageProviderForCandidate(candidate("openai", "gpt-image-2"), {
