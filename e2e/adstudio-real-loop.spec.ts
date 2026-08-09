@@ -54,7 +54,7 @@ describeAdStudioRealLoop("Ad Studio real loop", () => {
         ),
         `template gallery should use its responsive column count at ${viewport.width}x${viewport.height}`,
       ).toBe(viewport.width > 900 ? 4 : 2);
-      await page.getByRole("button", { name: /^close$/i }).click();
+      await page.locator('.studio-newad-x[aria-label="Close"]').click();
       expect(
         await page.evaluate(
           () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
@@ -73,12 +73,12 @@ describeAdStudioRealLoop("Ad Studio real loop", () => {
     await chooseCloneSample(page);
     await expect(page.locator('.studio-newad input[type="file"]')).toHaveCount(2);
 
-    await page.getByRole("button", { name: /^close$/i }).click();
+    await page.locator('.studio-newad-x[aria-label="Close"]').click();
     const discardDialog = page.getByRole("alertdialog", { name: /discard this ad draft/i });
     await expect(discardDialog).toBeVisible();
     await discardDialog.getByRole("button", { name: /keep editing/i }).click();
     await expect(page.getByRole("button", { name: /generate ad/i })).toBeVisible();
-    await page.getByRole("button", { name: /^close$/i }).click();
+    await page.locator('.studio-newad-x[aria-label="Close"]').click();
     await page.getByRole("alertdialog", { name: /discard this ad draft/i })
       .getByRole("button", { name: /discard draft/i })
       .click();
