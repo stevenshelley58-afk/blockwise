@@ -456,8 +456,8 @@ test("template campaign generation quality-gates the render before its prebuilt 
   const pipeline = readFileSync("src/lib/adstudio/generate-template-campaign.ts", "utf8");
   const generation = readFileSync("src/lib/adstudio/clone-generation.ts", "utf8");
 
-  // Each customer quality choice resolves through the model-profile registry;
-  // neither path hardcodes a vendor or introduces a separate clone pipeline.
+  // The customer path is always professional quality. Internal draft work and
+  // the final lane still share one registry-backed clone pipeline.
   assert.match(generation, /fast: "image_draft"/);
   assert.match(generation, /high: "image_final"/);
   assert.doesNotMatch(generation, /CloneTier|tier:/);
@@ -465,6 +465,7 @@ test("template campaign generation quality-gates the render before its prebuilt 
   assert.doesNotMatch(generation, /createOpenAiImageProvider\(\)/);
   assert.match(generation, /recordAdStudioProviderRun/);
   assert.match(generation, /output: result/);
+  assert.match(pipeline, /const generationQuality = "high" as const/);
   assert.match(pipeline, /resolveCloneProviders\(generationQuality\)/);
   assert.doesNotMatch(pipeline, /createFalImageProvider|fal-image-provider|FAL_KEY/);
 
@@ -820,7 +821,10 @@ test("targeted edit endpoint model-edits selected regions and verifies advisoril
   assert.match(route, /buildTargetedEditRequest/);
   assert.doesNotMatch(route, /canRenderTextDirectly/);
   assert.doesNotMatch(route, /renderExactCloneTextEdit/);
-  assert.match(route, /resolveCloneProviders\("fast"\)/);
+  // A persisted edit is another finished customer-facing render: it must not
+  // silently downgrade to the draft image lane.
+  assert.match(route, /resolveCloneProviders\("high"\)/);
+  assert.match(route, /modelProfile: "image_final"/);
   assert.match(route, /maxDuration = 300/);
 
   // Expected copy carries the current value of every text field (from the

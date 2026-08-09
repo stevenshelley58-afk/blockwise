@@ -29,7 +29,7 @@ export type FirstAdInput = {
   source: "gallery";
   templateId: string;
   description: string;
-  /** Customer-facing render choice. Fast is the default for new ads. */
+  /** Legacy clients may still send this; finished customer ads always use high quality. */
   generationQuality?: "fast" | "high";
   /**
    * Which palette the one canonical clone request preserves. Template is the

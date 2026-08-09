@@ -486,7 +486,10 @@ export async function runTemplateCampaignGeneration(
   // result — start them NOW so they overlap the 25-47s copy call instead of
   // following it. Gallery samples are SVGs, which no image provider accepts;
   // rasterize to a PNG data URL before the clone requests are built.
-  const generationQuality = firstAd.generationQuality ?? "fast";
+  // The customer always receives the professional final-image lane. Keeping a
+  // caller-supplied "fast" value for backward compatibility must never reduce
+  // the quality of the finished ad.
+  const generationQuality = "high" as const;
   const rasterPromise = ensureRasterReferenceImage(
     new URL(template.sample.imageSrc, input.origin).toString(),
   );

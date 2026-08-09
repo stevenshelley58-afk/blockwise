@@ -444,7 +444,7 @@ export function NewAdDialog({
   // Nothing can be created until the customer chooses the sample to clone.
   const [templateId, setTemplateId] = useState<string | undefined>(undefined);
   const [description, setDescription] = useState("");
-  const [generationQuality, setGenerationQuality] = useState<GenerationQuality>("fast");
+  const generationQuality: GenerationQuality = "high";
   const [colourSource, setColourSource] = useState<ColourSource>("template");
   const [imageDataUrlsBySlot, setImageDataUrlsBySlot] = useState<Record<string, string>>({});
   // Point 9 — background image scaling: the slot shows a raw `URL.createObjectURL`
@@ -630,7 +630,6 @@ export function NewAdDialog({
     }
     setFilter("all");
     setDescription("");
-    setGenerationQuality("fast");
     setColourSource("template");
     // The customer supplies every declared image and text field. The selected
     // sample is only the visual anchor sent to the image model.
@@ -940,11 +939,6 @@ export function NewAdDialog({
       ),
     }));
     setCopyError(null);
-  }
-
-  function selectGenerationQuality(quality: GenerationQuality) {
-    setGenerationQuality(quality);
-    setError("");
   }
 
   function selectColourSource(source: ColourSource) {
@@ -1346,38 +1340,6 @@ export function NewAdDialog({
                 </div>
               </fieldset>
 
-              <fieldset className="studio-newad-quality">
-                <legend>Generation quality</legend>
-                <div className="studio-newad-quality-options">
-                  <label className={generationQuality === "fast" ? "is-selected" : undefined}>
-                    <input
-                      type="radio"
-                      name="generation-quality"
-                      value="fast"
-                      checked={generationQuality === "fast"}
-                      onChange={() => selectGenerationQuality("fast")}
-                    />
-                    <span>
-                      <strong>Fast</strong>
-                      <small>Usually ready in about 1 minute</small>
-                    </span>
-                    <em>Recommended</em>
-                  </label>
-                  <label className={generationQuality === "high" ? "is-selected" : undefined}>
-                    <input
-                      type="radio"
-                      name="generation-quality"
-                      value="high"
-                      checked={generationQuality === "high"}
-                      onChange={() => selectGenerationQuality("high")}
-                    />
-                    <span>
-                      <strong>High quality</strong>
-                      <small>Usually ready in about 2–3 minutes</small>
-                    </span>
-                  </label>
-                </div>
-              </fieldset>
               </div>
               <aside className="studio-newad-previewpane" aria-label="Template placement guide">
                 <NewAdPlacementGuide
@@ -1448,9 +1410,7 @@ export function NewAdDialog({
                 aria-live="polite"
               >
                 {submitting
-                  ? generationQuality === "fast"
-                    ? "Creating your ad. Fast ads are usually ready in under a minute."
-                    : "Creating your high-quality ad. This usually takes 2–3 minutes."
+                  ? "Creating your high-quality ad. This usually takes 2–3 minutes."
                   : error || footHint}
               </span>
             )}

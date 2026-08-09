@@ -173,20 +173,18 @@ test("the server owns clone generation and returns the finished editable ad inli
   assert.match(generation, /persistAdStudioCampaignPack/);
 });
 
-test("the customer chooses fast or high quality without provider jargon", () => {
+test("the customer always receives high quality without a downgrade control", () => {
   const dialog = readFileSync("src/components/adstudio/new-ad-dialog.tsx", "utf8");
   const types = readFileSync("src/lib/adstudio/types.ts", "utf8");
 
   assert.match(types, /generationQuality\?:\s*"fast" \| "high"/);
-  assert.match(dialog, /legend>Generation quality<\/legend>/);
-  assert.match(dialog, /Fast/);
-  assert.match(dialog, /Usually ready in about 1 minute/);
-  assert.match(dialog, /High quality/);
-  assert.match(dialog, /Usually ready in about 2–3 minutes/);
-  assert.match(dialog, /generationQuality/);
+  assert.match(dialog, /const generationQuality: GenerationQuality = "high"/);
+  assert.doesNotMatch(dialog, /legend>Generation quality<\/legend>/);
+  assert.doesNotMatch(dialog, /selectGenerationQuality/);
+  assert.doesNotMatch(dialog, /Fast ads are usually ready/);
+  assert.match(dialog, /Creating your high-quality ad/);
   assert.match(dialog, /We couldn't create this ad/);
   assert.match(dialog, /error \? "Try again" : "Generate ad"/);
-  assert.match(dialog, /selectGenerationQuality/);
   assert.doesNotMatch(dialog, /Gemini|GPT Image|OpenAI|fal\.ai/);
 });
 

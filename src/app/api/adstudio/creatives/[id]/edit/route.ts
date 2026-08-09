@@ -264,16 +264,15 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
   // Parallelize the three independent async setup steps that used to run
   // serially: fetch the current image, fetch the replacement image (if any),
   // and resolve the provider cascade. This saves ~1-3s per edit.
-  // Region edits use the fast (draft) profile: an edit repaints a small masked
-  // crop, sits behind undo/compare/history, and draft-class image models are
-  // several times faster. The runtime model-profile table can re-pin models
-  // without code changes if quality regresses.
+  // Edits change a completed customer-facing ad, so they must use the same
+  // final-quality lane as initial generation. Undo/compare/history protect
+  // the interaction, but are not a license to downgrade the rendered result.
   const [currentImage, newImage, providers] = await Promise.all([
     resolveAdStudioImageForModel(context.supabase, context.access.workspaceId, currentImageRef),
     newImageRef
       ? resolveAdStudioImageForModel(context.supabase, context.access.workspaceId, newImageRef)
       : Promise.resolve(undefined),
-    resolveCloneProviders("fast"),
+    resolveCloneProviders("high"),
   ]);
   if (!currentImage) {
     await releaseClaim();
@@ -408,7 +407,7 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
         userId: context.access.userId,
         correlationId,
         attempt: 1,
-        modelProfile: "image_draft",
+        modelProfile: "image_final",
       });
       // normalizeCloneRenderAspect is intentionally SKIPPED for cropped edits:
       // it force-resizes the render to the ad's exact placement ratio, which

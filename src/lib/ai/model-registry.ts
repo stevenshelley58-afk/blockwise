@@ -237,13 +237,13 @@ const MODEL_PROFILES: Record<ModelProfileKey, ModelProfile> = {
     defaultTemperature: 0.65,
     primary: {
       provider: "google",
-      model: "gemini-3.1-flash-image",
-      inputUsdPerMillionTokens: 0.5,
-      outputUsdPerMillionTokens: 3,
-      imageUsdPerUnit: 0.067,
+      model: "gemini-3-pro-image",
+      inputUsdPerMillionTokens: 2,
+      outputUsdPerMillionTokens: 12,
+      imageUsdPerUnit: 0.134,
       supportsStructuredOutput: false,
-      maxContextTokens: 131_072,
-      maxLatencyMs: 75_000,
+      maxContextTokens: 65_536,
+      maxLatencyMs: 120_000,
     },
     fallbacks: [
       {
