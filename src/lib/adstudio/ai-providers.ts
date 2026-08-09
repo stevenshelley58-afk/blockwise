@@ -457,14 +457,29 @@ async function postChatCompletion(input: {
   }
 
   const rawText = payload.choices?.[0]?.message?.content?.trim() ?? "{}";
+  const usage = usageFromProviderPayload(payload.usage, {
+    providerRequestId: payload.id,
+    complete: true,
+  });
+  let json: unknown;
+  try {
+    json = parseJson(rawText);
+  } catch (cause) {
+    // A response that reached us but cannot be parsed is a technical QA
+    // failure, not a visual rejection. Preserve its billable request evidence
+    // so the QA gate can retry this same image without losing accounting.
+    throw submittedError("Provider returned non-JSON content.", {
+      retryable: true,
+      providerRequestId: payload.id,
+      usage,
+      cause,
+    });
+  }
 
   return {
-    json: parseJson(rawText),
+    json,
     rawText,
-    usage: usageFromProviderPayload(payload.usage, {
-      providerRequestId: payload.id,
-      complete: true,
-    }),
+    usage,
     providerMetadata: {
       model: input.model,
       schemaName: input.input.schemaName,

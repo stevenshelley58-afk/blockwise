@@ -23,6 +23,7 @@ import {
   TemplateCampaignQaError,
   cloneCorrectionForNextCandidate,
   cloneQualityPassed,
+  isAbortError,
   reviewCloneCandidate,
 } from "./clone-quality-gate.ts";
 import { buildPrebuiltTemplateCloneQa } from "./clone-regions.ts";
@@ -266,7 +267,9 @@ export async function generateFinalCloneRender(input: {
     attempt: number;
     request: ImageProviderRequest;
     candidateImage: string;
-    review: AdStudioCloneQualityReview;
+    review?: AdStudioCloneQualityReview;
+    qaStatus?: "pending" | "passed" | "rejected" | "technical_failed" | "aborted";
+    qaError?: string;
     accepted: boolean;
   }): Promise<void>;
 }, dependencies: CloneRenderDependencies = {}): Promise<GeneratedCloneRender> {
@@ -302,40 +305,67 @@ export async function generateFinalCloneRender(input: {
       modelProfile: input.modelProfile,
     });
     const exactAssetUrl = await normalize(generated.assetUrl, input.format);
-    lastReview = await review({
-      templateId: input.templateId,
-      format: input.format,
-      attempt,
-      referenceImage: input.referenceImage,
-      candidateImage: exactAssetUrl,
-      request: candidateRequest,
-      expectedCopy: input.expectedCopy,
-      expectedAssetKeys: input.expectedAssetKeys,
-      workspaceId: input.workspaceId,
-      userId: input.userId,
-      correlationId: input.correlationId,
-      providerEnv: input.providerEnv,
-      signal: input.signal,
-    });
+    // Persist the normalized paid image before vision QA. A malformed QA
+    // response must never make a billable candidate disappear from evidence.
+    if (input.recordCandidate) {
+      await input.recordCandidate({
+        attempt,
+        request: candidateRequest,
+        candidateImage: exactAssetUrl,
+        qaStatus: "pending",
+        accepted: false,
+      });
+    }
+    const finalizeQaFailure = async (error: unknown) => {
+      if (!input.recordCandidate) return;
+      const aborted = input.signal?.aborted === true || isAbortError(error);
+      await input.recordCandidate({
+        attempt,
+        request: candidateRequest,
+        candidateImage: exactAssetUrl,
+        accepted: false,
+        qaStatus: aborted ? "aborted" : "technical_failed",
+        qaError: error instanceof Error ? error.message : "Clone QA failed without an error message.",
+      });
+    };
+    try {
+      lastReview = await review({
+        templateId: input.templateId,
+        format: input.format,
+        attempt,
+        referenceImage: input.referenceImage,
+        candidateImage: exactAssetUrl,
+        request: candidateRequest,
+        expectedCopy: input.expectedCopy,
+        expectedAssetKeys: input.expectedAssetKeys,
+        workspaceId: input.workspaceId,
+        userId: input.userId,
+        correlationId: input.correlationId,
+        providerEnv: input.providerEnv,
+        signal: input.signal,
+      });
+    } catch (error) {
+      await finalizeQaFailure(error);
+      throw error;
+    }
+    if (!lastReview) {
+      const error = new TemplateCampaignQaError("Clone quality review failed.");
+      await finalizeQaFailure(error);
+      throw error;
+    }
     const accepted = cloneQualityPassed({
       review: lastReview,
       expectedCopy: input.expectedCopy,
       expectedAssetKeys: input.expectedAssetKeys,
     });
     if (input.recordCandidate) {
-      try {
-        await input.recordCandidate({
-          attempt,
-          request: candidateRequest,
-          candidateImage: exactAssetUrl,
-          review: lastReview,
-          accepted,
-        });
-      } catch (error) {
-        // Evidence must survive whenever storage is healthy, but a transient
-        // audit upload must not discard an otherwise accepted customer ad.
-        console.error("Clone candidate audit failed", error);
-      }
+      await input.recordCandidate({
+        attempt,
+        request: candidateRequest,
+        candidateImage: exactAssetUrl,
+        review: lastReview,
+        accepted,
+      });
     }
     if (accepted) {
       return { ...generated, assetUrl: exactAssetUrl, attempt, qualityReview: lastReview };
@@ -615,21 +645,28 @@ export async function runTemplateCampaignGeneration(
   const expectedAssetKeys = template.inputs.images
     .filter((slot) => Boolean(resolvedImages[slot.key]))
     .map((slot) => slot.key);
-  const candidateAudit = (format: TemplateCloneRenderFormat) => async (candidate: {
-    attempt: number;
-    request: ImageProviderRequest;
-    candidateImage: string;
-    review: AdStudioCloneQualityReview;
-    accepted: boolean;
-  }) => {
-    await recordCloneCandidateAudit({
-      supabase: input.supabase as unknown as CloneCandidateAuditClient,
-      workspaceId: input.workspaceId,
-      correlationId,
-      templateId: template.id,
-      format,
-      ...candidate,
-    });
+  const candidateAudit = (format: TemplateCloneRenderFormat) => {
+    const candidatePaths = new Map<number, string>();
+    return async (candidate: {
+      attempt: number;
+      request: ImageProviderRequest;
+      candidateImage: string;
+      review?: AdStudioCloneQualityReview;
+      qaStatus?: "pending" | "passed" | "rejected" | "technical_failed" | "aborted";
+      qaError?: string;
+      accepted: boolean;
+    }) => {
+      const candidateImagePath = await recordCloneCandidateAudit({
+        supabase: input.supabase as unknown as CloneCandidateAuditClient,
+        workspaceId: input.workspaceId,
+        correlationId,
+        templateId: template.id,
+        format,
+        candidateImagePath: candidatePaths.get(candidate.attempt),
+        ...candidate,
+      });
+      candidatePaths.set(candidate.attempt, candidateImagePath);
+    };
   };
   // --- Feed-first critical path: give Gemini the Feed request exclusively so
   // it does not compete with Story for provider quota or bandwidth. Once the

@@ -25,17 +25,35 @@ import {
 export const MIN_RUNTIME_AD_SYSTEM_LIKENESS = 9.5;
 export const MIN_RUNTIME_STANDALONE_AD_QUALITY = 9;
 export const MAX_RUNTIME_CLONE_CANDIDATES = 3;
+/** A malformed or transient QA response may be retried against the same paid image. */
+// First retry the primary reviewer once, then use the independently priced
+// fallback once when configured. This never creates another image candidate.
+export const MAX_RUNTIME_CLONE_QA_ATTEMPTS = 3;
 
 class CloneQualitySchemaError extends Error {}
 
 export class TemplateCampaignQaError extends Error {
   readonly review?: AdStudioCloneQualityReview;
+  readonly aborted: boolean;
 
-  constructor(message: string, review?: AdStudioCloneQualityReview) {
-    super(message);
+  constructor(
+    message: string,
+    review?: AdStudioCloneQualityReview,
+    options: { aborted?: boolean; cause?: unknown } = {},
+  ) {
+    super(message, options.cause === undefined ? undefined : { cause: options.cause });
     this.name = "TemplateCampaignQaError";
     this.review = review;
+    this.aborted = options.aborted === true;
   }
+}
+
+export function isAbortError(error: unknown): boolean {
+  if (error instanceof TemplateCampaignQaError && error.aborted) return true;
+  return typeof error === "object"
+    && error !== null
+    && "name" in error
+    && error.name === "AbortError";
 }
 
 function sha256(value: string | Uint8Array): string {
@@ -182,7 +200,13 @@ export async function reviewCloneCandidate(input: {
 }, dependencies: {
   fetchImpl?: typeof fetch;
   contactSheet?: typeof buildCloneQualityContactSheet;
+  resolveProfile?: typeof resolveRuntimeModelProfile;
+  getPromptSection?: typeof getActivePromptSection;
+  createProvider?: typeof createTextProviderForCandidate;
+  executeProviderAttempt?: typeof executeAdStudioProviderAttempt;
+  recordProviderRun?: typeof recordAdStudioProviderRun;
 } = {}): Promise<AdStudioCloneQualityReview> {
+  if (input.signal?.aborted) throw input.signal.reason ?? new DOMException("Clone QA cancelled.", "AbortError");
   const startedAt = Date.now();
   const contact = await (dependencies.contactSheet ?? buildCloneQualityContactSheet)(
     input.referenceImage,
@@ -190,7 +214,7 @@ export async function reviewCloneCandidate(input: {
     dependencies.fetchImpl ?? fetch,
   );
   const requestHash = cloneRequestHash(input.request);
-  const section = await getActivePromptSection("adstudio.clone_qa");
+  const section = await (dependencies.getPromptSection ?? getActivePromptSection)("adstudio.clone_qa");
   const contract = [
     "RUNTIME CONTRACT: this contract supersedes any earlier scoring rubric, region list, or output shape in the governed prompt above.",
     "The image is a two-panel contact sheet: approved public sample on the left, customer candidate on the right.",
@@ -213,7 +237,7 @@ export async function reviewCloneCandidate(input: {
     warnings: section.source === "fallback" ? [`${section.key} used bundled fallback.`] : [],
   };
   const mutationId = `${input.correlationId}:adstudio.clone_qa:${input.format}:${input.attempt}`;
-  const profile = await resolveRuntimeModelProfile("vision_classification");
+  const profile = await (dependencies.resolveProfile ?? resolveRuntimeModelProfile)("vision_classification");
   const attempts: ProviderRunAttempt[] = [];
   let finalOutput: TextProviderResponse | null = null;
   let finalReview: AdStudioCloneQualityReview | null = null;
@@ -222,10 +246,24 @@ export async function reviewCloneCandidate(input: {
   let lastError: unknown = null;
   let schemaError: CloneQualitySchemaError | null = null;
 
-  for (const [attemptIndex, candidate] of modelCandidateAttempts(profile).entries()) {
-    const provider = createTextProviderForCandidate(candidate, { env: input.providerEnv });
-    if (!provider.capabilities.visionInput) continue;
-    const execution = await executeAdStudioProviderAttempt<TextProviderResponse>({
+  const qaProviders = modelCandidateAttempts(profile)
+    .map((candidate) => ({
+      candidate,
+      provider: (dependencies.createProvider ?? createTextProviderForCandidate)(candidate, { env: input.providerEnv }),
+    }))
+    .filter(({ provider }) => provider.capabilities.visionInput);
+  const [primary, fallback] = qaProviders;
+  const qaAttempts = primary
+    ? [primary, primary, ...(fallback ? [fallback] : [])].slice(0, MAX_RUNTIME_CLONE_QA_ATTEMPTS)
+    : [];
+
+  for (const [attemptIndex, qaAttempt] of qaAttempts.entries()) {
+    if (input.signal?.aborted) {
+      lastError = input.signal.reason ?? new DOMException("Clone QA cancelled.", "AbortError");
+      break;
+    }
+    const { candidate, provider } = qaAttempt;
+    const execution = await (dependencies.executeProviderAttempt ?? executeAdStudioProviderAttempt)<TextProviderResponse>({
       workspaceId: input.workspaceId,
       mutationId,
       attemptIndex,
@@ -251,10 +289,13 @@ export async function reviewCloneCandidate(input: {
       }
       schemaError = new CloneQualitySchemaError(`Clone QA returned an invalid schema: ${parsed.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`).join(", ")}`);
       lastError = schemaError;
-      continue;
+      if (attemptIndex + 1 < qaAttempts.length) continue;
+      break;
     }
     lastError = execution.error;
-    if (!(lastError instanceof CloneQualitySchemaError) && !isProviderFallbackEligible(lastError)) break;
+    if (isAbortError(lastError) || !isProviderFallbackEligible(lastError)) break;
+    if (attemptIndex + 1 < qaAttempts.length) continue;
+    break;
   }
 
   const finalError = !finalReview && schemaError
@@ -263,7 +304,7 @@ export async function reviewCloneCandidate(input: {
     )
     : lastError;
 
-  await recordAdStudioProviderRun({
+  await (dependencies.recordProviderRun ?? recordAdStudioProviderRun)({
     workspaceId: input.workspaceId,
     userId: input.userId,
     correlationId: input.correlationId,
@@ -290,7 +331,19 @@ export async function reviewCloneCandidate(input: {
     status: finalReview ? "completed" : "failed",
     error: finalReview ? undefined : finalError,
   });
-  if (!finalReview) throw new TemplateCampaignQaError(finalError instanceof Error ? finalError.message : "Clone quality review failed.");
+  if (!finalReview) {
+    throw new TemplateCampaignQaError(
+      finalError instanceof Error ? finalError.message : "Clone quality review failed.",
+      undefined,
+      {
+        // Only malformed schema output and provider-declared recoverable
+        // transport failures can recheck this exact image. A valid review
+        // (including a low score) never reaches this path.
+        aborted: isAbortError(finalError),
+        cause: finalError,
+      },
+    );
+  }
 
   const bindingMatches = finalReview.templateId === input.templateId
     && finalReview.format === input.format

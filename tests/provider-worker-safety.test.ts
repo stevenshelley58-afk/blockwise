@@ -64,7 +64,7 @@ test("Ad Studio VPS recovery injects the encrypted runtime credential without mu
   assert.match(campaign, /generateAdStudioTemplateCopy\(\{[\s\S]*providerEnv: input\.providerEnv,/);
   assert.match(campaign, /review\(\{[\s\S]*providerEnv: input\.providerEnv,/);
   assert.match(copy, /createTextProviderForCandidate\(candidate, \{ env: providerEnv \}\)/);
-  assert.match(cloneQa, /createTextProviderForCandidate\(candidate, \{ env: input\.providerEnv \}\)/);
+  assert.match(cloneQa, /provider: \(dependencies\.createProvider \?\? createTextProviderForCandidate\)\(candidate, \{ env: input\.providerEnv \}\)/);
   assert.match(campaign, /signal: input\.signal/);
 });
 
