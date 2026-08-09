@@ -85,6 +85,7 @@ const STRESS_FORMATS = ["4:5", "9:16"];
 // ─── load docs ──────────────────────────────────────────────────────────────
 
 const docs = [];
+const templateByteHashes = new Map();
 if (existsSync(galleryDir)) {
   for (const entry of readdirSync(galleryDir, { withFileTypes: true })) {
     if (!entry.isDirectory()) continue;
@@ -93,7 +94,8 @@ if (existsSync(galleryDir)) {
       fail(`${entry.name}: missing template.json`);
       continue;
     }
-    const parsed = templateDocV2Schema.safeParse(JSON.parse(readFileSync(path, "utf8")));
+    const templateBytes = readFileSync(path);
+    const parsed = templateDocV2Schema.safeParse(JSON.parse(templateBytes.toString("utf8")));
     if (!parsed.success) {
       for (const issue of parsed.error.issues) {
         fail(`${entry.name}: schema ${issue.path.join(".")}: ${issue.message}`);
@@ -105,6 +107,7 @@ if (existsSync(galleryDir)) {
     }
     const evidencePath = join(galleryDir, entry.name, "evidence.json");
     const doc = parsed.data;
+    templateByteHashes.set(doc.id, createHash("sha256").update(templateBytes).digest("hex"));
     doc.__textBoxes = existsSync(evidencePath)
       ? (JSON.parse(readFileSync(evidencePath, "utf8")).textBoxes ?? {})
       : {};
@@ -194,6 +197,55 @@ function sourcePathFor(doc) {
   return path.startsWith(`${sourceRoot}/`) && existsSync(path) ? path : null;
 }
 
+function validateSubjectInvarianceBinding(doc, evidence, templateByteHash) {
+  const subjectInvariance = evidence?.subjectInvariance;
+  if (!subjectInvariance) return;
+  const binding = subjectInvariance.binding;
+  if (!binding) {
+    fail(`${doc.id}: subject-invariance evidence lacks a deterministic binding`);
+    return;
+  }
+  if (binding.templateSha256 !== templateByteHash) fail(`${doc.id}: subject-invariance evidence template hash is stale`);
+  if (binding.sourceSha256 !== doc.provenance.sourceAd.contentHash) fail(`${doc.id}: subject-invariance evidence source hash is stale`);
+  if (binding.sampleSha256 !== doc.provenance.sample.contentHash) fail(`${doc.id}: subject-invariance evidence sample hash is stale`);
+  if (binding.gatePassed !== true) fail(`${doc.id}: subject-invariance deterministic gate did not pass`);
+  if (!Array.isArray(binding.sourcePixelIsolation) || binding.sourcePixelIsolation.some((asset) => asset.hardFail !== false)) {
+    fail(`${doc.id}: subject-invariance evidence reports static source leakage`);
+  }
+  if (!Array.isArray(binding.fixtureDifferenceEvidence)
+    || binding.fixtureDifferenceEvidence.length === 0
+    || binding.fixtureDifferenceEvidence.some((entry) => entry.changedOutsideBoxes !== 0 || entry.outsideDependencyPassed !== true)) {
+    fail(`${doc.id}: subject-invariance evidence reports changes outside declared dependencies`);
+  }
+  const declaredAssets = Object.fromEntries(Object.entries(doc.formats).map(([format, layout]) => [
+    format,
+    [
+      { id: "plate", sha256: layout.plate.sha256 },
+      ...layout.layers.filter((layer) => layer.type === "overlay_patch").map((layer) => ({ id: layer.id, sha256: layer.sha256 })),
+    ],
+  ]));
+  if (!canonicalEqual(binding.staticAssets, declaredAssets)) fail(`${doc.id}: subject-invariance evidence static asset hashes are stale`);
+
+  const visualReview = subjectInvariance.visualReview;
+  if (visualReview) {
+    if (visualReview.templateSha256 !== binding.templateSha256) fail(`${doc.id}: subject-invariance visual review template hash is stale`);
+    if (!/^[0-9a-f]{64}$/i.test(visualReview.customerFeedSha256 ?? "")) fail(`${doc.id}: subject-invariance visual review lacks a customer feed hash`);
+    if (visualReview.reviewerStatus !== "complete") fail(`${doc.id}: subject-invariance visual review is incomplete`);
+    const scores = visualReview.scores;
+    if (![scores?.primaryAdSystemLikeness, scores?.strictAdSystemLikeness, scores?.standaloneAdQuality]
+      .every((score) => typeof score === "number" && Number.isFinite(score) && score >= 0 && score <= 10)) {
+      fail(`${doc.id}: subject-invariance visual review scores are invalid`);
+    }
+    if (visualReview.accepted === true && (
+      typeof visualReview.likenessThreshold !== "number"
+      || scores?.primaryAdSystemLikeness <= visualReview.likenessThreshold
+      || scores?.strictAdSystemLikeness <= visualReview.likenessThreshold
+    )) {
+      fail(`${doc.id}: accepted subject-invariance visual review does not clear its likeness threshold`);
+    }
+  }
+}
+
 function readPngLikeDimensions(path) {
   const bytes = readFileSync(path);
   if (bytes.readUInt32BE(0) === 0x89504e47) {
@@ -232,6 +284,7 @@ const referencedFiles = new Set();
 
 for (const doc of docs) {
   const status = doc.exactness.status;
+  validateSubjectInvarianceBinding(doc, readEvidence(doc.id), templateByteHashes.get(doc.id));
   const layouts = [doc.formats.feed, doc.formats.story].filter(Boolean);
   // Story-first sources derive the 4:5 feed as a centred band; inputs whose
   // boxes fall outside the band legitimately have no layer on that surface.
