@@ -254,7 +254,12 @@ async function chooseCloneSample(page: Page) {
 // verbatim; the vision QA then verifies these exact strings. Distinct values
 // prove nothing was invented or paraphrased.
 const KILL_TEST_COPY: Record<string, string> = {
-  headline: "JUST LISTED",
+  // Distinct customer copy, but deliberately matched to the locked sample's
+  // character count and word rhythm. The visual-likeness gate scores text-box
+  // bounds and line rhythm, so a one-line placeholder would invalidate the ad
+  // system this E2E is meant to prove.
+  headline: "Find your coastal home today",
+  body: "Your coastal partner for all real estate needs.",
   price: "$847,500",
   address: "12 MARINE PDE, SCARBOROUGH WA 6019",
   phone: "+61 411 222 333",
