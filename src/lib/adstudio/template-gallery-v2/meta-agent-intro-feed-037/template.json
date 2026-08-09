@@ -1,0 +1,316 @@
+{
+  "schema": "adstudio.template.v2",
+  "id": "meta-agent-intro-feed-037",
+  "name": "Meet Your Local Agent — Feed 037",
+  "goal": "seller_leads",
+  "offerId": "agent-introduction-call",
+  "category": "agent-introduction-lead-generation",
+  "tags": [
+    "agent-intro",
+    "lead-generation",
+    "feed"
+  ],
+  "audienceIntent": "Local property owners seeking a trusted agent relationship",
+  "classification": {
+    "ad_type": "lead_generation",
+    "primary_intent": "agent_introduction",
+    "property_or_agent_focus": "property"
+  },
+  "provenance": {
+    "sourceAd": {
+      "file": "01_feed_4x5_best/meta_037.png",
+      "contentHash": "c2b76dc1425b5c96c6b6845349f1dc2bfe1f0b390805daf46e00029347a97a7a"
+    },
+    "sample": {
+      "imageSrc": "/adstudio-templates/meta-agent-intro-feed-037/sample.png",
+      "contentHash": "3e9f5b91ea14aabac0b4333ace153aced7a62fe8e71cacb7fcea6b9eed1aaa62",
+      "generatedBy": "deterministic_render"
+    },
+    "decomposedFrom": "source"
+  },
+  "restyle": {
+    "paletteMap": {},
+    "plateRemap": {
+      "hue": 12
+    },
+    "replacedAssets": [
+      "property_photo",
+      "agency_logo"
+    ]
+  },
+  "fonts": [
+    {
+      "fontId": "poppins",
+      "family": "Poppins",
+      "weight": 500,
+      "italic": false,
+      "file": "/fonts/adstudio/poppins-500.woff2",
+      "sha256": "cd36de204aca2d5fa263a731f7c20009b5e3d754ba1f1e03c33e93a48f3e7446"
+    },
+    {
+      "fontId": "plus-jakarta-sans",
+      "family": "Plus Jakarta Sans",
+      "weight": 600,
+      "italic": false,
+      "file": "/fonts/adstudio/plus-jakarta-sans-600.woff2",
+      "sha256": "8872bb5c9111df9bd3162c2394aee6354d782b13408a4dd5bbf65c48207206e6"
+    },
+    {
+      "fontId": "manrope",
+      "family": "Manrope",
+      "weight": 800,
+      "italic": false,
+      "file": "/fonts/adstudio/manrope-800.woff2",
+      "sha256": "74c161dbcbce7c3590803cc72dc1f63313c360e13367aba5075a7b7b3818ea49"
+    }
+  ],
+  "formats": {
+    "feed": {
+      "format": "4:5",
+      "width": 1080,
+      "height": 1350,
+      "plate": {
+        "src": "/adstudio-templates/meta-agent-intro-feed-037/plate-feed.webp",
+        "sha256": "e235895de7071146888e56404bc45cdec5a8442109910b914b073c505c5d6e7a"
+      },
+      "layers": [
+        {
+          "id": "slot-property_photo",
+          "z": 2,
+          "box": {
+            "x": 0.012037037037037037,
+            "y": 0.01037037037037037,
+            "width": 0.975925925925926,
+            "height": 0.46
+          },
+          "type": "image_slot",
+          "inputKey": "property_photo",
+          "fit": "cover",
+          "mask": {
+            "kind": "rounded",
+            "radius": [
+              82,
+              82,
+              0,
+              0
+            ]
+          },
+          "minSourcePx": {
+            "width": 1054,
+            "height": 595
+          }
+        },
+        {
+          "id": "slot-agency_logo",
+          "z": 4,
+          "box": {
+            "x": 0.7240740740740741,
+            "y": 0.8392592592592593,
+            "width": 0.07407407407407407,
+            "height": 0.05925925925925926
+          },
+          "type": "image_slot",
+          "inputKey": "agency_logo",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 80,
+            "height": 80
+          }
+        },
+        {
+          "id": "patch-feed-finish",
+          "z": 3,
+          "box": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "type": "overlay_patch",
+          "src": "/adstudio-templates/meta-agent-intro-feed-037/patch-feed-finish.svg",
+          "sha256": "5249091a6a107f62badbb2f1ca3ede8452f194aeb775282fb22f12d87a3d55d4"
+        }
+      ]
+    },
+    "story": {
+      "format": "9:16",
+      "width": 1080,
+      "height": 1920,
+      "plate": {
+        "src": "/adstudio-templates/meta-agent-intro-feed-037/plate-story.webp",
+        "sha256": "344c600538ce773a9d67681a32c4a20d897c6a85511316eb02ba5144907ac2fa"
+      },
+      "layers": [
+        {
+          "id": "slot-property_photo",
+          "z": 2,
+          "box": {
+            "x": 0.012037037037037037,
+            "y": 0.13739197530864197,
+            "width": 0.975925925925926,
+            "height": 0.3053047839506173
+          },
+          "type": "image_slot",
+          "inputKey": "property_photo",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 1054,
+            "height": 586
+          }
+        },
+        {
+          "id": "slot-agency_logo",
+          "z": 3,
+          "box": {
+            "x": 0.7203703703703703,
+            "y": 0.6499961419753086,
+            "width": 0.2222222222222222,
+            "height": 0.1252006172839506
+          },
+          "type": "image_slot",
+          "inputKey": "agency_logo",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 240,
+            "height": 240
+          }
+        }
+      ]
+    }
+  },
+  "inputs": {
+    "images": [
+      {
+        "key": "property_photo",
+        "label": "property photo",
+        "required": true,
+        "aspect": "landscape",
+        "description": "Customer photo drawn into the declared slot."
+      },
+      {
+        "key": "agency_logo",
+        "label": "agency logo",
+        "required": true,
+        "aspect": "square",
+        "description": "Customer photo drawn into the declared slot."
+      }
+    ],
+    "text": [
+      {
+        "key": "body",
+        "label": "Body",
+        "required": true,
+        "maxLength": 95,
+        "sample": "Local insight, clear advice and a practical plan for your next property move."
+      },
+      {
+        "key": "headline",
+        "label": "Headline",
+        "required": true,
+        "maxLength": 45,
+        "sample": "YOUR LOCAL PROPERTY PARTNER"
+      },
+      {
+        "key": "subheadline",
+        "label": "Subheadline",
+        "required": true,
+        "maxLength": 41,
+        "sample": "BOOK A NO-PRESSURE CALL"
+      },
+      {
+        "key": "cta",
+        "label": "Cta",
+        "required": true,
+        "maxLength": 29,
+        "sample": "BOOK A CALL"
+      }
+    ]
+  },
+  "publish": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "apiVersionMin": "v26.0",
+    "copy": {
+      "primaryText": [
+        "Ask for the property details."
+      ],
+      "headlines": [
+        "Property details"
+      ],
+      "descriptions": [
+        "Request more information"
+      ]
+    },
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Connect with your local agent",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "thankYou": {
+        "title": "Thanks",
+        "body": "We'll be in touch."
+      }
+    },
+    "placements": {
+      "publisherPlatforms": [
+        "facebook",
+        "instagram"
+      ],
+      "facebookPositions": [
+        "feed"
+      ],
+      "instagramPositions": [
+        "stream"
+      ]
+    },
+    "formatRouting": {
+      "feed": "4:5",
+      "story": "9:16"
+    },
+    "creativeFeatures": {
+      "adapt_to_placement": "OPT_OUT",
+      "image_touchups": "OPT_OUT",
+      "image_templates": "OPT_OUT",
+      "inline_comment": "OPT_OUT",
+      "enhance_cta": "OPT_OUT",
+      "text_optimizations": "OPT_OUT",
+      "image_animation": "OPT_OUT",
+      "image_background_gen": "OPT_OUT",
+      "video_auto_crop": "OPT_OUT",
+      "translate_voiceover": "OPT_OUT",
+      "text_translation": "OPT_OUT",
+      "media_type_automation": "OPT_OUT",
+      "product_extensions": "OPT_OUT"
+    },
+    "previewFormats": [
+      "MOBILE_FEED_STANDARD",
+      "INSTAGRAM_STANDARD"
+    ]
+  },
+  "editPolicy": {
+    "mode": "guided",
+    "advancedUnlockable": true,
+    "lockedLayerIds": []
+  },
+  "exactness": {
+    "status": "qa",
+    "residuals": {},
+    "bakedTextKeys": [
+      "body",
+      "headline",
+      "subheadline",
+      "cta"
+    ]
+  }
+}
