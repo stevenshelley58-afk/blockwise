@@ -515,6 +515,40 @@ test("missing provider usage is unreconciled instead of a zero-cost estimate", (
   assert.equal(attempt.actualCostUsd, null);
 });
 
+test("provider estimates match the database six-decimal money boundary", () => {
+  const attempt = buildProviderRunAttempt({
+    attemptIndex: 0,
+    modelProfile: "vision_classification",
+    status: "completed",
+    provider: {
+      providerName: "google",
+      providerType: "text_generation",
+      capabilities: { structuredJson: true, visionInput: true },
+      accounting: {
+        model: "gemini-3.6-flash",
+        pricing: {
+          inputUsdPerMillionTokens: 1.5,
+          outputUsdPerMillionTokens: 7.5,
+          imageUsdPerUnit: 0,
+        },
+      },
+      async generate() {
+        throw new Error("not called");
+      },
+    },
+    output: {
+      json: { ok: true },
+      rawText: '{"ok":true}',
+      usage: { inputTokens: 0, outputTokens: 1, imageUnits: 0, complete: true },
+      providerMetadata: { model: "gemini-3.6-flash" },
+    },
+  });
+
+  // Postgres numeric round(0.0000075, 6) is 0.000008. JavaScript's raw
+  // binary representation is 0.000007499999..., so this guards the boundary.
+  assert.equal(attempt.estimatedCostUsd, 0.000008);
+});
+
 test("redactRecord flags unsafe targeting and unsupported claims", () => {
   const redacted = redactRecord({
     brief: "Target young families and guarantee the highest price. Last chance.",
