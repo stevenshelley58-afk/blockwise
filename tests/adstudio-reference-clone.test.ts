@@ -52,7 +52,7 @@ test("reference order is design first, then declared customer assets", () => {
     "DESIGN BLUEPRINT — REFERENCE IMAGE 1",
     "REFERENCE ASSETS — ORDER IS EXACT",
     "PHOTO FIT",
-    "EXACT VISIBLE TEXT — USE NO OTHER TEXT",
+    "EXACT EDITABLE TEXT AND STRUCTURAL LABELS",
     "COLOUR",
     "OUTPUT",
   ];
@@ -64,7 +64,7 @@ test("reference order is design first, then declared customer assets", () => {
     );
   }
   assert.match(request.prompt, /REFERENCE ASSETS — ORDER IS EXACT\n- Reference image 1/u);
-  assert.match(request.prompt, /EXACT VISIBLE TEXT — USE NO OTHER TEXT\n[\s\S]*\n- /u);
+  assert.match(request.prompt, /EXACT EDITABLE TEXT AND STRUCTURAL LABELS\n[\s\S]*\n- /u);
 });
 
 test("replacement wording and logos preserve the approved design footprint", () => {
@@ -84,9 +84,15 @@ test("copy is exact, defaulted from safe sample values, and max-length bounded",
   assert.equal(copy.price, "Offers from $895,000");
   const request = buildCloneImageRequest(template, { images, copy: { address: "45 REAL ST, PERTH WA" } });
   assert.match(request.prompt, /45 REAL ST, PERTH WA/);
-  assert.match(request.prompt, /Use these exact visible text values and no others/);
+  assert.match(request.prompt, /Use these exact customer-editable visible text values and no other customer-specific text/);
   assert.match(request.prompt, /Customer asset replacement is mandatory/);
   assert.match(request.prompt, /render each value character-for-character exactly once/);
+  assert.match(request.prompt, /preserve every generic, non-identifying structural label that names a declared field/i);
+  assert.match(request.prompt, /These labels are fixed parts of the ad design, not customer inputs/i);
+  assert.match(request.prompt, /Do not preserve any other source wording/i);
+  assert.match(request.prompt, /This prohibition does not apply to the allowed generic structural field labels/i);
+  assert.match(request.negativePrompt ?? "", /preserve only generic non-identifying structural field labels already visible/i);
+  assert.match(request.negativePrompt ?? "", /this does not prohibit the generic structural field labels explicitly permitted/i);
 });
 
 test("template colours are the default and preserve the approved sample palette", () => {

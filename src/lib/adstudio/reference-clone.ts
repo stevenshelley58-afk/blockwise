@@ -22,8 +22,8 @@ export type CloneInputs = {
 };
 
 export const GLOBAL_CLONE_NEGATIVES = [
-  "do not retain any name, phone number, URL, handle, logo, address, price, or identifying detail from reference image 1",
-  "do not invent or change any text beyond the supplied text values",
+  "do not retain any source-specific identity or value from reference image 1: no person, agency, or property name; phone-number value; URL; handle; logo; address value; price value; or other identifying detail; this does not prohibit the generic structural field labels explicitly permitted in the prompt",
+  "do not invent or change any supplied text value; preserve only generic non-identifying structural field labels already visible in reference image 1, and no other source copy",
   "do not distort, repaint, relight, or restructure the original visible content of supplied property photos, logos, or faces",
   "do not crop away the main subject of a supplied photo; a house, room, or person must never be cut off to fit the frame",
   "no extra logos, watermarks, captions, borders, or platform UI",
@@ -150,11 +150,13 @@ export function buildCloneImageRequest(template: AdStudioTemplate, inputs: Clone
       ].join("\n"),
       ...(suppliedImages.length ? [["PHOTO FIT", PHOTO_FIT_RULE].join("\n")] : []),
       [
-        "EXACT VISIBLE TEXT — USE NO OTHER TEXT",
-        "Use these exact visible text values and no others:",
+        "EXACT EDITABLE TEXT AND STRUCTURAL LABELS",
+        "Use these exact customer-editable visible text values and no other customer-specific text:",
         copyLegend,
         "Every supplied text value is mandatory: render each value character-for-character exactly once, fully visible, and at a readable size.",
-        "Natural layout line wrapping is allowed and does not change the copy; do not add, remove, misspell, split, or reorder any visible word, punctuation mark, or symbol.",
+        "Natural layout line wrapping is allowed and does not change the supplied copy; do not add, remove, misspell, split, or reorder any supplied visible word, punctuation mark, or symbol.",
+        "Also preserve every generic, non-identifying structural label that names a declared field in reference image 1 (for example LOCATION:, PRICE:, or FOR MORE INFO:), character-for-character in its original text box and type treatment. These labels are fixed parts of the ad design, not customer inputs.",
+        "Do not preserve any other source wording: no source headline, offer, status claim, testimonial, badge, statistic, agency or agent identity, actual property detail, price value, address value, phone-number value, handle, or URL unless it is one of the supplied values above. This prohibition does not apply to the allowed generic structural field labels.",
       ].join("\n"),
       ["COLOUR", colourInstruction].join("\n"),
       [

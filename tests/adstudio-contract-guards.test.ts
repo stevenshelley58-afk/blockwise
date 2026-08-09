@@ -68,7 +68,8 @@ test("campaign generation uses the durable VPS queue from the start", () => {
 test("the one full-ad request consumes sample, assets, and exact copy", () => {
   const source = readFileSync("src/lib/adstudio/reference-clone.ts", "utf8");
   assert.match(source, /Reference image 1 is the ad design to clone/);
-  assert.match(source, /Use these exact visible text values and no others/);
+  assert.match(source, /Use these exact customer-editable visible text values and no other customer-specific text/);
+  assert.match(source, /generic, non-identifying structural label that names a declared field/);
   assert.match(source, /referenceAssets: \[referenceImage, \.\.\.suppliedImages\.map/);
   assert.doesNotMatch(source, /fabricJson|layout archetype|template version/i);
 });

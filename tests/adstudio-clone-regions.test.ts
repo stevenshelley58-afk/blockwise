@@ -763,8 +763,9 @@ test("final clone renders once when the blocking quality review passes", async (
   assert.equal(generateCalls, 1);
   assert.equal(normalizedFrom, "data:image/png;base64,cmF3:4:5");
   assert.equal(result.assetUrl, "data:image/png;base64,ZXhhY3Q=");
-  assert.equal(audited.length, 1);
-  assert.equal(audited[0]?.accepted, true);
+  assert.equal(audited.length, 2);
+  assert.equal(audited[0]?.accepted, false);
+  assert.equal(audited[1]?.accepted, true);
   assert.equal(audited[0]?.candidateImage, "data:image/png;base64,ZXhhY3Q=");
 });
 
@@ -812,6 +813,8 @@ test("every paid candidate is audited before a rejected render is corrected", as
   assert.deepEqual(prompts, ["clone", "corrected clone"]);
   assert.deepEqual(audited, [
     { attempt: 1, accepted: false },
+    { attempt: 1, accepted: false },
+    { attempt: 2, accepted: false },
     { attempt: 2, accepted: true },
   ]);
 });
