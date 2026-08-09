@@ -203,7 +203,7 @@ async function approveBrandKit(page: Page) {
 }
 
 async function openNewAd(page: Page) {
-  const button = page.getByRole("button", { name: /create ad|new ad|add ad/i }).first();
+  const button = page.getByRole("button", { name: /create ad|new ad|add ad|^create$/i }).first();
   if (await button.isVisible().catch(() => false)) {
     await expect(button).toBeEnabled({ timeout: 30_000 });
     await button.click();
