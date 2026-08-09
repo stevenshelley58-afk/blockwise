@@ -289,8 +289,13 @@ async function uploadRequiredSampleImages(page: Page, listingPath: string, logoP
   for (let index = 0; index < count; index += 1) {
     const input = inputs.nth(index);
     await input.setInputFiles(index === 1 ? logoPath : listingPath);
+    const preparingImage = page.getByRole("button", { name: /preparing image/i });
     await expect(
-      page.getByRole("button", { name: /uploading/i }),
+      preparingImage,
+      `image slot ${index + 1} of ${count} should start uploading`,
+    ).toBeVisible({ timeout: 10_000 });
+    await expect(
+      preparingImage,
       `image slot ${index + 1} of ${count} should finish uploading`,
     ).toBeHidden({ timeout: 60_000 });
   }

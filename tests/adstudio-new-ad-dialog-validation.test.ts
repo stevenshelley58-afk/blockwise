@@ -6,7 +6,9 @@ import { briefGuidanceForTemplate } from "../src/components/adstudio/new-ad-dial
 import {
   defaultImageForTemplateSlot,
   defaultTextForTemplateField,
+  hasPendingImageUploads,
   imageRequirementsForTemplate,
+  updatePendingImageUploads,
 } from "../src/components/adstudio/new-ad-dialog-slots.ts";
 import { extractBrandKitFromWebsite } from "../src/lib/adstudio/brand-extraction.ts";
 import { AD_STUDIO_TEMPLATES } from "../src/lib/adstudio/templates.ts";
@@ -18,6 +20,27 @@ test("the dialog collects only the selected template's declared inputs", () => {
   assert.match(dialog, /imageRequirementsForTemplate\(selectedTemplate\)/);
   assert.match(dialog, /customerCopyFieldsForTemplate\(selectedTemplate\)/);
   assert.doesNotMatch(dialog, /generate-options|generate-clone|Fabric|canvas\.objects/);
+});
+
+test("concurrent slot uploads keep Generate gated until the final upload settles", () => {
+  const dialog = readFileSync("src/components/adstudio/new-ad-dialog.tsx", "utf8");
+  let pending = {};
+  pending = updatePendingImageUploads(pending, "property_photo", 1);
+  pending = updatePendingImageUploads(pending, "property_photo", 1);
+  pending = updatePendingImageUploads(pending, "agency_logo", 1);
+  assert.equal(hasPendingImageUploads(pending), true);
+
+  pending = updatePendingImageUploads(pending, "property_photo", -1);
+  assert.equal(hasPendingImageUploads(pending), true, "the second upload in the same slot still blocks generation");
+
+  pending = updatePendingImageUploads(pending, "property_photo", -1);
+  assert.equal(hasPendingImageUploads(pending), true, "the other slot still blocks generation");
+
+  pending = updatePendingImageUploads(pending, "agency_logo", -1);
+  assert.equal(hasPendingImageUploads(pending), false);
+  assert.match(dialog, /setPendingImageUploads\(\(current\) => updatePendingImageUploads\(current, slotId, 1\)\)/);
+  assert.match(dialog, /setPendingImageUploads\(\(current\) => updatePendingImageUploads\(current, slotId, -1\)\)/);
+  assert.doesNotMatch(dialog, /useState\(false\).*uploadingImage/);
 });
 
 test("the customer flow uses template terminology and shared dropdown styling", () => {

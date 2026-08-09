@@ -32,7 +32,9 @@ import {
   defaultImageForTemplateSlot,
   defaultImageLabelForTemplateSlot,
   defaultTextForTemplateField,
+  hasPendingImageUploads,
   imageRequirementsForTemplate,
+  updatePendingImageUploads,
   type TemplateCopyRequirement,
   type TemplateImageRequirement,
 } from "./new-ad-dialog-slots";
@@ -447,10 +449,12 @@ export function NewAdDialog({
   const [imageDataUrlsBySlot, setImageDataUrlsBySlot] = useState<Record<string, string>>({});
   // Point 9 — background image scaling: the slot shows a raw `URL.createObjectURL`
   // preview INSTANTLY while the heavier storage upload (which downscales big
-  // photos on the way up) runs off to the side. `uploadingImage` gates Generate
+  // photos on the way up) runs off to the side. Pending uploads gate Generate
   // so the server always gets the final downscaled URL, not a transient blob.
   // Preview object URLs are tracked so they can be revoked (no blob leaks).
   const previewUrlsRef = useRef<Record<string, string>>({});
+  const uploadVersionRef = useRef(0);
+  const activeUploadVersionBySlotRef = useRef<Record<string, number>>({});
   const [copyMode, setCopyMode] = useState<CopyMode>("ai");
   const [copyGenerated, setCopyGenerated] = useState(false);
   const [feedCopy, setFeedCopy] = useState<FeedCopy>(EMPTY_FEED_COPY);
@@ -464,7 +468,8 @@ export function NewAdDialog({
   const [error, setError] = useState("");
   const [showRequirementsAlert, setShowRequirementsAlert] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [uploadingImage, setUploadingImage] = useState(false);
+  const [pendingImageUploads, setPendingImageUploads] = useState<Record<string, number>>({});
+  const uploadingImage = hasPendingImageUploads(pendingImageUploads);
   const [trialCreditNote, setTrialCreditNote] = useState("Uses one ad pack. No Meta account is needed until publish.");
 
   const [activeZone, setActiveZone] = useState<GuideZone | null>(null);
@@ -638,7 +643,8 @@ export function NewAdDialog({
     setMediaSourceMode("details");
     setError("");
     setShowRequirementsAlert(false);
-    setUploadingImage(false);
+    activeUploadVersionBySlotRef.current = {};
+    setPendingImageUploads({});
     setCopyMode("ai");
     setCopyGenerated(false);
     setFeedCopy(EMPTY_FEED_COPY);
@@ -727,6 +733,8 @@ export function NewAdDialog({
     setError("");
     setShowRequirementsAlert(false);
     // Inputs reset whenever the customer chooses a different sample.
+    activeUploadVersionBySlotRef.current = {};
+    setPendingImageUploads({});
     setImageDataUrlsBySlot({});
     setImageNamesBySlot({});
     setOnImageCopy(brandTextDefaultsForTemplate(template, brandKit));
@@ -758,6 +766,10 @@ export function NewAdDialog({
     setImageNamesBySlot((current) => ({ ...current, [slotId]: label }));
   }
 
+  function invalidateSlotUpload(slotId: string) {
+    delete activeUploadVersionBySlotRef.current[slotId];
+  }
+
   /**
    * Point 9 — the customer sees their photo the instant they pick it. A raw
    * `URL.createObjectURL` blob preview drops into the slot right away while the
@@ -768,17 +780,21 @@ export function NewAdDialog({
    */
   async function selectImage(file: File, slotId: string) {
     setError("");
+    revokeSlotPreview(slotId);
+    const uploadVersion = ++uploadVersionRef.current;
+    activeUploadVersionBySlotRef.current[slotId] = uploadVersion;
     const previewUrl = URL.createObjectURL(file);
     previewUrlsRef.current[slotId] = previewUrl;
     setImageDataUrlsBySlot((current) => ({ ...current, [slotId]: previewUrl }));
     setImageNamesBySlot((current) => ({ ...current, [slotId]: file.name }));
-    setUploadingImage(true);
+    setPendingImageUploads((current) => updatePendingImageUploads(current, slotId, 1));
     try {
       const uploaded = await uploadAdStudioMedia({
         file,
         workspaceId,
         brandKitId: brandKit.brandKitId,
       });
+      if (activeUploadVersionBySlotRef.current[slotId] !== uploadVersion) return;
       // Blob preview served its purpose; swap to the real URL and release it.
       revokeSlotPreview(slotId);
       setSlotImage(slotId, uploaded.src, file.name);
@@ -792,11 +808,12 @@ export function NewAdDialog({
       });
       setError("");
     } catch (caught) {
+      if (activeUploadVersionBySlotRef.current[slotId] !== uploadVersion) return;
       revokeSlotPreview(slotId);
       clearSlotImage(slotId);
       setError(caught instanceof Error ? caught.message : "Could not upload that image.");
     } finally {
-      setUploadingImage(false);
+      setPendingImageUploads((current) => updatePendingImageUploads(current, slotId, -1));
     }
   }
 
@@ -810,6 +827,7 @@ export function NewAdDialog({
   }
 
   function clearSlotImage(slotId: string) {
+    invalidateSlotUpload(slotId);
     revokeSlotPreview(slotId);
     setImageDataUrlsBySlot((current) => {
       const next = { ...current };
@@ -830,6 +848,8 @@ export function NewAdDialog({
   }
 
   function selectLibraryImage(asset: ImageLibraryAsset) {
+    invalidateSlotUpload(activeImageSlot.id);
+    revokeSlotPreview(activeImageSlot.id);
     setSlotImage(activeImageSlot.id, asset.fullSrc, asset.label);
     setMediaSourceMode("details");
     setError("");
@@ -1236,7 +1256,6 @@ export function NewAdDialog({
                           onClear={() => {
                             clearSlotImage(slot.id);
                             setError("");
-                            setUploadingImage(false);
                           }}
                         />
                         <div className="studio-newad-media-actions" aria-label={`${slot.label} source options`}>
