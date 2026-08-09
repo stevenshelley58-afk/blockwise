@@ -81,13 +81,19 @@
             "x": 0.012037037037037037,
             "y": 0.01037037037037037,
             "width": 0.975925925925926,
-            "height": 0.44074074074074077
+            "height": 0.46
           },
           "type": "image_slot",
           "inputKey": "property_photo",
           "fit": "cover",
           "mask": {
-            "kind": "rect"
+            "kind": "rounded",
+            "radius": [
+              82,
+              82,
+              0,
+              0
+            ]
           },
           "minSourcePx": {
             "width": 1054,
@@ -96,12 +102,12 @@
         },
         {
           "id": "slot-agency_logo",
-          "z": 3,
+          "z": 4,
           "box": {
-            "x": 0.7203703703703703,
-            "y": 0.7503703703703704,
-            "width": 0.2222222222222222,
-            "height": 0.18074074074074073
+            "x": 0.7240740740740741,
+            "y": 0.8392592592592593,
+            "width": 0.07407407407407407,
+            "height": 0.05925925925925926
           },
           "type": "image_slot",
           "inputKey": "agency_logo",
@@ -110,9 +116,22 @@
             "kind": "rect"
           },
           "minSourcePx": {
-            "width": 240,
-            "height": 244
+            "width": 80,
+            "height": 80
           }
+        },
+        {
+          "id": "patch-feed-finish",
+          "z": 3,
+          "box": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "type": "overlay_patch",
+          "src": "/adstudio-templates/meta-agent-intro-feed-037/patch-feed-finish.svg",
+          "sha256": "5249091a6a107f62badbb2f1ca3ede8452f194aeb775282fb22f12d87a3d55d4"
         }
       ]
     },
@@ -174,14 +193,14 @@
         "key": "property_photo",
         "label": "property photo",
         "required": true,
-        "aspect": "portrait",
+        "aspect": "landscape",
         "description": "Customer photo drawn into the declared slot."
       },
       {
         "key": "agency_logo",
         "label": "agency logo",
         "required": true,
-        "aspect": "portrait",
+        "aspect": "square",
         "description": "Customer photo drawn into the declared slot."
       }
     ],
