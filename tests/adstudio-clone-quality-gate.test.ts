@@ -7,7 +7,7 @@ import {
   cloneQualityPassed,
 } from "../src/lib/adstudio/clone-quality-gate.ts";
 import { generateFinalCloneRender } from "../src/lib/adstudio/generate-template-campaign.ts";
-import type { ImageProviderRequest } from "../src/lib/adstudio/providers.ts";
+import type { ImageProviderAdapter, ImageProviderRequest } from "../src/lib/adstudio/providers.ts";
 import type { AdStudioCloneQualityReview } from "../src/lib/adstudio/types.ts";
 
 const expectedCopy = { headline: "Exact headline" };
@@ -44,6 +44,17 @@ function request(prompt = "clone"): ImageProviderRequest {
     stylePreset: "real_estate_clone",
     requiresReferenceAssets: true,
     seed: 0,
+  };
+}
+
+function provider(providerName: string): ImageProviderAdapter {
+  return {
+    providerName,
+    providerType: "image_generation",
+    capabilities: { textToImage: true, imageToImage: true, multiReference: true },
+    async generate() {
+      throw new Error("The test generation dependency owns dispatch.");
+    },
   };
 }
 
@@ -92,6 +103,37 @@ test("a failed candidate feeds only its image-model correction through the same 
   });
   assert.equal(result.attempt, 2);
   assert.deepEqual(generatedPrompts, ["clone", "clone | correction: Restore the exact logo footprint."]);
+});
+
+test("a visual QA failure gives the corrected clone to the independent fallback model", async () => {
+  const providerOrder: string[][] = [];
+  const result = await generateFinalCloneRender({
+    format: "4:5",
+    templateId: "template-1",
+    providers: [provider("google"), provider("openai")],
+    request: request(),
+    referenceImage: "approved-sample",
+    expectedCopy,
+    expectedAssetKeys,
+    buildCorrectedRequest: (correction) => request(`clone | correction: ${correction}`),
+    workspaceId: "workspace-1",
+    userId: "user-1",
+    correlationId: "run-cross-model",
+  }, {
+    generate: async (input) => {
+      providerOrder.push(input.providers.map((candidate) => candidate.providerName));
+      return { assetUrl: `candidate-${providerOrder.length}`, model: "image", provider: "test", providerAttemptCount: 1 };
+    },
+    normalize: async (assetUrl) => assetUrl,
+    review: async (input) => review({
+      attempt: input.attempt,
+      adSystemLikenessScore: input.attempt === 1 ? 9.1 : 9.6,
+      suggestedCorrection: input.attempt === 1 ? "Use the supplied property photo faithfully." : "",
+    }),
+  });
+
+  assert.equal(result.attempt, 2);
+  assert.deepEqual(providerOrder, [["google", "openai"], ["openai", "google"]]);
 });
 
 test("no below-threshold candidate is released after the bounded quality loop", async () => {

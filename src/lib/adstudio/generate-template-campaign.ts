@@ -259,8 +259,18 @@ export async function generateFinalCloneRender(input: {
 
   for (let attempt = 1; attempt <= MAX_RUNTIME_CLONE_CANDIDATES; attempt += 1) {
     const candidateRequest = { ...request, seed: (request.seed ?? 0) + attempt };
+    // A provider that produced a valid image but missed visual QA will not
+    // enter the technical fallback inside generateCloneWithCascade. Give the
+    // independently priced fallback model the corrected request on later
+    // candidates instead of paying the same model to repeat the same failure.
+    // The first provider remains available behind that fallback for an actual
+    // outage, and every candidate still uses the same canonical clone request.
+    const [primaryProvider, ...fallbackProviders] = input.providers;
+    const candidateProviders = attempt === 1 || !primaryProvider || fallbackProviders.length === 0
+      ? input.providers
+      : [...fallbackProviders, primaryProvider];
     const generated = await generate({
-      providers: input.providers,
+      providers: candidateProviders,
       request: candidateRequest,
       workspaceId: input.workspaceId,
       userId: input.userId,
