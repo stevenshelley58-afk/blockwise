@@ -331,7 +331,7 @@ const GOOGLE_AI_CHAT_URL = "https://generativelanguage.googleapis.com/v1beta/ope
 
 function createGoogleAiTextProvider(options: ProviderOptions = {}): TextProviderAdapter {
   const env = options.env ?? process.env;
-  const model = options.model ?? env.BLOCKWISE_GOOGLE_TEXT_MODEL ?? "gemini-2.5-flash";
+  const model = options.model ?? env.BLOCKWISE_GOOGLE_TEXT_MODEL ?? "gemini-3.6-flash";
   const fetchImpl = options.fetchImpl ?? fetch;
 
   return {
@@ -407,6 +407,7 @@ async function postChatCompletion(input: {
 }): Promise<TextProviderResponse> {
   const includeModelInBody = input.includeModelInBody ?? true;
   const reasoningEffort = minimalReasoningEffort(input.model);
+  const openAiCompletionTokens = usesOpenAiCompletionTokenParameter(input.model);
   // DeepSeek R1 (deepseek-reasoner) rejects both response_format and the
   // OpenAI-specific max_completion_tokens param — it only understands
   // max_tokens and emits JSON in plain text. Everything else (incl. deepseek-chat,
@@ -435,9 +436,9 @@ async function postChatCompletion(input: {
       // and a bad loop can drain the account. Copy/QA outputs are small JSON;
       // 4096 is generous. OpenAI reasoning models (gpt-5*/o*) only accept
       // max_completion_tokens; DeepSeek R1 + everything else accepts max_tokens.
-      ...(customTemp || deepseekReasoner
-        ? { max_tokens: MAX_COMPLETION_TOKENS }
-        : { max_completion_tokens: MAX_COMPLETION_TOKENS }),
+      ...(openAiCompletionTokens
+        ? { max_completion_tokens: MAX_COMPLETION_TOKENS }
+        : { max_tokens: MAX_COMPLETION_TOKENS }),
     }),
   });
   const payload = (await response.json().catch(() => ({}))) as {
@@ -570,9 +571,9 @@ function isRetryableProviderStatus(status: number): boolean {
 }
 
 function isProviderFallbackEligibleStatus(status: number): boolean {
-  // A depleted account will not recover by retrying the same request, but it
-  // must not strand the customer when the profile has another provider.
-  return status === 402 || isRetryableProviderStatus(status);
+  // A depleted account or unavailable endpoint/model will not recover by
+  // retrying the same provider, but must not strand a profile with a fallback.
+  return status === 402 || status === 404 || isRetryableProviderStatus(status);
 }
 
 function supportsCustomTemperature(model: string): boolean {
@@ -580,7 +581,12 @@ function supportsCustomTemperature(model: string): boolean {
   // DeepSeek's reasoning model (deepseek-reasoner / R1 family) rejects a custom
   // temperature and only accepts max_tokens, like OpenAI's gpt-5* / o* reasoning
   // models reject temperature too — so it takes the same no-temperature path.
-  return !/^(gpt-5|o\d|deepseek-reasoner)/i.test(name);
+  return !/^(gpt-5|o\d|deepseek-reasoner|gemini-3\.(?:5|6))/i.test(name);
+}
+
+function usesOpenAiCompletionTokenParameter(model: string): boolean {
+  const name = model.split("/").pop() ?? model;
+  return /^(gpt-5|o\d)/i.test(name);
 }
 
 // DeepSeek's R1 reasoning model (deepseek-reasoner) rejects response_format

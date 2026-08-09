@@ -99,9 +99,9 @@ const MODEL_PROFILES: Record<ModelProfileKey, ModelProfile> = {
     fallbacks: [
       {
         provider: "google",
-        model: "gemini-2.0-flash-001",
-        inputUsdPerMillionTokens: 0.1,
-        outputUsdPerMillionTokens: 0.4,
+        model: "gemini-3.1-flash-lite",
+        inputUsdPerMillionTokens: 0.25,
+        outputUsdPerMillionTokens: 1.5,
         imageUsdPerUnit: 0,
         supportsStructuredOutput: true,
         maxContextTokens: 1_000_000,
@@ -168,17 +168,17 @@ const MODEL_PROFILES: Record<ModelProfileKey, ModelProfile> = {
     enabled: true,
     requiresStructuredOutput: true,
     // Vision QA reads the customer's exact copy back off the generated image.
-    // Gemini's vision models localize and OCR rendered text more reliably than
-    // a reasoning model, and cost a fraction as much per QA pass. OpenAI stays
-    // as the fallback so a Google outage never strands the advisory QA pass.
+    // Gemini's current Flash model localizes and OCRs rendered text reliably,
+    // with strong spatial reasoning for layout comparison. OpenAI stays as the
+    // fallback so a Google endpoint or model outage never strands the QA pass.
     maxRunCostUsd: 0.6,
     defaultTemperature: 0.1,
     primary: {
       provider: "google",
-      model: "gemini-2.5-flash",
-      inputUsdPerMillionTokens: 0.3,
-      outputUsdPerMillionTokens: 2.5,
-      imageUsdPerUnit: 0.004,
+      model: "gemini-3.6-flash",
+      inputUsdPerMillionTokens: 1.5,
+      outputUsdPerMillionTokens: 7.5,
+      imageUsdPerUnit: 0,
       supportsStructuredOutput: true,
       maxContextTokens: 1_000_000,
       maxLatencyMs: 20_000,

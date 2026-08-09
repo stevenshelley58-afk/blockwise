@@ -122,6 +122,35 @@ test("candidate adapters reject missing or invalid explicit pricing before dispa
   );
 });
 
+test("current Gemini vision chat uses the supported compatibility payload", async () => {
+  const bodies: Record<string, unknown>[] = [];
+  const provider = createTextProviderForCandidate(candidate("google", "gemini-3.6-flash"), {
+    env: { GOOGLE_AI_API_KEY: "google_test" },
+    fetchImpl: async (_url, init) => {
+      bodies.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
+      return new Response(JSON.stringify({
+        id: "google-request",
+        choices: [{ message: { content: JSON.stringify({ ok: true }) } }],
+        usage: { prompt_tokens: 10, completion_tokens: 4 },
+      }), { status: 200 });
+    },
+  });
+
+  await provider.generate({
+    system: "Return JSON.",
+    schemaName: "adStudioCloneQualityReview",
+    messages: [{ role: "user", content: "Review the image." }],
+    imageUrl: "data:image/png;base64,AA==",
+  });
+
+  const body = bodies[0];
+  assert.ok(body);
+  assert.equal(body.model, "gemini-3.6-flash");
+  assert.equal(body.max_tokens, 4096);
+  assert.equal("max_completion_tokens" in body, false);
+  assert.equal("temperature" in body, false);
+});
+
 test("priced Azure candidate posts structured multimodal prompts to the deployment endpoint", async () => {
   const calls: Array<{ url: string; init: RequestInit }> = [];
   const provider = createTextProviderForCandidate(candidate("azure", "gpt-4.1-mini-vision"), {
@@ -272,7 +301,16 @@ test("OpenAI 2xx response without an image preserves submitted billing evidence"
 });
 
 test("provider HTTP errors are retryable only for explicitly transient statuses", async () => {
-  for (const [status, retryable] of [[400, false], [401, false], [408, true], [409, true], [425, true], [429, true], [500, true]] as const) {
+  for (const [status, retryable, fallbackEligible] of [
+    [400, false, false],
+    [401, false, false],
+    [404, false, true],
+    [408, true, true],
+    [409, true, true],
+    [425, true, true],
+    [429, true, true],
+    [500, true, true],
+  ] as const) {
     const provider = createImageProviderForCandidate(candidate("openai", "gpt-image-2"), {
       env: { OPENAI_API_KEY: "oa_test" },
       fetchImpl: async () => new Response(JSON.stringify({ error: { message: `status ${status}` } }), { status }),
@@ -287,6 +325,7 @@ test("provider HTTP errors are retryable only for explicitly transient statuses"
       assert.ok(error instanceof ProviderRequestError);
       assert.equal(error.requestSubmitted, true);
       assert.equal(error.retryable, retryable, `status ${status}`);
+      assert.equal(error.fallbackEligible, fallbackEligible, `status ${status}`);
       return true;
     });
   }

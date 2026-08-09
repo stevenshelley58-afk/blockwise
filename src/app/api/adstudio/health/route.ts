@@ -108,9 +108,9 @@ function resolveTextCandidate(provider: "openai" | "google"): ModelCandidate {
   return (
     googleFallback ?? {
       provider: "google",
-      model: "gemini-2.5-flash",
-      inputUsdPerMillionTokens: 0.1,
-      outputUsdPerMillionTokens: 0.4,
+      model: "gemini-3.1-flash-lite",
+      inputUsdPerMillionTokens: 0.25,
+      outputUsdPerMillionTokens: 1.5,
       imageUsdPerUnit: 0,
       supportsStructuredOutput: true,
       maxContextTokens: 1_000_000,

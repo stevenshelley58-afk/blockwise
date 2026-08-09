@@ -27,8 +27,8 @@ test("vision_classification defaults to Gemini vision with an OpenAI fallback", 
   const resolved = resolveModelProfile("vision_classification");
 
   assert.equal(resolved.primary.provider, "google");
-  assert.equal(resolved.primary.model, "gemini-2.5-flash");
-  assert.equal(resolved.primary.imageUsdPerUnit > 0, true);
+  assert.equal(resolved.primary.model, "gemini-3.6-flash");
+  assert.equal(resolved.primary.imageUsdPerUnit, 0);
   // OpenAI stays as the fallback so a Google outage never strands the pass.
   assert.deepEqual(
     resolved.fallbacks.map((candidate) => candidate.model),
