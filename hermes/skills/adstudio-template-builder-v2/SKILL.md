@@ -35,6 +35,72 @@ renderer (`src/lib/adstudio/v2/render/`), and one editor.
    "approximately right".
 6. One source ad produces at most one template.
 
+## Image-substitution law
+
+The likeness target is the reusable ad, never the replaceable subject inside a
+declared image slot.
+
+### Excluded from customer-result likeness
+
+- the property, house, person, product, landscape, pool, sky, or other subject
+  inside a declared customer image
+- the source image's architecture, scene composition, inherent lighting,
+  colours, sharpness, weather, or photographic style
+- semantic or pixel similarity between a source image and its customer
+  replacement
+
+Do not generate, outpaint, relight, restage, recolour, soften, or otherwise
+change a customer image merely to resemble the source image. Technical
+normalisation (safe decoding, EXIF orientation, ICC/colour-space conversion,
+lossless format conversion) and the template's declared deterministic
+crop/pan/zoom/focal behaviour are allowed. A generative customer-image edit
+must be an explicit customer-facing product feature; it must not receive the
+source ad/photo, is not template QA, and does not improve the likeness score.
+
+### Included in customer-result likeness
+
+- canvas, card, frame, border, corner geometry, background, hierarchy, and
+  whitespace
+- image-slot position, dimensions, aspect contract, fit/focal behaviour,
+  clipping, and masks
+- every transferable effect applied to or around the image: fades, feathers,
+  alpha fields, gradients, overlays, shadows, colour transforms, blur, glow,
+  duotone, reflection, blend behaviour, and overlap with type or other regions
+- typography geometry, copy regions, logo footprint and anchor, and complete
+  source-identity cleanup
+
+An effect that depends on image pixels must transform the **current customer
+image**. Never bake source-photo pixels, source reflections, or source-scene
+fragments into a plate or overlay patch. Patches may contain neutral colours,
+opacity fields, borders, panels, badges, and other non-replaceable design
+pixels. A patch intersecting an image slot must be analytic/neutral or have
+recorded proof that it is source-image-independent. A full-canvas source-derived
+patch containing photo or reflection pixels is an automatic fail. If the
+renderer cannot reproduce an image-dependent effect on an arbitrary replacement
+image, the template stays `qa`; source-photo leakage is not an acceptable
+substitute.
+
+"Photo composition" or "photo mass" in QA means the slot, mask, fit, and crop
+behaviour — never the subject's silhouette, size, architecture, or viewpoint
+inside the image. Intrinsic customer-image colour, sharpness, lighting, and
+style are excluded; template-applied colour, blur, fade, and reflection effects
+are included.
+
+### Two scores, never one blended score
+
+- **Ad-system likeness** measures only the included reusable structure and
+  effects. This owns the likeness threshold.
+- **Result quality** measures whether the finished ad looks excellent with the
+  supplied customer image. It is independent of source-image similarity.
+
+Never improve either score by making the customer image look more like the
+source image.
+
+Use one fixed, pre-registered fixture corpus chosen independently of the source
+and template. Record fixture hashes and reuse the exact corpus across every
+template. Do not create a bespoke or model-generated QA fixture after seeing a
+source ad.
+
 ## Process
 
 `source → analyse → decompose → restyle → story-draft → check → Studio QA → ready`
@@ -46,10 +112,10 @@ Vercel (the OpenCV/tesseract/rembg dependencies do not exist there).
 | Step | Command | What it produces |
 |---|---|---|
 | 1. analyse | `analyse --source <path> --id <id>` | Vision input contract + `sourceValues` (the source's own on-image text per key) into `template-gallery-v2/<id>/evidence.json`. |
-| 2. decompose | `decompose --id <id>` | OCR text regions, corpus font match, text-inpaint mask → **plate**, slot boxes + mask kind, operator-marked overlay patches. Emits `template.json` with `exactness.status: "draft"` + a residual report. |
+| 2. decompose | `decompose --id <id>` | OCR text regions, corpus font match, text-inpaint mask → **plate**, slot boxes + mask kind, operator-marked overlay patches. Removes replaceable source-image pixels from the plate and every patch across the complete slot/effect footprint. Emits `template.json` with `exactness.status: "draft"` + a residual report. |
 | 3. restyle | `restyle --id <id>` | Applies the Studio-recorded `restyle` block headlessly (palette remap, generic slot assets, safe copy), renders the **public sample** via `render/server.ts`, back-fills `provenance.sample.contentHash`. Fails if the sample hash equals the source hash or the restyle evidence is trivial. |
 | 4. story-draft | `story-draft --id <id>` | 9:16 draft: plate extended to 1920 (sampled-edge blur-extend by default; `--ai-extend` outpaints the margin bands only), layers repositioned into Meta safe zones. |
-| 5. check | `check --id <id>` | **The fidelity gate.** Renders the doc with `sourceValues` + the source photos and compares against the source ad. Runs the stress matrix and asserts it does not throw. Writes `exactness.residuals`. |
+| 5. check | `check --id <id>` | **The source-replay integrity gate.** Renders the doc with `sourceValues` + the source photos and compares against the source ad to verify decomposition. This is not a customer-result likeness score. Runs the stress matrix and writes `exactness.residuals`. |
 | 6. Studio QA | `/operator/template-studio/<id>` | Human confirms fonts, nudges boxes, marks overlay patches, completes the restyle tab, signs off the stress preview, and approves. |
 | — | `migrate-v1 --id <id>\|--all [--from source\|sample]` | Builds a v2 draft from an existing v1 template (reuses `typography`, `deterministicEditing.imageBoxes`, `meta`). |
 | — | `emit-fonts` | Extends the runtime font manifest to cover v2 docs (same manifest, same license gating). |
@@ -65,9 +131,17 @@ The pipeline auto-decomposes; a person signs off. In the Template Studio
   are always baked.
 - Nudge slot boxes, set mask kind/radius, default focal, and `minSourcePx`.
 - Mark overlay patches (original RGBA pixels that sit above slots — panels,
-  borders, badges) and accept the auto background-removal.
+  borders, badges) and accept the auto background-removal. Reject any patch
+  containing pixels from a replaceable source image, including reflections.
 - Complete the **Restyle tab** (mandatory): palette remap, generic assets per
   slot, safe copy. This records `restyle` and renders the public sample.
+- Run the **Subject-invariant image probes** (mandatory): mid-grey field,
+  high-contrast grid/gradient, and unrelated real holdout photos from the fixed
+  fixture corpus. The flat field exposes slot bounds, masks, overlays, borders,
+  and cleanup. The grid exposes crop, warp, fade, reflection, blur, blend, and
+  overlap behaviour. Holdout photos prove the effect remains clean without
+  judging their subject, lighting, colour, or composition against the source
+  image.
 - Run the **Stress preview** (mandatory): longest legal copy per field, 1-char
   copy, worst-aspect + minimum-resolution photos, all-slots-portrait,
   all-slots-landscape. A template that renders ugly here gets fixed (tighter
@@ -83,13 +157,26 @@ because template docs are repo-versioned. Production Studio is read-only.
 
 ## Fidelity thresholds (the anti-slop number)
 
-`check` renders the doc with the **source's own values** and compares against
-the **original source ad** — the template must reproduce the designer's actual
-ad before it is allowed to reproduce anyone else's:
+Template fidelity has two distinct gates that must not be conflated:
 
-- **Outside text boxes and restyled plate regions: byte-identical.** Plates,
-  patches, and untouched slot pixels are a `drawImage` of source bytes; any
-  diff is a pipeline bug and a hard fail. Restyle recolours are excluded by the
+1. **Source replay** renders the doc with the source's own values and source
+   images. This verifies that the decomposition and renderer can reproduce the
+   designer's ad. It is an implementation-integrity gate, not evidence that a
+   customer image should resemble the source image.
+2. **Substitution fidelity** is mandatory Studio QA evidence: render mid-grey,
+   grid/gradient, and unrelated customer images. It measures the reusable ad
+   system and image effects while explicitly excluding image-subject
+   similarity. Until the CLI records these probes automatically, attach the
+   renders and measurements to the template evidence and keep the template in
+   `qa` when they are missing.
+
+Source replay thresholds:
+
+- **Outside text boxes, declared image/effect regions, and restyled plate
+  regions: byte-identical.** The composite may reproduce source-image bytes
+  only by drawing the source through its live image slot and declared dynamic
+  effects. Plates and patches must remain source-image-free. Any other diff is
+  a pipeline bug and a hard fail. Restyle recolours are excluded by the
   recorded `paletteMap` regions.
 - **Per text region:** grayscale RMSE over the padded box ≤ **0.14** AND
   stroke-profile distance (the `match-font.mjs` Stage-B metric) within its
@@ -97,12 +184,24 @@ ad before it is allowed to reproduce anyone else's:
 - Residuals are stored in `exactness.residuals` and **re-verified** by the
   gate. Self-reported passes do not count.
 
+Substitution-fidelity evidence records slot geometry, mask residuals, effect
+alignment/strength, and cleanup residuals for every probe. Image-model critic
+prompts must state the excluded image-content rule verbatim. Objective geometry
+owns geometry decisions; critics advise only on transferable effects and
+finish. If a critic rewards or penalises subject, architecture, viewpoint,
+intrinsic lighting/colour/sharpness/style, or source/customer pixel similarity,
+invalidate that score and rerun. Exploratory variants do not count: freeze the
+chosen candidate, then independently rescore that exact immutable render with
+the fixed fixtures and rubric. Store source, candidate, and fixture hashes plus
+the rubric/prompt version and included/excluded rationale.
+
 ## Definition of done
 
-`node scripts/verify/adstudio-templates-v2.mjs` must pass every check below,
-plus `npm run typecheck`, `npm run test`, `npm run verify:hard-reset`, and
-`npm run test:render-parity`. Never weaken a gate or add a template-specific
-bypass.
+`node scripts/verify/adstudio-templates-v2.mjs` must pass automated checks 1–9
+below, plus `npm run typecheck`, `npm run test`, `npm run verify:hard-reset`,
+and `npm run test:render-parity`. Manual evidence checks 10–11 also block
+`ready`; keep the template in `qa` until they are recorded. Never weaken a gate
+or add a template-specific bypass.
 
 1. **Schema** — every `template-gallery-v2/*/template.json` parses
    `templateDocV2Schema`; `id` == dirname; no duplicate ids; no duplicate
@@ -131,6 +230,17 @@ bypass.
 9. **Renderer smoke** — every `ready` template renders at both formats via
    `render/server.ts` without throwing, at exact output dims, and the stress
    matrix renders without throwing.
+10. **Source-image isolation** — plates and patches contain no replaceable
+    source-image pixels or reflections. Image-dependent effects operate on the
+    current slot image; any source-derived image leakage is an automatic fail,
+    and unsupported effects keep the template in `qa`.
+11. **Subject invariance** — mid-grey, grid/gradient, and unrelated-photo
+    evidence from the fixed hashed corpus proves that slot geometry and image
+    effects survive arbitrary customer images. Reports store ad-system likeness
+    and result quality as separate scores, record the rubric/prompt version,
+    invalidate critics that score image content, and never score
+    source/customer image-content similarity. Source-identity cleanup is a
+    separate hard gate and cannot be averaged into likeness.
 
 Source curation is the cheapest quality control: only proven, designer-grade
 ads enter `meta_ad_candidates/`, recorded as an explicit curation flag in
