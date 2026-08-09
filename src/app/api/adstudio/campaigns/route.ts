@@ -23,6 +23,7 @@ import {
   cancelQueuedJob,
   enqueueQueuedJob,
 } from "@/lib/providers/job-queue-enqueue";
+import { ensureRuntimeProviderToken } from "@/lib/providers/provider-connections";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -226,6 +227,16 @@ export async function POST(request: NextRequest) {
     if (firstAdError) {
       return NextResponse.json({ error: firstAdError }, { status: 400 });
     }
+    // The image key is configured only in Vercel. Before charging the customer,
+    // idempotently ensure the durable VPS worker can read that same credential
+    // from the encrypted service vault. No secret crosses the request boundary
+    // or enters VPS configuration.
+    const funnelService = createSupabaseServiceClient();
+    await ensureRuntimeProviderToken({
+      serviceSupabase: funnelService,
+      provider: "openai",
+      accessToken: process.env.OPENAI_API_KEY,
+    });
     const creditGate = await reserveAdStudioGenerationCredits({
       supabase: context.supabase,
       workspaceId: context.access.workspaceId,
@@ -238,7 +249,6 @@ export async function POST(request: NextRequest) {
     }
 
     creditReservation = creditGate.reservation;
-    const funnelService = createSupabaseServiceClient();
     await recordWorkspaceFunnelEventBestEffort(funnelService, {
       eventName: "template_selected",
       workspaceId: context.access.workspaceId,

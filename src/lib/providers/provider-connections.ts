@@ -145,6 +145,36 @@ export async function upsertRuntimeProviderToken(input: {
   if (error) throw new Error(`runtime_provider_token_vault_upsert failed: ${error.message}`);
 }
 
+/**
+ * Ensure a Vercel-owned runtime credential is available to durable workers.
+ * The caller supplies only a service-role client and the server-only value;
+ * the token never crosses an HTTP boundary or enters a worker environment.
+ */
+export async function ensureRuntimeProviderToken(input: {
+  serviceSupabase: SupabaseServiceClient;
+  provider: RuntimeProvider;
+  accessToken: string | null | undefined;
+}): Promise<void> {
+  const accessToken = input.accessToken?.trim();
+  if (!accessToken) {
+    throw new Error(`The ${input.provider} runtime credential is not configured.`);
+  }
+
+  const existing = await loadRuntimeProviderToken(input.serviceSupabase, input.provider);
+  if (existing === accessToken) return;
+
+  await upsertRuntimeProviderToken({
+    serviceSupabase: input.serviceSupabase,
+    provider: input.provider,
+    accessToken,
+  });
+
+  const verified = await loadRuntimeProviderToken(input.serviceSupabase, input.provider);
+  if (verified !== accessToken) {
+    throw new Error(`The ${input.provider} runtime credential could not be verified.`);
+  }
+}
+
 export async function upsertProviderConnectionWithTokens(input: {
   serviceSupabase: SupabaseServiceClient;
   workspaceId: string;
