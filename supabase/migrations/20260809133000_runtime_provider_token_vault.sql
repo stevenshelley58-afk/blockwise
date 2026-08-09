@@ -28,12 +28,14 @@ set id = gen_random_uuid()
 where id is null;
 
 alter table private.provider_token_vault
-  alter column id set not null,
-  alter column provider_connection_id drop not null,
-  alter column workspace_id drop not null;
+  alter column id set not null;
 
 alter table private.provider_token_vault
   drop constraint if exists provider_token_vault_pkey;
+
+alter table private.provider_token_vault
+  alter column provider_connection_id drop not null,
+  alter column workspace_id drop not null;
 
 alter table private.provider_token_vault
   add constraint provider_token_vault_pkey primary key (id),
