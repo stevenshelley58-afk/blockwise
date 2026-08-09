@@ -26,12 +26,7 @@ test("campaign generation route uses the shared render-credit reservation", () =
   assert.match(source, /@\/lib\/adstudio\/generation-credits/);
   assert.match(source, /reserveAdStudioGenerationCredits/);
   assert.match(source, /refundOutstandingWorkspaceCredits/);
-  assert.match(source, /body\.clientMutationId \?\? request\.headers\.get\("idempotency-key"\)/);
-  assert.match(source, /clientMutationId[^\n]+dedupKey/);
-  const client = read("src/components/adstudio/use-campaign-actions.ts");
-  assert.match(client, /pendingGenerationRef/);
-  assert.match(client, /clientMutationId/);
-  assert.match(client, /crypto\.randomUUID\(\)/);
+  assert.match(source, /clientMutationId \?\? request\.headers\.get\("idempotency-key"\)/);
   assert.match(read("src/lib/adstudio/generate-template-campaign.ts"), /resolveAdStudioGenerationBrandKit/);
 });
 

@@ -106,37 +106,4 @@ requireNoError(
   "Upsert workspace member",
 );
 
-// Approved brand kit for the v2-loop e2e: the loop assumes a ready workspace.
-// Fixed deterministic id (idempotent upsert). This is test fixture data, not
-// product data.
-const E2E_BRAND_KIT_ID = "00000000-0000-4000-8000-00000000e2e2";
-const now = new Date().toISOString();
-requireNoError(
-  await supabase.from("adstudio_brand_kits").upsert(
-    {
-      id: E2E_BRAND_KIT_ID,
-      workspace_id: ADSTUDIO_E2E_WORKSPACE_ID,
-      source_type: "website",
-      source_url: "https://e2e-realty.example",
-      business_name: "E2E Realty",
-      market_country: "AU",
-      market_region: "WA",
-      identity_json: { businessName: "E2E Realty", tradingName: "E2E Realty" },
-      logos_json: { primaryLogoUrl: null, darkLogoUrl: null, faviconUrl: null },
-      colours_json: { primary: "#1f242b", secondary: "#8a94a3", accent: "#2f7cf6", background: "#ffffff", text: "#111111" },
-      typography_json: {},
-      tone_json: { voice: "friendly", preferredPhrases: [], avoid: [] },
-      visual_style_json: {},
-      compliance_json: {},
-      contact_json: {},
-      review_status: "approved",
-      locked_fields_json: [],
-      created_by: authUser.id,
-      updated_at: now,
-    },
-    { onConflict: "id" },
-  ),
-  "Upsert approved brand kit",
-);
-
 console.log(`Seeded AdStudio e2e fixture: ${email} → workspace ${ADSTUDIO_E2E_WORKSPACE_ID}`);

@@ -5,8 +5,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { errorResponse, requireAdStudioRequest } from "@/lib/adstudio/http";
 import { deriveAndPersistTemplateTextLayers } from "@/lib/adstudio/layer-derivation";
 import { buildingTextLayers } from "@/lib/adstudio/text-layer-state";
-import type { AdStudioCreative, AdStudioLegacyCanvas } from "@/lib/adstudio/types";
-import { isAdDocInstanceShape } from "@/lib/adstudio/v2/template-doc";
+import type { AdStudioCreative } from "@/lib/adstudio/types";
 import { deterministicEditingReadiness, resolveAdStudioTemplate } from "@/lib/adstudio/templates";
 import { checkRateLimit } from "@/lib/rate-limit";
 
@@ -38,17 +37,7 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
   if (loadError) return NextResponse.json({ error: loadError.message }, { status: 500 });
   if (!row) return NextResponse.json({ error: "Creative not found." }, { status: 404 });
 
-  const storedCanvas = row.canvas_json as AdStudioCreative["canvas"];
-  if (isAdDocInstanceShape(storedCanvas)) {
-    return NextResponse.json(
-      {
-        code: "v2_document_edit",
-        error: `This creative uses the v2 document editor. Send edits to /api/adstudio/creatives/${id}/doc.`,
-      },
-      { status: 409 },
-    );
-  }
-  const canvas: AdStudioLegacyCanvas = storedCanvas;
+  const canvas = row.canvas_json as AdStudioCreative["canvas"];
   const cloneObject = canvas?.objects?.[0];
   const isClone = canvas?.objects?.length === 1 && cloneObject?.objectId === "template_clone_image";
   if (!isClone) {

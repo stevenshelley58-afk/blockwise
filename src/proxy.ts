@@ -5,52 +5,11 @@ import { isFeatureRouteAvailable } from "@/lib/features/route-availability";
 import { refreshSupabaseSession } from "@/lib/supabase/proxy";
 
 const AUTHENTICATED_API_PREFIXES = ["/api/adstudio/", "/api/operator/"] as const;
-// Plates and patches preserve source-ad pixels. Their logical URLs are never
-// browser resources: the bytes live in the server bundle, and both direct and
-// optimizer requests fail identically. Safe gallery samples remain public.
-const TEMPLATE_ASSET_PREFIX = "/adstudio-templates/";
-
-function isSourceDerivedTemplateAsset(pathname: string): boolean {
-  if (!pathname.startsWith(TEMPLATE_ASSET_PREFIX)) return false;
-  const filename = pathname.slice(pathname.lastIndexOf("/") + 1);
-  return filename.startsWith("plate-") || filename.startsWith("patch-");
-}
-
-function optimizedAssetPath(request: NextRequest): string | null {
-  if (request.nextUrl.pathname !== "/_next/image") return null;
-  const raw = request.nextUrl.searchParams.get("url");
-  if (!raw) return null;
-  try {
-    const target = new URL(raw, request.nextUrl);
-    return target.pathname;
-  } catch {
-    return null;
-  }
-}
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const optimizedPath = optimizedAssetPath(request);
 
-  // No product surface optimizes v2 render parts. Reject this path for every
-  // caller so an authenticated request can never seed a shared optimizer cache.
-  if (optimizedPath && isSourceDerivedTemplateAsset(optimizedPath)) {
-    return new NextResponse("Not found", {
-      status: 404,
-      headers: { "Cache-Control": "private, no-store", "Content-Type": "text/plain; charset=utf-8" },
-    });
-  }
-  if (pathname === "/_next/image") return NextResponse.next();
-  if (isSourceDerivedTemplateAsset(pathname)) {
-    return new NextResponse("Not found", {
-      status: 404,
-      headers: { "Cache-Control": "private, no-store", "Content-Type": "text/plain; charset=utf-8" },
-    });
-  }
-
-  // Dev tooling (render harness, render smoke) may run on localhost and on
-  // flag-gated Preview deploys; it must never exist on production.
-  if (process.env.VERCEL_ENV === "production" && pathname.startsWith("/api/dev/")) {
+  if (process.env.NODE_ENV === "production" && pathname.startsWith("/api/dev/")) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
@@ -70,13 +29,10 @@ export async function proxy(request: NextRequest) {
   ) {
     return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
   }
+
   return session.response;
 }
 
 export const config = {
-  matcher: [
-    "/_next/image",
-    "/adstudio-templates/:path*",
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|ico|woff2?)$).*)",
-  ],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|ico|woff2?)$).*)"],
 };

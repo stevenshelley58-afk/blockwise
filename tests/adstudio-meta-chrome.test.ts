@@ -49,16 +49,9 @@ test("primary text, headline, description and CTA open their exact Edit field", 
   assert.match(workbench, /selectedElement=\{selectedElement\}/);
 });
 
-test("workbench wraps the post-clone editor in Meta chrome", () => {
-  // Track B: the in-place editor is extracted once and wrapped by either the
-  // v2 MetaFrame (flag on) or the legacy MetaChromePreview (flag off) — both
-  // live inside the clone editor stage with PreviewFit scaling.
-  assert.match(workbench, /if \(isCloneCreative\(currentCreative\)\) \{/);
-  assert.match(workbench, /const cloneEditor = \(\s*<InPlaceAdEditor/);
-  assert.match(workbench, /const frameChrome = useV2Frames \? \(\s*<MetaFrame/);
-  assert.match(workbench, /<MetaChromePreview/);
-  assert.match(workbench, /\{cloneEditor\}\s*<\/MetaChromePreview>/);
-  assert.match(workbench, /\{frameChrome\}\s*<\/PreviewFit>/);
+test("workbench wraps the post-clone editor in MetaChromePreview", () => {
+  assert.match(workbench, /if \(isCloneCreative\(currentCreative\)\) \{\s*return \(\s*<div className="studio-clone-editor-wrap">/);
+  assert.match(workbench, /<MetaChromePreview[\s\S]*?<InPlaceAdEditor[\s\S]*?creative=\{currentCreative\}[\s\S]*?<\/MetaChromePreview>/);
   assert.doesNotMatch(workbench, /FabricAdEditor|fabric-ad-editor/);
 });
 

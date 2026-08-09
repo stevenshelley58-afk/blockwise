@@ -9,7 +9,6 @@ import {
   ADVERTISER_DOMAIN_PLACEHOLDER,
   resolveAdvertiserDomain,
 } from "../src/lib/adstudio/advertiser-domain.ts";
-import { creativeDimensions } from "../src/lib/adstudio/creative-preview.ts";
 import { buildCloneTestPack } from "./adstudio-clone-fixture.ts";
 
 const textDecoder = new TextDecoder();
@@ -19,7 +18,8 @@ function completeCreativeRenders(pack: ReturnType<typeof buildCloneTestPack>) {
     creativeId: creative.creativeId,
     variantId: creative.variantId,
     format: creative.format,
-    ...creativeDimensions(creative),
+    width: creative.canvas.width,
+    height: creative.canvas.height,
     mimeType,
     dataUrl: `data:${mimeType};base64,${Buffer.from(`${creative.creativeId}:${mimeType}`).toString("base64")}`,
   })));

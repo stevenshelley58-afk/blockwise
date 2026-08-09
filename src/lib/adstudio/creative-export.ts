@@ -1,5 +1,4 @@
 import type { AdStudioCreative, AdStudioFormat } from "./types.ts";
-import { creativeDimensions } from "./creative-preview.ts";
 
 export type CreativeExportFormat = "png" | "jpeg";
 
@@ -37,13 +36,12 @@ export function findCreativeRender(
 
 export function decodeCreativeRender(
   render: CreativeExportRender,
-  expected: Pick<AdStudioCreative, "creativeId" | "format" | "canvas">,
+  expected: Pick<AdStudioCreative, "creativeId" | "format"> & { canvas: Pick<AdStudioCreative["canvas"], "width" | "height"> },
 ): Uint8Array {
   if (render.creativeId !== expected.creativeId || render.format !== expected.format) {
     throw new Error("Creative render does not match the export creative.");
   }
-  const dimensions = creativeDimensions(expected);
-  if (render.width !== dimensions.width || render.height !== dimensions.height) {
+  if (render.width !== expected.canvas.width || render.height !== expected.canvas.height) {
     throw new Error(`Creative render for ${expected.format} has invalid dimensions.`);
   }
 

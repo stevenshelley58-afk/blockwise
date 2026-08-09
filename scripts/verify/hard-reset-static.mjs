@@ -177,7 +177,7 @@ function checkAdStudioTemplateReset() {
 // and the anti-homogenization diversity checks) is enforced by the dedicated gate:
 //   scripts/verify/adstudio-templates.mjs
 // It deliberately has NO fixed-role schema. Do not reintroduce required-role checks
-// here or there. See hermes/skills/adstudio-template-builder-v2/SKILL.md.
+// here or there. See hermes/skills/adstudio-template-builder/SKILL.md.
 
 function checkHermesQueueWorkerContract() {
   const runtimeFiles = {

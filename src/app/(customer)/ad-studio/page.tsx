@@ -1,7 +1,5 @@
 import { AdStudioWorkbench } from "@/components/adstudio/ad-studio-workbench";
 import { createEmptyAdStudioCampaignPack, listOfferTemplates, type AdStudioBrandKit } from "@/lib/adstudio";
-import { adstudioTemplatesV2Enabled } from "@/lib/adstudio/v2/flags";
-import { v2ReadyTemplatesAsV1 } from "@/lib/adstudio/v2/gallery-adapter";
 import {
   ADSTUDIO_EMBEDDED_ASSET_LIMIT,
   applyBrandAssetRows,
@@ -77,8 +75,6 @@ export default async function AdStudioPage({ searchParams }: { searchParams?: Se
         showBrandSetupPrompt={showBrandSetupPrompt}
         initialMediaAssets={initialMediaAssets}
         initialMediaCursor={assetsPage.nextCursor}
-        useV2Frames={adstudioTemplatesV2Enabled()}
-        v2Templates={adstudioTemplatesV2Enabled() ? v2ReadyTemplatesAsV1() : []}
       />
     </>
   );

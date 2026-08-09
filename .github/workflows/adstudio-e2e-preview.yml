@@ -43,7 +43,6 @@ jobs:
       ADSTUDIO_E2E_WORKSPACE_ID: 00000000-0000-4000-8000-0000000000e2
       ADSTUDIO_E2E_EMAIL: adstudio-e2e@blockwise.test
       ADSTUDIO_E2E_PASSWORD: ${{ secrets.ADSTUDIO_E2E_PASSWORD }}
-      ADSTUDIO_E2E_V2: "1"
     steps:
       - name: Require the e2e secret
         run: |
@@ -78,13 +77,6 @@ jobs:
           # landing page is always fetchable and never an example.* host.
           ADSTUDIO_E2E_BRAND_URL: ${{ inputs.base_url }}
         run: npx playwright test e2e/adstudio-real-loop.spec.ts --project=chromium
-
-      # Deterministic v2 loop: generation is a server render (no paid image
-      # calls), so it only exercises templates the preview env marks ready.
-      - name: Run Ad Studio v2 loop
-        env:
-          ADSTUDIO_E2E_BRAND_URL: ${{ inputs.base_url }}
-        run: npx playwright test e2e/adstudio-v2-loop.spec.ts --project=chromium
 
       # The DOM snapshot at the moment of failure, inlined into the job log —
       # the report artifact is not reachable from every diagnosis environment.

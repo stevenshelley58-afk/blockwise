@@ -74,10 +74,12 @@ test("production exports expose only explicitly priced provider candidates", () 
   const adapters = readFileSync("src/lib/adstudio/ai-providers.ts", "utf8");
   const publicApi = readFileSync("src/lib/adstudio/index.ts", "utf8");
   const googleAdapter = readFileSync("src/lib/adstudio/google-image-provider.ts", "utf8");
+  const styleProfile = readFileSync("src/lib/adstudio/style-profile.ts", "utf8");
 
   assert.doesNotMatch(adapters, /export function create(?:OpenAi|OpenRouter|AzureOpenAi|GoogleAi|Fal)(?:Text|Image|Vision)Provider/);
   assert.doesNotMatch(publicApi, /createOpenAi(?:Text|Image|Vision)Provider|createOpenRouter(?:Text|Image)Provider/);
   assert.match(googleAdapter, /createGoogleImageProvider\(\s*accounting: ProviderAccountingContext/);
+  assert.doesNotMatch(styleProfile, /\.generate\(/);
 });
 
 test("candidate adapters retain exact runtime version, price, currency, and billing basis", () => {

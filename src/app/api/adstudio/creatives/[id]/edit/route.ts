@@ -23,14 +23,7 @@ import {
   extendTextLayersValidity,
   MAX_TEXT_PATCH_BYTES,
 } from "@/lib/adstudio/text-layers";
-import {
-  normalizeCloneQa,
-  type AdStudioCloneQa,
-  type AdStudioCreative,
-  type AdStudioLegacyCanvas,
-  type AdStudioTextLayers,
-} from "@/lib/adstudio/types";
-import { isAdDocInstanceShape } from "@/lib/adstudio/v2/template-doc";
+import { normalizeCloneQa, type AdStudioCloneQa, type AdStudioCreative, type AdStudioTextLayers } from "@/lib/adstudio/types";
 import { checkRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
@@ -180,18 +173,7 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
     );
   }
 
-  const storedCanvas = row.canvas_json as AdStudioCreative["canvas"];
-  if (isAdDocInstanceShape(storedCanvas)) {
-    await releaseClaim();
-    return NextResponse.json(
-      {
-        code: "v2_document_edit",
-        error: `This creative uses the v2 document editor. Send edits to /api/adstudio/creatives/${id}/doc.`,
-      },
-      { status: 409 },
-    );
-  }
-  const canvas: AdStudioLegacyCanvas = storedCanvas;
+  const canvas = row.canvas_json as AdStudioCreative["canvas"];
   const cloneObject = canvas?.objects?.[0];
   const isClone = canvas?.objects?.length === 1 && cloneObject?.objectId === "template_clone_image";
   if (!isClone) {
@@ -569,15 +551,6 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
   }
   if (execution.state === "completed") {
     const completedCanvas = execution.canvas as AdStudioCreative["canvas"];
-    if (isAdDocInstanceShape(completedCanvas)) {
-      return NextResponse.json(
-        {
-          code: "v2_document_edit",
-          error: `This creative uses the v2 document editor. Send edits to /api/adstudio/creatives/${id}/doc.`,
-        },
-        { status: 409 },
-      );
-    }
     const completedImage = completedCanvas.objects?.[0]?.content ?? completedCanvas.objects?.[0]?.assetId;
     if (!completedImage) return NextResponse.json({ error: "The saved edit is incomplete." }, { status: 500 });
     return NextResponse.json({

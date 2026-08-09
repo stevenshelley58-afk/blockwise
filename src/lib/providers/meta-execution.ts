@@ -1,10 +1,7 @@
 import { createHash } from "node:crypto";
 
-import type { AdStudioCampaignPack, AdStudioCreative } from "../adstudio/index.ts";
+import type { AdStudioCampaignPack } from "../adstudio/index.ts";
 import { deterministicUuid } from "../adstudio/id.ts";
-import { remapLegacyMetaCta } from "../adstudio/meta-cta.ts";
-import { metaAssetFeedEnabled } from "../adstudio/v2/flags.ts";
-import type { AdDocInstance, TemplatePublishDefaults } from "../adstudio/v2/template-doc.ts";
 import { evaluatePublishReadiness, type ApprovalStatus, type ProviderConnectionStatus } from "../publishing/readiness.ts";
 import type { ComplianceStatus } from "../compliance/real-estate-policy.ts";
 import type { createSupabaseServiceClient } from "../supabase/service.ts";
@@ -16,28 +13,6 @@ const META_PROVIDER_OBJECT_NAME_MAX_LENGTH = 255;
 const META_AD_CREATIVE_NAME_MAX_LENGTH = 100;
 const META_HOUSING_MIN_RADIUS_KM = 25;
 const META_LOWEST_COST_BID_STRATEGY = "LOWEST_COST_WITHOUT_CAP";
-
-// Advantage+ feature keys + default enrollment live in the shared v2 module;
-// re-exported so existing importers keep working.
-import { META_CREATIVE_FEATURE_KEYS, buildDefaultMetaCreativeFeatures } from "../adstudio/v2/creative-features.ts";
-export { META_CREATIVE_FEATURE_KEYS, buildDefaultMetaCreativeFeatures };
-
-/**
- * Placement positions each asset_feed customization rule covers. Ad set
- * targeting must be a superset of every rule position while the flag is on.
- */
-const ASSET_FEED_RULE_POSITIONS = {
-  feed: {
-    publisherPlatforms: ["facebook", "instagram"],
-    facebookPositions: ["feed", "marketplace", "video_feeds", "search"],
-    instagramPositions: ["stream", "explore", "explore_home", "profile_feed", "ig_search"],
-  },
-  story: {
-    publisherPlatforms: ["facebook", "instagram"],
-    facebookPositions: ["story"],
-    instagramPositions: ["story"],
-  },
-} as const;
 
 export type MetaExecutionAdapter = "marketing_api" | "ads_cli" | "ads_mcp";
 export type MetaPublishPlanStatus = "draft" | "approved" | "publishing" | "paused_live" | "failed";
@@ -145,12 +120,6 @@ export type MetaPublishCreativePlan = {
   adStudioCreativeId: string | null;
   format: string | null;
   asset?: MetaCreativeAssetPlan | null;
-  /**
-   * v2: per-format render assets for the two-image asset_feed path. Feed is
-   * the 4:5 canonical render; story the 9:16 one. Null until Track E feeds
-   * real values from the instance doc.
-   */
-  formatAssets?: { feed: MetaCreativeAssetPlan | null; story: MetaCreativeAssetPlan | null } | null;
 };
 
 export type MetaAdVariantTag = {
@@ -224,10 +193,6 @@ export type MetaPublishPlan = {
   creatives: MetaPublishCreativePlan[];
   ads: MetaPublishAdPlan[];
   tracking: MetaPublishTrackingPlan;
-  /** Explicit Advantage+ enrollment from the template publish block; null = all OPT_OUT defaults. */
-  creativeFeatures: Record<string, "OPT_IN" | "OPT_OUT"> | null;
-  /** Snapshot of META_ASSET_FEED_ENABLED at plan build — payloads never read process env at execution time. */
-  assetFeedEnabled: boolean;
   requestLog: MetaProviderLogEntry[];
   responseLog: MetaProviderLogEntry[];
   reconciledObjects: MetaReconciledObjects;
@@ -350,8 +315,7 @@ export function buildMetaPublishPlan(input: {
   const selectedVariantIds = (input.variantIds ?? []).filter((id) => typeof id === "string" && id.trim().length > 0);
   const abTest = selectedVariantIds.length > 0;
   const campaignPack = abTest ? filterPackToVariants(input.campaignPack, selectedVariantIds) : input.campaignPack;
-  const templatePublish = readV2TemplatePublish(campaignPack);
-  const controls = normalizeMetaPublishControls(input.controls, campaignPack, templatePublish?.placements);
+  const controls = normalizeMetaPublishControls(input.controls, campaignPack);
   const setup = normalizeMetaConnectionSetup(input.setup);
   const existingMetaCampaignId = input.existingMetaCampaignId?.trim() || null;
   const campaign: MetaPublishCampaignPlan = {
@@ -366,17 +330,9 @@ export function buildMetaPublishPlan(input: {
       : "campaign",
   };
   const adSets = buildAdSetPlans(campaignPack, controls);
-  const leadForms = buildLeadFormPlans(campaignPack, setup, controls.destinationUrl, templatePublish);
-  const creatives = buildCreativePlans(campaignPack, setup, templatePublish);
+  const leadForms = buildLeadFormPlans(campaignPack, setup, controls.destinationUrl);
+  const creatives = buildCreativePlans(campaignPack, setup);
   const ads = buildAdPlans(campaignPack);
-  const creativeFeatures = templatePublish?.creativeFeatures ?? buildDefaultMetaCreativeFeatures();
-  const assetFeedEnabled = metaAssetFeedEnabled()
-    && creatives.some((creative) => creative.formatAssets?.story);
-  if (assetFeedEnabled) {
-    for (const adSet of adSets) {
-      adSet.targeting = unionAssetFeedPositions(adSet.targeting);
-    }
-  }
   const tracking: MetaPublishTrackingPlan = {
     utmSource: "meta",
     utmMedium: "paid_social",
@@ -393,8 +349,6 @@ export function buildMetaPublishPlan(input: {
     creatives,
     ads,
     tracking,
-    creativeFeatures,
-    assetFeedEnabled,
   });
   const idempotencyKey = buildMetaPlanIdempotencyKey({
     workspaceId: input.workspaceId,
@@ -425,8 +379,6 @@ export function buildMetaPublishPlan(input: {
     creatives,
     ads,
     tracking,
-    creativeFeatures,
-    assetFeedEnabled,
     requestLog: [],
     responseLog: [],
     reconciledObjects: {
@@ -829,18 +781,10 @@ async function publishWithMarketingApi(
         reconciledObjects.creativeIds[creative.localId] = existingId;
       } else {
         const imageHash = await resolveCreativeImageHash(plan, creative, input, requestLog, responseLog);
-        // Two-image path: flag on AND this creative carries a story render.
-        // The combined lead-ad + asset_feed shape is probe-gated (§9.2) —
-        // until the probe passes, the flag must stay off in production.
-        const useAssetFeed = plan.assetFeedEnabled && Boolean(creative.formatAssets?.story);
-        const storyHash = useAssetFeed
-          ? await resolveStoryImageHash(plan, creative, input, requestLog, responseLog)
-          : null;
         const leadFormId = reconciledObjects.leadFormIds[creative.leadFormLocalId];
         const linkBase = plan.controls.destinationUrl?.trim() || plan.setup.privacyPolicyUrl;
         const utmLink = buildUtmLink(linkBase, plan.tracking, creative.localId);
-        const degreesOfFreedom = buildDegreesOfFreedomSpec(plan.creativeFeatures);
-        const payload: Record<string, unknown> = {
+        const response = await postMetaObject(input, requestLog, responseLog, `creative.${creative.localId}`, `/${plan.setup.metaAdAccountId}/adcreatives`, {
           name: providerName,
           object_story_spec: {
             page_id: creative.pageId,
@@ -851,9 +795,6 @@ async function publishWithMarketingApi(
               description: creative.description,
               link: utmLink,
               ...(imageHash ? { image_hash: imageHash } : {}),
-              ...(useAssetFeed && imageHash && storyHash ? {
-                asset_feed_spec: buildAssetFeedSpec(imageHash, storyHash),
-              } : {}),
               call_to_action: {
                 type: creative.cta,
                 value: {
@@ -862,9 +803,7 @@ async function publishWithMarketingApi(
               },
             },
           },
-          ...degreesOfFreedom,
-        };
-        const response = await postMetaObject(input, requestLog, responseLog, `creative.${creative.localId}`, `/${plan.setup.metaAdAccountId}/adcreatives`, payload);
+        });
         reconciledObjects.creativeIds[creative.localId] = requireMetaId(response, "creative");
       }
       await checkpointMetaPublishProgress(input, requestLog, responseLog, reconciledObjects);
@@ -939,89 +878,6 @@ async function resolveCreativeImageHash(
   const fromMap = imageMap?.[filename]?.hash ?? Object.values(imageMap ?? {})[0]?.hash;
 
   return fromMap ?? (typeof response.hash === "string" ? response.hash : null);
-}
-
-/**
- * Upload the 9:16 render for the asset_feed path. The feed image already
- * resolves through resolveCreativeImageHash; the story render lives under
- * formatAssets.story and uploads with its own /adimages call so both hashes
- * are account-scoped and reusable.
- */
-async function resolveStoryImageHash(
-  plan: MetaPublishPlan,
-  creative: MetaPublishCreativePlan,
-  input: MetaPublishExecutionInput,
-  requestLog: MetaProviderLogEntry[],
-  responseLog: MetaProviderLogEntry[],
-): Promise<string | null> {
-  const story = creative.formatAssets?.story;
-  if (!story) return null;
-  if (story.imageHash) return story.imageHash;
-  if (story.type !== "image" || story.source !== "inline" || !story.bytesBase64) return null;
-
-  const filename = story.filename ?? `${creative.localId}-story.png`;
-  const response = await postMetaObject(input, requestLog, responseLog, `asset.${creative.localId}.story`, `/${plan.setup.metaAdAccountId}/adimages`, {
-    bytes: story.bytesBase64,
-  });
-  const imageMap = response.images as Record<string, { hash?: string }> | undefined;
-  return imageMap?.[filename]?.hash ?? Object.values(imageMap ?? {})[0]?.hash ?? (typeof response.hash === "string" ? response.hash : null);
-}
-
-function buildAssetFeedSpec(feedHash: string, storyHash: string): Record<string, unknown> {
-  return {
-    images: [
-      { hash: feedHash, adlabels: [{ name: "feed_image" }] },
-      { hash: storyHash, adlabels: [{ name: "story_image" }] },
-    ],
-    ad_formats: ["SINGLE_IMAGE"],
-    optimization_type: "PLACEMENT",
-    asset_customization_rules: [
-      {
-        customization_spec: {
-          publisher_platforms: [...ASSET_FEED_RULE_POSITIONS.feed.publisherPlatforms],
-          facebook_positions: [...ASSET_FEED_RULE_POSITIONS.feed.facebookPositions],
-          instagram_positions: [...ASSET_FEED_RULE_POSITIONS.feed.instagramPositions],
-        },
-        image_label: { name: "feed_image" },
-        priority: 1,
-      },
-      {
-        customization_spec: {
-          publisher_platforms: [...ASSET_FEED_RULE_POSITIONS.story.publisherPlatforms],
-          facebook_positions: [...ASSET_FEED_RULE_POSITIONS.story.facebookPositions],
-          instagram_positions: [...ASSET_FEED_RULE_POSITIONS.story.instagramPositions],
-        },
-        image_label: { name: "story_image" },
-        priority: 2,
-      },
-    ],
-  };
-}
-
-/**
- * Explicit Advantage+ enrollment: what the template declares, everything
- * else OPT_OUT. Keys Meta no longer accepts are dropped with a log line
- * (Meta renames these periodically; a stale key must not kill a publish).
- */
-function buildDegreesOfFreedomSpec(
-  templateFeatures: Record<string, "OPT_IN" | "OPT_OUT"> | null,
-): Record<string, unknown> {
-  const features: Record<string, { enroll_status: string }> = {};
-  for (const key of META_CREATIVE_FEATURE_KEYS) {
-    features[key] = { enroll_status: templateFeatures?.[key] ?? "OPT_OUT" };
-  }
-  for (const [key, value] of Object.entries(templateFeatures ?? {})) {
-    if (!(key in features)) {
-      console.warn(`[meta-execution] unknown Advantage+ feature key "${key}" from template; dropping from degrees_of_freedom_spec.`);
-      continue;
-    }
-    features[key] = { enroll_status: value };
-  }
-  return {
-    degrees_of_freedom_spec: {
-      creative_features_spec: features,
-    },
-  };
 }
 
 async function reconcileMetaObjects(
@@ -1508,21 +1364,6 @@ async function getMetaObjectStatus(
   };
 }
 
-function unionAssetFeedPositions(targeting: Record<string, unknown>): Record<string, unknown> {
-  // Ad set placements must cover every asset_feed rule position. Merge the
-  // rule positions with whatever the operator selected; publisher platforms
-  // stay as the operator chose (rules never add a platform that wasn't asked
-  // for beyond facebook/instagram, which are the only ones the rules use).
-  const existingFb = Array.isArray(targeting.facebook_positions) ? (targeting.facebook_positions as string[]) : [];
-  const existingIg = Array.isArray(targeting.instagram_positions) ? (targeting.instagram_positions as string[]) : [];
-  const fb = [...new Set([...existingFb, ...ASSET_FEED_RULE_POSITIONS.feed.facebookPositions, ...ASSET_FEED_RULE_POSITIONS.story.facebookPositions])];
-  const ig = [...new Set([...existingIg, ...ASSET_FEED_RULE_POSITIONS.feed.instagramPositions, ...ASSET_FEED_RULE_POSITIONS.story.instagramPositions])];
-  const platforms = Array.isArray(targeting.publisher_platforms) && (targeting.publisher_platforms as string[]).length > 0
-    ? targeting.publisher_platforms
-    : ["facebook", "instagram"];
-  return { ...targeting, publisher_platforms: platforms, facebook_positions: fb, instagram_positions: ig };
-}
-
 function buildAdSetPlans(pack: AdStudioCampaignPack, controls: MetaPublishControls): MetaPublishAdSetPlan[] {
   const suburb = pack.campaign.market.suburb;
   const targeting = buildTargeting(controls);
@@ -1594,105 +1435,22 @@ function buildTargeting(controls: MetaPublishControls): Record<string, unknown> 
   };
 }
 
-type V2TemplatePublishPlan = Pick<
-  TemplatePublishDefaults,
-  "cta" | "leadForm" | "placements" | "formatRouting" | "creativeFeatures"
->;
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+function buildLeadFormPlans(pack: AdStudioCampaignPack, setup: MetaConnectionSetup, destinationUrl?: string): MetaPublishLeadFormPlan[] {
+  return pack.copyPacks.slice(0, 6).map((copy, index) => ({
+    localId: `form_${index + 1}`,
+    name: `${pack.campaign.market.suburb} ${copy.meta.leadForm.headline}`,
+    headline: copy.meta.leadForm.headline,
+    questions: copy.meta.leadForm.questions,
+    privacyPolicyUrl: setup.privacyPolicyUrl,
+    thankYouTitle: copy.meta.leadForm.thankYouScreen.title,
+    thankYouBody: copy.meta.leadForm.thankYouScreen.body,
+    thankYouWebsiteUrl: destinationUrl ?? setup.privacyPolicyUrl,
+  }));
 }
 
-/** Read only the persisted, validated v2 publish contract — never the gallery. */
-function readV2TemplatePublish(pack: AdStudioCampaignPack): V2TemplatePublishPlan | null {
-  const snapshot = pack.campaign.templateSnapshot;
-  if (!isRecord(snapshot) || snapshot.schema !== "adstudio.template.v2") return null;
-  if (!isRecord(snapshot.publish)) {
-    throw new Error("This v2 campaign is missing its immutable template publish snapshot. Regenerate it before publishing.");
-  }
-
-  const publish = snapshot.publish;
-  const placements = publish.placements;
-  const routing = publish.formatRouting;
-  const leadForm = publish.leadForm;
-  const creativeFeatureKeys = isRecord(publish.creativeFeatures)
-    ? Object.keys(publish.creativeFeatures)
-    : [];
-  if (
-    typeof publish.cta !== "string"
-    || !isRecord(placements)
-    || !Array.isArray(placements.publisherPlatforms)
-    || !placements.publisherPlatforms.every((value) => value === "facebook" || value === "instagram")
-    || !Array.isArray(placements.facebookPositions)
-    || !placements.facebookPositions.every((value) => typeof value === "string")
-    || !Array.isArray(placements.instagramPositions)
-    || !placements.instagramPositions.every((value) => typeof value === "string")
-    || !isRecord(routing)
-    || routing.feed !== "4:5"
-    || (routing.story !== "9:16" && routing.story !== null)
-    || !isRecord(leadForm)
-    || typeof leadForm.headline !== "string"
-    || !Array.isArray(leadForm.questions)
-    || !leadForm.questions.every((value) => typeof value === "string")
-    || !isRecord(leadForm.thankYou)
-    || typeof leadForm.thankYou.title !== "string"
-    || typeof leadForm.thankYou.body !== "string"
-    || !isRecord(publish.creativeFeatures)
-    || creativeFeatureKeys.length !== META_CREATIVE_FEATURE_KEYS.length
-    || !META_CREATIVE_FEATURE_KEYS.every((key) => creativeFeatureKeys.includes(key))
-    || !Object.values(publish.creativeFeatures).every((value) => value === "OPT_IN" || value === "OPT_OUT")
-  ) {
-    throw new Error("This v2 campaign has an invalid template publish snapshot. Regenerate it before publishing.");
-  }
-
-  return {
-    cta: publish.cta as V2TemplatePublishPlan["cta"],
-    leadForm: {
-      headline: leadForm.headline,
-      questions: [...leadForm.questions] as string[],
-      thankYou: {
-        title: leadForm.thankYou.title,
-        body: leadForm.thankYou.body,
-      },
-    },
-    placements: {
-      publisherPlatforms: [...placements.publisherPlatforms] as Array<"facebook" | "instagram">,
-      facebookPositions: [...placements.facebookPositions] as string[],
-      instagramPositions: [...placements.instagramPositions] as string[],
-    },
-    formatRouting: { feed: "4:5", story: routing.story },
-    creativeFeatures: { ...publish.creativeFeatures } as Record<string, "OPT_IN" | "OPT_OUT">,
-  };
-}
-
-function buildLeadFormPlans(
-  pack: AdStudioCampaignPack,
-  setup: MetaConnectionSetup,
-  destinationUrl?: string,
-  templatePublish?: V2TemplatePublishPlan | null,
-): MetaPublishLeadFormPlan[] {
+function buildCreativePlans(pack: AdStudioCampaignPack, setup: MetaConnectionSetup): MetaPublishCreativePlan[] {
   return pack.copyPacks.slice(0, 6).map((copy, index) => {
-    const leadForm = templatePublish?.leadForm;
-    return {
-      localId: `form_${index + 1}`,
-      name: `${pack.campaign.market.suburb} ${leadForm?.headline ?? copy.meta.leadForm.headline}`,
-      headline: leadForm?.headline ?? copy.meta.leadForm.headline,
-      questions: leadForm?.questions ?? copy.meta.leadForm.questions,
-      privacyPolicyUrl: setup.privacyPolicyUrl,
-      thankYouTitle: leadForm?.thankYou.title ?? copy.meta.leadForm.thankYouScreen.title,
-      thankYouBody: leadForm?.thankYou.body ?? copy.meta.leadForm.thankYouScreen.body,
-      thankYouWebsiteUrl: destinationUrl ?? setup.privacyPolicyUrl,
-    };
-  });
-}
-
-function buildCreativePlans(
-  pack: AdStudioCampaignPack,
-  setup: MetaConnectionSetup,
-  templatePublish?: V2TemplatePublishPlan | null,
-): MetaPublishCreativePlan[] {
-  return pack.copyPacks.slice(0, 6).map((copy, index) => {
-    const creative = selectCreativeForPublish(pack, copy.variantId, index);
+    const creative = pack.creatives.find((item) => item.variantId === copy.variantId) ?? pack.creatives[index] ?? null;
 
     return {
       localId: `creative_${index + 1}`,
@@ -1702,43 +1460,13 @@ function buildCreativePlans(
       headline: copy.meta.headlines[0] ?? pack.campaign.name,
       primaryText: copy.meta.primaryText[0] ?? pack.campaign.name,
       description: copy.meta.descriptions[0] ?? pack.campaign.audienceIntent,
-      // Legacy packs may carry CONTACT_US (undocumented for lead ads); the
-      // remap happens here, at payload-plan time, with a logged warning.
-      cta: remapLegacyMetaCta(templatePublish?.cta ?? copy.meta.cta),
+      cta: copy.meta.cta,
       leadFormLocalId: `form_${index + 1}`,
       adStudioCreativeId: creative?.creativeId ?? null,
       format: creative?.format ?? null,
       asset: creative ? buildCreativeImageAsset(creative) : null,
-      formatAssets: creative ? buildFormatAssets(creative, templatePublish?.formatRouting) : null,
     };
   });
-}
-
-function selectCreativeForPublish(pack: AdStudioCampaignPack, variantId: string, index: number): AdStudioCreative | null {
-  const matchingVariant = pack.creatives.filter((creative) => creative.variantId === variantId);
-  // A v2 instance stores the canonical feed and story renders together. Pick
-  // its feed creative as the primary asset regardless of array order.
-  return matchingVariant.find((creative) => isAdDocInstanceCanvas(creative.canvas) && creative.format === "4:5")
-    ?? matchingVariant[0]
-    ?? pack.creatives[index]
-    ?? null;
-}
-
-/**
- * v2 creatives store the canonical server renders per format under
- * canvas.renders (Track E). Absent today, this returns nulls and the publish
- * stays on the single-image path.
- */
-function buildFormatAssets(
-  creative: AdStudioCampaignPack["creatives"][number],
-  formatRouting?: TemplatePublishDefaults["formatRouting"],
-): { feed: MetaCreativeAssetPlan | null; story: MetaCreativeAssetPlan | null } | null {
-  const renders = canvasRenderReferences(creative.canvas);
-  if (!renders || (typeof renders.feed !== "string" && typeof renders.story !== "string")) return null;
-  return {
-    feed: buildRenderedImageAsset(creative.creativeId, "feed", renders.feed),
-    story: formatRouting?.story === null ? null : buildRenderedImageAsset(creative.creativeId, "story", renders.story),
-  };
 }
 
 /**
@@ -1749,10 +1477,6 @@ function buildFormatAssets(
  * publish worker just before upload, so plans stay small in the database.
  */
 function buildCreativeImageAsset(creative: AdStudioCampaignPack["creatives"][number]): MetaCreativeAssetPlan | null {
-  if (isAdDocInstanceCanvas(creative.canvas)) {
-    return buildRenderedImageAsset(creative.creativeId, "feed", creative.canvas.renders?.feed);
-  }
-
   const imageObject = creative.canvas.objects.find((object) => object.objectId === "template_clone_image")
     ?? creative.canvas.objects.find((object) => object.role === "primary_image");
   const reference = imageObject?.content?.trim() || imageObject?.assetId?.trim() || "";
@@ -1783,57 +1507,6 @@ function buildCreativeImageAsset(creative: AdStudioCampaignPack["creatives"][num
     source: "storage",
     mimeType: "image/png",
     filename: `${creative.creativeId}.png`,
-    storagePath,
-  };
-}
-
-function isAdDocInstanceCanvas(canvas: unknown): canvas is AdDocInstance {
-  return isRecord(canvas)
-    && canvas.schema === "adstudio.instance.v2"
-    && typeof canvas.templateId === "string"
-    && typeof canvas.templateHash === "string"
-    && (canvas.format === "4:5" || canvas.format === "9:16")
-    && isRecord(canvas.values)
-    && Array.isArray(canvas.overrides);
-}
-
-function canvasRenderReferences(canvas: unknown): { feed?: string; story?: string } | null {
-  if (!isRecord(canvas) || !isRecord(canvas.renders)) return null;
-  const feed = typeof canvas.renders.feed === "string" ? canvas.renders.feed : undefined;
-  const story = typeof canvas.renders.story === "string" ? canvas.renders.story : undefined;
-  return feed || story ? { feed, story } : null;
-}
-
-function buildRenderedImageAsset(
-  creativeId: string,
-  format: "feed" | "story",
-  reference: string | undefined,
-): MetaCreativeAssetPlan | null {
-  if (!reference?.trim()) return null;
-
-  const dataUrlMatch = reference.match(/^data:(image\/[a-z0-9.+-]+);base64,(.+)$/i);
-  if (dataUrlMatch) {
-    return {
-      type: "image",
-      source: "inline",
-      mimeType: dataUrlMatch[1],
-      filename: `${creativeId}-${format}.${dataUrlMatch[1] === "image/jpeg" ? "jpg" : "png"}`,
-      bytesBase64: dataUrlMatch[2],
-    };
-  }
-
-  const storagePath = reference.startsWith("/api/adstudio/media?")
-    ? new URL(reference, "https://blockwise.invalid").searchParams.get("path")
-    : isHttpUrl(reference) || reference.startsWith("data:")
-      ? null
-      : reference;
-  if (!storagePath) return null;
-
-  return {
-    type: "image",
-    source: "storage",
-    mimeType: "image/png",
-    filename: `${creativeId}-${format}.png`,
     storagePath,
   };
 }
@@ -1888,11 +1561,7 @@ export function buildAdVariantTagSuffix(tag: MetaAdVariantTag): string {
   return ` | bw:${parts.join(";")}`;
 }
 
-function normalizeMetaPublishControls(
-  controls: MetaPublishControls | undefined,
-  pack: AdStudioCampaignPack,
-  templatePlacements?: TemplatePublishDefaults["placements"],
-): MetaPublishControls {
+function normalizeMetaPublishControls(controls: MetaPublishControls | undefined, pack: AdStudioCampaignPack): MetaPublishControls {
   const destinationUrl = controls?.destinationUrl?.trim();
 
   return {
@@ -1906,15 +1575,9 @@ function normalizeMetaPublishControls(
       endTime: controls?.schedule?.endTime ?? null,
     },
     placements: {
-      publisherPlatforms: controls?.placements?.publisherPlatforms?.length
-        ? controls.placements.publisherPlatforms
-        : templatePlacements?.publisherPlatforms ?? ["facebook", "instagram"],
-      facebookPositions: controls?.placements
-        ? controls.placements.facebookPositions ?? []
-        : templatePlacements?.facebookPositions ?? [],
-      instagramPositions: controls?.placements
-        ? controls.placements.instagramPositions ?? []
-        : templatePlacements?.instagramPositions ?? [],
+      publisherPlatforms: controls?.placements?.publisherPlatforms?.length ? controls.placements.publisherPlatforms : ["facebook", "instagram"],
+      facebookPositions: controls?.placements?.facebookPositions ?? [],
+      instagramPositions: controls?.placements?.instagramPositions ?? [],
     },
   };
 }
@@ -2010,8 +1673,6 @@ type MetaPublishPlanRow = {
     ads?: MetaPublishAdPlan[];
     tracking?: MetaPublishTrackingPlan;
     controls?: MetaPublishControls;
-    creativeFeatures?: Record<string, "OPT_IN" | "OPT_OUT"> | null;
-    assetFeedEnabled?: boolean;
   };
   request_log_json: MetaProviderLogEntry[] | null;
   response_log_json: MetaProviderLogEntry[] | null;
@@ -2068,11 +1729,6 @@ function rowToPlan(row: MetaPublishPlanRow): MetaPublishPlan {
       utmCampaign: "meta-campaign",
       utmContentPrefix: "meta",
     },
-    // Plans stored before Track D have no enrollment snapshot: the explicit
-    // all-OPT_OUT default is exactly what they would have published anyway
-    // (Meta's unenrolled behaviour), so replaying them is safe.
-    creativeFeatures: planJson.creativeFeatures ?? null,
-    assetFeedEnabled: planJson.assetFeedEnabled ?? false,
     requestLog: row.request_log_json ?? [],
     responseLog: row.response_log_json ?? [],
     reconciledObjects: row.reconciled_objects_json ?? emptyReconciledObjects(),
