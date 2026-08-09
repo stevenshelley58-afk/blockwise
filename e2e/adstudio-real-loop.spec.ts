@@ -52,8 +52,8 @@ describeAdStudioRealLoop("Ad Studio real loop", () => {
         await templateGrid.evaluate((element) =>
           getComputedStyle(element).gridTemplateColumns.trim().split(/\s+/).filter(Boolean).length
         ),
-        `template gallery should have two columns at ${viewport.width}x${viewport.height}`,
-      ).toBe(2);
+        `template gallery should use its responsive column count at ${viewport.width}x${viewport.height}`,
+      ).toBe(viewport.width > 900 ? 4 : 2);
       await page.getByRole("button", { name: /^close$/i }).click();
       expect(
         await page.evaluate(
