@@ -446,10 +446,40 @@ export const adStudioTemplateAnalysisSchema = z.object({
   }),
 });
 
+export const adStudioCloneQualityReviewSchema = z.object({
+  schemaVersion: z.literal(1),
+  templateId: z.string().min(1),
+  format: z.enum(["4:5", "9:16"]),
+  attempt: z.number().int().positive(),
+  referenceHash: z.string().regex(/^[a-f0-9]{64}$/u),
+  candidateHash: z.string().regex(/^[a-f0-9]{64}$/u),
+  requestHash: z.string().regex(/^[a-f0-9]{64}$/u),
+  adSystemLikenessScore: z.number().min(0).max(10),
+  standaloneAdQualityScore: z.number().min(0).max(10),
+  excludedContentInfluencedScore: z.boolean(),
+  copyChecks: z.array(z.object({
+    key: z.string().min(1),
+    expected: z.string(),
+    rendered: z.string(),
+    exact: z.boolean(),
+  })),
+  assetChecks: z.array(z.object({
+    key: z.string().min(1),
+    used: z.boolean(),
+    faithful: z.boolean(),
+  })),
+  identityLeakage: z.array(z.string()),
+  defects: z.array(z.string()),
+  includedRationale: z.string(),
+  qualityRationale: z.string(),
+  suggestedCorrection: z.string(),
+});
+
 export type MetaLeadAdPack = z.infer<typeof metaLeadAdPackSchema>;
 export type GoogleSearchPack = z.infer<typeof googleSearchPackSchema>;
 export type GoogleAssetPack = z.infer<typeof googleAssetPackSchema>;
 export type AdStudioTemplateAnalysis = z.infer<typeof adStudioTemplateAnalysisSchema>;
+export type AdStudioCloneQualityReview = z.infer<typeof adStudioCloneQualityReviewSchema>;
 
 export type AdStudioPlatformCopyPack = {
   copyPackId: string;

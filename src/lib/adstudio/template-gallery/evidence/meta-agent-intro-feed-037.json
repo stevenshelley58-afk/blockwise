@@ -1,60 +1,172 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "templateId": "meta-agent-intro-feed-037",
-  "requestHash": "97790d0340d751108209564a1ce444f35030fb46603d1b9db86046323de5b7ce",
-  "inputHashes": {
-    "source_ad": "c2b76dc1425b5c96c6b6845349f1dc2bfe1f0b390805daf46e00029347a97a7a",
-    "property_photo": "b0dc48d057ef6a9a0077a054b4d7aff9636fa7e08c6e15f594b27f2c759cf986",
-    "agency_logo": "7d735a9ebddd710205edbdba4925e15ab952ba0ad52bb6e6a60a264553f1bcb3"
+  "templateHash": "b1d73bc80fa1d60e03ea0c8d7e11f636e78a7202407c46c00384e3c1b7499e76",
+  "sampleHash": "0d83ce43550e78876dc2958337f92e2fa438b9aaa90778058a5b1ad14f7c1064",
+  "rubricVersion": "adstudio-subject-invariant-clone-v1",
+  "thresholds": {
+    "adSystemLikeness": 9.5,
+    "standaloneAdQuality": 9
   },
-  "outputHash": "fe276e2b31e8a99c4aab6b3a62860b93aa717a1285e403ad806a1aaa2a7bf7f7",
-  "executionTransport": "codex_subscription_image_generation",
-  "reviewedAt": "2026-07-19T06:37:16.929Z",
-  "correctionCount": 0,
-  "qa": {
-    "passed": true,
-    "fullSizeReviewed": true,
-    "contractReview": {
-      "passed": true,
-      "notes": "Only source-visible customer inputs were declared."
-    },
-    "requestIntegrity": {
-      "passed": true,
-      "notes": "Executed the locked buildCloneImageRequest prompt with references in contractual order."
-    },
-    "copyChecks": [
+  "qualifiedAt": "2026-08-09T00:00:00.000Z",
+  "sample": {
+    "stage": "gallery_sample",
+    "requestHash": "9732d1c6150a1ee84791c59cf7cbb13c1cba7492d0405c8d62f1702f93316583",
+    "referenceHash": "c2b76dc1425b5c96c6b6845349f1dc2bfe1f0b390805daf46e00029347a97a7a",
+    "references": [
       {
-        "key": "headline",
-        "expected": "YOUR LOCAL PROPERTY PARTNER",
-        "exact": true
+        "index": 1,
+        "key": "source_ad",
+        "role": "source",
+        "contentHash": "c2b76dc1425b5c96c6b6845349f1dc2bfe1f0b390805daf46e00029347a97a7a"
       },
       {
-        "key": "subheadline",
-        "expected": "BOOK A NO-PRESSURE CALL",
-        "exact": true
-      },
-      {
-        "key": "body",
-        "expected": "Local insight, clear advice and a practical plan for your next property move.",
-        "exact": true
-      },
-      {
-        "key": "cta",
-        "expected": "BOOK A CALL",
-        "exact": true
-      }
-    ],
-    "assetChecks": [
-      {
+        "index": 2,
         "key": "property_photo",
-        "used": true
+        "role": "replacement_asset",
+        "contentHash": "e8859ada440f7d56b37e6b7969d39a12b935959d38fa6e946b1682d3fc99afd6"
       },
       {
+        "index": 3,
         "key": "agency_logo",
-        "used": true
+        "role": "replacement_asset",
+        "contentHash": "9cdbf0b89029cfafc2b5a6c4285a2713f4d164a9a65cccad630d7f510a463976"
       }
     ],
-    "identityLeakage": [],
-    "defects": []
+    "copy": {
+      "headline": "Find your forever home today",
+      "body": "Your trusted partner for all real estate needs."
+    },
+    "outputHash": "0d83ce43550e78876dc2958337f92e2fa438b9aaa90778058a5b1ad14f7c1064",
+    "executionTransport": "codex_subscription_image_generation",
+    "reviewedAt": "2026-08-09T00:00:00.000Z",
+    "review": {
+      "schemaVersion": 1,
+      "rubricVersion": "adstudio-subject-invariant-clone-v1",
+      "templateId": "meta-agent-intro-feed-037",
+      "requestHash": "9732d1c6150a1ee84791c59cf7cbb13c1cba7492d0405c8d62f1702f93316583",
+      "candidateHash": "0d83ce43550e78876dc2958337f92e2fa438b9aaa90778058a5b1ad14f7c1064",
+      "reviewer": {
+        "provider": "openai",
+        "model": "gpt-5.6"
+      },
+      "adSystemLikenessScore": 9.6,
+      "standaloneAdQualityScore": 9.5,
+      "excludedContentInfluencedScore": false,
+      "copyChecks": [
+        {
+          "key": "headline",
+          "expected": "Find your forever home today",
+          "observed": "Find your forever home today",
+          "exact": true
+        },
+        {
+          "key": "body",
+          "expected": "Your trusted partner for all real estate needs.",
+          "observed": "Your trusted partner for all real estate needs.",
+          "exact": true
+        }
+      ],
+      "assetChecks": [
+        {
+          "key": "property_photo",
+          "used": true,
+          "faithful": true,
+          "notes": "The replacement property image is cleanly used in the fixed hero region with the soft white veil and fade retained."
+        },
+        {
+          "key": "agency_logo",
+          "used": true,
+          "faithful": true,
+          "notes": "The replacement logo is crisp, undistorted, and retains the lower-right footer anchor."
+        }
+      ],
+      "identityLeakage": [],
+      "defects": [],
+      "includedRationale": "The candidate is a near-match for the reusable system: rounded card and faint outer border, full-width hero geometry, white fade placement, headline and body anchors, three-line headline rhythm, palette, whitespace, and footer arrangement all closely follow the source. Minor residual differences are the candidate's slightly cleaner/more prominent footer logo treatment and a marginally different hero fade density, neither of which materially alters the system.",
+      "qualityRationale": "Excellent finished-ad quality: polished imagery, clear hierarchy, crisp type, ample whitespace, and no visible rendering artifacts.",
+      "suggestedCorrection": "",
+      "reviewedAt": "2026-08-09T00:00:00.000Z"
+    }
+  },
+  "customerFixture": {
+    "stage": "customer_fixture",
+    "requestHash": "a8ba0c37ac664eb0bb3de71ad9f888cb504aac4f0fe3338a2dc4e1eec4bdef3a",
+    "referenceHash": "0d83ce43550e78876dc2958337f92e2fa438b9aaa90778058a5b1ad14f7c1064",
+    "references": [
+      {
+        "index": 1,
+        "key": "approved_sample",
+        "role": "approved_sample",
+        "contentHash": "0d83ce43550e78876dc2958337f92e2fa438b9aaa90778058a5b1ad14f7c1064"
+      },
+      {
+        "index": 2,
+        "key": "property_photo",
+        "role": "replacement_asset",
+        "contentHash": "c8033005d3a8b3883726f02d6243de8dd17d92de5c927359e4f29a01d2fc6702"
+      },
+      {
+        "index": 3,
+        "key": "agency_logo",
+        "role": "replacement_asset",
+        "contentHash": "23bf53aaa0d83c829a9ff2717a3d632abd00237ea1c5e938caccce80a36e27b9"
+      }
+    ],
+    "copy": {
+      "headline": "Meet your perfect home today",
+      "body": "Local experts for all real estate needs."
+    },
+    "outputHash": "9e4a51668394cdf43fb152f6c6658e92b8a748180992223bd3f26077dfb49ce2",
+    "executionTransport": "codex_subscription_image_generation",
+    "reviewedAt": "2026-08-09T00:00:00.000Z",
+    "review": {
+      "schemaVersion": 1,
+      "rubricVersion": "adstudio-subject-invariant-clone-v1",
+      "templateId": "meta-agent-intro-feed-037",
+      "requestHash": "a8ba0c37ac664eb0bb3de71ad9f888cb504aac4f0fe3338a2dc4e1eec4bdef3a",
+      "candidateHash": "9e4a51668394cdf43fb152f6c6658e92b8a748180992223bd3f26077dfb49ce2",
+      "reviewer": {
+        "provider": "openai",
+        "model": "gpt-5.6"
+      },
+      "adSystemLikenessScore": 9.5,
+      "standaloneAdQualityScore": 9.5,
+      "excludedContentInfluencedScore": false,
+      "copyChecks": [
+        {
+          "key": "headline",
+          "expected": "Meet your perfect home today",
+          "observed": "Meet your perfect home today",
+          "exact": true
+        },
+        {
+          "key": "body",
+          "expected": "Local experts for all real estate needs.",
+          "observed": "Local experts for all real estate needs.",
+          "exact": true
+        }
+      ],
+      "assetChecks": [
+        {
+          "key": "property_photo",
+          "used": true,
+          "faithful": true,
+          "notes": "The supplied wide property photo is cleanly used in the full-width hero, with correct crop and retained white fade."
+        },
+        {
+          "key": "agency_logo",
+          "used": true,
+          "faithful": true,
+          "notes": "Only the supplied teal mark is rendered in the lower-right footer; no inherited agency wordmark is visible."
+        }
+      ],
+      "identityLeakage": [],
+      "defects": [],
+      "includedRationale": "The reusable system is now a near-match: rounded card and border, hero slot, fade boundary, dark headline treatment, three-line headline footprint, body and footer anchors, whitespace, and logo display size closely track the approved sample. The shorter replacement body naturally occupies two lines, but its type treatment and bounding region remain consistent with the system.",
+      "qualityRationale": "Excellent finished-ad quality with polished imagery, crisp typography, clean asset replacement, and no visible rendering or identity-integrity issues.",
+      "suggestedCorrection": "",
+      "reviewedAt": "2026-08-09T00:00:00.000Z"
+    }
   }
 }

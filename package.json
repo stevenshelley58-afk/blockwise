@@ -24,6 +24,7 @@
     "verify-env": "node scripts/verify-env.mjs",
     "verify-env:first-tester": "node scripts/verify-env.mjs --first-tester",
     "adstudio:create-template": "node scripts/adstudio/create-template.mjs",
+    "adstudio:template-quality": "node scripts/adstudio/template-quality.mjs",
     "adstudio:build-display-variants": "node scripts/adstudio/build-display-variants.mjs",
     "seed:test-users": "node scripts/seed-test-users.mjs"
   },

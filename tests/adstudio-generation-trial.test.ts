@@ -43,7 +43,10 @@ test("real campaign generation route guards duplicate in-flight requests", () =>
   const source = read(campaignsRoute);
 
   assert.match(source, /const inFlightGenerations = new Map<string, number>\(\)/);
+  assert.match(source, /createHash\("sha256"\)\.update\(text\)\.digest\("hex"\)/);
   assert.match(source, /generationDedupKey\(context\.access\.workspaceId,\s*body\)/);
+  assert.match(source, /clientMutationId.*dedupKey/s);
+  assert.match(source, /adstudio-generation:\$\{workspaceId\}:\$\{clientMutationId\}:\$\{dedupKey\}/);
   assert.match(source, /status:\s*409/);
   assert.match(source, /inFlightGenerations\.delete\(dedupKey\)/);
 });

@@ -421,8 +421,13 @@ function submittedProviderFailure(message: string, retryable: boolean): Provider
 function finalRenderInput(providers: ImageProviderAdapter[]) {
   return {
     format: "4:5",
+    templateId: "template-test",
     providers,
     request: { prompt: "clone", referenceAssets: [], aspectRatio: "4:5", stylePreset: "test" },
+    referenceImage: "data:image/png;base64,cmVmZXJlbmNl",
+    expectedCopy: {},
+    expectedAssetKeys: [],
+    buildCorrectedRequest: () => ({ prompt: "corrected clone", referenceAssets: [], aspectRatio: "4:5", stylePreset: "test" }),
     workspaceId: "11111111-1111-4111-8111-111111111111",
     userId: "22222222-2222-4222-8222-222222222222",
     correlationId: "final-render",
@@ -447,7 +452,7 @@ async function persistencePipelineFunction() {
   return fn as (input: unknown) => Promise<unknown>;
 }
 
-test("template campaign generation ships the render with its prebuilt editor map", () => {
+test("template campaign generation quality-gates the render before its prebuilt editor map", () => {
   const pipeline = readFileSync("src/lib/adstudio/generate-template-campaign.ts", "utf8");
   const generation = readFileSync("src/lib/adstudio/clone-generation.ts", "utf8");
 
@@ -463,15 +468,15 @@ test("template campaign generation ships the render with its prebuilt editor map
   assert.match(pipeline, /resolveCloneProviders\(generationQuality\)/);
   assert.doesNotMatch(pipeline, /createFalImageProvider|fal-image-provider|FAL_KEY/);
 
-  // The blocking QA gate and customer-time vision are gone. Native-format
-  // editor regions come from the template's offline type-spec block.
+  // A cheap subject-invariant vision gate blocks poor candidates before
+  // persistence. Native-format editor regions still come from offline evidence.
   assert.match(pipeline, /buildPrebuiltTemplateCloneQa/);
   assert.match(pipeline, /prepareCloneCreativeTextLayers/);
   assert.doesNotMatch(pipeline, /detectCloneRegions/);
-  assert.doesNotMatch(pipeline, /vision_classification/);
-  assert.doesNotMatch(pipeline, /cloneQaCorrectionPrompt/);
-  assert.doesNotMatch(pipeline, /TemplateCampaignQaError/);
-  assert.doesNotMatch(pipeline, /qa\.passed/);
+  assert.match(pipeline, /reviewCloneCandidate/);
+  assert.match(pipeline, /cloneQualityPassed/);
+  assert.match(pipeline, /TemplateCampaignQaError/);
+  assert.match(pipeline, /buildCorrectedRequest/);
 });
 
 test("durable accounting failure after provider success never dispatches a fallback", async () => {
@@ -708,7 +713,7 @@ test("clone generation never invokes a second fallback candidate", async () => {
   assert.equal(thirdProviderCalls, 0);
 });
 
-test("final clone renders generate once, normalize to the exact ratio, and never wait on QA", async () => {
+test("final clone renders once when the blocking quality review passes", async () => {
   const render = await finalRenderFunction();
   let generateCalls = 0;
   let normalizedFrom = "";
@@ -727,6 +732,25 @@ test("final clone renders generate once, normalize to the exact ratio, and never
       normalizedFrom = `${assetUrl}:${format}`;
       return "data:image/png;base64,ZXhhY3Q=";
     },
+    review: async () => ({
+      schemaVersion: 1,
+      templateId: "template-test",
+      format: "4:5",
+      attempt: 1,
+      referenceHash: "a".repeat(64),
+      candidateHash: "b".repeat(64),
+      requestHash: "c".repeat(64),
+      adSystemLikenessScore: 9.6,
+      standaloneAdQualityScore: 9.2,
+      excludedContentInfluencedScore: false,
+      copyChecks: [],
+      assetChecks: [],
+      identityLeakage: [],
+      defects: [],
+      includedRationale: "matches",
+      qualityRationale: "clean",
+      suggestedCorrection: "",
+    }),
   });
 
   assert.equal(generateCalls, 1);
@@ -752,7 +776,7 @@ test("provider cascade failures still fail the render honestly", async () => {
   assert.equal(providerCalls, 2);
 });
 
-test("renders and the campaign persist with no QA involvement at all", async () => {
+test("the persistence helper stores only renders already accepted by its caller", async () => {
   const pipeline = await persistencePipelineFunction();
   let clonePersistenceCalls = 0;
   let campaignPersistenceCalls = 0;
@@ -826,7 +850,7 @@ test("template generation persists prebuilt editor regions with the finished ren
   // The pack builder carries the prebuilt map supplied by generation.
   assert.match(builder, /cloneQa: input\.firstAd\.templateCloneQaByFormat\?\.\[format\]/);
   assert.match(generation, /templateCloneQaByFormat/);
-  assert.doesNotMatch(generation, /TemplateCampaignQaError/);
+  assert.match(generation, /TemplateCampaignQaError/);
   assert.match(generation, /buildPrebuiltTemplateCloneQa/);
   assert.doesNotMatch(generation, /detectCloneRegions/);
 });

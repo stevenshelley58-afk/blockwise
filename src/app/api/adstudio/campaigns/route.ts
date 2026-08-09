@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 
 import { NextResponse, after, type NextRequest } from "next/server";
 
@@ -43,22 +43,29 @@ const GENERATION_RECOVERY_DELAY_MS = 5 * 60_000 + 15_000;
 
 function generationDedupKey(workspaceId: string, body: unknown): string {
   const text = JSON.stringify(body) ?? "";
-  let hash = 5381;
-  for (let index = 0; index < text.length; index += 1) {
-    hash = ((hash << 5) + hash + text.charCodeAt(index)) | 0;
-  }
-  return `${workspaceId}:${hash}`;
+  const fingerprint = createHash("sha256").update(text).digest("hex");
+  return `${workspaceId}:${fingerprint}`;
+}
+
+function normalizedGenerationMutationId(
+  request: NextRequest,
+  body: CreateCampaignBody,
+): string | null {
+  const supplied = body.clientMutationId ?? request.headers.get("idempotency-key");
+  const normalized = supplied?.trim().replace(/[^a-zA-Z0-9:_-]/g, "").slice(0, 160);
+  return normalized || null;
 }
 
 function generationCreditMutationKey(
-  request: NextRequest,
-  body: CreateCampaignBody,
   workspaceId: string,
   dedupKey: string,
+  clientMutationId: string | null,
 ): string {
-  const supplied = body.clientMutationId ?? request.headers.get("idempotency-key");
-  const normalized = supplied?.trim().replace(/[^a-zA-Z0-9:_-]/g, "").slice(0, 160);
-  if (normalized) return `adstudio-generation:${workspaceId}:${normalized}`;
+  // Bind a caller token to the exact request fingerprint. Reusing a token for
+  // different content can therefore never alias the first campaign or charge.
+  if (clientMutationId) {
+    return `adstudio-generation:${workspaceId}:${clientMutationId}:${dedupKey}`;
+  }
 
   const bucket = Math.floor(Date.now() / GENERATION_DEDUP_TTL_MS);
   return `adstudio-generation:${dedupKey}:${bucket}`;
@@ -167,11 +174,11 @@ export async function POST(request: NextRequest) {
 
   const body = await readJsonBody<CreateCampaignBody>(request);
   const dedupKey = generationDedupKey(context.access.workspaceId, body);
+  const clientMutationId = normalizedGenerationMutationId(request, body);
   const creditMutationKey = generationCreditMutationKey(
-    request,
-    body,
     context.access.workspaceId,
     dedupKey,
+    clientMutationId,
   );
   const inFlightSince = inFlightGenerations.get(dedupKey);
 

@@ -35,7 +35,7 @@ test("clone campaign refuses to create an ad before the feed (4:5) clone exists"
     state: "WA",
     firstAd: {
       source: "gallery",
-      templateId: "meta-feed-020",
+      templateId: "meta-agent-intro-feed-037",
       description: "Missing feed clone",
       imageDataUrl: "data:image/png;base64,cHJvcGVydHk=",
       templateCloneImagesByFormat: { "9:16": "data:image/png;base64,c3Rvcnk=" },
@@ -54,7 +54,7 @@ test("clone campaign builds with feed-only when story is not yet rendered", () =
     state: "WA",
     firstAd: {
       source: "gallery",
-      templateId: "meta-feed-020",
+      templateId: "meta-agent-intro-feed-037",
       description: "Feed only",
       imageDataUrl: "data:image/png;base64,cHJvcGVydHk=",
       templateCloneImagesByFormat: { "4:5": "data:image/png;base64,ZmVlZA==" },

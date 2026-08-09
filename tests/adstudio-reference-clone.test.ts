@@ -3,6 +3,7 @@ import test from "node:test";
 
 import { AD_STUDIO_TEMPLATES } from "../src/lib/adstudio/templates.ts";
 import {
+  AD_SYSTEM_CLONE_CONTRACT,
   GLOBAL_CLONE_NEGATIVES,
   PHOTO_FIT_RULE,
   buildCloneImageRequest,
@@ -39,6 +40,23 @@ test("reference order is design first, then declared customer assets", () => {
   assert.equal(request.requiresReferenceAssets, true);
   assert.equal(request.negativePrompt, GLOBAL_CLONE_NEGATIVES);
   assert.match(request.prompt, /Clone reference image 1 as closely as possible/);
+  assert.ok(request.prompt.includes(AD_SYSTEM_CLONE_CONTRACT));
+  assert.match(request.prompt, /pixel-level design blueprint/);
+  assert.match(request.prompt, /template-applied effect/);
+  assert.match(request.prompt, /fade, gradient, veil, overlay, shadow, reflection/);
+  assert.match(request.prompt, /replacement image subject is intentionally different/);
+  assert.match(request.prompt, /reference image slot is immovable/);
+  assert.match(request.prompt, /Do not redesign, modernise, simplify/);
+});
+
+test("replacement wording and logos preserve the approved design footprint", () => {
+  const request = buildCloneImageRequest(template, {
+    referenceImage: "sample-image",
+    images: { property_photo: "new-photo", brand_logo: "new-logo" },
+    copy: { headline: "Different words", body: "Different supporting copy" },
+  });
+  assert.match(request.prompt, /text block's outer bounds, number of lines, line rhythm/u);
+  assert.match(request.prompt, /logo's displayed bounding box, anchor, clear space, and visual weight/u);
 });
 
 test("copy is exact, defaulted from safe sample values, and max-length bounded", () => {
@@ -70,12 +88,25 @@ test("Brand Pack colours are applied only when the customer explicitly chooses t
   assert.match(request.prompt, /Preserve the reference design's contrast, hierarchy, typography, spacing, shapes, and image treatment/);
 });
 
+test("a rejected gallery candidate can feed one model-suggested correction back through the same clone builder", () => {
+  const request = buildCloneImageRequest(template, {
+    images,
+    reviewCorrection: "Reduce the logo and match the quieter CTA treatment.",
+  });
+  assert.match(request.prompt, /Image-model QA correction from the previous candidate/);
+  assert.match(request.prompt, /Reduce the logo and match the quieter CTA treatment/);
+  assert.match(request.prompt, /do not authorize any other redesign/i);
+  assert.deepEqual(request.referenceAssets, [template.sample.imageSrc, images.property_photo, images.brand_logo]);
+});
+
 test("supplied photos carry the fit rule: extend past edges instead of cropping the subject", () => {
   const request = buildCloneImageRequest(template, { images });
   assert.ok(request.prompt.includes(PHOTO_FIT_RULE));
   assert.match(request.prompt, /main subject stays completely in frame/);
   assert.match(request.prompt, /extend the photo by continuing its own scene naturally past its original edges/);
   assert.match(request.prompt, /crop only when the crop still shows the entire main subject/);
+  assert.match(request.prompt, /photo area's position, width, height, mask, and boundary.*fixed/u);
+  assert.match(request.prompt, /never resize or move that area/u);
   assert.match(GLOBAL_CLONE_NEGATIVES, /do not crop away the main subject of a supplied photo/);
   // The no-repaint negative must protect original content without banning edge extension.
   assert.match(GLOBAL_CLONE_NEGATIVES, /original visible content of supplied property photos/);

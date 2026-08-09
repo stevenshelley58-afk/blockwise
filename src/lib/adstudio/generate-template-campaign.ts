@@ -4,10 +4,9 @@
 // Order matters and is the product: brand kit -> slot images -> brief-grounded
 // copy (on-image fields + feed copy in one pass) -> reference clone renders
 // (feed + story) -> deterministic pack build -> provided-copy application ->
-// one transactional persist. The customer gets the finished ad the moment the
-// feed render persists, with native-format editor hit-boxes copied from the
-// template's offline type-spec block. No customer-time vision pass is needed.
-// The editor's history (undo/compare) plus in-place fixes are the safety net.
+// one transactional persist. Every candidate passes the subject-invariant
+// image-model likeness gate before persistence; failed candidates feed one
+// correction back through the same reference-clone request builder.
 import { randomUUID } from "node:crypto";
 
 import { applyProvidedCopyToCampaignPack } from "./campaign-copy-enrichment.ts";
@@ -19,6 +18,12 @@ import {
   resolveCloneProviders,
   type CloneGenerationResult,
 } from "./clone-generation.ts";
+import {
+  MAX_RUNTIME_CLONE_CANDIDATES,
+  TemplateCampaignQaError,
+  cloneQualityPassed,
+  reviewCloneCandidate,
+} from "./clone-quality-gate.ts";
 import { buildPrebuiltTemplateCloneQa } from "./clone-regions.ts";
 import { deriveAndPersistTemplateTextLayers } from "./layer-derivation.ts";
 import { generateAdStudioTemplateCopy, type AdStudioCopyFields } from "./copy-generation.ts";
@@ -39,6 +44,7 @@ import type {
   AdStudioCampaignPack,
   AdStudioCreative,
   FirstAdInput,
+  AdStudioCloneQualityReview,
 } from "./types.ts";
 import type { ImageProviderAdapter, ImageProviderRequest } from "./providers.ts";
 import {
@@ -182,6 +188,7 @@ type TemplateCloneRenderFormat = typeof PRIMARY_CLONE_FORMAT | typeof STORY_CLON
 
 type GeneratedCloneRender = CloneGenerationResult & {
   attempt: number;
+  qualityReview: AdStudioCloneQualityReview;
 };
 
 type PersistedCloneRender = GeneratedCloneRender & {
@@ -222,18 +229,23 @@ export function buildTemplateCloneRequestsByFormat(
 type CloneRenderDependencies = {
   generate?: typeof generateCloneWithCascade;
   normalize?: typeof normalizeCloneRenderAspect;
+  review?: typeof reviewCloneCandidate;
 };
 
 /**
- * One final-quality render per format: provider cascade (bounded fallback
- * inside) then an exact aspect crop. No vision gate, no reroll — the customer
- * sees this render as soon as it persists. Editor regions are already present
- * in the native-format template metadata; no customer-time vision is run.
+ * Generate, normalize, and independently review candidates before persistence.
+ * The same clone request is rebuilt with the image-model correction when a
+ * candidate misses the quality lock. Failed candidates are never released.
  */
 export async function generateFinalCloneRender(input: {
   format: TemplateCloneRenderFormat;
+  templateId: string;
   providers: ImageProviderAdapter[];
   request: ImageProviderRequest;
+  referenceImage: string;
+  expectedCopy: Record<string, string>;
+  expectedAssetKeys: string[];
+  buildCorrectedRequest(correction: string): ImageProviderRequest;
   workspaceId: string;
   userId: string;
   correlationId: string;
@@ -241,18 +253,46 @@ export async function generateFinalCloneRender(input: {
 }, dependencies: CloneRenderDependencies = {}): Promise<GeneratedCloneRender> {
   const generate = dependencies.generate ?? generateCloneWithCascade;
   const normalize = dependencies.normalize ?? normalizeCloneRenderAspect;
+  const review = dependencies.review ?? reviewCloneCandidate;
+  let request = input.request;
+  let lastReview: AdStudioCloneQualityReview | undefined;
 
-  const generated = await generate({
-    providers: input.providers,
-    request: { ...input.request, seed: (input.request.seed ?? 0) + 1 },
-    workspaceId: input.workspaceId,
-    userId: input.userId,
-    correlationId: input.correlationId,
-    attempt: 1,
-    modelProfile: input.modelProfile,
-  });
-  const exactAssetUrl = await normalize(generated.assetUrl, input.format);
-  return { ...generated, assetUrl: exactAssetUrl, attempt: 1 };
+  for (let attempt = 1; attempt <= MAX_RUNTIME_CLONE_CANDIDATES; attempt += 1) {
+    const candidateRequest = { ...request, seed: (request.seed ?? 0) + attempt };
+    const generated = await generate({
+      providers: input.providers,
+      request: candidateRequest,
+      workspaceId: input.workspaceId,
+      userId: input.userId,
+      correlationId: input.correlationId,
+      attempt,
+      modelProfile: input.modelProfile,
+    });
+    const exactAssetUrl = await normalize(generated.assetUrl, input.format);
+    lastReview = await review({
+      templateId: input.templateId,
+      format: input.format,
+      attempt,
+      referenceImage: input.referenceImage,
+      candidateImage: exactAssetUrl,
+      request: candidateRequest,
+      expectedCopy: input.expectedCopy,
+      expectedAssetKeys: input.expectedAssetKeys,
+      workspaceId: input.workspaceId,
+      userId: input.userId,
+      correlationId: input.correlationId,
+    });
+    if (cloneQualityPassed({ review: lastReview, expectedCopy: input.expectedCopy, expectedAssetKeys: input.expectedAssetKeys })) {
+      return { ...generated, assetUrl: exactAssetUrl, attempt, qualityReview: lastReview };
+    }
+    const correction = lastReview.suggestedCorrection.trim();
+    if (!correction || attempt === MAX_RUNTIME_CLONE_CANDIDATES) break;
+    request = input.buildCorrectedRequest(correction);
+  }
+  throw new TemplateCampaignQaError(
+    `The ad did not reach ${input.format} likeness quality after ${MAX_RUNTIME_CLONE_CANDIDATES} candidates.`,
+    lastReview,
+  );
 }
 
 export type CloneEditingLayersInput = {
@@ -482,11 +522,12 @@ export async function runTemplateCampaignGeneration(
   const onImageCopy = { ...copyResult.onImage, ...customerOnImage };
 
   // The image lane prioritises the customer-visible feed, then starts the
-  // recomposed 9:16 story while Feed persistence continues. The matching-format
+  // recomposed 9:16 story after Feed clears blocking visual QA, while Feed
+  // persistence continues. The matching-format
   // editor map was measured offline.
   const [referenceImage, providers] = await Promise.all([rasterPromise, providersPromise]);
   const expectedCopy = resolveCloneCopy(template, onImageCopy);
-  const cloneRequestsByFormat = buildTemplateCloneRequestsByFormat(template, {
+  const cloneInputs: CloneInputs = {
     referenceImage,
     images: resolvedImages,
     copy: onImageCopy,
@@ -500,18 +541,33 @@ export async function runTemplateCampaignGeneration(
     ] as const)
       .filter(([, value]) => value.trim())
       .map(([label, value]) => `${label} ${value.trim()}`),
-  });
+  };
+  const cloneRequestsByFormat = buildTemplateCloneRequestsByFormat(template, cloneInputs);
   const feedCloneQa = buildPrebuiltTemplateCloneQa(template, expectedCopy, PRIMARY_CLONE_FORMAT);
   const modelProfile = cloneModelProfileForQuality(generationQuality);
+  // Review every customer/brand asset actually supplied, not just required
+  // fields. An optional logo or secondary photo must never be allowed to leak,
+  // disappear, or warp simply because its input contract is optional.
+  const expectedAssetKeys = template.inputs.images
+    .filter((slot) => Boolean(resolvedImages[slot.key]))
+    .map((slot) => slot.key);
   // --- Feed-first critical path: give Gemini the Feed request exclusively so
   // it does not compete with Story for provider quota or bandwidth. Once the
-  // Feed bytes arrive, Story starts and overlaps normalization/upload/DB work.
+  // Feed is accepted, Story starts and overlaps upload/DB work.
   // This improves time-to-first-ad while still reducing two-format wall time. ---
   const { feed: feedRender, storyTask: storyGenPromise } = await startStoryAfterFeed({
     generateFeed: () => generateFinalCloneRender({
       format: PRIMARY_CLONE_FORMAT,
+      templateId: template.id,
       providers,
       request: cloneRequestsByFormat[PRIMARY_CLONE_FORMAT],
+      referenceImage,
+      expectedCopy,
+      expectedAssetKeys,
+      buildCorrectedRequest: (correction) => buildTemplateCloneRequestsByFormat(template, {
+        ...cloneInputs,
+        reviewCorrection: correction,
+      })[PRIMARY_CLONE_FORMAT],
       workspaceId: input.workspaceId,
       userId: input.userId,
       correlationId,
@@ -519,8 +575,16 @@ export async function runTemplateCampaignGeneration(
     }),
     generateStory: () => generateFinalCloneRender({
       format: STORY_CLONE_FORMAT,
+      templateId: template.id,
       providers,
       request: cloneRequestsByFormat[STORY_CLONE_FORMAT],
+      referenceImage,
+      expectedCopy,
+      expectedAssetKeys,
+      buildCorrectedRequest: (correction) => buildTemplateCloneRequestsByFormat(template, {
+        ...cloneInputs,
+        reviewCorrection: correction,
+      })[STORY_CLONE_FORMAT],
       workspaceId: input.workspaceId,
       userId: input.userId,
       correlationId,

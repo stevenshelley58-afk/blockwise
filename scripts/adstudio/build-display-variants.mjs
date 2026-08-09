@@ -11,7 +11,9 @@ const THUMBNAIL_MAX_BYTES = 100_000;
 const PREVIEW_MAX_BYTES = 300_000;
 
 await mkdir(OUTPUT_DIR, { recursive: true });
-const files = (await readdir(MANIFEST_DIR)).filter((file) => file.endsWith(".json")).sort();
+const files = (await readdir(MANIFEST_DIR))
+  .filter((file) => file.endsWith(".json") && file !== "quality-locks.json")
+  .sort();
 let generated = 0;
 
 for (const file of files) {

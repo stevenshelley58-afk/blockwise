@@ -16,6 +16,9 @@ export type CloneInputs = {
   brandColours?: string[];
   aspectRatio?: string;
   seed?: number;
+  /** Ephemeral image-model QA feedback for rebuilding a rejected full clone.
+   * It is never stored as a layout recipe and never changes the reference contract. */
+  reviewCorrection?: string;
 };
 
 export const GLOBAL_CLONE_NEGATIVES = [
@@ -30,16 +33,33 @@ export const GLOBAL_CLONE_NEGATIVES = [
 ].join("; ");
 
 /**
+ * Subject-invariant definition of likeness. The replaceable photo/logo content
+ * is deliberately different; the reusable ad system around and over it must
+ * stay faithful to the approved design.
+ */
+export const AD_SYSTEM_CLONE_CONTRACT = [
+  "Treat reference image 1 as a pixel-level design blueprint, not as a source of customer content.",
+  "Match the reusable ad system exactly: canvas and card geometry, borders, corner radii, margins, image-area geometry, logo anchor, text-block positions, line breaks, type scale and weight, alignment, hierarchy, whitespace, shapes, CTA treatment, and footer treatment.",
+  "For replacement copy, preserve each reference text block's outer bounds, number of lines, line rhythm, alignment, and visual weight; fit the exact new wording inside those same bounds with only the smallest necessary type-size, tracking, or line-break adjustment.",
+  "For a replacement logo, preserve the reference logo's displayed bounding box, anchor, clear space, and visual weight regardless of the supplied logo file's intrinsic canvas or aspect ratio; never let a simpler mark become larger or more dominant.",
+  "When replacing an image, keep every template-applied effect that sits around or over that image: its crop or fit behaviour, mask, border, radius, fade, gradient, veil, overlay, shadow, reflection, blend, blur, colour treatment, and overlap with other design elements.",
+  "Every reference image slot is immovable: preserve its exact position, width, height, mask, and boundary even when the replacement asset has a different aspect ratio. Fit, crop, or naturally extend the replacement only inside that fixed slot; never enlarge, shrink, or move the slot or displace surrounding text and footer elements to accommodate the asset.",
+  "The replacement image subject is intentionally different and must not be made to resemble the subject in reference image 1.",
+  "Do not redesign, modernise, simplify, decorate, rebalance, or reinterpret the composition.",
+].join(" ");
+
+/**
  * How a supplied photo is fitted into the design's photo area when their aspect
  * ratios differ. Extending the scene at the edges is explicitly permitted so the
  * model is not forced into a destructive crop by the no-repaint rule above.
  */
 export const PHOTO_FIT_RULE =
-  "Fit each supplied photo to its area in the design so its main subject stays completely in frame. " +
+  "The photo area's position, width, height, mask, and boundary from reference image 1 are fixed and take priority; never resize or move that area to fit the supplied photo. " +
+  "Fit each supplied photo inside that unchanged area so its main subject stays completely in frame. " +
   "If the photo's aspect ratio does not match its area, choose the better of two options: " +
   "crop only when the crop still shows the entire main subject; " +
   "otherwise extend the photo by continuing its own scene naturally past its original edges (more sky, lawn, driveway, wall, or surroundings that match its lighting and perspective). " +
-  "Never solve an aspect-ratio mismatch by cutting off part of the main subject, and never stretch, squash, or add invented objects to the photo.";
+  "Never solve an aspect-ratio mismatch by changing the template layout, cutting off part of the main subject, stretching, squashing, or adding invented objects to the photo.";
 
 /** Resolve every declared field to exact text, using the safe sample value only
  * when a caller does not provide a replacement. */
@@ -82,6 +102,7 @@ export function buildCloneImageRequest(template: AdStudioTemplate, inputs: Clone
   const colourInstruction = colourSource === "brand"
     ? `Colour instruction: adapt the design to this Brand Pack palette: ${brandColours.join(", ") || "the colours visible in the supplied brand logo"}. Preserve the reference design's contrast, hierarchy, typography, spacing, shapes, and image treatment.`
     : "Colour instruction: preserve the exact colour palette of reference image 1. Do not recolour the design to match the supplied logo or Brand Pack.";
+  const reviewCorrection = inputs.reviewCorrection?.trim();
 
   const assetLegend = [
     "Reference image 1 is the ad design to clone.",
@@ -95,7 +116,11 @@ export function buildCloneImageRequest(template: AdStudioTemplate, inputs: Clone
 
   return {
     prompt: [
-      "Clone reference image 1 as closely as possible, preserving its composition, spacing, typography, visual hierarchy, shapes, and image treatment.",
+      "Clone reference image 1 as closely as possible.",
+      AD_SYSTEM_CLONE_CONTRACT,
+      ...(reviewCorrection
+        ? [`Image-model QA correction from the previous candidate: ${reviewCorrection} Apply only these corrections to make this clone more faithful to reference image 1; they do not authorize any other redesign.`]
+        : []),
       assetLegend,
       "Customer asset replacement is mandatory: reference image 1 controls the design only; never retain a source image where a supplied replacement asset belongs.",
       ...(suppliedImages.length ? [PHOTO_FIT_RULE] : []),

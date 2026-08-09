@@ -16,6 +16,7 @@ const root = process.cwd();
 const galleryDir = resolve(process.env.ADSTUDIO_GALLERY_DIR ?? join(root, "src", "lib", "adstudio", "template-gallery"));
 const publicDir = resolve(process.env.ADSTUDIO_PUBLIC_DIR ?? join(root, "public"));
 const sourceDir = resolve(process.env.ADSTUDIO_SOURCE_DIR ?? join(root, "meta_ad_candidates"));
+const qualityLocksPath = join(galleryDir, "quality-locks.json");
 const fontManifestPath = join(publicDir, "fonts", "adstudio", "manifest.json");
 const fontManifest = existsSync(fontManifestPath)
   ? JSON.parse(readFileSync(fontManifestPath, "utf8"))
@@ -43,6 +44,9 @@ const knownFormats = {
 const diversityMinCount = 12;
 const minDistinctIntents = 5;
 const maxIntentShare = 0.5;
+const qualityRubricVersion = "adstudio-subject-invariant-clone-v1";
+const minAdSystemLikeness = 9.5;
+const minStandaloneAdQuality = 9;
 const failures = [];
 const warnings = [];
 const templates = [];
@@ -89,6 +93,356 @@ function overlapRatio(left, right) {
   const overlapArea = overlapWidth * overlapHeight;
   const smallerArea = Math.min(left.width * left.height, right.width * right.height);
   return smallerArea > 0 ? overlapArea / smallerArea : 0;
+}
+
+function isRecord(value) {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function isHash(value) {
+  return typeof value === "string" && /^[a-f0-9]{64}$/u.test(value);
+}
+
+function isIsoTimestamp(value) {
+  return typeof value === "string"
+    && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/u.test(value)
+    && Number.isFinite(Date.parse(value));
+}
+
+function hasExactKeys(value, expected) {
+  if (!isRecord(value)) return false;
+  const actual = Object.keys(value);
+  return actual.length === expected.length && actual.every((key) => expected.includes(key));
+}
+
+function canonicalJson(value) {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
+  if (isRecord(value)) {
+    return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${canonicalJson(value[key])}`).join(",")}}`;
+  }
+  return JSON.stringify(value);
+}
+
+function templateContractHash(template) {
+  const { qualityLock: _qualityLock, ...contract } = template;
+  return createHash("sha256").update(canonicalJson(contract)).digest("hex");
+}
+
+function verifyQualityScore(id, name, value, minimum) {
+  if (!Number.isFinite(value) || value < minimum || value > 10) {
+    fail(id, `${name} must be between ${minimum} and 10`);
+    return false;
+  }
+  return true;
+}
+
+function verifyQualityReview({ id, review, template, stage, copy, assetKeys, outputHash, requestHash }) {
+  const before = failures.length;
+  if (!isRecord(review) || review.schemaVersion !== 1) {
+    fail(id, `${stage}.review must use schemaVersion 1`);
+    return false;
+  }
+  if (
+    review.rubricVersion !== qualityRubricVersion
+    || review.templateId !== template.id
+    || review.requestHash !== requestHash
+    || review.candidateHash !== outputHash
+  ) {
+    fail(id, `${stage}.review is not bound to the rubric, template, request, and output`);
+  }
+  if (!review.reviewer?.provider?.trim() || !review.reviewer?.model?.trim()) {
+    fail(id, `${stage}.review must identify its image-model reviewer`);
+  }
+  verifyQualityScore(id, `${stage}.review.adSystemLikenessScore`, review.adSystemLikenessScore, minAdSystemLikeness);
+  verifyQualityScore(id, `${stage}.review.standaloneAdQualityScore`, review.standaloneAdQualityScore, minStandaloneAdQuality);
+  if (review.excludedContentInfluencedScore !== false) {
+    fail(id, `${stage}.review must exclude replaceable subject matter from likeness scoring`);
+  }
+
+  const expectedCopy = Object.entries(copy);
+  if (!Array.isArray(review.copyChecks) || review.copyChecks.length !== expectedCopy.length) {
+    fail(id, `${stage}.review must contain one exact copy check per declared text input`);
+  } else {
+    const checks = new Map();
+    for (const check of review.copyChecks) {
+      if (!check?.key || checks.has(check.key)) fail(id, `${stage}.review has duplicate or invalid copy checks`);
+      else checks.set(check.key, check);
+    }
+    for (const [key, expected] of expectedCopy) {
+      const check = checks.get(key);
+      if (!check || check.expected !== expected || check.observed !== expected || check.exact !== true) {
+        fail(id, `${stage}.review copy check failed for ${key}`);
+      }
+    }
+  }
+
+  if (!Array.isArray(review.assetChecks) || review.assetChecks.length !== assetKeys.size) {
+    fail(id, `${stage}.review must contain one passing asset check per declared image input`);
+  } else {
+    const checks = new Map();
+    for (const check of review.assetChecks) {
+      if (!check?.key || checks.has(check.key)) fail(id, `${stage}.review has duplicate or invalid asset checks`);
+      else checks.set(check.key, check);
+    }
+    for (const key of assetKeys) {
+      const check = checks.get(key);
+      if (!check || check.used !== true || check.faithful !== true || typeof check.notes !== "string") {
+        fail(id, `${stage}.review asset check failed for ${key}`);
+      }
+    }
+  }
+  if (!Array.isArray(review.identityLeakage) || review.identityLeakage.length !== 0) {
+    fail(id, `${stage}.review contains source identity leakage`);
+  }
+  if (!Array.isArray(review.defects) || review.defects.length !== 0) {
+    fail(id, `${stage}.review contains rendering defects`);
+  }
+  if (!review.includedRationale?.trim() || !review.qualityRationale?.trim() || typeof review.suggestedCorrection !== "string") {
+    fail(id, `${stage}.review rationale fields are incomplete`);
+  }
+  if (!isIsoTimestamp(review.reviewedAt)) fail(id, `${stage}.review reviewedAt must be an ISO-8601 timestamp`);
+  return failures.length === before;
+}
+
+function verifyQualityStage({ id, value, template, stage, expectedReferenceRole, expectedReferenceHash }) {
+  const before = failures.length;
+  const expectedKeys = [
+    "stage",
+    "requestHash",
+    "referenceHash",
+    "references",
+    "copy",
+    "outputHash",
+    "executionTransport",
+    "reviewedAt",
+    "review",
+  ];
+  if (!hasExactKeys(value, expectedKeys)) {
+    fail(id, `${stage} evidence has an invalid schema`);
+    return null;
+  }
+  if (value.stage !== stage) fail(id, `${stage} evidence has the wrong stage`);
+  if (!isHash(value.requestHash)) fail(id, `${stage}.requestHash must be a SHA-256 hash`);
+  if (value.referenceHash !== expectedReferenceHash) fail(id, `${stage}.referenceHash is not bound to its design reference`);
+  if (!isHash(value.outputHash)) fail(id, `${stage}.outputHash must be a SHA-256 hash`);
+  if (!value.executionTransport?.trim()) fail(id, `${stage}.executionTransport is required`);
+  if (!isIsoTimestamp(value.reviewedAt)) fail(id, `${stage}.reviewedAt must be an ISO-8601 timestamp`);
+
+  const expectedTextKeys = new Set(template.inputs.text.map((field) => field.key));
+  if (!isRecord(value.copy) || Object.keys(value.copy).length !== expectedTextKeys.size) {
+    fail(id, `${stage}.copy must bind every declared text input exactly once`);
+  } else {
+    for (const field of template.inputs.text) {
+      const copy = value.copy[field.key];
+      if (typeof copy !== "string" || !copy.trim() || copy.length > field.maxLength) {
+        fail(id, `${stage}.copy.${field.key} is missing or exceeds its manifest limit`);
+      }
+    }
+    for (const key of Object.keys(value.copy)) {
+      if (!expectedTextKeys.has(key)) fail(id, `${stage}.copy.${key} is not a declared text input`);
+    }
+  }
+
+  const expectedAssetKeys = new Set(template.inputs.images.map((field) => field.key));
+  const assetHashes = new Map();
+  if (!Array.isArray(value.references) || value.references.length !== expectedAssetKeys.size + 1) {
+    fail(id, `${stage}.references must contain one design reference and every declared image asset`);
+  } else {
+    const referenceKeys = new Set();
+    value.references.forEach((reference, index) => {
+      if (!hasExactKeys(reference, ["index", "key", "role", "contentHash"])) {
+        fail(id, `${stage}.references[${index}] has an invalid schema`);
+        return;
+      }
+      if (reference.index !== index + 1) fail(id, `${stage}.references must preserve contractual order`);
+      if (!reference.key?.trim() || referenceKeys.has(reference.key)) fail(id, `${stage}.references contain duplicate keys`);
+      referenceKeys.add(reference.key);
+      if (!isHash(reference.contentHash)) fail(id, `${stage}.references[${index}].contentHash must be a SHA-256 hash`);
+      if (index === 0) {
+        if (reference.role !== expectedReferenceRole || reference.contentHash !== expectedReferenceHash) {
+          fail(id, `${stage}.references[0] is not the required design reference`);
+        }
+      } else {
+        if (reference.role !== "replacement_asset" || !expectedAssetKeys.has(reference.key)) {
+          fail(id, `${stage}.references[${index}] is not a declared replacement asset`);
+        } else {
+          assetHashes.set(reference.key, reference.contentHash);
+        }
+      }
+    });
+    for (const key of expectedAssetKeys) {
+      if (!assetHashes.has(key)) fail(id, `${stage}.references are missing replacement asset ${key}`);
+    }
+  }
+
+  verifyQualityReview({
+    id,
+    review: value.review,
+    template,
+    stage,
+    copy: isRecord(value.copy) ? value.copy : {},
+    assetKeys: expectedAssetKeys,
+    outputHash: value.outputHash,
+    requestHash: value.requestHash,
+  });
+  if (value.reviewedAt !== value.review?.reviewedAt) fail(id, `${stage}.reviewedAt does not match its review`);
+  return failures.length === before ? { assetHashes, copy: value.copy, review: value.review, outputHash: value.outputHash } : null;
+}
+
+function verifyQualityEvidence({ id, evidence, lock, template, templateHash }) {
+  const before = failures.length;
+  if (!hasExactKeys(evidence, [
+    "schemaVersion",
+    "templateId",
+    "templateHash",
+    "sampleHash",
+    "rubricVersion",
+    "thresholds",
+    "qualifiedAt",
+    "sample",
+    "customerFixture",
+  ])) {
+    fail(id, "quality evidence v2 has an invalid schema");
+    return false;
+  }
+  if (evidence.schemaVersion !== 2 || evidence.templateId !== id) fail(id, "quality evidence must use schemaVersion 2 and match the template id");
+  if (evidence.templateHash !== templateHash || evidence.templateHash !== lock.templateHash) {
+    fail(id, "quality evidence templateHash does not match the manifest and lock");
+  }
+  if (evidence.sampleHash !== template.sample.contentHash || evidence.sampleHash !== lock.sampleHash) {
+    fail(id, "quality evidence sampleHash does not match the manifest and lock");
+  }
+  if (evidence.rubricVersion !== qualityRubricVersion) fail(id, "quality evidence rubricVersion is invalid");
+  if (!hasExactKeys(evidence.thresholds, ["adSystemLikeness", "standaloneAdQuality"])
+    || evidence.thresholds.adSystemLikeness !== minAdSystemLikeness
+    || evidence.thresholds.standaloneAdQuality !== minStandaloneAdQuality) {
+    fail(id, "quality evidence thresholds do not match the release thresholds");
+  }
+  if (!isIsoTimestamp(evidence.qualifiedAt) || evidence.qualifiedAt !== lock.qualifiedAt) {
+    fail(id, "quality evidence qualifiedAt does not match the lock");
+  }
+
+  const sample = verifyQualityStage({
+    id,
+    value: evidence.sample,
+    template,
+    stage: "gallery_sample",
+    expectedReferenceRole: "source",
+    expectedReferenceHash: template.sourceAd.contentHash,
+  });
+  const customer = verifyQualityStage({
+    id,
+    value: evidence.customerFixture,
+    template,
+    stage: "customer_fixture",
+    expectedReferenceRole: "approved_sample",
+    expectedReferenceHash: template.sample.contentHash,
+  });
+  if (sample) {
+    if (sample.outputHash !== template.sample.contentHash) fail(id, "gallery_sample output is not the approved manifest sample");
+    if (sample.review.adSystemLikenessScore !== lock.sampleLikeness || sample.review.standaloneAdQualityScore !== lock.sampleQuality) {
+      fail(id, "gallery_sample scores do not match the quality lock");
+    }
+  }
+  if (customer) {
+    if (customer.outputHash === template.sample.contentHash) fail(id, "customer_fixture output must differ from the approved sample");
+    if (customer.review.adSystemLikenessScore !== lock.customerFixtureLikeness
+      || customer.review.standaloneAdQualityScore !== lock.customerFixtureQuality) {
+      fail(id, "customer_fixture scores do not match the quality lock");
+    }
+  }
+  if (sample && customer) {
+    if (canonicalJson(sample.copy) === canonicalJson(customer.copy)) {
+      fail(id, "customer_fixture copy must differ from the gallery sample copy");
+    }
+    for (const [key, sampleHash] of sample.assetHashes) {
+      if (customer.assetHashes.get(key) === sampleHash) {
+        fail(id, `customer_fixture must use a distinct ${key} asset`);
+      }
+    }
+  }
+  return failures.length === before;
+}
+
+function verifyQualityLocks() {
+  if (!existsSync(qualityLocksPath)) {
+    warnings.push("QUALITY_LOCKS: no release quality-lock index; built-in templates will remain unavailable");
+    return 0;
+  }
+  let index;
+  try {
+    index = JSON.parse(readFileSync(qualityLocksPath, "utf8"));
+  } catch (error) {
+    fail("QUALITY_LOCKS", `invalid JSON: ${error.message}`);
+    return 0;
+  }
+  if (!hasExactKeys(index, ["schemaVersion", "templates"]) || index.schemaVersion !== 1 || !isRecord(index.templates)) {
+    fail("QUALITY_LOCKS", "index must have schemaVersion 1 and a templates object");
+    return 0;
+  }
+  const entries = Object.entries(index.templates);
+  if (entries.length === 0) {
+    fail("QUALITY_LOCKS", "release index must contain at least one valid template lock");
+    return 0;
+  }
+
+  const templatesById = new Map(templates.map((entry) => [entry.template.id, entry]));
+  let validLocks = 0;
+  for (const [id, lock] of entries) {
+    const before = failures.length;
+    const entry = templatesById.get(id);
+    if (!entry) {
+      fail(id, "quality lock does not match a gallery manifest");
+      continue;
+    }
+    if (!hasExactKeys(lock, [
+      "templateHash",
+      "templateContract",
+      "sampleHash",
+      "evidenceHash",
+      "sampleLikeness",
+      "sampleQuality",
+      "customerFixtureLikeness",
+      "customerFixtureQuality",
+      "qualifiedAt",
+    ])) {
+      fail(id, "quality lock has an invalid schema");
+      continue;
+    }
+    const templateHash = templateContractHash(entry.template);
+    if (entry.template.qualityLock?.templateHash !== templateHash) {
+      fail(id, "manifest qualityLock.templateHash does not match its contract");
+    }
+    if (lock.templateHash !== templateHash) fail(id, "quality lock templateHash does not match the manifest file");
+    const { qualityLock: _qualityLock, ...templateContract } = entry.template;
+    if (lock.templateContract !== canonicalJson(templateContract)) {
+      fail(id, "quality lock templateContract does not match the current manifest");
+    }
+    if (lock.sampleHash !== entry.template.sample.contentHash) fail(id, "quality lock sampleHash does not match the approved sample");
+    if (!isHash(lock.evidenceHash)) fail(id, "quality lock evidenceHash must be a SHA-256 hash");
+    verifyQualityScore(id, "quality lock sampleLikeness", lock.sampleLikeness, minAdSystemLikeness);
+    verifyQualityScore(id, "quality lock sampleQuality", lock.sampleQuality, minStandaloneAdQuality);
+    verifyQualityScore(id, "quality lock customerFixtureLikeness", lock.customerFixtureLikeness, minAdSystemLikeness);
+    verifyQualityScore(id, "quality lock customerFixtureQuality", lock.customerFixtureQuality, minStandaloneAdQuality);
+    if (!isIsoTimestamp(lock.qualifiedAt)) fail(id, "quality lock qualifiedAt must be an ISO-8601 timestamp");
+
+    const evidencePath = join(galleryDir, "evidence", `${id}.json`);
+    if (!existsSync(evidencePath)) {
+      fail(id, `quality evidence not found: evidence/${id}.json`);
+    } else if (sha256(evidencePath) !== lock.evidenceHash) {
+      fail(id, "quality lock evidenceHash does not match the evidence file");
+    } else {
+      try {
+        const evidence = JSON.parse(readFileSync(evidencePath, "utf8"));
+        verifyQualityEvidence({ id, evidence, lock, template: entry.template, templateHash });
+      } catch (error) {
+        fail(id, `quality evidence is invalid JSON: ${error.message}`);
+      }
+    }
+    if (failures.length === before) validLocks += 1;
+  }
+  if (validLocks === 0) fail("QUALITY_LOCKS", "release index contains no valid template locks");
+  return validLocks;
 }
 
 /**
@@ -393,6 +747,8 @@ for (const { file, template } of templates) {
   }
 }
 
+const validQualityLocks = verifyQualityLocks();
+
 if (templates.length >= diversityMinCount) {
   if (intentCounts.size < minDistinctIntents) fail("DIVERSITY", `only ${intentCounts.size} distinct primary intents; need at least ${minDistinctIntents}`);
   for (const [intent, count] of intentCounts) {
@@ -433,5 +789,5 @@ const typographyNote = typographyEntries > 0
   ? `, typography ${typographyEntries}/${typographyTextInputTotal} regions (${(typographyCoverage * 100).toFixed(1)}%, ${typographyLowFitEntries} below fitScore ${lowFitScoreThreshold})`
   : "";
 console.log(
-  `AdStudio template gate passed - ${templates.length} template(s), ${intentCounts.size} distinct primary intent(s)${typographyNote}; deterministic editing ${deterministicEditingCounts.ready} ready, ${deterministicEditingCounts.partial} partial, ${deterministicEditingCounts.legacy} legacy.`,
+  `AdStudio template gate passed - ${templates.length} template(s), ${validQualityLocks} quality locked, ${intentCounts.size} distinct primary intent(s)${typographyNote}; deterministic editing ${deterministicEditingCounts.ready} ready, ${deterministicEditingCounts.partial} partial, ${deterministicEditingCounts.legacy} legacy.`,
 );

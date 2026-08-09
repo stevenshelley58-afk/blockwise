@@ -13,7 +13,7 @@ import {
   MAGIC_LAYER_MIN_FONT_FIT,
   MAGIC_LAYER_MIN_REGION_CONFIDENCE,
 } from "../src/lib/adstudio/magic-layers-config.mjs";
-import { resolveAdStudioTemplate } from "../src/lib/adstudio/templates.ts";
+import { AD_STUDIO_TEMPLATES } from "../src/lib/adstudio/templates.ts";
 import { paddedPixelRect } from "../src/lib/adstudio/region-edit.ts";
 import { paddedPatchRect } from "../src/components/adstudio/canvas/text-patch.ts";
 import type { AdStudioCloneRegion, AdStudioTextLayers } from "../src/lib/adstudio/types.ts";
@@ -96,7 +96,7 @@ test("instant text fitting uses painted glyph bounds rather than the oversized C
 });
 
 test("runtime styles come from the approved template and low-confidence regions rerender", () => {
-  const template = resolveAdStudioTemplate("meta-agent-intro-feed-037");
+  const template = AD_STUDIO_TEMPLATES.find((candidate) => candidate.typography);
   assert.ok(template?.typography);
   const cloneRegions = Object.entries(template.typography).map(([key, spec]) => ({
     key,
