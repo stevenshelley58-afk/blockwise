@@ -154,6 +154,7 @@ export async function reviewCloneCandidate(input: {
     `Expected exact copy: ${JSON.stringify(input.expectedCopy)}.`,
     `Required replaced asset regions: ${JSON.stringify(input.expectedAssetKeys)}. An asset is used only if the candidate visibly replaces the corresponding sample asset; faithful means visibly clean and unwarped.`,
     `Bind the JSON to schemaVersion 1, templateId ${input.templateId}, format ${input.format}, attempt ${input.attempt}, referenceHash ${contact.referenceHash}, candidateHash ${contact.candidateHash}, requestHash ${requestHash}.`,
+    "adSystemLikenessScore and standaloneAdQualityScore must each be JSON numbers on a 0-10 scale, never percentages or strings.",
     "Return only the current adStudioCloneQualityReview JSON schema and every one of its fields. Do not return regions or any legacy QA shape. On failure, suggestedCorrection must be a concise actionable edit for the next full clone; on pass it may be empty.",
   ].join("\n");
   const prompt = {
@@ -172,6 +173,7 @@ export async function reviewCloneCandidate(input: {
   let finalProvider = "unavailable";
   let finalModel = "unavailable";
   let lastError: unknown = null;
+  let schemaError: CloneQualitySchemaError | null = null;
 
   for (const [attemptIndex, candidate] of modelCandidateAttempts(profile).entries()) {
     const provider = createTextProviderForCandidate(candidate);
@@ -199,12 +201,19 @@ export async function reviewCloneCandidate(input: {
         finalModel = String(execution.output.providerMetadata.model ?? candidate.model);
         break;
       }
-      lastError = new CloneQualitySchemaError(`Clone QA returned an invalid schema: ${parsed.error.issues.map((issue) => issue.path.join(".")).join(", ")}`);
+      schemaError = new CloneQualitySchemaError(`Clone QA returned an invalid schema: ${parsed.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`).join(", ")}`);
+      lastError = schemaError;
       continue;
     }
     lastError = execution.error;
     if (!(lastError instanceof CloneQualitySchemaError) && !isProviderFallbackEligible(lastError)) break;
   }
+
+  const finalError = !finalReview && schemaError
+    ? new CloneQualitySchemaError(
+      `${schemaError.message}${lastError !== schemaError && lastError instanceof Error ? `; fallback failed: ${lastError.message}` : ""}`,
+    )
+    : lastError;
 
   await recordAdStudioProviderRun({
     workspaceId: input.workspaceId,
@@ -231,9 +240,9 @@ export async function reviewCloneCandidate(input: {
     modelName: finalModel,
     output: finalOutput,
     status: finalReview ? "completed" : "failed",
-    error: finalReview ? undefined : lastError,
+    error: finalReview ? undefined : finalError,
   });
-  if (!finalReview) throw new TemplateCampaignQaError(lastError instanceof Error ? lastError.message : "Clone quality review failed.");
+  if (!finalReview) throw new TemplateCampaignQaError(finalError instanceof Error ? finalError.message : "Clone quality review failed.");
 
   const bindingMatches = finalReview.templateId === input.templateId
     && finalReview.format === input.format

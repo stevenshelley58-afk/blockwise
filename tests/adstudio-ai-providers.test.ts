@@ -196,6 +196,60 @@ test("current Gemini vision chat uses the supported compatibility payload", asyn
   assert.equal("temperature" in body, false);
 });
 
+test("OpenAI clone QA uses a strict bounded JSON schema", async () => {
+  const bodies: Record<string, any>[] = [];
+  const provider = createTextProviderForCandidate(candidate("openai", "gpt-5.5"), {
+    env: { OPENAI_API_KEY: "openai_test" },
+    fetchImpl: async (_url, init) => {
+      bodies.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
+      return new Response(JSON.stringify({
+        id: "openai-qa-request",
+        choices: [{ message: { content: JSON.stringify({
+          schemaVersion: 1,
+          templateId: "template-1",
+          format: "4:5",
+          attempt: 1,
+          referenceHash: "a".repeat(64),
+          candidateHash: "b".repeat(64),
+          requestHash: "c".repeat(64),
+          adSystemLikenessScore: 9.6,
+          standaloneAdQualityScore: 9.3,
+          excludedContentInfluencedScore: false,
+          copyChecks: [],
+          assetChecks: [],
+          identityLeakage: [],
+          defects: [],
+          includedRationale: "Matches.",
+          qualityRationale: "Polished.",
+          suggestedCorrection: "",
+        }) } }],
+        usage: { prompt_tokens: 10, completion_tokens: 4 },
+      }), { status: 200 });
+    },
+  });
+
+  await provider.generate({
+    system: "Return QA JSON.",
+    schemaName: "adStudioCloneQualityReview",
+    messages: [{ role: "user", content: "Review the image." }],
+    imageUrl: "data:image/png;base64,AA==",
+  });
+
+  const responseFormat = bodies[0]?.response_format;
+  assert.equal(responseFormat?.type, "json_schema");
+  assert.equal(responseFormat?.json_schema?.strict, true);
+  assert.deepEqual(responseFormat?.json_schema?.schema?.properties?.adSystemLikenessScore, {
+    type: "number",
+    minimum: 0,
+    maximum: 10,
+  });
+  assert.deepEqual(responseFormat?.json_schema?.schema?.properties?.standaloneAdQualityScore, {
+    type: "number",
+    minimum: 0,
+    maximum: 10,
+  });
+});
+
 test("priced Azure candidate posts structured multimodal prompts to the deployment endpoint", async () => {
   const calls: Array<{ url: string; init: RequestInit }> = [];
   const provider = createTextProviderForCandidate(candidate("azure", "gpt-4.1-mini-vision"), {

@@ -66,6 +66,7 @@ function createOpenAiTextProvider(options: ProviderOptions = {}): TextProviderAd
         input,
         fetchImpl,
         headers: gatewayHeaders(env),
+        strictStructuredOutput: true,
       });
     },
   };
@@ -404,6 +405,7 @@ async function postChatCompletion(input: {
   headers?: Record<string, string>;
   authHeader?: boolean;
   includeModelInBody?: boolean;
+  strictStructuredOutput?: boolean;
 }): Promise<TextProviderResponse> {
   const includeModelInBody = input.includeModelInBody ?? true;
   const reasoningEffort = minimalReasoningEffort(input.model);
@@ -424,7 +426,9 @@ async function postChatCompletion(input: {
     body: JSON.stringify({
       ...(includeModelInBody ? { model: input.model } : {}),
       messages: buildChatMessages(input.input),
-      ...(deepseekReasoner ? {} : { response_format: { type: "json_object" } }),
+      ...(deepseekReasoner
+        ? {}
+        : { response_format: responseFormat(input.input.schemaName, input.strictStructuredOutput === true) }),
       // Reasoning models (gpt-5*, o*, deepseek-reasoner) accept only the default
       // temperature and reject the request outright when any other value is sent.
       ...(customTemp ? { temperature: 0.4 } : {}),
@@ -467,6 +471,88 @@ async function postChatCompletion(input: {
     providerMetadata: {
       model: input.model,
       schemaName: input.input.schemaName,
+    },
+  };
+}
+
+function responseFormat(schemaName: TextProviderRequest["schemaName"], strictStructuredOutput: boolean): Record<string, unknown> {
+  if (!strictStructuredOutput || schemaName !== "adStudioCloneQualityReview") {
+    return { type: "json_object" };
+  }
+
+  const stringValue = { type: "string" };
+  return {
+    type: "json_schema",
+    json_schema: {
+      name: "ad_studio_clone_quality_review",
+      strict: true,
+      schema: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          schemaVersion: { type: "integer", const: 1 },
+          templateId: stringValue,
+          format: { type: "string", enum: ["4:5", "9:16"] },
+          attempt: { type: "integer", minimum: 1 },
+          referenceHash: { type: "string", pattern: "^[a-f0-9]{64}$" },
+          candidateHash: { type: "string", pattern: "^[a-f0-9]{64}$" },
+          requestHash: { type: "string", pattern: "^[a-f0-9]{64}$" },
+          adSystemLikenessScore: { type: "number", minimum: 0, maximum: 10 },
+          standaloneAdQualityScore: { type: "number", minimum: 0, maximum: 10 },
+          excludedContentInfluencedScore: { type: "boolean" },
+          copyChecks: {
+            type: "array",
+            items: {
+              type: "object",
+              additionalProperties: false,
+              properties: {
+                key: stringValue,
+                expected: stringValue,
+                rendered: stringValue,
+                exact: { type: "boolean" },
+              },
+              required: ["key", "expected", "rendered", "exact"],
+            },
+          },
+          assetChecks: {
+            type: "array",
+            items: {
+              type: "object",
+              additionalProperties: false,
+              properties: {
+                key: stringValue,
+                used: { type: "boolean" },
+                faithful: { type: "boolean" },
+              },
+              required: ["key", "used", "faithful"],
+            },
+          },
+          identityLeakage: { type: "array", items: stringValue },
+          defects: { type: "array", items: stringValue },
+          includedRationale: stringValue,
+          qualityRationale: stringValue,
+          suggestedCorrection: stringValue,
+        },
+        required: [
+          "schemaVersion",
+          "templateId",
+          "format",
+          "attempt",
+          "referenceHash",
+          "candidateHash",
+          "requestHash",
+          "adSystemLikenessScore",
+          "standaloneAdQualityScore",
+          "excludedContentInfluencedScore",
+          "copyChecks",
+          "assetChecks",
+          "identityLeakage",
+          "defects",
+          "includedRationale",
+          "qualityRationale",
+          "suggestedCorrection",
+        ],
+      },
     },
   };
 }
