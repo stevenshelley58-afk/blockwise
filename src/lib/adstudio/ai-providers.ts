@@ -16,10 +16,10 @@ import type {
   TextProviderResponse,
 } from "./providers.ts";
 
-type EnvLike = Partial<Record<string, string>>;
+export type ProviderEnvironment = Partial<Record<string, string>>;
 
 type ProviderOptions = {
-  env?: EnvLike;
+  env?: ProviderEnvironment;
   fetchImpl?: typeof fetch;
   model?: string;
   /** OpenAI image quality tier ("low" | "medium" | "high" | "auto"). */
@@ -66,6 +66,7 @@ function createOpenAiTextProvider(options: ProviderOptions = {}): TextProviderAd
         input,
         fetchImpl,
         headers: gatewayHeaders(env),
+        strictStructuredOutput: true,
       });
     },
   };
@@ -116,7 +117,7 @@ function createAzureOpenAiTextProvider(options: ProviderOptions = {}): TextProvi
   };
 }
 
-export function resolveAzureOpenAiChatUrl(env: EnvLike, deployment: string): string {
+export function resolveAzureOpenAiChatUrl(env: ProviderEnvironment, deployment: string): string {
   if (env.AZURE_OPENAI_CHAT_COMPLETIONS_URL) return env.AZURE_OPENAI_CHAT_COMPLETIONS_URL;
 
   const endpoint = env.AZURE_OPENAI_ENDPOINT?.replace(/\/+$/u, "");
@@ -172,7 +173,7 @@ function createOpenAiImageProvider(options: ProviderOptions = {}): ImageProvider
             body: JSON.stringify({
               model,
               prompt: buildImagePrompt(input),
-              size: imageSizeForAspect(input.aspectRatio),
+              size: imageSizeForAspect(input.aspectRatio, model),
               quality,
               n: 1,
             }),
@@ -232,7 +233,7 @@ function createOpenAiImageProvider(options: ProviderOptions = {}): ImageProvider
 }
 
 /** Resolves the /images/edits endpoint, honouring a Cloudflare AI Gateway URL. */
-export function resolveOpenAiImageEditsUrl(env: EnvLike): string {
+export function resolveOpenAiImageEditsUrl(env: ProviderEnvironment): string {
   const gateway = env.CLOUDFLARE_AI_GATEWAY_URL;
   if (!gateway) return OPENAI_IMAGE_EDITS_URL;
   // A real gateway mirrors the OpenAI path (…/openai/images/generations); swap the
@@ -248,7 +249,7 @@ export function resolveOpenAiImageEditsUrl(env: EnvLike): string {
 }
 
 async function postOpenAiImageEdit(input: {
-  env: EnvLike;
+  env: ProviderEnvironment;
   apiKey: string;
   model: string;
   quality: string;
@@ -302,11 +303,7 @@ async function postOpenAiImageEdit(input: {
     });
   };
 
-  return send(imageSizeForAspect(input.input.aspectRatio));
-
-  // Supported size sets differ per model generation (e.g. gpt-image-1-mini
-  // rejects 1024x1280 while gpt-image-2 accepts it). On that specific error,
-  // retry once with "auto" — the model picks the nearest size to the inputs.
+  return send(imageSizeForAspect(input.input.aspectRatio, input.model));
 }
 
 // Resolves a reference (data: URL or http(s) URL) to a Blob for multipart upload.
@@ -331,7 +328,7 @@ const GOOGLE_AI_CHAT_URL = "https://generativelanguage.googleapis.com/v1beta/ope
 
 function createGoogleAiTextProvider(options: ProviderOptions = {}): TextProviderAdapter {
   const env = options.env ?? process.env;
-  const model = options.model ?? env.BLOCKWISE_GOOGLE_TEXT_MODEL ?? "gemini-2.5-flash";
+  const model = options.model ?? env.BLOCKWISE_GOOGLE_TEXT_MODEL ?? "gemini-3.6-flash";
   const fetchImpl = options.fetchImpl ?? fetch;
 
   return {
@@ -404,9 +401,11 @@ async function postChatCompletion(input: {
   headers?: Record<string, string>;
   authHeader?: boolean;
   includeModelInBody?: boolean;
+  strictStructuredOutput?: boolean;
 }): Promise<TextProviderResponse> {
   const includeModelInBody = input.includeModelInBody ?? true;
   const reasoningEffort = minimalReasoningEffort(input.model);
+  const openAiCompletionTokens = usesOpenAiCompletionTokenParameter(input.model);
   // DeepSeek R1 (deepseek-reasoner) rejects both response_format and the
   // OpenAI-specific max_completion_tokens param — it only understands
   // max_tokens and emits JSON in plain text. Everything else (incl. deepseek-chat,
@@ -415,6 +414,7 @@ async function postChatCompletion(input: {
   const deepseekReasoner = isDeepSeekReasoner(input.model);
   const response = await fetchProviderRequest(input.fetchImpl, input.url, {
     method: "POST",
+    signal: input.input.signal,
     headers: {
       ...(input.authHeader === false ? {} : { Authorization: `Bearer ${input.apiKey}` }),
       "Content-Type": "application/json",
@@ -423,7 +423,9 @@ async function postChatCompletion(input: {
     body: JSON.stringify({
       ...(includeModelInBody ? { model: input.model } : {}),
       messages: buildChatMessages(input.input),
-      ...(deepseekReasoner ? {} : { response_format: { type: "json_object" } }),
+      ...(deepseekReasoner
+        ? {}
+        : { response_format: responseFormat(input.input.schemaName, input.strictStructuredOutput === true) }),
       // Reasoning models (gpt-5*, o*, deepseek-reasoner) accept only the default
       // temperature and reject the request outright when any other value is sent.
       ...(customTemp ? { temperature: 0.4 } : {}),
@@ -435,9 +437,9 @@ async function postChatCompletion(input: {
       // and a bad loop can drain the account. Copy/QA outputs are small JSON;
       // 4096 is generous. OpenAI reasoning models (gpt-5*/o*) only accept
       // max_completion_tokens; DeepSeek R1 + everything else accepts max_tokens.
-      ...(customTemp || deepseekReasoner
-        ? { max_tokens: MAX_COMPLETION_TOKENS }
-        : { max_completion_tokens: MAX_COMPLETION_TOKENS }),
+      ...(openAiCompletionTokens
+        ? { max_completion_tokens: MAX_COMPLETION_TOKENS }
+        : { max_tokens: MAX_COMPLETION_TOKENS }),
     }),
   });
   const payload = (await response.json().catch(() => ({}))) as {
@@ -466,6 +468,88 @@ async function postChatCompletion(input: {
     providerMetadata: {
       model: input.model,
       schemaName: input.input.schemaName,
+    },
+  };
+}
+
+function responseFormat(schemaName: TextProviderRequest["schemaName"], strictStructuredOutput: boolean): Record<string, unknown> {
+  if (!strictStructuredOutput || schemaName !== "adStudioCloneQualityReview") {
+    return { type: "json_object" };
+  }
+
+  const stringValue = { type: "string" };
+  return {
+    type: "json_schema",
+    json_schema: {
+      name: "ad_studio_clone_quality_review",
+      strict: true,
+      schema: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          schemaVersion: { type: "integer", const: 1 },
+          templateId: stringValue,
+          format: { type: "string", enum: ["4:5", "9:16"] },
+          attempt: { type: "integer", minimum: 1 },
+          referenceHash: { type: "string", pattern: "^[a-f0-9]{64}$" },
+          candidateHash: { type: "string", pattern: "^[a-f0-9]{64}$" },
+          requestHash: { type: "string", pattern: "^[a-f0-9]{64}$" },
+          adSystemLikenessScore: { type: "number", minimum: 0, maximum: 10 },
+          standaloneAdQualityScore: { type: "number", minimum: 0, maximum: 10 },
+          excludedContentInfluencedScore: { type: "boolean" },
+          copyChecks: {
+            type: "array",
+            items: {
+              type: "object",
+              additionalProperties: false,
+              properties: {
+                key: stringValue,
+                expected: stringValue,
+                rendered: stringValue,
+                exact: { type: "boolean" },
+              },
+              required: ["key", "expected", "rendered", "exact"],
+            },
+          },
+          assetChecks: {
+            type: "array",
+            items: {
+              type: "object",
+              additionalProperties: false,
+              properties: {
+                key: stringValue,
+                used: { type: "boolean" },
+                faithful: { type: "boolean" },
+              },
+              required: ["key", "used", "faithful"],
+            },
+          },
+          identityLeakage: { type: "array", items: stringValue },
+          defects: { type: "array", items: stringValue },
+          includedRationale: stringValue,
+          qualityRationale: stringValue,
+          suggestedCorrection: stringValue,
+        },
+        required: [
+          "schemaVersion",
+          "templateId",
+          "format",
+          "attempt",
+          "referenceHash",
+          "candidateHash",
+          "requestHash",
+          "adSystemLikenessScore",
+          "standaloneAdQualityScore",
+          "excludedContentInfluencedScore",
+          "copyChecks",
+          "assetChecks",
+          "identityLeakage",
+          "defects",
+          "includedRationale",
+          "qualityRationale",
+          "suggestedCorrection",
+        ],
+      },
     },
   };
 }
@@ -570,9 +654,9 @@ function isRetryableProviderStatus(status: number): boolean {
 }
 
 function isProviderFallbackEligibleStatus(status: number): boolean {
-  // A depleted account will not recover by retrying the same request, but it
-  // must not strand the customer when the profile has another provider.
-  return status === 402 || isRetryableProviderStatus(status);
+  // A depleted account or unavailable endpoint/model will not recover by
+  // retrying the same provider, but must not strand a profile with a fallback.
+  return status === 402 || status === 404 || isRetryableProviderStatus(status);
 }
 
 function supportsCustomTemperature(model: string): boolean {
@@ -580,7 +664,12 @@ function supportsCustomTemperature(model: string): boolean {
   // DeepSeek's reasoning model (deepseek-reasoner / R1 family) rejects a custom
   // temperature and only accepts max_tokens, like OpenAI's gpt-5* / o* reasoning
   // models reject temperature too — so it takes the same no-temperature path.
-  return !/^(gpt-5|o\d|deepseek-reasoner)/i.test(name);
+  return !/^(gpt-5|o\d|deepseek-reasoner|gemini-3\.(?:5|6))/i.test(name);
+}
+
+function usesOpenAiCompletionTokenParameter(model: string): boolean {
+  const name = model.split("/").pop() ?? model;
+  return /^(gpt-5|o\d)/i.test(name);
 }
 
 // DeepSeek's R1 reasoning model (deepseek-reasoner) rejects response_format
@@ -660,7 +749,7 @@ function parseJson(rawText: string): unknown {
   }
 }
 
-function gatewayHeaders(env: EnvLike): Record<string, string> {
+function gatewayHeaders(env: ProviderEnvironment): Record<string, string> {
   return env.CLOUDFLARE_AI_GATEWAY_TOKEN
     ? { "cf-aig-authorization": `Bearer ${env.CLOUDFLARE_AI_GATEWAY_TOKEN}` }
     : {};
@@ -703,10 +792,18 @@ function extractImageUrl(content: unknown): string | undefined {
   return undefined;
 }
 
-function imageSizeForAspect(aspectRatio: string): string {
-  // OpenAI's image endpoints accept only these native canvases. AdStudio's
-  // exact placement ratio remains in the prompt and the clone pipeline crops
-  // the returned native canvas to that ratio before QA and persistence.
+function imageSizeForAspect(aspectRatio: string, model: string): string {
+  // GPT Image 2 accepts flexible dimensions when both edges are multiples of
+  // 16 and the documented pixel/ratio limits are respected. Generate on the
+  // final canvas so clone geometry reaches visual QA without a destructive
+  // centre crop. Older GPT Image models retain their native supported sizes.
+  if (model === "gpt-image-2") {
+    if (aspectRatio === "4:5") return "1024x1280";
+    if (aspectRatio === "9:16") return "864x1536";
+    if (aspectRatio === "1.91:1") return "1952x1024";
+    return "1024x1024";
+  }
+
   if (aspectRatio === "1:1") return "1024x1024";
   if (aspectRatio === "1.91:1") return "1536x1024";
   return "1024x1536";

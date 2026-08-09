@@ -1,19 +1,15 @@
-import type {
-  AdStudioLegacyCanvas,
-  AdStudioLegacyCreative,
-  AdStudioTextLayers,
-} from "@/lib/adstudio/types.ts";
+import type { AdStudioCreative, AdStudioTextLayers } from "@/lib/adstudio/types.ts";
 
 type CreativeEditResponse = {
   image?: string;
   /** Finished pixels inline — painted immediately, no media-proxy round trip. */
   previewImage?: string;
-  qa?: AdStudioLegacyCanvas["cloneQa"];
+  qa?: AdStudioCreative["canvas"]["cloneQa"];
   textLayers?: AdStudioTextLayers | null;
   renderHistory?: string[];
-  renderQaHistory?: NonNullable<AdStudioLegacyCanvas["cloneQa"]>[];
+  renderQaHistory?: NonNullable<AdStudioCreative["canvas"]["cloneQa"]>[];
   redoHistory?: string[];
-  redoQaHistory?: NonNullable<AdStudioLegacyCanvas["cloneQa"]>[];
+  redoQaHistory?: NonNullable<AdStudioCreative["canvas"]["cloneQa"]>[];
   revisionId?: string;
   code?: string;
   error?: string;
@@ -40,13 +36,13 @@ export class CreativeEditError extends Error {
 }
 
 export type CreativeEditResult = {
-  creative: AdStudioLegacyCreative;
+  creative: AdStudioCreative;
   /** Data URL of the finished render when the server inlined it. */
   previewImage?: string;
 };
 
 export async function requestCreativeEdit(input: {
-  creative: AdStudioLegacyCreative;
+  creative: AdStudioCreative;
   mutation: CreativeEditMutation;
   mutationId: string;
 }): Promise<CreativeEditResult> {

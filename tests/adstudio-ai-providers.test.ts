@@ -70,14 +70,61 @@ test("template analysis uses its own strict provider schema", () => {
   assert.equal(invalid.ok, false);
 });
 
+test("clone QA accepts strict numeric score strings without weakening invalid-score rejection", () => {
+  const base = {
+    schemaVersion: 1,
+    templateId: "template-1",
+    format: "4:5",
+    attempt: 1,
+    referenceHash: "a".repeat(64),
+    candidateHash: "b".repeat(64),
+    requestHash: "c".repeat(64),
+    excludedContentInfluencedScore: false,
+    copyChecks: [],
+    assetChecks: [],
+    identityLeakage: [],
+    defects: [],
+    includedRationale: "Reusable system matches.",
+    qualityRationale: "Polished output.",
+    suggestedCorrection: "",
+  };
+  const valid = validateProviderJsonOutput({
+    schemaName: "adStudioCloneQualityReview",
+    rawText: JSON.stringify({
+      ...base,
+      adSystemLikenessScore: "9.6/10",
+      standaloneAdQualityScore: "9.2",
+    }),
+  });
+  assert.equal(valid.ok, true);
+  if (valid.ok) {
+    assert.equal("adSystemLikenessScore" in valid.value && valid.value.adSystemLikenessScore, 9.6);
+    assert.equal("standaloneAdQualityScore" in valid.value && valid.value.standaloneAdQualityScore, 9.2);
+  }
+
+  for (const invalidScore of ["excellent", "9.5 out of 10", "11", "", null]) {
+    const invalid = validateProviderJsonOutput({
+      schemaName: "adStudioCloneQualityReview",
+      rawText: JSON.stringify({
+        ...base,
+        adSystemLikenessScore: invalidScore,
+        standaloneAdQualityScore: 9.5,
+      }),
+    });
+    assert.equal(invalid.ok, false);
+  }
+});
+
 test("production exports expose only explicitly priced provider candidates", () => {
   const adapters = readFileSync("src/lib/adstudio/ai-providers.ts", "utf8");
   const publicApi = readFileSync("src/lib/adstudio/index.ts", "utf8");
   const googleAdapter = readFileSync("src/lib/adstudio/google-image-provider.ts", "utf8");
+  const styleProfile = readFileSync("src/lib/adstudio/style-profile.ts", "utf8");
 
   assert.doesNotMatch(adapters, /export function create(?:OpenAi|OpenRouter|AzureOpenAi|GoogleAi|Fal)(?:Text|Image|Vision)Provider/);
   assert.doesNotMatch(publicApi, /createOpenAi(?:Text|Image|Vision)Provider|createOpenRouter(?:Text|Image)Provider/);
   assert.match(googleAdapter, /createGoogleImageProvider\(\s*accounting: ProviderAccountingContext/);
+  assert.doesNotMatch(styleProfile, /\.generate\(/);
 });
 
 test("candidate adapters retain exact runtime version, price, currency, and billing basis", () => {
@@ -118,6 +165,89 @@ test("candidate adapters reject missing or invalid explicit pricing before dispa
     () => createImageProviderForCandidate(candidate("openai", "   ")),
     /must declare a model/,
   );
+});
+
+test("current Gemini vision chat uses the supported compatibility payload", async () => {
+  const bodies: Record<string, unknown>[] = [];
+  const provider = createTextProviderForCandidate(candidate("google", "gemini-3.6-flash"), {
+    env: { GOOGLE_AI_API_KEY: "google_test" },
+    fetchImpl: async (_url, init) => {
+      bodies.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
+      return new Response(JSON.stringify({
+        id: "google-request",
+        choices: [{ message: { content: JSON.stringify({ ok: true }) } }],
+        usage: { prompt_tokens: 10, completion_tokens: 4 },
+      }), { status: 200 });
+    },
+  });
+
+  await provider.generate({
+    system: "Return JSON.",
+    schemaName: "adStudioCloneQualityReview",
+    messages: [{ role: "user", content: "Review the image." }],
+    imageUrl: "data:image/png;base64,AA==",
+  });
+
+  const body = bodies[0];
+  assert.ok(body);
+  assert.equal(body.model, "gemini-3.6-flash");
+  assert.equal(body.max_tokens, 4096);
+  assert.equal("max_completion_tokens" in body, false);
+  assert.equal("temperature" in body, false);
+});
+
+test("OpenAI clone QA uses a strict bounded JSON schema", async () => {
+  const bodies: Record<string, any>[] = [];
+  const provider = createTextProviderForCandidate(candidate("openai", "gpt-5.5"), {
+    env: { OPENAI_API_KEY: "openai_test" },
+    fetchImpl: async (_url, init) => {
+      bodies.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
+      return new Response(JSON.stringify({
+        id: "openai-qa-request",
+        choices: [{ message: { content: JSON.stringify({
+          schemaVersion: 1,
+          templateId: "template-1",
+          format: "4:5",
+          attempt: 1,
+          referenceHash: "a".repeat(64),
+          candidateHash: "b".repeat(64),
+          requestHash: "c".repeat(64),
+          adSystemLikenessScore: 9.6,
+          standaloneAdQualityScore: 9.3,
+          excludedContentInfluencedScore: false,
+          copyChecks: [],
+          assetChecks: [],
+          identityLeakage: [],
+          defects: [],
+          includedRationale: "Matches.",
+          qualityRationale: "Polished.",
+          suggestedCorrection: "",
+        }) } }],
+        usage: { prompt_tokens: 10, completion_tokens: 4 },
+      }), { status: 200 });
+    },
+  });
+
+  await provider.generate({
+    system: "Return QA JSON.",
+    schemaName: "adStudioCloneQualityReview",
+    messages: [{ role: "user", content: "Review the image." }],
+    imageUrl: "data:image/png;base64,AA==",
+  });
+
+  const responseFormat = bodies[0]?.response_format;
+  assert.equal(responseFormat?.type, "json_schema");
+  assert.equal(responseFormat?.json_schema?.strict, true);
+  assert.deepEqual(responseFormat?.json_schema?.schema?.properties?.adSystemLikenessScore, {
+    type: "number",
+    minimum: 0,
+    maximum: 10,
+  });
+  assert.deepEqual(responseFormat?.json_schema?.schema?.properties?.standaloneAdQualityScore, {
+    type: "number",
+    minimum: 0,
+    maximum: 10,
+  });
 });
 
 test("priced Azure candidate posts structured multimodal prompts to the deployment endpoint", async () => {
@@ -222,6 +352,31 @@ test("priced OpenAI image candidate uses GPT Image 2", async () => {
   assert.equal(output.usage?.inputTokens, undefined);
 });
 
+test("GPT Image 2 generations use the exact AdStudio canvas instead of a crop-prone native portrait", async () => {
+  for (const [aspectRatio, expectedSize] of [
+    ["4:5", "1024x1280"],
+    ["9:16", "864x1536"],
+  ] as const) {
+    let dispatchedBody: Record<string, unknown> | undefined;
+    const provider = createImageProviderForCandidate(candidate("openai", "gpt-image-2"), {
+      env: { OPENAI_API_KEY: "oa_test" },
+      fetchImpl: async (_url, init) => {
+        dispatchedBody = JSON.parse(String(init?.body));
+        return new Response(JSON.stringify({ data: [{ b64_json: "aW1hZ2U=" }] }), { status: 200 });
+      },
+    });
+
+    await provider.generate({
+      prompt: "Premium local real estate creative",
+      referenceAssets: [],
+      aspectRatio,
+      stylePreset: "real_estate_photography",
+    });
+
+    assert.equal(dispatchedBody?.size, expectedSize);
+  }
+});
+
 test("OpenAI 2xx response without an image preserves submitted billing evidence", async () => {
   const provider = createImageProviderForCandidate(candidate("openai", "gpt-image-2"), {
     env: { OPENAI_API_KEY: "oa_test" },
@@ -270,7 +425,16 @@ test("OpenAI 2xx response without an image preserves submitted billing evidence"
 });
 
 test("provider HTTP errors are retryable only for explicitly transient statuses", async () => {
-  for (const [status, retryable] of [[400, false], [401, false], [408, true], [409, true], [425, true], [429, true], [500, true]] as const) {
+  for (const [status, retryable, fallbackEligible] of [
+    [400, false, false],
+    [401, false, false],
+    [404, false, true],
+    [408, true, true],
+    [409, true, true],
+    [425, true, true],
+    [429, true, true],
+    [500, true, true],
+  ] as const) {
     const provider = createImageProviderForCandidate(candidate("openai", "gpt-image-2"), {
       env: { OPENAI_API_KEY: "oa_test" },
       fetchImpl: async () => new Response(JSON.stringify({ error: { message: `status ${status}` } }), { status }),
@@ -285,6 +449,7 @@ test("provider HTTP errors are retryable only for explicitly transient statuses"
       assert.ok(error instanceof ProviderRequestError);
       assert.equal(error.requestSubmitted, true);
       assert.equal(error.retryable, retryable, `status ${status}`);
+      assert.equal(error.fallbackEligible, fallbackEligible, `status ${status}`);
       return true;
     });
   }
@@ -391,6 +556,32 @@ test("a pre-aborted provider signal never dispatches", async () => {
   assert.equal(calls, 0);
 });
 
+test("a pre-aborted worker signal also stops paid copy and vision requests before dispatch", async () => {
+  let calls = 0;
+  const abortController = new AbortController();
+  abortController.abort(new Error("lease lost"));
+  const provider = createTextProviderForCandidate(candidate("openai", "gpt-5.5"), {
+    env: { OPENAI_API_KEY: "oa_test" },
+    fetchImpl: async () => {
+      calls += 1;
+      return new Response("{}", { status: 200 });
+    },
+  });
+
+  await assert.rejects(() => provider.generate({
+    system: "Return JSON.",
+    messages: [{ role: "user", content: "Review." }],
+    schemaName: "metaLeadAdPack",
+    signal: abortController.signal,
+  }), (error: unknown) => {
+    assert.ok(error instanceof ProviderRequestError);
+    assert.equal(error.requestSubmitted, false);
+    assert.equal(error.retryable, false);
+    return true;
+  });
+  assert.equal(calls, 0);
+});
+
 test("reference acquisition failures remain unsubmitted and non-retryable", async () => {
   let calls = 0;
   const provider = createImageProviderForCandidate(candidate("openai", "gpt-image-2"), {
@@ -464,7 +655,7 @@ test("priced OpenAI image candidate sends locked-template reference work to imag
   const output = await provider.generate({
     prompt: "Prepare this listing photo for a locked template frame",
     referenceAssets: ["data:image/png;base64,aW1hZ2U="],
-    aspectRatio: "1:1",
+    aspectRatio: "4:5",
     stylePreset: "locked_template_photo_prep",
     requiresReferenceAssets: true,
     signal: abortController.signal,
@@ -479,7 +670,7 @@ test("priced OpenAI image candidate sends locked-template reference work to imag
 
   const body = calls[0].init.body as FormData;
   assert.equal(body.get("model"), "gpt-image-2");
-  assert.equal(body.get("size"), "1024x1024");
+  assert.equal(body.get("size"), "1024x1280");
   assert.equal(body.get("quality"), "high");
   assert.equal(body.get("n"), "1");
   assert.ok(body.get("image") instanceof Blob);
@@ -512,7 +703,30 @@ test("priced OpenAI image candidate attaches a mask when one is supplied", async
 
   const body = calls[0].init.body as FormData;
   assert.ok(body.get("mask"), "mask must be attached when provided");
-  assert.equal(body.get("size"), "1024x1536");
+  assert.equal(body.get("size"), "864x1536");
+});
+
+test("older GPT Image models retain their native portrait canvas", async () => {
+  for (const aspectRatio of ["4:5", "9:16"] as const) {
+    let dispatchedBody: FormData | undefined;
+    const provider = createImageProviderForCandidate(candidate("openai", "gpt-image-1-mini"), {
+      env: { OPENAI_API_KEY: "oa_test" },
+      fetchImpl: async (_url, init) => {
+        dispatchedBody = init?.body as FormData;
+        return new Response(JSON.stringify({ data: [{ b64_json: "aW1hZ2U=" }] }), { status: 200 });
+      },
+    });
+
+    await provider.generate({
+      prompt: "Prepare this listing photo",
+      referenceAssets: ["data:image/png;base64,aW1hZ2U="],
+      aspectRatio,
+      stylePreset: "locked_template_photo_prep",
+      requiresReferenceAssets: true,
+    });
+
+    assert.equal(dispatchedBody?.get("size"), "1024x1536");
+  }
 });
 
 test("priced OpenAI image candidate honours quality tier and the Cloudflare gateway for edits", async () => {

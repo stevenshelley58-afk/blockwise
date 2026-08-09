@@ -104,3 +104,12 @@ test("every live elevated script uses the shared secret-first client helper", ()
     assert.doesNotMatch(source, /createClient\([^\n]*(?:serviceRoleKey|serviceKey|serverCredential)/, path);
   }
 });
+
+test("the AdStudio e2e seed provisions a small idempotent render entitlement", () => {
+  const source = readFileSync("scripts/e2e/seed-adstudio-e2e.mjs", "utf8");
+  assert.match(source, /rpc\("grant_workspace_credits"/);
+  assert.match(source, /p_workspace_id:\s*ADSTUDIO_E2E_WORKSPACE_ID/);
+  assert.match(source, /p_entitlement_type:\s*"operator"/);
+  assert.match(source, /p_credits:\s*6/);
+  assert.match(source, /adstudio-e2e:credit-grant:\$\{periodStart\.toISOString\(\)\.slice\(0, 7\)\}:v1/);
+});

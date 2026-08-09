@@ -11,6 +11,26 @@ export type TemplateImageRequirement = {
   required: boolean;
 };
 
+/** Counts active uploads by slot so concurrent selections cannot unblock Generate early. */
+export type PendingImageUploads = Record<string, number>;
+
+export function updatePendingImageUploads(
+  current: PendingImageUploads,
+  slotId: string,
+  change: 1 | -1,
+): PendingImageUploads {
+  const nextCount = Math.max(0, (current[slotId] ?? 0) + change);
+  if (nextCount === 0) {
+    const { [slotId]: _finished, ...remaining } = current;
+    return remaining;
+  }
+  return { ...current, [slotId]: nextCount };
+}
+
+export function hasPendingImageUploads(pending: PendingImageUploads): boolean {
+  return Object.values(pending).some((count) => count > 0);
+}
+
 export const DEFAULT_IMAGE_SLOT: TemplateImageRequirement = {
   id: "property_photo",
   label: "Property image",

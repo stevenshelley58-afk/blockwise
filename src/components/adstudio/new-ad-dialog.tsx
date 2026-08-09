@@ -19,7 +19,6 @@ import {
 import type { AdStudioBrandKit, AdStudioTemplate, FirstAdInput } from "@/lib/adstudio";
 import { resolveAdvertiserDomain } from "@/lib/adstudio/advertiser-domain";
 import { isAdStudioImageSrc, isTransientImagePreview } from "@/lib/adstudio/image-src.ts";
-import { labelForMetaCta } from "@/lib/adstudio/meta-cta.ts";
 import { templatePreviewDataUrl } from "@/lib/adstudio/template-preview.ts";
 import { templateThumbnailSrcSet } from "@/lib/adstudio/template-display.ts";
 import { AD_IMAGE_MAX_BYTES, AD_IMAGE_UPLOAD_TYPES } from "@/lib/upload/asset-file";
@@ -33,7 +32,9 @@ import {
   defaultImageForTemplateSlot,
   defaultImageLabelForTemplateSlot,
   defaultTextForTemplateField,
+  hasPendingImageUploads,
   imageRequirementsForTemplate,
+  updatePendingImageUploads,
   type TemplateCopyRequirement,
   type TemplateImageRequirement,
 } from "./new-ad-dialog-slots";
@@ -100,17 +101,17 @@ const COPY_MODES: ReadonlyArray<{ id: CopyMode; label: string }> = [
 ];
 
 /**
- * Meta's documented lead-ads CTA subset (Track D / Appendix A). Anything
- * outside it is either remapped at payload build (CONTACT_US → LEARN_MORE)
- * or never offered here.
+ * Every Meta CTA option that survives the server's 24-char clamp
+ * (src/lib/adstudio/copy-generation.ts). The preview renders the same label
+ * that Ad Studio's publish flow shows on the button.
  */
 const FEED_COPY_CTA_OPTIONS: ReadonlyArray<{ value: string; label: string }> = [
   { value: "LEARN_MORE", label: "Learn more" },
-  { value: "GET_QUOTE", label: "Get quote" },
+  { value: "CONTACT_US", label: "Contact us" },
   { value: "SIGN_UP", label: "Sign up" },
-  { value: "APPLY_NOW", label: "Apply now" },
   { value: "DOWNLOAD", label: "Download" },
-  { value: "SUBSCRIBE", label: "Subscribe" },
+  { value: "GET_QUOTE", label: "Get quote" },
+  { value: "BOOK_NOW", label: "Book now" },
 ];
 const TEMPLATE_FILTERS: ReadonlyArray<{ id: TemplateFilter; label: string }> = [
   { id: "all", label: "All" },
@@ -234,13 +235,25 @@ function cleanText(value: string | null | undefined): string {
 }
 
 function metaCtaLabel(value: string | undefined): string {
-  // Delegates to the single CTA label map; legacy CONTACT_US displays as
-  // "Contact us" even though it can no longer be sent to Meta.
-  return labelForMetaCta(value);
+  switch (value) {
+    case "CONTACT_US":
+      return "Contact us";
+    case "DOWNLOAD":
+      return "Download";
+    case "SIGN_UP":
+      return "Sign up";
+    case "LEARN_MORE":
+    default:
+      return "Learn more";
+  }
 }
 
 function brandNameForPreview(brandKit: AdStudioBrandKit): string {
   return brandKit.identity.tradingName || brandKit.identity.businessName || "Your agency";
+}
+
+function initialForBrand(brandName: string): string {
+  return (brandName.trim().charAt(0) || "B").toUpperCase();
 }
 
 function domainForPreview(brandKit: AdStudioBrandKit): string {
@@ -263,6 +276,7 @@ function NewAdPlacementGuide({
   onZoneClick: (zone: GuideZone) => void;
 }) {
   const brandName = brandNameForPreview(brandKit);
+  const brandInitial = initialForBrand(brandName);
   const domain = domainForPreview(brandKit);
   const sample = template ? templateAdCopy(template) : undefined;
   const primaryText = sample?.primaryText || "Primary text";
@@ -336,6 +350,7 @@ function NewAdPlacementGuide({
               );
             })}
             <span className="newad-pv-story-top">
+              <span className="studio-template-avatar">{brandInitial}</span>
               <span><strong>{brandName}</strong><small>Sponsored</small></span>
             </span>
             <span className="newad-pv-story-copy">
@@ -347,7 +362,9 @@ function NewAdPlacementGuide({
         ) : (
           <div className="newad-pv-feed">
             <span className="newad-pv-feed-head">
+              <span className="studio-template-avatar">{brandInitial}</span>
               <span><strong>{brandName}</strong><small>Sponsored</small></span>
+              <span className="studio-template-dots" aria-hidden>···</span>
             </span>
             {captionButton("feed:primaryText", primaryText)}
             <span className={`newad-pv-media${activeZone?.startsWith("image:") ? " is-active" : ""}`}>
@@ -427,15 +444,17 @@ export function NewAdDialog({
   // Nothing can be created until the customer chooses the sample to clone.
   const [templateId, setTemplateId] = useState<string | undefined>(undefined);
   const [description, setDescription] = useState("");
-  const [generationQuality, setGenerationQuality] = useState<GenerationQuality>("fast");
+  const generationQuality: GenerationQuality = "high";
   const [colourSource, setColourSource] = useState<ColourSource>("template");
   const [imageDataUrlsBySlot, setImageDataUrlsBySlot] = useState<Record<string, string>>({});
   // Point 9 — background image scaling: the slot shows a raw `URL.createObjectURL`
   // preview INSTANTLY while the heavier storage upload (which downscales big
-  // photos on the way up) runs off to the side. `uploadingImage` gates Generate
+  // photos on the way up) runs off to the side. Pending uploads gate Generate
   // so the server always gets the final downscaled URL, not a transient blob.
   // Preview object URLs are tracked so they can be revoked (no blob leaks).
   const previewUrlsRef = useRef<Record<string, string>>({});
+  const uploadVersionRef = useRef(0);
+  const activeUploadVersionBySlotRef = useRef<Record<string, number>>({});
   const [copyMode, setCopyMode] = useState<CopyMode>("ai");
   const [copyGenerated, setCopyGenerated] = useState(false);
   const [feedCopy, setFeedCopy] = useState<FeedCopy>(EMPTY_FEED_COPY);
@@ -449,7 +468,8 @@ export function NewAdDialog({
   const [error, setError] = useState("");
   const [showRequirementsAlert, setShowRequirementsAlert] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [uploadingImage, setUploadingImage] = useState(false);
+  const [pendingImageUploads, setPendingImageUploads] = useState<Record<string, number>>({});
+  const uploadingImage = hasPendingImageUploads(pendingImageUploads);
   const [trialCreditNote, setTrialCreditNote] = useState("Uses one ad pack. No Meta account is needed until publish.");
 
   const [activeZone, setActiveZone] = useState<GuideZone | null>(null);
@@ -610,7 +630,6 @@ export function NewAdDialog({
     }
     setFilter("all");
     setDescription("");
-    setGenerationQuality("fast");
     setColourSource("template");
     // The customer supplies every declared image and text field. The selected
     // sample is only the visual anchor sent to the image model.
@@ -623,7 +642,8 @@ export function NewAdDialog({
     setMediaSourceMode("details");
     setError("");
     setShowRequirementsAlert(false);
-    setUploadingImage(false);
+    activeUploadVersionBySlotRef.current = {};
+    setPendingImageUploads({});
     setCopyMode("ai");
     setCopyGenerated(false);
     setFeedCopy(EMPTY_FEED_COPY);
@@ -712,6 +732,8 @@ export function NewAdDialog({
     setError("");
     setShowRequirementsAlert(false);
     // Inputs reset whenever the customer chooses a different sample.
+    activeUploadVersionBySlotRef.current = {};
+    setPendingImageUploads({});
     setImageDataUrlsBySlot({});
     setImageNamesBySlot({});
     setOnImageCopy(brandTextDefaultsForTemplate(template, brandKit));
@@ -743,6 +765,10 @@ export function NewAdDialog({
     setImageNamesBySlot((current) => ({ ...current, [slotId]: label }));
   }
 
+  function invalidateSlotUpload(slotId: string) {
+    delete activeUploadVersionBySlotRef.current[slotId];
+  }
+
   /**
    * Point 9 — the customer sees their photo the instant they pick it. A raw
    * `URL.createObjectURL` blob preview drops into the slot right away while the
@@ -753,17 +779,21 @@ export function NewAdDialog({
    */
   async function selectImage(file: File, slotId: string) {
     setError("");
+    revokeSlotPreview(slotId);
+    const uploadVersion = ++uploadVersionRef.current;
+    activeUploadVersionBySlotRef.current[slotId] = uploadVersion;
     const previewUrl = URL.createObjectURL(file);
     previewUrlsRef.current[slotId] = previewUrl;
     setImageDataUrlsBySlot((current) => ({ ...current, [slotId]: previewUrl }));
     setImageNamesBySlot((current) => ({ ...current, [slotId]: file.name }));
-    setUploadingImage(true);
+    setPendingImageUploads((current) => updatePendingImageUploads(current, slotId, 1));
     try {
       const uploaded = await uploadAdStudioMedia({
         file,
         workspaceId,
         brandKitId: brandKit.brandKitId,
       });
+      if (activeUploadVersionBySlotRef.current[slotId] !== uploadVersion) return;
       // Blob preview served its purpose; swap to the real URL and release it.
       revokeSlotPreview(slotId);
       setSlotImage(slotId, uploaded.src, file.name);
@@ -777,11 +807,12 @@ export function NewAdDialog({
       });
       setError("");
     } catch (caught) {
+      if (activeUploadVersionBySlotRef.current[slotId] !== uploadVersion) return;
       revokeSlotPreview(slotId);
       clearSlotImage(slotId);
       setError(caught instanceof Error ? caught.message : "Could not upload that image.");
     } finally {
-      setUploadingImage(false);
+      setPendingImageUploads((current) => updatePendingImageUploads(current, slotId, -1));
     }
   }
 
@@ -795,6 +826,7 @@ export function NewAdDialog({
   }
 
   function clearSlotImage(slotId: string) {
+    invalidateSlotUpload(slotId);
     revokeSlotPreview(slotId);
     setImageDataUrlsBySlot((current) => {
       const next = { ...current };
@@ -815,6 +847,8 @@ export function NewAdDialog({
   }
 
   function selectLibraryImage(asset: ImageLibraryAsset) {
+    invalidateSlotUpload(activeImageSlot.id);
+    revokeSlotPreview(activeImageSlot.id);
     setSlotImage(activeImageSlot.id, asset.fullSrc, asset.label);
     setMediaSourceMode("details");
     setError("");
@@ -905,11 +939,6 @@ export function NewAdDialog({
       ),
     }));
     setCopyError(null);
-  }
-
-  function selectGenerationQuality(quality: GenerationQuality) {
-    setGenerationQuality(quality);
-    setError("");
   }
 
   function selectColourSource(source: ColourSource) {
@@ -1221,7 +1250,6 @@ export function NewAdDialog({
                           onClear={() => {
                             clearSlotImage(slot.id);
                             setError("");
-                            setUploadingImage(false);
                           }}
                         />
                         <div className="studio-newad-media-actions" aria-label={`${slot.label} source options`}>
@@ -1312,38 +1340,6 @@ export function NewAdDialog({
                 </div>
               </fieldset>
 
-              <fieldset className="studio-newad-quality">
-                <legend>Generation quality</legend>
-                <div className="studio-newad-quality-options">
-                  <label className={generationQuality === "fast" ? "is-selected" : undefined}>
-                    <input
-                      type="radio"
-                      name="generation-quality"
-                      value="fast"
-                      checked={generationQuality === "fast"}
-                      onChange={() => selectGenerationQuality("fast")}
-                    />
-                    <span>
-                      <strong>Fast</strong>
-                      <small>Usually ready in about 1 minute</small>
-                    </span>
-                    <em>Recommended</em>
-                  </label>
-                  <label className={generationQuality === "high" ? "is-selected" : undefined}>
-                    <input
-                      type="radio"
-                      name="generation-quality"
-                      value="high"
-                      checked={generationQuality === "high"}
-                      onChange={() => selectGenerationQuality("high")}
-                    />
-                    <span>
-                      <strong>High quality</strong>
-                      <small>Usually ready in about 2–3 minutes</small>
-                    </span>
-                  </label>
-                </div>
-              </fieldset>
               </div>
               <aside className="studio-newad-previewpane" aria-label="Template placement guide">
                 <NewAdPlacementGuide
@@ -1414,9 +1410,7 @@ export function NewAdDialog({
                 aria-live="polite"
               >
                 {submitting
-                  ? generationQuality === "fast"
-                    ? "Creating your ad. Fast ads are usually ready in under a minute."
-                    : "Creating your high-quality ad. This usually takes 2–3 minutes."
+                  ? "Creating your high-quality ad. This usually takes 2–3 minutes."
                   : error || footHint}
               </span>
             )}

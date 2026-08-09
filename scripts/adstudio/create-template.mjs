@@ -8,7 +8,9 @@ import { dirname, join, relative, resolve, sep } from "node:path";
 
 import sharp from "sharp";
 
+import { resolveModelProfile } from "../../src/lib/ai/model-registry.ts";
 import { createTextProviderForCandidate } from "../../src/lib/adstudio/ai-providers.ts";
+import { createGoogleImageProvider } from "../../src/lib/adstudio/google-image-provider.ts";
 import { validateProviderJsonOutput } from "../../src/lib/adstudio/providers.ts";
 import { buildCloneImageRequest } from "../../src/lib/adstudio/reference-clone.ts";
 import {
@@ -27,6 +29,8 @@ if (command === "analyse") await analyseSource();
 else if (command === "analyse-local") await analyseLocalSource();
 else if (command === "render") await renderSample();
 else if (command === "export-local") await exportLocalSample();
+else if (command === "export-customer-local") await exportCustomerLocal();
+else if (command === "render-locked-google") await renderLockedGooglePacket();
 else if (command === "import-local") await importLocalSample();
 else usage();
 
@@ -115,6 +119,7 @@ function writeTemplateContract({ extracted, sourcePath, id, outputPath, format }
 }
 
 async function exportLocalSample() {
+  const executionTransport = requestedTransport();
   const templatePath = requiredPath("template");
   const packetPath = resolve(required("packet"));
   const template = JSON.parse(readFileSync(templatePath, "utf8"));
@@ -140,11 +145,14 @@ async function exportLocalSample() {
     images: assets,
     copy,
     seed: Number(args.seed ?? 0),
+    reviewCorrection: typeof args.correction === "string" ? args.correction : undefined,
   });
   const suppliedFields = template.inputs.images.filter((field) => assetPaths[field.key]);
   const expectedOutput = resolve(args.output ?? join(root, "public", template.sample.imageSrc.replace(/^[/\\]+/u, "")));
   const packet = createLockedClonePacket({
     root,
+    stage: "gallery_sample",
+    executionTransport,
     templateId: template.id,
     request,
     copy,
@@ -159,6 +167,151 @@ async function exportLocalSample() {
   console.log(`Locked local clone request written to ${relative(root, packetPath)}.`);
 }
 
+async function exportCustomerLocal() {
+  const executionTransport = requestedTransport();
+  const templatePath = requiredPath("template");
+  const packetPath = resolve(required("packet"));
+  const template = JSON.parse(readFileSync(templatePath, "utf8"));
+  const approvedSamplePath = resolve(root, "public", template.sample.imageSrc.replace(/^[/\\]+/u, ""));
+  if (!existsSync(approvedSamplePath) || sha256(readFileSync(approvedSamplePath)) !== template.sample.contentHash) {
+    throw new Error("Customer-fixture generation requires the exact approved public sample from the template manifest.");
+  }
+
+  const assets = {};
+  const assetPaths = {};
+  for (const pair of arrayArg("asset")) {
+    const [key, pathValue] = splitPair(pair, "asset");
+    if (!template.inputs.images.some((field) => field.key === key)) throw new Error(`Unknown image input: ${key}`);
+    const path = resolve(pathValue);
+    if (!existsSync(path)) throw new Error(`Replacement asset not found: ${path}`);
+    assetPaths[key] = path;
+    assets[key] = await pngDataUrl(path);
+  }
+  const missingAssets = template.inputs.images.filter((field) => field.required && !assets[field.key]);
+  if (missingAssets.length) throw new Error(`Missing --asset values: ${missingAssets.map((field) => field.key).join(", ")}`);
+
+  const copy = {};
+  for (const pair of arrayArg("copy")) {
+    const [key, value] = splitPair(pair, "copy");
+    if (!template.inputs.text.some((field) => field.key === key)) throw new Error(`Unknown text input: ${key}`);
+    copy[key] = value;
+  }
+  const missingCopy = template.inputs.text.filter((field) => copy[field.key] === undefined || (field.required && !copy[field.key].trim()));
+  if (missingCopy.length) throw new Error(`Customer fixtures require complete --copy values: ${missingCopy.map((field) => field.key).join(", ")}`);
+
+  const request = buildCloneImageRequest(template, {
+    referenceImage: await pngDataUrl(approvedSamplePath),
+    images: assets,
+    copy,
+    seed: Number(args.seed ?? 0),
+    reviewCorrection: typeof args.correction === "string" ? args.correction : undefined,
+  });
+  const expectedOutput = resolve(required("output"));
+  const outputRelative = relative(root, expectedOutput).split(sep).join("/");
+  if (!outputRelative.startsWith("artifacts/") || outputRelative.startsWith("../")) {
+    throw new Error("Customer-fixture output must stay under artifacts/ and can never overwrite a public sample.");
+  }
+  const packet = createLockedClonePacket({
+    root,
+    stage: "customer_fixture",
+    executionTransport,
+    templateId: template.id,
+    request,
+    copy,
+    referencePaths: [
+      { key: "approved_sample", role: "approved_sample", path: approvedSamplePath },
+      ...template.inputs.images.filter((field) => assetPaths[field.key]).map((field) => ({ key: field.key, role: "replacement_asset", path: assetPaths[field.key] })),
+    ],
+    expectedOutput,
+  });
+  mkdirSync(dirname(packetPath), { recursive: true });
+  writeFileSync(packetPath, `${JSON.stringify(packet, null, 2)}\n`);
+  console.log(`Locked customer-fixture clone request written to ${relative(root, packetPath)}.`);
+}
+
+/**
+ * Renders an already-exported packet through the same Google image provider
+ * and primary image-final model used by the production clone lane. The packet
+ * is authoritative: this command cannot change the references, prompt, copy,
+ * output path, or transport after it was locked.
+ */
+async function renderLockedGooglePacket() {
+  const templatePath = requiredPath("template");
+  const packetPath = requiredPath("packet");
+  const template = JSON.parse(readFileSync(templatePath, "utf8"));
+  const packet = JSON.parse(readFileSync(packetPath, "utf8"));
+  const verified = verifyLockedClonePacket(packet, { root });
+  if (packet.templateId !== template.id) throw new Error("Locked clone packet belongs to another template.");
+  if (packet.executionTransport !== "google_image_api") {
+    throw new Error("render-locked-google requires a packet exported with --transport google_image_api.");
+  }
+
+  const outputPath = resolve(root, packet.expectedOutput);
+  assertLockedOutputPath({ template, stage: verified.stage, outputPath });
+  const rawPath = outputPath.replace(/\.png$/iu, ".raw.png");
+  if (rawPath === outputPath) throw new Error("Locked Google output must be a PNG path.");
+  if (existsSync(outputPath) || existsSync(rawPath)) {
+    throw new Error("Locked Google render refuses to overwrite an existing output or raw artifact.");
+  }
+
+  const referenceAssets = await Promise.all(packet.references.map((reference) => (
+    pngDataUrl(resolve(root, reference.path))
+  )));
+  const request = {
+    prompt: packet.prompt,
+    negativePrompt: packet.negativePrompt || undefined,
+    referenceAssets,
+    aspectRatio: packet.aspectRatio,
+    stylePreset: "real_estate_clone",
+    seed: packet.seed,
+    requiresReferenceAssets: true,
+  };
+  const profile = resolveModelProfile("image_final");
+  const primary = profile.primary;
+  if (primary.provider !== "google") throw new Error("The production image_final primary is not Google.");
+  const model = primary.model;
+  const provider = createGoogleImageProvider({
+    model,
+    pricing: {
+      inputUsdPerMillionTokens: primary.inputUsdPerMillionTokens,
+      outputUsdPerMillionTokens: primary.outputUsdPerMillionTokens,
+      imageUsdPerUnit: primary.imageUsdPerUnit,
+      currency: "USD",
+      inputTokenBasis: "per_million_tokens",
+      outputTokenBasis: "per_million_tokens",
+      imageBasis: "per_output_image",
+      source: "default",
+      snapshotId: null,
+    },
+  }, { model });
+  const generated = await provider.generate(request);
+  const rawBytes = await assetBytes(generated.assetUrl);
+  const normalized = await sharp(rawBytes)
+    .resize(template.dimensions.width, template.dimensions.height, { fit: "cover", position: "centre" })
+    .png()
+    .toBuffer();
+  mkdirSync(dirname(outputPath), { recursive: true });
+  writeFileSync(rawPath, rawBytes, { flag: "wx" });
+  writeFileSync(outputPath, normalized, { flag: "wx" });
+  console.log(`Google image render completed with ${generated.model}.`);
+  console.log(`Raw provider artifact written to ${relative(root, rawPath)}.`);
+  console.log(`Normalized locked output written to ${relative(root, outputPath)}.`);
+}
+
+function assertLockedOutputPath({ template, stage, outputPath }) {
+  const workspacePath = relative(root, outputPath).split(sep).join("/");
+  if (!workspacePath || workspacePath === ".." || workspacePath.startsWith("../")) {
+    throw new Error("Locked output must remain inside the workspace.");
+  }
+  if (stage === "gallery_sample") {
+    const samplePath = resolve(root, "public", template.sample.imageSrc.replace(/^[/\\]+/u, ""));
+    if (outputPath !== samplePath) throw new Error("Gallery-sample packet output must be the declared public sample path.");
+    return;
+  }
+  if (stage === "customer_fixture" && workspacePath.startsWith("artifacts/")) return;
+  throw new Error("Customer-fixture packet output must stay under artifacts/.");
+}
+
 async function importLocalSample() {
   const templatePath = requiredPath("template");
   const packetPath = requiredPath("packet");
@@ -167,7 +320,8 @@ async function importLocalSample() {
   const template = JSON.parse(readFileSync(templatePath, "utf8"));
   const packet = JSON.parse(readFileSync(packetPath, "utf8"));
   const qa = JSON.parse(readFileSync(qaPath, "utf8"));
-  verifyLockedClonePacket(packet, { root });
+  const verifiedPacket = verifyLockedClonePacket(packet, { root });
+  if (verifiedPacket.stage !== "gallery_sample") throw new Error("Only a gallery-sample packet can update the public template sample.");
   if (packet.templateId !== template.id) throw new Error("Local clone packet belongs to another template.");
   const bytes = readFileSync(outputPath);
   const outputHash = sha256(bytes);
@@ -177,9 +331,10 @@ async function importLocalSample() {
   if (metadata.width !== template.dimensions.width || metadata.height !== template.dimensions.height) {
     throw new Error(`QA output must be exactly ${template.dimensions.width}x${template.dimensions.height}; received ${metadata.width}x${metadata.height}.`);
   }
-  const finalPath = resolve(root, packet.expectedOutput);
+  const lockedReviewedOutput = resolve(root, packet.expectedOutput);
+  if (lockedReviewedOutput !== outputPath) throw new Error("QA output path does not match the locked reviewed candidate.");
   const declaredFinalPath = resolve(root, "public", template.sample.imageSrc.replace(/^[/\\]+/u, ""));
-  if (finalPath !== declaredFinalPath) throw new Error("Locked output path does not match the template sample path.");
+  const finalPath = declaredFinalPath;
   mkdirSync(dirname(finalPath), { recursive: true });
   writeFileSync(finalPath, bytes);
   template.sample.contentHash = sha256(bytes);
@@ -216,6 +371,7 @@ async function renderSample() {
     images: assets,
     copy: Object.fromEntries(template.inputs.text.map((field) => [field.key, field.sample])),
     seed: Number(args.seed ?? 0),
+    reviewCorrection: typeof args.correction === "string" ? args.correction : undefined,
   });
   console.log(`Rendering ${template.id} from one source ad and ${Object.keys(assets).length} replacement asset(s)...`);
   const generated = generateImageWithCurl(request);
@@ -301,9 +457,23 @@ function parseArgs(values) {
     const value = values[index + 1];
     if (!value || value.startsWith("--")) throw new Error(`Missing value for --${key}.`);
     index += 1;
-    parsed[key] = key === "asset" ? [...(parsed[key] ?? []), value] : value;
+    parsed[key] = key === "asset" || key === "copy" ? [...(parsed[key] ?? []), value] : value;
   }
   return parsed;
+}
+
+function splitPair(pair, kind) {
+  const equals = pair.indexOf("=");
+  if (equals < 1) throw new Error(`Invalid --${kind} ${pair}; use key=value.`);
+  return [pair.slice(0, equals), pair.slice(equals + 1)];
+}
+
+function requestedTransport() {
+  const transport = typeof args.transport === "string" ? args.transport : "codex_subscription_image_generation";
+  if (!["codex_subscription_image_generation", "google_image_api"].includes(transport)) {
+    throw new Error("--transport must be codex_subscription_image_generation or google_image_api.");
+  }
+  return transport;
 }
 
 function required(key) {
@@ -414,8 +584,10 @@ function usage() {
   console.error("Usage:");
   console.error("  node scripts/adstudio/create-template.mjs analyse --source meta_ad_candidates/... --id meta-feed-001");
   console.error("  node scripts/adstudio/create-template.mjs analyse-local --source meta_ad_candidates/... --analysis analysis.json --id meta-feed-001");
-  console.error("  node scripts/adstudio/create-template.mjs render --template src/lib/adstudio/template-gallery/meta-feed-001.json --asset photo=path --asset logo=path");
-  console.error("  node scripts/adstudio/create-template.mjs export-local --template template.json --packet packet.json --asset photo=path");
+  console.error("  node scripts/adstudio/create-template.mjs render --template src/lib/adstudio/template-gallery/meta-feed-001.json --asset photo=path --asset logo=path [--correction review-feedback]");
+  console.error("  node scripts/adstudio/create-template.mjs export-local --template template.json --packet packet.json --asset photo=path [--correction review-feedback]");
+  console.error("  node scripts/adstudio/create-template.mjs export-customer-local --template template.json --packet packet.json --output artifacts/.../candidate.png --asset photo=path --copy headline='Exact copy' [--correction review-feedback]");
+  console.error("  node scripts/adstudio/create-template.mjs render-locked-google --template template.json --packet packet.json");
   console.error("  node scripts/adstudio/create-template.mjs import-local --template template.json --packet packet.json --output generated.png --qa qa.json");
   process.exit(1);
 }

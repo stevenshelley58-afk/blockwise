@@ -23,7 +23,7 @@ export function buildCloneTestPack(workspaceId = "workspace_clone_test"): AdStud
     state: "WA",
     firstAd: {
       source: "gallery",
-      templateId: "meta-feed-020",
+      templateId: "meta-agent-intro-feed-037",
       description: "Clone the selected sample with the supplied property photo and agency logo.",
       imageDataUrl: "data:image/png;base64,cHJvcGVydHk=",
       templateCloneImagesByFormat: {

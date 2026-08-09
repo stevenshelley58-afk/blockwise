@@ -3,7 +3,7 @@
 import { Check, ChevronLeft, ChevronRight, ImagePlus, ListTree, Redo2, RefreshCw, ScanEye, Sparkles, Undo2, WandSparkles, X, ZoomIn } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from "react";
 
-import type { AdStudioCloneRegion, AdStudioLegacyCreative } from "@/lib/adstudio/types.ts";
+import type { AdStudioCloneRegion, AdStudioCreative } from "@/lib/adstudio/types.ts";
 import { downscaleImageForUpload } from "@/lib/upload/asset-file";
 
 import {
@@ -20,8 +20,8 @@ import {
 } from "./text-patch";
 
 export type InPlaceAdEditorProps = {
-  creative: AdStudioLegacyCreative;
-  onCreativeChange: (next: AdStudioLegacyCreative) => void;
+  creative: AdStudioCreative;
+  onCreativeChange: (next: AdStudioCreative) => void;
   showToast: (msg: string) => void;
   selectedRegionKey?: string | null;
   onRegionSelectionChange?: (key: string | null) => void;
@@ -82,7 +82,7 @@ function truncateForStatus(value: string): string {
   return value.length > 18 ? `${value.slice(0, 18)}…` : value;
 }
 
-function expectedTextForKey(creative: AdStudioLegacyCreative, key: string): string {
+function expectedTextForKey(creative: AdStudioCreative, key: string): string {
   return creative.canvas.cloneQa?.copyValues?.[key] ?? "";
 }
 

@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "templates": {
+    "meta-agent-intro-feed-037": {
+      "templateHash": "b1d73bc80fa1d60e03ea0c8d7e11f636e78a7202407c46c00384e3c1b7499e76",
+      "templateContract": "{\"audienceIntent\":\"Home buyers looking for a trusted real-estate partner\",\"category\":\"buyer-lead-generation\",\"classification\":{\"ad_type\":\"lead_generation\",\"primary_intent\":\"buyer_acquisition\",\"property_or_agent_focus\":\"property\"},\"dimensions\":{\"height\":1350,\"width\":1080},\"format\":\"4:5\",\"goal\":\"buyer_leads\",\"id\":\"meta-agent-intro-feed-037\",\"inputs\":{\"images\":[{\"aspect\":\"landscape\",\"description\":\"the customer's property photograph\",\"key\":\"property_photo\",\"label\":\"Property photo\",\"required\":true},{\"aspect\":\"square\",\"description\":\"the customer's agency logo\",\"key\":\"agency_logo\",\"label\":\"Agency logo\",\"required\":true}],\"text\":[{\"key\":\"headline\",\"label\":\"Headline\",\"maxLength\":28,\"required\":true,\"sample\":\"Find your forever home today\"},{\"key\":\"body\",\"label\":\"Body\",\"maxLength\":47,\"required\":true,\"sample\":\"Your trusted partner for all real estate needs.\"}]},\"meta\":{\"cta\":\"LEARN_MORE\",\"descriptions\":[\"Tell us what you are looking for\"],\"facebookPositions\":[\"feed\"],\"headlines\":[\"Find your next home\"],\"instagramPositions\":[\"stream\"],\"leadForm\":{\"headline\":\"Start your home search\",\"privacyPolicyUrl\":null,\"questions\":[\"What is your best contact number?\"],\"thankYouScreen\":{\"body\":\"The agency will be in touch within 24 hours to learn what you are looking for.\",\"title\":\"Request received\"}},\"objective\":\"OUTCOME_LEADS\",\"platform\":\"meta\",\"primaryText\":[\"Find a home that fits the way you want to live.\"],\"publisherPlatforms\":[\"facebook\",\"instagram\"],\"specialAdCategory\":\"housing\"},\"name\":\"Find Your Forever Home — Feed 037\",\"offerId\":\"find-your-forever-home\",\"sample\":{\"alt\":\"Generated sample for Find Your Forever Home — Feed 037.\",\"contentHash\":\"0d83ce43550e78876dc2958337f92e2fa438b9aaa90778058a5b1ad14f7c1064\",\"generatedBy\":\"reference_clone\",\"imageSrc\":\"/adstudio-samples/meta/meta-agent-intro-feed-037-sample.png\",\"thumbnailSrc\":\"/adstudio-samples/meta/meta-agent-intro-feed-037-sample.png\"},\"source\":\"builtin\",\"sourceAd\":{\"contentHash\":\"c2b76dc1425b5c96c6b6845349f1dc2bfe1f0b390805daf46e00029347a97a7a\",\"file\":\"01_feed_4x5_best/meta_037.png\"},\"status\":\"approved\",\"tags\":[\"buyer-leads\",\"property\",\"feed\"]}",
+      "sampleHash": "0d83ce43550e78876dc2958337f92e2fa438b9aaa90778058a5b1ad14f7c1064",
+      "evidenceHash": "8f3172889be783f31906ff20b4eac2841754e2fce3cb78561d6ad13fd7780765",
+      "sampleLikeness": 9.6,
+      "sampleQuality": 9.5,
+      "customerFixtureLikeness": 9.5,
+      "customerFixtureQuality": 9.5,
+      "qualifiedAt": "2026-08-09T00:00:00.000Z"
+    }
+  }
+}

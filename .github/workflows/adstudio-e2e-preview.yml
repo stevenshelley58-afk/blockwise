@@ -6,10 +6,10 @@
 # credits (~$0.30-0.60). It used to fire on every Preview deployment — dozens
 # of paid generations per dev day — which drained the OpenRouter/FAL balances.
 # It is now MANUAL-ONLY (workflow_dispatch with the deployment URL to test).
-# Auto-running against Production is not possible anyway: the login form's
-# Turnstile captcha rejects Playwright there ("Verification failed"), so an
-# automatic production run just fails at login on every merge. Run it by hand
-# against a Vercel preview URL before merging risky Ad Studio changes.
+# Production keeps its real Turnstile challenge. For a Production proof, set
+# auth_base_url to an owned captcha-free Preview; the login helper transfers
+# only the dedicated test account's Supabase cookies to blockwise.sale after
+# strict hostname validation. The challenge is never disabled or bypassed.
 #
 # ONE required repository secret (the job FAILS loudly when it is missing —
 # a silent skip is how runtime regressions shipped green for months):
@@ -19,14 +19,19 @@
 # seeded once (already done) — to rotate or re-seed it, run with service-role env:
 #   node scripts/e2e/seed-adstudio-e2e.mjs
 
-name: AdStudio E2E (Vercel Preview)
+name: AdStudio E2E (Vercel Hosted)
 
 on:
   workflow_dispatch:
     inputs:
       base_url:
-        description: "Deployment URL to run the real loop against (e.g. a Vercel preview URL)"
+        description: "Owned Vercel or Production URL to run the real loop against"
         required: true
+        type: string
+      auth_base_url:
+        description: "Optional captcha-free Preview used only to authenticate before testing Production"
+        required: false
+        default: ""
         type: string
 
 concurrency:
@@ -35,15 +40,15 @@ concurrency:
 
 jobs:
   real-loop:
-    name: Real-loop against preview
+    name: Real-loop against hosted deployment
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
       PLAYWRIGHT_BASE_URL: ${{ inputs.base_url }}
+      ADSTUDIO_E2E_LOGIN_URL: ${{ inputs.auth_base_url || inputs.base_url }}
       ADSTUDIO_E2E_WORKSPACE_ID: 00000000-0000-4000-8000-0000000000e2
       ADSTUDIO_E2E_EMAIL: adstudio-e2e@blockwise.test
       ADSTUDIO_E2E_PASSWORD: ${{ secrets.ADSTUDIO_E2E_PASSWORD }}
-      ADSTUDIO_E2E_V2: "1"
     steps:
       - name: Require the e2e secret
         run: |
@@ -78,13 +83,6 @@ jobs:
           # landing page is always fetchable and never an example.* host.
           ADSTUDIO_E2E_BRAND_URL: ${{ inputs.base_url }}
         run: npx playwright test e2e/adstudio-real-loop.spec.ts --project=chromium
-
-      # Deterministic v2 loop: generation is a server render (no paid image
-      # calls), so it only exercises templates the preview env marks ready.
-      - name: Run Ad Studio v2 loop
-        env:
-          ADSTUDIO_E2E_BRAND_URL: ${{ inputs.base_url }}
-        run: npx playwright test e2e/adstudio-v2-loop.spec.ts --project=chromium
 
       # The DOM snapshot at the moment of failure, inlined into the job log —
       # the report artifact is not reachable from every diagnosis environment.

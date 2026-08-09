@@ -58,7 +58,8 @@ export async function resolveHandler(kind: string): Promise<Handler | null> {
         assertDeterministicFeedEditingReady,
         runTemplateCampaignGeneration,
       } = await import("../src/lib/adstudio/generate-template-campaign.ts");
-      return async (payload, supabase) => {
+      const { loadRuntimeProviderToken } = await import("../src/lib/providers/provider-connections.ts");
+      return async (payload, supabase, context) => {
         const workspaceId = String(payload.workspaceId ?? "");
         const userId = String(payload.userId ?? "");
         const creativeJobId = String(payload.creativeJobId ?? "");
@@ -89,6 +90,13 @@ export async function resolveHandler(kind: string): Promise<Handler | null> {
         };
         if (!stored.body) throw new Error("Ad Studio recovery job has no generation body.");
         const reservation = stored.reservation ?? undefined;
+        const openAiApiKey = await loadRuntimeProviderToken(supabase, "openai");
+        if (!openAiApiKey) {
+          throw new Error("The encrypted OpenAI runtime credential is not provisioned.");
+        }
+        // Never mutate process.env or put this key in the VPS deployment file.
+        // Each provider receives an explicit copy scoped to this job.
+        const providerEnv = { ...process.env, OPENAI_API_KEY: openAiApiKey };
 
         await supabase
           .from("adstudio_creative_jobs")
@@ -114,6 +122,8 @@ export async function resolveHandler(kind: string): Promise<Handler | null> {
             creditReservation: reservation,
             correlationId: stored.correlationId,
             expectedCampaignId: stored.expectedCampaignId,
+            providerEnv,
+            signal: context.signal,
           });
         } catch (error) {
           // Generation mutates the reservation as each format settles. Persist
@@ -444,14 +454,39 @@ export async function runOnce(
     const outcome = await settleFailedJob(supabase, job, executionError.message);
     if (job.kind === "adstudio.generate.template" && outcome === "failed") {
       await finalizeAdStudioGenerationFailure(job.payload, executionError.message, supabase);
+      await releaseAdStudioGenerationLock(job.payload, supabase);
     }
     log(`job ${job.id} (${job.kind}) ${outcome}: ${executionError.message}`);
     return true;
   }
 
   await settleCompletedJob(supabase, job);
+  if (job.kind === "adstudio.generate.template") {
+    await releaseAdStudioGenerationLock(job.payload, supabase);
+  }
   log(`job ${job.id} (${job.kind}) completed in ${Date.now() - started}ms`);
   return true;
+}
+
+async function releaseAdStudioGenerationLock(
+  payload: Record<string, unknown>,
+  supabase: ServiceSupabase,
+): Promise<void> {
+  const workspaceId = String(payload.workspaceId ?? "");
+  const dedupeKey = String(payload.generationDedupKey ?? "");
+  const creativeJobId = String(payload.creativeJobId ?? "");
+  if (!workspaceId || !dedupeKey || !creativeJobId) return;
+  const deleted = await supabase
+    .from("adstudio_generation_locks")
+    .delete()
+    .eq("workspace_id", workspaceId)
+    .eq("dedupe_key", dedupeKey)
+    // Ownership fence: an older terminal job must never delete a lock that a
+    // newer retry has already reclaimed and rebound to itself.
+    .eq("job_id", creativeJobId);
+  if (deleted.error) {
+    console.error("Ad Studio generation lock release failed", deleted.error.message);
+  }
 }
 
 async function finalizeAdStudioGenerationFailure(

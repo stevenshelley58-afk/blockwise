@@ -8,7 +8,6 @@ supabase/.temp
 /coverage
 playwright-report
 test-results
-e2e/.auth/
 .env
 .env*.local
 *.tsbuildinfo

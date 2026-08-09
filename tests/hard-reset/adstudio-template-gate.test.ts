@@ -1,13 +1,24 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
 
 const gate = "scripts/verify/adstudio-templates.mjs";
-const hash = (value: string) => createHash("sha256").update(value).digest("hex");
+const hash = (value: string | Uint8Array) => createHash("sha256").update(value).digest("hex");
+const rubricVersion = "adstudio-subject-invariant-clone-v1";
+const qualifiedAt = "2026-08-09T00:00:00.000Z";
+
+function canonicalJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    return `{${Object.keys(record).sort().map((key) => `${JSON.stringify(key)}:${canonicalJson(record[key])}`).join(",")}}`;
+  }
+  return JSON.stringify(value);
+}
 
 function fixtureRoot() {
   const root = mkdtempSync(join(tmpdir(), "adstudio-gate-"));
@@ -47,6 +58,127 @@ function template(root: string, n: number, intent = "listing") {
   };
 }
 
+function passingReview(input: {
+  templateId: string;
+  requestHash: string;
+  outputHash: string;
+  copy: Record<string, string>;
+  assetKeys: string[];
+  likeness?: number;
+  quality?: number;
+}) {
+  return {
+    schemaVersion: 1,
+    rubricVersion,
+    templateId: input.templateId,
+    requestHash: input.requestHash,
+    candidateHash: input.outputHash,
+    reviewer: { provider: "test", model: "vision" },
+    adSystemLikenessScore: input.likeness ?? 9.7,
+    standaloneAdQualityScore: input.quality ?? 9.4,
+    excludedContentInfluencedScore: false,
+    copyChecks: Object.entries(input.copy).map(([key, expected]) => ({ key, expected, observed: expected, exact: true })),
+    assetChecks: input.assetKeys.map((key) => ({ key, used: true, faithful: true, notes: "faithful" })),
+    identityLeakage: [],
+    defects: [],
+    includedRationale: "The reusable system matches.",
+    qualityRationale: "The ad is polished.",
+    suggestedCorrection: "",
+    reviewedAt: qualifiedAt,
+  };
+}
+
+function writeQualityRelease(root: string, value: ReturnType<typeof template>) {
+  const templatePath = join(root, "gallery", `${value.id}.json`);
+  const templateHash = hash(canonicalJson(value));
+  writeFileSync(templatePath, JSON.stringify({ ...value, qualityLock: { templateHash } }));
+  const sampleRequestHash = hash("gallery-request");
+  const customerRequestHash = hash("customer-request");
+  const sampleCopy = { headline: value.inputs.text[0]!.sample };
+  const customerCopy = { headline: "CUSTOMER COPY" };
+  const sampleAssetHash = hash("gallery-property-photo");
+  const customerAssetHash = hash("customer-property-photo");
+  const customerOutputHash = hash("customer-candidate");
+  const sampleReview = passingReview({
+    templateId: value.id,
+    requestHash: sampleRequestHash,
+    outputHash: value.sample.contentHash,
+    copy: sampleCopy,
+    assetKeys: ["property_photo"],
+  });
+  const customerReview = passingReview({
+    templateId: value.id,
+    requestHash: customerRequestHash,
+    outputHash: customerOutputHash,
+    copy: customerCopy,
+    assetKeys: ["property_photo"],
+    likeness: 9.6,
+    quality: 9.3,
+  });
+  const evidence = {
+    schemaVersion: 2,
+    templateId: value.id,
+    templateHash,
+    sampleHash: value.sample.contentHash,
+    rubricVersion,
+    thresholds: { adSystemLikeness: 9.5, standaloneAdQuality: 9 },
+    qualifiedAt,
+    sample: {
+      stage: "gallery_sample",
+      requestHash: sampleRequestHash,
+      referenceHash: value.sourceAd.contentHash,
+      references: [
+        { index: 1, key: "source_ad", role: "source", contentHash: value.sourceAd.contentHash },
+        { index: 2, key: "property_photo", role: "replacement_asset", contentHash: sampleAssetHash },
+      ],
+      copy: sampleCopy,
+      outputHash: value.sample.contentHash,
+      executionTransport: "test",
+      reviewedAt: qualifiedAt,
+      review: sampleReview,
+    },
+    customerFixture: {
+      stage: "customer_fixture",
+      requestHash: customerRequestHash,
+      referenceHash: value.sample.contentHash,
+      references: [
+        { index: 1, key: "approved_sample", role: "approved_sample", contentHash: value.sample.contentHash },
+        { index: 2, key: "property_photo", role: "replacement_asset", contentHash: customerAssetHash },
+      ],
+      copy: customerCopy,
+      outputHash: customerOutputHash,
+      executionTransport: "test",
+      reviewedAt: qualifiedAt,
+      review: customerReview,
+    },
+  };
+  const evidenceDir = join(root, "gallery", "evidence");
+  mkdirSync(evidenceDir, { recursive: true });
+  const evidencePath = join(evidenceDir, `${value.id}.json`);
+
+  const write = () => {
+    writeFileSync(evidencePath, JSON.stringify(evidence));
+    const lock = {
+      templateHash,
+      templateContract: canonicalJson(value),
+      sampleHash: value.sample.contentHash,
+      evidenceHash: hash(readFileSync(evidencePath)),
+      sampleLikeness: sampleReview.adSystemLikenessScore,
+      sampleQuality: sampleReview.standaloneAdQualityScore,
+      customerFixtureLikeness: customerReview.adSystemLikenessScore,
+      customerFixtureQuality: customerReview.standaloneAdQualityScore,
+      qualifiedAt,
+    };
+    writeFileSync(join(root, "gallery", "quality-locks.json"), JSON.stringify({
+      schemaVersion: 1,
+      templates: { [value.id]: lock },
+    }));
+    return lock;
+  };
+
+  return { evidence, evidencePath, write };
+}
+
 function run(root?: string) {
   return spawnSync(process.execPath, [gate], {
     encoding: "utf8",
@@ -59,9 +191,92 @@ function run(root?: string) {
   });
 }
 
-test("the installed gallery passes", () => {
+test("the installed gallery enforces release quality-lock readiness", () => {
   const result = run();
-  assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+  const indexPath = join(process.cwd(), "src", "lib", "adstudio", "template-gallery", "quality-locks.json");
+  const lockCount = existsSync(indexPath)
+    ? Object.keys(JSON.parse(readFileSync(indexPath, "utf8")).templates ?? {}).length
+    : 0;
+  if (lockCount > 0) assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+  else {
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /at least one valid template lock/u);
+  }
+});
+
+test("a gallery without a release index remains valid but has no release locks", () => {
+  const root = fixtureRoot();
+  try {
+    const value = template(root, 1);
+    writeFileSync(join(root, "gallery", `${value.id}.json`), JSON.stringify(value));
+    const result = run(root);
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+    assert.match(result.stderr, /no release quality-lock index/u);
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test("a release index requires at least one valid lock", () => {
+  const root = fixtureRoot();
+  try {
+    const value = template(root, 1);
+    writeFileSync(join(root, "gallery", `${value.id}.json`), JSON.stringify(value));
+    writeFileSync(join(root, "gallery", "quality-locks.json"), JSON.stringify({ schemaVersion: 1, templates: {} }));
+    const result = run(root);
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /at least one valid template lock/u);
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test("a valid quality lock requires passing gallery and distinct customer evidence", () => {
+  const root = fixtureRoot();
+  try {
+    const value = template(root, 1);
+    writeFileSync(join(root, "gallery", `${value.id}.json`), JSON.stringify(value));
+    writeQualityRelease(root, value).write();
+    const result = run(root);
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+    assert.match(result.stdout, /1 quality locked/u);
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test("the release gate rejects stale evidence hashes and below-threshold locks", () => {
+  const root = fixtureRoot();
+  try {
+    const value = template(root, 1);
+    writeFileSync(join(root, "gallery", `${value.id}.json`), JSON.stringify(value));
+    const release = writeQualityRelease(root, value);
+    release.write();
+    writeFileSync(release.evidencePath, `${JSON.stringify(release.evidence)}\n`);
+    let result = run(root);
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /evidenceHash does not match/u);
+
+    const lock = release.write();
+    lock.sampleLikeness = 9.4;
+    writeFileSync(join(root, "gallery", "quality-locks.json"), JSON.stringify({
+      schemaVersion: 1,
+      templates: { [value.id]: lock },
+    }));
+    result = run(root);
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /sampleLikeness must be between 9\.5 and 10/u);
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test("evidence v2 rejects reused customer fixtures and failed exact QA", () => {
+  const root = fixtureRoot();
+  try {
+    const value = template(root, 1);
+    writeFileSync(join(root, "gallery", `${value.id}.json`), JSON.stringify(value));
+    const release = writeQualityRelease(root, value);
+    release.evidence.customerFixture.copy = release.evidence.sample.copy;
+    release.evidence.customerFixture.references[1]!.contentHash = release.evidence.sample.references[1]!.contentHash;
+    release.evidence.customerFixture.review.copyChecks[0]!.exact = false;
+    release.write();
+    const result = run(root);
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /copy check failed|copy must differ|distinct property_photo asset/u);
+  } finally { rmSync(root, { recursive: true, force: true }); }
 });
 test("the gate rejects old canvas/version fields", () => {
   const root = fixtureRoot();

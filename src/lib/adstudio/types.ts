@@ -1,7 +1,5 @@
 import { z } from "zod";
 
-import type { AdDocInstance } from "./v2/template-doc.ts";
-
 export const adStudioGoalSchema = z.enum([
   "seller_leads",
   "appraisal_bookings",
@@ -31,7 +29,7 @@ export type FirstAdInput = {
   source: "gallery";
   templateId: string;
   description: string;
-  /** Customer-facing render choice. Fast is the default for new ads. */
+  /** Legacy clients may still send this; finished customer ads always use high quality. */
   generationQuality?: "fast" | "high";
   /**
    * Which palette the one canonical clone request preserves. Template is the
@@ -339,25 +337,6 @@ export function normalizeCloneQa(raw: unknown): AdStudioCloneQa | undefined {
   return { regions, copyValues };
 }
 
-export type AdStudioLegacyCanvas = {
-  width: number;
-  height: number;
-  backgroundAssetId: string | null;
-  objects: AdStudioCanvasObject[];
-  /** Present on AI-cloned creatives: editable-element regions + text values. */
-  cloneQa?: AdStudioCloneQa;
-  /** Derived text-editing layers (plate + type treatments); absent until built. */
-  textLayers?: AdStudioTextLayers;
-  /** Previous renders (media paths, newest last) for undo on clone edits. */
-  renderHistory?: string[];
-  /** Editor-map snapshots paired by index with renderHistory. */
-  renderQaHistory?: AdStudioCloneQa[];
-  /** Renders made available after undo; cleared by the next new edit. */
-  redoHistory?: string[];
-  /** Editor-map snapshots paired by index with redoHistory. */
-  redoQaHistory?: AdStudioCloneQa[];
-};
-
 export type AdStudioCreative = {
   creativeId: string;
   /** Server-issued compare-and-swap base for immutable targeted edits. */
@@ -365,8 +344,24 @@ export type AdStudioCreative = {
   campaignId: string;
   variantId: string;
   format: AdStudioFormat;
-  /** `schema` discriminates deterministic v2 documents from legacy canvases. */
-  canvas: AdStudioLegacyCanvas | AdDocInstance;
+  canvas: {
+    width: number;
+    height: number;
+    backgroundAssetId: string | null;
+    objects: AdStudioCanvasObject[];
+    /** Present on AI-cloned creatives: editable-element regions + text values. */
+    cloneQa?: AdStudioCloneQa;
+    /** Derived text-editing layers (plate + type treatments); absent until built. */
+    textLayers?: AdStudioTextLayers;
+    /** Previous renders (media paths, newest last) for undo on clone edits. */
+    renderHistory?: string[];
+    /** Editor-map snapshots paired by index with renderHistory. */
+    renderQaHistory?: AdStudioCloneQa[];
+    /** Renders made available after undo; cleared by the next new edit. */
+    redoHistory?: string[];
+    /** Editor-map snapshots paired by index with redoHistory. */
+    redoQaHistory?: AdStudioCloneQa[];
+  };
   safeZones: {
     metaStory: boolean;
     googleDemandGen: boolean;
@@ -374,15 +369,13 @@ export type AdStudioCreative = {
   previewSvg: string;
 };
 
-export type AdStudioLegacyCreative = AdStudioCreative & { canvas: AdStudioLegacyCanvas };
-
 export const metaLeadAdPackSchema = z.object({
   platform: z.literal("meta"),
   specialAdCategory: z.union([z.literal("housing"), z.null()]),
   primaryText: z.array(z.string()).min(1),
   headlines: z.array(z.string()).min(1),
   descriptions: z.array(z.string()).min(1),
-  cta: z.enum(["LEARN_MORE", "SIGN_UP", "GET_QUOTE", "APPLY_NOW", "DOWNLOAD", "SUBSCRIBE"]),
+  cta: z.enum(["LEARN_MORE", "SIGN_UP", "DOWNLOAD", "CONTACT_US"]),
   leadForm: z.object({
     headline: z.string().min(1),
     questions: z.array(z.string()),
@@ -453,10 +446,54 @@ export const adStudioTemplateAnalysisSchema = z.object({
   }),
 });
 
+function strictTenPointScore(value: unknown): unknown {
+  if (typeof value !== "string") return value;
+  const match = value.match(/^\s*(10(?:\.0+)?|[0-9](?:\.\d+)?)\s*(?:\/\s*10)?\s*$/u);
+  return match ? Number(match[1]) : value;
+}
+
+const adStudioTenPointScoreSchema = z.preprocess(
+  strictTenPointScore,
+  z.number().min(0).max(10),
+);
+
+export const adStudioCloneQualityReviewSchema = z.object({
+  schemaVersion: z.literal(1),
+  templateId: z.string().min(1),
+  format: z.enum(["4:5", "9:16"]),
+  attempt: z.number().int().positive(),
+  referenceHash: z.string().regex(/^[a-f0-9]{64}$/u),
+  candidateHash: z.string().regex(/^[a-f0-9]{64}$/u),
+  requestHash: z.string().regex(/^[a-f0-9]{64}$/u),
+  // OpenAI's JSON mode can serialize rubric scores as numeric strings even
+  // when the prompt asks for numbers. Normalize only strict 0-10 score forms;
+  // missing, descriptive, malformed, and out-of-range values still fail shut.
+  adSystemLikenessScore: adStudioTenPointScoreSchema,
+  standaloneAdQualityScore: adStudioTenPointScoreSchema,
+  excludedContentInfluencedScore: z.boolean(),
+  copyChecks: z.array(z.object({
+    key: z.string().min(1),
+    expected: z.string(),
+    rendered: z.string(),
+    exact: z.boolean(),
+  })),
+  assetChecks: z.array(z.object({
+    key: z.string().min(1),
+    used: z.boolean(),
+    faithful: z.boolean(),
+  })),
+  identityLeakage: z.array(z.string()),
+  defects: z.array(z.string()),
+  includedRationale: z.string(),
+  qualityRationale: z.string(),
+  suggestedCorrection: z.string(),
+});
+
 export type MetaLeadAdPack = z.infer<typeof metaLeadAdPackSchema>;
 export type GoogleSearchPack = z.infer<typeof googleSearchPackSchema>;
 export type GoogleAssetPack = z.infer<typeof googleAssetPackSchema>;
 export type AdStudioTemplateAnalysis = z.infer<typeof adStudioTemplateAnalysisSchema>;
+export type AdStudioCloneQualityReview = z.infer<typeof adStudioCloneQualityReviewSchema>;
 
 export type AdStudioPlatformCopyPack = {
   copyPackId: string;

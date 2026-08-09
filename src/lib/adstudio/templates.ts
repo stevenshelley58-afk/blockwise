@@ -1,12 +1,11 @@
 import type { AdStudioFormat, AdStudioGoal, MetaLeadAdPack } from "./types.ts";
 import { RAW_ADSTUDIO_GALLERY_TEMPLATES } from "./template-gallery/index.ts";
+import rawQualityLocks from "./template-gallery/quality-locks.json" with { type: "json" };
 import { templateDisplaySrc } from "./template-display.ts";
 import {
   MAGIC_LAYER_MIN_FONT_FIT,
   MAGIC_LAYER_MIN_REGION_CONFIDENCE,
 } from "./magic-layers-config.mjs";
-
-const SOURCE_AD_FILE_PATTERN = /^[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+\.(?:jpe?g|png|webp)$/i;
 
 export type AdStudioTemplateImageInput = {
   key: string;
@@ -150,6 +149,9 @@ export type AdStudioTemplate = {
   meta: AdStudioTemplateMeta;
   sourceAd: AdStudioTemplateSourceAd;
   classification: AdStudioTemplateClassification;
+  /** Cryptographic identity of this manifest excluding this marker. Present
+   * only after the template passes the two-stage release quality lock. */
+  qualityLock?: { templateHash: string };
   /** Keyed by inputs.text[].key. Absent entirely for templates the offline build hasn't covered yet. */
   typography?: Record<string, AdStudioTypeSpec>;
   /**
@@ -161,9 +163,33 @@ export type AdStudioTemplate = {
 
 export type AdStudioGalleryTemplate = AdStudioTemplate;
 
+export const AD_STUDIO_QUALITY_RUBRIC_VERSION = "adstudio-subject-invariant-clone-v1";
+export const MIN_AD_STUDIO_SYSTEM_LIKENESS = 9.5;
+export const MIN_AD_STUDIO_STANDALONE_QUALITY = 9;
+
+export type AdStudioTemplateQualityLock = {
+  templateHash: string;
+  templateContract: string;
+  sampleHash: string;
+  evidenceHash: string;
+  sampleLikeness: number;
+  sampleQuality: number;
+  customerFixtureLikeness: number;
+  customerFixtureQuality: number;
+  qualifiedAt: string;
+};
+
+export type AdStudioTemplateQualityLockIndex = {
+  schemaVersion: 1;
+  templates: Record<string, AdStudioTemplateQualityLock>;
+};
+
 export const AD_STUDIO_TEMPLATES: AdStudioTemplate[] = RAW_ADSTUDIO_GALLERY_TEMPLATES.map(validateGalleryTemplate);
+const qualityLockValidation = validateQualityLockIndex(rawQualityLocks, AD_STUDIO_TEMPLATES);
+export const AD_STUDIO_QUALITY_LOCK_ISSUES = qualityLockValidation.issues;
+export const QUALITY_LOCKED_AD_STUDIO_TEMPLATE_IDS = qualityLockValidation.templateIds;
 export const RESOLVABLE_AD_STUDIO_TEMPLATES: AdStudioTemplate[] = AD_STUDIO_TEMPLATES.filter(
-  (template) => template.status === "approved",
+  (template) => template.status === "approved" && QUALITY_LOCKED_AD_STUDIO_TEMPLATE_IDS.has(template.id),
 );
 
 export function resolveAdStudioTemplate(templateId: string | undefined): AdStudioTemplate | null {
@@ -176,7 +202,7 @@ export function isBuiltInAdStudioTemplate(templateId: string | undefined): boole
 }
 
 export function builtInAdStudioTemplates(): AdStudioTemplate[] {
-  return AD_STUDIO_TEMPLATES.map((template) => ({
+  return RESOLVABLE_AD_STUDIO_TEMPLATES.map((template) => ({
     ...template,
     sample: {
       ...template.sample,
@@ -187,6 +213,83 @@ export function builtInAdStudioTemplates(): AdStudioTemplate[] {
 
 export function resolvableAdStudioTemplates(): AdStudioTemplate[] {
   return [...RESOLVABLE_AD_STUDIO_TEMPLATES];
+}
+
+/**
+ * Validate the checked-in release index without importing its evidence or any
+ * private source assets into the customer bundle. The verifier performs the
+ * cryptographic evidence checks; runtime selection fails closed to entries
+ * whose lock metadata does not match the approved manifest sample.
+ */
+export function validateQualityLockIndex(
+  raw: unknown,
+  templates: readonly AdStudioTemplate[],
+): { templateIds: ReadonlySet<string>; issues: string[] } {
+  const issues: string[] = [];
+  const templateIds = new Set<string>();
+  if (!isRecord(raw) || raw.schemaVersion !== 1 || !isRecord(raw.templates)) {
+    return {
+      templateIds,
+      issues: ["quality-lock index must have schemaVersion 1 and a templates object"],
+    };
+  }
+
+  const templatesById = new Map(templates.map((template) => [template.id, template]));
+  for (const [templateId, value] of Object.entries(raw.templates)) {
+    const entryIssues: string[] = [];
+    const template = templatesById.get(templateId);
+    if (!template) entryIssues.push("does not match a built-in template");
+    if (!isRecord(value)) {
+      entryIssues.push("must be an object");
+    } else {
+      const expectedKeys = new Set([
+        "templateHash",
+        "templateContract",
+        "sampleHash",
+        "evidenceHash",
+        "sampleLikeness",
+        "sampleQuality",
+        "customerFixtureLikeness",
+        "customerFixtureQuality",
+        "qualifiedAt",
+      ]);
+      const actualKeys = Object.keys(value);
+      if (actualKeys.length !== expectedKeys.size || actualKeys.some((key) => !expectedKeys.has(key))) {
+        entryIssues.push("has an invalid schema");
+      }
+      if (!isSha256(value.templateHash)) entryIssues.push("templateHash must be a SHA-256 hash");
+      if (typeof value.templateContract !== "string" || value.templateContract !== templateContract(template)) {
+        entryIssues.push("templateContract does not match the current manifest");
+      }
+      if (!isSha256(value.sampleHash)) entryIssues.push("sampleHash must be a SHA-256 hash");
+      if (!isSha256(value.evidenceHash)) entryIssues.push("evidenceHash must be a SHA-256 hash");
+      if (template && value.sampleHash !== template.sample.contentHash) {
+        entryIssues.push("sampleHash does not match the approved manifest sample");
+      }
+      if (template && template.qualityLock?.templateHash !== value.templateHash) {
+        entryIssues.push("templateHash does not match the qualified manifest contract");
+      }
+      validateQualityScore(value.sampleLikeness, MIN_AD_STUDIO_SYSTEM_LIKENESS, "sampleLikeness", entryIssues);
+      validateQualityScore(value.sampleQuality, MIN_AD_STUDIO_STANDALONE_QUALITY, "sampleQuality", entryIssues);
+      validateQualityScore(
+        value.customerFixtureLikeness,
+        MIN_AD_STUDIO_SYSTEM_LIKENESS,
+        "customerFixtureLikeness",
+        entryIssues,
+      );
+      validateQualityScore(
+        value.customerFixtureQuality,
+        MIN_AD_STUDIO_STANDALONE_QUALITY,
+        "customerFixtureQuality",
+        entryIssues,
+      );
+      if (!isIsoTimestamp(value.qualifiedAt)) entryIssues.push("qualifiedAt must be an ISO-8601 timestamp");
+    }
+
+    if (entryIssues.length === 0) templateIds.add(templateId);
+    else issues.push(...entryIssues.map((issue) => `${templateId}: ${issue}`));
+  }
+  return { templateIds, issues };
 }
 
 /**
@@ -297,9 +400,6 @@ export function validateGalleryTemplate(raw: AdStudioTemplate): AdStudioTemplate
   if (!isSha256(raw?.sample?.contentHash)) errors.push("sample.contentHash must be a SHA-256 hash");
   if (raw?.sourceAd?.contentHash === raw?.sample?.contentHash) errors.push("gallery sample must not be the source ad");
   if (!raw?.sourceAd?.creativeId && !raw?.sourceAd?.file) errors.push("sourceAd provenance is required");
-  if (raw?.sourceAd?.file && !SOURCE_AD_FILE_PATTERN.test(raw.sourceAd.file)) {
-    errors.push("sourceAd.file must stay inside the image provenance archive");
-  }
   if (!Array.isArray(raw?.inputs?.images) || raw.inputs.images.length === 0) errors.push("at least one image input is required");
   if (!raw?.inputs?.images?.some((input) => input.required)) errors.push("at least one image input must be required");
   validateUniqueKeys(raw?.inputs?.images ?? [], "image", errors);
@@ -312,6 +412,9 @@ export function validateGalleryTemplate(raw: AdStudioTemplate): AdStudioTemplate
   if (raw?.meta?.platform !== "meta") errors.push("meta platform must be meta");
   if (raw?.meta?.objective !== "OUTCOME_LEADS") errors.push("meta objective must be OUTCOME_LEADS");
   if (raw?.meta?.specialAdCategory !== "housing") errors.push("meta special ad category must be housing");
+  if (raw?.qualityLock !== undefined && !isSha256(raw.qualityLock.templateHash)) {
+    errors.push("qualityLock.templateHash must be a SHA-256 hash");
+  }
   if (raw?.deterministicEditing !== undefined) {
     if (!(raw.deterministicEditing?.status === "partial" || raw.deterministicEditing?.status === "ready")) {
       errors.push("deterministicEditing.status must be partial or ready");
@@ -351,6 +454,36 @@ function validateUniqueKeys(items: Array<{ key: string; label: string }>, kind: 
 
 function isSha256(value: unknown): value is string {
   return typeof value === "string" && /^[a-f0-9]{64}$/iu.test(value);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function isIsoTimestamp(value: unknown): value is string {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/u.test(value)) return false;
+  return Number.isFinite(Date.parse(value));
+}
+
+function validateQualityScore(value: unknown, minimum: number, name: string, errors: string[]): void {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < minimum || value > 10) {
+    errors.push(`${name} must be between ${minimum} and 10`);
+  }
+}
+
+function templateContract(template: AdStudioTemplate | undefined): string {
+  if (!template) return "";
+  const { qualityLock: _qualityLock, ...contract } = template;
+  return canonicalJson(contract);
+}
+
+function canonicalJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    return `{${Object.keys(record).sort().map((key) => `${JSON.stringify(key)}:${canonicalJson(record[key])}`).join(",")}}`;
+  }
+  return JSON.stringify(value);
 }
 
 function isNormalizedBox(value: unknown): value is AdStudioTemplateRegionBox {

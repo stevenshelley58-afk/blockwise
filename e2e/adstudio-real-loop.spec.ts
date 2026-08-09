@@ -23,6 +23,10 @@ if (!canRun && process.env.CI) {
 
 describeAdStudioRealLoop("Ad Studio real loop", () => {
   test.use({ storageState: storageStatePath });
+  // Every case uses the same dedicated workspace and campaign fixture. Running
+  // them in parallel lets one page's campaign mutations invalidate another
+  // page's assumptions, so keep the real deployed loop deterministic.
+  test.describe.configure({ mode: "serial" });
   // Real AI generation + edit + export can take several minutes end to end.
   test.setTimeout(600_000);
 
@@ -41,16 +45,16 @@ describeAdStudioRealLoop("Ad Studio real loop", () => {
       await expect(page.getByLabel("Ad Studio workspace")).toBeVisible({ timeout: 30_000 });
       await openNewAd(page);
       await expect(page.getByRole("heading", { name: /choose a template/i })).toBeVisible();
-      await expect(page.getByText(/^\d+ templates$/)).toBeVisible();
+      await expect(page.getByText(/^\d+ templates?$/)).toBeVisible();
       const templateGrid = page.locator(".studio-explore-grid");
       await expect(templateGrid).toBeVisible();
       expect(
         await templateGrid.evaluate((element) =>
           getComputedStyle(element).gridTemplateColumns.trim().split(/\s+/).filter(Boolean).length
         ),
-        `template gallery should have two columns at ${viewport.width}x${viewport.height}`,
-      ).toBe(2);
-      await page.getByRole("button", { name: /^close$/i }).click();
+        `template gallery should use its responsive column count at ${viewport.width}x${viewport.height}`,
+      ).toBe(viewport.width > 900 ? 4 : 2);
+      await page.locator('.studio-newad-x[aria-label="Close"]').click();
       expect(
         await page.evaluate(
           () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
@@ -60,55 +64,21 @@ describeAdStudioRealLoop("Ad Studio real loop", () => {
     }
   });
 
-  test("keeps listing extraction, template choice, and draft dismissal in the right order", async ({ page }) => {
+  test("keeps template choice and draft dismissal in the right order", async ({ page }) => {
     await page.addInitScript(() => localStorage.setItem("bw-consent", "essential"));
-    await page.route("**/api/adstudio/listing-extract", async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          ok: true,
-          brief: "Renovated family home with a Saturday inspection.",
-          photos: ["https://images.example.test/listing.jpg"],
-          listing: {
-            address: "10 Test Street",
-            suburb: "Scarborough",
-            state: "WA",
-            postcode: "6019",
-            price: "$900,000",
-            bedrooms: 3,
-            bathrooms: 2,
-            parking: 2,
-            propertyType: "House",
-            landSize: "500 m²",
-            description: "Renovated family home.",
-            features: ["Pool"],
-            photos: ["https://images.example.test/listing.jpg"],
-            agentName: "Test Agent",
-            agencyName: "Test Realty",
-            agentPhone: "08 5555 0101",
-            inspectionTimes: ["Saturday 10:00"],
-            sourceUrl: "https://www.example.com.au/property/10-test-street",
-          },
-        }),
-      });
-    });
-
     await page.goto(`/ad-studio?workspaceId=${encodeURIComponent(workspaceId ?? "")}`);
     await openNewAd(page);
-    await page.getByLabel(/have a listing/i).fill("https://www.example.com.au/property/10-test-street");
-    await page.getByRole("button", { name: /fetch details/i }).click();
-
     await expect(page.getByRole("heading", { name: /choose a template/i })).toBeVisible();
-    await expect(page.getByText("Listing details are ready. Choose the template you want to use.")).toBeVisible();
-    await expect(page.getByText(/10 Test Street · 3 bed · \$900,000/)).toBeVisible();
+    await expect(page.getByText(/^1 template$/)).toBeVisible();
+    await chooseCloneSample(page);
+    await expect(page.locator('.studio-newad input[type="file"]')).toHaveCount(2);
 
-    await page.getByRole("button", { name: /^close$/i }).click();
+    await page.locator('.studio-newad-x[aria-label="Close"]').click();
     const discardDialog = page.getByRole("alertdialog", { name: /discard this ad draft/i });
     await expect(discardDialog).toBeVisible();
     await discardDialog.getByRole("button", { name: /keep editing/i }).click();
-    await expect(page.getByText("Listing details are ready. Choose the template you want to use.")).toBeVisible();
-    await page.getByRole("button", { name: /^close$/i }).click();
+    await expect(page.getByRole("button", { name: /generate ad/i })).toBeVisible();
+    await page.locator('.studio-newad-x[aria-label="Close"]').click();
     await page.getByRole("alertdialog", { name: /discard this ad draft/i })
       .getByRole("button", { name: /discard draft/i })
       .click();
@@ -142,15 +112,18 @@ describeAdStudioRealLoop("Ad Studio real loop", () => {
       testInfo.outputPath("listing.png"),
       testInfo.outputPath("logo.png"),
     );
+    // Exercise the supported manual-copy path so this image-generation test
+    // does not spend a separate model call generating prose first.
+    await page.getByRole("radio", { name: /i'll write it myself/i }).check();
+    const feedCopy = page.getByRole("region", { name: /editable ad copy/i });
+    await feedCopy.getByLabel("Primary text", { exact: true }).fill(
+      "See this renovated Scarborough home this weekend. Spacious modern living for family comfort.",
+    );
+    await feedCopy.getByLabel("Headline", { exact: true }).fill("Open Home This Saturday");
+    await feedCopy.getByLabel("Description", { exact: true }).fill(
+      "Renovated family home open this Saturday in Scarborough",
+    );
     await fillCustomerCopyFields(page);
-    // The brief label is sample-specific (e.g. "Listing details") and the
-    // dialog title can match the same words — target the textbox role so the
-    // locator can never resolve to the dialog container.
-    await page
-      .getByRole("dialog")
-      .getByRole("textbox", { name: /details|description/i })
-      .first()
-      .fill("Open home this Saturday, renovated family home in Scarborough.");
     const generationResponse = page.waitForResponse(
       (response) => {
         const url = new URL(response.url());
@@ -232,10 +205,11 @@ async function approveBrandKit(page: Page) {
 }
 
 async function openNewAd(page: Page) {
-  const button = page.getByRole("button", { name: /create ad|new ad|add ad/i }).first();
+  const button = page.getByRole("button", { name: /create ad|new ad|add ad|^create$/i }).first();
   if (await button.isVisible().catch(() => false)) {
     await expect(button).toBeEnabled({ timeout: 30_000 });
     await button.click();
+    await expect(page.getByRole("heading", { name: /choose a template/i })).toBeVisible({ timeout: 30_000 });
     return;
   }
 
@@ -271,16 +245,7 @@ async function waitForGenerationJob(page: Page, jobId: string): Promise<string> 
 // The real loop uses the approved sanitized sample and no alternate creation
 // path. The private source ad is never exposed to the browser.
 async function chooseCloneSample(page: Page) {
-  const killTest = page.getByRole("button", { name: /use just listed sage panel .* template/i }).first();
-  // The gallery renders after the dialog opens; an immediate isVisible() races
-  // it and silently falls back to whatever template happens to sort first.
-  // Wait for the kill-test template properly - its inputs match the uploaded
-  // listing photo + logo and the KILL_TEST_COPY fields.
-  if (await killTest.waitFor({ state: "visible", timeout: 30_000 }).then(() => true).catch(() => false)) {
-    await killTest.click();
-    return;
-  }
-  const sample = page.getByRole("button", { name: /use .* template/i }).first();
+  const sample = page.getByRole("button", { name: /use find your forever home .* template/i }).first();
   await expect(sample).toBeVisible({ timeout: 30_000 });
   await sample.click();
 }
@@ -289,7 +254,12 @@ async function chooseCloneSample(page: Page) {
 // verbatim; the vision QA then verifies these exact strings. Distinct values
 // prove nothing was invented or paraphrased.
 const KILL_TEST_COPY: Record<string, string> = {
-  headline: "JUST LISTED",
+  // Distinct customer copy, but deliberately matched to the locked sample's
+  // character count and word rhythm. The visual-likeness gate scores text-box
+  // bounds and line rhythm, so a one-line placeholder would invalidate the ad
+  // system this E2E is meant to prove.
+  headline: "Find your coastal home today",
+  body: "Your coastal partner for all real estate needs.",
   price: "$847,500",
   address: "12 MARINE PDE, SCARBOROUGH WA 6019",
   phone: "+61 411 222 333",
@@ -324,8 +294,13 @@ async function uploadRequiredSampleImages(page: Page, listingPath: string, logoP
   for (let index = 0; index < count; index += 1) {
     const input = inputs.nth(index);
     await input.setInputFiles(index === 1 ? logoPath : listingPath);
+    const preparingImage = page.getByRole("button", { name: /preparing image/i });
     await expect(
-      page.getByRole("button", { name: /uploading/i }),
+      preparingImage,
+      `image slot ${index + 1} of ${count} should start uploading`,
+    ).toBeVisible({ timeout: 10_000 });
+    await expect(
+      preparingImage,
       `image slot ${index + 1} of ${count} should finish uploading`,
     ).toBeHidden({ timeout: 60_000 });
   }

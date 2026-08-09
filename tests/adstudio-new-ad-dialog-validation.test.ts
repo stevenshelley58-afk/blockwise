@@ -6,7 +6,9 @@ import { briefGuidanceForTemplate } from "../src/components/adstudio/new-ad-dial
 import {
   defaultImageForTemplateSlot,
   defaultTextForTemplateField,
+  hasPendingImageUploads,
   imageRequirementsForTemplate,
+  updatePendingImageUploads,
 } from "../src/components/adstudio/new-ad-dialog-slots.ts";
 import { extractBrandKitFromWebsite } from "../src/lib/adstudio/brand-extraction.ts";
 import { AD_STUDIO_TEMPLATES } from "../src/lib/adstudio/templates.ts";
@@ -18,6 +20,27 @@ test("the dialog collects only the selected template's declared inputs", () => {
   assert.match(dialog, /imageRequirementsForTemplate\(selectedTemplate\)/);
   assert.match(dialog, /customerCopyFieldsForTemplate\(selectedTemplate\)/);
   assert.doesNotMatch(dialog, /generate-options|generate-clone|Fabric|canvas\.objects/);
+});
+
+test("concurrent slot uploads keep Generate gated until the final upload settles", () => {
+  const dialog = readFileSync("src/components/adstudio/new-ad-dialog.tsx", "utf8");
+  let pending = {};
+  pending = updatePendingImageUploads(pending, "property_photo", 1);
+  pending = updatePendingImageUploads(pending, "property_photo", 1);
+  pending = updatePendingImageUploads(pending, "agency_logo", 1);
+  assert.equal(hasPendingImageUploads(pending), true);
+
+  pending = updatePendingImageUploads(pending, "property_photo", -1);
+  assert.equal(hasPendingImageUploads(pending), true, "the second upload in the same slot still blocks generation");
+
+  pending = updatePendingImageUploads(pending, "property_photo", -1);
+  assert.equal(hasPendingImageUploads(pending), true, "the other slot still blocks generation");
+
+  pending = updatePendingImageUploads(pending, "agency_logo", -1);
+  assert.equal(hasPendingImageUploads(pending), false);
+  assert.match(dialog, /setPendingImageUploads\(\(current\) => updatePendingImageUploads\(current, slotId, 1\)\)/);
+  assert.match(dialog, /setPendingImageUploads\(\(current\) => updatePendingImageUploads\(current, slotId, -1\)\)/);
+  assert.doesNotMatch(dialog, /useState\(false\).*uploadingImage/);
 });
 
 test("the customer flow uses template terminology and shared dropdown styling", () => {
@@ -126,7 +149,7 @@ test("missing customer inputs are shown together before generation", () => {
   assert.match(submit, /buildRequirementBlockers/);
 });
 
-test("the server owns clone generation and returns the finished editable ad inline", () => {
+test("the server owns clone generation and returns the finished editable ad through the durable job", () => {
   const dialog = readFileSync("src/components/adstudio/new-ad-dialog.tsx", "utf8");
   const actions = readFileSync("src/components/adstudio/use-campaign-actions.ts", "utf8");
   const route = readFileSync("src/app/api/adstudio/campaigns/route.ts", "utf8");
@@ -136,11 +159,12 @@ test("the server owns clone generation and returns the finished editable ad inli
   // (Point 10), so that endpoint is no longer banned from the dialog — but local
   // clone rendering is.
   assert.doesNotMatch(dialog, /templateCloneImage/);
-  assert.match(route, /runTemplateCampaignGeneration/);
-  assert.match(route, /status: 201/);
+  assert.doesNotMatch(route, /runTemplateCampaignGeneration/);
+  assert.match(route, /status: 202/);
   assert.match(route, /adstudio\.generate\.template/);
   assert.doesNotMatch(route, /generateAdStudioCampaignPack\(\{/);
-  assert.match(actions, /payload\.campaignPack/);
+  assert.match(actions, /waitForTemplateCampaignJob/);
+  assert.match(actions, /job\.campaignPack/);
   assert.match(actions, /Your ad is ready to edit/);
   assert.match(actions, /s\.setSection\("edit"\)/);
   assert.doesNotMatch(actions, /s\.setSection\("media"\)/);
@@ -150,20 +174,18 @@ test("the server owns clone generation and returns the finished editable ad inli
   assert.match(generation, /persistAdStudioCampaignPack/);
 });
 
-test("the customer chooses fast or high quality without provider jargon", () => {
+test("the customer always receives high quality without a downgrade control", () => {
   const dialog = readFileSync("src/components/adstudio/new-ad-dialog.tsx", "utf8");
   const types = readFileSync("src/lib/adstudio/types.ts", "utf8");
 
   assert.match(types, /generationQuality\?:\s*"fast" \| "high"/);
-  assert.match(dialog, /legend>Generation quality<\/legend>/);
-  assert.match(dialog, /Fast/);
-  assert.match(dialog, /Usually ready in about 1 minute/);
-  assert.match(dialog, /High quality/);
-  assert.match(dialog, /Usually ready in about 2–3 minutes/);
-  assert.match(dialog, /generationQuality/);
+  assert.match(dialog, /const generationQuality: GenerationQuality = "high"/);
+  assert.doesNotMatch(dialog, /legend>Generation quality<\/legend>/);
+  assert.doesNotMatch(dialog, /selectGenerationQuality/);
+  assert.doesNotMatch(dialog, /Fast ads are usually ready/);
+  assert.match(dialog, /Creating your high-quality ad/);
   assert.match(dialog, /We couldn't create this ad/);
   assert.match(dialog, /error \? "Try again" : "Generate ad"/);
-  assert.match(dialog, /selectGenerationQuality/);
   assert.doesNotMatch(dialog, /Gemini|GPT Image|OpenAI|fal\.ai/);
 });
 

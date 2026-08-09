@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
@@ -23,16 +24,15 @@ test("resolveModelProfile defaults structured copy to the best text model with a
   assert.equal(resolved.profile.requiresStructuredOutput, true);
 });
 
-test("vision_classification defaults to Gemini vision with an OpenAI fallback", () => {
+test("vision_classification uses OpenAI first with independent Gemini recovery", () => {
   const resolved = resolveModelProfile("vision_classification");
 
-  assert.equal(resolved.primary.provider, "google");
-  assert.equal(resolved.primary.model, "gemini-2.5-flash");
-  assert.equal(resolved.primary.imageUsdPerUnit > 0, true);
-  // OpenAI stays as the fallback so a Google outage never strands the pass.
+  assert.equal(resolved.primary.provider, "openai");
+  assert.equal(resolved.primary.model, "gpt-5.5");
+  assert.equal(resolved.primary.imageUsdPerUnit, 0.01);
   assert.deepEqual(
     resolved.fallbacks.map((candidate) => candidate.model),
-    ["gpt-5.5"],
+    ["gemini-3.6-flash"],
   );
 });
 
@@ -54,15 +54,17 @@ test("fast image generation defaults to the benchmarked Gemini edit model", () =
 
   assert.equal(resolved.primary.provider, "google");
   assert.equal(resolved.primary.model, "gemini-3.1-flash-image");
+  assert.equal(resolved.primary.imageUsdPerUnit, 0.067);
   assert.deepEqual(resolved.fallbacks.map((candidate) => candidate.model), ["gpt-image-2"]);
 });
 
-test("final image generation uses Gemini first and OpenAI only as fallback", () => {
+test("final image generation uses OpenAI first with independent Gemini recovery", () => {
   const resolved = resolveModelProfile("image_final");
-  assert.equal(resolved.primary.provider, "google");
-  assert.equal(resolved.primary.model, "gemini-3.1-flash-image");
-  assert.equal(resolved.fallbacks[0].provider, "openai");
-  assert.equal(resolved.fallbacks[0].model, "gpt-image-2");
+  assert.equal(resolved.primary.provider, "openai");
+  assert.equal(resolved.primary.model, "gpt-image-2");
+  assert.equal(resolved.primary.imageUsdPerUnit, 0.211);
+  assert.equal(resolved.fallbacks[0].provider, "google");
+  assert.equal(resolved.fallbacks[0].model, "gemini-3-pro-image");
 });
 
 test("resolveEffectiveModelProfile accepts Azure OpenAI deployment overrides", () => {
@@ -113,7 +115,31 @@ test("estimateRunCostUsd accounts for text input, text output, and image units",
     imageUnits: 2,
   });
 
-  assert.equal(cost, 0.1365);
+  assert.equal(cost, 0.447);
+});
+
+test("the professional final-image migration never rotates the economical draft profile", () => {
+  const migration = readFileSync(
+    "supabase/migrations/20260809112956_adstudio_pro_final_image_quality.sql",
+    "utf8",
+  );
+
+  assert.match(migration, /where key = 'image_final'/);
+  assert.match(migration, /'gemini-3-pro-image'/);
+  assert.match(migration, /\n\s*2,\n\s*12,\n\s*0\.134,/);
+  assert.doesNotMatch(migration, /where key = 'image_draft'/);
+});
+
+test("provider recovery migration rotates only final image and vision QA primaries", () => {
+  const migration = readFileSync(
+    "supabase/migrations/20260809121000_adstudio_openai_provider_recovery.sql",
+    "utf8",
+  );
+
+  assert.match(migration, /key in \('image_final', 'vision_classification'\)/);
+  assert.match(migration, /'openai',\s*'gpt-image-2'/);
+  assert.match(migration, /'openai',\s*'gpt-5\.5'/);
+  assert.doesNotMatch(migration, /where key = 'image_draft'/);
 });
 
 test("resolveModelProfileForData removes public-only fallbacks for sensitive client data", () => {

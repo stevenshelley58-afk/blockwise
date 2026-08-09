@@ -1,7 +1,10 @@
 // Shared final-quality clone generation + first-success provider cascade.
 // Used for both the initial full-ad clone and later targeted in-place edits.
 
-import { createImageProviderForCandidate } from "./ai-providers.ts";
+import {
+  createImageProviderForCandidate,
+  type ProviderEnvironment,
+} from "./ai-providers.ts";
 import { dataUrlToUploadBytes } from "./generated-media.ts";
 import type { ImageProviderAdapter, ImageProviderRequest, ImageProviderResponse } from "./providers.ts";
 import {
@@ -30,9 +33,12 @@ export function cloneModelProfileForQuality(quality: AdGenerationQuality): Clone
 }
 
 /** Ordered providers for the customer's quality choice, pinned to runtime pricing. */
-export async function resolveCloneProviders(quality: AdGenerationQuality = "high"): Promise<ImageProviderAdapter[]> {
+export async function resolveCloneProviders(
+  quality: AdGenerationQuality = "high",
+  providerEnv?: ProviderEnvironment,
+): Promise<ImageProviderAdapter[]> {
   const profile = await resolveRuntimeModelProfile(cloneModelProfileForQuality(quality));
-  return modelCandidateAttempts(profile).map((candidate) => createImageProviderForCandidate(candidate));
+  return modelCandidateAttempts(profile).map((candidate) => createImageProviderForCandidate(candidate, { env: providerEnv }));
 }
 
 export type CloneGenerationResult = {

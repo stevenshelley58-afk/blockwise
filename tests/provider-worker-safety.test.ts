@@ -48,6 +48,26 @@ test("provider workers and approval queueing are guarded by provider writes kill
   assert.match(approvals, /approval was not queued/);
 });
 
+test("Ad Studio VPS recovery injects the encrypted runtime credential without mutating process.env", () => {
+  const worker = readFileSync("worker/index.ts", "utf8");
+  const campaign = readFileSync("src/lib/adstudio/generate-template-campaign.ts", "utf8");
+  const copy = readFileSync("src/lib/adstudio/copy-generation.ts", "utf8");
+  const cloneQa = readFileSync("src/lib/adstudio/clone-quality-gate.ts", "utf8");
+
+  assert.match(worker, /loadRuntimeProviderToken\(supabase, "openai"\)/);
+  assert.match(worker, /providerEnv = \{ \.\.\.process\.env, OPENAI_API_KEY: openAiApiKey \}/);
+  assert.match(worker, /runTemplateCampaignGeneration\(\{[\s\S]*providerEnv,/);
+  assert.match(worker, /runTemplateCampaignGeneration\(\{[\s\S]*signal: context\.signal,/);
+  assert.doesNotMatch(worker, /process\.env\.OPENAI_API_KEY\s*=/);
+  assert.match(worker, /releaseAdStudioGenerationLock[\s\S]*\.eq\("job_id", creativeJobId\)/);
+  assert.match(campaign, /resolveCloneProviders\(generationQuality, input\.providerEnv\)/);
+  assert.match(campaign, /generateAdStudioTemplateCopy\(\{[\s\S]*providerEnv: input\.providerEnv,/);
+  assert.match(campaign, /review\(\{[\s\S]*providerEnv: input\.providerEnv,/);
+  assert.match(copy, /createTextProviderForCandidate\(candidate, \{ env: providerEnv \}\)/);
+  assert.match(cloneQa, /createTextProviderForCandidate\(candidate, \{ env: input\.providerEnv \}\)/);
+  assert.match(campaign, /signal: input\.signal/);
+});
+
 test("approval and executable target state are durable before queue dispatch", () => {
   const source = readFileSync(approvalsRoute, "utf8");
   const queueIndex = source.indexOf("queueJobId = await queueApprovedTarget");

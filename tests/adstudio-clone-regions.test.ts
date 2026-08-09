@@ -421,8 +421,13 @@ function submittedProviderFailure(message: string, retryable: boolean): Provider
 function finalRenderInput(providers: ImageProviderAdapter[]) {
   return {
     format: "4:5",
+    templateId: "template-test",
     providers,
     request: { prompt: "clone", referenceAssets: [], aspectRatio: "4:5", stylePreset: "test" },
+    referenceImage: "data:image/png;base64,cmVmZXJlbmNl",
+    expectedCopy: {},
+    expectedAssetKeys: [],
+    buildCorrectedRequest: () => ({ prompt: "corrected clone", referenceAssets: [], aspectRatio: "4:5", stylePreset: "test" }),
     workspaceId: "11111111-1111-4111-8111-111111111111",
     userId: "22222222-2222-4222-8222-222222222222",
     correlationId: "final-render",
@@ -447,12 +452,12 @@ async function persistencePipelineFunction() {
   return fn as (input: unknown) => Promise<unknown>;
 }
 
-test("template campaign generation ships the render with its prebuilt editor map", () => {
+test("template campaign generation quality-gates the render before its prebuilt editor map", () => {
   const pipeline = readFileSync("src/lib/adstudio/generate-template-campaign.ts", "utf8");
   const generation = readFileSync("src/lib/adstudio/clone-generation.ts", "utf8");
 
-  // Each customer quality choice resolves through the model-profile registry;
-  // neither path hardcodes a vendor or introduces a separate clone pipeline.
+  // The customer path is always professional quality. Internal draft work and
+  // the final lane still share one registry-backed clone pipeline.
   assert.match(generation, /fast: "image_draft"/);
   assert.match(generation, /high: "image_final"/);
   assert.doesNotMatch(generation, /CloneTier|tier:/);
@@ -460,18 +465,19 @@ test("template campaign generation ships the render with its prebuilt editor map
   assert.doesNotMatch(generation, /createOpenAiImageProvider\(\)/);
   assert.match(generation, /recordAdStudioProviderRun/);
   assert.match(generation, /output: result/);
-  assert.match(pipeline, /resolveCloneProviders\(generationQuality\)/);
+  assert.match(pipeline, /const generationQuality = "high" as const/);
+  assert.match(pipeline, /resolveCloneProviders\(generationQuality, input\.providerEnv\)/);
   assert.doesNotMatch(pipeline, /createFalImageProvider|fal-image-provider|FAL_KEY/);
 
-  // The blocking QA gate and customer-time vision are gone. Native-format
-  // editor regions come from the template's offline type-spec block.
+  // A cheap subject-invariant vision gate blocks poor candidates before
+  // persistence. Native-format editor regions still come from offline evidence.
   assert.match(pipeline, /buildPrebuiltTemplateCloneQa/);
   assert.match(pipeline, /prepareCloneCreativeTextLayers/);
   assert.doesNotMatch(pipeline, /detectCloneRegions/);
-  assert.doesNotMatch(pipeline, /vision_classification/);
-  assert.doesNotMatch(pipeline, /cloneQaCorrectionPrompt/);
-  assert.doesNotMatch(pipeline, /TemplateCampaignQaError/);
-  assert.doesNotMatch(pipeline, /qa\.passed/);
+  assert.match(pipeline, /reviewCloneCandidate/);
+  assert.match(pipeline, /cloneQualityPassed/);
+  assert.match(pipeline, /TemplateCampaignQaError/);
+  assert.match(pipeline, /buildCorrectedRequest/);
 });
 
 test("durable accounting failure after provider success never dispatches a fallback", async () => {
@@ -708,12 +714,18 @@ test("clone generation never invokes a second fallback candidate", async () => {
   assert.equal(thirdProviderCalls, 0);
 });
 
-test("final clone renders generate once, normalize to the exact ratio, and never wait on QA", async () => {
+test("final clone renders once when the blocking quality review passes", async () => {
   const render = await finalRenderFunction();
   let generateCalls = 0;
   let normalizedFrom = "";
+  const audited: Array<Record<string, unknown>> = [];
 
-  const result = await render(finalRenderInput([]), {
+  const result = await render({
+    ...finalRenderInput([]),
+    recordCandidate: async (candidate: Record<string, unknown>) => {
+      audited.push(candidate);
+    },
+  }, {
     generate: async () => {
       generateCalls += 1;
       return {
@@ -727,11 +739,81 @@ test("final clone renders generate once, normalize to the exact ratio, and never
       normalizedFrom = `${assetUrl}:${format}`;
       return "data:image/png;base64,ZXhhY3Q=";
     },
+    review: async () => ({
+      schemaVersion: 1,
+      templateId: "template-test",
+      format: "4:5",
+      attempt: 1,
+      referenceHash: "a".repeat(64),
+      candidateHash: "b".repeat(64),
+      requestHash: "c".repeat(64),
+      adSystemLikenessScore: 9.6,
+      standaloneAdQualityScore: 9.2,
+      excludedContentInfluencedScore: false,
+      copyChecks: [],
+      assetChecks: [],
+      identityLeakage: [],
+      defects: [],
+      includedRationale: "matches",
+      qualityRationale: "clean",
+      suggestedCorrection: "",
+    }),
   });
 
   assert.equal(generateCalls, 1);
   assert.equal(normalizedFrom, "data:image/png;base64,cmF3:4:5");
   assert.equal(result.assetUrl, "data:image/png;base64,ZXhhY3Q=");
+  assert.equal(audited.length, 1);
+  assert.equal(audited[0]?.accepted, true);
+  assert.equal(audited[0]?.candidateImage, "data:image/png;base64,ZXhhY3Q=");
+});
+
+test("every paid candidate is audited before a rejected render is corrected", async () => {
+  const render = await finalRenderFunction();
+  const prompts: string[] = [];
+  const audited: Array<{ attempt: number; accepted: boolean }> = [];
+
+  await render({
+    ...finalRenderInput([]),
+    recordCandidate: async (candidate: { attempt: number; accepted: boolean }) => {
+      audited.push({ attempt: candidate.attempt, accepted: candidate.accepted });
+    },
+  }, {
+    generate: async (input: { request: { prompt: string } }) => {
+      prompts.push(input.request.prompt);
+      return {
+        assetUrl: `data:image/png;base64,${input.request.prompt === "clone" ? "MQ==" : "Mg=="}`,
+        model: "image-model",
+        provider: "primary",
+        providerAttemptCount: 1,
+      };
+    },
+    review: async (input: { attempt: number }) => ({
+      schemaVersion: 1,
+      templateId: "template-test",
+      format: "4:5",
+      attempt: input.attempt,
+      referenceHash: "a".repeat(64),
+      candidateHash: "b".repeat(64),
+      requestHash: "c".repeat(64),
+      adSystemLikenessScore: input.attempt === 1 ? 8.8 : 9.6,
+      standaloneAdQualityScore: 9.4,
+      excludedContentInfluencedScore: false,
+      copyChecks: [],
+      assetChecks: [],
+      identityLeakage: [],
+      defects: [],
+      includedRationale: "reviewed",
+      qualityRationale: "clean",
+      suggestedCorrection: input.attempt === 1 ? "restore geometry" : "",
+    }),
+  });
+
+  assert.deepEqual(prompts, ["clone", "corrected clone"]);
+  assert.deepEqual(audited, [
+    { attempt: 1, accepted: false },
+    { attempt: 2, accepted: true },
+  ]);
 });
 
 test("provider cascade failures still fail the render honestly", async () => {
@@ -752,7 +834,7 @@ test("provider cascade failures still fail the render honestly", async () => {
   assert.equal(providerCalls, 2);
 });
 
-test("renders and the campaign persist with no QA involvement at all", async () => {
+test("the persistence helper stores only renders already accepted by its caller", async () => {
   const pipeline = await persistencePipelineFunction();
   let clonePersistenceCalls = 0;
   let campaignPersistenceCalls = 0;
@@ -796,7 +878,10 @@ test("targeted edit endpoint model-edits selected regions and verifies advisoril
   assert.match(route, /buildTargetedEditRequest/);
   assert.doesNotMatch(route, /canRenderTextDirectly/);
   assert.doesNotMatch(route, /renderExactCloneTextEdit/);
-  assert.match(route, /resolveCloneProviders\("fast"\)/);
+  // A persisted edit is another finished customer-facing render: it must not
+  // silently downgrade to the draft image lane.
+  assert.match(route, /resolveCloneProviders\("high"\)/);
+  assert.match(route, /modelProfile: "image_final"/);
   assert.match(route, /maxDuration = 300/);
 
   // Expected copy carries the current value of every text field (from the
@@ -826,7 +911,7 @@ test("template generation persists prebuilt editor regions with the finished ren
   // The pack builder carries the prebuilt map supplied by generation.
   assert.match(builder, /cloneQa: input\.firstAd\.templateCloneQaByFormat\?\.\[format\]/);
   assert.match(generation, /templateCloneQaByFormat/);
-  assert.doesNotMatch(generation, /TemplateCampaignQaError/);
+  assert.match(generation, /TemplateCampaignQaError/);
   assert.match(generation, /buildPrebuiltTemplateCloneQa/);
   assert.doesNotMatch(generation, /detectCloneRegions/);
 });

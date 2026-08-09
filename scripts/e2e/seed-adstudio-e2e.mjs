@@ -6,6 +6,7 @@
 //   - its profile row
 //   - a dedicated self-serve workspace (deterministic id below)
 //   - owner membership
+//   - a six-credit operator entitlement for the current UTC month
 // Brand-kit approval is exercised by the spec itself through the real UI.
 //
 // Env: NEXT_PUBLIC_SUPABASE_URL or SUPABASE_URL, SUPABASE_SECRET_KEY
@@ -106,37 +107,26 @@ requireNoError(
   "Upsert workspace member",
 );
 
-// Approved brand kit for the v2-loop e2e: the loop assumes a ready workspace.
-// Fixed deterministic id (idempotent upsert). This is test fixture data, not
-// product data.
-const E2E_BRAND_KIT_ID = "00000000-0000-4000-8000-00000000e2e2";
-const now = new Date().toISOString();
+// The browser workflow exercises the real paid render path. Keep its wallet
+// explicit, small, monthly, and idempotent so a freshly seeded fixture cannot
+// fail before generation while still putting a hard ceiling on test spend.
+const now = new Date();
+const periodStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+const periodEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+const periodKey = `adstudio-e2e-${periodStart.toISOString().slice(0, 7)}`;
 requireNoError(
-  await supabase.from("adstudio_brand_kits").upsert(
-    {
-      id: E2E_BRAND_KIT_ID,
-      workspace_id: ADSTUDIO_E2E_WORKSPACE_ID,
-      source_type: "website",
-      source_url: "https://e2e-realty.example",
-      business_name: "E2E Realty",
-      market_country: "AU",
-      market_region: "WA",
-      identity_json: { businessName: "E2E Realty", tradingName: "E2E Realty" },
-      logos_json: { primaryLogoUrl: null, darkLogoUrl: null, faviconUrl: null },
-      colours_json: { primary: "#1f242b", secondary: "#8a94a3", accent: "#2f7cf6", background: "#ffffff", text: "#111111" },
-      typography_json: {},
-      tone_json: { voice: "friendly", preferredPhrases: [], avoid: [] },
-      visual_style_json: {},
-      compliance_json: {},
-      contact_json: {},
-      review_status: "approved",
-      locked_fields_json: [],
-      created_by: authUser.id,
-      updated_at: now,
-    },
-    { onConflict: "id" },
-  ),
-  "Upsert approved brand kit",
+  await supabase.rpc("grant_workspace_credits", {
+    p_workspace_id: ADSTUDIO_E2E_WORKSPACE_ID,
+    p_entitlement_type: "operator",
+    p_period_key: periodKey,
+    p_credits: 6,
+    p_period_start: periodStart.toISOString(),
+    p_period_end: periodEnd.toISOString(),
+    p_mutation_key: `adstudio-e2e:credit-grant:${periodStart.toISOString().slice(0, 7)}:v1`,
+    p_source_reference: "adstudio-e2e-fixture",
+    p_metadata: { fixture: true, scope: "preview-real-loop" },
+  }),
+  "Grant AdStudio e2e render credits",
 );
 
 console.log(`Seeded AdStudio e2e fixture: ${email} → workspace ${ADSTUDIO_E2E_WORKSPACE_ID}`);

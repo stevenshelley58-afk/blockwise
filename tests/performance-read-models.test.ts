@@ -53,7 +53,7 @@ test("smart prefetch is capped and respects browser constraints", () => {
 
 test("every canonical Ad Studio sample has bounded content-hashed display variants", () => {
   const manifests = readdirSync("src/lib/adstudio/template-gallery").filter((file) =>
-    file.endsWith(".json"),
+    file.endsWith(".json") && file !== "quality-locks.json",
   );
   for (const file of manifests) {
     const manifest = JSON.parse(

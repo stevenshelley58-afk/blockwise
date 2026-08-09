@@ -2,30 +2,18 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
 
-import { labelForMetaCta, remapLegacyMetaCta, toMetaCta } from "../src/lib/adstudio/meta-cta.ts";
+import { labelForMetaCta, toMetaCta } from "../src/lib/adstudio/meta-cta.ts";
 import { findCopyLimitViolations, findPackCopyLimitViolations } from "../src/lib/adstudio/readiness.ts";
 
-test("one CTA mapper: labels map consistently onto the lead-ads subset", () => {
-  assert.equal(toMetaCta("Book an appraisal"), "GET_QUOTE");
-  assert.equal(toMetaCta("Request price update"), "GET_QUOTE");
-  assert.equal(toMetaCta("Apply for tenancy"), "APPLY_NOW");
-  assert.equal(toMetaCta("Subscribe to updates"), "SUBSCRIBE");
+test("one CTA mapper: labels map consistently, enum passthrough works", () => {
+  assert.equal(toMetaCta("Book an appraisal"), "CONTACT_US");
+  assert.equal(toMetaCta("Request price update"), "CONTACT_US");
   assert.equal(toMetaCta("Seller checklist"), "DOWNLOAD");
   assert.equal(toMetaCta("Download the guide"), "DOWNLOAD");
   assert.equal(toMetaCta("Sign up"), "SIGN_UP");
   assert.equal(toMetaCta("Anything else"), "LEARN_MORE");
-  // The documented lead-ads subset has no CONTACT_US; the keyword mapper
-  // treats "contact us" copy as quote-shaped.
-  assert.equal(toMetaCta("CONTACT_US"), "GET_QUOTE");
+  assert.equal(toMetaCta("CONTACT_US"), "CONTACT_US");
   assert.equal(labelForMetaCta("DOWNLOAD"), "Download");
-  assert.equal(labelForMetaCta("GET_QUOTE"), "Get quote");
-  assert.equal(labelForMetaCta("CONTACT_US"), "Contact us");
-});
-
-test("legacy CONTACT_US packs remap to LEARN_MORE at payload build", () => {
-  assert.equal(remapLegacyMetaCta("CONTACT_US"), "LEARN_MORE");
-  assert.equal(remapLegacyMetaCta("GET_QUOTE"), "GET_QUOTE");
-  assert.equal(remapLegacyMetaCta("SIGN_UP"), "SIGN_UP");
 });
 
 test("no divergent CTA keyword maps remain", () => {

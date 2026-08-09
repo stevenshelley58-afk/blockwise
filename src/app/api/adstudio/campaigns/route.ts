@@ -1,9 +1,8 @@
 import { createHash, randomUUID } from "node:crypto";
 
-import { NextResponse, after, type NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 
 import { recordWorkspaceFunnelEventBestEffort } from "@/lib/analytics/progressive-funnel";
-import { buildAdStudioLiveResult } from "@/lib/adstudio";
 import { errorResponse, readJsonBody, requireAdStudioRequest } from "@/lib/adstudio/http";
 import { validateFirstAd } from "@/lib/adstudio/first-ad-input";
 import { publicAdStudioGenerationError } from "@/lib/adstudio/generation-error";
@@ -13,16 +12,10 @@ import {
 } from "@/lib/adstudio/generation-credits";
 import { refundOutstandingWorkspaceCredits } from "@/lib/credits/workspace-credits";
 import {
-  assertDeterministicFeedEditingReady,
-  runTemplateCampaignGeneration,
   type CreateCampaignBody,
 } from "@/lib/adstudio/generate-template-campaign";
-import { adstudioTemplatesV2Enabled } from "@/lib/adstudio/v2/flags";
-import { generateV2Campaign, V2GenerationError } from "@/lib/adstudio/v2/generate.ts";
-import { resolveReadyTemplateV2 } from "@/lib/adstudio/v2/template-resolver.ts";
-import { resolveAdStudioGenerationBrandKit } from "@/lib/adstudio/trial-brand-kit";
-import { compactAdStudioCampaignPackForTransport, persistAdStudioCampaignPack } from "@/lib/adstudio/persistence";
 import { resolveCloneCampaignId } from "@/lib/adstudio/clone-campaign";
+import { generationLockCanBeReclaimed } from "@/lib/adstudio/generation-lock";
 import { buildAdStudioCreativeLibrary } from "@/lib/adstudio/creative-library";
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
@@ -30,20 +23,17 @@ import {
   cancelQueuedJob,
   enqueueQueuedJob,
 } from "@/lib/providers/job-queue-enqueue";
+import { ensureRuntimeProviderToken } from "@/lib/providers/provider-connections";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-// The synchronous degraded-mode pipeline (copy + both clone renders in one
-// request, plus the deferred advisory QA pass via after()) can exceed 120s;
-// 300 is the Pro plan ceiling.
-export const maxDuration = 300;
+export const maxDuration = 60;
 
 const inFlightGenerations = new Map<string, number>();
 // This must exceed the whole Vercel render window. A 30-second lock allowed a
 // retry to start while the median image request was still running, producing
 // duplicate provider spend and competing with the original render.
 const GENERATION_DEDUP_TTL_MS = 15 * 60_000;
-const GENERATION_RECOVERY_DELAY_MS = 5 * 60_000 + 15_000;
 
 function generationDedupKey(workspaceId: string, body: unknown): string {
   const text = JSON.stringify(body) ?? "";
@@ -66,7 +56,7 @@ function generationCreditMutationKey(
   clientMutationId: string | null,
 ): string {
   // Bind a caller token to the exact request fingerprint. Reusing a token for
-  // different content can therefore never overwrite the first campaign.
+  // different content can therefore never alias the first campaign or charge.
   if (clientMutationId) {
     return `adstudio-generation:${workspaceId}:${clientMutationId}:${dedupKey}`;
   }
@@ -129,8 +119,9 @@ type SupabaseAccessClient = Awaited<ReturnType<typeof createSupabaseServerClient
 /**
  * Cross-instance dedup: the primary-key insert into adstudio_generation_locks
  * wins; a concurrent duplicate on another Vercel instance sees the conflict
- * and 409s. Stale locks (crashed runs) older than the TTL are stolen. Fails
- * open on unexpected DB errors — the in-memory Map still guards this instance.
+ * and 409s. Only an unbound setup lock can age out; queued/running job owners
+ * retain their lock until terminal settlement. Unexpected insert errors fail
+ * open because the in-memory Map still guards this instance.
  */
 async function acquireGenerationLock(
   supabase: SupabaseAccessClient,
@@ -148,16 +139,41 @@ async function acquireGenerationLock(
 
   const existing = await supabase
     .from("adstudio_generation_locks")
-    .select("created_at")
+    .select("created_at,job_id")
     .eq("dedupe_key", dedupeKey)
     .maybeSingle();
+  const ownerJobId = existing.data?.job_id ? String(existing.data.job_id) : null;
+  let ownerStatus: "queued" | "running" | "done" | "failed" | null = null;
+  let ownerLookupFailed = false;
+  if (ownerJobId) {
+    const owner = await supabase
+      .from("adstudio_creative_jobs")
+      .select("status")
+      .eq("workspace_id", workspaceId)
+      .eq("id", ownerJobId)
+      .maybeSingle();
+    ownerLookupFailed = Boolean(owner.error);
+    ownerStatus = (owner.data?.status as typeof ownerStatus) ?? null;
+  }
   const createdAt = existing.data?.created_at ? Date.parse(existing.data.created_at) : 0;
-  if (Date.now() - createdAt < GENERATION_DEDUP_TTL_MS) return false;
+  if (!generationLockCanBeReclaimed({
+    ownerJobId,
+    ownerStatus,
+    ownerLookupFailed,
+    createdAtMs: createdAt,
+    nowMs: Date.now(),
+    unboundTtlMs: GENERATION_DEDUP_TTL_MS,
+  })) return false;
 
   const stolen = await supabase
     .from("adstudio_generation_locks")
     .upsert(
-      { dedupe_key: dedupeKey, workspace_id: workspaceId, created_at: new Date().toISOString() },
+      {
+        dedupe_key: dedupeKey,
+        workspace_id: workspaceId,
+        created_at: new Date().toISOString(),
+        job_id: null,
+      },
       { onConflict: "dedupe_key" },
     );
   if (stolen.error) console.error("adstudio_generation_locks steal failed", stolen.error.message);
@@ -203,114 +219,37 @@ export async function POST(request: NextRequest) {
   inFlightGenerations.set(dedupKey, Date.now());
   let creditReservation: AdStudioGenerationCreditReservation | null = null;
   let creativeJobId: string | null = null;
-  let recoveryQueueJobId: string | null = null;
+  let generationQueueJobId: string | null = null;
+  let releaseLockOnExit = true;
 
   try {
     const firstAdError = validateFirstAd(body.firstAd);
     if (firstAdError) {
       return NextResponse.json({ error: firstAdError }, { status: 400 });
     }
-    // Track E (§6): resolve the v2 template BEFORE reserving credits. The v2
-    // path renders free (0 credits) and must not hit the credit gate (402 on
-    // empty trials). The reservation only applies to the v1 image-model path.
-    const v2Enabled = adstudioTemplatesV2Enabled();
-    const v2Template = v2Enabled
-      ? resolveReadyTemplateV2(body.firstAd!.templateId)
-      : null;
-
-    // Cutover is one-way. When v2 is enabled, a missing or QA template must
-    // fail closed rather than silently spending credits on the legacy
-    // whole-ad image generator.
-    if (v2Enabled && !v2Template) {
-      return NextResponse.json(
-        { error: "That design is still being quality-checked. Choose an approved design and try again." },
-        { status: 409 },
-      );
-    }
-
-    if (v2Template && !clientMutationId) {
-      return NextResponse.json(
-        { error: "This ad request needs an idempotency key. Refresh and try again." },
-        { status: 400 },
-      );
-    }
-
-    if (!v2Template) {
-      const creditGate = await reserveAdStudioGenerationCredits({
-        supabase: context.supabase,
-        workspaceId: context.access.workspaceId,
-        actorProfileId: context.access.userId,
-        mutationKey: creditMutationKey,
-      });
-      if (!creditGate.ok) {
-        return creditGate.response;
-      }
-      creditReservation = creditGate.reservation;
-    }
+    // The image key is configured only in Vercel. Before charging the customer,
+    // idempotently ensure the durable VPS worker can read that same credential
+    // from the encrypted service vault. No secret crosses the request boundary
+    // or enters VPS configuration.
     const funnelService = createSupabaseServiceClient();
+    await ensureRuntimeProviderToken({
+      serviceSupabase: funnelService,
+      provider: "openai",
+      accessToken: process.env.OPENAI_API_KEY,
+      allowWrite: process.env.VERCEL_ENV === "production",
+    });
+    const creditGate = await reserveAdStudioGenerationCredits({
+      supabase: context.supabase,
+      workspaceId: context.access.workspaceId,
+      actorProfileId: context.access.userId,
+      mutationKey: creditMutationKey,
+    });
 
-    if (v2Template) {
-        try {
-          const brandKitResult = await resolveAdStudioGenerationBrandKit({
-            supabase: context.supabase,
-            workspaceId: context.access.workspaceId,
-            workspaceName: context.access.workspaceName,
-            region: context.access.region,
-            userId: context.access.userId,
-          });
-          if (!brandKitResult.ok) {
-            throw new V2GenerationError(brandKitResult.error, 422);
-          }
-          const v2 = await generateV2Campaign({
-            workspaceId: context.access.workspaceId,
-            userId: context.access.userId,
-            generationKey: creditMutationKey,
-            template: v2Template,
-            brandKit: brandKitResult.brandKit,
-            firstAd: body.firstAd!,
-            // V2 consumes its declared customer inputs separately from the
-            // legacy first-ad envelope. Keep every supplied slot and exact
-            // customer copy intact instead of falling back to the first image.
-            images: body.firstAd!.imageDataUrls,
-            text: body.firstAd!.onImageCopy,
-            suburb: body.suburb,
-            city: body.city,
-            state: body.state,
-            supabase: createSupabaseServiceClient(),
-          });
-          const persisted = await persistAdStudioCampaignPack(context.supabase, v2.pack, context.access.userId);
-          if (persisted.error) {
-            throw new Error(
-              `Your ad was rendered but could not be saved (${persisted.error.message}). Please try again.`,
-            );
-          }
-          await refundOutstandingWorkspaceCredits({
-            reservation: creditReservation,
-            mutationKey: `${creditMutationKey}:v2_zero_render_credits`,
-            reason: "v2_renders_cost_zero",
-          });
-          const liveResult = buildAdStudioLiveResult({
-            data: compactAdStudioCampaignPackForTransport(v2.pack),
-          });
-          return NextResponse.json(
-            {
-              campaignPack: liveResult.data,
-              data: liveResult.data,
-              persistence: liveResult.persistence,
-              v2: true,
-              renderMs: v2.renderMs,
-              warnings: v2.warnings,
-            },
-            { status: 201 },
-          );
-        } catch (error) {
-          if (error instanceof V2GenerationError) {
-            return errorResponse(new Error(error.message), error.status);
-          }
-          throw error;
-        }
+    if (!creditGate.ok) {
+      return creditGate.response;
     }
-    // With the v2 flag off, the established v1 customer flow remains live.
+
+    creditReservation = creditGate.reservation;
     await recordWorkspaceFunnelEventBestEffort(funnelService, {
       eventName: "template_selected",
       workspaceId: context.access.workspaceId,
@@ -321,10 +260,11 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Vercel owns the customer-critical path so there is no queue/poll delay:
-    // copy → feed clone → persist returns in this request. A delayed copy of
-    // the same idempotent job sits in Supabase for the VPS worker to recover
-    // only if this function is killed before it can cancel that row.
+    // Final-quality reference cloning can honestly require several independently
+    // reviewed candidates. Run the complete canonical pipeline in the durable
+    // VPS worker from the start; the existing client waits on this job over
+    // Realtime. This removes Vercel's hard 300-second ceiling without reducing
+    // the 9.5 likeness gate or rebuying work after an inline function death.
     {
       const origin = request.nextUrl.origin;
       const service = createSupabaseServiceClient();
@@ -340,8 +280,8 @@ export async function POST(request: NextRequest) {
         .insert({
           workspace_id: context.access.workspaceId,
           created_by: context.access.userId,
-          status: "running",
-          attempts: 1,
+          status: "queued",
+          attempts: 0,
           kind: "template_campaign",
           headline: body.firstAd!.description.slice(0, 200),
           payload: {
@@ -359,8 +299,16 @@ export async function POST(request: NextRequest) {
         throw new Error(`Could not create the generation job (${inserted.error.message}).`);
       }
       creativeJobId = String(inserted.data.id);
+      const boundLock = await context.supabase
+        .from("adstudio_generation_locks")
+        .update({ job_id: creativeJobId })
+        .eq("workspace_id", context.access.workspaceId)
+        .eq("dedupe_key", dedupKey);
+      if (boundLock.error) {
+        throw new Error(`Could not bind the generation lock (${boundLock.error.message}).`);
+      }
 
-      const recovery = await enqueueQueuedJob({
+      const queued = await enqueueQueuedJob({
         workspaceId: context.access.workspaceId,
         kind: "adstudio.generate.template",
         payload: {
@@ -368,106 +316,36 @@ export async function POST(request: NextRequest) {
           userId: context.access.userId,
           creativeJobId,
           origin,
+          generationDedupKey: dedupKey,
         },
         // A caught generation failure is final and refunds immediately. The
-        // queue's lease reaper still retries a worker process crash because no
-        // fail_job call occurs in that case.
+        // lease reaper still resumes a worker process crash because no fail_job
+        // call occurs in that case.
         maxAttempts: 1,
-        runAfter: new Date(Date.now() + GENERATION_RECOVERY_DELAY_MS),
+        runAfter: new Date(),
         dedupeKey: `adstudio.generate.template:${creativeJobId}`,
       });
-      recoveryQueueJobId = recovery.id;
+      generationQueueJobId = queued.id;
 
       await recordFirstGenerationStarted(
         funnelService,
         context.access.workspaceId,
         creditMutationKey,
-        "inline",
       );
-      const result = await runTemplateCampaignGeneration({
-        supabase: context.supabase,
-        workspaceId: context.access.workspaceId,
-        userId: context.access.userId,
-        origin,
-        body,
-        workspaceName: context.access.workspaceName,
-        region: context.access.region,
-        creditReservation: creditReservation ?? undefined,
-        correlationId,
-        expectedCampaignId,
-      });
-      if (result.requiresDeterministicEditing) {
-        await result.editingLayersTask;
-        await assertDeterministicFeedEditingReady({
-          supabase: context.supabase,
-          workspaceId: context.access.workspaceId,
-          campaignId: result.campaignId,
-        });
-      }
-      const completedAt = new Date().toISOString();
-      const completedJob = await service
-        .from("adstudio_creative_jobs")
-        .update({
-          status: "done",
-          campaign_id: result.campaignId,
-          error: null,
-          updated_at: completedAt,
-        })
-        .eq("id", creativeJobId)
-        .eq("workspace_id", context.access.workspaceId);
-      if (completedJob.error) {
-        console.error("adstudio creative job completion update failed", completedJob.error.message);
-      }
-      if (recoveryQueueJobId) {
-        await cancelGenerationRecoveryBestEffort({
-          serviceSupabase: service,
-          workspaceId: context.access.workspaceId,
-          jobId: recoveryQueueJobId,
-          failureContext: "after inline completion",
-        });
-      }
-      await recordWorkspaceFunnelEventBestEffort(funnelService, {
-        eventName: "first_generation_completed",
-        workspaceId: context.access.workspaceId,
-        idempotencyKey: `activation:${context.access.workspaceId}:first-generation-completed`,
-        properties: {
-          mutation_key: creditMutationKey,
-          campaign_id: result.campaignId,
-          execution: "inline",
-        },
-      });
-
-      // The customer has the ad and its prebuilt editor hit-boxes in this
-      // response. Only the optional instant-edit plate and Story patch finish
-      // in the background.
-      if (!result.requiresDeterministicEditing) {
-        after(() => result.editingLayersTask);
-      }
-      if (result.storyTask) after(() => result.storyTask);
-
-      const liveResult = buildAdStudioLiveResult({
-        data: compactAdStudioCampaignPackForTransport(result.campaignPack),
-      });
-
-      return NextResponse.json(
-        {
-          campaignPack: liveResult.data,
-          data: liveResult.data,
-          persistence: liveResult.persistence,
-          jobId: creativeJobId,
-        },
-        { status: 201 },
-      );
+      // The worker now owns this generation lock until it reaches a terminal
+      // job state; releasing it here would allow a duplicate queued render.
+      releaseLockOnExit = false;
+      return NextResponse.json({ jobId: creativeJobId }, { status: 202 });
     }
 
   } catch (error) {
     const service = createSupabaseServiceClient();
-    if (recoveryQueueJobId) {
-      await cancelGenerationRecoveryBestEffort({
+    if (generationQueueJobId) {
+      await cancelGenerationQueueBestEffort({
         serviceSupabase: service,
         workspaceId: context.access.workspaceId,
-        jobId: recoveryQueueJobId,
-        failureContext: "after inline failure",
+        jobId: generationQueueJobId,
+        failureContext: "after queue setup failure",
       });
     }
     if (creativeJobId) {
@@ -491,11 +369,11 @@ export async function POST(request: NextRequest) {
     return errorResponse(new Error(publicAdStudioGenerationError(error)), 400);
   } finally {
     inFlightGenerations.delete(dedupKey);
-    await releaseGenerationLock(context.supabase, dedupKey);
+    if (releaseLockOnExit) await releaseGenerationLock(context.supabase, dedupKey);
   }
 }
 
-async function cancelGenerationRecoveryBestEffort(input: {
+async function cancelGenerationQueueBestEffort(input: {
   serviceSupabase: ReturnType<typeof createSupabaseServiceClient>;
   workspaceId: string;
   jobId: string;
@@ -509,12 +387,12 @@ async function cancelGenerationRecoveryBestEffort(input: {
     });
     if (!cancelled) {
       console.warn(
-        `adstudio recovery cancellation ${input.failureContext} found no pending job`,
+        `adstudio generation queue cancellation ${input.failureContext} found no pending job`,
       );
     }
   } catch (error) {
     console.error(
-      `adstudio recovery cancellation ${input.failureContext} failed`,
+      `adstudio generation queue cancellation ${input.failureContext} failed`,
       error instanceof Error ? error.message : String(error),
     );
   }
@@ -524,12 +402,11 @@ async function recordFirstGenerationStarted(
   service: ReturnType<typeof createSupabaseServiceClient>,
   workspaceId: string,
   mutationKey: string,
-  execution: "inline" | "vps_recovery",
 ): Promise<void> {
   await recordWorkspaceFunnelEventBestEffort(service, {
     eventName: "first_generation_started",
     workspaceId,
     idempotencyKey: `activation:${workspaceId}:first-generation-started`,
-    properties: { mutation_key: mutationKey, execution },
+    properties: { mutation_key: mutationKey, execution: "vps_queue" },
   });
 }

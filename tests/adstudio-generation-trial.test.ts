@@ -26,21 +26,15 @@ test("campaign generation route uses the shared render-credit reservation", () =
   assert.match(source, /@\/lib\/adstudio\/generation-credits/);
   assert.match(source, /reserveAdStudioGenerationCredits/);
   assert.match(source, /refundOutstandingWorkspaceCredits/);
-  assert.match(source, /body\.clientMutationId \?\? request\.headers\.get\("idempotency-key"\)/);
-  assert.match(source, /clientMutationId[^\n]+dedupKey/);
-  const client = read("src/components/adstudio/use-campaign-actions.ts");
-  assert.match(client, /pendingGenerationRef/);
-  assert.match(client, /clientMutationId/);
-  assert.match(client, /crypto\.randomUUID\(\)/);
+  assert.match(source, /clientMutationId \?\? request\.headers\.get\("idempotency-key"\)/);
   assert.match(read("src/lib/adstudio/generate-template-campaign.ts"), /resolveAdStudioGenerationBrandKit/);
 });
 
-test("generation success response keeps the existing fields without a trial block", () => {
+test("generation enqueue response returns the durable job without a trial block", () => {
   const source = read(campaignsRoute);
 
-  assert.match(source, /campaignPack:\s*liveResult\.data/);
-  assert.match(source, /data:\s*liveResult\.data/);
-  assert.match(source, /persistence:\s*liveResult\.persistence/);
+  assert.match(source, /NextResponse\.json\(\{ jobId: creativeJobId \}, \{ status: 202 \}\)/);
+  assert.doesNotMatch(source, /campaignPack:\s*liveResult\.data/);
   assert.doesNotMatch(source, /\btrial\s*:/);
 });
 
@@ -48,7 +42,10 @@ test("real campaign generation route guards duplicate in-flight requests", () =>
   const source = read(campaignsRoute);
 
   assert.match(source, /const inFlightGenerations = new Map<string, number>\(\)/);
+  assert.match(source, /createHash\("sha256"\)\.update\(text\)\.digest\("hex"\)/);
   assert.match(source, /generationDedupKey\(context\.access\.workspaceId,\s*body\)/);
+  assert.match(source, /clientMutationId.*dedupKey/s);
+  assert.match(source, /adstudio-generation:\$\{workspaceId\}:\$\{clientMutationId\}:\$\{dedupKey\}/);
   assert.match(source, /status:\s*409/);
   assert.match(source, /inFlightGenerations\.delete\(dedupKey\)/);
 });

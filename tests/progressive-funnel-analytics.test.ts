@@ -189,7 +189,7 @@ test("owning server transactions emit authoritative funnel events with stable ke
   assert.match(sources.generation, /eventName:\s*"template_selected"/);
   assert.match(sources.generation, /eventName:\s*"first_generation_started"/);
   assert.match(sources.generation, /first-generation-started/);
-  assert.match(sources.generation, /eventName:\s*"first_generation_completed"/);
+  assert.doesNotMatch(sources.generation, /eventName:\s*"first_generation_completed"/);
   assert.match(sources.generationWorker, /eventName:\s*"first_generation_completed"/);
 
   assert.match(sources.meta, /eventName:\s*"meta_connected"/);

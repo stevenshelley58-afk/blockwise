@@ -4,14 +4,12 @@
 // Order matters and is the product: brand kit -> slot images -> brief-grounded
 // copy (on-image fields + feed copy in one pass) -> reference clone renders
 // (feed + story) -> deterministic pack build -> provided-copy application ->
-// one transactional persist. The customer gets the finished ad the moment the
-// feed render persists, with native-format editor hit-boxes copied from the
-// template's offline type-spec block. No customer-time vision pass is needed.
-// The editor's history (undo/compare) plus in-place fixes are the safety net.
+// one transactional persist. Every candidate passes the subject-invariant
+// image-model likeness gate before persistence; failed candidates feed one
+// correction back through the same reference-clone request builder.
 import { randomUUID } from "node:crypto";
 
 import { applyProvidedCopyToCampaignPack } from "./campaign-copy-enrichment.ts";
-import { creativeDimensions, isLegacyCreative } from "./creative-preview.ts";
 import {
   cloneModelProfileForQuality,
   generateCloneWithCascade,
@@ -20,10 +18,20 @@ import {
   resolveCloneProviders,
   type CloneGenerationResult,
 } from "./clone-generation.ts";
+import {
+  MAX_RUNTIME_CLONE_CANDIDATES,
+  TemplateCampaignQaError,
+  cloneQualityPassed,
+  reviewCloneCandidate,
+} from "./clone-quality-gate.ts";
 import { buildPrebuiltTemplateCloneQa } from "./clone-regions.ts";
 import { deriveAndPersistTemplateTextLayers } from "./layer-derivation.ts";
 import { generateAdStudioTemplateCopy, type AdStudioCopyFields } from "./copy-generation.ts";
 import { buildCloneCampaignPack, buildCloneCreative } from "./clone-campaign.ts";
+import {
+  recordCloneCandidateAudit,
+  type CloneCandidateAuditClient,
+} from "./clone-candidate-audit.ts";
 import { loadAdStudioCampaignPack, persistAdStudioCampaignPack } from "./persistence.ts";
 import { ensureRasterReferenceImage } from "./rasterize-reference.ts";
 import {
@@ -40,8 +48,10 @@ import type {
   AdStudioCampaignPack,
   AdStudioCreative,
   FirstAdInput,
+  AdStudioCloneQualityReview,
 } from "./types.ts";
 import type { ImageProviderAdapter, ImageProviderRequest } from "./providers.ts";
+import type { ProviderEnvironment } from "./ai-providers.ts";
 import {
   refundWorkspaceCreditReservation,
   settleWorkspaceCreditReservation,
@@ -86,6 +96,10 @@ export type RunTemplateCampaignGenerationInput = {
   correlationId?: string;
   /** Deterministic campaign checkpoint used to resume after a function crash. */
   expectedCampaignId?: string;
+  /** Explicit service-runtime credentials; Vercel requests use process.env. */
+  providerEnv?: ProviderEnvironment;
+  /** Worker lease/timeout cancellation propagated to every paid provider. */
+  signal?: AbortSignal;
 };
 
 export type RunTemplateCampaignGenerationResult = {
@@ -118,11 +132,7 @@ export async function assertDeterministicFeedEditingReady(input: {
     .eq("format", PRIMARY_CLONE_FORMAT)
     .maybeSingle();
   if (error) throw new Error(error.message);
-  const storedCreative = { canvas: (data?.canvas_json ?? {}) as AdStudioCreative["canvas"] } as AdStudioCreative;
-  if (!isLegacyCreative(storedCreative)) {
-    throw new Error("Deterministic v2 documents do not use legacy clone editing layers.");
-  }
-  const canvas = storedCreative.canvas;
+  const canvas = (data?.canvas_json ?? {}) as AdStudioCreative["canvas"];
   const currentImage = canvas.objects?.[0]?.content ?? canvas.objects?.[0]?.assetId ?? "";
   if (
     !currentImage
@@ -150,10 +160,8 @@ async function resumePersistedTemplateCampaign(input: {
   if (!campaignPack) return null;
 
   const feedCreative = campaignPack.creatives.find((creative) => creative.format === PRIMARY_CLONE_FORMAT);
-  const imageRef = feedCreative && isLegacyCreative(feedCreative)
-    ? feedCreative.canvas.objects.find((object) => object.role === "primary_image")?.content
-      ?? feedCreative.canvas.objects.find((object) => object.role === "primary_image")?.assetId
-    : undefined;
+  const imageRef = feedCreative?.canvas.objects.find((object) => object.role === "primary_image")?.content
+    ?? feedCreative?.canvas.objects.find((object) => object.role === "primary_image")?.assetId;
   if (!feedCreative || !imageRef) {
     throw new Error("The persisted generation checkpoint has no finished Feed creative.");
   }
@@ -189,6 +197,7 @@ type TemplateCloneRenderFormat = typeof PRIMARY_CLONE_FORMAT | typeof STORY_CLON
 
 type GeneratedCloneRender = CloneGenerationResult & {
   attempt: number;
+  qualityReview: AdStudioCloneQualityReview;
 };
 
 type PersistedCloneRender = GeneratedCloneRender & {
@@ -229,37 +238,115 @@ export function buildTemplateCloneRequestsByFormat(
 type CloneRenderDependencies = {
   generate?: typeof generateCloneWithCascade;
   normalize?: typeof normalizeCloneRenderAspect;
+  review?: typeof reviewCloneCandidate;
 };
 
 /**
- * One final-quality render per format: provider cascade (bounded fallback
- * inside) then an exact aspect crop. No vision gate, no reroll — the customer
- * sees this render as soon as it persists. Editor regions are already present
- * in the native-format template metadata; no customer-time vision is run.
+ * Generate, normalize, and independently review candidates before persistence.
+ * The same clone request is rebuilt with the image-model correction when a
+ * candidate misses the quality lock. Failed candidates are never released.
  */
 export async function generateFinalCloneRender(input: {
   format: TemplateCloneRenderFormat;
+  templateId: string;
   providers: ImageProviderAdapter[];
   request: ImageProviderRequest;
+  referenceImage: string;
+  expectedCopy: Record<string, string>;
+  expectedAssetKeys: string[];
+  buildCorrectedRequest(correction: string): ImageProviderRequest;
   workspaceId: string;
   userId: string;
   correlationId: string;
   modelProfile?: "image_draft" | "image_final";
+  providerEnv?: ProviderEnvironment;
+  signal?: AbortSignal;
+  recordCandidate?(candidate: {
+    attempt: number;
+    request: ImageProviderRequest;
+    candidateImage: string;
+    review: AdStudioCloneQualityReview;
+    accepted: boolean;
+  }): Promise<void>;
 }, dependencies: CloneRenderDependencies = {}): Promise<GeneratedCloneRender> {
   const generate = dependencies.generate ?? generateCloneWithCascade;
   const normalize = dependencies.normalize ?? normalizeCloneRenderAspect;
+  const review = dependencies.review ?? reviewCloneCandidate;
+  let request = input.request;
+  let lastReview: AdStudioCloneQualityReview | undefined;
 
-  const generated = await generate({
-    providers: input.providers,
-    request: { ...input.request, seed: (input.request.seed ?? 0) + 1 },
-    workspaceId: input.workspaceId,
-    userId: input.userId,
-    correlationId: input.correlationId,
-    attempt: 1,
-    modelProfile: input.modelProfile,
-  });
-  const exactAssetUrl = await normalize(generated.assetUrl, input.format);
-  return { ...generated, assetUrl: exactAssetUrl, attempt: 1 };
+  for (let attempt = 1; attempt <= MAX_RUNTIME_CLONE_CANDIDATES; attempt += 1) {
+    const candidateRequest = {
+      ...request,
+      seed: (request.seed ?? 0) + attempt,
+      signal: input.signal ?? request.signal,
+    };
+    // A provider that produced a valid image but missed visual QA will not
+    // enter the technical fallback inside generateCloneWithCascade. Give the
+    // independently priced fallback model the corrected request on later
+    // candidates instead of paying the same model to repeat the same failure.
+    // The first provider remains available behind that fallback for an actual
+    // outage, and every candidate still uses the same canonical clone request.
+    const [primaryProvider, ...fallbackProviders] = input.providers;
+    const candidateProviders = attempt === 1 || !primaryProvider || fallbackProviders.length === 0
+      ? input.providers
+      : [...fallbackProviders, primaryProvider];
+    const generated = await generate({
+      providers: candidateProviders,
+      request: candidateRequest,
+      workspaceId: input.workspaceId,
+      userId: input.userId,
+      correlationId: input.correlationId,
+      attempt,
+      modelProfile: input.modelProfile,
+    });
+    const exactAssetUrl = await normalize(generated.assetUrl, input.format);
+    lastReview = await review({
+      templateId: input.templateId,
+      format: input.format,
+      attempt,
+      referenceImage: input.referenceImage,
+      candidateImage: exactAssetUrl,
+      request: candidateRequest,
+      expectedCopy: input.expectedCopy,
+      expectedAssetKeys: input.expectedAssetKeys,
+      workspaceId: input.workspaceId,
+      userId: input.userId,
+      correlationId: input.correlationId,
+      providerEnv: input.providerEnv,
+      signal: input.signal,
+    });
+    const accepted = cloneQualityPassed({
+      review: lastReview,
+      expectedCopy: input.expectedCopy,
+      expectedAssetKeys: input.expectedAssetKeys,
+    });
+    if (input.recordCandidate) {
+      try {
+        await input.recordCandidate({
+          attempt,
+          request: candidateRequest,
+          candidateImage: exactAssetUrl,
+          review: lastReview,
+          accepted,
+        });
+      } catch (error) {
+        // Evidence must survive whenever storage is healthy, but a transient
+        // audit upload must not discard an otherwise accepted customer ad.
+        console.error("Clone candidate audit failed", error);
+      }
+    }
+    if (accepted) {
+      return { ...generated, assetUrl: exactAssetUrl, attempt, qualityReview: lastReview };
+    }
+    const correction = lastReview.suggestedCorrection.trim();
+    if (!correction || attempt === MAX_RUNTIME_CLONE_CANDIDATES) break;
+    request = { ...input.buildCorrectedRequest(correction), signal: input.signal };
+  }
+  throw new TemplateCampaignQaError(
+    `The ad did not reach ${input.format} likeness quality after ${MAX_RUNTIME_CLONE_CANDIDATES} candidates.`,
+    lastReview,
+  );
 }
 
 export type CloneEditingLayersInput = {
@@ -295,9 +382,7 @@ export async function prepareCloneCreativeTextLayers(
         .eq("id", render.creativeId)
         .maybeSingle();
       if (error || !row) return;
-      const storedCreative = { canvas: (row.canvas_json ?? {}) as AdStudioCreative["canvas"] } as AdStudioCreative;
-      if (!isLegacyCreative(storedCreative)) return;
-      const canvas = storedCreative.canvas;
+      const canvas = (row.canvas_json ?? {}) as AdStudioCreative["canvas"];
       if (!canvas.cloneQa?.regions.length) return;
       await deriveAndPersistTemplateTextLayers({
         supabase,
@@ -455,11 +540,14 @@ export async function runTemplateCampaignGeneration(
   // result — start them NOW so they overlap the 25-47s copy call instead of
   // following it. Gallery samples are SVGs, which no image provider accepts;
   // rasterize to a PNG data URL before the clone requests are built.
-  const generationQuality = firstAd.generationQuality ?? "fast";
+  // The customer always receives the professional final-image lane. Keeping a
+  // caller-supplied "fast" value for backward compatibility must never reduce
+  // the quality of the finished ad.
+  const generationQuality = "high" as const;
   const rasterPromise = ensureRasterReferenceImage(
     new URL(template.sample.imageSrc, input.origin).toString(),
   );
-  const providersPromise = resolveCloneProviders(generationQuality);
+  const providersPromise = resolveCloneProviders(generationQuality, input.providerEnv);
 
   const copyResult = providedCopy
     ? { onImage: customerOnImage, copy: providedCopy, source: "provided" as const }
@@ -475,6 +563,8 @@ export async function runTemplateCampaignGeneration(
           sample: field.sample,
         })),
         sourceImageUrl,
+        providerEnv: input.providerEnv,
+        signal: input.signal,
         context: {
           goal: template.goal,
           templateName: template.name,
@@ -491,11 +581,12 @@ export async function runTemplateCampaignGeneration(
   const onImageCopy = { ...copyResult.onImage, ...customerOnImage };
 
   // The image lane prioritises the customer-visible feed, then starts the
-  // recomposed 9:16 story while Feed persistence continues. The matching-format
+  // recomposed 9:16 story after Feed clears blocking visual QA, while Feed
+  // persistence continues. The matching-format
   // editor map was measured offline.
   const [referenceImage, providers] = await Promise.all([rasterPromise, providersPromise]);
   const expectedCopy = resolveCloneCopy(template, onImageCopy);
-  const cloneRequestsByFormat = buildTemplateCloneRequestsByFormat(template, {
+  const cloneInputs: CloneInputs = {
     referenceImage,
     images: resolvedImages,
     copy: onImageCopy,
@@ -509,31 +600,80 @@ export async function runTemplateCampaignGeneration(
     ] as const)
       .filter(([, value]) => value.trim())
       .map(([label, value]) => `${label} ${value.trim()}`),
-  });
+  };
+  const builtCloneRequests = buildTemplateCloneRequestsByFormat(template, cloneInputs);
+  const cloneRequestsByFormat: Record<TemplateCloneRenderFormat, ImageProviderRequest> = {
+    [PRIMARY_CLONE_FORMAT]: { ...builtCloneRequests[PRIMARY_CLONE_FORMAT], signal: input.signal },
+    [STORY_CLONE_FORMAT]: { ...builtCloneRequests[STORY_CLONE_FORMAT], signal: input.signal },
+  };
   const feedCloneQa = buildPrebuiltTemplateCloneQa(template, expectedCopy, PRIMARY_CLONE_FORMAT);
   const modelProfile = cloneModelProfileForQuality(generationQuality);
+  // Review every customer/brand asset actually supplied, not just required
+  // fields. An optional logo or secondary photo must never be allowed to leak,
+  // disappear, or warp simply because its input contract is optional.
+  const expectedAssetKeys = template.inputs.images
+    .filter((slot) => Boolean(resolvedImages[slot.key]))
+    .map((slot) => slot.key);
+  const candidateAudit = (format: TemplateCloneRenderFormat) => async (candidate: {
+    attempt: number;
+    request: ImageProviderRequest;
+    candidateImage: string;
+    review: AdStudioCloneQualityReview;
+    accepted: boolean;
+  }) => {
+    await recordCloneCandidateAudit({
+      supabase: input.supabase as unknown as CloneCandidateAuditClient,
+      workspaceId: input.workspaceId,
+      correlationId,
+      templateId: template.id,
+      format,
+      ...candidate,
+    });
+  };
   // --- Feed-first critical path: give Gemini the Feed request exclusively so
   // it does not compete with Story for provider quota or bandwidth. Once the
-  // Feed bytes arrive, Story starts and overlaps normalization/upload/DB work.
+  // Feed is accepted, Story starts and overlaps upload/DB work.
   // This improves time-to-first-ad while still reducing two-format wall time. ---
   const { feed: feedRender, storyTask: storyGenPromise } = await startStoryAfterFeed({
     generateFeed: () => generateFinalCloneRender({
       format: PRIMARY_CLONE_FORMAT,
+      templateId: template.id,
       providers,
       request: cloneRequestsByFormat[PRIMARY_CLONE_FORMAT],
+      referenceImage,
+      expectedCopy,
+      expectedAssetKeys,
+      buildCorrectedRequest: (correction) => buildTemplateCloneRequestsByFormat(template, {
+        ...cloneInputs,
+        reviewCorrection: correction,
+      })[PRIMARY_CLONE_FORMAT],
       workspaceId: input.workspaceId,
       userId: input.userId,
       correlationId,
       modelProfile,
+      providerEnv: input.providerEnv,
+      signal: input.signal,
+      recordCandidate: candidateAudit(PRIMARY_CLONE_FORMAT),
     }),
     generateStory: () => generateFinalCloneRender({
       format: STORY_CLONE_FORMAT,
+      templateId: template.id,
       providers,
       request: cloneRequestsByFormat[STORY_CLONE_FORMAT],
+      referenceImage,
+      expectedCopy,
+      expectedAssetKeys,
+      buildCorrectedRequest: (correction) => buildTemplateCloneRequestsByFormat(template, {
+        ...cloneInputs,
+        reviewCorrection: correction,
+      })[STORY_CLONE_FORMAT],
       workspaceId: input.workspaceId,
       userId: input.userId,
       correlationId,
       modelProfile,
+      providerEnv: input.providerEnv,
+      signal: input.signal,
+      recordCandidate: candidateAudit(STORY_CLONE_FORMAT),
     }),
   });
 
@@ -715,7 +855,8 @@ async function persistStoryInBackground(input: {
       campaign_id: input.campaignId,
       variant_id: input.variantId,
       format: STORY_CLONE_FORMAT,
-      ...creativeDimensions(storyCreative),
+      width: storyCreative.canvas.width,
+      height: storyCreative.canvas.height,
       canvas_json: storyCreative.canvas,
       render_status: "rendered",
       preview_svg: null,

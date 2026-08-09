@@ -41,28 +41,28 @@
       {
         "key": "headline_number",
         "label": "Headline Number",
-        "maxLength": 1,
-        "sample": "7",
+        "maxLength": 2,
+        "sample": "5",
         "required": true
       },
       {
         "key": "headline_main",
         "label": "Headline Main",
-        "maxLength": 16,
-        "sample": "BUYER MISTAKES",
+        "maxLength": 30,
+        "sample": "SMART FIRST STEPS",
         "required": true
       },
       {
         "key": "headline_sub",
         "label": "Headline Sub",
-        "maxLength": 23,
-        "sample": "Before Your First Offer",
+        "maxLength": 35,
+        "sample": "Before Buying a Home",
         "required": true
       },
       {
         "key": "contact_handle",
         "label": "Contact Handle",
-        "maxLength": 18,
+        "maxLength": 30,
         "sample": "@homeguide.example",
         "required": false
       }
@@ -92,25 +92,24 @@
       "stream"
     ],
     "primaryText": [
-      "Avoid the mistakes that cost buyers time and money. Get the 7-point checklist before you make your first offer."
+      "Ask for the property details."
     ],
     "headlines": [
-      "Avoid 7 Costly Buyer Mistakes"
+      "Property details"
     ],
     "descriptions": [
-      "Get the free first-offer checklist"
+      "Request more information"
     ],
     "cta": "LEARN_MORE",
     "leadForm": {
-      "headline": "Get the 7-point buyer checklist",
+      "headline": "Get your free property guide",
       "questions": [
-        "What stage are you at in your home-buying journey?",
         "What is your best contact number?"
       ],
       "privacyPolicyUrl": null,
       "thankYouScreen": {
-        "title": "Your checklist is requested",
-        "body": "Thanks. We'll follow up with the checklist and the clearest next step for your search."
+        "title": "Request received",
+        "body": "The agency will be in touch within 24 hours to send you your free property guide."
       }
     }
   },
@@ -118,10 +117,10 @@
     "status": "ready",
     "imageBoxes": {
       "main_property_image": {
-        "x": 0.580318,
-        "y": 0.196262,
-        "width": 0.400868,
-        "height": 0.545561
+        "x": 0.576171875,
+        "y": 0.16875,
+        "width": 0.423828125,
+        "height": 0.59765625
       }
     }
   },
@@ -138,13 +137,12 @@
       "sizeRatio": 1.3913043929635895,
       "lineHeight": 1,
       "tracking": 0,
-      "autoFitMinRatio": 0.45,
       "align": "left",
       "color": "#535046",
       "fitScore": 0.9,
       "sampleBox": {
-        "x": 0.1745,
-        "y": 0.235,
+        "x": 0.1689453125,
+        "y": 0.20703125,
         "width": 0.1650390625,
         "height": 0.175
       },
@@ -154,13 +152,13 @@
         {
           "text": "5",
           "sampleBox": {
-            "x": 0.1745,
-            "y": 0.239125,
+            "x": 0.1689453125,
+            "y": 0.20703125,
             "width": 0.1650390625,
             "height": 0.175
           },
-          "sizeRatio": 1.4313043929635896,
-          "scaleX": 1.08
+          "sizeRatio": 1.3913043929635895,
+          "scaleX": 0.9956477926063692
         }
       ],
       "fontFile": "/fonts/adstudio/outfit-600.woff2"
@@ -177,15 +175,14 @@
       "sizeRatio": 0.6025230532786886,
       "lineHeight": 1,
       "tracking": 0,
-      "autoFitMinRatio": 0.45,
       "align": "left",
       "color": "#535046",
       "fitScore": 0.9,
       "sampleBox": {
-        "x": 0.103,
-        "y": 0.456,
+        "x": 0.0849609375,
+        "y": 0.465625,
         "width": 0.43505859375,
-        "height": 0.235
+        "height": 0.24453125
       },
       "sampleLineCount": 2,
       "detectionScore": 1,
@@ -193,24 +190,24 @@
         {
           "text": "SMART",
           "sampleBox": {
-            "x": 0.0978,
-            "y": 0.4541,
-            "width": 0.41,
+            "x": 0.08642578125,
+            "y": 0.465625,
+            "width": 0.3544921875,
             "height": 0.13515625
           },
-          "sizeRatio": 1.589,
-          "scaleX": 1.036
+          "sizeRatio": 1.3307692307692307,
+          "scaleX": 0.8298660071710934
         },
         {
           "text": "FIRST STEPS",
           "sampleBox": {
-            "x": 0.0992,
-            "y": 0.599,
+            "x": 0.0849609375,
+            "y": 0.61796875,
             "width": 0.43505859375,
             "height": 0.0921875
           },
-          "sizeRatio": 1.3708426966292138,
-          "scaleX": 0.986
+          "sizeRatio": 1.3258426966292136,
+          "scaleX": 0.847360847658376
         }
       ],
       "fontFile": "/fonts/adstudio/league-gothic-400.woff2"
@@ -227,13 +224,12 @@
       "sizeRatio": 1.02648891966759,
       "lineHeight": 1,
       "tracking": 0,
-      "autoFitMinRatio": 0.5,
       "align": "left",
       "color": "#6e6a61",
       "fitScore": 0.85,
       "sampleBox": {
-        "x": 0.1063,
-        "y": 0.7123,
+        "x": 0.0859375,
+        "y": 0.7375,
         "width": 0.4326171875,
         "height": 0.030078125
       },
@@ -243,13 +239,13 @@
         {
           "text": "Before Buying a Home",
           "sampleBox": {
-            "x": 0.1063,
-            "y": 0.7123,
+            "x": 0.0859375,
+            "y": 0.7375,
             "width": 0.4326171875,
             "height": 0.030078125
           },
           "sizeRatio": 1.02648891966759,
-          "scaleX": 1.35
+          "scaleX": 1.258
         }
       ],
       "fontFile": "/fonts/adstudio/roboto-condensed-400.woff2"
@@ -266,13 +262,12 @@
       "sizeRatio": 1.0385395537525355,
       "lineHeight": 1,
       "tracking": 0,
-      "autoFitMinRatio": 0.65,
       "align": "left",
       "color": "#716d64",
       "fitScore": 0.85,
       "sampleBox": {
-        "x": 0.107,
-        "y": 0.8248,
+        "x": 0.0869140625,
+        "y": 0.840625,
         "width": 0.33154296875,
         "height": 0.025
       },
@@ -282,8 +277,8 @@
         {
           "text": "@homeguide.example",
           "sampleBox": {
-            "x": 0.107,
-            "y": 0.8248,
+            "x": 0.0869140625,
+            "y": 0.840625,
             "width": 0.33154296875,
             "height": 0.025
           },

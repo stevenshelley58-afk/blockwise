@@ -11,7 +11,6 @@ import {
 const migrationPath = "supabase/migrations/202607130003_adstudio_creative_revisions.sql";
 const dbTestPath = "supabase/tests/adstudio_creative_revisions.test.sql";
 const routePath = "src/app/api/adstudio/creatives/[id]/edit/route.ts";
-const layersRoutePath = "src/app/api/adstudio/creatives/[id]/layers/route.ts";
 const requestHash = "a".repeat(64);
 
 test("creative revision migration backfills every creative and installs an append-only CAS path", () => {
@@ -186,19 +185,6 @@ test("targeted edit appends through the revision CAS and returns a clean stale c
   assert.match(route, /code: "stale_revision"/);
   assert.match(route, /status: 409/);
   assert.doesNotMatch(route, /\.from\("adstudio_creatives"\)[\s\S]{0,300}\.update\(\{ canvas_json:/);
-});
-
-test("legacy clone endpoints direct v2 documents to the document mutation before reading legacy canvas fields", () => {
-  for (const routePathToCheck of [routePath, layersRoutePath]) {
-    const route = readFileSync(routePathToCheck, "utf8");
-    const v2Guard = route.indexOf("isAdDocInstanceShape(storedCanvas)");
-    const legacyObjects = route.indexOf("canvas?.objects");
-
-    assert.ok(v2Guard >= 0, `${routePathToCheck} recognizes v2 documents`);
-    assert.ok(v2Guard < legacyObjects, `${routePathToCheck} guards before legacy canvas access`);
-    assert.match(route, /code: "v2_document_edit"/);
-    assert.match(route, /\/api\/adstudio\/creatives\/\$\{id\}\/doc/);
-  }
 });
 
 test("revision claim binds a mutation ID to one canonical request hash", async () => {

@@ -132,7 +132,7 @@ export function buildProviderRunAttempt(input: {
   const requestSubmitted = providerError?.requestSubmitted ?? (input.status === "completed" || Boolean(input.error));
   const actualCostUsd = finiteMoney(usageSource?.actualCostUsd);
   const hasExactPricing = Boolean(input.provider.accounting);
-  const estimatedCostUsd = requestSubmitted && usage.complete && hasExactPricing
+  const rawEstimatedCostUsd = requestSubmitted && usage.complete && hasExactPricing
     ? estimateRunCostUsd(
         {
           provider: "openai",
@@ -145,6 +145,10 @@ export function buildProviderRunAttempt(input: {
         usage,
       )
     : 0;
+  // Postgres validates attempt estimates at a six-decimal USD scale. Quantize
+  // here with a small positive epsilon so binary floating-point values exactly
+  // on a half-micro boundary round the same way as Postgres numeric values.
+  const estimatedCostUsd = roundUsdForPersistence(rawEstimatedCostUsd);
   const billingStatus: ProviderRunBillingStatus = !requestSubmitted
     ? "unbilled"
     : actualCostUsd !== null
@@ -707,6 +711,10 @@ function finiteMoney(value: unknown): number | null {
   if (value === null || value === undefined) return null;
   const number = Number(value);
   return Number.isFinite(number) && number >= 0 ? number : null;
+}
+
+function roundUsdForPersistence(value: number): number {
+  return Math.round((value + Number.EPSILON) * 1_000_000) / 1_000_000;
 }
 
 function zeroPricingSnapshot(): ProviderPricingSnapshot {

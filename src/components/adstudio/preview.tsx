@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, ChevronRight, MoreHorizontal, Plus } from "lucide-react";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
 import type { AdStudioBrandKit } from "@/lib/adstudio";
 import { resolveAdvertiserDomain } from "@/lib/adstudio/advertiser-domain";
@@ -202,6 +202,18 @@ export function MetaChromePreview({
   );
 }
 
+type AdPreviewProps = {
+  brand: string;
+  domain: string;
+  initials: string;
+  copy: CopyState;
+  image: string;
+  format: PreviewFormat;
+  zoom: number;
+  selectedElement: SelectedElement;
+  setSelectedElement: (element: SelectedElement) => void;
+};
+
 type VariantStripProps = {
   variants: Array<{ variantId: string; displayName: string; angleLabel: string; image: string; headline: string }>;
   selectedVariantIndex: number;
@@ -291,6 +303,97 @@ export function VariantStrip({
           </article>
         ))}
       </div>
+    </div>
+  );
+}
+
+export function AdPreview({
+  brand,
+  domain,
+  initials,
+  copy,
+  image,
+  format,
+  zoom,
+  selectedElement,
+  setSelectedElement,
+}: AdPreviewProps) {
+  const transform = { "--preview-scale": String(zoom / 100) } as CSSProperties;
+
+  if (format === "story") {
+    return (
+      <div className="studio-preview-device" style={transform}>
+        <div className="studio-story-card">
+          <img src={image} alt="" />
+          <span className="studio-story-shade" />
+          <div className="studio-story-brand">
+            <span>{initials}</span>
+            <div>
+              <strong>{brand}</strong>
+              <small>Sponsored</small>
+            </div>
+          </div>
+          <button className="studio-hit image" type="button" aria-label="Edit image" onClick={() => setSelectedElement("image")} />
+          <button
+            className={selectedElement === "headline" ? "studio-story-headline selected" : "studio-story-headline"}
+            type="button"
+            onClick={() => setSelectedElement("headline")}
+          >
+            {copy.headline}
+          </button>
+          <button
+            className={selectedElement === "description" ? "studio-story-body selected" : "studio-story-body"}
+            type="button"
+            onClick={() => setSelectedElement("description")}
+          >
+            {copy.description}
+          </button>
+          <button className={selectedElement === "cta" ? "studio-story-cta selected" : "studio-story-cta"} type="button" onClick={() => setSelectedElement("cta")}>
+            {copy.cta}
+            <ChevronRight aria-hidden size={17} />
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // aspect ratio for each format: story handled above
+  const feedAspectRatio = format === "feed" ? "4/5" : "1/1";
+
+  return (
+    <div className="studio-preview-device" style={transform}>
+      <article className="studio-feed-card">
+        <header>
+          <div className="studio-feed-id">
+            <span>{initials}</span>
+            <div>
+              <strong>{brand}</strong>
+              <small>Sponsored</small>
+            </div>
+          </div>
+          <MoreHorizontal aria-hidden size={18} />
+        </header>
+        <button className={selectedElement === "primaryText" ? "studio-feed-primary selected" : "studio-feed-primary"} type="button" onClick={() => setSelectedElement("primaryText")}>
+          {copy.primaryText}
+        </button>
+        <button className="studio-feed-image" type="button" onClick={() => setSelectedElement("image")}>
+          <img src={image} alt="" style={{ aspectRatio: feedAspectRatio }} />
+        </button>
+        <footer>
+          <div>
+            {domain ? <small>{domain}</small> : null}
+            <button className={selectedElement === "headline" ? "studio-feed-headline selected" : "studio-feed-headline"} type="button" onClick={() => setSelectedElement("headline")}>
+              {copy.headline}
+            </button>
+            <button className={selectedElement === "description" ? "studio-feed-desc selected" : "studio-feed-desc"} type="button" onClick={() => setSelectedElement("description")}>
+              {copy.description}
+            </button>
+          </div>
+          <button className={selectedElement === "cta" ? "studio-feed-cta selected" : "studio-feed-cta"} type="button" onClick={() => setSelectedElement("cta")}>
+            {copy.cta}
+          </button>
+        </footer>
+      </article>
     </div>
   );
 }

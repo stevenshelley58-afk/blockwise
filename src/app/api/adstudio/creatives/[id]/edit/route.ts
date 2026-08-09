@@ -23,14 +23,7 @@ import {
   extendTextLayersValidity,
   MAX_TEXT_PATCH_BYTES,
 } from "@/lib/adstudio/text-layers";
-import {
-  normalizeCloneQa,
-  type AdStudioCloneQa,
-  type AdStudioCreative,
-  type AdStudioLegacyCanvas,
-  type AdStudioTextLayers,
-} from "@/lib/adstudio/types";
-import { isAdDocInstanceShape } from "@/lib/adstudio/v2/template-doc";
+import { normalizeCloneQa, type AdStudioCloneQa, type AdStudioCreative, type AdStudioTextLayers } from "@/lib/adstudio/types";
 import { checkRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
@@ -180,18 +173,7 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
     );
   }
 
-  const storedCanvas = row.canvas_json as AdStudioCreative["canvas"];
-  if (isAdDocInstanceShape(storedCanvas)) {
-    await releaseClaim();
-    return NextResponse.json(
-      {
-        code: "v2_document_edit",
-        error: `This creative uses the v2 document editor. Send edits to /api/adstudio/creatives/${id}/doc.`,
-      },
-      { status: 409 },
-    );
-  }
-  const canvas: AdStudioLegacyCanvas = storedCanvas;
+  const canvas = row.canvas_json as AdStudioCreative["canvas"];
   const cloneObject = canvas?.objects?.[0];
   const isClone = canvas?.objects?.length === 1 && cloneObject?.objectId === "template_clone_image";
   if (!isClone) {
@@ -282,16 +264,15 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
   // Parallelize the three independent async setup steps that used to run
   // serially: fetch the current image, fetch the replacement image (if any),
   // and resolve the provider cascade. This saves ~1-3s per edit.
-  // Region edits use the fast (draft) profile: an edit repaints a small masked
-  // crop, sits behind undo/compare/history, and draft-class image models are
-  // several times faster. The runtime model-profile table can re-pin models
-  // without code changes if quality regresses.
+  // Edits change a completed customer-facing ad, so they must use the same
+  // final-quality lane as initial generation. Undo/compare/history protect
+  // the interaction, but are not a license to downgrade the rendered result.
   const [currentImage, newImage, providers] = await Promise.all([
     resolveAdStudioImageForModel(context.supabase, context.access.workspaceId, currentImageRef),
     newImageRef
       ? resolveAdStudioImageForModel(context.supabase, context.access.workspaceId, newImageRef)
       : Promise.resolve(undefined),
-    resolveCloneProviders("fast"),
+    resolveCloneProviders("high"),
   ]);
   if (!currentImage) {
     await releaseClaim();
@@ -426,7 +407,7 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
         userId: context.access.userId,
         correlationId,
         attempt: 1,
-        modelProfile: "image_draft",
+        modelProfile: "image_final",
       });
       // normalizeCloneRenderAspect is intentionally SKIPPED for cropped edits:
       // it force-resizes the render to the ad's exact placement ratio, which
@@ -569,15 +550,6 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
   }
   if (execution.state === "completed") {
     const completedCanvas = execution.canvas as AdStudioCreative["canvas"];
-    if (isAdDocInstanceShape(completedCanvas)) {
-      return NextResponse.json(
-        {
-          code: "v2_document_edit",
-          error: `This creative uses the v2 document editor. Send edits to /api/adstudio/creatives/${id}/doc.`,
-        },
-        { status: 409 },
-      );
-    }
     const completedImage = completedCanvas.objects?.[0]?.content ?? completedCanvas.objects?.[0]?.assetId;
     if (!completedImage) return NextResponse.json({ error: "The saved edit is incomplete." }, { status: 500 });
     return NextResponse.json({

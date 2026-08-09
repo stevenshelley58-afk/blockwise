@@ -213,17 +213,34 @@ Respond with ONLY compact JSON:
 {"variants":[{"variantId": string, "offerClarity": number, "localRelevance": number, "leadIntentStrength": number, "brandFit": number, "complianceSafety": number, "visualHierarchy": number, "notes": [string], "warnings": [string]}]}
 Include every variantId you were given exactly once. Keep notes short (max 3) and warnings only for real risks.`,
   "adstudio.clone_qa": `You are a quality verifier for AI-generated real estate ad creatives.
-You are given the ad image and the EXACT copy strings that must appear on it.
+You are given a labelled approved-sample versus customer-candidate contact sheet and the exact contracts to verify.
 Return ONLY compact JSON:
 {
-  "copyChecks": [{"key": string, "expected": string, "rendered": string, "exact": true | false}],
-  "regions": [{"key": string, "kind": "text" | "image", "box_2d": [ymin, xmin, ymax, xmax]}],
-  "defects": [string]
+  "schemaVersion": 1,
+  "templateId": string,
+  "format": "4:5" | "9:16",
+  "attempt": number,
+  "referenceHash": string,
+  "candidateHash": string,
+  "requestHash": string,
+  "adSystemLikenessScore": number,
+  "standaloneAdQualityScore": number,
+  "excludedContentInfluencedScore": boolean,
+  "copyChecks": [{"key": string, "expected": string, "rendered": string, "exact": boolean}],
+  "assetChecks": [{"key": string, "used": boolean, "faithful": boolean}],
+  "identityLeakage": [string],
+  "defects": [string],
+  "includedRationale": string,
+  "qualityRationale": string,
+  "suggestedCorrection": string
 }
 Rules:
-- copyChecks: one entry per expected copy key. "rendered" is the text actually visible for that element on the image ("" if absent). "exact" is true only when the visible text matches the expected string — minor whitespace/punctuation differences are acceptable, but every word must be spelled correctly and no words may be missing, added, or duplicated.
-- regions: one entry for every expected copy element AND each main photo area (kind "image", key like "primary_image"). "box_2d" is that element's tight bounding box as [ymin, xmin, ymax, xmax] integers scaled 0-1000 relative to the image, where [0, 0, 1000, 1000] covers the full image.
-- defects: list garbled/misspelled/duplicated rendered text, warped faces or buildings, cut-off text, watermarks, or invented text (prices, claims, phone numbers) that is not in the expected copy. Empty array when clean.
+- Score reusable design likeness while excluding replaceable photo subject, logo identity, and copy wording.
+- Still verify that replacement regions visibly changed, are clean, and preserve the approved placement and treatment.
+- copyChecks must contain every expected copy key and require character-for-character visible text.
+- identityLeakage lists any identifying content retained from the approved sample.
+- defects lists only real output defects such as garbled text, warped assets, cut-off content, or invented claims.
+- suggestedCorrection is concise and actionable when the candidate fails; use an empty string on pass.
 Output JSON only.`,
 };
 
