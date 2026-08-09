@@ -236,6 +236,7 @@ export async function POST(request: NextRequest) {
       serviceSupabase: funnelService,
       provider: "openai",
       accessToken: process.env.OPENAI_API_KEY,
+      allowWrite: process.env.VERCEL_ENV === "production",
     });
     const creditGate = await reserveAdStudioGenerationCredits({
       supabase: context.supabase,

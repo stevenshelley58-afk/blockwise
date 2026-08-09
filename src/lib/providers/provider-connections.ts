@@ -154,6 +154,7 @@ export async function ensureRuntimeProviderToken(input: {
   serviceSupabase: SupabaseServiceClient;
   provider: RuntimeProvider;
   accessToken: string | null | undefined;
+  allowWrite: boolean;
 }): Promise<void> {
   const accessToken = input.accessToken?.trim();
   if (!accessToken) {
@@ -162,6 +163,14 @@ export async function ensureRuntimeProviderToken(input: {
 
   const existing = await loadRuntimeProviderToken(input.serviceSupabase, input.provider);
   if (existing === accessToken) return;
+
+  // Preview deployments share the Production database. They may verify the
+  // configured credential, but a stale Preview must never replace the global
+  // worker key. Production and the explicit operator-only sync route are the
+  // only provisioning authorities.
+  if (!input.allowWrite) {
+    throw new Error(`The ${input.provider} runtime credential is not provisioned for this deployment.`);
+  }
 
   await upsertRuntimeProviderToken({
     serviceSupabase: input.serviceSupabase,

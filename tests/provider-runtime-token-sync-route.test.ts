@@ -27,5 +27,6 @@ test("campaign generation provisions the encrypted worker credential before char
   assert.ok(reserveIndex > ensureIndex);
   assert.ok(enqueueIndex > reserveIndex);
   assert.match(campaignsRoute, /accessToken: process\.env\.OPENAI_API_KEY/);
+  assert.match(campaignsRoute, /allowWrite: process\.env\.VERCEL_ENV === "production"/);
   assert.doesNotMatch(campaignsRoute, /OPENAI_API_KEY[^\n]*payload/);
 });
