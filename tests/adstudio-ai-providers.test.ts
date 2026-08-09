@@ -70,6 +70,51 @@ test("template analysis uses its own strict provider schema", () => {
   assert.equal(invalid.ok, false);
 });
 
+test("clone QA accepts strict numeric score strings without weakening invalid-score rejection", () => {
+  const base = {
+    schemaVersion: 1,
+    templateId: "template-1",
+    format: "4:5",
+    attempt: 1,
+    referenceHash: "a".repeat(64),
+    candidateHash: "b".repeat(64),
+    requestHash: "c".repeat(64),
+    excludedContentInfluencedScore: false,
+    copyChecks: [],
+    assetChecks: [],
+    identityLeakage: [],
+    defects: [],
+    includedRationale: "Reusable system matches.",
+    qualityRationale: "Polished output.",
+    suggestedCorrection: "",
+  };
+  const valid = validateProviderJsonOutput({
+    schemaName: "adStudioCloneQualityReview",
+    rawText: JSON.stringify({
+      ...base,
+      adSystemLikenessScore: "9.6/10",
+      standaloneAdQualityScore: "9.2",
+    }),
+  });
+  assert.equal(valid.ok, true);
+  if (valid.ok) {
+    assert.equal("adSystemLikenessScore" in valid.value && valid.value.adSystemLikenessScore, 9.6);
+    assert.equal("standaloneAdQualityScore" in valid.value && valid.value.standaloneAdQualityScore, 9.2);
+  }
+
+  for (const invalidScore of ["excellent", "9.5 out of 10", "11", "", null]) {
+    const invalid = validateProviderJsonOutput({
+      schemaName: "adStudioCloneQualityReview",
+      rawText: JSON.stringify({
+        ...base,
+        adSystemLikenessScore: invalidScore,
+        standaloneAdQualityScore: 9.5,
+      }),
+    });
+    assert.equal(invalid.ok, false);
+  }
+});
+
 test("production exports expose only explicitly priced provider candidates", () => {
   const adapters = readFileSync("src/lib/adstudio/ai-providers.ts", "utf8");
   const publicApi = readFileSync("src/lib/adstudio/index.ts", "utf8");

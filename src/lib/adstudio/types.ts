@@ -446,6 +446,17 @@ export const adStudioTemplateAnalysisSchema = z.object({
   }),
 });
 
+function strictTenPointScore(value: unknown): unknown {
+  if (typeof value !== "string") return value;
+  const match = value.match(/^\s*(10(?:\.0+)?|[0-9](?:\.\d+)?)\s*(?:\/\s*10)?\s*$/u);
+  return match ? Number(match[1]) : value;
+}
+
+const adStudioTenPointScoreSchema = z.preprocess(
+  strictTenPointScore,
+  z.number().min(0).max(10),
+);
+
 export const adStudioCloneQualityReviewSchema = z.object({
   schemaVersion: z.literal(1),
   templateId: z.string().min(1),
@@ -454,8 +465,11 @@ export const adStudioCloneQualityReviewSchema = z.object({
   referenceHash: z.string().regex(/^[a-f0-9]{64}$/u),
   candidateHash: z.string().regex(/^[a-f0-9]{64}$/u),
   requestHash: z.string().regex(/^[a-f0-9]{64}$/u),
-  adSystemLikenessScore: z.number().min(0).max(10),
-  standaloneAdQualityScore: z.number().min(0).max(10),
+  // OpenAI's JSON mode can serialize rubric scores as numeric strings even
+  // when the prompt asks for numbers. Normalize only strict 0-10 score forms;
+  // missing, descriptive, malformed, and out-of-range values still fail shut.
+  adSystemLikenessScore: adStudioTenPointScoreSchema,
+  standaloneAdQualityScore: adStudioTenPointScoreSchema,
   excludedContentInfluencedScore: z.boolean(),
   copyChecks: z.array(z.object({
     key: z.string().min(1),
