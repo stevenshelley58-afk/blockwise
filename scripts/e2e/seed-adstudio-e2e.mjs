@@ -6,6 +6,7 @@
 //   - its profile row
 //   - a dedicated self-serve workspace (deterministic id below)
 //   - owner membership
+//   - a six-credit operator entitlement for the current UTC month
 // Brand-kit approval is exercised by the spec itself through the real UI.
 //
 // Env: NEXT_PUBLIC_SUPABASE_URL or SUPABASE_URL, SUPABASE_SECRET_KEY
@@ -104,6 +105,28 @@ requireNoError(
     { onConflict: "workspace_id,profile_id" },
   ),
   "Upsert workspace member",
+);
+
+// The browser workflow exercises the real paid render path. Keep its wallet
+// explicit, small, monthly, and idempotent so a freshly seeded fixture cannot
+// fail before generation while still putting a hard ceiling on test spend.
+const now = new Date();
+const periodStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+const periodEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+const periodKey = `adstudio-e2e-${periodStart.toISOString().slice(0, 7)}`;
+requireNoError(
+  await supabase.rpc("grant_workspace_credits", {
+    p_workspace_id: ADSTUDIO_E2E_WORKSPACE_ID,
+    p_entitlement_type: "operator",
+    p_period_key: periodKey,
+    p_credits: 6,
+    p_period_start: periodStart.toISOString(),
+    p_period_end: periodEnd.toISOString(),
+    p_mutation_key: `adstudio-e2e:credit-grant:${periodStart.toISOString().slice(0, 7)}:v1`,
+    p_source_reference: "adstudio-e2e-fixture",
+    p_metadata: { fixture: true, scope: "preview-real-loop" },
+  }),
+  "Grant AdStudio e2e render credits",
 );
 
 console.log(`Seeded AdStudio e2e fixture: ${email} → workspace ${ADSTUDIO_E2E_WORKSPACE_ID}`);
