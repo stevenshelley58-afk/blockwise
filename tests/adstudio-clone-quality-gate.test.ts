@@ -114,7 +114,7 @@ test("runtime quality lock requires scores, exact copy, faithful assets, and cle
   }), false);
 });
 
-test("only a clean 9+ candidate warrants a corrected same-tier retry", () => {
+test("only a clean 9+ or high-scoring exact-copy near-pass warrants a corrected same-tier retry", () => {
   assert.equal(cloneQualityWarrantsSameTierRetry({
     review: review({ adSystemLikenessScore: 9.2 }),
     expectedCopy,
@@ -130,6 +130,39 @@ test("only a clean 9+ candidate warrants a corrected same-tier retry", () => {
     expectedCopy,
     expectedAssetKeys,
   }), false);
+  assert.equal(cloneQualityWarrantsSameTierRetry({
+    review: review({
+      adSystemLikenessScore: 9.8,
+      standaloneAdQualityScore: 9.5,
+      copyChecks: [{ key: "headline", expected: "Exact headline", rendered: "Exact headline,", exact: false }],
+      defects: ["A trailing comma was added."],
+      suggestedCorrection: "Remove the trailing comma.",
+    }),
+    expectedCopy,
+    expectedAssetKeys,
+  }), true);
+  assert.equal(cloneQualityWarrantsSameTierRetry({
+    review: review({
+      adSystemLikenessScore: 9.8,
+      standaloneAdQualityScore: 9.5,
+      copyChecks: [{ key: "headline", expected: "Exact headline", rendered: "Exact headline,", exact: false }],
+      defects: ["A trailing comma was added."],
+      suggestedCorrection: "",
+    }),
+    expectedCopy,
+    expectedAssetKeys,
+  }), false);
+  assert.equal(cloneQualityWarrantsSameTierRetry({
+    review: review({
+      adSystemLikenessScore: 9.8,
+      standaloneAdQualityScore: 9.5,
+      copyChecks: [{ key: "headline", expected: "Exact headline", rendered: "Exact headline,", exact: false }],
+      defects: ["The composition is visibly warped."],
+      suggestedCorrection: "Remove the trailing comma and rebuild the composition.",
+    }),
+    expectedCopy,
+    expectedAssetKeys,
+  }), true, "one bounded cheaper retry may repair the copy mismatch and single visual defect");
 });
 
 test("only an internally inconsistent clean near-pass needs independent vision confirmation", () => {
