@@ -72,7 +72,7 @@ describeAdStudioRealLoop("Ad Studio real loop", () => {
     await page.goto(`/ad-studio?workspaceId=${encodeURIComponent(workspaceId ?? "")}`);
     await openNewAd(page);
     await expect(page.getByRole("heading", { name: /choose a template/i })).toBeVisible();
-    await expect(page.getByText(/^1 template$/)).toBeVisible();
+    await expect(page.getByText(/^12 templates$/)).toBeVisible();
     await chooseCloneSample(page);
     await expect(page.locator('.studio-newad input[type="file"]')).toHaveCount(2);
 
