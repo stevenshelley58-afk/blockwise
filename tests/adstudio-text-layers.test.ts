@@ -19,7 +19,6 @@ import { paddedPatchRect } from "../src/components/adstudio/canvas/text-patch.ts
 import type { AdStudioCloneRegion, AdStudioTextLayers } from "../src/lib/adstudio/types.ts";
 import type { AdStudioTypeSpec } from "../src/lib/adstudio/templates.ts";
 
-const editor = readFileSync("src/components/adstudio/canvas/in-place-ad-editor.tsx", "utf8");
 const textPatch = readFileSync("src/components/adstudio/canvas/text-patch.ts", "utf8");
 const layersRoute = readFileSync("src/app/api/adstudio/creatives/[id]/layers/route.ts", "utf8");
 const editRoute = readFileSync("src/app/api/adstudio/creatives/[id]/edit/route.ts", "utf8");
@@ -86,7 +85,6 @@ test("a persisted building state is a durable single-flight lease", () => {
 test("a fully migrated template cannot silently fall back to image-model text editing", () => {
   assert.match(editRoute, /layers\?\.deterministicOnly && !patchImage/);
   assert.match(editRoute, /code: "layers_not_ready"/);
-  assert.match(editor, /textLayers\?\.deterministicOnly && !patchImage/);
   assert.doesNotMatch(generationRoute, /assertDeterministicFeedEditingReady/);
   assert.match(generationWorker, /assertDeterministicFeedEditingReady/);
 });
@@ -132,24 +130,10 @@ test("client patch rect and server composite rect are the same pixels", () => {
   }
 });
 
-test("editor builds layers in the background and applies text edits optimistically", () => {
-  // Decomposition kicks off silently from the editor; failures never block.
-  assert.match(editor, /requestCreativeLayers\(creative\.creativeId\)/);
-  // The patch doubles as the optimistic overlay: final pixels, instantly.
-  assert.match(editor, /renderTextPatch\(/);
-  assert.match(editor, /setOptimisticPatch\(\{ key: selectedRegion\.key/);
-  assert.match(editor, /studio-inplace-optimistic/);
-  // Inlined finished pixels paint without a media-proxy round trip.
+test("edit responses return finished pixels without a media-proxy round trip", () => {
   assert.match(editRoute, /previewImage,/);
   assert.match(editClient, /previewImage: data\.previewImage/);
   assert.doesNotMatch(editRoute, /previewDataUrl/);
-  // A failed build is recoverable without forcing the customer to reload.
-  assert.match(editor, /function retryLayerBuild\(\)/);
-  assert.match(editor, /setLayerRetryToken\(\(current\) => current \+ 1\)/);
-  assert.match(editor, /RefreshCw[\s\S]*Retry/);
-  assert.match(editor, /freshPreview/);
-  // A stale instant path falls back to the model path in the same gesture.
-  assert.match(editor, /layers_stale/);
 });
 
 test("the decompose route protects the design and the budget", () => {

@@ -12,7 +12,7 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { offerIdForLabel } from "./template-offer-state";
 import type { CopyState } from "./use-copy";
 import { seedCopy, toMetaCta } from "./use-copy";
-import type { StudioSection } from "./use-ad-studio";
+type CampaignActionSection = "home" | "media" | "edit" | "publish" | "settings";
 
 /** Staged generation progress shown as skeleton variant cards + honest phase labels. */
 export type GenerationProgress = {
@@ -90,7 +90,7 @@ export type CampaignActionsState = {
   setBusy: (busy: boolean) => void;
   setBusyMessage: (msg: string) => void;
   setGeneration: (progress: GenerationProgress | null) => void;
-  setSection: (section: StudioSection) => void;
+  setSection: (section: CampaignActionSection) => void;
   showToast: (msg: string) => void;
 };
 

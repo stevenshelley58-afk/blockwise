@@ -11,7 +11,7 @@ import {
   mapListingToOnImageCopy,
   type ListingData,
 } from "../src/lib/adstudio/listing-extract.ts";
-import type { TemplateCopyRequirement } from "../src/components/adstudio/new-ad-dialog-slots.ts";
+import type { TemplateCopyRequirement } from "../src/lib/adstudio/listing-extract.ts";
 
 // ---------------------------------------------------------------------------
 // isAustralianDomain

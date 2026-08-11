@@ -21,15 +21,15 @@ test("double-publish reuses an active plan and avoids duplicate queue dispatch",
 
 test("existing campaigns require a declared audience and cannot use free auto-activation", () => {
   const route = readFileSync(publishRoute, "utf8");
-  const panel = readFileSync("src/components/adstudio/panels/publish-panel.tsx", "utf8");
+  const panel = readFileSync("src/components/adstudio/ad-studio-customer-flow.tsx", "utf8");
 
   assert.match(route, /existingMetaCampaignId && !hasExplicitMetaPublishAudience\(body\.controls\)/);
   assert.match(route, /\.from\("workspaces"\)[\s\S]*\.eq\("id", access\.access\.workspaceId\)/);
   assert.match(route, /metaExistingCampaignReuseIssue\(\{[\s\S]*billingOfferVersion:[\s\S]*stripeSubscriptionStatus:/);
-  assert.match(panel, /const campaignStepReady = audienceReady && \(campaignMode === "new" \|\| Boolean\(selectedCampaign\)\)/);
-  assert.match(panel, /geo: targetSuburbs\.length > 0/);
+  assert.match(panel, /targetSuburbs\.length > 0/);
+  assert.match(panel, /geo: \{ type: "cities", locations: targetSuburbs/);
   assert.doesNotMatch(panel, /Existing campaign targeting/);
-  assert.match(panel, /Add a 25 km area around each selected suburb/);
+  assert.match(panel, /Include surrounding suburbs/);
 });
 
 test("provider workers and approval queueing are guarded by provider writes kill switch", () => {

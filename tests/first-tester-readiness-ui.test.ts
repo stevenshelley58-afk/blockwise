@@ -40,7 +40,7 @@ test("billing settings prefer friendly portal messages and hide billing manageme
 test("ad studio lead destination stays out of local-only workbench state", () => {
   // The campaign/landing panels that once held a local-only lead-destination
   // selector were deleted; the workbench must not reintroduce that state.
-  const workbench = read("src/components/adstudio/ad-studio-workbench.tsx");
+  const workbench = read("src/components/adstudio/ad-studio-customer-flow.tsx");
 
   assert.doesNotMatch(workbench, /leadDestination/);
   assert.doesNotMatch(workbench, /setLeadDestination/);
