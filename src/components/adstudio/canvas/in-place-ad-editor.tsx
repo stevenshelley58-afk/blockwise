@@ -556,7 +556,9 @@ export function InPlaceAdEditor({
       setOptimisticPatch({ key: selectedRegion.key, dataUrl: patchImage, box: selectedRegion.box });
     }
     if (textLayers?.deterministicOnly && !patchImage) {
-      showToast("This text area is still preparing. Wait a moment, then try again.");
+      showToast(selectedTextInstantReady
+        ? "That text does not fit this area. Shorten it and try again."
+        : "This text area is still preparing. Wait a moment, then try again.");
       return;
     }
     void performMutation(
