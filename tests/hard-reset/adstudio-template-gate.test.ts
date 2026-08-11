@@ -346,11 +346,14 @@ test("the gate rejects old canvas/version fields", () => {
 test("the gate rejects private source filenames in public manifests", () => {
   const root = fixtureRoot();
   try {
-    const value = template(root, 1) as ReturnType<typeof template> & {
-      sourceAd: { contentHash: string; provenance?: string; file?: string };
+    const valid = template(root, 1);
+    const value = {
+      ...valid,
+      sourceAd: {
+        contentHash: valid.sourceAd.contentHash,
+        file: "01_feed_4x5_best/meta_001.png",
+      },
     };
-    delete value.sourceAd.provenance;
-    value.sourceAd.file = "01_feed_4x5_best/meta_001.png";
     writeFileSync(join(root, "gallery", "meta-feed-001.json"), JSON.stringify(value));
     const result = run(root);
     assert.notEqual(result.status, 0);

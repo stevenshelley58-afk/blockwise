@@ -97,7 +97,10 @@ export type TemplateFactoryExportBody = {
   attestation: ReleaseAttestation;
 };
 
-type PublicGalleryManifest = Omit<TemplateFactoryDraft, "sourceAd"> & {
+type PublicGalleryManifest = Pick<
+  TemplateFactoryDraft,
+  "id" | "name" | "format" | "dimensions" | "classification" | "inputs"
+> & {
   sourceAd: TemplateFactoryPublicSourceAd;
   sample: {
     imageSrc: string;
