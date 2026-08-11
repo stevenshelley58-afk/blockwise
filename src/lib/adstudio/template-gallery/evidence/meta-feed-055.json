@@ -1,0 +1,228 @@
+{
+  "schemaVersion": 2,
+  "templateId": "meta-feed-055",
+  "templateHash": "444f9304adc7e7b41ef5d660b5e40a0fe176928ac0182ca93dc06893c699ff11",
+  "sampleHash": "e9fcf7a46c67e2832c29ea11b3e65af8eae6500856ba80f3a6f978ac23315c54",
+  "rubricVersion": "adstudio-subject-invariant-clone-v1",
+  "thresholds": {
+    "adSystemLikeness": 9.5,
+    "standaloneAdQuality": 9
+  },
+  "qualifiedAt": "2026-08-11T05:35:00.000Z",
+  "sample": {
+    "stage": "gallery_sample",
+    "requestHash": "50963559079f7d48ae5a753d9d2e5a4d59fec40f9a31eeeccc85ba67d403898a",
+    "referenceHash": "82c1f3f48d910b3daeaf4d347fabce2ed5c56721287e03826c5d8184368c10b9",
+    "references": [
+      {
+        "index": 1,
+        "key": "source_ad",
+        "role": "source",
+        "contentHash": "82c1f3f48d910b3daeaf4d347fabce2ed5c56721287e03826c5d8184368c10b9"
+      },
+      {
+        "index": 2,
+        "key": "property_image",
+        "role": "replacement_asset",
+        "contentHash": "71ef5fb4d0469dd96df3dbde982786b074cf4c87adfe1cec3edd4e5012445445"
+      },
+      {
+        "index": 3,
+        "key": "agent_photo",
+        "role": "replacement_asset",
+        "contentHash": "a3528cb9b3d63afd9634d8d163fb98659c0eabcdce3931f698efac0cd54c3cb0"
+      }
+    ],
+    "copy": {
+      "headline": "Just sold",
+      "subheadline": "A NEW CHAPTER STARTS HERE",
+      "agent_name": "AVA BENNETT",
+      "agent_phone": "+123-555-0155",
+      "agent_email": "hello@bennett.example",
+      "contact_label": "contact me"
+    },
+    "outputHash": "e9fcf7a46c67e2832c29ea11b3e65af8eae6500856ba80f3a6f978ac23315c54",
+    "executionTransport": "google_image_api",
+    "reviewedAt": "2026-08-11T05:32:00.000Z",
+    "review": {
+      "schemaVersion": 1,
+      "rubricVersion": "adstudio-subject-invariant-clone-v1",
+      "templateId": "meta-feed-055",
+      "requestHash": "50963559079f7d48ae5a753d9d2e5a4d59fec40f9a31eeeccc85ba67d403898a",
+      "candidateHash": "e9fcf7a46c67e2832c29ea11b3e65af8eae6500856ba80f3a6f978ac23315c54",
+      "reviewer": {
+        "provider": "openai",
+        "model": "gpt-5.6-vision"
+      },
+      "adSystemLikenessScore": 9.6,
+      "standaloneAdQualityScore": 9.4,
+      "excludedContentInfluencedScore": false,
+      "copyChecks": [
+        {
+          "key": "headline",
+          "expected": "Just sold",
+          "observed": "Just sold",
+          "exact": true
+        },
+        {
+          "key": "subheadline",
+          "expected": "A NEW CHAPTER STARTS HERE",
+          "observed": "A NEW CHAPTER STARTS HERE",
+          "exact": true
+        },
+        {
+          "key": "agent_name",
+          "expected": "AVA BENNETT",
+          "observed": "AVA BENNETT",
+          "exact": true
+        },
+        {
+          "key": "agent_phone",
+          "expected": "+123-555-0155",
+          "observed": "+123-555-0155",
+          "exact": true
+        },
+        {
+          "key": "agent_email",
+          "expected": "hello@bennett.example",
+          "observed": "hello@bennett.example",
+          "exact": true
+        },
+        {
+          "key": "contact_label",
+          "expected": "contact me",
+          "observed": "contact me",
+          "exact": true
+        }
+      ],
+      "assetChecks": [
+        {
+          "key": "property_image",
+          "used": true,
+          "faithful": true,
+          "notes": "used"
+        },
+        {
+          "key": "agent_photo",
+          "used": true,
+          "faithful": true,
+          "notes": "used"
+        }
+      ],
+      "identityLeakage": [],
+      "defects": [],
+      "includedRationale": "Composition retained.",
+      "qualityRationale": "Clean ad.",
+      "suggestedCorrection": "",
+      "reviewedAt": "2026-08-11T05:32:00.000Z"
+    }
+  },
+  "customerFixture": {
+    "stage": "customer_fixture",
+    "requestHash": "1eb57175f1f25c5574c79cbac3ab231ca3b13e8a869d816e001bc77f41a971db",
+    "referenceHash": "e9fcf7a46c67e2832c29ea11b3e65af8eae6500856ba80f3a6f978ac23315c54",
+    "references": [
+      {
+        "index": 1,
+        "key": "approved_sample",
+        "role": "approved_sample",
+        "contentHash": "e9fcf7a46c67e2832c29ea11b3e65af8eae6500856ba80f3a6f978ac23315c54"
+      },
+      {
+        "index": 2,
+        "key": "property_image",
+        "role": "replacement_asset",
+        "contentHash": "75a54a2f26061f2223fff719aa5c506388f23652e0065a424d083476dd692f42"
+      },
+      {
+        "index": 3,
+        "key": "agent_photo",
+        "role": "replacement_asset",
+        "contentHash": "4f1c49d7841cedab74a733578d592cbca27ed28a2269f88e017fb8604bf44b6d"
+      }
+    ],
+    "copy": {
+      "headline": "Just sold",
+      "subheadline": "A NEW CHAPTER STARTS HERE",
+      "agent_name": "NORA VALE",
+      "agent_phone": "+123-555-0199",
+      "agent_email": "nora@vale.example",
+      "contact_label": "contact me"
+    },
+    "outputHash": "08de7f577353e010752160ea2d6c2853a24447dd2eb6cae484e2335e307a3229",
+    "executionTransport": "google_image_api",
+    "reviewedAt": "2026-08-11T05:35:00.000Z",
+    "review": {
+      "schemaVersion": 1,
+      "rubricVersion": "adstudio-subject-invariant-clone-v1",
+      "templateId": "meta-feed-055",
+      "requestHash": "1eb57175f1f25c5574c79cbac3ab231ca3b13e8a869d816e001bc77f41a971db",
+      "candidateHash": "08de7f577353e010752160ea2d6c2853a24447dd2eb6cae484e2335e307a3229",
+      "reviewer": {
+        "provider": "openai",
+        "model": "gpt-5.6-vision"
+      },
+      "adSystemLikenessScore": 9.7,
+      "standaloneAdQualityScore": 9.4,
+      "excludedContentInfluencedScore": false,
+      "copyChecks": [
+        {
+          "key": "headline",
+          "expected": "Just sold",
+          "observed": "Just sold",
+          "exact": true
+        },
+        {
+          "key": "subheadline",
+          "expected": "A NEW CHAPTER STARTS HERE",
+          "observed": "A NEW CHAPTER STARTS HERE",
+          "exact": true
+        },
+        {
+          "key": "agent_name",
+          "expected": "NORA VALE",
+          "observed": "NORA VALE",
+          "exact": true
+        },
+        {
+          "key": "agent_phone",
+          "expected": "+123-555-0199",
+          "observed": "+123-555-0199",
+          "exact": true
+        },
+        {
+          "key": "agent_email",
+          "expected": "nora@vale.example",
+          "observed": "nora@vale.example",
+          "exact": true
+        },
+        {
+          "key": "contact_label",
+          "expected": "contact me",
+          "observed": "contact me",
+          "exact": true
+        }
+      ],
+      "assetChecks": [
+        {
+          "key": "property_image",
+          "used": true,
+          "faithful": true,
+          "notes": "used"
+        },
+        {
+          "key": "agent_photo",
+          "used": true,
+          "faithful": true,
+          "notes": "used"
+        }
+      ],
+      "identityLeakage": [],
+      "defects": [],
+      "includedRationale": "retained",
+      "qualityRationale": "clean",
+      "suggestedCorrection": "",
+      "reviewedAt": "2026-08-11T05:35:00.000Z"
+    }
+  }
+}

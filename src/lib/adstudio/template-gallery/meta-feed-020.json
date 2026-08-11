@@ -19,10 +19,10 @@
     "meta-feed"
   ],
   "sample": {
-    "thumbnailSrc": "/adstudio-samples/meta/meta-feed-020-sample.png",
-    "imageSrc": "/adstudio-samples/meta/meta-feed-020-sample.png",
+    "thumbnailSrc": "/adstudio-samples/meta/meta-feed-020-sample-v2.png",
+    "imageSrc": "/adstudio-samples/meta/meta-feed-020-sample-v2.png",
     "alt": "Sample just-listed ad with a sage panel, property image, price, address, and agency contact details.",
-    "contentHash": "0899efc11fc68e177c731321421454f0001a393bbc8b0211dafad4a7f3b89347",
+    "contentHash": "ba253c7f84227e9ca0a7bc47355cb5b3b4e7cd33597f3fa0e3b43cc138f42d0f",
     "generatedBy": "reference_clone"
   },
   "inputs": {
@@ -241,5 +241,8 @@
       "detectionScore": 1,
       "fontFile": "/fonts/adstudio/open-sans-300.woff2"
     }
+  },
+  "qualityLock": {
+    "templateHash": "01166bf76888c223f2ea74cbbda0c909d4ed6fefc754eb888f711905629077be"
   }
 }
