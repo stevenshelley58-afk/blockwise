@@ -45,6 +45,21 @@ test("runtime rejects a stale lock when the current manifest contract changes", 
   assert.match(result.issues.join("\n"), /templateContract does not match the current manifest/u);
 });
 
+test("runtime keeps a valid lock when production rewrites equivalent floating-point geometry", () => {
+  const released = RESOLVABLE_AD_STUDIO_TEMPLATES.find(
+    (template) => template.id === "meta-agent-intro-feed-037",
+  )!;
+  const locks = structuredClone(qualityLocks);
+  const lock = locks.templates[released.id as keyof typeof locks.templates];
+  const stored = JSON.parse(lock.templateContract) as { dimensions: { height: number } };
+  stored.dimensions.height += Number.EPSILON * stored.dimensions.height * 4;
+  lock.templateContract = JSON.stringify(stored);
+
+  const result = validateQualityLockIndex(locks, [released]);
+  assert.equal(result.templateIds.has(released.id), true);
+  assert.equal(result.issues.some((issue) => issue.includes(released.id)), false);
+});
+
 test("the manifest contract accepts templates with deterministicOnly: true", () => {
   // At least one template in the gallery is marked deterministicOnly.
   // The in-memory contract must not reject it.
