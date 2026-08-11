@@ -6,7 +6,10 @@ import {
   buildPrebuiltTemplateCloneQa,
   parseCloneRegions,
 } from "../src/lib/adstudio/clone-regions.ts";
-import { AD_STUDIO_TEMPLATES } from "../src/lib/adstudio/templates.ts";
+import {
+  AD_STUDIO_TEMPLATES,
+  RESOLVABLE_AD_STUDIO_TEMPLATES,
+} from "../src/lib/adstudio/templates.ts";
 import {
   compositeCloneRegionEdit,
   createCloneRegionEditMask,
@@ -77,6 +80,27 @@ test("native-format editor regions come from the offline template build without 
   assert.equal(storySubBox.width, sampleSubBox.width);
   assert.equal(storySubBox.y, (sampleSubBox.y * 1350 + 285) / 1920);
   assert.equal(storySubBox.height, (sampleSubBox.height * 1350) / 1920);
+});
+
+test("every released template persists one editable region for every declared customer input", () => {
+  assert.ok(RESOLVABLE_AD_STUDIO_TEMPLATES.length > 0);
+  for (const template of RESOLVABLE_AD_STUDIO_TEMPLATES) {
+    const copy = Object.fromEntries(template.inputs.text.map((field) => [field.key, field.sample]));
+    const expectedKeys = [
+      ...template.inputs.text.map((field) => field.key),
+      ...template.inputs.images.map((field) => field.key),
+    ];
+    for (const format of ["4:5", "9:16"] as const) {
+      const qa = buildPrebuiltTemplateCloneQa(template, copy, format);
+      assert.ok(qa, `${template.id} ${format} must have an editor map`);
+      assert.deepEqual(
+        qa.regions.map((region) => region.key),
+        expectedKeys,
+        `${template.id} ${format} must expose every input exactly once`,
+      );
+      assert.deepEqual(qa.copyValues, copy);
+    }
+  }
 });
 
 test("a migrated template carries its measured image hitboxes into both formats", () => {

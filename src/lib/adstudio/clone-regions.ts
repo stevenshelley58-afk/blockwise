@@ -14,9 +14,11 @@ export type CloneBox = CloneRegion["box"];
 /**
  * Build the editor map from the template's offline type-spec block. Both
  * supported canvases are 1080px wide. Story generation extends a Feed canvas
- * equally above and below; Feed generation from a Story sample centre-crops.
- * Applying that same deterministic transform keeps the offline boxes aligned
- * without inspecting the customer's finished render.
+ * equally above and below. Feed generation from a Story sample must reflow the
+ * complete design because exact-copy QA forbids cropping away declared inputs,
+ * so those boxes retain their normalized positions. Applying these same
+ * deterministic transforms keeps every declared input editable without a
+ * customer-time vision call.
  */
 export function buildPrebuiltTemplateCloneQa(
   template: AdStudioTemplate,
@@ -28,8 +30,13 @@ export function buildPrebuiltTemplateCloneQa(
   const sourceHeight = template.dimensions.height;
   const verticalOffset = (targetHeight - sourceHeight) / 2;
   const mapSampleBox = (sampleBox: CloneBox): CloneBox | null => {
-    const rawY = (sampleBox.y * sourceHeight + verticalOffset) / targetHeight;
-    const rawBottom = rawY + (sampleBox.height * sourceHeight) / targetHeight;
+    const sourceIsTaller = sourceHeight > targetHeight;
+    const rawY = sourceIsTaller
+      ? sampleBox.y
+      : (sampleBox.y * sourceHeight + verticalOffset) / targetHeight;
+    const rawBottom = rawY + (sourceIsTaller
+      ? sampleBox.height
+      : (sampleBox.height * sourceHeight) / targetHeight);
     const y = Math.max(0, rawY);
     const bottom = Math.min(1, rawBottom);
     if (bottom <= y) return null;

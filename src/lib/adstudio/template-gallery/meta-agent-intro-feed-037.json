@@ -104,6 +104,145 @@
     }
   },
   "qualityLock": {
-    "templateHash": "b1d73bc80fa1d60e03ea0c8d7e11f636e78a7202407c46c00384e3c1b7499e76"
+    "templateHash": "6f024e3b1853a588a9adae7490ff9122b399c694414e20678c96082c9dc0988a"
+  },
+  "typography": {
+    "body": {
+      "fontId": "plus-jakarta-sans",
+      "family": "Plus Jakarta Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 800,
+      "italic": false,
+      "case": "mixed",
+      "measurementVersion": 2,
+      "sizeRatio": 0.3642507449978713,
+      "lineHeight": 1.26,
+      "tracking": 0,
+      "align": "left",
+      "color": "#555042",
+      "fitScore": 0.85,
+      "sampleBox": {
+        "x": 0.1125,
+        "y": 0.825925925925926,
+        "width": 0.2972222222222222,
+        "height": 0.07629629629629629
+      },
+      "sampleLineCount": 3,
+      "detectionScore": 1,
+      "measurementSource": "manual-verified",
+      "measuredLines": [
+        {
+          "text": "Your trusted",
+          "sampleBox": {
+            "x": 0.1125,
+            "y": 0.825925925925926,
+            "width": 0.20416666666666666,
+            "height": 0.02148148148148148
+          },
+          "sizeRatio": 1.0927522349936138,
+          "scaleX": 1
+        },
+        {
+          "text": "partner for all real",
+          "sampleBox": {
+            "x": 0.11388888888888889,
+            "y": 0.8537037037037037,
+            "width": 0.29583333333333334,
+            "height": 0.026296296296296297
+          },
+          "sizeRatio": 1.0927522349936138,
+          "scaleX": 1
+        },
+        {
+          "text": "estate needs.",
+          "sampleBox": {
+            "x": 0.1125,
+            "y": 0.8814814814814815,
+            "width": 0.22361111111111112,
+            "height": 0.02074074074074074
+          },
+          "sizeRatio": 1.0927522349936138,
+          "scaleX": 1
+        }
+      ],
+      "fontFile": "/fonts/adstudio/plus-jakarta-sans-800.woff2"
+    },
+    "headline": {
+      "fontId": "rubik",
+      "family": "Rubik",
+      "fallbackFamily": "sans-serif",
+      "weight": 600,
+      "italic": false,
+      "case": "mixed",
+      "measurementVersion": 2,
+      "sizeRatio": 0.3559542725988701,
+      "lineHeight": 1.185,
+      "tracking": 0,
+      "align": "center",
+      "color": "#373121",
+      "fitScore": 0.66,
+      "sampleBox": {
+        "x": 0.1125,
+        "y": 0.49962962962962965,
+        "width": 0.7509259259259259,
+        "height": 0.2866666666666667
+      },
+      "sampleLineCount": 3,
+      "detectionScore": 1,
+      "measurementSource": "ocr-v2",
+      "measuredLines": [
+        {
+          "text": "Find your",
+          "sampleBox": {
+            "x": 0.11805555555555555,
+            "y": 0.49962962962962965,
+            "width": 0.5787037037037037,
+            "height": 0.10148148148148148
+          },
+          "sizeRatio": 1.0678628177966103,
+          "scaleX": 1
+        },
+        {
+          "text": "forever",
+          "sampleBox": {
+            "x": 0.1125,
+            "y": 0.5937037037037037,
+            "width": 0.46064814814814814,
+            "height": 0.08074074074074074
+          },
+          "sizeRatio": 1.0678628177966103,
+          "scaleX": 1
+        },
+        {
+          "text": "home today",
+          "sampleBox": {
+            "x": 0.1175925925925926,
+            "y": 0.6862962962962963,
+            "width": 0.7458333333333333,
+            "height": 0.1
+          },
+          "sizeRatio": 1.0678628177966103,
+          "scaleX": 1
+        }
+      ],
+      "fontFile": "/fonts/adstudio/rubik-600.woff2"
+    }
+  },
+  "deterministicEditing": {
+    "status": "ready",
+    "imageBoxes": {
+      "property_photo": {
+        "x": 0.0185,
+        "y": 0.013,
+        "width": 0.963,
+        "height": 0.471
+      },
+      "agency_logo": {
+        "x": 0.715,
+        "y": 0.817,
+        "width": 0.18,
+        "height": 0.11
+      }
+    }
   }
 }

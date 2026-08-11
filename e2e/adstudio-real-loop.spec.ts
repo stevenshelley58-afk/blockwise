@@ -173,6 +173,7 @@ describeAdStudioRealLoop("Ad Studio real loop", () => {
     expect(campaignId).toBeTruthy();
 
     await expect(page.getByRole("dialog")).toBeHidden({ timeout: 90_000 });
+    await openPanel(page, "Edit");
     const editedImage = await editGeneratedClone(page);
     await waitForSavedStatus(page);
 
@@ -302,13 +303,16 @@ async function uploadRequiredSampleImages(page: Page, listingPath: string, logoP
 }
 
 async function editGeneratedClone(page: Page): Promise<string> {
+  // The finished render is visible before its persisted offline editor map is
+  // merged into the campaign. Wait on the actual edit-readiness affordance,
+  // not the plain preview image shown during that short preparing state.
+  const textRegion = page.locator(".studio-inplace-region.text").filter({ visible: true }).first();
+  await expect(textRegion).toBeVisible({ timeout: 300_000 });
   const image = page.locator(".studio-inplace-frame img").filter({ visible: true }).first();
-  await expect(image).toBeVisible({ timeout: 90_000 });
+  await expect(image).toBeVisible({ timeout: 30_000 });
   const originalImage = await image.getAttribute("src");
   expect(originalImage).toBeTruthy();
 
-  const textRegion = page.locator(".studio-inplace-region.text").filter({ visible: true }).first();
-  await expect(textRegion).toBeVisible({ timeout: 90_000 });
   await textRegion.click();
   const editor = page.locator(".studio-inplace-editor textarea");
   await expect(editor).toBeVisible();
@@ -330,7 +334,7 @@ async function editGeneratedClone(page: Page): Promise<string> {
   return editedImage ?? "";
 }
 
-async function openPanel(page: Page, label: "Text" | "Publish") {
+async function openPanel(page: Page, label: "Edit" | "Text" | "Publish") {
   const button = page.getByRole("button", { name: new RegExp(`^${label}$`, "i") }).first();
   await expect(button).toBeVisible({ timeout: 30_000 });
   await button.click();

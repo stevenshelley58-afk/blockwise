@@ -239,6 +239,9 @@ export function validateQualityLockIndex(
     const entryIssues: string[] = [];
     const template = templatesById.get(templateId);
     if (!template) entryIssues.push("does not match a built-in template");
+    if (template && deterministicEditingReadiness(template).status !== "ready") {
+      entryIssues.push("must have complete deterministic editing evidence before release");
+    }
     if (!isRecord(value)) {
       entryIssues.push("must be an object");
     } else {
@@ -293,9 +296,9 @@ export function validateQualityLockIndex(
 }
 
 /**
- * Classify the offline editor evidence without changing whether a template is
- * available in the gallery. Migration is staged: only an explicit `ready`
- * marker makes the strict deterministic contract release-blocking.
+ * Classify the offline editor evidence. Quality-locked templates must be
+ * `ready` before runtime selection exposes them; non-release gallery records
+ * may remain legacy or partial while their evidence is rebuilt.
  */
 export function deterministicEditingReadiness(template: AdStudioTemplate): AdStudioTemplateEditReadiness {
   const hasOfflineEditorEvidence = Boolean(template.deterministicEditing) || Boolean(template.typography);

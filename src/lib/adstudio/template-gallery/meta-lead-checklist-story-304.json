@@ -146,6 +146,427 @@
     }
   },
   "qualityLock": {
-    "templateHash": "126aab0b421a3a9fcf75cf7f8d981583e11d3c9984924fd0aa60a1ca39c0f6b3"
+    "templateHash": "0d9682b5989505bd5283bf9b4025eabe9201eed6fd88b1ab18bce41ce3c52798"
+  },
+  "typography": {
+    "left_item_3": {
+      "fontId": "roboto-condensed",
+      "family": "Roboto Condensed",
+      "fallbackFamily": "sans-serif",
+      "weight": 700,
+      "italic": false,
+      "case": "upper",
+      "measurementVersion": 2,
+      "sizeRatio": 1.08,
+      "lineHeight": 1.17,
+      "tracking": 0,
+      "align": "left",
+      "color": "#1f1f1d",
+      "fitScore": 0.9,
+      "sampleBox": {
+        "x": 0.23194444444444445,
+        "y": 0.6388020833333333,
+        "width": 0.225,
+        "height": 0.029
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 1,
+      "measurementSource": "manual-verified",
+      "measuredLines": [
+        {
+          "text": "SCHEDULE A DESIGN",
+          "sampleBox": {
+            "x": 0.23194444444444445,
+            "y": 0.6388020833333333,
+            "width": 0.222,
+            "height": 0.012
+          },
+          "sizeRatio": 2.16,
+          "scaleX": 1
+        },
+        {
+          "text": "CONSULTATION",
+          "sampleBox": {
+            "x": 0.23194444444444445,
+            "y": 0.65625,
+            "width": 0.166,
+            "height": 0.012
+          },
+          "sizeRatio": 2.16,
+          "scaleX": 1
+        }
+      ],
+      "fontFile": "/fonts/adstudio/roboto-condensed-700.woff2"
+    },
+    "right_item_1": {
+      "fontId": "museomoderno",
+      "family": "MuseoModerno",
+      "fallbackFamily": "sans-serif",
+      "weight": 900,
+      "italic": false,
+      "case": "upper",
+      "measurementVersion": 2,
+      "sizeRatio": 0.5266290726817042,
+      "lineHeight": 1.59,
+      "tracking": 0,
+      "align": "left",
+      "color": "#565655",
+      "fitScore": 0.704,
+      "sampleBox": {
+        "x": 0.6083333333333333,
+        "y": 0.5223958333333333,
+        "width": 0.24305555555555555,
+        "height": 0.028125
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 1,
+      "measurementSource": "ocr-v2",
+      "measuredLines": [
+        {
+          "text": "SKIPPING COMMUNITY",
+          "sampleBox": {
+            "x": 0.6083333333333333,
+            "y": 0.5223958333333333,
+            "width": 0.24305555555555555,
+            "height": 0.010677083333333334
+          },
+          "sizeRatio": 1.0532581453634084,
+          "scaleX": 1
+        },
+        {
+          "text": "RESEARCH",
+          "sampleBox": {
+            "x": 0.6083333333333333,
+            "y": 0.53984375,
+            "width": 0.11296296296296296,
+            "height": 0.010677083333333334
+          },
+          "sizeRatio": 1.0532581453634084,
+          "scaleX": 1
+        }
+      ],
+      "fontFile": "/fonts/adstudio/museomoderno-900.woff2"
+    },
+    "right_item_3": {
+      "fontId": "roboto-condensed",
+      "family": "Roboto Condensed",
+      "fallbackFamily": "sans-serif",
+      "weight": 700,
+      "italic": false,
+      "case": "upper",
+      "measurementVersion": 2,
+      "sizeRatio": 1.08,
+      "lineHeight": 1.17,
+      "tracking": 0,
+      "align": "left",
+      "color": "#1f1f1d",
+      "fitScore": 0.9,
+      "sampleBox": {
+        "x": 0.6083333333333333,
+        "y": 0.6388020833333333,
+        "width": 0.225,
+        "height": 0.029
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 1,
+      "measurementSource": "manual-verified",
+      "measuredLines": [
+        {
+          "text": "MISSING A HOME",
+          "sampleBox": {
+            "x": 0.6083333333333333,
+            "y": 0.6388020833333333,
+            "width": 0.182,
+            "height": 0.012
+          },
+          "sizeRatio": 2.16,
+          "scaleX": 1
+        },
+        {
+          "text": "INSPECTION",
+          "sampleBox": {
+            "x": 0.6083333333333333,
+            "y": 0.65625,
+            "width": 0.129,
+            "height": 0.012
+          },
+          "sizeRatio": 2.16,
+          "scaleX": 1
+        }
+      ],
+      "fontFile": "/fonts/adstudio/roboto-condensed-700.woff2"
+    },
+    "left_item_2": {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "fallbackFamily": "serif",
+      "weight": 900,
+      "italic": false,
+      "case": "upper",
+      "measurementVersion": 2,
+      "sizeRatio": 0.64072265625,
+      "lineHeight": 1.257,
+      "tracking": 0,
+      "align": "left",
+      "color": "#42413e",
+      "fitScore": 0.85,
+      "sampleBox": {
+        "x": 0.23194444444444445,
+        "y": 0.58046875,
+        "width": 0.21157407407407408,
+        "height": 0.027864583333333335
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 1,
+      "measurementSource": "ocr-v2",
+      "measuredLines": [
+        {
+          "text": "CHOOSE THE RIGHT",
+          "sampleBox": {
+            "x": 0.23194444444444445,
+            "y": 0.58046875,
+            "width": 0.21157407407407408,
+            "height": 0.010677083333333334
+          },
+          "sizeRatio": 1.2814453125,
+          "scaleX": 1
+        },
+        {
+          "text": "BUILDER",
+          "sampleBox": {
+            "x": 0.2324074074074074,
+            "y": 0.5979166666666667,
+            "width": 0.08981481481481482,
+            "height": 0.010416666666666666
+          },
+          "sizeRatio": 1.2814453125,
+          "scaleX": 1
+        }
+      ],
+      "fontFile": "/fonts/adstudio/merriweather-900.woff2"
+    },
+    "left_item_1": {
+      "fontId": "roboto-condensed",
+      "family": "Roboto Condensed",
+      "fallbackFamily": "sans-serif",
+      "weight": 700,
+      "italic": false,
+      "case": "upper",
+      "measurementVersion": 2,
+      "sizeRatio": 1.08,
+      "lineHeight": 1.17,
+      "tracking": 0,
+      "align": "left",
+      "color": "#1f1f1d",
+      "fitScore": 0.9,
+      "sampleBox": {
+        "x": 0.2310185185185185,
+        "y": 0.5223958333333333,
+        "width": 0.18,
+        "height": 0.029
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 1,
+      "measurementSource": "manual-verified",
+      "measuredLines": [
+        {
+          "text": "WORK WITH A",
+          "sampleBox": {
+            "x": 0.2310185185185185,
+            "y": 0.5223958333333333,
+            "width": 0.149,
+            "height": 0.012
+          },
+          "sizeRatio": 2.16,
+          "scaleX": 1
+        },
+        {
+          "text": "LOCAL AGENT",
+          "sampleBox": {
+            "x": 0.23194444444444445,
+            "y": 0.53984375,
+            "width": 0.145,
+            "height": 0.012
+          },
+          "sizeRatio": 2.16,
+          "scaleX": 1
+        }
+      ],
+      "fontFile": "/fonts/adstudio/roboto-condensed-700.woff2"
+    },
+    "right_item_2": {
+      "fontId": "roboto-condensed",
+      "family": "Roboto Condensed",
+      "fallbackFamily": "sans-serif",
+      "weight": 700,
+      "italic": false,
+      "case": "upper",
+      "measurementVersion": 2,
+      "sizeRatio": 1.08,
+      "lineHeight": 1.17,
+      "tracking": 0,
+      "align": "left",
+      "color": "#1f1f1d",
+      "fitScore": 0.9,
+      "sampleBox": {
+        "x": 0.6083333333333333,
+        "y": 0.58046875,
+        "width": 0.21,
+        "height": 0.029
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 1,
+      "measurementSource": "manual-verified",
+      "measuredLines": [
+        {
+          "text": "IGNORING PRIORITY",
+          "sampleBox": {
+            "x": 0.6083333333333333,
+            "y": 0.58046875,
+            "width": 0.21,
+            "height": 0.012
+          },
+          "sizeRatio": 2.16,
+          "scaleX": 1
+        },
+        {
+          "text": "COSTS",
+          "sampleBox": {
+            "x": 0.6083333333333333,
+            "y": 0.5979166666666667,
+            "width": 0.08,
+            "height": 0.012
+          },
+          "sizeRatio": 2.16,
+          "scaleX": 1
+        }
+      ],
+      "fontFile": "/fonts/adstudio/roboto-condensed-700.woff2"
+    },
+    "right_heading": {
+      "fontId": "manrope",
+      "family": "Manrope",
+      "fallbackFamily": "sans-serif",
+      "weight": 700,
+      "italic": false,
+      "case": "upper",
+      "measurementVersion": 2,
+      "sizeRatio": 1.3237920168067228,
+      "lineHeight": 1.366,
+      "tracking": 0,
+      "align": "left",
+      "color": "#484847",
+      "fitScore": 0.638,
+      "sampleBox": {
+        "x": 0.6300925925925925,
+        "y": 0.48098958333333336,
+        "width": 0.1287037037037037,
+        "height": 0.018489583333333334
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "measurementSource": "ocr-v2",
+      "measuredLines": [
+        {
+          "text": "AVOID",
+          "sampleBox": {
+            "x": 0.6300925925925925,
+            "y": 0.48098958333333336,
+            "width": 0.1287037037037037,
+            "height": 0.018489583333333334
+          },
+          "sizeRatio": 1.3237920168067228,
+          "scaleX": 1
+        }
+      ],
+      "fontFile": "/fonts/adstudio/manrope-700.woff2"
+    },
+    "left_heading": {
+      "fontId": "cormorant-garamond",
+      "family": "Cormorant Garamond",
+      "fallbackFamily": "serif",
+      "weight": 700,
+      "italic": false,
+      "case": "upper",
+      "measurementVersion": 2,
+      "sizeRatio": 1.4809048178613395,
+      "lineHeight": 1.211,
+      "tracking": 0,
+      "align": "left",
+      "color": "#30302e",
+      "fitScore": 0.85,
+      "sampleBox": {
+        "x": 0.2865740740740741,
+        "y": 0.48098958333333336,
+        "width": 0.06018518518518518,
+        "height": 0.018489583333333334
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "measurementSource": "ocr-v2",
+      "measuredLines": [
+        {
+          "text": "DO",
+          "sampleBox": {
+            "x": 0.2865740740740741,
+            "y": 0.48098958333333336,
+            "width": 0.06018518518518518,
+            "height": 0.018489583333333334
+          },
+          "sizeRatio": 1.4809048178613395,
+          "scaleX": 1
+        }
+      ],
+      "fontFile": "/fonts/adstudio/cormorant-garamond-700.woff2"
+    },
+    "question": {
+      "fontId": "roboto-condensed",
+      "family": "Roboto Condensed",
+      "fallbackFamily": "sans-serif",
+      "weight": 700,
+      "italic": false,
+      "case": "upper",
+      "measurementVersion": 2,
+      "sizeRatio": 1.08,
+      "lineHeight": 1.17,
+      "tracking": 0,
+      "align": "left",
+      "color": "#1f1f1d",
+      "fitScore": 0.9,
+      "sampleBox": {
+        "x": 0.208,
+        "y": 0.384,
+        "width": 0.65,
+        "height": 0.022
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "measurementSource": "manual-verified",
+      "measuredLines": [
+        {
+          "text": "WHAT SHOULD I KNOW BEFORE BUYING NEW CONSTRUCTION?",
+          "sampleBox": {
+            "x": 0.208,
+            "y": 0.384,
+            "width": 0.65,
+            "height": 0.022
+          },
+          "sizeRatio": 1.08,
+          "scaleX": 1
+        }
+      ],
+      "fontFile": "/fonts/adstudio/roboto-condensed-700.woff2"
+    }
+  },
+  "deterministicEditing": {
+    "status": "ready",
+    "imageBoxes": {
+      "background_photo": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      }
+    }
   }
 }

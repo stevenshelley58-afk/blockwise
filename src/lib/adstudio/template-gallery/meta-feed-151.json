@@ -216,6 +216,603 @@
     }
   },
   "qualityLock": {
-    "templateHash": "ea0f9f5601193459c018f080c7a74be82e3bb57f97d4ca4d48a7abc268ada174"
+    "templateHash": "62b787291bee3b81789594dd7f5c42997b207b984a31e7ee5dc3ff83a8494493"
+  },
+  "typography": {
+    "contact_prompt": {
+      "fontId": "roboto-condensed",
+      "family": "Roboto Condensed",
+      "fallbackFamily": "sans-serif",
+      "weight": 900,
+      "italic": false,
+      "case": "upper",
+      "measurementVersion": 2,
+      "sizeRatio": 0.708984375,
+      "lineHeight": 1.171875,
+      "tracking": 0,
+      "align": "left",
+      "color": "#3b3834",
+      "fitScore": 0.85,
+      "sampleBox": {
+        "x": 0.5476851851851852,
+        "y": 0.8062962962962963,
+        "width": 0.15694444444444444,
+        "height": 0.02925925925925926
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 1,
+      "measurementSource": "ocr-v2",
+      "measuredLines": [
+        {
+          "text": "For Directions Or",
+          "sampleBox": {
+            "x": 0.5476851851851852,
+            "y": 0.8062962962962963,
+            "width": 0.15694444444444444,
+            "height": 0.012222222222222223
+          },
+          "sizeRatio": 1.41796875,
+          "scaleX": 1
+        },
+        {
+          "text": "Details Call",
+          "sampleBox": {
+            "x": 0.5476851851851852,
+            "y": 0.8233333333333334,
+            "width": 0.1037037037037037,
+            "height": 0.012222222222222223
+          },
+          "sizeRatio": 1.41796875,
+          "scaleX": 1
+        }
+      ],
+      "fontFile": "/fonts/adstudio/roboto-condensed-900.woff2"
+    },
+    "date_time": {
+      "fontId": "roboto-slab",
+      "family": "Roboto Slab",
+      "fallbackFamily": "serif",
+      "weight": 800,
+      "italic": false,
+      "case": "upper",
+      "measurementVersion": 2,
+      "sizeRatio": 1.0974025974025976,
+      "lineHeight": 1.31884765625,
+      "tracking": 0,
+      "align": "left",
+      "color": "#cac5c0",
+      "fitScore": 0.85,
+      "sampleBox": {
+        "x": 0.14351851851851852,
+        "y": 0.2614814814814815,
+        "width": 0.35509259259259257,
+        "height": 0.01925925925925926
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "measurementSource": "ocr-v2",
+      "measuredLines": [
+        {
+          "text": "21 JUNE 2026 | 10 AM - 2 PM",
+          "sampleBox": {
+            "x": 0.14351851851851852,
+            "y": 0.2614814814814815,
+            "width": 0.35509259259259257,
+            "height": 0.01925925925925926
+          },
+          "sizeRatio": 1.0974025974025976,
+          "scaleX": 1
+        }
+      ],
+      "fontFile": "/fonts/adstudio/roboto-slab-800.woff2"
+    },
+    "headline": {
+      "fontId": "newsreader",
+      "family": "Newsreader",
+      "fallbackFamily": "serif",
+      "weight": 800,
+      "italic": false,
+      "case": "upper",
+      "measurementVersion": 2,
+      "sizeRatio": 0.6569897217607975,
+      "lineHeight": 1,
+      "tracking": 0,
+      "align": "left",
+      "color": "#5c5049",
+      "fitScore": 0.85,
+      "sampleBox": {
+        "x": 0.08472222222222223,
+        "y": 0.13111111111111112,
+        "width": 0.5078703703703704,
+        "height": 0.0962962962962963
+      },
+      "sampleLineCount": 2,
+      "detectionScore": 1,
+      "measurementSource": "ocr-v2",
+      "measuredLines": [
+        {
+          "text": "OPEN HOUSE",
+          "sampleBox": {
+            "x": 0.08703703703703704,
+            "y": 0.13111111111111112,
+            "width": 0.5055555555555555,
+            "height": 0.04518518518518518
+          },
+          "sizeRatio": 1.313979443521595,
+          "scaleX": 1
+        },
+        {
+          "text": "THIS SUNDAY",
+          "sampleBox": {
+            "x": 0.08472222222222223,
+            "y": 0.18925925925925927,
+            "width": 0.43333333333333335,
+            "height": 0.038148148148148146
+          },
+          "sizeRatio": 1.313979443521595,
+          "scaleX": 1
+        }
+      ],
+      "fontFile": "/fonts/adstudio/newsreader-800.woff2"
+    },
+    "agent_website": {
+      "fontId": "roboto-condensed",
+      "family": "Roboto Condensed",
+      "fallbackFamily": "sans-serif",
+      "weight": 900,
+      "italic": false,
+      "case": "upper",
+      "measurementVersion": 2,
+      "sizeRatio": 1.3650568181818183,
+      "lineHeight": 1.171875,
+      "tracking": 0,
+      "align": "left",
+      "color": "#585653",
+      "fitScore": 0.686,
+      "sampleBox": {
+        "x": 0.500462962962963,
+        "y": 0.914074074074074,
+        "width": 0.20324074074074075,
+        "height": 0.011481481481481481
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "measurementSource": "ocr-v2",
+      "measuredLines": [
+        {
+          "text": "HARBOURLINE.EXAMPLE",
+          "sampleBox": {
+            "x": 0.500462962962963,
+            "y": 0.914074074074074,
+            "width": 0.20324074074074075,
+            "height": 0.011481481481481481
+          },
+          "sizeRatio": 1.3650568181818183,
+          "scaleX": 1
+        }
+      ],
+      "fontFile": "/fonts/adstudio/roboto-condensed-900.woff2"
+    },
+    "agent_phone": {
+      "fontId": "figtree",
+      "family": "Figtree",
+      "fallbackFamily": "sans-serif",
+      "weight": 900,
+      "italic": false,
+      "case": "none",
+      "measurementVersion": 2,
+      "sizeRatio": 1.402898550724637,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "left",
+      "color": "#6d635c",
+      "fitScore": 0.734,
+      "sampleBox": {
+        "x": 0.500462962962963,
+        "y": 0.8785185185185185,
+        "width": 0.19675925925925927,
+        "height": 0.016296296296296295
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "measurementSource": "ocr-v2",
+      "measuredLines": [
+        {
+          "text": "+123-555-0126",
+          "sampleBox": {
+            "x": 0.500462962962963,
+            "y": 0.8785185185185185,
+            "width": 0.19675925925925927,
+            "height": 0.016296296296296295
+          },
+          "sizeRatio": 1.402898550724637,
+          "scaleX": 1
+        }
+      ],
+      "fontFile": "/fonts/adstudio/figtree-900.woff2"
+    },
+    "area": {
+      "fontId": "overlock",
+      "family": "Overlock",
+      "fallbackFamily": "sans-serif",
+      "weight": 900,
+      "italic": false,
+      "case": "upper",
+      "measurementVersion": 2,
+      "sizeRatio": 1.2257653061224492,
+      "lineHeight": 1.22,
+      "tracking": 0,
+      "align": "left",
+      "color": "#4d4c4c",
+      "fitScore": 0.771,
+      "sampleBox": {
+        "x": 0.3384259259259259,
+        "y": 0.8162962962962963,
+        "width": 0.09027777777777778,
+        "height": 0.011481481481481481
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "measurementSource": "ocr-v2",
+      "measuredLines": [
+        {
+          "text": "2,400 SQ FT",
+          "sampleBox": {
+            "x": 0.3384259259259259,
+            "y": 0.8162962962962963,
+            "width": 0.09027777777777778,
+            "height": 0.011481481481481481
+          },
+          "sizeRatio": 1.2257653061224492,
+          "scaleX": 1
+        }
+      ],
+      "fontFile": "/fonts/adstudio/overlock-900.woff2"
+    },
+    "agent_name": {
+      "fontId": "dm-sans",
+      "family": "DM Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 900,
+      "italic": false,
+      "case": "upper",
+      "measurementVersion": 2,
+      "sizeRatio": 1.3636363636363635,
+      "lineHeight": 1.302,
+      "tracking": 0,
+      "align": "center",
+      "color": "#5b5956",
+      "fitScore": 0.625,
+      "sampleBox": {
+        "x": 0.5,
+        "y": 0.8607407407407407,
+        "width": 0.11064814814814815,
+        "height": 0.011111111111111112
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "measurementSource": "ocr-v2",
+      "measuredLines": [
+        {
+          "text": "SOPHIE HALE",
+          "sampleBox": {
+            "x": 0.5,
+            "y": 0.8607407407407407,
+            "width": 0.11064814814814815,
+            "height": 0.011111111111111112
+          },
+          "sizeRatio": 1.3636363636363635,
+          "scaleX": 1
+        }
+      ],
+      "fontFile": "/fonts/adstudio/dm-sans-900.woff2"
+    },
+    "price_label": {
+      "fontId": "gabarito",
+      "family": "Gabarito",
+      "fallbackFamily": "sans-serif",
+      "weight": 900,
+      "italic": false,
+      "case": "upper",
+      "measurementVersion": 2,
+      "sizeRatio": 1.4325396825396828,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "left",
+      "color": "#dfdcd8",
+      "fitScore": 0.766,
+      "sampleBox": {
+        "x": 0.7268518518518519,
+        "y": 0.17,
+        "width": 0.11296296296296296,
+        "height": 0.014074074074074074
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "measurementSource": "ocr-v2",
+      "measuredLines": [
+        {
+          "text": "LISTED AT",
+          "sampleBox": {
+            "x": 0.7268518518518519,
+            "y": 0.17,
+            "width": 0.11296296296296296,
+            "height": 0.014074074074074074
+          },
+          "sizeRatio": 1.4325396825396828,
+          "scaleX": 1
+        }
+      ],
+      "fontFile": "/fonts/adstudio/gabarito-900.woff2"
+    },
+    "feature_1": {
+      "fontId": "playfair-display",
+      "family": "Playfair Display",
+      "fallbackFamily": "serif",
+      "weight": 900,
+      "italic": false,
+      "case": "upper",
+      "measurementVersion": 2,
+      "sizeRatio": 1.1834415584415585,
+      "lineHeight": 1.333,
+      "tracking": 0,
+      "align": "left",
+      "color": "#4a4a49",
+      "fitScore": 0.85,
+      "sampleBox": {
+        "x": 0.09953703703703703,
+        "y": 0.9051851851851852,
+        "width": 0.07777777777777778,
+        "height": 0.01
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "measurementSource": "ocr-v2",
+      "measuredLines": [
+        {
+          "text": "CAR PORT",
+          "sampleBox": {
+            "x": 0.09953703703703703,
+            "y": 0.9051851851851852,
+            "width": 0.07777777777777778,
+            "height": 0.01
+          },
+          "sizeRatio": 1.1834415584415585,
+          "scaleX": 1
+        }
+      ],
+      "fontFile": "/fonts/adstudio/playfair-display-900.woff2"
+    },
+    "bathrooms": {
+      "fontId": "playfair-display",
+      "family": "Playfair Display",
+      "fallbackFamily": "serif",
+      "weight": 900,
+      "italic": false,
+      "case": "upper",
+      "measurementVersion": 2,
+      "sizeRatio": 1.1834415584415585,
+      "lineHeight": 1.333,
+      "tracking": 0,
+      "align": "left",
+      "color": "#4e4d4c",
+      "fitScore": 0.85,
+      "sampleBox": {
+        "x": 0.22962962962962963,
+        "y": 0.8162962962962963,
+        "width": 0.06296296296296296,
+        "height": 0.01
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "measurementSource": "ocr-v2",
+      "measuredLines": [
+        {
+          "text": "2 BATHS",
+          "sampleBox": {
+            "x": 0.22962962962962963,
+            "y": 0.8162962962962963,
+            "width": 0.06296296296296296,
+            "height": 0.01
+          },
+          "sizeRatio": 1.1834415584415585,
+          "scaleX": 1
+        }
+      ],
+      "fontFile": "/fonts/adstudio/playfair-display-900.woff2"
+    },
+    "bedrooms": {
+      "fontId": "simonetta",
+      "family": "Simonetta",
+      "fallbackFamily": "sans-serif",
+      "weight": 900,
+      "italic": false,
+      "case": "upper",
+      "measurementVersion": 2,
+      "sizeRatio": 1.1834415584415585,
+      "lineHeight": 1.251953125,
+      "tracking": 0,
+      "align": "left",
+      "color": "#4f4f4e",
+      "fitScore": 0.692,
+      "sampleBox": {
+        "x": 0.11157407407407408,
+        "y": 0.8162962962962963,
+        "width": 0.05277777777777778,
+        "height": 0.01
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "measurementSource": "ocr-v2",
+      "measuredLines": [
+        {
+          "text": "4 BEDS",
+          "sampleBox": {
+            "x": 0.11157407407407408,
+            "y": 0.8162962962962963,
+            "width": 0.05277777777777778,
+            "height": 0.01
+          },
+          "sizeRatio": 1.1834415584415585,
+          "scaleX": 1
+        }
+      ],
+      "fontFile": "/fonts/adstudio/simonetta-900.woff2"
+    },
+    "feature_3": {
+      "fontId": "playfair-display",
+      "family": "Playfair Display",
+      "fallbackFamily": "serif",
+      "weight": 900,
+      "italic": false,
+      "case": "upper",
+      "measurementVersion": 2,
+      "sizeRatio": 1.1834415584415585,
+      "lineHeight": 1.333,
+      "tracking": 0,
+      "align": "left",
+      "color": "#484746",
+      "fitScore": 0.85,
+      "sampleBox": {
+        "x": 0.35185185185185186,
+        "y": 0.9051851851851852,
+        "width": 0.06296296296296296,
+        "height": 0.01
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "measurementSource": "ocr-v2",
+      "measuredLines": [
+        {
+          "text": "GARDEN",
+          "sampleBox": {
+            "x": 0.35185185185185186,
+            "y": 0.9051851851851852,
+            "width": 0.06296296296296296,
+            "height": 0.01
+          },
+          "sizeRatio": 1.1834415584415585,
+          "scaleX": 1
+        }
+      ],
+      "fontFile": "/fonts/adstudio/playfair-display-900.woff2"
+    },
+    "feature_2": {
+      "fontId": "dm-sans",
+      "family": "DM Sans",
+      "fallbackFamily": "sans-serif",
+      "weight": 900,
+      "italic": false,
+      "case": "upper",
+      "measurementVersion": 2,
+      "sizeRatio": 1.4083333333333337,
+      "lineHeight": 1.302,
+      "tracking": 0,
+      "align": "left",
+      "color": "#4a4948",
+      "fitScore": 0.85,
+      "sampleBox": {
+        "x": 0.24074074074074073,
+        "y": 0.9055555555555556,
+        "width": 0.0412037037037037,
+        "height": 0.00962962962962963
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "measurementSource": "ocr-v2",
+      "measuredLines": [
+        {
+          "text": "POOL",
+          "sampleBox": {
+            "x": 0.24074074074074073,
+            "y": 0.9055555555555556,
+            "width": 0.0412037037037037,
+            "height": 0.00962962962962963
+          },
+          "sizeRatio": 1.4083333333333337,
+          "scaleX": 1
+        }
+      ],
+      "fontFile": "/fonts/adstudio/dm-sans-900.woff2"
+    },
+    "listing_price": {
+      "fontId": "figtree",
+      "family": "Figtree",
+      "fallbackFamily": "sans-serif",
+      "weight": 900,
+      "italic": false,
+      "case": "none",
+      "measurementVersion": 2,
+      "sizeRatio": 1.4,
+      "lineHeight": 1.2,
+      "tracking": 0,
+      "align": "left",
+      "color": "#f7f5f2",
+      "fitScore": 0.9,
+      "sampleBox": {
+        "x": 0.682,
+        "y": 0.197,
+        "width": 0.19,
+        "height": 0.042
+      },
+      "sampleLineCount": 1,
+      "detectionScore": 1,
+      "measurementSource": "manual-verified",
+      "measuredLines": [
+        {
+          "text": "$860,000",
+          "sampleBox": {
+            "x": 0.682,
+            "y": 0.197,
+            "width": 0.19,
+            "height": 0.042
+          },
+          "sizeRatio": 1.4,
+          "scaleX": 1
+        }
+      ],
+      "fontFile": "/fonts/adstudio/figtree-900.woff2"
+    }
+  },
+  "deterministicEditing": {
+    "status": "ready",
+    "imageBoxes": {
+      "agency_logo": {
+        "x": 0.07,
+        "y": 0.06,
+        "width": 0.29,
+        "height": 0.055
+      },
+      "main_exterior": {
+        "x": 0.02,
+        "y": 0.271,
+        "width": 0.63,
+        "height": 0.453
+      },
+      "interior_1": {
+        "x": 0.673,
+        "y": 0.249,
+        "width": 0.228,
+        "height": 0.157
+      },
+      "interior_2": {
+        "x": 0.673,
+        "y": 0.415,
+        "width": 0.228,
+        "height": 0.157
+      },
+      "interior_3": {
+        "x": 0.673,
+        "y": 0.589,
+        "width": 0.228,
+        "height": 0.153
+      },
+      "agent_photo": {
+        "x": 0.724,
+        "y": 0.79,
+        "width": 0.19,
+        "height": 0.15
+      }
+    }
   }
 }
