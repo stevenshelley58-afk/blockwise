@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 
 import type { AdStudioCampaignPack } from "../adstudio/index.ts";
+import { normalizeLeadFormQuestions } from "../adstudio/default-lead-forms.ts";
 import { deterministicUuid } from "../adstudio/id.ts";
 import { evaluatePublishReadiness, type ApprovalStatus, type ProviderConnectionStatus } from "../publishing/readiness.ts";
 import type { ComplianceStatus } from "../compliance/real-estate-policy.ts";
@@ -1901,6 +1902,7 @@ function buildTargeting(controls: MetaPublishControls): Record<string, unknown> 
   };
 }
 
+<<<<<<< HEAD
 function unsupportedMetaPlacementPositions(targeting: Record<string, unknown>): string[] {
   const instagramPositions = Array.isArray(targeting.instagram_positions)
     ? targeting.instagram_positions.filter((value): value is string => typeof value === "string")
@@ -1910,26 +1912,28 @@ function unsupportedMetaPlacementPositions(targeting: Record<string, unknown>): 
 
 function buildLeadFormPlans(pack: AdStudioCampaignPack, setup: MetaConnectionSetup, completionUrl?: string): MetaPublishLeadFormPlan[] {
   return pack.copyPacks.slice(0, 6).map((copy, index) => {
+    const leadForm = copy.meta.leadForm;
     const defaults: MetaLeadFormDefaults = {
-    headline: copy.meta.leadForm.headline,
-    intro: copy.meta.primaryText[0] ?? copy.meta.leadForm.headline,
-    contactFields: ["FIRST_NAME", "LAST_NAME", "EMAIL", "PHONE"],
-    customQuestions: copy.meta.leadForm.questions.slice(0, 5),
-    thankYouTitle: copy.meta.leadForm.thankYouScreen.title,
-    thankYouBody: copy.meta.leadForm.thankYouScreen.body,
-    thankYouButtonType: "VIEW_WEBSITE",
-    thankYouButtonText: "Visit website",
+      headline: leadForm?.headline ?? "",
+      intro: copy.meta.primaryText[0] ?? leadForm?.headline ?? "",
+      contactFields: ["FIRST_NAME", "LAST_NAME", "EMAIL", "PHONE"],
+      customQuestions: normalizeLeadFormQuestions(leadForm?.questions ?? []),
+      thankYouTitle: leadForm?.thankYouScreen?.title ?? "",
+      thankYouBody: leadForm?.thankYouScreen?.body ?? "",
+      thankYouButtonType: "VIEW_WEBSITE",
+      thankYouButtonText: "Visit website",
     };
     return {
       localId: `form_${index + 1}`,
-      name: `${pack.campaign.market.suburb} ${copy.meta.leadForm.headline}`,
+      name: `${pack.campaign.market.suburb} ${defaults.headline}`,
       ...buildMetaInstantFormSpec(defaults, {
         privacyPolicyUrl: setup.privacyPolicyUrl,
         formCompletionUrl: completionUrl ?? setup.privacyPolicyUrl,
       }),
-      questions: copy.meta.leadForm.questions.slice(0, 5),
+      questions: defaults.customQuestions,
     };
   });
+}
 }
 
 function buildCreativePlans(pack: AdStudioCampaignPack, setup: MetaConnectionSetup): MetaPublishCreativePlan[] {

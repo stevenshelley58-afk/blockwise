@@ -42,7 +42,15 @@ function template(root: string, n: number, intent = "listing") {
     },
     sourceAd: { file: `${id}.png`, contentHash: hash(source) },
     classification: { ad_type: "listing", primary_intent: intent, property_or_agent_focus: "property" },
-    meta: { platform: "meta", objective: "OUTCOME_LEADS", specialAdCategory: "housing" },
+    meta: {
+      platform: "meta", objective: "OUTCOME_LEADS", specialAdCategory: "housing",
+      leadForm: {
+        headline: "Request the property details",
+        questions: ["What is your best contact number?"],
+        privacyPolicyUrl: null,
+        thankYouScreen: { title: "Request received", body: "The agency will be in touch shortly." },
+      },
+    },
     typography: {
       headline: {
         fontId: "TestFont", family: "TestFont", fallbackFamily: "sans-serif",
@@ -242,6 +250,23 @@ test("a gallery without a release index remains valid but has no release locks",
     const result = run(root);
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
     assert.match(result.stderr, /no release quality-lock index/u);
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test("the gate rejects orphan evidence and display thumbnails", () => {
+  const root = fixtureRoot();
+  try {
+    const value = template(root, 1);
+    writeFileSync(join(root, "gallery", `${value.id}.json`), JSON.stringify(value));
+    mkdirSync(join(root, "gallery", "evidence"), { recursive: true });
+    writeFileSync(join(root, "gallery", "evidence", "meta-retired.json"), "{}");
+    mkdirSync(join(root, "public", "adstudio-thumbnails", "meta"), { recursive: true });
+    writeFileSync(join(root, "public", "adstudio-thumbnails", "meta", "retired-preview.webp"), "old");
+
+    const result = run(root);
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /ORPHAN_EVIDENCE/u);
+    assert.match(result.stderr, /ORPHAN_THUMBNAIL/u);
   } finally { rmSync(root, { recursive: true, force: true }); }
 });
 

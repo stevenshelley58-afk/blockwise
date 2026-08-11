@@ -414,6 +414,7 @@ export function validateGalleryTemplate(raw: AdStudioTemplate): AdStudioTemplate
   if (raw?.meta?.platform !== "meta") errors.push("meta platform must be meta");
   if (raw?.meta?.objective !== "OUTCOME_LEADS") errors.push("meta objective must be OUTCOME_LEADS");
   if (raw?.meta?.specialAdCategory !== "housing") errors.push("meta special ad category must be housing");
+  validateLeadForm(raw?.meta?.leadForm, errors);
   if (raw?.qualityLock !== undefined && !isSha256(raw.qualityLock.templateHash)) {
     errors.push("qualityLock.templateHash must be a SHA-256 hash");
   }
@@ -439,6 +440,25 @@ export function validateGalleryTemplate(raw: AdStudioTemplate): AdStudioTemplate
   }
 
   return raw;
+}
+
+function validateLeadForm(
+  leadForm: { headline?: string; questions?: string[]; thankYouScreen?: { title?: string; body?: string } } | undefined,
+  errors: string[],
+): void {
+  if (!leadForm?.headline?.trim()) errors.push("meta.leadForm.headline is required");
+  const questions = Array.isArray(leadForm?.questions) ? leadForm.questions : [];
+  if (!questions.some((question) => typeof question === "string" && question.trim())) {
+    errors.push("meta.leadForm needs at least one non-empty question");
+  }
+  if (questions.length > 5) errors.push("meta.leadForm supports at most 5 questions");
+  const labels = questions
+    .filter((question): question is string => typeof question === "string")
+    .map((question) => question.trim().toLowerCase())
+    .filter(Boolean);
+  if (new Set(labels).size !== labels.length) errors.push("meta.leadForm question labels must be unique");
+  if (!leadForm?.thankYouScreen?.title?.trim()) errors.push("meta.leadForm.thankYouScreen.title is required");
+  if (!leadForm?.thankYouScreen?.body?.trim()) errors.push("meta.leadForm.thankYouScreen.body is required");
 }
 
 function validateUniqueKeys(items: Array<{ key: string; label: string }>, kind: string, errors: string[]): void {

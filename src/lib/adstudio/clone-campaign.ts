@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 
 import { appendAdvertiserPath, resolveAdvertiserBaseUrl, resolveLeadFormPrivacyPolicyUrl } from "./advertiser-domain.ts";
 import { runAdStudioComplianceReview } from "./compliance.ts";
+import { DEFAULT_LEAD_FORM_PRESETS, normalizeLeadFormQuestions, renderPresetLeadForm, resolveDefaultLeadFormPreset } from "./default-lead-forms.ts";
 import { deterministicUuid } from "./id.ts";
 import { labelForMetaCta } from "./meta-cta.ts";
 import { scoreAdStudioVariant } from "./scoring.ts";
@@ -78,51 +79,41 @@ export function resolveCloneCampaignId(input: {
   });
 }
 
-function buildLeadFormCopy(template: AdStudioGalleryTemplate, brandKit: AdStudioBrandKit): {
+const LEGACY_LEAD_FORM_HEADLINES = new Set([
+  ...DEFAULT_LEAD_FORM_PRESETS.map((preset) => preset.headline),
+  "Request your free rental appraisal",
+  "Request your free market report",
+  "Request your free downsizing consultation",
+  "Request your free investment consultation",
+  "Request off-market property alerts",
+]);
+
+export function buildLeadFormCopy(template: AdStudioGalleryTemplate, brandKit: AdStudioBrandKit): {
     headline: string;
     questions: string[];
     privacyPolicyUrl: string | null;
     thankYouScreen: { title: string; body: string };
   } {
   const goal = template.classification?.primary_intent ?? "";
-  const offer = template.name ?? "";
   const agencyName = brandKit.identity.tradingName?.trim() || brandKit.identity.businessName || "the agency";
-
-  let headline = "Request the property details";
-  if (goal.includes("appraisal") || offer.toLowerCase().includes("appraisal")) {
-    headline = "Request your free property appraisal";
-  } else if (goal.includes("seller") || offer.toLowerCase().includes("seller")) {
-    headline = "Request your free seller consultation";
-  } else if (goal.includes("buyer") || offer.toLowerCase().includes("buyer")) {
-    headline = "Register your interest in this property";
-  } else if (goal.includes("rental") || offer.toLowerCase().includes("rental")) {
-    headline = "Request your free rental appraisal";
-  } else if (goal.includes("market") || offer.toLowerCase().includes("market")) {
-    headline = "Request your free market report";
-  } else if (goal.includes("downsizer") || offer.toLowerCase().includes("downsizer")) {
-    headline = "Request your free downsizing consultation";
-  } else if (goal.includes("investor") || offer.toLowerCase().includes("investor")) {
-    headline = "Request your free investment consultation";
-  } else if (goal.includes("offmarket") || offer.toLowerCase().includes("offmarket") || offer.toLowerCase().includes("off-market")) {
-    headline = "Request off-market property alerts";
-  }
-
-  const templateQuestions = template.meta.leadForm.questions ?? [];
-  const hasPhoneQuestion = templateQuestions.some((q) => q.toLowerCase().includes("phone") || q.toLowerCase().includes("call"));
-  const questions = hasPhoneQuestion
-    ? templateQuestions
-    : [...templateQuestions, "What is your best contact number?"];
-
-  const thankYouScreen = {
-    title: "Request received",
-    body: `${agencyName} will be in touch within 24 hours to arrange your ${goal.includes("appraisal") ? "appraisal" : goal.includes("seller") || goal.includes("buyer") || goal.includes("downsizer") ? "consultation" : "next steps"}.`,
-  };
+  const preset = resolveDefaultLeadFormPreset(template);
+  const nextStep = goal.includes("appraisal")
+    ? "appraisal"
+    : goal.includes("seller") || goal.includes("buyer") || goal.includes("downsizer")
+      ? "consultation"
+      : "next steps";
+  const rendered = renderPresetLeadForm(preset, agencyName, nextStep);
+  const questions = normalizeLeadFormQuestions([...(template.meta.leadForm.questions ?? []), ...rendered.questions]);
+  const templateHeadline = template.meta.leadForm.headline?.trim() ?? "";
+  const headline = templateHeadline && !LEGACY_LEAD_FORM_HEADLINES.has(templateHeadline)
+    ? templateHeadline
+    : rendered.headline;
 
   return {
     headline,
     questions,
     privacyPolicyUrl: resolveLeadFormPrivacyPolicyUrl(brandKit),
-    thankYouScreen,
+    thankYouScreen: rendered.thankYouScreen,
   };
 }
 

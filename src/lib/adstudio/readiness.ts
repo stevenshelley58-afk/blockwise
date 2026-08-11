@@ -57,6 +57,29 @@ export function findPackCopyLimitViolations(pack: {
   return [...seen];
 }
 
+export function findLeadFormViolations(pack: {
+  copyPacks: Array<{ meta?: { leadForm?: { questions?: unknown } } } | null | undefined>;
+}): string[] {
+  const seen = new Set<string>();
+  for (const copyPack of pack.copyPacks ?? []) {
+    const questions = copyPack?.meta?.leadForm?.questions;
+    if (!Array.isArray(questions)) {
+      seen.add("A lead form question list is missing.");
+      continue;
+    }
+    if (questions.some((question) => typeof question !== "string" || !question.trim())) {
+      seen.add("A lead form question label is empty.");
+    }
+    if (questions.length > 5) seen.add(`A lead form has ${questions.length} questions (Meta limit 5).`);
+    const labels = questions
+      .filter((question): question is string => typeof question === "string")
+      .map((question) => question.trim().toLowerCase())
+      .filter(Boolean);
+    if (new Set(labels).size !== labels.length) seen.add("A lead form has duplicate questions.");
+  }
+  return [...seen];
+}
+
 export function buildReadinessItems(input: {
   campaignGoal: string;
   offerLabel: string;
