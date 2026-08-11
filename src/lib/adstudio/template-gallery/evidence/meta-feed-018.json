@@ -1,0 +1,97 @@
+{
+  "schemaVersion": 1,
+  "stage": "gallery_sample",
+  "templateId": "meta-feed-018",
+  "requestHash": "cea19384b4c54b3169834f6d85be0c0d36101e92c5ff5c1a5532890bda606108",
+  "inputHashes": {
+    "source_ad": "e67bfaec28cce6e1ea7cbddc6ed9e377533388484dce7d4cb98fa214c05f16f8",
+    "main_property_image": "b14ccb7f72e0b4cf4741ca8ad16b25f9ce257a81397d542f99377c328dc621fe"
+  },
+  "inputs": [
+    {
+      "index": 1,
+      "key": "source_ad",
+      "role": "source",
+      "path": "meta_ad_candidates/01_feed_4x5_best/meta_018.png",
+      "contentHash": "e67bfaec28cce6e1ea7cbddc6ed9e377533388484dce7d4cb98fa214c05f16f8"
+    },
+    {
+      "index": 2,
+      "key": "main_property_image",
+      "role": "replacement_asset",
+      "path": "artifacts/template-quality/fixtures/gallery/japandi-interior.png",
+      "contentHash": "b14ccb7f72e0b4cf4741ca8ad16b25f9ce257a81397d542f99377c328dc621fe"
+    }
+  ],
+  "request": {
+    "prompt": "TASK\nClone reference image 1 as closely as possible into one finished Meta real-estate ad.\n\nDESIGN BLUEPRINT — REFERENCE IMAGE 1\n- Treat reference image 1 as a pixel-level design blueprint, not as a source of customer content.\n- Match the reusable ad system exactly: canvas and card geometry, borders, corner radii, margins, image-area geometry, logo anchor, text-block positions, line breaks, type scale and weight, alignment, hierarchy, whitespace, shapes, CTA treatment, and footer treatment.\n- For replacement copy, preserve each reference text block's outer bounds, anchor, line rhythm, alignment, and visual weight. Preserve the reference line count when the exact new words fit naturally; when a different copy length makes that impossible, use the smallest natural line-count, type-size, tracking, or line-spacing adjustment that keeps the same outer bounds. Never split a word unnaturally just to imitate the sample line count.\n- For a replacement logo, preserve the reference logo's displayed bounding box, anchor, clear space, and visual weight regardless of the supplied logo file's intrinsic canvas or aspect ratio; never let a simpler mark become larger or more dominant.\n- When replacing an image, keep every template-applied effect that sits around or over that image: its crop or fit behaviour, mask, border, radius, fade, gradient, veil, overlay, shadow, reflection, blend, blur, colour treatment, and overlap with other design elements.\n- Every reference image slot is immovable: preserve its exact position, width, height, mask, and boundary even when the replacement asset has a different aspect ratio. Fit, crop, or naturally extend the replacement only inside that fixed slot; never enlarge, shrink, or move the slot or displace surrounding text and footer elements to accommodate the asset.\n- The replacement image subject is intentionally different and must not be made to resemble the subject in reference image 1.\n- Do not redesign, modernise, simplify, decorate, rebalance, or reinterpret the composition.\n\nREFERENCE ASSETS — ORDER IS EXACT\n- Reference image 1 is the ad design to clone.\n- Reference image 2 is A high-quality photo of a stylish room or home interior, ideally with natural light and modern decor.. Replace the matching asset in the design with it.\nCustomer asset replacement is mandatory. Reference image 1 controls the design only; never retain a source image where a supplied replacement asset belongs.\n\nPHOTO FIT\nThe photo area's position, width, height, mask, and boundary from reference image 1 are fixed and take priority; never resize or move that area to fit the supplied photo. Fit each supplied photo inside that unchanged area so its main subject stays completely in frame. If the photo's aspect ratio does not match its area, choose the better of two options: crop only when the crop still shows the entire main subject; otherwise extend the photo by continuing its own scene naturally past its original edges (more sky, lawn, driveway, wall, or surroundings that match its lighting and perspective). Never solve an aspect-ratio mismatch by changing the template layout, cutting off part of the main subject, stretching, squashing, or adding invented objects to the photo.\n\nEXACT EDITABLE TEXT AND STRUCTURAL LABELS\nUse these exact customer-editable visible text values and no other customer-specific text:\n- Headline Number: \"5\"\n- Headline Main: \"SMART FIRST STEPS\"\n- Headline Sub: \"Before Buying a Home\"\n- Contact Handle: \"@homeguide.example\"\nEvery supplied text value is mandatory: render each value character-for-character exactly once, fully visible, and at a readable size.\nNatural layout line wrapping is allowed and does not change the supplied copy; do not add, remove, misspell, split, or reorder any supplied visible word, punctuation mark, or symbol.\nAlso preserve every generic, non-identifying structural label that names a declared field in reference image 1 (for example LOCATION:, PRICE:, or FOR MORE INFO:), character-for-character in its original text box and type treatment. These labels are fixed parts of the ad design, not customer inputs.\nDo not preserve any other source wording: no source headline, offer, status claim, testimonial, badge, statistic, agency or agent identity, actual property detail, price value, address value, phone-number value, handle, or URL unless it is one of the supplied values above. This prohibition does not apply to the allowed generic structural field labels.\n\nCOLOUR\nColour instruction: preserve the exact colour palette of reference image 1. Do not recolour the design to match the supplied logo or Brand Pack.\n\nOUTPUT\nProduce one finished 4:5 Meta real-estate ad with no Meta interface chrome.",
+    "negativePrompt": "do not retain any source-specific identity or value from reference image 1: no person, agency, or property name; phone-number value; URL; handle; logo; address value; price value; or other identifying detail; this does not prohibit the generic structural field labels explicitly permitted in the prompt; do not invent or change any supplied text value; preserve only generic non-identifying structural field labels already visible in reference image 1, and no other source copy; do not distort, repaint, relight, or restructure the original visible content of supplied property photos, logos, or faces; do not crop away the main subject of a supplied photo; a house, room, or person must never be cut off to fit the frame; no extra logos, watermarks, captions, borders, or platform UI; no fabricated prices, sale results, awards, or claims; no warped windows, rooflines, faces, hands, logos, or text; keep every supplied text value crisp, legible, and inside the canvas",
+    "aspectRatio": "4:5",
+    "seed": 0
+  },
+  "outputHash": "bb83d1d5e73a9a906e80677e0c4ddd8676547fe4ddd3b696cde7fe427d692b9d",
+  "executionTransport": "google_image_api",
+  "reviewedAt": "2026-08-11T05:10:00Z",
+  "correctionCount": 0,
+  "qa": {
+    "passed": true,
+    "fullSizeReviewed": true,
+    "contractReview": {
+      "passed": true,
+      "notes": "Declared inputs only."
+    },
+    "requestIntegrity": {
+      "passed": true,
+      "notes": "Immutable packet verified."
+    },
+    "copyChecks": [
+      {
+        "key": "headline_number",
+        "expected": "5",
+        "observed": "5",
+        "exact": true
+      },
+      {
+        "key": "headline_main",
+        "expected": "SMART FIRST STEPS",
+        "observed": "SMART FIRST STEPS",
+        "exact": true
+      },
+      {
+        "key": "headline_sub",
+        "expected": "Before Buying a Home",
+        "observed": "Before Buying a Home",
+        "exact": true
+      },
+      {
+        "key": "contact_handle",
+        "expected": "@homeguide.example",
+        "observed": "@homeguide.example",
+        "exact": true
+      }
+    ],
+    "assetChecks": [
+      {
+        "key": "main_property_image",
+        "used": true,
+        "faithful": true,
+        "notes": "Clean supplied interior in fixed slot."
+      }
+    ],
+    "identityLeakage": [],
+    "defects": [],
+    "visualReview": {
+      "rubricVersion": "adstudio-subject-invariant-clone-v1",
+      "requestHash": "cea19384b4c54b3169834f6d85be0c0d36101e92c5ff5c1a5532890bda606108",
+      "candidateHash": "bb83d1d5e73a9a906e80677e0c4ddd8676547fe4ddd3b696cde7fe427d692b9d",
+      "reviewer": {
+        "provider": "google",
+        "model": "gemini-3.6-flash"
+      },
+      "adSystemLikenessScore": 9.8,
+      "standaloneAdQualityScore": 9.5,
+      "excludedContentInfluencedScore": false,
+      "reviewedAt": "2026-08-11T05:10:00Z"
+    }
+  }
+}
