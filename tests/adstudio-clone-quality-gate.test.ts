@@ -114,7 +114,7 @@ test("runtime quality lock requires scores, exact copy, faithful assets, and cle
   }), false);
 });
 
-test("only a clean 9+ or exact-copy-only near-pass warrants a corrected same-tier retry", () => {
+test("only a clean 9+ or high-scoring exact-copy near-pass warrants a corrected same-tier retry", () => {
   assert.equal(cloneQualityWarrantsSameTierRetry({
     review: review({ adSystemLikenessScore: 9.2 }),
     expectedCopy,
@@ -162,7 +162,7 @@ test("only a clean 9+ or exact-copy-only near-pass warrants a corrected same-tie
     }),
     expectedCopy,
     expectedAssetKeys,
-  }), false);
+  }), true, "one bounded cheaper retry may repair the copy mismatch and single visual defect");
 });
 
 test("only an internally inconsistent clean near-pass needs independent vision confirmation", () => {
