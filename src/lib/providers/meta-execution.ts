@@ -1155,9 +1155,9 @@ async function publishWithMarketingApi(
     }
 
     for (const leadForm of plan.leadForms) {
+      const providerName = buildMetaProviderObjectName(plan, leadForm.localId, leadForm.name);
       let formId: string | undefined = reconciledObjects.leadFormIds[leadForm.localId];
       if (!formId) {
-        const providerName = buildMetaProviderObjectName(plan, leadForm.localId, leadForm.name);
         formId = input.reconcileMissingObjects
           ? await findMetaObjectByName(
               input,
@@ -1185,7 +1185,7 @@ async function publishWithMarketingApi(
       // A deterministic name proves identity, not content. Always verify the
       // exact Instant Form fields before recording either a recovered, newly
       // created, or previously checkpointed provider ID as publish-ready.
-      await verifyMetaLeadForm(input, requestLog, responseLog, formId, leadForm, input.pageAccessToken ?? input.accessToken);
+      await verifyMetaLeadForm(input, requestLog, responseLog, formId, providerName, leadForm, input.pageAccessToken ?? input.accessToken);
       reconciledObjects.leadFormIds[leadForm.localId] = formId;
       await checkpointMetaPublishProgress(input, requestLog, responseLog, reconciledObjects);
     }
@@ -1523,6 +1523,7 @@ async function verifyMetaLeadForm(
   requestLog: MetaProviderLogEntry[],
   responseLog: MetaProviderLogEntry[],
   formId: string,
+  expectedName: string,
   expected: MetaPublishLeadFormPlan,
   accessToken: string,
 ) {
@@ -1538,12 +1539,76 @@ async function verifyMetaLeadForm(
   responseLog.push({ step, method: "GET", path, response: payload, status: response.status, createdAt: new Date().toISOString() });
   if (!response.ok) throw new Error(metaProviderErrorMessage(payload, `Meta lead form read-back failed with ${response.status}.`));
 
-  const serialized = JSON.stringify(payload);
-  const expectedValues = [expected.headline, expected.intro, expected.privacyPolicyUrl, expected.thankYouTitle, expected.thankYouBody, expected.thankYouWebsiteUrl, ...expected.customQuestions]
-    .filter(Boolean);
-  if (expectedValues.some((value) => !serialized.includes(value))) {
+  if (!metaLeadFormReadbackMatches(payload, formId, expectedName, expected)) {
     throw new MetaReconciliationRequiredError("Meta did not read back the requested Instant Form fields exactly; the paused campaign was not created.");
   }
+}
+
+function canonicalMetaQuestion(value: unknown): string | null {
+  const question = recordValue(value);
+  if (!question || typeof question.type !== "string" || typeof question.key !== "string") return null;
+  const options = question.options == null
+    ? []
+    : Array.isArray(question.options)
+      ? question.options.map((option) => {
+          const entry = recordValue(option);
+          return entry && typeof entry.key === "string" && typeof entry.label === "string"
+            ? { key: entry.key, label: entry.label }
+            : null;
+        })
+      : [null];
+  if (options.some((option) => option === null)) return null;
+  const label = question.type === "CUSTOM"
+    ? (typeof question.label === "string" ? question.label : null)
+    : null;
+  if (question.type === "CUSTOM" && label === null) return null;
+  return JSON.stringify({
+    type: question.type,
+    key: question.key,
+    label,
+    options,
+  });
+}
+
+/** Compare only documented Graph fields, structurally and without substring evidence. */
+export function metaLeadFormReadbackMatches(
+  payload: Record<string, unknown>,
+  formId: string,
+  expectedName: string,
+  expected: MetaPublishLeadFormPlan,
+): boolean {
+  const context = recordValue(payload.context_card);
+  const privacy = recordValue(payload.privacy_policy);
+  const thankYou = recordValue(payload.thank_you_page);
+  if (
+    payload.id !== formId
+    || payload.name !== expectedName
+    || payload.question_page_custom_headline !== expected.headline
+    || context?.title !== expected.headline
+    || context?.style !== "PARAGRAPH_STYLE"
+    || !Array.isArray(context.content)
+    || context.content.length !== 1
+    || context.content[0] !== expected.intro
+    || privacy?.url !== expected.privacyPolicyUrl
+    || privacy?.link_text !== "Privacy Policy"
+    || payload.follow_up_action_url !== expected.thankYouWebsiteUrl
+    || thankYou?.title !== expected.thankYouTitle
+    || thankYou?.body !== expected.thankYouBody
+    || thankYou?.button_text !== expected.thankYouButtonText
+    || thankYou?.button_type !== expected.thankYouButtonType
+    || thankYou?.website_url !== expected.thankYouWebsiteUrl
+    || !Array.isArray(payload.questions)
+  ) return false;
+
+  const expectedQuestions = [
+    ...expected.contactFields.map((type) => ({ type, key: type.toLowerCase(), label: null, options: [] })),
+    ...expected.customQuestions.map((label, index) => ({ type: "CUSTOM", key: `custom_${index + 1}`, label, options: [] })),
+  ].map((question) => JSON.stringify(question)).sort();
+  const actualQuestions = payload.questions.map(canonicalMetaQuestion);
+  return actualQuestions.every((question): question is string => question !== null)
+    && actualQuestions.length === expectedQuestions.length
+    && new Set(actualQuestions).size === actualQuestions.length
+    && actualQuestions.sort().every((question, index) => question === expectedQuestions[index]);
 }
 
 class MetaReconciliationRequiredError extends Error {}

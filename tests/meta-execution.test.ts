@@ -48,17 +48,20 @@ const controls: MetaPublishControls = {
   },
 };
 
-function leadFormReadback(plan: { leadForms: Array<{ name: string; headline: string; intro: string; contactFields: string[]; customQuestions: string[]; privacyPolicyUrl: string; thankYouTitle: string; thankYouBody: string; thankYouButtonType: string; thankYouButtonText: string; thankYouWebsiteUrl: string }> }, id: string) {
+function leadFormReadback(plan: { planId: string; leadForms: Array<{ localId: string; name: string; headline: string; intro: string; contactFields: string[]; customQuestions: string[]; privacyPolicyUrl: string; thankYouTitle: string; thankYouBody: string; thankYouButtonType: string; thankYouButtonText: string; thankYouWebsiteUrl: string }> }, id: string) {
   const form = plan.leadForms[0]!;
   return {
     id,
-    name: form.name,
+    name: `${form.name} [BW:${plan.planId}:${form.localId}]`,
     context_card: { title: form.headline, content: [form.intro], style: "PARAGRAPH_STYLE" },
     question_page_custom_headline: form.headline,
     privacy_policy: { url: form.privacyPolicyUrl, link_text: "Privacy Policy" },
     follow_up_action_url: form.thankYouWebsiteUrl,
     thank_you_page: { title: form.thankYouTitle, body: form.thankYouBody, button_text: form.thankYouButtonText, button_type: form.thankYouButtonType, website_url: form.thankYouWebsiteUrl },
-    questions: [...form.contactFields.map((type) => ({ type })), ...form.customQuestions.map((label) => ({ type: "CUSTOM", label }))],
+    questions: [
+      ...form.contactFields.map((type) => ({ type, key: type.toLowerCase(), label: `Meta ${type.toLowerCase()} label` })),
+      ...form.customQuestions.map((label, index) => ({ type: "CUSTOM", key: `custom_${index + 1}`, label })),
+    ],
   };
 }
 
@@ -1337,10 +1340,15 @@ test("marketing_api reconciliation rejects a recovered Instant Form with mismatc
       });
     }
     if (url.includes("/form_recovered?")) {
+      const valid = leadFormReadback(plan, "form_recovered");
       return new Response(JSON.stringify({
-        ...leadFormReadback(plan, "form_recovered"),
-        question_page_custom_headline: "A different form headline",
-        context_card: { title: "A different form headline", content: ["Different introduction"] },
+        ...valid,
+        context_card: { title: "A different form headline", content: [leadForm.intro], style: "PARAGRAPH_STYLE" },
+        questions: [...valid.questions, valid.questions.at(-1)],
+        decoy: {
+          expectedHeadlineInWrongField: leadForm.headline,
+          expectedQuestionInWrongField: leadForm.customQuestions[0],
+        },
       }), { status: 200, headers: { "content-type": "application/json" } });
     }
     return new Response(JSON.stringify({
