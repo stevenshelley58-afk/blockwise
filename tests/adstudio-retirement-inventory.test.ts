@@ -36,9 +36,21 @@ test("retirement inventory retains a canonical finished-clone canary and scopes 
       { id: "run_legacy", workspace_id: "workspace_1", input_json: { campaignId: "campaign_legacy" } },
       { id: "run_canary", workspace_id: "workspace_1", input_json: { campaignId: "campaign_canary" } },
     ],
+    adstudio_creative_jobs: [
+      { id: "creative_job_legacy", workspace_id: "workspace_1", campaign_id: "campaign_legacy", payload: {} },
+      { id: "creative_job_canary", workspace_id: "workspace_1", campaign_id: "campaign_canary", payload: {} },
+    ],
+    adstudio_generation_locks: [
+      { dedupe_key: "lock_legacy", workspace_id: "workspace_1", job_id: "creative_job_legacy" },
+      { dedupe_key: "lock_canary", workspace_id: "workspace_1", job_id: "creative_job_canary" },
+    ],
+    adstudio_clone_candidate_audits: [
+      { id: "audit_legacy", workspace_id: "workspace_1", correlation_id: "correlation_legacy" },
+      { id: "audit_canary", workspace_id: "workspace_1", correlation_id: "correlation_canary" },
+    ],
     adstudio_provider_runs: [
-      { id: "provider_legacy", workspace_id: "workspace_1", job_id: "run_legacy", input_json: {} },
-      { id: "provider_canary", workspace_id: "workspace_1", job_id: "run_canary", input_json: {} },
+      { id: "provider_legacy", workspace_id: "workspace_1", campaign_id: "campaign_legacy", job_id: "run_legacy", input_json: {}, correlation_id: "correlation_legacy" },
+      { id: "provider_canary", workspace_id: "workspace_1", campaign_id: "campaign_canary", job_id: "run_canary", input_json: {}, correlation_id: "correlation_canary" },
     ],
     adstudio_provider_run_attempts: [
       { id: "attempt_legacy", workspace_id: "workspace_1", provider_run_id: "provider_legacy" },
@@ -80,6 +92,7 @@ test("retirement inventory retains a canonical finished-clone canary and scopes 
     "adstudio_campaign_variants", "adstudio_creatives", "adstudio_creative_revisions",
     "adstudio_creative_revision_mutations", "adstudio_creative_objects", "adstudio_job_runs",
     "adstudio_provider_runs", "adstudio_provider_run_attempts", "adstudio_provider_attempt_outbox",
+    "adstudio_creative_jobs", "adstudio_generation_locks", "adstudio_clone_candidate_audits",
   ]) assert.equal(manifest.counts[table], 1, `${table} should retain only its legacy child`);
   assert.deepEqual(manifest.retainedCanonical, { planIds: ["plan_canary"], campaignIds: ["campaign_canary"] });
 });

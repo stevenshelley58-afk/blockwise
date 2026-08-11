@@ -103,44 +103,57 @@ const revisionIds = new Set(revisions.map((row) => row.id));
 const linkageIds = new Set([...campaignIds, ...planIds, ...variantIds, ...creativeIds, ...revisionIds]);
 const jobRuns = rows("adstudio_job_runs").filter((row) => inLegacyWorkspace(row) && jsonReferencesAnyId(row.input_json, linkageIds));
 const jobRunIds = new Set(jobRuns.map((row) => row.id));
-const providerRuns = rows("adstudio_provider_runs").filter((row) => inLegacyWorkspace(row) && (jobRunIds.has(row.job_id) || jsonReferencesAnyId(row.input_json, linkageIds)));
+const creativeJobs = rows("adstudio_creative_jobs").filter((row) => inLegacyWorkspace(row)
+  && (campaignIds.has(row.campaign_id) || jsonReferencesAnyId(row.payload, linkageIds)));
+const creativeJobIds = new Set(creativeJobs.map((row) => row.id));
+const providerRuns = rows("adstudio_provider_runs").filter((row) => inLegacyWorkspace(row)
+  && (campaignIds.has(row.campaign_id) || jobRunIds.has(row.job_id) || creativeJobIds.has(row.job_id) || jsonReferencesAnyId(row.input_json, linkageIds)));
 const providerRunIds = new Set(providerRuns.map((row) => row.id));
+const legacyCorrelationIds = new Set([...creativeJobs, ...providerRuns].map((row) => row.correlation_id).filter(Boolean));
+const canonicalCorrelationIds = new Set(rows("adstudio_provider_runs")
+  .filter((row) => canonicalCampaignIds.has(row.campaign_id))
+  .map((row) => row.correlation_id)
+  .filter(Boolean));
 const tableRows = {
   adstudio_campaigns: campaigns,
   adstudio_campaign_variants: variants,
   adstudio_creatives: creatives,
   adstudio_creative_revisions: revisions,
   adstudio_creative_revision_mutations: rows("adstudio_creative_revision_mutations").filter((row) => inLegacyWorkspace(row) && creativeIds.has(row.creative_id)),
-  adstudio_creative_jobs: [], // Schema has no campaign/creative FK. Retain unless manually classified.
+  adstudio_creative_jobs: creativeJobs,
   adstudio_job_runs: jobRuns,
   adstudio_creative_objects: rows("adstudio_creative_objects").filter((row) => inLegacyWorkspace(row) && creativeIds.has(row.creative_id)),
   adstudio_platform_copy: rows("adstudio_platform_copy").filter((row) => inLegacyWorkspace(row) && (campaignIds.has(row.campaign_id) || variantIds.has(row.variant_id))),
   adstudio_exports: rows("adstudio_exports").filter((row) => inLegacyWorkspace(row) && campaignIds.has(row.campaign_id)),
   adstudio_compliance_reports: rows("adstudio_compliance_reports").filter((row) => inLegacyWorkspace(row) && (campaignIds.has(row.campaign_id) || variantIds.has(row.variant_id))),
-  adstudio_clone_candidate_audits: [], // Correlation-only schema; never infer ownership from workspace.
+  adstudio_clone_candidate_audits: rows("adstudio_clone_candidate_audits").filter((row) => inLegacyWorkspace(row) && legacyCorrelationIds.has(row.correlation_id)),
   adstudio_provider_runs: providerRuns,
   adstudio_provider_run_attempts: rows("adstudio_provider_run_attempts").filter((row) => inLegacyWorkspace(row) && providerRunIds.has(row.provider_run_id)),
   adstudio_provider_attempt_outbox: rows("adstudio_provider_attempt_outbox").filter((row) => inLegacyWorkspace(row) && providerRunIds.has(row.provider_run_id)),
-  adstudio_generation_locks: [], // Workspace-only schema; never retire without a direct owner key.
+  adstudio_generation_locks: rows("adstudio_generation_locks").filter((row) => inLegacyWorkspace(row) && creativeJobIds.has(row.job_id)),
   adstudio_brand_assets: [],
   adstudio_brand_kits: [],
-  adstudio_template_review_overrides: rows("adstudio_template_review_overrides").filter((row) => inLegacyWorkspace(row) && campaignIds.has(row.campaign_id)),
+  adstudio_template_review_overrides: [], // Global template governance has no campaign owner key.
   meta_publish_plans: plans,
   meta_publish_plan_mutations: rows("meta_publish_plan_mutations").filter((row) => inLegacyWorkspace(row) && planIds.has(row.meta_publish_plan_id)),
   approval_requests: rows("approval_requests").filter((row) => inLegacyWorkspace(row)
     && ((row.target_type === "meta_publish_plan" && planIds.has(row.target_id)) || (row.target_type === "adstudio_campaign" && campaignIds.has(row.target_id)))),
   lead_source_attribution: rows("lead_source_attribution").filter((row) => inLegacyWorkspace(row) && (planIds.has(row.meta_publish_plan_id) || campaignIds.has(row.adstudio_campaign_id))),
-  meta_leads: rows("meta_leads").filter((row) => inLegacyWorkspace(row) && (planIds.has(row.meta_publish_plan_id) || campaignIds.has(row.adstudio_campaign_id))),
-  leads: rows("leads").filter((row) => inLegacyWorkspace(row) && (planIds.has(row.meta_publish_plan_id) || campaignIds.has(row.adstudio_campaign_id))),
-  lead_events: rows("lead_events").filter((row) => inLegacyWorkspace(row) && (planIds.has(row.meta_publish_plan_id) || campaignIds.has(row.adstudio_campaign_id))),
-  lead_delivery_attempts: rows("lead_delivery_attempts").filter((row) => inLegacyWorkspace(row) && (planIds.has(row.meta_publish_plan_id) || campaignIds.has(row.adstudio_campaign_id))),
-  lead_dedupe_records: rows("lead_dedupe_records").filter((row) => inLegacyWorkspace(row) && (planIds.has(row.meta_publish_plan_id) || campaignIds.has(row.adstudio_campaign_id))),
   job_queue: rows("job_queue").filter((row) => inLegacyWorkspace(row) && legacyJobKinds.has(String(row.kind)) && jsonReferencesPlanId(row.payload_json ?? row.payload ?? row.data_json)),
 };
-const indirectOnlyTables = new Set(["adstudio_creative_jobs", "adstudio_clone_candidate_audits", "adstudio_generation_locks"]);
+const legacyLeadIds = new Set(tableRows.lead_source_attribution.map((row) => row.lead_id).filter(Boolean));
+tableRows.leads = rows("leads").filter((row) => inLegacyWorkspace(row) && legacyLeadIds.has(row.id));
+tableRows.meta_leads = rows("meta_leads").filter((row) => inLegacyWorkspace(row) && legacyLeadIds.has(row.lead_id));
+tableRows.lead_events = rows("lead_events").filter((row) => inLegacyWorkspace(row) && legacyLeadIds.has(row.lead_id));
+tableRows.lead_delivery_attempts = rows("lead_delivery_attempts").filter((row) => inLegacyWorkspace(row) && legacyLeadIds.has(row.lead_id));
+tableRows.lead_dedupe_records = rows("lead_dedupe_records").filter((row) => inLegacyWorkspace(row) && (legacyLeadIds.has(row.lead_id) || legacyLeadIds.has(row.duplicate_of_lead_id)));
+const indirectOnlyTables = new Set(["adstudio_clone_candidate_audits"]);
 const unclassifiedRows = Object.entries(inventory).flatMap(([table, value]) => {
   if (!value.present || !Object.hasOwn(tableRows, table) || !indirectOnlyTables.has(table)) return [];
-  return value.rows.filter(inLegacyWorkspace).map((row) => `${table}:${row.id ?? row.dedupe_key ?? "unknown"}`);
+  const scoped = new Set(tableRows[table]);
+  return value.rows.filter((row) => inLegacyWorkspace(row) && !scoped.has(row)
+    && !(table === "adstudio_clone_candidate_audits" && canonicalCorrelationIds.has(row.correlation_id)))
+    .map((row) => `${table}:${row.id ?? row.dedupe_key ?? "unknown"}`);
 });
 if (unclassifiedRows.length) throw new Error(`Unclassified workspace-only retirement rows must be resolved manually: ${unclassifiedRows.slice(0, 20).join(", ")}`);
 const scopedTables = Object.fromEntries(Object.entries(inventory).map(([table, value]) => [
