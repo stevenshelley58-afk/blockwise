@@ -168,15 +168,34 @@ if (unclassifiedPresentTables.length) throw new Error(`Unclassified present reti
 
 const storageRefs = Object.values(scopedTables).flatMap((table) => table.flatMap((row) => [
   row.storage_path, row.preview_url, row.full_url, row.render_path, row.export_path,
-])).filter((value) => typeof value === "string");
-const parsedStorageObjects = storageRefs.map(storageObjectFromReference);
+  ...canvasStorageReferences(row.canvas_json),
+].filter((value) => typeof value === "string").map((value) => ({ value, workspaceId: row.workspace_id }))));
+const parsedStorageObjects = storageRefs.map(({ value, workspaceId }) => storageObjectFromReference(value, workspaceId));
 const unparsedStorageReferences = storageRefs.filter((reference, index) => !parsedStorageObjects[index]);
 if (unparsedStorageReferences.length) throw new Error(`Unclassified storage references: ${unparsedStorageReferences.slice(0, 5).join(", ")}`);
 const storageObjects = [...new Map(parsedStorageObjects.map((item) => [`${item.bucketId}:${item.name}`, item])).values()]
   .sort((left, right) => `${left.bucketId}/${left.name}`.localeCompare(`${right.bucketId}/${right.name}`));
 const storagePaths = storageObjects.map((item) => item.name);
 
-function storageObjectFromReference(value) {
+function canvasStorageReferences(canvas) {
+  if (!canvas || typeof canvas !== "object") return [];
+  const value = canvas;
+  const objects = Array.isArray(value.objects) ? value.objects : [];
+  const objectRefs = objects.flatMap((object) => {
+    if (!object || typeof object !== "object") return [];
+    return [object.content, object.assetId].filter((reference) => typeof reference === "string");
+  });
+  const historyRefs = [value.renderHistory, value.redoHistory]
+    .filter(Array.isArray)
+    .flatMap((history) => history.filter((reference) => typeof reference === "string"));
+  return [...objectRefs, ...historyRefs];
+}
+
+function storageObjectFromReference(value, workspaceId) {
+  if (value.startsWith("/api/adstudio/media?")) {
+    const name = new URL(value, "https://blockwise.invalid").searchParams.get("path");
+    return name ? { bucketId: "workspace-artifacts", name } : null;
+  }
   if (!value.startsWith("http")) return { bucketId: "workspace-artifacts", name: value };
   try {
     const urlValue = new URL(value);

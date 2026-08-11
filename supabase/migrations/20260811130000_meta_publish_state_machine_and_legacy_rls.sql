@@ -13,24 +13,25 @@ where status in ('approved', 'paused_live');
 -- never backfill a hash from timestamps or mutable campaign rows.
 alter table public.adstudio_compliance_reports
   add column if not exists subject_hash text;
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conrelid = 'public.adstudio_compliance_reports'::regclass
+      and conname = 'adstudio_compliance_reports_subject_hash_check'
+  ) then
+    alter table public.adstudio_compliance_reports
+      add constraint adstudio_compliance_reports_subject_hash_check
+      check (subject_hash is null or subject_hash ~ '^[A-Fa-f0-9]{64}$');
+  end if;
+end $$;
 create index if not exists adstudio_compliance_reports_subject_hash_idx
   on public.adstudio_compliance_reports (workspace_id, campaign_id, subject_hash)
   where subject_hash is not null;
 
-do $$
-declare
-  constraint_name text;
-begin
-  select conname into constraint_name
-  from pg_constraint
-  where conrelid = 'public.meta_publish_plans'::regclass
-    and contype = 'c'
-    and pg_get_constraintdef(oid) like '%status%';
-
-  if constraint_name is not null then
-    execute format('alter table public.meta_publish_plans drop constraint %I', constraint_name);
-  end if;
-end $$;
+alter table public.meta_publish_plans
+  drop constraint if exists meta_publish_plans_status_check;
 
 alter table public.meta_publish_plans
   add constraint meta_publish_plans_status_check

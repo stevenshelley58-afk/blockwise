@@ -169,7 +169,7 @@ export function validateMetaInstantFormSpec(form: MetaInstantFormSpec): string[]
   if (form.customQuestions.some((question) => SENSITIVE_LEAD_QUESTION_PATTERN.test(question))) {
     blockers.push("Meta housing lead forms cannot ask prohibited sensitive questions.");
   }
-  if (!isHttpUrl(form.privacyPolicyUrl) || !isHttpUrl(form.thankYouWebsiteUrl)) {
+  if (!isHttpsUrl(form.privacyPolicyUrl) || !isHttpsUrl(form.thankYouWebsiteUrl)) {
     blockers.push("Meta Instant Form privacy and completion URLs must be valid HTTPS URLs.");
   }
   return blockers;
@@ -2083,6 +2083,14 @@ function isHttpUrl(value: string): boolean {
   try {
     const url = new URL(value);
     return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+function isHttpsUrl(value: string): boolean {
+  try {
+    return new URL(value).protocol === "https:";
   } catch {
     return false;
   }

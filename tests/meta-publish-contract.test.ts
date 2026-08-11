@@ -83,6 +83,14 @@ test("Instant Form payload snapshots visible intro, question headline and thank-
     thank_you_page: { title: "Thank you", body: "We will be in touch.", button_text: "Visit website", button_type: "VIEW_WEBSITE", website_url: "https://example.test/next" },
   });
   assert.match(validateMetaInstantFormSpec({ ...form, customQuestions: ["What is your income?"] }).join(" "), /prohibited sensitive/i);
+  assert.match(
+    validateMetaInstantFormSpec({ ...form, privacyPolicyUrl: "http://example.test/privacy" }).join(" "),
+    /valid HTTPS URLs/i,
+  );
+  assert.match(
+    validateMetaInstantFormSpec({ ...form, thankYouWebsiteUrl: "http://example.test/next" }).join(" "),
+    /valid HTTPS URLs/i,
+  );
 });
 
 test("Meta creative payload fails closed to a single image when either placement asset is absent", () => {
