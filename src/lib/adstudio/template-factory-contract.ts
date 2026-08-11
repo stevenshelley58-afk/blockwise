@@ -11,6 +11,15 @@ export const TEMPLATE_FACTORY_MAX_IMAGE_BYTES = 15 * 1024 * 1024;
 export type PullReceipt = { url: string; contentHash: string; expiresAt: string };
 export type TemplateFactoryImageInput = { key: string; label: string; description: string; aspect?: string; required: boolean };
 export type TemplateFactoryTextInput = { key: string; label: string; maxLength: number; required: boolean; sample: string };
+export type TemplateFactoryPrivateSourceAd = {
+  creativeId?: string;
+  file?: string;
+  contentHash: string;
+};
+export type TemplateFactoryPublicSourceAd = {
+  contentHash: string;
+  provenance: "frank_factory";
+};
 export type TemplateFactoryDraft = {
   id: string;
   name: string;
@@ -22,7 +31,8 @@ export type TemplateFactoryDraft = {
     property_or_agent_focus: "property" | "agent" | "both";
   };
   inputs: { images: TemplateFactoryImageInput[]; text: TemplateFactoryTextInput[] };
-  sourceAd: { creativeId?: string; file?: string; contentHash: string };
+  /** Private Frank-only provenance. It is accepted only by the clone endpoint. */
+  sourceAd: TemplateFactoryPrivateSourceAd;
   [key: string]: unknown;
 };
 
@@ -87,7 +97,8 @@ export type TemplateFactoryExportBody = {
   attestation: ReleaseAttestation;
 };
 
-type PublicGalleryManifest = TemplateFactoryDraft & {
+type PublicGalleryManifest = Omit<TemplateFactoryDraft, "sourceAd"> & {
+  sourceAd: TemplateFactoryPublicSourceAd;
   sample: {
     imageSrc: string;
     thumbnailSrc: string;
@@ -211,7 +222,12 @@ function validatePublicGalleryManifest(value: Record<string, unknown>): asserts 
   if (!classification?.ad_type?.trim() || !classification.primary_intent?.trim() || !["property", "agent", "both"].includes(String(classification.property_or_agent_focus))) {
     throw new Error("Gallery manifest classification is invalid.");
   }
-  if (!manifest.sourceAd || !/^[a-f0-9]{64}$/u.test(String(manifest.sourceAd.contentHash ?? ""))) throw new Error("Gallery manifest provenance is invalid.");
+  if (!manifest.sourceAd
+    || !hasExactKeys(manifest.sourceAd, ["contentHash", "provenance"])
+    || !/^[a-f0-9]{64}$/u.test(String(manifest.sourceAd.contentHash ?? ""))
+    || manifest.sourceAd.provenance !== "frank_factory") {
+    throw new Error("Gallery manifest provenance must be source-free and factory-attested.");
+  }
   const sample = manifest.sample;
   if (!sample || !/^[a-f0-9]{64}$/u.test(String(sample.contentHash ?? "")) || sample.generatedBy !== "reference_clone"
     || sample.imageSrc !== sample.thumbnailSrc || !sample.alt?.trim()
@@ -232,9 +248,14 @@ function assertSourceFree(value: unknown, key = "manifest"): void {
   if (Array.isArray(value)) { value.forEach((item, index) => assertSourceFree(item, `${key}[${index}]`)); return; }
   if (!value || typeof value !== "object") return;
   for (const [childKey, child] of Object.entries(value as Record<string, unknown>)) {
-    if (/^(?:sourceReference|privatePath|bytes|dataUrl|base64|layers|recipe|versions|fonts)$/iu.test(childKey)) throw new Error(`Gallery manifest contains forbidden field ${childKey}.`);
+    if (/^(?:sourceReference|privatePath|sourceFile|fileName|file|creativeId|bytes|dataUrl|base64|layers|recipe|versions|fonts)$/iu.test(childKey)) throw new Error(`Gallery manifest contains forbidden field ${childKey}.`);
     assertSourceFree(child, `${key}.${childKey}`);
   }
+}
+
+function hasExactKeys(value: object, expected: readonly string[]): boolean {
+  const keys = Object.keys(value);
+  return keys.length === expected.length && keys.every((key) => expected.includes(key));
 }
 
 export function pullFingerprint(receipt: PullReceipt): string {

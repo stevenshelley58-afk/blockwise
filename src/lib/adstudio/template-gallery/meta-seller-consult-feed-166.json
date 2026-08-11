@@ -108,8 +108,8 @@
     ]
   },
   "sourceAd": {
-    "file": "01_feed_4x5_best/meta_166.png",
-    "contentHash": "8d5be92bce991e7e107b8aa93ced81c46a8d1b0445759cdc831d4ffc8bb60d0b"
+    "contentHash": "8d5be92bce991e7e107b8aa93ced81c46a8d1b0445759cdc831d4ffc8bb60d0b",
+    "provenance": "frank_factory"
   },
   "classification": {
     "ad_type": "seller_checklist",
@@ -546,6 +546,6 @@
     }
   },
   "qualityLock": {
-    "templateHash": "4e72d7f1d150496c51d26c49fa3a6e506ec0f2a3749640ba4e23b508749be0fc"
+    "templateHash": "baa99ceba5695238d93161fa989f184bf1a2c47d2e647460689ba1f8ca295cb1"
   }
 }

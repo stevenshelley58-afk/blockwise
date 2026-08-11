@@ -69,8 +69,8 @@
     ]
   },
   "sourceAd": {
-    "file": "01_feed_4x5_best/meta_018.png",
-    "contentHash": "e67bfaec28cce6e1ea7cbddc6ed9e377533388484dce7d4cb98fa214c05f16f8"
+    "contentHash": "e67bfaec28cce6e1ea7cbddc6ed9e377533388484dce7d4cb98fa214c05f16f8",
+    "provenance": "frank_factory"
   },
   "classification": {
     "ad_type": "social_post",
@@ -290,6 +290,6 @@
     }
   },
   "qualityLock": {
-    "templateHash": "8b9fc7600b596e2dec4939c8ad915a5fb3250675edd60b35a5668157777fb6a2"
+    "templateHash": "ad656c62669be27d60d8b35b5cdcdfb0def7dc6e284f00cd2ffdff57b0e629f9"
   }
 }

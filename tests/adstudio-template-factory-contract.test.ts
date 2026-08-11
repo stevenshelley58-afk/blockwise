@@ -40,7 +40,7 @@ function exportBody(): TemplateFactoryExportBody {
       images: [{ key: "property_photo", label: "Property photo", description: "Customer property", required: true }],
       text: [{ key: "headline", label: "Headline", maxLength: 40, required: true, sample: "Find your next home" }],
     },
-    sourceAd: { file: "01_feed/source.png", contentHash: "a".repeat(64) },
+    sourceAd: { contentHash: "a".repeat(64), provenance: "frank_factory" },
     sample: {
       imageSrc: "/adstudio-samples/meta/meta-factory-feed-001-v1.png",
       thumbnailSrc: "/adstudio-samples/meta/meta-factory-feed-001-v1.png",
@@ -120,6 +120,16 @@ test("candidate evidence binds the exact inputs and public QA shape used by Fran
 test("release attestation accepts only a source-free flat gallery manifest", () => {
   const body = exportBody();
   assert.doesNotThrow(() => validateReleaseAttestation(body));
+  const privateSource = exportBody();
+  privateSource.manifest.sourceAd = {
+    ...(privateSource.manifest.sourceAd as object),
+    file: "01_feed/source.png",
+  };
+  privateSource.manifestHash = canonicalHash(privateSource.manifest);
+  privateSource.attestation.manifestHash = privateSource.manifestHash;
+  const { attestationHash: _privateHash, ...privateUnsigned } = privateSource.attestation;
+  privateSource.attestation.attestationHash = canonicalHash(privateUnsigned);
+  assert.throws(() => validateReleaseAttestation(privateSource), /source-free|forbidden field file/u);
   const layered = structuredClone(body);
   layered.manifest.layers = [];
   layered.manifestHash = canonicalHash(layered.manifest);
@@ -175,6 +185,7 @@ test("operator importer is cell-scoped, bundle-hash validating, source-free, and
   assert.match(importer, /sha256\(bundleBytes\) !== release\.bundle_hash/u);
   assert.match(importer, /artifacts", "adstudio-template-imports", releaseId/u);
   assert.match(importer, /assertSourceFree\(publicEvidence\)/u);
+  assert.match(importer, /assertPublicSourceProvenance\(bundle\.manifest\.sourceAd\)/u);
   assert.match(importer, /adstudio:customer-fixture/u);
   assert.doesNotMatch(importer, /src", "lib", "adstudio", "template-gallery/u);
 });
@@ -193,6 +204,8 @@ test("Blockwise keeps one post-Frank promotion path and no local source-to-sampl
   assert.match(promotion, /npm", \["run", "verify:hard-reset"\]/u);
   assert.match(promotion, /rmSync\(path, \{ force: true \}\)/u);
   assert.match(promotion, /qualityLock: \{ templateHash \}/u);
+  assert.match(promotion, /assertPublicSourceProvenance\(importedManifest\.sourceAd\)/u);
+  assert.match(promotion, /assertPublicSourceProvenance\(prepared\.sourceAd\)/u);
   assert.match(promotion, /copyChecks: factoryPackage\.qa\.copyChecks/u);
   assert.match(promotion, /assetChecks: factoryPackage\.qa\.assetChecks/u);
   assert.doesNotMatch(promotion, /observed: field\.sample|Passed the attested Blockwise visual QA gate/u);

@@ -171,8 +171,8 @@
     ]
   },
   "sourceAd": {
-    "file": "01_feed_4x5_best/meta_151.png",
-    "contentHash": "14b9dc6b4444b2da96cdc95cec203654772ac935125035ef8d5230fa4f028979"
+    "contentHash": "14b9dc6b4444b2da96cdc95cec203654772ac935125035ef8d5230fa4f028979",
+    "provenance": "frank_factory"
   },
   "classification": {
     "ad_type": "open_house",
@@ -214,9 +214,6 @@
         "body": "The agency will be in touch shortly."
       }
     }
-  },
-  "qualityLock": {
-    "templateHash": "62b787291bee3b81789594dd7f5c42997b207b984a31e7ee5dc3ff83a8494493"
   },
   "typography": {
     "contact_prompt": {
@@ -814,5 +811,8 @@
         "height": 0.15
       }
     }
+  },
+  "qualityLock": {
+    "templateHash": "38e00e354377a78703b3f40146d9c21dfe57076804f77e81e8d9eaf727c19eee"
   }
 }

@@ -330,7 +330,7 @@ function inMemoryFactoryTemplate(draft: TemplateFactoryDraft, referenceImage: st
     status: "approved",
     tags: [],
     sample: { imageSrc: referenceImage, thumbnailSrc: referenceImage, alt: draft.name, generatedBy: "reference_clone", contentHash: draft.sourceAd.contentHash },
-    sourceAd: { file: "private-source-not-persisted", contentHash: draft.sourceAd.contentHash },
+    sourceAd: { contentHash: draft.sourceAd.contentHash, provenance: "frank_factory" },
     meta: {
       platform: "meta", objective: "OUTCOME_LEADS", specialAdCategory: "housing",
       primaryText: ["Request more information."], headlines: [draft.name], descriptions: ["Request more information."], cta: "LEARN_MORE",

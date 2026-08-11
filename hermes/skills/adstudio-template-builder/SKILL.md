@@ -40,7 +40,8 @@ Each JSON file under `src/lib/adstudio/template-gallery/` contains:
   plain description used in the reference-image legend
 - `inputs.text[]`: stable `key`, user label, `required`, `maxLength`, and safe
   sample text
-- `sourceAd`: real source provenance plus SHA-256 hash
+- `sourceAd`: opaque SHA-256 source hash plus `provenance: "frank_factory"`;
+  private source paths, filenames, and creative IDs remain in Frank
 - `classification`: `ad_type`, `primary_intent`, and
   `property_or_agent_focus`
 

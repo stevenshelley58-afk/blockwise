@@ -89,8 +89,8 @@
     ]
   },
   "sourceAd": {
-    "file": "01_feed_4x5_best/meta_055.png",
-    "contentHash": "82c1f3f48d910b3daeaf4d347fabce2ed5c56721287e03826c5d8184368c10b9"
+    "contentHash": "82c1f3f48d910b3daeaf4d347fabce2ed5c56721287e03826c5d8184368c10b9",
+    "provenance": "frank_factory"
   },
   "classification": {
     "ad_type": "just_sold",
@@ -374,9 +374,6 @@
       ]
     }
   },
-  "qualityLock": {
-    "templateHash": "aee5eaf3b1b37069ae83d746007f4b648f925b2f1384444f2479ca216c03cf25"
-  },
   "deterministicEditing": {
     "status": "ready",
     "imageBoxes": {
@@ -393,5 +390,8 @@
         "height": 0.164
       }
     }
+  },
+  "qualityLock": {
+    "templateHash": "164114e136e8dec4ff4e64646ea6ecebbd4f289cdd441912746a6afa32fb3157"
   }
 }

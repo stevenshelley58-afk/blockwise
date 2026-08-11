@@ -171,6 +171,8 @@ function validateFactoryPackage({ importedManifest, importedSamplePath, factoryP
   }
   const stages = new Set(factoryPackage.attempts?.filter((attempt) => attempt.outcome === "pass").map((attempt) => attempt.stage));
   if (!stages.has("reference_clone") || !stages.has("visual_qa")) throw new Error("Factory paid-attempt evidence is incomplete.");
+  assertPublicSourceProvenance(importedManifest.sourceAd);
+  assertPublicSourceProvenance(prepared.sourceAd);
   assertSourceFree(importedManifest);
   assertSourceFree(factoryPackage);
 }
@@ -258,8 +260,19 @@ function assertSourceFree(value, key = "value") {
   if (Array.isArray(value)) { value.forEach((item, index) => assertSourceFree(item, `${key}[${index}]`)); return; }
   if (!isRecord(value)) return;
   for (const [childKey, child] of Object.entries(value)) {
-    if (/^(?:sourceReference|privatePath|bytes|dataUrl|base64|layers|recipe|versions|fonts)$/iu.test(childKey)) throw new Error(`Promotion contains forbidden field ${childKey}.`);
+    if (/^(?:sourceReference|privatePath|sourceFile|fileName|file|creativeId|bytes|dataUrl|base64|layers|recipe|versions|fonts)$/iu.test(childKey)) throw new Error(`Promotion contains forbidden field ${childKey}.`);
     assertSourceFree(child, `${key}.${childKey}`);
+  }
+}
+
+function assertPublicSourceProvenance(sourceAd) {
+  if (!isRecord(sourceAd)
+    || Object.keys(sourceAd).length !== 2
+    || !Object.hasOwn(sourceAd, "contentHash")
+    || !Object.hasOwn(sourceAd, "provenance")
+    || !/^[a-f0-9]{64}$/u.test(sourceAd.contentHash)
+    || sourceAd.provenance !== "frank_factory") {
+    throw new Error("Promotion source provenance must contain only the factory marker and SHA-256 hash.");
   }
 }
 

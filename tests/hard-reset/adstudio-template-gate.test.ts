@@ -40,7 +40,7 @@ function template(root: string, n: number, intent = "listing") {
       images: [{ key: "property_photo", label: "Property image", required: true, description: "customer property image" }],
       text: [{ key: "headline", label: "Headline", maxLength: 30, sample: "JUST LISTED", required: true }],
     },
-    sourceAd: { file: `${id}.png`, contentHash: hash(source) },
+    sourceAd: { contentHash: hash(source), provenance: "frank_factory" },
     classification: { ad_type: "listing", primary_intent: intent, property_or_agent_focus: "property" },
     meta: {
       platform: "meta", objective: "OUTCOME_LEADS", specialAdCategory: "housing",
@@ -340,6 +340,21 @@ test("the gate rejects old canvas/version fields", () => {
     const result = run(root);
     assert.notEqual(result.status, 0);
     assert.match(result.stderr, /old template field is forbidden/);
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test("the gate rejects private source filenames in public manifests", () => {
+  const root = fixtureRoot();
+  try {
+    const value = template(root, 1) as ReturnType<typeof template> & {
+      sourceAd: { contentHash: string; provenance?: string; file?: string };
+    };
+    delete value.sourceAd.provenance;
+    value.sourceAd.file = "01_feed_4x5_best/meta_001.png";
+    writeFileSync(join(root, "gallery", "meta-feed-001.json"), JSON.stringify(value));
+    const result = run(root);
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /Frank factory marker|sourceAd/u);
   } finally { rmSync(root, { recursive: true, force: true }); }
 });
 

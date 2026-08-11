@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 // AdStudio has one template model: a safe public sample image plus the image
-// and text inputs required to clone it. The private source ad is provenance for
-// building the public sample; it is never itself a gallery image.
+// and text inputs required to clone it. Only the private source ad's opaque hash
+// and Frank factory marker cross into the gallery contract.
 
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
@@ -602,9 +602,11 @@ for (const { file, template } of templates) {
   for (const path of findForbidden(template)) fail(id, `old template field is forbidden: ${path}`);
 
   const source = template.sourceAd;
-  const sourceKey = source?.creativeId ?? source?.file;
-  if (!sourceKey || !/^[a-f0-9]{64}$/iu.test(source?.contentHash ?? "")) {
-    fail(id, "sourceAd provenance and SHA-256 contentHash are required");
+  const sourceKey = source?.contentHash?.toLowerCase();
+  if (!hasExactKeys(source, ["contentHash", "provenance"])
+    || source.provenance !== "frank_factory"
+    || !/^[a-f0-9]{64}$/iu.test(sourceKey ?? "")) {
+    fail(id, "sourceAd must contain only the Frank factory marker and SHA-256 contentHash");
   } else {
     if (sources.has(sourceKey)) fail(id, `source ad already used by ${sources.get(sourceKey)}`);
     sources.set(sourceKey, id);

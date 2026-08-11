@@ -12,19 +12,42 @@ import { validateQualityLockIndex } from "../../src/lib/adstudio/templates.ts";
 import qualityLocks from "../../src/lib/adstudio/template-gallery/quality-locks.json" with { type: "json" };
 
 const forbidden = ["canvas", "fabricJson", "gallery", "templateKey", "promptHint", "version"];
+const privateSourceKeys = new Set(["file", "fileName", "filename", "sourceFile", "creativeId", "privatePath"]);
+
+function assertCustomerSourceFree(value: unknown, path = "template"): void {
+  if (typeof value === "string") {
+    assert.doesNotMatch(value, /(?:meta_ad_candidates|01_feed_4x5_best|02_stories_reels_9x16|private-source-not-persisted|\\)/u, `${path} exposes private source custody`);
+    return;
+  }
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => assertCustomerSourceFree(item, `${path}[${index}]`));
+    return;
+  }
+  if (!value || typeof value !== "object") return;
+  for (const [key, child] of Object.entries(value)) {
+    assert.equal(privateSourceKeys.has(key), false, `${path}.${key} exposes private source provenance`);
+    assertCustomerSourceFree(child, `${path}.${key}`);
+  }
+}
 
 test("the installed gallery exposes one unversioned sample-and-input contract", () => {
-  assert.equal(builtInAdStudioTemplates().length, RESOLVABLE_AD_STUDIO_TEMPLATES.length);
+  const customerTemplates = builtInAdStudioTemplates();
+  assert.equal(customerTemplates.length, 12);
+  assert.equal(customerTemplates.length, RESOLVABLE_AD_STUDIO_TEMPLATES.length);
   assert.equal(resolvableAdStudioTemplates().length, RESOLVABLE_AD_STUDIO_TEMPLATES.length);
+  assert.equal(Object.keys(qualityLocks.templates).length, 12);
   assert.equal(new Set(AD_STUDIO_TEMPLATES.map((template) => template.id)).size, AD_STUDIO_TEMPLATES.length);
   for (const template of AD_STUDIO_TEMPLATES) {
     assert.equal(template.status, "approved");
     assert.equal(template.sample.generatedBy, "reference_clone");
     assert.notEqual(template.sample.contentHash, template.sourceAd.contentHash);
+    assert.deepEqual(Object.keys(template.sourceAd).sort(), ["contentHash", "provenance"]);
+    assert.equal(template.sourceAd.provenance, "frank_factory");
     assert.ok(template.inputs.images.some((field) => field.required));
     const serialized = JSON.stringify(template);
     for (const key of forbidden) assert.equal(serialized.includes(`"${key}"`), false, `${template.id} contains ${key}`);
   }
+  assertCustomerSourceFree(customerTemplates);
   for (const template of RESOLVABLE_AD_STUDIO_TEMPLATES) {
     assert.equal(resolveAdStudioTemplate(template.id)?.id, template.id);
   }
