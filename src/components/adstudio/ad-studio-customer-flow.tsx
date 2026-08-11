@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Check, ImageIcon, LoaderCircle, Megaphone, Pencil, Plus, Redo2, Send, Trash2, Undo2 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,7 +27,8 @@ import { primaryImageSource } from "@/lib/adstudio/creative-preview";
 import { templateThumbnailSrcSet } from "@/lib/adstudio/template-display";
 import { downscaleImageForUpload } from "@/lib/upload/asset-file";
 
-import { requestCreativeEdit } from "./canvas/creative-edit-client";
+import { requestCreativeEdit, requestCreativeLayers } from "./canvas/creative-edit-client";
+import { loadPatchFonts, loadPatchImage, PATCH_PADDING, renderTextPatch } from "./canvas/text-patch";
 import { initialOfferLabelForPack } from "./template-offer-state";
 import { useCampaignActions, type GenerationProgress } from "./use-campaign-actions";
 import { seedCopy } from "./use-copy";
@@ -95,6 +96,19 @@ function hasFinishedPlacement(pack: AdStudioCampaignPack, format: Placement): bo
   return Boolean(creative?.activeRevisionId && creativeSource(creative));
 }
 
+function optimisticPatchStyle(box: { x: number; y: number; width: number; height: number }): CSSProperties {
+  const left = Math.max(0, box.x - PATCH_PADDING);
+  const top = Math.max(0, box.y - PATCH_PADDING);
+  const right = Math.min(1, box.x + box.width + PATCH_PADDING);
+  const bottom = Math.min(1, box.y + box.height + PATCH_PADDING);
+  return {
+    left: `${left * 100}%`,
+    top: `${top * 100}%`,
+    width: `${(right - left) * 100}%`,
+    height: `${(bottom - top) * 100}%`,
+  };
+}
+
 function CompactCreativeEditor({ creative, onCreativeChange, showToast }: {
   creative: AdStudioCreative;
   onCreativeChange: (creative: AdStudioCreative) => void;
@@ -103,10 +117,119 @@ function CompactCreativeEditor({ creative, onCreativeChange, showToast }: {
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
+  const [loadedFontIds, setLoadedFontIds] = useState<Set<string>>(new Set());
+  const [loadedPlate, setLoadedPlate] = useState<string | null>(null);
+  const [layerBuildIssue, setLayerBuildIssue] = useState<string | null>(null);
+  const [layerRetryToken, setLayerRetryToken] = useState(0);
+  const [freshPreview, setFreshPreview] = useState<{ ref: string; dataUrl: string } | null>(null);
+  const [optimisticPatch, setOptimisticPatch] = useState<{ dataUrl: string; box: { x: number; y: number; width: number; height: number } } | null>(null);
+  const layersRequestedForRef = useRef<string | null>(null);
+  const plateImagesRef = useRef(new Map<string, HTMLImageElement>());
+  const creativeRef = useRef(creative);
+  creativeRef.current = creative;
   const selected = creative.canvas.cloneQa?.regions.find((region) => region.key === selectedKey) ?? null;
   const src = creativeSource(creative);
+  const displaySrc = freshPreview?.ref === src ? freshPreview.dataUrl : src;
+  const regions = creative.canvas.cloneQa?.regions ?? [];
+  const textLayers = creative.canvas.textLayers;
+  const layersReady = textLayers?.status === "ready" && textLayers.validFor.includes(src);
+  const selectedTextStyle = selected?.kind === "text" ? textLayers?.styles[selected.key] : undefined;
+  const selectedTextInstantReady = Boolean(
+    layersReady
+    && loadedPlate === textLayers?.plate
+    && selectedTextStyle?.mode === "live"
+    && loadedFontIds.has(selectedTextStyle.fontId),
+  );
   const canUndo = (creative.canvas.renderHistory?.length ?? 0) > 0;
   const canRedo = (creative.canvas.redoHistory?.length ?? 0) > 0;
+
+  useEffect(() => {
+    if (regions.length === 0 || busy || !src || src.startsWith("data:")) return;
+    const current = creativeRef.current.canvas.textLayers;
+    if (current?.status === "ready" && current.validFor.includes(src)) return;
+
+    if (current?.status === "building" && current.derivedFrom === src) {
+      let cancelled = false;
+      let retry: number | undefined;
+      const poll = () => {
+        retry = window.setTimeout(() => {
+          void requestCreativeLayers(creative.creativeId).then((built) => {
+            if (cancelled) return;
+            if (!built) {
+              setLayerBuildIssue("Exact text editing could not finish preparing.");
+              return;
+            }
+            if (built.status === "building") return poll();
+            const latest = creativeRef.current;
+            const latestSrc = creativeSource(latest);
+            if (built.status === "ready" && !built.validFor.includes(latestSrc)) return;
+            setLayerBuildIssue(built.status === "failed" ? built.error ?? "Exact text editing could not finish preparing." : null);
+            onCreativeChange({ ...latest, canvas: { ...latest.canvas, textLayers: built } });
+          });
+        }, 2_000);
+      };
+      poll();
+      return () => {
+        cancelled = true;
+        if (retry !== undefined) window.clearTimeout(retry);
+      };
+    }
+
+    if (layersRequestedForRef.current === src) return;
+    layersRequestedForRef.current = src;
+    let cancelled = false;
+    void requestCreativeLayers(creative.creativeId).then((built) => {
+      if (cancelled) return;
+      if (!built) {
+        setLayerBuildIssue("Exact text editing could not finish preparing.");
+        return;
+      }
+      const latest = creativeRef.current;
+      const latestSrc = creativeSource(latest);
+      if ((built.status === "ready" && !built.validFor.includes(latestSrc))
+        || (built.status === "building" && built.derivedFrom !== latestSrc)) return;
+      setLayerBuildIssue(built.status === "failed" ? built.error ?? "Exact text editing could not finish preparing." : null);
+      onCreativeChange({ ...latest, canvas: { ...latest.canvas, textLayers: built } });
+    });
+    return () => { cancelled = true; };
+  }, [busy, creative.creativeId, layerRetryToken, onCreativeChange, regions.length, src]);
+
+  useEffect(() => {
+    const plate = textLayers?.plate;
+    if (!plate) {
+      setLoadedPlate(null);
+      return;
+    }
+    if (plateImagesRef.current.has(plate)) {
+      setLoadedPlate(plate);
+      return;
+    }
+    setLoadedPlate(null);
+    let cancelled = false;
+    void loadPatchImage(plate).then((image) => {
+      if (cancelled) return;
+      plateImagesRef.current.set(plate, image);
+      setLoadedPlate(plate);
+    }).catch(() => {
+      if (!cancelled) setLayerBuildIssue("The exact-text editing plate could not be loaded.");
+    });
+    return () => { cancelled = true; };
+  }, [layerRetryToken, textLayers?.plate]);
+
+  useEffect(() => {
+    if (!textLayers) return;
+    let cancelled = false;
+    const styles = Object.values(textLayers.styles);
+    void loadPatchFonts(styles).then((loaded) => {
+      if (cancelled) return;
+      setLoadedFontIds(loaded);
+      const required = new Set(styles.filter((style) => style.mode === "live").map((style) => style.fontId));
+      if ([...required].some((fontId) => !loaded.has(fontId))) {
+        setLayerBuildIssue("The exact text font could not be loaded.");
+      }
+    });
+    return () => { cancelled = true; };
+  }, [layerRetryToken, textLayers]);
 
   function chooseRegion(key: string) {
     const region = creative.canvas.cloneQa?.regions.find((item) => item.key === key);
@@ -114,11 +237,13 @@ function CompactCreativeEditor({ creative, onCreativeChange, showToast }: {
     setDraft(region?.kind === "text" ? creative.canvas.cloneQa?.copyValues[key] ?? "" : "");
   }
 
-  async function mutate(mutation: { action?: "undo" | "redo" | "edit"; fieldKey?: string; newValue?: string; newImage?: string; instruction?: string }) {
+  async function mutate(mutation: { action?: "undo" | "redo" | "edit"; fieldKey?: string; newValue?: string; newImage?: string; instruction?: string; patchImage?: string }) {
     if (!creative.activeRevisionId) return showToast("Reload this ad before editing it.");
     setBusy(true);
     try {
       const result = await requestCreativeEdit({ creative, mutation, mutationId: crypto.randomUUID() });
+      const nextRef = creativeSource(result.creative);
+      setFreshPreview(result.previewImage && nextRef ? { ref: nextRef, dataUrl: result.previewImage } : null);
       onCreativeChange(result.creative);
       if (mutation.action === "undo") showToast("Previous version restored");
       else if (mutation.action === "redo") showToast("Next version restored");
@@ -126,6 +251,7 @@ function CompactCreativeEditor({ creative, onCreativeChange, showToast }: {
     } catch (error) {
       showToast(error instanceof Error ? error.message : "The edit could not be saved.");
     } finally {
+      setOptimisticPatch(null);
       setBusy(false);
     }
   }
@@ -134,6 +260,32 @@ function CompactCreativeEditor({ creative, onCreativeChange, showToast }: {
     if (!file || !selected || selected.kind !== "image") return;
     const scaled = await downscaleImageForUpload(file);
     await mutate({ action: "edit", fieldKey: selected.key, newImage: await readFile(scaled), instruction: draft.trim() || undefined });
+  }
+
+  function saveTextChange() {
+    if (!selected || selected.kind !== "text") return;
+    const value = draft.trim();
+    if (!value) return;
+    const maxLength = selectedTextStyle?.maxLength ?? 200;
+    if (value.length > maxLength) return showToast(`Keep the replacement text to ${maxLength} characters or less.`);
+    if (!selectedTextInstantReady || !textLayers || !selectedTextStyle) {
+      showToast(layerBuildIssue ?? "This text area is still preparing. Wait a moment, then try again.");
+      return;
+    }
+    const plate = plateImagesRef.current.get(textLayers.plate);
+    const patchImage = plate ? renderTextPatch({ plate, box: selected.box, style: selectedTextStyle, text: value }) : null;
+    if (!patchImage) {
+      showToast("That text does not fit this area. Shorten it and try again.");
+      return;
+    }
+    setOptimisticPatch({ dataUrl: patchImage, box: selected.box });
+    void mutate({ action: "edit", fieldKey: selected.key, newValue: value, patchImage });
+  }
+
+  function retryLayerBuild() {
+    layersRequestedForRef.current = null;
+    setLayerBuildIssue(null);
+    setLayerRetryToken((current) => current + 1);
   }
 
   return (
@@ -147,7 +299,8 @@ function CompactCreativeEditor({ creative, onCreativeChange, showToast }: {
           </div>
         </div>
         <div className="relative mx-auto w-full max-w-xl overflow-hidden rounded-(--r-card) bg-muted" style={{ aspectRatio: `${creative.canvas.width}/${creative.canvas.height}` }}>
-          {src && <img src={src} alt="Finished ad" className="size-full object-contain" />}
+          {displaySrc && <img src={displaySrc} alt="Finished ad" className="size-full object-contain" />}
+          {optimisticPatch && <img src={optimisticPatch.dataUrl} alt="" aria-hidden className="absolute object-fill" style={optimisticPatchStyle(optimisticPatch.box)} />}
           {(creative.canvas.cloneQa?.regions ?? []).map((region) => (
             <button
               key={`${region.kind}-${region.key}`}
@@ -172,7 +325,11 @@ function CompactCreativeEditor({ creative, onCreativeChange, showToast }: {
             <Label htmlFor="region-edit">{selected.kind === "text" ? "Replacement text" : "Image direction (optional)"}</Label>
             <Textarea id="region-edit" className="min-h-24" value={draft} maxLength={selected.kind === "text" ? 200 : 500} onChange={(event) => setDraft(event.target.value)} />
             {selected.kind === "text" ? (
-              <Button disabled={!draft.trim() || busy} onClick={() => void mutate({ action: "edit", fieldKey: selected.key, newValue: draft.trim() })}>Save text change</Button>
+              <>
+                {!selectedTextInstantReady && !layerBuildIssue && <p className="m-0 text-sm text-muted-foreground" role="status">Preparing exact text editing…</p>}
+                {layerBuildIssue && <div className="grid gap-2"><p className="m-0 text-sm text-destructive" role="alert">{layerBuildIssue}</p><Button variant="outline" onClick={retryLayerBuild}>Try preparing again</Button></div>}
+                <Button disabled={!draft.trim() || busy || !selectedTextInstantReady} onClick={saveTextChange}>Save text change</Button>
+              </>
             ) : (
               <>
                 <Button variant="outline" disabled={busy} onClick={() => void mutate({ action: "edit", fieldKey: selected.key, instruction: draft.trim() })}>Apply image direction</Button>

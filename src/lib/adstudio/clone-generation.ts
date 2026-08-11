@@ -46,15 +46,18 @@ export type CloneGenerationResult = {
   model: string;
   provider: string;
   providerAttemptCount: number;
+  attemptReceipts?: ProviderRunAttempt[];
 };
 
 export class CloneGenerationError extends Error {
   readonly providerAttemptCount: number;
+  readonly attemptReceipts: ProviderRunAttempt[];
 
-  constructor(cause: unknown, providerAttemptCount: number) {
+  constructor(cause: unknown, providerAttemptCount: number, attemptReceipts: ProviderRunAttempt[] = []) {
     super(cause instanceof Error ? cause.message : "Ad generation is not configured.");
     this.name = "CloneGenerationError";
     this.providerAttemptCount = providerAttemptCount;
+    this.attemptReceipts = attemptReceipts;
     if (cause !== undefined) this.cause = cause;
   }
 }
@@ -230,6 +233,7 @@ export async function generateCloneWithCascade(input: {
     recordRun: typeof recordAdStudioProviderRun;
   };
   fallbackAlert?: typeof emitModelFallbackAlert;
+  onAttemptReceipts?: (attempts: readonly ProviderRunAttempt[]) => void;
 }): Promise<CloneGenerationResult> {
   const startedAt = Date.now();
   const mutationId = `${input.correlationId}:adstudio.clone:${input.attempt}:${input.request.aspectRatio}`;
@@ -295,6 +299,7 @@ export async function generateCloneWithCascade(input: {
     if (fallbackAlertTask) await fallbackAlertTask;
     // A durable finalization failure is not a provider failure and must never
     // enter the fallback loop or be retried with a different payload.
+    input.onAttemptReceipts?.(attempts);
     await accounting.recordRun({
       workspaceId: input.workspaceId,
       userId: input.userId,
@@ -317,10 +322,12 @@ export async function generateCloneWithCascade(input: {
       model: result.model,
       provider: provider.providerName,
       providerAttemptCount,
+      attemptReceipts: attempts,
     };
   }
 
   if (fallbackAlertTask) await fallbackAlertTask;
+  input.onAttemptReceipts?.(attempts);
   await accounting.recordRun({
     workspaceId: input.workspaceId,
     userId: input.userId,
@@ -340,7 +347,7 @@ export async function generateCloneWithCascade(input: {
     error: lastError,
   });
   if (lastError instanceof ProviderRunPersistenceError) throw lastError;
-  throw new CloneGenerationError(lastError, providerAttemptCount);
+  throw new CloneGenerationError(lastError, providerAttemptCount, attempts);
 }
 
 function fallbackReason(error: unknown): string {

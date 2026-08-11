@@ -73,7 +73,7 @@ function samplePath(root, template) {
   return resolve(root, "public", template.sample.imageSrc.slice(1));
 }
 
-export async function inspectEvidence({ templatePath, packetPath, candidatePath }) {
+export async function inspectEvidence({ templatePath, packetPath, candidatePath, sampleOverride }) {
   const root = process.cwd();
   const { absolute: templateAbsolute, template } = resolveTemplate(templatePath);
   const packetAbsolute = resolve(packetPath);
@@ -84,7 +84,10 @@ export async function inspectEvidence({ templatePath, packetPath, candidatePath 
   if (packet.templateId !== template.id) throw new Error("Locked packet templateId does not match the template.");
   const reference = packet.references[0];
   if (resolve(root, packet.expectedOutput) !== candidateAbsolute) throw new Error("Candidate path does not match the locked packet expectedOutput.");
-  const publicSample = samplePath(root, template);
+  const publicSample = sampleOverride ? resolve(sampleOverride) : samplePath(root, template);
+  if (sampleOverride && !workspacePath(root, publicSample).startsWith("artifacts/adstudio-template-imports/")) {
+    throw new Error("Customer-fixture sample override must come from an imported Frank release package.");
+  }
   const placeholderSample = template.sample.contentHash === "0".repeat(64);
   if (existsSync(publicSample)) {
     if (!placeholderSample && fileHash(publicSample) !== template.sample.contentHash) {
@@ -205,7 +208,7 @@ function assertReview(review, evidence) {
   if (!Number.isFinite(Date.parse(review.reviewedAt ?? ""))) throw new Error("Review needs a valid reviewedAt timestamp.");
 }
 
-function assertPassingQa(qa, evidence) {
+export function assertPassingQa(qa, evidence) {
   if (qa?.schemaVersion !== 1 || qa.stage !== evidence.stage || qa.templateId !== evidence.template.id || qa.requestHash !== evidence.packet.requestHash || qa.outputHash !== evidence.hashes.candidate) {
     throw new Error(`Recorded ${evidence.stage} QA is not bound to the reviewed request and output.`);
   }
@@ -222,7 +225,7 @@ function assertPassingQa(qa, evidence) {
   if (qa.identityLeakage.length || qa.defects.length) throw new Error(`Recorded ${evidence.stage} QA has leakage or defects.`);
 }
 
-function releasableStageEvidence(evidence, qa) {
+export function releasableStageEvidence(evidence, qa) {
   return {
     stage: evidence.stage,
     requestHash: evidence.packet.requestHash,

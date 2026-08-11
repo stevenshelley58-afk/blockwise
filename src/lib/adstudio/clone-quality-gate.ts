@@ -313,6 +313,7 @@ export async function reviewCloneCandidate(input: {
   createProvider?: typeof createTextProviderForCandidate;
   executeProviderAttempt?: typeof executeAdStudioProviderAttempt;
   recordProviderRun?: typeof recordAdStudioProviderRun;
+  onAttemptReceipts?: (attempts: readonly ProviderRunAttempt[]) => void;
 } = {}): Promise<AdStudioCloneQualityReview> {
   if (input.signal?.aborted) throw input.signal.reason ?? new DOMException("Clone QA cancelled.", "AbortError");
   const startedAt = Date.now();
@@ -354,7 +355,7 @@ export async function reviewCloneCandidate(input: {
     "Different customer copy lengths may wrap to a different natural line count. Do not penalize that fact alone: score whether the replacement occupies the same text-box anchor and outer bounds with faithful type treatment and natural spacing. Never split a word unnaturally just to mimic the sample line count.",
     "For copyChecks, compare visible words, punctuation, symbols, and order after collapsing layout whitespace. OCR line breaks and repeated spaces are not changed copy; score their visual rhythm under ad-system likeness instead.",
     `Expected exact copy: ${JSON.stringify(input.expectedCopy)}.`,
-    `Required replaced asset regions and labelled comparison hashes: ${JSON.stringify(contact.assetReferences)}. For each assetChecks entry, used may be true only when the matching labelled CUSTOMER ASSET is visibly present in the candidate's corresponding slot. Faithful may be true only after visually comparing that candidate region to the labelled customer asset and confirming its subject/identity and original visible content were preserved without substitution, fabrication, repainting, warping, or destructive crop. Template masks, overlays, fades, and non-destructive fitting are allowed.`,
+    `Required replaced asset regions and labelled comparison hashes: ${JSON.stringify(contact.assetReferences)}. For each assetChecks entry, used may be true only when the matching labelled CUSTOMER ASSET is visibly present in the candidate's corresponding slot. Faithful may be true only after visually comparing that candidate region to the labelled customer asset and confirming its subject/identity and original visible content were preserved without substitution, fabrication, repainting, warping, or destructive crop. Template masks, overlays, fades, and non-destructive fitting are allowed. Include concise notes describing what was actually observed.`,
     "Never suggest replacing a supplied customer asset with a more realistic, polished, or stylistically similar substitute. If the supplied asset limits standalone quality, report that limitation while preserving the exact customer asset.",
     `Bind the JSON to schemaVersion 1, templateId ${input.templateId}, format ${input.format}, attempt ${input.attempt}, referenceHash ${contact.referenceHash}, candidateHash ${contact.candidateHash}, requestHash ${requestHash}.`,
     "adSystemLikenessScore and standaloneAdQualityScore must each be JSON numbers on a 0-10 scale, never percentages or strings.",
@@ -457,6 +458,7 @@ export async function reviewCloneCandidate(input: {
     )
     : lastError;
 
+  dependencies.onAttemptReceipts?.(attempts);
   await (dependencies.recordProviderRun ?? recordAdStudioProviderRun)({
     workspaceId: input.workspaceId,
     userId: input.userId,

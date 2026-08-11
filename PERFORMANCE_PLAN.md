@@ -43,12 +43,12 @@ Every claim below traces to a file:line or a live query. Prices verified against
 
 ### API routes & polling
 
-- 6 client polling loops, **0 with backoff, 0 that pause when the tab is hidden**. Ad-studio job poll: **1,000ms interval for up to 10 minutes** (`src/components/adstudio/use-campaign-actions.ts:24-25`) = up to 600 requests × ~4 queries each per generation. Workbench re-downloads the **entire campaign pack every 3s** just to read one QA flag (`ad-studio-workbench.tsx:786-801`).
+- Historical note: the legacy Ad Studio workbench and its overlapping generation/QA pollers were removed in the compact customer-flow cutover.
 - `/api/adstudio/campaigns/[id]` runs 15 queries per hit, **5 of them fully redundant** (fetched raw at `route.ts:21-28`, then re-fetched inside `loadAdStudioCampaignPack`), and returns every payload twice.
 - `/api/operator/research/drain-status`: **~53 queries per request** (44 `count: "exact"` scans over `work_queue`), polled every 15s while the dashboard is open (`src/lib/research/drain-status.ts`, `research-drain-dashboard.tsx:33`).
 - `/api/research/local-ad-radar`: up to **48 sequential leading-wildcard ILIKE queries** per request (`src/lib/research/public-ad-radar.ts:404-412`) — the code already swallows statement timeouts from this.
 - Cache-Control: **51 of 57 GET routes send none.** Supabase Realtime: **0 uses** — everything that could push is polled. Signed URLs: 0 — every ad-studio image goes through an authenticated proxy route costing 3 auth round trips + a Lambda invocation per image (`/api/adstudio/media`).
-- `select("*")`: 44 call sites; the ad-studio library loads **every creative a workspace has ever made, with full `canvas_json`, no limit** (`ad-studio/library/page.tsx:25`).
+- Historical note: the unbounded Ad Studio library query and its full `canvas_json` payload were removed with the legacy customer shell.
 - Synchronous AI in request handlers: creative **edit** and **layers** routes hold the HTTP connection up to **5 minutes** (`maxDuration = 300`) instead of using the 202+job pattern that generation already has.
 
 ### Client bundle & assets
@@ -85,7 +85,7 @@ These don't reduce total work much — they reorder it so users see something in
 4. **Wrap slow page bodies in `<Suspense>`** exactly like `results/page.tsx:61` already does: ad-studio, leads, settings, and the operator pages. Shell + nav appear immediately; data streams in.
 5. **Poll hygiene** (pure client, no server changes):
    - `use-campaign-actions.ts:24` — 1s → exponential backoff (1s×5 → 2s → 5s → 10s cap). A 10-min generation drops from ~600 requests to ~70.
-   - `ad-studio-workbench.tsx:798` and `publish-panel.tsx:360,516` — same backoff; merge the two overlapping publish polls into one effect.
+   - The compact Ad Studio flow now owns its bounded publish-status wait in one place; keep future polling changes centralized there.
    - All pollers: skip when `document.visibilityState === "hidden"`, fire immediately on `visibilitychange`.
    - `research-drain-dashboard.tsx:33` — 15s → 30s + hidden-tab pause (this alone removes ~53 DB counts × 4/min while an operator tab idles).
    - `public-ad-radar-dialog.tsx:73-78` — stop the unbounded page-walk; load first page, then "Load more".
@@ -127,7 +127,7 @@ Net effect: typical authenticated API request goes from 4–5 network waves to 1
 ### D. Shrink the payloads
 
 1. `/api/adstudio/campaigns/[id]/route.ts:21-42` — delete the duplicate block; return the pack only (15→7 queries, payload halves). Add a **narrow QA endpoint** (or `?fields=cloneQa`) for the workbench poll so it stops downloading every creative's `canvas_json` at 3s cadence.
-2. `ad-studio/library/page.tsx:25` — explicit columns, `.limit(100)`, keyset pagination. Same for the other unbounded `select("*")` sites (Appendix C).
+2. Continue converting the remaining unbounded `select("*")` sites (Appendix C) to explicit columns, bounded pages, and keyset pagination.
 3. Export renders (`export-render-storage.ts:67`) and fresh sync-path generations return base64 data URLs (~1.5MB per image, +33% overhead) — upload to Storage first and return paths.
 
 ### E. Serve images like a CDN, not like an API
@@ -152,7 +152,7 @@ Net effect: typical authenticated API request goes from 4–5 network waves to 1
 
 Highest-value conversions, all tables the workers already write:
 1. `adstudio_creative_jobs` → replaces the 1Hz generation poll entirely.
-2. `meta_publish_plans` → replaces both publish-panel polls.
+2. `meta_publish_plans` → can replace the compact flow's bounded publish-status wait.
 3. `adstudio_creatives` → replaces the 3s QA poll.
 Keep a slow poll (10–15s) as socket-failure fallback. Realtime also inherently solves the hidden-tab problem.
 
@@ -339,7 +339,7 @@ SELECT pg_stat_statements_reset();
 
 ## Appendix C — Unbounded / over-wide queries to tighten
 
-- `ad-studio/library/page.tsx:25` — `select("*")`, no limit, full `canvas_json` per creative.
+- The former unbounded Ad Studio library query was deleted with the legacy customer shell.
 - `api/adstudio/campaigns/route.ts:121-125` — all workspace campaigns, unbounded.
 - `api/operator/research/coverage|policies|health|meta-api-validation` — `select("*")`, no limit (up to ~3,300 rows).
 - `ad-studio/page.tsx:116`, `operator/research/page.tsx:106,117`, `onboarding/page.tsx:42` — same pattern.

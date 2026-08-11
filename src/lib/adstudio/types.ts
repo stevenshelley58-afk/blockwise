@@ -481,6 +481,7 @@ export const adStudioCloneQualityReviewSchema = z.object({
     key: z.string().min(1),
     used: z.boolean(),
     faithful: z.boolean(),
+    notes: z.string().optional(),
   })),
   identityLeakage: z.array(z.string()),
   defects: z.array(z.string()),

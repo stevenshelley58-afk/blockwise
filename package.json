@@ -23,7 +23,9 @@
     "verify:hard-reset": "node scripts/verify/hard-reset-static.mjs && node scripts/verify/adstudio-templates.mjs && node --test tests/hard-reset/*.test.ts",
     "verify-env": "node scripts/verify-env.mjs",
     "verify-env:first-tester": "node scripts/verify-env.mjs --first-tester",
-    "adstudio:create-template": "node scripts/adstudio/create-template.mjs",
+    "adstudio:import-factory-release": "node scripts/adstudio/import-factory-release.mjs",
+    "adstudio:customer-fixture": "node scripts/adstudio/customer-template-fixture.mjs",
+    "adstudio:promote-factory-template": "node scripts/adstudio/promote-factory-template.mjs",
     "adstudio:template-quality": "node scripts/adstudio/template-quality.mjs",
     "adstudio:build-display-variants": "node scripts/adstudio/build-display-variants.mjs",
     "seed:test-users": "node scripts/seed-test-users.mjs"

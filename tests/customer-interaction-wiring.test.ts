@@ -46,17 +46,19 @@ test("Ad Radar save failures remain visible and retryable", () => {
   assert.doesNotMatch(actions, /Action failed/);
 });
 
-test("compact Ad Studio keeps canonical customer destinations", () => {
+test("compact Ad Studio keeps one canonical customer destination", () => {
   const flow = read("src/components/adstudio/ad-studio-customer-flow.tsx");
+  const legacyLibrary = read("src/app/(customer)/ad-studio/library/page.tsx");
   const niche = read("src/config/niche/blockwise.ts");
 
   assert.match(flow, /href="\/self-serve"/);
-  assert.match(flow, /href="\/ad-studio\/library"/);
+  assert.doesNotMatch(flow, /href="\/ad-studio\/library"/);
+  assert.match(legacyLibrary, /redirect\("\/ad-studio"\)/);
   assert.match(niche, /href: "\/ad-studio\/brand", label: "Brand Pack"/);
 });
 
 test("starter campaigns cannot open Edit or Publish before a clone exists", () => {
   const flow = read("src/components/adstudio/ad-studio-customer-flow.tsx");
-  assert.match(flow, /const canEdit = pack\.creatives\.length > 0/);
+  assert.match(flow, /const canEdit = hasFinishedPlacement\(pack, "4:5"\) \|\| hasFinishedPlacement\(pack, "9:16"\)/);
   assert.match(flow, /const disabled = item\.id !== "create" && !canEdit/);
 });
