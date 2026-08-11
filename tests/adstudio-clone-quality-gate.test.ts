@@ -139,6 +139,11 @@ test("only an internally inconsistent clean near-pass needs independent vision c
     expectedAssetKeys,
   }), true);
   assert.equal(cloneQualityNeedsIndependentConfirmation({
+    review: review({ adSystemLikenessScore: 9.8, standaloneAdQualityScore: 9.8, excludedContentInfluencedScore: true }),
+    expectedCopy,
+    expectedAssetKeys,
+  }), true);
+  assert.equal(cloneQualityNeedsIndependentConfirmation({
     review: review({ adSystemLikenessScore: 9.1, suggestedCorrection: "Move the image boundary up." }),
     expectedCopy,
     expectedAssetKeys,
@@ -606,6 +611,7 @@ test("non-JSON clone QA retries the same contact sheet and candidate before acce
   assert.ok(providerSystemPrompts.every((prompt) => prompt.includes('"property_photo"')));
   assert.ok(providerSystemPrompts.every((prompt) => prompt.includes('"agency_logo"')));
   assert.ok(providerSystemPrompts.every((prompt) => prompt.includes("without substitution, fabrication, repainting")));
+  assert.ok(providerSystemPrompts.every((prompt) => prompt.includes("excludedContentInfluencedScore MUST be false")));
   assert.deepEqual(recordedAttempts, [2]);
 });
 

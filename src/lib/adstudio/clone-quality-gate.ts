@@ -208,10 +208,18 @@ export function cloneQualityWarrantsSameTierRetry(input: {
   expectedCopy: Record<string, string>;
   expectedAssetKeys: string[];
 }): boolean {
+  return input.review.adSystemLikenessScore < MIN_RUNTIME_AD_SYSTEM_LIKENESS
+    && cloneQualityHasCleanNearPassEvidence(input);
+}
+
+function cloneQualityHasCleanNearPassEvidence(input: {
+  review: AdStudioCloneQualityReview;
+  expectedCopy: Record<string, string>;
+  expectedAssetKeys: string[];
+}): boolean {
   const copyChecks = new Map(input.review.copyChecks.map((check) => [check.key, check]));
   const assetChecks = new Map(input.review.assetChecks.map((check) => [check.key, check]));
   return input.review.adSystemLikenessScore >= 9
-    && input.review.adSystemLikenessScore < MIN_RUNTIME_AD_SYSTEM_LIKENESS
     && input.review.standaloneAdQualityScore >= MIN_RUNTIME_STANDALONE_AD_QUALITY
     && Object.entries(input.expectedCopy).every(([key, expected]) => {
       const check = copyChecks.get(key);
@@ -240,7 +248,7 @@ export function cloneQualityNeedsIndependentConfirmation(input: {
 }): boolean {
   return input.review.suggestedCorrection.trim() === ""
     && !cloneQualityPassed(input)
-    && cloneQualityWarrantsSameTierRetry(input);
+    && cloneQualityHasCleanNearPassEvidence(input);
 }
 
 /**
@@ -341,6 +349,7 @@ export async function reviewCloneCandidate(input: {
     "The image is a labelled contact sheet: approved public sample at top left, customer candidate at top right, followed by one CUSTOMER ASSET panel for every supplied customer image.",
     "Score the reusable ad system, not replaceable property/photo subject matter, logo identity, or copy wording.",
     "Do not judge a supplied customer asset against the sample asset's realism, identity, subject, composition, or style. The labelled CUSTOMER ASSET panel is the only authority for that replacement content.",
+    "Boolean semantics are strict: excludedContentInfluencedScore MUST be false when you successfully ignored replaceable photo subject matter, logo identity, and copy wording while scoring. Set it true only when those excluded content differences improperly changed either numeric score. A compliant subject-invariant review normally returns false.",
     "Do score canvas/panel geometry, borders, margins, image crop and effects, logo displayed footprint/anchor, text-block bounds and line rhythm, typography treatment, hierarchy, whitespace, palette, CTA and footer treatment.",
     "Different customer copy lengths may wrap to a different natural line count. Do not penalize that fact alone: score whether the replacement occupies the same text-box anchor and outer bounds with faithful type treatment and natural spacing. Never split a word unnaturally just to mimic the sample line count.",
     "For copyChecks, compare visible words, punctuation, symbols, and order after collapsing layout whitespace. OCR line breaks and repeated spaces are not changed copy; score their visual rhythm under ad-system likeness instead.",
@@ -395,7 +404,7 @@ export async function reviewCloneCandidate(input: {
       provider,
       execute: () => provider.generate({
         system: confirmationRequested
-          ? `${prompt.system}\n\nINDEPENDENT VISION CONFIRMATION: A prior vision review returned a clean near-pass below the release threshold but supplied no actionable correction. Re-evaluate the pixels independently; do not inherit or average the prior score. If this candidate is still below 9.5 likeness, suggestedCorrection MUST name the exact spatial, typography, or treatment changes needed. If it genuinely reaches the contract, score it accordingly. Keep the same JSON schema.`
+          ? `${prompt.system}\n\nINDEPENDENT VISION CONFIRMATION: A prior vision review returned clean evidence that could not be accepted, but supplied no actionable correction. Re-evaluate the pixels independently; do not inherit or average the prior score. If this candidate is below 9.5 likeness or any other gate fails, suggestedCorrection MUST name the exact spatial, typography, or treatment changes needed. If it genuinely reaches the contract, score it accordingly. Keep the same JSON schema.`
           : prompt.system,
         schemaName: "adStudioCloneQualityReview",
         messages: [{ role: "user", content: prompt.user }],
