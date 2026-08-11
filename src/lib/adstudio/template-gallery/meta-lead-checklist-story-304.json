@@ -21,7 +21,7 @@
     "imageSrc": "/adstudio-samples/meta/meta-lead-checklist-story-304-sample.png",
     "thumbnailSrc": "/adstudio-samples/meta/meta-lead-checklist-story-304-sample.png",
     "alt": "Generated sample for New Construction Decision Guide.",
-    "contentHash": "0000000000000000000000000000000000000000000000000000000000000000",
+    "contentHash": "3783e91e99827539bd60b6fb4cb2ac34b6be6178ce6758c87e7d752547238d3e",
     "generatedBy": "reference_clone"
   },
   "inputs": {
@@ -144,5 +144,8 @@
         "body": "The agency will be in touch shortly."
       }
     }
+  },
+  "qualityLock": {
+    "templateHash": "126aab0b421a3a9fcf75cf7f8d981583e11d3c9984924fd0aa60a1ca39c0f6b3"
   }
 }

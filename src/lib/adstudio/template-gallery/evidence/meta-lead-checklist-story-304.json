@@ -1,80 +1,246 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "templateId": "meta-lead-checklist-story-304",
-  "requestHash": "e1b5fffb1c5f8e93fcfcfe1df93a7cea50453f329f66fa2dd6f761451e5d96c6",
-  "inputHashes": {
-    "source_ad": "15db4d72f3b3af099d5555e5271a0f1cccd86d65068a4f7e2257742f1fcb1597",
-    "background_photo": "4cb5d6d789da66561fb597399c539369a0f45b4a383ad16681b108ca52d0efc1"
+  "templateHash": "126aab0b421a3a9fcf75cf7f8d981583e11d3c9984924fd0aa60a1ca39c0f6b3",
+  "sampleHash": "3783e91e99827539bd60b6fb4cb2ac34b6be6178ce6758c87e7d752547238d3e",
+  "rubricVersion": "adstudio-subject-invariant-clone-v1",
+  "thresholds": {
+    "adSystemLikeness": 9.5,
+    "standaloneAdQuality": 9
   },
-  "outputHash": "0d8bd8b9ee1737615e2023050eb26699d568a2cfa857dc4e2608eeca9f446d8c",
-  "executionTransport": "codex_subscription_image_generation",
-  "reviewedAt": "2026-07-19T07:00:14.665Z",
-  "correctionCount": 0,
-  "qa": {
-    "passed": true,
-    "fullSizeReviewed": true,
-    "contractReview": {
-      "passed": true,
-      "notes": "Only source-visible customer inputs were declared."
-    },
-    "requestIntegrity": {
-      "passed": true,
-      "notes": "Executed the locked buildCloneImageRequest prompt with references in contractual order."
-    },
-    "copyChecks": [
+  "qualifiedAt": "2026-08-11T05:06:00.000Z",
+  "sample": {
+    "stage": "gallery_sample",
+    "requestHash": "c7a1e96950c206171605ca8328daff0083958880ff5648dcfce8095c5eeb1ede",
+    "referenceHash": "15db4d72f3b3af099d5555e5271a0f1cccd86d65068a4f7e2257742f1fcb1597",
+    "references": [
       {
-        "key": "headline",
-        "expected": "FREE PROPERTY PLANNING CHECKLIST",
-        "exact": true
+        "index": 1,
+        "key": "source_ad",
+        "role": "source",
+        "contentHash": "15db4d72f3b3af099d5555e5271a0f1cccd86d65068a4f7e2257742f1fcb1597"
       },
       {
-        "key": "subheadline",
-        "expected": "MAKE YOUR NEXT MOVE CLEARER",
-        "exact": true
-      },
-      {
-        "key": "benefit_1",
-        "expected": "PREPARE YOUR HOME",
-        "exact": true
-      },
-      {
-        "key": "benefit_2",
-        "expected": "UNDERSTAND TIMING",
-        "exact": true
-      },
-      {
-        "key": "benefit_3",
-        "expected": "ASK BETTER QUESTIONS",
-        "exact": true
-      },
-      {
-        "key": "check_1",
-        "expected": "PREPARE YOUR PROPERTY",
-        "exact": true
-      },
-      {
-        "key": "check_2",
-        "expected": "UNDERSTAND YOUR TIMING",
-        "exact": true
-      },
-      {
-        "key": "check_3",
-        "expected": "REVIEW LOCAL CONDITIONS",
-        "exact": true
-      },
-      {
-        "key": "cta",
-        "expected": "GET THE FREE CHECKLIST",
-        "exact": true
-      }
-    ],
-    "assetChecks": [
-      {
+        "index": 2,
         "key": "background_photo",
-        "used": true
+        "role": "replacement_asset",
+        "contentHash": "80fe40a4fcdc73ae359866531cdfb78d7c32f137b8eb5310d064df5a09b91036"
       }
     ],
-    "identityLeakage": [],
-    "defects": []
+    "copy": {
+      "question": "WHAT SHOULD I KNOW BEFORE BUYING NEW CONSTRUCTION?",
+      "left_heading": "DO",
+      "left_item_1": "WORK WITH A LOCAL AGENT",
+      "left_item_2": "CHOOSE THE RIGHT BUILDER",
+      "left_item_3": "SCHEDULE A DESIGN CONSULTATION",
+      "right_heading": "AVOID",
+      "right_item_1": "SKIPPING COMMUNITY RESEARCH",
+      "right_item_2": "IGNORING PRIORITY COSTS",
+      "right_item_3": "MISSING A HOME INSPECTION"
+    },
+    "outputHash": "3783e91e99827539bd60b6fb4cb2ac34b6be6178ce6758c87e7d752547238d3e",
+    "executionTransport": "google_image_api",
+    "reviewedAt": "2026-08-11T05:03:53Z",
+    "review": {
+      "schemaVersion": 1,
+      "rubricVersion": "adstudio-subject-invariant-clone-v1",
+      "templateId": "meta-lead-checklist-story-304",
+      "requestHash": "c7a1e96950c206171605ca8328daff0083958880ff5648dcfce8095c5eeb1ede",
+      "candidateHash": "3783e91e99827539bd60b6fb4cb2ac34b6be6178ce6758c87e7d752547238d3e",
+      "reviewer": {
+        "provider": "openai",
+        "model": "gpt-5.6-vision"
+      },
+      "adSystemLikenessScore": 9.5,
+      "standaloneAdQualityScore": 9.4,
+      "excludedContentInfluencedScore": false,
+      "copyChecks": [
+        {
+          "key": "question",
+          "expected": "WHAT SHOULD I KNOW BEFORE BUYING NEW CONSTRUCTION?",
+          "observed": "WHAT SHOULD I KNOW BEFORE BUYING NEW CONSTRUCTION?",
+          "exact": true
+        },
+        {
+          "key": "left_heading",
+          "expected": "DO",
+          "observed": "DO",
+          "exact": true
+        },
+        {
+          "key": "left_item_1",
+          "expected": "WORK WITH A LOCAL AGENT",
+          "observed": "WORK WITH A LOCAL AGENT",
+          "exact": true
+        },
+        {
+          "key": "left_item_2",
+          "expected": "CHOOSE THE RIGHT BUILDER",
+          "observed": "CHOOSE THE RIGHT BUILDER",
+          "exact": true
+        },
+        {
+          "key": "left_item_3",
+          "expected": "SCHEDULE A DESIGN CONSULTATION",
+          "observed": "SCHEDULE A DESIGN CONSULTATION",
+          "exact": true
+        },
+        {
+          "key": "right_heading",
+          "expected": "AVOID",
+          "observed": "AVOID",
+          "exact": true
+        },
+        {
+          "key": "right_item_1",
+          "expected": "SKIPPING COMMUNITY RESEARCH",
+          "observed": "SKIPPING COMMUNITY RESEARCH",
+          "exact": true
+        },
+        {
+          "key": "right_item_2",
+          "expected": "IGNORING PRIORITY COSTS",
+          "observed": "IGNORING PRIORITY COSTS",
+          "exact": true
+        },
+        {
+          "key": "right_item_3",
+          "expected": "MISSING A HOME INSPECTION",
+          "observed": "MISSING A HOME INSPECTION",
+          "exact": true
+        }
+      ],
+      "assetChecks": [
+        {
+          "key": "background_photo",
+          "used": true,
+          "faithful": true,
+          "notes": "Used as story background."
+        }
+      ],
+      "identityLeakage": [],
+      "defects": [],
+      "includedRationale": "Preserves story scale, top search-question bar, twin white checklist cards, typography hierarchy, bullets and background placement.",
+      "qualityRationale": "Legible and polished at full size.",
+      "suggestedCorrection": "",
+      "reviewedAt": "2026-08-11T05:03:53Z"
+    }
+  },
+  "customerFixture": {
+    "stage": "customer_fixture",
+    "requestHash": "e87db4d9063dc7871fdaa6fa529cffc3db30b4419f12a2c4f22737abcfa04e55",
+    "referenceHash": "3783e91e99827539bd60b6fb4cb2ac34b6be6178ce6758c87e7d752547238d3e",
+    "references": [
+      {
+        "index": 1,
+        "key": "approved_sample",
+        "role": "approved_sample",
+        "contentHash": "3783e91e99827539bd60b6fb4cb2ac34b6be6178ce6758c87e7d752547238d3e"
+      },
+      {
+        "index": 2,
+        "key": "background_photo",
+        "role": "replacement_asset",
+        "contentHash": "795b5488e848ee0796424ce7ed95e99ab3d6d62a5bc9b5f6f80a36e0f2360899"
+      }
+    ],
+    "copy": {
+      "question": "HOW DO I PREPARE MY HOME TO SELL?",
+      "left_heading": "DO",
+      "left_item_1": "STYLE EACH ROOM",
+      "left_item_2": "BOOK PROFESSIONAL PHOTOS",
+      "left_item_3": "CREATE A VIEWING PLAN",
+      "right_heading": "AVOID",
+      "right_item_1": "OVERPRICING THE HOME",
+      "right_item_2": "SKIPPING MINOR REPAIRS",
+      "right_item_3": "HIDING PROPERTY DETAILS"
+    },
+    "outputHash": "6f4ad48f6f6e52bcf29c9f3b3e12f038598499fc6b3c022a58497d9485044052",
+    "executionTransport": "google_image_api",
+    "reviewedAt": "2026-08-11T05:06:00Z",
+    "review": {
+      "schemaVersion": 1,
+      "rubricVersion": "adstudio-subject-invariant-clone-v1",
+      "templateId": "meta-lead-checklist-story-304",
+      "requestHash": "e87db4d9063dc7871fdaa6fa529cffc3db30b4419f12a2c4f22737abcfa04e55",
+      "candidateHash": "6f4ad48f6f6e52bcf29c9f3b3e12f038598499fc6b3c022a58497d9485044052",
+      "reviewer": {
+        "provider": "openai",
+        "model": "gpt-5.6-vision"
+      },
+      "adSystemLikenessScore": 9.6,
+      "standaloneAdQualityScore": 9.5,
+      "excludedContentInfluencedScore": false,
+      "copyChecks": [
+        {
+          "key": "question",
+          "expected": "HOW DO I PREPARE MY HOME TO SELL?",
+          "observed": "HOW DO I PREPARE MY HOME TO SELL?",
+          "exact": true
+        },
+        {
+          "key": "left_heading",
+          "expected": "DO",
+          "observed": "DO",
+          "exact": true
+        },
+        {
+          "key": "left_item_1",
+          "expected": "STYLE EACH ROOM",
+          "observed": "STYLE EACH ROOM",
+          "exact": true
+        },
+        {
+          "key": "left_item_2",
+          "expected": "BOOK PROFESSIONAL PHOTOS",
+          "observed": "BOOK PROFESSIONAL PHOTOS",
+          "exact": true
+        },
+        {
+          "key": "left_item_3",
+          "expected": "CREATE A VIEWING PLAN",
+          "observed": "CREATE A VIEWING PLAN",
+          "exact": true
+        },
+        {
+          "key": "right_heading",
+          "expected": "AVOID",
+          "observed": "AVOID",
+          "exact": true
+        },
+        {
+          "key": "right_item_1",
+          "expected": "OVERPRICING THE HOME",
+          "observed": "OVERPRICING THE HOME",
+          "exact": true
+        },
+        {
+          "key": "right_item_2",
+          "expected": "SKIPPING MINOR REPAIRS",
+          "observed": "SKIPPING MINOR REPAIRS",
+          "exact": true
+        },
+        {
+          "key": "right_item_3",
+          "expected": "HIDING PROPERTY DETAILS",
+          "observed": "HIDING PROPERTY DETAILS",
+          "exact": true
+        }
+      ],
+      "assetChecks": [
+        {
+          "key": "background_photo",
+          "used": true,
+          "faithful": true,
+          "notes": "The distinct supplied interior photo is visibly used as the background."
+        }
+      ],
+      "identityLeakage": [],
+      "defects": [],
+      "includedRationale": "Subject-invariant review: the story frame, search-question bar, paired white cards, headings, bullet treatment, card geometry and background treatment are preserved from the approved sample.",
+      "qualityRationale": "The rendered copy is fully legible at full size, with clean cards, spacing and type; no visual defects observed.",
+      "suggestedCorrection": "",
+      "reviewedAt": "2026-08-11T05:06:00Z"
+    }
   }
 }
