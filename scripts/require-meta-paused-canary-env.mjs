@@ -1,3 +1,6 @@
+import { lstatSync, readFileSync } from "node:fs";
+import { isAbsolute, resolve, sep } from "node:path";
+
 const required = [
   "PLAYWRIGHT_BASE_URL",
   "ADSTUDIO_E2E_LOGIN_URL",
@@ -6,7 +9,7 @@ const required = [
   "ADSTUDIO_META_CANARY_WORKSPACE_ID",
   "ADSTUDIO_META_CANARY_TEMPLATE_NAME",
   "ADSTUDIO_META_CANARY_LOCATION",
-  "ADSTUDIO_META_CANARY_IMAGE_BASE64",
+  "ADSTUDIO_META_CANARY_IMAGE_PATH",
 ];
 const missing = required.filter((key) => !process.env[key]?.trim());
 
@@ -29,10 +32,10 @@ for (const [name, value] of [
 if (!isUuid(process.env.ADSTUDIO_META_CANARY_WORKSPACE_ID)) {
   fail("ADSTUDIO_META_CANARY_WORKSPACE_ID must be the UUID of a dedicated, Meta-connected canary workspace.");
 }
-if (!isBase64(process.env.ADSTUDIO_META_CANARY_IMAGE_BASE64)) {
-  fail("ADSTUDIO_META_CANARY_IMAGE_BASE64 must be a non-empty base64-encoded safe test image.");
+if (!isSafePng(process.env.ADSTUDIO_META_CANARY_IMAGE_PATH)) {
+  fail("ADSTUDIO_META_CANARY_IMAGE_PATH must name a regular 1KB–20MB PNG file outside this Git checkout that is safe for the selected canary template.");
 }
-console.log("Hosted Meta PAUSED canary environment is ready. The workflow captures a fresh real authenticated session before it runs and will not activate a campaign or bypass authentication.");
+console.log("Hosted Meta PAUSED canary environment is ready. The operator command captures a fresh real authenticated session before it runs and will not activate a campaign or bypass authentication.");
 
 function isAllowedDeploymentUrl(value) {
   try {
@@ -50,9 +53,15 @@ function isUuid(value) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value ?? "");
 }
 
-function isBase64(value) {
+function isSafePng(value) {
   try {
-    return Buffer.from(value ?? "", "base64").length > 32;
+    if (!value || !isAbsolute(value)) return false;
+    const absolutePath = resolve(value);
+    if (absolutePath.startsWith(`${resolve(process.cwd())}${sep}`)) return false;
+    const file = lstatSync(absolutePath);
+    if (!file.isFile() || file.size < 1024 || file.size > 20 * 1024 * 1024) return false;
+    const signature = readFileSync(absolutePath).subarray(0, 8);
+    return signature.equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
   } catch {
     return false;
   }
