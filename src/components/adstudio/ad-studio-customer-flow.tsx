@@ -237,7 +237,7 @@ function CompactCreativeEditor({ creative, onCreativeChange, showToast }: {
     setDraft(region?.kind === "text" ? creative.canvas.cloneQa?.copyValues[key] ?? "" : "");
   }
 
-  async function mutate(mutation: { action?: "undo" | "redo" | "edit"; fieldKey?: string; newValue?: string; newImage?: string; instruction?: string; patchImage?: string }) {
+  async function mutate(mutation: { action?: "undo" | "redo" | "edit"; fieldKey?: string; newValue?: string; newImage?: string; instruction?: string }) {
     if (!creative.activeRevisionId) return showToast("Reload this ad before editing it.");
     setBusy(true);
     try {
@@ -279,7 +279,7 @@ function CompactCreativeEditor({ creative, onCreativeChange, showToast }: {
       return;
     }
     setOptimisticPatch({ dataUrl: patchImage, box: selected.box });
-    void mutate({ action: "edit", fieldKey: selected.key, newValue: value, patchImage });
+    void mutate({ action: "edit", fieldKey: selected.key, newValue: value });
   }
 
   function retryLayerBuild() {

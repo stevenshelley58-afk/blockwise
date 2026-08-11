@@ -1,10 +1,9 @@
-// Client-side deterministic text patch rendering.
+// Client-side optimistic text patch rendering.
 //
-// The browser is the only place in the stack with real fonts (serverless sharp
-// has no fontconfig), so it renders the customer's exact copy over the clean
-// plate crop and sends the finished patch to the server, which clamps it to
-// the selected region and composites. The same patch doubles as the optimistic
-// overlay: what the customer sees instantly IS the final pixels.
+// The browser renders the customer's exact copy over the clean plate crop for
+// immediate feedback while the request is in flight. These pixels never leave
+// the browser; the Node edit route independently rasterizes the persisted
+// style and text before it stores a revision.
 
 import type { AdStudioTextLayerStyle } from "@/lib/adstudio/types.ts";
 import { MAGIC_LAYER_MIN_AUTOFIT_RATIO } from "../../../lib/adstudio/magic-layers-config.mjs";

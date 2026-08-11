@@ -21,8 +21,6 @@ export type CreativeEditMutation = {
   newValue?: string;
   newImage?: string;
   instruction?: string;
-  /** Client-rendered deterministic text patch (data URL) for the region. */
-  patchImage?: string;
 };
 
 export class CreativeEditError extends Error {
@@ -54,7 +52,11 @@ export async function requestCreativeEdit(input: {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      ...mutation,
+      action: mutation.action,
+      fieldKey: mutation.fieldKey,
+      newValue: mutation.newValue,
+      newImage: mutation.newImage,
+      instruction: mutation.instruction,
       expectedRevisionId: creative.activeRevisionId,
       mutationId,
     }),
