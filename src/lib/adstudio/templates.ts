@@ -52,8 +52,7 @@ export type AdStudioTemplateMeta = MetaLeadAdPack & {
 
 /**
  * Per-text-region typography, built offline by
- * scripts/build/font-corpus/adstudio-type-specs.mjs (see
- * docs/plans/2026-07-27-adstudio-magic-layers-editor.md §7). This is a
+ * scripts/build/font-corpus/adstudio-type-specs.mjs. This is a
  * best-effort real-font match against the sample image, not a rendering
  * recipe on its own — Phase 2 (the "mode: live|rerender" gating) decides
  * when a region is trustworthy enough to re-typeset with it. `fitScore`

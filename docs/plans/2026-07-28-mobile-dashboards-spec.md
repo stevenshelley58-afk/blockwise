@@ -833,7 +833,7 @@ Swiping pages through `visibleTemplates` in the current category filter.
 
 ### 9.6 Acceptance
 
-`npm run verify:hard-reset` still reports 71 templates and passes `adstudio-templates.mjs`. At 390 px the gallery is two even columns; tapping previews; "Use this template" in the preview still creates the ad exactly as before.
+`npm run verify:hard-reset` reports the exact quality-locked release set and passes `adstudio-templates.mjs`. At 390 px the gallery is two even columns; tapping previews; "Use this template" in the preview still creates the ad exactly as before.
 
 ---
 

@@ -1,4 +1,4 @@
-// Runs detectTemplateRegions across all 71 gallery templates and reports
+// Runs detectTemplateRegions across all released gallery templates and reports
 // coverage: how many regions matched cleanly, how many are flagged
 // lowConfidence, and how many failed to match at all (box: null). This is
 // a standalone diagnostic/checkpoint step — per the "no silent caps"
