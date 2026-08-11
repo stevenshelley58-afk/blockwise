@@ -72,13 +72,17 @@ test("runtime profiles distinguish declared defaults from persisted version and 
   assert.equal(persisted.primary.imageUsdPerUnit, 0.039);
 });
 
-test("runtime model attempts expose one primary and at most one declared fallback", () => {
+test("runtime model attempts are bounded by the caller's paid-candidate policy", () => {
   const profile = resolveRuntimeProfileFromVersions("image_final", []);
 
-  assert.equal(profile.fallbacks.length, 1, "the registry retains one recovery choice per profile");
+  assert.equal(profile.fallbacks.length, 2, "the clone registry declares Flash, Pro, then GPT Image");
   assert.deepEqual(
     modelCandidateAttempts(profile).map((candidate) => candidate.model),
     [profile.primary.model, profile.fallbacks[0].model],
+  );
+  assert.deepEqual(
+    modelCandidateAttempts(profile, 3).map((candidate) => candidate.model),
+    [profile.primary.model, profile.fallbacks[0].model, profile.fallbacks[1].model],
   );
 });
 

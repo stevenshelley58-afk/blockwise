@@ -31,8 +31,8 @@ export function resolveRuntimeProfileFromVersions(
   };
 }
 
-export function modelCandidateAttempts(profile: RuntimeModelProfile): ModelCandidate[] {
-  return [profile.primary, ...profile.fallbacks.slice(0, 1)];
+export function modelCandidateAttempts(profile: RuntimeModelProfile, maxCandidates = 2): ModelCandidate[] {
+  return [profile.primary, ...profile.fallbacks.slice(0, Math.max(0, maxCandidates - 1))];
 }
 
 export function isProviderFallbackEligible(error: unknown): boolean {

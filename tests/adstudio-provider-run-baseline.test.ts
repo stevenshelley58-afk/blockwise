@@ -464,8 +464,9 @@ test("profile resolution uses active persisted primaries and committed runtime d
 
   const final = evidence.find((profile: { profileKey: string }) => profile.profileKey === "image_final");
   assert.equal(final.source, "default");
-  assert.equal(final.primary.model, "gpt-image-2");
+  assert.equal(final.primary.model, "gemini-3.1-flash-image");
   assert.equal(final.fallbacks[0].model, "gemini-3-pro-image");
+  assert.equal(final.fallbacks[1].model, "gpt-image-2");
   assert.equal(final.activeVersionIdSha256, null);
   assert.doesNotMatch(JSON.stringify(evidence), new RegExp(rawVersionId));
 });

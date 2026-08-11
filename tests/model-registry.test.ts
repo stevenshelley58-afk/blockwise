@@ -58,13 +58,15 @@ test("fast image generation defaults to the benchmarked Gemini edit model", () =
   assert.deepEqual(resolved.fallbacks.map((candidate) => candidate.model), ["gpt-image-2"]);
 });
 
-test("final image generation uses OpenAI first with independent Gemini recovery", () => {
+test("final image generation advances from Flash to Pro to GPT Image", () => {
   const resolved = resolveModelProfile("image_final");
-  assert.equal(resolved.primary.provider, "openai");
-  assert.equal(resolved.primary.model, "gpt-image-2");
-  assert.equal(resolved.primary.imageUsdPerUnit, 0.211);
+  assert.equal(resolved.primary.provider, "google");
+  assert.equal(resolved.primary.model, "gemini-3.1-flash-image");
+  assert.equal(resolved.primary.imageUsdPerUnit, 0.067);
   assert.equal(resolved.fallbacks[0].provider, "google");
   assert.equal(resolved.fallbacks[0].model, "gemini-3-pro-image");
+  assert.equal(resolved.fallbacks[1].provider, "openai");
+  assert.equal(resolved.fallbacks[1].model, "gpt-image-2");
 });
 
 test("resolveEffectiveModelProfile accepts Azure OpenAI deployment overrides", () => {
@@ -115,7 +117,7 @@ test("estimateRunCostUsd accounts for text input, text output, and image units",
     imageUnits: 2,
   });
 
-  assert.equal(cost, 0.447);
+  assert.equal(cost, 0.1365);
 });
 
 test("the professional final-image migration never rotates the economical draft profile", () => {
@@ -140,6 +142,14 @@ test("provider recovery migration rotates only final image and vision QA primari
   assert.match(migration, /'openai',\s*'gpt-image-2'/);
   assert.match(migration, /'openai',\s*'gpt-5\.5'/);
   assert.doesNotMatch(migration, /where key = 'image_draft'/);
+});
+
+test("runtime vault migration confines Google credentials to the encrypted service lane", () => {
+  const migration = readFileSync("supabase/migrations/20260811101000_google_runtime_provider_token_vault.sql", "utf8");
+  assert.match(migration, /runtime_provider in \('openai', 'google'\)/);
+  assert.match(migration, /p_runtime_provider in \('openai', 'google'\)/);
+  assert.match(migration, /grant execute.*runtime_provider_token_vault_get.*service_role/is);
+  assert.match(migration, /revoke all.*runtime_provider_token_vault_upsert.*authenticated/is);
 });
 
 test("resolveModelProfileForData removes public-only fallbacks for sensitive client data", () => {

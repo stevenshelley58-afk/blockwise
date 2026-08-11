@@ -291,10 +291,15 @@ export async function generateFinalCloneRender(input: {
     // candidates instead of paying the same model to repeat the same failure.
     // The first provider remains available behind that fallback for an actual
     // outage, and every candidate still uses the same canonical clone request.
-    const [primaryProvider, ...fallbackProviders] = input.providers;
-    const candidateProviders = attempt === 1 || !primaryProvider || fallbackProviders.length === 0
-      ? input.providers
-      : [...fallbackProviders, primaryProvider];
+    // A QA rejection advances the intended paid tier exactly once: Flash,
+    // then Pro, then GPT Image. Within each candidate, the remaining ordered
+    // providers still handle genuine provider/transport failures and retain
+    // their independent accounting records.
+    const providerOffset = Math.min(attempt - 1, Math.max(0, input.providers.length - 1));
+    const candidateProviders = [
+      ...input.providers.slice(providerOffset),
+      ...input.providers.slice(0, providerOffset),
+    ];
     const generated = await generate({
       providers: candidateProviders,
       request: candidateRequest,

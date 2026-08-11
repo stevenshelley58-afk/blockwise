@@ -32,7 +32,7 @@ export type StoredProviderTokens = {
   refreshToken: string | null;
 };
 
-export type RuntimeProvider = "openai";
+export type RuntimeProvider = "openai" | "google";
 
 type ProviderConnectionRow = {
   id: string;

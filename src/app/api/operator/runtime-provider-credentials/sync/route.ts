@@ -18,25 +18,26 @@ export const dynamic = "force-dynamic";
 export async function POST(request: NextRequest) {
   const guard = await requireOperator();
   if (!guard.ok) return guard.response;
-  if (request.headers.get("x-blockwise-runtime-credential-sync") !== "openai") {
+  const provider = request.headers.get("x-blockwise-runtime-credential-sync");
+  if (provider !== "openai" && provider !== "google") {
     return NextResponse.json({ error: "Runtime credential sync confirmation is required." }, { status: 400 });
   }
 
-  const accessToken = process.env.OPENAI_API_KEY?.trim();
+  const accessToken = (provider === "google" ? process.env.GOOGLE_AI_API_KEY : process.env.OPENAI_API_KEY)?.trim();
   if (!accessToken) {
-    return NextResponse.json({ error: "The OpenAI runtime credential is not configured." }, { status: 503 });
+    return NextResponse.json({ error: `The ${provider} runtime credential is not configured.` }, { status: 503 });
   }
 
   const serviceSupabase = createSupabaseServiceClient();
   await upsertRuntimeProviderToken({
     serviceSupabase,
-    provider: "openai",
+    provider,
     accessToken,
   });
-  const roundTrip = await loadRuntimeProviderToken(serviceSupabase, "openai");
+  const roundTrip = await loadRuntimeProviderToken(serviceSupabase, provider);
   if (roundTrip !== accessToken) {
     return NextResponse.json({ error: "The encrypted runtime credential could not be verified." }, { status: 500 });
   }
 
-  return NextResponse.json({ provider: "openai", configured: true, roundTripVerified: true });
+  return NextResponse.json({ provider, configured: true, roundTripVerified: true });
 }
