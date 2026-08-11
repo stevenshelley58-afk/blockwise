@@ -143,6 +143,7 @@ test("editor builds layers in the background and applies text edits optimistical
   assert.match(editor, /setOptimisticPatch\(\{ key: selectedRegion\.key/);
   assert.match(editor, /loadedPlate === textLayers\?\.plate/);
   assert.match(editor, /setLoadedPlate\(plate\)/);
+  assert.match(editor, /That text does not fit this area\. Shorten it and try again\./);
   assert.match(editor, /studio-inplace-optimistic/);
   // Inlined finished pixels paint without a media-proxy round trip.
   assert.match(editRoute, /previewImage,/);
