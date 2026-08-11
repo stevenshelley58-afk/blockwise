@@ -154,7 +154,7 @@ function createOpenAiImageProvider(options: ProviderOptions = {}): ImageProvider
       const apiKey = env.OPENAI_API_KEY;
 
       if (!apiKey) {
-        throw preflightError("OPENAI_API_KEY is not configured.");
+        throw preflightError("OPENAI_API_KEY is not configured.", true);
       }
 
 
@@ -631,8 +631,8 @@ function usageFromProviderPayload(
   };
 }
 
-function preflightError(message: string): ProviderRequestError {
-  return new ProviderRequestError(message, { requestSubmitted: false, retryable: false });
+function preflightError(message: string, fallbackEligible = false): ProviderRequestError {
+  return new ProviderRequestError(message, { requestSubmitted: false, retryable: false, fallbackEligible });
 }
 
 function submittedError(

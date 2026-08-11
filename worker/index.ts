@@ -90,20 +90,19 @@ export async function resolveHandler(kind: string): Promise<Handler | null> {
         };
         if (!stored.body) throw new Error("Ad Studio recovery job has no generation body.");
         const reservation = stored.reservation ?? undefined;
-        const openAiApiKey = await loadRuntimeProviderToken(supabase, "openai");
-        const googleAiApiKey = await loadRuntimeProviderToken(supabase, "google");
-        if (!openAiApiKey) {
-          throw new Error("The encrypted OpenAI runtime credential is not provisioned.");
-        }
-        if (!googleAiApiKey) {
-          throw new Error("The encrypted Google runtime credential is not provisioned.");
+        const [openAiApiKey, googleAiApiKey] = await Promise.all([
+          loadRuntimeProviderToken(supabase, "openai"),
+          loadRuntimeProviderToken(supabase, "google"),
+        ]);
+        if (!openAiApiKey && !googleAiApiKey) {
+          throw new Error("No encrypted image-generation runtime credential is provisioned.");
         }
         // Never mutate process.env or put this key in the VPS deployment file.
         // Each provider receives an explicit copy scoped to this job.
         const providerEnv = {
           ...process.env,
-          OPENAI_API_KEY: openAiApiKey,
-          GOOGLE_AI_API_KEY: googleAiApiKey,
+          ...(openAiApiKey ? { OPENAI_API_KEY: openAiApiKey } : {}),
+          ...(googleAiApiKey ? { GOOGLE_AI_API_KEY: googleAiApiKey } : {}),
         };
 
         await supabase

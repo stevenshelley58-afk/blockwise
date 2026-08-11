@@ -21,15 +21,17 @@ test("runtime credential sync is operator-only, confirmation-bound, and never ac
 });
 
 test("campaign generation provisions the encrypted worker credential before charging or queueing", () => {
-  const ensureIndex = campaignsRoute.indexOf("await ensureRuntimeProviderToken(");
+  const ensureIndex = campaignsRoute.indexOf("runtimeImageCredentials.map");
   const reserveIndex = campaignsRoute.indexOf("await reserveAdStudioGenerationCredits(");
   const enqueueIndex = campaignsRoute.indexOf("await enqueueQueuedJob(");
 
   assert.ok(ensureIndex > 0);
   assert.ok(reserveIndex > ensureIndex);
   assert.ok(enqueueIndex > reserveIndex);
-  assert.match(campaignsRoute, /accessToken: process\.env\.OPENAI_API_KEY/);
-  assert.match(campaignsRoute, /provider: "google"[\s\S]*accessToken: process\.env\.GOOGLE_AI_API_KEY/);
+  assert.match(campaignsRoute, /provider: "openai" as const, accessToken: process\.env\.OPENAI_API_KEY/);
+  assert.match(campaignsRoute, /provider: "google" as const, accessToken: process\.env\.GOOGLE_AI_API_KEY/);
+  assert.match(campaignsRoute, /runtimeImageCredentials\.length === 0/);
+  assert.match(campaignsRoute, /Promise\.all\(runtimeImageCredentials\.map/);
   assert.match(campaignsRoute, /allowWrite: process\.env\.VERCEL_ENV === "production"/);
   assert.doesNotMatch(campaignsRoute, /OPENAI_API_KEY[^\n]*payload/);
   assert.doesNotMatch(campaignsRoute, /GOOGLE_AI_API_KEY[^\n]*payload/);
