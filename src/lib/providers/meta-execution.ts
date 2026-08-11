@@ -306,6 +306,8 @@ export type MetaPublishPlan = {
   adapter: MetaExecutionAdapter;
   status: MetaPublishPlanStatus;
   idempotencyKey: string;
+  /** Immutable cutover identity. Unmarked plans are legacy and cannot activate. */
+  publishContractVersion: "finished_clone_v1" | null;
   setup: MetaConnectionSetup;
   controls: MetaPublishControls;
   campaign: MetaPublishCampaignPlan;
@@ -554,6 +556,7 @@ export function buildMetaPublishPlan(input: {
     adapter,
     status: "draft",
     idempotencyKey,
+    publishContractVersion: "finished_clone_v1",
     setup,
     controls,
     campaign,
@@ -629,6 +632,9 @@ export function validateMetaPublishPlanReadiness(
 
   if (input.approvalStatus === "approved" && !plan.approvalRequestId) {
     blockers.push("Meta publish plan is not linked to an approval request.");
+  }
+  if (plan.publishContractVersion !== "finished_clone_v1") {
+    blockers.push("This Meta publish plan predates the finished clone contract and cannot be activated.");
   }
 
   if (plan.adapter === "marketing_api" && plan.creatives.some((creative) => !hasUsableCreativeImage(creative))) {
@@ -2180,6 +2186,7 @@ function planToJson(plan: MetaPublishPlan) {
     creatives: plan.creatives,
     ads: plan.ads,
     tracking: plan.tracking,
+    publishContractVersion: plan.publishContractVersion,
     complianceReportId: plan.complianceReportId,
     complianceSubjectHash: plan.complianceSubjectHash,
     complianceCheckedAt: plan.complianceCheckedAt,
@@ -2245,6 +2252,7 @@ type MetaPublishPlanRow = {
     creatives?: MetaPublishCreativePlan[];
     ads?: MetaPublishAdPlan[];
     tracking?: MetaPublishTrackingPlan;
+    publishContractVersion?: string | null;
     complianceReportId?: string | null;
     complianceSubjectHash?: string;
     complianceCheckedAt?: string | null;
@@ -2283,6 +2291,7 @@ function rowToPlan(row: MetaPublishPlanRow): MetaPublishPlan {
     adapter: row.adapter,
     status: normalizePersistedMetaPublishStatus(row.status),
     idempotencyKey: row.idempotency_key,
+    publishContractVersion: planJson.publishContractVersion === "finished_clone_v1" ? "finished_clone_v1" : null,
     setup: normalizeMetaConnectionSetup({
       metaAdAccountId: row.meta_ad_account_id,
       pageId: row.page_id,

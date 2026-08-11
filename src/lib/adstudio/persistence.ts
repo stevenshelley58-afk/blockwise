@@ -126,7 +126,10 @@ export async function persistAdStudioCampaignPack(
       template_key: pack.campaign.templateKey ?? null,
       template_source: pack.campaign.templateSource ?? null,
       source_observed_ad_id: pack.campaign.sourceObservedAdId ?? null,
-      template_snapshot_json: pack.campaign.templateSnapshot ?? {},
+      template_snapshot_json: {
+        ...(pack.campaign.templateSnapshot ?? {}),
+        publishContractVersion: "finished_clone_v1",
+      },
       platforms_json: pack.campaign.platforms,
       creative_formats_json: pack.campaign.creativeFormats,
       status: pack.campaign.status,

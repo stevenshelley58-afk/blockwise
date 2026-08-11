@@ -45,15 +45,38 @@ const inventory = await getAll([
   "lead_events", "lead_delivery_attempts", "lead_dedupe_records", "job_queue",
 ]);
 const rows = (table) => inventory[table].rows;
-const plans = rows("meta_publish_plans");
-const campaigns = rows("adstudio_campaigns");
-const campaignIds = new Set(campaigns.map((row) => row.id));
+const canonicalContractVersion = "finished_clone_v1";
+const allPlans = rows("meta_publish_plans");
+const allCampaigns = rows("adstudio_campaigns");
+function isCanonicalPlan(plan) {
+  const json = plan.plan_json;
+  return json?.publishContractVersion === canonicalContractVersion
+    && Array.isArray(json?.creatives)
+    && json.creatives.length > 0
+    && json.creatives.every((creative) => Array.isArray(creative.revisionBindings) && creative.revisionBindings.length > 0);
+}
+function isCanonicalCampaign(campaign) {
+  return campaign.template_snapshot_json?.publishContractVersion === canonicalContractVersion;
+}
+const canonicalPlans = allPlans.filter(isCanonicalPlan);
+const malformedCanonicalPlans = allPlans.filter((plan) =>
+  plan.plan_json?.publishContractVersion === canonicalContractVersion && !isCanonicalPlan(plan),
+);
+if (malformedCanonicalPlans.length) throw new Error(`Canonical Meta plans missing immutable revision bindings: ${malformedCanonicalPlans.map((row) => row.id).join(", ")}`);
+const canonicalPlanIds = new Set(canonicalPlans.map((row) => row.id));
+const canonicalCampaignIds = new Set([
+  ...canonicalPlans.map((row) => row.adstudio_campaign_id),
+  ...allCampaigns.filter(isCanonicalCampaign).map((row) => row.id),
+]);
+const plans = allPlans.filter((row) => !canonicalPlanIds.has(row.id));
+const campaignIds = new Set(allCampaigns.filter((row) => !canonicalCampaignIds.has(row.id)).map((row) => row.id));
+const campaigns = allCampaigns.filter((row) => campaignIds.has(row.id));
+const canonicalLegacyPlanOverlap = plans.filter((row) => canonicalCampaignIds.has(row.adstudio_campaign_id));
+if (canonicalLegacyPlanOverlap.length) throw new Error(`Campaign has both canonical and legacy Meta plans: ${canonicalLegacyPlanOverlap.map((row) => row.adstudio_campaign_id).join(", ")}`);
 const planIds = new Set(plans.map((row) => row.id));
 const workspaceIds = new Set([...campaigns, ...plans].map((row) => row.workspace_id).filter(Boolean));
 const belongs = (row) => workspaceIds.has(row.workspace_id)
-  && (!row.campaign_id || campaignIds.has(row.campaign_id))
-  && (!row.adstudio_campaign_id || campaignIds.has(row.adstudio_campaign_id))
-  && (!row.meta_publish_plan_id || planIds.has(row.meta_publish_plan_id));
+  && (campaignIds.has(row.campaign_id) || campaignIds.has(row.adstudio_campaign_id) || planIds.has(row.meta_publish_plan_id));
 
 const legacyJobKinds = new Set(["publish.meta", "sync.meta.leads"]);
 function jsonReferencesPlanId(value) {
@@ -72,6 +95,8 @@ const scopedTables = Object.fromEntries(Object.entries(inventory).map(([table, v
     // Brand kits/assets are shared new-system resources. They are retained
     // unless a separately proven FK-level ownership migration classifies them.
     if (table === "adstudio_brand_assets" || table === "adstudio_brand_kits") return false;
+    if (table === "adstudio_campaigns") return campaignIds.has(row.id);
+    if (table === "meta_publish_plans") return planIds.has(row.id);
     if (table === "job_queue") return workspaceIds.has(row.workspace_id)
       && legacyJobKinds.has(String(row.kind))
       && jsonReferencesPlanId(row.payload_json ?? row.payload ?? row.data_json);
@@ -135,6 +160,10 @@ console.log(JSON.stringify({
   inventoryPresence: Object.fromEntries(Object.entries(inventory).map(([table, value]) => [table, value.present])),
   counts: Object.fromEntries(Object.entries(scopedTables).map(([table, value]) => [table, value.length])),
   workspaceIds: [...workspaceIds].sort(),
+  retainedCanonical: {
+    planIds: [...canonicalPlanIds].sort(),
+    campaignIds: [...canonicalCampaignIds].sort(),
+  },
   tables: scopedTables,
   storagePaths,
   storageObjects,
