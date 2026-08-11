@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-30T10:41:22.343Z",
+  "generatedAt": "2026-08-11T10:11:34.261Z",
   "gates": {
     "minFontFit": 0.6,
     "minRegionConfidence": 0.6
@@ -150,6 +150,30 @@
       "bytes": 13972
     },
     {
+      "file": "/fonts/adstudio/comfortaa-700.woff2",
+      "fontId": "comfortaa",
+      "family": "Comfortaa",
+      "weight": 700,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/comfortaa/v47/1Pt_g8LJRfWJmhDAuUsSQamb1W0lwk4S4Y_LDrMfIA.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "ed9f328cf6aaa4c14dfb464d215e8a0d8d56b675a72fb601b819e95a1cb4e45d",
+      "bytes": 13416
+    },
+    {
+      "file": "/fonts/adstudio/cormorant-garamond-700.woff2",
+      "fontId": "cormorant-garamond",
+      "family": "Cormorant Garamond",
+      "weight": 700,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/cormorantgaramond/v21/co3umX5slCNuHLi8bLeY9MK7whWMhyjypVO7abI26QOD_hg9KnTOig.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "21a0fc1c5c22708cf4aa0c147fd32982e25bf9e21efec0ca31a4495ba41753eb",
+      "bytes": 22340
+    },
+    {
       "file": "/fonts/adstudio/dm-sans-800.woff2",
       "fontId": "dm-sans",
       "family": "DM Sans",
@@ -244,6 +268,18 @@
       "licenseUrl": "https://openfontlicense.org",
       "sha256": "07bf8cdae1f309a16a002227c18f9b2aff83fbfae8e74a2d499561c865f08f0f",
       "bytes": 14880
+    },
+    {
+      "file": "/fonts/adstudio/gabarito-900.woff2",
+      "fontId": "gabarito",
+      "family": "Gabarito",
+      "weight": 900,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/gabarito/v9/QGYwz_0dZAGKJJ4t3FFkc3Q8AkNP9Pj2SsWEEQgs.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "0fc8add8d31d590c48b8b418e64dd4f84c2d9696778ce694d086537f0539b70b",
+      "bytes": 17772
     },
     {
       "file": "/fonts/adstudio/glegoo-700.woff2",
@@ -654,6 +690,18 @@
       "bytes": 3868
     },
     {
+      "file": "/fonts/adstudio/newsreader-800.woff2",
+      "fontId": "newsreader",
+      "family": "Newsreader",
+      "weight": 800,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/newsreader/v26/cY9qfjOCX1hbuyalUrK49dLac06G1ZGsZBtoBCzBDXXD9JVF438w-IjwC-ZF.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "a80d960e5f0dca38702676840bc5b80bcea51c5efd90d9b2160fd643d41f2685",
+      "bytes": 23504
+    },
+    {
       "file": "/fonts/adstudio/noto-serif-800.woff2",
       "fontId": "noto-serif",
       "family": "Noto Serif",
@@ -844,6 +892,18 @@
       "licenseUrl": "https://openfontlicense.org",
       "sha256": "b56fac55959b4ddf165c9f3666edd35de2792f3fd54177c3cb41ce44a98451c9",
       "bytes": 12396
+    },
+    {
+      "file": "/fonts/adstudio/playfair-display-900.woff2",
+      "fontId": "playfair-display",
+      "family": "Playfair Display",
+      "weight": 900,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/playfairdisplay/v40/nuFvD-vYSZviVYUb_rj3ij__anPXJzDwcbmjWBN2PKfsunDXbtM.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "2772c56b28bec10f310634732b0554dd6cced8ad0f723bbdf73f6abc53829ad0",
+      "bytes": 22372
     },
     {
       "file": "/fonts/adstudio/plus-jakarta-sans-500.woff2",
@@ -1038,6 +1098,18 @@
       "bytes": 13460
     },
     {
+      "file": "/fonts/adstudio/raleway-800.woff2",
+      "fontId": "raleway",
+      "family": "Raleway",
+      "weight": 800,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/raleway/v37/1Ptxg8zYS_SKggPN4iEgvnHyvveLxVtapbCIPrE.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "12ba99eb125d1348c0ee4afe5ac74c30cb2d68eb25f17da934f94677545c89b2",
+      "bytes": 22644
+    },
+    {
       "file": "/fonts/adstudio/raleway-900.woff2",
       "fontId": "raleway",
       "family": "Raleway",
@@ -1134,6 +1206,18 @@
       "bytes": 21172
     },
     {
+      "file": "/fonts/adstudio/roboto-condensed-900.woff2",
+      "fontId": "roboto-condensed",
+      "family": "Roboto Condensed",
+      "weight": 900,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/robotocondensed/v31/ieVo2ZhZI2eCN5jzbjEETS9weq8-_d6T_POl0fRJeyUbpcBO5Xw.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "e319d623bef9b8bfe3f86d6eda5c5d94a983eab3794f04a3513c5a73cfc90973",
+      "bytes": 20996
+    },
+    {
       "file": "/fonts/adstudio/roboto-mono-600.woff2",
       "fontId": "roboto-mono",
       "family": "Roboto Mono",
@@ -1170,6 +1254,18 @@
       "bytes": 12884
     },
     {
+      "file": "/fonts/adstudio/rubik-600.woff2",
+      "fontId": "rubik",
+      "family": "Rubik",
+      "weight": 600,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/rubik/v31/iJWZBXyIfDnIV5PNhY1KTN7Z-Yh-2Y-FV0U1.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "6182043a20faf3fe1a8f0e2c7c964009e11de5e09852617fef3517cbf3c35513",
+      "bytes": 19060
+    },
+    {
       "file": "/fonts/adstudio/rubik-700.woff2",
       "fontId": "rubik",
       "family": "Rubik",
@@ -1204,6 +1300,18 @@
       "licenseUrl": "https://openfontlicense.org",
       "sha256": "c89cdac300402bbd22fd730c86d3438ccdaeef29742fd29e2787d91e6f1a3f80",
       "bytes": 4888
+    },
+    {
+      "file": "/fonts/adstudio/simonetta-900.woff2",
+      "fontId": "simonetta",
+      "family": "Simonetta",
+      "weight": 900,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/simonetta/v29/x3dnckHVYrCU5BU15c45-N0WsA7o.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "24173056ff2792008770d58425996216be8733040e1279544bcb2135f0a91b2d",
+      "bytes": 44312
     },
     {
       "file": "/fonts/adstudio/smooch-sans-300.woff2",

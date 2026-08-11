@@ -668,7 +668,10 @@ export function InPlaceAdEditor({
                 }}
                 type="button"
                 className={`studio-inplace-region ${region.kind}`}
-                style={regionStyle(region)}
+                // Full-bleed customer images legitimately sit behind text.
+                // Keep their large hit target below the smaller text targets
+                // so replacing a background never makes its copy unselectable.
+                style={{ ...regionStyle(region), zIndex: region.kind === "text" ? 2 : 1 }}
                 data-label={labelForRegionKey(region.key)}
                 data-pending={pending || undefined}
                 data-quiet={(pending && optimisticPatch?.key === region.key) || undefined}

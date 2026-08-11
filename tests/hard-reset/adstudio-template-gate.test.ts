@@ -89,6 +89,36 @@ function passingReview(input: {
 }
 
 function writeQualityRelease(root: string, value: ReturnType<typeof template>) {
+  // Release fixtures model the same fail-closed runtime contract as production:
+  // every quality-locked template has a complete offline editor map and a
+  // self-hosted, manifest-verified font face.
+  const fontFile = "/fonts/adstudio/TestFont-Regular.woff2";
+  const fontContent = "fake-font-data";
+  mkdirSync(join(root, "public", "fonts", "adstudio"), { recursive: true });
+  writeFileSync(join(root, "public", fontFile.slice(1)), fontContent);
+  writeFileSync(join(root, "public", "fonts", "adstudio", "manifest.json"), JSON.stringify({
+    faces: [{
+      file: fontFile,
+      fontId: "TestFont",
+      weight: 700,
+      italic: false,
+      sha256: hash(fontContent),
+    }],
+    excluded: [],
+  }));
+  const headlineTypography = value.typography.headline as typeof value.typography.headline & {
+    fontFile?: string;
+  };
+  headlineTypography.fitScore = 0.8;
+  headlineTypography.detectionScore = 0.8;
+  headlineTypography.fontFile = fontFile;
+  (value as typeof value & { deterministicEditing: {
+    status: "ready";
+    imageBoxes: Record<string, { x: number; y: number; width: number; height: number }>;
+  } }).deterministicEditing = {
+    status: "ready",
+    imageBoxes: { property_photo: { x: 0.1, y: 0.25, width: 0.8, height: 0.5 } },
+  };
   const templatePath = join(root, "gallery", `${value.id}.json`);
   const templateHash = hash(canonicalJson(value));
   writeFileSync(templatePath, JSON.stringify({ ...value, qualityLock: { templateHash } }));

@@ -146,16 +146,31 @@
       "tracking": 0,
       "align": "center",
       "color": "#787776",
-      "fitScore": 0.661,
+      "fitScore": 0.85,
       "sampleBox": {
-        "x": 0.17626953125,
-        "y": 0.751953125,
-        "width": 0.6572265625,
-        "height": 0.015625
+        "x": 0.35,
+        "y": 0.646,
+        "width": 0.28500000000000003,
+        "height": 0.020000000000000018
       },
       "sampleLineCount": 1,
-      "detectionScore": 0.388,
-      "fontFile": "/fonts/adstudio/plus-jakarta-sans-600.woff2"
+      "detectionScore": 0.85,
+      "fontFile": "/fonts/adstudio/plus-jakarta-sans-600.woff2",
+      "measurementVersion": 2,
+      "measurementSource": "manual-verified",
+      "measuredLines": [
+        {
+          "text": "@harbourline.example",
+          "sampleBox": {
+            "x": 0.35,
+            "y": 0.646,
+            "width": 0.285,
+            "height": 0.02
+          },
+          "sizeRatio": 1.0012771392081736,
+          "scaleX": 1
+        }
+      ]
     },
     "agent_name": {
       "fontId": "quicksand",
@@ -169,16 +184,31 @@
       "tracking": 0,
       "align": "left",
       "color": "#7e7c7b",
-      "fitScore": 0.59,
+      "fitScore": 0.85,
       "sampleBox": {
-        "x": 0.560546875,
-        "y": 0.8411458333333334,
-        "width": 0.29638671875,
-        "height": 0.06966145833333333
+        "x": 0.405,
+        "y": 0.78,
+        "width": 0.245,
+        "height": 0.050000000000000044
       },
       "sampleLineCount": 1,
-      "detectionScore": 0.545,
-      "fontFile": "/fonts/adstudio/quicksand-300.woff2"
+      "detectionScore": 0.85,
+      "fontFile": "/fonts/adstudio/quicksand-300.woff2",
+      "measurementVersion": 2,
+      "measurementSource": "manual-verified",
+      "measuredLines": [
+        {
+          "text": "Elena Marsh",
+          "sampleBox": {
+            "x": 0.405,
+            "y": 0.78,
+            "width": 0.245,
+            "height": 0.05
+          },
+          "sizeRatio": 1.3261746143057502,
+          "scaleX": 1
+        }
+      ]
     },
     "average_price": {
       "fontId": "roboto-mono",
@@ -192,16 +222,31 @@
       "tracking": 0,
       "align": "left",
       "color": "#6c6b6c",
-      "fitScore": 0.608,
+      "fitScore": 0.85,
       "sampleBox": {
-        "x": 0.71630859375,
-        "y": 0.55859375,
-        "width": 0.12109375,
-        "height": 0.0166015625
+        "x": 0.715,
+        "y": 0.479,
+        "width": 0.14500000000000002,
+        "height": 0.020000000000000018
       },
       "sampleLineCount": 1,
       "detectionScore": 1,
-      "fontFile": "/fonts/adstudio/roboto-mono-600.woff2"
+      "fontFile": "/fonts/adstudio/roboto-mono-600.woff2",
+      "measurementVersion": 2,
+      "measurementSource": "manual-verified",
+      "measuredLines": [
+        {
+          "text": "$742,000",
+          "sampleBox": {
+            "x": 0.715,
+            "y": 0.479,
+            "width": 0.145,
+            "height": 0.02
+          },
+          "sizeRatio": 1.0108173076923077,
+          "scaleX": 1
+        }
+      ]
     },
     "time_on_market": {
       "fontId": "merriweather",
@@ -215,16 +260,31 @@
       "tracking": 0,
       "align": "left",
       "color": "#6b6a6a",
-      "fitScore": 0.456,
+      "fitScore": 0.85,
       "sampleBox": {
-        "x": 0.73876953125,
-        "y": 0.4973958333333333,
-        "width": 0.09814453125,
-        "height": 0.013020833333333334
+        "x": 0.767,
+        "y": 0.426,
+        "width": 0.08999999999999997,
+        "height": 0.020000000000000018
       },
       "sampleLineCount": 1,
       "detectionScore": 1,
-      "fontFile": "/fonts/adstudio/merriweather-800.woff2"
+      "fontFile": "/fonts/adstudio/merriweather-800.woff2",
+      "measurementVersion": 2,
+      "measurementSource": "manual-verified",
+      "measuredLines": [
+        {
+          "text": "9 DAYS",
+          "sampleBox": {
+            "x": 0.767,
+            "y": 0.426,
+            "width": 0.09,
+            "height": 0.02
+          },
+          "sizeRatio": 1.1925465838509315,
+          "scaleX": 1
+        }
+      ]
     },
     "new_listings": {
       "fontId": "merriweather",
@@ -238,16 +298,31 @@
       "tracking": 0,
       "align": "left",
       "color": "#676667",
-      "fitScore": 0.428,
+      "fitScore": 0.85,
       "sampleBox": {
-        "x": 0.7939453125,
-        "y": 0.6223958333333334,
-        "width": 0.04443359375,
-        "height": 0.0126953125
+        "x": 0.792,
+        "y": 0.532,
+        "width": 0.06000000000000005,
+        "height": 0.020000000000000018
       },
       "sampleLineCount": 1,
       "detectionScore": 1,
-      "fontFile": "/fonts/adstudio/merriweather-800.woff2"
+      "fontFile": "/fonts/adstudio/merriweather-800.woff2",
+      "measurementVersion": 2,
+      "measurementSource": "manual-verified",
+      "measuredLines": [
+        {
+          "text": "126",
+          "sampleBox": {
+            "x": 0.792,
+            "y": 0.532,
+            "width": 0.06,
+            "height": 0.02
+          },
+          "sizeRatio": 1.224537037037037,
+          "scaleX": 1
+        }
+      ]
     },
     "sold_listings": {
       "fontId": "merriweather",
@@ -261,19 +336,51 @@
       "tracking": 0,
       "align": "left",
       "color": "#6f6e6f",
-      "fitScore": 0.35,
+      "fitScore": 0.85,
       "sampleBox": {
-        "x": 0.80859375,
-        "y": 0.6803385416666666,
-        "width": 0.0283203125,
-        "height": 0.013020833333333334
+        "x": 0.805,
+        "y": 0.584,
+        "width": 0.050000000000000044,
+        "height": 0.020000000000000018
       },
       "sampleLineCount": 1,
       "detectionScore": 1,
-      "fontFile": "/fonts/adstudio/merriweather-800.woff2"
+      "fontFile": "/fonts/adstudio/merriweather-800.woff2",
+      "measurementVersion": 2,
+      "measurementSource": "manual-verified",
+      "measuredLines": [
+        {
+          "text": "38",
+          "sampleBox": {
+            "x": 0.805,
+            "y": 0.584,
+            "width": 0.05,
+            "height": 0.02
+          },
+          "sizeRatio": 1.391304347826087,
+          "scaleX": 1
+        }
+      ]
     }
   },
   "qualityLock": {
-    "templateHash": "315e9fabc9a0f51340577b08ee9c6bb5290364ad3a7964945e3faacef2a72869"
+    "templateHash": "924865de0c29c5fc7c18ff30f2c4a93c8f6a27e55c70611348d2845ffbb8a809"
+  },
+  "deterministicEditing": {
+    "status": "ready",
+    "imageBoxes": {
+      "property_image": {
+        "x": 0.111,
+        "y": 0.016,
+        "width": 0.787,
+        "height": 0.225
+      },
+      "agent_photo": {
+        "x": 0.117,
+        "y": 0.7,
+        "width": 0.782,
+        "height": 0.288
+      }
+    }
   }
 }

@@ -140,16 +140,42 @@
       "tracking": 0,
       "align": "center",
       "color": "#402f1f",
-      "fitScore": 0.298,
+      "fitScore": 0.85,
       "sampleBox": {
-        "x": 0.21630859375,
-        "y": 0.695703125,
-        "width": 0.58935546875,
-        "height": 0.07265625
+        "x": 0.11,
+        "y": 0.085,
+        "width": 0.78,
+        "height": 0.24
       },
-      "sampleLineCount": 3,
-      "detectionScore": 0.421,
-      "fontFile": "/fonts/adstudio/montserrat-900.woff2"
+      "sampleLineCount": 2,
+      "detectionScore": 0.85,
+      "fontFile": "/fonts/adstudio/montserrat-900.woff2",
+      "measurementVersion": 2,
+      "measurementSource": "manual-verified",
+      "measuredLines": [
+        {
+          "text": "CALM CITY",
+          "sampleBox": {
+            "x": 0.15,
+            "y": 0.085,
+            "width": 0.7,
+            "height": 0.12
+          },
+          "sizeRatio": 1.3544303797468353,
+          "scaleX": 1
+        },
+        {
+          "text": "APARTMENT",
+          "sampleBox": {
+            "x": 0.11,
+            "y": 0.22,
+            "width": 0.78,
+            "height": 0.105
+          },
+          "sizeRatio": 1.3544303797468353,
+          "scaleX": 1
+        }
+      ]
     },
     "price_info": {
       "fontId": "merriweather",
@@ -163,16 +189,31 @@
       "tracking": 0,
       "align": "center",
       "color": "#b2a394",
-      "fitScore": 0.474,
+      "fitScore": 0.85,
       "sampleBox": {
-        "x": 0.2841796875,
-        "y": 0.665234375,
-        "width": 0.3603515625,
-        "height": 0.044140625
+        "x": 0.365,
+        "y": 0.58,
+        "width": 0.30000000000000004,
+        "height": 0.05999999999999994
       },
       "sampleLineCount": 1,
-      "detectionScore": 0.462,
-      "fontFile": "/fonts/adstudio/merriweather-400.woff2"
+      "detectionScore": 0.85,
+      "fontFile": "/fonts/adstudio/merriweather-400.woff2",
+      "measurementVersion": 2,
+      "measurementSource": "manual-verified",
+      "measuredLines": [
+        {
+          "text": "FROM $680 / WEEK",
+          "sampleBox": {
+            "x": 0.365,
+            "y": 0.58,
+            "width": 0.3,
+            "height": 0.06
+          },
+          "sizeRatio": 0.9552238805970149,
+          "scaleX": 1
+        }
+      ]
     },
     "feature_1": {
       "fontId": "oswald",
@@ -186,16 +227,42 @@
       "tracking": 0,
       "align": "center",
       "color": "#66594b",
-      "fitScore": 0.406,
+      "fitScore": 0.85,
       "sampleBox": {
-        "x": 0.2021484375,
-        "y": 0.752734375,
-        "width": 0.62646484375,
-        "height": 0.048046875
+        "x": 0.19,
+        "y": 0.7,
+        "width": 0.14999999999999997,
+        "height": 0.06000000000000005
       },
-      "sampleLineCount": 3,
-      "detectionScore": 0.667,
-      "fontFile": "/fonts/adstudio/oswald-500.woff2"
+      "sampleLineCount": 2,
+      "detectionScore": 0.85,
+      "fontFile": "/fonts/adstudio/oswald-500.woff2",
+      "measurementVersion": 2,
+      "measurementSource": "manual-verified",
+      "measuredLines": [
+        {
+          "text": "QUIET",
+          "sampleBox": {
+            "x": 0.19,
+            "y": 0.7,
+            "width": 0.15,
+            "height": 0.03
+          },
+          "sizeRatio": 1,
+          "scaleX": 1
+        },
+        {
+          "text": "LOUNGE",
+          "sampleBox": {
+            "x": 0.19,
+            "y": 0.73,
+            "width": 0.15,
+            "height": 0.03
+          },
+          "sizeRatio": 1,
+          "scaleX": 1
+        }
+      ]
     },
     "feature_2": {
       "fontId": "manrope",
@@ -209,16 +276,42 @@
       "tracking": 0,
       "align": "center",
       "color": "#e2dfda",
-      "fitScore": 0.41,
+      "fitScore": 0.85,
       "sampleBox": {
-        "x": 0.4287109375,
-        "y": 0.775390625,
-        "width": 0.1708984375,
-        "height": 0.018359375
+        "x": 0.41,
+        "y": 0.7,
+        "width": 0.19,
+        "height": 0.06000000000000005
       },
-      "sampleLineCount": 1,
-      "detectionScore": 0.8,
-      "fontFile": "/fonts/adstudio/manrope-700.woff2"
+      "sampleLineCount": 2,
+      "detectionScore": 0.85,
+      "fontFile": "/fonts/adstudio/manrope-700.woff2",
+      "measurementVersion": 2,
+      "measurementSource": "manual-verified",
+      "measuredLines": [
+        {
+          "text": "2",
+          "sampleBox": {
+            "x": 0.47,
+            "y": 0.7,
+            "width": 0.05,
+            "height": 0.03
+          },
+          "sizeRatio": 1.3230490018148817,
+          "scaleX": 1
+        },
+        {
+          "text": "BEDROOMS",
+          "sampleBox": {
+            "x": 0.41,
+            "y": 0.73,
+            "width": 0.19,
+            "height": 0.03
+          },
+          "sizeRatio": 1.3230490018148817,
+          "scaleX": 1
+        }
+      ]
     },
     "feature_3": {
       "fontId": "montserrat",
@@ -232,17 +325,42 @@
       "tracking": 0,
       "align": "left",
       "color": "#402f1f",
-      "fitScore": 0.35,
+      "fitScore": 0.85,
       "sampleBox": {
-        "x": 0.1,
-        "y": 0.6,
-        "width": 0.8,
-        "height": 0.06
+        "x": 0.68,
+        "y": 0.7,
+        "width": 0.15000000000000002,
+        "height": 0.06000000000000005
       },
-      "sampleLineCount": 1,
-      "detectionScore": 0.55,
-      "measurementSource": "manual-estimate",
-      "fontFile": "/fonts/adstudio/montserrat-900.woff2"
+      "sampleLineCount": 2,
+      "detectionScore": 0.85,
+      "measurementSource": "manual-verified",
+      "fontFile": "/fonts/adstudio/montserrat-900.woff2",
+      "measurementVersion": 2,
+      "measuredLines": [
+        {
+          "text": "CITY",
+          "sampleBox": {
+            "x": 0.68,
+            "y": 0.7,
+            "width": 0.15,
+            "height": 0.03
+          },
+          "sizeRatio": 0.5,
+          "scaleX": 1
+        },
+        {
+          "text": "VIEWS",
+          "sampleBox": {
+            "x": 0.68,
+            "y": 0.73,
+            "width": 0.15,
+            "height": 0.03
+          },
+          "sizeRatio": 0.5,
+          "scaleX": 1
+        }
+      ]
     },
     "website": {
       "fontId": "montserrat",
@@ -256,20 +374,45 @@
       "tracking": 0,
       "align": "center",
       "color": "#402f1f",
-      "fitScore": 0.35,
+      "fitScore": 0.85,
       "sampleBox": {
-        "x": 0.1,
-        "y": 0.95,
-        "width": 0.8,
-        "height": 0.025
+        "x": 0.33,
+        "y": 0.874,
+        "width": 0.39999999999999997,
+        "height": 0.030000000000000027
       },
       "sampleLineCount": 1,
-      "detectionScore": 0.55,
-      "measurementSource": "manual-estimate",
-      "fontFile": "/fonts/adstudio/montserrat-900.woff2"
+      "detectionScore": 0.85,
+      "measurementSource": "manual-verified",
+      "fontFile": "/fonts/adstudio/montserrat-900.woff2",
+      "measurementVersion": 2,
+      "measuredLines": [
+        {
+          "text": "CEDARCOAST.EXAMPLE",
+          "sampleBox": {
+            "x": 0.33,
+            "y": 0.874,
+            "width": 0.4,
+            "height": 0.03
+          },
+          "sizeRatio": 0.45,
+          "scaleX": 1
+        }
+      ]
     }
   },
   "qualityLock": {
-    "templateHash": "70db97f1fe2f3dc4dd894fc92589750bf10b75b0e7fe08b4993c50152fd08abf"
+    "templateHash": "a38128c9a69515fadbbf4bf6cc59083e7573df1ad10580b7b99f6e4204030280"
+  },
+  "deterministicEditing": {
+    "status": "ready",
+    "imageBoxes": {
+      "main_image": {
+        "x": 0.018,
+        "y": 0.018,
+        "width": 0.964,
+        "height": 0.958
+      }
+    }
   }
 }

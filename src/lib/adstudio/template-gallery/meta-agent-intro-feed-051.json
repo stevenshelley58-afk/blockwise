@@ -146,7 +146,373 @@
       }
     }
   },
+  "typography": {
+    "brand_name": {
+      "measurementVersion": 2,
+      "measurementSource": "manual-verified",
+      "fontId": "manrope",
+      "family": "Manrope",
+      "fallbackFamily": "sans-serif",
+      "weight": 800,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.08,
+      "lineHeight": 1.1,
+      "tracking": 0.02,
+      "align": "center",
+      "color": "#121212",
+      "fitScore": 0.82,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/manrope-800.woff2",
+      "sampleBox": {
+        "x": 0.1912037037,
+        "y": 0.0918518519,
+        "width": 0.6092592593,
+        "height": 0.1237037037
+      },
+      "sampleLineCount": 1,
+      "measuredLines": [
+        {
+          "text": "NEST",
+          "sampleBox": {
+            "x": 0.1912037037,
+            "y": 0.0918518519,
+            "width": 0.6092592593,
+            "height": 0.1237037037
+          },
+          "sizeRatio": 1.08
+        }
+      ]
+    },
+    "headline": {
+      "measurementVersion": 2,
+      "measurementSource": "manual-verified",
+      "fontId": "manrope",
+      "family": "Manrope",
+      "fallbackFamily": "sans-serif",
+      "weight": 500,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.05,
+      "lineHeight": 1.06,
+      "tracking": 0,
+      "align": "center",
+      "color": "#553b08",
+      "fitScore": 0.8,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/manrope-500.woff2",
+      "sampleBox": {
+        "x": 0.2407407407,
+        "y": 0.6592592593,
+        "width": 0.5148148148,
+        "height": 0.0877777778
+      },
+      "sampleLineCount": 2,
+      "measuredLines": [
+        {
+          "text": "THE KEY TO YOUR",
+          "sampleBox": {
+            "x": 0.2407407407,
+            "y": 0.6592592593,
+            "width": 0.5148148148,
+            "height": 0.0403703704
+          },
+          "sizeRatio": 2.1
+        },
+        {
+          "text": "NEXT HOME",
+          "sampleBox": {
+            "x": 0.3106481481,
+            "y": 0.7051851852,
+            "width": 0.3791666667,
+            "height": 0.0418518519
+          },
+          "sizeRatio": 2.1
+        }
+      ]
+    },
+    "feature_strapline": {
+      "measurementVersion": 2,
+      "measurementSource": "ocr-v2",
+      "fontId": "manrope",
+      "family": "Manrope",
+      "fallbackFamily": "sans-serif",
+      "weight": 500,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.1,
+      "lineHeight": 1.1,
+      "tracking": 0.01,
+      "align": "center",
+      "color": "#5e4611",
+      "fitScore": 0.77,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/manrope-500.woff2",
+      "sampleBox": {
+        "x": 0.1476851852,
+        "y": 0.7622222222,
+        "width": 0.7157407407,
+        "height": 0.0196296296
+      },
+      "sampleLineCount": 1,
+      "measuredLines": [
+        {
+          "text": "PRIME LOCATION | MODERN LIVING | READY TO MOVE",
+          "sampleBox": {
+            "x": 0.1476851852,
+            "y": 0.7622222222,
+            "width": 0.7157407407,
+            "height": 0.0196296296
+          },
+          "sizeRatio": 1.1
+        }
+      ]
+    },
+    "location_address": {
+      "measurementVersion": 2,
+      "measurementSource": "manual-verified",
+      "fontId": "manrope",
+      "family": "Manrope",
+      "fallbackFamily": "sans-serif",
+      "weight": 500,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.1,
+      "lineHeight": 1.15,
+      "tracking": 0,
+      "align": "center",
+      "color": "#553b08",
+      "fitScore": 0.78,
+      "detectionScore": 0.714,
+      "fontFile": "/fonts/adstudio/manrope-500.woff2",
+      "sampleBox": {
+        "x": 0.1069444444,
+        "y": 0.8474074074,
+        "width": 0.2185185185,
+        "height": 0.0337037037
+      },
+      "sampleLineCount": 2,
+      "measuredLines": [
+        {
+          "text": "123 EXAMPLE STREET,",
+          "sampleBox": {
+            "x": 0.1069444444,
+            "y": 0.8474074074,
+            "width": 0.2185185185,
+            "height": 0.0148148148
+          },
+          "sizeRatio": 2.2
+        },
+        {
+          "text": "SAMPLE CITY",
+          "sampleBox": {
+            "x": 0.1439814815,
+            "y": 0.8681481481,
+            "width": 0.1361111111,
+            "height": 0.012962963
+          },
+          "sizeRatio": 2.2
+        }
+      ]
+    },
+    "floor_area": {
+      "measurementVersion": 2,
+      "measurementSource": "ocr-v2",
+      "fontId": "manrope",
+      "family": "Manrope",
+      "fallbackFamily": "sans-serif",
+      "weight": 800,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.15,
+      "lineHeight": 1.1,
+      "tracking": 0,
+      "align": "center",
+      "color": "#553b08",
+      "fitScore": 0.79,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/manrope-800.woff2",
+      "sampleBox": {
+        "x": 0.4092592593,
+        "y": 0.8255555556,
+        "width": 0.1842592593,
+        "height": 0.0318518519
+      },
+      "sampleLineCount": 1,
+      "measuredLines": [
+        {
+          "text": "3456 SQ FT",
+          "sampleBox": {
+            "x": 0.4092592593,
+            "y": 0.8255555556,
+            "width": 0.1842592593,
+            "height": 0.0318518519
+          },
+          "sizeRatio": 1.15
+        }
+      ]
+    },
+    "garden_feature": {
+      "measurementVersion": 2,
+      "measurementSource": "manual-verified",
+      "fontId": "manrope",
+      "family": "Manrope",
+      "fallbackFamily": "sans-serif",
+      "weight": 500,
+      "italic": false,
+      "case": "upper",
+      "sizeRatio": 1.1,
+      "lineHeight": 1.1,
+      "tracking": 0,
+      "align": "center",
+      "color": "#553b08",
+      "fitScore": 0.77,
+      "detectionScore": 0.95,
+      "fontFile": "/fonts/adstudio/manrope-500.woff2",
+      "sampleBox": {
+        "x": 0.4111111111,
+        "y": 0.8651851852,
+        "width": 0.1703703704,
+        "height": 0.0162962963
+      },
+      "sampleLineCount": 1,
+      "measuredLines": [
+        {
+          "text": "WITH GARDEN",
+          "sampleBox": {
+            "x": 0.4111111111,
+            "y": 0.8651851852,
+            "width": 0.1703703704,
+            "height": 0.0162962963
+          },
+          "sizeRatio": 1.1
+        }
+      ]
+    },
+    "price": {
+      "measurementVersion": 2,
+      "measurementSource": "ocr-v2",
+      "fontId": "manrope",
+      "family": "Manrope",
+      "fallbackFamily": "sans-serif",
+      "weight": 800,
+      "italic": false,
+      "case": "none",
+      "sizeRatio": 1.15,
+      "lineHeight": 1.1,
+      "tracking": 0,
+      "align": "center",
+      "color": "#553b08",
+      "fitScore": 0.8,
+      "detectionScore": 1,
+      "fontFile": "/fonts/adstudio/manrope-800.woff2",
+      "sampleBox": {
+        "x": 0.6851851852,
+        "y": 0.8451851852,
+        "width": 0.2166666667,
+        "height": 0.0351851852
+      },
+      "sampleLineCount": 1,
+      "measuredLines": [
+        {
+          "text": "$1,250,000",
+          "sampleBox": {
+            "x": 0.6851851852,
+            "y": 0.8451851852,
+            "width": 0.2166666667,
+            "height": 0.0351851852
+          },
+          "sizeRatio": 1.15
+        }
+      ]
+    },
+    "phone": {
+      "measurementVersion": 2,
+      "measurementSource": "manual-verified",
+      "fontId": "manrope",
+      "family": "Manrope",
+      "fallbackFamily": "sans-serif",
+      "weight": 700,
+      "italic": false,
+      "case": "none",
+      "sizeRatio": 1.1,
+      "lineHeight": 1.1,
+      "tracking": 0,
+      "align": "center",
+      "color": "#ffffff",
+      "fitScore": 0.77,
+      "detectionScore": 0.92,
+      "fontFile": "/fonts/adstudio/manrope-700.woff2",
+      "sampleBox": {
+        "x": 0.3888888889,
+        "y": 0.9496296296,
+        "width": 0.1925925926,
+        "height": 0.0244444444
+      },
+      "sampleLineCount": 1,
+      "measuredLines": [
+        {
+          "text": "0400 123 456",
+          "sampleBox": {
+            "x": 0.3888888889,
+            "y": 0.9496296296,
+            "width": 0.1925925926,
+            "height": 0.0244444444
+          },
+          "sizeRatio": 1.1
+        }
+      ]
+    },
+    "website": {
+      "measurementVersion": 2,
+      "measurementSource": "manual-verified",
+      "fontId": "manrope",
+      "family": "Manrope",
+      "fallbackFamily": "sans-serif",
+      "weight": 400,
+      "italic": false,
+      "case": "lower",
+      "sizeRatio": 1.1,
+      "lineHeight": 1.1,
+      "tracking": 0,
+      "align": "left",
+      "color": "#ffffff",
+      "fitScore": 0.76,
+      "detectionScore": 0.92,
+      "fontFile": "/fonts/adstudio/manrope-400.woff2",
+      "sampleBox": {
+        "x": 0.6074074074,
+        "y": 0.9496296296,
+        "width": 0.3148148148,
+        "height": 0.0244444444
+      },
+      "sampleLineCount": 1,
+      "measuredLines": [
+        {
+          "text": "exampleproperty.com",
+          "sampleBox": {
+            "x": 0.6074074074,
+            "y": 0.9496296296,
+            "width": 0.3148148148,
+            "height": 0.0244444444
+          },
+          "sizeRatio": 1.1
+        }
+      ]
+    }
+  },
+  "deterministicEditing": {
+    "status": "ready",
+    "imageBoxes": {
+      "property_photo": {
+        "x": 0,
+        "y": 0.242962963,
+        "width": 1,
+        "height": 0.4081481481
+      }
+    }
+  },
   "qualityLock": {
-    "templateHash": "c8b355bd22ce28d9bb680334ee0062a248c00e2bb6764d0bec4a947536a73b59"
+    "templateHash": "e9797e24b408c710d60a1c5b90606c8d2b7eceec4d5eed9cfe76d257e33595d7"
   }
 }

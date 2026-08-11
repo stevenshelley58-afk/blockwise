@@ -45,6 +45,14 @@ test("runtime rejects a stale lock when the current manifest contract changes", 
   assert.match(result.issues.join("\n"), /templateContract does not match the current manifest/u);
 });
 
+test("runtime rejects a quality lock without complete deterministic editing evidence", () => {
+  const released = structuredClone(RESOLVABLE_AD_STUDIO_TEMPLATES[0]!);
+  delete released.deterministicEditing;
+  const result = validateQualityLockIndex(qualityLocks, [released]);
+  assert.equal(result.templateIds.has(released.id), false);
+  assert.match(result.issues.join("\n"), /complete deterministic editing evidence/u);
+});
+
 test("runtime keeps a valid lock when production rewrites equivalent floating-point geometry", () => {
   const released = RESOLVABLE_AD_STUDIO_TEMPLATES.find(
     (template) => template.id === "meta-agent-intro-feed-037",

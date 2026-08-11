@@ -62,6 +62,7 @@ let typographyEntries = 0;
 let typographyLowFitEntries = 0;
 let typographyTextInputTotal = 0;
 const deterministicEditingCounts = { legacy: 0, partial: 0, ready: 0 };
+const deterministicEditingReady = new Map();
 
 function fail(id, message) {
   failures.push(`${id}: ${message}`);
@@ -409,6 +410,9 @@ function verifyQualityLocks() {
       fail(id, "quality lock has an invalid schema");
       continue;
     }
+    if (deterministicEditingReady.get(id) !== true) {
+      fail(id, "quality-locked templates must have complete deterministic editing evidence");
+    }
     const templateHash = templateContractHash(entry.template);
     if (entry.template.qualityLock?.templateHash !== templateHash) {
       fail(id, "manifest qualityLock.templateHash does not match its contract");
@@ -455,10 +459,12 @@ function verifyDeterministicEditing(template, id, images, text) {
   const hasOfflineEvidence = editing !== undefined || template.typography !== undefined;
   if (!editing) {
     deterministicEditingCounts[hasOfflineEvidence ? "partial" : "legacy"] += 1;
+    deterministicEditingReady.set(id, false);
     return;
   }
   if (!(editing.status === "partial" || editing.status === "ready")) {
     deterministicEditingCounts.partial += 1;
+    deterministicEditingReady.set(id, false);
     fail(id, "deterministicEditing.status must be partial or ready");
     return;
   }
@@ -523,6 +529,7 @@ function verifyDeterministicEditing(template, id, images, text) {
 
   if (editing.status === "partial") {
     deterministicEditingCounts.partial += 1;
+    deterministicEditingReady.set(id, false);
     for (const [key, box] of Object.entries(editing.imageBoxes ?? {})) {
       if (imageKeys.has(key) && !isNormalizedBox(box)) {
         fail(id, `deterministic editing: image input ${key} has no valid editor hitbox`);
@@ -533,9 +540,11 @@ function verifyDeterministicEditing(template, id, images, text) {
 
   if (issues.length) {
     deterministicEditingCounts.partial += 1;
+    deterministicEditingReady.set(id, false);
     for (const issue of issues) fail(id, `deterministic editing: ${issue}`);
   } else {
     deterministicEditingCounts.ready += 1;
+    deterministicEditingReady.set(id, true);
   }
 }
 

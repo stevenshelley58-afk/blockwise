@@ -128,8 +128,8 @@
   },
   "typography": {
     "address": {
-      "fontId": "source-sans-3",
-      "family": "Source Sans 3",
+      "fontId": "open-sans",
+      "family": "Open Sans",
       "fallbackFamily": "sans-serif",
       "weight": 300,
       "italic": false,
@@ -139,15 +139,42 @@
       "tracking": 0,
       "align": "left",
       "color": "#b9b8b6",
-      "fitScore": 0.497,
+      "fitScore": 0.85,
       "sampleBox": {
-        "x": 0.048828125,
-        "y": 0.434375,
-        "width": 0.3271484375,
-        "height": 0.053125
+        "x": 0.15,
+        "y": 0.39,
+        "width": 0.30999999999999994,
+        "height": 0.05399999999999999
       },
-      "sampleLineCount": 3,
-      "detectionScore": 1
+      "sampleLineCount": 2,
+      "detectionScore": 1,
+      "measurementVersion": 2,
+      "measurementSource": "manual-verified",
+      "fontFile": "/fonts/adstudio/open-sans-300.woff2",
+      "measuredLines": [
+        {
+          "text": "18 TALLOW LANE,",
+          "sampleBox": {
+            "x": 0.15,
+            "y": 0.39,
+            "width": 0.255,
+            "height": 0.028
+          },
+          "sizeRatio": 1.04,
+          "scaleX": 1
+        },
+        {
+          "text": "SCARBOROUGH WA",
+          "sampleBox": {
+            "x": 0.15,
+            "y": 0.416,
+            "width": 0.31,
+            "height": 0.028
+          },
+          "sizeRatio": 1.04,
+          "scaleX": 1
+        }
+      ]
     },
     "price": {
       "fontId": "kanit",
@@ -161,15 +188,30 @@
       "tracking": 0,
       "align": "center",
       "color": "#64686a",
-      "fitScore": 0.261,
+      "fitScore": 0.85,
       "sampleBox": {
-        "x": 0.138671875,
-        "y": 0.314453125,
-        "width": 0.7265625,
-        "height": 0.023046875
+        "x": 0.153,
+        "y": 0.313,
+        "width": 0.38,
+        "height": 0.033999999999999975
       },
-      "sampleLineCount": 2,
-      "detectionScore": 0.65,
+      "sampleLineCount": 1,
+      "detectionScore": 0.85,
+      "measurementVersion": 2,
+      "measurementSource": "manual-verified",
+      "measuredLines": [
+        {
+          "text": "Offers from $895,000",
+          "sampleBox": {
+            "x": 0.153,
+            "y": 0.313,
+            "width": 0.38,
+            "height": 0.034
+          },
+          "sizeRatio": 1.1439075630252102,
+          "scaleX": 1
+        }
+      ],
       "fontFile": "/fonts/adstudio/kanit-900.woff2"
     },
     "website_handle": {
@@ -184,15 +226,30 @@
       "tracking": 0,
       "align": "left",
       "color": "#dfe2e2",
-      "fitScore": 0.613,
+      "fitScore": 0.85,
       "sampleBox": {
-        "x": 0.13623046875,
-        "y": 0.890625,
-        "width": 0.349609375,
-        "height": 0.024609375
+        "x": 0.15,
+        "y": 0.881,
+        "width": 0.36,
+        "height": 0.030000000000000027
       },
       "sampleLineCount": 1,
       "detectionScore": 1,
+      "measurementVersion": 2,
+      "measurementSource": "manual-verified",
+      "measuredLines": [
+        {
+          "text": "harbourandkey.com.au",
+          "sampleBox": {
+            "x": 0.15,
+            "y": 0.881,
+            "width": 0.36,
+            "height": 0.03
+          },
+          "sizeRatio": 1.0596885813148786,
+          "scaleX": 1
+        }
+      ],
       "fontFile": "/fonts/adstudio/karla-600.woff2"
     },
     "phone": {
@@ -207,15 +264,30 @@
       "tracking": 0,
       "align": "left",
       "color": "#e3e6e5",
-      "fitScore": 0.433,
+      "fitScore": 0.85,
       "sampleBox": {
-        "x": 0.1357421875,
-        "y": 0.85546875,
-        "width": 0.21044921875,
-        "height": 0.0203125
+        "x": 0.15,
+        "y": 0.846,
+        "width": 0.24500000000000002,
+        "height": 0.026000000000000023
       },
       "sampleLineCount": 1,
       "detectionScore": 1,
+      "measurementVersion": 2,
+      "measurementSource": "manual-verified",
+      "measuredLines": [
+        {
+          "text": "08 6102 1840",
+          "sampleBox": {
+            "x": 0.15,
+            "y": 0.846,
+            "width": 0.245,
+            "height": 0.026
+          },
+          "sizeRatio": 1.1111111111111112,
+          "scaleX": 1
+        }
+      ],
       "fontFile": "/fonts/adstudio/playfair-display-700.woff2"
     },
     "headline": {
@@ -230,19 +302,62 @@
       "tracking": 0,
       "align": "left",
       "color": "#f3f5f5",
-      "fitScore": 0.563,
+      "fitScore": 0.85,
       "sampleBox": {
-        "x": 0.13330078125,
-        "y": 0.099609375,
-        "width": 0.3720703125,
-        "height": 0.1734375
+        "x": 0.153,
+        "y": 0.114,
+        "width": 0.33699999999999997,
+        "height": 0.15500000000000003
       },
       "sampleLineCount": 2,
       "detectionScore": 1,
+      "measurementVersion": 2,
+      "measurementSource": "manual-verified",
+      "measuredLines": [
+        {
+          "text": "JUST",
+          "sampleBox": {
+            "x": 0.153,
+            "y": 0.114,
+            "width": 0.241,
+            "height": 0.07
+          },
+          "sizeRatio": 1.0847457846291142,
+          "scaleX": 1
+        },
+        {
+          "text": "LISTED",
+          "sampleBox": {
+            "x": 0.159,
+            "y": 0.199,
+            "width": 0.331,
+            "height": 0.07
+          },
+          "sizeRatio": 1.0847457846291142,
+          "scaleX": 1
+        }
+      ],
       "fontFile": "/fonts/adstudio/open-sans-300.woff2"
     }
   },
   "qualityLock": {
-    "templateHash": "01166bf76888c223f2ea74cbbda0c909d4ed6fefc754eb888f711905629077be"
+    "templateHash": "6ee09cde577bcf4e1062b5ff28d25fd2c9fe305123168f0a67760d995f5f513b"
+  },
+  "deterministicEditing": {
+    "status": "ready",
+    "imageBoxes": {
+      "property_photo": {
+        "x": 0.018,
+        "y": 0.016,
+        "width": 0.964,
+        "height": 0.968
+      },
+      "brand_logo": {
+        "x": 0.15,
+        "y": 0.73,
+        "width": 0.1,
+        "height": 0.08
+      }
+    }
   }
 }
