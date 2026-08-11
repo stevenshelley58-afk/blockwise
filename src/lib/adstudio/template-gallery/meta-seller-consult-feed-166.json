@@ -1,8 +1,8 @@
 {
   "id": "meta-seller-consult-feed-166",
-  "name": "Seller Consultation — Feed 166",
+  "name": "Home Staging Cleaning Checklist",
   "goal": "seller_leads",
-  "offerId": "seller-consultation",
+  "offerId": "home-staging-cleaning-checklist",
   "source": "builtin",
   "status": "approved",
   "format": "4:5",
@@ -10,99 +10,99 @@
     "width": 1080,
     "height": 1350
   },
-  "audienceIntent": "Homeowners thinking about selling and seeking expert guidance",
+  "audienceIntent": "Homeowners preparing a property for sale",
   "category": "seller-lead-generation",
   "tags": [
-    "seller-consult",
-    "lead-generation",
+    "home staging",
+    "seller checklist",
     "feed"
   ],
   "sample": {
     "imageSrc": "/adstudio-samples/meta/meta-seller-consult-feed-166-sample.png",
     "thumbnailSrc": "/adstudio-samples/meta/meta-seller-consult-feed-166-sample.png",
-    "alt": "Generated sample for Seller Consultation — Feed 166.",
-    "contentHash": "e734f93c52aeac753f78935639efb663cf6286065e50438d27f97da6883e549a",
+    "alt": "Generated sample for Home Staging Cleaning Checklist.",
+    "contentHash": "8e7ed365cbc1d9bb3c4889c3409e2084189aab7f6cf91208bee4419ef887cbf8",
     "generatedBy": "reference_clone"
   },
   "inputs": {
     "images": [
       {
         "key": "background_photo",
-        "label": "Background photo",
+        "label": "Background Photo",
         "required": true,
         "aspect": "landscape",
-        "description": "the customer's background property or lifestyle photograph"
-      },
-      {
-        "key": "agency_logo",
-        "label": "Agency logo",
-        "required": true,
-        "aspect": "square",
-        "description": "the customer's agency logo"
+        "description": "the customer home interior background photograph"
       }
     ],
     "text": [
       {
         "key": "headline",
         "label": "Headline",
-        "maxLength": 38,
-        "sample": "THINKING OF SELLING?",
+        "maxLength": 45,
+        "sample": "HOME STAGING CLEANING CHECKLIST",
         "required": true
       },
       {
         "key": "check_1",
         "label": "Check 1",
-        "maxLength": 39,
-        "sample": "CLARIFY YOUR TIMELINE",
+        "maxLength": 35,
+        "sample": "DECLUTTER ALL ROOMS",
         "required": true
       },
       {
         "key": "check_2",
         "label": "Check 2",
         "maxLength": 35,
-        "sample": "PREPARE YOUR HOME",
+        "sample": "DEEP CLEAN THE KITCHEN",
         "required": true
       },
       {
         "key": "check_3",
         "label": "Check 3",
-        "maxLength": 36,
-        "sample": "REVIEW LOCAL SALES",
+        "maxLength": 35,
+        "sample": "FRESHEN UP THE BATHROOMS",
         "required": true
       },
       {
         "key": "check_4",
         "label": "Check 4",
-        "maxLength": 38,
-        "sample": "SET A PRICE STRATEGY",
+        "maxLength": 35,
+        "sample": "DUST ALL SURFACES",
         "required": true
       },
       {
         "key": "check_5",
         "label": "Check 5",
-        "maxLength": 36,
-        "sample": "PLAN YOUR CAMPAIGN",
+        "maxLength": 35,
+        "sample": "ORGANIZE ENTRYWAYS",
         "required": true
       },
       {
         "key": "check_6",
         "label": "Check 6",
-        "maxLength": 36,
-        "sample": "CONFIRM NEXT STEPS",
+        "maxLength": 35,
+        "sample": "CLEAN THE FLOORS",
+        "required": true
+      },
+      {
+        "key": "check_7",
+        "label": "Check 7",
+        "maxLength": 35,
+        "sample": "FOCUS ON CURB APPEAL",
+        "required": true
+      },
+      {
+        "key": "check_8",
+        "label": "Check 8",
+        "maxLength": 35,
+        "sample": "CLEAN WINDOWS AND MIRRORS",
         "required": true
       },
       {
         "key": "cta",
-        "label": "Cta",
-        "maxLength": 44,
-        "sample": "BOOK A SELLER CONSULTATION",
-        "required": true
-      },
-      {
-        "key": "phone",
-        "label": "Phone",
-        "maxLength": 30,
-        "sample": "0400 123 456",
+        "label": "Contact Call To Action",
+        "maxLength": 70,
+        "sample": "HAVE A QUESTION? CALL US TODAY AT 0400 123 456",
         "required": true
       }
     ]
@@ -112,8 +112,8 @@
     "contentHash": "8d5be92bce991e7e107b8aa93ced81c46a8d1b0445759cdc831d4ffc8bb60d0b"
   },
   "classification": {
-    "ad_type": "lead_generation",
-    "primary_intent": "seller_consultation",
+    "ad_type": "seller_checklist",
+    "primary_intent": "seller_leads",
     "property_or_agent_focus": "property"
   },
   "meta": {
@@ -141,224 +141,18 @@
     ],
     "cta": "LEARN_MORE",
     "leadForm": {
-      "headline": "Request your free seller consultation",
+      "headline": "Request the property details",
       "questions": [
         "What is your best contact number?"
       ],
       "privacyPolicyUrl": null,
       "thankYouScreen": {
         "title": "Request received",
-        "body": "The agency will be in touch within 24 hours to arrange your free seller consultation."
+        "body": "The agency will be in touch shortly."
       }
     }
   },
-  "typography": {
-    "cta": {
-      "fontId": "smooch-sans",
-      "family": "Smooch Sans",
-      "fallbackFamily": "sans-serif",
-      "weight": 700,
-      "italic": false,
-      "case": "upper",
-      "sizeRatio": 1.5017857142857143,
-      "lineHeight": 1.2,
-      "tracking": 0,
-      "align": "left",
-      "color": "#dfe1e3",
-      "fitScore": 0.45,
-      "sampleBox": {
-        "x": 0.3416666666666667,
-        "y": 0.8774074074074074,
-        "width": 0.4652777777777778,
-        "height": 0.01888888888888889
-      },
-      "sampleLineCount": 1,
-      "detectionScore": 1,
-      "fontFile": "/fonts/adstudio/smooch-sans-700.woff2"
-    },
-    "check_1": {
-      "fontId": "lora",
-      "family": "Lora",
-      "fallbackFamily": "serif",
-      "weight": 700,
-      "italic": false,
-      "case": "upper",
-      "sizeRatio": 1.3212903225806452,
-      "lineHeight": 1.28,
-      "tracking": 0,
-      "align": "center",
-      "color": "#313132",
-      "fitScore": 0.446,
-      "sampleBox": {
-        "x": 0.32407407407407407,
-        "y": 0.3440740740740741,
-        "width": 0.42916666666666664,
-        "height": 0.02074074074074074
-      },
-      "sampleLineCount": 1,
-      "detectionScore": 1,
-      "fontFile": "/fonts/adstudio/lora-700.woff2"
-    },
-    "headline": {
-      "fontId": "quicksand",
-      "family": "Quicksand",
-      "fallbackFamily": "sans-serif",
-      "weight": 300,
-      "italic": false,
-      "case": "upper",
-      "sizeRatio": 1.3061224382702123,
-      "lineHeight": 1.25,
-      "tracking": 0,
-      "align": "center",
-      "color": "#1f3346",
-      "fitScore": 0.586,
-      "sampleBox": {
-        "x": 0.20555555555555555,
-        "y": 0.1451851851851852,
-        "width": 0.6976851851851852,
-        "height": 0.14185185185185184
-      },
-      "sampleLineCount": 3,
-      "detectionScore": 0.864,
-      "fontFile": "/fonts/adstudio/quicksand-300.woff2"
-    },
-    "check_4": {
-      "fontId": "kanit",
-      "family": "Kanit",
-      "fallbackFamily": "sans-serif",
-      "weight": 900,
-      "italic": false,
-      "case": "upper",
-      "sizeRatio": 1.4914394419784398,
-      "lineHeight": 1.495,
-      "tracking": 0,
-      "align": "center",
-      "color": "#dedad6",
-      "fitScore": 0.168,
-      "sampleBox": {
-        "x": 0.0375,
-        "y": 0.5014814814814815,
-        "width": 0.8888888888888888,
-        "height": 0.055185185185185184
-      },
-      "sampleLineCount": 3,
-      "detectionScore": 1,
-      "fontFile": "/fonts/adstudio/kanit-900.woff2"
-    },
-    "check_3": {
-      "fontId": "smooch-sans",
-      "family": "Smooch Sans",
-      "fallbackFamily": "sans-serif",
-      "weight": 700,
-      "italic": false,
-      "case": "upper",
-      "sizeRatio": 1.572964669738863,
-      "lineHeight": 1.2,
-      "tracking": 0,
-      "align": "center",
-      "color": "#2d2d2d",
-      "fitScore": 0.438,
-      "sampleBox": {
-        "x": 0.325,
-        "y": 0.47185185185185186,
-        "width": 0.37407407407407406,
-        "height": 0.02074074074074074
-      },
-      "sampleLineCount": 1,
-      "detectionScore": 1,
-      "fontFile": "/fonts/adstudio/smooch-sans-700.woff2"
-    },
-    "check_5": {
-      "fontId": "lora",
-      "family": "Lora",
-      "fallbackFamily": "serif",
-      "weight": 700,
-      "italic": false,
-      "case": "upper",
-      "sizeRatio": 1.3212903225806452,
-      "lineHeight": 1.28,
-      "tracking": 0,
-      "align": "center",
-      "color": "#2f2f2f",
-      "fitScore": 0.428,
-      "sampleBox": {
-        "x": 0.325,
-        "y": 0.6,
-        "width": 0.38842592592592595,
-        "height": 0.02074074074074074
-      },
-      "sampleLineCount": 1,
-      "detectionScore": 1,
-      "fontFile": "/fonts/adstudio/lora-700.woff2"
-    },
-    "check_6": {
-      "fontId": "lora",
-      "family": "Lora",
-      "fallbackFamily": "serif",
-      "weight": 700,
-      "italic": false,
-      "case": "upper",
-      "sizeRatio": 1.3212903225806452,
-      "lineHeight": 1.28,
-      "tracking": 0,
-      "align": "center",
-      "color": "#303030",
-      "fitScore": 0.435,
-      "sampleBox": {
-        "x": 0.32407407407407407,
-        "y": 0.664074074074074,
-        "width": 0.37453703703703706,
-        "height": 0.021111111111111112
-      },
-      "sampleLineCount": 1,
-      "detectionScore": 1,
-      "fontFile": "/fonts/adstudio/lora-700.woff2"
-    },
-    "check_2": {
-      "fontId": "lora",
-      "family": "Lora",
-      "fallbackFamily": "serif",
-      "weight": 700,
-      "italic": false,
-      "case": "upper",
-      "sizeRatio": 1.3212903225806452,
-      "lineHeight": 1.28,
-      "tracking": 0,
-      "align": "center",
-      "color": "#2c2c2c",
-      "fitScore": 0.422,
-      "sampleBox": {
-        "x": 0.325,
-        "y": 0.40814814814814815,
-        "width": 0.3768518518518518,
-        "height": 0.02074074074074074
-      },
-      "sampleLineCount": 1,
-      "detectionScore": 1,
-      "fontFile": "/fonts/adstudio/lora-700.woff2"
-    },
-    "phone": {
-      "fontId": "merriweather",
-      "family": "Merriweather",
-      "fallbackFamily": "serif",
-      "weight": 700,
-      "italic": false,
-      "case": "none",
-      "sizeRatio": 1.2562292358803988,
-      "lineHeight": 1.257,
-      "tracking": 0,
-      "align": "center",
-      "color": "#f0f1f2",
-      "fitScore": 0.462,
-      "sampleBox": {
-        "x": 0.34120370370370373,
-        "y": 0.912962962962963,
-        "width": 0.4074074074074074,
-        "height": 0.03666666666666667
-      },
-      "sampleLineCount": 1,
-      "detectionScore": 1,
-      "fontFile": "/fonts/adstudio/merriweather-700.woff2"
-    }
+  "qualityLock": {
+    "templateHash": "cef665eedb04df80d5558f8bc5e8abff6b7a1945ab92dcea8f275cbaaee33394"
   }
 }

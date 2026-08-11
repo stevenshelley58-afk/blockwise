@@ -1,8 +1,8 @@
 {
   "id": "meta-lead-checklist-story-304",
-  "name": "Free Property Checklist — Story 304",
-  "goal": "seller_leads",
-  "offerId": "property-checklist-lead-magnet",
+  "name": "New Construction Decision Guide",
+  "goal": "buyer_leads",
+  "offerId": "new-construction-decision-guide",
   "source": "builtin",
   "status": "approved",
   "format": "9:16",
@@ -10,92 +10,92 @@
     "width": 1080,
     "height": 1920
   },
-  "audienceIntent": "Property owners seeking practical guidance before their next move",
+  "audienceIntent": "Buyers evaluating a new-construction purchase",
   "category": "educational-lead-generation",
   "tags": [
-    "education",
-    "lead-generation",
+    "new construction",
+    "buyer education",
     "story"
   ],
   "sample": {
     "imageSrc": "/adstudio-samples/meta/meta-lead-checklist-story-304-sample.png",
     "thumbnailSrc": "/adstudio-samples/meta/meta-lead-checklist-story-304-sample.png",
-    "alt": "Generated sample for Free Property Checklist — Story 304.",
-    "contentHash": "0d8bd8b9ee1737615e2023050eb26699d568a2cfa857dc4e2608eeca9f446d8c",
+    "alt": "Generated sample for New Construction Decision Guide.",
+    "contentHash": "3783e91e99827539bd60b6fb4cb2ac34b6be6178ce6758c87e7d752547238d3e",
     "generatedBy": "reference_clone"
   },
   "inputs": {
     "images": [
       {
         "key": "background_photo",
-        "label": "Background photo",
+        "label": "Background Photo",
         "required": true,
-        "aspect": "landscape",
-        "description": "the customer's background property or lifestyle photograph"
+        "aspect": "portrait",
+        "description": "the customer property or lifestyle background photograph"
       }
     ],
     "text": [
       {
-        "key": "headline",
-        "label": "Headline",
-        "maxLength": 50,
-        "sample": "FREE PROPERTY PLANNING CHECKLIST",
+        "key": "question",
+        "label": "Question",
+        "maxLength": 70,
+        "sample": "WHAT SHOULD I KNOW BEFORE BUYING NEW CONSTRUCTION?",
         "required": true
       },
       {
-        "key": "subheadline",
-        "label": "Subheadline",
+        "key": "left_heading",
+        "label": "Left Column Heading",
+        "maxLength": 16,
+        "sample": "DO",
+        "required": true
+      },
+      {
+        "key": "left_item_1",
+        "label": "Left Item 1",
         "maxLength": 45,
-        "sample": "MAKE YOUR NEXT MOVE CLEARER",
+        "sample": "WORK WITH A LOCAL AGENT",
         "required": true
       },
       {
-        "key": "benefit_1",
-        "label": "Benefit 1",
-        "maxLength": 35,
-        "sample": "PREPARE YOUR HOME",
+        "key": "left_item_2",
+        "label": "Left Item 2",
+        "maxLength": 45,
+        "sample": "CHOOSE THE RIGHT BUILDER",
         "required": true
       },
       {
-        "key": "benefit_2",
-        "label": "Benefit 2",
-        "maxLength": 35,
-        "sample": "UNDERSTAND TIMING",
+        "key": "left_item_3",
+        "label": "Left Item 3",
+        "maxLength": 45,
+        "sample": "SCHEDULE A DESIGN CONSULTATION",
         "required": true
       },
       {
-        "key": "benefit_3",
-        "label": "Benefit 3",
-        "maxLength": 38,
-        "sample": "ASK BETTER QUESTIONS",
+        "key": "right_heading",
+        "label": "Right Column Heading",
+        "maxLength": 16,
+        "sample": "AVOID",
         "required": true
       },
       {
-        "key": "check_1",
-        "label": "Check 1",
-        "maxLength": 39,
-        "sample": "PREPARE YOUR PROPERTY",
+        "key": "right_item_1",
+        "label": "Right Item 1",
+        "maxLength": 45,
+        "sample": "SKIPPING COMMUNITY RESEARCH",
         "required": true
       },
       {
-        "key": "check_2",
-        "label": "Check 2",
-        "maxLength": 40,
-        "sample": "UNDERSTAND YOUR TIMING",
+        "key": "right_item_2",
+        "label": "Right Item 2",
+        "maxLength": 45,
+        "sample": "IGNORING PRIORITY COSTS",
         "required": true
       },
       {
-        "key": "check_3",
-        "label": "Check 3",
-        "maxLength": 41,
-        "sample": "REVIEW LOCAL CONDITIONS",
-        "required": true
-      },
-      {
-        "key": "cta",
-        "label": "Cta",
-        "maxLength": 40,
-        "sample": "GET THE FREE CHECKLIST",
+        "key": "right_item_3",
+        "label": "Right Item 3",
+        "maxLength": 45,
+        "sample": "MISSING A HOME INSPECTION",
         "required": true
       }
     ]
@@ -105,8 +105,8 @@
     "contentHash": "15db4d72f3b3af099d5555e5271a0f1cccd86d65068a4f7e2257742f1fcb1597"
   },
   "classification": {
-    "ad_type": "lead_generation",
-    "primary_intent": "educational_lead_magnet",
+    "ad_type": "educational_comparison",
+    "primary_intent": "buyer_education",
     "property_or_agent_focus": "property"
   },
   "meta": {
@@ -134,235 +134,18 @@
     ],
     "cta": "LEARN_MORE",
     "leadForm": {
-      "headline": "Get your free property guide",
+      "headline": "Request the property details",
       "questions": [
         "What is your best contact number?"
       ],
       "privacyPolicyUrl": null,
       "thankYouScreen": {
         "title": "Request received",
-        "body": "The agency will be in touch within 24 hours to send you your free property guide."
+        "body": "The agency will be in touch shortly."
       }
     }
   },
-  "typography": {
-    "headline": {
-      "fontId": "smooch-sans",
-      "family": "Smooch Sans",
-      "fallbackFamily": "sans-serif",
-      "weight": 300,
-      "italic": false,
-      "case": "upper",
-      "sizeRatio": 1.52380961018962,
-      "lineHeight": 1.2,
-      "tracking": 0,
-      "align": "left",
-      "color": "#445369",
-      "fitScore": 0.342,
-      "sampleBox": {
-        "x": 0.08333333333333333,
-        "y": 0.06276041666666667,
-        "width": 0.6884259259259259,
-        "height": 0.25755208333333335
-      },
-      "sampleLineCount": 4,
-      "detectionScore": 1,
-      "fontFile": "/fonts/adstudio/smooch-sans-300.woff2"
-    },
-    "subheadline": {
-      "fontId": "merriweather",
-      "family": "Merriweather",
-      "fallbackFamily": "serif",
-      "weight": 500,
-      "italic": false,
-      "case": "upper",
-      "sizeRatio": 1.3121924548933843,
-      "lineHeight": 1.257,
-      "tracking": 0,
-      "align": "left",
-      "color": "#7b8286",
-      "fitScore": 0.412,
-      "sampleBox": {
-        "x": 0.1550925925925926,
-        "y": 0.34479166666666666,
-        "width": 0.4476851851851852,
-        "height": 0.05416666666666667
-      },
-      "sampleLineCount": 2,
-      "detectionScore": 0.704,
-      "fontFile": "/fonts/adstudio/merriweather-500.woff2"
-    },
-    "check_3": {
-      "fontId": "merriweather",
-      "family": "Merriweather",
-      "fallbackFamily": "serif",
-      "weight": 600,
-      "italic": false,
-      "case": "upper",
-      "sizeRatio": 1.2884615384615385,
-      "lineHeight": 1.257,
-      "tracking": 0,
-      "align": "center",
-      "color": "#202c41",
-      "fitScore": 0.608,
-      "sampleBox": {
-        "x": 0.18518518518518517,
-        "y": 0.7760416666666666,
-        "width": 0.5740740740740741,
-        "height": 0.030729166666666665
-      },
-      "sampleLineCount": 1,
-      "detectionScore": 1,
-      "fontFile": "/fonts/adstudio/merriweather-600.woff2"
-    },
-    "check_2": {
-      "fontId": "manrope",
-      "family": "Manrope",
-      "fallbackFamily": "sans-serif",
-      "weight": 600,
-      "italic": false,
-      "case": "upper",
-      "sizeRatio": 1.3265306122448979,
-      "lineHeight": 1.366,
-      "tracking": 0,
-      "align": "center",
-      "color": "#1e2b40",
-      "fitScore": 0.613,
-      "sampleBox": {
-        "x": 0.18564814814814815,
-        "y": 0.715625,
-        "width": 0.5625,
-        "height": 0.029947916666666668
-      },
-      "sampleLineCount": 1,
-      "detectionScore": 1,
-      "fontFile": "/fonts/adstudio/manrope-600.woff2"
-    },
-    "cta": {
-      "fontId": "poppins",
-      "family": "Poppins",
-      "fallbackFamily": "sans-serif",
-      "weight": 900,
-      "italic": false,
-      "case": "upper",
-      "sizeRatio": 1.3704836334805752,
-      "lineHeight": 1.5,
-      "tracking": 0,
-      "align": "center",
-      "color": "#3b4b61",
-      "fitScore": 0.242,
-      "sampleBox": {
-        "x": 0.1935185185185185,
-        "y": 0.86953125,
-        "width": 0.612037037037037,
-        "height": 0.05
-      },
-      "sampleLineCount": 1,
-      "detectionScore": 1,
-      "fontFile": "/fonts/adstudio/poppins-900.woff2"
-    },
-    "check_1": {
-      "fontId": "manrope",
-      "family": "Manrope",
-      "fallbackFamily": "sans-serif",
-      "weight": 600,
-      "italic": false,
-      "case": "upper",
-      "sizeRatio": 1.3403076923076924,
-      "lineHeight": 1.366,
-      "tracking": 0,
-      "align": "center",
-      "color": "#202c42",
-      "fitScore": 0.624,
-      "sampleBox": {
-        "x": 0.18472222222222223,
-        "y": 0.6546875,
-        "width": 0.5430555555555555,
-        "height": 0.03046875
-      },
-      "sampleLineCount": 1,
-      "detectionScore": 1,
-      "fontFile": "/fonts/adstudio/manrope-600.woff2"
-    },
-    "benefit_3": {
-      "fontId": "oswald",
-      "family": "Oswald",
-      "fallbackFamily": "sans-serif",
-      "weight": 400,
-      "italic": false,
-      "case": "upper",
-      "sizeRatio": 1.0138888888888888,
-      "lineHeight": 1.482,
-      "tracking": 0,
-      "align": "left",
-      "color": "#4a515e",
-      "fitScore": 0.612,
-      "sampleBox": {
-        "x": 0.09444444444444444,
-        "y": 0.51875,
-        "width": 0.5689814814814815,
-        "height": 0.06588541666666667
-      },
-      "sampleLineCount": 2,
-      "detectionScore": 1,
-      "fontFile": "/fonts/adstudio/oswald-400.woff2"
-    },
-    "benefit_1": {
-      "fontId": "manrope",
-      "family": "Manrope",
-      "fallbackFamily": "sans-serif",
-      "weight": 700,
-      "italic": false,
-      "case": "upper",
-      "sizeRatio": 1.3257575757575757,
-      "lineHeight": 1.366,
-      "tracking": 0,
-      "align": "left",
-      "color": "#4a5364",
-      "fitScore": 0.337,
-      "sampleBox": {
-        "x": 0.22407407407407406,
-        "y": 0.41692708333333334,
-        "width": 0.4041666666666667,
-        "height": 0.01640625
-      },
-      "sampleLineCount": 1,
-      "detectionScore": 1,
-      "fontFile": "/fonts/adstudio/manrope-700.woff2"
-    },
-    "benefit_2": {
-      "fontId": "lato",
-      "family": "Lato",
-      "fallbackFamily": "sans-serif",
-      "weight": 900,
-      "italic": false,
-      "case": "upper",
-      "sizeRatio": 1.4012121212121211,
-      "lineHeight": 1.2,
-      "tracking": 0,
-      "align": "left",
-      "color": "#858a94",
-      "fitScore": 0.243,
-      "sampleBox": {
-        "x": 0.22407407407407406,
-        "y": 0.48489583333333336,
-        "width": 0.39305555555555555,
-        "height": 0.015885416666666666
-      },
-      "sampleLineCount": 1,
-      "detectionScore": 1,
-      "fontFile": "/fonts/adstudio/lato-900.woff2"
-    }
-  },
-  "deterministicEditing": {
-    "status": "partial",
-    "imageBoxes": {
-      "background_photo": {
-        "x": 0,
-        "y": 0,
-        "width": 1,
-        "height": 1
-      }
-    }
+  "qualityLock": {
+    "templateHash": "126aab0b421a3a9fcf75cf7f8d981583e11d3c9984924fd0aa60a1ca39c0f6b3"
   }
 }

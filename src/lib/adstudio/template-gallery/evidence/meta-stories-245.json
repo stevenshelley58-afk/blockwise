@@ -1,0 +1,256 @@
+{
+  "schemaVersion": 2,
+  "templateId": "meta-stories-245",
+  "templateHash": "f7733befa9202c1939e1754975a2c636f713d79e1f24c2936f849994709bde11",
+  "sampleHash": "293237f43d35d37301515dc9469acbccbf58b56603822e9dc9c626d3e5678e95",
+  "rubricVersion": "adstudio-subject-invariant-clone-v1",
+  "thresholds": {
+    "adSystemLikeness": 9.5,
+    "standaloneAdQuality": 9
+  },
+  "qualifiedAt": "2026-08-11T05:48:00.000Z",
+  "sample": {
+    "stage": "gallery_sample",
+    "requestHash": "e59210761c13303b58bad1534173e60318afa266057a404f8facabb94b8343a5",
+    "referenceHash": "b6d85d3015a97438faaf619b460f78f24ebc4c0d22a3e471575d105d6f65141e",
+    "references": [
+      {
+        "index": 1,
+        "key": "source_ad",
+        "role": "source",
+        "contentHash": "b6d85d3015a97438faaf619b460f78f24ebc4c0d22a3e471575d105d6f65141e"
+      },
+      {
+        "index": 2,
+        "key": "agency_logo",
+        "role": "replacement_asset",
+        "contentHash": "2712c374f355a029461d5fe2bb2fda148500be4cc3a5296022810b24263ee889"
+      },
+      {
+        "index": 3,
+        "key": "agent_photo",
+        "role": "replacement_asset",
+        "contentHash": "a3528cb9b3d63afd9634d8d163fb98659c0eabcdce3931f698efac0cd54c3cb0"
+      }
+    ],
+    "copy": {
+      "agency_name": "HARBOURLINE REALTY",
+      "service_tagline": "Best Service",
+      "headline": "LOOKING FOR A REAL ESTATE AGENT?",
+      "supporting_text": "We are ready to help you with the buying or selling of your home.",
+      "agent_name": "Mia Calloway",
+      "agent_title": "Real Estate Agent",
+      "cta_text": "Schedule a Viewing",
+      "contact_number": "+123-555-0134"
+    },
+    "outputHash": "293237f43d35d37301515dc9469acbccbf58b56603822e9dc9c626d3e5678e95",
+    "executionTransport": "production_image_api",
+    "reviewedAt": "2026-08-11T05:45:00.000Z",
+    "review": {
+      "schemaVersion": 1,
+      "rubricVersion": "adstudio-subject-invariant-clone-v1",
+      "templateId": "meta-stories-245",
+      "requestHash": "e59210761c13303b58bad1534173e60318afa266057a404f8facabb94b8343a5",
+      "candidateHash": "293237f43d35d37301515dc9469acbccbf58b56603822e9dc9c626d3e5678e95",
+      "reviewer": {
+        "provider": "openai",
+        "model": "gpt-5.6-vision"
+      },
+      "adSystemLikenessScore": 9.6,
+      "standaloneAdQualityScore": 9.5,
+      "excludedContentInfluencedScore": false,
+      "copyChecks": [
+        {
+          "key": "agency_name",
+          "expected": "HARBOURLINE REALTY",
+          "observed": "HARBOURLINE REALTY",
+          "exact": true
+        },
+        {
+          "key": "service_tagline",
+          "expected": "Best Service",
+          "observed": "Best Service",
+          "exact": true
+        },
+        {
+          "key": "headline",
+          "expected": "LOOKING FOR A REAL ESTATE AGENT?",
+          "observed": "LOOKING FOR A REAL ESTATE AGENT?",
+          "exact": true
+        },
+        {
+          "key": "supporting_text",
+          "expected": "We are ready to help you with the buying or selling of your home.",
+          "observed": "We are ready to help you with the buying or selling of your home.",
+          "exact": true
+        },
+        {
+          "key": "agent_name",
+          "expected": "Mia Calloway",
+          "observed": "Mia Calloway",
+          "exact": true
+        },
+        {
+          "key": "agent_title",
+          "expected": "Real Estate Agent",
+          "observed": "Real Estate Agent",
+          "exact": true
+        },
+        {
+          "key": "cta_text",
+          "expected": "Schedule a Viewing",
+          "observed": "Schedule a Viewing",
+          "exact": true
+        },
+        {
+          "key": "contact_number",
+          "expected": "+123-555-0134",
+          "observed": "+123-555-0134",
+          "exact": true
+        }
+      ],
+      "assetChecks": [
+        {
+          "key": "agency_logo",
+          "used": true,
+          "faithful": true,
+          "notes": "used"
+        },
+        {
+          "key": "agent_photo",
+          "used": true,
+          "faithful": true,
+          "notes": "used"
+        }
+      ],
+      "identityLeakage": [],
+      "defects": [],
+      "includedRationale": "Preserves reusable layout.",
+      "qualityRationale": "Clean finished ad.",
+      "suggestedCorrection": "",
+      "reviewedAt": "2026-08-11T05:45:00.000Z"
+    }
+  },
+  "customerFixture": {
+    "stage": "customer_fixture",
+    "requestHash": "c472215ea9972c99bdee5156d2d6498efe472511c18b8f74414098cbe80e8d39",
+    "referenceHash": "293237f43d35d37301515dc9469acbccbf58b56603822e9dc9c626d3e5678e95",
+    "references": [
+      {
+        "index": 1,
+        "key": "approved_sample",
+        "role": "approved_sample",
+        "contentHash": "293237f43d35d37301515dc9469acbccbf58b56603822e9dc9c626d3e5678e95"
+      },
+      {
+        "index": 2,
+        "key": "agency_logo",
+        "role": "replacement_asset",
+        "contentHash": "1ff9ec4c234ae7ce1432356f56783373c2985fe38e4adc76051620e021a57299"
+      },
+      {
+        "index": 3,
+        "key": "agent_photo",
+        "role": "replacement_asset",
+        "contentHash": "4f1c49d7841cedab74a733578d592cbca27ed28a2269f88e017fb8604bf44b6d"
+      }
+    ],
+    "copy": {
+      "agency_name": "VALE PROPERTY",
+      "service_tagline": "Local expertise",
+      "headline": "LOOKING FOR A REAL ESTATE AGENT?",
+      "supporting_text": "We are ready to help you with the buying or selling of your home.",
+      "agent_name": "Nora Vale",
+      "agent_title": "Property Advisor",
+      "cta_text": "Book a Consultation",
+      "contact_number": "+123-555-0199"
+    },
+    "outputHash": "ad2c0a9011cbb039c1a58e847f25d1461a3f52901047fce3761408f90a1e8ff8",
+    "executionTransport": "google_image_api",
+    "reviewedAt": "2026-08-11T05:48:00.000Z",
+    "review": {
+      "schemaVersion": 1,
+      "rubricVersion": "adstudio-subject-invariant-clone-v1",
+      "templateId": "meta-stories-245",
+      "requestHash": "c472215ea9972c99bdee5156d2d6498efe472511c18b8f74414098cbe80e8d39",
+      "candidateHash": "ad2c0a9011cbb039c1a58e847f25d1461a3f52901047fce3761408f90a1e8ff8",
+      "reviewer": {
+        "provider": "openai",
+        "model": "gpt-5.6-vision"
+      },
+      "adSystemLikenessScore": 9.7,
+      "standaloneAdQualityScore": 9.5,
+      "excludedContentInfluencedScore": false,
+      "copyChecks": [
+        {
+          "key": "agency_name",
+          "expected": "VALE PROPERTY",
+          "observed": "VALE PROPERTY",
+          "exact": true
+        },
+        {
+          "key": "service_tagline",
+          "expected": "Local expertise",
+          "observed": "Local expertise",
+          "exact": true
+        },
+        {
+          "key": "headline",
+          "expected": "LOOKING FOR A REAL ESTATE AGENT?",
+          "observed": "LOOKING FOR A REAL ESTATE AGENT?",
+          "exact": true
+        },
+        {
+          "key": "supporting_text",
+          "expected": "We are ready to help you with the buying or selling of your home.",
+          "observed": "We are ready to help you with the buying or selling of your home.",
+          "exact": true
+        },
+        {
+          "key": "agent_name",
+          "expected": "Nora Vale",
+          "observed": "Nora Vale",
+          "exact": true
+        },
+        {
+          "key": "agent_title",
+          "expected": "Property Advisor",
+          "observed": "Property Advisor",
+          "exact": true
+        },
+        {
+          "key": "cta_text",
+          "expected": "Book a Consultation",
+          "observed": "Book a Consultation",
+          "exact": true
+        },
+        {
+          "key": "contact_number",
+          "expected": "+123-555-0199",
+          "observed": "+123-555-0199",
+          "exact": true
+        }
+      ],
+      "assetChecks": [
+        {
+          "key": "agency_logo",
+          "used": true,
+          "faithful": true,
+          "notes": "used"
+        },
+        {
+          "key": "agent_photo",
+          "used": true,
+          "faithful": true,
+          "notes": "used"
+        }
+      ],
+      "identityLeakage": [],
+      "defects": [],
+      "includedRationale": "retained",
+      "qualityRationale": "clean",
+      "suggestedCorrection": "",
+      "reviewedAt": "2026-08-11T05:48:00.000Z"
+    }
+  }
+}

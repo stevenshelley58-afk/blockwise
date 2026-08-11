@@ -24,7 +24,7 @@
     "imageSrc": "/adstudio-samples/meta/meta-feed-165-sample.png",
     "thumbnailSrc": "/adstudio-samples/meta/meta-feed-165-sample.png",
     "alt": "Sample apartment rental ad with a warm interior photo, weekly price, three features, and contact website.",
-    "contentHash": "8d60c203de0b052f3dbeb5ccd567cc6df757277bb726f5b665120f51393ee98f",
+    "contentHash": "6b39524953085173c3693d65073af0521272baad4f24c4bd25c99638b4c0e858",
     "generatedBy": "reference_clone"
   },
   "inputs": {
@@ -268,5 +268,8 @@
       "measurementSource": "manual-estimate",
       "fontFile": "/fonts/adstudio/montserrat-900.woff2"
     }
+  },
+  "qualityLock": {
+    "templateHash": "70db97f1fe2f3dc4dd894fc92589750bf10b75b0e7fe08b4993c50152fd08abf"
   }
 }

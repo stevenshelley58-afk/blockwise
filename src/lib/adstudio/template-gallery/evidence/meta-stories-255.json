@@ -1,0 +1,228 @@
+{
+  "schemaVersion": 2,
+  "templateId": "meta-stories-255",
+  "templateHash": "315e9fabc9a0f51340577b08ee9c6bb5290364ad3a7964945e3faacef2a72869",
+  "sampleHash": "6e5c79a445561f96d5e580b42c78fc53342d083db4c29941f0b31d974c36c0fe",
+  "rubricVersion": "adstudio-subject-invariant-clone-v1",
+  "thresholds": {
+    "adSystemLikeness": 9.5,
+    "standaloneAdQuality": 9
+  },
+  "qualifiedAt": "2026-08-11T06:08:00.000Z",
+  "sample": {
+    "stage": "gallery_sample",
+    "requestHash": "9b5bbc9721d79d1311adfe434af98829eb29e4ab05727fca750eeedfc5481138",
+    "referenceHash": "64fdbd93d4d5f3e7fc6d062762fd50b9dd8ece96ab85e3c011a28346072fda71",
+    "references": [
+      {
+        "index": 1,
+        "key": "source_ad",
+        "role": "source",
+        "contentHash": "64fdbd93d4d5f3e7fc6d062762fd50b9dd8ece96ab85e3c011a28346072fda71"
+      },
+      {
+        "index": 2,
+        "key": "property_image",
+        "role": "replacement_asset",
+        "contentHash": "3888f8116b8a7d3b29d7b8547b3126408290a4b314ea7a48eb8500a1c0ccbd35"
+      },
+      {
+        "index": 3,
+        "key": "agent_photo",
+        "role": "replacement_asset",
+        "contentHash": "a3528cb9b3d63afd9634d8d163fb98659c0eabcdce3931f698efac0cd54c3cb0"
+      }
+    ],
+    "copy": {
+      "time_on_market": "9 DAYS",
+      "average_price": "$742,000",
+      "new_listings": "126",
+      "sold_listings": "38",
+      "social_handle": "@harbourline.example",
+      "agent_name": "Elena Marsh"
+    },
+    "outputHash": "6e5c79a445561f96d5e580b42c78fc53342d083db4c29941f0b31d974c36c0fe",
+    "executionTransport": "google_image_api",
+    "reviewedAt": "2026-08-11T06:05:00.000Z",
+    "review": {
+      "schemaVersion": 1,
+      "rubricVersion": "adstudio-subject-invariant-clone-v1",
+      "templateId": "meta-stories-255",
+      "requestHash": "9b5bbc9721d79d1311adfe434af98829eb29e4ab05727fca750eeedfc5481138",
+      "candidateHash": "6e5c79a445561f96d5e580b42c78fc53342d083db4c29941f0b31d974c36c0fe",
+      "reviewer": {
+        "provider": "openai",
+        "model": "gpt-5.6-vision"
+      },
+      "adSystemLikenessScore": 9.6,
+      "standaloneAdQualityScore": 9.4,
+      "excludedContentInfluencedScore": false,
+      "copyChecks": [
+        {
+          "key": "time_on_market",
+          "expected": "9 DAYS",
+          "observed": "9 DAYS",
+          "exact": true
+        },
+        {
+          "key": "average_price",
+          "expected": "$742,000",
+          "observed": "$742,000",
+          "exact": true
+        },
+        {
+          "key": "new_listings",
+          "expected": "126",
+          "observed": "126",
+          "exact": true
+        },
+        {
+          "key": "sold_listings",
+          "expected": "38",
+          "observed": "38",
+          "exact": true
+        },
+        {
+          "key": "social_handle",
+          "expected": "@harbourline.example",
+          "observed": "@harbourline.example",
+          "exact": true
+        },
+        {
+          "key": "agent_name",
+          "expected": "Elena Marsh",
+          "observed": "Elena Marsh",
+          "exact": true
+        }
+      ],
+      "assetChecks": [
+        {
+          "key": "property_image",
+          "used": true,
+          "faithful": true,
+          "notes": "used"
+        },
+        {
+          "key": "agent_photo",
+          "used": true,
+          "faithful": true,
+          "notes": "used"
+        }
+      ],
+      "identityLeakage": [],
+      "defects": [],
+      "includedRationale": "retained",
+      "qualityRationale": "clean",
+      "suggestedCorrection": "",
+      "reviewedAt": "2026-08-11T06:05:00.000Z"
+    }
+  },
+  "customerFixture": {
+    "stage": "customer_fixture",
+    "requestHash": "392a2a94c8bac2a7941708df0503dd3111e7e54f8dadd096029b0843f5553f31",
+    "referenceHash": "6e5c79a445561f96d5e580b42c78fc53342d083db4c29941f0b31d974c36c0fe",
+    "references": [
+      {
+        "index": 1,
+        "key": "approved_sample",
+        "role": "approved_sample",
+        "contentHash": "6e5c79a445561f96d5e580b42c78fc53342d083db4c29941f0b31d974c36c0fe"
+      },
+      {
+        "index": 2,
+        "key": "property_image",
+        "role": "replacement_asset",
+        "contentHash": "b5f3a66485310cfc792c2201c9b562d9352cec6fbddb32db4e71b8d50d2e5fab"
+      },
+      {
+        "index": 3,
+        "key": "agent_photo",
+        "role": "replacement_asset",
+        "contentHash": "4f1c49d7841cedab74a733578d592cbca27ed28a2269f88e017fb8604bf44b6d"
+      }
+    ],
+    "copy": {
+      "time_on_market": "6 DAYS",
+      "average_price": "$689,000",
+      "new_listings": "94",
+      "sold_listings": "41",
+      "social_handle": "@northpoint.example",
+      "agent_name": "Nora Vale"
+    },
+    "outputHash": "50e7383c452f1cc3802e0c4f85d2687fa01376a642c6f6fd577690a19de51004",
+    "executionTransport": "google_image_api",
+    "reviewedAt": "2026-08-11T06:08:00.000Z",
+    "review": {
+      "schemaVersion": 1,
+      "rubricVersion": "adstudio-subject-invariant-clone-v1",
+      "templateId": "meta-stories-255",
+      "requestHash": "392a2a94c8bac2a7941708df0503dd3111e7e54f8dadd096029b0843f5553f31",
+      "candidateHash": "50e7383c452f1cc3802e0c4f85d2687fa01376a642c6f6fd577690a19de51004",
+      "reviewer": {
+        "provider": "openai",
+        "model": "gpt-5.6-vision"
+      },
+      "adSystemLikenessScore": 9.7,
+      "standaloneAdQualityScore": 9.4,
+      "excludedContentInfluencedScore": false,
+      "copyChecks": [
+        {
+          "key": "time_on_market",
+          "expected": "6 DAYS",
+          "observed": "6 DAYS",
+          "exact": true
+        },
+        {
+          "key": "average_price",
+          "expected": "$689,000",
+          "observed": "$689,000",
+          "exact": true
+        },
+        {
+          "key": "new_listings",
+          "expected": "94",
+          "observed": "94",
+          "exact": true
+        },
+        {
+          "key": "sold_listings",
+          "expected": "41",
+          "observed": "41",
+          "exact": true
+        },
+        {
+          "key": "social_handle",
+          "expected": "@northpoint.example",
+          "observed": "@northpoint.example",
+          "exact": true
+        },
+        {
+          "key": "agent_name",
+          "expected": "Nora Vale",
+          "observed": "Nora Vale",
+          "exact": true
+        }
+      ],
+      "assetChecks": [
+        {
+          "key": "property_image",
+          "used": true,
+          "faithful": true,
+          "notes": "used"
+        },
+        {
+          "key": "agent_photo",
+          "used": true,
+          "faithful": true,
+          "notes": "used"
+        }
+      ],
+      "identityLeakage": [],
+      "defects": [],
+      "includedRationale": "retained",
+      "qualityRationale": "clean",
+      "suggestedCorrection": "",
+      "reviewedAt": "2026-08-11T06:08:00.000Z"
+    }
+  }
+}

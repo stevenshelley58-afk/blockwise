@@ -20,10 +20,10 @@
     "agent branding"
   ],
   "sample": {
-    "imageSrc": "/adstudio-samples/meta/meta-stories-255-sample.png",
-    "thumbnailSrc": "/adstudio-samples/meta/meta-stories-255-sample.png",
+    "imageSrc": "/adstudio-samples/meta/meta-stories-255-sample-v2.png",
+    "thumbnailSrc": "/adstudio-samples/meta/meta-stories-255-sample-v2.png",
     "alt": "Generated sample for Market Report Snapshot.",
-    "contentHash": "b00dcb0712750a4925e5832264e0ed3e8911d5532119e69273b0efd6e496e392",
+    "contentHash": "6e5c79a445561f96d5e580b42c78fc53342d083db4c29941f0b31d974c36c0fe",
     "generatedBy": "reference_clone"
   },
   "inputs": {
@@ -272,5 +272,8 @@
       "detectionScore": 1,
       "fontFile": "/fonts/adstudio/merriweather-800.woff2"
     }
+  },
+  "qualityLock": {
+    "templateHash": "315e9fabc9a0f51340577b08ee9c6bb5290364ad3a7964945e3faacef2a72869"
   }
 }

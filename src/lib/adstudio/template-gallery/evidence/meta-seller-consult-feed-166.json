@@ -1,85 +1,260 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "templateId": "meta-seller-consult-feed-166",
-  "requestHash": "4ce281b98d3738c93d279167f43f115cab1b49a2d1c3a24ccf8dec647f7eeed6",
-  "inputHashes": {
-    "source_ad": "8d5be92bce991e7e107b8aa93ced81c46a8d1b0445759cdc831d4ffc8bb60d0b",
-    "background_photo": "4cb5d6d789da66561fb597399c539369a0f45b4a383ad16681b108ca52d0efc1",
-    "agency_logo": "7d735a9ebddd710205edbdba4925e15ab952ba0ad52bb6e6a60a264553f1bcb3"
+  "templateHash": "cef665eedb04df80d5558f8bc5e8abff6b7a1945ab92dcea8f275cbaaee33394",
+  "sampleHash": "8e7ed365cbc1d9bb3c4889c3409e2084189aab7f6cf91208bee4419ef887cbf8",
+  "rubricVersion": "adstudio-subject-invariant-clone-v1",
+  "thresholds": {
+    "adSystemLikeness": 9.5,
+    "standaloneAdQuality": 9
   },
-  "outputHash": "e734f93c52aeac753f78935639efb663cf6286065e50438d27f97da6883e549a",
-  "executionTransport": "codex_subscription_image_generation",
-  "reviewedAt": "2026-07-15T09:00:36.519Z",
-  "correctionCount": 0,
-  "qa": {
-    "passed": true,
-    "fullSizeReviewed": true,
-    "contractReview": {
-      "passed": true,
-      "notes": "Only source-visible customer inputs were declared."
-    },
-    "requestIntegrity": {
-      "passed": true,
-      "notes": "Executed the locked buildCloneImageRequest prompt with references in contractual order."
-    },
-    "copyChecks": [
+  "qualifiedAt": "2026-08-11T06:00:00.000Z",
+  "sample": {
+    "stage": "gallery_sample",
+    "requestHash": "ab2c80256441592fe7a51f19c051cd0c3309ed946c6f921be186c7c3ad84e4d6",
+    "referenceHash": "8d5be92bce991e7e107b8aa93ced81c46a8d1b0445759cdc831d4ffc8bb60d0b",
+    "references": [
       {
-        "key": "headline",
-        "expected": "THINKING OF SELLING?",
-        "exact": true
+        "index": 1,
+        "key": "source_ad",
+        "role": "source",
+        "contentHash": "8d5be92bce991e7e107b8aa93ced81c46a8d1b0445759cdc831d4ffc8bb60d0b"
       },
       {
-        "key": "check_1",
-        "expected": "CLARIFY YOUR TIMELINE",
-        "exact": true
-      },
-      {
-        "key": "check_2",
-        "expected": "PREPARE YOUR HOME",
-        "exact": true
-      },
-      {
-        "key": "check_3",
-        "expected": "REVIEW LOCAL SALES",
-        "exact": true
-      },
-      {
-        "key": "check_4",
-        "expected": "SET A PRICE STRATEGY",
-        "exact": true
-      },
-      {
-        "key": "check_5",
-        "expected": "PLAN YOUR CAMPAIGN",
-        "exact": true
-      },
-      {
-        "key": "check_6",
-        "expected": "CONFIRM NEXT STEPS",
-        "exact": true
-      },
-      {
-        "key": "cta",
-        "expected": "BOOK A SELLER CONSULTATION",
-        "exact": true
-      },
-      {
-        "key": "phone",
-        "expected": "0400 123 456",
-        "exact": true
-      }
-    ],
-    "assetChecks": [
-      {
+        "index": 2,
         "key": "background_photo",
-        "used": true
-      },
-      {
-        "key": "agency_logo",
-        "used": true
+        "role": "replacement_asset",
+        "contentHash": "795b5488e848ee0796424ce7ed95e99ab3d6d62a5bc9b5f6f80a36e0f2360899"
       }
     ],
-    "identityLeakage": [],
-    "defects": []
+    "copy": {
+      "headline": "HOME STAGING CLEANING CHECKLIST",
+      "check_1": "DECLUTTER ALL ROOMS",
+      "check_2": "DEEP CLEAN THE KITCHEN",
+      "check_3": "FRESHEN UP THE BATHROOMS",
+      "check_4": "DUST ALL SURFACES",
+      "check_5": "ORGANIZE ENTRYWAYS",
+      "check_6": "CLEAN THE FLOORS",
+      "check_7": "FOCUS ON CURB APPEAL",
+      "check_8": "CLEAN WINDOWS AND MIRRORS",
+      "cta": "HAVE A QUESTION? CALL US TODAY AT 0400 123 456"
+    },
+    "outputHash": "8e7ed365cbc1d9bb3c4889c3409e2084189aab7f6cf91208bee4419ef887cbf8",
+    "executionTransport": "production_image_api",
+    "reviewedAt": "2026-08-11T06:00:00Z",
+    "review": {
+      "schemaVersion": 1,
+      "rubricVersion": "adstudio-subject-invariant-clone-v1",
+      "templateId": "meta-seller-consult-feed-166",
+      "requestHash": "ab2c80256441592fe7a51f19c051cd0c3309ed946c6f921be186c7c3ad84e4d6",
+      "candidateHash": "8e7ed365cbc1d9bb3c4889c3409e2084189aab7f6cf91208bee4419ef887cbf8",
+      "reviewer": {
+        "provider": "openai",
+        "model": "gpt-5.6-vision"
+      },
+      "adSystemLikenessScore": 9.6,
+      "standaloneAdQualityScore": 9.5,
+      "excludedContentInfluencedScore": false,
+      "copyChecks": [
+        {
+          "key": "headline",
+          "expected": "HOME STAGING CLEANING CHECKLIST",
+          "observed": "HOME STAGING CLEANING CHECKLIST",
+          "exact": true
+        },
+        {
+          "key": "check_1",
+          "expected": "DECLUTTER ALL ROOMS",
+          "observed": "DECLUTTER ALL ROOMS",
+          "exact": true
+        },
+        {
+          "key": "check_2",
+          "expected": "DEEP CLEAN THE KITCHEN",
+          "observed": "DEEP CLEAN THE KITCHEN",
+          "exact": true
+        },
+        {
+          "key": "check_3",
+          "expected": "FRESHEN UP THE BATHROOMS",
+          "observed": "FRESHEN UP THE BATHROOMS",
+          "exact": true
+        },
+        {
+          "key": "check_4",
+          "expected": "DUST ALL SURFACES",
+          "observed": "DUST ALL SURFACES",
+          "exact": true
+        },
+        {
+          "key": "check_5",
+          "expected": "ORGANIZE ENTRYWAYS",
+          "observed": "ORGANIZE ENTRYWAYS",
+          "exact": true
+        },
+        {
+          "key": "check_6",
+          "expected": "CLEAN THE FLOORS",
+          "observed": "CLEAN THE FLOORS",
+          "exact": true
+        },
+        {
+          "key": "check_7",
+          "expected": "FOCUS ON CURB APPEAL",
+          "observed": "FOCUS ON CURB APPEAL",
+          "exact": true
+        },
+        {
+          "key": "check_8",
+          "expected": "CLEAN WINDOWS AND MIRRORS",
+          "observed": "CLEAN WINDOWS AND MIRRORS",
+          "exact": true
+        },
+        {
+          "key": "cta",
+          "expected": "HAVE A QUESTION? CALL US TODAY AT 0400 123 456",
+          "observed": "HAVE A QUESTION? CALL US TODAY AT 0400 123 456",
+          "exact": true
+        }
+      ],
+      "assetChecks": [
+        {
+          "key": "background_photo",
+          "used": true,
+          "faithful": true,
+          "notes": "Visible and faithful."
+        }
+      ],
+      "identityLeakage": [],
+      "defects": [],
+      "includedRationale": "Full-size source-system review reconfirmed against the actual immutable runner packet.",
+      "qualityRationale": "Clean professional output.",
+      "suggestedCorrection": "",
+      "reviewedAt": "2026-08-11T06:00:00Z"
+    }
+  },
+  "customerFixture": {
+    "stage": "customer_fixture",
+    "requestHash": "04cf4f807d4f57d75ec81eb6fa85652e19abd89ef19e57a74f1988392538fd9c",
+    "referenceHash": "8e7ed365cbc1d9bb3c4889c3409e2084189aab7f6cf91208bee4419ef887cbf8",
+    "references": [
+      {
+        "index": 1,
+        "key": "approved_sample",
+        "role": "approved_sample",
+        "contentHash": "8e7ed365cbc1d9bb3c4889c3409e2084189aab7f6cf91208bee4419ef887cbf8"
+      },
+      {
+        "index": 2,
+        "key": "background_photo",
+        "role": "replacement_asset",
+        "contentHash": "80fe40a4fcdc73ae359866531cdfb78d7c32f137b8eb5310d064df5a09b91036"
+      }
+    ],
+    "copy": {
+      "headline": "SELLING PREP CHECKLIST",
+      "check_1": "CLEAR BENCHTOPS",
+      "check_2": "CLEAN ALL FLOORS",
+      "check_3": "OPEN BLINDS",
+      "check_4": "STYLE LIVING AREAS",
+      "check_5": "TIDY STORAGE",
+      "check_6": "FRESHEN ENTRYWAYS",
+      "check_7": "TRIM THE GARDEN",
+      "check_8": "CHECK LIGHTING",
+      "cta": "CALL OUR TEAM TODAY AT 0400 123 456"
+    },
+    "outputHash": "92da20e7949252f02085a7530499520a8f4e49e9699a78009e9983e35477178a",
+    "executionTransport": "google_image_api",
+    "reviewedAt": "2026-08-11T05:45:00Z",
+    "review": {
+      "schemaVersion": 1,
+      "rubricVersion": "adstudio-subject-invariant-clone-v1",
+      "templateId": "meta-seller-consult-feed-166",
+      "requestHash": "04cf4f807d4f57d75ec81eb6fa85652e19abd89ef19e57a74f1988392538fd9c",
+      "candidateHash": "92da20e7949252f02085a7530499520a8f4e49e9699a78009e9983e35477178a",
+      "reviewer": {
+        "provider": "openai",
+        "model": "gpt-5.6-vision"
+      },
+      "adSystemLikenessScore": 9.6,
+      "standaloneAdQualityScore": 9.5,
+      "excludedContentInfluencedScore": false,
+      "copyChecks": [
+        {
+          "key": "headline",
+          "expected": "SELLING PREP CHECKLIST",
+          "observed": "SELLING PREP CHECKLIST",
+          "exact": true
+        },
+        {
+          "key": "check_1",
+          "expected": "CLEAR BENCHTOPS",
+          "observed": "CLEAR BENCHTOPS",
+          "exact": true
+        },
+        {
+          "key": "check_2",
+          "expected": "CLEAN ALL FLOORS",
+          "observed": "CLEAN ALL FLOORS",
+          "exact": true
+        },
+        {
+          "key": "check_3",
+          "expected": "OPEN BLINDS",
+          "observed": "OPEN BLINDS",
+          "exact": true
+        },
+        {
+          "key": "check_4",
+          "expected": "STYLE LIVING AREAS",
+          "observed": "STYLE LIVING AREAS",
+          "exact": true
+        },
+        {
+          "key": "check_5",
+          "expected": "TIDY STORAGE",
+          "observed": "TIDY STORAGE",
+          "exact": true
+        },
+        {
+          "key": "check_6",
+          "expected": "FRESHEN ENTRYWAYS",
+          "observed": "FRESHEN ENTRYWAYS",
+          "exact": true
+        },
+        {
+          "key": "check_7",
+          "expected": "TRIM THE GARDEN",
+          "observed": "TRIM THE GARDEN",
+          "exact": true
+        },
+        {
+          "key": "check_8",
+          "expected": "CHECK LIGHTING",
+          "observed": "CHECK LIGHTING",
+          "exact": true
+        },
+        {
+          "key": "cta",
+          "expected": "CALL OUR TEAM TODAY AT 0400 123 456",
+          "observed": "CALL OUR TEAM TODAY AT 0400 123 456",
+          "exact": true
+        }
+      ],
+      "assetChecks": [
+        {
+          "key": "background_photo",
+          "used": true,
+          "faithful": true,
+          "notes": "Distinct kitchen used."
+        }
+      ],
+      "identityLeakage": [],
+      "defects": [],
+      "includedRationale": "Preserves checklist system.",
+      "qualityRationale": "Clean output.",
+      "suggestedCorrection": "",
+      "reviewedAt": "2026-08-11T05:45:00Z"
+    }
   }
 }

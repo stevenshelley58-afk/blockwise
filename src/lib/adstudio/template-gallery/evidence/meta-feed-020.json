@@ -1,0 +1,214 @@
+{
+  "schemaVersion": 2,
+  "templateId": "meta-feed-020",
+  "templateHash": "01166bf76888c223f2ea74cbbda0c909d4ed6fefc754eb888f711905629077be",
+  "sampleHash": "ba253c7f84227e9ca0a7bc47355cb5b3b4e7cd33597f3fa0e3b43cc138f42d0f",
+  "rubricVersion": "adstudio-subject-invariant-clone-v1",
+  "thresholds": {
+    "adSystemLikeness": 9.5,
+    "standaloneAdQuality": 9
+  },
+  "qualifiedAt": "2026-08-11T05:35:00.000Z",
+  "sample": {
+    "stage": "gallery_sample",
+    "requestHash": "cbb96a6e526aaea8150815643f5690048dfd8709d2583224628c15975957262a",
+    "referenceHash": "86e3bed929d7cdad06e487f758db7a7476e2452c43b4ffe78a1046b488ef43f1",
+    "references": [
+      {
+        "index": 1,
+        "key": "source_ad",
+        "role": "source",
+        "contentHash": "86e3bed929d7cdad06e487f758db7a7476e2452c43b4ffe78a1046b488ef43f1"
+      },
+      {
+        "index": 2,
+        "key": "property_photo",
+        "role": "replacement_asset",
+        "contentHash": "71ef5fb4d0469dd96df3dbde982786b074cf4c87adfe1cec3edd4e5012445445"
+      },
+      {
+        "index": 3,
+        "key": "brand_logo",
+        "role": "replacement_asset",
+        "contentHash": "2712c374f355a029461d5fe2bb2fda148500be4cc3a5296022810b24263ee889"
+      }
+    ],
+    "copy": {
+      "headline": "JUST LISTED",
+      "price": "Offers from $895,000",
+      "address": "18 Tallow Lane, Scarborough WA",
+      "phone": "08 6102 1840",
+      "website_handle": "harbourandkey.com.au"
+    },
+    "outputHash": "ba253c7f84227e9ca0a7bc47355cb5b3b4e7cd33597f3fa0e3b43cc138f42d0f",
+    "executionTransport": "google_image_api",
+    "reviewedAt": "2026-08-11T05:32:00.000Z",
+    "review": {
+      "schemaVersion": 1,
+      "rubricVersion": "adstudio-subject-invariant-clone-v1",
+      "templateId": "meta-feed-020",
+      "requestHash": "cbb96a6e526aaea8150815643f5690048dfd8709d2583224628c15975957262a",
+      "candidateHash": "ba253c7f84227e9ca0a7bc47355cb5b3b4e7cd33597f3fa0e3b43cc138f42d0f",
+      "reviewer": {
+        "provider": "openai",
+        "model": "gpt-5.6-vision"
+      },
+      "adSystemLikenessScore": 9.6,
+      "standaloneAdQualityScore": 9.3,
+      "excludedContentInfluencedScore": false,
+      "copyChecks": [
+        {
+          "key": "headline",
+          "expected": "JUST LISTED",
+          "observed": "JUST LISTED",
+          "exact": true
+        },
+        {
+          "key": "price",
+          "expected": "Offers from $895,000",
+          "observed": "Offers from $895,000",
+          "exact": true
+        },
+        {
+          "key": "address",
+          "expected": "18 Tallow Lane, Scarborough WA",
+          "observed": "18 Tallow Lane, Scarborough WA",
+          "exact": true
+        },
+        {
+          "key": "phone",
+          "expected": "08 6102 1840",
+          "observed": "08 6102 1840",
+          "exact": true
+        },
+        {
+          "key": "website_handle",
+          "expected": "harbourandkey.com.au",
+          "observed": "harbourandkey.com.au",
+          "exact": true
+        }
+      ],
+      "assetChecks": [
+        {
+          "key": "property_photo",
+          "used": true,
+          "faithful": true,
+          "notes": "used"
+        },
+        {
+          "key": "brand_logo",
+          "used": true,
+          "faithful": true,
+          "notes": "used"
+        }
+      ],
+      "identityLeakage": [],
+      "defects": [],
+      "includedRationale": "Composition retained.",
+      "qualityRationale": "Clean ad.",
+      "suggestedCorrection": "",
+      "reviewedAt": "2026-08-11T05:32:00.000Z"
+    }
+  },
+  "customerFixture": {
+    "stage": "customer_fixture",
+    "requestHash": "9aa33b8deaf497667a6067a79c4721370753792b71911ad90d1f1cfd5afcb283",
+    "referenceHash": "ba253c7f84227e9ca0a7bc47355cb5b3b4e7cd33597f3fa0e3b43cc138f42d0f",
+    "references": [
+      {
+        "index": 1,
+        "key": "approved_sample",
+        "role": "approved_sample",
+        "contentHash": "ba253c7f84227e9ca0a7bc47355cb5b3b4e7cd33597f3fa0e3b43cc138f42d0f"
+      },
+      {
+        "index": 2,
+        "key": "property_photo",
+        "role": "replacement_asset",
+        "contentHash": "75a54a2f26061f2223fff719aa5c506388f23652e0065a424d083476dd692f42"
+      },
+      {
+        "index": 3,
+        "key": "brand_logo",
+        "role": "replacement_asset",
+        "contentHash": "1ff9ec4c234ae7ce1432356f56783373c2985fe38e4adc76051620e021a57299"
+      }
+    ],
+    "copy": {
+      "headline": "JUST LISTED",
+      "price": "Offers from $745,000",
+      "address": "42 Indigo Drive, Fremantle WA",
+      "phone": "08 6102 1999",
+      "website_handle": "valeproperty.example"
+    },
+    "outputHash": "4a9f5fc0c8744745dd3fc3a4d81ae6506eec96badae91a4533ebb894108ba780",
+    "executionTransport": "google_image_api",
+    "reviewedAt": "2026-08-11T05:35:00.000Z",
+    "review": {
+      "schemaVersion": 1,
+      "rubricVersion": "adstudio-subject-invariant-clone-v1",
+      "templateId": "meta-feed-020",
+      "requestHash": "9aa33b8deaf497667a6067a79c4721370753792b71911ad90d1f1cfd5afcb283",
+      "candidateHash": "4a9f5fc0c8744745dd3fc3a4d81ae6506eec96badae91a4533ebb894108ba780",
+      "reviewer": {
+        "provider": "openai",
+        "model": "gpt-5.6-vision"
+      },
+      "adSystemLikenessScore": 9.7,
+      "standaloneAdQualityScore": 9.3,
+      "excludedContentInfluencedScore": false,
+      "copyChecks": [
+        {
+          "key": "headline",
+          "expected": "JUST LISTED",
+          "observed": "JUST LISTED",
+          "exact": true
+        },
+        {
+          "key": "price",
+          "expected": "Offers from $745,000",
+          "observed": "Offers from $745,000",
+          "exact": true
+        },
+        {
+          "key": "address",
+          "expected": "42 Indigo Drive, Fremantle WA",
+          "observed": "42 Indigo Drive, Fremantle WA",
+          "exact": true
+        },
+        {
+          "key": "phone",
+          "expected": "08 6102 1999",
+          "observed": "08 6102 1999",
+          "exact": true
+        },
+        {
+          "key": "website_handle",
+          "expected": "valeproperty.example",
+          "observed": "valeproperty.example",
+          "exact": true
+        }
+      ],
+      "assetChecks": [
+        {
+          "key": "property_photo",
+          "used": true,
+          "faithful": true,
+          "notes": "used"
+        },
+        {
+          "key": "brand_logo",
+          "used": true,
+          "faithful": true,
+          "notes": "used"
+        }
+      ],
+      "identityLeakage": [],
+      "defects": [],
+      "includedRationale": "retained",
+      "qualityRationale": "clean",
+      "suggestedCorrection": "",
+      "reviewedAt": "2026-08-11T05:35:00.000Z"
+    }
+  }
+}

@@ -1,8 +1,8 @@
 {
   "id": "meta-agent-intro-feed-051",
-  "name": "Meet Your Local Agent — Feed 051",
-  "goal": "seller_leads",
-  "offerId": "agent-introduction-call",
+  "name": "Property Detail Key — Feed 051",
+  "goal": "buyer_leads",
+  "offerId": "property-details-key",
   "source": "builtin",
   "status": "approved",
   "format": "4:5",
@@ -10,18 +10,19 @@
     "width": 1080,
     "height": 1350
   },
-  "audienceIntent": "Local property owners seeking a trusted agent relationship",
-  "category": "agent-introduction-lead-generation",
+  "audienceIntent": "Buyers seeking the details of a featured property.",
+  "category": "property-detail-lead-generation",
   "tags": [
-    "agent-intro",
-    "lead-generation",
+    "property-details",
+    "key",
+    "buyer-leads",
     "feed"
   ],
   "sample": {
     "imageSrc": "/adstudio-samples/meta/meta-agent-intro-feed-051-sample.png",
     "thumbnailSrc": "/adstudio-samples/meta/meta-agent-intro-feed-051-sample.png",
-    "alt": "Generated sample for Meet Your Local Agent — Feed 051.",
-    "contentHash": "b149b5633ba59f6be2c39cb2b49fba6c42d24de6d2a9a2771469919f9406b49a",
+    "alt": "Generated sample for Property Detail Key — Feed 051.",
+    "contentHash": "ead7008d345b8a03a63d4e154ddf0184ef5f262ae56c46201b77bc883f5c8a6e",
     "generatedBy": "reference_clone"
   },
   "inputs": {
@@ -31,43 +32,57 @@
         "label": "Property photo",
         "required": true,
         "aspect": "landscape",
-        "description": "the customer's property photograph"
-      },
-      {
-        "key": "agency_logo",
-        "label": "Agency logo",
-        "required": true,
-        "aspect": "square",
-        "description": "the customer's agency logo"
+        "description": "the customer's featured property photograph"
       }
     ],
     "text": [
       {
+        "key": "brand_name",
+        "label": "Brand name",
+        "maxLength": 16,
+        "sample": "NEST",
+        "required": true
+      },
+      {
         "key": "headline",
         "label": "Headline",
-        "maxLength": 45,
-        "sample": "YOUR LOCAL PROPERTY PARTNER",
+        "maxLength": 32,
+        "sample": "THE KEY TO YOUR NEXT HOME",
         "required": true
       },
       {
-        "key": "subheadline",
-        "label": "Subheadline",
-        "maxLength": 41,
-        "sample": "BOOK A NO-PRESSURE CALL",
+        "key": "feature_strapline",
+        "label": "Feature strapline",
+        "maxLength": 64,
+        "sample": "PRIME LOCATION | MODERN LIVING | READY TO MOVE",
         "required": true
       },
       {
-        "key": "body",
-        "label": "Body",
-        "maxLength": 95,
-        "sample": "Local insight, clear advice and a practical plan for your next property move.",
+        "key": "location_address",
+        "label": "Location and address",
+        "maxLength": 48,
+        "sample": "123 EXAMPLE STREET, SAMPLE CITY",
         "required": true
       },
       {
-        "key": "cta",
-        "label": "Cta",
-        "maxLength": 29,
-        "sample": "BOOK A CALL",
+        "key": "floor_area",
+        "label": "Floor area",
+        "maxLength": 20,
+        "sample": "3456 SQ FT",
+        "required": true
+      },
+      {
+        "key": "garden_feature",
+        "label": "Garden or feature",
+        "maxLength": 30,
+        "sample": "WITH GARDEN",
+        "required": true
+      },
+      {
+        "key": "price",
+        "label": "Price",
+        "maxLength": 24,
+        "sample": "$1,250,000",
         "required": true
       },
       {
@@ -75,6 +90,13 @@
         "label": "Phone",
         "maxLength": 30,
         "sample": "0400 123 456",
+        "required": true
+      },
+      {
+        "key": "website",
+        "label": "Website",
+        "maxLength": 48,
+        "sample": "exampleproperty.com",
         "required": true
       }
     ]
@@ -84,8 +106,8 @@
     "contentHash": "86565ad6874566135bfabbac7c27b70fcd06b0cfe0c4378779f1d39448b188c5"
   },
   "classification": {
-    "ad_type": "lead_generation",
-    "primary_intent": "agent_introduction",
+    "ad_type": "property_detail",
+    "primary_intent": "buyer_leads",
     "property_or_agent_focus": "property"
   },
   "meta": {
@@ -113,149 +135,18 @@
     ],
     "cta": "LEARN_MORE",
     "leadForm": {
-      "headline": "Connect with your local agent",
+      "headline": "Request property details",
       "questions": [
         "What is your best contact number?"
       ],
       "privacyPolicyUrl": null,
       "thankYouScreen": {
         "title": "Request received",
-        "body": "The agency will be in touch within 24 hours to introduce themselves and answer your questions."
+        "body": "The agency will be in touch within 24 hours with the property details."
       }
     }
   },
-  "typography": {
-    "body": {
-      "fontId": "kanit",
-      "family": "Kanit",
-      "fallbackFamily": "sans-serif",
-      "weight": 800,
-      "italic": false,
-      "case": "mixed",
-      "sizeRatio": 1.084745743857132,
-      "lineHeight": 1.495,
-      "tracking": 0,
-      "align": "center",
-      "color": "#dfd1b6",
-      "fitScore": 0.252,
-      "sampleBox": {
-        "x": 0.22870370370370371,
-        "y": 0.6207407407407407,
-        "width": 0.5912037037037037,
-        "height": 0.1559259259259259
-      },
-      "sampleLineCount": 5,
-      "detectionScore": 1,
-      "fontFile": "/fonts/adstudio/kanit-800.woff2"
-    },
-    "headline": {
-      "fontId": "oswald",
-      "family": "Oswald",
-      "fallbackFamily": "sans-serif",
-      "weight": 300,
-      "italic": false,
-      "case": "upper",
-      "sizeRatio": 1.2030075187969924,
-      "lineHeight": 1.482,
-      "tracking": 0,
-      "align": "center",
-      "color": "#0b0b0b",
-      "fitScore": 0.532,
-      "sampleBox": {
-        "x": 0.09074074074074075,
-        "y": 0.08222222222222222,
-        "width": 0.8439814814814814,
-        "height": 0.10222222222222223
-      },
-      "sampleLineCount": 6,
-      "detectionScore": 0.704,
-      "fontFile": "/fonts/adstudio/oswald-300.woff2"
-    },
-    "subheadline": {
-      "fontId": "titillium-web",
-      "family": "Titillium Web",
-      "fallbackFamily": "sans-serif",
-      "weight": 900,
-      "italic": false,
-      "case": "upper",
-      "sizeRatio": 1.43256237006237,
-      "lineHeight": 1.521,
-      "tracking": 0,
-      "align": "right",
-      "color": "#dad6ce",
-      "fitScore": 0.242,
-      "sampleBox": {
-        "x": 0.19074074074074074,
-        "y": 0.20222222222222222,
-        "width": 0.8092592592592592,
-        "height": 0.06777777777777778
-      },
-      "sampleLineCount": 2,
-      "detectionScore": 0.826,
-      "fontFile": "/fonts/adstudio/titillium-web-900.woff2"
-    },
-    "phone": {
-      "fontId": "roboto-slab",
-      "family": "Roboto Slab",
-      "fallbackFamily": "serif",
-      "weight": 800,
-      "italic": false,
-      "case": "none",
-      "sizeRatio": 1.3582089552238805,
-      "lineHeight": 1.31884765625,
-      "tracking": 0,
-      "align": "center",
-      "color": "#243b42",
-      "fitScore": 0.729,
-      "sampleBox": {
-        "x": 0.17407407407407408,
-        "y": 0.8844444444444445,
-        "width": 0.6689814814814815,
-        "height": 0.05851851851851852
-      },
-      "sampleLineCount": 2,
-      "detectionScore": 1,
-      "fontFile": "/fonts/adstudio/roboto-slab-800.woff2"
-    },
-    "cta": {
-      "fontId": "smooch-sans",
-      "family": "Smooch Sans",
-      "fallbackFamily": "sans-serif",
-      "weight": 300,
-      "italic": false,
-      "case": "upper",
-      "sizeRatio": 1.5545193229000318,
-      "lineHeight": 1.2,
-      "tracking": 0,
-      "align": "right",
-      "color": "#2a2210",
-      "fitScore": 0.596,
-      "sampleBox": {
-        "x": 0.2449074074074074,
-        "y": 0.14962962962962964,
-        "width": 0.687037037037037,
-        "height": 0.10111111111111111
-      },
-      "sampleLineCount": 5,
-      "detectionScore": 0.545,
-      "fontFile": "/fonts/adstudio/smooch-sans-300.woff2"
-    }
-  },
-  "deterministicEditing": {
-    "status": "partial",
-    "imageBoxes": {
-      "property_photo": {
-        "x": 0,
-        "y": 0.24666666666666667,
-        "width": 1,
-        "height": 0.3940740740740741
-      },
-      "agency_logo": {
-        "x": 0.08425925925925926,
-        "y": 0.7985185185185185,
-        "width": 0.1935185185185185,
-        "height": 0.16074074074074074
-      }
-    }
+  "qualityLock": {
+    "templateHash": "c8b355bd22ce28d9bb680334ee0062a248c00e2bb6764d0bec4a947536a73b59"
   }
 }
