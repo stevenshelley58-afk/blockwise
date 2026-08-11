@@ -5,6 +5,7 @@ import {
   MAX_RUNTIME_CLONE_CANDIDATES,
   MAX_RUNTIME_CLONE_QA_ATTEMPTS,
   TemplateCampaignQaError,
+  buildCloneQualityContactSheet,
   cloneCorrectionForNextCandidate,
   cloneRequestHash,
   cloneQualityPassed,
@@ -62,6 +63,33 @@ function provider(providerName: string): ImageProviderAdapter {
     },
   };
 }
+
+test("clone QA contact sheet includes every labelled customer asset", async () => {
+  const { default: sharp } = await import("sharp");
+  const image = async (red: number, green: number, blue: number) => {
+    const png = await sharp({
+      create: { width: 10, height: 12, channels: 3, background: { r: red, g: green, b: blue } },
+    }).png().toBuffer();
+    return `data:image/png;base64,${png.toString("base64")}`;
+  };
+  const contact = await buildCloneQualityContactSheet(
+    await image(10, 20, 30),
+    await image(40, 50, 60),
+    [
+      { key: "property_photo", image: await image(70, 80, 90) },
+      { key: "agency_logo", image: await image(100, 110, 120) },
+    ],
+  );
+  const contactBytes = Buffer.from(contact.imageUrl.split(",")[1]!, "base64");
+  const metadata = await sharp(contactBytes).metadata();
+
+  assert.deepEqual(contact.assetReferences.map((asset) => asset.key), ["property_photo", "agency_logo"]);
+  assert.ok(contact.assetReferences.every((asset) => /^[a-f0-9]{64}$/u.test(asset.contentHash)));
+  assert.equal(metadata.width, 20);
+  // Customer assets occupy a labelled thumbnail strip without enlarging the
+  // expensive full-resolution design comparison into another full-size row.
+  assert.equal(metadata.height, 112);
+});
 
 test("runtime quality lock requires scores, exact copy, faithful assets, and clean output", () => {
   assert.equal(cloneQualityPassed({ review: review(), expectedCopy, expectedAssetKeys }), true);
@@ -386,13 +414,15 @@ test("no below-threshold candidate is released after the bounded quality loop", 
 
 test("non-JSON clone QA retries the same contact sheet and candidate before accepting it", async () => {
   const providerCalls: number[] = [];
-  const contactSheets: number[] = [];
+  const providerSystemPrompts: string[] = [];
+  const contactSheets: Array<Array<{ key: string; image: string }>> = [];
   const provider = {
     providerName: "qa-test",
     providerType: "text_generation",
     capabilities: { visionInput: true },
-    async generate() {
+    async generate(input: { system: string }) {
       providerCalls.push(1);
+      providerSystemPrompts.push(input.system);
       return providerCalls.length === 1
         ? { json: "not JSON", rawText: "not JSON", usage: { complete: true }, providerMetadata: { model: "qa-test" } }
         : {
@@ -422,9 +452,14 @@ test("non-JSON clone QA retries the same contact sheet and candidate before acce
     userId: "user-1",
     correlationId: "same-candidate",
   }, {
-    contactSheet: async () => {
-      contactSheets.push(1);
-      return { imageUrl: "data:image/png;base64,AA==", referenceHash: "a".repeat(64), candidateHash: "b".repeat(64) };
+    contactSheet: async (_referenceImage, _candidateImage, assets) => {
+      contactSheets.push(assets);
+      return {
+        imageUrl: "data:image/png;base64,AA==",
+        referenceHash: "a".repeat(64),
+        candidateHash: "b".repeat(64),
+        assetReferences: assets.map((asset, index) => ({ key: asset.key, contentHash: String(index + 1).repeat(64) })),
+      };
     },
     getPromptSection: async () => ({ body: "QA", key: "adstudio.clone_qa", version: 1, id: null, source: "fallback" }) as never,
     resolveProfile: async () => ({
@@ -442,7 +477,15 @@ test("non-JSON clone QA retries the same contact sheet and candidate before acce
 
   assert.equal(result.adSystemLikenessScore, 9.6);
   assert.equal(contactSheets.length, 1);
+  assert.deepEqual(contactSheets[0], [
+    { key: "property_photo", image: "photo" },
+    { key: "agency_logo", image: "logo" },
+  ]);
   assert.equal(providerCalls.length, 2);
+  assert.ok(providerSystemPrompts.every((prompt) => prompt.includes("CUSTOMER ASSET panel")));
+  assert.ok(providerSystemPrompts.every((prompt) => prompt.includes('"property_photo"')));
+  assert.ok(providerSystemPrompts.every((prompt) => prompt.includes('"agency_logo"')));
+  assert.ok(providerSystemPrompts.every((prompt) => prompt.includes("without substitution, fabrication, repainting")));
   assert.deepEqual(recordedAttempts, [2]);
 });
 
@@ -474,7 +517,12 @@ test("provider parseJson failure retries the same candidate and records its subm
     userId: "user-1",
     correlationId: "parse-json-retry",
   }, {
-    contactSheet: async () => ({ imageUrl: "data:image/png;base64,AA==", referenceHash: "a".repeat(64), candidateHash: "b".repeat(64) }),
+    contactSheet: async (_referenceImage, _candidateImage, assets) => ({
+      imageUrl: "data:image/png;base64,AA==",
+      referenceHash: "a".repeat(64),
+      candidateHash: "b".repeat(64),
+      assetReferences: assets.map((asset, index) => ({ key: asset.key, contentHash: String(index + 1).repeat(64) })),
+    }),
     getPromptSection: async () => ({ body: "QA", key: "adstudio.clone_qa", version: 1, id: null, source: "fallback" }) as never,
     resolveProfile: async () => ({ primary: candidate, fallbacks: [] }) as never,
     createProvider: (modelCandidate) => createTextProviderForCandidate(modelCandidate, {
@@ -528,6 +576,64 @@ test("provider parseJson failure retries the same candidate and records its subm
   assert.equal(recordedAttempts[0]?.[0]?.requestSubmitted, true);
   assert.equal(recordedAttempts[0]?.[0]?.providerRequestId, "qa-request-1");
   assert.equal((recordedAttempts[0]?.[0]?.usage as { inputTokens?: number }).inputTokens, 11);
+});
+
+test("clone QA rejects missing canonical customer assets before provider dispatch", async () => {
+  let contactSheetCalls = 0;
+  let providerCalls = 0;
+  await assert.rejects(() => reviewCloneCandidate({
+    templateId: "template-1",
+    format: "4:5",
+    attempt: 1,
+    referenceImage: "approved-sample",
+    candidateImage: "paid-candidate",
+    request: { ...request(), referenceAssets: ["approved-sample"] },
+    expectedCopy,
+    expectedAssetKeys,
+    workspaceId: "workspace-1",
+    userId: "user-1",
+    correlationId: "missing-customer-assets",
+  }, {
+    contactSheet: async () => {
+      contactSheetCalls += 1;
+      throw new Error("must not build an incomplete contact sheet");
+    },
+    createProvider: () => {
+      providerCalls += 1;
+      throw new Error("must not dispatch QA without customer assets");
+    },
+  }), /one exact labelled customer asset for every expected asset region/u);
+  assert.equal(contactSheetCalls, 0);
+  assert.equal(providerCalls, 0);
+});
+
+test("clone QA cannot accept faithfulness when contact-sheet asset comparison is absent", async () => {
+  let providerCalls = 0;
+  await assert.rejects(() => reviewCloneCandidate({
+    templateId: "template-1",
+    format: "4:5",
+    attempt: 1,
+    referenceImage: "approved-sample",
+    candidateImage: "paid-candidate",
+    request: request(),
+    expectedCopy,
+    expectedAssetKeys,
+    workspaceId: "workspace-1",
+    userId: "user-1",
+    correlationId: "missing-asset-comparison",
+  }, {
+    contactSheet: async () => ({
+      imageUrl: "data:image/png;base64,AA==",
+      referenceHash: "a".repeat(64),
+      candidateHash: "b".repeat(64),
+      assetReferences: [],
+    }),
+    createProvider: () => {
+      providerCalls += 1;
+      throw new Error("must not dispatch QA without comparison evidence");
+    },
+  }), /cannot claim customer asset faithfulness without exact labelled asset comparisons/u);
+  assert.equal(providerCalls, 0);
 });
 
 test("technical clone QA exhaustion never creates another image candidate", async () => {
