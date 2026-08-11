@@ -201,15 +201,39 @@ export function cloneQualityPassed(input: {
 /**
  * A clean 9+ result is close enough that applying the vision model's concrete
  * correction on the same tier is usually cheaper than escalating immediately.
- * Hard copy, asset, leakage, and defect failures always advance instead.
+ * A result already above both score gates may also retry once when its only
+ * failure is one exact-copy mismatch with a concrete correction. The finished
+ * ad still has to pass the unchanged zero-defect acceptance gate.
  */
 export function cloneQualityWarrantsSameTierRetry(input: {
   review: AdStudioCloneQualityReview;
   expectedCopy: Record<string, string>;
   expectedAssetKeys: string[];
 }): boolean {
-  return input.review.adSystemLikenessScore < MIN_RUNTIME_AD_SYSTEM_LIKENESS
-    && cloneQualityHasCleanNearPassEvidence(input);
+  if (
+    input.review.adSystemLikenessScore < MIN_RUNTIME_AD_SYSTEM_LIKENESS
+    && cloneQualityHasCleanNearPassEvidence(input)
+  ) return true;
+
+  const copyChecks = new Map(input.review.copyChecks.map((check) => [check.key, check]));
+  const mismatches = Object.entries(input.expectedCopy).filter(([key, expected]) => {
+    const check = copyChecks.get(key);
+    return !check
+      || visibleCopyText(check.expected) !== visibleCopyText(expected)
+      || visibleCopyText(check.rendered) !== visibleCopyText(expected);
+  });
+  const assetChecks = new Map(input.review.assetChecks.map((check) => [check.key, check]));
+  return input.review.adSystemLikenessScore >= MIN_RUNTIME_AD_SYSTEM_LIKENESS
+    && input.review.standaloneAdQualityScore >= MIN_RUNTIME_STANDALONE_AD_QUALITY
+    && input.review.excludedContentInfluencedScore === false
+    && mismatches.length === 1
+    && input.expectedAssetKeys.every((key) => {
+      const check = assetChecks.get(key);
+      return check?.used === true && check.faithful === true;
+    })
+    && input.review.identityLeakage.length === 0
+    && input.review.defects.length <= 1
+    && input.review.suggestedCorrection.trim().length > 0;
 }
 
 function cloneQualityHasCleanNearPassEvidence(input: {

@@ -114,7 +114,7 @@ test("runtime quality lock requires scores, exact copy, faithful assets, and cle
   }), false);
 });
 
-test("only a clean 9+ candidate warrants a corrected same-tier retry", () => {
+test("only a clean 9+ or exact-copy-only near-pass warrants a corrected same-tier retry", () => {
   assert.equal(cloneQualityWarrantsSameTierRetry({
     review: review({ adSystemLikenessScore: 9.2 }),
     expectedCopy,
@@ -127,6 +127,28 @@ test("only a clean 9+ candidate warrants a corrected same-tier retry", () => {
   }), false);
   assert.equal(cloneQualityWarrantsSameTierRetry({
     review: review({ adSystemLikenessScore: 9.2, defects: ["warped photo"] }),
+    expectedCopy,
+    expectedAssetKeys,
+  }), false);
+  assert.equal(cloneQualityWarrantsSameTierRetry({
+    review: review({
+      adSystemLikenessScore: 9.8,
+      standaloneAdQualityScore: 9.5,
+      copyChecks: [{ key: "headline", expected: "Exact headline", rendered: "Exact headline,", exact: false }],
+      defects: ["A trailing comma was added."],
+      suggestedCorrection: "Remove the trailing comma.",
+    }),
+    expectedCopy,
+    expectedAssetKeys,
+  }), true);
+  assert.equal(cloneQualityWarrantsSameTierRetry({
+    review: review({
+      adSystemLikenessScore: 9.8,
+      standaloneAdQualityScore: 9.5,
+      copyChecks: [{ key: "headline", expected: "Exact headline", rendered: "Exact headline,", exact: false }],
+      defects: ["A trailing comma was added."],
+      suggestedCorrection: "",
+    }),
     expectedCopy,
     expectedAssetKeys,
   }), false);
