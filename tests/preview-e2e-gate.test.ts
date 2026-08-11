@@ -22,10 +22,11 @@ test("Meta PAUSED canary remains operator-run, credential-gated, and activation-
   const gate = readFileSync("scripts/require-meta-paused-canary-env.mjs", "utf8");
   const spec = readFileSync("e2e/adstudio-meta-paused-canary.spec.ts", "utf8");
 
-  assert.match(pkg, /test:e2e:meta-paused-canary/);
+  assert.match(pkg, /"test:e2e:meta-paused-canary": "node scripts\/require-meta-paused-canary-env\.mjs && node scripts\/e2e\/login-storage-state\.mjs && playwright test/);
   assert.match(gate, /PAUSED_META_CANARY/);
   assert.match(gate, /ADSTUDIO_META_CANARY_WORKSPACE_ID/);
-  assert.match(gate, /ADSTUDIO_META_CANARY_IMAGE_BASE64/);
+  assert.match(gate, /ADSTUDIO_META_CANARY_IMAGE_PATH/);
+  assert.match(gate, /regular 1KB–20MB PNG file outside this Git checkout/);
   assert.match(gate, /ADSTUDIO_E2E_EMAIL/);
   assert.match(gate, /ADSTUDIO_E2E_PASSWORD/);
   assert.match(spec, /must never request activation/);

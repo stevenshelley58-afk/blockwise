@@ -6,9 +6,9 @@ const baseUrl = process.env.PLAYWRIGHT_BASE_URL;
 const workspaceId = process.env.ADSTUDIO_META_CANARY_WORKSPACE_ID;
 const templateName = process.env.ADSTUDIO_META_CANARY_TEMPLATE_NAME;
 const targetLocation = process.env.ADSTUDIO_META_CANARY_LOCATION;
-const imageBase64 = process.env.ADSTUDIO_META_CANARY_IMAGE_BASE64;
+const imagePath = process.env.ADSTUDIO_META_CANARY_IMAGE_PATH;
 const canRun = Boolean(
-  baseUrl && workspaceId && templateName && targetLocation && imageBase64 &&
+  baseUrl && workspaceId && templateName && targetLocation && imagePath &&
   process.env.ADSTUDIO_META_CANARY_CONFIRM === "PAUSED_META_CANARY" && hasAuthState(storageStatePath),
 );
 const describeCanary = canRun ? test.describe : test.describe.skip;
@@ -46,15 +46,10 @@ describeCanary("hosted Meta PAUSED canary", () => {
     await dialog.getByRole("button", { name: new RegExp(escapeRegExp(templateName!), "i") }).click();
     await expect(dialog.getByRole("heading", { name: "Make this design yours" })).toBeVisible();
 
-    const image = Buffer.from(imageBase64!, "base64");
     const imageInputs = dialog.locator('input[type="file"]');
     expect(await imageInputs.count(), "The selected canary template needs at least one customer image input.").toBeGreaterThan(0);
     for (let index = 0; index < await imageInputs.count(); index += 1) {
-      await imageInputs.nth(index).setInputFiles({
-        name: `hosted-meta-canary-${index + 1}.png`,
-        mimeType: "image/png",
-        buffer: image,
-      });
+      await imageInputs.nth(index).setInputFiles(imagePath!);
     }
 
     // The template's visible customer-copy fields are deliberately changed so
@@ -232,7 +227,7 @@ function missingPreconditions() {
     !workspaceId && "ADSTUDIO_META_CANARY_WORKSPACE_ID",
     !templateName && "ADSTUDIO_META_CANARY_TEMPLATE_NAME",
     !targetLocation && "ADSTUDIO_META_CANARY_LOCATION",
-    !imageBase64 && "ADSTUDIO_META_CANARY_IMAGE_BASE64",
+    !imagePath && "ADSTUDIO_META_CANARY_IMAGE_PATH",
     process.env.ADSTUDIO_META_CANARY_CONFIRM !== "PAUSED_META_CANARY" && "ADSTUDIO_META_CANARY_CONFIRM=PAUSED_META_CANARY",
     !hasAuthState(storageStatePath) && `fresh authenticated storage state at ${storageStatePath}`,
   ].filter(Boolean);
