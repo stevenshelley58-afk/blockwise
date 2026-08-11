@@ -50,6 +50,7 @@ const minStandaloneAdQuality = 9;
 const failures = [];
 const warnings = [];
 const templates = [];
+const referencedPublicSamples = new Set();
 
 // Magic Layers typography coverage. Baseline set below the pipeline's
 // current empirical result (383/410 regions = 93.4%, see
@@ -610,6 +611,7 @@ for (const { file, template } of templates) {
   if (!sample?.imageSrc || sample.thumbnailSrc !== sample.imageSrc || !sample.alt?.trim()) {
     fail(id, "sample image, matching thumbnail, and alt text are required");
   }
+  if (typeof sample?.imageSrc === "string") referencedPublicSamples.add(sample.imageSrc);
   if (!/^[a-f0-9]{64}$/iu.test(sample?.contentHash ?? "")) fail(id, "sample.contentHash must be a SHA-256 hash");
   const sampleFile = publicPath(sample?.imageSrc);
   if (!sampleFile || !existsSync(sampleFile)) fail(id, `sample image not found: ${sample?.imageSrc ?? "<missing>"}`);
@@ -757,6 +759,14 @@ for (const { file, template } of templates) {
 }
 
 const validQualityLocks = verifyQualityLocks();
+
+const sampleDirectory = join(publicDir, "adstudio-samples", "meta");
+if (existsSync(sampleDirectory)) {
+  for (const filename of readdirSync(sampleDirectory)) {
+    const publicSample = `/adstudio-samples/meta/${filename}`;
+    if (!referencedPublicSamples.has(publicSample)) fail("ORPHAN_SAMPLE", `${publicSample} is not referenced by a released template`);
+  }
+}
 
 if (templates.length >= diversityMinCount) {
   if (intentCounts.size < minDistinctIntents) fail("DIVERSITY", `only ${intentCounts.size} distinct primary intents; need at least ${minDistinctIntents}`);
