@@ -75,8 +75,8 @@ values
     '74444444-4444-4444-8444-444444444444',
     '75555555-5555-4555-8555-555555555555',
     'marketing_api',
-    'approved',
-    'queue-lease-approved-plan',
+    'queued',
+    'queue-lease-queued-plan',
     'act_queue_lease_test',
     'page_queue_lease_test',
     'https://example.com/privacy',
@@ -564,10 +564,10 @@ select ok(
     from public.meta_publish_plans
     where id = '76666666-6666-4666-8666-666666666666'
       and workspace_id = '71111111-1111-4111-8111-111111111111'
-      and status = 'approved'
+      and status = 'queued'
       and last_error = 'retryable provider timeout'
   ),
-  'a retryable publish failure leaves the plan approved with its exact error'
+  'a retryable publish failure leaves the plan queued with its exact error'
 );
 
 update public.job_queue
@@ -606,7 +606,7 @@ select ok(
       and status = 'failed'
       and last_error = 'terminal provider timeout'
   ),
-  'terminal failure moves an approved plan to failed with the exact error'
+  'terminal failure moves a queued plan to failed with the exact error'
 );
 
 insert into queue_test_ids (name, id)
