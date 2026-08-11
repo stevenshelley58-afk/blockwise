@@ -14,8 +14,8 @@ const hash = (value) => createHash("sha256").update(value).digest("hex");
 
 async function fixture() {
   const root = mkdtempSync(join(tmpdir(), "adstudio-quality-"));
-  for (const path of ["meta_ad_candidates", "public/samples", "assets", "out"]) mkdirSync(join(root, path), { recursive: true });
-  const source = join(root, "meta_ad_candidates/source.png");
+  for (const path of ["factory-private", "public/samples", "assets", "out"]) mkdirSync(join(root, path), { recursive: true });
+  const source = join(root, "factory-private/source.png");
   const sample = join(root, "public/samples/sample.png");
   const photo = join(root, "assets/photo.png");
   const candidate = join(root, "out/candidate.png");

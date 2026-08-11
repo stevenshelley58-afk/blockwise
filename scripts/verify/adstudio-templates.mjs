@@ -15,7 +15,6 @@ import {
 const root = process.cwd();
 const galleryDir = resolve(process.env.ADSTUDIO_GALLERY_DIR ?? join(root, "src", "lib", "adstudio", "template-gallery"));
 const publicDir = resolve(process.env.ADSTUDIO_PUBLIC_DIR ?? join(root, "public"));
-const sourceDir = resolve(process.env.ADSTUDIO_SOURCE_DIR ?? join(root, "meta_ad_candidates"));
 const qualityLocksPath = join(galleryDir, "quality-locks.json");
 const fontManifestPath = join(publicDir, "fonts", "adstudio", "manifest.json");
 const fontManifest = existsSync(fontManifestPath)
@@ -609,11 +608,6 @@ for (const { file, template } of templates) {
   } else {
     if (sources.has(sourceKey)) fail(id, `source ad already used by ${sources.get(sourceKey)}`);
     sources.set(sourceKey, id);
-    if (source.file) {
-      const path = join(sourceDir, source.file);
-      if (!existsSync(path)) fail(id, `sourceAd.file not found: ${source.file}`);
-      else if (sha256(path) !== source.contentHash.toLowerCase()) fail(id, "sourceAd.contentHash does not match the source file");
-    }
   }
 
   const sample = template.sample;

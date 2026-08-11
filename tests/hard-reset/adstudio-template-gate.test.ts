@@ -224,7 +224,6 @@ function run(root?: string) {
       ...process.env,
       ADSTUDIO_GALLERY_DIR: join(root, "gallery"),
       ADSTUDIO_PUBLIC_DIR: join(root, "public"),
-      ADSTUDIO_SOURCE_DIR: join(root, "sources"),
     } : process.env,
   });
 }
