@@ -82,14 +82,6 @@ export type MetaPublishControls = {
   };
 };
 
-/** Immutable identity supplied by adstudio_runtime_instances. */
-export type MetaRuntimePublishBinding = {
-  runtimeInstanceId: string;
-  templateId: string;
-  templateVersion: number;
-  templatePackageHash: string;
-};
-
 export type MetaPublishCampaignPlan = {
   localId: string;
   name: string;
@@ -209,10 +201,22 @@ export type MetaPublishCreativePlan = {
   cta: string;
   leadFormLocalId: string;
   adStudioCreativeId: string | null;
+  /** Active immutable finished-clone revision at plan creation. */
+  adStudioCreativeRevisionId?: string | null;
   format: string | null;
   asset?: MetaCreativeAssetPlan | null;
   /** Renderer adapter: 4:5 feed plus optional 9:16 story final image. */
   formatAssets?: { feed: MetaCreativeAssetPlan | null; story: MetaCreativeAssetPlan | null } | null;
+  /** Exact immutable finished-clone revisions that supplied the Meta bytes. */
+  revisionBindings: MetaCreativeRevisionBinding[];
+};
+
+export type MetaCreativeRevisionBinding = {
+  placement: "feed" | "story";
+  creativeId: string;
+  revisionId: string;
+  format: AdStudioCampaignPack["creatives"][number]["format"];
+  asset: MetaCreativeAssetPlan;
 };
 
 export const META_CREATIVE_FEATURE_KEYS = [
@@ -296,11 +300,6 @@ export type MetaPublishPlan = {
   workspaceId: string;
   adStudioCampaignId: string;
   adStudioExportId: string | null;
-  /** Canonical runtime hand-off; legacy campaign packs leave these null. */
-  adStudioRuntimeInstanceId: string | null;
-  runtimeTemplateId: string | null;
-  runtimeTemplateVersion: number | null;
-  runtimeTemplatePackageHash: string | null;
   legacyCampaignId: string | null;
   providerConnectionId: string;
   approvalRequestId: string | null;
@@ -398,20 +397,27 @@ function hashMetaExecutionSpec(value: unknown): string {
  * asset identifiers/hashes plus ad copy and generic form defaults. Customer
  * privacy and destination URLs are intentionally excluded from package data.
  */
-export function buildMetaComplianceSubjectHash(input: Pick<MetaPublishPlan, "campaign" | "leadForms" | "creatives" | "ads" | "tracking"> & { runtimeBinding?: MetaRuntimePublishBinding | null }): string {
+export function buildMetaComplianceSubjectHash(input: Pick<MetaPublishPlan, "campaign" | "leadForms" | "creatives" | "ads" | "tracking">): string {
   return createHash("sha256")
     .update(JSON.stringify(canonicalizeMetaExecutionValue({
-      runtimeBinding: input.runtimeBinding ?? null,
       campaign: input.campaign,
       creatives: input.creatives.map((creative) => ({
         localId: creative.localId,
         adStudioCreativeId: creative.adStudioCreativeId,
+        adStudioCreativeRevisionId: creative.adStudioCreativeRevisionId ?? null,
         format: creative.format,
         asset: immutableCreativeAsset(creative.asset),
         formatAssets: creative.formatAssets ? {
           feed: immutableCreativeAsset(creative.formatAssets.feed),
           story: immutableCreativeAsset(creative.formatAssets.story),
         } : null,
+        revisionBindings: creative.revisionBindings.map((binding) => ({
+          placement: binding.placement,
+          creativeId: binding.creativeId,
+          revisionId: binding.revisionId,
+          format: binding.format,
+          asset: immutableCreativeAsset(binding.asset),
+        })),
         headline: creative.headline,
         primaryText: creative.primaryText,
         description: creative.description,
@@ -467,7 +473,6 @@ export function buildMetaPublishPlan(input: {
   approvalRequestId?: string | null;
   legacyCampaignId?: string | null;
   adStudioExportId?: string | null;
-  runtimeBinding?: MetaRuntimePublishBinding;
   existingMetaCampaignId?: string | null;
   existingMetaCampaignBudgetMode?: "campaign" | "adset";
   /**
@@ -512,7 +517,7 @@ export function buildMetaPublishPlan(input: {
     utmCampaign: slug(campaignPack.campaign.name),
     utmContentPrefix: slug(campaignPack.campaign.market.suburb),
   };
-  const complianceSubjectHash = buildMetaComplianceSubjectHash({ campaign, leadForms, creatives, ads, tracking, runtimeBinding: input.runtimeBinding });
+  const complianceSubjectHash = buildMetaComplianceSubjectHash({ campaign, leadForms, creatives, ads, tracking });
   const executionFingerprint = hashMetaExecutionSpec({
     providerConnectionId: input.connectionId,
     setup,
@@ -543,10 +548,6 @@ export function buildMetaPublishPlan(input: {
     workspaceId: input.workspaceId,
     adStudioCampaignId: campaignPack.campaign.campaignId,
     adStudioExportId: input.adStudioExportId ?? null,
-    adStudioRuntimeInstanceId: input.runtimeBinding?.runtimeInstanceId ?? null,
-    runtimeTemplateId: input.runtimeBinding?.templateId ?? null,
-    runtimeTemplateVersion: input.runtimeBinding?.templateVersion ?? null,
-    runtimeTemplatePackageHash: input.runtimeBinding?.templatePackageHash ?? null,
     legacyCampaignId: input.legacyCampaignId ?? null,
     providerConnectionId: input.connectionId,
     approvalRequestId: input.approvalRequestId ?? null,
@@ -616,7 +617,6 @@ export function validateMetaPublishPlanReadiness(
     approvalStatus: ApprovalStatus;
     providerConnectionStatus: ProviderConnectionStatus;
     complianceStatus: ComplianceStatus;
-    requireRuntimeBinding?: boolean;
   },
 ) {
   const readiness = evaluatePublishReadiness({
@@ -626,9 +626,6 @@ export function validateMetaPublishPlanReadiness(
     hasDraftPayload: plan.ads.length > 0 && plan.creatives.length > 0 && plan.leadForms.length > 0,
   });
   const blockers = [...readiness.blockers, ...validateMetaConnectionSetup(plan.setup)];
-  if (input.requireRuntimeBinding && !plan.adStudioRuntimeInstanceId) {
-    blockers.push("New Meta publishes require a pinned AdStudio runtime instance.");
-  }
 
   if (input.approvalStatus === "approved" && !plan.approvalRequestId) {
     blockers.push("Meta publish plan is not linked to an approval request.");
@@ -639,6 +636,18 @@ export function validateMetaPublishPlanReadiness(
   }
   if (plan.creatives.some((creative) => !hasImmutableCreativeContent(creative))) {
     blockers.push("Each selected finished ad asset must have a SHA-256 content hash before compliance and Meta publish.");
+  }
+  for (const creative of plan.creatives) {
+    const hasFeed = creative.revisionBindings.some((binding) => binding.placement === "feed");
+    const requiresStory = plan.adSets.some((adSet) => {
+      const platforms = Array.isArray(adSet.targeting.publisher_platforms) ? adSet.targeting.publisher_platforms : [];
+      const positions = Array.isArray(adSet.targeting.instagram_positions) ? adSet.targeting.instagram_positions : [];
+      return platforms.includes("instagram") && (positions.length === 0 || positions.includes("story"));
+    });
+    if (!hasFeed) blockers.push("Each selected variant needs a finished 4:5 feed clone before publishing.");
+    if (requiresStory && !creative.revisionBindings.some((binding) => binding.placement === "story")) {
+      blockers.push("Instagram Story placement requires a finished 9:16 story clone for every selected variant.");
+    }
   }
 
   for (const form of plan.leadForms) blockers.push(...validateMetaInstantFormSpec(form));
@@ -680,6 +689,79 @@ export async function loadMetaPublishPlanComplianceStatus(
   if (error || !data || data.id !== plan.complianceReportId || data.campaign_id !== plan.adStudioCampaignId) return "blocked";
   if (data.subject_hash !== plan.complianceSubjectHash) return "blocked";
   return data.status === "approved" || data.status === "needs_review" || data.status === "blocked" ? data.status : "blocked";
+}
+
+/** Current campaign + active clone revision gate shared by UI and activation. */
+export async function evaluateCurrentMetaPublishPlanReadiness(service: SupabaseServiceClient, plan: MetaPublishPlan) {
+  const bindings = plan.creatives.flatMap((creative) => creative.revisionBindings ?? []);
+  const creativeIds = [...new Set(bindings.map((binding) => binding.creativeId))];
+  const [{ data: connection }, { data: approval }, complianceStatus, creatives, revisions] = await Promise.all([
+    service.from("provider_connections").select("status").eq("workspace_id", plan.workspaceId).eq("id", plan.providerConnectionId).maybeSingle(),
+    plan.approvalRequestId ? service.from("approval_requests").select("status").eq("workspace_id", plan.workspaceId).eq("id", plan.approvalRequestId).maybeSingle() : Promise.resolve({ data: null }),
+    loadMetaPublishPlanComplianceStatus(service, plan),
+    creativeIds.length ? service.from("adstudio_creatives").select("id,active_revision_id").eq("workspace_id", plan.workspaceId).in("id", creativeIds) : Promise.resolve({ data: [] }),
+    creativeIds.length ? service.from("adstudio_creative_revisions").select("id,creative_id,canvas_json").eq("workspace_id", plan.workspaceId).in("creative_id", creativeIds) : Promise.resolve({ data: [] }),
+  ]);
+  const readiness = validateMetaPublishPlanReadiness(plan, {
+    providerConnectionStatus: connection?.status === "connected" || connection?.status === "needs_attention" ? connection.status : "not_connected",
+    approvalStatus: approval?.status === "approved" || approval?.status === "requested" || approval?.status === "rejected" || approval?.status === "cancelled" ? approval.status : "draft",
+    complianceStatus,
+  });
+  const activeByCreative = new Map((creatives.data ?? []).map((creative) => [String(creative.id), creative.active_revision_id ? String(creative.active_revision_id) : null]));
+  const revisionById = new Map((revisions.data ?? []).map((revision) => [String(revision.id), revision]));
+  const bindingChecks = await Promise.all(bindings.map(async (binding) => {
+    if (activeByCreative.get(binding.creativeId) !== binding.revisionId) return true;
+    const revision = revisionById.get(binding.revisionId);
+    if (!revision || String(revision.creative_id) !== binding.creativeId) return true;
+    const asset = await resolveImmutableRevisionAsset(service, plan.workspaceId, binding.creativeId, revision.canvas_json);
+    return !sameImmutableCreativeAsset(asset, binding.asset);
+  }));
+  if (bindings.length === 0 || bindingChecks.some(Boolean)) {
+    readiness.blockers.push("A finished clone changed after compliance. Re-run compliance before publishing.");
+  }
+  return readiness;
+}
+
+/**
+ * Server-only plan input preparation. It replaces mutable pack canvases with
+ * their currently active immutable revisions, rejects foreign/URL assets, and
+ * attaches the SHA-256 of the actual stored bytes before compliance is hashed.
+ */
+export async function prepareImmutableMetaPublishCampaignPack(
+  service: SupabaseServiceClient,
+  workspaceId: string,
+  campaignPack: AdStudioCampaignPack,
+  variantIds?: string[],
+): Promise<AdStudioCampaignPack> {
+  const selectedVariantIds = variantIds?.length ? new Set(variantIds) : null;
+  const selectedCreatives = selectedVariantIds
+    ? campaignPack.creatives.filter((creative) => selectedVariantIds.has(creative.variantId))
+    : campaignPack.creatives;
+  const creativeIds = [...new Set(selectedCreatives.map((creative) => creative.creativeId))];
+  if (!creativeIds.length) throw new Error("A Meta publish needs at least one finished clone creative.");
+  const [{ data: creatives, error: creativesError }, { data: revisions, error: revisionsError }] = await Promise.all([
+    service.from("adstudio_creatives").select("id,active_revision_id").eq("workspace_id", workspaceId).in("id", creativeIds),
+    service.from("adstudio_creative_revisions").select("id,creative_id,canvas_json").eq("workspace_id", workspaceId).in("creative_id", creativeIds),
+  ]);
+  if (creativesError || revisionsError) throw new Error(creativesError?.message ?? revisionsError?.message ?? "Unable to load finished clone revisions.");
+  const activeByCreative = new Map((creatives ?? []).map((creative) => [String(creative.id), String(creative.active_revision_id ?? "")]));
+  const revisionsByKey = new Map((revisions ?? []).map((revision) => [`${revision.creative_id}:${revision.id}`, revision]));
+
+  const preparedById = new Map(await Promise.all(selectedCreatives.map(async (creative) => {
+    const revisionId = activeByCreative.get(creative.creativeId);
+    const revision = revisionId ? revisionsByKey.get(`${creative.creativeId}:${revisionId}`) : null;
+    if (!revision || !revisionId) throw new Error(`Finished clone ${creative.creativeId} has no active immutable revision.`);
+    const canvas = structuredClone(revision.canvas_json) as AdStudioCampaignPack["creatives"][number]["canvas"];
+    const asset = await resolveImmutableRevisionAsset(service, workspaceId, creative.creativeId, canvas);
+    if (!asset?.contentSha256) throw new Error(`Finished clone ${creative.creativeId} has no verifiable image bytes.`);
+    const objects = canvas.objects as Array<Record<string, unknown>>;
+    const imageObject = objects.find((object) => object.objectId === "template_clone_image")
+      ?? objects.find((object) => object.role === "primary_image");
+    if (!imageObject) throw new Error(`Finished clone ${creative.creativeId} has no clone image region.`);
+    imageObject.contentSha256 = asset.contentSha256;
+    return [creative.creativeId, { ...creative, activeRevisionId: revisionId, canvas }] as const;
+  })));
+  return { ...campaignPack, creatives: campaignPack.creatives.map((creative) => preparedById.get(creative.creativeId) ?? creative) };
 }
 
 export function createMetaExecutionAdapter(adapter: MetaExecutionAdapter): MetaExecutionAdapterImplementation {
@@ -1846,7 +1928,24 @@ function buildLeadFormPlans(pack: AdStudioCampaignPack, setup: MetaConnectionSet
 
 function buildCreativePlans(pack: AdStudioCampaignPack, setup: MetaConnectionSetup): MetaPublishCreativePlan[] {
   return pack.copyPacks.slice(0, 6).map((copy, index) => {
-    const creative = pack.creatives.find((item) => item.variantId === copy.variantId) ?? pack.creatives[index] ?? null;
+    const variantCreatives = pack.creatives.filter((item) => item.variantId === copy.variantId);
+    const feedCreative = variantCreatives.find((item) => item.format === "4:5")
+      ?? variantCreatives.find((item) => item.format !== "9:16")
+      ?? null;
+    const storyCreative = variantCreatives.find((item) => item.format === "9:16") ?? null;
+    const creative = feedCreative ?? storyCreative ?? pack.creatives[index] ?? null;
+    const feedAsset = feedCreative ? buildCreativeImageAsset(feedCreative) : null;
+    const storyAsset = storyCreative ? buildCreativeImageAsset(storyCreative) : null;
+    const revisionBindings = [
+      feedCreative && feedAsset && feedCreative.activeRevisionId ? {
+        placement: "feed" as const, creativeId: feedCreative.creativeId, revisionId: feedCreative.activeRevisionId,
+        format: feedCreative.format, asset: feedAsset,
+      } : null,
+      storyCreative && storyAsset && storyCreative.activeRevisionId ? {
+        placement: "story" as const, creativeId: storyCreative.creativeId, revisionId: storyCreative.activeRevisionId,
+        format: storyCreative.format, asset: storyAsset,
+      } : null,
+    ].filter((binding): binding is NonNullable<typeof binding> => Boolean(binding));
 
     return {
       localId: `creative_${index + 1}`,
@@ -1858,12 +1957,12 @@ function buildCreativePlans(pack: AdStudioCampaignPack, setup: MetaConnectionSet
       description: copy.meta.descriptions[0] ?? pack.campaign.audienceIntent,
       cta: copy.meta.cta,
       leadFormLocalId: `form_${index + 1}`,
-      adStudioCreativeId: creative?.creativeId ?? null,
+      adStudioCreativeId: feedCreative?.creativeId ?? creative?.creativeId ?? null,
+      adStudioCreativeRevisionId: feedCreative?.activeRevisionId ?? creative?.activeRevisionId ?? null,
       format: creative?.format ?? null,
-      asset: creative ? buildCreativeImageAsset(creative) : null,
-      formatAssets: creative
-        ? { feed: buildCreativeImageAsset(creative), story: creative.format === "9:16" ? buildCreativeImageAsset(creative) : null }
-        : null,
+      asset: feedAsset,
+      formatAssets: { feed: feedAsset, story: storyAsset },
+      revisionBindings,
     };
   });
 }
@@ -1876,9 +1975,18 @@ function buildCreativePlans(pack: AdStudioCampaignPack, setup: MetaConnectionSet
  * publish worker just before upload, so plans stay small in the database.
  */
 function buildCreativeImageAsset(creative: AdStudioCampaignPack["creatives"][number]): MetaCreativeAssetPlan | null {
-  const imageObject = creative.canvas.objects.find((object) => object.objectId === "template_clone_image")
-    ?? creative.canvas.objects.find((object) => object.role === "primary_image");
-  const reference = imageObject?.content?.trim() || imageObject?.assetId?.trim() || "";
+  return buildCreativeImageAssetFromCanvas(creative.creativeId, creative.canvas);
+}
+
+function buildCreativeImageAssetFromCanvas(creativeId: string, canvas: unknown): MetaCreativeAssetPlan | null {
+  const objects = canvas && typeof canvas === "object" && Array.isArray((canvas as { objects?: unknown }).objects)
+    ? (canvas as { objects: Array<{ objectId?: unknown; role?: unknown; content?: unknown; assetId?: unknown; contentSha256?: unknown }> }).objects
+    : [];
+  const imageObject = objects.find((object) => object.objectId === "template_clone_image")
+    ?? objects.find((object) => object.role === "primary_image");
+  const reference = typeof imageObject?.content === "string" && imageObject.content.trim()
+    ? imageObject.content.trim()
+    : typeof imageObject?.assetId === "string" ? imageObject.assetId.trim() : "";
 
   if (!reference) return null;
 
@@ -1888,7 +1996,7 @@ function buildCreativeImageAsset(creative: AdStudioCampaignPack["creatives"][num
       type: "image",
       source: "inline",
       mimeType: dataUrlMatch[1],
-      filename: `${creative.creativeId}.${dataUrlMatch[1] === "image/jpeg" ? "jpg" : "png"}`,
+      filename: `${creativeId}.${dataUrlMatch[1] === "image/jpeg" ? "jpg" : "png"}`,
       bytesBase64: dataUrlMatch[2],
       contentSha256: createHash("sha256").update(Buffer.from(dataUrlMatch[2], "base64")).digest("hex"),
     };
@@ -1906,9 +2014,48 @@ function buildCreativeImageAsset(creative: AdStudioCampaignPack["creatives"][num
     type: "image",
     source: "storage",
     mimeType: "image/png",
-    filename: `${creative.creativeId}.png`,
+    filename: `${creativeId}.png`,
     storagePath,
+    ...(typeof imageObject?.contentSha256 === "string" && /^[a-f0-9]{64}$/i.test(imageObject.contentSha256)
+      ? { contentSha256: imageObject.contentSha256.toLowerCase() }
+      : {}),
   };
+}
+
+async function resolveImmutableRevisionAsset(
+  service: SupabaseServiceClient,
+  workspaceId: string,
+  creativeId: string,
+  canvas: unknown,
+): Promise<MetaCreativeAssetPlan | null> {
+  const asset = buildCreativeImageAssetFromCanvas(creativeId, canvas);
+  if (!asset) return null;
+  if (asset.source === "inline") return asset.contentSha256 ? asset : null;
+  if (asset.source !== "storage" || !asset.storagePath || !isWorkspaceArtifactPath(workspaceId, asset.storagePath)) return null;
+  const { data, error } = await service.storage.from("workspace-artifacts").download(asset.storagePath);
+  if (error || !data) return null;
+  const bytes = Buffer.from(await data.arrayBuffer());
+  if (!bytes.length) return null;
+  const mimeType = data.type && data.type.startsWith("image/") ? data.type : asset.mimeType;
+  if (!mimeType?.startsWith("image/")) return null;
+  return {
+    ...asset,
+    mimeType,
+    contentSha256: createHash("sha256").update(bytes).digest("hex"),
+  };
+}
+
+function isWorkspaceArtifactPath(workspaceId: string, storagePath: string): boolean {
+  return storagePath.startsWith(`${workspaceId}/`) && !storagePath.includes("..") && !storagePath.startsWith("/");
+}
+
+function sameImmutableCreativeAsset(current: MetaCreativeAssetPlan | null, expected: MetaCreativeAssetPlan): boolean {
+  if (!current) return false;
+  return current.source === expected.source
+    && current.storagePath === expected.storagePath
+    && current.url === expected.url
+    && current.contentSha256 === expected.contentSha256
+    && current.mimeType === expected.mimeType;
 }
 
 function hasUsableCreativeImage(creative: MetaPublishCreativePlan): boolean {
@@ -2033,10 +2180,6 @@ function planToJson(plan: MetaPublishPlan) {
     creatives: plan.creatives,
     ads: plan.ads,
     tracking: plan.tracking,
-    adStudioRuntimeInstanceId: plan.adStudioRuntimeInstanceId,
-    runtimeTemplateId: plan.runtimeTemplateId,
-    runtimeTemplateVersion: plan.runtimeTemplateVersion,
-    runtimeTemplatePackageHash: plan.runtimeTemplatePackageHash,
     complianceReportId: plan.complianceReportId,
     complianceSubjectHash: plan.complianceSubjectHash,
     complianceCheckedAt: plan.complianceCheckedAt,
@@ -2052,7 +2195,6 @@ function planToRow(plan: MetaPublishPlan, userId: string) {
     workspace_id: plan.workspaceId,
     adstudio_campaign_id: plan.adStudioCampaignId,
     adstudio_export_id: plan.adStudioExportId,
-    adstudio_runtime_instance_id: plan.adStudioRuntimeInstanceId,
     campaign_id: plan.legacyCampaignId,
     provider_connection_id: plan.providerConnectionId,
     approval_request_id: plan.approvalRequestId,
@@ -2082,7 +2224,6 @@ type MetaPublishPlanRow = {
   workspace_id: string;
   adstudio_campaign_id: string;
   adstudio_export_id: string | null;
-  adstudio_runtime_instance_id: string | null;
   campaign_id: string | null;
   provider_connection_id: string;
   approval_request_id: string | null;
@@ -2104,10 +2245,6 @@ type MetaPublishPlanRow = {
     creatives?: MetaPublishCreativePlan[];
     ads?: MetaPublishAdPlan[];
     tracking?: MetaPublishTrackingPlan;
-    adStudioRuntimeInstanceId?: string | null;
-    runtimeTemplateId?: string | null;
-    runtimeTemplateVersion?: number | null;
-    runtimeTemplatePackageHash?: string | null;
     complianceReportId?: string | null;
     complianceSubjectHash?: string;
     complianceCheckedAt?: string | null;
@@ -2140,10 +2277,6 @@ function rowToPlan(row: MetaPublishPlanRow): MetaPublishPlan {
     workspaceId: row.workspace_id,
     adStudioCampaignId: row.adstudio_campaign_id,
     adStudioExportId: row.adstudio_export_id,
-    adStudioRuntimeInstanceId: row.adstudio_runtime_instance_id ?? planJson.adStudioRuntimeInstanceId ?? null,
-    runtimeTemplateId: planJson.runtimeTemplateId ?? null,
-    runtimeTemplateVersion: planJson.runtimeTemplateVersion ?? null,
-    runtimeTemplatePackageHash: planJson.runtimeTemplatePackageHash ?? null,
     legacyCampaignId: row.campaign_id,
     providerConnectionId: row.provider_connection_id,
     approvalRequestId: row.approval_request_id,

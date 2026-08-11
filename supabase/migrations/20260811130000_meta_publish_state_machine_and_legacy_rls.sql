@@ -9,22 +9,13 @@ end
 where status in ('approved', 'paused_live');
 
 -- Compliance approval must bind to the exact immutable publish subject. Old
--- reports intentionally remain NULL and therefore fail closed in the runtime;
+-- reports intentionally remain NULL and therefore fail closed;
 -- never backfill a hash from timestamps or mutable campaign rows.
 alter table public.adstudio_compliance_reports
   add column if not exists subject_hash text;
 create index if not exists adstudio_compliance_reports_subject_hash_idx
   on public.adstudio_compliance_reports (workspace_id, campaign_id, subject_hash)
   where subject_hash is not null;
-
--- New publishes are anchored to a pinned runtime instance. Legacy rows remain
--- readable for reconciliation only; their null binding fails the new runtime
--- readiness gate and may not be used to create a new publish.
-alter table public.meta_publish_plans
-  add column if not exists adstudio_runtime_instance_id uuid references public.adstudio_runtime_instances (id) on delete restrict;
-create index if not exists meta_publish_plans_runtime_instance_idx
-  on public.meta_publish_plans (workspace_id, adstudio_runtime_instance_id)
-  where adstudio_runtime_instance_id is not null;
 
 do $$
 declare

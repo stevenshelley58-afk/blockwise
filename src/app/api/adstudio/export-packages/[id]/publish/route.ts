@@ -21,6 +21,7 @@ import {
   loadMetaPublishPlanComplianceStatus,
   loadMetaPublishPlanByIdempotencyKey,
   persistMetaPublishPlan,
+  prepareImmutableMetaPublishCampaignPack,
   resolveMetaConnectionSetup,
   validateMetaConnectionSetup,
   validateMetaPublishPlanReadiness,
@@ -325,7 +326,6 @@ export async function POST(request: NextRequest, context: RouteContext) {
         approvalStatus: metaPublishPlanResult?.approval.status ?? "draft",
         providerConnectionStatus: metaConnectionStatus,
         complianceStatus: scopedComplianceStatus,
-        requireRuntimeBinding: true,
       })
     : { ready: false, blockers: firstCopyPack?.meta ? ["Meta account is not connected."] : [] };
   const adapterBlockers = metaPublishPlan?.adapter && metaPublishPlan.adapter !== "marketing_api"
@@ -500,9 +500,15 @@ async function createAndPersistMetaPlan(input: {
     }
   }
 
+  const immutableCampaignPack = await prepareImmutableMetaPublishCampaignPack(
+    input.serviceSupabase,
+    input.workspaceId,
+    input.campaignPack,
+    input.variantIds,
+  );
   const plan = buildMetaPublishPlan({
     workspaceId: input.workspaceId,
-    campaignPack: input.campaignPack,
+    campaignPack: immutableCampaignPack,
     connectionId: input.connection.id,
     setup,
     controls: input.controls,
