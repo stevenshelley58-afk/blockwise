@@ -16,3 +16,19 @@ test("preview E2E command requires Vercel URL credentials and auth state before 
   assert.match(script, /non-empty authenticated storageState/);
   assert.match(runbook, /npm run test:e2e:preview/);
 });
+
+test("Meta PAUSED canary remains operator-run, credential-gated, and activation-free", () => {
+  const pkg = readFileSync("package.json", "utf8");
+  const gate = readFileSync("scripts/require-meta-paused-canary-env.mjs", "utf8");
+  const spec = readFileSync("e2e/adstudio-meta-paused-canary.spec.ts", "utf8");
+
+  assert.match(pkg, /test:e2e:meta-paused-canary/);
+  assert.match(gate, /PAUSED_META_CANARY/);
+  assert.match(gate, /ADSTUDIO_META_CANARY_WORKSPACE_ID/);
+  assert.match(gate, /ADSTUDIO_META_CANARY_IMAGE_BASE64/);
+  assert.match(gate, /ADSTUDIO_E2E_EMAIL/);
+  assert.match(gate, /ADSTUDIO_E2E_PASSWORD/);
+  assert.match(spec, /must never request activation/);
+  assert.match(spec, /paused_ready/);
+  assert.match(spec, /revisionBindings/);
+});

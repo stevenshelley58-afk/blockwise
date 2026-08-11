@@ -49,6 +49,50 @@ export async function GET(request: NextRequest, context: RouteContext) {
         creatives: Object.keys(plan.reconciledObjects.creativeIds).length,
         ads: Object.keys(plan.reconciledObjects.adIds).length,
       },
+      // A workspace member may inspect the immutable inputs and provider IDs
+      // for their own plan. This is deliberately limited to IDs, statuses,
+      // hashes, and revision bindings: provider tokens, request bodies, and
+      // lead payloads never leave the service-side plan record.
+      readback: {
+        complianceSubjectHash: plan.complianceSubjectHash,
+        campaign: {
+          providerId: plan.reconciledObjects.campaignId ?? null,
+          plannedStatus: plan.campaign.status,
+          effectiveStatus: plan.reconciledObjects.objectStatuses?.campaign?.effectiveStatus ?? null,
+        },
+        leadForms: plan.leadForms.map((form) => ({
+          localId: form.localId,
+          providerId: plan.reconciledObjects.leadFormIds[form.localId] ?? null,
+          // The worker only records the ID after Meta's required form GET
+          // succeeds, so this means the generated Instant Form was read back.
+          readBack: plan.responseLog.some((entry) => entry.step === `lead_form.${form.localId}.verify` && entry.status && entry.status >= 200 && entry.status < 300),
+        })),
+        adSets: plan.adSets.map((adSet) => ({
+          localId: adSet.localId,
+          providerId: plan.reconciledObjects.adSetIds[adSet.localId] ?? null,
+          plannedStatus: adSet.status,
+          effectiveStatus: plan.reconciledObjects.objectStatuses?.adSets?.[adSet.localId]?.effectiveStatus ?? null,
+        })),
+        creatives: plan.creatives.map((creative) => ({
+          localId: creative.localId,
+          providerId: plan.reconciledObjects.creativeIds[creative.localId] ?? null,
+          leadFormLocalId: creative.leadFormLocalId,
+          leadFormProviderId: plan.reconciledObjects.leadFormIds[creative.leadFormLocalId] ?? null,
+          revisionBindings: creative.revisionBindings.map((binding) => ({
+            placement: binding.placement,
+            format: binding.format,
+            creativeId: binding.creativeId,
+            revisionId: binding.revisionId,
+            contentSha256: binding.asset.contentSha256 ?? null,
+          })),
+        })),
+        ads: plan.ads.map((ad) => ({
+          localId: ad.localId,
+          providerId: plan.reconciledObjects.adIds[ad.localId] ?? null,
+          plannedStatus: ad.status,
+          effectiveStatus: plan.reconciledObjects.objectStatuses?.ads?.[ad.localId]?.effectiveStatus ?? null,
+        })),
+      },
     });
   } catch (error) {
     return NextResponse.json(
