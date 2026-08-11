@@ -20,10 +20,10 @@
     "agent branding"
   ],
   "sample": {
-    "imageSrc": "/adstudio-samples/meta/meta-feed-055-sample.png",
-    "thumbnailSrc": "/adstudio-samples/meta/meta-feed-055-sample.png",
+    "imageSrc": "/adstudio-samples/meta/meta-feed-055-sample-v2.png",
+    "thumbnailSrc": "/adstudio-samples/meta/meta-feed-055-sample-v2.png",
     "alt": "Generated sample for Just Sold - A New Chapter Starts Here.",
-    "contentHash": "3e48b6c81d41097fae6f39fabfc6cb104ab17e33a2c0c9adfc2403dd79312eb6",
+    "contentHash": "e9fcf7a46c67e2832c29ea11b3e65af8eae6500856ba80f3a6f978ac23315c54",
     "generatedBy": "reference_clone"
   },
   "inputs": {
@@ -273,5 +273,8 @@
       "measurementSource": "manual-estimate",
       "fontFile": "/fonts/adstudio/merriweather-300.woff2"
     }
+  },
+  "qualityLock": {
+    "templateHash": "444f9304adc7e7b41ef5d660b5e40a0fe176928ac0182ca93dc06893c699ff11"
   }
 }
