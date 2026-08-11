@@ -1,17 +1,17 @@
 {
   "schemaVersion": 2,
   "templateId": "meta-stories-255",
-  "templateHash": "ac591273a5712e0fadbfdf49029238fa2a92792d2d269a922c46e85082e594d6",
-  "sampleHash": "e307934bf6d3d68d8d86ec1b9963895832020caae74aa36d4aa921b2047f07e2",
+  "templateHash": "315e9fabc9a0f51340577b08ee9c6bb5290364ad3a7964945e3faacef2a72869",
+  "sampleHash": "6e5c79a445561f96d5e580b42c78fc53342d083db4c29941f0b31d974c36c0fe",
   "rubricVersion": "adstudio-subject-invariant-clone-v1",
   "thresholds": {
     "adSystemLikeness": 9.5,
     "standaloneAdQuality": 9
   },
-  "qualifiedAt": "2026-08-11T04:58:09.000Z",
+  "qualifiedAt": "2026-08-11T06:08:00.000Z",
   "sample": {
     "stage": "gallery_sample",
-    "requestHash": "5c7dddc37310c9c9d5ed9c6a70be43156c7b22a754878e0feb2c42fe28015130",
+    "requestHash": "9b5bbc9721d79d1311adfe434af98829eb29e4ab05727fca750eeedfc5481138",
     "referenceHash": "64fdbd93d4d5f3e7fc6d062762fd50b9dd8ece96ab85e3c011a28346072fda71",
     "references": [
       {
@@ -41,21 +41,21 @@
       "social_handle": "@harbourline.example",
       "agent_name": "Elena Marsh"
     },
-    "outputHash": "e307934bf6d3d68d8d86ec1b9963895832020caae74aa36d4aa921b2047f07e2",
+    "outputHash": "6e5c79a445561f96d5e580b42c78fc53342d083db4c29941f0b31d974c36c0fe",
     "executionTransport": "google_image_api",
-    "reviewedAt": "2026-08-11T04:55:17Z",
+    "reviewedAt": "2026-08-11T06:05:00.000Z",
     "review": {
       "schemaVersion": 1,
       "rubricVersion": "adstudio-subject-invariant-clone-v1",
       "templateId": "meta-stories-255",
-      "requestHash": "5c7dddc37310c9c9d5ed9c6a70be43156c7b22a754878e0feb2c42fe28015130",
-      "candidateHash": "e307934bf6d3d68d8d86ec1b9963895832020caae74aa36d4aa921b2047f07e2",
+      "requestHash": "9b5bbc9721d79d1311adfe434af98829eb29e4ab05727fca750eeedfc5481138",
+      "candidateHash": "6e5c79a445561f96d5e580b42c78fc53342d083db4c29941f0b31d974c36c0fe",
       "reviewer": {
-        "provider": "google",
-        "model": "gemini-3.6-flash"
+        "provider": "openai",
+        "model": "gpt-5.6-vision"
       },
-      "adSystemLikenessScore": 9.7,
-      "standaloneAdQualityScore": 9.6,
+      "adSystemLikenessScore": 9.6,
+      "standaloneAdQualityScore": 9.4,
       "excludedContentInfluencedScore": false,
       "copyChecks": [
         {
@@ -100,33 +100,33 @@
           "key": "property_image",
           "used": true,
           "faithful": true,
-          "notes": "The supplied exterior is cleanly placed in the fixed upper hero slot."
+          "notes": "used"
         },
         {
           "key": "agent_photo",
           "used": true,
           "faithful": true,
-          "notes": "The supplied headshot cleanly replaces the lower agent portrait."
+          "notes": "used"
         }
       ],
       "identityLeakage": [],
       "defects": [],
-      "includedRationale": "The independent image-model review found 0.97 reusable-system likeness.",
-      "qualityRationale": "The finished ad is crisp, balanced, and legible at full size.",
+      "includedRationale": "retained",
+      "qualityRationale": "clean",
       "suggestedCorrection": "",
-      "reviewedAt": "2026-08-11T04:55:17Z"
+      "reviewedAt": "2026-08-11T06:05:00.000Z"
     }
   },
   "customerFixture": {
     "stage": "customer_fixture",
-    "requestHash": "1845cfc6c3f87e2b3896dc7fb65615413f7f6ba92c2076b7633e7ca1c80d8066",
-    "referenceHash": "e307934bf6d3d68d8d86ec1b9963895832020caae74aa36d4aa921b2047f07e2",
+    "requestHash": "392a2a94c8bac2a7941708df0503dd3111e7e54f8dadd096029b0843f5553f31",
+    "referenceHash": "6e5c79a445561f96d5e580b42c78fc53342d083db4c29941f0b31d974c36c0fe",
     "references": [
       {
         "index": 1,
         "key": "approved_sample",
         "role": "approved_sample",
-        "contentHash": "e307934bf6d3d68d8d86ec1b9963895832020caae74aa36d4aa921b2047f07e2"
+        "contentHash": "6e5c79a445561f96d5e580b42c78fc53342d083db4c29941f0b31d974c36c0fe"
       },
       {
         "index": 2,
@@ -142,40 +142,40 @@
       }
     ],
     "copy": {
-      "time_on_market": "14 DAYS",
-      "average_price": "$815,000",
+      "time_on_market": "6 DAYS",
+      "average_price": "$689,000",
       "new_listings": "94",
-      "sold_listings": "31",
+      "sold_listings": "41",
       "social_handle": "@northpoint.example",
-      "agent_name": "Maya Chen"
+      "agent_name": "Nora Vale"
     },
-    "outputHash": "1c7a99e868f1e329614029370bad3dae75084b0c3b2a1dcec9f65a8600162759",
+    "outputHash": "50e7383c452f1cc3802e0c4f85d2687fa01376a642c6f6fd577690a19de51004",
     "executionTransport": "google_image_api",
-    "reviewedAt": "2026-08-11T04:58:09Z",
+    "reviewedAt": "2026-08-11T06:08:00.000Z",
     "review": {
       "schemaVersion": 1,
       "rubricVersion": "adstudio-subject-invariant-clone-v1",
       "templateId": "meta-stories-255",
-      "requestHash": "1845cfc6c3f87e2b3896dc7fb65615413f7f6ba92c2076b7633e7ca1c80d8066",
-      "candidateHash": "1c7a99e868f1e329614029370bad3dae75084b0c3b2a1dcec9f65a8600162759",
+      "requestHash": "392a2a94c8bac2a7941708df0503dd3111e7e54f8dadd096029b0843f5553f31",
+      "candidateHash": "50e7383c452f1cc3802e0c4f85d2687fa01376a642c6f6fd577690a19de51004",
       "reviewer": {
-        "provider": "google",
-        "model": "gemini-3.6-flash"
+        "provider": "openai",
+        "model": "gpt-5.6-vision"
       },
-      "adSystemLikenessScore": 9.9,
-      "standaloneAdQualityScore": 9.6,
+      "adSystemLikenessScore": 9.7,
+      "standaloneAdQualityScore": 9.4,
       "excludedContentInfluencedScore": false,
       "copyChecks": [
         {
           "key": "time_on_market",
-          "expected": "14 DAYS",
-          "observed": "14 DAYS",
+          "expected": "6 DAYS",
+          "observed": "6 DAYS",
           "exact": true
         },
         {
           "key": "average_price",
-          "expected": "$815,000",
-          "observed": "$815,000",
+          "expected": "$689,000",
+          "observed": "$689,000",
           "exact": true
         },
         {
@@ -186,8 +186,8 @@
         },
         {
           "key": "sold_listings",
-          "expected": "31",
-          "observed": "31",
+          "expected": "41",
+          "observed": "41",
           "exact": true
         },
         {
@@ -198,8 +198,8 @@
         },
         {
           "key": "agent_name",
-          "expected": "Maya Chen",
-          "observed": "Maya Chen",
+          "expected": "Nora Vale",
+          "observed": "Nora Vale",
           "exact": true
         }
       ],
@@ -208,21 +208,21 @@
           "key": "property_image",
           "used": true,
           "faithful": true,
-          "notes": "The distinct customer exterior is cleanly placed in the fixed upper hero slot."
+          "notes": "used"
         },
         {
           "key": "agent_photo",
           "used": true,
           "faithful": true,
-          "notes": "The distinct customer headshot cleanly replaces the lower agent portrait."
+          "notes": "used"
         }
       ],
       "identityLeakage": [],
       "defects": [],
-      "includedRationale": "Independent Gemini vision QA scored the reusable system at 0.99: geometry, fixed photo slots/effects, typography, rhythm, and palette align with the approved sample.",
-      "qualityRationale": "The customer ad is crisp and balanced with all text readable at full resolution.",
+      "includedRationale": "retained",
+      "qualityRationale": "clean",
       "suggestedCorrection": "",
-      "reviewedAt": "2026-08-11T04:58:09Z"
+      "reviewedAt": "2026-08-11T06:08:00.000Z"
     }
   }
 }
