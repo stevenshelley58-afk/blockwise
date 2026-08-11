@@ -288,5 +288,8 @@
       ],
       "fontFile": "/fonts/adstudio/roboto-condensed-400.woff2"
     }
+  },
+  "qualityLock": {
+    "templateHash": "a09447865e62528835bbf29423164a30d4d570f9f96749ae72e4b02cf593c08f"
   }
 }
