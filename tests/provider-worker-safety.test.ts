@@ -12,7 +12,7 @@ test("double-publish reuses an active plan and avoids duplicate queue dispatch",
   assert.match(source, /existingQueuedJobActive/);
   assert.match(source, /existingPlan\.status === "publishing"/);
   assert.match(source, /existingPlan\.status === "paused_ready"/);
-  assert.match(source, /return \{ plan: existingPlan, approval, reusedActivePlan: true \}/);
+  assert.match(source, /return \{ plan: existingPlan, approval, complianceStatus: compliance\.status, reusedActivePlan: true \}/);
   assert.match(source, /!metaPublishPlanResult\?\.reusedActivePlan/);
   assert.match(source, /requestLog: existingPlan\.requestLog/);
   assert.match(source, /responseLog: existingPlan\.responseLog/);
@@ -53,6 +53,32 @@ test("publish dry-run performs no approval, plan, queue, or provider mutation", 
   assert.ok(dryReturnIndex < approvalTargetIndex);
   assert.ok(dryReturnIndex < planPersistIndex);
   assert.match(route, /!body\.dryRun &&[\s\S]*writesEnabled/);
+  assert.match(route, /body\.dryRun[\s\S]*metaPublishPlanResult!\.complianceStatus/);
+  assert.ok(route.indexOf("if (!input.persist)") < route.indexOf("await bindMetaPublishPlanComplianceReport"));
+});
+
+test("publish rejects client-owned Meta setup and derives spend targets only from the workspace connection", () => {
+  const route = readFileSync(publishRoute, "utf8");
+
+  assert.doesNotMatch(route, /metaSetup\?: Partial<MetaConnectionSetup>/);
+  assert.doesNotMatch(route, /setupPatch\?: Partial<MetaConnectionSetup>/);
+  assert.doesNotMatch(route, /mergeConnectionSetup/);
+  assert.match(route, /CLIENT_META_SETUP_FIELDS[\s\S]*"metaAdAccountId"[\s\S]*"pageId"/);
+  assert.match(route, /Object\.prototype\.hasOwnProperty\.call\(body, field\)/);
+  assert.match(route, /resolveMetaConnectionSetup\(input\.connection\.metadata, input\.connection\.externalAccountId\)/);
+});
+
+test("exact compliance is bound before approval or plan writes and rechecked before queueing", () => {
+  const route = readFileSync(publishRoute, "utf8");
+  const bindIndex = route.indexOf("await bindMetaPublishPlanComplianceReport");
+  const approvalWriteIndex = route.indexOf('.from("approval_requests")', bindIndex);
+  const planWriteIndex = route.indexOf("await persistMetaPublishPlan", bindIndex);
+
+  assert.ok(bindIndex > route.indexOf("runMetaPublishComplianceReview"));
+  assert.ok(bindIndex < approvalWriteIndex);
+  assert.ok(bindIndex < planWriteIndex);
+  assert.match(route, /if \(compliance\.status === "blocked"\)[\s\S]*return \{ plan: validatingPlan/);
+  assert.match(route, /queueComplianceStatus[\s\S]*loadMetaPublishPlanComplianceStatus/);
 });
 
 test("existing campaigns require a declared audience and cannot use free auto-activation", () => {

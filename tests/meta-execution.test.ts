@@ -2,10 +2,13 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { buildCloneTestPack } from "./adstudio-clone-fixture.ts";
+import { runMetaPublishComplianceReview } from "../src/lib/adstudio/compliance.ts";
 import {
+  bindMetaPublishPlanComplianceReport,
   buildMetaPublishPlan,
   createMetaExecutionAdapter,
   hasExplicitMetaPublishAudience,
+  loadMetaPublishPlanComplianceStatus,
   metaLeadFormReadbackMatches,
   prepareImmutableMetaPublishCampaignPack,
   validateMetaConnectionSetup,
@@ -15,6 +18,7 @@ import {
   type MetaPublishControls,
 } from "../src/lib/providers/meta-execution.ts";
 import {
+  executeMetaPublishPlan,
   metaProviderFailureShouldRetry,
   metaProviderMutationMayHaveOccurred,
 } from "../src/lib/providers/meta-publish-worker.ts";
@@ -126,6 +130,197 @@ test("buildMetaPublishPlan creates a deterministic paused Meta plan", () => {
   assert.equal(plan.ads.every((ad) => ad.status === "PAUSED"), true);
   assert.equal(plan.ads.every((ad) => ad.adSetLocalId === "adset_primary"), true);
   assert.equal(plan.leadForms.every((form) => form.privacyPolicyUrl === setup.privacyPolicyUrl), true);
+});
+
+test("Meta compliance subject changes with every authored lead-form field and creative copy", () => {
+  const base = buildPack();
+  const basePlan = buildMetaPublishPlan({ workspaceId: "workspace_demo", campaignPack: base, connectionId: "connection_123", setup });
+  const changes: Array<(pack: ReturnType<typeof buildPack>) => void> = [
+    (pack) => { pack.copyPacks[0]!.meta.leadForm!.headline = "A different form headline"; },
+    (pack) => { pack.copyPacks[0]!.meta.leadForm!.questions = ["What is your preferred moving date?"]; },
+    (pack) => { pack.copyPacks[0]!.meta.leadForm!.thankYouScreen.title = "A different thank-you title"; },
+    (pack) => { pack.copyPacks[0]!.meta.leadForm!.thankYouScreen.body = "A different thank-you body"; },
+    (pack) => { pack.copyPacks[0]!.meta.primaryText[0] = "A different ad body"; },
+  ];
+
+  for (const change of changes) {
+    const changed = buildPack();
+    change(changed);
+    const changedPlan = buildMetaPublishPlan({ workspaceId: "workspace_demo", campaignPack: changed, connectionId: "connection_123", setup });
+    assert.notEqual(changedPlan.complianceSubjectHash, basePlan.complianceSubjectHash);
+  }
+});
+
+test("exact Meta compliance blocks forbidden copy authored only in the lead form", () => {
+  const plan = buildMetaPublishPlan({ workspaceId: "workspace_demo", campaignPack: buildPack(), connectionId: "connection_123", setup });
+  const forbiddenFields = [
+    { ...plan, leadForms: plan.leadForms.map((form, index) => index === 0 ? { ...form, headline: "Guaranteed top price" } : form) },
+    { ...plan, leadForms: plan.leadForms.map((form, index) => index === 0 ? { ...form, customQuestions: ["Are you families only?"] } : form) },
+    { ...plan, leadForms: plan.leadForms.map((form, index) => index === 0 ? { ...form, thankYouTitle: "Act now" } : form) },
+    { ...plan, leadForms: plan.leadForms.map((form, index) => index === 0 ? { ...form, thankYouBody: "Risk-free property" } : form) },
+  ];
+
+  for (const candidate of forbiddenFields) {
+    const review = runMetaPublishComplianceReview(candidate);
+    assert.equal(review.status, "blocked");
+    assert.equal(review.issues.some((issue) => issue.severity === "blocking"), true);
+  }
+});
+
+test("publish compliance binding writes the exact subject idempotently and rejects an ownership mismatch", async () => {
+  const plan = buildMetaPublishPlan({ workspaceId: "workspace_demo", campaignPack: buildPack(), connectionId: "connection_123", setup });
+  assert.ok(plan.complianceReportId);
+  const calls: Array<Record<string, unknown>> = [];
+  const service = {
+    rpc: async (_name: string, args: Record<string, unknown>) => {
+      calls.push(args);
+      return { data: {
+        report_id: plan.complianceReportId,
+        workspace_id: plan.workspaceId,
+        campaign_id: plan.adStudioCampaignId,
+        subject_hash: plan.complianceSubjectHash,
+        status: "approved",
+        issues_json: [],
+        checked_at: "2026-08-11T15:00:00.000Z",
+      }, error: null };
+    },
+  };
+  const review = { status: "approved" as const, issues: [], checkedAt: "2026-08-11T15:00:00.000Z" };
+
+  await bindMetaPublishPlanComplianceReport(service as never, plan, review);
+  await bindMetaPublishPlanComplianceReport(service as never, plan, review);
+  assert.equal(calls.length, 2);
+  assert.equal(calls.every((call) => call.p_subject_hash === plan.complianceSubjectHash), true);
+  assert.equal(calls.every((call) => call.p_workspace_id === plan.workspaceId), true);
+
+  const foreignService = {
+    rpc: async () => ({ data: { report_id: plan.complianceReportId, workspace_id: "foreign_workspace", campaign_id: plan.adStudioCampaignId, subject_hash: plan.complianceSubjectHash, status: "approved", issues_json: [], checked_at: "2026-08-11T15:00:00.000Z" }, error: null }),
+  };
+  await assert.rejects(bindMetaPublishPlanComplianceReport(foreignService as never, plan, review), /could not be bound/i);
+  await assert.rejects(bindMetaPublishPlanComplianceReport(service as never, { ...plan, complianceSubjectHash: "" }, review), /could not be bound/i);
+});
+
+test("stored compliance fails closed for NULL or stale subject hashes", async () => {
+  const plan = buildMetaPublishPlan({ workspaceId: "workspace_demo", campaignPack: buildPack(), connectionId: "connection_123", setup });
+  const serviceFor = (subjectHash: string | null) => ({
+    from: () => {
+      const query = {
+        select: () => query,
+        eq: () => query,
+        maybeSingle: async () => ({ data: { id: plan.complianceReportId, campaign_id: plan.adStudioCampaignId, status: "approved", subject_hash: subjectHash }, error: null }),
+      };
+      return query;
+    },
+  });
+
+  assert.equal(await loadMetaPublishPlanComplianceStatus(serviceFor(plan.complianceSubjectHash) as never, plan), "approved");
+  assert.equal(await loadMetaPublishPlanComplianceStatus(serviceFor(null) as never, plan), "blocked");
+  assert.equal(await loadMetaPublishPlanComplianceStatus(serviceFor("0".repeat(64)) as never, plan), "blocked");
+});
+
+test("queued worker blocks a rebound compliance hash before publishing state or provider access", async () => {
+  const original = buildMetaPublishPlan({
+    workspaceId: "workspace_demo",
+    campaignPack: buildPack(),
+    connectionId: "connection_123",
+    setup,
+    approvalRequestId: "approval_123",
+  });
+  const plan = { ...original, status: "queued" as const, creatives: [], ads: [], leadForms: [] };
+  const updates: Array<Record<string, unknown>> = [];
+  let fetchCalls = 0;
+  const service = {
+    from(table: string) {
+      const result = { data: null, error: null };
+      const query: Record<string, unknown> & PromiseLike<typeof result> = {
+        select: () => query,
+        eq: () => query,
+        maybeSingle: async () => ({
+          data: table === "provider_connections"
+            ? { status: "connected" }
+            : table === "approval_requests"
+              ? { status: "approved" }
+              : table === "adstudio_compliance_reports"
+                ? { id: plan.complianceReportId, campaign_id: plan.adStudioCampaignId, status: "approved", subject_hash: "0".repeat(64) }
+                : null,
+          error: null,
+        }),
+        update: (value: Record<string, unknown>) => { updates.push(value); return query; },
+        insert: async () => ({ error: null }),
+        then: (resolve, reject) => Promise.resolve(result).then(resolve, reject),
+      };
+      return query;
+    },
+  };
+
+  await assert.rejects(
+    executeMetaPublishPlan({
+      serviceSupabase: service as never,
+      plan,
+      fetchImpl: async () => { fetchCalls += 1; return new Response("{}"); },
+    }),
+    /pre-provider readiness failed/i,
+  );
+  assert.equal(fetchCalls, 0);
+  assert.equal(updates.some((update) => update.status === "publishing"), false);
+  assert.equal(updates.some((update) => update.status === "queued" && String(update.last_error).includes("Compliance")), true);
+});
+
+test("queued worker blocks a changed active creative revision before provider access", async () => {
+  const plan = {
+    ...buildMetaPublishPlan({
+      workspaceId: "workspace_demo",
+      campaignPack: buildPack(),
+      connectionId: "connection_123",
+      setup,
+      approvalRequestId: "approval_123",
+    }),
+    status: "queued" as const,
+  };
+  const updates: Array<Record<string, unknown>> = [];
+  let fetchCalls = 0;
+  const service = {
+    from(table: string) {
+      const result = { data: null, error: null };
+      const query: Record<string, unknown> & PromiseLike<typeof result> = {
+        select: () => query,
+        eq: () => query,
+        in: async () => ({
+          data: table === "adstudio_creatives"
+            ? [...new Set(plan.creatives.flatMap((creative) => creative.revisionBindings.map((binding) => binding.creativeId)))]
+              .map((id) => ({ id, active_revision_id: "rebound-active-revision" }))
+            : [],
+          error: null,
+        }),
+        maybeSingle: async () => ({
+          data: table === "provider_connections"
+            ? { status: "connected" }
+            : table === "approval_requests"
+              ? { status: "approved" }
+              : table === "adstudio_compliance_reports"
+                ? { id: plan.complianceReportId, campaign_id: plan.adStudioCampaignId, status: "approved", subject_hash: plan.complianceSubjectHash }
+                : null,
+          error: null,
+        }),
+        update: (value: Record<string, unknown>) => { updates.push(value); return query; },
+        insert: async () => ({ error: null }),
+        then: (resolve, reject) => Promise.resolve(result).then(resolve, reject),
+      };
+      return query;
+    },
+  };
+
+  await assert.rejects(
+    executeMetaPublishPlan({
+      serviceSupabase: service as never,
+      plan,
+      fetchImpl: async () => { fetchCalls += 1; return new Response("{}"); },
+    }),
+    /finished clone changed after compliance/i,
+  );
+  assert.equal(fetchCalls, 0);
+  assert.equal(updates.some((update) => update.status === "publishing"), false);
+  assert.equal(updates.some((update) => update.status === "queued"), true);
 });
 
 test("buildMetaPublishPlan reuses an explicitly selected Meta campaign", () => {

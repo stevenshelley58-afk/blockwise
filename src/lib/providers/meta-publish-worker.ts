@@ -2,6 +2,7 @@ import {
   applyMetaPublishExecutionResult,
   createMetaExecutionAdapter,
   deriveExactMetaActivationPayload,
+  evaluateMetaPublishPlanPreProviderReadiness,
   loadMetaPublishPlan,
   refreshCurrentMetaPausedReadbackEvidence,
   updateMetaPublishPlanExecution,
@@ -167,6 +168,22 @@ export async function executeMetaPublishPlan(input: {
     input.plan.status !== "paused_ready"
   ) {
     throw new Error("Meta publish plan must be queued before worker execution.");
+  }
+
+  if (input.plan.status !== "paused_ready") {
+    const preflight = await evaluateMetaPublishPlanPreProviderReadiness(input.serviceSupabase, input.plan);
+    if (!preflight.ready) {
+      const message = `Meta publish pre-provider readiness failed: ${preflight.blockers.join(" ")}`;
+      const blockedPlan: MetaPublishPlan = {
+        ...input.plan,
+        status: input.plan.status === "publishing" ? "reconciliation_required" : "queued",
+        lastError: message,
+        updatedAt: new Date().toISOString(),
+      };
+      await updateMetaPublishPlanExecution(input.serviceSupabase, blockedPlan);
+      await persistPublishAudit(input.serviceSupabase, blockedPlan);
+      throw new Error(message);
+    }
   }
 
   let freeLive: PreparedFreeLiveConversion | null;

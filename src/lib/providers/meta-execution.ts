@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import type { AdStudioCampaignPack } from "../adstudio/index.ts";
 import { normalizeLeadFormQuestions } from "../adstudio/default-lead-forms.ts";
 import { deterministicUuid } from "../adstudio/id.ts";
+import type { AdStudioComplianceReport } from "../adstudio/types.ts";
 import { evaluatePublishReadiness, type ApprovalStatus, type ProviderConnectionStatus } from "../publishing/readiness.ts";
 import type { ComplianceStatus } from "../compliance/real-estate-policy.ts";
 import type { createSupabaseServiceClient } from "../supabase/service.ts";
@@ -459,11 +460,41 @@ export function buildMetaComplianceSubjectHash(input: Pick<MetaPublishPlan, "cam
         description: creative.description,
         cta: creative.cta,
       })),
-      leadForms: input.leadForms.map(({ privacyPolicyUrl: _privacy, thankYouWebsiteUrl: _completion, name: _name, localId, questions: _questions, ...defaults }) => ({ localId, ...defaults })),
+      leadForms: input.leadForms.map(({ privacyPolicyUrl: _privacy, thankYouWebsiteUrl: _completion, name: _name, ...authoredContent }) => authoredContent),
       ads: input.ads,
       tracking: input.tracking,
     })))
     .digest("hex");
+}
+
+export async function bindMetaPublishPlanComplianceReport(
+  service: SupabaseServiceClient,
+  plan: Pick<MetaPublishPlan, "workspaceId" | "adStudioCampaignId" | "complianceReportId" | "complianceSubjectHash">,
+  review: Pick<AdStudioComplianceReport, "status" | "issues" | "checkedAt">,
+): Promise<void> {
+  if (!plan.complianceReportId || !/^[a-f0-9]{64}$/i.test(plan.complianceSubjectHash)) {
+    throw new Error("Exact Meta publish compliance could not be bound to this plan.");
+  }
+
+  const { data, error } = await (service as any).rpc("adstudio_bind_publish_compliance", {
+    p_workspace_id: plan.workspaceId,
+    p_campaign_id: plan.adStudioCampaignId,
+    p_report_id: plan.complianceReportId,
+    p_subject_hash: plan.complianceSubjectHash,
+    p_status: review.status,
+    p_issues_json: review.issues,
+    p_checked_at: review.checkedAt,
+  });
+  const bound = Array.isArray(data) ? data[0] : data;
+  if (
+    error || !bound || bound.report_id !== plan.complianceReportId ||
+    bound.campaign_id !== plan.adStudioCampaignId || bound.workspace_id !== plan.workspaceId ||
+    bound.subject_hash !== plan.complianceSubjectHash || bound.status !== review.status ||
+    JSON.stringify(bound.issues_json) !== JSON.stringify(review.issues) ||
+    new Date(bound.checked_at).getTime() !== new Date(review.checkedAt).getTime()
+  ) {
+    throw new Error(error?.message ?? "Exact Meta publish compliance could not be bound to this plan.");
+  }
 }
 
 function immutableCreativeAsset(asset: MetaCreativeAssetPlan | null | undefined) {
@@ -866,8 +897,13 @@ export async function loadMetaPublishPlanComplianceStatus(
   return data.status === "approved" || data.status === "needs_review" || data.status === "blocked" ? data.status : "blocked";
 }
 
-/** Current campaign + active clone revision gate shared by UI and activation. */
-export async function evaluateCurrentMetaPublishPlanReadiness(service: SupabaseServiceClient, plan: MetaPublishPlan) {
+/**
+ * Last server-owned gate before a queued plan may touch Meta. It verifies the
+ * exact report binding, approval, connection, and current immutable revisions,
+ * but intentionally does not require PAUSED provider evidence that can only
+ * exist after creation.
+ */
+export async function evaluateMetaPublishPlanPreProviderReadiness(service: SupabaseServiceClient, plan: MetaPublishPlan) {
   const bindings = plan.creatives.flatMap((creative) => creative.revisionBindings ?? []);
   const creativeIds = [...new Set(bindings.map((binding) => binding.creativeId))];
   const [{ data: connection }, { data: approval }, complianceStatus, creatives, revisions] = await Promise.all([
@@ -894,6 +930,12 @@ export async function evaluateCurrentMetaPublishPlanReadiness(service: SupabaseS
   if (bindings.length === 0 || bindingChecks.some(Boolean)) {
     readiness.blockers.push("A finished clone changed after compliance. Re-run compliance before publishing.");
   }
+  return readiness;
+}
+
+/** Current campaign + active clone revision gate shared by UI and activation. */
+export async function evaluateCurrentMetaPublishPlanReadiness(service: SupabaseServiceClient, plan: MetaPublishPlan) {
+  const readiness = await evaluateMetaPublishPlanPreProviderReadiness(service, plan);
   const pausedEvidenceBlocker = pausedReadbackEvidenceBlocker(plan);
   if (pausedEvidenceBlocker) readiness.blockers.push(pausedEvidenceBlocker);
   return readiness;

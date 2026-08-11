@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { requireAdStudioRequest } from "@/lib/adstudio/http";
+import { runMetaPublishComplianceReview } from "@/lib/adstudio/compliance";
 import type { AdStudioCreativeLibrarySelection } from "@/lib/adstudio/creative-library";
 import { loadAdStudioCampaignPack } from "@/lib/adstudio/persistence";
 import {
@@ -17,6 +18,7 @@ import {
   resolveAdStudioPublishReadiness,
 } from "@/lib/providers/publishing-adapters";
 import {
+  bindMetaPublishPlanComplianceReport,
   buildMetaPublishPlan,
   hasExplicitMetaPublishAudience,
   loadMetaPublishPlanComplianceStatus,
@@ -59,7 +61,6 @@ type PublishBody = {
   leadForm?: unknown;
   dryRun?: boolean;
   adapter?: MetaExecutionAdapter;
-  metaSetup?: Partial<MetaConnectionSetup>;
   controls?: MetaPublishControls;
   /** A/B publish (A6): plan only these variants — one ad set, one tagged ad per variant. Absent = full pack (unchanged). */
   variantIds?: string[];
@@ -75,8 +76,18 @@ type ApprovalRecord = {
 type MetaPlanPersistenceResult = {
   plan: MetaPublishPlan;
   approval: ApprovalRecord;
+  complianceStatus: AdStudioCampaignPack["compliance"]["status"];
   reusedActivePlan: boolean;
 };
+
+const CLIENT_META_SETUP_FIELDS = [
+  "metaSetup",
+  "setupPatch",
+  "metaAdAccountId",
+  "pageId",
+  "instagramActorId",
+  "pixelId",
+] as const;
 
 function providerWritesEnabled() {
   return process.env.BLOCKWISE_ENABLE_PROVIDER_WRITES === "true";
@@ -157,7 +168,16 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
   const body = (await request.json().catch(() => null)) as PublishBody | null;
 
-  if (!body) return NextResponse.json({ error: "Publish request is required." }, { status: 400 });
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return NextResponse.json({ error: "Publish request is required." }, { status: 400 });
+  }
+  const suppliedSetupField = CLIENT_META_SETUP_FIELDS.find((field) => Object.prototype.hasOwnProperty.call(body, field));
+  if (suppliedSetupField) {
+    return NextResponse.json(
+      { error: "Meta account and Page setup must come from the connected workspace account." },
+      { status: 400 },
+    );
+  }
   const leadFormPatch = parseAdStudioPublishLeadFormPatch(body.leadForm);
   if (!leadFormPatch.ok) {
     return NextResponse.json({ error: leadFormPatch.error }, { status: 400 });
@@ -288,7 +308,6 @@ export async function POST(request: NextRequest, context: RouteContext) {
         connection: metaConnection,
         approval: existingApproval,
         adapter: body.adapter ?? "marketing_api",
-        setupPatch: body.metaSetup,
         controls: body.controls,
         requestApproval: !body.dryRun,
         persist: !body.dryRun,
@@ -301,7 +320,9 @@ export async function POST(request: NextRequest, context: RouteContext) {
     : null;
   let metaPublishPlan = metaPublishPlanResult?.plan ?? null;
   const scopedComplianceStatus = metaPublishPlan
-    ? await loadMetaPublishPlanComplianceStatus(serviceSupabase, metaPublishPlan)
+    ? body.dryRun
+      ? metaPublishPlanResult!.complianceStatus
+      : await loadMetaPublishPlanComplianceStatus(serviceSupabase, metaPublishPlan)
     : metaScopedComplianceStatus(pack.compliance);
   const providerPayloadReadiness = resolveAdStudioPublishReadiness({
     providerStatuses,
@@ -319,8 +340,8 @@ export async function POST(request: NextRequest, context: RouteContext) {
   const adapterBlockers = metaPublishPlan?.adapter && metaPublishPlan.adapter !== "marketing_api"
     ? [`${metaPublishPlan.adapter} is read-only for diagnostics and cannot publish yet.`]
     : [];
-  const blockers = uniqueStrings([...metaReadiness.blockers, ...adapterBlockers]);
-  const publishReady = blockers.length === 0;
+  let blockers = uniqueStrings([...metaReadiness.blockers, ...adapterBlockers]);
+  let publishReady = blockers.length === 0;
   let queueJobId: string | null = null;
   const activePublishJob = metaPublishPlan && (
     metaPublishPlan.status === "queued" || metaPublishPlan.status === "publishing"
@@ -331,6 +352,16 @@ export async function POST(request: NextRequest, context: RouteContext) {
         planId: metaPublishPlan.planId,
       })
     : false;
+
+  // Narrow the bind-to-queue window and fail closed if a concurrent publish
+  // rebound this campaign report to a different immutable subject.
+  if (publishReady && !body.dryRun && metaPublishPlan) {
+    const queueComplianceStatus = await loadMetaPublishPlanComplianceStatus(serviceSupabase, metaPublishPlan);
+    if (queueComplianceStatus === "blocked") {
+      blockers = uniqueStrings([...blockers, "Compliance must pass for this exact ad and lead form before publishing."]);
+      publishReady = false;
+    }
+  }
 
   if (
     publishReady &&
@@ -444,7 +475,6 @@ async function createMetaPlan(input: {
   connection: ProviderConnectionMetadata;
   approval: ApprovalRecord;
   adapter: MetaExecutionAdapter;
-  setupPatch?: Partial<MetaConnectionSetup>;
   controls?: MetaPublishControls;
   requestApproval: boolean;
   persist: boolean;
@@ -452,15 +482,65 @@ async function createMetaPlan(input: {
   existingMetaCampaignId?: string | null;
   existingMetaCampaignBudgetMode?: "campaign" | "adset";
 }): Promise<MetaPlanPersistenceResult> {
-  const setup = mergeConnectionSetup(
-    resolveMetaConnectionSetup(input.connection.metadata, input.connection.externalAccountId),
-    input.setupPatch,
-  );
+  // Spend targets are server-owned: account, Page, actor, pixel and lead
+  // destination are derived only from this workspace-scoped connection.
+  const setup = resolveMetaConnectionSetup(input.connection.metadata, input.connection.externalAccountId);
   let approval = input.approval;
 
-  // The review step was removed from the UI, so submissions are approved
-  // immediately. This also unblocks approvals created before the removal that
-  // are still sitting in "requested" with no UI left to resolve them.
+  const immutableCampaignPack = await prepareImmutableMetaPublishCampaignPack(
+    input.serviceSupabase,
+    input.workspaceId,
+    input.campaignPack,
+    input.variantIds,
+  );
+  const buildPlan = (approvalRequestId: string | null) => buildMetaPublishPlan({
+    workspaceId: input.workspaceId,
+    campaignPack: immutableCampaignPack,
+    connectionId: input.connection.id,
+    setup,
+    controls: input.controls,
+    adapter: input.adapter,
+    approvalRequestId,
+    variantIds: input.variantIds,
+    existingMetaCampaignId: input.existingMetaCampaignId,
+    existingMetaCampaignBudgetMode: input.existingMetaCampaignBudgetMode,
+  });
+  const uncheckedPlan = buildPlan(approval.id);
+  const compliance = runMetaPublishComplianceReview(uncheckedPlan);
+  immutableCampaignPack.compliance = {
+    ...immutableCampaignPack.compliance,
+    status: compliance.status,
+    issues: compliance.issues,
+    checkedAt: compliance.checkedAt,
+  };
+  let plan = buildPlan(approval.id);
+  if (plan.complianceSubjectHash !== uncheckedPlan.complianceSubjectHash) {
+    throw new Error("Compliance changed the immutable Meta publish subject.");
+  }
+
+  let validatingPlan: MetaPublishPlan = {
+    ...plan,
+    approvalRequestId: approval.id,
+    status: "validating",
+    updatedAt: new Date().toISOString(),
+  };
+  // Dry-run is read-only: immutable revision preparation and readiness checks
+  // may read current state, but no approval, plan, provider, or queue mutation
+  // occurs. A real publish takes the idempotent persistence path below.
+  if (!input.persist) {
+    return { plan: validatingPlan, approval, complianceStatus: compliance.status, reusedActivePlan: false };
+  }
+
+  await bindMetaPublishPlanComplianceReport(input.serviceSupabase, validatingPlan, compliance);
+
+  // A blocked exact review may write its evidence report, but it must not
+  // create/approve an approval request or persist an executable plan.
+  if (compliance.status === "blocked") {
+    return { plan: validatingPlan, approval, complianceStatus: compliance.status, reusedActivePlan: false };
+  }
+
+  // The review step was removed from the UI, so clean exact submissions are
+  // approved immediately, after compliance has been durably bound.
   if (input.requestApproval && approval.id && approval.status !== "approved") {
     const approvalId = approval.id;
     const { error } = await input.serviceSupabase
@@ -469,9 +549,7 @@ async function createMetaPlan(input: {
       .eq("id", approvalId)
       .eq("workspace_id", input.workspaceId);
 
-    if (error) {
-      throw new Error(error.message);
-    }
+    if (error) throw new Error(error.message);
     approval = { id: approvalId, status: "approved" };
     await recordAutoApprovalAudit(input, approvalId);
   }
@@ -484,42 +562,18 @@ async function createMetaPlan(input: {
       adapter: input.adapter,
     });
     approval = createdApproval;
-    if (createdApproval.id) {
-      await recordAutoApprovalAudit(input, createdApproval.id);
-    }
+    if (createdApproval.id) await recordAutoApprovalAudit(input, createdApproval.id);
   }
 
-  const immutableCampaignPack = await prepareImmutableMetaPublishCampaignPack(
-    input.serviceSupabase,
-    input.workspaceId,
-    input.campaignPack,
-    input.variantIds,
-  );
-  const plan = buildMetaPublishPlan({
-    workspaceId: input.workspaceId,
-    campaignPack: immutableCampaignPack,
-    connectionId: input.connection.id,
-    setup,
-    controls: input.controls,
-    adapter: input.adapter,
-    approvalRequestId: approval.id,
-    variantIds: input.variantIds,
-    existingMetaCampaignId: input.existingMetaCampaignId,
-    existingMetaCampaignBudgetMode: input.existingMetaCampaignBudgetMode,
-  });
-
-  const validatingPlan: MetaPublishPlan = {
+  plan = buildPlan(approval.id);
+  if (plan.complianceSubjectHash !== uncheckedPlan.complianceSubjectHash) {
+    throw new Error("Approval changed the immutable Meta publish subject.");
+  }
+  validatingPlan = {
     ...plan,
-    approvalRequestId: approval.id,
     status: "validating",
     updatedAt: new Date().toISOString(),
   };
-  // Dry-run is read-only: immutable revision preparation and readiness checks
-  // may read current state, but no approval, plan, provider, or queue mutation
-  // occurs. A real publish takes the idempotent persistence path below.
-  if (!input.persist) {
-    return { plan: validatingPlan, approval, reusedActivePlan: false };
-  }
 
   if (approval.id) {
     const { error } = await input.serviceSupabase
@@ -562,7 +616,7 @@ async function createMetaPlan(input: {
       existingQueuedJobActive
     )
   ) {
-    return { plan: existingPlan, approval, reusedActivePlan: true };
+    return { plan: existingPlan, approval, complianceStatus: compliance.status, reusedActivePlan: true };
   }
 
   if (existingPlan) {
@@ -578,7 +632,7 @@ async function createMetaPlan(input: {
 
   await persistMetaPublishPlan(input.serviceSupabase, persistedPlan, input.userId);
 
-  return { plan: persistedPlan, approval, reusedActivePlan: false };
+  return { plan: persistedPlan, approval, complianceStatus: compliance.status, reusedActivePlan: false };
 }
 
 async function recordAutoApprovalAudit(
@@ -596,31 +650,6 @@ async function recordAutoApprovalAudit(
       adapter: input.adapter,
     },
   });
-}
-
-function mergeConnectionSetup(
-  current: MetaConnectionSetup,
-  patch: Partial<MetaConnectionSetup> | undefined,
-): MetaConnectionSetup {
-  if (!patch) return current;
-
-  return resolveMetaConnectionSetup(
-    {
-      meta: {
-        ...current,
-        ...patch,
-        leadDestination: {
-          ...current.leadDestination,
-          ...(patch.leadDestination ?? {}),
-          config: {
-            ...(current.leadDestination.config ?? {}),
-            ...(patch.leadDestination?.config ?? {}),
-          },
-        },
-      },
-    },
-    patch.metaAdAccountId ?? current.metaAdAccountId,
-  );
 }
 
 async function createMetaPublishApproval(

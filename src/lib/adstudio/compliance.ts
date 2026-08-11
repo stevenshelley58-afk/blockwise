@@ -12,6 +12,7 @@ import type {
   AdStudioPlatformCopyPack,
   ComplianceIssue,
 } from "./types.ts";
+import type { MetaPublishPlan } from "../providers/meta-execution.ts";
 
 const BLOCKED_COPY_PATTERNS: Array<{ code: string; pattern: RegExp; message: string }> = [
   {
@@ -69,18 +70,67 @@ export function runAdStudioComplianceReview(input: {
   };
 }
 
+/**
+ * Re-runs copy policy against the exact immutable Meta plan. This deliberately
+ * uses provider-visible plan fields instead of a previously stored campaign
+ * report so publish-time lead-form edits cannot bypass policy review.
+ */
+export function runMetaPublishComplianceReview(
+  plan: Pick<MetaPublishPlan, "adStudioCampaignId" | "campaign" | "creatives" | "leadForms">,
+): Omit<AdStudioComplianceReport, "reportId"> {
+  const issues = reviewTextValues([
+    ...plan.creatives.flatMap((creative) => [
+      creative.primaryText,
+      creative.headline,
+      creative.description,
+    ]),
+    ...plan.leadForms.flatMap((form) => [
+      form.headline,
+      form.intro,
+      ...form.customQuestions,
+      form.thankYouTitle,
+      form.thankYouBody,
+      form.thankYouButtonText,
+    ]),
+  ]);
+
+  if (!plan.campaign.specialAdCategories.includes("HOUSING")) {
+    issues.push({
+      code: "housing_special_category_required",
+      severity: "blocking",
+      message: "Housing-related Meta campaigns must be marked as Special Ad Category: Housing.",
+    });
+  }
+
+  const deduped = dedupeIssues(issues);
+  return {
+    campaignId: plan.adStudioCampaignId,
+    status: complianceStatus(deduped),
+    issues: deduped,
+    checkedAt: new Date().toISOString(),
+  };
+}
+
 function reviewCopyText(copyPack: AdStudioPlatformCopyPack): ComplianceIssue[] {
-  const text = [
+  return reviewTextValues([
     ...copyPack.meta.primaryText,
     ...copyPack.meta.headlines,
     ...copyPack.meta.descriptions,
+    copyPack.meta.leadForm?.headline ?? "",
+    ...(copyPack.meta.leadForm?.questions ?? []),
+    copyPack.meta.leadForm?.thankYouScreen?.title ?? "",
+    copyPack.meta.leadForm?.thankYouScreen?.body ?? "",
     ...copyPack.googleSearch.headlines,
     ...copyPack.googleSearch.descriptions,
     copyPack.landingPage.headline,
     copyPack.landingPage.subheadline,
     ...copyPack.followUp.sms,
     ...copyPack.followUp.email.flatMap((email) => [email.subject, email.body]),
-  ].join("\n");
+  ]);
+}
+
+function reviewTextValues(values: string[]): ComplianceIssue[] {
+  const text = values.join("\n");
   const baseResult = evaluateRealEstateCompliance({
     region: "AU",
     channel: "meta",
@@ -103,6 +153,11 @@ function reviewCopyText(copyPack: AdStudioPlatformCopyPack): ComplianceIssue[] {
   }
 
   return issues;
+}
+
+function complianceStatus(issues: ComplianceIssue[]): AdStudioComplianceReport["status"] {
+  if (issues.some((issue) => issue.severity === "blocking")) return "blocked";
+  return issues.some((issue) => issue.severity === "warning") ? "needs_review" : "approved";
 }
 
 function dedupeIssues(issues: ComplianceIssue[]): ComplianceIssue[] {
