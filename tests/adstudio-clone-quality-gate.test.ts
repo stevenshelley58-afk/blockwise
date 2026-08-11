@@ -9,6 +9,7 @@ import {
   cloneCorrectionForNextCandidate,
   cloneRequestHash,
   cloneQualityPassed,
+  cloneQualityNeedsIndependentConfirmation,
   cloneQualityWarrantsSameTierRetry,
   reviewCloneCandidate,
 } from "../src/lib/adstudio/clone-quality-gate.ts";
@@ -126,6 +127,29 @@ test("only a clean 9+ candidate warrants a corrected same-tier retry", () => {
   }), false);
   assert.equal(cloneQualityWarrantsSameTierRetry({
     review: review({ adSystemLikenessScore: 9.2, defects: ["warped photo"] }),
+    expectedCopy,
+    expectedAssetKeys,
+  }), false);
+});
+
+test("only an internally inconsistent clean near-pass needs independent vision confirmation", () => {
+  assert.equal(cloneQualityNeedsIndependentConfirmation({
+    review: review({ adSystemLikenessScore: 9.1, suggestedCorrection: "" }),
+    expectedCopy,
+    expectedAssetKeys,
+  }), true);
+  assert.equal(cloneQualityNeedsIndependentConfirmation({
+    review: review({ adSystemLikenessScore: 9.1, suggestedCorrection: "Move the image boundary up." }),
+    expectedCopy,
+    expectedAssetKeys,
+  }), false);
+  assert.equal(cloneQualityNeedsIndependentConfirmation({
+    review: review({ adSystemLikenessScore: 8.9, suggestedCorrection: "" }),
+    expectedCopy,
+    expectedAssetKeys,
+  }), false);
+  assert.equal(cloneQualityNeedsIndependentConfirmation({
+    review: review({ adSystemLikenessScore: 9.1, defects: ["warped text"], suggestedCorrection: "" }),
     expectedCopy,
     expectedAssetKeys,
   }), false);
@@ -583,6 +607,69 @@ test("non-JSON clone QA retries the same contact sheet and candidate before acce
   assert.ok(providerSystemPrompts.every((prompt) => prompt.includes('"agency_logo"')));
   assert.ok(providerSystemPrompts.every((prompt) => prompt.includes("without substitution, fabrication, repainting")));
   assert.deepEqual(recordedAttempts, [2]);
+});
+
+test("a clean near-pass with no correction is re-reviewed before another image is bought", async () => {
+  const providerSystemPrompts: string[] = [];
+  let providerCalls = 0;
+  const provider = {
+    providerName: "qa-test",
+    providerType: "text_generation",
+    capabilities: { visionInput: true },
+    async generate(input: { system: string }) {
+      providerCalls += 1;
+      providerSystemPrompts.push(input.system);
+      return {
+        json: review({
+          referenceHash: "a".repeat(64),
+          candidateHash: "b".repeat(64),
+          requestHash: cloneRequestHash(request()),
+          adSystemLikenessScore: providerCalls === 1 ? 9.1 : 9.6,
+          suggestedCorrection: "",
+        }),
+        rawText: "{}",
+        usage: { complete: true },
+        providerMetadata: { model: "qa-test" },
+      };
+    },
+  } as const;
+  const recorded: Array<Record<string, unknown>> = [];
+
+  const result = await reviewCloneCandidate({
+    templateId: "template-1",
+    format: "4:5",
+    attempt: 1,
+    referenceImage: "approved-sample",
+    candidateImage: "paid-candidate",
+    request: request(),
+    expectedCopy,
+    expectedAssetKeys,
+    workspaceId: "workspace-1",
+    userId: "user-1",
+    correlationId: "confirm-near-pass",
+  }, {
+    contactSheet: async (_referenceImage, _candidateImage, assets) => ({
+      imageUrl: "data:image/png;base64,AA==",
+      referenceHash: "a".repeat(64),
+      candidateHash: "b".repeat(64),
+      assetReferences: assets.map((asset, index) => ({ key: asset.key, contentHash: String(index + 1).repeat(64) })),
+    }),
+    getPromptSection: async () => ({ body: "QA", key: "adstudio.clone_qa", version: 1, id: null, source: "fallback" }) as never,
+    resolveProfile: async () => ({ primary: { provider: "openai", model: "qa-test" }, fallbacks: [] }) as never,
+    createProvider: () => provider as never,
+    executeProviderAttempt: async ({ execute, attemptIndex }) => ({
+      ok: true,
+      output: await execute(),
+      attempt: { attemptIndex },
+    }) as never,
+    recordProviderRun: async (input) => { recorded.push(input.input as Record<string, unknown>); },
+  });
+
+  assert.equal(result.adSystemLikenessScore, 9.6);
+  assert.equal(providerCalls, 2);
+  assert.equal(providerSystemPrompts[0]?.includes("INDEPENDENT VISION CONFIRMATION"), false);
+  assert.equal(providerSystemPrompts[1]?.includes("INDEPENDENT VISION CONFIRMATION"), true);
+  assert.equal(recorded[0]?.independentConfirmationRequested, true);
 });
 
 test("provider parseJson failure retries the same candidate and records its submitted usage", async () => {

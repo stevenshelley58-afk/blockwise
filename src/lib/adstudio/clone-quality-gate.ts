@@ -228,6 +228,22 @@ export function cloneQualityWarrantsSameTierRetry(input: {
 }
 
 /**
+ * Ask vision to independently re-check a clean near-pass when its own output
+ * is internally inconsistent: it rejected the image but supplied no concrete
+ * correction. A second vision call is much cheaper than buying another image,
+ * and the 9.5 acceptance threshold remains unchanged.
+ */
+export function cloneQualityNeedsIndependentConfirmation(input: {
+  review: AdStudioCloneQualityReview;
+  expectedCopy: Record<string, string>;
+  expectedAssetKeys: string[];
+}): boolean {
+  return input.review.suggestedCorrection.trim() === ""
+    && !cloneQualityPassed(input)
+    && cloneQualityWarrantsSameTierRetry(input);
+}
+
+/**
  * Line wrapping is layout, not a change to the customer's visible wording.
  * Collapse only whitespace that vision OCR inserts between otherwise exact
  * visible tokens; punctuation, spelling, symbols, and ordering stay strict.
@@ -352,6 +368,7 @@ export async function reviewCloneCandidate(input: {
   let finalModel = "unavailable";
   let lastError: unknown = null;
   let schemaError: CloneQualitySchemaError | null = null;
+  let confirmationRequested = false;
 
   const qaProviders = modelCandidateAttempts(profile)
     .map((candidate) => ({
@@ -361,7 +378,7 @@ export async function reviewCloneCandidate(input: {
     .filter(({ provider }) => provider.capabilities.visionInput);
   const [primary, fallback] = qaProviders;
   const qaAttempts = primary
-    ? [primary, primary, ...(fallback ? [fallback] : [])].slice(0, MAX_RUNTIME_CLONE_QA_ATTEMPTS)
+    ? [primary, ...(fallback ? [fallback, primary] : [primary])].slice(0, MAX_RUNTIME_CLONE_QA_ATTEMPTS)
     : [];
 
   for (const [attemptIndex, qaAttempt] of qaAttempts.entries()) {
@@ -377,7 +394,9 @@ export async function reviewCloneCandidate(input: {
       modelProfile: "vision_classification",
       provider,
       execute: () => provider.generate({
-        system: prompt.system,
+        system: confirmationRequested
+          ? `${prompt.system}\n\nINDEPENDENT VISION CONFIRMATION: A prior vision review returned a clean near-pass below the release threshold but supplied no actionable correction. Re-evaluate the pixels independently; do not inherit or average the prior score. If this candidate is still below 9.5 likeness, suggestedCorrection MUST name the exact spatial, typography, or treatment changes needed. If it genuinely reaches the contract, score it accordingly. Keep the same JSON schema.`
+          : prompt.system,
         schemaName: "adStudioCloneQualityReview",
         messages: [{ role: "user", content: prompt.user }],
         imageUrl: contact.imageUrl,
@@ -388,6 +407,22 @@ export async function reviewCloneCandidate(input: {
     if (execution.ok) {
       const parsed = adStudioCloneQualityReviewSchema.safeParse(execution.output.json);
       if (parsed.success) {
+        if (
+          !confirmationRequested
+          && attemptIndex + 1 < qaAttempts.length
+          && cloneQualityNeedsIndependentConfirmation({
+            review: parsed.data,
+            expectedCopy: input.expectedCopy,
+            expectedAssetKeys: input.expectedAssetKeys,
+          })
+        ) {
+          confirmationRequested = true;
+          finalOutput = execution.output;
+          finalReview = parsed.data;
+          finalProvider = provider.providerName;
+          finalModel = String(execution.output.providerMetadata.model ?? candidate.model);
+          continue;
+        }
         finalOutput = execution.output;
         finalReview = parsed.data;
         finalProvider = provider.providerName;
@@ -396,10 +431,12 @@ export async function reviewCloneCandidate(input: {
       }
       schemaError = new CloneQualitySchemaError(`Clone QA returned an invalid schema: ${parsed.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`).join(", ")}`);
       lastError = schemaError;
+      if (confirmationRequested) break;
       if (attemptIndex + 1 < qaAttempts.length) continue;
       break;
     }
     lastError = execution.error;
+    if (confirmationRequested) break;
     if (isAbortError(lastError) || !isProviderFallbackEligible(lastError)) break;
     if (attemptIndex + 1 < qaAttempts.length) continue;
     break;
@@ -429,6 +466,7 @@ export async function reviewCloneCandidate(input: {
       copyKeys: Object.keys(input.expectedCopy),
       assetKeys: input.expectedAssetKeys,
       assetReferences: contact.assetReferences,
+      independentConfirmationRequested: confirmationRequested,
     },
     attempts,
     latencyMs: Date.now() - startedAt,
