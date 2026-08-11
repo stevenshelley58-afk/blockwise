@@ -22,10 +22,10 @@
     "service"
   ],
   "sample": {
-    "imageSrc": "/adstudio-samples/meta/meta-stories-245-sample.png",
-    "thumbnailSrc": "/adstudio-samples/meta/meta-stories-245-sample.png",
+    "imageSrc": "/adstudio-samples/meta/meta-stories-245-gpt-018-v1.png",
+    "thumbnailSrc": "/adstudio-samples/meta/meta-stories-245-gpt-018-v1.png",
     "alt": "Generated sample for Looking for a Real Estate Agent?.",
-    "contentHash": "0cce6e6b8be766b169feaa10292176372e0f5db5b26c83855a6e92e83b70c894",
+    "contentHash": "293237f43d35d37301515dc9469acbccbf58b56603822e9dc9c626d3e5678e95",
     "generatedBy": "reference_clone"
   },
   "inputs": {
@@ -335,5 +335,8 @@
       "measurementSource": "manual-estimate",
       "fontFile": "/fonts/adstudio/smooch-sans-300.woff2"
     }
+  },
+  "qualityLock": {
+    "templateHash": "f7733befa9202c1939e1754975a2c636f713d79e1f24c2936f849994709bde11"
   }
 }
