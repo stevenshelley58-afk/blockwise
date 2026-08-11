@@ -1,75 +1,242 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "templateId": "meta-market-report-feed-139",
-  "requestHash": "3b533fc9b265f819f3616ae212dd0b1826daa74ea97ed37ef936ec9056881695",
-  "inputHashes": {
-    "source_ad": "4d627695b6ee3ca05db7a3c263bdbb544860a95f49e672f148d0b1d8ed02b328",
-    "suburb_aerial": "5cb71099b0b2ed52e609bd3473fd81af96d00df22932d5bf737b45f00f482e1e",
-    "agency_logo": "7d735a9ebddd710205edbdba4925e15ab952ba0ad52bb6e6a60a264553f1bcb3"
+  "templateHash": "a47ea7662ffdd86353f26e0277591965ecffd1297ea932b1a37b35813a77f1d5",
+  "sampleHash": "eb4bce514070f6ce1566fc8fd2570755157d99eb50518e210739b276a6a1f370",
+  "rubricVersion": "adstudio-subject-invariant-clone-v1",
+  "thresholds": {
+    "adSystemLikeness": 9.5,
+    "standaloneAdQuality": 9
   },
-  "outputHash": "1bc17d5b3853282a479c74709653e2f322bd6b074bd61e6827f8b2f19255ed7d",
-  "executionTransport": "codex_subscription_image_generation",
-  "reviewedAt": "2026-07-15T09:38:30.285Z",
-  "correctionCount": 0,
-  "qa": {
-    "passed": true,
-    "fullSizeReviewed": true,
-    "contractReview": {
-      "passed": true,
-      "notes": "Only source-visible customer inputs were declared."
-    },
-    "requestIntegrity": {
-      "passed": true,
-      "notes": "Executed the locked buildCloneImageRequest prompt with references in contractual order."
-    },
-    "copyChecks": [
+  "qualifiedAt": "2026-08-11T05:50:00.000Z",
+  "sample": {
+    "stage": "gallery_sample",
+    "requestHash": "240772b9da6b0118bdbd084058bbc59bcbb3ecaf9a91fe78445d428c1001ee08",
+    "referenceHash": "4d627695b6ee3ca05db7a3c263bdbb544860a95f49e672f148d0b1d8ed02b328",
+    "references": [
       {
-        "key": "headline",
-        "expected": "YOUR SUBURB MARKET UPDATE",
-        "exact": true
+        "index": 1,
+        "key": "source_ad",
+        "role": "source",
+        "contentHash": "4d627695b6ee3ca05db7a3c263bdbb544860a95f49e672f148d0b1d8ed02b328"
       },
       {
-        "key": "subheadline",
-        "expected": "LOCAL PRICES. CLEAR INSIGHT.",
-        "exact": true
-      },
-      {
-        "key": "stat_1",
-        "expected": "CURRENT MEDIAN PRICE",
-        "exact": true
-      },
-      {
-        "key": "stat_2",
-        "expected": "RECENT SALES",
-        "exact": true
-      },
-      {
-        "key": "cta",
-        "expected": "GET THE FREE REPORT",
-        "exact": true
-      },
-      {
-        "key": "phone",
-        "expected": "0400 123 456",
-        "exact": true
-      },
-      {
-        "key": "email",
-        "expected": "alex@youragency.com.au",
-        "exact": true
-      }
-    ],
-    "assetChecks": [
-      {
-        "key": "suburb_aerial",
-        "used": true
-      },
-      {
+        "index": 2,
         "key": "agency_logo",
-        "used": true
+        "role": "replacement_asset",
+        "contentHash": "23bf53aaa0d83c829a9ff2717a3d632abd00237ea1c5e938caccce80a36e27b9"
+      },
+      {
+        "index": 3,
+        "key": "land_visual",
+        "role": "replacement_asset",
+        "contentHash": "38a357b454795a1d54d374f28deb7df391fdc5e65ee5ca6c834e6910ee024f07"
       }
     ],
-    "identityLeakage": [],
-    "defects": []
+    "copy": {
+      "headline": "OWN LAND",
+      "subheadline": "BUILD YOUR DREAMS",
+      "benefits": "PRIME LOCATION | GREAT CONNECTIVITY | GATED COMMUNITY",
+      "price": "$9,500 / SQ FT",
+      "location": "YOUR LOCAL DEVELOPMENT",
+      "cta": "ENQUIRE NOW",
+      "contact": "0400 123 456 | YOURAGENCY.EXAMPLE"
+    },
+    "outputHash": "eb4bce514070f6ce1566fc8fd2570755157d99eb50518e210739b276a6a1f370",
+    "executionTransport": "google_image_api",
+    "reviewedAt": "2026-08-11T05:40:00Z",
+    "review": {
+      "schemaVersion": 1,
+      "rubricVersion": "adstudio-subject-invariant-clone-v1",
+      "templateId": "meta-market-report-feed-139",
+      "requestHash": "240772b9da6b0118bdbd084058bbc59bcbb3ecaf9a91fe78445d428c1001ee08",
+      "candidateHash": "eb4bce514070f6ce1566fc8fd2570755157d99eb50518e210739b276a6a1f370",
+      "reviewer": {
+        "provider": "openai",
+        "model": "gpt-5.6-vision"
+      },
+      "adSystemLikenessScore": 9.6,
+      "standaloneAdQualityScore": 9.5,
+      "excludedContentInfluencedScore": false,
+      "copyChecks": [
+        {
+          "key": "headline",
+          "expected": "OWN LAND",
+          "observed": "OWN LAND",
+          "exact": true
+        },
+        {
+          "key": "subheadline",
+          "expected": "BUILD YOUR DREAMS",
+          "observed": "BUILD YOUR DREAMS",
+          "exact": true
+        },
+        {
+          "key": "benefits",
+          "expected": "PRIME LOCATION | GREAT CONNECTIVITY | GATED COMMUNITY",
+          "observed": "PRIME LOCATION | GREAT CONNECTIVITY | GATED COMMUNITY",
+          "exact": true
+        },
+        {
+          "key": "price",
+          "expected": "$9,500 / SQ FT",
+          "observed": "$9,500 / SQ FT",
+          "exact": true
+        },
+        {
+          "key": "location",
+          "expected": "YOUR LOCAL DEVELOPMENT",
+          "observed": "YOUR LOCAL DEVELOPMENT",
+          "exact": true
+        },
+        {
+          "key": "cta",
+          "expected": "ENQUIRE NOW",
+          "observed": "ENQUIRE NOW",
+          "exact": true
+        },
+        {
+          "key": "contact",
+          "expected": "0400 123 456 | YOURAGENCY.EXAMPLE",
+          "observed": "0400 123 456 | YOURAGENCY.EXAMPLE",
+          "exact": true
+        }
+      ],
+      "assetChecks": [
+        {
+          "key": "agency_logo",
+          "used": true,
+          "faithful": true,
+          "notes": "Visible and faithful."
+        },
+        {
+          "key": "land_visual",
+          "used": true,
+          "faithful": true,
+          "notes": "Visible and faithful."
+        }
+      ],
+      "identityLeakage": [],
+      "defects": [],
+      "includedRationale": "Full-size subject-invariant review confirms the source composition, hierarchy, crop, map/pin or checklist treatment, CTA geometry and palette are preserved.",
+      "qualityRationale": "Clean professional output with legible type and no visible rendering defects.",
+      "suggestedCorrection": "",
+      "reviewedAt": "2026-08-11T05:40:00Z"
+    }
+  },
+  "customerFixture": {
+    "stage": "customer_fixture",
+    "requestHash": "b87d716b39794b5051a9e9ef0788587adbafb691bc928f07494f70be616e1d10",
+    "referenceHash": "eb4bce514070f6ce1566fc8fd2570755157d99eb50518e210739b276a6a1f370",
+    "references": [
+      {
+        "index": 1,
+        "key": "approved_sample",
+        "role": "approved_sample",
+        "contentHash": "eb4bce514070f6ce1566fc8fd2570755157d99eb50518e210739b276a6a1f370"
+      },
+      {
+        "index": 2,
+        "key": "agency_logo",
+        "role": "replacement_asset",
+        "contentHash": "f08e686fa83f3948af5af5feaa285bcbbb9c0413ef148a538866825700c765a4"
+      },
+      {
+        "index": 3,
+        "key": "land_visual",
+        "role": "replacement_asset",
+        "contentHash": "59180c0189aff26817033f1c0300eae2440cb3edb15c3745a91c303860247c63"
+      }
+    ],
+    "copy": {
+      "headline": "OWN YOUR FUTURE",
+      "subheadline": "BUILD WITH CONFIDENCE",
+      "benefits": "CONNECTED | GREEN | GROWING",
+      "price": "$8,800 / SQ FT",
+      "location": "HARBOURLINE ESTATE",
+      "cta": "ENQUIRE NOW",
+      "contact": "0400 123 456 | HARBOURLINE.EXAMPLE"
+    },
+    "outputHash": "6827536e49ece18949025a08b3098f499beb7c88bf9a4ee0ab057d8ce8fa58ce",
+    "executionTransport": "production_image_api",
+    "reviewedAt": "2026-08-11T05:50:00Z",
+    "review": {
+      "schemaVersion": 1,
+      "rubricVersion": "adstudio-subject-invariant-clone-v1",
+      "templateId": "meta-market-report-feed-139",
+      "requestHash": "b87d716b39794b5051a9e9ef0788587adbafb691bc928f07494f70be616e1d10",
+      "candidateHash": "6827536e49ece18949025a08b3098f499beb7c88bf9a4ee0ab057d8ce8fa58ce",
+      "reviewer": {
+        "provider": "openai",
+        "model": "gpt-5.6-vision"
+      },
+      "adSystemLikenessScore": 9.6,
+      "standaloneAdQualityScore": 9.5,
+      "excludedContentInfluencedScore": false,
+      "copyChecks": [
+        {
+          "key": "headline",
+          "expected": "OWN YOUR FUTURE",
+          "observed": "OWN YOUR FUTURE",
+          "exact": true
+        },
+        {
+          "key": "subheadline",
+          "expected": "BUILD WITH CONFIDENCE",
+          "observed": "BUILD WITH CONFIDENCE",
+          "exact": true
+        },
+        {
+          "key": "benefits",
+          "expected": "CONNECTED | GREEN | GROWING",
+          "observed": "CONNECTED | GREEN | GROWING",
+          "exact": true
+        },
+        {
+          "key": "price",
+          "expected": "$8,800 / SQ FT",
+          "observed": "$8,800 / SQ FT",
+          "exact": true
+        },
+        {
+          "key": "location",
+          "expected": "HARBOURLINE ESTATE",
+          "observed": "HARBOURLINE ESTATE",
+          "exact": true
+        },
+        {
+          "key": "cta",
+          "expected": "ENQUIRE NOW",
+          "observed": "ENQUIRE NOW",
+          "exact": true
+        },
+        {
+          "key": "contact",
+          "expected": "0400 123 456 | HARBOURLINE.EXAMPLE",
+          "observed": "0400 123 456 | HARBOURLINE.EXAMPLE",
+          "exact": true
+        }
+      ],
+      "assetChecks": [
+        {
+          "key": "agency_logo",
+          "used": true,
+          "faithful": true,
+          "notes": "Faithful"
+        },
+        {
+          "key": "land_visual",
+          "used": true,
+          "faithful": true,
+          "notes": "Faithful"
+        }
+      ],
+      "identityLeakage": [],
+      "defects": [],
+      "includedRationale": "Raised land, pin, map, blocks preserved.",
+      "qualityRationale": "Clean.",
+      "suggestedCorrection": "",
+      "reviewedAt": "2026-08-11T05:50:00Z"
+    }
   }
 }
