@@ -238,6 +238,12 @@ export async function POST(request: NextRequest) {
       accessToken: process.env.OPENAI_API_KEY,
       allowWrite: process.env.VERCEL_ENV === "production",
     });
+    await ensureRuntimeProviderToken({
+      serviceSupabase: funnelService,
+      provider: "google",
+      accessToken: process.env.GOOGLE_AI_API_KEY,
+      allowWrite: process.env.VERCEL_ENV === "production",
+    });
     const creditGate = await reserveAdStudioGenerationCredits({
       supabase: context.supabase,
       workspaceId: context.access.workspaceId,

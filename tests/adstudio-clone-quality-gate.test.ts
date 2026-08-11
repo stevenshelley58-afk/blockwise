@@ -169,7 +169,7 @@ test("a failed candidate feeds only its image-model correction through the same 
   assert.deepEqual(generatedPrompts, ["clone", "clone | correction: Restore the exact logo footprint."]);
 });
 
-test("a visual QA failure gives the corrected clone to the independent fallback model", async () => {
+test("a visual QA failure advances the corrected clone to the next paid model", async () => {
   const providerOrder: string[][] = [];
   const result = await generateFinalCloneRender({
     format: "4:5",
@@ -198,6 +198,41 @@ test("a visual QA failure gives the corrected clone to the independent fallback 
 
   assert.equal(result.attempt, 2);
   assert.deepEqual(providerOrder, [["google", "openai"], ["openai", "google"]]);
+});
+
+test("quality rejections advance Flash to Pro to GPT Image without releasing a bad candidate", async () => {
+  const providerOrder: string[][] = [];
+  const result = await generateFinalCloneRender({
+    format: "4:5",
+    templateId: "template-1",
+    providers: [provider("gemini-flash"), provider("gemini-pro"), provider("gpt-image")],
+    request: request(),
+    referenceImage: "approved-sample",
+    expectedCopy,
+    expectedAssetKeys,
+    buildCorrectedRequest: (correction) => request(`clone | correction: ${correction}`),
+    workspaceId: "workspace-1",
+    userId: "user-1",
+    correlationId: "run-three-tier",
+  }, {
+    generate: async (input) => {
+      providerOrder.push(input.providers.map((candidate) => candidate.providerName));
+      return { assetUrl: `candidate-${providerOrder.length}`, model: "image", provider: "test", providerAttemptCount: 1 };
+    },
+    normalize: async (assetUrl) => assetUrl,
+    review: async (input) => review({
+      attempt: input.attempt,
+      adSystemLikenessScore: input.attempt < 3 ? 9.4 : 9.6,
+      suggestedCorrection: input.attempt < 3 ? "Restore the approved geometry." : "",
+    }),
+  });
+
+  assert.equal(result.attempt, 3);
+  assert.deepEqual(providerOrder, [
+    ["gemini-flash", "gemini-pro", "gpt-image"],
+    ["gemini-pro", "gpt-image", "gemini-flash"],
+    ["gpt-image", "gemini-flash", "gemini-pro"],
+  ]);
 });
 
 test("no below-threshold candidate is released after the bounded quality loop", async () => {

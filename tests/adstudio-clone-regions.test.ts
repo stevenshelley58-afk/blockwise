@@ -685,7 +685,7 @@ test("clone generation does not fallback after a dispatched request is aborted",
   assert.equal(fallbackCalls, 0);
 });
 
-test("clone generation never invokes a second fallback candidate", async () => {
+test("clone generation reaches the third paid provider after eligible transport failures", async () => {
   let thirdProviderCalls = 0;
   const failedProvider = (name: string) => accountedImageProvider(name, async () => {
     throw submittedProviderFailure(`${name} unavailable`, true);
@@ -701,7 +701,7 @@ test("clone generation never invokes a second fallback candidate", async () => {
     };
   });
 
-  await assert.rejects(() => generateCloneWithCascade({
+  const result = await generateCloneWithCascade({
     providers: [failedProvider("primary"), failedProvider("fallback"), forbiddenThird],
     request: { prompt: "clone", referenceAssets: [], aspectRatio: "4:5", stylePreset: "test" },
     workspaceId: "11111111-1111-4111-8111-111111111111",
@@ -709,9 +709,10 @@ test("clone generation never invokes a second fallback candidate", async () => {
     correlationId: "bounded-clone",
     attempt: 1,
     accounting: { executeAttempt, recordRun: async () => {} },
-  }), /fallback unavailable/);
+  });
 
-  assert.equal(thirdProviderCalls, 0);
+  assert.equal(result.provider, "third");
+  assert.equal(thirdProviderCalls, 1);
 });
 
 test("final clone renders once when the blocking quality review passes", async () => {

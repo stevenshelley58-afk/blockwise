@@ -38,7 +38,7 @@ export async function resolveCloneProviders(
   providerEnv?: ProviderEnvironment,
 ): Promise<ImageProviderAdapter[]> {
   const profile = await resolveRuntimeModelProfile(cloneModelProfileForQuality(quality));
-  return modelCandidateAttempts(profile).map((candidate) => createImageProviderForCandidate(candidate, { env: providerEnv }));
+  return modelCandidateAttempts(profile, 3).map((candidate) => createImageProviderForCandidate(candidate, { env: providerEnv }));
 }
 
 export type CloneGenerationResult = {
@@ -251,7 +251,7 @@ export async function generateCloneWithCascade(input: {
   };
   const modelProfile = input.modelProfile ?? "image_final";
 
-  for (const [attemptIndex, provider] of input.providers.slice(0, 2).entries()) {
+  for (const [attemptIndex, provider] of input.providers.slice(0, 3).entries()) {
     providerAttemptCount += 1;
     let result: ImageProviderResponse | null = null;
     try {

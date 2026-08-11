@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { test, expect, type Page } from "@playwright/test";
 
+import { customerCopyForAccessibleLabel } from "./adstudio-real-loop-copy-binding.ts";
 import { readAdStudioCreativeJobStatus } from "../src/lib/adstudio/job-status.ts";
 
 const storageStatePath =
@@ -253,32 +254,22 @@ async function chooseCloneSample(page: Page) {
   await sample.click();
 }
 
-// Customer-typed on-image fields (price, address, phone…) render on the ad
-// verbatim; the vision QA then verifies these exact strings. Distinct values
-// prove nothing was invented or paraphrased.
-const KILL_TEST_COPY: Record<string, string> = {
-  // Distinct customer copy, but deliberately matched to the locked sample's
-  // character count and word rhythm. The visual-likeness gate scores text-box
-  // bounds and line rhythm, so a one-line placeholder would invalidate the ad
-  // system this E2E is meant to prove.
-  headline: "Find your coastal home today",
-  body: "Your coastal partner for all real estate needs.",
-  price: "$847,500",
-  address: "12 MARINE PDE, SCARBOROUGH WA 6019",
-  phone: "+61 411 222 333",
-  "website handle": "@scarboroughhomes",
-};
-
 async function fillCustomerCopyFields(page: Page) {
   const fields = page.locator(".studio-newad-copyfields input");
   const count = await fields.count();
+  expect(count, "the selected template should expose on-image copy fields").toBeGreaterThan(0);
   for (let index = 0; index < count; index += 1) {
     const input = fields.nth(index);
-    const label = ((await input.evaluate(
-      (el) => el.closest("label")?.querySelector("span")?.textContent ?? "",
-    )) as string).toLowerCase();
-    const match = Object.entries(KILL_TEST_COPY).find(([key]) => label.includes(key));
-    await input.fill(match?.[1] ?? "SAMPLE TEXT");
+    const { id, label } = await input.evaluate((element) => {
+      const inputElement = element as HTMLInputElement;
+      return {
+        id: inputElement.id,
+        // Labels are siblings in the production DOM (<label htmlFor=...>),
+        // not ancestors. HTMLInputElement.labels follows either valid binding.
+        label: inputElement.labels?.[0]?.textContent?.trim() ?? "",
+      };
+    });
+    await input.fill(customerCopyForAccessibleLabel(label, id));
   }
 }
 
