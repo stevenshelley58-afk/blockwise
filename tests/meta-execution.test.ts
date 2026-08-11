@@ -494,7 +494,7 @@ test("ads_cli and ads_mcp adapters are read-only until promoted", async () => {
   );
 });
 
-test("marketing_api adapter publishes paused objects and records request responses", async () => {
+test("marketing_api adapter rejects a fixture without paired Feed and Story upload evidence", async () => {
   const plan = buildMetaPublishPlan({
     workspaceId: "workspace_demo",
     campaignPack: buildPack(),
@@ -524,14 +524,15 @@ test("marketing_api adapter publishes paused objects and records request respons
     { accessToken: "token", fetchImpl },
   );
 
-  assert.equal(result.status, "paused_ready");
+  assert.equal(result.status, "reconciliation_required");
+  assert.equal(result.lastError, "Meta creative upload did not return both immutable Feed and Story image hashes.");
   assert.equal(result.reconciledObjects.campaignId, "meta_1");
   assert.equal(result.requestLog.length, requested.length);
   assert.ok(requested.length >= 5);
   assert.equal(requested.filter((request) => request.body.status).every((request) => request.body.status === "PAUSED"), true);
 });
 
-test("marketing_api adapter uploads creative assets and uses image hashes", async () => {
+test("marketing_api adapter rejects image-hash creation without configured provider status readback", async () => {
   const plan = buildMetaPublishPlan({
     workspaceId: "workspace_demo",
     campaignPack: buildPack(),
@@ -586,7 +587,8 @@ test("marketing_api adapter uploads creative assets and uses image hashes", asyn
   );
 
   const creativeCreate = requested.find((request) => String(request.url).includes("/adcreatives"));
-  assert.equal(result.status, "paused_ready");
+  assert.equal(result.status, "reconciliation_required");
+  assert.equal(result.lastError, "Meta did not read back the campaign with configured_status PAUSED and effective_status PAUSED.");
   assert.ok(requested.some((request) => String(request.url).includes("/adimages")));
   assert.equal(
     ((creativeCreate?.body.object_story_spec as Record<string, unknown>).link_data as Record<string, unknown>).image_hash,
@@ -594,7 +596,7 @@ test("marketing_api adapter uploads creative assets and uses image hashes", asyn
   );
 });
 
-test("marketing_api adapter emits the strict Meta v26 lead-ad request contract", async () => {
+test("marketing_api adapter rejects a v26 request fixture without paused status evidence", async () => {
   const plan = buildMetaPublishPlan({
     workspaceId: "workspace_demo",
     campaignPack: buildPack(),
@@ -656,7 +658,8 @@ test("marketing_api adapter emits the strict Meta v26 lead-ad request contract",
     { accessToken: "user_token", pageAccessToken: "page_token", fetchImpl },
   );
 
-  assert.equal(result.status, "paused_ready", result.lastError ?? undefined);
+  assert.equal(result.status, "reconciliation_required", result.lastError ?? undefined);
+  assert.equal(result.lastError, "Meta did not read back the campaign with configured_status PAUSED and effective_status PAUSED.");
   const post = (suffix: string) => requests.find((request) => request.method === "POST" && request.path.endsWith(suffix));
   const campaign = post("/campaigns")!;
   assert.deepEqual(Object.keys(campaign.body).sort(), [
@@ -970,7 +973,7 @@ test("marketing_api adapter blocks child writes when Meta does not confirm the r
   assert.equal(postPaths[0]?.endsWith(`/${campaignId}`), true);
 });
 
-test("marketing_api adapter resumes an already corrected legacy campaign without patching it again", async () => {
+test("marketing_api adapter rejects a resumed legacy campaign without ad-set PAUSED evidence", async () => {
   const plan = buildMetaPublishPlan({
     workspaceId: "workspace_demo",
     campaignPack: buildPack(),
@@ -1042,7 +1045,8 @@ test("marketing_api adapter resumes an already corrected legacy campaign without
     { accessToken: "user_token", fetchImpl },
   );
 
-  assert.equal(result.status, "paused_ready", result.lastError ?? undefined);
+  assert.equal(result.status, "reconciliation_required", result.lastError ?? undefined);
+  assert.equal(result.lastError, "Meta did not read back ad set adset_primary with configured_status PAUSED and a safe paused effective status.");
   assert.equal(postPaths.length, 1);
   assert.equal(postPaths[0]?.endsWith(`/${setup.metaAdAccountId}/adsets`), true);
 });
@@ -1146,7 +1150,7 @@ test("marketing_api adapter preserves Meta's actionable provider error", async (
   );
 });
 
-test("marketing_api adapter caps AdCreative names at Meta's 100-character limit", async () => {
+test("marketing_api adapter rejects a capped creative when Story upload evidence is missing", async () => {
   const pack = buildPack();
   pack.campaign.name = "Long Meta creative name ".repeat(12);
   const plan = buildMetaPublishPlan({
@@ -1202,12 +1206,13 @@ test("marketing_api adapter caps AdCreative names at Meta's 100-character limit"
     { accessToken: "user_token", fetchImpl },
   );
 
-  assert.equal(result.status, "paused_ready", result.lastError ?? undefined);
+  assert.equal(result.status, "reconciliation_required", result.lastError ?? undefined);
+  assert.equal(result.lastError, "Meta creative upload did not return both immutable Feed and Story image hashes.");
   assert.equal(providerName.length, 100);
   assert.match(providerName, new RegExp(`\\[BW:${plan.planId}:${creative.localId}\\]$`));
 });
 
-test("marketing_api adapter puts the selected budget on an existing ad-set-budget campaign", async () => {
+test("marketing_api adapter rejects an existing ad-set-budget campaign without campaign PAUSED evidence", async () => {
   const plan = buildMetaPublishPlan({
     workspaceId: "workspace_demo",
     campaignPack: buildPack(),
@@ -1244,7 +1249,8 @@ test("marketing_api adapter puts the selected budget on an existing ad-set-budge
     { accessToken: "user_token", fetchImpl },
   );
 
-  assert.equal(result.status, "paused_ready", result.lastError ?? undefined);
+  assert.equal(result.status, "reconciliation_required", result.lastError ?? undefined);
+  assert.equal(result.lastError, "Meta did not read back the campaign with configured_status PAUSED and effective_status PAUSED.");
   assert.equal(postPaths.includes("/existing_campaign"), false);
   assert.equal(adSetBodies[0]?.bid_strategy, "LOWEST_COST_WITHOUT_CAP");
   assert.equal(adSetBodies[0]?.daily_budget, "7500");
@@ -1308,7 +1314,7 @@ test("marketing_api reconciliation paginates before deciding a deterministic obj
   assert.equal(requests.some((request) => request.method === "POST"), false);
 });
 
-test("marketing_api adapter resumes partial publishes without recreating reconciled objects", async () => {
+test("marketing_api adapter rejects a partial resume without paired Feed and Story upload evidence", async () => {
   const plan = buildMetaPublishPlan({
     workspaceId: "workspace_demo",
     campaignPack: buildPack(),
@@ -1357,7 +1363,8 @@ test("marketing_api adapter resumes partial publishes without recreating reconci
     { accessToken: "token", fetchImpl },
   );
 
-  assert.equal(result.status, "paused_ready");
+  assert.equal(result.status, "reconciliation_required");
+  assert.equal(result.lastError, "Meta creative upload did not return both immutable Feed and Story image hashes.");
   assert.equal(requested.some((request) => request.method === "POST" && request.url.includes("/campaigns")), false);
   assert.equal(result.reconciledObjects.campaignId, "existing_campaign");
 });
@@ -1485,7 +1492,7 @@ test("provider mutation uncertainty distinguishes rejected writes from unsafe ou
   }), false);
 });
 
-test("marketing_api adapter reconciles Meta object state after publish", async () => {
+test("marketing_api adapter rejects object-state readback without paired Feed and Story upload evidence", async () => {
   const plan = buildMetaPublishPlan({
     workspaceId: "workspace_demo",
     campaignPack: buildPack(),
@@ -1520,7 +1527,7 @@ test("marketing_api adapter reconciles Meta object state after publish", async (
     { accessToken: "token", fetchImpl },
   );
 
-  assert.equal(result.status, "paused_ready");
+  assert.equal(result.status, "reconciliation_required");
   assert.equal(methods.includes("GET"), true);
-  assert.equal(result.reconciledObjects.objectStatuses?.campaign?.effectiveStatus, "PAUSED");
+  assert.equal(result.lastError, "Meta creative upload did not return both immutable Feed and Story image hashes.");
 });

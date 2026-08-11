@@ -2,7 +2,13 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { requireApiWorkspace } from "@/lib/auth/api-guards";
 import { deterministicUuid } from "@/lib/adstudio/id";
-import { evaluateCurrentMetaPublishPlanReadiness, loadMetaPublishPlan, updateMetaPublishPlanExecution } from "@/lib/providers/meta-execution";
+import {
+  activationPayloadSuppliesProviderTargets,
+  deriveExactMetaActivationPayload,
+  evaluateCurrentMetaPublishPlanReadiness,
+  loadMetaPublishPlan,
+  updateMetaPublishPlanExecution,
+} from "@/lib/providers/meta-execution";
 import { queueMetaMutationExecution } from "@/lib/providers/meta-mutation-queue";
 import {
   buildMetaPlanMutation,
@@ -55,6 +61,9 @@ export async function POST(request: NextRequest, context: RouteContext) {
   });
   const activationExpectedBudget = plan.controls.dailyBudgetMinorUnits ?? 0;
   if (body.action === "activate") {
+    if (activationPayloadSuppliesProviderTargets(body.payload)) {
+      return NextResponse.json({ error: "Activation targets are derived from the verified Meta publish plan; do not supply Meta object IDs or budgets." }, { status: 409 });
+    }
     if (body.confirmSpend !== true || body.dailyBudgetMinorUnits !== activationExpectedBudget || body.currency !== plan.setup.currency || body.planToken !== plan.complianceSubjectHash) {
       return NextResponse.json({ error: "Confirm the current verified budget before activating this Meta campaign." }, { status: 409 });
     }
@@ -93,7 +102,9 @@ export async function POST(request: NextRequest, context: RouteContext) {
     planId: plan.planId,
     requestedBy: access.userId,
     action: body.action,
-    payload: withDefaultMutationPayload(body.action, body.payload ?? {}, plan),
+    payload: body.action === "activate"
+      ? deriveExactMetaActivationPayload(plan)
+      : withDefaultMutationPayload(body.action, body.payload ?? {}, plan),
     ...(body.action === "activate" ? { mutationId: activationMutationId(plan) } : {}),
   });
   const { error: mutationError } = await serviceSupabase
@@ -183,7 +194,7 @@ function withDefaultMutationPayload(
   payload: MetaPlanMutationPayload,
   plan: Awaited<ReturnType<typeof loadMetaPublishPlan>>,
 ): MetaPlanMutationPayload {
-  if (action === "activate" || action === "pause") {
+  if (action === "pause") {
     return {
       ...payload,
       campaignId: payload.campaignId ?? plan.reconciledObjects.campaignId,

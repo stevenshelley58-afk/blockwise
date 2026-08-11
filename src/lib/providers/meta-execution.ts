@@ -279,11 +279,44 @@ export type MetaReconciledObjects = {
   adSetIds: Record<string, string>;
   creativeIds: Record<string, string>;
   adIds: Record<string, string>;
+  /** Provider image hashes captured at creative upload, never source bytes. */
+  creativeAssetHashes?: Record<string, { feedImageHash: string; storyImageHash: string }>;
   objectStatuses?: {
     campaign?: MetaReconciledObjectStatus;
     adSets?: Record<string, MetaReconciledObjectStatus>;
     ads?: Record<string, MetaReconciledObjectStatus>;
   };
+  /**
+   * A source-free Graph read-back captured immediately before paused_ready.
+   * It binds the Meta image hashes and Instant Form ids to the immutable
+   * revision hashes in this plan; it deliberately contains no bytes, storage
+   * paths, URLs, or provider tokens.
+   */
+  pausedReadbackEvidence?: MetaPausedReadbackEvidence;
+};
+
+export type MetaPausedCreativeAssetEvidence = {
+  placement: "feed" | "story";
+  creativeId: string;
+  revisionId: string;
+  contentSha256: string;
+  providerImageHash: string;
+};
+
+export type MetaPausedCreativeEvidence = {
+  providerCreativeId: string;
+  leadFormProviderId: string;
+  feed: MetaPausedCreativeAssetEvidence;
+  story: MetaPausedCreativeAssetEvidence;
+};
+
+export type MetaPausedReadbackEvidence = {
+  verifiedAt: string;
+  complianceSubjectHash: string;
+  campaign: MetaReconciledObjectStatus;
+  adSets: Record<string, MetaReconciledObjectStatus>;
+  ads: Record<string, MetaReconciledObjectStatus>;
+  creatives: Record<string, MetaPausedCreativeEvidence>;
 };
 
 export type MetaProviderLogEntry = {
@@ -637,6 +670,9 @@ export function validateMetaPublishPlanReadiness(
   if (plan.publishContractVersion !== "finished_clone_v1") {
     blockers.push("This Meta publish plan predates the finished clone contract and cannot be activated.");
   }
+  if (!plan.assetFeedEnabled) {
+    blockers.push("Each selected creative needs an exact 4:5 Feed and 9:16 Story asset feed before Meta publish.");
+  }
 
   if (plan.adapter === "marketing_api" && plan.creatives.some((creative) => !hasUsableCreativeImage(creative))) {
     blockers.push("The finished ad image could not be found for one or more creatives.");
@@ -673,6 +709,138 @@ export function validateMetaPublishPlanReadiness(
     ready: blockers.length === 0,
     blockers,
   };
+}
+
+/**
+ * Activation is deliberately targetless at the API boundary. These IDs are
+ * derived from the authenticated plan after its workspace-scoped DB read; a
+ * browser must never nominate a Meta object, even one it already knows.
+ */
+export function deriveExactMetaActivationPayload(plan: MetaPublishPlan): {
+  campaignId: string;
+  adSetIds: string[];
+  adIds: string[];
+  adSetBudgets?: Array<{ adSetId: string; dailyBudgetMinorUnits: number }>;
+} {
+  const campaignId = requiredReconciledId(plan.reconciledObjects.campaignId, "campaign");
+  const adSetIds = exactReconciledIds(plan.adSets.map((adSet) => adSet.localId), plan.reconciledObjects.adSetIds, "ad set");
+  const adIds = exactReconciledIds(plan.ads.map((ad) => ad.localId), plan.reconciledObjects.adIds, "ad");
+  const allIds = [campaignId, ...adSetIds, ...adIds];
+  if (new Set(allIds).size !== allIds.length) {
+    throw new Error("Meta publish plan has duplicate reconciled object IDs; activation is blocked.");
+  }
+
+  return {
+    campaignId,
+    adSetIds,
+    adIds,
+    ...(plan.campaign.budgetMode === "adset" ? {
+      adSetBudgets: plan.adSets.map((adSet, index) => ({
+        adSetId: adSetIds[index]!,
+        dailyBudgetMinorUnits: adSet.dailyBudgetMinorUnits,
+      })),
+    } : {}),
+  };
+}
+
+/** Reject all caller-supplied provider targets, including matching IDs. */
+export function activationPayloadSuppliesProviderTargets(payload: Record<string, unknown> | null | undefined): boolean {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return false;
+  return ["campaignId", "adSetIds", "adIds", "adSetBudgets"].some((key) => Object.prototype.hasOwnProperty.call(payload, key));
+}
+
+function requiredReconciledId(value: string | undefined, label: string): string {
+  const id = value?.trim();
+  if (!id) throw new Error(`Meta publish plan has no reconciled ${label} ID; activation is blocked.`);
+  return id;
+}
+
+function exactReconciledIds(expectedLocalIds: string[], actual: Record<string, string>, label: string): string[] {
+  const expected = new Set(expectedLocalIds);
+  const actualKeys = Object.keys(actual);
+  if (actualKeys.length !== expected.size || actualKeys.some((localId) => !expected.has(localId))) {
+    throw new Error(`Meta publish plan has an incomplete or extra reconciled ${label}; activation is blocked.`);
+  }
+  return expectedLocalIds.map((localId) => requiredReconciledId(actual[localId], label));
+}
+
+/**
+ * Evidence is current only when it proves this exact immutable plan and the
+ * complete current reconciliation set. A stale, partial, or source-bearing
+ * record cannot authorize spend.
+ */
+export function pausedReadbackEvidenceBlocker(plan: MetaPublishPlan): string | null {
+  const evidence = plan.reconciledObjects.pausedReadbackEvidence;
+  if (!evidence) return "Meta PAUSED provider read-back evidence is missing.";
+  if (evidence.complianceSubjectHash !== plan.complianceSubjectHash) {
+    return "Meta PAUSED provider read-back evidence is stale for this immutable plan.";
+  }
+  try {
+    const targets = deriveExactMetaActivationPayload(plan);
+    if (!samePausedStatus(evidence.campaign, "campaign") || evidence.campaign.id !== targets.campaignId) {
+      return "Meta PAUSED campaign evidence is incomplete or no longer exact.";
+    }
+    if (!sameExactStatusEvidence(plan.adSets.map((item) => item.localId), plan.reconciledObjects.adSetIds, evidence.adSets, "adset")) {
+      return "Meta PAUSED ad set evidence is incomplete or no longer exact.";
+    }
+    if (!sameExactStatusEvidence(plan.ads.map((item) => item.localId), plan.reconciledObjects.adIds, evidence.ads, "ad")) {
+      return "Meta PAUSED ad evidence is incomplete or no longer exact.";
+    }
+    for (const creative of plan.creatives) {
+      const observed = evidence.creatives[creative.localId];
+      const providerCreativeId = plan.reconciledObjects.creativeIds[creative.localId];
+      const leadFormProviderId = plan.reconciledObjects.leadFormIds[creative.leadFormLocalId];
+      if (!observed || observed.providerCreativeId !== providerCreativeId || observed.leadFormProviderId !== leadFormProviderId) {
+        return "Meta creative provider read-back evidence is incomplete or no longer exact.";
+      }
+      if (!sameCreativeBindingEvidence(creative, observed.feed, "feed") || !sameCreativeBindingEvidence(creative, observed.story, "story")) {
+        return "Meta creative asset-feed evidence no longer matches the immutable finished clones.";
+      }
+    }
+  } catch (error) {
+    return error instanceof Error ? error.message : "Meta PAUSED provider read-back evidence is invalid.";
+  }
+  return null;
+}
+
+function sameExactStatusEvidence(
+  localIds: string[],
+  reconciled: Record<string, string>,
+  evidence: Record<string, MetaReconciledObjectStatus>,
+  kind: "adset" | "ad",
+): boolean {
+  const keys = Object.keys(evidence);
+  return keys.length === localIds.length && localIds.every((localId) =>
+    evidence[localId]?.id === reconciled[localId] && samePausedStatus(evidence[localId]!, kind));
+}
+
+function samePausedStatus(status: MetaReconciledObjectStatus, kind: "campaign" | "adset" | "ad"): boolean {
+  const effective = normalizedProviderStatus(status.effectiveStatus);
+  const allowedEffective = kind === "campaign"
+    ? ["PAUSED"]
+    : kind === "adset"
+      ? ["PAUSED", "CAMPAIGN_PAUSED"]
+      : ["PAUSED", "ADSET_PAUSED", "CAMPAIGN_PAUSED"];
+  return normalizedProviderStatus(status.configuredStatus) === "PAUSED" && Boolean(effective && allowedEffective.includes(effective));
+}
+
+function normalizedProviderStatus(value: unknown): string | null {
+  const status = optionalString(value);
+  return status ? status.toUpperCase() : null;
+}
+
+function sameCreativeBindingEvidence(
+  creative: MetaPublishCreativePlan,
+  evidence: MetaPausedCreativeAssetEvidence,
+  placement: "feed" | "story",
+): boolean {
+  const binding = creative.revisionBindings.find((item) => item.placement === placement);
+  return Boolean(
+    binding && binding.format === (placement === "feed" ? "4:5" : "9:16") &&
+    evidence.placement === placement && evidence.creativeId === binding.creativeId &&
+    evidence.revisionId === binding.revisionId && evidence.contentSha256 === binding.asset.contentSha256 &&
+    /^[a-zA-Z0-9_-]+$/.test(evidence.providerImageHash),
+  );
 }
 
 /**
@@ -726,6 +894,8 @@ export async function evaluateCurrentMetaPublishPlanReadiness(service: SupabaseS
   if (bindings.length === 0 || bindingChecks.some(Boolean)) {
     readiness.blockers.push("A finished clone changed after compliance. Re-run compliance before publishing.");
   }
+  const pausedEvidenceBlocker = pausedReadbackEvidenceBlocker(plan);
+  if (pausedEvidenceBlocker) readiness.blockers.push(pausedEvidenceBlocker);
   return readiness;
 }
 
@@ -929,7 +1099,9 @@ async function publishWithMarketingApi(
     adSetIds: { ...plan.reconciledObjects.adSetIds },
     creativeIds: { ...plan.reconciledObjects.creativeIds },
     adIds: { ...plan.reconciledObjects.adIds },
+    creativeAssetHashes: { ...plan.reconciledObjects.creativeAssetHashes },
   };
+  const expectedCreativeAssets: Record<string, { feedImageHash: string; storyImageHash: string }> = {};
 
   try {
     if (!reconciledObjects.campaignId) {
@@ -1047,7 +1219,18 @@ async function publishWithMarketingApi(
     }
 
     for (const creative of plan.creatives) {
-      if (reconciledObjects.creativeIds[creative.localId]) continue;
+      if (reconciledObjects.creativeIds[creative.localId]) {
+        const prior = plan.reconciledObjects.pausedReadbackEvidence?.creatives[creative.localId];
+        if (prior?.providerCreativeId === reconciledObjects.creativeIds[creative.localId]) {
+          expectedCreativeAssets[creative.localId] = {
+            feedImageHash: prior.feed.providerImageHash,
+            storyImageHash: prior.story.providerImageHash,
+          };
+        } else if (reconciledObjects.creativeAssetHashes?.[creative.localId]) {
+          expectedCreativeAssets[creative.localId] = reconciledObjects.creativeAssetHashes[creative.localId]!;
+        }
+        continue;
+      }
 
       const providerName = buildMetaProviderObjectName(
         plan,
@@ -1093,6 +1276,11 @@ async function publishWithMarketingApi(
           }),
         );
         reconciledObjects.creativeIds[creative.localId] = requireMetaId(response, "creative");
+        if (!imageHash || !storyImageHash) {
+          throw new MetaReconciliationRequiredError("Meta creative upload did not return both immutable Feed and Story image hashes.");
+        }
+        expectedCreativeAssets[creative.localId] = { feedImageHash: imageHash, storyImageHash };
+        reconciledObjects.creativeAssetHashes![creative.localId] = expectedCreativeAssets[creative.localId]!;
       }
       await checkpointMetaPublishProgress(input, requestLog, responseLog, reconciledObjects);
     }
@@ -1125,7 +1313,18 @@ async function publishWithMarketingApi(
       await checkpointMetaPublishProgress(input, requestLog, responseLog, reconciledObjects);
     }
 
-    reconciledObjects.objectStatuses = await reconcileMetaObjects(input, requestLog, responseLog, reconciledObjects);
+    const objectStatuses = await reconcileMetaObjects(input, requestLog, responseLog, reconciledObjects);
+    assertAllProviderObjectsPaused(objectStatuses, plan, reconciledObjects);
+    reconciledObjects.objectStatuses = objectStatuses;
+    reconciledObjects.pausedReadbackEvidence = await verifyPausedMetaReadbackEvidence(
+      plan,
+      input,
+      requestLog,
+      responseLog,
+      reconciledObjects,
+      objectStatuses,
+      expectedCreativeAssets,
+    );
 
     return {
       status: "paused_ready",
@@ -1368,6 +1567,207 @@ async function reconcileMetaObjects(
   }
 
   return { campaign, adSets, ads };
+}
+
+function assertAllProviderObjectsPaused(
+  statuses: NonNullable<MetaReconciledObjects["objectStatuses"]>,
+  plan: MetaPublishPlan,
+  reconciledObjects: MetaReconciledObjects,
+) {
+  if (!statuses.campaign || statuses.campaign.id !== reconciledObjects.campaignId || !samePausedStatus(statuses.campaign, "campaign")) {
+    throw new MetaReconciliationRequiredError("Meta did not read back the campaign with configured_status PAUSED and effective_status PAUSED.");
+  }
+  for (const adSet of plan.adSets) {
+    const status = statuses.adSets?.[adSet.localId];
+    if (!status || status.id !== reconciledObjects.adSetIds[adSet.localId] || !samePausedStatus(status, "adset")) {
+      throw new MetaReconciliationRequiredError(`Meta did not read back ad set ${adSet.localId} with configured_status PAUSED and a safe paused effective status.`);
+    }
+  }
+  for (const ad of plan.ads) {
+    const status = statuses.ads?.[ad.localId];
+    if (!status || status.id !== reconciledObjects.adIds[ad.localId] || !samePausedStatus(status, "ad")) {
+      throw new MetaReconciliationRequiredError(`Meta did not read back ad ${ad.localId} with configured_status PAUSED and a safe paused effective status.`);
+    }
+  }
+}
+
+async function verifyPausedMetaReadbackEvidence(
+  plan: MetaPublishPlan,
+  input: MetaPublishExecutionInput,
+  requestLog: MetaProviderLogEntry[],
+  responseLog: MetaProviderLogEntry[],
+  reconciledObjects: MetaReconciledObjects,
+  statuses: NonNullable<MetaReconciledObjects["objectStatuses"]>,
+  expectedCreativeAssets: Record<string, { feedImageHash: string; storyImageHash: string }>,
+): Promise<MetaPausedReadbackEvidence> {
+  const creatives: Record<string, MetaPausedCreativeEvidence> = {};
+  for (const creative of plan.creatives) {
+    const providerCreativeId = requiredReconciledId(reconciledObjects.creativeIds[creative.localId], "creative");
+    const leadFormProviderId = requiredReconciledId(reconciledObjects.leadFormIds[creative.leadFormLocalId], "lead form");
+    const expectedAssets = expectedCreativeAssets[creative.localId];
+    if (!expectedAssets) {
+      throw new MetaReconciliationRequiredError(`Meta creative ${creative.localId} lacks immutable upload evidence; refusing paused readiness.`);
+    }
+    const payload = await getMetaCreativeReadback(input, requestLog, responseLog, creative.localId, providerCreativeId);
+    assertCreativeReadbackMatchesPlan(payload, creative, leadFormProviderId, expectedAssets);
+    const feed = requiredCreativeBinding(creative, "feed");
+    const story = requiredCreativeBinding(creative, "story");
+    creatives[creative.localId] = {
+      providerCreativeId,
+      leadFormProviderId,
+      feed: sourceFreeCreativeAssetEvidence(feed, "feed", expectedAssets.feedImageHash),
+      story: sourceFreeCreativeAssetEvidence(story, "story", expectedAssets.storyImageHash),
+    };
+  }
+
+  return {
+    verifiedAt: new Date().toISOString(),
+    complianceSubjectHash: plan.complianceSubjectHash,
+    campaign: statuses.campaign!,
+    adSets: statuses.adSets ?? {},
+    ads: statuses.ads ?? {},
+    creatives,
+  };
+}
+
+/**
+ * Provider state can change after paused_ready without a Blockwise write.
+ * Re-read it immediately before an ACTIVE mutation and replace the durable
+ * source-free evidence only if every status, creative asset mapping, and form
+ * mapping remains exact for the current immutable plan.
+ */
+export async function refreshCurrentMetaPausedReadbackEvidence(
+  plan: MetaPublishPlan,
+  input: MetaPublishExecutionInput,
+): Promise<Pick<MetaPublishExecutionResult, "requestLog" | "responseLog" | "reconciledObjects">> {
+  const blocker = pausedReadbackEvidenceBlocker(plan);
+  if (blocker) throw new Error(blocker);
+  const requestLog = [...plan.requestLog];
+  const responseLog = [...plan.responseLog];
+  const reconciledObjects: MetaReconciledObjects = {
+    ...plan.reconciledObjects,
+    leadFormIds: { ...plan.reconciledObjects.leadFormIds },
+    adSetIds: { ...plan.reconciledObjects.adSetIds },
+    creativeIds: { ...plan.reconciledObjects.creativeIds },
+    adIds: { ...plan.reconciledObjects.adIds },
+  };
+  const statuses = await reconcileMetaObjects(input, requestLog, responseLog, reconciledObjects);
+  assertAllProviderObjectsPaused(statuses, plan, reconciledObjects);
+  const expectedCreativeAssets = Object.fromEntries(plan.creatives.map((creative) => {
+    const prior = plan.reconciledObjects.pausedReadbackEvidence!.creatives[creative.localId]!;
+    return [creative.localId, {
+      feedImageHash: prior.feed.providerImageHash,
+      storyImageHash: prior.story.providerImageHash,
+    }];
+  }));
+  reconciledObjects.objectStatuses = statuses;
+  reconciledObjects.pausedReadbackEvidence = await verifyPausedMetaReadbackEvidence(
+    plan,
+    input,
+    requestLog,
+    responseLog,
+    reconciledObjects,
+    statuses,
+    expectedCreativeAssets,
+  );
+  return { requestLog, responseLog, reconciledObjects };
+}
+
+function sourceFreeCreativeAssetEvidence(
+  binding: MetaCreativeRevisionBinding,
+  placement: "feed" | "story",
+  providerImageHash: string,
+): MetaPausedCreativeAssetEvidence {
+  if (!binding.asset.contentSha256) {
+    throw new MetaReconciliationRequiredError(`Meta ${placement} creative binding has no immutable content hash.`);
+  }
+  return {
+    placement,
+    creativeId: binding.creativeId,
+    revisionId: binding.revisionId,
+    contentSha256: binding.asset.contentSha256,
+    providerImageHash,
+  };
+}
+
+function requiredCreativeBinding(creative: MetaPublishCreativePlan, placement: "feed" | "story"): MetaCreativeRevisionBinding {
+  const binding = creative.revisionBindings.find((item) => item.placement === placement);
+  if (!binding || binding.format !== (placement === "feed" ? "4:5" : "9:16")) {
+    throw new MetaReconciliationRequiredError(`Meta creative ${creative.localId} lacks its required ${placement === "feed" ? "4:5 Feed" : "9:16 Story"} revision binding.`);
+  }
+  return binding;
+}
+
+async function getMetaCreativeReadback(
+  input: MetaPublishExecutionInput,
+  requestLog: MetaProviderLogEntry[],
+  responseLog: MetaProviderLogEntry[],
+  localId: string,
+  providerCreativeId: string,
+): Promise<Record<string, unknown>> {
+  const step = `creative.${localId}.verify_asset_feed`;
+  const path = `/${providerCreativeId}?fields=id,asset_feed_spec,object_story_spec`;
+  const createdAt = new Date().toISOString();
+  requestLog.push({ step, method: "GET", path, createdAt });
+  const response = await (input.fetchImpl ?? fetch)(
+    `https://graph.facebook.com/${input.graphVersion ?? DEFAULT_META_GRAPH_VERSION}${path}`,
+    { method: "GET", headers: { authorization: `Bearer ${input.accessToken}` }, signal: AbortSignal.timeout(30_000) },
+  );
+  const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+  responseLog.push({ step, method: "GET", path, response: payload, status: response.status, createdAt: new Date().toISOString() });
+  if (!response.ok) throw new MetaReconciliationRequiredError(metaProviderErrorMessage(payload, `Meta creative read-back failed with ${response.status}.`));
+  if (optionalString(payload.id) !== providerCreativeId) {
+    throw new MetaReconciliationRequiredError(`Meta creative read-back returned an unexpected object for ${localId}.`);
+  }
+  return payload;
+}
+
+function assertCreativeReadbackMatchesPlan(
+  payload: Record<string, unknown>,
+  creative: MetaPublishCreativePlan,
+  leadFormProviderId: string,
+  expectedAssets: { feedImageHash: string; storyImageHash: string },
+) {
+  const storySpec = recordValue(payload.object_story_spec);
+  const linkData = recordValue(storySpec?.link_data);
+  const callToAction = recordValue(linkData?.call_to_action);
+  const ctaValue = recordValue(callToAction?.value);
+  if (optionalString(ctaValue?.lead_gen_form_id) !== leadFormProviderId) {
+    throw new MetaReconciliationRequiredError(`Meta creative ${creative.localId} did not read back its exact Instant Form mapping.`);
+  }
+
+  const actual = recordValue(payload.asset_feed_spec);
+  const expected = buildMetaAssetFeedSpec(expectedAssets.feedImageHash, expectedAssets.storyImageHash);
+  if (!actual || !sameJsonValue(actual.ad_formats, expected.ad_formats) || !sameJsonValue(actual.asset_customization_rules, expected.asset_customization_rules)) {
+    throw new MetaReconciliationRequiredError(`Meta creative ${creative.localId} did not read back the exact Feed and Story placement rules.`);
+  }
+  const images = Array.isArray(actual.images) ? actual.images : [];
+  const hasImage = (label: string, hash: string) => images.some((candidate) => {
+    const image = recordValue(candidate);
+    const labels = Array.isArray(image?.adlabels) ? image.adlabels : [];
+    return optionalString(image?.hash) === hash && labels.some((item) => recordValue(item)?.name === label);
+  });
+  if (!hasImage("feed_image", expectedAssets.feedImageHash) || !hasImage("story_image", expectedAssets.storyImageHash)) {
+    throw new MetaReconciliationRequiredError(`Meta creative ${creative.localId} did not read back the exact Feed 4:5 and Story 9:16 image mappings.`);
+  }
+}
+
+function recordValue(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
+}
+
+function sameJsonValue(left: unknown, right: unknown): boolean {
+  return JSON.stringify(sortJsonValue(left)) === JSON.stringify(sortJsonValue(right));
+}
+
+function sortJsonValue(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(sortJsonValue);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(Object.entries(value as Record<string, unknown>)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, item]) => [key, sortJsonValue(item)]));
+  }
+  return value;
 }
 
 async function postMetaObject(

@@ -71,6 +71,12 @@ export async function POST(request: NextRequest) {
       { status: 400 },
     );
   }
+  // Inline monitoring has no immutable publish plan to prove complete object
+  // ownership, current PAUSED evidence, or the exact spend confirmation. Live
+  // activation is therefore available only through the plan-bound endpoint.
+  if (body.action === "activate") {
+    return NextResponse.json({ error: "Activate only through a verified Meta publish plan." }, { status: 409 });
+  }
 
   const guard = await requireApiWorkspace(
     request,

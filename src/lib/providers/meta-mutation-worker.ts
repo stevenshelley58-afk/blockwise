@@ -1,6 +1,11 @@
 import { executeMetaPlanMutation, type MetaPlanMutation, type MetaPlanMutationAction } from "./meta-mutations.ts";
 import { loadStoredProviderTokens } from "./provider-connections.ts";
-import { loadMetaPublishPlan, updateMetaPublishPlanExecution } from "./meta-execution.ts";
+import {
+  deriveExactMetaActivationPayload,
+  loadMetaPublishPlan,
+  refreshCurrentMetaPausedReadbackEvidence,
+  updateMetaPublishPlanExecution,
+} from "./meta-execution.ts";
 import { queueReportingRefresh } from "../meta-monitor/reporting-refresh-queue.ts";
 import type { createSupabaseServiceClient } from "../supabase/service.ts";
 import type { ApprovalStatus } from "../publishing/readiness.ts";
@@ -26,6 +31,14 @@ type MetaMutationRow = {
   created_at: string;
   updated_at: string;
 };
+
+/** The persisted mutation payload is never an activation authority. */
+export function bindPlanActivationTargets(mutation: MetaPlanMutation, plan: Awaited<ReturnType<typeof loadMetaPublishPlan>>): MetaPlanMutation {
+  if (mutation.action !== "activate" || mutation.planId !== plan.planId || mutation.workspaceId !== plan.workspaceId) {
+    throw new Error("Meta activation mutation is not bound to its authenticated publish plan.");
+  }
+  return { ...mutation, payload: deriveExactMetaActivationPayload(plan) };
+}
 
 export async function executeMetaMutationById(input: {
   serviceSupabase: SupabaseServiceClient;
@@ -76,8 +89,32 @@ export async function executeMetaMutationById(input: {
       throw new Error("Meta mutation cannot run without a stored Meta access token.");
     }
 
+    let executionMutation = mutation;
+    if (mutation.planId && mutation.action === "activate") {
+      const plan = await loadMetaPublishPlan(input.serviceSupabase, {
+        workspaceId: input.workspaceId,
+        planId: mutation.planId,
+      });
+      const refreshed = await refreshCurrentMetaPausedReadbackEvidence(plan, {
+        accessToken: tokens.accessToken,
+        fetchImpl: input.fetchImpl,
+      });
+      const refreshedPlan = {
+        ...plan,
+        requestLog: refreshed.requestLog,
+        responseLog: refreshed.responseLog,
+        reconciledObjects: refreshed.reconciledObjects,
+        lastError: null,
+        updatedAt: new Date().toISOString(),
+      };
+      await updateMetaPublishPlanExecution(input.serviceSupabase, refreshedPlan);
+      // A persisted mutation is untrusted input too: discard its target IDs
+      // and derive the exact current set only from this workspace-scoped plan.
+      executionMutation = bindPlanActivationTargets(mutation, refreshedPlan);
+    }
+
     const result = await executeMetaPlanMutation({
-      mutation,
+      mutation: executionMutation,
       approvalStatus,
       accessToken: tokens.accessToken,
       fetchImpl: input.fetchImpl,
