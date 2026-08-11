@@ -55,12 +55,12 @@ test("vault execution reuses the exact exported packet request and reference ord
 
 test("the vault bridge never logs, serializes, or persists its credential", async () => {
   const source = readFileSync("scripts/adstudio/vault-template-execution.mjs", "utf8");
-  const command = readFileSync("scripts/adstudio/create-template.mjs", "utf8");
+  const command = readFileSync("scripts/adstudio/customer-template-fixture.mjs", "utf8");
   assert.doesNotMatch(source, /console\.|writeFile|JSON\.stringify/);
-  assert.match(command, /createGoogleImageProvider\([\s\S]*env: options\.providerEnv/);
+  assert.match(command, /createImageProviderForCandidate\(selected\.candidate, options\.providerEnv \? \{ env: options\.providerEnv \} : \{\}\)/);
   assert.doesNotMatch(command, /console\.[^(]*\([^\n]*(?:providerEnv|GOOGLE_AI_API_KEY|assetUrl|data:image)/);
   assert.match(command, /verifyLockedClonePacket\(packet, \{ root \}\)/);
-  assert.match(command, /existsSync\(outputPath\) \|\| existsSync\(rawPath\) \|\| existsSync\(manifestPath\)/);
+  assert.match(command, /\[outputPath, rawPath, manifestPath\]\.some\(existsSync\)/);
   assert.match(command, /outputSha256: sha256\(normalized\)/);
   assert.match(command, /providerRequestId:/);
   assert.match(command, /requestHash: verified\.requestHash/);

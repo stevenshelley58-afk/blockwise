@@ -10,7 +10,6 @@ import {
   storagePathFromMediaSrc,
   workspaceMediaSrc,
 } from "../src/lib/adstudio/image-src.ts";
-import { loadAdStudioLibraryPage } from "../src/lib/adstudio/library-read-model.ts";
 import type { FirstAdInput } from "../src/lib/adstudio/types.ts";
 
 const WORKSPACE = "workspace-1";
@@ -76,29 +75,6 @@ test("workspace media sources round-trip and stay workspace-scoped", () => {
   assert.equal(workspaceMediaSrc("", STORAGE_PATH), null);
 });
 
-/**
- * The regression this suite exists for: the library used to hand the New Ad
- * dialog its signed 640px thumbnail, which the campaigns route refused with
- * "Add a required image before generating the ad" — so "Choose from library"
- * could never produce an ad.
- */
-test("a library asset carries a generation source the campaigns route accepts", async () => {
-  const page = await loadAdStudioLibraryPage({
-    supabase: fakeLibraryClient(),
-    workspaceId: WORKSPACE,
-    kind: "assets",
-  });
-
-  const [asset] = page.items as Array<{ src: string; fullSrc: string }>;
-  assert.ok(asset);
-  // The grid still shows the cheap signed render...
-  assert.equal(asset.src, SIGNED_URL);
-  assert.equal(isAdStudioImageSrc(asset.src), false);
-  // ...while generation gets the durable, full-resolution original.
-  assert.equal(asset.fullSrc, MEDIA_SRC);
-  assert.equal(validateFirstAd(firstAd({ imageDataUrl: asset.fullSrc })), null);
-});
-
 test("the campaigns route accepts every source the dialog can produce", () => {
   const sources = {
     "fresh upload": MEDIA_SRC,
@@ -146,32 +122,3 @@ test("the campaigns route owns no private notion of a valid image", () => {
   assert.doesNotMatch(route, /startsWith\("data:image\//);
   assert.doesNotMatch(route, /startsWith\("\/adstudio-samples\//);
 });
-
-/** Minimal Supabase stand-in: one stored asset row plus signed-URL generation. */
-function fakeLibraryClient() {
-  const row = {
-    id: "asset-1",
-    asset_type: "listing_image",
-    storage_path: STORAGE_PATH,
-    metadata_json: { fileName: "Front of house.jpg" },
-    created_at: "2026-07-28T00:00:00.000Z",
-  };
-  const query = {
-    select: () => query,
-    eq: () => query,
-    order: () => query,
-    limit: () => query,
-    or: () => query,
-    gt: () => query,
-    data: [row],
-    error: null,
-  };
-  return {
-    from: () => query,
-    storage: {
-      from: () => ({
-        createSignedUrl: async () => ({ data: { signedUrl: SIGNED_URL }, error: null }),
-      }),
-    },
-  } as never;
-}

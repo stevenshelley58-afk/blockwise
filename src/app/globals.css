@@ -4729,62 +4729,13 @@ a.operator-file-row {
   font-weight: 700;
 }
 
-.studio-newad-upload .asset-upload-trigger {
-  min-height: 150px;
-  grid-template-columns: 128px minmax(0, 1fr) auto;
-}
-
-.studio-newad-upload .asset-upload-preview {
-  width: 128px;
-  aspect-ratio: 1.35 / 1;
-}
-
-.studio-newad-upload[data-has-file="true"] .asset-upload-trigger {
-  min-height: 112px;
-}
-
-.studio-newad-upload[data-has-file="true"] .asset-upload-preview img {
-  object-fit: contain;
-  background: var(--surface-subtle);
-}
-
-.studio-media-upload[data-has-file="true"] .asset-upload-trigger {
-  position: relative;
-  min-height: 0;
-  grid-template-columns: 1fr;
-  gap: 0;
-  align-items: stretch;
-  overflow: hidden;
-  padding: 0;
-}
-
-.studio-media-upload[data-has-file="true"] .asset-upload-preview {
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  border-radius: var(--r-card) var(--r-card) 0 0;
-}
-
-.studio-media-upload[data-has-file="true"] .asset-upload-copy {
-  padding: 12px 14px 14px;
-}
-
-.studio-media-upload[data-has-file="true"] .asset-upload-kind {
-  position: absolute;
-  right: 12px;
-  bottom: 12px;
-  background: var(--surface);
-  box-shadow: 0 6px 18px rgba(15, 23, 41, 0.16);
-}
-
 @media (max-width: 560px) {
-  .asset-upload-trigger,
-  .studio-newad-upload .asset-upload-trigger {
+  .asset-upload-trigger {
     grid-template-columns: 76px minmax(0, 1fr);
     min-height: 98px;
   }
 
-  .asset-upload-preview,
-  .studio-newad-upload .asset-upload-preview {
+  .asset-upload-preview {
     width: 76px;
   }
 

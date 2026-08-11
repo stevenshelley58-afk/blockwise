@@ -2,7 +2,7 @@
  * The one contract for a customer-supplied image source in Ad Studio.
  *
  * Every surface that hands an image to the generator — the New Ad dialog, the
- * media library, the listing scrape, the Brand Pack — must produce a source
+ * customer uploads, the listing scrape, the Brand Pack — must produce a source
  * this module accepts, and the campaigns route validates with the same
  * predicate. Before this existed the route carried a private allowlist that
  * disagreed with what the library actually produced (signed Supabase URLs),
@@ -25,7 +25,7 @@
  * Signed storage URLs are deliberately NOT a kind of their own. They expire
  * (one hour) and the library signs a 640px render, so generating from one
  * would silently degrade the ad. Map storage-backed assets to
- * `workspaceMediaSrc()` instead — see `library-read-model.ts`.
+ * `workspaceMediaSrc()` instead so generation always receives original bytes.
  */
 
 export type AdStudioImageSrcKind = "inline" | "workspace-media" | "builtin" | "remote";

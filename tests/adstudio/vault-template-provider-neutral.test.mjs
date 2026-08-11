@@ -44,9 +44,9 @@ test("provider-neutral vault lane keeps Google packet compatibility and admits G
 
 test("provider-neutral vault code never serializes provider credentials", () => {
   const source = readFileSync("scripts/adstudio/vault-template-execution.mjs", "utf8");
-  const command = readFileSync("scripts/adstudio/create-template.mjs", "utf8");
+  const command = readFileSync("scripts/adstudio/customer-template-fixture.mjs", "utf8");
   assert.doesNotMatch(source, /console\.|writeFile|JSON\.stringify/);
-  assert.match(command, /createImageProviderForCandidate\(candidate/);
+  assert.match(command, /createImageProviderForCandidate\(selected\.candidate/);
   assert.doesNotMatch(command, /console\.[^(]*\([^\n]*(?:providerEnv|OPENAI_API_KEY|GOOGLE_AI_API_KEY|assetUrl|data:image)/);
   assert.match(command, /selectedCandidate:/);
 });

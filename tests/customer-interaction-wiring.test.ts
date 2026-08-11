@@ -46,7 +46,7 @@ test("Ad Radar save failures remain visible and retryable", () => {
   assert.doesNotMatch(actions, /Action failed/);
 });
 
-test("compact Ad Studio keeps canonical customer destinations", () => {
+test("compact Ad Studio keeps one canonical customer destination", () => {
   const flow = read("src/components/adstudio/ad-studio-customer-flow.tsx");
   const legacyLibrary = read("src/app/(customer)/ad-studio/library/page.tsx");
   const niche = read("src/config/niche/blockwise.ts");
