@@ -103,11 +103,12 @@ describeCanary("hosted Meta PAUSED canary", () => {
     expect(plan.status).toBe("paused_ready");
     expect(plan.readback?.campaign?.plannedStatus).toBe("PAUSED");
     expect(plan.readback?.campaign?.effectiveStatus).toBe("PAUSED");
+    expect(plan.readback?.campaign?.providerEvidence).toMatchObject({ configuredStatus: "PAUSED", effectiveStatus: "PAUSED" });
     expect(plan.readback?.leadForms).toHaveLength(1);
     expect(plan.readback?.leadForms?.[0]?.providerId, "Meta must return the generated Instant Form ID.").toBeTruthy();
     expect(plan.readback?.leadForms?.[0]?.readBack).toBe(true);
-    expect(plan.readback?.adSets?.every((adSet) => adSet.plannedStatus === "PAUSED" && adSet.effectiveStatus === "PAUSED")).toBe(true);
-    expect(plan.readback?.ads?.every((ad) => ad.plannedStatus === "PAUSED" && ad.effectiveStatus === "PAUSED")).toBe(true);
+    expect(plan.readback?.adSets?.every((adSet) => adSet.plannedStatus === "PAUSED" && adSet.providerEvidence?.configuredStatus === "PAUSED" && ["PAUSED", "CAMPAIGN_PAUSED"].includes(adSet.providerEvidence?.effectiveStatus ?? ""))).toBe(true);
+    expect(plan.readback?.ads?.every((ad) => ad.plannedStatus === "PAUSED" && ad.providerEvidence?.configuredStatus === "PAUSED" && ["PAUSED", "ADSET_PAUSED", "CAMPAIGN_PAUSED"].includes(ad.providerEvidence?.effectiveStatus ?? ""))).toBe(true);
 
     const actualBindings = plan.readback?.creatives.flatMap((creative) => creative.revisionBindings) ?? [];
     expect(actualBindings).toHaveLength(2);
@@ -120,6 +121,24 @@ describeCanary("hosted Meta PAUSED canary", () => {
       }));
     }
     expect(plan.readback?.creatives.every((creative) => Boolean(creative.providerId) && Boolean(creative.leadFormProviderId))).toBe(true);
+    for (const creative of plan.readback?.creatives ?? []) {
+      const evidence = creative.providerEvidence;
+      expect(evidence, "Meta must persist a source-free provider creative read-back.").toBeTruthy();
+      expect(evidence?.providerCreativeId).toBe(creative.providerId);
+      expect(evidence?.leadFormProviderId).toBe(creative.leadFormProviderId);
+      expect(evidence?.feed).toMatchObject({ placement: "feed", providerImageHash: expect.any(String) });
+      expect(evidence?.story).toMatchObject({ placement: "story", providerImageHash: expect.any(String) });
+      expect(evidence?.feed.providerImageHash).not.toBe(evidence?.story.providerImageHash);
+      for (const binding of creative.revisionBindings) {
+        const asset = binding.placement === "feed" ? evidence?.feed : evidence?.story;
+        expect(asset).toMatchObject({
+          placement: binding.placement,
+          creativeId: binding.creativeId,
+          revisionId: binding.revisionId,
+          contentSha256: binding.contentSha256,
+        });
+      }
+    }
   });
 });
 
@@ -188,11 +207,11 @@ type PlanReadback = {
   status?: string;
   lastError?: string | null;
   readback?: {
-    campaign?: { plannedStatus?: string; effectiveStatus?: string | null };
+    campaign?: { plannedStatus?: string; effectiveStatus?: string | null; providerEvidence?: { configuredStatus?: string | null; effectiveStatus?: string | null } };
     leadForms?: Array<{ providerId?: string; readBack?: boolean }>;
-    adSets?: Array<{ plannedStatus?: string; effectiveStatus?: string | null }>;
-    creatives: Array<{ providerId?: string; leadFormProviderId?: string; revisionBindings: Array<{ placement: string; creativeId: string; revisionId: string | null }> }>;
-    ads?: Array<{ plannedStatus?: string; effectiveStatus?: string | null }>;
+    adSets?: Array<{ plannedStatus?: string; effectiveStatus?: string | null; providerEvidence?: { configuredStatus?: string | null; effectiveStatus?: string | null } }>;
+    creatives: Array<{ providerId?: string; leadFormProviderId?: string; revisionBindings: Array<{ placement: string; creativeId: string; revisionId: string | null; contentSha256?: string | null }>; providerEvidence?: { providerCreativeId?: string; leadFormProviderId?: string; feed: { placement?: string; creativeId?: string; revisionId?: string | null; contentSha256?: string | null; providerImageHash?: string }; story: { placement?: string; creativeId?: string; revisionId?: string | null; contentSha256?: string | null; providerImageHash?: string } } }>;
+    ads?: Array<{ plannedStatus?: string; effectiveStatus?: string | null; providerEvidence?: { configuredStatus?: string | null; effectiveStatus?: string | null } }>;
   };
 };
 

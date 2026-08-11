@@ -59,6 +59,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
           providerId: plan.reconciledObjects.campaignId ?? null,
           plannedStatus: plan.campaign.status,
           effectiveStatus: plan.reconciledObjects.objectStatuses?.campaign?.effectiveStatus ?? null,
+          providerEvidence: plan.reconciledObjects.pausedReadbackEvidence?.campaign ?? null,
         },
         leadForms: plan.leadForms.map((form) => ({
           localId: form.localId,
@@ -72,6 +73,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
           providerId: plan.reconciledObjects.adSetIds[adSet.localId] ?? null,
           plannedStatus: adSet.status,
           effectiveStatus: plan.reconciledObjects.objectStatuses?.adSets?.[adSet.localId]?.effectiveStatus ?? null,
+          providerEvidence: plan.reconciledObjects.pausedReadbackEvidence?.adSets?.[adSet.localId] ?? null,
         })),
         creatives: plan.creatives.map((creative) => ({
           localId: creative.localId,
@@ -85,12 +87,17 @@ export async function GET(request: NextRequest, context: RouteContext) {
             revisionId: binding.revisionId,
             contentSha256: binding.asset.contentSha256 ?? null,
           })),
+          // The provider evidence is intentionally source-free: it proves the
+          // Graph asset-feed/image-hash and Instant Form mappings without
+          // exposing image bytes, storage paths, or request bodies.
+          providerEvidence: plan.reconciledObjects.pausedReadbackEvidence?.creatives?.[creative.localId] ?? null,
         })),
         ads: plan.ads.map((ad) => ({
           localId: ad.localId,
           providerId: plan.reconciledObjects.adIds[ad.localId] ?? null,
           plannedStatus: ad.status,
           effectiveStatus: plan.reconciledObjects.objectStatuses?.ads?.[ad.localId]?.effectiveStatus ?? null,
+          providerEvidence: plan.reconciledObjects.pausedReadbackEvidence?.ads?.[ad.localId] ?? null,
         })),
       },
     });

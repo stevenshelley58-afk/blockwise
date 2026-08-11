@@ -1,7 +1,9 @@
 import {
   applyMetaPublishExecutionResult,
   createMetaExecutionAdapter,
+  deriveExactMetaActivationPayload,
   loadMetaPublishPlan,
+  refreshCurrentMetaPausedReadbackEvidence,
   updateMetaPublishPlanExecution,
   type MetaProviderLogEntry,
   type MetaPublishExecutionResult,
@@ -546,11 +548,7 @@ async function activateFreeCampaign(
     workspaceId: plan.workspaceId,
     planId: plan.planId,
     action: "activate",
-    payload: {
-      campaignId: plan.reconciledObjects.campaignId,
-      adSetIds: Object.values(plan.reconciledObjects.adSetIds),
-      adIds: Object.values(plan.reconciledObjects.adIds),
-    },
+    payload: deriveExactMetaActivationPayload(plan),
     mutationId,
   });
   const { error: createError } = await input.serviceSupabase
@@ -605,8 +603,21 @@ async function activateFreeCampaign(
     });
     throw new Error(message);
   }
+  const refreshed = await refreshCurrentMetaPausedReadbackEvidence(plan, {
+    accessToken: tokens.accessToken,
+    fetchImpl: input.fetchImpl,
+  });
+  const refreshedPlan: MetaPublishPlan = {
+    ...plan,
+    requestLog: refreshed.requestLog,
+    responseLog: refreshed.responseLog,
+    reconciledObjects: refreshed.reconciledObjects,
+    lastError: null,
+    updatedAt: new Date().toISOString(),
+  };
+  await updateMetaPublishPlanExecution(input.serviceSupabase, refreshedPlan);
   const result = await executeMetaPlanMutation({
-    mutation: applyingMutation,
+    mutation: { ...applyingMutation, payload: deriveExactMetaActivationPayload(refreshedPlan) },
     approvalStatus: "approved",
     accessToken: tokens.accessToken,
     fetchImpl: input.fetchImpl,
