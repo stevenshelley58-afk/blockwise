@@ -21,10 +21,10 @@
     "real estate"
   ],
   "sample": {
-    "imageSrc": "/adstudio-samples/meta/meta-feed-018-sample.png",
-    "thumbnailSrc": "/adstudio-samples/meta/meta-feed-018-sample.png",
+    "imageSrc": "/adstudio-samples/meta/meta-feed-018-sample-v2.png",
+    "thumbnailSrc": "/adstudio-samples/meta/meta-feed-018-sample-v2.png",
     "alt": "Sample buyer education ad with one interior image, a numbered headline, supporting line, and handle.",
-    "contentHash": "36447def29a0b8d0c4262f52299ca1b08401f2203a7f0d1d0278b2cd068c6a68",
+    "contentHash": "1c119a3dae9089ca621e947afe16c7f5307748d3ea956a826750e61d078fe94c",
     "generatedBy": "reference_clone"
   },
   "inputs": {
@@ -288,5 +288,8 @@
       ],
       "fontFile": "/fonts/adstudio/roboto-condensed-400.woff2"
     }
+  },
+  "qualityLock": {
+    "templateHash": "8b9fc7600b596e2dec4939c8ad915a5fb3250675edd60b35a5668157777fb6a2"
   }
 }
