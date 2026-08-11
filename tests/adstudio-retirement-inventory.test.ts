@@ -97,3 +97,25 @@ test("retirement inventory retains a canonical finished-clone canary and scopes 
   assert.deepEqual(manifest.storagePaths, ["workspace_1/adstudio/clones/legacy.png", "workspace_1/adstudio/clones/previous.png"]);
   assert.deepEqual(manifest.retainedCanonical, { planIds: ["plan_canary"], campaignIds: ["campaign_canary"] });
 });
+
+test("retirement inventory rejects workspace-artifact references outside the owning workspace", () => {
+  const tables = {
+    adstudio_campaigns: [{ id: "campaign_legacy", workspace_id: "workspace_1", template_snapshot_json: {} }],
+    adstudio_creatives: [{ id: "creative_legacy", workspace_id: "workspace_1", campaign_id: "campaign_legacy", preview_url: "workspace_2/adstudio/clones/not-owned.png" }],
+  };
+  const script = new URL("../scripts/adstudio/prepare-retirement.mjs", import.meta.url).href;
+  const harness = `
+    const tables = ${JSON.stringify(tables)};
+    globalThis.fetch = async (value) => {
+      const table = new URL(value).pathname.split("/").at(-1);
+      return { ok: true, status: 200, json: async () => tables[table] ?? [] };
+    };
+    await import(${JSON.stringify(script)});
+  `;
+
+  assert.throws(() => execFileSync(process.execPath, ["--input-type=module", "--eval", harness], {
+    env: { ...process.env, SUPABASE_URL: "https://example.test", SUPABASE_SERVICE_ROLE_KEY: "test" },
+    encoding: "utf8",
+    stdio: "pipe",
+  }), /Unclassified storage references/);
+});

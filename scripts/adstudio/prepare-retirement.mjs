@@ -172,8 +172,11 @@ const storageRefs = Object.values(scopedTables).flatMap((table) => table.flatMap
 ].filter((value) => typeof value === "string").map((value) => ({ value, workspaceId: row.workspace_id }))));
 const parsedStorageObjects = storageRefs.map(({ value, workspaceId }) => storageObjectFromReference(value, workspaceId));
 const unparsedStorageReferences = storageRefs.filter((reference, index) => !parsedStorageObjects[index]);
-if (unparsedStorageReferences.length) throw new Error(`Unclassified storage references: ${unparsedStorageReferences.slice(0, 5).join(", ")}`);
-const storageObjects = [...new Map(parsedStorageObjects.map((item) => [`${item.bucketId}:${item.name}`, item])).values()]
+if (unparsedStorageReferences.length) throw new Error(`Unclassified storage references: ${unparsedStorageReferences.slice(0, 5).map(({ value }) => value).join(", ")}`);
+const uniqueStorageObjects = [...new Map(parsedStorageObjects.map((item) => [`${item.bucketId}:${item.name}`, item])).values()];
+const storageObjects = uniqueStorageObjects.filter((item) => item.bucketId === "workspace-artifacts")
+  .sort((left, right) => `${left.bucketId}/${left.name}`.localeCompare(`${right.bucketId}/${right.name}`));
+const retainedNonWorkspaceStorageObjects = uniqueStorageObjects.filter((item) => item.bucketId !== "workspace-artifacts")
   .sort((left, right) => `${left.bucketId}/${left.name}`.localeCompare(`${right.bucketId}/${right.name}`));
 const storagePaths = storageObjects.map((item) => item.name);
 
@@ -192,24 +195,39 @@ function canvasStorageReferences(canvas) {
 }
 
 function storageObjectFromReference(value, workspaceId) {
+  let object;
   if (value.startsWith("/api/adstudio/media?")) {
     const name = new URL(value, "https://blockwise.invalid").searchParams.get("path");
-    return name ? { bucketId: "workspace-artifacts", name } : null;
+    object = name ? { bucketId: "workspace-artifacts", name } : null;
+  } else if (!value.startsWith("http")) {
+    object = { bucketId: "workspace-artifacts", name: value };
+  } else {
+    try {
+      const urlValue = new URL(value);
+      const marker = "/storage/v1/object/";
+      const index = urlValue.pathname.indexOf(marker);
+      if (index < 0) return null;
+      const pieces = urlValue.pathname.slice(index + marker.length).split("/");
+      if (["public", "authenticated", "sign"].includes(pieces[0])) pieces.shift();
+      const bucketId = pieces.shift();
+      const name = pieces.map(decodeURIComponent).join("/");
+      object = bucketId && name ? { bucketId, name } : null;
+    } catch {
+      return null;
+    }
   }
-  if (!value.startsWith("http")) return { bucketId: "workspace-artifacts", name: value };
-  try {
-    const urlValue = new URL(value);
-    const marker = "/storage/v1/object/";
-    const index = urlValue.pathname.indexOf(marker);
-    if (index < 0) return null;
-    const pieces = urlValue.pathname.slice(index + marker.length).split("/");
-    if (["public", "authenticated", "sign"].includes(pieces[0])) pieces.shift();
-    const bucketId = pieces.shift();
-    const name = pieces.map(decodeURIComponent).join("/");
-    return bucketId && name ? { bucketId, name } : null;
-  } catch {
-    return null;
-  }
+  if (!object) return null;
+  if (object.bucketId !== "workspace-artifacts") return object;
+  return isOwnedWorkspaceArtifactPath(workspaceId, object.name) ? object : null;
+}
+
+function isOwnedWorkspaceArtifactPath(workspaceId, name) {
+  return typeof workspaceId === "string"
+    && typeof name === "string"
+    && name.startsWith(`${workspaceId}/`)
+    && !name.startsWith("/")
+    && !name.includes("..")
+    && !/[\0-\x1f\x7f]/.test(name);
 }
 
 const externalObjects = plans.flatMap((plan) => {
@@ -237,6 +255,7 @@ console.log(JSON.stringify({
   tables: scopedTables,
   storagePaths,
   storageObjects,
+  retainedNonWorkspaceStorageObjects,
   retainedExcludedTables: ["workspaces", "provider_connections", "private.provider_token_vault", "audit_logs", "billing_events", "stripe_webhook_events", "meta_free_live_claims", "meta_free_live_claim_mutations", "adstudio_brand_assets", "adstudio_brand_kits"],
   dependencyDeletionOrder: ["job_queue", "lead_events", "lead_delivery_attempts", "lead_dedupe_records", "lead_source_attribution", "meta_leads", "leads", "adstudio_provider_attempt_outbox", "adstudio_provider_run_attempts", "adstudio_provider_runs", "adstudio_generation_locks", "adstudio_creative_revision_mutations", "adstudio_creative_revisions", "adstudio_creative_jobs", "adstudio_job_runs", "adstudio_creative_objects", "adstudio_creatives", "adstudio_campaign_variants", "meta_publish_plan_mutations", "approval_requests", "meta_publish_plans", "adstudio_platform_copy", "adstudio_compliance_reports", "adstudio_clone_candidate_audits", "adstudio_template_review_overrides", "adstudio_exports", "adstudio_campaigns"],
   providerDeletionOrder: ["ad", "adset", "creative", "campaign", "lead_form"],
