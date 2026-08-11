@@ -119,7 +119,8 @@ test("every application creative writer crosses an authenticated workspace bound
   assert.match(draftRoute, /creatives: existing\.creatives/);
   assert.match(draftRoute, /\{ \.\.\.submittedPack, creatives: \[\] \}/);
   assert.match(draftRoute, /persistAdStudioCampaignPack\(\s*createSupabaseServiceClient\(\)/);
-  assert.match(publishRoute, /persistAdStudioCampaignPack\(serviceSupabase, basePack/);
+  assert.doesNotMatch(publishRoute, /persistAdStudioCampaignPack/);
+  assert.match(publishRoute, /resolveAuthorizedAdStudioPublishPack/);
 
   assert.ok(layersRoute.indexOf("requireAdStudioRequest(request)") < layersRoute.indexOf("createSupabaseServiceClient()"));
   assert.match(layersRoute, /\.eq\("workspace_id", context\.access\.workspaceId\)\s*\.eq\("id", id\)/);

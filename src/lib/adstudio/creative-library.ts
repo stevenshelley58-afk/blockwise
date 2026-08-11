@@ -115,11 +115,12 @@ export function buildAdStudioLibrarySelectionPack(
     if (seenVariantIds.has(variant.variantId)) continue;
     seenVariantIds.add(variant.variantId);
 
-    variants.push(variant);
-    creatives.push(creative);
+    variants.push({ ...variant, campaignId: basePack.campaign.campaignId });
+    creatives.push({ ...creative, campaignId: basePack.campaign.campaignId });
     copyPacks.push(sharedLeadForm
       ? {
           ...copyPack,
+          campaignId: basePack.campaign.campaignId,
           meta: {
             ...copyPack.meta,
             leadForm: {
@@ -129,7 +130,7 @@ export function buildAdStudioLibrarySelectionPack(
             },
           },
         }
-      : copyPack);
+      : { ...copyPack, campaignId: basePack.campaign.campaignId });
   }
 
   if (variants.length !== selections.length) {

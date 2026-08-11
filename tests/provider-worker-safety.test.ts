@@ -19,6 +19,42 @@ test("double-publish reuses an active plan and avoids duplicate queue dispatch",
   assert.match(source, /reconciledObjects: existingPlan\.reconciledObjects/);
 });
 
+test("publish reloads an authorized route campaign and never trusts or persists a client pack", () => {
+  const route = readFileSync(publishRoute, "utf8");
+  const customerFlow = readFileSync("src/components/adstudio/ad-studio-customer-flow.tsx", "utf8");
+  const authorizedIndex = route.indexOf("await resolveAuthorizedAdStudioPublishPack");
+  const serviceIndex = route.indexOf("createSupabaseServiceClient()");
+  const planIndex = route.indexOf("await createMetaPlan");
+
+  assert.doesNotMatch(route, /campaignPack\?: AdStudioCampaignPack/);
+  assert.doesNotMatch(route, /body\.campaignPack/);
+  assert.doesNotMatch(route, /persistAdStudioCampaignPack/);
+  assert.match(route, /campaignId: id/);
+  assert.match(route, /workspaceId: access\.access\.workspaceId/);
+  assert.match(route, /loadAdStudioCampaignPack\(\s*access\.supabase/);
+  assert.ok(authorizedIndex > -1 && authorizedIndex < serviceIndex && serviceIndex < planIndex);
+  assert.match(route, /if \(!authorizedPack\.ok\)[\s\S]*return NextResponse\.json/);
+  assert.doesNotMatch(customerFlow, /campaignPack: publishPack/);
+  assert.match(customerFlow, /leadForm: \{[\s\S]*headline: headline\.trim\(\)[\s\S]*thankYouScreen:/);
+});
+
+test("publish dry-run performs no approval, plan, queue, or provider mutation", () => {
+  const route = readFileSync(publishRoute, "utf8");
+  const dryReturnIndex = route.indexOf("if (!input.persist)");
+  const approvalTargetIndex = route.indexOf("if (approval.id)", dryReturnIndex);
+  const planPersistIndex = route.indexOf("await persistMetaPublishPlan", dryReturnIndex);
+
+  assert.equal(route.match(/if \(existingMetaCampaignId\)/g)?.length, 2);
+  assert.match(route, /reconcileMetaConnectionStatus\(serviceSupabase, metaConnection, !body\.dryRun\)/);
+  assert.match(route, /if \(persistStatus && reconciled !== connection\.status\)/);
+  assert.match(route, /requestApproval: !body\.dryRun/);
+  assert.match(route, /persist: !body\.dryRun/);
+  assert.ok(dryReturnIndex > -1);
+  assert.ok(dryReturnIndex < approvalTargetIndex);
+  assert.ok(dryReturnIndex < planPersistIndex);
+  assert.match(route, /!body\.dryRun &&[\s\S]*writesEnabled/);
+});
+
 test("existing campaigns require a declared audience and cannot use free auto-activation", () => {
   const route = readFileSync(publishRoute, "utf8");
   const panel = readFileSync("src/components/adstudio/ad-studio-customer-flow.tsx", "utf8");

@@ -3,11 +3,12 @@ import { randomUUID } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { requireAdStudioRequest } from "@/lib/adstudio/http";
+import type { AdStudioCreativeLibrarySelection } from "@/lib/adstudio/creative-library";
+import { loadAdStudioCampaignPack } from "@/lib/adstudio/persistence";
 import {
-  buildAdStudioLibrarySelectionPack,
-  type AdStudioCreativeLibrarySelection,
-} from "@/lib/adstudio/creative-library";
-import { loadAdStudioCampaignPack, persistAdStudioCampaignPack } from "@/lib/adstudio/persistence";
+  parseAdStudioPublishLeadFormPatch,
+  resolveAuthorizedAdStudioPublishPack,
+} from "@/lib/adstudio/publish-pack";
 import { findLeadFormViolations, findPackCopyLimitViolations } from "@/lib/adstudio/readiness";
 import type { AdStudioCampaignPack } from "@/lib/adstudio";
 import type { ApprovalStatus, ProviderConnectionStatus } from "@/lib/publishing/readiness";
@@ -55,7 +56,7 @@ type RouteContext = {
 };
 
 type PublishBody = {
-  campaignPack?: AdStudioCampaignPack;
+  leadForm?: unknown;
   dryRun?: boolean;
   adapter?: MetaExecutionAdapter;
   metaSetup?: Partial<MetaConnectionSetup>;
@@ -94,6 +95,7 @@ function providerWritesEnabled() {
 async function reconcileMetaConnectionStatus(
   serviceSupabase: ReturnType<typeof createSupabaseServiceClient>,
   connection: ProviderConnectionMetadata,
+  persistStatus: boolean,
 ): Promise<ProviderConnectionStatus> {
   try {
     const tokens = await loadStoredProviderTokens(serviceSupabase, connection.id);
@@ -107,7 +109,7 @@ async function reconcileMetaConnectionStatus(
     ).length === 0;
     const reconciled: ProviderConnectionStatus = tokenUsable && setupClean ? "connected" : "needs_attention";
 
-    if (reconciled !== connection.status) {
+    if (persistStatus && reconciled !== connection.status) {
       await serviceSupabase
         .from("provider_connections")
         .update({
@@ -155,11 +157,11 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
   const body = (await request.json().catch(() => null)) as PublishBody | null;
 
-  if (!body?.campaignPack) {
-    return NextResponse.json({ error: "campaignPack is required." }, { status: 400 });
+  if (!body) return NextResponse.json({ error: "Publish request is required." }, { status: 400 });
+  const leadFormPatch = parseAdStudioPublishLeadFormPatch(body.leadForm);
+  if (!leadFormPatch.ok) {
+    return NextResponse.json({ error: leadFormPatch.error }, { status: 400 });
   }
-
-  const basePack = body.campaignPack;
   const existingMetaCampaignId = body.existingMetaCampaignId?.trim() || null;
   if (existingMetaCampaignId && !hasExplicitMetaPublishAudience(body.controls)) {
     return NextResponse.json(
@@ -169,39 +171,21 @@ export async function POST(request: NextRequest, context: RouteContext) {
   }
   const librarySelections = normalizeLibrarySelections(body.librarySelections);
   if (librarySelections instanceof NextResponse) return librarySelections;
-
-  const sourcePacks = librarySelections.length > 0
-    ? await Promise.all(
-        [...new Set(librarySelections.map((selection) => selection.campaignId))]
-          .map((campaignId) => loadAdStudioCampaignPack(
-            access.supabase,
-            access.access.workspaceId,
-            campaignId,
-          )),
-      )
-    : [];
-  if (sourcePacks.some((pack) => pack === null)) {
-    return NextResponse.json(
-      { error: "One of the selected ads is no longer available. Refresh the page and choose it again." },
-      { status: 422 },
-    );
+  const authorizedPack = await resolveAuthorizedAdStudioPublishPack({
+    workspaceId: access.access.workspaceId,
+    campaignId: id,
+    leadFormPatch: leadFormPatch.value,
+    librarySelections,
+    loadCampaign: (workspaceId, campaignId) => loadAdStudioCampaignPack(
+      access.supabase,
+      workspaceId,
+      campaignId,
+    ),
+  });
+  if (!authorizedPack.ok) {
+    return NextResponse.json({ error: authorizedPack.error }, { status: authorizedPack.status });
   }
-
-  let pack = basePack;
-  if (librarySelections.length > 0) {
-    try {
-      pack = buildAdStudioLibrarySelectionPack(
-        basePack,
-        sourcePacks.filter((sourcePack): sourcePack is AdStudioCampaignPack => sourcePack !== null),
-        librarySelections,
-      );
-    } catch (error) {
-      return NextResponse.json(
-        { error: error instanceof Error ? error.message : "The selected ads could not be prepared." },
-        { status: 422 },
-      );
-    }
-  }
+  const pack = authorizedPack.pack;
 
   // Over-limit copy gets rejected or truncated by Meta — block, don't warn.
   const copyViolations = findPackCopyLimitViolations(pack);
@@ -221,11 +205,6 @@ export async function POST(request: NextRequest, context: RouteContext) {
   }
 
   const serviceSupabase = createSupabaseServiceClient();
-  const persistResult = await persistAdStudioCampaignPack(serviceSupabase, basePack, access.access.userId);
-
-  if (persistResult.error) {
-    return NextResponse.json({ error: persistResult.error.message }, { status: 500 });
-  }
 
   if (existingMetaCampaignId) {
     const { data: workspaceBilling, error: workspaceBillingError } = await serviceSupabase
@@ -284,7 +263,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
   // Reconcile the Meta connection from live health/setup rather than the stale
   // stored status (see reconcileMetaConnectionStatus).
   const metaConnectionStatus = metaConnection
-    ? await reconcileMetaConnectionStatus(serviceSupabase, metaConnection)
+    ? await reconcileMetaConnectionStatus(serviceSupabase, metaConnection, !body.dryRun)
     : ("not_connected" as ProviderConnectionStatus);
   const providerStatuses = {
     ...(firstCopyPack?.meta ? { meta: metaConnectionStatus } : {}),
@@ -301,7 +280,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
   });
   const writesEnabled = providerWritesEnabled();
   const metaPublishPlanResult = metaConnection
-    ? await createAndPersistMetaPlan({
+    ? await createMetaPlan({
         serviceSupabase,
         userId: access.access.userId,
         workspaceId: access.access.workspaceId,
@@ -312,6 +291,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
         setupPatch: body.metaSetup,
         controls: body.controls,
         requestApproval: !body.dryRun,
+        persist: !body.dryRun,
         variantIds: librarySelections.length > 0
           ? pack.variants.map((variant) => variant.variantId)
           : body.variantIds,
@@ -456,7 +436,7 @@ function normalizeLibrarySelections(
   return normalized;
 }
 
-async function createAndPersistMetaPlan(input: {
+async function createMetaPlan(input: {
   serviceSupabase: ReturnType<typeof createSupabaseServiceClient>;
   userId: string;
   workspaceId: string;
@@ -467,6 +447,7 @@ async function createAndPersistMetaPlan(input: {
   setupPatch?: Partial<MetaConnectionSetup>;
   controls?: MetaPublishControls;
   requestApproval: boolean;
+  persist: boolean;
   variantIds?: string[];
   existingMetaCampaignId?: string | null;
   existingMetaCampaignBudgetMode?: "campaign" | "adset";
@@ -527,6 +508,19 @@ async function createAndPersistMetaPlan(input: {
     existingMetaCampaignBudgetMode: input.existingMetaCampaignBudgetMode,
   });
 
+  const validatingPlan: MetaPublishPlan = {
+    ...plan,
+    approvalRequestId: approval.id,
+    status: "validating",
+    updatedAt: new Date().toISOString(),
+  };
+  // Dry-run is read-only: immutable revision preparation and readiness checks
+  // may read current state, but no approval, plan, provider, or queue mutation
+  // occurs. A real publish takes the idempotent persistence path below.
+  if (!input.persist) {
+    return { plan: validatingPlan, approval, reusedActivePlan: false };
+  }
+
   if (approval.id) {
     const { error } = await input.serviceSupabase
       .from("approval_requests")
@@ -541,12 +535,7 @@ async function createAndPersistMetaPlan(input: {
 
   // The POST handler moves this validation record to queued only after all
   // readiness checks pass and the durable job enqueue succeeds.
-  let persistedPlan: MetaPublishPlan = {
-    ...plan,
-    approvalRequestId: approval.id,
-    status: "validating",
-    updatedAt: new Date().toISOString(),
-  };
+  let persistedPlan = validatingPlan;
   const existingPlan = await loadMetaPublishPlanByIdempotencyKey(input.serviceSupabase, {
     workspaceId: input.workspaceId,
     idempotencyKey: persistedPlan.idempotencyKey,

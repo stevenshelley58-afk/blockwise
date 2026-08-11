@@ -98,5 +98,8 @@ test("library selections combine finished ads under the configured campaign and 
   assert.equal(combined.variants.length, 2);
   assert.equal(combined.creatives.length, 2);
   assert.equal(combined.creatives.every((creative) => creative.format === "4:5"), true);
+  assert.equal(combined.variants.every((variant) => variant.campaignId === basePack.campaign.campaignId), true);
+  assert.equal(combined.creatives.every((creative) => creative.campaignId === basePack.campaign.campaignId), true);
+  assert.equal(combined.copyPacks.every((copyPack) => copyPack.campaignId === basePack.campaign.campaignId), true);
   assert.equal(combined.copyPacks.every((copyPack) => copyPack.meta.leadForm.headline === "Shared campaign form"), true);
 });

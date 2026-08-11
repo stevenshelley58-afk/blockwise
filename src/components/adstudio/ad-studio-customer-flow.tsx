@@ -437,30 +437,23 @@ function CompactPublish({ campaignId, campaignPack, brandKit, destinationUrl, on
     if (!ready) return;
     setPublishing(true); setPublishError(""); setPublished(false);
     const start = new Date(); const end = new Date(start); end.setDate(end.getDate() + 7);
-    const publishPack: AdStudioCampaignPack = {
-      ...campaignPack,
-      copyPacks: campaignPack.copyPacks.map((item) => ({
-        ...item,
-        meta: {
-          ...item.meta,
+    try {
+      const response = await fetch(`/api/adstudio/export-packages/${campaignId}/publish`, {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({
           leadForm: {
-            ...item.meta.leadForm,
             headline: headline.trim(),
             questions: normalizedQuestions,
             thankYouScreen: { title: thankYouTitle.trim(), body: thankYouBody.trim() },
           },
-        },
-      })),
-    };
-    try {
-      const response = await fetch(`/api/adstudio/export-packages/${campaignId}/publish`, {
-        method: "POST", headers: { "content-type": "application/json" },
-        body: JSON.stringify({ campaignPack: publishPack, dryRun: false, controls: {
-          dailyBudgetMinorUnits: Math.round(dailyBudget * 100), destinationUrl,
-          geo: { type: "cities", locations: targetSuburbs, includeSurroundingSuburbs: surrounding },
-          schedule: { startTime: start.toISOString(), endTime: end.toISOString() },
-          placements: { publisherPlatforms: ["facebook", "instagram"], facebookPositions: [], instagramPositions: [] },
-        } }),
+          dryRun: false,
+          controls: {
+            dailyBudgetMinorUnits: Math.round(dailyBudget * 100), destinationUrl,
+            geo: { type: "cities", locations: targetSuburbs, includeSurroundingSuburbs: surrounding },
+            schedule: { startTime: start.toISOString(), endTime: end.toISOString() },
+            placements: { publisherPlatforms: ["facebook", "instagram"], facebookPositions: [], instagramPositions: [] },
+          },
+        }),
       });
       const body = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(body.error ?? "Meta could not prepare the campaign.");
