@@ -156,6 +156,22 @@ test("candidate adapters retain exact runtime version, price, currency, and bill
   });
 });
 
+test("a missing OpenAI image credential is unbilled and allows a configured Google fallback", async () => {
+  const provider = createImageProviderForCandidate(candidate("openai", "gpt-image-2"), { env: {} });
+  await assert.rejects(
+    provider.generate({
+      prompt: "clone",
+      referenceAssets: ["data:image/png;base64,AA=="],
+      aspectRatio: "4:5",
+      stylePreset: "test",
+      requiresReferenceAssets: true,
+    }),
+    (error: unknown) => error instanceof ProviderRequestError
+      && error.requestSubmitted === false
+      && error.fallbackEligible === true,
+  );
+});
+
 test("candidate adapters reject missing or invalid explicit pricing before dispatch", () => {
   assert.throws(
     () => createImageProviderForCandidate({ ...candidate("openai", "gpt-image-2"), imageUsdPerUnit: -1 }),

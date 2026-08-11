@@ -278,6 +278,8 @@ export async function generateFinalCloneRender(input: {
   const review = dependencies.review ?? reviewCloneCandidate;
   let request = input.request;
   let lastReview: AdStudioCloneQualityReview | undefined;
+  let nextProviderIndex = 0;
+  let generatedCandidateCount = 0;
 
   for (let attempt = 1; attempt <= MAX_RUNTIME_CLONE_CANDIDATES; attempt += 1) {
     const candidateRequest = {
@@ -291,10 +293,12 @@ export async function generateFinalCloneRender(input: {
     // candidates instead of paying the same model to repeat the same failure.
     // The first provider remains available behind that fallback for an actual
     // outage, and every candidate still uses the same canonical clone request.
-    const [primaryProvider, ...fallbackProviders] = input.providers;
-    const candidateProviders = attempt === 1 || !primaryProvider || fallbackProviders.length === 0
-      ? input.providers
-      : [...fallbackProviders, primaryProvider];
+    // A QA rejection advances the intended paid tier exactly once: Flash,
+    // then Pro, then GPT Image. Within each candidate, the remaining ordered
+    // providers still handle genuine provider/transport failures and retain
+    // their independent accounting records.
+    const candidateProviders = input.providers.length === 0 ? [] : input.providers.slice(nextProviderIndex);
+    if (input.providers.length > 0 && candidateProviders.length === 0) break;
     const generated = await generate({
       providers: candidateProviders,
       request: candidateRequest,
@@ -304,6 +308,22 @@ export async function generateFinalCloneRender(input: {
       attempt,
       modelProfile: input.modelProfile,
     });
+    generatedCandidateCount += 1;
+    // Transport fallback may mean a later tier actually produced the image.
+    // Advance from that real successful provider/model, so a QA-rejected GPT
+    // candidate is terminal and can never be paid for again.
+    if (input.providers.length > 0) {
+      const successfulOffset = candidateProviders.findIndex((provider) =>
+        provider.providerName === generated.provider
+        && provider.accounting?.model === generated.model,
+      );
+      const providerNameOffset = candidateProviders.findIndex((provider) =>
+        provider.providerName === generated.provider,
+      );
+      nextProviderIndex += successfulOffset >= 0
+        ? successfulOffset
+        : providerNameOffset >= 0 ? providerNameOffset : 0;
+    }
     const exactAssetUrl = await normalize(generated.assetUrl, input.format);
     // Persist the normalized paid image before vision QA. A malformed QA
     // response must never make a billable candidate disappear from evidence.
@@ -371,11 +391,15 @@ export async function generateFinalCloneRender(input: {
       return { ...generated, assetUrl: exactAssetUrl, attempt, qualityReview: lastReview };
     }
     if (attempt === MAX_RUNTIME_CLONE_CANDIDATES) break;
+    if (input.providers.length > 0) {
+      nextProviderIndex += 1;
+      if (nextProviderIndex >= input.providers.length) break;
+    }
     const correction = cloneCorrectionForNextCandidate(lastReview);
     request = { ...input.buildCorrectedRequest(correction), signal: input.signal };
   }
   throw new TemplateCampaignQaError(
-    `The ad did not reach ${input.format} likeness quality after ${MAX_RUNTIME_CLONE_CANDIDATES} candidates.`,
+    `The ad did not reach ${input.format} likeness quality after ${generatedCandidateCount} candidate(s).`,
     lastReview,
   );
 }

@@ -232,12 +232,18 @@ export async function POST(request: NextRequest) {
     // from the encrypted service vault. No secret crosses the request boundary
     // or enters VPS configuration.
     const funnelService = createSupabaseServiceClient();
-    await ensureRuntimeProviderToken({
+    const runtimeImageCredentials = [
+      { provider: "google" as const, accessToken: process.env.GOOGLE_AI_API_KEY },
+      { provider: "openai" as const, accessToken: process.env.OPENAI_API_KEY },
+    ].filter((credential) => Boolean(credential.accessToken?.trim()));
+    if (runtimeImageCredentials.length === 0) {
+      throw new Error("No image-generation runtime credential is configured.");
+    }
+    await Promise.all(runtimeImageCredentials.map((credential) => ensureRuntimeProviderToken({
       serviceSupabase: funnelService,
-      provider: "openai",
-      accessToken: process.env.OPENAI_API_KEY,
+      ...credential,
       allowWrite: process.env.VERCEL_ENV === "production",
-    });
+    })));
     const creditGate = await reserveAdStudioGenerationCredits({
       supabase: context.supabase,
       workspaceId: context.access.workspaceId,

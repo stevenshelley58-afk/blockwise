@@ -169,7 +169,7 @@ test("a failed candidate feeds only its image-model correction through the same 
   assert.deepEqual(generatedPrompts, ["clone", "clone | correction: Restore the exact logo footprint."]);
 });
 
-test("a visual QA failure gives the corrected clone to the independent fallback model", async () => {
+test("a visual QA failure advances the corrected clone to the next paid model", async () => {
   const providerOrder: string[][] = [];
   const result = await generateFinalCloneRender({
     format: "4:5",
@@ -197,7 +197,161 @@ test("a visual QA failure gives the corrected clone to the independent fallback 
   });
 
   assert.equal(result.attempt, 2);
-  assert.deepEqual(providerOrder, [["google", "openai"], ["openai", "google"]]);
+  assert.deepEqual(providerOrder, [["google", "openai"], ["openai"]]);
+});
+
+test("quality rejections advance Flash to Pro to GPT Image without releasing a bad candidate", async () => {
+  const providerOrder: string[][] = [];
+  const result = await generateFinalCloneRender({
+    format: "4:5",
+    templateId: "template-1",
+    providers: [provider("gemini-flash"), provider("gemini-pro"), provider("gpt-image")],
+    request: request(),
+    referenceImage: "approved-sample",
+    expectedCopy,
+    expectedAssetKeys,
+    buildCorrectedRequest: (correction) => request(`clone | correction: ${correction}`),
+    workspaceId: "workspace-1",
+    userId: "user-1",
+    correlationId: "run-three-tier",
+  }, {
+    generate: async (input) => {
+      providerOrder.push(input.providers.map((candidate) => candidate.providerName));
+      return { assetUrl: `candidate-${providerOrder.length}`, model: "image", provider: "test", providerAttemptCount: 1 };
+    },
+    normalize: async (assetUrl) => assetUrl,
+    review: async (input) => review({
+      attempt: input.attempt,
+      adSystemLikenessScore: input.attempt < 3 ? 9.4 : 9.6,
+      suggestedCorrection: input.attempt < 3 ? "Restore the approved geometry." : "",
+    }),
+  });
+
+  assert.equal(result.attempt, 3);
+  assert.deepEqual(providerOrder, [
+    ["gemini-flash", "gemini-pro", "gpt-image"],
+    ["gemini-pro", "gpt-image"],
+    ["gpt-image"],
+  ]);
+});
+
+test("a missing later credential cannot cycle a quality-rejected provider", async () => {
+  const providerOrder: string[][] = [];
+  await assert.rejects(() => generateFinalCloneRender({
+    format: "4:5",
+    templateId: "template-1",
+    providers: [provider("gemini-flash"), provider("gemini-pro")],
+    request: request(),
+    referenceImage: "approved-sample",
+    expectedCopy,
+    expectedAssetKeys,
+    buildCorrectedRequest: (correction) => request(`clone | correction: ${correction}`),
+    workspaceId: "workspace-1",
+    userId: "user-1",
+    correlationId: "run-no-cycle",
+  }, {
+    generate: async (input) => {
+      providerOrder.push(input.providers.map((candidate) => candidate.providerName));
+      return { assetUrl: `candidate-${providerOrder.length}`, model: "image", provider: "test", providerAttemptCount: 1 };
+    },
+    normalize: async (assetUrl) => assetUrl,
+    review: async (input) => review({
+      attempt: input.attempt,
+      adSystemLikenessScore: 9.4,
+      suggestedCorrection: "Restore the approved geometry.",
+    }),
+  }), TemplateCampaignQaError);
+  assert.deepEqual(providerOrder, [["gemini-flash", "gemini-pro"], ["gemini-pro"]]);
+});
+
+test("Google preflight failures followed by a QA-rejected GPT candidate pay GPT only once", async () => {
+  let gptPaidCalls = 0;
+  let reviewCalls = 0;
+  const accountedProvider = (
+    providerName: "google" | "openai",
+    model: string,
+    generate: ImageProviderAdapter["generate"],
+  ): ImageProviderAdapter => ({
+    providerName,
+    providerType: "image_generation",
+    capabilities: { imageToImage: true, multiReference: true },
+    accounting: {
+      model,
+      pricing: {
+        inputUsdPerMillionTokens: 0,
+        outputUsdPerMillionTokens: 0,
+        imageUsdPerUnit: 0.1,
+      },
+    },
+    generate,
+  });
+  const unavailableGoogle = (model: string) => accountedProvider("google", model, async () => {
+    throw new ProviderRequestError("GOOGLE_AI_API_KEY is not configured.", {
+      requestSubmitted: false,
+      retryable: false,
+      fallbackEligible: true,
+    });
+  });
+  const gpt = accountedProvider("openai", "gpt-image-2", async () => {
+    gptPaidCalls += 1;
+    return {
+      assetUrl: "data:image/png;base64,R1BU",
+      seed: 1,
+      model: "gpt-image-2",
+      usage: { imageUnits: 1, complete: true },
+      providerMetadata: {},
+    };
+  });
+
+  await assert.rejects(() => generateFinalCloneRender({
+    format: "4:5",
+    templateId: "template-1",
+    providers: [
+      unavailableGoogle("gemini-3.1-flash-image"),
+      unavailableGoogle("gemini-3-pro-image"),
+      gpt,
+    ],
+    request: request(),
+    referenceImage: "approved-sample",
+    expectedCopy,
+    expectedAssetKeys,
+    buildCorrectedRequest: (correction) => request(`clone | correction: ${correction}`),
+    workspaceId: "workspace-1",
+    userId: "user-1",
+    correlationId: "run-google-down-gpt-rejected",
+  }, {
+    generate: async (generationInput) => {
+      let providerAttemptCount = 0;
+      for (const candidate of generationInput.providers) {
+        providerAttemptCount += 1;
+        try {
+          const output = await candidate.generate(generationInput.request);
+          return {
+            assetUrl: output.assetUrl,
+            model: output.model,
+            provider: candidate.providerName,
+            providerAttemptCount,
+          };
+        } catch (error) {
+          if (error instanceof ProviderRequestError && error.fallbackEligible) continue;
+          throw error;
+        }
+      }
+      throw new Error("No configured image provider succeeded.");
+    },
+    normalize: async (assetUrl) => assetUrl,
+    review: async (input) => {
+      reviewCalls += 1;
+      return review({
+        attempt: input.attempt,
+        adSystemLikenessScore: 9.4,
+        suggestedCorrection: "Restore the approved geometry.",
+      });
+    },
+  }), TemplateCampaignQaError);
+
+  assert.equal(gptPaidCalls, 1);
+  assert.equal(reviewCalls, 1);
 });
 
 test("no below-threshold candidate is released after the bounded quality loop", async () => {
