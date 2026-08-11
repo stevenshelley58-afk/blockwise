@@ -141,6 +141,7 @@ export function InPlaceAdEditor({
   creativeRef.current = creative;
   const [canScrollBackward, setCanScrollBackward] = useState(false);
   const [canScrollForward, setCanScrollForward] = useState(false);
+  const [loadedPlate, setLoadedPlate] = useState<string | null>(null);
 
   const cloneObject = creative.canvas.objects[0];
   const src = cloneObject?.content ?? cloneObject?.assetId ?? "";
@@ -162,6 +163,7 @@ export function InPlaceAdEditor({
     : undefined;
   const selectedTextInstantReady = Boolean(
     layersReady
+    && loadedPlate === textLayers?.plate
     && selectedTextStyle?.mode === "live"
     && loadedFontIds.has(selectedTextStyle.fontId),
   );
@@ -252,10 +254,22 @@ export function InPlaceAdEditor({
   // Keep the plate decoded and ready so text patches render synchronously.
   useEffect(() => {
     const plate = textLayers?.plate;
-    if (!plate || plateImagesRef.current.has(plate)) return;
+    if (!plate) {
+      setLoadedPlate(null);
+      return;
+    }
+    if (plateImagesRef.current.has(plate)) {
+      setLoadedPlate(plate);
+      return;
+    }
+    setLoadedPlate(null);
     let cancelled = false;
     void loadPatchImage(plate)
-      .then((image) => { if (!cancelled) plateImagesRef.current.set(plate, image); })
+      .then((image) => {
+        if (cancelled) return;
+        plateImagesRef.current.set(plate, image);
+        setLoadedPlate(plate);
+      })
       .catch(() => undefined);
     return () => { cancelled = true; };
   }, [textLayers?.plate]);
