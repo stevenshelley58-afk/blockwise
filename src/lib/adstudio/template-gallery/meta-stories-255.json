@@ -23,7 +23,7 @@
     "imageSrc": "/adstudio-samples/meta/meta-stories-255-sample.png",
     "thumbnailSrc": "/adstudio-samples/meta/meta-stories-255-sample.png",
     "alt": "Generated sample for Market Report Snapshot.",
-    "contentHash": "b00dcb0712750a4925e5832264e0ed3e8911d5532119e69273b0efd6e496e392",
+    "contentHash": "e307934bf6d3d68d8d86ec1b9963895832020caae74aa36d4aa921b2047f07e2",
     "generatedBy": "reference_clone"
   },
   "inputs": {
@@ -272,5 +272,8 @@
       "detectionScore": 1,
       "fontFile": "/fonts/adstudio/merriweather-800.woff2"
     }
+  },
+  "qualityLock": {
+    "templateHash": "ac591273a5712e0fadbfdf49029238fa2a92792d2d269a922c46e85082e594d6"
   }
 }

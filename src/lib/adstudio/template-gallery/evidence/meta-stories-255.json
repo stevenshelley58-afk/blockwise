@@ -1,0 +1,228 @@
+{
+  "schemaVersion": 2,
+  "templateId": "meta-stories-255",
+  "templateHash": "ac591273a5712e0fadbfdf49029238fa2a92792d2d269a922c46e85082e594d6",
+  "sampleHash": "e307934bf6d3d68d8d86ec1b9963895832020caae74aa36d4aa921b2047f07e2",
+  "rubricVersion": "adstudio-subject-invariant-clone-v1",
+  "thresholds": {
+    "adSystemLikeness": 9.5,
+    "standaloneAdQuality": 9
+  },
+  "qualifiedAt": "2026-08-11T04:58:09.000Z",
+  "sample": {
+    "stage": "gallery_sample",
+    "requestHash": "5c7dddc37310c9c9d5ed9c6a70be43156c7b22a754878e0feb2c42fe28015130",
+    "referenceHash": "64fdbd93d4d5f3e7fc6d062762fd50b9dd8ece96ab85e3c011a28346072fda71",
+    "references": [
+      {
+        "index": 1,
+        "key": "source_ad",
+        "role": "source",
+        "contentHash": "64fdbd93d4d5f3e7fc6d062762fd50b9dd8ece96ab85e3c011a28346072fda71"
+      },
+      {
+        "index": 2,
+        "key": "property_image",
+        "role": "replacement_asset",
+        "contentHash": "3888f8116b8a7d3b29d7b8547b3126408290a4b314ea7a48eb8500a1c0ccbd35"
+      },
+      {
+        "index": 3,
+        "key": "agent_photo",
+        "role": "replacement_asset",
+        "contentHash": "a3528cb9b3d63afd9634d8d163fb98659c0eabcdce3931f698efac0cd54c3cb0"
+      }
+    ],
+    "copy": {
+      "time_on_market": "9 DAYS",
+      "average_price": "$742,000",
+      "new_listings": "126",
+      "sold_listings": "38",
+      "social_handle": "@harbourline.example",
+      "agent_name": "Elena Marsh"
+    },
+    "outputHash": "e307934bf6d3d68d8d86ec1b9963895832020caae74aa36d4aa921b2047f07e2",
+    "executionTransport": "google_image_api",
+    "reviewedAt": "2026-08-11T04:55:17Z",
+    "review": {
+      "schemaVersion": 1,
+      "rubricVersion": "adstudio-subject-invariant-clone-v1",
+      "templateId": "meta-stories-255",
+      "requestHash": "5c7dddc37310c9c9d5ed9c6a70be43156c7b22a754878e0feb2c42fe28015130",
+      "candidateHash": "e307934bf6d3d68d8d86ec1b9963895832020caae74aa36d4aa921b2047f07e2",
+      "reviewer": {
+        "provider": "google",
+        "model": "gemini-3.6-flash"
+      },
+      "adSystemLikenessScore": 9.7,
+      "standaloneAdQualityScore": 9.6,
+      "excludedContentInfluencedScore": false,
+      "copyChecks": [
+        {
+          "key": "time_on_market",
+          "expected": "9 DAYS",
+          "observed": "9 DAYS",
+          "exact": true
+        },
+        {
+          "key": "average_price",
+          "expected": "$742,000",
+          "observed": "$742,000",
+          "exact": true
+        },
+        {
+          "key": "new_listings",
+          "expected": "126",
+          "observed": "126",
+          "exact": true
+        },
+        {
+          "key": "sold_listings",
+          "expected": "38",
+          "observed": "38",
+          "exact": true
+        },
+        {
+          "key": "social_handle",
+          "expected": "@harbourline.example",
+          "observed": "@harbourline.example",
+          "exact": true
+        },
+        {
+          "key": "agent_name",
+          "expected": "Elena Marsh",
+          "observed": "Elena Marsh",
+          "exact": true
+        }
+      ],
+      "assetChecks": [
+        {
+          "key": "property_image",
+          "used": true,
+          "faithful": true,
+          "notes": "The supplied exterior is cleanly placed in the fixed upper hero slot."
+        },
+        {
+          "key": "agent_photo",
+          "used": true,
+          "faithful": true,
+          "notes": "The supplied headshot cleanly replaces the lower agent portrait."
+        }
+      ],
+      "identityLeakage": [],
+      "defects": [],
+      "includedRationale": "The independent image-model review found 0.97 reusable-system likeness.",
+      "qualityRationale": "The finished ad is crisp, balanced, and legible at full size.",
+      "suggestedCorrection": "",
+      "reviewedAt": "2026-08-11T04:55:17Z"
+    }
+  },
+  "customerFixture": {
+    "stage": "customer_fixture",
+    "requestHash": "1845cfc6c3f87e2b3896dc7fb65615413f7f6ba92c2076b7633e7ca1c80d8066",
+    "referenceHash": "e307934bf6d3d68d8d86ec1b9963895832020caae74aa36d4aa921b2047f07e2",
+    "references": [
+      {
+        "index": 1,
+        "key": "approved_sample",
+        "role": "approved_sample",
+        "contentHash": "e307934bf6d3d68d8d86ec1b9963895832020caae74aa36d4aa921b2047f07e2"
+      },
+      {
+        "index": 2,
+        "key": "property_image",
+        "role": "replacement_asset",
+        "contentHash": "b5f3a66485310cfc792c2201c9b562d9352cec6fbddb32db4e71b8d50d2e5fab"
+      },
+      {
+        "index": 3,
+        "key": "agent_photo",
+        "role": "replacement_asset",
+        "contentHash": "4f1c49d7841cedab74a733578d592cbca27ed28a2269f88e017fb8604bf44b6d"
+      }
+    ],
+    "copy": {
+      "time_on_market": "14 DAYS",
+      "average_price": "$815,000",
+      "new_listings": "94",
+      "sold_listings": "31",
+      "social_handle": "@northpoint.example",
+      "agent_name": "Maya Chen"
+    },
+    "outputHash": "1c7a99e868f1e329614029370bad3dae75084b0c3b2a1dcec9f65a8600162759",
+    "executionTransport": "google_image_api",
+    "reviewedAt": "2026-08-11T04:58:09Z",
+    "review": {
+      "schemaVersion": 1,
+      "rubricVersion": "adstudio-subject-invariant-clone-v1",
+      "templateId": "meta-stories-255",
+      "requestHash": "1845cfc6c3f87e2b3896dc7fb65615413f7f6ba92c2076b7633e7ca1c80d8066",
+      "candidateHash": "1c7a99e868f1e329614029370bad3dae75084b0c3b2a1dcec9f65a8600162759",
+      "reviewer": {
+        "provider": "google",
+        "model": "gemini-3.6-flash"
+      },
+      "adSystemLikenessScore": 9.9,
+      "standaloneAdQualityScore": 9.6,
+      "excludedContentInfluencedScore": false,
+      "copyChecks": [
+        {
+          "key": "time_on_market",
+          "expected": "14 DAYS",
+          "observed": "14 DAYS",
+          "exact": true
+        },
+        {
+          "key": "average_price",
+          "expected": "$815,000",
+          "observed": "$815,000",
+          "exact": true
+        },
+        {
+          "key": "new_listings",
+          "expected": "94",
+          "observed": "94",
+          "exact": true
+        },
+        {
+          "key": "sold_listings",
+          "expected": "31",
+          "observed": "31",
+          "exact": true
+        },
+        {
+          "key": "social_handle",
+          "expected": "@northpoint.example",
+          "observed": "@northpoint.example",
+          "exact": true
+        },
+        {
+          "key": "agent_name",
+          "expected": "Maya Chen",
+          "observed": "Maya Chen",
+          "exact": true
+        }
+      ],
+      "assetChecks": [
+        {
+          "key": "property_image",
+          "used": true,
+          "faithful": true,
+          "notes": "The distinct customer exterior is cleanly placed in the fixed upper hero slot."
+        },
+        {
+          "key": "agent_photo",
+          "used": true,
+          "faithful": true,
+          "notes": "The distinct customer headshot cleanly replaces the lower agent portrait."
+        }
+      ],
+      "identityLeakage": [],
+      "defects": [],
+      "includedRationale": "Independent Gemini vision QA scored the reusable system at 0.99: geometry, fixed photo slots/effects, typography, rhythm, and palette align with the approved sample.",
+      "qualityRationale": "The customer ad is crisp and balanced with all text readable at full resolution.",
+      "suggestedCorrection": "",
+      "reviewedAt": "2026-08-11T04:58:09Z"
+    }
+  }
+}
