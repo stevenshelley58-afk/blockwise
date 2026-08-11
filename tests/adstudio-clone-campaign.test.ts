@@ -2,6 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { buildCloneCampaignPack, createEmptyAdStudioCampaignPack, extractBrandKitFromWebsite } from "../src/lib/adstudio/index.ts";
+import { buildLeadFormCopy } from "../src/lib/adstudio/clone-campaign.ts";
+import { normalizeLeadFormQuestions } from "../src/lib/adstudio/default-lead-forms.ts";
+import { findLeadFormViolations } from "../src/lib/adstudio/readiness.ts";
+import type { AdStudioGalleryTemplate } from "../src/lib/adstudio/templates.ts";
 import {
   generationRequestFingerprint,
   resolveCloneCampaignIdFromParts,
@@ -114,4 +118,39 @@ test("clone campaign builds with feed-only when story is not yet rendered", () =
   // Only the feed creative should be present; story patches in later.
   assert.deepEqual(pack.creatives.map((c) => c.format), ["4:5"]);
   assert.deepEqual(pack.campaign.creativeFormats, ["4:5"]);
+});
+
+test("lead form defaults stay editable while questions remain Meta-safe", () => {
+  const brandKit = buildCloneTestPack().brandKit;
+  const template = {
+    name: "Seller consultation",
+    classification: { primary_intent: "seller_leads" },
+    meta: {
+      leadForm: {
+        headline: "Request your free seller consultation",
+        questions: ["When would you like to sell?", "what is your best contact number?"],
+      },
+    },
+  } as unknown as AdStudioGalleryTemplate;
+
+  const form = buildLeadFormCopy(template, brandKit);
+  assert.equal(form.headline, "Request your free seller consultation");
+  assert.deepEqual(form.questions, ["When would you like to sell?", "what is your best contact number?"]);
+  assert.match(form.thankYouScreen.body, /will be in touch within 24 hours/u);
+});
+
+test("lead form normalization trims, deduplicates, and caps questions at five", () => {
+  assert.deepEqual(normalizeLeadFormQuestions([
+    " Phone? ", "phone?", "One", "Two", "Three", "Four", "Five", "Six",
+  ]), ["Phone?", "One", "Two", "Three", "Four"]);
+});
+
+test("publish readiness rejects malformed Meta forms", () => {
+  assert.deepEqual(findLeadFormViolations({
+    copyPacks: [{ meta: { leadForm: { questions: ["Phone?", "phone?", "", "1", "2", "3"] } } }],
+  }), [
+    "A lead form question label is empty.",
+    "A lead form has 6 questions (Meta limit 5).",
+    "A lead form has duplicate questions.",
+  ]);
 });

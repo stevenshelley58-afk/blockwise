@@ -140,14 +140,36 @@ export function PublishSetupPanel({
   onRetryExportFormat,
 }: PublishSetupPanelProps) {
   const [stepIndex, setStepIndex] = useState(initialStep);
-  const leadFormTemplate = campaignPack.copyPacks[0]?.meta.leadForm;
+  const [defaultLeadForm] = useState(() => {
+    const leadFormTemplate = campaignPack.copyPacks[0]?.meta.leadForm;
+    return {
+      headline: leadFormTemplate?.headline ?? "",
+      questions: leadFormTemplate?.questions?.length ? [...leadFormTemplate.questions] : [],
+      thankYouTitle: leadFormTemplate?.thankYouScreen.title ?? "",
+      thankYouBody: leadFormTemplate?.thankYouScreen.body ?? "",
+    };
+  });
   const [leadForm, setLeadForm] = useState(() => ({
-    headline: leadFormTemplate?.headline ?? "",
-    questions: leadFormTemplate?.questions?.length ? [...leadFormTemplate.questions] : [],
-    thankYouTitle: leadFormTemplate?.thankYouScreen.title ?? "",
-    thankYouBody: leadFormTemplate?.thankYouScreen.body ?? "",
+    headline: defaultLeadForm.headline,
+    questions: [...defaultLeadForm.questions],
+    thankYouTitle: defaultLeadForm.thankYouTitle,
+    thankYouBody: defaultLeadForm.thankYouBody,
   }));
-  const leadFormStepReady = leadForm.headline.trim().length > 0 && leadForm.questions.filter((q) => q.trim()).length > 0;
+  const filledQuestionCount = leadForm.questions.filter((question) => question.trim()).length;
+  const questionLabels = leadForm.questions.map((question) => question.trim().toLowerCase()).filter(Boolean);
+  const hasDuplicateQuestions = new Set(questionLabels).size < questionLabels.length;
+  const overQuestionLimit = filledQuestionCount > 5;
+  const leadFormStepReady = leadForm.headline.trim().length > 0
+    && filledQuestionCount > 0
+    && leadForm.thankYouTitle.trim().length > 0
+    && leadForm.thankYouBody.trim().length > 0
+    && !hasDuplicateQuestions
+    && !overQuestionLimit;
+  const leadFormDiffersFromDefault = leadForm.headline !== defaultLeadForm.headline
+    || leadForm.thankYouTitle !== defaultLeadForm.thankYouTitle
+    || leadForm.thankYouBody !== defaultLeadForm.thankYouBody
+    || leadForm.questions.length !== defaultLeadForm.questions.length
+    || leadForm.questions.some((question, index) => question !== defaultLeadForm.questions[index]);
   function updateLeadForm(patch: Partial<typeof leadForm>) {
     setLeadForm((prev) => {
       const next = { ...prev, ...patch };
@@ -939,12 +961,17 @@ export function PublishSetupPanel({
               <div className="studio-leadform-questions">
                 <strong>Questions</strong>
                 <span className="studio-leadform-hint">Standard fields (name, email) are added automatically by Meta. Add your custom questions below.</span>
-                {leadForm.questions.map((question, index) => (
-                  <div className="studio-leadform-q-row" key={index}>
+                {leadForm.questions.map((question, index) => {
+                  const normalized = question.trim().toLowerCase();
+                  const duplicate = normalized.length > 0 && leadForm.questions.some(
+                    (other, otherIndex) => otherIndex !== index && other.trim().toLowerCase() === normalized,
+                  );
+                  return <div className="studio-leadform-q-row" key={index}>
                     <input
                       type="text"
                       value={question}
                       placeholder="e.g. What is your best contact number?"
+                      aria-invalid={duplicate}
                       onChange={(event) => {
                         const questions = [...leadForm.questions];
                         questions[index] = event.target.value;
@@ -955,15 +982,24 @@ export function PublishSetupPanel({
                       const questions = leadForm.questions.filter((_, i) => i !== index);
                       updateLeadForm({ questions });
                     }}>&times;</button>
+                    {duplicate && <span className="studio-field-error">Each question must be unique.</span>}
                   </div>
-                ))}
+                })}
                 {leadForm.questions.length < 5 && (
                   <button type="button" className="studio-leadform-add" onClick={() => {
                     updateLeadForm({ questions: [...leadForm.questions, ""] });
                   }}>+ Add a question</button>
                 )}
-                {leadForm.questions.length >= 5 && (
+                {(overQuestionLimit || leadForm.questions.length >= 5) && (
                   <span className="studio-leadform-max">Maximum 5 custom questions (Meta limit).</span>
+                )}
+                {leadFormDiffersFromDefault && (
+                  <button type="button" className="studio-leadform-add" onClick={() => updateLeadForm({
+                    headline: defaultLeadForm.headline,
+                    questions: [...defaultLeadForm.questions],
+                    thankYouTitle: defaultLeadForm.thankYouTitle,
+                    thankYouBody: defaultLeadForm.thankYouBody,
+                  })}>Restore default form</button>
                 )}
               </div>
 
@@ -974,6 +1010,7 @@ export function PublishSetupPanel({
                     type="text"
                     value={leadForm.thankYouTitle}
                     placeholder="Request received"
+                    aria-invalid={!leadForm.thankYouTitle.trim()}
                     onChange={(event) => updateLeadForm({ thankYouTitle: event.target.value })}
                   />
                 </label>
@@ -983,6 +1020,7 @@ export function PublishSetupPanel({
                     type="text"
                     value={leadForm.thankYouBody}
                     placeholder="The agency will be in touch shortly."
+                    aria-invalid={!leadForm.thankYouBody.trim()}
                     onChange={(event) => updateLeadForm({ thankYouBody: event.target.value })}
                   />
                 </label>

@@ -8,7 +8,7 @@ import {
   type AdStudioCreativeLibrarySelection,
 } from "@/lib/adstudio/creative-library";
 import { loadAdStudioCampaignPack, persistAdStudioCampaignPack } from "@/lib/adstudio/persistence";
-import { findPackCopyLimitViolations } from "@/lib/adstudio/readiness";
+import { findLeadFormViolations, findPackCopyLimitViolations } from "@/lib/adstudio/readiness";
 import type { AdStudioCampaignPack } from "@/lib/adstudio";
 import type { ApprovalStatus, ProviderConnectionStatus } from "@/lib/publishing/readiness";
 import {
@@ -206,6 +206,14 @@ export async function POST(request: NextRequest, context: RouteContext) {
   if (copyViolations.length > 0) {
     return NextResponse.json(
       { error: `Fix the ad copy before publishing: ${copyViolations.join(" ")}` },
+      { status: 422 },
+    );
+  }
+
+  const leadFormViolations = findLeadFormViolations(pack);
+  if (leadFormViolations.length > 0) {
+    return NextResponse.json(
+      { error: `Fix the lead form before publishing: ${leadFormViolations.join(" ")}` },
       { status: 422 },
     );
   }

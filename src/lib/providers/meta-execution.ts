@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 
 import type { AdStudioCampaignPack } from "../adstudio/index.ts";
+import { normalizeLeadFormQuestions } from "../adstudio/default-lead-forms.ts";
 import { deterministicUuid } from "../adstudio/id.ts";
 import { evaluatePublishReadiness, type ApprovalStatus, type ProviderConnectionStatus } from "../publishing/readiness.ts";
 import type { ComplianceStatus } from "../compliance/real-estate-policy.ts";
@@ -1438,12 +1439,12 @@ function buildTargeting(controls: MetaPublishControls): Record<string, unknown> 
 function buildLeadFormPlans(pack: AdStudioCampaignPack, setup: MetaConnectionSetup, destinationUrl?: string): MetaPublishLeadFormPlan[] {
   return pack.copyPacks.slice(0, 6).map((copy, index) => ({
     localId: `form_${index + 1}`,
-    name: `${pack.campaign.market.suburb} ${copy.meta.leadForm.headline}`,
-    headline: copy.meta.leadForm.headline,
-    questions: copy.meta.leadForm.questions,
+    name: `${pack.campaign.market.suburb} ${copy.meta.leadForm?.headline ?? ""}`,
+    headline: copy.meta.leadForm?.headline ?? "",
+    questions: normalizeLeadFormQuestions(copy.meta.leadForm?.questions ?? []),
     privacyPolicyUrl: setup.privacyPolicyUrl,
-    thankYouTitle: copy.meta.leadForm.thankYouScreen.title,
-    thankYouBody: copy.meta.leadForm.thankYouScreen.body,
+    thankYouTitle: copy.meta.leadForm?.thankYouScreen?.title ?? "",
+    thankYouBody: copy.meta.leadForm?.thankYouScreen?.body ?? "",
     thankYouWebsiteUrl: destinationUrl ?? setup.privacyPolicyUrl,
   }));
 }

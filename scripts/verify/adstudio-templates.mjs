@@ -659,16 +659,28 @@ for (const { file, template } of templates) {
   if (template.meta?.platform !== "meta" || template.meta?.objective !== "OUTCOME_LEADS" || template.meta?.specialAdCategory !== "housing") {
     fail(id, "meta must describe a Meta OUTCOME_LEADS housing ad");
   }
+  const leadForm = template.meta?.leadForm;
+  if (!leadForm?.headline?.trim()) fail(id, "meta.leadForm.headline is required");
+  const questions = Array.isArray(leadForm?.questions) ? leadForm.questions : [];
+  if (!questions.some((question) => typeof question === "string" && question.trim())) fail(id, "meta.leadForm needs at least one non-empty question");
+  if (questions.length > 5) fail(id, "meta.leadForm supports at most 5 questions");
+  const questionLabels = questions
+    .filter((question) => typeof question === "string")
+    .map((question) => question.trim().toLowerCase())
+    .filter(Boolean);
+  if (new Set(questionLabels).size !== questionLabels.length) fail(id, "meta.leadForm question labels must be unique");
+  if (!leadForm?.thankYouScreen?.title?.trim() || !leadForm?.thankYouScreen?.body?.trim()) {
+    fail(id, "meta.leadForm thank-you title and body are required");
+  }
   for (const key of ["ad_type", "primary_intent", "property_or_agent_focus"]) {
     if (!template.classification?.[key]?.trim()) fail(id, `classification.${key} is required`);
   }
   const intent = template.classification?.primary_intent?.trim();
   if (intent && intent !== "other") intentCounts.set(intent, (intentCounts.get(intent) ?? 0) + 1);
 
-  // Magic Layers typography (scripts/build/font-corpus/adstudio-type-specs.mjs
-  // output). Optional per-template and per-region — the offline build can't
-  // always find/measure a region (see docs/plans/2026-07-27-adstudio-magic-
-  // layers-editor.md §7) — but whatever IS present must be well-formed and
+  // Offline typography evidence (scripts/build/font-corpus/adstudio-type-specs.mjs
+  // output). Optional per-template and per-region — the offline build cannot
+  // always find or measure a region — but whatever is present must be well-formed and
   // keyed to a real text input, and coverage overall must not silently regress.
   if (template.typography !== undefined) {
     if (typeof template.typography !== "object" || template.typography === null || Array.isArray(template.typography)) {
