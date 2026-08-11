@@ -6,7 +6,8 @@ const flow = readFileSync("src/components/adstudio/ad-studio-customer-flow.tsx",
 const route = readFileSync("src/app/api/adstudio/creatives/[id]/edit/route.ts", "utf8");
 
 test("finished-ad editor supports text, image direction and replacement images", () => {
-  assert.match(flow, /newValue: value, patchImage/);
+  assert.match(flow, /newValue: value \}\);/);
+  assert.doesNotMatch(flow, /newValue: value, patchImage/);
   assert.match(flow, /requestCreativeLayers\(creative\.creativeId\)/);
   assert.match(flow, /instruction: draft\.trim\(\)/);
   assert.match(flow, /newImage: await readFile\(scaled\)/);

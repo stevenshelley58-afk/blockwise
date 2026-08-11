@@ -84,9 +84,11 @@ test("a persisted building state is a durable single-flight lease", () => {
   assert.match(layersRoute, /existing\.deterministicOnly && allTextStylesLive/);
 });
 
-test("a fully migrated template cannot silently fall back to image-model text editing", () => {
-  assert.match(editRoute, /layers\?\.deterministicOnly && !patchImage/);
+test("text edits cannot silently fall back to image-model or browser-pixel rendering", () => {
+  assert.match(editRoute, /selectedRegion\.kind === "text" && !canRenderAuthoritativeText/);
   assert.match(editRoute, /code: "layers_not_ready"/);
+  assert.match(editRoute, /renderAuthoritativeTextEdit/);
+  assert.doesNotMatch(editRoute, /compositeTextPatch/);
   assert.doesNotMatch(generationRoute, /assertDeterministicFeedEditingReady/);
   assert.match(generationWorker, /assertDeterministicFeedEditingReady/);
   assert.match(layerDerivation, /resolveCloneProviders\("fast", input\.providerEnv\)/);
@@ -144,7 +146,8 @@ test("compact editor builds layers in the background and applies text edits opti
   assert.match(compactEditor, /setLoadedPlate\(plate\)/);
   assert.match(compactEditor, /That text does not fit this area\. Shorten it and try again\./);
   assert.match(compactEditor, /optimisticPatchStyle\(optimisticPatch\.box\)/);
-  assert.match(compactEditor, /newValue: value, patchImage/);
+  assert.match(compactEditor, /newValue: value \}\);/);
+  assert.doesNotMatch(compactEditor, /newValue: value, patchImage/);
   // Inlined finished pixels paint without a media-proxy round trip.
   assert.match(editRoute, /previewImage,/);
   assert.match(editClient, /previewImage: data\.previewImage/);

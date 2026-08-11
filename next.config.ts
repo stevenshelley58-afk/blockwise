@@ -5,10 +5,15 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   typedRoutes: true,
   outputFileTracingIncludes: {
+    "/api/adstudio/creatives/[id]/edit": ["./public/fonts/adstudio/**/*"],
     "/operator/research": ["./hermes/skills/**/*"],
     "/api/operator/research/skills": ["./hermes/skills/**/*"],
     "/api/operator/research/skills/[slug]": ["./hermes/skills/**/*"],
   },
+  // The text-edit route uses this native Node module to rasterize the approved
+  // self-hosted face. Keeping it external prevents webpack from trying to
+  // bundle its platform-specific binary.
+  serverExternalPackages: ["@napi-rs/canvas"],
   // Tree-shake heavy barrel-export libs so only used modules ship to the client.
   // lucide-react is already optimized by Next's defaults; recharts is not.
   experimental: {

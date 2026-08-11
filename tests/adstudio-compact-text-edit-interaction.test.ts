@@ -2,16 +2,17 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-import { requestCreativeEdit } from "../src/components/adstudio/canvas/creative-edit-client.ts";
+import { requestCreativeEdit, type CreativeEditMutation } from "../src/components/adstudio/canvas/creative-edit-client.ts";
 import type { AdStudioCreative } from "../src/lib/adstudio/types.ts";
 
 const flow = readFileSync("src/components/adstudio/ad-studio-customer-flow.tsx", "utf8");
 
-test("compact editor waits for released-template layers and saves an exact-text patch as a new revision", async () => {
+test("compact editor waits for released-template layers and saves exact text as a new revision", async () => {
   assert.match(flow, /requestCreativeLayers\(creative\.creativeId\)/u);
   assert.match(flow, /loadedPlate === textLayers\?\.plate/u);
   assert.match(flow, /renderTextPatch\(\{ plate, box: selected\.box, style: selectedTextStyle, text: value \}\)/u);
-  assert.match(flow, /newValue: value, patchImage/u);
+  assert.match(flow, /newValue: value \}\)/u);
+  assert.doesNotMatch(flow, /newValue: value, patchImage/u);
   assert.match(flow, /disabled=\{!draft\.trim\(\) \|\| busy \|\| !selectedTextInstantReady\}/u);
 
   const baseRevisionId = "11111111-1111-4111-8111-111111111111";
@@ -61,9 +62,14 @@ test("compact editor waits for released-template layers and saves an exact-text 
     const result = await requestCreativeEdit({
       creative,
       mutationId: "44444444-4444-4444-8444-444444444444",
-      mutation: { action: "edit", fieldKey: "headline", newValue: "A better headline", patchImage },
+      mutation: {
+        action: "edit",
+        fieldKey: "headline",
+        newValue: "A better headline",
+        patchImage,
+      } as unknown as CreativeEditMutation,
     });
-    assert.equal(requestBodies[0]?.patchImage, patchImage);
+    assert.equal(requestBodies[0]?.patchImage, undefined);
     assert.equal(requestBodies[0]?.newValue, "A better headline");
     assert.equal(requestBodies[0]?.expectedRevisionId, baseRevisionId);
     assert.equal(result.creative.activeRevisionId, nextRevisionId);
