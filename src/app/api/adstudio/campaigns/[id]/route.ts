@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { errorResponse, readJsonBody, requireAdStudioRequest } from "@/lib/adstudio/http";
 import { compactAdStudioCampaignPackForTransport, loadAdStudioCampaignPack } from "@/lib/adstudio/persistence";
+import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -87,6 +88,7 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
 
   if (fetchError) return errorResponse(fetchError);
   if (!campaign) return NextResponse.json({ error: "Campaign not found." }, { status: 404 });
+  const service = createSupabaseServiceClient();
 
   // Cascade-delete related records first, then the campaign row itself.
   const [variantsResult, creativesResult, copyResult, complianceResult] = await Promise.all([
@@ -95,7 +97,7 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
       .delete()
       .eq("workspace_id", access.access.workspaceId)
       .eq("campaign_id", id),
-    access.supabase
+    service
       .from("adstudio_creatives")
       .delete()
       .eq("workspace_id", access.access.workspaceId)

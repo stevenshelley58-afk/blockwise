@@ -10,7 +10,9 @@ import {
 
 const migrationPath = "supabase/migrations/202607130003_adstudio_creative_revisions.sql";
 const lockdownMigrationPath = "supabase/migrations/20260811140232_revision_rpc_service_role_only.sql";
+const creativeDmlLockdownMigrationPath = "supabase/migrations/20260811170000_adstudio_creatives_server_owned_dml.sql";
 const dbTestPath = "supabase/tests/adstudio_creative_revisions.test.sql";
+const ownershipDbTestPath = "supabase/tests/adstudio_campaign_pack_ownership.test.sql";
 const routePath = "src/app/api/adstudio/creatives/[id]/edit/route.ts";
 const requestHash = "a".repeat(64);
 
@@ -71,6 +73,59 @@ test("revision mutation RPCs are locked to service-role server work in a forward
     assert.match(section, /to service_role/i);
     assert.doesNotMatch(section, /to authenticated(?:,|;)/i);
   }
+});
+
+test("creative table DML and whole-pack persistence are service-role only", () => {
+  assert.equal(existsSync(creativeDmlLockdownMigrationPath), true);
+  assert.equal(existsSync(ownershipDbTestPath), true);
+  const sql = readFileSync(creativeDmlLockdownMigrationPath, "utf8");
+
+  assert.match(sql, /revoke insert, update, delete on table public\.adstudio_creatives\s+from public, anon, authenticated/i);
+  assert.match(sql, /grant select on table public\.adstudio_creatives to authenticated/i);
+  assert.match(sql, /grant select, insert, update, delete on table public\.adstudio_creatives to service_role/i);
+  assert.match(sql, /grant select, insert, update on table[\s\S]*public\.adstudio_brand_kits,[\s\S]*public\.adstudio_campaigns,[\s\S]*public\.adstudio_campaign_variants,[\s\S]*public\.adstudio_platform_copy,[\s\S]*public\.adstudio_compliance_reports[\s\S]*to service_role/i);
+  for (const policy of [
+    "adstudio_workspace_insert",
+    "adstudio_workspace_update",
+    "adstudio_workspace_delete",
+  ]) {
+    assert.match(sql, new RegExp(`drop policy if exists ${policy} on public\\.adstudio_creatives`, "i"));
+  }
+
+  const packSection = sql.slice(sql.indexOf("revoke all on function public.adstudio_persist_campaign_pack"));
+  assert.match(packSection, /from public, anon, authenticated/i);
+  assert.match(packSection, /to service_role/i);
+  assert.doesNotMatch(packSection, /to authenticated(?:,|;)/i);
+  assert.match(sql, /ADSTUDIO_CAMPAIGN_PACK_OWNERSHIP_VIOLATION/);
+  assert.match(sql, /ADSTUDIO_INVALID_CAMPAIGN_PACK/);
+  assert.match(sql, /where adstudio_creatives\.workspace_id = excluded\.workspace_id\s+and adstudio_creatives\.campaign_id = excluded\.campaign_id/i);
+  assert.match(sql, /became owned by another workspace or campaign during persistence/i);
+});
+
+test("every application creative writer crosses an authenticated workspace boundary before using service role", () => {
+  const persistence = readFileSync("src/lib/adstudio/persistence.ts", "utf8");
+  const draftRoute = readFileSync("src/app/api/adstudio/campaigns/[id]/draft/route.ts", "utf8");
+  const publishRoute = readFileSync("src/app/api/adstudio/export-packages/[id]/publish/route.ts", "utf8");
+  const layersRoute = readFileSync("src/app/api/adstudio/creatives/[id]/layers/route.ts", "utf8");
+  const campaignRoute = readFileSync("src/app/api/adstudio/campaigns/[id]/route.ts", "utf8");
+  const layerDerivation = readFileSync("src/lib/adstudio/layer-derivation.ts", "utf8");
+  const generation = readFileSync("src/lib/adstudio/generate-template-campaign.ts", "utf8");
+
+  assert.match(persistence, /persistAdStudioCampaignPack\(\s*supabase: SupabaseServiceClient/);
+  assert.match(generation, /SupabaseGenerationClient = SupabaseServiceClient/);
+  assert.match(layerDerivation, /type SupabaseClient = ReturnType<typeof createSupabaseServiceClient>/);
+
+  assert.ok(draftRoute.indexOf("requireAdStudioRequest(request)") < draftRoute.indexOf("createSupabaseServiceClient()"));
+  assert.match(draftRoute, /creatives: existing\.creatives/);
+  assert.match(draftRoute, /\{ \.\.\.submittedPack, creatives: \[\] \}/);
+  assert.match(draftRoute, /persistAdStudioCampaignPack\(\s*createSupabaseServiceClient\(\)/);
+  assert.match(publishRoute, /persistAdStudioCampaignPack\(serviceSupabase, basePack/);
+
+  assert.ok(layersRoute.indexOf("requireAdStudioRequest(request)") < layersRoute.indexOf("createSupabaseServiceClient()"));
+  assert.match(layersRoute, /\.eq\("workspace_id", context\.access\.workspaceId\)\s*\.eq\("id", id\)/);
+  assert.match(layersRoute, /supabase: creativeService/);
+  assert.ok(campaignRoute.indexOf("requireAdStudioRequest(request)") < campaignRoute.indexOf("const service = createSupabaseServiceClient()"));
+  assert.match(campaignRoute, /service\s*\.from\("adstudio_creatives"\)\s*\.delete\(\)\s*\.eq\("workspace_id", access\.access\.workspaceId\)\s*\.eq\("campaign_id", id\)/);
 });
 
 test("revision claim helper maps stale and in-flight claims without dispatching work", async () => {

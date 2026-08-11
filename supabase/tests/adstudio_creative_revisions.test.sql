@@ -2,7 +2,7 @@ create extension if not exists pgtap with schema extensions;
 
 begin;
 
-select plan(51);
+select plan(67);
 
 select has_table('public', 'adstudio_creative_revisions', 'creative revisions table exists');
 select has_table('public', 'adstudio_creative_revision_mutations', 'creative revision mutation claims exist');
@@ -331,7 +331,7 @@ select throws_ok(
   'the CAS lookup cannot cross workspace boundaries'
 );
 
-grant select, update, delete on public.adstudio_creatives to authenticated;
+grant select on public.adstudio_creatives to authenticated;
 grant select on revision_test_append to authenticated;
 set local role authenticated;
 select set_config(
@@ -343,23 +343,25 @@ create temp table revision_test_before_direct_update as
 select active_revision_id from public.adstudio_creatives
 where workspace_id = 'a1000000-0000-4000-8000-000000000001'
   and id = 'a5000000-0000-4000-8000-000000000001';
-select lives_ok(
+select throws_ok(
   $$
     update public.adstudio_creatives
     set canvas_json = '{"version":"bypass","objects":[]}'::jsonb
     where workspace_id = 'a1000000-0000-4000-8000-000000000001'
       and id = 'a5000000-0000-4000-8000-000000000001'
   $$,
-  'authenticated direct DML is captured by the revision trigger'
+  '42501',
+  null,
+  'authenticated users cannot replace canvas JSON directly'
 );
-select isnt(
+select is(
   (
     select active_revision_id::text from public.adstudio_creatives
     where workspace_id = 'a1000000-0000-4000-8000-000000000001'
       and id = 'a5000000-0000-4000-8000-000000000001'
   ),
   (select active_revision_id::text from revision_test_before_direct_update),
-  'direct DML advances the active revision instead of bypassing history'
+  'blocked direct DML leaves the active revision unchanged'
 );
 select is(
   (
@@ -367,8 +369,39 @@ select is(
     where workspace_id = 'a1000000-0000-4000-8000-000000000001'
       and creative_id = 'a5000000-0000-4000-8000-000000000001'
   ),
-  3,
-  'direct DML preserves both prior revisions and appends one snapshot'
+  2,
+  'blocked direct DML appends no attacker-controlled snapshot'
+);
+select throws_ok(
+  $$
+    insert into public.adstudio_creatives (
+      id, workspace_id, campaign_id, variant_id, format, width, height,
+      canvas_json, render_status
+    ) values (
+      'a5000000-0000-4000-8000-000000000099',
+      'a1000000-0000-4000-8000-000000000001',
+      'a3000000-0000-4000-8000-000000000001',
+      'a4000000-0000-4000-8000-000000000001',
+      '4:5', 1080, 1350,
+      '{"version":"browser-insert","objects":[]}'::jsonb,
+      'rendered'
+    )
+  $$,
+  '42501',
+  null,
+  'authenticated users cannot insert server-owned creative state'
+);
+select throws_ok(
+  $$
+    select public.adstudio_persist_campaign_pack(
+      '{}'::jsonb, '{}'::jsonb, '[]'::jsonb,
+      '[{"canvas_json":{"version":"browser-pack"}}]'::jsonb,
+      '[]'::jsonb, '{}'::jsonb
+    )
+  $$,
+  '42501',
+  null,
+  'authenticated users cannot proxy arbitrary canvas JSON through whole-pack persistence'
 );
 select throws_ok(
   $$
@@ -440,9 +473,9 @@ select throws_ok(
     where workspace_id = 'a1000000-0000-4000-8000-000000000001'
       and id = 'a5000000-0000-4000-8000-000000000001'
   $$,
-  '55P03',
-  'ADSTUDIO_EDIT_IN_PROGRESS',
-  'ordinary version writes cannot race an active paid edit'
+  '42501',
+  null,
+  'authenticated version writes are denied before they can race a paid edit'
 );
 select throws_ok(
   $$
@@ -451,8 +484,8 @@ select throws_ok(
     where workspace_id = 'a1000000-0000-4000-8000-000000000001'
       and id = 'a5000000-0000-4000-8000-000000000001'
   $$,
-  '23514',
-  'An active creative revision claim cannot be cleared directly.',
+  '42501',
+  null,
   'authenticated direct DML cannot clear an active claim'
 );
 select throws_ok(
@@ -462,12 +495,13 @@ select throws_ok(
     where workspace_id = 'a1000000-0000-4000-8000-000000000001'
       and id = 'a5000000-0000-4000-8000-000000000001'
   $$,
-  '23514',
-  'Invalid creative revision claim transition.',
+  '42501',
+  null,
   'authenticated direct DML cannot replace an active claim'
 );
 reset role;
 select set_config('request.jwt.claims', '{"role":"service_role"}', true);
+set local role service_role;
 select lives_ok(
   $$
     select public.adstudio_release_creative_revision_mutation(
@@ -488,6 +522,37 @@ select is(
   null,
   'the release RPC leaves no pending claim'
 );
+select lives_ok(
+  $$
+    update public.adstudio_creatives
+    set canvas_json = '{"version":"service-update","objects":[]}'::jsonb,
+        render_status = 'rendered'
+    where workspace_id = 'a1000000-0000-4000-8000-000000000001'
+      and id = 'a5000000-0000-4000-8000-000000000001'
+  $$,
+  'service-owned direct persistence updates a workspace-scoped creative'
+);
+select is(
+  (
+    select canvas_json ->> 'version'
+    from public.adstudio_creatives
+    where workspace_id = 'a1000000-0000-4000-8000-000000000001'
+      and id = 'a5000000-0000-4000-8000-000000000001'
+  ),
+  'service-update',
+  'the service update persists its server-built canvas'
+);
+select is(
+  (
+    select count(*)::integer
+    from public.adstudio_creative_revisions
+    where workspace_id = 'a1000000-0000-4000-8000-000000000001'
+      and creative_id = 'a5000000-0000-4000-8000-000000000001'
+  ),
+  3,
+  'service persistence remains revisioned by the database guard'
+);
+reset role;
 set local role authenticated;
 select set_config(
   'request.jwt.claims',
@@ -505,9 +570,9 @@ select throws_ok(
     $sql$,
     (select revision_id from revision_test_append)
   ),
-  '23503',
-  'Creative active revision does not match its versioned fields.',
-  'direct DML cannot move the active pointer backwards'
+  '42501',
+  null,
+  'authenticated direct DML cannot move the active pointer backwards'
 );
 select throws_ok(
   $$
@@ -515,8 +580,8 @@ select throws_ok(
     where workspace_id = 'a1000000-0000-4000-8000-000000000001'
       and id = 'a5000000-0000-4000-8000-000000000001'
   $$,
-  '23503',
-  'Creative revision history must be preserved; archive the creative instead.',
+  '42501',
+  null,
   'authenticated direct DML cannot erase revision history'
 );
 select throws_ok(
@@ -535,6 +600,51 @@ select throws_ok(
 );
 reset role;
 select set_config('request.jwt.claims', '{"role":"service_role"}', true);
+
+select ok(
+  has_table_privilege('authenticated', 'public.adstudio_creatives', 'SELECT'),
+  'authenticated users retain safe creative reads'
+);
+select ok(
+  not has_table_privilege('authenticated', 'public.adstudio_creatives', 'INSERT'),
+  'authenticated users cannot insert creatives'
+);
+select ok(
+  not has_table_privilege('authenticated', 'public.adstudio_creatives', 'UPDATE'),
+  'authenticated users cannot update any creative field'
+);
+select ok(
+  not has_table_privilege('authenticated', 'public.adstudio_creatives', 'DELETE'),
+  'authenticated users cannot delete creatives'
+);
+select ok(
+  has_table_privilege('service_role', 'public.adstudio_creatives', 'INSERT'),
+  'service role can insert server-owned creatives'
+);
+select ok(
+  has_table_privilege('service_role', 'public.adstudio_creatives', 'UPDATE'),
+  'service role can update server-owned creatives'
+);
+select ok(
+  has_table_privilege('service_role', 'public.adstudio_creatives', 'DELETE'),
+  'service role retains server-owned creative deletion authority'
+);
+select ok(
+  not has_function_privilege(
+    'authenticated',
+    'public.adstudio_persist_campaign_pack(jsonb,jsonb,jsonb,jsonb,jsonb,jsonb)',
+    'EXECUTE'
+  ),
+  'authenticated users cannot execute whole-pack persistence'
+);
+select ok(
+  has_function_privilege(
+    'service_role',
+    'public.adstudio_persist_campaign_pack(jsonb,jsonb,jsonb,jsonb,jsonb,jsonb)',
+    'EXECUTE'
+  ),
+  'service role can execute whole-pack persistence'
+);
 
 select ok(
   not has_function_privilege(
@@ -624,6 +734,61 @@ select ok(
   (select relrowsecurity from pg_class where oid = 'public.adstudio_creative_revisions'::regclass),
   'revision rows keep RLS enabled'
 );
+
+set local role service_role;
+select set_config('request.jwt.claims', '{"role":"service_role"}', true);
+select lives_ok(
+  $$
+    select public.adstudio_persist_campaign_pack(
+      (
+        select to_jsonb(row_value)
+        from public.adstudio_brand_kits row_value
+        where id = 'a2000000-0000-4000-8000-000000000001'
+      ),
+      (
+        select to_jsonb(row_value)
+        from public.adstudio_campaigns row_value
+        where id = 'a3000000-0000-4000-8000-000000000001'
+      ),
+      (
+        select jsonb_agg(to_jsonb(row_value))
+        from public.adstudio_campaign_variants row_value
+        where campaign_id = 'a3000000-0000-4000-8000-000000000001'
+      ),
+      (
+        select jsonb_agg(
+          to_jsonb(row_value) || jsonb_build_object(
+            'canvas_json', '{"version":"service-pack","objects":[]}'::jsonb,
+            'render_status', 'rendered'
+          )
+        )
+        from public.adstudio_creatives row_value
+        where campaign_id = 'a3000000-0000-4000-8000-000000000001'
+      ),
+      '[]'::jsonb,
+      jsonb_build_object(
+        'id', 'a7000000-0000-4000-8000-000000000001',
+        'workspace_id', 'a1000000-0000-4000-8000-000000000001',
+        'campaign_id', 'a3000000-0000-4000-8000-000000000001',
+        'status', 'passed',
+        'issues_json', '[]'::jsonb,
+        'checked_at', now()
+      )
+    )
+  $$,
+  'service_role executes transactional whole-pack persistence'
+);
+select is(
+  (
+    select canvas_json ->> 'version'
+    from public.adstudio_creatives
+    where workspace_id = 'a1000000-0000-4000-8000-000000000001'
+      and id = 'a5000000-0000-4000-8000-000000000001'
+  ),
+  'service-pack',
+  'the service-only pack RPC persists its server-built creative state'
+);
+reset role;
 
 select * from finish();
 

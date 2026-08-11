@@ -16,9 +16,9 @@ import { resolveAdStudioImageForModel } from "./resolve-image-for-model.ts";
 import type { AdStudioTemplate } from "./templates.ts";
 import type { AdStudioCreative, AdStudioTextLayers } from "./types.ts";
 import type { ProviderEnvironment } from "./ai-providers.ts";
-import type { createSupabaseServerClient } from "../supabase/server.ts";
+import type { createSupabaseServiceClient } from "../supabase/service.ts";
 
-type SupabaseClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
+type SupabaseClient = ReturnType<typeof createSupabaseServiceClient>;
 
 async function imageDimensions(assetUrl: string): Promise<{ width: number; height: number } | null> {
   let bytes: Uint8Array;
