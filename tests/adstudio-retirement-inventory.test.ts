@@ -21,7 +21,7 @@ test("retirement inventory retains a canonical finished-clone canary and scopes 
       { id: "creative_canary", workspace_id: "workspace_1", campaign_id: "campaign_canary", variant_id: "variant_canary" },
     ],
     adstudio_creative_revisions: [
-      { id: "revision_legacy", workspace_id: "workspace_1", creative_id: "creative_legacy" },
+      { id: "revision_legacy", workspace_id: "workspace_1", creative_id: "creative_legacy", canvas_json: { objects: [{ type: "image", content: "/api/adstudio/media?path=workspace_1%2Fadstudio%2Fclones%2Flegacy.png" }], renderHistory: ["workspace_1/adstudio/clones/previous.png"] } },
       { id: "revision_canary", workspace_id: "workspace_1", creative_id: "creative_canary" },
     ],
     adstudio_creative_revision_mutations: [
@@ -82,7 +82,7 @@ test("retirement inventory retains a canonical finished-clone canary and scopes 
     env: { ...process.env, SUPABASE_URL: "https://example.test", SUPABASE_SERVICE_ROLE_KEY: "test" },
     encoding: "utf8",
   });
-  const manifest = JSON.parse(output) as { counts: Record<string, number>; retainedCanonical: { planIds: string[]; campaignIds: string[] } };
+  const manifest = JSON.parse(output) as { counts: Record<string, number>; storagePaths: string[]; retainedCanonical: { planIds: string[]; campaignIds: string[] } };
 
   assert.equal(manifest.counts.meta_publish_plans, 1);
   assert.equal(manifest.counts.adstudio_campaigns, 1);
@@ -94,5 +94,6 @@ test("retirement inventory retains a canonical finished-clone canary and scopes 
     "adstudio_provider_runs", "adstudio_provider_run_attempts", "adstudio_provider_attempt_outbox",
     "adstudio_creative_jobs", "adstudio_generation_locks", "adstudio_clone_candidate_audits",
   ]) assert.equal(manifest.counts[table], 1, `${table} should retain only its legacy child`);
+  assert.deepEqual(manifest.storagePaths, ["workspace_1/adstudio/clones/legacy.png", "workspace_1/adstudio/clones/previous.png"]);
   assert.deepEqual(manifest.retainedCanonical, { planIds: ["plan_canary"], campaignIds: ["campaign_canary"] });
 });
