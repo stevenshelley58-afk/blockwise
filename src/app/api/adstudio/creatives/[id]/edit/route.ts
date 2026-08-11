@@ -24,6 +24,7 @@ import {
 } from "@/lib/adstudio/text-layers";
 import { normalizeCloneQa, type AdStudioCloneQa, type AdStudioCreative, type AdStudioTextLayers } from "@/lib/adstudio/types";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -55,6 +56,11 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
   const { id } = await Promise.resolve(routeContext.params);
   const context = await requireAdStudioRequest(request);
   if (!context.ok) return context.response;
+
+  // Revision RPCs accept a whole canvas, so they are internal-only. Keep this
+  // client inside the authenticated route: the request-scoped client above
+  // remains the authorization boundary for every customer-owned row read.
+  const revisionService = createSupabaseServiceClient();
 
   const body = await readJsonBody<TargetedEditBody>(request);
   const action = body.action ?? "edit";
@@ -114,7 +120,7 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
     }))
     .digest("hex");
 
-  const releaseClaim = () => releaseAdStudioCreativeRevisionMutation(context.supabase, {
+  const releaseClaim = () => releaseAdStudioCreativeRevisionMutation(revisionService, {
     workspaceId: context.access.workspaceId,
     creativeId: id,
     mutationId,
@@ -122,7 +128,7 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
 
   let execution;
   try {
-    execution = await executeAdStudioCreativeRevisionMutation(context.supabase, {
+    execution = await executeAdStudioCreativeRevisionMutation(revisionService, {
       workspaceId: context.access.workspaceId,
       creativeId: id,
       expectedActiveRevisionId: expectedRevisionId,
@@ -206,7 +212,7 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
         ? [...(canvas.redoQaHistory ?? []), ...(canvas.cloneQa ? [canvas.cloneQa] : [])].slice(-RENDER_HISTORY_LIMIT)
         : sourceQaHistory.slice(0, -1),
     };
-    const revision = await appendAdStudioCreativeRevision(context.supabase, {
+    const revision = await appendAdStudioCreativeRevision(revisionService, {
       workspaceId: context.access.workspaceId,
       creativeId: id,
       expectedActiveRevisionId: expectedRevisionId,
@@ -465,7 +471,7 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
 
   let revision;
   try {
-    revision = await appendAdStudioCreativeRevision(context.supabase, {
+    revision = await appendAdStudioCreativeRevision(revisionService, {
       workspaceId: context.access.workspaceId,
       creativeId: id,
       expectedActiveRevisionId: expectedRevisionId,
