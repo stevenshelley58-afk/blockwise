@@ -8,6 +8,7 @@ import {
   cloneCorrectionForNextCandidate,
   cloneRequestHash,
   cloneQualityPassed,
+  cloneQualityWarrantsSameTierRetry,
   reviewCloneCandidate,
 } from "../src/lib/adstudio/clone-quality-gate.ts";
 import { createTextProviderForCandidate } from "../src/lib/adstudio/ai-providers.ts";
@@ -79,6 +80,24 @@ test("runtime quality lock requires scores, exact copy, faithful assets, and cle
   }), false);
   assert.equal(cloneQualityPassed({
     review: review({ assetChecks: [{ key: "property_photo", used: true, faithful: true }, { key: "agency_logo", used: true, faithful: false }] }),
+    expectedCopy,
+    expectedAssetKeys,
+  }), false);
+});
+
+test("only a clean 9+ candidate warrants a corrected same-tier retry", () => {
+  assert.equal(cloneQualityWarrantsSameTierRetry({
+    review: review({ adSystemLikenessScore: 9.2 }),
+    expectedCopy,
+    expectedAssetKeys,
+  }), true);
+  assert.equal(cloneQualityWarrantsSameTierRetry({
+    review: review({ adSystemLikenessScore: 8.9 }),
+    expectedCopy,
+    expectedAssetKeys,
+  }), false);
+  assert.equal(cloneQualityWarrantsSameTierRetry({
+    review: review({ adSystemLikenessScore: 9.2, defects: ["warped photo"] }),
     expectedCopy,
     expectedAssetKeys,
   }), false);
@@ -191,7 +210,7 @@ test("a visual QA failure advances the corrected clone to the next paid model", 
     normalize: async (assetUrl) => assetUrl,
     review: async (input) => review({
       attempt: input.attempt,
-      adSystemLikenessScore: input.attempt === 1 ? 9.1 : 9.6,
+      adSystemLikenessScore: input.attempt === 1 ? 8.9 : 9.6,
       suggestedCorrection: input.attempt === 1 ? "Use the supplied property photo faithfully." : "",
     }),
   });
@@ -222,7 +241,7 @@ test("quality rejections advance Flash to Pro to GPT Image without releasing a b
     normalize: async (assetUrl) => assetUrl,
     review: async (input) => review({
       attempt: input.attempt,
-      adSystemLikenessScore: input.attempt < 3 ? 9.4 : 9.6,
+      adSystemLikenessScore: input.attempt < 3 ? 8.9 : 9.6,
       suggestedCorrection: input.attempt < 3 ? "Restore the approved geometry." : "",
     }),
   });
@@ -231,6 +250,79 @@ test("quality rejections advance Flash to Pro to GPT Image without releasing a b
   assert.deepEqual(providerOrder, [
     ["gemini-flash", "gemini-pro", "gpt-image"],
     ["gemini-pro", "gpt-image"],
+    ["gpt-image"],
+  ]);
+});
+
+test("one clean near-pass retries the corrected request on the same cheaper tier", async () => {
+  const providerOrder: string[][] = [];
+  const scores = [8.8, 9.2, 9.6];
+  const result = await generateFinalCloneRender({
+    format: "4:5",
+    templateId: "template-1",
+    providers: [provider("gemini-flash"), provider("gemini-pro"), provider("gpt-image")],
+    request: request(),
+    referenceImage: "approved-sample",
+    expectedCopy,
+    expectedAssetKeys,
+    buildCorrectedRequest: (correction) => request(`clone | correction: ${correction}`),
+    workspaceId: "workspace-1",
+    userId: "user-1",
+    correlationId: "run-near-pass-retry",
+  }, {
+    generate: async (input) => {
+      providerOrder.push(input.providers.map((candidate) => candidate.providerName));
+      return { assetUrl: `candidate-${providerOrder.length}`, model: "image", provider: "test", providerAttemptCount: 1 };
+    },
+    normalize: async (assetUrl) => assetUrl,
+    review: async (input) => review({
+      attempt: input.attempt,
+      adSystemLikenessScore: scores[input.attempt - 1]!,
+      suggestedCorrection: input.attempt < 3 ? "Restore the approved geometry." : "",
+    }),
+  });
+
+  assert.equal(result.attempt, 3);
+  assert.deepEqual(providerOrder, [
+    ["gemini-flash", "gemini-pro", "gpt-image"],
+    ["gemini-pro", "gpt-image"],
+    ["gemini-pro", "gpt-image"],
+  ]);
+});
+
+test("the final quality tier gets one corrected retry before failure", async () => {
+  const providerOrder: string[][] = [];
+  const scores = [8.8, 8.8, 9.2, 9.6];
+  const result = await generateFinalCloneRender({
+    format: "4:5",
+    templateId: "template-1",
+    providers: [provider("gemini-flash"), provider("gemini-pro"), provider("gpt-image")],
+    request: request(),
+    referenceImage: "approved-sample",
+    expectedCopy,
+    expectedAssetKeys,
+    buildCorrectedRequest: (correction) => request(`clone | correction: ${correction}`),
+    workspaceId: "workspace-1",
+    userId: "user-1",
+    correlationId: "run-final-retry",
+  }, {
+    generate: async (input) => {
+      providerOrder.push(input.providers.map((candidate) => candidate.providerName));
+      return { assetUrl: `candidate-${providerOrder.length}`, model: "image", provider: "test", providerAttemptCount: 1 };
+    },
+    normalize: async (assetUrl) => assetUrl,
+    review: async (input) => review({
+      attempt: input.attempt,
+      adSystemLikenessScore: scores[input.attempt - 1]!,
+      suggestedCorrection: input.attempt < 4 ? "Restore the approved geometry." : "",
+    }),
+  });
+
+  assert.equal(result.attempt, 4);
+  assert.deepEqual(providerOrder, [
+    ["gemini-flash", "gemini-pro", "gpt-image"],
+    ["gemini-pro", "gpt-image"],
+    ["gpt-image"],
     ["gpt-image"],
   ]);
 });
@@ -257,14 +349,18 @@ test("a missing later credential cannot cycle a quality-rejected provider", asyn
     normalize: async (assetUrl) => assetUrl,
     review: async (input) => review({
       attempt: input.attempt,
-      adSystemLikenessScore: 9.4,
+      adSystemLikenessScore: 8.9,
       suggestedCorrection: "Restore the approved geometry.",
     }),
   }), TemplateCampaignQaError);
-  assert.deepEqual(providerOrder, [["gemini-flash", "gemini-pro"], ["gemini-pro"]]);
+  assert.deepEqual(providerOrder, [
+    ["gemini-flash", "gemini-pro"],
+    ["gemini-pro"],
+    ["gemini-pro"],
+  ]);
 });
 
-test("Google preflight failures followed by a QA-rejected GPT candidate pay GPT only once", async () => {
+test("Google preflight failures followed by a QA-rejected GPT candidate use only the bounded final retry", async () => {
   let gptPaidCalls = 0;
   let reviewCalls = 0;
   const accountedProvider = (
@@ -350,8 +446,8 @@ test("Google preflight failures followed by a QA-rejected GPT candidate pay GPT 
     },
   }), TemplateCampaignQaError);
 
-  assert.equal(gptPaidCalls, 1);
-  assert.equal(reviewCalls, 1);
+  assert.equal(gptPaidCalls, 2);
+  assert.equal(reviewCalls, 2);
 });
 
 test("no below-threshold candidate is released after the bounded quality loop", async () => {

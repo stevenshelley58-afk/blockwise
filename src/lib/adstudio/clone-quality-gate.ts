@@ -24,7 +24,10 @@ import {
 
 export const MIN_RUNTIME_AD_SYSTEM_LIKENESS = 9.5;
 export const MIN_RUNTIME_STANDALONE_AD_QUALITY = 9;
-export const MAX_RUNTIME_CLONE_CANDIDATES = 3;
+// Cheap tiers still get one shot by default. A visually clean near-pass may
+// retry its corrected request once before escalation, and the final/highest
+// quality tier gets one corrected retry before the run fails closed.
+export const MAX_RUNTIME_CLONE_CANDIDATES = 5;
 /** A malformed or transient QA response may be retried against the same paid image. */
 // First retry the primary reviewer once, then use the independently priced
 // fallback once when configured. This never creates another image candidate.
@@ -129,6 +132,35 @@ export function cloneQualityPassed(input: {
   return input.review.adSystemLikenessScore >= MIN_RUNTIME_AD_SYSTEM_LIKENESS
     && input.review.standaloneAdQualityScore >= MIN_RUNTIME_STANDALONE_AD_QUALITY
     && input.review.excludedContentInfluencedScore === false
+    && Object.entries(input.expectedCopy).every(([key, expected]) => {
+      const check = copyChecks.get(key);
+      return Boolean(check)
+        && visibleCopyText(check!.expected) === visibleCopyText(expected)
+        && visibleCopyText(check!.rendered) === visibleCopyText(expected);
+    })
+    && input.expectedAssetKeys.every((key) => {
+      const check = assetChecks.get(key);
+      return check?.used === true && check.faithful === true;
+    })
+    && input.review.identityLeakage.length === 0
+    && input.review.defects.length === 0;
+}
+
+/**
+ * A clean 9+ result is close enough that applying the vision model's concrete
+ * correction on the same tier is usually cheaper than escalating immediately.
+ * Hard copy, asset, leakage, and defect failures always advance instead.
+ */
+export function cloneQualityWarrantsSameTierRetry(input: {
+  review: AdStudioCloneQualityReview;
+  expectedCopy: Record<string, string>;
+  expectedAssetKeys: string[];
+}): boolean {
+  const copyChecks = new Map(input.review.copyChecks.map((check) => [check.key, check]));
+  const assetChecks = new Map(input.review.assetChecks.map((check) => [check.key, check]));
+  return input.review.adSystemLikenessScore >= 9
+    && input.review.adSystemLikenessScore < MIN_RUNTIME_AD_SYSTEM_LIKENESS
+    && input.review.standaloneAdQualityScore >= MIN_RUNTIME_STANDALONE_AD_QUALITY
     && Object.entries(input.expectedCopy).every(([key, expected]) => {
       const check = copyChecks.get(key);
       return Boolean(check)
