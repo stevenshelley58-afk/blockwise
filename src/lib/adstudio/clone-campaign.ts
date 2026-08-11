@@ -50,7 +50,16 @@ function canonicalJson(value: unknown): string {
 
 /** Stable across HTTP JSON and Postgres jsonb key ordering. */
 export function generationRequestFingerprint(body: unknown): string {
-  return createHash("sha256").update(canonicalJson(body)).digest("hex");
+  const content = body && typeof body === "object" && !Array.isArray(body)
+    ? Object.fromEntries(
+        Object.entries(body as Record<string, unknown>).filter(([key]) => key !== "clientMutationId"),
+      )
+    : body;
+  return createHash("sha256").update(canonicalJson(content)).digest("hex");
+}
+
+export function generationCreditMutationKey(dedupKey: string): string {
+  return `adstudio-generation:${dedupKey}`;
 }
 
 export function resolveCloneCampaignIdFromParts(input: {

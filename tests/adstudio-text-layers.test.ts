@@ -27,6 +27,8 @@ const layerDerivation = readFileSync("src/lib/adstudio/layer-derivation.ts", "ut
 const cloneCampaign = readFileSync("src/lib/adstudio/clone-campaign.ts", "utf8");
 const generationRoute = readFileSync("src/app/api/adstudio/campaigns/route.ts", "utf8");
 const generationWorker = readFileSync("worker/index.ts", "utf8");
+const templateGeneration = readFileSync("src/lib/adstudio/generate-template-campaign.ts", "utf8");
+const compactEditor = readFileSync("src/components/adstudio/ad-studio-customer-flow.tsx", "utf8");
 
 const regions: AdStudioCloneRegion[] = [
   { key: "headline", kind: "text", box: { x: 0.1, y: 0.1, width: 0.8, height: 0.1 } },
@@ -87,6 +89,8 @@ test("a fully migrated template cannot silently fall back to image-model text ed
   assert.match(editRoute, /code: "layers_not_ready"/);
   assert.doesNotMatch(generationRoute, /assertDeterministicFeedEditingReady/);
   assert.match(generationWorker, /assertDeterministicFeedEditingReady/);
+  assert.match(layerDerivation, /resolveCloneProviders\("fast", input\.providerEnv\)/);
+  assert.match(templateGeneration, /providerEnv: input\.providerEnv/);
 });
 
 test("instant text fitting uses painted glyph bounds rather than the oversized CSS em box", () => {
@@ -130,7 +134,18 @@ test("client patch rect and server composite rect are the same pixels", () => {
   }
 });
 
-test("edit responses return finished pixels without a media-proxy round trip", () => {
+test("compact editor builds layers in the background and applies text edits optimistically", () => {
+  // Decomposition kicks off silently from the editor; failures never block.
+  assert.match(compactEditor, /requestCreativeLayers\(creative\.creativeId\)/);
+  // The patch doubles as the optimistic overlay: final pixels, instantly.
+  assert.match(compactEditor, /renderTextPatch\(/);
+  assert.match(compactEditor, /setOptimisticPatch\(\{ dataUrl: patchImage, box: selected\.box \}\)/);
+  assert.match(compactEditor, /loadedPlate === textLayers\?\.plate/);
+  assert.match(compactEditor, /setLoadedPlate\(plate\)/);
+  assert.match(compactEditor, /That text does not fit this area\. Shorten it and try again\./);
+  assert.match(compactEditor, /optimisticPatchStyle\(optimisticPatch\.box\)/);
+  assert.match(compactEditor, /newValue: value, patchImage/);
+  // Inlined finished pixels paint without a media-proxy round trip.
   assert.match(editRoute, /previewImage,/);
   assert.match(editClient, /previewImage: data\.previewImage/);
   assert.doesNotMatch(editRoute, /previewDataUrl/);

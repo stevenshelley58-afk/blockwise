@@ -227,6 +227,8 @@ export async function generateCloneWithCascade(input: {
   userId: string;
   correlationId: string;
   attempt: number;
+  /** Separates distinct billable operations that share one campaign correlation. */
+  operation?: "clone" | "text-plate" | "creative-edit" | "template-regenerate";
   modelProfile?: CloneModelProfile;
   accounting?: {
     executeAttempt: typeof executeAdStudioProviderAttempt;
@@ -236,7 +238,8 @@ export async function generateCloneWithCascade(input: {
   onAttemptReceipts?: (attempts: readonly ProviderRunAttempt[]) => void;
 }): Promise<CloneGenerationResult> {
   const startedAt = Date.now();
-  const mutationId = `${input.correlationId}:adstudio.clone:${input.attempt}:${input.request.aspectRatio}`;
+  const operation = input.operation ?? "clone";
+  const mutationId = `${input.correlationId}:adstudio.${operation}:${input.attempt}:${input.request.aspectRatio}`;
   const attempts: ProviderRunAttempt[] = [];
   const prompt = {
     system: "",

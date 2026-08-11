@@ -7,6 +7,7 @@ import { normalizeLeadFormQuestions } from "../src/lib/adstudio/default-lead-for
 import { findLeadFormViolations } from "../src/lib/adstudio/readiness.ts";
 import type { AdStudioGalleryTemplate } from "../src/lib/adstudio/templates.ts";
 import {
+  generationCreditMutationKey,
   generationRequestFingerprint,
   resolveCloneCampaignIdFromParts,
 } from "../src/lib/adstudio/clone-campaign.ts";
@@ -42,6 +43,21 @@ test("campaign identity covers customer inputs and the released template revisio
   };
   const fingerprint = generationRequestFingerprint(request);
   assert.equal(generationRequestFingerprint(reorderedRequest), fingerprint, "jsonb key order must not change identity");
+  assert.equal(
+    generationRequestFingerprint({ ...request, clientMutationId: "retry-2" }),
+    generationRequestFingerprint({ ...request, clientMutationId: "retry-1" }),
+    "transport retry tokens must not create a different ad",
+  );
+  assert.equal(
+    generationCreditMutationKey(`workspace-1:${generationRequestFingerprint({ ...request, clientMutationId: "retry-2" })}`),
+    generationCreditMutationKey(`workspace-1:${generationRequestFingerprint({ ...request, clientMutationId: "retry-1" })}`),
+    "transport retry tokens must reuse the same credit reservation",
+  );
+  assert.notEqual(
+    generationCreditMutationKey(`workspace-1:${generationRequestFingerprint({ ...request, firstAd: { ...request.firstAd, description: "Changed copy" } })}`),
+    generationCreditMutationKey(`workspace-1:${fingerprint}`),
+    "different ad content must use a different credit reservation",
+  );
   assert.notEqual(
     generationRequestFingerprint({ ...request, firstAd: { ...request.firstAd, imageDataUrls: { property: "asset-b" } } }),
     fingerprint,

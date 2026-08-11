@@ -15,6 +15,7 @@ import { buildingTextLayers } from "./text-layer-state.ts";
 import { resolveAdStudioImageForModel } from "./resolve-image-for-model.ts";
 import type { AdStudioTemplate } from "./templates.ts";
 import type { AdStudioCreative, AdStudioTextLayers } from "./types.ts";
+import type { ProviderEnvironment } from "./ai-providers.ts";
 import type { createSupabaseServerClient } from "../supabase/server.ts";
 
 type SupabaseClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
@@ -50,6 +51,7 @@ export async function deriveAndPersistTemplateTextLayers(input: {
   currentImageRef: string;
   currentImageUrl?: string;
   template: AdStudioTemplate;
+  providerEnv?: ProviderEnvironment;
 }): Promise<AdStudioTextLayers | null> {
   try {
     return await deriveTemplateTextLayers(input);
@@ -71,6 +73,7 @@ async function deriveTemplateTextLayers(input: {
   currentImageRef: string;
   currentImageUrl?: string;
   template: AdStudioTemplate;
+  providerEnv?: ProviderEnvironment;
 }): Promise<AdStudioTextLayers | null> {
   const existing = input.canvas.textLayers;
   if (existing?.status === "ready" && existing.validFor.includes(input.currentImageRef)) {
@@ -95,7 +98,7 @@ async function deriveTemplateTextLayers(input: {
   // Use the same fast inpainting profile as targeted region edits. The
   // previous default silently selected the final-quality provider, which
   // took roughly 140-150 seconds per plate in production.
-  const providers = (await resolveCloneProviders("fast")).sort(
+  const providers = (await resolveCloneProviders("fast", input.providerEnv)).sort(
     (left, right) => Number(Boolean(right.capabilities.inpainting)) - Number(Boolean(left.capabilities.inpainting)),
   );
   const generated = await generateCloneWithCascade({
@@ -108,6 +111,7 @@ async function deriveTemplateTextLayers(input: {
     userId: input.userId,
     correlationId: input.correlationId,
     attempt: 1,
+    operation: "text-plate",
     modelProfile: "image_draft",
   });
   const plateDataUrl = await derivePlateFromInpaint(currentImage, generated.assetUrl, textBoxes);
