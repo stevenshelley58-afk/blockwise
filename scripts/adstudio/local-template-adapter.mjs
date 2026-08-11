@@ -10,7 +10,7 @@ export const MIN_AD_SYSTEM_LIKENESS = 9.5;
 export const MIN_STANDALONE_AD_QUALITY = 9;
 export const SUBJECT_INVARIANT_RUBRIC_VERSION = "adstudio-subject-invariant-clone-v1";
 export const CLONE_PACKET_STAGES = ["gallery_sample", "customer_fixture"];
-export const CLONE_PACKET_TRANSPORTS = ["codex_subscription_image_generation", "google_image_api"];
+export const CLONE_PACKET_TRANSPORTS = ["codex_subscription_image_generation", "google_image_api", "production_image_api"];
 
 function canonicalJson(value) {
   if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
