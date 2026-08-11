@@ -1,0 +1,436 @@
+{
+  "schemaVersion": 2,
+  "templateId": "meta-feed-151",
+  "templateHash": "ea0f9f5601193459c018f080c7a74be82e3bb57f97d4ca4d48a7abc268ada174",
+  "sampleHash": "83b590525fa86592ac712ce6164b99453146e750a6243cda735561a1affe6b71",
+  "rubricVersion": "adstudio-subject-invariant-clone-v1",
+  "thresholds": {
+    "adSystemLikeness": 9.5,
+    "standaloneAdQuality": 9
+  },
+  "qualifiedAt": "2026-08-11T05:08:00.000Z",
+  "sample": {
+    "stage": "gallery_sample",
+    "requestHash": "086e5e01231b215024c31eba94f36cf1ac708a01ed45c1759b90491e107b934d",
+    "referenceHash": "14b9dc6b4444b2da96cdc95cec203654772ac935125035ef8d5230fa4f028979",
+    "references": [
+      {
+        "index": 1,
+        "key": "source_ad",
+        "role": "source",
+        "contentHash": "14b9dc6b4444b2da96cdc95cec203654772ac935125035ef8d5230fa4f028979"
+      },
+      {
+        "index": 2,
+        "key": "agency_logo",
+        "role": "replacement_asset",
+        "contentHash": "23bf53aaa0d83c829a9ff2717a3d632abd00237ea1c5e938caccce80a36e27b9"
+      },
+      {
+        "index": 3,
+        "key": "main_exterior",
+        "role": "replacement_asset",
+        "contentHash": "accffa058d035dfc7de3f48a381345f1900c3245127a837ca76171a51ea8b7a4"
+      },
+      {
+        "index": 4,
+        "key": "interior_1",
+        "role": "replacement_asset",
+        "contentHash": "795b5488e848ee0796424ce7ed95e99ab3d6d62a5bc9b5f6f80a36e0f2360899"
+      },
+      {
+        "index": 5,
+        "key": "interior_2",
+        "role": "replacement_asset",
+        "contentHash": "831c757d7608318fc8ba77f0a40e0dd1ed3179f38ec0e90cbcb1d30a2a7846a8"
+      },
+      {
+        "index": 6,
+        "key": "interior_3",
+        "role": "replacement_asset",
+        "contentHash": "dab8466b788f4aedf8fc1724a776719318d4df11193298691298b837aba50534"
+      },
+      {
+        "index": 7,
+        "key": "agent_photo",
+        "role": "replacement_asset",
+        "contentHash": "48a16b1aa96924d399413fd3500521757031c9fad8329223f4ae54b65ef6c9ef"
+      }
+    ],
+    "copy": {
+      "headline": "OPEN HOUSE THIS SUNDAY",
+      "date_time": "21 JUNE 2026 | 10 AM - 2 PM",
+      "price_label": "LISTED AT",
+      "listing_price": "$860,000",
+      "bedrooms": "4 BEDS",
+      "bathrooms": "2 BATHS",
+      "area": "2,400 SQ FT",
+      "feature_1": "CAR PORT",
+      "feature_2": "POOL",
+      "feature_3": "GARDEN",
+      "contact_prompt": "FOR DIRECTIONS OR DETAILS CALL",
+      "agent_name": "SOPHIE HALE",
+      "agent_phone": "+123-555-0126",
+      "agent_website": "HARBOURLINE.EXAMPLE"
+    },
+    "outputHash": "83b590525fa86592ac712ce6164b99453146e750a6243cda735561a1affe6b71",
+    "executionTransport": "google_image_api",
+    "reviewedAt": "2026-08-11T05:03:53Z",
+    "review": {
+      "schemaVersion": 1,
+      "rubricVersion": "adstudio-subject-invariant-clone-v1",
+      "templateId": "meta-feed-151",
+      "requestHash": "086e5e01231b215024c31eba94f36cf1ac708a01ed45c1759b90491e107b934d",
+      "candidateHash": "83b590525fa86592ac712ce6164b99453146e750a6243cda735561a1affe6b71",
+      "reviewer": {
+        "provider": "openai",
+        "model": "gpt-5.6-vision"
+      },
+      "adSystemLikenessScore": 9.6,
+      "standaloneAdQualityScore": 9.5,
+      "excludedContentInfluencedScore": false,
+      "copyChecks": [
+        {
+          "key": "headline",
+          "expected": "OPEN HOUSE THIS SUNDAY",
+          "observed": "OPEN HOUSE THIS SUNDAY",
+          "exact": true
+        },
+        {
+          "key": "date_time",
+          "expected": "21 JUNE 2026 | 10 AM - 2 PM",
+          "observed": "21 JUNE 2026 | 10 AM - 2 PM",
+          "exact": true
+        },
+        {
+          "key": "price_label",
+          "expected": "LISTED AT",
+          "observed": "LISTED AT",
+          "exact": true
+        },
+        {
+          "key": "listing_price",
+          "expected": "$860,000",
+          "observed": "$860,000",
+          "exact": true
+        },
+        {
+          "key": "bedrooms",
+          "expected": "4 BEDS",
+          "observed": "4 BEDS",
+          "exact": true
+        },
+        {
+          "key": "bathrooms",
+          "expected": "2 BATHS",
+          "observed": "2 BATHS",
+          "exact": true
+        },
+        {
+          "key": "area",
+          "expected": "2,400 SQ FT",
+          "observed": "2,400 SQ FT",
+          "exact": true
+        },
+        {
+          "key": "feature_1",
+          "expected": "CAR PORT",
+          "observed": "CAR PORT",
+          "exact": true
+        },
+        {
+          "key": "feature_2",
+          "expected": "POOL",
+          "observed": "POOL",
+          "exact": true
+        },
+        {
+          "key": "feature_3",
+          "expected": "GARDEN",
+          "observed": "GARDEN",
+          "exact": true
+        },
+        {
+          "key": "contact_prompt",
+          "expected": "FOR DIRECTIONS OR DETAILS CALL",
+          "observed": "FOR DIRECTIONS OR DETAILS CALL",
+          "exact": true
+        },
+        {
+          "key": "agent_name",
+          "expected": "SOPHIE HALE",
+          "observed": "SOPHIE HALE",
+          "exact": true
+        },
+        {
+          "key": "agent_phone",
+          "expected": "+123-555-0126",
+          "observed": "+123-555-0126",
+          "exact": true
+        },
+        {
+          "key": "agent_website",
+          "expected": "HARBOURLINE.EXAMPLE",
+          "observed": "HARBOURLINE.EXAMPLE",
+          "exact": true
+        }
+      ],
+      "assetChecks": [
+        {
+          "key": "agency_logo",
+          "used": true,
+          "faithful": true,
+          "notes": "Used in header."
+        },
+        {
+          "key": "main_exterior",
+          "used": true,
+          "faithful": true,
+          "notes": "Used as main image."
+        },
+        {
+          "key": "interior_1",
+          "used": true,
+          "faithful": true,
+          "notes": "Used in rail."
+        },
+        {
+          "key": "interior_2",
+          "used": true,
+          "faithful": true,
+          "notes": "Used in rail."
+        },
+        {
+          "key": "interior_3",
+          "used": true,
+          "faithful": true,
+          "notes": "Used in rail."
+        },
+        {
+          "key": "agent_photo",
+          "used": true,
+          "faithful": true,
+          "notes": "Used in contact panel."
+        }
+      ],
+      "identityLeakage": [],
+      "defects": [],
+      "includedRationale": "Preserves the rounded-card grid, header hierarchy, large image region, vertical photo rail, property metrics and contact panel.",
+      "qualityRationale": "Clean full-size type and photo treatment.",
+      "suggestedCorrection": "",
+      "reviewedAt": "2026-08-11T05:03:53Z"
+    }
+  },
+  "customerFixture": {
+    "stage": "customer_fixture",
+    "requestHash": "f64b6db4b9cdcbe9876986d5d71a042add3d71c1f732c1a5615a9cf876d3d553",
+    "referenceHash": "83b590525fa86592ac712ce6164b99453146e750a6243cda735561a1affe6b71",
+    "references": [
+      {
+        "index": 1,
+        "key": "approved_sample",
+        "role": "approved_sample",
+        "contentHash": "83b590525fa86592ac712ce6164b99453146e750a6243cda735561a1affe6b71"
+      },
+      {
+        "index": 2,
+        "key": "agency_logo",
+        "role": "replacement_asset",
+        "contentHash": "f08e686fa83f3948af5af5feaa285bcbbb9c0413ef148a538866825700c765a4"
+      },
+      {
+        "index": 3,
+        "key": "main_exterior",
+        "role": "replacement_asset",
+        "contentHash": "a5ba9fd9a7c541bcfdae934da9eec0b3f9865547105fa91a4a44744db6bc3cfd"
+      },
+      {
+        "index": 4,
+        "key": "interior_1",
+        "role": "replacement_asset",
+        "contentHash": "046aac73f9df9b5a97be28b928dc469f4811d700a859b54a56ba4bec006ec610"
+      },
+      {
+        "index": 5,
+        "key": "interior_2",
+        "role": "replacement_asset",
+        "contentHash": "80fe40a4fcdc73ae359866531cdfb78d7c32f137b8eb5310d064df5a09b91036"
+      },
+      {
+        "index": 6,
+        "key": "interior_3",
+        "role": "replacement_asset",
+        "contentHash": "822eb27cef5fda2ac7480316ccf163dbf3a4ed757fd6a2501b73f179b6b4133b"
+      },
+      {
+        "index": 7,
+        "key": "agent_photo",
+        "role": "replacement_asset",
+        "contentHash": "51320b2c5eb202b88f3b0aa9195e67568684ff02c6153e614b856b0bbf8853a4"
+      }
+    ],
+    "copy": {
+      "headline": "OPEN HOUSE THIS SATURDAY",
+      "date_time": "28 JUNE 2026 | 11 AM - 1 PM",
+      "price_label": "GUIDE PRICE",
+      "listing_price": "$910,000",
+      "bedrooms": "3 BEDS",
+      "bathrooms": "2 BATHS",
+      "area": "1,950 SQ FT",
+      "feature_1": "GARAGE",
+      "feature_2": "DECK",
+      "feature_3": "PARKSIDE",
+      "contact_prompt": "FOR INSPECTION DETAILS CALL",
+      "agent_name": "MORGAN REED",
+      "agent_phone": "+123-555-0198",
+      "agent_website": "HARBOURLINE.EXAMPLE"
+    },
+    "outputHash": "38dfd62a1804033d5b20f756c60d129e3375c080c0ba5be06dfb01ef062d7f40",
+    "executionTransport": "google_image_api",
+    "reviewedAt": "2026-08-11T05:08:00Z",
+    "review": {
+      "schemaVersion": 1,
+      "rubricVersion": "adstudio-subject-invariant-clone-v1",
+      "templateId": "meta-feed-151",
+      "requestHash": "f64b6db4b9cdcbe9876986d5d71a042add3d71c1f732c1a5615a9cf876d3d553",
+      "candidateHash": "38dfd62a1804033d5b20f756c60d129e3375c080c0ba5be06dfb01ef062d7f40",
+      "reviewer": {
+        "provider": "openai",
+        "model": "gpt-5.6-vision"
+      },
+      "adSystemLikenessScore": 9.6,
+      "standaloneAdQualityScore": 9.6,
+      "excludedContentInfluencedScore": false,
+      "copyChecks": [
+        {
+          "key": "headline",
+          "expected": "OPEN HOUSE THIS SATURDAY",
+          "observed": "OPEN HOUSE THIS SATURDAY",
+          "exact": true
+        },
+        {
+          "key": "date_time",
+          "expected": "28 JUNE 2026 | 11 AM - 1 PM",
+          "observed": "28 JUNE 2026 | 11 AM - 1 PM",
+          "exact": true
+        },
+        {
+          "key": "price_label",
+          "expected": "GUIDE PRICE",
+          "observed": "GUIDE PRICE",
+          "exact": true
+        },
+        {
+          "key": "listing_price",
+          "expected": "$910,000",
+          "observed": "$910,000",
+          "exact": true
+        },
+        {
+          "key": "bedrooms",
+          "expected": "3 BEDS",
+          "observed": "3 BEDS",
+          "exact": true
+        },
+        {
+          "key": "bathrooms",
+          "expected": "2 BATHS",
+          "observed": "2 BATHS",
+          "exact": true
+        },
+        {
+          "key": "area",
+          "expected": "1,950 SQ FT",
+          "observed": "1,950 SQ FT",
+          "exact": true
+        },
+        {
+          "key": "feature_1",
+          "expected": "GARAGE",
+          "observed": "GARAGE",
+          "exact": true
+        },
+        {
+          "key": "feature_2",
+          "expected": "DECK",
+          "observed": "DECK",
+          "exact": true
+        },
+        {
+          "key": "feature_3",
+          "expected": "PARKSIDE",
+          "observed": "PARKSIDE",
+          "exact": true
+        },
+        {
+          "key": "contact_prompt",
+          "expected": "FOR INSPECTION DETAILS CALL",
+          "observed": "FOR INSPECTION DETAILS CALL",
+          "exact": true
+        },
+        {
+          "key": "agent_name",
+          "expected": "MORGAN REED",
+          "observed": "MORGAN REED",
+          "exact": true
+        },
+        {
+          "key": "agent_phone",
+          "expected": "+123-555-0198",
+          "observed": "+123-555-0198",
+          "exact": true
+        },
+        {
+          "key": "agent_website",
+          "expected": "HARBOURLINE.EXAMPLE",
+          "observed": "HARBOURLINE.EXAMPLE",
+          "exact": true
+        }
+      ],
+      "assetChecks": [
+        {
+          "key": "agency_logo",
+          "used": true,
+          "faithful": true,
+          "notes": "Distinct generic logo used."
+        },
+        {
+          "key": "main_exterior",
+          "used": true,
+          "faithful": true,
+          "notes": "Distinct exterior used."
+        },
+        {
+          "key": "interior_1",
+          "used": true,
+          "faithful": true,
+          "notes": "Distinct interior used."
+        },
+        {
+          "key": "interior_2",
+          "used": true,
+          "faithful": true,
+          "notes": "Distinct interior used."
+        },
+        {
+          "key": "interior_3",
+          "used": true,
+          "faithful": true,
+          "notes": "Distinct interior used."
+        },
+        {
+          "key": "agent_photo",
+          "used": true,
+          "faithful": true,
+          "notes": "Distinct agent photo used."
+        }
+      ],
+      "identityLeakage": [],
+      "defects": [],
+      "includedRationale": "Preserves the source-derived rounded card, header, calendar bar, main image, photo rail, pricing tab, metric tiles and agent contact geometry.",
+      "qualityRationale": "Legible and production ready; no image, type or geometry defects.",
+      "suggestedCorrection": "",
+      "reviewedAt": "2026-08-11T05:08:00Z"
+    }
+  }
+}

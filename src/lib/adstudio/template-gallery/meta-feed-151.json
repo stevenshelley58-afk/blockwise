@@ -21,7 +21,7 @@
     "imageSrc": "/adstudio-samples/meta/meta-feed-151-sample.png",
     "thumbnailSrc": "/adstudio-samples/meta/meta-feed-151-sample.png",
     "alt": "Generated sample for Open House Property Showcase.",
-    "contentHash": "0000000000000000000000000000000000000000000000000000000000000000",
+    "contentHash": "83b590525fa86592ac712ce6164b99453146e750a6243cda735561a1affe6b71",
     "generatedBy": "reference_clone"
   },
   "inputs": {
@@ -214,5 +214,8 @@
         "body": "The agency will be in touch shortly."
       }
     }
+  },
+  "qualityLock": {
+    "templateHash": "ea0f9f5601193459c018f080c7a74be82e3bb57f97d4ca4d48a7abc268ada174"
   }
 }
