@@ -49,10 +49,9 @@ meta_ad_candidates/
 .codex-remote-attachments/
 _ad/
 
-# AdStudio font-corpus build cache (re-fetched/regenerated on demand; only
-# the winning typeSpecs + subset woff2 faces this script produces get
-# committed, not the raw corpus metadata or intermediate OCR region cache).
-.cache/font-corpus/
+# Generated tooling caches are re-fetched or rebuilt on demand. Runtime font
+# assets are the curated WOFF2 files under public/fonts/adstudio/.
+.cache/
 
 # Scratch / temp / local-only agent state (never commit)
 .tmp-*
