@@ -1,4 +1,5 @@
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
+import type { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 import {
   ADSTUDIO_EMBEDDED_ASSET_LIMIT,
@@ -17,6 +18,7 @@ import type {
 } from "./types.ts";
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
+type SupabaseServiceClient = ReturnType<typeof createSupabaseServiceClient>;
 type PersistenceResult = { data: unknown; error: { message: string } | null };
 
 export function isExampleBrandKitSourceUrl(value: string | null | undefined): boolean {
@@ -78,7 +80,7 @@ export async function persistAdStudioBrandKit(
 }
 
 export async function persistAdStudioCampaignPack(
-  supabase: SupabaseServerClient,
+  supabase: SupabaseServiceClient,
   pack: AdStudioCampaignPack,
   userId: string,
 ): Promise<PersistenceResult> {
@@ -89,9 +91,9 @@ export async function persistAdStudioCampaignPack(
   const now = new Date().toISOString();
   const compactCreatives = compactCreativesForPersistence(pack.creatives);
 
-  // One transactional RPC (adstudio_persist_campaign_pack, SECURITY INVOKER so
-  // RLS still applies): a failure in any table rolls back the whole pack —
-  // partially written campaigns are impossible.
+  // One internal transactional RPC writes the server-built pack. The caller
+  // must authenticate and bind the workspace before supplying this service
+  // client; a failure in any table rolls the whole pack back.
   const result = await supabase.rpc("adstudio_persist_campaign_pack", {
     brand_kit: {
       id: pack.brandKit.brandKitId,

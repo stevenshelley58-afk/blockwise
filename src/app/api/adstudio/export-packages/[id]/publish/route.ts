@@ -221,7 +221,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
   }
 
   const serviceSupabase = createSupabaseServiceClient();
-  const persistResult = await persistAdStudioCampaignPack(access.supabase, basePack, access.access.userId);
+  const persistResult = await persistAdStudioCampaignPack(serviceSupabase, basePack, access.access.userId);
 
   if (persistResult.error) {
     return NextResponse.json({ error: persistResult.error.message }, { status: 500 });

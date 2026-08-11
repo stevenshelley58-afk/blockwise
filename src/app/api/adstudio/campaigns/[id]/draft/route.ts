@@ -8,6 +8,7 @@ import {
   persistAdStudioCampaignPack,
 } from "@/lib/adstudio/persistence";
 import type { AdStudioCampaignPack } from "@/lib/adstudio";
+import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -52,9 +53,15 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       existingPack?.brandKit ?? body.campaignPack.brandKit,
       existingPack?.campaign.brandKitId ?? body.campaignPack.brandKit.brandKitId,
     );
-    const campaignPack = existingPack ? mergeCampaignPack(existingPack, submittedPack) : submittedPack;
+    const campaignPack = existingPack
+      ? mergeCampaignPack(existingPack, submittedPack)
+      : { ...submittedPack, creatives: [] };
 
-    const persisted = await persistAdStudioCampaignPack(access.supabase, campaignPack, access.access.userId);
+    const persisted = await persistAdStudioCampaignPack(
+      createSupabaseServiceClient(),
+      campaignPack,
+      access.access.userId,
+    );
 
     // A silent "Saved" over an unsaved draft is how users lose work: fail the
     // request so the client shows the retryable error state instead.
@@ -91,7 +98,9 @@ function mergeCampaignPack(existing: AdStudioCampaignPack, submitted: AdStudioCa
       brandKitId: existing.campaign.brandKitId,
     },
     variants: mergeById(existing.variants, submitted.variants, (variant) => variant.variantId),
-    creatives: mergeById(existing.creatives, submitted.creatives, (creative) => creative.creativeId),
+    // Finished pixels, QA, layers, histories, and revision pointers are all
+    // server-owned. Draft payloads may edit copy, never creative state.
+    creatives: existing.creatives,
     copyPacks: mergeById(existing.copyPacks, submitted.copyPacks, (copyPack) => copyPack.copyPackId),
     compliance: {
       ...existing.compliance,

@@ -66,18 +66,12 @@ import {
   type WorkspaceCreditReservation,
 } from "../credits/workspace-credits.ts";
 import { recordCustomerActivationMilestone } from "../activation/customer-activation.ts";
-import type { createSupabaseServerClient } from "../supabase/server.ts";
 import type { createSupabaseServiceClient } from "../supabase/service.ts";
 
-type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 type SupabaseServiceClient = ReturnType<typeof createSupabaseServiceClient>;
 
-/**
- * Both the RLS-scoped route client and the service-role client satisfy the same
- * runtime API; downstream helpers are typed against the server client, so the
- * union is normalised once at the top of the run.
- */
-export type SupabaseGenerationClient = SupabaseServerClient | SupabaseServiceClient;
+/** Generation runs only in the authenticated VPS worker with its service client. */
+export type SupabaseGenerationClient = SupabaseServiceClient;
 
 /** The campaigns POST body — shared with the route and the job payload. */
 export type CreateCampaignBody = {
@@ -184,7 +178,7 @@ async function resumePersistedTemplateCampaign(input: {
   providerEnv?: ProviderEnvironment;
 }): Promise<RunTemplateCampaignGenerationResult | null> {
   const campaignPack = await loadAdStudioCampaignPack(
-    input.supabase as SupabaseServerClient,
+    input.supabase,
     input.workspaceId,
     input.expectedCampaignId,
   );
@@ -515,7 +509,7 @@ export type CloneEditingLayersInput = {
 export async function prepareCloneCreativeTextLayers(
   input: CloneEditingLayersInput,
 ): Promise<void> {
-  const supabase = input.supabase as SupabaseServerClient;
+  const supabase = input.supabase;
   const requiresDeterministicEditing = deterministicEditingReadiness(input.template).status === "ready";
 
   await Promise.all(input.renders.map(async (render) => {
@@ -591,7 +585,7 @@ export async function runClonePersistencePipeline<
 export async function runTemplateCampaignGeneration(
   input: RunTemplateCampaignGenerationInput,
 ): Promise<RunTemplateCampaignGenerationResult> {
-  const supabase = input.supabase as SupabaseServerClient;
+  const supabase = input.supabase;
   const { body } = input;
   const firstAd = body.firstAd;
 

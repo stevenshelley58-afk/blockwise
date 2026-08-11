@@ -86,6 +86,7 @@ test("campaign-pack persistence is transactional and surfaces errors", () => {
   const source = read(persistence);
 
   // One RPC writes the whole pack; any table failure rolls everything back.
+  assert.match(source, /persistAdStudioCampaignPack\(\s*supabase: SupabaseServiceClient/);
   assert.match(source, /supabase\.rpc\("adstudio_persist_campaign_pack"/);
   assert.match(source, /error: result\.error \? \{ message: result\.error\.message \} : null/);
   // Demo kits still refuse to persist before any write happens.
@@ -103,12 +104,13 @@ test("first-session state stays empty and unpersisted until a sample is cloned",
   assert.doesNotMatch(loader, /persistAdStudioCampaignPack/);
 });
 
-test("draft route self-heals missing seeded campaigns instead of returning 404", () => {
+test("draft route self-heals missing campaigns without accepting browser-owned creative state", () => {
   const source = read(draftRoute);
 
   assert.doesNotMatch(source, /Campaign not found\./);
-  assert.match(source, /existingPack \? mergeCampaignPack\(existingPack,\s*submittedPack\) : submittedPack/);
-  assert.match(source, /persistAdStudioCampaignPack\(access\.supabase,\s*campaignPack,\s*access\.access\.userId\)/);
+  assert.match(source, /existingPack\s*\? mergeCampaignPack\(existingPack, submittedPack\)\s*:\s*\{ \.\.\.submittedPack, creatives: \[\] \}/);
+  assert.match(source, /creatives: existing\.creatives/);
+  assert.match(source, /persistAdStudioCampaignPack\(\s*createSupabaseServiceClient\(\),\s*campaignPack,\s*access\.access\.userId/);
 });
 
 test("brand kit fallback is available to every workspace and stays advisory", () => {

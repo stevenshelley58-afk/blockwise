@@ -8,6 +8,7 @@ import { buildingTextLayers } from "@/lib/adstudio/text-layer-state";
 import type { AdStudioCreative } from "@/lib/adstudio/types";
 import { deterministicEditingReadiness, resolveAdStudioTemplate } from "@/lib/adstudio/templates";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -99,7 +100,8 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
     deterministicOnly,
   );
   const claimedCanvas = { ...canvas, textLayers: building };
-  let claim = context.supabase
+  const creativeService = createSupabaseServiceClient();
+  let claim = creativeService
     .from("adstudio_creatives")
     .update({ canvas_json: claimedCanvas, updated_at: new Date().toISOString() })
     .eq("workspace_id", context.access.workspaceId)
@@ -108,7 +110,7 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
   claim = row.active_revision_id
     ? claim.eq("active_revision_id", row.active_revision_id)
     : claim.is("active_revision_id", null);
-  const { data: claimed, error: claimError } = await claim.select("id");
+  const { data: claimed, error: claimError } = await claim.select("id,active_revision_id");
   if (claimError) return NextResponse.json({ error: claimError.message }, { status: 500 });
   if (!claimed?.length) {
     return NextResponse.json({ error: "This ad changed. Reload it before editing." }, { status: 409 });
@@ -116,12 +118,12 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
 
   try {
     const textLayers = await deriveAndPersistTemplateTextLayers({
-      supabase: context.supabase,
+      supabase: creativeService,
       workspaceId: context.access.workspaceId,
       userId: context.access.userId,
       correlationId,
       creativeId: id,
-      activeRevisionId: row.active_revision_id,
+      activeRevisionId: claimed[0]?.active_revision_id ?? row.active_revision_id,
       format: String(row.format ?? "4:5"),
       canvas: claimedCanvas,
       currentImageRef,
