@@ -39,7 +39,7 @@ test("vault renderer rejects invalid, out-of-range, and non-Google candidate tie
 
 test("vault renderer records the selected immutable candidate in secret-free evidence", () => {
   const command = readFileSync("scripts/adstudio/create-template.mjs", "utf8");
-  assert.match(command, /resolvePricedGoogleImageFinalCandidate\(profile, options\.candidateIndex \?\? candidateIndexArg\(\)\)/);
+  assert.match(command, /resolvePricedImageFinalCandidate\(profile, options\.candidateIndex \?\? candidateIndexArg\(\)\)/);
   assert.match(command, /requestHash: verified\.requestHash/);
   assert.match(command, /candidateIndex,/);
   assert.match(command, /selectedCandidate: \{/);

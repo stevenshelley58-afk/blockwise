@@ -10,7 +10,7 @@ import sharp from "sharp";
 
 import { resolveModelProfile } from "../../src/lib/ai/model-registry.ts";
 import { createTextProviderForCandidate } from "../../src/lib/adstudio/ai-providers.ts";
-import { createGoogleImageProvider } from "../../src/lib/adstudio/google-image-provider.ts";
+import { createImageProviderForCandidate } from "../../src/lib/adstudio/ai-providers.ts";
 import { validateProviderJsonOutput } from "../../src/lib/adstudio/providers.ts";
 import { buildCloneImageRequest } from "../../src/lib/adstudio/reference-clone.ts";
 import {
@@ -21,8 +21,9 @@ import {
 } from "./local-template-adapter.mjs";
 import {
   lockedPacketImageRequest,
-  loadVaultGoogleProviderEnvironment,
-  resolvePricedGoogleImageFinalCandidate,
+  loadVaultImageProviderEnvironment,
+  resolvePricedImageFinalCandidate,
+  assertPacketTransportMatchesCandidate,
 } from "./vault-template-execution.mjs";
 
 const root = process.cwd();
@@ -242,8 +243,9 @@ async function exportCustomerLocal() {
  * output path, or transport after it was locked.
  */
 async function renderVaultLockedGooglePacket() {
-  const providerEnv = await loadVaultGoogleProviderEnvironment();
-  await renderLockedGooglePacket({ providerEnv, candidateIndex: candidateIndexArg() });
+  const selected = resolvePricedImageFinalCandidate(resolveModelProfile("image_final"), candidateIndexArg());
+  const providerEnv = await loadVaultImageProviderEnvironment(selected.candidate.provider);
+  await renderLockedGooglePacket({ providerEnv, selected });
 }
 
 async function renderLockedGooglePacket(options = {}) {
@@ -253,9 +255,6 @@ async function renderLockedGooglePacket(options = {}) {
   const packet = JSON.parse(readFileSync(packetPath, "utf8"));
   const verified = verifyLockedClonePacket(packet, { root });
   if (packet.templateId !== template.id) throw new Error("Locked clone packet belongs to another template.");
-  if (packet.executionTransport !== "google_image_api") {
-    throw new Error("render-locked-google requires a packet exported with --transport google_image_api.");
-  }
 
   const outputPath = resolve(root, packet.expectedOutput);
   assertLockedOutputPath({ template, stage: verified.stage, outputPath });
@@ -272,23 +271,10 @@ async function renderLockedGooglePacket(options = {}) {
   )));
   const request = lockedPacketImageRequest(packet, referenceAssets);
   const profile = resolveModelProfile("image_final");
-  const selected = resolvePricedGoogleImageFinalCandidate(profile, options.candidateIndex ?? candidateIndexArg());
+  const selected = options.selected ?? resolvePricedImageFinalCandidate(profile, options.candidateIndex ?? candidateIndexArg());
   const { candidate, candidateIndex } = selected;
-  const model = candidate.model;
-  const provider = createGoogleImageProvider({
-    model,
-    pricing: {
-      inputUsdPerMillionTokens: candidate.inputUsdPerMillionTokens,
-      outputUsdPerMillionTokens: candidate.outputUsdPerMillionTokens,
-      imageUsdPerUnit: candidate.imageUsdPerUnit,
-      currency: "USD",
-      inputTokenBasis: "per_million_tokens",
-      outputTokenBasis: "per_million_tokens",
-      imageBasis: "per_output_image",
-      source: "default",
-      snapshotId: null,
-    },
-  }, { model, ...(options.providerEnv ? { env: options.providerEnv } : {}) });
+  assertPacketTransportMatchesCandidate(packet.executionTransport, candidate);
+  const provider = createImageProviderForCandidate(candidate, options.providerEnv ? { env: options.providerEnv } : {});
   const generated = await provider.generate(request);
   const rawBytes = await assetBytes(generated.assetUrl);
   const normalized = await sharp(rawBytes)
@@ -316,7 +302,7 @@ async function renderLockedGooglePacket(options = {}) {
       ?? generated.providerMetadata?.requestId
       ?? null,
   }, null, 2)}\n`, { flag: "wx" });
-  console.log(`Google image render completed with ${generated.model}.`);
+  console.log(`Production image render completed with ${generated.model}.`);
   console.log(`Raw provider artifact written to ${relative(root, rawPath)}.`);
   console.log(`Normalized locked output written to ${relative(root, outputPath)}.`);
   console.log(`Locked output manifest written to ${relative(root, manifestPath)}.`);
@@ -494,8 +480,8 @@ function splitPair(pair, kind) {
 
 function requestedTransport() {
   const transport = typeof args.transport === "string" ? args.transport : "codex_subscription_image_generation";
-  if (!["codex_subscription_image_generation", "google_image_api"].includes(transport)) {
-    throw new Error("--transport must be codex_subscription_image_generation or google_image_api.");
+  if (!["codex_subscription_image_generation", "google_image_api", "production_image_api"].includes(transport)) {
+    throw new Error("--transport must be codex_subscription_image_generation, google_image_api, or production_image_api.");
   }
   return transport;
 }

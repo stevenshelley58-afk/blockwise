@@ -19,18 +19,26 @@ export function assertVpsTemplateExecutionContext(env = process.env) {
   }
 }
 
-/** Load the Google key into one short-lived provider environment in memory. */
-export async function loadVaultGoogleProviderEnvironment(input = {}) {
+/** Load just the selected image provider token into a short-lived environment. */
+export async function loadVaultImageProviderEnvironment(provider, input = {}) {
+  if (provider !== "google" && provider !== "openai") {
+    throw new Error(`Vault-backed template rendering does not support provider ${provider}.`);
+  }
   const env = input.env ?? process.env;
   const createServiceClient = input.createServiceClient ?? createSupabaseServiceClient;
   const loadToken = input.loadToken ?? loadRuntimeProviderToken;
   assertVpsTemplateExecutionContext(env);
   const serviceSupabase = createServiceClient({ env });
-  const googleAiApiKey = await loadToken(serviceSupabase, "google");
-  if (!googleAiApiKey) {
-    throw new Error("The encrypted Google runtime credential is not provisioned.");
+  const token = await loadToken(serviceSupabase, provider);
+  if (!token) {
+    throw new Error(`The encrypted ${provider} runtime credential is not provisioned.`);
   }
-  return Object.freeze({ GOOGLE_AI_API_KEY: googleAiApiKey });
+  return Object.freeze(provider === "google" ? { GOOGLE_AI_API_KEY: token } : { OPENAI_API_KEY: token });
+}
+
+/** Backwards-compatible Google-only entry point for existing callers. */
+export async function loadVaultGoogleProviderEnvironment(input = {}) {
+  return loadVaultImageProviderEnvironment("google", input);
 }
 
 /** Rehydrate only the immutable provider request fields locked at export. */
@@ -54,7 +62,7 @@ export function lockedPacketImageRequest(packet, referenceAssets) {
  * locked clone packet. Candidate order is the production profile order:
  * primary first, then declared fallbacks.
  */
-export function resolvePricedGoogleImageFinalCandidate(profile, candidateIndex = 0) {
+export function resolvePricedImageFinalCandidate(profile, candidateIndex = 0) {
   if (!Number.isInteger(candidateIndex) || candidateIndex < 0) {
     throw new Error("--candidate-index must be a non-negative integer.");
   }
@@ -64,8 +72,20 @@ export function resolvePricedGoogleImageFinalCandidate(profile, candidateIndex =
   if (!selected) {
     throw new Error(`--candidate-index ${candidateIndex} is outside the priced image_final candidate list.`);
   }
-  if (selected.provider !== "google") {
-    throw new Error(`--candidate-index ${candidateIndex} selects ${selected.provider}; render-request-vault only supports Google candidates.`);
-  }
   return Object.freeze({ candidateIndex, candidate: selected });
+}
+
+/** Backwards-compatible Google-only selector for existing callers/tests. */
+export function resolvePricedGoogleImageFinalCandidate(profile, candidateIndex = 0) {
+  const selected = resolvePricedImageFinalCandidate(profile, candidateIndex);
+  if (selected.candidate.provider !== "google") {
+    throw new Error(`--candidate-index ${candidateIndex} selects ${selected.candidate.provider}; render-locked-google only supports Google candidates.`);
+  }
+  return selected;
+}
+
+export function assertPacketTransportMatchesCandidate(packetTransport, candidate) {
+  if (packetTransport === "production_image_api") return;
+  if (packetTransport === "google_image_api" && candidate.provider === "google") return;
+  throw new Error(`Locked packet transport ${packetTransport} does not permit ${candidate.provider}.`);
 }
