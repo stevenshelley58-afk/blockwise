@@ -105,8 +105,8 @@
     ]
   },
   "sourceAd": {
-    "file": "02_stories_reels_9x16/meta_245.png",
-    "contentHash": "b6d85d3015a97438faaf619b460f78f24ebc4c0d22a3e471575d105d6f65141e"
+    "contentHash": "b6d85d3015a97438faaf619b460f78f24ebc4c0d22a3e471575d105d6f65141e",
+    "provenance": "frank_factory"
   },
   "classification": {
     "ad_type": "lead_generation",
@@ -521,9 +521,6 @@
       ]
     }
   },
-  "qualityLock": {
-    "templateHash": "2b19baa78d2f49e21f6f8be22bcf72bcb4a70fe679ac909c0c5cedf2f0b2f3e6"
-  },
   "deterministicEditing": {
     "status": "ready",
     "imageBoxes": {
@@ -540,5 +537,8 @@
         "height": 0.53
       }
     }
+  },
+  "qualityLock": {
+    "templateHash": "8bb920a8a91f06fa465e8db8f3a0a5e6fc5e7441ab9ea786fbf0d1ff107556c3"
   }
 }

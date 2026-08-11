@@ -89,8 +89,8 @@
     ]
   },
   "sourceAd": {
-    "file": "02_stories_reels_9x16/meta_255.png",
-    "contentHash": "64fdbd93d4d5f3e7fc6d062762fd50b9dd8ece96ab85e3c011a28346072fda71"
+    "contentHash": "64fdbd93d4d5f3e7fc6d062762fd50b9dd8ece96ab85e3c011a28346072fda71",
+    "provenance": "frank_factory"
   },
   "classification": {
     "ad_type": "market_update",
@@ -363,9 +363,6 @@
       ]
     }
   },
-  "qualityLock": {
-    "templateHash": "924865de0c29c5fc7c18ff30f2c4a93c8f6a27e55c70611348d2845ffbb8a809"
-  },
   "deterministicEditing": {
     "status": "ready",
     "imageBoxes": {
@@ -382,5 +379,8 @@
         "height": 0.288
       }
     }
+  },
+  "qualityLock": {
+    "templateHash": "449fe9e50b776f331fdac7b9f51323f20fcc6ec5713a6a0e1571ce56c247f176"
   }
 }

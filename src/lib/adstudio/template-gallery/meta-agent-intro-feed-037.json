@@ -59,8 +59,8 @@
     ]
   },
   "sourceAd": {
-    "file": "01_feed_4x5_best/meta_037.png",
-    "contentHash": "c2b76dc1425b5c96c6b6845349f1dc2bfe1f0b390805daf46e00029347a97a7a"
+    "contentHash": "c2b76dc1425b5c96c6b6845349f1dc2bfe1f0b390805daf46e00029347a97a7a",
+    "provenance": "frank_factory"
   },
   "classification": {
     "ad_type": "lead_generation",
@@ -102,9 +102,6 @@
         "body": "The agency will be in touch within 24 hours to learn what you are looking for."
       }
     }
-  },
-  "qualityLock": {
-    "templateHash": "6f024e3b1853a588a9adae7490ff9122b399c694414e20678c96082c9dc0988a"
   },
   "typography": {
     "body": {
@@ -244,5 +241,8 @@
         "height": 0.11
       }
     }
+  },
+  "qualityLock": {
+    "templateHash": "081fbb4218a8b29e9f3dddd720fbfcdef8ab28feb6133135b2941a6fbaa7cd85"
   }
 }

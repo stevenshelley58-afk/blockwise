@@ -102,8 +102,8 @@
     ]
   },
   "sourceAd": {
-    "file": "01_feed_4x5_best/meta_051.png",
-    "contentHash": "86565ad6874566135bfabbac7c27b70fcd06b0cfe0c4378779f1d39448b188c5"
+    "contentHash": "86565ad6874566135bfabbac7c27b70fcd06b0cfe0c4378779f1d39448b188c5",
+    "provenance": "frank_factory"
   },
   "classification": {
     "ad_type": "property_detail",
@@ -513,6 +513,6 @@
     }
   },
   "qualityLock": {
-    "templateHash": "e9797e24b408c710d60a1c5b90606c8d2b7eceec4d5eed9cfe76d257e33595d7"
+    "templateHash": "a299a88b25263960a118a4fb0e42fc6c429a832e514907b8944aac5ce7167927"
   }
 }

@@ -25,7 +25,7 @@ async function fixture() {
     id: "one-template",
     dimensions: { width: 100, height: 125 },
     sample: { imageSrc: "/samples/sample.png", contentHash: hash(readFileSync(sample)) },
-    sourceAd: { creativeId: "frank-attested-source", contentHash: hash("frank-attested-source") },
+    sourceAd: { contentHash: hash("frank-attested-source"), provenance: "frank_factory" },
     inputs: { images: [{ key: "photo" }], text: [{ key: "headline" }] },
   };
   const templatePath = join(root, "template.json");

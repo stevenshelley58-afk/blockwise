@@ -94,8 +94,8 @@
     ]
   },
   "sourceAd": {
-    "file": "01_feed_4x5_best/meta_139.png",
-    "contentHash": "4d627695b6ee3ca05db7a3c263bdbb544860a95f49e672f148d0b1d8ed02b328"
+    "contentHash": "4d627695b6ee3ca05db7a3c263bdbb544860a95f49e672f148d0b1d8ed02b328",
+    "provenance": "frank_factory"
   },
   "classification": {
     "ad_type": "land_listing",
@@ -137,9 +137,6 @@
         "body": "The agency will be in touch shortly."
       }
     }
-  },
-  "qualityLock": {
-    "templateHash": "3c0980fb159b5b04cf2c31e945946fcf315b9f7634363b74e57e88841232aec1"
   },
   "typography": {
     "benefits": {
@@ -447,5 +444,8 @@
         "height": 0.47
       }
     }
+  },
+  "qualityLock": {
+    "templateHash": "00c39a0463238a91be41cf8e0aed2866ed4cc10cd009dffcdf3edf85bd5417d4"
   }
 }

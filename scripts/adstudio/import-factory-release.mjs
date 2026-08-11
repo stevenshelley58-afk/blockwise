@@ -110,7 +110,19 @@ function validateBundle(bundle, release) {
     || bundle.manifest.sourceAd?.contentHash !== bundle.attestation.sourceHash) {
     throw new Error("Approved factory gallery manifest bindings are invalid.");
   }
+  assertPublicSourceProvenance(bundle.manifest.sourceAd);
   assertSourceFree(bundle.manifest);
+}
+
+function assertPublicSourceProvenance(sourceAd) {
+  if (!isRecord(sourceAd)
+    || Object.keys(sourceAd).length !== 2
+    || !Object.hasOwn(sourceAd, "contentHash")
+    || !Object.hasOwn(sourceAd, "provenance")
+    || !/^[a-f0-9]{64}$/u.test(sourceAd.contentHash)
+    || sourceAd.provenance !== "frank_factory") {
+    throw new Error("Import package source provenance must contain only the factory marker and SHA-256 hash.");
+  }
 }
 
 function assertSourceFree(value, key = "value") {
@@ -124,7 +136,7 @@ function assertSourceFree(value, key = "value") {
   if (Array.isArray(value)) { value.forEach((item, index) => assertSourceFree(item, `${key}[${index}]`)); return; }
   if (!isRecord(value)) return;
   for (const [childKey, child] of Object.entries(value)) {
-    if (/^(?:sourceReference|privatePath|bytes|dataUrl|base64|layers|recipe|versions|fonts)$/iu.test(childKey)) {
+    if (/^(?:sourceReference|privatePath|sourceFile|fileName|file|creativeId|bytes|dataUrl|base64|layers|recipe|versions|fonts)$/iu.test(childKey)) {
       throw new Error(`Import package contains forbidden field ${childKey}.`);
     }
     assertSourceFree(child, `${key}.${childKey}`);
