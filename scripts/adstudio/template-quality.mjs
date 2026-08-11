@@ -96,10 +96,8 @@ export async function inspectEvidence({ templatePath, packetPath, candidatePath,
   } else if (!placeholderSample) {
     throw new Error("Template public sample identity does not match its manifest.");
   }
-  const expectedSource = resolve(root, "meta_ad_candidates", template.sourceAd.file);
   if (stage === "gallery_sample") {
     if (reference.contentHash !== template.sourceAd.contentHash) throw new Error("Locked source identity does not match template sourceAd.");
-    if (resolve(root, reference.path) !== expectedSource) throw new Error("Locked source path does not match template sourceAd.file.");
   } else {
     if (!existsSync(publicSample) || placeholderSample) throw new Error("Customer-fixture review requires an approved public sample.");
     if (resolve(root, reference.path) !== publicSample || reference.contentHash !== template.sample.contentHash) {
@@ -125,7 +123,7 @@ export async function inspectEvidence({ templatePath, packetPath, candidatePath,
     },
     paths: {
       template: workspacePath(root, templateAbsolute), packet: workspacePath(root, packetAbsolute), reference: reference.path,
-      source: stage === "gallery_sample" ? reference.path : null,
+      source: null,
       sample: existsSync(publicSample) ? workspacePath(root, publicSample) : null,
       candidate: workspacePath(root, candidateAbsolute),
     },

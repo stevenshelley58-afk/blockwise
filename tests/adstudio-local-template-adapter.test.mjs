@@ -16,9 +16,9 @@ import {
 
 function fixture() {
   const root = mkdtempSync(join(tmpdir(), "adstudio-local-adapter-"));
-  mkdirSync(join(root, "meta_ad_candidates"));
+  mkdirSync(join(root, "factory-private"));
   mkdirSync(join(root, "assets"));
-  const source = join(root, "meta_ad_candidates", "source.png");
+  const source = join(root, "factory-private", "source.png");
   const photo = join(root, "assets", "photo.png");
   writeFileSync(source, "source-image");
   writeFileSync(photo, "replacement-photo");
@@ -171,7 +171,7 @@ test("emits audit evidence without copying private image bytes", () => {
   const evidence = localAuditEvidence({ template, packet, qa, outputHash: "f".repeat(64) });
   const serialized = JSON.stringify(evidence);
   assert.equal(evidence.outputHash, "f".repeat(64));
-  assert.equal(evidence.inputs[0].path, "meta_ad_candidates/source.png");
+  assert.equal(evidence.inputs[0].path, "factory-private/source.png");
   assert.equal(evidence.request.prompt, "Clone the source.");
   assert.equal(evidence.qa.visualReview.adSystemLikenessScore, 9.6);
   assert.equal(serialized.includes(readFileSync(source, "utf8")), false);

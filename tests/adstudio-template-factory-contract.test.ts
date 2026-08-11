@@ -184,7 +184,7 @@ test("Blockwise keeps one post-Frank promotion path and no local source-to-sampl
   const fixture = readFileSync("scripts/adstudio/customer-template-fixture.mjs", "utf8");
   const promotion = readFileSync("scripts/adstudio/promote-factory-template.mjs", "utf8");
   assert.doesNotMatch(packageJson, /adstudio:create-template/u);
-  assert.doesNotMatch(fixture, /gallery_sample|analyseSource|meta_ad_candidates/u);
+  assert.doesNotMatch(fixture, /gallery_sample|analyseSource|private-source-corpus/u);
   assert.match(fixture, /stage: "customer_fixture"/u);
   assert.match(fixture, /artifacts\/adstudio-template-imports/u);
   assert.match(promotion, /recordReview\(/u);

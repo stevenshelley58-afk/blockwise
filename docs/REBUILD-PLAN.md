@@ -114,8 +114,6 @@ Rules that make cloning trivial:
 3. Database schema stays niche-neutral (it already mostly is: workspaces, leads, campaigns, brand kits).
 4. Marketing pages (landing, pricing, guides) are the second copy surface — same config approach, can trail the app rebuild.
 
-**Clone playbook** (ships as `docs/CLONE-PLAYBOOK.md`): clone repo → new Supabase project + run migrations → new Vercel project + env from `.env.example` → write `src/config/niche/dentistwise.ts` → drop assets into `public/niche/dentistwise/` → flip `index.ts` export → set feature flags → deploy. Target: **a working DentistWise in under a day, with zero component edits.**
-
 Acceptance: `grep -rn "real estate\|listing\|suburb\|agent" src/app/\(customer\) src/components` returns only config imports and `features.*`-flagged surfaces.
 
 ---
@@ -138,7 +136,7 @@ Acceptance: `grep -rn "real estate\|listing\|suburb\|agent" src/app/\(customer\)
 
 **Phase 7 — Onboarding & first-run (~1 day).** `multi-step-form-01` + `progress-02` patterns for onboarding; confetti on first published ad; skeletons + empty states everywhere they're missing.
 
-**Phase 8 — Cleanup & governance (~1 day).** Remove customer-route dependence on legacy `globals.css` selectors (operator keeps them); DESIGN.md v2 (codify Premium v2 register + motion vocabulary); write `docs/CLONE-PLAYBOOK.md`; run the niche-noun grep acceptance; final `$impeccable` audit pass at desktop + mobile viewports on Vercel Preview.
+**Phase 8 — Cleanup & governance (~1 day).** Remove customer-route dependence on legacy `globals.css` selectors (operator keeps them); DESIGN.md v2 (codify Premium v2 register + motion vocabulary); run the niche-noun grep acceptance; final `$impeccable` audit pass at desktop + mobile viewports on Vercel Preview.
 
 Total: roughly 10–14 working days of focused effort.
 
@@ -150,4 +148,3 @@ Total: roughly 10–14 working days of focused effort.
 - **Ad Studio** is out of scope for this rebuild (it has its own approved architecture and migration path per DESIGN.md) but inherits every token/motion change automatically through the bridge.
 - **Operator/monitor** stays on the legacy shell until its own migration — the two systems already coexist by design; nothing here breaks that.
 - **Recharts**: all chart blocks used are Recharts-based (avoid `table-13`, ApexCharts). Chart styling follows the dataviz rules already applied in the mockup: single hue for single series, no legend for one series, text never wears the data color, tooltips + table fallback for accessibility.
-- The old `UI-UX-REVIEW-AND-PLAN.md` (June, navy-era palette) is superseded by this plan and should be archived in Phase 8 to avoid brand-drift for future agents — same hazard it itself warned about.

@@ -7,9 +7,10 @@ AdStudio has one template contract and one full-ad generation request.
 
 ## Product law
 
-1. A template starts from one real source ad in `meta_ad_candidates/` or one
-   Ad Radar creative. Record `sourceAd.file` or `sourceAd.creativeId`, its
-   SHA-256 `contentHash`, and its AI ad-radar `classification`.
+1. A template starts in Frank from one real private source ad or one Ad Radar
+   creative. Frank records its `sourceAd.file` or `sourceAd.creativeId`, SHA-256
+   `contentHash`, and AI ad-radar `classification`; Blockwise receives only the
+   source-free release metadata.
 2. Vision extracts the customer input contract from the source: each distinct
    image the customer must provide and each visible text value they can replace.
    It does not extract a rendering recipe.

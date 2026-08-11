@@ -22,7 +22,7 @@ learning design software or interpreting internal AI/provider mechanics.
 Blockwise turns real advertising evidence, customer Brand Packs, property media,
 and a short brief into compliant Meta lead ads and an auditable execution path.
 AdStudio succeeds when a user can choose a meaningfully different real-ad-derived
-sample, generate accurate Feed and Story creatives, edit the finished result,
+sample, generate one accurate finished creative, edit that finished result,
 review exactly what will export, and publish without hidden failures.
 
 ## Brand Personality
