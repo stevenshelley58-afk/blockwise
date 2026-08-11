@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { requireApiWorkspace } from "@/lib/auth/api-guards";
-import { loadMetaPublishPlan } from "@/lib/providers/meta-execution";
+import { loadMetaPublishPlan, updateMetaPublishPlanExecution } from "@/lib/providers/meta-execution";
 import {
   buildMetaPlanMutation,
   type MetaPlanMutationAction,
@@ -40,6 +40,12 @@ export async function POST(request: NextRequest, context: RouteContext) {
     workspaceId: access.workspaceId,
     planId: id,
   });
+  if (body.action === "activate" && plan.status !== "paused_ready") {
+    return NextResponse.json(
+      { error: "Only a Meta campaign confirmed PAUSED and ready can be activated." },
+      { status: 409 },
+    );
+  }
   const mutation = buildMetaPlanMutation({
     workspaceId: access.workspaceId,
     planId: plan.planId,
@@ -92,6 +98,15 @@ export async function POST(request: NextRequest, context: RouteContext) {
     })
     .eq("workspace_id", mutation.workspaceId)
     .eq("id", mutation.mutationId);
+
+  if (body.action === "activate") {
+    await updateMetaPublishPlanExecution(serviceSupabase, {
+      ...plan,
+      status: "activating",
+      lastError: null,
+      updatedAt: new Date().toISOString(),
+    });
+  }
 
   return NextResponse.json({
     mutation: {

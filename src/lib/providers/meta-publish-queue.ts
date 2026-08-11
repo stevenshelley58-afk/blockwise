@@ -58,7 +58,7 @@ export async function loadLatestMetaPublishPlanQueueState(input: {
 }
 
 /**
- * Watchdog recovery: find approved plans that were never queued and enqueue
+ * Watchdog recovery: find queued plans that were never enqueued and enqueue
  * them. A publishing plan is provider-ambiguous and is deliberately
  * quarantined for an explicit user retry after its queue budget is exhausted.
  *
@@ -86,11 +86,11 @@ export async function recoverStuckMetaPublishPlans(options?: {
   const supabase = createSupabaseServiceClient();
   const cutoff = new Date(Date.now() - stuckMinutes * 60_000).toISOString();
 
-  // Stuck = approved but never queued, and untouched beyond the window.
+  // Stuck = queued but never running, and untouched beyond the window.
   const { data: rows, error: listError } = await supabase
     .from("meta_publish_plans")
     .select("*")
-    .eq("status", "approved")
+    .eq("status", "queued")
     .lt("updated_at", cutoff)
     .limit(25);
 

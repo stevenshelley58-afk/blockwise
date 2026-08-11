@@ -18,6 +18,7 @@ import {
 import {
   buildMetaPublishPlan,
   hasExplicitMetaPublishAudience,
+  loadMetaPublishPlanComplianceStatus,
   loadMetaPublishPlanByIdempotencyKey,
   persistMetaPublishPlan,
   resolveMetaConnectionSetup,
@@ -310,7 +311,9 @@ export async function POST(request: NextRequest, context: RouteContext) {
       })
     : null;
   let metaPublishPlan = metaPublishPlanResult?.plan ?? null;
-  const scopedComplianceStatus = metaScopedComplianceStatus(pack.compliance);
+  const scopedComplianceStatus = metaPublishPlan
+    ? await loadMetaPublishPlanComplianceStatus(serviceSupabase, metaPublishPlan)
+    : metaScopedComplianceStatus(pack.compliance);
   const providerPayloadReadiness = resolveAdStudioPublishReadiness({
     providerStatuses,
     approvalStatus: metaPublishPlanResult?.approval.status ?? existingApproval.status,
@@ -322,6 +325,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
         approvalStatus: metaPublishPlanResult?.approval.status ?? "draft",
         providerConnectionStatus: metaConnectionStatus,
         complianceStatus: scopedComplianceStatus,
+        requireRuntimeBinding: true,
       })
     : { ready: false, blockers: firstCopyPack?.meta ? ["Meta account is not connected."] : [] };
   const adapterBlockers = metaPublishPlan?.adapter && metaPublishPlan.adapter !== "marketing_api"
@@ -331,7 +335,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
   const publishReady = blockers.length === 0;
   let queueJobId: string | null = null;
   const activePublishJob = metaPublishPlan && (
-    metaPublishPlan.status === "approved" || metaPublishPlan.status === "publishing"
+    metaPublishPlan.status === "queued" || metaPublishPlan.status === "publishing"
   )
     ? await hasActiveMetaPublishPlanExecution({
         serviceSupabase,
@@ -345,18 +349,19 @@ export async function POST(request: NextRequest, context: RouteContext) {
     !body.dryRun &&
     writesEnabled &&
     metaPublishPlan?.adapter === "marketing_api" &&
-    metaPublishPlan.status !== "paused_live" &&
+    metaPublishPlan.status !== "paused_ready" &&
+    metaPublishPlan.status !== "live" &&
     (!metaPublishPlanResult?.reusedActivePlan || !activePublishJob)
   ) {
     const queuedPlan: MetaPublishPlan = metaPublishPlan.status === "publishing"
       ? metaPublishPlan
       : {
           ...metaPublishPlan,
-          status: "approved",
+          status: "queued",
           lastError: null,
           updatedAt: new Date().toISOString(),
         };
-    if (queuedPlan.status === "approved") {
+    if (queuedPlan.status === "queued") {
       await persistMetaPublishPlan(serviceSupabase, queuedPlan, access.access.userId);
     }
 
@@ -370,7 +375,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       // claiming that no provider mutation occurred.
       const queueFailedPlan: MetaPublishPlan = {
         ...queuedPlan,
-        status: queuedPlan.status === "publishing" ? "publishing" : "failed",
+        status: queuedPlan.status === "publishing" ? "reconciliation_required" : "failed",
         lastError: error instanceof Error ? error.message : "Publish could not be queued.",
         updatedAt: new Date().toISOString(),
       };
@@ -520,12 +525,12 @@ async function createAndPersistMetaPlan(input: {
     }
   }
 
-  // Plans persist as "draft" here; the POST handler flips them to "approved"
-  // only when the plan is actually ready and a worker run is being queued.
+  // The POST handler moves this validation record to queued only after all
+  // readiness checks pass and the durable job enqueue succeeds.
   let persistedPlan: MetaPublishPlan = {
     ...plan,
     approvalRequestId: approval.id,
-    status: "draft",
+    status: "validating",
     updatedAt: new Date().toISOString(),
   };
   const existingPlan = await loadMetaPublishPlanByIdempotencyKey(input.serviceSupabase, {
@@ -533,11 +538,11 @@ async function createAndPersistMetaPlan(input: {
     idempotencyKey: persistedPlan.idempotencyKey,
   });
 
-  // Reuse completed/provider-ambiguous plans, and reuse an approved plan only
+  // Reuse completed/provider-ambiguous plans, and reuse a queued plan only
   // while its queue row is genuinely active. This prevents a second click from
   // overwriting an in-flight plan to draft, while still repairing an approved
   // plan whose enqueue failed or whose queue row became terminal.
-  const existingApprovedJobActive = existingPlan?.status === "approved"
+  const existingQueuedJobActive = existingPlan?.status === "queued"
     ? await hasActiveMetaPublishPlanExecution({
         serviceSupabase: input.serviceSupabase,
         workspaceId: input.workspaceId,
@@ -548,8 +553,10 @@ async function createAndPersistMetaPlan(input: {
     existingPlan &&
     (
       existingPlan.status === "publishing" ||
-      existingPlan.status === "paused_live" ||
-      existingApprovedJobActive
+      existingPlan.status === "paused_ready" ||
+      existingPlan.status === "live" ||
+      existingPlan.status === "reconciliation_required" ||
+      existingQueuedJobActive
     )
   ) {
     return { plan: existingPlan, approval, reusedActivePlan: true };

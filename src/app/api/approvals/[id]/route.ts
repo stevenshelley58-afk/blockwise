@@ -180,7 +180,7 @@ async function queueApprovedTarget(input: {
     });
     const approvedPlan = {
       ...plan,
-      status: "approved" as const,
+      status: "queued" as const,
       approvalRequestId: input.approval.id,
       updatedAt: new Date().toISOString(),
     };

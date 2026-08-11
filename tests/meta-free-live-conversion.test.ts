@@ -162,14 +162,8 @@ test("billing service ends the trial once and treats Stripe active state as an i
 
 test("publish worker withholds entitlement, trial end, and visible success until activation finishes", () => {
   const source = readFileSync("src/lib/providers/meta-publish-worker.ts", "utf8");
-  assert.match(
-    source,
-    /updateMetaPublishPlanExecution\(input\.serviceSupabase, durableProviderPlan\)[\s\S]*finalizeFreeLiveConversion\(input, completedPlan, freeLive\)[\s\S]*updateMetaPublishPlanExecution\(input\.serviceSupabase, completedPlan\)/,
-  );
-  assert.match(
-    source,
-    /await activateFreeCampaign\(input, completedPlan\)[\s\S]*consumeMetaFreeLiveClaim\([\s\S]*endTrialAfterFirstLiveCampaign\(/,
-  );
+  assert.match(source, /Creation is deliberately a PAUSED-only workflow/);
+  assert.doesNotMatch(source, /finalizeFreeLiveConversion\(input, completedPlan, freeLive\)/);
   assert.doesNotMatch(source, /if \(freeLive\.kind === "free_campaign"\) \{\s*await activateFreeCampaign/);
   assert.match(
     source,
@@ -177,25 +171,18 @@ test("publish worker withholds entitlement, trial end, and visible success until
   );
   assert.match(
     source,
-    /completedPlan\.status !== "paused_live"[\s\S]*releasePreparedFreeLiveClaim/,
+    /completedPlan\.status !== "paused_ready"[\s\S]*releasePreparedFreeLiveClaim/,
   );
-  assert.match(
-    source,
-    /catch \(error\)[\s\S]*metaProviderMutationMayHaveOccurred\(providerState\)[\s\S]*status: "publishing"[\s\S]*throw error[\s\S]*releasePreparedFreeLiveClaim/,
-  );
+  assert.match(source, /catch \(error\)[\s\S]*status: "reconciliation_required"/);
   assert.match(source, /onCheckpoint:[\s\S]*updateMetaPublishPlanExecution/);
-  assert.match(source, /if \(input\.plan\.status === "paused_live"\)[\s\S]*finalizeFreeLiveConversion/);
+  assert.match(source, /if \(input\.plan\.status === "paused_ready"\)[\s\S]*return input\.plan/);
   assert.match(
     source,
-    /if \(input\.plan\.status === "approved"\)[\s\S]*const retryablePlan:[\s\S]*\.\.\.input\.plan,[\s\S]*lastError:[\s\S]*throw error/,
-  );
-  assert.match(
-    source,
-    /status: input\.plan\.status === "publishing" \? "publishing" : "approved"/,
+    /if \(input\.plan\.status === "queued"\)[\s\S]*const retryablePlan:[\s\S]*\.\.\.input\.plan,[\s\S]*lastError:[\s\S]*throw error/,
   );
   assert.doesNotMatch(
     source,
-    /if \(input\.plan\.status === "approved"\)[\s\S]{0,400}status: "failed"/,
+    /if \(input\.plan\.status === "queued"\)[\s\S]{0,400}status: "failed"/,
   );
 });
 
