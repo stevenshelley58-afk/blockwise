@@ -1,7 +1,7 @@
 import type { ImageProviderRequest } from "./providers.ts";
 import type { AdStudioTemplate } from "./templates.ts";
 
-/** The one input shape used for gallery-sample clones and customer ad clones. */
+/** The one input shape used for Frank sample clones and customer ad clones. */
 export type CloneInputs = {
   /** The design image to clone. Gallery creation uses the private source ad;
    * customer generation uses the approved public sample. */
