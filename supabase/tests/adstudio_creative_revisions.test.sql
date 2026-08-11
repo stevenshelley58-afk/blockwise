@@ -2,7 +2,7 @@ create extension if not exists pgtap with schema extensions;
 
 begin;
 
-select plan(42);
+select plan(51);
 
 select has_table('public', 'adstudio_creative_revisions', 'creative revisions table exists');
 select has_table('public', 'adstudio_creative_revision_mutations', 'creative revision mutation claims exist');
@@ -370,23 +370,68 @@ select is(
   3,
   'direct DML preserves both prior revisions and appends one snapshot'
 );
-select is(
-  (
-    select state
-    from public.adstudio_claim_creative_revision_mutation(
+select throws_ok(
+  $$
+    select * from public.adstudio_claim_creative_revision_mutation(
       'a1000000-0000-4000-8000-000000000001',
       'a5000000-0000-4000-8000-000000000001',
-      (
-        select active_revision_id from public.adstudio_creatives
-        where workspace_id = 'a1000000-0000-4000-8000-000000000001'
-          and id = 'a5000000-0000-4000-8000-000000000001'
-      ),
+      'a5000000-0000-4000-8000-000000000001',
       'a6000000-0000-4000-8000-000000000005',
       repeat('e', 64)
     )
+  $$,
+  '42501',
+  null,
+  'an authenticated browser session cannot claim a revision mutation directly'
+);
+select throws_ok(
+  $$
+    select * from public.adstudio_append_creative_revision(
+      'a1000000-0000-4000-8000-000000000001',
+      'a5000000-0000-4000-8000-000000000001',
+      'a5000000-0000-4000-8000-000000000001',
+      '{"version":"browser-injected","objects":[{"content":"arbitrary pixels"}]}'::jsonb,
+      'rendered',
+      'targeted_edit',
+      'a6000000-0000-4000-8000-000000000005',
+      repeat('e', 64)
+    )
+  $$,
+  '42501',
+  null,
+  'an authenticated browser session cannot append arbitrary replacement canvas JSON'
+);
+select throws_ok(
+  $$
+    select public.adstudio_release_creative_revision_mutation(
+      'a1000000-0000-4000-8000-000000000001',
+      'a5000000-0000-4000-8000-000000000001',
+      'a6000000-0000-4000-8000-000000000005'
+    )
+  $$,
+  '42501',
+  null,
+  'an authenticated browser session cannot release a revision mutation directly'
+);
+reset role;
+select set_config('request.jwt.claims', '{"role":"service_role"}', true);
+select state
+from public.adstudio_claim_creative_revision_mutation(
+  'a1000000-0000-4000-8000-000000000001',
+  'a5000000-0000-4000-8000-000000000001',
+  (
+    select active_revision_id from public.adstudio_creatives
+    where workspace_id = 'a1000000-0000-4000-8000-000000000001'
+      and id = 'a5000000-0000-4000-8000-000000000001'
   ),
-  'claimed',
-  'an authenticated edit obtains the guarded pending claim'
+  'a6000000-0000-4000-8000-000000000005',
+  repeat('e', 64)
+);
+set local role authenticated;
+select set_config(
+  'request.jwt.claims',
+  '{"role":"authenticated","sub":"c1000000-0000-4000-8000-000000000001"}',
+  true
 );
 select throws_ok(
   $$
@@ -421,6 +466,8 @@ select throws_ok(
   'Invalid creative revision claim transition.',
   'authenticated direct DML cannot replace an active claim'
 );
+reset role;
+select set_config('request.jwt.claims', '{"role":"service_role"}', true);
 select lives_ok(
   $$
     select public.adstudio_release_creative_revision_mutation(
@@ -440,6 +487,12 @@ select is(
   ),
   null,
   'the release RPC leaves no pending claim'
+);
+set local role authenticated;
+select set_config(
+  'request.jwt.claims',
+  '{"role":"authenticated","sub":"c1000000-0000-4000-8000-000000000001"}',
+  true
 );
 select throws_ok(
   format(
@@ -477,8 +530,71 @@ select throws_ok(
     )
   $$,
   '42501',
-  'Workspace access is not allowed.',
-  'authenticated claims cannot cross workspace membership boundaries'
+  null,
+  'an authenticated session cannot probe another workspace through a revision RPC'
+);
+reset role;
+select set_config('request.jwt.claims', '{"role":"service_role"}', true);
+
+select ok(
+  not has_function_privilege(
+    'authenticated',
+    'public.adstudio_claim_creative_revision_mutation(uuid,uuid,uuid,uuid,text)',
+    'EXECUTE'
+  ),
+  'authenticated cannot execute the revision claim RPC'
+);
+select ok(
+  not has_function_privilege(
+    'authenticated',
+    'public.adstudio_release_creative_revision_mutation(uuid,uuid,uuid)',
+    'EXECUTE'
+  ),
+  'authenticated cannot execute the revision release RPC'
+);
+select ok(
+  not has_function_privilege(
+    'authenticated',
+    'public.adstudio_append_creative_revision(uuid,uuid,uuid,jsonb,text,text,uuid,text)',
+    'EXECUTE'
+  ),
+  'authenticated cannot execute the arbitrary-canvas append RPC'
+);
+select ok(
+  has_function_privilege(
+    'service_role',
+    'public.adstudio_claim_creative_revision_mutation(uuid,uuid,uuid,uuid,text)',
+    'EXECUTE'
+  ),
+  'service role can execute the revision claim RPC'
+);
+select ok(
+  has_function_privilege(
+    'service_role',
+    'public.adstudio_release_creative_revision_mutation(uuid,uuid,uuid)',
+    'EXECUTE'
+  ),
+  'service role can execute the revision release RPC'
+);
+select ok(
+  has_function_privilege(
+    'service_role',
+    'public.adstudio_append_creative_revision(uuid,uuid,uuid,jsonb,text,text,uuid,text)',
+    'EXECUTE'
+  ),
+  'service role can execute the revision append RPC'
+);
+set local role service_role;
+select set_config('request.jwt.claims', '{"role":"service_role"}', true);
+select lives_ok(
+  $$
+    select public.adstudio_release_creative_revision_mutation(
+      'a1000000-0000-4000-8000-000000000001',
+      'a5000000-0000-4000-8000-000000000001',
+      'a6000000-0000-4000-8000-000000000099'
+    )
+  $$,
+  'service_role executes a revision mutation RPC'
 );
 reset role;
 select set_config('request.jwt.claims', '{"role":"service_role"}', true);

@@ -9,6 +9,7 @@ import {
 } from "../src/lib/adstudio/creative-revisions.ts";
 
 const migrationPath = "supabase/migrations/202607130003_adstudio_creative_revisions.sql";
+const lockdownMigrationPath = "supabase/migrations/20260811140232_revision_rpc_service_role_only.sql";
 const dbTestPath = "supabase/tests/adstudio_creative_revisions.test.sql";
 const routePath = "src/app/api/adstudio/creatives/[id]/edit/route.ts";
 const requestHash = "a".repeat(64);
@@ -54,6 +55,22 @@ test("creative revision migration backfills every creative and installs an appen
     appendFunction.indexOf("for update") < appendFunction.indexOf("where m.workspace_id = p_workspace_id"),
     "append locks the creative before checking idempotency",
   );
+});
+
+test("revision mutation RPCs are locked to service-role server work in a forward migration", () => {
+  assert.equal(existsSync(lockdownMigrationPath), true);
+  const sql = readFileSync(lockdownMigrationPath, "utf8");
+
+  for (const functionName of [
+    "adstudio_claim_creative_revision_mutation",
+    "adstudio_release_creative_revision_mutation",
+    "adstudio_append_creative_revision",
+  ]) {
+    const section = sql.slice(sql.indexOf(`revoke all on function public.${functionName}`));
+    assert.match(section, /from public, anon, authenticated/i);
+    assert.match(section, /to service_role/i);
+    assert.doesNotMatch(section, /to authenticated(?:,|;)/i);
+  }
 });
 
 test("revision claim helper maps stale and in-flight claims without dispatching work", async () => {
@@ -177,6 +194,13 @@ test("targeted edit appends through the revision CAS and returns a clean stale c
   assert.match(route, /mutationId/);
   assert.match(route, /createHash\("sha256"\)/);
   assert.match(route, /requestHash/);
+  assert.match(route, /requireAdStudioRequest\(request\)[\s\S]*createSupabaseServiceClient\(\)/);
+  assert.match(route, /executeAdStudioCreativeRevisionMutation\(revisionService,/);
+  assert.match(route, /appendAdStudioCreativeRevision\(revisionService,/);
+  assert.match(route, /releaseAdStudioCreativeRevisionMutation\(revisionService,/);
+  assert.doesNotMatch(route, /executeAdStudioCreativeRevisionMutation\(context\.supabase,/);
+  assert.doesNotMatch(route, /appendAdStudioCreativeRevision\(context\.supabase,/);
+  assert.doesNotMatch(route, /releaseAdStudioCreativeRevisionMutation\(context\.supabase,/);
   assert.ok(
     route.indexOf("executeAdStudioCreativeRevisionMutation") < route.indexOf("generateCloneWithCascade({"),
     "the route claims before paid provider dispatch",
