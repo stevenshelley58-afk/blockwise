@@ -21,7 +21,7 @@
     "imageSrc": "/adstudio-samples/meta/meta-seller-consult-feed-166-sample.png",
     "thumbnailSrc": "/adstudio-samples/meta/meta-seller-consult-feed-166-sample.png",
     "alt": "Generated sample for Home Staging Cleaning Checklist.",
-    "contentHash": "0000000000000000000000000000000000000000000000000000000000000000",
+    "contentHash": "8e7ed365cbc1d9bb3c4889c3409e2084189aab7f6cf91208bee4419ef887cbf8",
     "generatedBy": "reference_clone"
   },
   "inputs": {
@@ -151,5 +151,8 @@
         "body": "The agency will be in touch shortly."
       }
     }
+  },
+  "qualityLock": {
+    "templateHash": "cef665eedb04df80d5558f8bc5e8abff6b7a1945ab92dcea8f275cbaaee33394"
   }
 }
