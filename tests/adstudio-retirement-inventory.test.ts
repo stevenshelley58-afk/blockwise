@@ -12,6 +12,42 @@ test("retirement inventory retains a canonical finished-clone canary and scopes 
       { id: "plan_legacy", workspace_id: "workspace_1", adstudio_campaign_id: "campaign_legacy", plan_json: {} },
       { id: "plan_canary", workspace_id: "workspace_1", adstudio_campaign_id: "campaign_canary", plan_json: { publishContractVersion: "finished_clone_v1", creatives: [{ revisionBindings: [{ creativeId: "creative_1", revisionId: "revision_1" }] }] } },
     ],
+    adstudio_campaign_variants: [
+      { id: "variant_legacy", workspace_id: "workspace_1", campaign_id: "campaign_legacy" },
+      { id: "variant_canary", workspace_id: "workspace_1", campaign_id: "campaign_canary" },
+    ],
+    adstudio_creatives: [
+      { id: "creative_legacy", workspace_id: "workspace_1", campaign_id: "campaign_legacy", variant_id: "variant_legacy" },
+      { id: "creative_canary", workspace_id: "workspace_1", campaign_id: "campaign_canary", variant_id: "variant_canary" },
+    ],
+    adstudio_creative_revisions: [
+      { id: "revision_legacy", workspace_id: "workspace_1", creative_id: "creative_legacy" },
+      { id: "revision_canary", workspace_id: "workspace_1", creative_id: "creative_canary" },
+    ],
+    adstudio_creative_revision_mutations: [
+      { id: "mutation_legacy", workspace_id: "workspace_1", creative_id: "creative_legacy" },
+      { id: "mutation_canary", workspace_id: "workspace_1", creative_id: "creative_canary" },
+    ],
+    adstudio_creative_objects: [
+      { id: "object_legacy", workspace_id: "workspace_1", creative_id: "creative_legacy" },
+      { id: "object_canary", workspace_id: "workspace_1", creative_id: "creative_canary" },
+    ],
+    adstudio_job_runs: [
+      { id: "run_legacy", workspace_id: "workspace_1", input_json: { campaignId: "campaign_legacy" } },
+      { id: "run_canary", workspace_id: "workspace_1", input_json: { campaignId: "campaign_canary" } },
+    ],
+    adstudio_provider_runs: [
+      { id: "provider_legacy", workspace_id: "workspace_1", job_id: "run_legacy", input_json: {} },
+      { id: "provider_canary", workspace_id: "workspace_1", job_id: "run_canary", input_json: {} },
+    ],
+    adstudio_provider_run_attempts: [
+      { id: "attempt_legacy", workspace_id: "workspace_1", provider_run_id: "provider_legacy" },
+      { id: "attempt_canary", workspace_id: "workspace_1", provider_run_id: "provider_canary" },
+    ],
+    adstudio_provider_attempt_outbox: [
+      { id: "outbox_legacy", workspace_id: "workspace_1", provider_run_id: "provider_legacy" },
+      { id: "outbox_canary", workspace_id: "workspace_1", provider_run_id: "provider_canary" },
+    ],
     job_queue: [
       { id: "job_legacy", workspace_id: "workspace_1", kind: "publish.meta", payload_json: { planId: "plan_legacy" } },
       { id: "job_canary", workspace_id: "workspace_1", kind: "publish.meta", payload_json: { planId: "plan_canary" } },
@@ -40,5 +76,10 @@ test("retirement inventory retains a canonical finished-clone canary and scopes 
   assert.equal(manifest.counts.adstudio_campaigns, 1);
   assert.equal(manifest.counts.job_queue, 1);
   assert.equal(manifest.counts.approval_requests, 1);
+  for (const table of [
+    "adstudio_campaign_variants", "adstudio_creatives", "adstudio_creative_revisions",
+    "adstudio_creative_revision_mutations", "adstudio_creative_objects", "adstudio_job_runs",
+    "adstudio_provider_runs", "adstudio_provider_run_attempts", "adstudio_provider_attempt_outbox",
+  ]) assert.equal(manifest.counts[table], 1, `${table} should retain only its legacy child`);
   assert.deepEqual(manifest.retainedCanonical, { planIds: ["plan_canary"], campaignIds: ["campaign_canary"] });
 });
