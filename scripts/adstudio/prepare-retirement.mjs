@@ -56,13 +56,25 @@ const belongs = (row) => workspaceIds.has(row.workspace_id)
   && (!row.meta_publish_plan_id || planIds.has(row.meta_publish_plan_id));
 
 const legacyJobKinds = new Set(["publish.meta", "sync.meta.leads"]);
+function jsonReferencesPlanId(value) {
+  if (typeof value === "string") return planIds.has(value);
+  if (!value || typeof value !== "object") return false;
+  if (Array.isArray(value)) return value.some(jsonReferencesPlanId);
+  return Object.entries(value).some(([key, entry]) =>
+    (key === "planId" || key === "plan_id" || key === "metaPublishPlanId" || key === "meta_publish_plan_id")
+      ? typeof entry === "string" && planIds.has(entry)
+      : jsonReferencesPlanId(entry),
+  );
+}
 const scopedTables = Object.fromEntries(Object.entries(inventory).map(([table, value]) => [
   table,
   value.rows.filter((row) => {
     // Brand kits/assets are shared new-system resources. They are retained
     // unless a separately proven FK-level ownership migration classifies them.
     if (table === "adstudio_brand_assets" || table === "adstudio_brand_kits") return false;
-    if (table === "job_queue") return workspaceIds.has(row.workspace_id) && legacyJobKinds.has(String(row.kind));
+    if (table === "job_queue") return workspaceIds.has(row.workspace_id)
+      && legacyJobKinds.has(String(row.kind))
+      && jsonReferencesPlanId(row.payload_json ?? row.payload ?? row.data_json);
     if (table === "approval_requests") return workspaceIds.has(row.workspace_id)
       && ((row.target_type === "meta_publish_plan" && planIds.has(row.target_id))
         || (row.target_type === "adstudio_campaign" && campaignIds.has(row.target_id)));

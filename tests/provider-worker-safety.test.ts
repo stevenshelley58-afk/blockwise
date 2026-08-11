@@ -87,6 +87,24 @@ test("approval and executable target state are durable before queue dispatch", (
   assert.match(source, /status: 502/);
 });
 
+test("activation rechecks immutable finished clones and queues before exposing an activating plan", () => {
+  const route = readFileSync("src/app/api/integrations/meta/publish-plans/[id]/mutations/route.ts", "utf8");
+  const readiness = readFileSync("src/app/api/integrations/meta/publish-plans/[id]/readiness/route.ts", "utf8");
+  const execution = readFileSync("src/lib/providers/meta-execution.ts", "utf8");
+
+  assert.match(route, /confirmSpend !== true/);
+  assert.match(route, /evaluateCurrentMetaPublishPlanReadiness/);
+  assert.match(route, /queueMetaMutationExecution/);
+  assert.ok(route.indexOf("queueMetaMutationExecution") < route.lastIndexOf('status: "activating"'));
+  assert.match(route, /activationMutationId/);
+  assert.match(readiness, /evaluateCurrentMetaPublishPlanReadiness/);
+  assert.match(readiness, /planToken: plan\.complianceSubjectHash/);
+  assert.match(execution, /adstudio_creative_revisions/);
+  assert.match(execution, /sameImmutableCreativeAsset/);
+  assert.match(execution, /variantCreatives/);
+  assert.doesNotMatch(execution, /adstudio_runtime_instances/);
+});
+
 test("lead delivery worker normalizes legacy email destinations to webhook language", () => {
   const source = readFileSync("src/lib/providers/lead-delivery-worker.ts", "utf8");
 

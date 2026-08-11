@@ -6,6 +6,7 @@ import {
   buildMetaPublishPlan,
   createMetaExecutionAdapter,
   hasExplicitMetaPublishAudience,
+  prepareImmutableMetaPublishCampaignPack,
   validateMetaConnectionSetup,
   validateMetaPublishPlanReadiness,
   type MetaCreativeAssetPlan,
@@ -321,6 +322,42 @@ test("buildMetaPublishPlan resolves stored clone references to storage assets", 
   assert.equal(plan.creatives[0]?.asset?.storagePath, "workspace_demo/clones/ad.png");
 });
 
+test("server preparation hashes storage-backed bytes from the exact active revision before planning", async () => {
+  const pack = buildPack();
+  const storedPack = {
+    ...pack,
+    creatives: pack.creatives.map((creative, index) => ({
+      ...creative,
+      activeRevisionId: `revision-${index + 1}`,
+      canvas: {
+        ...creative.canvas,
+        objects: creative.canvas.objects.map((object) => object.objectId === "template_clone_image"
+          ? { ...object, content: `/api/adstudio/media?path=workspace_demo%2Fclones%2F${creative.creativeId}.png`, assetId: "" }
+          : object),
+      },
+    })),
+  };
+  const revisionRows = storedPack.creatives.map((creative, index) => ({
+    id: `revision-${index + 1}`,
+    creative_id: creative.creativeId,
+    canvas_json: creative.canvas,
+  }));
+  const service = {
+    from(table: string) {
+      const data = table === "adstudio_creatives"
+        ? storedPack.creatives.map((creative) => ({ id: creative.creativeId, active_revision_id: creative.activeRevisionId }))
+        : revisionRows;
+      return { select: () => ({ eq: () => ({ in: async () => ({ data, error: null }) }) }) };
+    },
+    storage: { from: () => ({ download: async () => ({ data: new Blob(["finished clone bytes"], { type: "image/png" }), error: null }) }) },
+  };
+  const prepared = await prepareImmutableMetaPublishCampaignPack(service as never, "workspace_demo", storedPack);
+  const plan = buildMetaPublishPlan({ workspaceId: "workspace_demo", campaignPack: prepared, connectionId: "connection_123", setup, approvalRequestId: "approval_123" });
+
+  assert.equal(plan.creatives.every((creative) => /^[a-f0-9]{64}$/.test(creative.asset?.contentSha256 ?? "")), true);
+  assert.equal(plan.creatives.every((creative) => creative.revisionBindings.some((binding) => binding.placement === "feed")), true);
+});
+
 test("validateMetaPublishPlanReadiness blocks creatives without a finished ad image", () => {
   const plan = buildMetaPublishPlan({
     workspaceId: "workspace_demo",
@@ -347,6 +384,8 @@ test("validateMetaPublishPlanReadiness blocks creatives without a finished ad im
   assert.deepEqual(readiness.blockers, [
     "The finished ad image could not be found for one or more creatives.",
     "Each selected finished ad asset must have a SHA-256 content hash before compliance and Meta publish.",
+    "Each selected variant needs a finished 4:5 feed clone before publishing.",
+    "Instagram Story placement requires a finished 9:16 story clone for every selected variant.",
   ]);
 });
 
@@ -409,7 +448,11 @@ test("validateMetaPublishPlanReadiness keeps Blockwise as the authority", () => 
       providerConnectionStatus: "connected",
       complianceStatus: "approved",
     }).blockers,
-    ["Human approval is required before publishing."],
+    [
+      "Human approval is required before publishing.",
+      "Each selected variant needs a finished 4:5 feed clone before publishing.",
+      "Instagram Story placement requires a finished 9:16 story clone for every selected variant.",
+    ],
   );
 
   assert.deepEqual(
@@ -421,7 +464,13 @@ test("validateMetaPublishPlanReadiness keeps Blockwise as the authority", () => 
         complianceStatus: "approved",
       },
     ),
-    { ready: true, blockers: [] },
+    {
+      ready: false,
+      blockers: [
+        "Each selected variant needs a finished 4:5 feed clone before publishing.",
+        "Instagram Story placement requires a finished 9:16 story clone for every selected variant.",
+      ],
+    },
   );
 });
 

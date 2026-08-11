@@ -88,6 +88,7 @@ type PublishPlanStatus = {
 type PublishPlanReadiness = {
   ready?: boolean;
   blockers?: Array<{ code: string; message: string }>;
+  planToken?: string;
   budget?: { dailyMinorUnits: number; currency: string };
 };
 
@@ -184,6 +185,7 @@ export function PublishSetupPanel({
   const [publishPlanId, setPublishPlanId] = useState<string | null>(null);
   const [serverBlockers, setServerBlockers] = useState<string[]>([]);
   const [authoritativeBudget, setAuthoritativeBudget] = useState<{ dailyMinorUnits: number; currency: string } | null>(null);
+  const [authoritativePlanToken, setAuthoritativePlanToken] = useState<string | null>(null);
   const [readinessRefresh, setReadinessRefresh] = useState(0);
   const [pollRefresh, setPollRefresh] = useState(0);
   const [activationConfirmed, setActivationConfirmed] = useState(false);
@@ -419,6 +421,7 @@ export function PublishSetupPanel({
         if (!response.ok) throw new Error("Readiness unavailable");
         setServerBlockers((body.blockers ?? []).map((blocker) => blocker.message));
         setAuthoritativeBudget(body.budget ?? null);
+        setAuthoritativePlanToken(typeof body.planToken === "string" && body.planToken ? body.planToken : null);
       })
       .catch(() => {
         if (!controller.signal.aborted) setServerBlockers(["We could not verify the final Meta publish requirements."]);
@@ -618,6 +621,7 @@ export function PublishSetupPanel({
       setPublishPlanId(body.metaPublishPlan?.id ?? null);
       setServerBlockers(body.blockers ?? []);
       setAuthoritativeBudget(null);
+      setAuthoritativePlanToken(null);
       setPublishMessage(planStatus === "paused_ready" ? "Paused and ready for your approval" : "Creating your paused ads on Meta");
       setPublishDone(true);
       setPublishPhase(planStatus === "paused_ready" ? "paused_ready" : "creating");
@@ -633,14 +637,20 @@ export function PublishSetupPanel({
   }
 
   async function handleActivate(): Promise<void> {
-    if (!publishPlanId || !activationConfirmed || serverBlockers.length) return;
+    if (!publishPlanId || !activationConfirmed || !authoritativeBudget || !authoritativePlanToken || serverBlockers.length) return;
     setActivating(true);
     setPublishError("");
     try {
       const response = await fetch(`/api/integrations/meta/publish-plans/${encodeURIComponent(publishPlanId)}/mutations`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "activate" }),
+        body: JSON.stringify({
+          action: "activate",
+          confirmSpend: true,
+          dailyBudgetMinorUnits: authoritativeBudget.dailyMinorUnits,
+          currency: authoritativeBudget.currency,
+          planToken: authoritativePlanToken,
+        }),
       });
       const body = await response.json().catch(() => ({})) as { error?: string };
       if (!response.ok) throw new Error(body.error ?? "Meta activation could not be started.");
@@ -1299,7 +1309,7 @@ export function PublishSetupPanel({
                     <Checkbox checked={activationConfirmed} onCheckedChange={(checked) => setActivationConfirmed(checked === true)} aria-label="Confirm Meta spend" />
                     <span>I confirm that activating this campaign can start Meta spend at {authoritativeBudget ? formatMinorCurrency(authoritativeBudget.dailyMinorUnits, authoritativeBudget.currency) : "the verified Meta budget"} per day.</span>
                   </label>
-                  <Button type="button" onClick={() => void handleActivate()} disabled={!activationConfirmed || !authoritativeBudget || serverBlockers.length > 0 || activating}>
+                  <Button type="button" onClick={() => void handleActivate()} disabled={!activationConfirmed || !authoritativeBudget || !authoritativePlanToken || serverBlockers.length > 0 || activating}>
                     {activating ? <RefreshCw aria-hidden size={17} className="animate-spin" /> : <Send aria-hidden size={17} />} {activating ? "Requesting activation..." : "Activate campaign"}
                   </Button>
                 </div>
