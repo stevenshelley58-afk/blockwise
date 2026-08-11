@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import { AD_STUDIO_TEMPLATES } from "../src/lib/adstudio/templates.ts";
@@ -10,7 +11,10 @@ import {
   buildTargetedEditRequest,
   resolveCloneCopy,
 } from "../src/lib/adstudio/reference-clone.ts";
-import { buildTemplateCloneRequestsByFormat } from "../src/lib/adstudio/generate-template-campaign.ts";
+import {
+  buildTemplateCloneRequest,
+  deriveStoryCloneFromFinishedFeed,
+} from "../src/lib/adstudio/generate-template-campaign.ts";
 
 const template = AD_STUDIO_TEMPLATES.find((entry) => entry.id === "meta-feed-020")!;
 const images = {
@@ -171,13 +175,45 @@ test("missing required assets fail before any model request", () => {
   assert.throws(() => buildCloneImageRequest(template, { images: {} }), /Missing required image/);
 });
 
-test("feed and story are both clones anchored on the same approved sample", () => {
-  const requests = buildTemplateCloneRequestsByFormat(template, { images });
-  assert.equal(requests["4:5"].referenceAssets[0], template.sample.imageSrc);
-  assert.equal(requests["9:16"].referenceAssets[0], template.sample.imageSrc);
-  assert.equal(requests["4:5"].aspectRatio, "4:5");
-  assert.equal(requests["9:16"].aspectRatio, "9:16");
-  assert.match(requests["9:16"].prompt, /9:16/);
+test("one full-ad request produces Feed and a deterministic non-stretched Story placement", async () => {
+  const request = buildTemplateCloneRequest(template, { images });
+  assert.equal(request.referenceAssets[0], template.sample.imageSrc);
+  assert.equal(request.aspectRatio, "4:5");
+
+  const { default: sharp } = await import("sharp");
+  const feedBytes = await sharp({
+    create: { width: 1024, height: 1280, channels: 4, background: { r: 18, g: 62, b: 117, alpha: 1 } },
+  }).composite([
+    { input: Buffer.from('<svg width="32" height="1280"><rect width="32" height="1280" fill="#ff0000"/></svg>'), left: 0, top: 0 },
+    { input: Buffer.from('<svg width="32" height="1280"><rect width="32" height="1280" fill="#00ff00"/></svg>'), left: 992, top: 0 },
+    { input: Buffer.from('<svg width="960" height="32"><rect width="960" height="32" fill="#0000ff"/></svg>'), left: 32, top: 0 },
+    { input: Buffer.from('<svg width="960" height="32"><rect width="960" height="32" fill="#ffff00"/></svg>'), left: 32, top: 1248 },
+  ]).png().toBuffer();
+  const feed = `data:image/png;base64,${feedBytes.toString("base64")}`;
+  const story = await deriveStoryCloneFromFinishedFeed(feed);
+  const storyBytes = Buffer.from(story.split(",")[1]!, "base64");
+  const storyMetadata = await sharp(storyBytes).metadata();
+  assert.deepEqual({ width: storyMetadata.width, height: storyMetadata.height }, { width: 864, height: 1536 });
+
+  const expectedForeground = await sharp(feedBytes)
+    .resize(864, 1080, { fit: "fill" })
+    .raw()
+    .toBuffer();
+  const actualForeground = await sharp(storyBytes)
+    .extract({ left: 0, top: 228, width: 864, height: 1080 })
+    .raw()
+    .toBuffer();
+  assert.deepEqual(
+    actualForeground,
+    expectedForeground,
+    "the centered Story foreground must preserve every scaled Feed pixel, including all four edge markers",
+  );
+
+  const pipeline = readFileSync("src/lib/adstudio/generate-template-campaign.ts", "utf8");
+  assert.equal(pipeline.match(/await generateFinalCloneRender\(\{/g)?.length, 1);
+  assert.doesNotMatch(pipeline, /generateStory|STORY_RECOMPOSE_PROMPT|storyGenPromise/);
+  assert.doesNotMatch(pipeline, /normalize\(finishedFeed, STORY_CLONE_FORMAT\)/);
+  assert.match(pipeline, /templateCloneImagesByFormat:[\s\S]*PRIMARY_CLONE_FORMAT[\s\S]*STORY_CLONE_FORMAT/);
 });
 
 test("post-clone edits anchor on the current finished ad and change one target", () => {

@@ -60,10 +60,10 @@ export async function reserveAdStudioGenerationCredits(input: {
     const reservation = await reserveWorkspaceCredits({
       workspaceId: input.workspaceId,
       actorProfileId: input.actorProfileId,
-      credits: 2,
+      credits: 1,
       mutationKey: input.mutationKey,
       purpose: "adstudio.feed_story_pack",
-      metadata: { formats: ["4:5", "9:16"] },
+      metadata: { generatedFormat: "4:5", derivedFormats: ["9:16"] },
       serviceSupabase,
     });
 

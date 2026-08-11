@@ -650,32 +650,6 @@ test("plate construction has a distinct provider accounting identity from the fi
   assert.equal(mutationId, "shared-campaign-correlation:adstudio.text-plate:1:4:5");
 });
 
-test("story starts only after Feed provider output is ready", async () => {
-  const { startStoryAfterFeed } = await import("../src/lib/adstudio/generate-template-campaign.ts");
-  const events: string[] = [];
-  let resolveFeed!: () => void;
-  const feedReady = new Promise<void>((resolve) => { resolveFeed = resolve; });
-  const scheduled = startStoryAfterFeed({
-    generateFeed: async () => {
-      events.push("feed:start");
-      await feedReady;
-      events.push("feed:done");
-      return "feed";
-    },
-    generateStory: async () => {
-      events.push("story:start");
-      return "story";
-    },
-  });
-  await Promise.resolve();
-  assert.deepEqual(events, ["feed:start"]);
-  resolveFeed();
-  const result = await scheduled;
-  assert.deepEqual(events, ["feed:start", "feed:done", "story:start"]);
-  assert.equal(result.feed, "feed");
-  assert.equal(await result.storyTask, "story");
-});
-
 test("clone generation invokes one fallback after a retryable provider failure", async () => {
   let fallbackCalls = 0;
   const primary = accountedImageProvider("primary", async () => {

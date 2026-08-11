@@ -58,7 +58,7 @@ test("generation helper checks confirmed identity before the shared reserve RPC"
   assert.ok(emailCheckIndex > -1);
   assert.ok(reserveIndex > -1);
   assert.ok(emailCheckIndex < reserveIndex);
-  assert.match(source, /credits:\s*2/);
+  assert.match(source, /credits:\s*1/);
   assert.match(source, /adstudio\.feed_story_pack/);
   assert.match(source, /status:\s*403/);
   assert.match(source, /WorkspaceCreditError/);
@@ -68,14 +68,17 @@ test("generation helper checks confirmed identity before the shared reserve RPC"
   assert.match(read(creditDomain), /refund_workspace_credit_reservation/);
 });
 
-test("Feed and Story settle independently and Story failure refunds only its render", () => {
+test("one canonical render persists both placements and settles one render credit", () => {
   const pipeline = read("src/lib/adstudio/generate-template-campaign.ts");
   const worker = read("worker/index.ts");
 
-  assert.match(pipeline, /:settle:4x5/);
-  assert.match(pipeline, /:settle:9x16/);
-  assert.match(pipeline, /credits:\s*1[\s\S]*:refund:9x16/);
-  assert.match(pipeline, /story_render_failed/);
+  assert.match(pipeline, /:settle:full-ad/);
+  assert.equal(pipeline.match(/await settleWorkspaceCreditReservation\(\{/g)?.length, 1);
+  assert.doesNotMatch(pipeline, /:settle:4x5|:settle:9x16/);
+  assert.equal(pipeline.match(/await generateFinalCloneRender\(\{/g)?.length, 1);
+  assert.match(pipeline, /deriveStoryCloneFromFinishedFeed\(feedRender\.assetUrl\)/);
+  assert.doesNotMatch(pipeline, /story_render_failed|storyGenPromise|generateStory/);
+  assert.doesNotMatch(worker, /result\.storyTask/);
   assert.match(worker, /refundOutstandingWorkspaceCredits/);
 });
 

@@ -1314,6 +1314,76 @@ test("marketing_api reconciliation paginates before deciding a deterministic obj
   assert.equal(requests.some((request) => request.method === "POST"), false);
 });
 
+test("marketing_api reconciliation rejects a recovered Instant Form with mismatched content before checkpoint", async () => {
+  const plan = buildMetaPublishPlan({
+    workspaceId: "workspace_demo",
+    campaignPack: buildPack(),
+    connectionId: "connection_123",
+    setup,
+    approvalRequestId: "approval_123",
+  });
+  const leadForm = plan.leadForms[0]!;
+  const providerName = `${leadForm.name} [BW:${plan.planId}:${leadForm.localId}]`;
+  const requests: Array<{ url: string; method: string }> = [];
+  let checkpoints = 0;
+  const fetchImpl = async (input: string | URL | Request, init?: RequestInit) => {
+    const url = String(input);
+    const method = init?.method ?? "GET";
+    requests.push({ url, method });
+    if (url.includes("/page_123/leadgen_forms?")) {
+      return new Response(JSON.stringify({ data: [{ id: "form_recovered", name: providerName }] }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }
+    if (url.includes("/form_recovered?")) {
+      return new Response(JSON.stringify({
+        ...leadFormReadback(plan, "form_recovered"),
+        question_page_custom_headline: "A different form headline",
+        context_card: { title: "A different form headline", content: ["Different introduction"] },
+      }), { status: 200, headers: { "content-type": "application/json" } });
+    }
+    return new Response(JSON.stringify({
+      id: "campaign_existing",
+      account_id: "123",
+      daily_budget: "2000",
+      lifetime_budget: "0",
+      bid_strategy: "LOWEST_COST_WITHOUT_CAP",
+      effective_status: "PAUSED",
+      configured_status: "PAUSED",
+    }), { status: 200, headers: { "content-type": "application/json" } });
+  };
+
+  const result = await createMetaExecutionAdapter("marketing_api").publish(
+    {
+      ...plan,
+      status: "publishing",
+      adSets: [],
+      creatives: [],
+      ads: [],
+      reconciledObjects: {
+        ...plan.reconciledObjects,
+        campaignId: "campaign_existing",
+      },
+    },
+    {
+      accessToken: "user_token",
+      pageAccessToken: "page_token",
+      reconcileMissingObjects: true,
+      fetchImpl,
+      onCheckpoint: async () => { checkpoints += 1; },
+    },
+  );
+
+  assert.equal(result.status, "reconciliation_required");
+  assert.equal(result.lastError, "Meta did not read back the requested Instant Form fields exactly; the paused campaign was not created.");
+  assert.equal(result.reconciledObjects.leadFormIds[leadForm.localId], undefined);
+  assert.equal(checkpoints, 0);
+  assert.equal(requests.some((request) => request.method === "POST"), false);
+  assert.ok(requests.findIndex((request) => request.url.includes("/page_123/leadgen_forms?"))
+    < requests.findIndex((request) => request.url.includes("/form_recovered?")));
+});
+
 test("marketing_api adapter rejects a partial resume without paired Feed and Story upload evidence", async () => {
   const plan = buildMetaPublishPlan({
     workspaceId: "workspace_demo",

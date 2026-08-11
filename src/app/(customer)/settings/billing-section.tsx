@@ -44,7 +44,7 @@ export function BillingSection({
   const [busy, setBusy] = useState(false);
   const [portalBusy, setPortalBusy] = useState(false);
   const [message, setMessage] = useState<Msg>(null);
-  const packEstimate = usage.remaining == null ? null : Math.floor(usage.remaining / 2);
+  const packEstimate = usage.remaining;
   const currencyMark = workspace.currency === "USD" ? "US$" : "A$";
 
   async function saveBillingEmail(event: FormEvent<HTMLFormElement>) {

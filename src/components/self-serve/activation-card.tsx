@@ -54,7 +54,7 @@ const DISPLAY_MILESTONES = [
 export function ActivationCard({ data }: { data: ActivationCardData }) {
   const { activation, credits, plan, meta, booking } = data;
   const completedMilestones = DISPLAY_MILESTONES.filter(([key]) => activation.milestones[key]);
-  const packEstimate = credits.remaining == null ? null : Math.floor(credits.remaining / 2);
+  const packEstimate = credits.remaining;
   const isComplete = activation.currentStage === "complete";
 
   return (

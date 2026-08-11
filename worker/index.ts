@@ -196,7 +196,6 @@ export async function resolveHandler(kind: string): Promise<Handler | null> {
           },
         });
         if (!result.requiresDeterministicEditing) await result.editingLayersTask;
-        if (result.storyTask) await result.storyTask;
         return { campaignId: result.campaignId };
       };
     }

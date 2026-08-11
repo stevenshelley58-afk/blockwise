@@ -129,10 +129,9 @@ export function buildLeadFormCopy(template: AdStudioGalleryTemplate, brandKit: A
 export function buildCloneCampaignPack(input: BuildCloneCampaignPackInput): AdStudioCampaignPack {
   const template = requireGalleryTemplate(input.firstAd.templateId);
   const cloneImages = input.firstAd.templateCloneImagesByFormat;
-  // Feed-first contract: the 4:5 ad is the customer-facing headline and is
-  // REQUIRED to create the campaign. The 9:16 story is OPTIONAL — it renders
-  // in parallel and is patched into the already-persisted campaign once it
-  // lands (Point 8: feed returns immediately, story persists in background).
+  // Feed remains the canonical finished image. Current generation derives the
+  // Story placement deterministically before this pack is persisted; the
+  // builder still accepts historical Feed-only rows for safe reads/repair.
   if (!cloneImages?.["4:5"]) {
     throw new Error("The finished feed (4:5) clone is required before an ad can be created.");
   }
@@ -158,8 +157,7 @@ export function buildCloneCampaignPack(input: BuildCloneCampaignPackInput): AdSt
     sourceObservedAdId: null,
     templateSnapshot: templateSnapshot(template),
     platforms: ["meta"],
-    // Only formats that exist right now are declared; the story format is added
-    // to this set when the background story render patches in.
+    // Declare only placement outputs that have immutable stored images.
     creativeFormats: [...readyFormats],
     status: "ready",
   };

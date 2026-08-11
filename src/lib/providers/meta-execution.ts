@@ -1155,36 +1155,38 @@ async function publishWithMarketingApi(
     }
 
     for (const leadForm of plan.leadForms) {
-      if (reconciledObjects.leadFormIds[leadForm.localId]) continue;
-
-      const providerName = buildMetaProviderObjectName(plan, leadForm.localId, leadForm.name);
-      const existingId = input.reconcileMissingObjects
-        ? await findMetaObjectByName(
+      let formId: string | undefined = reconciledObjects.leadFormIds[leadForm.localId];
+      if (!formId) {
+        const providerName = buildMetaProviderObjectName(plan, leadForm.localId, leadForm.name);
+        formId = input.reconcileMissingObjects
+          ? await findMetaObjectByName(
+              input,
+              requestLog,
+              responseLog,
+              `lead_form.${leadForm.localId}.reconcile_missing`,
+              `/${plan.setup.pageId}/leadgen_forms`,
+              providerName,
+              input.pageAccessToken ?? input.accessToken,
+            ) ?? undefined
+          : undefined;
+        if (!formId) {
+          const response = await postMetaObject(
             input,
             requestLog,
             responseLog,
-            `lead_form.${leadForm.localId}.reconcile_missing`,
+            `lead_form.${leadForm.localId}`,
             `/${plan.setup.pageId}/leadgen_forms`,
-            providerName,
+            buildMetaInstantFormPayload(providerName, leadForm),
             input.pageAccessToken ?? input.accessToken,
-          )
-        : null;
-      if (existingId) {
-        reconciledObjects.leadFormIds[leadForm.localId] = existingId;
-      } else {
-        const response = await postMetaObject(
-          input,
-          requestLog,
-          responseLog,
-          `lead_form.${leadForm.localId}`,
-          `/${plan.setup.pageId}/leadgen_forms`,
-          buildMetaInstantFormPayload(providerName, leadForm),
-          input.pageAccessToken ?? input.accessToken,
-        );
-        const formId = requireMetaId(response, "lead form");
-        await verifyMetaLeadForm(input, requestLog, responseLog, formId, leadForm, input.pageAccessToken ?? input.accessToken);
-        reconciledObjects.leadFormIds[leadForm.localId] = formId;
+          );
+          formId = requireMetaId(response, "lead form");
+        }
       }
+      // A deterministic name proves identity, not content. Always verify the
+      // exact Instant Form fields before recording either a recovered, newly
+      // created, or previously checkpointed provider ID as publish-ready.
+      await verifyMetaLeadForm(input, requestLog, responseLog, formId, leadForm, input.pageAccessToken ?? input.accessToken);
+      reconciledObjects.leadFormIds[leadForm.localId] = formId;
       await checkpointMetaPublishProgress(input, requestLog, responseLog, reconciledObjects);
     }
 
