@@ -8,10 +8,10 @@
     "adSystemLikeness": 9.5,
     "standaloneAdQuality": 9
   },
-  "qualifiedAt": "2026-08-11T05:50:00.000Z",
+  "qualifiedAt": "2026-08-11T06:00:00.000Z",
   "sample": {
     "stage": "gallery_sample",
-    "requestHash": "240772b9da6b0118bdbd084058bbc59bcbb3ecaf9a91fe78445d428c1001ee08",
+    "requestHash": "ebe2560a241d55085e46dff62d162b4718f891ac2c9522557de317f71a339485",
     "referenceHash": "4d627695b6ee3ca05db7a3c263bdbb544860a95f49e672f148d0b1d8ed02b328",
     "references": [
       {
@@ -43,13 +43,13 @@
       "contact": "0400 123 456 | YOURAGENCY.EXAMPLE"
     },
     "outputHash": "eb4bce514070f6ce1566fc8fd2570755157d99eb50518e210739b276a6a1f370",
-    "executionTransport": "google_image_api",
-    "reviewedAt": "2026-08-11T05:40:00Z",
+    "executionTransport": "production_image_api",
+    "reviewedAt": "2026-08-11T06:00:00Z",
     "review": {
       "schemaVersion": 1,
       "rubricVersion": "adstudio-subject-invariant-clone-v1",
       "templateId": "meta-market-report-feed-139",
-      "requestHash": "240772b9da6b0118bdbd084058bbc59bcbb3ecaf9a91fe78445d428c1001ee08",
+      "requestHash": "ebe2560a241d55085e46dff62d162b4718f891ac2c9522557de317f71a339485",
       "candidateHash": "eb4bce514070f6ce1566fc8fd2570755157d99eb50518e210739b276a6a1f370",
       "reviewer": {
         "provider": "openai",
@@ -118,10 +118,10 @@
       ],
       "identityLeakage": [],
       "defects": [],
-      "includedRationale": "Full-size subject-invariant review confirms the source composition, hierarchy, crop, map/pin or checklist treatment, CTA geometry and palette are preserved.",
-      "qualityRationale": "Clean professional output with legible type and no visible rendering defects.",
+      "includedRationale": "Full-size source-system review reconfirmed against the actual immutable runner packet.",
+      "qualityRationale": "Clean professional output.",
       "suggestedCorrection": "",
-      "reviewedAt": "2026-08-11T05:40:00Z"
+      "reviewedAt": "2026-08-11T06:00:00Z"
     }
   },
   "customerFixture": {
