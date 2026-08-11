@@ -6,6 +6,7 @@ import {
   buildMetaPublishPlan,
   createMetaExecutionAdapter,
   hasExplicitMetaPublishAudience,
+  metaLeadFormReadbackMatches,
   prepareImmutableMetaPublishCampaignPack,
   validateMetaConnectionSetup,
   validateMetaPublishPlanReadiness,
@@ -53,6 +54,8 @@ function leadFormReadback(plan: { planId: string; leadForms: Array<{ localId: st
   return {
     id,
     name: `${form.name} [BW:${plan.planId}:${form.localId}]`,
+    locale: "en_AU",
+    is_optimized_for_quality: true,
     context_card: { title: form.headline, content: [form.intro], style: "PARAGRAPH_STYLE" },
     question_page_custom_headline: form.headline,
     privacy_policy: { url: form.privacyPolicyUrl, link_text: "Privacy Policy" },
@@ -64,6 +67,29 @@ function leadFormReadback(plan: { planId: string; leadForms: Array<{ localId: st
     ],
   };
 }
+
+test("Instant Form exact readback rejects the wrong locale and quality setting", () => {
+  const plan = buildMetaPublishPlan({
+    workspaceId: "workspace_demo",
+    campaignPack: buildPack(),
+    connectionId: "connection_123",
+    setup,
+    approvalRequestId: "approval_123",
+  });
+  const form = plan.leadForms[0]!;
+  const formId = "form_exact";
+  const providerName = `${form.name} [BW:${plan.planId}:${form.localId}]`;
+  const readback = leadFormReadback(plan, formId);
+
+  assert.equal(metaLeadFormReadbackMatches(readback, formId, providerName, form), true);
+  assert.equal(metaLeadFormReadbackMatches({ ...readback, locale: "en_US" }, formId, providerName, form), false);
+  assert.equal(metaLeadFormReadbackMatches(
+    { ...readback, is_optimized_for_quality: false },
+    formId,
+    providerName,
+    form,
+  ), false);
+});
 
 function buildPack() {
   return buildCloneTestPack("workspace_demo");
@@ -1390,6 +1416,11 @@ test("marketing_api reconciliation rejects a recovered Instant Form with mismatc
   assert.equal(requests.some((request) => request.method === "POST"), false);
   assert.ok(requests.findIndex((request) => request.url.includes("/page_123/leadgen_forms?"))
     < requests.findIndex((request) => request.url.includes("/form_recovered?")));
+  const readbackRequest = requests.find((request) => request.url.includes("/form_recovered?"));
+  assert.ok(readbackRequest);
+  const requestedFields = new URL(readbackRequest.url).searchParams.get("fields")?.split(",") ?? [];
+  assert.equal(requestedFields.includes("locale"), true);
+  assert.equal(requestedFields.includes("is_optimized_for_quality"), true);
 });
 
 test("marketing_api adapter rejects a partial resume without paired Feed and Story upload evidence", async () => {

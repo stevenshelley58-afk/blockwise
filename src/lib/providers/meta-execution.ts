@@ -1528,7 +1528,7 @@ async function verifyMetaLeadForm(
   accessToken: string,
 ) {
   const step = `lead_form.${expected.localId}.verify`;
-  const path = `/${formId}?fields=id,name,questions,privacy_policy,thank_you_page,context_card,question_page_custom_headline,follow_up_action_url`;
+  const path = `/${formId}?fields=id,name,locale,is_optimized_for_quality,questions,privacy_policy,thank_you_page,context_card,question_page_custom_headline,follow_up_action_url`;
   const createdAt = new Date().toISOString();
   requestLog.push({ step, method: "GET", path, createdAt });
   const response = await (input.fetchImpl ?? fetch)(
@@ -1583,6 +1583,8 @@ export function metaLeadFormReadbackMatches(
   if (
     payload.id !== formId
     || payload.name !== expectedName
+    || payload.locale !== "en_AU"
+    || payload.is_optimized_for_quality !== true
     || payload.question_page_custom_headline !== expected.headline
     || context?.title !== expected.headline
     || context?.style !== "PARAGRAPH_STYLE"
