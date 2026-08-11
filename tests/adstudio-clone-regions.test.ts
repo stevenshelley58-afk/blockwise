@@ -620,6 +620,36 @@ test("clone generation falls back when a provider account is depleted", async ()
   assert.equal(alertEvents[0]?.eventId, "depleted-primary-clone:adstudio.clone:1:4:5:provider:0");
 });
 
+test("plate construction has a distinct provider accounting identity from the finished clone", async () => {
+  let mutationId = "";
+  const imageProvider = accountedImageProvider("plate", async () => ({
+    assetUrl: "data:image/png;base64,b2s=",
+    seed: 1,
+    model: "plate-model",
+    usage: { imageUnits: 1, complete: true },
+    providerMetadata: {},
+  }));
+
+  await generateCloneWithCascade({
+    providers: [imageProvider],
+    request: { prompt: "remove text", referenceAssets: [], aspectRatio: "4:5", stylePreset: "test" },
+    workspaceId: "11111111-1111-4111-8111-111111111111",
+    userId: "22222222-2222-4222-8222-222222222222",
+    correlationId: "shared-campaign-correlation",
+    attempt: 1,
+    operation: "text-plate",
+    accounting: {
+      executeAttempt: async (input) => {
+        mutationId = input.mutationId;
+        return executeAttempt(input);
+      },
+      recordRun: async () => {},
+    },
+  });
+
+  assert.equal(mutationId, "shared-campaign-correlation:adstudio.text-plate:1:4:5");
+});
+
 test("story starts only after Feed provider output is ready", async () => {
   const { startStoryAfterFeed } = await import("../src/lib/adstudio/generate-template-campaign.ts");
   const events: string[] = [];

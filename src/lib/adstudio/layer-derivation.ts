@@ -108,6 +108,7 @@ async function deriveTemplateTextLayers(input: {
     userId: input.userId,
     correlationId: input.correlationId,
     attempt: 1,
+    operation: "text-plate",
     modelProfile: "image_draft",
   });
   const plateDataUrl = await derivePlateFromInpaint(currentImage, generated.assetUrl, textBoxes);
