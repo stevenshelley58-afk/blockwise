@@ -178,12 +178,7 @@ async function resumePersistedTemplateCampaign(input: {
   );
   if (!campaignPack) return null;
 
-  const feedCreative = campaignPack.creatives.find((creative) => creative.format === PRIMARY_CLONE_FORMAT);
-  const imageRef = feedCreative?.canvas.objects.find((object) => object.role === "primary_image")?.content
-    ?? feedCreative?.canvas.objects.find((object) => object.role === "primary_image")?.assetId;
-  if (!feedCreative || !imageRef) {
-    throw new Error("The persisted generation checkpoint has no finished Feed creative.");
-  }
+  const renders = resolvePersistedClonePlacementRenders(campaignPack, input.template.format);
 
   const editingLayersTask = prepareCloneCreativeTextLayers({
     supabase: input.supabase,
@@ -192,11 +187,7 @@ async function resumePersistedTemplateCampaign(input: {
     correlationId: input.correlationId,
     template: input.template,
     providerEnv: input.providerEnv,
-    renders: [{
-      format: PRIMARY_CLONE_FORMAT,
-      creativeId: feedCreative.creativeId,
-      imageRef,
-    }],
+    renders,
   });
   void editingLayersTask.catch(() => undefined);
 
@@ -212,6 +203,24 @@ const PRIMARY_CLONE_FORMAT = "4:5" as const;
 const STORY_CLONE_FORMAT = "9:16" as const;
 
 type TemplateCloneRenderFormat = typeof PRIMARY_CLONE_FORMAT | typeof STORY_CLONE_FORMAT;
+
+export function resolvePersistedClonePlacementRenders(
+  campaignPack: AdStudioCampaignPack,
+  nativeFormat: TemplateCloneRenderFormat,
+): CloneEditingLayersInput["renders"] {
+  const derivedFormat = nativeFormat === PRIMARY_CLONE_FORMAT
+    ? STORY_CLONE_FORMAT
+    : PRIMARY_CLONE_FORMAT;
+  return [nativeFormat, derivedFormat].map((format) => {
+    const creative = campaignPack.creatives.find((candidate) => candidate.format === format);
+    const image = creative?.canvas.objects.find((object) => object.role === "primary_image");
+    const imageRef = image?.content ?? image?.assetId;
+    if (!creative || !imageRef) {
+      throw new Error(`The persisted generation checkpoint has no finished ${format} creative.`);
+    }
+    return { format, creativeId: creative.creativeId, imageRef };
+  });
+}
 
 type GeneratedCloneRender = CloneGenerationResult & {
   attempt: number;

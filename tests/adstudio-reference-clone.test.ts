@@ -14,7 +14,9 @@ import {
 import {
   buildTemplateCloneRequest,
   derivePlacementCloneFromFinishedNative,
+  resolvePersistedClonePlacementRenders,
 } from "../src/lib/adstudio/generate-template-campaign.ts";
+import { buildCloneTestPack } from "./adstudio-clone-fixture.ts";
 
 const template = AD_STUDIO_TEMPLATES.find((entry) => entry.id === "meta-feed-020")!;
 const images = {
@@ -248,6 +250,17 @@ test("a native Story request preserves every edge when deriving Feed", async () 
     expectedForeground,
     "the centered Feed foreground must preserve every scaled Story pixel, including all four edge markers",
   );
+});
+
+test("a native Story retry resumes editing preparation for both persisted placements", () => {
+  const pack = buildCloneTestPack("workspace_story_resume");
+  const renders = resolvePersistedClonePlacementRenders(
+    { ...pack, creatives: [...pack.creatives].reverse() },
+    "9:16",
+  );
+  assert.deepEqual(renders.map((render) => render.format), ["9:16", "4:5"]);
+  assert.ok(renders.every((render) => render.imageRef));
+  assert.equal(new Set(renders.map((render) => render.creativeId)).size, 2);
 });
 
 test("post-clone edits anchor on the current finished ad and change one target", () => {
