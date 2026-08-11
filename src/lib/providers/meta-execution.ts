@@ -1902,7 +1902,6 @@ function buildTargeting(controls: MetaPublishControls): Record<string, unknown> 
   };
 }
 
-<<<<<<< HEAD
 function unsupportedMetaPlacementPositions(targeting: Record<string, unknown>): string[] {
   const instagramPositions = Array.isArray(targeting.instagram_positions)
     ? targeting.instagram_positions.filter((value): value is string => typeof value === "string")
@@ -1933,7 +1932,6 @@ function buildLeadFormPlans(pack: AdStudioCampaignPack, setup: MetaConnectionSet
       questions: defaults.customQuestions,
     };
   });
-}
 }
 
 function buildCreativePlans(pack: AdStudioCampaignPack, setup: MetaConnectionSetup): MetaPublishCreativePlan[] {

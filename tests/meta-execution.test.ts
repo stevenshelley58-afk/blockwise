@@ -594,7 +594,7 @@ test("marketing_api adapter uploads creative assets and uses image hashes", asyn
   );
 });
 
-test("marketing_api adapter emits the strict Meta v23 lead-ad request contract", async () => {
+test("marketing_api adapter emits the strict Meta v26 lead-ad request contract", async () => {
   const plan = buildMetaPublishPlan({
     workspaceId: "workspace_demo",
     campaignPack: buildPack(),
