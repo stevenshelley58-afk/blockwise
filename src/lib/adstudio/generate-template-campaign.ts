@@ -23,6 +23,7 @@ import {
   TemplateCampaignQaError,
   cloneCorrectionForNextCandidate,
   cloneQualityPassed,
+  cloneQualityWarrantsSameTierRetry,
   isAbortError,
   reviewCloneCandidate,
 } from "./clone-quality-gate.ts";
@@ -280,6 +281,8 @@ export async function generateFinalCloneRender(input: {
   let lastReview: AdStudioCloneQualityReview | undefined;
   let nextProviderIndex = 0;
   let generatedCandidateCount = 0;
+  let correctedSameTierRetryUsed = false;
+  let finalProviderRetryUsed = false;
 
   for (let attempt = 1; attempt <= MAX_RUNTIME_CLONE_CANDIDATES; attempt += 1) {
     const candidateRequest = {
@@ -293,10 +296,11 @@ export async function generateFinalCloneRender(input: {
     // candidates instead of paying the same model to repeat the same failure.
     // The first provider remains available behind that fallback for an actual
     // outage, and every candidate still uses the same canonical clone request.
-    // A QA rejection advances the intended paid tier exactly once: Flash,
-    // then Pro, then GPT Image. Within each candidate, the remaining ordered
-    // providers still handle genuine provider/transport failures and retain
-    // their independent accounting records.
+    // A QA rejection normally advances Flash -> Pro -> GPT Image. One clean
+    // near-pass may consume a corrected retry on its current tier, and the
+    // final tier gets one corrected retry before failure. This keeps cheap
+    // escalation as the default without discarding a 9+ candidate whose only
+    // remaining work is the vision review's precise layout correction.
     const candidateProviders = input.providers.length === 0 ? [] : input.providers.slice(nextProviderIndex);
     if (input.providers.length > 0 && candidateProviders.length === 0) break;
     const generated = await generate({
@@ -310,8 +314,8 @@ export async function generateFinalCloneRender(input: {
     });
     generatedCandidateCount += 1;
     // Transport fallback may mean a later tier actually produced the image.
-    // Advance from that real successful provider/model, so a QA-rejected GPT
-    // candidate is terminal and can never be paid for again.
+    // Advance from the real successful provider/model. The bounded correction
+    // policy below decides whether that tier gets its one permitted retry.
     if (input.providers.length > 0) {
       const successfulOffset = candidateProviders.findIndex((provider) =>
         provider.providerName === generated.provider
@@ -392,8 +396,21 @@ export async function generateFinalCloneRender(input: {
     }
     if (attempt === MAX_RUNTIME_CLONE_CANDIDATES) break;
     if (input.providers.length > 0) {
-      nextProviderIndex += 1;
-      if (nextProviderIndex >= input.providers.length) break;
+      const atFinalProvider = nextProviderIndex >= input.providers.length - 1;
+      const retryCurrentProvider = atFinalProvider
+        ? !finalProviderRetryUsed
+        : !correctedSameTierRetryUsed && cloneQualityWarrantsSameTierRetry({
+          review: lastReview,
+          expectedCopy: input.expectedCopy,
+          expectedAssetKeys: input.expectedAssetKeys,
+        });
+      if (retryCurrentProvider) {
+        if (atFinalProvider) finalProviderRetryUsed = true;
+        else correctedSameTierRetryUsed = true;
+      } else {
+        nextProviderIndex += 1;
+        if (nextProviderIndex >= input.providers.length) break;
+      }
     }
     const correction = cloneCorrectionForNextCandidate(lastReview);
     request = { ...input.buildCorrectedRequest(correction), signal: input.signal };

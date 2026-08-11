@@ -258,7 +258,7 @@ export function validateQualityLockIndex(
         entryIssues.push("has an invalid schema");
       }
       if (!isSha256(value.templateHash)) entryIssues.push("templateHash must be a SHA-256 hash");
-      if (typeof value.templateContract !== "string" || value.templateContract !== templateContract(template)) {
+      if (typeof value.templateContract !== "string" || !templateContractMatches(value.templateContract, template)) {
         entryIssues.push("templateContract does not match the current manifest");
       }
       if (!isSha256(value.sampleHash)) entryIssues.push("sampleHash must be a SHA-256 hash");
@@ -475,6 +475,49 @@ function templateContract(template: AdStudioTemplate | undefined): string {
   if (!template) return "";
   const { qualityLock: _qualityLock, ...contract } = template;
   return canonicalJson(contract);
+}
+
+/**
+ * Template manifests contain measured floating-point geometry. Production
+ * minification may print an equivalent number with fewer decimal digits, so a
+ * byte-for-byte JSON comparison can hide a valid lock in the browser. Compare
+ * the parsed contract structurally while keeping keys, arrays, strings, and
+ * all meaningful numeric changes strict. The offline verifier remains the
+ * cryptographic source of truth for the exact checked-in contract.
+ */
+function templateContractMatches(storedContract: string, template: AdStudioTemplate | undefined): boolean {
+  if (!template) return false;
+  let stored: unknown;
+  try {
+    stored = JSON.parse(storedContract);
+  } catch {
+    return false;
+  }
+  const { qualityLock: _qualityLock, ...current } = template;
+  return structurallyEqualContract(stored, current);
+}
+
+function structurallyEqualContract(left: unknown, right: unknown): boolean {
+  if (typeof left === "number" && typeof right === "number") {
+    if (!Number.isFinite(left) || !Number.isFinite(right)) return Object.is(left, right);
+    return Math.abs(left - right) <= Number.EPSILON * 8 * Math.max(1, Math.abs(left), Math.abs(right));
+  }
+  if (left === null || right === null || typeof left !== "object" || typeof right !== "object") {
+    return left === right;
+  }
+  if (Array.isArray(left) || Array.isArray(right)) {
+    return Array.isArray(left)
+      && Array.isArray(right)
+      && left.length === right.length
+      && left.every((value, index) => structurallyEqualContract(value, right[index]));
+  }
+  const leftRecord = left as Record<string, unknown>;
+  const rightRecord = right as Record<string, unknown>;
+  const leftKeys = Object.keys(leftRecord).sort();
+  const rightKeys = Object.keys(rightRecord).sort();
+  return leftKeys.length === rightKeys.length
+    && leftKeys.every((key, index) => key === rightKeys[index]
+      && structurallyEqualContract(leftRecord[key], rightRecord[key]));
 }
 
 function canonicalJson(value: unknown): string {

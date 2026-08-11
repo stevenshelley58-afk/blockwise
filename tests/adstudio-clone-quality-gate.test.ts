@@ -5,9 +5,11 @@ import {
   MAX_RUNTIME_CLONE_CANDIDATES,
   MAX_RUNTIME_CLONE_QA_ATTEMPTS,
   TemplateCampaignQaError,
+  buildCloneQualityContactSheet,
   cloneCorrectionForNextCandidate,
   cloneRequestHash,
   cloneQualityPassed,
+  cloneQualityWarrantsSameTierRetry,
   reviewCloneCandidate,
 } from "../src/lib/adstudio/clone-quality-gate.ts";
 import { createTextProviderForCandidate } from "../src/lib/adstudio/ai-providers.ts";
@@ -63,6 +65,33 @@ function provider(providerName: string): ImageProviderAdapter {
   };
 }
 
+test("clone QA contact sheet includes every labelled customer asset", async () => {
+  const { default: sharp } = await import("sharp");
+  const image = async (red: number, green: number, blue: number) => {
+    const png = await sharp({
+      create: { width: 10, height: 12, channels: 3, background: { r: red, g: green, b: blue } },
+    }).png().toBuffer();
+    return `data:image/png;base64,${png.toString("base64")}`;
+  };
+  const contact = await buildCloneQualityContactSheet(
+    await image(10, 20, 30),
+    await image(40, 50, 60),
+    [
+      { key: "property_photo", image: await image(70, 80, 90) },
+      { key: "agency_logo", image: await image(100, 110, 120) },
+    ],
+  );
+  const contactBytes = Buffer.from(contact.imageUrl.split(",")[1]!, "base64");
+  const metadata = await sharp(contactBytes).metadata();
+
+  assert.deepEqual(contact.assetReferences.map((asset) => asset.key), ["property_photo", "agency_logo"]);
+  assert.ok(contact.assetReferences.every((asset) => /^[a-f0-9]{64}$/u.test(asset.contentHash)));
+  assert.equal(metadata.width, 20);
+  // Customer assets occupy a labelled thumbnail strip without enlarging the
+  // expensive full-resolution design comparison into another full-size row.
+  assert.equal(metadata.height, 112);
+});
+
 test("runtime quality lock requires scores, exact copy, faithful assets, and clean output", () => {
   assert.equal(cloneQualityPassed({ review: review(), expectedCopy, expectedAssetKeys }), true);
   assert.equal(cloneQualityPassed({
@@ -79,6 +108,24 @@ test("runtime quality lock requires scores, exact copy, faithful assets, and cle
   }), false);
   assert.equal(cloneQualityPassed({
     review: review({ assetChecks: [{ key: "property_photo", used: true, faithful: true }, { key: "agency_logo", used: true, faithful: false }] }),
+    expectedCopy,
+    expectedAssetKeys,
+  }), false);
+});
+
+test("only a clean 9+ candidate warrants a corrected same-tier retry", () => {
+  assert.equal(cloneQualityWarrantsSameTierRetry({
+    review: review({ adSystemLikenessScore: 9.2 }),
+    expectedCopy,
+    expectedAssetKeys,
+  }), true);
+  assert.equal(cloneQualityWarrantsSameTierRetry({
+    review: review({ adSystemLikenessScore: 8.9 }),
+    expectedCopy,
+    expectedAssetKeys,
+  }), false);
+  assert.equal(cloneQualityWarrantsSameTierRetry({
+    review: review({ adSystemLikenessScore: 9.2, defects: ["warped photo"] }),
     expectedCopy,
     expectedAssetKeys,
   }), false);
@@ -191,7 +238,7 @@ test("a visual QA failure advances the corrected clone to the next paid model", 
     normalize: async (assetUrl) => assetUrl,
     review: async (input) => review({
       attempt: input.attempt,
-      adSystemLikenessScore: input.attempt === 1 ? 9.1 : 9.6,
+      adSystemLikenessScore: input.attempt === 1 ? 8.9 : 9.6,
       suggestedCorrection: input.attempt === 1 ? "Use the supplied property photo faithfully." : "",
     }),
   });
@@ -222,7 +269,7 @@ test("quality rejections advance Flash to Pro to GPT Image without releasing a b
     normalize: async (assetUrl) => assetUrl,
     review: async (input) => review({
       attempt: input.attempt,
-      adSystemLikenessScore: input.attempt < 3 ? 9.4 : 9.6,
+      adSystemLikenessScore: input.attempt < 3 ? 8.9 : 9.6,
       suggestedCorrection: input.attempt < 3 ? "Restore the approved geometry." : "",
     }),
   });
@@ -231,6 +278,79 @@ test("quality rejections advance Flash to Pro to GPT Image without releasing a b
   assert.deepEqual(providerOrder, [
     ["gemini-flash", "gemini-pro", "gpt-image"],
     ["gemini-pro", "gpt-image"],
+    ["gpt-image"],
+  ]);
+});
+
+test("one clean near-pass retries the corrected request on the same cheaper tier", async () => {
+  const providerOrder: string[][] = [];
+  const scores = [8.8, 9.2, 9.6];
+  const result = await generateFinalCloneRender({
+    format: "4:5",
+    templateId: "template-1",
+    providers: [provider("gemini-flash"), provider("gemini-pro"), provider("gpt-image")],
+    request: request(),
+    referenceImage: "approved-sample",
+    expectedCopy,
+    expectedAssetKeys,
+    buildCorrectedRequest: (correction) => request(`clone | correction: ${correction}`),
+    workspaceId: "workspace-1",
+    userId: "user-1",
+    correlationId: "run-near-pass-retry",
+  }, {
+    generate: async (input) => {
+      providerOrder.push(input.providers.map((candidate) => candidate.providerName));
+      return { assetUrl: `candidate-${providerOrder.length}`, model: "image", provider: "test", providerAttemptCount: 1 };
+    },
+    normalize: async (assetUrl) => assetUrl,
+    review: async (input) => review({
+      attempt: input.attempt,
+      adSystemLikenessScore: scores[input.attempt - 1]!,
+      suggestedCorrection: input.attempt < 3 ? "Restore the approved geometry." : "",
+    }),
+  });
+
+  assert.equal(result.attempt, 3);
+  assert.deepEqual(providerOrder, [
+    ["gemini-flash", "gemini-pro", "gpt-image"],
+    ["gemini-pro", "gpt-image"],
+    ["gemini-pro", "gpt-image"],
+  ]);
+});
+
+test("the final quality tier gets one corrected retry before failure", async () => {
+  const providerOrder: string[][] = [];
+  const scores = [8.8, 8.8, 9.2, 9.6];
+  const result = await generateFinalCloneRender({
+    format: "4:5",
+    templateId: "template-1",
+    providers: [provider("gemini-flash"), provider("gemini-pro"), provider("gpt-image")],
+    request: request(),
+    referenceImage: "approved-sample",
+    expectedCopy,
+    expectedAssetKeys,
+    buildCorrectedRequest: (correction) => request(`clone | correction: ${correction}`),
+    workspaceId: "workspace-1",
+    userId: "user-1",
+    correlationId: "run-final-retry",
+  }, {
+    generate: async (input) => {
+      providerOrder.push(input.providers.map((candidate) => candidate.providerName));
+      return { assetUrl: `candidate-${providerOrder.length}`, model: "image", provider: "test", providerAttemptCount: 1 };
+    },
+    normalize: async (assetUrl) => assetUrl,
+    review: async (input) => review({
+      attempt: input.attempt,
+      adSystemLikenessScore: scores[input.attempt - 1]!,
+      suggestedCorrection: input.attempt < 4 ? "Restore the approved geometry." : "",
+    }),
+  });
+
+  assert.equal(result.attempt, 4);
+  assert.deepEqual(providerOrder, [
+    ["gemini-flash", "gemini-pro", "gpt-image"],
+    ["gemini-pro", "gpt-image"],
+    ["gpt-image"],
     ["gpt-image"],
   ]);
 });
@@ -257,14 +377,18 @@ test("a missing later credential cannot cycle a quality-rejected provider", asyn
     normalize: async (assetUrl) => assetUrl,
     review: async (input) => review({
       attempt: input.attempt,
-      adSystemLikenessScore: 9.4,
+      adSystemLikenessScore: 8.9,
       suggestedCorrection: "Restore the approved geometry.",
     }),
   }), TemplateCampaignQaError);
-  assert.deepEqual(providerOrder, [["gemini-flash", "gemini-pro"], ["gemini-pro"]]);
+  assert.deepEqual(providerOrder, [
+    ["gemini-flash", "gemini-pro"],
+    ["gemini-pro"],
+    ["gemini-pro"],
+  ]);
 });
 
-test("Google preflight failures followed by a QA-rejected GPT candidate pay GPT only once", async () => {
+test("Google preflight failures followed by a QA-rejected GPT candidate use only the bounded final retry", async () => {
   let gptPaidCalls = 0;
   let reviewCalls = 0;
   const accountedProvider = (
@@ -350,8 +474,8 @@ test("Google preflight failures followed by a QA-rejected GPT candidate pay GPT 
     },
   }), TemplateCampaignQaError);
 
-  assert.equal(gptPaidCalls, 1);
-  assert.equal(reviewCalls, 1);
+  assert.equal(gptPaidCalls, 2);
+  assert.equal(reviewCalls, 2);
 });
 
 test("no below-threshold candidate is released after the bounded quality loop", async () => {
@@ -386,13 +510,15 @@ test("no below-threshold candidate is released after the bounded quality loop", 
 
 test("non-JSON clone QA retries the same contact sheet and candidate before accepting it", async () => {
   const providerCalls: number[] = [];
-  const contactSheets: number[] = [];
+  const providerSystemPrompts: string[] = [];
+  const contactSheets: Array<Array<{ key: string; image: string }>> = [];
   const provider = {
     providerName: "qa-test",
     providerType: "text_generation",
     capabilities: { visionInput: true },
-    async generate() {
+    async generate(input: { system: string }) {
       providerCalls.push(1);
+      providerSystemPrompts.push(input.system);
       return providerCalls.length === 1
         ? { json: "not JSON", rawText: "not JSON", usage: { complete: true }, providerMetadata: { model: "qa-test" } }
         : {
@@ -422,9 +548,14 @@ test("non-JSON clone QA retries the same contact sheet and candidate before acce
     userId: "user-1",
     correlationId: "same-candidate",
   }, {
-    contactSheet: async () => {
-      contactSheets.push(1);
-      return { imageUrl: "data:image/png;base64,AA==", referenceHash: "a".repeat(64), candidateHash: "b".repeat(64) };
+    contactSheet: async (_referenceImage, _candidateImage, assets) => {
+      contactSheets.push(assets);
+      return {
+        imageUrl: "data:image/png;base64,AA==",
+        referenceHash: "a".repeat(64),
+        candidateHash: "b".repeat(64),
+        assetReferences: assets.map((asset, index) => ({ key: asset.key, contentHash: String(index + 1).repeat(64) })),
+      };
     },
     getPromptSection: async () => ({ body: "QA", key: "adstudio.clone_qa", version: 1, id: null, source: "fallback" }) as never,
     resolveProfile: async () => ({
@@ -442,7 +573,15 @@ test("non-JSON clone QA retries the same contact sheet and candidate before acce
 
   assert.equal(result.adSystemLikenessScore, 9.6);
   assert.equal(contactSheets.length, 1);
+  assert.deepEqual(contactSheets[0], [
+    { key: "property_photo", image: "photo" },
+    { key: "agency_logo", image: "logo" },
+  ]);
   assert.equal(providerCalls.length, 2);
+  assert.ok(providerSystemPrompts.every((prompt) => prompt.includes("CUSTOMER ASSET panel")));
+  assert.ok(providerSystemPrompts.every((prompt) => prompt.includes('"property_photo"')));
+  assert.ok(providerSystemPrompts.every((prompt) => prompt.includes('"agency_logo"')));
+  assert.ok(providerSystemPrompts.every((prompt) => prompt.includes("without substitution, fabrication, repainting")));
   assert.deepEqual(recordedAttempts, [2]);
 });
 
@@ -474,7 +613,12 @@ test("provider parseJson failure retries the same candidate and records its subm
     userId: "user-1",
     correlationId: "parse-json-retry",
   }, {
-    contactSheet: async () => ({ imageUrl: "data:image/png;base64,AA==", referenceHash: "a".repeat(64), candidateHash: "b".repeat(64) }),
+    contactSheet: async (_referenceImage, _candidateImage, assets) => ({
+      imageUrl: "data:image/png;base64,AA==",
+      referenceHash: "a".repeat(64),
+      candidateHash: "b".repeat(64),
+      assetReferences: assets.map((asset, index) => ({ key: asset.key, contentHash: String(index + 1).repeat(64) })),
+    }),
     getPromptSection: async () => ({ body: "QA", key: "adstudio.clone_qa", version: 1, id: null, source: "fallback" }) as never,
     resolveProfile: async () => ({ primary: candidate, fallbacks: [] }) as never,
     createProvider: (modelCandidate) => createTextProviderForCandidate(modelCandidate, {
@@ -528,6 +672,64 @@ test("provider parseJson failure retries the same candidate and records its subm
   assert.equal(recordedAttempts[0]?.[0]?.requestSubmitted, true);
   assert.equal(recordedAttempts[0]?.[0]?.providerRequestId, "qa-request-1");
   assert.equal((recordedAttempts[0]?.[0]?.usage as { inputTokens?: number }).inputTokens, 11);
+});
+
+test("clone QA rejects missing canonical customer assets before provider dispatch", async () => {
+  let contactSheetCalls = 0;
+  let providerCalls = 0;
+  await assert.rejects(() => reviewCloneCandidate({
+    templateId: "template-1",
+    format: "4:5",
+    attempt: 1,
+    referenceImage: "approved-sample",
+    candidateImage: "paid-candidate",
+    request: { ...request(), referenceAssets: ["approved-sample"] },
+    expectedCopy,
+    expectedAssetKeys,
+    workspaceId: "workspace-1",
+    userId: "user-1",
+    correlationId: "missing-customer-assets",
+  }, {
+    contactSheet: async () => {
+      contactSheetCalls += 1;
+      throw new Error("must not build an incomplete contact sheet");
+    },
+    createProvider: () => {
+      providerCalls += 1;
+      throw new Error("must not dispatch QA without customer assets");
+    },
+  }), /one exact labelled customer asset for every expected asset region/u);
+  assert.equal(contactSheetCalls, 0);
+  assert.equal(providerCalls, 0);
+});
+
+test("clone QA cannot accept faithfulness when contact-sheet asset comparison is absent", async () => {
+  let providerCalls = 0;
+  await assert.rejects(() => reviewCloneCandidate({
+    templateId: "template-1",
+    format: "4:5",
+    attempt: 1,
+    referenceImage: "approved-sample",
+    candidateImage: "paid-candidate",
+    request: request(),
+    expectedCopy,
+    expectedAssetKeys,
+    workspaceId: "workspace-1",
+    userId: "user-1",
+    correlationId: "missing-asset-comparison",
+  }, {
+    contactSheet: async () => ({
+      imageUrl: "data:image/png;base64,AA==",
+      referenceHash: "a".repeat(64),
+      candidateHash: "b".repeat(64),
+      assetReferences: [],
+    }),
+    createProvider: () => {
+      providerCalls += 1;
+      throw new Error("must not dispatch QA without comparison evidence");
+    },
+  }), /cannot claim customer asset faithfulness without exact labelled asset comparisons/u);
+  assert.equal(providerCalls, 0);
 });
 
 test("technical clone QA exhaustion never creates another image candidate", async () => {
