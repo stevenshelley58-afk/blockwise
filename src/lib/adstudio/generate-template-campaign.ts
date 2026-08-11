@@ -226,54 +226,66 @@ export function buildTemplateCloneRequest(
   template: AdStudioTemplate,
   inputs: CloneInputs,
 ): ImageProviderRequest {
-  return buildCloneImageRequest(template, { ...inputs, aspectRatio: PRIMARY_CLONE_FORMAT });
+  return buildCloneImageRequest(template, { ...inputs, aspectRatio: template.format });
 }
 
 /**
- * Story is a deterministic placement derivative of the one finished ad.
- * The complete Feed stays visible and proportionally scaled at full Story
- * width; only the extra vertical canvas is filled from a softened copy of the
- * same pixels. This keeps the QA region offset mapping exact and never asks a
- * provider to redraw or extend the ad.
+ * Build the non-native placement from the one finished ad. The complete native
+ * image stays visible and proportionally centred; only the unused canvas is
+ * filled from a softened copy of the same pixels. This keeps the QA region
+ * affine exact and never asks a provider to redraw or extend the ad.
  */
-export async function deriveStoryCloneFromFinishedFeed(
-  finishedFeed: string,
+export async function derivePlacementCloneFromFinishedNative(
+  finishedNative: string,
+  sourceFormat: TemplateCloneRenderFormat,
+  targetFormat: TemplateCloneRenderFormat,
   fetchImpl: typeof fetch = fetch,
 ): Promise<string> {
-  let feedBytes: Uint8Array;
-  if (finishedFeed.startsWith("data:image/")) {
-    feedBytes = dataUrlToUploadBytes(finishedFeed).bytes;
+  let nativeBytes: Uint8Array;
+  if (finishedNative.startsWith("data:image/")) {
+    nativeBytes = dataUrlToUploadBytes(finishedNative).bytes;
   } else {
-    const response = await fetchImpl(finishedFeed);
-    if (!response.ok) throw new Error(`Finished Feed could not be prepared (${response.status}).`);
-    feedBytes = new Uint8Array(await response.arrayBuffer());
+    const response = await fetchImpl(finishedNative);
+    if (!response.ok) throw new Error(`Finished native ad could not be prepared (${response.status}).`);
+    nativeBytes = new Uint8Array(await response.arrayBuffer());
   }
   const { default: sharp } = await import("sharp");
-  const storyWidth = 864;
-  const storyHeight = 1536;
-  const foregroundHeight = 1080;
-  const foregroundTop = Math.floor((storyHeight - foregroundHeight) / 2);
-  const metadata = await sharp(feedBytes).metadata();
-  if (!metadata.width || !metadata.height || metadata.width * 5 !== metadata.height * 4) {
-    throw new Error("Finished Feed must be a 4:5 image before deriving Story.");
+  const sizes = {
+    [PRIMARY_CLONE_FORMAT]: { width: 1024, height: 1280 },
+    [STORY_CLONE_FORMAT]: { width: 864, height: 1536 },
+  } as const;
+  const source = sizes[sourceFormat];
+  const target = sizes[targetFormat];
+  const metadata = await sharp(nativeBytes).metadata();
+  if (
+    !metadata.width
+    || !metadata.height
+    || metadata.width * source.height !== metadata.height * source.width
+  ) {
+    throw new Error(`Finished native ad must be a ${sourceFormat} image before deriving ${targetFormat}.`);
   }
+  const scale = Math.min(target.width / metadata.width, target.height / metadata.height);
+  const foregroundWidth = Math.round(metadata.width * scale);
+  const foregroundHeight = Math.round(metadata.height * scale);
+  const foregroundLeft = Math.floor((target.width - foregroundWidth) / 2);
+  const foregroundTop = Math.floor((target.height - foregroundHeight) / 2);
   const [background, foreground] = await Promise.all([
-    sharp(feedBytes)
-      .resize(storyWidth, storyHeight, { fit: "cover", position: "centre" })
+    sharp(nativeBytes)
+      .resize(target.width, target.height, { fit: "cover", position: "centre" })
       .blur(24)
       .modulate({ brightness: 0.55, saturation: 0.75 })
       .png({ compressionLevel: 1 })
       .toBuffer(),
-    sharp(feedBytes)
-      .resize(storyWidth, foregroundHeight, { fit: "fill" })
+    sharp(nativeBytes)
+      .resize(foregroundWidth, foregroundHeight, { fit: "fill" })
       .png({ compressionLevel: 1 })
       .toBuffer(),
   ]);
-  const story = await sharp(background)
-    .composite([{ input: foreground, left: 0, top: foregroundTop }])
+  const output = await sharp(background)
+    .composite([{ input: foreground, left: foregroundLeft, top: foregroundTop }])
     .png({ compressionLevel: 1 })
     .toBuffer();
-  return `data:image/png;base64,${story.toString("base64")}`;
+  return `data:image/png;base64,${output.toString("base64")}`;
 }
 
 type CloneRenderDependencies = {
@@ -696,9 +708,9 @@ export async function runTemplateCampaignGeneration(
   // customer supplied everything, copyResult.onImage IS the customer's values.
   const onImageCopy = { ...copyResult.onImage, ...customerOnImage };
 
-  // One canonical full-ad request produces the finished 4:5 image. Story is a
-  // deterministic placement derivative of those accepted pixels; it never
-  // invokes a second provider or alternate full-ad builder.
+  // One canonical full-ad request uses the approved template's native format.
+  // The other placement is a deterministic derivative of those accepted
+  // pixels; it never invokes a second provider or alternate full-ad builder.
   const [referenceImage, providers] = await Promise.all([rasterPromise, providersPromise]);
   const expectedCopy = resolveCloneCopy(template, onImageCopy);
   const cloneInputs: CloneInputs = {
@@ -716,6 +728,10 @@ export async function runTemplateCampaignGeneration(
       .filter(([, value]) => value.trim())
       .map(([label, value]) => `${label} ${value.trim()}`),
   };
+  const nativeFormat = template.format;
+  const derivedFormat = nativeFormat === PRIMARY_CLONE_FORMAT
+    ? STORY_CLONE_FORMAT
+    : PRIMARY_CLONE_FORMAT;
   const cloneRequest = { ...buildTemplateCloneRequest(template, cloneInputs), signal: input.signal };
   const feedCloneQa = buildPrebuiltTemplateCloneQa(template, expectedCopy, PRIMARY_CLONE_FORMAT);
   const storyCloneQa = buildPrebuiltTemplateCloneQa(template, expectedCopy, STORY_CLONE_FORMAT);
@@ -749,8 +765,8 @@ export async function runTemplateCampaignGeneration(
       candidatePaths.set(candidate.attempt, candidateImagePath);
     };
   };
-  const feedRender = await generateFinalCloneRender({
-    format: PRIMARY_CLONE_FORMAT,
+  const nativeRender = await generateFinalCloneRender({
+    format: nativeFormat,
     templateId: template.id,
     providers,
     request: cloneRequest,
@@ -767,25 +783,37 @@ export async function runTemplateCampaignGeneration(
     modelProfile,
     providerEnv: input.providerEnv,
     signal: input.signal,
-    recordCandidate: candidateAudit(PRIMARY_CLONE_FORMAT),
+    recordCandidate: candidateAudit(nativeFormat),
   });
 
-  const storyAssetUrl = await deriveStoryCloneFromFinishedFeed(feedRender.assetUrl);
-  const [feedImage, storyImage] = await Promise.all([
+  const derivedAssetUrl = await derivePlacementCloneFromFinishedNative(
+    nativeRender.assetUrl,
+    nativeFormat,
+    derivedFormat,
+  );
+  const [nativeImage, derivedImage] = await Promise.all([
     persistCloneRender({
       supabase,
       workspaceId: input.workspaceId,
-      assetUrl: feedRender.assetUrl,
-      fileNameSeed: `${correlationId}-clone-${PRIMARY_CLONE_FORMAT.replace(":", "x")}`,
+      assetUrl: nativeRender.assetUrl,
+      fileNameSeed: `${correlationId}-clone-${nativeFormat.replace(":", "x")}`,
     }),
     persistCloneRender({
       supabase,
       workspaceId: input.workspaceId,
-      assetUrl: storyAssetUrl,
-      fileNameSeed: `${correlationId}-clone-${STORY_CLONE_FORMAT.replace(":", "x")}`,
+      assetUrl: derivedAssetUrl,
+      fileNameSeed: `${correlationId}-clone-${derivedFormat.replace(":", "x")}`,
     }),
   ]);
-  const feedPersisted: PersistedCloneRender = { ...feedRender, image: feedImage };
+  const nativePersisted: PersistedCloneRender = { ...nativeRender, image: nativeImage };
+  const placementImages = {
+    [nativeFormat]: nativeImage,
+    [derivedFormat]: derivedImage,
+  } as Record<TemplateCloneRenderFormat, string>;
+  const placementAssetUrls = {
+    [nativeFormat]: nativeRender.assetUrl,
+    [derivedFormat]: derivedAssetUrl,
+  } as Record<TemplateCloneRenderFormat, string>;
 
   // Both immutable placement outputs enter the same transactional pack write,
   // so publish readiness never observes a half-created Feed-only campaign.
@@ -799,14 +827,14 @@ export async function runTemplateCampaignGeneration(
       state: body.state ?? "WA",
       firstAd: {
         ...firstAd,
-        imageDataUrl: feedPersisted.image,
-        templateCloneImage: feedPersisted.image,
+        imageDataUrl: placementImages[PRIMARY_CLONE_FORMAT],
+        templateCloneImage: placementImages[PRIMARY_CLONE_FORMAT],
         templateCloneImagesByFormat: {
-          [PRIMARY_CLONE_FORMAT]: feedPersisted.image,
-          [STORY_CLONE_FORMAT]: storyImage,
+          [PRIMARY_CLONE_FORMAT]: placementImages[PRIMARY_CLONE_FORMAT],
+          [STORY_CLONE_FORMAT]: placementImages[STORY_CLONE_FORMAT],
         },
-        templateCloneProvider: feedPersisted.provider,
-        templateCloneModel: feedPersisted.model,
+        templateCloneProvider: nativePersisted.provider,
+        templateCloneModel: nativePersisted.model,
         templateCloneQaByFormat: feedCloneQa
           ? {
               [PRIMARY_CLONE_FORMAT]: feedCloneQa,
@@ -835,8 +863,8 @@ export async function runTemplateCampaignGeneration(
       credits: 1,
       mutationKey: `${input.creditReservation.mutationKey}:settle:full-ad`,
       metadata: {
-        format: PRIMARY_CLONE_FORMAT,
-        derivedFormats: [STORY_CLONE_FORMAT],
+        format: nativeFormat,
+        derivedFormats: [derivedFormat],
         campaignId: campaignPack.campaign.campaignId,
       },
     });
@@ -865,12 +893,9 @@ export async function runTemplateCampaignGeneration(
   // this plate remains advisory (partial template) or gates release (ready
   // template).
   const placementCreatives = campaignPack.creatives.flatMap((creative) => {
-    const imageRef = creative.format === PRIMARY_CLONE_FORMAT
-      ? feedPersisted.image
-      : creative.format === STORY_CLONE_FORMAT ? storyImage : null;
-    const imageUrl = creative.format === PRIMARY_CLONE_FORMAT
-      ? feedRender.assetUrl
-      : creative.format === STORY_CLONE_FORMAT ? storyAssetUrl : null;
+    const format = creative.format as TemplateCloneRenderFormat;
+    const imageRef = placementImages[format] ?? null;
+    const imageUrl = placementAssetUrls[format] ?? null;
     return imageRef && imageUrl
       ? [{ format: creative.format as TemplateCloneRenderFormat, creativeId: creative.creativeId, imageRef, imageUrl }]
       : [];

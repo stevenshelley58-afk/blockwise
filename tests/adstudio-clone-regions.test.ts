@@ -82,6 +82,26 @@ test("native-format editor regions come from the offline template build without 
   assert.equal(storySubBox.height, (sampleSubBox.height * 1350) / 1920);
 });
 
+test("native Story regions map through the same centred contain transform as the Feed pixels", () => {
+  const template = AD_STUDIO_TEMPLATES.find((entry) => entry.format === "9:16")!;
+  const field = template.inputs.text.find((entry) => template.typography?.[entry.key]?.sampleBox)!;
+  const sample = template.typography![field.key]!.sampleBox;
+  const copy = Object.fromEntries(template.inputs.text.map((entry) => [entry.key, entry.sample]));
+  const story = buildPrebuiltTemplateCloneQa(template, copy, "9:16")!;
+  const feed = buildPrebuiltTemplateCloneQa(template, copy, "4:5")!;
+  const storyBox = story.regions.find((region) => region.key === field.key)!.box;
+  const feedBox = feed.regions.find((region) => region.key === field.key)!.box;
+
+  assert.equal(storyBox.x, sample.x);
+  assert.equal(storyBox.y, sample.y);
+  assert.ok(Math.abs(storyBox.width - sample.width) < 1e-12);
+  assert.ok(Math.abs(storyBox.height - sample.height) < 1e-12);
+  assert.ok(Math.abs(feedBox.x - (sample.x * 0.703125 + 0.1484375)) < 1e-12);
+  assert.ok(Math.abs(feedBox.width - sample.width * 0.703125) < 1e-12);
+  assert.ok(Math.abs(feedBox.y - sample.y) < 1e-12);
+  assert.ok(Math.abs(feedBox.height - sample.height) < 1e-12);
+});
+
 test("every released template persists one editable region for every declared customer input", () => {
   assert.ok(RESOLVABLE_AD_STUDIO_TEMPLATES.length > 0);
   for (const template of RESOLVABLE_AD_STUDIO_TEMPLATES) {

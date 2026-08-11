@@ -13,7 +13,7 @@ import {
 } from "../src/lib/adstudio/reference-clone.ts";
 import {
   buildTemplateCloneRequest,
-  deriveStoryCloneFromFinishedFeed,
+  derivePlacementCloneFromFinishedNative,
 } from "../src/lib/adstudio/generate-template-campaign.ts";
 
 const template = AD_STUDIO_TEMPLATES.find((entry) => entry.id === "meta-feed-020")!;
@@ -190,7 +190,7 @@ test("one full-ad request produces Feed and a deterministic non-stretched Story 
     { input: Buffer.from('<svg width="960" height="32"><rect width="960" height="32" fill="#ffff00"/></svg>'), left: 32, top: 1248 },
   ]).png().toBuffer();
   const feed = `data:image/png;base64,${feedBytes.toString("base64")}`;
-  const story = await deriveStoryCloneFromFinishedFeed(feed);
+  const story = await derivePlacementCloneFromFinishedNative(feed, "4:5", "9:16");
   const storyBytes = Buffer.from(story.split(",")[1]!, "base64");
   const storyMetadata = await sharp(storyBytes).metadata();
   assert.deepEqual({ width: storyMetadata.width, height: storyMetadata.height }, { width: 864, height: 1536 });
@@ -214,6 +214,40 @@ test("one full-ad request produces Feed and a deterministic non-stretched Story 
   assert.doesNotMatch(pipeline, /generateStory|STORY_RECOMPOSE_PROMPT|storyGenPromise/);
   assert.doesNotMatch(pipeline, /normalize\(finishedFeed, STORY_CLONE_FORMAT\)/);
   assert.match(pipeline, /templateCloneImagesByFormat:[\s\S]*PRIMARY_CLONE_FORMAT[\s\S]*STORY_CLONE_FORMAT/);
+});
+
+test("a native Story request preserves every edge when deriving Feed", async () => {
+  const storyTemplate = AD_STUDIO_TEMPLATES.find((entry) => entry.format === "9:16")!;
+  const storyImages = Object.fromEntries(
+    storyTemplate.inputs.images.map((slot) => [slot.key, `data:image/png;base64,${slot.key}`]),
+  );
+  const request = buildTemplateCloneRequest(storyTemplate, { images: storyImages });
+  assert.equal(request.aspectRatio, "9:16");
+
+  const { default: sharp } = await import("sharp");
+  const storyBytes = await sharp({
+    create: { width: 864, height: 1536, channels: 4, background: { r: 18, g: 62, b: 117, alpha: 1 } },
+  }).composite([
+    { input: Buffer.from('<svg width="32" height="1536"><rect width="32" height="1536" fill="#ff0000"/></svg>'), left: 0, top: 0 },
+    { input: Buffer.from('<svg width="32" height="1536"><rect width="32" height="1536" fill="#00ff00"/></svg>'), left: 832, top: 0 },
+    { input: Buffer.from('<svg width="800" height="32"><rect width="800" height="32" fill="#0000ff"/></svg>'), left: 32, top: 0 },
+    { input: Buffer.from('<svg width="800" height="32"><rect width="800" height="32" fill="#ffff00"/></svg>'), left: 32, top: 1504 },
+  ]).png().toBuffer();
+  const story = `data:image/png;base64,${storyBytes.toString("base64")}`;
+  const feed = await derivePlacementCloneFromFinishedNative(story, "9:16", "4:5");
+  const feedBytes = Buffer.from(feed.split(",")[1]!, "base64");
+  const metadata = await sharp(feedBytes).metadata();
+  assert.deepEqual({ width: metadata.width, height: metadata.height }, { width: 1024, height: 1280 });
+  const expectedForeground = await sharp(storyBytes).resize(720, 1280, { fit: "fill" }).raw().toBuffer();
+  const actualForeground = await sharp(feedBytes)
+    .extract({ left: 152, top: 0, width: 720, height: 1280 })
+    .raw()
+    .toBuffer();
+  assert.deepEqual(
+    actualForeground,
+    expectedForeground,
+    "the centered Feed foreground must preserve every scaled Story pixel, including all four edge markers",
+  );
 });
 
 test("post-clone edits anchor on the current finished ad and change one target", () => {

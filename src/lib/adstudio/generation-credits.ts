@@ -63,7 +63,7 @@ export async function reserveAdStudioGenerationCredits(input: {
       credits: 1,
       mutationKey: input.mutationKey,
       purpose: "adstudio.feed_story_pack",
-      metadata: { generatedFormat: "4:5", derivedFormats: ["9:16"] },
+      metadata: { billableFullAdRenders: 1, outputFormats: ["4:5", "9:16"] },
       serviceSupabase,
     });
 

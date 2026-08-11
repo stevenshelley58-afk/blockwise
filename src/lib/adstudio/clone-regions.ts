@@ -13,12 +13,11 @@ export type CloneBox = CloneRegion["box"];
 
 /**
  * Build the editor map from the template's offline type-spec block. Both
- * supported canvases are 1080px wide. Story generation extends a Feed canvas
- * equally above and below. Feed generation from a Story sample must reflow the
- * complete design because exact-copy QA forbids cropping away declared inputs,
- * so those boxes retain their normalized positions. Applying these same
- * deterministic transforms keeps every declared input editable without a
- * customer-time vision call.
+ * placements use the same contain transform as the deterministic image
+ * derivative: the complete native ad is scaled proportionally and centred on
+ * the other canvas. Applying that affine transform to every measured region
+ * keeps both Feed-origin and Story-origin inputs aligned without customer-time
+ * vision or cropping.
  */
 export function buildPrebuiltTemplateCloneQa(
   template: AdStudioTemplate,
@@ -27,23 +26,28 @@ export function buildPrebuiltTemplateCloneQa(
 ): AdStudioCloneQa | undefined {
   const targetHeight = format === "4:5" ? 1350 : format === "9:16" ? 1920 : null;
   if (!targetHeight) return undefined;
+  const targetWidth = 1080;
+  const sourceWidth = template.dimensions.width;
   const sourceHeight = template.dimensions.height;
-  const verticalOffset = (targetHeight - sourceHeight) / 2;
+  const scale = Math.min(targetWidth / sourceWidth, targetHeight / sourceHeight);
+  const renderedWidth = sourceWidth * scale;
+  const renderedHeight = sourceHeight * scale;
+  const horizontalOffset = (targetWidth - renderedWidth) / 2;
+  const verticalOffset = (targetHeight - renderedHeight) / 2;
   const mapSampleBox = (sampleBox: CloneBox): CloneBox | null => {
-    const sourceIsTaller = sourceHeight > targetHeight;
-    const rawY = sourceIsTaller
-      ? sampleBox.y
-      : (sampleBox.y * sourceHeight + verticalOffset) / targetHeight;
-    const rawBottom = rawY + (sourceIsTaller
-      ? sampleBox.height
-      : (sampleBox.height * sourceHeight) / targetHeight);
+    const rawX = (sampleBox.x * renderedWidth + horizontalOffset) / targetWidth;
+    const rawY = (sampleBox.y * renderedHeight + verticalOffset) / targetHeight;
+    const rawRight = rawX + (sampleBox.width * renderedWidth) / targetWidth;
+    const rawBottom = rawY + (sampleBox.height * renderedHeight) / targetHeight;
+    const x = Math.max(0, rawX);
     const y = Math.max(0, rawY);
+    const right = Math.min(1, rawRight);
     const bottom = Math.min(1, rawBottom);
-    if (bottom <= y) return null;
+    if (right <= x || bottom <= y) return null;
     return {
-      x: sampleBox.x,
+      x,
       y,
-      width: sampleBox.width,
+      width: right - x,
       height: bottom - y,
     };
   };

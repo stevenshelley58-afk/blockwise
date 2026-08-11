@@ -76,7 +76,7 @@ test("one canonical render persists both placements and settles one render credi
   assert.equal(pipeline.match(/await settleWorkspaceCreditReservation\(\{/g)?.length, 1);
   assert.doesNotMatch(pipeline, /:settle:4x5|:settle:9x16/);
   assert.equal(pipeline.match(/await generateFinalCloneRender\(\{/g)?.length, 1);
-  assert.match(pipeline, /deriveStoryCloneFromFinishedFeed\(feedRender\.assetUrl\)/);
+  assert.match(pipeline, /derivePlacementCloneFromFinishedNative\(/);
   assert.doesNotMatch(pipeline, /story_render_failed|storyGenPromise|generateStory/);
   assert.doesNotMatch(worker, /result\.storyTask/);
   assert.match(worker, /refundOutstandingWorkspaceCredits/);
