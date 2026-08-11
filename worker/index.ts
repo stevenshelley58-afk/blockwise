@@ -57,6 +57,7 @@ export async function resolveHandler(kind: string): Promise<Handler | null> {
       const {
         assertDeterministicFeedEditingReady,
         runTemplateCampaignGeneration,
+        validateTemplateCampaignIdentity,
       } = await import("../src/lib/adstudio/generate-template-campaign.ts");
       const { loadRuntimeProviderToken } = await import("../src/lib/providers/provider-connections.ts");
       return async (payload, supabase, context) => {
@@ -89,6 +90,11 @@ export async function resolveHandler(kind: string): Promise<Handler | null> {
           expectedCampaignId?: string;
         };
         if (!stored.body) throw new Error("Ad Studio recovery job has no generation body.");
+        await validateTemplateCampaignIdentity({
+          workspaceId,
+          body: stored.body,
+          expectedCampaignId: stored.expectedCampaignId,
+        });
         const reservation = stored.reservation ?? undefined;
         const [openAiApiKey, googleAiApiKey] = await Promise.all([
           loadRuntimeProviderToken(supabase, "openai"),

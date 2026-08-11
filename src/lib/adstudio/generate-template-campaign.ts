@@ -30,7 +30,12 @@ import {
 import { buildPrebuiltTemplateCloneQa } from "./clone-regions.ts";
 import { deriveAndPersistTemplateTextLayers } from "./layer-derivation.ts";
 import { generateAdStudioTemplateCopy, type AdStudioCopyFields } from "./copy-generation.ts";
-import { buildCloneCampaignPack, buildCloneCreative } from "./clone-campaign.ts";
+import {
+  buildCloneCampaignPack,
+  buildCloneCreative,
+  generationRequestFingerprint,
+  resolveCloneCampaignId,
+} from "./clone-campaign.ts";
 import {
   recordCloneCandidateAudit,
   type CloneCandidateAuditClient,
@@ -121,6 +126,24 @@ export type RunTemplateCampaignGenerationResult = {
    */
   storyTask?: Promise<void>;
 };
+
+/** Validate the queue checkpoint before provider credentials or paid work are touched. */
+export async function validateTemplateCampaignIdentity(input: {
+  workspaceId: string;
+  body: CreateCampaignBody;
+  expectedCampaignId?: string;
+}): Promise<string> {
+  const template = await resolveApprovedAdStudioTemplate({ templateId: input.body.firstAd?.templateId });
+  const expected = resolveCloneCampaignId({
+    workspaceId: input.workspaceId,
+    templateId: template.id,
+    requestFingerprint: `${input.workspaceId}:${generationRequestFingerprint(input.body)}`,
+  });
+  if (!input.expectedCampaignId || input.expectedCampaignId !== expected) {
+    throw new Error("Generation job campaign identity does not match its request and released template.");
+  }
+  return expected;
+}
 
 export async function assertDeterministicFeedEditingReady(input: {
   supabase: SupabaseGenerationClient;
@@ -520,21 +543,24 @@ export async function runTemplateCampaignGeneration(
     templateId: firstAd.templateId,
   });
   const correlationId = input.correlationId ?? randomUUID();
+  const expectedCampaignId = await validateTemplateCampaignIdentity({
+    workspaceId: input.workspaceId,
+    body,
+    expectedCampaignId: input.expectedCampaignId,
+  });
 
   // The route persists this deterministic ID before any provider call. If
   // Vercel dies after the transactional Feed save, the VPS resumes the saved
   // campaign and its editor preparation instead of buying the same image again.
-  if (input.expectedCampaignId) {
-    const resumed = await resumePersistedTemplateCampaign({
-      supabase: input.supabase,
-      workspaceId: input.workspaceId,
-      userId: input.userId,
-      correlationId,
-      expectedCampaignId: input.expectedCampaignId,
-      template,
-    });
-    if (resumed) return resumed;
-  }
+  const resumed = await resumePersistedTemplateCampaign({
+    supabase: input.supabase,
+    workspaceId: input.workspaceId,
+    userId: input.userId,
+    correlationId,
+    expectedCampaignId,
+    template,
+  });
+  if (resumed) return resumed;
 
   const brandKitResult = await resolveAdStudioGenerationBrandKit({
     supabase,
@@ -771,6 +797,7 @@ export async function runTemplateCampaignGeneration(
   // customer has their ad now, without waiting for the story render.
   const feedPack = applyProvidedCopyToCampaignPack(
     buildCloneCampaignPack({
+      campaignId: expectedCampaignId,
       workspaceId: input.workspaceId,
       brandKit,
       suburb: body.suburb ?? "Scarborough",

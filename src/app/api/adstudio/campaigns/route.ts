@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 
 import { NextResponse, type NextRequest } from "next/server";
 
@@ -14,7 +14,7 @@ import { refundOutstandingWorkspaceCredits } from "@/lib/credits/workspace-credi
 import {
   type CreateCampaignBody,
 } from "@/lib/adstudio/generate-template-campaign";
-import { resolveCloneCampaignId } from "@/lib/adstudio/clone-campaign";
+import { generationRequestFingerprint, resolveCloneCampaignId } from "@/lib/adstudio/clone-campaign";
 import { generationLockCanBeReclaimed } from "@/lib/adstudio/generation-lock";
 import { buildAdStudioCreativeLibrary } from "@/lib/adstudio/creative-library";
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -36,8 +36,7 @@ const inFlightGenerations = new Map<string, number>();
 const GENERATION_DEDUP_TTL_MS = 15 * 60_000;
 
 function generationDedupKey(workspaceId: string, body: unknown): string {
-  const text = JSON.stringify(body) ?? "";
-  const fingerprint = createHash("sha256").update(text).digest("hex");
+  const fingerprint = generationRequestFingerprint(body);
   return `${workspaceId}:${fingerprint}`;
 }
 
@@ -278,8 +277,7 @@ export async function POST(request: NextRequest) {
       const expectedCampaignId = resolveCloneCampaignId({
         workspaceId: context.access.workspaceId,
         templateId: body.firstAd!.templateId,
-        suburb: body.suburb ?? "Scarborough",
-        description: body.firstAd!.description,
+        requestFingerprint: dedupKey,
       });
       const inserted = await service
         .from("adstudio_creative_jobs")

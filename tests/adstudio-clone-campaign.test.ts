@@ -2,6 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { buildCloneCampaignPack, createEmptyAdStudioCampaignPack, extractBrandKitFromWebsite } from "../src/lib/adstudio/index.ts";
+import {
+  generationRequestFingerprint,
+  resolveCloneCampaignIdFromParts,
+} from "../src/lib/adstudio/clone-campaign.ts";
 import { buildCloneTestPack } from "./adstudio-clone-fixture.ts";
 
 test("empty AdStudio state contains no synthetic ad", () => {
@@ -17,6 +21,50 @@ test("empty AdStudio state contains no synthetic ad", () => {
   assert.equal(pack.copyPacks.length, 0);
 });
 
+test("campaign identity covers customer inputs and the released template revision", () => {
+  const request = {
+    firstAd: {
+      templateId: "meta-agent-intro-feed-051",
+      imageDataUrls: { property: "asset-a" },
+      onImageCopy: { headline: "Coastal living" },
+    },
+  };
+  const reorderedRequest = {
+    firstAd: {
+      onImageCopy: { headline: "Coastal living" },
+      imageDataUrls: { property: "asset-a" },
+      templateId: "meta-agent-intro-feed-051",
+    },
+  };
+  const fingerprint = generationRequestFingerprint(request);
+  assert.equal(generationRequestFingerprint(reorderedRequest), fingerprint, "jsonb key order must not change identity");
+  assert.notEqual(
+    generationRequestFingerprint({ ...request, firstAd: { ...request.firstAd, imageDataUrls: { property: "asset-b" } } }),
+    fingerprint,
+  );
+  assert.notEqual(
+    generationRequestFingerprint({ ...request, firstAd: { ...request.firstAd, onImageCopy: { headline: "Just listed" } } }),
+    fingerprint,
+  );
+
+  const common = {
+    workspaceId: "workspace_clone_identity",
+    templateId: request.firstAd.templateId,
+    requestFingerprint: fingerprint,
+  };
+  const first = resolveCloneCampaignIdFromParts({ ...common, templateRevision: "quality-lock-a" });
+  assert.equal(
+    resolveCloneCampaignIdFromParts({ ...common, templateRevision: "quality-lock-a" }),
+    first,
+    "an exact retry must resume the same campaign",
+  );
+  assert.notEqual(
+    resolveCloneCampaignIdFromParts({ ...common, templateRevision: "quality-lock-b" }),
+    first,
+    "a new quality-locked template revision must create a new campaign",
+  );
+});
+
 test("clone campaign contains exactly one ad in the two finished formats", () => {
   const pack = buildCloneTestPack();
   assert.equal(pack.variants.length, 1);
@@ -28,6 +76,7 @@ test("clone campaign contains exactly one ad in the two finished formats", () =>
 test("clone campaign refuses to create an ad before the feed (4:5) clone exists", () => {
   const complete = buildCloneTestPack();
   assert.throws(() => buildCloneCampaignPack({
+    campaignId: "00000000-0000-4000-8000-000000000052",
     workspaceId: complete.campaign.workspaceId,
     brandKit: complete.brandKit,
     suburb: "Scarborough",
@@ -47,6 +96,7 @@ test("clone campaign refuses to create an ad before the feed (4:5) clone exists"
 test("clone campaign builds with feed-only when story is not yet rendered", () => {
   const complete = buildCloneTestPack();
   const pack = buildCloneCampaignPack({
+    campaignId: "00000000-0000-4000-8000-000000000053",
     workspaceId: complete.campaign.workspaceId,
     brandKit: complete.brandKit,
     suburb: "Scarborough",
