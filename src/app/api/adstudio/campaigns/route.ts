@@ -14,7 +14,11 @@ import { refundOutstandingWorkspaceCredits } from "@/lib/credits/workspace-credi
 import {
   type CreateCampaignBody,
 } from "@/lib/adstudio/generate-template-campaign";
-import { generationRequestFingerprint, resolveCloneCampaignId } from "@/lib/adstudio/clone-campaign";
+import {
+  generationCreditMutationKey,
+  generationRequestFingerprint,
+  resolveCloneCampaignId,
+} from "@/lib/adstudio/clone-campaign";
 import { generationLockCanBeReclaimed } from "@/lib/adstudio/generation-lock";
 import { buildAdStudioCreativeLibrary } from "@/lib/adstudio/creative-library";
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -38,30 +42,6 @@ const GENERATION_DEDUP_TTL_MS = 15 * 60_000;
 function generationDedupKey(workspaceId: string, body: unknown): string {
   const fingerprint = generationRequestFingerprint(body);
   return `${workspaceId}:${fingerprint}`;
-}
-
-function normalizedGenerationMutationId(
-  request: NextRequest,
-  body: CreateCampaignBody,
-): string | null {
-  const supplied = body.clientMutationId ?? request.headers.get("idempotency-key");
-  const normalized = supplied?.trim().replace(/[^a-zA-Z0-9:_-]/g, "").slice(0, 160);
-  return normalized || null;
-}
-
-function generationCreditMutationKey(
-  workspaceId: string,
-  dedupKey: string,
-  clientMutationId: string | null,
-): string {
-  // Bind a caller token to the exact request fingerprint. Reusing a token for
-  // different content can therefore never alias the first campaign or charge.
-  if (clientMutationId) {
-    return `adstudio-generation:${workspaceId}:${clientMutationId}:${dedupKey}`;
-  }
-
-  const bucket = Math.floor(Date.now() / GENERATION_DEDUP_TTL_MS);
-  return `adstudio-generation:${dedupKey}:${bucket}`;
 }
 
 export async function GET(request: NextRequest) {
@@ -193,12 +173,7 @@ export async function POST(request: NextRequest) {
 
   const body = await readJsonBody<CreateCampaignBody>(request);
   const dedupKey = generationDedupKey(context.access.workspaceId, body);
-  const clientMutationId = normalizedGenerationMutationId(request, body);
-  const creditMutationKey = generationCreditMutationKey(
-    context.access.workspaceId,
-    dedupKey,
-    clientMutationId,
-  );
+  const creditMutationKey = generationCreditMutationKey(dedupKey);
   const inFlightSince = inFlightGenerations.get(dedupKey);
 
   if (inFlightSince !== undefined && Date.now() - inFlightSince < GENERATION_DEDUP_TTL_MS) {

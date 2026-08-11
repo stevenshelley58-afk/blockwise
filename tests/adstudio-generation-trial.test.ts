@@ -26,7 +26,7 @@ test("campaign generation route uses the shared render-credit reservation", () =
   assert.match(source, /@\/lib\/adstudio\/generation-credits/);
   assert.match(source, /reserveAdStudioGenerationCredits/);
   assert.match(source, /refundOutstandingWorkspaceCredits/);
-  assert.match(source, /clientMutationId \?\? request\.headers\.get\("idempotency-key"\)/);
+  assert.match(source, /generationCreditMutationKey\(dedupKey\)/);
   assert.match(read("src/lib/adstudio/generate-template-campaign.ts"), /resolveAdStudioGenerationBrandKit/);
 });
 
@@ -44,8 +44,8 @@ test("real campaign generation route guards duplicate in-flight requests", () =>
   assert.match(source, /const inFlightGenerations = new Map<string, number>\(\)/);
   assert.match(source, /generationRequestFingerprint\(body\)/);
   assert.match(source, /generationDedupKey\(context\.access\.workspaceId,\s*body\)/);
-  assert.match(source, /clientMutationId.*dedupKey/s);
-  assert.match(source, /adstudio-generation:\$\{workspaceId\}:\$\{clientMutationId\}:\$\{dedupKey\}/);
+  assert.match(read("src/lib/adstudio/clone-campaign.ts"), /adstudio-generation:\$\{dedupKey\}/);
+  assert.doesNotMatch(source, /clientMutationId.*creditMutationKey/s);
   assert.match(source, /status:\s*409/);
   assert.match(source, /inFlightGenerations\.delete\(dedupKey\)/);
 });
