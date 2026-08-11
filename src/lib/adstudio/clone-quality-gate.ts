@@ -223,6 +223,7 @@ export function cloneQualityWarrantsSameTierRetry(input: {
       || visibleCopyText(check.rendered) !== visibleCopyText(expected);
   });
   const assetChecks = new Map(input.review.assetChecks.map((check) => [check.key, check]));
+  const copyFinding = /\b(?:copy|text|word|letter|punctuation|comma|period|apostrophe|hyphen|dash|colon|semicolon|address|headline|spelling|typo|character|symbol)\b/iu;
   return input.review.adSystemLikenessScore >= MIN_RUNTIME_AD_SYSTEM_LIKENESS
     && input.review.standaloneAdQualityScore >= MIN_RUNTIME_STANDALONE_AD_QUALITY
     && input.review.excludedContentInfluencedScore === false
@@ -233,7 +234,8 @@ export function cloneQualityWarrantsSameTierRetry(input: {
     })
     && input.review.identityLeakage.length === 0
     && input.review.defects.length <= 1
-    && input.review.suggestedCorrection.trim().length > 0;
+    && input.review.defects.every((defect) => copyFinding.test(defect))
+    && copyFinding.test(input.review.suggestedCorrection);
 }
 
 function cloneQualityHasCleanNearPassEvidence(input: {

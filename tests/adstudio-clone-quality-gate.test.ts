@@ -152,6 +152,17 @@ test("only a clean 9+ or exact-copy-only near-pass warrants a corrected same-tie
     expectedCopy,
     expectedAssetKeys,
   }), false);
+  assert.equal(cloneQualityWarrantsSameTierRetry({
+    review: review({
+      adSystemLikenessScore: 9.8,
+      standaloneAdQualityScore: 9.5,
+      copyChecks: [{ key: "headline", expected: "Exact headline", rendered: "Exact headline,", exact: false }],
+      defects: ["The composition is visibly warped."],
+      suggestedCorrection: "Remove the trailing comma and rebuild the composition.",
+    }),
+    expectedCopy,
+    expectedAssetKeys,
+  }), false);
 });
 
 test("only an internally inconsistent clean near-pass needs independent vision confirmation", () => {
