@@ -1,4 +1,4 @@
-// Offline text-region detection for the 71 gallery templates, using OCR
+// Offline text-region detection for the released gallery templates, using OCR
 // instead of a live vision-model call (this build script has no API keys and
 // must be reproducible/offline). We already know the EXACT string in every
 // region (inputs.text[].sample) — OCR only needs to find WHERE it sits, not

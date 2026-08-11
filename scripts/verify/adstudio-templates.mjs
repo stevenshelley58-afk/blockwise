@@ -51,6 +51,8 @@ const failures = [];
 const warnings = [];
 const templates = [];
 const referencedPublicSamples = new Set();
+const referencedEvidence = new Set();
+const referencedThumbnails = new Set();
 
 // Magic Layers typography coverage. Baseline set below the pipeline's
 // current empirical result (383/410 regions = 93.4%, see
@@ -76,6 +78,14 @@ function sha256(path) {
 function publicPath(src) {
   if (typeof src !== "string" || !src.startsWith("/")) return null;
   return join(publicDir, ...src.slice(1).split("/"));
+}
+
+function filesBelow(directory, prefix = "") {
+  if (!existsSync(directory)) return [];
+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const relative = prefix ? `${prefix}/${entry.name}` : entry.name;
+    return entry.isDirectory() ? filesBelow(join(directory, entry.name), relative) : [relative];
+  });
 }
 
 function isNormalizedBox(box) {
@@ -612,6 +622,11 @@ for (const { file, template } of templates) {
     fail(id, "sample image, matching thumbnail, and alt text are required");
   }
   if (typeof sample?.imageSrc === "string") referencedPublicSamples.add(sample.imageSrc);
+  if (/^[a-f0-9]{64}$/iu.test(sample?.contentHash ?? "")) {
+    for (const profile of ["320", "640", "preview"]) {
+      referencedThumbnails.add(`meta/${sample.contentHash.toLowerCase()}-${profile}.webp`);
+    }
+  }
   if (!/^[a-f0-9]{64}$/iu.test(sample?.contentHash ?? "")) fail(id, "sample.contentHash must be a SHA-256 hash");
   const sampleFile = publicPath(sample?.imageSrc);
   if (!sampleFile || !existsSync(sampleFile)) fail(id, `sample image not found: ${sample?.imageSrc ?? "<missing>"}`);
@@ -760,12 +775,31 @@ for (const { file, template } of templates) {
 
 const validQualityLocks = verifyQualityLocks();
 
+for (const id of ids) referencedEvidence.add(`${id}.json`);
+
 const sampleDirectory = join(publicDir, "adstudio-samples", "meta");
 if (existsSync(sampleDirectory)) {
   for (const filename of readdirSync(sampleDirectory)) {
     const publicSample = `/adstudio-samples/meta/${filename}`;
     if (!referencedPublicSamples.has(publicSample)) fail("ORPHAN_SAMPLE", `${publicSample} is not referenced by a released template`);
   }
+}
+
+const evidenceDirectory = join(galleryDir, "evidence");
+for (const filename of filesBelow(evidenceDirectory)) {
+  if (!referencedEvidence.has(filename)) fail("ORPHAN_EVIDENCE", `evidence/${filename} does not belong to a released template`);
+}
+
+const thumbnailDirectory = join(publicDir, "adstudio-thumbnails");
+if (existsSync(thumbnailDirectory)) {
+  for (const filename of filesBelow(thumbnailDirectory)) {
+    if (!referencedThumbnails.has(filename)) fail("ORPHAN_THUMBNAIL", `/adstudio-thumbnails/${filename} does not belong to a released template`);
+  }
+  for (const filename of referencedThumbnails) {
+    if (!existsSync(join(thumbnailDirectory, filename))) fail("MISSING_THUMBNAIL", `/adstudio-thumbnails/${filename} is required by a released template`);
+  }
+} else if (!process.env.ADSTUDIO_PUBLIC_DIR) {
+  fail("MISSING_THUMBNAIL", "/adstudio-thumbnails is required for the installed gallery");
 }
 
 if (templates.length >= diversityMinCount) {
