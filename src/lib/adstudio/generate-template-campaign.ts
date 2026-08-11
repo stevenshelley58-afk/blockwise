@@ -177,6 +177,7 @@ async function resumePersistedTemplateCampaign(input: {
   correlationId: string;
   expectedCampaignId: string;
   template: AdStudioTemplate;
+  providerEnv?: ProviderEnvironment;
 }): Promise<RunTemplateCampaignGenerationResult | null> {
   const campaignPack = await loadAdStudioCampaignPack(
     input.supabase as SupabaseServerClient,
@@ -198,6 +199,7 @@ async function resumePersistedTemplateCampaign(input: {
     userId: input.userId,
     correlationId: input.correlationId,
     template: input.template,
+    providerEnv: input.providerEnv,
     renders: [{
       format: PRIMARY_CLONE_FORMAT,
       creativeId: feedCreative.creativeId,
@@ -450,6 +452,7 @@ export type CloneEditingLayersInput = {
   userId: string;
   correlationId: string;
   template: AdStudioTemplate;
+  providerEnv?: ProviderEnvironment;
   renders: Array<{
     format: TemplateCloneRenderFormat;
     creativeId: string;
@@ -491,6 +494,7 @@ export async function prepareCloneCreativeTextLayers(
         currentImageRef: render.imageRef,
         currentImageUrl: render.imageUrl,
         template: input.template,
+        providerEnv: input.providerEnv,
       });
     } catch {
       // Advisory only — the targeted image-model edit remains available.
@@ -559,6 +563,7 @@ export async function runTemplateCampaignGeneration(
     correlationId,
     expectedCampaignId,
     template,
+    providerEnv: input.providerEnv,
   });
   if (resumed) return resumed;
 
@@ -862,6 +867,7 @@ export async function runTemplateCampaignGeneration(
           userId: input.userId,
           correlationId,
           template,
+          providerEnv: input.providerEnv,
           renders: [{
             format: PRIMARY_CLONE_FORMAT,
             creativeId: feedCreative.creativeId,
@@ -884,6 +890,7 @@ export async function runTemplateCampaignGeneration(
     campaignId: feedPack.campaign.campaignId,
     variantId: feedPack.variants[0].variantId,
     template,
+    providerEnv: input.providerEnv,
     storyGenPromise,
     creditReservation: input.creditReservation,
   });
@@ -911,6 +918,7 @@ async function persistStoryInBackground(input: {
   campaignId: string;
   variantId: string;
   template: AdStudioTemplate;
+  providerEnv?: ProviderEnvironment;
   storyGenPromise: Promise<GeneratedCloneRender>;
   creditReservation?: WorkspaceCreditReservation;
 }): Promise<void> {
@@ -985,6 +993,7 @@ async function persistStoryInBackground(input: {
       userId: input.userId,
       correlationId: input.correlationId,
       template: input.template,
+      providerEnv: input.providerEnv,
       renders: [{
         format: STORY_CLONE_FORMAT,
         creativeId: storyCreative.creativeId,

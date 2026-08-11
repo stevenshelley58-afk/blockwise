@@ -28,6 +28,7 @@ const layerDerivation = readFileSync("src/lib/adstudio/layer-derivation.ts", "ut
 const cloneCampaign = readFileSync("src/lib/adstudio/clone-campaign.ts", "utf8");
 const generationRoute = readFileSync("src/app/api/adstudio/campaigns/route.ts", "utf8");
 const generationWorker = readFileSync("worker/index.ts", "utf8");
+const templateGeneration = readFileSync("src/lib/adstudio/generate-template-campaign.ts", "utf8");
 
 const regions: AdStudioCloneRegion[] = [
   { key: "headline", kind: "text", box: { x: 0.1, y: 0.1, width: 0.8, height: 0.1 } },
@@ -89,6 +90,8 @@ test("a fully migrated template cannot silently fall back to image-model text ed
   assert.match(editor, /textLayers\?\.deterministicOnly && !patchImage/);
   assert.doesNotMatch(generationRoute, /assertDeterministicFeedEditingReady/);
   assert.match(generationWorker, /assertDeterministicFeedEditingReady/);
+  assert.match(layerDerivation, /resolveCloneProviders\("fast", input\.providerEnv\)/);
+  assert.match(templateGeneration, /providerEnv: input\.providerEnv/);
 });
 
 test("instant text fitting uses painted glyph bounds rather than the oversized CSS em box", () => {
