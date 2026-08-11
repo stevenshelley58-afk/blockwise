@@ -8,7 +8,7 @@
     "adSystemLikeness": 9.5,
     "standaloneAdQuality": 9
   },
-  "qualifiedAt": "2026-08-11T05:03:53.000Z",
+  "qualifiedAt": "2026-08-11T07:26:16.000Z",
   "sample": {
     "stage": "gallery_sample",
     "requestHash": "919bfb12bf727723ce0e7202a446b6bbbc73c1dd865e58dc22c5921f3ca44810",
@@ -107,7 +107,7 @@
   },
   "customerFixture": {
     "stage": "customer_fixture",
-    "requestHash": "5cdd97202891202e058f78674dc9f4d3ee1f574c6d78453b0dd4e022b0306a82",
+    "requestHash": "2b8c038e4aa8847980b3be557a39e29424d1c69cfc517699ea3e9d058b6e4e95",
     "referenceHash": "6b39524953085173c3693d65073af0521272baad4f24c4bd25c99638b4c0e858",
     "references": [
       {
@@ -131,21 +131,21 @@
       "feature_3": "PARK VIEWS",
       "website": "HARBOURLINE.EXAMPLE"
     },
-    "outputHash": "7d3a820576cc28e93ff39c5e7fb02ef86c699d9a6e5c5fc3cf3e99d06462a7d9",
-    "executionTransport": "google_image_api",
-    "reviewedAt": "2026-08-11T05:03:53Z",
+    "outputHash": "60cd351613901f1b0a882b8ba36df035dcad923d3f486a5d4f180eba3a9fc72b",
+    "executionTransport": "production_image_api",
+    "reviewedAt": "2026-08-11T07:26:16Z",
     "review": {
       "schemaVersion": 1,
       "rubricVersion": "adstudio-subject-invariant-clone-v1",
       "templateId": "meta-feed-165",
-      "requestHash": "5cdd97202891202e058f78674dc9f4d3ee1f574c6d78453b0dd4e022b0306a82",
-      "candidateHash": "7d3a820576cc28e93ff39c5e7fb02ef86c699d9a6e5c5fc3cf3e99d06462a7d9",
+      "requestHash": "2b8c038e4aa8847980b3be557a39e29424d1c69cfc517699ea3e9d058b6e4e95",
+      "candidateHash": "60cd351613901f1b0a882b8ba36df035dcad923d3f486a5d4f180eba3a9fc72b",
       "reviewer": {
         "provider": "openai",
         "model": "gpt-5.6-vision"
       },
       "adSystemLikenessScore": 9.5,
-      "standaloneAdQualityScore": 9.5,
+      "standaloneAdQualityScore": 9.6,
       "excludedContentInfluencedScore": false,
       "copyChecks": [
         {
@@ -190,15 +190,15 @@
           "key": "main_image",
           "used": true,
           "faithful": true,
-          "notes": "The distinct supplied lounge image is visibly used as the hero while retaining the sample’s crop, overlay, and rounded-card treatment."
+          "notes": "The distinct supplied lounge is visibly used as the full-bleed hero and preserves the approved sample's crop class, dark overlay, direct-on-photo typography, rounded frame, and footer treatment."
         }
       ],
       "identityLeakage": [],
       "defects": [],
-      "includedRationale": "The finished customer clone preserves the approved sample’s rounded frame, full-bleed hero system, title/price anchors, three-column feature treatment, overlay, and outlined CTA. The longer supplied headline uses an extra line but retains hierarchy and placement.",
-      "qualityRationale": "The ad remains polished and legible at full size; typography, dividers, CTA outline, and imagery are clean without rendering artifacts.",
+      "includedRationale": "Subject-invariant full-size comparison confirms the two-line serif headline, direct-on-photo price and feature treatment, three columns with only thin dividers, rounded outer frame, MORE INFO anchor, and thin outlined website footer. No invented capsules or panels remain. The price and all other supplied copy are exact.",
+      "qualityRationale": "The customer ad is polished, legible, balanced, and free of warped text, broken geometry, or rendering artifacts.",
       "suggestedCorrection": "",
-      "reviewedAt": "2026-08-11T05:03:53Z"
+      "reviewedAt": "2026-08-11T07:26:16Z"
     }
   }
 }

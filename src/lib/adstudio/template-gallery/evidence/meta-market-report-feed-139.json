@@ -8,7 +8,7 @@
     "adSystemLikeness": 9.5,
     "standaloneAdQuality": 9
   },
-  "qualifiedAt": "2026-08-11T06:00:00.000Z",
+  "qualifiedAt": "2026-08-11T07:26:16.000Z",
   "sample": {
     "stage": "gallery_sample",
     "requestHash": "ebe2560a241d55085e46dff62d162b4718f891ac2c9522557de317f71a339485",
@@ -126,7 +126,7 @@
   },
   "customerFixture": {
     "stage": "customer_fixture",
-    "requestHash": "b87d716b39794b5051a9e9ef0788587adbafb691bc928f07494f70be616e1d10",
+    "requestHash": "aacc5ce9619559784df2218cadab4db7380952841e1f6941d16c9b2079790194",
     "referenceHash": "eb4bce514070f6ce1566fc8fd2570755157d99eb50518e210739b276a6a1f370",
     "references": [
       {
@@ -157,21 +157,21 @@
       "cta": "ENQUIRE NOW",
       "contact": "0400 123 456 | HARBOURLINE.EXAMPLE"
     },
-    "outputHash": "6827536e49ece18949025a08b3098f499beb7c88bf9a4ee0ab057d8ce8fa58ce",
+    "outputHash": "d75fed7e2ef244b02399e5cc335a7a77cd4fbd609cb56ea54fba6256f0f715ab",
     "executionTransport": "production_image_api",
-    "reviewedAt": "2026-08-11T05:50:00Z",
+    "reviewedAt": "2026-08-11T07:26:16Z",
     "review": {
       "schemaVersion": 1,
       "rubricVersion": "adstudio-subject-invariant-clone-v1",
       "templateId": "meta-market-report-feed-139",
-      "requestHash": "b87d716b39794b5051a9e9ef0788587adbafb691bc928f07494f70be616e1d10",
-      "candidateHash": "6827536e49ece18949025a08b3098f499beb7c88bf9a4ee0ab057d8ce8fa58ce",
+      "requestHash": "aacc5ce9619559784df2218cadab4db7380952841e1f6941d16c9b2079790194",
+      "candidateHash": "d75fed7e2ef244b02399e5cc335a7a77cd4fbd609cb56ea54fba6256f0f715ab",
       "reviewer": {
         "provider": "openai",
         "model": "gpt-5.6-vision"
       },
-      "adSystemLikenessScore": 9.6,
-      "standaloneAdQualityScore": 9.5,
+      "adSystemLikenessScore": 9.7,
+      "standaloneAdQualityScore": 9.6,
       "excludedContentInfluencedScore": false,
       "copyChecks": [
         {
@@ -222,21 +222,21 @@
           "key": "agency_logo",
           "used": true,
           "faithful": true,
-          "notes": "Faithful"
+          "notes": "The distinct Harbourline logo is clearly and faithfully used at the approved top-center anchor."
         },
         {
           "key": "land_visual",
           "used": true,
           "faithful": true,
-          "notes": "Faithful"
+          "notes": "The distinct property image is clearly used inside the fixed isometric land-slab treatment rather than as a flat photo rectangle."
         }
       ],
       "identityLeakage": [],
       "defects": [],
-      "includedRationale": "Raised land, pin, map, blocks preserved.",
-      "qualityRationale": "Clean.",
+      "includedRationale": "Full-size subject-invariant comparison confirms the defining raised isometric slab, bright grass rim, exposed soil thickness, cast shadow, giant glossy 3D red pin, six smaller red pins, map-line background, dotted route, top hierarchy, paired blue information blocks, CTA and footer anchors. The property identity changes only inside the preserved compositing treatment.",
+      "qualityRationale": "The finished ad is cohesive, high-contrast, professionally composited, and free of warped text, broken perspective, leakage, or rendering defects.",
       "suggestedCorrection": "",
-      "reviewedAt": "2026-08-11T05:50:00Z"
+      "reviewedAt": "2026-08-11T07:26:16Z"
     }
   }
 }
