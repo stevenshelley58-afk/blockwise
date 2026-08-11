@@ -179,6 +179,11 @@ test("factory migration isolates cells, keeps the bucket private, and exposes on
   assert.match(sql, /raise notice 'AdStudio factory staging contains % candidate row\(s\)/u);
 });
 
+test("factory environment example accepts Frank's canonical one-use pull route", () => {
+  const example = readFileSync(".env.example", "utf8");
+  assert.match(example, /^FRANK_PULL_PATH_PREFIX=\/v1\/ad-template-factory\/pulls$/mu);
+});
+
 test("operator importer is cell-scoped, bundle-hash validating, source-free, and non-runtime", () => {
   const importer = readFileSync("scripts/adstudio/import-factory-release.mjs", "utf8");
   assert.match(importer, /\.eq\("factory_cell_id", factoryCellId\)/u);
