@@ -1,65 +1,246 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "templateId": "meta-agent-intro-feed-051",
-  "requestHash": "2c4a9ba0e97ed41045559604f8fd3e1a88ffd3c9634abb12ee514df2f4ace4fc",
-  "inputHashes": {
-    "source_ad": "86565ad6874566135bfabbac7c27b70fcd06b0cfe0c4378779f1d39448b188c5",
-    "property_photo": "b0dc48d057ef6a9a0077a054b4d7aff9636fa7e08c6e15f594b27f2c759cf986",
-    "agency_logo": "7d735a9ebddd710205edbdba4925e15ab952ba0ad52bb6e6a60a264553f1bcb3"
+  "templateHash": "c8b355bd22ce28d9bb680334ee0062a248c00e2bb6764d0bec4a947536a73b59",
+  "sampleHash": "ead7008d345b8a03a63d4e154ddf0184ef5f262ae56c46201b77bc883f5c8a6e",
+  "rubricVersion": "adstudio-subject-invariant-clone-v1",
+  "thresholds": {
+    "adSystemLikeness": 9.5,
+    "standaloneAdQuality": 9
   },
-  "outputHash": "b149b5633ba59f6be2c39cb2b49fba6c42d24de6d2a9a2771469919f9406b49a",
-  "executionTransport": "codex_subscription_image_generation",
-  "reviewedAt": "2026-07-19T06:37:16.940Z",
-  "correctionCount": 0,
-  "qa": {
-    "passed": true,
-    "fullSizeReviewed": true,
-    "contractReview": {
-      "passed": true,
-      "notes": "Only source-visible customer inputs were declared."
-    },
-    "requestIntegrity": {
-      "passed": true,
-      "notes": "Executed the locked buildCloneImageRequest prompt with references in contractual order."
-    },
-    "copyChecks": [
+  "qualifiedAt": "2026-08-11T13:10:00.000Z",
+  "sample": {
+    "stage": "gallery_sample",
+    "requestHash": "e51d46d6a457ea5a1e3d74ab04a907dd8ebb626de859ed49811c0e01850579c5",
+    "referenceHash": "86565ad6874566135bfabbac7c27b70fcd06b0cfe0c4378779f1d39448b188c5",
+    "references": [
       {
-        "key": "headline",
-        "expected": "YOUR LOCAL PROPERTY PARTNER",
-        "exact": true
+        "index": 1,
+        "key": "source_ad",
+        "role": "source",
+        "contentHash": "86565ad6874566135bfabbac7c27b70fcd06b0cfe0c4378779f1d39448b188c5"
       },
       {
-        "key": "subheadline",
-        "expected": "BOOK A NO-PRESSURE CALL",
-        "exact": true
-      },
-      {
-        "key": "body",
-        "expected": "Local insight, clear advice and a practical plan for your next property move.",
-        "exact": true
-      },
-      {
-        "key": "cta",
-        "expected": "BOOK A CALL",
-        "exact": true
-      },
-      {
-        "key": "phone",
-        "expected": "0400 123 456",
-        "exact": true
-      }
-    ],
-    "assetChecks": [
-      {
+        "index": 2,
         "key": "property_photo",
-        "used": true
-      },
-      {
-        "key": "agency_logo",
-        "used": true
+        "role": "replacement_asset",
+        "contentHash": "85f65ff33de6e6fd922bd1aa30ba970d275430c6e00cd55f4b2ef54a9db9bd4d"
       }
     ],
-    "identityLeakage": [],
-    "defects": []
+    "copy": {
+      "brand_name": "NEST",
+      "headline": "THE KEY TO YOUR NEXT HOME",
+      "feature_strapline": "PRIME LOCATION | MODERN LIVING | READY TO MOVE",
+      "location_address": "123 EXAMPLE STREET, SAMPLE CITY",
+      "floor_area": "3456 SQ FT",
+      "garden_feature": "WITH GARDEN",
+      "price": "$1,250,000",
+      "phone": "0400 123 456",
+      "website": "exampleproperty.com"
+    },
+    "outputHash": "ead7008d345b8a03a63d4e154ddf0184ef5f262ae56c46201b77bc883f5c8a6e",
+    "executionTransport": "production_image_api",
+    "reviewedAt": "2026-08-11T12:50:00.000Z",
+    "review": {
+      "schemaVersion": 1,
+      "rubricVersion": "adstudio-subject-invariant-clone-v1",
+      "templateId": "meta-agent-intro-feed-051",
+      "requestHash": "e51d46d6a457ea5a1e3d74ab04a907dd8ebb626de859ed49811c0e01850579c5",
+      "candidateHash": "ead7008d345b8a03a63d4e154ddf0184ef5f262ae56c46201b77bc883f5c8a6e",
+      "reviewer": {
+        "provider": "openai",
+        "model": "gpt-5.6-vision"
+      },
+      "adSystemLikenessScore": 9.6,
+      "standaloneAdQualityScore": 9.5,
+      "excludedContentInfluencedScore": false,
+      "copyChecks": [
+        {
+          "key": "brand_name",
+          "expected": "NEST",
+          "observed": "NEST",
+          "exact": true
+        },
+        {
+          "key": "headline",
+          "expected": "THE KEY TO YOUR NEXT HOME",
+          "observed": "THE KEY TO YOUR NEXT HOME",
+          "exact": true
+        },
+        {
+          "key": "feature_strapline",
+          "expected": "PRIME LOCATION | MODERN LIVING | READY TO MOVE",
+          "observed": "PRIME LOCATION | MODERN LIVING | READY TO MOVE",
+          "exact": true
+        },
+        {
+          "key": "location_address",
+          "expected": "123 EXAMPLE STREET, SAMPLE CITY",
+          "observed": "123 EXAMPLE STREET, SAMPLE CITY",
+          "exact": true
+        },
+        {
+          "key": "floor_area",
+          "expected": "3456 SQ FT",
+          "observed": "3456 SQ FT",
+          "exact": true
+        },
+        {
+          "key": "garden_feature",
+          "expected": "WITH GARDEN",
+          "observed": "WITH GARDEN",
+          "exact": true
+        },
+        {
+          "key": "price",
+          "expected": "$1,250,000",
+          "observed": "$1,250,000",
+          "exact": true
+        },
+        {
+          "key": "phone",
+          "expected": "0400 123 456",
+          "observed": "0400 123 456",
+          "exact": true
+        },
+        {
+          "key": "website",
+          "expected": "exampleproperty.com",
+          "observed": "exampleproperty.com",
+          "exact": true
+        }
+      ],
+      "assetChecks": [
+        {
+          "key": "property_photo",
+          "used": true,
+          "faithful": true,
+          "notes": "used faithfully as the softened photo backdrop"
+        }
+      ],
+      "identityLeakage": [],
+      "defects": [],
+      "includedRationale": "Key, ribbon, photo veil, card, footer and brand anchor faithfully retain the source ad system.",
+      "qualityRationale": "Polished, exact and release-ready.",
+      "suggestedCorrection": "",
+      "reviewedAt": "2026-08-11T12:50:00.000Z"
+    }
+  },
+  "customerFixture": {
+    "stage": "customer_fixture",
+    "requestHash": "522ba2b3699f0eb903c75d0b1b57c41255df2bfa9640a1164a25ab2ee67a0e8c",
+    "referenceHash": "ead7008d345b8a03a63d4e154ddf0184ef5f262ae56c46201b77bc883f5c8a6e",
+    "references": [
+      {
+        "index": 1,
+        "key": "approved_sample",
+        "role": "approved_sample",
+        "contentHash": "ead7008d345b8a03a63d4e154ddf0184ef5f262ae56c46201b77bc883f5c8a6e"
+      },
+      {
+        "index": 2,
+        "key": "property_photo",
+        "role": "replacement_asset",
+        "contentHash": "59180c0189aff26817033f1c0300eae2440cb3edb15c3745a91c303860247c63"
+      }
+    ],
+    "copy": {
+      "brand_name": "HAVEN",
+      "headline": "THE KEY TO COASTAL LIVING",
+      "feature_strapline": "OCEAN VIEWS | OPEN PLAN | MOVE IN READY",
+      "location_address": "88 HARBOUR ROAD, BAY CITY",
+      "floor_area": "280 SQ M",
+      "garden_feature": "WITH POOL",
+      "price": "$2,450,000",
+      "phone": "0412 555 018",
+      "website": "havenhomes.example"
+    },
+    "outputHash": "83e5345e4e53ccca6afe6cdf9ee5f53ac7f8621f0ffc4996e98b20372c7e96c5",
+    "executionTransport": "google_image_api",
+    "reviewedAt": "2026-08-11T13:10:00.000Z",
+    "review": {
+      "schemaVersion": 1,
+      "rubricVersion": "adstudio-subject-invariant-clone-v1",
+      "templateId": "meta-agent-intro-feed-051",
+      "requestHash": "522ba2b3699f0eb903c75d0b1b57c41255df2bfa9640a1164a25ab2ee67a0e8c",
+      "candidateHash": "83e5345e4e53ccca6afe6cdf9ee5f53ac7f8621f0ffc4996e98b20372c7e96c5",
+      "reviewer": {
+        "provider": "openai",
+        "model": "gpt-5.6-vision"
+      },
+      "adSystemLikenessScore": 9.7,
+      "standaloneAdQualityScore": 9.5,
+      "excludedContentInfluencedScore": false,
+      "copyChecks": [
+        {
+          "key": "brand_name",
+          "expected": "HAVEN",
+          "observed": "HAVEN",
+          "exact": true
+        },
+        {
+          "key": "headline",
+          "expected": "THE KEY TO COASTAL LIVING",
+          "observed": "THE KEY TO COASTAL LIVING",
+          "exact": true
+        },
+        {
+          "key": "feature_strapline",
+          "expected": "OCEAN VIEWS | OPEN PLAN | MOVE IN READY",
+          "observed": "OCEAN VIEWS | OPEN PLAN | MOVE IN READY",
+          "exact": true
+        },
+        {
+          "key": "location_address",
+          "expected": "88 HARBOUR ROAD, BAY CITY",
+          "observed": "88 HARBOUR ROAD, BAY CITY",
+          "exact": true
+        },
+        {
+          "key": "floor_area",
+          "expected": "280 SQ M",
+          "observed": "280 SQ M",
+          "exact": true
+        },
+        {
+          "key": "garden_feature",
+          "expected": "WITH POOL",
+          "observed": "WITH POOL",
+          "exact": true
+        },
+        {
+          "key": "price",
+          "expected": "$2,450,000",
+          "observed": "$2,450,000",
+          "exact": true
+        },
+        {
+          "key": "phone",
+          "expected": "0412 555 018",
+          "observed": "0412 555 018",
+          "exact": true
+        },
+        {
+          "key": "website",
+          "expected": "havenhomes.example",
+          "observed": "havenhomes.example",
+          "exact": true
+        }
+      ],
+      "assetChecks": [
+        {
+          "key": "property_photo",
+          "used": true,
+          "faithful": true,
+          "notes": "used"
+        }
+      ],
+      "identityLeakage": [],
+      "defects": [],
+      "includedRationale": "Key/ribbon and full ad system retained.",
+      "qualityRationale": "Pass.",
+      "suggestedCorrection": "",
+      "reviewedAt": "2026-08-11T13:10:00.000Z"
+    }
   }
 }
