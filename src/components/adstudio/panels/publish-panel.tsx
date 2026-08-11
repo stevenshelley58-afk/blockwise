@@ -85,6 +85,12 @@ type PublishPlanStatus = {
   };
 };
 
+type PublishPlanReadiness = {
+  ready?: boolean;
+  blockers?: Array<{ code: string; message: string }>;
+  budget?: { dailyMinorUnits: number; currency: string };
+};
+
 type PublishSetupPanelProps = {
   campaignId: string;
   campaignPack: AdStudioCampaignPack;
@@ -122,6 +128,10 @@ function dateInputToIso(value: string, endOfDay = false): string | null {
     ? new Date(year, month - 1, day, 23, 59, 59, 999)
     : new Date(year, month - 1, day);
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
+function formatMinorCurrency(minorUnits: number, currency: string): string {
+  return new Intl.NumberFormat("en-AU", { style: "currency", currency: currency || "AUD" }).format(minorUnits / 100);
 }
 
 export function PublishSetupPanel({
@@ -170,8 +180,14 @@ export function PublishSetupPanel({
   const [publishError, setPublishError] = useState("");
   const [publishDone, setPublishDone] = useState(false);
   const [publishMessage, setPublishMessage] = useState("Published");
-  const [publishPhase, setPublishPhase] = useState<"idle" | "creating" | "live" | "failed">("idle");
+  const [publishPhase, setPublishPhase] = useState<"idle" | "creating" | "paused_ready" | "activating" | "live" | "failed">("idle");
   const [publishPlanId, setPublishPlanId] = useState<string | null>(null);
+  const [serverBlockers, setServerBlockers] = useState<string[]>([]);
+  const [authoritativeBudget, setAuthoritativeBudget] = useState<{ dailyMinorUnits: number; currency: string } | null>(null);
+  const [readinessRefresh, setReadinessRefresh] = useState(0);
+  const [pollRefresh, setPollRefresh] = useState(0);
+  const [activationConfirmed, setActivationConfirmed] = useState(false);
+  const [activating, setActivating] = useState(false);
   const [deselectedVariantIds, setDeselectedVariantIds] = useState<ReadonlySet<string>>(new Set());
   const [publishedVariantCount, setPublishedVariantCount] = useState<number | null>(null);
   const [dailyBudgetAud, setDailyBudgetAud] = useState(20);
@@ -352,11 +368,18 @@ export function PublishSetupPanel({
         setPublishDone(false);
         setPublishError(plan.queueError ?? plan.lastError ?? "Meta publish failed.");
         setPublishPhase("failed");
-      } else if (plan.status === "paused_live") {
+      } else if (plan.status === "paused_ready") {
         stopPolling();
-        setPublishMessage("Ad submitted");
+        setPublishMessage("Paused and ready for your approval");
+        setPublishPhase("paused_ready");
+        setReadinessRefresh((value) => value + 1);
+      } else if (plan.status === "live") {
+        stopPolling();
+        setPublishMessage("Your ad is live");
         setPublishPhase("live");
-      } else if (plan.status === "publishing" || plan.status === "approved") {
+      } else if (plan.status === "activating") {
+        setPublishPhase("activating");
+      } else if (plan.status === "publishing" || plan.status === "queued" || plan.status === "validating") {
         const ads = plan.reconciledObjects?.ads ?? 0;
         setPublishMessage(ads > 0 ? `Creating ${ads} paused ad${ads === 1 ? "" : "s"} on Meta` : "Creating your paused ads on Meta");
         setPublishPhase("creating");
@@ -385,7 +408,23 @@ export function PublishSetupPanel({
       cancelled = true;
       window.clearInterval(interval);
     };
-  }, [publishDone, publishPlanId]);
+  }, [publishDone, publishPlanId, pollRefresh]);
+
+  useEffect(() => {
+    if (!publishPlanId) return;
+    const controller = new AbortController();
+    fetch(`/api/integrations/meta/publish-plans/${encodeURIComponent(publishPlanId)}/readiness`, { signal: controller.signal })
+      .then(async (response) => {
+        const body = await response.json().catch(() => ({})) as PublishPlanReadiness;
+        if (!response.ok) throw new Error("Readiness unavailable");
+        setServerBlockers((body.blockers ?? []).map((blocker) => blocker.message));
+        setAuthoritativeBudget(body.budget ?? null);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setServerBlockers(["We could not verify the final Meta publish requirements."]);
+      });
+    return () => controller.abort();
+  }, [publishPlanId, readinessRefresh]);
 
   const brandItem: ReadinessEntry | null = brandApproved
     ? null
@@ -518,7 +557,8 @@ export function PublishSetupPanel({
         : end.toISOString();
     return {
       dailyBudgetMinorUnits: Math.max(1, Math.round(dailyBudgetAud * 100)),
-      destinationUrl,
+      adDestinationUrl: destinationUrl,
+      formCompletionUrl: destinationUrl,
       geo: targetSuburbs.length > 0
         ? { type: "cities", locations: targetSuburbs, includeSurroundingSuburbs: includeSurroundingSuburbs === true }
         : { type: "country", country: campaignPack.campaign.market.country },
@@ -566,7 +606,7 @@ export function PublishSetupPanel({
       if (body.providerWritesEnabled === false) throw new Error("Live publishing is not enabled yet. Export your creatives to launch manually.");
 
       const planStatus = body.metaPublishPlan?.status;
-      const queued = Boolean(body.queueJobId) || Boolean(body.activePublishJob) || planStatus === "paused_live" || planStatus === "publishing";
+      const queued = Boolean(body.queueJobId) || Boolean(body.activePublishJob) || planStatus === "paused_ready" || planStatus === "publishing" || planStatus === "queued";
       if (!queued) {
         // The server declined to queue the publish — show the real blockers
         // instead of pretending the submission is in progress.
@@ -576,9 +616,11 @@ export function PublishSetupPanel({
 
       if (!fullSelection) setPublishedVariantCount(body.metaPublishPlan?.variantIds?.length ?? selectedVariantIds.length);
       setPublishPlanId(body.metaPublishPlan?.id ?? null);
-      setPublishMessage(planStatus === "paused_live" ? "Ad submitted" : "Creating your paused ads on Meta");
+      setServerBlockers(body.blockers ?? []);
+      setAuthoritativeBudget(null);
+      setPublishMessage(planStatus === "paused_ready" ? "Paused and ready for your approval" : "Creating your paused ads on Meta");
       setPublishDone(true);
-      setPublishPhase(planStatus === "paused_live" ? "live" : "creating");
+      setPublishPhase(planStatus === "paused_ready" ? "paused_ready" : "creating");
       return true;
     } catch (error) {
       setPublishError(error instanceof Error ? error.message : "Publish failed.");
@@ -587,6 +629,31 @@ export function PublishSetupPanel({
       return false;
     } finally {
       setPublishing(false);
+    }
+  }
+
+  async function handleActivate(): Promise<void> {
+    if (!publishPlanId || !activationConfirmed || serverBlockers.length) return;
+    setActivating(true);
+    setPublishError("");
+    try {
+      const response = await fetch(`/api/integrations/meta/publish-plans/${encodeURIComponent(publishPlanId)}/mutations`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "activate" }),
+      });
+      const body = await response.json().catch(() => ({})) as { error?: string };
+      if (!response.ok) throw new Error(body.error ?? "Meta activation could not be started.");
+      setPublishPhase("activating");
+      setPublishDone(true);
+      setPublishMessage("Activation requested. Meta will confirm delivery before we call this live.");
+      setReadinessRefresh((value) => value + 1);
+      setPollRefresh((value) => value + 1);
+    } catch (error) {
+      setPublishError(error instanceof Error ? error.message : "Meta activation could not be started.");
+      setPublishPhase("paused_ready");
+    } finally {
+      setActivating(false);
     }
   }
 
@@ -1217,11 +1284,38 @@ export function PublishSetupPanel({
                   <small>Building campaign, ad sets, and creatives. This takes a moment.</small>
                 </div>
               )}
+              {publishPhase === "paused_ready" && (
+                <div className="tw space-y-4 rounded-lg border border-amber-300 bg-amber-50 p-4 text-amber-950" role="status">
+                  <div className="flex items-start gap-3">
+                    <CircleAlert aria-hidden size={20} className="mt-0.5 shrink-0" />
+                  <span><strong className="block">Your ads are paused and ready</strong><small className="block">Nothing is spending yet. Activating starts delivery at {authoritativeBudget ? `${formatMinorCurrency(authoritativeBudget.dailyMinorUnits, authoritativeBudget.currency)} per day` : "the verified Meta budget"}.</small></span>
+                  </div>
+                  {serverBlockers.length > 0 && (
+                    <ul className="list-disc space-y-1 pl-5 text-sm" aria-live="polite">
+                      {serverBlockers.map((blocker) => <li key={blocker}>{blocker}</li>)}
+                    </ul>
+                  )}
+                  <label className="flex items-start gap-2 text-sm">
+                    <Checkbox checked={activationConfirmed} onCheckedChange={(checked) => setActivationConfirmed(checked === true)} aria-label="Confirm Meta spend" />
+                    <span>I confirm that activating this campaign can start Meta spend at {authoritativeBudget ? formatMinorCurrency(authoritativeBudget.dailyMinorUnits, authoritativeBudget.currency) : "the verified Meta budget"} per day.</span>
+                  </label>
+                  <Button type="button" onClick={() => void handleActivate()} disabled={!activationConfirmed || !authoritativeBudget || serverBlockers.length > 0 || activating}>
+                    {activating ? <RefreshCw aria-hidden size={17} className="animate-spin" /> : <Send aria-hidden size={17} />} {activating ? "Requesting activation..." : "Activate campaign"}
+                  </Button>
+                </div>
+              )}
+              {publishPhase === "activating" && (
+                <div className="studio-live-progress" role="status">
+                  <span className="studio-live-spinner"><RefreshCw aria-hidden size={24} /></span>
+                  <strong>{publishMessage}</strong>
+                  <small>We will only call this live after Meta confirms the active objects.</small>
+                </div>
+              )}
               {publishPhase === "live" && (
                 <div className="studio-publish-success">
                   <span><Check aria-hidden size={24} /></span>
-                  <strong>Ad submitted</strong>
-                  {publishedVariantCount && <small>{publishedVariantCount} creatives submitted to Meta</small>}
+                  <strong>Your ad is live</strong>
+                  {publishedVariantCount && <small>{publishedVariantCount} creatives are active on Meta</small>}
                   <Link href="/results" className="studio-btn publish studio-live-results-btn">View in Performance <ChevronRight aria-hidden size={17} /></Link>
                 </div>
               )}
@@ -1260,7 +1354,7 @@ export function PublishSetupPanel({
               disabled={stepIndex === 4 ? (!publishReady || publishing) : continueDisabled}
               onClick={stepIndex === 4 ? () => void handlePublishAndAdvance() : () => setStepIndex((index) => Math.min(STEPS.length - 1, index + 1))}
             >
-              {stepIndex === 4 ? <>{publishing ? <RefreshCw aria-hidden size={17} /> : <Send aria-hidden size={17} />} {publishing ? "Submitting..." : "Submit & go live"} <ChevronRight aria-hidden size={17} /></> : <>Continue to {STEPS[stepIndex + 1]?.toLowerCase()} <ChevronRight aria-hidden size={17} /></>}
+              {stepIndex === 4 ? <>{publishing ? <RefreshCw aria-hidden size={17} /> : <Send aria-hidden size={17} />} {publishing ? "Submitting..." : "Create paused Meta ad"} <ChevronRight aria-hidden size={17} /></> : <>Continue to {STEPS[stepIndex + 1]?.toLowerCase()} <ChevronRight aria-hidden size={17} /></>}
             </button>
           )}
         </footer>

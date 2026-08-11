@@ -160,11 +160,11 @@ export async function executeMetaPublishPlan(input: {
 }) {
   input.signal?.throwIfAborted();
   if (
-    input.plan.status !== "approved" &&
+    input.plan.status !== "queued" &&
     input.plan.status !== "publishing" &&
-    input.plan.status !== "paused_live"
+    input.plan.status !== "paused_ready"
   ) {
-    throw new Error("Meta publish plan must be approved before worker execution.");
+    throw new Error("Meta publish plan must be queued before worker execution.");
   }
 
   let freeLive: PreparedFreeLiveConversion | null;
@@ -174,7 +174,7 @@ export async function executeMetaPublishPlan(input: {
     // Record the exact pre-flight failure, but leave an approved plan eligible
     // for the queue's remaining attempts. fail_job_v2 is the sole authority
     // that moves it to failed when the final attempt is exhausted.
-    if (input.plan.status === "approved") {
+    if (input.plan.status === "queued") {
       const retryablePlan: MetaPublishPlan = {
         ...input.plan,
         lastError: error instanceof Error ? error.message : "Meta publish pre-flight failed.",
@@ -186,9 +186,7 @@ export async function executeMetaPublishPlan(input: {
     }
     throw error;
   }
-  if (input.plan.status === "paused_live") {
-    await finalizeFreeLiveConversion(input, input.plan, freeLive);
-    await queueReportingRefreshAfterProviderChange(input.plan.workspaceId, "publish");
+  if (input.plan.status === "paused_ready") {
     return input.plan;
   }
 
@@ -237,16 +235,13 @@ export async function executeMetaPublishPlan(input: {
     providerResult = result;
     completedPlan = applyMetaPublishExecutionResult(publishingPlan, result);
 
-    // Provider objects are durable, but "paused_live" is user-visible success.
-    // Keep the plan in publishing until claim/billing/activation finalization
-    // has also succeeded; retries reconcile the object IDs persisted here.
-    const durableProviderPlan: MetaPublishPlan = completedPlan.status === "paused_live"
-      ? { ...completedPlan, status: "publishing" }
-      : completedPlan;
+    // Creation is deliberately a PAUSED-only workflow. Billing/entitlement and
+    // activation happen only in the explicit activation mutation, never here.
+    const durableProviderPlan = completedPlan;
     input.signal?.throwIfAborted();
     await updateMetaPublishPlanExecution(input.serviceSupabase, durableProviderPlan);
     await persistPublishAudit(input.serviceSupabase, durableProviderPlan);
-    if (completedPlan.status !== "paused_live") {
+    if (completedPlan.status !== "paused_ready") {
       if (
         metaProviderMutationMayHaveOccurred(completedPlan) ||
         metaProviderFailureShouldRetry(completedPlan)
@@ -260,13 +255,18 @@ export async function executeMetaPublishPlan(input: {
       }
       return completedPlan;
     }
+    if (freeLive) {
+      await releasePreparedFreeLiveClaim(input.serviceSupabase, completedPlan, freeLive);
+    }
+    await queueReportingRefreshAfterProviderChange(completedPlan.workspaceId, "publish");
+    return completedPlan;
   } catch (error) {
     input.signal?.throwIfAborted();
     const providerState = completedPlan ?? providerResult;
     if (providerState && metaProviderMutationMayHaveOccurred(providerState)) {
       const reconciliationPlan: MetaPublishPlan = {
         ...(completedPlan ?? publishingPlan),
-        status: "publishing",
+        status: "reconciliation_required",
         lastError: `Provider reconciliation required: ${
           error instanceof Error ? error.message : "Meta publish outcome is uncertain."
         }`,
@@ -288,7 +288,7 @@ export async function executeMetaPublishPlan(input: {
     }
     const retryablePlan: MetaPublishPlan = {
       ...publishingPlan,
-      status: input.plan.status === "publishing" ? "publishing" : "approved",
+      status: input.plan.status === "publishing" ? "reconciliation_required" : "queued",
       lastError: error instanceof Error ? error.message : "Meta publish worker failed.",
       updatedAt: new Date().toISOString(),
     };
@@ -297,19 +297,7 @@ export async function executeMetaPublishPlan(input: {
     throw error;
   }
 
-  // Provider reconciliation is durable before finalization. User-visible
-  // success is persisted only after claim/billing/free-campaign activation is
-  // complete, so the UI cannot report a paused campaign as live.
-  if (!completedPlan) {
-    throw new Error("Meta publish completed without a reconciled plan.");
-  }
-  input.signal?.throwIfAborted();
-  await finalizeFreeLiveConversion(input, completedPlan, freeLive);
-  input.signal?.throwIfAborted();
-  await updateMetaPublishPlanExecution(input.serviceSupabase, completedPlan);
-  await persistPublishAudit(input.serviceSupabase, completedPlan);
-  await queueReportingRefreshAfterProviderChange(completedPlan.workspaceId, "publish");
-  return completedPlan;
+  throw new Error("Meta publish ended without a terminal provider state.");
 }
 
 async function queueReportingRefreshAfterProviderChange(
@@ -371,7 +359,7 @@ async function prepareFreeLiveConversion(input: {
       service: input.serviceSupabase,
       workspaceId: input.plan.workspaceId,
       gateway: input.billingGateway,
-      allowActive: input.plan.status === "paused_live",
+      allowActive: input.plan.status === "paused_ready" || input.plan.status === "live",
         })
       : null;
   if (error || !connection) {
@@ -502,7 +490,7 @@ async function finalizeFreeLiveConversion(
   freeLive: PreparedFreeLiveConversion | null,
 ) {
   if (!freeLive) return;
-  if (completedPlan.status !== "paused_live" || !completedPlan.reconciledObjects.campaignId) {
+  if (completedPlan.status !== "paused_ready" || !completedPlan.reconciledObjects.campaignId) {
     throw new Error("Meta publish did not reconcile a campaign, so the free live claim was not consumed.");
   }
 

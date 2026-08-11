@@ -47,6 +47,20 @@ const controls: MetaPublishControls = {
   },
 };
 
+function leadFormReadback(plan: { leadForms: Array<{ name: string; headline: string; intro: string; contactFields: string[]; customQuestions: string[]; privacyPolicyUrl: string; thankYouTitle: string; thankYouBody: string; thankYouButtonType: string; thankYouButtonText: string; thankYouWebsiteUrl: string }> }, id: string) {
+  const form = plan.leadForms[0]!;
+  return {
+    id,
+    name: form.name,
+    context_card: { title: form.headline, content: [form.intro], style: "PARAGRAPH_STYLE" },
+    question_page_custom_headline: form.headline,
+    privacy_policy: { url: form.privacyPolicyUrl, link_text: "Privacy Policy" },
+    follow_up_action_url: form.thankYouWebsiteUrl,
+    thank_you_page: { title: form.thankYouTitle, body: form.thankYouBody, button_text: form.thankYouButtonText, button_type: form.thankYouButtonType, website_url: form.thankYouWebsiteUrl },
+    questions: [...form.contactFields.map((type) => ({ type })), ...form.customQuestions.map((label) => ({ type: "CUSTOM", label }))],
+  };
+}
+
 function buildPack() {
   return buildCloneTestPack("workspace_demo");
 }
@@ -330,7 +344,10 @@ test("validateMetaPublishPlanReadiness blocks creatives without a finished ad im
   );
 
   assert.equal(readiness.ready, false);
-  assert.deepEqual(readiness.blockers, ["The finished ad image could not be found for one or more creatives."]);
+  assert.deepEqual(readiness.blockers, [
+    "The finished ad image could not be found for one or more creatives.",
+    "Each selected finished ad asset must have a SHA-256 content hash before compliance and Meta publish.",
+  ]);
 });
 
 test("marketing_api adapter links ads to the destination URL, not the privacy policy", async () => {
@@ -346,6 +363,9 @@ test("marketing_api adapter links ads to the destination URL, not the privacy po
   let nextId = 1;
   const fetchImpl = async (url: string | URL | Request, init?: RequestInit) => {
     requested.push({ url: String(url), body: JSON.parse(String(init?.body ?? "{}")) as Record<string, unknown> });
+    if ((init?.method ?? "GET") === "GET" && String(url).includes("question_page_custom_headline")) {
+      return new Response(JSON.stringify(leadFormReadback(plan, String(url).split("/").at(-1)?.split("?")[0] ?? "form")), { status: 200, headers: { "content-type": "application/json" } });
+    }
     return new Response(JSON.stringify({ id: `meta_${nextId++}` }), {
       status: 200,
       headers: { "content-type": "application/json" },
@@ -441,6 +461,9 @@ test("marketing_api adapter publishes paused objects and records request respons
       body: JSON.parse(String(init?.body ?? "{}")) as Record<string, unknown>,
     });
 
+    if ((init?.method ?? "GET") === "GET" && String(url).includes("question_page_custom_headline")) {
+      return new Response(JSON.stringify(leadFormReadback(plan, String(url).split("/").at(-1)?.split("?")[0] ?? "form")), { status: 200, headers: { "content-type": "application/json" } });
+    }
     return new Response(JSON.stringify({ id: `meta_${nextId++}` }), {
       status: 200,
       headers: { "content-type": "application/json" },
@@ -452,7 +475,7 @@ test("marketing_api adapter publishes paused objects and records request respons
     { accessToken: "token", fetchImpl },
   );
 
-  assert.equal(result.status, "paused_live");
+  assert.equal(result.status, "paused_ready");
   assert.equal(result.reconciledObjects.campaignId, "meta_1");
   assert.equal(result.requestLog.length, requested.length);
   assert.ok(requested.length >= 5);
@@ -487,6 +510,10 @@ test("marketing_api adapter uploads creative assets and uses image hashes", asyn
       });
     }
 
+    if ((init?.method ?? "GET") === "GET" && String(url).includes("question_page_custom_headline")) {
+      return new Response(JSON.stringify(leadFormReadback(plan, String(url).split("/").at(-1)?.split("?")[0] ?? "form")), { status: 200, headers: { "content-type": "application/json" } });
+    }
+
     if ((init?.method ?? "GET") === "GET") {
       return new Response(JSON.stringify({ id: String(url).split("/").at(-1)?.split("?")[0], effective_status: "PAUSED" }), {
         status: 200,
@@ -510,7 +537,7 @@ test("marketing_api adapter uploads creative assets and uses image hashes", asyn
   );
 
   const creativeCreate = requested.find((request) => String(request.url).includes("/adcreatives"));
-  assert.equal(result.status, "paused_live");
+  assert.equal(result.status, "paused_ready");
   assert.ok(requested.some((request) => String(request.url).includes("/adimages")));
   assert.equal(
     ((creativeCreate?.body.object_story_spec as Record<string, unknown>).link_data as Record<string, unknown>).image_hash,
@@ -551,6 +578,9 @@ test("marketing_api adapter emits the strict Meta v23 lead-ad request contract",
       body,
     });
 
+    if (method === "GET" && url.searchParams.has("fields")) {
+      return new Response(JSON.stringify(leadFormReadback(plan, url.pathname.split("/").at(-1) ?? "form")), { status: 200, headers: { "content-type": "application/json" } });
+    }
     if (method === "GET") {
       return new Response(JSON.stringify({
         id: url.pathname.split("/").at(-1),
@@ -577,7 +607,7 @@ test("marketing_api adapter emits the strict Meta v23 lead-ad request contract",
     { accessToken: "user_token", pageAccessToken: "page_token", fetchImpl },
   );
 
-  assert.equal(result.status, "paused_live", result.lastError ?? undefined);
+  assert.equal(result.status, "paused_ready", result.lastError ?? undefined);
   const post = (suffix: string) => requests.find((request) => request.method === "POST" && request.path.endsWith(suffix));
   const campaign = post("/campaigns")!;
   assert.deepEqual(Object.keys(campaign.body).sort(), [
@@ -712,7 +742,7 @@ test("marketing_api adapter repairs only an owned partial campaign that predates
     { accessToken: "user_token", fetchImpl },
   );
 
-  assert.equal(result.status, "paused_live", result.lastError ?? undefined);
+  assert.equal(result.status, "paused_ready", result.lastError ?? undefined);
   assert.equal(posts[0]?.path.endsWith(`/${campaignId}`), true);
   assert.deepEqual(posts[0]?.body, {
     bid_strategy: "LOWEST_COST_WITHOUT_CAP",
@@ -963,7 +993,7 @@ test("marketing_api adapter resumes an already corrected legacy campaign without
     { accessToken: "user_token", fetchImpl },
   );
 
-  assert.equal(result.status, "paused_live", result.lastError ?? undefined);
+  assert.equal(result.status, "paused_ready", result.lastError ?? undefined);
   assert.equal(postPaths.length, 1);
   assert.equal(postPaths[0]?.endsWith(`/${setup.metaAdAccountId}/adsets`), true);
 });
@@ -1123,7 +1153,7 @@ test("marketing_api adapter caps AdCreative names at Meta's 100-character limit"
     { accessToken: "user_token", fetchImpl },
   );
 
-  assert.equal(result.status, "paused_live", result.lastError ?? undefined);
+  assert.equal(result.status, "paused_ready", result.lastError ?? undefined);
   assert.equal(providerName.length, 100);
   assert.match(providerName, new RegExp(`\\[BW:${plan.planId}:${creative.localId}\\]$`));
 });
@@ -1165,7 +1195,7 @@ test("marketing_api adapter puts the selected budget on an existing ad-set-budge
     { accessToken: "user_token", fetchImpl },
   );
 
-  assert.equal(result.status, "paused_live", result.lastError ?? undefined);
+  assert.equal(result.status, "paused_ready", result.lastError ?? undefined);
   assert.equal(postPaths.includes("/existing_campaign"), false);
   assert.equal(adSetBodies[0]?.bid_strategy, "LOWEST_COST_WITHOUT_CAP");
   assert.equal(adSetBodies[0]?.daily_budget, "7500");
@@ -1223,7 +1253,7 @@ test("marketing_api reconciliation paginates before deciding a deterministic obj
     { accessToken: "user_token", fetchImpl, reconcileMissingObjects: true },
   );
 
-  assert.equal(result.status, "paused_live", result.lastError ?? undefined);
+  assert.equal(result.status, "paused_ready", result.lastError ?? undefined);
   assert.equal(result.reconciledObjects.campaignId, "campaign_existing");
   assert.equal(requests.filter((request) => request.url.includes("/campaigns?")).length, 2);
   assert.equal(requests.some((request) => request.method === "POST"), false);
@@ -1243,6 +1273,9 @@ test("marketing_api adapter resumes partial publishes without recreating reconci
     const method = init?.method ?? "GET";
     requested.push({ url: String(url), method });
 
+    if (method === "GET" && String(url).includes("question_page_custom_headline")) {
+      return new Response(JSON.stringify(leadFormReadback(plan, String(url).split("/").at(-1)?.split("?")[0] ?? "form")), { status: 200, headers: { "content-type": "application/json" } });
+    }
     if (method === "GET") {
       return new Response(JSON.stringify({
         id: String(url).split("/").at(-1)?.split("?")[0],
@@ -1275,7 +1308,7 @@ test("marketing_api adapter resumes partial publishes without recreating reconci
     { accessToken: "token", fetchImpl },
   );
 
-  assert.equal(result.status, "paused_live");
+  assert.equal(result.status, "paused_ready");
   assert.equal(requested.some((request) => request.method === "POST" && request.url.includes("/campaigns")), false);
   assert.equal(result.reconciledObjects.campaignId, "existing_campaign");
 });
@@ -1361,7 +1394,7 @@ test("marketing_api adapter reconciles a provider success after its local checkp
     },
   );
 
-  assert.equal(retryResult.status, "paused_live");
+  assert.equal(retryResult.status, "paused_ready");
   assert.equal(retryResult.reconciledObjects.campaignId, "meta_campaign_existing");
   assert.equal(retryRequests.some((request) => request.method === "POST"), false);
 });
@@ -1417,6 +1450,9 @@ test("marketing_api adapter reconciles Meta object state after publish", async (
     const method = init?.method ?? "GET";
     methods.push(method);
 
+    if (method === "GET" && String(url).includes("question_page_custom_headline")) {
+      return new Response(JSON.stringify(leadFormReadback(plan, String(url).split("/").at(-1)?.split("?")[0] ?? "form")), { status: 200, headers: { "content-type": "application/json" } });
+    }
     if (method === "GET") {
       return new Response(JSON.stringify({ id: String(url).split("/").at(-1)?.split("?")[0], effective_status: "PAUSED" }), {
         status: 200,
@@ -1435,7 +1471,7 @@ test("marketing_api adapter reconciles Meta object state after publish", async (
     { accessToken: "token", fetchImpl },
   );
 
-  assert.equal(result.status, "paused_live");
+  assert.equal(result.status, "paused_ready");
   assert.equal(methods.includes("GET"), true);
   assert.equal(result.reconciledObjects.objectStatuses?.campaign?.effectiveStatus, "PAUSED");
 });

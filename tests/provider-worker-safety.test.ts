@@ -9,9 +9,9 @@ test("double-publish reuses an active plan and avoids duplicate queue dispatch",
   const source = readFileSync(publishRoute, "utf8");
 
   assert.match(source, /loadMetaPublishPlanByIdempotencyKey/);
-  assert.match(source, /existingApprovedJobActive/);
+  assert.match(source, /existingQueuedJobActive/);
   assert.match(source, /existingPlan\.status === "publishing"/);
-  assert.match(source, /existingPlan\.status === "paused_live"/);
+  assert.match(source, /existingPlan\.status === "paused_ready"/);
   assert.match(source, /return \{ plan: existingPlan, approval, reusedActivePlan: true \}/);
   assert.match(source, /!metaPublishPlanResult\?\.reusedActivePlan/);
   assert.match(source, /requestLog: existingPlan\.requestLog/);

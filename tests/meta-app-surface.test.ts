@@ -30,7 +30,8 @@ test("publish review state skips approval and submits directly", () => {
   assert.doesNotMatch(panel, /needsApprovalReview/);
   assert.doesNotMatch(panel, /Send for review/);
   assert.doesNotMatch(panel, /requestApproval: true/);
-  assert.match(panel, /Submit & go live/);
+  assert.match(panel, /Create paused Meta ad/);
+  assert.doesNotMatch(panel, /Submit & go live/);
   assert.match(panel, /studio-review-creatives/);
 });
 
@@ -48,25 +49,28 @@ test("publish submit shares one readiness gate and advances only after server ac
   assert.match(readinessGate, /destinationReady/);
   assert.match(readinessGate, /budgetStepReady/);
   assert.match(panel, /async function handlePublishLive\(\): Promise<boolean> \{[\s\S]*?if \(!publishReady\) return false;/);
-  assert.match(panel, /setPublishPhase\(planStatus === "paused_live" \? "live" : "creating"\);\s*return true;/);
+  assert.match(panel, /setPublishPhase\(planStatus === "paused_ready" \? "paused_ready" : "creating"\);\s*return true;/);
+  assert.match(panel, /\/readiness/);
+  assert.match(panel, /Activate campaign/);
+  assert.match(panel, /authoritativeBudget/);
   assert.match(panel, /catch \(error\) \{[\s\S]*?setPublishPhase\("failed"\);\s*return false;/);
   assert.match(panel, /const accepted = await handlePublishLive\(\);\s*if \(accepted\) \{\s*setStepIndex/);
   assert.match(panel, /disabled=\{stepIndex === 4 \? \(!publishReady \|\| publishing\) : continueDisabled\}/);
   assert.doesNotMatch(panel, /void handlePublishLive\(\);\s*setStepIndex/);
-  assert.equal(panel.match(/\/api\/integrations\/meta\/publish-plans/g)?.length, 1);
+  assert.ok((panel.match(/\/api\/integrations\/meta\/publish-plans/g)?.length ?? 0) >= 2);
   assert.match(panel, /plan\.status === "failed" \|\| plan\.queueStatus === "failed"/);
   assert.match(statusRoute, /queueStatus: queue\?\.status/);
   assert.match(statusRoute, /queueError: queue\?\.lastError/);
   assert.match(
     publishRoute,
-    /existingPlan\?\.status === "approved"[\s\S]*hasActiveMetaPublishPlanExecution[\s\S]*existingApprovedJobActive/,
+    /existingPlan\?\.status === "queued"[\s\S]*hasActiveMetaPublishPlanExecution[\s\S]*existingQueuedJobActive/,
   );
   assert.match(
     publishRoute,
-    /metaPublishPlan\.status === "approved" \|\| metaPublishPlan\.status === "publishing"/,
+    /metaPublishPlan\.status === "queued" \|\| metaPublishPlan\.status === "publishing"/,
   );
-  assert.match(queue, /\.eq\("status", "approved"\)/);
-  assert.doesNotMatch(queue, /\.in\("status", \["approved", "publishing"\]\)/);
+  assert.match(queue, /\.eq\("status", "queued"\)/);
+  assert.doesNotMatch(queue, /\.in\("status", \["queued", "publishing"\]\)/);
   assert.doesNotMatch(panel, /Still processing on Meta\. Confirm in Performance shortly\./);
 });
 
@@ -113,7 +117,7 @@ test("Meta Graph fallback version is shared with disconnect", () => {
   const disconnectRoute = readFileSync("src/app/api/integrations/meta/disconnect/route.ts", "utf8");
 
   assert.match(version, /DEFAULT_META_GRAPH_VERSION/);
-  assert.match(version, /"v23\.0"/);
+  assert.match(version, /"v26\.0"/);
   assert.match(disconnectRoute, /DEFAULT_META_GRAPH_VERSION/);
   assert.doesNotMatch(disconnectRoute, /"v19\.0"/);
 });

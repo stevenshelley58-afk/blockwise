@@ -1,6 +1,6 @@
 import { executeMetaPlanMutation, type MetaPlanMutation, type MetaPlanMutationAction } from "./meta-mutations.ts";
 import { loadStoredProviderTokens } from "./provider-connections.ts";
-import { loadMetaPublishPlan } from "./meta-execution.ts";
+import { loadMetaPublishPlan, updateMetaPublishPlanExecution } from "./meta-execution.ts";
 import { queueReportingRefresh } from "../meta-monitor/reporting-refresh-queue.ts";
 import type { createSupabaseServiceClient } from "../supabase/service.ts";
 import type { ApprovalStatus } from "../publishing/readiness.ts";
@@ -93,6 +93,18 @@ export async function executeMetaMutationById(input: {
     };
 
     await updateMutation(input.serviceSupabase, updated);
+    if (mutation.planId && mutation.action === "activate") {
+      const plan = await loadMetaPublishPlan(input.serviceSupabase, {
+        workspaceId: input.workspaceId,
+        planId: mutation.planId,
+      });
+      await updateMetaPublishPlanExecution(input.serviceSupabase, {
+        ...plan,
+        status: result.status === "applied" ? "live" : "reconciliation_required",
+        lastError: result.lastError,
+        updatedAt: new Date().toISOString(),
+      });
+    }
     await input.serviceSupabase.from("audit_logs").insert({
       workspace_id: input.workspaceId,
       actor_profile_id: mutation.requestedBy,
@@ -125,6 +137,18 @@ export async function executeMetaMutationById(input: {
       updatedAt: new Date().toISOString(),
     };
     await updateMutation(input.serviceSupabase, failed);
+    if (mutation.planId && mutation.action === "activate") {
+      const plan = await loadMetaPublishPlan(input.serviceSupabase, {
+        workspaceId: input.workspaceId,
+        planId: mutation.planId,
+      });
+      await updateMetaPublishPlanExecution(input.serviceSupabase, {
+        ...plan,
+        status: "reconciliation_required",
+        lastError: failed.lastError,
+        updatedAt: new Date().toISOString(),
+      });
+    }
     throw error;
   }
 }
