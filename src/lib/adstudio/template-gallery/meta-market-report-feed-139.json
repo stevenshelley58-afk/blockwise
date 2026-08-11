@@ -21,7 +21,7 @@
     "imageSrc": "/adstudio-samples/meta/meta-market-report-feed-139-sample.png",
     "thumbnailSrc": "/adstudio-samples/meta/meta-market-report-feed-139-sample.png",
     "alt": "Generated sample for Land Development Enquiry.",
-    "contentHash": "0000000000000000000000000000000000000000000000000000000000000000",
+    "contentHash": "eb4bce514070f6ce1566fc8fd2570755157d99eb50518e210739b276a6a1f370",
     "generatedBy": "reference_clone"
   },
   "inputs": {
@@ -137,5 +137,8 @@
         "body": "The agency will be in touch shortly."
       }
     }
+  },
+  "qualityLock": {
+    "templateHash": "a47ea7662ffdd86353f26e0277591965ecffd1297ea932b1a37b35813a77f1d5"
   }
 }
