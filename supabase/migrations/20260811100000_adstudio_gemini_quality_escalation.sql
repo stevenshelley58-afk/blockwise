@@ -1,6 +1,14 @@
 -- Advance quality-rejected full-ad clones through independently priced image
 -- tiers. Active runtime versions are closed first so production reads the
 -- same Flash -> Pro -> GPT ordering declared in the model registry.
+do $$
+begin
+  if not exists (select 1 from public.model_profiles where key = 'image_final') then
+    raise exception 'image_final model profile is missing; refusing quality-tier migration';
+  end if;
+end;
+$$;
+
 with final_profile as (
   select id from public.model_profiles where key = 'image_final'
 )

@@ -19,6 +19,10 @@ import {
   validateLocalQaEvidence,
   verifyLockedClonePacket,
 } from "./local-template-adapter.mjs";
+import {
+  loadVaultGoogleProviderEnvironment,
+  lockedPacketImageRequest,
+} from "./vault-template-execution.mjs";
 
 const root = process.cwd();
 const command = process.argv[2];
@@ -31,6 +35,7 @@ else if (command === "render") await renderSample();
 else if (command === "export-local") await exportLocalSample();
 else if (command === "export-customer-local") await exportCustomerLocal();
 else if (command === "render-locked-google") await renderLockedGooglePacket();
+else if (command === "render-request-vault") await renderVaultLockedGooglePacket();
 else if (command === "import-local") await importLocalSample();
 else usage();
 
@@ -235,7 +240,12 @@ async function exportCustomerLocal() {
  * is authoritative: this command cannot change the references, prompt, copy,
  * output path, or transport after it was locked.
  */
-async function renderLockedGooglePacket() {
+async function renderVaultLockedGooglePacket() {
+  const providerEnv = await loadVaultGoogleProviderEnvironment();
+  await renderLockedGooglePacket({ providerEnv });
+}
+
+async function renderLockedGooglePacket(options = {}) {
   const templatePath = requiredPath("template");
   const packetPath = requiredPath("packet");
   const template = JSON.parse(readFileSync(templatePath, "utf8"));
@@ -249,23 +259,17 @@ async function renderLockedGooglePacket() {
   const outputPath = resolve(root, packet.expectedOutput);
   assertLockedOutputPath({ template, stage: verified.stage, outputPath });
   const rawPath = outputPath.replace(/\.png$/iu, ".raw.png");
+  const manifestPath = outputPath.replace(/\.png$/iu, ".manifest.json");
   if (rawPath === outputPath) throw new Error("Locked Google output must be a PNG path.");
-  if (existsSync(outputPath) || existsSync(rawPath)) {
-    throw new Error("Locked Google render refuses to overwrite an existing output or raw artifact.");
+  if (manifestPath === outputPath) throw new Error("Locked Google output must have a distinct manifest path.");
+  if (existsSync(outputPath) || existsSync(rawPath) || existsSync(manifestPath)) {
+    throw new Error("Locked Google render refuses to overwrite an existing output, raw artifact, or manifest.");
   }
 
   const referenceAssets = await Promise.all(packet.references.map((reference) => (
     pngDataUrl(resolve(root, reference.path))
   )));
-  const request = {
-    prompt: packet.prompt,
-    negativePrompt: packet.negativePrompt || undefined,
-    referenceAssets,
-    aspectRatio: packet.aspectRatio,
-    stylePreset: "real_estate_clone",
-    seed: packet.seed,
-    requiresReferenceAssets: true,
-  };
+  const request = lockedPacketImageRequest(packet, referenceAssets);
   const profile = resolveModelProfile("image_final");
   const primary = profile.primary;
   if (primary.provider !== "google") throw new Error("The production image_final primary is not Google.");
@@ -283,7 +287,7 @@ async function renderLockedGooglePacket() {
       source: "default",
       snapshotId: null,
     },
-  }, { model });
+  }, { model, ...(options.providerEnv ? { env: options.providerEnv } : {}) });
   const generated = await provider.generate(request);
   const rawBytes = await assetBytes(generated.assetUrl);
   const normalized = await sharp(rawBytes)
@@ -293,9 +297,22 @@ async function renderLockedGooglePacket() {
   mkdirSync(dirname(outputPath), { recursive: true });
   writeFileSync(rawPath, rawBytes, { flag: "wx" });
   writeFileSync(outputPath, normalized, { flag: "wx" });
+  writeFileSync(manifestPath, `${JSON.stringify({
+    schemaVersion: 1,
+    templateId: template.id,
+    stage: verified.stage,
+    requestHash: verified.requestHash,
+    outputSha256: sha256(normalized),
+    rawOutputSha256: sha256(rawBytes),
+    model: generated.model,
+    providerRequestId: generated.usage?.providerRequestId
+      ?? generated.providerMetadata?.requestId
+      ?? null,
+  }, null, 2)}\n`, { flag: "wx" });
   console.log(`Google image render completed with ${generated.model}.`);
   console.log(`Raw provider artifact written to ${relative(root, rawPath)}.`);
   console.log(`Normalized locked output written to ${relative(root, outputPath)}.`);
+  console.log(`Locked output manifest written to ${relative(root, manifestPath)}.`);
 }
 
 function assertLockedOutputPath({ template, stage, outputPath }) {
@@ -588,6 +605,7 @@ function usage() {
   console.error("  node scripts/adstudio/create-template.mjs export-local --template template.json --packet packet.json --asset photo=path [--correction review-feedback]");
   console.error("  node scripts/adstudio/create-template.mjs export-customer-local --template template.json --packet packet.json --output artifacts/.../candidate.png --asset photo=path --copy headline='Exact copy' [--correction review-feedback]");
   console.error("  node scripts/adstudio/create-template.mjs render-locked-google --template template.json --packet packet.json");
+  console.error("  BLOCKWISE_TEMPLATE_EXECUTION_CONTEXT=vps node scripts/adstudio/create-template.mjs render-request-vault --template template.json --packet packet.json");
   console.error("  node scripts/adstudio/create-template.mjs import-local --template template.json --packet packet.json --output generated.png --qa qa.json");
   process.exit(1);
 }
