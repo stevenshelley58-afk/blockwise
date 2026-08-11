@@ -56,6 +56,10 @@ test("campaign generation uses the durable VPS queue from the start", () => {
   assert.match(route, /expectedCampaignId/);
   assert.match(route, /correlationId/);
   assert.match(worker, /expectedCampaignId: stored\.expectedCampaignId/);
+  assert.ok(
+    worker.indexOf("await validateTemplateCampaignIdentity") < worker.indexOf("loadRuntimeProviderToken(supabase"),
+    "a stored request must prove its campaign identity before provider credentials are loaded",
+  );
   assert.match(worker, /releaseAdStudioGenerationLock/);
 
   const pipeline = generation.slice(generation.indexOf("export async function runTemplateCampaignGeneration"));

@@ -16,6 +16,7 @@ export function buildCloneTestPack(workspaceId = "workspace_clone_test"): AdStud
   }));
 
   return buildCloneCampaignPack({
+    campaignId: "00000000-0000-4000-8000-000000000051",
     workspaceId,
     brandKit,
     suburb: "Scarborough",

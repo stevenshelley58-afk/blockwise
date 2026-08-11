@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import { appendAdvertiserPath, resolveAdvertiserBaseUrl, resolveLeadFormPrivacyPolicyUrl } from "./advertiser-domain.ts";
 import { runAdStudioComplianceReview } from "./compliance.ts";
 import { deterministicUuid } from "./id.ts";
@@ -28,6 +30,8 @@ const CANVAS_SIZE: Record<(typeof CLONE_FORMATS)[number], { width: number; heigh
 };
 
 export type BuildCloneCampaignPackInput = {
+  /** Stable identity reserved before any provider work begins. */
+  campaignId: string;
   workspaceId: string;
   brandKit: AdStudioBrandKit;
   suburb: string;
@@ -36,16 +40,42 @@ export type BuildCloneCampaignPackInput = {
   firstAd: FirstAdInput;
 };
 
+function canonicalJson(value: unknown): string {
+  if (value === null || typeof value !== "object") return JSON.stringify(value) ?? "null";
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
+  const record = value as Record<string, unknown>;
+  return `{${Object.keys(record).sort().map((key) => `${JSON.stringify(key)}:${canonicalJson(record[key])}`).join(",")}}`;
+}
+
+/** Stable across HTTP JSON and Postgres jsonb key ordering. */
+export function generationRequestFingerprint(body: unknown): string {
+  return createHash("sha256").update(canonicalJson(body)).digest("hex");
+}
+
+export function resolveCloneCampaignIdFromParts(input: {
+  workspaceId: string;
+  templateId: string;
+  templateRevision: string;
+  requestFingerprint: string;
+}): string {
+  return deterministicUuid(
+    `${input.workspaceId}:${input.templateId}:${input.templateRevision}:${input.requestFingerprint}`,
+  );
+}
+
 export function resolveCloneCampaignId(input: {
   workspaceId: string;
   templateId: string;
-  suburb: string;
-  description: string;
+  /** SHA-256 fingerprint of the complete customer generation request. */
+  requestFingerprint: string;
 }): string {
   const template = requireGalleryTemplate(input.templateId);
-  return deterministicUuid(
-    `${input.workspaceId}:${template.id}:${input.suburb}:${input.description}`,
-  );
+  return resolveCloneCampaignIdFromParts({
+    workspaceId: input.workspaceId,
+    templateId: template.id,
+    templateRevision: template.qualityLock?.templateHash ?? "unlocked",
+    requestFingerprint: input.requestFingerprint,
+  });
 }
 
 function buildLeadFormCopy(template: AdStudioGalleryTemplate, brandKit: AdStudioBrandKit): {
@@ -107,12 +137,7 @@ export function buildCloneCampaignPack(input: BuildCloneCampaignPackInput): AdSt
     throw new Error("The finished feed (4:5) clone is required before an ad can be created.");
   }
 
-  const campaignId = resolveCloneCampaignId({
-    workspaceId: input.workspaceId,
-    templateId: template.id,
-    suburb: input.suburb,
-    description: input.firstAd.description,
-  });
+  const campaignId = input.campaignId;
   const readyFormats = CLONE_FORMATS.filter((format) => Boolean(cloneImages[format]));
   const campaign: AdStudioCampaign = {
     campaignId,
