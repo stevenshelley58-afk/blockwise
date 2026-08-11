@@ -48,3 +48,24 @@ export function lockedPacketImageRequest(packet, referenceAssets) {
     requiresReferenceAssets: true,
   };
 }
+
+/**
+ * Select a priced image-final candidate without allowing a caller to alter the
+ * locked clone packet. Candidate order is the production profile order:
+ * primary first, then declared fallbacks.
+ */
+export function resolvePricedGoogleImageFinalCandidate(profile, candidateIndex = 0) {
+  if (!Number.isInteger(candidateIndex) || candidateIndex < 0) {
+    throw new Error("--candidate-index must be a non-negative integer.");
+  }
+  const candidates = [profile.primary, ...profile.fallbacks]
+    .filter((candidate) => Number.isFinite(candidate.imageUsdPerUnit) && candidate.imageUsdPerUnit > 0);
+  const selected = candidates[candidateIndex];
+  if (!selected) {
+    throw new Error(`--candidate-index ${candidateIndex} is outside the priced image_final candidate list.`);
+  }
+  if (selected.provider !== "google") {
+    throw new Error(`--candidate-index ${candidateIndex} selects ${selected.provider}; render-request-vault only supports Google candidates.`);
+  }
+  return Object.freeze({ candidateIndex, candidate: selected });
+}

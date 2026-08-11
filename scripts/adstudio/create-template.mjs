@@ -20,8 +20,9 @@ import {
   verifyLockedClonePacket,
 } from "./local-template-adapter.mjs";
 import {
-  loadVaultGoogleProviderEnvironment,
   lockedPacketImageRequest,
+  loadVaultGoogleProviderEnvironment,
+  resolvePricedGoogleImageFinalCandidate,
 } from "./vault-template-execution.mjs";
 
 const root = process.cwd();
@@ -242,7 +243,7 @@ async function exportCustomerLocal() {
  */
 async function renderVaultLockedGooglePacket() {
   const providerEnv = await loadVaultGoogleProviderEnvironment();
-  await renderLockedGooglePacket({ providerEnv });
+  await renderLockedGooglePacket({ providerEnv, candidateIndex: candidateIndexArg() });
 }
 
 async function renderLockedGooglePacket(options = {}) {
@@ -271,15 +272,15 @@ async function renderLockedGooglePacket(options = {}) {
   )));
   const request = lockedPacketImageRequest(packet, referenceAssets);
   const profile = resolveModelProfile("image_final");
-  const primary = profile.primary;
-  if (primary.provider !== "google") throw new Error("The production image_final primary is not Google.");
-  const model = primary.model;
+  const selected = resolvePricedGoogleImageFinalCandidate(profile, options.candidateIndex ?? candidateIndexArg());
+  const { candidate, candidateIndex } = selected;
+  const model = candidate.model;
   const provider = createGoogleImageProvider({
     model,
     pricing: {
-      inputUsdPerMillionTokens: primary.inputUsdPerMillionTokens,
-      outputUsdPerMillionTokens: primary.outputUsdPerMillionTokens,
-      imageUsdPerUnit: primary.imageUsdPerUnit,
+      inputUsdPerMillionTokens: candidate.inputUsdPerMillionTokens,
+      outputUsdPerMillionTokens: candidate.outputUsdPerMillionTokens,
+      imageUsdPerUnit: candidate.imageUsdPerUnit,
       currency: "USD",
       inputTokenBasis: "per_million_tokens",
       outputTokenBasis: "per_million_tokens",
@@ -304,6 +305,12 @@ async function renderLockedGooglePacket(options = {}) {
     requestHash: verified.requestHash,
     outputSha256: sha256(normalized),
     rawOutputSha256: sha256(rawBytes),
+    candidateIndex,
+    selectedCandidate: {
+      provider: candidate.provider,
+      model: candidate.model,
+      imageUsdPerUnit: candidate.imageUsdPerUnit,
+    },
     model: generated.model,
     providerRequestId: generated.usage?.providerRequestId
       ?? generated.providerMetadata?.requestId
@@ -493,6 +500,19 @@ function requestedTransport() {
   return transport;
 }
 
+function candidateIndexArg() {
+  const value = args["candidate-index"];
+  if (value === undefined) return 0;
+  if (Array.isArray(value) || !/^\d+$/u.test(value)) {
+    throw new Error("--candidate-index must be a non-negative integer.");
+  }
+  const candidateIndex = Number(value);
+  if (!Number.isSafeInteger(candidateIndex)) {
+    throw new Error("--candidate-index must be a non-negative integer.");
+  }
+  return candidateIndex;
+}
+
 function required(key) {
   const value = args[key];
   if (!value || Array.isArray(value)) throw new Error(`--${key} is required.`);
@@ -605,7 +625,7 @@ function usage() {
   console.error("  node scripts/adstudio/create-template.mjs export-local --template template.json --packet packet.json --asset photo=path [--correction review-feedback]");
   console.error("  node scripts/adstudio/create-template.mjs export-customer-local --template template.json --packet packet.json --output artifacts/.../candidate.png --asset photo=path --copy headline='Exact copy' [--correction review-feedback]");
   console.error("  node scripts/adstudio/create-template.mjs render-locked-google --template template.json --packet packet.json");
-  console.error("  BLOCKWISE_TEMPLATE_EXECUTION_CONTEXT=vps node scripts/adstudio/create-template.mjs render-request-vault --template template.json --packet packet.json");
+  console.error("  BLOCKWISE_TEMPLATE_EXECUTION_CONTEXT=vps node scripts/adstudio/create-template.mjs render-request-vault --template template.json --packet packet.json [--candidate-index 0]");
   console.error("  node scripts/adstudio/create-template.mjs import-local --template template.json --packet packet.json --output generated.png --qa qa.json");
   process.exit(1);
 }
