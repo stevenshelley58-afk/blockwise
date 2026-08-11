@@ -56,8 +56,9 @@ test("Ad Studio VPS recovery injects the encrypted runtime credential without mu
 
   assert.match(worker, /loadRuntimeProviderToken\(supabase, "openai"\)/);
   assert.match(worker, /loadRuntimeProviderToken\(supabase, "google"\)/);
-  assert.match(worker, /OPENAI_API_KEY: openAiApiKey/);
-  assert.match(worker, /GOOGLE_AI_API_KEY: googleAiApiKey/);
+  assert.match(worker, /openAiApiKey \? \{ OPENAI_API_KEY: openAiApiKey \} : \{\}/);
+  assert.match(worker, /googleAiApiKey \? \{ GOOGLE_AI_API_KEY: googleAiApiKey \} : \{\}/);
+  assert.match(worker, /!openAiApiKey && !googleAiApiKey/);
   assert.match(worker, /runTemplateCampaignGeneration\(\{[\s\S]*providerEnv,/);
   assert.match(worker, /runTemplateCampaignGeneration\(\{[\s\S]*signal: context\.signal,/);
   assert.doesNotMatch(worker, /process\.env\.OPENAI_API_KEY\s*=/);

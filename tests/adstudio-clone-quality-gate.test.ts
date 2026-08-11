@@ -197,7 +197,7 @@ test("a visual QA failure advances the corrected clone to the next paid model", 
   });
 
   assert.equal(result.attempt, 2);
-  assert.deepEqual(providerOrder, [["google", "openai"], ["openai", "google"]]);
+  assert.deepEqual(providerOrder, [["google", "openai"], ["openai"]]);
 });
 
 test("quality rejections advance Flash to Pro to GPT Image without releasing a bad candidate", async () => {
@@ -230,9 +230,38 @@ test("quality rejections advance Flash to Pro to GPT Image without releasing a b
   assert.equal(result.attempt, 3);
   assert.deepEqual(providerOrder, [
     ["gemini-flash", "gemini-pro", "gpt-image"],
-    ["gemini-pro", "gpt-image", "gemini-flash"],
-    ["gpt-image", "gemini-flash", "gemini-pro"],
+    ["gemini-pro", "gpt-image"],
+    ["gpt-image"],
   ]);
+});
+
+test("a missing later credential cannot cycle a quality-rejected provider", async () => {
+  const providerOrder: string[][] = [];
+  await assert.rejects(() => generateFinalCloneRender({
+    format: "4:5",
+    templateId: "template-1",
+    providers: [provider("gemini-flash"), provider("gemini-pro")],
+    request: request(),
+    referenceImage: "approved-sample",
+    expectedCopy,
+    expectedAssetKeys,
+    buildCorrectedRequest: (correction) => request(`clone | correction: ${correction}`),
+    workspaceId: "workspace-1",
+    userId: "user-1",
+    correlationId: "run-no-cycle",
+  }, {
+    generate: async (input) => {
+      providerOrder.push(input.providers.map((candidate) => candidate.providerName));
+      return { assetUrl: `candidate-${providerOrder.length}`, model: "image", provider: "test", providerAttemptCount: 1 };
+    },
+    normalize: async (assetUrl) => assetUrl,
+    review: async (input) => review({
+      attempt: input.attempt,
+      adSystemLikenessScore: 9.4,
+      suggestedCorrection: "Restore the approved geometry.",
+    }),
+  }), TemplateCampaignQaError);
+  assert.deepEqual(providerOrder, [["gemini-flash", "gemini-pro"], ["gemini-pro"]]);
 });
 
 test("no below-threshold candidate is released after the bounded quality loop", async () => {

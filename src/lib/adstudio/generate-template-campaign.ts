@@ -295,11 +295,8 @@ export async function generateFinalCloneRender(input: {
     // then Pro, then GPT Image. Within each candidate, the remaining ordered
     // providers still handle genuine provider/transport failures and retain
     // their independent accounting records.
-    const providerOffset = Math.min(attempt - 1, Math.max(0, input.providers.length - 1));
-    const candidateProviders = [
-      ...input.providers.slice(providerOffset),
-      ...input.providers.slice(0, providerOffset),
-    ];
+    const candidateProviders = input.providers.length === 0 ? [] : input.providers.slice(attempt - 1);
+    if (input.providers.length > 0 && candidateProviders.length === 0) break;
     const generated = await generate({
       providers: candidateProviders,
       request: candidateRequest,
