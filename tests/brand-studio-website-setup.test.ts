@@ -39,14 +39,15 @@ test("Brand Studio accepts only an Ad Studio return path", () => {
   assert.match(page, /returnTo=\{safeAdStudioReturnTo\(params\.returnTo\)\}/);
 });
 
-test("Create New Ad receives the current Brand Pack for defaults and generation", () => {
-  const workbench = readFileSync("src/components/adstudio/ad-studio-workbench.tsx", "utf8");
-  const newAd = readFileSync("src/components/adstudio/new-ad-dialog.tsx", "utf8");
+test("Create Ad receives the current Brand Pack for logo defaults and generation", () => {
+  const adStudioPage = readFileSync("src/app/(customer)/ad-studio/page.tsx", "utf8");
+  const flow = readFileSync("src/components/adstudio/ad-studio-customer-flow.tsx", "utf8");
 
-  assert.match(workbench, /<NewAdDialog[\s\S]*brandKit=\{brandKit\}/);
-  assert.match(newAd, /brandTextDefaultsForTemplate\(selectedTemplate, brandKit\)/);
-  assert.match(newAd, /defaultImageForTemplateSlot\(slot, brandKit\)/);
-  assert.match(newAd, /brandKitId: brandKit\.brandKitId/);
+  assert.match(adStudioPage, /<AdStudioCustomerFlow[\s\S]*brandKit=\{bundle\.brandKit\}/);
+  assert.match(flow, /brandKit\.logos\.primaryLogoUrl/);
+  assert.match(flow, /brandKit\.logos\.darkLogoUrl/);
+  assert.match(flow, /brandKit\.logos\.lightLogoUrl/);
+  assert.match(flow, /brandKit,/);
 });
 
 test("Brand Studio reloads the newest workspace kit instead of a campaign-linked kit", () => {

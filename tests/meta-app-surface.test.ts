@@ -22,7 +22,7 @@ test("approval workflow stays contextual instead of exposing a standalone sectio
 
 test("publish review state skips approval and submits directly", () => {
   const readinessRoute = readFileSync("src/app/api/adstudio/publish-readiness/route.ts", "utf8");
-  const panel = readFileSync("src/components/adstudio/panels/publish-panel.tsx", "utf8");
+  const panel = readFileSync("src/components/adstudio/ad-studio-customer-flow.tsx", "utf8");
 
   assert.doesNotMatch(readinessRoute, /approval_ready/);
   assert.doesNotMatch(readinessRoute, /Submitted for review/);
@@ -30,62 +30,38 @@ test("publish review state skips approval and submits directly", () => {
   assert.doesNotMatch(panel, /needsApprovalReview/);
   assert.doesNotMatch(panel, /Send for review/);
   assert.doesNotMatch(panel, /requestApproval: true/);
-  assert.match(panel, /Create paused Meta ad/);
-  assert.doesNotMatch(panel, /Submit & go live/);
-  assert.match(panel, /studio-review-creatives/);
+  assert.match(panel, /Create paused Meta campaign/);
+  assert.match(panel, /It does not start spend/);
 });
 
 test("publish submit shares one readiness gate and advances only after server acceptance", () => {
-  const panel = readFileSync("src/components/adstudio/panels/publish-panel.tsx", "utf8");
+  const panel = readFileSync("src/components/adstudio/ad-studio-customer-flow.tsx", "utf8");
   const statusRoute = readFileSync("src/app/api/integrations/meta/publish-plans/[id]/route.ts", "utf8");
-  const publishRoute = readFileSync("src/app/api/adstudio/export-packages/[id]/publish/route.ts", "utf8");
-  const queue = readFileSync("src/lib/providers/meta-publish-queue.ts", "utf8");
-  const readinessGate = panel.match(/const publishReady = [\s\S]*?;/)?.[0] ?? "";
-
-  assert.match(readinessGate, /allMet/);
-  assert.match(readinessGate, /campaignStepReady/);
-  assert.match(readinessGate, /creativeStepReady/);
-  assert.match(readinessGate, /leadFormStepReady/);
-  assert.match(readinessGate, /destinationReady/);
-  assert.match(readinessGate, /budgetStepReady/);
-  assert.match(panel, /async function handlePublishLive\(\): Promise<boolean> \{[\s\S]*?if \(!publishReady\) return false;/);
-  assert.match(panel, /setPublishPhase\(planStatus === "paused_ready" \? "paused_ready" : "creating"\);\s*return true;/);
-  assert.match(panel, /\/readiness/);
-  assert.match(panel, /Activate campaign/);
-  assert.match(panel, /authoritativeBudget/);
-  assert.match(panel, /catch \(error\) \{[\s\S]*?setPublishPhase\("failed"\);\s*return false;/);
-  assert.match(panel, /const accepted = await handlePublishLive\(\);\s*if \(accepted\) \{\s*setStepIndex/);
-  assert.match(panel, /disabled=\{stepIndex === 4 \? \(!publishReady \|\| publishing\) : continueDisabled\}/);
-  assert.doesNotMatch(panel, /void handlePublishLive\(\);\s*setStepIndex/);
-  assert.ok((panel.match(/\/api\/integrations\/meta\/publish-plans/g)?.length ?? 0) >= 2);
-  assert.match(panel, /plan\.status === "failed" \|\| plan\.queueStatus === "failed"/);
+  assert.match(panel, /const ready = serverReadiness\?\.ready === true && brandApproved/);
+  assert.match(panel, /isHttpsUrl\(destinationUrl\)/);
+  assert.match(panel, /isHttpsUrl\(privacyUrl\)/);
+  assert.match(panel, /hasFinishedPlacement\(campaignPack, "4:5"\)/);
+  assert.match(panel, /hasFinishedPlacement\(campaignPack, "9:16"\)/);
+  assert.match(panel, /normalizedQuestions\.length <= 5/);
+  assert.match(panel, /if \(!ready\) return/);
+  assert.match(panel, /body\.queueJobId \|\| body\.activePublishJob/);
+  assert.match(panel, /body\.metaPublishPlan\?\.status !== "paused_ready"/);
+  assert.match(panel, /\/publish-plans\/\$\{planId\}\/readiness/);
+  assert.match(panel, /planToken: planReadiness\.planToken/);
+  assert.match(panel, /confirmSpend: true/);
+  assert.match(panel, /dailyBudgetMinorUnits: planReadiness\.budget\.dailyMinorUnits/);
+  assert.match(panel, /currency: planReadiness\.budget\.currency/);
   assert.match(statusRoute, /queueStatus: queue\?\.status/);
   assert.match(statusRoute, /queueError: queue\?\.lastError/);
-  assert.match(
-    publishRoute,
-    /existingPlan\?\.status === "queued"[\s\S]*hasActiveMetaPublishPlanExecution[\s\S]*existingQueuedJobActive/,
-  );
-  assert.match(
-    publishRoute,
-    /metaPublishPlan\.status === "queued" \|\| metaPublishPlan\.status === "publishing"/,
-  );
-  assert.match(queue, /\.eq\("status", "queued"\)/);
-  assert.doesNotMatch(queue, /\.in\("status", \["queued", "publishing"\]\)/);
-  assert.doesNotMatch(panel, /Still processing on Meta\. Confirm in Performance shortly\./);
+  assert.match(panel, /setPublished\(true\)/);
 });
 
-test("publish budget defaults to the free three-day campaign and supports paid schedules", () => {
-  const panel = readFileSync("src/components/adstudio/panels/publish-panel.tsx", "utf8");
-
-  assert.match(panel, /const BUDGET_PRESETS = \[10, 20, 50\]/);
-  assert.match(panel, /const DURATION_PRESETS = \[3, 7, 14, 30\]/);
-  assert.match(panel, /useState<ScheduleMode>\("3"\)/);
-  assert.match(panel, /Enter amount/);
-  assert.match(panel, /Custom dates/);
-  assert.match(panel, /Run until stopped/);
-  assert.match(panel, /scheduleMode === "ongoing"[\s\S]*?null/);
-  assert.match(panel, /End date must be after the start date/);
-  assert.match(panel, /end\.setDate\(end\.getDate\(\) \+ 6\)/);
+test("publish uses an explicit editable budget and a bounded paused schedule", () => {
+  const panel = readFileSync("src/components/adstudio/ad-studio-customer-flow.tsx", "utf8");
+  assert.match(panel, /useState\(20\)/);
+  assert.match(panel, /Daily budget \(AUD\)/);
+  assert.match(panel, /end\.setDate\(end\.getDate\(\) \+ 7\)/);
+  assert.match(panel, /Create paused Meta campaign/);
 });
 
 test("Meta setup API captures concrete lead delivery endpoint config", () => {
@@ -137,40 +113,12 @@ test("operator prompt preview surfaces avoid stale Phase 1 test copy", () => {
 });
 
 test("Ad Studio UI presents the constrained campaign workspace", () => {
-  const adstudio = readFileSync("src/components/adstudio/ad-studio-workbench.tsx", "utf8");
-
-  assert.match(adstudio, /\/api\/adstudio\/campaigns/);
-  assert.match(adstudio, /\/api\/adstudio\/campaigns\/\$\{currentPack\.campaign\.campaignId\}\/draft/);
-  assert.match(adstudio, /\/api\/adstudio\/export-packages\/\$\{currentPack\.campaign\.campaignId\}\/download/);
-  assert.match(adstudio, /platforms:\s*\["meta"\]/);
-  assert.match(adstudio, /Create from the selected template/);
-  assert.match(adstudio, /Campaign readiness/);
-  assert.match(adstudio, /Export creatives/);
-  assert.match(adstudio, /const NAV_ITEMS:[\s\S]*id: "home"[\s\S]*id: "samples"[\s\S]*id: "library"[\s\S]*id: "brand"[\s\S]*id: "edit"[\s\S]*id: "publish"[\s\S]*id: "settings"/);
-  const navItems = adstudio.match(/const NAV_ITEMS:[\s\S]*?\];/)?.[0] ?? "";
-  const mobileNavIds = adstudio.match(/const MOBILE_NAV_IDS[\s\S]*?\);/)?.[0] ?? "";
-  assert.match(mobileNavIds, /"home", "samples", "library", "edit", "publish"/);
-  assert.doesNotMatch(mobileNavIds, /"brand"|"settings"|"campaign"|"design"/);
-  assert.match(navItems, /id: "samples", label: "Create"/);
-  assert.match(navItems, /id: "edit", label: "Edit"/);
-  assert.match(navItems, /id: "publish", label: "Publish"/);
-  assert.match(adstudio, /const MOBILE_NAV = NAV_ITEMS\.filter/);
-  assert.doesNotMatch(adstudio, /label: "Review"/);
-  assert.doesNotMatch(adstudio, /const ADVANCED_NAV_ITEMS/);
-  assert.doesNotMatch(adstudio, /label: "Ad"/);
-  assert.match(navItems, /id: "brand", label: "Brand Pack"/);
-  assert.doesNotMatch(navItems, /label: "Brand"[,}]/);
-  assert.doesNotMatch(navItems, /label: "Design"/);
-  assert.match(adstudio, /studio-home-shell/);
-  assert.match(adstudio, /aria-label="Ad progress"/);
-  assert.match(adstudio, /Create an ad/);
-  assert.match(adstudio, /samplePickerOpen/);
-  assert.match(adstudio, /<NewAdDialog/);
-  assert.match(adstudio, /showBrandSetupPrompt/);
-  assert.doesNotMatch(adstudio, /Create your own/);
-  assert.doesNotMatch(adstudio, /Export pack/);
-  assert.doesNotMatch(adstudio, /Engine: GPT/);
-  assert.doesNotMatch(adstudio, /setPlatform\("google"\)/);
+  const adstudio = readFileSync("src/components/adstudio/ad-studio-customer-flow.tsx", "utf8");
+  assert.match(adstudio, /type Stage = "create" \| "edit" \| "publish"/);
+  assert.match(adstudio, /12 quality-checked designs/);
+  assert.match(adstudio, /<CompactCreativeEditor/);
+  assert.match(adstudio, /<CompactPublish/);
+  assert.doesNotMatch(adstudio, />Provider<|>Model<|layer controls|Google Ads/);
 });
 
 test("Vercel Cron paginates provider work into the VPS queue", () => {

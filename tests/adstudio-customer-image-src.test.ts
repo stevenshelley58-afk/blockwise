@@ -133,12 +133,11 @@ test("each rejection tells the customer what to do next", () => {
   assert.match(validateFirstAd(firstAd({ imageDataUrl: SIGNED_URL })) ?? "", /Upload it again/);
 });
 
-test("the dialog blocks an unusable image before it can reach the server", () => {
-  const dialog = readFileSync("src/components/adstudio/new-ad-dialog.tsx", "utf8");
-  // The library grid shows `src`; the ad is generated from `fullSrc`.
-  assert.match(dialog, /setSlotImage\(activeImageSlot\.id, asset\.fullSrc, asset\.label\)/);
-  assert.match(dialog, /!isTransientImagePreview\(src\) && !isAdStudioImageSrc\(src\)/);
-  assert.match(dialog, /unusableImageLabels/);
+test("the compact flow prepares image files before the server validation boundary", () => {
+  const flow = readFileSync("src/components/adstudio/ad-studio-customer-flow.tsx", "utf8");
+  assert.match(flow, /downscaleImageForUpload\(file\)/);
+  assert.match(flow, /imageDataUrls: imageValues/);
+  assert.match(flow, /Missing required image|Add \$\{missingImage/);
 });
 
 test("the campaigns route owns no private notion of a valid image", () => {

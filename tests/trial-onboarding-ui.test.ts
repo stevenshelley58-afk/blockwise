@@ -23,16 +23,13 @@ test("onboarding wizard completes the progressive website and Brand Pack path in
   assert.doesNotMatch(wizard, /Skip for now/);
 });
 
-test("new ad dialog explains trial credit use without requiring Meta", () => {
-  const dialog = readFileSync("src/components/adstudio/new-ad-dialog.tsx", "utf8");
+test("first-ad generation stays available before the Meta publish step", () => {
+  const flow = readFileSync("src/components/adstudio/ad-studio-customer-flow.tsx", "utf8");
+  const createSection = flow.slice(flow.indexOf("async function createAd"), flow.indexOf("const updateCreative"));
 
-  assert.match(dialog, /\/api\/trial\/status/);
-  assert.match(dialog, /includedRenders/);
-  assert.match(dialog, /Uses 2 of \$\{status\.includedRenders\} free renders/);
-  assert.doesNotMatch(dialog, /10 free ad packs|includedAdPacks/);
-  assert.match(dialog, /No Meta account is needed until publish/);
-  assert.match(dialog, /AssetUploadDropzone/);
-  assert.match(dialog, /capturePagePaste/);
+  assert.match(createSection, /await generateFirstAd\(input\)/);
+  assert.doesNotMatch(createSection, /publish-readiness|Meta account|provider/);
+  assert.match(flow, /type Stage = "create" \| "edit" \| "publish"/);
 });
 
 test("onboarding scan failure preserves the website and offers a minimal canonical fallback", () => {

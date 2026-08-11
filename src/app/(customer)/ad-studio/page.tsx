@@ -1,25 +1,18 @@
-import { AdStudioWorkbench } from "@/components/adstudio/ad-studio-workbench";
+import { AdStudioCustomerFlow } from "@/components/adstudio/ad-studio-customer-flow";
 import { createEmptyAdStudioCampaignPack, listOfferTemplates, type AdStudioBrandKit } from "@/lib/adstudio";
 import {
   ADSTUDIO_EMBEDDED_ASSET_LIMIT,
   applyBrandAssetRows,
   loadAdStudioBrandAssetRows,
 } from "@/lib/adstudio/assets";
-import { loadAdStudioLibraryPage, type LibraryAssetModel } from "@/lib/adstudio/library-read-model";
 import { loadLiveAdStudioBundle } from "@/lib/adstudio/load-live-bundle";
 import { isExampleBrandKitSourceUrl, persistAdStudioBrandKit, rowToBrandKit } from "@/lib/adstudio/persistence";
 import { buildAdStudioFallbackBrandKit } from "@/lib/adstudio/trial-brand-kit";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
 
-import { SampleBanner } from "./sample-banner";
-
 export const dynamic = "force-dynamic";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
-
-function isFirstRunParam(value: string | string[] | undefined) {
-  return Array.isArray(value) ? value.includes("1") : value === "1";
-}
 
 function stringParam(value: string | string[] | undefined): string | null {
   return Array.isArray(value) ? value[0] ?? null : value ?? null;
@@ -29,18 +22,10 @@ export default async function AdStudioPage({ searchParams }: { searchParams?: Se
   const params = searchParams ? await searchParams : {};
   const { supabase, access } = await requirePageSurfaceAccess("adstudio");
   const requestedCampaignId = stringParam(params.campaignId);
-  const [liveBundle, assetsPage] = await Promise.all([
-    loadLiveAdStudioBundle(supabase, access.workspaceId, requestedCampaignId),
-    loadAdStudioLibraryPage({
-      supabase,
-      workspaceId: access.workspaceId,
-      kind: "assets",
-      limit: 24,
-    }),
-  ]);
+  const liveBundle = await loadLiveAdStudioBundle(supabase, access.workspaceId, requestedCampaignId);
 
   // Softened gate: an extracted-but-unapproved kit lets the user straight into the
-  // workbench as a "Draft brand" (publish stays blocked until approval).
+  // customer flow as a draft brand (publish stays blocked until approval).
   const draftBundle = !liveBundle ? await buildDraftBrandBundle(supabase, access.workspaceId) : null;
 
   const starterBundle = !liveBundle && !draftBundle
@@ -52,31 +37,15 @@ export default async function AdStudioPage({ searchParams }: { searchParams?: Se
         userId: access.userId,
       })
     : null;
-  const isSample = liveBundle === null && draftBundle === null && starterBundle === null;
   const bundle = liveBundle ?? draftBundle ?? starterBundle;
   if (!bundle) throw new Error("Ad Studio could not prepare an empty workspace.");
-  const showBrandSetupPrompt = !isSample && isStarterFallbackBrandKit(bundle.brandKit);
-  const initialMediaAssets = (assetsPage.items as LibraryAssetModel[]).map((asset) => ({
-    ...asset,
-    ratio: "Image" as const,
-  }));
 
   return (
-    <>
-      {isSample && <SampleBanner />}
-      <AdStudioWorkbench
-        workspaceId={access.workspaceId}
-        brandKit={bundle.brandKit}
-        campaignPack={bundle.campaignPack}
-        offers={bundle.offers}
-        performance={bundle.performance}
-        firstRun={isFirstRunParam(params.first)}
-        isSample={isSample}
-        showBrandSetupPrompt={showBrandSetupPrompt}
-        initialMediaAssets={initialMediaAssets}
-        initialMediaCursor={assetsPage.nextCursor}
-      />
-    </>
+    <AdStudioCustomerFlow
+      brandKit={bundle.brandKit}
+      campaignPack={bundle.campaignPack}
+      offers={bundle.offers}
+    />
   );
 }
 
@@ -110,15 +79,11 @@ async function buildStarterBundle(input: {
   };
 }
 
-function isStarterFallbackBrandKit(brandKit: AdStudioBrandKit): boolean {
-  return brandKit.lockedFields.includes("starter_brand") || (brandKit.source.type === "manual" && !brandKit.source.url.trim());
-}
-
 /**
  * B2 (simplification): when the workspace only has an *unapproved* extracted brand
  * kit, seed a starter pack from it instead of hard-gating on approval. The kit is
- * returned with its real (draft) review status so the workbench shows the
- * "Draft brand" chip and the publish panel keeps publishing blocked.
+ * returned with its real draft review status so the create flow remains usable
+ * while the publish step stays blocked.
  */
 async function buildDraftBrandBundle(
   supabase: Awaited<ReturnType<typeof import("@/lib/supabase/server").createSupabaseServerClient>>,

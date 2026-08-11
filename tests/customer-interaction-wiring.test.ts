@@ -46,25 +46,17 @@ test("Ad Radar save failures remain visible and retryable", () => {
   assert.doesNotMatch(actions, /Action failed/);
 });
 
-test("mobile Ad Studio overflow opens the canonical Brand Pack with return context", () => {
-  const topbar = read("src/components/adstudio/topbar.tsx");
-  const workbench = read("src/components/adstudio/ad-studio-workbench.tsx");
+test("compact Ad Studio keeps canonical customer destinations", () => {
+  const flow = read("src/components/adstudio/ad-studio-customer-flow.tsx");
   const niche = read("src/config/niche/blockwise.ts");
 
-  assert.match(topbar, /onOpenBrand|Brand Pack/);
-  assert.match(topbar, /onOpenSettings/);
-  assert.match(topbar, /Campaign settings/);
-  assert.match(workbench, /onOpenSettings=\{\(\) => goToSection\("settings"\)\}/);
-  assert.match(workbench, /onOpenBrand=\{\(\) => router\.push\(brandHref\)\}/);
+  assert.match(flow, /href="\/self-serve"/);
+  assert.match(flow, /href="\/ad-studio\/library"/);
   assert.match(niche, /href: "\/ad-studio\/brand", label: "Brand Pack"/);
 });
 
-test("starter campaigns do not expose archive or delete actions that cannot succeed", () => {
-  const topbar = read("src/components/adstudio/topbar.tsx");
-  const workbench = read("src/components/adstudio/ad-studio-workbench.tsx");
-
-  assert.match(workbench, /const canManageCampaign = pack\.creatives\.length > 0/);
-  assert.match(workbench, /onDelete=\{canManageCampaign \? deleteCampaign : undefined\}/);
-  assert.match(topbar, /\{onDelete && campaignId && \(\s*<button type="button" role="menuitem" onClick=\{handleArchive\}>/);
-  assert.match(topbar, /\{onDelete && campaignId && \(\s*<button\s*className="danger"/);
+test("starter campaigns cannot open Edit or Publish before a clone exists", () => {
+  const flow = read("src/components/adstudio/ad-studio-customer-flow.tsx");
+  assert.match(flow, /const canEdit = pack\.creatives\.length > 0/);
+  assert.match(flow, /const disabled = item\.id !== "create" && !canEdit/);
 });

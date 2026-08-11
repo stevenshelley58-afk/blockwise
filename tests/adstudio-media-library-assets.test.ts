@@ -61,17 +61,12 @@ test("workspace library queries stay workspace-scoped", async () => {
   ]);
 });
 
-test("Create receives a bounded, pageable workspace library in addition to current-session uploads", () => {
-  const page = readFileSync("src/app/(customer)/ad-studio/page.tsx", "utf8");
-  const workbench = readFileSync("src/components/adstudio/ad-studio-workbench.tsx", "utf8");
+test("the legacy library route resolves to the one customer Ad Studio flow", () => {
+  const libraryPage = readFileSync("src/app/(customer)/ad-studio/library/page.tsx", "utf8");
+  const flow = readFileSync("src/components/adstudio/ad-studio-customer-flow.tsx", "utf8");
 
-  assert.match(page, /loadAdStudioLibraryPage\(\{/);
-  assert.match(page, /kind: "assets",\s*limit: 24,/);
-  assert.doesNotMatch(page, /loadAdStudioWorkspaceAssetRows/);
-  assert.match(page, /initialMediaAssets=\{initialMediaAssets\}/);
-  assert.match(page, /initialMediaCursor=\{assetsPage\.nextCursor\}/);
-  assert.match(workbench, /\.\.\.uploadedAssets,\s*\.\.\.loadedMediaAssets,/);
-  assert.match(workbench, /cursor: nextMediaCursor/);
-  assert.match(workbench, /onLoadMoreAssets=\{loadMoreMediaAssets\}/);
-  assert.match(workbench, /onLoadMoreMediaAssets=\{loadMoreMediaAssets\}/);
+  assert.match(libraryPage, /redirect\("\/ad-studio"\)/);
+  assert.match(flow, /selectedTemplate\.inputs\.images\.map/);
+  assert.match(flow, /type="file"/);
+  assert.doesNotMatch(flow, /\/ad-studio\/library/);
 });
