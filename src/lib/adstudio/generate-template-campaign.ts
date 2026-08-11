@@ -137,29 +137,41 @@ export async function validateTemplateCampaignIdentity(input: {
   return expected;
 }
 
-export async function assertDeterministicFeedEditingReady(input: {
+function assertClonePlacementEditingReady(input: {
+  format: TemplateCloneRenderFormat;
+  canvas: AdStudioCreative["canvas"];
+}): void {
+  const primaryImage = input.canvas.objects?.find((object) => object.role === "primary_image");
+  const currentImage = primaryImage?.content ?? primaryImage?.assetId ?? "";
+  if (
+    !currentImage
+    || input.canvas.textLayers?.status !== "ready"
+    || !input.canvas.textLayers.deterministicOnly
+    || !input.canvas.textLayers.validFor.includes(currentImage)
+  ) {
+    throw new Error(`The ${input.format} ad was created, but exact text editing did not finish preparing.`);
+  }
+}
+
+export async function assertDeterministicCloneEditingReady(input: {
   supabase: SupabaseGenerationClient;
   workspaceId: string;
   campaignId: string;
 }): Promise<void> {
-  const { data, error } = await input.supabase
-    .from("adstudio_creatives")
-    .select("canvas_json")
-    .eq("workspace_id", input.workspaceId)
-    .eq("campaign_id", input.campaignId)
-    .eq("format", PRIMARY_CLONE_FORMAT)
-    .maybeSingle();
-  if (error) throw new Error(error.message);
-  const canvas = (data?.canvas_json ?? {}) as AdStudioCreative["canvas"];
-  const currentImage = canvas.objects?.[0]?.content ?? canvas.objects?.[0]?.assetId ?? "";
-  if (
-    !currentImage
-    || canvas.textLayers?.status !== "ready"
-    || !canvas.textLayers.deterministicOnly
-    || !canvas.textLayers.validFor.includes(currentImage)
-  ) {
-    throw new Error("The ad was created, but exact text editing did not finish preparing.");
-  }
+  await Promise.all(([PRIMARY_CLONE_FORMAT, STORY_CLONE_FORMAT] as const).map(async (format) => {
+    const { data, error } = await input.supabase
+      .from("adstudio_creatives")
+      .select("canvas_json")
+      .eq("workspace_id", input.workspaceId)
+      .eq("campaign_id", input.campaignId)
+      .eq("format", format)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    assertClonePlacementEditingReady({
+      format,
+      canvas: (data?.canvas_json ?? {}) as AdStudioCreative["canvas"],
+    });
+  }));
 }
 
 async function resumePersistedTemplateCampaign(input: {
@@ -504,6 +516,7 @@ export async function prepareCloneCreativeTextLayers(
   input: CloneEditingLayersInput,
 ): Promise<void> {
   const supabase = input.supabase as SupabaseServerClient;
+  const requiresDeterministicEditing = deterministicEditingReadiness(input.template).status === "ready";
 
   await Promise.all(input.renders.map(async (render) => {
     try {
@@ -513,10 +526,13 @@ export async function prepareCloneCreativeTextLayers(
         .eq("workspace_id", input.workspaceId)
         .eq("id", render.creativeId)
         .maybeSingle();
-      if (error || !row) return;
+      if (error) throw new Error(error.message);
+      if (!row) throw new Error(`The persisted ${render.format} creative could not be loaded for editing preparation.`);
       const canvas = (row.canvas_json ?? {}) as AdStudioCreative["canvas"];
-      if (!canvas.cloneQa?.regions.length) return;
-      await deriveAndPersistTemplateTextLayers({
+      if (!canvas.cloneQa?.regions.length) {
+        throw new Error(`The persisted ${render.format} creative has no approved editing regions.`);
+      }
+      const textLayers = await deriveAndPersistTemplateTextLayers({
         supabase,
         workspaceId: input.workspaceId,
         userId: input.userId,
@@ -530,8 +546,15 @@ export async function prepareCloneCreativeTextLayers(
         template: input.template,
         providerEnv: input.providerEnv,
       });
-    } catch {
-      // Advisory only — the targeted image-model edit remains available.
+      if (requiresDeterministicEditing) {
+        assertClonePlacementEditingReady({
+          format: render.format,
+          canvas: { ...canvas, textLayers: textLayers ?? undefined },
+        });
+      }
+    } catch (error) {
+      if (requiresDeterministicEditing) throw error;
+      // Partial templates remain advisory — the targeted image-model edit is available.
     }
   }));
 }

@@ -55,7 +55,7 @@ export async function resolveHandler(kind: string): Promise<Handler | null> {
     case "adstudio.generate.template": {
       const { recordWorkspaceFunnelEventBestEffort } = await import("../src/lib/analytics/progressive-funnel.ts");
       const {
-        assertDeterministicFeedEditingReady,
+        assertDeterministicCloneEditingReady,
         runTemplateCampaignGeneration,
         validateTemplateCampaignIdentity,
       } = await import("../src/lib/adstudio/generate-template-campaign.ts");
@@ -155,7 +155,7 @@ export async function resolveHandler(kind: string): Promise<Handler | null> {
         if (result.requiresDeterministicEditing) {
           try {
             await result.editingLayersTask;
-            await assertDeterministicFeedEditingReady({
+            await assertDeterministicCloneEditingReady({
               supabase,
               workspaceId,
               campaignId: result.campaignId,

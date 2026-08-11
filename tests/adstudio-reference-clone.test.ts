@@ -12,6 +12,7 @@ import {
   resolveCloneCopy,
 } from "../src/lib/adstudio/reference-clone.ts";
 import {
+  prepareCloneCreativeTextLayers,
   buildTemplateCloneRequest,
   derivePlacementCloneFromFinishedNative,
   resolvePersistedClonePlacementRenders,
@@ -23,6 +24,74 @@ const images = {
   property_photo: "data:image/png;base64,PROPERTY",
   brand_logo: "data:image/png;base64,LOGO",
 };
+
+function creativeLookup(rows: Record<string, Record<string, unknown>>) {
+  return {
+    from(table: string) {
+      assert.equal(table, "adstudio_creatives");
+      let creativeId = "";
+      const query = {
+        select() { return query; },
+        eq(column: string, value: unknown) {
+          if (column === "id") creativeId = String(value);
+          return query;
+        },
+        async maybeSingle() {
+          return { data: rows[creativeId] ?? null, error: null };
+        },
+      };
+      return query;
+    },
+  };
+}
+
+function readyCreativeRow(imageRef: string) {
+  return {
+    id: `creative-${imageRef}`,
+    active_revision_id: null,
+    canvas_json: {
+      objects: [{ objectId: "image", role: "primary_image", type: "image", content: imageRef }],
+      cloneQa: { regions: [{ key: "headline", kind: "text", box: { x: 0.1, y: 0.1, width: 0.8, height: 0.1 } }] },
+      textLayers: {
+        status: "ready",
+        deterministicOnly: true,
+        builtAt: "2026-08-11T00:00:00.000Z",
+        plate: "plate",
+        styles: {},
+        validFor: [imageRef],
+      },
+    },
+  };
+}
+
+test("ready-template editing preparation rejects a missing Story and succeeds when retry restores it", async () => {
+  const renders = [
+    { format: "4:5" as const, creativeId: "feed", imageRef: "feed-image" },
+    { format: "9:16" as const, creativeId: "story", imageRef: "story-image" },
+  ];
+  const rows: Record<string, Record<string, unknown>> = {
+    feed: readyCreativeRow("feed-image"),
+  };
+  const input = {
+    supabase: creativeLookup(rows) as never,
+    workspaceId: "workspace-demo",
+    userId: "user-demo",
+    correlationId: "editing-retry",
+    template,
+    renders,
+  };
+
+  await assert.rejects(
+    prepareCloneCreativeTextLayers(input),
+    /persisted 9:16 creative could not be loaded/,
+  );
+
+  const partialTemplate = { ...template, deterministicEditing: undefined };
+  await prepareCloneCreativeTextLayers({ ...input, template: partialTemplate });
+
+  rows.story = readyCreativeRow("story-image");
+  await prepareCloneCreativeTextLayers(input);
+});
 
 test("gallery samples and customer ads use the same clone request builder", () => {
   const sample = buildCloneImageRequest(template, {

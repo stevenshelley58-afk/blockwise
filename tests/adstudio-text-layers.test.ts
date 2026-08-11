@@ -89,8 +89,8 @@ test("text edits cannot silently fall back to image-model or browser-pixel rende
   assert.match(editRoute, /code: "layers_not_ready"/);
   assert.match(editRoute, /renderAuthoritativeTextEdit/);
   assert.doesNotMatch(editRoute, /compositeTextPatch/);
-  assert.doesNotMatch(generationRoute, /assertDeterministicFeedEditingReady/);
-  assert.match(generationWorker, /assertDeterministicFeedEditingReady/);
+  assert.doesNotMatch(generationRoute, /assertDeterministicCloneEditingReady/);
+  assert.match(generationWorker, /assertDeterministicCloneEditingReady/);
   assert.match(layerDerivation, /resolveCloneProviders\("fast", input\.providerEnv\)/);
   assert.match(templateGeneration, /providerEnv: input\.providerEnv/);
 });

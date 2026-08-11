@@ -7,6 +7,7 @@ import {
   buildMetaPlanMutation,
   executeMetaPlanMutation,
 } from "../src/lib/providers/meta-mutations.ts";
+import { assertDeterministicCloneEditingReady } from "../src/lib/adstudio/generate-template-campaign.ts";
 import { runOnce } from "../worker/index.ts";
 
 type RpcCall = { name: string; args: Record<string, unknown> };
@@ -71,6 +72,63 @@ test("handler-resolution failures are settled through fail_job_v2", async () => 
     },
   });
   assert.equal(calls.some((call) => call.name === "complete_job_v2"), false);
+});
+
+test("a Story editing failure cannot complete generation and a resumed retry can recover", async () => {
+  const calls: RpcCall[] = [];
+  let storyReady = false;
+  const service = {
+    async rpc(name: string, args: Record<string, unknown>) {
+      calls.push({ name, args });
+      if (name === "claim_job_v2") return { data: [claimedJob("adstudio.generate.template")], error: null };
+      if (name === "fail_job_v2") return { data: "pending", error: null };
+      if (name === "complete_job_v2") return { data: true, error: null };
+      throw new Error(`Unexpected RPC ${name}`);
+    },
+    from(table: string) {
+      assert.equal(table, "adstudio_creatives");
+      let format = "";
+      const query = {
+        select() { return query; },
+        eq(column: string, value: unknown) {
+          if (column === "format") format = String(value);
+          return query;
+        },
+        async maybeSingle() {
+          const imageRef = `${format}-image`;
+          const ready = format === "4:5" || storyReady;
+          return {
+            data: {
+              canvas_json: {
+                objects: [{ role: "primary_image", content: imageRef }],
+                textLayers: ready
+                  ? { status: "ready", deterministicOnly: true, validFor: [imageRef] }
+                  : { status: "failed", deterministicOnly: true, validFor: [] },
+              },
+            },
+            error: null,
+          };
+        },
+      };
+      return query;
+    },
+  } as unknown as Parameters<typeof runOnce>[0];
+  const resolveGenerationHandler = async () => async (
+    _payload: Record<string, unknown>,
+    handlerService: Parameters<typeof runOnce>[0],
+  ) => assertDeterministicCloneEditingReady({
+    supabase: handlerService,
+    workspaceId,
+    campaignId: "campaign-demo",
+  });
+
+  await runOnce(service, { resolveHandler: resolveGenerationHandler });
+  assert.equal(calls.filter((call) => call.name === "fail_job_v2").length, 1);
+  assert.equal(calls.some((call) => call.name === "complete_job_v2"), false);
+
+  storyReady = true;
+  await runOnce(service, { resolveHandler: resolveGenerationHandler });
+  assert.equal(calls.filter((call) => call.name === "complete_job_v2").length, 1);
 });
 
 test("long-running handlers heartbeat the workspace-fenced lease", async () => {
