@@ -5,7 +5,6 @@ import {
   applyBrandAssetRows,
   loadAdStudioBrandAssetRows,
 } from "./assets.ts";
-import { normalizeCloneQa } from "./types.ts";
 import type {
   AdStudioBrandKit,
   AdStudioCampaign,
@@ -307,10 +306,7 @@ export function rowToCreative(row: Record<string, unknown>): AdStudioCreative {
     backgroundAssetId: null,
     objects: [],
   };
-  // Legacy rows carry verdict-era { copyChecks, passed… } blobs under cloneQa;
-  // normalize to the lean { regions, copyValues } editor map on read.
-  const cloneQa = normalizeCloneQa(rawCanvas.cloneQa);
-  const canvas = cloneQa ? { ...rawCanvas, cloneQa } : rawCanvas;
+  // Legacy cloneQa normalization was removed in Phase 1 clean-rebuild.
 
   return {
     creativeId: String(row.id),
@@ -318,9 +314,9 @@ export function rowToCreative(row: Record<string, unknown>): AdStudioCreative {
     campaignId: String(row.campaign_id),
     variantId: String(row.variant_id),
     format: row.format as AdStudioCreative["format"],
-    canvas,
+    canvas: rawCanvas,
     safeZones: {
-      metaStory: canvas.height >= canvas.width,
+      metaStory: rawCanvas.height >= rawCanvas.width,
       googleDemandGen: true,
     },
     previewSvg: String(row.preview_svg ?? ""),

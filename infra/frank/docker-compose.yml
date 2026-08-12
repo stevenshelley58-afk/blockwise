@@ -1,0 +1,26 @@
+version: "3.8"
+services:
+  frank-factory:
+    build:
+      context: ../../frank/template-factory
+      dockerfile: Dockerfile
+    ports:
+      - "${FRANK_PORT:-3100}:3100"
+    env_file:
+      - .env
+    restart: unless-stopped
+
+  frank-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${FRANK_DB_PASSWORD:-password}
+      POSTGRES_DB: frank_factory
+    ports:
+      - "5433:5432"
+    volumes:
+      - frank-db-data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  frank-db-data:

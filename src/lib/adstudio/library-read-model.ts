@@ -1,21 +1,17 @@
-import type { AssetRole } from "@/components/adstudio/asset-roles";
-
 import { assetUrlForRow, type AdStudioBrandAssetRow } from "./assets.ts";
-import { creativeLibraryPreview } from "./creative-preview.ts";
 import { storagePathFromMediaSrc, workspaceMediaSrc } from "./image-src.ts";
 import { createAdStudioMediaUrls } from "./media-urls.ts";
-import { isExampleBrandKitSourceUrl, rowToCreative } from "./persistence.ts";
+import { isExampleBrandKitSourceUrl } from "./persistence.ts";
+
+// Inlined from deleted asset-roles.ts
+export type AssetRole = "property" | "person" | "logo" | "background";
+
+// Stub: legacy creative-preview.ts deleted in Phase 1
+function creativeLibraryPreview(_creative: unknown): string | null { return null; }
 
 export type LibraryAssetModel = {
   id: string;
-  /** Signed, downscaled URL for display in a grid. Expires; never generate from it. */
   src: string;
-  /**
-   * The durable full-resolution source to hand to the generator when this asset
-   * is picked for an ad: the auth-gated media proxy for anything we store, or
-   * the remote URL for an asset we only reference. Always a source
-   * `isAdStudioImageSrc` accepts.
-   */
   fullSrc: string;
   label: string;
   type: string;
@@ -81,7 +77,7 @@ export async function loadAdStudioLibraryPage(input: {
     for (const row of pageRows) {
       const path = storagePathFromSource(
         input.workspaceId,
-        creativeLibraryPreview(rowToCreative(row)),
+        creativeLibraryPreview(row),
       );
       if (path) paths.add(path);
     }
@@ -103,8 +99,6 @@ export async function loadAdStudioLibraryPage(input: {
       const raw = assetUrlForRow(input.workspaceId, row);
       const path = storagePathFromSource(input.workspaceId, raw);
       const src = path ? signed[path]?.grid : raw;
-      // Picking a library image must send the original bytes to the generator,
-      // not the 640px signed render the grid displays.
       const fullSrc = (path ? workspaceMediaSrc(input.workspaceId, path) : raw) ?? src;
       if (!src || !fullSrc) continue;
       items.push({
@@ -138,7 +132,7 @@ export async function loadAdStudioLibraryPage(input: {
       const campaignId = String(row.campaign_id ?? "");
       const campaignName = campaignById.get(campaignId);
       if (!campaignName) continue;
-      const raw = creativeLibraryPreview(rowToCreative(row));
+      const raw = creativeLibraryPreview(row);
       const path = storagePathFromSource(input.workspaceId, raw);
       const src = path ? signed[path]?.grid : raw;
       if (!src) continue;

@@ -1,17 +1,18 @@
 import { evaluateRealEstateCompliance } from "../compliance/real-estate-policy.ts";
 
 import { deterministicUuid } from "./id.ts";
-import {
-  validateGoogleAssetPack,
-  validateGoogleSearchPack,
-  validateMetaLeadAdPack,
-} from "./platform-rules.ts";
 import type {
   AdStudioCampaign,
   AdStudioComplianceReport,
   AdStudioPlatformCopyPack,
   ComplianceIssue,
 } from "./types.ts";
+
+// Platform validation stubs — legacy platform-rules.ts was deleted in Phase 1.
+// Replaced by Frank-owned TemplatePack QA in Phase 4+.
+function validateMetaLeadAdPack(_meta: AdStudioPlatformCopyPack["meta"]) { return { issues: [] as ComplianceIssue[] }; }
+function validateGoogleSearchPack(_search: AdStudioPlatformCopyPack["googleSearch"]) { return { issues: [] as ComplianceIssue[] }; }
+function validateGoogleAssetPack(_assets: AdStudioPlatformCopyPack["googlePmax"]) { return { issues: [] as ComplianceIssue[] }; }
 
 const BLOCKED_COPY_PATTERNS: Array<{ code: string; pattern: RegExp; message: string }> = [
   {

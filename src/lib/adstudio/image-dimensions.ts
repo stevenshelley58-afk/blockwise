@@ -3,7 +3,7 @@
 // method, so we read the PNG IHDR / JPEG SOF / GIF screen descriptor directly.
 // No DOM, no codec dependency — unit-testable and safe on the server.
 
-import { dataUrlToUploadBytes } from "./generated-media.ts";
+import { dataUrlToUploadBytes } from "./generated-media-utils.ts";
 
 export type ImageDimensions = { width: number; height: number };
 

@@ -32,35 +32,13 @@
   `private` schema is not exposed through PostgREST, so never query it with
   `.schema("private")`.
 
-## AdStudio templates (the ad product)
+## AdStudio (rebuilding)
 
-Before creating, changing, or reviewing a template, follow
-`hermes/skills/adstudio-template-builder/SKILL.md`. There is one process:
-
-1. Start with one real source ad and record its file or creative ID, SHA-256
-   hash, and AI ad-radar classification.
-2. Use vision to extract only the customer inputs visible in that ad: each
-   required image and each editable text value.
-3. Create a safe public gallery sample by sending the private source, generic
-   replacement assets, and safe sample copy through `buildCloneImageRequest`.
-   The public sample must have a different hash from the source.
-4. Customer generation sends that public sample, the customer's declared image
-   inputs, and their exact text through the same `buildCloneImageRequest`.
-5. The result is one finished image. Only after QA passes may the Stitch-style
-   editor target a text or image region; every edit is anchored on the latest
-   finished ad and preserves the rest. Image edits use it as reference image 1
-   for the image model. Text edits may instead composite deterministically from
-   derived editing layers (a text-free inpainted plate plus detected type
-   treatments, built in the background per finished render) — the browser
-   re-typesets the exact copy over the plate crop and the server clamps the
-   patch to the selected region. Layers are advisory and validity-tracked; when
-   stale, text edits fall back to the image-model path. The finished flat image
-   stays canonical everywhere.
-
-There is no alternate template version, layout recipe, layer-based creation
-path, or second full-ad generator. Diversity is measured by the AI ad-radar
-classification. `node scripts/verify/adstudio-templates.mjs` and
-`npm run verify:hard-reset` must pass; never weaken or special-case either gate.
+AdStudio is being rebuilt as a layered template system with a separate Frank
+template factory. The legacy flat-clone system was deleted (Phase 1). Do not
+reference `buildCloneImageRequest`, `template-gallery/`, `reference-clone.ts`,
+or `scripts/verify/adstudio-templates.mjs` — none exist. Follow the clean-rebuild
+plan for all new AdStudio work.
 
 ## Component system (shadcn/ui canonical)
 
