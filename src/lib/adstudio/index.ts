@@ -10,7 +10,7 @@ export {
   type TextProviderAdapter,
   type VisionProviderAdapter,
 } from "./providers.ts";
-export { metaLeadAdPackSchema } from "./types.ts";
+export { approveAdStudioBrandKitForUse, buildAdStudioLiveResult } from "./brand-kit-workflow.ts";
 export type {
   AdStudioBrandKit,
   AdStudioCampaign,

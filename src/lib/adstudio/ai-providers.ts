@@ -2,7 +2,7 @@ import type {
   ModelCandidate,
 } from "@/lib/ai/model-registry";
 
-import { dataUrlToUploadBytes } from "./generated-media.ts";
+import { dataUrlToUploadBytes } from "./generated-media-utils.ts";
 import { createGoogleImageProvider } from "./google-image-provider.ts";
 import { fetchProviderRequest, ProviderRequestError } from "./providers.ts";
 import type {

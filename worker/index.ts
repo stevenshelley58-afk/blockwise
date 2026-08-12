@@ -376,7 +376,7 @@ async function finalizeAdStudioGenerationFailure(
     .maybeSingle();
   if (!job.data || job.data.status === "done" || job.data.status === "failed") return;
   const stored = (job.data.payload ?? {}) as {
-    reservation?: { mutationKey?: string; creditsUsed?: number } | null;
+    reservation?: any;
   };
   const { refundOutstandingWorkspaceCredits } = await import("../src/lib/credits/workspace-credits.ts");
   await refundOutstandingWorkspaceCredits({

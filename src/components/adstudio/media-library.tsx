@@ -13,7 +13,24 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AD_IMAGE_MAX_BYTES, AD_IMAGE_UPLOAD_TYPES, validateAssetUploadFile } from "@/lib/upload/asset-file";
 import type { LibraryAdModel, LibraryAssetModel } from "@/lib/adstudio/library-read-model";
 
-import { ROLE_META, ROLE_ORDER, resolveRole, type AssetRole } from "./asset-roles";
+// Inlined from deleted asset-roles.ts (Phase 1)
+type AssetRole = "property" | "person" | "logo" | "background";
+type MediaAsset = { src: string; fullSrc?: string; label: string; type?: string; ratio?: string; role?: string };
+const ROLE_ORDER: AssetRole[] = ["property", "person", "logo", "background"];
+const ROLE_META: Record<AssetRole, { label: string; plural: string }> = {
+  property: { label: "Property", plural: "Property" },
+  person: { label: "Person", plural: "People" },
+  logo: { label: "Logo", plural: "Logos" },
+  background: { label: "Background", plural: "Backgrounds" },
+};
+function resolveRole(asset: MediaAsset): AssetRole {
+  if (asset.role && asset.role in ROLE_META) return asset.role as AssetRole;
+  const hay = `${asset.label ?? ""} ${asset.type ?? ""}`.toLowerCase();
+  if (/agent|headshot|portrait|profile|person|team/.test(hay)) return "person";
+  if (/logo|wordmark|brandmark/.test(hay)) return "logo";
+  if (/office|skyline|interior|living|backdrop|background|market view/.test(hay)) return "background";
+  return "property";
+}
 import { uploadAdStudioMedia } from "./media-upload";
 
 export type LibraryAsset = LibraryAssetModel;
