@@ -4,7 +4,7 @@
  * the Vercel thin-proxy route + client dialog.
  */
 
-import type { TemplateCopyRequirement } from "@/components/adstudio/new-ad-dialog-slots";
+type TemplateCopyRequirement = { key: string; label: string; maxLength: number };
 
 // ---------------------------------------------------------------------------
 // Types

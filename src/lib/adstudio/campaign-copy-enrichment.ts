@@ -1,6 +1,6 @@
 import type { AdStudioCopyFields } from "./copy-generation.ts";
 import { runAdStudioComplianceReview } from "./compliance.ts";
-import { toMetaCta } from "./readiness.ts";
+import { toMetaCta } from "./meta-cta.ts";
 import type {
   AdStudioCampaignPack,
   AdStudioPlatformCopyPack,

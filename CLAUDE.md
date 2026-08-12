@@ -9,14 +9,6 @@ To SSH into the production VPS or redeploy Hermes, follow
 (gitignored); host is `root@76.13.209.160`. The sandbox is wiped each session,
 so re-stage the key per the runbook — do not assume SSH is already configured.
 
-## AdStudio templates
-
-Before touching `src/lib/adstudio/template-gallery/` or the template pipeline,
-follow `hermes/skills/adstudio-template-builder/SKILL.md`. A template is one safe
-sample image plus its declared customer image/text inputs. Gallery samples and
-customer ads must both use `buildCloneImageRequest`; editing begins only after a
-finished clone exists. Keep `node scripts/verify/adstudio-templates.mjs` green.
-
 ## External Reference Repositories
 
 Use these repositories as reference material when they are relevant to the
