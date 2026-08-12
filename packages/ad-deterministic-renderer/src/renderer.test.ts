@@ -40,7 +40,7 @@ const smokePack: TemplatePack = {
 
 describe("Deterministic renderer", () => {
   it("renders feed placement at 1080×1350", () => {
-    const result = renderPlacement(
+    const result = await renderPlacement(
       { pack: smokePack, imageValues: {}, textValues: {}, colourMap: smokePack.semanticColours },
       "feed",
     );
@@ -52,7 +52,7 @@ describe("Deterministic renderer", () => {
   });
 
   it("renders story placement at 1080×1920", () => {
-    const result = renderPlacement(
+    const result = await renderPlacement(
       { pack: smokePack, imageValues: {}, textValues: {}, colourMap: smokePack.semanticColours },
       "story",
     );
@@ -74,7 +74,7 @@ describe("Deterministic renderer", () => {
   });
 
   it("renderBoth returns [feed, story]", () => {
-    const [feed, story] = renderBoth({ pack: smokePack, imageValues: {}, textValues: {}, colourMap: smokePack.semanticColours });
+    const [feed, story] = await renderBoth({ pack: smokePack, imageValues: {}, textValues: {}, colourMap: smokePack.semanticColours });
     assert.equal(feed.placement, "feed");
     assert.equal(story.placement, "story");
   });

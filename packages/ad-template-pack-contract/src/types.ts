@@ -119,13 +119,13 @@ export interface OverlayPatchLayer {
 export interface TextLayer extends TextLayerDefaults {
   type: "text";
   layerId: string;
+  geometry: Rect;
 }
 
 export interface LogoLayer {
   type: "logo";
   layerId: string;
   geometry: Rect;
-  /** Declared logo input key — must exist in inputs. */
   inputKey: string;
 }
 
