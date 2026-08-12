@@ -53,152 +53,9 @@ interface ClaimedJob {
 export async function resolveHandler(kind: string): Promise<Handler | null> {
   switch (kind) {
     case "adstudio.generate.template": {
-      const { recordWorkspaceFunnelEventBestEffort } = await import("../src/lib/analytics/progressive-funnel.ts");
-      const {
-        assertDeterministicFeedEditingReady,
-        runTemplateCampaignGeneration,
-        validateTemplateCampaignIdentity,
-      } = await import("../src/lib/adstudio/generate-template-campaign.ts");
-      const { loadRuntimeProviderToken } = await import("../src/lib/providers/provider-connections.ts");
-      return async (payload, supabase, context) => {
-        const workspaceId = String(payload.workspaceId ?? "");
-        const userId = String(payload.userId ?? "");
-        const creativeJobId = String(payload.creativeJobId ?? "");
-        const origin = String(payload.origin ?? "");
-        if (!workspaceId || !userId || !creativeJobId || !origin) {
-          throw new Error("Ad Studio recovery payload is incomplete.");
-        }
-
-        const job = await supabase
-          .from("adstudio_creative_jobs")
-          .select("id,status,attempts,payload,campaign_id")
-          .eq("workspace_id", workspaceId)
-          .eq("id", creativeJobId)
-          .maybeSingle();
-        if (job.error) throw new Error(job.error.message);
-        if (!job.data) throw new Error(`Ad Studio job ${creativeJobId} was not found.`);
-        if (job.data.status === "done" || job.data.status === "failed") {
-          return { campaignId: job.data.campaign_id };
-        }
-
-        const stored = (job.data.payload ?? {}) as {
-          body?: import("../src/lib/adstudio/generate-template-campaign.ts").CreateCampaignBody;
-          reservation?: import("../src/lib/adstudio/generation-credits.ts").AdStudioGenerationCreditReservation | null;
-          workspaceName?: string;
-          region?: string;
-          correlationId?: string;
-          expectedCampaignId?: string;
-        };
-        if (!stored.body) throw new Error("Ad Studio recovery job has no generation body.");
-        await validateTemplateCampaignIdentity({
-          workspaceId,
-          body: stored.body,
-          expectedCampaignId: stored.expectedCampaignId,
-        });
-        const reservation = stored.reservation ?? undefined;
-        const [openAiApiKey, googleAiApiKey] = await Promise.all([
-          loadRuntimeProviderToken(supabase, "openai"),
-          loadRuntimeProviderToken(supabase, "google"),
-        ]);
-        if (!openAiApiKey && !googleAiApiKey) {
-          throw new Error("No encrypted image-generation runtime credential is provisioned.");
-        }
-        // Never mutate process.env or put this key in the VPS deployment file.
-        // Each provider receives an explicit copy scoped to this job.
-        const providerEnv = {
-          ...process.env,
-          ...(openAiApiKey ? { OPENAI_API_KEY: openAiApiKey } : {}),
-          ...(googleAiApiKey ? { GOOGLE_AI_API_KEY: googleAiApiKey } : {}),
-        };
-
-        await supabase
-          .from("adstudio_creative_jobs")
-          .update({
-            status: "running",
-            attempts: (Number(job.data.attempts) || 0) + 1,
-            error: null,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("workspace_id", workspaceId)
-          .eq("id", creativeJobId);
-
-        let result: Awaited<ReturnType<typeof runTemplateCampaignGeneration>>;
-        try {
-          result = await runTemplateCampaignGeneration({
-            supabase,
-            workspaceId,
-            userId,
-            origin,
-            body: stored.body,
-            workspaceName: stored.workspaceName,
-            region: stored.region,
-            creditReservation: reservation,
-            correlationId: stored.correlationId,
-            expectedCampaignId: stored.expectedCampaignId,
-            providerEnv,
-            signal: context.signal,
-          });
-        } catch (error) {
-          // Generation mutates the reservation as each format settles. Persist
-          // that live balance so final failure handling refunds only credits
-          // that are still outstanding, never a successfully-created Feed.
-          await supabase
-            .from("adstudio_creative_jobs")
-            .update({
-              payload: { ...stored, reservation: reservation ?? null },
-              updated_at: new Date().toISOString(),
-            })
-            .eq("workspace_id", workspaceId)
-            .eq("id", creativeJobId);
-          throw error;
-        }
-        if (result.requiresDeterministicEditing) {
-          try {
-            await result.editingLayersTask;
-            await assertDeterministicFeedEditingReady({
-              supabase,
-              workspaceId,
-              campaignId: result.campaignId,
-            });
-          } catch (error) {
-            await supabase
-              .from("adstudio_creative_jobs")
-              .update({
-                payload: { ...stored, reservation: reservation ?? null },
-                updated_at: new Date().toISOString(),
-              })
-              .eq("workspace_id", workspaceId)
-              .eq("id", creativeJobId);
-            throw error;
-          }
-        }
-
-        const completed = await supabase
-          .from("adstudio_creative_jobs")
-          .update({
-            status: "done",
-            campaign_id: result.campaignId,
-            error: null,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("workspace_id", workspaceId)
-          .eq("id", creativeJobId);
-        if (completed.error) throw new Error(completed.error.message);
-
-        await recordWorkspaceFunnelEventBestEffort(supabase, {
-          eventName: "first_generation_completed",
-          workspaceId,
-          idempotencyKey: `activation:${workspaceId}:first-generation-completed`,
-          properties: {
-            mutation_key: reservation?.mutationKey ?? creativeJobId,
-            campaign_id: result.campaignId,
-            execution: "vps_recovery",
-          },
-        });
-        if (!result.requiresDeterministicEditing) await result.editingLayersTask;
-        if (result.storyTask) await result.storyTask;
-        return { campaignId: result.campaignId };
-      };
+      // Legacy handler — template generation was deleted in Phase 1 (clean-rebuild).
+      // Returns immediately. Old jobs queued under this kind will be ignored.
+      return () => Promise.resolve({ skipped: true, reason: "legacy-adstudio-removed" });
     }
     case "sync.meta.leads": {
       const { syncMetaLeadsForPlanById } = await import("../src/lib/providers/meta-leads-worker.ts");
@@ -519,7 +376,7 @@ async function finalizeAdStudioGenerationFailure(
     .maybeSingle();
   if (!job.data || job.data.status === "done" || job.data.status === "failed") return;
   const stored = (job.data.payload ?? {}) as {
-    reservation?: import("../src/lib/adstudio/generation-credits.ts").AdStudioGenerationCreditReservation | null;
+    reservation?: { mutationKey?: string; creditsUsed?: number } | null;
   };
   const { refundOutstandingWorkspaceCredits } = await import("../src/lib/credits/workspace-credits.ts");
   await refundOutstandingWorkspaceCredits({

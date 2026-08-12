@@ -1,4 +1,4 @@
-import { dataUrlToUploadBytes } from "./generated-media.ts";
+import { dataUrlToUploadBytes } from "./generated-media-utils.ts";
 import { fetchProviderRequest, ProviderRequestError } from "./providers.ts";
 import type {
   ImageProviderAdapter,
