@@ -38,24 +38,15 @@ export type FirstAdInput = {
   colourSource?: "template" | "brand";
   imageDataUrl: string;
   imageDataUrls?: Partial<Record<string, string>>;
-  /** Clone renders produced after the request is validated. */
-  templateCloneImage?: string;
-  templateCloneImagesByFormat?: Partial<Record<AdStudioFormat, string>>;
-  templateCloneProvider?: string;
-  templateCloneModel?: string;
-  /**
-   * Brief-grounded Meta feed copy generated alongside the template clone —
-   * replaces the offer-library defaults so the feed text matches the ad image.
-   */
+  /** Clone renders removed in Phase 1 clean-rebuild. */
+  /** Brief-grounded Meta feed copy (legacy — retained for read compatibility). */
   copy?: {
     primaryText: string;
     headline: string;
     description: string;
     cta: string;
   };
-  /** Editable-element regions + text values for the clone image. */
-  templateCloneQa?: AdStudioCloneQa;
-  templateCloneQaByFormat?: Partial<Record<AdStudioFormat, AdStudioCloneQa>>;
+  /** Legacy clone QA removed in Phase 1. */
   /**
    * On-image copy typed by the customer, keyed by the template's copy-field
    * key (price, address, phone…). Rendered VERBATIM: these values override
@@ -317,25 +308,8 @@ export type AdStudioCloneQa = {
   copyValues: Record<string, string>;
 };
 
-/**
- * Accepts the current { regions, copyValues } shape and legacy persisted rows
- * ({ regions, copyChecks: [{ key, expected, ... }] } plus inert verdict keys).
- */
-export function normalizeCloneQa(raw: unknown): AdStudioCloneQa | undefined {
-  if (!raw || typeof raw !== "object") return undefined;
-  const value = raw as { regions?: unknown; copyValues?: unknown; copyChecks?: unknown };
-  const regions = Array.isArray(value.regions) ? (value.regions as AdStudioCloneRegion[]) : [];
-  if (value.copyValues && typeof value.copyValues === "object" && !Array.isArray(value.copyValues)) {
-    return { regions, copyValues: value.copyValues as Record<string, string> };
-  }
-  const copyValues: Record<string, string> = {};
-  if (Array.isArray(value.copyChecks)) {
-    for (const check of value.copyChecks as Array<{ key?: string; expected?: string }>) {
-      if (check?.key) copyValues[check.key] = check.expected ?? "";
-    }
-  }
-  return { regions, copyValues };
-}
+/** Legacy cloneQa normalization removed in Phase 1 clean-rebuild. */
+
 
 export type AdStudioCreative = {
   creativeId: string;
@@ -349,8 +323,6 @@ export type AdStudioCreative = {
     height: number;
     backgroundAssetId: string | null;
     objects: AdStudioCanvasObject[];
-    /** Present on AI-cloned creatives: editable-element regions + text values. */
-    cloneQa?: AdStudioCloneQa;
     /** Derived text-editing layers (plate + type treatments); absent until built. */
     textLayers?: AdStudioTextLayers;
     /** Previous renders (media paths, newest last) for undo on clone edits. */

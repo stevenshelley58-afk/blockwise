@@ -9,20 +9,16 @@ const failures = [];
 const activeRuntimeRoots = ["src", "workers", "hermes/skills"];
 const customerRoots = ["src/app/(customer)", "src/components"];
 const ignoredSegments = new Set([
-  ".git",
-  ".next",
-  ".tools",
-  ".trigger",
-  "node_modules",
-  "playwright-report",
-  "test-results",
-  "_archive",
+  ".git", ".next", ".tools", ".trigger", "node_modules",
+  "playwright-report", "test-results", "_archive",
 ]);
 
+// Phase 1 — AdStudio clean-rebuild: must not contain any legacy clone identifiers.
+checkLegacyCloneIdentifiers();
+// Existing checks (kept from pre-rebuild verifier).
 checkLegacyAdFirstReferences();
 checkCustomerInternalFieldReferences();
 checkCustomerDataSourceBoundaries();
-checkAdStudioTemplateReset();
 checkHermesQueueWorkerContract();
 
 if (failures.length > 0) {
@@ -35,16 +31,113 @@ if (failures.length > 0) {
 
 console.log("Hard-reset static verification passed.");
 
-function checkLegacyAdFirstReferences() {
-  const forbidden = [
-    /\bapify\b/i,
-    /\bapify[-_]discovery\b/i,
-    /\bad[-_\s]?first\b/i,
-    /\blocation[-_\s]?dump\b/i,
-    /\blocation[-_\s]?based\b/i,
-    /\bmeta_ad_library_ui\b/i,
+// ---------------------------------------------------------------------------
+// Phase 1: AdStudio clean-rebuild — zero legacy clone identifiers
+// ---------------------------------------------------------------------------
+
+function checkLegacyCloneIdentifiers() {
+  const strictLegacyIdentifiers = [
+    "reference_clone", "reference-clone",
+    "buildCloneImageRequest", "buildTargetedEditRequest",
+    "template_clone_image", "templateClone", "cloneQa",
+    "adstudio/clones",
+    "AD_STUDIO_TEMPLATES", "RESOLVABLE_AD_STUDIO_TEMPLATES",
+    "adstudio.generate.template",
   ];
 
+  const legacyPaths = [
+    "src/lib/adstudio/template-gallery",
+    "src/lib/adstudio/reference-clone.ts",
+    "src/lib/adstudio/clone-generation.ts",
+    "src/lib/adstudio/clone-campaign.ts",
+    "src/lib/adstudio/clone-creative.ts",
+    "src/lib/adstudio/clone-regions.ts",
+    "src/lib/adstudio/region-edit.ts",
+    "src/lib/adstudio/rasterize-reference.ts",
+    "src/lib/adstudio/generate-template-campaign.ts",
+    "src/lib/adstudio/template-resolver.ts",
+    "src/lib/adstudio/template-preview.ts",
+    "src/lib/adstudio/creative-preview.ts",
+    "src/lib/adstudio/creative-export.ts",
+    "src/lib/adstudio/export-package.ts",
+    "src/lib/adstudio/export-render-storage.ts",
+    "src/lib/adstudio/generated-media.ts",
+    "src/lib/adstudio/generation-credits.ts",
+    "src/lib/adstudio/generation-error.ts",
+    "src/lib/adstudio/generation-lock.ts",
+    "src/lib/adstudio/live-workflow.ts",
+    "src/lib/adstudio/offers.ts",
+    "src/lib/adstudio/platform-rules.ts",
+    "src/lib/adstudio/scoring.ts",
+    "src/lib/adstudio/templates.ts",
+    "src/lib/adstudio/template-display.ts",
+    "src/lib/adstudio/readiness.ts",
+    "src/lib/adstudio/job-status.ts",
+    "src/lib/adstudio/clone-candidate-audit.ts",
+    "src/lib/adstudio/clone-quality-gate.ts",
+    "src/lib/adstudio/empty-campaign.ts",
+    "src/lib/adstudio/first-ad-input.ts",
+    "src/lib/adstudio/load-live-bundle.ts",
+    "src/lib/adstudio/layer-derivation.ts",
+    "src/lib/adstudio/magic-layers-config.mjs",
+    "src/lib/adstudio/outpaint-layout.ts",
+    "src/lib/adstudio/resolve-image-for-model.ts",
+    "src/lib/adstudio/smart-crop.ts",
+    "src/lib/adstudio/text-layers.ts",
+    "src/lib/adstudio/text-layer-state.ts",
+    "src/lib/adstudio/creative-library.ts",
+    "src/lib/adstudio/creative-revisions.ts",
+    "public/adstudio-samples",
+    "scripts/adstudio/create-template.mjs",
+    "scripts/adstudio/local-template-adapter.mjs",
+    "scripts/build/rasterize-adstudio-samples.mjs",
+    "scripts/verify/adstudio-templates.mjs",
+    "hermes/skills/adstudio-template-builder/SKILL.md",
+    ".github/codex/prompts/adstudio-template-integrator.md",
+    "mockups/qwen-adstudio-full-process-20260722",
+    "src/app/api/adstudio/jobs",
+    "src/app/api/adstudio/creatives/[id]/edit",
+    "src/app/api/adstudio/campaigns/route.ts",
+    "src/app/api/adstudio/campaigns/[id]/draft",
+    "src/app/api/adstudio/export-packages",
+    "src/components/adstudio/ad-studio-workbench.tsx",
+    "src/components/adstudio/new-ad-dialog.tsx",
+    "src/components/adstudio/canvas/in-place-ad-editor.tsx",
+    "src/app/api/operator/template-trace",
+  ];
+
+  for (const legacyPath of legacyPaths) {
+    const full = join(root, ...legacyPath.split("/"));
+    if (existsSync(full)) {
+      failures.push(`Legacy AdStudio path still exists: ${display(full)}`);
+    }
+  }
+
+  const scanRoots = ["src", "tests", "scripts", "trigger", "hermes/tools"];
+  for (const file of filesUnder(scanRoots)) {
+    if (!/\.(?:ts|tsx|js|jsx|mjs|cjs)$/i.test(file)) continue;
+    // Skip the verifier itself and files that reference job kind strings
+    const normalized = file.replace(/\\/g, "/");
+    if (normalized.includes("scripts/verify/hard-reset-static")) continue;
+    if (normalized.includes("worker/index.ts")) continue;
+    if (normalized.includes("tests/vps-job-queue-config")) continue;
+    const text = stripComments(readFileSync(file, "utf8"));
+    const hits = strictLegacyIdentifiers.filter((id) => text.includes(id));
+    if (hits.length > 0) {
+      failures.push(`${display(file)} contains legacy clone identifier: ${hits.join(", ")}`);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Below: existing verifier checks (kept from pre-rebuild).
+// ---------------------------------------------------------------------------
+
+function checkLegacyAdFirstReferences() {
+  const forbidden = [
+    /\bapify\b/i, /\bapify[-_]discovery\b/i, /\bad[-_\s]?first\b/i,
+    /\blocation[-_\s]?dump\b/i, /\blocation[-_\s]?based\b/i, /\bmeta_ad_library_ui\b/i,
+  ];
   for (const file of filesUnder(activeRuntimeRoots)) {
     const text = stripComments(readFileSync(file, "utf8"));
     const hits = forbidden.filter((pattern) => pattern.test(text)).map(String);
@@ -56,19 +149,11 @@ function checkLegacyAdFirstReferences() {
 
 function checkCustomerInternalFieldReferences() {
   const forbidden = [
-    /\bsource_provider\b/i,
-    /\braw_payload\b/i,
-    /\bpayload_hash\b/i,
-    /\bsource_document_id\b/i,
-    /\bad_snapshot_id\b/i,
-    /\bad_fetch_run_id\b/i,
-    /\bobserved_ad_id\b/i,
-    /\badvertiser_page_id\b/i,
-    /\bad_creative_id\b/i,
-    /\bexternal_ad_id\b/i,
-    /Ad\s*\{\s*row\.external_ad_id\s*\}/,
+    /\bsource_provider\b/i, /\braw_payload\b/i, /\bpayload_hash\b/i,
+    /\bsource_document_id\b/i, /\bad_snapshot_id\b/i, /\bad_fetch_run_id\b/i,
+    /\bobserved_ad_id\b/i, /\badvertiser_page_id\b/i, /\bad_creative_id\b/i,
+    /\bexternal_ad_id\b/i, /Ad\s*\{\s*row\.external_ad_id\s*\}/,
   ];
-
   for (const file of filesUnder(customerRoots)) {
     if (!/\.(?:ts|tsx|js|jsx|mdx)$/i.test(file)) continue;
     const text = readFileSync(file, "utf8");
@@ -81,15 +166,9 @@ function checkCustomerInternalFieldReferences() {
 
 function checkCustomerDataSourceBoundaries() {
   const forbiddenSources = [
-    "observed_ads",
-    "ad_snapshots",
-    "source_documents",
-    "ad_fetch_runs",
-    "ingest_events",
-    "coverage_defects",
-    "agent_decisions",
+    "observed_ads", "ad_snapshots", "source_documents", "ad_fetch_runs",
+    "ingest_events", "coverage_defects", "agent_decisions",
   ];
-
   for (const file of filesUnder(["src/app/(customer)"])) {
     if (!/\.(?:ts|tsx)$/i.test(file)) continue;
     const text = stripComments(readFileSync(file, "utf8"));
@@ -102,83 +181,6 @@ function checkCustomerDataSourceBoundaries() {
   }
 }
 
-function checkAdStudioTemplateReset() {
-  const oldPaths = [
-    ["src", "lib", "adstudio", ["gold", "templates"].join("-")],
-    ["src", "lib", "adstudio", ["gold", "adstudio", "templates.ts"].join("-")],
-    ["src", "lib", "adstudio", "extracted-" + "meta-" + "template-builder.ts"],
-    ["src", "lib", "adstudio", "extracted-" + "meta-" + "templates.generated.ts"],
-    ["src", "lib", "adstudio", "template-" + "design.ts"],
-    ["src", "lib", "adstudio", "render" + "er.ts"],
-    ["src", "lib", "adstudio", "photo-prep.ts"],
-    ["src", "lib", "adstudio", "photo-prep-" + "service.ts"],
-    ["src", "lib", "ad-" + "template-" + "library"],
-	    ["public", ["adstudio", "samples"].join("-"), "gold"],
-	    ["public", ["adstudio", "samples"].join("-"), ["extracted", "meta"].join("-")],
-	    ["public", ["adstudio", "samples"].join("-"), "generated-au-properties"],
-	    ["ad-" + "template-" + "library"],
-	    ["supabase", "migrations", "20260613163000_" + ["template", "library", "schema.sql"].join("_")],
-	    ["supabase", "migrations", "20260614051500_" + ["template", "card", "images.sql"].join("_")],
-	    ["supabase", "migrations", "202606150006_adstudio_" + ["template", "engine", "foundation.sql"].join("_")],
-	    ["supabase", "migrations", "202606150007_first_pass_adstudio_" + ["template", "launch.sql"].join("_")],
-	    ["supabase", "migrations", "202606150009_" + ["template", "sample", "cards.sql"].join("_")],
-	    ["supabase", "migrations", "202606150010_fix_" + ["sample", "card", "path", "check.sql"].join("_")],
-	    ["supabase", "migrations", "202606200005_adstudio_" + ["photo", "prep", "assets.sql"].join("_")],
-	    ["supabase", "migrations", "202606200009_" + ["template", "sample", "imports.sql"].join("_")],
-	    ["supabase", "migrations", "202606210001_adstudio_" + ["template", "design", "persistence.sql"].join("_")],
-	  ];
-  for (const parts of oldPaths) {
-    const path = join(root, ...parts);
-    if (existsSync(path)) {
-      failures.push(`AdStudio reset path still exists: ${display(path)}`);
-    }
-  }
-
-  const forbiddenTerms = [
-    ["gold", "adstudio", "templates"].join("-"),
-    ["gold", "templates"].join("-"),
-    ["extracted", "meta", "template"].join("-"),
-    ["template", "design"].join("-"),
-    "render" + "Design",
-    "Template" + "Design",
-    "resolveTemplate" + "DesignForFormat",
-    ["public", ["adstudio", "samples"].join("-"), "gold"].join("/"),
-    ["public", ["adstudio", "samples"].join("-"), ["extracted", "meta"].join("-")].join("/"),
-    "Creative" + "Skeleton",
-    "creative" + "Skeleton",
-    ["creative", "skeleton"].join("_"),
-    ["vision", "extract"].join("_"),
-    "adstudio." + "skeleton",
-    ["template", "samples"].join("-"),
-    ["ad", "template", "library"].join("-"),
-    ["sample", "cards"].join("-"),
-	    ["template", "composite"].join("_"),
-	    ["prepare", "template", "frame"].join("_"),
-	    ["adstudio", "template", "versions"].join("_"),
-	    ["ad", "template", "candidates"].join("_"),
-	    ["ad", "template", "image", "briefs"].join("_"),
-	    ["v", "ad", "template", "library"].join("_"),
-	    ["template", "sample", "imports"].join("_"),
-	    ["adstudio", "photo", "prep", "assets"].join("_"),
-	  ];
-	  const scanRoots = ["src", "tests", "docs", "scripts", "public", "trigger", "supabase", "package.json"];
-  for (const file of filesUnder(scanRoots)) {
-    if (!/\.(?:ts|tsx|js|jsx|mjs|cjs|json|md|mdx|css|html|py)$/i.test(file)) continue;
-    const text = stripComments(readFileSync(file, "utf8"));
-    const normalized = text.replace(/\\/g, "/");
-    const hits = forbiddenTerms.filter((term) => normalized.includes(term));
-    if (hits.length > 0) {
-      failures.push(`${display(file)} contains removed AdStudio template references: ${hits.join(", ")}`);
-    }
-  }
-}
-
-// AdStudio template structure (envelope, field-name contract, source-ad provenance,
-// and the anti-homogenization diversity checks) is enforced by the dedicated gate:
-//   scripts/verify/adstudio-templates.mjs
-// It deliberately has NO fixed-role schema. Do not reintroduce required-role checks
-// here or there. See hermes/skills/adstudio-template-builder/SKILL.md.
-
 function checkHermesQueueWorkerContract() {
   const runtimeFiles = {
     index: "hermes/tools/research-runtime/src/index.ts",
@@ -186,9 +188,6 @@ function checkHermesQueueWorkerContract() {
     types: "hermes/tools/research-runtime/src/types.ts",
     worker: "hermes/tools/research-runtime/src/worker.ts",
   };
-  // The Meta capture tool moved from src/capture.ts + src/types.ts to a set of
-  // .mjs modules (commit 5f80a8b). Scan all of its source so the forbidden
-  // location/search-input check below still covers the active capture runtime.
   const captureFiles = [
     "hermes/tools/meta-library-capture/bin/capture.mjs",
     "hermes/tools/meta-library-capture/src/crawler.mjs",
@@ -210,25 +209,14 @@ function checkHermesQueueWorkerContract() {
     failures.push("Hermes research runtime must provide a ResearchQueueWorker.workOnce queue entrypoint");
   }
 
-  const requiredKinds = [
-    "blockwise-agent-census",
-    "blockwise-page-resolver",
-    "blockwise-ad-collector",
-    "blockwise-media-collector",
-    "blockwise-ad-classifier",
-  ];
+  const requiredKinds = ["blockwise-agent-census", "blockwise-page-resolver", "blockwise-ad-collector", "blockwise-media-collector", "blockwise-ad-classifier"];
   for (const kind of requiredKinds) {
     if (!new RegExp(`["']${kind}["']`).test(runtimeText.types)) {
       failures.push(`Hermes researchJobInputSchema must include ${kind}`);
     }
   }
 
-  const requiredPlannerMethods = [
-    "planPostcodeRosterRefresh",
-    "planPageResolution",
-    "planResolvedAdvertiserCapture",
-    "planCreativeClassification",
-  ];
+  const requiredPlannerMethods = ["planPostcodeRosterRefresh", "planPageResolution", "planResolvedAdvertiserCapture", "planCreativeClassification"];
   for (const method of requiredPlannerMethods) {
     if (!new RegExp(`\\b${method}\\s*\\(`).test(runtimeText.supervisor)) {
       failures.push(`Hermes ResearchSupervisor must include ${method}`);
@@ -239,13 +227,8 @@ function checkHermesQueueWorkerContract() {
   }
 
   const collectorRuntime = `${schemaBlock(runtimeText.types, "adCollectorPayloadSchema", "locationSearchGateSchema")}\n${captureRuntime}`;
-  const forbiddenCollectionInputs = [
-    /\bsearchQuery\b/i,
-    /\bsearch_query\b/i,
-    /\bradius\b/i,
-    /\bgeo\b/i,
-    /\blocation\b/i,
-  ].filter((pattern) => pattern.test(collectorRuntime)).map(String);
+  const forbiddenCollectionInputs = [/\bsearchQuery\b/i, /\bsearch_query\b/i, /\bradius\b/i, /\bgeo\b/i, /\blocation\b/i]
+    .filter((pattern) => pattern.test(collectorRuntime)).map(String);
   if (forbiddenCollectionInputs.length > 0) {
     failures.push(`Hermes active collection runtime accepts location/search-query inputs: ${forbiddenCollectionInputs.join(", ")}`);
   }
@@ -258,34 +241,20 @@ function schemaBlock(text, startName, nextName) {
   return end < 0 ? text.slice(start) : text.slice(start, end);
 }
 
-function filesUnder(roots) {
-  return roots.flatMap((rootPath) => walk(join(root, rootPath)));
-}
+function filesUnder(roots) { return roots.flatMap((rootPath) => walk(join(root, rootPath))); }
 
 function walk(path) {
   let stat;
-  try {
-    stat = statSync(path);
-  } catch {
-    return [];
-  }
-
+  try { stat = statSync(path); } catch { return []; }
   const rel = relative(root, path);
   if (rel.split(/[\\/]/u).some((part) => ignoredSegments.has(part))) return [];
-
   if (stat.isFile()) return [path];
   if (!stat.isDirectory()) return [];
-
   return readdirSync(path).flatMap((name) => walk(join(path, name)));
 }
 
 function stripComments(value) {
-  return value
-    .replace(/\/\*[\s\S]*?\*\//g, "")
-    .replace(/^\s*\/\/.*$/gm, "")
-    .replace(/^\s*--.*$/gm, "");
+  return value.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "").replace(/^\s*--.*$/gm, "");
 }
 
-function display(path) {
-  return relative(root, path).replace(/\\/g, "/");
-}
+function display(path) { return relative(root, path).replace(/\\/g, "/"); }

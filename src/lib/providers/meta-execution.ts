@@ -1477,8 +1477,7 @@ function buildCreativePlans(pack: AdStudioCampaignPack, setup: MetaConnectionSet
  * publish worker just before upload, so plans stay small in the database.
  */
 function buildCreativeImageAsset(creative: AdStudioCampaignPack["creatives"][number]): MetaCreativeAssetPlan | null {
-  const imageObject = creative.canvas.objects.find((object) => object.objectId === "template_clone_image")
-    ?? creative.canvas.objects.find((object) => object.role === "primary_image");
+  const imageObject = creative.canvas.objects.find((object) => object.role === "primary_image");
   const reference = imageObject?.content?.trim() || imageObject?.assetId?.trim() || "";
 
   if (!reference) return null;
