@@ -4,10 +4,18 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { TemplatePack } from "../../../packages/ad-template-pack-contract/src/types";
 import type { InstantForm } from "../adstudio/instant-form-types";
 import { deterministicUuid } from "./id.ts";
+import {
+  loadMetaPublishPlan,
+  updateMetaPublishPlanExecution,
+  type MetaPublishPlan,
+  type MetaReconciledObjectStatus,
+} from "../providers/meta-execution.ts";
+import { buildMetaPlanMutation, type BuiltMetaPlanMutation } from "../providers/meta-mutations.ts";
+import { executeMetaMutationById } from "../providers/meta-mutation-worker.ts";
+import type { createSupabaseServiceClient } from "../supabase/service.ts";
 import type {
   MetaConnectionSetup,
   MetaPublishControls,
-  MetaPublishPlan,
   MetaPublishAdPlan,
   MetaPublishAdSetPlan,
   MetaPublishCampaignPlan,
@@ -15,7 +23,7 @@ import type {
   MetaPublishLeadFormPlan,
   MetaPublishTrackingPlan,
   MetaExecutionAdapter,
-} from "../providers/meta-execution";
+} from "../providers/meta-execution.ts";
 
 // ---------------------------------------------------------------------------
 // Phase 7.2 — Publish adapter: new AdDocument → existing Meta pipeline
@@ -604,4 +612,338 @@ export class PublishError extends Error {
     super(message);
     this.code = code;
   }
+}
+
+// ---------------------------------------------------------------------------
+// BW-Q — explicit Activate after a PAUSED publish
+//
+// Publish creates campaign / ad set / creative / ad objects PAUSED on Meta.
+// Activation is a SEPARATE explicit action: it flips the created campaign,
+// ad sets, and ads to ACTIVE through the existing meta_publish_plan_mutations
+// machinery (safe activation — children first, campaign last, every object
+// verified). It NEVER runs automatically and NEVER claims the ad was already
+// live. With provider writes disabled it returns a clear dry-run receipt and
+// changes nothing on Meta.
+// ---------------------------------------------------------------------------
+
+type ActivationServiceClient = ReturnType<typeof createSupabaseServiceClient>;
+
+export type ActivationTargets = {
+  campaignId: string;
+  adSetIds: string[];
+  adIds: string[];
+};
+
+/** The Meta object IDs created by a paused publish, or null when nothing exists. */
+export function activationTargets(plan: MetaPublishPlan): ActivationTargets | null {
+  const campaignId = plan.reconciledObjects.campaignId?.trim();
+  if (!campaignId) return null;
+  return {
+    campaignId,
+    adSetIds: Object.values(plan.reconciledObjects.adSetIds).filter((id): id is string => Boolean(id)),
+    adIds: Object.values(plan.reconciledObjects.adIds).filter((id): id is string => Boolean(id)),
+  };
+}
+
+export type ActivationReadiness =
+  | { ok: true; targets: ActivationTargets }
+  | { ok: false; code: "never_created_on_meta" | "not_paused_on_meta"; message: string };
+
+/**
+ * A publish plan can only be activated when it actually created PAUSED objects
+ * on Meta (status paused_live with reconciled object IDs). A "draft" plan is a
+ * dry-run publish — nothing exists on Meta, so activation must refuse, not
+ * invent a live state.
+ */
+export function assertActivationReadiness(plan: MetaPublishPlan): ActivationReadiness {
+  if (plan.status === "draft") {
+    return {
+      ok: false,
+      code: "never_created_on_meta",
+      message:
+        "The publish for this ad was a dry run — no Meta objects were created (provider writes were disabled). " +
+        "Enable provider writes, publish again, then Activate.",
+    };
+  }
+
+  if (plan.status !== "paused_live") {
+    return {
+      ok: false,
+      code: "not_paused_on_meta",
+      message: `This publish plan is not paused on Meta (status: ${plan.status}). Activation only runs for a plan that created PAUSED objects.`,
+    };
+  }
+
+  const targets = activationTargets(plan);
+  if (!targets) {
+    return {
+      ok: false,
+      code: "not_paused_on_meta",
+      message: "The publish plan has no Meta object IDs — nothing was created on Meta, so there is nothing to activate.",
+    };
+  }
+
+  return { ok: true, targets };
+}
+
+export type ActivationPlan =
+  | {
+      mode: "dry_run";
+      planId: string;
+      status: "paused";
+      targets: ActivationTargets;
+      message: string;
+    }
+  | {
+      mode: "activate";
+      planId: string;
+      status: "activated";
+      mutation: BuiltMetaPlanMutation;
+      targets: ActivationTargets;
+      message: string;
+    };
+
+/**
+ * Decide what the Activate action does for a paused plan — without touching
+ * Meta. When provider writes are disabled the outcome is a dry-run receipt
+ * that says the campaign stays PAUSED (never a fake "live"). Otherwise it
+ * builds the "activate" mutation the existing Meta mutation machinery runs.
+ */
+export function planActivation(
+  plan: MetaPublishPlan,
+  input: { requestedBy?: string | null; providerWritesEnabled: boolean },
+): ActivationPlan {
+  const readiness = assertActivationReadiness(plan);
+  if (!readiness.ok) throw new PublishError(readiness.code, readiness.message);
+  const { targets } = readiness;
+
+  if (!input.providerWritesEnabled) {
+    return {
+      mode: "dry_run",
+      planId: plan.planId,
+      status: "paused",
+      targets,
+      message:
+        "Activation was NOT applied — provider writes are disabled (BLOCKWISE_ENABLE_PROVIDER_WRITES=false). " +
+        "The campaign stays PAUSED on Meta. Enable provider writes and click Activate again.",
+    };
+  }
+
+  const mutation = buildMetaPlanMutation({
+    workspaceId: plan.workspaceId,
+    planId: plan.planId,
+    requestedBy: input.requestedBy ?? null,
+    action: "activate",
+    payload: targets,
+  });
+
+  return {
+    mode: "activate",
+    planId: plan.planId,
+    status: "activated",
+    mutation,
+    targets,
+    message:
+      "Activated on Meta — the campaign, ad sets, and ads are now ACTIVE and can deliver. " +
+      "Nothing was live before this explicit Activate.",
+  };
+}
+
+/**
+ * Record the post-activation truth on the plan: every reconciled object is
+ * ACTIVE. The plan status stays paused_live (that status describes the create
+ * lifecycle); the applied "activate" mutation row is the activation record.
+ */
+export function markPlanObjectsActive(plan: MetaPublishPlan): MetaPublishPlan {
+  const objectStatuses: NonNullable<MetaPublishPlan["reconciledObjects"]["objectStatuses"]> = {};
+
+  if (plan.reconciledObjects.campaignId) {
+    objectStatuses.campaign = {
+      id: plan.reconciledObjects.campaignId,
+      configuredStatus: "ACTIVE",
+      effectiveStatus: "ACTIVE",
+    };
+  }
+
+  objectStatuses.adSets = Object.fromEntries(
+    Object.entries(plan.reconciledObjects.adSetIds).map(([localId, id]) => [
+      localId,
+      { id, configuredStatus: "ACTIVE", effectiveStatus: "ACTIVE" },
+    ]),
+  );
+  objectStatuses.ads = Object.fromEntries(
+    Object.entries(plan.reconciledObjects.adIds).map(([localId, id]) => [
+      localId,
+      { id, configuredStatus: "ACTIVE", effectiveStatus: "ACTIVE" },
+    ]),
+  );
+
+  return {
+    ...plan,
+    reconciledObjects: { ...plan.reconciledObjects, objectStatuses },
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+/** The most recent publish plan for an ad, or null when the ad was never published. */
+export async function loadLatestPublishPlanForAd(
+  serviceSupabase: ActivationServiceClient,
+  workspaceId: string,
+  adId: string,
+): Promise<MetaPublishPlan | null> {
+  const { data, error } = await serviceSupabase
+    .from("meta_publish_plans")
+    .select("id")
+    .eq("workspace_id", workspaceId)
+    .eq("adstudio_campaign_id", adId)
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  if (!data) return null;
+
+  return loadMetaPublishPlan(serviceSupabase, { workspaceId, planId: data.id });
+}
+
+export type ActivatePausedPublishInput = {
+  adId: string;
+  workspaceId: string;
+  /** Optional explicit plan from the paused receipt; otherwise the latest plan for the ad. */
+  planId?: string;
+  requestedBy?: string | null;
+  providerWritesEnabled: boolean;
+  fetchImpl?: typeof fetch;
+  compensationFetchImpl?: typeof fetch;
+};
+
+export type ActivatePausedPublishOutcome =
+  | { mode: "dry_run"; planId: string; status: "paused"; targets: ActivationTargets; message: string }
+  | {
+      mode: "activate";
+      planId: string;
+      status: "activated";
+      mutationId: string;
+      targets: ActivationTargets;
+      message: string;
+    };
+
+/**
+ * Orchestrate the Activate action for a PAUSED Meta publish. NEVER auto-live:
+ * only a plan that created PAUSED objects on Meta can be activated, the
+ * customer's Activate click is the single explicit approval, and with provider
+ * writes disabled the outcome is a dry-run receipt that changes nothing.
+ */
+export async function activatePausedMetaPublish(
+  serviceSupabase: ActivationServiceClient,
+  input: ActivatePausedPublishInput,
+): Promise<ActivatePausedPublishOutcome> {
+  const plan = input.planId
+    ? await loadMetaPublishPlan(serviceSupabase, {
+        workspaceId: input.workspaceId,
+        planId: input.planId,
+      })
+    : await loadLatestPublishPlanForAd(serviceSupabase, input.workspaceId, input.adId);
+
+  if (!plan) {
+    throw new PublishError("no_paused_plan", "No paused Meta publish plan found for this ad — publish it first.");
+  }
+
+  const planned = planActivation(plan, {
+    requestedBy: input.requestedBy,
+    providerWritesEnabled: input.providerWritesEnabled,
+  });
+
+  if (planned.mode === "dry_run") {
+    return {
+      mode: "dry_run",
+      planId: planned.planId,
+      status: planned.status,
+      targets: planned.targets,
+      message: planned.message,
+    };
+  }
+
+  const mutation = planned.mutation;
+  const now = new Date().toISOString();
+
+  // The Activate click IS the explicit approval — record the mutation and its
+  // approval in one durable commit so the canonical worker (executeMetaMutationById)
+  // can run it synchronously with approvalStatus "approved".
+  const { error: mutationError } = await serviceSupabase
+    .from("meta_publish_plan_mutations")
+    .insert({
+      id: mutation.mutationId,
+      workspace_id: mutation.workspaceId,
+      meta_publish_plan_id: mutation.planId,
+      action: mutation.action,
+      status: "approved",
+      payload_json: mutation.payload,
+      requested_by: mutation.requestedBy,
+      request_log_json: mutation.requestLog,
+      response_log_json: mutation.responseLog,
+      last_error: mutation.lastError,
+      updated_at: mutation.updatedAt,
+    });
+
+  if (mutationError) {
+    throw new Error(mutationError.message);
+  }
+
+  const { data: approval, error: approvalError } = await serviceSupabase
+    .from("approval_requests")
+    .insert({
+      workspace_id: mutation.workspaceId,
+      target_type: mutation.approval.targetType,
+      target_id: mutation.approval.targetId,
+      status: "approved",
+      requested_by: mutation.requestedBy,
+      approved_by: mutation.requestedBy,
+      resolved_at: now,
+      risk_summary: mutation.approval.riskSummary,
+    })
+    .select("id,status,risk_summary")
+    .single();
+
+  if (approvalError || !approval) {
+    throw new Error(approvalError?.message ?? "Unable to record the activation approval.");
+  }
+
+  const { error: linkError } = await serviceSupabase
+    .from("meta_publish_plan_mutations")
+    .update({ approval_request_id: approval.id, updated_at: now })
+    .eq("workspace_id", mutation.workspaceId)
+    .eq("id", mutation.mutationId);
+
+  if (linkError) {
+    throw new Error(linkError.message);
+  }
+
+  const executed = await executeMetaMutationById({
+    serviceSupabase,
+    workspaceId: input.workspaceId,
+    mutationId: mutation.mutationId,
+    fetchImpl: input.fetchImpl,
+    compensationFetchImpl: input.compensationFetchImpl,
+  });
+
+  if (executed.status !== "applied") {
+    throw new PublishError(
+      "activation_failed",
+      executed.lastError ?? "Meta could not activate the paused campaign — it stays PAUSED on Meta.",
+    );
+  }
+
+  // Record the activated object statuses on the plan (the mutation row is the
+  // durable activation record; the plan status itself stays paused_live).
+  await updateMetaPublishPlanExecution(serviceSupabase, markPlanObjectsActive(plan));
+
+  return {
+    mode: "activate",
+    planId: plan.planId,
+    status: "activated",
+    mutationId: mutation.mutationId,
+    targets: planned.targets,
+    message: planned.message,
+  };
 }

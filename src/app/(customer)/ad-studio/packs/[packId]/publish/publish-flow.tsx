@@ -56,6 +56,23 @@ type PublishReceipt = {
   blockers?: string[];
 };
 
+type ActivationTargets = {
+  campaignId?: string;
+  adSetIds?: string[];
+  adIds?: string[];
+};
+
+type ActivationReceipt = {
+  ok?: boolean;
+  mode?: "dry_run" | "activate";
+  status?: string;
+  planId?: string;
+  mutationId?: string;
+  targets?: ActivationTargets;
+  message?: string;
+  error?: string;
+};
+
 export function PublishFlow({
   adId,
   workspaceId,
@@ -72,6 +89,10 @@ export function PublishFlow({
   // the last saved revision (initialState.form) or one the customer generates,
   // edits and pins right here. The editor reports when a pin lands.
   const [formPinned, setFormPinned] = useState(() => Boolean(initialState?.form));
+  // BW-Q — activation is a SEPARATE explicit action after the PAUSED publish
+  // receipt; it is never automatic.
+  const [activating, setActivating] = useState(false);
+  const [activateReceipt, setActivateReceipt] = useState<ActivationReceipt | null>(null);
 
   const handlePinStateChange = useCallback((pinned: boolean) => {
     setFormPinned(pinned);
@@ -97,6 +118,33 @@ export function PublishFlow({
       setSubmitting(false);
     }
   }, [adId, workspaceId]);
+
+  // BW-Q — a SECOND explicit click. Only ever offered after a publish receipt
+  // that created PAUSED objects on Meta (mode "publish"), and it targets that
+  // exact plan. Never automatic.
+  const handleActivate = useCallback(
+    async (planId: string) => {
+      setActivating(true);
+      setActivateReceipt(null);
+      try {
+        const res = await fetch(
+          `/api/adstudio/ads/${encodeURIComponent(adId)}/activate?workspaceId=${encodeURIComponent(workspaceId)}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ planId }),
+          },
+        );
+        const body = (await res.json().catch(() => ({}))) as ActivationReceipt;
+        setActivateReceipt(body);
+      } catch (err) {
+        setActivateReceipt({ error: err instanceof Error ? err.message : "Activate request failed." });
+      } finally {
+        setActivating(false);
+      }
+    },
+    [adId, workspaceId],
+  );
 
   if (notSaved) {
     return (
@@ -190,6 +238,19 @@ export function PublishFlow({
 
         {/* Receipt */}
         {receipt && <ReceiptCard receipt={receipt} />}
+
+        {/* BW-Q — Activate is a SEPARATE explicit click, only offered after a
+            paused publish receipt (mode "publish" = objects created PAUSED on
+            Meta). It targets that exact plan and never runs automatically. */}
+        {receipt?.mode === "publish" && receipt.planId && !receipt.error && (
+          <ActivateSection
+            planId={receipt.planId}
+            providerWritesEnabled={providerWritesEnabled}
+            activating={activating}
+            receipt={activateReceipt}
+            onActivate={handleActivate}
+          />
+        )}
       </div>
 
       <footer className="flex shrink-0 items-center justify-between border-t border-(--line) bg-(--surface) px-5 py-4">
@@ -301,4 +362,101 @@ function shortHash(value: string): string {
 function formatIds(ids: Record<string, string> | undefined): string {
   if (!ids || Object.keys(ids).length === 0) return "—";
   return Object.values(ids).map(v => v.slice(0, 12)).join(", ");
+}
+
+// ---------------------------------------------------------------------------
+// BW-Q — Activate: the second explicit click after a PAUSED publish.
+// ---------------------------------------------------------------------------
+
+function ActivateSection({
+  planId,
+  providerWritesEnabled,
+  activating,
+  receipt,
+  onActivate,
+}: {
+  planId: string;
+  providerWritesEnabled: boolean;
+  activating: boolean;
+  receipt: ActivationReceipt | null;
+  onActivate: (planId: string) => void;
+}) {
+  return (
+    <div className="mt-6 rounded-(--r-card) border border-(--line) bg-(--surface) p-4">
+      <h3 className="text-sm font-semibold">Activate on Meta</h3>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Your campaign is <span className="font-medium text-foreground">PAUSED on Meta</span> — nothing is running.
+        Activating is a separate explicit step that turns the campaign, ad sets, and ads ACTIVE so they can start
+        delivering.
+      </p>
+      <p className="mt-1 text-xs text-muted-foreground">
+        {providerWritesEnabled
+          ? "Provider writes are enabled — this will flip the created objects to ACTIVE on Meta."
+          : "Provider writes are disabled (BLOCKWISE_ENABLE_PROVIDER_WRITES=false) — Activate returns a dry-run receipt and changes nothing on Meta."}
+      </p>
+      <div className="mt-3 flex items-center gap-3">
+        <button
+          onClick={() => onActivate(planId)}
+          disabled={activating}
+          className="rounded-(--r-control) bg-(--ui-primary) px-5 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
+        >
+          {activating ? "Activating on Meta..." : "Activate on Meta"}
+        </button>
+        <span className="text-xs text-muted-foreground">
+          Plan {shortHash(planId)} · this only affects the paused objects from your publish.
+        </span>
+      </div>
+
+      {receipt && <ActivationReceiptCard receipt={receipt} />}
+    </div>
+  );
+}
+
+function ActivationReceiptCard({ receipt }: { receipt: ActivationReceipt }) {
+  if (receipt.error) {
+    return (
+      <div className="mt-4 rounded-(--r-card) border border-red-200 bg-red-50 p-4" role="alert">
+        <h3 className="mb-1 text-sm font-semibold text-red-800">Activation failed</h3>
+        <p className="text-sm text-red-700">{receipt.error}</p>
+        <p className="mt-2 text-xs text-red-700">
+          The campaign is still PAUSED on Meta — nothing started running.
+        </p>
+      </div>
+    );
+  }
+
+  if (receipt.mode === "dry_run") {
+    return (
+      <div className="mt-4 rounded-(--r-card) border border-amber-200 bg-amber-50 p-4" role="status">
+        <h3 className="mb-1 text-sm font-semibold text-amber-900">Activation dry run — NOT applied</h3>
+        <p className="text-sm text-amber-800">{receipt.message}</p>
+        <p className="mt-2 text-xs font-medium text-amber-800">
+          The campaign stays PAUSED on Meta. No Meta status was changed.
+        </p>
+      </div>
+    );
+  }
+
+  if (receipt.mode === "activate") {
+    return (
+      <div className="mt-4 rounded-(--r-card) border border-green-200 bg-green-50 p-4" role="status">
+        <h3 className="mb-1 text-sm font-semibold text-green-800">Activated on Meta</h3>
+        <p className="text-sm text-green-700">{receipt.message}</p>
+        <dl className="mt-3 grid grid-cols-1 gap-1 text-xs text-green-800 sm:grid-cols-2">
+          <ReceiptStat label="Plan" value={shortHash(receipt.planId ?? "")} />
+          <ReceiptStat label="Mutation" value={shortHash(receipt.mutationId ?? "")} />
+          <ReceiptStat label="Campaign ID" value={receipt.targets?.campaignId ?? "—"} />
+          <ReceiptStat label="Ad set IDs" value={formatIdsList(receipt.targets?.adSetIds)} />
+          <ReceiptStat label="Ad IDs" value={formatIdsList(receipt.targets?.adIds)} />
+        </dl>
+      </div>
+    );
+  }
+
+  return null;
+}
+
+function formatIdsList(ids: string[] | undefined): string {
+  if (!ids || ids.length === 0) return "—";
+  return ids.map(v => v.slice(0, 12)).join(", ");
 }

@@ -1,6 +1,18 @@
-import { describe, it } from "node:test";
+import { after, before, describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { validatePublishState, PublishError, buildPausedMetaPublishPlan, buildStubForm } from "../src/lib/adstudio/publish-adapter.ts";
+import {
+  validatePublishState,
+  PublishError,
+  buildPausedMetaPublishPlan,
+  buildStubForm,
+  activationTargets,
+  assertActivationReadiness,
+  planActivation,
+  markPlanObjectsActive,
+  activatePausedMetaPublish,
+} from "../src/lib/adstudio/publish-adapter.ts";
+import type { MetaPublishPlan } from "../src/lib/providers/meta-execution.ts";
+import { encryptToken } from "../src/lib/providers/token-crypto.ts";
 import type { TemplatePack } from "../packages/ad-template-pack-contract/src/types.ts";
 
 const mockPack: TemplatePack = {
@@ -217,5 +229,456 @@ describe("buildStubForm", () => {
     assert.ok(form.contactFields.some(f => f.type === "email"));
     assert.equal(form.privacy.url, mockSetup.privacyPolicyUrl);
     assert.equal(form.thankYou.actionType, "visit_website");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// BW-Q — explicit Activate after a PAUSED publish. Never auto-live.
+// ---------------------------------------------------------------------------
+
+function pausedPlan(): MetaPublishPlan {
+  return {
+    ...buildPausedMetaPublishPlan({
+      adId: "ad-001",
+      workspaceId: "ws-001",
+      connectionId: "conn-001",
+      setup: mockSetup,
+      state: validState,
+    }),
+    status: "paused_live",
+    reconciledObjects: {
+      campaignId: "1001",
+      leadFormIds: { form_primary: "9001" },
+      adSetIds: { adset_primary: "1002" },
+      creativeIds: { creative_feed: "8001", creative_story: "8002" },
+      adIds: { ad_feed: "1003", ad_story: "1004" },
+    },
+  };
+}
+
+describe("activationTargets", () => {
+  it("extracts the created Meta object IDs from a paused plan", () => {
+    const targets = activationTargets(pausedPlan());
+    assert.deepEqual(targets, {
+      campaignId: "1001",
+      adSetIds: ["1002"],
+      adIds: ["1003", "1004"],
+    });
+  });
+
+  it("returns null when no campaign was created on Meta", () => {
+    const plan = pausedPlan();
+    plan.reconciledObjects.campaignId = undefined;
+    assert.equal(activationTargets(plan), null);
+  });
+});
+
+describe("assertActivationReadiness", () => {
+  it("refuses a draft plan — the publish was a dry run, nothing exists on Meta", () => {
+    const plan = pausedPlan();
+    plan.status = "draft";
+    const readiness = assertActivationReadiness(plan);
+    assert.equal(readiness.ok, false);
+    if (!readiness.ok) {
+      assert.equal(readiness.code, "never_created_on_meta");
+      assert.match(readiness.message, /dry run/i);
+    }
+  });
+
+  it("refuses a failed plan", () => {
+    const plan = pausedPlan();
+    plan.status = "failed";
+    const readiness = assertActivationReadiness(plan);
+    assert.equal(readiness.ok, false);
+    if (!readiness.ok) assert.equal(readiness.code, "not_paused_on_meta");
+  });
+
+  it("refuses a paused_live plan with no object IDs", () => {
+    const plan = pausedPlan();
+    plan.reconciledObjects = {
+      campaignId: undefined,
+      leadFormIds: {},
+      adSetIds: {},
+      creativeIds: {},
+      adIds: {},
+    };
+    const readiness = assertActivationReadiness(plan);
+    assert.equal(readiness.ok, false);
+    if (!readiness.ok) assert.equal(readiness.code, "not_paused_on_meta");
+  });
+
+  it("accepts a paused_live plan that created PAUSED objects", () => {
+    const readiness = assertActivationReadiness(pausedPlan());
+    assert.equal(readiness.ok, true);
+    if (readiness.ok) assert.equal(readiness.targets.campaignId, "1001");
+  });
+});
+
+describe("planActivation", () => {
+  it("returns a dry-run receipt when provider writes are disabled — campaign stays PAUSED", () => {
+    const planned = planActivation(pausedPlan(), { providerWritesEnabled: false });
+    assert.equal(planned.mode, "dry_run");
+    if (planned.mode === "dry_run") {
+      assert.equal(planned.status, "paused");
+      assert.match(planned.message, /NOT applied/i);
+      assert.match(planned.message, /stays PAUSED on Meta/i);
+      assert.ok(!planned.message.toLowerCase().includes("live"));
+    }
+  });
+
+  it("builds an activate mutation when provider writes are enabled", () => {
+    const planned = planActivation(pausedPlan(), { requestedBy: "user-1", providerWritesEnabled: true });
+    assert.equal(planned.mode, "activate");
+    if (planned.mode === "activate") {
+      assert.equal(planned.status, "activated");
+      assert.equal(planned.mutation.action, "activate");
+      assert.equal(planned.mutation.planId, pausedPlan().planId);
+      assert.deepEqual(planned.mutation.payload, {
+        campaignId: "1001",
+        adSetIds: ["1002"],
+        adIds: ["1003", "1004"],
+      });
+      assert.match(planned.message, /Activated on Meta/i);
+    }
+  });
+
+  it("never activates a dry-run (draft) publish — throws, does not invent live state", () => {
+    const plan = pausedPlan();
+    plan.status = "draft";
+    assert.throws(
+      () => planActivation(plan, { providerWritesEnabled: true }),
+      (err: unknown) => err instanceof PublishError && err.code === "never_created_on_meta",
+    );
+  });
+});
+
+describe("markPlanObjectsActive", () => {
+  it("records ACTIVE statuses for campaign, ad sets, and ads", () => {
+    const marked = markPlanObjectsActive(pausedPlan());
+    assert.equal(marked.reconciledObjects.objectStatuses?.campaign?.configuredStatus, "ACTIVE");
+    assert.equal(marked.reconciledObjects.objectStatuses?.campaign?.id, "1001");
+    assert.equal(marked.reconciledObjects.objectStatuses?.adSets?.["adset_primary"]?.configuredStatus, "ACTIVE");
+    assert.equal(marked.reconciledObjects.objectStatuses?.ads?.["ad_feed"]?.configuredStatus, "ACTIVE");
+    // The plan status stays paused_live — the create lifecycle never claims "live".
+    assert.equal(marked.status, "paused_live");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Orchestrator — activatePausedMetaPublish against an in-memory fake Supabase.
+// ---------------------------------------------------------------------------
+
+type Row = Record<string, unknown>;
+
+class FakeSupabase {
+  tables: Record<string, Row[]> = {
+    meta_publish_plans: [],
+    meta_publish_plan_mutations: [],
+    approval_requests: [],
+    audit_logs: [],
+  };
+  rpcs: Record<string, (args: Record<string, unknown>) => { data: unknown; error: unknown }> = {};
+  seq = 0;
+
+  from(table: string): FakeQuery {
+    return new FakeQuery(this, table);
+  }
+
+  rpc(name: string, args: Record<string, unknown>): Promise<{ data: unknown; error: unknown }> {
+    const handler = this.rpcs[name];
+    if (!handler) {
+      return Promise.resolve({ data: null, error: { message: `No fake rpc registered for ${name}` } });
+    }
+    return Promise.resolve(handler(args));
+  }
+}
+
+class FakeQuery {
+  private db: FakeSupabase;
+  private table: string;
+  private filters: Array<[string, unknown]> = [];
+  private op: { kind: "insert" | "update"; value: Row } | null = null;
+  private orderCol: string | null = null;
+  private orderAsc = true;
+  private limitN: number | null = null;
+
+  constructor(db: FakeSupabase, table: string) {
+    this.db = db;
+    this.table = table;
+  }
+
+  select(): this {
+    return this;
+  }
+
+  eq(col: string, value: unknown): this {
+    this.filters.push([col, value]);
+    return this;
+  }
+
+  order(col: string, options: { ascending: boolean }): this {
+    this.orderCol = col;
+    this.orderAsc = options.ascending;
+    return this;
+  }
+
+  limit(n: number): this {
+    this.limitN = n;
+    return this;
+  }
+
+  insert(value: Row): this {
+    this.op = { kind: "insert", value };
+    return this;
+  }
+
+  update(value: Row): this {
+    this.op = { kind: "update", value };
+    return this;
+  }
+
+  maybeSingle(): { data: Row | null; error: unknown } {
+    if (this.op?.kind === "insert") return this.doInsert();
+    const rows = this.rows();
+    return { data: rows[0] ?? null, error: null };
+  }
+
+  single(): { data: Row | null; error: unknown } {
+    if (this.op?.kind === "insert") return this.doInsert();
+    const rows = this.rows();
+    if (rows.length === 0) {
+      return { data: null, error: { message: "No rows found", code: "PGRST116", details: "", hint: "" } };
+    }
+    return { data: rows[0], error: null };
+  }
+
+  /** Awaited insert/update chains apply their op (save-ad FakeQuery pattern). */
+  then(resolve: (v: { data: Row | null; error: unknown }) => void): void {
+    if (this.op?.kind === "update") {
+      const targets = this.rows();
+      for (const target of targets) Object.assign(target, this.op.value);
+      resolve({ data: targets[0] ?? null, error: null });
+      return;
+    }
+    if (this.op?.kind === "insert") {
+      resolve(this.doInsert());
+      return;
+    }
+    resolve(this.maybeSingle());
+  }
+
+  private doInsert(): { data: Row; error: null } {
+    const row = this.op!.value;
+    // Postgres auto-generates ids on tables without an explicit id — mirror
+    // that so `.select("id").single()` after an insert returns a usable id.
+    if (row.id === undefined) row.id = `id-${++this.db.seq}`;
+    (this.db.tables[this.table] ??= []).push(row);
+    return { data: row, error: null };
+  }
+
+  private rows(): Row[] {
+    let rows = (this.db.tables[this.table] ?? []).filter(row =>
+      this.filters.every(([col, value]) => row[col] === value),
+    );
+    if (this.orderCol) {
+      rows = [...rows].sort((a, b) => {
+        const av = a[this.orderCol!];
+        const bv = b[this.orderCol!];
+        if (av === bv) return 0;
+        if (av == null) return 1;
+        if (bv == null) return -1;
+        const cmp = av < bv ? -1 : 1;
+        return this.orderAsc ? cmp : -cmp;
+      });
+    }
+    if (this.limitN != null) rows = rows.slice(0, this.limitN);
+    return rows;
+  }
+}
+
+function planToRow(plan: MetaPublishPlan): Row {
+  return {
+    id: plan.planId,
+    workspace_id: plan.workspaceId,
+    adstudio_campaign_id: plan.adStudioCampaignId,
+    adstudio_export_id: plan.adStudioExportId,
+    campaign_id: plan.legacyCampaignId,
+    provider_connection_id: plan.providerConnectionId,
+    approval_request_id: plan.approvalRequestId,
+    adapter: plan.adapter,
+    status: plan.status,
+    idempotency_key: plan.idempotencyKey,
+    meta_ad_account_id: plan.setup.metaAdAccountId,
+    page_id: plan.setup.pageId,
+    instagram_actor_id: plan.setup.instagramActorId,
+    pixel_id: plan.setup.pixelId,
+    lead_destination_json: plan.setup.leadDestination,
+    privacy_policy_url: plan.setup.privacyPolicyUrl,
+    currency: plan.setup.currency,
+    timezone: plan.setup.timezone,
+    plan_json: {
+      campaign: plan.campaign,
+      adSets: plan.adSets,
+      leadForms: plan.leadForms,
+      creatives: plan.creatives,
+      ads: plan.ads,
+      tracking: plan.tracking,
+      controls: plan.controls,
+    },
+    request_log_json: plan.requestLog,
+    response_log_json: plan.responseLog,
+    reconciled_objects_json: plan.reconciledObjects,
+    last_error: plan.lastError,
+    created_at: plan.createdAt,
+    updated_at: plan.updatedAt,
+  };
+}
+
+const ENCRYPTION_KEY = "b".repeat(32);
+const PACKED_VAULT_TOKEN = (() => {
+  const encrypted = encryptToken("meta-test-access-token", ENCRYPTION_KEY);
+  return `\\x${Buffer.from(JSON.stringify(encrypted), "utf8").toString("hex")}`;
+})();
+
+describe("activatePausedMetaPublish", () => {
+  it("throws no_paused_plan when the ad was never published", async () => {
+    const db = new FakeSupabase();
+    await assert.rejects(
+      activatePausedMetaPublish(db as never, {
+        adId: "ad-001",
+        workspaceId: "ws-001",
+        providerWritesEnabled: true,
+      }),
+      (err: unknown) => err instanceof PublishError && err.code === "no_paused_plan",
+    );
+  });
+
+  it("refuses a dry-run (draft) publish even when provider writes are enabled", async () => {
+    const db = new FakeSupabase();
+    const plan = pausedPlan();
+    plan.status = "draft";
+    db.tables.meta_publish_plans.push(planToRow(plan));
+
+    await assert.rejects(
+      activatePausedMetaPublish(db as never, {
+        adId: "ad-001",
+        workspaceId: "ws-001",
+        providerWritesEnabled: true,
+      }),
+      (err: unknown) => err instanceof PublishError && err.code === "never_created_on_meta",
+    );
+  });
+
+  it("returns a dry-run receipt when provider writes are disabled and writes nothing", async () => {
+    const db = new FakeSupabase();
+    db.tables.meta_publish_plans.push(planToRow(pausedPlan()));
+
+    const outcome = await activatePausedMetaPublish(db as never, {
+      adId: "ad-001",
+      workspaceId: "ws-001",
+      requestedBy: "user-1",
+      providerWritesEnabled: false,
+    });
+
+    assert.equal(outcome.mode, "dry_run");
+    if (outcome.mode === "dry_run") {
+      assert.equal(outcome.status, "paused");
+      assert.equal(outcome.targets.campaignId, "1001");
+      assert.match(outcome.message, /NOT applied/i);
+      assert.match(outcome.message, /stays PAUSED on Meta/i);
+    }
+    // Nothing was written — no mutation, no approval, no object status change.
+    assert.equal(db.tables.meta_publish_plan_mutations.length, 0);
+    assert.equal(db.tables.approval_requests.length, 0);
+    const row = db.tables.meta_publish_plans[0]!;
+    assert.equal((row.reconciled_objects_json as Row).objectStatuses, undefined);
+  });
+
+  it("activates the paused objects on Meta only on an explicit click", async () => {
+    const db = new FakeSupabase();
+    db.tables.meta_publish_plans.push(planToRow(pausedPlan()));
+    db.rpcs["provider_token_vault_get"] = () => ({
+      data: {
+        encrypted_access_token: PACKED_VAULT_TOKEN,
+        encrypted_refresh_token: null,
+        token_nonce: "test-nonce",
+      },
+      error: null,
+    });
+
+    const activated = new Set<string>();
+    const activeOrder: string[] = [];
+    const fetchImpl = async (input: string | URL | Request, init?: RequestInit) => {
+      const url = new URL(String(input));
+      const objectId = url.pathname.split("/").filter(Boolean).at(-1) ?? "";
+      if ((init?.method ?? "GET") === "GET") {
+        const status = activated.has(objectId) ? "ACTIVE" : "PAUSED";
+        return new Response(
+          JSON.stringify({ configured_status: status, effective_status: status, status }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
+      }
+      const body = JSON.parse(String(init?.body ?? "{}")) as Record<string, unknown>;
+      if (body.status === "ACTIVE") {
+        activated.add(objectId);
+        activeOrder.push(objectId);
+      }
+      return new Response(JSON.stringify({ success: true }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    };
+
+    const previousKey = process.env.TOKEN_ENCRYPTION_KEY;
+    const previousWrites = process.env.BLOCKWISE_ENABLE_PROVIDER_WRITES;
+    process.env.TOKEN_ENCRYPTION_KEY = ENCRYPTION_KEY;
+    process.env.BLOCKWISE_ENABLE_PROVIDER_WRITES = "true";
+    try {
+      const outcome = await activatePausedMetaPublish(db as never, {
+        adId: "ad-001",
+        workspaceId: "ws-001",
+        requestedBy: "user-1",
+        providerWritesEnabled: true,
+        fetchImpl,
+      });
+
+      assert.equal(outcome.mode, "activate");
+      if (outcome.mode === "activate") {
+        assert.equal(outcome.status, "activated");
+        assert.equal(outcome.targets.campaignId, "1001");
+        assert.match(outcome.message, /Activated on Meta/i);
+      }
+
+      // Safe activation order: children (ad set, ads) before the campaign.
+      assert.deepEqual(activeOrder, ["1002", "1003", "1004", "1001"]);
+
+      // The mutation row is the durable activation record: applied, activate action.
+      const mutationRow = db.tables.meta_publish_plan_mutations[0]!;
+      assert.equal(mutationRow.action, "activate");
+      assert.equal(mutationRow.status, "applied");
+      assert.equal((mutationRow.payload_json as Row).campaignId, "1001");
+      assert.ok((mutationRow.response_log_json as unknown[]).length > 0);
+
+      // The Activate click was the explicit approval.
+      const approvalRow = db.tables.approval_requests[0]!;
+      assert.equal(approvalRow.status, "approved");
+
+      // The plan records ACTIVE object statuses, but its status stays paused_live.
+      const planRow = db.tables.meta_publish_plans[0]!;
+      const reconciled = planRow.reconciled_objects_json as Row;
+      const objectStatuses = (reconciled.objectStatuses ?? {}) as {
+        campaign?: { configuredStatus?: string };
+      };
+      assert.equal(objectStatuses.campaign?.configuredStatus, "ACTIVE");
+      assert.equal(planRow.status, "paused_live");
+
+      // Audit trail written by the canonical executor.
+      assert.ok(db.tables.audit_logs.some(row => row.action === "meta.activate"));
+    } finally {
+      if (previousKey === undefined) delete process.env.TOKEN_ENCRYPTION_KEY;
+      else process.env.TOKEN_ENCRYPTION_KEY = previousKey;
+      if (previousWrites === undefined) delete process.env.BLOCKWISE_ENABLE_PROVIDER_WRITES;
+      else process.env.BLOCKWISE_ENABLE_PROVIDER_WRITES = previousWrites;
+    }
   });
 });
