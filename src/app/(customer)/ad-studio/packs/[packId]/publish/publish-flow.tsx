@@ -2,6 +2,8 @@
 
 import { useCallback, useState } from "react";
 
+import { InstantFormEditor } from "@/components/adstudio/instant-form-editor";
+
 // ---------------------------------------------------------------------------
 // Publish flow client (BW-M).
 //
@@ -66,6 +68,14 @@ export function PublishFlow({
 }: PublishFlowProps) {
   const [submitting, setSubmitting] = useState(false);
   const [receipt, setReceipt] = useState<PublishReceipt | null>(null);
+  // A form must be pinned before publishing — either one already attached to
+  // the last saved revision (initialState.form) or one the customer generates,
+  // edits and pins right here. The editor reports when a pin lands.
+  const [formPinned, setFormPinned] = useState(() => Boolean(initialState?.form));
+
+  const handlePinStateChange = useCallback((pinned: boolean) => {
+    setFormPinned(pinned);
+  }, []);
 
   const handlePublish = useCallback(async () => {
     setSubmitting(true);
@@ -109,7 +119,8 @@ export function PublishFlow({
   }
 
   const issues = initialIssues ?? [];
-  const ready = issues.length === 0;
+  const formReady = Boolean(initialState?.form) || formPinned;
+  const ready = issues.length === 0 && formReady;
 
   return (
     <div className="flex h-full flex-col bg-(--canvas)">
@@ -158,21 +169,13 @@ export function PublishFlow({
           )}
         </div>
 
-        {/* Form */}
-        <div className="mb-6 rounded-(--r-card) border border-(--line) bg-(--surface) p-4">
-          <h3 className="text-sm font-semibold">Instant Form</h3>
-          {initialState?.form ? (
-            <div className="mt-1 text-sm">
-              <p>{initialState.form.name}</p>
-              <p className="text-xs text-muted-foreground">
-                {initialState.form.formType} · {initialState.form.contactFields.map(f => f.type).join(", ")}
-              </p>
-            </div>
-          ) : (
-            <p className="mt-1 text-xs text-muted-foreground">
-              No Instant Form yet — a stub form will be used so publishing can proceed.
-            </p>
-          )}
+        {/* Instant Form — generate, edit and pin before publishing */}
+        <div className="mb-6">
+          <InstantFormEditor
+            adId={adId}
+            workspaceId={workspaceId}
+            onPinStateChange={handlePinStateChange}
+          />
         </div>
 
         {/* Provider mode */}
@@ -190,7 +193,15 @@ export function PublishFlow({
       </div>
 
       <footer className="flex shrink-0 items-center justify-between border-t border-(--line) bg-(--surface) px-5 py-4">
-        {receipt?.error && <p className="text-sm text-red-600">{receipt.error}</p>}
+        {receipt?.error ? (
+          <p className="text-sm text-red-600">{receipt.error}</p>
+        ) : !formReady && issues.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Generate and pin the Instant Form above to enable Freeze &amp; Create PAUSED.
+          </p>
+        ) : (
+          <span />
+        )}
         <div className="ml-auto">
           <button
             onClick={handlePublish}

@@ -47,16 +47,27 @@ const ACTION_LABELS: Record<ActionType, string> = {
 export interface InstantFormEditorProps {
   adId: string;
   workspaceId: string;
+  /** Reports whether a draft is currently pinned (saved as the active revision). */
+  onPinStateChange?: (pinned: boolean) => void;
 }
 
 type Status = "loading" | "idle" | "generating" | "saving";
 
-export function InstantFormEditor({ adId, workspaceId }: InstantFormEditorProps) {
+export function InstantFormEditor({ adId, workspaceId, onPinStateChange }: InstantFormEditorProps) {
   const [form, setForm] = useState<InstantForm | null>(null);
   const [pinnedRevision, setPinnedRevision] = useState<number | null>(null);
   const [status, setStatus] = useState<Status>("loading");
   const [error, setError] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
+
+  // A draft counts as pinned once it has a server revision and the working
+  // copy matches it. Report the settled state to the parent so the Publish
+  // button can gate on it (silent while the initial load is in flight).
+  const pinned = pinnedRevision !== null && !dirty;
+  useEffect(() => {
+    if (status === "loading") return;
+    onPinStateChange?.(pinned);
+  }, [pinned, status, onPinStateChange]);
 
   const basePath = `/api/adstudio/ads/${encodeURIComponent(adId)}/instant-form?workspaceId=${encodeURIComponent(workspaceId)}`;
 
