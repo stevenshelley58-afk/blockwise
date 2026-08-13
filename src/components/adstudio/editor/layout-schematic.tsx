@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactElement } from "react";
-import type { Layout, LayoutLayer, TemplatePack } from "../../../../packages/ad-template-pack-contract/src/types.js";
+import type { Layout, LayoutLayer, ImageSlotLayer, TemplatePack } from "../../../../packages/ad-template-pack-contract/src/types.js";
 import { PLACEMENT_DIMENSIONS } from "../../../../packages/ad-template-pack-contract/src/types.js";
 
 // ---------------------------------------------------------------------------
@@ -22,6 +22,11 @@ export interface LayoutSchematicProps {
   selectedLayerId?: string | null;
   /** Called when a layer shape is clicked. */
   onSelect?: (layerId: string) => void;
+  /**
+   * Called when an image slot is clicked (in addition to onSelect) — the
+   * editor opens the per-placement crop dialog for that input.
+   */
+  onCropImage?: (layer: ImageSlotLayer) => void;
   /** SVG preserveAspectRatio — "meet" shows the whole ad (editor), "slice" fills a card (gallery thumb). */
   preserveAspectRatio?: string;
   className?: string;
@@ -32,6 +37,7 @@ export function LayoutSchematic({
   colours,
   selectedLayerId,
   onSelect,
+  onCropImage,
   preserveAspectRatio = "xMidYMid meet",
   className,
 }: LayoutSchematicProps) {
@@ -49,7 +55,7 @@ export function LayoutSchematic({
       {layout.layers.length === 0 ? (
         <rect x={0} y={0} width={dims.width} height={dims.height} fill="#f1f5f9" />
       ) : (
-        layout.layers.map(layer => renderLayer(layer, colours, onSelect, dims))
+        layout.layers.map(layer => renderLayer(layer, colours, onSelect, onCropImage, dims))
       )}
 
       {/* Safe zones — dashed guide outlines, never block clicks */}
@@ -95,6 +101,7 @@ function renderLayer(
   layer: LayoutLayer,
   colours: TemplatePack["semanticColours"],
   onSelect: ((layerId: string) => void) | undefined,
+  onCropImage: ((layer: ImageSlotLayer) => void) | undefined,
   dims: { width: number; height: number },
 ): ReactElement {
   const fill = (role: string) => colours[role as keyof TemplatePack["semanticColours"]] ?? "#cbd5e1";
@@ -116,7 +123,19 @@ function renderLayer(
           {...handlers}
         />
       );
-    case "image_slot":
+    case "image_slot": {
+      // Clicking an image slot selects it AND opens the per-placement crop
+      // dialog (when the editor wires onCropImage).
+      const slotHandlers = onSelect
+        ? {
+            onClick: () => {
+              onSelect(layer.layerId);
+              onCropImage?.(layer);
+            },
+            className: "cursor-pointer hover:opacity-80",
+            title: onCropImage ? "Crop image" : undefined,
+          }
+        : { className: "schematic-layer" };
       if (layer.mask === "circle") {
         const r = Math.min(g.width, g.height) / 2;
         return (
@@ -128,7 +147,7 @@ function renderLayer(
             fill="#ffffff"
             stroke="#94a3b8"
             strokeWidth={4}
-            {...handlers}
+            {...slotHandlers}
           />
         );
       }
@@ -143,9 +162,10 @@ function renderLayer(
           fill="#ffffff"
           stroke="#94a3b8"
           strokeWidth={4}
-          {...handlers}
+          {...slotHandlers}
         />
       );
+    }
     case "overlay_patch":
       return (
         <rect

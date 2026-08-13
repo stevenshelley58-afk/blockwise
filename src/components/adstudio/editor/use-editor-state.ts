@@ -44,7 +44,7 @@ export interface EditorState {
 const initialState = (pack: TemplatePack): EditorState => ({
   pack,
   activePlacement: "feed",
-  imageValues: pack.imageInputs.map(i => ({ inputKey: i.key, dataUrl: null })),
+  imageValues: pack.imageInputs.map(i => ({ inputKey: i.key, dataUrl: null, crops: {} })),
   textValues: Object.fromEntries(pack.textInputs.map(i => [i.key, ""])),
   colourMode: "template",
   resolvedColourMap: { ...pack.semanticColours },
@@ -97,13 +97,13 @@ export function useEditorState(pack: TemplatePack) {
     });
   }, [pushUndo]);
 
-  const updateCrop = useCallback((key: string, crop: Rect) => {
+  const updateCrop = useCallback((key: string, placement: Placement, crop: Rect) => {
     setState(prev => {
       pushUndo(prev);
       return {
         ...prev,
         imageValues: prev.imageValues.map(iv =>
-          iv.inputKey === key ? { ...iv, crop } : iv
+          iv.inputKey === key ? { ...iv, crops: { ...iv.crops, [placement]: crop } } : iv
         ),
         isDirty: true,
       };
@@ -275,8 +275,21 @@ export async function buildAdDocument(state: EditorState): Promise<AdDocumentPar
         .map(iv => [iv.inputKey, iv.dataUrl as string]),
     ),
     sharedTextValues: { ...state.textValues },
-    feedCropOverrides: {},
-    storyCropOverrides: {},
+    // Per-placement crop overrides, keyed by input key, normalized [0,1]
+    // over the source image. Feed and Story stay independent; the renderer
+    // falls back to the slot's defaultCrop when an override is absent.
+    feedCropOverrides: Object.fromEntries(
+      state.imageValues.flatMap(iv => {
+        const crop = iv.crops.feed;
+        return crop ? [[iv.inputKey, crop] as const] : [];
+      }),
+    ),
+    storyCropOverrides: Object.fromEntries(
+      state.imageValues.flatMap(iv => {
+        const crop = iv.crops.story;
+        return crop ? [[iv.inputKey, crop] as const] : [];
+      }),
+    ),
     colourMode: state.colourMode,
     resolvedColourMap: { ...state.resolvedColourMap },
     metaPrimaryText: "",

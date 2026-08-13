@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback } from "react";
-import type { TemplatePack, Placement, LayoutLayer } from "../../../../packages/ad-template-pack-contract/src/types.js";
+import { useCallback, useState } from "react";
+import type { TemplatePack, Placement, LayoutLayer, ImageSlotLayer, Rect } from "../../../../packages/ad-template-pack-contract/src/types.js";
 import { PLACEMENT_DIMENSIONS } from "../../../../packages/ad-template-pack-contract/src/types.js";
-import { buildAdDocument, brandPackColoursToRoleMap, resolveColourMap, useEditorState, type BrandPackColours } from "./use-editor-state.js";
+import { buildAdDocument, brandPackColoursToRoleMap, resolveColourMap, useEditorState, type BrandPackColours, type EditorState } from "./use-editor-state.js";
 import { ColourToggle } from "./colour-toggle.js";
+import { CropDialog } from "./crop-dialog.js";
 import { InputsPanel } from "./inputs-panel.js";
 import { LayoutSchematic } from "./layout-schematic.js";
 
@@ -45,6 +46,7 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
     selectLayer,
     updateTextValue,
     updateImageValue,
+    updateCrop,
     setColourMode,
     undo,
     redo,
@@ -52,6 +54,28 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
     setSaving,
     setError,
   } = useEditorState(pack);
+
+  /** Which slot's crop dialog is open — always the ACTIVE placement's crop. */
+  const [cropTarget, setCropTarget] = useState<{ slot: ImageSlotLayer; placement: Placement } | null>(null);
+
+  /** Open the crop dialog for a slot (no-op until an image is picked). */
+  const openCrop = useCallback(
+    (slot: ImageSlotLayer) => {
+      const value = state.imageValues.find(iv => iv.inputKey === slot.inputKey);
+      if (!value?.dataUrl) return; // nothing to crop yet
+      setCropTarget({ slot, placement: state.activePlacement });
+    },
+    [state.imageValues, state.activePlacement],
+  );
+
+  /** Resolve an input key to its first image slot in the active layout. */
+  const openCropForInput = useCallback(
+    (key: string) => {
+      const slot = activeLayout.layers.find((l): l is ImageSlotLayer => l.type === "image_slot" && l.inputKey === key);
+      if (slot) openCrop(slot);
+    },
+    [activeLayout, openCrop],
+  );
 
   const handleSave = useCallback(async () => {
     setSaving(true);
@@ -212,6 +236,7 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
               colours={state.resolvedColourMap}
               selectedLayerId={state.selectedLayerId}
               onSelect={selectLayer}
+              onCropImage={openCrop}
               className="h-full w-full"
             />
           </div>
@@ -225,8 +250,12 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
           imageValues={Object.fromEntries(state.imageValues.map(iv => [iv.inputKey, iv.dataUrl]))}
           onTextChange={updateTextValue}
           onImageChange={updateImageValue}
+          onCropClick={openCropForInput}
         />
       </div>
+
+      {/* Crop dialog — per-placement crop for the selected image slot */}
+      {cropTarget && <CropDialogHost cropTarget={cropTarget} state={state} pack={pack} onApply={updateCrop} onClose={() => setCropTarget(null)} />}
 
       {/* Error banner */}
       {state.error && (
@@ -238,6 +267,45 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
         </div>
       )}
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// CropDialogHost — resolves the open crop target into CropDialog props.
+// The crop rect always targets the placement the slot belongs to, so Feed
+// and Story keep independent crops for the same shared image.
+// ---------------------------------------------------------------------------
+
+function CropDialogHost({
+  cropTarget,
+  state,
+  pack,
+  onApply,
+  onClose,
+}: {
+  cropTarget: { slot: ImageSlotLayer; placement: Placement };
+  state: EditorState;
+  pack: TemplatePack;
+  onApply: (key: string, placement: Placement, crop: Rect) => void;
+  onClose: () => void;
+}) {
+  const { slot, placement } = cropTarget;
+  const input = pack.imageInputs.find(i => i.key === slot.inputKey);
+  const value = state.imageValues.find(iv => iv.inputKey === slot.inputKey);
+  if (!input || !value?.dataUrl) return null;
+
+  return (
+    <CropDialog
+      imageUrl={value.dataUrl}
+      input={input}
+      crop={value.crops[placement] ?? slot.defaultCrop}
+      aspectRatio={slot.geometry.width / slot.geometry.height}
+      onConfirm={crop => {
+        onApply(slot.inputKey, placement, crop);
+        onClose();
+      }}
+      onCancel={onClose}
+    />
   );
 }
 

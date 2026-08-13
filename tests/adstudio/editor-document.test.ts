@@ -45,8 +45,8 @@ function makeState(overrides: Partial<EditorState> = {}): EditorState {
     pack: PACK,
     activePlacement: "feed",
     imageValues: [
-      { inputKey: "hero", dataUrl: HERO_DATA_URL },
-      { inputKey: "logo", dataUrl: null },
+      { inputKey: "hero", dataUrl: HERO_DATA_URL, crops: {} },
+      { inputKey: "logo", dataUrl: null, crops: {} },
     ],
     textValues: { headline: "Fresh bread, daily", cta: "Order now" },
     colourMode: "template",
@@ -88,5 +88,90 @@ describe("buildAdDocument shared inputs", () => {
     assert.equal(res.status, 200);
     const bytes = Buffer.from(await res.arrayBuffer());
     assert.ok(bytes.length > 0, "data URL resolves to bytes");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// buildAdDocument crop overrides — per-placement crops, normalized [0,1],
+// keyed by input key (the renderer's cropOverrides contract). Feed and
+// Story must stay INDEPENDENT: one shared image, two crop rects.
+// ---------------------------------------------------------------------------
+
+const FEED_CROP = { x: 0.1, y: 0.2, width: 0.5, height: 0.4 };
+const STORY_CROP = { x: 0.25, y: 0.25, width: 0.7, height: 0.7 };
+
+describe("buildAdDocument crop overrides", () => {
+  it("omits crop overrides when none are set", async () => {
+    const doc = await buildAdDocument(makeState());
+    assert.deepEqual(doc.feedCropOverrides, {});
+    assert.deepEqual(doc.storyCropOverrides, {});
+  });
+
+  it("stores a feed crop keyed by input key", async () => {
+    const doc = await buildAdDocument(
+      makeState({
+        imageValues: [
+          { inputKey: "hero", dataUrl: HERO_DATA_URL, crops: { feed: FEED_CROP } },
+          { inputKey: "logo", dataUrl: null, crops: {} },
+        ],
+      }),
+    );
+    assert.deepEqual(doc.feedCropOverrides, { hero: FEED_CROP });
+    assert.deepEqual(doc.storyCropOverrides, {});
+  });
+
+  it("stores a story crop independently of feed", async () => {
+    const doc = await buildAdDocument(
+      makeState({
+        imageValues: [
+          { inputKey: "hero", dataUrl: HERO_DATA_URL, crops: { story: STORY_CROP } },
+          { inputKey: "logo", dataUrl: null, crops: {} },
+        ],
+      }),
+    );
+    assert.deepEqual(doc.feedCropOverrides, {});
+    assert.deepEqual(doc.storyCropOverrides, { hero: STORY_CROP });
+  });
+
+  it("keeps feed and story crops separate for the same image", async () => {
+    const doc = await buildAdDocument(
+      makeState({
+        imageValues: [
+          {
+            inputKey: "hero",
+            dataUrl: HERO_DATA_URL,
+            crops: { feed: FEED_CROP, story: STORY_CROP },
+          },
+          { inputKey: "logo", dataUrl: null, crops: {} },
+        ],
+      }),
+    );
+    assert.deepEqual(doc.feedCropOverrides.hero, FEED_CROP);
+    assert.deepEqual(doc.storyCropOverrides.hero, STORY_CROP);
+    assert.notDeepEqual(doc.feedCropOverrides.hero, doc.storyCropOverrides.hero);
+  });
+
+  it("includes crops for multiple inputs at once", async () => {
+    const doc = await buildAdDocument(
+      makeState({
+        imageValues: [
+          { inputKey: "hero", dataUrl: HERO_DATA_URL, crops: { feed: FEED_CROP } },
+          { inputKey: "logo", dataUrl: HERO_DATA_URL, crops: { story: STORY_CROP } },
+        ],
+      }),
+    );
+    assert.deepEqual(doc.feedCropOverrides, { hero: FEED_CROP });
+    assert.deepEqual(doc.storyCropOverrides, { logo: STORY_CROP });
+  });
+
+  it("changes the document hash when a crop changes", async () => {
+    const base = await buildAdDocument(makeState());
+    const cropped = await buildAdDocument(
+      makeState({
+        imageValues: [{ inputKey: "hero", dataUrl: HERO_DATA_URL, crops: { feed: FEED_CROP } }],
+      }),
+    );
+    assert.notEqual(cropped.documentHash, base.documentHash);
+    assert.match(cropped.documentHash, /^[a-f0-9]{64}$/);
   });
 });

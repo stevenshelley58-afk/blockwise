@@ -23,6 +23,8 @@ export interface InputsPanelProps {
   imageValues: Record<string, string | null>;
   onTextChange: (key: string, value: string) => void;
   onImageChange: (key: string, dataUrl: string | null) => void;
+  /** Opens the crop dialog for the input's slot in the ACTIVE placement. */
+  onCropClick: (key: string) => void;
 }
 
 export function InputsPanel({
@@ -32,6 +34,7 @@ export function InputsPanel({
   imageValues,
   onTextChange,
   onImageChange,
+  onCropClick,
 }: InputsPanelProps) {
   return (
     <aside className="w-72 shrink-0 overflow-y-auto border-l border-(--line) bg-(--surface) p-4">
@@ -85,6 +88,7 @@ export function InputsPanel({
                 input={input}
                 dataUrl={imageValues[input.key] ?? null}
                 onImageChange={onImageChange}
+                onCropClick={() => onCropClick(input.key)}
               />
             ))}
           </div>
@@ -106,10 +110,12 @@ function ImageSlotControl({
   input,
   dataUrl,
   onImageChange,
+  onCropClick,
 }: {
   input: ImageInput;
   dataUrl: string | null;
   onImageChange: (key: string, dataUrl: string | null) => void;
+  onCropClick: () => void;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const accept = input.acceptedTypes.length > 0 ? input.acceptedTypes.join(",") : "image/*";
@@ -154,6 +160,13 @@ function ImageSlotControl({
               className="rounded-(--r-control) border border-(--line) px-3 py-1.5 text-xs font-medium text-foreground transition hover:bg-(--surface-subtle)"
             >
               Replace
+            </button>
+            <button
+              type="button"
+              onClick={onCropClick}
+              className="rounded-(--r-control) border border-(--line) px-3 py-1.5 text-xs font-medium text-foreground transition hover:bg-(--surface-subtle)"
+            >
+              Crop…
             </button>
             <button
               type="button"
