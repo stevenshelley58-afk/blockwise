@@ -1,8 +1,8 @@
 import { createHash } from "node:crypto";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { TemplatePack } from "../../../packages/ad-template-pack-contract/src/types.js";
-import type { InstantForm } from "../adstudio/instant-form-types.js";
+import type { TemplatePack } from "../../../packages/ad-template-pack-contract/src/types";
+import type { InstantForm } from "../adstudio/instant-form-types";
 import { deterministicUuid } from "./id.ts";
 import type {
   MetaConnectionSetup,
@@ -15,7 +15,7 @@ import type {
   MetaPublishLeadFormPlan,
   MetaPublishTrackingPlan,
   MetaExecutionAdapter,
-} from "../providers/meta-execution.js";
+} from "../providers/meta-execution";
 
 // ---------------------------------------------------------------------------
 // Phase 7.2 — Publish adapter: new AdDocument → existing Meta pipeline

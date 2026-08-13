@@ -4,6 +4,10 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
   typedRoutes: true,
+  // @napi-rs/canvas ships a native .node binding that Turbopack cannot place in
+  // ESM chunks; it is only used server-side (ad-deterministic-renderer), so
+  // externalize it and let the server require() the binding at runtime.
+  serverExternalPackages: ["@napi-rs/canvas"],
   // Tree-shake heavy barrel-export libs so only used modules ship to the client.
   // lucide-react is already optimized by Next's defaults; recharts is not.
   experimental: {

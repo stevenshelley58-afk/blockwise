@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useCallback, useRef } from "react";
-import type { TemplatePack, Layout, LayoutLayer, Placement, Rect, ColourRole } from "../../../../packages/ad-template-pack-contract/src/types.js";
-import type { AdDocumentParsed } from "../../../../packages/ad-template-pack-contract/src/schema.js";
+import type { TemplatePack, Layout, LayoutLayer, Placement, Rect, ColourRole } from "../../../../packages/ad-template-pack-contract/src/types";
+import type { AdDocumentParsed } from "../../../../packages/ad-template-pack-contract/src/schema";
 
 // ---------------------------------------------------------------------------
 // Editor state — Phase 6 foundation

@@ -1,5 +1,5 @@
 import { templatePackSchema } from "../../../packages/ad-template-pack-contract/src/index.ts";
-import type { Layout, TemplatePack } from "../../../packages/ad-template-pack-contract/src/types.js";
+import type { Layout, TemplatePack } from "../../../packages/ad-template-pack-contract/src/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 // ---------------------------------------------------------------------------

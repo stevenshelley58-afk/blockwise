@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import type { MetaCopy } from "./use-editor-state.js";
+import type { MetaCopy } from "./use-editor-state";
 
 // ---------------------------------------------------------------------------
 // Meta Copy Panel — primary text, headline, description and CTA for the

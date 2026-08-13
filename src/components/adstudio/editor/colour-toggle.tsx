@@ -1,6 +1,6 @@
 "use client";
 
-import { COLOUR_ROLES, type ColourRole } from "../../../../packages/ad-template-pack-contract/src/types.js";
+import { COLOUR_ROLES, type ColourRole } from "../../../../packages/ad-template-pack-contract/src/types";
 
 // ---------------------------------------------------------------------------
 // Colour mode toggle — template palette vs workspace Brand Pack colours.

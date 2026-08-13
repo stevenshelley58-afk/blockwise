@@ -1,5 +1,5 @@
 import { templatePackSchema, sha256Hex } from "../../../packages/ad-template-pack-contract/src/index.ts";
-import type { TemplatePack } from "../../../packages/ad-template-pack-contract/src/types.js";
+import type { TemplatePack } from "../../../packages/ad-template-pack-contract/src/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 // ---------------------------------------------------------------------------

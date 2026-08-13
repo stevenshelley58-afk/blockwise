@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { AdDocumentParsed } from "../../../packages/ad-template-pack-contract/src/schema.js";
-import type { TemplatePack } from "../../../packages/ad-template-pack-contract/src/types.js";
+import type { AdDocumentParsed } from "../../../packages/ad-template-pack-contract/src/schema";
+import type { TemplatePack } from "../../../packages/ad-template-pack-contract/src/types";
 import { sha256Hex } from "../../../packages/ad-template-pack-contract/src/hash.ts";
 
 // ---------------------------------------------------------------------------
@@ -188,7 +188,7 @@ async function renderPlacementSafe(
   } else {
     // Production — full render via @blockwise/ad-deterministic-renderer.
     // Renders the pack with customer image/text values and colour map.
-    const renderer = await import("../../../packages/ad-deterministic-renderer/src/renderer.js");
+    const renderer = await import("../../../packages/ad-deterministic-renderer/src/renderer");
     const result = await renderer.renderPlacement(
       {
         pack,

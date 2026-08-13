@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { TemplatePack } from "../../../packages/ad-template-pack-contract/src/types.js";
+import type { TemplatePack } from "../../../packages/ad-template-pack-contract/src/types";
 
 // ---------------------------------------------------------------------------
 // Customer ad rows (ad_customer_ads) — created server-side so the editor has

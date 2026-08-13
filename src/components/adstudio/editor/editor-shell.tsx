@@ -2,14 +2,14 @@
 
 import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { TemplatePack, Placement, LayoutLayer, ImageSlotLayer, Rect } from "../../../../packages/ad-template-pack-contract/src/types.js";
-import { PLACEMENT_DIMENSIONS } from "../../../../packages/ad-template-pack-contract/src/types.js";
-import { buildAdDocument, brandPackColoursToRoleMap, resolveColourMap, useEditorState, type BrandPackColours, type EditorState } from "./use-editor-state.js";
-import { ColourToggle } from "./colour-toggle.js";
-import { CropDialog } from "./crop-dialog.js";
-import { InputsPanel } from "./inputs-panel.js";
-import { LayoutSchematic } from "./layout-schematic.js";
-import { MetaCopyPanel } from "./meta-copy-panel.js";
+import type { TemplatePack, Placement, LayoutLayer, ImageSlotLayer, Rect } from "../../../../packages/ad-template-pack-contract/src/types";
+import { PLACEMENT_DIMENSIONS } from "../../../../packages/ad-template-pack-contract/src/types";
+import { buildAdDocument, brandPackColoursToRoleMap, resolveColourMap, useEditorState, type BrandPackColours, type EditorState } from "./use-editor-state";
+import { ColourToggle } from "./colour-toggle";
+import { CropDialog } from "./crop-dialog";
+import { InputsPanel } from "./inputs-panel";
+import { LayoutSchematic } from "./layout-schematic";
+import { MetaCopyPanel } from "./meta-copy-panel";
 
 // ---------------------------------------------------------------------------
 // Editor Shell — Phase 6 foundation

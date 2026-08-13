@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import type { ImageInput, TextInput } from "../../../../packages/ad-template-pack-contract/src/types.js";
+import type { ImageInput, TextInput } from "../../../../packages/ad-template-pack-contract/src/types";
 
 // ---------------------------------------------------------------------------
 // Inputs Panel — shared content inputs for a Frank pack.

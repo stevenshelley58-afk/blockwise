@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import type { Layout, LayoutLayer, TemplatePack } from "../../../../packages/ad-template-pack-contract/src/types.js";
+import type { Layout, LayoutLayer, TemplatePack } from "../../../../packages/ad-template-pack-contract/src/types";
 import { listImportedPacks } from "@/lib/adstudio/pack-gallery";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
 

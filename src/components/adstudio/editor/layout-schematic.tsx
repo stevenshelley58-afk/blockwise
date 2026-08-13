@@ -1,8 +1,8 @@
 "use client";
 
 import type { ReactElement } from "react";
-import type { Layout, LayoutLayer, ImageSlotLayer, TemplatePack } from "../../../../packages/ad-template-pack-contract/src/types.js";
-import { PLACEMENT_DIMENSIONS } from "../../../../packages/ad-template-pack-contract/src/types.js";
+import type { Layout, LayoutLayer, ImageSlotLayer, TemplatePack } from "../../../../packages/ad-template-pack-contract/src/types";
+import { PLACEMENT_DIMENSIONS } from "../../../../packages/ad-template-pack-contract/src/types";
 
 // ---------------------------------------------------------------------------
 // LayoutSchematic — live SVG view of a pack layout's layers.
