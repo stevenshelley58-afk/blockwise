@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  Activity,
   BarChart3,
   Bot,
   Database,
@@ -57,7 +56,6 @@ function RadarIcon({ size = 18, ...props }: { size?: number } & SVGProps<SVGSVGE
 const operatorNavItems: NavItem[] = [
   { href: "/operator", label: "Operator", icon: LayoutGrid },
   { href: "/operator/customers", label: "Customers", icon: ContactRound },
-  { href: "/operator/research", label: "Research Ops", icon: Activity },
   { href: "/operator/analytics", label: "Site Analytics", icon: BarChart3 },
   { href: "/operator/database", label: "Database", icon: Database },
   { href: "/results", label: "Results", icon: LineChart },

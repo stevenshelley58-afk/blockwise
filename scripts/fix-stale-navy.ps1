@@ -1,8 +1,7 @@
 $ErrorActionPreference = 'Stop'
 $files = @(
   'C:\Dev\Blockwise\src\components\adstudio\styles.ts',
-  'C:\Dev\Blockwise\src\components\adstudio\brand-studio.tsx',
-  'C:\Dev\Blockwise\src\components\operator\research-console-styles.ts'
+  'C:\Dev\Blockwise\src\components\adstudio\brand-studio.tsx'
 )
 foreach ($f in $files) {
   $c = Get-Content $f -Raw
