@@ -112,6 +112,7 @@ describe("buildAdDocument colour mode", () => {
       isSaving: false,
       lastSavedRevision: null,
       error: null,
+      metaCopy: { primaryText: "", headline: "", description: "", cta: "LEARN_MORE" },
       ...overrides,
     };
   }

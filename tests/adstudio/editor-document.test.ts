@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { buildAdDocument, type EditorState } from "../../src/components/adstudio/editor/use-editor-state.ts";
+import { adDocumentSchema } from "../../packages/ad-template-pack-contract/src/schema.ts";
 import type { TemplatePack } from "../../packages/ad-template-pack-contract/src/types.ts";
 
 // ---------------------------------------------------------------------------
@@ -56,6 +57,7 @@ function makeState(overrides: Partial<EditorState> = {}): EditorState {
     isSaving: false,
     lastSavedRevision: null,
     error: null,
+    metaCopy: { primaryText: "", headline: "", description: "", cta: "LEARN_MORE" },
     ...overrides,
   };
 }
@@ -173,5 +175,56 @@ describe("buildAdDocument crop overrides", () => {
     );
     assert.notEqual(cropped.documentHash, base.documentHash);
     assert.match(cropped.documentHash, /^[a-f0-9]{64}$/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// buildAdDocument meta copy — the Meta primary text, headline, description and
+// CTA are SHARED across placements and must land in the AdDocument v1 fields
+// (metaPrimaryText / metaHeadline / metaDescription / metaCta), which the save
+// route validates against adDocumentSchema before persisting the revision.
+// ---------------------------------------------------------------------------
+
+const META_COPY = {
+  primaryText: "Fresh bread, delivered to your door every morning.",
+  headline: "Artisan Bakery — Subiaco",
+  description: "Order today and get 20% off your first week.",
+  cta: "SIGN_UP",
+};
+
+describe("buildAdDocument meta copy", () => {
+  it("carries the four Meta copy fields into the AdDocument", async () => {
+    const doc = await buildAdDocument(makeState({ metaCopy: META_COPY }));
+    assert.equal(doc.metaPrimaryText, META_COPY.primaryText);
+    assert.equal(doc.metaHeadline, META_COPY.headline);
+    assert.equal(doc.metaDescription, META_COPY.description);
+    assert.equal(doc.metaCta, META_COPY.cta);
+  });
+
+  it("defaults the CTA to LEARN_MORE and leaves copy empty", async () => {
+    const doc = await buildAdDocument(makeState());
+    assert.equal(doc.metaPrimaryText, "");
+    assert.equal(doc.metaHeadline, "");
+    assert.equal(doc.metaDescription, "");
+    assert.equal(doc.metaCta, "LEARN_MORE");
+  });
+
+  it("accepts a custom CTA string (not just the standard options)", async () => {
+    const doc = await buildAdDocument(
+      makeState({ metaCopy: { ...META_COPY, cta: "Book a tasting" } }),
+    );
+    assert.equal(doc.metaCta, "Book a tasting");
+  });
+
+  it("produces a document the save route's schema accepts", async () => {
+    const doc = await buildAdDocument(makeState({ metaCopy: META_COPY }));
+    const parsed = adDocumentSchema.safeParse(doc);
+    assert.equal(parsed.success, true, parsed.success ? "" : parsed.error.issues[0]?.message);
+  });
+
+  it("changes the document hash when meta copy changes", async () => {
+    const base = await buildAdDocument(makeState());
+    const withCopy = await buildAdDocument(makeState({ metaCopy: META_COPY }));
+    assert.notEqual(withCopy.documentHash, base.documentHash);
   });
 });

@@ -27,6 +27,14 @@ export interface EditorImageValue {
   crops: Partial<Record<Placement, Rect>>;
 }
 
+/** Meta feed copy — one shared set of values for every placement. */
+export interface MetaCopy {
+  primaryText: string;
+  headline: string;
+  description: string;
+  cta: string;
+}
+
 export interface EditorState {
   pack: TemplatePack;
   activePlacement: Placement;
@@ -39,6 +47,8 @@ export interface EditorState {
   isSaving: boolean;
   lastSavedRevision: number | null;
   error: string | null;
+  /** Meta primary text / headline / description / CTA (shared across placements). */
+  metaCopy: MetaCopy;
 }
 
 const initialState = (pack: TemplatePack): EditorState => ({
@@ -53,6 +63,7 @@ const initialState = (pack: TemplatePack): EditorState => ({
   isSaving: false,
   lastSavedRevision: null,
   error: null,
+  metaCopy: { primaryText: "", headline: "", description: "", cta: "LEARN_MORE" },
 });
 
 export function useEditorState(pack: TemplatePack) {
@@ -105,6 +116,18 @@ export function useEditorState(pack: TemplatePack) {
         imageValues: prev.imageValues.map(iv =>
           iv.inputKey === key ? { ...iv, crops: { ...iv.crops, [placement]: crop } } : iv
         ),
+        isDirty: true,
+      };
+    });
+  }, [pushUndo]);
+
+  /** Update one Meta copy field (primary text, headline, description, CTA). */
+  const updateMetaCopy = useCallback((field: keyof MetaCopy, value: string) => {
+    setState(prev => {
+      pushUndo(prev);
+      return {
+        ...prev,
+        metaCopy: { ...prev.metaCopy, [field]: value },
         isDirty: true,
       };
     });
@@ -176,6 +199,7 @@ export function useEditorState(pack: TemplatePack) {
     markSaved,
     setSaving,
     setError,
+    updateMetaCopy,
   };
 }
 
@@ -292,10 +316,10 @@ export async function buildAdDocument(state: EditorState): Promise<AdDocumentPar
     ),
     colourMode: state.colourMode,
     resolvedColourMap: { ...state.resolvedColourMap },
-    metaPrimaryText: "",
-    metaHeadline: "",
-    metaDescription: "",
-    metaCta: "LEARN_MORE",
+    metaPrimaryText: state.metaCopy.primaryText,
+    metaHeadline: state.metaCopy.headline,
+    metaDescription: state.metaCopy.description,
+    metaCta: state.metaCopy.cta,
     revision: Math.max(1, state.lastSavedRevision ?? 0),
     documentHash: "0".repeat(64),
     lastRenderedHash: null,

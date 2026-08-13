@@ -8,6 +8,7 @@ import { ColourToggle } from "./colour-toggle.js";
 import { CropDialog } from "./crop-dialog.js";
 import { InputsPanel } from "./inputs-panel.js";
 import { LayoutSchematic } from "./layout-schematic.js";
+import { MetaCopyPanel } from "./meta-copy-panel.js";
 
 // ---------------------------------------------------------------------------
 // Editor Shell — Phase 6 foundation
@@ -53,6 +54,7 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
     markSaved,
     setSaving,
     setError,
+    updateMetaCopy,
   } = useEditorState(pack);
 
   /** Which slot's crop dialog is open — always the ACTIVE placement's crop. */
@@ -252,6 +254,9 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
           onImageChange={updateImageValue}
           onCropClick={openCropForInput}
         />
+
+        {/* Meta copy panel — primary text, headline, description, CTA (shared across placements) */}
+        <MetaCopyPanel values={state.metaCopy} onChange={updateMetaCopy} />
       </div>
 
       {/* Crop dialog — per-placement crop for the selected image slot */}
