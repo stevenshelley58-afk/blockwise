@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { TemplatePack, Placement, LayoutLayer, ImageSlotLayer, Rect } from "../../../../packages/ad-template-pack-contract/src/types.js";
 import { PLACEMENT_DIMENSIONS } from "../../../../packages/ad-template-pack-contract/src/types.js";
 import { buildAdDocument, brandPackColoursToRoleMap, resolveColourMap, useEditorState, type BrandPackColours, type EditorState } from "./use-editor-state.js";
@@ -38,6 +39,7 @@ export interface EditorShellProps {
 }
 
 export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColours = null }: EditorShellProps) {
+  const router = useRouter();
   const {
     state,
     activeLayout,
@@ -79,7 +81,7 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
     [activeLayout, openCrop],
   );
 
-  const handleSave = useCallback(async () => {
+  const handleSave = useCallback(async (): Promise<boolean> => {
     setSaving(true);
     setError(null);
     try {
@@ -95,12 +97,27 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
       const body = (await res.json().catch(() => ({}))) as { ad?: { revisionNumber?: number }; error?: string };
       if (!res.ok) throw new Error(body.error ?? `Save failed (${res.status})`);
       markSaved(body.ad?.revisionNumber ?? state.lastSavedRevision ?? 0);
+      return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Save failed");
+      return false;
     } finally {
       setSaving(false);
     }
   }, [adId, workspaceId, state, markSaved, setSaving, setError]);
+
+  /**
+   * Publish always freezes the LAST SAVED revision (server-side). If the
+   * editor is dirty there is no saved revision for that content yet, so Save
+   * first; if Save fails, refuse to navigate (the error banner explains why).
+   */
+  const handlePublish = useCallback(async () => {
+    if (state.isDirty || state.lastSavedRevision === null) {
+      const saved = await handleSave();
+      if (!saved) return; // error banner already set — refuse
+    }
+    router.push(`/ad-studio/packs/${encodeURIComponent(pack.packId)}/publish`);
+  }, [state.isDirty, state.lastSavedRevision, handleSave, router, pack.packId]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if ((e.ctrlKey || e.metaKey) && e.key === "z") {
@@ -193,6 +210,14 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
             className="rounded-(--r-control) bg-(--ui-primary) px-5 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
           >
             {state.isSaving ? "Saving..." : "Save"}
+          </button>
+          <button
+            onClick={handlePublish}
+            disabled={!canSave || state.isSaving}
+            className="rounded-(--r-control) bg-green-600 px-5 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
+            title={state.isDirty ? "Save first — publishing freezes the last saved revision" : "Freeze last saved revision and create PAUSED on Meta"}
+          >
+            Publish
           </button>
         </div>
       </header>

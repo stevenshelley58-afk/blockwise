@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { validatePublishState, PublishError } from "../src/lib/adstudio/publish-adapter.ts";
+import { validatePublishState, PublishError, buildPausedMetaPublishPlan, buildStubForm } from "../src/lib/adstudio/publish-adapter.ts";
 import type { TemplatePack } from "../packages/ad-template-pack-contract/src/types.ts";
 
 const mockPack: TemplatePack = {
@@ -102,5 +102,120 @@ describe("Publish adapter", () => {
     const err = new PublishError("not_saved", "Save first");
     assert.equal(err.code, "not_saved");
     assert.equal(err.message, "Save first");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// BW-M — paused publish plan builder
+// ---------------------------------------------------------------------------
+
+const mockSetup = {
+  metaAdAccountId: "act_123",
+  pageId: "page_456",
+  instagramActorId: null,
+  pixelId: null,
+  leadDestination: { type: "manual" as const, label: "Manual review" },
+  privacyPolicyUrl: "https://example.com/privacy",
+  currency: "AUD",
+  timezone: "Australia/Perth",
+};
+
+describe("buildPausedMetaPublishPlan", () => {
+  const plan = buildPausedMetaPublishPlan({
+    adId: "ad-001",
+    workspaceId: "ws-001",
+    connectionId: "conn-001",
+    setup: mockSetup,
+    state: validState,
+  });
+
+  it("creates a campaign PAUSED with housing category", () => {
+    assert.equal(plan.campaign.status, "PAUSED");
+    assert.equal(plan.campaign.objective, "OUTCOME_LEADS");
+    assert.deepEqual(plan.campaign.specialAdCategories, ["HOUSING"]);
+  });
+
+  it("creates one ad set PAUSED", () => {
+    assert.equal(plan.adSets.length, 1);
+    assert.equal(plan.adSets[0]!.status, "PAUSED");
+    assert.equal(plan.adSets[0]!.campaignLocalId, "campaign_main");
+    assert.equal(plan.adSets[0]!.dailyBudgetMinorUnits, 2000);
+  });
+
+  it("creates a lead form from the Instant Form", () => {
+    assert.equal(plan.leadForms.length, 1);
+    assert.equal(plan.leadForms[0]!.privacyPolicyUrl, mockSetup.privacyPolicyUrl);
+    assert.ok(plan.leadForms[0]!.headline.length > 0);
+  });
+
+  it("creates feed + story creatives PAUSED referencing revision PNGs", () => {
+    assert.equal(plan.creatives.length, 2);
+    assert.deepEqual(plan.creatives.map(c => c.format).sort(), ["4:5", "9:16"]);
+    for (const creative of plan.creatives) {
+      assert.equal(creative.asset?.source, "storage");
+      assert.ok(creative.asset?.storagePath);
+    }
+  });
+
+  it("creates two ads PAUSED", () => {
+    assert.equal(plan.ads.length, 2);
+    for (const ad of plan.ads) {
+      assert.equal(ad.status, "PAUSED");
+    }
+  });
+
+  it("never reports live — plan status is draft and ads are PAUSED", () => {
+    assert.equal(plan.status, "draft");
+    assert.ok(!JSON.stringify(plan).toLowerCase().includes("live"));
+  });
+
+  it("is deterministic for the same frozen revision", () => {
+    const again = buildPausedMetaPublishPlan({
+      adId: "ad-001",
+      workspaceId: "ws-001",
+      connectionId: "conn-001",
+      setup: mockSetup,
+      state: validState,
+    });
+    assert.equal(plan.planId, again.planId);
+    assert.equal(plan.idempotencyKey, again.idempotencyKey);
+  });
+
+  it("changes plan identity when the frozen revision changes", () => {
+    const changed = structuredClone(validState);
+    changed.revision.id = "rev-002";
+    changed.revision.revisionNumber = 2;
+    const again = buildPausedMetaPublishPlan({
+      adId: "ad-001",
+      workspaceId: "ws-001",
+      connectionId: "conn-001",
+      setup: mockSetup,
+      state: changed,
+    });
+    assert.notEqual(plan.planId, again.planId);
+  });
+
+  it("uses a stub form when the state has none", () => {
+    const noForm = structuredClone(validState);
+    (noForm as any).form = null;
+    const stubPlan = buildPausedMetaPublishPlan({
+      adId: "ad-001",
+      workspaceId: "ws-001",
+      connectionId: "conn-001",
+      setup: mockSetup,
+      state: noForm,
+    });
+    assert.equal(stubPlan.leadForms.length, 1);
+    assert.ok(stubPlan.leadForms[0]!.headline.length > 0);
+  });
+});
+
+describe("buildStubForm", () => {
+  it("produces a valid lead form shape from the frozen state", () => {
+    const form = buildStubForm(validState, mockSetup);
+    assert.ok(form.name.length > 0);
+    assert.ok(form.contactFields.some(f => f.type === "email"));
+    assert.equal(form.privacy.url, mockSetup.privacyPolicyUrl);
+    assert.equal(form.thankYou.actionType, "visit_website");
   });
 });
