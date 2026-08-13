@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { COLOUR_ROLES, LAYER_TYPES, PLACEMENTS } from "./types.js";
+import { COLOUR_ROLES, LAYER_TYPES, PLACEMENTS } from "./types.ts";
 
 // ---------------------------------------------------------------------------
 // Geometry

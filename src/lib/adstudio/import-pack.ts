@@ -31,6 +31,21 @@ export interface ImportError {
   detail?: unknown;
 }
 
+/**
+ * TEST/LOCAL-ONLY injection point.
+ *
+ * When `fetchPack` is provided, the pack bytes come from this function instead
+ * of a live network fetch of `input.packUrl`, and the HTTPS + origin allowlist
+ * check is skipped — the caller vouches for the source. This is how tests and
+ * local fixture imports (no live Frank URL) exercise the full pipeline.
+ *
+ * Production callers (the internal route) MUST NOT pass this option; for them
+ * the allowlist and live fetch below remain enforced.
+ */
+export interface ImportOptions {
+  fetchPack?: (url: string) => Promise<unknown>;
+}
+
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
@@ -46,6 +61,7 @@ const ALLOWED_ORIGINS = ["frank.fail", "frank-template-factory.local"];
 export async function importTemplatePack(
   supabase: SupabaseClient,
   input: ImportRequest,
+  options: ImportOptions = {},
 ): Promise<ImportReceipt> {
   // 0. Idempotency check
   const existing = await checkIdempotency(supabase, input.packSha256);
@@ -57,11 +73,15 @@ export async function importTemplatePack(
   // 2. Nonce check
   await validateNonce(supabase, input.nonce);
 
-  // 3. Origin allowlist
-  validateOrigin(input.packUrl);
+  // 3. Origin allowlist — skipped only for the injected test/local fetchPack path
+  if (!options.fetchPack) {
+    validateOrigin(input.packUrl);
+  }
 
-  // 4. Fetch pack
-  const packJson = await fetchPack(input.packUrl);
+  // 4. Fetch pack (injected fixture source, or live Frank URL)
+  const packJson = options.fetchPack
+    ? await options.fetchPack(input.packUrl)
+    : await fetchPack(input.packUrl);
 
   // 5. Size check
   const packBuffer = Buffer.from(JSON.stringify(packJson), "utf-8");
