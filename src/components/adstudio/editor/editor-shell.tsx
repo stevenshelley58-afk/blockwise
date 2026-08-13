@@ -3,6 +3,7 @@
 import { useCallback } from "react";
 import type { TemplatePack, Placement, LayoutLayer } from "../../../../packages/ad-template-pack-contract/src/types.js";
 import { buildAdDocument, useEditorState } from "./use-editor-state.js";
+import { InputsPanel } from "./inputs-panel.js";
 
 // ---------------------------------------------------------------------------
 // Editor Shell — Phase 6 foundation
@@ -31,6 +32,8 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true }: EditorS
     canRedo,
     setActivePlacement,
     selectLayer,
+    updateTextValue,
+    updateImageValue,
     undo,
     redo,
     markSaved,
@@ -184,6 +187,16 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true }: EditorS
             </div>
           </div>
         </main>
+
+        {/* Content panel — shared text + image inputs (Feed and Story both use these) */}
+        <InputsPanel
+          textInputs={pack.textInputs}
+          imageInputs={pack.imageInputs}
+          textValues={state.textValues}
+          imageValues={Object.fromEntries(state.imageValues.map(iv => [iv.inputKey, iv.dataUrl]))}
+          onTextChange={updateTextValue}
+          onImageChange={updateImageValue}
+        />
       </div>
 
       {/* Error banner */}

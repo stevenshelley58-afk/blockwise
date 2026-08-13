@@ -10,8 +10,15 @@ import type { AdDocumentParsed } from "../../../../packages/ad-template-pack-con
 
 export interface EditorImageValue {
   inputKey: string;
-  /** Uploaded image buffer (for rendering). */
-  buffer: Buffer | null;
+  /**
+   * Session-local data URL of the picked image.
+   * Doubles as the browser preview AND the value Save sends: the save route
+   * fetches document.sharedImageValues URLs server-side, and data: URLs are
+   * fetchable there, so the renderer receives real image buffers. No upload
+   * library yet — the image never leaves the client except as base64 in the
+   * document (see inputs-panel "session only" label).
+   */
+  dataUrl: string | null;
   /** Crop override for the current placement. */
   crop?: Rect;
 }
@@ -33,7 +40,7 @@ export interface EditorState {
 const initialState = (pack: TemplatePack): EditorState => ({
   pack,
   activePlacement: "feed",
-  imageValues: pack.imageInputs.map(i => ({ inputKey: i.key, buffer: null })),
+  imageValues: pack.imageInputs.map(i => ({ inputKey: i.key, dataUrl: null })),
   textValues: Object.fromEntries(pack.textInputs.map(i => [i.key, ""])),
   colourMode: "template",
   resolvedColourMap: { ...pack.semanticColours },
@@ -73,13 +80,13 @@ export function useEditorState(pack: TemplatePack) {
     });
   }, [pushUndo]);
 
-  const updateImageValue = useCallback((key: string, buffer: Buffer | null) => {
+  const updateImageValue = useCallback((key: string, dataUrl: string | null) => {
     setState(prev => {
       pushUndo(prev);
       return {
         ...prev,
         imageValues: prev.imageValues.map(iv =>
-          iv.inputKey === key ? { ...iv, buffer } : iv
+          iv.inputKey === key ? { ...iv, dataUrl } : iv
         ),
         isDirty: true,
       };
@@ -201,7 +208,11 @@ export async function buildAdDocument(state: EditorState): Promise<AdDocumentPar
     templateVersion: pack.version,
     templateHash: pack.manifestSha256,
     rendererVersion: pack.rendererVersion,
-    sharedImageValues: {},
+    sharedImageValues: Object.fromEntries(
+      state.imageValues
+        .filter(iv => iv.dataUrl !== null)
+        .map(iv => [iv.inputKey, iv.dataUrl as string]),
+    ),
     sharedTextValues: { ...state.textValues },
     feedCropOverrides: {},
     storyCropOverrides: {},
