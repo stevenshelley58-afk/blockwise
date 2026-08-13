@@ -3,7 +3,8 @@
 import { useCallback } from "react";
 import type { TemplatePack, Placement, LayoutLayer } from "../../../../packages/ad-template-pack-contract/src/types.js";
 import { PLACEMENT_DIMENSIONS } from "../../../../packages/ad-template-pack-contract/src/types.js";
-import { buildAdDocument, useEditorState } from "./use-editor-state.js";
+import { buildAdDocument, brandPackColoursToRoleMap, resolveColourMap, useEditorState, type BrandPackColours } from "./use-editor-state.js";
+import { ColourToggle } from "./colour-toggle.js";
 import { InputsPanel } from "./inputs-panel.js";
 import { LayoutSchematic } from "./layout-schematic.js";
 
@@ -12,7 +13,8 @@ import { LayoutSchematic } from "./layout-schematic.js";
 //
 // Feed and Story tabs, live SVG layout schematic (follows the active
 // placement, click-to-select layers), shared text/image content inputs,
-// layer selection, undo/redo, dirty/saved/error state.
+// layer selection, template-vs-Brand-Pack colour toggle, undo/redo,
+// dirty/saved/error state.
 // Save persists the AdDocument through POST /api/adstudio/ads/[id]/save —
 // the server renders Feed AND Story PNGs.
 // ---------------------------------------------------------------------------
@@ -25,9 +27,15 @@ export interface EditorShellProps {
   workspaceId: string;
   /** Whether Save is enabled. */
   canSave?: boolean;
+  /**
+   * The workspace Brand Pack's colours block (loaded server-side by the pack
+   * page — latest non-demo kit). Null when the workspace has no Brand Pack;
+   * the colour toggle is then disabled and the template palette stays.
+   */
+  brandColours?: BrandPackColours | null;
 }
 
-export function EditorShell({ pack, adId, workspaceId, canSave = true }: EditorShellProps) {
+export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColours = null }: EditorShellProps) {
   const {
     state,
     activeLayout,
@@ -37,6 +45,7 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true }: EditorS
     selectLayer,
     updateTextValue,
     updateImageValue,
+    setColourMode,
     undo,
     redo,
     markSaved,
@@ -78,6 +87,23 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true }: EditorS
     }
   }, [undo, redo, selectLayer]);
 
+  // Template colours always resolve; checking the toggle overlays the
+  // workspace Brand Pack palette. Roles the brand kit lacks (inverseText)
+  // keep the template value — never invent a palette.
+  const handleColourToggle = useCallback(
+    (useBrandPack: boolean) => {
+      if (useBrandPack) {
+        setColourMode(
+          "brand_pack",
+          resolveColourMap(pack.semanticColours, "brand_pack", brandPackColoursToRoleMap(brandColours)),
+        );
+      } else {
+        setColourMode("template");
+      }
+    },
+    [pack.semanticColours, brandColours, setColourMode],
+  );
+
   return (
     <div
       className="flex h-full flex-col bg-(--canvas)"
@@ -103,6 +129,13 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true }: EditorS
               {p === "feed" ? "Feed (1080×1350)" : "Story (1080×1920)"}
             </button>
           ))}
+          <span className="mx-2 h-5 w-px bg-(--line)" aria-hidden="true" />
+          <ColourToggle
+            useBrandPack={state.colourMode === "brand_pack"}
+            brandPackAvailable={!!brandColours}
+            resolvedColourMap={state.resolvedColourMap}
+            onToggle={handleColourToggle}
+          />
         </div>
 
         <div className="flex items-center gap-2">

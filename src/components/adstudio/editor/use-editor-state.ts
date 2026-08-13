@@ -19,8 +19,12 @@ export interface EditorImageValue {
    * document (see inputs-panel "session only" label).
    */
   dataUrl: string | null;
-  /** Crop override for the current placement. */
-  crop?: Rect;
+  /**
+   * Per-placement crop overrides, normalized to [0,1] over the source image
+   * (matching the renderer's cropOverrides contract, keyed by input key).
+   * Feed and Story keep SEPARATE rects — one image, two crops.
+   */
+  crops: Partial<Record<Placement, Rect>>;
 }
 
 export interface EditorState {
@@ -173,6 +177,63 @@ export function useEditorState(pack: TemplatePack) {
     setSaving,
     setError,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Colour mode resolution — template palette vs workspace Brand Pack.
+// The editor page loads the workspace's latest Brand Pack server-side and
+// passes its `colours` block in. Roles the brand kit has no field for
+// (inverseText) stay on the template value — we never invent a palette.
+// ---------------------------------------------------------------------------
+
+/** Brand Pack colour fields that map onto template colour roles. */
+export interface BrandPackColours {
+  primary: string;
+  secondary: string;
+  accent: string;
+  background: string;
+  text: string;
+}
+
+const BRAND_PACK_ROLE_MAP: Record<keyof BrandPackColours, ColourRole> = {
+  background: "background",
+  primary: "primary",
+  secondary: "secondary",
+  accent: "accent",
+  text: "mainText",
+};
+
+const HEX_COLOUR = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
+
+/** Map a Brand Pack `colours` block onto template colour roles (partial). */
+export function brandPackColoursToRoleMap(
+  colours: BrandPackColours | null | undefined,
+): Partial<Record<ColourRole, string>> {
+  const map: Partial<Record<ColourRole, string>> = {};
+  if (!colours) return map;
+  for (const [field, role] of Object.entries(BRAND_PACK_ROLE_MAP) as [keyof BrandPackColours, ColourRole][]) {
+    const hex = colours[field];
+    if (typeof hex === "string" && HEX_COLOUR.test(hex.trim())) {
+      map[role] = hex.trim();
+    }
+  }
+  return map;
+}
+
+/**
+ * Resolve the render palette for a colour mode: brand roles override the
+ * template palette, roles missing from the brand kit (e.g. inverseText)
+ * keep the template value. Never invents a palette.
+ */
+export function resolveColourMap(
+  templateColours: Record<ColourRole, string>,
+  mode: "template" | "brand_pack",
+  brandColourMap?: Partial<Record<ColourRole, string>> | null,
+): Record<ColourRole, string> {
+  if (mode === "brand_pack" && brandColourMap) {
+    return { ...templateColours, ...brandColourMap };
+  }
+  return { ...templateColours };
 }
 
 // ---------------------------------------------------------------------------

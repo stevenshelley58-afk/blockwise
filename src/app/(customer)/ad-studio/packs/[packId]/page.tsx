@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { EditorShell } from "@/components/adstudio/editor/editor-shell";
 import { getOrCreateCustomerAd } from "@/lib/adstudio/create-customer-ad";
 import { getImportedPack } from "@/lib/adstudio/pack-gallery";
+import { isExampleBrandKitSourceUrl, rowToBrandKit } from "@/lib/adstudio/persistence";
+import type { AdStudioBrandKit } from "@/lib/adstudio/types";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
 
 export const dynamic = "force-dynamic";
@@ -26,6 +28,11 @@ export default async function PackEditorPage({
   if (!pack) notFound();
 
   const { adId } = await getOrCreateCustomerAd(supabase, access.workspaceId, pack);
+
+  // Brand Pack colours for the template-vs-brand toggle: the workspace's
+  // latest non-demo kit, loaded server-side (same pattern as /ad-studio/brand).
+  // Null → toggle disabled, editor stays on the template palette.
+  const brandColours = await loadLatestBrandColours(supabase, access.workspaceId);
 
   return (
     <main className="fixed inset-0 flex flex-col bg-(--canvas) text-foreground">
@@ -58,8 +65,32 @@ export default async function PackEditorPage({
           adId={adId}
           workspaceId={access.workspaceId}
           canSave={true}
+          brandColours={brandColours}
         />
       </div>
     </main>
   );
+}
+
+/** Latest non-demo Brand Pack colours for a workspace, or null when none. */
+async function loadLatestBrandColours(
+  supabase: Awaited<ReturnType<typeof import("@/lib/supabase/server").createSupabaseServerClient>>,
+  workspaceId: string,
+): Promise<AdStudioBrandKit["colours"] | null> {
+  try {
+    const { data } = await supabase
+      .from("adstudio_brand_kits")
+      .select("*")
+      .eq("workspace_id", workspaceId)
+      .order("updated_at", { ascending: false })
+      .limit(10);
+
+    const nonDemoRows = (data ?? []).filter((row) => !isExampleBrandKitSourceUrl(String(row.source_url ?? "")));
+    const row = nonDemoRows.find((candidate) => String(candidate.source_url ?? "").trim()) ?? nonDemoRows[0];
+    if (!row) return null;
+
+    return rowToBrandKit(row).colours;
+  } catch {
+    return null;
+  }
 }
