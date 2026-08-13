@@ -175,6 +175,56 @@ export function generateInstantForm(input: FormGenerationInput): GenerateFormOut
 }
 
 // ---------------------------------------------------------------------------
+// Input derivation — builds FormGenerationInput from server-side state.
+// Pure and isomorphic so the Publish flow can derive + preview drafts from
+// the ad row, Brand Pack, and Meta connection without a model call.
+// ---------------------------------------------------------------------------
+
+export interface FormGenerationContext {
+  ad: {
+    metaPrimaryText: string;
+    metaHeadline: string;
+    metaDescription: string;
+    metaCta: string;
+  };
+  business: {
+    name: string;
+    agentName?: string;
+    phone?: string;
+    email?: string;
+  };
+  privacyPolicyUrl: string;
+  destinationUrl?: string;
+  /** Fallback campaign goal when the ad has no copy yet (e.g. pack classification). */
+  fallbackGoal?: string;
+}
+
+export function deriveFormGenerationInput(context: FormGenerationContext): FormGenerationInput {
+  const { ad, business } = context;
+
+  const primaryText = ad.metaPrimaryText.trim();
+  const headline = ad.metaHeadline.trim();
+  const description = ad.metaDescription.trim();
+
+  return {
+    campaignGoal: description || primaryText || context.fallbackGoal?.trim() || "Get in touch",
+    offer: headline || primaryText || business.name,
+    primaryText,
+    headline,
+    description,
+    cta: ad.metaCta.trim() || "LEARN_MORE",
+    business: {
+      name: business.name,
+      agentName: business.agentName?.trim() || undefined,
+      phone: business.phone?.trim() || undefined,
+      email: business.email?.trim() || undefined,
+    },
+    privacyPolicyUrl: context.privacyPolicyUrl,
+    destinationUrl: context.destinationUrl?.trim() || context.privacyPolicyUrl || "",
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
