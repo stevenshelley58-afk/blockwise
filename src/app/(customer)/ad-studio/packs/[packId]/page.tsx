@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { EditorShell } from "@/components/adstudio/editor/editor-shell";
+import { getOrCreateCustomerAd } from "@/lib/adstudio/create-customer-ad";
 import { getImportedPack } from "@/lib/adstudio/pack-gallery";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
 
@@ -9,7 +10,9 @@ export const dynamic = "force-dynamic";
 // ---------------------------------------------------------------------------
 // Ad Studio — layered editor for one imported template pack.
 // Feed/Story tabs, layer list and canvas come from the existing EditorShell.
-// Save/Publish are not wired yet (Save button is disabled via canSave=false).
+// Opening a pack server-side creates (idempotently) the customer ad row the
+// Save button persists against; Save renders Feed + Story PNGs via saveAd.
+// Publish is not wired yet.
 // ---------------------------------------------------------------------------
 
 export default async function PackEditorPage({
@@ -18,9 +21,11 @@ export default async function PackEditorPage({
   params: Promise<{ packId: string }>;
 }) {
   const { packId } = await params;
-  const { supabase } = await requirePageSurfaceAccess("adstudio");
+  const { supabase, access } = await requirePageSurfaceAccess("adstudio");
   const pack = await getImportedPack(supabase, packId);
   if (!pack) notFound();
+
+  const { adId } = await getOrCreateCustomerAd(supabase, access.workspaceId, pack);
 
   return (
     <main className="fixed inset-0 flex flex-col bg-(--canvas) text-foreground">
@@ -48,7 +53,12 @@ export default async function PackEditorPage({
         </span>
       </header>
       <div className="min-h-0 flex-1">
-        <EditorShell pack={pack} canSave={false} />
+        <EditorShell
+          pack={pack}
+          adId={adId}
+          workspaceId={access.workspaceId}
+          canSave={true}
+        />
       </div>
     </main>
   );

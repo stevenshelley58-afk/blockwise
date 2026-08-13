@@ -2,25 +2,28 @@
 
 import { useCallback } from "react";
 import type { TemplatePack, Placement, LayoutLayer } from "../../../../packages/ad-template-pack-contract/src/types.js";
-import { useEditorState } from "./use-editor-state.js";
+import { buildAdDocument, useEditorState } from "./use-editor-state.js";
 
 // ---------------------------------------------------------------------------
 // Editor Shell — Phase 6 foundation
 //
 // Feed and Story tabs, Konva layered canvas placeholder, layer selection,
 // undo/redo, dirty/saved/error state. Full Konva implementation + Impeccable
-// review pending browser inspection.
+// review pending browser inspection. Save persists the AdDocument through
+// POST /api/adstudio/ads/[id]/save — the server renders Feed AND Story PNGs.
 // ---------------------------------------------------------------------------
 
 export interface EditorShellProps {
   pack: TemplatePack;
-  /** Called when user clicks Save. */
-  onSave?: () => void;
+  /** Customer ad row the document saves against (created server-side). */
+  adId: string;
+  /** Workspace scope for the Save API call. */
+  workspaceId: string;
   /** Whether Save is enabled. */
   canSave?: boolean;
 }
 
-export function EditorShell({ pack, onSave, canSave = true }: EditorShellProps) {
+export function EditorShell({ pack, adId, workspaceId, canSave = true }: EditorShellProps) {
   const {
     state,
     activeLayout,
@@ -30,7 +33,33 @@ export function EditorShell({ pack, onSave, canSave = true }: EditorShellProps) 
     selectLayer,
     undo,
     redo,
+    markSaved,
+    setSaving,
+    setError,
   } = useEditorState(pack);
+
+  const handleSave = useCallback(async () => {
+    setSaving(true);
+    setError(null);
+    try {
+      const document = await buildAdDocument(state);
+      const res = await fetch(
+        `/api/adstudio/ads/${encodeURIComponent(adId)}/save?workspaceId=${encodeURIComponent(workspaceId)}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ document, expectedRevision: state.lastSavedRevision ?? 0 }),
+        },
+      );
+      const body = (await res.json().catch(() => ({}))) as { ad?: { revisionNumber?: number }; error?: string };
+      if (!res.ok) throw new Error(body.error ?? `Save failed (${res.status})`);
+      markSaved(body.ad?.revisionNumber ?? state.lastSavedRevision ?? 0);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Save failed");
+    } finally {
+      setSaving(false);
+    }
+  }, [adId, workspaceId, state, markSaved, setSaving, setError]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if ((e.ctrlKey || e.metaKey) && e.key === "z") {
@@ -94,7 +123,7 @@ export function EditorShell({ pack, onSave, canSave = true }: EditorShellProps) 
             ↪
           </button>
           <button
-            onClick={onSave}
+            onClick={handleSave}
             disabled={!canSave || state.isSaving}
             className="rounded-(--r-control) bg-(--ui-primary) px-5 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
           >

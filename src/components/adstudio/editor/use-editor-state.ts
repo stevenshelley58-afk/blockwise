@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef } from "react";
 import type { TemplatePack, Layout, LayoutLayer, Placement, Rect, ColourRole } from "../../../../packages/ad-template-pack-contract/src/types.js";
+import type { AdDocumentParsed } from "../../../../packages/ad-template-pack-contract/src/schema.js";
 
 // ---------------------------------------------------------------------------
 // Editor state — Phase 6 foundation
@@ -165,4 +166,54 @@ export function useEditorState(pack: TemplatePack) {
     setSaving,
     setError,
   };
+}
+
+// ---------------------------------------------------------------------------
+// AdDocument builder — client-safe (Web Crypto, no node:crypto).
+// Matches the server's canonical-JSON hashing so document_hash is meaningful.
+// ---------------------------------------------------------------------------
+
+function canonicalJson(value: unknown): string {
+  return JSON.stringify(value, (_key: string, v: unknown) => {
+    if (v !== null && typeof v === "object" && !Array.isArray(v)) {
+      const sorted: Record<string, unknown> = {};
+      for (const k of Object.keys(v as Record<string, unknown>).sort()) {
+        sorted[k] = (v as Record<string, unknown>)[k];
+      }
+      return sorted;
+    }
+    return v;
+  });
+}
+
+async function sha256HexClient(value: unknown): Promise<string> {
+  const bytes = new TextEncoder().encode(canonicalJson(value));
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+/** Build the AdDocument v1 described by the editor's current state. */
+export async function buildAdDocument(state: EditorState): Promise<AdDocumentParsed> {
+  const pack = state.pack;
+  const doc = {
+    schema: "blockwise.ad-document/v1" as const,
+    templateId: pack.templateId,
+    templateVersion: pack.version,
+    templateHash: pack.manifestSha256,
+    rendererVersion: pack.rendererVersion,
+    sharedImageValues: {},
+    sharedTextValues: { ...state.textValues },
+    feedCropOverrides: {},
+    storyCropOverrides: {},
+    colourMode: state.colourMode,
+    resolvedColourMap: { ...state.resolvedColourMap },
+    metaPrimaryText: "",
+    metaHeadline: "",
+    metaDescription: "",
+    metaCta: "LEARN_MORE",
+    revision: Math.max(1, state.lastSavedRevision ?? 0),
+    documentHash: "0".repeat(64),
+    lastRenderedHash: null,
+  };
+  return { ...doc, documentHash: await sha256HexClient(doc) };
 }
