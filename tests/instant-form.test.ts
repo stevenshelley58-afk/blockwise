@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { generateInstantForm, validateInstantForm } from "../src/lib/adstudio/instant-form-generator.js";
-import type { FormGenerationInput } from "../src/lib/adstudio/instant-form-types.js";
+import { generateInstantForm, validateInstantForm } from "../src/lib/adstudio/instant-form-generator.ts";
+import type { FormGenerationInput } from "../src/lib/adstudio/instant-form-types.ts";
 
 const validInput: FormGenerationInput = {
   campaignGoal: "Get a free property appraisal",

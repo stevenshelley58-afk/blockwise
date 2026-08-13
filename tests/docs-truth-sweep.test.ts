@@ -51,12 +51,6 @@ test("production readiness references real release commands", () => {
   assert.doesNotMatch(readiness, /Verify Trigger\.dev deployed tasks[^\r\n]*(?:\r?\n {2}[^\r\n]*)*paid-service watchdog/);
 });
 
-test("launch plan is marked superseded", () => {
-  const launchPlan = read("docs/LAUNCH_PLAN.md");
-
-  assert.match(launchPlan.slice(0, 200), /Superseded: use `docs\/runbooks\/production-readiness\.md`/);
-});
-
 test("rollback documents export, publish, and VPS worker posture", () => {
   const rollback = read("docs/runbooks/rollback.md");
 

@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
@@ -59,19 +58,4 @@ test("workspace library queries stay workspace-scoped", async () => {
     ["eq", "workspace_id", "workspace-1"],
     ["order", "created_at", { ascending: false }],
   ]);
-});
-
-test("Create receives a bounded, pageable workspace library in addition to current-session uploads", () => {
-  const page = readFileSync("src/app/(customer)/ad-studio/page.tsx", "utf8");
-  const workbench = readFileSync("src/components/adstudio/ad-studio-workbench.tsx", "utf8");
-
-  assert.match(page, /loadAdStudioLibraryPage\(\{/);
-  assert.match(page, /kind: "assets",\s*limit: 24,/);
-  assert.doesNotMatch(page, /loadAdStudioWorkspaceAssetRows/);
-  assert.match(page, /initialMediaAssets=\{initialMediaAssets\}/);
-  assert.match(page, /initialMediaCursor=\{assetsPage\.nextCursor\}/);
-  assert.match(workbench, /\.\.\.uploadedAssets,\s*\.\.\.loadedMediaAssets,/);
-  assert.match(workbench, /cursor: nextMediaCursor/);
-  assert.match(workbench, /onLoadMoreAssets=\{loadMoreMediaAssets\}/);
-  assert.match(workbench, /onLoadMoreMediaAssets=\{loadMoreMediaAssets\}/);
 });

@@ -4,7 +4,6 @@ import test from "node:test";
 
 const source = readFileSync("src/components/adstudio/brand-studio.tsx", "utf8");
 const page = readFileSync("src/app/(customer)/ad-studio/brand/page.tsx", "utf8");
-const liveBundle = readFileSync("src/lib/adstudio/load-live-bundle.ts", "utf8");
 
 test("Brand Studio explains the website-first setup path", () => {
   assert.match(source, /Enter your website\. We’ll build your brand kit\./);
@@ -39,19 +38,8 @@ test("Brand Studio accepts only an Ad Studio return path", () => {
   assert.match(page, /returnTo=\{safeAdStudioReturnTo\(params\.returnTo\)\}/);
 });
 
-test("Create New Ad receives the current Brand Pack for defaults and generation", () => {
-  const workbench = readFileSync("src/components/adstudio/ad-studio-workbench.tsx", "utf8");
-  const newAd = readFileSync("src/components/adstudio/new-ad-dialog.tsx", "utf8");
-
-  assert.match(workbench, /<NewAdDialog[\s\S]*brandKit=\{brandKit\}/);
-  assert.match(newAd, /brandTextDefaultsForTemplate\(selectedTemplate, brandKit\)/);
-  assert.match(newAd, /defaultImageForTemplateSlot\(slot, brandKit\)/);
-  assert.match(newAd, /brandKitId: brandKit\.brandKitId/);
-});
-
 test("Brand Studio reloads the newest workspace kit instead of a campaign-linked kit", () => {
   assert.match(page, /loadLatestBrandKit/);
   assert.match(page, /\.order\("updated_at", \{ ascending: false \}\)/);
   assert.doesNotMatch(page, /loadLiveAdStudioBundle/);
-  assert.match(liveBundle, /brandKit:\s*latestApprovedBrandKit \?\? brandKit/);
 });

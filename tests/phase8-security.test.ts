@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { sha256Hex, canonicalJson, computeManifestHash } from "../packages/ad-template-pack-contract/src/index.js";
-import { templatePackSchema } from "../packages/ad-template-pack-contract/src/schema.js";
+import { sha256Hex, canonicalJson, computeManifestHash } from "../packages/ad-template-pack-contract/src/index.ts";
+import { templatePackSchema } from "../packages/ad-template-pack-contract/src/schema.ts";
 
 // ---------------------------------------------------------------------------
 // Phase 8 — Security and integration tests (Blockwise-side, no Frank needed)

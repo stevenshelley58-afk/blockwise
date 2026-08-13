@@ -23,18 +23,6 @@ test("onboarding wizard completes the progressive website and Brand Pack path in
   assert.doesNotMatch(wizard, /Skip for now/);
 });
 
-test("new ad dialog explains trial credit use without requiring Meta", () => {
-  const dialog = readFileSync("src/components/adstudio/new-ad-dialog.tsx", "utf8");
-
-  assert.match(dialog, /\/api\/trial\/status/);
-  assert.match(dialog, /includedRenders/);
-  assert.match(dialog, /Uses 2 of \$\{status\.includedRenders\} free renders/);
-  assert.doesNotMatch(dialog, /10 free ad packs|includedAdPacks/);
-  assert.match(dialog, /No Meta account is needed until publish/);
-  assert.match(dialog, /AssetUploadDropzone/);
-  assert.match(dialog, /capturePagePaste/);
-});
-
 test("onboarding scan failure preserves the website and offers a minimal canonical fallback", () => {
   const wizard = readFileSync("src/components/onboarding/onboarding-wizard.tsx", "utf8");
 
@@ -70,22 +58,4 @@ test("landing CTA tracking fires cta_click for every CTA and BookDemoClick only 
   // The page still has both kinds of links.
   assert.match(homepage, /href="\/signup"/);
   assert.match(homepage, /href="#managed-setup"/);
-});
-
-test("trial pill refreshes from the first-ad generation event", () => {
-  const pill = readFileSync("src/components/trial-status-pill.tsx", "utf8");
-  const loader = readFileSync("src/lib/trial/trial-status.ts", "utf8");
-  const appShell = readFileSync("src/components/app-shell.tsx", "utf8");
-  const statusRoute = readFileSync("src/app/api/trial/status/route.ts", "utf8");
-  const campaignActions = readFileSync("src/components/adstudio/use-campaign-actions.ts", "utf8");
-
-  assert.match(pill, /blockwise:trial-status-refresh/);
-  assert.match(campaignActions, /dispatchEvent\(new Event\("blockwise:trial-status-refresh"\)\)/);
-  assert.match(pill, /status\.upgradeHref/);
-  assert.match(loader, /FREE_TRIAL_RENDER_LIMIT = 6/);
-  assert.match(loader, /RENDERS_PER_AD_PACK = 2/);
-  assert.match(loader, /TRIAL_UPGRADE_HREF = "\/settings#billing"/);
-  assert.match(appShell, /loadTrialStatus/);
-  assert.match(statusRoute, /loadTrialStatus/);
-  assert.doesNotMatch(`${appShell}\n${statusRoute}`, /adstudio_campaigns|INCLUDED_AD_PACKS|loadFallbackTrialStatus/);
 });

@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { validatePublishState, PublishError } from "../src/lib/adstudio/publish-adapter.js";
-import type { TemplatePack } from "../packages/ad-template-pack-contract/src/types.js";
+import { validatePublishState, PublishError } from "../src/lib/adstudio/publish-adapter.ts";
+import type { TemplatePack } from "../packages/ad-template-pack-contract/src/types.ts";
 
 const mockPack: TemplatePack = {
   schema: "blockwise.template-pack/v1",
