@@ -28,7 +28,6 @@ const primaryHrefsByVariant: Partial<Record<SidebarVariant, string[]>> = {
 };
 
 const mobileLabels: Record<string, string> = {
-  "/operator/email": "Email",
   "/operator/customers": "Customers",
   "/operator/research": "Research",
   "/model-control": "Model",

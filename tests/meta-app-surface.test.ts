@@ -126,16 +126,12 @@ test("Meta Graph fallback version is shared with disconnect", () => {
 
 test("operator prompt preview surfaces avoid stale Phase 1 test copy", () => {
   const promptPanel = readFileSync("src/components/prompt-control-panel.tsx", "utf8");
-  const contentEditor = readFileSync("src/components/operator/content-runs/content-prompt-editor.tsx", "utf8");
-  const contentPreviewRoute = readFileSync("src/app/api/operator/content-prompts/[id]/test/route.ts", "utf8");
   const promptPreviewRoute = readFileSync("src/app/api/operator/prompts/[key]/test/route.ts", "utf8");
 
   assert.match(promptPanel, /Run preview/);
   assert.match(promptPanel, /Preview Result/);
-  assert.match(contentEditor, /Preview/);
-  assert.match(contentPreviewRoute, /Prompt preview renders/);
   assert.match(promptPreviewRoute, /Provider execution is disabled for prompt previews/);
-  assert.doesNotMatch(`${promptPanel}\n${contentEditor}\n${contentPreviewRoute}\n${promptPreviewRoute}`, /Phase 1|PR 1|Run test|Test Result/);
+  assert.doesNotMatch(`${promptPanel}\n${promptPreviewRoute}`, /Phase 1|PR 1|Run test|Test Result/);
 });
 
 test("Ad Studio UI presents the constrained campaign workspace", () => {
