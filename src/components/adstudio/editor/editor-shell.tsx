@@ -2,16 +2,19 @@
 
 import { useCallback } from "react";
 import type { TemplatePack, Placement, LayoutLayer } from "../../../../packages/ad-template-pack-contract/src/types.js";
+import { PLACEMENT_DIMENSIONS } from "../../../../packages/ad-template-pack-contract/src/types.js";
 import { buildAdDocument, useEditorState } from "./use-editor-state.js";
 import { InputsPanel } from "./inputs-panel.js";
+import { LayoutSchematic } from "./layout-schematic.js";
 
 // ---------------------------------------------------------------------------
 // Editor Shell — Phase 6 foundation
 //
-// Feed and Story tabs, Konva layered canvas placeholder, layer selection,
-// undo/redo, dirty/saved/error state. Full Konva implementation + Impeccable
-// review pending browser inspection. Save persists the AdDocument through
-// POST /api/adstudio/ads/[id]/save — the server renders Feed AND Story PNGs.
+// Feed and Story tabs, live SVG layout schematic (follows the active
+// placement, click-to-select layers), shared text/image content inputs,
+// layer selection, undo/redo, dirty/saved/error state.
+// Save persists the AdDocument through POST /api/adstudio/ads/[id]/save —
+// the server renders Feed AND Story PNGs.
 // ---------------------------------------------------------------------------
 
 export interface EditorShellProps {
@@ -161,30 +164,23 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true }: EditorS
           </ul>
         </aside>
 
-        {/* Canvas area */}
+        {/* Canvas area — live layer schematic for the active placement */}
         <main className="flex flex-1 items-center justify-center bg-(--surface-subtle) p-6">
           <div
-            className="relative rounded-(--r-card) bg-white shadow-lg"
-            style={{ aspectRatio: activeLayout.layers[0]?.type === "plate"
-              ? `${(activeLayout.layers[0] as any).geometry?.width ?? 1080} / ${(activeLayout.layers[0] as any).geometry?.height ?? 1350}`
-              : "1080 / 1350",
+            className="relative overflow-hidden rounded-(--r-card) bg-white shadow-lg"
+            style={{
+              aspectRatio: `${PLACEMENT_DIMENSIONS[state.activePlacement].width} / ${PLACEMENT_DIMENSIONS[state.activePlacement].height}`,
               maxHeight: "min(72vh, 800px)",
               maxWidth: "90%",
             }}
           >
-            {/* Placeholder — full Konva canvas in next iteration */}
-            <div className="flex h-full w-full items-center justify-center rounded-(--r-card) bg-gray-100 text-sm text-muted-foreground">
-              <div className="text-center">
-                <p className="font-medium">Canvas placeholder</p>
-                <p className="text-xs">{state.activePlacement === "feed" ? "1080×1350" : "1080×1920"}</p>
-                <p className="mt-2 text-xs">{activeLayout.layers.length} layers</p>
-                <p className="text-xs text-muted-foreground">
-                  {state.selectedLayerId
-                    ? `Selected: ${state.selectedLayerId}`
-                    : "Select a layer to edit"}
-                </p>
-              </div>
-            </div>
+            <LayoutSchematic
+              layout={activeLayout}
+              colours={state.resolvedColourMap}
+              selectedLayerId={state.selectedLayerId}
+              onSelect={selectLayer}
+              className="h-full w-full"
+            />
           </div>
         </main>
 
