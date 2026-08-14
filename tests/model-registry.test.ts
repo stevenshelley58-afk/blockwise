@@ -124,7 +124,7 @@ test("the professional final-image migration never rotates the economical draft 
   const migration = readFileSync(
     "supabase/migrations/20260809112956_adstudio_pro_final_image_quality.sql",
     "utf8",
-  );
+  ).replace(/\r\n?/g, "\n");
 
   assert.match(migration, /where key = 'image_final'/);
   assert.match(migration, /'gemini-3-pro-image'/);

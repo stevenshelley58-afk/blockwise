@@ -168,8 +168,6 @@ test("owning server transactions emit authoritative funnel events with stable ke
     auth: readFileSync("src/app/auth/confirm/route.ts", "utf8"),
     website: readFileSync("src/app/api/adstudio/brand-kits/extract/route.ts", "utf8"),
     brand: readFileSync("src/app/api/adstudio/brand-kits/[id]/approve/route.ts", "utf8"),
-    generation: readFileSync("src/app/api/adstudio/campaigns/route.ts", "utf8"),
-    generationWorker: readFileSync("worker/index.ts", "utf8"),
     meta: readFileSync("src/app/api/integrations/meta/callback/route.ts", "utf8"),
     metaHelp: readFileSync("src/app/api/integrations/meta/help/route.ts", "utf8"),
     metaPublish: readFileSync("src/lib/providers/meta-publish-worker.ts", "utf8"),
@@ -185,12 +183,6 @@ test("owning server transactions emit authoritative funnel events with stable ke
   assert.match(sources.website, /eventName:\s*"website_submitted"/);
   assert.match(sources.brand, /eventName:\s*"brand_pack_approved"/);
   assert.match(sources.brand, /first-brand-pack-approved/);
-
-  assert.match(sources.generation, /eventName:\s*"template_selected"/);
-  assert.match(sources.generation, /eventName:\s*"first_generation_started"/);
-  assert.match(sources.generation, /first-generation-started/);
-  assert.doesNotMatch(sources.generation, /eventName:\s*"first_generation_completed"/);
-  assert.match(sources.generationWorker, /eventName:\s*"first_generation_completed"/);
 
   assert.match(sources.meta, /eventName:\s*"meta_connected"/);
   assert.match(sources.metaHelp, /eventName:\s*"meta_help_requested"/);

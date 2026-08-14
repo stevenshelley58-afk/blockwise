@@ -271,8 +271,11 @@ export async function checkOpenAiApiHealth(): Promise<ServiceStatus | null> {
 type RuntimeSettingRow = { setting_key: string; setting_value: unknown };
 
 /** Apify month-to-date spend (research.v_health) vs the caps in runtime_settings. */
-export async function checkApifySpend(supabase: SupabaseClient): Promise<ServiceStatus | null> {
+export async function checkApifySpend(supabase: SupabaseClient | null): Promise<ServiceStatus | null> {
   const service = PAID_CAPTURE_SPEND_SERVICE;
+  // The research schema moved out of the app with the operator research console;
+  // without a research client the paid-capture check is skipped, not failed.
+  if (!supabase) return null;
   try {
     const research = supabase.schema("research");
     const [health, settings] = await Promise.all([
@@ -313,7 +316,7 @@ export async function checkVpsHealth(): Promise<ServiceStatus[]> {
 }
 
 /** Runs every poller; unconfigured services are skipped, failures become statuses. */
-export async function collectPaidServiceStatuses(supabase: SupabaseClient): Promise<ServiceStatus[]> {
+export async function collectPaidServiceStatuses(supabase: SupabaseClient | null): Promise<ServiceStatus[]> {
   const [openAiSpend, openAiApi, apifySpend, vpsHealth] = await Promise.all([
     checkOpenAiSpend(),
     checkOpenAiApiHealth(),

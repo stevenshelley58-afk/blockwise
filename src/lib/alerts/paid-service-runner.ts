@@ -16,19 +16,19 @@ export const PAID_SERVICE_WATCHDOG_STATE_KEY = "paid_service_watchdog_state";
 // Seams so the alerting wiring (escalate-at-WARN-and-CRITICAL) is unit-testable
 // without live provider polling. Production uses the real collect/send.
 export type PaidServiceWatchdogDeps = {
-  collect?: (supabase: SupabaseClient) => Promise<ServiceStatus[]>;
+  collect?: (supabase: SupabaseClient | null) => Promise<ServiceStatus[]>;
   send?: (message: AlertMessage) => Promise<{ email: boolean; whatsapp: boolean }>;
 };
 
 export async function runPaidServiceWatchdog(
-  researchSupabase: SupabaseClient,
+  researchSupabase: SupabaseClient | null,
   deps: PaidServiceWatchdogDeps = {},
 ) {
   const collect = deps.collect ?? collectPaidServiceStatuses;
   const send = deps.send ?? sendPaidServiceAlert;
 
   const statuses = await collect(researchSupabase);
-  const previous = await loadPreviousWatchdogState(researchSupabase);
+  const previous = researchSupabase ? await loadPreviousWatchdogState(researchSupabase) : {};
   const diff = diffForAlerts(previous, statuses);
   let delivery: { email: boolean; whatsapp: boolean } | null = null;
 
@@ -38,7 +38,9 @@ export async function runPaidServiceWatchdog(
     delivery = await send(formatAlert(diff, statuses));
   }
 
-  await saveWatchdogState(researchSupabase, toState(statuses));
+  if (researchSupabase) {
+    await saveWatchdogState(researchSupabase, toState(statuses));
+  }
 
   return {
     statuses,

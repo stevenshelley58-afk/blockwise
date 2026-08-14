@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { generateInstantForm, validateInstantForm } from "../src/lib/adstudio/instant-form-generator.js";
-import type { FormGenerationInput } from "../src/lib/adstudio/instant-form-types.js";
+import { deriveFormGenerationInput, generateInstantForm, validateInstantForm } from "../src/lib/adstudio/instant-form-generator.ts";
+import type { FormGenerationInput } from "../src/lib/adstudio/instant-form-types.ts";
 
 const validInput: FormGenerationInput = {
   campaignGoal: "Get a free property appraisal",
@@ -124,3 +124,58 @@ describe("Instant Form generator", () => {
     assert.ok(form.name.length <= 100 + validInput.business.name.length + 3);
   });
 });
+
+describe("deriveFormGenerationInput", () => {
+  const context = {
+    ad: {
+      metaPrimaryText: "Thinking of selling?",
+      metaHeadline: "Free Home Valuation",
+      metaDescription: "Get an expert valuation of your property.",
+      metaCta: "CONTACT_US",
+    },
+    business: { name: "Blockwise Real Estate", phone: "0412345678" },
+    privacyPolicyUrl: "https://blockwise.sale/privacy",
+    fallbackGoal: "Real estate ads",
+  };
+
+  it("maps ad copy and business state into generator input", () => {
+    const input = deriveFormGenerationInput(context);
+    assert.equal(input.offer, context.ad.metaHeadline);
+    assert.equal(input.campaignGoal, context.ad.metaDescription);
+    assert.equal(input.primaryText, context.ad.metaPrimaryText);
+    assert.equal(input.cta, context.ad.metaCta);
+    assert.equal(input.business.name, context.business.name);
+    assert.equal(input.business.phone, context.business.phone);
+    assert.equal(input.privacyPolicyUrl, context.privacyPolicyUrl);
+    assert.equal(input.destinationUrl, context.privacyPolicyUrl);
+  });
+
+  it("falls back to primary text / business name when copy is empty", () => {
+    const input = deriveFormGenerationInput({
+      ...context,
+      ad: { metaPrimaryText: "Book a free appraisal", metaHeadline: "", metaDescription: "", metaCta: "" },
+    });
+    assert.equal(input.offer, "Book a free appraisal");
+    assert.equal(input.campaignGoal, "Book a free appraisal");
+    assert.equal(input.cta, "LEARN_MORE");
+  });
+
+  it("falls back to business name and fallback goal with no copy at all", () => {
+    const input = deriveFormGenerationInput({
+      ad: { metaPrimaryText: "", metaHeadline: "", metaDescription: "", metaCta: "" },
+      business: { name: "Coastal Realty" },
+      privacyPolicyUrl: "",
+      fallbackGoal: "Real estate ads",
+    });
+    assert.equal(input.offer, "Coastal Realty");
+    assert.equal(input.campaignGoal, "Real estate ads");
+    assert.equal(input.privacyPolicyUrl, "");
+    assert.equal(input.destinationUrl, "");
+  });
+
+  it("prefers an explicit destination URL over the privacy URL", () => {
+    const input = deriveFormGenerationInput({ ...context, destinationUrl: "https://blockwise.sale/" });
+    assert.equal(input.destinationUrl, "https://blockwise.sale/");
+  });
+});
+

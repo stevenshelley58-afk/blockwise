@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync, statSync } from "node:fs";
-import { readdirSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
@@ -49,26 +48,6 @@ test("smart prefetch is capped and respects browser constraints", () => {
   assert.match(source, /visibilityState/);
   assert.match(source, /deviceMemory/);
   assert.match(source, /requestIdleCallback/);
-});
-
-test("every canonical Ad Studio sample has bounded content-hashed display variants", () => {
-  const manifests = readdirSync("src/lib/adstudio/template-gallery").filter((file) =>
-    file.endsWith(".json") && file !== "quality-locks.json",
-  );
-  for (const file of manifests) {
-    const manifest = JSON.parse(
-      read(`src/lib/adstudio/template-gallery/${file}`),
-    ) as {
-      sample: { imageSrc: string; thumbnailSrc: string; contentHash: string };
-    };
-    assert.equal(manifest.sample.thumbnailSrc, manifest.sample.imageSrc);
-    for (const profile of ["320", "640"] as const) {
-      const path = `public/adstudio-thumbnails/meta/${manifest.sample.contentHash}-${profile}.webp`;
-      assert.ok(statSync(path).size <= 100_000, path);
-    }
-    const preview = `public/adstudio-thumbnails/meta/${manifest.sample.contentHash}-preview.webp`;
-    assert.ok(statSync(preview).size <= 300_000, preview);
-  }
 });
 
 test("bulk private media signing rejects cross-workspace paths and is request-bounded", () => {

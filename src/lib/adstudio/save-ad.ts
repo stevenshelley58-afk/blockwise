@@ -1,8 +1,8 @@
 import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { AdDocumentParsed } from "../../../packages/ad-template-pack-contract/src/schema.js";
-import type { TemplatePack } from "../../../packages/ad-template-pack-contract/src/types.js";
-import { sha256Hex } from "../../../packages/ad-template-pack-contract/src/hash.js";
+import type { AdDocumentParsed } from "../../../packages/ad-template-pack-contract/src/schema";
+import type { TemplatePack } from "../../../packages/ad-template-pack-contract/src/types";
+import { sha256Hex } from "../../../packages/ad-template-pack-contract/src/hash.ts";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -20,6 +20,12 @@ export interface SaveAdInput {
   colourMap: Record<string, string>;
   /** Resolved image buffers keyed by input key. */
   imageValues: Record<string, Buffer>;
+  /**
+   * Test-only injection point (mirrors import-pack's fetchPack): skips the
+   * real renderer and returns a caller-supplied sha256 per placement.
+   * Production callers omit it and get the @blockwise/ad-deterministic-renderer.
+   */
+  renderPlacement?: (placement: "feed" | "story") => Promise<{ sha256: string }>;
 }
 
 export interface SaveAdOutput {
@@ -39,7 +45,7 @@ export async function saveAd(input: SaveAdInput): Promise<SaveAdOutput> {
   // 1. Load the ad + template pack
   const { data: ad } = await input.supabase
     .from("ad_customer_ads")
-    .select("id, active_revision_id, template_pack_id, template_hash")
+    .select("id, active_revision_id, template_pack_id")
     .eq("id", input.adId)
     .eq("workspace_id", input.workspaceId)
     .single();
@@ -173,23 +179,32 @@ async function renderPlacementSafe(
   input: SaveAdInput,
   placement: "feed" | "story",
 ): Promise<RenderOutput> {
-  // Placeholder — full render via @blockwise/ad-deterministic-renderer in production.
-  // Renders the pack with customer image/text values and colour map.
-  const renderer = await import("../../../packages/ad-deterministic-renderer/src/renderer.js");
-  const result = await renderer.renderPlacement(
-    {
-      pack,
-      imageValues: input.imageValues,
-      textValues: input.document.sharedTextValues,
-      colourMap: input.colourMap,
-    },
-    placement,
-  );
+  let sha256: string;
+
+  if (input.renderPlacement) {
+    // Test injection point — caller supplies the hash, no renderer import.
+    const result = await input.renderPlacement(placement);
+    sha256 = result.sha256;
+  } else {
+    // Production — full render via @blockwise/ad-deterministic-renderer.
+    // Renders the pack with customer image/text values and colour map.
+    const renderer = await import("../../../packages/ad-deterministic-renderer/src/renderer");
+    const result = await renderer.renderPlacement(
+      {
+        pack,
+        imageValues: input.imageValues,
+        textValues: input.document.sharedTextValues,
+        colourMap: input.colourMap,
+      },
+      placement,
+    );
+    sha256 = result.sha256;
+  }
 
   // Upload to workspace-scoped temp storage
-  const path = `${input.workspaceId}/adstudio/renders/${input.adId}/${placement}-${result.sha256}.png`;
+  const path = `${input.workspaceId}/adstudio/renders/${input.adId}/${placement}-${sha256}.png`;
 
-  return { hash: result.sha256, path };
+  return { hash: sha256, path };
 }
 
 // ---------------------------------------------------------------------------

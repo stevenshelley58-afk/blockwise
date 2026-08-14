@@ -237,7 +237,6 @@ test("every queue producer passes workspace identity explicitly", () => {
     "src/lib/providers/meta-publish-queue.ts",
     "src/lib/meta-monitor/reporting-refresh-queue.ts",
     "src/lib/providers/scheduled-maintenance.ts",
-    "src/app/api/adstudio/campaigns/route.ts",
   ]) {
     const source = readFileSync(path, "utf8");
     assert.match(

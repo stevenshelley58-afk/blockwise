@@ -1,6 +1,4 @@
-import { Bot, FileSearch, ShieldAlert, TimerReset, Workflow } from "lucide-react";
-import Link from "next/link";
-
+import { Bot, ShieldAlert, TimerReset, Workflow } from "lucide-react";
 import { MetricCard } from "@/components/metric-card";
 import { PageHeading } from "@/components/page-heading";
 import { StatusPill } from "@/components/status-pill";
@@ -46,22 +44,6 @@ export default async function AgentWorkforcePage() {
         <MetricCard icon={Workflow} label="Open runs" value={String(openRuns ?? 0)} note="Queued, running, or needs review" />
         <MetricCard icon={ShieldAlert} label="Approval actions" value={String(HUMAN_APPROVAL_ACTIONS.length)} note="Publish, budget, sends, PII export" />
         <MetricCard icon={TimerReset} label="Schedules" value={String(enabledSchedules ?? 0)} note="Enabled agent schedules" />
-      </section>
-
-      <section className="panel">
-        <div className="split">
-          <div>
-            <h2>Hermes Research Agent</h2>
-            <p className="item-meta">
-              Research build, Meta ad capture, media escrow, classification, and coverage checks run under the Hermes runtime.
-            </p>
-          </div>
-          <div className="stack">
-            <Link className="button" href="/operator/research">
-              <FileSearch size={14} /> Research Ops
-            </Link>
-          </div>
-        </div>
       </section>
 
       <section className="panel">

@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 
 import { runPaidServiceWatchdog } from "@/lib/alerts/paid-service-runner";
-import { createResearchServiceClient } from "@/lib/research/service";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -19,6 +18,9 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  const result = await runPaidServiceWatchdog(createResearchServiceClient());
+  // The private research API is retired with the operator research console
+  // (BW-D2). The watchdog keeps the provider/VPS checks and skips the
+  // research-schema ones (Apify spend + state persistence).
+  const result = await runPaidServiceWatchdog(null);
   return NextResponse.json({ ok: true, ...result });
 }

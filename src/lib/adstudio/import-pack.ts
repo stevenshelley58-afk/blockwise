@@ -1,5 +1,6 @@
-import { templatePackSchema, sha256Hex } from "../../../packages/ad-template-pack-contract/src/index.ts";
-import type { TemplatePack } from "../../../packages/ad-template-pack-contract/src/types.js";
+import { createPublicKey, verify as verifyEd25519 } from "node:crypto";
+import { canonicalJson, templatePackSchema, sha256Hex } from "../../../packages/ad-template-pack-contract/src/index.ts";
+import type { TemplatePack } from "../../../packages/ad-template-pack-contract/src/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 // ---------------------------------------------------------------------------
@@ -31,6 +32,21 @@ export interface ImportError {
   detail?: unknown;
 }
 
+/**
+ * TEST/LOCAL-ONLY injection point.
+ *
+ * When `fetchPack` is provided, the pack bytes come from this function instead
+ * of a live network fetch of `input.packUrl`, and the HTTPS + origin allowlist
+ * check is skipped — the caller vouches for the source. This is how tests and
+ * local fixture imports (no live Frank URL) exercise the full pipeline.
+ *
+ * Production callers (the internal route) MUST NOT pass this option; for them
+ * the allowlist and live fetch below remain enforced.
+ */
+export interface ImportOptions {
+  fetchPack?: (url: string) => Promise<unknown>;
+}
+
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
@@ -46,6 +62,7 @@ const ALLOWED_ORIGINS = ["frank.fail", "frank-template-factory.local"];
 export async function importTemplatePack(
   supabase: SupabaseClient,
   input: ImportRequest,
+  options: ImportOptions = {},
 ): Promise<ImportReceipt> {
   // 0. Idempotency check
   const existing = await checkIdempotency(supabase, input.packSha256);
@@ -57,11 +74,27 @@ export async function importTemplatePack(
   // 2. Nonce check
   await validateNonce(supabase, input.nonce);
 
-  // 3. Origin allowlist
-  validateOrigin(input.packUrl);
+  // 3. Origin allowlist — skipped only for the injected test/local fetchPack path
+  if (!options.fetchPack) {
+    validateOrigin(input.packUrl);
+  }
 
-  // 4. Fetch pack
-  const packJson = await fetchPack(input.packUrl);
+  // 3.5 Production route must never import without a key to authenticate the
+  // pack. Enforced BEFORE any network fetch (fail fast, no wasted egress).
+  // The only exception is the documented TEST/LOCAL-ONLY injection point:
+  // when `fetchPack` is provided the caller vouches for the source, so the
+  // signature check may be skipped if FRANK_PACK_PUBLIC_KEY is unset.
+  if (!options.fetchPack && !process.env.FRANK_PACK_PUBLIC_KEY) {
+    throw importError(
+      "missing_public_key",
+      "FRANK_PACK_PUBLIC_KEY is not set — refusing to import an unsigned pack",
+    );
+  }
+
+  // 4. Fetch pack (injected fixture source, or live Frank URL)
+  const packJson = options.fetchPack
+    ? await options.fetchPack(input.packUrl)
+    : await fetchPack(input.packUrl);
 
   // 5. Size check
   const packBuffer = Buffer.from(JSON.stringify(packJson), "utf-8");
@@ -82,8 +115,17 @@ export async function importTemplatePack(
   }
   const pack = parsed.data as TemplatePack;
 
-  // 8. Signature verification (placeholder — real Ed25519 in Phase 5)
-  // verifySignature(pack.manifestSha256, input.signature, frankPublicKey);
+  // 8. Signature verification — Ed25519 over the canonical pack JSON
+  // (same canonicalization the factory signs: recursively sorted keys, no
+  // whitespace). Skipped ONLY on the injected fetchPack path when
+  // FRANK_PACK_PUBLIC_KEY is unset (documented test/local exception).
+  const publicKeyHex = process.env.FRANK_PACK_PUBLIC_KEY;
+  if (publicKeyHex && !verifyPackSignature(packJson, input.signature, publicKeyHex)) {
+    throw importError(
+      "signature_rejected",
+      "Ed25519 signature does not verify over the canonical pack JSON",
+    );
+  }
 
   // 9. Asset and font hash verification (placeholder — assets fetched in Phase 5)
   // for (const [key, asset] of Object.entries(pack.assets)) {
@@ -104,6 +146,28 @@ export async function importTemplatePack(
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+/**
+ * Verify the pack's Ed25519 signature over the CANONICAL JSON bytes of the
+ * pack object — the exact bytes the Frank factory signs (recursively sorted
+ * keys, no whitespace; same canonicalization as sha256Hex).
+ *
+ * @param packJson     the parsed pack object (as fetched)
+ * @param signatureHex lowercase hex Ed25519 signature (from the import request)
+ * @param publicKeyHex lowercase hex SPKI DER Ed25519 public key
+ *                     (FRANK_PACK_PUBLIC_KEY env — the factory's public key)
+ * @returns true only when the signature verifies; malformed key/signature
+ *          hex or a mismatch all return false (never throws).
+ */
+export function verifyPackSignature(packJson: unknown, signatureHex: string, publicKeyHex: string): boolean {
+  try {
+    const publicKey = createPublicKey({ key: Buffer.from(publicKeyHex, "hex"), format: "der", type: "spki" });
+    const canonicalBytes = Buffer.from(canonicalJson(packJson), "utf-8");
+    return verifyEd25519(null, canonicalBytes, publicKey, Buffer.from(signatureHex, "hex"));
+  } catch {
+    return false; // malformed key/signature -> not verified
+  }
+}
 
 function validateTimestamp(issuedAt: string): void {
   const ts = new Date(issuedAt).getTime();

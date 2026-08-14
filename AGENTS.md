@@ -1,5 +1,12 @@
 # Blockwise Engineering Rules
 
+## Product law (source of truth)
+
+Blockwise is the customer product. Customers pick Frank-built template packs,
+edit ads, Save PNGs, Publish to Meta, and manage campaigns and billing.
+Blockwise does not scrape ads, write blogs, or generate templates — those are
+Frank's tools. Ignore older rules in this repo that say otherwise.
+
 ## Principles
 
 - Delete > simplify > abstract. No speculative abstraction, no future-proofing.
@@ -32,13 +39,14 @@
   `private` schema is not exposed through PostgREST, so never query it with
   `.schema("private")`.
 
-## AdStudio (rebuilding)
+## AdStudio (current state)
 
-AdStudio is being rebuilt as a layered template system with a separate Frank
-template factory. The legacy flat-clone system was deleted (Phase 1). Do not
-reference `buildCloneImageRequest`, `template-gallery/`, `reference-clone.ts`,
-or `scripts/verify/adstudio-templates.mjs` — none exist. Follow the clean-rebuild
-plan for all new AdStudio work.
+AdStudio is the customer editor over Frank-built template packs; Frank owns
+template generation and layered packs. The legacy flat-clone system was
+deleted (Phase 1). Do not reference `buildCloneImageRequest`,
+`template-gallery/`, `reference-clone.ts`, or
+`scripts/verify/adstudio-templates.mjs` — none exist. See
+`docs/plans/PRODUCT-REBUILD.md` for the leftover inventory.
 
 ## Component system (shadcn/ui canonical)
 
