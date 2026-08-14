@@ -1,0 +1,160 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+
+import {
+  AD_INTELLIGENCE_CONSUMER_COMPATIBILITY,
+  AD_INTELLIGENCE_PUBLIC_EXPORT_SCHEMA,
+  AD_INTELLIGENCE_RELEASE_SCHEMA,
+  AD_INTELLIGENCE_TOOL_ID,
+  computeAdIntelligencePublicExportChecksum,
+  computeAdIntelligenceReleaseHash,
+  consumeAdIntelligenceRelease,
+  AdIntelligenceReleaseError,
+} from "../src/lib/research/ad-intelligence-release.ts";
+
+test("consumer verifies the reviewed Frank envelope and maps stable public subjects to the read model", () => {
+  const release = signedRelease({ creatives: [creative()] });
+  const result = consumeAdIntelligenceRelease(release);
+
+  assert.equal(result.state, "ready");
+  assert.equal(result.release.schema, AD_INTELLIGENCE_RELEASE_SCHEMA);
+  assert.equal(result.release.tool_id, AD_INTELLIGENCE_TOOL_ID);
+  assert.equal(result.release.release_id, "release-2026-08-14-001");
+  assert.equal(result.rows[0]?.library_id, "creative-1");
+  assert.equal(result.rows[0]?.source_revision, "release-2026-08-14-001@1.0.0");
+  assert.match(result.rows[0]?.card_id ?? "", /^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u);
+  assert.equal(result.stableSubjectRefs[0]?.sourceRef, "hermes://creative/source-1");
+  assert.equal(result.cards[0]?.suburb, "Coogee");
+  assert.deepEqual(result.sanitizationReceiptRefs, ["receipt://sanitize/1"]);
+});
+
+test("consumer rejects nested PII, private, raw, and provider payloads", () => {
+  const mutations = [
+    (release: any) => { release.public_export.creatives[0].copy.body = "owner@example.com"; },
+    (release: any) => { release.public_export.creatives[0].media[0].asset_ref = "vault://raw/ad.jpg"; },
+    (release: any) => { release.public_export.creatives[0].raw = { provider_payload: true }; },
+    (release: any) => { release.public_export.creatives[0].media[0].provider = "meta"; },
+  ];
+
+  for (const mutate of mutations) {
+    const release = signedRelease({ creatives: [creative()] });
+    mutate(release);
+    assert.throws(
+      () => consumeAdIntelligenceRelease(release),
+      (error: unknown) => error instanceof AdIntelligenceReleaseError,
+    );
+  }
+});
+
+test("consumer rejects public-export checksum, whole-envelope hash, and compatibility failures", () => {
+  const checksumFailure = signedRelease({ creatives: [creative()] });
+  checksumFailure.public_export.creatives[0].copy.headline = "Tampered";
+  assert.throws(
+    () => consumeAdIntelligenceRelease(checksumFailure),
+    (error: unknown) => error instanceof AdIntelligenceReleaseError && error.code === "checksum_mismatch",
+  );
+
+  const releaseHashFailure = signedRelease({ creatives: [creative()] });
+  releaseHashFailure.project_scope = "tampered-scope";
+  assert.throws(
+    () => consumeAdIntelligenceRelease(releaseHashFailure),
+    (error: unknown) => error instanceof AdIntelligenceReleaseError && error.code === "release_hash_mismatch",
+  );
+
+  const compatibilityFailure = signedRelease({ creatives: [creative()] });
+  compatibilityFailure.consumer_compatibility = ["blockwise.customer-ad-radar/v1"];
+  assert.throws(
+    () => consumeAdIntelligenceRelease(compatibilityFailure),
+    (error: unknown) => error instanceof AdIntelligenceReleaseError && error.code === "invalid_shape",
+  );
+});
+
+test("consumer requires evidence refs and preserves an explicit empty state", () => {
+  const missingEvidence = signedRelease({ creatives: [creative()] });
+  delete missingEvidence.qa_receipt_ref;
+  assert.throws(
+    () => consumeAdIntelligenceRelease(missingEvidence),
+    (error: unknown) => error instanceof AdIntelligenceReleaseError && error.code === "invalid_shape",
+  );
+
+  const empty = consumeAdIntelligenceRelease(signedRelease({ creatives: [] }));
+  assert.equal(empty.state, "empty");
+  assert.deepEqual(empty.rows, []);
+  assert.deepEqual(empty.cards, []);
+});
+
+function signedRelease(overrides: Record<string, unknown>): any {
+  const { creatives, public_export, ...releaseOverrides } = overrides;
+  const release = {
+    schema: AD_INTELLIGENCE_RELEASE_SCHEMA,
+    tool_id: AD_INTELLIGENCE_TOOL_ID,
+    release_id: "release-2026-08-14-001",
+    version: "1.0.0",
+    status: "released",
+    immutable: true,
+    project_scope: "real-estate-customer-ad-radar",
+    checksum: "",
+    release_hash: "",
+    provenance_refs: ["provenance://frank/run-1"],
+    trace_refs: ["trace://hermes/run-1"],
+    settings_refs: ["settings://ad-radar/v1"],
+    qa_approved: true,
+    pii_sanitized: true,
+    secret_sanitized: true,
+    pipeline_id: "ad-radar-pipeline",
+    pipeline_version: "1.0.0",
+    consumer_compatibility: [AD_INTELLIGENCE_CONSUMER_COMPATIBILITY],
+    qa_receipt_ref: "receipt://qa/1",
+    sanitization_receipt_refs: ["receipt://sanitize/1"],
+    public_export: {
+      schema: AD_INTELLIGENCE_PUBLIC_EXPORT_SCHEMA,
+      project: "real-estate",
+      generated_at: "2026-08-14T08:00:00Z",
+      creatives: creatives ?? [],
+      ...(public_export as Record<string, unknown> | undefined),
+    },
+    ...releaseOverrides,
+  };
+  resign(release);
+  return release;
+}
+
+function resign(release: any): void {
+  release.checksum = computeAdIntelligencePublicExportChecksum(release.public_export);
+  release.release_hash = computeAdIntelligenceReleaseHash(release);
+}
+
+function creative(): Record<string, unknown> {
+  return {
+    id: "creative-1",
+    source_ref: "hermes://creative/source-1",
+    advertiser: "Coogee Property Group",
+    market: "Coogee",
+    category: "listing",
+    copy: {
+      headline: "A better way to sell in Coogee",
+      body: "Local market update.",
+      cta: "Learn more",
+    },
+    destination_ref: "https://example.com/listing",
+    observed: {
+      first_seen: "2026-08-01T00:00:00Z",
+      last_seen: "2026-08-14T07:00:00Z",
+    },
+    media: [
+      {
+        asset_ref: "https://cdn.example.com/ad.jpg",
+        kind: "image",
+        width: 1200,
+        height: 628,
+        qa_status: "passed",
+      },
+    ],
+    classification: {
+      label: "listing",
+      confidence: 0.98,
+      receipt_refs: ["receipt://classify/1"],
+      provenance_refs: ["provenance://classify/1"],
+    },
+  };
+}
