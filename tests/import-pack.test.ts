@@ -3,9 +3,9 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { randomUUID } from "node:crypto";
+import { randomUUID, generateKeyPairSync, sign as ed25519Sign, type KeyObject } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { sha256Hex } from "../packages/ad-template-pack-contract/src/index.ts";
+import { canonicalJson, sha256Hex } from "../packages/ad-template-pack-contract/src/index.ts";
 import {
   importTemplatePack,
   type ImportRequest,
@@ -130,6 +130,22 @@ function fakeSupabase(): SupabaseClient {
 }
 
 // ---------------------------------------------------------------------------
+// Ed25519 test helpers — a throwaway keypair whose public half plays the
+// role of FRANK_PACK_PUBLIC_KEY, and a signer over the CANONICAL JSON bytes
+// (the exact wire format the Frank factory signs).
+// ---------------------------------------------------------------------------
+
+function ed25519Keypair(): { publicKeyHex: string; privateKey: KeyObject } {
+  const { publicKey, privateKey } = generateKeyPairSync("ed25519");
+  const publicKeyHex = publicKey.export({ type: "spki", format: "der" }).toString("hex");
+  return { publicKeyHex, privateKey };
+}
+
+function signCanonical(pack: unknown, privateKey: KeyObject): string {
+  return ed25519Sign(null, Buffer.from(canonicalJson(pack), "utf-8"), privateKey).toString("hex");
+}
+
+// ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
@@ -244,6 +260,98 @@ describe("import-pack — local fixture import (no live Frank URL)", () => {
       importTemplatePack(supabase, input, { fetchPack: async () => pack }),
       (err: unknown) => (err as ImportError).code === "timestamp_expired",
     );
+  });
+});
+
+describe("import-pack — Ed25519 signature verification (FRANK_PACK_PUBLIC_KEY)", () => {
+  it("accepts a valid signature over the canonical pack JSON (roundtrip)", async () => {
+    const { publicKeyHex, privateKey } = ed25519Keypair();
+    process.env.FRANK_PACK_PUBLIC_KEY = publicKeyHex;
+    try {
+      const supabase = fakeSupabase();
+      const pack = loadFixture();
+      const input = makeRequest(pack, { signature: signCanonical(pack, privateKey) });
+
+      const receipt = await importTemplatePack(supabase, input, {
+        fetchPack: async () => pack,
+      });
+
+      assert.equal(receipt.status, "active");
+      // The verified signature is what the receipt row records.
+      const stored = supabaseTables(supabase).ad_import_receipts[0];
+      assert.equal(stored.signature, input.signature);
+    } finally {
+      delete process.env.FRANK_PACK_PUBLIC_KEY;
+    }
+  });
+
+  it("rejects a tampered pack — signature over different bytes", async () => {
+    const { publicKeyHex, privateKey } = ed25519Keypair();
+    process.env.FRANK_PACK_PUBLIC_KEY = publicKeyHex;
+    try {
+      const supabase = fakeSupabase();
+      const pack = loadFixture();
+      const signature = signCanonical(pack, privateKey); // over the ORIGINAL bytes
+
+      const tampered = structuredClone(pack) as Record<string, unknown>;
+      tampered.templateId = "fixture-minimal-TAMPERED";
+
+      // The request hashes the tampered pack (hash check passes); only the
+      // signature is stale, so the failure must be signature_rejected.
+      const input = makeRequest(tampered, { signature });
+
+      await assert.rejects(
+        importTemplatePack(supabase, input, { fetchPack: async () => tampered }),
+        (err: unknown) => (err as ImportError).code === "signature_rejected",
+      );
+    } finally {
+      delete process.env.FRANK_PACK_PUBLIC_KEY;
+    }
+  });
+
+  it("rejects a valid-looking signature from the wrong key", async () => {
+    const other = ed25519Keypair();
+    process.env.FRANK_PACK_PUBLIC_KEY = other.publicKeyHex;
+    try {
+      const supabase = fakeSupabase();
+      const pack = loadFixture();
+      // Signed with a DIFFERENT key than the configured FRANK_PACK_PUBLIC_KEY.
+      const rogue = ed25519Keypair();
+      const input = makeRequest(pack, { signature: signCanonical(pack, rogue.privateKey) });
+
+      await assert.rejects(
+        importTemplatePack(supabase, input, { fetchPack: async () => pack }),
+        (err: unknown) => (err as ImportError).code === "signature_rejected",
+      );
+    } finally {
+      delete process.env.FRANK_PACK_PUBLIC_KEY;
+    }
+  });
+
+  it("refuses the production (live-fetch) route when FRANK_PACK_PUBLIC_KEY is unset", async () => {
+    delete process.env.FRANK_PACK_PUBLIC_KEY;
+    const supabase = fakeSupabase();
+    const pack = loadFixture();
+    // Allowlisted origin + NO injected fetchPack -> the real production route.
+    // The key guard fires before any network fetch (fail fast, no egress).
+    const input = makeRequest(pack, { packUrl: "https://frank.fail/packs/fixture-minimal.json" });
+
+    await assert.rejects(
+      importTemplatePack(supabase, input),
+      (err: unknown) => (err as ImportError).code === "missing_public_key",
+    );
+  });
+
+  it("skips the signature check on the injected fetchPack path when no key is set", async () => {
+    delete process.env.FRANK_PACK_PUBLIC_KEY;
+    const supabase = fakeSupabase();
+    const pack = loadFixture();
+    const input = makeRequest(pack, { signature: "fixture-ed25519-signature-placeholder" });
+
+    const receipt = await importTemplatePack(supabase, input, {
+      fetchPack: async () => pack, // caller vouches for the source — documented test-only skip
+    });
+    assert.equal(receipt.status, "active");
   });
 });
 
