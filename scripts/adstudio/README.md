@@ -44,7 +44,8 @@ node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON \
 node scripts/adstudio/import-fixture-pack.mjs --help   # full flag list
 ```
 
-Useful flags: `--pack-id`, `--build-id`, `--nonce`, `--fixture <path>`.
+Useful flags: `--pack-id`, `--build-id`, `--nonce`, `--fixture <path>`,
+`--sig-file <path>`, `--pack-sha256 <hex>`.
 Re-running the same pack hash is idempotent — you get a `replayed` receipt
 and no duplicate rows.
 
@@ -87,11 +88,49 @@ internal import route (`src/app/api/internal/adstudio/template-packs/import/rout
 writes. `ad_template_packs` is global (shared by every workspace), so the
 seed shows up for all workspaces on that project.
 
+### Importing a real factory pack (signed)
+
+Ed25519 verification is **live** in `src/lib/adstudio/import-pack.ts`
+(step 8, `verifyPackSignature`) whenever `FRANK_PACK_PUBLIC_KEY` is set —
+the lowercase-hex SPKI DER public key of the Frank factory. The factory
+writes a `pack.json.sig` sidecar next to every `pack.json`; pass it with
+`--sig-file` so the real signature (and the factory's `packSha256`) travels
+through the import request instead of the fixture placeholder:
+
+```bash
+node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON \
+  scripts/adstudio/import-fixture-pack.mjs --yes \
+  --fixture <pack.json> --sig-file <pack.json.sig> --pack-sha256 <hex>
+```
+
+- `--sig-file <pack.json.sig>` — the factory's sidecar JSON
+  (`{algorithm, keyId, publicKey, signature, packSha256, dev}`). Its
+  `signature` field becomes `ImportRequest.signature` and its `packSha256`
+  is used unless `--pack-sha256` overrides it.
+- `--pack-sha256 <hex>` — explicit pack hash override. Must be the
+  canonical-JSON SHA-256 (`sha256Hex`); the factory's `pack.json.sha256`
+  matches this, but a raw `sha256sum` of the pretty-printed file does NOT.
+- Without `--sig-file` the script falls back to the placeholder signature.
+  That still works on the local `fetchPack` seed path when
+  `FRANK_PACK_PUBLIC_KEY` is unset (the documented test/local exception),
+  but is **rejected** (`signature_rejected`) if the key is set — import
+  real factory packs with `--sig-file`.
+
+The internal server route
+(`src/app/api/internal/adstudio/template-packs/import/route.ts`) refuses
+imports when `FRANK_PACK_PUBLIC_KEY` is unset (`missing_public_key`); the
+injected `fetchPack` path is the only exception. Set `FRANK_PACK_PUBLIC_KEY`
+in the Vercel project env (the factory's public key, lowercase hex SPKI DER)
+before delivering real Frank packs through the production route.
+
 ### Signature / FRANK_PACK_PUBLIC_KEY
 
-The script sends the fixture's placeholder signature
-(`fixture-ed25519-signature-placeholder`). Real Ed25519 verification is a
-Phase 5 placeholder in `import-pack.ts` (commented out), so no key is
-required today. When verification lands it will be keyed by the Frank public
-key (env `FRANK_PACK_PUBLIC_KEY`) and this seed path will need a fixture
-signed with the matching private key.
+The importer verifies the Ed25519 signature over the canonical pack JSON on
+every import where `FRANK_PACK_PUBLIC_KEY` is set — including the
+placeholder-signature fixture path, which then fails with
+`signature_rejected`. The key guard (`missing_public_key`) fires before any
+network fetch on the production (live-fetch) route. This script's
+`fetchPack` injection is the documented test/local exception: when the key
+is unset the signature check is skipped because the operator vouches for
+the fixture bytes on disk. Point `FRANK_PACK_PUBLIC_KEY` at the factory
+public key to exercise real verification from the seed path.
