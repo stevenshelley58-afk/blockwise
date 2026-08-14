@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import canonicalize from "canonicalize";
 import test from "node:test";
 
 import {
@@ -81,6 +82,28 @@ test("consumer requires evidence refs and preserves an explicit empty state", ()
   assert.equal(empty.state, "empty");
   assert.deepEqual(empty.rows, []);
   assert.deepEqual(empty.cards, []);
+});
+
+test("release hashes use RFC 8785 JCS for Unicode and numeric canonical equivalence", () => {
+  const unicode = signedRelease({ creatives: [creative()] });
+  unicode.public_export.creatives[0].copy.headline = "Café — מוכר";
+  resign(unicode);
+  assert.equal(consumeAdIntelligenceRelease(unicode).state, "ready");
+
+  assert.equal(canonicalize({ value: 1 }), canonicalize({ value: 1.0 }));
+  assert.equal(
+    canonicalize({ value: "Café — מוכר" }),
+    '{"value":"Café — מוכר"}',
+  );
+
+  const integerRelease = signedRelease({ creatives: [creative()] });
+  integerRelease.public_export.creatives[0].classification.confidence = 1;
+  resign(integerRelease);
+  const decimalRelease = signedRelease({ creatives: [creative()] });
+  decimalRelease.public_export.creatives[0].classification.confidence = 1.0;
+  resign(decimalRelease);
+  assert.equal(integerRelease.checksum, decimalRelease.checksum);
+  assert.equal(integerRelease.release_hash, decimalRelease.release_hash);
 });
 
 function signedRelease(overrides: Record<string, unknown>): any {
