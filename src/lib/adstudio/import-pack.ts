@@ -1,5 +1,5 @@
-import { createPublicKey, verify as verifyEd25519 } from "node:crypto";
-import { canonicalJson, templatePackSchema, sha256Hex } from "../../../packages/ad-template-pack-contract/src/index.ts";
+import { createHash, createPublicKey, verify as verifyEd25519 } from "node:crypto";
+import { canonicalJson, templatePackSchema } from "../../../packages/ad-template-pack-contract/src/index.ts";
 import type { TemplatePack } from "../../../packages/ad-template-pack-contract/src/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -35,7 +35,7 @@ export interface ImportError {
 /**
  * TEST/LOCAL-ONLY injection point.
  *
- * When `fetchPack` is provided, the pack bytes come from this function instead
+ * When `fetchPackBytes` is provided, the exact pack bytes come from this function instead
  * of a live network fetch of `input.packUrl`, and the HTTPS + origin allowlist
  * check is skipped — the caller vouches for the source. This is how tests and
  * local fixture imports (no live Frank URL) exercise the full pipeline.
@@ -44,7 +44,7 @@ export interface ImportError {
  * the allowlist and live fetch below remain enforced.
  */
 export interface ImportOptions {
-  fetchPack?: (url: string) => Promise<unknown>;
+  fetchPackBytes?: (url: string) => Promise<string | Uint8Array>;
 }
 
 // ---------------------------------------------------------------------------
@@ -64,60 +64,69 @@ export async function importTemplatePack(
   input: ImportRequest,
   options: ImportOptions = {},
 ): Promise<ImportReceipt> {
+  if (options.fetchPackBytes && process.env.NODE_ENV === "production") {
+    throw importError("fixture_injection_disabled", "Injected TemplatePack bytes are disabled in production");
+  }
+
   // 0. Idempotency check
-  const existing = await checkIdempotency(supabase, input.packSha256);
+  const existing = await checkIdempotency(supabase, input.packSha256, input.packId);
   if (existing) return existing;
 
   // 1. Timestamp window
   validateTimestamp(input.issuedAt);
 
-  // 2. Nonce check
-  await validateNonce(supabase, input.nonce);
+  // 2. Nonce check (recorded only after the complete pack validates)
+  await assertNonceUnused(supabase, input.nonce);
 
-  // 3. Origin allowlist — skipped only for the injected test/local fetchPack path
-  if (!options.fetchPack) {
+  // 3. Origin allowlist — skipped only for injected test/local raw bytes
+  if (!options.fetchPackBytes) {
     validateOrigin(input.packUrl);
   }
 
   // 3.5 Production route must never import without a key to authenticate the
   // pack. Enforced BEFORE any network fetch (fail fast, no wasted egress).
   // The only exception is the documented TEST/LOCAL-ONLY injection point:
-  // when `fetchPack` is provided the caller vouches for the source, so the
+  // when `fetchPackBytes` is provided the caller vouches for the source, so the
   // signature check may be skipped if FRANK_PACK_PUBLIC_KEY is unset.
-  if (!options.fetchPack && !process.env.FRANK_PACK_PUBLIC_KEY) {
+  if (!options.fetchPackBytes && !process.env.FRANK_PACK_PUBLIC_KEY) {
     throw importError(
       "missing_public_key",
       "FRANK_PACK_PUBLIC_KEY is not set — refusing to import an unsigned pack",
     );
   }
 
-  // 4. Fetch pack (injected fixture source, or live Frank URL)
-  const packJson = options.fetchPack
-    ? await options.fetchPack(input.packUrl)
-    : await fetchPack(input.packUrl);
+  // 4. Fetch exactly once as bounded raw bytes. Production never hashes a
+  // parsed/re-serialized object because template_pack.sha256 authenticates the
+  // artifact bytes as served.
+  const packBytes = options.fetchPackBytes
+    ? normalizeInjectedPackBytes(await options.fetchPackBytes(input.packUrl))
+    : await fetchPackBytes(input.packUrl);
 
-  // 5. Size check
-  const packBuffer = Buffer.from(JSON.stringify(packJson), "utf-8");
-  if (packBuffer.length > MAX_PACK_SIZE) {
+  // 5. Size check before decoding or parsing (production also bounds while reading).
+  if (packBytes.byteLength > MAX_PACK_SIZE) {
     throw importError("size_exceeded", "Pack exceeds 50 MB limit");
   }
 
-  // 6. Hash verification
-  const actualHash = sha256Hex(packJson);
+  // 6. Exact raw-byte hash verification before JSON parsing.
+  const actualHash = createHash("sha256").update(packBytes).digest("hex");
   if (actualHash !== input.packSha256) {
     throw importError("hash_mismatch", `Expected ${input.packSha256}, got ${actualHash}`);
   }
 
-  // 7. Schema validation
+  // 7. Decode, parse, and validate schema.
+  const packJson = parsePackJson(packBytes);
   const parsed = templatePackSchema.safeParse(packJson);
   if (!parsed.success) {
     throw importError("schema_invalid", "Pack failed schema validation", parsed.error.issues);
   }
   const pack = parsed.data as TemplatePack;
+  if (pack.packId !== input.packId) {
+    throw importError("pack_id_mismatch", "Fetched TemplatePack identity does not match the requested packId");
+  }
 
   // 8. Signature verification — Ed25519 over the canonical pack JSON
   // (same canonicalization the factory signs: recursively sorted keys, no
-  // whitespace). Skipped ONLY on the injected fetchPack path when
+  // whitespace). Skipped ONLY on the injected fetchPackBytes path when
   // FRANK_PACK_PUBLIC_KEY is unset (documented test/local exception).
   const publicKeyHex = process.env.FRANK_PACK_PUBLIC_KEY;
   if (publicKeyHex && !verifyPackSignature(packJson, input.signature, publicKeyHex)) {
@@ -126,6 +135,8 @@ export async function importTemplatePack(
       "Ed25519 signature does not verify over the canonical pack JSON",
     );
   }
+
+  await recordNonce(supabase, input.nonce);
 
   // 9. Asset and font hash verification (placeholder — assets fetched in Phase 5)
   // for (const [key, asset] of Object.entries(pack.assets)) {
@@ -153,20 +164,30 @@ export async function importTemplatePack(
  * keys, no whitespace; same canonicalization as sha256Hex).
  *
  * @param packJson     the parsed pack object (as fetched)
- * @param signatureHex lowercase hex Ed25519 signature (from the import request)
+ * @param signature    hex, base64, or base64url Ed25519 signature (from the import request)
  * @param publicKeyHex lowercase hex SPKI DER Ed25519 public key
  *                     (FRANK_PACK_PUBLIC_KEY env — the factory's public key)
  * @returns true only when the signature verifies; malformed key/signature
  *          hex or a mismatch all return false (never throws).
  */
-export function verifyPackSignature(packJson: unknown, signatureHex: string, publicKeyHex: string): boolean {
+export function verifyPackSignature(packJson: unknown, signature: string, publicKeyHex: string): boolean {
   try {
     const publicKey = createPublicKey({ key: Buffer.from(publicKeyHex, "hex"), format: "der", type: "spki" });
     const canonicalBytes = Buffer.from(canonicalJson(packJson), "utf-8");
-    return verifyEd25519(null, canonicalBytes, publicKey, Buffer.from(signatureHex, "hex"));
+    const signatureBytes = decodeEd25519Signature(signature);
+    return signatureBytes !== null && verifyEd25519(null, canonicalBytes, publicKey, signatureBytes);
   } catch {
     return false; // malformed key/signature -> not verified
   }
+}
+
+function decodeEd25519Signature(signature: string): Buffer | null {
+  if (/^[a-f0-9]{128}$/u.test(signature)) return Buffer.from(signature, "hex");
+  if (!/^[A-Za-z0-9+/_-]+={0,2}$/u.test(signature)) return null;
+  const normalized = signature.replace(/-/gu, "+").replace(/_/gu, "/");
+  const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
+  const bytes = Buffer.from(padded, "base64");
+  return bytes.length === 64 ? bytes : null;
 }
 
 function validateTimestamp(issuedAt: string): void {
@@ -190,7 +211,22 @@ function validateOrigin(url: string): void {
   }
 }
 
-async function fetchPack(url: string): Promise<unknown> {
+function normalizeInjectedPackBytes(value: string | Uint8Array): Uint8Array {
+  if (typeof value === "string") return Buffer.from(value, "utf8");
+  if (value instanceof Uint8Array) return value;
+  throw importError("invalid_fixture_bytes", "Injected TemplatePack fixture must provide raw UTF-8 bytes");
+}
+
+function parsePackJson(bytes: Uint8Array): unknown {
+  try {
+    const text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    return JSON.parse(text);
+  } catch {
+    throw importError("invalid_json", "TemplatePack artifact is not valid UTF-8 JSON");
+  }
+}
+
+async function fetchPackBytes(url: string): Promise<Uint8Array> {
   // No redirects — fetch with redirect: 'manual'
   const response = await fetch(url, { redirect: "manual" });
   if (response.status >= 300 && response.status < 400) {
@@ -199,14 +235,47 @@ async function fetchPack(url: string): Promise<unknown> {
   if (!response.ok) {
     throw importError("fetch_failed", `Failed to fetch pack: ${response.status} ${response.statusText}`);
   }
-  return response.json();
+  const declaredSize = Number(response.headers.get("content-length"));
+  if (Number.isFinite(declaredSize) && declaredSize > MAX_PACK_SIZE) {
+    await response.body?.cancel();
+    throw importError("size_exceeded", "Pack exceeds 50 MB limit");
+  }
+  if (!response.body) return new Uint8Array();
+
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > MAX_PACK_SIZE) {
+        await reader.cancel();
+        throw importError("size_exceeded", "Pack exceeds 50 MB limit");
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return bytes;
 }
 
-async function validateNonce(supabase: SupabaseClient, nonce: string): Promise<void> {
+async function assertNonceUnused(supabase: SupabaseClient, nonce: string): Promise<void> {
   // Check if nonce was already used
   const { data } = await supabase.from("ad_import_nonces").select("nonce").eq("nonce", nonce).maybeSingle();
   if (data) throw importError("nonce_replay", "Nonce has already been used");
+}
 
+async function recordNonce(supabase: SupabaseClient, nonce: string): Promise<void> {
   // Record nonce
   const { error } = await supabase.from("ad_import_nonces").insert({ nonce });
   if (error) throw importError("nonce_insert_failed", error.message);
@@ -215,6 +284,7 @@ async function validateNonce(supabase: SupabaseClient, nonce: string): Promise<v
 async function checkIdempotency(
   supabase: SupabaseClient,
   packSha256: string,
+  packId: string,
 ): Promise<ImportReceipt | null> {
   const { data } = await supabase
     .from("ad_import_receipts")
@@ -224,6 +294,9 @@ async function checkIdempotency(
     .maybeSingle();
 
   if (data) {
+    if (data.pack_id !== packId) {
+      throw importError("pack_id_mismatch", "Existing TemplatePack receipt does not match the requested packId");
+    }
     return {
       receiptId: data.id,
       packId: data.pack_id,

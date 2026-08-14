@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { randomUUID, generateKeyPairSync, sign as ed25519Sign, type KeyObject } from "node:crypto";
+import { createHash, randomUUID, generateKeyPairSync, sign as ed25519Sign, type KeyObject } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { canonicalJson, sha256Hex } from "../packages/ad-template-pack-contract/src/index.ts";
 import {
@@ -14,7 +14,7 @@ import {
 
 // ---------------------------------------------------------------------------
 // Local fixture — no live Frank URL required. The importer is handed the pack
-// through the documented test-only `fetchPack` injection point, which skips
+// through the documented test-only `fetchPackBytes` injection point, which skips
 // only the HTTPS + origin allowlist (the caller vouches for the source).
 // ---------------------------------------------------------------------------
 
@@ -29,13 +29,21 @@ function loadFixture(): Record<string, unknown> {
   return JSON.parse(readFileSync(FIXTURE_PATH, "utf8")) as Record<string, unknown>;
 }
 
+function packBytes(pack: unknown): Uint8Array {
+  return Buffer.from(canonicalJson(pack), "utf8");
+}
+
+function rawSha256(bytes: Uint8Array): string {
+  return createHash("sha256").update(bytes).digest("hex");
+}
+
 function makeRequest(
   pack: Record<string, unknown>,
   overrides: Partial<ImportRequest> = {},
 ): ImportRequest {
   return {
     packUrl: "https://frank.fail/packs/fixture-minimal.json",
-    packSha256: sha256Hex(pack),
+    packSha256: rawSha256(packBytes(pack)),
     packId: "fixture-minimal-v1",
     buildId: "fixture-build-1",
     issuedAt: new Date().toISOString(),
@@ -156,7 +164,7 @@ describe("import-pack — local fixture import (no live Frank URL)", () => {
     const input = makeRequest(pack);
 
     const receipt = await importTemplatePack(supabase, input, {
-      fetchPack: async () => pack, // fixture bytes from disk — no network
+      fetchPackBytes: async () => packBytes(pack), // declared fixture bytes — no network
     });
 
     assert.equal(receipt.status, "active");
@@ -188,8 +196,8 @@ describe("import-pack — local fixture import (no live Frank URL)", () => {
     const pack = loadFixture();
     const input = makeRequest(pack);
 
-    const first = await importTemplatePack(supabase, input, { fetchPack: async () => pack });
-    const second = await importTemplatePack(supabase, input, { fetchPack: async () => pack });
+    const first = await importTemplatePack(supabase, input, { fetchPackBytes: async () => packBytes(pack) });
+    const second = await importTemplatePack(supabase, input, { fetchPackBytes: async () => packBytes(pack) });
 
     assert.equal(first.status, "active");
     assert.equal(second.status, "replayed");
@@ -201,7 +209,7 @@ describe("import-pack — local fixture import (no live Frank URL)", () => {
     const pack = loadFixture();
     const input = makeRequest(pack, { nonce: "fixed-nonce" });
 
-    const first = await importTemplatePack(supabase, input, { fetchPack: async () => pack });
+    const first = await importTemplatePack(supabase, input, { fetchPackBytes: async () => packBytes(pack) });
     assert.equal(first.status, "active");
 
     // Same nonce with a different pack (so idempotency doesn't short-circuit)
@@ -211,7 +219,7 @@ describe("import-pack — local fixture import (no live Frank URL)", () => {
     const replay = makeRequest(other, { nonce: "fixed-nonce", packId: "fixture-minimal-v2" });
 
     await assert.rejects(
-      importTemplatePack(supabase, replay, { fetchPack: async () => other }),
+      importTemplatePack(supabase, replay, { fetchPackBytes: async () => packBytes(other) }),
       (err: unknown) => (err as ImportError).code === "nonce_replay",
     );
   });
@@ -222,8 +230,37 @@ describe("import-pack — local fixture import (no live Frank URL)", () => {
     const input = makeRequest(pack, { packSha256: "f".repeat(64) });
 
     await assert.rejects(
-      importTemplatePack(supabase, input, { fetchPack: async () => pack }),
+      importTemplatePack(supabase, input, { fetchPackBytes: async () => packBytes(pack) }),
       (err: unknown) => (err as ImportError).code === "hash_mismatch",
+    );
+  });
+
+  it("authenticates the exact declared artifact bytes rather than re-serialized JSON", async () => {
+    const supabase = fakeSupabase();
+    const pack = loadFixture();
+    const prettyBytes = Buffer.from(JSON.stringify(pack, null, 2), "utf8");
+    const input = makeRequest(pack, { packSha256: rawSha256(prettyBytes) });
+
+    const receipt = await importTemplatePack(supabase, input, {
+      fetchPackBytes: async () => prettyBytes,
+    });
+    assert.equal(receipt.packSha256, rawSha256(prettyBytes));
+
+    const differentBytes = Buffer.from(`${JSON.stringify(pack)}\n`, "utf8");
+    const mismatch = makeRequest(pack);
+    await assert.rejects(
+      importTemplatePack(fakeSupabase(), mismatch, { fetchPackBytes: async () => differentBytes }),
+      (err: unknown) => (err as ImportError).code === "hash_mismatch",
+    );
+  });
+
+  it("hashes raw bytes before parsing JSON", async () => {
+    const invalidBytes = Buffer.from("{not-json", "utf8");
+    const input = makeRequest(loadFixture(), { packSha256: rawSha256(invalidBytes) });
+
+    await assert.rejects(
+      importTemplatePack(fakeSupabase(), input, { fetchPackBytes: async () => invalidBytes }),
+      (err: unknown) => (err as ImportError).code === "invalid_json",
     );
   });
 
@@ -233,12 +270,25 @@ describe("import-pack — local fixture import (no live Frank URL)", () => {
     const input = makeRequest(bad);
 
     await assert.rejects(
-      importTemplatePack(supabase, input, { fetchPack: async () => bad }),
+      importTemplatePack(supabase, input, { fetchPackBytes: async () => packBytes(bad) }),
       (err: unknown) => (err as ImportError).code === "schema_invalid",
     );
   });
 
-  it("still enforces the origin allowlist when no fetchPack is injected", async () => {
+  it("rejects TemplatePack identity confusion before recording a nonce or pack", async () => {
+    const supabase = fakeSupabase();
+    const pack = loadFixture();
+    const input = makeRequest(pack, { packId: "different-pack-v1" });
+
+    await assert.rejects(
+      importTemplatePack(supabase, input, { fetchPackBytes: async () => packBytes(pack) }),
+      (err: unknown) => (err as ImportError).code === "pack_id_mismatch",
+    );
+    assert.equal(supabaseTables(supabase).ad_import_nonces.length, 0);
+    assert.equal(supabaseTables(supabase).ad_template_packs.length, 0);
+  });
+
+  it("still enforces the origin allowlist when no fetchPackBytes is injected", async () => {
     const supabase = fakeSupabase();
     const pack = loadFixture();
     const input = makeRequest(pack, { packUrl: "https://evil.example.com/pack.json" });
@@ -249,6 +299,22 @@ describe("import-pack — local fixture import (no live Frank URL)", () => {
     );
   });
 
+  it("disables raw fixture injection in production", async () => {
+    const mutableEnv = process.env as Record<string, string | undefined>;
+    const originalNodeEnv = process.env.NODE_ENV;
+    mutableEnv.NODE_ENV = "production";
+    try {
+      const pack = loadFixture();
+      await assert.rejects(
+        importTemplatePack(fakeSupabase(), makeRequest(pack), { fetchPackBytes: async () => packBytes(pack) }),
+        (err: unknown) => (err as ImportError).code === "fixture_injection_disabled",
+      );
+    } finally {
+      if (originalNodeEnv === undefined) delete mutableEnv.NODE_ENV;
+      else mutableEnv.NODE_ENV = originalNodeEnv;
+    }
+  });
+
   it("rejects an issuedAt outside the ±5 minute window", async () => {
     const supabase = fakeSupabase();
     const pack = loadFixture();
@@ -257,13 +323,42 @@ describe("import-pack — local fixture import (no live Frank URL)", () => {
     });
 
     await assert.rejects(
-      importTemplatePack(supabase, input, { fetchPack: async () => pack }),
+      importTemplatePack(supabase, input, { fetchPackBytes: async () => packBytes(pack) }),
       (err: unknown) => (err as ImportError).code === "timestamp_expired",
     );
   });
 });
 
 describe("import-pack — Ed25519 signature verification (FRANK_PACK_PUBLIC_KEY)", () => {
+  it("production fetches once and authenticates the exact bounded response bytes", async () => {
+    const { publicKeyHex, privateKey } = ed25519Keypair();
+    const originalFetch = globalThis.fetch;
+    process.env.FRANK_PACK_PUBLIC_KEY = publicKeyHex;
+    try {
+      const pack = loadFixture();
+      const rawBytes = Buffer.from(JSON.stringify(pack, null, 2), "utf8");
+      const input = makeRequest(pack, {
+        packSha256: rawSha256(rawBytes),
+        signature: signCanonical(pack, privateKey),
+      });
+      let fetchCount = 0;
+      globalThis.fetch = async () => {
+        fetchCount += 1;
+        return new Response(rawBytes, {
+          status: 200,
+          headers: { "content-length": String(rawBytes.byteLength), "content-type": "application/json" },
+        });
+      };
+
+      const receipt = await importTemplatePack(fakeSupabase(), input);
+      assert.equal(receipt.packSha256, rawSha256(rawBytes));
+      assert.equal(fetchCount, 1);
+    } finally {
+      globalThis.fetch = originalFetch;
+      delete process.env.FRANK_PACK_PUBLIC_KEY;
+    }
+  });
+
   it("accepts a valid signature over the canonical pack JSON (roundtrip)", async () => {
     const { publicKeyHex, privateKey } = ed25519Keypair();
     process.env.FRANK_PACK_PUBLIC_KEY = publicKeyHex;
@@ -273,7 +368,7 @@ describe("import-pack — Ed25519 signature verification (FRANK_PACK_PUBLIC_KEY)
       const input = makeRequest(pack, { signature: signCanonical(pack, privateKey) });
 
       const receipt = await importTemplatePack(supabase, input, {
-        fetchPack: async () => pack,
+        fetchPackBytes: async () => packBytes(pack),
       });
 
       assert.equal(receipt.status, "active");
@@ -301,7 +396,7 @@ describe("import-pack — Ed25519 signature verification (FRANK_PACK_PUBLIC_KEY)
       const input = makeRequest(tampered, { signature });
 
       await assert.rejects(
-        importTemplatePack(supabase, input, { fetchPack: async () => tampered }),
+        importTemplatePack(supabase, input, { fetchPackBytes: async () => packBytes(tampered) }),
         (err: unknown) => (err as ImportError).code === "signature_rejected",
       );
     } finally {
@@ -320,7 +415,7 @@ describe("import-pack — Ed25519 signature verification (FRANK_PACK_PUBLIC_KEY)
       const input = makeRequest(pack, { signature: signCanonical(pack, rogue.privateKey) });
 
       await assert.rejects(
-        importTemplatePack(supabase, input, { fetchPack: async () => pack }),
+        importTemplatePack(supabase, input, { fetchPackBytes: async () => packBytes(pack) }),
         (err: unknown) => (err as ImportError).code === "signature_rejected",
       );
     } finally {
@@ -332,7 +427,7 @@ describe("import-pack — Ed25519 signature verification (FRANK_PACK_PUBLIC_KEY)
     delete process.env.FRANK_PACK_PUBLIC_KEY;
     const supabase = fakeSupabase();
     const pack = loadFixture();
-    // Allowlisted origin + NO injected fetchPack -> the real production route.
+    // Allowlisted origin + NO injected fetchPackBytes -> the real production route.
     // The key guard fires before any network fetch (fail fast, no egress).
     const input = makeRequest(pack, { packUrl: "https://frank.fail/packs/fixture-minimal.json" });
 
@@ -342,14 +437,14 @@ describe("import-pack — Ed25519 signature verification (FRANK_PACK_PUBLIC_KEY)
     );
   });
 
-  it("skips the signature check on the injected fetchPack path when no key is set", async () => {
+  it("skips the signature check on the injected raw-byte fixture path when no key is set", async () => {
     delete process.env.FRANK_PACK_PUBLIC_KEY;
     const supabase = fakeSupabase();
     const pack = loadFixture();
     const input = makeRequest(pack, { signature: "fixture-ed25519-signature-placeholder" });
 
     const receipt = await importTemplatePack(supabase, input, {
-      fetchPack: async () => pack, // caller vouches for the source — documented test-only skip
+      fetchPackBytes: async () => packBytes(pack), // caller declares exact fixture bytes
     });
     assert.equal(receipt.status, "active");
   });
