@@ -1,4 +1,5 @@
-import { sha256Hex } from "../../../packages/ad-template-pack-contract/src/hash.ts";
+import { createHash } from "node:crypto";
+import canonicalize from "canonicalize";
 import { z } from "zod";
 
 import {
@@ -168,13 +169,13 @@ export class AdIntelligenceReleaseError extends Error {
 
 /** SHA-256 of `public_export`, matching Frank's public-export checksum. */
 export function computeAdIntelligencePublicExportChecksum(publicExport: unknown): string {
-  return sha256Hex(publicExport);
+  return sha256Jcs(publicExport);
 }
 
 /** SHA-256 of the complete release envelope excluding only `release_hash`. */
 export function computeAdIntelligenceReleaseHash(input: Record<string, unknown>): string {
   const { release_hash: _releaseHash, ...unsignedRelease } = input;
-  return sha256Hex(unsignedRelease);
+  return sha256Jcs(unsignedRelease);
 }
 
 /**
@@ -284,11 +285,17 @@ function stableSubjectRef(
 }
 
 function stableUuid(value: string): string {
-  const hex = sha256Hex(value).slice(0, 32).split("");
+  const hex = createHash("sha256").update(value, "utf8").digest("hex").slice(0, 32).split("");
   hex[12] = "5";
   hex[16] = ((Number.parseInt(hex[16]!, 16) & 0x3) | 0x8).toString(16);
   const joined = hex.join("");
   return `${joined.slice(0, 8)}-${joined.slice(8, 12)}-${joined.slice(12, 16)}-${joined.slice(16, 20)}-${joined.slice(20)}`;
+}
+
+function sha256Jcs(value: unknown): string {
+  const canonical = canonicalize(value);
+  if (canonical === undefined) throw new TypeError("Cannot canonicalize an undefined Ad Intelligence payload.");
+  return createHash("sha256").update(canonical, "utf8").digest("hex");
 }
 
 function toCustomerAdRadarRow(
