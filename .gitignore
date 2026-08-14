@@ -15,6 +15,7 @@ dist
 
 .vercel
 .env*
+!.env.example
 
 # Local tooling / cleanup backups (not part of project)
 .claude/
@@ -52,7 +53,7 @@ _ad/
 # AdStudio font-corpus build cache (re-fetched/regenerated on demand; only
 # the winning typeSpecs + subset woff2 faces this script produces get
 # committed, not the raw corpus metadata or intermediate OCR region cache).
-.cache/font-corpus/
+.cache/
 
 # Scratch / temp / local-only agent state (never commit)
 .tmp-*
@@ -67,7 +68,8 @@ tmp/
 screenshots/
 video/
 video-capture.mjs
-mockups/
+/mockups/
+/stitch/
 agent-os/
 blockwise-logo-pack/
 *.patch

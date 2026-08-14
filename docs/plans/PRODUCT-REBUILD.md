@@ -44,7 +44,9 @@ Blockwise no longer owns. Importers are internal to the group unless noted.
 - Runtime: `hermes/tools/research-runtime/**` (VPS queue worker + supervisor), `hermes/tools/meta-library-capture/**` (Meta Library scraper). Wired only via `infra/hermes/Dockerfile` (lines 24-31), `infra/hermes/main-wrapper.sh`, `infra/coolify/docker-compose.research.yml`. `worker/index.ts` does **not** depend on them.
 - Skills (research-ops only): `hermes/skills/{blockwise-ad-collector,blockwise-ad-classifier,blockwise-agent-census,blockwise-coverage-auditor,blockwise-defect-investigator,blockwise-location-ad-search,blockwise-page-resolver,blockwise-operator-chat}`. NOTE `blockwise-agent-cleanup` / `blockwise-agent-reviewer` / `blockwise-artifact-packager` are cleanup/review skills — keep.
 - Tests: `tests/research-engine/**`, `tests/ad-radar-accuracy-audit.test.mjs` (+`.ts`), `tests/research-inactive-purge.test.ts`
-- Docs: `docs/research-engine/**` (README.md, env.md, operator-runbook.md), `docs/plans/2026-07-20-meta-capture-rebuild-model-cutover.md`, `research/**` (5× ad-radar-replacement md), `meta_ad_candidates/**` (image data)
+- Removed during canonical-project cleanup: the old research-engine runbooks,
+  Meta-capture plan, five ad-radar replacement reports, and
+  `meta_ad_candidates/**` image data.
 - Tests that **reference** these routes and must be edited (not deleted): `tests/feature-surface-isolation.test.ts` (research routes list), `tests/operator-service-role-pages.test.ts` (research/content page snapshots)
 
 ### B2. Operator content-engine (blog / content-to-lead)
@@ -84,14 +86,10 @@ itself (self-excluded). Deleted paths include:
 - `src/app/api/adstudio/{jobs, creatives/[id]/edit, campaigns/route.ts, campaigns/[id]/draft, export-packages}`, `src/app/api/operator/template-trace`
 - `src/components/adstudio/{ad-studio-workbench.tsx, new-ad-dialog.tsx, canvas/in-place-ad-editor.tsx}`
 
-Remaining legacy-term hits are **docs/history only** (no code): `AGENTS.md`
-(now rewritten), `.plan/template-trace-inspector.md`,
-`docs/CLAUDE-CODE-PROMPT-STAGE2.md`, `docs/plans/2026-07-28-mobile-dashboards-spec.md`,
-`docs/superpowers/specs/2026-07-15-adstudio-local-subscription-adapter-design.md`,
-`docs/superpowers/specs/2026-07-27-progressive-onboarding-pricing-rollout-design.md`,
-`docs/plans/2026-07-27-adstudio-magic-layers-editor.md`,
-`supabase/migrations/202607150001_adstudio_fast_quality_profile.sql`
-(applied migration — keep as history), `.claude-task-prompt.md`.
+The old prompt, handover, review, and implementation-plan files were removed
+during canonical-project cleanup. The applied migration
+`supabase/migrations/202607150001_adstudio_fast_quality_profile.sql` remains as
+required database history.
 
 ## (d) Recommended next delete commit (BW-D)
 
@@ -100,9 +98,7 @@ One commit, explicit paths:
 1. **B1 research surface** (pages, 27 API routes, 4 components, 5 libs,
    `api/health/research`, `next.config.ts` edits, `tests/feature-surface-isolation` +
    `tests/operator-service-role-pages` edits, `tests/research-engine`,
-   `tests/research-inactive-purge`, `tests/ad-radar-accuracy-audit.*`,
-   `docs/research-engine`, `research/`, `meta_ad_candidates`,
-   `docs/plans/2026-07-20-meta-capture-rebuild-model-cutover.md`) **plus** the
+   `tests/research-inactive-purge`, `tests/ad-radar-accuracy-audit.*`) **plus** the
    `paid-service-watchdog` refactor off `src/lib/research/service.ts`.
 2. **B2 content-engine** (3 pages, 6 API routes, 3 components,
    `src/lib/content-engine`, `tests/content-engine`, and the confirmed blog-only

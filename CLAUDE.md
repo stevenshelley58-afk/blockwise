@@ -5,9 +5,8 @@ Follow `AGENTS.md` as the source of truth for Blockwise engineering rules.
 ## VPS / Deploy access
 
 To SSH into the production VPS or redeploy Hermes, follow
-`docs/runbooks/vps-ssh.md`. The persistent SSH key lives at `.secrets/vps_key`
-(gitignored); host is `root@76.13.209.160`. The sandbox is wiped each session,
-so re-stage the key per the runbook — do not assume SSH is already configured.
+`docs/runbooks/vps-ssh.md`. Access is key-based over Tailscale; do not store an
+SSH private key in this repository or fall back to password authentication.
 
 ## External Reference Repositories
 
