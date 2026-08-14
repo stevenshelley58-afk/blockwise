@@ -1,12 +1,11 @@
 import { createHash } from "node:crypto";
 
+import canonicalize from "canonicalize";
 import { z } from "zod";
 
 /** Wire identifiers emitted by Frank's `public_release()` producer. */
 export const CONTENT_FACTORY_RELEASE_SCHEMA = "schema://frank.content-factory-release/v1" as const;
 export const CONTENT_FACTORY_TOOL_ID = "content-factory" as const;
-/** Compatibility pin for the reviewed Frank producer revision. */
-export const CONTENT_FACTORY_PRODUCER_REVISION = "3de9e4f" as const;
 
 const SHA256_PATTERN = /^[a-f0-9]{64}$/u;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
@@ -15,6 +14,7 @@ const FORBIDDEN_FIELD_PATTERN = /(?:^|[_-])(prompt|prompts|model|models|provider
 const nonEmptyText = (max: number) => z.string().trim().min(1).max(max);
 const sha256Schema = z.string().regex(SHA256_PATTERN, "must be a lowercase SHA-256 hex digest");
 const publicUrlSchema = z.string().trim().url().max(2_048);
+const timestampSchema = z.string().datetime({ offset: true });
 
 const bodySchema = z
   .object({ format: z.literal("markdown"), content: nonEmptyText(500_000) })
@@ -37,13 +37,30 @@ const seoSchema = z
   })
   .strict();
 
-const approvalReceiptSchema = z.record(z.unknown());
-const sanitizationReceiptsSchema = z.array(z.record(z.unknown())).min(2).max(16);
+const approvalReceiptSchema = z
+  .object({
+    decision: z.literal("approve"),
+    receipt_ref: nonEmptyText(500),
+    decided_at: timestampSchema,
+  })
+  .strict();
+
+const sanitizationReceiptsSchema = z
+  .object({
+    pii_scan: z
+      .object({ status: z.literal("passed"), receipt_id: nonEmptyText(500), scanned_at: timestampSchema })
+      .strict(),
+    secret_scan: z
+      .object({ status: z.literal("passed"), receipt_id: nonEmptyText(500), scanned_at: timestampSchema })
+      .strict(),
+  })
+  .strict();
+
 const qaReceiptSchema = z
   .object({
     decision: z.literal("pass"),
     receipt_ref: nonEmptyText(500),
-    checked_at: z.string().datetime({ offset: true }),
+    checked_at: timestampSchema,
   })
   .strict();
 
@@ -54,15 +71,15 @@ const releaseSchema = z
     project_id: nonEmptyText(200),
     workspace_id: nonEmptyText(200),
     settings_revision: z.number().int().nonnegative(),
-    pipeline_id: nonEmptyText(200),
-    pipeline_version: z.number().int().positive(),
+    pipeline_id: z.literal("content-factory-pipeline"),
+    pipeline_version: z.literal("1.0.0"),
     consumer_compatibility: z.array(nonEmptyText(200)).min(1).max(32),
     release_id: nonEmptyText(200),
     content_id: nonEmptyText(200),
     version: z.number().int().positive(),
     immutable: z.literal(true),
     status: z.literal("published"),
-    channel: nonEmptyText(100),
+    channel: z.literal("web"),
     title: nonEmptyText(240),
     summary: nonEmptyText(1_000).optional(),
     body: bodySchema,
@@ -77,7 +94,7 @@ const releaseSchema = z
       .strict(),
     sanitization_receipts: sanitizationReceiptsSchema,
     qa_receipt: qaReceiptSchema,
-    published_at: z.string().datetime({ offset: true }),
+    published_at: timestampSchema,
     release_hash: sha256Schema,
   })
   .strict();
@@ -91,14 +108,14 @@ export type BlockwiseBlogRelease = {
   version: number;
   workspaceId: string;
   projectId: string;
-  channel: string;
+  channel: "web";
   title: string;
   summary: string | null;
   bodyMarkdown: string;
   seo: ContentFactoryBlogRelease["seo"];
   media: ContentFactoryBlogRelease["media"];
   settingsRevision: number;
-  pipeline: { id: string; version: number };
+  pipeline: { id: "content-factory-pipeline"; version: "1.0.0" };
   consumerCompatibility: string[];
   traceId: string;
   artifactChecksums: Record<string, string>;
@@ -131,16 +148,11 @@ export class ContentFactoryReleaseError extends Error {
   }
 }
 
-/** Canonical JSON used by the Frank release contract for hash receipts. */
+/** RFC 8785 JSON Canonicalization Scheme bytes used by the Frank contract. */
 export function canonicalJson(value: unknown): string {
-  return JSON.stringify(value, (_key, entry) => {
-    if (entry !== null && typeof entry === "object" && !Array.isArray(entry)) {
-      return Object.fromEntries(
-        Object.entries(entry as Record<string, unknown>).sort(([left], [right]) => left.localeCompare(right)),
-      );
-    }
-    return entry;
-  });
+  const result = canonicalize(value);
+  if (result === undefined) throw new Error("Cannot canonicalize an undefined value.");
+  return result;
 }
 
 export function sha256Hex(value: unknown): string {
@@ -174,8 +186,8 @@ export function parseContentFactoryBlogRelease(input: unknown, workspaceId: stri
   if (!UUID_PATTERN.test(release.workspace_id) || release.workspace_id !== workspaceId) {
     throw new ContentFactoryReleaseError("workspace_mismatch", "Release workspace does not match the requested Blockwise workspace.");
   }
-  if (!release.consumer_compatibility.some((entry) => /blockwise/iu.test(entry))) {
-    throw new ContentFactoryReleaseError("schema_invalid", "Release does not declare Blockwise consumer compatibility.");
+  if (!release.consumer_compatibility.includes("article-release-v1")) {
+    throw new ContentFactoryReleaseError("schema_invalid", "Release does not declare article-release-v1 compatibility.");
   }
   assertReceipts(release);
   assertPublicUrl(release.seo.canonical_url, "seo.canonical_url");
@@ -245,27 +257,35 @@ export async function fetchContentFactoryBlogRelease(
 }
 
 function assertReceipts(release: ContentFactoryBlogRelease): void {
-  const approvalStatus = readStatus(release.approval_receipt);
-  if (approvalStatus !== "approved") {
+  if (release.approval_receipt.decision !== "approve") {
     throw new ContentFactoryReleaseError("receipt_failed", "Release approval receipt is not approved.");
   }
-  for (const receipt of release.sanitization_receipts) {
-    const status = readStatus(receipt);
-    if (status !== "passed" && status !== "sanitized" && status !== "approved") {
-      throw new ContentFactoryReleaseError("receipt_failed", "Release contains a failed sanitization receipt.");
-    }
+  if (release.sanitization_receipts.pii_scan.status !== "passed" || release.sanitization_receipts.secret_scan.status !== "passed") {
+    throw new ContentFactoryReleaseError("receipt_failed", "Release contains a failed sanitization receipt.");
+  }
+  if (release.qa_receipt.decision !== "pass") {
+    throw new ContentFactoryReleaseError("receipt_failed", "Release QA receipt is not passed.");
   }
 }
 
 function assertArtifactChecksums(release: ContentFactoryBlogRelease): void {
   const checksums = release.provenance.artifact_checksums;
-  for (const media of release.media) {
-    const checksum = checksums[media.id] ?? checksums[`media:${media.id}`];
-    if (!checksum) throw new ContentFactoryReleaseError("hash_missing", `Media artifact ${media.id} is missing a checksum receipt.`);
-    if (checksum !== media.checksum) throw new ContentFactoryReleaseError("hash_mismatch", `Media artifact ${media.id} checksum does not match its receipt.`);
+  const expectedKeys = new Set(["body", "seo", ...release.media.map((media) => `media:${media.id}`)]);
+  const actualKeys = Object.keys(checksums);
+  if (actualKeys.length !== expectedKeys.size || actualKeys.some((key) => !expectedKeys.has(key))) {
+    throw new ContentFactoryReleaseError("hash_mismatch", "Artifact checksum keys do not match body, seo, and media artifacts.");
   }
-  if (!checksums.body && !checksums.content) throw new ContentFactoryReleaseError("hash_missing", "Body artifact is missing a checksum receipt.");
-  if (!checksums.seo) throw new ContentFactoryReleaseError("hash_missing", "SEO artifact is missing a checksum receipt.");
+  if (checksums.body !== sha256Hex(release.body)) {
+    throw new ContentFactoryReleaseError("hash_mismatch", "Body artifact checksum does not match RFC 8785 JCS bytes.");
+  }
+  if (checksums.seo !== sha256Hex(release.seo)) {
+    throw new ContentFactoryReleaseError("hash_mismatch", "SEO artifact checksum does not match RFC 8785 JCS bytes.");
+  }
+  for (const media of release.media) {
+    if (checksums[`media:${media.id}`] !== media.checksum) {
+      throw new ContentFactoryReleaseError("hash_mismatch", `Media artifact ${media.id} checksum does not match its receipt.`);
+    }
+  }
 }
 
 function hashReleaseWithoutHash(release: ContentFactoryBlogRelease): string {
@@ -315,10 +335,6 @@ function assertUniqueMediaIds(media: ContentFactoryBlogRelease["media"]): void {
     if (ids.has(entry.id)) throw new ContentFactoryReleaseError("hash_mismatch", `Media artifact id ${entry.id} is not unique.`);
     ids.add(entry.id);
   }
-}
-
-function readStatus(receipt: Record<string, unknown>): string | null {
-  return typeof receipt.status === "string" ? receipt.status.trim().toLowerCase() : null;
 }
 
 function assertPublicUrl(value: string, label: string): void {

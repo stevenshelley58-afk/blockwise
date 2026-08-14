@@ -3,9 +3,9 @@ import test from "node:test";
 
 import {
   CONTENT_FACTORY_RELEASE_SCHEMA,
-  CONTENT_FACTORY_PRODUCER_REVISION,
   CONTENT_FACTORY_TOOL_ID,
   ContentFactoryReleaseError,
+  canonicalJson,
   fetchContentFactoryBlogRelease,
   parseContentFactoryBlogRelease,
   sha256Hex,
@@ -14,7 +14,7 @@ import {
 const workspaceId = "11111111-1111-4111-8111-111111111111";
 
 function makeRelease(): Record<string, unknown> {
-  const body = { format: "markdown", content: "# A useful guide\n\nThe final, reviewed article." };
+  const body = { format: "markdown", content: "# Café guide — 日本語\n\nThe final, reviewed article." };
   const seo = {
     title: "A useful Blockwise guide | Blockwise",
     description: "A practical guide for real-estate advertising teams.",
@@ -25,11 +25,7 @@ function makeRelease(): Record<string, unknown> {
       id: "hero",
       url: "https://cdn.frank.fail/releases/a-useful-blockwise-guide/hero.webp",
       alt_text: "A clear illustration of a campaign decision",
-      checksum: sha256Hex({
-        id: "hero",
-        url: "https://cdn.frank.fail/releases/a-useful-blockwise-guide/hero.webp",
-        alt_text: "A clear illustration of a campaign decision",
-      }),
+      checksum: "f".repeat(64),
     },
   ];
   const withoutReleaseHash = {
@@ -38,33 +34,33 @@ function makeRelease(): Record<string, unknown> {
     project_id: "blockwise",
     workspace_id: workspaceId,
     settings_revision: 7,
-    pipeline_id: "blog-web-release",
-    pipeline_version: 3,
-    consumer_compatibility: ["blockwise.blog/v1"],
+    pipeline_id: "content-factory-pipeline",
+    pipeline_version: "1.0.0",
+    consumer_compatibility: ["article-release-v1"],
     release_id: "release-2026-08-14-guide",
     content_id: "content-a-useful-guide",
     version: 1,
     immutable: true,
     status: "published",
-    channel: "web/blog",
+    channel: "web",
     title: "A useful Blockwise guide",
     summary: "A short summary for the public guide.",
     body,
     media,
     seo,
-    approval_receipt: { status: "approved", receipt_id: "approval-123" },
+    approval_receipt: { decision: "approve", receipt_ref: "approval-123", decided_at: "2026-08-14T07:50:00.000Z" },
     provenance: {
       trace_id: "trace-123",
       artifact_checksums: {
         body: sha256Hex(body),
         seo: sha256Hex(seo),
-        hero: media[0].checksum,
+        "media:hero": media[0].checksum,
       },
     },
-    sanitization_receipts: [
-      { kind: "pii", status: "passed", receipt_id: "pii-123" },
-      { kind: "secrets", status: "passed", receipt_id: "secret-123" },
-    ],
+    sanitization_receipts: {
+      pii_scan: { status: "passed", receipt_id: "pii-123", scanned_at: "2026-08-14T07:45:00.000Z" },
+      secret_scan: { status: "passed", receipt_id: "secret-123", scanned_at: "2026-08-14T07:46:00.000Z" },
+    },
     qa_receipt: { decision: "pass", receipt_ref: "qa-123", checked_at: "2026-08-14T07:55:00.000Z" },
     published_at: "2026-08-14T08:00:00.000Z",
   };
@@ -75,48 +71,84 @@ function assertReleaseError(action: () => unknown, code: ContentFactoryReleaseEr
   assert.throws(action, (error: unknown) => error instanceof ContentFactoryReleaseError && error.code === code);
 }
 
-test("accepts the immutable Frank public_release contract and verifies artifact checksums", () => {
-  assert.equal(CONTENT_FACTORY_PRODUCER_REVISION, "3de9e4f");
+test("accepts the exact immutable Frank public_release contract", () => {
   const parsed = parseContentFactoryBlogRelease(makeRelease(), workspaceId);
 
   assert.equal(parsed.releaseId, "release-2026-08-14-guide");
-  assert.equal(parsed.bodyMarkdown, "# A useful guide\n\nThe final, reviewed article.");
-  assert.equal(parsed.artifactChecksums.hero, (makeRelease() as { provenance: { artifact_checksums: Record<string, string> } }).provenance.artifact_checksums.hero);
+  assert.equal(parsed.pipeline.version, "1.0.0");
+  assert.equal(parsed.channel, "web");
+  assert.equal(parsed.consumerCompatibility[0], "article-release-v1");
+  assert.equal(parsed.bodyMarkdown, "# Café guide — 日本語\n\nThe final, reviewed article.");
 });
 
-test("rejects drafts and failed approval or sanitization receipts", () => {
+test("uses RFC 8785 JCS for Unicode, numeric, and property-order equivalence", () => {
+  const first = { z: "café", number: 1.0, nested: { b: "日本語", a: true } };
+  const second = { nested: { a: true, b: "日本語" }, number: 1, z: "caf\u00e9" };
+
+  assert.equal(canonicalJson(first), canonicalJson(second));
+  assert.equal(sha256Hex(first), sha256Hex(second));
+});
+
+test("rejects drafts, wrong pipeline/channel, incompatible releases, and failed receipts", () => {
   const draft = makeRelease() as { status: string };
   draft.status = "draft";
   assertReleaseError(() => parseContentFactoryBlogRelease(draft, workspaceId), "schema_invalid");
 
-  const failedApproval = makeRelease() as { approval_receipt: { status: string } };
-  failedApproval.approval_receipt.status = "rejected";
-  assertReleaseError(() => parseContentFactoryBlogRelease(failedApproval, workspaceId), "receipt_failed");
+  const wrongPipeline = makeRelease() as { pipeline_version: string };
+  wrongPipeline.pipeline_version = "1";
+  assertReleaseError(() => parseContentFactoryBlogRelease(wrongPipeline, workspaceId), "schema_invalid");
 
-  const failedSanitization = makeRelease() as { sanitization_receipts: Array<{ status: string }> };
-  failedSanitization.sanitization_receipts[0].status = "failed";
-  assertReleaseError(() => parseContentFactoryBlogRelease(failedSanitization, workspaceId), "receipt_failed");
+  const wrongChannel = makeRelease() as { channel: string };
+  wrongChannel.channel = "web/blog";
+  assertReleaseError(() => parseContentFactoryBlogRelease(wrongChannel, workspaceId), "schema_invalid");
+
+  const incompatible = makeRelease() as { consumer_compatibility: string[] };
+  incompatible.consumer_compatibility = ["other-capability-v1"];
+  assertReleaseError(() => parseContentFactoryBlogRelease(incompatible, workspaceId), "schema_invalid");
+
+  const failedApproval = makeRelease() as { approval_receipt: { decision: string } };
+  failedApproval.approval_receipt.decision = "reject";
+  assertReleaseError(() => parseContentFactoryBlogRelease(failedApproval, workspaceId), "schema_invalid");
+
+  const failedSanitization = makeRelease() as { sanitization_receipts: { pii_scan: { status: string } } };
+  failedSanitization.sanitization_receipts.pii_scan.status = "failed";
+  assertReleaseError(() => parseContentFactoryBlogRelease(failedSanitization, workspaceId), "schema_invalid");
 
   const failedQa = makeRelease() as { qa_receipt: { decision: string } };
   failedQa.qa_receipt.decision = "fail";
   assertReleaseError(() => parseContentFactoryBlogRelease(failedQa, workspaceId), "schema_invalid");
-
-  const incompatible = makeRelease() as { consumer_compatibility: string[] };
-  incompatible.consumer_compatibility = ["other-consumer/v1"];
-  assertReleaseError(() => parseContentFactoryBlogRelease(incompatible, workspaceId), "schema_invalid");
 });
 
-test("rejects recursive prompt, model, provider, private, raw, and internal fields", () => {
-  const release = makeRelease() as { provenance: Record<string, unknown> };
-  release.provenance = {
+test("rejects extra nested fields and recursive forbidden fields", () => {
+  const extra = makeRelease() as { body: Record<string, unknown> };
+  extra.body.extra = "not in the producer contract";
+  assertReleaseError(() => parseContentFactoryBlogRelease(extra, workspaceId), "schema_invalid");
+
+  const forbidden = makeRelease() as { provenance: Record<string, unknown> };
+  forbidden.provenance = {
     trace_id: "trace-123",
-    artifact_checksums: { body: "f".repeat(64), seo: "f".repeat(64), hero: "f".repeat(64) },
+    artifact_checksums: { body: "f".repeat(64), seo: "f".repeat(64), "media:hero": "f".repeat(64) },
     nested: { raw_output: "not allowed" },
   };
-  assertReleaseError(() => parseContentFactoryBlogRelease(release, workspaceId), "forbidden_field");
+  assertReleaseError(() => parseContentFactoryBlogRelease(forbidden, workspaceId), "forbidden_field");
 });
 
-test("rejects unsafe media URLs, cross-workspace releases, and hash tampering", () => {
+test("rejects wrong artifact keys and hashes", () => {
+  const wrongKey = makeRelease() as { provenance: { artifact_checksums: Record<string, string> } };
+  wrongKey.provenance.artifact_checksums.hero = wrongKey.provenance.artifact_checksums["media:hero"];
+  delete wrongKey.provenance.artifact_checksums["media:hero"];
+  assertReleaseError(() => parseContentFactoryBlogRelease(wrongKey, workspaceId), "hash_mismatch");
+
+  const wrongBodyHash = makeRelease() as { provenance: { artifact_checksums: Record<string, string> } };
+  wrongBodyHash.provenance.artifact_checksums.body = "0".repeat(64);
+  assertReleaseError(() => parseContentFactoryBlogRelease(wrongBodyHash, workspaceId), "hash_mismatch");
+
+  const wrongReleaseHash = makeRelease() as { release_hash: string };
+  wrongReleaseHash.release_hash = "0".repeat(64);
+  assertReleaseError(() => parseContentFactoryBlogRelease(wrongReleaseHash, workspaceId), "hash_mismatch");
+});
+
+test("rejects unsafe media URLs and cross-workspace data", () => {
   const unsafe = makeRelease() as { media: Array<{ url: string }> };
   unsafe.media[0].url = "http://127.0.0.1/private.webp";
   assertReleaseError(() => parseContentFactoryBlogRelease(unsafe, workspaceId), "unsafe_url");
@@ -124,21 +156,9 @@ test("rejects unsafe media URLs, cross-workspace releases, and hash tampering", 
   const crossWorkspace = makeRelease() as { workspace_id: string };
   crossWorkspace.workspace_id = "22222222-2222-4222-8222-222222222222";
   assertReleaseError(() => parseContentFactoryBlogRelease(crossWorkspace, workspaceId), "workspace_mismatch");
-
-  const nestedCrossWorkspace = makeRelease() as { provenance: Record<string, unknown> };
-  nestedCrossWorkspace.provenance = {
-    trace_id: "trace-123",
-    artifact_checksums: { body: "f".repeat(64), seo: "f".repeat(64), hero: "f".repeat(64) },
-    workspace_id: "22222222-2222-4222-8222-222222222222",
-  };
-  assertReleaseError(() => parseContentFactoryBlogRelease(nestedCrossWorkspace, workspaceId), "workspace_mismatch");
-
-  const tampered = makeRelease() as { media: Array<{ checksum: string }> };
-  tampered.media[0].checksum = "f".repeat(64);
-  assertReleaseError(() => parseContentFactoryBlogRelease(tampered, workspaceId), "hash_mismatch");
 });
 
-test("fetch adapter validates a served release and has no generator or orchestrator path", async () => {
+test("fetch adapter validates a served release without a generator or orchestrator path", async () => {
   let fetchCount = 0;
   const parsed = await fetchContentFactoryBlogRelease(
     "https://frank.fail/releases/release-2026-08-14-guide.json",
