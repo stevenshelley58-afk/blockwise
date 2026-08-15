@@ -7,17 +7,15 @@ import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { canonicalJson, sha256Hex } from "../packages/ad-template-pack-contract/src/index.ts";
 import {
+  frankPublicReleaseSchema,
   importFrankPublicRelease,
   type FrankPublicRelease,
 } from "../src/lib/adstudio/frank-public-release.ts";
-import type { ImportError, ImportRequest } from "../src/lib/adstudio/import-pack.ts";
+import type { ImportError } from "../src/lib/adstudio/import-pack.ts";
 
-const FIXTURE_PATH = join(
-  fileURLToPath(new URL(".", import.meta.url)),
-  "fixtures",
-  "template-pack",
-  "minimal-feed-story.json",
-);
+const FIXTURE_PATH = join(fileURLToPath(new URL(".", import.meta.url)), "fixtures", "template-pack", "minimal-feed-story.json");
+const GOLDEN_RELEASE_PATH = join(fileURLToPath(new URL(".", import.meta.url)), "fixtures", "releases", "ad-template-generator-v1.json");
+const PACK_URL = "https://frank.fail/packs/fixture-minimal.json";
 
 type Row = Record<string, unknown>;
 
@@ -31,17 +29,11 @@ class FakeSupabase {
   };
   private sequence = 0;
 
-  from(table: string): FakeQueryBuilder {
-    return new FakeQueryBuilder(this, table);
-  }
+  from(table: string): FakeQueryBuilder { return new FakeQueryBuilder(this, table); }
 
   insertInto(table: string, value: Row | Row[]): Row | Row[] {
     const values = Array.isArray(value) ? value : [value];
-    const stored = values.map((row) => ({
-      id: row.id ?? `fake-${++this.sequence}`,
-      created_at: row.created_at ?? new Date().toISOString(),
-      ...row,
-    }));
+    const stored = values.map((row) => ({ id: row.id ?? `fake-${++this.sequence}`, created_at: row.created_at ?? new Date().toISOString(), ...row }));
     (this.tables[table] ??= []).push(...stored);
     return Array.isArray(value) ? stored : stored[0]!;
   }
@@ -52,110 +44,58 @@ class FakeQueryBuilder {
   private inserted?: Row | Row[];
   private readonly db: FakeSupabase;
   private readonly table: string;
-
   constructor(db: FakeSupabase, table: string) {
     this.db = db;
     this.table = table;
   }
-
   select(_columns: string): this { return this; }
-
-  eq(column: string, value: unknown): this {
-    this.filters.push([column, value]);
-    return this;
-  }
-
-  insert(value: Row | Row[]): this {
-    this.inserted = this.db.insertInto(this.table, value);
-    return this;
-  }
-
-  maybeSingle(): Promise<{ data: Row | null; error: null }> {
-    return Promise.resolve({ data: this.find() ?? null, error: null });
-  }
-
+  eq(column: string, value: unknown): this { this.filters.push([column, value]); return this; }
+  insert(value: Row | Row[]): this { this.inserted = this.db.insertInto(this.table, value); return this; }
+  maybeSingle(): Promise<{ data: Row | null; error: null }> { return Promise.resolve({ data: this.find() ?? null, error: null }); }
   single(): Promise<{ data: Row | null; error: null }> {
-    const row = this.inserted !== undefined
-      ? Array.isArray(this.inserted) ? this.inserted[0] : this.inserted
-      : this.find();
+    const row = this.inserted !== undefined ? (Array.isArray(this.inserted) ? this.inserted[0] : this.inserted) : this.find();
     return Promise.resolve({ data: row ?? null, error: null });
   }
-
-  private find(): Row | undefined {
-    return (this.db.tables[this.table] ?? []).find((row) => this.filters.every(([column, value]) => row[column] === value));
-  }
+  private find(): Row | undefined { return (this.db.tables[this.table] ?? []).find((row) => this.filters.every(([column, value]) => row[column] === value)); }
 }
 
-function fakeSupabase(): SupabaseClient {
-  return new FakeSupabase() as unknown as SupabaseClient;
-}
+function fakeSupabase(): SupabaseClient { return new FakeSupabase() as unknown as SupabaseClient; }
+function loadPack(): Record<string, unknown> { return JSON.parse(readFileSync(FIXTURE_PATH, "utf8")) as Record<string, unknown>; }
+function loadGoldenRelease(): FrankPublicRelease { return JSON.parse(readFileSync(GOLDEN_RELEASE_PATH, "utf8")) as FrankPublicRelease; }
 
-function loadPack(): Record<string, unknown> {
-  return JSON.parse(readFileSync(FIXTURE_PATH, "utf8")) as Record<string, unknown>;
-}
-
-function releaseFor(pack: Record<string, unknown>): FrankPublicRelease {
-  const assets = pack.assets as Record<string, { sha256: string }>;
-  const fonts = pack.fonts as Array<{ file: string; sha256: string }>;
-  const previews = pack.safePreviews as Record<"feed" | "story", { sha256: string }>;
-  const release = {
-    schema: "schema://frank.tool-app-release/v1",
+function releaseFor(pack: Record<string, unknown>, overrides: Record<string, unknown> = {}): FrankPublicRelease {
+  const now = new Date().toISOString();
+  const base = {
+    schema: "schema://frank.ad-template-generator-release/v1",
     tool_id: "ad-template-generator",
-    scope: { kind: "public", id: "ad-template-generator" },
-    release_version: 1,
+    scope: { kind: "project", id: "blockwise" },
+    release_version: "1.0.0",
     release_id: "release-fixture-1",
     status: "released",
     settings_revision: 1,
-    settings_ref: "settings/public-template-pack-v1",
+    settings_ref: "settings/template-pack-v1",
     pipeline_id: "reference-clone-release",
     pipeline_version: "1.0.0",
-    consumer_compatibility: { blockwise: { min: 1, max: 1 } },
-    artifact_refs: {
-      template_pack: { ref: "https://frank.fail/packs/fixture-minimal.json", sha256: sha256Hex(pack), public: true },
-      assets: Object.fromEntries(Object.entries(assets).map(([key, asset]) => [key, {
-        ref: `https://frank.fail/assets/${encodeURIComponent(key)}`,
-        sha256: asset.sha256,
-        public: true,
-      }])),
-      fonts: Object.fromEntries(fonts.map((font) => [font.file, {
-        ref: `https://frank.fail/fonts/${encodeURIComponent(font.file)}`,
-        sha256: font.sha256,
-        public: true,
-      }])),
-      previews: {
-        feed: { ref: "https://frank.fail/previews/fixture-feed.png", sha256: previews.feed.sha256, public: true },
-        story: { ref: "https://frank.fail/previews/fixture-story.png", sha256: previews.story.sha256, public: true },
-      },
+    consumer_compatibility: ["blockwise-template-pack-v1"],
+    template_pack: {
+      schema: "blockwise.template-pack/v1",
+      pack_id: String(pack.packId),
+      artifact_ref: PACK_URL,
+      sha256: sha256Hex(pack),
+      signature_algorithm: "ed25519",
+      signature: "fixture-signature",
     },
-    artifact_provenance: { template_pack: "provenance/release-fixture-1" },
-    output_checksums: {
-      template_pack: sha256Hex(pack),
-      assets: Object.fromEntries(Object.entries(assets).map(([key, asset]) => [key, asset.sha256])),
-      fonts: Object.fromEntries(fonts.map((font) => [font.file, font.sha256])),
-      previews: { feed: previews.feed.sha256, story: previews.story.sha256 },
-    },
-    receipt_refs: { qa: "receipt/qa-fixture-1", approval: "receipt/approval-fixture-1", sanitization: "receipt/sanitization-fixture-1" },
-    trace_ref: "trace/release-fixture-1",
-    qa_decision: { status: "passed", ref: "qa/release-fixture-1" },
-    approval_decision: { status: "approved", ref: "approval/release-fixture-1" },
-    sanitization_receipt: { status: "passed", ref: "sanitization/release-fixture-1" },
+    provenance: { artifact_ref: PACK_URL, artifact_receipt_ref: "receipt/artifact-1" },
+    trace_ref: "trace/release-1",
+    qa_receipt: { decision: "pass", receipt_ref: "receipt/qa-1", checked_at: now },
+    approval_receipt: { decision: "approved", gate: "native-pixel-human-approval", receipt_ref: "receipt/approval-1", decided_at: now },
+    sanitization_receipt: { decision: "pass", receipt_ref: "receipt/sanitization-1", checked_at: now },
+    released_at: now,
     immutable: true,
     source_free: true,
+    ...overrides,
   };
-  return { ...release, release_hash: sha256Hex(release) } as FrankPublicRelease;
-}
-
-function requestFor(pack: Record<string, unknown>): ImportRequest {
-  return {
-    packUrl: "https://frank.fail/packs/fixture-minimal.json",
-    packSha256: sha256Hex(pack),
-    packId: String(pack.packId),
-    buildId: "fixture-build-1",
-    issuedAt: new Date().toISOString(),
-    nonce: randomUUID(),
-    signature: "fixture-signature",
-    idempotencyKey: randomUUID(),
-  };
+  return { ...base, release_hash: sha256Hex(base) } as FrankPublicRelease;
 }
 
 function refreshReleaseHash(release: FrankPublicRelease): void {
@@ -167,27 +107,24 @@ async function rejectsWithCode(action: () => Promise<unknown>, code: string): Pr
   await assert.rejects(action, (error: unknown) => (error as ImportError).code === code);
 }
 
-describe("Frank public release consumer adapter", () => {
-  it("uses RFC 8785 JCS equivalence for Unicode and 1.0/1, and detects tampering", () => {
-    const numericAndUnicode = { label: "café", version: 1.0 };
-    const equivalent = JSON.parse('{"version":1,"label":"caf\\u00e9"}') as Record<string, unknown>;
-    assert.equal(canonicalJson(numericAndUnicode), canonicalJson(equivalent));
-    assert.equal(sha256Hex(numericAndUnicode), sha256Hex(equivalent));
-
-    const release = releaseFor(loadPack());
-    const { release_hash: releaseHash, ...releaseWithoutHash } = release;
-    assert.equal(releaseHash, sha256Hex(releaseWithoutHash));
-    assert.notEqual(releaseHash, sha256Hex({ ...releaseWithoutHash, release_id: "tampered" }));
+describe("Frank TemplatePack public release consumer adapter", () => {
+  it("matches the reviewed Frank golden release hash byte-for-byte", () => {
+    const release = loadGoldenRelease();
+    assert.equal(frankPublicReleaseSchema.safeParse(release).success, true);
+    const { release_hash: _, ...withoutReleaseHash } = release;
+    assert.equal(sha256Hex(withoutReleaseHash), "793f20dee498be21c417a55e6a8822368359985e13b55abb06f6da82b8c9100f");
+    assert.equal(release.template_pack.artifact_ref, release.provenance.artifact_ref);
   });
 
-  it("imports an immutable sanitized release through the existing importer", async () => {
+  it("accepts the exact producer envelope and imports its one nested TemplatePack artifact", async () => {
     const pack = loadPack();
-    const supabase = fakeSupabase();
     const release = releaseFor(pack);
+    assert.equal(frankPublicReleaseSchema.safeParse(release).success, true);
+    const supabase = fakeSupabase();
     const receipt = await importFrankPublicRelease(supabase, {
       release,
-      importRequest: requestFor(pack),
-    }, { fetchPack: async () => pack });
+      importRequest: { nonce: randomUUID() },
+    }, { fetchPack: async (url) => { assert.equal(url, PACK_URL); return pack; } });
 
     assert.equal(receipt.status, "active");
     const db = supabase as unknown as FakeSupabase;
@@ -195,67 +132,42 @@ describe("Frank public release consumer adapter", () => {
     assert.deepEqual(db.tables.ad_import_receipts[0]!.receipt, release);
   });
 
-  it("rejects a mutable draft and workspace-scoped release data recursively", async () => {
-    const pack = loadPack();
-    const request = requestFor(pack);
-    const draft = { ...releaseFor(pack), draft: true };
-    await rejectsWithCode(
-      () => importFrankPublicRelease(fakeSupabase(), { release: draft, importRequest: request }, { fetchPack: async () => pack }),
-      "mutable_draft_rejected",
-    );
+  it("uses JCS Unicode and 1.0/1 equivalence and detects release tampering", () => {
+    const left = { label: "café", version: 1.0 };
+    const right = JSON.parse('{"version":1,"label":"caf\\u00e9"}') as Record<string, unknown>;
+    assert.equal(canonicalJson(left), canonicalJson(right));
+    assert.equal(sha256Hex(left), sha256Hex(right));
 
-    const crossWorkspace = { ...releaseFor(pack), artifact_refs: {
-      ...releaseFor(pack).artifact_refs,
-      assets: { ...releaseFor(pack).artifact_refs.assets, leaked: { ref: "https://frank.fail/assets/leaked", sha256: "a".repeat(64), public: true } },
-    }, workspace_id: "other-workspace" };
-    await rejectsWithCode(
-      () => importFrankPublicRelease(fakeSupabase(), { release: crossWorkspace, importRequest: request }, { fetchPack: async () => pack }),
-      "cross_workspace_data",
-    );
+    const release = releaseFor(loadPack());
+    const { release_hash: releaseHash, ...withoutReleaseHash } = release;
+    assert.equal(releaseHash, sha256Hex(withoutReleaseHash));
+    assert.notEqual(releaseHash, sha256Hex({ ...withoutReleaseHash, release_id: "tampered" }));
   });
 
-  it("rejects recursive source, prompt, provider, reviewer, PII, and secret fields", async () => {
+  it("rejects mutable drafts, forbidden recursive fields, and workspace mismatches", async () => {
     const pack = loadPack();
-    const request = requestFor(pack);
-    const forbidden = { ...releaseFor(pack), qa_decision: {
-      ...releaseFor(pack).qa_decision,
-      evidence: { prompt: "must not cross the public boundary", providerToken: "secret" },
-    } };
-    await rejectsWithCode(
-      () => importFrankPublicRelease(fakeSupabase(), { release: forbidden, importRequest: request }, { fetchPack: async () => pack }),
-      "sanitization_rejected",
-    );
+    const draft = releaseFor(pack, { draft: true });
+    await rejectsWithCode(() => importFrankPublicRelease(fakeSupabase(), { release: draft, importRequest: { nonce: randomUUID() } }, { fetchPack: async () => pack }), "mutable_draft_rejected");
 
-    const packWithPrivateField = { ...pack, privateSourceImages: ["private://source"] };
-    const release = releaseFor(packWithPrivateField);
-    const privateRequest = requestFor(packWithPrivateField);
-    await rejectsWithCode(
-      () => importFrankPublicRelease(fakeSupabase(), { release, importRequest: privateRequest }, { fetchPack: async () => packWithPrivateField }),
-      "sanitization_rejected",
-    );
+    const forbidden = releaseFor(pack, { provenance: { artifact_ref: PACK_URL, artifact_receipt_ref: "receipt/1", nested: { prompt: "private" } } });
+    await rejectsWithCode(() => importFrankPublicRelease(fakeSupabase(), { release: forbidden, importRequest: { nonce: randomUUID() } }, { fetchPack: async () => pack }), "sanitization_rejected");
+
+    const workspace = releaseFor(pack, { scope: { kind: "workspace", id: "workspace-a" } });
+    await rejectsWithCode(() => importFrankPublicRelease(fakeSupabase(), { release: workspace, importRequest: { nonce: randomUUID() }, workspaceId: "workspace-b" }, { fetchPack: async () => pack }), "cross_workspace_data");
   });
 
-  it("rejects checksum drift and unknown assets before persistence", async () => {
+  it("rejects stale release hashes, provenance ref drift, and unknown pack identity", async () => {
     const pack = loadPack();
-    const request = requestFor(pack);
-    const release = releaseFor(pack);
-    release.artifact_refs.template_pack.sha256 = "b".repeat(64);
-    refreshReleaseHash(release);
-    await rejectsWithCode(
-      () => importFrankPublicRelease(fakeSupabase(), { release, importRequest: request }, { fetchPack: async () => pack }),
-      "checksum_mismatch",
-    );
+    const tampered = releaseFor(pack);
+    tampered.release_id = "tampered";
+    await rejectsWithCode(() => importFrankPublicRelease(fakeSupabase(), { release: tampered, importRequest: { nonce: randomUUID() } }, { fetchPack: async () => pack }), "checksum_mismatch");
 
-    const withUnknownAsset = releaseFor(pack);
-    withUnknownAsset.artifact_refs.assets.unknown = {
-      ref: "https://frank.fail/assets/unknown",
-      sha256: "c".repeat(64),
-      public: true,
-    };
-    refreshReleaseHash(withUnknownAsset);
-    await rejectsWithCode(
-      () => importFrankPublicRelease(fakeSupabase(), { release: withUnknownAsset, importRequest: requestFor(pack) }, { fetchPack: async () => pack }),
-      "unknown_asset",
-    );
+    const drift = releaseFor(pack, { provenance: { artifact_ref: "https://frank.fail/other-pack.json", artifact_receipt_ref: "receipt/1" } });
+    refreshReleaseHash(drift);
+    await rejectsWithCode(() => importFrankPublicRelease(fakeSupabase(), { release: drift, importRequest: { nonce: randomUUID() } }, { fetchPack: async () => pack }), "artifact_binding_mismatch");
+
+    const wrongPack = releaseFor(pack, { template_pack: { ...releaseFor(pack).template_pack, pack_id: "other-pack" } });
+    refreshReleaseHash(wrongPack);
+    await rejectsWithCode(() => importFrankPublicRelease(fakeSupabase(), { release: wrongPack, importRequest: { nonce: randomUUID() } }, { fetchPack: async () => pack }), "pack_id_mismatch");
   });
 });
