@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
@@ -12,6 +13,13 @@ import {
 } from "../src/lib/content-factory/blog-release.ts";
 
 const workspaceId = "11111111-1111-4111-8111-111111111111";
+const frankProducerPin = "e9fa6434f4d29a40d43966b6d3e3f654ba99bd5fd";
+const goldenReleaseHash = "ac0f1819a79b3c42ab604f4092b6bcb2928cb312462062e2416334cfb447a803";
+
+// Golden fixture source: Frank codex/blockwise-modular-tools @ e9fa6434f4d29a40d43966b6d3e3f654ba99bd5fd.
+const goldenContentReleaseV1 = JSON.parse(
+  readFileSync(new URL("./fixtures/content-release-v1.json", import.meta.url), "utf8"),
+) as Record<string, unknown>;
 
 function makeRelease(): Record<string, unknown> {
   const body = { format: "markdown", content: "# Café guide — 日本語\n\nThe final, reviewed article." };
@@ -79,6 +87,21 @@ test("accepts the exact immutable Frank public_release contract", () => {
   assert.equal(parsed.channel, "web");
   assert.equal(parsed.consumerCompatibility[0], "article-release-v1");
   assert.equal(parsed.bodyMarkdown, "# Café guide — 日本語\n\nThe final, reviewed article.");
+});
+
+test("accepts the pinned Frank golden payload unchanged", () => {
+  const { release_hash: releaseHash, ...withoutReleaseHash } = goldenContentReleaseV1;
+
+  assert.equal(frankProducerPin, "e9fa6434f4d29a40d43966b6d3e3f654ba99bd5fd");
+  assert.equal(releaseHash, goldenReleaseHash);
+  assert.equal(sha256Hex(withoutReleaseHash), goldenReleaseHash);
+
+  const parsed = parseContentFactoryBlogRelease(goldenContentReleaseV1, "123e4567-e89b-42d3-a456-426614174000");
+
+  assert.equal(parsed.releaseId, "release-1");
+  assert.equal(parsed.contentId, "content-1");
+  assert.equal(parsed.bodyMarkdown, "# Article\n\nPublic content.");
+  assert.equal(parsed.media[0]?.checksum, "a".repeat(64));
 });
 
 test("uses RFC 8785 JCS for Unicode, numeric, and property-order equivalence", () => {
