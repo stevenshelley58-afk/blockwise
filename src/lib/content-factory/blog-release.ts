@@ -9,9 +9,17 @@ export const CONTENT_FACTORY_TOOL_ID = "content-factory" as const;
 
 const SHA256_PATTERN = /^[a-f0-9]{64}$/u;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
-const FORBIDDEN_FIELD_PATTERN = /(?:^|[_-])(prompt|prompts|model|models|provider|providers|private|raw|internal)(?:$|[_-])/iu;
+const DOMAIN_ID_PATTERN = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/u;
+const PUBLIC_FORBIDDEN_KEY_FRAGMENTS = [
+  "prompt", "raw", "private", "internal", "secret", "model", "email", "phone", "address",
+  "dob", "dateofbirth", "ssn", "tax", "passport", "ip", "customer", "person", "reviewer",
+] as const;
+const SANITIZATION_RECEIPT_KEYS = new Set(["piiscan", "secretscan", "status", "receiptid", "scannedat"]);
+const SECRET_VALUE_PATTERN = /(?:-----BEGIN [A-Z ]+-----|\b(?:sk|pk|rk)_(?:live|test)_[A-Za-z0-9]+|\bBearer\s+[A-Za-z0-9._~+/=-]{16,}|\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)/iu;
+const PII_VALUE_PATTERN = /(?:\b[^\s@]+@[^\s@]+\.[^\s@]+\b|0[2-478](?:[\s()\-]?\d){8}|\+61(?:[\s()\-]?\d){9}|\+\d{1,3}(?:[\s()\-]?\d){7,12})/u;
 
 const nonEmptyText = (max: number) => z.string().trim().min(1).max(max);
+const compatibilityIdSchema = nonEmptyText(200).regex(DOMAIN_ID_PATTERN, "must be a safe compatibility identifier");
 const sha256Schema = z.string().regex(SHA256_PATTERN, "must be a lowercase SHA-256 hex digest");
 const publicUrlSchema = z.string().trim().url().max(2_048);
 const timestampSchema = z.string().datetime({ offset: true });
@@ -73,7 +81,10 @@ const releaseSchema = z
     settings_revision: z.number().int().nonnegative(),
     pipeline_id: z.literal("content-factory-pipeline"),
     pipeline_version: z.literal("1.0.0"),
-    consumer_compatibility: z.array(nonEmptyText(200)).min(1).max(32),
+    consumer_compatibility: z.array(compatibilityIdSchema).min(1).refine(
+      (values) => new Set(values).size === values.length,
+      "consumer_compatibility entries must be unique",
+    ),
     release_id: nonEmptyText(200),
     content_id: nonEmptyText(200),
     version: z.number().int().positive(),
@@ -167,7 +178,7 @@ export function parseContentFactoryBlogRelease(input: unknown, workspaceId: stri
     throw new ContentFactoryReleaseError("workspace_mismatch", "A target workspace is required.");
   }
 
-  const forbiddenPath = findForbiddenField(input);
+  const forbiddenPath = findForbiddenPublicPath(input);
   if (forbiddenPath) {
     throw new ContentFactoryReleaseError("forbidden_field", `Release contains a prohibited field at ${forbiddenPath}.`, forbiddenPath);
   }
@@ -293,10 +304,25 @@ function hashReleaseWithoutHash(release: ContentFactoryBlogRelease): string {
   return sha256Hex(withoutHash);
 }
 
-function findForbiddenField(value: unknown, path = "$"): string | null {
+function normalizeKey(key: string): string {
+  return key.replace(/[^a-z0-9]/giu, "").toLowerCase();
+}
+
+function isForbiddenPublicKey(normalizedKey: string): boolean {
+  return PUBLIC_FORBIDDEN_KEY_FRAGMENTS.some((fragment) => (
+    fragment === "ip"
+      ? normalizedKey.startsWith("ip") || normalizedKey.endsWith("ip")
+      : normalizedKey.includes(fragment)
+  ));
+}
+
+function findForbiddenPublicPath(value: unknown, path = "$"): string | null {
+  if (typeof value === "string" && (PII_VALUE_PATTERN.test(value) || SECRET_VALUE_PATTERN.test(value))) {
+    return path;
+  }
   if (Array.isArray(value)) {
     for (let index = 0; index < value.length; index += 1) {
-      const found = findForbiddenField(value[index], `${path}[${index}]`);
+      const found = findForbiddenPublicPath(value[index], `${path}[${index}]`);
       if (found) return found;
     }
     return null;
@@ -304,8 +330,12 @@ function findForbiddenField(value: unknown, path = "$"): string | null {
   if (!isRecord(value)) return null;
   for (const [key, entry] of Object.entries(value)) {
     const currentPath = `${path}.${key}`;
-    if (FORBIDDEN_FIELD_PATTERN.test(key)) return currentPath;
-    const found = findForbiddenField(entry, currentPath);
+    const receiptField = path.startsWith("$.sanitization_receipts");
+    const normalizedKey = normalizeKey(key);
+    if ((receiptField && !SANITIZATION_RECEIPT_KEYS.has(normalizedKey)) || (!receiptField && isForbiddenPublicKey(normalizedKey))) {
+      return currentPath;
+    }
+    const found = findForbiddenPublicPath(entry, currentPath);
     if (found) return found;
   }
   return null;

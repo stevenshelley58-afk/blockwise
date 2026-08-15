@@ -142,7 +142,7 @@ test("rejects drafts, wrong pipeline/channel, incompatible releases, and failed 
   assertReleaseError(() => parseContentFactoryBlogRelease(failedQa, workspaceId), "schema_invalid");
 });
 
-test("rejects extra nested fields and recursive forbidden fields", () => {
+test("rejects extra nested fields and recursive forbidden keys and values", () => {
   const extra = makeRelease() as { body: Record<string, unknown> };
   extra.body.extra = "not in the producer contract";
   assertReleaseError(() => parseContentFactoryBlogRelease(extra, workspaceId), "schema_invalid");
@@ -154,6 +154,24 @@ test("rejects extra nested fields and recursive forbidden fields", () => {
     nested: { raw_output: "not allowed" },
   };
   assertReleaseError(() => parseContentFactoryBlogRelease(forbidden, workspaceId), "forbidden_field");
+
+  const piiValue = makeRelease() as { body: { content: string } };
+  piiValue.body.content = "Contact alex@example.test for the reviewed article.";
+  assertReleaseError(() => parseContentFactoryBlogRelease(piiValue, workspaceId), "forbidden_field");
+
+  const secretValue = makeRelease() as { seo: { description: string } };
+  secretValue.seo.description = "Bearer abcdefghijklmnopqrstuvwxyz";
+  assertReleaseError(() => parseContentFactoryBlogRelease(secretValue, workspaceId), "forbidden_field");
+});
+
+test("requires producer-shaped unique consumer compatibility IDs", () => {
+  const duplicate = makeRelease() as { consumer_compatibility: string[] };
+  duplicate.consumer_compatibility = ["article-release-v1", "article-release-v1"];
+  assertReleaseError(() => parseContentFactoryBlogRelease(duplicate, workspaceId), "schema_invalid");
+
+  const malformed = makeRelease() as { consumer_compatibility: string[] };
+  malformed.consumer_compatibility = ["article-release-v1", "Article Release V1"];
+  assertReleaseError(() => parseContentFactoryBlogRelease(malformed, workspaceId), "schema_invalid");
 });
 
 test("rejects wrong artifact keys and hashes", () => {
