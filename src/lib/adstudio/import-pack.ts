@@ -123,6 +123,10 @@ export async function importTemplatePack(
   }
   const pack = parsed.data as TemplatePack;
 
+  if (pack.packId !== input.packId) {
+    throw importError("pack_id_mismatch", "packId does not match the imported TemplatePack");
+  }
+
   // 8. Signature verification — Ed25519 over the canonical pack JSON
   // (same canonicalization the factory signs: recursively sorted keys, no
   // whitespace). Skipped ONLY on the injected fetchPack path when

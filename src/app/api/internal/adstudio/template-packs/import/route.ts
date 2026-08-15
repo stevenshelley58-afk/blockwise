@@ -24,7 +24,7 @@ export async function POST(request: Request) {
   }
 
   const input = body as Record<string, unknown>;
-  if (!input.release || !input.packUrl || !input.packSha256 || !input.packId || !input.issuedAt || !input.nonce || !input.signature) {
+  if (!input.release || !input.nonce) {
     return NextResponse.json({ error: "missing_required_fields" }, { status: 400 });
   }
 
@@ -40,15 +40,10 @@ export async function POST(request: Request) {
     const receipt = await importFrankPublicRelease(supabase, {
       release: input.release,
       importRequest: {
-        packUrl: String(input.packUrl),
-        packSha256: String(input.packSha256),
-        packId: String(input.packId),
-        buildId: String(input.buildId ?? ""),
-        issuedAt: String(input.issuedAt),
         nonce: String(input.nonce),
-        signature: String(input.signature),
-        idempotencyKey: String(input.idempotencyKey ?? input.packSha256),
+        idempotencyKey: String(input.idempotencyKey ?? ""),
       },
+      workspaceId: typeof input.workspaceId === "string" ? input.workspaceId : undefined,
     });
 
     const status = receipt.status === "replayed" ? 200 : 201;
