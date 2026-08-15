@@ -16,6 +16,8 @@ export interface ImportRequest {
   nonce: string;
   signature: string;
   idempotencyKey: string;
+  /** Release evidence retained with the import receipt when a public release is used. */
+  releaseReceipt?: Record<string, unknown>;
 }
 
 export interface ImportReceipt {
@@ -45,6 +47,8 @@ export interface ImportError {
  */
 export interface ImportOptions {
   fetchPack?: (url: string) => Promise<unknown>;
+  /** Validate the fetched wire payload before schema parsing strips unknown keys. */
+  validatePack?: (packJson: unknown) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -107,6 +111,10 @@ export async function importTemplatePack(
   if (actualHash !== input.packSha256) {
     throw importError("hash_mismatch", `Expected ${input.packSha256}, got ${actualHash}`);
   }
+
+  // Consumer adapters use this hook to validate the complete wire payload,
+  // including unknown fields that Zod would otherwise strip during parsing.
+  options.validatePack?.(packJson);
 
   // 7. Schema validation
   const parsed = templatePackSchema.safeParse(packJson);
@@ -263,6 +271,7 @@ async function activatePack(
       nonce: input.nonce,
       signature: input.signature,
       status: "active",
+      receipt: input.releaseReceipt ?? null,
     })
     .select("id, pack_id, pack_sha256, created_at")
     .single();

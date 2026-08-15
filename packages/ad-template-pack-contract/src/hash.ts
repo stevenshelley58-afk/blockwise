@@ -1,27 +1,20 @@
 import { createHash } from "node:crypto";
+import canonicalize from "canonicalize";
 
 // ---------------------------------------------------------------------------
-// Canonical JSON hashing — deterministic, stable across Frank and Blockwise.
+// RFC 8785 JSON Canonicalization Scheme hashing — deterministic, stable across Frank and Blockwise.
 // ---------------------------------------------------------------------------
 
 /**
- * Produce a canonical (sorted-key) JSON string.
- * Keys are sorted recursively; no whitespace variation.
+ * Produce RFC 8785 JCS bytes represented as a string.
+ * The canonicalize package owns key ordering, string escaping, and number formatting.
  */
 export function canonicalJson(value: unknown): string {
-  return JSON.stringify(value, sortedKeysReplacer);
-}
-
-function sortedKeysReplacer(_key: string, value: unknown): unknown {
-  if (value !== null && typeof value === "object" && !Array.isArray(value)) {
-    const sorted: Record<string, unknown> = {};
-    const keys = Object.keys(value).sort();
-    for (const k of keys) {
-      sorted[k] = (value as Record<string, unknown>)[k];
-    }
-    return sorted;
+  const result = canonicalize(value);
+  if (result === undefined) {
+    throw new TypeError("Cannot canonicalize an undefined JSON value");
   }
-  return value;
+  return result;
 }
 
 /**
