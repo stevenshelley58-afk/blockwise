@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import canonicalize from "canonicalize";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import test from "node:test";
 
 import {
@@ -26,7 +28,19 @@ test("consumer verifies the reviewed Frank envelope and maps stable public subje
   assert.match(result.rows[0]?.card_id ?? "", /^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u);
   assert.equal(result.stableSubjectRefs[0]?.sourceRef, "hermes://creative/source-1");
   assert.equal(result.cards[0]?.suburb, "Coogee");
-  assert.deepEqual(result.sanitizationReceiptRefs, ["receipt://sanitize/1"]);
+  assert.equal(result.settingsRevision, 1);
+  assert.equal(result.qaReceipt.decision, "pass");
+  assert.equal(result.sanitizationReceipts.pii_scan.status, "passed");
+});
+
+test("consumer accepts the unchanged reviewed e9fa643 golden release fixture", () => {
+  const fixture = JSON.parse(readFileSync(join(process.cwd(), "tests/fixtures/ad-radar-release-v1.json"), "utf8"));
+  const result = consumeAdIntelligenceRelease(fixture);
+
+  assert.equal(fixture.checksum, "84afae4e14dace7517dd135cfbe45fd513cb7b85163bd72790b16b2f6c1a6e18");
+  assert.equal(fixture.release_hash, "f0046362b6bd2317c30f7f16e4ee786a351982b9d89f0827feeddb93f5cf90fe");
+  assert.equal(result.scope, "blockwise");
+  assert.equal(result.stableSubjectRefs[0]?.sourceRef, "https://public.example/ad");
 });
 
 test("consumer rejects nested PII, private, raw, and provider payloads", () => {
@@ -72,7 +86,7 @@ test("consumer rejects public-export checksum, whole-envelope hash, and compatib
 
 test("consumer requires evidence refs and preserves an explicit empty state", () => {
   const missingEvidence = signedRelease({ creatives: [creative()] });
-  delete missingEvidence.qa_receipt_ref;
+  delete missingEvidence.qa_receipt;
   assert.throws(
     () => consumeAdIntelligenceRelease(missingEvidence),
     (error: unknown) => error instanceof AdIntelligenceReleaseError && error.code === "invalid_shape",
@@ -82,6 +96,19 @@ test("consumer requires evidence refs and preserves an explicit empty state", ()
   assert.equal(empty.state, "empty");
   assert.deepEqual(empty.rows, []);
   assert.deepEqual(empty.cards, []);
+});
+
+test("consumer rejects superseded evidence fields and a scope/export mismatch", () => {
+  for (const field of ["settings_refs", "qa_pass", "pii_safe", "secret_safe", "public_export_ref"]) {
+    const release = signedRelease({ creatives: [creative()] });
+    release[field] = field === "settings_refs" ? ["settings://old"] : true;
+    assert.throws(() => consumeAdIntelligenceRelease(release), (error: unknown) => error instanceof AdIntelligenceReleaseError && error.code === "invalid_shape");
+  }
+
+  const mismatch = signedRelease({ creatives: [creative()] });
+  mismatch.project_scope = "another-project";
+  resign(mismatch);
+  assert.throws(() => consumeAdIntelligenceRelease(mismatch), (error: unknown) => error instanceof AdIntelligenceReleaseError && error.code === "incompatible_release");
 });
 
 test("release hashes use RFC 8785 JCS for Unicode and numeric canonical equivalence", () => {
@@ -115,23 +142,29 @@ function signedRelease(overrides: Record<string, unknown>): any {
     version: "1.0.0",
     status: "released",
     immutable: true,
-    project_scope: "real-estate-customer-ad-radar",
+    project_scope: "blockwise",
     checksum: "",
     release_hash: "",
     provenance_refs: ["provenance://frank/run-1"],
     trace_refs: ["trace://hermes/run-1"],
-    settings_refs: ["settings://ad-radar/v1"],
-    qa_approved: true,
-    pii_sanitized: true,
-    secret_sanitized: true,
+    released_at: "2026-08-14T08:00:01Z",
+    settings_revision: 1,
+    settings_ref: "settings://ad-radar/v1",
+    qa_receipt: {
+      decision: "pass",
+      receipt_ref: "receipt://qa/1",
+      checked_at: "2026-08-14T08:00:01Z",
+    },
+    sanitization_receipts: {
+      pii_scan: { status: "passed", receipt_id: "pii-scan-1", scanned_at: "2026-08-14T08:00:01Z" },
+      secret_scan: { status: "passed", receipt_id: "secret-scan-1", scanned_at: "2026-08-14T08:00:01Z" },
+    },
     pipeline_id: "ad-radar-pipeline",
     pipeline_version: "1.0.0",
     consumer_compatibility: [AD_INTELLIGENCE_CONSUMER_COMPATIBILITY],
-    qa_receipt_ref: "receipt://qa/1",
-    sanitization_receipt_refs: ["receipt://sanitize/1"],
     public_export: {
       schema: AD_INTELLIGENCE_PUBLIC_EXPORT_SCHEMA,
-      project: "real-estate",
+      project: "blockwise",
       generated_at: "2026-08-14T08:00:00Z",
       creatives: creatives ?? [],
       ...(public_export as Record<string, unknown> | undefined),

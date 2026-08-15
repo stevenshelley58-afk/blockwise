@@ -23,7 +23,9 @@ const privateRef = /^(?:openbao|vault|secret|file):\/\//iu;
 const safeText = (max: number) => z.string().min(1).max(max).refine((value) => !unsafeText.test(value));
 const nullableSafeText = (max: number) => safeText(max).nullable();
 const safeRef = safeText(500).refine((value) => !privateRef.test(value));
-const safeRefList = z.array(safeRef).min(1).max(100);
+const safeRefList = z.array(safeRef).min(1).max(100).refine((values) => new Set(values).size === values.length);
+const safeRefListOptional = z.array(safeRef).max(100).refine((values) => new Set(values).size === values.length);
+const isoTimestamp = z.string().datetime({ offset: true });
 
 const publicCopySchema = z
   .object({
@@ -35,8 +37,8 @@ const publicCopySchema = z
 
 const publicObservedSchema = z
   .object({
-    first_seen: nullableSafeText(80),
-    last_seen: nullableSafeText(80),
+    first_seen: isoTimestamp.nullable(),
+    last_seen: isoTimestamp.nullable(),
   })
   .strict();
 
@@ -54,8 +56,8 @@ const publicClassificationSchema = z
   .object({
     label: safeText(160),
     confidence: z.number().finite().min(0).max(1),
-    receipt_refs: z.array(safeRef).max(100),
-    provenance_refs: z.array(safeRef).max(100),
+    receipt_refs: safeRefListOptional,
+    provenance_refs: safeRefListOptional,
   })
   .strict();
 
@@ -78,8 +80,8 @@ const publicExportSchema = z
   .object({
     schema: z.literal(AD_INTELLIGENCE_PUBLIC_EXPORT_SCHEMA),
     project: safeText(240),
-    generated_at: safeText(80),
-    creatives: z.array(publicCreativeSchema).max(5000),
+    generated_at: isoTimestamp,
+    creatives: z.array(publicCreativeSchema),
   })
   .strict();
 
@@ -88,23 +90,29 @@ const releaseSchema = z
     schema: z.literal(AD_INTELLIGENCE_RELEASE_SCHEMA),
     tool_id: z.literal(AD_INTELLIGENCE_TOOL_ID),
     release_id: safeText(240),
-    version: safeText(120),
+    version: z.string().regex(/^[0-9]+\.[0-9]+\.[0-9]+$/u),
     status: z.literal("released"),
     immutable: z.literal(true),
     project_scope: safeText(240),
     checksum: z.string().regex(/^[a-f0-9]{64}$/u),
+    released_at: isoTimestamp,
     release_hash: z.string().regex(/^[a-f0-9]{64}$/u),
     provenance_refs: safeRefList,
     trace_refs: safeRefList,
-    settings_refs: safeRefList,
-    qa_approved: z.literal(true),
-    pii_sanitized: z.literal(true),
-    secret_sanitized: z.literal(true),
+    settings_revision: z.number().int().min(1),
+    settings_ref: safeRef,
+    qa_receipt: z
+      .object({ decision: z.literal("pass"), receipt_ref: safeRef, checked_at: isoTimestamp })
+      .strict(),
+    sanitization_receipts: z
+      .object({
+        pii_scan: z.object({ status: z.literal("passed"), receipt_id: safeRef, scanned_at: isoTimestamp }).strict(),
+        secret_scan: z.object({ status: z.literal("passed"), receipt_id: safeRef, scanned_at: isoTimestamp }).strict(),
+      })
+      .strict(),
     pipeline_id: z.literal(AD_INTELLIGENCE_PIPELINE_ID),
     pipeline_version: z.literal(AD_INTELLIGENCE_PIPELINE_VERSION),
     consumer_compatibility: z.tuple([z.literal(AD_INTELLIGENCE_CONSUMER_COMPATIBILITY)]),
-    qa_receipt_ref: safeRef,
-    sanitization_receipt_refs: safeRefList,
     public_export: publicExportSchema,
   })
   .strict();
@@ -129,13 +137,22 @@ export type AdIntelligenceReleaseConsumerResult = {
   state: "ready" | "empty";
   release: Pick<
     AdIntelligenceRelease,
-    "schema" | "tool_id" | "release_id" | "version" | "status" | "immutable" | "checksum" | "release_hash"
+    | "schema"
+    | "tool_id"
+    | "release_id"
+    | "version"
+    | "status"
+    | "released_at"
+    | "immutable"
+    | "checksum"
+    | "release_hash"
   >;
   provenanceRefs: string[];
   traceRefs: string[];
-  settingsRefs: string[];
-  qaReceiptRef: string;
-  sanitizationReceiptRefs: string[];
+  settingsRevision: number;
+  settingsRef: string;
+  qaReceipt: AdIntelligenceRelease["qa_receipt"];
+  sanitizationReceipts: AdIntelligenceRelease["sanitization_receipts"];
   scope: string;
   rows: AdIntelligenceReleaseRow[];
   cards: CustomerMetaAdLibraryCard[];
@@ -205,6 +222,9 @@ export function consumeAdIntelligenceRelease(input: unknown): AdIntelligenceRele
   if (!isRecord(input) || computeAdIntelligenceReleaseHash(input) !== release.release_hash) {
     throw new AdIntelligenceReleaseError("release_hash_mismatch", "Ad Intelligence release hash does not match the envelope.");
   }
+  if (release.public_export.project !== release.project_scope) {
+    throw new AdIntelligenceReleaseError("incompatible_release", "Public export project must equal release project scope.");
+  }
   if (release.consumer_compatibility[0] !== AD_INTELLIGENCE_CONSUMER_COMPATIBILITY) {
     throw new AdIntelligenceReleaseError("incompatible_release", "Ad Intelligence release is not compatible with the public customer export.");
   }
@@ -231,13 +251,15 @@ export function consumeAdIntelligenceRelease(input: unknown): AdIntelligenceRele
       status: release.status,
       immutable: release.immutable,
       checksum: release.checksum,
+      released_at: release.released_at,
       release_hash: release.release_hash,
     },
     provenanceRefs: [...release.provenance_refs],
     traceRefs: [...release.trace_refs],
-    settingsRefs: [...release.settings_refs],
-    qaReceiptRef: release.qa_receipt_ref,
-    sanitizationReceiptRefs: [...release.sanitization_receipt_refs],
+    settingsRevision: release.settings_revision,
+    settingsRef: release.settings_ref,
+    qaReceipt: release.qa_receipt,
+    sanitizationReceipts: release.sanitization_receipts,
     scope: release.project_scope,
     rows,
     cards: rows.map(normaliseCustomerMetaAdLibraryCard),
@@ -250,7 +272,7 @@ function validatePublicExportSafety(value: unknown, key = "public_export"): void
     if (key !== "generated_at" && key !== "first_seen" && key !== "last_seen" && piiLikeText.test(value)) {
       throw new Error("PII-like public text");
     }
-    if (unsafeText.test(value) || (privateRef.test(value) && key !== "project")) throw new Error("unsafe public text");
+    if (unsafeText.test(value) || privateRef.test(value)) throw new Error("unsafe public text");
     return;
   }
   if (Array.isArray(value)) {
