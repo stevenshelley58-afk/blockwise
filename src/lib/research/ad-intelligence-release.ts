@@ -20,18 +20,20 @@ const unsafeText = /<\/?[a-z][^>]*>|javascript\s*:|bearer\s+[a-z0-9._~+/=-]{16,}
 const piiLikeText = /(?:\b[^\s@]+@[^\s@]+\.[^\s@]+\b|\+?\d[\d ()-]{7,}\d)/u;
 const privateRef = /^(?:openbao|vault|secret|file):\/\//iu;
 
-const safeText = (max: number) => z.string().min(1).max(max).refine((value) => !unsafeText.test(value));
-const nullableSafeText = (max: number) => safeText(max).nullable();
-const safeRef = safeText(500).refine((value) => !privateRef.test(value));
-const safeRefList = z.array(safeRef).min(1).max(100).refine((values) => new Set(values).size === values.length);
-const safeRefListOptional = z.array(safeRef).max(100).refine((values) => new Set(values).size === values.length);
+const safeText = () => z.string().min(1).refine((value) => !unsafeText.test(value));
+const nullableSafeText = () => safeText().nullable();
+const safeRef = safeText().refine((value) => !privateRef.test(value));
+const safeRefList = z.array(safeRef).min(1).refine((values) => new Set(values).size === values.length);
+const safeRefListOptional = z.array(safeRef).refine((values) => new Set(values).size === values.length);
 const isoTimestamp = z.string().datetime({ offset: true });
+const forbiddenReleaseKey = /^(?:email|phone|prospect|prospectid|outreach|outreachsequence|agentcontacts?|contactid|recipient|leademail|phonenumber|contactemail|promptref|promptversion|model|rationale|rawpayload|secret|token|apikey|password)$/iu;
+const piiExemptKeys = new Set(["released_at", "generated_at", "first_seen", "last_seen", "checked_at", "scanned_at", "checksum", "release_hash"]);
 
 const publicCopySchema = z
   .object({
-    headline: nullableSafeText(1000),
-    body: nullableSafeText(5000),
-    cta: nullableSafeText(240),
+    headline: nullableSafeText(),
+    body: nullableSafeText(),
+    cta: nullableSafeText(),
   })
   .strict();
 
@@ -45,7 +47,7 @@ const publicObservedSchema = z
 const publicMediaSchema = z
   .object({
     asset_ref: safeRef,
-    kind: safeText(80),
+    kind: safeText(),
     width: z.number().int().nonnegative().nullable(),
     height: z.number().int().nonnegative().nullable(),
     qa_status: z.literal("passed"),
@@ -54,7 +56,7 @@ const publicMediaSchema = z
 
 const publicClassificationSchema = z
   .object({
-    label: safeText(160),
+    label: safeText(),
     confidence: z.number().finite().min(0).max(1),
     receipt_refs: safeRefListOptional,
     provenance_refs: safeRefListOptional,
@@ -63,15 +65,15 @@ const publicClassificationSchema = z
 
 const publicCreativeSchema = z
   .object({
-    id: safeText(240),
+    id: safeText(),
     source_ref: safeRef,
-    advertiser: nullableSafeText(240),
-    market: nullableSafeText(160),
-    category: nullableSafeText(160),
+    advertiser: nullableSafeText(),
+    market: nullableSafeText(),
+    category: nullableSafeText(),
     copy: publicCopySchema,
     destination_ref: safeRef.nullable(),
     observed: publicObservedSchema,
-    media: z.array(publicMediaSchema).max(20),
+    media: z.array(publicMediaSchema),
     classification: publicClassificationSchema.nullable(),
   })
   .strict();
@@ -79,7 +81,7 @@ const publicCreativeSchema = z
 const publicExportSchema = z
   .object({
     schema: z.literal(AD_INTELLIGENCE_PUBLIC_EXPORT_SCHEMA),
-    project: safeText(240),
+    project: safeText(),
     generated_at: isoTimestamp,
     creatives: z.array(publicCreativeSchema),
   })
@@ -89,11 +91,11 @@ const releaseSchema = z
   .object({
     schema: z.literal(AD_INTELLIGENCE_RELEASE_SCHEMA),
     tool_id: z.literal(AD_INTELLIGENCE_TOOL_ID),
-    release_id: safeText(240),
+    release_id: safeText(),
     version: z.string().regex(/^[0-9]+\.[0-9]+\.[0-9]+$/u),
     status: z.literal("released"),
     immutable: z.literal(true),
-    project_scope: safeText(240),
+    project_scope: safeText(),
     checksum: z.string().regex(/^[a-f0-9]{64}$/u),
     released_at: isoTimestamp,
     release_hash: z.string().regex(/^[a-f0-9]{64}$/u),
@@ -204,17 +206,18 @@ export function computeAdIntelligenceReleaseHash(input: Record<string, unknown>)
  * can persist the returned rows through the existing public read model.
  */
 export function consumeAdIntelligenceRelease(input: unknown): AdIntelligenceReleaseConsumerResult {
+  try {
+    validateReleaseSafety(input);
+  } catch {
+    throw new AdIntelligenceReleaseError("unsafe_public_export", "Ad Intelligence release contains unsafe content.");
+  }
+
   const parsed = releaseSchema.safeParse(input);
   if (!parsed.success) {
     throw new AdIntelligenceReleaseError("invalid_shape", "Ad Intelligence release is not the reviewed Frank v1 payload.");
   }
 
   const release = parsed.data;
-  try {
-    validatePublicExportSafety(release.public_export);
-  } catch {
-    throw new AdIntelligenceReleaseError("unsafe_public_export", "Ad Intelligence public export contains unsafe content.");
-  }
 
   if (computeAdIntelligencePublicExportChecksum(release.public_export) !== release.checksum) {
     throw new AdIntelligenceReleaseError("checksum_mismatch", "Ad Intelligence public-export checksum does not match.");
@@ -267,26 +270,34 @@ export function consumeAdIntelligenceRelease(input: unknown): AdIntelligenceRele
   };
 }
 
-function validatePublicExportSafety(value: unknown, key = "public_export"): void {
+/** Mirror Frank's whole-envelope public-release safety walk before schema parsing. */
+function validateReleaseSafety(value: unknown, path = "release", key = ""): void {
   if (typeof value === "string") {
-    if (key !== "generated_at" && key !== "first_seen" && key !== "last_seen" && piiLikeText.test(value)) {
-      throw new Error("PII-like public text");
+    if (unsafeText.test(value) || privateRef.test(value)) {
+      throw new Error("unsafe release text");
     }
-    if (unsafeText.test(value) || privateRef.test(value)) throw new Error("unsafe public text");
+    if (!piiExemptKeys.has(key) && piiLikeText.test(value)) throw new Error("PII-like release text");
     return;
   }
   if (Array.isArray(value)) {
-    value.forEach((child, index) => validatePublicExportSafety(child, `${key}[${index}]`));
+    value.forEach((child, index) => validateReleaseSafety(child, `${path}[${index}]`, key));
     return;
   }
   if (value && typeof value === "object") {
     for (const [childKey, child] of Object.entries(value)) {
       const normalizedKey = childKey.replace(/[^a-z0-9]/giu, "").toLowerCase();
-      if (/^(?:email|phone|prospect|outreach|contact|recipient|lead|raw|provider|model|prompt|secret|token|password)/u.test(normalizedKey)) {
-        throw new Error("unsafe public key");
+      if (forbiddenReleaseKey.test(normalizedKey)) {
+        throw new Error("unsafe release key");
       }
-      validatePublicExportSafety(child, childKey);
+      validateReleaseSafety(child, `${path}.${childKey}`, childKey);
     }
+    return;
+  }
+  if (typeof value === "number" && !Number.isFinite(value)) {
+    throw new Error("non-finite release number");
+  }
+  if (value !== null && typeof value !== "boolean" && typeof value !== "number") {
+    throw new Error("unsupported release value");
   }
 }
 

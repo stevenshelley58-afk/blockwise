@@ -22,9 +22,9 @@ test("consumer verifies the reviewed Frank envelope and maps stable public subje
   assert.equal(result.state, "ready");
   assert.equal(result.release.schema, AD_INTELLIGENCE_RELEASE_SCHEMA);
   assert.equal(result.release.tool_id, AD_INTELLIGENCE_TOOL_ID);
-  assert.equal(result.release.release_id, "release-2026-08-14-001");
+  assert.equal(result.release.release_id, "release-v1");
   assert.equal(result.rows[0]?.library_id, "creative-1");
-  assert.equal(result.rows[0]?.source_revision, "release-2026-08-14-001@1.0.0");
+  assert.equal(result.rows[0]?.source_revision, "release-v1@1.0.0");
   assert.match(result.rows[0]?.card_id ?? "", /^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u);
   assert.equal(result.stableSubjectRefs[0]?.sourceRef, "hermes://creative/source-1");
   assert.equal(result.cards[0]?.suburb, "Coogee");
@@ -59,6 +59,52 @@ test("consumer rejects nested PII, private, raw, and provider payloads", () => {
       (error: unknown) => error instanceof AdIntelligenceReleaseError,
     );
   }
+});
+
+test("consumer mirrors Frank's whole-envelope PII, private, and secret rejection", () => {
+  const mutations = [
+    (release: any) => { release.settings_ref = "settings://owner@example.com"; },
+    (release: any) => { release.sanitization_receipts.secret_scan.receipt_id = "vault://private/receipt"; },
+    (release: any) => { release.qa_receipt.receipt_ref = "Bearer abcdefghijklmnopqrstuvwxyz"; },
+  ];
+
+  for (const mutate of mutations) {
+    const release = signedRelease({ creatives: [creative()] });
+    mutate(release);
+    resign(release);
+    assert.throws(
+      () => consumeAdIntelligenceRelease(release),
+      (error: unknown) => error instanceof AdIntelligenceReleaseError && error.code === "unsafe_public_export",
+    );
+  }
+});
+
+test("consumer accepts frozen-contract text, ref, and array cardinalities", () => {
+  const release = signedRelease({ creatives: [creative()] });
+  const longValue = "x".repeat(5_001);
+  const creativeRecord = release.public_export.creatives[0];
+
+  release.release_id = longValue;
+  release.project_scope = longValue;
+  release.public_export.project = longValue;
+  release.settings_ref = `settings://${longValue}`;
+  release.provenance_refs = Array.from({ length: 101 }, (_, index) => `provenance://run-${index}`);
+  release.trace_refs = Array.from({ length: 101 }, (_, index) => `trace://run-${index}`);
+  creativeRecord.id = longValue;
+  creativeRecord.source_ref = `https://public.example/${longValue}`;
+  creativeRecord.copy.headline = longValue;
+  creativeRecord.media = Array.from({ length: 21 }, (_, index) => ({
+    asset_ref: `https://cdn.example/${longValue}-${index}.jpg`,
+    kind: longValue,
+    width: 1200,
+    height: 628,
+    qa_status: "passed",
+  }));
+  creativeRecord.classification.receipt_refs = Array.from({ length: 101 }, (_, index) => `receipt://classification-${index}`);
+  creativeRecord.classification.provenance_refs = Array.from({ length: 101 }, (_, index) => `provenance://classification-${index}`);
+  resign(release);
+
+  assert.equal(consumeAdIntelligenceRelease(release).state, "ready");
 });
 
 test("consumer rejects public-export checksum, whole-envelope hash, and compatibility failures", () => {
@@ -138,7 +184,7 @@ function signedRelease(overrides: Record<string, unknown>): any {
   const release = {
     schema: AD_INTELLIGENCE_RELEASE_SCHEMA,
     tool_id: AD_INTELLIGENCE_TOOL_ID,
-    release_id: "release-2026-08-14-001",
+    release_id: "release-v1",
     version: "1.0.0",
     status: "released",
     immutable: true,
