@@ -118,7 +118,23 @@ function v2ToTemplatePack({ doc, feedPreviewBytes, storyPreviewBytes, plateFiles
       descriptions: doc.publish?.copy?.descriptions ?? [],
       cta: doc.publish?.cta ?? "LEARN_MORE",
     },
-    aiWritingGuidance: { summary: "Keep copy concise, factual, and consistent with the declared offer.", fields: Object.fromEntries((doc.inputs?.text ?? []).map((input) => [input.key, `${input.label}; maximum ${input.maxLength} characters.`])) },
+    aiWritingGuidance: (() => {
+      const defaults = Object.fromEntries((doc.inputs?.text ?? []).map((input) => [input.key, `${input.label}; maximum ${input.maxLength} characters.`]));
+      const declared = doc.publish?.aiWritingGuidance ?? {};
+      const declaredFields = declared.fields && typeof declared.fields === "object" ? declared.fields : {};
+      const guidanceText = (value) => typeof value === "string" ? value : JSON.stringify(value);
+      return {
+        summary: typeof declared.summary === "string" && declared.summary.trim()
+          ? declared.summary
+          : "Keep copy concise, factual, and consistent with the declared offer.",
+        fields: {
+          ...defaults,
+          ...Object.fromEntries(Object.entries(declaredFields).filter(([, value]) => typeof value === "string")),
+          ...(declared.overlay !== undefined ? { overlay: guidanceText(declared.overlay) } : {}),
+          ...(declared.offCanvas !== undefined ? { offCanvas: guidanceText(declared.offCanvas) } : {}),
+        },
+      };
+    })(),
     publishRequirements: {
       objective: doc.publish?.objective ?? "OUTCOME_LEADS",
       specialAdCategory: doc.publish?.specialAdCategory ?? null,
@@ -260,7 +276,7 @@ async function main() {
   const scopeId = argValue("--scope") || "blockwise";
   const settingsRevision = Number(argValue("--settings-revision") ?? 0);
   const approvalReceipt = argValue("--approval") ? resolve(argValue("--approval")) : null;
-  const slotPath = resolve(argValue("--slot") || join(REPO_ROOT, "tests", "fixtures", "adstudio-v2", "public", "slots", "photo-portrait.png"));
+  const slotPath = resolve(argValue("--slot") || join(REPO_ROOT, "public", "adstudio-samples", "photos", "int-bedroom.png"));
   const slotBytes = readFileSync(slotPath);
   const slotSha = sha256(slotBytes);
 
@@ -324,16 +340,21 @@ async function main() {
     }
 
     // deterministic previews (no image model)
+    const requiredImageInputs = (doc.inputs?.images ?? []).filter((input) => input.required);
+    if (requiredImageInputs.length !== 1) {
+      throw new Error(`${id}: release previews require exactly one required image input, got ${requiredImageInputs.length}`);
+    }
+    const imageInputKey = requiredImageInputs[0].key;
     const instance = (format) => ({
       schema: "adstudio.instance.v2",
       templateId: doc.id,
       templateHash: "0".repeat(64),
       format,
-      values: { images: { customer_photo: { src: "/slots/photo-portrait.png" } }, text: Object.fromEntries(doc.inputs.text.map((t) => [t.key, t.sample])) },
+      values: { images: { [imageInputKey]: { src: "/slots/photo-portrait.png" } }, text: Object.fromEntries(doc.inputs.text.map((t) => [t.key, t.sample])) },
       overrides: [],
     });
-    const feedPreview = await renderAdDocToPng(doc, instance("4:5"), "4:5", { repoRoot: candidate, slotBytes: new Map([["customer_photo", slotBytes]]) });
-    const storyPreview = await renderAdDocToPng(doc, instance("9:16"), "9:16", { repoRoot: candidate, slotBytes: new Map([["customer_photo", slotBytes]]) });
+    const feedPreview = await renderAdDocToPng(doc, instance("4:5"), "4:5", { repoRoot: candidate, slotBytes: new Map([[imageInputKey, slotBytes]]) });
+    const storyPreview = await renderAdDocToPng(doc, instance("9:16"), "9:16", { repoRoot: candidate, slotBytes: new Map([[imageInputKey, slotBytes]]) });
     writeFileSync(join(previewsDir, `${id}-feed.png`), feedPreview);
     writeFileSync(join(previewsDir, `${id}-story.png`), storyPreview);
     writeFileSync(join(assetsDir, `${id}-feed.png`), feedPreview);

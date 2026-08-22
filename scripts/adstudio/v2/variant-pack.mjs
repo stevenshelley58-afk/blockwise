@@ -382,7 +382,7 @@ async function main() {
   // ── 3. shared public assets the renderer needs (fonts + slot fixture) ─────
   const fontsSrc = join(REPO_ROOT, "public", "fonts", "adstudio");
   if (existsSync(fontsSrc)) copyTree(fontsSrc, join(publicDir, "fonts", "adstudio"));
-  const slotPath = resolve(argValue("--slot") || join(REPO_ROOT, "tests", "fixtures", "adstudio-v2", "public", "slots", "photo-portrait.png"));
+  const slotPath = resolve(argValue("--slot") || join(REPO_ROOT, "public", "adstudio-samples", "photos", "int-bedroom.png"));
   const slotBytes = readFileSync(slotPath);
   const slotSha = sha256(slotBytes);
   const slotRel = "/slots/photo-portrait.png";
