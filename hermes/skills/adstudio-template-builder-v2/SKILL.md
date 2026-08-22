@@ -167,6 +167,19 @@ JSON object with `release_id`, `template_pack_ref`, `template_pack_path`,
 must be a `.json` or `.zip` file under the release store whose bytes hash to
 `sha256` and whose `integrity.signature` equals the returned `signature`.
 
+The returned `qa` object MUST contain these EXACT keys (the framework
+validates them verbatim and fails the release otherwise):
+
+- `qa.all_gates_passed` — MUST be boolean `true`
+- `qa.subject_invariance_passed` — MUST be boolean `true`
+- `qa.source_identity_leakage` — MUST be the integer `0`
+
+Extra descriptive keys (per-gate "passed" strings, evidence paths, etc.)
+are fine to include, but those three exact keys with those exact values are
+mandatory. Do not return `qa` as a list of per-gate strings or a
+human-readable summary — the framework reads the three boolean/int fields
+directly.
+
 ## Release law
 
 Release only a provider-neutral TemplatePack with Feed and Story layouts,
