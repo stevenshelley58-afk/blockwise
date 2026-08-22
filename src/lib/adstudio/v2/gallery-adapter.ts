@@ -1,9 +1,17 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import type { AdStudioTemplate, AdStudioTypeSpec } from "../templates";
 import { templateDocV2Schema } from "./template-doc";
 import { redactTemplateV2ForCustomer } from "./template-resolver";
+
+// The v1 template module was intentionally removed during the provider-neutral
+// cleanup.  Keep the temporary gallery adapter self-contained until its last
+// legacy UI consumer is removed as well.
+type LegacyCompatibleTemplate = {
+  sample: Record<string, unknown>;
+  [key: string]: unknown;
+};
+type LegacyCompatibleTypeSpec = Record<string, unknown>;
 
 /**
  * Track E gallery merge: when ADSTUDIO_TEMPLATES_V2 is on, the NewAdDialog
@@ -11,10 +19,10 @@ import { redactTemplateV2ForCustomer } from "./template-resolver";
  * the dialog already renders. v1 templates stay out of the list while v2 is
  * on (cutover); v1 remains the list when the flag is off.
  */
-export function v2ReadyTemplatesAsV1(): AdStudioTemplate[] {
+export function v2ReadyTemplatesAsV1(): LegacyCompatibleTemplate[] {
   const gallery = join(process.cwd(), "src", "lib", "adstudio", "template-gallery-v2");
   if (!existsSync(gallery)) return [];
-  const out: AdStudioTemplate[] = [];
+  const out: LegacyCompatibleTemplate[] = [];
   for (const id of readdirSync(gallery)) {
     const path = join(gallery, id, "template.json");
     if (!existsSync(path)) continue;
@@ -47,7 +55,7 @@ export function v2ReadyTemplatesAsV1(): AdStudioTemplate[] {
         // v2 samples are deterministic renders, not reference clones; the v1
         // union predates v2. Cast to the wider semantics.
         generatedBy: "deterministic_render",
-      } as unknown as AdStudioTemplate["sample"],
+      },
       inputs: {
         images: customerDoc.inputs.images.map((image) => ({
           key: image.key,
@@ -107,7 +115,7 @@ export function v2ReadyTemplatesAsV1(): AdStudioTemplate[] {
               sampleLineCount: layer.typo.measuredLines?.length ?? 1,
               sample: customerDoc.inputs.text.find((text) => text.key === layer.inputKey)?.sample ?? "",
               maxLength: layer.constraints.maxLength,
-            } as unknown as AdStudioTypeSpec,
+            } as LegacyCompatibleTypeSpec,
           ]),
       ),
       deterministicEditing: {

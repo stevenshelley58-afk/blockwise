@@ -8,7 +8,6 @@ import sharp from "sharp";
 import { generateAdStudioTemplateCopy } from "../copy-generation.ts";
 import { deterministicUuid } from "../id.ts";
 import { storagePathFromMediaSrc } from "../image-src.ts";
-import { computeFocalPointFromLuma } from "../smart-crop.ts";
 import type {
   AdStudioBrandKit,
   AdStudioCampaignPack,
@@ -65,6 +64,29 @@ export type V2GenerationResult = {
 };
 
 type ResolvedImage = { src: string; bytes: Buffer; width: number; height: number; focal: { x: number; y: number } };
+
+function computeFocalPointFromLuma(luma: ArrayLike<number>, width: number, height: number) {
+  if (width < 3 || height < 3 || luma.length < width * height) return { x: 0.5, y: 0.5 };
+  let sumWeight = 0;
+  let sumX = 0;
+  let sumY = 0;
+  for (let y = 1; y < height - 1; y += 1) {
+    for (let x = 1; x < width - 1; x += 1) {
+      const index = y * width + x;
+      const energy = Math.abs(luma[index + 1] - luma[index - 1])
+        + Math.abs(luma[index + width] - luma[index - width]);
+      sumWeight += energy;
+      sumX += energy * x;
+      sumY += energy * y;
+    }
+  }
+  if (sumWeight <= 1e-6) return { x: 0.5, y: 0.5 };
+  const biased = (value: number) => Math.min(0.85, Math.max(0.15, value * 0.7 + 0.15));
+  return {
+    x: biased(sumX / sumWeight / (width - 1)),
+    y: biased(sumY / sumWeight / (height - 1)),
+  };
+}
 
 async function resolveImageBytes(
   input: V2GenerationInput,
@@ -286,13 +308,15 @@ export async function generateV2Campaign(input: V2GenerationInput): Promise<V2Ge
   );
   const variantId = deterministicUuid(`adstudio-v2:variant:${campaignId}:main`);
   const publish = template.publish;
+  const supportedMetaCtas = new Set(["LEARN_MORE", "SIGN_UP", "DOWNLOAD", "CONTACT_US"]);
+  const metaCta = supportedMetaCtas.has(publish.cta) ? publish.cta : "LEARN_MORE";
   const metaCopy = {
     platform: "meta" as const,
     specialAdCategory: publish.specialAdCategory,
     primaryText: publish.copy.primaryText.slice(0, 5),
     headlines: publish.copy.headlines.slice(0, 5),
     descriptions: publish.copy.descriptions.slice(0, 5),
-    cta: publish.cta,
+    cta: metaCta as "LEARN_MORE" | "SIGN_UP" | "DOWNLOAD" | "CONTACT_US",
     leadForm: {
       headline: publish.leadForm.headline,
       questions: publish.leadForm.questions,
@@ -390,14 +414,14 @@ export async function generateV2Campaign(input: V2GenerationInput): Promise<V2Ge
         ...creativeBase,
         creativeId: deterministicUuid(`creative-v2:${campaignId}:feed`),
         format: "4:5",
-        canvas: feedInstance,
+        canvas: feedInstance as unknown as AdStudioCampaignPack["creatives"][number]["canvas"],
       },
       ...(storyInstance
         ? [{
             ...creativeBase,
             creativeId: deterministicUuid(`creative-v2:${campaignId}:story`),
             format: "9:16" as const,
-            canvas: storyInstance,
+            canvas: storyInstance as unknown as AdStudioCampaignPack["creatives"][number]["canvas"],
           }]
         : []),
     ],
