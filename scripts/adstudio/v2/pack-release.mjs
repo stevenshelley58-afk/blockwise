@@ -184,8 +184,17 @@ async function main() {
 
   const manifest = readJson(join(candidate, "variant-pack.manifest.json"));
   const releaseId = `${manifest.packId}-${runId.slice(-8)}`;
-  const releaseDir = resolve(argValue("--release") || join(process.env.HERMES_HOME || process.env.HOME, "tool_releases", "ad-template-generator", releaseId));
-  rmSync(releaseDir, { recursive: true, force: true });
+  const releaseStoreRoot = resolveReleaseStoreRoot(process.env);
+  const releaseDir = resolve(argValue("--release") || join(releaseStoreRoot, releaseId));
+  if (releaseDir !== releaseStoreRoot && !releaseDir.startsWith(releaseStoreRoot + "/")) {
+    throw new Error(`releaseDir ${releaseDir} is outside the private release store ${releaseStoreRoot}`);
+  }
+  // An immutable release dir (chmod 0o555 after writing) must be made writable
+  // again before a re-release can overwrite it.
+  if (existsSync(releaseDir)) {
+    try { chmodSync(releaseDir, 0o755); } catch {}
+  }
+  rmSync(releaseDir, { recursive: true, force: true, maxRetries: 3 });
   mkdirSync(releaseDir, { recursive: true });
 
   const templatesDir = join(releaseDir, "templates");
@@ -258,15 +267,22 @@ async function main() {
   // The Ed25519 signature signs the SHA-256 of the canonical bundle content
   // (integrity excluded), then the signed bundle is written with the
   // integrity receipt attached. The artifact's own bytes hash to
-  // finalBundleSha.
+  // finalBundleSha. The framework contract requires integrity.signature to be
+  // a receipt OBJECT (algorithm + hex signature + public key), not a bare hex
+  // string, and sha256 to hash the exact artifact bytes.
   const bundleSha = sha256(Buffer.from(canonicalJson(bundle)));
   const bundleSignature = sign(null, Buffer.from(bundleSha, "utf8"), privateKey).toString("hex");
-  const signedBundle = { ...bundle, integrity: { algorithm: "ed25519", signature: bundleSignature } };
+  const publicKeyHex = publicKey.export({ type: "spki", format: "pem" });
+  const signatureReceipt = {
+    algorithm: "ed25519",
+    signature: bundleSignature,
+    publicKey: publicKeyHex,
+  };
+  const signedBundle = { ...bundle, integrity: { algorithm: "ed25519", signature: signatureReceipt } };
   const finalBundleBytes = Buffer.from(canonicalJson(signedBundle));
   const finalBundleSha = sha256(finalBundleBytes);
   writeFileSync(join(releaseDir, "pack.bundle.json"), finalBundleBytes);
 
-  const publicKeyHex = publicKey.export({ type: "spki", format: "pem" });
   const artifactRef = `https://frank.fail/api/ad-studio/runs/${runId}/artifacts/${releaseId}-pack.bundle.json`;
   const now = new Date().toISOString();
   const release = {
@@ -325,7 +341,8 @@ async function main() {
     releaseId,
     releaseDir,
     packBundle: join(releaseDir, "pack.bundle.json"),
-    bundleSha256: bundleSha,
+    sha256: finalBundleSha,
+    signature: signatureReceipt,
     templates: signedPacks.map((pack) => ({ templateId: pack.templateId, manifestSha256: pack.manifestSha256 })),
     traceRef,
     envelope: join(releaseDir, "release.json"),
@@ -333,7 +350,20 @@ async function main() {
   }, null, 2)}\n`);
 }
 
-main().catch((error) => {
-  console.error(error?.stack ?? error);
-  process.exit(1);
-});
+// The private release store lives under the Hermes home. The Tool-run agent
+// environment does not always export HERMES_HOME, so fall back to ~/.hermes
+// explicitly — never to $HOME itself, which the framework rejects as outside
+// the private store.
+export function resolveReleaseStoreRoot(env = process.env) {
+  const hermesHome = env.HERMES_HOME || join(env.HOME || "", ".hermes");
+  return resolve(join(hermesHome, "tool_releases", "ad-template-generator"));
+}
+
+// Guard: only run the packager when invoked directly, so tests can import
+// the exported helpers without executing a release.
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main().catch((error) => {
+    console.error(error?.stack ?? error);
+    process.exit(1);
+  });
+}
