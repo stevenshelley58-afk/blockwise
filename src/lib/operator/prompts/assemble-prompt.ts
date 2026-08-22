@@ -24,6 +24,7 @@ export type MetaCopyPromptInput = {
     voice?: string;
     preferredPhrases?: string[];
     neverSay?: string[];
+    aiWritingGuidance?: { summary: string; fields: Record<string, string> };
   };
   brandKit?: Partial<AdStudioBrandKit> | null;
   brief?: string;
@@ -140,6 +141,7 @@ export function assembleMetaCopyPrompt(input: MetaCopyPromptInput): AssembledPro
       businessName: input.context.businessName,
       templateName: input.context.templateName,
       templateHint: input.context.templateHint,
+      aiWritingGuidance: input.context.aiWritingGuidance,
     }),
     CUSTOMER_BRIEF: formatCustomerBrief(input.brief, input.mode),
     CURRENT_COPY: formatCurrentCopy(input.currentCopy),
@@ -299,6 +301,16 @@ export function formatBrandConstraints(
 }
 
 export function formatCampaignInput(input: Record<string, unknown>): string {
+  const guidance = input.aiWritingGuidance as { summary?: unknown; fields?: unknown } | undefined;
+  const fieldGuidanceLines = guidance?.fields && typeof guidance.fields === "object"
+    ? Object.entries(guidance.fields as Record<string, unknown>)
+      .filter(([, value]) => typeof value === "string" && value)
+      .map(([key, value]) => `- ${key}: ${value}`)
+    : [];
+  const guidanceLines = [
+    typeof guidance?.summary === "string" && guidance.summary ? `Template writing guidance: ${guidance.summary}` : "",
+    ...fieldGuidanceLines,
+  ].filter(Boolean);
   const lines = [
     "Campaign/ad input:",
     stringLine("Mode", input.mode),
@@ -309,6 +321,7 @@ export function formatCampaignInput(input: Record<string, unknown>): string {
     stringLine("Property type", input.propertyType),
     stringLine("Template", input.templateName),
     stringLine("Template intent", input.templateHint),
+    guidanceLines.length ? ["Template-specific writing guidance:", ...guidanceLines].join("\n") : "",
   ].filter(Boolean);
 
   return lines.length > 1 ? lines.join("\n") : "Campaign/ad input:\n- Use the available campaign context.";

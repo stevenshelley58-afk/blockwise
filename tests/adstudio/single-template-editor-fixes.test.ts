@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import { readEditorDefaults, type MetaCopy } from "../../src/components/adstudio/editor/use-editor-state.ts";
 import { readGallerySampleUrl } from "../../src/lib/adstudio/pack-gallery.ts";
 import { buildDeterministicCopyProposal } from "../../src/lib/adstudio/copy-proposal.ts";
+import { normalizeAdStudioAiWritingGuidance } from "../../src/lib/adstudio/copy-generation.ts";
+import { formatCampaignInput } from "../../src/lib/operator/prompts/assemble-prompt.ts";
 import type { TemplatePack } from "../../packages/ad-template-pack-contract/src/types.ts";
 
 const pack = {
@@ -49,5 +51,25 @@ describe("single-template editor fixes", () => {
     assert.equal(proposal.source, "fallback");
     assert.equal(current.headline, "Current");
     assert.equal(proposal.onImage.overlay, "Saturday appraisal in Su");
+  });
+
+  it("uses template field guidance in deterministic proposals and enforces guidance limits", () => {
+    const guidance = normalizeAdStudioAiWritingGuidance({
+      summary: "s".repeat(900),
+      fields: { overlay: "g".repeat(400), second: "ok", ignored: 4 },
+    });
+    assert.equal(guidance?.summary.length, 600);
+    assert.equal(guidance?.fields.overlay.length, 240);
+    const proposal = buildDeterministicCopyProposal(
+      [{ key: "overlay", label: "Overlay", maxLength: 80 }],
+      "Saturday appraisal in Subiaco",
+      {},
+      guidance,
+    );
+    assert.match(proposal.onImage.overlay, /Saturday appraisal/);
+    assert.doesNotMatch(proposal.onImage.overlay, /g{10}/);
+    const promptContext = formatCampaignInput({ mode: "brief", templateName: "Open Home", aiWritingGuidance: guidance });
+    assert.match(promptContext, /Template writing guidance/);
+    assert.match(promptContext, /overlay/);
   });
 });
