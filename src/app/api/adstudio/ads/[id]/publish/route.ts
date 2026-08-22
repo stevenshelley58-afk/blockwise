@@ -5,7 +5,6 @@ import {
   PublishError,
   backfillPublishMetaCopy,
   buildPausedMetaPublishPlan,
-  buildStubForm,
   freezePublicationSnapshot,
   loadPublishState,
   resolvePublishCreativeAssets,
@@ -68,7 +67,6 @@ export async function POST(request: NextRequest, context: RouteContext) {
     await backfillPublishMetaCopy(access.supabase, id, access.access.workspaceId);
 
     // 2. Load the workspace's Meta connection and resolved setup early — the
-    // stub form (used when no Instant Form is pinned) needs the privacy URL.
     const serviceSupabase = createSupabaseServiceClient();
     const connection = await loadMetaConnection(serviceSupabase, access.access.workspaceId);
     if (!connection) {
@@ -85,13 +83,10 @@ export async function POST(request: NextRequest, context: RouteContext) {
     // changes (no active revision). This is the authoritative server state.
     const loaded = await loadPublishState(access.supabase, id, access.access.workspaceId);
 
-    // The saved revision has no pinned Instant Form yet. BW-M does not
-    // implement form generation — a stub form satisfies Meta's lead-form
-    // requirement so publishing can proceed (the real form flow replaces it).
-    const state = loaded.form ? loaded : { ...loaded, form: buildStubForm(loaded, setup) };
+    const state = loaded;
 
     // 4. Validate the frozen state.
-    const issues = validatePublishState(state);
+    const issues = validatePublishState(state, { controls, setup });
     if (issues.length > 0) {
       return NextResponse.json({ error: "not_ready", issues }, { status: 400 });
     }
