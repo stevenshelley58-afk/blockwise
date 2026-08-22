@@ -1,7 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { createHash } from "node:crypto";
 
 import { errorResponse, readJsonBody, requireAdStudioRequest } from "@/lib/adstudio/http";
 import { saveAd, SaveError } from "@/lib/adstudio/save-ad";
+import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { adDocumentSchema, type AdDocumentParsed } from "../../../../../../../packages/ad-template-pack-contract/src/schema.ts";
 
 export const runtime = "nodejs";
@@ -48,9 +50,11 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
   const document = parsed.data as AdDocumentParsed;
 
-  const imageValues = await resolveImageValues(document);
-
   try {
+    const [customerImages, templateAssets] = await Promise.all([
+      resolveImageValues(document),
+      resolveTemplatePlateValues(id, access.access.workspaceId),
+    ]);
     const output = await saveAd({
       supabase: access.supabase,
       workspaceId: access.access.workspaceId,
@@ -58,7 +62,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       document,
       expectedRevision: body.expectedRevision,
       colourMap: document.resolvedColourMap,
-      imageValues,
+      imageValues: { ...templateAssets, ...customerImages },
     });
 
     return NextResponse.json({ ad: output });
@@ -69,7 +73,9 @@ export async function POST(request: NextRequest, context: RouteContext) {
           ? 404
           : err.code === "stale_revision" || err.code === "template_hash_mismatch"
             ? 409
-            : 500;
+            : err.code.startsWith("image_")
+              ? 400
+              : 500;
       return NextResponse.json({ error: err.message, code: err.code }, { status });
     }
     return errorResponse(err);
@@ -77,23 +83,73 @@ export async function POST(request: NextRequest, context: RouteContext) {
 }
 
 // ---------------------------------------------------------------------------
-// Image resolution — media URLs referenced by the document -> Buffers.
-// Empty until the editor wires image upload; the renderer skips missing slots.
+// Customer image resolution. The browser editor emits a data URL; accepting
+// arbitrary network URLs here would turn Save into an authenticated SSRF.
 // ---------------------------------------------------------------------------
 
-async function resolveImageValues(document: AdDocumentParsed): Promise<Record<string, Buffer>> {
+const MAX_CUSTOMER_IMAGE_BYTES = 10 * 1024 * 1024;
+const MAX_CUSTOMER_IMAGE_PIXELS = 40_000_000;
+
+export async function resolveImageValues(document: AdDocumentParsed): Promise<Record<string, Buffer>> {
   const entries = Object.entries(document.sharedImageValues);
   if (entries.length === 0) return {};
 
   const resolved: Record<string, Buffer> = {};
-  for (const [key, url] of entries) {
+  for (const [key, value] of entries) {
     try {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      resolved[key] = Buffer.from(await res.arrayBuffer());
+      const match = /^data:(image\/(?:png|jpeg|webp));base64,([A-Za-z0-9+/]+={0,2})$/.exec(value);
+      if (!match) throw new Error("Only PNG, JPEG, or WebP data URLs are accepted");
+      if (match[2].length > Math.ceil(MAX_CUSTOMER_IMAGE_BYTES / 3) * 4 + 4) throw new Error("Image is too large");
+      const bytes = Buffer.from(match[2], "base64");
+      if (bytes.length === 0 || bytes.length > MAX_CUSTOMER_IMAGE_BYTES) throw new Error("Image is too large");
+      if (sniffImageMime(bytes) !== match[1]) throw new Error("Image bytes do not match the declared type");
+      const sharp = (await import("sharp")).default;
+      const metadata = await sharp(bytes, { limitInputPixels: MAX_CUSTOMER_IMAGE_PIXELS }).metadata();
+      if (!metadata.width || !metadata.height || metadata.width * metadata.height > MAX_CUSTOMER_IMAGE_PIXELS) {
+        throw new Error("Image dimensions are invalid");
+      }
+      resolved[key] = bytes;
     } catch {
-      throw new SaveError("image_fetch_failed", `Could not fetch image for input "${key}".`);
+      throw new SaveError("image_invalid", `Image for input "${key}" must be a valid PNG, JPEG, or WebP under 10 MB.`);
     }
   }
   return resolved;
+}
+
+function sniffImageMime(bytes: Buffer): string | null {
+  if (bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))) return "image/png";
+  if (bytes.subarray(0, 3).equals(Buffer.from([255, 216, 255]))) return "image/jpeg";
+  if (bytes.subarray(0, 4).toString("ascii") === "RIFF" && bytes.subarray(8, 12).toString("ascii") === "WEBP") return "image/webp";
+  return null;
+}
+
+async function resolveTemplatePlateValues(adId: string, workspaceId: string): Promise<Record<string, Buffer>> {
+  const service = createSupabaseServiceClient();
+  const { data: ad, error: adError } = await service
+    .from("ad_customer_ads")
+    .select("template_pack_id")
+    .eq("id", adId)
+    .eq("workspace_id", workspaceId)
+    .single();
+  if (adError || !ad?.template_pack_id) throw new SaveError("ad_not_found", "Ad not found");
+
+  const { data: assets, error: assetError } = await service
+    .from("ad_template_assets")
+    .select("asset_key, sha256, storage_path")
+    .eq("pack_id", ad.template_pack_id)
+    .in("asset_key", ["feed-plate", "story-plate"]);
+  if (assetError) throw new SaveError("template_asset_load_failed", assetError.message);
+
+  const values: Record<string, Buffer> = {};
+  for (const asset of assets ?? []) {
+    if (!asset.storage_path) throw new SaveError("template_asset_missing", `Template asset ${asset.asset_key} has no stored bytes.`);
+    const { data, error } = await service.storage.from("workspace-artifacts").download(asset.storage_path);
+    if (error || !data) throw new SaveError("template_asset_missing", `Template asset ${asset.asset_key} could not be loaded.`);
+    const bytes = Buffer.from(await data.arrayBuffer());
+    if (createHash("sha256").update(bytes).digest("hex") !== asset.sha256) {
+      throw new SaveError("template_asset_tampered", `Template asset ${asset.asset_key} failed its integrity check.`);
+    }
+    values[asset.asset_key] = bytes;
+  }
+  return values;
 }

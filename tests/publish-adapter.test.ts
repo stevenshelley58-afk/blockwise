@@ -4,7 +4,6 @@ import {
   validatePublishState,
   PublishError,
   buildPausedMetaPublishPlan,
-  buildStubForm,
   activationTargets,
   assertActivationReadiness,
   planActivation,
@@ -64,14 +63,21 @@ const validState = {
     contactFields: [{ type: "email" as const, required: true }, { type: "full_name" as const, required: true }],
     customQuestions: [],
     privacy: { url: "https://example.com/privacy", linkText: "Privacy" },
-    thankYou: { title: "Thanks", body: "Done", actionType: "visit_website" as const },
+    thankYou: { title: "Thanks", body: "Done", actionType: "visit_website" as const, actionUrl: "https://example.com/article" },
   },
+  formDraftId: "form-draft-001",
+  formRevision: 1,
 };
 
 describe("Publish adapter", () => {
   it("validates complete state", () => {
-    const issues = validatePublishState(validState);
+    const issues = validatePublishState(validState, { controls: { destinationUrl: "https://example.com/article" } });
     assert.equal(issues.length, 0, JSON.stringify(issues));
+  });
+
+  it("does not invent a website dependency for an Instant Form pack", () => {
+    const issues = validatePublishState(validState, { controls: { destinationMode: "instant_form" } });
+    assert.deepEqual(issues, []);
   });
 
   it("detects missing Feed PNG", () => {
@@ -131,6 +137,7 @@ const mockSetup = {
   currency: "AUD",
   timezone: "Australia/Perth",
 };
+const mockControls = { destinationUrl: "https://example.com/article", destinationMode: "instant_form" as const };
 
 describe("buildPausedMetaPublishPlan", () => {
   const plan = buildPausedMetaPublishPlan({
@@ -138,6 +145,7 @@ describe("buildPausedMetaPublishPlan", () => {
     workspaceId: "ws-001",
     connectionId: "conn-001",
     setup: mockSetup,
+    controls: mockControls,
     state: validState,
   });
 
@@ -186,7 +194,8 @@ describe("buildPausedMetaPublishPlan", () => {
       adId: "ad-001",
       workspaceId: "ws-001",
       connectionId: "conn-001",
-      setup: mockSetup,
+    setup: mockSetup,
+      controls: mockControls,
       state: validState,
     });
     assert.equal(plan.planId, again.planId);
@@ -201,34 +210,64 @@ describe("buildPausedMetaPublishPlan", () => {
       adId: "ad-001",
       workspaceId: "ws-001",
       connectionId: "conn-001",
-      setup: mockSetup,
+    setup: mockSetup,
+      controls: mockControls,
       state: changed,
     });
     assert.notEqual(plan.planId, again.planId);
   });
 
-  it("uses a stub form when the state has none", () => {
+  it("refuses a publish when the pinned form is missing", () => {
     const noForm = structuredClone(validState);
     (noForm as any).form = null;
-    const stubPlan = buildPausedMetaPublishPlan({
-      adId: "ad-001",
-      workspaceId: "ws-001",
-      connectionId: "conn-001",
-      setup: mockSetup,
-      state: noForm,
-    });
-    assert.equal(stubPlan.leadForms.length, 1);
-    assert.ok(stubPlan.leadForms[0]!.headline.length > 0);
+    assert.throws(() => buildPausedMetaPublishPlan({
+      adId: "ad-001", workspaceId: "ws-001", connectionId: "conn-001", setup: mockSetup,
+      controls: mockControls, state: noForm,
+    }), /pinned Instant Form|publish_dependencies_missing/);
   });
-});
 
-describe("buildStubForm", () => {
-  it("produces a valid lead form shape from the frozen state", () => {
-    const form = buildStubForm(validState, mockSetup);
-    assert.ok(form.name.length > 0);
-    assert.ok(form.contactFields.some(f => f.type === "email"));
-    assert.equal(form.privacy.url, mockSetup.privacyPolicyUrl);
-    assert.equal(form.thankYou.actionType, "visit_website");
+  it("builds website mode without a lead form and never uses privacy as destination", () => {
+    const websitePlan = buildPausedMetaPublishPlan({
+      adId: "ad-website", workspaceId: "ws-001", connectionId: "conn-001", setup: mockSetup,
+      controls: { destinationUrl: "https://example.com/article", destinationMode: "website" }, state: validState,
+    });
+    assert.equal(websitePlan.leadForms.length, 0);
+    assert.equal(websitePlan.creatives[0]!.leadFormLocalId, "");
+    assert.equal(websitePlan.controls.destinationUrl, "https://example.com/article");
+  });
+
+  it("refuses an invalid or absent destination instead of falling back to privacy", () => {
+    assert.throws(() => buildPausedMetaPublishPlan({
+      adId: "ad-no-destination", workspaceId: "ws-001", connectionId: "conn-001", setup: mockSetup,
+      controls: { destinationMode: "website" }, state: validState,
+    }), /destination URL|publish_dependencies_missing/);
+    assert.throws(() => buildPausedMetaPublishPlan({
+      adId: "ad-http", workspaceId: "ws-001", connectionId: "conn-001", setup: mockSetup,
+      controls: { destinationUrl: "http://example.com/article", destinationMode: "website" }, state: validState,
+    }), /destination URL|publish_dependencies_missing/);
+  });
+
+  it("honours the optional v2 publishRequirements CTA allow-list", () => {
+    const restricted = structuredClone(validState);
+    (restricted.pack as unknown as Record<string, unknown>).publishRequirements = {
+      destinationMode: "website", requiredCtaTypes: ["SIGN_UP"],
+    };
+    assert.throws(() => buildPausedMetaPublishPlan({
+      adId: "ad-cta", workspaceId: "ws-001", connectionId: "conn-001", setup: mockSetup,
+      controls: { destinationUrl: "https://example.com/article", destinationMode: "website" }, state: restricted,
+    }), /CTA must be one of/);
+  });
+
+  it("reads nested v2 metadata publish requirements", () => {
+    const nested = structuredClone(validState);
+    (nested.pack as unknown as Record<string, unknown>).metadata = {
+      publishRequirements: {
+        destination: { required: true, kind: "article", dependency: "article-1" },
+        instantForm: { required: false, dependency: null },
+      },
+    };
+    const issues = validatePublishState(nested, { controls: { destinationMode: "website", destinationUrl: "https://example.com/article" } });
+    assert.deepEqual(issues, []);
   });
 });
 
@@ -243,6 +282,7 @@ function pausedPlan(): MetaPublishPlan {
       workspaceId: "ws-001",
       connectionId: "conn-001",
       setup: mockSetup,
+      controls: mockControls,
       state: validState,
     }),
     status: "paused_live",

@@ -3,9 +3,9 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { randomUUID, generateKeyPairSync, sign as ed25519Sign, type KeyObject } from "node:crypto";
+import { randomUUID, generateKeyPairSync, sign as ed25519Sign, createHash, type KeyObject } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { canonicalJson, sha256Hex } from "../packages/ad-template-pack-contract/src/index.ts";
+import { computeManifestHash, sha256Hex } from "../packages/ad-template-pack-contract/src/index.ts";
 import {
   importTemplatePack,
   type ImportRequest,
@@ -27,6 +27,28 @@ const FIXTURE_PATH = join(
 
 function loadFixture(): Record<string, unknown> {
   return JSON.parse(readFileSync(FIXTURE_PATH, "utf8")) as Record<string, unknown>;
+}
+
+function sealPlaceholder(pack: Record<string, unknown>): Record<string, unknown> {
+  pack.manifestSha256 = computeManifestHash(pack);
+  return pack;
+}
+
+function v2Pack(bytes: Uint8Array, packId: string): { pack: Record<string, unknown>; assetUrl: string } {
+  const pack = loadFixture();
+  const assetUrl = "https://frank.fail/releases/ad-template-generator/fixture-release/assets/logo.png";
+  pack.schema = "blockwise.template-pack/v2";
+  pack.packId = packId;
+  pack.assets = { logo: { fileName: "logo.png", sha256: createHash("sha256").update(bytes).digest("hex"), mimeType: "image/png" } };
+  pack.metadata = {
+    title: "Fixture", description: "Fixture",
+    gallerySamples: { feed: { assetKey: "logo", placement: "feed", purpose: "gallery_sample", url: assetUrl }, story: { assetKey: "logo", placement: "story", purpose: "gallery_sample", url: assetUrl } },
+    metaCopyDefaults: { primaryText: [], headlines: [], descriptions: [], cta: "LEARN_MORE" },
+    aiWritingGuidance: { summary: "", fields: {} },
+    publishRequirements: { objective: "leads", specialAdCategory: null, instantForm: { required: false, dependency: null }, destination: { required: true, kind: "url", dependency: null } },
+    replacementAssets: [], realAssetRefs: [],
+  };
+  return { pack: sealPlaceholder(pack), assetUrl };
 }
 
 function makeRequest(
@@ -60,11 +82,21 @@ class FakeSupabase {
     ad_template_pack_versions: [],
     ad_template_assets: [],
   };
+  uploaded: Array<{ bucket: string; path: string; bytes: Uint8Array; options: Record<string, unknown> }> = [];
   private seq = 0;
 
   from(table: string): FakeQueryBuilder {
     return new FakeQueryBuilder(this, table);
   }
+
+  storage = {
+    from: (bucket: string) => ({
+      upload: async (path: string, bytes: Uint8Array, options: Record<string, unknown>) => {
+        this.uploaded.push({ bucket, path, bytes, options });
+        return { data: { path }, error: null };
+      },
+    }),
+  };
 
   insertInto(table: string, value: Row | Row[]): Row | Row[] {
     const rows = Array.isArray(value) ? value : [value];
@@ -131,8 +163,7 @@ function fakeSupabase(): SupabaseClient {
 
 // ---------------------------------------------------------------------------
 // Ed25519 test helpers — a throwaway keypair whose public half plays the
-// role of FRANK_PACK_PUBLIC_KEY, and a signer over the CANONICAL JSON bytes
-// (the exact wire format the Frank factory signs).
+// role of FRANK_PACK_PUBLIC_KEY, and a signer over manifestSha256.
 // ---------------------------------------------------------------------------
 
 function ed25519Keypair(): { publicKeyHex: string; privateKey: KeyObject } {
@@ -141,8 +172,11 @@ function ed25519Keypair(): { publicKeyHex: string; privateKey: KeyObject } {
   return { publicKeyHex, privateKey };
 }
 
-function signCanonical(pack: unknown, privateKey: KeyObject): string {
-  return ed25519Sign(null, Buffer.from(canonicalJson(pack), "utf-8"), privateKey).toString("hex");
+function signManifest(pack: Record<string, unknown>, privateKey: KeyObject): string {
+  pack.manifestSha256 = computeManifestHash(pack);
+  const signature = ed25519Sign(null, Buffer.from(String(pack.manifestSha256), "utf-8"), privateKey).toString("hex");
+  pack.signature = signature;
+  return signature;
 }
 
 // ---------------------------------------------------------------------------
@@ -264,13 +298,13 @@ describe("import-pack — local fixture import (no live Frank URL)", () => {
 });
 
 describe("import-pack — Ed25519 signature verification (FRANK_PACK_PUBLIC_KEY)", () => {
-  it("accepts a valid signature over the canonical pack JSON (roundtrip)", async () => {
+  it("accepts a valid signature over the manifest hash (roundtrip)", async () => {
     const { publicKeyHex, privateKey } = ed25519Keypair();
     process.env.FRANK_PACK_PUBLIC_KEY = publicKeyHex;
     try {
       const supabase = fakeSupabase();
       const pack = loadFixture();
-      const input = makeRequest(pack, { signature: signCanonical(pack, privateKey) });
+      const input = makeRequest(pack, { signature: signManifest(pack, privateKey), packSha256: sha256Hex(pack) });
 
       const receipt = await importTemplatePack(supabase, input, {
         fetchPack: async () => pack,
@@ -291,14 +325,15 @@ describe("import-pack — Ed25519 signature verification (FRANK_PACK_PUBLIC_KEY)
     try {
       const supabase = fakeSupabase();
       const pack = loadFixture();
-      const signature = signCanonical(pack, privateKey); // over the ORIGINAL bytes
+      const signature = signManifest(pack, privateKey);
 
       const tampered = structuredClone(pack) as Record<string, unknown>;
       tampered.templateId = "fixture-minimal-TAMPERED";
+      tampered.manifestSha256 = computeManifestHash(tampered);
 
       // The request hashes the tampered pack (hash check passes); only the
       // signature is stale, so the failure must be signature_rejected.
-      const input = makeRequest(tampered, { signature });
+      const input = makeRequest(tampered, { signature, packSha256: sha256Hex(tampered) });
 
       await assert.rejects(
         importTemplatePack(supabase, input, { fetchPack: async () => tampered }),
@@ -317,7 +352,8 @@ describe("import-pack — Ed25519 signature verification (FRANK_PACK_PUBLIC_KEY)
       const pack = loadFixture();
       // Signed with a DIFFERENT key than the configured FRANK_PACK_PUBLIC_KEY.
       const rogue = ed25519Keypair();
-      const input = makeRequest(pack, { signature: signCanonical(pack, rogue.privateKey) });
+      const signature = signManifest(pack, rogue.privateKey);
+      const input = makeRequest(pack, { signature, packSha256: sha256Hex(pack) });
 
       await assert.rejects(
         importTemplatePack(supabase, input, { fetchPack: async () => pack }),
@@ -361,6 +397,58 @@ describe("import-pack — pure helpers", () => {
     const h1 = sha256Hex(obj);
     const h2 = sha256Hex(structuredClone(obj));
     assert.equal(h1, h2);
+  });
+});
+
+describe("import-pack — v2 asset verification", () => {
+  const png = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 0]);
+
+  it("fetches, verifies, uploads, and records v2 asset storage paths", async () => {
+    const supabase = fakeSupabase();
+    const { pack, assetUrl } = v2Pack(png, "fixture-v2-assets");
+    const input = makeRequest(pack, { packId: "fixture-v2-assets", packUrl: "https://frank.fail/releases/ad-template-generator/fixture-release/pack-v2/fixture.json" });
+    const receipt = await importTemplatePack(supabase, input, {
+      fetchPack: async () => pack,
+      fetchAsset: async (url) => { assert.equal(url, assetUrl); return png; },
+    });
+    assert.equal(receipt.status, "active");
+    const fake = supabase as unknown as FakeSupabase;
+    assert.equal(fake.uploaded.length, 1);
+    assert.match(String(fake.uploaded[0]!.path), /^templates\/fixture-v2-assets\/logo-/);
+    assert.equal(fake.tables.ad_template_assets[0]!.storage_path, fake.uploaded[0]!.path);
+  });
+
+  it("fails closed on tampered asset bytes before activation", async () => {
+    const supabase = fakeSupabase();
+    const { pack } = v2Pack(png, "fixture-v2-tamper");
+    const input = makeRequest(pack, { packId: "fixture-v2-tamper", packUrl: "https://frank.fail/releases/ad-template-generator/fixture-release/pack-v2/fixture.json" });
+    await assert.rejects(importTemplatePack(supabase, input, {
+      fetchPack: async () => pack, fetchAsset: async () => new Uint8Array([...png.slice(0, -1), 1]),
+    }), (err: unknown) => (err as ImportError).code === "asset_hash_mismatch");
+    const fake = supabase as unknown as FakeSupabase;
+    assert.equal(fake.tables.ad_import_receipts.length, 0);
+    assert.equal(fake.uploaded.length, 0);
+  });
+
+  it("rejects redirects and assets outside the signed release origin/subtree", async () => {
+    const supabase = fakeSupabase();
+    const { pack } = v2Pack(png, "fixture-v2-origin");
+    const metadata = pack.metadata as Record<string, any>;
+    metadata.gallerySamples.feed.url = "https://evil.example/logo.png";
+    metadata.gallerySamples.story.url = "https://evil.example/logo.png";
+    sealPlaceholder(pack);
+    const input = makeRequest(pack, { packId: "fixture-v2-origin", packUrl: "https://frank.fail/releases/ad-template-generator/fixture-release/pack-v2/fixture.json" });
+    await assert.rejects(importTemplatePack(supabase, input, {
+      fetchPack: async () => pack, fetchAsset: async () => new Response(null, { status: 302, headers: { location: "https://evil.example" } }),
+    }), (err: unknown) => (err as ImportError).code === "asset_url_missing");
+    assert.equal((supabase as unknown as FakeSupabase).tables.ad_import_receipts.length, 0);
+
+    const redirectDb = fakeSupabase();
+    const valid = v2Pack(png, "fixture-v2-redirect").pack;
+    const redirectInput = makeRequest(valid, { packId: "fixture-v2-redirect", packUrl: "https://frank.fail/releases/ad-template-generator/fixture-release/pack-v2/fixture.json" });
+    await assert.rejects(importTemplatePack(redirectDb, redirectInput, {
+      fetchPack: async () => valid, fetchAsset: async () => new Response(null, { status: 302 }),
+    }), (err: unknown) => (err as ImportError).code === "redirect_not_allowed");
   });
 });
 

@@ -64,6 +64,41 @@ export interface PublishLoadResult {
   };
   pack: TemplatePack;
   form: InstantForm | null;
+  formDraftId: string | null;
+  formRevision: number | null;
+}
+
+export type PublishRequirements = {
+  destinationMode: "website" | "instant_form";
+  requiredCtaTypes: string[];
+};
+
+/** Read only the optional v2 publish contract; the canonical pack schema stays unchanged. */
+export function readPublishRequirements(pack: unknown): PublishRequirements {
+  if (!pack || typeof pack !== "object") return { destinationMode: "instant_form", requiredCtaTypes: [] };
+  const candidate = (pack as Record<string, unknown>).publishRequirements;
+  const metadata = (pack as Record<string, unknown>).metadata;
+  const metadataRequirements = metadata && typeof metadata === "object" ? (metadata as Record<string, unknown>).publishRequirements : null;
+  const effectiveCandidate = candidate && typeof candidate === "object" ? candidate : metadataRequirements;
+  if (!effectiveCandidate || typeof effectiveCandidate !== "object") return { destinationMode: "instant_form", requiredCtaTypes: [] };
+  const record = effectiveCandidate as Record<string, unknown>;
+  const nestedDestination = record.destination && typeof record.destination === "object"
+    ? record.destination as Record<string, unknown>
+    : null;
+  const nestedKind = nestedDestination?.kind;
+  const destinationMode = record.destinationMode === "website" || record.destinationMode === "instant_form"
+    ? record.destinationMode
+    : nestedKind === "url" || nestedKind === "article" ? "website"
+      : nestedKind === "instant_form" ? "instant_form" : "instant_form";
+  const requiredCtaTypes = Array.isArray(record.requiredCtaTypes)
+    ? record.requiredCtaTypes.filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+    : [];
+  return { destinationMode, requiredCtaTypes };
+}
+
+function isHttpsUrl(value: unknown): value is string {
+  if (typeof value !== "string" || !value.trim()) return false;
+  try { return new URL(value).protocol === "https:"; } catch { return false; }
 }
 
 /**
@@ -109,7 +144,7 @@ export async function loadPublishState(
   // 4. Load latest Instant Form draft
   const { data: formRow } = await supabase
     .from("ad_instant_form_drafts")
-    .select("form_json")
+    .select("id, form_json, revision")
     .eq("ad_id", adId)
     .order("revision", { ascending: false })
     .limit(1)
@@ -138,6 +173,8 @@ export async function loadPublishState(
     },
     pack,
     form,
+    formDraftId: formRow?.id ?? null,
+    formRevision: typeof formRow?.revision === "number" ? formRow.revision : null,
   };
 }
 
@@ -145,15 +182,38 @@ export async function loadPublishState(
  * Verify that the loaded publish state is complete and consistent.
  * Returns validation issues — empty array means ready to publish.
  */
-export function validatePublishState(state: PublishLoadResult): string[] {
+export function validatePublishState(
+  state: PublishLoadResult,
+  options: { controls?: MetaPublishControls; setup?: Partial<MetaConnectionSetup> } = {},
+): string[] {
   const issues: string[] = [];
+  const requirements = readPublishRequirements(state.pack);
+  const mode = options.controls?.destinationMode ?? requirements.destinationMode;
+  const destinationUrl = options.controls?.destinationUrl?.trim();
 
   if (!state.revision.feedPngHash) issues.push("Missing Feed PNG");
   if (!state.revision.storyPngHash) issues.push("Missing Story PNG");
   if (!state.ad.metaPrimaryText) issues.push("Missing primary text");
   if (!state.ad.metaHeadline) issues.push("Missing headline");
   if (!state.ad.metaCta) issues.push("Missing CTA");
-  if (!state.form) issues.push("No Instant Form — generate one before publishing");
+  if (mode === "website" && (!destinationUrl || !isHttpsUrl(destinationUrl))) {
+    issues.push("Missing valid HTTPS destination URL/article — add the article or website URL before publishing");
+  }
+  if (requirements.requiredCtaTypes.length > 0 && !requirements.requiredCtaTypes.includes(state.ad.metaCta)) {
+    issues.push(`CTA must be one of: ${requirements.requiredCtaTypes.join(", ")}`);
+  }
+  if (mode === "instant_form") {
+    if (!state.form) issues.push("No pinned Instant Form — generate and save one before publishing");
+    if (!state.formDraftId || !state.formRevision || state.formRevision < 1) {
+      issues.push("Instant Form draft identity is missing — save a real form revision before publishing");
+    }
+    if (state.form && !isHttpsUrl(state.form.privacy.url)) issues.push("Instant Form privacy policy must be a valid HTTPS URL");
+    if (state.form && state.form.thankYou.actionType === "none") issues.push("Instant Form thank-you screen needs an action");
+    if (state.form && state.form.thankYou.actionType === "call_now") issues.push("Instant Form call-now thank-you actions are not supported by this publisher yet");
+    if (state.form && ["visit_website", "download"].includes(state.form.thankYou.actionType) && !isHttpsUrl(state.form.thankYou.actionUrl ?? destinationUrl)) {
+      issues.push("Instant Form thank-you website action needs a valid HTTPS URL");
+    }
+  }
   if (state.ad.colourMode === "brand_pack" && !hasAllColours(state.pack.semanticColours)) {
     issues.push("Brand Pack is missing required colour roles");
   }
@@ -194,6 +254,8 @@ export async function freezePublicationSnapshot(
     metaCta: state.ad.metaCta,
     colourMode: state.ad.colourMode,
     form: state.form,
+    formDraftId: state.formDraftId,
+    formRevision: state.formRevision,
     frozenAt: new Date().toISOString(),
   };
 
@@ -203,7 +265,7 @@ export async function freezePublicationSnapshot(
       ad_id: input.adId,
       workspace_id: input.workspaceId,
       revision_id: state.revision.id,
-      form_draft_id: state.form ? undefined : undefined, // linked if exists
+      form_draft_id: state.formDraftId,
       snapshot_json: snapshot as unknown as Record<string, unknown>,
     })
     .select("id")
@@ -284,7 +346,12 @@ export function buildPausedMetaPublishPlan(input: PausedPublishPlanInput): MetaP
   const country = controlsCountry(input.controls) || "AU";
   const controls = normalizePausedControls(input.controls ?? {}, country);
   const now = new Date().toISOString();
-  const form = state.form ?? buildStubForm(state, setup);
+  const requirements = readPublishRequirements(state.pack);
+  const mode = input.controls?.destinationMode ?? requirements.destinationMode;
+  const issues = validatePublishState(state, { controls: { ...(input.controls ?? {}), destinationMode: mode }, setup });
+  if (issues.length > 0) throw new PublishError("publish_dependencies_missing", issues.join("; "));
+  const form = state.form;
+  if (mode === "instant_form" && !form) throw new PublishError("publish_dependencies_missing", "No pinned Instant Form — generate and save one before publishing");
 
   const campaign: MetaPublishCampaignPlan = {
     localId: "campaign_main",
@@ -311,22 +378,20 @@ export function buildPausedMetaPublishPlan(input: PausedPublishPlanInput): MetaP
     },
   ];
 
-  const leadForms: MetaPublishLeadFormPlan[] = [
-    {
+  const leadForms: MetaPublishLeadFormPlan[] = mode === "instant_form" ? [{
       localId: "form_primary",
-      name: `${label} ${form.intro.headline}`.slice(0, 100),
-      headline: form.intro.headline,
-      questions: form.customQuestions.map((q) => q.label),
-      privacyPolicyUrl: setup.privacyPolicyUrl,
-      thankYouTitle: form.thankYou.title,
-      thankYouBody: form.thankYou.body,
-      thankYouWebsiteUrl: controls.destinationUrl ?? setup.privacyPolicyUrl,
-    },
-  ];
+      name: `${label} ${form!.intro.headline}`.slice(0, 100),
+      headline: form!.intro.headline,
+      questions: form!.customQuestions.map((q) => q.label),
+      privacyPolicyUrl: form!.privacy.url,
+      thankYouTitle: form!.thankYou.title,
+      thankYouBody: form!.thankYou.body,
+      thankYouWebsiteUrl: form!.thankYou.actionUrl ?? controls.destinationUrl!,
+    }] : [];
 
   const creatives: MetaPublishCreativePlan[] = [
-    buildPausedCreative(state, setup, label, "feed", state.revision.feedPngPath, "4:5"),
-    buildPausedCreative(state, setup, label, "story", state.revision.storyPngPath, "9:16"),
+    buildPausedCreative(state, setup, label, "feed", state.revision.feedPngPath, "4:5", mode),
+    buildPausedCreative(state, setup, label, "story", state.revision.storyPngPath, "9:16", mode),
   ];
 
   const ads: MetaPublishAdPlan[] = [
@@ -398,6 +463,7 @@ function buildPausedCreative(
   placement: "feed" | "story",
   pngPath: string,
   format: "4:5" | "9:16",
+  destinationMode: "website" | "instant_form",
 ): MetaPublishCreativePlan {
   return {
     localId: `creative_${placement}`,
@@ -408,7 +474,7 @@ function buildPausedCreative(
     primaryText: state.ad.metaPrimaryText || label,
     description: state.ad.metaDescription || "",
     cta: state.ad.metaCta || "LEARN_MORE",
-    leadFormLocalId: "form_primary",
+    leadFormLocalId: destinationMode === "instant_form" ? "form_primary" : "",
     adStudioCreativeId: null,
     format,
     asset: pngPath
@@ -465,6 +531,7 @@ function normalizePausedControls(controls: MetaPublishControls, country: string)
       ? Math.round(controls.dailyBudgetMinorUnits)
       : 2000,
     ...(controls.destinationUrl?.trim() ? { destinationUrl: controls.destinationUrl.trim() } : {}),
+    ...(controls.destinationMode ? { destinationMode: controls.destinationMode } : {}),
     geo: controls.geo ?? { type: "country", country },
     schedule: {
       startTime: controls.schedule?.startTime ?? null,
@@ -515,41 +582,6 @@ function buildPausedPlanIdempotencyKey(
     `revision_${state.revision.revisionNumber}`,
     `execution_${fingerprint}`,
   ].join(":");
-}
-
-/**
- * Minimal stub Instant Form used when no AI-generated draft exists yet.
- * This task does not implement Instant Form generation; the stub satisfies
- * Meta's lead-form requirement so publishing can proceed, and the real form
- * flow replaces it later.
- */
-export function buildStubForm(state: PublishLoadResult, setup: MetaConnectionSetup): InstantForm {
-  const label = state.pack.classification?.label?.trim() || state.pack.templateId || "your business";
-  const headline = state.ad.metaHeadline?.trim() || label;
-
-  return {
-    name: `${label} lead form`,
-    formType: "more_volume",
-    intro: {
-      headline: headline.slice(0, 60),
-      body: `Enter your details and ${label} will be in touch.`,
-    },
-    contactFields: [
-      { type: "email", required: true },
-      { type: "full_name", required: true },
-    ],
-    customQuestions: [],
-    privacy: {
-      url: setup.privacyPolicyUrl || "https://example.com/privacy",
-      linkText: "Privacy Policy",
-    },
-    thankYou: {
-      title: "Thank you!",
-      body: "We've received your details.",
-      actionType: "visit_website",
-      actionUrl: setup.privacyPolicyUrl,
-    },
-  };
 }
 
 /**

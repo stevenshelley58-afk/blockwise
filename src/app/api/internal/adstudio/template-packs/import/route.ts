@@ -11,7 +11,10 @@ import { importTemplatePack } from "@/lib/adstudio/import-pack";
 export async function POST(request: Request) {
   // Auth: internal service secret
   const authHeader = request.headers.get("authorization");
-  const expectedSecret = process.env.BLOCKWISE_INTERNAL_AUTH_SECRET ?? "dev-secret-change-me";
+  const expectedSecret = process.env.BLOCKWISE_INTERNAL_AUTH_SECRET;
+  if (!expectedSecret) {
+    return NextResponse.json({ error: "server_configuration" }, { status: 500 });
+  }
   if (!authHeader || authHeader !== `Bearer ${expectedSecret}`) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
@@ -57,8 +60,12 @@ export async function POST(request: Request) {
       : code === "nonce_replay" ? 409
       : code === "timestamp_expired" ? 400
       : code === "hash_mismatch" ? 400
+      : code === "pack_id_mismatch" ? 400
+      : code === "manifest_hash_mismatch" ? 400
+      : code === "signature_rejected" ? 403
       : code === "schema_invalid" ? 422
       : code === "origin_not_allowed" ? 403
+      : code.startsWith("asset_") || code === "invalid_release_path" ? 422
       : 500;
 
     return NextResponse.json({ error: code, message: err.message, detail: err.detail }, { status });

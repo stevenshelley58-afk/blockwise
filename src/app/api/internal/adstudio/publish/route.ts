@@ -57,7 +57,7 @@ export async function POST(request: Request) {
 
   try {
     const state = await loadPublishState(supabase, body.adId, body.workspaceId);
-    const issues = validatePublishState(state);
+    const issues = validatePublishState(state, { controls: body.controls ?? {}, setup: body.setup ?? {} });
     if (issues.length > 0) {
       return NextResponse.json({ error: "not_ready", issues }, { status: 400 });
     }

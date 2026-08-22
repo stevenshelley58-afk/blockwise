@@ -1,4 +1,4 @@
-import { templatePackSchema } from "../../../packages/ad-template-pack-contract/src/index.ts";
+import { templatePackAnySchema } from "../../../packages/ad-template-pack-contract/src/index.ts";
 import type { Layout, TemplatePack } from "../../../packages/ad-template-pack-contract/src/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -20,6 +20,7 @@ export interface ImportedPackSummary {
   feedLayout: Layout;
   storyLayout: Layout;
   semanticColours: TemplatePack["semanticColours"];
+  gallerySampleUrl: string | null;
 }
 
 type PackRow = {
@@ -29,6 +30,21 @@ type PackRow = {
   pack_json: unknown;
   created_at: unknown;
 };
+
+function record(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
+}
+
+export function readGallerySampleUrl(value: unknown): string | null {
+  const raw = record(value);
+  const metadataGallery = record(record(raw?.metadata)?.gallerySamples);
+  const gallery = metadataGallery ?? record(raw?.gallerySample);
+  const provenance = record(raw?.provenance);
+  const sample = record(gallery?.feed) ?? record(gallery) ?? record(provenance?.sample);
+  const safeFeed = record(record(raw?.safePreviews)?.feed);
+  const candidate = sample?.imageSrc ?? sample?.url ?? safeFeed?.url;
+  return typeof candidate === "string" && candidate.trim() ? candidate.trim() : null;
+}
 
 /** All active imported packs, newest first. Invalid rows are skipped, never fatal. */
 export async function listImportedPacks(
@@ -75,7 +91,7 @@ function summaryFromPack(pack: TemplatePack, row: PackRow): ImportedPackSummary 
   return {
     packId: String(row.pack_id ?? pack.packId),
     templateId: pack.templateId,
-    name: label && label.length > 0 ? label : pack.templateId,
+    name: (record((pack as unknown as Record<string, unknown>).metadata)?.title as string | undefined) ?? (label && label.length > 0 ? label : pack.templateId),
     version: pack.version,
     importedAt: typeof row.created_at === "string" ? row.created_at : pack.createdAt,
     imageInputs: pack.imageInputs.length,
@@ -83,11 +99,12 @@ function summaryFromPack(pack: TemplatePack, row: PackRow): ImportedPackSummary 
     feedLayout: pack.feedLayout,
     storyLayout: pack.storyLayout,
     semanticColours: { ...pack.semanticColours },
+    gallerySampleUrl: readGallerySampleUrl(row.pack_json),
   };
 }
 
 function parsePackJson(value: unknown): TemplatePack | null {
   if (!value || typeof value !== "object") return null;
-  const parsed = templatePackSchema.safeParse(value);
+  const parsed = templatePackAnySchema.safeParse(value);
   return parsed.success ? (parsed.data as TemplatePack) : null;
 }

@@ -50,6 +50,15 @@ class FakeSupabase {
     ad_render_attempts: [],
   };
   seq = 0;
+  uploaded: Array<{ path: string; bytes: Buffer }> = [];
+  storage = {
+    from: () => ({
+      upload: async (path: string, bytes: Buffer) => {
+        this.uploaded.push({ path, bytes });
+        return { error: null };
+      },
+    }),
+  };
 
   from(table: string): FakeQuery {
     return new FakeQuery(this, table);
@@ -167,7 +176,7 @@ const STORY_HASH = "e".repeat(64);
 function fakeRenderer(calls: string[]) {
   return async (placement: "feed" | "story") => {
     calls.push(placement);
-    return { sha256: placement === "feed" ? FEED_HASH : STORY_HASH };
+    return { sha256: placement === "feed" ? FEED_HASH : STORY_HASH, png: Buffer.from(placement) };
   };
 }
 
@@ -247,6 +256,8 @@ describe("saveAd", () => {
     assert.notEqual(output.feedPngHash, output.storyPngHash);
     assert.equal(output.feedPngHash, FEED_HASH);
     assert.equal(output.storyPngHash, STORY_HASH);
+    assert.equal(db.uploaded.length, 2);
+    assert.deepEqual(db.uploaded.map(upload => upload.bytes.length > 0), [true, true]);
 
     // Both placements were requested — never a Feed-only save.
     assert.deepEqual(placements, ["feed", "story"]);
@@ -264,6 +275,26 @@ describe("saveAd", () => {
     const attempts = db.tables.ad_render_attempts;
     assert.equal(attempts.length, 2);
     assert.deepEqual(attempts.map(a => a.placement).sort(), ["feed", "story"]);
+  });
+
+  it("keeps Feed and Story crop overrides on the save document", async () => {
+    const db = new FakeSupabase();
+    seedAd(db, WS);
+    const document = makeDocument({
+      feedCropOverrides: { hero: { x: 0.1, y: 0, width: 0.5, height: 1 } },
+      storyCropOverrides: { hero: { x: 0.4, y: 0, width: 0.5, height: 1 } },
+    });
+    await saveAd({
+      supabase: db as never,
+      workspaceId: WS,
+      adId: "ad-1",
+      document,
+      expectedRevision: 0,
+      colourMap: PACK.semanticColours,
+      imageValues: {},
+      renderPlacement: fakeRenderer([]),
+    });
+    assert.deepEqual(db.tables.ad_revisions[0].document_json, document);
   });
 
   it("second save with changed document advances to revision 2", async () => {

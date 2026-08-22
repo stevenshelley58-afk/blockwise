@@ -1,5 +1,7 @@
-import { createCanvas, loadImage, type SKRSContext2D, type Canvas } from "@napi-rs/canvas";
+import { createCanvas, GlobalFonts, loadImage, type SKRSContext2D } from "@napi-rs/canvas";
 import { createHash } from "node:crypto";
+import { existsSync } from "node:fs";
+import { basename, join } from "node:path";
 import type {
   TemplatePack,
   LayoutLayer,
@@ -32,6 +34,7 @@ const DIMENSIONS: Record<Placement, { width: number; height: number }> = {
 };
 
 export async function renderPlacement(input: RenderInput, placement: Placement): Promise<RenderOutput> {
+  registerPackFonts(input.pack);
   const layout = placement === "feed" ? input.pack.feedLayout : input.pack.storyLayout;
   const dims = DIMENSIONS[placement];
   const canvas = createCanvas(dims.width, dims.height);
@@ -60,9 +63,29 @@ async function renderLayer(ctx: SKRSContext2D, layer: LayoutLayer, input: Render
   }
 }
 
-function renderPlate(ctx: SKRSContext2D, layer: Extract<LayoutLayer, { type: "plate" }>, input: RenderInput): void {
+async function renderPlate(ctx: SKRSContext2D, layer: Extract<LayoutLayer, { type: "plate" }>, input: RenderInput): Promise<void> {
+  if (layer.assetKey) {
+    const bytes = input.imageValues[layer.assetKey];
+    if (!bytes) throw new Error(`Missing immutable plate asset: ${layer.assetKey}`);
+    const image = await loadImage(bytes);
+    ctx.drawImage(image, layer.geometry.x, layer.geometry.y, layer.geometry.width, layer.geometry.height);
+    return;
+  }
   ctx.fillStyle = input.colourMap[layer.colourRole] ?? "#FFFFFF";
   ctx.fillRect(layer.geometry.x, layer.geometry.y, layer.geometry.width, layer.geometry.height);
+}
+
+const registeredFontFiles = new Set<string>();
+
+function registerPackFonts(pack: TemplatePack): void {
+  for (const font of pack.fonts) {
+    const fileName = basename(font.file);
+    if (registeredFontFiles.has(fileName)) continue;
+    const absolute = join(process.cwd(), "public", "fonts", "adstudio", fileName);
+    if (!existsSync(absolute)) continue;
+    GlobalFonts.registerFromPath(absolute, fileName.replace(/\.[^.]+$/, ""));
+    registeredFontFiles.add(fileName);
+  }
 }
 
 function renderOverlay(ctx: SKRSContext2D, layer: Extract<LayoutLayer, { type: "overlay_patch" }>, input: RenderInput): void {
@@ -98,27 +121,70 @@ async function renderImageSlot(ctx: SKRSContext2D, layer: ImageSlotLayer, input:
 }
 
 function renderText(ctx: SKRSContext2D, layer: TextLayer, input: RenderInput): void {
-  const text = input.textValues[layer.inputKey];
-  if (!text) return;
+  const source = input.textValues[layer.inputKey];
+  if (!source) return;
+  if (layer.overflowBehaviour === "refuse" && source.length > layer.maxCharacters) return;
+  const text = source.slice(0, layer.maxCharacters);
   ctx.save();
-  ctx.font = `${layer.fontSize}px "${layer.font.file.replace(/\.\w+$/, "")}"`;
   ctx.fillStyle = input.colourMap[layer.colourRole] ?? "#000000";
   ctx.textAlign = layer.alignment;
   ctx.textBaseline = "top";
 
-  const metrics = ctx.measureText(text);
-  if (layer.overflowBehaviour === "refuse") {
-    if (text.length > layer.maxCharacters || metrics.width > layer.geometry.width) {
-      ctx.restore();
-      return;
+  const family = layer.font.file.replace(/\.[^.]+$/, "");
+  const minimumSize = layer.overflowBehaviour === "scale_down" ? Math.max(8, layer.fontSize * 0.45) : layer.fontSize;
+  let fontSize = layer.fontSize;
+  let lines: string[] = [];
+  let fits = false;
+  for (; fontSize >= minimumSize; fontSize -= 1) {
+    ctx.font = `${fontSize}px "${family}"`;
+    lines = wrapText(ctx, text, layer.geometry.width);
+    const widest = Math.max(0, ...lines.map((line) => ctx.measureText(line).width));
+    const height = lines.length * fontSize * layer.lineHeight;
+    fits = lines.length <= layer.maxLines && widest <= layer.geometry.width && height <= layer.geometry.height;
+    if (fits) break;
+  }
+  if (!fits && layer.overflowBehaviour === "refuse") {
+    ctx.restore();
+    return;
+  }
+  if (!fits) {
+    fontSize = Math.max(8, fontSize);
+    ctx.font = `${fontSize}px "${family}"`;
+    lines = wrapText(ctx, text, layer.geometry.width).slice(0, layer.maxLines);
+    if (layer.overflowBehaviour === "truncate" && lines.length > 0) {
+      let last = lines[lines.length - 1] ?? "";
+      while (last && ctx.measureText(`${last}…`).width > layer.geometry.width) last = last.slice(0, -1);
+      lines[lines.length - 1] = `${last.trimEnd()}…`;
     }
   }
 
   const x = layer.alignment === "center" ? layer.geometry.x + layer.geometry.width / 2
     : layer.alignment === "right" ? layer.geometry.x + layer.geometry.width
     : layer.geometry.x;
-  ctx.fillText(text, x, layer.geometry.y);
+  lines.forEach((line, index) => ctx.fillText(line, x, layer.geometry.y + index * fontSize * layer.lineHeight));
   ctx.restore();
+}
+
+function wrapText(ctx: SKRSContext2D, text: string, maxWidth: number): string[] {
+  const output: string[] = [];
+  for (const paragraph of text.split(/\r?\n/)) {
+    const words = paragraph.trim().split(/\s+/).filter(Boolean);
+    if (words.length === 0) {
+      output.push("");
+      continue;
+    }
+    let line = words[0] ?? "";
+    for (const word of words.slice(1)) {
+      const candidate = `${line} ${word}`;
+      if (ctx.measureText(candidate).width <= maxWidth) line = candidate;
+      else {
+        output.push(line);
+        line = word;
+      }
+    }
+    output.push(line);
+  }
+  return output;
 }
 
 async function renderLogo(ctx: SKRSContext2D, layer: Extract<LayoutLayer, { type: "logo" }>, input: RenderInput): Promise<void> {

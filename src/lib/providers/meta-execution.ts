@@ -39,8 +39,9 @@ export type MetaConnectionSetup = {
 
 export type MetaPublishControls = {
   dailyBudgetMinorUnits?: number;
-  /** Destination URL for the ad link and lead form thank-you button (falls back to privacy policy). */
+  /** Explicit article/website destination for the ad and (when applicable) form thank-you button. */
   destinationUrl?: string;
+  destinationMode?: "website" | "instant_form";
   geo?:
     | { type: "country"; country: string }
     | { type: "custom_radius"; latitude: number; longitude: number; radiusKm: number }
@@ -782,7 +783,10 @@ async function publishWithMarketingApi(
       } else {
         const imageHash = await resolveCreativeImageHash(plan, creative, input, requestLog, responseLog);
         const leadFormId = reconciledObjects.leadFormIds[creative.leadFormLocalId];
-        const linkBase = plan.controls.destinationUrl?.trim() || plan.setup.privacyPolicyUrl;
+        const linkBase = plan.controls.destinationUrl?.trim();
+        if (!linkBase || !isHttpsDestination(linkBase)) {
+          throw new Error("Publish plan is missing a valid HTTPS destination URL.");
+        }
         const utmLink = buildUtmLink(linkBase, plan.tracking, creative.localId);
         const response = await postMetaObject(input, requestLog, responseLog, `creative.${creative.localId}`, `/${plan.setup.metaAdAccountId}/adcreatives`, {
           name: providerName,
@@ -797,9 +801,7 @@ async function publishWithMarketingApi(
               ...(imageHash ? { image_hash: imageHash } : {}),
               call_to_action: {
                 type: creative.cta,
-                value: {
-                  lead_gen_form_id: leadFormId,
-                },
+                value: leadFormId ? { lead_gen_form_id: leadFormId } : { link: utmLink },
               },
             },
           },
@@ -1524,6 +1526,10 @@ function isHttpUrl(value: string): boolean {
   } catch {
     return false;
   }
+}
+
+function isHttpsDestination(value: string): boolean {
+  try { return new URL(value).protocol === "https:"; } catch { return false; }
 }
 
 function buildAdPlans(pack: AdStudioCampaignPack): MetaPublishAdPlan[] {

@@ -25,7 +25,7 @@ export interface SaveAdInput {
    * real renderer and returns a caller-supplied sha256 per placement.
    * Production callers omit it and get the @blockwise/ad-deterministic-renderer.
    */
-  renderPlacement?: (placement: "feed" | "story") => Promise<{ sha256: string }>;
+  renderPlacement?: (placement: "feed" | "story") => Promise<{ sha256: string; png?: Buffer }>;
 }
 
 export interface SaveAdOutput {
@@ -94,6 +94,9 @@ export async function saveAd(input: SaveAdInput): Promise<SaveAdOutput> {
   // 6. Render Feed and Story (deferred to render service in real impl)
   const feedResult = await renderPlacementSafe(templatePack, input, "feed");
   const storyResult = await renderPlacementSafe(templatePack, input, "story");
+
+  await uploadRender(input, "feed", feedResult);
+  await uploadRender(input, "story", storyResult);
 
   // 7. Atomic transaction: insert revision + render attempts + advance active
   const { data: revision, error } = await input.supabase
@@ -172,6 +175,7 @@ async function getActiveRevision(
 interface RenderOutput {
   hash: string;
   path: string;
+  png?: Buffer;
 }
 
 async function renderPlacementSafe(
@@ -180,11 +184,13 @@ async function renderPlacementSafe(
   placement: "feed" | "story",
 ): Promise<RenderOutput> {
   let sha256: string;
+  let png: Buffer | undefined;
 
   if (input.renderPlacement) {
     // Test injection point — caller supplies the hash, no renderer import.
     const result = await input.renderPlacement(placement);
     sha256 = result.sha256;
+    png = result.png;
   } else {
     // Production — full render via @blockwise/ad-deterministic-renderer.
     // Renders the pack with customer image/text values and colour map.
@@ -195,16 +201,34 @@ async function renderPlacementSafe(
         imageValues: input.imageValues,
         textValues: input.document.sharedTextValues,
         colourMap: input.colourMap,
+        cropOverrides: placement === "feed" ? input.document.feedCropOverrides : input.document.storyCropOverrides,
       },
       placement,
     );
     sha256 = result.sha256;
+    png = result.png;
   }
 
   // Upload to workspace-scoped temp storage
   const path = `${input.workspaceId}/adstudio/renders/${input.adId}/${placement}-${sha256}.png`;
 
-  return { hash: sha256, path };
+  return { hash: sha256, path, png };
+}
+
+async function uploadRender(
+  input: SaveAdInput,
+  placement: "feed" | "story",
+  render: RenderOutput,
+): Promise<void> {
+  if (!render.png) {
+    throw new SaveError("render_bytes_missing", "The " + placement + " render did not return PNG bytes.");
+  }
+  const { error } = await input.supabase.storage
+    .from("workspace-artifacts")
+    .upload(render.path, render.png, { contentType: "image/png", upsert: true });
+  if (error) {
+    throw new SaveError("render_upload_failed", "Could not store the " + placement + " render: " + error.message);
+  }
 }
 
 // ---------------------------------------------------------------------------

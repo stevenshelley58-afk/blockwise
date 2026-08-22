@@ -122,10 +122,14 @@ for (const doc of docs) {
   seenIds.add(doc.id);
 }
 
-// One source ad, at most one template, across BOTH generations — with the
-// transition carve-out: a v2 doc is the SUCCESSOR of the same-id v1 doc
-// (same source by construction; Track H deletes the v1 side), not a second
-// template from that source. Only genuinely new sources get deduplicated.
+// One source ad, at most one INDEPENDENT template, across BOTH generations —
+// with two carve-outs: (a) the transition carve-out (a v2 doc is the
+// SUCCESSOR of the same-id v1 doc, not a second template from that source),
+// and (b) DECLARED PACK VARIANTS: when the job brief requests a pack of N
+// templates, the builder emits N docs that share the source hash but declare
+// the same provenance.packId with distinct provenance.packVariantIndex. Those
+// are one authorised pack, not accidental duplicates; two independent
+// templates from one source still fail.
 const sourceHashes = new Map();
 if (existsSync(v1GalleryDir)) {
   for (const entry of readdirSync(v1GalleryDir, { withFileTypes: true })) {
@@ -137,7 +141,7 @@ if (existsSync(v1GalleryDir)) {
       const v1 = JSON.parse(readFileSync(path, "utf8"));
       const v1Id = v1.id ?? entry.name.replace(/\.json$/, "");
       if (seenIds.has(v1Id)) continue; // v2 successor replaces it
-      if (v1.sourceAd?.contentHash) sourceHashes.set(v1.sourceAd.contentHash, `v1:${v1Id}`);
+      if (v1.sourceAd?.contentHash) sourceHashes.set(v1.sourceAd.contentHash, { kind: "v1", id: v1Id, packId: null });
     } catch {
       // not a doc; not this gate's business
     }
@@ -145,8 +149,42 @@ if (existsSync(v1GalleryDir)) {
 }
 for (const doc of docs) {
   const owner = sourceHashes.get(doc.provenance.sourceAd.contentHash);
-  if (owner) fail(`${doc.id}: source ad already used by ${owner} — one source, one template`);
-  sourceHashes.set(doc.provenance.sourceAd.contentHash, `v2:${doc.id}`);
+  const packId = doc.provenance?.packId ?? null;
+  const packVariantIndex = doc.provenance?.packVariantIndex ?? null;
+  const isDeclaredPackVariant = Boolean(
+    owner
+    && owner.kind === "v2"
+    && owner.packId
+    && packId === owner.packId
+    && typeof packVariantIndex === "number"
+  );
+  if (owner && !isDeclaredPackVariant) {
+    fail(`${doc.id}: source ad already used by ${owner.kind}:${owner.id} — one source, one template (declare provenance.packId + packVariantIndex to author a multi-variant pack)`);
+  }
+  sourceHashes.set(doc.provenance.sourceAd.contentHash, { kind: "v2", id: doc.id, packId });
+}
+
+// Every declared pack must have complete, unique variant indices (1..N), so a
+// pack cannot smuggle two docs as the same variant or a half-declared pack.
+const packIndices = new Map();
+for (const doc of docs) {
+  const packId = doc.provenance?.packId;
+  if (!packId) continue;
+  const index = doc.provenance?.packVariantIndex;
+  if (typeof index !== "number" || !Number.isInteger(index) || index < 1) {
+    fail(`${doc.id}: pack variant ${packId} needs a positive integer provenance.packVariantIndex`);
+    continue;
+  }
+  const indices = packIndices.get(packId) ?? new Set();
+  if (indices.has(index)) fail(`${doc.id}: pack ${packId} declares duplicate packVariantIndex ${index}`);
+  indices.add(index);
+  packIndices.set(packId, indices);
+}
+for (const [packId, indices] of packIndices) {
+  const maxIndex = Math.max(...indices);
+  if (indices.size !== maxIndex) {
+    fail(`pack ${packId} declares non-contiguous variant indices ${[...indices].sort((a, b) => a - b).join(",")}`);
+  }
 }
 
 // ─── helpers ───────────────────────────────────────────────────────────────
@@ -257,6 +295,15 @@ function readPngLikeDimensions(path) {
       width: 1 + bytes.readUIntLE(24, 3),
       height: 1 + bytes.readUIntLE(27, 3),
     };
+  }
+  // WebP lossless: RIFF....WEBP + VP8L chunk (no VP8X). The VP8L header packs
+  // 14-bit (width-1) and 14-bit (height-1) after a 0x2f signature byte.
+  if (bytes.toString("ascii", 8, 12) === "WEBP" && bytes.toString("ascii", 12, 16) === "VP8L") {
+    if (bytes.length < 22 || bytes[16] !== 0x2f) return null;
+    const widthMinus1 = bytes[17] | ((bytes[18] & 0x3f) << 8);
+    const heightMinus1 = (bytes[18] >> 6) | (bytes[19] << 2) | ((bytes[20] & 0x0f) << 10);
+    if (widthMinus1 < 0 || heightMinus1 < 0) return null;
+    return { width: widthMinus1 + 1, height: heightMinus1 + 1 };
   }
   return null;
 }
@@ -522,6 +569,12 @@ for (const doc of docs) {
     if (!existsSync(samplePath)) fail(`${doc.id}: sample missing at ${doc.provenance.sample.imageSrc}`);
     else if (sha256File(samplePath) !== doc.provenance.sample.contentHash) fail(`${doc.id}: sample sha256 mismatch`);
   }
+  if (doc.provenance.storySample?.imageSrc) {
+    referencedFiles.add(doc.provenance.storySample.imageSrc);
+    const storySamplePath = join(publicDir, doc.provenance.storySample.imageSrc.replace(/^\//, ""));
+    if (!existsSync(storySamplePath)) fail(`${doc.id}: story sample missing at ${doc.provenance.storySample.imageSrc}`);
+    else if (sha256File(storySamplePath) !== doc.provenance.storySample.contentHash) fail(`${doc.id}: story sample sha256 mismatch`);
+  }
   if (doc.provenance.sample.contentHash && doc.provenance.sample.contentHash === doc.provenance.sourceAd.contentHash) {
     fail(`${doc.id}: sample hash equals source hash`);
   }
@@ -556,15 +609,256 @@ if (existsSync(privateAssetsDir)) {
   walkPrivate(privateAssetsDir);
 }
 
+// ── 8.5 visual output: no tofu / missing glyphs in any rendered surface ──
+// Two complementary checks:
+//  (a) EXACT font coverage — every face a doc declares must contain every
+//      codepoint the doc renders (text input samples + any literal text), so
+//      missing-glyph boxes cannot be produced at build time.
+//  (b) PREVIEW SCAN — the .notdef glyph draws as a hollow rectangle outline;
+//      a text layer whose ink is concentrated on a thin closed rectangle with
+//      an empty interior is tofu. Scans every 4:5 and 9:16 sample.
+const { brotliDecompressSync } = await import("node:zlib");
+
+const WOFF2_KNOWN_TAGS = [
+  "cmap", "head", "hhea", "hmtx", "maxp", "name", "OS/2", "post", "cvt ", "fpgm",
+  "glyf", "loca", "prep", "CFF ", "VORG", "EBDT", "EBLC", "gasp", "hdmx", "kern",
+  "LTSH", "PCLT", "VDMX", "vhea", "vmtx", "BASE", "GDEF", "GPOS", "GSUB", "EBSC",
+  "JSTF", "MATH", "CBDT", "CBLC", "COLR", "CPAL", "SVG ", "sbix", "acnt", "avar",
+  "bdat", "bloc", "bsln", "cvar", "fdsc", "feat", "fmtx", "fvar", "gvar", "hsty",
+  "just", "lcar", "mort", "morx", "opbd", "prop", "trak", "Zapf", "Silf", "Glat",
+  "Gloc", "Feat", "Sill",
+];
+
+function readBase128(b, start) {
+  let result = 0;
+  let i = start;
+  for (let count = 0; count < 5; count += 1) {
+    if (i >= b.length) throw new Error("base128 value truncated");
+    const byte = b[i];
+    i += 1;
+    if (count === 0 && byte === 0x80) throw new Error("base128 leading zero");
+    result = (result << 7) | (byte & 0x7f);
+    if ((byte & 0x80) === 0) return { value: result, next: i };
+  }
+  throw new Error("base128 value too long");
+}
+
+function parseWoff2Cmap(filePath) {
+  const b = readFileSync(filePath);
+  if (b.toString("ascii", 0, 4) !== "wOF2") throw new Error("not a woff2 font");
+  const numTables = b.readUInt16BE(12);
+  const totalCompressedSize = b.readUInt32BE(20);
+  let off = 48;
+  const tables = [];
+  for (let i = 0; i < numTables; i += 1) {
+    const flags = b.readUInt8(off);
+    off += 1;
+    const tagIndex = flags & 0x3f;
+    let tag;
+    if (tagIndex === 0x3f) {
+      tag = b.toString("ascii", off, off + 4);
+      off += 4;
+    } else {
+      tag = WOFF2_KNOWN_TAGS[tagIndex];
+    }
+    const orig = readBase128(b, off);
+    off = orig.next;
+    const transformVersion = flags >> 6;
+    const transformed = (tag === "glyf" || tag === "loca") ? transformVersion !== 3 : transformVersion !== 0;
+    if (transformed) {
+      const len = readBase128(b, off);
+      off = len.next;
+    }
+    tables.push({ tag, origLength: orig.value });
+  }
+  const compressed = b.subarray(off, off + totalCompressedSize);
+  const data = brotliDecompressSync(compressed);
+  let cursor = 0;
+  let cmapData = null;
+  for (const table of tables) {
+    if (table.tag === "cmap") {
+      cmapData = data.subarray(cursor, cursor + table.origLength);
+      break;
+    }
+    cursor += table.origLength;
+  }
+  if (!cmapData) return new Set();
+  const numSubtables = cmapData.readUInt16BE(2);
+  const codes = new Set();
+  for (let i = 0; i < numSubtables; i += 1) {
+    const rec = 4 + i * 8;
+    const platformID = cmapData.readUInt16BE(rec);
+    const encodingID = cmapData.readUInt16BE(rec + 2);
+    const subOffset = cmapData.readUInt32BE(rec + 4);
+    const format = cmapData.readUInt16BE(subOffset);
+    if (format === 4 && (platformID === 3 || platformID === 0)) {
+      const segCountX2 = cmapData.readUInt16BE(subOffset + 6);
+      const segCount = segCountX2 >> 1;
+      const endCodes = subOffset + 14;
+      const startCodes = endCodes + segCountX2 + 2;
+      for (let s = 0; s < segCount; s += 1) {
+        const start = cmapData.readUInt16BE(startCodes + s * 2);
+        const end = cmapData.readUInt16BE(endCodes + s * 2);
+        for (let c = start; c <= end && c <= 0xffff; c += 1) codes.add(c);
+      }
+    } else if (format === 12 && (platformID === 3 || platformID === 0)) {
+      const nGroups = cmapData.readUInt32BE(subOffset + 12);
+      for (let g = 0; g < nGroups; g += 1) {
+        const base = subOffset + 16 + g * 12;
+        const start = cmapData.readUInt32BE(base);
+        const end = cmapData.readUInt32BE(base + 4);
+        for (let c = start; c <= end && c < 0x110000; c += 1) codes.add(c);
+      }
+    }
+  }
+  return codes;
+}
+
+function tofuLikeComponents(gray, w, h) {
+  // gray: Uint8Array luminance; returns the area of ink components that look
+  // like .notdef tofu boxes (thin hollow rectangles).
+  const visited = new Uint8Array(w * h);
+  let tofuArea = 0;
+  let totalInk = 0;
+  const queue = [];
+  for (let start = 0; start < w * h; start += 1) {
+    if (visited[start] || gray[start] >= 128) continue;
+    // flood fill one ink component
+    queue.length = 0;
+    queue.push(start);
+    visited[start] = 1;
+    let minX = start % w, maxX = minX, minY = (start / w) | 0, maxY = minY;
+    let ink = 0;
+    while (queue.length > 0) {
+      const p = queue.pop();
+      const x = p % w;
+      const y = (p / w) | 0;
+      ink += 1;
+      if (x < minX) minX = x;
+      if (x > maxX) maxX = x;
+      if (y < minY) minY = y;
+      if (y > maxY) maxY = y;
+      if (x > 0 && !visited[p - 1] && gray[p - 1] < 128) { visited[p - 1] = 1; queue.push(p - 1); }
+      if (x < w - 1 && !visited[p + 1] && gray[p + 1] < 128) { visited[p + 1] = 1; queue.push(p + 1); }
+      if (y > 0 && !visited[p - w] && gray[p - w] < 128) { visited[p - w] = 1; queue.push(p - w); }
+      if (y < h - 1 && !visited[p + w] && gray[p + w] < 128) { visited[p + w] = 1; queue.push(p + w); }
+    }
+    totalInk += ink;
+    const bw = maxX - minX + 1;
+    const bh = maxY - minY + 1;
+    if (bw < 6 || bh < 6) continue; // noise specks are not tofu
+    if (bw < w * 0.03 || bh < h * 0.03) continue; // too small relative to the layer
+    // ink within 1px of the component bbox border vs the rest
+    let borderInk = 0;
+    let interiorInk = 0;
+    for (let y = minY; y <= maxY; y += 1) {
+      for (let x = minX; x <= maxX; x += 1) {
+        const p = y * w + x;
+        if (gray[p] >= 128) continue;
+        if (x === minX || x === maxX || y === minY || y === maxY) borderInk += 1;
+        else interiorInk += 1;
+      }
+    }
+    const interiorFraction = interiorInk / (bw * bh);
+    const borderShare = ink === 0 ? 0 : borderInk / ink;
+    // tofu: a thin closed rectangle — nearly all ink on the bbox border and an
+    // empty interior. Real glyphs (O, 0, D, @) have thick strokes so their
+    // interior is inked; diagonal glyphs (>) do not hug all four edges.
+    if (borderShare >= 0.78 && interiorFraction < 0.05) tofuArea += ink;
+  }
+  return { tofuArea, totalInk };
+}
+
+async function scanSampleForTofu(doc, samplePath, layout, label, failures) {
+  if (!existsSync(samplePath)) return;
+  const sharpMod = await import("sharp");
+  const { data, info } = await sharpMod.default(samplePath).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+  for (const layer of layout.layers) {
+    if (layer.type !== "text") continue;
+    const x0 = Math.max(0, Math.floor(layer.box.x * info.width));
+    const y0 = Math.max(0, Math.floor(layer.box.y * info.height));
+    const x1 = Math.min(info.width, Math.ceil((layer.box.x + layer.box.width) * info.width));
+    const y1 = Math.min(info.height, Math.ceil((layer.box.y + layer.box.height) * info.height));
+    const w = x1 - x0;
+    const h = y1 - y0;
+    if (w < 8 || h < 8) continue;
+    const gray = new Uint8Array(w * h);
+    let ink = 0;
+    for (let y = y0; y < y1; y += 1) {
+      for (let x = x0; x < x1; x += 1) {
+        const p = (y * info.width + x) * 3;
+        const lum = 0.2126 * data[p] + 0.7152 * data[p + 1] + 0.0722 * data[p + 2];
+        gray[(y - y0) * w + (x - x0)] = lum;
+        if (lum < 128) ink += 1;
+      }
+    }
+    if (ink === 0) {
+      failures.push(`${doc.id}: ${label} layer ${layer.id} rendered no ink at all (missing glyphs or the font failed to load)`);
+      continue;
+    }
+    const { tofuArea, totalInk } = tofuLikeComponents(gray, w, h);
+    if (tofuArea >= 0.25 * totalInk) {
+      failures.push(`${doc.id}: ${label} layer ${layer.id} renders tofu/missing-glyph boxes (${Math.round((tofuArea / totalInk) * 100)}% of ink is hollow .notdef rectangles)`);
+    }
+  }
+}
+
+for (const doc of docs) {
+  if (doc.exactness.status === "draft") continue;
+  const failures = [];
+  // (a) font coverage
+  const renderedText = [
+    ...doc.inputs.text.map((input) => input.sample ?? ""),
+    ...doc.formats.feed.layers.filter((l) => l.type === "text" && l.literal).map((l) => l.literal),
+  ].join("");
+  const needed = new Set([...renderedText].map((ch) => ch.codePointAt(0)).filter((cp) => cp >= 32 && cp !== 0xfeff));
+  for (const font of doc.fonts) {
+    const rel = font.file.replace(/^\//, "");
+    const fontPath = join(publicDir, rel);
+    if (!existsSync(fontPath)) {
+      failures.push(`${doc.id}: font file missing at ${font.file} — renders fall back to a missing-glyph font`);
+      continue;
+    }
+    let codes;
+    try {
+      codes = parseWoff2Cmap(fontPath);
+    } catch (error) {
+      failures.push(`${doc.id}: font ${font.file} is unreadable (${error?.message ?? error})`);
+      continue;
+    }
+    const missing = [...needed].filter((cp) => !codes.has(cp)).map((cp) => String.fromCodePoint(cp));
+    if (missing.length > 0) {
+      failures.push(`${doc.id}: font ${font.fontId} (${font.file}) lacks glyphs for: ${JSON.stringify(missing.slice(0, 20))} — the rendered text would show tofu boxes`);
+    }
+  }
+  // (b) preview scan on both placements
+  const feedSample = doc.provenance.sample?.imageSrc ? join(publicDir, doc.provenance.sample.imageSrc.replace(/^\//, "")) : null;
+  if (feedSample) await scanSampleForTofu(doc, feedSample, doc.formats.feed, "4:5", failures);
+  const storySample = doc.provenance.storySample?.imageSrc
+    ? join(publicDir, doc.provenance.storySample.imageSrc.replace(/^\//, ""))
+    : join(publicDir, "adstudio-templates", doc.id, "sample-story.png");
+  if (doc.formats.story) await scanSampleForTofu(doc, storySample, doc.formats.story, "9:16", failures);
+  for (const message of failures) fail(message);
+}
+
 // 8. diversity across the gallery.
 if (docs.length > 0) {
-  const intents = docs.map((doc) => doc.classification?.primary_intent).filter((intent) => intent && intent !== "other");
-  const distinct = new Set(intents);
-  if (distinct.size < 5 && docs.length >= 5) fail(`diversity: only ${distinct.size} distinct non-other intents (<5)`);
-  const counts = new Map();
-  for (const intent of intents) counts.set(intent, (counts.get(intent) ?? 0) + 1);
-  for (const [intent, count] of counts) {
-    if (count / Math.max(1, intents.length) > 0.5) fail(`diversity: intent "${intent}" is ${Math.round((count / intents.length) * 100)}% of the gallery (>50%)`);
+  // Intent distribution is a LIBRARY-level property. A declared single-source
+  // pack is one source family by construction (the brief asked for N variants
+  // of one ad), so intent checks apply only when the scanned set is not one
+  // pack. Skeleton collision is enforced everywhere: even within a pack every
+  // variant must be a genuinely distinct layout.
+  const packIds = new Set(docs.map((doc) => doc.provenance?.packId).filter(Boolean));
+  const singleSourcePack = packIds.size === 1 && docs.every((doc) => doc.provenance?.packId === [...packIds][0]);
+  if (!singleSourcePack) {
+    const intents = docs.map((doc) => doc.classification?.primary_intent).filter((intent) => intent && intent !== "other");
+    const distinct = new Set(intents);
+    if (distinct.size < 5 && docs.length >= 5) fail(`diversity: only ${distinct.size} distinct non-other intents (<5)`);
+    const counts = new Map();
+    for (const intent of intents) counts.set(intent, (counts.get(intent) ?? 0) + 1);
+    for (const [intent, count] of counts) {
+      if (count / Math.max(1, intents.length) > 0.5) fail(`diversity: intent "${intent}" is ${Math.round((count / intents.length) * 100)}% of the gallery (>50%)`);
+    }
   }
   const signatures = new Map();
   for (const doc of docs) {

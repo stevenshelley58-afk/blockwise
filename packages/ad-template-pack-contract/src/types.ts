@@ -97,6 +97,8 @@ export interface PlateLayer {
   layerId: string;
   /** Background colour role. */
   colourRole: ColourRole;
+  /** Optional immutable plate asset declared in TemplatePack.assets. */
+  assetKey?: string;
   geometry: Rect;
   /** True if this region must be inpaint-masked during content replacement. */
   protected: boolean;
@@ -227,6 +229,28 @@ export interface TemplatePack {
     reviewerVersions: string[];
     stressFixtureResults: Record<string, "pass" | "fail">;
   };
+}
+
+export interface AssetRef {
+  assetKey: string;
+  placement?: Placement | null;
+  purpose?: "gallery_sample" | "replacement" | "real_asset" | "font";
+  url?: string;
+}
+export interface TemplatePackMetadata {
+  title: string; description: string;
+  gallerySamples: { feed: AssetRef; story: AssetRef };
+  metaCopyDefaults: { primaryText: string[]; headlines: string[]; descriptions: string[]; cta: string };
+  aiWritingGuidance: { summary: string; fields: Record<string, string> };
+  publishRequirements: {
+    objective: string; specialAdCategory: string | null;
+    instantForm: { required: boolean; dependency: string | null; defaults?: unknown | null };
+    destination: { required: boolean; kind: "url" | "article" | "instant_form" | "none"; dependency: string | null };
+  };
+  replacementAssets: AssetRef[]; realAssetRefs: AssetRef[];
+}
+export interface TemplatePackV2 extends Omit<TemplatePack, "schema"> {
+  schema: "blockwise.template-pack/v2"; metadata: TemplatePackMetadata;
 }
 
 // ---------------------------------------------------------------------------

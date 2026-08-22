@@ -44,7 +44,11 @@ export default async function AdStudioPage() {
                   className="group block rounded-(--r-card) border border-(--line) bg-(--surface) p-3 transition hover:border-(--line-heavy) hover:shadow-sm"
                 >
                   <div className="overflow-hidden rounded-(--r-card) border border-(--line-soft) bg-white">
-                    <LayoutThumb layout={pack.feedLayout} colours={pack.semanticColours} />
+                    {pack.gallerySampleUrl ? (
+                      <img src={pack.gallerySampleUrl} alt={`${pack.name} sample`} className="aspect-[1080/1350] w-full object-cover" />
+                    ) : (
+                      <LayoutThumb layout={pack.feedLayout} colours={pack.semanticColours} />
+                    )}
                   </div>
                   <div className="px-1 pb-1 pt-3">
                     <h2 className="truncate text-sm font-medium text-foreground">{pack.name}</h2>

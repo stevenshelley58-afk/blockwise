@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { PublishFlow } from "./publish-flow";
 import { getOrCreateCustomerAd } from "@/lib/adstudio/create-customer-ad";
 import { getImportedPack } from "@/lib/adstudio/pack-gallery";
-import { loadPublishState, PublishError, validatePublishState } from "@/lib/adstudio/publish-adapter";
+import { loadPublishState, PublishError, readPublishRequirements, validatePublishState } from "@/lib/adstudio/publish-adapter";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
 
 export const dynamic = "force-dynamic";
@@ -47,8 +47,16 @@ export default async function PublishPage({
     }
   }
 
-  const issues = state ? validatePublishState(state) : [];
+  const publishRequirements = readPublishRequirements(pack);
+  const validationControls = publishRequirements.destinationMode === "website"
+    ? { destinationMode: "website" as const, destinationUrl: "https://pending.invalid" }
+    : { destinationMode: "instant_form" as const };
+  const issues = state
+    ? validatePublishState(state, { controls: validationControls }).filter((issue) => !isInteractiveDependencyIssue(issue))
+    : [];
   const providerWrites = providerWritesEnabled();
+  const metadata = (pack as unknown as { metadata?: { title?: string } }).metadata;
+  const packName = metadata?.title?.trim() || pack.classification.label || pack.templateId;
 
   return (
     <main className="fixed inset-0 flex flex-col bg-(--canvas) text-foreground">
@@ -69,7 +77,7 @@ export default async function PublishPage({
           Back to editor
         </a>
         <span className="ml-4 truncate text-sm font-medium">
-          Publish — {pack.classification.label || pack.templateId}
+          Publish — {packName}
         </span>
         {!providerWrites && (
           <span className="ml-auto rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700">
@@ -82,7 +90,8 @@ export default async function PublishPage({
           adId={adId}
           workspaceId={access.workspaceId}
           packId={packId}
-          packName={pack.classification.label || pack.templateId}
+          packName={packName}
+          publishRequirements={publishRequirements}
           notSaved={notSaved}
           initialState={state}
           initialIssues={issues}
@@ -91,4 +100,8 @@ export default async function PublishPage({
       </div>
     </main>
   );
+}
+
+function isInteractiveDependencyIssue(issue: string): boolean {
+  return /destination URL|Instant Form|form revision|privacy policy|thank-you/i.test(issue);
 }

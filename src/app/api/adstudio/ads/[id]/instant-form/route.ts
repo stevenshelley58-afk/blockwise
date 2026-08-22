@@ -65,7 +65,9 @@ export async function POST(request: NextRequest, context: RouteContext) {
     ad,
   );
 
-  const { form, issues } = generateInstantForm(deriveFormGenerationInput(contextInput));
+  const generated = generateInstantForm(deriveFormGenerationInput(contextInput));
+  const form = applyTemplateFormDefaults(generated.form, contextInput.templateFormDefaults, contextInput.privacyPolicyUrl);
+  const issues = validateInstantForm(form);
 
   return NextResponse.json({ form, issues });
 }
@@ -150,18 +152,24 @@ async function loadBrandKit(
 }
 
 /** Pack classification label — fallback campaign goal when the ad has no copy. */
-async function loadPackGoal(
+async function loadPackContext(
   supabase: Awaited<ReturnType<typeof import("@/lib/supabase/server").createSupabaseServerClient>>,
   templatePackId: string,
-): Promise<string | undefined> {
+): Promise<{ goal?: string; templateFormDefaults?: unknown }> {
   const { data } = await supabase
     .from("ad_template_packs")
     .select("pack_json")
     .eq("pack_id", templatePackId)
     .maybeSingle();
 
-  const pack = data?.pack_json as { classification?: { label?: string } } | null;
-  return pack?.classification?.label?.trim() || undefined;
+  const pack = data?.pack_json as {
+    classification?: { label?: string };
+    metadata?: { publishRequirements?: { instantForm?: { defaults?: unknown } } };
+  } | null;
+  return {
+    goal: pack?.classification?.label?.trim() || undefined,
+    templateFormDefaults: pack?.metadata?.publishRequirements?.instantForm?.defaults,
+  };
 }
 
 async function buildFormGenerationContext(
@@ -169,9 +177,9 @@ async function buildFormGenerationContext(
   workspaceId: string,
   ad: AdRow,
 ) {
-  const [brandKit, fallbackGoal, workspaceRow] = await Promise.all([
+  const [brandKit, packContext, workspaceRow] = await Promise.all([
     loadBrandKit(supabase, workspaceId),
-    loadPackGoal(supabase, ad.template_pack_id),
+    loadPackContext(supabase, ad.template_pack_id),
     supabase.from("workspaces").select("name").eq("id", workspaceId).maybeSingle(),
   ]);
 
@@ -193,8 +201,31 @@ async function buildFormGenerationContext(
       email: brandKit?.contact.email ?? undefined,
     },
     privacyPolicyUrl: usablePrivacyUrl(brandKit),
-    fallbackGoal,
+    fallbackGoal: packContext.goal,
+    templateFormDefaults: packContext.templateFormDefaults,
   };
+}
+
+function applyTemplateFormDefaults(base: InstantForm, value: unknown, privacyPolicyUrl: string): InstantForm {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return base;
+  const defaults = value as Partial<InstantForm>;
+  const intro = defaults.intro && typeof defaults.intro === "object" ? defaults.intro : undefined;
+  const privacy = defaults.privacy && typeof defaults.privacy === "object" ? defaults.privacy : undefined;
+  const thankYou = defaults.thankYou && typeof defaults.thankYou === "object" ? defaults.thankYou : undefined;
+  return {
+    ...base,
+    ...(typeof defaults.name === "string" ? { name: defaults.name } : {}),
+    ...(defaults.formType === "higher_intent" || defaults.formType === "more_volume" ? { formType: defaults.formType } : {}),
+    intro: { ...base.intro, ...intro },
+    ...(Array.isArray(defaults.contactFields) ? { contactFields: defaults.contactFields } : {}),
+    ...(Array.isArray(defaults.customQuestions) ? { customQuestions: defaults.customQuestions } : {}),
+    privacy: {
+      ...base.privacy,
+      ...privacy,
+      url: typeof privacy?.url === "string" && privacy.url.trim() ? privacy.url : privacyPolicyUrl,
+    },
+    thankYou: { ...base.thankYou, ...thankYou },
+  } as InstantForm;
 }
 
 /**

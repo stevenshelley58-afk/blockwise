@@ -2,7 +2,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { sha256Hex, canonicalJson, computeManifestHash, verifyManifestHash } from "./hash.js";
-import { templatePackSchema, adDocumentSchema } from "./schema.js";
+import { templatePackSchema, templatePackV2Schema, adDocumentSchema } from "./schema.js";
 import type { TemplatePack } from "./types.js";
 
 // ---------------------------------------------------------------------------
@@ -97,6 +97,23 @@ describe("TemplatePack schema", () => {
   it("validates the golden fixture", () => {
     const result = templatePackSchema.safeParse(goldenPack);
     assert.ok(result.success, JSON.stringify(result.error?.issues, null, 2));
+  });
+
+  it("accepts v2 metadata while v1 remains frozen", () => {
+    const v2 = {
+      ...structuredClone(goldenPack),
+      schema: "blockwise.template-pack/v2",
+      metadata: {
+        title: "Golden", description: "Portable template",
+        gallerySamples: { feed: { assetKey: "feed-sample", placement: "feed", purpose: "gallery_sample" }, story: { assetKey: "story-sample", placement: "story", purpose: "gallery_sample" } },
+        metaCopyDefaults: { primaryText: ["Primary"], headlines: ["Headline"], descriptions: ["Description"], cta: "LEARN_MORE" },
+        aiWritingGuidance: { summary: "Be concise", fields: { headline: "Short" } },
+        publishRequirements: { objective: "OUTCOME_LEADS", specialAdCategory: null, instantForm: { required: true, dependency: "instant_form" }, destination: { required: false, kind: "none", dependency: null } },
+        replacementAssets: [{ assetKey: "replacement", purpose: "replacement" }], realAssetRefs: [],
+      },
+    };
+    assert.equal(templatePackSchema.safeParse(v2).success, false);
+    assert.equal(templatePackV2Schema.safeParse(v2).success, true);
   });
 
   it("rejects a pack with missing Story layout", () => {

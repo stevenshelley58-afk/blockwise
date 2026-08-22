@@ -196,7 +196,7 @@ export function PublishUI({
           )}
           {isPublished && (
             <span className="text-sm text-green-700 font-medium">
-              Campaign is live on Meta
+              Campaign is paused on Meta
             </span>
           )}
         </div>

@@ -92,7 +92,12 @@ export type TemplatePublishDefaults = {
   leadForm: {
     headline: string;
     questions: string[];
-    thankYou: { title: string; body: string };
+    thankYou: { title: string; body: string; actionType?: "visit_website" | "call_now" | "download" | "none"; actionUrl?: string };
+    name?: string;
+    formType?: "higher_intent" | "more_volume";
+    introBody?: string;
+    contactFields?: Array<{ type: string; required: boolean; label?: string }>;
+    privacy?: { url: string; linkText: string };
   };
   placements: {
     publisherPlatforms: Array<"facebook" | "instagram">;
@@ -199,8 +204,19 @@ export type AdTemplateDocV2 = {
     sourceAd: { creativeId?: string; file?: string; contentHash: string };
     /** The public gallery sample is a DETERMINISTIC RENDER of the restyled doc. */
     sample: { imageSrc: string; contentHash: string; generatedBy: "deterministic_render" };
+    /** The 9:16 story placement sample; both placements ship with the pack. */
+    storySample?: { imageSrc: string; contentHash: string; generatedBy: "deterministic_render" };
     /** Layers derive from the real source ad's pixels. */
     decomposedFrom: "source";
+    /**
+     * Authorised multi-variant packs: when the job brief requests N templates
+     * from ONE source ad, every variant doc shares the same `packId` and a
+     * distinct positive integer `packVariantIndex` (1..N). The gates treat
+     * declared pack variants as one authorised pack — never as accidental
+     * duplicates — while independent same-source templates still fail.
+     */
+    packId?: string;
+    packVariantIndex?: number;
   };
 
   /** Mandatory Studio restyle evidence; "ready" requires it non-trivial. */
@@ -564,7 +580,17 @@ const publishDefaultsSchema = z.object({
   leadForm: z.object({
     headline: nonEmptyString,
     questions: z.array(nonEmptyString).min(1),
-    thankYou: z.object({ title: nonEmptyString, body: nonEmptyString }),
+    thankYou: z.object({
+      title: nonEmptyString,
+      body: nonEmptyString,
+      actionType: z.enum(["visit_website", "call_now", "download", "none"]).optional(),
+      actionUrl: z.string().optional(),
+    }),
+    name: nonEmptyString.optional(),
+    formType: z.enum(["higher_intent", "more_volume"]).optional(),
+    introBody: nonEmptyString.optional(),
+    contactFields: z.array(z.object({ type: nonEmptyString, required: z.boolean(), label: z.string().optional() })).optional(),
+    privacy: z.object({ url: z.string(), linkText: nonEmptyString }).optional(),
   }),
   placements: z.object({
     publisherPlatforms: z.array(z.enum(["facebook", "instagram"])).min(1),
@@ -611,7 +637,17 @@ const templateDocShapeSchema = z.object({
       contentHash: sha256Schema,
       generatedBy: z.literal("deterministic_render"),
     }),
+    /** The 9:16 story placement sample; both placements ship with the pack. */
+    storySample: z.object({
+      imageSrc: publicPathSchema,
+      contentHash: sha256Schema,
+      generatedBy: z.literal("deterministic_render"),
+    }).optional(),
     decomposedFrom: z.literal("source"),
+    // Authorised multi-variant packs (see the TS type note). packVariantIndex
+    // is checked for uniqueness/contiguity by the verify gate.
+    packId: nonEmptyString.optional(),
+    packVariantIndex: z.number().int().positive().optional(),
   }),
   restyle: z.object({
     paletteMap: z.record(hexColorSchema, hexColorSchema).refine(
