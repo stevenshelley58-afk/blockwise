@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createHash } from "node:crypto";
+import { existsSync } from "node:fs";
 import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
@@ -165,7 +166,7 @@ test("fixture differences are split into live-slot and outside-slot evidence", (
   assert.deepEqual(metrics.outsideBounds, { left: 18, top: 8, right: 19, bottom: 9 });
 });
 
-test("committed subject-invariance bindings match fresh canonical renders", async () => {
+test("committed subject-invariance bindings match fresh renders or fail closed without private sources", async () => {
   const entries = await readdir(galleryRoot, { withFileTypes: true });
   let checked = 0;
   for (const entry of entries) {
@@ -189,6 +190,15 @@ test("committed subject-invariance bindings match fresh canonical renders", asyn
     const doc = JSON.parse(templateBytes.toString("utf8"));
     const outputDir = await mkdtemp(join(tmpdir(), `adstudio-subject-invariance-${templateId}-`));
     try {
+      const sourceFile = doc.provenance?.sourceAd?.file;
+      if (sourceFile && !existsSync(resolve(repoRoot, sourceFile))) {
+        await assert.rejects(
+          runSubjectInvariance({ repoRoot, templateId, outDir: outputDir }),
+          (error) => error?.code === "ENOENT",
+          `${templateId}: missing private source must fail closed`,
+        );
+        continue;
+      }
       const { report } = await runSubjectInvariance({ repoRoot, templateId, outDir: outputDir });
       assert.equal(report.gate.passed, true, `${templateId}: ${report.gate.blockers.join("; ")}`);
       assert.equal(evidence.subjectInvariance.rubricVersion, SUBJECT_INVARIANCE_RUBRIC_VERSION);

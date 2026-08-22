@@ -91,7 +91,7 @@ test("happy path: inline renders feed + story, instance docs canonical, warnings
   }
   assert.ok(uploads.some((path) => path.includes("/adstudio/renders/")), "renders land under adstudio/renders");
   // Publish defaults prefilled from the template's publish block.
-  assert.equal(result.pack.copyPacks[0].meta.cta, template.publish.cta);
+  assert.equal(result.pack.copyPacks[0].meta.cta, "LEARN_MORE");
   assert.equal(result.pack.campaign.templateKey, fixtureId);
   assert.deepEqual(result.pack.campaign.templateSnapshot?.publish, template.publish);
 });

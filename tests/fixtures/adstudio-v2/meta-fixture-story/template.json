@@ -1,0 +1,354 @@
+{
+  "schema": "adstudio.template.v2",
+  "id": "meta-fixture-story",
+  "name": "Fixture Story",
+  "goal": "buyer_leads",
+  "offerId": "fixture-offer",
+  "category": "fixture",
+  "tags": [
+    "fixture",
+    "story"
+  ],
+  "audienceIntent": "buyers",
+  "classification": {
+    "ad_type": "single_image",
+    "primary_intent": "lead_gen",
+    "property_or_agent_focus": "property"
+  },
+  "provenance": {
+    "sourceAd": {
+      "file": "meta_ad_candidates/meta-fixture-story-source.png",
+      "contentHash": "a9c59a472e9bc27fe4fd68a344b60601a6eb8b121760f9480cc3d738a4c3abe8"
+    },
+    "sample": {
+      "imageSrc": "/adstudio-templates/meta-fixture-story/sample.png",
+      "contentHash": "ba57e3fc78bd9fad91f1d6ca177a5beaa97504b2faf7332a0d186a763ad1e97e",
+      "generatedBy": "deterministic_render"
+    },
+    "decomposedFrom": "source"
+  },
+  "restyle": {
+    "paletteMap": {
+      "#e11d48": "#1d4ed8"
+    },
+    "replacedAssets": [
+      "photo"
+    ],
+    "safeReplacementAssets": [
+      {
+        "inputKey": "photo",
+        "src": "/slots/photo-landscape.png",
+        "sha256": "3023e5565818c2daacd305899537bdc29293a5384dfd722c4839a51605a448d0"
+      }
+    ],
+    "note": "fixture restyle: palette remap + generic photo"
+  },
+  "fonts": [
+    {
+      "fontId": "alegreya",
+      "family": "Alegreya",
+      "weight": 400,
+      "italic": false,
+      "file": "/fonts/adstudio/alegreya-400.woff2",
+      "sha256": "fe33a80f1e2f7200d22980bb3838c168f1e7a36262a3e51ff73f47242e79c21f"
+    }
+  ],
+  "formats": {
+    "feed": {
+      "format": "4:5",
+      "width": 1080,
+      "height": 1350,
+      "plate": {
+        "src": "/plates/fixture-story-feed.png",
+        "sha256": "35eb22c3328d37a6c696854501814535125d36f0f7f292f8570b6302c7c555ae"
+      },
+      "layers": [
+        {
+          "id": "feed-slot-photo",
+          "z": 1,
+          "type": "image_slot",
+          "inputKey": "photo",
+          "fit": "cover",
+          "box": {
+            "x": 0.06,
+            "y": 0.06,
+            "width": 0.88,
+            "height": 0.5
+          },
+          "mask": {
+            "kind": "ellipse"
+          }
+        },
+        {
+          "id": "feed-text-headline",
+          "z": 2,
+          "type": "text",
+          "inputKey": "headline",
+          "box": {
+            "x": 0.06,
+            "y": 0.62,
+            "width": 0.88,
+            "height": 0.12
+          },
+          "typo": {
+            "fontId": "alegreya",
+            "family": "Alegreya",
+            "fallbackFamily": "serif",
+            "weight": 400,
+            "italic": false,
+            "case": "none",
+            "lineHeight": 1.1,
+            "tracking": 0,
+            "align": "center",
+            "sizeRatio": 0.45,
+            "color": "#065f46"
+          },
+          "constraints": {
+            "maxLength": 36,
+            "maxLines": 2,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.92,
+            "detectionScore": 0.9,
+            "source": "ocr-v2",
+            "version": 2
+          }
+        }
+      ]
+    },
+    "story": {
+      "format": "9:16",
+      "width": 1080,
+      "height": 1920,
+      "plate": {
+        "src": "/plates/fixture-story-story.png",
+        "sha256": "7094ca3d9a8ce2b53948d2c1bd78cab34adde85734ace619c961b7167a481a5d"
+      },
+      "layers": [
+        {
+          "id": "story-slot-photo",
+          "z": 1,
+          "type": "image_slot",
+          "inputKey": "photo",
+          "fit": "cover",
+          "box": {
+            "x": 0.1,
+            "y": 0.2,
+            "width": 0.8,
+            "height": 0.35
+          },
+          "mask": {
+            "kind": "rect"
+          }
+        },
+        {
+          "id": "story-text-headline",
+          "z": 2,
+          "type": "text",
+          "inputKey": "headline",
+          "box": {
+            "x": 0.1,
+            "y": 0.6,
+            "width": 0.8,
+            "height": 0.1
+          },
+          "typo": {
+            "fontId": "alegreya",
+            "family": "Alegreya",
+            "fallbackFamily": "serif",
+            "weight": 400,
+            "italic": false,
+            "case": "none",
+            "lineHeight": 1.1,
+            "tracking": 0,
+            "align": "center",
+            "sizeRatio": 0.45,
+            "color": "#065f46"
+          },
+          "constraints": {
+            "maxLength": 36,
+            "maxLines": 2,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.92,
+            "detectionScore": 0.9,
+            "source": "ocr-v2",
+            "version": 2
+          }
+        }
+      ]
+    }
+  },
+  "inputs": {
+    "images": [
+      {
+        "key": "photo",
+        "label": "Property photo",
+        "required": true,
+        "aspect": "landscape",
+        "description": "Street shot"
+      }
+    ],
+    "text": [
+      {
+        "key": "headline",
+        "label": "Headline",
+        "required": true,
+        "maxLength": 36,
+        "sample": "Your next address"
+      }
+    ]
+  },
+  "publish": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "apiVersionMin": "v26.0",
+    "copy": {
+      "primaryText": [
+        "Find your next home with a local expert."
+      ],
+      "headlines": [
+        "Free home appraisal"
+      ],
+      "descriptions": [
+        "Book in 30 seconds."
+      ]
+    },
+    "cta": "GET_QUOTE",
+    "leadForm": {
+      "headline": "Get your free appraisal",
+      "questions": [
+        "What is your property worth?"
+      ],
+      "thankYou": {
+        "title": "Thanks!",
+        "body": "We will be in touch within one business day."
+      }
+    },
+    "placements": {
+      "publisherPlatforms": [
+        "facebook",
+        "instagram"
+      ],
+      "facebookPositions": [
+        "feed",
+        "story"
+      ],
+      "instagramPositions": [
+        "stream",
+        "story"
+      ]
+    },
+    "formatRouting": {
+      "feed": "4:5",
+      "story": "9:16"
+    },
+    "creativeFeatures": {
+      "adapt_to_placement": "OPT_OUT",
+      "image_touchups": "OPT_OUT",
+      "text_optimizations": "OPT_OUT"
+    },
+    "previewFormats": [
+      "MOBILE_FEED_STANDARD",
+      "INSTAGRAM_STORY"
+    ]
+  },
+  "editPolicy": {
+    "mode": "guided",
+    "advancedUnlockable": true,
+    "lockedLayerIds": []
+  },
+  "exactness": {
+    "status": "ready",
+    "residuals": {
+      "feed-text-headline": 0.05
+    },
+    "bakedTextKeys": [],
+    "residualEvidence": {
+      "sourceContentHash": "a9c59a472e9bc27fe4fd68a344b60601a6eb8b121760f9480cc3d738a4c3abe8",
+      "templateHash": "1a6ae4ae25341f9190264e53db496c3247f5e1f960588c31c182f09c50fe4a8d",
+      "checkedAt": "2026-08-05T00:00:00.000Z",
+      "nativeSurface": "feed",
+      "residuals": {
+        "feed-text-headline": 0.05
+      },
+      "outside": {
+        "totalPixels": 1234567,
+        "differingPixels": 0,
+        "differingBounds": null
+      }
+    },
+    "stressEvidence": {
+      "templateHash": "1a6ae4ae25341f9190264e53db496c3247f5e1f960588c31c182f09c50fe4a8d",
+      "checkedAt": "2026-08-05T00:00:00.000Z",
+      "matrixHash": "dfbc764960d4f3fde77856c292a0d3f91175b5bf0a870904fe3aed04cb5d8a5a",
+      "entries": [
+        {
+          "format": "4:5",
+          "scenario": "longest-copy",
+          "renderHash": "4c150a083141b3e6510c34ff6e2ca0b440135861efcea3ff02c0e03c05a60b3f"
+        },
+        {
+          "format": "9:16",
+          "scenario": "longest-copy",
+          "renderHash": "9e8ccbb40624666f9abaab10ae3fb509922d055c70e4cb5db809e68217c9b20b"
+        },
+        {
+          "format": "4:5",
+          "scenario": "one-character-copy",
+          "renderHash": "4aa3562c66292ebce688d5ffc07cb3913b0a0d73183376010b806c00c6a6e487"
+        },
+        {
+          "format": "9:16",
+          "scenario": "one-character-copy",
+          "renderHash": "41058b6758c245eb30bcb1b79ce441f82442ac8436089384c1c8096b8ba2d5dc"
+        },
+        {
+          "format": "4:5",
+          "scenario": "minimum-resolution",
+          "renderHash": "f20003e497124964a6bce826516edad1ebf6ca82d0a682f9ae94d9ddf74bec8b"
+        },
+        {
+          "format": "9:16",
+          "scenario": "minimum-resolution",
+          "renderHash": "2d21b893e37f59cc1dd63e8341dd239fd02484899509447bfa58db612d260a51"
+        },
+        {
+          "format": "4:5",
+          "scenario": "all-portrait",
+          "renderHash": "5b6390b248b90af55b29bee84effbeb1748d9f05dfd2aebc64ef026c48ca616f"
+        },
+        {
+          "format": "9:16",
+          "scenario": "all-portrait",
+          "renderHash": "7399d91901886354268b90b77bb7ab23dcd33ea079873e317d0200239ae1e410"
+        },
+        {
+          "format": "4:5",
+          "scenario": "all-landscape",
+          "renderHash": "92f68dc9ef3483c7fc8cb96679e79441c6958b653d8c065da5120592ab195dc3"
+        },
+        {
+          "format": "9:16",
+          "scenario": "all-landscape",
+          "renderHash": "769ca2ed30503e4297c1b5ec9bb166e2e2ceca5aa6e07de3061e69f06dca4c64"
+        }
+      ]
+    },
+    "reviewEvidence": {
+      "reviewerUserId": "6d0dd487-0c2d-4c7e-bfcc-5d55c9e2b04c",
+      "reviewerEmail": "fixture-qa@example.com",
+      "reviewedAt": "2026-08-05T00:00:00.000Z",
+      "confirmation": "inspected-at-100-percent",
+      "templateHash": "1a6ae4ae25341f9190264e53db496c3247f5e1f960588c31c182f09c50fe4a8d",
+      "sourceContentHash": "a9c59a472e9bc27fe4fd68a344b60601a6eb8b121760f9480cc3d738a4c3abe8",
+      "sampleContentHash": "ba57e3fc78bd9fad91f1d6ca177a5beaa97504b2faf7332a0d186a763ad1e97e",
+      "sourceCurationHash": "f42ee5c6102692fe01f619c8e6dd50aa6306c6c5390ea77338cc91791877c592",
+      "fidelityEvidenceHash": "1d7f5de18235b20e3317f88ffec4828c8e52a48027bb728441934f449dfa40cc",
+      "stressEvidenceHash": "537e9b82609f3a92004852c0059839d0868ede61f0a17bfb008c724014d1f719"
+    }
+  }
+}
