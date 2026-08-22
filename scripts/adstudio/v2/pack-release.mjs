@@ -341,6 +341,7 @@ async function main() {
     releaseId,
     releaseDir,
     packBundle: join(releaseDir, "pack.bundle.json"),
+    template_pack_path: join(releaseDir, "pack.bundle.json"),
     sha256: finalBundleSha,
     signature: signatureReceipt,
     templates: signedPacks.map((pack) => ({ templateId: pack.templateId, manifestSha256: pack.manifestSha256 })),
