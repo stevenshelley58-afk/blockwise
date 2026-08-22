@@ -39,6 +39,7 @@ describe("single-template editor fixes", () => {
 
   it("prefers an imported gallery sample and keeps legacy fallback data absent", () => {
     assert.equal(readGallerySampleUrl({ gallerySample: { feed: { imageSrc: "/sample.png" } } }), "/sample.png");
+    assert.equal(readGallerySampleUrl({ metadata: { gallerySamples: { feed: { url: "https://frank.fail/releases/v2/feed.png" } } } }), "https://frank.fail/releases/v2/feed.png");
     assert.equal(readGallerySampleUrl({ safePreviews: { feed: { sha256: "a".repeat(64) } } }), null);
   });
 

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { randomUUID, generateKeyPairSync, sign as ed25519Sign, type KeyObject } from "node:crypto";
+import { randomUUID, generateKeyPairSync, sign as ed25519Sign, createHash, type KeyObject } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { canonicalJson, sha256Hex } from "../packages/ad-template-pack-contract/src/index.ts";
 import {
@@ -27,6 +27,22 @@ const FIXTURE_PATH = join(
 
 function loadFixture(): Record<string, unknown> {
   return JSON.parse(readFileSync(FIXTURE_PATH, "utf8")) as Record<string, unknown>;
+}
+
+function v2Pack(bytes: Uint8Array): { pack: Record<string, unknown>; assetUrl: string } {
+  const pack = loadFixture();
+  const assetUrl = "https://frank.fail/releases/fixture/logo.png";
+  pack.schema = "blockwise.template-pack/v2";
+  pack.assets = { logo: { fileName: "logo.png", sha256: createHash("sha256").update(bytes).digest("hex"), mimeType: "image/png" } };
+  pack.metadata = {
+    title: "Fixture", description: "Fixture",
+    gallerySamples: { feed: { assetKey: "logo", placement: "feed", purpose: "gallery_sample", url: assetUrl }, story: { assetKey: "logo", placement: "story", purpose: "gallery_sample", url: assetUrl } },
+    metaCopyDefaults: { primaryText: [], headlines: [], descriptions: [], cta: "LEARN_MORE" },
+    aiWritingGuidance: { summary: "", fields: {} },
+    publishRequirements: { objective: "leads", specialAdCategory: null, instantForm: { required: false, dependency: null }, destination: { required: true, kind: "url", dependency: null } },
+    replacementAssets: [], realAssetRefs: [],
+  };
+  return { pack, assetUrl };
 }
 
 function makeRequest(
@@ -60,11 +76,21 @@ class FakeSupabase {
     ad_template_pack_versions: [],
     ad_template_assets: [],
   };
+  uploaded: Array<{ bucket: string; path: string; bytes: Uint8Array; options: Record<string, unknown> }> = [];
   private seq = 0;
 
   from(table: string): FakeQueryBuilder {
     return new FakeQueryBuilder(this, table);
   }
+
+  storage = {
+    from: (bucket: string) => ({
+      upload: async (path: string, bytes: Uint8Array, options: Record<string, unknown>) => {
+        this.uploaded.push({ bucket, path, bytes, options });
+        return { data: { path }, error: null };
+      },
+    }),
+  };
 
   insertInto(table: string, value: Row | Row[]): Row | Row[] {
     const rows = Array.isArray(value) ? value : [value];
@@ -361,6 +387,58 @@ describe("import-pack — pure helpers", () => {
     const h1 = sha256Hex(obj);
     const h2 = sha256Hex(structuredClone(obj));
     assert.equal(h1, h2);
+  });
+});
+
+describe("import-pack — v2 asset verification", () => {
+  const png = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 0]);
+
+  it("fetches, verifies, uploads, and records v2 asset storage paths", async () => {
+    const supabase = fakeSupabase();
+    const { pack, assetUrl } = v2Pack(png);
+    pack.packId = "fixture-v2-assets";
+    const input = makeRequest(pack, { packId: "fixture-v2-assets", packUrl: "https://frank.fail/releases/fixture/pack.json" });
+    const receipt = await importTemplatePack(supabase, input, {
+      fetchPack: async () => pack,
+      fetchAsset: async (url) => { assert.equal(url, assetUrl); return png; },
+    });
+    assert.equal(receipt.status, "active");
+    const fake = supabase as unknown as FakeSupabase;
+    assert.equal(fake.uploaded.length, 1);
+    assert.match(String(fake.uploaded[0]!.path), /^templates\/fixture-v2-assets\/logo-/);
+    assert.equal(fake.tables.ad_template_assets[0]!.storage_path, fake.uploaded[0]!.path);
+  });
+
+  it("fails closed on tampered asset bytes before activation", async () => {
+    const supabase = fakeSupabase();
+    const { pack } = v2Pack(png);
+    const input = makeRequest(pack, { packId: "fixture-v2-tamper", packUrl: "https://frank.fail/releases/fixture/pack.json" });
+    await assert.rejects(importTemplatePack(supabase, input, {
+      fetchPack: async () => pack, fetchAsset: async () => new Uint8Array([...png.slice(0, -1), 1]),
+    }), (err: unknown) => (err as ImportError).code === "asset_hash_mismatch");
+    const fake = supabase as unknown as FakeSupabase;
+    assert.equal(fake.tables.ad_import_receipts.length, 0);
+    assert.equal(fake.uploaded.length, 0);
+  });
+
+  it("rejects redirects and assets outside the signed release origin/subtree", async () => {
+    const supabase = fakeSupabase();
+    const { pack } = v2Pack(png);
+    const metadata = pack.metadata as Record<string, any>;
+    metadata.gallerySamples.feed.url = "https://evil.example/logo.png";
+    metadata.gallerySamples.story.url = "https://evil.example/logo.png";
+    const input = makeRequest(pack, { packId: "fixture-v2-origin", packUrl: "https://frank.fail/releases/fixture/pack.json" });
+    await assert.rejects(importTemplatePack(supabase, input, {
+      fetchPack: async () => pack, fetchAsset: async () => new Response(null, { status: 302, headers: { location: "https://evil.example" } }),
+    }), (err: unknown) => (err as ImportError).code === "asset_url_missing");
+    assert.equal((supabase as unknown as FakeSupabase).tables.ad_import_receipts.length, 0);
+
+    const redirectDb = fakeSupabase();
+    const valid = v2Pack(png).pack;
+    const redirectInput = makeRequest(valid, { packId: "fixture-v2-redirect", packUrl: "https://frank.fail/releases/fixture/pack.json" });
+    await assert.rejects(importTemplatePack(redirectDb, redirectInput, {
+      fetchPack: async () => valid, fetchAsset: async () => new Response(null, { status: 302 }),
+    }), (err: unknown) => (err as ImportError).code === "redirect_not_allowed");
   });
 });
 

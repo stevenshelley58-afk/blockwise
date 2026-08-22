@@ -37,8 +37,8 @@ function record(value: unknown): Record<string, unknown> | null {
 
 export function readGallerySampleUrl(value: unknown): string | null {
   const raw = record(value);
-  const metadata = record(raw?.metadata);
-  const gallery = record(metadata?.gallerySamples) ?? record(raw?.gallerySample);
+  const metadataGallery = record(record(raw?.metadata)?.gallerySamples);
+  const gallery = metadataGallery ?? record(raw?.gallerySample);
   const provenance = record(raw?.provenance);
   const sample = record(gallery?.feed) ?? record(gallery) ?? record(provenance?.sample);
   const safeFeed = record(record(raw?.safePreviews)?.feed);
