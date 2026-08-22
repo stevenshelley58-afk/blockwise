@@ -1,0 +1,345 @@
+{
+  "schema": "adstudio.template.v2",
+  "id": "meta-market-report-feed-167",
+  "name": "Suburb Market Report — Feed 167",
+  "goal": "market_update_leads",
+  "offerId": "suburb-market-report",
+  "category": "market-report-lead-generation",
+  "tags": [
+    "market-report",
+    "lead-generation",
+    "feed"
+  ],
+  "audienceIntent": "Local homeowners seeking current suburb price and demand insights",
+  "classification": {
+    "ad_type": "lead_generation",
+    "primary_intent": "market_report_leads",
+    "property_or_agent_focus": "property"
+  },
+  "provenance": {
+    "sourceAd": {
+      "file": "01_feed_4x5_best/meta_167.png",
+      "contentHash": "9551c77edfd63e065f5f6bdc00d574e2864a765e1447c33b8be4bc6cf5651fa8"
+    },
+    "sample": {
+      "imageSrc": "/adstudio-templates/meta-market-report-feed-167/sample.png",
+      "contentHash": "77e4812c2971433814826816f7207dc00801834db26258962187314681fcd976",
+      "generatedBy": "deterministic_render"
+    },
+    "decomposedFrom": "source"
+  },
+  "restyle": {
+    "paletteMap": {},
+    "plateRemap": {
+      "hue": 12
+    },
+    "replacedAssets": [
+      "property_photo",
+      "agency_logo"
+    ]
+  },
+  "fonts": [
+    {
+      "fontId": "roboto",
+      "family": "Roboto",
+      "weight": 600,
+      "italic": false,
+      "file": "/fonts/adstudio/roboto-600.woff2",
+      "sha256": "7608821ae7a01e76cb42e6fda12421e5f546efd79bd51850b75d39831423f3cb"
+    },
+    {
+      "fontId": "frank-ruhl-libre",
+      "family": "Frank Ruhl Libre",
+      "weight": 900,
+      "italic": false,
+      "file": "/fonts/adstudio/frank-ruhl-libre-900.woff2",
+      "sha256": "07bf8cdae1f309a16a002227c18f9b2aff83fbfae8e74a2d499561c865f08f0f"
+    },
+    {
+      "fontId": "poppins",
+      "family": "Poppins",
+      "weight": 900,
+      "italic": false,
+      "file": "/fonts/adstudio/poppins-900.woff2",
+      "sha256": "7e5f8b8628f6e5a751c907900f98f2a7396ecd08a6b5f6766cf6b564f4aa436c"
+    },
+    {
+      "fontId": "outfit",
+      "family": "Outfit",
+      "weight": 900,
+      "italic": false,
+      "file": "/fonts/adstudio/outfit-900.woff2",
+      "sha256": "090bdae2e8f2fdc962732c8f918d57c5501737c6826be989bcd770860ec19f85"
+    },
+    {
+      "fontId": "figtree",
+      "family": "Figtree",
+      "weight": 900,
+      "italic": false,
+      "file": "/fonts/adstudio/figtree-900.woff2",
+      "sha256": "99f507c1146794f83367b2371266bb8b19f2d7d6740092f3b38bacc752481911"
+    },
+    {
+      "fontId": "londrina-solid",
+      "family": "Londrina Solid",
+      "weight": 900,
+      "italic": false,
+      "file": "/fonts/adstudio/londrina-solid-900.woff2",
+      "sha256": "ed455d5fb4d1b1e9e1892db85d1026c9e435dc4412ede3244c7ff92ef8b50ad9"
+    }
+  ],
+  "formats": {
+    "feed": {
+      "format": "4:5",
+      "width": 1080,
+      "height": 1350,
+      "plate": {
+        "src": "/adstudio-templates/meta-market-report-feed-167/plate-feed.webp",
+        "sha256": "a1c78b85c703830c0f23368021e605ed53ed1daad97f2c786c50bf8a3a1b32f6"
+      },
+      "layers": [
+        {
+          "id": "slot-property_photo",
+          "z": 2,
+          "box": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "type": "image_slot",
+          "inputKey": "property_photo",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 1080,
+            "height": 1350
+          }
+        },
+        {
+          "id": "slot-agency_logo",
+          "z": 3,
+          "box": {
+            "x": 0.787962962962963,
+            "y": 0,
+            "width": 0.14814814814814814,
+            "height": 0.13333333333333333
+          },
+          "type": "image_slot",
+          "inputKey": "agency_logo",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 160,
+            "height": 180
+          }
+        }
+      ]
+    },
+    "story": {
+      "format": "9:16",
+      "width": 1080,
+      "height": 1920,
+      "plate": {
+        "src": "/adstudio-templates/meta-market-report-feed-167/plate-story.webp",
+        "sha256": "50ae430c7edc53e9a73e9ecc0f58e700c84f670275906d727035b42d0fefe3ba"
+      },
+      "layers": [
+        {
+          "id": "slot-property_photo",
+          "z": 2,
+          "box": {
+            "x": 0,
+            "y": 0.13020833333333334,
+            "width": 1,
+            "height": 0.6927083333333333
+          },
+          "type": "image_slot",
+          "inputKey": "property_photo",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 1080,
+            "height": 1330
+          }
+        },
+        {
+          "id": "slot-agency_logo",
+          "z": 3,
+          "box": {
+            "x": 0.787962962962963,
+            "y": 0.13020833333333334,
+            "width": 0.14814814814814814,
+            "height": 0.0923611111111111
+          },
+          "type": "image_slot",
+          "inputKey": "agency_logo",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 160,
+            "height": 177
+          }
+        }
+      ]
+    }
+  },
+  "inputs": {
+    "images": [
+      {
+        "key": "property_photo",
+        "label": "property photo",
+        "required": true,
+        "aspect": "portrait",
+        "description": "Customer photo drawn into the declared slot."
+      },
+      {
+        "key": "agency_logo",
+        "label": "agency logo",
+        "required": true,
+        "aspect": "portrait",
+        "description": "Customer photo drawn into the declared slot."
+      }
+    ],
+    "text": [
+      {
+        "key": "body",
+        "label": "Body",
+        "required": true,
+        "maxLength": 96,
+        "sample": "Get the latest local sales, price trends and buyer demand in one clear report."
+      },
+      {
+        "key": "subheadline",
+        "label": "Subheadline",
+        "required": true,
+        "maxLength": 46,
+        "sample": "LOCAL PRICES. CLEAR INSIGHT."
+      },
+      {
+        "key": "headline",
+        "label": "Headline",
+        "required": true,
+        "maxLength": 43,
+        "sample": "YOUR SUBURB MARKET UPDATE"
+      },
+      {
+        "key": "stat_1",
+        "label": "Stat 1",
+        "required": true,
+        "maxLength": 38,
+        "sample": "CURRENT MEDIAN PRICE"
+      },
+      {
+        "key": "cta",
+        "label": "Cta",
+        "required": true,
+        "maxLength": 37,
+        "sample": "GET THE FREE REPORT"
+      },
+      {
+        "key": "stat_3",
+        "label": "Stat 3",
+        "required": true,
+        "maxLength": 32,
+        "sample": "DAYS ON MARKET"
+      },
+      {
+        "key": "stat_2",
+        "label": "Stat 2",
+        "required": true,
+        "maxLength": 30,
+        "sample": "RECENT SALES"
+      }
+    ]
+  },
+  "publish": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "apiVersionMin": "v26.0",
+    "copy": {
+      "primaryText": [
+        "Ask for the property details."
+      ],
+      "headlines": [
+        "Property details"
+      ],
+      "descriptions": [
+        "Request more information"
+      ]
+    },
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Request your free market report",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "thankYou": {
+        "title": "Thanks",
+        "body": "We'll be in touch."
+      }
+    },
+    "placements": {
+      "publisherPlatforms": [
+        "facebook",
+        "instagram"
+      ],
+      "facebookPositions": [
+        "feed"
+      ],
+      "instagramPositions": [
+        "stream"
+      ]
+    },
+    "formatRouting": {
+      "feed": "4:5",
+      "story": "9:16"
+    },
+    "creativeFeatures": {
+      "adapt_to_placement": "OPT_OUT",
+      "image_touchups": "OPT_OUT",
+      "image_templates": "OPT_OUT",
+      "inline_comment": "OPT_OUT",
+      "enhance_cta": "OPT_OUT",
+      "text_optimizations": "OPT_OUT",
+      "image_animation": "OPT_OUT",
+      "image_background_gen": "OPT_OUT",
+      "video_auto_crop": "OPT_OUT",
+      "translate_voiceover": "OPT_OUT",
+      "text_translation": "OPT_OUT",
+      "media_type_automation": "OPT_OUT",
+      "product_extensions": "OPT_OUT"
+    },
+    "previewFormats": [
+      "MOBILE_FEED_STANDARD",
+      "INSTAGRAM_STANDARD"
+    ]
+  },
+  "editPolicy": {
+    "mode": "guided",
+    "advancedUnlockable": true,
+    "lockedLayerIds": []
+  },
+  "exactness": {
+    "status": "qa",
+    "residuals": {},
+    "bakedTextKeys": [
+      "body",
+      "subheadline",
+      "headline",
+      "stat_1",
+      "cta",
+      "stat_3",
+      "stat_2"
+    ]
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "migratedFrom": "v1",
+  "source": "source",
+  "sourceValues": {
+    "body": "",
+    "cta": "",
+    "headline": "",
+    "subheadline": "",
+    "website": ""
+  },
+  "textBoxes": {
+    "body": {
+      "x": 0.23194444444444445,
+      "y": 0.7822916666666667,
+      "width": 0.5444444444444444,
+      "height": 0.03828125
+    },
+    "cta": {
+      "x": 0.25925925925925924,
+      "y": 0.8734375,
+      "width": 0.4912037037037037,
+      "height": 0.01171875
+    },
+    "headline": {
+      "x": 0.11342592592592593,
+      "y": 0.665625,
+      "width": 0.7972222222222223,
+      "height": 0.026822916666666665
+    },
+    "subheadline": {
+      "x": 0.21712962962962962,
+      "y": 0.7239583333333334,
+      "width": 0.5861111111111111,
+      "height": 0.01796875
+    },
+    "website": {
+      "x": 0.35462962962962963,
+      "y": 0.94296875,
+      "width": 0.28703703703703703,
+      "height": 0.012760416666666666
+    }
+  },
+  "bakedResiduals": {
+    "baked-body": 0,
+    "baked-cta": 0,
+    "baked-headline": 0,
+    "baked-subheadline": 0,
+    "baked-website": 0
+  }
+}

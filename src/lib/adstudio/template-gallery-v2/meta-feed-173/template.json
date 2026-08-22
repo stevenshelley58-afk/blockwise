@@ -1,0 +1,243 @@
+{
+  "schema": "adstudio.template.v2",
+  "id": "meta-feed-173",
+  "name": "New Location Coming Soon Announcement",
+  "goal": "buyer_leads",
+  "offerId": "coming-soon-location-2024",
+  "category": "new_development",
+  "tags": [
+    "coming soon",
+    "new location",
+    "property launch",
+    "buyer interest",
+    "modern apartments"
+  ],
+  "audienceIntent": "Inform buyers about a new residential development launching soon in the city.",
+  "classification": {
+    "ad_type": "announcement",
+    "primary_intent": "generate_buyer_interest",
+    "property_or_agent_focus": "property"
+  },
+  "provenance": {
+    "sourceAd": {
+      "file": "01_feed_4x5_best/meta_173.png",
+      "contentHash": "62af7a0e093d06a1eda25d187c05fafad4db95a82523f714dcfcffba44aa68cc"
+    },
+    "sample": {
+      "imageSrc": "/adstudio-templates/meta-feed-173/sample.png",
+      "contentHash": "679537e55b7768ba4b20cd3667d8ca91f41d9586b2a4edf12dc1d2b62b0c5aec",
+      "generatedBy": "deterministic_render"
+    },
+    "decomposedFrom": "source"
+  },
+  "restyle": {
+    "paletteMap": {},
+    "plateRemap": {
+      "hue": 12
+    },
+    "replacedAssets": [
+      "main_property_image"
+    ]
+  },
+  "fonts": [
+    {
+      "fontId": "fira-sans",
+      "family": "Fira Sans",
+      "weight": 300,
+      "italic": false,
+      "file": "/fonts/adstudio/fira-sans-300.woff2",
+      "sha256": "c3052e66783c8888c6b408f4ed9501c8848d3e4f5a1d1f463cda373a4fbff3e6"
+    },
+    {
+      "fontId": "oswald",
+      "family": "Oswald",
+      "weight": 400,
+      "italic": false,
+      "file": "/fonts/adstudio/oswald-400.woff2",
+      "sha256": "e902b779e43944c300cf8ae5e4a1affa68cb8a823fd263dd2f479c4cdfbd213c"
+    },
+    {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "weight": 400,
+      "italic": false,
+      "file": "/fonts/adstudio/smooch-sans-400.woff2",
+      "sha256": "a1b64ed5521846da168a3a1907019f6ee8699958c6807b8d33d962d33153cff8"
+    }
+  ],
+  "formats": {
+    "feed": {
+      "format": "4:5",
+      "width": 1080,
+      "height": 1350,
+      "plate": {
+        "src": "/adstudio-templates/meta-feed-173/plate-feed.webp",
+        "sha256": "111a714cf46fd1d13308993254b3e98a030d9b1a37d473378620f64edc927788"
+      },
+      "layers": [
+        {
+          "id": "slot-main_property_image",
+          "z": 2,
+          "box": {
+            "x": 0,
+            "y": 0.53515625,
+            "width": 1,
+            "height": 0.46484375
+          },
+          "type": "image_slot",
+          "inputKey": "main_property_image",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 1080,
+            "height": 628
+          }
+        }
+      ]
+    },
+    "story": {
+      "format": "9:16",
+      "width": 1080,
+      "height": 1920,
+      "plate": {
+        "src": "/adstudio-templates/meta-feed-173/plate-story.webp",
+        "sha256": "b9bc0eceb24686df489399e40d19d0f8ba99778f8cf2281d4ecedf8788e256cf"
+      },
+      "layers": [
+        {
+          "id": "slot-main_property_image",
+          "z": 2,
+          "box": {
+            "x": 0,
+            "y": 0.50091552734375,
+            "width": 1,
+            "height": 0.32200113932291663
+          },
+          "type": "image_slot",
+          "inputKey": "main_property_image",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 1080,
+            "height": 618
+          }
+        }
+      ]
+    }
+  },
+  "inputs": {
+    "images": [
+      {
+        "key": "main_property_image",
+        "label": "main property image",
+        "required": true,
+        "aspect": "portrait",
+        "description": "Customer photo drawn into the declared slot."
+      }
+    ],
+    "text": [
+      {
+        "key": "subheadline",
+        "label": "Subheadline",
+        "required": true,
+        "maxLength": 100,
+        "sample": "Elevate your living.\nA new destination is rising in the heart of the city"
+      },
+      {
+        "key": "main_headline",
+        "label": "Main Headline",
+        "required": true,
+        "maxLength": 30,
+        "sample": "COMING SOON !"
+      },
+      {
+        "key": "headline_top",
+        "label": "Headline Top",
+        "required": true,
+        "maxLength": 30,
+        "sample": "NEW LOCATION"
+      }
+    ]
+  },
+  "publish": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "apiVersionMin": "v26.0",
+    "copy": {
+      "primaryText": [
+        "Ask for the property details."
+      ],
+      "headlines": [
+        "Property details"
+      ],
+      "descriptions": [
+        "Request more information"
+      ]
+    },
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Register your interest in this property",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "thankYou": {
+        "title": "Thanks",
+        "body": "We'll be in touch."
+      }
+    },
+    "placements": {
+      "publisherPlatforms": [
+        "facebook",
+        "instagram"
+      ],
+      "facebookPositions": [
+        "feed"
+      ],
+      "instagramPositions": [
+        "stream"
+      ]
+    },
+    "formatRouting": {
+      "feed": "4:5",
+      "story": "9:16"
+    },
+    "creativeFeatures": {
+      "adapt_to_placement": "OPT_OUT",
+      "image_touchups": "OPT_OUT",
+      "image_templates": "OPT_OUT",
+      "inline_comment": "OPT_OUT",
+      "enhance_cta": "OPT_OUT",
+      "text_optimizations": "OPT_OUT",
+      "image_animation": "OPT_OUT",
+      "image_background_gen": "OPT_OUT",
+      "video_auto_crop": "OPT_OUT",
+      "translate_voiceover": "OPT_OUT",
+      "text_translation": "OPT_OUT",
+      "media_type_automation": "OPT_OUT",
+      "product_extensions": "OPT_OUT"
+    },
+    "previewFormats": [
+      "MOBILE_FEED_STANDARD",
+      "INSTAGRAM_STANDARD"
+    ]
+  },
+  "editPolicy": {
+    "mode": "guided",
+    "advancedUnlockable": true,
+    "lockedLayerIds": []
+  },
+  "exactness": {
+    "status": "qa",
+    "residuals": {},
+    "bakedTextKeys": [
+      "subheadline",
+      "main_headline",
+      "headline_top"
+    ]
+  }
+}

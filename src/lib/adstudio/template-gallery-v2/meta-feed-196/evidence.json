@@ -1,0 +1,66 @@
+{
+  "migratedFrom": "v1",
+  "source": "source",
+  "sourceValues": {
+    "description": "",
+    "features": "",
+    "contact_email": "",
+    "agency_name": "",
+    "headline": "",
+    "contact_phone": "",
+    "cta_button": ""
+  },
+  "textBoxes": {
+    "description": {
+      "x": 0.12646484375,
+      "y": 0.365625,
+      "width": 0.7177734375,
+      "height": 0.09765625
+    },
+    "features": {
+      "x": 0.2373046875,
+      "y": 0.79140625,
+      "width": 0.56640625,
+      "height": 0.0109375
+    },
+    "contact_email": {
+      "x": 0.5107421875,
+      "y": 0.9171875,
+      "width": 0.26953125,
+      "height": 0.025
+    },
+    "agency_name": {
+      "x": 0.078125,
+      "y": 0.08359375,
+      "width": 0.5322265625,
+      "height": 0.041796875
+    },
+    "headline": {
+      "x": 0.12890625,
+      "y": 0.20234375,
+      "width": 0.34326171875,
+      "height": 0.1359375
+    },
+    "contact_phone": {
+      "x": 0.30517578125,
+      "y": 0.818359375,
+      "width": 0.517578125,
+      "height": 0.08984375
+    },
+    "cta_button": {
+      "x": 0.1,
+      "y": 0.8,
+      "width": 0.8,
+      "height": 0.05
+    }
+  },
+  "bakedResiduals": {
+    "baked-description": 0,
+    "baked-features": 0,
+    "baked-contact_email": 0,
+    "baked-agency_name": 0,
+    "baked-headline": 0,
+    "baked-contact_phone": 0,
+    "baked-cta_button": 0
+  }
+}

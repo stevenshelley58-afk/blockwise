@@ -1,0 +1,600 @@
+{
+  "schema": "adstudio.template.v2",
+  "id": "meta-appraisal-feed-200",
+  "name": "Free Property Appraisal — Feed 200",
+  "goal": "appraisal_bookings",
+  "offerId": "free-property-appraisal",
+  "category": "appraisal-lead-generation",
+  "tags": [
+    "appraisal",
+    "lead-generation",
+    "feed"
+  ],
+  "audienceIntent": "Homeowners curious about their current property value or considering selling",
+  "classification": {
+    "ad_type": "lead_generation",
+    "primary_intent": "appraisal_leads",
+    "property_or_agent_focus": "agent"
+  },
+  "provenance": {
+    "sourceAd": {
+      "file": "01_feed_4x5_best/meta_200.png",
+      "contentHash": "9f7909390f4a5cd3168f80ae24d5dccd1ebf3ba852e6c67a2e5cd53cce88cc01"
+    },
+    "sample": {
+      "imageSrc": "/adstudio-templates/meta-appraisal-feed-200/sample.png",
+      "contentHash": "1e617ae7f0d475aab632dd3c48c2b20d51f8debc2e9de6eab9f77ca062469946",
+      "generatedBy": "deterministic_render"
+    },
+    "decomposedFrom": "source"
+  },
+  "restyle": {
+    "paletteMap": {},
+    "replacedAssets": [
+      "property_photo",
+      "agent_portrait",
+      "agency_logo"
+    ],
+    "note": "migrated from v1 (source); restyle pass pending in Studio"
+  },
+  "fonts": [
+    {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "weight": 300,
+      "italic": false,
+      "file": "/fonts/adstudio/smooch-sans-300.woff2",
+      "sha256": "24c4dda0d38ff3000dbaf5c37b0035fc51791a693cc68101d14acb16c8504cb6"
+    },
+    {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "weight": 800,
+      "italic": false,
+      "file": "/fonts/adstudio/merriweather-800.woff2",
+      "sha256": "234916daa3dd072625fad30f1ae31d989c101bcd73ae8f29023cfbbc9a711c8a"
+    },
+    {
+      "fontId": "lora",
+      "family": "Lora",
+      "weight": 700,
+      "italic": false,
+      "file": "/fonts/adstudio/lora-700.woff2",
+      "sha256": "c05fd5289492ed310ed882259b944ca5287e76e572a65d92d3941f9f44f0342a"
+    },
+    {
+      "fontId": "oswald",
+      "family": "Oswald",
+      "weight": 700,
+      "italic": false,
+      "file": "/fonts/adstudio/oswald-700.woff2",
+      "sha256": "aae665c75af89ea7cb7d8ccc8b0911ea72267442ebcd84f6e3efa041ad3b3c16"
+    },
+    {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "weight": 400,
+      "italic": false,
+      "file": "/fonts/adstudio/smooch-sans-400.woff2",
+      "sha256": "a1b64ed5521846da168a3a1907019f6ee8699958c6807b8d33d962d33153cff8"
+    },
+    {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "weight": 600,
+      "italic": false,
+      "file": "/fonts/adstudio/merriweather-600.woff2",
+      "sha256": "3ef93c94387a5a08bbe3115b15b912ea9ed27cae4d5b7db869dc07c443fadc4c"
+    }
+  ],
+  "formats": {
+    "feed": {
+      "format": "4:5",
+      "width": 1080,
+      "height": 1350,
+      "plate": {
+        "src": "/adstudio-templates/meta-appraisal-feed-200/plate-feed.webp",
+        "sha256": "9ecbf2c7a4bb9780125e58588fe3f5962dde3ae8159405472b6339eee631eafa"
+      },
+      "layers": [
+        {
+          "id": "slot-property_photo",
+          "z": 2,
+          "box": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 0.43703703703703706
+          },
+          "type": "image_slot",
+          "inputKey": "property_photo",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 1080,
+            "height": 590
+          }
+        },
+        {
+          "id": "slot-agent_portrait",
+          "z": 3,
+          "box": {
+            "x": 0.1175925925925926,
+            "y": 0.677037037037037,
+            "width": 0.2962962962962963,
+            "height": 0.27925925925925926
+          },
+          "type": "image_slot",
+          "inputKey": "agent_portrait",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 320,
+            "height": 377
+          }
+        },
+        {
+          "id": "slot-agency_logo",
+          "z": 4,
+          "box": {
+            "x": 0.4722222222222222,
+            "y": 0.6785185185185185,
+            "width": 0.08888888888888889,
+            "height": 0.06666666666666667
+          },
+          "type": "image_slot",
+          "inputKey": "agency_logo",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 96,
+            "height": 90
+          }
+        },
+        {
+          "id": "text-agent_role",
+          "z": 10,
+          "box": {
+            "x": 0.475,
+            "y": 0.812962962962963,
+            "width": 0.3731481481481482,
+            "height": 0.014444444444444444
+          },
+          "type": "text",
+          "inputKey": "agent_role",
+          "typo": {
+            "fontId": "merriweather",
+            "family": "Merriweather",
+            "fallbackFamily": "serif",
+            "weight": 800,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 1.3529411764705883,
+            "lineHeight": 1.257,
+            "tracking": 0,
+            "align": "left",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 43,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.408,
+            "detectionScore": 1,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        },
+        {
+          "id": "text-subheadline",
+          "z": 11,
+          "box": {
+            "x": 0.4601851851851852,
+            "y": 0.6155555555555555,
+            "width": 0.4625,
+            "height": 0.02259259259259259
+          },
+          "type": "text",
+          "inputKey": "subheadline",
+          "typo": {
+            "fontId": "lora",
+            "family": "Lora",
+            "fallbackFamily": "serif",
+            "weight": 700,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 1.061524334251607,
+            "lineHeight": 1.28,
+            "tracking": 0,
+            "align": "right",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 42,
+            "maxLines": 2,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.866,
+            "detectionScore": 0.625,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        },
+        {
+          "id": "text-agent_name",
+          "z": 13,
+          "box": {
+            "x": 0.47314814814814815,
+            "y": 0.7670370370370371,
+            "width": 0.33935185185185185,
+            "height": 0.027037037037037037
+          },
+          "type": "text",
+          "inputKey": "agent_name",
+          "typo": {
+            "fontId": "merriweather",
+            "family": "Merriweather",
+            "fallbackFamily": "serif",
+            "weight": 600,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 1.300813008130081,
+            "lineHeight": 1.257,
+            "tracking": 0,
+            "align": "left",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 29,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.583,
+            "detectionScore": 1,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        }
+      ]
+    },
+    "story": {
+      "format": "9:16",
+      "width": 1080,
+      "height": 1920,
+      "plate": {
+        "src": "/adstudio-templates/meta-appraisal-feed-200/plate-story.webp",
+        "sha256": "08607fda3b95121c21b1e835100fcb134c573fd31c3960eba5749f8eca05e488"
+      },
+      "layers": [
+        {
+          "id": "slot-property_photo",
+          "z": 2,
+          "box": {
+            "x": 0,
+            "y": 0.13020833333333334,
+            "width": 1,
+            "height": 0.3027391975308642
+          },
+          "type": "image_slot",
+          "inputKey": "property_photo",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 1080,
+            "height": 581
+          }
+        },
+        {
+          "id": "slot-agent_portrait",
+          "z": 3,
+          "box": {
+            "x": 0.1175925925925926,
+            "y": 0.5991975308641975,
+            "width": 0.2962962962962963,
+            "height": 0.1934452160493827
+          },
+          "type": "image_slot",
+          "inputKey": "agent_portrait",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 320,
+            "height": 371
+          }
+        },
+        {
+          "id": "slot-agency_logo",
+          "z": 4,
+          "box": {
+            "x": 0.4722222222222222,
+            "y": 0.6002237654320988,
+            "width": 0.08888888888888889,
+            "height": 0.04618055555555555
+          },
+          "type": "image_slot",
+          "inputKey": "agency_logo",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 96,
+            "height": 89
+          }
+        },
+        {
+          "id": "text-agent_role",
+          "z": 10,
+          "box": {
+            "x": 0.475,
+            "y": 0.6933545524691358,
+            "width": 0.3731481481481482,
+            "height": 0.010005787037037035
+          },
+          "type": "text",
+          "inputKey": "agent_role",
+          "typo": {
+            "fontId": "merriweather",
+            "family": "Merriweather",
+            "fallbackFamily": "serif",
+            "weight": 800,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 1.3529411764705883,
+            "lineHeight": 1.257,
+            "tracking": 0,
+            "align": "left",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 43,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.408,
+            "detectionScore": 1,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        },
+        {
+          "id": "text-subheadline",
+          "z": 11,
+          "box": {
+            "x": 0.4601851851851852,
+            "y": 0.5566087962962962,
+            "width": 0.4625,
+            "height": 0.015650077160493825
+          },
+          "type": "text",
+          "inputKey": "subheadline",
+          "typo": {
+            "fontId": "lora",
+            "family": "Lora",
+            "fallbackFamily": "serif",
+            "weight": 700,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 1.061524334251607,
+            "lineHeight": 1.28,
+            "tracking": 0,
+            "align": "right",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 42,
+            "maxLines": 2,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.866,
+            "detectionScore": 0.625,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        },
+        {
+          "id": "text-agent_name",
+          "z": 13,
+          "box": {
+            "x": 0.47314814814814815,
+            "y": 0.6615412808641975,
+            "width": 0.33935185185185185,
+            "height": 0.01872878086419753
+          },
+          "type": "text",
+          "inputKey": "agent_name",
+          "typo": {
+            "fontId": "merriweather",
+            "family": "Merriweather",
+            "fallbackFamily": "serif",
+            "weight": 600,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 1.300813008130081,
+            "lineHeight": 1.257,
+            "tracking": 0,
+            "align": "left",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 29,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.583,
+            "detectionScore": 1,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        }
+      ]
+    }
+  },
+  "inputs": {
+    "images": [
+      {
+        "key": "property_photo",
+        "label": "property photo",
+        "required": true,
+        "aspect": "portrait",
+        "description": "Customer photo drawn into the declared slot."
+      },
+      {
+        "key": "agent_portrait",
+        "label": "agent portrait",
+        "required": true,
+        "aspect": "portrait",
+        "description": "Customer photo drawn into the declared slot."
+      },
+      {
+        "key": "agency_logo",
+        "label": "agency logo",
+        "required": true,
+        "aspect": "portrait",
+        "description": "Customer photo drawn into the declared slot."
+      }
+    ],
+    "text": [
+      {
+        "key": "headline",
+        "label": "Headline",
+        "required": true,
+        "maxLength": 48,
+        "sample": "WHAT COULD YOUR HOME BE WORTH?"
+      },
+      {
+        "key": "agent_role",
+        "label": "Agent Role",
+        "required": true,
+        "maxLength": 43,
+        "sample": "LOCAL PROPERTY SPECIALIST"
+      },
+      {
+        "key": "subheadline",
+        "label": "Subheadline",
+        "required": true,
+        "maxLength": 42,
+        "sample": "REQUEST A FREE APPRAISAL"
+      },
+      {
+        "key": "cta",
+        "label": "Cta",
+        "required": true,
+        "maxLength": 37,
+        "sample": "BOOK YOUR APPRAISAL"
+      },
+      {
+        "key": "phone",
+        "label": "Phone",
+        "required": true,
+        "maxLength": 30,
+        "sample": "0400 123 456"
+      },
+      {
+        "key": "agent_name",
+        "label": "Agent Name",
+        "required": true,
+        "maxLength": 29,
+        "sample": "ALEX MORGAN"
+      }
+    ]
+  },
+  "publish": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "apiVersionMin": "v26.0",
+    "copy": {
+      "primaryText": [
+        "Ask for the property details."
+      ],
+      "headlines": [
+        "Property details"
+      ],
+      "descriptions": [
+        "Request more information"
+      ]
+    },
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Request your free property appraisal",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "thankYou": {
+        "title": "Thanks",
+        "body": "We'll be in touch."
+      }
+    },
+    "placements": {
+      "publisherPlatforms": [
+        "facebook",
+        "instagram"
+      ],
+      "facebookPositions": [
+        "feed"
+      ],
+      "instagramPositions": [
+        "stream"
+      ]
+    },
+    "formatRouting": {
+      "feed": "4:5",
+      "story": "9:16"
+    },
+    "creativeFeatures": {
+      "adapt_to_placement": "OPT_OUT",
+      "image_touchups": "OPT_OUT",
+      "image_templates": "OPT_OUT",
+      "inline_comment": "OPT_OUT",
+      "enhance_cta": "OPT_OUT",
+      "text_optimizations": "OPT_OUT",
+      "image_animation": "OPT_OUT",
+      "image_background_gen": "OPT_OUT",
+      "video_auto_crop": "OPT_OUT",
+      "translate_voiceover": "OPT_OUT",
+      "text_translation": "OPT_OUT",
+      "media_type_automation": "OPT_OUT",
+      "product_extensions": "OPT_OUT"
+    },
+    "previewFormats": [
+      "MOBILE_FEED_STANDARD",
+      "INSTAGRAM_STANDARD"
+    ]
+  },
+  "editPolicy": {
+    "mode": "guided",
+    "advancedUnlockable": true,
+    "lockedLayerIds": []
+  },
+  "exactness": {
+    "status": "qa",
+    "residuals": {
+      "text-agent_role": 0.1326068967954601,
+      "text-subheadline": 0.13971626051012814,
+      "text-agent_name": 0.00411323439027767
+    },
+    "bakedTextKeys": [
+      "headline",
+      "cta",
+      "phone"
+    ]
+  }
+}

@@ -1,0 +1,441 @@
+{
+  "schema": "adstudio.template.v2",
+  "id": "meta-feed-165",
+  "name": "Japandi Apartment Rental Ad",
+  "goal": "buyer_leads",
+  "offerId": "japandi_apartment_2024",
+  "category": "property_listing",
+  "tags": [
+    "apartment",
+    "rental",
+    "Japandi",
+    "modern",
+    "interior",
+    "two bedroom"
+  ],
+  "audienceIntent": "People looking to rent a stylish, modern apartment",
+  "classification": {
+    "ad_type": "image_text_overlay",
+    "primary_intent": "generate_rental_inquiries",
+    "property_or_agent_focus": "property"
+  },
+  "provenance": {
+    "sourceAd": {
+      "file": "01_feed_4x5_best/meta_165.png",
+      "contentHash": "5c69e93a6b2d9ce1bd86dce78f6c0ef6d1bcd84506bde6066dd9b6eeb901b123"
+    },
+    "sample": {
+      "imageSrc": "/adstudio-templates/meta-feed-165/sample.png",
+      "contentHash": "ce161efa826a7a7d534adf248f5dbd31d10898bc7dd46af3710e91584c140e60",
+      "generatedBy": "deterministic_render"
+    },
+    "decomposedFrom": "source"
+  },
+  "restyle": {
+    "paletteMap": {},
+    "replacedAssets": [],
+    "note": "migrated from v1 (source); restyle pass pending in Studio"
+  },
+  "fonts": [
+    {
+      "fontId": "montserrat",
+      "family": "Montserrat",
+      "weight": 900,
+      "italic": false,
+      "file": "/fonts/adstudio/montserrat-900.woff2",
+      "sha256": "522cebe603650541da7c59fa833d4a5b110dee8fbc977c688ccb3b33ae2ac7f1"
+    },
+    {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "weight": 400,
+      "italic": false,
+      "file": "/fonts/adstudio/merriweather-400.woff2",
+      "sha256": "e96c559a8b1d6095d11a3f1b440354115235babfe1fa2d002d63d8eff3fa482d"
+    },
+    {
+      "fontId": "oswald",
+      "family": "Oswald",
+      "weight": 500,
+      "italic": false,
+      "file": "/fonts/adstudio/oswald-500.woff2",
+      "sha256": "8efb1f76958d3c975bda1db05402807c1cde0c9c910d6f5f9b1e3d255b0be78f"
+    },
+    {
+      "fontId": "manrope",
+      "family": "Manrope",
+      "weight": 700,
+      "italic": false,
+      "file": "/fonts/adstudio/manrope-700.woff2",
+      "sha256": "0dc9d9b75bffd07e25f727e8d67a39cc731e21c718b3b86267226bb4e2757813"
+    }
+  ],
+  "formats": {
+    "feed": {
+      "format": "4:5",
+      "width": 1080,
+      "height": 1350,
+      "plate": {
+        "src": "/adstudio-templates/meta-feed-165/plate-feed.webp",
+        "sha256": "c589b1b3fdfa0b0ffefca9b37a72db0fe3e4943873c9097aa4f7d7e12889589e"
+      },
+      "layers": [
+        {
+          "id": "text-feature_1",
+          "z": 10,
+          "box": {
+            "x": 0.2021484375,
+            "y": 0.752734375,
+            "width": 0.62646484375,
+            "height": 0.048046875
+          },
+          "type": "text",
+          "inputKey": "feature_1",
+          "typo": {
+            "fontId": "oswald",
+            "family": "Oswald",
+            "fallbackFamily": "sans-serif",
+            "weight": 500,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 1,
+            "lineHeight": 1.482,
+            "tracking": 0,
+            "align": "center",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 20,
+            "maxLines": 3,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.406,
+            "detectionScore": 0.667,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        },
+        {
+          "id": "text-feature_3",
+          "z": 11,
+          "box": {
+            "x": 0.1,
+            "y": 0.6,
+            "width": 0.8,
+            "height": 0.06
+          },
+          "type": "text",
+          "inputKey": "feature_3",
+          "typo": {
+            "fontId": "montserrat",
+            "family": "Montserrat",
+            "fallbackFamily": "sans-serif",
+            "weight": 900,
+            "italic": false,
+            "case": "mixed",
+            "sizeRatio": 0.5,
+            "lineHeight": 1.2,
+            "tracking": 0,
+            "align": "left",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 20,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.35,
+            "detectionScore": 0.55,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        },
+        {
+          "id": "text-website",
+          "z": 12,
+          "box": {
+            "x": 0.1,
+            "y": 0.95,
+            "width": 0.8,
+            "height": 0.025
+          },
+          "type": "text",
+          "inputKey": "website",
+          "typo": {
+            "fontId": "montserrat",
+            "family": "Montserrat",
+            "fallbackFamily": "sans-serif",
+            "weight": 900,
+            "italic": false,
+            "case": "lower",
+            "sizeRatio": 0.45,
+            "lineHeight": 1.2,
+            "tracking": 0,
+            "align": "center",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 50,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.35,
+            "detectionScore": 0.55,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        }
+      ]
+    },
+    "story": {
+      "format": "9:16",
+      "width": 1080,
+      "height": 1920,
+      "plate": {
+        "src": "/adstudio-templates/meta-feed-165/plate-story.webp",
+        "sha256": "e773e2e7709e1344efc935e814b8b1504357f6d5d682e5f952b421e865dde3e0"
+      },
+      "layers": [
+        {
+          "id": "text-feature_1",
+          "z": 10,
+          "box": {
+            "x": 0.2021484375,
+            "y": 0.6516337076822916,
+            "width": 0.62646484375,
+            "height": 0.033282470703125
+          },
+          "type": "text",
+          "inputKey": "feature_1",
+          "typo": {
+            "fontId": "oswald",
+            "family": "Oswald",
+            "fallbackFamily": "sans-serif",
+            "weight": 500,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 1,
+            "lineHeight": 1.482,
+            "tracking": 0,
+            "align": "center",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 20,
+            "maxLines": 3,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.406,
+            "detectionScore": 0.667,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        },
+        {
+          "id": "text-feature_3",
+          "z": 11,
+          "box": {
+            "x": 0.1,
+            "y": 0.5458333333333333,
+            "width": 0.8,
+            "height": 0.041562499999999995
+          },
+          "type": "text",
+          "inputKey": "feature_3",
+          "typo": {
+            "fontId": "montserrat",
+            "family": "Montserrat",
+            "fallbackFamily": "sans-serif",
+            "weight": 900,
+            "italic": false,
+            "case": "mixed",
+            "sizeRatio": 0.5,
+            "lineHeight": 1.2,
+            "tracking": 0,
+            "align": "left",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 20,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.35,
+            "detectionScore": 0.55,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        },
+        {
+          "id": "text-website",
+          "z": 12,
+          "box": {
+            "x": 0.1,
+            "y": 0.7882812499999999,
+            "width": 0.8,
+            "height": 0.01731770833333333
+          },
+          "type": "text",
+          "inputKey": "website",
+          "typo": {
+            "fontId": "montserrat",
+            "family": "Montserrat",
+            "fallbackFamily": "sans-serif",
+            "weight": 900,
+            "italic": false,
+            "case": "lower",
+            "sizeRatio": 0.45,
+            "lineHeight": 1.2,
+            "tracking": 0,
+            "align": "center",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 50,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.35,
+            "detectionScore": 0.55,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        }
+      ]
+    }
+  },
+  "inputs": {
+    "images": [],
+    "text": [
+      {
+        "key": "headline",
+        "label": "Headline",
+        "required": true,
+        "maxLength": 30,
+        "sample": "CALM CITY APARTMENT"
+      },
+      {
+        "key": "price_info",
+        "label": "Starting Price",
+        "required": true,
+        "maxLength": 30,
+        "sample": "FROM $680 / WEEK"
+      },
+      {
+        "key": "feature_1",
+        "label": "Feature 1",
+        "required": true,
+        "maxLength": 20,
+        "sample": "QUIET LOUNGE"
+      },
+      {
+        "key": "feature_2",
+        "label": "Feature 2",
+        "required": true,
+        "maxLength": 20,
+        "sample": "2 BEDROOMS"
+      },
+      {
+        "key": "feature_3",
+        "label": "Feature 3",
+        "required": true,
+        "maxLength": 20,
+        "sample": "CITY VIEWS"
+      },
+      {
+        "key": "website",
+        "label": "Website or Contact Info",
+        "required": true,
+        "maxLength": 50,
+        "sample": "CEDARCOAST.EXAMPLE"
+      }
+    ]
+  },
+  "publish": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "apiVersionMin": "v26.0",
+    "copy": {
+      "primaryText": [
+        "Ask for the property details."
+      ],
+      "headlines": [
+        "Property details"
+      ],
+      "descriptions": [
+        "Request more information"
+      ]
+    },
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Request your free rental appraisal",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "thankYou": {
+        "title": "Thanks",
+        "body": "We'll be in touch."
+      }
+    },
+    "placements": {
+      "publisherPlatforms": [
+        "facebook",
+        "instagram"
+      ],
+      "facebookPositions": [
+        "feed"
+      ],
+      "instagramPositions": [
+        "stream"
+      ]
+    },
+    "formatRouting": {
+      "feed": "4:5",
+      "story": "9:16"
+    },
+    "creativeFeatures": {
+      "adapt_to_placement": "OPT_OUT",
+      "image_touchups": "OPT_OUT",
+      "image_templates": "OPT_OUT",
+      "inline_comment": "OPT_OUT",
+      "enhance_cta": "OPT_OUT",
+      "text_optimizations": "OPT_OUT",
+      "image_animation": "OPT_OUT",
+      "image_background_gen": "OPT_OUT",
+      "video_auto_crop": "OPT_OUT",
+      "translate_voiceover": "OPT_OUT",
+      "text_translation": "OPT_OUT",
+      "media_type_automation": "OPT_OUT",
+      "product_extensions": "OPT_OUT"
+    },
+    "previewFormats": [
+      "MOBILE_FEED_STANDARD",
+      "INSTAGRAM_STANDARD"
+    ]
+  },
+  "editPolicy": {
+    "mode": "guided",
+    "advancedUnlockable": true,
+    "lockedLayerIds": []
+  },
+  "exactness": {
+    "status": "qa",
+    "residuals": {
+      "text-feature_1": 0.0240420367675148,
+      "text-feature_3": 0.09245278728051108,
+      "text-website": 0.06692113600947634
+    },
+    "bakedTextKeys": [
+      "headline",
+      "price_info",
+      "feature_2"
+    ]
+  }
+}

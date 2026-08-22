@@ -1,0 +1,660 @@
+{
+  "schema": "adstudio.template.v2",
+  "id": "meta-feed-018",
+  "name": "5 Costly Mistakes When Buying a Home",
+  "goal": "buyer_leads",
+  "offerId": "5-costly-mistakes-buying-home",
+  "category": "buyer_education",
+  "tags": [
+    "buyer",
+    "education",
+    "mistakes",
+    "lead generation",
+    "real estate"
+  ],
+  "audienceIntent": "Educate home buyers about common mistakes to avoid and generate buyer leads.",
+  "classification": {
+    "ad_type": "social_post",
+    "primary_intent": "education",
+    "property_or_agent_focus": "property"
+  },
+  "provenance": {
+    "sourceAd": {
+      "file": "01_feed_4x5_best/meta_018.png",
+      "contentHash": "e67bfaec28cce6e1ea7cbddc6ed9e377533388484dce7d4cb98fa214c05f16f8"
+    },
+    "sample": {
+      "imageSrc": "/adstudio-templates/meta-feed-018/sample.png",
+      "contentHash": "1f1bb052cf4f96cba395277d5a28ebba7df760af4b8ba4dfeb6d156aff563e8b",
+      "generatedBy": "deterministic_render"
+    },
+    "decomposedFrom": "source"
+  },
+  "restyle": {
+    "paletteMap": {},
+    "plateRemap": {
+      "hue": 12
+    },
+    "replacedAssets": [
+      "main_property_image"
+    ]
+  },
+  "fonts": [
+    {
+      "fontId": "outfit",
+      "family": "Outfit",
+      "weight": 600,
+      "italic": false,
+      "file": "/fonts/adstudio/outfit-600.woff2",
+      "sha256": "8cfe15c2c6de6ef8efff3eedbd52a383ac9ef23d6c23f6cd9f9b838f5f37dc36"
+    },
+    {
+      "fontId": "league-gothic",
+      "family": "League Gothic",
+      "weight": 400,
+      "italic": false,
+      "file": "/fonts/adstudio/league-gothic-400.woff2",
+      "sha256": "44dceee4d918f5928d05ad0711d17e1edd421ce7fd7bed91d05642d8d693a8b1"
+    },
+    {
+      "fontId": "roboto-condensed",
+      "family": "Roboto Condensed",
+      "weight": 400,
+      "italic": false,
+      "file": "/fonts/adstudio/roboto-condensed-400.woff2",
+      "sha256": "543c03fff71d1b39590af102e0852c2dbce46f4dbe4faaebafbef6edc82e78f5"
+    }
+  ],
+  "formats": {
+    "feed": {
+      "format": "4:5",
+      "width": 1080,
+      "height": 1350,
+      "plate": {
+        "src": "/adstudio-templates/meta-feed-018/plate-feed.webp",
+        "sha256": "a925b4405e7be471ae903c26f22105348671b6eaf349c4a819f450b2866293ba"
+      },
+      "layers": [
+        {
+          "id": "slot-main_property_image",
+          "z": 2,
+          "box": {
+            "x": 0.576171875,
+            "y": 0.16875,
+            "width": 0.423828125,
+            "height": 0.59765625
+          },
+          "type": "image_slot",
+          "inputKey": "main_property_image",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 458,
+            "height": 807
+          }
+        },
+        {
+          "id": "text-headline_number",
+          "z": 10,
+          "box": {
+            "x": 0.1689453125,
+            "y": 0.20703125,
+            "width": 0.1650390625,
+            "height": 0.175
+          },
+          "type": "text",
+          "inputKey": "headline_number",
+          "typo": {
+            "fontId": "outfit",
+            "family": "Outfit",
+            "fallbackFamily": "sans-serif",
+            "weight": 600,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 1.3913043929635895,
+            "lineHeight": 1,
+            "tracking": 0,
+            "align": "left",
+            "color": "#535046",
+            "measuredLines": [
+              {
+                "text": "5",
+                "box": {
+                  "x": 0.1689453125,
+                  "y": 0.20703125,
+                  "width": 0.1650390625,
+                  "height": 0.175
+                },
+                "sizeRatio": 1.3913043929635895,
+                "scaleX": 0.9956477926063692
+              }
+            ]
+          },
+          "constraints": {
+            "maxLength": 1,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.9,
+            "detectionScore": 1,
+            "source": "manual-verified",
+            "version": 2
+          }
+        },
+        {
+          "id": "text-headline_main",
+          "z": 11,
+          "box": {
+            "x": 0.0849609375,
+            "y": 0.465625,
+            "width": 0.43505859375,
+            "height": 0.24453125
+          },
+          "type": "text",
+          "inputKey": "headline_main",
+          "typo": {
+            "fontId": "league-gothic",
+            "family": "League Gothic",
+            "fallbackFamily": "sans-serif",
+            "weight": 400,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 0.6025230532786886,
+            "lineHeight": 1,
+            "tracking": 0,
+            "align": "left",
+            "color": "#535046",
+            "measuredLines": [
+              {
+                "text": "SMART",
+                "box": {
+                  "x": 0.08642578125,
+                  "y": 0.465625,
+                  "width": 0.43505859375,
+                  "height": 0.13515625
+                },
+                "sizeRatio": 1.3307692307692307,
+                "scaleX": 0.8298660071710934
+              },
+              {
+                "text": "FIRST STEPS",
+                "box": {
+                  "x": 0.0849609375,
+                  "y": 0.61796875,
+                  "width": 0.43505859375,
+                  "height": 0.0921875
+                },
+                "sizeRatio": 1.3258426966292136,
+                "scaleX": 0.847360847658376
+              }
+            ]
+          },
+          "constraints": {
+            "maxLength": 16,
+            "maxLines": 2,
+            "autoFitMinRatio": 0.6
+          },
+          "measurement": {
+            "fitScore": 0.9,
+            "detectionScore": 1,
+            "source": "manual-verified",
+            "version": 2
+          }
+        },
+        {
+          "id": "text-headline_sub",
+          "z": 12,
+          "box": {
+            "x": 0.0859375,
+            "y": 0.7375,
+            "width": 0.4326171875,
+            "height": 0.030078125
+          },
+          "type": "text",
+          "inputKey": "headline_sub",
+          "typo": {
+            "fontId": "roboto-condensed",
+            "family": "Roboto Condensed",
+            "fallbackFamily": "sans-serif",
+            "weight": 400,
+            "italic": false,
+            "case": "mixed",
+            "sizeRatio": 1.02648891966759,
+            "lineHeight": 1,
+            "tracking": 0,
+            "align": "left",
+            "color": "#6e6a61",
+            "measuredLines": [
+              {
+                "text": "Before Buying a Home",
+                "box": {
+                  "x": 0.0859375,
+                  "y": 0.7375,
+                  "width": 0.4326171875,
+                  "height": 0.030078125
+                },
+                "sizeRatio": 1.02648891966759,
+                "scaleX": 1.258
+              }
+            ]
+          },
+          "constraints": {
+            "maxLength": 23,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.5
+          },
+          "measurement": {
+            "fitScore": 0.85,
+            "detectionScore": 1,
+            "source": "manual-verified",
+            "version": 2
+          }
+        },
+        {
+          "id": "text-contact_handle",
+          "z": 13,
+          "box": {
+            "x": 0.0869140625,
+            "y": 0.840625,
+            "width": 0.33154296875,
+            "height": 0.025
+          },
+          "type": "text",
+          "inputKey": "contact_handle",
+          "typo": {
+            "fontId": "roboto-condensed",
+            "family": "Roboto Condensed",
+            "fallbackFamily": "sans-serif",
+            "weight": 400,
+            "italic": false,
+            "case": "lower",
+            "sizeRatio": 1.0385395537525355,
+            "lineHeight": 1,
+            "tracking": 0,
+            "align": "left",
+            "color": "#716d64",
+            "measuredLines": [
+              {
+                "text": "@homeguide.example",
+                "box": {
+                  "x": 0.0869140625,
+                  "y": 0.840625,
+                  "width": 0.33154296875,
+                  "height": 0.025
+                },
+                "sizeRatio": 1.0385395537525355,
+                "scaleX": 1.14
+              }
+            ]
+          },
+          "constraints": {
+            "maxLength": 18,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.65
+          },
+          "measurement": {
+            "fitScore": 0.85,
+            "detectionScore": 1,
+            "source": "manual-verified",
+            "version": 2
+          }
+        }
+      ]
+    },
+    "story": {
+      "format": "9:16",
+      "width": 1080,
+      "height": 1920,
+      "plate": {
+        "src": "/adstudio-templates/meta-feed-018/plate-story.webp",
+        "sha256": "51bf9e05a03123a88388708cb132dd7719513b50c21c6f79a33e9dd8349ac6b1"
+      },
+      "layers": [
+        {
+          "id": "slot-main_property_image",
+          "z": 2,
+          "box": {
+            "x": 0.576171875,
+            "y": 0.24710286458333333,
+            "width": 0.423828125,
+            "height": 0.41400146484374994
+          },
+          "type": "image_slot",
+          "inputKey": "main_property_image",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 458,
+            "height": 807
+          }
+        },
+        {
+          "id": "text-headline_number",
+          "z": 10,
+          "box": {
+            "x": 0.1689453125,
+            "y": 0.27362060546875,
+            "width": 0.1650390625,
+            "height": 0.12122395833333331
+          },
+          "type": "text",
+          "inputKey": "headline_number",
+          "typo": {
+            "fontId": "outfit",
+            "family": "Outfit",
+            "fallbackFamily": "sans-serif",
+            "weight": 600,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 1.3913043929635895,
+            "lineHeight": 1,
+            "tracking": 0,
+            "align": "left",
+            "color": "#535046",
+            "measuredLines": [
+              {
+                "text": "5",
+                "box": {
+                  "x": 0.1689453125,
+                  "y": 0.20703125,
+                  "width": 0.1650390625,
+                  "height": 0.175
+                },
+                "sizeRatio": 1.3913043929635895,
+                "scaleX": 0.9956477926063692
+              }
+            ]
+          },
+          "constraints": {
+            "maxLength": 1,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.9,
+            "detectionScore": 1,
+            "source": "manual-verified",
+            "version": 2
+          }
+        },
+        {
+          "id": "text-headline_main",
+          "z": 11,
+          "box": {
+            "x": 0.0849609375,
+            "y": 0.4527506510416667,
+            "width": 0.43505859375,
+            "height": 0.16938883463541665
+          },
+          "type": "text",
+          "inputKey": "headline_main",
+          "typo": {
+            "fontId": "league-gothic",
+            "family": "League Gothic",
+            "fallbackFamily": "sans-serif",
+            "weight": 400,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 0.6025230532786886,
+            "lineHeight": 1,
+            "tracking": 0,
+            "align": "left",
+            "color": "#535046",
+            "measuredLines": [
+              {
+                "text": "SMART",
+                "box": {
+                  "x": 0.08642578125,
+                  "y": 0.465625,
+                  "width": 0.43505859375,
+                  "height": 0.13515625
+                },
+                "sizeRatio": 1.3307692307692307,
+                "scaleX": 0.8298660071710934
+              },
+              {
+                "text": "FIRST STEPS",
+                "box": {
+                  "x": 0.0849609375,
+                  "y": 0.61796875,
+                  "width": 0.43505859375,
+                  "height": 0.0921875
+                },
+                "sizeRatio": 1.3258426966292136,
+                "scaleX": 0.847360847658376
+              }
+            ]
+          },
+          "constraints": {
+            "maxLength": 16,
+            "maxLines": 2,
+            "autoFitMinRatio": 0.6
+          },
+          "measurement": {
+            "fitScore": 0.9,
+            "detectionScore": 1,
+            "source": "manual-verified",
+            "version": 2
+          }
+        },
+        {
+          "id": "text-headline_sub",
+          "z": 12,
+          "box": {
+            "x": 0.0859375,
+            "y": 0.6410807291666667,
+            "width": 0.4326171875,
+            "height": 0.020835367838541664
+          },
+          "type": "text",
+          "inputKey": "headline_sub",
+          "typo": {
+            "fontId": "roboto-condensed",
+            "family": "Roboto Condensed",
+            "fallbackFamily": "sans-serif",
+            "weight": 400,
+            "italic": false,
+            "case": "mixed",
+            "sizeRatio": 1.02648891966759,
+            "lineHeight": 1,
+            "tracking": 0,
+            "align": "left",
+            "color": "#6e6a61",
+            "measuredLines": [
+              {
+                "text": "Before Buying a Home",
+                "box": {
+                  "x": 0.0859375,
+                  "y": 0.7375,
+                  "width": 0.4326171875,
+                  "height": 0.030078125
+                },
+                "sizeRatio": 1.02648891966759,
+                "scaleX": 1.258
+              }
+            ]
+          },
+          "constraints": {
+            "maxLength": 23,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.5
+          },
+          "measurement": {
+            "fitScore": 0.85,
+            "detectionScore": 1,
+            "source": "manual-verified",
+            "version": 2
+          }
+        },
+        {
+          "id": "text-contact_handle",
+          "z": 13,
+          "box": {
+            "x": 0.0869140625,
+            "y": 0.7125162760416666,
+            "width": 0.33154296875,
+            "height": 0.01731770833333333
+          },
+          "type": "text",
+          "inputKey": "contact_handle",
+          "typo": {
+            "fontId": "roboto-condensed",
+            "family": "Roboto Condensed",
+            "fallbackFamily": "sans-serif",
+            "weight": 400,
+            "italic": false,
+            "case": "lower",
+            "sizeRatio": 1.0385395537525355,
+            "lineHeight": 1,
+            "tracking": 0,
+            "align": "left",
+            "color": "#716d64",
+            "measuredLines": [
+              {
+                "text": "@homeguide.example",
+                "box": {
+                  "x": 0.0869140625,
+                  "y": 0.840625,
+                  "width": 0.33154296875,
+                  "height": 0.025
+                },
+                "sizeRatio": 1.0385395537525355,
+                "scaleX": 1.14
+              }
+            ]
+          },
+          "constraints": {
+            "maxLength": 18,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.65
+          },
+          "measurement": {
+            "fitScore": 0.85,
+            "detectionScore": 1,
+            "source": "manual-verified",
+            "version": 2
+          }
+        }
+      ]
+    }
+  },
+  "inputs": {
+    "images": [
+      {
+        "key": "main_property_image",
+        "label": "main property image",
+        "required": true,
+        "aspect": "portrait",
+        "description": "Customer photo drawn into the declared slot."
+      }
+    ],
+    "text": [
+      {
+        "key": "headline_number",
+        "label": "Headline Number",
+        "required": true,
+        "maxLength": 1,
+        "sample": "7"
+      },
+      {
+        "key": "headline_main",
+        "label": "Headline Main",
+        "required": true,
+        "maxLength": 16,
+        "sample": "BUYER MISTAKES"
+      },
+      {
+        "key": "headline_sub",
+        "label": "Headline Sub",
+        "required": true,
+        "maxLength": 23,
+        "sample": "Before Your First Offer"
+      },
+      {
+        "key": "contact_handle",
+        "label": "Contact Handle",
+        "required": true,
+        "maxLength": 18,
+        "sample": "@homeguide.example"
+      }
+    ]
+  },
+  "publish": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "apiVersionMin": "v26.0",
+    "copy": {
+      "primaryText": [
+        "Ask for the property details."
+      ],
+      "headlines": [
+        "Property details"
+      ],
+      "descriptions": [
+        "Request more information"
+      ]
+    },
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Get your free property guide",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "thankYou": {
+        "title": "Thanks",
+        "body": "We'll be in touch."
+      }
+    },
+    "placements": {
+      "publisherPlatforms": [
+        "facebook",
+        "instagram"
+      ],
+      "facebookPositions": [
+        "feed"
+      ],
+      "instagramPositions": [
+        "stream"
+      ]
+    },
+    "formatRouting": {
+      "feed": "4:5",
+      "story": "9:16"
+    },
+    "creativeFeatures": {
+      "adapt_to_placement": "OPT_OUT",
+      "image_touchups": "OPT_OUT",
+      "image_templates": "OPT_OUT",
+      "inline_comment": "OPT_OUT",
+      "enhance_cta": "OPT_OUT",
+      "text_optimizations": "OPT_OUT",
+      "image_animation": "OPT_OUT",
+      "image_background_gen": "OPT_OUT",
+      "video_auto_crop": "OPT_OUT",
+      "translate_voiceover": "OPT_OUT",
+      "text_translation": "OPT_OUT",
+      "media_type_automation": "OPT_OUT",
+      "product_extensions": "OPT_OUT"
+    },
+    "previewFormats": [
+      "MOBILE_FEED_STANDARD",
+      "INSTAGRAM_STANDARD"
+    ]
+  },
+  "editPolicy": {
+    "mode": "guided",
+    "advancedUnlockable": true,
+    "lockedLayerIds": []
+  },
+  "exactness": {
+    "status": "qa",
+    "residuals": {},
+    "bakedTextKeys": []
+  }
+}

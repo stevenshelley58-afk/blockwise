@@ -1,0 +1,633 @@
+{
+  "schema": "adstudio.template.v2",
+  "id": "meta-feed-150",
+  "name": "New Listing - 123 Anywhere St.",
+  "goal": "buyer_leads",
+  "offerId": "meta-feed-150",
+  "category": "residential_listing",
+  "tags": [
+    "new listing",
+    "for sale",
+    "residential",
+    "buyer leads"
+  ],
+  "audienceIntent": "Attract buyers interested in a newly listed residential property.",
+  "classification": {
+    "ad_type": "property_listing",
+    "primary_intent": "buyer_leads",
+    "property_or_agent_focus": "property"
+  },
+  "provenance": {
+    "sourceAd": {
+      "file": "01_feed_4x5_best/meta_150.png",
+      "contentHash": "f8ac3bf2b46c2819b6dfa359c663fe62747f96392cc181cf8ba12866b460fa80"
+    },
+    "sample": {
+      "imageSrc": "/adstudio-templates/meta-feed-150/sample.png",
+      "contentHash": "ac095119a256f66b7b89993cb2afcafbdcad45d86ef581a8e72658419bd06785",
+      "generatedBy": "deterministic_render"
+    },
+    "decomposedFrom": "source"
+  },
+  "restyle": {
+    "paletteMap": {},
+    "replacedAssets": [
+      "main_photo",
+      "interior_photo_1",
+      "interior_photo_2",
+      "interior_photo_3"
+    ],
+    "note": "migrated from v1 (source); restyle pass pending in Studio"
+  },
+  "fonts": [
+    {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "weight": 600,
+      "italic": false,
+      "file": "/fonts/adstudio/merriweather-600.woff2",
+      "sha256": "3ef93c94387a5a08bbe3115b15b912ea9ed27cae4d5b7db869dc07c443fadc4c"
+    },
+    {
+      "fontId": "oswald",
+      "family": "Oswald",
+      "weight": 600,
+      "italic": false,
+      "file": "/fonts/adstudio/oswald-600.woff2",
+      "sha256": "f6cb541f4d9794b86145c9c3e7d778ffb78c92f8180c577e245238991503da6f"
+    },
+    {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "weight": 700,
+      "italic": false,
+      "file": "/fonts/adstudio/merriweather-700.woff2",
+      "sha256": "4e1ab49396c02be0d9a2a25eed7bc73781c047d85fcb5dfc2889873eaf992b09"
+    },
+    {
+      "fontId": "plus-jakarta-sans",
+      "family": "Plus Jakarta Sans",
+      "weight": 600,
+      "italic": false,
+      "file": "/fonts/adstudio/plus-jakarta-sans-600.woff2",
+      "sha256": "8872bb5c9111df9bd3162c2394aee6354d782b13408a4dd5bbf65c48207206e6"
+    },
+    {
+      "fontId": "oswald",
+      "family": "Oswald",
+      "weight": 300,
+      "italic": false,
+      "file": "/fonts/adstudio/oswald-300.woff2",
+      "sha256": "84f168468881f1ae6cf11573f3befa2e83f2067e914a57dad0233e3a772e76f7"
+    }
+  ],
+  "formats": {
+    "feed": {
+      "format": "4:5",
+      "width": 1080,
+      "height": 1350,
+      "plate": {
+        "src": "/adstudio-templates/meta-feed-150/plate-feed.webp",
+        "sha256": "b0201864b2edc653985a763809b88d5e62545af1536d0937c8ccb10806b090ee"
+      },
+      "layers": [
+        {
+          "id": "slot-main_photo",
+          "z": 2,
+          "box": {
+            "x": 0.091796875,
+            "y": 0.1609375,
+            "width": 0.818359375,
+            "height": 0.39375
+          },
+          "type": "image_slot",
+          "inputKey": "main_photo",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 884,
+            "height": 532
+          }
+        },
+        {
+          "id": "slot-interior_photo_1",
+          "z": 3,
+          "box": {
+            "x": 0.091796875,
+            "y": 0.5625,
+            "width": 0.2724609375,
+            "height": 0.23359375
+          },
+          "type": "image_slot",
+          "inputKey": "interior_photo_1",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 294,
+            "height": 315
+          }
+        },
+        {
+          "id": "slot-interior_photo_2",
+          "z": 4,
+          "box": {
+            "x": 0.3671875,
+            "y": 0.5625,
+            "width": 0.271484375,
+            "height": 0.23359375
+          },
+          "type": "image_slot",
+          "inputKey": "interior_photo_2",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 293,
+            "height": 315
+          }
+        },
+        {
+          "id": "slot-interior_photo_3",
+          "z": 5,
+          "box": {
+            "x": 0.6416015625,
+            "y": 0.5625,
+            "width": 0.2685546875,
+            "height": 0.23359375
+          },
+          "type": "image_slot",
+          "inputKey": "interior_photo_3",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 290,
+            "height": 315
+          }
+        },
+        {
+          "id": "text-property_details",
+          "z": 10,
+          "box": {
+            "x": 0.09228515625,
+            "y": 0.86796875,
+            "width": 0.490234375,
+            "height": 0.02109375
+          },
+          "type": "text",
+          "inputKey": "property_details",
+          "typo": {
+            "fontId": "merriweather",
+            "family": "Merriweather",
+            "fallbackFamily": "serif",
+            "weight": 600,
+            "italic": false,
+            "case": "lower",
+            "sizeRatio": 0.9117647058823529,
+            "lineHeight": 1.257,
+            "tracking": 0,
+            "align": "left",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 60,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.674,
+            "detectionScore": 0.842,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        },
+        {
+          "id": "text-agent_contact",
+          "z": 11,
+          "box": {
+            "x": 0.091796875,
+            "y": 0.941796875,
+            "width": 0.45361328125,
+            "height": 0.016796875
+          },
+          "type": "text",
+          "inputKey": "agent_contact",
+          "typo": {
+            "fontId": "merriweather",
+            "family": "Merriweather",
+            "fallbackFamily": "serif",
+            "weight": 700,
+            "italic": false,
+            "case": "mixed",
+            "sizeRatio": 1.1904761904761905,
+            "lineHeight": 1.257,
+            "tracking": 0,
+            "align": "left",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 50,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.529,
+            "detectionScore": 1,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        },
+        {
+          "id": "text-asking_price",
+          "z": 12,
+          "box": {
+            "x": 0.091796875,
+            "y": 0.905078125,
+            "width": 0.2080078125,
+            "height": 0.020703125
+          },
+          "type": "text",
+          "inputKey": "asking_price",
+          "typo": {
+            "fontId": "plus-jakarta-sans",
+            "family": "Plus Jakarta Sans",
+            "fallbackFamily": "sans-serif",
+            "weight": 600,
+            "italic": false,
+            "case": "mixed",
+            "sizeRatio": 0.8823529411764706,
+            "lineHeight": 1.26,
+            "tracking": 0,
+            "align": "left",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 30,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.627,
+            "detectionScore": 1,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        }
+      ]
+    },
+    "story": {
+      "format": "9:16",
+      "width": 1080,
+      "height": 1920,
+      "plate": {
+        "src": "/adstudio-templates/meta-feed-150/plate-story.webp",
+        "sha256": "9c9a9ae45ec8eabdc6d6a9e5ae245ca65a045654afdbeb7cfa5ff57fb55b3d27"
+      },
+      "layers": [
+        {
+          "id": "slot-main_photo",
+          "z": 2,
+          "box": {
+            "x": 0.091796875,
+            "y": 0.24169108072916667,
+            "width": 0.818359375,
+            "height": 0.27275390624999996
+          },
+          "type": "image_slot",
+          "inputKey": "main_photo",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 884,
+            "height": 524
+          }
+        },
+        {
+          "id": "slot-interior_photo_1",
+          "z": 3,
+          "box": {
+            "x": 0.091796875,
+            "y": 0.5198567708333333,
+            "width": 0.2724609375,
+            "height": 0.1618123372395833
+          },
+          "type": "image_slot",
+          "inputKey": "interior_photo_1",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 294,
+            "height": 311
+          }
+        },
+        {
+          "id": "slot-interior_photo_2",
+          "z": 4,
+          "box": {
+            "x": 0.3671875,
+            "y": 0.5198567708333333,
+            "width": 0.271484375,
+            "height": 0.1618123372395833
+          },
+          "type": "image_slot",
+          "inputKey": "interior_photo_2",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 293,
+            "height": 311
+          }
+        },
+        {
+          "id": "slot-interior_photo_3",
+          "z": 5,
+          "box": {
+            "x": 0.6416015625,
+            "y": 0.5198567708333333,
+            "width": 0.2685546875,
+            "height": 0.1618123372395833
+          },
+          "type": "image_slot",
+          "inputKey": "interior_photo_3",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 290,
+            "height": 311
+          }
+        },
+        {
+          "id": "text-property_details",
+          "z": 10,
+          "box": {
+            "x": 0.09228515625,
+            "y": 0.7314575195312499,
+            "width": 0.490234375,
+            "height": 0.014611816406249999
+          },
+          "type": "text",
+          "inputKey": "property_details",
+          "typo": {
+            "fontId": "merriweather",
+            "family": "Merriweather",
+            "fallbackFamily": "serif",
+            "weight": 600,
+            "italic": false,
+            "case": "lower",
+            "sizeRatio": 0.9117647058823529,
+            "lineHeight": 1.257,
+            "tracking": 0,
+            "align": "left",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 60,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.674,
+            "detectionScore": 0.842,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        },
+        {
+          "id": "text-agent_contact",
+          "z": 11,
+          "box": {
+            "x": 0.091796875,
+            "y": 0.7825988769531249,
+            "width": 0.45361328125,
+            "height": 0.011635335286458331
+          },
+          "type": "text",
+          "inputKey": "agent_contact",
+          "typo": {
+            "fontId": "merriweather",
+            "family": "Merriweather",
+            "fallbackFamily": "serif",
+            "weight": 700,
+            "italic": false,
+            "case": "mixed",
+            "sizeRatio": 1.1904761904761905,
+            "lineHeight": 1.257,
+            "tracking": 0,
+            "align": "left",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 50,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.529,
+            "detectionScore": 1,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        },
+        {
+          "id": "text-asking_price",
+          "z": 12,
+          "box": {
+            "x": 0.091796875,
+            "y": 0.7571634928385416,
+            "width": 0.2080078125,
+            "height": 0.014341227213541665
+          },
+          "type": "text",
+          "inputKey": "asking_price",
+          "typo": {
+            "fontId": "plus-jakarta-sans",
+            "family": "Plus Jakarta Sans",
+            "fallbackFamily": "sans-serif",
+            "weight": 600,
+            "italic": false,
+            "case": "mixed",
+            "sizeRatio": 0.8823529411764706,
+            "lineHeight": 1.26,
+            "tracking": 0,
+            "align": "left",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 30,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.627,
+            "detectionScore": 1,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        }
+      ]
+    }
+  },
+  "inputs": {
+    "images": [
+      {
+        "key": "main_photo",
+        "label": "main photo",
+        "required": true,
+        "aspect": "portrait",
+        "description": "Customer photo drawn into the declared slot."
+      },
+      {
+        "key": "interior_photo_1",
+        "label": "interior photo 1",
+        "required": true,
+        "aspect": "portrait",
+        "description": "Customer photo drawn into the declared slot."
+      },
+      {
+        "key": "interior_photo_2",
+        "label": "interior photo 2",
+        "required": true,
+        "aspect": "portrait",
+        "description": "Customer photo drawn into the declared slot."
+      },
+      {
+        "key": "interior_photo_3",
+        "label": "interior photo 3",
+        "required": true,
+        "aspect": "portrait",
+        "description": "Customer photo drawn into the declared slot."
+      }
+    ],
+    "text": [
+      {
+        "key": "property_details",
+        "label": "Property Details",
+        "required": true,
+        "maxLength": 60,
+        "sample": "4 bed · 3 bath · 1,850 sqft · 9,400 sqft lot"
+      },
+      {
+        "key": "address",
+        "label": "Property Address",
+        "required": true,
+        "maxLength": 60,
+        "sample": "14 Alder Lane, Greenvale, WA 6210"
+      },
+      {
+        "key": "agent_contact",
+        "label": "Agent Contact",
+        "required": true,
+        "maxLength": 50,
+        "sample": "Contact Amelia Hart +123-555-0182"
+      },
+      {
+        "key": "asking_price",
+        "label": "Asking Price",
+        "required": true,
+        "maxLength": 30,
+        "sample": "Asking $915,000"
+      },
+      {
+        "key": "headline",
+        "label": "Headline",
+        "required": true,
+        "maxLength": 30,
+        "sample": "New Listing"
+      }
+    ]
+  },
+  "publish": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "apiVersionMin": "v26.0",
+    "copy": {
+      "primaryText": [
+        "Ask for the property details."
+      ],
+      "headlines": [
+        "Property details"
+      ],
+      "descriptions": [
+        "Request more information"
+      ]
+    },
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Register your interest in this property",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "thankYou": {
+        "title": "Thanks",
+        "body": "We'll be in touch."
+      }
+    },
+    "placements": {
+      "publisherPlatforms": [
+        "facebook",
+        "instagram"
+      ],
+      "facebookPositions": [
+        "feed"
+      ],
+      "instagramPositions": [
+        "stream"
+      ]
+    },
+    "formatRouting": {
+      "feed": "4:5",
+      "story": "9:16"
+    },
+    "creativeFeatures": {
+      "adapt_to_placement": "OPT_OUT",
+      "image_touchups": "OPT_OUT",
+      "image_templates": "OPT_OUT",
+      "inline_comment": "OPT_OUT",
+      "enhance_cta": "OPT_OUT",
+      "text_optimizations": "OPT_OUT",
+      "image_animation": "OPT_OUT",
+      "image_background_gen": "OPT_OUT",
+      "video_auto_crop": "OPT_OUT",
+      "translate_voiceover": "OPT_OUT",
+      "text_translation": "OPT_OUT",
+      "media_type_automation": "OPT_OUT",
+      "product_extensions": "OPT_OUT"
+    },
+    "previewFormats": [
+      "MOBILE_FEED_STANDARD",
+      "INSTAGRAM_STANDARD"
+    ]
+  },
+  "editPolicy": {
+    "mode": "guided",
+    "advancedUnlockable": true,
+    "lockedLayerIds": []
+  },
+  "exactness": {
+    "status": "qa",
+    "residuals": {
+      "text-property_details": 0.09021725016499554,
+      "text-agent_contact": 0.009622042414741228,
+      "text-asking_price": 0.10454250380137163
+    },
+    "bakedTextKeys": [
+      "address",
+      "headline"
+    ]
+  }
+}

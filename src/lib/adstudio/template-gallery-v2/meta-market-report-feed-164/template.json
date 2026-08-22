@@ -1,0 +1,281 @@
+{
+  "schema": "adstudio.template.v2",
+  "id": "meta-market-report-feed-164",
+  "name": "Suburb Market Report — Feed 164",
+  "goal": "market_update_leads",
+  "offerId": "suburb-market-report",
+  "category": "market-report-lead-generation",
+  "tags": [
+    "market-report",
+    "lead-generation",
+    "feed"
+  ],
+  "audienceIntent": "Local homeowners seeking current suburb price and demand insights",
+  "classification": {
+    "ad_type": "lead_generation",
+    "primary_intent": "market_report_leads",
+    "property_or_agent_focus": "property"
+  },
+  "provenance": {
+    "sourceAd": {
+      "file": "01_feed_4x5_best/meta_164.png",
+      "contentHash": "152a128aafd4d60567da3794f14cb02dbd7105f6913c73317f70ec8b786c655b"
+    },
+    "sample": {
+      "imageSrc": "/adstudio-templates/meta-market-report-feed-164/sample.png",
+      "contentHash": "3f869413eae396102a67b9fae44ae7c266cce2db57f5742ae4a8722ece89195c",
+      "generatedBy": "deterministic_render"
+    },
+    "decomposedFrom": "source"
+  },
+  "restyle": {
+    "paletteMap": {},
+    "plateRemap": {
+      "hue": 12
+    },
+    "replacedAssets": [
+      "chart_graphic"
+    ]
+  },
+  "fonts": [
+    {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "weight": 900,
+      "italic": false,
+      "file": "/fonts/adstudio/merriweather-900.woff2",
+      "sha256": "f46470c4106fc6cf2a507991af1288bda867fddff87c4b919d8d39632b869fe4"
+    },
+    {
+      "fontId": "big-shoulders",
+      "family": "Big Shoulders",
+      "weight": 800,
+      "italic": false,
+      "file": "/fonts/adstudio/big-shoulders-800.woff2",
+      "sha256": "8c1ff1cbdb9ecb73647b797780c47f8b52505eb778eb1eb528e00f363467051e"
+    },
+    {
+      "fontId": "grenze-gotisch",
+      "family": "Grenze Gotisch",
+      "weight": 900,
+      "italic": false,
+      "file": "/fonts/adstudio/grenze-gotisch-900.woff2",
+      "sha256": "fa08034a8904c2e9bc6c8663ad3d68e9b115014db2f9bf5d43b3cb7f8f33ce50"
+    },
+    {
+      "fontId": "big-shoulders",
+      "family": "Big Shoulders",
+      "weight": 900,
+      "italic": false,
+      "file": "/fonts/adstudio/big-shoulders-900.woff2",
+      "sha256": "6f1ae3155460dac4e4ae46797294035f705ceb0b4c8f02eb7c2eab7ecfcca946"
+    },
+    {
+      "fontId": "big-shoulders",
+      "family": "Big Shoulders",
+      "weight": 300,
+      "italic": false,
+      "file": "/fonts/adstudio/big-shoulders-300.woff2",
+      "sha256": "1fafb8df64c87957813d45abc6fed00e1ae63db47879306f5e841dc196f112ea"
+    }
+  ],
+  "formats": {
+    "feed": {
+      "format": "4:5",
+      "width": 1080,
+      "height": 1350,
+      "plate": {
+        "src": "/adstudio-templates/meta-market-report-feed-164/plate-feed.webp",
+        "sha256": "c0ec8fa927d445b01cf632c77721f17c0631801bcf34301bf57dde018a0e8915"
+      },
+      "layers": [
+        {
+          "id": "slot-chart_graphic",
+          "z": 2,
+          "box": {
+            "x": 0.012962962962962963,
+            "y": 0.2859259259259259,
+            "width": 0.9740740740740741,
+            "height": 0.4666666666666667
+          },
+          "type": "image_slot",
+          "inputKey": "chart_graphic",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 1052,
+            "height": 630
+          }
+        }
+      ]
+    },
+    "story": {
+      "format": "9:16",
+      "width": 1080,
+      "height": 1920,
+      "plate": {
+        "src": "/adstudio-templates/meta-market-report-feed-164/plate-story.webp",
+        "sha256": "3abb86850f216d0344cec4f244b4ef5cc10b2d25de39da5fc147e3cc460af6ce"
+      },
+      "layers": [
+        {
+          "id": "slot-chart_graphic",
+          "z": 2,
+          "box": {
+            "x": 0.012962962962962963,
+            "y": 0.32827160493827157,
+            "width": 0.9740740740740741,
+            "height": 0.32326388888888885
+          },
+          "type": "image_slot",
+          "inputKey": "chart_graphic",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 1052,
+            "height": 621
+          }
+        }
+      ]
+    }
+  },
+  "inputs": {
+    "images": [
+      {
+        "key": "chart_graphic",
+        "label": "chart graphic",
+        "required": true,
+        "aspect": "portrait",
+        "description": "Customer photo drawn into the declared slot."
+      }
+    ],
+    "text": [
+      {
+        "key": "subheadline",
+        "label": "Subheadline",
+        "required": true,
+        "maxLength": 46,
+        "sample": "LOCAL PRICES. CLEAR INSIGHT."
+      },
+      {
+        "key": "stat_1",
+        "label": "Stat 1",
+        "required": true,
+        "maxLength": 38,
+        "sample": "CURRENT MEDIAN PRICE"
+      },
+      {
+        "key": "stat_3",
+        "label": "Stat 3",
+        "required": true,
+        "maxLength": 32,
+        "sample": "DAYS ON MARKET"
+      },
+      {
+        "key": "stat_2",
+        "label": "Stat 2",
+        "required": true,
+        "maxLength": 30,
+        "sample": "RECENT SALES"
+      },
+      {
+        "key": "stat_4",
+        "label": "Stat 4",
+        "required": true,
+        "maxLength": 30,
+        "sample": "BUYER DEMAND"
+      },
+      {
+        "key": "headline",
+        "label": "Headline",
+        "required": true,
+        "maxLength": 43,
+        "sample": "YOUR SUBURB MARKET UPDATE"
+      }
+    ]
+  },
+  "publish": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "apiVersionMin": "v26.0",
+    "copy": {
+      "primaryText": [
+        "Ask for the property details."
+      ],
+      "headlines": [
+        "Property details"
+      ],
+      "descriptions": [
+        "Request more information"
+      ]
+    },
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Request your free market report",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "thankYou": {
+        "title": "Thanks",
+        "body": "We'll be in touch."
+      }
+    },
+    "placements": {
+      "publisherPlatforms": [
+        "facebook",
+        "instagram"
+      ],
+      "facebookPositions": [
+        "feed"
+      ],
+      "instagramPositions": [
+        "stream"
+      ]
+    },
+    "formatRouting": {
+      "feed": "4:5",
+      "story": "9:16"
+    },
+    "creativeFeatures": {
+      "adapt_to_placement": "OPT_OUT",
+      "image_touchups": "OPT_OUT",
+      "image_templates": "OPT_OUT",
+      "inline_comment": "OPT_OUT",
+      "enhance_cta": "OPT_OUT",
+      "text_optimizations": "OPT_OUT",
+      "image_animation": "OPT_OUT",
+      "image_background_gen": "OPT_OUT",
+      "video_auto_crop": "OPT_OUT",
+      "translate_voiceover": "OPT_OUT",
+      "text_translation": "OPT_OUT",
+      "media_type_automation": "OPT_OUT",
+      "product_extensions": "OPT_OUT"
+    },
+    "previewFormats": [
+      "MOBILE_FEED_STANDARD",
+      "INSTAGRAM_STANDARD"
+    ]
+  },
+  "editPolicy": {
+    "mode": "guided",
+    "advancedUnlockable": true,
+    "lockedLayerIds": []
+  },
+  "exactness": {
+    "status": "qa",
+    "residuals": {},
+    "bakedTextKeys": [
+      "subheadline",
+      "stat_1",
+      "stat_3",
+      "stat_2",
+      "stat_4",
+      "headline"
+    ]
+  }
+}

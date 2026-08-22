@@ -1,0 +1,15 @@
+{
+  "migratedFrom": "v1",
+  "source": "source",
+  "sourceValues": {
+    "headline": "NEW\nLISTING"
+  },
+  "textBoxes": {
+    "headline": {
+      "x": 0.114625,
+      "y": 0.388,
+      "width": 0.766798,
+      "height": 0.220347
+    }
+  }
+}

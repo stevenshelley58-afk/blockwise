@@ -1,0 +1,40 @@
+{
+  "migratedFrom": "v1",
+  "source": "source",
+  "sourceValues": {
+    "headline": "",
+    "subheadline": "",
+    "brand_name": "",
+    "cta": ""
+  },
+  "textBoxes": {
+    "headline": {
+      "x": 0.12158203125,
+      "y": 0.55390625,
+      "width": 0.57177734375,
+      "height": 0.329296875
+    },
+    "subheadline": {
+      "x": 0.1162109375,
+      "y": 0.906640625,
+      "width": 0.341796875,
+      "height": 0.025
+    },
+    "brand_name": {
+      "x": 0.09423828125,
+      "y": 0.0875,
+      "width": 0.19189453125,
+      "height": 0.01796875
+    },
+    "cta": {
+      "x": 0.75390625,
+      "y": 0.9,
+      "width": 0.14404296875,
+      "height": 0.015625
+    }
+  },
+  "bakedResiduals": {
+    "baked-headline": 0.0005455359674225745,
+    "baked-subheadline": 0
+  }
+}
