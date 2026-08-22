@@ -131,11 +131,18 @@ describe("variant-pack — authoritative exactly-five pack", () => {
       const corpusStat = statSync(corpusFile);
       assert.ok(corpusStat.isFile() && !corpusStat.isSymbolicLink());
 
+      // The default customer-photo slot must be the committed real safe photo,
+      // not the abstract portrait placeholder. The slot remains a declared
+      // editable input in every generated template.
+      const slotFile = join(candidate, "public", "slots", "photo-portrait.png");
+      assert.deepEqual(readFileSync(slotFile), readFileSync(source), "default gallery/editor slot must use the committed real photo");
+
       // every variant: complete doc + assets + distinct skeleton
       const signatures = new Set();
       for (let i = 0; i < 5; i += 1) {
         const id = manifest.variantIds[i];
         const doc = assertCompleteVariant(join(gallery, id, "template.json"), i + 1, contract.sourceAd.contentHash);
+        assert.equal(doc.restyle.safeReplacementAssets.find((asset) => asset.inputKey === "customer_photo")?.sha256, sha256(readFileSync(source)));
         for (const [format, layout] of [["feed", doc.formats.feed], ["story", doc.formats.story]]) {
           const platePath = join(candidate, "src", "lib", "adstudio", "template-assets-v2", id, `plate-${format}.webp`);
           assert.ok(existsSync(platePath), `${id} ${format} plate missing`);
@@ -203,6 +210,19 @@ describe("variant-pack — authoritative exactly-five pack", () => {
       assert.equal(doc.formats.story.height, 1920);
       assert.equal(doc.name, "Single");
 
+      // Release previews must derive the declared required image key rather
+      // than assuming the builder's historical customer_photo name. Guidance
+      // from the template publish contract must survive packaging too.
+      const renamedDocPath = join(candidate, "src", "lib", "adstudio", "template-gallery-v2", manifest.variantIds[0], "template.json");
+      const renamedDoc = JSON.parse(JSON.stringify(doc).replaceAll("customer_photo", "customer_image"));
+      renamedDoc.publish.aiWritingGuidance = {
+        summary: "Use the approved overlay and off-canvas wording.",
+        fields: { headline: "Use the declared headline constraint." },
+        overlay: "Keep the badge factual.",
+        offCanvas: { primaryText: "Do not invent offer details." },
+      };
+      writeFileSync(renamedDocPath, JSON.stringify(renamedDoc));
+
       const signingDir = join(candidate, "signing");
       mkdirSync(signingDir, { recursive: true });
       const { publicKey, privateKey } = generateKeyPairSync("ed25519");
@@ -225,6 +245,11 @@ describe("variant-pack — authoritative exactly-five pack", () => {
       assert.equal(pack.schema, "blockwise.template-pack/v2");
       assert.equal(pack.feedLayout.layers[0].assetKey, "feed-plate");
       assert.equal(pack.storyLayout.layers[0].assetKey, "story-plate");
+      assert.ok(pack.feedLayout.layers.some((layer) => layer.type === "image_slot" && layer.inputKey === "customer_image"));
+      assert.equal(pack.metadata.aiWritingGuidance.summary, "Use the approved overlay and off-canvas wording.");
+      assert.equal(pack.metadata.aiWritingGuidance.fields.headline, "Use the declared headline constraint.");
+      assert.equal(pack.metadata.aiWritingGuidance.fields.overlay, "Keep the badge factual.");
+      assert.equal(pack.metadata.aiWritingGuidance.fields.offCanvas, JSON.stringify({ primaryText: "Do not invent offer details." }));
       assert.ok(pack.feedLayout.layers.find((layer) => layer.type === "text").fontSize > 20);
       for (const asset of Object.values(pack.assets)) {
         assert.ok(existsSync(join(publicRoot, releaseOutput.releaseId, "assets", asset.fileName)), `missing public asset ${asset.fileName}`);
