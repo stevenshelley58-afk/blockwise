@@ -20,6 +20,7 @@ export interface ImportedPackSummary {
   feedLayout: Layout;
   storyLayout: Layout;
   semanticColours: TemplatePack["semanticColours"];
+  gallerySampleUrl: string | null;
 }
 
 type PackRow = {
@@ -29,6 +30,20 @@ type PackRow = {
   pack_json: unknown;
   created_at: unknown;
 };
+
+function record(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
+}
+
+export function readGallerySampleUrl(value: unknown): string | null {
+  const raw = record(value);
+  const gallery = record(raw?.gallerySample);
+  const provenance = record(raw?.provenance);
+  const sample = record(gallery?.feed) ?? record(gallery) ?? record(provenance?.sample);
+  const safeFeed = record(record(raw?.safePreviews)?.feed);
+  const candidate = sample?.imageSrc ?? sample?.url ?? safeFeed?.url;
+  return typeof candidate === "string" && candidate.trim() ? candidate.trim() : null;
+}
 
 /** All active imported packs, newest first. Invalid rows are skipped, never fatal. */
 export async function listImportedPacks(
@@ -83,6 +98,7 @@ function summaryFromPack(pack: TemplatePack, row: PackRow): ImportedPackSummary 
     feedLayout: pack.feedLayout,
     storyLayout: pack.storyLayout,
     semanticColours: { ...pack.semanticColours },
+    gallerySampleUrl: readGallerySampleUrl(row.pack_json),
   };
 }
 

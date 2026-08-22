@@ -4,7 +4,7 @@ import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { TemplatePack, Placement, LayoutLayer, ImageSlotLayer, Rect } from "../../../../packages/ad-template-pack-contract/src/types";
 import { PLACEMENT_DIMENSIONS } from "../../../../packages/ad-template-pack-contract/src/types";
-import { buildAdDocument, brandPackColoursToRoleMap, resolveColourMap, useEditorState, type BrandPackColours, type EditorState } from "./use-editor-state";
+import { buildAdDocument, brandPackColoursToRoleMap, editorTextInputs, resolveColourMap, useEditorState, type BrandPackColours, type EditorState, type MetaCopy } from "./use-editor-state";
 import { ColourToggle } from "./colour-toggle";
 import { CropDialog } from "./crop-dialog";
 import { InputsPanel } from "./inputs-panel";
@@ -61,6 +61,9 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
 
   /** Which slot's crop dialog is open — always the ACTIVE placement's crop. */
   const [cropTarget, setCropTarget] = useState<{ slot: ImageSlotLayer; placement: Placement } | null>(null);
+  const [proposalBrief, setProposalBrief] = useState("");
+  const [proposal, setProposal] = useState<{ onImage: Record<string, string>; copy: MetaCopy; source: string } | null>(null);
+  const [proposalBusy, setProposalBusy] = useState(false);
 
   /** Open the crop dialog for a slot (no-op until an image is picked). */
   const openCrop = useCallback(
@@ -105,6 +108,24 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
       setSaving(false);
     }
   }, [adId, workspaceId, state, markSaved, setSaving, setError]);
+
+  const proposeCopy = useCallback(async () => {
+    setProposalBusy(true);
+    try {
+      const response = await fetch(`/api/adstudio/ads/${encodeURIComponent(adId)}/copy-proposal?workspaceId=${encodeURIComponent(workspaceId)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ brief: proposalBrief, copy: state.metaCopy }),
+      });
+      const body = await response.json() as { onImage?: Record<string, string>; copy?: MetaCopy; source?: string; error?: string };
+      if (!response.ok || !body.copy) throw new Error(body.error ?? "Copy proposal failed.");
+      setProposal({ onImage: body.onImage ?? {}, copy: body.copy, source: body.source ?? "ai" });
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Copy proposal failed.");
+    } finally {
+      setProposalBusy(false);
+    }
+  }, [adId, workspaceId, proposalBrief, state.metaCopy, setError]);
 
   /**
    * Publish always freezes the LAST SAVED revision (server-side). If the
@@ -271,7 +292,7 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
 
         {/* Content panel — shared text + image inputs (Feed and Story both use these) */}
         <InputsPanel
-          textInputs={pack.textInputs}
+          textInputs={editorTextInputs(pack)}
           imageInputs={pack.imageInputs}
           textValues={state.textValues}
           imageValues={Object.fromEntries(state.imageValues.map(iv => [iv.inputKey, iv.dataUrl]))}
@@ -282,6 +303,16 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
 
         {/* Meta copy panel — primary text, headline, description, CTA (shared across placements) */}
         <MetaCopyPanel values={state.metaCopy} onChange={updateMetaCopy} />
+        <ProposalPanel
+          brief={proposalBrief}
+          proposal={proposal}
+          busy={proposalBusy}
+          textInputs={editorTextInputs(pack)}
+          onBriefChange={setProposalBrief}
+          onPropose={proposeCopy}
+          onApplyText={updateTextValue}
+          onApplyMeta={updateMetaCopy}
+        />
       </div>
 
       {/* Crop dialog — per-placement crop for the selected image slot */}
@@ -297,6 +328,54 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
         </div>
       )}
     </div>
+  );
+}
+
+function ProposalPanel({
+  brief,
+  proposal,
+  busy,
+  textInputs,
+  onBriefChange,
+  onPropose,
+  onApplyText,
+  onApplyMeta,
+}: {
+  brief: string;
+  proposal: { onImage: Record<string, string>; copy: MetaCopy; source: string } | null;
+  busy: boolean;
+  textInputs: Array<{ key: string; label: string }>;
+  onBriefChange: (value: string) => void;
+  onPropose: () => void;
+  onApplyText: (key: string, value: string) => void;
+  onApplyMeta: (field: keyof MetaCopy, value: string) => void;
+}) {
+  return (
+    <aside className="w-72 shrink-0 overflow-y-auto border-l border-(--line) bg-(--surface) p-4">
+      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">AI copy help</h3>
+      <p className="mb-3 text-xs leading-relaxed text-muted-foreground">Get a draft for the overlay and Meta copy. Nothing changes until you apply a suggestion.</p>
+      <textarea value={brief} onChange={event => onBriefChange(event.target.value)} rows={4} placeholder="Describe the property, offer or audience…" className="w-full rounded-(--r-control) border border-(--line) bg-(--surface-subtle) px-3 py-2 text-sm" />
+      <button type="button" onClick={onPropose} disabled={busy} className="mt-2 w-full rounded-(--r-control) bg-(--ui-primary) px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">{busy ? "Drafting…" : "Suggest copy"}</button>
+      {proposal ? (
+        <div className="mt-4 space-y-3 text-sm">
+          <span className="text-[11px] text-muted-foreground">{proposal.source === "fallback" ? "Safe deterministic draft" : "AI draft"}</span>
+          {textInputs.filter(input => proposal.onImage[input.key]).map(input => (
+            <div key={input.key}>
+              <span className="text-xs text-muted-foreground">{input.label}</span>
+              <p className="mt-0.5 rounded border border-(--line) p-2">{proposal.onImage[input.key]}</p>
+              <button type="button" onClick={() => onApplyText(input.key, proposal.onImage[input.key])} className="mt-1 text-xs font-medium text-(--ui-primary)">Use overlay suggestion</button>
+            </div>
+          ))}
+          {(Object.keys(proposal.copy) as Array<keyof MetaCopy>).map(field => (
+            <div key={field}>
+              <span className="text-xs capitalize text-muted-foreground">{field.replace(/([A-Z])/g, " $1")}</span>
+              <p className="mt-0.5 rounded border border-(--line) p-2 whitespace-pre-wrap">{proposal.copy[field]}</p>
+              <button type="button" onClick={() => onApplyMeta(field, proposal.copy[field])} className="mt-1 text-xs font-medium text-(--ui-primary)">Use Meta suggestion</button>
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </aside>
   );
 }
 

@@ -35,6 +35,52 @@ export interface MetaCopy {
   cta: string;
 }
 
+export interface EditorTextInput {
+  key: string;
+  label: string;
+  placeholder: string;
+  maxLength: number;
+}
+
+type PackEditorDefaults = {
+  textInputs: EditorTextInput[];
+  textValues: Record<string, string>;
+  metaCopy: Partial<MetaCopy>;
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+export function readEditorDefaults(pack: TemplatePack): PackEditorDefaults {
+  const raw = pack as unknown as Record<string, unknown>;
+  const defaults = isRecord(raw.editorDefaults) ? raw.editorDefaults : isRecord(raw.v2) ? raw.v2 : {};
+  const rawInputs = Array.isArray(defaults.overlayTextInputs) ? defaults.overlayTextInputs : [];
+  const textInputs = rawInputs.flatMap((value): EditorTextInput[] => {
+    if (!isRecord(value) || typeof value.key !== "string") return [];
+    return [{
+      key: value.key,
+      label: typeof value.label === "string" ? value.label : value.key,
+      placeholder: typeof value.placeholder === "string" ? value.placeholder : "",
+      maxLength: typeof value.maxLength === "number" && value.maxLength > 0 ? Math.floor(value.maxLength) : 120,
+    }];
+  });
+  const rawValues = isRecord(defaults.textValues) ? defaults.textValues : {};
+  const textValues = Object.fromEntries(Object.entries(rawValues).filter(([, value]) => typeof value === "string")) as Record<string, string>;
+  const rawMeta = isRecord(defaults.metaCopy) ? defaults.metaCopy : {};
+  const metaCopy: Partial<MetaCopy> = {};
+  for (const field of ["primaryText", "headline", "description", "cta"] as const) {
+    if (typeof rawMeta[field] === "string") metaCopy[field] = rawMeta[field] as string;
+  }
+  return { textInputs, textValues, metaCopy };
+}
+
+export function editorTextInputs(pack: TemplatePack): EditorTextInput[] {
+  const defaults = readEditorDefaults(pack);
+  const existing = new Set(pack.textInputs.map(input => input.key));
+  return [...pack.textInputs, ...defaults.textInputs.filter(input => !existing.has(input.key))];
+}
+
 export interface EditorState {
   pack: TemplatePack;
   activePlacement: Placement;
@@ -51,11 +97,13 @@ export interface EditorState {
   metaCopy: MetaCopy;
 }
 
-const initialState = (pack: TemplatePack): EditorState => ({
+const initialState = (pack: TemplatePack): EditorState => {
+  const defaults = readEditorDefaults(pack);
+  return {
   pack,
   activePlacement: "feed",
   imageValues: pack.imageInputs.map(i => ({ inputKey: i.key, dataUrl: null, crops: {} })),
-  textValues: Object.fromEntries(pack.textInputs.map(i => [i.key, ""])),
+  textValues: { ...Object.fromEntries(pack.textInputs.map(i => [i.key, ""])), ...defaults.textValues },
   colourMode: "template",
   resolvedColourMap: { ...pack.semanticColours },
   selectedLayerId: null,
@@ -63,8 +111,15 @@ const initialState = (pack: TemplatePack): EditorState => ({
   isSaving: false,
   lastSavedRevision: null,
   error: null,
-  metaCopy: { primaryText: "", headline: "", description: "", cta: "LEARN_MORE" },
-});
+  metaCopy: {
+    primaryText: "",
+    headline: "",
+    description: "",
+    cta: "LEARN_MORE",
+    ...defaults.metaCopy,
+  },
+  };
+};
 
 export function useEditorState(pack: TemplatePack) {
   const [state, setState] = useState<EditorState>(() => initialState(pack));
