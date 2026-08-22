@@ -38,6 +38,10 @@ const imageSlotSchema = z.object({
 const textLayerSchema = z.object({
   type: z.literal("text"),
   layerId: z.string().min(1),
+  // Geometry was omitted from the original v1 fixture shape, so keep this
+  // optional for backwards compatibility while preserving it when present.
+  // V2 packs emitted by Frank include it and the manifest hash must cover it.
+  geometry: rectSchema.optional(),
   inputKey: z.string().min(1),
   font: fontRefSchema,
   fontSize: z.number().positive(),

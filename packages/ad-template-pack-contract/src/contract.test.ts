@@ -116,6 +116,22 @@ describe("TemplatePack schema", () => {
     assert.equal(templatePackV2Schema.safeParse(v2).success, true);
   });
 
+  it("preserves text geometry when validating a signed pack", () => {
+    const withGeometry = structuredClone(goldenPack) as Record<string, any>;
+    for (const layoutKey of ["feedLayout", "storyLayout"]) {
+      for (const layer of withGeometry[layoutKey].layers) {
+        if (layer.type === "text") {
+          layer.geometry = { x: 40, y: 40, width: 1000, height: 200 };
+        }
+      }
+    }
+    withGeometry.manifestSha256 = computeManifestHash(withGeometry);
+
+    const result = templatePackSchema.safeParse(withGeometry);
+    assert.ok(result.success, JSON.stringify(result.error?.issues, null, 2));
+    assert.equal(computeManifestHash(result.data as unknown as Record<string, unknown>), withGeometry.manifestSha256);
+  });
+
   it("rejects a pack with missing Story layout", () => {
     const { storyLayout: _, ...noStory } = goldenPack;
     const result = templatePackSchema.safeParse(noStory);
