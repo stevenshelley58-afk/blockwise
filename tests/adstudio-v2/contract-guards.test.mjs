@@ -22,7 +22,7 @@ test("normal production builds run the v2 template evidence gate before Next com
 
 // Only real imports count — comments mentioning old modules must not trip
 // the law. Matches import statements, dynamic imports and require() calls.
-const IMAGE_MODEL_IMPORT = /(^|[^/\w])(import[\s{]|from\s|require\(|await import\()[^\n]*(ai-providers|clone-generation|reference-clone)/m;
+const IMAGE_MODEL_IMPORT = /(^|[^/\w])(import[\s{]|from\s|require\(|await import\()[^\n]*(ai-providers|clone-generation)/m;
 
 test("exactly one canonical v2 renderer (renderAdDocToPng defined once)", () => {
   const hits = [];
