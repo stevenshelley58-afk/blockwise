@@ -77,11 +77,19 @@ type PublishRequirements = {
 function readPublishRequirements(pack: unknown): PublishRequirements {
   if (!pack || typeof pack !== "object") return { destinationMode: "instant_form", requiredCtaTypes: [] };
   const candidate = (pack as Record<string, unknown>).publishRequirements;
-  if (!candidate || typeof candidate !== "object") return { destinationMode: "instant_form", requiredCtaTypes: [] };
-  const record = candidate as Record<string, unknown>;
+  const metadata = (pack as Record<string, unknown>).metadata;
+  const metadataRequirements = metadata && typeof metadata === "object" ? (metadata as Record<string, unknown>).publishRequirements : null;
+  const effectiveCandidate = candidate && typeof candidate === "object" ? candidate : metadataRequirements;
+  if (!effectiveCandidate || typeof effectiveCandidate !== "object") return { destinationMode: "instant_form", requiredCtaTypes: [] };
+  const record = effectiveCandidate as Record<string, unknown>;
+  const nestedDestination = record.destination && typeof record.destination === "object"
+    ? record.destination as Record<string, unknown>
+    : null;
+  const nestedKind = nestedDestination?.kind;
   const destinationMode = record.destinationMode === "website" || record.destinationMode === "instant_form"
     ? record.destinationMode
-    : "instant_form";
+    : nestedKind === "url" || nestedKind === "article" ? "website"
+      : nestedKind === "instant_form" ? "instant_form" : "instant_form";
   const requiredCtaTypes = Array.isArray(record.requiredCtaTypes)
     ? record.requiredCtaTypes.filter((value): value is string => typeof value === "string" && value.trim().length > 0)
     : [];

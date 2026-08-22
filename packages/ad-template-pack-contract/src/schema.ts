@@ -158,7 +158,7 @@ const templateMetadataSchema = z.object({
   aiWritingGuidance: z.object({ summary: z.string(), fields: z.record(z.string(), z.string()) }),
   publishRequirements: z.object({
     objective: z.string().min(1), specialAdCategory: z.string().nullable(),
-    instantForm: z.object({ required: z.boolean(), dependency: z.string().nullable() }),
+    instantForm: z.object({ required: z.boolean(), dependency: z.string().nullable(), defaults: z.unknown().nullable().optional() }),
     destination: z.object({ required: z.boolean(), kind: z.enum(["url", "article", "instant_form", "none"]), dependency: z.string().nullable() }),
   }),
   replacementAssets: z.array(assetRefSchema), realAssetRefs: z.array(assetRefSchema),

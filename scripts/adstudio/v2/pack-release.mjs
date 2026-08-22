@@ -62,6 +62,11 @@ function pixelRect(rect, width, height) {
 
 function v2ToTemplatePack({ doc, feedPreviewBytes, storyPreviewBytes, plateFiles, createdAt, publicBaseUrl }) {
   const assetUrl = (key) => publicBaseUrl ? `${publicBaseUrl}/assets/${plateFiles[key]?.fileName ?? key}` : undefined;
+  const declaredRequirements = doc.publish?.requirements ?? doc.publishRequirements ?? doc.provenance?.publishRequirements ?? {};
+  const declaredDestination = declaredRequirements.destination ?? (doc.publish?.leadForm
+    ? { required: true, kind: "instant_form", dependency: "instant_form" }
+    : { required: false, kind: "none", dependency: null });
+  const declaredForm = declaredRequirements.instantForm ?? {};
   const metadata = {
     title: doc.name,
     description: `${doc.category} ${doc.audienceIntent} template`,
@@ -79,8 +84,8 @@ function v2ToTemplatePack({ doc, feedPreviewBytes, storyPreviewBytes, plateFiles
     publishRequirements: {
       objective: doc.publish?.objective ?? "OUTCOME_LEADS",
       specialAdCategory: doc.publish?.specialAdCategory ?? null,
-      instantForm: { required: Boolean(doc.publish?.leadForm), dependency: doc.publish?.leadForm ? "instant_form" : null },
-      destination: { required: false, kind: "none", dependency: null },
+      instantForm: { required: declaredForm.required ?? Boolean(doc.publish?.leadForm), dependency: declaredForm.dependency ?? (doc.publish?.leadForm ? "instant_form" : null), defaults: doc.publish?.leadForm ?? declaredForm.defaults ?? null },
+      destination: { required: declaredDestination.required ?? false, kind: declaredDestination.kind ?? "none", dependency: declaredDestination.dependency ?? null },
     },
     replacementAssets: [{ assetKey: "customer-photo-fixture", purpose: "replacement", ...(publicBaseUrl ? { url: assetUrl("customer-photo-fixture") } : {}) }],
     realAssetRefs: [],

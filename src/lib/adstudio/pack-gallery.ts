@@ -37,7 +37,8 @@ function record(value: unknown): Record<string, unknown> | null {
 
 export function readGallerySampleUrl(value: unknown): string | null {
   const raw = record(value);
-  const gallery = record(raw?.gallerySample);
+  const metadata = record(raw?.metadata);
+  const gallery = record(metadata?.gallerySamples) ?? record(raw?.gallerySample);
   const provenance = record(raw?.provenance);
   const sample = record(gallery?.feed) ?? record(gallery) ?? record(provenance?.sample);
   const safeFeed = record(record(raw?.safePreviews)?.feed);
@@ -90,7 +91,7 @@ function summaryFromPack(pack: TemplatePack, row: PackRow): ImportedPackSummary 
   return {
     packId: String(row.pack_id ?? pack.packId),
     templateId: pack.templateId,
-    name: label && label.length > 0 ? label : pack.templateId,
+    name: (record((pack as unknown as Record<string, unknown>).metadata)?.title as string | undefined) ?? (label && label.length > 0 ? label : pack.templateId),
     version: pack.version,
     importedAt: typeof row.created_at === "string" ? row.created_at : pack.createdAt,
     imageInputs: pack.imageInputs.length,

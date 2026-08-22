@@ -252,6 +252,18 @@ describe("buildPausedMetaPublishPlan", () => {
       controls: { destinationUrl: "https://example.com/article", destinationMode: "website" }, state: restricted,
     }), /CTA must be one of/);
   });
+
+  it("reads nested v2 metadata publish requirements", () => {
+    const nested = structuredClone(validState);
+    (nested.pack as unknown as Record<string, unknown>).metadata = {
+      publishRequirements: {
+        destination: { required: true, kind: "article", dependency: "article-1" },
+        instantForm: { required: false, dependency: null },
+      },
+    };
+    const issues = validatePublishState(nested, { controls: { destinationMode: "website", destinationUrl: "https://example.com/article" } });
+    assert.deepEqual(issues, []);
+  });
 });
 
 // ---------------------------------------------------------------------------

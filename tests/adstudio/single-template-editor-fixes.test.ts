@@ -22,6 +22,21 @@ describe("single-template editor fixes", () => {
     assert.equal(defaults.metaCopy.headline, "Your next move");
   });
 
+  it("reads portable v2 metadata defaults and gallery URLs", () => {
+    const portable = {
+      ...pack,
+      metadata: {
+        title: "Portable title",
+        gallerySamples: { feed: { url: "https://frank.fail/sample.png" } },
+        metaCopyDefaults: { primaryText: ["Primary"], headlines: ["Headline"], descriptions: ["Description"], cta: "LEARN_MORE" },
+        aiWritingGuidance: { summary: "Be concise", fields: {} },
+      },
+    } as unknown as TemplatePack;
+    const defaults = readEditorDefaults(portable);
+    assert.equal(defaults.metaCopy.headline, "Headline");
+    assert.equal(readGallerySampleUrl(portable), "https://frank.fail/sample.png");
+  });
+
   it("prefers an imported gallery sample and keeps legacy fallback data absent", () => {
     assert.equal(readGallerySampleUrl({ gallerySample: { feed: { imageSrc: "/sample.png" } } }), "/sample.png");
     assert.equal(readGallerySampleUrl({ safePreviews: { feed: { sha256: "a".repeat(64) } } }), null);

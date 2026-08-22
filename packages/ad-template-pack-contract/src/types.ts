@@ -242,7 +242,7 @@ export interface TemplatePackMetadata {
   aiWritingGuidance: { summary: string; fields: Record<string, string> };
   publishRequirements: {
     objective: string; specialAdCategory: string | null;
-    instantForm: { required: boolean; dependency: string | null };
+    instantForm: { required: boolean; dependency: string | null; defaults?: unknown | null };
     destination: { required: boolean; kind: "url" | "article" | "instant_form" | "none"; dependency: string | null };
   };
   replacementAssets: AssetRef[]; realAssetRefs: AssetRef[];

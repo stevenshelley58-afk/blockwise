@@ -54,7 +54,19 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 export function readEditorDefaults(pack: TemplatePack): PackEditorDefaults {
   const raw = pack as unknown as Record<string, unknown>;
-  const defaults = isRecord(raw.editorDefaults) ? raw.editorDefaults : isRecord(raw.v2) ? raw.v2 : {};
+  const metadata = isRecord(raw.metadata) ? raw.metadata : {};
+  const metaCopyDefaults = isRecord(metadata.metaCopyDefaults) ? metadata.metaCopyDefaults : {};
+  const guidance = isRecord(metadata.aiWritingGuidance) ? metadata.aiWritingGuidance : {};
+  const defaults = Object.keys(metadata).length > 0
+    ? { overlayTextInputs: [], textValues: {}, metaCopy: {
+      primaryText: Array.isArray(metaCopyDefaults.primaryText) ? metaCopyDefaults.primaryText[0] : undefined,
+      headline: Array.isArray(metaCopyDefaults.headlines) ? metaCopyDefaults.headlines[0] : undefined,
+      description: Array.isArray(metaCopyDefaults.descriptions) ? metaCopyDefaults.descriptions[0] : undefined,
+      cta: typeof metaCopyDefaults.cta === "string" ? metaCopyDefaults.cta : undefined,
+    }, aiWritingGuidance: guidance }
+    : isRecord(raw.editorDefaults)
+      ? raw.editorDefaults
+      : isRecord(raw.v2) ? raw.v2 : {};
   const rawInputs = Array.isArray(defaults.overlayTextInputs) ? defaults.overlayTextInputs : [];
   const textInputs = rawInputs.flatMap((value): EditorTextInput[] => {
     if (!isRecord(value) || typeof value.key !== "string") return [];
@@ -67,7 +79,12 @@ export function readEditorDefaults(pack: TemplatePack): PackEditorDefaults {
   });
   const rawValues = isRecord(defaults.textValues) ? defaults.textValues : {};
   const textValues = Object.fromEntries(Object.entries(rawValues).filter(([, value]) => typeof value === "string")) as Record<string, string>;
-  const rawMeta = isRecord(defaults.metaCopy) ? defaults.metaCopy : {};
+  const rawMeta = isRecord(defaults.metaCopy) ? defaults.metaCopy : {
+    ...metaCopyDefaults,
+    headline: Array.isArray(metaCopyDefaults.headlines) ? metaCopyDefaults.headlines[0] : undefined,
+    description: Array.isArray(metaCopyDefaults.descriptions) ? metaCopyDefaults.descriptions[0] : undefined,
+    primaryText: Array.isArray(metaCopyDefaults.primaryText) ? metaCopyDefaults.primaryText[0] : undefined,
+  };
   const metaCopy: Partial<MetaCopy> = {};
   for (const field of ["primaryText", "headline", "description", "cta"] as const) {
     if (typeof rawMeta[field] === "string") metaCopy[field] = rawMeta[field] as string;

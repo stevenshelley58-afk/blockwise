@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { generateAdStudioTemplateCopy } from "@/lib/adstudio/copy-generation";
 import { buildDeterministicCopyProposal } from "@/lib/adstudio/copy-proposal";
 import { errorResponse, readJsonBody, requireAdStudioRequest } from "@/lib/adstudio/http";
-import { templatePackSchema } from "../../../../../../../packages/ad-template-pack-contract/src/schema.ts";
+import { templatePackAnySchema } from "../../../../../../../packages/ad-template-pack-contract/src/schema.ts";
 
 export const runtime = "nodejs";
 
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     .select("pack_json")
     .eq("pack_id", ad.template_pack_id)
     .maybeSingle();
-  const parsed = templatePackSchema.safeParse(packRow?.pack_json);
+  const parsed = templatePackAnySchema.safeParse(packRow?.pack_json);
   if (!parsed.success) return NextResponse.json({ error: "Template pack not found" }, { status: 404 });
   const pack = parsed.data as unknown as import("../../../../../../../packages/ad-template-pack-contract/src/types.ts").TemplatePack;
   const fields = overlayFields(packRow?.pack_json && typeof packRow.pack_json === "object" ? packRow.pack_json as Record<string, unknown> : {}, pack.textInputs.map(field => ({ key: field.key, label: field.label, maxLength: field.maxLength })));
