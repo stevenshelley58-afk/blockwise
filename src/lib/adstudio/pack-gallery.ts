@@ -1,4 +1,4 @@
-import { templatePackSchema } from "../../../packages/ad-template-pack-contract/src/index.ts";
+import { templatePackAnySchema } from "../../../packages/ad-template-pack-contract/src/index.ts";
 import type { Layout, TemplatePack } from "../../../packages/ad-template-pack-contract/src/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -88,6 +88,6 @@ function summaryFromPack(pack: TemplatePack, row: PackRow): ImportedPackSummary 
 
 function parsePackJson(value: unknown): TemplatePack | null {
   if (!value || typeof value !== "object") return null;
-  const parsed = templatePackSchema.safeParse(value);
+  const parsed = templatePackAnySchema.safeParse(value);
   return parsed.success ? (parsed.data as TemplatePack) : null;
 }

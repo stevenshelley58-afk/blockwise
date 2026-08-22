@@ -141,6 +141,29 @@ const qaEvidenceSchema = z.object({
   stressFixtureResults: z.record(z.string(), z.enum(["pass", "fail"])),
 });
 
+const assetRefSchema = z.object({
+  assetKey: z.string().min(1),
+  placement: z.enum(PLACEMENTS).nullable().optional(),
+  purpose: z.enum(["gallery_sample", "replacement", "real_asset", "font"]).optional(),
+  url: z.string().url().optional(),
+});
+
+const templateMetadataSchema = z.object({
+  title: z.string().min(1), description: z.string(),
+  gallerySamples: z.object({ feed: assetRefSchema, story: assetRefSchema }),
+  metaCopyDefaults: z.object({
+    primaryText: z.array(z.string()).max(5), headlines: z.array(z.string()).max(5),
+    descriptions: z.array(z.string()).max(5), cta: z.string().min(1),
+  }),
+  aiWritingGuidance: z.object({ summary: z.string(), fields: z.record(z.string(), z.string()) }),
+  publishRequirements: z.object({
+    objective: z.string().min(1), specialAdCategory: z.string().nullable(),
+    instantForm: z.object({ required: z.boolean(), dependency: z.string().nullable() }),
+    destination: z.object({ required: z.boolean(), kind: z.enum(["url", "article", "instant_form", "none"]), dependency: z.string().nullable() }),
+  }),
+  replacementAssets: z.array(assetRefSchema), realAssetRefs: z.array(assetRefSchema),
+});
+
 export const templatePackSchema = z.object({
   schema: z.literal("blockwise.template-pack/v1"),
   templateId: z.string().min(1),
@@ -167,6 +190,13 @@ export const templatePackSchema = z.object({
 });
 
 export type TemplatePackParsed = z.infer<typeof templatePackSchema>;
+
+/** v2 extends the frozen v1 envelope with portable editor and publish metadata. */
+export const templatePackV2Schema = templatePackSchema.extend({
+  schema: z.literal("blockwise.template-pack/v2"), metadata: templateMetadataSchema,
+});
+export const templatePackAnySchema = z.union([templatePackV2Schema, templatePackSchema]);
+export type TemplatePackV2Parsed = z.infer<typeof templatePackV2Schema>;
 
 // ---------------------------------------------------------------------------
 // AdDocument v1 (customer-side document referencing a pack)

@@ -2,8 +2,8 @@
 
 // AdStudio v2 variant-pack builder — deterministic, source-free, build-time only.
 //
-// Derives EXACTLY `count` complete layered template variants from ONE analysed
-// source ad, honouring the job brief's requested pack size. Each variant is a
+// Derives one semantic template (or explicitly requested multi-concept variants)
+// from ONE analysed source ad. Each template is a
 // full `adstudio.template.v2` doc with native 4:5 feed and 9:16 story formats,
 // its own plate assets, editable text/image inputs, the complete Meta publish
 // block, evidence, and a deterministic sample render. All variants share the
@@ -29,7 +29,7 @@
 //   {
 //     "schema": "adstudio.variant-pack.contract.v1",
 //     "packId": "meta-<slug>-<srchash8>",
-//     "count": 5,
+//     "mode": "single-template",
 //     "name": "...", "goal": "buyer_leads", "offerId": "...",
 //     "category": "real-estate", "tags": [...], "audienceIntent": "...",
 //     "classification": { "ad_type": "...", "primary_intent": "...", "property_or_agent_focus": "..." },
@@ -266,7 +266,9 @@ function buildLayout(format, skeleton, text, heightPx) {
 }
 
 function buildDoc({ contract, variantIndex, skeleton, fonts, plates, sampleHash, slotSha, slotSrc }) {
-  const id = `${contract.packId}-v${String(variantIndex).padStart(2, "0")}`;
+  const id = contract.mode === "multi-concept"
+    ? `${contract.packId}-v${String(variantIndex).padStart(2, "0")}`
+    : contract.templateId || contract.packId;
   const feed = buildLayout("4:5", skeleton.feed, contract.text, 1350);
   const story = buildLayout("9:16", skeleton.story, contract.text, 1920);
   feed.plate = { src: `/adstudio-templates/${id}/plate-feed.webp`, sha256: plates.feed };
@@ -344,9 +346,10 @@ async function main() {
     process.exit(2);
   }
   const contract = readJson(contractPath);
-  const count = Number(contract.count ?? 0);
-  if (!Number.isInteger(count) || count < 2 || count > 12) {
-    throw new Error(`contract.count must be an integer in [2,12], got ${contract.count}`);
+  const multiConcept = contract.mode === "multi-concept";
+  const count = multiConcept ? Number(contract.count ?? 0) : 1;
+  if (multiConcept && (!Number.isInteger(count) || count < 2 || count > 12)) {
+    throw new Error(`multi-concept contract.count must be an integer in [2,12], got ${contract.count}`);
   }
   const repoRoot = resolve(argValue("--repo") || REPO_ROOT);
   const galleryDir = join(repoRoot, "src", "lib", "adstudio", "template-gallery-v2");
@@ -399,7 +402,9 @@ async function main() {
   for (let i = 0; i < count; i += 1) {
     const variantIndex = i + 1;
     const skeleton = skeletonKeys[i];
-    const id = `${contract.packId}-v${String(variantIndex).padStart(2, "0")}`;
+    const id = multiConcept
+      ? `${contract.packId}-v${String(variantIndex).padStart(2, "0")}`
+      : contract.templateId || contract.packId;
     variantIds.push(id);
     mkdirSync(join(assetsDir, id), { recursive: true });
     mkdirSync(join(publicDir, "adstudio-templates", id), { recursive: true });
@@ -461,8 +466,9 @@ async function main() {
   }
 
   const manifestOut = {
-    schema: "adstudio.variant-pack.manifest.v1",
+    schema: "adstudio.variant-pack.manifest.v2",
     packId: contract.packId,
+    mode: multiConcept ? "multi-concept" : "single-template",
     count,
     variantIds,
     sourceAd: { file: contract.sourceAd.file, contentHash: contract.sourceAd.contentHash },

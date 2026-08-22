@@ -97,6 +97,7 @@ describe("variant-pack — authoritative exactly-five pack", () => {
       const source = join(ROOT, "public", "adstudio-samples", "photos", "int-bedroom.png");
       const contract = {
         schema: "adstudio.variant-pack.contract.v1",
+        mode: "multi-concept",
         packId: "meta-regression-pack-e67bfaec",
         count: 5,
         name: "Regression Pack",
@@ -175,12 +176,41 @@ describe("variant-pack — authoritative exactly-five pack", () => {
     }
   });
 
+  it("single-template mode emits one semantic ID with Feed and Story layouts", () => {
+    const candidate = mkdtempSync(join(os.tmpdir(), "adstudio-single-test-"));
+    try {
+      const source = join(ROOT, "public", "adstudio-samples", "photos", "int-bedroom.png");
+      const contract = {
+        schema: "adstudio.variant-pack.contract.v1", mode: "single-template",
+        packId: "meta-single-source-e67bfaec", name: "Single", goal: "buyer_leads", offerId: "buyer-guide",
+        category: "real-estate", tags: ["meta"], audienceIntent: "buyers",
+        classification: { ad_type: "single_image", primary_intent: "other", property_or_agent_focus: "property" },
+        sourceAd: { file: "e67bfaec/int-bedroom.png", contentHash: sha256(readFileSync(source)) },
+        text: { headline: "COSTLY MISTAKES", supporting: "When Buying a Home", handle: "@yourhandle", arrow: ">" },
+      };
+      const contractPath = join(candidate, "contract.json");
+      writeFileSync(contractPath, JSON.stringify(contract));
+      const result = runNode(["scripts/adstudio/v2/variant-pack.mjs", "--contract", contractPath, "--repo", candidate, "--source", source]);
+      assert.equal(result.status, 0, result.stderr);
+      const manifest = JSON.parse(result.stdout);
+      assert.equal(manifest.mode, "single-template");
+      assert.equal(manifest.count, 1);
+      assert.equal(manifest.variantIds.length, 1);
+      const doc = JSON.parse(readFileSync(join(candidate, "src", "lib", "adstudio", "template-gallery-v2", manifest.variantIds[0], "template.json"), "utf8"));
+      assert.equal(doc.formats.feed.format, "4:5");
+      assert.equal(doc.formats.story.format, "9:16");
+      assert.equal(doc.formats.feed.width, 1080);
+      assert.equal(doc.formats.story.height, 1920);
+    } finally { rmSync(candidate, { recursive: true, force: true }); }
+  });
+
   it("two INDEPENDENT templates from one source still fail the gate (no weakening)", () => {
     const candidate = mkdtempSync(join(os.tmpdir(), "adstudio-dup-test-"));
     try {
       const source = join(ROOT, "public", "adstudio-samples", "photos", "int-bedroom.png");
       const contract = {
         schema: "adstudio.variant-pack.contract.v1",
+        mode: "multi-concept",
         packId: "meta-dup-source-e67bfaec",
         count: 2,
         name: "Dup Source",

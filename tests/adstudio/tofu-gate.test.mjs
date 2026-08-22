@@ -11,6 +11,7 @@ const runNode = (args, env = {}) => spawnSync("node", args, { cwd: REPO, encodin
 
 const CONTRACT = {
   schema: "adstudio.variant-pack.contract.v1",
+  mode: "multi-concept",
   packId: "meta-tofu-gate-test",
   count: 5,
   name: "Tofu Gate Test Pack",

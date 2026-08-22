@@ -26,14 +26,14 @@
 // directory is made read-only after writing (immutable).
 
 import { createHash, generateKeyPairSync, sign } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, writeFileSync, copyFileSync, rmSync, chmodSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync, copyFileSync, rmSync, chmodSync, readdirSync } from "node:fs";
 import { join, resolve, dirname, basename } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import sharp from "sharp";
 
 import { renderAdDocToPng } from "../../../src/lib/adstudio/v2/render/server.ts";
-import { templatePackSchema } from "../../../packages/ad-template-pack-contract/src/index.ts";
+import { templatePackV2Schema } from "../../../packages/ad-template-pack-contract/src/index.ts";
 import { computeManifestHash, canonicalJson } from "../../../packages/ad-template-pack-contract/src/hash.ts";
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
@@ -56,14 +56,44 @@ function argValue(flag) {
 
 const COLOUR_ROLES = ["background", "primary", "secondary", "accent", "mainText", "inverseText"];
 
-function v2ToTemplatePack({ doc, feedPreviewBytes, storyPreviewBytes, plateFiles, createdAt }) {
+function pixelRect(rect, width, height) {
+  return { x: rect.x * width, y: rect.y * height, width: rect.width * width, height: rect.height * height };
+}
+
+function v2ToTemplatePack({ doc, feedPreviewBytes, storyPreviewBytes, plateFiles, createdAt, publicBaseUrl }) {
+  const assetUrl = (key) => publicBaseUrl ? `${publicBaseUrl}/assets/${plateFiles[key]?.fileName ?? key}` : undefined;
+  const metadata = {
+    title: doc.name,
+    description: `${doc.category} ${doc.audienceIntent} template`,
+    gallerySamples: {
+      feed: { assetKey: "feed-sample", placement: "feed", purpose: "gallery_sample", ...(publicBaseUrl ? { url: assetUrl("feed-sample") } : {}) },
+      story: { assetKey: "story-sample", placement: "story", purpose: "gallery_sample", ...(publicBaseUrl ? { url: assetUrl("story-sample") } : {}) },
+    },
+    metaCopyDefaults: {
+      primaryText: doc.publish?.copy?.primaryText ?? [],
+      headlines: doc.publish?.copy?.headlines ?? [],
+      descriptions: doc.publish?.copy?.descriptions ?? [],
+      cta: doc.publish?.cta ?? "LEARN_MORE",
+    },
+    aiWritingGuidance: { summary: "Keep copy concise, factual, and consistent with the declared offer.", fields: Object.fromEntries((doc.inputs?.text ?? []).map((input) => [input.key, `${input.label}; maximum ${input.maxLength} characters.`])) },
+    publishRequirements: {
+      objective: doc.publish?.objective ?? "OUTCOME_LEADS",
+      specialAdCategory: doc.publish?.specialAdCategory ?? null,
+      instantForm: { required: Boolean(doc.publish?.leadForm), dependency: doc.publish?.leadForm ? "instant_form" : null },
+      destination: { required: false, kind: "none", dependency: null },
+    },
+    replacementAssets: [{ assetKey: "customer-photo-fixture", purpose: "replacement", ...(publicBaseUrl ? { url: assetUrl("customer-photo-fixture") } : {}) }],
+    realAssetRefs: [],
+  };
   const layout = (docLayout, placement, previewBytes) => {
+    const width = 1080;
+    const height = placement === "feed" ? 1350 : 1920;
     const layers = [];
     layers.push({
       type: "plate",
       layerId: "plate",
       colourRole: "background",
-      geometry: { x: 0, y: 0, width: 1, height: 1 },
+      geometry: { x: 0, y: 0, width, height },
       protected: false,
     });
     for (const layer of docLayout.layers) {
@@ -72,7 +102,7 @@ function v2ToTemplatePack({ doc, feedPreviewBytes, storyPreviewBytes, plateFiles
           type: "image_slot",
           layerId: layer.id,
           inputKey: layer.inputKey,
-          geometry: layer.box,
+          geometry: pixelRect(layer.box, width, height),
           mask: layer.mask.kind === "rounded" ? "rounded_rect" : "none",
           minSourceWidth: layer.minSourcePx?.width ?? 540,
           minSourceHeight: layer.minSourcePx?.height ?? 675,
@@ -85,7 +115,7 @@ function v2ToTemplatePack({ doc, feedPreviewBytes, storyPreviewBytes, plateFiles
           type: "text",
           layerId: layer.id,
           inputKey: layer.inputKey,
-          geometry: layer.box,
+          geometry: pixelRect(layer.box, width, height),
           font: { file: basename(font?.file ?? layer.typo.fontId), sha256: font?.sha256 ?? "0".repeat(64) },
           fontSize: Math.round(layer.typo.sizeRatio * 100),
           lineHeight: layer.typo.lineHeight,
@@ -100,15 +130,15 @@ function v2ToTemplatePack({ doc, feedPreviewBytes, storyPreviewBytes, plateFiles
     }
     const safeZones = placement === "story"
       ? [
-          { x: 0, y: 0, width: 1, height: 250 / 1920 },
-          { x: 0, y: (1920 - 340) / 1920, width: 1, height: 340 / 1920 },
+          { x: 0, y: 0, width, height: 250 },
+          { x: 0, y: 1920 - 340, width, height: 340 },
         ]
-      : [{ x: 0, y: 0, width: 1, height: 1 }];
+      : [{ x: 0, y: 0, width, height }];
     return { placement, layers, safeZones };
   };
 
   const pack = {
-    schema: "blockwise.template-pack/v1",
+    schema: "blockwise.template-pack/v2",
     templateId: doc.id,
     version: 1,
     packId: doc.provenance.packId ?? doc.id,
@@ -155,6 +185,7 @@ function v2ToTemplatePack({ doc, feedPreviewBytes, storyPreviewBytes, plateFiles
       reviewerVersions: ["adstudio-subject-invariance-v1"],
       stressFixtureResults: {},
     },
+    metadata,
   };
   return pack;
 }
@@ -164,7 +195,7 @@ function signPack(pack, privateKey) {
   const signature = sign(null, Buffer.from(manifestHash, "utf8"), privateKey).toString("hex");
   const signed = { ...pack, manifestSha256: manifestHash, signature };
   // Validate the SIGNED pack (manifestSha256 + signature must be present).
-  const parsed = templatePackSchema.safeParse(signed);
+  const parsed = templatePackV2Schema.safeParse(signed);
   if (!parsed.success) {
     throw new Error(`TemplatePack ${pack.templateId} failed schema validation: ${JSON.stringify(parsed.error.issues.slice(0, 4))}`);
   }
@@ -184,6 +215,8 @@ async function main() {
 
   const manifest = readJson(join(candidate, "variant-pack.manifest.json"));
   const releaseId = `${manifest.packId}-${runId.slice(-8)}`;
+  const publicRoot = process.env.FRANK_PUBLIC_RELEASE_ROOT ? resolve(process.env.FRANK_PUBLIC_RELEASE_ROOT) : null;
+  const publicBaseUrl = publicRoot ? `https://frank.fail/releases/ad-template-generator/${releaseId}` : null;
   const releaseStoreRoot = resolveReleaseStoreRoot(process.env);
   const releaseDir = resolve(argValue("--release") || join(releaseStoreRoot, releaseId));
   if (releaseDir !== releaseStoreRoot && !releaseDir.startsWith(releaseStoreRoot + "/")) {
@@ -198,7 +231,7 @@ async function main() {
   mkdirSync(releaseDir, { recursive: true });
 
   const templatesDir = join(releaseDir, "templates");
-  const packV1Dir = join(releaseDir, "pack-v1");
+  const packV1Dir = join(releaseDir, "pack-v2");
   const previewsDir = join(releaseDir, "previews");
   const assetsDir = join(releaseDir, "assets");
   for (const dir of [templatesDir, packV1Dir, previewsDir, assetsDir]) mkdirSync(dir, { recursive: true });
@@ -221,6 +254,8 @@ async function main() {
       copyFileSync(src, join(assetsDir, `${id}-plate-${format}.webp`));
     }
     copyFileSync(join(candidate, "public", "adstudio-templates", id, "sample.png"), join(assetsDir, `${id}-sample.png`));
+    copyFileSync(join(candidate, "public", "adstudio-templates", id, "sample-story.png"), join(assetsDir, `${id}-sample-story.png`));
+    copyFileSync(slotPath, join(assetsDir, `${id}-customer-photo-fixture.png`));
 
     // deterministic previews (no image model)
     const instance = (format) => ({
@@ -241,22 +276,39 @@ async function main() {
       "story-plate": { fileName: `${id}-plate-story.webp`, sha256: doc.formats.story.plate.sha256, mimeType: "image/webp" },
       "feed-preview": { fileName: `${id}-feed.png`, sha256: sha256(feedPreview), mimeType: "image/png" },
       "story-preview": { fileName: `${id}-story.png`, sha256: sha256(storyPreview), mimeType: "image/png" },
+      "feed-sample": { fileName: `${id}-sample.png`, sha256: sha256(readFileSync(join(candidate, "public", "adstudio-templates", id, "sample.png"))), mimeType: "image/png" },
+      "story-sample": { fileName: `${id}-sample-story.png`, sha256: sha256(readFileSync(join(candidate, "public", "adstudio-templates", id, "sample-story.png"))), mimeType: "image/png" },
+      "customer-photo-fixture": { fileName: `${id}-customer-photo-fixture.png`, sha256: slotSha, mimeType: "image/png" },
     };
-    const unsigned = v2ToTemplatePack({ doc, feedPreviewBytes: feedPreview, storyPreviewBytes: storyPreview, plateFiles, createdAt });
+    const unsigned = v2ToTemplatePack({ doc, feedPreviewBytes: feedPreview, storyPreviewBytes: storyPreview, plateFiles, createdAt, publicBaseUrl });
     const signed = signPack(unsigned, privateKey);
     if (computeManifestHash(signed) !== signed.manifestSha256 || !signed.signature) throw new Error(`${id}: signing failed`);
     writeJson(join(packV1Dir, `${id}.json`), signed);
     signedPacks.push(signed);
-    artifacts.push({ templateId: id, packFile: `pack-v1/${id}.json`, manifestSha256: signed.manifestSha256, signature: signed.signature });
+    artifacts.push({ templateId: id, packFile: `pack-v2/${id}.json`, manifestSha256: signed.manifestSha256, signature: signed.signature });
   }
 
   writeJson(join(releaseDir, "variant-pack.manifest.json"), manifest);
+
+  // Optional public serving tree: only the signed portable pack and its
+  // referenced assets/previews are copied; candidate/source/evidence remain private.
+  if (publicRoot) {
+    const publicReleaseDir = join(publicRoot, releaseId);
+    mkdirSync(join(publicReleaseDir, "pack-v2"), { recursive: true });
+    mkdirSync(join(publicReleaseDir, "assets"), { recursive: true });
+    mkdirSync(join(publicReleaseDir, "previews"), { recursive: true });
+    for (const artifact of artifacts) {
+      copyFileSync(join(releaseDir, artifact.packFile), join(publicReleaseDir, artifact.packFile));
+    }
+    for (const file of readdirSync(assetsDir)) copyFileSync(join(assetsDir, file), join(publicReleaseDir, "assets", file));
+    for (const file of readdirSync(previewsDir)) copyFileSync(join(previewsDir, file), join(publicReleaseDir, "previews", file));
+  }
 
   // bundle artifact: canonical JSON of the signed pack refs + manifest. The
   // `integrity` block is the release receipt the Tool framework validates:
   // the artifact's integrity.signature must equal the envelope signature.
   const bundle = {
-    schema: "blockwise.template-pack/v1",
+    schema: "blockwise.template-pack/v2",
     releaseId,
     packId: manifest.packId,
     sourceAd: manifest.sourceAd,
@@ -283,7 +335,12 @@ async function main() {
   const finalBundleSha = sha256(finalBundleBytes);
   writeFileSync(join(releaseDir, "pack.bundle.json"), finalBundleBytes);
 
-  const artifactRef = `https://frank.fail/api/ad-studio/runs/${runId}/artifacts/${releaseId}-pack.bundle.json`;
+  const artifactRef = publicBaseUrl
+    ? `${publicBaseUrl}/pack-v2/${artifacts[0].templateId}.json`
+    : `https://frank.fail/api/ad-studio/runs/${runId}/artifacts/${releaseId}-pack.bundle.json`;
+  const portablePackSha = publicBaseUrl
+    ? sha256(Buffer.from(canonicalJson(signedPacks[0])))
+    : finalBundleSha;
   const now = new Date().toISOString();
   const release = {
     schema: "schema://frank.ad-template-generator-release/v1",
@@ -296,12 +353,12 @@ async function main() {
     settings_ref: "hermes://ad-template-generator/settings/recommended-quality-v2",
     pipeline_id: "variant-pack-release",
     pipeline_version: "1.0.0",
-    consumer_compatibility: ["blockwise-template-pack-v1"],
+    consumer_compatibility: ["blockwise-template-pack-v1", "blockwise-template-pack-v2"],
     template_pack: {
-      schema: "blockwise.template-pack/v1",
+      schema: "blockwise.template-pack/v2",
       pack_id: manifest.packId,
       artifact_ref: artifactRef,
-      sha256: finalBundleSha,
+      sha256: portablePackSha,
       signature_algorithm: "ed25519",
       signature: bundleSignature,
     },

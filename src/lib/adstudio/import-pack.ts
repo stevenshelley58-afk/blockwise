@@ -1,5 +1,5 @@
 import { createPublicKey, verify as verifyEd25519 } from "node:crypto";
-import { canonicalJson, templatePackSchema, sha256Hex } from "../../../packages/ad-template-pack-contract/src/index.ts";
+import { canonicalJson, templatePackAnySchema, sha256Hex } from "../../../packages/ad-template-pack-contract/src/index.ts";
 import type { TemplatePack } from "../../../packages/ad-template-pack-contract/src/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -109,7 +109,7 @@ export async function importTemplatePack(
   }
 
   // 7. Schema validation
-  const parsed = templatePackSchema.safeParse(packJson);
+  const parsed = templatePackAnySchema.safeParse(packJson);
   if (!parsed.success) {
     throw importError("schema_invalid", "Pack failed schema validation", parsed.error.issues);
   }
