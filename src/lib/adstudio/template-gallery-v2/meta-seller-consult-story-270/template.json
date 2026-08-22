@@ -1,0 +1,350 @@
+{
+  "schema": "adstudio.template.v2",
+  "id": "meta-seller-consult-story-270",
+  "name": "Seller Consultation — Story 270",
+  "goal": "seller_leads",
+  "offerId": "seller-consultation",
+  "category": "seller-lead-generation",
+  "tags": [
+    "seller-consult",
+    "lead-generation",
+    "story"
+  ],
+  "audienceIntent": "Homeowners thinking about selling and seeking expert guidance",
+  "classification": {
+    "ad_type": "lead_generation",
+    "primary_intent": "seller_consultation",
+    "property_or_agent_focus": "property"
+  },
+  "provenance": {
+    "sourceAd": {
+      "file": "02_stories_reels_9x16/meta_270.png",
+      "contentHash": "7690271f39f161134f97a8debdb403ccf4d6da32990da3d1770b636aaecbd915"
+    },
+    "sample": {
+      "imageSrc": "/adstudio-templates/meta-seller-consult-story-270/sample.png",
+      "contentHash": "13eeeaa30c149984966d84a18532a0855a22e3d327094889ab0036e006025484",
+      "generatedBy": "deterministic_render"
+    },
+    "decomposedFrom": "source"
+  },
+  "restyle": {
+    "paletteMap": {},
+    "plateRemap": {
+      "hue": 12
+    },
+    "replacedAssets": [
+      "property_photo_1",
+      "property_photo_2",
+      "agency_logo"
+    ]
+  },
+  "fonts": [
+    {
+      "fontId": "arimo",
+      "family": "Arimo",
+      "weight": 600,
+      "italic": false,
+      "file": "/fonts/adstudio/arimo-600.woff2",
+      "sha256": "e56ba72ece2579125a34dda8b81f4a8692ee712757a5f5910dcf7c084cd0082e"
+    },
+    {
+      "fontId": "arimo",
+      "family": "Arimo",
+      "weight": 600,
+      "italic": false,
+      "file": "/fonts/adstudio/arimo-600.woff2",
+      "sha256": "e56ba72ece2579125a34dda8b81f4a8692ee712757a5f5910dcf7c084cd0082e"
+    },
+    {
+      "fontId": "manrope",
+      "family": "Manrope",
+      "weight": 600,
+      "italic": false,
+      "file": "/fonts/adstudio/manrope-600.woff2",
+      "sha256": "f7ac6258da20ab7541939b59851155753d1d24f1b30cbcb949077a3faa3d1593"
+    },
+    {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "weight": 700,
+      "italic": false,
+      "file": "/fonts/adstudio/merriweather-700.woff2",
+      "sha256": "4e1ab49396c02be0d9a2a25eed7bc73781c047d85fcb5dfc2889873eaf992b09"
+    },
+    {
+      "fontId": "lora",
+      "family": "Lora",
+      "weight": 700,
+      "italic": false,
+      "file": "/fonts/adstudio/lora-700.woff2",
+      "sha256": "c05fd5289492ed310ed882259b944ca5287e76e572a65d92d3941f9f44f0342a"
+    }
+  ],
+  "formats": {
+    "feed": {
+      "format": "4:5",
+      "width": 1080,
+      "height": 1350,
+      "plate": {
+        "src": "/adstudio-templates/meta-seller-consult-story-270/plate-feed.webp",
+        "sha256": "320c9c00c96b54d573671b7311265210e4195f7b1e313f8fb4baa08ff4f3acdf"
+      },
+      "layers": [
+        {
+          "id": "slot-property_photo_1",
+          "z": 2,
+          "box": {
+            "x": 0.001851851851851852,
+            "y": 0.06518518518518518,
+            "width": 0.49166666666666664,
+            "height": 0.5696296296296296
+          },
+          "type": "image_slot",
+          "inputKey": "property_photo_1",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 531,
+            "height": 769
+          }
+        },
+        {
+          "id": "slot-property_photo_2",
+          "z": 3,
+          "box": {
+            "x": 0.5064814814814815,
+            "y": 0.06518518518518518,
+            "width": 0.49166666666666664,
+            "height": 0.5696296296296296
+          },
+          "type": "image_slot",
+          "inputKey": "property_photo_2",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 531,
+            "height": 769
+          }
+        }
+      ]
+    },
+    "story": {
+      "format": "9:16",
+      "width": 1080,
+      "height": 1920,
+      "plate": {
+        "src": "/adstudio-templates/meta-seller-consult-story-270/plate-story.webp",
+        "sha256": "1f27f1c05b95ea1664041dc207cbe263f27e9d37e2d9aadc1f83d322c352982c"
+      },
+      "layers": [
+        {
+          "id": "slot-property_photo_1",
+          "z": 2,
+          "box": {
+            "x": 0.001851851851851852,
+            "y": 0.19427083333333334,
+            "width": 0.49166666666666664,
+            "height": 0.4005208333333333
+          },
+          "type": "image_slot",
+          "inputKey": "property_photo_1",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 531,
+            "height": 769
+          }
+        },
+        {
+          "id": "slot-property_photo_2",
+          "z": 3,
+          "box": {
+            "x": 0.5064814814814815,
+            "y": 0.19427083333333334,
+            "width": 0.49166666666666664,
+            "height": 0.4005208333333333
+          },
+          "type": "image_slot",
+          "inputKey": "property_photo_2",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 531,
+            "height": 769
+          }
+        },
+        {
+          "id": "slot-agency_logo",
+          "z": 4,
+          "box": {
+            "x": 0.4287037037037037,
+            "y": 0.05416666666666667,
+            "width": 0.14,
+            "height": 0.0734375
+          },
+          "type": "image_slot",
+          "inputKey": "agency_logo",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 151,
+            "height": 141
+          }
+        }
+      ],
+      "native": true
+    }
+  },
+  "inputs": {
+    "images": [
+      {
+        "key": "property_photo_1",
+        "label": "property photo 1",
+        "required": true,
+        "aspect": "portrait",
+        "description": "Customer photo drawn into the declared slot."
+      },
+      {
+        "key": "property_photo_2",
+        "label": "property photo 2",
+        "required": true,
+        "aspect": "portrait",
+        "description": "Customer photo drawn into the declared slot."
+      },
+      {
+        "key": "agency_logo",
+        "label": "agency logo",
+        "required": true,
+        "aspect": "portrait",
+        "description": "Customer photo drawn into the declared slot."
+      }
+    ],
+    "text": [
+      {
+        "key": "body",
+        "label": "Body",
+        "required": true,
+        "maxLength": 90,
+        "sample": "Book a no-pressure seller consultation with a local property specialist."
+      },
+      {
+        "key": "cta",
+        "label": "Cta",
+        "required": true,
+        "maxLength": 44,
+        "sample": "BOOK A SELLER CONSULTATION"
+      },
+      {
+        "key": "headline",
+        "label": "Headline",
+        "required": true,
+        "maxLength": 38,
+        "sample": "THINKING OF SELLING?"
+      },
+      {
+        "key": "subheadline",
+        "label": "Subheadline",
+        "required": true,
+        "maxLength": 37,
+        "sample": "PLAN YOUR NEXT MOVE"
+      },
+      {
+        "key": "website",
+        "label": "Website",
+        "required": true,
+        "maxLength": 35,
+        "sample": "youragency.com.au"
+      }
+    ]
+  },
+  "publish": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "apiVersionMin": "v26.0",
+    "copy": {
+      "primaryText": [
+        "Ask for the property details."
+      ],
+      "headlines": [
+        "Property details"
+      ],
+      "descriptions": [
+        "Request more information"
+      ]
+    },
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Request your free seller consultation",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "thankYou": {
+        "title": "Thanks",
+        "body": "We'll be in touch."
+      }
+    },
+    "placements": {
+      "publisherPlatforms": [
+        "facebook",
+        "instagram"
+      ],
+      "facebookPositions": [
+        "feed"
+      ],
+      "instagramPositions": [
+        "stream"
+      ]
+    },
+    "formatRouting": {
+      "feed": "4:5",
+      "story": null
+    },
+    "creativeFeatures": {
+      "adapt_to_placement": "OPT_OUT",
+      "image_touchups": "OPT_OUT",
+      "image_templates": "OPT_OUT",
+      "inline_comment": "OPT_OUT",
+      "enhance_cta": "OPT_OUT",
+      "text_optimizations": "OPT_OUT",
+      "image_animation": "OPT_OUT",
+      "image_background_gen": "OPT_OUT",
+      "video_auto_crop": "OPT_OUT",
+      "translate_voiceover": "OPT_OUT",
+      "text_translation": "OPT_OUT",
+      "media_type_automation": "OPT_OUT",
+      "product_extensions": "OPT_OUT"
+    },
+    "previewFormats": [
+      "MOBILE_FEED_STANDARD",
+      "INSTAGRAM_STANDARD"
+    ]
+  },
+  "editPolicy": {
+    "mode": "guided",
+    "advancedUnlockable": true,
+    "lockedLayerIds": []
+  },
+  "exactness": {
+    "status": "qa",
+    "residuals": {},
+    "bakedTextKeys": [
+      "body",
+      "cta",
+      "headline",
+      "subheadline",
+      "website"
+    ]
+  }
+}

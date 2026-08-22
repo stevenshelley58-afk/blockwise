@@ -1,0 +1,277 @@
+{
+  "schema": "adstudio.template.v2",
+  "id": "meta-feed-162",
+  "name": "Borcelle Villa For Rent",
+  "goal": "buyer_leads",
+  "offerId": "for-rent-borcelle-villa",
+  "category": "rental_property",
+  "tags": [
+    "villa",
+    "for rent",
+    "luxury",
+    "short term",
+    "2 bedroom",
+    "living room",
+    "kitchen"
+  ],
+  "audienceIntent": "People looking to rent a premium villa for short stays",
+  "classification": {
+    "ad_type": "property_listing",
+    "primary_intent": "buyer_leads",
+    "property_or_agent_focus": "property"
+  },
+  "provenance": {
+    "sourceAd": {
+      "file": "01_feed_4x5_best/meta_162.png",
+      "contentHash": "70d1efbae33cb4121acd82cead76daa3189a611d3deb3c6e10e9e08f490d4880"
+    },
+    "sample": {
+      "imageSrc": "/adstudio-templates/meta-feed-162/sample.png",
+      "contentHash": "faacb0bd20d8b83e6a9d064298a0a4629ca1f35d4774bd20255087cbc6c82c2c",
+      "generatedBy": "deterministic_render"
+    },
+    "decomposedFrom": "source"
+  },
+  "restyle": {
+    "paletteMap": {
+      "#828fa8": "#1f242b",
+      "#8f8b8e": "#1f242b"
+    },
+    "replacedAssets": [],
+    "note": "migrated from v1 (source); font remaps: source-sans-3 -> arimo; restyle pass pending in Studio"
+  },
+  "fonts": [
+    {
+      "fontId": "arimo",
+      "family": "Arimo",
+      "weight": 600,
+      "italic": false,
+      "file": "/fonts/adstudio/arimo-600.woff2",
+      "sha256": "e56ba72ece2579125a34dda8b81f4a8692ee712757a5f5910dcf7c084cd0082e"
+    },
+    {
+      "fontId": "kanit",
+      "family": "Kanit",
+      "weight": 900,
+      "italic": false,
+      "file": "/fonts/adstudio/kanit-900.woff2",
+      "sha256": "f001e4c46c00f65965198ba7547aadd375aa6222feff177c57c943d3bf6794d3"
+    },
+    {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "weight": 400,
+      "italic": false,
+      "file": "/fonts/adstudio/smooch-sans-400.woff2",
+      "sha256": "a1b64ed5521846da168a3a1907019f6ee8699958c6807b8d33d962d33153cff8"
+    }
+  ],
+  "formats": {
+    "feed": {
+      "format": "4:5",
+      "width": 1080,
+      "height": 1350,
+      "plate": {
+        "src": "/adstudio-templates/meta-feed-162/plate-feed.webp",
+        "sha256": "79cf4d580e397eb447340936e8a7aee27edc8422f0d3fec7a3cc9ad6d7493378"
+      },
+      "layers": [
+        {
+          "id": "text-property_name",
+          "z": 10,
+          "box": {
+            "x": 0.16455078125,
+            "y": 0.11328125,
+            "width": 0.6767578125,
+            "height": 0.013671875
+          },
+          "type": "text",
+          "inputKey": "property_name",
+          "typo": {
+            "fontId": "kanit",
+            "family": "Kanit",
+            "fallbackFamily": "sans-serif",
+            "weight": 900,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 1.4749163879598663,
+            "lineHeight": 1.495,
+            "tracking": 0,
+            "align": "center",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 40,
+            "maxLines": 4,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.121,
+            "detectionScore": 0.375,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        }
+      ]
+    },
+    "story": {
+      "format": "9:16",
+      "width": 1080,
+      "height": 1920,
+      "plate": {
+        "src": "/adstudio-templates/meta-feed-162/plate-story.webp",
+        "sha256": "f5252bd213e01b00c632e5e51e9885119f264bc7bb67e5b3ba58e1f8ab589703"
+      },
+      "layers": [
+        {
+          "id": "text-property_name",
+          "z": 10,
+          "box": {
+            "x": 0.16455078125,
+            "y": 0.20867919921875,
+            "width": 0.6767578125,
+            "height": 0.009470621744791666
+          },
+          "type": "text",
+          "inputKey": "property_name",
+          "typo": {
+            "fontId": "kanit",
+            "family": "Kanit",
+            "fallbackFamily": "sans-serif",
+            "weight": 900,
+            "italic": false,
+            "case": "upper",
+            "sizeRatio": 1.4749163879598663,
+            "lineHeight": 1.495,
+            "tracking": 0,
+            "align": "center",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 40,
+            "maxLines": 4,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.121,
+            "detectionScore": 0.375,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        }
+      ]
+    }
+  },
+  "inputs": {
+    "images": [],
+    "text": [
+      {
+        "key": "features",
+        "label": "Key Features",
+        "required": true,
+        "maxLength": 60,
+        "sample": "2 BEDROOMS | LOUNGE | KITCHEN"
+      },
+      {
+        "key": "property_name",
+        "label": "Property Name",
+        "required": true,
+        "maxLength": 40,
+        "sample": "CEDAR COAST STAY"
+      },
+      {
+        "key": "main_cta",
+        "label": "Main Call to Action",
+        "required": true,
+        "maxLength": 20,
+        "sample": "BOOK YOUR STAY"
+      },
+      {
+        "key": "price_per_night",
+        "label": "Price Per Night",
+        "required": true,
+        "maxLength": 20,
+        "sample": "$420 / NIGHT"
+      }
+    ]
+  },
+  "publish": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "apiVersionMin": "v26.0",
+    "copy": {
+      "primaryText": [
+        "Ask for the property details."
+      ],
+      "headlines": [
+        "Property details"
+      ],
+      "descriptions": [
+        "Request more information"
+      ]
+    },
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Register your interest in this property",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "thankYou": {
+        "title": "Thanks",
+        "body": "We'll be in touch."
+      }
+    },
+    "placements": {
+      "publisherPlatforms": [
+        "facebook",
+        "instagram"
+      ],
+      "facebookPositions": [
+        "feed"
+      ],
+      "instagramPositions": [
+        "stream"
+      ]
+    },
+    "formatRouting": {
+      "feed": "4:5",
+      "story": "9:16"
+    },
+    "creativeFeatures": {
+      "adapt_to_placement": "OPT_OUT",
+      "image_touchups": "OPT_OUT",
+      "image_templates": "OPT_OUT",
+      "inline_comment": "OPT_OUT",
+      "enhance_cta": "OPT_OUT",
+      "text_optimizations": "OPT_OUT",
+      "image_animation": "OPT_OUT",
+      "image_background_gen": "OPT_OUT",
+      "video_auto_crop": "OPT_OUT",
+      "translate_voiceover": "OPT_OUT",
+      "text_translation": "OPT_OUT",
+      "media_type_automation": "OPT_OUT",
+      "product_extensions": "OPT_OUT"
+    },
+    "previewFormats": [
+      "MOBILE_FEED_STANDARD",
+      "INSTAGRAM_STANDARD"
+    ]
+  },
+  "editPolicy": {
+    "mode": "guided",
+    "advancedUnlockable": true,
+    "lockedLayerIds": []
+  },
+  "exactness": {
+    "status": "qa",
+    "residuals": {
+      "text-property_name": 0.11113745613052661
+    },
+    "bakedTextKeys": [
+      "features",
+      "main_cta",
+      "price_per_night"
+    ]
+  }
+}

@@ -1,0 +1,222 @@
+{
+  "schema": "adstudio.template.v2",
+  "id": "meta-downsizer-consult-story-266",
+  "name": "Downsizer Consultation — Story 266",
+  "goal": "downsizer_leads",
+  "offerId": "downsizer-consultation",
+  "category": "downsizer-lead-generation",
+  "tags": [
+    "downsizer",
+    "lead-generation",
+    "story"
+  ],
+  "audienceIntent": "Established homeowners planning a simpler property move",
+  "classification": {
+    "ad_type": "lead_generation",
+    "primary_intent": "downsizer_consultation",
+    "property_or_agent_focus": "agent"
+  },
+  "provenance": {
+    "sourceAd": {
+      "file": "02_stories_reels_9x16/meta_266.png",
+      "contentHash": "ee5e022ddeb1aec7e767858ea93e0664b85ac0a435d2115856b7340c700b272f"
+    },
+    "sample": {
+      "imageSrc": "/adstudio-templates/meta-downsizer-consult-story-266/sample.png",
+      "contentHash": "810d805327790645a4e3048f982a84a38551addaf79cad9b1e15b2eca96d3c4b",
+      "generatedBy": "deterministic_render"
+    },
+    "decomposedFrom": "source"
+  },
+  "restyle": {
+    "paletteMap": {},
+    "plateRemap": {
+      "hue": 12
+    },
+    "replacedAssets": []
+  },
+  "fonts": [
+    {
+      "fontId": "quicksand",
+      "family": "Quicksand",
+      "weight": 300,
+      "italic": false,
+      "file": "/fonts/adstudio/quicksand-300.woff2",
+      "sha256": "55155473f87144632373d538eb042733b2c98e5aa31810a873b44ae4620c1f55"
+    },
+    {
+      "fontId": "oswald",
+      "family": "Oswald",
+      "weight": 300,
+      "italic": false,
+      "file": "/fonts/adstudio/oswald-300.woff2",
+      "sha256": "84f168468881f1ae6cf11573f3befa2e83f2067e914a57dad0233e3a772e76f7"
+    },
+    {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "weight": 300,
+      "italic": false,
+      "file": "/fonts/adstudio/merriweather-300.woff2",
+      "sha256": "f4b7d84d4c4bd217985b5f4a93d9e61f63670a2efc5a5e6048afd044bc921330"
+    },
+    {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "weight": 800,
+      "italic": false,
+      "file": "/fonts/adstudio/merriweather-800.woff2",
+      "sha256": "234916daa3dd072625fad30f1ae31d989c101bcd73ae8f29023cfbbc9a711c8a"
+    },
+    {
+      "fontId": "plus-jakarta-sans",
+      "family": "Plus Jakarta Sans",
+      "weight": 500,
+      "italic": false,
+      "file": "/fonts/adstudio/plus-jakarta-sans-500.woff2",
+      "sha256": "579e73a04f73af905837351f4d529d94765af50d2faaaed8dfc4449872641849"
+    }
+  ],
+  "formats": {
+    "feed": {
+      "format": "4:5",
+      "width": 1080,
+      "height": 1350,
+      "plate": {
+        "src": "/adstudio-templates/meta-downsizer-consult-story-266/plate-feed.webp",
+        "sha256": "e40759f08a6a9da10866964b37dcf268e1826617f12bdb34bb1c50f69f6dd205"
+      },
+      "layers": []
+    },
+    "story": {
+      "format": "9:16",
+      "width": 1080,
+      "height": 1920,
+      "plate": {
+        "src": "/adstudio-templates/meta-downsizer-consult-story-266/plate-story.webp",
+        "sha256": "58bd60eb45674d6cef91add11611a46249d3de9d05f269553f053cc9f74c0fad"
+      },
+      "layers": [],
+      "native": true
+    }
+  },
+  "inputs": {
+    "images": [],
+    "text": [
+      {
+        "key": "body",
+        "label": "Body",
+        "required": true,
+        "maxLength": 96,
+        "sample": "Talk through timing, value and suitable next-home options with a local expert."
+      },
+      {
+        "key": "subheadline",
+        "label": "Subheadline",
+        "required": true,
+        "maxLength": 53,
+        "sample": "PLAN YOUR NEXT MOVE WITH CONFIDENCE"
+      },
+      {
+        "key": "headline",
+        "label": "Headline",
+        "required": true,
+        "maxLength": 44,
+        "sample": "THINKING ABOUT DOWNSIZING?"
+      },
+      {
+        "key": "cta",
+        "label": "Cta",
+        "required": true,
+        "maxLength": 39,
+        "sample": "BOOK A DOWNSIZER CHAT"
+      },
+      {
+        "key": "phone",
+        "label": "Phone",
+        "required": true,
+        "maxLength": 30,
+        "sample": "0400 123 456"
+      }
+    ]
+  },
+  "publish": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "apiVersionMin": "v26.0",
+    "copy": {
+      "primaryText": [
+        "Ask for the property details."
+      ],
+      "headlines": [
+        "Property details"
+      ],
+      "descriptions": [
+        "Request more information"
+      ]
+    },
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Request your free downsizing consultation",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "thankYou": {
+        "title": "Thanks",
+        "body": "We'll be in touch."
+      }
+    },
+    "placements": {
+      "publisherPlatforms": [
+        "facebook",
+        "instagram"
+      ],
+      "facebookPositions": [
+        "feed"
+      ],
+      "instagramPositions": [
+        "stream"
+      ]
+    },
+    "formatRouting": {
+      "feed": "4:5",
+      "story": null
+    },
+    "creativeFeatures": {
+      "adapt_to_placement": "OPT_OUT",
+      "image_touchups": "OPT_OUT",
+      "image_templates": "OPT_OUT",
+      "inline_comment": "OPT_OUT",
+      "enhance_cta": "OPT_OUT",
+      "text_optimizations": "OPT_OUT",
+      "image_animation": "OPT_OUT",
+      "image_background_gen": "OPT_OUT",
+      "video_auto_crop": "OPT_OUT",
+      "translate_voiceover": "OPT_OUT",
+      "text_translation": "OPT_OUT",
+      "media_type_automation": "OPT_OUT",
+      "product_extensions": "OPT_OUT"
+    },
+    "previewFormats": [
+      "MOBILE_FEED_STANDARD",
+      "INSTAGRAM_STANDARD"
+    ]
+  },
+  "editPolicy": {
+    "mode": "guided",
+    "advancedUnlockable": true,
+    "lockedLayerIds": []
+  },
+  "exactness": {
+    "status": "qa",
+    "residuals": {},
+    "bakedTextKeys": [
+      "body",
+      "subheadline",
+      "headline",
+      "phone",
+      "cta"
+    ]
+  }
+}

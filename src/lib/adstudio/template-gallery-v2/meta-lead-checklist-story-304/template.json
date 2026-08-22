@@ -1,0 +1,330 @@
+{
+  "schema": "adstudio.template.v2",
+  "id": "meta-lead-checklist-story-304",
+  "name": "Free Property Checklist — Story 304",
+  "goal": "seller_leads",
+  "offerId": "property-checklist-lead-magnet",
+  "category": "educational-lead-generation",
+  "tags": [
+    "education",
+    "lead-generation",
+    "story"
+  ],
+  "audienceIntent": "Property owners seeking practical guidance before their next move",
+  "classification": {
+    "ad_type": "lead_generation",
+    "primary_intent": "educational_lead_magnet",
+    "property_or_agent_focus": "property"
+  },
+  "provenance": {
+    "sourceAd": {
+      "file": "02_stories_reels_9x16/meta_304.png",
+      "contentHash": "15db4d72f3b3af099d5555e5271a0f1cccd86d65068a4f7e2257742f1fcb1597"
+    },
+    "sample": {
+      "imageSrc": "/adstudio-templates/meta-lead-checklist-story-304/sample.png",
+      "contentHash": "20c1e898603d5d53d92b6d0123a53915c73d496cc818359efc905d6472310ed5",
+      "generatedBy": "deterministic_render"
+    },
+    "decomposedFrom": "source"
+  },
+  "restyle": {
+    "paletteMap": {},
+    "plateRemap": {
+      "hue": 12
+    },
+    "replacedAssets": [
+      "background_photo"
+    ]
+  },
+  "fonts": [
+    {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "weight": 300,
+      "italic": false,
+      "file": "/fonts/adstudio/smooch-sans-300.woff2",
+      "sha256": "24c4dda0d38ff3000dbaf5c37b0035fc51791a693cc68101d14acb16c8504cb6"
+    },
+    {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "weight": 500,
+      "italic": false,
+      "file": "/fonts/adstudio/merriweather-500.woff2",
+      "sha256": "0b573a833832b8cafdcb3beeb64b2f4d524b7ca908c7d2232c2d78610b2c8ebd"
+    },
+    {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "weight": 600,
+      "italic": false,
+      "file": "/fonts/adstudio/merriweather-600.woff2",
+      "sha256": "3ef93c94387a5a08bbe3115b15b912ea9ed27cae4d5b7db869dc07c443fadc4c"
+    },
+    {
+      "fontId": "manrope",
+      "family": "Manrope",
+      "weight": 600,
+      "italic": false,
+      "file": "/fonts/adstudio/manrope-600.woff2",
+      "sha256": "f7ac6258da20ab7541939b59851155753d1d24f1b30cbcb949077a3faa3d1593"
+    },
+    {
+      "fontId": "poppins",
+      "family": "Poppins",
+      "weight": 900,
+      "italic": false,
+      "file": "/fonts/adstudio/poppins-900.woff2",
+      "sha256": "7e5f8b8628f6e5a751c907900f98f2a7396ecd08a6b5f6766cf6b564f4aa436c"
+    },
+    {
+      "fontId": "oswald",
+      "family": "Oswald",
+      "weight": 400,
+      "italic": false,
+      "file": "/fonts/adstudio/oswald-400.woff2",
+      "sha256": "e902b779e43944c300cf8ae5e4a1affa68cb8a823fd263dd2f479c4cdfbd213c"
+    },
+    {
+      "fontId": "manrope",
+      "family": "Manrope",
+      "weight": 700,
+      "italic": false,
+      "file": "/fonts/adstudio/manrope-700.woff2",
+      "sha256": "0dc9d9b75bffd07e25f727e8d67a39cc731e21c718b3b86267226bb4e2757813"
+    },
+    {
+      "fontId": "lato",
+      "family": "Lato",
+      "weight": 900,
+      "italic": false,
+      "file": "/fonts/adstudio/lato-900.woff2",
+      "sha256": "e266d64fae0958748c289b2288e29991b4b8386eb4935517c4544a2478cfb703"
+    }
+  ],
+  "formats": {
+    "feed": {
+      "format": "4:5",
+      "width": 1080,
+      "height": 1350,
+      "plate": {
+        "src": "/adstudio-templates/meta-lead-checklist-story-304/plate-feed.webp",
+        "sha256": "6baa5aedae48d3cc9bead5ff4f68c4ef16576e43d4a8b74e4c11f2ca6ba51622"
+      },
+      "layers": [
+        {
+          "id": "slot-background_photo",
+          "z": 2,
+          "box": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "type": "image_slot",
+          "inputKey": "background_photo",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 1080,
+            "height": 1350
+          }
+        }
+      ]
+    },
+    "story": {
+      "format": "9:16",
+      "width": 1080,
+      "height": 1920,
+      "plate": {
+        "src": "/adstudio-templates/meta-lead-checklist-story-304/plate-story.webp",
+        "sha256": "6f1744ac09d4c5f014e9d454a101681652ebd1016b40cf387216ec18702e283f"
+      },
+      "layers": [
+        {
+          "id": "slot-background_photo",
+          "z": 2,
+          "box": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "type": "image_slot",
+          "inputKey": "background_photo",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 1080,
+            "height": 1920
+          }
+        }
+      ],
+      "native": true
+    }
+  },
+  "inputs": {
+    "images": [
+      {
+        "key": "background_photo",
+        "label": "background photo",
+        "required": true,
+        "aspect": "portrait",
+        "description": "Customer photo drawn into the declared slot."
+      }
+    ],
+    "text": [
+      {
+        "key": "headline",
+        "label": "Headline",
+        "required": true,
+        "maxLength": 50,
+        "sample": "FREE PROPERTY PLANNING CHECKLIST"
+      },
+      {
+        "key": "subheadline",
+        "label": "Subheadline",
+        "required": true,
+        "maxLength": 45,
+        "sample": "MAKE YOUR NEXT MOVE CLEARER"
+      },
+      {
+        "key": "check_3",
+        "label": "Check 3",
+        "required": true,
+        "maxLength": 41,
+        "sample": "REVIEW LOCAL CONDITIONS"
+      },
+      {
+        "key": "check_2",
+        "label": "Check 2",
+        "required": true,
+        "maxLength": 40,
+        "sample": "UNDERSTAND YOUR TIMING"
+      },
+      {
+        "key": "cta",
+        "label": "Cta",
+        "required": true,
+        "maxLength": 40,
+        "sample": "GET THE FREE CHECKLIST"
+      },
+      {
+        "key": "check_1",
+        "label": "Check 1",
+        "required": true,
+        "maxLength": 39,
+        "sample": "PREPARE YOUR PROPERTY"
+      },
+      {
+        "key": "benefit_3",
+        "label": "Benefit 3",
+        "required": true,
+        "maxLength": 38,
+        "sample": "ASK BETTER QUESTIONS"
+      },
+      {
+        "key": "benefit_1",
+        "label": "Benefit 1",
+        "required": true,
+        "maxLength": 35,
+        "sample": "PREPARE YOUR HOME"
+      },
+      {
+        "key": "benefit_2",
+        "label": "Benefit 2",
+        "required": true,
+        "maxLength": 35,
+        "sample": "UNDERSTAND TIMING"
+      }
+    ]
+  },
+  "publish": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "apiVersionMin": "v26.0",
+    "copy": {
+      "primaryText": [
+        "Ask for the property details."
+      ],
+      "headlines": [
+        "Property details"
+      ],
+      "descriptions": [
+        "Request more information"
+      ]
+    },
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Get your free property guide",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "thankYou": {
+        "title": "Thanks",
+        "body": "We'll be in touch."
+      }
+    },
+    "placements": {
+      "publisherPlatforms": [
+        "facebook",
+        "instagram"
+      ],
+      "facebookPositions": [
+        "feed"
+      ],
+      "instagramPositions": [
+        "stream"
+      ]
+    },
+    "formatRouting": {
+      "feed": "4:5",
+      "story": null
+    },
+    "creativeFeatures": {
+      "adapt_to_placement": "OPT_OUT",
+      "image_touchups": "OPT_OUT",
+      "image_templates": "OPT_OUT",
+      "inline_comment": "OPT_OUT",
+      "enhance_cta": "OPT_OUT",
+      "text_optimizations": "OPT_OUT",
+      "image_animation": "OPT_OUT",
+      "image_background_gen": "OPT_OUT",
+      "video_auto_crop": "OPT_OUT",
+      "translate_voiceover": "OPT_OUT",
+      "text_translation": "OPT_OUT",
+      "media_type_automation": "OPT_OUT",
+      "product_extensions": "OPT_OUT"
+    },
+    "previewFormats": [
+      "MOBILE_FEED_STANDARD",
+      "INSTAGRAM_STANDARD"
+    ]
+  },
+  "editPolicy": {
+    "mode": "guided",
+    "advancedUnlockable": true,
+    "lockedLayerIds": []
+  },
+  "exactness": {
+    "status": "qa",
+    "residuals": {},
+    "bakedTextKeys": [
+      "headline",
+      "subheadline",
+      "check_3",
+      "check_2",
+      "cta",
+      "check_1",
+      "benefit_3",
+      "benefit_1",
+      "benefit_2"
+    ]
+  }
+}

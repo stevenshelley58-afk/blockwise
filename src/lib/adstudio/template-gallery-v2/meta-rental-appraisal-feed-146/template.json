@@ -1,0 +1,433 @@
+{
+  "schema": "adstudio.template.v2",
+  "id": "meta-rental-appraisal-feed-146",
+  "name": "Rental Appraisal — Feed 146",
+  "goal": "investor_leads",
+  "offerId": "rental-appraisal",
+  "category": "investor-lead-generation",
+  "tags": [
+    "rental-appraisal",
+    "lead-generation",
+    "feed"
+  ],
+  "audienceIntent": "Property investors and landlords seeking current rental guidance",
+  "classification": {
+    "ad_type": "lead_generation",
+    "primary_intent": "rental_appraisal",
+    "property_or_agent_focus": "property"
+  },
+  "provenance": {
+    "sourceAd": {
+      "file": "01_feed_4x5_best/meta_146.png",
+      "contentHash": "97e3301b3358d5b8bff7330b99502b73c8e201d361789deb2967f65dab0888fd"
+    },
+    "sample": {
+      "imageSrc": "/adstudio-templates/meta-rental-appraisal-feed-146/sample.png",
+      "contentHash": "320ef813d953ce206c1f7a5712e81eefb51c305b815756f5f093d4dcf2ecbd25",
+      "generatedBy": "deterministic_render"
+    },
+    "decomposedFrom": "source"
+  },
+  "restyle": {
+    "paletteMap": {},
+    "plateRemap": {
+      "hue": 12
+    },
+    "replacedAssets": [
+      "property_photo_1",
+      "property_photo_2",
+      "property_photo_3",
+      "agency_logo"
+    ]
+  },
+  "fonts": [
+    {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "weight": 300,
+      "italic": false,
+      "file": "/fonts/adstudio/smooch-sans-300.woff2",
+      "sha256": "24c4dda0d38ff3000dbaf5c37b0035fc51791a693cc68101d14acb16c8504cb6"
+    },
+    {
+      "fontId": "oswald",
+      "family": "Oswald",
+      "weight": 300,
+      "italic": false,
+      "file": "/fonts/adstudio/oswald-300.woff2",
+      "sha256": "84f168468881f1ae6cf11573f3befa2e83f2067e914a57dad0233e3a772e76f7"
+    },
+    {
+      "fontId": "quicksand",
+      "family": "Quicksand",
+      "weight": 500,
+      "italic": false,
+      "file": "/fonts/adstudio/quicksand-500.woff2",
+      "sha256": "eb8add2effc4883b14a0470be949cab435ca77b72c762d24a7b12472d34a8aa4"
+    },
+    {
+      "fontId": "lora",
+      "family": "Lora",
+      "weight": 700,
+      "italic": false,
+      "file": "/fonts/adstudio/lora-700.woff2",
+      "sha256": "c05fd5289492ed310ed882259b944ca5287e76e572a65d92d3941f9f44f0342a"
+    },
+    {
+      "fontId": "smooch-sans",
+      "family": "Smooch Sans",
+      "weight": 400,
+      "italic": false,
+      "file": "/fonts/adstudio/smooch-sans-400.woff2",
+      "sha256": "a1b64ed5521846da168a3a1907019f6ee8699958c6807b8d33d962d33153cff8"
+    },
+    {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "weight": 800,
+      "italic": false,
+      "file": "/fonts/adstudio/merriweather-800.woff2",
+      "sha256": "234916daa3dd072625fad30f1ae31d989c101bcd73ae8f29023cfbbc9a711c8a"
+    }
+  ],
+  "formats": {
+    "feed": {
+      "format": "4:5",
+      "width": 1080,
+      "height": 1350,
+      "plate": {
+        "src": "/adstudio-templates/meta-rental-appraisal-feed-146/plate-feed.webp",
+        "sha256": "fbc1e9f0915e00aac195b03bf34dad77a04c8b38cad38e995c88dab87b788919"
+      },
+      "layers": [
+        {
+          "id": "slot-property_photo_1",
+          "z": 2,
+          "box": {
+            "x": 0.044444444444444446,
+            "y": 0.03777777777777778,
+            "width": 0.45555555555555555,
+            "height": 0.4540740740740741
+          },
+          "type": "image_slot",
+          "inputKey": "property_photo_1",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 492,
+            "height": 613
+          }
+        },
+        {
+          "id": "slot-property_photo_2",
+          "z": 3,
+          "box": {
+            "x": 0.5092592592592593,
+            "y": 0.03777777777777778,
+            "width": 0.44814814814814813,
+            "height": 0.23555555555555555
+          },
+          "type": "image_slot",
+          "inputKey": "property_photo_2",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 484,
+            "height": 318
+          }
+        },
+        {
+          "id": "slot-property_photo_3",
+          "z": 4,
+          "box": {
+            "x": 0.5092592592592593,
+            "y": 0.28,
+            "width": 0.44814814814814813,
+            "height": 0.21185185185185185
+          },
+          "type": "image_slot",
+          "inputKey": "property_photo_3",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 484,
+            "height": 286
+          }
+        },
+        {
+          "id": "slot-agency_logo",
+          "z": 5,
+          "box": {
+            "x": 0.15185185185185185,
+            "y": 0.8711111111111111,
+            "width": 0.09722222222222222,
+            "height": 0.07481481481481482
+          },
+          "type": "image_slot",
+          "inputKey": "agency_logo",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 105,
+            "height": 101
+          }
+        }
+      ]
+    },
+    "story": {
+      "format": "9:16",
+      "width": 1080,
+      "height": 1920,
+      "plate": {
+        "src": "/adstudio-templates/meta-rental-appraisal-feed-146/plate-story.webp",
+        "sha256": "4bf184266142765c0f25d51809fdd64b8e30e9bbc3b21fa1d9ceb86460050161"
+      },
+      "layers": [
+        {
+          "id": "slot-property_photo_1",
+          "z": 2,
+          "box": {
+            "x": 0.044444444444444446,
+            "y": 0.15637731481481482,
+            "width": 0.45555555555555555,
+            "height": 0.3145408950617284
+          },
+          "type": "image_slot",
+          "inputKey": "property_photo_1",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 492,
+            "height": 604
+          }
+        },
+        {
+          "id": "slot-property_photo_2",
+          "z": 3,
+          "box": {
+            "x": 0.5092592592592593,
+            "y": 0.15637731481481482,
+            "width": 0.44814814814814813,
+            "height": 0.16317129629629626
+          },
+          "type": "image_slot",
+          "inputKey": "property_photo_2",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 484,
+            "height": 313
+          }
+        },
+        {
+          "id": "slot-property_photo_3",
+          "z": 4,
+          "box": {
+            "x": 0.5092592592592593,
+            "y": 0.3241666666666667,
+            "width": 0.44814814814814813,
+            "height": 0.14675154320987652
+          },
+          "type": "image_slot",
+          "inputKey": "property_photo_3",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 484,
+            "height": 282
+          }
+        },
+        {
+          "id": "slot-agency_logo",
+          "z": 5,
+          "box": {
+            "x": 0.15185185185185185,
+            "y": 0.7336342592592592,
+            "width": 0.09722222222222222,
+            "height": 0.05182484567901234
+          },
+          "type": "image_slot",
+          "inputKey": "agency_logo",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 105,
+            "height": 100
+          }
+        }
+      ]
+    }
+  },
+  "inputs": {
+    "images": [
+      {
+        "key": "property_photo_1",
+        "label": "property photo 1",
+        "required": true,
+        "aspect": "portrait",
+        "description": "Customer photo drawn into the declared slot."
+      },
+      {
+        "key": "property_photo_2",
+        "label": "property photo 2",
+        "required": true,
+        "aspect": "portrait",
+        "description": "Customer photo drawn into the declared slot."
+      },
+      {
+        "key": "property_photo_3",
+        "label": "property photo 3",
+        "required": true,
+        "aspect": "portrait",
+        "description": "Customer photo drawn into the declared slot."
+      },
+      {
+        "key": "agency_logo",
+        "label": "agency logo",
+        "required": true,
+        "aspect": "portrait",
+        "description": "Customer photo drawn into the declared slot."
+      }
+    ],
+    "text": [
+      {
+        "key": "headline",
+        "label": "Headline",
+        "required": true,
+        "maxLength": 52,
+        "sample": "WHAT COULD YOUR PROPERTY RENT FOR?"
+      },
+      {
+        "key": "subheadline",
+        "label": "Subheadline",
+        "required": true,
+        "maxLength": 44,
+        "sample": "REQUEST A RENTAL APPRAISAL"
+      },
+      {
+        "key": "cta",
+        "label": "Cta",
+        "required": true,
+        "maxLength": 41,
+        "sample": "BOOK A RENTAL APPRAISAL"
+      },
+      {
+        "key": "benefit_3",
+        "label": "Benefit 3",
+        "required": true,
+        "maxLength": 35,
+        "sample": "INVESTOR GUIDANCE"
+      },
+      {
+        "key": "benefit_2",
+        "label": "Benefit 2",
+        "required": true,
+        "maxLength": 31,
+        "sample": "TENANT DEMAND"
+      },
+      {
+        "key": "benefit_1",
+        "label": "Benefit 1",
+        "required": true,
+        "maxLength": 30,
+        "sample": "CURRENT RENT"
+      }
+    ]
+  },
+  "publish": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "apiVersionMin": "v26.0",
+    "copy": {
+      "primaryText": [
+        "Ask for the property details."
+      ],
+      "headlines": [
+        "Property details"
+      ],
+      "descriptions": [
+        "Request more information"
+      ]
+    },
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Request your free rental appraisal",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "thankYou": {
+        "title": "Thanks",
+        "body": "We'll be in touch."
+      }
+    },
+    "placements": {
+      "publisherPlatforms": [
+        "facebook",
+        "instagram"
+      ],
+      "facebookPositions": [
+        "feed"
+      ],
+      "instagramPositions": [
+        "stream"
+      ]
+    },
+    "formatRouting": {
+      "feed": "4:5",
+      "story": "9:16"
+    },
+    "creativeFeatures": {
+      "adapt_to_placement": "OPT_OUT",
+      "image_touchups": "OPT_OUT",
+      "image_templates": "OPT_OUT",
+      "inline_comment": "OPT_OUT",
+      "enhance_cta": "OPT_OUT",
+      "text_optimizations": "OPT_OUT",
+      "image_animation": "OPT_OUT",
+      "image_background_gen": "OPT_OUT",
+      "video_auto_crop": "OPT_OUT",
+      "translate_voiceover": "OPT_OUT",
+      "text_translation": "OPT_OUT",
+      "media_type_automation": "OPT_OUT",
+      "product_extensions": "OPT_OUT"
+    },
+    "previewFormats": [
+      "MOBILE_FEED_STANDARD",
+      "INSTAGRAM_STANDARD"
+    ]
+  },
+  "editPolicy": {
+    "mode": "guided",
+    "advancedUnlockable": true,
+    "lockedLayerIds": []
+  },
+  "exactness": {
+    "status": "qa",
+    "residuals": {},
+    "bakedTextKeys": [
+      "headline",
+      "subheadline",
+      "cta",
+      "benefit_3",
+      "benefit_2",
+      "benefit_1"
+    ]
+  }
+}

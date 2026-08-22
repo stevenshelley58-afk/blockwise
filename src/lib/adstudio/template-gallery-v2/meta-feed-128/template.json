@@ -1,0 +1,378 @@
+{
+  "schema": "adstudio.template.v2",
+  "id": "meta-feed-128",
+  "name": "Just Sold Announcement - New Chapter",
+  "goal": "seller_leads",
+  "offerId": "just-sold-announcement-001",
+  "category": "just_sold",
+  "tags": [
+    "just sold",
+    "seller leads",
+    "real estate",
+    "announcement",
+    "new chapter"
+  ],
+  "audienceIntent": "Showcase a recently sold property and attract new seller leads.",
+  "classification": {
+    "ad_type": "just_sold",
+    "primary_intent": "seller_leads",
+    "property_or_agent_focus": "property"
+  },
+  "provenance": {
+    "sourceAd": {
+      "file": "01_feed_4x5_best/meta_128.png",
+      "contentHash": "c37d0b77e60869df409e48ff386281f60f5f62a5b876fb069395446eecf43baf"
+    },
+    "sample": {
+      "imageSrc": "/adstudio-templates/meta-feed-128/sample.png",
+      "contentHash": "762826211bc1a69bad62716ddc784b5d9e5b3a3eb4d25263b5cea0b8f236d9e2",
+      "generatedBy": "deterministic_render"
+    },
+    "decomposedFrom": "source"
+  },
+  "restyle": {
+    "paletteMap": {},
+    "replacedAssets": [
+      "property_photo",
+      "agent_photo"
+    ],
+    "note": "migrated from v1 (source); font remaps: source-sans-3 -> arimo; restyle pass pending in Studio"
+  },
+  "fonts": [
+    {
+      "fontId": "arimo",
+      "family": "Arimo",
+      "weight": 600,
+      "italic": false,
+      "file": "/fonts/adstudio/arimo-600.woff2",
+      "sha256": "e56ba72ece2579125a34dda8b81f4a8692ee712757a5f5910dcf7c084cd0082e"
+    },
+    {
+      "fontId": "merriweather",
+      "family": "Merriweather",
+      "weight": 700,
+      "italic": false,
+      "file": "/fonts/adstudio/merriweather-700.woff2",
+      "sha256": "4e1ab49396c02be0d9a2a25eed7bc73781c047d85fcb5dfc2889873eaf992b09"
+    },
+    {
+      "fontId": "plus-jakarta-sans",
+      "family": "Plus Jakarta Sans",
+      "weight": 600,
+      "italic": false,
+      "file": "/fonts/adstudio/plus-jakarta-sans-600.woff2",
+      "sha256": "8872bb5c9111df9bd3162c2394aee6354d782b13408a4dd5bbf65c48207206e6"
+    },
+    {
+      "fontId": "playfair-display",
+      "family": "Playfair Display",
+      "weight": 700,
+      "italic": false,
+      "file": "/fonts/adstudio/playfair-display-700.woff2",
+      "sha256": "cfbfb0e36791f82470367d25c5a8d498dc1561a7a66a4172b7c6df749fdf9894"
+    }
+  ],
+  "formats": {
+    "feed": {
+      "format": "4:5",
+      "width": 1080,
+      "height": 1350,
+      "plate": {
+        "src": "/adstudio-templates/meta-feed-128/plate-feed.webp",
+        "sha256": "53d5c36d56d717c80c817e087bc46ac190cd0564d1baec2ac34695a41bc553d3"
+      },
+      "layers": [
+        {
+          "id": "slot-property_photo",
+          "z": 2,
+          "box": {
+            "x": 0.017578125,
+            "y": 0.1125,
+            "width": 0.96484375,
+            "height": 0.4734375
+          },
+          "type": "image_slot",
+          "inputKey": "property_photo",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 1042,
+            "height": 639
+          }
+        },
+        {
+          "id": "slot-agent_photo",
+          "z": 3,
+          "box": {
+            "x": 0.662109375,
+            "y": 0.4984375,
+            "width": 0.216796875,
+            "height": 0.1734375
+          },
+          "type": "image_slot",
+          "inputKey": "agent_photo",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 234,
+            "height": 234
+          }
+        },
+        {
+          "id": "text-contact_phone",
+          "z": 12,
+          "box": {
+            "x": 0.71728515625,
+            "y": 0.894921875,
+            "width": 0.16015625,
+            "height": 0.015234375
+          },
+          "type": "text",
+          "inputKey": "contact_phone",
+          "typo": {
+            "fontId": "playfair-display",
+            "family": "Playfair Display",
+            "fallbackFamily": "serif",
+            "weight": 700,
+            "italic": false,
+            "case": "none",
+            "sizeRatio": 1.1020833333333333,
+            "lineHeight": 1.333,
+            "tracking": 0,
+            "align": "left",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 20,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.447,
+            "detectionScore": 1,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        }
+      ]
+    },
+    "story": {
+      "format": "9:16",
+      "width": 1080,
+      "height": 1920,
+      "plate": {
+        "src": "/adstudio-templates/meta-feed-128/plate-story.webp",
+        "sha256": "566646ec4606d8ef4fe9eb1ae1a4e81c60a717e90cfd2f8abade221c4e4a6421"
+      },
+      "layers": [
+        {
+          "id": "slot-property_photo",
+          "z": 2,
+          "box": {
+            "x": 0.017578125,
+            "y": 0.20813802083333333,
+            "width": 0.96484375,
+            "height": 0.3279541015625
+          },
+          "type": "image_slot",
+          "inputKey": "property_photo",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 1042,
+            "height": 630
+          }
+        },
+        {
+          "id": "slot-agent_photo",
+          "z": 3,
+          "box": {
+            "x": 0.662109375,
+            "y": 0.47548014322916665,
+            "width": 0.216796875,
+            "height": 0.12014160156249998
+          },
+          "type": "image_slot",
+          "inputKey": "agent_photo",
+          "fit": "cover",
+          "mask": {
+            "kind": "rect"
+          },
+          "minSourcePx": {
+            "width": 234,
+            "height": 231
+          }
+        },
+        {
+          "id": "text-contact_phone",
+          "z": 12,
+          "box": {
+            "x": 0.71728515625,
+            "y": 0.7501281738281249,
+            "width": 0.16015625,
+            "height": 0.010552978515624999
+          },
+          "type": "text",
+          "inputKey": "contact_phone",
+          "typo": {
+            "fontId": "playfair-display",
+            "family": "Playfair Display",
+            "fallbackFamily": "serif",
+            "weight": 700,
+            "italic": false,
+            "case": "none",
+            "sizeRatio": 1.1020833333333333,
+            "lineHeight": 1.333,
+            "tracking": 0,
+            "align": "left",
+            "color": "#1f242b"
+          },
+          "constraints": {
+            "maxLength": 20,
+            "maxLines": 1,
+            "autoFitMinRatio": 0.85
+          },
+          "measurement": {
+            "fitScore": 0.447,
+            "detectionScore": 1,
+            "source": "ocr-v2",
+            "version": 1
+          }
+        }
+      ]
+    }
+  },
+  "inputs": {
+    "images": [
+      {
+        "key": "property_photo",
+        "label": "property photo",
+        "required": true,
+        "aspect": "portrait",
+        "description": "Customer photo drawn into the declared slot."
+      },
+      {
+        "key": "agent_photo",
+        "label": "agent photo",
+        "required": true,
+        "aspect": "portrait",
+        "description": "Customer photo drawn into the declared slot."
+      }
+    ],
+    "text": [
+      {
+        "key": "main_message",
+        "label": "Main Message",
+        "required": true,
+        "maxLength": 60,
+        "sample": "Just Sold! A new chapter begins."
+      },
+      {
+        "key": "property_address",
+        "label": "Property Address",
+        "required": true,
+        "maxLength": 60,
+        "sample": "8 MARINE TERRACE, COTTESLOE WA"
+      },
+      {
+        "key": "contact_email",
+        "label": "Contact Email",
+        "required": true,
+        "maxLength": 40,
+        "sample": "hello@cedarcoast.example"
+      },
+      {
+        "key": "contact_phone",
+        "label": "Contact Phone",
+        "required": true,
+        "maxLength": 20,
+        "sample": "08 6102 1840"
+      }
+    ]
+  },
+  "publish": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "apiVersionMin": "v26.0",
+    "copy": {
+      "primaryText": [
+        "Ask for the property details."
+      ],
+      "headlines": [
+        "Property details"
+      ],
+      "descriptions": [
+        "Request more information"
+      ]
+    },
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Request your free seller consultation",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "thankYou": {
+        "title": "Thanks",
+        "body": "We'll be in touch."
+      }
+    },
+    "placements": {
+      "publisherPlatforms": [
+        "facebook",
+        "instagram"
+      ],
+      "facebookPositions": [
+        "feed"
+      ],
+      "instagramPositions": [
+        "stream"
+      ]
+    },
+    "formatRouting": {
+      "feed": "4:5",
+      "story": "9:16"
+    },
+    "creativeFeatures": {
+      "adapt_to_placement": "OPT_OUT",
+      "image_touchups": "OPT_OUT",
+      "image_templates": "OPT_OUT",
+      "inline_comment": "OPT_OUT",
+      "enhance_cta": "OPT_OUT",
+      "text_optimizations": "OPT_OUT",
+      "image_animation": "OPT_OUT",
+      "image_background_gen": "OPT_OUT",
+      "video_auto_crop": "OPT_OUT",
+      "translate_voiceover": "OPT_OUT",
+      "text_translation": "OPT_OUT",
+      "media_type_automation": "OPT_OUT",
+      "product_extensions": "OPT_OUT"
+    },
+    "previewFormats": [
+      "MOBILE_FEED_STANDARD",
+      "INSTAGRAM_STANDARD"
+    ]
+  },
+  "editPolicy": {
+    "mode": "guided",
+    "advancedUnlockable": true,
+    "lockedLayerIds": []
+  },
+  "exactness": {
+    "status": "qa",
+    "residuals": {
+      "text-contact_phone": 0.09188479609284698
+    },
+    "bakedTextKeys": [
+      "main_message",
+      "property_address",
+      "contact_email"
+    ]
+  }
+}
