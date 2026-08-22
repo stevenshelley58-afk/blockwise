@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 
 import { InstantFormEditor } from "@/components/adstudio/instant-form-editor";
+import type { PublishRequirements } from "@/lib/adstudio/publish-adapter";
 
 // ---------------------------------------------------------------------------
 // Publish flow client (BW-M).
@@ -19,6 +20,7 @@ export interface PublishFlowProps {
   workspaceId: string;
   packId: string;
   packName: string;
+  publishRequirements: PublishRequirements;
   /** True when the ad has no saved revision yet. */
   notSaved: boolean;
   initialState: {
@@ -78,6 +80,7 @@ export function PublishFlow({
   workspaceId,
   packId,
   packName,
+  publishRequirements,
   notSaved,
   initialState,
   initialIssues,
@@ -89,6 +92,7 @@ export function PublishFlow({
   // the last saved revision (initialState.form) or one the customer generates,
   // edits and pins right here. The editor reports when a pin lands.
   const [formPinned, setFormPinned] = useState(() => Boolean(initialState?.form));
+  const [destinationUrl, setDestinationUrl] = useState("");
   // BW-Q — activation is a SEPARATE explicit action after the PAUSED publish
   // receipt; it is never automatic.
   const [activating, setActivating] = useState(false);
@@ -107,7 +111,12 @@ export function PublishFlow({
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ controls: {} }),
+          body: JSON.stringify({
+            controls: {
+              destinationMode: publishRequirements.destinationMode,
+              ...(destinationUrl.trim() ? { destinationUrl: destinationUrl.trim() } : {}),
+            },
+          }),
         },
       );
       const body = (await res.json().catch(() => ({}))) as PublishReceipt;
@@ -117,7 +126,7 @@ export function PublishFlow({
     } finally {
       setSubmitting(false);
     }
-  }, [adId, workspaceId]);
+  }, [adId, destinationUrl, publishRequirements.destinationMode, workspaceId]);
 
   // BW-Q — a SECOND explicit click. Only ever offered after a publish receipt
   // that created PAUSED objects on Meta (mode "publish"), and it targets that
@@ -167,8 +176,10 @@ export function PublishFlow({
   }
 
   const issues = initialIssues ?? [];
-  const formReady = Boolean(initialState?.form) || formPinned;
-  const ready = issues.length === 0 && formReady;
+  const requiresForm = publishRequirements.destinationMode === "instant_form";
+  const formReady = !requiresForm || Boolean(initialState?.form) || formPinned;
+  const destinationReady = publishRequirements.destinationMode !== "website" || validHttpsUrl(destinationUrl);
+  const ready = issues.length === 0 && formReady && destinationReady;
 
   return (
     <div className="flex h-full flex-col bg-(--canvas)">
@@ -217,14 +228,29 @@ export function PublishFlow({
           )}
         </div>
 
-        {/* Instant Form — generate, edit and pin before publishing */}
-        <div className="mb-6">
-          <InstantFormEditor
-            adId={adId}
-            workspaceId={workspaceId}
-            onPinStateChange={handlePinStateChange}
-          />
-        </div>
+        {requiresForm ? (
+          <div className="mb-6">
+            <InstantFormEditor
+              adId={adId}
+              workspaceId={workspaceId}
+              onPinStateChange={handlePinStateChange}
+            />
+          </div>
+        ) : (
+          <div className="mb-6 rounded-(--r-card) border border-(--line) bg-(--surface) p-4">
+            <label className="text-sm font-semibold" htmlFor="publish-destination-url">Article or website destination</label>
+            <p className="mt-1 text-xs text-muted-foreground">Use the real HTTPS page promised by this ad. Blockwise never substitutes the privacy-policy URL.</p>
+            <input
+              id="publish-destination-url"
+              type="url"
+              value={destinationUrl}
+              onChange={(event) => setDestinationUrl(event.target.value)}
+              placeholder="https://your-site.com/article"
+              className="mt-3 w-full rounded-(--r-control) border border-(--line) bg-(--canvas) px-3 py-2 text-sm outline-none focus:border-(--ui-primary)"
+            />
+            {destinationUrl && !destinationReady ? <p className="mt-2 text-xs text-red-600">Enter a valid HTTPS URL.</p> : null}
+          </div>
+        )}
 
         {/* Provider mode */}
         <div className="rounded-(--r-card) border border-(--line) bg-(--surface) p-4">
@@ -260,6 +286,8 @@ export function PublishFlow({
           <p className="text-sm text-muted-foreground">
             Generate and pin the Instant Form above to enable Freeze &amp; Create PAUSED.
           </p>
+        ) : !destinationReady && issues.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Add the real HTTPS article or website URL to continue.</p>
         ) : (
           <span />
         )}
@@ -357,6 +385,14 @@ function ReceiptStat({ label, value }: { label: string; value: string }) {
 function shortHash(value: string): string {
   if (!value) return "—";
   return value.length > 12 ? `${value.slice(0, 12)}…` : value;
+}
+
+function validHttpsUrl(value: string): boolean {
+  try {
+    return new URL(value.trim()).protocol === "https:";
+  } catch {
+    return false;
+  }
 }
 
 function formatIds(ids: Record<string, string> | undefined): string {

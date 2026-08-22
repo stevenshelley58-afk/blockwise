@@ -25,9 +25,9 @@
 // No image model is called; previews are deterministic renders. The release
 // directory is made read-only after writing (immutable).
 
-import { createHash, generateKeyPairSync, sign } from "node:crypto";
+import { createHash, createPrivateKey, createPublicKey, generateKeyPairSync, sign } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync, copyFileSync, rmSync, chmodSync, readdirSync } from "node:fs";
-import { join, resolve, dirname, basename } from "node:path";
+import { join, resolve, dirname, basename, relative, isAbsolute } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import sharp from "sharp";
@@ -49,6 +49,20 @@ function writeJson(path, value) {
   mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`);
 }
+
+function loadSigningKey(publicReleaseEnabled) {
+  const inline = process.env.FRANK_PACK_SIGNING_PRIVATE_KEY?.trim();
+  const keyFile = process.env.FRANK_PACK_SIGNING_KEY_FILE?.trim();
+  if (inline || keyFile) {
+    const pem = inline || readFileSync(resolve(keyFile), "utf8");
+    const privateKey = createPrivateKey(pem);
+    return { privateKey, publicKey: createPublicKey(privateKey), ephemeral: false };
+  }
+  if (publicReleaseEnabled && process.env.FRANK_ALLOW_EPHEMERAL_PACK_SIGNING !== "1") {
+    throw new Error("A public release requires FRANK_PACK_SIGNING_KEY_FILE or FRANK_PACK_SIGNING_PRIVATE_KEY");
+  }
+  return { ...generateKeyPairSync("ed25519"), ephemeral: true };
+}
 function argValue(flag) {
   const index = process.argv.indexOf(flag);
   return index >= 0 ? process.argv[index + 1] : null;
@@ -56,12 +70,36 @@ function argValue(flag) {
 
 const COLOUR_ROLES = ["background", "primary", "secondary", "accent", "mainText", "inverseText"];
 
+function instantFormDefaults(doc) {
+  const leadForm = doc.publish?.leadForm;
+  if (!leadForm) return null;
+  const primary = doc.publish?.copy?.primaryText?.[0] ?? "Tell us what you need and we will be in touch.";
+  return {
+    name: leadForm.name ?? `${doc.name} lead form`.slice(0, 100),
+    formType: leadForm.formType ?? "higher_intent",
+    intro: { headline: leadForm.headline, body: leadForm.introBody ?? primary.slice(0, 500) },
+    contactFields: leadForm.contactFields ?? [
+      { type: "full_name", required: true },
+      { type: "email", required: true },
+      { type: "phone", required: false },
+    ],
+    customQuestions: (leadForm.questions ?? []).slice(0, 5).map((label) => ({ type: "short_answer", label, required: false })),
+    privacy: leadForm.privacy ?? { url: "", linkText: "Privacy policy" },
+    thankYou: {
+      title: leadForm.thankYou.title,
+      body: leadForm.thankYou.body,
+      actionType: leadForm.thankYou.actionType ?? "none",
+      ...(leadForm.thankYou.actionUrl ? { actionUrl: leadForm.thankYou.actionUrl } : {}),
+    },
+  };
+}
+
 function pixelRect(rect, width, height) {
   return { x: rect.x * width, y: rect.y * height, width: rect.width * width, height: rect.height * height };
 }
 
 function v2ToTemplatePack({ doc, feedPreviewBytes, storyPreviewBytes, plateFiles, createdAt, publicBaseUrl }) {
-  const assetUrl = (key) => publicBaseUrl ? `${publicBaseUrl}/assets/${plateFiles[key]?.fileName ?? key}` : undefined;
+  const assetUrl = (key) => publicBaseUrl ? `${publicBaseUrl}/assets/${plateFiles[key]?.fileName ?? basename(key)}` : undefined;
   const declaredRequirements = doc.publish?.requirements ?? doc.publishRequirements ?? doc.provenance?.publishRequirements ?? {};
   const declaredDestination = declaredRequirements.destination ?? (doc.publish?.leadForm
     ? { required: true, kind: "instant_form", dependency: "instant_form" }
@@ -84,11 +122,16 @@ function v2ToTemplatePack({ doc, feedPreviewBytes, storyPreviewBytes, plateFiles
     publishRequirements: {
       objective: doc.publish?.objective ?? "OUTCOME_LEADS",
       specialAdCategory: doc.publish?.specialAdCategory ?? null,
-      instantForm: { required: declaredForm.required ?? Boolean(doc.publish?.leadForm), dependency: declaredForm.dependency ?? (doc.publish?.leadForm ? "instant_form" : null), defaults: doc.publish?.leadForm ?? declaredForm.defaults ?? null },
+      instantForm: { required: declaredForm.required ?? Boolean(doc.publish?.leadForm), dependency: declaredForm.dependency ?? (doc.publish?.leadForm ? "instant_form" : null), defaults: declaredForm.defaults ?? instantFormDefaults(doc) },
       destination: { required: declaredDestination.required ?? false, kind: declaredDestination.kind ?? "none", dependency: declaredDestination.dependency ?? null },
     },
     replacementAssets: [{ assetKey: "customer-photo-fixture", purpose: "replacement", ...(publicBaseUrl ? { url: assetUrl("customer-photo-fixture") } : {}) }],
-    realAssetRefs: [],
+    realAssetRefs: [
+      ...Object.keys(plateFiles)
+        .filter((key) => !["feed-sample", "story-sample", "customer-photo-fixture"].includes(key))
+        .map((key) => ({ assetKey: key, purpose: "real_asset", ...(publicBaseUrl ? { url: assetUrl(key) } : {}) })),
+      ...doc.fonts.map((font) => ({ assetKey: basename(font.file), purpose: "font", ...(publicBaseUrl ? { url: assetUrl(font.file) } : {}) })),
+    ],
   };
   const layout = (docLayout, placement, previewBytes) => {
     const width = 1080;
@@ -98,6 +141,7 @@ function v2ToTemplatePack({ doc, feedPreviewBytes, storyPreviewBytes, plateFiles
       type: "plate",
       layerId: "plate",
       colourRole: "background",
+      assetKey: `${placement}-plate`,
       geometry: { x: 0, y: 0, width, height },
       protected: false,
     });
@@ -116,13 +160,14 @@ function v2ToTemplatePack({ doc, feedPreviewBytes, storyPreviewBytes, plateFiles
         });
       } else if (layer.type === "text") {
         const font = doc.fonts.find((face) => face.fontId === layer.typo.fontId && face.weight === layer.typo.weight);
+        const geometry = pixelRect(layer.box, width, height);
         layers.push({
           type: "text",
           layerId: layer.id,
           inputKey: layer.inputKey,
-          geometry: pixelRect(layer.box, width, height),
+          geometry,
           font: { file: basename(font?.file ?? layer.typo.fontId), sha256: font?.sha256 ?? "0".repeat(64) },
-          fontSize: Math.round(layer.typo.sizeRatio * 100),
+          fontSize: Math.max(1, Math.round(geometry.height * layer.typo.sizeRatio)),
           lineHeight: layer.typo.lineHeight,
           tracking: layer.typo.tracking,
           alignment: layer.typo.align,
@@ -217,14 +262,19 @@ async function main() {
   const approvalReceipt = argValue("--approval") ? resolve(argValue("--approval")) : null;
   const slotPath = resolve(argValue("--slot") || join(REPO_ROOT, "tests", "fixtures", "adstudio-v2", "public", "slots", "photo-portrait.png"));
   const slotBytes = readFileSync(slotPath);
+  const slotSha = sha256(slotBytes);
 
   const manifest = readJson(join(candidate, "variant-pack.manifest.json"));
   const releaseId = `${manifest.packId}-${runId.slice(-8)}`;
   const publicRoot = process.env.FRANK_PUBLIC_RELEASE_ROOT ? resolve(process.env.FRANK_PUBLIC_RELEASE_ROOT) : null;
+  if (!publicRoot && process.env.FRANK_ALLOW_PRIVATE_TEMPLATE_RELEASE !== "1") {
+    throw new Error("FRANK_PUBLIC_RELEASE_ROOT is required so Blockwise can fetch the signed pack and assets");
+  }
   const publicBaseUrl = publicRoot ? `https://frank.fail/releases/ad-template-generator/${releaseId}` : null;
   const releaseStoreRoot = resolveReleaseStoreRoot(process.env);
   const releaseDir = resolve(argValue("--release") || join(releaseStoreRoot, releaseId));
-  if (releaseDir !== releaseStoreRoot && !releaseDir.startsWith(releaseStoreRoot + "/")) {
+  const releaseRelative = relative(releaseStoreRoot, releaseDir);
+  if (!releaseRelative || releaseRelative.startsWith("..") || isAbsolute(releaseRelative)) {
     throw new Error(`releaseDir ${releaseDir} is outside the private release store ${releaseStoreRoot}`);
   }
   // An immutable release dir (chmod 0o555 after writing) must be made writable
@@ -241,7 +291,7 @@ async function main() {
   const assetsDir = join(releaseDir, "assets");
   for (const dir of [templatesDir, packV1Dir, previewsDir, assetsDir]) mkdirSync(dir, { recursive: true });
   const createdAt = new Date().toISOString();
-  const { publicKey, privateKey } = generateKeyPairSync("ed25519");
+  const { publicKey, privateKey, ephemeral } = loadSigningKey(Boolean(publicRoot));
 
   const signedPacks = [];
   const artifacts = [];
@@ -261,6 +311,17 @@ async function main() {
     copyFileSync(join(candidate, "public", "adstudio-templates", id, "sample.png"), join(assetsDir, `${id}-sample.png`));
     copyFileSync(join(candidate, "public", "adstudio-templates", id, "sample-story.png"), join(assetsDir, `${id}-sample-story.png`));
     copyFileSync(slotPath, join(assetsDir, `${id}-customer-photo-fixture.png`));
+    for (const font of doc.fonts) {
+      const relative = String(font.file).replace(/^[/\\]+/, "");
+      const source = join(candidate, "public", relative);
+      const bytes = readFileSync(source);
+      if (sha256(bytes) !== font.sha256) throw new Error(`${id} font hash mismatch: ${font.file}`);
+      const destination = join(assetsDir, basename(font.file));
+      if (existsSync(destination) && sha256(readFileSync(destination)) !== font.sha256) {
+        throw new Error(`${id} font basename collision: ${basename(font.file)}`);
+      }
+      if (!existsSync(destination)) copyFileSync(source, destination);
+    }
 
     // deterministic previews (no image model)
     const instance = (format) => ({
@@ -275,6 +336,8 @@ async function main() {
     const storyPreview = await renderAdDocToPng(doc, instance("9:16"), "9:16", { repoRoot: candidate, slotBytes: new Map([["customer_photo", slotBytes]]) });
     writeFileSync(join(previewsDir, `${id}-feed.png`), feedPreview);
     writeFileSync(join(previewsDir, `${id}-story.png`), storyPreview);
+    writeFileSync(join(assetsDir, `${id}-feed.png`), feedPreview);
+    writeFileSync(join(assetsDir, `${id}-story.png`), storyPreview);
 
     const plateFiles = {
       "feed-plate": { fileName: `${id}-plate-feed.webp`, sha256: doc.formats.feed.plate.sha256, mimeType: "image/webp" },
@@ -329,11 +392,15 @@ async function main() {
   // string, and sha256 to hash the exact artifact bytes.
   const bundleSha = sha256(Buffer.from(canonicalJson(bundle)));
   const bundleSignature = sign(null, Buffer.from(bundleSha, "utf8"), privateKey).toString("hex");
-  const publicKeyHex = publicKey.export({ type: "spki", format: "pem" });
+  const publicKeyPem = publicKey.export({ type: "spki", format: "pem" });
+  const publicKeyHex = publicKey.export({ type: "spki", format: "der" }).toString("hex");
+  const signingKeyId = sha256(Buffer.from(publicKeyHex, "hex")).slice(0, 16);
   const signatureReceipt = {
     algorithm: "ed25519",
     signature: bundleSignature,
-    publicKey: publicKeyHex,
+    publicKey: publicKeyPem,
+    publicKeyHex,
+    keyId: signingKeyId,
   };
   const signedBundle = { ...bundle, integrity: { algorithm: "ed25519", signature: signatureReceipt } };
   const finalBundleBytes = Buffer.from(canonicalJson(signedBundle));
@@ -365,7 +432,8 @@ async function main() {
       artifact_ref: artifactRef,
       sha256: portablePackSha,
       signature_algorithm: "ed25519",
-      signature: bundleSignature,
+      signature: signedPacks[0].signature,
+      signing_key_id: signingKeyId,
     },
     provenance: { artifact_ref: artifactRef, artifact_receipt_ref: `${releaseId}/receipt.json` },
     trace_ref: traceRef,
@@ -390,7 +458,7 @@ async function main() {
     job,
     pack: manifest,
     templates: artifacts,
-    artifact: { file: "pack.bundle.json", sha256: finalBundleSha, signature: bundleSignature, signatureAlgorithm: "ed25519", publicKey: publicKeyHex },
+    artifact: { file: "pack.bundle.json", sha256: finalBundleSha, signature: bundleSignature, signatureAlgorithm: "ed25519", publicKey: publicKeyPem, publicKeyHex, signingKeyId, ephemeralSigningKey: ephemeral },
     artifactRef,
     servingNote: "No public HTTPS host currently serves tool-run artifacts on this box (frank.fail returns 401; /etc/caddy has no site for it). Serve the release dir at artifactRef (or an allowed origin from import-pack.ts ALLOWED_ORIGINS) before UI import; until then the pack is importable from the local release path.",
     releaseEnvelope: `${releaseDir}/release.json`,
@@ -406,6 +474,7 @@ async function main() {
     template_pack_path: join(releaseDir, "pack.bundle.json"),
     sha256: finalBundleSha,
     signature: signatureReceipt,
+    templatePack: { artifactRef, sha256: portablePackSha, signature: signedPacks[0].signature, publicKeyHex, signingKeyId },
     templates: signedPacks.map((pack) => ({ templateId: pack.templateId, manifestSha256: pack.manifestSha256 })),
     traceRef,
     envelope: join(releaseDir, "release.json"),

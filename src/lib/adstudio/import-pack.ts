@@ -1,5 +1,6 @@
 import { createHash, createPublicKey, verify as verifyEd25519 } from "node:crypto";
-import { canonicalJson, templatePackAnySchema, sha256Hex } from "../../../packages/ad-template-pack-contract/src/index.ts";
+import { basename } from "node:path";
+import { templatePackAnySchema, sha256Hex, verifyManifestHash } from "../../../packages/ad-template-pack-contract/src/index.ts";
 import type { TemplatePack } from "../../../packages/ad-template-pack-contract/src/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -117,16 +118,26 @@ export async function importTemplatePack(
     throw importError("schema_invalid", "Pack failed schema validation", parsed.error.issues);
   }
   const pack = parsed.data as TemplatePack;
+  if (pack.packId !== input.packId) {
+    throw importError("pack_id_mismatch", `Request packId ${input.packId} does not match signed pack ${pack.packId}`);
+  }
 
-  // 8. Signature verification — Ed25519 over the canonical pack JSON
-  // (same canonicalization the factory signs: recursively sorted keys, no
-  // whitespace). Skipped ONLY on the injected fetchPack path when
+  if (!verifyManifestHash(pack as unknown as Record<string, unknown>)) {
+    throw importError("manifest_hash_mismatch", "Pack manifestSha256 does not match its signed content");
+  }
+
+  // 8. Signature verification — Ed25519 over manifestSha256, the immutable
+  // digest the factory signs after excluding self-referential signature fields.
+  // Skipped ONLY on the injected fetchPack path when
   // FRANK_PACK_PUBLIC_KEY is unset (documented test/local exception).
   const publicKeyHex = process.env.FRANK_PACK_PUBLIC_KEY;
-  if (publicKeyHex && !verifyPackSignature(packJson, input.signature, publicKeyHex)) {
+  if (input.signature !== pack.signature) {
+    throw importError("signature_rejected", "Import signature does not match the signature embedded in the pack");
+  }
+  if (publicKeyHex && !verifyPackSignature(packJson, pack.signature, publicKeyHex)) {
     throw importError(
       "signature_rejected",
-      "Ed25519 signature does not verify over the canonical pack JSON",
+      "Ed25519 signature does not verify over the declared manifest hash",
     );
   }
 
@@ -153,9 +164,7 @@ export async function importTemplatePack(
 // ---------------------------------------------------------------------------
 
 /**
- * Verify the pack's Ed25519 signature over the CANONICAL JSON bytes of the
- * pack object — the exact bytes the Frank factory signs (recursively sorted
- * keys, no whitespace; same canonicalization as sha256Hex).
+ * Verify the pack's Ed25519 signature over its validated manifestSha256.
  *
  * @param packJson     the parsed pack object (as fetched)
  * @param signatureHex lowercase hex Ed25519 signature (from the import request)
@@ -166,9 +175,11 @@ export async function importTemplatePack(
  */
 export function verifyPackSignature(packJson: unknown, signatureHex: string, publicKeyHex: string): boolean {
   try {
+    if (!packJson || typeof packJson !== "object") return false;
+    const manifestSha256 = (packJson as Record<string, unknown>).manifestSha256;
+    if (typeof manifestSha256 !== "string" || !/^[a-f0-9]{64}$/.test(manifestSha256)) return false;
     const publicKey = createPublicKey({ key: Buffer.from(publicKeyHex, "hex"), format: "der", type: "spki" });
-    const canonicalBytes = Buffer.from(canonicalJson(packJson), "utf-8");
-    return verifyEd25519(null, canonicalBytes, publicKey, Buffer.from(signatureHex, "hex"));
+    return verifyEd25519(null, Buffer.from(manifestSha256, "utf-8"), publicKey, Buffer.from(signatureHex, "hex"));
   } catch {
     return false; // malformed key/signature -> not verified
   }
@@ -257,17 +268,25 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function releaseAssetBase(packUrl: string): URL {
   const parsed = new URL(packUrl);
   if (parsed.protocol !== "https:") throw importError("invalid_origin", "packUrl must use HTTPS");
-  parsed.search = ""; parsed.hash = "";
-  parsed.pathname = parsed.pathname.slice(0, parsed.pathname.lastIndexOf("/") + 1);
+  if (parsed.search || parsed.hash) throw importError("invalid_url", "packUrl must not contain a query or fragment");
+  const packDirectory = parsed.pathname.lastIndexOf("/pack-v2/");
+  if (packDirectory < 1 || !parsed.pathname.endsWith(".json")) {
+    throw importError("invalid_release_path", "packUrl must point to a pack-v2 JSON inside one Frank release");
+  }
+  parsed.pathname = parsed.pathname.slice(0, packDirectory + 1);
   return parsed;
 }
 
 function resolveDeclaredUrl(explicit: unknown, base: URL, fileName: string): string | null {
   try {
-    const candidate = explicit == null ? new URL(fileName, base) : new URL(String(explicit), base);
+    const safeFileName = fileName === basename(fileName) && !fileName.startsWith(".") ? fileName : null;
+    if (!safeFileName) return null;
+    const candidate = explicit == null
+      ? new URL(`assets/${encodeURIComponent(safeFileName)}`, base)
+      : new URL(String(explicit), base);
     if (candidate.protocol !== "https:" || candidate.origin !== base.origin) return null;
-    if (!candidate.pathname.startsWith(base.pathname) || candidate.pathname.includes("..")) return null;
-    candidate.search = ""; candidate.hash = "";
+    if (candidate.search || candidate.hash) return null;
+    if (!candidate.pathname.startsWith(`${base.pathname}assets/`) || candidate.pathname.includes("..")) return null;
     return candidate.toString();
   } catch { return null; }
 }

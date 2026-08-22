@@ -92,7 +92,12 @@ export type TemplatePublishDefaults = {
   leadForm: {
     headline: string;
     questions: string[];
-    thankYou: { title: string; body: string };
+    thankYou: { title: string; body: string; actionType?: "visit_website" | "call_now" | "download" | "none"; actionUrl?: string };
+    name?: string;
+    formType?: "higher_intent" | "more_volume";
+    introBody?: string;
+    contactFields?: Array<{ type: string; required: boolean; label?: string }>;
+    privacy?: { url: string; linkText: string };
   };
   placements: {
     publisherPlatforms: Array<"facebook" | "instagram">;
@@ -575,7 +580,17 @@ const publishDefaultsSchema = z.object({
   leadForm: z.object({
     headline: nonEmptyString,
     questions: z.array(nonEmptyString).min(1),
-    thankYou: z.object({ title: nonEmptyString, body: nonEmptyString }),
+    thankYou: z.object({
+      title: nonEmptyString,
+      body: nonEmptyString,
+      actionType: z.enum(["visit_website", "call_now", "download", "none"]).optional(),
+      actionUrl: z.string().optional(),
+    }),
+    name: nonEmptyString.optional(),
+    formType: z.enum(["higher_intent", "more_volume"]).optional(),
+    introBody: nonEmptyString.optional(),
+    contactFields: z.array(z.object({ type: nonEmptyString, required: z.boolean(), label: z.string().optional() })).optional(),
+    privacy: z.object({ url: z.string(), linkText: nonEmptyString }).optional(),
   }),
   placements: z.object({
     publisherPlatforms: z.array(z.enum(["facebook", "instagram"])).min(1),

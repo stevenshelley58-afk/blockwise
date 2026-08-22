@@ -79,7 +79,7 @@ export function readEditorDefaults(pack: TemplatePack): PackEditorDefaults {
   });
   const rawValues = isRecord(defaults.textValues) ? defaults.textValues : {};
   const textValues = Object.fromEntries(Object.entries(rawValues).filter(([, value]) => typeof value === "string")) as Record<string, string>;
-  const rawMeta = isRecord(defaults.metaCopy) ? defaults.metaCopy : {
+  const rawMeta: Record<string, unknown> = isRecord(defaults.metaCopy) ? defaults.metaCopy : {
     ...metaCopyDefaults,
     headline: Array.isArray(metaCopyDefaults.headlines) ? metaCopyDefaults.headlines[0] : undefined,
     description: Array.isArray(metaCopyDefaults.descriptions) ? metaCopyDefaults.descriptions[0] : undefined,

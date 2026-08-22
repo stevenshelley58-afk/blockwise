@@ -97,6 +97,8 @@ export interface PlateLayer {
   layerId: string;
   /** Background colour role. */
   colourRole: ColourRole;
+  /** Optional immutable plate asset declared in TemplatePack.assets. */
+  assetKey?: string;
   geometry: Rect;
   /** True if this region must be inpaint-masked during content replacement. */
   protected: boolean;

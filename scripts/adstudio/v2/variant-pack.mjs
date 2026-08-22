@@ -257,10 +257,10 @@ function imageSlotLayer(id, z, inputKey, box, heightPx) {
 function buildLayout(format, skeleton, text, heightPx) {
   const layers = [
     imageSlotLayer(`${format === "4:5" ? "feed" : "story"}-slot-customer-photo`, 1, "customer_photo", skeleton.slot, heightPx),
-    textLayer(`${format === "4:5" ? "feed" : "story"}-text-headline`, 2, "headline", skeleton.headline, {}, { maxLength: 15, maxLines: 2 }),
-    textLayer(`${format === "4:5" ? "feed" : "story"}-text-supporting`, 3, "supporting", skeleton.supporting, {}, { maxLength: 44, maxLines: 1 }),
-    textLayer(`${format === "4:5" ? "feed" : "story"}-text-handle`, 4, "handle", skeleton.handle, {}, { maxLength: 28, maxLines: 1 }),
-    textLayer(`${format === "4:5" ? "feed" : "story"}-text-arrow`, 5, "arrow", skeleton.arrow, {}, { maxLength: 2, maxLines: 1 }),
+    textLayer(`${format === "4:5" ? "feed" : "story"}-text-headline`, 2, "headline", skeleton.headline, {}, { maxLength: 48, maxLines: 3 }),
+    textLayer(`${format === "4:5" ? "feed" : "story"}-text-supporting`, 3, "supporting", skeleton.supporting, {}, { maxLength: 80, maxLines: 2 }),
+    textLayer(`${format === "4:5" ? "feed" : "story"}-text-handle`, 4, "handle", skeleton.handle, {}, { maxLength: 40, maxLines: 1 }),
+    textLayer(`${format === "4:5" ? "feed" : "story"}-text-arrow`, 5, "arrow", skeleton.arrow, {}, { maxLength: 4, maxLines: 1 }),
   ];
   return { format, width: 1080, height: heightPx, layers };
 }
@@ -278,11 +278,13 @@ function buildDoc({ contract, variantIndex, skeleton, fonts, plates, sampleHash,
   return {
     schema: "adstudio.template.v2",
     id,
-    name: `${contract.name} — Variant ${variantIndex}`,
+    name: contract.mode === "multi-concept" ? `${contract.name} — Variant ${variantIndex}` : contract.name,
     goal: contract.goal || "buyer_leads",
     offerId: contract.offerId || "general",
     category: contract.category || "real-estate",
-    tags: [...(contract.tags || ["meta", "source-free"]), `variant-${variantIndex}`],
+    tags: contract.mode === "multi-concept"
+      ? [...(contract.tags || ["meta", "source-free"]), `variant-${variantIndex}`]
+      : [...(contract.tags || ["meta", "source-free"]), "single-template"],
     audienceIntent: contract.audienceIntent || "buyers",
     classification: contract.classification || { ad_type: "single_image", primary_intent: "other", property_or_agent_focus: "property" },
     provenance: {
@@ -303,10 +305,10 @@ function buildDoc({ contract, variantIndex, skeleton, fonts, plates, sampleHash,
     inputs: {
       images: [{ key: "customer_photo", label: "Customer or property photo", required: true, aspect: "portrait", description: "Replaceable rounded customer/property photo slot." }],
       text: [
-        { key: "headline", label: "Headline", required: true, maxLength: 15, sample: contract.text.headline },
-        { key: "supporting", label: "Supporting line", required: true, maxLength: 44, sample: contract.text.supporting },
-        { key: "handle", label: "Handle", required: true, maxLength: 28, sample: contract.text.handle },
-        { key: "arrow", label: "Arrow cue", required: true, maxLength: 2, sample: contract.text.arrow },
+        { key: "headline", label: "Headline", required: true, maxLength: 48, sample: contract.text.headline },
+        { key: "supporting", label: "Supporting line", required: true, maxLength: 80, sample: contract.text.supporting },
+        { key: "handle", label: "Handle", required: true, maxLength: 40, sample: contract.text.handle },
+        { key: "arrow", label: "Arrow cue", required: true, maxLength: 4, sample: contract.text.arrow },
       ],
     },
     publish: {

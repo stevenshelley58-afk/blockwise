@@ -1,11 +1,11 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync, readFileSync, writeFileSync, existsSync, statSync, readdirSync } from "node:fs";
+import { mkdtempSync, rmSync, readFileSync, writeFileSync, existsSync, statSync, readdirSync, mkdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import os from "node:os";
 import { spawnSync } from "node:child_process";
-import { createHash } from "node:crypto";
+import { createHash, generateKeyPairSync, verify as verifySignature } from "node:crypto";
 
 // ---------------------------------------------------------------------------
 // Authoritative pack-size regression: a request for "exactly 5 templates"
@@ -201,6 +201,38 @@ describe("variant-pack — authoritative exactly-five pack", () => {
       assert.equal(doc.formats.story.format, "9:16");
       assert.equal(doc.formats.feed.width, 1080);
       assert.equal(doc.formats.story.height, 1920);
+      assert.equal(doc.name, "Single");
+
+      const signingDir = join(candidate, "signing");
+      mkdirSync(signingDir, { recursive: true });
+      const { publicKey, privateKey } = generateKeyPairSync("ed25519");
+      const signingKey = join(signingDir, "pack-signing.pem");
+      writeFileSync(signingKey, privateKey.export({ type: "pkcs8", format: "pem" }));
+      const publicRoot = join(candidate, "public-releases");
+      const released = runNode([
+        "scripts/adstudio/v2/pack-release.mjs", "--candidate", candidate,
+        "--run", "trun_1234567890abcdef1234567890abcdef", "--trace", "trace-test",
+        "--job", "single release test", "--scope", "blockwise", "--settings-revision", "1",
+      ], { env: {
+        HERMES_HOME: join(candidate, "hermes-home"),
+        FRANK_PUBLIC_RELEASE_ROOT: publicRoot,
+        FRANK_PACK_SIGNING_KEY_FILE: signingKey,
+      } });
+      assert.equal(released.status, 0, `pack release failed:\n${released.stdout}\n${released.stderr}`);
+      const releaseOutput = JSON.parse(released.stdout);
+      const packPath = join(publicRoot, releaseOutput.releaseId, "pack-v2", `${manifest.variantIds[0]}.json`);
+      const pack = JSON.parse(readFileSync(packPath, "utf8"));
+      assert.equal(pack.schema, "blockwise.template-pack/v2");
+      assert.equal(pack.feedLayout.layers[0].assetKey, "feed-plate");
+      assert.equal(pack.storyLayout.layers[0].assetKey, "story-plate");
+      assert.ok(pack.feedLayout.layers.find((layer) => layer.type === "text").fontSize > 20);
+      for (const asset of Object.values(pack.assets)) {
+        assert.ok(existsSync(join(publicRoot, releaseOutput.releaseId, "assets", asset.fileName)), `missing public asset ${asset.fileName}`);
+      }
+      for (const font of pack.fonts) {
+        assert.ok(existsSync(join(publicRoot, releaseOutput.releaseId, "assets", font.file)), `missing public font ${font.file}`);
+      }
+      assert.ok(verifySignature(null, Buffer.from(pack.manifestSha256, "utf8"), publicKey, Buffer.from(pack.signature, "hex")));
     } finally { rmSync(candidate, { recursive: true, force: true }); }
   });
 

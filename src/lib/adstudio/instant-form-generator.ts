@@ -139,9 +139,23 @@ export function validateInstantForm(form: InstantForm): ValidationIssue[] {
   // Privacy URL required
   if (!form.privacy.url) {
     issues.push({ field: "privacy.url", code: "missing_privacy_url", message: "Privacy policy URL is required", severity: "error" });
+  } else if (!isHttpsUrl(form.privacy.url)) {
+    issues.push({ field: "privacy.url", code: "invalid_privacy_url", message: "Privacy policy must use a valid HTTPS URL", severity: "error" });
+  }
+
+  if ((form.thankYou.actionType === "visit_website" || form.thankYou.actionType === "download") && !isHttpsUrl(form.thankYou.actionUrl ?? "")) {
+    issues.push({ field: "thankYou.actionUrl", code: "invalid_action_url", message: "Thank-you action must use a valid HTTPS URL", severity: "error" });
   }
 
   return issues;
+}
+
+function isHttpsUrl(value: string): boolean {
+  try {
+    return new URL(value).protocol === "https:";
+  } catch {
+    return false;
+  }
 }
 
 // ---------------------------------------------------------------------------

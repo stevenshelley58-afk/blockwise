@@ -68,13 +68,13 @@ export interface PublishLoadResult {
   formRevision: number | null;
 }
 
-type PublishRequirements = {
+export type PublishRequirements = {
   destinationMode: "website" | "instant_form";
   requiredCtaTypes: string[];
 };
 
 /** Read only the optional v2 publish contract; the canonical pack schema stays unchanged. */
-function readPublishRequirements(pack: unknown): PublishRequirements {
+export function readPublishRequirements(pack: unknown): PublishRequirements {
   if (!pack || typeof pack !== "object") return { destinationMode: "instant_form", requiredCtaTypes: [] };
   const candidate = (pack as Record<string, unknown>).publishRequirements;
   const metadata = (pack as Record<string, unknown>).metadata;
@@ -196,7 +196,7 @@ export function validatePublishState(
   if (!state.ad.metaPrimaryText) issues.push("Missing primary text");
   if (!state.ad.metaHeadline) issues.push("Missing headline");
   if (!state.ad.metaCta) issues.push("Missing CTA");
-  if (!destinationUrl || !isHttpsUrl(destinationUrl)) {
+  if (mode === "website" && (!destinationUrl || !isHttpsUrl(destinationUrl))) {
     issues.push("Missing valid HTTPS destination URL/article — add the article or website URL before publishing");
   }
   if (requirements.requiredCtaTypes.length > 0 && !requirements.requiredCtaTypes.includes(state.ad.metaCta)) {
@@ -209,7 +209,8 @@ export function validatePublishState(
     }
     if (state.form && !isHttpsUrl(state.form.privacy.url)) issues.push("Instant Form privacy policy must be a valid HTTPS URL");
     if (state.form && state.form.thankYou.actionType === "none") issues.push("Instant Form thank-you screen needs an action");
-    if (state.form && state.form.thankYou.actionType === "visit_website" && !isHttpsUrl(state.form.thankYou.actionUrl ?? destinationUrl)) {
+    if (state.form && state.form.thankYou.actionType === "call_now") issues.push("Instant Form call-now thank-you actions are not supported by this publisher yet");
+    if (state.form && ["visit_website", "download"].includes(state.form.thankYou.actionType) && !isHttpsUrl(state.form.thankYou.actionUrl ?? destinationUrl)) {
       issues.push("Instant Form thank-you website action needs a valid HTTPS URL");
     }
   }

@@ -75,6 +75,11 @@ describe("Publish adapter", () => {
     assert.equal(issues.length, 0, JSON.stringify(issues));
   });
 
+  it("does not invent a website dependency for an Instant Form pack", () => {
+    const issues = validatePublishState(validState, { controls: { destinationMode: "instant_form" } });
+    assert.deepEqual(issues, []);
+  });
+
   it("detects missing Feed PNG", () => {
     const s = structuredClone(validState);
     s.revision.feedPngHash = "";

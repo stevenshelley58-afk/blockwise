@@ -54,6 +54,7 @@ const plateLayerSchema = z.object({
   type: z.literal("plate"),
   layerId: z.string().min(1),
   colourRole: z.enum(COLOUR_ROLES),
+  assetKey: z.string().min(1).optional(),
   geometry: rectSchema,
   protected: z.boolean(),
 });
