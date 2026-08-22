@@ -215,7 +215,7 @@ test("two declared image slots keep their distinct customer sources", async () =
   });
 
   for (const creative of result.pack.creatives) {
-    const instance = creative.canvas as { values: { images: Record<string, { src: string }> } };
+    const instance = creative.canvas as unknown as { values: { images: Record<string, { src: string }> } };
     assert.equal(instance.values.images.photo?.src, firstPhoto);
     assert.equal(instance.values.images.logo?.src, secondPhoto);
   }
@@ -242,7 +242,7 @@ test("multiple declared customer text values survive unchanged", async () => {
     template: twoTextTemplate,
   });
   for (const creative of result.pack.creatives) {
-    const instance = creative.canvas as { values: { text: Record<string, string> } };
+    const instance = creative.canvas as unknown as { values: { text: Record<string, string> } };
     assert.deepEqual(instance.values.text, supplied);
   }
 });
