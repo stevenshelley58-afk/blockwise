@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync, readFileSync, writeFileSync, existsSync, statSync, readdirSync, mkdirSync } from "node:fs";
+import { mkdtempSync, rmSync, readFileSync, writeFileSync, existsSync, statSync, readdirSync, mkdirSync, chmodSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import os from "node:os";
@@ -233,7 +233,15 @@ describe("variant-pack — authoritative exactly-five pack", () => {
         assert.ok(existsSync(join(publicRoot, releaseOutput.releaseId, "assets", font.file)), `missing public font ${font.file}`);
       }
       assert.ok(verifySignature(null, Buffer.from(pack.manifestSha256, "utf8"), publicKey, Buffer.from(pack.signature, "hex")));
-    } finally { rmSync(candidate, { recursive: true, force: true }); }
+    } finally {
+      const privateReleaseRoot = join(candidate, "hermes-home", "tool_releases", "ad-template-generator");
+      if (existsSync(privateReleaseRoot)) {
+        for (const releaseId of readdirSync(privateReleaseRoot)) {
+          try { chmodSync(join(privateReleaseRoot, releaseId), 0o755); } catch {}
+        }
+      }
+      rmSync(candidate, { recursive: true, force: true });
+    }
   });
 
   it("two INDEPENDENT templates from one source still fail the gate (no weakening)", () => {
