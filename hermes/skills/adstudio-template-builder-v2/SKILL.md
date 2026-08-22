@@ -180,6 +180,16 @@ mandatory. Do not return `qa` as a list of per-gate strings or a
 human-readable summary — the framework reads the three boolean/int fields
 directly.
 
+Observed finalize failure modes (all fixed in the codebase, listed so they
+are never reintroduced): (1) `HERMES_HOME` unset in the Tool-run env makes
+a `HERMES_HOME || HOME` default write the pack under bare `$HOME/
+tool_releases` — resolved via `resolveReleaseStoreRoot` (~/.hermes
+fallback); (2) the agent self-redacting `template_pack_path` into a
+placeholder (e.g. `hermes-private:`) because the controller prompt says
+"never expose private paths" — the framework fields are NOT redacted, echo
+the packager stdout verbatim; (3) returning `qa` without the three
+mandatory keys above.
+
 ## Release law
 
 Release only a provider-neutral TemplatePack with Feed and Story layouts,
