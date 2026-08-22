@@ -17,15 +17,26 @@ const SCRIPT_PATH = fileURLToPath(import.meta.url);
 const REPO_ROOT = resolve(dirname(SCRIPT_PATH), "..", "..", "..");
 
 export const SUBJECT_INVARIANCE_RUBRIC_VERSION = "adstudio-subject-invariance-v1";
-export const FIXTURE_CORPUS_VERSION = "adstudio-subject-invariance-fixtures-v1";
+export const FIXTURE_CORPUS_VERSION = "adstudio-subject-invariance-fixtures-v2";
 
+// The real-photo fixture is a DURABLE, VERSIONED dependency of the canonical
+// builder. The pinned file is committed at
+//   public/adstudio-samples/photos/int-bedroom.png
+// so every clean checkout can run the gate at full strength — no transient
+// release-worktree file and no symlink indirection. Candidate builds must
+// COPY this tree into the candidate root (never symlink it).
+//
+// v2 corpus note: the artifact was re-encoded losslessly from the v1 corpus
+// photo; the decoded RGB pixels are unchanged (canonicalPixelHash identical),
+// and the byte pin below matches the committed file exactly. Bump
+// FIXTURE_CORPUS_VERSION whenever the corpus artifact or pins change.
 const FIXTURE_WIDTH = 1600;
 const FIXTURE_HEIGHT = 1000;
 const FIXTURE_CORPUS = Object.freeze({
   realPhoto: {
     id: "unrelated-real-photo",
     path: "public/adstudio-samples/photos/int-bedroom.png",
-    sha256: "831c757d7608318fc8ba77f0a40e0dd1ed3179f38ec0e90cbcb1d30a2a7846a8",
+    sha256: "1694485827645913c10ea99f2c71bda57f1172739d2baa4713fa96b8ae6a268f",
     canonicalPixelHash: "5cd890e4ccf0b31dbac879b265635d98793a6e645258198a359a21290a5a965a",
   },
   // Hashes are over decoded RGB pixels, not encoder-specific PNG bytes.
@@ -456,6 +467,45 @@ async function rgba(bytes, width, height) {
     .raw()
     .toBuffer({ resolveWithObject: true });
   return { data, width: info.width, height: info.height };
+}
+
+/**
+ * Verify the pinned real-photo corpus artifact against its committed pins.
+ * Reads `repoRoot/public/adstudio-samples/photos/int-bedroom.png`, checks the
+ * byte SHA-256 AND the decoded RGB pixel hash against FIXTURE_CORPUS, and
+ * verifies the procedural fixtures' canonical pixel hashes. This is the
+ * clean-checkout regression: a checkout missing the committed fixture (or a
+ * candidate root that symlinked instead of copying) fails here before any
+ * render work, exactly as the gate requires.
+ */
+export async function verifyPinnedFixtureCorpus(repoRoot) {
+  const results = [];
+  for (const id of ["mid-grey", "grid-gradient", "neutral-logo"]) {
+    const fixture = buildProceduralFixture(id);
+    const pixelHash = verifyCanonicalFixture(id, fixture);
+    results.push({ id, canonicalPixelHash: pixelHash, sourceIndependent: true });
+  }
+  const realPath = join(repoRoot, FIXTURE_CORPUS.realPhoto.path);
+  const sourceRealBytes = await readFile(realPath);
+  const actualRealHash = sha256(sourceRealBytes);
+  if (actualRealHash !== FIXTURE_CORPUS.realPhoto.sha256) {
+    throw new Error(`fixed real-photo fixture hash mismatch: expected ${FIXTURE_CORPUS.realPhoto.sha256}, got ${actualRealHash}`);
+  }
+  const normalizedReal = await sharp(sourceRealBytes).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+  const actualRealPixelHash = sha256(normalizedReal.data);
+  if (actualRealPixelHash !== FIXTURE_CORPUS.realPhoto.canonicalPixelHash) {
+    throw new Error(`fixed real-photo fixture pixel hash mismatch: expected ${FIXTURE_CORPUS.realPhoto.canonicalPixelHash}, got ${actualRealPixelHash}`);
+  }
+  return {
+    version: FIXTURE_CORPUS_VERSION,
+    realPhoto: {
+      id: FIXTURE_CORPUS.realPhoto.id,
+      path: FIXTURE_CORPUS.realPhoto.path,
+      byteSha256: actualRealHash,
+      canonicalPixelHash: actualRealPixelHash,
+    },
+    procedural: results,
+  };
 }
 
 async function fixtureCorpus(repoRoot, outDir) {

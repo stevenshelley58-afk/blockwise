@@ -33,7 +33,23 @@ renderer (`src/lib/adstudio/v2/render/`), and one editor.
    fidelity gate (§ Fidelity) or be marked **baked** — its original pixels stay
    in the plate and that text is simply not editable. Never ship a region
    "approximately right".
-6. One source ad produces at most one template.
+6. One source ad produces at most one template **unless the job brief requests
+   a multi-variant pack** (e.g. "exactly 5 templates"): the pipeline then
+   emits exactly N declared variants of that source. Every variant declares
+   `provenance.packId` (shared) and `provenance.packVariantIndex` (1..N,
+   unique, contiguous). The gates treat declared pack variants as one
+   authorised pack — never as accidental duplicates — and still enforce that
+   every variant has a DISTINCT layout skeleton. Two independent templates
+   from one source remain forbidden.
+
+7. The subject-invariance QA corpus is a durable, versioned dependency of the
+   builder: the real-photo fixture is committed at
+   `public/adstudio-samples/photos/int-bedroom.png` and pinned in
+   `scripts/adstudio/v2/subject-invariance.mjs` (`FIXTURE_CORPUS_VERSION` +
+   byte/pixel hashes). Candidate builds must COPY the corpus into the
+   candidate root as regular files — never symlink it — so the gate runs at
+   full strength on clean checkouts. Repin the corpus only by changing the
+   committed artifact and bumping the corpus version; never weaken a check.
 
 ## Image-substitution law
 
@@ -113,6 +129,7 @@ Vercel (the OpenCV/tesseract/rembg dependencies do not exist there).
 |---|---|---|
 | 1. analyse | `analyse --source <path> --id <id>` | Vision input contract + `sourceValues` (the source's own on-image text per key) into `template-gallery-v2/<id>/evidence.json`. |
 | 2. decompose | `decompose --id <id>` | OCR text regions, corpus font match, text-inpaint mask → **plate**, slot boxes + mask kind, operator-marked overlay patches. Removes replaceable source-image pixels from the plate and every patch across the complete slot/effect footprint. Emits `template.json` with `exactness.status: "draft"` + a residual report. |
+| 2b. variant-pack | `node scripts/adstudio/v2/variant-pack.mjs --contract <analysis.json> --repo <candidateRoot>` | **Only when the job brief requests a pack of N>1 templates.** Deterministically derives exactly N complete layered variants from the one analysed source. Each variant: `provenance.packId` + `packVariantIndex` (1..N), own source-free plates, native 4:5 feed + 9:16 story, editable inputs, full Meta publish block, evidence, deterministic sample. Copies the committed QA corpus into the candidate root (regular files, never symlinks) and verifies it before writing any variant. |
 | 3. restyle | `restyle --id <id>` | Applies the Studio-recorded `restyle` block headlessly (palette remap, generic slot assets, safe copy), renders the **public sample** via `render/server.ts`, back-fills `provenance.sample.contentHash`. Fails if the sample hash equals the source hash or the restyle evidence is trivial. |
 | 4. story-draft | `story-draft --id <id>` | 9:16 draft: plate extended to 1920 (sampled-edge blur-extend by default; `--ai-extend` outpaints the margin bands only), layers repositioned into Meta safe zones. |
 | 5. check | `check --id <id>` | **The source-replay integrity gate.** Renders the doc with `sourceValues` + the source photos and compares against the source ad to verify decomposition. This is not a customer-result likeness score. Runs the stress matrix and writes `exactness.residuals`. |
@@ -247,6 +264,73 @@ or add a template-specific bypass.
 Source curation is the cheapest quality control: only proven, designer-grade
 ads enter `meta_ad_candidates/`, recorded as an explicit curation flag in
 evidence. The gallery can never look better than its sources.
+
+## Final result contract (candidate stage)
+
+After `studio-qa` previews are prepared, stop before release for human
+approval and return ONE compact JSON object with EXACTLY these semantics
+(the Tool framework validates them verbatim — gateway/tool_run_api.py
+`_prepare_candidate_output`):
+
+- `template_id` — the pack id.
+- `candidate_ref` — a `.json` FILE (e.g. the variant-pack manifest) beneath
+  this run's `tool_assets/.../runs/<run_id>` or `tool_checkpoints/<run_id>`
+  roots. Never a directory; never a path outside the private run roots.
+- `preview_refs` — non-empty array of image files (`png/jpg/webp`) under
+  `tool_assets/.../runs/<run_id>/previews/`; copy per-variant portrait +
+  story previews there (candidate/public paths are rejected).
+- `evidence_refs` — analysis, check, manifest, template docs, subject-
+  invariance evidence, contact sheets.
+- `qa_summary` with the EXACT literals: `source_verified: true`,
+  `deterministic_check: "passed"`, `subject_invariance_gate: true`,
+  `release_status: "blocked_pending_human_approval"` (exact string).
+- `cost` and `attention`.
+
+The framework hard-fails the run if any value differs. Never mark a gate
+passed when it did not pass; if a gate fails, report it and stop.
+
+After the 100% zoom approval, the finalize stage reruns every release gate
+and issues ONE immutable, sanitized, signed TemplatePack beneath
+`$HERMES_HOME/tool_releases/ad-template-generator` via
+`scripts/adstudio/v2/pack-release.mjs`, returning `release_id`,
+`template_pack_ref`, `template_pack_path`, `sha256`, `signature`,
+`compatibility`, `qa`, `trace_ref`. The artifact's bytes must hash to
+`sha256` and its `integrity.signature` must equal the returned `signature`.
+
+## Finalize / hard-reset recipe (after human approval)
+
+Re-open the approved checkpointed workspace and rerun EVERY release-blocking
+check from the committed state, WITHOUT writing into the read-only authority
+checkouts (/opt/ad-template-builder, any Git checkout — read-only by
+contract):
+
+1. `node scripts/verify/adstudio-templates-v2.mjs` (fast mode) against the
+   candidate dirs — schema/contract/publish/diversity + tofu gate.
+2. Subject-invariance gate per variant (fresh outDir) — source-free proof.
+3. `npm run typecheck` — the canonical typecheck is NON-WRITING
+   (`tsc --noEmit --incremental false`); it must pass from the read-only
+   checkout and never write build-info files.
+4. `node scripts/verify/hard-reset-static.mjs` — static clean-rebuild
+   verification (the fixture corpus path is a committed dependency, not
+   legacy).
+
+Only when every check passes, issue the immutable signed TemplatePack via
+`pack-release.mjs` and return the release JSON (release_id,
+template_pack_ref, template_pack_path, sha256, signature, compatibility, qa,
+trace_ref). If a check is stale or fails, return `failed=true` with the
+error — never weaken or skip a gate.
+
+## Visual-output gate (tofu / missing glyphs)
+
+The verify gate (scripts/verify/adstudio-templates-v2.mjs, section 8.5) scans
+every 4:5 and 9:16 sample and fails the check if any rendered text layer
+shows tofu (.notdef boxes) or a declared face lacks the codepoints the doc
+renders. The font corpus (public/fonts/adstudio, pinned in manifest.json) is
+a VERSIONED dependency: never ship or re-encode faces; a damaged face is
+repaired through the corpus process (Google Fonts face, Latin coverage
+verified incl. '@' '>' and digits, manifest sha256 repinned) — the gate is
+never weakened. Every variant ships both placement samples
+(provenance.sample + provenance.storySample).
 
 ## Files
 
