@@ -27,6 +27,11 @@ export type AdStudioCopyFields = {
   cta: string;
 };
 
+export type AdStudioAiWritingGuidance = {
+  summary: string;
+  fields: Record<string, string>;
+};
+
 export type AdStudioCopyRequestBody = {
   mode?: "generate" | "brief" | "assist";
   brief?: string;
@@ -49,6 +54,7 @@ export type AdStudioCopyRequestBody = {
     voice?: string;
     preferredPhrases?: string[];
     neverSay?: string[];
+    aiWritingGuidance?: AdStudioAiWritingGuidance;
   };
 };
 
@@ -96,6 +102,29 @@ export const ADSTUDIO_COPY_LIMITS: Record<keyof AdStudioCopyFields, number> = {
   description: 90,
   cta: 24,
 };
+
+export const ADSTUDIO_GUIDANCE_LIMITS = {
+  summary: 600,
+  field: 240,
+  fields: 40,
+} as const;
+
+export function normalizeAdStudioAiWritingGuidance(value: unknown): AdStudioAiWritingGuidance | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const record = value as Record<string, unknown>;
+  const summary = typeof record.summary === "string" ? record.summary.trim().slice(0, ADSTUDIO_GUIDANCE_LIMITS.summary) : "";
+  const rawFields = record.fields && typeof record.fields === "object" && !Array.isArray(record.fields)
+    ? record.fields as Record<string, unknown>
+    : {};
+  const fields: Record<string, string> = {};
+  for (const [key, guidance] of Object.entries(rawFields).slice(0, ADSTUDIO_GUIDANCE_LIMITS.fields)) {
+    if (typeof guidance !== "string") continue;
+    const cleanKey = key.trim().slice(0, 100);
+    const cleanGuidance = guidance.trim().slice(0, ADSTUDIO_GUIDANCE_LIMITS.field);
+    if (cleanKey && cleanGuidance) fields[cleanKey] = cleanGuidance;
+  }
+  return summary || Object.keys(fields).length ? { summary, fields } : undefined;
+}
 
 export async function generateAdStudioCopy(
   input: AdStudioCopyGenerationInput,

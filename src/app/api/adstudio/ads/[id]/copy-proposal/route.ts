@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { generateAdStudioTemplateCopy } from "@/lib/adstudio/copy-generation";
+import { generateAdStudioTemplateCopy, normalizeAdStudioAiWritingGuidance } from "@/lib/adstudio/copy-generation";
 import { buildDeterministicCopyProposal } from "@/lib/adstudio/copy-proposal";
 import { errorResponse, readJsonBody, requireAdStudioRequest } from "@/lib/adstudio/http";
 import { templatePackAnySchema } from "../../../../../../../packages/ad-template-pack-contract/src/schema.ts";
@@ -42,10 +42,13 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
   if (!parsed.success) return NextResponse.json({ error: "Template pack not found" }, { status: 404 });
   const pack = parsed.data as unknown as import("../../../../../../../packages/ad-template-pack-contract/src/types.ts").TemplatePack;
   const fields = overlayFields(packRow?.pack_json && typeof packRow.pack_json === "object" ? packRow.pack_json as Record<string, unknown> : {}, pack.textInputs.map(field => ({ key: field.key, label: field.label, maxLength: field.maxLength })));
+  const rawPack = packRow?.pack_json && typeof packRow.pack_json === "object" ? packRow.pack_json as Record<string, unknown> : {};
+  const metadata = rawPack.metadata && typeof rawPack.metadata === "object" ? rawPack.metadata as Record<string, unknown> : {};
+  const guidance = normalizeAdStudioAiWritingGuidance(metadata.aiWritingGuidance);
   const copy = body.copy && typeof body.copy === "object" ? body.copy as Record<string, string> : {};
   const providerEnabled = Boolean(process.env.OPENAI_API_KEY || process.env.AZURE_OPENAI_API_KEY || process.env.DEEPSEEK_API_KEY);
   if (!providerEnabled) {
-    return NextResponse.json(buildDeterministicCopyProposal(fields, brief, copy));
+    return NextResponse.json(buildDeterministicCopyProposal(fields, brief, copy, guidance));
   }
   try {
     const result = await generateAdStudioTemplateCopy({
@@ -53,7 +56,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
       userId: access.access.userId,
       description: brief,
       fields,
-      context: { templateName: pack.classification.label },
+      context: { templateName: pack.classification.label, aiWritingGuidance: guidance },
     });
     return NextResponse.json(result);
   } catch (error) {
