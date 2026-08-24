@@ -225,10 +225,20 @@ async function uploadRender(
   }
   const { error } = await input.supabase.storage
     .from("workspace-artifacts")
-    .upload(render.path, render.png, { contentType: "image/png", upsert: true });
-  if (error) {
-    throw new SaveError("render_upload_failed", "Could not store the " + placement + " render: " + error.message);
+    .upload(render.path, render.png, { contentType: "image/png", upsert: false });
+  if (!error) return;
+
+  // Render paths are content-addressed. A create-only retry can therefore
+  // treat an existing object as success only after downloading and verifying
+  // its bytes, never by overwriting it or trusting the upload error alone.
+  const existing = await input.supabase.storage.from("workspace-artifacts").download(render.path);
+  if (!existing.error && existing.data) {
+    const existingBytes = Buffer.from(await existing.data.arrayBuffer());
+    const existingHash = createHash("sha256").update(existingBytes).digest("hex");
+    if (existingHash === render.hash) return;
   }
+
+  throw new SaveError("render_upload_failed", "Could not store the " + placement + " render: " + error.message);
 }
 
 // ---------------------------------------------------------------------------
