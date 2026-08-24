@@ -96,6 +96,18 @@ const layoutSchema = z.object({
   placement: placementSchema,
   layers: z.array(layoutLayerSchema).min(1),
   safeZones: z.array(safeZoneSchema).min(1),
+  storyPolicy: z.object({
+    schema: z.literal("adstudio.story-policy.v1"),
+    safeTopPx: z.number().int().nonnegative(),
+    safeBottomPx: z.number().int().nonnegative(),
+    maxDeadSpacePx: z.number().int().positive(),
+    backingColour: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+    backingLayerIds: z.array(z.string().min(1)),
+    ctaGroup: z.object({
+      layerIds: z.array(z.string().min(1)),
+      maxGapPx: z.number().int().positive(),
+    }),
+  }).optional(),
 });
 
 // ---------------------------------------------------------------------------

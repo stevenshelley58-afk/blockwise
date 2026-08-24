@@ -1,5 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -51,11 +52,25 @@ class FakeSupabase {
   };
   seq = 0;
   uploaded: Array<{ path: string; bytes: Buffer }> = [];
+  uploadAttempts: Array<{ path: string; bytes: Buffer; options: Record<string, unknown> }> = [];
+  objects = new Map<string, Buffer>();
   storage = {
     from: () => ({
-      upload: async (path: string, bytes: Buffer) => {
-        this.uploaded.push({ path, bytes });
+      upload: async (path: string, bytes: Buffer, options: Record<string, unknown>) => {
+        this.uploadAttempts.push({ path, bytes, options });
+        if (this.objects.has(path) && options.upsert === false) {
+          return { error: { message: "The resource already exists" } };
+        }
+        const stored = Buffer.from(bytes);
+        this.objects.set(path, stored);
+        this.uploaded.push({ path, bytes: stored });
         return { error: null };
+      },
+      download: async (path: string) => {
+        const bytes = this.objects.get(path);
+        return bytes
+          ? { data: new Blob([Uint8Array.from(bytes).buffer as ArrayBuffer]), error: null }
+          : { data: null, error: { message: "The resource was not found" } };
       },
     }),
   };
@@ -180,6 +195,14 @@ function fakeRenderer(calls: string[]) {
   };
 }
 
+function contentAddressedRenderer(calls: string[]) {
+  return async (placement: "feed" | "story") => {
+    calls.push(placement);
+    const png = Buffer.from(`${placement}-render`);
+    return { sha256: createHash("sha256").update(png).digest("hex"), png };
+  };
+}
+
 function seedAd(db: FakeSupabase, workspaceId: string, overrides: Row = {}) {
   const row: Row = {
     id: "ad-1",
@@ -301,6 +324,7 @@ describe("saveAd", () => {
     const db = new FakeSupabase();
     seedAd(db, WS);
     const placements: string[] = [];
+    const renderer = contentAddressedRenderer(placements);
 
     const first = await saveAd({
       supabase: db as never,
@@ -310,7 +334,7 @@ describe("saveAd", () => {
       expectedRevision: 0,
       colourMap: PACK.semanticColours,
       imageValues: {},
-      renderPlacement: fakeRenderer(placements),
+      renderPlacement: renderer,
     });
     assert.equal(first.revisionNumber, 1);
 
@@ -322,7 +346,7 @@ describe("saveAd", () => {
       expectedRevision: 1,
       colourMap: PACK.semanticColours,
       imageValues: {},
-      renderPlacement: fakeRenderer(placements),
+      renderPlacement: renderer,
     });
 
     assert.equal(second.revisionNumber, 2);
@@ -331,6 +355,64 @@ describe("saveAd", () => {
     assert.equal(revisionRows(db).length, 2);
     assert.equal(db.tables.ad_customer_ads[0].active_revision_id, second.revisionId);
     assert.deepEqual(placements, ["feed", "story", "feed", "story"]);
+  });
+
+  it("retries an existing content-addressed render without overwriting it", async () => {
+    const db = new FakeSupabase();
+    seedAd(db, WS);
+    const placements: string[] = [];
+    const renderer = contentAddressedRenderer(placements);
+
+    await saveAd({
+      supabase: db as never,
+      workspaceId: WS,
+      adId: "ad-1",
+      document: makeDocument(),
+      expectedRevision: 0,
+      colourMap: PACK.semanticColours,
+      imageValues: {},
+      renderPlacement: renderer,
+    });
+    const second = await saveAd({
+      supabase: db as never,
+      workspaceId: WS,
+      adId: "ad-1",
+      document: makeDocument({ sharedTextValues: { headline: "Open Sunday" } }),
+      expectedRevision: 1,
+      colourMap: PACK.semanticColours,
+      imageValues: {},
+      renderPlacement: renderer,
+    });
+
+    assert.equal(second.revisionNumber, 2);
+    assert.equal(db.uploaded.length, 2, "duplicate retries must not replace the stored objects");
+    assert.equal(db.uploadAttempts.length, 4);
+    assert.deepEqual(db.uploadAttempts.map(attempt => attempt.options.upsert), [false, false, false, false]);
+    assert.deepEqual(placements, ["feed", "story", "feed", "story"]);
+  });
+
+  it("rejects an existing render when its bytes do not match the render hash", async () => {
+    const db = new FakeSupabase();
+    seedAd(db, WS);
+    const renderer = contentAddressedRenderer([]);
+    const feedBytes = Buffer.from("feed-render");
+    const feedHash = createHash("sha256").update(feedBytes).digest("hex");
+    db.objects.set(`${WS}/adstudio/renders/ad-1/feed-${feedHash}.png`, Buffer.from("tampered"));
+
+    await assert.rejects(
+      saveAd({
+        supabase: db as never,
+        workspaceId: WS,
+        adId: "ad-1",
+        document: makeDocument(),
+        expectedRevision: 0,
+        colourMap: PACK.semanticColours,
+        imageValues: {},
+        renderPlacement: renderer,
+      }),
+      (error: unknown) => error instanceof SaveError && error.code === "render_upload_failed",
+    );
+    assert.equal(db.tables.ad_revisions.length, 0);
   });
 
   it("returns existing hashes unchanged when the document hash matches", async () => {
@@ -376,7 +458,7 @@ describe("saveAd", () => {
   it("rejects a stale revision (expected < current)", async () => {
     const db = new FakeSupabase();
     seedAd(db, WS);
-    const renderer = fakeRenderer([]);
+    const renderer = contentAddressedRenderer([]);
 
     await saveAd({
       supabase: db as never,

@@ -31,7 +31,7 @@ Run deployment checks through Vercel build and preview workflows. Do not run loc
 - `npm run build`
 - `npm run verify-env`
 - `npm run verify-env:first-tester`
-- `npm run test:e2e:preview` with `PLAYWRIGHT_BASE_URL`, `BLOCKWISE_DEV_PASSWORD`, `ADSTUDIO_E2E_WORKSPACE_ID`, and an authenticated `ADSTUDIO_E2E_STORAGE_STATE`.
+- `npm run test:e2e:preview` with `PLAYWRIGHT_BASE_URL`, `ADSTUDIO_E2E_PASSWORD`, `ADSTUDIO_E2E_WORKSPACE_ID`, `ADSTUDIO_E2E_PACK_ID`, and an authenticated `ADSTUDIO_E2E_STORAGE_STATE`. When Production Turnstile blocks headless login, set optional `ADSTUDIO_E2E_LOGIN_URL` to an owned captcha-free Preview; the helper transfers only the dedicated Supabase session cookies to the target origin, and the E2E asserts the target is unauthenticated before using that state.
 - Visit `/api/health` on the preview URL and confirm `status` is `ready` once secrets are configured.
 - Use `Authorization: Bearer $CRON_SECRET` when checking detailed `/api/health` or `/api/health/research` output. While the launch Ad Radar feature flag is off, `/api/health/research` deliberately returns HTTP 200 with `status: "disabled"` without contacting the research service.
 - Confirm `/api/health` has no `readiness.security.missingRecommended` entries before handling live client data.

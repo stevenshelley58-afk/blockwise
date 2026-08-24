@@ -156,6 +156,16 @@ export interface Layout {
   layers: LayoutLayer[];
   /** Safe zones for text and critical content. */
   safeZones: SafeZone[];
+  /** Deterministic derived Story composition policy, when present. */
+  storyPolicy?: {
+    schema: "adstudio.story-policy.v1";
+    safeTopPx: number;
+    safeBottomPx: number;
+    maxDeadSpacePx: number;
+    backingColour: string;
+    backingLayerIds: string[];
+    ctaGroup: { layerIds: string[]; maxGapPx: number };
+  };
 }
 
 // ---------------------------------------------------------------------------

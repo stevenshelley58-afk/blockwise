@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { TemplatePack, Placement, LayoutLayer, ImageSlotLayer, Rect } from "../../../../packages/ad-template-pack-contract/src/types";
+import type { AdDocumentParsed } from "../../../../packages/ad-template-pack-contract/src/schema";
 import { PLACEMENT_DIMENSIONS } from "../../../../packages/ad-template-pack-contract/src/types";
 import { buildAdDocument, brandPackColoursToRoleMap, editorTextInputs, resolveColourMap, useEditorState, type BrandPackColours, type EditorState, type MetaCopy } from "./use-editor-state";
 import { ColourToggle } from "./colour-toggle";
@@ -10,6 +11,8 @@ import { CropDialog } from "./crop-dialog";
 import { InputsPanel } from "./inputs-panel";
 import { LayoutSchematic } from "./layout-schematic";
 import { MetaCopyPanel } from "./meta-copy-panel";
+import { uploadCustomerImage } from "./customer-image-upload";
+import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
 // Editor Shell — Phase 6 foundation
@@ -36,9 +39,11 @@ export interface EditorShellProps {
    * the colour toggle is then disabled and the template palette stays.
    */
   brandColours?: BrandPackColours | null;
+  initialDocument?: AdDocumentParsed;
+  initialRevision?: number;
 }
 
-export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColours = null }: EditorShellProps) {
+export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColours = null, initialDocument, initialRevision }: EditorShellProps) {
   const router = useRouter();
   const {
     state,
@@ -49,6 +54,7 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
     selectLayer,
     updateTextValue,
     updateImageValue,
+    updateImagePreview,
     updateCrop,
     setColourMode,
     undo,
@@ -57,19 +63,48 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
     setSaving,
     setError,
     updateMetaCopy,
-  } = useEditorState(pack);
+  } = useEditorState(pack, initialDocument, initialRevision);
 
   /** Which slot's crop dialog is open — always the ACTIVE placement's crop. */
   const [cropTarget, setCropTarget] = useState<{ slot: ImageSlotLayer; placement: Placement } | null>(null);
   const [proposalBrief, setProposalBrief] = useState("");
   const [proposal, setProposal] = useState<{ onImage: Record<string, string>; copy: MetaCopy; source: string } | null>(null);
   const [proposalBusy, setProposalBusy] = useState(false);
+  const [pendingImageUploads, setPendingImageUploads] = useState(0);
+  const [mobilePanel, setMobilePanel] = useState<MobilePanel>(null);
+  const imageUploadTokens = useRef(new Map<string, number>());
+
+  const handleImageChange = useCallback(async (key: string, change: { file: File; previewUrl: string } | null) => {
+    const token = (imageUploadTokens.current.get(key) ?? 0) + 1;
+    imageUploadTokens.current.set(key, token);
+    if (!change) {
+      updateImageValue(key, null, null);
+      return;
+    }
+    // Keep the last verified ref visible if a replacement upload fails. The
+    // preview is optimistic, but it must never replace a persisted image with
+    // an invalid or half-uploaded value.
+    const previousValue = state.imageValues.find(value => value.inputKey === key);
+    setPendingImageUploads(count => count + 1);
+    updateImagePreview(key, change.previewUrl);
+    try {
+      const uploaded = await uploadCustomerImage({ file: change.file, adId, workspaceId });
+      if (imageUploadTokens.current.get(key) !== token) return;
+      updateImageValue(key, uploaded.ref, change.previewUrl);
+    } catch (error) {
+      if (imageUploadTokens.current.get(key) !== token) return;
+      updateImageValue(key, previousValue?.dataUrl ?? null, null);
+      setError(error instanceof Error ? error.message : "Image upload failed.");
+    } finally {
+      setPendingImageUploads(count => Math.max(0, count - 1));
+    }
+  }, [adId, workspaceId, state.imageValues, updateImagePreview, updateImageValue, setError]);
 
   /** Open the crop dialog for a slot (no-op until an image is picked). */
   const openCrop = useCallback(
     (slot: ImageSlotLayer) => {
       const value = state.imageValues.find(iv => iv.inputKey === slot.inputKey);
-      if (!value?.dataUrl) return; // nothing to crop yet
+      if (!value?.dataUrl && !value?.previewUrl) return; // nothing to crop yet
       setCropTarget({ slot, placement: state.activePlacement });
     },
     [state.imageValues, state.activePlacement],
@@ -85,6 +120,7 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
   );
 
   const handleSave = useCallback(async (): Promise<boolean> => {
+    const savedEditVersion = state.editVersion ?? 0;
     setSaving(true);
     setError(null);
     try {
@@ -99,7 +135,7 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
       );
       const body = (await res.json().catch(() => ({}))) as { ad?: { revisionNumber?: number }; error?: string };
       if (!res.ok) throw new Error(body.error ?? `Save failed (${res.status})`);
-      markSaved(body.ad?.revisionNumber ?? state.lastSavedRevision ?? 0);
+      markSaved(body.ad?.revisionNumber ?? state.lastSavedRevision ?? 0, savedEditVersion);
       return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Save failed");
@@ -170,20 +206,20 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
 
   return (
     <div
-      className="flex h-full flex-col bg-(--canvas)"
+      className="flex h-full min-w-0 flex-col overflow-hidden bg-(--canvas)"
       onKeyDown={handleKeyDown}
       tabIndex={0}
       role="region"
       aria-label="Ad Studio editor"
     >
       {/* Top bar: tabs + actions */}
-      <header className="flex h-14 shrink-0 items-center justify-between border-b border-(--line) bg-(--surface) px-5">
-        <div className="flex items-center gap-1">
+      <header className="flex min-h-14 shrink-0 flex-wrap items-center gap-2 border-b border-(--line) bg-(--surface) px-3 py-2 xl:h-14 xl:flex-nowrap xl:justify-between xl:px-5 xl:py-0">
+        <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
           {(["feed", "story"] as Placement[]).map(p => (
             <button
               key={p}
               onClick={() => setActivePlacement(p)}
-              className={`rounded-(--r-control) px-4 py-2 text-sm font-medium transition ${
+              className={`shrink-0 rounded-(--r-control) px-3 py-2 text-xs font-medium transition xl:px-4 xl:text-sm ${
                 state.activePlacement === p
                   ? "bg-(--ui-primary) text-white"
                   : "text-muted-foreground hover:bg-(--surface-subtle)"
@@ -193,26 +229,31 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
               {p === "feed" ? "Feed (1080×1350)" : "Story (1080×1920)"}
             </button>
           ))}
-          <span className="mx-2 h-5 w-px bg-(--line)" aria-hidden="true" />
-          <ColourToggle
-            useBrandPack={state.colourMode === "brand_pack"}
-            brandPackAvailable={!!brandColours}
-            resolvedColourMap={state.resolvedColourMap}
-            onToggle={handleColourToggle}
-          />
+          <span className="mx-2 hidden h-5 w-px bg-(--line) xl:block" aria-hidden="true" />
+          <div className="hidden xl:block">
+            <ColourToggle
+              useBrandPack={state.colourMode === "brand_pack"}
+              brandPackAvailable={!!brandColours}
+              resolvedColourMap={state.resolvedColourMap}
+              onToggle={handleColourToggle}
+            />
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          {state.isDirty && (
-            <span className="text-xs text-muted-foreground">Unsaved changes</span>
+        <div className="ml-auto flex shrink-0 items-center gap-1 xl:gap-2">
+          {pendingImageUploads > 0 && (
+            <span className="hidden text-xs text-muted-foreground sm:inline">Uploading image...</span>
+          )}
+          {state.isDirty && pendingImageUploads === 0 && (
+            <span className="hidden text-xs text-muted-foreground sm:inline">Unsaved changes</span>
           )}
           {state.lastSavedRevision !== null && !state.isDirty && (
-            <span className="text-xs text-muted-foreground">Saved</span>
+            <span className="hidden text-xs text-muted-foreground sm:inline">Saved</span>
           )}
           <button
             onClick={undo}
             disabled={!canUndo}
-            className="rounded-(--r-control) p-2 text-muted-foreground hover:bg-(--surface-subtle) disabled:opacity-30"
+            className="size-9 rounded-(--r-control) p-2 text-muted-foreground hover:bg-(--surface-subtle) disabled:opacity-30"
             aria-label="Undo"
           >
             ↩
@@ -220,22 +261,22 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
           <button
             onClick={redo}
             disabled={!canRedo}
-            className="rounded-(--r-control) p-2 text-muted-foreground hover:bg-(--surface-subtle) disabled:opacity-30"
+            className="size-9 rounded-(--r-control) p-2 text-muted-foreground hover:bg-(--surface-subtle) disabled:opacity-30"
             aria-label="Redo"
           >
             ↪
           </button>
           <button
             onClick={handleSave}
-            disabled={!canSave || state.isSaving}
-            className="rounded-(--r-control) bg-(--ui-primary) px-5 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
+            disabled={!canSave || state.isSaving || pendingImageUploads > 0}
+            className="h-9 rounded-(--r-control) bg-(--ui-primary) px-3 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-50 sm:px-4 sm:text-sm"
           >
             {state.isSaving ? "Saving..." : "Save"}
           </button>
           <button
             onClick={handlePublish}
-            disabled={!canSave || state.isSaving}
-            className="rounded-(--r-control) bg-green-600 px-5 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
+            disabled={!canSave || state.isSaving || pendingImageUploads > 0}
+            className="h-9 rounded-(--r-control) bg-green-600 px-3 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-50 sm:px-4 sm:text-sm"
             title={state.isDirty ? "Save first — publishing freezes the last saved revision" : "Freeze last saved revision and create PAUSED on Meta"}
           >
             Publish
@@ -244,9 +285,18 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
       </header>
 
       {/* Main area: layer panel + canvas */}
-      <div className="flex min-h-0 flex-1">
+      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden xl:flex-row">
         {/* Layer panel */}
-        <aside className="w-56 shrink-0 overflow-y-auto border-r border-(--line) bg-(--surface) p-3">
+        <aside
+          aria-label="Layers"
+          className={cn(
+            "z-30 w-56 shrink-0 overflow-y-auto border-r border-(--line) bg-(--surface) p-3",
+            mobilePanel === "layers"
+              ? "absolute inset-x-2 bottom-14 top-2 block max-h-[min(60%,30rem)] rounded-(--r-card) border shadow-xl"
+              : "hidden",
+            "xl:static xl:top-auto xl:right-auto xl:bottom-auto xl:left-auto xl:block xl:h-auto xl:max-h-none xl:rounded-none xl:border-b-0 xl:border-l-0 xl:border-t-0 xl:p-3 xl:shadow-none",
+          )}
+        >
           <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Layers
           </h3>
@@ -270,8 +320,12 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
         </aside>
 
         {/* Canvas area — live layer schematic for the active placement */}
-        <main className="flex flex-1 items-center justify-center bg-(--surface-subtle) p-6">
-          <div
+        <main className="order-first flex min-h-0 min-w-0 flex-1 items-center justify-center bg-(--surface-subtle) p-3 xl:order-none xl:p-6">
+          <div className="relative flex max-h-full max-w-[90%] flex-col items-center gap-2">
+            <span className="rounded-full bg-(--surface) px-3 py-1 text-[11px] font-medium text-muted-foreground shadow-sm">
+              Editor preview · schematic — final PNG may differ slightly
+            </span>
+            <div
             className="relative overflow-hidden rounded-(--r-card) bg-white shadow-lg"
             style={{
               aspectRatio: `${PLACEMENT_DIMENSIONS[state.activePlacement].width} / ${PLACEMENT_DIMENSIONS[state.activePlacement].height}`,
@@ -282,28 +336,53 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
             <LayoutSchematic
               layout={activeLayout}
               colours={state.resolvedColourMap}
+              imageValues={Object.fromEntries(state.imageValues.map(iv => [iv.inputKey, iv.previewUrl ?? iv.dataUrl]))}
+              textValues={state.textValues}
+              cropOverrides={Object.fromEntries(state.imageValues.map(iv => [iv.inputKey, iv.crops[state.activePlacement]]))}
               selectedLayerId={state.selectedLayerId}
               onSelect={selectLayer}
               onCropImage={openCrop}
               className="h-full w-full"
             />
+            </div>
           </div>
         </main>
 
         {/* Content panel — shared text + image inputs (Feed and Story both use these) */}
         <InputsPanel
+          className={cn(
+            mobilePanel === "content"
+              ? "absolute inset-x-2 bottom-14 top-2 z-30 block max-h-[min(60%,30rem)] w-auto max-w-[calc(100%-1rem)] rounded-(--r-card) border shadow-xl"
+              : "hidden",
+            "xl:static xl:block xl:h-auto xl:max-h-none xl:w-72 xl:max-w-none xl:rounded-none xl:border-b-0 xl:border-t-0 xl:shadow-none",
+          )}
           textInputs={editorTextInputs(pack)}
           imageInputs={pack.imageInputs}
           textValues={state.textValues}
-          imageValues={Object.fromEntries(state.imageValues.map(iv => [iv.inputKey, iv.dataUrl]))}
+          imageValues={Object.fromEntries(state.imageValues.map(iv => [iv.inputKey, iv.previewUrl ?? iv.dataUrl]))}
           onTextChange={updateTextValue}
-          onImageChange={updateImageValue}
+          onImageChange={handleImageChange}
           onCropClick={openCropForInput}
         />
 
         {/* Meta copy panel — primary text, headline, description, CTA (shared across placements) */}
-        <MetaCopyPanel values={state.metaCopy} onChange={updateMetaCopy} />
+        <MetaCopyPanel
+          className={cn(
+            mobilePanel === "meta"
+              ? "absolute inset-x-2 bottom-14 top-2 z-30 block max-h-[min(60%,30rem)] w-auto max-w-[calc(100%-1rem)] rounded-(--r-card) border shadow-xl"
+              : "hidden",
+            "xl:static xl:block xl:h-auto xl:max-h-none xl:w-72 xl:max-w-none xl:rounded-none xl:border-b-0 xl:border-t-0 xl:shadow-none",
+          )}
+          values={state.metaCopy}
+          onChange={updateMetaCopy}
+        />
         <ProposalPanel
+          className={cn(
+            mobilePanel === "ai"
+              ? "absolute inset-x-2 bottom-14 top-2 z-30 block max-h-[min(60%,30rem)] w-auto max-w-[calc(100%-1rem)] rounded-(--r-card) border shadow-xl"
+              : "hidden",
+            "xl:static xl:block xl:h-auto xl:max-h-none xl:w-72 xl:max-w-none xl:rounded-none xl:border-b-0 xl:border-t-0 xl:shadow-none",
+          )}
           brief={proposalBrief}
           proposal={proposal}
           busy={proposalBusy}
@@ -313,6 +392,50 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
           onApplyText={updateTextValue}
           onApplyMeta={updateMetaCopy}
         />
+
+        {mobilePanel === "palette" && (
+          <aside
+            aria-label="Palette"
+            className="absolute inset-x-2 bottom-14 top-2 z-30 max-h-[min(60%,30rem)] overflow-y-auto rounded-(--r-card) border border-(--line) bg-(--surface) p-4 shadow-xl xl:hidden"
+          >
+            <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Palette</h3>
+            <ColourToggle
+              useBrandPack={state.colourMode === "brand_pack"}
+              brandPackAvailable={!!brandColours}
+              resolvedColourMap={state.resolvedColourMap}
+              onToggle={handleColourToggle}
+            />
+          </aside>
+        )}
+
+        <div className="z-20 flex shrink-0 items-center gap-1 overflow-x-auto border-t border-(--line) bg-(--surface) p-2 xl:hidden" role="navigation" aria-label="Editor panels">
+          {MOBILE_PANELS.map(panel => (
+            <button
+              key={panel.key}
+              type="button"
+              aria-pressed={mobilePanel === panel.key}
+              onClick={() => setMobilePanel(current => current === panel.key ? null : panel.key)}
+              className={cn(
+                "min-h-11 shrink-0 rounded-(--r-control) border px-3 text-xs font-semibold transition",
+                mobilePanel === panel.key
+                  ? "border-(--ui-primary) bg-(--ui-primary) text-white"
+                  : "border-(--line) bg-(--surface) text-foreground hover:bg-(--surface-subtle)",
+              )}
+            >
+              {panel.label}
+            </button>
+          ))}
+          {mobilePanel && (
+            <button
+              type="button"
+              aria-label="Close panel"
+              onClick={() => setMobilePanel(null)}
+              className="ml-auto grid min-h-11 min-w-11 shrink-0 place-items-center rounded-(--r-control) border border-(--line) text-lg text-muted-foreground hover:bg-(--surface-subtle)"
+            >
+              ×
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Crop dialog — per-placement crop for the selected image slot */}
@@ -332,6 +455,7 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
 }
 
 function ProposalPanel({
+  className,
   brief,
   proposal,
   busy,
@@ -341,6 +465,7 @@ function ProposalPanel({
   onApplyText,
   onApplyMeta,
 }: {
+  className?: string;
   brief: string;
   proposal: { onImage: Record<string, string>; copy: MetaCopy; source: string } | null;
   busy: boolean;
@@ -351,7 +476,7 @@ function ProposalPanel({
   onApplyMeta: (field: keyof MetaCopy, value: string) => void;
 }) {
   return (
-    <aside className="w-72 shrink-0 overflow-y-auto border-l border-(--line) bg-(--surface) p-4">
+    <aside aria-label="AI copy help" className={cn("w-72 shrink-0 overflow-y-auto border-l border-(--line) bg-(--surface) p-4", className)}>
       <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">AI copy help</h3>
       <p className="mb-3 text-xs leading-relaxed text-muted-foreground">Get a draft for the overlay and Meta copy. Nothing changes until you apply a suggestion.</p>
       <textarea value={brief} onChange={event => onBriefChange(event.target.value)} rows={4} placeholder="Describe the property, offer or audience…" className="w-full rounded-(--r-control) border border-(--line) bg-(--surface-subtle) px-3 py-2 text-sm" />
@@ -401,11 +526,11 @@ function CropDialogHost({
   const { slot, placement } = cropTarget;
   const input = pack.imageInputs.find(i => i.key === slot.inputKey);
   const value = state.imageValues.find(iv => iv.inputKey === slot.inputKey);
-  if (!input || !value?.dataUrl) return null;
+  if (!input || (!value?.dataUrl && !value?.previewUrl)) return null;
 
   return (
     <CropDialog
-      imageUrl={value.dataUrl}
+      imageUrl={value.previewUrl ?? value.dataUrl!}
       input={input}
       crop={value.crops[placement] ?? slot.defaultCrop}
       aspectRatio={slot.geometry.width / slot.geometry.height}
@@ -421,6 +546,16 @@ function CropDialogHost({
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+type MobilePanel = "layers" | "content" | "meta" | "ai" | "palette" | null;
+
+const MOBILE_PANELS: Array<{ key: Exclude<MobilePanel, null>; label: string }> = [
+  { key: "layers", label: "Layers" },
+  { key: "content", label: "Content" },
+  { key: "meta", label: "Meta copy" },
+  { key: "ai", label: "AI help" },
+  { key: "palette", label: "Palette" },
+];
 
 function layerTypeLabel(type: LayoutLayer["type"]): string {
   switch (type) {

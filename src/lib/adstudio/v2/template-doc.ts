@@ -171,6 +171,16 @@ export type OverlayPatchLayer = TemplateLayerBase & {
   sha256: string;
 };
 
+export type StoryPolicy = {
+  schema: "adstudio.story-policy.v1";
+  safeTopPx: number;
+  safeBottomPx: number;
+  maxDeadSpacePx: number;
+  backingColour: string;
+  backingLayerIds: string[];
+  ctaGroup: { layerIds: string[]; maxGapPx: number };
+};
+
 export type TemplateLayer = ImageSlotLayer | TextLayer | OverlayPatchLayer;
 
 export type TemplateLayout = {
@@ -186,6 +196,8 @@ export type TemplateLayout = {
   native?: boolean;
   /** z-ordered ABOVE the plate, ascending. */
   layers: TemplateLayer[];
+  /** Machine-readable contract for deterministic derived Story composition. */
+  storyPolicy?: StoryPolicy;
 };
 
 export type AdTemplateDocV2 = {
@@ -549,6 +561,18 @@ const templateLayoutSchema = z
     height: z.union([z.literal(1350), z.literal(1920)]),
     plate: z.object({ src: publicPathSchema, sha256: sha256Schema }),
     layers: z.array(templateLayerSchema),
+    storyPolicy: z.object({
+      schema: z.literal("adstudio.story-policy.v1"),
+      safeTopPx: z.number().int().nonnegative(),
+      safeBottomPx: z.number().int().nonnegative(),
+      maxDeadSpacePx: z.number().int().positive(),
+      backingColour: hexColorSchema,
+      backingLayerIds: z.array(nonEmptyString),
+      ctaGroup: z.object({
+        layerIds: z.array(nonEmptyString),
+        maxGapPx: z.number().int().positive(),
+      }),
+    }).optional(),
     /** True when the layout is the source-native surface (decomposed from a
      *  9:16 source); absent for feeds and derived band layouts. */
     native: z.boolean().optional(),

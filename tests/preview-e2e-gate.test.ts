@@ -9,10 +9,13 @@ test("preview E2E command requires Vercel URL credentials and auth state before 
 
   assert.match(pkg, /"test:e2e:preview": "node scripts\/require-preview-e2e-env\.mjs && playwright test"/);
   assert.match(script, /PLAYWRIGHT_BASE_URL/);
-  assert.match(script, /BLOCKWISE_DEV_PASSWORD/);
+  assert.match(script, /ADSTUDIO_E2E_LOGIN_URL/);
+  assert.match(script, /ADSTUDIO_E2E_PASSWORD/);
   assert.match(script, /ADSTUDIO_E2E_WORKSPACE_ID/);
+  assert.match(script, /ADSTUDIO_E2E_PACK_ID/);
   assert.match(script, /ADSTUDIO_E2E_STORAGE_STATE/);
   assert.match(script, /HTTPS Vercel Preview or Production URL/);
   assert.match(script, /non-empty authenticated storageState/);
   assert.match(runbook, /npm run test:e2e:preview/);
+  assert.match(runbook, /ADSTUDIO_E2E_LOGIN_URL/);
 });

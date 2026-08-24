@@ -298,7 +298,7 @@ function migrateOne(id, from, force = false) {
 // ── story-draft (deterministic) ────────────────────────────────────────────
 
 async function storyDraft(id) {
-  const { extendPlateToStory, repositionLayersForStory } = await import("./lib/story.mjs");
+  const { extendPlateToStory, deriveStoryComposition, STORY_BACKING_COLOUR } = await import("./lib/story.mjs");
   const { writeTemplateDoc } = await import("../../../src/lib/adstudio/v2/studio.ts");
   const docPath = join(v2Gallery, id, "template.json");
   const doc = readJson(docPath);
@@ -319,12 +319,39 @@ async function storyDraft(id) {
   writeFileSync(join(privateV2, id, "plate-story.webp"), webp);
   const sha = await sha256Hex(webp);
 
+  const composition = deriveStoryComposition(doc.formats.feed.layers);
+  const storyLayers = composition.layers.map((layer) => {
+    if (layer.type !== "overlay_patch") return layer;
+    const backing = composition.backings.find((candidate) => candidate.id === layer.id);
+    if (!backing) return layer;
+    return {
+      ...layer,
+      src: layer.src.replace("__TEMPLATE_ID__", id),
+      sha256: "0".repeat(64),
+    };
+  });
+
+  // Backing patches are one-pixel ivory assets stretched over their declared
+  // geometry by the deterministic renderer. They are source-free and keep
+  // supporting copy legible even when the customer's photo is dark.
+  for (const backing of composition.backings) {
+    const patch = await sharp({
+      create: { width: 1, height: 1, channels: 4, background: STORY_BACKING_COLOUR },
+    }).png().toBuffer();
+    const patchPath = join(privateV2, id, `patch-${backing.role}.webp`);
+    const webpPatch = await sharp(patch).webp({ lossless: true }).toBuffer();
+    writeFileSync(patchPath, webpPatch);
+    const layer = storyLayers.find((candidate) => candidate.id === backing.id);
+    if (layer) layer.sha256 = (await import("./lib/plate.mjs")).sha256Hex(webpPatch);
+  }
+
   const storyLayout = {
     format: "9:16",
     width: 1080,
     height: 1920,
     plate: { src: `/adstudio-templates/${id}/plate-story.webp`, sha256: sha },
-    layers: repositionLayersForStory(doc.formats.feed.layers),
+    layers: storyLayers,
+    storyPolicy: composition.policy,
   };
   doc.formats.story = storyLayout;
   doc.publish.formatRouting.story = "9:16";

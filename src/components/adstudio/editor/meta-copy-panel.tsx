@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import type { MetaCopy } from "./use-editor-state";
+import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
 // Meta Copy Panel — primary text, headline, description and CTA for the
@@ -18,6 +19,7 @@ import type { MetaCopy } from "./use-editor-state";
 // ---------------------------------------------------------------------------
 
 export interface MetaCopyPanelProps {
+  className?: string;
   values: MetaCopy;
   onChange: (field: keyof MetaCopy, value: string) => void;
 }
@@ -38,11 +40,11 @@ const LIMITS: Record<keyof MetaCopy, number> = {
   cta: 25,
 };
 
-export function MetaCopyPanel({ values, onChange }: MetaCopyPanelProps) {
+export function MetaCopyPanel({ className, values, onChange }: MetaCopyPanelProps) {
   const customCta = !(META_CTA_OPTIONS as readonly string[]).includes(values.cta);
 
   return (
-    <aside className="w-72 shrink-0 overflow-y-auto border-l border-(--line) bg-(--surface) p-4">
+    <aside aria-label="Meta copy" className={cn("w-72 shrink-0 overflow-y-auto border-l border-(--line) bg-(--surface) p-4", className)}>
       <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         Meta copy
       </h3>
@@ -135,11 +137,14 @@ function TextField({
 }) {
   const shared =
     "w-full rounded-(--r-control) border border-(--line) bg-(--surface-subtle) px-3 py-2 text-sm text-foreground outline-none transition focus:border-(--ui-primary) focus:ring-1 focus:ring-(--ui-primary)/40";
+  const inputId = `meta-copy-${field}`;
   return (
-    <label className="block">
-      <span className="mb-1 block text-sm font-medium text-foreground">{label}</span>
+    <div className="block">
+      <label htmlFor={inputId} className="mb-1 block text-sm font-medium text-foreground">{label}</label>
       {textarea ? (
         <textarea
+          id={inputId}
+          aria-label={label}
           value={value}
           maxLength={maxLength}
           rows={3}
@@ -148,6 +153,8 @@ function TextField({
         />
       ) : (
         <input
+          id={inputId}
+          aria-label={label}
           type="text"
           value={value}
           maxLength={maxLength}
@@ -158,7 +165,7 @@ function TextField({
       <span className="mt-1 block text-right text-[11px] tabular-nums text-muted-foreground">
         {value.length}/{maxLength}
       </span>
-    </label>
+    </div>
   );
 }
 

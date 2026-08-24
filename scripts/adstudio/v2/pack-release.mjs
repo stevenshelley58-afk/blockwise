@@ -35,6 +35,7 @@ import sharp from "sharp";
 import { renderAdDocToPng } from "../../../src/lib/adstudio/v2/render/server.ts";
 import { templatePackV2Schema } from "../../../packages/ad-template-pack-contract/src/index.ts";
 import { computeManifestHash, canonicalJson } from "../../../packages/ad-template-pack-contract/src/hash.ts";
+import { evaluateStoryQa } from "./lib/story-qa.mjs";
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(SCRIPT_DIR, "..", "..", "..");
@@ -48,6 +49,12 @@ function readJson(path) {
 function writeJson(path, value) {
   mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`);
+}
+
+export function assertStoryQa(templateId, storyQa) {
+  if (!storyQa?.passed) {
+    throw new Error(`${templateId}: Story QA failed: ${(storyQa?.blockers ?? ["unknown Story QA failure"]).join("; ")}`);
+  }
 }
 
 function loadSigningKey(publicReleaseEnabled) {
@@ -98,7 +105,7 @@ function pixelRect(rect, width, height) {
   return { x: rect.x * width, y: rect.y * height, width: rect.width * width, height: rect.height * height };
 }
 
-function v2ToTemplatePack({ doc, feedPreviewBytes, storyPreviewBytes, plateFiles, createdAt, publicBaseUrl }) {
+function v2ToTemplatePack({ doc, feedPreviewBytes, storyPreviewBytes, plateFiles, createdAt, publicBaseUrl, storyQa }) {
   const assetUrl = (key) => publicBaseUrl ? `${publicBaseUrl}/assets/${plateFiles[key]?.fileName ?? basename(key)}` : undefined;
   const declaredRequirements = doc.publish?.requirements ?? doc.publishRequirements ?? doc.provenance?.publishRequirements ?? {};
   const declaredDestination = declaredRequirements.destination ?? (doc.publish?.leadForm
@@ -162,6 +169,7 @@ function v2ToTemplatePack({ doc, feedPreviewBytes, storyPreviewBytes, plateFiles
       protected: false,
     });
     for (const layer of docLayout.layers) {
+      const geometry = pixelRect(layer.box, width, height);
       if (layer.type === "image_slot") {
         layers.push({
           type: "image_slot",
@@ -176,7 +184,6 @@ function v2ToTemplatePack({ doc, feedPreviewBytes, storyPreviewBytes, plateFiles
         });
       } else if (layer.type === "text") {
         const font = doc.fonts.find((face) => face.fontId === layer.typo.fontId && face.weight === layer.typo.weight);
-        const geometry = pixelRect(layer.box, width, height);
         layers.push({
           type: "text",
           layerId: layer.id,
@@ -192,6 +199,14 @@ function v2ToTemplatePack({ doc, feedPreviewBytes, storyPreviewBytes, plateFiles
           colourRole: "mainText",
           overflowBehaviour: "scale_down",
         });
+      } else if (layer.type === "overlay_patch") {
+        layers.push({
+          type: "overlay_patch",
+          layerId: layer.id,
+          geometry,
+          colourRole: "background",
+          opacity: 1,
+        });
       }
     }
     const safeZones = placement === "story"
@@ -200,7 +215,12 @@ function v2ToTemplatePack({ doc, feedPreviewBytes, storyPreviewBytes, plateFiles
           { x: 0, y: 1920 - 340, width, height: 340 },
         ]
       : [{ x: 0, y: 0, width, height }];
-    return { placement, layers, safeZones };
+    return {
+      placement,
+      layers,
+      safeZones,
+      ...(docLayout.storyPolicy && placement === "story" ? { storyPolicy: docLayout.storyPolicy } : {}),
+    };
   };
 
   const pack = {
@@ -232,7 +252,7 @@ function v2ToTemplatePack({ doc, feedPreviewBytes, storyPreviewBytes, plateFiles
       maxLength: text.maxLength,
     })),
     semanticColours: {
-      background: "#f3dfbd",
+      background: "#f4f0e8",
       primary: "#2b2118",
       secondary: "#ead2a9",
       accent: "#6f4e2b",
@@ -247,7 +267,7 @@ function v2ToTemplatePack({ doc, feedPreviewBytes, storyPreviewBytes, plateFiles
     },
     qaEvidence: {
       feedPassed: true,
-      storyPassed: true,
+      storyPassed: storyQa.passed === true,
       reviewerVersions: ["adstudio-subject-invariance-v1"],
       stressFixtureResults: {},
     },
@@ -324,6 +344,12 @@ async function main() {
       if (sha256(bytes) !== layout.plate.sha256) throw new Error(`${id} ${format} plate hash mismatch`);
       copyFileSync(src, join(assetsDir, `${id}-plate-${format}.webp`));
     }
+    for (const layer of doc.formats.story.layers.filter((entry) => entry.type === "overlay_patch")) {
+      const source = join(candidate, "src", "lib", "adstudio", "template-assets-v2", id, basename(layer.src));
+      const bytes = readFileSync(source);
+      if (sha256(bytes) !== layer.sha256) throw new Error(`${id} ${layer.id} patch hash mismatch`);
+      copyFileSync(source, join(assetsDir, `${id}-${basename(layer.src)}`));
+    }
     copyFileSync(join(candidate, "public", "adstudio-templates", id, "sample.png"), join(assetsDir, `${id}-sample.png`));
     copyFileSync(join(candidate, "public", "adstudio-templates", id, "sample-story.png"), join(assetsDir, `${id}-sample-story.png`));
     copyFileSync(slotPath, join(assetsDir, `${id}-customer-photo-fixture.png`));
@@ -355,6 +381,8 @@ async function main() {
     });
     const feedPreview = await renderAdDocToPng(doc, instance("4:5"), "4:5", { repoRoot: candidate, slotBytes: new Map([[imageInputKey, slotBytes]]) });
     const storyPreview = await renderAdDocToPng(doc, instance("9:16"), "9:16", { repoRoot: candidate, slotBytes: new Map([[imageInputKey, slotBytes]]) });
+    const storyQa = await evaluateStoryQa(doc, storyPreview);
+    assertStoryQa(id, storyQa);
     writeFileSync(join(previewsDir, `${id}-feed.png`), feedPreview);
     writeFileSync(join(previewsDir, `${id}-story.png`), storyPreview);
     writeFileSync(join(assetsDir, `${id}-feed.png`), feedPreview);
@@ -369,7 +397,7 @@ async function main() {
       "story-sample": { fileName: `${id}-sample-story.png`, sha256: sha256(readFileSync(join(candidate, "public", "adstudio-templates", id, "sample-story.png"))), mimeType: "image/png" },
       "customer-photo-fixture": { fileName: `${id}-customer-photo-fixture.png`, sha256: slotSha, mimeType: "image/png" },
     };
-    const unsigned = v2ToTemplatePack({ doc, feedPreviewBytes: feedPreview, storyPreviewBytes: storyPreview, plateFiles, createdAt, publicBaseUrl });
+    const unsigned = v2ToTemplatePack({ doc, feedPreviewBytes: feedPreview, storyPreviewBytes: storyPreview, plateFiles, createdAt, publicBaseUrl, storyQa });
     const signed = signPack(unsigned, privateKey);
     if (computeManifestHash(signed) !== signed.manifestSha256 || !signed.signature) throw new Error(`${id}: signing failed`);
     writeJson(join(packV1Dir, `${id}.json`), signed);

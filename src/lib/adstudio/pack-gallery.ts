@@ -23,6 +23,8 @@ export interface ImportedPackSummary {
   gallerySampleUrl: string | null;
 }
 
+export type GallerySamplePlacement = "feed" | "story";
+
 type PackRow = {
   pack_id: unknown;
   template_id: unknown;
@@ -44,6 +46,33 @@ export function readGallerySampleUrl(value: unknown): string | null {
   const safeFeed = record(record(raw?.safePreviews)?.feed);
   const candidate = sample?.imageSrc ?? sample?.url ?? safeFeed?.url;
   return typeof candidate === "string" && candidate.trim() ? candidate.trim() : null;
+}
+
+/**
+ * Return the immutable asset key declared for a gallery sample.
+ *
+ * The URL in a Frank pack is provenance only. Customer-facing pages must not
+ * render that remote URL directly: the imported bytes live in our private
+ * storage and are served through the authenticated same-origin sample route.
+ */
+export function readGallerySampleAssetKey(
+  value: unknown,
+  placement: GallerySamplePlacement = "feed",
+): string | null {
+  const raw = record(value);
+  const metadataGallery = record(record(raw?.metadata)?.gallerySamples);
+  const sample = record(metadataGallery?.[placement]);
+  const key = sample?.assetKey;
+  return typeof key === "string" && /^[A-Za-z0-9._-]+$/.test(key) ? key : null;
+}
+
+export function gallerySampleProxyUrl(
+  packId: string,
+  value: unknown,
+  placement: GallerySamplePlacement = "feed",
+): string | null {
+  if (!/^[A-Za-z0-9._-]+$/.test(packId) || !readGallerySampleAssetKey(value, placement)) return null;
+  return `/api/adstudio/template-packs/${encodeURIComponent(packId)}/sample?placement=${placement}`;
 }
 
 /** All active imported packs, newest first. Invalid rows are skipped, never fatal. */
@@ -99,7 +128,10 @@ function summaryFromPack(pack: TemplatePack, row: PackRow): ImportedPackSummary 
     feedLayout: pack.feedLayout,
     storyLayout: pack.storyLayout,
     semanticColours: { ...pack.semanticColours },
-    gallerySampleUrl: readGallerySampleUrl(row.pack_json),
+    // Only emit a same-origin URL for an imported asset. Legacy or malformed
+    // packs fall back to the schematic thumbnail instead of leaking a blocked
+    // cross-origin Frank URL into the customer gallery.
+    gallerySampleUrl: gallerySampleProxyUrl(String(row.pack_id ?? pack.packId), row.pack_json),
   };
 }
 

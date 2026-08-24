@@ -49,6 +49,7 @@ import sharp from "sharp";
 import { toLosslessWebp } from "./lib/plate.mjs";
 import { renderAdDocToPng } from "../../../src/lib/adstudio/v2/render/server.ts";
 import { verifyPinnedFixtureCorpus } from "./subject-invariance.mjs";
+import { STORY_BACKING_COLOUR, STORY_MAX_DEAD_SPACE_PX, STORY_CTA_MAX_GAP_PX } from "./lib/story.mjs";
 
 const SCRIPT_PATH = fileURLToPath(import.meta.url);
 const SCRIPT_DIR = dirname(SCRIPT_PATH);
@@ -254,7 +255,7 @@ function imageSlotLayer(id, z, inputKey, box, heightPx) {
   };
 }
 
-function buildLayout(format, skeleton, text, heightPx) {
+function buildLayout(format, skeleton, text, heightPx, storyBackingSha = null) {
   const layers = [
     imageSlotLayer(`${format === "4:5" ? "feed" : "story"}-slot-customer-photo`, 1, "customer_photo", skeleton.slot, heightPx),
     textLayer(`${format === "4:5" ? "feed" : "story"}-text-headline`, 2, "headline", skeleton.headline, {}, { maxLength: 48, maxLines: 3 }),
@@ -262,15 +263,50 @@ function buildLayout(format, skeleton, text, heightPx) {
     textLayer(`${format === "4:5" ? "feed" : "story"}-text-handle`, 4, "handle", skeleton.handle, {}, { maxLength: 40, maxLines: 1 }),
     textLayer(`${format === "4:5" ? "feed" : "story"}-text-arrow`, 5, "arrow", skeleton.arrow, {}, { maxLength: 4, maxLines: 1 }),
   ];
-  return { format, width: 1080, height: heightPx, layers };
+  if (format === "9:16" && storyBackingSha) {
+    const backing = (id, role, box, z) => ({ id, z, type: "overlay_patch", src: `/adstudio-templates/__TEMPLATE_ID__/patch-${role}.webp`, sha256: storyBackingSha, box });
+    const supporting = skeleton.supporting;
+    const cta = {
+      x: Math.min(skeleton.handle.x, skeleton.arrow.x) - 0.02,
+      y: Math.min(skeleton.handle.y, skeleton.arrow.y) - 0.018,
+      width: Math.max(skeleton.handle.x + skeleton.handle.width, skeleton.arrow.x + skeleton.arrow.width) - Math.min(skeleton.handle.x, skeleton.arrow.x) + 0.04,
+      height: Math.max(skeleton.handle.y + skeleton.handle.height, skeleton.arrow.y + skeleton.arrow.height) - Math.min(skeleton.handle.y, skeleton.arrow.y) + 0.036,
+    };
+    layers.push(
+      backing("story-backing-supporting", "supporting", { x: supporting.x - 0.02, y: supporting.y - 0.018, width: supporting.width + 0.04, height: supporting.height + 0.036 }, 3),
+      backing("story-backing-cta", "cta", cta, 4),
+    );
+    for (const layer of layers) {
+      if (layer.type !== "text") continue;
+      if (layer.inputKey === "headline") layer.z = 2;
+      else if (layer.inputKey === "supporting") layer.z = 4;
+      else if (layer.inputKey === "handle") layer.z = 8;
+      else if (layer.inputKey === "arrow") layer.z = 9;
+    }
+    layers.sort((left, right) => left.z - right.z);
+  }
+  return {
+    format, width: 1080, height: heightPx, layers,
+    ...(format === "9:16" && storyBackingSha ? {
+      storyPolicy: {
+        schema: "adstudio.story-policy.v1", safeTopPx: 250, safeBottomPx: 340,
+        maxDeadSpacePx: STORY_MAX_DEAD_SPACE_PX, backingColour: STORY_BACKING_COLOUR,
+        backingLayerIds: ["story-backing-supporting", "story-backing-cta"],
+        ctaGroup: {
+          layerIds: [`${format === "4:5" ? "feed" : "story"}-text-handle`, `${format === "4:5" ? "feed" : "story"}-text-arrow`],
+          maxGapPx: STORY_CTA_MAX_GAP_PX,
+        },
+      },
+    } : {}),
+  };
 }
 
-function buildDoc({ contract, variantIndex, skeleton, fonts, plates, sampleHash, slotSha, slotSrc }) {
+function buildDoc({ contract, variantIndex, skeleton, fonts, plates, sampleHash, slotSha, slotSrc, storyBackingSha }) {
   const id = contract.mode === "multi-concept"
     ? `${contract.packId}-v${String(variantIndex).padStart(2, "0")}`
     : contract.templateId || contract.packId;
   const feed = buildLayout("4:5", skeleton.feed, contract.text, 1350);
-  const story = buildLayout("9:16", skeleton.story, contract.text, 1920);
+  const story = buildLayout("9:16", skeleton.story, contract.text, 1920, storyBackingSha);
   feed.plate = { src: `/adstudio-templates/${id}/plate-feed.webp`, sha256: plates.feed };
   story.plate = { src: `/adstudio-templates/${id}/plate-story.webp`, sha256: plates.story };
   const creativeFeatures = Object.fromEntries(CREATIVE_FEATURE_KEYS.map((key) => [key, "OPT_OUT"]));
@@ -421,9 +457,16 @@ async function main() {
     const storySha = sha256(storyPlate);
     writeFileSync(join(assetsDir, id, "plate-feed.webp"), feedPlate);
     writeFileSync(join(assetsDir, id, "plate-story.webp"), storyPlate);
+    const storyBackingPatch = await sharp({ create: { width: 1, height: 1, channels: 4, background: STORY_BACKING_COLOUR } }).webp({ lossless: true }).toBuffer();
+    const storyBackingSha = sha256(storyBackingPatch);
+    writeFileSync(join(assetsDir, id, "patch-supporting.webp"), storyBackingPatch);
+    writeFileSync(join(assetsDir, id, "patch-cta.webp"), storyBackingPatch);
 
     // sample: deterministic render of the doc with the generic slot fixture
-    const doc = buildDoc({ contract, variantIndex, skeleton, fonts, plates: { feed: feedSha, story: storySha }, sampleHash: "0".repeat(64), slotSha, slotSrc: slotRel });
+    const doc = buildDoc({ contract, variantIndex, skeleton, fonts, plates: { feed: feedSha, story: storySha }, sampleHash: "0".repeat(64), slotSha, slotSrc: slotRel, storyBackingSha });
+    for (const layer of doc.formats.story.layers.filter((entry) => entry.type === "overlay_patch")) {
+      layer.src = layer.src.replace("__TEMPLATE_ID__", id);
+    }
     const instance = (format) => ({
       schema: "adstudio.instance.v2",
       templateId: doc.id,

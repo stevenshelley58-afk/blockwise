@@ -2,32 +2,34 @@
 
 import { useRef } from "react";
 import type { ImageInput, TextInput } from "../../../../packages/ad-template-pack-contract/src/types";
+import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
-// Inputs Panel — shared content inputs for a Frank pack.
+// Inputs Panel — shared content inputs for a Frank pack. Picked files keep a
+// local preview while uploading directly to private workspace media refs.
 //
 // One field per declared textInput and one file control per imageInput.
 // Values live in the shared editor state (use-editor-state), so Feed and Story
 // both read the same values — one edit updates both placements. Saving embeds
-// them in the AdDocument (sharedTextValues + sharedImageValues data URLs).
+// them in the AdDocument (sharedTextValues + private workspace image refs).
 //
-// Images are session-local only for now: picked files become data URLs held in
-// browser state. No upload library yet — the label below says so honestly.
 // ---------------------------------------------------------------------------
 
 export interface InputsPanelProps {
+  className?: string;
   textInputs: TextInput[];
   imageInputs: ImageInput[];
   textValues: Record<string, string>;
   /** dataUrl per input key (null = not picked yet). */
   imageValues: Record<string, string | null>;
   onTextChange: (key: string, value: string) => void;
-  onImageChange: (key: string, dataUrl: string | null) => void;
+  onImageChange: (key: string, change: { file: File; previewUrl: string } | null) => void;
   /** Opens the crop dialog for the input's slot in the ACTIVE placement. */
   onCropClick: (key: string) => void;
 }
 
 export function InputsPanel({
+  className,
   textInputs,
   imageInputs,
   textValues,
@@ -37,7 +39,7 @@ export function InputsPanel({
   onCropClick,
 }: InputsPanelProps) {
   return (
-    <aside className="w-72 shrink-0 overflow-y-auto border-l border-(--line) bg-(--surface) p-4">
+    <aside aria-label="Content" className={cn("w-72 shrink-0 overflow-y-auto border-l border-(--line) bg-(--surface) p-4", className)}>
       <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         Content
       </h3>
@@ -94,8 +96,8 @@ export function InputsPanel({
           </div>
         )}
         <p className="text-[11px] leading-relaxed text-muted-foreground">
-          Picked images stay in this browser session only — there is no upload
-          library yet, so they are not stored on the server.
+          Images are stored privately in your workspace and reused when you
+          reopen this ad. They are never added to the public gallery.
         </p>
       </section>
     </aside>
@@ -114,7 +116,7 @@ function ImageSlotControl({
 }: {
   input: ImageInput;
   dataUrl: string | null;
-  onImageChange: (key: string, dataUrl: string | null) => void;
+  onImageChange: (key: string, change: { file: File; previewUrl: string } | null) => void;
   onCropClick: () => void;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
@@ -122,11 +124,11 @@ function ImageSlotControl({
 
   const handleFile = (file: File | undefined) => {
     if (!file) return;
-    // Session-local only: read the file into a data URL that previews AND
-    // travels inside the Save document (the save route fetches it server-side).
+    // Keep a local preview while the browser uploads bytes directly to private
+    // workspace storage. The editor state stores only the returned ref.
     const reader = new FileReader();
     reader.onload = () => {
-      if (typeof reader.result === "string") onImageChange(input.key, reader.result);
+    if (typeof reader.result === "string") onImageChange(input.key, { file, previewUrl: reader.result });
     };
     reader.readAsDataURL(file);
   };

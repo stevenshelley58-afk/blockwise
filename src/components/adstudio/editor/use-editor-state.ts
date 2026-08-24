@@ -11,14 +11,13 @@ import type { AdDocumentParsed } from "../../../../packages/ad-template-pack-con
 export interface EditorImageValue {
   inputKey: string;
   /**
-   * Session-local data URL of the picked image.
-   * Doubles as the browser preview AND the value Save sends: the save route
-   * fetches document.sharedImageValues URLs server-side, and data: URLs are
-   * fetchable there, so the renderer receives real image buffers. No upload
-   * library yet — the image never leaves the client except as base64 in the
-   * document (see inputs-panel "session only" label).
+   * Browser preview URL. New picks begin as data URLs; after Save the server
+   * returns a private workspace-artifacts media reference, which is safe to
+   * persist and remains usable by the authenticated media proxy.
    */
   dataUrl: string | null;
+  /** Local object/data URL retained while a direct upload is in flight. */
+  previewUrl?: string | null;
   /**
    * Per-placement crop overrides, normalized to [0,1] over the source image
    * (matching the renderer's cropOverrides contract, keyed by input key).
@@ -107,6 +106,8 @@ export interface EditorState {
   resolvedColourMap: Record<ColourRole, string>;
   selectedLayerId: string | null;
   isDirty: boolean;
+  /** Monotonic edit token used to keep a late save from clearing newer edits. */
+  editVersion?: number;
   isSaving: boolean;
   lastSavedRevision: number | null;
   error: string | null;
@@ -114,17 +115,23 @@ export interface EditorState {
   metaCopy: MetaCopy;
 }
 
+/** True when a save response still covers the editor's current edit snapshot. */
+export function saveCoversEditVersion(currentVersion: number | undefined, savedVersion: number): boolean {
+  return (currentVersion ?? 0) === savedVersion;
+}
+
 const initialState = (pack: TemplatePack): EditorState => {
   const defaults = readEditorDefaults(pack);
   return {
   pack,
   activePlacement: "feed",
-  imageValues: pack.imageInputs.map(i => ({ inputKey: i.key, dataUrl: null, crops: {} })),
+  imageValues: pack.imageInputs.map(i => ({ inputKey: i.key, dataUrl: null, previewUrl: null, crops: {} })),
   textValues: { ...Object.fromEntries(pack.textInputs.map(i => [i.key, ""])), ...defaults.textValues },
   colourMode: "template",
   resolvedColourMap: { ...pack.semanticColours },
   selectedLayerId: null,
   isDirty: false,
+  editVersion: 0,
   isSaving: false,
   lastSavedRevision: null,
   error: null,
@@ -138,8 +145,33 @@ const initialState = (pack: TemplatePack): EditorState => {
   };
 };
 
-export function useEditorState(pack: TemplatePack) {
-  const [state, setState] = useState<EditorState>(() => initialState(pack));
+export function useEditorState(pack: TemplatePack, initialDocument?: AdDocumentParsed, initialRevision?: number) {
+  const [state, setState] = useState<EditorState>(() => {
+    const base = initialState(pack);
+    if (!initialDocument) return base;
+    return {
+      ...base,
+      imageValues: base.imageValues.map(value => ({
+        ...value,
+        dataUrl: initialDocument.sharedImageValues[value.inputKey] ?? null,
+        previewUrl: null,
+        crops: {
+          feed: initialDocument.feedCropOverrides[value.inputKey],
+          story: initialDocument.storyCropOverrides[value.inputKey],
+        },
+      })),
+      textValues: { ...base.textValues, ...initialDocument.sharedTextValues },
+      colourMode: initialDocument.colourMode,
+      resolvedColourMap: { ...base.resolvedColourMap, ...initialDocument.resolvedColourMap },
+      metaCopy: {
+        primaryText: initialDocument.metaPrimaryText,
+        headline: initialDocument.metaHeadline,
+        description: initialDocument.metaDescription,
+        cta: initialDocument.metaCta,
+      },
+      lastSavedRevision: initialRevision ?? null,
+    };
+  });
   const undoStack = useRef<EditorState[]>([]);
   const redoStack = useRef<EditorState[]>([]);
 
@@ -163,22 +195,33 @@ export function useEditorState(pack: TemplatePack) {
         ...prev,
         textValues: { ...prev.textValues, [key]: value },
         isDirty: true,
+        editVersion: (prev.editVersion ?? 0) + 1,
       };
     });
   }, [pushUndo]);
 
-  const updateImageValue = useCallback((key: string, dataUrl: string | null) => {
+  const updateImageValue = useCallback((key: string, dataUrl: string | null, previewUrl: string | null = null) => {
     setState(prev => {
       pushUndo(prev);
       return {
         ...prev,
         imageValues: prev.imageValues.map(iv =>
-          iv.inputKey === key ? { ...iv, dataUrl } : iv
+          iv.inputKey === key ? { ...iv, dataUrl, previewUrl } : iv
         ),
         isDirty: true,
+        editVersion: (prev.editVersion ?? 0) + 1,
       };
     });
   }, [pushUndo]);
+
+  const updateImagePreview = useCallback((key: string, previewUrl: string | null) => {
+    setState(prev => ({
+      ...prev,
+      imageValues: prev.imageValues.map(iv => iv.inputKey === key ? { ...iv, previewUrl } : iv),
+      isDirty: true,
+      editVersion: (prev.editVersion ?? 0) + 1,
+    }));
+  }, []);
 
   const updateCrop = useCallback((key: string, placement: Placement, crop: Rect) => {
     setState(prev => {
@@ -189,6 +232,7 @@ export function useEditorState(pack: TemplatePack) {
           iv.inputKey === key ? { ...iv, crops: { ...iv.crops, [placement]: crop } } : iv
         ),
         isDirty: true,
+        editVersion: (prev.editVersion ?? 0) + 1,
       };
     });
   }, [pushUndo]);
@@ -201,6 +245,7 @@ export function useEditorState(pack: TemplatePack) {
         ...prev,
         metaCopy: { ...prev.metaCopy, [field]: value },
         isDirty: true,
+        editVersion: (prev.editVersion ?? 0) + 1,
       };
     });
   }, [pushUndo]);
@@ -213,6 +258,7 @@ export function useEditorState(pack: TemplatePack) {
         colourMode: mode,
         resolvedColourMap: colourMap ?? (mode === "template" ? { ...prev.pack.semanticColours } : prev.resolvedColourMap),
         isDirty: true,
+        editVersion: (prev.editVersion ?? 0) + 1,
       };
     });
   }, [pushUndo]);
@@ -221,7 +267,7 @@ export function useEditorState(pack: TemplatePack) {
     const prev = undoStack.current.pop();
     if (prev) {
       redoStack.current.push(state);
-      setState(prev);
+      setState({ ...prev, isSaving: state.isSaving, isDirty: true, editVersion: (state.editVersion ?? 0) + 1 });
     }
   }, [state]);
 
@@ -229,14 +275,16 @@ export function useEditorState(pack: TemplatePack) {
     const next = redoStack.current.pop();
     if (next) {
       undoStack.current.push(state);
-      setState(next);
+      setState({ ...next, isSaving: state.isSaving, isDirty: true, editVersion: (state.editVersion ?? 0) + 1 });
     }
   }, [state]);
 
-  const markSaved = useCallback((revision: number) => {
+  const markSaved = useCallback((revision: number, savedEditVersion = 0) => {
     setState(prev => ({
       ...prev,
-      isDirty: false,
+      // A user may have edited while the request was rendering. Only clear
+      // dirty state when the response covers the current edit snapshot.
+      isDirty: !saveCoversEditVersion(prev.editVersion, savedEditVersion),
       isSaving: false,
       lastSavedRevision: revision,
     }));
@@ -264,6 +312,7 @@ export function useEditorState(pack: TemplatePack) {
     selectLayer,
     updateTextValue,
     updateImageValue,
+    updateImagePreview,
     updateCrop,
     setColourMode,
     undo,
@@ -367,7 +416,7 @@ export async function buildAdDocument(state: EditorState): Promise<AdDocumentPar
     rendererVersion: pack.rendererVersion,
     sharedImageValues: Object.fromEntries(
       state.imageValues
-        .filter(iv => iv.dataUrl !== null)
+        .filter(iv => iv.dataUrl !== null && !/^data:image\//i.test(iv.dataUrl))
         .map(iv => [iv.inputKey, iv.dataUrl as string]),
     ),
     sharedTextValues: { ...state.textValues },
@@ -392,7 +441,7 @@ export async function buildAdDocument(state: EditorState): Promise<AdDocumentPar
     metaHeadline: state.metaCopy.headline,
     metaDescription: state.metaCopy.description,
     metaCta: state.metaCopy.cta,
-    revision: Math.max(1, state.lastSavedRevision ?? 0),
+    revision: Math.max(1, (state.lastSavedRevision ?? 0) + 1),
     documentHash: "0".repeat(64),
     lastRenderedHash: null,
   };

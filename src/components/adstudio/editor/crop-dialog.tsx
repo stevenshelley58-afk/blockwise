@@ -89,12 +89,30 @@ export function CropDialog({
   onConfirm,
   onCancel,
 }: CropDialogProps) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const cancelButtonRef = useRef<HTMLButtonElement>(null);
+  const returnFocusRef = useRef<HTMLElement | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
   const [imgRect, setImgRect] = useState<ImageDisplayRect>({ x: 0, y: 0, width: 0, height: 0 });
   const [crop, setCrop] = useState<Rect>(initialCrop);
   const dragRef = useRef<{ mode: "move" | "resize"; startX: number; startY: number; startCrop: Rect } | null>(null);
   const aspectFitted = useRef(false);
+
+  // Capture the control that opened the modal, move focus into the dialog,
+  // and return focus when the dialog closes. This keeps keyboard users in the
+  // editor instead of dropping them back at the document root.
+  useEffect(() => {
+    returnFocusRef.current = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+    const initialFocus = cancelButtonRef.current ?? dialogRef.current;
+    initialFocus?.focus();
+    return () => {
+      const returnFocus = returnFocusRef.current;
+      if (returnFocus?.isConnected) returnFocus.focus();
+    };
+  }, []);
 
   // Load image dimensions
   useEffect(() => {
@@ -103,13 +121,33 @@ export function CropDialog({
     img.src = imageUrl;
   }, [imageUrl]);
 
-  // Escape cancels
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onCancel();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+  const handleDialogKeyDown = useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      onCancel();
+      return;
+    }
+    if (event.key !== "Tab") return;
+
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    const focusable = Array.from(dialog.querySelectorAll<HTMLElement>(
+      'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])',
+    ));
+    if (focusable.length === 0) {
+      event.preventDefault();
+      dialog.focus();
+      return;
+    }
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
   }, [onCancel]);
 
   // Measure the letterboxed image display rect; fit the initial crop once.
@@ -185,6 +223,27 @@ export function CropDialog({
     dragRef.current = null;
   }, []);
 
+  // Pointer dragging is convenient, but these numeric controls make the
+  // crop's move/resize operations fully keyboard accessible and precise.
+  const updateNumericCrop = useCallback((axis: "x" | "y" | "width", value: number) => {
+    if (!Number.isFinite(value)) return;
+    if (axis === "x") {
+      setCrop(current => ({ ...current, x: clamp(value / 100, 0, 1 - current.width) }));
+      return;
+    }
+    if (axis === "y") {
+      setCrop(current => ({ ...current, y: clamp(value / 100, 0, 1 - current.height) }));
+      return;
+    }
+    const ratio = aspectRatio * (imgRect.height / Math.max(1, imgRect.width));
+    if (!Number.isFinite(ratio) || ratio <= 0) return;
+    setCrop(current => {
+      const maxWidth = Math.min(1 - current.x, (1 - current.y) * ratio);
+      const width = clamp(value / 100, MIN_CROP_SIZE, Math.max(MIN_CROP_SIZE, maxWidth));
+      return { ...current, width, height: Math.min(1 - current.y, width / ratio) };
+    });
+  }, [aspectRatio, imgRect]);
+
   const boxStyle = imgRect.width > 0
     ? {
         left: imgRect.x + crop.x * imgRect.width,
@@ -196,17 +255,20 @@ export function CropDialog({
 
   return (
     <div
+      ref={dialogRef}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-6"
       role="dialog"
       aria-modal="true"
       aria-label={`Crop ${input.label}`}
+      tabIndex={-1}
+      onKeyDown={handleDialogKeyDown}
     >
       <div className="flex max-h-[90vh] w-full max-w-3xl flex-col rounded-(--r-card) bg-(--surface) shadow-2xl">
         {/* Header */}
         <header className="flex items-center justify-between gap-4 border-b border-(--line) px-5 py-3">
           <div>
-            <h2 className="text-base font-semibold">Crop {input.label}</h2>
-            <p className="text-xs text-muted-foreground">
+            <h2 id="crop-dialog-title" className="text-base font-semibold">Crop {input.label}</h2>
+            <p id="crop-dialog-description" className="text-xs text-muted-foreground">
               Drag to reposition · handle to resize · locked to slot ratio.
             </p>
           </div>
@@ -255,6 +317,52 @@ export function CropDialog({
           )}
         </div>
 
+        <fieldset className="grid grid-cols-3 gap-2 border-b border-(--line) px-5 py-3" aria-label="Keyboard crop controls">
+          <legend className="sr-only">Keyboard crop controls</legend>
+          <label className="text-[11px] text-muted-foreground">
+            Left (%)
+            <input
+              type="number"
+              min="0"
+              max="100"
+              step="1"
+              value={Math.round(crop.x * 100)}
+              onChange={event => updateNumericCrop("x", Number(event.target.value))}
+              aria-label="Crop left position (%)"
+              disabled={imgRect.width === 0}
+              className="mt-1 w-full rounded-(--r-control) border border-(--line) bg-(--surface-subtle) px-2 py-1.5 text-sm text-foreground"
+            />
+          </label>
+          <label className="text-[11px] text-muted-foreground">
+            Top (%)
+            <input
+              type="number"
+              min="0"
+              max="100"
+              step="1"
+              value={Math.round(crop.y * 100)}
+              onChange={event => updateNumericCrop("y", Number(event.target.value))}
+              aria-label="Crop top position (%)"
+              disabled={imgRect.width === 0}
+              className="mt-1 w-full rounded-(--r-control) border border-(--line) bg-(--surface-subtle) px-2 py-1.5 text-sm text-foreground"
+            />
+          </label>
+          <label className="text-[11px] text-muted-foreground">
+            Width (%)
+            <input
+              type="number"
+              min="5"
+              max="100"
+              step="1"
+              value={Math.round(crop.width * 100)}
+              onChange={event => updateNumericCrop("width", Number(event.target.value))}
+              aria-label="Crop width (%)"
+              disabled={imgRect.width === 0}
+              className="mt-1 w-full rounded-(--r-control) border border-(--line) bg-(--surface-subtle) px-2 py-1.5 text-sm text-foreground"
+            />
+          </label>
+        </fieldset>
+
         {/* Footer */}
         <footer className="flex items-center justify-between border-t border-(--line) px-5 py-3">
           <p className="text-xs text-muted-foreground">
@@ -269,6 +377,7 @@ export function CropDialog({
           </p>
           <div className="flex gap-2">
             <button
+              ref={cancelButtonRef}
               onClick={onCancel}
               className="rounded-(--r-control) px-4 py-2 text-sm text-muted-foreground hover:bg-(--surface-subtle)"
             >
