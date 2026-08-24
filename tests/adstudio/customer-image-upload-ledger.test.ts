@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const migration = readFileSync("supabase/migrations/202608250001_adstudio_customer_image_uploads.sql", "utf8");
+const hardeningMigration = readFileSync("supabase/migrations/202608250002_harden_customer_image_upload_status.sql", "utf8");
 const mediaRoute = readFileSync("src/app/api/adstudio/ads/[id]/media/route.ts", "utf8");
 const proxyRoute = readFileSync("src/app/api/adstudio/customer-media/route.ts", "utf8");
 const genericMediaRoute = readFileSync("src/app/api/adstudio/media/route.ts", "utf8");
@@ -27,6 +28,7 @@ test("customer image ledger has bounded workspace quotas and stale cleanup", () 
   assert.match(migration, /adstudio_claim_customer_image_finalize/);
   assert.match(migration, /adstudio_discard_customer_image_upload/);
   assert.match(migration, /status in \('pending', 'finalizing', 'deleting', 'finalized'\)/);
+  assert.match(migration, /adstudio_customer_image_uploads_status_check[\s\S]*add constraint adstudio_customer_image_uploads_status_check[\s\S]*check \(status in \('pending', 'finalizing', 'deleting', 'finalized'\)\)/);
   assert.match(migration, /with claimed as \([\s\S]*update public\.adstudio_customer_image_uploads[\s\S]*workspace_id = p_workspace_id[\s\S]*returning id, object_path[\s\S]*from claimed/);
   assert.match(migration, /set status = 'deleting'/);
   assert.match(migration, /existing_status in \('finalizing', 'deleting'\)[\s\S]*upload_cleanup_in_progress/);
@@ -38,6 +40,12 @@ test("customer image ledger has bounded workspace quotas and stale cleanup", () 
   assert.match(migration, /expires_at > now\(\)[\s\S]*status = 'finalizing'/);
   assert.match(migration, /upload_finalization_not_claimed/);
   assert.match(migration, /returns boolean/);
+});
+
+test("customer image status hardening is idempotent for already-migrated databases", () => {
+  assert.match(hardeningMigration, /if not exists \([\s\S]*adstudio_customer_image_uploads_status_check/);
+  assert.match(hardeningMigration, /add constraint adstudio_customer_image_uploads_status_check/);
+  assert.match(hardeningMigration, /check \(status in \('pending', 'finalizing', 'deleting', 'finalized'\)\)/);
 });
 
 test("finalize checks object metadata before downloading bytes", () => {

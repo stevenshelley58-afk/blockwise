@@ -90,7 +90,10 @@ test.describe("Ad Studio authenticated real loop", () => {
       await page.addInitScript(() => localStorage.setItem("bw-consent", "essential"));
       await page.goto(`/ad-studio?workspaceId=${encodeURIComponent(workspaceId!)}`);
       await expect(page.getByRole("heading", { name: "Ad Studio" })).toBeVisible();
-      await expect(page.getByText(/templates$/)).toHaveCount(1);
+      const approvedPackHref = `/ad-studio/packs/${encodeURIComponent(packId!)}`;
+      const approvedPack = page.locator(`a[href="${approvedPackHref}"]`);
+      await expect(approvedPack, `ADSTUDIO_E2E_PACK_ID=${packId} is not visible in the gallery at ${viewport.width}x${viewport.height}`).toBeVisible();
+      await expect(approvedPack).toHaveAttribute("href", approvedPackHref);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
     });
   }
