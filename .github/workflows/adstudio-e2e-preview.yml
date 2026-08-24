@@ -47,6 +47,9 @@ jobs:
       PLAYWRIGHT_BASE_URL: ${{ inputs.base_url }}
       ADSTUDIO_E2E_LOGIN_URL: ${{ inputs.auth_base_url || inputs.base_url }}
       ADSTUDIO_E2E_WORKSPACE_ID: 00000000-0000-4000-8000-0000000000e2
+      # Stable signed v2 pack seeded for the dedicated E2E workspace. Keep
+      # this explicit so a gallery ordering change cannot select a fixture.
+      ADSTUDIO_E2E_PACK_ID: meta-costly-mistakes-homebuyer-e67bfaec
       ADSTUDIO_E2E_EMAIL: adstudio-e2e@blockwise.test
       ADSTUDIO_E2E_PASSWORD: ${{ secrets.ADSTUDIO_E2E_PASSWORD }}
     steps:

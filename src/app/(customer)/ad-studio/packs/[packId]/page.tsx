@@ -27,7 +27,7 @@ export default async function PackEditorPage({
   const pack = await getImportedPack(supabase, packId);
   if (!pack) notFound();
 
-  const { adId } = await getOrCreateCustomerAd(supabase, access.workspaceId, pack);
+  const adRef = await getOrCreateCustomerAd(supabase, access.workspaceId, pack);
 
   // Brand Pack colours for the template-vs-brand toggle: the workspace's
   // latest non-demo kit, loaded server-side (same pattern as /ad-studio/brand).
@@ -62,10 +62,12 @@ export default async function PackEditorPage({
       <div className="min-h-0 flex-1">
         <EditorShell
           pack={pack}
-          adId={adId}
+          adId={adRef.adId}
           workspaceId={access.workspaceId}
           canSave={true}
           brandColours={brandColours}
+          initialDocument={adRef.initialDocument}
+          initialRevision={adRef.revisionNumber}
         />
       </div>
     </main>

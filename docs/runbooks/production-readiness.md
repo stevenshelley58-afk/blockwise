@@ -65,6 +65,10 @@ as a release gate unless a later task adds real package scripts.
 - [ ] Latest Vercel Preview URL is recorded and tested on desktop and mobile.
 - [ ] `npm run test:e2e:preview` runs against a seeded Vercel Preview URL.
   Skipped Playwright tests do not count as launch evidence.
+  For Production, set `ADSTUDIO_E2E_LOGIN_URL` to an owned captcha-free
+  Preview when Turnstile prevents headless login. The login proof runs on that
+  origin, verifies the target starts unauthenticated, then the authenticated
+  real-loop uses only the transferred Supabase session state on the target.
 - [ ] Stripe is either fully implemented and verified with checkout, portal,
   webhooks, and synced subscription state, or billing/payment UI and paid
   claims stay hidden behind the current fallback messaging.

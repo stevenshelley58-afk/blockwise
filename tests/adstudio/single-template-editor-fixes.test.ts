@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { readEditorDefaults, type MetaCopy } from "../../src/components/adstudio/editor/use-editor-state.ts";
-import { readGallerySampleUrl } from "../../src/lib/adstudio/pack-gallery.ts";
+import { gallerySampleProxyUrl, readGallerySampleAssetKey, readGallerySampleUrl } from "../../src/lib/adstudio/pack-gallery.ts";
 import { buildDeterministicCopyProposal } from "../../src/lib/adstudio/copy-proposal.ts";
 import { normalizeAdStudioAiWritingGuidance } from "../../src/lib/adstudio/copy-generation.ts";
 import { formatCampaignInput } from "../../src/lib/operator/prompts/assemble-prompt.ts";
@@ -43,6 +43,23 @@ describe("single-template editor fixes", () => {
     assert.equal(readGallerySampleUrl({ gallerySample: { feed: { imageSrc: "/sample.png" } } }), "/sample.png");
     assert.equal(readGallerySampleUrl({ metadata: { gallerySamples: { feed: { url: "https://frank.fail/releases/v2/feed.png" } } } }), "https://frank.fail/releases/v2/feed.png");
     assert.equal(readGallerySampleUrl({ safePreviews: { feed: { sha256: "a".repeat(64) } } }), null);
+  });
+
+  it("only exposes declared gallery asset keys for the authenticated sample proxy", () => {
+    const pack = {
+      metadata: {
+        gallerySamples: {
+          feed: { assetKey: "feed-sample", url: "https://frank.fail/releases/v2/feed.png" },
+          story: { assetKey: "story-sample" },
+        },
+      },
+    };
+    assert.equal(readGallerySampleAssetKey(pack, "feed"), "feed-sample");
+    assert.equal(readGallerySampleAssetKey(pack, "story"), "story-sample");
+    assert.equal(readGallerySampleAssetKey({ metadata: { gallerySamples: { feed: { assetKey: "../private" } } } }), null);
+    assert.equal(gallerySampleProxyUrl("pack-safe", pack), "/api/adstudio/template-packs/pack-safe/sample?placement=feed");
+    assert.equal(gallerySampleProxyUrl("pack/with-slash", pack), null);
+    assert.equal(gallerySampleProxyUrl("legacy-pack", { metadata: { gallerySamples: { feed: { url: "https://frank.fail/sample.png" } } } }), null);
   });
 
   it("returns copy suggestions without mutating the current copy", () => {

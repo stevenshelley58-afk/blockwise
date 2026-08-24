@@ -4,15 +4,15 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { buildAdDocument, type EditorState } from "../../src/components/adstudio/editor/use-editor-state.ts";
+import { buildAdDocument, saveCoversEditVersion, type EditorState } from "../../src/components/adstudio/editor/use-editor-state.ts";
 import { adDocumentSchema } from "../../packages/ad-template-pack-contract/src/schema.ts";
 import type { TemplatePack } from "../../packages/ad-template-pack-contract/src/types.ts";
 
 // ---------------------------------------------------------------------------
 // buildAdDocument — the Save document must carry the customer's shared text
 // and image-slot values. Text goes in sharedTextValues verbatim; images go in
-// sharedImageValues as data URLs, which the save route fetches server-side to
-// build render buffers (so a data: URL must actually be fetchable).
+// sharedImageValues as browser preview values. The save route validates bytes,
+// stores them privately, and persists content-addressed refs.
 // ---------------------------------------------------------------------------
 
 const FIXTURE_PATH = join(
@@ -39,6 +39,7 @@ const PACK: TemplatePack = {
   ],
 };
 
+const HERO_REF = "/api/adstudio/customer-media?workspaceId=workspace&path=workspace%2Fadstudio%2Fads%2Fad%2Fimages%2Faaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.png&sha256=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa&mime=image%2Fpng";
 const HERO_DATA_URL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
 
 function makeState(overrides: Partial<EditorState> = {}): EditorState {
@@ -46,7 +47,7 @@ function makeState(overrides: Partial<EditorState> = {}): EditorState {
     pack: PACK,
     activePlacement: "feed",
     imageValues: [
-      { inputKey: "hero", dataUrl: HERO_DATA_URL, crops: {} },
+      { inputKey: "hero", dataUrl: HERO_REF, crops: {} },
       { inputKey: "logo", dataUrl: null, crops: {} },
     ],
     textValues: { headline: "Fresh bread, daily", cta: "Order now" },
@@ -62,6 +63,14 @@ function makeState(overrides: Partial<EditorState> = {}): EditorState {
   };
 }
 
+describe("editor save snapshot", () => {
+  it("keeps newer edits dirty when a late save response returns", () => {
+    assert.equal(saveCoversEditVersion(4, 4), true);
+    assert.equal(saveCoversEditVersion(5, 4), false);
+    assert.equal(saveCoversEditVersion(undefined, 0), true);
+  });
+});
+
 describe("buildAdDocument shared inputs", () => {
   it("includes text values keyed by input key", async () => {
     const doc = await buildAdDocument(makeState());
@@ -71,9 +80,9 @@ describe("buildAdDocument shared inputs", () => {
     });
   });
 
-  it("includes picked images as data URLs and omits unpicked slots", async () => {
+  it("includes uploaded image refs and omits unpicked slots", async () => {
     const doc = await buildAdDocument(makeState());
-    assert.equal(doc.sharedImageValues.hero, HERO_DATA_URL);
+    assert.equal(doc.sharedImageValues.hero, HERO_REF);
     assert.ok(!("logo" in doc.sharedImageValues), "unpicked image slot must be omitted");
   });
 
@@ -84,9 +93,20 @@ describe("buildAdDocument shared inputs", () => {
     assert.match(filled.documentHash, /^[a-f0-9]{64}$/);
   });
 
-  it("emits data URLs the save route can fetch server-side", async () => {
-    // The route turns sharedImageValues into Buffers with fetch(url).
-    const res = await fetch(HERO_DATA_URL);
+  it("never includes an inline image payload in the save document", async () => {
+    const doc = await buildAdDocument(makeState({ imageValues: [{ inputKey: "hero", dataUrl: "data:image/png;base64,AAAA", crops: {} }] }));
+    assert.ok(!("hero" in doc.sharedImageValues));
+  });
+
+  it("increments the document revision for the next save", async () => {
+    assert.equal((await buildAdDocument(makeState({ lastSavedRevision: null }))).revision, 1);
+    assert.equal((await buildAdDocument(makeState({ lastSavedRevision: 1 }))).revision, 2);
+    assert.equal((await buildAdDocument(makeState({ lastSavedRevision: 7 }))).revision, 8);
+  });
+
+  it("emits preview data URLs before the server replaces them with refs", async () => {
+    // The client uses data URLs only for the immediate browser preview.
+    const res = await fetch("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==");
     assert.equal(res.status, 200);
     const bytes = Buffer.from(await res.arrayBuffer());
     assert.ok(bytes.length > 0, "data URL resolves to bytes");

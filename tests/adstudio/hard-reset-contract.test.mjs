@@ -30,7 +30,7 @@ describe("release hard-reset + typecheck contracts", () => {
     assert.match(gate.stdout, /Hard-reset static verification passed/);
   });
 
-  it("the canonical typecheck is non-writing: tsc --noEmit --incremental false passes on an unwritable workspace and creates no build-info file", () => {
+  it("the canonical typecheck is non-writing: tsc --noEmit --incremental false passes on an unwritable workspace and creates no build-info file", { skip: process.platform === "win32" ? "Windows does not enforce chmod-based unwritable-directory semantics; covered on Linux/VPS." : false }, () => {
     const work = mkdtempSync(join(os.tmpdir(), "adstudio-typecheck-"));
     try {
       writeFileSync(
