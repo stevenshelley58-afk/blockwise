@@ -10,6 +10,20 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["@napi-rs/canvas"],
   // Tree-shake heavy barrel-export libs so only used modules ship to the client.
   // lucide-react is already optimized by Next's defaults; recharts is not.
+  // Sharp resolves its native implementation at runtime. Vercel's trace can
+  // otherwise omit the Linux libvips shared object from these Node functions.
+  outputFileTracingIncludes: {
+    "/api/adstudio/ads/*/media": [
+      "./node_modules/sharp/**/*",
+      "./node_modules/@img/sharp-linux-x64/**/*",
+      "./node_modules/@img/sharp-libvips-linux-x64/**/*",
+    ],
+    "/api/adstudio/customer-media": [
+      "./node_modules/sharp/**/*",
+      "./node_modules/@img/sharp-linux-x64/**/*",
+      "./node_modules/@img/sharp-libvips-linux-x64/**/*",
+    ],
+  },
   experimental: {
     optimizePackageImports: ["recharts"],
     staleTimes: {

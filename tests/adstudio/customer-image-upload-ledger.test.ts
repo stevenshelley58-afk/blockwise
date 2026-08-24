@@ -6,6 +6,7 @@ const migration = readFileSync("supabase/migrations/202608250001_adstudio_custom
 const mediaRoute = readFileSync("src/app/api/adstudio/ads/[id]/media/route.ts", "utf8");
 const proxyRoute = readFileSync("src/app/api/adstudio/customer-media/route.ts", "utf8");
 const genericMediaRoute = readFileSync("src/app/api/adstudio/media/route.ts", "utf8");
+const nextConfig = readFileSync("next.config.ts", "utf8");
 
 test("customer image migration creates a private, constrained bucket", () => {
   assert.match(migration, /'adstudio-customer-images'[\s\S]*false[\s\S]*10485760/);
@@ -69,4 +70,13 @@ test("finalize checks object metadata before downloading bytes", () => {
   assert.match(proxyRoute, /status", "finalized"/);
   assert.match(genericMediaRoute, /workspace-artifacts/);
   assert.doesNotMatch(genericMediaRoute, /adstudio_customer_image_uploads/);
+});
+
+test("AdStudio image routes trace Sharp's Linux runtime on Vercel", () => {
+  assert.match(nextConfig, /outputFileTracingIncludes/);
+  assert.match(nextConfig, /"\/api\/adstudio\/ads\/\*\/media"/);
+  assert.match(nextConfig, /"\/api\/adstudio\/customer-media"/);
+  assert.match(nextConfig, /\.\/node_modules\/sharp\/\*\*\/\*/);
+  assert.match(nextConfig, /\.\/node_modules\/@img\/sharp-linux-x64\/\*\*\/\*/);
+  assert.match(nextConfig, /\.\/node_modules\/@img\/sharp-libvips-linux-x64\/\*\*\/\*/);
 });

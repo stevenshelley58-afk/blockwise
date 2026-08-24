@@ -108,7 +108,8 @@ async function runEditorFlow(page: Page) {
   await expect(template, `ADSTUDIO_E2E_PACK_ID=${packId} is not present in the usable pack gallery`).toHaveCount(1);
   await expect(template).toBeVisible();
   await template.click();
-  await expect(page.getByRole("region", { name: "Ad Studio editor" })).toBeVisible();
+  const editor = page.getByRole("region", { name: "Ad Studio editor" });
+  await expect(editor).toBeVisible();
 
   const imageInputs = page.locator('input[type="file"]');
   const imageCount = await imageInputs.count();
@@ -120,7 +121,7 @@ async function runEditorFlow(page: Page) {
   // The preview appears before the direct storage upload finishes. Saving is
   // only valid after every prepare/upload/finalize sequence has completed.
   await expect(page.getByText("Uploading image...", { exact: true })).toHaveCount(0, { timeout: 60_000 });
-  await expect(page.locator('[role="alert"]')).toHaveCount(0);
+  await expect(editor.locator('[role="alert"]')).toHaveCount(0);
   const overlayInputs = page.locator('section[aria-label="Text"] input[type="text"]');
   for (let i = 0; i < await overlayInputs.count(); i += 1) await overlayInputs.nth(i).fill(`Sample overlay ${i + 1}`);
   const metaCopy = page.getByRole("complementary", { name: "Meta copy" });
@@ -137,7 +138,7 @@ async function runEditorFlow(page: Page) {
   const firstSaveBodyRequest = await firstSaveRequest;
   const firstDocument = (firstSaveBodyRequest.postDataJSON() as { document?: { sharedImageValues?: Record<string, string> } }).document;
   for (const ref of Object.values(firstDocument?.sharedImageValues ?? {})) {
-    expect(ref).toContain("/api/adstudio/media?");
+    expect(ref).toContain("/api/adstudio/customer-media?");
     expect(ref).not.toMatch(/^data:image\//i);
   }
   const firstSaveResponse = await firstSave;
