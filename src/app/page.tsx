@@ -11,8 +11,8 @@ import {
   Updates,
   WorkflowBand,
 } from "@/components/home-landing/home-sections";
-import { NightOpsHero } from "@/components/home-landing/night-ops-hero";
 import { SiteFooter, SiteHeader } from "@/components/home-landing/site-chrome";
+import { WorkspaceHero } from "@/components/home-landing/workspace-hero";
 
 import "./homepage.css";
 
@@ -28,7 +28,7 @@ export default function HomePage() {
     <div className={`hw-page ${manrope.variable} ${inter.variable}`}>
       <SiteHeader />
       <main>
-        <section id="top"><NightOpsHero /></section>
+        <section id="top"><WorkspaceHero /></section>
         <section id="start"><StartBand /></section>
         <section id="workflow"><WorkflowBand /></section>
         <section id="control"><ControlFold /></section>
