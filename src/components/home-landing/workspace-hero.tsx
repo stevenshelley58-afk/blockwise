@@ -65,7 +65,10 @@ export function WorkspaceHero() {
             Create, approve and track Meta ads from one beautifully simple workspace.
           </p>
           <CtaLink location="hero" href="/signup" className="hw-btn hw-btn--light hw-ws__cta">
-            Start free trial <span aria-hidden>→</span>
+            Start free trial
+            <svg className="hw-ws__cta-icon" viewBox="0 0 16 16" aria-hidden focusable="false">
+              <path d="M3 8h9M9 4.5 12.5 8 9 11.5" />
+            </svg>
           </CtaLink>
         </div>
 
