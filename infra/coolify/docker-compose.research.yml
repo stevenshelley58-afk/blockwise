@@ -7,6 +7,8 @@ x-blockwise-research-reset:
     - "Hermes owns research execution; build and collection adapters are placeholders until enabled by the operator."
     - "Pinned images are required. Do not deploy with floating tags."
 
+x-research-storage-db-credential: &research-storage-db-credential ${HERMES_RESEARCH_STORAGE_DB_PASSWORD:?Set HERMES_RESEARCH_STORAGE_DB_PASSWORD}
+
 services:
   research-db:
     image: "postgres:17.6-alpine"
@@ -85,7 +87,7 @@ services:
     environment:
       POSTGRES_DB: blockwise_research_storage
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${HERMES_RESEARCH_STORAGE_DB_PASSWORD:?Set HERMES_RESEARCH_STORAGE_DB_PASSWORD}
+      POSTGRES_PASSWORD: *research-storage-db-credential
     volumes:
       - research-storage-db-data:/var/lib/postgresql/data
       - ../../infra/research-storage/init:/docker-entrypoint-initdb.d:ro
