@@ -204,7 +204,7 @@ describe("variant-pack — authoritative exactly-five pack", () => {
       for (const key of assignment) {
         assert.ok(catalog.has(key), `${id} references an unknown safe fixture ${key}`);
         const fixture = catalog.get(key);
-        if (fixture.path) assert.match(fixture.path, /\\public\\(?:ads|home|adstudio-samples)\\/u, `${id} fixture must come from a safe public corpus`);
+        if (fixture.path) assert.match(fixture.path, /[\\/]public[\\/](?:ads|home|adstudio-samples)[\\/]/u, `${id} fixture must come from a safe public corpus`);
         else assert.ok(fixture.procedural, `${id} procedural fixture must declare source-free provenance`);
       }
       return assignment;
