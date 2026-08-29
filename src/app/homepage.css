@@ -258,7 +258,7 @@ html, body { overflow-x: clip; }
   background: rgba(246, 247, 249, 0.08);
 }
 
-/* Mobile: preserve one clear conversion path and full-size touch targets. */
+/* Mobile: keep both account access and the primary conversion path visible. */
 @media (max-width: 767.98px) {
   .hw-header-inner { gap: var(--hw-space-2xs); }
   .hw-nav {
@@ -269,7 +269,7 @@ html, body { overflow-x: clip; }
     margin-left: auto;
   }
   .hw-nav + .hw-header-actions { margin-left: auto; }
-  .hw-header .hw-login { display: none; }
+  .hw-header .hw-login { display: inline-flex; }
 }
 
 @media (max-width: 379.98px) {

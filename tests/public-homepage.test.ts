@@ -19,6 +19,7 @@ function readHomeSources(): { page: string; combined: string } {
 
 test("public homepage does not redirect anonymous visitors to the login screen", () => {
   const { page, combined } = readHomeSources();
+  const homepageCss = readFileSync("src/app/homepage.css", "utf8");
 
   assert.doesNotMatch(page, /redirect\(/);
   // Signup flow stays reachable; wording of buttons/sections is free to change.
@@ -26,6 +27,11 @@ test("public homepage does not redirect anonymous visitors to the login screen",
   // C5: sign-in stays in its own component so Space-key activations scroll the
   // page rather than navigating to /login. Label text itself is not pinned.
   assert.match(combined, /SignInLink/);
+  assert.match(
+    homepageCss,
+    /@media \(max-width: 767\.98px\)[\s\S]*?\.hw-header \.hw-login \{ display: inline-flex; \}/,
+    "mobile header must keep Log in visible beside Free trial",
+  );
 });
 
 test("public audit report route stays public and off the protected Ad Radar surface", () => {
@@ -44,6 +50,10 @@ test("public audit report route stays public and off the protected Ad Radar surf
 
 test("landing page anchors, sections, and claims stay connected", () => {
   const { page, combined } = readHomeSources();
+  const workspaceHeroCss = readFileSync(
+    "src/components/home-landing/workspace-hero.css",
+    "utf8",
+  );
   const oldProductName = new RegExp("Aur" + "alis", "i");
   const deadAnchor = new RegExp('href="' + '#"');
   const staleSignupAnchor = 'href="#sig' + 'nup"';
@@ -107,6 +117,16 @@ test("landing page anchors, sections, and claims stay connected", () => {
   assert.match(combined, /Example campaign/);
   assert.match(combined, /Performance/);
   assert.match(combined, /Prepared ads/);
+  assert.match(
+    workspaceHeroCss,
+    /@media \(max-width: 600px\)[\s\S]*?\.hw-ws-product \{ height: 326px; margin-top: 28px;/,
+    "mobile hero must use the compact first-viewport product proof",
+  );
+  assert.match(
+    workspaceHeroCss,
+    /@media \(max-width: 600px\)[\s\S]*?\.hw-ws-product__ads \{ display: none; \}/,
+    "mobile hero must not show clipped prepared-ad cards",
+  );
 
   const ids = [...combined.matchAll(/id="([^"]+)"/g)].map((match) => match[1]);
   assert.equal(new Set(ids).size, ids.length, "landing and setup form IDs must be unique");
