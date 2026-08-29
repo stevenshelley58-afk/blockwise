@@ -42,7 +42,7 @@
 //   }
 
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, writeFileSync, copyFileSync, rmSync, readdirSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync, copyFileSync, rmSync, readdirSync, realpathSync } from "node:fs";
 import { join, resolve, dirname, basename } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -981,7 +981,7 @@ function copyTree(src, dest) {
   }
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === SCRIPT_PATH) {
+if (process.argv[1] && realpathSync(resolve(process.argv[1])) === realpathSync(SCRIPT_PATH)) {
   main().catch((error) => {
     console.error(error?.stack ?? error);
     process.exit(1);

@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 
 import { createHash } from "node:crypto";
+import { realpathSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { basename, dirname, join, relative, resolve } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 
 import sharp from "sharp";
 
@@ -1038,7 +1039,7 @@ export async function runSubjectInvariance({
   return { report, reportPath, contactSheetPath, rubricPath };
 }
 
-const invokedDirectly = process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url;
+const invokedDirectly = process.argv[1] && realpathSync(resolve(process.argv[1])) === realpathSync(SCRIPT_PATH);
 if (invokedDirectly) {
   try {
     const options = parseArgs(process.argv.slice(2));

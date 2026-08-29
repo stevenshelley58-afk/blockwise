@@ -1,14 +1,33 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync, symlinkSync } from "node:fs";
 import { join } from "node:path";
 import os from "node:os";
+import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 
 import { assertCandidateEvidence, readApprovalReceipt } from "../../scripts/adstudio/v2/pack-release.mjs";
 import { hashCanonicalJson } from "../../src/lib/adstudio/v2/template-hash.ts";
 import { appendGeneration, createGenerationTrace } from "../../scripts/adstudio/v2/generation-trace.mjs";
 
 describe("layered TemplatePack release approval", () => {
+  it("runs through a junction and still rejects a missing approval receipt", () => {
+    const root = mkdtempSync(join(os.tmpdir(), "adstudio-pack-release-link-test-"));
+    const linkedDir = join(root, "v2");
+    const sourceDir = fileURLToPath(new URL("../../scripts/adstudio/v2/", import.meta.url));
+    symlinkSync(sourceDir, linkedDir, "junction");
+    try {
+      const result = spawnSync(process.execPath, [join(linkedDir, "pack-release.mjs")], {
+        cwd: fileURLToPath(new URL("../..", import.meta.url)),
+        encoding: "utf8",
+      });
+      assert.notEqual(result.status, 0, "direct execution through a junction must run main() and fail closed");
+      assert.match(result.stderr, /--approval is required/);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("refuses a missing or pending approval receipt", () => {
     assert.throws(() => readApprovalReceipt(null), /--approval is required/);
 
