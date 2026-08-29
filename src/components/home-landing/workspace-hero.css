@@ -454,19 +454,20 @@
 }
 
 @media (max-width: 600px) {
-  .hw-wide.hw-ws__inner { padding: 48px 16px 40px; }
+  .hw-wide.hw-ws__inner { padding: 36px 16px 32px; }
   .hw-page .hw-ws__title { font-size: clamp(2.05rem, 9.3vw, 2.45rem); line-height: 0.98; }
-  .hw-ws__lede { margin-top: 22px; font-size: 16px; line-height: 1.5; }
-  .hw-ws-product { height: 580px; margin-top: 42px; border-radius: 18px; }
-  .hw-ws-product__bar { height: 42px; padding-inline: 12px; }
+  .hw-ws__lede { margin-top: 20px; font-size: 16px; line-height: 1.5; }
+  .hw-ws__cta { margin-top: 22px; }
+  .hw-ws-product { height: 326px; margin-top: 28px; border-radius: 18px; }
+  .hw-ws-product__bar { height: 40px; padding-inline: 12px; }
   .hw-ws-product__bar > b { font-size: 7px; }
-  .hw-ws-product__body { height: calc(100% - 42px); display: block; }
+  .hw-ws-product__body { height: calc(100% - 40px); display: block; }
   .hw-ws-product__nav { display: none; }
   .hw-ws-product__main {
-    height: 358px;
-    grid-template-rows: 24px 58px 104px 66px 44px;
-    gap: 8px;
-    padding: 14px 12px;
+    height: 100%;
+    grid-template-rows: 22px 50px 78px 56px 38px;
+    gap: 6px;
+    padding: 9px 12px;
   }
   .hw-ws-product__heading strong { font-size: 12px; }
   .hw-ws-product__heading span { padding: 7px 9px; font-size: 7px; }
@@ -479,36 +480,13 @@
   .hw-ws-campaigns div:nth-child(3) { display: none; }
   .hw-ws-activity { padding-left: 28px; }
   .hw-ws-activity small { font-size: 5.75px; }
-  .hw-ws-product__ads {
-    height: 180px;
-    padding: 0;
-    border-top: 1px solid var(--ws-line);
-    border-left: 0;
-  }
-  .hw-ws-product__ads-head { position: absolute; z-index: 3; inset: 10px 12px auto; margin: 0; }
-  .hw-ws-ad { width: 132px; border-radius: 9px; }
-  .hw-ws-ad--home { top: 31px; left: 14px; }
-  .hw-ws-ad--agent { top: 31px; right: 14px; left: auto; transform: rotate(1deg); }
-  .hw-ws-ad__account { height: 28px; padding-inline: 6px; }
-  .hw-ws-ad__avatar { width: 17px; height: 17px; font-size: 5px; }
-  .hw-ws-ad__account strong { font-size: 5.5px; }
-  .hw-ws-ad__account small { font-size: 4.5px; }
-  .hw-ws-ad__image { height: 79px; }
-  .hw-ws-ad__image > strong { left: 6px; right: 6px; bottom: 6px; font-size: 8px; }
-  .hw-ws-ad__footer { min-height: 36px; padding: 5px 6px; }
-  .hw-ws-ad__footer small { font-size: 3.5px; }
-  .hw-ws-ad__footer strong { font-size: 5px; }
-  .hw-ws-ad__footer b { padding: 4px 5px; font-size: 4px; }
+  .hw-ws-product__ads { display: none; }
 }
 
 @media (max-width: 374px) {
   .hw-wide.hw-ws__inner { padding-inline: 14px; }
   .hw-page .hw-ws__title { font-size: 2rem; }
   .hw-ws__lede { font-size: 15px; }
-  .hw-ws-product { height: 570px; }
-  .hw-ws-product__main { height: 350px; }
-  .hw-ws-product__ads { height: 178px; }
-  .hw-ws-ad { width: 124px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
