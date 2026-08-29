@@ -100,6 +100,8 @@ test("product readiness is fatal while liveness remains process-only", async () 
   ]);
   assert.match(health, /const status = ready \? 200 : 503/);
   assert.match(health, /\{ status \}/);
+  assert.match(health, /new URL\("workspaces", `\$\{directPostgrestUrl\.replace/);
+  assert.match(health, /supabaseServerCredentialHeaders\(credential\)/);
   assert.match(live, /status: "alive"/);
   assert.match(migration, /notify pgrst, 'reload schema'/i);
   assert.match(migration, /notify pgrst, 'reload config'/i);
