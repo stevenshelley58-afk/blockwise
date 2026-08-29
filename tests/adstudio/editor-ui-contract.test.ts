@@ -14,8 +14,8 @@ describe("customer Ad Studio workbench contract", () => {
   });
 
   it("uses the route workbench flow without fixed viewport shells", () => {
-    const editorRoute = readFileSync("src/app/(customer)/ad-studio/packs/[packId]/page.tsx", "utf8");
-    const publishRoute = readFileSync("src/app/(customer)/ad-studio/packs/[packId]/publish/page.tsx", "utf8");
+    const editorRoute = readFileSync("src/app/(customer)/ad-studio/templates/[templateId]/page.tsx", "utf8");
+    const publishRoute = readFileSync("src/app/(customer)/ad-studio/templates/[templateId]/publish/page.tsx", "utf8");
     assert.doesNotMatch(editorRoute, /fixed inset-0/);
     assert.doesNotMatch(publishRoute, /fixed inset-0/);
     assert.match(editorRoute, /<EditorShell/);

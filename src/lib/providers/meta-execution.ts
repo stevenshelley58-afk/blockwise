@@ -37,8 +37,74 @@ export type MetaConnectionSetup = {
   timezone: string;
 };
 
+export type MetaPublishTarget =
+  | { mode: "new_campaign_new_adset" }
+  | { mode: "existing_campaign_new_adset"; campaignId: string }
+  | { mode: "existing_adset"; campaignId: string; adSetIds: string[] };
+
+export type MetaExistingCampaignState = {
+  id: string;
+  objective: string;
+  specialAdCategories: string[];
+  specialAdCategoryCountries: string[];
+  budgetMode: "campaign" | "adset";
+};
+export type MetaExistingAdSetState = {
+  id: string;
+  campaignId: string;
+  targeting: Record<string, unknown>;
+  optimizationGoal: string;
+  billingEvent: string;
+  dailyBudgetMinorUnits: number;
+  destination: Record<string, unknown> | null;
+  promotedObject: Record<string, unknown> | null;
+};
+export type MetaParentState = {
+  campaign?: MetaExistingCampaignState;
+  adSets?: MetaExistingAdSetState[];
+};
+
+export type MetaOfferFulfilment = {
+  exactOffer: string;
+  eligibility: string;
+  conditions: string;
+  timeframe: string;
+  evidence: string;
+  approval: string;
+  disclaimer: string;
+  privacyUrl: string;
+  consent: string;
+  fulfilmentAsset: string;
+  fulfilmentUrl: string;
+  owner: string;
+  expiry: string;
+  tracking: string;
+};
+
+export function validateMetaOfferFulfilment(value: MetaOfferFulfilment | null | undefined): string[] {
+  if (!value) return ["Offer fulfilment details are required before publication."];
+  const required: Array<keyof MetaOfferFulfilment> = [
+    "exactOffer", "eligibility", "conditions", "timeframe", "evidence", "approval",
+    "disclaimer", "privacyUrl", "consent", "owner", "expiry", "tracking",
+  ];
+  const issues = required.filter((key) => !value[key]?.trim()).map((key) => "Missing offer fulfilment field: " + key);
+  if (!value.fulfilmentAsset.trim() && !value.fulfilmentUrl.trim()) issues.push("Provide a fulfilment asset or HTTPS URL.");
+  if (value.fulfilmentUrl.trim()) {
+    try { if (new URL(value.fulfilmentUrl).protocol !== "https:") issues.push("Fulfilment URL must use HTTPS."); }
+    catch { issues.push("Fulfilment URL must be valid HTTPS."); }
+  }
+  if (value.privacyUrl.trim()) {
+    try { if (new URL(value.privacyUrl).protocol !== "https:") issues.push("Privacy URL must use HTTPS."); }
+    catch { issues.push("Privacy URL must be valid HTTPS."); }
+  }
+  return issues;
+}
+
 export type MetaPublishControls = {
+  target?: MetaPublishTarget;
   dailyBudgetMinorUnits?: number;
+  newCampaign?: { objective: string; specialAdCategories: string[]; specialAdCategoryCountries: string[]; budgetMode: "campaign" | "adset" };
+  parentState?: MetaParentState;
   /** Explicit article/website destination for the ad and (when applicable) form thank-you button. */
   destinationUrl?: string;
   destinationMode?: "website" | "instant_form";
@@ -54,6 +120,7 @@ export type MetaPublishControls = {
     startTime?: string | null;
     endTime?: string | null;
   };
+  fulfilment?: MetaOfferFulfilment;
   placements?: {
     publisherPlatforms?: string[];
     facebookPositions?: string[];
@@ -64,15 +131,16 @@ export type MetaPublishControls = {
 export type MetaPublishCampaignPlan = {
   localId: string;
   name: string;
-  objective: "OUTCOME_LEADS";
+  objective: string;
   status: "PAUSED";
-  specialAdCategories: ["HOUSING"];
+  specialAdCategories: string[];
   specialAdCategoryCountries: string[];
   budgetMode: "campaign" | "adset";
 };
 
 export type MetaPublishAdSetPlan = {
   localId: string;
+  existingId?: string;
   name: string;
   campaignLocalId: string;
   billingEvent: "IMPRESSIONS";
@@ -106,6 +174,7 @@ export type MetaPublishLeadFormPlan = {
   thankYouTitle: string;
   thankYouBody: string;
   thankYouWebsiteUrl: string;
+  fulfilment?: MetaOfferFulfilment;
 };
 
 export type MetaPublishCreativePlan = {
@@ -316,9 +385,11 @@ export function buildMetaPublishPlan(input: {
   const selectedVariantIds = (input.variantIds ?? []).filter((id) => typeof id === "string" && id.trim().length > 0);
   const abTest = selectedVariantIds.length > 0;
   const campaignPack = abTest ? filterPackToVariants(input.campaignPack, selectedVariantIds) : input.campaignPack;
-  const controls = normalizeMetaPublishControls(input.controls, campaignPack);
+  const controls = normalizeMetaPublishControls(input.controls, campaignPack, input);
   const setup = normalizeMetaConnectionSetup(input.setup);
-  const existingMetaCampaignId = input.existingMetaCampaignId?.trim() || null;
+  const existingMetaCampaignId = controls.target?.mode === "new_campaign_new_adset"
+    ? null
+    : controls.target?.campaignId?.trim() || input.existingMetaCampaignId?.trim() || null;
   const campaign: MetaPublishCampaignPlan = {
     localId: "campaign_main",
     name: campaignPack.campaign.name,
@@ -333,7 +404,7 @@ export function buildMetaPublishPlan(input: {
   const adSets = buildAdSetPlans(campaignPack, controls);
   const leadForms = buildLeadFormPlans(campaignPack, setup, controls.destinationUrl);
   const creatives = buildCreativePlans(campaignPack, setup);
-  const ads = buildAdPlans(campaignPack);
+  const ads = buildAdPlans(campaignPack, adSets);
   const tracking: MetaPublishTrackingPlan = {
     utmSource: "meta",
     utmMedium: "paid_social",
@@ -385,6 +456,8 @@ export function buildMetaPublishPlan(input: {
     reconciledObjects: {
       ...emptyReconciledObjects(),
       ...(existingMetaCampaignId ? { campaignId: existingMetaCampaignId } : {}),
+      adSetIds: Object.fromEntries(adSets.filter((adSet) => adSet.existingId)
+        .map((adSet) => [adSet.localId, adSet.existingId as string])),
     },
     lastError: null,
     createdAt: now,
@@ -1369,9 +1442,25 @@ async function getMetaObjectStatus(
 function buildAdSetPlans(pack: AdStudioCampaignPack, controls: MetaPublishControls): MetaPublishAdSetPlan[] {
   const suburb = pack.campaign.market.suburb;
   const targeting = buildTargeting(controls);
+  const target = controls.target;
+  if (target?.mode === "existing_adset") {
+    return target.adSetIds.map((existingId, index) => ({
+      localId: "adset_existing_" + (index + 1),
+      existingId,
+      name: suburb + " existing ad set " + (index + 1),
+      campaignLocalId: "campaign_main",
+      billingEvent: "IMPRESSIONS",
+      optimizationGoal: "LEAD_GENERATION",
+      status: "PAUSED",
+      dailyBudgetMinorUnits: controls.dailyBudgetMinorUnits ?? 2000,
+      targeting,
+      startTime: controls.schedule?.startTime ?? null,
+      endTime: controls.schedule?.endTime ?? null,
+    }));
+  }
   return [{
     localId: "adset_primary",
-    name: `${suburb} homeowners`,
+    name: suburb + " homeowners",
     campaignLocalId: "campaign_main",
     billingEvent: "IMPRESSIONS",
     optimizationGoal: "LEAD_GENERATION",
@@ -1532,22 +1621,23 @@ function isHttpsDestination(value: string): boolean {
   try { return new URL(value).protocol === "https:"; } catch { return false; }
 }
 
-function buildAdPlans(pack: AdStudioCampaignPack): MetaPublishAdPlan[] {
-  return pack.copyPacks.slice(0, 6).map((copy, index) => {
+function buildAdPlans(pack: AdStudioCampaignPack, adSets: MetaPublishAdSetPlan[]): MetaPublishAdPlan[] {
+  const copies = pack.copyPacks.slice(0, 6);
+  return adSets.flatMap((adSet, adSetIndex) => copies.map((copy, index) => {
     const variant = pack.variants.find((item) => item.variantId === copy.variantId) ?? null;
     const variantTag: MetaAdVariantTag | null = variant
       ? { variantId: variant.variantId, angle: variant.angle, template: pack.campaign.templateKey ?? pack.campaign.offerId ?? null }
       : null;
-
+    const ordinal = adSetIndex * copies.length + index + 1;
     return {
-      localId: `ad_${index + 1}`,
-      name: `${pack.campaign.name} ad ${index + 1}${variantTag ? buildAdVariantTagSuffix(variantTag) : ""}`,
-      adSetLocalId: "adset_primary",
-      creativeLocalId: `creative_${index + 1}`,
-      status: "PAUSED",
+      localId: "ad_" + ordinal,
+      name: pack.campaign.name + " ad " + ordinal + (variantTag ? buildAdVariantTagSuffix(variantTag) : ""),
+      adSetLocalId: adSet.localId,
+      creativeLocalId: "creative_" + (index + 1),
+      status: "PAUSED" as const,
       variantTag,
     };
-  });
+  }));
 }
 
 /**
@@ -1566,10 +1656,20 @@ export function buildAdVariantTagSuffix(tag: MetaAdVariantTag): string {
   return ` | bw:${parts.join(";")}`;
 }
 
-function normalizeMetaPublishControls(controls: MetaPublishControls | undefined, pack: AdStudioCampaignPack): MetaPublishControls {
+function normalizeMetaPublishControls(
+  controls: MetaPublishControls | undefined,
+  pack: AdStudioCampaignPack,
+  input: { existingMetaCampaignId?: string | null; existingMetaCampaignBudgetMode?: "campaign" | "adset" },
+): MetaPublishControls {
   const destinationUrl = controls?.destinationUrl?.trim();
+  const suppliedTarget = controls?.target;
+  const target: MetaPublishTarget = suppliedTarget
+    ?? (input.existingMetaCampaignId?.trim()
+      ? { mode: "existing_campaign_new_adset", campaignId: input.existingMetaCampaignId.trim() }
+      : { mode: "new_campaign_new_adset" });
 
   return {
+    target,
     dailyBudgetMinorUnits: controls?.dailyBudgetMinorUnits && controls.dailyBudgetMinorUnits > 0
       ? Math.round(controls.dailyBudgetMinorUnits)
       : 2000,

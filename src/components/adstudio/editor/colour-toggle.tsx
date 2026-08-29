@@ -1,6 +1,6 @@
 "use client";
 
-import { COLOUR_ROLES, type ColourRole } from "../../../../packages/ad-template-pack-contract/src/types";
+import { COLOUR_ROLES, type ColourRole } from "../../../../packages/ad-template-contract/src/types";
 import { useId } from "react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";

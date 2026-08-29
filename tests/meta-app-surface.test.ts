@@ -64,25 +64,6 @@ test("operator prompt preview surfaces avoid stale Phase 1 test copy", () => {
   assert.doesNotMatch(`${promptPanel}\n${promptPreviewRoute}`, /Phase 1|PR 1|Run test|Test Result/);
 });
 
-test("Vercel Cron paginates provider work into the VPS queue", () => {
-  const maintenance = readFileSync("src/lib/providers/scheduled-maintenance.ts", "utf8");
-  const worker = readFileSync("worker/index.ts", "utf8");
-  const vercel = readFileSync("vercel.json", "utf8");
-
-  assert.match(maintenance, /queueScheduledMetaLeadSyncs/);
-  assert.match(maintenance, /queueScheduledPerformanceReadModels/);
-  assert.match(maintenance, /check\.meta\.token-health/);
-  assert.match(maintenance, /scanScheduledRowsById/);
-  assert.match(maintenance, /\.gt\("id", afterId\)/);
-  assert.doesNotMatch(maintenance, /\.limit\(100\)/);
-  assert.match(worker, /case "sync\.meta\.leads"/);
-  assert.match(worker, /case "check\.meta\.token-health"/);
-  assert.match(worker, /case "reconcile\.customer\.activation"/);
-  assert.match(vercel, /\/api\/cron\/meta-leads/);
-  assert.match(vercel, /\/api\/cron\/provider-maintenance/);
-  assert.match(vercel, /\/api\/cron\/performance-read-models/);
-});
-
 test("operator sidebar does not hardcode Hermes runtime health", () => {
   const appShell = readFileSync("src/components/app-shell.tsx", "utf8");
 

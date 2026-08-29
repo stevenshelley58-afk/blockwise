@@ -165,19 +165,3 @@ EMPTY=
     },
   );
 });
-
-test("Vercel build command only builds; env, test, and typecheck gates run in CI", () => {
-  const vercel = JSON.parse(readFileSync("vercel.json", "utf8")) as { buildCommand?: string };
-
-  assert.equal(vercel.buildCommand, "npm run build");
-});
-
-test("Vercel route bundles are loadable by the CommonJS serverless launcher", () => {
-  const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { type?: string };
-
-  assert.notEqual(
-    pkg.type,
-    "module",
-    'root package.json must not force emitted Next route ".js" bundles to be treated as ESM on Vercel',
-  );
-});

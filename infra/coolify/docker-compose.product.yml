@@ -335,9 +335,9 @@ networks:
 
 volumes:
   blockwise-product-db-data:
-    name: blockwise-product-db-data
+    name: ${BLOCKWISE_DB_VOLUME_NAME:-blockwise-product-db-data}
   blockwise-product-storage-data:
-    name: blockwise-product-storage-data
+    name: ${BLOCKWISE_STORAGE_VOLUME_NAME:-blockwise-product-storage-data}
   blockwise-product-caddy-data:
     name: blockwise-product-caddy-data
   blockwise-product-caddy-config:

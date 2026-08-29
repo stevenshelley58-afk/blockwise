@@ -3,9 +3,9 @@
 import { useCallback, useRef, useState, type KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, Palette, PencilLine, RotateCcw, RotateCw, Save, Sparkles } from "lucide-react";
-import type { TemplatePack, Placement, ImageSlotLayer, Rect } from "../../../../packages/ad-template-pack-contract/src/types";
-import type { AdDocumentParsed } from "../../../../packages/ad-template-pack-contract/src/schema";
-import { PLACEMENT_DIMENSIONS } from "../../../../packages/ad-template-pack-contract/src/types";
+import type { AdTemplate, Placement, ImageSlotLayer, LayoutLayer, Rect } from "../../../../packages/ad-template-contract/src/types";
+import type { AdDocumentParsed } from "../../../../packages/ad-template-contract/src/schema";
+import { PLACEMENT_DIMENSIONS } from "../../../../packages/ad-template-contract/src/types";
 import { buildAdDocument, brandPackColoursToRoleMap, editorTextInputs, resolveColourMap, useEditorState, type BrandPackColours, type EditorState, type MetaCopy } from "./use-editor-state";
 import { ColourToggle } from "./colour-toggle";
 import { CropDialog } from "./crop-dialog";
@@ -31,7 +31,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 // ---------------------------------------------------------------------------
 
 export interface EditorShellProps {
-  pack: TemplatePack;
+  pack: AdTemplate;
   /** Customer ad row the document saves against (created server-side). */
   adId: string;
   /** Workspace scope for the Save API call. */
@@ -126,7 +126,7 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
   /** Resolve an input key to its first image slot in the active layout. */
   const openCropForInput = useCallback(
     (key: string) => {
-      const slot = activeLayout.layers.find((l): l is ImageSlotLayer => l.type === "image_slot" && l.inputKey === key);
+      const slot = activeLayout.layers.find((l: LayoutLayer): l is ImageSlotLayer => l.type === "image_slot" && l.inputKey === key);
       if (slot) openCrop(slot);
     },
     [activeLayout, openCrop],
@@ -200,8 +200,8 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
       const saved = await handleSave();
       if (!saved) return; // error banner already set — refuse
     }
-    router.push(`/ad-studio/packs/${encodeURIComponent(pack.packId)}/publish`);
-  }, [state.isDirty, state.lastSavedRevision, handleSave, router, pack.packId]);
+    router.push(`/ad-studio/templates/${encodeURIComponent(pack.templateId)}/publish`);
+  }, [state.isDirty, state.lastSavedRevision, handleSave, router, pack.templateId]);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     const modifier = e.ctrlKey || e.metaKey;
@@ -241,7 +241,7 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
     pack={pack}
     state={state}
     activeLayout={activeLayout}
-    packId={pack.packId}
+    templateId={pack.templateId}
     brandColours={brandColours}
     canSave={canSave}
     canUndo={canUndo}
@@ -276,8 +276,8 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
   />;
 }
 
-function RedesignedEditor({ pack, packId, state, activeLayout, brandColours, canSave, canUndo, canRedo, pendingImageUploads, inspectorTab, setInspectorTab, mobileInspectorOpen, setMobileInspectorOpen, handleSave, handlePublish, handleKeyDown, undo, redo, setActivePlacement, selectLayer, handleColourToggle, handleImageChange, openCrop, openCropForInput, updateTextValue, updateMetaCopy, updateCrop, setError, cropTarget, setCropTarget, proposalBrief, setProposalBrief, proposal, proposalBusy, proposeCopy }: {
-  pack: TemplatePack; packId: string; state: EditorState; activeLayout: TemplatePack["feedLayout"]; brandColours: BrandPackColours | null; canSave: boolean; canUndo: boolean; canRedo: boolean; pendingImageUploads: number;
+function RedesignedEditor({ pack, templateId, state, activeLayout, brandColours, canSave, canUndo, canRedo, pendingImageUploads, inspectorTab, setInspectorTab, mobileInspectorOpen, setMobileInspectorOpen, handleSave, handlePublish, handleKeyDown, undo, redo, setActivePlacement, selectLayer, handleColourToggle, handleImageChange, openCrop, openCropForInput, updateTextValue, updateMetaCopy, updateCrop, setError, cropTarget, setCropTarget, proposalBrief, setProposalBrief, proposal, proposalBusy, proposeCopy }: {
+  pack: AdTemplate; templateId: string; state: EditorState; activeLayout: AdTemplate["feedLayout"]; brandColours: BrandPackColours | null; canSave: boolean; canUndo: boolean; canRedo: boolean; pendingImageUploads: number;
   inspectorTab: InspectorTab; setInspectorTab: (value: InspectorTab) => void; mobileInspectorOpen: boolean; setMobileInspectorOpen: (value: boolean) => void; handleSave: () => Promise<boolean>; handlePublish: () => Promise<void>; handleKeyDown: (event: KeyboardEvent) => void; undo: () => void; redo: () => void; setActivePlacement: (value: Placement) => void; selectLayer: (value: string | null) => void;
   handleColourToggle: (value: boolean) => void; handleImageChange: (key: string, change: { file: File; previewUrl: string } | null) => Promise<void>; openCrop: (slot: ImageSlotLayer) => void; openCropForInput: (key: string) => void; updateTextValue: (key: string, value: string) => void; updateMetaCopy: (field: keyof MetaCopy, value: string) => void; updateCrop: (key: string, placement: Placement, crop: Rect) => void; setError: (value: string | null) => void;
   cropTarget: { slot: ImageSlotLayer; placement: Placement } | null; setCropTarget: (value: { slot: ImageSlotLayer; placement: Placement } | null) => void; proposalBrief: string; setProposalBrief: (value: string) => void; proposal: { onImage: Record<string, string>; copy: MetaCopy; source: string } | null; proposalBusy: boolean; proposeCopy: () => Promise<void>;
@@ -292,7 +292,7 @@ function RedesignedEditor({ pack, packId, state, activeLayout, brandColours, can
       <div className="ml-auto flex shrink-0 items-center gap-1.5 md:gap-2"><Button variant="ghost" size="icon" onClick={undo} disabled={!canUndo} aria-label="Undo" className="min-h-11 min-w-11"><RotateCcw /></Button><Button variant="ghost" size="icon" onClick={redo} disabled={!canRedo} aria-label="Redo" className="min-h-11 min-w-11"><RotateCw /></Button><Button onClick={handleSave} disabled={!canSave || state.isSaving || pendingImageUploads > 0} className="min-h-11 rounded-full px-4">{state.isSaving ? "Saving…" : "Save"}<Save className="ml-1.5 size-4" /></Button><Button onClick={handlePublish} disabled={!canSave || state.isSaving || pendingImageUploads > 0} variant="outline" className="min-h-11 rounded-full px-4">Review & publish</Button></div>
     </header>
     <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden xl:flex-row">
-      <section aria-label="Ad preview" className="order-first flex min-h-0 min-w-0 flex-1 items-center justify-center bg-muted/30 p-3 md:p-6 xl:order-none"><div className="relative flex h-full min-h-0 w-full max-w-[94%] flex-col items-center justify-center gap-2"><div className="flex shrink-0 items-center gap-1.5 text-[11px] font-medium text-muted-foreground"><Eye className="size-3.5" /> Live preview · checked on save</div><div className="relative min-h-0 min-w-0 overflow-hidden rounded-(--r-card) bg-white shadow-float" style={{ aspectRatio: `${PLACEMENT_DIMENSIONS[state.activePlacement].width} / ${PLACEMENT_DIMENSIONS[state.activePlacement].height}`, height: "min(72vh, calc(100% - 2rem), 800px)", maxHeight: "100%", maxWidth: "100%", width: "auto" }}><LayeredCanvas packId={packId} layout={activeLayout} colours={state.resolvedColourMap} imageValues={Object.fromEntries(state.imageValues.map(iv => [iv.inputKey, iv.previewUrl ?? iv.dataUrl]))} textValues={state.textValues} cropOverrides={Object.fromEntries(state.imageValues.map(iv => [iv.inputKey, iv.crops[state.activePlacement]]))} selectedLayerId={state.selectedLayerId} onSelect={selectLayer} onCropImage={openCrop} className="h-full w-full" /></div></div></section>
+      <section aria-label="Ad preview" className="order-first flex min-h-0 min-w-0 flex-1 items-center justify-center bg-muted/30 p-3 md:p-6 xl:order-none"><div className="relative flex h-full min-h-0 w-full max-w-[94%] flex-col items-center justify-center gap-2"><div className="flex shrink-0 items-center gap-1.5 text-[11px] font-medium text-muted-foreground"><Eye className="size-3.5" /> Live preview · checked on save</div><div className="relative min-h-0 min-w-0 overflow-hidden rounded-(--r-card) bg-white shadow-float" style={{ aspectRatio: `${PLACEMENT_DIMENSIONS[state.activePlacement].width} / ${PLACEMENT_DIMENSIONS[state.activePlacement].height}`, height: "min(72vh, calc(100% - 2rem), 800px)", maxHeight: "100%", maxWidth: "100%", width: "auto" }}><LayeredCanvas templateId={templateId} layout={activeLayout} colours={state.resolvedColourMap} imageValues={Object.fromEntries(state.imageValues.map(iv => [iv.inputKey, iv.previewUrl ?? iv.dataUrl]))} textValues={state.textValues} cropOverrides={Object.fromEntries(state.imageValues.map(iv => [iv.inputKey, iv.crops[state.activePlacement]]))} selectedLayerId={state.selectedLayerId} onSelect={selectLayer} onCropImage={openCrop} className="h-full w-full" /></div></div></section>
       <aside aria-label="Editor inspector" className="hidden w-[22rem] shrink-0 overflow-y-auto border-l border-border bg-card xl:block"><InspectorTabs value={inspectorTab} onChange={setInspectorTab} />{inspector}</aside>
     </div>
     <nav className="z-20 grid shrink-0 grid-cols-3 border-t border-border bg-card p-1.5 xl:hidden" aria-label="Editor tools">{INSPECTOR_TABS.map(({ value, label, icon: Icon }) => <button key={value} type="button" aria-pressed={inspectorTab === value && mobileInspectorOpen} onClick={() => { setInspectorTab(value); setMobileInspectorOpen(true); }} className={cn("flex min-h-11 items-center justify-center gap-1 rounded-full px-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", inspectorTab === value && mobileInspectorOpen ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted")}>{<Icon className="size-4" />}{label}</button>)}</nav>
@@ -306,7 +306,7 @@ function InspectorTabs({ value, onChange }: { value: InspectorTab; onChange: (va
   return <Tabs value={value} onValueChange={next => onChange(next as InspectorTab)} className="border-b border-border p-3"><TabsList aria-label="Editor sections" className="grid h-auto w-full grid-cols-3 gap-1 bg-muted/50 p-1">{INSPECTOR_TABS.map(({ value: tab, label, icon: Icon }) => <TabsTrigger key={tab} value={tab} className="min-h-11 justify-center gap-2 px-2 text-xs"><Icon className="size-4" />{label}</TabsTrigger>)}</TabsList></Tabs>;
 }
 
-function InspectorContent({ tab, pack, state, brandColours, onTextChange, onImageChange, onCropClick, onMetaChange, onColourToggle, proposalBrief, proposal, proposalBusy, onBriefChange, onPropose }: { tab: InspectorTab; pack: TemplatePack; state: EditorState; brandColours: BrandPackColours | null; onTextChange: (key: string, value: string) => void; onImageChange: (key: string, change: { file: File; previewUrl: string } | null) => Promise<void>; onCropClick: (key: string) => void; onMetaChange: (field: keyof MetaCopy, value: string) => void; onColourToggle: (value: boolean) => void; proposalBrief: string; proposal: { onImage: Record<string, string>; copy: MetaCopy; source: string } | null; proposalBusy: boolean; onBriefChange: (value: string) => void; onPropose: () => Promise<void> }) {
+function InspectorContent({ tab, pack, state, brandColours, onTextChange, onImageChange, onCropClick, onMetaChange, onColourToggle, proposalBrief, proposal, proposalBusy, onBriefChange, onPropose }: { tab: InspectorTab; pack: AdTemplate; state: EditorState; brandColours: BrandPackColours | null; onTextChange: (key: string, value: string) => void; onImageChange: (key: string, change: { file: File; previewUrl: string } | null) => Promise<void>; onCropClick: (key: string) => void; onMetaChange: (field: keyof MetaCopy, value: string) => void; onColourToggle: (value: boolean) => void; proposalBrief: string; proposal: { onImage: Record<string, string>; copy: MetaCopy; source: string } | null; proposalBusy: boolean; onBriefChange: (value: string) => void; onPropose: () => Promise<void> }) {
   if (tab === "copy") return <div><MetaCopyPanel values={state.metaCopy} onChange={onMetaChange} /><ProposalPanel brief={proposalBrief} proposal={proposal} busy={proposalBusy} textInputs={editorTextInputs(pack)} onBriefChange={onBriefChange} onPropose={onPropose} onApplyText={onTextChange} onApplyMeta={onMetaChange} /></div>;
   if (tab === "appearance") return <aside aria-label="Appearance" className="space-y-4 border-t border-border p-4"><div><h3 className="text-sm font-semibold">Appearance</h3><p className="mt-1 text-xs leading-relaxed text-muted-foreground">Choose the colours that feel right for this ad.</p></div><ColourToggle useBrandPack={state.colourMode === "brand_pack"} brandPackAvailable={!!brandColours} resolvedColourMap={state.resolvedColourMap} onToggle={onColourToggle} /></aside>;
   return <InputsPanel textInputs={pack.textInputs} imageInputs={pack.imageInputs} textValues={state.textValues} imageValues={Object.fromEntries(state.imageValues.map(iv => [iv.inputKey, iv.previewUrl ?? iv.dataUrl]))} onTextChange={onTextChange} onImageChange={onImageChange} onCropClick={onCropClick} />;
@@ -384,7 +384,7 @@ function CropDialogHost({
 }: {
   cropTarget: { slot: ImageSlotLayer; placement: Placement };
   state: EditorState;
-  pack: TemplatePack;
+  pack: AdTemplate;
   onApply: (key: string, placement: Placement, crop: Rect) => void;
   onClose: () => void;
 }) {

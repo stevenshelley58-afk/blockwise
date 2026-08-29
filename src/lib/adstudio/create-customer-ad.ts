@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { TemplatePack } from "../../../packages/ad-template-pack-contract/src/types";
-import { adDocumentSchema, type AdDocumentParsed } from "../../../packages/ad-template-pack-contract/src/schema.ts";
+import type { AdTemplate } from "../../../packages/ad-template-contract/src/types";
+import { adDocumentSchema, type AdDocumentParsed } from "../../../packages/ad-template-contract/src/schema.ts";
 
 // ---------------------------------------------------------------------------
 // Customer ad rows (ad_customer_ads) — created server-side so the editor has
@@ -28,13 +28,13 @@ export class InvalidActiveRevisionError extends Error {
 export async function getOrCreateCustomerAd(
   supabase: SupabaseClient,
   workspaceId: string,
-  pack: TemplatePack,
+  pack: AdTemplate,
 ): Promise<CustomerAdRef> {
   const { data: existing, error: existingError } = await supabase
     .from("ad_customer_ads")
     .select("id, active_revision_id")
     .eq("workspace_id", workspaceId)
-    .eq("template_pack_id", pack.packId)
+    .eq("template_id", pack.templateId)
     .maybeSingle();
   if (existingError) {
     throw new Error(`Failed to load customer ad: ${existingError.message}`);
@@ -70,9 +70,7 @@ export async function getOrCreateCustomerAd(
     .from("ad_customer_ads")
     .insert({
       workspace_id: workspaceId,
-      template_pack_id: pack.packId,
       template_id: pack.templateId,
-      template_version: pack.version,
       colour_mode: "template",
       resolved_colour_map: pack.semanticColours,
     })

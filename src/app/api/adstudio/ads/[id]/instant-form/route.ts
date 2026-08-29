@@ -5,7 +5,7 @@ import { isExampleBrandKitSourceUrl, rowToBrandKit } from "@/lib/adstudio/persis
 import type { AdStudioBrandKit } from "@/lib/adstudio/types";
 import { deriveFormGenerationInput, generateInstantForm, validateInstantForm } from "@/lib/adstudio/instant-form-generator";
 import { instantFormSchema, type InstantForm } from "@/lib/adstudio/instant-form-types";
-import { sha256Hex } from "../../../../../../../packages/ad-template-pack-contract/src/hash.ts";
+import { sha256Hex } from "@/lib/adstudio/document-token";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -107,7 +107,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
 
 type AdRow = {
   id: string;
-  template_pack_id: string;
+  template_id: string;
   meta_primary_text: string;
   meta_headline: string;
   meta_description: string;
@@ -121,7 +121,7 @@ async function loadAd(
 ): Promise<AdRow | null> {
   const { data } = await supabase
     .from("ad_customer_ads")
-    .select("id, template_pack_id, meta_primary_text, meta_headline, meta_description, meta_cta")
+    .select("id, template_id, meta_primary_text, meta_headline, meta_description, meta_cta")
     .eq("id", adId)
     .eq("workspace_id", workspaceId)
     .maybeSingle();
@@ -154,15 +154,15 @@ async function loadBrandKit(
 /** Pack classification label — fallback campaign goal when the ad has no copy. */
 async function loadPackContext(
   supabase: Awaited<ReturnType<typeof import("@/lib/supabase/server").createSupabaseServerClient>>,
-  templatePackId: string,
+  templateId: string,
 ): Promise<{ goal?: string; templateFormDefaults?: unknown }> {
   const { data } = await supabase
-    .from("ad_template_packs")
-    .select("pack_json")
-    .eq("pack_id", templatePackId)
+    .from("ad_templates")
+    .select("template_json")
+    .eq("template_id", templateId)
     .maybeSingle();
 
-  const pack = data?.pack_json as {
+  const pack = data?.template_json as {
     classification?: { label?: string };
     metadata?: { publishRequirements?: { instantForm?: { defaults?: unknown } } };
   } | null;
@@ -179,7 +179,7 @@ async function buildFormGenerationContext(
 ) {
   const [brandKit, packContext, workspaceRow] = await Promise.all([
     loadBrandKit(supabase, workspaceId),
-    loadPackContext(supabase, ad.template_pack_id),
+    loadPackContext(supabase, ad.template_id),
     supabase.from("workspaces").select("name").eq("id", workspaceId).maybeSingle(),
   ]);
 

@@ -1,7 +1,11 @@
 "use client";
 
-import { track } from "@vercel/analytics";
 import Link from "next/link";
+
+function fireSafe(event: string, properties: Record<string, string | number>) {
+  try { const w = window as Window & { fbq?: (...args: unknown[]) => void; gtag?: (...args: unknown[]) => void }; w.fbq?.("trackCustom", event, properties); w.gtag?.("event", event, properties); } catch {}
+}
+
 import { useActionState, useEffect, useRef, useState } from "react";
 
 import type { PublicAdRadarCard } from "@/lib/research/public-ad-radar";
@@ -164,4 +168,3 @@ function EmailReportDialog({ open, onClose, postcode, suburb }: { open: boolean;
 }
 
 function gateHref(postcode: string, intent: "track" | "remix" | "trial") { return `/signup?src=suburb-report&postcode=${postcode}&intent=${intent}`; }
-function fireSafe(event: string, properties: Record<string, string | number>) { try { track(event, properties); } catch { /* analytics is best effort */ } if (typeof window === "undefined") return; const analyticsWindow = window as Window & { fbq?: (...args: unknown[]) => void; gtag?: (...args: unknown[]) => void }; try { analyticsWindow.fbq?.("trackCustom", event, properties); } catch {} try { analyticsWindow.gtag?.("event", event, properties); } catch {} }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import type { ImageInput, TextInput } from "../../../../packages/ad-template-pack-contract/src/types";
+import type { ImageInput, TextInput } from "../../../../packages/ad-template-contract/src/types";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

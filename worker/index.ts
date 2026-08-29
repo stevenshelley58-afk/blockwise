@@ -52,11 +52,6 @@ interface ClaimedJob {
  */
 export async function resolveHandler(kind: string): Promise<Handler | null> {
   switch (kind) {
-    case "adstudio.generate.template": {
-      // Legacy handler — template generation was deleted in Phase 1 (clean-rebuild).
-      // Returns immediately. Old jobs queued under this kind will be ignored.
-      return () => Promise.resolve({ skipped: true, reason: "legacy-adstudio-removed" });
-    }
     case "sync.meta.leads": {
       const { syncMetaLeadsForPlanById } = await import("../src/lib/providers/meta-leads-worker.ts");
       return (payload, supabase, context) =>
@@ -322,74 +317,13 @@ export async function runOnce(
       }
     }
     const outcome = await settleFailedJob(supabase, job, executionError.message);
-    if (job.kind === "adstudio.generate.template" && outcome === "failed") {
-      await finalizeAdStudioGenerationFailure(job.payload, executionError.message, supabase);
-      await releaseAdStudioGenerationLock(job.payload, supabase);
-    }
     log(`job ${job.id} (${job.kind}) ${outcome}: ${executionError.message}`);
     return true;
   }
 
   await settleCompletedJob(supabase, job);
-  if (job.kind === "adstudio.generate.template") {
-    await releaseAdStudioGenerationLock(job.payload, supabase);
-  }
   log(`job ${job.id} (${job.kind}) completed in ${Date.now() - started}ms`);
   return true;
-}
-
-async function releaseAdStudioGenerationLock(
-  payload: Record<string, unknown>,
-  supabase: ServiceSupabase,
-): Promise<void> {
-  const workspaceId = String(payload.workspaceId ?? "");
-  const dedupeKey = String(payload.generationDedupKey ?? "");
-  const creativeJobId = String(payload.creativeJobId ?? "");
-  if (!workspaceId || !dedupeKey || !creativeJobId) return;
-  const deleted = await supabase
-    .from("adstudio_generation_locks")
-    .delete()
-    .eq("workspace_id", workspaceId)
-    .eq("dedupe_key", dedupeKey)
-    // Ownership fence: an older terminal job must never delete a lock that a
-    // newer retry has already reclaimed and rebound to itself.
-    .eq("job_id", creativeJobId);
-  if (deleted.error) {
-    console.error("Ad Studio generation lock release failed", deleted.error.message);
-  }
-}
-
-async function finalizeAdStudioGenerationFailure(
-  payload: Record<string, unknown>,
-  message: string,
-  supabase: ServiceSupabase,
-): Promise<void> {
-  const workspaceId = String(payload.workspaceId ?? "");
-  const creativeJobId = String(payload.creativeJobId ?? "");
-  if (!workspaceId || !creativeJobId) return;
-
-  const job = await supabase
-    .from("adstudio_creative_jobs")
-    .select("status,payload")
-    .eq("workspace_id", workspaceId)
-    .eq("id", creativeJobId)
-    .maybeSingle();
-  if (!job.data || job.data.status === "done" || job.data.status === "failed") return;
-  const stored = (job.data.payload ?? {}) as {
-    reservation?: any;
-  };
-  const { refundOutstandingWorkspaceCredits } = await import("../src/lib/credits/workspace-credits.ts");
-  await refundOutstandingWorkspaceCredits({
-    reservation: stored.reservation ?? null,
-    mutationKey: `${stored.reservation?.mutationKey ?? creativeJobId}:refund:vps-recovery-failure`,
-    reason: "generation_vps_recovery_failed",
-    serviceSupabase: supabase,
-  });
-  await supabase
-    .from("adstudio_creative_jobs")
-    .update({ status: "failed", error: message, updated_at: new Date().toISOString() })
-    .eq("workspace_id", workspaceId)
-    .eq("id", creativeJobId);
 }
 
 function startLeaseHeartbeat(

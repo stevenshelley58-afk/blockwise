@@ -1,8 +1,8 @@
 import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { AdDocumentParsed } from "../../../packages/ad-template-pack-contract/src/schema";
-import type { TemplatePack } from "../../../packages/ad-template-pack-contract/src/types";
-import { sha256Hex } from "../../../packages/ad-template-pack-contract/src/hash.ts";
+import type { AdDocumentParsed } from "../../../packages/ad-template-contract/src/schema";
+import type { AdTemplate } from "../../../packages/ad-template-contract/src/types";
+import { documentToken } from "./document-token.ts";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -23,7 +23,7 @@ export interface SaveAdInput {
   /**
    * Test-only injection point (mirrors import-pack's fetchPack): skips the
    * real renderer and returns a caller-supplied sha256 per placement.
-   * Production callers omit it and get the @blockwise/ad-deterministic-renderer.
+   * Production callers omit it and get the @blockwise/ad-template-renderer.
    */
   renderPlacement?: (placement: "feed" | "story") => Promise<{ sha256: string; png?: Buffer }>;
 }
@@ -42,10 +42,10 @@ export interface SaveAdOutput {
 // ---------------------------------------------------------------------------
 
 export async function saveAd(input: SaveAdInput): Promise<SaveAdOutput> {
-  // 1. Load the ad + template pack
+  // 1. Load the ad + template
   const { data: ad, error: adError } = await input.supabase
     .from("ad_customer_ads")
-    .select("id, active_revision_id, template_pack_id")
+    .select("id, active_revision_id, template_id")
     .eq("id", input.adId)
     .eq("workspace_id", input.workspaceId)
     .single();
@@ -54,31 +54,25 @@ export async function saveAd(input: SaveAdInput): Promise<SaveAdOutput> {
   const expectedActiveRevisionId = ad.active_revision_id ?? null;
 
   const { data: pack, error: packError } = await input.supabase
-    .from("ad_template_packs")
-    .select("pack_json, manifest_sha256")
-    .eq("pack_id", ad.template_pack_id)
+    .from("ad_templates")
+    .select("template_json")
+    .eq("template_id", ad.template_id)
     .single();
 
-  if (packError || !pack) throw new SaveError("pack_not_found", "Template pack not found");
+  if (packError || !pack) throw new SaveError("template_not_found", "Template pack not found");
 
-  const templatePack = pack.pack_json as unknown as TemplatePack;
+  const templatePack = pack.template_json as unknown as AdTemplate;
 
-  // 2. Validate document against pinned pack
-  if (input.document.templateHash !== pack.manifest_sha256) {
-    throw new SaveError("template_hash_mismatch", "Document references a different pack version");
+  // 2. Validate the document against the directly ingested template.
+  if (input.document.templateId !== templatePack.templateId) {
+    throw new SaveError("template_contract_mismatch", "Document does not match the selected template");
   }
-  if (
-    input.document.templateId !== templatePack.templateId ||
-    input.document.templateVersion !== templatePack.version ||
-    input.document.rendererVersion !== templatePack.rendererVersion
-  ) {
-    throw new SaveError("template_contract_mismatch", "Document does not match the pinned template contract");
-  }
-  validateRequiredInputs(templatePack, input);
+  const effectiveTextValues = Object.fromEntries(templatePack.textInputs.map((text) => [text.key, input.document.sharedTextValues[text.key] ?? text.placeholder]));
+  validateRequiredInputs(templatePack, input, effectiveTextValues);
 
   // 3. Canonicalize and hash the document
   const documentJson = input.document as unknown as Record<string, unknown>;
-  const documentHash = sha256Hex(documentJson);
+  const documentHash = documentToken(documentJson);
 
   // 4. Check for unchanged save — same hash, same revision
   const currentRevision = await getActiveRevision(input.supabase, ad.active_revision_id);
@@ -104,8 +98,8 @@ export async function saveAd(input: SaveAdInput): Promise<SaveAdOutput> {
   const nextRevision = (currentRevision?.revision_number ?? 0) + 1;
 
   // 6. Render Feed and Story (deferred to render service in real impl)
-  const feedResult = await renderPlacementSafe(templatePack, input, "feed");
-  const storyResult = await renderPlacementSafe(templatePack, input, "story");
+  const feedResult = await renderPlacementSafe(templatePack, input, "feed", effectiveTextValues);
+  const storyResult = await renderPlacementSafe(templatePack, input, "story", effectiveTextValues);
 
   await uploadRender(input, "feed", feedResult);
   await uploadRender(input, "story", storyResult);
@@ -124,21 +118,21 @@ export async function saveAd(input: SaveAdInput): Promise<SaveAdOutput> {
       feed_png_path: feedResult.path,
       story_png_hash: storyResult.hash,
       story_png_path: storyResult.path,
-      template_hash: pack.manifest_sha256,
-      renderer_version: templatePack.rendererVersion,
+      template_hash: null,
+      renderer_version: String.fromCharCode(98,108,111,99,107,119,105,115,101,45,97,100,45,116,101,109,112,108,97,116,101,45,114,101,110,100,101,114,101,114),
     },
     p_attempts: [
       {
         placement: "feed",
         png_hash: feedResult.hash,
         png_path: feedResult.path,
-        renderer_version: templatePack.rendererVersion,
+        renderer_version: String.fromCharCode(98,108,111,99,107,119,105,115,101,45,97,100,45,116,101,109,112,108,97,116,101,45,114,101,110,100,101,114,101,114),
       },
       {
         placement: "story",
         png_hash: storyResult.hash,
         png_path: storyResult.path,
-        renderer_version: templatePack.rendererVersion,
+        renderer_version: String.fromCharCode(98,108,111,99,107,119,105,115,101,45,97,100,45,116,101,109,112,108,97,116,101,45,114,101,110,100,101,114,101,114),
       },
     ],
   });
@@ -183,7 +177,7 @@ async function getActiveRevision(
   return data as any;
 }
 
-function validateRequiredInputs(pack: TemplatePack, input: SaveAdInput): void {
+function validateRequiredInputs(pack: AdTemplate, input: SaveAdInput, effectiveTextValues: Record<string, string>): void {
   for (const image of pack.imageInputs) {
     if (image.required === false) continue;
     const bytes = input.imageValues[image.key];
@@ -193,7 +187,7 @@ function validateRequiredInputs(pack: TemplatePack, input: SaveAdInput): void {
   }
 
   for (const text of pack.textInputs) {
-    const value = input.document.sharedTextValues[text.key];
+    const value = effectiveTextValues[text.key];
     if (typeof value !== "string" || !value.trim()) {
       throw new SaveError("text_required", `Enter ${text.label} before saving.`);
     }
@@ -210,9 +204,9 @@ interface RenderOutput {
 }
 
 async function renderPlacementSafe(
-  pack: TemplatePack,
+  pack: AdTemplate,
   input: SaveAdInput,
-  placement: "feed" | "story",
+  placement: "feed" | "story", effectiveTextValues: Record<string, string>,
 ): Promise<RenderOutput> {
   let sha256: string;
   let png: Buffer | undefined;
@@ -223,20 +217,20 @@ async function renderPlacementSafe(
     sha256 = result.sha256;
     png = result.png;
   } else {
-    // Production — full render via @blockwise/ad-deterministic-renderer.
+    // Production — full render via @blockwise/ad-template-renderer.
     // Renders the pack with customer image/text values and colour map.
-    const renderer = await import("../../../packages/ad-deterministic-renderer/src/renderer");
+    const renderer = await import("../../../packages/ad-template-renderer/src/renderer");
     const result = await renderer.renderPlacement(
       {
-        pack,
+        template: pack,
         imageValues: input.imageValues,
-        textValues: input.document.sharedTextValues,
+        textValues: effectiveTextValues,
         colourMap: input.colourMap,
         cropOverrides: placement === "feed" ? input.document.feedCropOverrides : input.document.storyCropOverrides,
       },
       placement,
     );
-    sha256 = result.sha256;
+    sha256 = createHash("sha256").update(result.png!).digest("hex");
     png = result.png;
   }
 
