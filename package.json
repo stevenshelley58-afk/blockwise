@@ -5,6 +5,8 @@
   "workspaces": ["packages/ad-template-contract", "packages/ad-template-renderer"],
   "scripts": {
     "dev": "next dev",
+    "build:packages": "npm run --workspace @blockwise/ad-template-contract build && npm run --workspace @blockwise/ad-template-renderer build",
+    "prebuild": "npm run build:packages",
     "build": "next build",
     "start": "next start",
     "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test tests/*.test.ts tests/**/*.test.ts tests/**/*.test.mjs",
@@ -13,6 +15,7 @@
     "test:e2e": "playwright test",
     "test:e2e:hard-reset": "playwright test e2e/meta-ad-library-card.spec.ts",
     "test:research": "node --test tests/research-engine/*.test.ts",
+    "pretypecheck": "npm run build:packages",
     "typecheck": "tsc --noEmit --incremental false",
     "check:nul": "node scripts/check-no-nul.mjs",
     "check": "npm run check:nul && npm run test && npm run typecheck",

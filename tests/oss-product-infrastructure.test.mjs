@@ -93,6 +93,18 @@ test("OSS product compose is isolated and has no managed deployment endpoint", a
 
   const dockerfile = await read("infra/product/Dockerfile");
   assert.match(dockerfile, /ENV HOSTNAME=0\.0\.0\.0/);
+  const workspaceManifestCopy = dockerfile.search(/^COPY packages\/ad-template-contract\/package.json/m);
+  const npmCi = dockerfile.search(/^RUN npm ci --ignore-scripts$/m);
+  assert.ok(npmCi > workspaceManifestCopy, "npm ci must see workspace manifests");
+  assert.ok(workspaceManifestCopy >= 0, "Docker must copy workspace manifests before npm ci");
+  const packageJson = JSON.parse(await read("package.json"));
+  assert.equal(packageJson.scripts["build:packages"], "npm run --workspace @blockwise/ad-template-contract build && npm run --workspace @blockwise/ad-template-renderer build");
+  assert.equal(packageJson.scripts.prebuild, "npm run build:packages");
+  assert.equal(packageJson.scripts.pretypecheck, "npm run build:packages");
+  const workspaceBuild = dockerfile.search(/^RUN npm run build:packages$/m);
+  const nextBuild = dockerfile.search(/^RUN npm run build$/m);
+  assert.ok(workspaceBuild >= 0, "Docker must build internal workspace packages");
+  assert.ok(nextBuild > workspaceBuild, "Next build must run after internal workspace packages");
 });
 
 test("product readiness is fatal while liveness remains process-only", async () => {
