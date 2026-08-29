@@ -51,7 +51,7 @@ export default async function PublishPage({
   const publishRequirements = readTemplatePublishRequirements(pack);
   const validationControls = publishRequirements.destinationMode === "website"
     ? { destinationMode: "website" as const, destinationUrl: "https://pending.invalid" }
-    : { destinationMode: "instant_form" as const };
+    : { destinationMode: "instant_form" as const, destinationUrl: "https://pending.invalid" };
   const issues = state
     ? validatePublishState(state, { controls: validationControls }).filter((issue) => !isInteractiveDependencyIssue(issue))
     : [];
