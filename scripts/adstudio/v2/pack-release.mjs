@@ -107,7 +107,7 @@ export function assertCandidateEvidence({ templateId, doc, evidence, templateByt
   if (doc?.exactness?.status !== "ready") {
     throw new Error(`${templateId}: release requires exactness.status=ready`);
   }
-  const expectedTemplateSha = sha256(templateBytes);
+  const expectedTemplateSha = hashCanonicalJson(JSON.parse(templateBytes.toString("utf8")));
   if (evidence?.templateSha256 !== expectedTemplateSha) {
     throw new Error(`${templateId}: evidence templateSha256 is stale or wrong`);
   }

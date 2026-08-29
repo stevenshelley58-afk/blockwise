@@ -348,7 +348,7 @@ describe("variant-pack — authoritative exactly-five pack", () => {
       );
       const readyTemplateBytes = readFileSync(templatePath);
       const readyEvidence = JSON.parse(readFileSync(evidencePath, "utf8"));
-      readyEvidence.templateSha256 = sha256(readyTemplateBytes);
+      readyEvidence.templateSha256 = hashCanonicalJson(JSON.parse(readyTemplateBytes.toString("utf8")));
       readyEvidence.iteration = {
         ...readyEvidence.iteration,
         status: "accepted",

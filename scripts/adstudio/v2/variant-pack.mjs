@@ -50,6 +50,7 @@ import sharp from "sharp";
 
 import { toLosslessWebp } from "./lib/plate.mjs";
 import { renderAdDocToPng } from "../../../src/lib/adstudio/v2/render/server.ts";
+import { hashCanonicalJson } from "../../../src/lib/adstudio/v2/template-hash.ts";
 import { verifyPinnedFixtureCorpus } from "./subject-invariance.mjs";
 import { STORY_BACKING_COLOUR, STORY_MAX_DEAD_SPACE_PX, STORY_CTA_MAX_GAP_PX } from "./lib/story.mjs";
 
@@ -901,10 +902,9 @@ async function main() {
       generatedBy: "deterministic_render",
     };
 
-    // Evidence binds to the exact bytes written to the candidate gallery,
-    // including the stable pretty-print/newline used by writeJson.  Release
-    // and the verifier then hash the same immutable representation.
-    const templateSha256 = sha256(Buffer.from(`${JSON.stringify(doc, null, 2)}\n`));
+    // Evidence binds to the semantic document so the same candidate has one
+    // identity across LF/CRLF checkouts and operating systems.
+    const templateSha256 = hashCanonicalJson(doc);
     writeJson(join(galleryDir, id, "template.json"), doc);
     writeJson(join(galleryDir, id, "evidence.json"), {
       schema: "adstudio.template.evidence.v2",

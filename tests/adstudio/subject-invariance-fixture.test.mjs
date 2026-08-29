@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import os from "node:os";
 
 import { verifyPinnedFixtureCorpus, FIXTURE_CORPUS_VERSION } from "../../scripts/adstudio/v2/subject-invariance.mjs";
+import { hashCanonicalJson } from "../../src/lib/adstudio/v2/template-hash.ts";
 
 // ---------------------------------------------------------------------------
 // Clean-checkout regression for the subject-invariance fixture corpus.
@@ -20,6 +21,8 @@ import { verifyPinnedFixtureCorpus, FIXTURE_CORPUS_VERSION } from "../../scripts
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const COMMITTED_FIXTURE = join(ROOT, "public", "adstudio-samples", "photos", "int-bedroom.png");
+const TEMPLATE_037 = join(ROOT, "src", "lib", "adstudio", "template-gallery-v2", "meta-agent-intro-feed-037", "template.json");
+const EVIDENCE_037 = join(ROOT, "src", "lib", "adstudio", "template-gallery-v2", "meta-agent-intro-feed-037", "evidence.json");
 
 function makeRepoCopy() {
   const dir = mkdtempSync(join(os.tmpdir(), "adstudio-fixture-test-"));
@@ -76,5 +79,15 @@ describe("subject-invariance fixture corpus (clean checkout)", () => {
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+
+  it("subject-invariance evidence stays bound to the canonical template document", () => {
+    const templateDoc = JSON.parse(readFileSync(TEMPLATE_037, "utf8"));
+    const templateHash = hashCanonicalJson(templateDoc);
+    const crlfSerialization = `${JSON.stringify(templateDoc, null, 2).replace(/\n/g, "\r\n")}\r\n`;
+    const evidence = JSON.parse(readFileSync(EVIDENCE_037, "utf8"));
+    assert.equal(hashCanonicalJson(JSON.parse(crlfSerialization)), templateHash);
+    assert.equal(evidence.subjectInvariance.binding.templateSha256, templateHash);
+    assert.equal(evidence.subjectInvariance.visualReview.templateSha256, templateHash);
   });
 });

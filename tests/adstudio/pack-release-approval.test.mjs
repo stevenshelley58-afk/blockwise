@@ -6,7 +6,6 @@ import os from "node:os";
 
 import { assertCandidateEvidence, readApprovalReceipt } from "../../scripts/adstudio/v2/pack-release.mjs";
 import { hashCanonicalJson } from "../../src/lib/adstudio/v2/template-hash.ts";
-import { createHash } from "node:crypto";
 import { appendGeneration, createGenerationTrace } from "../../scripts/adstudio/v2/generation-trace.mjs";
 
 describe("layered TemplatePack release approval", () => {
@@ -86,7 +85,7 @@ describe("layered TemplatePack release approval", () => {
     };
     const templateBytes = Buffer.from(JSON.stringify(doc));
     const evidence = {
-      templateSha256: createHash("sha256").update(templateBytes).digest("hex"),
+      templateSha256: hashCanonicalJson(doc),
       restyle: { sourceFree: true, noWholeAdImageModel: true },
       generationTrace: appendGeneration(
         createGenerationTrace({ templateId: "fixture", sourceSha256: hash }),

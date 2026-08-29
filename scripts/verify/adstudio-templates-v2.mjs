@@ -86,7 +86,7 @@ const STRESS_FORMATS = ["4:5", "9:16"];
 // ─── load docs ──────────────────────────────────────────────────────────────
 
 const docs = [];
-const templateByteHashes = new Map();
+const templateEvidenceHashes = new Map();
 if (existsSync(galleryDir)) {
   for (const entry of readdirSync(galleryDir, { withFileTypes: true })) {
     if (!entry.isDirectory()) continue;
@@ -108,7 +108,10 @@ if (existsSync(galleryDir)) {
     }
     const evidencePath = join(galleryDir, entry.name, "evidence.json");
     const doc = parsed.data;
-    templateByteHashes.set(doc.id, createHash("sha256").update(templateBytes).digest("hex"));
+    // Evidence binds to the semantic template document, not checkout bytes.
+    // Canonical JSON keeps the binding identical across LF/CRLF checkouts while
+    // still changing for every meaningful template change.
+    templateEvidenceHashes.set(doc.id, hashCanonicalJson(parsed.data));
     doc.__textBoxes = existsSync(evidencePath)
       ? (JSON.parse(readFileSync(evidencePath, "utf8")).textBoxes ?? {})
       : {};
@@ -236,7 +239,7 @@ function sourcePathFor(doc) {
   return path.startsWith(`${sourceRoot}/`) && existsSync(path) ? path : null;
 }
 
-function validateSubjectInvarianceBinding(doc, evidence, templateByteHash) {
+function validateSubjectInvarianceBinding(doc, evidence, templateEvidenceHash) {
   const subjectInvariance = evidence?.subjectInvariance;
   if (!subjectInvariance) return;
   const binding = subjectInvariance.binding;
@@ -244,7 +247,7 @@ function validateSubjectInvarianceBinding(doc, evidence, templateByteHash) {
     fail(`${doc.id}: subject-invariance evidence lacks a deterministic binding`);
     return;
   }
-  if (binding.templateSha256 !== templateByteHash) fail(`${doc.id}: subject-invariance evidence template hash is stale`);
+  if (binding.templateSha256 !== templateEvidenceHash) fail(`${doc.id}: subject-invariance evidence template hash is stale`);
   if (binding.sourceSha256 !== doc.provenance.sourceAd.contentHash) fail(`${doc.id}: subject-invariance evidence source hash is stale`);
   if (binding.sampleSha256 !== doc.provenance.sample.contentHash) fail(`${doc.id}: subject-invariance evidence sample hash is stale`);
   if (binding.gatePassed !== true) fail(`${doc.id}: subject-invariance deterministic gate did not pass`);
@@ -315,7 +318,7 @@ const referencedFiles = new Set();
 
 for (const doc of docs) {
   const status = doc.exactness.status;
-  validateSubjectInvarianceBinding(doc, readEvidence(doc.id), templateByteHashes.get(doc.id));
+  validateSubjectInvarianceBinding(doc, readEvidence(doc.id), templateEvidenceHashes.get(doc.id));
   const layouts = [doc.formats.feed, doc.formats.story].filter(Boolean);
   // Story-first sources derive the 4:5 feed as a centred band; inputs whose
   // boxes fall outside the band legitimately have no layer on that surface.
