@@ -11,14 +11,14 @@ import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { fidelityTemplateHash, runStressMatrix } from "../../../src/lib/adstudio/v2/fidelity-stress.ts";
+import { buildRestyleSampleRenderInput } from "../../../src/lib/adstudio/v2/restyle-assets.ts";
+import { renderAdDocToPng } from "../../../src/lib/adstudio/v2/render/server.ts";
 import { hashCanonicalJson } from "../../../src/lib/adstudio/v2/template-hash.ts";
-import { appendGeneration, validateGenerationTrace, LIKENESS_THRESHOLD } from "./generation-trace.mjs";
+import { validateGenerationTrace, LIKENESS_THRESHOLD } from "./generation-trace.mjs";
 import { readApprovalReceipt } from "./pack-release.mjs";
 
 const SHA256 = /^[0-9a-f]{64}$/u;
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/u;
-const ROOT = resolve(fileURLToPath(new URL("../../..", import.meta.url)));
+const PUBLIC_REF = /^[a-z0-9:_./-]{1,200}$/u;
 
 function sha256(bytes) { return createHash("sha256").update(bytes).digest("hex"); }
 function readJson(path) { return JSON.parse(readFileSync(path, "utf8")); }
@@ -41,7 +41,7 @@ function assertSha(value, label) {
   if (!SHA256.test(String(value ?? ""))) throw new Error(`${label} must be a lowercase SHA-256`);
 }
 
-export function assertLayeredEvidence({ templateId, doc, evidence, trace, subjectInvariance, approval, reviewerUserId, reviewerEmail, templateBytes, sampleBytes, storySampleBytes }) {
+export function assertLayeredEvidence({ templateId, doc, evidence, trace, subjectInvariance, approval, reviewerRef, sampleBytes, storySampleBytes }) {
   if (doc?.exactness?.status !== "qa") throw new Error(`${templateId}: promotion requires exactness.status=qa`);
   if (doc.exactness.bakedTextKeys?.length) throw new Error(`${templateId}: source-free promotion cannot carry baked text`);
   if (evidence?.restyle?.sourceFree !== true || evidence?.restyle?.noWholeAdImageModel !== true) {
@@ -70,13 +70,13 @@ export function assertLayeredEvidence({ templateId, doc, evidence, trace, subjec
     throw new Error(`${templateId}: sample bytes do not match the current document`);
   }
   if (!approval || approval.decision !== "approved") throw new Error(`${templateId}: approved human receipt is required`);
-  if (!UUID.test(reviewerUserId ?? "") || !EMAIL.test(reviewerEmail ?? "")) {
-    throw new Error(`${templateId}: authenticated reviewer id and email are required`);
+  if (!PUBLIC_REF.test(reviewerRef ?? "") || !PUBLIC_REF.test(approval.receipt_ref ?? "")) {
+    throw new Error(`${templateId}: non-identifying reviewer and approval references are required`);
   }
-  return { templateHash, generation, checkedAt: approval.decided_at };
+  return { templateHash, generation, checkedAt: approval.decided_at, reviewerRef, approvalReceiptRef: approval.receipt_ref };
 }
 
-export async function promoteLayeredCandidate({ candidate, tracePath, subjectInvariancePath, approvalPath, reviewerUserId, reviewerEmail }) {
+export async function promoteLayeredCandidate({ candidate, tracePath, subjectInvariancePath, approvalPath, reviewerRef }) {
   const root = resolve(candidate);
   const manifest = readJson(join(root, "variant-pack.manifest.json"));
   if (!Array.isArray(manifest.variantIds) || manifest.variantIds.length !== 1) throw new Error("promotion requires exactly one candidate variant");
@@ -104,7 +104,18 @@ export async function promoteLayeredCandidate({ candidate, tracePath, subjectInv
   const approval = readApprovalReceipt(requirePath(approvalPath, "--approval"));
   const sampleBytes = readFileSync(samplePath);
   const storySampleBytes = readFileSync(storySamplePath);
-  const checked = assertLayeredEvidence({ templateId, doc, evidence, trace, subjectInvariance, approval, reviewerUserId, reviewerEmail, templateBytes, sampleBytes, storySampleBytes });
+  const sampleText = {
+    ...(evidence.sourceValues ?? {}),
+    ...Object.fromEntries(doc.inputs.text.map((input) => [input.key, input.sample])),
+  };
+  for (const [format, expectedBytes] of [["4:5", sampleBytes], ["9:16", storySampleBytes]]) {
+    const renderInput = buildRestyleSampleRenderInput({ doc, format, text: sampleText, repoRoot: root });
+    const rendered = await renderAdDocToPng(doc, renderInput.instance, format, { repoRoot: root, slotBytes: renderInput.slotBytes });
+    if (sha256(rendered) !== sha256(expectedBytes)) {
+      throw new Error(`${templateId}: ${format} sample does not replay to the declared PNG hash`);
+    }
+  }
+  const checked = assertLayeredEvidence({ templateId, doc, evidence, trace, subjectInvariance, approval, reviewerRef, sampleBytes, storySampleBytes });
   const stress = await runStressMatrix(doc, { renderOptions: { repoRoot: root } });
   if (stress.templateHash !== checked.templateHash || stress.entries.length !== 10) throw new Error(`${templateId}: deterministic stress replay did not complete ten cases`);
   const sampleReplayEvidence = {
@@ -124,8 +135,8 @@ export async function promoteLayeredCandidate({ candidate, tracePath, subjectInv
       sampleReplayEvidence,
       stressEvidence: { templateHash: stress.templateHash, checkedAt: checked.checkedAt, matrixHash: stress.hash, entries: stress.entries },
       reviewEvidence: {
-        reviewerUserId,
-        reviewerEmail,
+        reviewerRef: checked.reviewerRef,
+        approvalReceiptRef: checked.approvalReceiptRef,
         reviewedAt: checked.checkedAt,
         confirmation: "inspected-at-100-percent",
         templateHash: checked.templateHash,
@@ -146,7 +157,7 @@ export async function promoteLayeredCandidate({ candidate, tracePath, subjectInv
       storyPassed: true,
       stressFixtureResults: Object.fromEntries(stress.entries.map((entry) => [`${entry.format}:${entry.scenario}`, { passed: true, renderHash: entry.renderHash }])),
     },
-    iteration: { process: "source-analysis -> layered-v2 -> deterministic-render -> subject-invariance -> stress-replay -> dual-review -> human-approval", status: "ready", authority: "frank-hermes-durable-run", accepted: true, durableRunRequired: false },
+    iteration: { process: "source-analysis -> layered-v2 -> deterministic-render -> subject-invariance -> stress-replay -> dual-review -> human-approval", status: "ready", authority: "frank-hermes-durable-run", accepted: true, durableRunRequired: true },
   };
   writeJsonAtomic(templatePath, nextDoc);
   writeJsonAtomic(evidencePath, nextEvidence);
@@ -156,7 +167,7 @@ export async function promoteLayeredCandidate({ candidate, tracePath, subjectInv
 async function main() {
   const argv = process.argv.slice(2);
   if (argv.includes("--help")) {
-    process.stdout.write("usage: promote-layered-candidate.mjs --candidate <root> --trace <path> --subject-invariance <path> --approval <path> --reviewer-id <uuid> --reviewer-email <email>\n");
+    process.stdout.write("usage: promote-layered-candidate.mjs --candidate <root> --trace <path> --subject-invariance <path> --approval <path> [--reviewer-ref <safe-ref>]\n");
     return;
   }
   const result = await promoteLayeredCandidate({
@@ -164,8 +175,7 @@ async function main() {
     tracePath: arg(argv, "--trace"),
     subjectInvariancePath: arg(argv, "--subject-invariance"),
     approvalPath: arg(argv, "--approval"),
-    reviewerUserId: arg(argv, "--reviewer-id"),
-    reviewerEmail: arg(argv, "--reviewer-email"),
+    reviewerRef: arg(argv, "--reviewer-ref") || "frank-hermes-review",
   });
   process.stdout.write(`${JSON.stringify(result)}\n`);
 }

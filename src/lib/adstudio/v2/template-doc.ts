@@ -363,8 +363,12 @@ export type AdTemplateDocV2 = {
     bakedTextKeys: string[];
     /** Authenticated human sign-off, bound to the exact evidence inspected. */
     reviewEvidence?: {
-      reviewerUserId: string;
-      reviewerEmail: string;
+      /** Source-fidelity packs retain authenticated operator identity privately. */
+      reviewerUserId?: string;
+      reviewerEmail?: string;
+      /** Source-free public packs carry only non-identifying receipt references. */
+      reviewerRef?: string;
+      approvalReceiptRef?: string;
       reviewedAt: string;
       confirmation: "inspected-at-100-percent";
       templateHash: string;
@@ -841,8 +845,10 @@ const templateDocShapeSchema = z.object({
     }).optional(),
     bakedTextKeys: z.array(nonEmptyString),
     reviewEvidence: z.object({
-      reviewerUserId: z.string().uuid(),
-      reviewerEmail: operatorEmailSchema,
+      reviewerUserId: z.string().uuid().optional(),
+      reviewerEmail: operatorEmailSchema.optional(),
+      reviewerRef: nonEmptyString.optional(),
+      approvalReceiptRef: nonEmptyString.optional(),
       reviewedAt: z.string().datetime(),
       confirmation: z.literal("inspected-at-100-percent"),
       templateHash: sha256Schema,
@@ -1078,11 +1084,17 @@ function checkReadyImplications(doc: TemplateDocShape, ctx: z.RefinementCtx): vo
   }
 
   const reviewEvidence = doc.exactness.reviewEvidence;
+  const sourceFreeReplay = doc.exactness.mode === "source-free-sample-replay-v1";
   if (!reviewEvidence) {
     addIssue(ctx, ["exactness", "reviewEvidence"], 'status "ready" requires authenticated human review evidence');
+  } else if (sourceFreeReplay) {
+    if (!reviewEvidence.reviewerRef || !reviewEvidence.approvalReceiptRef) {
+      addIssue(ctx, ["exactness", "reviewEvidence"], "source-free ready requires non-identifying reviewer and approval references");
+    }
+  } else if (!reviewEvidence.reviewerUserId || !reviewEvidence.reviewerEmail) {
+    addIssue(ctx, ["exactness", "reviewEvidence"], "source-fidelity ready requires authenticated reviewer identity");
   }
 
-  const sourceFreeReplay = doc.exactness.mode === "source-free-sample-replay-v1";
   const residualEvidence = doc.exactness.residualEvidence;
   const sampleReplayEvidence = doc.exactness.sampleReplayEvidence;
   if (sourceFreeReplay) {

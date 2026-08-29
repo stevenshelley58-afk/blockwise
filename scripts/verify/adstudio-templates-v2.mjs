@@ -465,9 +465,13 @@ for (const doc of docs) {
     if (!reviewEvidence) {
       fail(`${doc.id}: ready requires authenticated human review evidence`);
     } else {
-      if (!OPERATOR_USER_ID.test(reviewEvidence.reviewerUserId) || !OPERATOR_EMAIL.test(reviewEvidence.reviewerEmail) || !isIsoTimestamp(reviewEvidence.reviewedAt)
+      const reviewerValid = sourceFreeReplay
+        ? /^[a-z0-9:_./-]{1,200}$/u.test(reviewEvidence.reviewerRef ?? "")
+          && /^[a-z0-9:_./-]{1,200}$/u.test(reviewEvidence.approvalReceiptRef ?? "")
+        : OPERATOR_USER_ID.test(reviewEvidence.reviewerUserId ?? "") && OPERATOR_EMAIL.test(reviewEvidence.reviewerEmail ?? "");
+      if (!reviewerValid || !isIsoTimestamp(reviewEvidence.reviewedAt)
         || reviewEvidence.confirmation !== "inspected-at-100-percent") {
-        fail(`${doc.id}: review evidence requires authenticated reviewerUserId, reviewerEmail, timestamp, and 100% confirmation`);
+        fail(`${doc.id}: review evidence requires ${sourceFreeReplay ? "non-identifying receipt references" : "authenticated reviewerUserId and reviewerEmail"}, timestamp, and 100% confirmation`);
       }
       if (reviewEvidence.templateHash !== fidelityTemplateHash(doc)
         || reviewEvidence.sourceContentHash !== doc.provenance.sourceAd.contentHash
