@@ -1,11 +1,10 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
 import sharp from "sharp";
 
 import { CustomerImageValidationError, validateCustomerImageDataUrl } from "../../src/lib/adstudio/image-validation.ts";
 
-const png = await readFile("tests/fixtures/adstudio-v2/public/slots/photo-portrait.png");
+const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=", "base64");
 const dataUrl = (mime: string, bytes: Buffer) => `data:${mime};base64,${bytes.toString("base64")}`;
 
 describe("customer image validation", () => {

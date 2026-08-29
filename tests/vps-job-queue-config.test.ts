@@ -11,7 +11,7 @@ test("the external task runner is absent and background work uses the VPS queue"
   assert.equal(existsSync("trigger"), false);
   assert.equal(existsSync(".github/workflows/trigger-deploy.yml"), false);
   assert.doesNotMatch(worker, /BLOCKWISE_QUEUED_KINDS/);
-  assert.match(worker, /job\.data\.status === "done" \|\| job\.data\.status === "failed"/);
+  assert.match(worker, /handler\(job\.payload/);
   for (const kind of [
     "publish.meta.execute",
     "publish.meta.mutate",

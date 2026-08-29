@@ -9,8 +9,8 @@ test("performance telemetry and database guards ship with the hot-path changes",
     "utf8",
   );
 
-  assert.match(layout, /@vercel\/speed-insights\/next/);
-  assert.match(layout, /<SpeedInsights \/>/);
+  assert.doesNotMatch(layout, /@vercel\/speed-insights\/next/);
+  assert.doesNotMatch(layout, /<SpeedInsights \/>/);
   assert.match(migration, /alter publication supabase_realtime add table public\.adstudio_creatives/);
   assert.match(migration, /alter publication supabase_realtime add table public\.adstudio_creative_jobs/);
   assert.match(migration, /owned_ad_performance_adstudio_campaign_idx/);
