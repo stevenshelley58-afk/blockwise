@@ -37,6 +37,7 @@ test("OSS product compose is isolated and has no managed deployment endpoint", a
   assert.match(compose, /BLOCKWISE_WORKER_EXPECTED_REVISION/);
   assert.match(compose, /NEXT_PUBLIC_APP_URL/);
   assert.match(compose, /BLOCKWISE_READINESS_SUPABASE_URL: http:\/\/product-rest:3000/);
+  assert.match(compose, /test: \[CMD, "node", "-e", "fetch\('http:\/\/127\.0\.0\.1:3000\/api\/health'/);
   assert.match(compose, /OPENAI_API_KEY/);
   assert.match(compose, /CRON_SECRET/);
   assert.match(compose, /OPENAI_API_KEY: \$\{OPENAI_API_KEY:-\}/);
@@ -64,6 +65,13 @@ test("OSS product compose is isolated and has no managed deployment endpoint", a
   assert.match(bootstrap, /FUNCTION auth\.role\(\)/);
   assert.match(bootstrap, /SCHEMA IF NOT EXISTS _realtime/);
   assert.match(bootstrap, /CREATE PUBLICATION supabase_realtime/);
+  assert.match(bootstrap, /ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public[\s\S]*GRANT ALL ON TABLES TO service_role/);
+  assert.doesNotMatch(bootstrap, /GRANT ALL ON TABLES TO anon, authenticated/);
+  const apiGrants = await read("infra/product/post-migrate-api-grants.sql");
+  assert.match(apiGrants, /class\.relrowsecurity/);
+  assert.match(apiGrants, /TO authenticated/);
+  assert.doesNotMatch(apiGrants, /TO anon/);
+  assert.match(apiGrants, /ALL ON ALL TABLES IN SCHEMA public TO service_role/);
   const rolePassword = await read("infra/product/db-init/002-roles.sh");
   assert.match(rolePassword, /ALTER ROLE authenticator PASSWORD/);
   assert.match(rolePassword, /<<'SQL'/);
