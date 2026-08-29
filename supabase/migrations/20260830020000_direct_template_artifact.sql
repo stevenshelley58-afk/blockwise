@@ -1,7 +1,6 @@
 -- Sole direct-template schema. This is the expand phase of the cutover:
 -- legacy pack columns and rows are retained, while all new customer ads and
 -- artifacts use the direct template ID. Exact legacy removal is post-canary.
-begin;
 
 do $$
 begin
@@ -197,4 +196,3 @@ create policy ad_template_assets_direct_authenticated_select on public.ad_templa
 grant select on public.ad_templates, public.ad_template_assets_direct to authenticated;
 grant all on public.ad_templates, public.ad_template_assets_direct to service_role;
 
-commit;

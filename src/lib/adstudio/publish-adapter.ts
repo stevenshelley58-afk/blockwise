@@ -89,7 +89,7 @@ export function readTemplatePublishRequirements(pack: unknown): PublishRequireme
   const nestedKind = nestedDestination?.kind;
   const destinationMode = record.destinationMode === "website" || record.destinationMode === "instant_form"
     ? record.destinationMode
-    : nestedKind === "url" || nestedKind === "article" ? "website"
+    : nestedKind === "website" || nestedKind === "url" || nestedKind === "article" ? "website"
       : nestedKind === "instant_form" ? "instant_form" : "instant_form";
   const requiredCtaTypes = Array.isArray(record.requiredCtaTypes)
     ? record.requiredCtaTypes.filter((value): value is string => typeof value === "string" && value.trim().length > 0)
@@ -382,8 +382,8 @@ export function buildPausedMetaPublishPlan(input: PausedPublishPlanInput): MetaP
         billingEvent: "IMPRESSIONS",
         optimizationGoal: (controls.parentState?.adSets?.find((candidate) => candidate.id === existingId)?.optimizationGoal ?? "LEAD_GENERATION") as "LEAD_GENERATION",
         status: "PAUSED" as const,
-        dailyBudgetMinorUnits: controls.parentState?.adSets?.find((candidate) => candidate.id === existingId)?.dailyBudgetMinorUnits ?? controls.dailyBudgetMinorUnits ?? 2000,
-        targeting: controls.parentState?.adSets?.find((candidate) => candidate.id === existingId)?.targeting ?? buildPausedTargeting(controls),
+        dailyBudgetMinorUnits: controls.parentState?.adSets?.find((candidate) => candidate.id === existingId)?.dailyBudgetMinorUnits ?? 0,
+        targeting: controls.parentState?.adSets?.find((candidate) => candidate.id === existingId)?.targeting ?? {},
         startTime: controls.schedule?.startTime ?? null,
         endTime: controls.schedule?.endTime ?? null,
       }))
@@ -412,29 +412,19 @@ export function buildPausedMetaPublishPlan(input: PausedPublishPlanInput): MetaP
       ...(controls.fulfilment ? { fulfilment: controls.fulfilment } : {}),
     }] : [];
 
-  const creatives: MetaPublishCreativePlan[] = [
-    buildPausedCreative(state, setup, label, "feed", state.revision.feedPngPath, "4:5", mode),
-    buildPausedCreative(state, setup, label, "story", state.revision.storyPngPath, "9:16", mode),
-  ];
-
-  const ads: MetaPublishAdPlan[] = adSets.flatMap((adSet, adSetIndex) => [
-    {
-      localId: "ad_feed_" + (adSetIndex + 1),
-      name: label + " Feed ad " + (adSetIndex + 1),
-      adSetLocalId: adSet.localId,
-      creativeLocalId: "creative_feed",
-      status: "PAUSED" as const,
-      variantTag: null,
-    },
-    {
-      localId: "ad_story_" + (adSetIndex + 1),
-      name: label + " Story ad " + (adSetIndex + 1),
-      adSetLocalId: adSet.localId,
-      creativeLocalId: "creative_story",
-      status: "PAUSED" as const,
-      variantTag: null,
-    },
-  ]);
+  const selectedVariants = input.controls?.variantIds?.length ? [...new Set(input.controls.variantIds)] : ["feed", "story"];
+  if (selectedVariants.some((variant) => variant !== "feed" && variant !== "story")) throw new PublishError("invalid_variants", "Select Feed and/or Story variants only.");
+  const creatives: MetaPublishCreativePlan[] = selectedVariants.map((variant) => variant === "feed"
+    ? buildPausedCreative(state, setup, label, "feed", state.revision.feedPngPath, "4:5", mode)
+    : buildPausedCreative(state, setup, label, "story", state.revision.storyPngPath, "9:16", mode));
+  const ads: MetaPublishAdPlan[] = adSets.flatMap((adSet, adSetIndex) => selectedVariants.map((variant) => ({
+    localId: "ad_" + variant + "_" + (adSetIndex + 1),
+    name: label + " " + (variant === "feed" ? "Feed" : "Story") + " ad " + (adSetIndex + 1),
+    adSetLocalId: adSet.localId,
+    creativeLocalId: "creative_" + variant,
+    status: "PAUSED" as const,
+    variantTag: { variantId: variant, angle: variant, template: null },
+  })));
 
   const tracking: MetaPublishTrackingPlan = {
     utmSource: "meta",
@@ -553,6 +543,7 @@ function buildPausedTargeting(controls: MetaPublishControls): Record<string, unk
 function normalizePausedControls(controls: MetaPublishControls, country: string): MetaPublishControls {
   return {
     ...(controls.target ? { target: controls.target } : {}),
+    ...(controls.variantIds ? { variantIds: [...new Set(controls.variantIds)] } : {}),
     dailyBudgetMinorUnits: controls.dailyBudgetMinorUnits && controls.dailyBudgetMinorUnits > 0
       ? Math.round(controls.dailyBudgetMinorUnits)
       : 2000,

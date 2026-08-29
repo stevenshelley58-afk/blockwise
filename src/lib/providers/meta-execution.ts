@@ -108,6 +108,7 @@ export type MetaPublishControls = {
   /** Explicit article/website destination for the ad and (when applicable) form thank-you button. */
   destinationUrl?: string;
   destinationMode?: "website" | "instant_form";
+  variantIds?: Array<"feed" | "story">;
   geo?:
     | { type: "country"; country: string }
     | { type: "custom_radius"; latitude: number; longitude: number; radiusKm: number }
