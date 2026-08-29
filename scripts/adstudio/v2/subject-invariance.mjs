@@ -13,6 +13,7 @@ import {
   resolveTemplateAssetPath,
 } from "../../../src/lib/adstudio/v2/render/assets.ts";
 import { renderAdDocToPng } from "../../../src/lib/adstudio/v2/render/server.ts";
+import { hashCanonicalJson } from "../../../src/lib/adstudio/v2/template-hash.ts";
 
 const SCRIPT_PATH = fileURLToPath(import.meta.url);
 const REPO_ROOT = resolve(dirname(SCRIPT_PATH), "..", "..", "..");
@@ -817,8 +818,16 @@ export async function runSubjectInvariance({
   if (!templateId) throw new Error("templateId is required");
   const templatePath = join(repoRoot, "src", "lib", "adstudio", "template-gallery-v2", templateId, "template.json");
   const templateBytes = await readFile(templatePath);
-  const templateHash = sha256(templateBytes);
   const doc = JSON.parse(templateBytes.toString("utf8"));
+  // Bind invariance to semantic document identity, not platform-specific JSON
+  // bytes (Windows CRLF and Linux LF must produce the same evidence hash).
+  const templateHash = hashCanonicalJson(doc);
+  // This identity excludes mutable QA status/evidence so the report remains
+  // bound after the candidate is promoted from qa to ready.
+  const templateIdentityHash = hashCanonicalJson({
+    ...doc,
+    exactness: { bakedTextKeys: [...(doc.exactness?.bakedTextKeys ?? [])].sort() },
+  });
   const imageKey = requestedImageKey || doc.inputs.images[0]?.key;
   if (!imageKey || !doc.inputs.images.some((input) => input.key === imageKey)) {
     throw new Error(`template ${templateId} has no image input ${imageKey || "(none)"}`);
@@ -955,6 +964,7 @@ export async function runSubjectInvariance({
     schema: "adstudio.subject-invariance.evidence.v1",
     templateId,
     templateHash,
+    templateIdentityHash,
     source: {
       path: relative(repoRoot, sourcePath),
       sha256: sourceHash,

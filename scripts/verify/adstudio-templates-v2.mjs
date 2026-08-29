@@ -379,22 +379,35 @@ for (const doc of docs) {
         fail(`${doc.id}: editable text ${input.key} public sample copy still equals private source text`);
       }
     }
+    const sourceFreeReplay = doc.exactness.mode === "source-free-sample-replay-v1";
     const curation = evidence?.sourceCuration;
-    if (!curation?.accepted
+    if (!sourceFreeReplay && (!curation?.accepted
       || !OPERATOR_USER_ID.test(curation.reviewerUserId ?? "")
       || !OPERATOR_EMAIL.test(curation.reviewerEmail ?? "")
       || !isIsoTimestamp(curation.reviewedAt)
       || !curation.classification
-      || !String(curation.rationale ?? "").trim()) {
+      || !String(curation.rationale ?? "").trim())) {
       fail(`${doc.id}: ready requires accepted sourceCuration with authenticated reviewerUserId, reviewerEmail, timestamp, classification, and rationale`);
-    } else if (!canonicalEqual(curation.classification, doc.classification)) {
+    } else if (!sourceFreeReplay && !canonicalEqual(curation.classification, doc.classification)) {
       fail(`${doc.id}: sourceCuration classification does not match template classification`);
     }
 
     const residualEvidence = doc.exactness.residualEvidence;
-    if (!residualEvidence) {
+    const sampleReplayEvidence = doc.exactness.sampleReplayEvidence;
+    if (sourceFreeReplay) {
+      if (!sampleReplayEvidence) {
+        fail(`${doc.id}: source-free ready requires sample replay evidence`);
+      } else {
+        if (sampleReplayEvidence.templateHash !== fidelityTemplateHash(doc)) fail(`${doc.id}: sample replay template hash is stale`);
+        if (!isIsoTimestamp(sampleReplayEvidence.checkedAt)) fail(`${doc.id}: sample replay evidence timestamp is invalid`);
+        if (sampleReplayEvidence.sampleContentHash !== doc.provenance.sample.contentHash
+          || sampleReplayEvidence.storySampleContentHash !== doc.provenance.storySample?.contentHash) {
+          fail(`${doc.id}: sample replay evidence sample hash is stale`);
+        }
+      }
+    } else if (!residualEvidence) {
       fail(`${doc.id}: ready requires replay-bound residual evidence`);
-    } else {
+    } else if (!sourceFreeReplay) {
       if (residualEvidence.sourceContentHash !== doc.provenance.sourceAd.contentHash) fail(`${doc.id}: residual evidence source hash is stale`);
       if (residualEvidence.templateHash !== fidelityTemplateHash(doc)) fail(`${doc.id}: residual evidence template hash is stale`);
       if (!isIsoTimestamp(residualEvidence.checkedAt)) fail(`${doc.id}: residual evidence timestamp is invalid`);
@@ -452,18 +465,28 @@ for (const doc of docs) {
     if (!reviewEvidence) {
       fail(`${doc.id}: ready requires authenticated human review evidence`);
     } else {
-      if (!OPERATOR_USER_ID.test(reviewEvidence.reviewerUserId) || !OPERATOR_EMAIL.test(reviewEvidence.reviewerEmail) || !isIsoTimestamp(reviewEvidence.reviewedAt)
+      const reviewerValid = sourceFreeReplay
+        ? /^[a-z0-9:_./-]{1,200}$/u.test(reviewEvidence.reviewerRef ?? "")
+          && /^[a-z0-9:_./-]{1,200}$/u.test(reviewEvidence.approvalReceiptRef ?? "")
+        : OPERATOR_USER_ID.test(reviewEvidence.reviewerUserId ?? "") && OPERATOR_EMAIL.test(reviewEvidence.reviewerEmail ?? "");
+      if (!reviewerValid || !isIsoTimestamp(reviewEvidence.reviewedAt)
         || reviewEvidence.confirmation !== "inspected-at-100-percent") {
-        fail(`${doc.id}: review evidence requires authenticated reviewerUserId, reviewerEmail, timestamp, and 100% confirmation`);
+        fail(`${doc.id}: review evidence requires ${sourceFreeReplay ? "non-identifying receipt references" : "authenticated reviewerUserId and reviewerEmail"}, timestamp, and 100% confirmation`);
       }
       if (reviewEvidence.templateHash !== fidelityTemplateHash(doc)
         || reviewEvidence.sourceContentHash !== doc.provenance.sourceAd.contentHash
         || reviewEvidence.sampleContentHash !== doc.provenance.sample.contentHash) {
         fail(`${doc.id}: review evidence is not bound to the current template, source, and sample`);
       }
-      if (curation && reviewEvidence.sourceCurationHash !== hashCanonicalJson(curation)) fail(`${doc.id}: review evidence source curation hash is stale`);
-      if (residualEvidence && reviewEvidence.fidelityEvidenceHash !== hashCanonicalJson(residualEvidence)) fail(`${doc.id}: review evidence fidelity hash is stale`);
+      if (!sourceFreeReplay && curation && reviewEvidence.sourceCurationHash !== hashCanonicalJson(curation)) fail(`${doc.id}: review evidence source curation hash is stale`);
+      if (!sourceFreeReplay && residualEvidence && reviewEvidence.fidelityEvidenceHash !== hashCanonicalJson(residualEvidence)) fail(`${doc.id}: review evidence fidelity hash is stale`);
+      if (sourceFreeReplay && sampleReplayEvidence && reviewEvidence.sampleReplayEvidenceHash !== hashCanonicalJson(sampleReplayEvidence)) fail(`${doc.id}: review evidence sample replay hash is stale`);
       if (stressEvidence && reviewEvidence.stressEvidenceHash !== hashCanonicalJson(stressEvidence)) fail(`${doc.id}: review evidence stress hash is stale`);
+      if (sourceFreeReplay && (evidence?.subjectInvariance?.templateId !== doc.id
+        || evidence.subjectInvariance.templateIdentityHash !== fidelityTemplateHash(doc)
+        || evidence.subjectInvariance.gate?.passed !== true)) {
+        fail(`${doc.id}: source-free ready requires passing subject-invariance evidence bound to the current template`);
+      }
     }
     for (const layout of layouts) {
       for (const layer of layout.layers) {
@@ -855,11 +878,12 @@ if (!process.env.ADSTUDIO_V2_GATE_FAST && docs.some((doc) => doc.exactness.statu
   for (const doc of docs.filter((entry) => entry.exactness.status === "ready")) {
     const evidence = readEvidence(doc.id);
     const residualEvidence = doc.exactness.residualEvidence;
+    const sourceFreeReplay = doc.exactness.mode === "source-free-sample-replay-v1";
     const stressEvidence = doc.exactness.stressEvidence;
     const sourcePath = sourcePathFor(doc);
-    if (!sourcePath || !residualEvidence) {
+    if (!sourceFreeReplay && (!sourcePath || !residualEvidence)) {
       fail(`${doc.id}: ready fidelity replay requires the recorded local source asset and residual evidence`);
-    } else {
+    } else if (!sourceFreeReplay) {
       try {
         const replay = await runNativeSurfaceFidelity(doc, {
           sourceBytes: readFileSync(sourcePath),

@@ -135,10 +135,24 @@ export function assertCandidateEvidence({ templateId, doc, evidence, templateByt
 
   const exactness = doc.exactness;
   const fidelityHash = fidelityTemplateHash(doc);
+  const sourceFreeReplay = exactness.mode === "source-free-sample-replay-v1";
   const residual = exactness.residualEvidence;
+  const sampleReplay = exactness.sampleReplayEvidence;
+  if (sourceFreeReplay) {
+    if (!sampleReplay || sampleReplay.templateHash !== fidelityHash
+      || sampleReplay.sampleContentHash !== doc.provenance?.sample?.contentHash
+      || sampleReplay.storySampleContentHash !== doc.provenance?.storySample?.contentHash) {
+      throw new Error(`${templateId}: source-free sample replay evidence is missing or stale`);
+    }
+    if (evidence?.subjectInvariance?.templateId !== templateId
+      || evidence.subjectInvariance.gate?.passed !== true
+      || evidence.subjectInvariance.templateIdentityHash !== fidelityHash) {
+      throw new Error(`${templateId}: passing subject-invariance evidence bound to the current template is required`);
+    }
+  }
   const stress = exactness.stressEvidence;
   const review = exactness.reviewEvidence;
-  if (!residual || residual.templateHash !== fidelityHash || residual.outside?.differingPixels !== 0) {
+  if (!sourceFreeReplay && (!residual || residual.templateHash !== fidelityHash || residual.outside?.differingPixels !== 0)) {
     throw new Error(`${templateId}: fidelity evidence is missing, stale, or failed`);
   }
   if (!stress || stress.templateHash !== fidelityHash || !Array.isArray(stress.entries) || stress.entries.length !== 10) {
@@ -149,7 +163,8 @@ export function assertCandidateEvidence({ templateId, doc, evidence, templateByt
   if (!review || review.templateHash !== fidelityHash
     || review.sourceContentHash !== doc.provenance?.sourceAd?.contentHash
     || review.sampleContentHash !== doc.provenance?.sample?.contentHash
-    || review.fidelityEvidenceHash !== hashCanonicalJson(residual)
+    || (!sourceFreeReplay && review.fidelityEvidenceHash !== hashCanonicalJson(residual))
+    || (sourceFreeReplay && review.sampleReplayEvidenceHash !== hashCanonicalJson(sampleReplay))
     || review.stressEvidenceHash !== hashCanonicalJson(stress)) {
     throw new Error(`${templateId}: human review evidence is missing or not bound to current evidence`);
   }

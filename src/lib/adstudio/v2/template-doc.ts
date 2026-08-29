@@ -319,6 +319,9 @@ export type AdTemplateDocV2 = {
 
   exactness: {
     status: "draft" | "qa" | "ready";
+    /** Readiness evidence mode. Source-free layered packs use sample replay;
+     * they must never be represented as source-pixel fidelity. */
+    mode?: "source-fidelity" | "source-free-sample-replay-v1";
     /** Per text-LAYER-ID residual from the gate (0 = identical, lower is better). */
     residuals: Record<string, number>;
     /**
@@ -338,6 +341,13 @@ export type AdTemplateDocV2 = {
         differingBounds: { x: number; y: number; width: number; height: number } | null;
       };
     };
+    sampleReplayEvidence?: {
+      templateHash: string;
+      checkedAt: string;
+      sampleContentHash: string;
+      storySampleContentHash: string;
+      stressMatrixHash: string;
+    };
     /** Deterministic feed/story copy + image stress renders. */
     stressEvidence?: {
       templateHash: string;
@@ -353,16 +363,21 @@ export type AdTemplateDocV2 = {
     bakedTextKeys: string[];
     /** Authenticated human sign-off, bound to the exact evidence inspected. */
     reviewEvidence?: {
-      reviewerUserId: string;
-      reviewerEmail: string;
+      /** Source-fidelity packs retain authenticated operator identity privately. */
+      reviewerUserId?: string;
+      reviewerEmail?: string;
+      /** Source-free public packs carry only non-identifying receipt references. */
+      reviewerRef?: string;
+      approvalReceiptRef?: string;
       reviewedAt: string;
       confirmation: "inspected-at-100-percent";
       templateHash: string;
       sourceContentHash: string;
       sampleContentHash: string;
-      sourceCurationHash: string;
-      fidelityEvidenceHash: string;
+      sourceCurationHash?: string;
+      fidelityEvidenceHash?: string;
       stressEvidenceHash: string;
+      sampleReplayEvidenceHash?: string;
     };
   };
 };
@@ -792,6 +807,7 @@ const templateDocShapeSchema = z.object({
   }),
   exactness: z.object({
     status: z.enum(["draft", "qa", "ready"]),
+    mode: z.enum(["source-fidelity", "source-free-sample-replay-v1"]).optional(),
     residuals: z.record(z.string(), unitScoreSchema),
     residualEvidence: z.object({
       sourceContentHash: sha256Schema,
@@ -810,6 +826,13 @@ const templateDocShapeSchema = z.object({
         }).nullable(),
       }),
     }).optional(),
+    sampleReplayEvidence: z.object({
+      templateHash: sha256Schema,
+      checkedAt: z.string().datetime(),
+      sampleContentHash: sha256Schema,
+      storySampleContentHash: sha256Schema,
+      stressMatrixHash: sha256Schema,
+    }).optional(),
     stressEvidence: z.object({
       templateHash: sha256Schema,
       checkedAt: z.string().datetime(),
@@ -822,16 +845,19 @@ const templateDocShapeSchema = z.object({
     }).optional(),
     bakedTextKeys: z.array(nonEmptyString),
     reviewEvidence: z.object({
-      reviewerUserId: z.string().uuid(),
-      reviewerEmail: operatorEmailSchema,
+      reviewerUserId: z.string().uuid().optional(),
+      reviewerEmail: operatorEmailSchema.optional(),
+      reviewerRef: nonEmptyString.optional(),
+      approvalReceiptRef: nonEmptyString.optional(),
       reviewedAt: z.string().datetime(),
       confirmation: z.literal("inspected-at-100-percent"),
       templateHash: sha256Schema,
       sourceContentHash: sha256Schema,
       sampleContentHash: sha256Schema,
-      sourceCurationHash: sha256Schema,
-      fidelityEvidenceHash: sha256Schema,
+      sourceCurationHash: sha256Schema.optional(),
+      fidelityEvidenceHash: sha256Schema.optional(),
       stressEvidenceHash: sha256Schema,
+      sampleReplayEvidenceHash: sha256Schema.optional(),
     }).optional(),
   }),
 });
@@ -1058,24 +1084,36 @@ function checkReadyImplications(doc: TemplateDocShape, ctx: z.RefinementCtx): vo
   }
 
   const reviewEvidence = doc.exactness.reviewEvidence;
+  const sourceFreeReplay = doc.exactness.mode === "source-free-sample-replay-v1";
   if (!reviewEvidence) {
     addIssue(ctx, ["exactness", "reviewEvidence"], 'status "ready" requires authenticated human review evidence');
+  } else if (sourceFreeReplay) {
+    if (!reviewEvidence.reviewerRef || !reviewEvidence.approvalReceiptRef) {
+      addIssue(ctx, ["exactness", "reviewEvidence"], "source-free ready requires non-identifying reviewer and approval references");
+    }
+  } else if (!reviewEvidence.reviewerUserId || !reviewEvidence.reviewerEmail) {
+    addIssue(ctx, ["exactness", "reviewEvidence"], "source-fidelity ready requires authenticated reviewer identity");
   }
 
   const residualEvidence = doc.exactness.residualEvidence;
-  if (!residualEvidence) {
+  const sampleReplayEvidence = doc.exactness.sampleReplayEvidence;
+  if (sourceFreeReplay) {
+    if (!sampleReplayEvidence) {
+      addIssue(ctx, ["exactness", "sampleReplayEvidence"], 'source-free ready requires sample replay evidence');
+    }
+  } else if (!residualEvidence) {
     addIssue(ctx, ["exactness", "residualEvidence"], 'status "ready" requires replay-bound residual evidence');
   }
 
   const nativeSurface: FormatKey = doc.formats.story?.native === true ? "story" : "feed";
   const nativeLayout = doc.formats[nativeSurface] as TemplateLayout;
-  if (residualEvidence && residualEvidence.nativeSurface !== nativeSurface) {
+  if (!sourceFreeReplay && residualEvidence && residualEvidence.nativeSurface !== nativeSurface) {
     addIssue(ctx, ["exactness", "residualEvidence", "nativeSurface"], `native fidelity must cover ${nativeSurface}`);
   }
-  if (residualEvidence?.outside.differingPixels !== 0 || residualEvidence?.outside.differingBounds !== null) {
+  if (!sourceFreeReplay && residualEvidence?.outside.differingPixels !== 0 || !sourceFreeReplay && residualEvidence?.outside.differingBounds !== null) {
     addIssue(ctx, ["exactness", "residualEvidence", "outside"], "native fidelity changed pixels outside editable text regions");
   }
-  for (const [index, layer] of nativeLayout.layers.entries()) {
+  for (const [index, layer] of (sourceFreeReplay ? [] : nativeLayout.layers).entries()) {
       if (layer.type !== "text" || doc.exactness.bakedTextKeys.includes(layer.inputKey)) continue;
       const residual = residualEvidence?.residuals[layer.id] ?? doc.exactness.residuals[layer.id];
       if (residual === undefined) {
@@ -1099,6 +1137,15 @@ function checkReadyImplications(doc: TemplateDocShape, ctx: z.RefinementCtx): vo
   if (!stressEvidence || stressEvidence.entries.length !== 10) {
     addIssue(ctx, ["exactness", "stressEvidence"], 'status "ready" requires all ten feed/story stress renders');
   }
+  if (sourceFreeReplay && sampleReplayEvidence) {
+    if (sampleReplayEvidence.templateHash !== stressEvidence?.templateHash) {
+      addIssue(ctx, ["exactness", "sampleReplayEvidence", "templateHash"], "sample replay evidence is not bound to stress evidence");
+    }
+    if (sampleReplayEvidence.sampleContentHash !== doc.provenance.sample.contentHash
+      || sampleReplayEvidence.storySampleContentHash !== doc.provenance.storySample?.contentHash) {
+      addIssue(ctx, ["exactness", "sampleReplayEvidence"], "sample replay evidence is not bound to current samples");
+    }
+  }
 
   if (!hasNonTrivialRestyle(doc as unknown as AdTemplateDocV2)) {
     addIssue(
@@ -1117,7 +1164,8 @@ function checkReadyImplications(doc: TemplateDocShape, ctx: z.RefinementCtx): vo
   }
 
   if (reviewEvidence) {
-    if (reviewEvidence.templateHash !== residualEvidence?.templateHash || reviewEvidence.templateHash !== stressEvidence?.templateHash) {
+    const reviewedTemplateHash = sourceFreeReplay ? sampleReplayEvidence?.templateHash : residualEvidence?.templateHash;
+    if (reviewEvidence.templateHash !== reviewedTemplateHash || reviewEvidence.templateHash !== stressEvidence?.templateHash) {
       addIssue(ctx, ["exactness", "reviewEvidence", "templateHash"], "human review is not bound to the current fidelity and stress evidence");
     }
     if (reviewEvidence.sourceContentHash !== doc.provenance.sourceAd.contentHash) {
