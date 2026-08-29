@@ -1,12 +1,23 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState, type Dispatch, type SetStateAction } from "react";
 
 import { InstantFormEditor } from "@/components/adstudio/instant-form-editor";
 import type { PublishRequirements } from "@/lib/adstudio/publish-adapter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  buildExplicitMetaPublishControls,
+  MIN_META_RADIUS_KM,
+  type AudienceMode,
+  type PlacementChoice,
+  type PublishAudienceLocation,
+  type PublishSetupSummary,
+  type PublishTargetMode,
+  type ScheduleEndIntent,
+  type ScheduleStartIntent,
+} from "./publish-controls";
 
 // ---------------------------------------------------------------------------
 // Publish flow client (BW-M).
@@ -107,9 +118,23 @@ export function PublishFlow({
   // edits and pins right here. The editor reports when a pin lands.
   const [formPinned, setFormPinned] = useState(() => Boolean(initialState?.form));
   const [destinationUrl, setDestinationUrl] = useState("");
-  const [targetMode, setTargetMode] = useState<"new_campaign_new_adset" | "existing_campaign_new_adset" | "existing_adset">("new_campaign_new_adset");
+  const [targetMode, setTargetMode] = useState<PublishTargetMode>("new_campaign_new_adset");
   const [campaignId, setCampaignId] = useState("");
   const [adSetIds, setAdSetIds] = useState("");
+  const [dailyBudgetDollars, setDailyBudgetDollars] = useState("");
+  const [audienceMode, setAudienceMode] = useState<AudienceMode>("");
+  const [selectedLocationKeys, setSelectedLocationKeys] = useState<string[]>([]);
+  const [includeSurroundingSuburbs, setIncludeSurroundingSuburbs] = useState(false);
+  const [latitude, setLatitude] = useState("");
+  const [longitude, setLongitude] = useState("");
+  const [radiusKm, setRadiusKm] = useState("");
+  const [placementChoices, setPlacementChoices] = useState<PlacementChoice[]>([]);
+  const [startIntent, setStartIntent] = useState<ScheduleStartIntent>("");
+  const [startAt, setStartAt] = useState("");
+  const [endIntent, setEndIntent] = useState<ScheduleEndIntent>("");
+  const [endAt, setEndAt] = useState("");
+  const [setupConfirmed, setSetupConfirmed] = useState(false);
+  const [publishedSetupSummary, setPublishedSetupSummary] = useState<PublishSetupSummary | null>(null);
   const [selectedVariants, setSelectedVariants] = useState<Array<"feed" | "story">>(["feed", "story"]);
   const [offerEnabled, setOfferEnabled] = useState(false);
   const [fulfilment, setFulfilment] = useState<FulfilmentDraft>(emptyFulfilment);
@@ -122,9 +147,57 @@ export function PublishFlow({
     setFormPinned(pinned);
   }, []);
 
+  const parsedAdSetIds = adSetIds.split(",").map(id => id.trim()).filter(Boolean);
+  const controlsDraft = {
+    destinationMode: publishRequirements.destinationMode,
+    destinationUrl,
+    targetMode,
+    campaignId,
+    adSetIds: parsedAdSetIds,
+    variantIds: selectedVariants,
+    dailyBudgetDollars,
+    audienceMode,
+    availableLocations: [],
+    selectedLocationKeys,
+    includeSurroundingSuburbs,
+    latitude,
+    longitude,
+    radiusKm,
+    placementChoices,
+    startIntent,
+    startAt,
+    endIntent,
+    endAt,
+    setupConfirmed,
+  };
+  const fieldsBuild = buildExplicitMetaPublishControls({ ...controlsDraft, setupConfirmed: true });
+  const publishBuild = buildExplicitMetaPublishControls(controlsDraft);
+
+  useEffect(() => {
+    setSetupConfirmed(false);
+  }, [
+    targetMode,
+    campaignId,
+    adSetIds,
+    dailyBudgetDollars,
+    audienceMode,
+    selectedLocationKeys.join("|"),
+    includeSurroundingSuburbs,
+    latitude,
+    longitude,
+    radiusKm,
+    placementChoices.join("|"),
+    startIntent,
+    startAt,
+    endIntent,
+    endAt,
+  ]);
+
   const handlePublish = useCallback(async () => {
+    if (!publishBuild.controls || !publishBuild.summary) return;
     setSubmitting(true);
     setReceipt(null);
+    setPublishedSetupSummary(publishBuild.summary);
     try {
       const res = await fetch(
         `/api/adstudio/ads/${encodeURIComponent(adId)}/publish?workspaceId=${encodeURIComponent(workspaceId)}`,
@@ -133,14 +206,7 @@ export function PublishFlow({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             controls: {
-              destinationMode: publishRequirements.destinationMode,
-              variantIds: selectedVariants,
-              target: targetMode === "new_campaign_new_adset"
-                ? { mode: targetMode }
-                : targetMode === "existing_campaign_new_adset"
-                  ? { mode: targetMode, campaignId: campaignId.trim() }
-                  : { mode: targetMode, campaignId: campaignId.trim(), adSetIds: adSetIds.split(",").map((id) => id.trim()).filter(Boolean) },
-              ...(destinationUrl.trim() ? { destinationUrl: destinationUrl.trim() } : {}),
+              ...publishBuild.controls,
               ...(offerEnabled ? { fulfilment } : {}),
             },
           }),
@@ -153,7 +219,7 @@ export function PublishFlow({
     } finally {
       setSubmitting(false);
     }
-  }, [adId, adSetIds, campaignId, destinationUrl, fulfilment, offerEnabled, publishRequirements.destinationMode, selectedVariants, targetMode, workspaceId]);
+  }, [adId, fulfilment, offerEnabled, publishBuild.controls, publishBuild.summary, workspaceId]);
 
   // BW-Q — a SECOND explicit click. Only ever offered after a publish receipt
   // that created PAUSED objects on Meta (mode "publish"), and it targets that
@@ -204,13 +270,12 @@ export function PublishFlow({
   const issues = initialIssues ?? [];
   const requiresForm = publishRequirements.destinationMode === "instant_form";
   const formReady = !requiresForm || Boolean(initialState?.form) || formPinned;
-  const destinationReady = publishRequirements.destinationMode !== "website" || validHttpsUrl(destinationUrl);
-  const parsedAdSetIds = adSetIds.split(",").map(id => id.trim()).filter(Boolean);
+  const destinationReady = validHttpsUrl(destinationUrl);
   const selectedAdSetCount = targetMode === "existing_adset" ? parsedAdSetIds.length : 1;
   const targetReady = targetMode === "new_campaign_new_adset" || (Boolean(campaignId.trim()) && (targetMode !== "existing_adset" || selectedAdSetCount > 0));
   const fulfilmentReady = !offerEnabled || (Object.entries(fulfilment).every(([key, value]) => key === "fulfilmentAsset" || key === "fulfilmentUrl" ? true : Boolean(value.trim())) && Boolean(fulfilment.fulfilmentAsset.trim() || validHttpsUrl(fulfilment.fulfilmentUrl)));
   const plannedAds = selectedVariants.length * selectedAdSetCount;
-  const ready = issues.length === 0 && formReady && destinationReady && fulfilmentReady && targetReady && plannedAds > 0;
+  const ready = issues.length === 0 && formReady && destinationReady && fulfilmentReady && targetReady && plannedAds > 0 && Boolean(publishBuild.controls);
 
   return (
     <div className="flex h-full flex-col bg-(--canvas)">
@@ -310,6 +375,60 @@ export function PublishFlow({
           {!targetReady ? <p className="text-xs text-amber-700">Add the existing campaign and ad set details to continue.</p> : null}
         </div>
 
+        <PublishSetupFields
+          targetMode={targetMode}
+          audienceLocations={[]}
+          dailyBudgetDollars={dailyBudgetDollars}
+          setDailyBudgetDollars={setDailyBudgetDollars}
+          audienceMode={audienceMode}
+          setAudienceMode={setAudienceMode}
+          selectedLocationKeys={selectedLocationKeys}
+          setSelectedLocationKeys={setSelectedLocationKeys}
+          includeSurroundingSuburbs={includeSurroundingSuburbs}
+          setIncludeSurroundingSuburbs={setIncludeSurroundingSuburbs}
+          latitude={latitude}
+          setLatitude={setLatitude}
+          longitude={longitude}
+          setLongitude={setLongitude}
+          radiusKm={radiusKm}
+          setRadiusKm={setRadiusKm}
+          placementChoices={placementChoices}
+          setPlacementChoices={setPlacementChoices}
+          startIntent={startIntent}
+          setStartIntent={setStartIntent}
+          startAt={startAt}
+          setStartAt={setStartAt}
+          endIntent={endIntent}
+          setEndIntent={setEndIntent}
+          endAt={endAt}
+          setEndAt={setEndAt}
+          setupConfirmed={setupConfirmed}
+          setSetupConfirmed={setSetupConfirmed}
+          summary={fieldsBuild.summary}
+          fieldsReady={Boolean(fieldsBuild.controls)}
+        />
+
+        <div className="mb-6 rounded-(--r-card) border border-(--line) bg-(--surface) p-4">
+          <Label className="text-sm font-semibold" htmlFor="publish-destination-url">
+            {requiresForm ? "Thank-you button destination" : "Article or website destination"}
+          </Label>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {requiresForm
+              ? "After someone submits the Instant Form, Meta's thank-you button opens this HTTPS page. It is required before anything can be created."
+              : "Use the real HTTPS page promised by this ad. Blockwise never substitutes the privacy-policy URL."}
+          </p>
+          <Input
+            id="publish-destination-url"
+            type="url"
+            value={destinationUrl}
+            onChange={(event) => setDestinationUrl(event.target.value)}
+            placeholder={requiresForm ? "https://your-site.com/thank-you" : "https://your-site.com/article"}
+            aria-invalid={Boolean(destinationUrl) && !destinationReady}
+            className="mt-3 min-h-11 w-full bg-muted/30"
+          />
+          {destinationUrl && !destinationReady ? <p className="mt-2 text-xs text-red-600">Enter a valid HTTPS URL.</p> : null}
+        </div>
+
         {requiresForm ? (
           <div className="mb-6">
             <InstantFormEditor
@@ -318,21 +437,7 @@ export function PublishFlow({
               onPinStateChange={handlePinStateChange}
             />
           </div>
-        ) : (
-          <div className="mb-6 rounded-(--r-card) border border-(--line) bg-(--surface) p-4">
-            <Label className="text-sm font-semibold" htmlFor="publish-destination-url">Article or website destination</Label>
-            <p className="mt-1 text-xs text-muted-foreground">Use the real HTTPS page promised by this ad. Blockwise never substitutes the privacy-policy URL.</p>
-            <Input
-              id="publish-destination-url"
-              type="url"
-              value={destinationUrl}
-              onChange={(event) => setDestinationUrl(event.target.value)}
-              placeholder="https://your-site.com/article"
-              className="mt-3 min-h-11 w-full bg-muted/30"
-            />
-            {destinationUrl && !destinationReady ? <p className="mt-2 text-xs text-red-600">Enter a valid HTTPS URL.</p> : null}
-          </div>
-        )}
+        ) : null}
 
         <div className="mb-6 space-y-3 rounded-(--r-card) border border-(--line) bg-(--surface) p-4">
           <label className="flex min-h-11 items-center gap-3 text-sm font-semibold">
@@ -372,11 +477,13 @@ export function PublishFlow({
             Meta). It targets that exact plan and never runs automatically. */}
         {receipt?.mode === "publish" && receipt.planId && !receipt.error && (
           <ActivateSection
+            key={receipt.planId}
             planId={receipt.planId}
             providerWritesEnabled={providerWritesEnabled}
             activating={activating}
             receipt={activateReceipt}
             onActivate={handleActivate}
+            setupSummary={publishedSetupSummary}
           />
         )}
       </div>
@@ -389,9 +496,17 @@ export function PublishFlow({
             Save the Instant Form above to continue.
           </p>
         ) : !destinationReady && issues.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Add the real HTTPS article or website URL to continue.</p>
+          <p className="text-sm text-muted-foreground">
+            {requiresForm ? "Add the HTTPS thank-you destination to continue." : "Add the real HTTPS article or website URL to continue."}
+          </p>
         ) : !targetReady && issues.length === 0 ? (
           <p className="text-sm text-muted-foreground">Complete the campaign and ad set destination to continue.</p>
+        ) : !publishBuild.controls && issues.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            {targetMode === "existing_adset"
+              ? "Confirm that the existing ad set settings stay unchanged."
+              : "Complete and confirm the budget, audience, placements and schedule."}
+          </p>
         ) : !fulfilmentReady && issues.length === 0 ? (
           <p className="text-sm text-muted-foreground">Complete the offer and delivery details to continue.</p>
         ) : (
@@ -407,6 +522,246 @@ export function PublishFlow({
           </Button>
         </div>
       </footer>
+    </div>
+  );
+}
+
+function PublishSetupFields({
+  targetMode,
+  audienceLocations,
+  dailyBudgetDollars,
+  setDailyBudgetDollars,
+  audienceMode,
+  setAudienceMode,
+  selectedLocationKeys,
+  setSelectedLocationKeys,
+  includeSurroundingSuburbs,
+  setIncludeSurroundingSuburbs,
+  latitude,
+  setLatitude,
+  longitude,
+  setLongitude,
+  radiusKm,
+  setRadiusKm,
+  placementChoices,
+  setPlacementChoices,
+  startIntent,
+  setStartIntent,
+  startAt,
+  setStartAt,
+  endIntent,
+  setEndIntent,
+  endAt,
+  setEndAt,
+  setupConfirmed,
+  setSetupConfirmed,
+  summary,
+  fieldsReady,
+}: {
+  targetMode: PublishTargetMode;
+  audienceLocations: PublishAudienceLocation[];
+  dailyBudgetDollars: string;
+  setDailyBudgetDollars: (value: string) => void;
+  audienceMode: AudienceMode;
+  setAudienceMode: (value: AudienceMode) => void;
+  selectedLocationKeys: string[];
+  setSelectedLocationKeys: Dispatch<SetStateAction<string[]>>;
+  includeSurroundingSuburbs: boolean;
+  setIncludeSurroundingSuburbs: (value: boolean) => void;
+  latitude: string;
+  setLatitude: (value: string) => void;
+  longitude: string;
+  setLongitude: (value: string) => void;
+  radiusKm: string;
+  setRadiusKm: (value: string) => void;
+  placementChoices: PlacementChoice[];
+  setPlacementChoices: Dispatch<SetStateAction<PlacementChoice[]>>;
+  startIntent: ScheduleStartIntent;
+  setStartIntent: (value: ScheduleStartIntent) => void;
+  startAt: string;
+  setStartAt: (value: string) => void;
+  endIntent: ScheduleEndIntent;
+  setEndIntent: (value: ScheduleEndIntent) => void;
+  endAt: string;
+  setEndAt: (value: string) => void;
+  setupConfirmed: boolean;
+  setSetupConfirmed: (value: boolean) => void;
+  summary: PublishSetupSummary | null;
+  fieldsReady: boolean;
+}) {
+  if (targetMode === "existing_adset") {
+    return (
+      <div className="mb-6 space-y-4 rounded-(--r-card) border border-(--line) bg-(--surface) p-4">
+        <div>
+          <h3 className="text-sm font-semibold">Existing ad set settings</h3>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Blockwise will add ads only. Each selected ad set keeps its live budget, audience, placements and schedule from Meta.
+          </p>
+        </div>
+        <dl className="grid gap-2 rounded-(--r-ctl) bg-muted/50 p-3 text-sm sm:grid-cols-2">
+          {(["Budget", "Audience", "Placements", "Schedule"] as const).map(label => (
+            <div key={label} className="flex items-baseline justify-between gap-3 sm:block">
+              <dt className="text-xs text-muted-foreground">{label}</dt>
+              <dd className="font-medium">Unchanged in Meta</dd>
+            </div>
+          ))}
+        </dl>
+        <label className="flex min-h-11 items-start gap-3 rounded-(--r-ctl) border border-border px-3 py-2.5 text-sm font-medium">
+          <input
+            type="checkbox"
+            checked={setupConfirmed}
+            onChange={event => setSetupConfirmed(event.target.checked)}
+            disabled={!fieldsReady}
+            className="mt-0.5 size-4 shrink-0 accent-primary"
+          />
+          I confirm Blockwise must keep the existing ad sets&apos; live settings unchanged.
+        </label>
+      </div>
+    );
+  }
+
+  const placementOptions: Array<[PlacementChoice, string]> = [
+    ["facebook_feed", "Facebook Feed"],
+    ["facebook_story", "Facebook Stories"],
+    ["instagram_feed", "Instagram Feed"],
+    ["instagram_story", "Instagram Stories"],
+  ];
+
+  return (
+    <div className="mb-6 space-y-5 rounded-(--r-card) border border-(--line) bg-(--surface) p-4">
+      <div>
+        <h3 className="text-sm font-semibold">New ad set setup</h3>
+        <p className="mt-1 text-xs text-muted-foreground">Nothing is assumed. Set the spend, audience, placements and timing before Blockwise creates anything.</p>
+      </div>
+
+      <div className="grid gap-4 border-t border-border pt-4 sm:grid-cols-2">
+        <div>
+          <Label htmlFor="publish-daily-budget">Daily budget (AUD)</Label>
+          <Input
+            id="publish-daily-budget"
+            type="number"
+            min="0.01"
+            step="0.01"
+            inputMode="decimal"
+            value={dailyBudgetDollars}
+            onChange={event => setDailyBudgetDollars(event.target.value)}
+            placeholder="25.00"
+            className="mt-1 min-h-11 bg-muted/30 tabular-nums"
+          />
+          <p className="mt-1 text-xs text-muted-foreground">Maximum Meta spend for this ad set each day.</p>
+        </div>
+
+        <div>
+          <Label htmlFor="publish-audience-mode">Audience location</Label>
+          <select
+            id="publish-audience-mode"
+            value={audienceMode}
+            onChange={event => setAudienceMode(event.target.value as AudienceMode)}
+            className="mt-1 min-h-11 w-full rounded-md border border-border bg-muted/30 px-3 text-base md:text-sm"
+          >
+            <option value="">Choose a location method</option>
+            {audienceLocations.length > 0 ? <option value="saved_locations">Saved campaign locations</option> : null}
+            <option value="custom_radius">Custom map radius</option>
+          </select>
+          <p className="mt-1 text-xs text-muted-foreground">Blockwise will not target all of Australia by default.</p>
+        </div>
+      </div>
+
+      {audienceMode === "saved_locations" ? (
+        <div className="space-y-2">
+          <p className="text-xs font-medium">Choose saved locations</p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {audienceLocations.map(location => (
+              <label key={location.key} className="flex min-h-11 items-center gap-3 rounded-(--r-ctl) border border-border px-3 py-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={selectedLocationKeys.includes(location.key)}
+                  onChange={event => setSelectedLocationKeys(current => event.target.checked ? [...current, location.key] : current.filter(key => key !== location.key))}
+                  className="size-4 accent-primary"
+                />
+                {location.name}{location.region ? `, ${location.region}` : ""}
+              </label>
+            ))}
+          </div>
+          <label className="flex min-h-11 items-center gap-3 text-sm">
+            <input type="checkbox" checked={includeSurroundingSuburbs} onChange={event => setIncludeSurroundingSuburbs(event.target.checked)} className="size-4 accent-primary" />
+            Include nearby areas (Meta&apos;s minimum radius is {MIN_META_RADIUS_KM} km)
+          </label>
+        </div>
+      ) : null}
+
+      {audienceMode === "custom_radius" ? (
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div><Label htmlFor="publish-latitude">Latitude</Label><Input id="publish-latitude" type="number" step="any" value={latitude} onChange={event => setLatitude(event.target.value)} placeholder="-31.9523" className="mt-1 min-h-11 bg-muted/30" /></div>
+          <div><Label htmlFor="publish-longitude">Longitude</Label><Input id="publish-longitude" type="number" step="any" value={longitude} onChange={event => setLongitude(event.target.value)} placeholder="115.8613" className="mt-1 min-h-11 bg-muted/30" /></div>
+          <div><Label htmlFor="publish-radius">Radius (km)</Label><Input id="publish-radius" type="number" min={MIN_META_RADIUS_KM} step="1" value={radiusKm} onChange={event => setRadiusKm(event.target.value)} placeholder={String(MIN_META_RADIUS_KM)} className="mt-1 min-h-11 bg-muted/30" /></div>
+        </div>
+      ) : null}
+
+      <fieldset className="space-y-2 border-t border-border pt-4">
+        <legend className="text-xs font-medium">Placements</legend>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {placementOptions.map(([value, label]) => (
+            <label key={value} className="flex min-h-11 items-center gap-3 rounded-(--r-ctl) border border-border px-3 py-2 text-sm">
+              <input
+                type="checkbox"
+                checked={placementChoices.includes(value)}
+                onChange={event => setPlacementChoices(current => event.target.checked ? [...current, value] : current.filter(choice => choice !== value))}
+                className="size-4 accent-primary"
+              />
+              {label}
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
+      <div className="grid gap-4 border-t border-border pt-4 sm:grid-cols-2">
+        <div>
+          <Label htmlFor="publish-start-intent">Starts</Label>
+          <select id="publish-start-intent" value={startIntent} onChange={event => setStartIntent(event.target.value as ScheduleStartIntent)} className="mt-1 min-h-11 w-full rounded-md border border-border bg-muted/30 px-3 text-base md:text-sm">
+            <option value="">Choose start timing</option>
+            <option value="as_soon_as_activated">As soon as I activate it</option>
+            <option value="scheduled">At a scheduled time</option>
+          </select>
+          {startIntent === "scheduled" ? <Input aria-label="Scheduled start date and time" type="datetime-local" value={startAt} onChange={event => setStartAt(event.target.value)} className="mt-2 min-h-11 bg-muted/30" /> : null}
+        </div>
+        <div>
+          <Label htmlFor="publish-end-intent">Ends</Label>
+          <select id="publish-end-intent" value={endIntent} onChange={event => setEndIntent(event.target.value as ScheduleEndIntent)} className="mt-1 min-h-11 w-full rounded-md border border-border bg-muted/30 px-3 text-base md:text-sm">
+            <option value="">Choose end timing</option>
+            <option value="run_until_paused">Run until I pause it</option>
+            <option value="scheduled">At a scheduled time</option>
+          </select>
+          {endIntent === "scheduled" ? <Input aria-label="Scheduled end date and time" type="datetime-local" value={endAt} onChange={event => setEndAt(event.target.value)} className="mt-2 min-h-11 bg-muted/30" /> : null}
+        </div>
+      </div>
+
+      {summary ? <PublishSetupSummaryCard summary={summary} /> : (
+        <p className="rounded-(--r-ctl) bg-muted px-3 py-2 text-xs text-muted-foreground">Complete the destination and every setup choice to see the exact activation summary.</p>
+      )}
+      <label className="flex min-h-11 items-start gap-3 rounded-(--r-ctl) border border-border px-3 py-2.5 text-sm font-medium">
+        <input type="checkbox" checked={setupConfirmed} onChange={event => setSetupConfirmed(event.target.checked)} disabled={!fieldsReady} className="mt-0.5 size-4 shrink-0 accent-primary" />
+        I confirm this daily budget, audience, placement and schedule setup is correct.
+      </label>
+    </div>
+  );
+}
+
+function PublishSetupSummaryCard({ summary }: { summary: PublishSetupSummary }) {
+  const rows = [
+    ["Target", summary.target],
+    ["Budget", summary.budget],
+    ["Audience", summary.audience],
+    ["Placements", summary.placements],
+    ["Schedule", summary.schedule],
+    ["Destination", summary.destination],
+  ];
+  return (
+    <div className="rounded-(--r-ctl) bg-muted/60 p-3">
+      <p className="text-xs font-semibold">Review the exact setup</p>
+      <dl className="mt-2 grid gap-x-4 gap-y-2 text-sm sm:grid-cols-2">
+        {rows.map(([label, value]) => <div key={label} className="min-w-0"><dt className="text-xs text-muted-foreground">{label}</dt><dd className="break-words font-medium">{value}</dd></div>)}
+      </dl>
     </div>
   );
 }
@@ -516,13 +871,16 @@ function ActivateSection({
   activating,
   receipt,
   onActivate,
+  setupSummary,
 }: {
   planId: string;
   providerWritesEnabled: boolean;
   activating: boolean;
   receipt: ActivationReceipt | null;
   onActivate: (planId: string) => void;
+  setupSummary: PublishSetupSummary | null;
 }) {
+  const [activationConfirmed, setActivationConfirmed] = useState(false);
   return (
     <div className="mt-6 rounded-(--r-card) border border-(--line) bg-(--surface) p-4">
       <h3 className="text-sm font-semibold">Activate on Meta</h3>
@@ -536,10 +894,20 @@ function ActivateSection({
           ? "This optional step will move the paused campaign live."
           : "Dry run mode is on — this optional step will only show what would change."}
       </p>
+      {setupSummary ? <div className="mt-3"><PublishSetupSummaryCard summary={setupSummary} /></div> : null}
+      <label className="mt-3 flex min-h-11 items-start gap-3 rounded-(--r-ctl) border border-border px-3 py-2.5 text-sm font-medium">
+        <input
+          type="checkbox"
+          checked={activationConfirmed}
+          onChange={event => setActivationConfirmed(event.target.checked)}
+          className="mt-0.5 size-4 shrink-0 accent-primary"
+        />
+        {setupSummary?.activationConfirmation ?? "I confirm I have reviewed this paused plan and want to activate it."}
+      </label>
       <div className="mt-3 flex items-center gap-3">
         <Button
           onClick={() => onActivate(planId)}
-          disabled={activating || Boolean(receipt?.ok)}
+          disabled={!activationConfirmed || activating || Boolean(receipt?.ok)}
           className="min-h-11 rounded-full px-5 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
           {activating ? "Activating on Meta..." : "Activate on Meta"}
