@@ -60,6 +60,30 @@ export type ExplicitPublishControlsResult =
   | { controls: MetaPublishControls; issues: []; summary: PublishSetupSummary }
   | { controls: null; issues: string[]; summary: null };
 
+export function normalizeSavedPublishAudienceLocations(markets: unknown[]): PublishAudienceLocation[] {
+  const seen = new Set<string>();
+  const locations: PublishAudienceLocation[] = [];
+  for (const value of markets) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) continue;
+    const targets = (value as { targetSuburbs?: unknown }).targetSuburbs;
+    if (!Array.isArray(targets)) continue;
+    for (const target of targets) {
+      if (!target || typeof target !== "object" || Array.isArray(target)) continue;
+      const row = target as { key?: unknown; name?: unknown; region?: unknown };
+      const key = typeof row.key === "string" ? row.key.trim() : "";
+      const name = typeof row.name === "string" ? row.name.trim() : "";
+      if (!key || !name || seen.has(key)) continue;
+      seen.add(key);
+      locations.push({
+        key,
+        name,
+        region: typeof row.region === "string" && row.region.trim() ? row.region.trim() : null,
+      });
+    }
+  }
+  return locations.slice(0, 24);
+}
+
 /**
  * Build only controls the customer explicitly supplied and confirmed.
  * New ad sets never receive provider defaults; existing ad sets deliberately

@@ -49,6 +49,7 @@ export interface PublishFlowProps {
   } | null;
   initialIssues: string[];
   providerWritesEnabled: boolean;
+  audienceLocations: PublishAudienceLocation[];
 }
 
 type PublishReceipt = {
@@ -110,6 +111,7 @@ export function PublishFlow({
   initialState,
   initialIssues,
   providerWritesEnabled,
+  audienceLocations,
 }: PublishFlowProps) {
   const [submitting, setSubmitting] = useState(false);
   const [receipt, setReceipt] = useState<PublishReceipt | null>(null);
@@ -157,7 +159,7 @@ export function PublishFlow({
     variantIds: selectedVariants,
     dailyBudgetDollars,
     audienceMode,
-    availableLocations: [],
+    availableLocations: audienceLocations,
     selectedLocationKeys,
     includeSurroundingSuburbs,
     latitude,
@@ -377,7 +379,7 @@ export function PublishFlow({
 
         <PublishSetupFields
           targetMode={targetMode}
-          audienceLocations={[]}
+          audienceLocations={audienceLocations}
           dailyBudgetDollars={dailyBudgetDollars}
           setDailyBudgetDollars={setDailyBudgetDollars}
           audienceMode={audienceMode}
