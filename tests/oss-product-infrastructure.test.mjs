@@ -29,6 +29,11 @@ test("OSS product compose is isolated and has no managed deployment endpoint", a
   assert.match(compose, /BLOCKWISE_READINESS_SUPABASE_URL: http:\/\/product-rest:3000/);
   assert.match(compose, /OPENAI_API_KEY/);
   assert.match(compose, /CRON_SECRET/);
+  assert.match(compose, /OPENAI_API_KEY: \$\{OPENAI_API_KEY:-\}/);
+  assert.match(compose, /META_APP_ID: \$\{META_APP_ID:-\}/);
+  assert.match(compose, /META_APP_SECRET: \$\{META_APP_SECRET:-\}/);
+  assert.match(compose, /CRON_SECRET: \$\{CRON_SECRET:-\}/);
+  assert.doesNotMatch(compose, /(?:OPENAI_API_KEY|META_APP_ID|META_APP_SECRET|CRON_SECRET): \$\{[^}]+:\?/);
   for (const key of [
     "GOOGLE_AI_API_KEY",
     "AZURE_OPENAI_API_KEY",
@@ -50,6 +55,11 @@ test("OSS product compose is isolated and has no managed deployment endpoint", a
   const rolePassword = await read("infra/product/db-init/002-roles.sh");
   assert.match(rolePassword, /ALTER ROLE authenticator PASSWORD/);
   assert.doesNotMatch(compose, /vercel\.app|supabase\.co|supabase\.com/);
+
+  const envExample = await read("infra/product/.env.example");
+  assert.match(envExample, /^OPENAI_API_KEY=$/m);
+  assert.match(envExample, /^META_APP_ID=$/m);
+  assert.match(envExample, /^META_APP_SECRET=$/m);
 
   const dockerfile = await read("infra/product/Dockerfile");
   assert.match(dockerfile, /ENV HOSTNAME=0\.0\.0\.0/);
