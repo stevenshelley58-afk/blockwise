@@ -1,6 +1,5 @@
 "use client";
 
-import { track } from "@vercel/analytics";
 import Link from "next/link";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
@@ -12,11 +11,6 @@ type TrackingWindow = Window & {
 };
 
 function fire(event: string, props: AnalyticsProps = {}) {
-  try {
-    track(event, props);
-  } catch {
-    // analytics is best-effort
-  }
   if (typeof window === "undefined") return;
   const w = window as TrackingWindow;
   try {

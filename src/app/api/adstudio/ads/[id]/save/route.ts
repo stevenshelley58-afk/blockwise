@@ -1,11 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { createHash } from "node:crypto";
 
 import { errorResponse, readJsonBody, requireAdStudioRequest } from "@/lib/adstudio/http";
+import { getTemplate, templateAssetStoragePath } from "@/lib/adstudio/pack-gallery";
 import { saveAd, SaveError } from "@/lib/adstudio/save-ad";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
-import { adDocumentSchema, type AdDocumentParsed } from "../../../../../../../packages/ad-template-pack-contract/src/schema.ts";
-import { containsInlineImageData, withPersistedDocumentHash } from "@/lib/adstudio/persisted-document";
+import { adDocumentSchema, type AdDocumentParsed } from "../../../../../../../packages/ad-template-contract/src/schema.ts";
+import { containsInlineImageData, } from "@/lib/adstudio/persisted-document";
 import { CustomerImageStorageError, resolveCustomerImageValues } from "@/lib/adstudio/customer-image-storage";
 
 export const runtime = "nodejs";
@@ -61,9 +61,9 @@ export async function POST(request: NextRequest, context: RouteContext) {
   try {
     const [customerImages, templateAssets] = await Promise.all([
       resolveImageValues(document, access.access.workspaceId, id, createSupabaseServiceClient()),
-      resolveTemplatePlateValues(id, access.access.workspaceId),
+      resolveTemplateAssetValues(id, access.access.workspaceId),
     ]);
-    const persistedDocument = withPersistedDocumentHash({ ...document, sharedImageValues: customerImages.refs });
+    const persistedDocument = ({ ...document, sharedImageValues: customerImages.refs });
     const output = await saveAd({
       supabase: access.supabase,
       workspaceId: access.access.workspaceId,
@@ -86,7 +86,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       const storageFailure = err.code.startsWith("template_asset") || err.code === "render_upload_failed";
       if (storageFailure) console.error("Ad Studio asset storage failure", { code: err.code, message: err.message });
       const status =
-        err.code === "ad_not_found" || err.code === "pack_not_found"
+        err.code === "ad_not_found" || err.code === "template_not_found"
           ? 404
           : err.code === "stale_revision" || err.code === "template_hash_mismatch"
             ? 409
@@ -111,33 +111,50 @@ export async function resolveImageValues(
   return resolveCustomerImageValues(document.sharedImageValues, workspaceId, adId, supabase, { requireFinalizedLedger: true });
 }
 
-async function resolveTemplatePlateValues(adId: string, workspaceId: string): Promise<Record<string, Buffer>> {
+type StoredTemplateAsset = { asset_key: string; file_name: string; mime_type: string; storage_path: string };
+
+export async function resolveTemplateAssetValues(adId: string, workspaceId: string): Promise<Record<string, Buffer>> {
   const service = createSupabaseServiceClient();
   const { data: ad, error: adError } = await service
     .from("ad_customer_ads")
-    .select("template_pack_id")
+    .select("template_id")
     .eq("id", adId)
     .eq("workspace_id", workspaceId)
     .single();
-  if (adError || !ad?.template_pack_id) throw new SaveError("ad_not_found", "Ad not found");
+  if (adError || !ad?.template_id) throw new SaveError("ad_not_found", "Ad not found");
+
+  const template = await getTemplate(service, ad.template_id);
+  if (!template) throw new SaveError("template_not_found", "Template not found");
+  const declarations = Object.entries(template.assets);
+  if (declarations.length === 0) return {};
 
   const { data: assets, error: assetError } = await service
-    .from("ad_template_assets")
-    .select("asset_key, sha256, storage_path")
-    .eq("pack_id", ad.template_pack_id)
-    .in("asset_key", ["feed-plate", "story-plate"]);
+    .from("ad_template_assets_direct")
+    .select("asset_key,file_name,mime_type,storage_path")
+    .eq("template_id", ad.template_id);
   if (assetError) throw new SaveError("template_asset_load_failed", assetError.message);
+  const rows = (assets ?? []) as StoredTemplateAsset[];
+  if (rows.length !== declarations.length) throw new SaveError("template_asset_missing", "Template assets are incomplete.");
+  const byKey = new Map(rows.map(asset => [asset.asset_key, asset]));
 
   const values: Record<string, Buffer> = {};
-  for (const asset of assets ?? []) {
-    if (!asset.storage_path) throw new SaveError("template_asset_missing", `Template asset ${asset.asset_key} has no stored bytes.`);
-    const { data, error } = await service.storage.from("workspace-artifacts").download(asset.storage_path);
-    if (error || !data) throw new SaveError("template_asset_missing", `Template asset ${asset.asset_key} could not be loaded.`);
-    const bytes = Buffer.from(await data.arrayBuffer());
-    if (createHash("sha256").update(bytes).digest("hex") !== asset.sha256) {
-      throw new SaveError("template_asset_tampered", `Template asset ${asset.asset_key} failed its integrity check.`);
+  for (const [assetKey, declaration] of declarations) {
+    const asset = byKey.get(assetKey);
+    const expectedPath = templateAssetStoragePath(template.templateId, assetKey, declaration.fileName);
+    if (!asset || asset.file_name !== declaration.fileName || asset.mime_type !== declaration.mimeType || asset.storage_path !== expectedPath) {
+      throw new SaveError("template_asset_missing", `Template asset ${assetKey} does not match its declaration.`);
     }
-    values[asset.asset_key] = bytes;
+    const { data, error } = await service.storage.from("workspace-artifacts").download(expectedPath);
+    if (error || !data) throw new SaveError("template_asset_missing", `Template asset ${assetKey} could not be loaded.`);
+    const bytes = Buffer.from(await data.arrayBuffer());
+    values[assetKey] = bytes;
+  }
+  for (const input of template.imageInputs) {
+    if (input.defaultAssetKey) {
+      const defaultBytes = values[input.defaultAssetKey];
+      if (!defaultBytes) throw new SaveError("template_asset_missing", `Default image for ${input.label} could not be loaded.`);
+      values[input.key] = defaultBytes;
+    }
   }
   return values;
 }

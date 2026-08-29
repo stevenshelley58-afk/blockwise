@@ -190,7 +190,6 @@ services:
       NEXT_PUBLIC_BLOCKWISE_SAMPLE_DATA: ${NEXT_PUBLIC_BLOCKWISE_SAMPLE_DATA:-false}
       CRON_SECRET: ${CRON_SECRET:-}
       BLOCKWISE_INTERNAL_AUTH_SECRET: ${BLOCKWISE_INTERNAL_AUTH_SECRET:-}
-      FRANK_PACK_PUBLIC_KEY: ${FRANK_PACK_PUBLIC_KEY:-}
       OPENAI_ADMIN_KEY: ${OPENAI_ADMIN_KEY:-}
       GOOGLE_AI_API_KEY: ${GOOGLE_AI_API_KEY:-}
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
@@ -335,9 +334,9 @@ networks:
 
 volumes:
   blockwise-product-db-data:
-    name: blockwise-product-db-data
+    name: ${BLOCKWISE_DB_VOLUME_NAME:-blockwise-product-db-data}
   blockwise-product-storage-data:
-    name: blockwise-product-storage-data
+    name: ${BLOCKWISE_STORAGE_VOLUME_NAME:-blockwise-product-storage-data}
   blockwise-product-caddy-data:
     name: blockwise-product-caddy-data
   blockwise-product-caddy-config:

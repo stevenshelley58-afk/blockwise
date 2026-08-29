@@ -9,7 +9,7 @@ import type {
 } from "./types.ts";
 
 // Platform validation stubs — legacy platform-rules.ts was deleted in Phase 1.
-// Replaced by Frank-owned TemplatePack QA in Phase 4+.
+// Replaced by Frank-owned AdTemplate QA in Phase 4+.
 function validateMetaLeadAdPack(_meta: AdStudioPlatformCopyPack["meta"]) { return { issues: [] as ComplianceIssue[] }; }
 function validateGoogleSearchPack(_search: AdStudioPlatformCopyPack["googleSearch"]) { return { issues: [] as ComplianceIssue[] }; }
 function validateGoogleAssetPack(_assets: AdStudioPlatformCopyPack["googlePmax"]) { return { issues: [] as ComplianceIssue[] }; }

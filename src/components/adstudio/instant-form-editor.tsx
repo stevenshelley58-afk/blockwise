@@ -18,7 +18,7 @@ import {
 //
 // Mounted in the Publish flow. Fetches the latest pinned draft on load;
 // "Generate draft" asks the server for a fresh draft derived from the ad's
-// saved copy, the workspace Brand Pack, and the template pack. The customer
+// saved copy, the workspace brand details, and the template. The customer
 // edits every field in place; Save (PUT) pins it as the next draft revision.
 // Drafts with error-severity validation issues cannot be pinned — warnings
 // (e.g. missing optional fields) are allowed through.
@@ -220,13 +220,13 @@ export function InstantFormEditor({ adId, workspaceId, onPinStateChange }: Insta
   }
 
   return (
-    <section className="rounded-(--r-card) border border-(--line) bg-(--surface)">
+    <section aria-labelledby="instant-form-heading" className="rounded-(--r-card) border border-(--line) bg-(--surface)">
       {/* Header */}
       <header className="flex items-center justify-between border-b border-(--line) px-5 py-4">
         <div>
-          <h3 className="text-sm font-semibold">Instant Form</h3>
+          <h3 id="instant-form-heading" className="text-sm font-semibold">Instant Form</h3>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            Lead form attached to your ad — preview and edit below, then Save to pin it.
+            Choose what customers see after they tap your ad, then save it.
           </p>
         </div>
         {form && (
@@ -236,11 +236,12 @@ export function InstantFormEditor({ adId, workspaceId, onPinStateChange }: Insta
                 ? "bg-yellow-100 text-yellow-700"
                 : "bg-green-100 text-green-700"
             }`}
+            aria-live="polite"
           >
             {dirty
               ? "Unsaved draft"
               : pinnedRevision !== null
-                ? `Pinned · revision ${pinnedRevision}`
+                ? "Saved"
                 : "Draft"}
           </span>
         )}
@@ -276,12 +277,13 @@ export function InstantFormEditor({ adId, workspaceId, onPinStateChange }: Insta
         /* Empty state */
         <div className="flex flex-col items-center gap-3 px-6 py-10 text-center">
           <p className="max-w-sm text-sm text-muted-foreground">
-            No form yet. Generate a draft from your ad copy and Brand Pack, then edit and pin it before publishing.
+            No form yet. Create a draft from your saved ad, then review every field before publishing.
           </p>
           <button
+            type="button"
             onClick={generate}
             disabled={status === "generating"}
-            className="rounded-(--r-control) bg-(--ui-primary) px-5 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
+            className="min-h-11 rounded-(--r-ctl) bg-(--ui-primary) px-5 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
           >
             {status === "generating" ? "Generating..." : "Generate draft"}
           </button>
@@ -290,14 +292,14 @@ export function InstantFormEditor({ adId, workspaceId, onPinStateChange }: Insta
         <div className="space-y-6 p-5">
           {/* Name */}
           <Field label="Form name">
-            <TextInput value={form.name} onChange={name => update({ ...form, name })} placeholder="e.g. Blockwise Real Estate — Free home valuation" />
+            <TextInput label="Form name" value={form.name} onChange={name => update({ ...form, name })} placeholder="e.g. Free home valuation" />
           </Field>
 
           {/* Intro */}
           <Field label="Intro">
             <div className="space-y-2">
-              <TextInput value={form.intro.headline} onChange={headline => updateIntro({ headline })} placeholder="Headline" maxLength={60} />
-              <TextArea value={form.intro.body} onChange={body => updateIntro({ body })} placeholder="Intro body" maxLength={500} />
+              <TextInput label="Intro headline" value={form.intro.headline} onChange={headline => updateIntro({ headline })} placeholder="Headline" maxLength={60} />
+              <TextArea label="Intro message" value={form.intro.body} onChange={body => updateIntro({ body })} placeholder="Intro body" maxLength={500} />
             </div>
           </Field>
 
@@ -307,22 +309,24 @@ export function InstantFormEditor({ adId, workspaceId, onPinStateChange }: Insta
               {CONTACT_FIELD_TYPES.filter(t => t !== "country" && t !== "street_address").map(type => {
                 const present = form.contactFields.find(f => f.type === type);
                 return (
-                  <label
+                  <div
                     key={type}
-                    className="flex items-center justify-between rounded-(--r-control) border border-(--line) bg-(--canvas) px-3 py-2"
+                    className="flex min-h-11 items-center justify-between gap-3 rounded-(--r-ctl) border border-(--line) bg-(--canvas) px-3 py-2"
                   >
-                    <span className="flex items-center gap-2.5">
+                    <label htmlFor={`contact-${type}`} className="flex min-h-11 flex-1 items-center gap-2.5">
                       <input
+                        id={`contact-${type}`}
                         type="checkbox"
                         checked={!!present}
                         onChange={e => toggleContactField(type, e.target.checked)}
                         className="size-4 accent-(--ui-primary)"
                       />
                       <span className="text-sm">{FIELD_LABELS[type]}</span>
-                    </span>
+                    </label>
                     {present && (
-                      <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <label htmlFor={`contact-${type}-required`} className="flex min-h-11 items-center gap-1.5 text-xs text-muted-foreground">
                         <input
+                          id={`contact-${type}-required`}
                           type="checkbox"
                           checked={present.required}
                           onChange={e => setContactRequired(type, e.target.checked)}
@@ -331,7 +335,7 @@ export function InstantFormEditor({ adId, workspaceId, onPinStateChange }: Insta
                         Required
                       </label>
                     )}
-                  </label>
+                  </div>
                 );
               })}
             </div>
@@ -343,14 +347,16 @@ export function InstantFormEditor({ adId, workspaceId, onPinStateChange }: Insta
               {form.customQuestions.map((question, index) => (
                 <div key={index} className="flex items-center gap-2">
                   <TextInput
+                    label={`Question ${index + 1}`}
                     value={question.label}
                     onChange={label => updateQuestionLabel(index, label)}
                     placeholder={`Question ${index + 1}`}
                     maxLength={200}
                   />
                   <button
+                    type="button"
                     onClick={() => removeQuestion(index)}
-                    className="shrink-0 rounded-(--r-control) px-2.5 py-2 text-xs text-muted-foreground hover:bg-(--surface-subtle) hover:text-red-600"
+                    className="min-h-11 shrink-0 rounded-(--r-ctl) px-3 py-2 text-xs text-muted-foreground hover:bg-(--surface-subtle) hover:text-red-600"
                     aria-label={`Remove question ${index + 1}`}
                   >
                     Remove
@@ -359,8 +365,9 @@ export function InstantFormEditor({ adId, workspaceId, onPinStateChange }: Insta
               ))}
               {form.customQuestions.length < 5 && (
                 <button
+                  type="button"
                   onClick={addQuestion}
-                  className="rounded-(--r-control) border border-dashed border-(--line) px-4 py-2 text-sm text-muted-foreground transition hover:border-(--ui-primary) hover:text-(--ui-primary)"
+                  className="min-h-11 rounded-(--r-ctl) border border-dashed border-(--line) px-4 py-2 text-sm text-muted-foreground transition hover:border-(--ui-primary) hover:text-(--ui-primary)"
                 >
                   + Add question
                 </button>
@@ -371,21 +378,23 @@ export function InstantFormEditor({ adId, workspaceId, onPinStateChange }: Insta
           {/* Privacy */}
           <Field label="Privacy policy">
             <div className="space-y-2">
-              <TextInput value={form.privacy.url} onChange={url => updatePrivacy({ url })} placeholder="https://yoursite.com.au/privacy" />
-              <TextInput value={form.privacy.linkText} onChange={linkText => updatePrivacy({ linkText })} placeholder="View our privacy policy" maxLength={100} />
+              <TextInput label="Privacy policy URL" value={form.privacy.url} onChange={url => updatePrivacy({ url })} placeholder="https://yoursite.com.au/privacy" />
+              <TextInput label="Privacy policy link text" value={form.privacy.linkText} onChange={linkText => updatePrivacy({ linkText })} placeholder="View our privacy policy" maxLength={100} />
             </div>
           </Field>
 
           {/* Thank-you */}
           <Field label="Thank-you screen">
             <div className="space-y-2">
-              <TextInput value={form.thankYou.title} onChange={title => updateThankYou({ title })} placeholder="Thank you!" maxLength={60} />
-              <TextArea value={form.thankYou.body} onChange={body => updateThankYou({ body })} placeholder="We've received your details..." maxLength={500} />
+              <TextInput label="Thank-you title" value={form.thankYou.title} onChange={title => updateThankYou({ title })} placeholder="Thank you!" maxLength={60} />
+              <TextArea label="Thank-you message" value={form.thankYou.body} onChange={body => updateThankYou({ body })} placeholder="We've received your details..." maxLength={500} />
               <div className="flex gap-2">
+                <label htmlFor="instant-form-action" className="sr-only">Thank-you action</label>
                 <select
+                  id="instant-form-action"
                   value={form.thankYou.actionType}
                   onChange={e => updateThankYou({ actionType: e.target.value as ActionType })}
-                  className="w-44 rounded-(--r-control) border border-(--line) bg-(--canvas) px-3 py-2 text-sm outline-none focus:border-(--ui-primary)"
+                  className="min-h-11 w-44 rounded-(--r-ctl) border border-(--line) bg-(--canvas) px-3 py-2 text-sm outline-none focus:border-(--ui-primary)"
                 >
                   {ACTION_TYPES.map(type => (
                     <option key={type} value={type}>
@@ -395,6 +404,7 @@ export function InstantFormEditor({ adId, workspaceId, onPinStateChange }: Insta
                 </select>
                 {(form.thankYou.actionType === "visit_website" || form.thankYou.actionType === "download") && (
                   <TextInput
+                    label="Thank-you action URL"
                     value={form.thankYou.actionUrl ?? ""}
                     onChange={actionUrl => updateThankYou({ actionUrl })}
                     placeholder="Action URL"
@@ -407,18 +417,20 @@ export function InstantFormEditor({ adId, workspaceId, onPinStateChange }: Insta
           {/* Footer actions */}
           <div className="flex items-center justify-end gap-3 border-t border-(--line) pt-4">
             <button
+              type="button"
               onClick={generate}
               disabled={status === "generating"}
-              className="rounded-(--r-control) px-4 py-2 text-sm text-muted-foreground transition hover:bg-(--surface-subtle) hover:text-foreground disabled:opacity-50"
+              className="min-h-11 rounded-(--r-ctl) px-4 py-2 text-sm text-muted-foreground transition hover:bg-(--surface-subtle) hover:text-foreground disabled:opacity-50"
             >
               {status === "generating" ? "Generating..." : "Regenerate draft"}
             </button>
             <button
+              type="button"
               onClick={save}
               disabled={status === "saving" || errorIssues.length > 0 || !dirty}
-              className="rounded-(--r-control) bg-(--ui-primary) px-6 py-2.5 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
+              className="min-h-11 rounded-(--r-ctl) bg-(--ui-primary) px-6 py-2.5 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
             >
-              {status === "saving" ? "Saving..." : "Save draft"}
+              {status === "saving" ? "Saving..." : "Save form"}
             </button>
           </div>
         </div>
@@ -441,11 +453,13 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 function TextInput({
+  label,
   value,
   onChange,
   placeholder,
   maxLength,
 }: {
+  label: string;
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
@@ -454,21 +468,24 @@ function TextInput({
   return (
     <input
       type="text"
+      aria-label={label}
       value={value}
       onChange={e => onChange(e.target.value)}
       placeholder={placeholder}
       maxLength={maxLength}
-      className="w-full rounded-(--r-control) border border-(--line) bg-(--canvas) px-3 py-2 text-sm text-foreground outline-none transition focus:border-(--ui-primary)"
+      className="min-h-11 w-full rounded-(--r-ctl) border border-(--line) bg-(--canvas) px-3 py-2 text-sm text-foreground outline-none transition focus:border-(--ui-primary)"
     />
   );
 }
 
 function TextArea({
+  label,
   value,
   onChange,
   placeholder,
   maxLength,
 }: {
+  label: string;
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
@@ -476,12 +493,13 @@ function TextArea({
 }) {
   return (
     <textarea
+      aria-label={label}
       value={value}
       onChange={e => onChange(e.target.value)}
       placeholder={placeholder}
       maxLength={maxLength}
       rows={2}
-      className="w-full resize-none rounded-(--r-control) border border-(--line) bg-(--canvas) px-3 py-2 text-sm text-foreground outline-none transition focus:border-(--ui-primary)"
+      className="min-h-11 w-full resize-none rounded-(--r-ctl) border border-(--line) bg-(--canvas) px-3 py-2 text-sm text-foreground outline-none transition focus:border-(--ui-primary)"
     />
   );
 }

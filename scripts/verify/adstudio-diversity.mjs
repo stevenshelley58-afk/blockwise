@@ -10,8 +10,8 @@ export function diversityFailures(docs) {
   const failures = [];
   if (docs.length === 0) return failures;
 
-  const packIds = new Set(docs.map((doc) => doc.provenance?.packId).filter(Boolean));
-  const singleSourcePack = packIds.size === 1 && docs.every((doc) => doc.provenance?.packId === [...packIds][0]);
+  const templateIds = new Set(docs.map((doc) => doc.provenance?.templateId).filter(Boolean));
+  const singleSourcePack = templateIds.size === 1 && docs.every((doc) => doc.provenance?.templateId === [...templateIds][0]);
   if (!singleSourcePack) {
     const intents = docs.map((doc) => doc.classification?.primary_intent).filter((intent) => intent && intent !== "other");
     const distinct = new Set(intents);

@@ -1,22 +1,19 @@
-import type { ReactElement } from "react";
 import Link from "next/link";
-import type { Layout, LayoutLayer, TemplatePack } from "../../../../packages/ad-template-pack-contract/src/types";
-import { listImportedPacks } from "@/lib/adstudio/pack-gallery";
+import { listTemplates } from "@/lib/adstudio/pack-gallery";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
-import { Badge } from "@/components/ui/badge";
 
 export const dynamic = "force-dynamic";
 
 // ---------------------------------------------------------------------------
-// Ad Studio — gallery of imported template packs.
-// Packs are built in Frank and imported through the signed import endpoint.
-// This page is read-only: opening a pack takes the customer into the layered
+// Ad Studio — template gallery.
+// Final layered templates are delivered by Hermes through the authenticated internal endpoint.
+// This page is read-only: opening a template takes the customer into the layered
 // editor shell. Save/Publish land in a later phase.
 // ---------------------------------------------------------------------------
 
 export default async function AdStudioPage() {
   const { supabase } = await requirePageSurfaceAccess("adstudio");
-  const packs = await listImportedPacks(supabase);
+  const templates = await listTemplates(supabase);
 
   return (
     <div className="flex min-h-[calc(100dvh-54px)] flex-col bg-background text-foreground md:min-h-[calc(100dvh-60px)]">
@@ -29,44 +26,38 @@ export default async function AdStudioPage() {
             </p>
           </div>
           <span className="hidden text-xs tabular-nums text-muted-foreground sm:block">
-            {packs.length === 1 ? "1 template" : `${packs.length} templates`}
+            {templates.length === 1 ? "1 template" : `${templates.length} templates`}
           </span>
         </div>
       </header>
 
       <div className="mx-auto w-full max-w-6xl flex-1 px-6 py-8">
-        {packs.length === 0 ? (
+        {templates.length === 0 ? (
           <EmptyState />
         ) : (
-          <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {packs.map((pack) => (
-              <li key={pack.packId}>
+          <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
+            {templates.map((template) => (
+              <li key={template.templateId}>
                 <Link
-                  href={`/ad-studio/packs/${encodeURIComponent(pack.packId)}`}
-                  className="group block rounded-(--r-card) border border-border bg-card p-3 transition hover:border-foreground/30 hover:shadow-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  href={`/ad-studio/templates/${encodeURIComponent(template.templateId)}`}
+                  className="group block overflow-hidden rounded-(--r-card) border border-border bg-card transition duration-200 hover:-translate-y-0.5 hover:border-foreground/25 hover:shadow-float focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:hover:translate-y-0"
                 >
-                  <div className="overflow-hidden rounded-(--r-card) border border-(--line-soft) bg-white">
-                    {pack.gallerySampleUrl ? (
-                      <img loading="lazy" width={1080} height={1350} src={pack.gallerySampleUrl} alt={`${pack.name} sample`} className="aspect-[1080/1350] w-full object-cover" />
-                    ) : (
-                      <LayoutThumb layout={pack.feedLayout} colours={pack.semanticColours} />
-                    )}
+                  <div className="overflow-hidden border-b border-border bg-muted">
+                    <img
+                      loading="lazy"
+                      width={1080}
+                      height={1350}
+                      src={template.gallerySampleUrl}
+                      alt={`${template.name} Feed preview`}
+                      className="aspect-[4/5] w-full object-cover transition duration-300 group-hover:scale-[1.01] motion-reduce:transform-none"
+                    />
                   </div>
-                  <div className="px-1 pb-1 pt-3">
-                    <h2 className="truncate text-sm font-medium text-foreground">{pack.name}</h2>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      v{pack.version} · imported {formatDate(pack.importedAt)}
-                    </p>
-                    <div className="mt-3 flex flex-wrap gap-1.5">
-                      <Badge variant="outline">
-                        Feed
-                      </Badge>
-                      <Badge variant="outline">
-                        Story
-                      </Badge>
-                      <Badge variant="outline">
-                        {pack.imageInputs + pack.textInputs} inputs
-                      </Badge>
+                  <div className="p-4">
+                    <h2 className="truncate text-base font-semibold tracking-tight text-foreground">{template.name}</h2>
+                    <p className="mt-1 line-clamp-2 min-h-10 text-sm leading-5 text-muted-foreground">{template.description}</p>
+                    <div className="mt-4 flex items-center justify-between text-xs font-medium">
+                      <span className="text-muted-foreground">Feed + Story</span>
+                      <span className="text-primary transition group-hover:translate-x-0.5 motion-reduce:transform-none">Customise →</span>
                     </div>
                   </div>
                 </Link>
@@ -99,132 +90,4 @@ function EmptyState() {
       </div>
     </div>
   );
-}
-
-// ---------------------------------------------------------------------------
-// Schematic thumbnail — derived from the pack's real layout geometry and
-// semantic colours, not a placeholder image.
-// ---------------------------------------------------------------------------
-
-function LayoutThumb({
-  layout,
-  colours,
-}: {
-  layout: Layout;
-  colours: TemplatePack["semanticColours"];
-}) {
-  const width = 1080;
-  const height = layout.placement === "story" ? 1920 : 1350;
-
-  return (
-    <svg
-      viewBox={`0 0 ${width} ${height}`}
-      preserveAspectRatio="xMidYMid slice"
-      className="aspect-[1080/1350] w-full"
-      role="img"
-      aria-label={`${layout.placement} layout preview`}
-    >
-      {layout.layers.map((layer) => renderLayer(layer, colours))}
-      {layout.safeZones.map((zone, index) => (
-        <rect
-          key={`safe-${index}`}
-          x={zone.x}
-          y={zone.y}
-          width={zone.width}
-          height={zone.height}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="4"
-          strokeDasharray="12 12"
-          opacity="0.35"
-          className="text-slate-400"
-        />
-      ))}
-    </svg>
-  );
-}
-
-function renderLayer(
-  layer: LayoutLayer,
-  colours: TemplatePack["semanticColours"],
-): ReactElement {
-  const fill = (role: string) => colours[role as keyof TemplatePack["semanticColours"]] ?? "#cbd5e1";
-  const g = layer.geometry ?? { x: 0, y: 0, width: 1080, height: 1350 };
-
-  switch (layer.type) {
-    case "plate":
-      return (
-        <rect
-          key={layer.layerId}
-          x={g.x}
-          y={g.y}
-          width={g.width}
-          height={g.height}
-          fill={fill(layer.colourRole)}
-        />
-      );
-    case "image_slot":
-      return (
-        <rect
-          key={layer.layerId}
-          x={g.x}
-          y={g.y}
-          width={g.width}
-          height={g.height}
-          fill="#ffffff"
-          stroke="#94a3b8"
-          strokeWidth="4"
-        />
-      );
-    case "overlay_patch":
-      return (
-        <rect
-          key={layer.layerId}
-          x={g.x}
-          y={g.y}
-          width={g.width}
-          height={g.height}
-          fill={fill(layer.colourRole)}
-          opacity={Math.max(0.05, Math.min(1, layer.opacity))}
-        />
-      );
-    case "text":
-      return (
-        <rect
-          key={layer.layerId}
-          x={g.x}
-          y={g.y}
-          width={g.width}
-          height={g.height}
-          fill={fill(layer.colourRole)}
-          opacity="0.85"
-        />
-      );
-    case "logo":
-      return (
-        <rect
-          key={layer.layerId}
-          x={g.x}
-          y={g.y}
-          width={g.width}
-          height={g.height}
-          fill={colours.primary ?? "#334155"}
-          rx={Math.min(24, g.width / 4)}
-        />
-      );
-    case "vector":
-      return layer.shape === "circle" ? (
-        <circle key={layer.layerId} cx={g.x + g.width / 2} cy={g.y + g.height / 2} r={Math.min(g.width, g.height) / 2} fill={fill(layer.colourRole)} opacity={layer.opacity ?? 1} />
-      ) : (
-        <rect key={layer.layerId} x={g.x} y={g.y} width={g.width} height={g.height} rx={layer.shape === "pill" || layer.shape === "rounded" ? Math.min(24, g.height / 2) : 0} fill={fill(layer.colourRole)} opacity={layer.opacity ?? 1} />
-      );
-    case "icon":
-      return <circle key={layer.layerId} cx={g.x + g.width / 2} cy={g.y + g.height / 2} r={Math.min(g.width, g.height) / 3} fill="none" stroke={fill(layer.colourRole)} strokeWidth={Math.max(2, Math.min(g.width, g.height) / 12)} />;
-  }
-}
-
-function formatDate(value: string): string {
-  const date = new Date(value);
-  if (isNaN(date.getTime())) return value;
-  return date.toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" });
 }

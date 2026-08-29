@@ -8,9 +8,9 @@ import type {
   Layout,
   LayoutLayer,
   Rect,
-  TemplatePack,
-} from "../../../../packages/ad-template-pack-contract/src/types";
-import { PLACEMENT_DIMENSIONS } from "../../../../packages/ad-template-pack-contract/src/types";
+  AdTemplate,
+} from "../../../../packages/ad-template-contract/src/types";
+import { PLACEMENT_DIMENSIONS } from "../../../../packages/ad-template-contract/src/types";
 import { templateAssetProxyUrl } from "@/lib/adstudio/pack-gallery";
 import { cn } from "@/lib/utils";
 
@@ -36,9 +36,9 @@ function ensureLocalFont(font: { file: string }): Promise<void> {
 }
 
 export interface LayeredCanvasProps {
-  packId: string;
+  templateId: string;
   layout: Layout;
-  colours: TemplatePack["semanticColours"];
+  colours: AdTemplate["semanticColours"];
   imageValues?: Record<string, string | null | undefined>;
   textValues?: Record<string, string | null | undefined>;
   cropOverrides?: Record<string, Rect | null | undefined>;
@@ -54,7 +54,7 @@ export interface LayeredCanvasProps {
  * and provides hit-testing without exposing a second editor UI.
  */
 export function LayeredCanvas({
-  packId,
+  templateId,
   layout,
   colours,
   imageValues = {},
@@ -150,7 +150,7 @@ export function LayeredCanvas({
         if (renderVersionRef.current !== version) return;
         const object = await createLayerObject({
           fabric,
-          packId,
+          templateId,
           layer,
           colours,
           imageValues,
@@ -170,7 +170,7 @@ export function LayeredCanvas({
     return () => {
       renderVersionRef.current += 1;
     };
-  }, [colours, cropOverrides, imageValues, layout, packId, ready, selectedLayerId, textValues]);
+  }, [colours, cropOverrides, imageValues, layout, templateId, ready, selectedLayerId, textValues]);
 
   useEffect(() => {
     const canvas = fabricRef.current;
@@ -196,7 +196,7 @@ export function LayeredCanvas({
 
 async function createLayerObject({
   fabric,
-  packId,
+  templateId,
   layer,
   colours,
   imageValues,
@@ -204,9 +204,9 @@ async function createLayerObject({
   cropOverrides,
 }: {
   fabric: typeof import("fabric");
-  packId: string;
+  templateId: string;
   layer: LayoutLayer;
-  colours: TemplatePack["semanticColours"];
+  colours: AdTemplate["semanticColours"];
   imageValues: Record<string, string | null | undefined>;
   textValues: Record<string, string | null | undefined>;
   cropOverrides: Record<string, Rect | null | undefined>;
@@ -229,10 +229,10 @@ async function createLayerObject({
     moveCursor: "pointer",
     objectCaching: true,
   } as const;
-  const fill = (role: keyof TemplatePack["semanticColours"]) => colours[role] ?? "#d3d7df";
+  const fill = (role: keyof AdTemplate["semanticColours"]) => colours[role] ?? "#d3d7df";
 
   if (layer.type === "plate") {
-    const assetUrl = layer.assetKey ? templateAssetProxyUrl(packId, layer.assetKey) : null;
+    const assetUrl = layer.assetKey ? templateAssetProxyUrl(templateId, layer.assetKey) : null;
     if (assetUrl) {
       try {
         const image = await fabric.FabricImage.fromURL(assetUrl);

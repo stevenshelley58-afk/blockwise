@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { TemplatePack } from "../../../packages/ad-template-pack-contract/src/types";
+import type { AdTemplate } from "../../../packages/ad-template-contract/src/types";
 import type { InstantForm } from "../adstudio/instant-form-types";
 import { deterministicUuid } from "./id.ts";
 import {
@@ -10,6 +10,7 @@ import {
   type MetaPublishPlan,
   type MetaReconciledObjectStatus,
 } from "../providers/meta-execution.ts";
+import { validateMetaOfferFulfilment } from "../providers/meta-execution.ts";
 import { buildMetaPlanMutation, type BuiltMetaPlanMutation } from "../providers/meta-mutations.ts";
 import { executeMetaMutationById } from "../providers/meta-mutation-worker.ts";
 import type { createSupabaseServiceClient } from "../supabase/service.ts";
@@ -34,7 +35,7 @@ import type {
 // Replaces "Submit and go live" with "Paused on Meta" + separate activation.
 // ---------------------------------------------------------------------------
 
-export interface PublishInputV2 {
+export interface PublishInput {
   adId: string;
   workspaceId: string;
   connectionId: string;
@@ -46,7 +47,7 @@ export interface PublishInputV2 {
 export interface PublishLoadResult {
   ad: {
     id: string;
-    templatePackId: string;
+    templateId: string;
     colourMode: "template" | "brand_pack";
     metaPrimaryText: string;
     metaHeadline: string;
@@ -62,7 +63,7 @@ export interface PublishLoadResult {
     storyPngHash: string;
     storyPngPath: string;
   };
-  pack: TemplatePack;
+  pack: AdTemplate;
   form: InstantForm | null;
   formDraftId: string | null;
   formRevision: number | null;
@@ -73,8 +74,8 @@ export type PublishRequirements = {
   requiredCtaTypes: string[];
 };
 
-/** Read only the optional v2 publish contract; the canonical pack schema stays unchanged. */
-export function readPublishRequirements(pack: unknown): PublishRequirements {
+/** Read only the template publish contract; the direct template metadata is read when present. */
+export function readTemplatePublishRequirements(pack: unknown): PublishRequirements {
   if (!pack || typeof pack !== "object") return { destinationMode: "instant_form", requiredCtaTypes: [] };
   const candidate = (pack as Record<string, unknown>).publishRequirements;
   const metadata = (pack as Record<string, unknown>).metadata;
@@ -88,7 +89,7 @@ export function readPublishRequirements(pack: unknown): PublishRequirements {
   const nestedKind = nestedDestination?.kind;
   const destinationMode = record.destinationMode === "website" || record.destinationMode === "instant_form"
     ? record.destinationMode
-    : nestedKind === "url" || nestedKind === "article" ? "website"
+    : nestedKind === "website" || nestedKind === "url" || nestedKind === "article" ? "website"
       : nestedKind === "instant_form" ? "instant_form" : "instant_form";
   const requiredCtaTypes = Array.isArray(record.requiredCtaTypes)
     ? record.requiredCtaTypes.filter((value): value is string => typeof value === "string" && value.trim().length > 0)
@@ -103,7 +104,7 @@ function isHttpsUrl(value: unknown): value is string {
 
 /**
  * Load the authoritative server state for publishing.
- * Reads from ad_customer_ads, ad_revisions, ad_template_packs, ad_instant_form_drafts.
+ * Reads from ad_customer_ads, ad_revisions, ad_templates, ad_instant_form_drafts.
  * Rejects if the ad has unsaved changes (no active revision).
  */
 export async function loadPublishState(
@@ -114,7 +115,7 @@ export async function loadPublishState(
   // 1. Load ad
   const { data: ad, error: adError } = await supabase
     .from("ad_customer_ads")
-    .select("id, template_pack_id, colour_mode, meta_primary_text, meta_headline, meta_description, meta_cta, active_revision_id")
+    .select("id, template_id, colour_mode, meta_primary_text, meta_headline, meta_description, meta_cta, active_revision_id")
     .eq("id", adId)
     .eq("workspace_id", workspaceId)
     .single();
@@ -131,15 +132,15 @@ export async function loadPublishState(
 
   if (revError || !revision) throw new PublishError("revision_not_found", "Active revision not found");
 
-  // 3. Load template pack
+  // 3. Load template
   const { data: packRow, error: packError } = await supabase
-    .from("ad_template_packs")
-    .select("pack_json")
-    .eq("pack_id", ad.template_pack_id)
+    .from("ad_templates")
+    .select("template_json")
+    .eq("template_id", ad.template_id)
     .single();
 
-  if (packError || !packRow) throw new PublishError("pack_not_found", "Template pack not found");
-  const pack = packRow.pack_json as unknown as TemplatePack;
+  if (packError || !packRow) throw new PublishError("template_not_found", "Template not found");
+  const pack = packRow.template_json as unknown as AdTemplate;
 
   // 4. Load latest Instant Form draft
   const { data: formRow } = await supabase
@@ -155,7 +156,7 @@ export async function loadPublishState(
   return {
     ad: {
       id: ad.id,
-      templatePackId: ad.template_pack_id,
+      templateId: ad.template_id,
       colourMode: ad.colour_mode,
       metaPrimaryText: ad.meta_primary_text,
       metaHeadline: ad.meta_headline,
@@ -187,7 +188,8 @@ export function validatePublishState(
   options: { controls?: MetaPublishControls; setup?: Partial<MetaConnectionSetup> } = {},
 ): string[] {
   const issues: string[] = [];
-  const requirements = readPublishRequirements(state.pack);
+  if (options.controls?.fulfilment) issues.push(...validateMetaOfferFulfilment(options.controls.fulfilment));
+  const requirements = readTemplatePublishRequirements(state.pack);
   const mode = options.controls?.destinationMode ?? requirements.destinationMode;
   const destinationUrl = options.controls?.destinationUrl?.trim();
 
@@ -226,7 +228,7 @@ export function validatePublishState(
  */
 export async function freezePublicationSnapshot(
   supabase: SupabaseClient,
-  input: PublishInputV2,
+  input: PublishInput,
   state: PublishLoadResult,
 ): Promise<{ snapshotId: string }> {
   // Check if a snapshot already exists for this revision
@@ -247,7 +249,7 @@ export async function freezePublicationSnapshot(
     feedPngHash: state.revision.feedPngHash,
     storyPngHash: state.revision.storyPngHash,
     templateId: state.pack.templateId,
-    templateVersion: state.pack.version,
+    templateVersion: 1,
     metaPrimaryText: state.ad.metaPrimaryText,
     metaHeadline: state.ad.metaHeadline,
     metaDescription: state.ad.metaDescription,
@@ -342,41 +344,61 @@ export interface PausedPublishPlanInput {
 
 export function buildPausedMetaPublishPlan(input: PausedPublishPlanInput): MetaPublishPlan {
   const { state, setup } = input;
-  const label = state.pack.classification?.label?.trim() || state.pack.templateId || "Blockwise ad";
+  const label = state.pack.metadata?.title?.trim?.() || state.pack.templateId || "Blockwise ad";
   const country = controlsCountry(input.controls) || "AU";
   const controls = normalizePausedControls(input.controls ?? {}, country);
   const now = new Date().toISOString();
-  const requirements = readPublishRequirements(state.pack);
+  const requirements = readTemplatePublishRequirements(state.pack);
   const mode = input.controls?.destinationMode ?? requirements.destinationMode;
   const issues = validatePublishState(state, { controls: { ...(input.controls ?? {}), destinationMode: mode }, setup });
   if (issues.length > 0) throw new PublishError("publish_dependencies_missing", issues.join("; "));
   const form = state.form;
   if (mode === "instant_form" && !form) throw new PublishError("publish_dependencies_missing", "No pinned Instant Form — generate and save one before publishing");
 
+  const target = controls.target;
+  if (target?.mode === "existing_campaign_new_adset" && !target.campaignId.trim()) {
+    throw new PublishError("publish_dependencies_missing", "Select an existing Meta campaign.");
+  }
+  if (target?.mode === "existing_adset" && (!target.campaignId.trim() || target.adSetIds.length === 0)) {
+    throw new PublishError("publish_dependencies_missing", "Select an existing Meta campaign and at least one ad set.");
+  }
+  const existingCampaignId = target && target.mode !== "new_campaign_new_adset" ? target.campaignId.trim() : null;
   const campaign: MetaPublishCampaignPlan = {
     localId: "campaign_main",
-    name: `${label} — ${state.revision.revisionNumber}`,
-    objective: "OUTCOME_LEADS",
+    name: label + " - " + state.revision.revisionNumber,
+    objective: (existingCampaignId ? input.controls?.parentState?.campaign?.objective : input.controls?.newCampaign?.objective) ?? "OUTCOME_LEADS",
     status: "PAUSED",
-    specialAdCategories: ["HOUSING"],
-    specialAdCategoryCountries: [country],
-    budgetMode: "campaign",
+    specialAdCategories: ((existingCampaignId ? input.controls?.parentState?.campaign?.specialAdCategories : input.controls?.newCampaign?.specialAdCategories) ?? ["HOUSING"]),
+    specialAdCategoryCountries: (existingCampaignId ? input.controls?.parentState?.campaign?.specialAdCategoryCountries : input.controls?.newCampaign?.specialAdCategoryCountries) ?? [country],
+    budgetMode: (existingCampaignId ? input.controls?.parentState?.campaign?.budgetMode : input.controls?.newCampaign?.budgetMode) ?? "campaign",
   };
 
-  const adSets: MetaPublishAdSetPlan[] = [
-    {
-      localId: "adset_primary",
-      name: `${label} homeowners`,
-      campaignLocalId: "campaign_main",
-      billingEvent: "IMPRESSIONS",
-      optimizationGoal: "LEAD_GENERATION",
-      status: "PAUSED",
-      dailyBudgetMinorUnits: controls.dailyBudgetMinorUnits ?? 2000,
-      targeting: buildPausedTargeting(controls),
-      startTime: controls.schedule?.startTime ?? null,
-      endTime: controls.schedule?.endTime ?? null,
-    },
-  ];
+  const adSets: MetaPublishAdSetPlan[] = target?.mode === "existing_adset"
+    ? target.adSetIds.map((existingId, index) => ({
+        localId: "adset_existing_" + (index + 1),
+        existingId,
+        name: label + " existing ad set " + (index + 1),
+        campaignLocalId: "campaign_main",
+        billingEvent: "IMPRESSIONS",
+        optimizationGoal: (controls.parentState?.adSets?.find((candidate) => candidate.id === existingId)?.optimizationGoal ?? "LEAD_GENERATION") as "LEAD_GENERATION",
+        status: "PAUSED" as const,
+        dailyBudgetMinorUnits: controls.parentState?.adSets?.find((candidate) => candidate.id === existingId)?.dailyBudgetMinorUnits ?? 0,
+        targeting: controls.parentState?.adSets?.find((candidate) => candidate.id === existingId)?.targeting ?? {},
+        startTime: controls.schedule?.startTime ?? null,
+        endTime: controls.schedule?.endTime ?? null,
+      }))
+    : [{
+        localId: "adset_primary",
+        name: label + " homeowners",
+        campaignLocalId: "campaign_main",
+        billingEvent: "IMPRESSIONS",
+        optimizationGoal: "LEAD_GENERATION",
+        status: "PAUSED" as const,
+        dailyBudgetMinorUnits: controls.dailyBudgetMinorUnits ?? 2000,
+        targeting: buildPausedTargeting(controls),
+        startTime: controls.schedule?.startTime ?? null,
+        endTime: controls.schedule?.endTime ?? null,
+      }];
 
   const leadForms: MetaPublishLeadFormPlan[] = mode === "instant_form" ? [{
       localId: "form_primary",
@@ -387,31 +409,22 @@ export function buildPausedMetaPublishPlan(input: PausedPublishPlanInput): MetaP
       thankYouTitle: form!.thankYou.title,
       thankYouBody: form!.thankYou.body,
       thankYouWebsiteUrl: form!.thankYou.actionUrl ?? controls.destinationUrl!,
+      ...(controls.fulfilment ? { fulfilment: controls.fulfilment } : {}),
     }] : [];
 
-  const creatives: MetaPublishCreativePlan[] = [
-    buildPausedCreative(state, setup, label, "feed", state.revision.feedPngPath, "4:5", mode),
-    buildPausedCreative(state, setup, label, "story", state.revision.storyPngPath, "9:16", mode),
-  ];
-
-  const ads: MetaPublishAdPlan[] = [
-    {
-      localId: "ad_feed",
-      name: `${label} Feed ad`,
-      adSetLocalId: "adset_primary",
-      creativeLocalId: "creative_feed",
-      status: "PAUSED",
-      variantTag: null,
-    },
-    {
-      localId: "ad_story",
-      name: `${label} Story ad`,
-      adSetLocalId: "adset_primary",
-      creativeLocalId: "creative_story",
-      status: "PAUSED",
-      variantTag: null,
-    },
-  ];
+  const selectedVariants = input.controls?.variantIds?.length ? [...new Set(input.controls.variantIds)] : ["feed", "story"];
+  if (selectedVariants.some((variant) => variant !== "feed" && variant !== "story")) throw new PublishError("invalid_variants", "Select Feed and/or Story variants only.");
+  const creatives: MetaPublishCreativePlan[] = selectedVariants.map((variant) => variant === "feed"
+    ? buildPausedCreative(state, setup, label, "feed", state.revision.feedPngPath, "4:5", mode)
+    : buildPausedCreative(state, setup, label, "story", state.revision.storyPngPath, "9:16", mode));
+  const ads: MetaPublishAdPlan[] = adSets.flatMap((adSet, adSetIndex) => selectedVariants.map((variant) => ({
+    localId: "ad_" + variant + "_" + (adSetIndex + 1),
+    name: label + " " + (variant === "feed" ? "Feed" : "Story") + " ad " + (adSetIndex + 1),
+    adSetLocalId: adSet.localId,
+    creativeLocalId: "creative_" + variant,
+    status: "PAUSED" as const,
+    variantTag: { variantId: variant, angle: variant, template: null },
+  })));
 
   const tracking: MetaPublishTrackingPlan = {
     utmSource: "meta",
@@ -445,8 +458,10 @@ export function buildPausedMetaPublishPlan(input: PausedPublishPlanInput): MetaP
     requestLog: [],
     responseLog: [],
     reconciledObjects: {
+      ...(existingCampaignId ? { campaignId: existingCampaignId } : {}),
       leadFormIds: {},
-      adSetIds: {},
+      adSetIds: Object.fromEntries(adSets.filter((adSet) => adSet.existingId)
+        .map((adSet) => [adSet.localId, adSet.existingId as string])),
       creativeIds: {},
       adIds: {},
     },
@@ -527,6 +542,8 @@ function buildPausedTargeting(controls: MetaPublishControls): Record<string, unk
 
 function normalizePausedControls(controls: MetaPublishControls, country: string): MetaPublishControls {
   return {
+    ...(controls.target ? { target: controls.target } : {}),
+    ...(controls.variantIds ? { variantIds: [...new Set(controls.variantIds)] } : {}),
     dailyBudgetMinorUnits: controls.dailyBudgetMinorUnits && controls.dailyBudgetMinorUnits > 0
       ? Math.round(controls.dailyBudgetMinorUnits)
       : 2000,
@@ -672,7 +689,7 @@ export function activationTargets(plan: MetaPublishPlan): ActivationTargets | nu
   if (!campaignId) return null;
   return {
     campaignId,
-    adSetIds: Object.values(plan.reconciledObjects.adSetIds).filter((id): id is string => Boolean(id)),
+    adSetIds: plan.adSets.filter((adSet) => !adSet.existingId).map((adSet) => plan.reconciledObjects.adSetIds[adSet.localId]).filter((id): id is string => Boolean(id)),
     adIds: Object.values(plan.reconciledObjects.adIds).filter((id): id is string => Boolean(id)),
   };
 }
@@ -798,7 +815,7 @@ export function markPlanObjectsActive(plan: MetaPublishPlan): MetaPublishPlan {
   }
 
   objectStatuses.adSets = Object.fromEntries(
-    Object.entries(plan.reconciledObjects.adSetIds).map(([localId, id]) => [
+    Object.entries(plan.reconciledObjects.adSetIds).filter(([localId]) => !plan.adSets.find((adSet) => adSet.localId === localId)?.existingId).map(([localId, id]) => [
       localId,
       { id, configuredStatus: "ACTIVE", effectiveStatus: "ACTIVE" },
     ]),

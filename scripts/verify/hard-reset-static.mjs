@@ -70,7 +70,6 @@ function checkLegacyCloneIdentifiers() {
     // procedural fixtures), a hard dependency of the canonical gate. The
     // pre-rebuild "samples" residue was removed in Phase 1; the path was
     // re-occupied deliberately by the fixture corpus and is referenced by
-    // pinned sha256 in scripts/adstudio/v2/subject-invariance.mjs.
     "src/lib/adstudio/live-workflow.ts",
     "src/lib/adstudio/offers.ts",
     "src/lib/adstudio/platform-rules.ts",

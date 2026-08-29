@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useCallback, useRef } from "react";
-import type { TemplatePack, Layout, LayoutLayer, Placement, Rect, ColourRole } from "../../../../packages/ad-template-pack-contract/src/types";
-import type { AdDocumentParsed } from "../../../../packages/ad-template-pack-contract/src/schema";
+import type { AdTemplate, Layout, LayoutLayer, Placement, Rect, ColourRole } from "../../../../packages/ad-template-contract/src/types";
+import type { AdDocumentParsed } from "../../../../packages/ad-template-contract/src/schema";
 
 // ---------------------------------------------------------------------------
 // Editor state — Phase 6 foundation
@@ -51,7 +51,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
 
-export function readEditorDefaults(pack: TemplatePack): PackEditorDefaults {
+export function readEditorDefaults(pack: AdTemplate): PackEditorDefaults {
   const raw = pack as unknown as Record<string, unknown>;
   const metadata = isRecord(raw.metadata) ? raw.metadata : {};
   const metaCopyDefaults = isRecord(metadata.metaCopyDefaults) ? metadata.metaCopyDefaults : {};
@@ -65,7 +65,7 @@ export function readEditorDefaults(pack: TemplatePack): PackEditorDefaults {
     }, aiWritingGuidance: guidance }
     : isRecord(raw.editorDefaults)
       ? raw.editorDefaults
-      : isRecord(raw.v2) ? raw.v2 : {};
+      : isRecord(raw.metadata) ? raw.metadata : {};
   const rawInputs = Array.isArray(defaults.overlayTextInputs) ? defaults.overlayTextInputs : [];
   const textInputs = rawInputs.flatMap((value): EditorTextInput[] => {
     if (!isRecord(value) || typeof value.key !== "string") return [];
@@ -91,14 +91,14 @@ export function readEditorDefaults(pack: TemplatePack): PackEditorDefaults {
   return { textInputs, textValues, metaCopy };
 }
 
-export function editorTextInputs(pack: TemplatePack): EditorTextInput[] {
+export function editorTextInputs(pack: AdTemplate): EditorTextInput[] {
   const defaults = readEditorDefaults(pack);
   const existing = new Set(pack.textInputs.map(input => input.key));
   return [...pack.textInputs, ...defaults.textInputs.filter(input => !existing.has(input.key))];
 }
 
 export interface EditorState {
-  pack: TemplatePack;
+  pack: AdTemplate;
   activePlacement: Placement;
   imageValues: EditorImageValue[];
   textValues: Record<string, string>;
@@ -120,7 +120,7 @@ export function saveCoversEditVersion(currentVersion: number | undefined, savedV
   return (currentVersion ?? 0) === savedVersion;
 }
 
-const initialState = (pack: TemplatePack): EditorState => {
+const initialState = (pack: AdTemplate): EditorState => {
   const defaults = readEditorDefaults(pack);
   return {
   pack,
@@ -145,7 +145,7 @@ const initialState = (pack: TemplatePack): EditorState => {
   };
 };
 
-export function useEditorState(pack: TemplatePack, initialDocument?: AdDocumentParsed, initialRevision?: number) {
+export function useEditorState(pack: AdTemplate, initialDocument?: AdDocumentParsed, initialRevision?: number) {
   const [state, setState] = useState<EditorState>(() => {
     const base = initialState(pack);
     if (!initialDocument) return base;
@@ -382,44 +382,25 @@ export function resolveColourMap(
 }
 
 // ---------------------------------------------------------------------------
-// AdDocument builder — client-safe (Web Crypto, no node:crypto).
-// Matches the server's canonical-JSON hashing so document_hash is meaningful.
-// ---------------------------------------------------------------------------
 
-function canonicalJson(value: unknown): string {
-  return JSON.stringify(value, (_key: string, v: unknown) => {
-    if (v !== null && typeof v === "object" && !Array.isArray(v)) {
-      const sorted: Record<string, unknown> = {};
-      for (const k of Object.keys(v as Record<string, unknown>).sort()) {
-        sorted[k] = (v as Record<string, unknown>)[k];
-      }
-      return sorted;
-    }
-    return v;
-  });
-}
-
-async function sha256HexClient(value: unknown): Promise<string> {
-  const bytes = new TextEncoder().encode(canonicalJson(value));
-  const digest = await crypto.subtle.digest("SHA-256", bytes);
-  return [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, "0")).join("");
-}
-
-/** Build the AdDocument v1 described by the editor's current state. */
+/** Build the saved customer overrides described by the editor's current state. */
 export async function buildAdDocument(state: EditorState): Promise<AdDocumentParsed> {
   const pack = state.pack;
+  const placeholders = new Map(editorTextInputs(pack).map(input => [input.key, input.placeholder]));
   const doc = {
-    schema: "blockwise.ad-document/v1" as const,
+    schema: "blockwise.ad-document" as const,
     templateId: pack.templateId,
-    templateVersion: pack.version,
-    templateHash: pack.manifestSha256,
-    rendererVersion: pack.rendererVersion,
     sharedImageValues: Object.fromEntries(
       state.imageValues
         .filter(iv => iv.dataUrl !== null && !/^data:image\//i.test(iv.dataUrl))
         .map(iv => [iv.inputKey, iv.dataUrl as string]),
     ),
-    sharedTextValues: { ...state.textValues },
+    sharedTextValues: Object.fromEntries(
+      Object.entries(state.textValues).filter(([key, value]) => {
+        const trimmed = value.trim();
+        return trimmed.length > 0 && trimmed !== (placeholders.get(key) ?? "").trim();
+      }),
+    ),
     // Per-placement crop overrides, keyed by input key, normalized [0,1]
     // over the source image. Feed and Story stay independent; the renderer
     // falls back to the slot's defaultCrop when an override is absent.
@@ -442,8 +423,16 @@ export async function buildAdDocument(state: EditorState): Promise<AdDocumentPar
     metaDescription: state.metaCopy.description,
     metaCta: state.metaCopy.cta,
     revision: Math.max(1, (state.lastSavedRevision ?? 0) + 1),
-    documentHash: "0".repeat(64),
-    lastRenderedHash: null,
   };
-  return { ...doc, documentHash: await sha256HexClient(doc) };
+  return doc;
+}
+
+/** Merge template placeholder copy for preview without persisting it as a customer edit. */
+export function previewTextValues(
+  template: AdTemplate,
+  overrides: Record<string, string>,
+): Record<string, string> {
+  return Object.fromEntries(
+    editorTextInputs(template).map(input => [input.key, overrides[input.key]?.trim() ? overrides[input.key] : input.placeholder]),
+  );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import type { Rect, ImageInput } from "../../../../packages/ad-template-pack-contract/src/types";
+import type { Rect, ImageInput } from "../../../../packages/ad-template-contract/src/types";
 
 // ---------------------------------------------------------------------------
 // Image Crop Dialog — Phase 6

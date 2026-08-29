@@ -29,10 +29,9 @@ describe("RLS and cross-workspace denial", () => {
     // In production: RLS policy enforces workspace_id = auth.uid() claim
   });
 
-  it("template packs are global (not workspace-scoped)", () => {
-    // ad_template_packs table has no workspace_id column
-    // All workspaces can read published packs
-    assert.ok(true, "Template packs are workspace-independent by design");
+  it("direct templates are catalog-scoped (not workspace-scoped)", () => {
+    // Direct templates are shared catalog records; customer ads remain scoped.
+    assert.ok(true, "Direct templates are workspace-independent by design");
   });
 
   it("customer ads are workspace-scoped", () => {
@@ -74,37 +73,12 @@ describe("Atomic save guarantees", () => {
   });
 
   it("unchanged save returns existing revision", () => {
-    // documentHash matches current → no new revision created
-    // Returns existing revision ID + PNG hashes
+    // saved document matches current → no new revision created
+    // Returns the existing revision ID and render outputs
     assert.ok(true, "Unchanged saves are idempotent");
   });
 });
 
-describe("Import idempotency", () => {
-  it("same packSha256 returns existing receipt", () => {
-    // Second import of same pack → 200 with existing receipt, status "replayed"
-    assert.ok(true, "Import is idempotent by packSha256");
-  });
-
-  it("same packId + different hash returns 409", () => {
-    // Conflict: same template identity, different content
-    // Equivalent to trying to overwrite an immutable pack
-    assert.ok(true, "packId conflict returns 409");
-  });
-
-  it("nonce replay is rejected", () => {
-    // Each nonce is used once. Second use → 409.
-    assert.ok(true, "Nonce replay is rejected");
-  });
-
-  it("expired timestamp is rejected", () => {
-    // issuedAt outside ±5 minute window → 400
-    const now = Date.now();
-    const tenMinutesAgo = new Date(now - 10 * 60 * 1000).toISOString();
-    const ts = new Date(tenMinutesAgo).getTime();
-    assert.ok(Math.abs(now - ts) > 5 * 60 * 1000);
-  });
-});
 
 describe("Crop math", () => {
   it("normalized crop is clamped to [0,1]", () => {

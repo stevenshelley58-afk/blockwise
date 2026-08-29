@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import test from "node:test";
 
@@ -9,7 +8,7 @@ import {
 } from "../../src/lib/adstudio/customer-image-storage.ts";
 import { buildCustomerImageRef, imageSha256 } from "../../src/lib/adstudio/customer-image-ref.ts";
 
-const png = readFileSync("tests/fixtures/adstudio-v2/public/slots/photo-portrait.png");
+const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=", "base64");
 const workspaceId = "workspace-test";
 const adId = "ad-test";
 const dataUrl = `data:image/png;base64,${png.toString("base64")}`;

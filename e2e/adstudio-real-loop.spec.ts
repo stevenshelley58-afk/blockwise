@@ -3,7 +3,7 @@ import { test, expect, type Page } from "@playwright/test";
 
 const storageStatePath = process.env.ADSTUDIO_E2E_STORAGE_STATE ?? "e2e/.auth/adstudio-test.storage-state.json";
 const workspaceId = process.env.ADSTUDIO_E2E_WORKSPACE_ID;
-const packId = process.env.ADSTUDIO_E2E_PACK_ID;
+const templateId = process.env.ADSTUDIO_E2E_TEMPLATE_ID;
 const baseUrl = process.env.PLAYWRIGHT_BASE_URL;
 const loginBaseUrl = process.env.ADSTUDIO_E2E_LOGIN_URL || baseUrl;
 const email = process.env.ADSTUDIO_E2E_EMAIL;
@@ -11,8 +11,8 @@ const password = process.env.ADSTUDIO_E2E_PASSWORD;
 // This is deliberately opt-in. Even when a reviewer wants to exercise the
 // final publish POST, it must be a provider-write-disabled dry run.
 const allowDryRunPublish = process.env.ADSTUDIO_E2E_PUBLISH_TEST_MODE === "dry-run";
-const initialImagePath = "tests/fixtures/adstudio-v2/public/slots/photo-landscape.png";
-const replacementImagePath = "tests/fixtures/adstudio-v2/public/slots/photo-portrait.png";
+const initialImagePath = "public/ads/ad-coastline.jpg";
+const replacementImagePath = "public/ads/ad-hillview.jpg";
 
 // This file creates and updates customer data. Override Playwright's global
 // fullyParallel setting so login/create/save cannot race another test using
@@ -44,16 +44,16 @@ const hasAuthState = existsSync(storageStatePath) && (() => {
   } catch { return false; }
 })();
 const hasWorkspace = Boolean(workspaceId?.trim());
-const hasPack = Boolean(packId?.trim());
-const canRun = Boolean(baseUrlIsAllowed && hasWorkspace && hasPack && hasAuthState);
+const hasTemplate = Boolean(templateId?.trim());
+const canRun = Boolean(baseUrlIsAllowed && hasWorkspace && hasTemplate && hasAuthState);
 const canLogin = Boolean(baseUrlIsAllowed && loginBaseUrlIsAllowed && email?.trim() && password);
-const canLoginAndCreate = Boolean(canLogin && hasWorkspace && hasPack);
+const canLoginAndCreate = Boolean(canLogin && hasWorkspace && hasTemplate);
 const missingPreconditions = [
   !baseUrl && "PLAYWRIGHT_BASE_URL",
   baseUrl && !baseUrlIsAllowed && "PLAYWRIGHT_BASE_URL (must be https://blockwise.sale or this project's Vercel deployment)",
   loginBaseUrl && !loginBaseUrlIsAllowed && "ADSTUDIO_E2E_LOGIN_URL (must be https://blockwise.sale or this project's Vercel deployment)",
   !hasWorkspace && "ADSTUDIO_E2E_WORKSPACE_ID",
-  !hasPack && "ADSTUDIO_E2E_PACK_ID (must identify an imported usable pack)",
+  !hasTemplate && "ADSTUDIO_E2E_TEMPLATE_ID (must identify an available template)",
   !hasAuthState && `authenticated storage state at ${storageStatePath}`,
 ].filter(Boolean);
 if ((!canRun || !canLogin) && process.env.CI) {
@@ -63,7 +63,7 @@ if ((!canRun || !canLogin) && process.env.CI) {
 }
 
 test.describe("Ad Studio login", () => {
-  test.skip(!canLoginAndCreate, "Set Vercel PLAYWRIGHT_BASE_URL, ADSTUDIO_E2E_EMAIL, ADSTUDIO_E2E_PASSWORD, ADSTUDIO_E2E_WORKSPACE_ID and ADSTUDIO_E2E_PACK_ID.");
+  test.skip(!canLoginAndCreate, "Set PLAYWRIGHT_BASE_URL, ADSTUDIO_E2E_EMAIL, ADSTUDIO_E2E_PASSWORD, ADSTUDIO_E2E_WORKSPACE_ID and ADSTUDIO_E2E_TEMPLATE_ID.");
   test.use({ storageState: { cookies: [], origins: [] } });
   test("logs in and creates an ad in one authenticated flow", async ({ page }) => {
     // Production may enforce Turnstile. The login helper can authenticate on
@@ -85,7 +85,7 @@ test.describe("Ad Studio login", () => {
 });
 
 test.describe("Ad Studio authenticated real loop", () => {
-  test.skip(!canRun, "Set Vercel PLAYWRIGHT_BASE_URL, ADSTUDIO_E2E_WORKSPACE_ID, ADSTUDIO_E2E_PACK_ID and authenticated storage state.");
+  test.skip(!canRun, "Set PLAYWRIGHT_BASE_URL, ADSTUDIO_E2E_WORKSPACE_ID, ADSTUDIO_E2E_TEMPLATE_ID and authenticated storage state.");
   test.use({ storageState: storageStatePath });
   test.setTimeout(180_000);
 
@@ -95,10 +95,10 @@ test.describe("Ad Studio authenticated real loop", () => {
       await page.addInitScript(() => localStorage.setItem("bw-consent", "essential"));
       await page.goto(`/ad-studio?workspaceId=${encodeURIComponent(workspaceId!)}`);
       await expect(page.getByRole("heading", { name: "Ad Studio" })).toBeVisible();
-      const approvedPackHref = `/ad-studio/packs/${encodeURIComponent(packId!)}`;
-      const approvedPack = page.locator(`a[href="${approvedPackHref}"]`);
-      await expect(approvedPack, `ADSTUDIO_E2E_PACK_ID=${packId} is not visible in the gallery at ${viewport.width}x${viewport.height}`).toBeVisible();
-      await expect(approvedPack).toHaveAttribute("href", approvedPackHref);
+      const templateHref = `/ad-studio/templates/${encodeURIComponent(templateId!)}`;
+      const templateCard = page.locator(`a[href="${templateHref}"]`);
+      await expect(templateCard, `ADSTUDIO_E2E_TEMPLATE_ID=${templateId} is not visible in the gallery at ${viewport.width}x${viewport.height}`).toBeVisible();
+      await expect(templateCard).toHaveAttribute("href", templateHref);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
     });
   }
@@ -113,8 +113,8 @@ async function runEditorFlow(page: Page) {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.addInitScript(() => localStorage.setItem("bw-consent", "essential"));
   await page.goto(`/ad-studio?workspaceId=${encodeURIComponent(workspaceId!)}`);
-  const template = page.locator(`a[href="/ad-studio/packs/${encodeURIComponent(packId!)}"]`);
-  await expect(template, `ADSTUDIO_E2E_PACK_ID=${packId} is not present in the usable pack gallery`).toHaveCount(1);
+  const template = page.locator(`a[href="/ad-studio/templates/${encodeURIComponent(templateId!)}"]`);
+  await expect(template, `ADSTUDIO_E2E_TEMPLATE_ID=${templateId} is not present in the template gallery`).toHaveCount(1);
   await expect(template).toBeVisible();
   await template.click();
   const editor = page.getByRole("region", { name: "Ad Studio editor" });
@@ -201,9 +201,9 @@ async function runEditorFlow(page: Page) {
   // Review freezes the last saved revision and must render both authenticated
   // media responses. It is safe to inspect this page without publishing.
   await page.getByRole("button", { name: "Review & publish", exact: true }).click();
-  await expect(page).toHaveURL(/\/ad-studio\/packs\/[^/]+\/publish(?:\?|$)/);
-  const frozenFeed = page.getByRole("img", { name: "Frozen Feed ad creative" });
-  const frozenStory = page.getByRole("img", { name: "Frozen Story ad creative" });
+  await expect(page).toHaveURL(/\/ad-studio\/templates\/[^/]+\/publish(?:\?|$)/);
+  const frozenFeed = page.getByRole("img", { name: "Saved Feed ad" });
+  const frozenStory = page.getByRole("img", { name: "Saved Story ad" });
   await expect(frozenFeed).toBeVisible();
   await expect(frozenStory).toBeVisible();
   await expect.poll(() => frozenFeed.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
@@ -220,7 +220,7 @@ async function runEditorFlow(page: Page) {
     expect(exported.contentType).toMatch(/^image\/png(?:;|$)/i);
     expect(exported.byteLength).toBeGreaterThan(100);
   }
-  await expect(page.getByText(/Dry run.*nothing will be created/i)).toBeVisible();
+  await expect(page.getByText(/Preview only.*nothing will be created/i)).toBeVisible();
 
   const freezeAndCreate = page.getByRole("button", { name: "Freeze & Create PAUSED", exact: true });
   await expect(freezeAndCreate).toBeVisible();
@@ -232,7 +232,8 @@ async function runEditorFlow(page: Page) {
     // Never let the opt-in flag turn a writes-enabled deployment into a Meta
     // mutation. The server-rendered dry-run notice is the preflight guard;
     // the response assertion below is a second defense after the request.
-    await expect(page.getByText(/Dry run mode is on.*nothing will be created/i)).toBeVisible();
+    await page.getByText("What happens next", { exact: true }).click();
+    await expect(page.getByText(/Preview only is on.*nothing will be created/i)).toBeVisible();
     const publishResponse = page.waitForResponse(response => response.url().includes("/api/adstudio/ads/") && response.url().includes("/publish?") && response.request().method() === "POST");
     await freezeAndCreate.click();
     const response = await publishResponse;
@@ -243,7 +244,7 @@ async function runEditorFlow(page: Page) {
     await expect(page.getByRole("status").filter({ hasText: /Dry run/ })).toBeVisible();
   }
 
-  await page.goto(`/ad-studio/packs/${encodeURIComponent(packId!)}`);
+  await page.goto(`/ad-studio/templates/${encodeURIComponent(templateId!)}`);
   for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 }, { width: 320, height: 844 }]) {
     await page.setViewportSize(viewport);
     await expect(page.getByRole("region", { name: "Ad Studio editor" })).toBeVisible();

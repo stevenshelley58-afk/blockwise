@@ -86,9 +86,25 @@ test("OSS product compose is isolated and has no managed deployment endpoint", a
   assert.match(envExample, /^OPENAI_API_KEY=$/m);
   assert.match(envExample, /^META_APP_ID=$/m);
   assert.match(envExample, /^META_APP_SECRET=$/m);
+  assert.match(envExample, /^BLOCKWISE_DB_VOLUME_NAME=blockwise-product-db-data$/m);
+  assert.match(envExample, /^BLOCKWISE_STORAGE_VOLUME_NAME=blockwise-product-storage-data$/m);
+  assert.ok(compose.includes("name: " + String.fromCharCode(36) + "{BLOCKWISE_DB_VOLUME_NAME:-blockwise-product-db-data}"));
+  assert.ok(compose.includes("name: " + String.fromCharCode(36) + "{BLOCKWISE_STORAGE_VOLUME_NAME:-blockwise-product-storage-data}"));
 
   const dockerfile = await read("infra/product/Dockerfile");
   assert.match(dockerfile, /ENV HOSTNAME=0\.0\.0\.0/);
+  const workspaceManifestCopy = dockerfile.search(/^COPY packages\/ad-template-contract\/package.json/m);
+  const npmCi = dockerfile.search(/^RUN npm ci --ignore-scripts$/m);
+  assert.ok(npmCi > workspaceManifestCopy, "npm ci must see workspace manifests");
+  assert.ok(workspaceManifestCopy >= 0, "Docker must copy workspace manifests before npm ci");
+  const packageJson = JSON.parse(await read("package.json"));
+  assert.equal(packageJson.scripts["build:packages"], "npm run --workspace @blockwise/ad-template-contract build && npm run --workspace @blockwise/ad-template-renderer build");
+  assert.equal(packageJson.scripts.prebuild, "npm run build:packages");
+  assert.equal(packageJson.scripts.pretypecheck, "npm run build:packages");
+  const workspaceBuild = dockerfile.search(/^RUN npm run build:packages$/m);
+  const nextBuild = dockerfile.search(/^RUN npm run build$/m);
+  assert.ok(workspaceBuild >= 0, "Docker must build internal workspace packages");
+  assert.ok(nextBuild > workspaceBuild, "Next build must run after internal workspace packages");
 });
 
 test("product readiness is fatal while liveness remains process-only", async () => {
@@ -254,24 +270,21 @@ test("OSS product build and reconciliation contracts avoid local secrets and est
   assert.deepEqual([...allowlistedMigrations].sort(), allowlistedMigrations);
 });
 
-test("Ad Studio pack imports and customer saves commit through PostgreSQL transactions", async () => {
-  const [migration, migrations, importer, saver] = await Promise.all([
+test("direct Hermes artifacts and customer saves use the self-hosted transaction boundary", async () => {
+  const [migration, migrations, ingest, saver] = await Promise.all([
     read("supabase/migrations/20260829010000_adstudio_transactional_writes.sql"),
     read("infra/product/product-migrations.txt"),
-    read("src/lib/adstudio/import-pack.ts"),
+    read("src/lib/adstudio/ingest-artifact.ts"),
     read("src/lib/adstudio/save-ad.ts"),
   ]);
-  assert.match(migrations, /20260829010000_adstudio_transactional_writes\.sql/);
-  assert.match(migration, /create or replace function public\.activate_ad_template_pack_import/);
+  assert.match(migrations, /20260830020000_direct_template_artifact\.sql/);
   assert.match(migration, /create or replace function public\.commit_ad_revision/);
-  assert.match(migration, /pg_advisory_xact_lock/);
   assert.match(migration, /alter table public\.ad_customer_ads enable row level security/);
-  assert.match(migration, /private\.adstudio_has_workspace_access\(workspace_id\)/);
-  assert.match(migration, /revoke all on function public\.activate_ad_template_pack_import/);
-  assert.match(importer, /\.rpc\("activate_ad_template_pack_import"/);
-  assert.doesNotMatch(importer, /from\("ad_template_packs"\)\.insert/);
-  assert.match(saver, /\.rpc\("commit_ad_revision"/);
-  assert.doesNotMatch(saver, /from\("ad_revisions"\)\s*\.insert/);
+  assert.match(ingest, /adTemplateSchema/);
+  assert.match(ingest, /template_artifact_conflict/);
+  assert.match(ingest, /ad_template_assets_direct/);
+  assert.doesNotMatch(ingest, /ad_import_receipts|signature.*verify|packUrl/);
+  assert.match(saver, /commit_ad_revision/);
 });
 
 test("new VPS shell entrypoints are staged with executable Git modes", async () => {

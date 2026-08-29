@@ -6,7 +6,7 @@ import { loadPublishState, validatePublishState, freezePublicationSnapshot } fro
  * GET /api/internal/adstudio/publish/state?adId=...&workspaceId=...
  *
  * Loads the authoritative publish state: ad metadata, active revision
- * PNG hashes, template pack, and latest Instant Form.
+ * PNG outputs, direct template, and latest Instant Form.
  */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);

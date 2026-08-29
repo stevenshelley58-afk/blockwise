@@ -1,6 +1,8 @@
 # Reproducible standalone Next image for the self-hosted product stack.
 FROM node:22-slim AS deps
 WORKDIR /app
+COPY packages/ad-template-contract/package.json packages/ad-template-contract/package.json
+COPY packages/ad-template-renderer/package.json packages/ad-template-renderer/package.json
 COPY package.json package-lock.json .npmrc ./
 RUN npm ci --ignore-scripts
 
@@ -27,6 +29,7 @@ ENV NEXT_PUBLIC_SENTRY_DSN=$NEXT_PUBLIC_SENTRY_DSN
 ENV NEXT_PUBLIC_GOOGLE_ADS_ID=$NEXT_PUBLIC_GOOGLE_ADS_ID
 ENV NEXT_PUBLIC_BLOCKWISE_SAMPLE_DATA=$NEXT_PUBLIC_BLOCKWISE_SAMPLE_DATA
 ENV NEXT_TELEMETRY_DISABLED=1
+RUN npm run build:packages
 RUN npm run build
 
 FROM node:22-slim AS runner

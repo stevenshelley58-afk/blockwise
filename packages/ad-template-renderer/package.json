@@ -1,0 +1,29 @@
+{
+  "name": "@blockwise/ad-template-renderer",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Canonical deterministic renderer for Blockwise final templates.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": { "ad-template-render": "./dist/cli.js" },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test src/**/*.test.ts"
+  },
+  "dependencies": {
+    "@blockwise/ad-template-contract": "file:../ad-template-contract",
+    "@napi-rs/canvas": "^1.0.3"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.0",
+    "tsx": "^4.19.0"
+  }
+}
