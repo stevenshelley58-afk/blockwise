@@ -36,7 +36,7 @@ export function SiteFooter() {
       <div className="hw-wide hw-footer-statement-block">
         <p className="hw-footer-statement">Your competitors are advertising. Are you?</p>
         <CtaLink location="footer" href="/signup" className="hw-btn hw-btn--light">
-          Create three ads free <span className="hw-arr">→</span>
+          Start free trial <span className="hw-arr">→</span>
         </CtaLink>
       </div>
       <div className="hw-wide">

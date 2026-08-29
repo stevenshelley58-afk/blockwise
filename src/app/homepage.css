@@ -181,8 +181,8 @@ html, body { overflow-x: clip; }
 /* ---------- Header (N9) ---------- */
 
 .hw-header {
-  background: var(--hw-canvas);
-  border-bottom: 1px solid var(--hw-line);
+  background: #050910;
+  border-bottom: 1px solid rgba(136, 169, 214, 0.14);
 }
 .hw-header-inner {
   display: flex;
@@ -203,6 +203,7 @@ html, body { overflow-x: clip; }
   justify-content: center;
   min-width: 44px;
   min-height: 44px;
+  color: var(--hw-inv-text);
 }
 .hw-logo-mark {
   display: inline-block;
@@ -222,12 +223,12 @@ html, body { overflow-x: clip; }
 .hw-nav a {
   font-size: var(--hw-text-label);
   font-weight: 600;
-  color: var(--hw-muted);
+  color: rgba(246, 247, 249, 0.76);
   text-decoration: none;
   white-space: nowrap;
   transition: color var(--hw-dur) var(--hw-ease);
 }
-.hw-nav a:hover { color: var(--hw-ink); }
+.hw-nav a:hover { color: var(--hw-inv-text); }
 .hw-header-actions {
   display: flex;
   align-items: center;
@@ -241,12 +242,21 @@ html, body { overflow-x: clip; }
   min-height: 44px;
   font-size: var(--hw-text-label);
   font-weight: 600;
-  color: var(--hw-muted);
+  color: rgba(246, 247, 249, 0.76);
   text-decoration: none;
   white-space: nowrap;
   transition: color var(--hw-dur) var(--hw-ease);
 }
-.hw-login:hover { color: var(--hw-ink); }
+.hw-login:hover { color: var(--hw-inv-text); }
+.hw-header .hw-btn--dark {
+  border-color: rgba(246, 247, 249, 0.72);
+  background: transparent;
+  color: var(--hw-inv-text);
+}
+.hw-header .hw-btn--dark:hover {
+  border-color: var(--hw-inv-text);
+  background: rgba(246, 247, 249, 0.08);
+}
 
 /* Mobile: preserve one clear conversion path and full-size touch targets. */
 @media (max-width: 767.98px) {
@@ -259,6 +269,7 @@ html, body { overflow-x: clip; }
     margin-left: auto;
   }
   .hw-nav + .hw-header-actions { margin-left: auto; }
+  .hw-header .hw-login { display: none; }
 }
 
 @media (max-width: 379.98px) {
@@ -277,13 +288,6 @@ html, body { overflow-x: clip; }
   .hw-header-actions .hw-btn {
     padding-inline: 12px;
     font-size: 11px;
-  }
-}
-
-/* Keep the initial mobile conversion action above the fixed consent choice. */
-@media (max-width: 767.98px) {
-  body:has(.consent-banner) .hw-page .hw-no-form {
-    margin-bottom: calc(164px + env(safe-area-inset-bottom));
   }
 }
 

@@ -94,18 +94,18 @@ test("landing page anchors, sections, and claims stay connected", () => {
     previousIndex = index;
   }
 
-  assert.match(combined, /Your competitors are advertising\. Are&nbsp;you\?/);
+  assert.match(combined, /Your competitors are advertising\.\s*<span>Are you\?<\/span>/);
   assert.match(
     combined,
-    /Ads built from what&rsquo;s actually working in your area\. Start getting leads today\./,
+    /Create, approve and track Meta ads from one beautifully simple workspace\./,
   );
   assert.match(combined, /Know the property before the call/);
   assert.match(combined, /Run a property check/);
   // Illustrative dashboard and offer values must be labelled as examples so
   // prospects cannot mistake them for promised customer results.
-  assert.match(combined, />Examples</);
-  assert.match(combined, /Example angle/);
-  assert.match(combined, /Example data/);
+  assert.match(combined, /Example campaign/);
+  assert.match(combined, /Performance/);
+  assert.match(combined, /Prepared ads/);
 
   const ids = [...combined.matchAll(/id="([^"]+)"/g)].map((match) => match[1]);
   assert.equal(new Set(ids).size, ids.length, "landing and setup form IDs must be unique");
