@@ -5,8 +5,10 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/product-common.sh"
 MIGRATION_DIR="${BLOCKWISE_PRODUCT_MIGRATION_DIR:-$PRODUCT_ROOT/supabase/migrations}"
 ALLOWLIST="${BLOCKWISE_PRODUCT_MIGRATION_ALLOWLIST:-$PRODUCT_ROOT/infra/product/product-migrations.txt}"
+API_GRANTS="${BLOCKWISE_PRODUCT_API_GRANTS:-$PRODUCT_ROOT/infra/product/post-migrate-api-grants.sql}"
 
 [[ -f "$ALLOWLIST" ]] || { echo "Missing product migration allowlist: $ALLOWLIST" >&2; exit 2; }
+[[ -f "$API_GRANTS" ]] || { echo "Missing product API grants: $API_GRANTS" >&2; exit 2; }
 [[ -d "$MIGRATION_DIR" ]] || { echo "Missing migration directory: $MIGRATION_DIR" >&2; exit 2; }
 
 mapfile -t MIGRATIONS < <(sed -e 's/[[:space:]]*#.*$//' -e '/^[[:space:]]*$/d' "$ALLOWLIST")
@@ -72,6 +74,11 @@ for name in "${MIGRATIONS[@]}"; do
     printf '%s\n' 'commit;'
   } | compose exec -T product-db psql -v ON_ERROR_STOP=1 -U "$BLOCKWISE_DB_USER" -d "$BLOCKWISE_DB_NAME" -v migration="$name"
 done
+
+# The managed Supabase bootstrap grants PostgREST roles separately from app
+# migrations. Recreate that boundary after the reviewed migration set, but
+# grant browser DML only to tables protected by RLS.
+compose exec -T product-db psql -v ON_ERROR_STOP=1 -U "$BLOCKWISE_DB_USER" -d "$BLOCKWISE_DB_NAME" < "$API_GRANTS"
 
 # PostgREST caches the schema and configuration. Refresh both caches after the
 # complete migration set, then perform a controlled restart so a missed
