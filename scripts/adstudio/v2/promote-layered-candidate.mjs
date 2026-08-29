@@ -76,6 +76,12 @@ export function assertLayeredEvidence({ templateId, doc, evidence, trace, subjec
   return { templateHash, generation, checkedAt: approval.decided_at, reviewerRef, approvalReceiptRef: approval.receipt_ref };
 }
 
+export function sourceFreeSampleEvidence(doc, evidence) {
+  const sampleValues = Object.fromEntries(doc.inputs.text.map((input) => [input.key, input.sample]));
+  const { sourceValues: _privateSourceValues, ...safeEvidence } = evidence;
+  return { safeEvidence, sampleValues };
+}
+
 export async function promoteLayeredCandidate({ candidate, tracePath, subjectInvariancePath, approvalPath, reviewerRef }) {
   const root = resolve(candidate);
   const manifest = readJson(join(root, "variant-pack.manifest.json"));
@@ -104,10 +110,8 @@ export async function promoteLayeredCandidate({ candidate, tracePath, subjectInv
   const approval = readApprovalReceipt(requirePath(approvalPath, "--approval"));
   const sampleBytes = readFileSync(samplePath);
   const storySampleBytes = readFileSync(storySamplePath);
-  const sampleText = {
-    ...(evidence.sourceValues ?? {}),
-    ...Object.fromEntries(doc.inputs.text.map((input) => [input.key, input.sample])),
-  };
+  const { safeEvidence, sampleValues } = sourceFreeSampleEvidence(doc, evidence);
+  const sampleText = sampleValues;
   for (const [format, expectedBytes] of [["4:5", sampleBytes], ["9:16", storySampleBytes]]) {
     const renderInput = buildRestyleSampleRenderInput({ doc, format, text: sampleText, repoRoot: root });
     const rendered = await renderAdDocToPng(doc, renderInput.instance, format, { repoRoot: root, slotBytes: renderInput.slotBytes });
@@ -148,7 +152,8 @@ export async function promoteLayeredCandidate({ candidate, tracePath, subjectInv
     },
   };
   const nextEvidence = {
-    ...evidence,
+    ...safeEvidence,
+    sampleValues,
     templateSha256: hashCanonicalJson(nextDoc),
     generationTrace: trace,
     subjectInvariance,

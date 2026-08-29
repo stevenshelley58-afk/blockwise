@@ -109,6 +109,8 @@ export type TemplatePublishDefaults = {
   /** Explicit Advantage+ creative feature enrollment — default all OPT_OUT. */
   creativeFeatures: Record<string, "OPT_IN" | "OPT_OUT">;
   previewFormats: string[];
+  /** Optional pack-release destination/form dependency contract. */
+  requirements?: Record<string, unknown> | null;
 };
 
 export type TemplateLayerBase = { id: string; z: number; box: NormBox; rotation?: number };
@@ -192,6 +194,8 @@ export type IconLayer = TemplateLayerBase & {
   icon: string;
   color: string;
   strokeWidth?: number;
+  /** Semantic role retained for portable Brand Pack remapping. */
+  colourRole?: "background" | "surface" | "accent" | "ink" | "inverseText";
 };
 
 export type StoryPolicy = {
@@ -302,8 +306,11 @@ export type AdTemplateDocV2 = {
       key: string;
       label: string;
       required: boolean;
+      kind?: "image" | "logo" | "portrait";
       aspect?: "landscape" | "portrait" | "square";
       description: string;
+      /** Non-sensitive description of the source-free fixture used in previews. */
+      sample?: string;
     }>;
     text: Array<{ key: string; label: string; required: boolean; maxLength: number; sample: string }>;
   };
@@ -614,6 +621,7 @@ const iconLayerSchema = z.object({
   icon: nonEmptyString,
   color: hexColorSchema,
   strokeWidth: z.number().positive().optional(),
+  colourRole: z.enum(["background", "surface", "accent", "ink", "inverseText"]).optional(),
 });
 
 const templateLayerSchema = z.discriminatedUnion("type", [
@@ -697,6 +705,7 @@ const publishDefaultsSchema = z.object({
   }),
   creativeFeatures: z.record(z.string(), z.enum(["OPT_IN", "OPT_OUT"])),
   previewFormats: z.array(nonEmptyString).min(1),
+  requirements: z.record(z.string(), z.unknown()).nullable().optional(),
 });
 
 // ─── zod: the doc ────────────────────────────────────────────────────────────
@@ -786,8 +795,10 @@ const templateDocShapeSchema = z.object({
         key: nonEmptyString,
         label: nonEmptyString,
         required: z.boolean(),
+        kind: z.enum(["image", "logo", "portrait"]).optional(),
         aspect: z.enum(["landscape", "portrait", "square"]).optional(),
         description: nonEmptyString,
+        sample: z.string().optional(),
       }),
     ),
     text: z.array(
