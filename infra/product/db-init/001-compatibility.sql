@@ -7,6 +7,16 @@ CREATE SCHEMA IF NOT EXISTS extensions;
 CREATE SCHEMA IF NOT EXISTS graphql_public;
 CREATE SCHEMA IF NOT EXISTS _realtime;
 
+-- Supabase migrations add selected tables to this publication even when the
+-- Realtime container is profile-gated. The publication itself is harmless
+-- while Realtime is off and makes a later profile enablement deterministic.
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime') THEN
+    CREATE PUBLICATION supabase_realtime;
+  END IF;
+END $$;
+
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN
