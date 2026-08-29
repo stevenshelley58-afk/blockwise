@@ -59,7 +59,7 @@
       ]
     },
     "binding": {
-      "templateSha256": "37d1dbce2ee7068e90d790b051faa798c7cee7e433103c69c3db89e3e40e5b50",
+      "templateSha256": "fa0c02a679e6dad500c09d33c5c02e94861f84e692541475549e957226392341",
       "sourceSha256": "c2b76dc1425b5c96c6b6845349f1dc2bfe1f0b390805daf46e00029347a97a7a",
       "sampleSha256": "3dc0ec8817141522a15ba8dd848c29eddc8ce7c98397b24854725bf89012ccc0",
       "staticAssets": {
@@ -95,7 +95,7 @@
     },
     "visualReview": {
       "iteration": 22,
-      "templateSha256": "37d1dbce2ee7068e90d790b051faa798c7cee7e433103c69c3db89e3e40e5b50",
+      "templateSha256": "fa0c02a679e6dad500c09d33c5c02e94861f84e692541475549e957226392341",
       "customerFeedSha256": "39b67991a81262fbe4835cf9a102e8d4d6fd64e620510100d5fbe6d09c04e902",
       "reviewerStatus": "complete",
       "likenessThreshold": 9.5,

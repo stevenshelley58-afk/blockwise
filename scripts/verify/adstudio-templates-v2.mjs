@@ -33,6 +33,7 @@ import { join, resolve } from "node:path";
 import { fidelityTemplateHash, nativeSurfaceFor, runNativeSurfaceFidelity, runStressMatrix } from "../../src/lib/adstudio/v2/fidelity-stress.ts";
 import { hashCanonicalJson } from "../../src/lib/adstudio/v2/template-hash.ts";
 import { hasNonTrivialRestyle, normalizeCanonicalJson, templateDocV2Schema } from "../../src/lib/adstudio/v2/template-doc.ts";
+import { diversityFailures } from "./adstudio-diversity.mjs";
 
 const root = process.cwd();
 const galleryDir = resolve(process.env.ADSTUDIO_GALLERY_V2_DIR ?? join(root, "src", "lib", "adstudio", "template-gallery-v2"));
@@ -306,23 +307,6 @@ function readPngLikeDimensions(path) {
     return { width: widthMinus1 + 1, height: heightMinus1 + 1 };
   }
   return null;
-}
-
-function skeletonSignature(doc) {
-  const boxes = [];
-  const q = (v) => Math.min(11, Math.max(0, Math.round(v * 12)));
-  for (const layout of [doc.formats.feed, doc.formats.story]) {
-    if (!layout) continue;
-    for (const layer of layout.layers) {
-      boxes.push([q(layer.box.x), q(layer.box.y), q(layer.box.x + layer.box.width), q(layer.box.y + layer.box.height)].join(","));
-    }
-  }
-  // Baked text is visually present (it's in the plate) even when it is not an
-  // editable layer — the signature must reflect the real layout.
-  for (const box of Object.values(doc.__textBoxes ?? {})) {
-    boxes.push([q(box.x), q(box.y), q(box.x + box.width), q(box.y + box.height)].join(","));
-  }
-  return boxes.sort().join("|");
 }
 
 // ─── per-doc checks ─────────────────────────────────────────────────────────
@@ -855,31 +839,7 @@ for (const doc of docs) {
 
 // 8. diversity across the gallery.
 if (docs.length > 0) {
-  // Intent distribution is a LIBRARY-level property. A declared single-source
-  // pack is one source family by construction (the brief asked for N variants
-  // of one ad), so intent checks apply only when the scanned set is not one
-  // pack. Skeleton collision is enforced everywhere: even within a pack every
-  // variant must be a genuinely distinct layout.
-  const packIds = new Set(docs.map((doc) => doc.provenance?.packId).filter(Boolean));
-  const singleSourcePack = packIds.size === 1 && docs.every((doc) => doc.provenance?.packId === [...packIds][0]);
-  if (!singleSourcePack) {
-    const intents = docs.map((doc) => doc.classification?.primary_intent).filter((intent) => intent && intent !== "other");
-    const distinct = new Set(intents);
-    if (distinct.size < 5 && docs.length >= 5) fail(`diversity: only ${distinct.size} distinct non-other intents (<5)`);
-    const counts = new Map();
-    for (const intent of intents) counts.set(intent, (counts.get(intent) ?? 0) + 1);
-    for (const [intent, count] of counts) {
-      if (count / Math.max(1, intents.length) > 0.5) fail(`diversity: intent "${intent}" is ${Math.round((count / intents.length) * 100)}% of the gallery (>50%)`);
-    }
-  }
-  const signatures = new Map();
-  for (const doc of docs) {
-    const signature = skeletonSignature(doc);
-    signatures.set(signature, (signatures.get(signature) ?? 0) + 1);
-  }
-  for (const [signature, count] of signatures) {
-    if (count > 3) fail(`diversity: ${count} templates share an identical layout skeleton (>3)`);
-  }
+  for (const message of diversityFailures(docs)) fail(message);
 }
 
 // ── 9. replay the ready evidence, then render both formats + stress matrix ──
