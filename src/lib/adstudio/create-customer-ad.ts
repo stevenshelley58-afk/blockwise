@@ -4,8 +4,8 @@ import { adDocumentSchema, type AdDocumentParsed } from "../../../packages/ad-te
 
 // ---------------------------------------------------------------------------
 // Customer ad rows (ad_customer_ads) — created server-side so the editor has
-// an adId to Save against. One ad per (workspace, template pack): opening a
-// pack reuses the existing row (idempotent), so re-saves keep revision history.
+// an adId to Save against. One ad per (workspace, direct template): opening a
+// template reuses the existing row (idempotent), so re-saves keep revision history.
 // ---------------------------------------------------------------------------
 
 export interface CustomerAdRef {
