@@ -1,6 +1,11 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
+import { mkdtempSync, rmSync, symlinkSync } from "node:fs";
+import { join } from "node:path";
+import { spawnSync } from "node:child_process";
+import os from "node:os";
+import { fileURLToPath } from "node:url";
 
 import { assertLayeredEvidence } from "../../scripts/adstudio/v2/promote-layered-candidate.mjs";
 import { appendGeneration, createGenerationTrace } from "../../scripts/adstudio/v2/generation-trace.mjs";
@@ -44,6 +49,23 @@ function fixture() {
 }
 
 describe("source-free layered candidate promotion", () => {
+  it("executes through the builder symlink and fails closed without a candidate", () => {
+    const root = mkdtempSync(join(os.tmpdir(), "adstudio-promote-link-test-"));
+    const linkedDir = join(root, "v2");
+    const sourceDir = fileURLToPath(new URL("../../scripts/adstudio/v2/", import.meta.url));
+    symlinkSync(sourceDir, linkedDir, process.platform === "win32" ? "junction" : "dir");
+    try {
+      const result = spawnSync(process.execPath, [join(linkedDir, "promote-layered-candidate.mjs")], {
+        cwd: fileURLToPath(new URL("../..", import.meta.url)),
+        encoding: "utf8",
+      });
+      assert.notEqual(result.status, 0);
+      assert.match(result.stderr, /--candidate is required/);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("accepts only current dual-review, subject-invariance, and sample-bound evidence", () => {
     const result = assertLayeredEvidence({ templateId: "meta-feed-006", ...fixture() });
     assert.equal(result.templateHash, fidelityTemplateHash(fixture().doc));
