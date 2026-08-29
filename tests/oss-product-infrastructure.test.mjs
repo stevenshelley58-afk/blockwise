@@ -54,6 +54,8 @@ test("OSS product compose is isolated and has no managed deployment endpoint", a
   assert.match(bootstrap, /FUNCTION auth\.role\(\)/);
   const rolePassword = await read("infra/product/db-init/002-roles.sh");
   assert.match(rolePassword, /ALTER ROLE authenticator PASSWORD/);
+  assert.match(rolePassword, /<<'SQL'/);
+  assert.doesNotMatch(rolePassword, /-c\s+"ALTER ROLE authenticator/);
   assert.doesNotMatch(compose, /vercel\.app|supabase\.co|supabase\.com/);
 
   const productCaddy = await read("infra/product/Caddyfile");
