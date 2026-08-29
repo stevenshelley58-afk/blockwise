@@ -15,8 +15,11 @@ import {
   parseEnvFile,
 } from "../src/lib/config/env.ts";
 
-test("required environment keys include Meta credentials", () => {
-  assert.equal(REQUIRED_ENV_KEYS.includes("META_APP_SECRET"), true);
+test("external AI and Meta credentials are optional provider readiness gates", () => {
+  assert.equal(REQUIRED_ENV_KEYS.includes("OPENAI_API_KEY" as never), false);
+  assert.equal(REQUIRED_ENV_KEYS.includes("META_APP_SECRET" as never), false);
+  assert.deepEqual(PROVIDER_ENV_KEYS.ai, ["OPENAI_API_KEY"]);
+  assert.deepEqual(PROVIDER_ENV_KEYS.meta, ["META_APP_ID", "META_APP_SECRET"]);
 });
 
 test("Google Ads keys are tracked as provider-scoped, not core required, so a Meta-only deploy can report ready", () => {
@@ -28,6 +31,9 @@ test("Google Ads keys are tracked as provider-scoped, not core required, so a Me
     "GOOGLE_CLIENT_SECRET",
     "GOOGLE_ADS_DEVELOPER_TOKEN",
   ]);
+
+  assert.equal(getProviderReadiness("ai", {} as NodeJS.ProcessEnv).ok, false);
+  assert.equal(getProviderReadiness("meta", {} as NodeJS.ProcessEnv).ok, false);
 
   const readiness = getProviderReadiness("google", {} as NodeJS.ProcessEnv);
   assert.equal(readiness.ok, false);
@@ -138,10 +144,9 @@ test("getInvalidEnvKeys treats placeholder production secrets as invalid", () =>
   assert.deepEqual(
     getInvalidEnvKeys({
       ...base,
-      OPENAI_API_KEY: "replace_me",
-      META_APP_SECRET: "proj_replace_me",
+      TOKEN_ENCRYPTION_KEY: "replace_me",
     }),
-    ["OPENAI_API_KEY", "META_APP_SECRET"],
+    ["TOKEN_ENCRYPTION_KEY"],
   );
 });
 

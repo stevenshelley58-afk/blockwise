@@ -9,6 +9,15 @@ worker. The compose foundation is present in the repository; this does not
 claim that the public DNS has been cut over. Until the gates below are signed
 off, the previous managed endpoint remains available only as a rollback source.
 
+Core product readiness is intentionally independent of external AI and ad
+network credentials. Login, workspace access, Ad Studio editing, rendering,
+and durable saves use the self-hosted database/auth/storage services and must
+boot with `OPENAI_API_KEY`, `META_APP_ID`, and `META_APP_SECRET` unset. Those
+values are optional provider gates: `/api/health` reports their individual
+missing/invalid status under `readiness.providers` without marking the core
+deployment unhealthy. Configure real values only when enabling the relevant
+provider; never use example or fake credentials.
+
 The application may use `@supabase/supabase-js` as a protocol client only. It
 must point to the self-hosted Caddy origin through `NEXT_PUBLIC_SUPABASE_URL`;
 the client library must not be read as evidence that a managed Supabase
