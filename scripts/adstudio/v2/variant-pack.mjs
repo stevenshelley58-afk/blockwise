@@ -52,6 +52,7 @@ import { toLosslessWebp } from "./lib/plate.mjs";
 import { renderAdDocToPng } from "../../../src/lib/adstudio/v2/render/server.ts";
 import { verifyPinnedFixtureCorpus } from "./subject-invariance.mjs";
 import { STORY_BACKING_COLOUR, STORY_MAX_DEAD_SPACE_PX, STORY_CTA_MAX_GAP_PX } from "./lib/story.mjs";
+import { validateInitialPortfolioContract } from "./initial-portfolio-specs.mjs";
 
 const SCRIPT_PATH = fileURLToPath(import.meta.url);
 const SCRIPT_DIR = dirname(SCRIPT_PATH);
@@ -742,6 +743,7 @@ async function main() {
     process.exit(2);
   }
   const contract = readJson(contractPath);
+  validateInitialPortfolioContract(contract);
   const multiConcept = contract.mode === "multi-concept";
   const count = multiConcept ? Number(contract.count ?? 0) : 1;
   if (multiConcept && (!Number.isInteger(count) || count < 2 || count > 12)) {

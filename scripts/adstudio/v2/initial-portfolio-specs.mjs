@@ -136,7 +136,7 @@ const vector = (inputKey, bounds, shape, options = {}) => { const { kind = "vect
 const icon = (inputKey, bounds, shape, options = {}) => ({ type: "vector_icon", inputKey, box: box(...bounds), editable: true, shape, ...options });
 const slot = (inputKey, bounds, options = {}) => ({ type: "logo_slot", inputKey, box: box(...bounds), editable: true, ...options });
 const overlay = (inputKey, bounds, role) => ({ type: "overlay_patch", inputKey, box: box(...bounds), editable: true, role: `story-backing-${role}`, colourRole: "story-backing", colour: "#f4f0e8" });
-const EXTRA_VECTORS = { "180": [], "149": [], "033": ["circular_inset_patch"], "044": ["checklist_icon", "check_icon_1", "check_icon_2", "check_icon_3"], "021": ["flowing_line_decor"], "006": [], "039": [], "062": ["price_strike_line"], "154": [], "108": [], "111": ["amenity_pill_1", "amenity_pill_2", "amenity_pill_3"], "182": ["price_row_1", "price_row_2", "price_row_3"], "143": ["notched_patch"], "145": [], "148": [], "159": [], "176": [], "194": [], "127": [], "199": ["fact_bar"] };
+const EXTRA_VECTORS = { "180": [], "149": [], "033": ["circular_inset_patch"], "044": ["checklist_icon", "check_icon_1", "check_icon_2", "check_icon_3"], "021": ["flowing_line_decor"], "006": ["about_panel", "contact_bar"], "039": [], "062": ["price_strike_line"], "154": [], "108": [], "111": ["amenity_pill_1", "amenity_pill_2", "amenity_pill_3"], "182": ["price_row_1", "price_row_2", "price_row_3"], "143": ["notched_patch"], "145": [], "148": [], "159": [], "176": [], "194": [], "127": [], "199": ["fact_bar"] };
 const FEED_LAYER_PLANS = Object.freeze({
   "180": [
     vector("background_patch", [0,0,1,1], "rounded", {"kind":"vector_patch","role":"background","colourRole":"background"}),
@@ -1082,14 +1082,14 @@ const polishedDecor = (bounds, shape = "line", role = "layout-rule", colourRole 
 const polishedCta = (options = {}) => {
   const {
     x = 0.66, y = 0.88, width = 0.27, height = 0.05, shape = "rounded",
-    colourRole = "accent", copyColourRole = "inverseText", contactX = 0.08,
+    colourRole = "accent", copyColourRole = "inverseText", contactColourRole = copyColourRole, contactX = 0.08,
     contactWidth = 0.34, contactY, iconShape = "line",
   } = options;
   const resolvedContactY = contactY ?? y + 0.014;
   return [
     polishedVector("accent_patch", [x, y, width, height], shape, { role: "cta-button", colourRole }),
     polishedText("cta", [x + 0.032, y + 0.014, width - 0.085, 0.022], "cta", "sans-bold", copyColourRole, { maxLines: 1 }),
-    polishedText("contact", [contactX, resolvedContactY, contactWidth, 0.022], "contact", "sans", copyColourRole, { maxLines: 1 }),
+    polishedText("contact", [contactX, resolvedContactY, contactWidth, 0.022], "contact", "sans", contactColourRole, { maxLines: 1 }),
     icon("icon_primary", [x + width - 0.046, y + 0.011, 0.03, 0.03], iconShape, { role: "cta_icon", colourRole }),
   ];
 };
@@ -1197,22 +1197,24 @@ const POLISHED_FEED_LAYER_PLANS = Object.freeze({
   ],
   "006": [
     polishedBackground("rect", "background"),
-    polishedBrand("sans-bold"),
     polishedLogo([0.75, 0.075, 0.17, 0.04]),
-    polishedImage("customer_photo", [0.08, 0.14, 0.42, 0.48], "rounded", "primary-media"),
-    polishedSurface([0.54, 0.14, 0.38, 0.34], "rounded", "listing-detail-card"),
-    polishedText("headline", [0.58, 0.18, 0.30, 0.11], "headline", "sans-bold", "ink", { maxLines: 2 }),
-    polishedText("supporting", [0.58, 0.32, 0.28, 0.06], "supporting", "sans", "ink", { maxLines: 2 }),
-    polishedImage("property_image_1", [0.08, 0.66, 0.25, 0.12], "rounded", "supporting-media"),
-    polishedImage("property_image_2", [0.375, 0.66, 0.25, 0.12], "rounded", "supporting-media"),
-    polishedImage("property_image_3", [0.67, 0.66, 0.25, 0.12], "rounded", "supporting-media"),
-    polishedDecor([0.08, 0.80, 0.84, 0.075], "rect", "listing-fact-rail", "surface"),
-    polishedText("address", [0.10, 0.812, 0.22, 0.025], "semantic-detail", "sans", "ink", { semantic: true, maxLines: 1 }),
-    polishedText("price", [0.34, 0.812, 0.18, 0.025], "semantic-detail", "sans-bold", "ink", { semantic: true, maxLines: 1 }),
-    polishedText("feature_1", [0.55, 0.812, 0.18, 0.025], "semantic-detail", "sans", "ink", { semantic: true, maxLines: 1 }),
-    polishedText("feature_2", [0.10, 0.847, 0.22, 0.025], "semantic-detail", "sans", "ink", { semantic: true, maxLines: 1 }),
-    polishedText("feature_3", [0.34, 0.847, 0.22, 0.025], "semantic-detail", "sans", "ink", { semantic: true, maxLines: 1 }),
-    ...polishedCta({ x: 0.66, y: 0.875, width: 0.27, contactX: 0.10, contactWidth: 0.35, copyColourRole: "inverseText" }),
+    polishedSurface([0.58, 0.23, 0.34, 0.35], "rect", "listing-price-brand-card"),
+    polishedText("headline", [0.08, 0.12, 0.84, 0.08], "headline", "serif-display", "ink", { maxLines: 1, sizeRatio: 0.40 }),
+    polishedImage("customer_photo", [0.08, 0.23, 0.46, 0.35], "rect", "primary-media"),
+    polishedText("brand_name", [0.62, 0.26, 0.24, 0.025], "brand", "sans-bold", "ink", { maxLines: 1 }),
+    polishedText("address", [0.62, 0.30, 0.26, 0.025], "semantic-detail", "sans", "ink", { semantic: true, maxLines: 1, sizeRatio: 0.30 }),
+    polishedText("price", [0.62, 0.35, 0.26, 0.06], "semantic-detail", "sans-bold", "ink", { semantic: true, maxLines: 1, sizeRatio: 0.34 }),
+    polishedImage("property_image_1", [0.08, 0.62, 0.26, 0.12], "rect", "supporting-media"),
+    polishedImage("property_image_2", [0.37, 0.62, 0.26, 0.12], "rect", "supporting-media"),
+    polishedImage("property_image_3", [0.66, 0.62, 0.26, 0.12], "rect", "supporting-media"),
+    polishedVector("about_panel", [0.08, 0.76, 0.84, 0.08], "rect", { role: "about-features-panel", colourRole: "surface" }),
+    polishedDecor([0.12, 0.765, 0.14, 0.006], "line", "about-features-rule"),
+    polishedText("supporting", [0.12, 0.775, 0.28, 0.045], "about-copy", "sans", "ink", { maxLines: 2, sizeRatio: 0.30 }),
+    polishedText("feature_1", [0.46, 0.775, 0.20, 0.025], "semantic-detail", "sans-bold", "ink", { semantic: true, maxLines: 1, sizeRatio: 0.30 }),
+    polishedText("feature_2", [0.70, 0.775, 0.18, 0.025], "semantic-detail", "sans", "ink", { semantic: true, maxLines: 1, sizeRatio: 0.30 }),
+    polishedText("feature_3", [0.46, 0.805, 0.20, 0.025], "semantic-detail", "sans", "ink", { semantic: true, maxLines: 1, sizeRatio: 0.30 }),
+    polishedVector("contact_bar", [0.08, 0.86, 0.84, 0.06], "rect", { role: "full-contact-bar", colourRole: "surface" }),
+    ...polishedCta({ x: 0.66, y: 0.865, width: 0.27, height: 0.05, contactX: 0.11, contactWidth: 0.42, copyColourRole: "inverseText", contactColourRole: "ink" }),
   ],
   "039": [
     polishedBackground("rect", "background"),
@@ -1577,22 +1579,24 @@ const POLISHED_STORY_LAYER_PLANS = Object.freeze({
     polishedBackground("rect", "story-listing-background"),
     polishedBrand("sans-bold", "ink", [0.08, 0.132, 0.25, 0.034]),
     polishedLogo([0.75, 0.132, 0.17, 0.04]),
-    polishedImage("customer_photo", [0.08, 0.18, 0.42, 0.44], "rounded", "primary-media"),
-    polishedImage("property_image_1", [0.54, 0.18, 0.12, 0.12], "rounded", "supporting-media"),
-    polishedImage("property_image_2", [0.68, 0.18, 0.12, 0.12], "rounded", "supporting-media"),
-    polishedImage("property_image_3", [0.82, 0.18, 0.10, 0.12], "rounded", "supporting-media"),
-    polishedSurface([0.54, 0.34, 0.38, 0.27], "rounded", "story-listing-card"),
-    polishedDecor([0.08, 0.64, 0.84, 0.09], "rect", "listing-summary-band", "surface"),
-    polishedText("headline", [0.56, 0.38, 0.33, 0.08], "headline", "sans-bold", "ink", { maxLines: 2 }),
-    overlay("backing-supporting", [0.542, 0.462, 0.336, 0.066], "supporting"),
-    polishedText("supporting", [0.56, 0.48, 0.30, 0.035], "supporting", "sans", "ink", { maxLines: 2 }),
-    polishedText("address", [0.56, 0.55, 0.14, 0.016], "semantic-detail", "sans", "ink", { semantic: true, maxLines: 1, sizeRatio: 0.30 }),
-    polishedText("price", [0.72, 0.55, 0.12, 0.016], "semantic-detail", "sans-bold", "ink", { semantic: true, maxLines: 1, sizeRatio: 0.30 }),
-    polishedText("feature_1", [0.86, 0.55, 0.06, 0.016], "semantic-detail", "sans", "ink", { semantic: true, maxLines: 1, sizeRatio: 0.30 }),
-    polishedText("feature_2", [0.12, 0.67, 0.24, 0.018], "semantic-detail", "sans", "ink", { semantic: true, maxLines: 1, sizeRatio: 0.30 }),
-    polishedText("feature_3", [0.42, 0.67, 0.24, 0.018], "semantic-detail", "sans", "ink", { semantic: true, maxLines: 1, sizeRatio: 0.30 }),
-    overlay("backing-cta", [0.06, 0.767, 0.88, 0.065], "cta"),
-    ...polishedCta({ x: 0.08, y: 0.78, width: 0.25, contactX: 0.38, contactWidth: 0.18, copyColourRole: "inverseText" }),
+    polishedSurface([0.08, 0.59, 0.84, 0.06], "rect", "story-price-card"),
+    polishedText("headline", [0.08, 0.18, 0.84, 0.08], "headline", "serif-display", "ink", { maxLines: 1, sizeRatio: 0.40 }),
+    polishedImage("customer_photo", [0.08, 0.26, 0.84, 0.31], "rect", "primary-media"),
+    polishedText("address", [0.12, 0.608, 0.34, 0.018], "semantic-detail", "sans", "ink", { semantic: true, maxLines: 1, sizeRatio: 0.30 }),
+    polishedText("price", [0.56, 0.603, 0.27, 0.03], "semantic-detail", "sans-bold", "ink", { semantic: true, maxLines: 1, sizeRatio: 0.34 }),
+    overlay("backing-supporting", [0.12, 0.632, 0.40, 0.032], "supporting"),
+    polishedText("supporting", [0.12, 0.632, 0.40, 0.022], "supporting", "sans", "ink", { maxLines: 1, sizeRatio: 0.30 }),
+    polishedImage("property_image_1", [0.08, 0.66, 0.26, 0.05], "rect", "supporting-media"),
+    polishedImage("property_image_2", [0.37, 0.66, 0.26, 0.05], "rect", "supporting-media"),
+    polishedImage("property_image_3", [0.66, 0.66, 0.26, 0.05], "rect", "supporting-media"),
+    polishedVector("about_panel", [0.08, 0.72, 0.84, 0.06], "rect", { role: "stacked-features-panel", colourRole: "surface" }),
+    polishedDecor([0.12, 0.715, 0.14, 0.006], "line", "story-features-rule"),
+    polishedText("feature_1", [0.12, 0.72, 0.70, 0.016], "semantic-detail", "sans-bold", "ink", { semantic: true, maxLines: 1, sizeRatio: 0.30 }),
+    polishedText("feature_2", [0.12, 0.74, 0.70, 0.016], "semantic-detail", "sans", "ink", { semantic: true, maxLines: 1, sizeRatio: 0.30 }),
+    polishedText("feature_3", [0.12, 0.76, 0.70, 0.016], "semantic-detail", "sans", "ink", { semantic: true, maxLines: 1, sizeRatio: 0.30 }),
+    polishedVector("contact_bar", [0.08, 0.787, 0.84, 0.05], "rect", { role: "story-contact-bar", colourRole: "surface" }),
+    overlay("backing-cta", [0.08, 0.787, 0.84, 0.05], "cta"),
+    ...polishedCta({ x: 0.63, y: 0.787, width: 0.27, height: 0.05, contactX: 0.12, contactWidth: 0.40, copyColourRole: "inverseText", contactColourRole: "ink" }),
   ],
   "039": [
     polishedBackground("rect", "story-family-background"),
@@ -1883,3 +1887,27 @@ function makeSpec(id) {
 export const initialPortfolioSpecs = Object.freeze(Object.fromEntries(INITIAL_PORTFOLIO_IDS.map((id) => [id, makeSpec(id)])));
 export const INITIAL_PORTFOLIO_SPECS = initialPortfolioSpecs;
 export const requiredInputKeysById = Object.freeze(Object.fromEntries(INITIAL_PORTFOLIO_IDS.map((id) => [id, initialPortfolioSpecs[id].requiredInputKeys])));
+
+// Initial portfolio IDs are immutable authored compositions.  A direct
+// variant-pack invocation must not silently replace one with an ad-hoc
+// analysis contract (the failure mode that produced the generic 006 canary).
+export function validateInitialPortfolioContract(contract) {
+  const templateId = String(contract?.templateId || "");
+  if (!/(^|-)006(?:-|$)/u.test(templateId)) return contract;
+  const expected = initialPortfolioSpecs["006"];
+  if (templateId !== expected.templateId) throw new Error("ID 006 must use the canonical templateId meta-feed-006");
+  const authored = contract.portfolioSpec;
+  if (!authored || authored.id !== expected.id) throw new Error("ID 006 requires the canonical initial portfolioSpec");
+  if (authored.mediaCount !== expected.mediaCount) throw new Error("ID 006 mediaCount must remain four");
+  for (const placement of ["feed", "story"]) {
+    const expectedLayout = expected.formats[placement];
+    const actualLayout = authored.formats?.[placement];
+    if (!actualLayout || actualLayout.width !== expectedLayout.width || actualLayout.height !== expectedLayout.height) {
+      throw new Error(`ID 006 ${placement} dimensions must remain native 1080x${placement === "feed" ? "1350" : "1920"}`);
+    }
+    if (actualLayout.geometryFingerprint !== expectedLayout.geometryFingerprint || actualLayout.structuralFingerprint !== expectedLayout.structuralFingerprint) {
+      throw new Error(`ID 006 ${placement} geometry/structure must match the canonical authored plan`);
+    }
+  }
+  return contract;
+}

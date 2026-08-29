@@ -216,10 +216,41 @@ test("structural fingerprints exclude IDs and remain unique by authored layer in
   assert.equal(new Set(fingerprints).size, 20, "Story structures must differ without relying on layer IDs");
 });
 
+test("ID 006 keeps its authored listing hierarchy and four editable media slots", () => {
+  const spec = initialPortfolioSpecs["006"];
+  assert.equal(spec.mediaCount, 4);
+  for (const placement of ["feed", "story"]) {
+    const layout = spec.formats[placement];
+    const media = layout.layers.filter((layer) => layer.type === "image_slot");
+    assert.equal(media.length, 4, `${placement} must retain one hero and three thumbnails`);
+    assert.equal(new Set(media.map((layer) => layer.inputKey)).size, 4);
+    assert.ok(layout.geometryFingerprint.length > 0);
+    assert.ok(layout.structuralFingerprint.length > 0);
+  }
+
+  const feed = spec.formats.feed.layers;
+  const feedLayer = (inputKey) => feed.find((layer) => layer.inputKey === inputKey);
+  assert.equal(feedLayer("headline").font, "serif-display");
+  assert.ok(feedLayer("headline").box.y < feedLayer("customer_photo").box.y);
+  assert.ok(feedLayer("customer_photo").box.x < feed.find((layer) => layer.role === "listing-price-brand-card").box.x);
+  assert.equal(feedLayer("about_panel").role, "about-features-panel");
+  assert.equal(feedLayer("contact_bar").role, "full-contact-bar");
+  assert.equal(feedLayer("contact_bar").box.width, 0.84);
+
+  const story = spec.formats.story.layers;
+  const storyLayer = (inputKey) => story.find((layer) => layer.inputKey === inputKey);
+  assert.equal(storyLayer("headline").font, "serif-display");
+  assert.ok(storyLayer("headline").box.y < storyLayer("customer_photo").box.y);
+  assert.ok(storyLayer("customer_photo").box.height >= 0.31);
+  assert.equal(storyLayer("about_panel").role, "stacked-features-panel");
+  assert.equal(storyLayer("contact_bar").role, "story-contact-bar");
+  assert.ok(storyLayer("cta").box.y >= storyLayer("contact_bar").box.y);
+});
+
 test("story geometry is native and not a uniform feed transform", () => {
   const minimumStoryHeroHeights = {
     "180": 0.40, "149": 0.44, "033": 0.34, "044": 0.44, "021": 0.34,
-    "006": 0.44, "039": 0.42, "062": 0.38, "154": 0.50, "108": 0.46,
+    "006": 0.31, "039": 0.42, "062": 0.38, "154": 0.50, "108": 0.46,
     "111": 0.40, "182": 0.45, "143": 0.38, "145": 0.46, "148": 0.68,
     "159": 0.72, "176": 0.66, "194": 0.62, "127": 0.66, "199": 0.64,
   };
