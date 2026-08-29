@@ -4,7 +4,7 @@ Blockwise is organized around a few shared primitives rather than separate produ
 
 ## Surfaces
 
-- Operator Console: workspace oversight, AI spend, agent queue, approval queue, blocked outputs, sync failures, and managed-service tasks.
+- Operator Console: workspace oversight, AI spend, agent queue, approval queue, blocked outputs, sync failures, and service operations.
 - Monitor: connected account health, reporting snapshots, CPL, lead quality, competitor snapshots, recommendations, and alerts.
 - Self-Serve: research, idea mine, campaign builder, creative studio, ad previews, lead magnets, leads, and reports.
 - Agent Workforce: agent definitions, runs, steps, artifacts, schedules, permissions, and reviews.
@@ -22,8 +22,20 @@ Blockwise is organized around a few shared primitives rather than separate produ
 
 ## Runtime Boundaries
 
-- Vercel handles Next.js pages and request/response route handlers.
-- Supabase handles Auth, Postgres, RLS, Storage, and workspace isolation.
-- Supabase `job_queue` and the VPS worker handle durable jobs, retries, and provider syncs; Vercel Cron enqueues schedules.
+- The OSS product VPS compose target handles Caddy, the Next standalone app,
+  PostgREST, GoTrue, PostgreSQL, Storage API, and the durable worker. See
+  [the OSS migration runbook](../runbooks/oss-product-migration.md); production
+  is not cut over yet.
+- The first migration phase retains `@supabase/supabase-js` as a protocol
+  client only, pointed at the self-hosted Caddy origin. It is not a managed
+  Supabase runtime or database dependency. Auth UUIDs,
+  Postgres/RLS/RPC semantics, private Storage, and workspace isolation are
+  preserved as explicit data contracts.
+- Realtime is enabled only while reporting invalidation needs it; polling is
+  the fallback. DNS, SMTP, webhooks, and provider writes are separate cutover
+  gates and are not implicitly changed by the compose foundation.
+- Frank generation runs and template-v2 packs/provenance remain self-hosted
+  product artifacts. Hermes research/agent runs remain a separate VPS runtime;
+  neither is a hidden dependency on managed Vercel or Supabase services.
 - External agent runtimes are adapters and must use scoped Blockwise APIs.
 

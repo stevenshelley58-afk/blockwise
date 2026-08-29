@@ -3,6 +3,8 @@
 import { useMemo } from "react";
 import type { MetaCopy } from "./use-editor-state";
 import { cn } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 // ---------------------------------------------------------------------------
 // Meta Copy Panel — primary text, headline, description and CTA for the
@@ -44,8 +46,8 @@ export function MetaCopyPanel({ className, values, onChange }: MetaCopyPanelProp
   const customCta = !(META_CTA_OPTIONS as readonly string[]).includes(values.cta);
 
   return (
-    <aside aria-label="Meta copy" className={cn("w-72 shrink-0 overflow-y-auto border-l border-(--line) bg-(--surface) p-4", className)}>
-      <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+    <aside aria-label="Meta copy" className={cn("w-full shrink-0 overflow-y-auto bg-card p-4 xl:w-auto", className)}>
+      <h3 className="mb-3 text-sm font-semibold text-foreground">
         Meta copy
       </h3>
       <p className="mb-4 text-xs leading-relaxed text-muted-foreground">
@@ -78,17 +80,17 @@ export function MetaCopyPanel({ className, values, onChange }: MetaCopyPanelProp
         />
 
         <div>
-          <span className="mb-1 block text-sm font-medium text-foreground">
+          <Label htmlFor="meta-copy-cta" className="mb-1 block text-sm font-medium">
             Call to action
-          </span>
+          </Label>
           <select
             value={customCta ? "CUSTOM" : values.cta}
             onChange={e => {
               const next = e.target.value;
               onChange("cta", next === "CUSTOM" ? "" : next);
             }}
-            className="w-full rounded-(--r-control) border border-(--line) bg-(--surface-subtle) px-3 py-2 text-sm text-foreground outline-none transition focus:border-(--ui-primary) focus:ring-1 focus:ring-(--ui-primary)/40"
-            aria-label="Call to action"
+            id="meta-copy-cta"
+            className="min-h-11 w-full rounded-(--r-card) border border-input bg-muted/30 px-3 text-base shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
           >
             {META_CTA_OPTIONS.map(cta => (
               <option key={cta} value={cta}>
@@ -135,12 +137,11 @@ function TextField({
   maxLength: number;
   textarea?: boolean;
 }) {
-  const shared =
-    "w-full rounded-(--r-control) border border-(--line) bg-(--surface-subtle) px-3 py-2 text-sm text-foreground outline-none transition focus:border-(--ui-primary) focus:ring-1 focus:ring-(--ui-primary)/40";
+  const shared = "min-h-11 w-full rounded-(--r-card) border border-input bg-muted/30 px-3 text-base shadow-xs outline-none selection:bg-primary selection:text-primary-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50";
   const inputId = `meta-copy-${field}`;
   return (
     <div className="block">
-      <label htmlFor={inputId} className="mb-1 block text-sm font-medium text-foreground">{label}</label>
+      <Label htmlFor={inputId} className="mb-1 block text-sm font-medium">{label}</Label>
       {textarea ? (
         <textarea
           id={inputId}
@@ -149,10 +150,10 @@ function TextField({
           maxLength={maxLength}
           rows={3}
           onChange={e => onChange(field, e.target.value)}
-          className={`${shared} resize-y`}
+          className={`${shared} min-h-24 py-2 resize-y`}
         />
       ) : (
-        <input
+        <Input
           id={inputId}
           aria-label={label}
           type="text"
@@ -188,15 +189,15 @@ function TruncationPreview({ values }: { values: MetaCopy }) {
       <h4 className="mb-2 text-xs font-semibold text-foreground">
         Feed preview
       </h4>
-      <div className="rounded-(--r-card) border border-(--line) bg-white p-3 text-[13px] leading-snug text-neutral-800">
+      <div className="rounded-(--r-card) border border-border bg-background p-3 text-[13px] leading-snug text-foreground">
         <p className="line-clamp-4">{primary || "Primary text"}</p>
-        <p className="mt-2 truncate font-semibold text-neutral-900">
+        <p className="mt-2 truncate font-semibold text-foreground">
           {headline || "Headline"}
         </p>
-        <p className="mt-1 truncate text-neutral-500">
+        <p className="mt-1 truncate text-muted-foreground">
           {description || "Description"}
         </p>
-        <p className="mt-2 inline-block rounded-full bg-neutral-100 px-3 py-1 text-xs font-medium text-neutral-600">
+        <p className="mt-2 inline-block rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
           {cta}
         </p>
       </div>

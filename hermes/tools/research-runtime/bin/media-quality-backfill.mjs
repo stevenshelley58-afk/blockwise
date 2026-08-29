@@ -3,12 +3,12 @@
 import { spawn } from "node:child_process";
 
 import { assessCapturedImageQuality, readImageDimensions } from "./ad-classifier.mjs";
-import { hermesSupabaseHeaders, resolveHermesSupabaseCredential } from "./supabase-credentials.mjs";
+import { assertHermesOwnedStorageUrl, hermesSupabaseHeaders, resolveHermesSupabaseCredential } from "./supabase-credentials.mjs";
 
 const env = process.env;
 const dryRun = process.argv.includes("--dry-run");
 const supabaseUrl = String(env.HERMES_SUPABASE_URL || env.SUPABASE_URL || "").replace(/\/+$/u, "");
-const customerSupabaseUrl = String(env.HERMES_CUSTOMER_SUPABASE_URL || env.SUPABASE_URL || "").replace(/\/+$/u, "");
+const storageUrl = env.HERMES_RESEARCH_STORAGE_URL ? assertHermesOwnedStorageUrl(env.HERMES_RESEARCH_STORAGE_URL) : "";
 const credential = resolveHermesSupabaseCredential(env);
 const mediaBucket = env.HERMES_RESEARCH_AD_CREATIVES_BUCKET || "research-ad-creatives";
 const batchSize = Math.max(1, Math.min(500, Number.parseInt(env.HERMES_MEDIA_QUALITY_BACKFILL_BATCH_SIZE || "200", 10)));
@@ -16,7 +16,7 @@ const fetchTimeoutMs = Math.max(1_000, Math.min(60_000, Number.parseInt(env.HERM
 const concurrency = Math.max(1, Math.min(32, Number.parseInt(env.HERMES_MEDIA_QUALITY_BACKFILL_CONCURRENCY || "16", 10)));
 
 if (!supabaseUrl) throw new Error("Missing HERMES_SUPABASE_URL/SUPABASE_URL");
-if (!customerSupabaseUrl) throw new Error("Missing HERMES_CUSTOMER_SUPABASE_URL/SUPABASE_URL");
+if (!storageUrl) throw new Error("Missing HERMES_RESEARCH_STORAGE_URL");
 if (!credential) throw new Error("Missing Hermes Supabase server credential");
 
 const stats = {
@@ -137,7 +137,7 @@ async function mapWithConcurrency(items, limit, operation) {
 function mediaUrl(asset) {
   if (asset.storage_path) {
     const objectPath = String(asset.storage_path).split("/").map(encodeURIComponent).join("/");
-    return `${customerSupabaseUrl}/storage/v1/object/public/${encodeURIComponent(mediaBucket)}/${objectPath}`;
+    return `${storageUrl}/storage/v1/object/public/${encodeURIComponent(mediaBucket)}/${objectPath}`;
   }
   return /^https?:\/\//iu.test(String(asset.source_url || "")) ? asset.source_url : null;
 }

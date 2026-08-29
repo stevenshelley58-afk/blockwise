@@ -1,4 +1,4 @@
-import { templatePackAnySchema } from "../../../packages/ad-template-pack-contract/src/index.ts";
+import { templatePackV2Schema } from "../../../packages/ad-template-pack-contract/src/index.ts";
 import type { Layout, TemplatePack } from "../../../packages/ad-template-pack-contract/src/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -31,6 +31,11 @@ type PackRow = {
   version: unknown;
   pack_json: unknown;
   created_at: unknown;
+};
+
+type ImportReceiptRow = {
+  pack_id: unknown;
+  receipt: unknown;
 };
 
 function record(value: unknown): Record<string, unknown> | null {
@@ -75,6 +80,12 @@ export function gallerySampleProxyUrl(
   return `/api/adstudio/template-packs/${encodeURIComponent(packId)}/sample?placement=${placement}`;
 }
 
+/** Authenticated same-origin URL for one immutable declared image asset. */
+export function templateAssetProxyUrl(packId: string, assetKey: string): string | null {
+  if (!/^[A-Za-z0-9._-]+$/.test(packId) || !/^[A-Za-z0-9._-]+$/.test(assetKey)) return null;
+  return `/api/adstudio/template-packs/${encodeURIComponent(packId)}/assets/${encodeURIComponent(assetKey)}`;
+}
+
 /** All active imported packs, newest first. Invalid rows are skipped, never fatal. */
 export async function listImportedPacks(
   supabase: SupabaseClient,
@@ -86,9 +97,28 @@ export async function listImportedPacks(
 
   if (error) throw new Error(error.message);
 
+  const rows = (data ?? []) as PackRow[];
+  const packIds = rows
+    .map(row => typeof row.pack_id === "string" ? row.pack_id : null)
+    .filter((packId): packId is string => Boolean(packId));
+  if (packIds.length === 0) return [];
+
+  const { data: receiptData, error: receiptError } = await supabase
+    .from("ad_import_receipts")
+    .select("pack_id, receipt")
+    .eq("status", "active")
+    .in("pack_id", packIds);
+  if (receiptError) throw new Error(receiptError.message);
+  const approvedPackIds = new Set(
+    ((receiptData ?? []) as ImportReceiptRow[])
+      .filter(row => isApprovedLayeredImportReceipt(row.receipt))
+      .map(row => String(row.pack_id)),
+  );
+
   const summaries: ImportedPackSummary[] = [];
-  for (const row of (data ?? []) as PackRow[]) {
-    const pack = parsePackJson(row.pack_json);
+  for (const row of rows) {
+    if (!approvedPackIds.has(String(row.pack_id))) continue;
+    const pack = parseLayeredPackJson(row.pack_json);
     if (!pack) continue;
     summaries.push(summaryFromPack(pack, row));
   }
@@ -100,6 +130,15 @@ export async function getImportedPack(
   supabase: SupabaseClient,
   packId: string,
 ): Promise<TemplatePack | null> {
+  const { data: receipt, error: receiptError } = await supabase
+    .from("ad_import_receipts")
+    .select("receipt")
+    .eq("pack_id", packId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (receiptError) throw new Error(receiptError.message);
+  if (!receipt || !isApprovedLayeredImportReceipt((receipt as { receipt: unknown }).receipt)) return null;
+
   const { data, error } = await supabase
     .from("ad_template_packs")
     .select("pack_json")
@@ -108,7 +147,35 @@ export async function getImportedPack(
 
   if (error) throw new Error(error.message);
   if (!data) return null;
-  return parsePackJson((data as { pack_json: unknown }).pack_json);
+  return parseLayeredPackJson((data as { pack_json: unknown }).pack_json);
+}
+
+/**
+ * Customer-visible packs require the complete, sanitized release lineage.
+ * Merely setting a database row to `active` cannot bypass the iterative visual
+ * QA and explicit 100%-zoom approval gates.
+ */
+export function isApprovedLayeredImportReceipt(value: unknown): boolean {
+  const receipt = record(value);
+  const provenance = record(receipt?.provenance);
+  if (
+    receipt?.schema !== "blockwise.ad-template-import-receipt.v1" ||
+    receipt?.status !== "active" ||
+    !provenance
+  ) return false;
+
+  for (const field of [
+    "runId",
+    "releaseId",
+    "traceRef",
+    "qaReceiptRef",
+    "approvalReceiptRef",
+    "sanitizationReceiptRef",
+  ] as const) {
+    const candidate = provenance[field];
+    if (typeof candidate !== "string" || candidate.length === 0 || candidate.length > 512) return false;
+  }
+  return true;
 }
 
 // ---------------------------------------------------------------------------
@@ -135,8 +202,14 @@ function summaryFromPack(pack: TemplatePack, row: PackRow): ImportedPackSummary 
   };
 }
 
-function parsePackJson(value: unknown): TemplatePack | null {
+/**
+ * Customer Ad Studio deliberately exposes only the source-free layered v2
+ * release contract. Historical v1 rows remain available for audit/rollback,
+ * but cannot silently reappear in the gallery or editor.
+ */
+export function parseLayeredPackJson(value: unknown): TemplatePack | null {
   if (!value || typeof value !== "object") return null;
-  const parsed = templatePackAnySchema.safeParse(value);
-  return parsed.success ? (parsed.data as TemplatePack) : null;
+  if ((value as { schema?: unknown }).schema !== "blockwise.template-pack/v2") return null;
+  const parsed = templatePackV2Schema.safeParse(value);
+  return parsed.success ? (parsed.data as unknown as TemplatePack) : null;
 }

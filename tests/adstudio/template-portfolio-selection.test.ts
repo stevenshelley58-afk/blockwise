@@ -12,6 +12,12 @@ test("launch portfolio registers exactly 20 unique 4:5 feed sources", () => {
   assert.equal(initialTemplateBuildQueue.length, 20);
   assert.equal(new Set(initialTemplateBuildQueue.map((template) => template.id)).size, 20);
   assert.equal(new Set(initialTemplateBuildQueue.map((template) => template.sourceFile)).size, 20);
+  assert.deepEqual(initialTemplateBuildQueue.map((template) => template.id), [
+    "meta-feed-180", "meta-feed-149", "meta-feed-033", "meta-feed-044", "meta-feed-021",
+    "meta-feed-006", "meta-feed-039", "meta-feed-062", "meta-feed-154", "meta-feed-108",
+    "meta-feed-111", "meta-feed-182", "meta-feed-143", "meta-feed-145", "meta-feed-148",
+    "meta-feed-159", "meta-feed-176", "meta-feed-194", "meta-feed-127", "meta-feed-199",
+  ]);
 
   for (const template of initialTemplateBuildQueue) {
     assert.match(template.sourceFile, /^01_feed_4x5_best\/meta_\d{3}\.png$/);
@@ -28,6 +34,7 @@ test("launch portfolio registers exactly 20 unique 4:5 feed sources", () => {
       assert.equal(sourceHash, template.sourceSha256, `${template.id} source hash drifted`);
     }
   }
+
 });
 
 test("private raw candidate inventory is ignored by git", () => {

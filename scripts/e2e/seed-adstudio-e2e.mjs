@@ -7,7 +7,7 @@
 //   - a dedicated self-serve workspace (deterministic id below)
 //   - owner membership
 //   - a six-credit operator entitlement for the current UTC month
-// Brand-kit approval is exercised by the spec itself through the real UI.
+//   - a reviewed Brand Pack so the spec can exercise appearance persistence
 //
 // Env: NEXT_PUBLIC_SUPABASE_URL or SUPABASE_URL, SUPABASE_SECRET_KEY
 //      (preferred) or SUPABASE_SERVICE_ROLE_KEY,
@@ -105,6 +105,44 @@ requireNoError(
     { onConflict: "workspace_id,profile_id" },
   ),
   "Upsert workspace member",
+);
+
+// Give the dedicated fixture workspace a reviewed, non-demo Brand Pack so the
+// real-loop test can exercise the appearance toggle and persist that choice.
+// This is deliberately a plain database fixture: no external site is fetched
+// and no logo/identity asset is introduced into the customer flow.
+requireNoError(
+  await supabase.from("adstudio_brand_kits").upsert(
+    {
+      id: "00000000-0000-4000-8000-0000000000e3",
+      workspace_id: ADSTUDIO_E2E_WORKSPACE_ID,
+      source_type: "manual",
+      source_url: "https://blockwise.sale",
+      business_name: "AdStudio E2E Realty",
+      market_country: "AU",
+      market_region: "WA",
+      identity_json: { businessName: "AdStudio E2E Realty", tradingName: "AdStudio E2E Realty" },
+      logos_json: {},
+      colours_json: {
+        primary: "#123E75",
+        secondary: "#F1F5F9",
+        accent: "#31C46F",
+        background: "#FFFFFF",
+        text: "#131B2E",
+        confidence: { primary: 0.99, secondary: 0.99 },
+      },
+      typography_json: { headingFont: "Inter", bodyFont: "Inter" },
+      tone_json: {},
+      visual_style_json: {},
+      compliance_json: {},
+      contact_json: {},
+      review_status: "approved",
+      locked_fields_json: [],
+      created_by: authUser.id,
+    },
+    { onConflict: "id" },
+  ),
+  "Upsert AdStudio e2e Brand Pack",
 );
 
 // The browser workflow exercises the real paid render path. Keep its wallet

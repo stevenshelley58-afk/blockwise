@@ -8,6 +8,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { computeManifestHash, sha256Hex } from "../packages/ad-template-pack-contract/src/index.ts";
 import {
   importTemplatePack,
+  requireCompleteReleaseProvenance,
   type ImportRequest,
   type ImportError,
 } from "../src/lib/adstudio/import-pack.ts";
@@ -26,6 +27,27 @@ const FIXTURE_PATH = join(
 );
 
 function loadFixture(): Record<string, unknown> {
+  const pack = loadLegacyFixture();
+  pack.schema = "blockwise.template-pack/v2";
+  pack.metadata = {
+    title: "Fixture", description: "Layered fixture",
+    gallerySamples: {
+      feed: { assetKey: "feed-sample", placement: "feed", purpose: "gallery_sample" },
+      story: { assetKey: "story-sample", placement: "story", purpose: "gallery_sample" },
+    },
+    metaCopyDefaults: { primaryText: [], headlines: [], descriptions: [], cta: "LEARN_MORE" },
+    aiWritingGuidance: { summary: "Use verified claims only.", fields: {} },
+    publishRequirements: {
+      objective: "OUTCOME_LEADS", specialAdCategory: null,
+      instantForm: { required: false, dependency: null },
+      destination: { required: false, kind: "none", dependency: null },
+    },
+    replacementAssets: [], realAssetRefs: [],
+  };
+  return sealPlaceholder(pack);
+}
+
+function loadLegacyFixture(): Record<string, unknown> {
   return JSON.parse(readFileSync(FIXTURE_PATH, "utf8")) as Record<string, unknown>;
 }
 
@@ -56,7 +78,7 @@ function makeRequest(
   overrides: Partial<ImportRequest> = {},
 ): ImportRequest {
   return {
-    packUrl: "https://frank.fail/packs/fixture-minimal.json",
+    packUrl: "https://frank.fail/releases/ad-template-generator/fixture-release/pack-v2/fixture-minimal.json",
     packSha256: sha256Hex(pack),
     packId: "fixture-minimal-v1",
     buildId: "fixture-build-1",
@@ -83,6 +105,8 @@ class FakeSupabase {
     ad_template_assets: [],
   };
   uploaded: Array<{ bucket: string; path: string; bytes: Uint8Array; options: Record<string, unknown> }> = [];
+  objects = new Map<string, Uint8Array>();
+  activationError: string | null = null;
   private seq = 0;
 
   from(table: string): FakeQueryBuilder {
@@ -92,11 +116,102 @@ class FakeSupabase {
   storage = {
     from: (bucket: string) => ({
       upload: async (path: string, bytes: Uint8Array, options: Record<string, unknown>) => {
+        if (this.objects.has(path) && options.upsert === false) {
+          return { data: null, error: { message: "The resource already exists" } };
+        }
+        this.objects.set(path, Uint8Array.from(bytes));
         this.uploaded.push({ bucket, path, bytes, options });
         return { data: { path }, error: null };
       },
+      download: async (path: string) => {
+        const bytes = this.objects.get(path);
+        return bytes
+          ? { data: new Blob([Uint8Array.from(bytes).buffer as ArrayBuffer]), error: null }
+          : { data: null, error: { message: "The resource was not found" } };
+      },
     }),
   };
+
+  async rpc(name: string, args: Record<string, unknown>) {
+    if (name !== "activate_ad_template_pack_import") {
+      return { data: null, error: { message: `Unknown RPC ${name}` } };
+    }
+    if (this.activationError) return { data: null, error: { message: this.activationError } };
+    const receiptInput = args.p_receipt as Row;
+    const packInput = args.p_pack as Row;
+    const assets = args.p_assets as Row[];
+    const existing = this.tables.ad_import_receipts.find(row => row.pack_id === receiptInput.pack_id);
+    if (existing) {
+      if (existing.pack_sha256 !== receiptInput.pack_sha256) {
+        return { data: null, error: { message: "pack_id_conflict" } };
+      }
+      return {
+        data: {
+          id: existing.id,
+          pack_id: existing.pack_id,
+          pack_sha256: existing.pack_sha256,
+          created_at: existing.created_at,
+          replayed: true,
+        },
+        error: null,
+      };
+    }
+    if (this.tables.ad_import_nonces.some(row => row.nonce === receiptInput.nonce)) {
+      return { data: null, error: { message: "nonce_replay" } };
+    }
+
+    const createdAt = new Date().toISOString();
+    const receipt: Row = {
+      id: `row-${++this.seq}`,
+      pack_id: receiptInput.pack_id,
+      pack_sha256: receiptInput.pack_sha256,
+      build_id: receiptInput.build_id,
+      issuer: receiptInput.issuer,
+      issued_at: receiptInput.issued_at,
+      nonce: receiptInput.nonce,
+      signature: receiptInput.signature,
+      status: "active",
+      receipt: receiptInput.receipt,
+      created_at: createdAt,
+    };
+    this.tables.ad_import_nonces.push({ nonce: receiptInput.nonce, used_at: createdAt });
+    this.tables.ad_template_packs.push({
+      id: `row-${++this.seq}`,
+      pack_id: packInput.pack_id,
+      template_id: packInput.template_id,
+      version: packInput.version,
+      schema_version: packInput.schema_version,
+      manifest_sha256: packInput.manifest_sha256,
+      signature: packInput.signature,
+      pack_json: packInput.pack_json,
+      created_at: createdAt,
+    });
+    this.tables.ad_template_pack_versions.push({
+      id: `row-${++this.seq}`,
+      pack_id: packInput.pack_id,
+      version: packInput.version,
+      manifest_sha256: packInput.manifest_sha256,
+      pack_json: packInput.pack_json,
+      created_at: createdAt,
+    });
+    this.tables.ad_template_assets.push(...assets.map(asset => ({
+      id: `row-${++this.seq}`,
+      pack_id: packInput.pack_id,
+      ...asset,
+      created_at: createdAt,
+    })));
+    this.tables.ad_import_receipts.push(receipt);
+    return {
+      data: {
+        id: receipt.id,
+        pack_id: receipt.pack_id,
+        pack_sha256: receipt.pack_sha256,
+        created_at: receipt.created_at,
+        replayed: false,
+      },
+      error: null,
+    };
+  }
 
   insertInto(table: string, value: Row | Row[]): Row | Row[] {
     const rows = Array.isArray(value) ? value : [value];
@@ -230,6 +345,51 @@ describe("import-pack — local fixture import (no live Frank URL)", () => {
     assert.equal(second.receiptId, first.receiptId);
   });
 
+  it("persists and replays only sanitized Frank run provenance", async () => {
+    const supabase = fakeSupabase();
+    const pack = loadFixture();
+    const input = makeRequest(pack, {
+      runId: "run-20260824-01",
+      releaseId: "meta-portfolio-abcdef12",
+      traceRef: "hermes://ad-template-generator/runs/run-20260824-01",
+      qaReceiptRef: "meta-portfolio-abcdef12/qa-evidence.json",
+      approvalReceiptRef: "meta-portfolio-abcdef12/approval.json",
+      sanitizationReceiptRef: "meta-portfolio-abcdef12/sanitization.json",
+    });
+
+    const first = await importTemplatePack(supabase, input, { fetchPack: async () => pack });
+    assert.deepEqual(first.provenance, {
+      runId: "run-20260824-01",
+      releaseId: "meta-portfolio-abcdef12",
+      traceRef: "hermes://ad-template-generator/runs/run-20260824-01",
+      qaReceiptRef: "meta-portfolio-abcdef12/qa-evidence.json",
+      approvalReceiptRef: "meta-portfolio-abcdef12/approval.json",
+      sanitizationReceiptRef: "meta-portfolio-abcdef12/sanitization.json",
+    });
+
+    const storedReceipt = supabaseTables(supabase).ad_import_receipts[0]!.receipt as Record<string, unknown>;
+    assert.equal(storedReceipt.schema, "blockwise.ad-template-import-receipt.v1");
+    assert.equal((storedReceipt.provenance as Record<string, unknown>).runId, "run-20260824-01");
+    assert.equal((storedReceipt as Record<string, unknown>).sourceAd, undefined);
+    assert.equal((storedReceipt as Record<string, unknown>).promptHistory, undefined);
+
+    const replay = await importTemplatePack(supabase, input, { fetchPack: async () => pack });
+    assert.equal(replay.status, "replayed");
+    assert.deepEqual(replay.provenance, first.provenance);
+  });
+
+  it("rejects control characters in Frank provenance refs before activation", async () => {
+    const supabase = fakeSupabase();
+    const pack = loadFixture();
+    const input = makeRequest(pack, { traceRef: "hermes://runs/\u0000bad" });
+
+    await assert.rejects(
+      importTemplatePack(supabase, input, { fetchPack: async () => pack }),
+      (err: unknown) => (err as ImportError).code === "invalid_provenance",
+    );
+    assert.equal(supabaseTables(supabase).ad_import_receipts.length, 0);
+  });
+
   it("rejects a replayed nonce", async () => {
     const supabase = fakeSupabase();
     const pack = loadFixture();
@@ -259,6 +419,7 @@ describe("import-pack — local fixture import (no live Frank URL)", () => {
       importTemplatePack(supabase, input, { fetchPack: async () => pack }),
       (err: unknown) => (err as ImportError).code === "hash_mismatch",
     );
+    assert.equal(supabaseTables(supabase).ad_import_nonces.length, 0, "validation failures must not consume the nonce");
   });
 
   it("rejects a pack that fails schema validation", async () => {
@@ -270,6 +431,18 @@ describe("import-pack — local fixture import (no live Frank URL)", () => {
       importTemplatePack(supabase, input, { fetchPack: async () => bad }),
       (err: unknown) => (err as ImportError).code === "schema_invalid",
     );
+  });
+
+  it("refuses an otherwise valid historical v1 pack", async () => {
+    const supabase = fakeSupabase();
+    const legacy = loadLegacyFixture();
+    const input = makeRequest(legacy);
+
+    await assert.rejects(
+      importTemplatePack(supabase, input, { fetchPack: async () => legacy }),
+      (err: unknown) => (err as ImportError).code === "layered_v2_required",
+    );
+    assert.equal(supabaseTables(supabase).ad_template_packs.length, 0);
   });
 
   it("still enforces the origin allowlist when no fetchPack is injected", async () => {
@@ -398,6 +571,21 @@ describe("import-pack — pure helpers", () => {
     const h2 = sha256Hex(structuredClone(obj));
     assert.equal(h1, h2);
   });
+
+  it("requires the complete production release provenance chain", () => {
+    assert.doesNotThrow(() => requireCompleteReleaseProvenance({
+      runId: "trun_123",
+      releaseId: "release_123",
+      traceRef: "trace:123",
+      qaReceiptRef: "qa:123",
+      approvalReceiptRef: "approval:123",
+      sanitizationReceiptRef: "sanitization:123",
+    }));
+    assert.throws(
+      () => requireCompleteReleaseProvenance({ runId: "trun_123" }),
+      (err: unknown) => (err as ImportError).code === "release_provenance_incomplete",
+    );
+  });
 });
 
 describe("import-pack — v2 asset verification", () => {
@@ -414,8 +602,33 @@ describe("import-pack — v2 asset verification", () => {
     assert.equal(receipt.status, "active");
     const fake = supabase as unknown as FakeSupabase;
     assert.equal(fake.uploaded.length, 1);
+    assert.equal(fake.uploaded[0]!.options.upsert, false);
     assert.match(String(fake.uploaded[0]!.path), /^templates\/fixture-v2-assets\/logo-/);
     assert.equal(fake.tables.ad_template_assets[0]!.storage_path, fake.uploaded[0]!.path);
+  });
+
+  it("leaves no database rows or consumed nonce when transactional activation fails", async () => {
+    const supabase = fakeSupabase();
+    const fake = supabase as unknown as FakeSupabase;
+    fake.activationError = "simulated transaction rollback";
+    const { pack, assetUrl } = v2Pack(png, "fixture-v2-rollback");
+    const input = makeRequest(pack, {
+      packId: "fixture-v2-rollback",
+      packUrl: "https://frank.fail/releases/ad-template-generator/fixture-release/pack-v2/fixture.json",
+    });
+
+    await assert.rejects(
+      importTemplatePack(supabase, input, {
+        fetchPack: async () => pack,
+        fetchAsset: async (url) => { assert.equal(url, assetUrl); return png; },
+      }),
+      (err: unknown) => (err as ImportError).code === "activation_failed",
+    );
+    assert.equal(fake.tables.ad_import_receipts.length, 0);
+    assert.equal(fake.tables.ad_import_nonces.length, 0);
+    assert.equal(fake.tables.ad_template_packs.length, 0);
+    assert.equal(fake.tables.ad_template_pack_versions.length, 0);
+    assert.equal(fake.tables.ad_template_assets.length, 0);
   });
 
   it("fails closed on tampered asset bytes before activation", async () => {

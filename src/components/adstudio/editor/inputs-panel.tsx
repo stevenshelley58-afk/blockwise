@@ -3,6 +3,9 @@
 import { useRef } from "react";
 import type { ImageInput, TextInput } from "../../../../packages/ad-template-pack-contract/src/types";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 // ---------------------------------------------------------------------------
 // Inputs Panel — shared content inputs for a Frank pack. Picked files keep a
@@ -38,9 +41,13 @@ export function InputsPanel({
   onImageChange,
   onCropClick,
 }: InputsPanelProps) {
+  const requiredImageInputs = imageInputs.filter(input => input.required !== false);
+  const optionalImageInputs = imageInputs.filter(input => input.required === false);
+  const missingRequiredImages = requiredImageInputs.filter(input => !imageValues[input.key]);
+
   return (
-    <aside aria-label="Content" className={cn("w-72 shrink-0 overflow-y-auto border-l border-(--line) bg-(--surface) p-4", className)}>
-      <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+    <aside aria-label="Content" className={cn("w-full shrink-0 overflow-y-auto bg-card p-4 xl:w-auto", className)}>
+      <h3 className="mb-3 text-sm font-semibold text-foreground">
         Content
       </h3>
       <p className="mb-4 text-xs leading-relaxed text-muted-foreground">
@@ -56,22 +63,22 @@ export function InputsPanel({
             {textInputs.map(input => {
               const value = textValues[input.key] ?? "";
               return (
-                <label key={input.key} className="block">
-                  <span className="mb-1 block text-sm font-medium text-foreground">
-                    {input.label}
-                  </span>
-                  <input
+                <div key={input.key} className="block">
+                  <Label htmlFor={`content-${input.key}`} className="mb-1 block text-sm font-medium">{input.label}</Label>
+                  <Input
+                    id={`content-${input.key}`}
                     type="text"
                     value={value}
                     placeholder={input.placeholder || undefined}
                     maxLength={input.maxLength}
                     onChange={e => onTextChange(input.key, e.target.value)}
-                    className="w-full rounded-(--r-control) border border-(--line) bg-(--surface-subtle) px-3 py-2 text-sm text-foreground outline-none transition focus:border-(--ui-primary) focus:ring-1 focus:ring-(--ui-primary)/40"
+                    className="min-h-11 rounded-(--r-card) bg-muted/30"
+                    aria-describedby={`content-${input.key}-count`}
                   />
-                  <span className="mt-1 block text-right text-[11px] tabular-nums text-muted-foreground">
+                  <span id={`content-${input.key}-count`} className="mt-1 block text-right text-[11px] tabular-nums text-muted-foreground">
                     {value.length}/{input.maxLength}
                   </span>
-                </label>
+                </div>
               );
             })}
           </div>
@@ -84,7 +91,12 @@ export function InputsPanel({
           <p className="mb-4 text-xs text-muted-foreground">This template has no image slots.</p>
         ) : (
           <div className="mb-4 space-y-4">
-            {imageInputs.map(input => (
+            <p className="rounded-(--r-card) bg-muted/50 px-3 py-2 text-xs leading-relaxed text-muted-foreground" role="status">
+              {missingRequiredImages.length > 0
+                ? `${missingRequiredImages.length} required ${missingRequiredImages.length === 1 ? "image is" : "images are"} still needed. Each label shows where it appears.`
+                : "All required images are in place. Replace or crop any image below if needed."}
+            </p>
+            {requiredImageInputs.map(input => (
               <ImageSlotControl
                 key={input.key}
                 input={input}
@@ -93,6 +105,24 @@ export function InputsPanel({
                 onCropClick={() => onCropClick(input.key)}
               />
             ))}
+            {optionalImageInputs.length > 0 ? (
+              <details className="rounded-(--r-ctl) border border-border bg-muted/20">
+                <summary className="cursor-pointer px-3 py-3 text-sm font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                  Optional brand details
+                </summary>
+                <div className="space-y-4 border-t border-border p-3">
+                  {optionalImageInputs.map(input => (
+                    <ImageSlotControl
+                      key={input.key}
+                      input={input}
+                      dataUrl={imageValues[input.key] ?? null}
+                      onImageChange={onImageChange}
+                      onCropClick={() => onCropClick(input.key)}
+                    />
+                  ))}
+                </div>
+              </details>
+            ) : null}
           </div>
         )}
         <p className="text-[11px] leading-relaxed text-muted-foreground">
@@ -135,10 +165,14 @@ function ImageSlotControl({
 
   return (
     <div>
-      <span className="mb-1 block text-sm font-medium text-foreground">{input.label}</span>
+      <span className="mb-1 flex items-center justify-between gap-2 text-sm font-medium text-foreground">
+        <span>{input.label}</span>
+        <span className="text-[11px] font-normal text-muted-foreground">{input.required === false ? "Optional" : "Required"}</span>
+      </span>
       <input
         ref={fileRef}
         type="file"
+        required={input.required !== false}
         accept={accept}
         className="hidden"
         aria-label={`Choose image for ${input.label}`}
@@ -153,40 +187,44 @@ function ImageSlotControl({
           <img
             src={dataUrl}
             alt={`${input.label} preview`}
-            className="h-16 w-16 shrink-0 rounded-(--r-control) border border-(--line) object-cover"
+            className="h-16 w-16 shrink-0 rounded-(--r-card) border border-border object-cover"
           />
-          <div className="flex flex-col gap-1.5">
-            <button
+          <div className="flex min-w-0 flex-wrap gap-2">
+            <Button
               type="button"
+              variant="outline"
               onClick={() => fileRef.current?.click()}
-              className="rounded-(--r-control) border border-(--line) px-3 py-1.5 text-xs font-medium text-foreground transition hover:bg-(--surface-subtle)"
+              className="min-h-11"
             >
               Replace
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
+              variant="outline"
               onClick={onCropClick}
-              className="rounded-(--r-control) border border-(--line) px-3 py-1.5 text-xs font-medium text-foreground transition hover:bg-(--surface-subtle)"
+              className="min-h-11"
             >
               Crop…
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
+              variant="ghost"
               onClick={() => onImageChange(input.key, null)}
-              className="rounded-(--r-control) border border-(--line) px-3 py-1.5 text-xs font-medium text-muted-foreground transition hover:bg-(--surface-subtle) hover:text-red-600"
+              className="min-h-11 text-muted-foreground hover:text-destructive"
             >
               Remove
-            </button>
+            </Button>
           </div>
         </div>
       ) : (
-        <button
+        <Button
           type="button"
+          variant="outline"
           onClick={() => fileRef.current?.click()}
-          className="w-full rounded-(--r-control) border border-dashed border-(--line) px-3 py-3 text-sm font-medium text-muted-foreground transition hover:border-(--ui-primary) hover:text-(--ui-primary)"
+          className="min-h-11 w-full border-dashed text-muted-foreground hover:text-primary"
         >
           Choose image…
-        </button>
+        </Button>
       )}
     </div>
   );

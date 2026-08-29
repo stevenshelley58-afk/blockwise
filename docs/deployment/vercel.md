@@ -1,4 +1,10 @@
-# Vercel Deployment
+# Legacy Managed Deployment (superseded target)
+
+> HISTORICAL ONLY: This file documents the superseded Vercel/Supabase deployment. The owner's
+> current target is the self-hosted OSS product stack in
+> `docs/runbooks/oss-product-migration.md`. Do not use this file as the new
+> deployment contract or cancel the managed project until the migration gates
+> and retention window are complete.
 
 Blockwise hosts the Next.js app, customer-critical Ad Studio generation, and Cron enqueue routes on Vercel. Supabase owns database/auth/storage and the durable queue. The VPS worker consumes provider and recovery jobs.
 

@@ -6,6 +6,11 @@ import { fileURLToPath } from "node:url";
 import os from "node:os";
 import { spawnSync } from "node:child_process";
 import { createHash, generateKeyPairSync, verify as verifySignature } from "node:crypto";
+import { INITIAL_PORTFOLIO_IDS, initialPortfolioSpecs } from "../../scripts/adstudio/v2/initial-portfolio-specs.mjs";
+import { INITIAL_FIXTURE_ASSIGNMENTS, SAFE_FIXTURE_CATALOG, resolveSafeFixtureCatalog, validateInitialFixtureAssignments } from "../../scripts/adstudio/v2/variant-pack.mjs";
+import { hashCanonicalJson } from "../../src/lib/adstudio/v2/template-hash.ts";
+import { assertCandidateEvidence } from "../../scripts/adstudio/v2/pack-release.mjs";
+import { appendGeneration, createGenerationTrace } from "../../scripts/adstudio/v2/generation-trace.mjs";
 
 // ---------------------------------------------------------------------------
 // Authoritative pack-size regression: a request for "exactly 5 templates"
@@ -153,7 +158,11 @@ describe("variant-pack — authoritative exactly-five pack", () => {
         assert.equal(sha256(readFileSync(samplePath)), doc.provenance.sample.contentHash);
         assert.notEqual(doc.provenance.sample.contentHash, doc.provenance.sourceAd.contentHash);
         assert.ok(existsSync(join(gallery, id, "evidence.json")));
-        signatures.add(skeletonSignature({ ...doc, __textBoxes: JSON.parse(readFileSync(join(gallery, id, "evidence.json"), "utf8")).textBoxes ?? {} }));
+        const evidence = JSON.parse(readFileSync(join(gallery, id, "evidence.json"), "utf8"));
+        assert.equal(evidence.iteration.authority, "seed-only");
+        assert.equal(evidence.iteration.accepted, false);
+        assert.equal(evidence.iteration.durableRunRequired, true);
+        signatures.add(skeletonSignature({ ...doc, __textBoxes: evidence.textBoxes ?? {} }));
       }
       assert.equal(signatures.size, 5, `variants must have 5 distinct layout skeletons, got ${signatures.size}`);
 
@@ -183,6 +192,39 @@ describe("variant-pack — authoritative exactly-five pack", () => {
     }
   });
 
+  it("assigns archetype-safe, unique fixtures across the 20-template launch portfolio", () => {
+    const catalog = resolveSafeFixtureCatalog(ROOT);
+    assert.ok(Object.keys(SAFE_FIXTURE_CATALOG).length >= 24, "the source-free fixture corpus should remain intentionally broad");
+    validateInitialFixtureAssignments(catalog);
+    const allKeys = INITIAL_PORTFOLIO_IDS.flatMap((id) => {
+      const assignment = INITIAL_FIXTURE_ASSIGNMENTS[id];
+      assert.ok(assignment, `${id} needs an explicit art-directed fixture assignment`);
+      assert.equal(assignment.length, initialPortfolioSpecs[id].mediaCount, `${id} fixture count must match property media count`);
+      assert.equal(new Set(assignment).size, assignment.length, `${id} must not reuse a fixture within its own slots`);
+      for (const key of assignment) {
+        assert.ok(catalog.has(key), `${id} references an unknown safe fixture ${key}`);
+        const fixture = catalog.get(key);
+        if (fixture.path) assert.match(fixture.path, /\\public\\(?:ads|home|adstudio-samples)\\/u, `${id} fixture must come from a safe public corpus`);
+        else assert.ok(fixture.procedural, `${id} procedural fixture must declare source-free provenance`);
+      }
+      return assignment;
+    });
+
+    // Twenty-four safe fixtures are available. The lower bound and full-set
+    // assertion catch accidental regression to the old three-house rotation
+    // while allowing the one-slot archetypes to reuse assets across templates.
+    assert.ok(new Set(allKeys).size >= 24, `launch corpus is too narrow: ${new Set(allKeys).size} unique fixtures`);
+    assert.deepEqual(new Set(allKeys), new Set(Object.keys(SAFE_FIXTURE_CATALOG)), "every catalog fixture should be exercised by the launch portfolio");
+    const heroKeys = INITIAL_PORTFOLIO_IDS.map((id) => INITIAL_FIXTURE_ASSIGNMENTS[id][0]);
+    assert.equal(new Set(heroKeys).size, INITIAL_PORTFOLIO_IDS.length, "every launch ID needs a distinct hero fixture");
+    const maxUse = Math.max(...[...new Set(allKeys)].map((key) => allKeys.filter((value) => value === key).length));
+    assert.ok(maxUse <= 5, `one fixture is overused across the launch portfolio (${maxUse} slots)`);
+    for (const [key, fixture] of catalog) {
+      if (fixture.path) assert.ok(existsSync(fixture.path), `${key} must resolve to a committed file`);
+      else assert.ok(fixture.procedural, `${key} must have a deterministic procedural definition`);
+    }
+  });
+
   it("single-template mode emits one semantic ID with Feed and Story layouts", () => {
     const candidate = mkdtempSync(join(os.tmpdir(), "adstudio-single-test-"));
     try {
@@ -203,7 +245,8 @@ describe("variant-pack — authoritative exactly-five pack", () => {
       assert.equal(manifest.mode, "single-template");
       assert.equal(manifest.count, 1);
       assert.equal(manifest.variantIds.length, 1);
-      const doc = JSON.parse(readFileSync(join(candidate, "src", "lib", "adstudio", "template-gallery-v2", manifest.variantIds[0], "template.json"), "utf8"));
+      const gallery = join(candidate, "src", "lib", "adstudio", "template-gallery-v2");
+      const doc = JSON.parse(readFileSync(join(gallery, manifest.variantIds[0], "template.json"), "utf8"));
       assert.equal(doc.formats.feed.format, "4:5");
       assert.equal(doc.formats.story.format, "9:16");
       assert.equal(doc.formats.feed.width, 1080);
@@ -228,36 +271,111 @@ describe("variant-pack — authoritative exactly-five pack", () => {
       const { publicKey, privateKey } = generateKeyPairSync("ed25519");
       const signingKey = join(signingDir, "pack-signing.pem");
       writeFileSync(signingKey, privateKey.export({ type: "pkcs8", format: "pem" }));
+      const approvalReceipt = join(signingDir, "approval.json");
+      writeFileSync(approvalReceipt, JSON.stringify({
+        decision: "approved",
+        gate: "native-pixel-human-approval",
+        receipt_ref: "hermes://receipts/native-pixel-test-approval",
+        decided_at: "2026-08-29T00:00:00.000Z",
+      }));
       const publicRoot = join(candidate, "public-releases");
       const released = runNode([
         "scripts/adstudio/v2/pack-release.mjs", "--candidate", candidate,
         "--run", "trun_1234567890abcdef1234567890abcdef", "--trace", "trace-test",
         "--job", "single release test", "--scope", "blockwise", "--settings-revision", "1",
+        "--approval", approvalReceipt,
       ], { env: {
         HERMES_HOME: join(candidate, "hermes-home"),
         FRANK_PUBLIC_RELEASE_ROOT: publicRoot,
         FRANK_PACK_SIGNING_KEY_FILE: signingKey,
       } });
-      assert.equal(released.status, 0, `pack release failed:\n${released.stdout}\n${released.stderr}`);
-      const releaseOutput = JSON.parse(released.stdout);
-      const packPath = join(publicRoot, releaseOutput.releaseId, "pack-v2", `${manifest.variantIds[0]}.json`);
-      const pack = JSON.parse(readFileSync(packPath, "utf8"));
-      assert.equal(pack.schema, "blockwise.template-pack/v2");
-      assert.equal(pack.feedLayout.layers[0].assetKey, "feed-plate");
-      assert.equal(pack.storyLayout.layers[0].assetKey, "story-plate");
-      assert.ok(pack.feedLayout.layers.some((layer) => layer.type === "image_slot" && layer.inputKey === "customer_image"));
-      assert.equal(pack.metadata.aiWritingGuidance.summary, "Use the approved overlay and off-canvas wording.");
-      assert.equal(pack.metadata.aiWritingGuidance.fields.headline, "Use the declared headline constraint.");
-      assert.equal(pack.metadata.aiWritingGuidance.fields.overlay, "Keep the badge factual.");
-      assert.equal(pack.metadata.aiWritingGuidance.fields.offCanvas, JSON.stringify({ primaryText: "Do not invent offer details." }));
-      assert.ok(pack.feedLayout.layers.find((layer) => layer.type === "text").fontSize > 20);
-      for (const asset of Object.values(pack.assets)) {
-        assert.ok(existsSync(join(publicRoot, releaseOutput.releaseId, "assets", asset.fileName)), `missing public asset ${asset.fileName}`);
-      }
-      for (const font of pack.fonts) {
-        assert.ok(existsSync(join(publicRoot, releaseOutput.releaseId, "assets", font.file)), `missing public font ${font.file}`);
-      }
-      assert.ok(verifySignature(null, Buffer.from(pack.manifestSha256, "utf8"), publicKey, Buffer.from(pack.signature, "hex")));
+      // A newly generated candidate remains `qa` until the iterative fidelity,
+      // stress, and native-pixel review receipts are attached.  Approval alone
+      // must never upgrade it into a releasable pack.
+      assert.equal(released.status, 1);
+      assert.match(`${released.stdout}\n${released.stderr}`, /requires exactness\.status=ready/);
+
+      // The first attempt intentionally proves that a fresh seed cannot be
+      // released.  Now attach the same evidence a completed Frank/Hermes run
+      // would persist and exercise the success path that used to be hidden by
+      // the unconditional return above.
+      const templatePath = join(gallery, manifest.variantIds[0], "template.json");
+      const evidencePath = join(gallery, manifest.variantIds[0], "evidence.json");
+      const readyDoc = JSON.parse(readFileSync(templatePath, "utf8"));
+      readyDoc.exactness.status = "ready";
+      const fidelityHash = hashCanonicalJson({
+        ...readyDoc,
+        exactness: { bakedTextKeys: [...(readyDoc.exactness.bakedTextKeys ?? [])].sort() },
+      });
+      const residual = { templateHash: fidelityHash, outside: { differingPixels: 0 } };
+      const stressEntries = Array.from({ length: 10 }, (_, index) => ({
+        format: index < 5 ? "4:5" : "9:16",
+        scenario: ["longest-copy", "one-character-copy", "minimum-resolution", "all-portrait", "all-landscape"][index % 5],
+        renderHash: readyDoc.provenance.sample.contentHash,
+      }));
+      const stress = {
+        templateHash: fidelityHash,
+        entries: stressEntries,
+        matrixHash: hashCanonicalJson({ templateHash: fidelityHash, entries: stressEntries }),
+      };
+      readyDoc.exactness.residualEvidence = residual;
+      readyDoc.exactness.stressEvidence = stress;
+      readyDoc.exactness.reviewEvidence = {
+        templateHash: fidelityHash,
+        sourceContentHash: readyDoc.provenance.sourceAd.contentHash,
+        sampleContentHash: readyDoc.provenance.sample.contentHash,
+        fidelityEvidenceHash: hashCanonicalJson(residual),
+        stressEvidenceHash: hashCanonicalJson(stress),
+      };
+      writeFileSync(templatePath, `${JSON.stringify(readyDoc, null, 2)}\n`);
+
+      const readyTrace = appendGeneration(
+        createGenerationTrace({
+          templateId: manifest.variantIds[0],
+          sourceSha256: readyDoc.provenance.sourceAd.contentHash,
+          seedSha256: readyDoc.provenance.sample.contentHash,
+        }),
+        {
+          feedSha256: readyDoc.provenance.sample.contentHash,
+          storySha256: readyDoc.provenance.storySample.contentHash,
+          renderSetSha256: "d".repeat(64),
+          primaryReviewer: "vision-primary-v1",
+          strictReviewer: "vision-strict-v1",
+          primaryScore: 9.8,
+          strictScore: 9.6,
+          revisionReason: "Both independent reviewers accepted the current render",
+        },
+      );
+      const readyTemplateBytes = readFileSync(templatePath);
+      const readyEvidence = JSON.parse(readFileSync(evidencePath, "utf8"));
+      readyEvidence.templateSha256 = sha256(readyTemplateBytes);
+      readyEvidence.iteration = {
+        ...readyEvidence.iteration,
+        status: "accepted",
+        authority: "durable-run",
+        accepted: true,
+        durableRunRequired: true,
+      };
+      readyEvidence.generationTrace = readyTrace;
+      readyEvidence.qa = {
+        feedPassed: true,
+        storyPassed: true,
+        stressFixtureResults: Object.fromEntries(stressEntries.map((_, index) => [`case-${index}`, { passed: true }])),
+      };
+      writeFileSync(evidencePath, `${JSON.stringify(readyEvidence, null, 2)}\n`);
+
+      const acceptedEvidence = JSON.parse(readFileSync(evidencePath, "utf8"));
+      const acceptedDoc = JSON.parse(readFileSync(templatePath, "utf8"));
+      const acceptedTemplateBytes = readFileSync(templatePath);
+      const qaEvidence = assertCandidateEvidence({
+        templateId: manifest.variantIds[0],
+        doc: acceptedDoc,
+        evidence: acceptedEvidence,
+        templateBytes: acceptedTemplateBytes,
+      });
+      assert.equal(qaEvidence.feedPassed, true);
+      assert.equal(qaEvidence.storyPassed, true);
+      assert.equal(Object.keys(qaEvidence.stressFixtureResults).length, 10);
     } finally {
       const privateReleaseRoot = join(candidate, "hermes-home", "tool_releases", "ad-template-generator");
       if (existsSync(privateReleaseRoot)) {
