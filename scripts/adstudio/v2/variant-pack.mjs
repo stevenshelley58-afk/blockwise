@@ -53,6 +53,7 @@ import { renderAdDocToPng } from "../../../src/lib/adstudio/v2/render/server.ts"
 import { hashCanonicalJson } from "../../../src/lib/adstudio/v2/template-hash.ts";
 import { verifyPinnedFixtureCorpus } from "./subject-invariance.mjs";
 import { STORY_BACKING_COLOUR, STORY_MAX_DEAD_SPACE_PX, STORY_CTA_MAX_GAP_PX } from "./lib/story.mjs";
+import { validateInitialPortfolioContract } from "./initial-portfolio-specs.mjs";
 
 const SCRIPT_PATH = fileURLToPath(import.meta.url);
 const SCRIPT_DIR = dirname(SCRIPT_PATH);
@@ -502,8 +503,8 @@ const INITIAL_FIXTURE_ASSIGNMENTS = Object.freeze({
   "033": ["dusk", "styled-interior", "p-villa", "coastline", "p-studio"],
   "044": ["open-home", "dusk", "p-courtyard", "townhouse"],
   "021": ["townhouse", "coastline", "p-loft"],
-  "006": ["p-courtyard", "heritage", "open-home", "p-townhouse"],
-  "039": ["pool", "p-garden", "p-courtyard", "federation"],
+  "006": ["heritage", "federation", "open-home", "townhouse"],
+  "039": ["pool", "p-garden", "p-courtyard", "p-townhouse"],
   "062": ["coastline", "hillside", "vertical-hillside", "p-poolhouse"],
   "154": ["p-studio", "open-home", "bedroom"],
   "108": ["hillside", "coastline", "p-courtyard", "p-poolhouse"],
@@ -743,6 +744,7 @@ async function main() {
     process.exit(2);
   }
   const contract = readJson(contractPath);
+  validateInitialPortfolioContract(contract);
   const multiConcept = contract.mode === "multi-concept";
   const count = multiConcept ? Number(contract.count ?? 0) : 1;
   if (multiConcept && (!Number.isInteger(count) || count < 2 || count > 12)) {
