@@ -4,9 +4,11 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
+import { initialPortfolioSpecs, validateInitialPortfolioContract } from "../../scripts/adstudio/v2/initial-portfolio-specs.mjs";
 
 const ROOT = resolve(import.meta.dirname, "..", "..");
 const RUNNER = join(ROOT, "scripts", "adstudio", "v2", "initial-portfolio-runner.mjs");
+const VARIANT_PACK = join(ROOT, "scripts", "adstudio", "v2", "variant-pack.mjs");
 
 const run = (args) => spawnSync(process.execPath, [RUNNER, ...args], {
   cwd: ROOT,
@@ -42,4 +44,24 @@ test("Frank skill requires one visible run per initial template and human approv
   assert.match(skill, /one durable, visible Frank\s+run/);
   assert.match(skill, /do not combine the 20 attachments into one invisible bulk run/i);
   assert.match(skill, /blocked_pending_human_approval/);
+});
+
+test("ID 006 cannot bypass the canonical authored runner contract", () => {
+  assert.match(readFileSync(VARIANT_PACK, "utf8"), /validateInitialPortfolioContract\(contract\)/);
+  assert.throws(
+    () => validateInitialPortfolioContract({ templateId: "meta-006-canary", mode: "single-template" }),
+    /canonical templateId meta-feed-006/,
+  );
+  assert.throws(
+    () => validateInitialPortfolioContract({ templateId: "meta-feed-006", mode: "single-template" }),
+    /canonical initial portfolioSpec/,
+  );
+  const canonical = validateInitialPortfolioContract({ templateId: "meta-feed-006", portfolioSpec: initialPortfolioSpecs["006"] });
+  assert.equal(canonical.portfolioSpec.formats.feed.geometryFingerprint, initialPortfolioSpecs["006"].formats.feed.geometryFingerprint);
+  const altered = structuredClone(initialPortfolioSpecs["006"]);
+  altered.formats.story.geometryFingerprint = "[]";
+  assert.throws(
+    () => validateInitialPortfolioContract({ templateId: "meta-feed-006", portfolioSpec: altered }),
+    /geometry\/structure must match/,
+  );
 });
