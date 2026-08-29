@@ -46,7 +46,7 @@ function MetaAd({
  * THESIS: Blockwise is the advertising workspace itself, not a category metaphor.
  * OWN-WORLD: Obsidian work surface, white Manrope display, one data-blue voice.
  * STORY: See the product, understand create/approve/track, then start a free trial.
- * FIRST VIEWPORT: Exact challenge copy left; live-feeling campaign workspace right.
+ * FIRST VIEWPORT: Three-line challenge left; active, information-dense campaign workspace right.
  * FORM: User-approved 06A comp, reproduced as a responsive product proof hero.
  * FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
  */
@@ -56,9 +56,10 @@ export function WorkspaceHero() {
       <div className="hw-ws__grid" aria-hidden />
       <div className="hw-wide hw-ws__inner">
         <div className="hw-ws__copy">
-          <p className="hw-ws__eyebrow">The real estate advertising workspace</p>
           <h1 className="hw-ws__title">
-            Your competitors are advertising. <span>Are you?</span>
+            <span className="hw-ws__title-line">Your competitors are</span>
+            <span className="hw-ws__title-line">advertising.</span>
+            <span className="hw-ws__title-line hw-ws__title-line--accent">Are you?</span>
           </h1>
           <p className="hw-ws__lede">
             Create, approve and track Meta ads from one beautifully simple workspace.
@@ -76,11 +77,12 @@ export function WorkspaceHero() {
           </div>
           <div className="hw-ws-product__body">
             <div className="hw-ws-product__nav">
-              <span className="hw-ws-product__nav-logo" />
-              <i className="is-active" />
-              <i />
-              <i />
-              <i />
+              <span className="hw-ws-product__nav-logo"><i />Blockwise</span>
+              <span className="hw-ws-product__nav-item is-active"><i />Campaigns</span>
+              <span className="hw-ws-product__nav-item"><i />Ads</span>
+              <span className="hw-ws-product__nav-item"><i />Reports</span>
+              <span className="hw-ws-product__nav-item"><i />Brand</span>
+              <span className="hw-ws-product__nav-user"><i>YA</i><b>Your Agency</b></span>
             </div>
 
             <div className="hw-ws-product__main">
@@ -103,11 +105,18 @@ export function WorkspaceHero() {
                   </defs>
                   <path className="hw-ws-graph__fill" d={`${GRAPH_LINE} L548 124 L4 124 Z`} />
                   <path className="hw-ws-graph__line" d={GRAPH_LINE} pathLength="1" />
+                  <circle className="hw-ws-graph__point" cx="548" cy="19" r="5" />
                 </svg>
               </div>
               <div className="hw-ws-campaigns">
                 <div><span>Mt Lawley appraisal</span><b>Active</b><strong>18</strong></div>
                 <div><span>Subiaco seller campaign</span><b>Active</b><strong>11</strong></div>
+                <div><span>Cottesloe market update</span><b>Review</b><strong>6</strong></div>
+              </div>
+              <div className="hw-ws-activity">
+                <span><i />Latest activity</span>
+                <strong>Seller consult ad prepared</strong>
+                <small>Ready to review · just now</small>
               </div>
             </div>
 
