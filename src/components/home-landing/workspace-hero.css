@@ -489,6 +489,10 @@
   .hw-ws__lede { font-size: 15px; }
 }
 
+@media (max-width: 340px) {
+  .hw-page .hw-ws__title { font-size: 1.8rem; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .hw-ws__title-line,
   .hw-ws__lede,
