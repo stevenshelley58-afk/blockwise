@@ -156,7 +156,7 @@ export type TextLayer = TemplateLayerBase & {
       gradientFill?: { from: string; to: string; angleDeg: number };
     };
   };
-  constraints: { maxLength: number; maxLines: number; autoFitMinRatio: number };
+  constraints: { maxLength: number; maxLines: number; autoFitMinRatio: number; preferSingleLine?: boolean };
   /** provenance of the spec — carried from the v1 measurement pipeline */
   measurement: {
     fitScore: number;
@@ -579,6 +579,7 @@ const textLayerSchema = z.object({
     maxLength: z.number().int().positive(),
     maxLines: z.number().int().positive(),
     autoFitMinRatio: z.number().positive().max(1),
+    preferSingleLine: z.boolean().optional(),
   }),
   measurement: z.object({
     fitScore: unitScoreSchema,

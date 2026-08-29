@@ -134,6 +134,22 @@ const sampleOverridesById = Object.freeze({
   "127": { headline: "JUST SOLD", supporting: "ANOTHER STRONG RESULT, BEAUTIFULLY PRESENTED." },
   "199": { headline: "LUXURY VILLA", supporting: "REFINED SPACE. QUIET CONFIDENCE." },
 });
+const textLimitsById = Object.freeze({
+  "006": Object.freeze({
+    brand_name: 20,
+    headline: 30,
+    supporting: 40,
+    address: 36,
+    price: 16,
+    about_label: 20,
+    features_label: 22,
+    feature_1: 20,
+    feature_2: 20,
+    feature_3: 20,
+    cta: 19,
+    contact: 40,
+  }),
+});
 const box = (x, y, width, height) => ({ x, y, width, height });
 const pixelBox = (b, canvas) => ({ x: Math.round(b.x * canvas.width), y: Math.round(b.y * canvas.height), width: Math.round(b.width * canvas.width), height: Math.round(b.height * canvas.height) });
 const text = (inputKey, bounds, options = {}) => {
@@ -1071,7 +1087,14 @@ function makeInputs(id, entry) {
   imageInputs.push({ key: "logo_slot", kind: "logo", label: "Brand logo", required: false, sample: "SOURCE-FREE LOGO SLOT" });
   if (entry.portrait) imageInputs.push({ key: "portrait_slot", kind: "portrait", label: "Agent portrait", required: false, sample: "SOURCE-FREE PORTRAIT SLOT" });
   const textKeys = ["brand_name", "headline", "supporting", ...entry.semantics, "cta", "contact"];
-  const textInputs = [...new Set(textKeys)].map((key) => ({ key, kind: "text", label: key.replaceAll("_", " "), required: true, maxLength: key === "cta" ? 28 : 48, sample: sampleValues[key] || "EDITABLE DETAIL" }));
+  const textInputs = [...new Set(textKeys)].map((key) => ({
+    key,
+    kind: "text",
+    label: key.replaceAll("_", " "),
+    required: true,
+    maxLength: textLimitsById[id]?.[key] ?? (key === "cta" ? 28 : 48),
+    sample: sampleValues[key] || "EDITABLE DETAIL",
+  }));
   const vectorInputs = ["background_patch", "surface_patch", "accent_patch", "decor_primary", "icon_primary", ...EXTRA_VECTORS[id]];
   return { images: imageInputs, text: textInputs, vectors: vectorInputs.map((key) => ({ key, kind: "vector", label: key.replaceAll("_", " "), required: true, editable: true })) };
 }
@@ -1212,11 +1235,11 @@ const POLISHED_FEED_LAYER_PLANS = Object.freeze({
     polishedVector("inner_canvas", [0.031, 0.031, 0.938, 0.928], "rounded", { role: "brochure-canvas", colourRole: "background" }),
     polishedLogo([0.75, 0.075, 0.17, 0.04]),
     polishedSurface([0.63, 0.20, 0.29, 0.31], "rect", "listing-price-brand-card"),
-    polishedText("headline", [0.08, 0.09, 0.84, 0.08], "headline", "serif-display", "ink", { align: "center", maxLines: 1, sizeRatio: 0.40 }),
+    polishedText("headline", [0.08, 0.09, 0.84, 0.08], "headline", "serif-display", "ink", { align: "center", maxLines: 2, preferSingleLine: true, sizeRatio: 0.40 }),
     polishedImage("customer_photo", [0.08, 0.20, 0.52, 0.31], "rect", "primary-media"),
     polishedText("brand_name", [0.67, 0.235, 0.21, 0.025], "brand", "sans-bold", "ink", { maxLines: 1, sizeRatio: 0.46 }),
-    polishedText("address", [0.67, 0.28, 0.21, 0.025], "semantic-detail", "sans", "ink", { semantic: true, maxLines: 1, sizeRatio: 0.44 }),
-    polishedText("price", [0.67, 0.34, 0.21, 0.06], "semantic-detail", "sans-bold", "ink", { semantic: true, maxLines: 1, sizeRatio: 0.46 }),
+    polishedText("address", [0.67, 0.28, 0.21, 0.025], "semantic-detail", "sans", "ink", { semantic: true, maxLines: 2, preferSingleLine: true, sizeRatio: 0.44 }),
+    polishedText("price", [0.67, 0.34, 0.21, 0.06], "semantic-detail", "sans-bold", "ink", { semantic: true, maxLines: 2, preferSingleLine: true, sizeRatio: 0.46 }),
     polishedImage("property_image_1", [0.08, 0.54, 0.26, 0.11], "rect", "supporting-media"),
     polishedImage("property_image_2", [0.37, 0.54, 0.26, 0.11], "rect", "supporting-media"),
     polishedImage("property_image_3", [0.66, 0.54, 0.26, 0.11], "rect", "supporting-media"),
@@ -1598,11 +1621,11 @@ const POLISHED_STORY_LAYER_PLANS = Object.freeze({
     polishedBrand("sans-bold", "ink", [0.08, 0.132, 0.25, 0.034]),
     polishedLogo([0.75, 0.132, 0.17, 0.04]),
     polishedSurface([0.08, 0.59, 0.84, 0.07], "rect", "story-price-card"),
-    polishedText("headline", [0.08, 0.18, 0.84, 0.08], "headline", "serif-display", "ink", { maxLines: 1, sizeRatio: 0.40 }),
+    polishedText("headline", [0.08, 0.18, 0.84, 0.08], "headline", "serif-display", "ink", { maxLines: 2, preferSingleLine: true, sizeRatio: 0.40 }),
     polishedImage("customer_photo", [0.08, 0.26, 0.84, 0.31], "rect", "primary-media"),
     polishedText("about_label", [0.12, 0.592, 0.34, 0.014], "section-label", "sans-bold", "ink", { semantic: true, maxLines: 1, sizeRatio: 0.44 }),
-    polishedText("address", [0.12, 0.61, 0.34, 0.018], "semantic-detail", "sans", "ink", { semantic: true, maxLines: 1, sizeRatio: 0.44 }),
-    polishedText("price", [0.56, 0.603, 0.27, 0.03], "semantic-detail", "sans-bold", "ink", { semantic: true, maxLines: 1, sizeRatio: 0.48 }),
+    polishedText("address", [0.12, 0.61, 0.34, 0.018], "semantic-detail", "sans", "ink", { semantic: true, maxLines: 2, preferSingleLine: true, sizeRatio: 0.44 }),
+    polishedText("price", [0.56, 0.603, 0.27, 0.03], "semantic-detail", "sans-bold", "ink", { semantic: true, maxLines: 2, preferSingleLine: true, sizeRatio: 0.48 }),
     overlay("backing-supporting", [0.12, 0.633, 0.40, 0.028], "supporting"),
     polishedText("supporting", [0.12, 0.635, 0.40, 0.022], "supporting", "sans", "ink", { maxLines: 1, sizeRatio: 0.42 }),
     polishedImage("property_image_1", [0.08, 0.675, 0.26, 0.045], "rect", "supporting-media"),
