@@ -432,11 +432,12 @@ for (const doc of docs) {
     for (const [layerId, residual] of Object.entries(doc.exactness.residuals)) {
       if (residual > RESIDUAL_THRESHOLD) fail(`${doc.id}: residual ${residual} for ${layerId} exceeds ${RESIDUAL_THRESHOLD}`);
     }
-    if (!hasNonTrivialRestyle(doc)) fail(`${doc.id}: restyle is incomplete: every declared image input needs one hashed safe replacement asset`);
+    if (!hasNonTrivialRestyle(doc)) fail(`${doc.id}: restyle is incomplete: every required image input needs one hashed safe replacement asset`);
     const replacementKeys = (doc.restyle.safeReplacementAssets ?? []).map((asset) => asset.inputKey);
-    if (!hasExactlyKeys(Object.fromEntries(replacementKeys.map((key) => [key, true])), doc.inputs.images.map((input) => input.key))
+    const requiredImageKeys = doc.inputs.images.filter((input) => input.required !== false).map((input) => input.key);
+    if (!hasExactlyKeys(Object.fromEntries(replacementKeys.map((key) => [key, true])), requiredImageKeys)
       || new Set(replacementKeys).size !== replacementKeys.length) {
-      fail(`${doc.id}: safe replacement assets must map one-to-one to declared image inputs`);
+      fail(`${doc.id}: safe replacement assets must map one-to-one to required image inputs`);
     }
     for (const asset of doc.restyle.safeReplacementAssets ?? []) {
       const path = join(publicDir, asset.src.replace(/^\//, ""));

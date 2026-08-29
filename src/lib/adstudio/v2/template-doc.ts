@@ -1060,8 +1060,10 @@ export function hasNonTrivialRestyle(doc: Pick<AdTemplateDocV2, "restyle" | "inp
   // bytes plus safe copy are sufficient distance from the private source.
   const assets = doc.restyle.safeReplacementAssets ?? [];
   const byKey = new Map(assets.map((asset) => [asset.inputKey, asset]));
-  return byKey.size === doc.inputs.images.length
-    && doc.inputs.images.every((input) => byKey.has(input.key));
+  const declared = new Set(doc.inputs.images.map((input) => input.key));
+  const required = doc.inputs.images.filter((input) => input.required !== false);
+  return assets.every((asset) => declared.has(asset.inputKey))
+    && required.every((input) => byKey.has(input.key));
 }
 
 /**
