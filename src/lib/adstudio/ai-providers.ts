@@ -1,0 +1,825 @@
+import type {
+  ModelCandidate,
+} from "@/lib/ai/model-registry";
+
+import { dataUrlToUploadBytes } from "./generated-media-utils.ts";
+import { createGoogleImageProvider } from "./google-image-provider.ts";
+import { fetchProviderRequest, ProviderRequestError } from "./providers.ts";
+import type {
+  ImageProviderAdapter,
+  ImageProviderRequest,
+  ImageProviderResponse,
+  ProviderAccountingContext,
+  ProviderUsage,
+  TextProviderAdapter,
+  TextProviderRequest,
+  TextProviderResponse,
+} from "./providers.ts";
+
+export type ProviderEnvironment = Partial<Record<string, string>>;
+
+type ProviderOptions = {
+  env?: ProviderEnvironment;
+  fetchImpl?: typeof fetch;
+  model?: string;
+  /** OpenAI image quality tier ("low" | "medium" | "high" | "auto"). */
+  quality?: string;
+};
+
+// Hard cap on completion tokens for copy/QA chat calls. Outputs are small
+// JSON packs; this bounds worst-case spend per call and keeps requests viable
+// on constrained balances.
+const MAX_COMPLETION_TOKENS = 4096;
+
+const OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions";
+const OPENAI_IMAGE_URL = "https://api.openai.com/v1/images/generations";
+const OPENAI_IMAGE_EDITS_URL = "https://api.openai.com/v1/images/edits";
+const DEEPSEEK_CHAT_URL = "https://api.deepseek.com/chat/completions";
+const AZURE_OPENAI_DEFAULT_API_VERSION = "2024-10-21";
+// best now, cost-tune later — gpt-image-2 processes inputs at max fidelity regardless.
+const DEFAULT_OPENAI_IMAGE_QUALITY = "high";
+
+function createOpenAiTextProvider(options: ProviderOptions = {}): TextProviderAdapter {
+  const env = options.env ?? process.env;
+  const model = options.model ?? env.BLOCKWISE_OPENAI_TEXT_MODEL ?? "gpt-5.5";
+  const fetchImpl = options.fetchImpl ?? fetch;
+
+  return {
+    providerName: "openai",
+    providerType: "text_generation",
+    capabilities: {
+      structuredJson: true,
+      longContext: true,
+      visionInput: true,
+    },
+    async generate(input) {
+      const apiKey = env.OPENAI_API_KEY;
+
+      if (!apiKey) {
+        throw preflightError("OPENAI_API_KEY is not configured.");
+      }
+
+      return postChatCompletion({
+        url: env.CLOUDFLARE_AI_GATEWAY_URL ?? OPENAI_CHAT_URL,
+        apiKey,
+        model,
+        input,
+        fetchImpl,
+        headers: gatewayHeaders(env),
+        strictStructuredOutput: true,
+      });
+    },
+  };
+}
+
+function createAzureOpenAiTextProvider(options: ProviderOptions = {}): TextProviderAdapter {
+  const env = options.env ?? process.env;
+  const deployment =
+    options.model ??
+    env.AZURE_OPENAI_DEPLOYMENT ??
+    env.AZURE_OPENAI_CHAT_DEPLOYMENT ??
+    env.AZURE_OPENAI_TEXT_DEPLOYMENT ??
+    env.BLOCKWISE_AZURE_OPENAI_TEXT_DEPLOYMENT ??
+    "";
+  const fetchImpl = options.fetchImpl ?? fetch;
+
+  return {
+    providerName: "azure",
+    providerType: "text_generation",
+    capabilities: {
+      structuredJson: true,
+      longContext: true,
+      visionInput: true,
+    },
+    async generate(input) {
+      const apiKey = env.AZURE_OPENAI_API_KEY;
+
+      if (!apiKey) {
+        throw preflightError("AZURE_OPENAI_API_KEY is not configured.");
+      }
+      if (!deployment && !env.AZURE_OPENAI_CHAT_COMPLETIONS_URL) {
+        throw preflightError("AZURE_OPENAI_DEPLOYMENT is not configured.");
+      }
+
+      return postChatCompletion({
+        url: resolveAzureOpenAiChatUrl(env, deployment),
+        apiKey,
+        model: deployment || "azure-openai",
+        input,
+        fetchImpl,
+        headers: {
+          "api-key": apiKey,
+        },
+        authHeader: false,
+        includeModelInBody: false,
+      });
+    },
+  };
+}
+
+export function resolveAzureOpenAiChatUrl(env: ProviderEnvironment, deployment: string): string {
+  if (env.AZURE_OPENAI_CHAT_COMPLETIONS_URL) return env.AZURE_OPENAI_CHAT_COMPLETIONS_URL;
+
+  const endpoint = env.AZURE_OPENAI_ENDPOINT?.replace(/\/+$/u, "");
+  if (!endpoint) {
+    throw new Error("AZURE_OPENAI_ENDPOINT is not configured.");
+  }
+  if (!deployment) {
+    throw new Error("AZURE_OPENAI_DEPLOYMENT is not configured.");
+  }
+
+  const apiVersion = env.AZURE_OPENAI_API_VERSION ?? AZURE_OPENAI_DEFAULT_API_VERSION;
+  return `${endpoint}/openai/deployments/${encodeURIComponent(deployment)}/chat/completions?api-version=${encodeURIComponent(apiVersion)}`;
+}
+
+function createOpenAiImageProvider(options: ProviderOptions = {}): ImageProviderAdapter {
+  const env = options.env ?? process.env;
+  const model = options.model ?? env.BLOCKWISE_OPENAI_IMAGE_MODEL ?? "gpt-image-2";
+  const quality = options.quality ?? env.BLOCKWISE_OPENAI_IMAGE_QUALITY ?? DEFAULT_OPENAI_IMAGE_QUALITY;
+  const fetchImpl = options.fetchImpl ?? fetch;
+
+  return {
+    providerName: "openai",
+    providerType: "image_generation",
+    // gpt-image-2's /images/edits consumes one or more reference images plus an
+    // optional mask, so it satisfies the truth-preserving repair gate
+    // (imageToImage && multiReference) — see supportsTruthPreservingRepair.
+    capabilities: {
+      textToImage: true,
+      imageToImage: true,
+      inpainting: true,
+      multiReference: true,
+    },
+    async generate(input) {
+      const apiKey = env.OPENAI_API_KEY;
+
+      if (!apiKey) {
+        throw preflightError("OPENAI_API_KEY is not configured.", true);
+      }
+
+
+      // Reference-based fit/extend → /images/edits (multipart). Otherwise the
+      // text-to-image /images/generations path (JSON), unchanged.
+      const response = input.requiresReferenceAssets
+        ? await postOpenAiImageEdit({ env, apiKey, model, quality, input, fetchImpl })
+        : await fetchProviderRequest(fetchImpl, env.CLOUDFLARE_AI_GATEWAY_URL ?? OPENAI_IMAGE_URL, {
+            method: "POST",
+            signal: input.signal,
+            headers: {
+              Authorization: `Bearer ${apiKey}`,
+              "Content-Type": "application/json",
+              ...gatewayHeaders(env),
+            },
+            body: JSON.stringify({
+              model,
+              prompt: buildImagePrompt(input),
+              size: imageSizeForAspect(input.aspectRatio, model),
+              quality,
+              n: 1,
+            }),
+          });
+
+      const payload = (await response.json().catch(() => ({}))) as {
+        id?: string;
+        data?: Array<{ url?: string; b64_json?: string }>;
+        usage?: {
+          input_tokens?: number;
+          output_tokens?: number;
+          prompt_tokens?: number;
+          completion_tokens?: number;
+          cost?: number;
+        };
+        error?: { message?: string };
+      };
+
+      if (!response.ok) {
+        throw submittedHttpError(payload.error?.message ?? `Provider image request failed with ${response.status}.`, response.status, {
+          providerRequestId: payload.id,
+          usage: usageFromProviderPayload(payload.usage, { imageUnits: 0, complete: false }),
+        });
+      }
+
+      const first = payload.data?.[0];
+      const assetUrl = first?.url ?? (first?.b64_json ? `data:image/png;base64,${first.b64_json}` : undefined);
+      if (!assetUrl) {
+        throw submittedError("OpenAI returned no image.", {
+          retryable: false,
+          providerRequestId: payload.id,
+          usage: usageFromProviderPayload(payload.usage, {
+            imageUnits: 0,
+            providerRequestId: payload.id,
+            complete: true,
+          }),
+        });
+      }
+
+      return {
+        assetUrl,
+        seed: input.seed ?? 0,
+        model,
+        usage: usageFromProviderPayload(payload.usage, {
+          imageUnits: 1,
+          providerRequestId: payload.id,
+          complete: true,
+        }),
+        providerMetadata: {
+          provider: "openai",
+          referenceAssets: input.referenceAssets.length,
+          mode: input.requiresReferenceAssets ? "edit" : "generation",
+        },
+      };
+    },
+  };
+}
+
+/** Resolves the /images/edits endpoint, honouring a Cloudflare AI Gateway URL. */
+export function resolveOpenAiImageEditsUrl(env: ProviderEnvironment): string {
+  const gateway = env.CLOUDFLARE_AI_GATEWAY_URL;
+  if (!gateway) return OPENAI_IMAGE_EDITS_URL;
+  // A real gateway mirrors the OpenAI path (…/openai/images/generations); swap the
+  // trailing endpoint to edits. If the URL doesn't expose that segment, use it
+  // verbatim — same best-effort posture as the generations path.
+  if (gateway.includes("/images/generations")) {
+    return gateway.replace("/images/generations", "/images/edits");
+  }
+  if (/\/generations\/?$/.test(gateway)) {
+    return gateway.replace(/\/generations(\/?)$/, "/edits$1");
+  }
+  return gateway;
+}
+
+async function postOpenAiImageEdit(input: {
+  env: ProviderEnvironment;
+  apiKey: string;
+  model: string;
+  quality: string;
+  input: ImageProviderRequest;
+  fetchImpl: typeof fetch;
+}): Promise<Response> {
+  const references = input.input.referenceAssets;
+  if (!references.length) {
+    throw preflightError("Reference-image edit requires at least one image.");
+  }
+
+  const blobs: Blob[] = [];
+  let maskBlob: Blob | null = null;
+  try {
+    for (const reference of references) {
+      blobs.push(await imageReferenceToBlob(reference, input.fetchImpl, input.input.signal));
+    }
+    maskBlob = input.input.maskImage
+      ? await imageReferenceToBlob(input.input.maskImage, input.fetchImpl, input.input.signal)
+      : null;
+  } catch (cause) {
+    throw new ProviderRequestError("Reference image could not be prepared for provider dispatch.", {
+      requestSubmitted: false,
+      retryable: false,
+      cause,
+    });
+  }
+
+  const send = (size: string) => {
+    const form = new FormData();
+    form.set("model", input.model);
+    form.set("prompt", buildImagePrompt(input.input, { includeReferenceList: false }));
+    form.set("size", size);
+    form.set("quality", input.quality);
+    form.set("n", "1");
+    const single = blobs.length === 1;
+    blobs.forEach((blob, index) => {
+      // Single reference uses `image`; multiple uses `image[]` per the API contract.
+      form.append(single ? "image" : "image[]", blob, `reference-${index}.png`);
+    });
+    if (maskBlob) form.set("mask", maskBlob, "mask.png");
+    // No explicit Content-Type — fetch sets the multipart boundary itself.
+    return fetchProviderRequest(input.fetchImpl, resolveOpenAiImageEditsUrl(input.env), {
+      method: "POST",
+      signal: input.input.signal,
+      headers: {
+        Authorization: `Bearer ${input.apiKey}`,
+        ...gatewayHeaders(input.env),
+      },
+      body: form,
+    });
+  };
+
+  return send(imageSizeForAspect(input.input.aspectRatio, input.model));
+}
+
+// Resolves a reference (data: URL or http(s) URL) to a Blob for multipart upload.
+async function imageReferenceToBlob(reference: string, fetchImpl: typeof fetch, signal?: AbortSignal): Promise<Blob> {
+  if (reference.startsWith("data:")) {
+    const decoded = dataUrlToUploadBytes(reference);
+    // Copy into a fresh ArrayBuffer-backed view so it satisfies BlobPart.
+    const bytes = new Uint8Array(decoded.bytes.byteLength);
+    bytes.set(decoded.bytes);
+    return new Blob([bytes], { type: decoded.contentType });
+  }
+  const response = await fetchImpl(reference, { signal });
+  if (!response.ok) {
+    throw new Error(`Reference image could not be fetched (${response.status}).`);
+  }
+  return response.blob();
+}
+
+// Google AI Studio direct (free-tier keys, no card): Gemini through Google's
+// OpenAI-compatible endpoint, so the standard chat-completion path applies.
+const GOOGLE_AI_CHAT_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
+
+function createGoogleAiTextProvider(options: ProviderOptions = {}): TextProviderAdapter {
+  const env = options.env ?? process.env;
+  const model = options.model ?? env.BLOCKWISE_GOOGLE_TEXT_MODEL ?? "gemini-3.6-flash";
+  const fetchImpl = options.fetchImpl ?? fetch;
+
+  return {
+    providerName: "google",
+    providerType: "text_generation",
+    capabilities: { structuredJson: true, visionInput: true },
+    async generate(input) {
+      const apiKey = env.GOOGLE_AI_API_KEY;
+      if (!apiKey) throw preflightError("GOOGLE_AI_API_KEY is not configured.");
+      return postChatCompletion({ url: GOOGLE_AI_CHAT_URL, apiKey, model, input, fetchImpl });
+    },
+  };
+}
+
+// DeepSeek is OpenAI chat-completions compatible (same request/response shape,
+// plus json_object response format), so it rides the standard postChatCompletion
+// path. deepseek-chat is the general model; deepseek-reasoner is the R1
+// reasoning model (temperature-restricted — handled in supportsCustomTemperature).
+function createDeepSeekTextProvider(options: ProviderOptions = {}): TextProviderAdapter {
+  const env = options.env ?? process.env;
+  const model = options.model ?? env.BLOCKWISE_DEEPSEEK_TEXT_MODEL ?? "deepseek-chat";
+  const fetchImpl = options.fetchImpl ?? fetch;
+
+  return {
+    providerName: "deepseek",
+    providerType: "text_generation",
+    capabilities: { structuredJson: true, longContext: true },
+    async generate(input) {
+      const apiKey = env.DEEPSEEK_API_KEY;
+      if (!apiKey) throw preflightError("DEEPSEEK_API_KEY is not configured.");
+      // DeepSeek has no vision input, so any imageUrl on the request must not be
+      // forwarded as a multimodal part (it would 400). Strip it here; the caller
+      // should never route a vision profile to DeepSeek in the first place.
+      const textInput = input.imageUrl ? { ...input, imageUrl: undefined } : input;
+      return postChatCompletion({ url: DEEPSEEK_CHAT_URL, apiKey, model, input: textInput, fetchImpl });
+    },
+  };
+}
+
+export function createTextProviderForCandidate(candidate: ModelCandidate, options: ProviderOptions = {}): TextProviderAdapter {
+  let provider: TextProviderAdapter;
+  if (candidate.provider === "azure") {
+    provider = createAzureOpenAiTextProvider({ ...options, model: candidate.model });
+  } else if (candidate.provider === "google") {
+    provider = createGoogleAiTextProvider({ ...options, model: candidate.model });
+  } else if (candidate.provider === "deepseek") {
+    provider = createDeepSeekTextProvider({ ...options, model: candidate.model });
+  } else {
+    provider = createOpenAiTextProvider({ ...options, model: candidate.model });
+  }
+  return withAccounting(provider, candidate);
+}
+
+export function createImageProviderForCandidate(candidate: ModelCandidate, options: ProviderOptions = {}): ImageProviderAdapter {
+  let provider: ImageProviderAdapter;
+  if (candidate.provider === "google") {
+    provider = createGoogleImageProvider(accountingForCandidate(candidate), { ...options, model: candidate.model });
+  } else {
+    provider = createOpenAiImageProvider({ ...options, model: candidate.model });
+  }
+  return withAccounting(provider, candidate);
+}
+
+async function postChatCompletion(input: {
+  url: string;
+  apiKey: string;
+  model: string;
+  input: TextProviderRequest;
+  fetchImpl: typeof fetch;
+  headers?: Record<string, string>;
+  authHeader?: boolean;
+  includeModelInBody?: boolean;
+  strictStructuredOutput?: boolean;
+}): Promise<TextProviderResponse> {
+  const includeModelInBody = input.includeModelInBody ?? true;
+  const reasoningEffort = minimalReasoningEffort(input.model);
+  const openAiCompletionTokens = usesOpenAiCompletionTokenParameter(input.model);
+  // DeepSeek R1 (deepseek-reasoner) rejects both response_format and the
+  // OpenAI-specific max_completion_tokens param — it only understands
+  // max_tokens and emits JSON in plain text. Everything else (incl. deepseek-chat,
+  // gpt-5*, o*) accepts json_object + the temperature-restricted token param.
+  const customTemp = supportsCustomTemperature(input.model);
+  const deepseekReasoner = isDeepSeekReasoner(input.model);
+  const response = await fetchProviderRequest(input.fetchImpl, input.url, {
+    method: "POST",
+    signal: input.input.signal,
+    headers: {
+      ...(input.authHeader === false ? {} : { Authorization: `Bearer ${input.apiKey}` }),
+      "Content-Type": "application/json",
+      ...input.headers,
+    },
+    body: JSON.stringify({
+      ...(includeModelInBody ? { model: input.model } : {}),
+      messages: buildChatMessages(input.input),
+      ...(deepseekReasoner
+        ? {}
+        : { response_format: responseFormat(input.input.schemaName, input.strictStructuredOutput === true) }),
+      // Reasoning models (gpt-5*, o*, deepseek-reasoner) accept only the default
+      // temperature and reject the request outright when any other value is sent.
+      ...(customTemp ? { temperature: 0.4 } : {}),
+      // Reasoning models (gpt-5.x): use the cheapest thinking tier so the small
+      // structured outputs return fast and cheap.
+      ...(reasoningEffort ? { reasoning_effort: reasoningEffort } : {}),
+      // Without an explicit cap the provider reserves credits for the model's
+      // absolute max completion (65k+ tokens) — requests fail on low balances
+      // and a bad loop can drain the account. Copy/QA outputs are small JSON;
+      // 4096 is generous. OpenAI reasoning models (gpt-5*/o*) only accept
+      // max_completion_tokens; DeepSeek R1 + everything else accepts max_tokens.
+      ...(openAiCompletionTokens
+        ? { max_completion_tokens: MAX_COMPLETION_TOKENS }
+        : { max_tokens: MAX_COMPLETION_TOKENS }),
+    }),
+  });
+  const payload = (await response.json().catch(() => ({}))) as {
+    id?: string;
+    choices?: Array<{ message?: { content?: string | null } }>;
+    usage?: { prompt_tokens?: number; completion_tokens?: number; cost?: number };
+    error?: { message?: string };
+  };
+
+  if (!response.ok) {
+    throw submittedHttpError(payload.error?.message ?? `Provider request failed with ${response.status}.`, response.status, {
+      providerRequestId: payload.id,
+      usage: usageFromProviderPayload(payload.usage, { complete: false }),
+    });
+  }
+
+  const rawText = payload.choices?.[0]?.message?.content?.trim() ?? "{}";
+  const usage = usageFromProviderPayload(payload.usage, {
+    providerRequestId: payload.id,
+    complete: true,
+  });
+  let json: unknown;
+  try {
+    json = parseJson(rawText);
+  } catch (cause) {
+    // A response that reached us but cannot be parsed is a technical QA
+    // failure, not a visual rejection. Preserve its billable request evidence
+    // so the QA gate can retry this same image without losing accounting.
+    throw submittedError("Provider returned non-JSON content.", {
+      retryable: true,
+      providerRequestId: payload.id,
+      usage,
+      cause,
+    });
+  }
+
+  return {
+    json,
+    rawText,
+    usage,
+    providerMetadata: {
+      model: input.model,
+      schemaName: input.input.schemaName,
+    },
+  };
+}
+
+function responseFormat(schemaName: TextProviderRequest["schemaName"], strictStructuredOutput: boolean): Record<string, unknown> {
+  if (!strictStructuredOutput || schemaName !== "adStudioCloneQualityReview") {
+    return { type: "json_object" };
+  }
+
+  const stringValue = { type: "string" };
+  return {
+    type: "json_schema",
+    json_schema: {
+      name: "ad_studio_clone_quality_review",
+      strict: true,
+      schema: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          schemaVersion: { type: "integer", const: 1 },
+          templateId: stringValue,
+          format: { type: "string", enum: ["4:5", "9:16"] },
+          attempt: { type: "integer", minimum: 1 },
+          referenceHash: { type: "string", pattern: "^[a-f0-9]{64}$" },
+          candidateHash: { type: "string", pattern: "^[a-f0-9]{64}$" },
+          requestHash: { type: "string", pattern: "^[a-f0-9]{64}$" },
+          adSystemLikenessScore: { type: "number", minimum: 0, maximum: 10 },
+          standaloneAdQualityScore: { type: "number", minimum: 0, maximum: 10 },
+          excludedContentInfluencedScore: { type: "boolean" },
+          copyChecks: {
+            type: "array",
+            items: {
+              type: "object",
+              additionalProperties: false,
+              properties: {
+                key: stringValue,
+                expected: stringValue,
+                rendered: stringValue,
+                exact: { type: "boolean" },
+              },
+              required: ["key", "expected", "rendered", "exact"],
+            },
+          },
+          assetChecks: {
+            type: "array",
+            items: {
+              type: "object",
+              additionalProperties: false,
+              properties: {
+                key: stringValue,
+                used: { type: "boolean" },
+                faithful: { type: "boolean" },
+              },
+              required: ["key", "used", "faithful"],
+            },
+          },
+          identityLeakage: { type: "array", items: stringValue },
+          defects: { type: "array", items: stringValue },
+          includedRationale: stringValue,
+          qualityRationale: stringValue,
+          suggestedCorrection: stringValue,
+        },
+        required: [
+          "schemaVersion",
+          "templateId",
+          "format",
+          "attempt",
+          "referenceHash",
+          "candidateHash",
+          "requestHash",
+          "adSystemLikenessScore",
+          "standaloneAdQualityScore",
+          "excludedContentInfluencedScore",
+          "copyChecks",
+          "assetChecks",
+          "identityLeakage",
+          "defects",
+          "includedRationale",
+          "qualityRationale",
+          "suggestedCorrection",
+        ],
+      },
+    },
+  };
+}
+
+function withAccounting<T extends TextProviderAdapter | ImageProviderAdapter>(
+  provider: T,
+  candidate: ModelCandidate,
+): T {
+  return { ...provider, accounting: accountingForCandidate(candidate) };
+}
+
+function accountingForCandidate(candidate: ModelCandidate): ProviderAccountingContext {
+  if (!candidate.model.trim()) {
+    throw new Error("A priced provider candidate must declare a model.");
+  }
+  for (const [field, value] of Object.entries({
+    inputUsdPerMillionTokens: candidate.inputUsdPerMillionTokens,
+    outputUsdPerMillionTokens: candidate.outputUsdPerMillionTokens,
+    imageUsdPerUnit: candidate.imageUsdPerUnit,
+  })) {
+    if (!Number.isFinite(value) || value < 0) {
+      throw new Error(`A priced provider candidate requires a non-negative ${field}.`);
+    }
+  }
+
+  return {
+    model: candidate.model,
+    modelProfileVersionId: candidate.modelProfileVersionId ?? null,
+    pricingSnapshotId: candidate.pricingSnapshotId ?? null,
+    pricing: {
+      inputUsdPerMillionTokens: candidate.inputUsdPerMillionTokens,
+      outputUsdPerMillionTokens: candidate.outputUsdPerMillionTokens,
+      imageUsdPerUnit: candidate.imageUsdPerUnit,
+      currency: "USD",
+      inputTokenBasis: "per_million_tokens",
+      outputTokenBasis: "per_million_tokens",
+      imageBasis: "per_output_image",
+      source: candidate.pricingSource ?? "default",
+      snapshotId: candidate.pricingSnapshotId ?? null,
+    },
+  };
+
+}
+
+function usageFromProviderPayload(
+  usage: {
+    input_tokens?: number;
+    output_tokens?: number;
+    prompt_tokens?: number;
+    completion_tokens?: number;
+    cost?: number;
+  } | undefined,
+  defaults: ProviderUsage,
+): ProviderUsage {
+  const inputTokens = usage?.input_tokens ?? usage?.prompt_tokens;
+  const outputTokens = usage?.output_tokens ?? usage?.completion_tokens;
+  const hasCompleteTokenUsage = Number.isFinite(inputTokens) && Number.isFinite(outputTokens);
+  return {
+    ...defaults,
+    ...(Number.isFinite(inputTokens) ? { inputTokens: Number(inputTokens) } : {}),
+    ...(Number.isFinite(outputTokens) ? { outputTokens: Number(outputTokens) } : {}),
+    complete: defaults.complete === true && hasCompleteTokenUsage,
+    ...(Number.isFinite(usage?.cost) ? { actualCostUsd: Number(usage?.cost) } : {}),
+  };
+}
+
+function preflightError(message: string, fallbackEligible = false): ProviderRequestError {
+  return new ProviderRequestError(message, { requestSubmitted: false, retryable: false, fallbackEligible });
+}
+
+function submittedError(
+  message: string,
+  options: {
+    retryable: boolean;
+    fallbackEligible?: boolean;
+    usage?: ProviderUsage;
+    providerRequestId?: string | null;
+    cause?: unknown;
+  },
+): ProviderRequestError {
+  return new ProviderRequestError(message, { requestSubmitted: true, ...options });
+}
+
+function submittedHttpError(
+  message: string,
+  status: number,
+  options: {
+    usage?: ProviderUsage;
+    providerRequestId?: string | null;
+    cause?: unknown;
+  } = {},
+): ProviderRequestError {
+  return submittedError(message, {
+    ...options,
+    retryable: isRetryableProviderStatus(status),
+    fallbackEligible: isProviderFallbackEligibleStatus(status),
+  });
+}
+
+function isRetryableProviderStatus(status: number): boolean {
+  return status === 408 || status === 409 || status === 425 || status === 429 || status >= 500;
+}
+
+function isProviderFallbackEligibleStatus(status: number): boolean {
+  // A depleted account or unavailable endpoint/model will not recover by
+  // retrying the same provider, but must not strand a profile with a fallback.
+  return status === 402 || status === 404 || isRetryableProviderStatus(status);
+}
+
+function supportsCustomTemperature(model: string): boolean {
+  const name = model.split("/").pop() ?? model;
+  // DeepSeek's reasoning model (deepseek-reasoner / R1 family) rejects a custom
+  // temperature and only accepts max_tokens, like OpenAI's gpt-5* / o* reasoning
+  // models reject temperature too — so it takes the same no-temperature path.
+  return !/^(gpt-5|o\d|deepseek-reasoner|gemini-3\.(?:5|6))/i.test(name);
+}
+
+function usesOpenAiCompletionTokenParameter(model: string): boolean {
+  const name = model.split("/").pop() ?? model;
+  return /^(gpt-5|o\d)/i.test(name);
+}
+
+// DeepSeek's R1 reasoning model (deepseek-reasoner) rejects response_format
+// (no json_object support) and does not accept the OpenAI-specific
+// max_completion_tokens param — it only understands max_tokens. deepseek-chat
+// is unaffected and behaves like OpenAI here.
+function isDeepSeekReasoner(model: string): boolean {
+  const name = model.split("/").pop() ?? model;
+  return /^deepseek-reasoner/i.test(name);
+}
+
+// Reasoning models (gpt-5.x) think before answering; the copy/QA outputs are
+// small structured JSON, so asking for the cheapest reasoning tier keeps calls
+// fast and cheap without sacrificing quality. The name of that tier changed
+// across the family: the original gpt-5 generation accepts "minimal", while
+// gpt-5.N point releases renamed it to "none" and reject "minimal" outright
+// ("Unsupported value: 'reasoning_effort' does not support 'minimal'…").
+// Returns null for non-reasoning models so no reasoning_effort is sent at all.
+export function minimalReasoningEffort(model: string): "minimal" | "none" | null {
+  const name = model.split("/").pop() ?? model;
+  if (!/^gpt-5/i.test(name)) return null;
+  return /^gpt-5\.\d/i.test(name) ? "none" : "minimal";
+}
+
+// Builds the chat payload. When an image is supplied, it is attached to the final
+// user message as a multimodal content array accepted by supported vision providers.
+function buildChatMessages(request: TextProviderRequest): unknown[] {
+  const system = { role: "system", content: request.system };
+
+  if (!request.imageUrl) {
+    return [system, ...request.messages];
+  }
+
+  const messages: Array<{ role: "user" | "assistant"; content: unknown }> = request.messages.map(
+    (message) => ({ role: message.role, content: message.content }),
+  );
+  const imagePart = { type: "image_url", image_url: { url: request.imageUrl } };
+
+  let lastUserIndex = -1;
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    if (messages[index].role === "user") {
+      lastUserIndex = index;
+      break;
+    }
+  }
+
+  if (lastUserIndex >= 0) {
+    messages[lastUserIndex] = {
+      role: "user",
+      content: [{ type: "text", text: String(messages[lastUserIndex].content) }, imagePart],
+    };
+  } else {
+    messages.push({ role: "user", content: [imagePart] });
+  }
+
+  return [system, ...messages];
+}
+
+function parseJson(rawText: string): unknown {
+  try {
+    return JSON.parse(rawText);
+  } catch {
+    // Models frequently fence JSON in markdown or preface it with prose.
+    // Extract the outermost JSON object before
+    // giving up — rejecting good content cost a whole provider lane.
+    const unfenced = rawText.replace(/```(?:json)?/gi, "");
+    const start = unfenced.indexOf("{");
+    const end = unfenced.lastIndexOf("}");
+    if (start !== -1 && end > start) {
+      try {
+        return JSON.parse(unfenced.slice(start, end + 1));
+      } catch {
+        // fall through
+      }
+    }
+    throw new Error("Provider returned non-JSON content.");
+  }
+}
+
+function gatewayHeaders(env: ProviderEnvironment): Record<string, string> {
+  return env.CLOUDFLARE_AI_GATEWAY_TOKEN
+    ? { "cf-aig-authorization": `Bearer ${env.CLOUDFLARE_AI_GATEWAY_TOKEN}` }
+    : {};
+}
+
+function buildImagePrompt(
+  input: ImageProviderRequest,
+  options: { includeReferenceList?: boolean } = {},
+): string {
+  const includeReferenceList = options.includeReferenceList ?? true;
+  return [
+    input.prompt,
+    `Aspect ratio: ${input.aspectRatio}.`,
+    `Style preset: ${input.stylePreset}.`,
+    input.negativePrompt ? `Avoid: ${input.negativePrompt}.` : "",
+    includeReferenceList && input.referenceAssets.length
+      ? `Reference assets: ${input.referenceAssets.join(", ")}.`
+      : "",
+  ].filter(Boolean).join("\n");
+}
+
+function extractImageUrl(content: unknown): string | undefined {
+  if (typeof content === "string") {
+    return content.match(/data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+/)?.[0];
+  }
+
+  if (!Array.isArray(content)) return undefined;
+
+  for (const item of content) {
+    if (!item || typeof item !== "object") continue;
+    const record = item as Record<string, unknown>;
+    if (typeof record.url === "string" && record.url.startsWith("data:image/")) return record.url;
+    const imageUrl = record.image_url;
+    if (imageUrl && typeof imageUrl === "object") {
+      const url = (imageUrl as Record<string, unknown>).url;
+      if (typeof url === "string" && url.startsWith("data:image/")) return url;
+    }
+  }
+
+  return undefined;
+}
+
+function imageSizeForAspect(aspectRatio: string, model: string): string {
+  // GPT Image 2 accepts flexible dimensions when both edges are multiples of
+  // 16 and the documented pixel/ratio limits are respected. Generate on the
+  // final canvas so clone geometry reaches visual QA without a destructive
+  // centre crop. Older GPT Image models retain their native supported sizes.
+  if (model === "gpt-image-2") {
+    if (aspectRatio === "4:5") return "1024x1280";
+    if (aspectRatio === "9:16") return "864x1536";
+    if (aspectRatio === "1.91:1") return "1952x1024";
+    return "1024x1024";
+  }
+
+  if (aspectRatio === "1:1") return "1024x1024";
+  if (aspectRatio === "1.91:1") return "1536x1024";
+  return "1024x1536";
+}

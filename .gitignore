@@ -1,0 +1,82 @@
+node_modules
+.tools
+.codegraph/
+.next
+.vercel
+supabase/.temp
+.trigger
+/coverage
+playwright-report
+test-results
+.env
+.env*.local
+*.tsbuildinfo
+dist
+
+.vercel
+.env*
+!.env.example
+
+# Local tooling / cleanup backups (not part of project)
+.claude/
+_archive/
+.fuse_hidden*
+
+# MCP config (contains API key)
+.mcp.json
+
+# Persistent local secrets (SSH keys etc.) - never commit
+.secrets/
+
+# Office temp/owner-lock files
+~$*
+
+# Agent-generated media artifacts
+artifacts/
+matrix-media-*.png
+
+# Agent-generated ad-template assets (served from Supabase, not committed)
+ad-template-library/images/mockups/
+ad-template-library/images/sample-cards/
+ad-template-library/images/sample-sources/
+ad-template-library/qa-report.json
+
+# Extracted source template libraries are local reference inputs only.
+extracted_templates_highres_merged/
+meta_ad_candidates/
+
+# Local agent state and scratch output (never commit)
+.agents/
+.codex-remote-attachments/
+_ad/
+
+# AdStudio font-corpus build cache (re-fetched/regenerated on demand; only
+# the winning typeSpecs + subset woff2 faces this script produces get
+# committed, not the raw corpus metadata or intermediate OCR region cache).
+.cache/
+
+# Scratch / temp / local-only agent state (never commit)
+.tmp-*
+*.tmp
+~WRL*.tmp
+.qoder/
+.hallmark/
+.hermes/
+.vscode/
+.worktrees/
+tmp/
+screenshots/
+video/
+video-capture.mjs
+/mockups/
+/stitch/
+agent-os/
+blockwise-logo-pack/
+*.patch
+_to_delete/
+App review/
+video-styles/
+Steven_Shelley_Resume.*
+record-meta-segments.cmd
+.codex/
+.impeccable/

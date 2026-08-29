@@ -1,0 +1,30 @@
+# Canonical VPS deployment for the Supabase job_queue worker.
+#
+# The image is built and preflighted separately, then selected by its full Git
+# SHA tag. There is deliberately no build section or mutable image fallback:
+# Compose must never rebuild or silently select latest during a restart.
+
+services:
+  blockwise-worker:
+    image: "${BLOCKWISE_WORKER_IMAGE:?Set BLOCKWISE_WORKER_IMAGE to blockwise/worker:<full-git-sha>}"
+    restart: unless-stopped
+    env_file:
+      - "${BLOCKWISE_WORKER_ENV_FILE:?Set BLOCKWISE_WORKER_ENV_FILE to the absolute worker env path}"
+    environment:
+      BLOCKWISE_WORKER_EXPECTED_REVISION: "${BLOCKWISE_WORKER_EXPECTED_REVISION:?Set the full expected Git SHA}"
+      WORKER_POLL_IDLE_MS: ${WORKER_POLL_IDLE_MS:-3000}
+      WORKER_POLL_BUSY_MS: ${WORKER_POLL_BUSY_MS:-250}
+      WORKER_LEASE_SECONDS: ${WORKER_LEASE_SECONDS:-600}
+      WORKER_HEARTBEAT_INTERVAL_MS: ${WORKER_HEARTBEAT_INTERVAL_MS:-200000}
+      WORKER_REAP_INTERVAL_MS: ${WORKER_REAP_INTERVAL_MS:-60000}
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

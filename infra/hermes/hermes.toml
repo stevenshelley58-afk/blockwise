@@ -1,0 +1,81 @@
+# Hermes runtime config for the Blockwise research engine.
+# Environment variables provide secrets and deployment-specific values.
+
+[agent]
+name = "blockwise-research"
+description = "Hermes agent running the Blockwise real-estate ad research engine"
+home_dir = "/data"
+
+[agent.server]
+host = "0.0.0.0"
+port = 8080
+
+[agent.model]
+# "openai" here means the OpenAI-compatible wire protocol, NOT api.openai.com.
+# The actual endpoint is resolved from model slug + base_url env:
+#   kimi-*/moonshot-* -> Moonshot (HERMES_AGENT_BASE_URL, default https://api.moonshot.ai/v1)
+#   qwen-*            -> Alibaba DashScope compatible mode
+# The runtime reads MOONSHOT_API_KEY / DASHSCOPE_API_KEY; there is no OpenAI provider.
+provider = "openai"
+default_model_env = "HERMES_DEFAULT_MODEL"
+task_models_json_env = "HERMES_MODELS_JSON"
+
+[agent.memory]
+# Postgres is the system of record for decisions. mem0 is fuzzy recall only.
+
+[agent.memory.mem0]
+enabled = true
+
+[agent.memory.postgres]
+enabled = true
+schema = "research"
+table = "agent_decisions"
+
+[agent.skills]
+directory = "/app/skills"
+auto_reload = true
+
+[agent.skills.allowed]
+names = [
+  "blockwise-agent-census",
+  "blockwise-page-resolver",
+  "blockwise-ad-collector",
+  "blockwise-ad-classifier",
+  "blockwise-coverage-auditor",
+  "blockwise-defect-investigator",
+  "blockwise-operator-chat",
+  "blockwise-content-run-orchestrator",
+  "blockwise-topic-researcher",
+  "blockwise-content-strategist",
+  "blockwise-blog-writer",
+  "blockwise-blog-editor",
+  "blockwise-blog-formatter",
+  "blockwise-image-brief-writer",
+  "blockwise-image-generator",
+  "blockwise-image-reviewer",
+  "blockwise-page-builder",
+  "blockwise-seo-schema-builder",
+  "blockwise-social-post-generator",
+  "blockwise-lead-ad-generator",
+  "blockwise-instant-form-generator",
+  "blockwise-compliance-reviewer",
+  "blockwise-agent-reviewer",
+  "blockwise-artifact-packager",
+  "blockwise-prompt-manager",
+  "blockwise-model-router",
+]
+
+[agent.scheduling]
+timezone = "Australia/Perth"
+
+[[agent.scheduling.jobs]]
+name = "weekly-census-priority-1"
+skill = "blockwise-agent-census"
+cron = "0 3 * * 1"
+input = { state = "WA", priority_max = 1 }
+
+[[agent.scheduling.jobs]]
+name = "weekly-coverage-audit"
+skill = "blockwise-coverage-auditor"
+cron = "0 5 * * 1"
+input = { method = "sampled_manual_browse", state = "WA" }

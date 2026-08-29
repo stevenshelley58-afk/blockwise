@@ -1,0 +1,42 @@
+hermes.blockwise.sale {
+	encode gzip
+
+	handle_path /research/* {
+		reverse_proxy blockwise-research-gateway:3000
+	}
+
+	# Explicitly public research media route. The Hermes media gateway only
+	# forwards /storage/v1/object/public/* and returns 404 for admin APIs.
+	handle_path /research-media/* {
+		reverse_proxy blockwise-research-media-gateway:3000
+	}
+
+	handle /scrape-listing {
+		reverse_proxy blockwise-listing-scraper:8650
+	}
+
+	handle {
+		basic_auth {
+			operator {$HERMES_DASHBOARD_PASSWORD_HASH}
+		}
+		reverse_proxy hermes:9119
+	}
+}
+
+api.cuz.fail {
+	encode gzip
+	reverse_proxy draftcheck-v3-caddy:80
+}
+
+lotfile.app {
+	encode gzip
+	reverse_proxy draftcheck-v3-caddy:80
+}
+
+app.cuz.fail {
+	redir https://lotfile.app{uri} permanent
+}
+
+cuz.fail, www.cuz.fail {
+	redir https://lotfile.app{uri} permanent
+}

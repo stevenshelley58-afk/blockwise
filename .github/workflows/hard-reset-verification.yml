@@ -1,0 +1,72 @@
+name: Hard Reset Verification
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  contracts:
+    name: Contract and static checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check for NUL-byte corruption
+        run: npm run check:nul
+
+      - name: Run hard-reset verification
+        run: npm run verify:hard-reset
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Run full test suite
+        run: npm test
+
+      - name: Build
+        run: npm run build
+        env:
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
+          NEXT_PUBLIC_SUPABASE_URL: https://dummy-project.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: dummy-anon-key
+          SUPABASE_SERVICE_ROLE_KEY: dummy-service-role-key
+          TOKEN_ENCRYPTION_KEY: "0000000000000000000000000000000000000000000000000000000000000000"
+
+  database-contracts:
+    name: Database migration and pgTAP checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v2
+        with:
+          version: 2.108.0
+          github-token: ${{ github.token }}
+
+      - name: Start local database
+        run: supabase db start
+
+      - name: Replay migrations and run pgTAP
+        run: npm run test:db
+
+      - name: Stop local database
+        if: always()
+        run: supabase stop --no-backup

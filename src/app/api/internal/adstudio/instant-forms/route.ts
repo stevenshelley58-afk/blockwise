@@ -1,0 +1,53 @@
+import { NextResponse } from "next/server";
+import { formGenerationInputSchema } from "@/lib/adstudio/instant-form-types";
+import { generateInstantForm, validateInstantForm } from "@/lib/adstudio/instant-form-generator";
+
+/**
+ * POST /api/internal/adstudio/instant-forms/generate
+ *
+ * AI-assisted Instant Form generator. Uses deterministic rules + template-based
+ * wording (Phase 7.1 stub — real AI in production via cheapest capable text model).
+ *
+ * Request: FormGenerationInput
+ * Response: { form: InstantForm, issues: ValidationIssue[] }
+ */
+export async function POST(request: Request) {
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "invalid_json" }, { status: 400 });
+  }
+
+  const parsed = formGenerationInputSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "invalid_input", issues: parsed.error.issues }, { status: 400 });
+  }
+
+  const { form, issues } = generateInstantForm(parsed.data);
+
+  return NextResponse.json({ form, issues }, { status: 200 });
+}
+
+/**
+ * POST /api/internal/adstudio/instant-forms/validate
+ *
+ * Validates an Instant Form against Meta requirements without regenerating.
+ */
+export async function PUT(request: Request) {
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "invalid_json" }, { status: 400 });
+  }
+
+  const { instantFormSchema } = await import("@/lib/adstudio/instant-form-types");
+  const parsed = instantFormSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "invalid_form", issues: parsed.error.issues }, { status: 400 });
+  }
+
+  const issues = validateInstantForm(parsed.data);
+  return NextResponse.json({ form: parsed.data, issues }, { status: 200 });
+}

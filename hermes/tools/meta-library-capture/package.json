@@ -1,0 +1,20 @@
+{
+  "name": "@blockwise/meta-library-capture",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Standalone Meta Ad Library capture CLI (Crawlee + system chromium). Replaces the Apify capture path.",
+  "type": "module",
+  "bin": {
+    "meta-library-capture": "bin/capture.mjs"
+  },
+  "scripts": {
+    "capture": "node bin/capture.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "crawlee": "^3.17.0",
+    "playwright": "^1.61.1"
+  }
+}

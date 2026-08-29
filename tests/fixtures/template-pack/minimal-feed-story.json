@@ -1,0 +1,68 @@
+{
+  "schema": "blockwise.template-pack/v1",
+  "templateId": "fixture-minimal",
+  "version": 1,
+  "packId": "fixture-minimal-v1",
+  "createdAt": "2026-08-13T00:00:00.000Z",
+  "builderVersion": "fixture-builder-1.0.0",
+  "rendererVersion": "ad-deterministic-renderer-1.0.0",
+  "classification": {
+    "label": "fixture",
+    "modelVersion": "fixture-classifier-1.0.0",
+    "confidence": 0.99
+  },
+  "manifestSha256": "b3eb7c494ca27619daf43a70782bd3fb16f4d5728c63448aeac49186df8497c2",
+  "signature": "fixture-ed25519-signature-placeholder",
+  "feedLayout": {
+    "placement": "feed",
+    "layers": [
+      {
+        "type": "plate",
+        "layerId": "feed-background",
+        "colourRole": "background",
+        "geometry": { "x": 0, "y": 0, "width": 1080, "height": 1350 },
+        "protected": false
+      }
+    ],
+    "safeZones": [
+      { "x": 60, "y": 60, "width": 960, "height": 300 }
+    ]
+  },
+  "storyLayout": {
+    "placement": "story",
+    "layers": [
+      {
+        "type": "plate",
+        "layerId": "story-background",
+        "colourRole": "background",
+        "geometry": { "x": 0, "y": 0, "width": 1080, "height": 1920 },
+        "protected": false
+      }
+    ],
+    "safeZones": [
+      { "x": 60, "y": 60, "width": 960, "height": 400 }
+    ]
+  },
+  "imageInputs": [],
+  "textInputs": [],
+  "semanticColours": {
+    "background": "#FFFFFF",
+    "primary": "#1E1E1E",
+    "secondary": "#F2F2F2",
+    "accent": "#2F6FED",
+    "mainText": "#111111",
+    "inverseText": "#FFFFFF"
+  },
+  "assets": {},
+  "fonts": [],
+  "safePreviews": {
+    "feed": { "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" },
+    "story": { "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" }
+  },
+  "qaEvidence": {
+    "feedPassed": true,
+    "storyPassed": true,
+    "reviewerVersions": ["fixture-qa-1.0.0"],
+    "stressFixtureResults": {}
+  }
+}

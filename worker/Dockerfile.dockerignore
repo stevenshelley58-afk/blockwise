@@ -1,0 +1,15 @@
+# Worker-only build context filter. Narrow because worker/index.ts imports
+# src/lib/** which pulls in tests/** via @ts-expect-error imports.
+.git
+.next
+node_modules
+.env
+.env.*
+hermes
+e2e
+trigger
+public
+docs
+.hermes
+.worktrees
+.vscode

@@ -1,0 +1,95 @@
+{
+  "sources": [
+    {
+      "id": "reiwa_agent_finder",
+      "state": "WA",
+      "enabled": true,
+      "type": "agent_roster",
+      "parser": "reiwa_jsonld_person",
+      "url_template": "https://reiwa.com.au/real-estate-agents/{suburb_slug}/",
+      "priority": 1,
+      "notes": "Public REIWA suburb roster with JSON-LD Person and agency data."
+    },
+    {
+      "id": "nsw_fair_trading_property_licence",
+      "state": "NSW",
+      "enabled": false,
+      "type": "official_register_candidate",
+      "registry_url": "https://www.service.nsw.gov.au/transaction/check-a-real-estate-agent-licence",
+      "priority": 2,
+      "notes": "Service NSW points to Verify NSW for the Property and real estate agents register. Enable only after adapter validation."
+    },
+    {
+      "id": "vic_public_register_estate_agents",
+      "state": "VIC",
+      "enabled": false,
+      "type": "official_register_candidate",
+      "registry_url": "https://www.consumer.vic.gov.au/resources-and-tools/search-public-registers",
+      "priority": 2,
+      "notes": "Consumer Affairs Victoria lists the Estate agents public register. Enable only after adapter validation."
+    },
+    {
+      "id": "qld_licence_register_real_estate",
+      "state": "QLD",
+      "enabled": false,
+      "type": "official_register_candidate",
+      "registry_url": "https://www.qld.gov.au/law/laws-regulated-industries-and-accountability/queensland-laws-and-regulations/regulated-industries-and-licensing/regulated-industries-licensing-and-legislation/property-industry-regulation/check-a-property-licence",
+      "priority": 2,
+      "notes": "Queensland says the public property licence register is free to search online. Enable only after adapter validation."
+    },
+    {
+      "id": "sa_consumer_business_services_register",
+      "state": "SA",
+      "enabled": false,
+      "type": "official_register_candidate",
+      "registry_url": "https://www.sa.gov.au/topics/housing-and-property/buying-building-selling/selling-a-property/engaging-professionals",
+      "priority": 3,
+      "notes": "SA directs users to check the public licence register for real estate or land agents. Enable only after adapter validation."
+    },
+    {
+      "id": "tas_occupational_licensing_register",
+      "state": "TAS",
+      "enabled": false,
+      "type": "official_register_candidate",
+      "registry_url": "https://ablis.business.gov.au/service/tas/real%20estate%20agent%20licence/7369",
+      "priority": 3,
+      "notes": "ABLIS describes the Tasmanian real estate agent licence and responsible registration context. Enable only after adapter validation."
+    },
+    {
+      "id": "act_licence_register_real_estate",
+      "state": "ACT",
+      "enabled": false,
+      "type": "official_register_candidate",
+      "registry_url": "https://www.accesscanberra.act.gov.au/business-and-work/real-estate-and-property/licensing-for-business-real-estate-and-stock-and-station-agents",
+      "priority": 3,
+      "notes": "Candidate official register source. Enable only after adapter validation."
+    },
+    {
+      "id": "nt_licensing_register_real_estate",
+      "state": "NT",
+      "enabled": false,
+      "type": "official_register_candidate",
+      "registry_url": "https://dtbar.nt.gov.au/boards-and-committees/agents-licensing-board",
+      "priority": 3,
+      "notes": "Northern Territory Agents Licensing Board is responsible for real estate, business and conveyancing agent licensing. Enable only after adapter validation."
+    },
+    {
+      "id": "realestate_com_au_agents",
+      "state": "AU",
+      "enabled": false,
+      "type": "portal_candidate",
+      "registry_url": "https://partner.realestate.com.au/",
+      "priority": 4,
+      "notes": "Disabled unless an official/free API or allowed partner endpoint is configured."
+    },
+    {
+      "id": "domain_agents",
+      "state": "AU",
+      "enabled": false,
+      "type": "portal_candidate",
+      "registry_url": "https://developer.domain.com.au/docs/latest/apis/pkg_agents_listings/",
+      "priority": 4,
+      "notes": "Disabled unless an official/free API or allowed partner endpoint is configured."
+    }
+  ]
+}
