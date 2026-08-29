@@ -1,4 +1,7 @@
-{$BLOCKWISE_PRODUCT_DOMAIN} {
+# Frank's shared edge terminates public TLS. This internal router is explicitly
+# HTTP-only so proxying to product-caddy:80 cannot trigger an HTTPS redirect
+# loop or a second ACME certificate flow.
+http://{$BLOCKWISE_PRODUCT_DOMAIN} {
   encode zstd gzip
 
   @health path /healthz

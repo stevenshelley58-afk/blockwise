@@ -41,25 +41,34 @@ services:
       PGRST_DB_ANON_ROLE: anon
       PGRST_JWT_SECRET: ${BLOCKWISE_AUTH_JWT_SECRET:?BLOCKWISE_AUTH_JWT_SECRET is required}
       PGRST_DB_USE_LEGACY_GUCS: "false"
+      PGRST_ADMIN_SERVER_PORT: 3001
+      PGRST_ADMIN_SERVER_HOST: localhost
     networks: [blockwise-product]
     healthcheck:
-      test: [CMD-SHELL, "wget -qO- http://127.0.0.1:3000/ || exit 1"]
+      test: [CMD, "postgrest", "--ready"]
       interval: 10s
       timeout: 5s
       retries: 12
 
   product-auth:
-    image: supabase/gotrue:v2.171.0
+    image: supabase/gotrue:v2.189.0
     restart: unless-stopped
     depends_on:
       product-db: { condition: service_healthy }
     environment:
+      GOTRUE_API_HOST: 0.0.0.0
+      GOTRUE_API_PORT: 9999
+      API_EXTERNAL_URL: ${BLOCKWISE_AUTH_API_EXTERNAL_URL:?BLOCKWISE_AUTH_API_EXTERNAL_URL is required}
       GOTRUE_DB_DRIVER: postgres
-      GOTRUE_DB_DATABASE_URL: postgres://${BLOCKWISE_DB_USER}:${BLOCKWISE_DB_PASSWORD}@product-db:5432/${BLOCKWISE_DB_NAME}
-      GOTRUE_DB_NAMESPACE: auth
+      GOTRUE_DB_DATABASE_URL: postgres://${BLOCKWISE_DB_USER}:${BLOCKWISE_DB_PASSWORD}@product-db:5432/${BLOCKWISE_DB_NAME}?options=-csearch_path%3Dauth%2Cpublic
+      DB_NAMESPACE: auth
       GOTRUE_SITE_URL: ${BLOCKWISE_AUTH_SITE_URL:?BLOCKWISE_AUTH_SITE_URL is required}
       GOTRUE_URI_ALLOW_LIST: ${BLOCKWISE_AUTH_URI_ALLOW_LIST}
       GOTRUE_JWT_SECRET: ${BLOCKWISE_AUTH_JWT_SECRET:?BLOCKWISE_AUTH_JWT_SECRET is required}
+      GOTRUE_JWT_ISSUER: ${BLOCKWISE_AUTH_API_EXTERNAL_URL}
+      GOTRUE_JWT_ADMIN_ROLES: service_role
+      GOTRUE_JWT_AUD: authenticated
+      GOTRUE_JWT_DEFAULT_GROUP_NAME: authenticated
       GOTRUE_JWT_EXP: ${BLOCKWISE_AUTH_JWT_EXP:-3600}
       GOTRUE_EXTERNAL_EMAIL_ENABLED: ${BLOCKWISE_AUTH_EXTERNAL_EMAIL_ENABLED:-true}
       GOTRUE_MAILER_AUTOCONFIRM: ${BLOCKWISE_AUTH_MAILER_AUTOCONFIRM:-false}
@@ -71,38 +80,44 @@ services:
       GOTRUE_SMTP_SENDER_NAME: ${BLOCKWISE_AUTH_SMTP_SENDER_NAME:-Blockwise}
     networks: [blockwise-product]
     healthcheck:
-      test: [CMD-SHELL, "wget -qO- http://127.0.0.1:9999/health || exit 1"]
+      test: [CMD, "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:9999/health"]
       interval: 10s
       timeout: 5s
       retries: 18
 
   product-storage:
-    image: supabase/storage-api:v1.11.13
+    image: supabase/storage-api:v1.60.4
     restart: unless-stopped
     depends_on:
       product-db: { condition: service_healthy }
       product-rest: { condition: service_healthy }
     environment:
-      DATABASE_URL: postgres://${BLOCKWISE_DB_USER}:${BLOCKWISE_DB_PASSWORD}@product-db:5432/${BLOCKWISE_DB_NAME}
+      DATABASE_URL: postgres://${BLOCKWISE_DB_USER}:${BLOCKWISE_DB_PASSWORD}@product-db:5432/${BLOCKWISE_DB_NAME}?options=-csearch_path%3Dstorage%2Cpublic
       PGRST_JWT_SECRET: ${BLOCKWISE_AUTH_JWT_SECRET:?BLOCKWISE_AUTH_JWT_SECRET is required}
+      AUTH_JWT_SECRET: ${BLOCKWISE_AUTH_JWT_SECRET}
       ANON_KEY: ${BLOCKWISE_AUTH_ANON_KEY:?BLOCKWISE_AUTH_ANON_KEY is required}
       SERVICE_KEY: ${BLOCKWISE_STORAGE_SERVICE_KEY:?BLOCKWISE_STORAGE_SERVICE_KEY is required}
       POSTGREST_URL: http://product-rest:3000
+      STORAGE_PUBLIC_URL: ${BLOCKWISE_PUBLIC_URL:?BLOCKWISE_PUBLIC_URL is required}/storage/v1
+      REQUEST_ALLOW_X_FORWARDED_PATH: "true"
       FILE_SIZE_LIMIT: ${BLOCKWISE_STORAGE_FILE_SIZE_LIMIT:-10485760}
       TENANT_ID: blockwise
+      REGION: local
+      GLOBAL_S3_BUCKET: blockwise
       STORAGE_BACKEND: file
       FILE_STORAGE_BACKEND_PATH: /var/lib/storage
     volumes:
       - blockwise-product-storage-data:/var/lib/storage
     networks: [blockwise-product]
     healthcheck:
-      test: [CMD-SHELL, "wget -qO- http://127.0.0.1:5000/status || exit 1"]
+      test: [CMD, "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:5000/status"]
       interval: 10s
       timeout: 5s
       retries: 18
 
   product-realtime:
-    image: supabase/realtime:v2.34.47
+    image: supabase/realtime:v2.102.3
+    container_name: blockwise-realtime.supabase-realtime
     restart: unless-stopped
     profiles: [realtime]
     depends_on:
@@ -114,14 +129,20 @@ services:
       DB_PASSWORD: ${BLOCKWISE_DB_PASSWORD}
       DB_PORT: 5432
       DB_AFTER_CONNECT_QUERY: SET search_path TO _realtime
+      DB_ENC_KEY: ${BLOCKWISE_REALTIME_DB_ENC_KEY:?BLOCKWISE_REALTIME_DB_ENC_KEY is required}
       API_JWT_SECRET: ${BLOCKWISE_AUTH_JWT_SECRET:?BLOCKWISE_AUTH_JWT_SECRET is required}
+      ANON_KEY: ${BLOCKWISE_AUTH_ANON_KEY:?BLOCKWISE_AUTH_ANON_KEY is required}
+      METRICS_JWT_SECRET: ${BLOCKWISE_AUTH_JWT_SECRET}
       SECRET_KEY_BASE: ${BLOCKWISE_REALTIME_SECRET_KEY_BASE:?BLOCKWISE_REALTIME_SECRET_KEY_BASE is required}
       APP_NAME: blockwise-realtime
       PORT: 4000
       ERL_AFLAGS: -proto_dist inet_tcp
+      DNS_NODES: "''"
+      RLIMIT_NOFILE: "10000"
+      SEED_SELF_HOST: "true"
     networks: [blockwise-product]
     healthcheck:
-      test: [CMD-SHELL, "wget -qO- http://127.0.0.1:4000/api/health || exit 1"]
+      test: [CMD-SHELL, "curl -sSfL --head -o /dev/null -H \"Authorization: Bearer $${ANON_KEY}\" http://127.0.0.1:4000/api/tenants/blockwise-realtime/health"]
       interval: 10s
       timeout: 5s
       retries: 18
