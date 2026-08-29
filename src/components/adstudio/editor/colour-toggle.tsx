@@ -1,12 +1,15 @@
 "use client";
 
 import { COLOUR_ROLES, type ColourRole } from "../../../../packages/ad-template-pack-contract/src/types";
+import { useId } from "react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 // ---------------------------------------------------------------------------
 // Colour mode toggle — template palette vs workspace Brand Pack colours.
 // Unchecked = template colours; checked = Brand Pack colours. Disabled when
 // the workspace has no Brand Pack yet. The swatch strip previews the live
-// resolved palette (the schematic updates from the same map, so both move
+// resolved palette (the preview updates from the same map, so both move
 // together).
 // ---------------------------------------------------------------------------
 
@@ -26,35 +29,43 @@ export function ColourToggle({
   resolvedColourMap,
   onToggle,
 }: ColourToggleProps) {
+  const switchId = useId();
+  const descriptionId = `${switchId}-description`;
   return (
-    <label
-      className={`flex items-center gap-2 rounded-(--r-control) border border-(--line) px-3 py-1.5 text-sm transition ${
-        useBrandPack ? "bg-(--ui-primary)/10" : "bg-transparent"
-      } ${brandPackAvailable ? "cursor-pointer hover:bg-(--surface-subtle)" : "cursor-not-allowed opacity-60"}`}
-      title={
-        brandPackAvailable
-          ? "Use your Brand Pack colours in place of the template palette"
-          : "No Brand Pack yet — add one in Brand Studio"
-      }
-    >
-      <input
-        type="checkbox"
-        checked={useBrandPack}
-        disabled={!brandPackAvailable}
-        onChange={(e) => onToggle(e.target.checked)}
-        className="h-4 w-4 accent-(--ui-primary)"
-      />
-      <span className="font-medium text-foreground">Brand Pack colours</span>
-      <span className="flex items-center gap-1" aria-hidden="true">
-        {COLOUR_ROLES.map((role) => (
-          <span
-            key={role}
-            className="h-3 w-3 rounded-full border border-black/10"
-            style={{ backgroundColor: resolvedColourMap[role] ?? "#cccccc" }}
-            title={role}
-          />
-        ))}
-      </span>
-    </label>
+    <div className="space-y-1.5">
+      <div
+        className={`flex min-h-11 items-center gap-2 rounded-(--r-card) border border-border px-3 py-1.5 text-sm transition ${
+          useBrandPack ? "bg-(--ui-primary)/10" : "bg-transparent"
+        } ${brandPackAvailable ? "hover:bg-(--surface-subtle)" : "cursor-not-allowed opacity-60"}`}
+        aria-describedby={descriptionId}
+      >
+        <Switch
+          id={switchId}
+          checked={useBrandPack}
+          disabled={!brandPackAvailable}
+          onCheckedChange={onToggle}
+          aria-labelledby={`${switchId}-label`}
+          aria-describedby={descriptionId}
+        />
+        <Label id={`${switchId}-label`} htmlFor={switchId} className="font-medium">
+          Workspace colours
+        </Label>
+        <span className="flex items-center gap-1" aria-hidden="true">
+          {COLOUR_ROLES.map((role) => (
+            <span
+              key={role}
+              className="h-3 w-3 rounded-full border border-foreground/10"
+              style={{ backgroundColor: resolvedColourMap[role] ?? "var(--muted)" }}
+              title={role}
+            />
+          ))}
+        </span>
+      </div>
+      <p id={descriptionId} className="px-1 text-[11px] leading-relaxed text-muted-foreground">
+        {brandPackAvailable
+          ? "Use your workspace colours instead of the template palette."
+          : "Add workspace colours in Brand Studio to use them here."}
+      </p>
+    </div>
   );
 }

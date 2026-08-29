@@ -567,7 +567,7 @@ function drawImageSlot(
   if (!image) return; // guided render always supplies every slot; absence = plate shows through
   const rect = boxPx(layer.box, layout);
   const values = instance?.values.images[layer.inputKey];
-  const placement = focalCoverSourceRect({
+  const placement = layer.fit === "contain" ? null : focalCoverSourceRect({
     slotWidthPx: rect.width,
     slotHeightPx: rect.height,
     imageWidth: image.width,
@@ -584,17 +584,101 @@ function drawImageSlot(
     ctx.translate(-(rect.left + rect.width / 2), -(rect.top + rect.height / 2));
   }
   clipMaskPath(ctx, rect, layer.mask);
-  ctx.drawImage(
-    image as CanvasImageLike,
-    placement.sx,
-    placement.sy,
-    placement.sw,
-    placement.sh,
-    rect.left,
-    rect.top,
-    rect.width,
-    rect.height,
-  );
+  if (placement) {
+    ctx.drawImage(image as CanvasImageLike, placement.sx, placement.sy, placement.sw, placement.sh, rect.left, rect.top, rect.width, rect.height);
+  } else {
+    const scale = Math.min(rect.width / image.width, rect.height / image.height);
+    const width = image.width * scale;
+    const height = image.height * scale;
+    ctx.drawImage(image as CanvasImageLike, rect.left + (rect.width - width) / 2, rect.top + (rect.height - height) / 2, width, height);
+  }
+  ctx.restore();
+}
+
+function drawVectorLayer(
+  ctx: Canvas2DLike,
+  layer: Extract<TemplateLayer, { type: "vector" }>,
+  layout: TemplateLayout,
+): void {
+  const rect = boxPx(layer.box, layout);
+  ctx.save();
+  ctx.globalAlpha = layer.opacity ?? 1;
+  ctx.fillStyle = layer.fill;
+  ctx.strokeStyle = layer.stroke ?? layer.fill;
+  ctx.lineWidth = layer.strokeWidth ?? 1;
+  ctx.beginPath();
+  if (layer.shape === "circle" || layer.shape === "ring") {
+    ctx.ellipse(rect.left + rect.width / 2, rect.top + rect.height / 2, rect.width / 2, rect.height / 2, 0, 0, Math.PI * 2);
+    if (layer.shape === "ring") {
+      ctx.strokeStyle = layer.stroke ?? layer.fill;
+      ctx.lineWidth = layer.strokeWidth ?? 2;
+      ctx.stroke();
+      ctx.restore();
+      return;
+    }
+  } else if (layer.shape === "line" || layer.shape === "wave") {
+    ctx.moveTo(rect.left, rect.top + rect.height / 2);
+    const segments = layer.shape === "wave" ? 12 : 1;
+    for (let index = 1; index <= segments; index += 1) {
+      const x = rect.left + rect.width * (index / segments);
+      const y = rect.top + rect.height / 2 + (layer.shape === "wave" ? Math.sin(index / segments * Math.PI * 2) * rect.height * .35 : 0);
+      ctx.lineTo(x, y);
+    }
+  } else if (layer.shape === "notched") {
+    const notch = Math.min(rect.width, rect.height) * .18;
+    ctx.moveTo(rect.left, rect.top);
+    ctx.lineTo(rect.left + rect.width, rect.top);
+    ctx.lineTo(rect.left + rect.width, rect.top + rect.height);
+    ctx.lineTo(rect.left + notch, rect.top + rect.height);
+    ctx.lineTo(rect.left, rect.top + rect.height - notch);
+    ctx.closePath();
+  } else if (layer.shape === "rounded" || layer.shape === "pill") {
+    const radius = layer.shape === "pill" ? Math.min(rect.width, rect.height) / 2 : Math.min(24, Math.min(rect.width, rect.height) / 4);
+    ctx.moveTo(rect.left + radius, rect.top);
+    ctx.lineTo(rect.left + rect.width - radius, rect.top);
+    ctx.arc(rect.left + rect.width - radius, rect.top + radius, radius, -Math.PI / 2, 0);
+    ctx.lineTo(rect.left + rect.width, rect.top + rect.height - radius);
+    ctx.arc(rect.left + rect.width - radius, rect.top + rect.height - radius, radius, 0, Math.PI / 2);
+    ctx.lineTo(rect.left + radius, rect.top + rect.height);
+    ctx.arc(rect.left + radius, rect.top + rect.height - radius, radius, Math.PI / 2, Math.PI);
+    ctx.lineTo(rect.left, rect.top + radius);
+    ctx.arc(rect.left + radius, rect.top + radius, radius, Math.PI, Math.PI * 1.5);
+    ctx.closePath();
+  } else {
+    ctx.rect(rect.left, rect.top, rect.width, rect.height);
+  }
+  if (layer.shape !== "line" && layer.shape !== "wave") ctx.fill();
+  if (layer.stroke) ctx.stroke();
+  ctx.restore();
+}
+
+function drawIconLayer(
+  ctx: Canvas2DLike,
+  layer: Extract<TemplateLayer, { type: "icon" }>,
+  layout: TemplateLayout,
+): void {
+  const rect = boxPx(layer.box, layout);
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  const radius = Math.min(rect.width, rect.height) * 0.34;
+  ctx.save();
+  ctx.strokeStyle = layer.color;
+  ctx.fillStyle = layer.color;
+  ctx.lineWidth = layer.strokeWidth ?? Math.max(2, Math.min(rect.width, rect.height) * 0.06);
+  ctx.beginPath();
+  if (layer.icon === "check" || layer.icon === "tick") {
+    ctx.moveTo(rect.left + rect.width * 0.18, cy);
+    ctx.lineTo(rect.left + rect.width * 0.42, rect.top + rect.height * 0.76);
+    ctx.lineTo(rect.left + rect.width * 0.84, rect.top + rect.height * 0.24);
+    ctx.stroke();
+  } else if (layer.icon === "plus") {
+    ctx.moveTo(cx - radius, cy); ctx.lineTo(cx + radius, cy);
+    ctx.moveTo(cx, cy - radius); ctx.lineTo(cx, cy + radius);
+    ctx.stroke();
+  } else {
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.stroke();
+  }
   ctx.restore();
 }
 
@@ -653,6 +737,10 @@ export function renderAdDoc(
       drawImageSlot(ctx, layer, layout, instance, assets);
     } else if (layer.type === "overlay_patch") {
       drawOverlayPatch(ctx, layer, layout, assets);
+    } else if (layer.type === "vector") {
+      drawVectorLayer(ctx, layer, layout);
+    } else if (layer.type === "icon") {
+      drawIconLayer(ctx, layer, layout);
     } else {
       drawTextLayer(ctx, doc, layer, layout, instance, overrides);
     }

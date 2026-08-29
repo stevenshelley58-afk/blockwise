@@ -259,11 +259,12 @@ export function CropDialog({
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-6"
       role="dialog"
       aria-modal="true"
-      aria-label={`Crop ${input.label}`}
+      aria-labelledby="crop-dialog-title"
+      aria-describedby="crop-dialog-description"
       tabIndex={-1}
       onKeyDown={handleDialogKeyDown}
     >
-      <div className="flex max-h-[90vh] w-full max-w-3xl flex-col rounded-(--r-card) bg-(--surface) shadow-2xl">
+      <div className="flex max-h-[90vh] w-full max-w-3xl flex-col rounded-(--r-card) bg-card shadow-float">
         {/* Header */}
         <header className="flex items-center justify-between gap-4 border-b border-(--line) px-5 py-3">
           <div>
@@ -284,7 +285,7 @@ export function CropDialog({
         {/* Crop area — live preview of the slot (image letterboxed to slot ratio) */}
         <div
           ref={containerRef}
-          className="relative overflow-hidden bg-gray-900 select-none"
+          className="relative select-none overflow-hidden bg-foreground"
           style={{ aspectRatio, touchAction: "none" }}
           onPointerMove={handlePointerMove}
           onPointerUp={endDrag}
@@ -330,7 +331,7 @@ export function CropDialog({
               onChange={event => updateNumericCrop("x", Number(event.target.value))}
               aria-label="Crop left position (%)"
               disabled={imgRect.width === 0}
-              className="mt-1 w-full rounded-(--r-control) border border-(--line) bg-(--surface-subtle) px-2 py-1.5 text-sm text-foreground"
+              className="mt-1 min-h-11 w-full rounded-(--r-card) border border-input bg-muted/30 px-2 py-1.5 text-base text-foreground outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
             />
           </label>
           <label className="text-[11px] text-muted-foreground">
@@ -344,7 +345,7 @@ export function CropDialog({
               onChange={event => updateNumericCrop("y", Number(event.target.value))}
               aria-label="Crop top position (%)"
               disabled={imgRect.width === 0}
-              className="mt-1 w-full rounded-(--r-control) border border-(--line) bg-(--surface-subtle) px-2 py-1.5 text-sm text-foreground"
+              className="mt-1 min-h-11 w-full rounded-(--r-card) border border-input bg-muted/30 px-2 py-1.5 text-base text-foreground outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
             />
           </label>
           <label className="text-[11px] text-muted-foreground">
@@ -358,7 +359,7 @@ export function CropDialog({
               onChange={event => updateNumericCrop("width", Number(event.target.value))}
               aria-label="Crop width (%)"
               disabled={imgRect.width === 0}
-              className="mt-1 w-full rounded-(--r-control) border border-(--line) bg-(--surface-subtle) px-2 py-1.5 text-sm text-foreground"
+              className="mt-1 min-h-11 w-full rounded-(--r-card) border border-input bg-muted/30 px-2 py-1.5 text-base text-foreground outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
             />
           </label>
         </fieldset>
@@ -379,13 +380,13 @@ export function CropDialog({
             <button
               ref={cancelButtonRef}
               onClick={onCancel}
-              className="rounded-(--r-control) px-4 py-2 text-sm text-muted-foreground hover:bg-(--surface-subtle)"
+              className="min-h-11 rounded-full px-4 text-sm text-muted-foreground hover:bg-muted"
             >
               Cancel
             </button>
             <button
               onClick={() => onConfirm(crop)}
-              className="rounded-(--r-control) bg-(--ui-primary) px-5 py-2 text-sm font-semibold text-white hover:opacity-90"
+              className="min-h-11 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground hover:opacity-90"
             >
               Apply crop
             </button>
@@ -435,7 +436,7 @@ function SlotPreview({
   return (
     <div
       ref={ref}
-      className="relative w-24 shrink-0 overflow-hidden rounded-(--r-control) border border-(--line) bg-gray-900"
+      className="relative w-24 shrink-0 overflow-hidden rounded-(--r-ctl) border border-(--line) bg-gray-900"
       style={{ aspectRatio }}
       aria-hidden="true"
       title="Live slot preview"

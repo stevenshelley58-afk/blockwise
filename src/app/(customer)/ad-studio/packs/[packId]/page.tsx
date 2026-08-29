@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 
 import { EditorShell } from "@/components/adstudio/editor/editor-shell";
 import { getOrCreateCustomerAd } from "@/lib/adstudio/create-customer-ad";
@@ -14,7 +15,6 @@ export const dynamic = "force-dynamic";
 // Feed/Story tabs, layer list and canvas come from the existing EditorShell.
 // Opening a pack server-side creates (idempotently) the customer ad row the
 // Save button persists against; Save renders Feed + Story PNGs via saveAd.
-// Publish is not wired yet.
 // ---------------------------------------------------------------------------
 
 export default async function PackEditorPage({
@@ -35,11 +35,11 @@ export default async function PackEditorPage({
   const brandColours = await loadLatestBrandColours(supabase, access.workspaceId);
 
   return (
-    <main className="fixed inset-0 flex flex-col bg-(--canvas) text-foreground">
-      <header className="flex h-12 shrink-0 items-center border-b border-(--line) bg-(--surface) px-5">
-        <a
+    <div className="flex min-h-[calc(100dvh-54px)] flex-col bg-background text-foreground md:min-h-[calc(100dvh-60px)]">
+      <header className="flex min-h-12 shrink-0 items-center border-b border-border bg-card px-4 md:px-5">
+        <Link
           href="/ad-studio"
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition hover:text-foreground"
+          className="inline-flex min-h-11 items-center gap-1.5 text-sm text-muted-foreground transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
             <path
@@ -51,7 +51,7 @@ export default async function PackEditorPage({
             />
           </svg>
           All templates
-        </a>
+        </Link>
         <span className="ml-4 truncate text-sm font-medium">
           {pack.classification.label || pack.templateId}
           <span className="ml-2 text-xs font-normal tabular-nums text-muted-foreground">
@@ -59,7 +59,7 @@ export default async function PackEditorPage({
           </span>
         </span>
       </header>
-      <div className="min-h-0 flex-1">
+      <div className="min-h-0 flex-1 h-full">
         <EditorShell
           pack={pack}
           adId={adRef.adId}
@@ -70,7 +70,7 @@ export default async function PackEditorPage({
           initialRevision={adRef.revisionNumber}
         />
       </div>
-    </main>
+    </div>
   );
 }
 

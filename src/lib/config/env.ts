@@ -38,6 +38,7 @@ export const FIRST_TESTER_ENV_KEYS = [
 
 const PLACEHOLDER_ENV_PATTERNS = [
   /^replace(_me|_with)/i,
+  /^replace[-_]/i,
   /^proj_replace/i,
   /^example(\.|$)/i,
   /^https:\/\/example\.supabase\.co$/i,

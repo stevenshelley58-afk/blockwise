@@ -34,7 +34,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
-    "konva": "^10.3.0",
+    "fabric": "^7.4.0",
     "lucide-react": "^0.468.0",
     "motion": "^12.42.2",
     "next": "^16.2.11",
@@ -43,7 +43,6 @@
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-is": "^19.0.0",
-    "react-konva": "^19.2.5",
     "recharts": "^3.8.0",
     "resend": "^6.18.1",
     "sharp": "^0.35.3",
@@ -67,6 +66,7 @@
   },
   "overrides": {
     "postcss": "^8.5.25",
-    "sharp": "$sharp"
+    "sharp": "$sharp",
+    "nanoid": "3.3.18"
   }
 }

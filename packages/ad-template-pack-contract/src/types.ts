@@ -21,6 +21,8 @@ export const LAYER_TYPES = [
   "overlay_patch",
   "text",
   "logo",
+  "vector",
+  "icon",
 ] as const;
 export type LayerType = (typeof LAYER_TYPES)[number];
 
@@ -116,6 +118,8 @@ export interface OverlayPatchLayer {
   /** Colour role for the overlay tint. */
   colourRole: ColourRole;
   opacity: number;
+  /** Content-addressed neutral patch asset used by the deterministic renderer. */
+  assetKey?: string;
 }
 
 export interface TextLayer extends TextLayerDefaults {
@@ -131,12 +135,31 @@ export interface LogoLayer {
   inputKey: string;
 }
 
+export interface VectorLayer {
+  type: "vector";
+  layerId: string;
+  geometry: Rect;
+  shape: "rect" | "rounded" | "circle" | "line" | "pill" | "notched" | "wave" | "ring";
+  colourRole: ColourRole;
+  opacity: number;
+}
+
+export interface IconLayer {
+  type: "icon";
+  layerId: string;
+  geometry: Rect;
+  icon: string;
+  colourRole: ColourRole;
+}
+
 export type LayoutLayer =
   | PlateLayer
   | ImageSlotLayer
   | OverlayPatchLayer
   | TextLayer
-  | LogoLayer;
+  | LogoLayer
+  | VectorLayer
+  | IconLayer;
 
 // ---------------------------------------------------------------------------
 // Layout
@@ -175,6 +198,8 @@ export interface Layout {
 export interface ImageInput {
   key: string;
   label: string;
+  /** Whether the editor must provide this slot before rendering/publish. */
+  required?: boolean;
   /** Accepted MIME types. */
   acceptedTypes: string[];
 }

@@ -25,6 +25,33 @@ or continue a chat.
 
 ## Pipeline
 
+### Initial 20-template portfolio lane
+
+When the brief contains `initial-portfolio-id:NNN`, it selects exactly one of
+the approved launch templates (`006`, `021`, `033`, `039`, `044`, `062`,
+`108`, `111`, `127`, `143`, `145`, `148`, `149`, `154`, `159`, `176`,
+`180`, `182`, `194`, `199`). The Tool controller must associate exactly one
+private source attachment with that ID. Build it as one durable, visible Frank
+run by executing:
+
+`node scripts/adstudio/v2/initial-portfolio-runner.mjs --id NNN --source <privateSourcePath> --out <thisRunPrivateAssetsRoot>`
+
+The runner verifies the pinned source SHA-256, then uses the committed explicit
+art-direction contract to create one source-free layered template with native
+Feed and Story documents. The source is evidence only: its pixels, identity,
+copy, logos, people, URLs, and contact details must never enter the candidate.
+The committed portfolio specs, safe fixtures and any prior local candidate are
+SEEDS only. Preserve their hash as `seedSha256` and reuse their layered art
+direction, but never import their `qa`, `ready`, approval, score or release
+state. A seed has no durable-run authority; every accepted generation begins
+inside this run and is bound to this run's private source hash.
+Do not replace this lane with the generic five-variant skeleton generator, and
+do not combine the 20 attachments into one invisible bulk run. Continue with
+the deterministic check, subject-invariance, and Studio QA stages below for
+that one candidate. Stop with
+`release_status: "blocked_pending_human_approval"`; this command never grants
+approval or releases a pack.
+
 Run and checkpoint these stages in order:
 
 1. `source`: verify the private source ref and hash.
@@ -43,21 +70,38 @@ Run and checkpoint these stages in order:
 5. `restyle`: sanitize identity, copy, palette, assets, and source-photo slots.
 6. `story-draft`: run the deterministic story layout command (variants from
    variant-pack already carry native story layouts).
-7. `check`: run the deterministic builder check for EVERY variant
+7. `render`: create fresh native Feed and Story previews and hash each preview
+   plus their render set. Initialize this run's private generation trace with:
+   `node scripts/adstudio/v2/generation-trace.mjs init --trace <privateTraceFile> --template <id> --source-sha <sourceSha256> [--seed-sha <seedSha256>]`.
+8. `visual-review`: run two independently attributable visual reviews against
+   the source design system, excluding replaceable subject pixels, source
+   identity and copy wording. Record EVERY render with:
+   `node scripts/adstudio/v2/generation-trace.mjs record --trace <privateTraceFile> --feed-sha <sha256> --story-sha <sha256> --render-set-sha <sha256> --primary-reviewer <stableId> --strict-reviewer <differentStableId> --primary-score <0..10> --strict-score <0..10> --revision-reason <specificDelta>`.
+   Emit durable safe events `generation-started`, `generation-rendered`, and
+   `generation-scored`. If either score is below 9.5, emit
+   `generation-revision-requested`, revise the layered document (never paint a
+   flattened replacement), return to `render`, and preserve the prior
+   generation. When both scores are at least 9.5, emit `generation-accepted`
+   and continue. Never copy a previous score, average the two scores, use one
+   reviewer identity twice, or manufacture a passing value. The trace is
+   capped at 30 generations; exhaustion is a failed/attention run, never an
+   approval bypass.
+9. `check`: run the deterministic builder check for EVERY variant
    (`ADSTUDIO_GALLERY_V2_DIR` etc. pointed at the candidate root; the gate is
    pack-aware: declared pack variants share one source hash legitimately, and
    every variant must have a distinct layout skeleton).
-8. `subject-invariance`: for the CLI entrypoint run
+10. `subject-invariance`: for the CLI entrypoint run
    `node scripts/adstudio/v2/subject-invariance.mjs --id <id> --out <dir>`
    for EVERY variant. If a candidate root outside the builder checkout is used,
    call the exported `runSubjectInvariance({ repoRoot, templateId, outDir })`
    from a small private Tool-assets script, because the direct CLI defaults
    `repoRoot` to the committed builder checkout. The gate uses the committed,
    versioned fixture corpus (FIXTURE_CORPUS_VERSION) at full strength.
-9. `studio-qa`: return previews and evidence for all variants, then stop for
+11. `studio-qa`: return previews, the accepted generation trace and evidence
+   for all variants, then stop for
    Frank approval.
-10. `ready`: after 100% zoom approval, rerun every release gate.
-11. `release`: write the immutable pack beneath
+12. `ready`: after 100% zoom approval, rerun every release gate.
+13. `release`: write the immutable pack beneath
     `$HERMES_HOME/tool_releases/ad-template-generator` and return its receipt.
 
 The analyse stage uses the configured vision route to write the builder's
@@ -88,11 +132,19 @@ approval and return ONE compact JSON object with EXACTLY these semantics
   under `tool_assets/.../runs/<run_id>/previews/`. Copy the per-variant
   portrait + story previews there (never reference candidate/public paths).
 - `evidence_refs` — the analysis, check, variant-pack manifest, template docs,
-  subject-invariance evidence, and contact sheets.
+  accepted generation trace, subject-invariance evidence, and contact sheets.
+- `generations` — the complete ordered array copied from the validated
+  `adstudio.generation-trace.v1` record. Each item contains immutable Feed,
+  Story and render-set hashes, independent reviewer IDs, both numeric scores,
+  the decision and the specific revision reason.
 - `qa_summary` with the EXACT literal values:
   - `source_verified: true`
   - `deterministic_check: "passed"`
   - `subject_invariance_gate: true` (after all N variants pass the gate)
+  - `visual_review.likeness_threshold: 9.5`
+  - `visual_review.scores.primary_ad_system_likeness: <accepted score>`
+  - `visual_review.scores.strict_ad_system_likeness: <accepted score>`
+  - `visual_review.generation_trace_sha256: <validated trace SHA-256>`
   - `release_status: "blocked_pending_human_approval"` (exact string)
 - `cost` and `attention` items.
 

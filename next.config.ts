@@ -4,6 +4,8 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
   typedRoutes: true,
+  // The OSS product image runs Next's standalone server behind Caddy.
+  output: "standalone",
   // @napi-rs/canvas ships a native .node binding that Turbopack cannot place in
   // ESM chunks; it is only used server-side (ad-deterministic-renderer), so
   // externalize it and let the server require() the binding at runtime.

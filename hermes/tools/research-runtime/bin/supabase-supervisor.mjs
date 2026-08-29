@@ -24,8 +24,9 @@ import { resolveAdRadarRuntime } from "./ad-radar-runtime-gate.mjs";
 import { publishCustomerReadModels } from "./customer-read-model-publisher.mjs";
 import { runInactiveAdPurge } from "./inactive-ad-purge.mjs";
 import {
+  assertHermesOwnedStorageUrl,
   hermesSupabaseHeaders,
-  resolveHermesCustomerSupabaseCredential,
+  resolveHermesResearchStorageCredential,
   resolveHermesSupabaseCredential,
 } from "./supabase-credentials.mjs";
 
@@ -72,10 +73,14 @@ if (!supabaseCredential) {
   );
 }
 const customerSupabaseUrl = required("HERMES_CUSTOMER_SUPABASE_URL", env.SUPABASE_URL).replace(/\/+$/u, "");
-const customerSupabaseCredential = resolveHermesCustomerSupabaseCredential(env);
-if (!customerSupabaseCredential) {
+if (/\.supabase\.(?:co|com)$/iu.test(new URL(customerSupabaseUrl).hostname) || /^(?:supabase\.(?:co|com))$/iu.test(new URL(customerSupabaseUrl).hostname)) {
+  throw new Error("HERMES_CUSTOMER_SUPABASE_URL must point at the self-hosted product edge");
+}
+const researchStorageUrl = assertHermesOwnedStorageUrl(required("HERMES_RESEARCH_STORAGE_URL"));
+const researchStorageCredential = resolveHermesResearchStorageCredential(env);
+if (!researchStorageCredential) {
   throw new Error(
-    "Missing HERMES_CUSTOMER_SUPABASE_SECRET_KEY or HERMES_CUSTOMER_SUPABASE_SERVICE_ROLE_KEY",
+    "Missing HERMES_RESEARCH_STORAGE_SECRET_KEY or HERMES_RESEARCH_STORAGE_SERVICE_ROLE_KEY",
   );
 }
 const customerReadModelPublishIntervalMs = positiveInt(
@@ -333,9 +338,9 @@ async function rest(schema, path, init = {}) {
 }
 
 async function storage(path, init = {}) {
-  const response = await fetch(`${customerSupabaseUrl}/storage/v1/${path}`, {
+  const response = await fetch(`${researchStorageUrl}/storage/v1/${path}`, {
     ...init,
-    headers: hermesSupabaseHeaders(customerSupabaseCredential, {
+    headers: hermesSupabaseHeaders(researchStorageCredential, {
       ...(init.headers || {}),
     }),
   });
@@ -4821,9 +4826,9 @@ async function writeBrowserRawEvidence(kind, input, evidence) {
 
 async function uploadStorageObject(bucket, objectPath, buffer, contentType) {
   const encodedObjectPath = objectPath.split("/").map(encode).join("/");
-  const response = await fetch(`${customerSupabaseUrl}/storage/v1/object/${encode(bucket)}/${encodedObjectPath}`, {
+  const response = await fetch(`${researchStorageUrl}/storage/v1/object/${encode(bucket)}/${encodedObjectPath}`, {
     method: "POST",
-    headers: hermesSupabaseHeaders(customerSupabaseCredential, {
+    headers: hermesSupabaseHeaders(researchStorageCredential, {
       "Content-Type": contentType,
       "x-upsert": "true",
     }),
@@ -4835,7 +4840,7 @@ async function uploadStorageObject(bucket, objectPath, buffer, contentType) {
 
 function storagePublicUrlForPath(objectPath) {
   if (!objectPath) return null;
-  return `${customerSupabaseUrl}/storage/v1/object/public/${encode(mediaBucket)}/${String(objectPath).split("/").map(encode).join("/")}`;
+  return `${researchStorageUrl}/storage/v1/object/public/${encode(mediaBucket)}/${String(objectPath).split("/").map(encode).join("/")}`;
 }
 
 function extensionForContentType(contentType, kind) {
