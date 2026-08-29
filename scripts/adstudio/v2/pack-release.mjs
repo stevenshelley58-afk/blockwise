@@ -12,7 +12,7 @@
 //     [--slot <slotFixturePath>]
 //
 // Produces, beneath <releaseDir>:
-//   pack-v1/<variantId>.json   one signed TemplatePack (blockwise.template-pack/v1)
+//   pack-v2/<variantId>.json   one signed TemplatePack (blockwise.template-pack/v2)
 //                              per variant, validated against the frozen schema
 //   templates/                 canonical adstudio.template.v2 docs + evidence
 //   assets/                    plates + samples (hash-verified)
@@ -26,16 +26,18 @@
 // directory is made read-only after writing (immutable).
 
 import { createHash, createPrivateKey, createPublicKey, generateKeyPairSync, sign } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, writeFileSync, copyFileSync, rmSync, chmodSync, readdirSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync, copyFileSync, chmodSync, readdirSync } from "node:fs";
 import { join, resolve, dirname, basename, relative, isAbsolute } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import sharp from "sharp";
 
 import { renderAdDocToPng } from "../../../src/lib/adstudio/v2/render/server.ts";
+import { hashCanonicalJson } from "../../../src/lib/adstudio/v2/template-hash.ts";
 import { templatePackV2Schema } from "../../../packages/ad-template-pack-contract/src/index.ts";
 import { computeManifestHash, canonicalJson } from "../../../packages/ad-template-pack-contract/src/hash.ts";
 import { evaluateStoryQa } from "./lib/story-qa.mjs";
+import { LIKENESS_THRESHOLD, validateGenerationTrace } from "./generation-trace.mjs";
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(SCRIPT_DIR, "..", "..", "..");
@@ -51,10 +53,118 @@ function writeJson(path, value) {
   writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`);
 }
 
+/**
+ * Release is a one-way boundary. It must consume the explicit receipt created
+ * by Frank after the operator reviewed every native-pixel preview; a missing
+ * path or a merely pending decision can never be upgraded to "approved" by
+ * the packager itself.
+ */
+export function readApprovalReceipt(path) {
+  if (!path) throw new Error("--approval is required after native-pixel human review");
+  const resolvedPath = resolve(path);
+  if (!existsSync(resolvedPath)) throw new Error(`approval receipt does not exist: ${resolvedPath}`);
+  const raw = readJson(resolvedPath);
+  const receipt = raw?.approval_receipt && typeof raw.approval_receipt === "object"
+    ? raw.approval_receipt
+    : raw;
+  if (receipt?.decision !== "approved") throw new Error("approval receipt decision must be approved");
+  if (receipt?.gate !== "native-pixel-human-approval") {
+    throw new Error("approval receipt gate must be native-pixel-human-approval");
+  }
+  if (typeof receipt?.receipt_ref !== "string" || !receipt.receipt_ref.trim()) {
+    throw new Error("approval receipt must include receipt_ref");
+  }
+  if (typeof receipt?.decided_at !== "string" || !Number.isFinite(Date.parse(receipt.decided_at))) {
+    throw new Error("approval receipt must include an ISO decided_at timestamp");
+  }
+  return {
+    decision: "approved",
+    gate: "native-pixel-human-approval",
+    receipt_ref: receipt.receipt_ref,
+    decided_at: receipt.decided_at,
+  };
+}
+
 export function assertStoryQa(templateId, storyQa) {
   if (!storyQa?.passed) {
     throw new Error(`${templateId}: Story QA failed: ${(storyQa?.blockers ?? ["unknown Story QA failure"]).join("; ")}`);
   }
+}
+
+function fidelityTemplateHash(doc) {
+  return hashCanonicalJson({
+    ...doc,
+    exactness: { bakedTextKeys: [...(doc.exactness?.bakedTextKeys ?? [])].sort() },
+  });
+}
+
+/**
+ * A release may only consume a candidate that completed the iterative QA
+ * process.  The portable pack is intentionally not allowed to turn a `qa`
+ * document or a stale sidecar into a release by reporting optimistic booleans.
+ */
+export function assertCandidateEvidence({ templateId, doc, evidence, templateBytes }) {
+  if (doc?.exactness?.status !== "ready") {
+    throw new Error(`${templateId}: release requires exactness.status=ready`);
+  }
+  const expectedTemplateSha = sha256(templateBytes);
+  if (evidence?.templateSha256 !== expectedTemplateSha) {
+    throw new Error(`${templateId}: evidence templateSha256 is stale or wrong`);
+  }
+  if (evidence?.restyle?.sourceFree !== true || evidence?.restyle?.noWholeAdImageModel !== true) {
+    throw new Error(`${templateId}: evidence does not prove source-free iterative construction`);
+  }
+  let generationTrace;
+  try {
+    generationTrace = validateGenerationTrace(evidence?.generationTrace);
+  } catch (error) {
+    throw new Error(`${templateId}: accepted durable generation trace is missing or invalid: ${error.message}`);
+  }
+  if (generationTrace.templateId !== templateId
+    || generationTrace.sourceSha256 !== doc.provenance?.sourceAd?.contentHash
+    || generationTrace.status !== "accepted") {
+    throw new Error(`${templateId}: generation trace is not accepted or is bound to another template/source`);
+  }
+  const acceptedGeneration = generationTrace.generations.at(-1);
+  if (acceptedGeneration?.scores?.primaryAdSystemLikeness < LIKENESS_THRESHOLD
+    || acceptedGeneration?.scores?.strictAdSystemLikeness < LIKENESS_THRESHOLD
+    || acceptedGeneration?.artifacts?.feedSha256 !== doc.provenance?.sample?.contentHash
+    || acceptedGeneration?.artifacts?.storySha256 !== doc.provenance?.storySample?.contentHash) {
+    throw new Error(`${templateId}: accepted generation scores or preview hashes are stale`);
+  }
+
+  const exactness = doc.exactness;
+  const fidelityHash = fidelityTemplateHash(doc);
+  const residual = exactness.residualEvidence;
+  const stress = exactness.stressEvidence;
+  const review = exactness.reviewEvidence;
+  if (!residual || residual.templateHash !== fidelityHash || residual.outside?.differingPixels !== 0) {
+    throw new Error(`${templateId}: fidelity evidence is missing, stale, or failed`);
+  }
+  if (!stress || stress.templateHash !== fidelityHash || !Array.isArray(stress.entries) || stress.entries.length !== 10) {
+    throw new Error(`${templateId}: complete feed/story stress evidence is required`);
+  }
+  const matrixHash = hashCanonicalJson({ templateHash: stress.templateHash, entries: stress.entries });
+  if (stress.matrixHash !== matrixHash) throw new Error(`${templateId}: stress evidence matrix hash is stale`);
+  if (!review || review.templateHash !== fidelityHash
+    || review.sourceContentHash !== doc.provenance?.sourceAd?.contentHash
+    || review.sampleContentHash !== doc.provenance?.sample?.contentHash
+    || review.fidelityEvidenceHash !== hashCanonicalJson(residual)
+    || review.stressEvidenceHash !== hashCanonicalJson(stress)) {
+    throw new Error(`${templateId}: human review evidence is missing or not bound to current evidence`);
+  }
+
+  const qa = evidence.qa;
+  if (qa?.feedPassed !== true || qa?.storyPassed !== true) {
+    throw new Error(`${templateId}: Feed and Story QA must both pass in evidence`);
+  }
+  const stressResults = qa?.stressFixtureResults;
+  if (!stressResults || typeof stressResults !== "object" || Array.isArray(stressResults)
+    || Object.keys(stressResults).length !== 10
+    || Object.values(stressResults).some((result) => result?.passed !== true)) {
+    throw new Error(`${templateId}: evidence stressFixtureResults must contain 10 passing cases`);
+  }
+  return { feedPassed: true, storyPassed: true, stressFixtureResults: qa.stressFixtureResults };
 }
 
 function loadSigningKey(publicReleaseEnabled) {
@@ -105,13 +215,35 @@ function pixelRect(rect, width, height) {
   return { x: rect.x * width, y: rect.y * height, width: rect.width * width, height: rect.height * height };
 }
 
-function v2ToTemplatePack({ doc, feedPreviewBytes, storyPreviewBytes, plateFiles, createdAt, publicBaseUrl, storyQa }) {
+function v2ToTemplatePack({ doc, feedPreviewBytes, storyPreviewBytes, plateFiles, createdAt, publicBaseUrl, storyQa, qaEvidence }) {
   const assetUrl = (key) => publicBaseUrl ? `${publicBaseUrl}/assets/${plateFiles[key]?.fileName ?? basename(key)}` : undefined;
   const declaredRequirements = doc.publish?.requirements ?? doc.publishRequirements ?? doc.provenance?.publishRequirements ?? {};
   const declaredDestination = declaredRequirements.destination ?? (doc.publish?.leadForm
     ? { required: true, kind: "instant_form", dependency: "instant_form" }
     : { required: false, kind: "none", dependency: null });
   const declaredForm = declaredRequirements.instantForm ?? {};
+  const paletteMap = doc.restyle?.paletteMap ?? {};
+  const paletteRoles = doc.restyle?.paletteRoles ?? {};
+  const paletteColour = (key, fallback) => {
+    const roleValue = paletteRoles[key];
+    if (typeof roleValue === "string" && /^#[0-9a-f]{6}$/i.test(roleValue)) return roleValue.toLowerCase();
+    const value = paletteMap[key];
+    return typeof value === "string" && /^#[0-9a-f]{6}$/i.test(value) ? value : fallback;
+  };
+  const roleForLayer = (layer) => {
+    const role = layer.colourRole || (layer.typo?.colourRole);
+    if (role === "background") return "background";
+    if (role === "surface") return "secondary";
+    if (role === "accent") return "accent";
+    if (role === "inverseText") return "inverseText";
+    if (role === "ink") return "mainText";
+    if (layer.id?.includes("supporting")) return "secondary";
+    if (layer.id?.includes("cta")) return "accent";
+    const colour = layer.typo?.color || layer.fill;
+    if (typeof colour === "string" && colour.toLowerCase() === String(paletteRoles.inverseText || "").toLowerCase()) return "inverseText";
+    if (typeof colour === "string" && colour.toLowerCase() === String(paletteRoles.surface || "").toLowerCase()) return "secondary";
+    return "mainText";
+  };
   const metadata = {
     title: doc.name,
     description: `${doc.category} ${doc.audienceIntent} template`,
@@ -148,7 +280,11 @@ function v2ToTemplatePack({ doc, feedPreviewBytes, storyPreviewBytes, plateFiles
       instantForm: { required: declaredForm.required ?? Boolean(doc.publish?.leadForm), dependency: declaredForm.dependency ?? (doc.publish?.leadForm ? "instant_form" : null), defaults: declaredForm.defaults ?? instantFormDefaults(doc) },
       destination: { required: declaredDestination.required ?? false, kind: declaredDestination.kind ?? "none", dependency: declaredDestination.dependency ?? null },
     },
-    replacementAssets: [{ assetKey: "customer-photo-fixture", purpose: "replacement", ...(publicBaseUrl ? { url: assetUrl("customer-photo-fixture") } : {}) }],
+    replacementAssets: (doc.restyle?.safeReplacementAssets ?? []).map((asset) => ({
+      assetKey: `${asset.inputKey}-fixture`,
+      purpose: "replacement",
+      ...(publicBaseUrl ? { url: assetUrl(`${asset.inputKey}-fixture`) } : {}),
+    })),
     realAssetRefs: [
       ...Object.keys(plateFiles)
         .filter((key) => !["feed-sample", "story-sample", "customer-photo-fixture"].includes(key))
@@ -170,13 +306,20 @@ function v2ToTemplatePack({ doc, feedPreviewBytes, storyPreviewBytes, plateFiles
     });
     for (const layer of docLayout.layers) {
       const geometry = pixelRect(layer.box, width, height);
-      if (layer.type === "image_slot") {
+      if (layer.type === "image_slot" && layer.inputKey === "logo_slot") {
+        layers.push({
+          type: "logo",
+          layerId: layer.id,
+          inputKey: layer.inputKey,
+          geometry,
+        });
+      } else if (layer.type === "image_slot") {
         layers.push({
           type: "image_slot",
           layerId: layer.id,
           inputKey: layer.inputKey,
           geometry: pixelRect(layer.box, width, height),
-          mask: layer.mask.kind === "rounded" ? "rounded_rect" : "none",
+          mask: layer.mask.kind === "rounded" ? "rounded_rect" : layer.mask.kind === "ellipse" ? "circle" : "none",
           minSourceWidth: layer.minSourcePx?.width ?? 540,
           minSourceHeight: layer.minSourcePx?.height ?? 675,
           defaultCrop: { x: 0, y: 0, width: 1, height: 1 },
@@ -196,7 +339,7 @@ function v2ToTemplatePack({ doc, feedPreviewBytes, storyPreviewBytes, plateFiles
           alignment: layer.typo.align,
           maxCharacters: layer.constraints.maxLength,
           maxLines: layer.constraints.maxLines,
-          colourRole: "mainText",
+          colourRole: roleForLayer(layer),
           overflowBehaviour: "scale_down",
         });
       } else if (layer.type === "overlay_patch") {
@@ -204,15 +347,33 @@ function v2ToTemplatePack({ doc, feedPreviewBytes, storyPreviewBytes, plateFiles
           type: "overlay_patch",
           layerId: layer.id,
           geometry,
-          colourRole: "background",
+          colourRole: roleForLayer(layer),
           opacity: 1,
+          assetKey: `${layer.id}-patch`,
+        });
+      } else if (layer.type === "vector") {
+        layers.push({
+          type: "vector",
+          layerId: layer.id,
+          geometry,
+          shape: layer.shape,
+          colourRole: roleForLayer(layer),
+          opacity: layer.opacity ?? 1,
+        });
+      } else if (layer.type === "icon") {
+        layers.push({
+          type: "icon",
+          layerId: layer.id,
+          geometry,
+          icon: layer.icon,
+          colourRole: roleForLayer(layer),
         });
       }
     }
     const safeZones = placement === "story"
       ? [
-          { x: 0, y: 0, width, height: 250 },
-          { x: 0, y: 1920 - 340, width, height: 340 },
+          { x: 0, y: 0, width, height: docLayout.storyPolicy?.safeTopPx ?? 240 },
+          { x: 0, y: height - (docLayout.storyPolicy?.safeBottomPx ?? 300), width, height: docLayout.storyPolicy?.safeBottomPx ?? 300 },
         ]
       : [{ x: 0, y: 0, width, height }];
     return {
@@ -243,6 +404,7 @@ function v2ToTemplatePack({ doc, feedPreviewBytes, storyPreviewBytes, plateFiles
     imageInputs: doc.inputs.images.map((image) => ({
       key: image.key,
       label: image.label,
+      required: image.required,
       acceptedTypes: ["image/jpeg", "image/png", "image/webp"],
     })),
     textInputs: doc.inputs.text.map((text) => ({
@@ -252,12 +414,12 @@ function v2ToTemplatePack({ doc, feedPreviewBytes, storyPreviewBytes, plateFiles
       maxLength: text.maxLength,
     })),
     semanticColours: {
-      background: "#f4f0e8",
-      primary: "#2b2118",
-      secondary: "#ead2a9",
-      accent: "#6f4e2b",
-      mainText: "#2b2118",
-      inverseText: "#f3dfbd",
+      background: paletteColour("background", "#f4f0e8"),
+      primary: paletteColour("ink", "#2b2118"),
+      secondary: paletteColour("surface", "#ead2a9"),
+      accent: paletteColour("accent", "#6f4e2b"),
+      mainText: paletteColour("ink", "#2b2118"),
+      inverseText: paletteColour("inverseText", "#f3dfbd"),
     },
     assets: plateFiles,
     fonts: doc.fonts.map((face) => ({ file: basename(face.file), sha256: face.sha256 })),
@@ -266,10 +428,10 @@ function v2ToTemplatePack({ doc, feedPreviewBytes, storyPreviewBytes, plateFiles
       story: { sha256: sha256(storyPreviewBytes) },
     },
     qaEvidence: {
-      feedPassed: true,
-      storyPassed: storyQa.passed === true,
+      feedPassed: qaEvidence.feedPassed === true,
+      storyPassed: qaEvidence.storyPassed === true && storyQa.passed === true,
       reviewerVersions: ["adstudio-subject-invariance-v1"],
-      stressFixtureResults: {},
+      stressFixtureResults: qaEvidence.stressFixtureResults,
     },
     metadata,
   };
@@ -295,7 +457,7 @@ async function main() {
   const job = argValue("--job") || "Ad Studio job";
   const scopeId = argValue("--scope") || "blockwise";
   const settingsRevision = Number(argValue("--settings-revision") ?? 0);
-  const approvalReceipt = argValue("--approval") ? resolve(argValue("--approval")) : null;
+  const approvalReceipt = readApprovalReceipt(argValue("--approval"));
   const slotPath = resolve(argValue("--slot") || join(REPO_ROOT, "public", "adstudio-samples", "photos", "int-bedroom.png"));
   const slotBytes = readFileSync(slotPath);
   const slotSha = sha256(slotBytes);
@@ -313,12 +475,9 @@ async function main() {
   if (!releaseRelative || releaseRelative.startsWith("..") || isAbsolute(releaseRelative)) {
     throw new Error(`releaseDir ${releaseDir} is outside the private release store ${releaseStoreRoot}`);
   }
-  // An immutable release dir (chmod 0o555 after writing) must be made writable
-  // again before a re-release can overwrite it.
   if (existsSync(releaseDir)) {
-    try { chmodSync(releaseDir, 0o755); } catch {}
+    throw new Error(`releaseId already exists and is immutable: ${releaseDir}`);
   }
-  rmSync(releaseDir, { recursive: true, force: true, maxRetries: 3 });
   mkdirSync(releaseDir, { recursive: true });
 
   const templatesDir = join(releaseDir, "templates");
@@ -332,8 +491,11 @@ async function main() {
   const signedPacks = [];
   const artifacts = [];
   for (const id of manifest.variantIds) {
-    const doc = readJson(join(candidate, "src", "lib", "adstudio", "template-gallery-v2", id, "template.json"));
+    const templatePath = join(candidate, "src", "lib", "adstudio", "template-gallery-v2", id, "template.json");
+    const templateBytes = readFileSync(templatePath);
+    const doc = JSON.parse(templateBytes.toString("utf8"));
     const evidence = readJson(join(candidate, "src", "lib", "adstudio", "template-gallery-v2", id, "evidence.json"));
+    const qaEvidence = assertCandidateEvidence({ templateId: id, doc, evidence, templateBytes });
 
     // canonical v2 artifacts (hash-verified copies)
     writeJson(join(templatesDir, id, "template.json"), doc);
@@ -352,6 +514,22 @@ async function main() {
     }
     copyFileSync(join(candidate, "public", "adstudio-templates", id, "sample.png"), join(assetsDir, `${id}-sample.png`));
     copyFileSync(join(candidate, "public", "adstudio-templates", id, "sample-story.png"), join(assetsDir, `${id}-sample-story.png`));
+    const sampleSlots = new Map();
+    for (const image of doc.inputs?.images ?? []) {
+      // Brand logos and portraits are intentionally empty in the neutral QA
+      // sample; never substitute property photography into those slots.
+      if (image.key === "logo_slot" || image.key === "portrait_slot") continue;
+      const declared = doc.restyle?.safeReplacementAssets?.find((asset) => asset.inputKey === image.key);
+      const candidateAsset = declared?.src ? join(candidate, "public", String(declared.src).replace(/^[/\\]+/, "")) : slotPath;
+      const source = existsSync(candidateAsset) ? candidateAsset : slotPath;
+      const bytes = readFileSync(source);
+      const digest = sha256(bytes);
+      if (declared?.sha256 && declared.sha256 !== digest) throw new Error(`${id} ${image.key} fixture hash mismatch`);
+      const ext = source.endsWith(".webp") ? "webp" : source.endsWith(".jpg") || source.endsWith(".jpeg") ? "jpg" : "png";
+      const fileName = `${id}-${image.key}-fixture.${ext}`;
+      copyFileSync(source, join(assetsDir, fileName));
+      sampleSlots.set(image.key, { src: declared?.src || "/slots/photo-portrait.png", bytes, sha256: digest, fileName, mimeType: ext === "webp" ? "image/webp" : ext === "jpg" ? "image/jpeg" : "image/png" });
+    }
     copyFileSync(slotPath, join(assetsDir, `${id}-customer-photo-fixture.png`));
     for (const font of doc.fonts) {
       const relative = String(font.file).replace(/^[/\\]+/, "");
@@ -366,21 +544,17 @@ async function main() {
     }
 
     // deterministic previews (no image model)
-    const requiredImageInputs = (doc.inputs?.images ?? []).filter((input) => input.required);
-    if (requiredImageInputs.length !== 1) {
-      throw new Error(`${id}: release previews require exactly one required image input, got ${requiredImageInputs.length}`);
-    }
-    const imageInputKey = requiredImageInputs[0].key;
     const instance = (format) => ({
       schema: "adstudio.instance.v2",
       templateId: doc.id,
       templateHash: "0".repeat(64),
       format,
-      values: { images: { [imageInputKey]: { src: "/slots/photo-portrait.png" } }, text: Object.fromEntries(doc.inputs.text.map((t) => [t.key, t.sample])) },
+      values: { images: Object.fromEntries([...sampleSlots.entries()].map(([key, asset]) => [key, { src: asset.src }])), text: Object.fromEntries(doc.inputs.text.map((t) => [t.key, t.sample])) },
       overrides: [],
     });
-    const feedPreview = await renderAdDocToPng(doc, instance("4:5"), "4:5", { repoRoot: candidate, slotBytes: new Map([[imageInputKey, slotBytes]]) });
-    const storyPreview = await renderAdDocToPng(doc, instance("9:16"), "9:16", { repoRoot: candidate, slotBytes: new Map([[imageInputKey, slotBytes]]) });
+    const sampleSlotBytes = new Map([...sampleSlots.entries()].map(([key, asset]) => [key, asset.bytes]));
+    const feedPreview = await renderAdDocToPng(doc, instance("4:5"), "4:5", { repoRoot: candidate, slotBytes: sampleSlotBytes });
+    const storyPreview = await renderAdDocToPng(doc, instance("9:16"), "9:16", { repoRoot: candidate, slotBytes: sampleSlotBytes });
     const storyQa = await evaluateStoryQa(doc, storyPreview);
     assertStoryQa(id, storyQa);
     writeFileSync(join(previewsDir, `${id}-feed.png`), feedPreview);
@@ -396,8 +570,17 @@ async function main() {
       "feed-sample": { fileName: `${id}-sample.png`, sha256: sha256(readFileSync(join(candidate, "public", "adstudio-templates", id, "sample.png"))), mimeType: "image/png" },
       "story-sample": { fileName: `${id}-sample-story.png`, sha256: sha256(readFileSync(join(candidate, "public", "adstudio-templates", id, "sample-story.png"))), mimeType: "image/png" },
       "customer-photo-fixture": { fileName: `${id}-customer-photo-fixture.png`, sha256: slotSha, mimeType: "image/png" },
+      ...Object.fromEntries([...sampleSlots.entries()].map(([key, asset]) => [`${key}-fixture`, { fileName: asset.fileName, sha256: asset.sha256, mimeType: asset.mimeType }])),
     };
-    const unsigned = v2ToTemplatePack({ doc, feedPreviewBytes: feedPreview, storyPreviewBytes: storyPreview, plateFiles, createdAt, publicBaseUrl, storyQa });
+    for (const layer of doc.formats.story.layers.filter((entry) => entry.type === "overlay_patch")) {
+      const sourceName = basename(layer.src);
+      plateFiles[`${layer.id}-patch`] = {
+        fileName: `${id}-${sourceName}`,
+        sha256: layer.sha256,
+        mimeType: "image/webp",
+      };
+    }
+    const unsigned = v2ToTemplatePack({ doc, feedPreviewBytes: feedPreview, storyPreviewBytes: storyPreview, plateFiles, createdAt, publicBaseUrl, storyQa, qaEvidence });
     const signed = signPack(unsigned, privateKey);
     if (computeManifestHash(signed) !== signed.manifestSha256 || !signed.signature) throw new Error(`${id}: signing failed`);
     writeJson(join(packV1Dir, `${id}.json`), signed);
@@ -487,9 +670,7 @@ async function main() {
     provenance: { artifact_ref: artifactRef, artifact_receipt_ref: `${releaseId}/receipt.json` },
     trace_ref: traceRef,
     qa_receipt: { decision: "pass", receipt_ref: `${releaseId}/qa-evidence.json`, checked_at: now },
-    approval_receipt: approvalReceipt
-      ? { decision: "approved", gate: "native-pixel-human-approval", receipt_ref: approvalReceipt, decided_at: now }
-      : { decision: "approved", gate: "native-pixel-human-approval", receipt_ref: `${releaseId}/approval-pending.json`, decided_at: now },
+    approval_receipt: approvalReceipt,
     sanitization_receipt: { decision: "pass", receipt_ref: `${releaseId}/sanitization.json`, checked_at: now },
     released_at: now,
     release_hash: "0".repeat(64),
@@ -509,7 +690,7 @@ async function main() {
     templates: artifacts,
     artifact: { file: "pack.bundle.json", sha256: finalBundleSha, signature: bundleSignature, signatureAlgorithm: "ed25519", publicKey: publicKeyPem, publicKeyHex, signingKeyId, ephemeralSigningKey: ephemeral },
     artifactRef,
-    servingNote: "No public HTTPS host currently serves tool-run artifacts on this box (frank.fail returns 401; /etc/caddy has no site for it). Serve the release dir at artifactRef (or an allowed origin from import-pack.ts ALLOWED_ORIGINS) before UI import; until then the pack is importable from the local release path.",
+    servingNote: "Frank serves signed release artifacts at artifactRef under /releases/ad-template-generator; import-pack.ts validates that HTTPS origin and the content-addressed assets before activation.",
     releaseEnvelope: `${releaseDir}/release.json`,
   });
 

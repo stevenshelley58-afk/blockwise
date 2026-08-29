@@ -1,4 +1,8 @@
-# Agent prompt: record Meta App Review screencasts for Blockwise
+# Agent prompt: record Meta App Review screencasts for Blockwise (historical)
+
+> HISTORICAL ONLY: This recording prompt assumes the former Vercel/managed
+> Supabase deployment. It is not a current deployment or go-live runbook; use
+> the self-hosted VPS target and controlled hostname for any new evidence.
 
 Copy everything below the line into a fresh agent session (Claude Code on a
 machine with a browser, or any agent with Playwright + screen recording).

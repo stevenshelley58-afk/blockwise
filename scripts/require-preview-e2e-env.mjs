@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 
 const required = [
   "PLAYWRIGHT_BASE_URL",
+  "ADSTUDIO_E2E_EMAIL",
   "ADSTUDIO_E2E_PASSWORD",
   "ADSTUDIO_E2E_WORKSPACE_ID",
   "ADSTUDIO_E2E_PACK_ID",
@@ -50,7 +51,17 @@ function requireDeploymentUrl(value, label) {
     fail(`${label} must be an HTTPS Vercel Preview or Production URL.`);
   }
 
-  if (url.protocol !== "https:" || /(?:localhost|127\.0\.0\.1|\[::1\])/i.test(url.hostname)) {
-    fail(`${label} must be an HTTPS Vercel Preview or Production URL.`);
+  const isProduction = url.hostname === "blockwise.sale";
+  const isOwnedVercel = /^blockwise(?:-[a-z0-9-]+)?-steven-shelleys-projects\.vercel\.app$/i.test(url.hostname);
+  const isCleanOrigin =
+    url.protocol === "https:" &&
+    !url.username &&
+    !url.password &&
+    (!url.port || url.port === "443") &&
+    (url.pathname === "/" || url.pathname === "") &&
+    !url.search &&
+    !url.hash;
+  if ((!isProduction && !isOwnedVercel) || !isCleanOrigin) {
+    fail(`${label} must be blockwise.sale or this project's HTTPS Vercel deployment origin.`);
   }
 }

@@ -27,6 +27,32 @@ export function resolveHermesCustomerSupabaseCredential(env = process.env) {
   return null;
 }
 
+export function assertHermesOwnedStorageUrl(value) {
+  const url = clean(value).replace(/\/+$/u, "");
+  let parsed;
+  try {
+    parsed = new URL(url);
+  } catch {
+    throw new Error("HERMES_RESEARCH_STORAGE_URL must be an absolute URL");
+  }
+  const hostname = parsed.hostname.toLowerCase();
+  if (!url || !hostname || !["http:", "https:"].includes(parsed.protocol)) {
+    throw new Error("HERMES_RESEARCH_STORAGE_URL must be an HTTP(S) URL");
+  }
+  if (hostname.endsWith(".supabase.co") || hostname === "supabase.co" || hostname.endsWith(".supabase.com") || hostname === "supabase.com") {
+    throw new Error("HERMES_RESEARCH_STORAGE_URL must point at Hermes-owned Storage API");
+  }
+  return url;
+}
+
+export function resolveHermesResearchStorageCredential(env = process.env) {
+  for (const source of ["HERMES_RESEARCH_STORAGE_SECRET_KEY", "HERMES_RESEARCH_STORAGE_SERVICE_ROLE_KEY"]) {
+    const value = clean(env[source]);
+    if (value) return { value, kind: isLegacySupabaseJwt(value) ? "legacy_jwt" : "secret", source };
+  }
+  return null;
+}
+
 export function hermesSupabaseHeaders(credential, initialHeaders = {}) {
   if (!credential?.value) throw new Error("Missing Hermes Supabase server credential");
 

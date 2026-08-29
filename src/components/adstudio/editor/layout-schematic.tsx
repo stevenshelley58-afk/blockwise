@@ -253,6 +253,14 @@ function renderLayer(
           {...handlers}
         />
       );
+    case "vector":
+      return layer.shape === "circle" ? (
+        <circle key={layer.layerId} cx={g.x + g.width / 2} cy={g.y + g.height / 2} r={Math.min(g.width, g.height) / 2} fill={fill(layer.colourRole)} opacity={layer.opacity ?? 1} {...handlers} />
+      ) : (
+        <rect key={layer.layerId} x={g.x} y={g.y} width={g.width} height={g.height} rx={layer.shape === "pill" || layer.shape === "rounded" ? Math.min(24, g.height / 2) : 0} fill={fill(layer.colourRole)} opacity={layer.opacity ?? 1} {...handlers} />
+      );
+    case "icon":
+      return <circle key={layer.layerId} cx={g.x + g.width / 2} cy={g.y + g.height / 2} r={Math.min(g.width, g.height) / 3} fill="none" stroke={fill(layer.colourRole)} strokeWidth={Math.max(2, Math.min(g.width, g.height) / 12)} {...handlers} />;
   }
 }
 

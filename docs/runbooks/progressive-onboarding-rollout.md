@@ -1,4 +1,9 @@
-# Progressive onboarding rollout
+# Progressive onboarding rollout (historical managed runtime)
+
+> HISTORICAL ONLY: This rollout document assumes Vercel Preview/Production and
+> managed Supabase. It is not a current product deployment or go-live runbook.
+> Use `docs/runbooks/production-readiness.md` and
+> `docs/runbooks/oss-product-migration.md` for the self-hosted VPS target.
 
 This runbook controls the progressive email-only activation, regional
 self-serve offer, assisted Meta launch, managed service, and public-copy

@@ -1,4 +1,9 @@
-# Blockwise — Database Work Log, 2026-07-28
+# Blockwise - Database Work Log, 2026-07-28
+
+> HISTORICAL ONLY: This work log records a past managed Supabase operation.
+> It is evidence of historical state, not a current product runbook. The
+> current target is the self-hosted VPS stack documented in
+> `docs/runbooks/oss-product-migration.md`.
 
 Executed live against Supabase project `blockwise` (uwwbvdloschaccycjozr, ap-southeast-2) via MCP.
 Every item below is verified, not proposed.

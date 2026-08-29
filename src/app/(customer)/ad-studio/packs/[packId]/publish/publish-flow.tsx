@@ -4,6 +4,9 @@ import { useCallback, useState } from "react";
 
 import { InstantFormEditor } from "@/components/adstudio/instant-form-editor";
 import type { PublishRequirements } from "@/lib/adstudio/publish-adapter";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 // ---------------------------------------------------------------------------
 // Publish flow client (BW-M).
@@ -25,7 +28,7 @@ export interface PublishFlowProps {
   notSaved: boolean;
   initialState: {
     ad: { metaPrimaryText: string; metaHeadline: string; metaDescription: string; metaCta: string };
-    revision: { revisionNumber: number; feedPngHash: string; storyPngHash: string };
+    revision: { revisionNumber: number; feedPngHash: string; feedPngPath: string; storyPngHash: string; storyPngPath: string };
     form: {
       name: string;
       formType: string;
@@ -166,7 +169,7 @@ export function PublishFlow({
           </p>
           <a
             href={`/ad-studio/packs/${encodeURIComponent(packId)}`}
-            className="mt-4 inline-block rounded-(--r-control) bg-(--ui-primary) px-5 py-2 text-sm font-semibold text-white"
+            className="mt-4 inline-flex min-h-11 items-center rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             Go to editor
           </a>
@@ -200,12 +203,14 @@ export function PublishFlow({
         <div className="mb-6 rounded-(--r-card) border border-(--line) bg-(--surface) p-4">
           <h3 className="mb-2 text-sm font-semibold">Frozen revision (last saved)</h3>
           {initialState ? (
-            <div className="space-y-1 text-xs text-muted-foreground">
+             <div className="space-y-1 text-xs text-muted-foreground">
               <p>
                 Revision <span className="font-medium text-foreground">#{initialState.revision.revisionNumber}</span>
               </p>
-              <p>Feed PNG: {shortHash(initialState.revision.feedPngHash)}</p>
-              <p>Story PNG: {shortHash(initialState.revision.storyPngHash)}</p>
+               <div className="grid gap-4 sm:grid-cols-2">
+                 <div><p className="mb-2">Feed creative</p><img src={`/api/adstudio/media?path=${encodeURIComponent(initialState.revision.feedPngPath)}`} alt="Frozen Feed ad creative" className="w-full rounded-md border border-border" /></div>
+                 <div><p className="mb-2">Story creative</p><img src={`/api/adstudio/media?path=${encodeURIComponent(initialState.revision.storyPngPath)}`} alt="Frozen Story ad creative" className="w-full rounded-md border border-border" /></div>
+               </div>
               <p>Pack: {packName}</p>
             </div>
           ) : (
@@ -238,15 +243,15 @@ export function PublishFlow({
           </div>
         ) : (
           <div className="mb-6 rounded-(--r-card) border border-(--line) bg-(--surface) p-4">
-            <label className="text-sm font-semibold" htmlFor="publish-destination-url">Article or website destination</label>
+            <Label className="text-sm font-semibold" htmlFor="publish-destination-url">Article or website destination</Label>
             <p className="mt-1 text-xs text-muted-foreground">Use the real HTTPS page promised by this ad. Blockwise never substitutes the privacy-policy URL.</p>
-            <input
+            <Input
               id="publish-destination-url"
               type="url"
               value={destinationUrl}
               onChange={(event) => setDestinationUrl(event.target.value)}
               placeholder="https://your-site.com/article"
-              className="mt-3 w-full rounded-(--r-control) border border-(--line) bg-(--canvas) px-3 py-2 text-sm outline-none focus:border-(--ui-primary)"
+              className="mt-3 min-h-11 w-full bg-muted/30"
             />
             {destinationUrl && !destinationReady ? <p className="mt-2 text-xs text-red-600">Enter a valid HTTPS URL.</p> : null}
           </div>
@@ -257,8 +262,8 @@ export function PublishFlow({
           <h3 className="text-sm font-semibold">Publish mode</h3>
           <p className="mt-1 text-xs text-muted-foreground">
             {providerWritesEnabled
-              ? "Provider writes are enabled — Meta objects will be created PAUSED, never live."
-              : "Provider writes are disabled (BLOCKWISE_ENABLE_PROVIDER_WRITES=false) — publishing returns a dry-run receipt and creates nothing on Meta."}
+              ? "Your ad will be created in a paused state for your final review."
+              : "Dry run mode is on — nothing will be created. You can still review the complete publish plan."}
           </p>
         </div>
 
@@ -292,13 +297,13 @@ export function PublishFlow({
           <span />
         )}
         <div className="ml-auto">
-          <button
+          <Button
             onClick={handlePublish}
-            disabled={!ready || submitting}
-            className="rounded-(--r-control) bg-(--ui-primary) px-6 py-2.5 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
+             disabled={!ready || submitting || Boolean(receipt && !receipt.error)}
+            className="min-h-11 rounded-full px-6 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             {submitting ? "Freezing & creating PAUSED..." : "Freeze & Create PAUSED"}
-          </button>
+          </Button>
         </div>
       </footer>
     </div>
@@ -427,17 +432,17 @@ function ActivateSection({
       </p>
       <p className="mt-1 text-xs text-muted-foreground">
         {providerWritesEnabled
-          ? "Provider writes are enabled — this will flip the created objects to ACTIVE on Meta."
-          : "Provider writes are disabled (BLOCKWISE_ENABLE_PROVIDER_WRITES=false) — Activate returns a dry-run receipt and changes nothing on Meta."}
+          ? "This optional step will move the paused campaign live."
+          : "Dry run mode is on — this optional step will only show what would change."}
       </p>
       <div className="mt-3 flex items-center gap-3">
-        <button
+        <Button
           onClick={() => onActivate(planId)}
-          disabled={activating}
-          className="rounded-(--r-control) bg-(--ui-primary) px-5 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
+          disabled={activating || Boolean(receipt?.ok)}
+          className="min-h-11 rounded-full px-5 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
           {activating ? "Activating on Meta..." : "Activate on Meta"}
-        </button>
+        </Button>
         <span className="text-xs text-muted-foreground">
           Plan {shortHash(planId)} · this only affects the paused objects from your publish.
         </span>
