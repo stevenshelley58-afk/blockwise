@@ -11,8 +11,9 @@ test("OSS product compose is isolated and has no managed deployment endpoint", a
   assert.match(compose, /name: blockwise-product/);
   assert.match(compose, /postgres:17\.6-alpine/);
   assert.match(compose, /postgrest\/postgrest:v14\.15/);
-  assert.match(compose, /supabase\/gotrue:v2\.171\.0/);
-  assert.match(compose, /supabase\/storage-api:v1\.11\.13/);
+  assert.match(compose, /supabase\/gotrue:v2\.189\.0/);
+  assert.match(compose, /supabase\/storage-api:v1\.60\.4/);
+  assert.match(compose, /supabase\/realtime:v2\.102\.3/);
   assert.match(compose, /blockwise-product-db-data/);
   assert.match(compose, /blockwise-product-storage-data/);
   assert.match(compose, /PGRST_DB_URI: postgres:\/\/\$\{BLOCKWISE_DB_AUTHENTICATOR/);
@@ -24,6 +25,15 @@ test("OSS product compose is isolated and has no managed deployment endpoint", a
   assert.match(compose, /BLOCKWISE_PRODUCT_HTTP_PORT:-8080/);
   assert.doesNotMatch(compose, /ports: \["80:80", "443:443"\]/);
   assert.match(compose, /Host: \$\$\{BLOCKWISE_PRODUCT_DOMAIN\}/);
+  assert.match(compose, /test: \[CMD, "postgrest", "--ready"\]/);
+  assert.match(compose, /API_EXTERNAL_URL: \$\{BLOCKWISE_AUTH_API_EXTERNAL_URL:\?/);
+  assert.match(compose, /GOTRUE_JWT_AUD: authenticated/);
+  assert.match(compose, /AUTH_JWT_SECRET: \$\{BLOCKWISE_AUTH_JWT_SECRET\}/);
+  assert.match(compose, /RLIMIT_NOFILE: "10000"/);
+  assert.match(compose, /SEED_SELF_HOST: "true"/);
+  assert.match(compose, /DB_NAMESPACE: auth/);
+  assert.match(compose, /search_path%3Dauth%2Cpublic/);
+  assert.match(compose, /search_path%3Dstorage%2Cpublic/);
   assert.match(compose, /BLOCKWISE_WORKER_EXPECTED_REVISION/);
   assert.match(compose, /NEXT_PUBLIC_APP_URL/);
   assert.match(compose, /BLOCKWISE_READINESS_SUPABASE_URL: http:\/\/product-rest:3000/);
@@ -52,6 +62,7 @@ test("OSS product compose is isolated and has no managed deployment endpoint", a
   const bootstrap = await read("infra/product/db-init/001-compatibility.sql");
   assert.match(bootstrap, /GRANT anon, authenticated, service_role TO authenticator/);
   assert.match(bootstrap, /FUNCTION auth\.role\(\)/);
+  assert.match(bootstrap, /SCHEMA IF NOT EXISTS _realtime/);
   const rolePassword = await read("infra/product/db-init/002-roles.sh");
   assert.match(rolePassword, /ALTER ROLE authenticator PASSWORD/);
   assert.match(rolePassword, /<<'SQL'/);
