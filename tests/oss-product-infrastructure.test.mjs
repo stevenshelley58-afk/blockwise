@@ -63,6 +63,7 @@ test("OSS product compose is isolated and has no managed deployment endpoint", a
   assert.match(bootstrap, /GRANT anon, authenticated, service_role TO authenticator/);
   assert.match(bootstrap, /FUNCTION auth\.role\(\)/);
   assert.match(bootstrap, /SCHEMA IF NOT EXISTS _realtime/);
+  assert.match(bootstrap, /CREATE PUBLICATION supabase_realtime/);
   const rolePassword = await read("infra/product/db-init/002-roles.sh");
   assert.match(rolePassword, /ALTER ROLE authenticator PASSWORD/);
   assert.match(rolePassword, /<<'SQL'/);
