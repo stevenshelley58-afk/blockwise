@@ -57,8 +57,8 @@ export function WorkspaceHero() {
       <div className="hw-wide hw-ws__inner">
         <div className="hw-ws__copy">
           <h1 className="hw-ws__title">
-            <span className="hw-ws__title-line">Your competitors are</span>
-            <span className="hw-ws__title-line">advertising.</span>
+            <span className="hw-ws__title-line">Your competitors</span>
+            <span className="hw-ws__title-line">are advertising.</span>
             <span className="hw-ws__title-line hw-ws__title-line--accent">Are you?</span>
           </h1>
           <p className="hw-ws__lede">

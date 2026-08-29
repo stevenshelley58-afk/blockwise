@@ -94,7 +94,7 @@ test("landing page anchors, sections, and claims stay connected", () => {
     previousIndex = index;
   }
 
-  assert.match(combined, /Your competitors are<\/span>\s*<span[^>]*>advertising\.<\/span>\s*<span[^>]*>Are you\?<\/span>/);
+  assert.match(combined, /Your competitors<\/span>\s*<span[^>]*>are advertising\.<\/span>\s*<span[^>]*>Are you\?<\/span>/);
   assert.doesNotMatch(combined, /hw-ws__eyebrow/);
   assert.match(
     combined,
