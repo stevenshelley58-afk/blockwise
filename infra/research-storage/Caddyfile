@@ -1,0 +1,19 @@
+:3000 {
+	encode gzip
+
+	handle /health {
+		respond "ok" 200
+	}
+
+	# Customer browsers may read explicitly public research creatives. Keep
+	# bucket/list/upload/admin endpoints private on the research network.
+	@publicResearchObjects path /storage/v1/object/public/*
+	handle @publicResearchObjects {
+		uri strip_prefix /storage/v1
+		reverse_proxy blockwise-research-storage:5000
+	}
+
+	handle {
+		respond "not found" 404
+	}
+}

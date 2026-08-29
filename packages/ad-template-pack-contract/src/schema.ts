@@ -69,6 +69,7 @@ const overlayPatchLayerSchema = z.object({
   geometry: rectSchema,
   colourRole: z.enum(COLOUR_ROLES),
   opacity: z.number().min(0).max(1),
+  assetKey: z.string().min(1).optional(),
 });
 
 const logoLayerSchema = z.object({
@@ -78,12 +79,31 @@ const logoLayerSchema = z.object({
   inputKey: z.string().min(1),
 });
 
+const vectorLayerSchema = z.object({
+  type: z.literal("vector"),
+  layerId: z.string().min(1),
+  geometry: rectSchema,
+  shape: z.enum(["rect", "rounded", "circle", "line", "pill", "notched", "wave", "ring"]),
+  colourRole: z.enum(COLOUR_ROLES),
+  opacity: z.number().min(0).max(1),
+});
+
+const iconLayerSchema = z.object({
+  type: z.literal("icon"),
+  layerId: z.string().min(1),
+  geometry: rectSchema,
+  icon: z.string().min(1),
+  colourRole: z.enum(COLOUR_ROLES),
+});
+
 const layoutLayerSchema = z.discriminatedUnion("type", [
   plateLayerSchema,
   imageSlotSchema,
   overlayPatchLayerSchema,
   textLayerSchema,
   logoLayerSchema,
+  vectorLayerSchema,
+  iconLayerSchema,
 ]);
 
 // ---------------------------------------------------------------------------
@@ -117,6 +137,7 @@ const layoutSchema = z.object({
 const imageInputSchema = z.object({
   key: z.string().min(1),
   label: z.string().min(1),
+  required: z.boolean().optional(),
   acceptedTypes: z.array(z.string().min(1)).min(1),
 });
 

@@ -7,6 +7,8 @@ x-blockwise-research-reset:
     - "Hermes owns research execution; build and collection adapters are placeholders until enabled by the operator."
     - "Pinned images are required. Do not deploy with floating tags."
 
+x-research-storage-db-credential: &research-storage-db-credential ${HERMES_RESEARCH_STORAGE_DB_PASSWORD:?Set HERMES_RESEARCH_STORAGE_DB_PASSWORD}
+
 services:
   research-db:
     image: "postgres:17.6-alpine"
@@ -67,7 +69,7 @@ services:
     expose: ["3000"]
     networks: [research]
     healthcheck:
-      test: ["CMD", "postgrest", "--help"]
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/ >/dev/null || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -75,12 +77,150 @@ services:
       driver: json-file
       options: { max-size: "20m", max-file: "5" }
 
+  # Hermes media metadata is deliberately isolated from both the research
+  # state database and the customer product database. Storage API owns this
+  # schema; the dedicated file-backend volume owns the bytes.
+  research-storage-db:
+    image: "postgres:17.6-alpine"
+    container_name: blockwise-research-storage-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: blockwise_research_storage
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: *research-storage-db-credential
+    volumes:
+      - research-storage-db-data:/var/lib/postgresql/data
+      - ../../infra/research-storage/init:/docker-entrypoint-initdb.d:ro
+    networks: [research]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d blockwise_research_storage"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    logging:
+      driver: json-file
+      options: { max-size: "20m", max-file: "5" }
+
+  research-storage-rest:
+    image: "postgrest/postgrest:v14.15"
+    container_name: blockwise-research-storage-rest
+    restart: unless-stopped
+    depends_on:
+      research-storage-db:
+        condition: service_healthy
+    environment:
+      PGRST_DB_URI: postgres://postgres:${HERMES_RESEARCH_STORAGE_DB_PASSWORD}@blockwise-research-storage-db:5432/blockwise_research_storage
+      PGRST_DB_SCHEMAS: storage
+      PGRST_DB_EXTRA_SEARCH_PATH: public,extensions
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: ${HERMES_RESEARCH_STORAGE_JWT_SECRET:?Set HERMES_RESEARCH_STORAGE_JWT_SECRET}
+      PGRST_DB_POOL: "8"
+      PGRST_DB_POOL_ACQUISITION_TIMEOUT: "10"
+      PGRST_DB_POOL_MAX_IDLETIME: "60"
+    expose: ["3000"]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs:
+      - /tmp
+    networks: [research]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/ >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    logging:
+      driver: json-file
+      options: { max-size: "20m", max-file: "5" }
+
+  research-storage:
+    image: "supabase/storage-api:v1.60.4@sha256:c8eb9858eafec891a97c27125470aaad54703c3f4eb4d55ca7f1bf6c6411febf"
+    container_name: blockwise-research-storage
+    restart: unless-stopped
+    depends_on:
+      research-storage-db:
+        condition: service_healthy
+      research-storage-rest:
+        condition: service_healthy
+    environment:
+      SERVER_PORT: "5000"
+      DATABASE_URL: postgres://postgres:${HERMES_RESEARCH_STORAGE_DB_PASSWORD}@blockwise-research-storage-db:5432/blockwise_research_storage
+      PGRST_JWT_SECRET: ${HERMES_RESEARCH_STORAGE_JWT_SECRET:?Set HERMES_RESEARCH_STORAGE_JWT_SECRET}
+      ANON_KEY: ${HERMES_RESEARCH_STORAGE_ANON_KEY:?Set HERMES_RESEARCH_STORAGE_ANON_KEY}
+      SERVICE_KEY: ${HERMES_RESEARCH_STORAGE_SERVICE_KEY:?Set HERMES_RESEARCH_STORAGE_SERVICE_KEY}
+      AUTH_JWT_ALGORITHM: HS256
+      POSTGREST_URL: http://blockwise-research-storage-rest:3000
+      AUTH_JWT_SECRET: ${HERMES_RESEARCH_STORAGE_JWT_SECRET}
+      STORAGE_PUBLIC_URL: ${HERMES_RESEARCH_STORAGE_PUBLIC_URL:-https://hermes.blockwise.sale/research-media/storage/v1}
+      REQUEST_ALLOW_X_FORWARDED_PATH: "true"
+      DB_INSTALL_ROLES: "true"
+      FILE_SIZE_LIMIT: ${HERMES_RESEARCH_STORAGE_FILE_SIZE_LIMIT:-1073741824}
+      UPLOAD_FILE_SIZE_LIMIT: ${HERMES_RESEARCH_STORAGE_FILE_SIZE_LIMIT:-1073741824}
+      STORAGE_BACKEND: file
+      # Required even for the file backend: this is the internal directory
+      # below FILE_STORAGE_BACKEND_PATH, not a public bucket.
+      GLOBAL_S3_BUCKET: blockwise-research-storage
+      REGION: local
+      TENANT_ID: blockwise-research
+      FILE_STORAGE_BACKEND_PATH: /var/lib/storage
+      IMAGE_TRANSFORMATION_ENABLED: "false"
+      ENABLE_IMAGE_TRANSFORMATION: "false"
+    expose: ["5000"]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs:
+      - /tmp
+    networks: [research]
+    volumes:
+      - research-storage-data:/var/lib/storage
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:5000/status"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 30s
+    logging:
+      driver: json-file
+      options: { max-size: "20m", max-file: "5" }
+
+  # Only the public object read path is exposed through this gateway. The
+  # authenticated Storage API remains reachable only on the research network.
+  research-media-gateway:
+    image: "caddy:2.11.3-alpine"
+    container_name: blockwise-research-media-gateway
+    restart: unless-stopped
+    depends_on:
+      research-storage:
+        condition: service_healthy
+    expose: ["3000"]
+    volumes:
+      - ../../infra/research-storage/Caddyfile:/etc/caddy/Caddyfile:ro
+    networks: [research]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs:
+      - /tmp
+      - /data
+      - /config
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
   research-gateway:
     image: "caddy:2.11.3-alpine"
     container_name: blockwise-research-gateway
     restart: unless-stopped
     depends_on:
       - research-rest
+      - research-storage
     ports:
       - "127.0.0.1:8652:3000"
     volumes:
@@ -115,6 +255,31 @@ services:
     volumes:
       - ../../scripts/vps/research-backup.sh:/opt/blockwise/research-backup.sh:ro
       - /opt/blockwise-backups/research:/backups
+    networks: [research]
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+  research-storage-backup:
+    image: "postgres:17.6-alpine"
+    container_name: blockwise-research-storage-backup
+    restart: unless-stopped
+    depends_on:
+      research-storage-db:
+        condition: service_healthy
+    environment:
+      PGHOST: blockwise-research-storage-db
+      PGPORT: "5432"
+      PGDATABASE: blockwise_research_storage
+      PGUSER: postgres
+      PGPASSWORD: ${HERMES_RESEARCH_STORAGE_DB_PASSWORD:?Set HERMES_RESEARCH_STORAGE_DB_PASSWORD}
+      RESEARCH_STORAGE_BACKUP_DIR: /backups
+      RESEARCH_STORAGE_BACKUP_RETENTION_DAYS: ${RESEARCH_STORAGE_BACKUP_RETENTION_DAYS:-14}
+      RESEARCH_STORAGE_BACKUP_INTERVAL_SECONDS: ${RESEARCH_STORAGE_BACKUP_INTERVAL_SECONDS:-86400}
+    entrypoint: ["/bin/sh", "/opt/blockwise/research-storage-backup.sh"]
+    volumes:
+      - ../../scripts/vps/research-storage-backup.sh:/opt/blockwise/research-storage-backup.sh:ro
+      - /opt/blockwise-backups/research-storage:/backups
     networks: [research]
     logging:
       driver: json-file
@@ -189,9 +354,14 @@ services:
       HERMES_SUPABASE_URL: http://blockwise-research-gateway:3000
       HERMES_SUPABASE_SECRET_KEY: ""
       HERMES_SUPABASE_SERVICE_ROLE_KEY: ${HERMES_RESEARCH_SERVICE_ROLE_KEY:?Set HERMES_RESEARCH_SERVICE_ROLE_KEY}
-      HERMES_CUSTOMER_SUPABASE_URL: ${SUPABASE_URL}
+      # Customer Supabase remains the read-model database only. Research media
+      # uses the Hermes-owned Storage API below, never this endpoint.
+      HERMES_CUSTOMER_SUPABASE_URL: ${HERMES_CUSTOMER_SUPABASE_URL:?Set HERMES_CUSTOMER_SUPABASE_URL for read-model publishing}
       HERMES_CUSTOMER_SUPABASE_SECRET_KEY: ${SUPABASE_SECRET_KEY:-}
       HERMES_CUSTOMER_SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-}
+      HERMES_RESEARCH_STORAGE_URL: http://blockwise-research-gateway:3000
+      HERMES_RESEARCH_STORAGE_SECRET_KEY: ${HERMES_RESEARCH_STORAGE_SECRET_KEY:-}
+      HERMES_RESEARCH_STORAGE_SERVICE_ROLE_KEY: ${HERMES_RESEARCH_STORAGE_SERVICE_KEY:?Set HERMES_RESEARCH_STORAGE_SERVICE_KEY}
       HERMES_CUSTOMER_READ_MODEL_PUBLISH_INTERVAL_SECONDS: ${HERMES_CUSTOMER_READ_MODEL_PUBLISH_INTERVAL_SECONDS:-300}
       HERMES_ACCURACY_AUDIT_CHECK_INTERVAL_SECONDS: ${HERMES_ACCURACY_AUDIT_CHECK_INTERVAL_SECONDS:-3600}
       HERMES_ACCURACY_AUDIT_INTERVAL_HOURS: ${HERMES_ACCURACY_AUDIT_INTERVAL_HOURS:-168}
@@ -298,6 +468,8 @@ services:
 volumes:
   hermes-data:
   research-db-data:
+  research-storage-db-data:
+  research-storage-data:
   research-raw-evidence:
   steel-cache:
   uptime-data:

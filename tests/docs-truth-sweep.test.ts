@@ -12,18 +12,20 @@ function read(path: string): string {
 test("production readiness references real release commands", () => {
   const readiness = read("docs/runbooks/production-readiness.md");
 
-  assert.match(readiness, /There is no `lint` script and no `audit:repo` script/);
-  assert.match(readiness, /npm run verify:hard-reset/);
-  assert.match(readiness, /VPS.*job_queue.*worker/);
-  assert.match(readiness, /paid-service watchdog as the Vercel Cron configured in\s+`vercel\.json`/);
-  assert.doesNotMatch(readiness, /Verify Trigger\.dev deployed tasks[^\r\n]*(?:\r?\n {2}[^\r\n]*)*paid-service watchdog/);
+  assert.match(readiness, /`npm run check:nul`, `npm run typecheck`, `npm test`, `npm run build`/);
+  assert.match(readiness, /scripts\/vps\/product-health\.sh/);
+  assert.match(readiness, /durable worker jobs/i);
+  assert.match(readiness, /product-worker/);
+  assert.match(readiness, /Scheduled enqueueing is a separate[\s\S]*not a Vercel requirement/);
+  assert.doesNotMatch(readiness, /Vercel Cron configured in\s+`vercel\.json`/);
 });
 
 test("rollback documents export, publish, and VPS worker posture", () => {
   const rollback = read("docs/runbooks/rollback.md");
 
-  assert.match(rollback, /Manual Ad Studio export is not a provider write/);
-  assert.match(rollback, /created\s+paused/i);
-  assert.match(rollback, /VPS.*job_queue.*worker/);
+  assert.match(rollback, /product-worker[\s\S]*public\.job_queue/);
   assert.match(rollback, /BLOCKWISE_ENABLE_PROVIDER_WRITES=false/);
+  assert.match(rollback, /scripts\/vps\/product-health\.sh/);
+  assert.match(rollback, /BLOCKWISE_RESTORE_APPROVED=I_HAVE_VERIFIED_THE_BACKUP/);
+  assert.match(rollback, /Frank\/Hermes separation is a migration invariant/);
 });

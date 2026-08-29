@@ -1,79 +1,113 @@
 # Rollback Runbook
 
-Use this when a production deployment must be reversed, provider writes must
-stop, or queued work must be paused.
+Status: active for the self-hosted product target. The target is implemented,
+but live cutover remains gated. Until cutover is signed off, the previous
+managed endpoint is retained as a rollback source and must not be decommissioned.
 
-## Current Runtime Posture
+Use this runbook to stop provider writes, pause the VPS product worker, restore
+verified data, or return DNS to the previous endpoint. Do not delete product
+volumes or the retained source deployment during an incident.
 
-- Vercel serves the app and runs customer-critical Ad Studio generation inline.
-- Supabase owns Auth, Postgres, RLS, Storage, and the durable `job_queue`.
-- The VPS `job_queue` worker owns Meta publishing, mutations, lead delivery,
-  reporting/provider maintenance, and Ad Studio crash recovery.
-- Vercel Cron routes enqueue scheduled work; they do not execute provider writes.
-- Meta campaigns, ad sets, creatives, lead forms, and ads are created paused.
+## Current runtime posture
 
-Manual Ad Studio export is not a provider write. If export generation or
-download breaks, roll back Vercel; there are no Meta objects to clean up from
-export alone.
+- Caddy is the public ingress for the product VPS and routes the Next
+  standalone app, PostgREST, GoTrue, Storage API, and optional Realtime.
+- The `product-worker` profile consumes the durable `public.job_queue` through
+  the self-hosted PostgREST/Auth contract and performs provider, reporting,
+  lead-delivery, and Ad Studio recovery jobs.
+- `@supabase/supabase-js` is a protocol client only; its URL must resolve to
+  the product Caddy origin, not a managed Supabase project.
+- Frank/Hermes separation is a migration invariant; rollback commands affect
+  product data only. See `docs/runbooks/oss-product-migration.md`.
 
-## 1. Vercel Instant Rollback
+## 1. Stop provider writes
 
-1. Open **Vercel Dashboard → blockwise → Deployments**.
-2. Find the last known-good deployment by timestamp and git SHA.
-3. Choose **Promote to Production**.
-4. Verify the Production URL and `/api/health`.
-
-Do not use localhost as rollback acceptance evidence.
-
-## 2. Kill Provider Writes
-
-Set this in the VPS worker deployment and Vercel Production:
+Set `BLOCKWISE_ENABLE_PROVIDER_WRITES=false` in the rendered product env at
+`/srv/blockwise/product/.env`, then stop the worker and recreate the app from
+the same immutable image. The worker remains omitted while writes are false;
+the flag is checked before Meta publish, Meta mutation, and non-manual lead
+delivery.
 
 ```bash
-BLOCKWISE_ENABLE_PROVIDER_WRITES=false
+export BLOCKWISE_PRODUCT_ENV_FILE=/srv/blockwise/product/.env
+export COMPOSE_FILE=/projects/blockwise/infra/coolify/docker-compose.product.yml
+docker compose --env-file "$BLOCKWISE_PRODUCT_ENV_FILE" -f "$COMPOSE_FILE" --profile worker --profile realtime stop product-worker
+docker compose --env-file "$BLOCKWISE_PRODUCT_ENV_FILE" -f "$COMPOSE_FILE" up -d --no-build --pull never product-app
 ```
 
-Restart the VPS worker after changing its environment and redeploy/promote the
-Vercel app if its environment changed. The flag is checked before Meta publish,
-Meta mutation, and non-manual lead delivery.
+If the env cannot be changed safely, stop `product-worker` first and leave it
+stopped. Preserve queue rows for audit and recovery.
 
-Re-enable only after the incident is understood and approval-gated publish
-checks pass.
+## 2. Pause the product stack or scheduled work
 
-## 3. Pause Scheduled Or Queued Work
+For a full application incident, stop the writers and ingress through the
+product Compose contract:
 
-- Disable the affected Vercel Cron entry in `vercel.json` and deploy, or pause
-  Cron from the Vercel dashboard.
-- Stop the VPS worker to halt all queue consumption.
-- To stop only provider writes while retaining read/reporting jobs, leave the
-  worker running and use `BLOCKWISE_ENABLE_PROVIDER_WRITES=false`.
-- Inspect `public.job_queue` for pending, processing, or failed jobs. Preserve
-  rows during incidents for audit and recovery.
+```bash
+docker compose --env-file "$BLOCKWISE_PRODUCT_ENV_FILE" -f "$COMPOSE_FILE" --profile worker --profile realtime --profile edge stop product-worker product-app product-caddy
+```
 
-After changing `worker/**` or a module imported by the worker, deploy committed
-source with `docs/runbooks/vps-worker-deploy.md`.
+Scheduled enqueueing is a separate VPS scheduler or webhook configuration.
+Disable the affected schedule at that scheduler; there is no Vercel Cron
+dependency in the OSS product target. Do not delete queued jobs. Inspect
+`public.job_queue` after the worker is stopped and retain the incident evidence.
 
-## 4. Pause Runaway Meta Objects
+## 3. Roll back application images
 
-1. Open [Meta Ads Manager](https://adsmanager.facebook.com/) and select the
-   affected ad account.
-2. Filter campaigns by the incident window.
-3. Pause suspect campaigns. Delete only when they must never resume.
-4. Repeat for orphaned ad sets or ads.
+Select the last verified app image digest and set `BLOCKWISE_APP_IMAGE` and
+`BLOCKWISE_GIT_SHA` to that release in the product env, then recreate only the
+app and edge. Keep the worker omitted while provider writes are false:
 
-Provider writes off prevents more Blockwise-created objects, but does not pause
-objects already created on Meta.
+```bash
+docker compose --env-file "$BLOCKWISE_PRODUCT_ENV_FILE" -f "$COMPOSE_FILE" --profile realtime --profile edge config --quiet
+docker compose --env-file "$BLOCKWISE_PRODUCT_ENV_FILE" -f "$COMPOSE_FILE" --profile edge up -d --no-build --pull never --force-recreate product-app product-caddy
+scripts/vps/product-health.sh
+```
 
-## Quick Reference
+Never build from a moving checkout during rollback. Verify the Caddy `/healthz`
+response, app `/api/health`, and provider-write flag before resuming traffic.
+Only after a separate provider-write approval should the verified worker image
+and revision be selected and started with `--profile worker`.
+
+## 4. Restore database, Auth, and Storage
+
+`product-rollback.sh` is plan-only unless explicitly approved. First verify the
+backup manifest, then run the guarded restore with the selected dump and
+globals:
+
+```bash
+scripts/vps/product-checksums.sh /srv/blockwise/backups/product/<stamp>/SHA256SUMS
+BLOCKWISE_ROLLBACK_APPROVED=I_HAVE_VERIFIED_THE_ROLLBACK_PLAN scripts/vps/product-rollback.sh --apply
+BLOCKWISE_RESTORE_APPROVED=I_HAVE_VERIFIED_THE_BACKUP scripts/vps/product-restore.sh /srv/blockwise/backups/product/<stamp>/database.dump --globals=/srv/blockwise/backups/product/<stamp>/globals.sql --apply
+```
+
+The restore script stops product API/worker writers, applies optional role
+globals, and uses a single-transaction `pg_restore`; it does not remove named
+volumes. Restore Auth users, identities, password/recovery metadata, and
+Storage metadata/objects through their GoTrue/Storage compatibility procedures.
+Do not restore `auth.*` with a generic application dump and do not make private
+storage buckets public. Run `product-row-counts.sh`, reconcile the five-field
+object manifest, run tenant/RLS/Auth smoke tests, and only then restart services.
+
+## 5. Return DNS to the previous endpoint
+
+If the VPS target cannot safely serve traffic, disable provider writes and point
+the public DNS or upstream proxy back to the retained previous endpoint. Keep
+the product Caddy volumes, database dump, Auth receipt, and object manifest
+intact for forensic review and a later retry. DNS, SMTP, OAuth callbacks,
+webhooks, and scheduler changes are separate gates and must be reverted as a
+coordinated set.
+
+## Quick reference
 
 | Symptom | First action |
 | --- | --- |
-| Wrong app code is live | Vercel instant rollback |
-| Provider mutations are unexpected | Set `BLOCKWISE_ENABLE_PROVIDER_WRITES=false` and restart the VPS worker |
-| Lead delivery targets the wrong destination | Provider writes off, then inspect `job_queue` |
-| Scheduled tasks loop | Pause the relevant Vercel Cron |
-| Queue work is unsafe | Stop the VPS worker |
-| Meta spend is unexpected | Pause objects in Ads Manager and disable provider writes |
+| Unexpected Meta/provider mutation | Set provider writes false; stop `product-worker` |
+| Unsafe queue behavior | Stop `product-worker`; preserve `public.job_queue` |
+| Bad app release | Re-select the last verified immutable images and recreate Compose services |
+| Corrupt or incomplete data | Verify `SHA256SUMS`, then use guarded `product-restore.sh` |
+| VPS ingress failure | Return DNS/upstream to the retained previous endpoint |
+| Unexpected spend | Disable provider writes and pause affected objects in the provider console |
 
-After any rollback, record the incident window, affected workspaces/jobs,
-actions taken, and the prevention change.
+After rollback, record the incident window, affected workspaces/jobs, release
+SHA and image digests, data manifests, actions taken, and the prevention change.

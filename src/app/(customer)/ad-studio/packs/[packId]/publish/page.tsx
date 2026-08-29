@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 
 import { PublishFlow } from "./publish-flow";
 import { getOrCreateCustomerAd } from "@/lib/adstudio/create-customer-ad";
@@ -59,11 +60,11 @@ export default async function PublishPage({
   const packName = metadata?.title?.trim() || pack.classification.label || pack.templateId;
 
   return (
-    <main className="fixed inset-0 flex flex-col bg-(--canvas) text-foreground">
-      <header className="flex h-12 shrink-0 items-center border-b border-(--line) bg-(--surface) px-5">
-        <a
+    <div className="flex min-h-[calc(100dvh-54px)] flex-col bg-background text-foreground md:min-h-[calc(100dvh-60px)]">
+      <header className="flex min-h-12 shrink-0 items-center border-b border-border bg-card px-4 md:px-5">
+        <Link
           href={`/ad-studio/packs/${encodeURIComponent(packId)}`}
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition hover:text-foreground"
+          className="inline-flex min-h-11 items-center gap-1.5 text-sm text-muted-foreground transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
             <path
@@ -75,13 +76,13 @@ export default async function PublishPage({
             />
           </svg>
           Back to editor
-        </a>
+        </Link>
         <span className="ml-4 truncate text-sm font-medium">
           Publish — {packName}
         </span>
         {!providerWrites && (
           <span className="ml-auto rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700">
-            Provider writes disabled — dry run
+            Dry run · nothing will be created
           </span>
         )}
       </header>
@@ -98,7 +99,7 @@ export default async function PublishPage({
           providerWritesEnabled={providerWrites}
         />
       </div>
-    </main>
+    </div>
   );
 }
 

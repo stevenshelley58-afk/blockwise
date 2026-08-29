@@ -13,10 +13,27 @@ export interface ImportRequest {
   packSha256: string;
   packId: string;
   buildId: string;
+  /** Private Frank run that produced the release. Stored only as sanitized provenance. */
+  runId?: string;
+  /** Immutable Frank release and receipt references. Never source/prompt content. */
+  releaseId?: string;
+  traceRef?: string;
+  qaReceiptRef?: string;
+  approvalReceiptRef?: string;
+  sanitizationReceiptRef?: string;
   issuedAt: string;
   nonce: string;
   signature: string;
   idempotencyKey: string;
+}
+
+export interface ImportProvenance {
+  runId?: string;
+  releaseId?: string;
+  traceRef?: string;
+  qaReceiptRef?: string;
+  approvalReceiptRef?: string;
+  sanitizationReceiptRef?: string;
 }
 
 export interface ImportReceipt {
@@ -25,6 +42,7 @@ export interface ImportReceipt {
   packSha256: string;
   status: "active" | "replayed";
   activatedAt: string;
+  provenance?: ImportProvenance;
 }
 
 export interface ImportError {
@@ -68,6 +86,8 @@ export async function importTemplatePack(
   input: ImportRequest,
   options: ImportOptions = {},
 ): Promise<ImportReceipt> {
+  const provenance = validateProvenance(input);
+
   // 0. Idempotency check
   const existing = await checkIdempotency(supabase, input.packSha256);
   if (existing) return existing;
@@ -75,8 +95,9 @@ export async function importTemplatePack(
   // 1. Timestamp window
   validateTimestamp(input.issuedAt);
 
-  // 2. Nonce check
-  await validateNonce(supabase, input.nonce);
+  // 2. Fast replay check. The nonce is consumed inside the transactional
+  // activation RPC so a later validation or asset failure cannot burn it.
+  await assertNonceAvailable(supabase, input.nonce);
 
   // 3. Origin allowlist — skipped only for the injected test/local fetchPack path
   if (!options.fetchPack) {
@@ -94,6 +115,7 @@ export async function importTemplatePack(
       "FRANK_PACK_PUBLIC_KEY is not set — refusing to import an unsigned pack",
     );
   }
+  if (!options.fetchPack) requireCompleteReleaseProvenance(provenance);
 
   // 4. Fetch pack (injected fixture source, or live Frank URL)
   const packJson = options.fetchPack
@@ -118,6 +140,12 @@ export async function importTemplatePack(
     throw importError("schema_invalid", "Pack failed schema validation", parsed.error.issues);
   }
   const pack = parsed.data as TemplatePack;
+  if ((pack as unknown as { schema?: string }).schema !== "blockwise.template-pack/v2") {
+    throw importError(
+      "layered_v2_required",
+      "Only source-free layered blockwise.template-pack/v2 releases can be activated",
+    );
+  }
   if (pack.packId !== input.packId) {
     throw importError("pack_id_mismatch", `Request packId ${input.packId} does not match signed pack ${pack.packId}`);
   }
@@ -156,7 +184,25 @@ export async function importTemplatePack(
   const resolvedAssets = await resolveDeclaredAssets(pack, input.packUrl, options.fetchAsset);
 
   // 11. Atomic activation
-  return await activatePack(supabase, input, pack, resolvedAssets);
+  return await activatePack(supabase, input, pack, resolvedAssets, provenance);
+}
+
+/** Production imports must prove the complete iterative release chain. */
+export function requireCompleteReleaseProvenance(provenance: ImportProvenance): void {
+  const missing = ([
+    "runId",
+    "releaseId",
+    "traceRef",
+    "qaReceiptRef",
+    "approvalReceiptRef",
+    "sanitizationReceiptRef",
+  ] as const).filter(field => !provenance[field]);
+  if (missing.length > 0) {
+    throw importError(
+      "release_provenance_incomplete",
+      `Layered release provenance is incomplete: ${missing.join(", ")}`,
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -326,14 +372,9 @@ function sniffMime(bytes: Uint8Array): string {
   return "application/octet-stream";
 }
 
-async function validateNonce(supabase: SupabaseClient, nonce: string): Promise<void> {
-  // Check if nonce was already used
+async function assertNonceAvailable(supabase: SupabaseClient, nonce: string): Promise<void> {
   const { data } = await supabase.from("ad_import_nonces").select("nonce").eq("nonce", nonce).maybeSingle();
   if (data) throw importError("nonce_replay", "Nonce has already been used");
-
-  // Record nonce
-  const { error } = await supabase.from("ad_import_nonces").insert({ nonce });
-  if (error) throw importError("nonce_insert_failed", error.message);
 }
 
 async function checkIdempotency(
@@ -342,7 +383,7 @@ async function checkIdempotency(
 ): Promise<ImportReceipt | null> {
   const { data } = await supabase
     .from("ad_import_receipts")
-    .select("*")
+    .select("id, pack_id, pack_sha256, status, created_at, receipt")
     .eq("pack_sha256", packSha256)
     .eq("status", "active")
     .maybeSingle();
@@ -354,6 +395,7 @@ async function checkIdempotency(
       packSha256: data.pack_sha256,
       status: "replayed",
       activatedAt: data.created_at,
+      provenance: provenanceFromReceipt(data.receipt),
     };
   }
   return null;
@@ -364,67 +406,30 @@ async function activatePack(
   input: ImportRequest,
   pack: TemplatePack,
   resolvedAssets: ResolvedAsset[],
+  provenance: ImportProvenance,
 ): Promise<ImportReceipt> {
-  // Check for conflicting packId with different hash
-  const { data: existing } = await supabase
-    .from("ad_import_receipts")
-    .select("pack_sha256")
-    .eq("pack_id", input.packId)
-    .maybeSingle();
-
-  if (existing && existing.pack_sha256 !== input.packSha256) {
-    throw importError("pack_id_conflict", "Same packId with different hash — rejected");
-  }
-
   // Upload all verified bytes before writing the active receipt/pack rows.
   // A failed upload therefore cannot activate a pack with missing assets.
   for (const asset of resolvedAssets) {
-    const { error } = await supabase.storage.from("workspace-artifacts").upload(
-      storagePathForAsset(pack.packId, asset)!, asset.bytes,
-      { contentType: asset.mimeType, upsert: true },
-    );
-    if (error) throw importError("asset_upload_failed", `${asset.key}: ${error.message}`);
+    const storagePath = storagePathForAsset(pack.packId, asset)!;
+    const bucket = supabase.storage.from("workspace-artifacts");
+    const { error } = await bucket.upload(storagePath, asset.bytes, {
+      contentType: asset.mimeType,
+      upsert: false,
+    });
+    if (error) {
+      const existing = await bucket.download(storagePath);
+      if (existing.error || !existing.data) {
+        throw importError("asset_upload_failed", `${asset.key}: ${error.message}`);
+      }
+      const existingBytes = Buffer.from(await existing.data.arrayBuffer());
+      if (createHash("sha256").update(existingBytes).digest("hex") !== asset.sha256) {
+        throw importError("asset_upload_failed", `${asset.key}: existing content-addressed object has different bytes`);
+      }
+    }
   }
 
-  // Atomic: insert receipt + pack + assets in one conceptual transaction
-  const { data: receipt, error: receiptError } = await supabase
-    .from("ad_import_receipts")
-    .insert({
-      pack_id: input.packId,
-      pack_sha256: input.packSha256,
-      build_id: input.buildId,
-      issuer: new URL(input.packUrl).hostname,
-      issued_at: input.issuedAt,
-      nonce: input.nonce,
-      signature: input.signature,
-      status: "active",
-    })
-    .select("id, pack_id, pack_sha256, created_at")
-    .single();
-
-  if (receiptError) throw importError("receipt_insert_failed", receiptError.message);
-
-  // Insert pack
-  await supabase.from("ad_template_packs").insert({
-    pack_id: input.packId,
-    template_id: pack.templateId,
-    version: pack.version,
-    manifest_sha256: pack.manifestSha256,
-    signature: input.signature,
-    pack_json: pack as unknown as Record<string, unknown>,
-  });
-
-  // Insert version
-  await supabase.from("ad_template_pack_versions").insert({
-    pack_id: input.packId,
-    version: pack.version,
-    manifest_sha256: pack.manifestSha256,
-    pack_json: pack as unknown as Record<string, unknown>,
-  });
-
-  // Insert assets
   const assetRows = Object.entries(pack.assets).map(([key, asset]) => ({
-    pack_id: input.packId,
     asset_key: key,
     file_name: (asset as { fileName: string }).fileName,
     sha256: (asset as { sha256: string }).sha256,
@@ -433,7 +438,6 @@ async function activatePack(
   }));
   for (const asset of resolvedAssets.filter((item) => item.key.startsWith("font:"))) {
     assetRows.push({
-      pack_id: input.packId,
       asset_key: asset.key,
       file_name: asset.fileName,
       sha256: asset.sha256,
@@ -441,16 +445,106 @@ async function activatePack(
       storage_path: storagePathForAsset(pack.packId, asset),
     });
   }
-  if (assetRows.length > 0) {
-    await supabase.from("ad_template_assets").insert(assetRows);
+
+  const receiptBody = {
+    schema: "blockwise.ad-template-import-receipt.v1",
+    status: "active",
+    provenance,
+    artifact: {
+      packId: input.packId,
+      templateId: pack.templateId,
+      version: pack.version,
+      manifestSha256: pack.manifestSha256,
+      packSha256: input.packSha256,
+    },
+  };
+  const { data, error } = await supabase.rpc("activate_ad_template_pack_import", {
+    p_receipt: {
+      pack_id: input.packId,
+      pack_sha256: input.packSha256,
+      build_id: input.buildId,
+      issuer: new URL(input.packUrl).hostname,
+      issued_at: input.issuedAt,
+      nonce: input.nonce,
+      signature: input.signature,
+      receipt: receiptBody,
+    },
+    p_pack: {
+      pack_id: input.packId,
+      template_id: pack.templateId,
+      version: pack.version,
+      schema_version: (pack as unknown as { schema: string }).schema,
+      manifest_sha256: pack.manifestSha256,
+      signature: input.signature,
+      pack_json: pack as unknown as Record<string, unknown>,
+    },
+    p_assets: assetRows,
+  });
+  if (error) {
+    const message = error.message ?? "Pack activation failed";
+    if (message.includes("pack_id_conflict")) throw importError("pack_id_conflict", "Same packId with different hash — rejected");
+    if (message.includes("nonce_replay")) throw importError("nonce_replay", "Nonce has already been used");
+    throw importError("activation_failed", message);
+  }
+
+  const receipt = (Array.isArray(data) ? data[0] : data) as {
+    id?: unknown; pack_id?: unknown; pack_sha256?: unknown; created_at?: unknown; replayed?: unknown;
+  } | null;
+  if (!receipt || typeof receipt.id !== "string" || typeof receipt.created_at !== "string") {
+    throw importError("activation_failed", "Transactional activation returned an invalid receipt");
   }
 
   return {
-    receiptId: receipt!.id,
+    receiptId: receipt.id,
     packId: input.packId,
     packSha256: input.packSha256,
-    status: "active",
-    activatedAt: receipt!.created_at,
+    status: receipt.replayed === true ? "replayed" : "active",
+    activatedAt: receipt.created_at,
+    provenance,
+  };
+}
+
+/**
+ * Validate the small provenance envelope accepted from Frank. The importer
+ * must never persist source paths, prompts, credentials, or arbitrary payloads
+ * in the Blockwise receipt table.
+ */
+function validateProvenance(input: ImportRequest): ImportProvenance {
+  const runId = optionalId(input.runId ?? input.buildId, "runId", 128);
+  const releaseId = optionalId(input.releaseId, "releaseId", 128);
+  const traceRef = optionalRef(input.traceRef, "traceRef");
+  const qaReceiptRef = optionalRef(input.qaReceiptRef, "qaReceiptRef");
+  const approvalReceiptRef = optionalRef(input.approvalReceiptRef, "approvalReceiptRef");
+  const sanitizationReceiptRef = optionalRef(input.sanitizationReceiptRef, "sanitizationReceiptRef");
+  return { runId, releaseId, traceRef, qaReceiptRef, approvalReceiptRef, sanitizationReceiptRef };
+}
+
+function optionalId(value: unknown, field: string, maxLength: number): string | undefined {
+  if (value == null || value === "") return undefined;
+  if (typeof value !== "string" || value.length > maxLength || !/^[A-Za-z0-9._-]+$/.test(value)) {
+    throw importError("invalid_provenance", `${field} is not a valid provenance identifier`);
+  }
+  return value;
+}
+
+function optionalRef(value: unknown, field: string): string | undefined {
+  if (value == null || value === "") return undefined;
+  if (typeof value !== "string" || value.length > 512 || !/^[A-Za-z0-9._:/?=&%+#-]+$/.test(value)) {
+    throw importError("invalid_provenance", `${field} is not a valid provenance reference`);
+  }
+  return value;
+}
+
+function provenanceFromReceipt(value: unknown): ImportProvenance | undefined {
+  if (!isRecord(value) || !isRecord(value.provenance)) return undefined;
+  const provenance = value.provenance;
+  return {
+    runId: typeof provenance.runId === "string" ? provenance.runId : undefined,
+    releaseId: typeof provenance.releaseId === "string" ? provenance.releaseId : undefined,
+    traceRef: typeof provenance.traceRef === "string" ? provenance.traceRef : undefined,
+    qaReceiptRef: typeof provenance.qaReceiptRef === "string" ? provenance.qaReceiptRef : undefined,
+    approvalReceiptRef: typeof provenance.approvalReceiptRef === "string" ? provenance.approvalReceiptRef : undefined,
+    sanitizationReceiptRef: typeof provenance.sanitizationReceiptRef === "string" ? provenance.sanitizationReceiptRef : undefined,
   };
 }
 

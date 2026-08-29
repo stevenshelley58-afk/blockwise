@@ -78,6 +78,37 @@ class FakeSupabase {
   from(table: string): FakeQuery {
     return new FakeQuery(this, table);
   }
+
+  async rpc(name: string, args: Record<string, unknown>) {
+    if (name !== "commit_ad_revision") return { data: null, error: { message: `Unknown RPC ${name}` } };
+    const revisionInput = args.p_revision as Row;
+    const attemptInputs = args.p_attempts as Row[];
+    const ad = this.tables.ad_customer_ads.find(row =>
+      row.id === args.p_ad_id && row.workspace_id === args.p_workspace_id
+    );
+    if (!ad) return { data: null, error: { message: "ad_not_found" } };
+    if ((ad.active_revision_id ?? null) !== (args.p_expected_active_revision_id ?? null)) {
+      return { data: null, error: { message: "stale_revision" } };
+    }
+    const revision: Row = {
+      id: `row-${++this.seq}`,
+      ad_id: args.p_ad_id,
+      workspace_id: args.p_workspace_id,
+      ...revisionInput,
+      created_at: new Date().toISOString(),
+    };
+    this.tables.ad_revisions.push(revision);
+    for (const attempt of attemptInputs) {
+      this.tables.ad_render_attempts.push({
+        id: `row-${++this.seq}`,
+        revision_id: revision.id,
+        workspace_id: args.p_workspace_id,
+        ...attempt,
+      });
+    }
+    ad.active_revision_id = revision.id;
+    return { data: { id: revision.id, revision_number: revision.revision_number }, error: null };
+  }
 }
 
 class FakeQuery {
@@ -516,6 +547,83 @@ describe("saveAd", () => {
       }),
       (err: unknown) => err instanceof SaveError && err.code === "ad_not_found",
     );
+  });
+
+  it("blocks save before rendering when a required image is missing", async () => {
+    const db = new FakeSupabase();
+    seedAd(db, WS);
+    const requiredPack = structuredClone(PACK) as TemplatePack;
+    requiredPack.imageInputs = [{
+      key: "hero",
+      label: "Property photo",
+      required: true,
+      acceptedTypes: ["image/jpeg", "image/png", "image/webp"],
+    }];
+    db.tables.ad_template_packs = [{ ...PACK_ROW, pack_json: requiredPack }];
+
+    await assert.rejects(
+      saveAd({
+        supabase: db as never,
+        workspaceId: WS,
+        adId: "ad-1",
+        document: makeDocument(),
+        expectedRevision: 0,
+        colourMap: PACK.semanticColours,
+        imageValues: {},
+        renderPlacement: fakeRenderer([]),
+      }),
+      (err: unknown) => err instanceof SaveError && err.code === "image_required",
+    );
+    assert.equal(db.uploadAttempts.length, 0);
+  });
+
+  it("blocks save before rendering when required overlay text is blank", async () => {
+    const db = new FakeSupabase();
+    seedAd(db, WS);
+    const requiredPack = structuredClone(PACK) as TemplatePack;
+    requiredPack.textInputs = [{ key: "headline", label: "Headline", placeholder: "Headline", maxLength: 40 }];
+    db.tables.ad_template_packs = [{ ...PACK_ROW, pack_json: requiredPack }];
+
+    await assert.rejects(
+      saveAd({
+        supabase: db as never,
+        workspaceId: WS,
+        adId: "ad-1",
+        document: makeDocument({ sharedTextValues: { headline: "   " } }),
+        expectedRevision: 0,
+        colourMap: PACK.semanticColours,
+        imageValues: {},
+        renderPlacement: fakeRenderer([]),
+      }),
+      (err: unknown) => err instanceof SaveError && err.code === "text_required",
+    );
+    assert.equal(db.uploadAttempts.length, 0);
+  });
+
+  it("does not partially insert a revision when the active pointer changes during rendering", async () => {
+    const db = new FakeSupabase();
+    const ad = seedAd(db, WS);
+    let renders = 0;
+    await assert.rejects(
+      saveAd({
+        supabase: db as never,
+        workspaceId: WS,
+        adId: "ad-1",
+        document: makeDocument(),
+        expectedRevision: 0,
+        colourMap: PACK.semanticColours,
+        imageValues: {},
+        renderPlacement: async (placement) => {
+          renders += 1;
+          if (placement === "story") ad.active_revision_id = "another-revision";
+          return { sha256: placement === "feed" ? FEED_HASH : STORY_HASH, png: Buffer.from(placement) };
+        },
+      }),
+      (err: unknown) => err instanceof SaveError && err.code === "stale_revision",
+    );
+    assert.equal(renders, 2);
+    assert.equal(db.tables.ad_revisions.length, 0);
+    assert.equal(db.tables.ad_render_attempts.length, 0);
   });
 
   it("throws template_hash_mismatch when the document references another pack version", async () => {
