@@ -21,7 +21,9 @@ host route for `BLOCKWISE_PRODUCT_DOMAIN` to `product-caddy:80`. Configure that
 attachment in Frank's Compose/service definition and redeploy it; a one-off
 `docker network connect` is not the final configuration. Do not enable the
 `edge` profile until this route is present, because the product edge is not
-intended to reclaim public 80/443.
+intended to reclaim public 80/443. Frank terminates public TLS; the internal
+product Caddy site is deliberately `http://` so the hop to port 80 cannot
+redirect back through the public hostname or start a second ACME flow.
 
 The image tags are reviewable bootstrap pins, not proof that a release is safe
 for production. Before the rehearsal, resolve each tag to an approved digest,

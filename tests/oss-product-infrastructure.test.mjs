@@ -56,6 +56,10 @@ test("OSS product compose is isolated and has no managed deployment endpoint", a
   assert.match(rolePassword, /ALTER ROLE authenticator PASSWORD/);
   assert.doesNotMatch(compose, /vercel\.app|supabase\.co|supabase\.com/);
 
+  const productCaddy = await read("infra/product/Caddyfile");
+  assert.match(productCaddy, /^http:\/\/\{\$BLOCKWISE_PRODUCT_DOMAIN\} \{/m);
+  assert.doesNotMatch(productCaddy, /^\{\$BLOCKWISE_PRODUCT_DOMAIN\} \{/m);
+
   const envExample = await read("infra/product/.env.example");
   assert.match(envExample, /^OPENAI_API_KEY=$/m);
   assert.match(envExample, /^META_APP_ID=$/m);
