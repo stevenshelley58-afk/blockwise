@@ -22,6 +22,11 @@ export type RestyleSampleRenderInput = {
   slotBytes: Map<string, Buffer>;
 };
 
+/** Optional brand-kit inputs intentionally render empty in the neutral sample. */
+export function requiredImageInputs(doc: Pick<AdTemplateDocV2, "inputs">) {
+  return doc.inputs.images.filter((input) => input.required !== false);
+}
+
 function publicAssetPath(repoRoot: string, src: string): string {
   if (!src.startsWith("/") || src.includes("\\") || src.split("/").includes("..")) {
     throw new RestyleSampleAssetError(`safe replacement asset must be a public root-relative path: ${src}`);
@@ -61,9 +66,10 @@ export function loadSafeReplacementAssets(
   const imageRefs: AdDocInstance["values"]["images"] = {};
   for (const input of doc.inputs.images) {
     const asset = byKey.get(input.key);
-    if (!asset) {
+    if (!asset && input.required !== false) {
       throw new RestyleSampleAssetError(`${doc.id}: public sample needs a safe replacement asset for "${input.key}"`);
     }
+    if (!asset) continue;
     const path = publicAssetPath(repoRoot, asset.src);
     if (!existsSync(/* turbopackIgnore: true */ path)) {
       throw new RestyleSampleAssetError(`${doc.id}: safe replacement asset is missing: ${asset.src}`);
