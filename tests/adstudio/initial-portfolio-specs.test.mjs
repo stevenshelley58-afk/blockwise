@@ -16,7 +16,7 @@ const expectedSemanticKeys = {
   "033": ["address", "price", "fact_beds", "fact_baths", "fact_area"],
   "044": ["event_date", "event_time", "checklist_1", "checklist_2", "checklist_3"],
   "021": ["address", "fact_beds", "fact_baths", "url"],
-  "006": ["address", "price", "feature_1", "feature_2", "feature_3"],
+  "006": ["address", "price", "about_label", "features_label", "feature_1", "feature_2", "feature_3"],
   "039": ["address", "feature_1", "feature_2", "feature_3", "feature_4"],
   "062": ["old_price", "price", "amenity_1", "amenity_2", "amenity_3"],
   "154": ["service_1", "service_2", "service_3", "service_4", "website"],
