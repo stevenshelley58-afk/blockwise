@@ -689,6 +689,11 @@ async function publishWithMarketingApi(
   };
 
   try {
+    const destinationUrl = plan.controls.destinationUrl?.trim();
+    if (!destinationUrl || !isHttpsDestination(destinationUrl)) {
+      throw new Error("Publish plan is missing a valid HTTPS destination URL.");
+    }
+
     if (!reconciledObjects.campaignId) {
       const providerName = buildMetaProviderObjectName(plan, plan.campaign.localId, plan.campaign.name);
       const existingId = input.reconcileMissingObjects
@@ -857,11 +862,7 @@ async function publishWithMarketingApi(
       } else {
         const imageHash = await resolveCreativeImageHash(plan, creative, input, requestLog, responseLog);
         const leadFormId = reconciledObjects.leadFormIds[creative.leadFormLocalId];
-        const linkBase = plan.controls.destinationUrl?.trim();
-        if (!linkBase || !isHttpsDestination(linkBase)) {
-          throw new Error("Publish plan is missing a valid HTTPS destination URL.");
-        }
-        const utmLink = buildUtmLink(linkBase, plan.tracking, creative.localId);
+        const utmLink = buildUtmLink(destinationUrl, plan.tracking, creative.localId);
         const response = await postMetaObject(input, requestLog, responseLog, `creative.${creative.localId}`, `/${plan.setup.metaAdAccountId}/adcreatives`, {
           name: providerName,
           object_story_spec: {
