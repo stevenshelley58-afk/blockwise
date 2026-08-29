@@ -783,13 +783,25 @@ async function scanSampleForTofu(doc, samplePath, layout, label, failures) {
     const h = y1 - y0;
     if (w < 8 || h < 8) continue;
     const gray = new Uint8Array(w * h);
+    // A light/inverse text role on a light-neutral or photographic region is
+    // still real ink; the historical lum<128 probe incorrectly called those
+    // layers empty.  Use the authored hex colour to choose the polarity while
+    // retaining the dark-text behaviour for normal ink.
+    const authoredColour = layer.typo?.color;
+    const colourMatch = typeof authoredColour === "string" && /^#[0-9a-f]{6}$/i.test(authoredColour)
+      ? authoredColour.slice(1).match(/../g)?.map((part) => Number.parseInt(part, 16))
+      : null;
+    const authoredLum = colourMatch
+      ? 0.2126 * colourMatch[0] + 0.7152 * colourMatch[1] + 0.0722 * colourMatch[2]
+      : 0;
+    const expectsLightInk = authoredLum >= 128;
     let ink = 0;
     for (let y = y0; y < y1; y += 1) {
       for (let x = x0; x < x1; x += 1) {
         const p = (y * info.width + x) * 3;
         const lum = 0.2126 * data[p] + 0.7152 * data[p + 1] + 0.0722 * data[p + 2];
-        gray[(y - y0) * w + (x - x0)] = lum;
-        if (lum < 128) ink += 1;
+        gray[(y - y0) * w + (x - x0)] = expectsLightInk ? 255 - lum : lum;
+        if (expectsLightInk ? lum > 180 : lum < 128) ink += 1;
       }
     }
     if (ink === 0) {

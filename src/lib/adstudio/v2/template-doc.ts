@@ -116,7 +116,7 @@ export type TemplateLayerBase = { id: string; z: number; box: NormBox; rotation?
 export type ImageSlotLayer = TemplateLayerBase & {
   type: "image_slot";
   inputKey: string;
-  fit: "cover";
+  fit: "cover" | "contain";
   /** Default focal point for the cover crop; customer can pan/zoom within the slot. */
   focal?: { x: number; y: number };
   mask: ImageSlotMask;
@@ -144,6 +144,8 @@ export type TextLayer = TemplateLayerBase & {
     tracking: number;
     align: "left" | "center" | "right";
     color: string;
+    /** Semantic role retained for portable Brand Pack remapping. */
+    colourRole?: "background" | "surface" | "accent" | "ink" | "inverseText";
     /** carried over from v1 measurement — drives per-line fidelity */
     measuredLines?: Array<{ text: string; box: NormBox; sizeRatio: number; scaleX?: number }>;
     effects?: {
@@ -169,6 +171,27 @@ export type OverlayPatchLayer = TemplateLayerBase & {
   type: "overlay_patch";
   src: string;
   sha256: string;
+  /** Semantic role retained for portable Brand Pack remapping. */
+  colourRole?: "background" | "surface" | "accent" | "ink" | "inverseText";
+};
+
+/** Source-free editable geometry used for badges, ribbons, rules and cards. */
+export type VectorLayer = TemplateLayerBase & {
+  type: "vector";
+  shape: "rect" | "rounded" | "circle" | "line" | "pill" | "notched" | "wave" | "ring";
+  fill: string;
+  stroke?: string;
+  strokeWidth?: number;
+  opacity?: number;
+  colourRole?: "background" | "surface" | "accent" | "ink" | "inverseText";
+};
+
+/** Small editable pictograms (amenity/fact icons) rendered by the shared canvas. */
+export type IconLayer = TemplateLayerBase & {
+  type: "icon";
+  icon: string;
+  color: string;
+  strokeWidth?: number;
 };
 
 export type StoryPolicy = {
@@ -181,7 +204,7 @@ export type StoryPolicy = {
   ctaGroup: { layerIds: string[]; maxGapPx: number };
 };
 
-export type TemplateLayer = ImageSlotLayer | TextLayer | OverlayPatchLayer;
+export type TemplateLayer = ImageSlotLayer | TextLayer | OverlayPatchLayer | VectorLayer | IconLayer;
 
 export type TemplateLayout = {
   format: "4:5" | "9:16";
@@ -235,6 +258,14 @@ export type AdTemplateDocV2 = {
   restyle: {
     /** #source -> #safe colour remaps applied to text/effects */
     paletteMap: Record<string, string>;
+    /** Role-aware palette for portable pack semantic colour mapping. */
+    paletteRoles?: {
+      background: string;
+      surface: string;
+      accent: string;
+      ink: string;
+      inverseText: string;
+    };
     /** Deterministic plate remap (hue degrees) — the D5 distance mechanism
      *  for fully-baked docs (no editable text to recolour). */
     plateRemap?: { hue: number; appliedHue?: number };
@@ -476,7 +507,7 @@ const imageSlotLayerSchema = z
     ...layerBaseShape,
     type: z.literal("image_slot"),
     inputKey: nonEmptyString,
-    fit: z.literal("cover"),
+    fit: z.enum(["cover", "contain"]),
     focal: focalSchema.optional(),
     mask: imageSlotMaskSchema,
     minSourcePx: z
@@ -500,6 +531,7 @@ const textLayerSchema = z.object({
     tracking: z.number(),
     align: z.enum(["left", "center", "right"]),
     color: hexColorSchema,
+    colourRole: z.enum(["background", "surface", "accent", "ink", "inverseText"]).optional(),
     measuredLines: z
       .array(
         z.object({
@@ -546,12 +578,34 @@ const overlayPatchLayerSchema = z.object({
   type: z.literal("overlay_patch"),
   src: publicPathSchema,
   sha256: sha256Schema,
+  colourRole: z.enum(["background", "surface", "accent", "ink", "inverseText"]).optional(),
+});
+
+const vectorLayerSchema = z.object({
+  ...layerBaseShape,
+  type: z.literal("vector"),
+  shape: z.enum(["rect", "rounded", "circle", "line", "pill", "notched", "wave", "ring"]),
+  fill: hexColorSchema,
+  stroke: hexColorSchema.optional(),
+  strokeWidth: z.number().nonnegative().optional(),
+  opacity: z.number().min(0).max(1).optional(),
+  colourRole: z.enum(["background", "surface", "accent", "ink", "inverseText"]).optional(),
+});
+
+const iconLayerSchema = z.object({
+  ...layerBaseShape,
+  type: z.literal("icon"),
+  icon: nonEmptyString,
+  color: hexColorSchema,
+  strokeWidth: z.number().positive().optional(),
 });
 
 const templateLayerSchema = z.discriminatedUnion("type", [
   imageSlotLayerSchema,
   textLayerSchema,
   overlayPatchLayerSchema,
+  vectorLayerSchema,
+  iconLayerSchema,
 ]);
 
 const templateLayoutSchema = z
@@ -678,6 +732,13 @@ const templateDocShapeSchema = z.object({
       (map) => Object.entries(map).every(([from, to]) => from !== to),
       "paletteMap cannot contain an identity colour transform",
     ),
+    paletteRoles: z.object({
+      background: hexColorSchema,
+      surface: hexColorSchema,
+      accent: hexColorSchema,
+      ink: hexColorSchema,
+      inverseText: hexColorSchema,
+    }).optional(),
     /** Optional deterministic plate remap (hue degrees) — the D5 distance
      *  mechanism for fully-baked docs (no editable text to recolour). */
     plateRemap: z.object({

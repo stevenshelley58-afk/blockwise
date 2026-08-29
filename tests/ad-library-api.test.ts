@@ -8,23 +8,38 @@ import {
 import { normaliseMediaUrl } from "../src/lib/research/customer-meta-card.ts";
 
 test("normaliseMediaUrl prefixes and segment-encodes storage paths", () => {
-  const previousSupabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  process.env.NEXT_PUBLIC_SUPABASE_URL = "https://example.supabase.co/";
+  const previousStorageUrl = process.env.NEXT_PUBLIC_RESEARCH_STORAGE_URL;
+  process.env.NEXT_PUBLIC_RESEARCH_STORAGE_URL = "https://hermes.example/";
 
   try {
     assert.equal(
       normaliseMediaUrl("nested folder/creative #1.png"),
-      "https://example.supabase.co/storage/v1/object/public/research-ad-creatives/nested%20folder/creative%20%231.png",
+      "https://hermes.example/storage/v1/object/public/research-ad-creatives/nested%20folder/creative%20%231.png",
     );
     assert.equal(normaliseMediaUrl("https://cdn.example/creative #1.png"), "https://cdn.example/creative #1.png");
   } finally {
+    restoreEnv("NEXT_PUBLIC_RESEARCH_STORAGE_URL", previousStorageUrl);
+  }
+});
+
+test("normaliseMediaUrl fails closed without Hermes storage", () => {
+  const previousStorageUrl = process.env.NEXT_PUBLIC_RESEARCH_STORAGE_URL;
+  const previousSupabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  delete process.env.NEXT_PUBLIC_RESEARCH_STORAGE_URL;
+  process.env.NEXT_PUBLIC_SUPABASE_URL = "https://managed-project.supabase.co";
+
+  try {
+    assert.equal(normaliseMediaUrl("images/hero.png"), null);
+    assert.equal(normaliseMediaUrl("https://managed-project.supabase.co/storage/v1/object/public/research-ad-creatives/hero.png"), null);
+  } finally {
+    restoreEnv("NEXT_PUBLIC_RESEARCH_STORAGE_URL", previousStorageUrl);
     restoreEnv("NEXT_PUBLIC_SUPABASE_URL", previousSupabaseUrl);
   }
 });
 
 test("normaliseResearchAd exposes public media URLs for stored creatives", () => {
-  const previousSupabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  process.env.NEXT_PUBLIC_SUPABASE_URL = "https://example.supabase.co";
+  const previousStorageUrl = process.env.NEXT_PUBLIC_RESEARCH_STORAGE_URL;
+  process.env.NEXT_PUBLIC_RESEARCH_STORAGE_URL = "https://hermes.example";
 
   try {
     const ad = normaliseResearchAd(row({
@@ -45,32 +60,32 @@ test("normaliseResearchAd exposes public media URLs for stored creatives", () =>
       [
         {
           kind: "image",
-          url: "https://example.supabase.co/storage/v1/object/public/research-ad-creatives/images/hero%20creative.png",
+          url: "https://hermes.example/storage/v1/object/public/research-ad-creatives/images/hero%20creative.png",
           storagePath: "images/hero creative.png",
           sourceUrl: null,
         },
         {
           kind: "video",
-          url: "https://example.supabase.co/storage/v1/object/public/research-ad-creatives/video/listing%20tour%20%232.mp4",
+          url: "https://hermes.example/storage/v1/object/public/research-ad-creatives/video/listing%20tour%20%232.mp4",
           storagePath: "video/listing tour #2.mp4",
           sourceUrl: null,
         },
         {
           kind: "thumbnail",
-          url: "https://example.supabase.co/storage/v1/object/public/research-ad-creatives/thumbs/listing%20tour%20%232.jpg",
+          url: "https://hermes.example/storage/v1/object/public/research-ad-creatives/thumbs/listing%20tour%20%232.jpg",
           storagePath: "thumbs/listing tour #2.jpg",
           sourceUrl: null,
         },
         {
           kind: "image",
-          url: "https://example.supabase.co/storage/v1/object/public/research-ad-creatives/gallery/front%20elevation.jpg",
+          url: "https://hermes.example/storage/v1/object/public/research-ad-creatives/gallery/front%20elevation.jpg",
           storagePath: "gallery/front elevation.jpg",
           sourceUrl: "https://cdn.example/front.jpg",
         },
       ],
     );
   } finally {
-    restoreEnv("NEXT_PUBLIC_SUPABASE_URL", previousSupabaseUrl);
+    restoreEnv("NEXT_PUBLIC_RESEARCH_STORAGE_URL", previousStorageUrl);
   }
 });
 

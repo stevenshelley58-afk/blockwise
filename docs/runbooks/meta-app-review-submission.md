@@ -1,4 +1,10 @@
-# Meta App Review Submission Runbook
+# Meta App Review Submission Runbook (historical managed runtime)
+
+> HISTORICAL ONLY: This runbook records Meta review work against the former
+> Vercel/managed Supabase deployment. It is not the current product deployment
+> contract. For current infrastructure and cutover status, use
+> `docs/runbooks/production-readiness.md` and
+> `docs/runbooks/oss-product-migration.md`.
 
 Status date: 2026-07-16. Owner: Steven. This runbook tracks everything required
 to submit Blockwise for Meta App Review and what remains after approval.

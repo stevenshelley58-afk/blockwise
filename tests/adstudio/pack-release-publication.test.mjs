@@ -19,6 +19,9 @@ describe("portable release publication", () => {
     assert.match(source, /pack-v2/);
     assert.match(source, /copyFileSync\(join\(releaseDir, artifact\.packFile\)/);
     assert.doesNotMatch(source, /copyFileSync\(join\(templatesDir/);
+    assert.match(source, /for \(const image of doc\.inputs\?\.images/);
+    assert.doesNotMatch(source, /require exactly one required image input/);
+    assert.match(source, /safeReplacementAssets/);
     assert.match(source, /join\(REPO_ROOT, "public", "adstudio-samples", "photos", "int-bedroom\.png"\)/);
     assert.doesNotMatch(source, /join\(REPO_ROOT, "tests", "fixtures", "adstudio-v2", "public", "slots", "photo-portrait\.png"\)/);
   });

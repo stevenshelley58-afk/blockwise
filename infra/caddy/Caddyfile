@@ -5,6 +5,12 @@ hermes.blockwise.sale {
 		reverse_proxy blockwise-research-gateway:3000
 	}
 
+	# Explicitly public research media route. The Hermes media gateway only
+	# forwards /storage/v1/object/public/* and returns 404 for admin APIs.
+	handle_path /research-media/* {
+		reverse_proxy blockwise-research-media-gateway:3000
+	}
+
 	handle /scrape-listing {
 		reverse_proxy blockwise-listing-scraper:8650
 	}

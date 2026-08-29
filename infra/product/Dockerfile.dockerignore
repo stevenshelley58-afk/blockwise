@@ -1,0 +1,37 @@
+# This Dockerfile uses the repository root as its context. Keep the context to
+# files needed by the Next build and never transmit local secrets/state.
+.git
+.git/**
+.env*
+.secrets
+.secrets/**
+node_modules
+node_modules/**
+.next
+.next/**
+.cache
+.cache/**
+.codex
+.codex/**
+.claude
+.claude/**
+.agents
+.agents/**
+artifacts
+artifacts/**
+docs
+docs/**
+tests
+tests/**
+e2e
+e2e/**
+hermes
+hermes/**
+frank
+frank/**
+worker
+worker/**
+scripts
+scripts/**
+tmp
+tmp/**
