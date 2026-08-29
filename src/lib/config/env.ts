@@ -6,9 +6,6 @@ export const REQUIRED_ENV_KEYS = [
   "NEXT_PUBLIC_SUPABASE_ANON_KEY",
   "SUPABASE_SERVICE_ROLE_KEY",
   "TOKEN_ENCRYPTION_KEY",
-  "OPENAI_API_KEY",
-  "META_APP_ID",
-  "META_APP_SECRET",
 ] as const;
 
 // Provider integrations have their own readiness gates so the top-level
@@ -16,6 +13,8 @@ export const REQUIRED_ENV_KEYS = [
 // Ads) has not been wired up yet. This is also what Meta App Review expects
 // to see on /api/health.
 export const PROVIDER_ENV_KEYS = {
+  ai: ["OPENAI_API_KEY"],
+  meta: ["META_APP_ID", "META_APP_SECRET"],
   google: ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "GOOGLE_ADS_DEVELOPER_TOKEN"],
 } as const;
 
