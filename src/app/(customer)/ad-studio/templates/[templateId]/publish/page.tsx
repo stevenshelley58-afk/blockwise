@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 
 import { PublishFlow } from "./publish-flow";
+import { normalizeSavedPublishAudienceLocations } from "./publish-controls";
 import { getOrCreateCustomerAd } from "@/lib/adstudio/create-customer-ad";
 import { getTemplate } from "@/lib/adstudio/pack-gallery";
 import { loadPublishState, PublishError, readTemplatePublishRequirements, validatePublishState } from "@/lib/adstudio/publish-adapter";
@@ -33,6 +34,16 @@ export default async function PublishPage({
   if (!pack) notFound();
 
   const { adId } = await getOrCreateCustomerAd(supabase, access.workspaceId, pack);
+  const { data: campaignMarkets, error: campaignMarketsError } = await supabase
+    .from("adstudio_campaigns")
+    .select("market_json")
+    .eq("workspace_id", access.workspaceId)
+    .order("updated_at", { ascending: false })
+    .limit(50);
+  if (campaignMarketsError) throw new Error(`Failed to load saved campaign locations: ${campaignMarketsError.message}`);
+  const audienceLocations = normalizeSavedPublishAudienceLocations(
+    (campaignMarkets ?? []).map(row => (row as { market_json?: unknown }).market_json),
+  );
 
   // Frozen publish state — the LAST SAVED revision. not_saved means the user
   // must Save in the editor before publishing; render a clear gate.
@@ -97,6 +108,7 @@ export default async function PublishPage({
           initialState={state}
           initialIssues={issues}
           providerWritesEnabled={providerWrites}
+          audienceLocations={audienceLocations}
         />
       </div>
     </div>

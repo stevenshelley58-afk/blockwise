@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 
 import {
   buildExplicitMetaPublishControls,
+  normalizeSavedPublishAudienceLocations,
   type ExplicitPublishControlsDraft,
 } from "../../src/app/(customer)/ad-studio/templates/[templateId]/publish/publish-controls.ts";
 
@@ -100,5 +101,24 @@ describe("explicit Meta publish setup", () => {
     assert.match(source, /Thank-you button destination/);
     assert.match(source, /I confirm this daily budget, audience, placement and schedule setup is correct/);
     assert.match(source, /activationConfirmed/);
+  });
+
+  it("loads workspace-scoped saved campaign locations into the publish UI", () => {
+    assert.deepEqual(normalizeSavedPublishAudienceLocations([
+      { targetSuburbs: [{ key: "101", name: "Subiaco", region: "WA" }] },
+      { targetSuburbs: [{ key: "101", name: "Duplicate", region: "WA" }, { key: "102", name: "Cottesloe" }] },
+    ]), [
+      { key: "101", name: "Subiaco", region: "WA" },
+      { key: "102", name: "Cottesloe", region: null },
+    ]);
+
+    const page = readFileSync("src/app/(customer)/ad-studio/templates/[templateId]/publish/page.tsx", "utf8");
+    const flow = readFileSync("src/app/(customer)/ad-studio/templates/[templateId]/publish/publish-flow.tsx", "utf8");
+    assert.match(page, /\.from\("adstudio_campaigns"\)/);
+    assert.match(page, /\.eq\("workspace_id", access\.workspaceId\)/);
+    assert.match(page, /audienceLocations=\{audienceLocations\}/);
+    assert.match(flow, /availableLocations: audienceLocations/);
+    assert.doesNotMatch(flow, /availableLocations:\s*\[\]/);
+    assert.doesNotMatch(flow, /audienceLocations=\{\[\]\}/);
   });
 });
