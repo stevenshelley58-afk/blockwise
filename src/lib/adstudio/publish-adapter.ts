@@ -10,7 +10,7 @@ import {
   type MetaPublishPlan,
   type MetaReconciledObjectStatus,
 } from "../providers/meta-execution.ts";
-import { validateMetaOfferFulfilment } from "../providers/meta-execution.ts";
+import { hasExplicitMetaPublishAudience, validateMetaOfferFulfilment } from "../providers/meta-execution.ts";
 import { buildMetaPlanMutation, type BuiltMetaPlanMutation } from "../providers/meta-mutations.ts";
 import { executeMetaMutationById } from "../providers/meta-mutation-worker.ts";
 import type { createSupabaseServiceClient } from "../supabase/service.ts";
@@ -189,6 +189,7 @@ export function validatePublishState(
 ): string[] {
   const issues: string[] = [];
   if (options.controls?.fulfilment) issues.push(...validateMetaOfferFulfilment(options.controls.fulfilment));
+  issues.push(...validatePausedPublishControls(options.controls));
   const requirements = readTemplatePublishRequirements(state.pack);
   const mode = options.controls?.destinationMode ?? requirements.destinationMode;
   const destinationUrl = options.controls?.destinationUrl?.trim();
@@ -198,8 +199,10 @@ export function validatePublishState(
   if (!state.ad.metaPrimaryText) issues.push("Missing primary text");
   if (!state.ad.metaHeadline) issues.push("Missing headline");
   if (!state.ad.metaCta) issues.push("Missing CTA");
-  if (mode === "website" && (!destinationUrl || !isHttpsUrl(destinationUrl))) {
-    issues.push("Missing valid HTTPS destination URL/article — add the article or website URL before publishing");
+  if (!destinationUrl || !isHttpsUrl(destinationUrl)) {
+    issues.push(mode === "website"
+      ? "Missing valid HTTPS destination URL/article — add the article or website URL before publishing"
+      : "Missing valid HTTPS destination URL — add the Instant Form thank-you website URL before publishing");
   }
   if (requirements.requiredCtaTypes.length > 0 && !requirements.requiredCtaTypes.includes(state.ad.metaCta)) {
     issues.push(`CTA must be one of: ${requirements.requiredCtaTypes.join(", ")}`);
@@ -540,25 +543,76 @@ function buildPausedTargeting(controls: MetaPublishControls): Record<string, unk
   };
 }
 
+function validatePausedPublishControls(controls: MetaPublishControls | undefined): string[] {
+  const createsNewAdSet = controls?.target?.mode === "new_campaign_new_adset"
+    || controls?.target?.mode === "existing_campaign_new_adset";
+  if (!createsNewAdSet) return [];
+
+  const issues: string[] = [];
+  if (!Number.isInteger(controls.dailyBudgetMinorUnits) || (controls.dailyBudgetMinorUnits ?? 0) <= 0) {
+    issues.push("Set an explicit positive daily budget before creating a new ad set.");
+  }
+  if (!hasExplicitMetaPublishAudience(controls)) {
+    issues.push("Select an explicit city or custom-radius audience before creating a new ad set.");
+  }
+
+  const platforms = controls.placements?.publisherPlatforms ?? [];
+  const selectedPlatforms = new Set(platforms);
+  const supportedPlatforms = platforms.every((platform) => platform === "facebook" || platform === "instagram");
+  const hasFacebookPositions = !selectedPlatforms.has("facebook")
+    || Boolean(controls.placements?.facebookPositions?.length);
+  const hasInstagramPositions = !selectedPlatforms.has("instagram")
+    || Boolean(controls.placements?.instagramPositions?.length);
+  if (platforms.length === 0 || !supportedPlatforms || !hasFacebookPositions || !hasInstagramPositions) {
+    issues.push("Select explicit Facebook or Instagram placements before creating a new ad set.");
+  }
+
+  const schedule = controls.schedule;
+  const hasExplicitScheduleIntent = Boolean(
+    schedule
+    && Object.prototype.hasOwnProperty.call(schedule, "startTime")
+    && Object.prototype.hasOwnProperty.call(schedule, "endTime")
+    && isNullableIsoDateTime(schedule.startTime)
+    && isNullableIsoDateTime(schedule.endTime),
+  );
+  if (!hasExplicitScheduleIntent) {
+    issues.push("Confirm an explicit start and end schedule intent before creating a new ad set.");
+  } else if (schedule?.startTime && schedule.endTime && Date.parse(schedule.endTime) <= Date.parse(schedule.startTime)) {
+    issues.push("The ad set end time must be after its start time.");
+  }
+
+  return issues;
+}
+
+function isNullableIsoDateTime(value: string | null | undefined): boolean {
+  return value === null || (typeof value === "string" && value.trim().length > 0 && !Number.isNaN(Date.parse(value)));
+}
+
 function normalizePausedControls(controls: MetaPublishControls, country: string): MetaPublishControls {
+  const usesExistingAdSet = controls.target?.mode === "existing_adset";
   return {
     ...(controls.target ? { target: controls.target } : {}),
     ...(controls.variantIds ? { variantIds: [...new Set(controls.variantIds)] } : {}),
-    dailyBudgetMinorUnits: controls.dailyBudgetMinorUnits && controls.dailyBudgetMinorUnits > 0
-      ? Math.round(controls.dailyBudgetMinorUnits)
-      : 2000,
+    ...(controls.newCampaign ? { newCampaign: controls.newCampaign } : {}),
+    ...(controls.parentState ? { parentState: controls.parentState } : {}),
     ...(controls.destinationUrl?.trim() ? { destinationUrl: controls.destinationUrl.trim() } : {}),
     ...(controls.destinationMode ? { destinationMode: controls.destinationMode } : {}),
-    geo: controls.geo ?? { type: "country", country },
-    schedule: {
-      startTime: controls.schedule?.startTime ?? null,
-      endTime: controls.schedule?.endTime ?? null,
-    },
-    placements: {
-      publisherPlatforms: controls.placements?.publisherPlatforms?.length ? controls.placements.publisherPlatforms : ["facebook", "instagram"],
-      facebookPositions: controls.placements?.facebookPositions ?? [],
-      instagramPositions: controls.placements?.instagramPositions ?? [],
-    },
+    ...(controls.fulfilment ? { fulfilment: controls.fulfilment } : {}),
+    ...(!usesExistingAdSet ? {
+      dailyBudgetMinorUnits: controls.dailyBudgetMinorUnits && controls.dailyBudgetMinorUnits > 0
+        ? Math.round(controls.dailyBudgetMinorUnits)
+        : 2000,
+      geo: controls.geo ?? { type: "country" as const, country },
+      schedule: {
+        startTime: controls.schedule?.startTime ?? null,
+        endTime: controls.schedule?.endTime ?? null,
+      },
+      placements: {
+        publisherPlatforms: controls.placements?.publisherPlatforms?.length ? controls.placements.publisherPlatforms : ["facebook", "instagram"],
+        facebookPositions: controls.placements?.facebookPositions ?? [],
+        instagramPositions: controls.placements?.instagramPositions ?? [],
+      },
+    } : {}),
   };
 }
 
