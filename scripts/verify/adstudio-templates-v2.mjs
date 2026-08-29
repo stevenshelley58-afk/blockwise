@@ -28,20 +28,22 @@
 
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { join, resolve, sep } from "node:path";
 
 import { fidelityTemplateHash, nativeSurfaceFor, runNativeSurfaceFidelity, runStressMatrix } from "../../src/lib/adstudio/v2/fidelity-stress.ts";
+import { buildRestyleSampleRenderInput } from "../../src/lib/adstudio/v2/restyle-assets.ts";
 import { hashCanonicalJson } from "../../src/lib/adstudio/v2/template-hash.ts";
 import { hasNonTrivialRestyle, normalizeCanonicalJson, templateDocV2Schema } from "../../src/lib/adstudio/v2/template-doc.ts";
 import { diversityFailures } from "./adstudio-diversity.mjs";
 
 const root = process.cwd();
-const galleryDir = resolve(process.env.ADSTUDIO_GALLERY_V2_DIR ?? join(root, "src", "lib", "adstudio", "template-gallery-v2"));
+const candidateRoot = resolve(process.env.ADSTUDIO_CANDIDATE_ROOT ?? root);
+const galleryDir = resolve(process.env.ADSTUDIO_GALLERY_V2_DIR ?? join(candidateRoot, "src", "lib", "adstudio", "template-gallery-v2"));
 const v1GalleryDir = resolve(join(root, "src", "lib", "adstudio", "template-gallery"));
-const publicDir = resolve(process.env.ADSTUDIO_PUBLIC_DIR ?? join(root, "public"));
+const publicDir = resolve(process.env.ADSTUDIO_PUBLIC_DIR ?? join(candidateRoot, "public"));
 const v2PublicDir = join(publicDir, "adstudio-templates");
 const privateAssetsDir = resolve(
-  process.env.ADSTUDIO_PRIVATE_V2 ?? join(root, "src", "lib", "adstudio", "template-assets-v2"),
+  process.env.ADSTUDIO_PRIVATE_V2 ?? join(candidateRoot, "src", "lib", "adstudio", "template-assets-v2"),
 );
 const fontManifestPath = join(publicDir, "fonts", "adstudio", "manifest.json");
 
@@ -111,10 +113,13 @@ if (existsSync(galleryDir)) {
     // Evidence binds to the semantic template document, not checkout bytes.
     // Canonical JSON keeps the binding identical across LF/CRLF checkouts while
     // still changing for every meaningful template change.
-    templateEvidenceHashes.set(doc.id, hashCanonicalJson(parsed.data));
-    doc.__textBoxes = existsSync(evidencePath)
-      ? (JSON.parse(readFileSync(evidencePath, "utf8")).textBoxes ?? {})
-      : {};
+    templateEvidenceHashes.set(doc.id, hashCanonicalJson(doc));
+    Object.defineProperty(doc, "__textBoxes", {
+      value: existsSync(evidencePath)
+        ? (JSON.parse(readFileSync(evidencePath, "utf8")).textBoxes ?? {})
+        : {},
+      enumerable: false,
+    });
     docs.push(doc);
   }
 }
@@ -234,14 +239,50 @@ function hasExactlyKeys(record, keys) {
 function sourcePathFor(doc) {
   const file = doc.provenance.sourceAd.file;
   if (!file) return null;
-  const sourceRoot = resolve(root, "meta_ad_candidates");
+  const sourceRoot = resolve(candidateRoot, "meta_ad_candidates");
   const path = resolve(sourceRoot, file);
-  return path.startsWith(`${sourceRoot}/`) && existsSync(path) ? path : null;
+  return path.startsWith(`${sourceRoot}${sep}`) && existsSync(path) ? path : null;
 }
 
 function validateSubjectInvarianceBinding(doc, evidence, templateEvidenceHash) {
   const subjectInvariance = evidence?.subjectInvariance;
   if (!subjectInvariance) return;
+  if (doc.exactness.mode === "source-free-sample-replay-v1") {
+    const sourceIsolation = subjectInvariance.adSystemLikeness?.sourcePixelIsolation;
+    const deterministicChecks = subjectInvariance.resultQuality?.deterministicChecks;
+    const fixtures = subjectInvariance.fixtureCorpus?.fixtures;
+    const auxiliaryImages = subjectInvariance.fixtureCorpus?.auxiliaryImages;
+    if (subjectInvariance.schema !== "adstudio.subject-invariance.evidence.v1"
+      || subjectInvariance.templateId !== doc.id
+      || subjectInvariance.templateIdentityHash !== fidelityTemplateHash(doc)) {
+      fail(`${doc.id}: source-free subject-invariance evidence template binding is stale`);
+    }
+    if (subjectInvariance.source?.sha256 !== doc.provenance.sourceAd.contentHash
+      || subjectInvariance.source?.usedOnlyForAssetIsolation !== true
+      || subjectInvariance.source?.excludedFromCustomerImageSimilarity !== true) {
+      fail(`${doc.id}: source-free subject-invariance evidence source binding is stale`);
+    }
+    if (subjectInvariance.fixtureCorpus?.sourceIndependent !== true
+      || !Array.isArray(fixtures) || fixtures.length < 3
+      || fixtures.some((fixture) => fixture.sourceIndependent !== true)
+      || !Array.isArray(auxiliaryImages)
+      || auxiliaryImages.some((asset) => asset.sourceIndependent !== true)) {
+      fail(`${doc.id}: source-free subject-invariance fixture corpus is not source-independent`);
+    }
+    if (sourceIsolation?.passed !== true
+      || sourceIsolation?.fullyMeasured !== true
+      || !Array.isArray(sourceIsolation.failures) || sourceIsolation.failures.length > 0
+      || !Array.isArray(sourceIsolation.unmeasured) || sourceIsolation.unmeasured.length > 0) {
+      fail(`${doc.id}: source-free subject-invariance evidence reports static source leakage`);
+    }
+    if (subjectInvariance.adSystemLikeness?.substitutionTransfer?.passed !== true
+      || deterministicChecks?.allRendersDeterministic !== true
+      || deterministicChecks?.dimensionsPassed !== true
+      || subjectInvariance.gate?.passed !== true) {
+      fail(`${doc.id}: source-free subject-invariance deterministic gate did not pass`);
+    }
+    return;
+  }
   const binding = subjectInvariance.binding;
   if (!binding) {
     fail(`${doc.id}: subject-invariance evidence lacks a deterministic binding`);
@@ -369,17 +410,25 @@ for (const doc of docs) {
     if (editable.length === 0) fail(`${doc.id}: ready requires at least one customer-visible editable text field`);
 
     const evidence = readEvidence(doc.id);
+    const sourceFreeReplay = doc.exactness.mode === "source-free-sample-replay-v1";
+    if (sourceFreeReplay && Object.hasOwn(evidence ?? {}, "sourceValues")) {
+      fail(`${doc.id}: source-free ready evidence must not retain private sourceValues`);
+    }
+    if (sourceFreeReplay && !hasExactlyKeys(evidence?.sampleValues, editable.map((input) => input.key))) {
+      fail(`${doc.id}: source-free ready evidence must record every public sample value exactly once`);
+    }
     for (const input of editable) {
-      if (typeof evidence?.sourceValues?.[input.key] !== "string" || evidence.sourceValues[input.key].trim().length === 0) {
+      if (!sourceFreeReplay && (typeof evidence?.sourceValues?.[input.key] !== "string" || evidence.sourceValues[input.key].trim().length === 0)) {
         fail(`${doc.id}: editable text ${input.key} lacks a non-blank sourceValues record`);
       }
       if (typeof input.sample !== "string" || input.sample.trim().length === 0) {
         fail(`${doc.id}: editable text ${input.key} has blank public sample copy`);
-      } else if (input.sample.trim() === evidence?.sourceValues?.[input.key]?.trim()) {
+      } else if (sourceFreeReplay && evidence?.sampleValues?.[input.key] !== input.sample) {
+        fail(`${doc.id}: editable text ${input.key} public sample evidence is stale`);
+      } else if (!sourceFreeReplay && input.sample.trim() === evidence?.sourceValues?.[input.key]?.trim()) {
         fail(`${doc.id}: editable text ${input.key} public sample copy still equals private source text`);
       }
     }
-    const sourceFreeReplay = doc.exactness.mode === "source-free-sample-replay-v1";
     const curation = evidence?.sourceCuration;
     if (!sourceFreeReplay && (!curation?.accepted
       || !OPERATOR_USER_ID.test(curation.reviewerUserId ?? "")
@@ -898,28 +947,34 @@ if (!process.env.ADSTUDIO_V2_GATE_FAST && docs.some((doc) => doc.exactness.statu
         fail(`${doc.id}: native fidelity replay failed: ${error?.message ?? error}`);
       }
     }
-    const values = {
-      images: {},
-      text: Object.fromEntries(doc.inputs.text.map((input) => [input.key, input.sample])),
-    };
+    const sampleText = Object.fromEntries(doc.inputs.text.map((input) => [input.key, input.sample]));
     for (const [key, layout] of [["feed", doc.formats.feed], ["story", doc.formats.story]]) {
       if (!layout) continue;
       try {
-        const png = await renderAdDocToPng(doc, {
-          schema: "adstudio.instance.v2",
-          templateId: doc.id,
-          templateHash: "0".repeat(64),
-          format: layout.format,
-          values,
-          overrides: [],
-        }, layout.format);
+        const renderInput = sourceFreeReplay
+          ? buildRestyleSampleRenderInput({ doc, format: layout.format, text: sampleText, repoRoot: candidateRoot })
+          : {
+              instance: {
+                schema: "adstudio.instance.v2",
+                templateId: doc.id,
+                templateHash: "0".repeat(64),
+                format: layout.format,
+                values: { images: {}, text: sampleText },
+                overrides: [],
+              },
+              slotBytes: undefined,
+            };
+        const png = await renderAdDocToPng(doc, renderInput.instance, layout.format, {
+          repoRoot: candidateRoot,
+          slotBytes: renderInput.slotBytes,
+        });
         if (!png || png.length < 1000) fail(`${doc.id}: ${key} smoke render produced no image`);
       } catch (error) {
         fail(`${doc.id}: ${key} smoke render threw: ${error?.message ?? error}`);
       }
     }
     try {
-      const replay = await runStressMatrix(doc);
+      const replay = await runStressMatrix(doc, { renderOptions: { repoRoot: candidateRoot } });
       if (!stressEvidence || replay.hash !== stressEvidence.matrixHash || !canonicalEqual(replay.entries, stressEvidence.entries)) {
         fail(`${doc.id}: stress matrix replay does not match recorded evidence`);
       }

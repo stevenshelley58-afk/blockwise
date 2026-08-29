@@ -9,6 +9,8 @@ import { initialPortfolioSpecs, validateInitialPortfolioContract } from "../../s
 import { runStressMatrix } from "../../src/lib/adstudio/v2/fidelity-stress.ts";
 import { buildRestyleSampleRenderInput } from "../../src/lib/adstudio/v2/restyle-assets.ts";
 import { renderAdDocToPng } from "../../src/lib/adstudio/v2/render/server.ts";
+import { hashCanonicalJson } from "../../src/lib/adstudio/v2/template-hash.ts";
+import { templateDocV2Schema } from "../../src/lib/adstudio/v2/template-doc.ts";
 
 const ROOT = resolve(import.meta.dirname, "..", "..");
 const RUNNER = join(ROOT, "scripts", "adstudio", "v2", "initial-portfolio-runner.mjs");
@@ -121,6 +123,12 @@ test("ID 006 survives all ten long-copy and replacement-image stress renders", a
       "meta-feed-006",
       "template.json",
     ), "utf8"));
+    const parsedDoc = templateDocV2Schema.parse(doc);
+    assert.equal(hashCanonicalJson(parsedDoc), hashCanonicalJson(doc), "schema projection must preserve the complete generated document");
+    assert.equal(parsedDoc.inputs.images[0].kind, "image");
+    assert.equal(parsedDoc.inputs.images[0].sample, "SOURCE-FREE FIXTURE SLOT");
+    assert.equal(parsedDoc.publish.requirements, null);
+    assert.ok(parsedDoc.formats.feed.layers.some((layer) => layer.type === "icon" && layer.colourRole === "accent"));
     const legacySingleLineDoc = structuredClone(doc);
     for (const placement of ["feed", "story"]) {
       for (const layer of legacySingleLineDoc.formats[placement].layers) {
