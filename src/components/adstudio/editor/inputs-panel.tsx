@@ -25,6 +25,8 @@ export interface InputsPanelProps {
   textValues: Record<string, string>;
   /** dataUrl per input key (null = not picked yet). */
   imageValues: Record<string, string | null>;
+  /** Template-provided imagery displayed until the customer replaces it. */
+  defaultImageValues: Record<string, string>;
   onTextChange: (key: string, value: string) => void;
   onImageChange: (key: string, change: { file: File; previewUrl: string } | null) => void;
   /** Opens the crop dialog for the input's slot in the ACTIVE placement. */
@@ -37,13 +39,14 @@ export function InputsPanel({
   imageInputs,
   textValues,
   imageValues,
+  defaultImageValues,
   onTextChange,
   onImageChange,
   onCropClick,
 }: InputsPanelProps) {
   const requiredImageInputs = imageInputs.filter(input => input.required !== false);
   const optionalImageInputs = imageInputs.filter(input => input.required === false);
-  const missingRequiredImages = requiredImageInputs.filter(input => !imageValues[input.key]);
+  const missingRequiredImages = requiredImageInputs.filter(input => !imageValues[input.key] && !defaultImageValues[input.key]);
 
   return (
     <aside aria-label="Content" className={cn("w-full shrink-0 overflow-y-auto bg-card p-4 xl:w-auto", className)}>
@@ -100,6 +103,7 @@ export function InputsPanel({
               <ImageSlotControl
                 key={input.key}
                 input={input}
+                defaultUrl={defaultImageValues[input.key] ?? null}
                 dataUrl={imageValues[input.key] ?? null}
                 onImageChange={onImageChange}
                 onCropClick={() => onCropClick(input.key)}
@@ -115,6 +119,7 @@ export function InputsPanel({
                     <ImageSlotControl
                       key={input.key}
                       input={input}
+                      defaultUrl={defaultImageValues[input.key] ?? null}
                       dataUrl={imageValues[input.key] ?? null}
                       onImageChange={onImageChange}
                       onCropClick={() => onCropClick(input.key)}
@@ -141,16 +146,19 @@ export function InputsPanel({
 function ImageSlotControl({
   input,
   dataUrl,
+  defaultUrl,
   onImageChange,
   onCropClick,
 }: {
   input: ImageInput;
   dataUrl: string | null;
+  defaultUrl: string | null;
   onImageChange: (key: string, change: { file: File; previewUrl: string } | null) => void;
   onCropClick: () => void;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const accept = input.acceptedTypes.length > 0 ? input.acceptedTypes.join(",") : "image/*";
+  const displayUrl = dataUrl ?? defaultUrl;
 
   const handleFile = (file: File | undefined) => {
     if (!file) return;
@@ -181,15 +189,16 @@ function ImageSlotControl({
           e.target.value = ""; // allow re-picking the same file
         }}
       />
-      {dataUrl ? (
+      {displayUrl ? (
         <div className="flex items-center gap-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={dataUrl}
-            alt={`${input.label} preview`}
-            className="h-16 w-16 shrink-0 rounded-(--r-card) border border-border object-cover"
+            src={displayUrl}
+            alt={dataUrl ? `${input.label} preview` : `${input.label} template image`}
+            className="h-20 w-20 shrink-0 rounded-(--r-card) border border-border object-cover"
           />
           <div className="flex min-w-0 flex-wrap gap-2">
+            {!dataUrl && <span className="w-full text-xs text-muted-foreground">Template image</span>}
             <Button
               type="button"
               variant="outline"
@@ -202,18 +211,19 @@ function ImageSlotControl({
               type="button"
               variant="outline"
               onClick={onCropClick}
+              disabled={!dataUrl}
               className="min-h-11"
             >
               Crop…
             </Button>
-            <Button
+            {dataUrl && <Button
               type="button"
               variant="ghost"
               onClick={() => onImageChange(input.key, null)}
               className="min-h-11 text-muted-foreground hover:text-destructive"
             >
-              Remove
-            </Button>
+              {defaultUrl ? "Use template image" : "Remove"}
+            </Button>}
           </div>
         </div>
       ) : (
@@ -221,7 +231,7 @@ function ImageSlotControl({
           type="button"
           variant="outline"
           onClick={() => fileRef.current?.click()}
-          className="min-h-11 w-full border-dashed text-muted-foreground hover:text-primary"
+          className="min-h-11 w-full rounded-(--r-ctl) border-dashed text-muted-foreground hover:text-primary"
         >
           Choose image…
         </Button>

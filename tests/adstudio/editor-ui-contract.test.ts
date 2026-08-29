@@ -61,4 +61,26 @@ describe("customer Ad Studio workbench contract", () => {
     assert.doesNotMatch(colours, /<Label[\s\S]*<Switch/);
     assert.doesNotMatch(shell, /Safe deterministic draft|AI draft/);
   });
+
+  it("shows template defaults, recovers stale saves, and keeps publishing choices explicit", () => {
+    const shell = readFileSync("src/components/adstudio/editor/editor-shell.tsx", "utf8");
+    const state = readFileSync("src/components/adstudio/editor/use-editor-state.ts", "utf8");
+    const inputs = readFileSync("src/components/adstudio/editor/inputs-panel.tsx", "utf8");
+    const publish = readFileSync("src/app/(customer)/ad-studio/templates/[templateId]/publish/publish-flow.tsx", "utf8");
+    const instantForm = readFileSync("src/components/adstudio/instant-form-editor.tsx", "utf8");
+
+    assert.match(shell, /previewTextValues/);
+    assert.match(shell, /defaultImageValues/);
+    assert.match(shell, /Reload latest/);
+    assert.match(state, /trimmed !== \(placeholders\.get\(key\)/);
+    assert.match(inputs, /Template image/);
+    assert.match(inputs, /Use template image/);
+    assert.match(publish, /variantIds: selectedVariants/);
+    assert.match(publish, /selectedVariants\.length \* selectedAdSetCount/);
+    assert.match(publish, /This ad includes an offer, guide or result promise/);
+    assert.match(publish, /offerEnabled \? \{ fulfilment \} : \{\}/);
+    assert.match(instantForm, /aria-label=\{label\}/);
+    assert.match(instantForm, /min-h-11/);
+    assert.doesNotMatch(instantForm, /--r-control/);
+  });
 });

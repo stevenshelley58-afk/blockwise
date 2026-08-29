@@ -57,7 +57,7 @@ export default async function PublishPage({
     : [];
   const providerWrites = providerWritesEnabled();
   const metadata = (pack as unknown as { metadata?: { title?: string } }).metadata;
-  const packName = metadata?.title?.trim() || pack.metadata.title || pack.templateId;
+  const templateName = metadata?.title?.trim() || pack.metadata.title || pack.templateId;
 
   return (
     <div className="flex min-h-[calc(100dvh-54px)] flex-col bg-background text-foreground md:min-h-[calc(100dvh-60px)]">
@@ -78,11 +78,11 @@ export default async function PublishPage({
           Back to editor
         </Link>
         <span className="ml-4 truncate text-sm font-medium">
-          Publish — {packName}
+          Publish — {templateName}
         </span>
         {!providerWrites && (
           <span className="ml-auto rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700">
-            Dry run · nothing will be created
+            Preview only · nothing will be created
           </span>
         )}
       </header>
@@ -91,7 +91,7 @@ export default async function PublishPage({
           adId={adId}
           workspaceId={access.workspaceId}
           templateId={templateId}
-          packName={packName}
+          templateName={templateName}
           publishRequirements={publishRequirements}
           notSaved={notSaved}
           initialState={state}

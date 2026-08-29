@@ -22,7 +22,7 @@ export interface PublishFlowProps {
   adId: string;
   workspaceId: string;
   templateId: string;
-  packName: string;
+  templateName: string;
   publishRequirements: PublishRequirements;
   /** True when the ad has no saved revision yet. */
   notSaved: boolean;
@@ -93,7 +93,7 @@ export function PublishFlow({
   adId,
   workspaceId,
   templateId,
-  packName,
+  templateName,
   publishRequirements,
   notSaved,
   initialState,
@@ -110,6 +110,8 @@ export function PublishFlow({
   const [targetMode, setTargetMode] = useState<"new_campaign_new_adset" | "existing_campaign_new_adset" | "existing_adset">("new_campaign_new_adset");
   const [campaignId, setCampaignId] = useState("");
   const [adSetIds, setAdSetIds] = useState("");
+  const [selectedVariants, setSelectedVariants] = useState<Array<"feed" | "story">>(["feed", "story"]);
+  const [offerEnabled, setOfferEnabled] = useState(false);
   const [fulfilment, setFulfilment] = useState<FulfilmentDraft>(emptyFulfilment);
   // BW-Q — activation is a SEPARATE explicit action after the PAUSED publish
   // receipt; it is never automatic.
@@ -132,13 +134,14 @@ export function PublishFlow({
           body: JSON.stringify({
             controls: {
               destinationMode: publishRequirements.destinationMode,
+              variantIds: selectedVariants,
               target: targetMode === "new_campaign_new_adset"
                 ? { mode: targetMode }
                 : targetMode === "existing_campaign_new_adset"
                   ? { mode: targetMode, campaignId: campaignId.trim() }
                   : { mode: targetMode, campaignId: campaignId.trim(), adSetIds: adSetIds.split(",").map((id) => id.trim()).filter(Boolean) },
               ...(destinationUrl.trim() ? { destinationUrl: destinationUrl.trim() } : {}),
-              fulfilment,
+              ...(offerEnabled ? { fulfilment } : {}),
             },
           }),
         },
@@ -150,7 +153,7 @@ export function PublishFlow({
     } finally {
       setSubmitting(false);
     }
-  }, [adId, adSetIds, campaignId, destinationUrl, fulfilment, publishRequirements.destinationMode, targetMode, workspaceId]);
+  }, [adId, adSetIds, campaignId, destinationUrl, fulfilment, offerEnabled, publishRequirements.destinationMode, selectedVariants, targetMode, workspaceId]);
 
   // BW-Q — a SECOND explicit click. Only ever offered after a publish receipt
   // that created PAUSED objects on Meta (mode "publish"), and it targets that
@@ -185,8 +188,7 @@ export function PublishFlow({
         <div className="max-w-md rounded-(--r-card) border border-amber-200 bg-amber-50 p-6 text-center">
           <h2 className="mb-2 text-base font-semibold text-amber-900">Nothing to publish yet</h2>
           <p className="text-sm text-amber-800">
-            This ad has no saved revision. Save it in the editor first — publishing always freezes the
-            last saved revision.
+            Save this ad in the editor before you choose where it should be created.
           </p>
           <a
             href={`/ad-studio/templates/${encodeURIComponent(templateId)}`}
@@ -203,8 +205,12 @@ export function PublishFlow({
   const requiresForm = publishRequirements.destinationMode === "instant_form";
   const formReady = !requiresForm || Boolean(initialState?.form) || formPinned;
   const destinationReady = publishRequirements.destinationMode !== "website" || validHttpsUrl(destinationUrl);
-  const fulfilmentReady = Object.entries(fulfilment).every(([key, value]) => key === "fulfilmentAsset" || key === "fulfilmentUrl" ? true : Boolean(value.trim())) && Boolean(fulfilment.fulfilmentAsset.trim() || fulfilment.fulfilmentUrl.trim());
-  const ready = issues.length === 0 && formReady && destinationReady && fulfilmentReady;
+  const parsedAdSetIds = adSetIds.split(",").map(id => id.trim()).filter(Boolean);
+  const selectedAdSetCount = targetMode === "existing_adset" ? parsedAdSetIds.length : 1;
+  const targetReady = targetMode === "new_campaign_new_adset" || (Boolean(campaignId.trim()) && (targetMode !== "existing_adset" || selectedAdSetCount > 0));
+  const fulfilmentReady = !offerEnabled || (Object.entries(fulfilment).every(([key, value]) => key === "fulfilmentAsset" || key === "fulfilmentUrl" ? true : Boolean(value.trim())) && Boolean(fulfilment.fulfilmentAsset.trim() || validHttpsUrl(fulfilment.fulfilmentUrl)));
+  const plannedAds = selectedVariants.length * selectedAdSetCount;
+  const ready = issues.length === 0 && formReady && destinationReady && fulfilmentReady && targetReady && plannedAds > 0;
 
   return (
     <div className="flex h-full flex-col bg-(--canvas)">
@@ -221,19 +227,15 @@ export function PublishFlow({
           </div>
         )}
 
-        {/* Frozen revision */}
+        {/* Saved creative */}
         <div className="mb-6 rounded-(--r-card) border border-(--line) bg-(--surface) p-4">
-          <h3 className="mb-2 text-sm font-semibold">Frozen revision (last saved)</h3>
+          <h3 className="mb-2 text-sm font-semibold">Saved creative</h3>
           {initialState ? (
              <div className="space-y-1 text-xs text-muted-foreground">
-              <p>
-                Revision <span className="font-medium text-foreground">#{initialState.revision.revisionNumber}</span>
-              </p>
                <div className="grid gap-4 sm:grid-cols-2">
-                 <div><p className="mb-2">Feed creative</p><img src={`/api/adstudio/media?path=${encodeURIComponent(initialState.revision.feedPngPath)}`} alt="Frozen Feed ad creative" className="w-full rounded-md border border-border" /></div>
-                 <div><p className="mb-2">Story creative</p><img src={`/api/adstudio/media?path=${encodeURIComponent(initialState.revision.storyPngPath)}`} alt="Frozen Story ad creative" className="w-full rounded-md border border-border" /></div>
+                 <div><p className="mb-2">Feed</p><img src={`/api/adstudio/media?path=${encodeURIComponent(initialState.revision.feedPngPath)}`} alt="Saved Feed ad" className="w-full rounded-(--r-card) border border-border" /></div>
+                 <div><p className="mb-2">Story</p><img src={`/api/adstudio/media?path=${encodeURIComponent(initialState.revision.storyPngPath)}`} alt="Saved Story ad" className="w-full rounded-(--r-card) border border-border" /></div>
                </div>
-              <p>Pack: {packName}</p>
             </div>
           ) : (
             <p className="text-xs text-muted-foreground">No saved revision loaded.</p>
@@ -256,10 +258,35 @@ export function PublishFlow({
         </div>
 
         <div className="mb-6 space-y-3 rounded-(--r-card) border border-(--line) bg-(--surface) p-4">
+          <div>
+            <h3 className="text-sm font-semibold">Creative variants</h3>
+            <p className="mt-1 text-xs text-muted-foreground">Choose the saved formats to create. These are the two variants available for this template.</p>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {(["feed", "story"] as const).map(variant => (
+              <label key={variant} className="flex min-h-11 items-center gap-3 rounded-(--r-ctl) border border-border bg-muted/20 px-3 py-2 text-sm font-medium">
+                <input
+                  type="checkbox"
+                  checked={selectedVariants.includes(variant)}
+                  onChange={event => setSelectedVariants(current => event.target.checked ? [...current, variant] : current.filter(value => value !== variant))}
+                  className="size-4 accent-primary"
+                />
+                {variant === "feed" ? "Feed (4:5)" : "Story (9:16)"}
+              </label>
+            ))}
+          </div>
+          <p className="rounded-(--r-ctl) bg-muted px-3 py-2 text-sm font-semibold" role="status" aria-live="polite">
+            {selectedVariants.length} selected {selectedVariants.length === 1 ? "variant" : "variants"} × {selectedAdSetCount} {selectedAdSetCount === 1 ? "ad set" : "ad sets"} = {plannedAds} paused {plannedAds === 1 ? "ad" : "ads"}
+          </p>
+          {selectedVariants.length === 0 ? <p className="text-xs text-amber-700">Choose at least one creative variant.</p> : null}
+        </div>
+
+        <div className="mb-6 space-y-3 rounded-(--r-card) border border-(--line) bg-(--surface) p-4">
           <h3 className="text-sm font-semibold">Meta destination</h3>
           <p className="text-xs text-muted-foreground">Choose where the paused objects belong. Existing campaigns and ad sets are never edited.</p>
+          <Label htmlFor="meta-target-mode">Campaign and ad set</Label>
           <select
-            aria-label="Meta campaign and ad set target"
+            id="meta-target-mode"
             value={targetMode}
             onChange={(event) => setTargetMode(event.target.value as typeof targetMode)}
             className="min-h-11 w-full rounded-md border border-border bg-muted/30 px-3 text-sm"
@@ -269,11 +296,18 @@ export function PublishFlow({
             <option value="existing_adset">Existing campaign and one or more existing ad sets</option>
           </select>
           {targetMode !== "new_campaign_new_adset" ? (
-            <Input aria-label="Existing Meta campaign ID" value={campaignId} onChange={(event) => setCampaignId(event.target.value)} placeholder="Existing campaign ID" className="min-h-11 w-full bg-muted/30" />
+            <div>
+              <Label htmlFor="meta-campaign-id">Existing campaign ID</Label>
+              <Input id="meta-campaign-id" value={campaignId} onChange={(event) => setCampaignId(event.target.value)} placeholder="Existing campaign ID" className="mt-1 min-h-11 w-full bg-muted/30" />
+            </div>
           ) : null}
           {targetMode === "existing_adset" ? (
-            <Input aria-label="Existing Meta ad set IDs" value={adSetIds} onChange={(event) => setAdSetIds(event.target.value)} placeholder="Existing ad set IDs, comma separated" className="min-h-11 w-full bg-muted/30" />
+            <div>
+              <Label htmlFor="meta-ad-set-ids">Existing ad set IDs</Label>
+              <Input id="meta-ad-set-ids" value={adSetIds} onChange={(event) => setAdSetIds(event.target.value)} placeholder="Separate multiple IDs with commas" className="mt-1 min-h-11 w-full bg-muted/30" />
+            </div>
           ) : null}
+          {!targetReady ? <p className="text-xs text-amber-700">Add the existing campaign and ad set details to continue.</p> : null}
         </div>
 
         {requiresForm ? (
@@ -301,9 +335,12 @@ export function PublishFlow({
         )}
 
         <div className="mb-6 space-y-3 rounded-(--r-card) border border-(--line) bg-(--surface) p-4">
-          <h3 className="text-sm font-semibold">Offer and fulfilment</h3>
-          <p className="text-xs text-muted-foreground">Complete what is promised, who qualifies, the evidence and consent, and exactly how the lead receives it. Publication is blocked until this is complete.</p>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <label className="flex min-h-11 items-center gap-3 text-sm font-semibold">
+            <input type="checkbox" checked={offerEnabled} onChange={event => setOfferEnabled(event.target.checked)} className="size-4 accent-primary" />
+            This ad includes an offer, guide or result promise
+          </label>
+          <p className="text-xs text-muted-foreground">Turn this on only when the ad promises something the customer must receive or a claim that needs evidence.</p>
+          {offerEnabled ? <div className="grid gap-3 border-t border-border pt-4 sm:grid-cols-2">
             {([
               ["exactOffer", "Exact offer"], ["eligibility", "Eligibility"], ["conditions", "Conditions"], ["timeframe", "Timeframe"],
               ["evidence", "Evidence"], ["approval", "Evidence approval"], ["disclaimer", "Disclaimer"], ["privacyUrl", "Privacy URL"],
@@ -313,19 +350,19 @@ export function PublishFlow({
             ))}
             <div><Label htmlFor="fulfilment-asset">Fulfilment asset</Label><Input id="fulfilment-asset" value={fulfilment.fulfilmentAsset} onChange={(event) => setFulfilment((current) => ({ ...current, fulfilmentAsset: event.target.value }))} placeholder="Asset name or delivery file" className="mt-1 min-h-11 bg-muted/30" /></div>
             <div><Label htmlFor="fulfilment-url">Fulfilment URL</Label><Input id="fulfilment-url" type="url" value={fulfilment.fulfilmentUrl} onChange={(event) => setFulfilment((current) => ({ ...current, fulfilmentUrl: event.target.value }))} placeholder="https://..." className="mt-1 min-h-11 bg-muted/30" /></div>
-          </div>
-          {!fulfilmentReady ? <p className="text-xs text-amber-700">All offer fields are required, plus a fulfilment asset or HTTPS URL.</p> : null}
+          </div> : null}
+          {offerEnabled && !fulfilmentReady ? <p className="text-xs text-amber-700">Complete every promise field and add a delivery asset or valid HTTPS URL.</p> : null}
         </div>
 
         {/* Provider mode */}
-        <div className="rounded-(--r-card) border border-(--line) bg-(--surface) p-4">
-          <h3 className="text-sm font-semibold">Publish mode</h3>
+        <details className="rounded-(--r-card) border border-(--line) bg-(--surface) p-4">
+          <summary className="flex min-h-11 cursor-pointer items-center text-sm font-semibold">What happens next</summary>
           <p className="mt-1 text-xs text-muted-foreground">
             {providerWritesEnabled
               ? "Your ad will be created in a paused state for your final review."
-              : "Dry run mode is on — nothing will be created. You can still review the complete publish plan."}
+              : "Preview only is on — nothing will be created. You can still review the complete plan."}
           </p>
-        </div>
+        </details>
 
         {/* Receipt */}
         {receipt && <ReceiptCard receipt={receipt} />}
@@ -349,10 +386,14 @@ export function PublishFlow({
           <p className="text-sm text-red-600">{receipt.error}</p>
         ) : !formReady && issues.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            Generate and pin the Instant Form above to enable Freeze &amp; Create PAUSED.
+            Save the Instant Form above to continue.
           </p>
         ) : !destinationReady && issues.length === 0 ? (
           <p className="text-sm text-muted-foreground">Add the real HTTPS article or website URL to continue.</p>
+        ) : !targetReady && issues.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Complete the campaign and ad set destination to continue.</p>
+        ) : !fulfilmentReady && issues.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Complete the offer and delivery details to continue.</p>
         ) : (
           <span />
         )}
@@ -399,7 +440,7 @@ function ReceiptCard({ receipt }: { receipt: PublishReceipt }) {
   if (receipt.mode === "dry_run") {
     return (
       <div className="mt-6 rounded-(--r-card) border border-amber-200 bg-amber-50 p-4" role="status">
-        <h3 className="mb-1 text-sm font-semibold text-amber-900">Dry run — paused-disabled receipt</h3>
+        <h3 className="mb-1 text-sm font-semibold text-amber-900">Preview complete</h3>
         <p className="text-sm text-amber-800">{receipt.message}</p>
         <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-amber-800 sm:grid-cols-5">
           <ReceiptStat label="Snapshot" value={shortHash(receipt.snapshotId ?? "")} />

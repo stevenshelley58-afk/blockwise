@@ -1,5 +1,5 @@
-import { adTemplateSchema } from "../../../packages/ad-template-contract/src/schema";
-import type { AdTemplate, Layout } from "../../../packages/ad-template-contract/src/types";
+import { adTemplateSchema } from "../../../packages/ad-template-contract/src/schema.ts";
+import type { AdTemplate, Layout } from "../../../packages/ad-template-contract/src/types.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export interface TemplateSummary {
