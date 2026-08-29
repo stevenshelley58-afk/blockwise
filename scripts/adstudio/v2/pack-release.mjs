@@ -26,7 +26,7 @@
 // directory is made read-only after writing (immutable).
 
 import { createHash, createPrivateKey, createPublicKey, generateKeyPairSync, sign } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, writeFileSync, copyFileSync, chmodSync, readdirSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync, copyFileSync, chmodSync, readdirSync, realpathSync } from "node:fs";
 import { join, resolve, dirname, basename, relative, isAbsolute } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -723,7 +723,7 @@ export function resolveReleaseStoreRoot(env = process.env) {
 
 // Guard: only run the packager when invoked directly, so tests can import
 // the exported helpers without executing a release.
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (process.argv[1] && realpathSync(resolve(process.argv[1])) === realpathSync(fileURLToPath(import.meta.url))) {
   main().catch((error) => {
     console.error(error?.stack ?? error);
     process.exit(1);
