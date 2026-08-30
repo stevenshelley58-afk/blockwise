@@ -250,6 +250,19 @@ function primaryImageSource(creative: AdStudioCreative): string | undefined {
 }
 
 export function rowToBrandKit(row: Record<string, unknown>): AdStudioBrandKit {
+  const identity = asRecord(row.identity_json);
+  const logos = asRecord(row.logos_json);
+  const colours = asRecord(row.colours_json);
+  const confidence = asRecord(colours.confidence);
+  const typography = asRecord(row.typography_json);
+  const tone = asRecord(row.tone_json);
+  const visualStyle = asRecord(row.visual_style_json);
+  const contact = asRecord(row.contact_json);
+  const compliance = asRecord(row.compliance_json);
+  const businessName = nonEmptyString(identity.businessName)
+    ?? nonEmptyString(row.business_name)
+    ?? "Your Agency";
+
   return {
     brandKitId: String(row.id),
     workspaceId: String(row.workspace_id),
@@ -259,26 +272,101 @@ export function rowToBrandKit(row: Record<string, unknown>): AdStudioBrandKit {
       lastExtractedAt: String(row.updated_at ?? row.created_at ?? new Date().toISOString()),
       pagesScanned: [],
     },
-    identity: row.identity_json as AdStudioBrandKit["identity"],
-    logos: row.logos_json as AdStudioBrandKit["logos"],
-    colours: row.colours_json as AdStudioBrandKit["colours"],
-    typography: row.typography_json as AdStudioBrandKit["typography"],
-    tone: row.tone_json as AdStudioBrandKit["tone"],
-    visualStyle: row.visual_style_json as AdStudioBrandKit["visualStyle"],
+    identity: {
+      businessName,
+      tradingName: nullableString(identity.tradingName),
+      marketCountry: identity.marketCountry === "US" || row.market_country === "US" ? "US" : "AU",
+      marketRegion: nullableString(identity.marketRegion) ?? nullableString(row.market_region),
+      licenceText: nullableString(identity.licenceText),
+    },
+    logos: {
+      primaryLogoUrl: nullableString(logos.primaryLogoUrl),
+      darkLogoUrl: nullableString(logos.darkLogoUrl),
+      lightLogoUrl: nullableString(logos.lightLogoUrl),
+      faviconUrl: nullableString(logos.faviconUrl),
+    },
+    colours: {
+      primary: nonEmptyString(colours.primary) ?? "#123E75",
+      secondary: nonEmptyString(colours.secondary) ?? "#F1F5F9",
+      accent: nonEmptyString(colours.accent) ?? "#31C46F",
+      background: nonEmptyString(colours.background) ?? "#FFFFFF",
+      text: nonEmptyString(colours.text) ?? "#131B2E",
+      confidence: {
+        primary: finiteNumber(confidence.primary) ?? 0,
+        secondary: finiteNumber(confidence.secondary) ?? 0,
+      },
+    },
+    typography: {
+      headingFont: nonEmptyString(typography.headingFont) ?? "Inter",
+      bodyFont: nonEmptyString(typography.bodyFont) ?? "Inter",
+      fallbackHeading: typography.fallbackHeading === "serif" ? "serif" : "sans-serif",
+      fallbackBody: typography.fallbackBody === "serif" ? "serif" : "sans-serif",
+    },
+    tone: {
+      voice: stringValue(tone.voice),
+      avoid: asStringArray(tone.avoid),
+      preferredPhrases: asStringArray(tone.preferredPhrases),
+      sampleCopy: asStringArray(tone.sampleCopy),
+    },
+    visualStyle: {
+      styleTags: asStringArray(visualStyle.styleTags),
+      imageTreatment: stringValue(visualStyle.imageTreatment),
+      layoutDensity:
+        visualStyle.layoutDensity === "medium" || visualStyle.layoutDensity === "high"
+          ? visualStyle.layoutDensity
+          : "low",
+      cornerRadius:
+        visualStyle.cornerRadius === "none"
+        || visualStyle.cornerRadius === "small"
+        || visualStyle.cornerRadius === "large"
+          ? visualStyle.cornerRadius
+          : "medium",
+    },
     assets: {
       headshots: [],
       officeImages: [],
       listingImages: [],
       socialProofImages: [],
     },
-    contact: row.contact_json as AdStudioBrandKit["contact"],
-    compliance: row.compliance_json as AdStudioBrandKit["compliance"],
+    contact: {
+      phone: nullableString(contact.phone),
+      email: nullableString(contact.email),
+      address: nullableString(contact.address),
+      socialLinks: asStringArray(contact.socialLinks),
+    },
+    compliance: {
+      disclaimers: asStringArray(compliance.disclaimers),
+      privacyPolicyUrl: nullableString(compliance.privacyPolicyUrl),
+      termsUrl: nullableString(compliance.termsUrl),
+    },
     reviewStatus:
       row.review_status === "approved" || row.review_status === "needs_changes"
         ? row.review_status
         : "pending_user_review",
-    lockedFields: Array.isArray(row.locked_fields_json) ? (row.locked_fields_json as string[]) : [],
+    lockedFields: asStringArray(row.locked_fields_json),
   };
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+}
+
+function stringValue(value: unknown): string {
+  return typeof value === "string" ? value : "";
+}
+
+function nonEmptyString(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value : null;
+}
+
+function nullableString(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value : null;
+}
+
+function finiteNumber(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
 function asStringArray(value: unknown): string[] {
