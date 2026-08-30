@@ -1,0 +1,14 @@
+{
+  "name": "@blockwise/ad-video-renderer",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": { ".": { "import": "./dist/index.js", "types": "./dist/index.d.ts" } },
+  "bin": { "ad-video-render": "./dist/cli.js" },
+  "scripts": { "build": "tsc", "typecheck": "tsc --noEmit", "test": "node --import tsx --test src/**/*.test.ts" },
+  "dependencies": { "@napi-rs/canvas": "^1.0.3", "zod": "^3.25.76" },
+  "optionalDependencies": { "@remotion/bundler": "^4.0.274", "@remotion/renderer": "^4.0.274", "remotion": "^4.0.274" },
+  "devDependencies": { "@types/node": "^22.15.30", "tsx": "^4.19.0", "typescript": "^5.8.3" }
+}
