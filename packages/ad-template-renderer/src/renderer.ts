@@ -380,19 +380,64 @@ function renderIcon(ctx: SKRSContext2D, layer: Extract<LayoutLayer, { type: "ico
   const { x, y, width, height } = resolveGeometry(layer.geometry, dims);
   const cx = x + width / 2;
   const cy = y + height / 2;
-  const radius = Math.min(width, height) * 0.34;
+  const radius = Math.min(width, height) * 0.36;
+  const px = (fraction: number) => x + width * fraction;
+  const py = (fraction: number) => y + height * fraction;
   ctx.save();
   ctx.strokeStyle = input.colourMap[layer.colourRole] ?? "#000000";
-  ctx.lineWidth = Math.max(2, Math.min(width, height) * 0.1);
+  ctx.lineWidth = Math.max(2, Math.min(width, height) * 0.08);
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
   ctx.beginPath();
-  if (layer.icon === "arrow") {
-    ctx.moveTo(x + width * .1, cy); ctx.lineTo(x + width * .9, cy);
-    ctx.moveTo(x + width * .55, y + height * .18); ctx.lineTo(x + width * .9, cy); ctx.lineTo(x + width * .55, y + height * .82); ctx.stroke();
-  } else if (layer.icon === "check" || layer.icon === "tick") {
-    ctx.moveTo(x + width * 0.18, cy); ctx.lineTo(x + width * 0.42, y + height * 0.76); ctx.lineTo(x + width * 0.84, y + height * 0.24); ctx.stroke();
-  } else {
-    ctx.arc(cx, cy, radius, 0, Math.PI * 2); ctx.stroke();
+  switch (layer.icon) {
+    case "arrow":
+      ctx.moveTo(px(0.1), cy);
+      ctx.lineTo(px(0.9), cy);
+      ctx.moveTo(px(0.55), py(0.18));
+      ctx.lineTo(px(0.9), cy);
+      ctx.lineTo(px(0.55), py(0.82));
+      break;
+    case "check":
+      ctx.moveTo(px(0.18), cy);
+      ctx.lineTo(px(0.42), py(0.76));
+      ctx.lineTo(px(0.84), py(0.24));
+      break;
+    case "phone":
+      ctx.moveTo(px(0.28), py(0.17));
+      ctx.bezierCurveTo(px(0.18), py(0.23), px(0.18), py(0.38), px(0.3), py(0.56));
+      ctx.bezierCurveTo(px(0.43), py(0.75), px(0.66), py(0.88), px(0.8), py(0.78));
+      ctx.lineTo(px(0.68), py(0.61));
+      ctx.bezierCurveTo(px(0.61), py(0.66), px(0.54), py(0.63), px(0.46), py(0.54));
+      ctx.bezierCurveTo(px(0.38), py(0.45), px(0.35), py(0.38), px(0.4), py(0.31));
+      ctx.closePath();
+      break;
+    case "mail":
+      ctx.rect(px(0.12), py(0.22), width * 0.76, height * 0.56);
+      ctx.moveTo(px(0.13), py(0.24));
+      ctx.lineTo(cx, py(0.55));
+      ctx.lineTo(px(0.87), py(0.24));
+      break;
+    case "globe":
+      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+      ctx.moveTo(cx, cy - radius);
+      ctx.bezierCurveTo(cx - radius * 0.48, cy - radius * 0.52, cx - radius * 0.48, cy + radius * 0.52, cx, cy + radius);
+      ctx.moveTo(cx, cy - radius);
+      ctx.bezierCurveTo(cx + radius * 0.48, cy - radius * 0.52, cx + radius * 0.48, cy + radius * 0.52, cx, cy + radius);
+      ctx.moveTo(cx - radius, cy);
+      ctx.lineTo(cx + radius, cy);
+      break;
+    case "pin":
+      ctx.moveTo(cx, py(0.9));
+      ctx.bezierCurveTo(px(0.34), py(0.69), px(0.22), py(0.52), px(0.22), py(0.36));
+      ctx.bezierCurveTo(px(0.22), py(0.16), px(0.35), py(0.08), cx, py(0.08));
+      ctx.bezierCurveTo(px(0.65), py(0.08), px(0.78), py(0.16), px(0.78), py(0.36));
+      ctx.bezierCurveTo(px(0.78), py(0.52), px(0.66), py(0.69), cx, py(0.9));
+      ctx.closePath();
+      ctx.moveTo(px(0.59), py(0.36));
+      ctx.arc(cx, py(0.36), width * 0.09, 0, Math.PI * 2);
+      break;
   }
+  ctx.stroke();
   ctx.restore();
 }
 

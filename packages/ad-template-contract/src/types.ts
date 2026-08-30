@@ -1,6 +1,8 @@
 export const COLOUR_ROLES = ["background", "primary", "secondary", "accent", "mainText", "inverseText"] as const;
 export type ColourRole = (typeof COLOUR_ROLES)[number];
 export const LAYER_TYPES = ["plate", "image_slot", "overlay_patch", "text", "logo", "vector", "icon"] as const;
+export const ICON_NAMES = ["arrow", "check", "phone", "mail", "globe", "pin"] as const;
+export type IconName = (typeof ICON_NAMES)[number];
 export type LayerType = (typeof LAYER_TYPES)[number];
 export interface Rect { x: number; y: number; width: number; height: number; }
 export type SafeZone = Rect;
@@ -14,7 +16,7 @@ export interface OverlayPatchLayer { type: "overlay_patch"; layerId: string; geo
 export interface TextLayer extends TextLayerDefaults { type: "text"; layerId: string; geometry: Rect; }
 export interface LogoLayer { type: "logo"; layerId: string; geometry: Rect; inputKey: string; }
 export interface VectorLayer { type: "vector"; layerId: string; geometry: Rect; shape: "rect" | "rounded" | "circle" | "line" | "pill" | "notched" | "wave" | "ring"; colourRole: ColourRole; opacity: number; }
-export interface IconLayer { type: "icon"; layerId: string; geometry: Rect; icon: string; colourRole: ColourRole; }
+export interface IconLayer { type: "icon"; layerId: string; geometry: Rect; icon: IconName; colourRole: ColourRole; }
 export type LayoutLayer = PlateLayer | ImageSlotLayer | OverlayPatchLayer | TextLayer | LogoLayer | VectorLayer | IconLayer;
 export const PLACEMENTS = ["feed", "story"] as const;
 export type Placement = (typeof PLACEMENTS)[number];

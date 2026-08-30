@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ICON_NAMES } from "./types.ts";
 
 const colourRoleSchema = z.enum(["background", "primary", "secondary", "accent", "mainText", "inverseText"]);
 const rectSchema = z.object({ x: z.number().finite(), y: z.number().finite(), width: z.number().positive(), height: z.number().positive() }).strict();
@@ -8,10 +9,10 @@ const layerSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("plate"), layerId: z.string().min(1), colourRole: colourRoleSchema, assetKey: z.string().min(1).optional(), geometry: rectSchema, protected: z.boolean() }).strict(),
   z.object({ type: z.literal("image_slot"), layerId: z.string().min(1), inputKey: z.string().min(1), geometry: rectSchema, mask: z.enum(["rounded_rect", "circle", "none"]), minSourceWidth: z.number().int().positive(), minSourceHeight: z.number().int().positive(), defaultCrop: rectSchema, allowedPlacementOverrides: z.array(z.enum(["crop", "position"])) }).strict(),
   z.object({ type: z.literal("overlay_patch"), layerId: z.string().min(1), geometry: rectSchema, colourRole: colourRoleSchema, opacity: z.number().min(0).max(1), assetKey: z.string().min(1).optional() }).strict(),
-  z.object({ type: z.literal("text"), layerId: z.string().min(1), inputKey: z.string().min(1), font: fontSchema, fontSize: z.number().positive(), lineHeight: z.number().positive(), tracking: z.number(), alignment: z.enum(["left", "center", "right"]), maxCharacters: z.number().int().positive(), maxLines: z.number().int().positive(), colourRole: colourRoleSchema, overflowBehaviour: z.enum(["refuse", "truncate", "scale_down"]), geometry: rectSchema }).strict(),
+  z.object({ type: z.literal("text"), layerId: z.string().min(1), inputKey: z.string().min(1), font: fontSchema, fontSize: z.number().positive(), lineHeight: z.number().min(0.8).max(2.5), tracking: z.number(), alignment: z.enum(["left", "center", "right"]), maxCharacters: z.number().int().positive(), maxLines: z.number().int().positive(), colourRole: colourRoleSchema, overflowBehaviour: z.enum(["refuse", "truncate", "scale_down"]), geometry: rectSchema }).strict(),
   z.object({ type: z.literal("logo"), layerId: z.string().min(1), inputKey: z.string().min(1), geometry: rectSchema }).strict(),
   z.object({ type: z.literal("vector"), layerId: z.string().min(1), geometry: rectSchema, shape: z.enum(["rect", "rounded", "circle", "line", "pill", "notched", "wave", "ring"]), colourRole: colourRoleSchema, opacity: z.number().min(0).max(1) }).strict(),
-  z.object({ type: z.literal("icon"), layerId: z.string().min(1), geometry: rectSchema, icon: z.string().min(1), colourRole: colourRoleSchema }).strict(),
+  z.object({ type: z.literal("icon"), layerId: z.string().min(1), geometry: rectSchema, icon: z.enum(ICON_NAMES), colourRole: colourRoleSchema }).strict(),
 ]);
 
 const layoutSchema = z.object({
