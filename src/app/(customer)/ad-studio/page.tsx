@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { StudioNavigation } from "@/components/adstudio/studio-navigation";
+import { Film, Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { listTemplates } from "@/lib/adstudio/pack-gallery";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
 
@@ -21,17 +22,19 @@ export default async function AdStudioPage() {
       <header className="border-b border-border bg-card">
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-5 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h1 className="text-xl font-semibold tracking-tight">Templates</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Start a new ad, or open Library to continue one you saved.
-            </p>
+            <p className="font-mono text-[9.5px] uppercase tracking-[0.12em] text-muted-foreground">Create</p>
+            <h1 className="mt-2 font-display text-2xl font-extrabold tracking-tight sm:text-[27px]">Create an ad.</h1>
+            <p className="mt-1 max-w-[60ch] text-sm text-muted-foreground">Start from a ready-to-go creative, or make a short video from one clear brief.</p>
           </div>
-          <StudioNavigation active="templates" />
+          <div className="flex flex-wrap items-center gap-2">
+            <Button asChild className="min-h-11 rounded-full px-4"><Link href="#templates"><Plus aria-hidden className="size-4" /> Create ad</Link></Button>
+            <Button asChild variant="outline" className="min-h-11 rounded-full px-4"><Link href="/ad-studio/video/new"><Film aria-hidden className="size-4" /> Short video</Link></Button>
+          </div>
         </div>
       </header>
 
       <div className="mx-auto w-full max-w-6xl flex-1 px-4 py-7 sm:px-6">
-        <div className="mb-5 flex items-center justify-between gap-4">
+        <div id="templates" className="mb-5 flex items-center justify-between gap-4 scroll-mt-5">
           <p className="text-sm text-muted-foreground">Feed and native Story layouts are included in every template.</p>
           <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
             {templates.length === 1 ? "1 template" : `${templates.length} templates`}

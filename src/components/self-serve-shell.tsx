@@ -184,6 +184,13 @@ export function SelfServeShell({
     void syncReadModelIdentity({ userId, workspaceId });
   }, [userId, workspaceId]);
 
+  // Ad Studio owns an immersive workbench shell. Keep the authenticated
+  // customer layout and all non-Studio routes unchanged, but do not stack the
+  // generic sidebar/topbar around Studio's rail and mobile dock.
+  if (pathname.startsWith("/ad-studio")) {
+    return <>{children}</>;
+  }
+
   return (
     <SidebarProvider
       className="tw"
@@ -312,10 +319,6 @@ function SelfServeMobileNav({ account }: { account: Account }) {
     const tabSet = new Set(tabs.map((item) => item.href));
     return { tabItems: tabs, overflowItems: allItems.filter((item) => !tabSet.has(item.href)) };
   }, []);
-
-  if (pathname.startsWith("/ad-studio")) {
-    return null;
-  }
 
   return (
     <>
