@@ -3,15 +3,18 @@
 import { useCallback, useRef, useState, type KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Palette, PencilLine, RotateCcw, RotateCw, Save, Sparkles } from "lucide-react";
-import type { AdTemplate, Placement, ImageSlotLayer, LayoutLayer, Rect } from "../../../../packages/ad-template-contract/src/types";
+import type { AdTemplate, Placement, ImageSlotLayer, LayoutLayer, Rect, ColourMode, ColourRole } from "../../../../packages/ad-template-contract/src/types";
 import type { AdDocumentParsed } from "../../../../packages/ad-template-contract/src/schema";
 import { buildAdDocument, brandPackColoursToRoleMap, editorTextInputs, previewTextValues, resolveColourMap, useEditorState, type BrandPackColours, type EditorState, type MetaCopy } from "./use-editor-state";
 import { ColourToggle } from "./colour-toggle";
+import { AiCopyAssistant } from "./ai-copy-assistant";
+import type { AiCopyProposal, SelectedAiCopyPayload } from "./ai-copy-selection";
 import { CropDialog } from "./crop-dialog";
 import { InputsPanel } from "./inputs-panel";
 import { LayeredCanvas } from "./layered-canvas";
 import { MetaCopyPanel } from "./meta-copy-panel";
 import { MetaPlacementPreview, type MetaPreviewBrand } from "./meta-placement-preview";
+import { editorTargetForLayer, type EditorTarget, type MetaEditField } from "./editor-target";
 import { uploadCustomerImage } from "./customer-image-upload";
 import { cn } from "@/lib/utils";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -69,11 +72,13 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
     updateTextValue,
     applyTemplateText,
     applyTemplateMetaCopy,
-    applyCompleteCopy,
+    applySelectedCopy,
     updateImageValue,
     updateImagePreview,
     updateCrop,
     setColourMode,
+    updateColour,
+    resetColour,
     undo,
     redo,
     markSaved,
@@ -85,8 +90,9 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
   /** Which slot's crop dialog is open — always the ACTIVE placement's crop. */
   const [cropTarget, setCropTarget] = useState<{ slot: ImageSlotLayer; placement: Placement } | null>(null);
   const [proposalBrief, setProposalBrief] = useState("");
-  const [proposal, setProposal] = useState<{ onImage: Record<string, string>; copy: MetaCopy; source: string } | null>(null);
+  const [proposal, setProposal] = useState<AiCopyProposal | null>(null);
   const [proposalBusy, setProposalBusy] = useState(false);
+  const [proposalError, setProposalError] = useState<string | null>(null);
   const [pendingImageUploads, setPendingImageUploads] = useState(0);
   const [saveConflict, setSaveConflict] = useState(false);
   const [inspectorTab, setInspectorTab] = useState<InspectorTab>("content");
@@ -187,6 +193,7 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
 
   const proposeCopy = useCallback(async () => {
     setProposalBusy(true);
+    setProposalError(null);
     try {
       const response = await fetch(`/api/adstudio/ads/${encodeURIComponent(adId)}/copy-proposal?workspaceId=${encodeURIComponent(workspaceId)}`, {
         method: "POST",
@@ -196,14 +203,18 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
       const body = await response.json() as { onImage?: Record<string, string>; copy?: MetaCopy; source?: string; error?: string };
       if (!response.ok || !body.copy) throw new Error(body.error ?? "Copy proposal failed.");
       const next = { onImage: body.onImage ?? {}, copy: body.copy, source: body.source ?? "ai" };
-      applyCompleteCopy(next.onImage, next.copy);
       setProposal(next);
     } catch (error) {
-      setError(error instanceof Error ? error.message : "Copy proposal failed.");
+      setProposalError(error instanceof Error ? error.message : "Copy proposal failed.");
     } finally {
       setProposalBusy(false);
     }
-  }, [adId, workspaceId, proposalBrief, state.metaCopy, setError, applyCompleteCopy]);
+  }, [adId, workspaceId, proposalBrief, state.metaCopy]);
+
+  const applyProposal = useCallback((payload: SelectedAiCopyPayload) => {
+    applySelectedCopy(payload.onImage, payload.copy);
+    setProposalError(null);
+  }, [applySelectedCopy]);
 
   /**
    * Publish always freezes the LAST SAVED revision (server-side). If the
@@ -240,18 +251,20 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
   // Template colours always resolve; checking the toggle overlays the
   // workspace Brand Pack palette. Roles the brand kit lacks (inverseText)
   // keep the template value — never invent a palette.
-  const handleColourToggle = useCallback(
-    (useBrandPack: boolean) => {
-      if (useBrandPack) {
+  const handleColourModeChange = useCallback(
+    (mode: ColourMode) => {
+      if (mode === "brand_pack") {
         setColourMode(
           "brand_pack",
           resolveColourMap(pack.semanticColours, "brand_pack", brandPackColoursToRoleMap(brandColours)),
         );
+      } else if (mode === "manual") {
+        setColourMode("manual", state.resolvedColourMap);
       } else {
         setColourMode("template");
       }
     },
-    [pack.semanticColours, brandColours, setColourMode],
+    [pack.semanticColours, brandColours, state.resolvedColourMap, setColourMode],
   );
 
   return <RedesignedEditor
@@ -277,9 +290,10 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
     redo={redo}
     setActivePlacement={setActivePlacement}
     selectLayer={selectLayer}
-    handleColourToggle={handleColourToggle}
+    handleColourModeChange={handleColourModeChange}
+    updateColour={updateColour}
+    resetColour={resetColour}
     handleImageChange={handleImageChange}
-    openCrop={openCrop}
     openCropForInput={openCropForInput}
     updateTextValue={updateTextValue}
     applyTemplateText={applyTemplateText}
@@ -293,16 +307,68 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
     setProposalBrief={setProposalBrief}
     proposal={proposal}
     proposalBusy={proposalBusy}
+    proposalError={proposalError}
     proposeCopy={proposeCopy}
+    applyProposal={applyProposal}
+    dismissProposal={() => { setProposal(null); setProposalError(null); }}
   />;
 }
 
-function RedesignedEditor({ pack, templateId, state, activeLayout, brandColours, brandPreview, canSave, canUndo, canRedo, saveConflict, pendingImageUploads, inspectorTab, setInspectorTab, mobileInspectorOpen, setMobileInspectorOpen, handleSave, handlePublish, handleKeyDown, undo, redo, setActivePlacement, selectLayer, handleColourToggle, handleImageChange, openCrop, openCropForInput, updateTextValue, applyTemplateText, applyTemplateMetaCopy, updateMetaCopy, updateCrop, setError, cropTarget, setCropTarget, proposalBrief, setProposalBrief, proposal, proposalBusy, proposeCopy }: {
+function RedesignedEditor({ pack, templateId, state, activeLayout, brandColours, brandPreview, canSave, canUndo, canRedo, saveConflict, pendingImageUploads, inspectorTab, setInspectorTab, mobileInspectorOpen, setMobileInspectorOpen, handleSave, handlePublish, handleKeyDown, undo, redo, setActivePlacement, selectLayer, handleColourModeChange, updateColour, resetColour, handleImageChange, openCropForInput, updateTextValue, applyTemplateText, applyTemplateMetaCopy, updateMetaCopy, updateCrop, setError, cropTarget, setCropTarget, proposalBrief, setProposalBrief, proposal, proposalBusy, proposalError, proposeCopy, applyProposal, dismissProposal }: {
   pack: AdTemplate; templateId: string; state: EditorState; activeLayout: AdTemplate["feedLayout"]; brandColours: BrandPackColours | null; brandPreview: MetaPreviewBrand | null; canSave: boolean; canUndo: boolean; canRedo: boolean; saveConflict: boolean; pendingImageUploads: number;
   inspectorTab: InspectorTab; setInspectorTab: (value: InspectorTab) => void; mobileInspectorOpen: boolean; setMobileInspectorOpen: (value: boolean) => void; handleSave: () => Promise<boolean>; handlePublish: () => Promise<void>; handleKeyDown: (event: KeyboardEvent) => void; undo: () => void; redo: () => void; setActivePlacement: (value: Placement) => void; selectLayer: (value: string | null) => void;
-  handleColourToggle: (value: boolean) => void; handleImageChange: (key: string, change: { file: File; previewUrl: string } | null) => Promise<void>; openCrop: (slot: ImageSlotLayer) => void; openCropForInput: (key: string) => void; updateTextValue: (key: string, value: string) => void; applyTemplateText: () => void; applyTemplateMetaCopy: () => void; updateMetaCopy: (field: keyof MetaCopy, value: string) => void; updateCrop: (key: string, placement: Placement, crop: Rect) => void; setError: (value: string | null) => void;
-  cropTarget: { slot: ImageSlotLayer; placement: Placement } | null; setCropTarget: (value: { slot: ImageSlotLayer; placement: Placement } | null) => void; proposalBrief: string; setProposalBrief: (value: string) => void; proposal: { onImage: Record<string, string>; copy: MetaCopy; source: string } | null; proposalBusy: boolean; proposeCopy: () => Promise<void>;
+  handleColourModeChange: (mode: ColourMode) => void; updateColour: (role: ColourRole, value: string) => boolean; resetColour: (role: ColourRole) => void; handleImageChange: (key: string, change: { file: File; previewUrl: string } | null) => Promise<void>; openCropForInput: (key: string) => void; updateTextValue: (key: string, value: string) => void; applyTemplateText: () => void; applyTemplateMetaCopy: () => void; updateMetaCopy: (field: keyof MetaCopy, value: string) => void; updateCrop: (key: string, placement: Placement, crop: Rect) => void; setError: (value: string | null) => void;
+  cropTarget: { slot: ImageSlotLayer; placement: Placement } | null; setCropTarget: (value: { slot: ImageSlotLayer; placement: Placement } | null) => void; proposalBrief: string; setProposalBrief: (value: string) => void; proposal: AiCopyProposal | null; proposalBusy: boolean; proposalError: string | null; proposeCopy: () => Promise<void>; applyProposal: (payload: SelectedAiCopyPayload) => void; dismissProposal: () => void;
 }) {
+  const [activeTarget, setActiveTarget] = useState<EditorTarget | null>(null);
+  const [focusRequestId, setFocusRequestId] = useState(0);
+  const [appearanceRole, setAppearanceRole] = useState<ColourRole>("background");
+
+  const openInspectorForTarget = useCallback((target: EditorTarget) => {
+    setActiveTarget(target);
+    setFocusRequestId(value => value + 1);
+    if (target.kind === "layer") {
+      selectLayer(target.layerId);
+      if (target.colourRole) setAppearanceRole(target.colourRole);
+      setInspectorTab("content");
+    } else {
+      selectLayer(null);
+      setInspectorTab("copy");
+    }
+    if (typeof window !== "undefined" && window.matchMedia("(max-width: 1279px)").matches) {
+      setMobileInspectorOpen(true);
+    }
+  }, [selectLayer, setInspectorTab, setMobileInspectorOpen]);
+
+  const syncContentFocus = useCallback((inputKey: string) => {
+    const layer = activeLayout.layers.find(candidate => {
+      const target = editorTargetForLayer(candidate);
+      return target?.inputKey === inputKey;
+    });
+    const target = layer ? editorTargetForLayer(layer) : null;
+    if (target) {
+      selectLayer(target.layerId);
+      setActiveTarget(target);
+      if (target.colourRole) setAppearanceRole(target.colourRole);
+    }
+  }, [activeLayout, selectLayer]);
+
+  const syncMetaFocus = useCallback((field: MetaEditField) => {
+    setActiveTarget({ kind: "meta", field });
+    selectLayer(null);
+  }, [selectLayer]);
+
+  const changePlacement = useCallback((placement: Placement) => {
+    setActivePlacement(placement);
+    if (activeTarget?.kind !== "layer") return;
+    const nextLayout = placement === "feed" ? pack.feedLayout : pack.storyLayout;
+    const matchingLayer = nextLayout.layers.find(candidate => editorTargetForLayer(candidate)?.inputKey === activeTarget.inputKey);
+    const matchingTarget = matchingLayer ? editorTargetForLayer(matchingLayer) : null;
+    selectLayer(matchingTarget?.layerId ?? null);
+    setActiveTarget(matchingTarget);
+    if (matchingTarget?.colourRole) setAppearanceRole(matchingTarget.colourRole);
+  }, [activeTarget, pack.feedLayout, pack.storyLayout, selectLayer, setActivePlacement]);
+
   const defaultImageValues = Object.fromEntries(pack.imageInputs.flatMap(input => input.defaultAssetKey
     ? [[input.key, `/api/adstudio/templates/${encodeURIComponent(templateId)}/assets/${encodeURIComponent(input.defaultAssetKey)}`] as const]
     : []));
@@ -312,12 +378,46 @@ function RedesignedEditor({ pack, templateId, state, activeLayout, brandColours,
   }));
   const previewImages = { ...defaultImageValues, ...customerImageValues };
   const previewCopy = previewTextValues(pack, state.textValues);
-  const inspector = <InspectorContent tab={inspectorTab} pack={pack} state={state} defaultImageValues={defaultImageValues} brandColours={brandColours} onTextChange={updateTextValue} onUseTemplateText={applyTemplateText} onUseTemplateCopy={applyTemplateMetaCopy} onImageChange={handleImageChange} onCropClick={openCropForInput} onMetaChange={updateMetaCopy} onColourToggle={handleColourToggle} proposalBrief={proposalBrief} proposal={proposal} proposalBusy={proposalBusy} onBriefChange={setProposalBrief} onPropose={proposeCopy} />;
+  const brandRoleColours = brandPackColoursToRoleMap(brandColours);
+  const inspector = <InspectorContent
+    tab={inspectorTab}
+    pack={pack}
+    state={state}
+    defaultImageValues={defaultImageValues}
+    brandColours={brandColours}
+    brandPackName={brandPreview?.businessName ?? null}
+    activeInputKey={activeTarget?.kind === "layer" ? activeTarget.inputKey : null}
+    contentFocusRequest={activeTarget?.kind === "layer" ? { inputKey: activeTarget.inputKey, requestId: focusRequestId } : null}
+    activeMetaField={activeTarget?.kind === "meta" ? activeTarget.field : null}
+    metaFocusRequest={activeTarget?.kind === "meta" ? { field: activeTarget.field, requestId: focusRequestId } : null}
+    selectedColourRole={appearanceRole}
+    onTextChange={updateTextValue}
+    onUseTemplateText={applyTemplateText}
+    onUseTemplateCopy={applyTemplateMetaCopy}
+    onImageChange={handleImageChange}
+    onCropClick={openCropForInput}
+    onContentFieldFocus={syncContentFocus}
+    onMetaChange={updateMetaCopy}
+    onMetaFieldFocus={syncMetaFocus}
+    onColourModeChange={handleColourModeChange}
+    onColourChange={updateColour}
+    onResetColour={resetColour}
+    onSelectColourRole={setAppearanceRole}
+    proposalBrief={proposalBrief}
+    proposal={proposal}
+    proposalBusy={proposalBusy}
+    proposalError={proposalError}
+    onBriefChange={setProposalBrief}
+    onPropose={proposeCopy}
+    onApplyProposal={applyProposal}
+    onDismissProposal={dismissProposal}
+    brandRoleColours={brandRoleColours}
+  />;
   const resolvedBrandPreview = brandPreview ?? { businessName: "Your business", displayDomain: "yourwebsite.com", logoUrl: null };
   const saveStatus = pendingImageUploads > 0 ? "Uploading…" : state.isSaving ? "Saving…" : state.isDirty ? "Unsaved changes" : state.lastSavedRevision !== null ? "Saved" : "Not saved yet";
   return <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background text-foreground" onKeyDown={handleKeyDown} tabIndex={0} role="region" aria-label="Ad Studio editor">
     <header className="grid shrink-0 grid-cols-1 gap-2 border-b border-border bg-card px-2 py-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:px-3 md:grid-cols-[minmax(0,1fr)_auto_auto] md:px-5">
-      <Tabs value={state.activePlacement} onValueChange={value => setActivePlacement(value as Placement)} className="min-w-0"><TabsList aria-label="Facebook ad placement" className="grid h-auto w-full grid-cols-2 bg-muted/60 sm:flex sm:w-auto"><TabsTrigger value="feed" className="min-h-11 min-w-0 px-2 text-xs sm:px-3 md:px-4 md:text-sm">Facebook Feed<span className="hidden lg:inline"> · 1080 × 1350</span></TabsTrigger><TabsTrigger value="story" className="min-h-11 min-w-0 px-2 text-xs sm:px-3 md:px-4 md:text-sm">Facebook Story<span className="hidden lg:inline"> · 1080 × 1920</span></TabsTrigger></TabsList></Tabs>
+      <Tabs value={state.activePlacement} onValueChange={value => changePlacement(value as Placement)} className="min-w-0"><TabsList aria-label="Facebook ad placement" className="grid h-auto w-full grid-cols-2 bg-muted/60 sm:flex sm:w-auto"><TabsTrigger value="feed" className="min-h-11 min-w-0 px-2 text-xs sm:px-3 md:px-4 md:text-sm">Facebook Feed<span className="hidden lg:inline"> · 1080 × 1350</span></TabsTrigger><TabsTrigger value="story" className="min-h-11 min-w-0 px-2 text-xs sm:px-3 md:px-4 md:text-sm">Facebook Story<span className="hidden lg:inline"> · 1080 × 1920</span></TabsTrigger></TabsList></Tabs>
       <span className="order-3 w-full truncate text-right text-[11px] text-muted-foreground sm:col-span-2 sm:text-xs md:order-none md:col-span-1 md:w-auto" role="status" aria-live="polite">{saveStatus}</span>
       <div className="order-2 grid min-w-0 grid-cols-[2.75rem_2.75rem_minmax(0,0.8fr)_minmax(0,1.25fr)] items-center gap-1.5 sm:flex sm:justify-end md:order-none md:gap-2"><Button variant="ghost" size="icon" onClick={undo} disabled={!canUndo} aria-label="Undo" className="min-h-11 min-w-11 rounded-full"><RotateCcw /></Button><Button variant="ghost" size="icon" onClick={redo} disabled={!canRedo} aria-label="Redo" className="min-h-11 min-w-11 rounded-full"><RotateCw /></Button><Button onClick={handleSave} disabled={!canSave || state.isSaving || pendingImageUploads > 0} className="min-h-11 min-w-0 rounded-full px-2.5 sm:px-4"><span className="truncate">{state.isSaving ? "Saving…" : "Save"}</span><Save className="ml-1.5 size-4 shrink-0" /></Button><Button onClick={handlePublish} disabled={!canSave || state.isSaving || pendingImageUploads > 0} variant="outline" aria-label="Review and publish" className="min-h-11 min-w-0 rounded-full px-2.5 sm:px-4"><span className="sm:hidden">Review</span><span className="hidden sm:inline">Review & publish</span></Button></div>
     </header>
@@ -328,7 +428,9 @@ function RedesignedEditor({ pack, templateId, state, activeLayout, brandColours,
             placement={state.activePlacement}
             brand={resolvedBrandPreview}
             copy={state.metaCopy}
-            creative={<LayeredCanvas templateId={templateId} layout={activeLayout} colours={state.resolvedColourMap} imageValues={previewImages} textValues={previewCopy} cropOverrides={Object.fromEntries(state.imageValues.map(iv => [iv.inputKey, iv.crops[state.activePlacement]]))} selectedLayerId={state.selectedLayerId} onSelect={selectLayer} onCropImage={openCrop} className="h-full w-full" />}
+            activeField={activeTarget?.kind === "meta" ? activeTarget.field : null}
+            onEditField={field => openInspectorForTarget({ kind: "meta", field })}
+            creative={<LayeredCanvas templateId={templateId} layout={activeLayout} colours={state.resolvedColourMap} imageValues={previewImages} textValues={previewCopy} cropOverrides={Object.fromEntries(state.imageValues.map(iv => [iv.inputKey, iv.crops[state.activePlacement]]))} selectedLayerId={state.selectedLayerId} onTargetSelect={openInspectorForTarget} className="h-full w-full" />}
           />
         </div>
       </section>
@@ -345,52 +447,104 @@ function InspectorTabs({ value, onChange }: { value: InspectorTab; onChange: (va
   return <Tabs value={value} onValueChange={next => onChange(next as InspectorTab)} className="border-b border-border p-3"><TabsList aria-label="Editor sections" className="grid h-auto w-full grid-cols-3 gap-1 bg-muted/50 p-1">{INSPECTOR_TABS.map(({ value: tab, label, icon: Icon }) => <TabsTrigger key={tab} value={tab} className="min-h-11 justify-center gap-2 px-2 text-xs"><Icon className="size-4" />{label}</TabsTrigger>)}</TabsList></Tabs>;
 }
 
-function InspectorContent({ tab, pack, state, defaultImageValues, brandColours, onTextChange, onUseTemplateText, onUseTemplateCopy, onImageChange, onCropClick, onMetaChange, onColourToggle, proposalBrief, proposal, proposalBusy, onBriefChange, onPropose }: { tab: InspectorTab; pack: AdTemplate; state: EditorState; defaultImageValues: Record<string, string>; brandColours: BrandPackColours | null; onTextChange: (key: string, value: string) => void; onUseTemplateText: () => void; onUseTemplateCopy: () => void; onImageChange: (key: string, change: { file: File; previewUrl: string } | null) => Promise<void>; onCropClick: (key: string) => void; onMetaChange: (field: keyof MetaCopy, value: string) => void; onColourToggle: (value: boolean) => void; proposalBrief: string; proposal: { onImage: Record<string, string>; copy: MetaCopy; source: string } | null; proposalBusy: boolean; onBriefChange: (value: string) => void; onPropose: () => Promise<void> }) {
-  if (tab === "copy") return <div><MetaCopyPanel values={state.metaCopy} onChange={onMetaChange} onUseTemplateCopy={onUseTemplateCopy} /><ProposalPanel brief={proposalBrief} proposal={proposal} busy={proposalBusy} textInputCount={editorTextInputs(pack).length} onBriefChange={onBriefChange} onPropose={onPropose} /></div>;
-  if (tab === "appearance") return <aside aria-label="Appearance" className="space-y-4 border-t border-border p-4"><div><h3 className="text-sm font-semibold">Appearance</h3><p className="mt-1 text-xs leading-relaxed text-muted-foreground">Choose the colours that feel right for this ad.</p></div><ColourToggle useBrandPack={state.colourMode === "brand_pack"} brandPackAvailable={!!brandColours} resolvedColourMap={state.resolvedColourMap} onToggle={onColourToggle} /></aside>;
-  return <InputsPanel textInputs={pack.textInputs} imageInputs={pack.imageInputs} textValues={state.textValues} imageValues={Object.fromEntries(state.imageValues.map(iv => [iv.inputKey, iv.previewUrl ?? iv.dataUrl]))} defaultImageValues={defaultImageValues} onTextChange={onTextChange} onUseTemplateText={onUseTemplateText} onImageChange={onImageChange} onCropClick={onCropClick} />;
-}
-
-function ProposalPanel({
-  className,
-  brief,
-  proposal,
-  busy,
-  textInputCount,
-  onBriefChange,
-  onPropose,
-}: {
-  className?: string;
-  brief: string;
-  proposal: { onImage: Record<string, string>; copy: MetaCopy; source: string } | null;
-  busy: boolean;
-  textInputCount: number;
+type InspectorContentProps = {
+  tab: InspectorTab;
+  pack: AdTemplate;
+  state: EditorState;
+  defaultImageValues: Record<string, string>;
+  brandColours: BrandPackColours | null;
+  brandPackName: string | null;
+  brandRoleColours: Partial<Record<ColourRole, string>>;
+  activeInputKey: string | null;
+  contentFocusRequest: { inputKey: string; requestId: string | number } | null;
+  activeMetaField: MetaEditField | null;
+  metaFocusRequest: { field: MetaEditField; requestId: string | number } | null;
+  selectedColourRole: ColourRole;
+  onTextChange: (key: string, value: string) => void;
+  onUseTemplateText: () => void;
+  onUseTemplateCopy: () => void;
+  onImageChange: (key: string, change: { file: File; previewUrl: string } | null) => Promise<void>;
+  onCropClick: (key: string) => void;
+  onContentFieldFocus: (key: string) => void;
+  onMetaChange: (field: keyof MetaCopy, value: string) => void;
+  onMetaFieldFocus: (field: MetaEditField) => void;
+  onColourModeChange: (mode: ColourMode) => void;
+  onColourChange: (role: ColourRole, value: string) => boolean;
+  onResetColour: (role: ColourRole) => void;
+  onSelectColourRole: (role: ColourRole) => void;
+  proposalBrief: string;
+  proposal: AiCopyProposal | null;
+  proposalBusy: boolean;
+  proposalError: string | null;
   onBriefChange: (value: string) => void;
-  onPropose: () => void;
-}) {
-  return (
-    <section aria-label="AI copy" className={cn("border-t border-border p-4", className)}>
-      <div className="rounded-(--r-card) border border-primary/20 bg-primary/[0.04] p-3.5">
-        <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-          <Sparkles aria-hidden className="size-4 text-primary" />
-          Write every field with AI
-        </div>
-        <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
-          Uses this brief, the selected template and your Brand Pack. One click updates all {textInputCount} design fields plus primary text, headline, description and CTA.
-        </p>
-        <label htmlFor="copy-suggestion-brief" className="mt-3 mb-1 block text-sm font-medium text-foreground">Ad brief</label>
-        <textarea id="copy-suggestion-brief" value={brief} onChange={event => onBriefChange(event.target.value)} rows={5} placeholder="Example: Promote the Saturday open home at 18 Smith Street to young families. Mention the renovated kitchen and free suburb guide." className="min-h-28 w-full resize-y rounded-(--r-card) border border-input bg-background px-3 py-2 text-base shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50" />
-        <Button type="button" onClick={onPropose} disabled={busy || !brief.trim()} className="mt-3 min-h-11 w-full rounded-full">
-          <Sparkles aria-hidden className="size-4" />
-          {busy ? "Writing complete ad…" : "Generate all copy"}
-        </Button>
-      {proposal ? (
-        <p role="status" className="mt-3 rounded-(--r-card) bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-800">
-          Updated {Object.keys(proposal.onImage).length + 4} fields. Review the live Meta preview and edit anything you want.
-        </p>
-      ) : null}
+  onPropose: () => Promise<void>;
+  onApplyProposal: (payload: SelectedAiCopyPayload) => void;
+  onDismissProposal: () => void;
+};
+
+function InspectorContent(props: InspectorContentProps) {
+  if (props.tab === "copy") {
+    return (
+      <div>
+        <AiCopyAssistant
+          brief={props.proposalBrief}
+          proposal={props.proposal}
+          busy={props.proposalBusy}
+          error={props.proposalError}
+          textInputs={editorTextInputs(props.pack)}
+          brandPackName={props.brandPackName}
+          onBriefChange={props.onBriefChange}
+          onGenerate={props.onPropose}
+          onApply={props.onApplyProposal}
+          onDismiss={props.onDismissProposal}
+        />
+        <MetaCopyPanel
+          values={props.state.metaCopy}
+          onChange={props.onMetaChange}
+          onUseTemplateCopy={props.onUseTemplateCopy}
+          activeField={props.activeMetaField}
+          focusRequest={props.metaFocusRequest}
+          onFieldFocus={props.onMetaFieldFocus}
+        />
       </div>
-    </section>
+    );
+  }
+  if (props.tab === "appearance") {
+    return (
+      <aside aria-label="Appearance" className="space-y-4 border-t border-border p-4">
+        <div>
+          <h3 className="text-sm font-semibold">Appearance</h3>
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Start with the designer palette, apply your Brand Pack, or tune each role yourself.</p>
+        </div>
+        <ColourToggle
+          mode={props.state.colourMode}
+          templateColours={props.pack.semanticColours}
+          brandPackColours={props.brandRoleColours}
+          resolvedColourMap={props.state.resolvedColourMap}
+          selectedRole={props.selectedColourRole}
+          onModeChange={props.onColourModeChange}
+          onColourChange={props.onColourChange}
+          onResetColour={props.onResetColour}
+          onSelectRole={props.onSelectColourRole}
+        />
+      </aside>
+    );
+  }
+  return (
+    <InputsPanel
+      textInputs={editorTextInputs(props.pack)}
+      imageInputs={props.pack.imageInputs}
+      textValues={props.state.textValues}
+      imageValues={Object.fromEntries(props.state.imageValues.map(value => [value.inputKey, value.previewUrl ?? value.dataUrl]))}
+      defaultImageValues={props.defaultImageValues}
+      activeInputKey={props.activeInputKey}
+      focusRequest={props.contentFocusRequest}
+      onTextChange={props.onTextChange}
+      onUseTemplateText={props.onUseTemplateText}
+      onImageChange={props.onImageChange}
+      onCropClick={props.onCropClick}
+      onFieldFocus={props.onContentFieldFocus}
+    />
   );
 }
 // ---------------------------------------------------------------------------

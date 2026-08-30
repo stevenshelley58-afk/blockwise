@@ -83,6 +83,7 @@ describe("customer Ad Studio workbench contract", () => {
     const inputs = readFileSync("src/components/adstudio/editor/inputs-panel.tsx", "utf8");
     const copy = readFileSync("src/components/adstudio/editor/meta-copy-panel.tsx", "utf8");
     const shell = readFileSync("src/components/adstudio/editor/editor-shell.tsx", "utf8");
+    const assistant = readFileSync("src/components/adstudio/editor/ai-copy-assistant.tsx", "utf8");
     const colours = readFileSync("src/components/adstudio/editor/colour-toggle.tsx", "utf8");
 
     assert.match(inputs, /missingRequiredImages/);
@@ -90,13 +91,14 @@ describe("customer Ad Studio workbench contract", () => {
     assert.match(inputs, /rounded-\(--r-card\)/);
     assert.match(copy, /id="meta-copy-cta"/);
     assert.match(copy, /border border-input/);
-    assert.match(shell, /aria-label="AI copy"/);
-    assert.match(shell, /disabled=\{busy \|\| !brief\.trim\(\)\}/);
+    assert.match(shell, /<AiCopyAssistant/);
+    assert.match(assistant, /aria-label="AI copy"/);
+    assert.match(assistant, /disabled=\{busy \|\| !brief\.trim\(\)\}/);
     assert.match(shell, /e\.key\.toLowerCase\(\)/);
     assert.match(shell, /key === "y"/);
     assert.match(colours, /Add workspace colours in Brand Studio/);
     assert.match(colours, /useId/);
-    assert.match(colours, /aria-labelledby=\{`\$\{switchId\}-label`\}/);
+    assert.match(colours, /aria-labelledby=\{`\$\{groupId\}-label`\}/);
     assert.doesNotMatch(colours, /<Label[\s\S]*<Switch/);
     assert.doesNotMatch(shell, /Safe deterministic draft|AI draft/);
   });
@@ -147,7 +149,7 @@ describe("customer Ad Studio workbench contract", () => {
     assert.match(state, /metaCopy: normalizeEditorMetaCopy\(defaults\.metaCopy\)/);
     assert.match(state, /metaCopy: normalizeEditorMetaCopy\(\{[\s\S]*?cta: initialDocument\.metaCta/);
     assert.match(state, /metaCopy: normalizeEditorMetaCopy\(defaults\)/);
-    assert.match(state, /metaCopy: normalizeEditorMetaCopy\(copy\)/);
+    assert.match(state, /metaCopy: normalizeEditorMetaCopy\(\{ \.\.\.prev\.metaCopy, \.\.\.copy \}\)/);
     assert.match(state, /\[field\]: field === "cta" \? toMetaCta\(value\) : value/);
     assert.match(state, /metaCta: toMetaCta\(state\.metaCopy\.cta\)/);
   });
@@ -181,23 +183,25 @@ describe("customer Ad Studio workbench contract", () => {
     assert.match(templateAction, /editVersion: \(prev\.editVersion \?\? 0\) \+ 1/);
   });
 
-  it("applies one AI result to every on-image field and all four Meta fields atomically", () => {
+  it("applies the selected AI fields in one atomic undoable edit", () => {
     const shell = readFileSync("src/components/adstudio/editor/editor-shell.tsx", "utf8");
     const state = readFileSync("src/components/adstudio/editor/use-editor-state.ts", "utf8");
     const metaCopyBody = state.match(/export interface MetaCopy \{([\s\S]*?)\n\}/)?.[1] ?? "";
     const metaFields = [...metaCopyBody.matchAll(/^\s+(\w+): string;/gm)].map(match => match[1]);
-    const atomicAction = state.match(/const applyCompleteCopy = useCallback\(\(onImage: Record<string, string>, copy: MetaCopy\) => \{[\s\S]*?\n  \}, \[pushUndo\]\);/)?.[0];
+    const atomicAction = state.match(/const applySelectedCopy = useCallback\(\(onImage: Record<string, string>, copy: Partial<MetaCopy>\) => \{[\s\S]*?\n  \}, \[pushUndo\]\);/)?.[0];
 
     assert.deepEqual(metaFields, ["primaryText", "headline", "description", "cta"]);
-    assert.ok(atomicAction, "the complete-copy state action must exist");
+    assert.ok(atomicAction, "the selected-copy state action must exist");
     assert.equal((atomicAction.match(/setState\(/g) ?? []).length, 1, "all fields must share one React state transaction");
     assert.equal((atomicAction.match(/pushUndo\(/g) ?? []).length, 1, "the complete result must undo as one edit");
     assert.match(atomicAction, /editorTextInputs\(prev\.pack\)/);
     assert.match(atomicAction, /textValues: \{ \.\.\.prev\.textValues, \.\.\.safeOnImage \}/);
-    assert.match(atomicAction, /metaCopy: normalizeEditorMetaCopy\(copy\)/);
+    assert.match(atomicAction, /metaCopy: normalizeEditorMetaCopy\(\{ \.\.\.prev\.metaCopy, \.\.\.copy \}\)/);
     assert.match(atomicAction, /isDirty: true/);
     assert.match(atomicAction, /editVersion: \(prev\.editVersion \?\? 0\) \+ 1/);
-    assert.match(shell, /const next = \{ onImage: body\.onImage \?\? \{\}, copy: body\.copy,[\s\S]*?applyCompleteCopy\(next\.onImage, next\.copy\);/);
+    assert.match(shell, /setProposal\(next\);/);
+    assert.doesNotMatch(shell, /setProposal\(next\);[\s\S]{0,100}applySelectedCopy/);
+    assert.match(shell, /applySelectedCopy\(payload\.onImage, payload\.copy\)/);
   });
 
   it("requires a real AI provider and passes the complete Brand Pack into copy generation", () => {
@@ -232,19 +236,19 @@ describe("customer Ad Studio workbench contract", () => {
     assert.equal((route.match(/cta: toMetaCta\(result\.copy\.cta\)/g) ?? []).length, 1, "the endpoint must defensively return a supported Meta CTA enum");
   });
 
-  it("generates and applies the complete copy set without per-field suggestion approval", () => {
+  it("reviews every generated field before Use all or Use selected changes the ad", () => {
     const shell = readFileSync("src/components/adstudio/editor/editor-shell.tsx", "utf8");
-    const proposalStart = shell.indexOf("function ProposalPanel(");
-    const proposalEnd = shell.indexOf("function CropDialogHost(", proposalStart);
-    const proposalPanel = proposalStart >= 0 && proposalEnd > proposalStart ? shell.slice(proposalStart, proposalEnd) : "";
+    const assistant = readFileSync("src/components/adstudio/editor/ai-copy-assistant.tsx", "utf8");
+    const selection = readFileSync("src/components/adstudio/editor/ai-copy-selection.ts", "utf8");
 
-    assert.ok(proposalPanel, "the AI copy panel must exist");
-    assert.equal((proposalPanel.match(/<Button\b/g) ?? []).length, 1, "AI copy should have one complete-generation action");
-    assert.match(proposalPanel, /Generate all copy/);
-    assert.doesNotMatch(proposalPanel, /onApplyText|onApplyMeta/);
-    assert.doesNotMatch(proposalPanel, /Use overlay suggestion|Use suggestion/);
-    assert.doesNotMatch(proposalPanel, /proposal\.copy\[[^\]]+\]/);
-    assert.match(shell, /applyCompleteCopy\(next\.onImage, next\.copy\);/);
+    assert.match(shell, /<AiCopyAssistant[\s\S]*?<MetaCopyPanel/);
+    assert.match(assistant, /Review suggestions/);
+    assert.match(assistant, /Use all/);
+    assert.match(assistant, /Use selected \(\{selectedCount\}\)/);
+    assert.match(assistant, /<Checkbox/);
+    assert.match(selection, /selectedAiCopyPayload/);
+    assert.match(selection, /metaCopySelectionKey/);
+    assert.doesNotMatch(shell, /applyCompleteCopy\(next\.onImage, next\.copy\)/);
   });
 
   it("shows template defaults, recovers stale saves, and keeps publishing choices explicit", () => {

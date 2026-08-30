@@ -231,16 +231,17 @@ export function useEditorState(pack: AdTemplate, initialDocument?: AdDocumentPar
     });
   }, [pushUndo]);
 
-  /** Apply one AI result across every on-image and Meta field atomically. */
-  const applyCompleteCopy = useCallback((onImage: Record<string, string>, copy: MetaCopy) => {
+  /** Apply only the AI suggestions the customer selected, as one undoable edit. */
+  const applySelectedCopy = useCallback((onImage: Record<string, string>, copy: Partial<MetaCopy>) => {
     setState(prev => {
-      pushUndo(prev);
       const declared = new Set(editorTextInputs(prev.pack).map(input => input.key));
       const safeOnImage = Object.fromEntries(Object.entries(onImage).filter(([key]) => declared.has(key)));
+      if (Object.keys(safeOnImage).length === 0 && Object.keys(copy).length === 0) return prev;
+      pushUndo(prev);
       return {
         ...prev,
         textValues: { ...prev.textValues, ...safeOnImage },
-        metaCopy: normalizeEditorMetaCopy(copy),
+        metaCopy: normalizeEditorMetaCopy({ ...prev.metaCopy, ...copy }),
         isDirty: true,
         editVersion: (prev.editVersion ?? 0) + 1,
       };
@@ -403,7 +404,7 @@ export function useEditorState(pack: AdTemplate, initialDocument?: AdDocumentPar
     updateTextValue,
     applyTemplateText,
     applyTemplateMetaCopy,
-    applyCompleteCopy,
+    applySelectedCopy,
     updateImageValue,
     updateImagePreview,
     updateCrop,

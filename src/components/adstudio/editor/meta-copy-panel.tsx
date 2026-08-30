@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import type { MetaCopy } from "./use-editor-state";
+import type { MetaEditField } from "./editor-target";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +27,9 @@ export interface MetaCopyPanelProps {
   values: MetaCopy;
   onChange: (field: keyof MetaCopy, value: string) => void;
   onUseTemplateCopy: () => void;
+  activeField?: MetaEditField | null;
+  focusRequest?: { field: MetaEditField; requestId: string | number } | null;
+  onFieldFocus?: (field: MetaEditField) => void;
 }
 /** Meta's standard CTAs (the same set the meta lead-ad pack schema allows). */
 export const META_CTA_OPTIONS = [
@@ -39,7 +44,30 @@ const LIMITS: Record<keyof MetaCopy, number> = {
   cta: 24,
 };
 
-export function MetaCopyPanel({ className, values, onChange, onUseTemplateCopy }: MetaCopyPanelProps) {
+export function MetaCopyPanel({ className, values, onChange, onUseTemplateCopy, activeField = null, focusRequest = null, onFieldFocus }: MetaCopyPanelProps) {
+  const focusTargetsRef = useRef(new Map<MetaEditField, HTMLElement>());
+  const completedFocusRequestRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!focusRequest) return;
+    const requestKey = `${focusRequest.requestId}:${focusRequest.field}`;
+    if (completedFocusRequestRef.current === requestKey) return;
+    completedFocusRequestRef.current = requestKey;
+    const frame = window.requestAnimationFrame(() => {
+      const target = focusTargetsRef.current.get(focusRequest.field);
+      if (!target) return;
+      const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      target.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "center" });
+      target.focus({ preventScroll: true });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [focusRequest]);
+
+  const setFocusTarget = (field: MetaEditField, node: HTMLElement | null) => {
+    if (node) focusTargetsRef.current.set(field, node);
+    else focusTargetsRef.current.delete(field);
+  };
+
   return (
     <aside aria-label="Meta copy" className={cn("w-full shrink-0 overflow-y-auto bg-card p-4 xl:w-auto", className)}>
       <div className="mb-3 flex items-center justify-between gap-3">
@@ -61,6 +89,9 @@ export function MetaCopyPanel({ className, values, onChange, onUseTemplateCopy }
           onChange={onChange}
           maxLength={LIMITS.primaryText}
           textarea
+          active={activeField === "primaryText"}
+          setFocusTarget={node => setFocusTarget("primaryText", node)}
+          onFocus={() => onFieldFocus?.("primaryText")}
         />
         <TextField
           label="Headline"
@@ -68,6 +99,9 @@ export function MetaCopyPanel({ className, values, onChange, onUseTemplateCopy }
           value={values.headline}
           onChange={onChange}
           maxLength={LIMITS.headline}
+          active={activeField === "headline"}
+          setFocusTarget={node => setFocusTarget("headline", node)}
+          onFocus={() => onFieldFocus?.("headline")}
         />
         <TextField
           label="Description"
@@ -75,15 +109,20 @@ export function MetaCopyPanel({ className, values, onChange, onUseTemplateCopy }
           value={values.description}
           onChange={onChange}
           maxLength={LIMITS.description}
+          active={activeField === "description"}
+          setFocusTarget={node => setFocusTarget("description", node)}
+          onFocus={() => onFieldFocus?.("description")}
         />
 
-        <div>
+        <div className={cn("-mx-2 rounded-(--r-card) p-2 transition-colors", activeField === "cta" && "bg-primary/5 ring-2 ring-primary/35")}>
           <Label htmlFor="meta-copy-cta" className="mb-1 block text-sm font-medium">
             Call to action
           </Label>
           <select
+            ref={node => setFocusTarget("cta", node)}
             value={toMetaCta(values.cta)}
             onChange={e => onChange("cta", e.target.value)}
+            onFocus={() => onFieldFocus?.("cta")}
             id="meta-copy-cta"
             className="min-h-11 w-full rounded-(--r-card) border border-input bg-muted/30 px-3 text-base shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
           >
@@ -114,6 +153,9 @@ function TextField({
   onChange,
   maxLength,
   textarea = false,
+  active = false,
+  setFocusTarget,
+  onFocus,
 }: {
   label: string;
   field: keyof MetaCopy;
@@ -121,30 +163,37 @@ function TextField({
   onChange: (field: keyof MetaCopy, value: string) => void;
   maxLength: number;
   textarea?: boolean;
+  active?: boolean;
+  setFocusTarget: (node: HTMLElement | null) => void;
+  onFocus: () => void;
 }) {
   const shared = "min-h-11 w-full rounded-(--r-card) border border-input bg-muted/30 px-3 text-base shadow-xs outline-none selection:bg-primary selection:text-primary-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50";
   const inputId = `meta-copy-${field}`;
   return (
-    <div className="block">
+    <div className={cn("-mx-2 rounded-(--r-card) p-2 transition-colors", active && "bg-primary/5 ring-2 ring-primary/35")}>
       <Label htmlFor={inputId} className="mb-1 block text-sm font-medium">{label}</Label>
       {textarea ? (
         <textarea
+          ref={setFocusTarget}
           id={inputId}
           aria-label={label}
           value={value}
           maxLength={maxLength}
           rows={3}
           onChange={e => onChange(field, e.target.value)}
+          onFocus={onFocus}
           className={`${shared} min-h-24 py-2 resize-y`}
         />
       ) : (
         <Input
+          ref={setFocusTarget}
           id={inputId}
           aria-label={label}
           type="text"
           value={value}
           maxLength={maxLength}
           onChange={e => onChange(field, e.target.value)}
+          onFocus={onFocus}
           className={shared}
         />
       )}

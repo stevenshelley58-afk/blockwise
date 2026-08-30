@@ -74,4 +74,19 @@ describe("Ad Studio direct-edit contract", () => {
     assert.match(preview, /active && "ring-2 ring-\[#1877f2\] ring-offset-2"/);
     assert.doesNotMatch(preview, /<span className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-white/);
   });
+
+  it("wires preview hotspots to the matching inspector controls", () => {
+    const shell = read("src/components/adstudio/editor/editor-shell.tsx");
+    const metaCopy = read("src/components/adstudio/editor/meta-copy-panel.tsx");
+
+    assert.match(shell, /onTargetSelect=\{openInspectorForTarget\}/);
+    assert.match(shell, /onEditField=\{field => openInspectorForTarget\(\{ kind: "meta", field \}\)\}/);
+    assert.match(shell, /activeInputKey=\{activeTarget\?\.kind === "layer" \? activeTarget\.inputKey : null\}/);
+    assert.match(shell, /contentFocusRequest=\{activeTarget\?\.kind === "layer"/);
+    assert.match(shell, /activeField=\{activeTarget\?\.kind === "meta" \? activeTarget\.field : null\}/);
+    assert.match(shell, /metaFocusRequest=\{activeTarget\?\.kind === "meta"/);
+    assert.match(metaCopy, /target\.scrollIntoView/);
+    assert.match(metaCopy, /target\.focus\(\{ preventScroll: true \}\)/);
+    assert.match(metaCopy, /onFocus=\{onFocus\}/);
+  });
 });
