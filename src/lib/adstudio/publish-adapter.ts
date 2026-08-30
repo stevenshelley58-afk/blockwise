@@ -505,7 +505,8 @@ export function buildPausedMetaPublishPlan(input: PausedPublishPlanInput): MetaP
   return {
     planId,
     workspaceId: input.workspaceId,
-    adStudioCampaignId: input.adId,
+    adStudioCampaignId: null,
+    customerAdId: input.adId,
     adStudioExportId: null,
     legacyCampaignId: null,
     providerConnectionId: input.connectionId,
@@ -1032,7 +1033,7 @@ export async function loadLatestPublishPlanForAd(
     .from("meta_publish_plans")
     .select("id")
     .eq("workspace_id", workspaceId)
-    .eq("adstudio_campaign_id", adId)
+    .eq("customer_ad_id", adId)
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();

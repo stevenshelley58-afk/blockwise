@@ -260,7 +260,8 @@ export type MetaProviderLogEntry = {
 export type MetaPublishPlan = {
   planId: string;
   workspaceId: string;
-  adStudioCampaignId: string;
+  adStudioCampaignId: string | null;
+  customerAdId: string | null;
   adStudioExportId: string | null;
   legacyCampaignId: string | null;
   providerConnectionId: string;
@@ -449,6 +450,7 @@ export function buildMetaPublishPlan(input: {
     planId: deterministicUuid(`meta_publish_plan:${idempotencyKey}`),
     workspaceId: input.workspaceId,
     adStudioCampaignId: campaignPack.campaign.campaignId,
+    customerAdId: null,
     adStudioExportId: input.adStudioExportId ?? null,
     legacyCampaignId: input.legacyCampaignId ?? null,
     providerConnectionId: input.connectionId,
@@ -2480,6 +2482,7 @@ function planToRow(plan: MetaPublishPlan, userId: string) {
     workspace_id: plan.workspaceId,
     adstudio_campaign_id: plan.adStudioCampaignId,
     adstudio_export_id: plan.adStudioExportId,
+    customer_ad_id: plan.customerAdId,
     campaign_id: plan.legacyCampaignId,
     provider_connection_id: plan.providerConnectionId,
     approval_request_id: plan.approvalRequestId,
@@ -2507,7 +2510,8 @@ function planToRow(plan: MetaPublishPlan, userId: string) {
 type MetaPublishPlanRow = {
   id: string;
   workspace_id: string;
-  adstudio_campaign_id: string;
+  adstudio_campaign_id: string | null;
+  customer_ad_id: string | null;
   adstudio_export_id: string | null;
   campaign_id: string | null;
   provider_connection_id: string;
@@ -2558,6 +2562,7 @@ function rowToPlan(row: MetaPublishPlanRow): MetaPublishPlan {
     adStudioCampaignId: row.adstudio_campaign_id,
     adStudioExportId: row.adstudio_export_id,
     legacyCampaignId: row.campaign_id,
+    customerAdId: row.customer_ad_id,
     providerConnectionId: row.provider_connection_id,
     approvalRequestId: row.approval_request_id,
     adapter: row.adapter,

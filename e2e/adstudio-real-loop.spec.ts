@@ -45,9 +45,9 @@ const hasAuthState = existsSync(storageStatePath) && (() => {
 })();
 const hasWorkspace = Boolean(workspaceId?.trim());
 const hasTemplate = Boolean(templateId?.trim());
-const canRun = Boolean(baseUrlIsAllowed && hasWorkspace && hasTemplate && hasAuthState);
+const canRun = Boolean(baseUrlIsAllowed && hasWorkspace && hasTemplate && hasAuthState && allowDryRunPublish);
 const canLogin = Boolean(baseUrlIsAllowed && loginBaseUrlIsAllowed && email?.trim() && password);
-const canLoginAndCreate = Boolean(canLogin && hasWorkspace && hasTemplate);
+const canLoginAndCreate = Boolean(canLogin && hasWorkspace && hasTemplate && allowDryRunPublish);
 const missingPreconditions = [
   !baseUrl && "PLAYWRIGHT_BASE_URL",
   baseUrl && !baseUrlIsAllowed && "PLAYWRIGHT_BASE_URL (must be https://blockwise.sale or this project's Vercel deployment)",
@@ -55,6 +55,7 @@ const missingPreconditions = [
   !hasWorkspace && "ADSTUDIO_E2E_WORKSPACE_ID",
   !hasTemplate && "ADSTUDIO_E2E_TEMPLATE_ID (must identify an available template)",
   !hasAuthState && `authenticated storage state at ${storageStatePath}`,
+  !allowDryRunPublish && "ADSTUDIO_E2E_PUBLISH_TEST_MODE=dry-run",
 ].filter(Boolean);
 if ((!canRun || !canLogin) && process.env.CI) {
   test("Ad Studio real-loop preconditions are present in CI", () => {
@@ -63,7 +64,7 @@ if ((!canRun || !canLogin) && process.env.CI) {
 }
 
 test.describe("Ad Studio login", () => {
-  test.skip(!canLoginAndCreate, "Set PLAYWRIGHT_BASE_URL, ADSTUDIO_E2E_EMAIL, ADSTUDIO_E2E_PASSWORD, ADSTUDIO_E2E_WORKSPACE_ID and ADSTUDIO_E2E_TEMPLATE_ID.");
+  test.skip(!canLoginAndCreate, "Set the Ad Studio E2E credentials, workspace, template, and ADSTUDIO_E2E_PUBLISH_TEST_MODE=dry-run.");
   test.use({ storageState: { cookies: [], origins: [] } });
   test("logs in and creates an ad in one authenticated flow", async ({ page }) => {
     // Production may enforce Turnstile. The login helper can authenticate on
@@ -85,7 +86,7 @@ test.describe("Ad Studio login", () => {
 });
 
 test.describe("Ad Studio authenticated real loop", () => {
-  test.skip(!canRun, "Set PLAYWRIGHT_BASE_URL, ADSTUDIO_E2E_WORKSPACE_ID, ADSTUDIO_E2E_TEMPLATE_ID and authenticated storage state.");
+  test.skip(!canRun, "Set the Ad Studio E2E workspace, template, authenticated storage state, and ADSTUDIO_E2E_PUBLISH_TEST_MODE=dry-run.");
   test.use({ storageState: storageStatePath });
   test.setTimeout(180_000);
 

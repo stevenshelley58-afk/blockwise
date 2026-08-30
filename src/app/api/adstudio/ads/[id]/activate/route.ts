@@ -65,7 +65,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     if (!plan) {
       throw new PublishError("no_paused_plan", "No paused Meta publish plan found for this ad — publish it first.");
     }
-    if (plan.adStudioCampaignId !== id) {
+    if (plan.customerAdId !== id) {
       throw new PublishError("plan_ad_mismatch", "That Meta publish plan belongs to a different ad.");
     }
 

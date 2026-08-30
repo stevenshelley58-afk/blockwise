@@ -43,6 +43,13 @@ describe("paused Ad Studio Meta publish planning", () => {
     assert.equal(plan.leadForms[0]?.thankYouWebsiteUrl, fulfilmentUrl);
   });
 
+  it("binds direct publish plans to the customer ad rather than a legacy campaign", () => {
+    const plan = buildPausedMetaPublishPlan(buildInput(validNewAdSetControls()));
+
+    assert.equal(plan.customerAdId, "ad_123");
+    assert.equal(plan.adStudioCampaignId, null);
+  });
+
   it("rejects every missing explicit control for either mode that creates a new ad set", () => {
     const omissions: Array<{
       name: string;

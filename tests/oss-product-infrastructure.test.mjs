@@ -278,6 +278,7 @@ test("direct Hermes artifacts and customer saves use the self-hosted transaction
     read("src/lib/adstudio/save-ad.ts"),
   ]);
   assert.match(migrations, /20260830020000_direct_template_artifact\.sql/);
+  assert.match(migrations, /20260830030000_direct_customer_meta_publish_plans\.sql/);
   assert.match(migration, /create or replace function public\.commit_ad_revision/);
   assert.match(migration, /alter table public\.ad_customer_ads enable row level security/);
   assert.match(ingest, /adTemplateSchema/);

@@ -8,6 +8,7 @@
 //   - owner membership
 //   - a six-credit operator entitlement for the current UTC month
 //   - a reviewed Brand Pack so the spec can exercise appearance persistence
+//   - a token-free Meta connection fixture usable only while provider writes are disabled
 //
 // Env: NEXT_PUBLIC_SUPABASE_URL or SUPABASE_URL, SUPABASE_SECRET_KEY
 //      (preferred) or SUPABASE_SERVICE_ROLE_KEY,
@@ -21,6 +22,7 @@ import {
 } from "../lib/supabase-server-credential.mjs";
 
 export const ADSTUDIO_E2E_WORKSPACE_ID = "00000000-0000-4000-8000-0000000000e2";
+export const ADSTUDIO_E2E_META_CONNECTION_ID = "00000000-0000-4000-8000-0000000000e4";
 
 function cleanEnv(value) {
   return value?.replace(/^﻿/, "").trim();
@@ -143,6 +145,40 @@ requireNoError(
     { onConflict: "id" },
   ),
   "Upsert AdStudio e2e Brand Pack",
+);
+
+// Publishing a dry-run plan still validates the account/Page/delivery contract.
+// This dedicated fixture contains no token or provider credential and is marked
+// so a writes-enabled deployment refuses to use it.
+requireNoError(
+  await supabase.from("provider_connections").upsert(
+    {
+      id: ADSTUDIO_E2E_META_CONNECTION_ID,
+      workspace_id: ADSTUDIO_E2E_WORKSPACE_ID,
+      provider: "meta",
+      status: "connected",
+      scopes: [],
+      external_account_id: "act_blockwise_e2e_dry_run",
+      external_account_name: "Blockwise E2E dry run",
+      metadata_json: {
+        e2eDryRunOnly: true,
+        metaAdAccountId: "act_blockwise_e2e_dry_run",
+        pageId: "page_blockwise_e2e_dry_run",
+        leadDestination: {
+          type: "manual",
+          label: "E2E dry-run review",
+        },
+        privacyPolicyUrl: "https://example.com/privacy",
+        currency: "AUD",
+        timezone: "Australia/Perth",
+      },
+      health_status: "healthy",
+      created_by: authUser.id,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "workspace_id,provider,external_account_id" },
+  ),
+  "Upsert AdStudio e2e token-free Meta connection",
 );
 
 // The browser workflow exercises the real paid render path. Keep its wallet
