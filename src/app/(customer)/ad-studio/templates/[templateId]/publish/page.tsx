@@ -116,5 +116,5 @@ export default async function PublishPage({
 }
 
 function isInteractiveDependencyIssue(issue: string): boolean {
-  return /destination URL|Instant Form|form revision|privacy policy|thank-you/i.test(issue);
+  return /destination URL|Instant Form|form revision|privacy policy|thank-you|campaign|ad set|variant|budget|audience|placement|schedule|fulfilment|offer/i.test(issue);
 }
