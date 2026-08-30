@@ -1,9 +1,10 @@
 services:
   adstudio-video-renderer:
     image: ${ADVIDEO_IMAGE:?ADVIDEO_IMAGE must be an immutable registry digest}
+    profiles: [standalone-video]
     labels:
       org.opencontainers.image.revision: ${ADVIDEO_REVISION:?ADVIDEO_REVISION is required}
-      org.opencontainers.image.source: https://github.com/blockwise/blockwise
+      org.opencontainers.image.source: https://github.com/stevenshelley58-afk/blockwise
     restart: unless-stopped
     init: true
     read_only: true

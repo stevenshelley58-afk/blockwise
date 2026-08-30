@@ -290,6 +290,54 @@ services:
       BLOCKWISE_ENABLE_PROVIDER_WRITES: ${BLOCKWISE_ENABLE_PROVIDER_WRITES:-false}
     networks: [blockwise-product]
 
+  # The AdStudio renderer is a separate queue consumer but remains in this
+  # product Compose contract so Coolify cannot accidentally run competing
+  # canonical stacks. It has no published ports.
+  adstudio-video-renderer:
+    image: ${BLOCKWISE_VIDEO_WORKER_IMAGE:?BLOCKWISE_VIDEO_WORKER_IMAGE is required}
+    profiles: [worker]
+    labels:
+      org.opencontainers.image.source: https://github.com/stevenshelley58-afk/blockwise
+      org.opencontainers.image.revision: ${BLOCKWISE_GIT_SHA:?BLOCKWISE_GIT_SHA is required}
+    build:
+      context: ../..
+      dockerfile: video-worker/Dockerfile
+      args:
+        GIT_SHA: ${BLOCKWISE_GIT_SHA}
+        BUILD_DATE: ${BLOCKWISE_BUILD_DATE}
+    restart: unless-stopped
+    depends_on:
+      product-rest: { condition: service_healthy }
+      product-auth: { condition: service_healthy }
+      product-storage: { condition: service_healthy }
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    stop_grace_period: 30s
+    pids_limit: 256
+    mem_limit: 2g
+    cpus: 2.0
+    environment:
+      NODE_ENV: production
+      SUPABASE_URL: ${BLOCKWISE_VIDEO_SUPABASE_URL:-${NEXT_PUBLIC_SUPABASE_URL:?NEXT_PUBLIC_SUPABASE_URL is required}}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:?SUPABASE_SERVICE_ROLE_KEY is required}
+      ADVIDEO_WORKER_NAME: ${ADVIDEO_WORKER_NAME:-adstudio-video-renderer}
+      ADVIDEO_MAX_ATTEMPTS: ${ADVIDEO_MAX_ATTEMPTS:-3}
+      ADVIDEO_POLL_MS: ${ADVIDEO_POLL_MS:-2000}
+      ADVIDEO_OUTPUT_DIR: /tmp/blockwise-video-worker
+      ADVIDEO_FFMPEG_PATH: /usr/bin/ffmpeg
+      ADVIDEO_ALLOWED_ASSET_HOSTS: ${ADVIDEO_ALLOWED_ASSET_HOSTS:-}
+      ADVIDEO_WORKER_REVISION: ${BLOCKWISE_GIT_SHA}
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=2g
+    networks: [blockwise-product]
+    healthcheck:
+      test: [CMD, "node", "--import", "tsx", "video-worker/index.ts", "--health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
   product-caddy:
     image: caddy:2.11.3-alpine
     # Frank's edge owns host ports 80/443 on the shared VPS. Keep this
