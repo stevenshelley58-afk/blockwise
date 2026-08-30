@@ -3,6 +3,8 @@ import { existsSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
 
+import { START_TEMPLATES } from "../src/components/home-landing/data.ts";
+
 // The homepage renders from src/app/page.tsx plus the home-landing component
 // tree (desktop + mobile variants of every section). Guards that used to read
 // page.tsx alone now read the combined homepage source.
@@ -144,13 +146,37 @@ test("landing page anchors, sections, and claims stay connected", () => {
 });
 
 test("landing page local image assets resolve from public/", () => {
-  const { combined } = readHomeSources();
-  const assets = [
-    ...combined.matchAll(/(?:src|photoSrc)=(?:"|\{")(\/(?:hero|ads|home)\/[^"]+)"/g),
+  const componentSources = [
+    readFileSync("src/app/page.tsx", "utf8"),
+    ...readdirSync(HOME_LANDING_DIR)
+      .filter((file) => file.endsWith(".tsx"))
+      .sort()
+      .map((file) => readFileSync(path.join(HOME_LANDING_DIR, file), "utf8")),
+  ].join("\n");
+  const styleSources = [
+    readFileSync("src/app/homepage.css", "utf8"),
+    ...readdirSync(HOME_LANDING_DIR)
+      .filter((file) => file.endsWith(".css"))
+      .sort()
+      .map((file) => readFileSync(path.join(HOME_LANDING_DIR, file), "utf8")),
+  ].join("\n");
+  const componentAssets = [
+    ...componentSources.matchAll(
+      /(?:src|photoSrc|imageSrc)=\s*(?:"|\{")(\/[^"]+\.(?:avif|gif|jpe?g|png|svg|webp))"/g,
+    ),
   ].map((match) => match[1]);
+  const styleAssets = [
+    ...styleSources.matchAll(
+      /url\(\s*(?:"|')?(\/[^)"']+\.(?:avif|gif|jpe?g|png|svg|webp))(?:"|')?\s*\)/g,
+    ),
+  ].map((match) => match[1]);
+  const templateAssets = START_TEMPLATES.map(({ imageSrc }) => imageSrc);
+  const assets = [...componentAssets, ...styleAssets, ...templateAssets];
+  const uniqueAssets = [...new Set(assets)];
 
-  assert.ok(assets.length > 0, "homepage should reference bundled /home assets");
-  for (const asset of assets) {
+  assert.ok(templateAssets.length > 0, "#start should provide bundled template previews");
+  assert.ok(uniqueAssets.length > 0, "homepage should reference bundled local image assets");
+  for (const asset of uniqueAssets) {
     assert.ok(existsSync(path.join("public", asset.slice(1))), `${asset} should exist under public/`);
   }
 });
