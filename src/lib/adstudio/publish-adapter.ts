@@ -77,6 +77,19 @@ export interface PublishLoadResult {
   formRevision: number | null;
 }
 
+/** A worker-attested render output. Unattested/pending video refs are never publishable. */
+export type ValidatedVideoPublishAsset = {
+  projectStatus: "succeeded";
+  validationStatus: "validated";
+  storagePath?: string;
+  bytesBase64?: string;
+  videoId?: string;
+  mimeType?: "video/mp4" | "video/webm";
+  posterPath?: string | null;
+  posterUrl?: string;
+  durationMs?: number;
+};
+
 export type PublishRequirements = {
   destinationMode: "website" | "instant_form";
   requiredCtaTypes: string[];
@@ -237,7 +250,7 @@ export async function loadPublishState(
  */
 export function validatePublishState(
   state: PublishLoadResult,
-  options: { controls?: MetaPublishControls; setup?: Partial<MetaConnectionSetup> } = {},
+  options: { controls?: MetaPublishControls; setup?: Partial<MetaConnectionSetup>; videoAsset?: ValidatedVideoPublishAsset | null } = {},
 ): string[] {
   const issues: string[] = [];
   issues.push(...validatePausedPublishControls(options.controls));
@@ -256,8 +269,9 @@ export function validatePublishState(
     issues.push(...validateExecutableOfferFulfilment(options.controls.fulfilment));
   }
 
-  if (!state.revision.feedPngHash) issues.push("Missing Feed PNG");
-  if (!state.revision.storyPngHash) issues.push("Missing Story PNG");
+  const videoReady = options.videoAsset?.projectStatus === "succeeded" && options.videoAsset.validationStatus === "validated" && Boolean(options.videoAsset.storagePath || options.videoAsset.videoId || options.videoAsset.bytesBase64);
+  if (!videoReady && !state.revision.feedPngHash) issues.push("Missing Feed PNG");
+  if (!videoReady && !state.revision.storyPngHash) issues.push("Missing Story PNG");
   if (!state.ad.metaPrimaryText) issues.push("Missing primary text");
   if (!state.ad.metaHeadline) issues.push("Missing headline");
   if (!state.ad.metaCta) issues.push("Missing CTA");
@@ -416,16 +430,20 @@ export interface PausedPublishPlanInput {
   setup: MetaConnectionSetup;
   controls?: MetaPublishControls;
   state: PublishLoadResult;
+  videoAsset?: ValidatedVideoPublishAsset | null;
+  /** Alias used by callers loading a video project alongside the ad state. */
+  video?: ValidatedVideoPublishAsset | null;
 }
 
 export function buildPausedMetaPublishPlan(input: PausedPublishPlanInput): MetaPublishPlan {
   const { state, setup } = input;
+  const videoAsset = input.videoAsset ?? input.video ?? null;
   const label = state.pack.metadata?.title?.trim?.() || state.pack.templateId || "Blockwise ad";
   const controls = normalizePausedControls(input.controls ?? {});
   const now = new Date().toISOString();
   const requirements = readTemplatePublishRequirements(state.pack);
   const mode = input.controls?.destinationMode ?? requirements.destinationMode;
-  const issues = validatePublishState(state, { controls: { ...(input.controls ?? {}), destinationMode: mode }, setup });
+  const issues = validatePublishState(state, { controls: { ...(input.controls ?? {}), destinationMode: mode }, setup, videoAsset });
   if (issues.length > 0) throw new PublishError("publish_dependencies_missing", issues.join("; "));
   const form = state.form;
   if (mode === "instant_form" && !form) throw new PublishError("publish_dependencies_missing", "No pinned Instant Form — generate and save one before publishing");
@@ -498,11 +516,11 @@ export function buildPausedMetaPublishPlan(input: PausedPublishPlanInput): MetaP
       ...(controls.fulfilment ? { fulfilment: controls.fulfilment } : {}),
     }] : [];
 
-  const selectedVariants = [...new Set(input.controls!.variantIds!)];
+  const selectedVariants = [...new Set(controls.variantIds ?? ["feed", "story"])] as Array<"feed" | "story">;
   if (selectedVariants.some((variant) => variant !== "feed" && variant !== "story")) throw new PublishError("invalid_variants", "Select Feed and/or Story variants only.");
   const creatives: MetaPublishCreativePlan[] = selectedVariants.map((variant) => variant === "feed"
-    ? buildPausedCreative(state, setup, label, "feed", state.revision.feedPngPath, "4:5", mode)
-    : buildPausedCreative(state, setup, label, "story", state.revision.storyPngPath, "9:16", mode));
+    ? buildPausedCreative(state, setup, label, "feed", state.revision.feedPngPath, "4:5", mode, videoAsset)
+    : buildPausedCreative(state, setup, label, "story", state.revision.storyPngPath, "9:16", mode, videoAsset));
   const ads: MetaPublishAdPlan[] = adSets.flatMap((adSet, adSetIndex) => selectedVariants.map((variant) => ({
     localId: "ad_" + variant + "_" + (adSetIndex + 1),
     name: label + " " + (variant === "feed" ? "Feed" : "Story") + " ad " + (adSetIndex + 1),
@@ -566,7 +584,37 @@ function buildPausedCreative(
   pngPath: string,
   format: "4:5" | "9:16",
   destinationMode: "website" | "instant_form",
+  videoAsset?: ValidatedVideoPublishAsset | null,
 ): MetaPublishCreativePlan {
+  if (videoAsset) {
+    if (videoAsset.projectStatus !== "succeeded" || videoAsset.validationStatus !== "validated" || (!videoAsset.storagePath && !videoAsset.videoId && !videoAsset.bytesBase64)) {
+      throw new PublishError("publish_dependencies_missing", "Video rendering and worker validation must succeed before publishing.");
+    }
+    return {
+      localId: `creative_${placement}`,
+      name: `${label} ${placement === "feed" ? "Feed" : "Story"}`,
+      pageId: setup.pageId,
+      instagramActorId: setup.instagramActorId ?? null,
+      headline: state.ad.metaHeadline || label,
+      primaryText: state.ad.metaPrimaryText || label,
+      description: state.ad.metaDescription || "",
+      cta: state.ad.metaCta || "LEARN_MORE",
+      leadFormLocalId: destinationMode === "instant_form" ? "form_primary" : "",
+      adStudioCreativeId: null,
+      format: placement === "feed" ? "4:5" : "9:16",
+      asset: {
+        type: "video",
+        source: videoAsset.videoId ? "meta" : videoAsset.bytesBase64 ? "inline" : "storage",
+        ...(videoAsset.mimeType ? { mimeType: videoAsset.mimeType } : {}),
+        filename: `${placement}.mp4`,
+        ...(videoAsset.storagePath ? { storagePath: videoAsset.storagePath } : {}),
+        ...(videoAsset.bytesBase64 ? { bytesBase64: videoAsset.bytesBase64 } : {}),
+        ...(videoAsset.videoId ? { videoId: videoAsset.videoId } : {}),
+        ...(videoAsset.posterPath ? { posterPath: videoAsset.posterPath } : {}),
+        ...(videoAsset.posterUrl ? { posterUrl: videoAsset.posterUrl } : {}),
+      },
+    };
+  }
   return {
     localId: `creative_${placement}`,
     name: `${label} ${placement === "feed" ? "Feed" : "Story"}`,
@@ -828,12 +876,13 @@ export async function resolvePublishCreativeAssets(
 
     const storagePath = asset.storagePath;
     if (!storagePath.startsWith(`${plan.workspaceId}/`) || storagePath.includes("..")) {
-      throw new PublishError("creative_image_outside_workspace", `The finished ad image for ${creative.name} is outside this workspace.`);
+      throw new PublishError("creative_image_outside_workspace", `The finished ad media for ${creative.name} is outside this workspace.`);
     }
 
-    const { data, error } = await serviceSupabase.storage.from("workspace-artifacts").download(storagePath);
+    const bucket = asset.type === "video" ? "adstudio-videos" : "workspace-artifacts";
+    const { data, error } = await serviceSupabase.storage.from(bucket).download(storagePath);
     if (error || !data) {
-      throw new PublishError("creative_image_missing", `The finished ad image for ${creative.name} could not be loaded. Regenerate the ad and try again.`);
+      throw new PublishError("creative_image_missing", `The finished ad media for ${creative.name} could not be loaded. Regenerate the ad and try again.`);
     }
 
     const bytes = Buffer.from(await data.arrayBuffer());

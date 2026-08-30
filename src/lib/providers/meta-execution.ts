@@ -164,6 +164,9 @@ export type MetaCreativeAssetPlan = {
   storagePath?: string;
   imageHash?: string;
   videoId?: string;
+  /** Optional poster supplied for a video_data creative. */
+  posterUrl?: string;
+  posterPath?: string;
 };
 
 export type MetaPublishLeadFormPlan = {
@@ -532,8 +535,10 @@ export function validateMetaPublishPlanReadiness(
     blockers.push("Meta publish plan is not linked to an approval request.");
   }
 
-  if (plan.adapter === "marketing_api" && plan.creatives.some((creative) => !hasUsableCreativeImage(creative))) {
-    blockers.push("The finished ad image could not be found for one or more creatives.");
+  if (plan.adapter === "marketing_api" && plan.creatives.some((creative) => !hasUsableCreativeMedia(creative))) {
+    blockers.push(plan.creatives.some((creative) => creative.asset?.type === "video")
+      ? "The finished ad media could not be found or has not been validated for one or more creatives."
+      : "The finished ad image could not be found for one or more creatives.");
   }
 
   return {
@@ -932,25 +937,39 @@ async function publishWithMarketingApi(
       if (existingId) {
         reconciledObjects.creativeIds[creative.localId] = existingId;
       } else {
-        const imageHash = await resolveCreativeImageHash(plan, creative, input, requestLog, responseLog);
+        const media = await resolveCreativeMedia(plan, creative, input, requestLog, responseLog);
         const leadFormId = reconciledObjects.leadFormIds[creative.leadFormLocalId];
         const utmLink = buildUtmLink(destinationUrl, plan.tracking, creative.localId);
+        const callToAction = {
+          type: creative.cta,
+          value: leadFormId ? { lead_gen_form_id: leadFormId } : { link: utmLink },
+        };
         const response = await postMetaObject(input, requestLog, responseLog, `creative.${creative.localId}`, `/${plan.setup.metaAdAccountId}/adcreatives`, {
           name: providerName,
           object_story_spec: {
             page_id: creative.pageId,
             ...(creative.instagramActorId ? { instagram_user_id: creative.instagramActorId } : {}),
-            link_data: {
-              message: creative.primaryText,
-              name: creative.headline,
-              description: creative.description,
-              link: utmLink,
-              ...(imageHash ? { image_hash: imageHash } : {}),
-              call_to_action: {
-                type: creative.cta,
-                value: leadFormId ? { lead_gen_form_id: leadFormId } : { link: utmLink },
-              },
-            },
+            ...(creative.asset?.type === "video"
+              ? {
+                  video_data: {
+                    video_id: media.videoId,
+                    message: creative.primaryText,
+                    title: creative.headline,
+                    link_description: creative.description,
+                    call_to_action: callToAction,
+                    ...(creative.asset.posterUrl ? { image_url: creative.asset.posterUrl } : {}),
+                  },
+                }
+              : {
+                  link_data: {
+                    message: creative.primaryText,
+                    name: creative.headline,
+                    description: creative.description,
+                    link: utmLink,
+                    ...(media.imageHash ? { image_hash: media.imageHash } : {}),
+                    call_to_action: callToAction,
+                  },
+                }),
           },
         });
         reconciledObjects.creativeIds[creative.localId] = requireMetaId(response, "creative");
@@ -1546,6 +1565,32 @@ async function resolveCreativeImageHash(
   const fromMap = imageMap?.[filename]?.hash ?? Object.values(imageMap ?? {})[0]?.hash;
 
   return fromMap ?? (typeof response.hash === "string" ? response.hash : null);
+}
+
+async function resolveCreativeMedia(
+  plan: MetaPublishPlan,
+  creative: MetaPublishCreativePlan,
+  input: MetaPublishExecutionInput,
+  requestLog: MetaProviderLogEntry[],
+  responseLog: MetaProviderLogEntry[],
+): Promise<{ imageHash: string | null; videoId: string | null }> {
+  if (creative.asset?.type !== "video") {
+    return { imageHash: await resolveCreativeImageHash(plan, creative, input, requestLog, responseLog), videoId: null };
+  }
+  if (creative.asset.videoId) return { imageHash: null, videoId: creative.asset.videoId };
+  if (creative.asset.source === "storage" && creative.asset.storagePath) {
+    throw new Error("Video storage refs must be resolved to bytes by the publish worker before Meta upload.");
+  }
+  if (creative.asset.source === "url" && creative.asset.url) {
+    const response = await postMetaObject(input, requestLog, responseLog, `asset.${creative.localId}`, `/${plan.setup.metaAdAccountId}/advideos`, { file_url: creative.asset.url });
+    return { imageHash: null, videoId: requireMetaId(response, "video") };
+  }
+  if (creative.asset.source !== "inline" || !creative.asset.bytesBase64) throw new Error("Validated video bytes are required before Meta upload.");
+  const response = await postMetaObject(input, requestLog, responseLog, `asset.${creative.localId}`, `/${plan.setup.metaAdAccountId}/advideos`, {
+    source: creative.asset.bytesBase64,
+    name: creative.asset.filename ?? `${creative.localId}.mp4`,
+  });
+  return { imageHash: null, videoId: requireMetaId(response, "video") };
 }
 
 async function reconcileMetaObjects(
@@ -2356,9 +2401,13 @@ function buildCreativeImageAsset(creative: AdStudioCampaignPack["creatives"][num
   };
 }
 
-function hasUsableCreativeImage(creative: MetaPublishCreativePlan): boolean {
+function hasUsableCreativeMedia(creative: MetaPublishCreativePlan): boolean {
   const asset = creative.asset;
   if (!asset) return false;
+
+  if (asset.type === "video") {
+    return Boolean(asset.videoId || asset.bytesBase64 || (asset.source === "storage" && asset.storagePath) || (asset.source === "url" && asset.url));
+  }
 
   return Boolean(asset.imageHash || asset.bytesBase64 || (asset.source === "storage" && asset.storagePath));
 }
