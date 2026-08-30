@@ -220,6 +220,7 @@ async function runEditorFlow(page: Page) {
     expect(exported.contentType).toMatch(/^image\/png(?:;|$)/i);
     expect(exported.byteLength).toBeGreaterThan(100);
   }
+  await configurePublishPlanner(page);
   await expect(page.getByText(/Preview only.*nothing will be created/i)).toBeVisible();
 
   const freezeAndCreate = page.getByRole("button", { name: "Freeze & Create PAUSED", exact: true });
@@ -234,14 +235,63 @@ async function runEditorFlow(page: Page) {
     // the response assertion below is a second defense after the request.
     await page.getByText("What happens next", { exact: true }).click();
     await expect(page.getByText(/Preview only is on.*nothing will be created/i)).toBeVisible();
+    await expect(freezeAndCreate).toBeEnabled();
+    const publishRequest = page.waitForRequest(request => request.url().includes("/api/adstudio/ads/") && request.url().includes("/publish?") && request.method() === "POST");
     const publishResponse = page.waitForResponse(response => response.url().includes("/api/adstudio/ads/") && response.url().includes("/publish?") && response.request().method() === "POST");
     await freezeAndCreate.click();
-    const response = await publishResponse;
-    const body = await response.json() as { mode?: string; providerWritesEnabled?: boolean; error?: string };
+    const [request, response] = await Promise.all([publishRequest, publishResponse]);
+    const requestBody = request.postDataJSON() as {
+      controls?: {
+        target?: { mode?: string };
+        destinationUrl?: string;
+        variantIds?: string[];
+        dailyBudgetMinorUnits?: number;
+        newCampaign?: { budgetMode?: string; specialAdCategoryCountries?: string[] };
+        geo?: { type?: string; latitude?: number; longitude?: number; radiusKm?: number };
+        placements?: { publisherPlatforms?: string[]; facebookPositions?: string[]; instagramPositions?: string[] };
+        schedule?: { startTime?: string | null; endTime?: string | null };
+        fulfilment?: { exactOffer?: string; fulfilmentAsset?: string; fulfilmentUrl?: string };
+      };
+    };
+    expect(requestBody.controls).toMatchObject({
+      target: { mode: "new_campaign_new_adset" },
+      destinationUrl: "https://example.com/e2e-listing",
+      variantIds: ["feed", "story"],
+      dailyBudgetMinorUnits: 2_500,
+      newCampaign: { budgetMode: "adset", specialAdCategoryCountries: ["AU"] },
+      geo: { type: "custom_radius", latitude: -31.9523, longitude: 115.8613, radiusKm: 25 },
+      placements: {
+        publisherPlatforms: ["facebook", "instagram"],
+        facebookPositions: ["feed", "story"],
+        instagramPositions: ["stream", "story"],
+      },
+      fulfilment: {
+        exactOffer: "E2E property guide",
+        fulfilmentAsset: "",
+        fulfilmentUrl: "https://example.com/e2e-guide",
+      },
+    });
+    expect(Date.parse(requestBody.controls?.schedule?.startTime ?? "")).toBeLessThan(
+      Date.parse(requestBody.controls?.schedule?.endTime ?? ""),
+    );
+    const body = await response.json() as {
+      mode?: string;
+      status?: string;
+      providerWritesEnabled?: boolean;
+      plannedObjects?: { campaigns?: number; adSets?: number; creatives?: number; ads?: number };
+      reconciledObjects?: Record<string, string>;
+      message?: string;
+      error?: string;
+    };
     expect(response.ok(), JSON.stringify(body)).toBe(true);
     expect(body.mode, JSON.stringify(body)).toBe("dry_run");
-    expect(body.providerWritesEnabled, JSON.stringify(body)).not.toBe(true);
+    expect(body.status, JSON.stringify(body)).toBe("paused_disabled");
+    expect(body.providerWritesEnabled, JSON.stringify(body)).toBe(false);
+    expect(body.plannedObjects, JSON.stringify(body)).toMatchObject({ campaigns: 1, adSets: 1, creatives: 2, ads: 2 });
+    expect(body.reconciledObjects ?? {}, "dry run must not report any provider object IDs").toEqual({});
+    expect(body.message, JSON.stringify(body)).toMatch(/NO Meta objects were created/i);
     await expect(page.getByRole("status").filter({ hasText: /Dry run/ })).toBeVisible();
+    await expect(page.getByRole("button", { name: /Activate/i })).toHaveCount(0);
   }
 
   await page.goto(`/ad-studio/templates/${encodeURIComponent(templateId!)}`);
@@ -312,6 +362,113 @@ async function waitForImageUploads(page: Page) {
   // The preview appears before the direct storage upload finishes. Saving is
   // only valid after every prepare/upload/finalize sequence has completed.
   await expect(page.getByText(/Uploading/)).toHaveCount(0, { timeout: 60_000 });
+}
+
+async function configurePublishPlanner(page: Page) {
+  const feedVariant = page.getByLabel("Feed (4:5)", { exact: true });
+  const storyVariant = page.getByLabel("Story (9:16)", { exact: true });
+  await expect(feedVariant).toBeChecked();
+  await expect(storyVariant).toBeChecked();
+  await storyVariant.uncheck();
+  await expect(page.getByRole("status").filter({ hasText: /1 selected variant.*1 ad set.*1 paused ad/ })).toBeVisible();
+  await storyVariant.check();
+  await expect(page.getByRole("status").filter({ hasText: /2 selected variants.*1 ad set.*2 paused ads/ })).toBeVisible();
+
+  // Exercise every supported target shape before completing the sole
+  // direct-template E2E path with a new campaign and new ad set.
+  const target = page.getByLabel("Campaign and ad set", { exact: true });
+  expect(await target.locator("option").allTextContents()).toEqual([
+    "New campaign and new ad set",
+    "Existing campaign and new ad set",
+    "Existing campaign and one or more existing ad sets",
+  ]);
+  await target.selectOption("existing_adset");
+  const existingCampaign = page.getByLabel("Existing campaign ID", { exact: true });
+  const existingAdSets = page.getByLabel("Existing ad set IDs", { exact: true });
+  await existingCampaign.fill("e2e-existing-campaign");
+  await existingAdSets.fill("e2e-existing-adset-1, e2e-existing-adset-2");
+  await expect(existingCampaign).toHaveValue("e2e-existing-campaign");
+  await expect(existingAdSets).toHaveValue("e2e-existing-adset-1, e2e-existing-adset-2");
+  await expect(page.getByRole("heading", { name: "Existing ad set settings", exact: true })).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: /2 selected variants.*2 ad sets.*4 paused ads/ })).toBeVisible();
+
+  await target.selectOption("existing_campaign_new_adset");
+  await page.getByLabel("Existing campaign ID", { exact: true }).fill("e2e-existing-campaign");
+  await expect(page.getByLabel("Existing ad set IDs", { exact: true })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "New ad set setup", exact: true })).toBeVisible();
+
+  await target.selectOption("new_campaign_new_adset");
+  await expect(page.getByLabel("Existing campaign ID", { exact: true })).toHaveCount(0);
+  await page.getByLabel("Special ad category country", { exact: true }).fill("AU");
+
+  const campaignBudget = page.getByLabel(/^Campaign budget \(CBO\)/);
+  const adSetBudget = page.getByLabel(/^Ad set budget \(ABO\)/);
+  await campaignBudget.check();
+  await expect(campaignBudget).toBeChecked();
+  await adSetBudget.check();
+  await expect(adSetBudget).toBeChecked();
+  await expect(campaignBudget).not.toBeChecked();
+  await page.getByLabel("Ad set daily budget (AUD)", { exact: true }).fill("25.00");
+
+  await page.getByLabel("Audience location", { exact: true }).selectOption("custom_radius");
+  await page.getByLabel("Latitude", { exact: true }).fill("-31.9523");
+  await page.getByLabel("Longitude", { exact: true }).fill("115.8613");
+  await page.getByLabel("Radius (km)", { exact: true }).fill("25");
+
+  for (const placement of ["Facebook Feed", "Facebook Stories", "Instagram Feed", "Instagram Stories"]) {
+    const choice = page.getByLabel(placement, { exact: true });
+    await choice.check();
+    await expect(choice).toBeChecked();
+  }
+
+  await page.getByLabel("Starts", { exact: true }).selectOption("scheduled");
+  await page.getByLabel("Scheduled start date and time", { exact: true }).fill("2030-01-15T09:30");
+  await page.getByLabel("Ends", { exact: true }).selectOption("scheduled");
+  await page.getByLabel("Scheduled end date and time", { exact: true }).fill("2030-01-22T09:30");
+  await page.getByLabel(/^(Ad destination|Article or website destination)$/).fill("https://example.com/e2e-listing");
+
+  const offer = page.getByLabel("This ad includes an offer, guide or result promise", { exact: true });
+  if (!(await offer.isChecked())) {
+    await expect(offer).toBeEnabled();
+    await offer.check();
+  }
+  await expect(offer).toBeChecked();
+  const fulfilmentFields: Array<[string, string]> = [
+    ["Exact offer", "E2E property guide"],
+    ["Eligibility", "All E2E enquiries"],
+    ["Conditions", "Dry-run fixture only"],
+    ["Timeframe", "Immediately after submission"],
+    ["Evidence", "E2E evidence record"],
+    ["Evidence approval", "Approved for dry-run verification"],
+    ["Disclaimer", "Test fixture; no real offer."],
+    ["Privacy URL", "https://example.com/privacy"],
+    ["Fulfilment delivery URL", "https://example.com/e2e-guide"],
+    ["Consent wording", "I agree to receive the test guide."],
+    ["Fulfilment owner", "E2E test team"],
+    ["Expiry", "2030-12-31"],
+    ["Tracking", "E2E dry-run receipt"],
+  ];
+  for (const [label, value] of fulfilmentFields) {
+    const field = page.getByLabel(label, { exact: true });
+    await field.fill(value);
+    await expect(field).toHaveValue(value);
+  }
+
+  const summary = page.getByText("Review the exact setup", { exact: true }).locator("..");
+  await expect(summary).toContainText(/New campaign.*new ad set/);
+  await expect(summary).toContainText("Ad set budget (ABO)");
+  await expect(summary).toContainText("A$25.00 per day for the new ad set");
+  await expect(summary).toContainText("25 km around -31.9523, 115.8613");
+  for (const placement of ["Facebook Feed", "Facebook Stories", "Instagram Feed", "Instagram Stories"]) {
+    await expect(summary).toContainText(placement);
+  }
+  await expect(summary).toContainText("Feed + Story");
+  await expect(summary).toContainText("E2E property guide");
+
+  const confirmation = page.getByLabel(/^I confirm this budget mode, spend, audience, placement, schedule, creative matrix and fulfilment setup is correct/);
+  await expect(confirmation).toBeEnabled();
+  await confirmation.check();
+  await expect(confirmation).toBeChecked();
 }
 
 async function assertEditorPlacement(page: Page, placement: "feed" | "story") {
