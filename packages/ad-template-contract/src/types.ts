@@ -25,7 +25,7 @@ export interface TextInput { key: string; label: string; placeholder: string; ma
 export interface GallerySample { assetKey?: string; placement: Placement; purpose: string; }
 export interface MetaCopyDefaults { primaryText: string[]; headlines: string[]; descriptions: string[]; cta: string; }
 export interface AiWritingGuidance { summary: string; fields: Record<string, string>; }
-export interface PublishRequirements { objective: string; specialAdCategory: string | null; instantForm: { required: boolean; dependency: string | null; defaults?: Record<string, string> }; destination: { required: boolean; kind: "website" | "instant_form" | "none"; dependency: string | null }; requiredCtaTypes: string[]; }
+export interface PublishRequirements { objective: string; specialAdCategory: string | null; instantForm: { required: boolean; dependency: string | null; defaults?: Record<string, string> }; destination: { required: boolean; kind: "website" | "instant_form" | "none"; dependency: string | null }; fulfilment?: { required: boolean; dependency: string | null }; requiredCtaTypes: string[]; }
 export interface ReplacementAsset { inputKey: string; assetKey: string; purpose?: string; }
 export interface RealAssetRef { inputKey: string; kind: string; required: boolean; }
 export interface TemplateMetadata { title: string; description: string; gallerySamples: { feed?: GallerySample; story?: GallerySample }; metaCopyDefaults: MetaCopyDefaults; aiWritingGuidance: AiWritingGuidance; publishRequirements: PublishRequirements; replacementAssets: ReplacementAsset[]; realAssetRefs: RealAssetRef[]; }

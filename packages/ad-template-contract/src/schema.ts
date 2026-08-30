@@ -54,6 +54,7 @@ const metadataSchema = z.object({
     objective: z.string().min(1), specialAdCategory: z.string().nullable(),
     instantForm: z.object({ required: z.boolean(), dependency: z.string().nullable(), defaults: z.record(z.string()).optional() }).strict(),
     destination: z.object({ required: z.boolean(), kind: z.enum(["website", "instant_form", "none"]), dependency: z.string().nullable() }).strict(),
+    fulfilment: z.object({ required: z.boolean(), dependency: z.string().nullable() }).strict().optional(),
     requiredCtaTypes: z.array(z.string()).default([]),
   }).strict(),
   replacementAssets: z.array(z.object({ inputKey: z.string().min(1), assetKey: z.string().min(1), purpose: z.string().optional() }).strict()),

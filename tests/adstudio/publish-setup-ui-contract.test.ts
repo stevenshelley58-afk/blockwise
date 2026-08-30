@@ -5,6 +5,7 @@ import { readFileSync } from "node:fs";
 import {
   buildExplicitMetaPublishControls,
   normalizeSavedPublishAudienceLocations,
+  publishSetupFingerprint,
   type ExplicitPublishControlsDraft,
 } from "../../src/app/(customer)/ad-studio/templates/[templateId]/publish/publish-controls.ts";
 
@@ -16,7 +17,11 @@ function draft(overrides: Partial<ExplicitPublishControlsDraft> = {}): ExplicitP
     campaignId: "",
     adSetIds: [],
     variantIds: ["feed", "story"],
+    budgetMode: "adset",
     dailyBudgetDollars: "35.50",
+    newCampaignObjective: "OUTCOME_LEADS",
+    newCampaignSpecialAdCategory: "HOUSING",
+    newCampaignSpecialAdCategoryCountry: "AU",
     audienceMode: "saved_locations",
     availableLocations: [{ key: "meta-perth", name: "Perth", region: "WA" }],
     selectedLocationKeys: ["meta-perth"],
@@ -29,6 +34,23 @@ function draft(overrides: Partial<ExplicitPublishControlsDraft> = {}): ExplicitP
     startAt: "",
     endIntent: "run_until_paused",
     endAt: "",
+    offerEnabled: false,
+    fulfilmentRequired: false,
+    fulfilment: {
+      exactOffer: "",
+      eligibility: "",
+      conditions: "",
+      timeframe: "",
+      evidence: "",
+      approval: "",
+      disclaimer: "",
+      privacyUrl: "",
+      consent: "",
+      fulfilmentUrl: "",
+      owner: "",
+      expiry: "",
+      tracking: "",
+    },
     setupConfirmed: true,
     ...overrides,
   };
@@ -63,6 +85,7 @@ describe("explicit Meta publish setup", () => {
     assert.ok(result.controls);
     assert.equal(result.controls.destinationUrl, "https://example.com/thank-you");
     assert.equal(result.controls.dailyBudgetMinorUnits, 3550);
+    assert.equal(result.controls.newCampaign?.budgetMode, "adset");
     assert.deepEqual(result.controls.geo, {
       type: "cities",
       locations: [{ key: "meta-perth", name: "Perth", region: "WA" }],
@@ -82,6 +105,7 @@ describe("explicit Meta publish setup", () => {
       targetMode: "existing_adset",
       campaignId: "campaign-1",
       adSetIds: ["adset-1", "adset-2"],
+      parentState: existingParentState(),
     }));
 
     assert.ok(result.controls);
@@ -89,17 +113,95 @@ describe("explicit Meta publish setup", () => {
     assert.equal(Object.hasOwn(result.controls, "geo"), false);
     assert.equal(Object.hasOwn(result.controls, "placements"), false);
     assert.equal(Object.hasOwn(result.controls, "schedule"), false);
+    assert.equal(Object.hasOwn(result.controls, "parentState"), false);
     assert.equal(result.summary?.usesExistingAdSetSettings, true);
+  });
+
+  it("requires an explicit variant selection", () => {
+    const result = buildExplicitMetaPublishControls(draft({ variantIds: [] }));
+
+    assert.equal(result.controls, null);
+    assert.match(result.issues.join(" "), /at least one creative variant/i);
+  });
+
+  it("sends a positive conditional ABO budget for a new ad set in an existing campaign", () => {
+    const result = buildExplicitMetaPublishControls(draft({
+      targetMode: "existing_campaign_new_adset",
+      campaignId: "campaign-1",
+      budgetMode: "",
+      parentState: { ...existingParentState(), campaign: { ...existingParentState().campaign!, budgetMode: "campaign" } },
+    }));
+
+    assert.ok(result.controls);
+    assert.equal(result.controls.dailyBudgetMinorUnits, 3550);
+    assert.equal(Object.hasOwn(result.controls, "newCampaign"), false);
+    assert.equal(Object.hasOwn(result.controls, "parentState"), false);
+    assert.match(result.summary?.budget ?? "", /ignored for live CBO/i);
+  });
+
+  it("rejects duplicate existing ad sets so the creative matrix is exact", () => {
+    const result = buildExplicitMetaPublishControls(draft({
+      targetMode: "existing_adset",
+      campaignId: "campaign-1",
+      adSetIds: ["adset-1", "adset-1"],
+      parentState: existingParentState(),
+    }));
+
+    assert.equal(result.controls, null);
+    assert.match(result.issues.join(" "), /duplicate ad set IDs/i);
+  });
+
+  it("binds required offer fulfilment to its explicit HTTPS delivery URL and never accepts typed asset text", () => {
+    const result = buildExplicitMetaPublishControls(draft({
+      destinationUrl: "https://example.com/property-appraisal",
+      fulfilmentRequired: true,
+      fulfilment: validFulfilment(),
+    }));
+
+    assert.ok(result.controls?.fulfilment);
+    assert.equal(result.controls.destinationUrl, "https://example.com/property-appraisal");
+    assert.equal(result.controls.fulfilment.fulfilmentUrl, "https://example.com/delivery/seller-guide");
+    assert.equal(result.controls.fulfilment.fulfilmentAsset, "");
+    assert.match(result.summary?.fulfilment ?? "", /Free seller guide/);
+  });
+
+  it("fails closed when required fulfilment has no executable HTTPS delivery path", () => {
+    const result = buildExplicitMetaPublishControls(draft({
+      fulfilmentRequired: true,
+      fulfilment: { ...validFulfilment(), fulfilmentUrl: "http://example.com/guide" },
+    }));
+
+    assert.equal(result.controls, null);
+    assert.match(result.issues.join(" "), /HTTPS/);
+  });
+
+  it("binds confirmation to destination, matrix and fulfilment changes", () => {
+    const base = draft({ setupConfirmed: false });
+    const withoutConfirmation = ({ setupConfirmed: _ignored, ...value }: ExplicitPublishControlsDraft) => value;
+    const fingerprint = publishSetupFingerprint(withoutConfirmation(base));
+
+    assert.notEqual(publishSetupFingerprint(withoutConfirmation({ ...base, destinationUrl: "https://example.com/changed" })), fingerprint);
+    assert.notEqual(publishSetupFingerprint(withoutConfirmation({ ...base, variantIds: ["feed"] })), fingerprint);
+    assert.notEqual(publishSetupFingerprint(withoutConfirmation({ ...base, offerEnabled: true, fulfilment: validFulfilment() })), fingerprint);
+    assert.notEqual(publishSetupFingerprint(withoutConfirmation({ ...base, fulfilment: { ...base.fulfilment, fulfilmentUrl: "https://example.com/new-delivery" } })), fingerprint);
   });
 
   it("keeps both customer confirmations and explicit labels visible", () => {
     const source = readFileSync("src/app/(customer)/ad-studio/templates/[templateId]/publish/publish-flow.tsx", "utf8");
-    assert.match(source, /Daily budget \(AUD\)/);
+    assert.match(source, /daily budget \(AUD\)/);
     assert.match(source, /Audience location/);
     assert.match(source, /Placements/);
     assert.match(source, /Choose start timing/);
-    assert.match(source, /Thank-you button destination/);
-    assert.match(source, /I confirm this daily budget, audience, placement and schedule setup is correct/);
+    assert.match(source, /Ad destination/);
+    assert.match(source, /Fulfilment delivery URL/);
+    assert.match(source, /Campaign budget \(CBO\)/);
+    assert.match(source, /Ad set budget \(ABO\)/);
+    assert.match(source, /Special ad category country/);
+    assert.match(source, /Blockwise will not assume it/);
+    assert.doesNotMatch(source, /newCampaignSpecialAdCategoryCountry: "AU"/);
+    assert.match(source, /I confirm this budget mode, spend, audience, placement, schedule, creative matrix and fulfilment setup is correct/);
+    assert.doesNotMatch(source, /Fulfilment asset/);
+    assert.match(source, /A typed file name is not accepted/);
     assert.match(source, /activationConfirmed/);
   });
 
@@ -122,3 +224,43 @@ describe("explicit Meta publish setup", () => {
     assert.doesNotMatch(flow, /audienceLocations=\{\[\]\}/);
   });
 });
+
+function validFulfilment(): ExplicitPublishControlsDraft["fulfilment"] {
+  return {
+    exactOffer: "Free seller guide",
+    eligibility: "Homeowners in the selected locations",
+    conditions: "One guide per enquiry",
+    timeframe: "Delivered immediately",
+    evidence: "Approved guide revision 4",
+    approval: "Approved by the principal",
+    disclaimer: "General information only.",
+    privacyUrl: "https://example.com/privacy",
+    consent: "I agree to receive the guide.",
+    fulfilmentUrl: "https://example.com/delivery/seller-guide",
+    owner: "Customer success",
+    expiry: "No expiry",
+    tracking: "CRM tag: seller-guide",
+  };
+}
+
+function existingParentState(): NonNullable<ExplicitPublishControlsDraft["parentState"]> {
+  return {
+    campaign: {
+      id: "campaign-1",
+      objective: "OUTCOME_LEADS",
+      specialAdCategories: ["HOUSING"],
+      specialAdCategoryCountries: ["AU"],
+      budgetMode: "adset",
+    },
+    adSets: ["adset-1", "adset-2"].map(id => ({
+      id,
+      campaignId: "campaign-1",
+      targeting: { geo_locations: { cities: [{ key: "meta-perth" }] } },
+      optimizationGoal: "LEAD_GENERATION",
+      billingEvent: "IMPRESSIONS",
+      dailyBudgetMinorUnits: 3550,
+      destination: { type: "ON_AD" },
+      promotedObject: { page_id: "page-1" },
+    })),
+  };
+}

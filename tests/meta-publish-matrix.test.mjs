@@ -8,7 +8,7 @@ const route = readFileSync("src/app/api/adstudio/ads/[id]/publish/route.ts", "ut
 
 test("publication matrix accepts saved Feed/Story variant selection", () => {
   assert.match(execution, /variantIds\?: Array<"feed" \| "story">/);
-  assert.match(adapter, /selectedVariants = input\.controls\?\.variantIds/);
+  assert.match(adapter, /selectedVariants = \[\.\.\.new Set\(input\.controls!\.variantIds!\)\]/);
   assert.match(adapter, /selectedVariants\.map\(\(variant\)/);
   assert.match(adapter, /adSets\.flatMap\(\(adSet, adSetIndex\) => selectedVariants\.map/);
   assert.match(adapter, /status: "PAUSED"/);

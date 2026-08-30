@@ -78,7 +78,8 @@ describe("customer Ad Studio workbench contract", () => {
     assert.match(publish, /variantIds: selectedVariants/);
     assert.match(publish, /selectedVariants\.length \* selectedAdSetCount/);
     assert.match(publish, /This ad includes an offer, guide or result promise/);
-    assert.match(publish, /offerEnabled \? \{ fulfilment \} : \{\}/);
+    assert.match(publish, /fulfilmentRequired: publishRequirements\.fulfilmentRequired/);
+    assert.match(publish, /Fulfilment delivery URL/);
     assert.match(instantForm, /aria-label=\{label\}/);
     assert.match(instantForm, /min-h-11/);
     assert.doesNotMatch(instantForm, /--r-control/);
