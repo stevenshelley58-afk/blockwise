@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ICON_NAMES } from "./types.ts";
+import { COLOUR_MODES, COLOUR_ROLES, ICON_NAMES } from "./types.ts";
 
 const colourRoleSchema = z.enum(["background", "primary", "secondary", "accent", "mainText", "inverseText"]);
 const rectSchema = z.object({ x: z.number().finite(), y: z.number().finite(), width: z.number().positive(), height: z.number().positive() }).strict();
@@ -113,8 +113,23 @@ export const adDocumentSchema = z.object({
   schema: z.literal("blockwise.ad-document"), templateId: z.string().min(1),
   sharedImageValues: z.record(z.string().min(1)), sharedTextValues: z.record(z.string()),
   feedCropOverrides: z.record(rectSchema), storyCropOverrides: z.record(rectSchema),
-  colourMode: z.enum(["template", "brand_pack"]), resolvedColourMap: z.record(z.string().min(1)),
+  // `template` and `brand_pack` are the original persisted values. Adding
+  // `manual` is intentionally additive so every existing document continues
+  // to parse without a migration or rewrite.
+  colourMode: z.enum(COLOUR_MODES), resolvedColourMap: z.record(z.string().min(1)),
   metaPrimaryText: z.string(), metaHeadline: z.string(), metaDescription: z.string(), metaCta: z.string(),
   revision: z.number().int().positive(), lastRenderedAt: z.string().datetime().nullable().optional(),
-}).strict();
+}).strict().superRefine((document, ctx) => {
+  if (document.colourMode !== "manual") return;
+  for (const role of COLOUR_ROLES) {
+    const value = document.resolvedColourMap[role];
+    if (!value) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["resolvedColourMap", role], message: `manual colour map is missing ${role}` });
+      continue;
+    }
+    if (!/^#[0-9a-fA-F]{6}$/.test(value)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["resolvedColourMap", role], message: `manual ${role} must be a six-digit hex colour` });
+    }
+  }
+});
 export type AdDocumentParsed = z.infer<typeof adDocumentSchema>;

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef } from "react";
-import type { AdTemplate, Layout, LayoutLayer, Placement, Rect, ColourRole } from "../../../../packages/ad-template-contract/src/types";
+import type { AdTemplate, Layout, LayoutLayer, Placement, Rect, ColourMode, ColourRole } from "../../../../packages/ad-template-contract/src/types";
 import type { AdDocumentParsed } from "../../../../packages/ad-template-contract/src/schema";
 import { toMetaCta } from "@/lib/adstudio/meta-cta";
 
@@ -112,7 +112,7 @@ export interface EditorState {
   activePlacement: Placement;
   imageValues: EditorImageValue[];
   textValues: Record<string, string>;
-  colourMode: "template" | "brand_pack";
+  colourMode: ColourMode;
   resolvedColourMap: Record<ColourRole, string>;
   selectedLayerId: string | null;
   isDirty: boolean;
@@ -297,13 +297,56 @@ export function useEditorState(pack: AdTemplate, initialDocument?: AdDocumentPar
     });
   }, [pushUndo]);
 
-  const setColourMode = useCallback((mode: "template" | "brand_pack", colourMap?: Record<ColourRole, string>) => {
+  /** Select an authored, Brand Pack, or customer-created palette as one edit. */
+  const setColourMode = useCallback((mode: ColourMode, colourMap?: Record<ColourRole, string>) => {
     setState(prev => {
       pushUndo(prev);
+      const selectedColourMap = mode === "template"
+        ? { ...prev.pack.semanticColours }
+        : colourMap
+          ? { ...prev.pack.semanticColours, ...colourMap }
+          : { ...prev.resolvedColourMap };
+      const resolvedColourMap = mode === "manual"
+        ? normaliseManualColourMap(selectedColourMap)
+        : selectedColourMap;
       return {
         ...prev,
         colourMode: mode,
-        resolvedColourMap: colourMap ?? (mode === "template" ? { ...prev.pack.semanticColours } : prev.resolvedColourMap),
+        resolvedColourMap,
+        isDirty: true,
+        editVersion: (prev.editVersion ?? 0) + 1,
+      };
+    });
+  }, [pushUndo]);
+
+  /** Change one semantic role and enter Manual mode as one undoable edit. */
+  const updateColour = useCallback((role: ColourRole, value: string) => {
+    const colour = normalizeManualHexColour(value);
+    if (!colour) return false;
+    setState(prev => {
+      if (prev.colourMode === "manual" && prev.resolvedColourMap[role] === colour) return prev;
+      pushUndo(prev);
+      return {
+        ...prev,
+        colourMode: "manual",
+        resolvedColourMap: { ...prev.resolvedColourMap, [role]: colour },
+        isDirty: true,
+        editVersion: (prev.editVersion ?? 0) + 1,
+      };
+    });
+    return true;
+  }, [pushUndo]);
+
+  /** Reset one manual role to the template's authored value, preserving others. */
+  const resetColour = useCallback((role: ColourRole) => {
+    setState(prev => {
+      const value = normalizeManualHexColour(prev.pack.semanticColours[role]) ?? prev.pack.semanticColours[role];
+      if (prev.colourMode === "manual" && prev.resolvedColourMap[role] === value) return prev;
+      pushUndo(prev);
+      return {
+        ...prev,
+        colourMode: "manual",
+        resolvedColourMap: { ...prev.resolvedColourMap, [role]: value },
         isDirty: true,
         editVersion: (prev.editVersion ?? 0) + 1,
       };
@@ -365,6 +408,8 @@ export function useEditorState(pack: AdTemplate, initialDocument?: AdDocumentPar
     updateImagePreview,
     updateCrop,
     setColourMode,
+    updateColour,
+    resetColour,
     undo,
     redo,
     markSaved,
@@ -399,6 +444,21 @@ const BRAND_PACK_ROLE_MAP: Record<keyof BrandPackColours, ColourRole> = {
 };
 
 const HEX_COLOUR = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
+const MANUAL_HEX_COLOUR = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
+
+/** Convert a customer-entered colour to the saved six-digit contract form. */
+export function normalizeManualHexColour(value: string): string | null {
+  const trimmed = value.trim();
+  if (!MANUAL_HEX_COLOUR.test(trimmed)) return null;
+  const digits = trimmed.slice(1);
+  return `#${digits.length === 3 ? digits.split("").map(character => character.repeat(2)).join("") : digits}`.toUpperCase();
+}
+
+function normaliseManualColourMap(colours: Record<ColourRole, string>): Record<ColourRole, string> {
+  return Object.fromEntries(
+    Object.entries(colours).map(([role, value]) => [role, normalizeManualHexColour(value) ?? value]),
+  ) as Record<ColourRole, string>;
+}
 
 /** Map a Brand Pack `colours` block onto template colour roles (partial). */
 export function brandPackColoursToRoleMap(
@@ -422,10 +482,10 @@ export function brandPackColoursToRoleMap(
  */
 export function resolveColourMap(
   templateColours: Record<ColourRole, string>,
-  mode: "template" | "brand_pack",
+  mode: ColourMode,
   brandColourMap?: Partial<Record<ColourRole, string>> | null,
 ): Record<ColourRole, string> {
-  if (mode === "brand_pack" && brandColourMap) {
+  if ((mode === "brand_pack" || mode === "manual") && brandColourMap) {
     return { ...templateColours, ...brandColourMap };
   }
   return { ...templateColours };

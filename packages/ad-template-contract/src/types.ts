@@ -1,5 +1,7 @@
 export const COLOUR_ROLES = ["background", "primary", "secondary", "accent", "mainText", "inverseText"] as const;
 export type ColourRole = (typeof COLOUR_ROLES)[number];
+export const COLOUR_MODES = ["template", "brand_pack", "manual"] as const;
+export type ColourMode = (typeof COLOUR_MODES)[number];
 export const LAYER_TYPES = ["plate", "image_slot", "overlay_patch", "text", "logo", "vector", "icon"] as const;
 export const ICON_NAMES = ["arrow", "check", "phone", "mail", "globe", "pin"] as const;
 export type IconName = (typeof ICON_NAMES)[number];
@@ -32,4 +34,4 @@ export interface ReplacementAsset { inputKey: string; assetKey: string; purpose?
 export interface RealAssetRef { inputKey: string; kind: string; required: boolean; }
 export interface TemplateMetadata { title: string; description: string; gallerySamples: { feed?: GallerySample; story?: GallerySample }; metaCopyDefaults: MetaCopyDefaults; aiWritingGuidance: AiWritingGuidance; publishRequirements: PublishRequirements; replacementAssets: ReplacementAsset[]; realAssetRefs: RealAssetRef[]; }
 export interface AdTemplate { schema: "blockwise.ad-template"; templateId: string; createdAt: string; feedLayout: Layout; storyLayout: Layout; imageInputs: ImageInput[]; textInputs: TextInput[]; semanticColours: Record<ColourRole, string>; assets: Record<string, { fileName: string; mimeType: string }>; fonts: FontRef[]; metadata: TemplateMetadata; }
-export interface AdDocument { schema: "blockwise.ad-document"; templateId: string; sharedImageValues: Record<string, string>; sharedTextValues: Record<string, string>; feedCropOverrides: Record<string, Rect>; storyCropOverrides: Record<string, Rect>; colourMode: "template" | "brand_pack"; resolvedColourMap: Record<string, string>; metaPrimaryText: string; metaHeadline: string; metaDescription: string; metaCta: string; revision: number; lastRenderedAt?: string | null; }
+export interface AdDocument { schema: "blockwise.ad-document"; templateId: string; sharedImageValues: Record<string, string>; sharedTextValues: Record<string, string>; feedCropOverrides: Record<string, Rect>; storyCropOverrides: Record<string, Rect>; colourMode: ColourMode; resolvedColourMap: Record<ColourRole, string>; metaPrimaryText: string; metaHeadline: string; metaDescription: string; metaCta: string; revision: number; lastRenderedAt?: string | null; }

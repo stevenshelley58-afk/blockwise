@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import test from "node:test";
+import { createCanvas, loadImage } from "@napi-rs/canvas";
 import { ICON_NAMES, type AdTemplate, type IconName } from "@blockwise/ad-template-contract";
-import { renderPlacement } from "./renderer.ts";
+import { renderPlacement, resolveCoverSourceRect } from "./renderer.ts";
 
 const colours = {
   background: "#ffffff", primary: "#111111", secondary: "#777777",
@@ -59,4 +60,54 @@ test("every supported icon renders a distinct deterministic vector", async () =>
     hashes.add(hash);
   }
   assert.equal(hashes.size, ICON_NAMES.length, "every supported icon must have distinct visible geometry");
+});
+
+test("cover source geometry preserves aspect ratio inside a supplied focal crop", () => {
+  assert.deepEqual(
+    resolveCoverSourceRect(400, 200, { x: 0, y: 0, width: 1, height: 1 }, 200, 200),
+    { x: 100, y: 0, width: 200, height: 200 },
+  );
+  assert.deepEqual(
+    resolveCoverSourceRect(200, 400, { x: 0, y: 0.25, width: 1, height: 0.5 }, 400, 200),
+    { x: 0, y: 150, width: 200, height: 100 },
+  );
+});
+
+test("image slots render with true cover instead of stretching a full-width source", async () => {
+  const source = createCanvas(400, 200);
+  const sourceContext = source.getContext("2d");
+  for (const [index, colour] of ["#ff0000", "#00ff00", "#0000ff", "#ffff00"].entries()) {
+    sourceContext.fillStyle = colour;
+    sourceContext.fillRect(index * 100, 0, 100, 200);
+  }
+  const template = templateWithIcon("arrow");
+  template.templateId = "renderer-cover-crop";
+  template.imageInputs = [{ key: "hero", label: "Hero", acceptedTypes: ["image/png"] }];
+  template.feedLayout.layers = [{
+    type: "image_slot",
+    layerId: "feed-hero",
+    inputKey: "hero",
+    geometry: { x: 0, y: 0, width: 200, height: 200 },
+    mask: "none",
+    minSourceWidth: 1,
+    minSourceHeight: 1,
+    defaultCrop: { x: 0, y: 0, width: 1, height: 1 },
+    allowedPlacementOverrides: ["crop"],
+  }];
+
+  const output = await renderPlacement({
+    template,
+    imageValues: { hero: source.toBuffer("image/png") },
+    textValues: {},
+    colourMap: colours,
+  }, "feed");
+  const rendered = await loadImage(output.png);
+  const sample = createCanvas(1080, 1350);
+  const sampleContext = sample.getContext("2d");
+  sampleContext.drawImage(rendered, 0, 0);
+  const left = sampleContext.getImageData(20, 100, 1, 1).data;
+  const right = sampleContext.getImageData(180, 100, 1, 1).data;
+
+  assert.deepEqual(Array.from(left.slice(0, 3)), [0, 255, 0], "cover must trim the outer red stripe");
+  assert.deepEqual(Array.from(right.slice(0, 3)), [0, 0, 255], "cover must trim the outer yellow stripe");
 });

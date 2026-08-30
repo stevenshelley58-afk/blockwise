@@ -41,7 +41,11 @@ export async function renderPlacement(input: RenderInput, placement: Placement):
   const dims = DIMENSIONS[placement];
   const canvas = createCanvas(dims.width, dims.height);
   const ctx = canvas.getContext("2d");
-  ctx.imageSmoothingEnabled = false;
+  // Customer images are frequently scaled down from large camera originals.
+  // Skia's high-quality sampler avoids the jagged, pixel-stepped result the
+  // old nearest-neighbour configuration produced in final Meta assets.
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
 
   for (const layer of layout.layers) {
     await renderLayer(ctx, layer, input, placement, dims);
@@ -129,12 +133,14 @@ async function renderImageSlot(ctx: SKRSContext2D, layer: ImageSlotLayer, input:
   const imageBuf = input.imageValues[layer.inputKey];
   if (!imageBuf) return;
   const img = await loadImage(imageBuf);
-  const crop = normalizeCrop(input.cropOverrides?.[layer.inputKey] ?? layer.defaultCrop);
   const geometry = resolveGeometry(layer.geometry, dims);
-  const sx = crop.x * img.width;
-  const sy = crop.y * img.height;
-  const sw = crop.width * img.width;
-  const sh = crop.height * img.height;
+  const source = resolveCoverSourceRect(
+    img.width,
+    img.height,
+    input.cropOverrides?.[layer.inputKey] ?? layer.defaultCrop,
+    geometry.width,
+    geometry.height,
+  );
 
   ctx.save();
   if (layer.mask === "rounded_rect") {
@@ -147,8 +153,42 @@ async function renderImageSlot(ctx: SKRSContext2D, layer: ImageSlotLayer, input:
     ctx.arc(cx, cy, Math.min(geometry.width, geometry.height) / 2, 0, Math.PI * 2);
     ctx.clip();
   }
-  ctx.drawImage(img, sx, sy, sw, sh, geometry.x, geometry.y, geometry.width, geometry.height);
+  ctx.drawImage(img, source.x, source.y, source.width, source.height, geometry.x, geometry.y, geometry.width, geometry.height);
   ctx.restore();
+}
+
+/**
+ * Resolve a normalised customer crop/focal rectangle to a source rectangle
+ * with the destination aspect ratio. The selected region is never stretched:
+ * any excess is trimmed equally around its centre, exactly like object-fit
+ * cover while respecting the customer's chosen focal area.
+ */
+export function resolveCoverSourceRect(
+  sourceWidth: number,
+  sourceHeight: number,
+  rawCrop: Rect,
+  destinationWidth: number,
+  destinationHeight: number,
+): Rect {
+  const crop = normalizeCrop(rawCrop);
+  const region = {
+    x: crop.x * sourceWidth,
+    y: crop.y * sourceHeight,
+    width: crop.width * sourceWidth,
+    height: crop.height * sourceHeight,
+  };
+  const destinationAspect = Math.max(Number.EPSILON, destinationWidth) / Math.max(Number.EPSILON, destinationHeight);
+  const regionAspect = region.width / region.height;
+
+  if (regionAspect > destinationAspect) {
+    const width = region.height * destinationAspect;
+    return { ...region, x: region.x + (region.width - width) / 2, width };
+  }
+  if (regionAspect < destinationAspect) {
+    const height = region.width / destinationAspect;
+    return { ...region, y: region.y + (region.height - height) / 2, height };
+  }
+  return region;
 }
 
 function normalizeCrop(crop: Rect): Rect {
