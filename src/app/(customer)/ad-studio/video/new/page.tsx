@@ -9,13 +9,13 @@ export const dynamic = "force-dynamic";
 export default async function NewVideoPage() {
   const { supabase, access } = await requirePageSurfaceAccess("adstudio");
   const brandData = await loadApprovedBrandData(supabase, access.workspaceId);
-  return <VideoNewFlow workspaceId={access.workspaceId} brandAssets={brandData.assets} brandSnapshot={brandData.snapshot} />;
+  return <VideoNewFlow workspaceId={access.workspaceId} brandKitId={brandData.brandKitId} brandAssets={brandData.assets} brandSnapshot={brandData.snapshot} />;
 }
 
 async function loadApprovedBrandData(
   supabase: Awaited<ReturnType<typeof import("@/lib/supabase/server").createSupabaseServerClient>>,
   workspaceId: string,
-): Promise<{ assets: VideoAsset[]; snapshot: BrandSnapshot }> {
+): Promise<{ assets: VideoAsset[]; snapshot: BrandSnapshot; brandKitId?: string }> {
   try {
     const { data } = await supabase
       .from("adstudio_brand_kits")
@@ -45,7 +45,7 @@ async function loadApprovedBrandData(
       if (kind === "listing_image" || kind === "property_image") assets.push({ id: String(assetRow.id ?? url), kind: "photo", url });
       if (kind === "testimonial_image" || kind === "social_proof_image") assets.push({ id: String(assetRow.id ?? url), kind: "testimonial", url });
     }
-    return { assets, snapshot };
+    return { assets, snapshot, brandKitId: brandKit.brandKitId };
   } catch {
     return { assets: [], snapshot: {} };
   }
