@@ -1,7 +1,14 @@
 import { createHash } from "node:crypto";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { AdTemplate } from "../../../packages/ad-template-contract/src/types";
+import { adDocumentSchema } from "../../../packages/ad-template-contract/src/schema.ts";
+import {
+  COLOUR_MODES,
+  COLOUR_ROLES,
+  type AdTemplate,
+  type ColourMode,
+  type ColourRole,
+} from "../../../packages/ad-template-contract/src/types.ts";
 import type { InstantForm } from "../adstudio/instant-form-types";
 import { deterministicUuid } from "./id.ts";
 import {
@@ -48,7 +55,8 @@ export interface PublishLoadResult {
   ad: {
     id: string;
     templateId: string;
-    colourMode: "template" | "brand_pack";
+    colourMode: ColourMode;
+    resolvedColourMap: Record<ColourRole, string>;
     metaPrimaryText: string;
     metaHeadline: string;
     metaDescription: string;
@@ -158,7 +166,7 @@ export async function loadPublishState(
   // 1. Load ad
   const { data: ad, error: adError } = await supabase
     .from("ad_customer_ads")
-    .select("id, template_id, colour_mode, meta_primary_text, meta_headline, meta_description, meta_cta, active_revision_id")
+    .select("id, template_id, colour_mode, resolved_colour_map, meta_primary_text, meta_headline, meta_description, meta_cta, active_revision_id")
     .eq("id", adId)
     .eq("workspace_id", workspaceId)
     .single();
@@ -200,7 +208,8 @@ export async function loadPublishState(
     ad: {
       id: ad.id,
       templateId: ad.template_id,
-      colourMode: ad.colour_mode,
+      colourMode: readColourMode(ad.colour_mode),
+      resolvedColourMap: readColourMap(ad.resolved_colour_map),
       metaPrimaryText: ad.meta_primary_text,
       metaHeadline: ad.meta_headline,
       metaDescription: ad.meta_description,
@@ -272,8 +281,11 @@ export function validatePublishState(
       issues.push("Instant Form thank-you website action needs a valid HTTPS URL");
     }
   }
-  if (state.ad.colourMode === "brand_pack" && !hasAllColours(state.pack.semanticColours)) {
+  if (state.ad.colourMode === "brand_pack" && !hasAllColours(state.ad.resolvedColourMap)) {
     issues.push("Brand Pack is missing required colour roles");
+  }
+  if (state.ad.colourMode === "manual" && !hasValidManualColours(state.ad.resolvedColourMap)) {
+    issues.push("Custom palette is missing a valid six-digit colour for every required role");
   }
 
   return issues;
@@ -311,6 +323,7 @@ export async function freezePublicationSnapshot(
     metaDescription: state.ad.metaDescription,
     metaCta: state.ad.metaCta,
     colourMode: state.ad.colourMode,
+    resolvedColourMap: state.ad.resolvedColourMap,
     form: state.form,
     formDraftId: state.formDraftId,
     formRevision: state.formRevision,
@@ -335,10 +348,11 @@ export async function freezePublicationSnapshot(
 }
 
 /**
- * The editor stores Meta copy inside the AdDocument (document_json), not on
- * the ad row. loadPublishState reads ad_customer_ads.meta_* columns, so before
- * publishing we promote the frozen revision's copy onto the row. The revision
- * is authoritative: the publish always uses the LAST SAVED document.
+ * The editor stores Meta copy and palette state inside the AdDocument
+ * (document_json), while loadPublishState reads their indexed ad-row mirrors.
+ * Before publishing, promote both from the LAST SAVED revision so a manual
+ * palette cannot be silently reported as the template palette in the frozen
+ * publication receipt.
  */
 export async function backfillPublishMetaCopy(
   supabase: SupabaseClient,
@@ -360,24 +374,30 @@ export async function backfillPublishMetaCopy(
     .eq("id", ad.active_revision_id)
     .maybeSingle();
 
-  const document = revision?.document_json as
-    | { metaPrimaryText?: string; metaHeadline?: string; metaDescription?: string; metaCta?: string }
-    | null
-    | undefined;
+  if (!revision?.document_json) return;
+  const parsed = adDocumentSchema.safeParse(revision.document_json);
+  if (!parsed.success) {
+    throw new PublishError("saved_document_invalid", "The last saved ad document is invalid — save the ad again before publishing.");
+  }
+  const document = parsed.data;
 
-  if (!document) return;
-
-  await supabase
+  const { error: updateError } = await supabase
     .from("ad_customer_ads")
     .update({
-      meta_primary_text: document.metaPrimaryText ?? "",
-      meta_headline: document.metaHeadline ?? "",
-      meta_description: document.metaDescription ?? "",
-      meta_cta: document.metaCta ?? "LEARN_MORE",
+      colour_mode: document.colourMode,
+      resolved_colour_map: document.resolvedColourMap,
+      meta_primary_text: document.metaPrimaryText,
+      meta_headline: document.metaHeadline,
+      meta_description: document.metaDescription,
+      meta_cta: document.metaCta,
       updated_at: new Date().toISOString(),
     })
     .eq("id", adId)
     .eq("workspace_id", workspaceId);
+
+  if (updateError) {
+    throw new PublishError("publish_state_sync_failed", "The saved ad state could not be prepared for publishing.");
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -840,8 +860,29 @@ function slug(value: string): string {
 // ---------------------------------------------------------------------------
 
 function hasAllColours(colours: Record<string, string>): boolean {
-  const required = ["background", "primary", "secondary", "accent", "mainText", "inverseText"];
-  return required.every(r => colours[r] && colours[r]!.length > 0);
+  return COLOUR_ROLES.every(role => typeof colours[role] === "string" && colours[role]!.length > 0);
+}
+
+function hasValidManualColours(colours: Record<string, string>): boolean {
+  return COLOUR_ROLES.every(role => /^#[0-9a-fA-F]{6}$/.test(colours[role] ?? ""));
+}
+
+function readColourMode(value: unknown): ColourMode {
+  if (typeof value === "string" && COLOUR_MODES.includes(value as ColourMode)) {
+    return value as ColourMode;
+  }
+  throw new PublishError("invalid_colour_mode", "Saved ad has an unsupported colour mode.");
+}
+
+function readColourMap(value: unknown): Record<ColourRole, string> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new PublishError("invalid_colour_map", "Saved ad has an invalid colour map.");
+  }
+  const record = value as Record<string, unknown>;
+  if (!COLOUR_ROLES.every(role => typeof record[role] === "string" && record[role]!.length > 0)) {
+    throw new PublishError("invalid_colour_map", "Saved ad is missing required colour roles.");
+  }
+  return Object.fromEntries(COLOUR_ROLES.map(role => [role, record[role] as string])) as Record<ColourRole, string>;
 }
 
 export class PublishError extends Error {

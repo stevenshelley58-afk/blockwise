@@ -32,6 +32,9 @@ test("cheap-copy migration appends DeepSeek once and replays as a no-op", () => 
     .split(/\r?\n/u)
     .map(line => line.trim())
     .filter(Boolean);
-  assert.equal(allowlist.at(-1), migrationName);
   assert.equal(allowlist.filter(name => name === migrationName).length, 1);
+  assert.ok(
+    allowlist.indexOf(migrationName) > allowlist.indexOf("20260830030000_direct_customer_meta_publish_plans.sql"),
+    "cheap-copy migration must remain after its direct-publish predecessor",
+  );
 });

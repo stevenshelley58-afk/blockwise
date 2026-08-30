@@ -3,10 +3,13 @@ import { describe, it } from "node:test";
 
 import {
   PublishError,
+  backfillPublishMetaCopy,
   buildPausedMetaPublishPlan,
+  validatePublishState,
   type PausedPublishPlanInput,
   type PublishLoadResult,
 } from "../../src/lib/adstudio/publish-adapter.ts";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   createMetaExecutionAdapter,
   type MetaOfferFulfilment,
@@ -34,6 +37,78 @@ const exactOffer: MetaOfferFulfilment = {
 };
 
 describe("paused Ad Studio Meta publish planning", () => {
+  it("accepts a complete manual palette and rejects an incomplete one", () => {
+    const valid = publishState();
+    valid.ad.colourMode = "manual";
+    valid.ad.resolvedColourMap = manualColours;
+
+    assert.doesNotMatch(
+      validatePublishState(valid, { controls: validNewAdSetControls() }).join("\n"),
+      /Custom palette/i,
+    );
+
+    const invalid = publishState();
+    invalid.ad.colourMode = "manual";
+    invalid.ad.resolvedColourMap = { ...manualColours, accent: "gold" };
+    assert.match(
+      validatePublishState(invalid, { controls: validNewAdSetControls() }).join("\n"),
+      /Custom palette is missing a valid six-digit colour/i,
+    );
+  });
+
+  it("promotes the saved manual palette and copy together before publishing", async () => {
+    const updates: Array<Record<string, unknown>> = [];
+    const savedDocument = {
+      schema: "blockwise.ad-document",
+      templateId: "free-guide-template",
+      sharedImageValues: {},
+      sharedTextValues: {},
+      feedCropOverrides: {},
+      storyCropOverrides: {},
+      colourMode: "manual",
+      resolvedColourMap: manualColours,
+      metaPrimaryText: "Fresh primary text",
+      metaHeadline: "Fresh headline",
+      metaDescription: "Fresh description",
+      metaCta: "LEARN_MORE",
+      revision: 5,
+    };
+    const supabase = publishBackfillSupabase(savedDocument, updates);
+
+    await backfillPublishMetaCopy(supabase, "ad_123", "workspace_123");
+
+    assert.equal(updates.length, 1);
+    assert.equal(updates[0]?.colour_mode, "manual");
+    assert.deepEqual(updates[0]?.resolved_colour_map, manualColours);
+    assert.equal(updates[0]?.meta_primary_text, "Fresh primary text");
+    assert.equal(updates[0]?.meta_headline, "Fresh headline");
+  });
+
+  it("fails closed instead of publishing an invalid saved palette document", async () => {
+    const updates: Array<Record<string, unknown>> = [];
+    const invalidDocument = {
+      schema: "blockwise.ad-document",
+      templateId: "free-guide-template",
+      sharedImageValues: {},
+      sharedTextValues: {},
+      feedCropOverrides: {},
+      storyCropOverrides: {},
+      colourMode: "manual",
+      resolvedColourMap: { ...manualColours, accent: "gold" },
+      metaPrimaryText: "Primary text",
+      metaHeadline: "Headline",
+      metaDescription: "Description",
+      metaCta: "LEARN_MORE",
+      revision: 5,
+    };
+
+    await assert.rejects(
+      backfillPublishMetaCopy(publishBackfillSupabase(invalidDocument, updates), "ad_123", "workspace_123"),
+      (error: unknown) => error instanceof PublishError && error.code === "saved_document_invalid",
+    );
+    assert.equal(updates.length, 0);
+  });
+
   it("preserves a validated Free guide promise in plan controls and the Instant Form", () => {
     const plan = buildPausedMetaPublishPlan(buildInput(validNewAdSetControls()));
 
@@ -346,6 +421,7 @@ function publishState(): PublishLoadResult {
       id: "ad_123",
       templateId: "free-guide-template",
       colourMode: "template",
+      resolvedColourMap: manualColours,
       metaPrimaryText: "Download the free seller guide.",
       metaHeadline: "Free seller guide",
       metaDescription: "A practical guide for Perth homeowners.",
@@ -394,4 +470,64 @@ function publishState(): PublishLoadResult {
     formDraftId: "form_draft_123",
     formRevision: 2,
   };
+}
+
+const manualColours = {
+  background: "#F7F4EE",
+  primary: "#17352D",
+  secondary: "#A7B8AF",
+  accent: "#D8954E",
+  mainText: "#17201D",
+  inverseText: "#FFFFFF",
+} as const;
+
+function publishBackfillSupabase(
+  documentJson: Record<string, unknown>,
+  updates: Array<Record<string, unknown>>,
+): SupabaseClient {
+  return {
+    from(table: string) {
+      if (table === "ad_customer_ads") {
+        return {
+          select() {
+            return {
+              eq() {
+                return {
+                  eq() {
+                    return {
+                      maybeSingle: async () => ({ data: { active_revision_id: "revision_123" }, error: null }),
+                    };
+                  },
+                };
+              },
+            };
+          },
+          update(value: Record<string, unknown>) {
+            updates.push(value);
+            return {
+              eq() {
+                return {
+                  eq: async () => ({ data: null, error: null }),
+                };
+              },
+            };
+          },
+        };
+      }
+      if (table === "ad_revisions") {
+        return {
+          select() {
+            return {
+              eq() {
+                return {
+                  maybeSingle: async () => ({ data: { document_json: documentJson }, error: null }),
+                };
+              },
+            };
+          },
+        };
+      }
+      throw new Error(`Unexpected table: ${table}`);
+    },
+  } as unknown as SupabaseClient;
 }

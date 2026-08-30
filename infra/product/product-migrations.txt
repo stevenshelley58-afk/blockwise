@@ -88,3 +88,4 @@
 20260830020000_direct_template_artifact.sql
 20260830030000_direct_customer_meta_publish_plans.sql
 20260830040000_adstudio_cheap_copy_deepseek.sql
+20260830050000_adstudio_manual_colour_mode.sql
