@@ -475,7 +475,8 @@ function clampRequiredText(value: unknown, limit: number, field = "copy"): strin
   if (!within) throw new AdStudioCopyLimitError(field, limit);
 
   // If the next character is whitespace, the limit already ends at a word.
-  if (/\s/u.test(text.charAt(limit)) || /[.!?]/u.test(within.at(-1) ?? "")) return within;
+  if (/[.!?]/u.test(within.at(-1) ?? "")) return within;
+  if (/\s/u.test(text.charAt(limit))) return trimDanglingPhraseEnding(within);
 
   // Prefer a complete sentence or authored line when it retains useful copy.
   const minimumUsefulLength = Math.max(8, Math.floor(limit * 0.45));
@@ -489,10 +490,24 @@ function clampRequiredText(value: unknown, limit: number, field = "copy"): strin
   // clause punctuation. Never show an AI suggestion cut through a word.
   const wordBoundary = Math.max(within.lastIndexOf(" "), within.lastIndexOf("\n"), within.lastIndexOf("\t"));
   if (wordBoundary > 0) {
-    const bounded = within.slice(0, wordBoundary).replace(/[,:;\-–—]+$/u, "").trimEnd();
+    const bounded = trimDanglingPhraseEnding(
+      within.slice(0, wordBoundary).replace(/[,:;\-–—]+$/u, "").trimEnd(),
+    );
     if (bounded) return bounded;
   }
   throw new AdStudioCopyLimitError(field, limit);
+}
+
+/**
+ * A word-safe cut can still read as visibly broken ("Visit the open home or").
+ * Remove only function words that cannot sensibly finish an ad field; keep the
+ * customer's substantive wording untouched.
+ */
+function trimDanglingPhraseEnding(value: string): string {
+  const dangling = /(?:\s+|^)(?:a|an|and|at|but|by|for|from|in|of|on|or|the|to|with)$/iu;
+  let result = value.trimEnd();
+  while (dangling.test(result)) result = result.replace(dangling, "").trimEnd();
+  return result.replace(/[,:;\-–—]+$/u, "").trimEnd();
 }
 
 function clampList(value: unknown, limit: number): string[] {

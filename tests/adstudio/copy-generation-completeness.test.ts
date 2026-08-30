@@ -21,7 +21,7 @@ test("complete AI output is trimmed and constrained to editor limits", () => {
     ...completeCopy,
     headline: `  ${longHeadline}  `,
   });
-  assert.equal(parsed.headline, "A beautifully renovated family home with");
+  assert.equal(parsed.headline, "A beautifully renovated family home");
   assert.ok(parsed.headline.length <= 40);
   assert.equal(parsed.primaryText, completeCopy.primaryText);
 });
@@ -42,6 +42,17 @@ test("over-limit Meta copy keeps complete sentences or words instead of hard-cut
   assert.match(description.charAt(parsed.description.length), /\s/);
   assert.doesNotMatch(parsed.primaryText, /Download the free S$/);
   assert.doesNotMatch(parsed.description, /Get the l$/);
+});
+
+test("over-limit copy never ends on a dangling conjunction or preposition", () => {
+  const parsed = parseCompleteAdStudioCopy({
+    ...completeCopy,
+    description: `${"A practical local guide. ".repeat(3)}Visit the open home or discover more details today`,
+  });
+
+  assert.ok(parsed.description.length <= 90);
+  assert.doesNotMatch(parsed.description, /\b(?:and|or|but|with|for|to|of|in|on|at|from|by|a|an|the)$/iu);
+  assert.match(parsed.description, /[.!?]$/u);
 });
 
 test("an unbreakable over-limit token fails instead of displaying a broken word", () => {
