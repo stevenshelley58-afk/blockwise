@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import type { ApprovalStatus } from "../publishing/readiness.ts";
+import type { MetaPublishPlan } from "./meta-execution.ts";
 import { DEFAULT_META_GRAPH_VERSION } from "./meta-graph-version.ts";
 
 export type MetaPlanMutationAction = "activate" | "pause" | "increase_budget" | "export_leads";
@@ -10,6 +11,8 @@ export type MetaPlanMutationPayload = {
   campaignId?: string;
   adSetIds?: string[];
   adIds?: string[];
+  reusedCampaignId?: string;
+  reusedAdSetIds?: string[];
   adSetBudgets?: Array<{ adSetId: string; dailyBudgetMinorUnits: number }>;
   destination?: string;
 };
@@ -99,6 +102,70 @@ export function buildMetaPlanMutation(input: {
   };
 }
 
+/**
+ * Activation ownership comes from server-recorded create/adopt checkpoints,
+ * never from IDs posted by the browser. Reused parents are carried only for a
+ * GET-only active-status preflight and are never activation targets.
+ */
+export function buildOwnedMetaActivationPayload(plan: MetaPublishPlan): MetaPlanMutationPayload {
+  const target = plan.controls.target;
+  if (!target) throw new Error("The publish plan has no explicit Meta parent target.");
+
+  const payload: MetaPlanMutationPayload = { adSetIds: [], adIds: [] };
+  if (target.mode === "new_campaign_new_adset") {
+    const ownedCampaignId = normalizedObjectId(plan.reconciledObjects.ownedCampaignId);
+    if (!ownedCampaignId || ownedCampaignId !== normalizedObjectId(plan.reconciledObjects.campaignId)) {
+      throw new Error("The publish plan cannot prove ownership of its Meta campaign; activation is blocked.");
+    }
+    payload.campaignId = ownedCampaignId;
+  } else {
+    const reusedCampaignId = normalizedObjectId(target.campaignId);
+    if (!reusedCampaignId || reusedCampaignId !== normalizedObjectId(plan.reconciledObjects.campaignId)) {
+      throw new Error("The selected reused campaign no longer matches the publish plan; activation is blocked.");
+    }
+    payload.reusedCampaignId = reusedCampaignId;
+  }
+
+  const ownedAdSetIds = plan.reconciledObjects.ownedAdSetIds ?? {};
+  const reusedAdSetIds: string[] = [];
+  for (const adSet of plan.adSets) {
+    const reconciledId = normalizedObjectId(plan.reconciledObjects.adSetIds[adSet.localId]);
+    if (!reconciledId) throw new Error(`Meta ad set ${adSet.localId} was not reconciled; activation is blocked.`);
+    if (adSet.existingId) {
+      if (reconciledId !== normalizedObjectId(adSet.existingId)) {
+        throw new Error(`Reused Meta ad set ${adSet.localId} changed; activation is blocked.`);
+      }
+      reusedAdSetIds.push(reconciledId);
+    } else {
+      if (normalizedObjectId(ownedAdSetIds[adSet.localId]) !== reconciledId) {
+        throw new Error(`The publish plan cannot prove ownership of Meta ad set ${adSet.localId}; activation is blocked.`);
+      }
+      payload.adSetIds!.push(reconciledId);
+    }
+  }
+  if (target.mode === "existing_adset") {
+    if (!sameObjectIds(reusedAdSetIds, target.adSetIds)) {
+      throw new Error("The reused Meta ad-set selection changed; activation is blocked.");
+    }
+    payload.reusedAdSetIds = uniqueObjectIds(reusedAdSetIds);
+  } else if (reusedAdSetIds.length > 0) {
+    throw new Error("The publish plan unexpectedly contains reused ad sets; activation is blocked.");
+  }
+
+  const ownedAdIds = plan.reconciledObjects.ownedAdIds ?? {};
+  for (const ad of plan.ads) {
+    const reconciledId = normalizedObjectId(plan.reconciledObjects.adIds[ad.localId]);
+    if (!reconciledId || normalizedObjectId(ownedAdIds[ad.localId]) !== reconciledId) {
+      throw new Error(`The publish plan cannot prove ownership of Meta ad ${ad.localId}; activation is blocked.`);
+    }
+    payload.adIds!.push(reconciledId);
+  }
+  if (payload.adIds!.length === 0) throw new Error("The publish plan has no owned Meta ads to activate.");
+  payload.adSetIds = uniqueObjectIds(payload.adSetIds ?? []);
+  payload.adIds = uniqueObjectIds(payload.adIds ?? []);
+  return payload;
+}
+
 export async function executeMetaPlanMutation(input: {
   mutation: MetaPlanMutation;
   approvalStatus: ApprovalStatus;
@@ -114,6 +181,18 @@ export async function executeMetaPlanMutation(input: {
 
   const requestLog = [...input.mutation.requestLog];
   const responseLog = [...input.mutation.responseLog];
+  if (input.mutation.action === "activate") {
+    try {
+      await verifyReusedActivationParents({ ...input, requestLog, responseLog });
+    } catch (error) {
+      return {
+        status: "failed",
+        requestLog,
+        responseLog,
+        lastError: errorMessage(error),
+      };
+    }
+  }
 
   try {
     if (input.mutation.action === "activate") {
@@ -235,6 +314,39 @@ async function executeSafeActivation(input: {
   }
 }
 
+/** GET-only preflight. A paused/stale reused parent fails before any ACTIVE or PAUSED POST. */
+async function verifyReusedActivationParents(input: {
+  mutation: MetaPlanMutation;
+  accessToken: string;
+  graphVersion?: string;
+  fetchImpl?: typeof fetch;
+  onCheckpoint?: (result: MetaMutationExecutionResult) => Promise<void>;
+  requestLog: MetaMutationLogEntry[];
+  responseLog: MetaMutationLogEntry[];
+}) {
+  const ownedAdSetIds = new Set(uniqueObjectIds(input.mutation.payload.adSetIds ?? []));
+  for (const budget of input.mutation.payload.adSetBudgets ?? []) {
+    if (!ownedAdSetIds.has(budget.adSetId)) {
+      throw new Error(`Activation cannot change the budget of reused Meta ad set ${budget.adSetId}.`);
+    }
+  }
+
+  const reusedParents = [
+    ...uniqueObjectIds([input.mutation.payload.reusedCampaignId]).map((id) => ({ kind: "campaign", id })),
+    ...uniqueObjectIds(input.mutation.payload.reusedAdSetIds ?? []).map((id) => ({ kind: "ad set", id })),
+  ];
+  for (const parent of reusedParents) {
+    const status = await getMetaMutationObjectStatus({
+      ...input,
+      step: `activate.preflight_reused_${parent.kind.replace(" ", "_")}.${parent.id}`,
+      objectId: parent.id,
+    });
+    if (!reusedParentConfirmsActive(status)) {
+      throw new Error(`The reused Meta ${parent.kind} ${parent.id} is not active; activation made no provider writes.`);
+    }
+  }
+}
+
 async function applyBudgetMutations(input: {
   mutation: MetaPlanMutation;
   accessToken: string;
@@ -328,6 +440,12 @@ function mutationChildObjectIds(
   ]).filter((objectId) => objectId !== campaignId);
 }
 
+function sameObjectIds(left: string[], right: string[]): boolean {
+  const normalizedLeft = uniqueObjectIds(left).sort();
+  const normalizedRight = uniqueObjectIds(right).sort();
+  return normalizedLeft.length === normalizedRight.length && normalizedLeft.every((id, index) => id === normalizedRight[index]);
+}
+
 function uniqueObjectIds(values: Array<string | null | undefined>): string[] {
   return [...new Set(values.map(normalizedObjectId).filter((value): value is string => Boolean(value)))];
 }
@@ -356,6 +474,18 @@ function statusConfirmsActive(payload: Record<string, unknown>): boolean {
   if (status) return status === "ACTIVE";
 
   return normalizedStatus(payload.effective_status) === "ACTIVE";
+}
+
+function reusedParentConfirmsActive(payload: Record<string, unknown>): boolean {
+  const configured = normalizedStatus(payload.configured_status ?? payload.status);
+  const effective = normalizedStatus(payload.effective_status ?? payload.status);
+  if (configured !== "ACTIVE" || !effective) return false;
+  return !(
+    effective.includes("PAUSED") ||
+    effective.includes("ARCHIVED") ||
+    effective.includes("DELETED") ||
+    effective.includes("DISAPPROVED")
+  );
 }
 
 function normalizedStatus(value: unknown): string | null {

@@ -2,9 +2,17 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { errorResponse, readJsonBody, requireAdStudioRequest } from "@/lib/adstudio/http";
 import {
-  activatePausedMetaPublish,
+  assertActivationReadiness,
+  loadLatestPublishPlanForAd,
+  markPlanObjectsActive,
   PublishError,
 } from "@/lib/adstudio/publish-adapter";
+import {
+  loadMetaPublishPlan,
+  updateMetaPublishPlanExecution,
+} from "@/lib/providers/meta-execution";
+import { executeMetaMutationById } from "@/lib/providers/meta-mutation-worker";
+import { buildMetaPlanMutation, buildOwnedMetaActivationPayload } from "@/lib/providers/meta-mutations";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const runtime = "nodejs";
@@ -47,34 +55,118 @@ export async function POST(request: NextRequest, context: RouteContext) {
   const planId = typeof body.planId === "string" && body.planId.trim() ? body.planId.trim() : undefined;
 
   try {
-    const outcome = await activatePausedMetaPublish(createSupabaseServiceClient(), {
-      adId: id,
-      workspaceId: access.access.workspaceId,
-      planId,
-      requestedBy: access.access.userId,
-      providerWritesEnabled: providerWritesEnabled(),
-    });
+    const serviceSupabase = createSupabaseServiceClient();
+    const plan = planId
+      ? await loadMetaPublishPlan(serviceSupabase, {
+          workspaceId: access.access.workspaceId,
+          planId,
+        })
+      : await loadLatestPublishPlanForAd(serviceSupabase, access.access.workspaceId, id);
+    if (!plan) {
+      throw new PublishError("no_paused_plan", "No paused Meta publish plan found for this ad — publish it first.");
+    }
+    if (plan.adStudioCampaignId !== id) {
+      throw new PublishError("plan_ad_mismatch", "That Meta publish plan belongs to a different ad.");
+    }
 
-    if (outcome.mode === "dry_run") {
+    const readiness = assertActivationReadiness(plan);
+    if (!readiness.ok) throw new PublishError(readiness.code, readiness.message);
+    let mutationPayload;
+    try {
+      mutationPayload = buildOwnedMetaActivationPayload(plan);
+    } catch (error) {
+      throw new PublishError(
+        "activation_ownership_unverified",
+        error instanceof Error ? error.message : "Meta activation ownership could not be verified.",
+      );
+    }
+    const targets = {
+      campaignId: plan.reconciledObjects.campaignId!,
+      adSetIds: mutationPayload.adSetIds ?? [],
+      adIds: mutationPayload.adIds ?? [],
+    };
+
+    if (!providerWritesEnabled()) {
       return NextResponse.json({
         ok: true,
         mode: "dry_run",
-        // The campaign is still PAUSED on Meta — never "live".
-        status: outcome.status,
-        planId: outcome.planId,
-        targets: outcome.targets,
-        message: outcome.message,
+        status: "paused",
+        planId: plan.planId,
+        targets,
+        message: "Activation was NOT applied — provider writes are disabled. Every Meta object remains unchanged.",
       });
     }
+
+    const mutation = buildMetaPlanMutation({
+      workspaceId: plan.workspaceId,
+      planId: plan.planId,
+      requestedBy: access.access.userId,
+      action: "activate",
+      payload: mutationPayload,
+    });
+    const now = new Date().toISOString();
+    const { error: mutationError } = await serviceSupabase
+      .from("meta_publish_plan_mutations")
+      .insert({
+        id: mutation.mutationId,
+        workspace_id: mutation.workspaceId,
+        meta_publish_plan_id: mutation.planId,
+        action: mutation.action,
+        status: "approved",
+        payload_json: mutation.payload,
+        requested_by: mutation.requestedBy,
+        request_log_json: mutation.requestLog,
+        response_log_json: mutation.responseLog,
+        last_error: null,
+        updated_at: now,
+      });
+    if (mutationError) throw new Error(mutationError.message);
+
+    const { data: approval, error: approvalError } = await serviceSupabase
+      .from("approval_requests")
+      .insert({
+        workspace_id: mutation.workspaceId,
+        target_type: mutation.approval.targetType,
+        target_id: mutation.approval.targetId,
+        status: "approved",
+        requested_by: mutation.requestedBy,
+        approved_by: mutation.requestedBy,
+        resolved_at: now,
+        risk_summary: mutation.approval.riskSummary,
+      })
+      .select("id")
+      .single();
+    if (approvalError || !approval) {
+      throw new Error(approvalError?.message ?? "Unable to record the activation approval.");
+    }
+    const { error: linkError } = await serviceSupabase
+      .from("meta_publish_plan_mutations")
+      .update({ approval_request_id: approval.id, updated_at: now })
+      .eq("workspace_id", mutation.workspaceId)
+      .eq("id", mutation.mutationId);
+    if (linkError) throw new Error(linkError.message);
+
+    const executed = await executeMetaMutationById({
+      serviceSupabase,
+      workspaceId: plan.workspaceId,
+      mutationId: mutation.mutationId,
+    });
+    if (executed.status !== "applied") {
+      throw new PublishError(
+        "activation_failed",
+        executed.lastError ?? "Meta could not activate the Blockwise-created ads; reused parents were not changed.",
+      );
+    }
+    await updateMetaPublishPlanExecution(serviceSupabase, markPlanObjectsActive(plan));
 
     return NextResponse.json({
       ok: true,
       mode: "activate",
-      status: outcome.status,
-      planId: outcome.planId,
-      mutationId: outcome.mutationId,
-      targets: outcome.targets,
-      message: outcome.message,
+      status: "activated",
+      planId: plan.planId,
+      mutationId: mutation.mutationId,
+      targets,
+      message: "Activated only the Meta objects created by this publish plan. Reused campaigns and ad sets were verified active and left unchanged.",
     });
   } catch (err) {
     if (err instanceof PublishError) {

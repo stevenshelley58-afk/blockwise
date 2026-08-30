@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { requireApiWorkspace } from "@/lib/auth/api-guards";
 import { loadMetaPublishPlan } from "@/lib/providers/meta-execution";
 import {
+  buildOwnedMetaActivationPayload,
   buildMetaPlanMutation,
   type MetaPlanMutationAction,
   type MetaPlanMutationPayload,
@@ -107,7 +108,10 @@ function withDefaultMutationPayload(
   payload: MetaPlanMutationPayload,
   plan: Awaited<ReturnType<typeof loadMetaPublishPlan>>,
 ): MetaPlanMutationPayload {
-  if (action === "activate" || action === "pause") {
+  if (action === "activate") {
+    return buildOwnedMetaActivationPayload(plan);
+  }
+  if (action === "pause") {
     return {
       ...payload,
       campaignId: payload.campaignId ?? plan.reconciledObjects.campaignId,
