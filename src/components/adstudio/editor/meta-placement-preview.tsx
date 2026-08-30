@@ -13,6 +13,7 @@ import type { Placement } from "../../../../packages/ad-template-contract/src/ty
 import type { MetaCopy } from "./use-editor-state";
 import { labelForMetaCta, toMetaCta } from "@/lib/adstudio/meta-cta";
 import { cn } from "@/lib/utils";
+import type { MetaEditField } from "./editor-target";
 
 export type MetaPreviewBrand = {
   businessName: string;
@@ -25,20 +26,32 @@ export function MetaPlacementPreview({
   brand,
   copy,
   creative,
+  activeField = null,
+  onEditField,
 }: {
   placement: Placement;
   brand: MetaPreviewBrand;
   copy: MetaCopy;
   creative: ReactNode;
+  activeField?: MetaEditField | null;
+  onEditField?: (field: MetaEditField) => void;
 }) {
   return placement === "story" ? (
-    <MetaStoryPreview brand={brand} copy={copy} creative={creative} />
+    <MetaStoryPreview brand={brand} copy={copy} creative={creative} activeField={activeField} onEditField={onEditField} />
   ) : (
-    <MetaFeedPreview brand={brand} copy={copy} creative={creative} />
+    <MetaFeedPreview brand={brand} copy={copy} creative={creative} activeField={activeField} onEditField={onEditField} />
   );
 }
 
-function MetaFeedPreview({ brand, copy, creative }: { brand: MetaPreviewBrand; copy: MetaCopy; creative: ReactNode }) {
+type MetaPreviewProps = {
+  brand: MetaPreviewBrand;
+  copy: MetaCopy;
+  creative: ReactNode;
+  activeField: MetaEditField | null;
+  onEditField?: (field: MetaEditField) => void;
+};
+
+function MetaFeedPreview({ brand, copy, creative, activeField, onEditField }: MetaPreviewProps) {
   const headline = copy.headline.trim() || "Your headline";
   const description = copy.description.trim() || "A short description of your offer";
   const primaryText = copy.primaryText.trim() || "Your primary ad copy will appear here.";
@@ -60,7 +73,15 @@ function MetaFeedPreview({ brand, copy, creative }: { brand: MetaPreviewBrand; c
       </header>
 
       <div className="px-3 pb-3 text-[14px] leading-[1.35]">
-        <p className="line-clamp-4 whitespace-pre-line">{primaryText}</p>
+        <button
+          type="button"
+          aria-label="Edit primary text"
+          data-active={activeField === "primaryText" || undefined}
+          onClick={() => onEditField?.("primaryText")}
+          className={metaEditHotspotClass("line-clamp-4 w-full whitespace-pre-line text-left", activeField === "primaryText")}
+        >
+          {primaryText}
+        </button>
       </div>
 
       <div className="aspect-[4/5] w-full overflow-hidden bg-[#e4e6eb]">{creative}</div>
@@ -68,12 +89,34 @@ function MetaFeedPreview({ brand, copy, creative }: { brand: MetaPreviewBrand; c
       <div className="flex min-h-[68px] items-center gap-3 border-b border-[#dadde1] bg-[#f0f2f5] px-3 py-2.5">
         <div className="min-w-0 flex-1">
           <p className="truncate text-[11px] uppercase tracking-[0.04em] text-[#65676b]">{brand.displayDomain}</p>
-          <p className="mt-0.5 truncate text-[15px] font-semibold leading-tight">{headline}</p>
-          <p className="mt-1 truncate text-[12px] text-[#65676b]">{description}</p>
+          <button
+            type="button"
+            aria-label="Edit headline"
+            data-active={activeField === "headline" || undefined}
+            onClick={() => onEditField?.("headline")}
+            className={metaEditHotspotClass("mt-0.5 block max-w-full truncate text-left text-[15px] font-semibold leading-tight", activeField === "headline")}
+          >
+            {headline}
+          </button>
+          <button
+            type="button"
+            aria-label="Edit description"
+            data-active={activeField === "description" || undefined}
+            onClick={() => onEditField?.("description")}
+            className={metaEditHotspotClass("mt-1 block max-w-full truncate text-left text-[12px] text-[#65676b]", activeField === "description")}
+          >
+            {description}
+          </button>
         </div>
-        <span className="inline-flex min-h-9 shrink-0 items-center justify-center rounded-md bg-[#e4e6eb] px-4 text-[13px] font-semibold text-[#050505]">
+        <button
+          type="button"
+          aria-label="Edit call to action"
+          data-active={activeField === "cta" || undefined}
+          onClick={() => onEditField?.("cta")}
+          className={metaEditHotspotClass("inline-flex min-h-9 shrink-0 items-center justify-center rounded-md bg-[#e4e6eb] px-4 text-[13px] font-semibold text-[#050505]", activeField === "cta")}
+        >
           {formatCta(copy.cta)}
-        </span>
+        </button>
       </div>
 
       <div className="px-3">
@@ -87,7 +130,7 @@ function MetaFeedPreview({ brand, copy, creative }: { brand: MetaPreviewBrand; c
   );
 }
 
-function MetaStoryPreview({ brand, copy, creative }: { brand: MetaPreviewBrand; copy: MetaCopy; creative: ReactNode }) {
+function MetaStoryPreview({ brand, copy, creative, activeField, onEditField }: MetaPreviewProps) {
   return (
     <article
       aria-label="Facebook Story ad preview"
@@ -108,10 +151,16 @@ function MetaStoryPreview({ brand, copy, creative }: { brand: MetaPreviewBrand; 
         </div>
       </header>
 
-      <footer className="pointer-events-none absolute inset-x-0 bottom-0 z-10 px-4 pb-5 text-center">
-        <span className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-white px-4 text-[13px] font-semibold text-[#050505] shadow-lg">
+      <footer className="absolute inset-x-0 bottom-0 z-10 px-4 pb-5 text-center">
+        <button
+          type="button"
+          aria-label="Edit call to action"
+          data-active={activeField === "cta" || undefined}
+          onClick={() => onEditField?.("cta")}
+          className={metaEditHotspotClass("inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-white px-4 text-[13px] font-semibold text-[#050505] shadow-lg", activeField === "cta")}
+        >
           {formatCta(copy.cta)}
-        </span>
+        </button>
       </footer>
     </article>
   );
@@ -138,6 +187,14 @@ function MetaAction({ icon, label }: { icon: ReactNode; label: string }) {
       {icon}
       {label}
     </span>
+  );
+}
+
+function metaEditHotspotClass(base: string, active: boolean): string {
+  return cn(
+    "cursor-pointer border-0 font-[inherit] outline-none transition-shadow focus-visible:ring-2 focus-visible:ring-[#1877f2] focus-visible:ring-offset-2",
+    active && "ring-2 ring-[#1877f2] ring-offset-2",
+    base,
   );
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import type { ImageInput, TextInput } from "../../../../packages/ad-template-contract/src/types";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -33,6 +33,12 @@ export interface InputsPanelProps {
   onImageChange: (key: string, change: { file: File; previewUrl: string } | null) => void;
   /** Opens the crop dialog for the input's slot in the ACTIVE placement. */
   onCropClick: (key: string) => void;
+  /** Logical input selected from either placement's preview. */
+  activeInputKey?: string | null;
+  /** Imperative focus request; requestId lets the same field be requested again. */
+  focusRequest?: { inputKey: string; requestId: string | number } | null;
+  /** Keeps preview selection in sync with keyboard and pointer focus. */
+  onFieldFocus?: (key: string) => void;
 }
 
 export function InputsPanel({
@@ -46,10 +52,40 @@ export function InputsPanel({
   onUseTemplateText,
   onImageChange,
   onCropClick,
+  activeInputKey = null,
+  focusRequest = null,
+  onFieldFocus,
 }: InputsPanelProps) {
   const requiredImageInputs = imageInputs.filter(input => input.required !== false);
   const optionalImageInputs = imageInputs.filter(input => input.required === false);
   const missingRequiredImages = requiredImageInputs.filter(input => !imageValues[input.key] && !defaultImageValues[input.key]);
+  const focusTargetsRef = useRef(new Map<string, HTMLElement>());
+  const optionalDetailsRef = useRef<HTMLDetailsElement | null>(null);
+  const completedFocusRequestRef = useRef<string | null>(null);
+  const optionalImageKeys = optionalImageInputs.map(input => input.key).join("\u0000");
+
+  useEffect(() => {
+    if (!focusRequest) return;
+    const requestKey = `${focusRequest.requestId}:${focusRequest.inputKey}`;
+    if (completedFocusRequestRef.current === requestKey) return;
+    completedFocusRequestRef.current = requestKey;
+    if (optionalImageKeys.split("\u0000").includes(focusRequest.inputKey) && optionalDetailsRef.current) {
+      optionalDetailsRef.current.open = true;
+    }
+    const frame = window.requestAnimationFrame(() => {
+      const target = focusTargetsRef.current.get(focusRequest.inputKey);
+      if (!target) return;
+      const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      target.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "center" });
+      target.focus({ preventScroll: true });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [focusRequest, optionalImageKeys]);
+
+  const setFocusTarget = (key: string, node: HTMLElement | null) => {
+    if (node) focusTargetsRef.current.set(key, node);
+    else focusTargetsRef.current.delete(key);
+  };
 
   return (
     <aside aria-label="Content" className={cn("w-full shrink-0 overflow-y-auto bg-card p-4 xl:w-auto", className)}>
@@ -75,16 +111,26 @@ export function InputsPanel({
           <div className="mb-5 space-y-4">
             {textInputs.map(input => {
               const value = textValues[input.key] ?? "";
+              const active = activeInputKey === input.key;
               return (
-                <div key={input.key} className="block">
+                <div
+                  key={input.key}
+                  data-active={active || undefined}
+                  className={cn(
+                    "-mx-2 rounded-(--r-card) p-2 transition-colors",
+                    active && "bg-primary/5 ring-2 ring-primary/35",
+                  )}
+                >
                   <Label htmlFor={`content-${input.key}`} className="mb-1 block text-sm font-medium">{input.label}</Label>
                   <Input
+                    ref={node => setFocusTarget(input.key, node)}
                     id={`content-${input.key}`}
                     type="text"
                     value={value}
                     placeholder={input.placeholder || undefined}
                     maxLength={input.maxLength}
                     onChange={e => onTextChange(input.key, e.target.value)}
+                    onFocus={() => onFieldFocus?.(input.key)}
                     className="min-h-11 rounded-(--r-card) bg-muted/30"
                     aria-describedby={`content-${input.key}-count`}
                   />
@@ -115,12 +161,15 @@ export function InputsPanel({
                 input={input}
                 defaultUrl={defaultImageValues[input.key] ?? null}
                 dataUrl={imageValues[input.key] ?? null}
+                active={activeInputKey === input.key}
+                setFocusTarget={node => setFocusTarget(input.key, node)}
+                onFieldFocus={() => onFieldFocus?.(input.key)}
                 onImageChange={onImageChange}
                 onCropClick={() => onCropClick(input.key)}
               />
             ))}
             {optionalImageInputs.length > 0 ? (
-              <details className="rounded-(--r-ctl) border border-border bg-muted/20">
+              <details ref={optionalDetailsRef} className="rounded-(--r-ctl) border border-border bg-muted/20">
                 <summary className="cursor-pointer px-3 py-3 text-sm font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                   Optional brand details
                 </summary>
@@ -131,6 +180,9 @@ export function InputsPanel({
                       input={input}
                       defaultUrl={defaultImageValues[input.key] ?? null}
                       dataUrl={imageValues[input.key] ?? null}
+                      active={activeInputKey === input.key}
+                      setFocusTarget={node => setFocusTarget(input.key, node)}
+                      onFieldFocus={() => onFieldFocus?.(input.key)}
                       onImageChange={onImageChange}
                       onCropClick={() => onCropClick(input.key)}
                     />
@@ -157,12 +209,18 @@ function ImageSlotControl({
   input,
   dataUrl,
   defaultUrl,
+  active,
+  setFocusTarget,
+  onFieldFocus,
   onImageChange,
   onCropClick,
 }: {
   input: ImageInput;
   dataUrl: string | null;
   defaultUrl: string | null;
+  active: boolean;
+  setFocusTarget: (node: HTMLElement | null) => void;
+  onFieldFocus: () => void;
   onImageChange: (key: string, change: { file: File; previewUrl: string } | null) => void;
   onCropClick: () => void;
 }) {
@@ -182,7 +240,14 @@ function ImageSlotControl({
   };
 
   return (
-    <div>
+    <div
+      data-active={active || undefined}
+      className={cn(
+        "-mx-2 rounded-(--r-card) p-2 transition-colors",
+        active && "bg-primary/5 ring-2 ring-primary/35",
+      )}
+      onFocusCapture={onFieldFocus}
+    >
       <span className="mb-1 flex items-center justify-between gap-2 text-sm font-medium text-foreground">
         <span>{input.label}</span>
         <span className="text-[11px] font-normal text-muted-foreground">{input.required === false ? "Optional" : "Required"}</span>
@@ -210,6 +275,7 @@ function ImageSlotControl({
           <div className="flex min-w-0 flex-wrap gap-2">
             {!dataUrl && <span className="w-full text-xs text-muted-foreground">Template image</span>}
             <Button
+              ref={setFocusTarget}
               type="button"
               variant="outline"
               onClick={() => fileRef.current?.click()}
@@ -238,6 +304,7 @@ function ImageSlotControl({
         </div>
       ) : (
         <Button
+          ref={setFocusTarget}
           type="button"
           variant="outline"
           onClick={() => fileRef.current?.click()}

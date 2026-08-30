@@ -13,6 +13,7 @@ import type {
 import { PLACEMENT_DIMENSIONS } from "../../../../packages/ad-template-contract/src/types";
 import { templateAssetProxyUrl } from "@/lib/adstudio/pack-gallery";
 import { cn } from "@/lib/utils";
+import { editorTargetForLayer, type EditorLayerTarget } from "./editor-target";
 
 type LayerTarget = { layer: LayoutLayer; object: FabricObject };
 
@@ -43,7 +44,10 @@ export interface LayeredCanvasProps {
   textValues?: Record<string, string | null | undefined>;
   cropOverrides?: Record<string, Rect | null | undefined>;
   selectedLayerId?: string | null;
+  /** @deprecated Use onTargetSelect so the inspector can focus the matching input. */
   onSelect?: (layerId: string) => void;
+  onTargetSelect?: (target: EditorLayerTarget) => void;
+  /** @deprecated Image selection now focuses its control; cropping is an explicit action there. */
   onCropImage?: (layer: ImageSlotLayer) => void;
   className?: string;
 }
@@ -62,7 +66,7 @@ export function LayeredCanvas({
   cropOverrides = {},
   selectedLayerId,
   onSelect,
-  onCropImage,
+  onTargetSelect,
   className,
 }: LayeredCanvasProps) {
   const elementRef = useRef<HTMLCanvasElement | null>(null);
@@ -72,15 +76,19 @@ export function LayeredCanvas({
   const targetIdsRef = useRef(new Map<FabricObject, string>());
   const renderVersionRef = useRef(0);
   const onSelectRef = useRef(onSelect);
-  const onCropRef = useRef(onCropImage);
-  const layoutRef = useRef(layout);
+  const onTargetSelectRef = useRef(onTargetSelect);
+  const selectedLayerIdRef = useRef(selectedLayerId);
   const [ready, setReady] = useState(false);
   const [isRendering, setIsRendering] = useState(true);
   const [hasRendered, setHasRendered] = useState(false);
 
   onSelectRef.current = onSelect;
-  onCropRef.current = onCropImage;
-  layoutRef.current = layout;
+  onTargetSelectRef.current = onTargetSelect;
+  selectedLayerIdRef.current = selectedLayerId;
+  const selectedLayer = selectedLayerId
+    ? layout.layers.find(layer => layer.layerId === selectedLayerId)
+    : null;
+  const selectedTarget = selectedLayer ? editorTargetForLayer(selectedLayer) : null;
 
   useEffect(() => {
     let cancelled = false;
@@ -98,9 +106,11 @@ export function LayeredCanvas({
         if (!target) return;
         const layerId = targetIdsRef.current.get(target);
         if (!layerId) return;
-        onSelectRef.current?.(layerId);
-        const layer = layoutRef.current.layers.find(item => item.layerId === layerId);
-        if (layer?.type === "image_slot") onCropRef.current?.(layer);
+        const editTarget = layerTargetsRef.current.get(layerId)?.layer;
+        const logicalTarget = editTarget ? editorTargetForLayer(editTarget) : null;
+        if (!logicalTarget) return;
+        if (onTargetSelectRef.current) onTargetSelectRef.current(logicalTarget);
+        else onSelectRef.current?.(layerId);
       });
       setReady(true);
     });
@@ -162,7 +172,7 @@ export function LayeredCanvas({
         if (!object) continue;
         nextObjects.push(object);
         nextLayerTargets.set(layer.layerId, { layer, object });
-        nextTargetIds.set(object, layer.layerId);
+        if (editorTargetForLayer(layer)) nextTargetIds.set(object, layer.layerId);
       }
       if (renderVersionRef.current !== version || fabricRef.current !== canvas) return;
 
@@ -172,7 +182,8 @@ export function LayeredCanvas({
       nextObjects.forEach(object => canvas.add(object));
       layerTargetsRef.current = nextLayerTargets;
       targetIdsRef.current = nextTargetIds;
-      const selected = selectedLayerId ? nextLayerTargets.get(selectedLayerId)?.object : null;
+      const selectedId = selectedLayerIdRef.current;
+      const selected = selectedId ? nextLayerTargets.get(selectedId)?.object : null;
       if (selected?.selectable) canvas.setActiveObject(selected);
       canvas.renderAll();
       if (renderVersionRef.current === version && fabricRef.current === canvas) {
@@ -184,7 +195,7 @@ export function LayeredCanvas({
     return () => {
       renderVersionRef.current += 1;
     };
-  }, [colours, cropOverrides, imageValues, layout, templateId, ready, selectedLayerId, textValues]);
+  }, [colours, cropOverrides, imageValues, layout, templateId, ready, textValues]);
 
   useEffect(() => {
     const canvas = fabricRef.current;
@@ -197,7 +208,9 @@ export function LayeredCanvas({
 
   return (
     <div ref={hostRef} className={cn("relative h-full w-full overflow-hidden bg-white", className)}>
-      <div className="sr-only" aria-live="polite">{selectedLayerId ? `Selected layer: ${layout.layers.find(layer => layer.layerId === selectedLayerId)?.layerId ?? selectedLayerId}` : "No layer selected"}</div>
+      <div className="sr-only" aria-live="polite">
+        {selectedTarget ? `Selected ${selectedTarget.type.replace("_", " ")} field: ${selectedTarget.inputKey}` : "No editable field selected"}
+      </div>
       {(!ready || (isRendering && !hasRendered)) && (
         <div
           className="pointer-events-none absolute inset-0 z-10 animate-pulse bg-muted motion-reduce:animate-none"
@@ -303,18 +316,18 @@ async function createLayerObject({
 
   if (layer.type === "vector") {
     const colour = fill(layer.colourRole);
-    if (layer.shape === "line") return new fabric.Path(`M ${geometry.x} ${geometry.y + geometry.height / 2} L ${geometry.x + geometry.width} ${geometry.y + geometry.height / 2}`, { fill: "", stroke: colour, strokeWidth: 2, ...interactive });
-    if (layer.shape === "wave") return new fabric.Path(`M ${geometry.x} ${geometry.y + geometry.height / 2} C ${geometry.x + geometry.width * .25} ${geometry.y - geometry.height / 2} ${geometry.x + geometry.width * .75} ${geometry.y + geometry.height * 1.5} ${geometry.x + geometry.width} ${geometry.y + geometry.height / 2}`, { fill: "", stroke: colour, strokeWidth: 2, ...interactive });
+    if (layer.shape === "line") return new fabric.Path(`M ${geometry.x} ${geometry.y + geometry.height / 2} L ${geometry.x + geometry.width} ${geometry.y + geometry.height / 2}`, { fill: "", stroke: colour, strokeWidth: 2, ...passive });
+    if (layer.shape === "wave") return new fabric.Path(`M ${geometry.x} ${geometry.y + geometry.height / 2} C ${geometry.x + geometry.width * .25} ${geometry.y - geometry.height / 2} ${geometry.x + geometry.width * .75} ${geometry.y + geometry.height * 1.5} ${geometry.x + geometry.width} ${geometry.y + geometry.height / 2}`, { fill: "", stroke: colour, strokeWidth: 2, ...passive });
     if (layer.shape === "notched") {
       const x = geometry.x, y = geometry.y, w = geometry.width, h = geometry.height, n = Math.min(w, h) * .2;
-      return new fabric.Polygon([{ x, y }, { x: x + w - n, y }, { x: x + w, y: y + n }, { x: x + w, y: y + h }, { x: x + n, y: y + h }, { x, y: y + h - n }], { fill: colour, ...interactive });
+      return new fabric.Polygon([{ x, y }, { x: x + w - n, y }, { x: x + w, y: y + n }, { x: x + w, y: y + h }, { x: x + n, y: y + h }, { x, y: y + h - n }], { fill: colour, ...passive });
     }
-    if (layer.shape === "ring") return new fabric.Circle({ left: geometry.x + geometry.width / 2, top: geometry.y + geometry.height / 2, originX: "center", originY: "center", radius: Math.min(geometry.width, geometry.height) / 2, fill: "", stroke: colour, strokeWidth: Math.max(2, Math.min(geometry.width, geometry.height) * .08), opacity: layer.opacity ?? 1, ...interactive });
+    if (layer.shape === "ring") return new fabric.Circle({ left: geometry.x + geometry.width / 2, top: geometry.y + geometry.height / 2, originX: "center", originY: "center", radius: Math.min(geometry.width, geometry.height) / 2, fill: "", stroke: colour, strokeWidth: Math.max(2, Math.min(geometry.width, geometry.height) * .08), opacity: layer.opacity ?? 1, ...passive });
     const radius = layer.shape === "pill" ? Math.min(geometry.width, geometry.height) / 2 : layer.shape === "rounded" ? Math.min(16, geometry.width / 4, geometry.height / 4) : 0;
     if (layer.shape === "circle") {
-      return new fabric.Circle({ left: geometry.x, top: geometry.y, originX: "left", originY: "top", radius: Math.min(geometry.width, geometry.height) / 2, fill: colour, opacity: layer.opacity ?? 1, ...interactive });
+      return new fabric.Circle({ left: geometry.x, top: geometry.y, originX: "left", originY: "top", radius: Math.min(geometry.width, geometry.height) / 2, fill: colour, opacity: layer.opacity ?? 1, ...passive });
     }
-    return new fabric.Rect({ ...fabricRectGeometry(geometry), rx: radius, ry: radius, fill: colour, opacity: layer.opacity ?? 1, ...interactive });
+    return new fabric.Rect({ ...fabricRectGeometry(geometry), rx: radius, ry: radius, fill: colour, opacity: layer.opacity ?? 1, ...passive });
   }
 
   if (layer.type === "icon") {
@@ -344,7 +357,7 @@ async function createLayerObject({
       strokeWidth: Math.max(2, Math.min(w, h) * .08),
       strokeLineCap: "round",
       strokeLineJoin: "round",
-      ...interactive,
+      ...passive,
     });
   }
 
@@ -400,7 +413,7 @@ async function createLayerObject({
     rx: Math.min(16, geometry.width / 4, geometry.height / 4),
     ry: Math.min(16, geometry.width / 4, geometry.height / 4),
     fill: fill("primary"),
-    ...interactive,
+    ...passive,
   });
 }
 
