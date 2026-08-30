@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 import { loadPublishState, validatePublishState, freezePublicationSnapshot } from "@/lib/adstudio/publish-adapter";
+import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 /**
  * GET /api/internal/adstudio/publish/state?adId=...&workspaceId=...
@@ -17,13 +17,12 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "missing_params" }, { status: 400 });
   }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!supabaseUrl || !supabaseKey) {
+  let supabase;
+  try {
+    supabase = createSupabaseServiceClient();
+  } catch {
     return NextResponse.json({ error: "server_configuration" }, { status: 500 });
   }
-
-  const supabase = createClient(supabaseUrl, supabaseKey);
 
   try {
     const state = await loadPublishState(supabase, adId, workspaceId);
@@ -47,13 +46,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "missing_params" }, { status: 400 });
   }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!supabaseUrl || !supabaseKey) {
+  let supabase;
+  try {
+    supabase = createSupabaseServiceClient();
+  } catch {
     return NextResponse.json({ error: "server_configuration" }, { status: 500 });
   }
-
-  const supabase = createClient(supabaseUrl, supabaseKey);
 
   try {
     const state = await loadPublishState(supabase, body.adId, body.workspaceId);

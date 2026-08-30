@@ -37,6 +37,7 @@ test("OSS product compose is isolated and has no managed deployment endpoint", a
   assert.match(compose, /BLOCKWISE_WORKER_EXPECTED_REVISION/);
   assert.match(compose, /NEXT_PUBLIC_APP_URL/);
   assert.match(compose, /BLOCKWISE_READINESS_SUPABASE_URL: http:\/\/product-rest:3000/);
+  assert.match(compose, /BLOCKWISE_SUPABASE_INTERNAL_URL: \$\{BLOCKWISE_SUPABASE_INTERNAL_URL:-http:\/\/product-caddy\}/);
   assert.match(compose, /test: \[CMD, "node", "-e", "fetch\('http:\/\/127\.0\.0\.1:3000\/api\/health'/);
   assert.match(compose, /OPENAI_API_KEY/);
   assert.match(compose, /CRON_SECRET/);
@@ -193,6 +194,7 @@ test("phased product exports and public/Auth imports fail closed around data and
 test("product env contract contains compatibility endpoints but no managed URL", async () => {
   const env = await read("infra/product/.env.example");
   assert.match(env, /NEXT_PUBLIC_SUPABASE_URL=https:\/\/blockwise\.sale/);
+  assert.match(env, /BLOCKWISE_SUPABASE_INTERNAL_URL=http:\/\/product-caddy/);
   assert.match(env, /BLOCKWISE_AUTH_JWT_SECRET=/);
   assert.match(env, /BLOCKWISE_AUTH_SERVICE_KEY=/);
   assert.match(env, /NEXT_PUBLIC_APP_URL=/);
