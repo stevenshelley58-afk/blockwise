@@ -89,7 +89,7 @@ const IMAGE_GROUNDING_INSTRUCTION =
   "An image of the advertised property is attached. Ground the copy in what is actually visible in it — the property's style, setting, and standout features — and do not invent details that contradict the image.";
 
 const PRIMARY_TEXT_FORMATTING_INSTRUCTION =
-  "Primary text must read like a real Meta lead ad: return one string with actual newline characters, starting with a one-line hook followed by 2-4 short benefit or offer lines. Preserve those newlines in JSON, use no hashtags, and use emoji only when the brand voice explicitly calls for it. Keep the wording compliant with Meta Housing rules.";
+  "Primary text must read like a real Meta lead ad: return one string with actual newline characters, starting with a one-line hook followed by 2-4 short benefit or offer lines. Preserve those newlines in JSON, use no hashtags, and use emoji only when the brand voice explicitly calls for it. Keep every field within its stated character limit and end on a complete word or sentence; never rely on truncation. Keep the wording compliant with Meta Housing rules.";
 
 const COPY_PROMPT_KEYS: PromptKey[] = [
   "adstudio.copy.system",
@@ -411,10 +411,10 @@ export function parseCompleteAdStudioCopy(value: unknown): AdStudioCopyFields {
   const missing = REQUIRED_META_COPY_FIELDS.filter(field => !cleanRequiredText(record[field]));
   if (missing.length) throw new IncompleteAdStudioCopyResponseError(missing.map(field => `copy.${field}`));
   return {
-    primaryText: clampRequiredText(record.primaryText, ADSTUDIO_COPY_LIMITS.primaryText),
-    headline: clampRequiredText(record.headline, ADSTUDIO_COPY_LIMITS.headline),
-    description: clampRequiredText(record.description, ADSTUDIO_COPY_LIMITS.description),
-    cta: clampRequiredText(record.cta, ADSTUDIO_COPY_LIMITS.cta),
+    primaryText: clampRequiredText(record.primaryText, ADSTUDIO_COPY_LIMITS.primaryText, "copy.primaryText"),
+    headline: clampRequiredText(record.headline, ADSTUDIO_COPY_LIMITS.headline, "copy.headline"),
+    description: clampRequiredText(record.description, ADSTUDIO_COPY_LIMITS.description, "copy.description"),
+    cta: clampRequiredText(record.cta, ADSTUDIO_COPY_LIMITS.cta, "copy.cta"),
   };
 }
 
@@ -447,7 +447,7 @@ export function parseCompleteAdStudioTemplateCopy(
   const onImage = Object.fromEntries(fields.map(field => {
     const text = cleanRequiredText(rawOnImage[field.key]);
     const limit = field.maxLength && field.maxLength > 0 ? field.maxLength : Number.POSITIVE_INFINITY;
-    return [field.key, text.length > limit ? text.slice(0, limit).trimEnd() : text];
+    return [field.key, clampRequiredText(text, limit, `onImage.${field.key}`)];
   }));
   return { onImage, copy };
 }
@@ -456,9 +456,43 @@ function cleanRequiredText(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
-function clampRequiredText(value: unknown, limit: number): string {
+export class AdStudioCopyLimitError extends Error {
+  readonly field: string;
+  readonly limit: number;
+
+  constructor(field: string, limit: number) {
+    super(`AI returned ${field} that cannot fit within ${limit} characters without cutting a word. Regenerate the suggestions.`);
+    this.name = "AdStudioCopyLimitError";
+    this.field = field;
+    this.limit = limit;
+  }
+}
+
+function clampRequiredText(value: unknown, limit: number, field = "copy"): string {
   const text = cleanRequiredText(value);
-  return text.length > limit ? text.slice(0, limit).trimEnd() : text;
+  if (!Number.isFinite(limit) || text.length <= limit) return text;
+  const within = text.slice(0, limit).trimEnd();
+  if (!within) throw new AdStudioCopyLimitError(field, limit);
+
+  // If the next character is whitespace, the limit already ends at a word.
+  if (/\s/u.test(text.charAt(limit)) || /[.!?]/u.test(within.at(-1) ?? "")) return within;
+
+  // Prefer a complete sentence or authored line when it retains useful copy.
+  const minimumUsefulLength = Math.max(8, Math.floor(limit * 0.45));
+  const naturalEnds = [...within.matchAll(/[.!?](?=\s|$)|\n/gu)]
+    .map(match => (match.index ?? -1) + match[0].length)
+    .filter(index => index >= minimumUsefulLength);
+  const naturalEnd = naturalEnds.at(-1);
+  if (naturalEnd) return within.slice(0, naturalEnd).trimEnd();
+
+  // Otherwise keep the longest set of complete words and remove dangling
+  // clause punctuation. Never show an AI suggestion cut through a word.
+  const wordBoundary = Math.max(within.lastIndexOf(" "), within.lastIndexOf("\n"), within.lastIndexOf("\t"));
+  if (wordBoundary > 0) {
+    const bounded = within.slice(0, wordBoundary).replace(/[,:;\-–—]+$/u, "").trimEnd();
+    if (bounded) return bounded;
+  }
+  throw new AdStudioCopyLimitError(field, limit);
 }
 
 function clampList(value: unknown, limit: number): string[] {
@@ -466,7 +500,14 @@ function clampList(value: unknown, limit: number): string[] {
   return value
     .filter((item): item is string => typeof item === "string" && item.trim().length > 0)
     .slice(0, 2)
-    .map((item) => (item.length > limit ? item.slice(0, limit).trimEnd() : item.trim()));
+    .flatMap((item) => {
+      try {
+        return [clampRequiredText(item, limit, "alternate")];
+      } catch (error) {
+        if (error instanceof AdStudioCopyLimitError) return [];
+        throw error;
+      }
+    });
 }
 
 // Only forward references a vision model can actually read.

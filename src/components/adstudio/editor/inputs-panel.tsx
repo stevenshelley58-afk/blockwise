@@ -112,6 +112,7 @@ export function InputsPanel({
             {textInputs.map(input => {
               const value = textValues[input.key] ?? "";
               const active = activeInputKey === input.key;
+              const multiline = shouldUseMultilineTextInput(input, value);
               return (
                 <div
                   key={input.key}
@@ -122,18 +123,33 @@ export function InputsPanel({
                   )}
                 >
                   <Label htmlFor={`content-${input.key}`} className="mb-1 block text-sm font-medium">{input.label}</Label>
-                  <Input
-                    ref={node => setFocusTarget(input.key, node)}
-                    id={`content-${input.key}`}
-                    type="text"
-                    value={value}
-                    placeholder={input.placeholder || undefined}
-                    maxLength={input.maxLength}
-                    onChange={e => onTextChange(input.key, e.target.value)}
-                    onFocus={() => onFieldFocus?.(input.key)}
-                    className="min-h-11 rounded-(--r-card) bg-muted/30"
-                    aria-describedby={`content-${input.key}-count`}
-                  />
+                  {multiline ? (
+                    <textarea
+                      ref={node => setFocusTarget(input.key, node)}
+                      id={`content-${input.key}`}
+                      value={value}
+                      placeholder={input.placeholder || undefined}
+                      maxLength={input.maxLength}
+                      rows={input.maxLength > 180 ? 5 : 3}
+                      onChange={event => onTextChange(input.key, event.target.value)}
+                      onFocus={() => onFieldFocus?.(input.key)}
+                      className="min-h-24 w-full resize-y whitespace-pre-wrap rounded-(--r-card) border border-input bg-muted/30 px-3 py-2 text-base shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                      aria-describedby={`content-${input.key}-count`}
+                    />
+                  ) : (
+                    <Input
+                      ref={node => setFocusTarget(input.key, node)}
+                      id={`content-${input.key}`}
+                      type="text"
+                      value={value}
+                      placeholder={input.placeholder || undefined}
+                      maxLength={input.maxLength}
+                      onChange={event => onTextChange(input.key, event.target.value)}
+                      onFocus={() => onFieldFocus?.(input.key)}
+                      className="min-h-11 rounded-(--r-card) bg-muted/30"
+                      aria-describedby={`content-${input.key}-count`}
+                    />
+                  )}
                   <span id={`content-${input.key}-count`} className="mt-1 block text-right text-[11px] tabular-nums text-muted-foreground">
                     {value.length}/{input.maxLength}
                   </span>
@@ -199,6 +215,11 @@ export function InputsPanel({
       </section>
     </aside>
   );
+}
+
+/** Long authored fields and generated line-broken lists must stay editable as written. */
+export function shouldUseMultilineTextInput(input: Pick<TextInput, "maxLength" | "placeholder">, value: string): boolean {
+  return input.maxLength > 100 || /[\r\n]/u.test(value) || /[\r\n]/u.test(input.placeholder ?? "");
 }
 
 // ---------------------------------------------------------------------------

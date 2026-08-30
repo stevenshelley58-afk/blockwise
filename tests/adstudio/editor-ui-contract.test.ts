@@ -89,6 +89,10 @@ describe("customer Ad Studio workbench contract", () => {
     assert.match(inputs, /missingRequiredImages/);
     assert.match(inputs, /role="status"/);
     assert.match(inputs, /rounded-\(--r-card\)/);
+    assert.match(inputs, /shouldUseMultilineTextInput\(input, value\)/);
+    assert.match(inputs, /input\.maxLength > 100/);
+    assert.match(inputs, /<textarea/);
+    assert.match(inputs, /whitespace-pre-wrap/);
     assert.match(copy, /id="meta-copy-cta"/);
     assert.match(copy, /border border-input/);
     assert.match(shell, /<AiCopyAssistant/);
