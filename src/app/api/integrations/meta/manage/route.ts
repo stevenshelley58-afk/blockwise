@@ -1,7 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { requireApiWorkspace } from "@/lib/auth/api-guards";
-import { dollarsToMinorUnits, isPlausibleDailyBudgetDollars } from "@/lib/meta-monitor/budget";
 import {
   buildMetaPlanMutation,
   type MetaPlanMutationAction,
@@ -18,47 +17,17 @@ const ACTIONS: MetaPlanMutationAction[] = ["activate", "pause", "increase_budget
 type ManageBody = {
   workspaceId?: string;
   action?: MetaPlanMutationAction;
-  /** Targets for activate/pause. At least one id is required. */
-  campaignId?: string;
-  adSetIds?: string[];
-  adIds?: string[];
-  /** increase_budget target + new daily budget in dollars. */
-  adSetId?: string;
-  dailyBudgetDollars?: number;
   /** export_leads destination. */
   destination?: string;
 };
 
 function buildPayload(body: ManageBody): { payload: MetaPlanMutationPayload } | { error: string } {
-  if (body.action === "activate" || body.action === "pause") {
-    const payload: MetaPlanMutationPayload = {};
-    if (body.campaignId) payload.campaignId = body.campaignId;
-    if (Array.isArray(body.adSetIds) && body.adSetIds.length) payload.adSetIds = body.adSetIds.filter(Boolean);
-    if (Array.isArray(body.adIds) && body.adIds.length) payload.adIds = body.adIds.filter(Boolean);
-
-    if (!payload.campaignId && !payload.adSetIds?.length && !payload.adIds?.length) {
-      return { error: "activate/pause requires a campaignId, adSetIds, or adIds." };
-    }
-    return { payload };
-  }
-
-  if (body.action === "increase_budget") {
-    if (!body.adSetId) {
-      return { error: "increase_budget requires an adSetId." };
-    }
-    if (typeof body.dailyBudgetDollars !== "number" || !isPlausibleDailyBudgetDollars(body.dailyBudgetDollars)) {
-      return { error: "dailyBudgetDollars must be a sane daily budget (>= $1)." };
-    }
+  if (body.action !== "export_leads") {
     return {
-      payload: {
-        adSetBudgets: [
-          { adSetId: body.adSetId, dailyBudgetMinorUnits: dollarsToMinorUnits(body.dailyBudgetDollars) },
-        ],
-      },
+      error: "Live Meta objects can be mutated only through a publish plan with durable ownership proof.",
     };
   }
 
-  // export_leads
   return { payload: body.destination ? { destination: body.destination } : {} };
 }
 
@@ -87,7 +56,7 @@ export async function POST(request: NextRequest) {
 
   const serviceSupabase = createSupabaseServiceClient();
 
-  // No owning publish plan: this is inline management of a live Meta object.
+  // Lead export is non-provider-mutating and may remain planless.
   const mutation = buildMetaPlanMutation({
     workspaceId: access.workspaceId,
     planId: null,

@@ -3,7 +3,9 @@ import { NextResponse, type NextRequest } from "next/server";
 import { requireApiWorkspace } from "@/lib/auth/api-guards";
 import { loadMetaPublishPlan } from "@/lib/providers/meta-execution";
 import {
+  buildOwnedMetaBudgetPayload,
   buildOwnedMetaActivationPayload,
+  buildOwnedMetaPausePayload,
   buildMetaPlanMutation,
   type MetaPlanMutationAction,
   type MetaPlanMutationPayload,
@@ -20,7 +22,7 @@ type RouteContext = {
 type MutationBody = {
   workspaceId?: string;
   action?: MetaPlanMutationAction;
-  payload?: MetaPlanMutationPayload;
+  payload?: MetaPlanMutationPayload & { dailyBudgetMinorUnits?: number };
 };
 
 export async function POST(request: NextRequest, context: RouteContext) {
@@ -36,18 +38,34 @@ export async function POST(request: NextRequest, context: RouteContext) {
   if (!guard.ok) return guard.response;
   const { access } = guard;
 
+  const clientObjectIdField = firstClientObjectIdField(body.payload ?? {});
+  if (clientObjectIdField) {
+    return NextResponse.json(
+      { error: `payload.${clientObjectIdField} is server-derived and must not be supplied.` },
+      { status: 400 },
+    );
+  }
+
   const serviceSupabase = createSupabaseServiceClient();
   const plan = await loadMetaPublishPlan(serviceSupabase, {
     workspaceId: access.workspaceId,
     planId: id,
   });
-  const mutation = buildMetaPlanMutation({
-    workspaceId: access.workspaceId,
-    planId: plan.planId,
-    requestedBy: access.userId,
-    action: body.action,
-    payload: withDefaultMutationPayload(body.action, body.payload ?? {}, plan),
-  });
+  let mutation: ReturnType<typeof buildMetaPlanMutation>;
+  try {
+    mutation = buildMetaPlanMutation({
+      workspaceId: access.workspaceId,
+      planId: plan.planId,
+      requestedBy: access.userId,
+      action: body.action,
+      payload: withDefaultMutationPayload(body.action, body.payload ?? {}, plan),
+    });
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Meta mutation targets are invalid." },
+      { status: 400 },
+    );
+  }
   const { error: mutationError } = await serviceSupabase
     .from("meta_publish_plan_mutations")
     .insert({
@@ -105,19 +123,14 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
 function withDefaultMutationPayload(
   action: MetaPlanMutationAction,
-  payload: MetaPlanMutationPayload,
+  payload: MetaPlanMutationPayload & { dailyBudgetMinorUnits?: number },
   plan: Awaited<ReturnType<typeof loadMetaPublishPlan>>,
 ): MetaPlanMutationPayload {
   if (action === "activate") {
     return buildOwnedMetaActivationPayload(plan);
   }
   if (action === "pause") {
-    return {
-      ...payload,
-      campaignId: payload.campaignId ?? plan.reconciledObjects.campaignId,
-      adSetIds: payload.adSetIds ?? Object.values(plan.reconciledObjects.adSetIds),
-      adIds: payload.adIds ?? Object.values(plan.reconciledObjects.adIds),
-    };
+    return buildOwnedMetaPausePayload(plan);
   }
 
   if (action === "export_leads") {
@@ -127,15 +140,25 @@ function withDefaultMutationPayload(
     };
   }
 
-  if (action === "increase_budget" && !payload.adSetBudgets?.length) {
-    return {
-      ...payload,
-      adSetBudgets: Object.values(plan.reconciledObjects.adSetIds).map((adSetId) => ({
-        adSetId,
-        dailyBudgetMinorUnits: 7500,
-      })),
-    };
+  if (action === "increase_budget") {
+    return buildOwnedMetaBudgetPayload(plan, payload.dailyBudgetMinorUnits ?? 7500);
   }
 
   return payload;
+}
+
+function firstClientObjectIdField(
+  payload: MetaPlanMutationPayload & { dailyBudgetMinorUnits?: number },
+): string | null {
+  for (const field of [
+    "campaignId",
+    "adSetIds",
+    "adIds",
+    "reusedCampaignId",
+    "reusedAdSetIds",
+    "adSetBudgets",
+  ] as const) {
+    if (Object.prototype.hasOwnProperty.call(payload, field)) return field;
+  }
+  return null;
 }

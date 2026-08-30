@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
 
+import type { MetaPublishPlan } from "../src/lib/providers/meta-execution.ts";
 import {
   buildMetaPlanMutation,
   executeMetaPlanMutation,
@@ -206,6 +207,7 @@ test("lease loss waits for bounded PAUSE-only Meta activation compensation", asy
         });
         const result = await executeMetaPlanMutation({
           mutation,
+          publishPlan: workerOwnedPlan(),
           approvalStatus: "approved",
           accessToken: "token",
           fetchImpl: context.fetchImpl,
@@ -252,6 +254,37 @@ test("lease loss waits for bounded PAUSE-only Meta activation compensation", asy
   assert.equal(calls.some((call) => call.name === "complete_job_v2"), false);
   assert.equal(calls.some((call) => call.name === "fail_job_v2"), false);
 });
+
+function workerOwnedPlan(): MetaPublishPlan {
+  const createdAt = "2026-08-30T00:00:00.000Z";
+  return {
+    planId: "44444444-4444-4444-8444-444444444444",
+    workspaceId,
+    setup: { metaAdAccountId: "act_123" },
+    controls: { target: { mode: "new_campaign_new_adset" } },
+    campaign: { localId: "campaign_main", name: "Campaign" },
+    adSets: [{ localId: "adset_1", name: "Ad set" }],
+    ads: [],
+    requestLog: [
+      { step: "campaign.create", method: "POST", path: "/act_123/campaigns", body: { name: "Campaign [BW:44444444-4444-4444-8444-444444444444:campaign_main]" }, createdAt },
+      { step: "adset.adset_1", method: "POST", path: "/act_123/adsets", body: { name: "Ad set [BW:44444444-4444-4444-8444-444444444444:adset_1]" }, createdAt },
+    ],
+    responseLog: [
+      { step: "campaign.create", method: "POST", path: "/act_123/campaigns", response: { id: "1001" }, status: 200, createdAt },
+      { step: "adset.adset_1", method: "POST", path: "/act_123/adsets", response: { id: "1002" }, status: 200, createdAt },
+    ],
+    reconciledObjects: {
+      campaignId: "1001",
+      ownedCampaignId: "1001",
+      leadFormIds: {},
+      adSetIds: { adset_1: "1002" },
+      ownedAdSetIds: { adset_1: "1002" },
+      creativeIds: {},
+      adIds: {},
+      ownedAdIds: {},
+    },
+  } as unknown as MetaPublishPlan;
+}
 
 test("a never-resolving heartbeat cannot freeze worker shutdown or completion", async () => {
   const { calls, service } = fakeService(async (name) => {
