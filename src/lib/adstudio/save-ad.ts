@@ -84,10 +84,20 @@ export async function saveAd(input: SaveAdInput): Promise<SaveAdOutput> {
   // 3. Canonicalize and hash the document
   const documentJson = input.document as unknown as Record<string, unknown>;
   const documentHash = documentToken(documentJson);
+  const saveIdentity = documentSaveIdentity(documentJson);
 
-  // 4. Check for unchanged save — same hash, same revision
+  // 4. Check for an unchanged save. The editor-maintained revision and render
+  // timestamp describe the client lifecycle, not customer-visible content.
+  // Older rows hashed the complete document, so compare their saved JSON with
+  // those volatile fields removed instead of forcing a redundant render.
   const currentRevision = await getActiveRevision(input.supabase, ad.active_revision_id);
-  if (currentRevision && currentRevision.document_hash === documentHash) {
+  if (
+    currentRevision
+    && (
+      currentRevision.document_hash === documentHash
+      || documentSaveIdentity(currentRevision.document_json) === saveIdentity
+    )
+  ) {
     return {
       adId: input.adId,
       revisionId: currentRevision.id,
@@ -177,15 +187,27 @@ export async function saveAd(input: SaveAdInput): Promise<SaveAdOutput> {
 async function getActiveRevision(
   supabase: SupabaseClient,
   revisionId: string | null | undefined,
-): Promise<{ id: string; revision_number: number; document_hash: string; feed_png_hash?: string; story_png_hash?: string } | null> {
+): Promise<{
+  id: string;
+  revision_number: number;
+  document_json: Record<string, unknown>;
+  document_hash: string;
+  feed_png_hash?: string;
+  story_png_hash?: string;
+} | null> {
   if (!revisionId) return null;
   const { data, error } = await supabase
     .from("ad_revisions")
-    .select("id, revision_number, document_hash, feed_png_hash, story_png_hash")
+    .select("id, revision_number, document_json, document_hash, feed_png_hash, story_png_hash")
     .eq("id", revisionId)
     .maybeSingle();
   if (error || !data) throw new SaveError("active_revision_invalid", "The active saved revision could not be loaded");
   return data as any;
+}
+
+function documentSaveIdentity(document: Record<string, unknown>): string {
+  const { revision: _revision, lastRenderedAt: _lastRenderedAt, ...customerContent } = document;
+  return documentToken(customerContent);
 }
 
 function validateRequiredInputs(pack: AdTemplate, input: SaveAdInput, effectiveTextValues: Record<string, string>): void {
@@ -259,6 +281,12 @@ async function uploadRender(
   if (!render.png) {
     throw new SaveError("render_bytes_missing", "The " + placement + " render did not return PNG bytes.");
   }
+
+  // The path includes the rendered byte hash. Verify a prior identical object
+  // before attempting a create-only upload so repeat saves do not enter the
+  // storage client's slow duplicate-object retry path.
+  if (await existingRenderMatches(input.supabase, render)) return;
+
   const { error } = await input.supabase.storage
     .from("workspace-artifacts")
     .upload(render.path, render.png, { contentType: "image/png", upsert: false });
@@ -267,14 +295,16 @@ async function uploadRender(
   // Render paths are content-addressed. A create-only retry can therefore
   // treat an existing object as success only after downloading and verifying
   // its bytes, never by overwriting it or trusting the upload error alone.
-  const existing = await input.supabase.storage.from("workspace-artifacts").download(render.path);
-  if (!existing.error && existing.data) {
-    const existingBytes = Buffer.from(await existing.data.arrayBuffer());
-    const existingHash = createHash("sha256").update(existingBytes).digest("hex");
-    if (existingHash === render.hash) return;
-  }
+  if (await existingRenderMatches(input.supabase, render)) return;
 
   throw new SaveError("render_upload_failed", "Could not store the " + placement + " render: " + error.message);
+}
+
+async function existingRenderMatches(supabase: SupabaseClient, render: RenderOutput): Promise<boolean> {
+  const existing = await supabase.storage.from("workspace-artifacts").download(render.path);
+  if (existing.error || !existing.data) return false;
+  const existingBytes = Buffer.from(await existing.data.arrayBuffer());
+  return createHash("sha256").update(existingBytes).digest("hex") === render.hash;
 }
 
 // ---------------------------------------------------------------------------
