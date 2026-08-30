@@ -98,6 +98,9 @@ const COPY_PROMPT_KEYS: PromptKey[] = [
   "adstudio.copy.compliance_rules",
 ];
 
+/** Low-risk customer copy belongs on the cheap draft-text lane. */
+const ADSTUDIO_COPY_MODEL_PROFILE = "cheap_draft_text" as const;
+
 const TEXT_PROVIDER_API_KEYS = [
   "AZURE_OPENAI_API_KEY",
   "OPENAI_API_KEY",
@@ -181,7 +184,7 @@ export async function generateAdStudioCopy(
       userId: input.userId,
       correlationId,
       taskType: "adstudio.copy",
-      modelProfile: "structured_json",
+      modelProfile: ADSTUDIO_COPY_MODEL_PROFILE,
       mutationId,
       prompt: assembled,
       input: generationLogInput(input),
@@ -217,7 +220,7 @@ export async function generateAdStudioCopy(
       userId: input.userId,
       correlationId,
       taskType: "adstudio.copy",
-      modelProfile: "structured_json",
+      modelProfile: ADSTUDIO_COPY_MODEL_PROFILE,
       mutationId,
       prompt: assembled,
       input: generationLogInput(input),
@@ -336,7 +339,7 @@ export async function generateAdStudioTemplateCopy(
       userId: input.userId,
       correlationId,
       taskType: "adstudio.template_copy",
-      modelProfile: "structured_json",
+      modelProfile: ADSTUDIO_COPY_MODEL_PROFILE,
       mutationId,
       prompt: assembled,
       input: { description: input.description, fields: input.fields, context: input.context ?? {} },
@@ -369,7 +372,7 @@ export async function generateAdStudioTemplateCopy(
       userId: input.userId,
       correlationId,
       taskType: "adstudio.template_copy",
-      modelProfile: "structured_json",
+      modelProfile: ADSTUDIO_COPY_MODEL_PROFILE,
       mutationId,
       prompt: assembled,
       input: { description: input.description, fields: input.fields, context: input.context ?? {} },
@@ -424,7 +427,7 @@ async function generateCopyWithProfile(
   providerEnv?: ProviderEnvironment,
   signal?: AbortSignal,
 ): Promise<CopyGenerationResult> {
-  const profile = await resolveRuntimeModelProfile("structured_json");
+  const profile = await resolveRuntimeModelProfile(ADSTUDIO_COPY_MODEL_PROFILE);
   const candidates = modelCandidateAttempts(profile);
   const attempts: CopyGenerationResult["attempts"] = [];
 
@@ -439,7 +442,7 @@ async function generateCopyWithProfile(
         workspaceId: reservation.workspaceId,
         mutationId: reservation.mutationId,
         attemptIndex: index,
-        modelProfile: "structured_json",
+        modelProfile: ADSTUDIO_COPY_MODEL_PROFILE,
         provider,
         execute: () => provider.generate({
           system,
