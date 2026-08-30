@@ -6,9 +6,6 @@ import { isExampleBrandKitSourceUrl } from "./persistence.ts";
 // Inlined from deleted asset-roles.ts
 export type AssetRole = "property" | "person" | "logo" | "background";
 
-// Stub: legacy creative-preview.ts deleted in Phase 1
-function creativeLibraryPreview(_creative: unknown): string | null { return null; }
-
 export type LibraryAssetModel = {
   id: string;
   src: string;
@@ -19,11 +16,12 @@ export type LibraryAssetModel = {
 };
 
 export type LibraryAdModel = {
-  creativeId: string;
-  campaignId: string;
-  campaignName: string;
+  adId: string;
+  templateId: string;
+  name: string;
   src: string;
-  format: string;
+  revisionNumber: number;
+  updatedAt: string;
 };
 
 type QueryClient = {
@@ -48,7 +46,7 @@ export async function loadAdStudioLibraryPage(input: {
   const cursor = decodeCursor(input.cursor);
   const orderColumn = input.kind === "assets" ? "created_at" : "updated_at";
   let query = input.supabase
-    .from(input.kind === "assets" ? "adstudio_brand_assets" : "adstudio_creatives")
+    .from(input.kind === "assets" ? "adstudio_brand_assets" : "ad_customer_ads")
     .select("*")
     .eq("workspace_id", input.workspaceId)
     .order(orderColumn, { ascending: false })
@@ -66,6 +64,8 @@ export async function loadAdStudioLibraryPage(input: {
   const hasMore = rows.length > limit;
   const pageRows = rows.slice(0, limit);
   const paths = new Set<string>();
+  const revisionById = new Map<string, { ad_id: string; revision_number: number; feed_png_path: string | null }>();
+  const templateNameById = new Map<string, string>();
 
   if (input.kind === "assets") {
     for (const row of pageRows as AdStudioBrandAssetRow[]) {
@@ -74,12 +74,40 @@ export async function loadAdStudioLibraryPage(input: {
       if (path) paths.add(path);
     }
   } else {
-    for (const row of pageRows) {
-      const path = storagePathFromSource(
-        input.workspaceId,
-        creativeLibraryPreview(row),
-      );
+    const revisionIds = [...new Set(pageRows.map(row => String(row.active_revision_id ?? "")).filter(Boolean))];
+    const templateIds = [...new Set(pageRows.map(row => String(row.template_id ?? "")).filter(Boolean))];
+    const [revisionsResult, templatesResult] = await Promise.all([
+      revisionIds.length
+        ? input.supabase.from("ad_revisions").select("id,ad_id,revision_number,feed_png_path").eq("workspace_id", input.workspaceId).in("id", revisionIds)
+        : Promise.resolve({ data: [], error: null }),
+      templateIds.length
+        ? input.supabase.from("ad_templates").select("template_id,template_json").in("template_id", templateIds)
+        : Promise.resolve({ data: [], error: null }),
+    ]);
+    if (revisionsResult.error) throw new Error(revisionsResult.error.message);
+    if (templatesResult.error) throw new Error(templatesResult.error.message);
+    for (const revision of (revisionsResult.data ?? []) as Array<Record<string, unknown>>) {
+      const id = String(revision.id ?? "");
+      const adId = String(revision.ad_id ?? "");
+      const feedPath = typeof revision.feed_png_path === "string" ? revision.feed_png_path : null;
+      if (!id || !adId) continue;
+      revisionById.set(id, {
+        ad_id: adId,
+        revision_number: typeof revision.revision_number === "number" ? revision.revision_number : 0,
+        feed_png_path: feedPath,
+      });
+      const path = storagePathFromSource(input.workspaceId, feedPath);
       if (path) paths.add(path);
+    }
+    for (const template of (templatesResult.data ?? []) as Array<Record<string, unknown>>) {
+      const templateId = String(template.template_id ?? "");
+      const json = template.template_json && typeof template.template_json === "object" && !Array.isArray(template.template_json)
+        ? template.template_json as Record<string, unknown>
+        : {};
+      const metadata = json.metadata && typeof json.metadata === "object" && !Array.isArray(json.metadata)
+        ? json.metadata as Record<string, unknown>
+        : {};
+      if (templateId) templateNameById.set(templateId, typeof metadata.title === "string" && metadata.title.trim() ? metadata.title : templateId);
     }
   }
   const signed =
@@ -111,37 +139,23 @@ export async function loadAdStudioLibraryPage(input: {
       });
     }
   } else {
-    const campaignIds = [...new Set(pageRows.map((row) => String(row.campaign_id ?? "")).filter(Boolean))];
-    const { data: campaigns, error: campaignError } = campaignIds.length
-      ? await input.supabase
-          .from("adstudio_campaigns")
-          .select("id,name,status")
-          .eq("workspace_id", input.workspaceId)
-          .in("id", campaignIds)
-          .neq("status", "archived")
-      : { data: [], error: null };
-    if (campaignError) throw new Error(campaignError.message);
-    const campaignById = new Map(
-      ((campaigns ?? []) as Array<{ id: unknown; name: unknown }>).map((campaign) => [
-        String(campaign.id),
-        typeof campaign.name === "string" && campaign.name.trim() ? campaign.name : "Untitled ad",
-      ]),
-    );
     items = [];
     for (const row of pageRows) {
-      const campaignId = String(row.campaign_id ?? "");
-      const campaignName = campaignById.get(campaignId);
-      if (!campaignName) continue;
-      const raw = creativeLibraryPreview(row);
-      const path = storagePathFromSource(input.workspaceId, raw);
-      const src = path ? signed[path]?.grid : raw;
+      const adId = String(row.id ?? "");
+      const activeRevisionId = String(row.active_revision_id ?? "");
+      const revision = revisionById.get(activeRevisionId);
+      const templateId = String(row.template_id ?? "");
+      if (!adId || !revision?.feed_png_path || revision.ad_id !== adId || !templateId) continue;
+      const path = storagePathFromSource(input.workspaceId, revision.feed_png_path);
+      const src = path ? signed[path]?.full : null;
       if (!src) continue;
       items.push({
-        creativeId: String(row.id ?? items.length),
-        campaignId,
-        campaignName,
+        adId,
+        templateId,
+        name: templateNameById.get(templateId) ?? templateId,
         src,
-        format: String(row.format ?? ""),
+        revisionNumber: revision.revision_number,
+        updatedAt: typeof row.updated_at === "string" ? row.updated_at : "",
       });
     }
   }

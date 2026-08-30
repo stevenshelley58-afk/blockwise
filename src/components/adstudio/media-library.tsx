@@ -1,6 +1,6 @@
 "use client";
 
-import { Images, Megaphone, Plus, Upload } from "lucide-react";
+import { Images, Megaphone, Palette, Plus, Upload } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
 import { Toaster, toast } from "sonner";
@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { AD_IMAGE_MAX_BYTES, AD_IMAGE_UPLOAD_TYPES, validateAssetUploadFile } from "@/lib/upload/asset-file";
 import type { LibraryAdModel, LibraryAssetModel } from "@/lib/adstudio/library-read-model";
+import { StudioNavigation } from "./studio-navigation";
 
 // Inlined from deleted asset-roles.ts (Phase 1)
 type AssetRole = "property" | "person" | "logo" | "background";
@@ -46,13 +47,6 @@ type MediaLibraryProps = {
 };
 
 type RoleFilter = AssetRole | "all";
-
-function formatLabel(format: string): string {
-  if (format === "9:16") return "Story";
-  if (format === "4:5") return "Feed";
-  if (format === "1:1") return "Square";
-  return format || "Ad";
-}
 
 export function MediaLibrary({
   workspaceId,
@@ -124,9 +118,9 @@ export function MediaLibrary({
     if (!cursor || loadingMore) return;
     setLoadingMore(kind);
     try {
-      const params = new URLSearchParams({ wave: "library", kind, limit: "24", cursor });
-      const response = await fetch(`/api/adstudio/bootstrap?${params}`, { cache: "no-store" });
-      if (!response.ok) throw new Error("Could not load more.");
+      const params = new URLSearchParams({ kind, limit: "24", cursor });
+      const response = await fetch(`/api/adstudio/library?${params}`, { cache: "no-store" });
+      if (!response.ok) throw new Error();
       const page = (await response.json()) as {
         items: Array<LibraryAsset | LibraryAd>;
         nextCursor: string | null;
@@ -138,23 +132,41 @@ export function MediaLibrary({
         setLoadedAds((current) => [...current, ...(page.items as LibraryAd[])]);
         setNextAdCursor(page.nextCursor);
       }
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not load more.");
+    } catch {
+      toast.error("Could not load more Library items. Try again.");
     } finally {
       setLoadingMore(null);
     }
   }
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-4 py-8 md:px-6">
+    <div className="mx-auto w-full max-w-6xl px-4 py-7 md:px-6">
       <Toaster richColors position="top-center" />
 
-      <header className="mb-6 flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold tracking-tight">Library</h1>
-        <Button type="button" disabled={uploading || !brandKitId} onClick={() => fileInputRef.current?.click()}>
-          <Upload aria-hidden />
-          {uploading ? "Uploading…" : "Upload"}
-        </Button>
+      <header className="mb-7 flex flex-col gap-4 border-b border-border pb-5 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Library</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Saved ads and brand images for this workspace.</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <StudioNavigation active="library" />
+          {brandKitId ? (
+            <Button type="button" disabled={uploading} onClick={() => fileInputRef.current?.click()} className="rounded-full">
+              <Upload aria-hidden />
+              {uploading ? "Uploading…" : "Upload"}
+            </Button>
+          ) : (
+            <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center">
+              <p className="max-w-52 text-xs leading-5 text-muted-foreground">Set up your Brand Pack before uploading images.</p>
+              <Button asChild variant="outline" className="rounded-full">
+                <Link href="/ad-studio/brand">
+                  <Palette aria-hidden />
+                  Set up Brand Pack
+                </Link>
+              </Button>
+            </div>
+          )}
+        </div>
         <input
           ref={fileInputRef}
           type="file"
@@ -165,7 +177,7 @@ export function MediaLibrary({
         />
       </header>
 
-      <Tabs defaultValue="assets">
+      <Tabs defaultValue={loadedAds.length > 0 ? "ads" : "assets"}>
         <TabsList>
           <TabsTrigger value="assets">Assets ({allAssets.length})</TabsTrigger>
           <TabsTrigger value="ads">Ads ({loadedAds.length})</TabsTrigger>
@@ -213,7 +225,10 @@ export function MediaLibrary({
               ))}
             </div>
           ) : (
-            <EmptyState icon={<Images aria-hidden className="size-6" />} title="Upload your first image." />
+            <EmptyState
+              icon={<Images aria-hidden className="size-6" />}
+              title={brandKitId ? "Upload your first image." : "Brand images will appear here after you set up your Brand Pack."}
+            />
           )}
           {nextAssetCursor ? (
             <div className="mt-5 flex justify-center">
@@ -229,15 +244,15 @@ export function MediaLibrary({
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
               {loadedAds.map((ad) => (
                 <Link
-                  key={ad.creativeId}
-                  href={`/ad-studio?campaignId=${encodeURIComponent(ad.campaignId)}`}
+                  key={ad.adId}
+                  href={`/ad-studio/templates/${encodeURIComponent(ad.templateId)}?adId=${encodeURIComponent(ad.adId)}`}
                   className="rounded-(--r-card) focus-visible:outline-2 focus-visible:outline-(--accent)"
                 >
                   <Card className="gap-0 overflow-hidden py-0 transition-shadow hover:shadow-md">
                     <div className="aspect-[4/5] w-full overflow-hidden bg-(--surface-subtle)">
                       <img
                         src={ad.src}
-                        alt={ad.campaignName}
+                        alt={`${ad.name} saved Feed ad`}
                         width={640}
                         height={800}
                         sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 240px"
@@ -247,8 +262,8 @@ export function MediaLibrary({
                       />
                     </div>
                     <div className="px-3 py-2">
-                      <p className="truncate text-xs font-semibold">{ad.campaignName}</p>
-                      <p className="text-[11px] text-muted-foreground">{formatLabel(ad.format)}</p>
+                      <p className="truncate text-xs font-semibold">{ad.name}</p>
+                      <p className="text-[11px] text-muted-foreground">Feed + Story · revision {ad.revisionNumber}</p>
                     </div>
                   </Card>
                 </Link>
@@ -260,7 +275,7 @@ export function MediaLibrary({
               title="Your ads will appear here."
               action={
                 <Button asChild variant="outline" size="sm">
-                  <Link href="/ad-studio?newAd=1">
+                  <Link href="/ad-studio">
                     <Plus aria-hidden />
                     Create ad
                   </Link>

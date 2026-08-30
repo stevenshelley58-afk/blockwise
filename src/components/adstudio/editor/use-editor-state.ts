@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef } from "react";
 import type { AdTemplate, Layout, LayoutLayer, Placement, Rect, ColourRole } from "../../../../packages/ad-template-contract/src/types";
 import type { AdDocumentParsed } from "../../../../packages/ad-template-contract/src/schema";
+import { toMetaCta } from "@/lib/adstudio/meta-cta";
 
 // ---------------------------------------------------------------------------
 // Editor state — Phase 6 foundation
@@ -32,6 +33,15 @@ export interface MetaCopy {
   headline: string;
   description: string;
   cta: string;
+}
+
+export function normalizeEditorMetaCopy(copy: Partial<MetaCopy> | null | undefined): MetaCopy {
+  return {
+    primaryText: copy?.primaryText ?? "",
+    headline: copy?.headline ?? "",
+    description: copy?.description ?? "",
+    cta: toMetaCta(copy?.cta ?? "LEARN_MORE"),
+  };
 }
 
 export interface EditorTextInput {
@@ -135,13 +145,7 @@ const initialState = (pack: AdTemplate): EditorState => {
   isSaving: false,
   lastSavedRevision: null,
   error: null,
-  metaCopy: {
-    primaryText: "",
-    headline: "",
-    description: "",
-    cta: "LEARN_MORE",
-    ...defaults.metaCopy,
-  },
+  metaCopy: normalizeEditorMetaCopy(defaults.metaCopy),
   };
 };
 
@@ -163,12 +167,12 @@ export function useEditorState(pack: AdTemplate, initialDocument?: AdDocumentPar
       textValues: { ...base.textValues, ...initialDocument.sharedTextValues },
       colourMode: initialDocument.colourMode,
       resolvedColourMap: { ...base.resolvedColourMap, ...initialDocument.resolvedColourMap },
-      metaCopy: {
+      metaCopy: normalizeEditorMetaCopy({
         primaryText: initialDocument.metaPrimaryText,
         headline: initialDocument.metaHeadline,
         description: initialDocument.metaDescription,
         cta: initialDocument.metaCta,
-      },
+      }),
       lastSavedRevision: initialRevision ?? null,
     };
   });
@@ -194,6 +198,49 @@ export function useEditorState(pack: AdTemplate, initialDocument?: AdDocumentPar
       return {
         ...prev,
         textValues: { ...prev.textValues, [key]: value },
+        isDirty: true,
+        editVersion: (prev.editVersion ?? 0) + 1,
+      };
+    });
+  }, [pushUndo]);
+
+  /** Fill every on-image field from the template in one undoable action. */
+  const applyTemplateText = useCallback(() => {
+    setState(prev => {
+      pushUndo(prev);
+      return {
+        ...prev,
+        textValues: Object.fromEntries(editorTextInputs(prev.pack).map(input => [input.key, input.placeholder])),
+        isDirty: true,
+        editVersion: (prev.editVersion ?? 0) + 1,
+      };
+    });
+  }, [pushUndo]);
+
+  /** Reset all Meta placement fields to the selected template's authored copy. */
+  const applyTemplateMetaCopy = useCallback(() => {
+    setState(prev => {
+      pushUndo(prev);
+      const defaults = readEditorDefaults(prev.pack).metaCopy;
+      return {
+        ...prev,
+        metaCopy: normalizeEditorMetaCopy(defaults),
+        isDirty: true,
+        editVersion: (prev.editVersion ?? 0) + 1,
+      };
+    });
+  }, [pushUndo]);
+
+  /** Apply one AI result across every on-image and Meta field atomically. */
+  const applyCompleteCopy = useCallback((onImage: Record<string, string>, copy: MetaCopy) => {
+    setState(prev => {
+      pushUndo(prev);
+      const declared = new Set(editorTextInputs(prev.pack).map(input => input.key));
+      const safeOnImage = Object.fromEntries(Object.entries(onImage).filter(([key]) => declared.has(key)));
+      return {
+        ...prev,
+        textValues: { ...prev.textValues, ...safeOnImage },
+        metaCopy: normalizeEditorMetaCopy(copy),
         isDirty: true,
         editVersion: (prev.editVersion ?? 0) + 1,
       };
@@ -243,7 +290,7 @@ export function useEditorState(pack: AdTemplate, initialDocument?: AdDocumentPar
       pushUndo(prev);
       return {
         ...prev,
-        metaCopy: { ...prev.metaCopy, [field]: value },
+        metaCopy: { ...prev.metaCopy, [field]: field === "cta" ? toMetaCta(value) : value },
         isDirty: true,
         editVersion: (prev.editVersion ?? 0) + 1,
       };
@@ -311,6 +358,9 @@ export function useEditorState(pack: AdTemplate, initialDocument?: AdDocumentPar
     setActivePlacement,
     selectLayer,
     updateTextValue,
+    applyTemplateText,
+    applyTemplateMetaCopy,
+    applyCompleteCopy,
     updateImageValue,
     updateImagePreview,
     updateCrop,
@@ -421,7 +471,7 @@ export async function buildAdDocument(state: EditorState): Promise<AdDocumentPar
     metaPrimaryText: state.metaCopy.primaryText,
     metaHeadline: state.metaCopy.headline,
     metaDescription: state.metaCopy.description,
-    metaCta: state.metaCopy.cta,
+    metaCta: toMetaCta(state.metaCopy.cta),
     revision: Math.max(1, (state.lastSavedRevision ?? 0) + 1),
   };
   return doc;

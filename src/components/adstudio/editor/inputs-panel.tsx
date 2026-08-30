@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 // ---------------------------------------------------------------------------
-// Inputs Panel — shared content inputs for a Frank pack. Picked files keep a
+// Inputs Panel — shared content inputs for the selected template. Picked files keep a
 // local preview while uploading directly to private workspace media refs.
 //
 // One field per declared textInput and one file control per imageInput.
@@ -28,6 +28,8 @@ export interface InputsPanelProps {
   /** Template-provided imagery displayed until the customer replaces it. */
   defaultImageValues: Record<string, string>;
   onTextChange: (key: string, value: string) => void;
+  /** Populate every text field with the authored template example. */
+  onUseTemplateText: () => void;
   onImageChange: (key: string, change: { file: File; previewUrl: string } | null) => void;
   /** Opens the crop dialog for the input's slot in the ACTIVE placement. */
   onCropClick: (key: string) => void;
@@ -41,6 +43,7 @@ export function InputsPanel({
   imageValues,
   defaultImageValues,
   onTextChange,
+  onUseTemplateText,
   onImageChange,
   onCropClick,
 }: InputsPanelProps) {
@@ -58,7 +61,14 @@ export function InputsPanel({
       </p>
 
       <section aria-label="Text">
-        <h4 className="mb-2 text-xs font-semibold text-foreground">Text</h4>
+        <div className="mb-2 flex items-center justify-between gap-3">
+          <h4 className="text-xs font-semibold text-foreground">Text</h4>
+          {textInputs.length > 0 ? (
+            <Button type="button" variant="outline" size="sm" onClick={onUseTemplateText} className="min-h-9 rounded-full px-3 text-xs">
+              Use template text
+            </Button>
+          ) : null}
+        </div>
         {textInputs.length === 0 ? (
           <p className="mb-4 text-xs text-muted-foreground">This template has no text inputs.</p>
         ) : (

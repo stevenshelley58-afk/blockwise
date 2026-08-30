@@ -251,7 +251,7 @@ export function PublishFlow({
             Save this ad in the editor before you choose where it should be created.
           </p>
           <a
-            href={`/ad-studio/templates/${encodeURIComponent(templateId)}`}
+            href={`/ad-studio/templates/${encodeURIComponent(templateId)}?adId=${encodeURIComponent(adId)}`}
             className="mt-4 inline-flex min-h-11 items-center rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             Go to editor

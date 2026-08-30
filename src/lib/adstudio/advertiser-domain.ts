@@ -65,10 +65,13 @@ function advertiserUrlCandidates(input: ResolveAdvertiserDomainInput): Array<str
   return [
     ...(input.finalUrls ?? []),
     ...copyPackFinalUrls,
+    // The Brand Pack source is the advertiser's own website. Prefer it over
+    // profile links so an ad preview never presents facebook.com/instagram.com
+    // as the destination domain merely because no legal URL was supplied.
+    input.brandKit.source.url,
     input.brandKit.compliance.privacyPolicyUrl,
     input.brandKit.compliance.termsUrl,
     ...input.brandKit.contact.socialLinks,
-    input.brandKit.source.url,
   ];
 }
 

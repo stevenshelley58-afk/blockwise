@@ -310,7 +310,7 @@ describe("direct template route and migration contract", () => {
     assert.match(migration, /references public\.ad_templates\(template_id\)[\s\S]*on delete restrict[\s\S]*not valid/i);
     assert.doesNotMatch(migration, /drop column[^;]*(?:template_pack_id|template_version)/i);
     assert.doesNotMatch(migration, /drop table[^;]*cascade/i);
-    assert.match(createCustomerAd, /template_id: pack\.templateId/);
+    assert.match(createCustomerAd, /template_id: template\.templateId/);
     assert.doesNotMatch(createCustomerAd, /template_pack_id:|template_version:/);
   });
 });

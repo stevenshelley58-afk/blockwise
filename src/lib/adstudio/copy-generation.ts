@@ -1,4 +1,6 @@
 import { randomUUID } from "node:crypto";
+import type { AdStudioBrandKit } from "./types.ts";
+import { toMetaCta } from "./meta-cta.ts";
 
 import {
   createTextProviderForCandidate,
@@ -95,6 +97,20 @@ const COPY_PROMPT_KEYS: PromptKey[] = [
   "adstudio.copy.output_schema",
   "adstudio.copy.compliance_rules",
 ];
+
+const TEXT_PROVIDER_API_KEYS = [
+  "AZURE_OPENAI_API_KEY",
+  "OPENAI_API_KEY",
+  "GOOGLE_AI_API_KEY",
+  "DEEPSEEK_API_KEY",
+] as const;
+
+/** True when at least one supported paid text provider has a non-empty key. */
+export function hasConfiguredAdStudioTextProvider(
+  env: ProviderEnvironment = process.env,
+): boolean {
+  return TEXT_PROVIDER_API_KEYS.some((key) => Boolean(env[key]?.trim()));
+}
 
 export const ADSTUDIO_COPY_LIMITS: Record<keyof AdStudioCopyFields, number> = {
   primaryText: 125,
@@ -236,6 +252,8 @@ export type AdStudioTemplateCopyInput = {
   fields: AdStudioTemplateCopyFieldSpec[];
   sourceImageUrl?: string;
   context?: AdStudioCopyRequestBody["context"];
+  /** Complete approved workspace brand context for voice and compliance. */
+  brandKit?: Partial<AdStudioBrandKit> | null;
   /** Explicit service-runtime credentials; web requests use process.env. */
   providerEnv?: ProviderEnvironment;
   signal?: AbortSignal;
@@ -273,6 +291,7 @@ export async function generateAdStudioTemplateCopy(
     bundle,
     mode: "brief",
     context: input.context ?? {},
+    brandKit: input.brandKit,
     brief: input.description,
   });
   const fieldLines = input.fields
@@ -336,7 +355,7 @@ export async function generateAdStudioTemplateCopy(
         headline: clamp(json.headline, ADSTUDIO_COPY_LIMITS.headline, ""),
         primaryText: clamp(json.primaryText, ADSTUDIO_COPY_LIMITS.primaryText, ""),
         description: clamp(json.description, ADSTUDIO_COPY_LIMITS.description, ""),
-        cta: clamp(json.cta, ADSTUDIO_COPY_LIMITS.cta, "Learn more"),
+        cta: toMetaCta(clamp(json.cta, ADSTUDIO_COPY_LIMITS.cta, "Learn more")),
       },
       source: "ai",
     };

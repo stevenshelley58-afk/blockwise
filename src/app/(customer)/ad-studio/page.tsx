@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { StudioNavigation } from "@/components/adstudio/studio-navigation";
 import { listTemplates } from "@/lib/adstudio/pack-gallery";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
 
@@ -18,20 +19,24 @@ export default async function AdStudioPage() {
   return (
     <div className="flex min-h-[calc(100dvh-54px)] flex-col bg-background text-foreground md:min-h-[calc(100dvh-60px)]">
       <header className="border-b border-border bg-card">
-        <div className="mx-auto flex w-full max-w-6xl items-baseline justify-between gap-4 px-6 py-6">
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-5 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h1 className="text-xl font-semibold tracking-tight">Ad Studio</h1>
+            <h1 className="text-xl font-semibold tracking-tight">Templates</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Choose a starting point, then shape the ad in the editor.
+              Start a new ad, or open Library to continue one you saved.
             </p>
           </div>
-          <span className="hidden text-xs tabular-nums text-muted-foreground sm:block">
-            {templates.length === 1 ? "1 template" : `${templates.length} templates`}
-          </span>
+          <StudioNavigation active="templates" />
         </div>
       </header>
 
-      <div className="mx-auto w-full max-w-6xl flex-1 px-6 py-8">
+      <div className="mx-auto w-full max-w-6xl flex-1 px-4 py-7 sm:px-6">
+        <div className="mb-5 flex items-center justify-between gap-4">
+          <p className="text-sm text-muted-foreground">Feed and native Story layouts are included in every template.</p>
+          <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+            {templates.length === 1 ? "1 template" : `${templates.length} templates`}
+          </span>
+        </div>
         {templates.length === 0 ? (
           <EmptyState />
         ) : (

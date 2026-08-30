@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { AssetUploadDropzone } from "@/components/asset-upload-dropzone";
+import { StudioNavigation } from "@/components/adstudio/studio-navigation";
 import type { AdStudioBrandKit } from "@/lib/adstudio";
 import { mediaUrlForStoragePath } from "@/lib/adstudio/assets";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
@@ -316,6 +317,7 @@ export function BrandStudio({ brandKit: initialKit, returnTo = "/ad-studio" }: {
           {"< Close"}
         </Link>
         <h1>Brand Studio</h1>
+        <StudioNavigation active="brand" />
         <div className="grow">{notice && <span className={`notice ${notice.tone}`}>{notice.text}</span>}</div>
       </div>
 
@@ -543,6 +545,7 @@ function BrandStudioEditor({ brandKit: initialKit, returnTo }: { brandKit: AdStu
           ‹ Close
         </Link>
         <h1>Brand Studio</h1>
+        <StudioNavigation active="brand" />
         <span className={`chip ${approved ? "good" : "warn"}`}>{approved ? "✓ Approved" : "Pending review"}</span>
         <div className="grow">
           {notice && <span className={`notice ${notice.tone}`}>{notice.text}</span>}
@@ -904,7 +907,7 @@ const BRAND_STYLES = `
 .bs-screen .chip{font-size:11.5px;font-weight:650;border-radius:999px;padding:5px 11px}
 .bs-screen .chip.good{background:#ecfdf5;color:#006d38}
 .bs-screen .chip.warn{background:#fdf8ee;color:#8a5a00}
-.bs-top{height:58px;background:#fff;border-bottom:1px solid var(--line-soft);display:flex;align-items:center;gap:14px;padding:0 20px;flex:0 0 auto}
+.bs-top{min-height:58px;background:#fff;border-bottom:1px solid var(--line-soft);display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;padding:8px 20px;flex:0 0 auto}
 .bs-top .back{color:var(--muted);font-weight:600;font-size:13px;text-decoration:none}
 .bs-top h1{font-size:15.5px;font-weight:680;margin:0}
 .bs-top .grow{margin-left:auto;display:flex;gap:9px;align-items:center}

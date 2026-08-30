@@ -1,58 +1,56 @@
 "use client";
 
-import { useMemo } from "react";
 import type { MetaCopy } from "./use-editor-state";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { labelForMetaCta, META_CTA_VALUES, toMetaCta } from "@/lib/adstudio/meta-cta";
 
 // ---------------------------------------------------------------------------
 // Meta Copy Panel — primary text, headline, description and CTA for the
-// Meta placements of a pack.
+// selected template's Facebook placements.
 //
 // One shared set of values, matching AdDocument v1's metaPrimaryText /
 // metaHeadline / metaDescription / metaCta fields: Feed and Story both read
 // the same copy, so an edit here updates every placement. Save embeds these
 // in the AdDocument and the save route validates them against the contract.
 //
-// The CTA field is a select of Meta's standard call-to-action values with a
-// "Custom…" escape hatch — AdDocument stores whatever string the user picks
-// or types.
+// The CTA field uses the supported Meta call-to-action values. Legacy or
+// generated labels are normalised before they reach the control or document.
 // ---------------------------------------------------------------------------
 
 export interface MetaCopyPanelProps {
   className?: string;
   values: MetaCopy;
   onChange: (field: keyof MetaCopy, value: string) => void;
+  onUseTemplateCopy: () => void;
 }
-
 /** Meta's standard CTAs (the same set the meta lead-ad pack schema allows). */
 export const META_CTA_OPTIONS = [
-  "LEARN_MORE",
-  "SIGN_UP",
-  "DOWNLOAD",
-  "CONTACT_US",
+  ...META_CTA_VALUES,
 ] as const;
 
 /** Meta truncation limits used for the live preview. */
 const LIMITS: Record<keyof MetaCopy, number> = {
   primaryText: 125,
   headline: 40,
-  description: 30,
-  cta: 25,
+  description: 90,
+  cta: 24,
 };
 
-export function MetaCopyPanel({ className, values, onChange }: MetaCopyPanelProps) {
-  const customCta = !(META_CTA_OPTIONS as readonly string[]).includes(values.cta);
-
+export function MetaCopyPanel({ className, values, onChange, onUseTemplateCopy }: MetaCopyPanelProps) {
   return (
     <aside aria-label="Meta copy" className={cn("w-full shrink-0 overflow-y-auto bg-card p-4 xl:w-auto", className)}>
-      <h3 className="mb-3 text-sm font-semibold text-foreground">
-        Meta copy
-      </h3>
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <h3 className="text-sm font-semibold text-foreground">Meta copy</h3>
+        <Button type="button" variant="outline" size="sm" onClick={onUseTemplateCopy} className="min-h-9 rounded-full px-3 text-xs">
+          Use template copy
+        </Button>
+      </div>
       <p className="mb-4 text-xs leading-relaxed text-muted-foreground">
-        Primary text, headline, description and CTA show with the design in
-        every placement — edit once, all placements update.
+        Primary text, headline and description appear in Facebook Feed. The
+        CTA also appears in Story — edit once and both previews update.
       </p>
 
       <div className="space-y-4">
@@ -84,36 +82,23 @@ export function MetaCopyPanel({ className, values, onChange }: MetaCopyPanelProp
             Call to action
           </Label>
           <select
-            value={customCta ? "CUSTOM" : values.cta}
-            onChange={e => {
-              const next = e.target.value;
-              onChange("cta", next === "CUSTOM" ? "" : next);
-            }}
+            value={toMetaCta(values.cta)}
+            onChange={e => onChange("cta", e.target.value)}
             id="meta-copy-cta"
             className="min-h-11 w-full rounded-(--r-card) border border-input bg-muted/30 px-3 text-base shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
           >
             {META_CTA_OPTIONS.map(cta => (
               <option key={cta} value={cta}>
-                {cta.replaceAll("_", " ")}
+                {labelForMetaCta(cta)}
               </option>
             ))}
-            <option value="CUSTOM">Custom…</option>
           </select>
-          {customCta && (
-            <div className="mt-2">
-              <TextField
-                label="Custom CTA"
-                field="cta"
-                value={values.cta}
-                onChange={onChange}
-                maxLength={LIMITS.cta}
-              />
-            </div>
-          )}
         </div>
       </div>
 
-      <TruncationPreview values={values} />
+      <p className="mt-5 rounded-(--r-card) border border-border bg-muted/30 px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
+        The Facebook Feed and Story previews update live as you type.
+      </p>
     </aside>
   );
 }
@@ -168,50 +153,4 @@ function TextField({
       </span>
     </div>
   );
-}
-
-// ---------------------------------------------------------------------------
-// TruncationPreview — compact feed-style preview of how the copy truncates.
-// Plain text only; deliberately NOT a Facebook/IG wireframe.
-// ---------------------------------------------------------------------------
-
-function TruncationPreview({ values }: { values: MetaCopy }) {
-  const primary = useMemo(
-    () => truncate(values.primaryText, LIMITS.primaryText),
-    [values.primaryText],
-  );
-  const headline = truncate(values.headline, LIMITS.headline);
-  const description = truncate(values.description, LIMITS.description);
-  const cta = truncate(values.cta, LIMITS.cta) || "Learn more";
-
-  return (
-    <section aria-label="Truncation preview" className="mt-5">
-      <h4 className="mb-2 text-xs font-semibold text-foreground">
-        Feed preview
-      </h4>
-      <div className="rounded-(--r-card) border border-border bg-background p-3 text-[13px] leading-snug text-foreground">
-        <p className="line-clamp-4">{primary || "Primary text"}</p>
-        <p className="mt-2 truncate font-semibold text-foreground">
-          {headline || "Headline"}
-        </p>
-        <p className="mt-1 truncate text-muted-foreground">
-          {description || "Description"}
-        </p>
-        <p className="mt-2 inline-block rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
-          {cta}
-        </p>
-      </div>
-      <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
-        Copy is truncated in feed at 125 / 40 / 30 characters (primary text,
-        headline, description). Longest text is cut first.
-      </p>
-    </section>
-  );
-}
-
-function truncate(value: string, max: number): string {
-  const collapsed = value.replace(/\s+/g, " ").trim();
-  if (collapsed.length <= max) return collapsed;
-  const cut = collapsed.slice(0, max).replace(/\s+\S*$/u, "");
-  return `${cut}…`;
 }
