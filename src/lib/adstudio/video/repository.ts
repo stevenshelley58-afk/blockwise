@@ -120,6 +120,14 @@ export async function getVideoProject(ctx: VideoRepositoryContext, id: string): 
   return mapProject(data);
 }
 
+export async function getLatestVideoRenderJob(ctx: VideoRepositoryContext, projectId: string): Promise<VideoRenderJob | null> {
+  const { data, error } = await ctx.supabase.from("ad_video_render_jobs")
+    .select(JOB_COLUMNS).eq("workspace_id", ctx.workspaceId).eq("project_id", projectId)
+    .order("created_at", { ascending: false }).limit(1).maybeSingle();
+  if (error) throw new VideoRepositoryError("video_project_storage", error.message);
+  return data ? mapJob(data) : null;
+}
+
 export async function updateVideoProject(
   ctx: VideoRepositoryContext,
   id: string,
@@ -157,27 +165,57 @@ export async function updateVideoProject(
 
 export async function queueVideoRender(ctx: VideoRepositoryContext, id: string): Promise<VideoRenderJob> {
   const project = await getVideoProject(ctx, id);
-  if (["cancelled", "succeeded"].includes(project.status)) {
-    throw new VideoRepositoryError("video_render_not_allowed", "Only a draft or failed video project can be queued.");
-  }
   const idempotencyKey = videoRenderIdempotencyKey(project);
   const now = new Date().toISOString();
+  // Idempotent retries must never reset a running or completed job. A worker
+  // may have claimed the row between the caller's request and this lookup.
+  const existing = await ctx.supabase.from("ad_video_render_jobs")
+    .select(JOB_COLUMNS)
+    .eq("workspace_id", ctx.workspaceId)
+    .eq("project_id", project.id)
+    .eq("idempotency_key", idempotencyKey)
+    .maybeSingle();
+  if (existing.error) throw new VideoRepositoryError("video_project_storage", existing.error.message);
+  if (existing.data) {
+    if (existing.data.status !== "failed") return mapJob(existing.data);
+    const retried = await ctx.supabase.from("ad_video_render_jobs").update({ status: "queued", error_code: null, error_message: null, finished_at: null, queued_at: now, updated_at: now })
+      .eq("id", existing.data.id).eq("workspace_id", ctx.workspaceId).eq("status", "failed").select(JOB_COLUMNS).maybeSingle();
+    if (retried.error) throw new VideoRepositoryError("video_project_storage", retried.error.message);
+    if (retried.data) {
+      await ctx.supabase.from("ad_video_projects").update({ status: "render_queued", updated_at: now }).eq("id", id).eq("workspace_id", ctx.workspaceId);
+      return mapJob(retried.data);
+    }
+    const racedRetry = await ctx.supabase.from("ad_video_render_jobs").select(JOB_COLUMNS).eq("id", existing.data.id).eq("workspace_id", ctx.workspaceId).maybeSingle();
+    if (racedRetry.data) return mapJob(racedRetry.data);
+    throw new VideoRepositoryError("video_project_storage", "Video render could not be retried.");
+  }
+  if (!["draft", "script_ready", "failed", "render_queued", "queued"].includes(project.status)) {
+    throw new VideoRepositoryError("video_render_not_allowed", "Only a draft, script-ready, or failed video project can be queued.");
+  }
+
   const inserted = await ctx.supabase
     .from("ad_video_render_jobs")
-    .upsert({
+    .insert({
       workspace_id: ctx.workspaceId,
       project_id: project.id,
       status: "queued",
       idempotency_key: idempotencyKey,
       queued_at: now,
       updated_at: now,
-    }, { onConflict: "workspace_id,idempotency_key", ignoreDuplicates: false })
+    })
     .select(JOB_COLUMNS)
     .single();
-  if (inserted.error || !inserted.data) throw new VideoRepositoryError("video_project_storage", inserted.error?.message ?? "Video render could not be queued.");
+  if (inserted.error || !inserted.data) {
+    // A concurrent request can win the unique key race. Return its durable
+    // job instead of surfacing a spurious 500 or creating a second job.
+    const raced = await ctx.supabase.from("ad_video_render_jobs")
+      .select(JOB_COLUMNS).eq("workspace_id", ctx.workspaceId).eq("idempotency_key", idempotencyKey).maybeSingle();
+    if (raced.data) return mapJob(raced.data);
+    throw new VideoRepositoryError("video_project_storage", inserted.error?.message ?? "Video render could not be queued.");
+  }
   // This update is intentionally best effort only after the durable job exists;
   // a worker must never mistake a queued project for a publishable output.
-  await ctx.supabase.from("ad_video_projects").update({ status: "queued", updated_at: now }).eq("id", id).eq("workspace_id", ctx.workspaceId);
+  await ctx.supabase.from("ad_video_projects").update({ status: "render_queued", updated_at: now }).eq("id", id).eq("workspace_id", ctx.workspaceId);
   return mapJob(inserted.data);
 }
 

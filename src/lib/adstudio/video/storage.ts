@@ -58,7 +58,10 @@ export async function prepareVideoUpload(ctx: VideoStorageContext, metadata: Vid
     .eq("workspace_id", ctx.workspaceId).eq("project_id", ctx.projectId)
     .eq("object_path", path).maybeSingle();
   if (existing.error) throw new VideoStorageError("video_storage", existing.error.message);
-  if (existing.data) return { assetId: existing.data.id, path, token: null, reused: true, validationStatus: existing.data.validation_status };
+  if (existing.data) {
+    const token = existing.data.validation_status === "pending" ? await createUploadToken(ctx, path) : null;
+    return { assetId: existing.data.id, path, token, reused: true, validationStatus: existing.data.validation_status };
+  }
 
   const inserted = await ctx.supabase.from("ad_video_assets").insert({
     workspace_id: ctx.workspaceId, project_id: ctx.projectId, asset_role: "source", object_path: path,
@@ -67,13 +70,27 @@ export async function prepareVideoUpload(ctx: VideoStorageContext, metadata: Vid
     poster_path: metadata.posterPath ?? null, provenance_json: metadata.provenance ?? {},
     rights_json: metadata.rights ?? {}, consent_json: metadata.consent ?? {}, validation_status: "pending",
   }).select("id, validation_status").single();
-  if (inserted.error || !inserted.data) throw new VideoStorageError("video_storage", inserted.error?.message ?? "Video upload could not be prepared.");
-  const signed = await ctx.supabase.storage.from(VIDEO_BUCKET).createSignedUploadUrl(path, { upsert: false });
-  if (signed.error || !signed.data?.token) {
-    await ctx.supabase.from("ad_video_assets").delete().eq("id", inserted.data.id).eq("workspace_id", ctx.workspaceId);
-    throw new VideoStorageError("video_storage", signed.error?.message ?? "Video upload URL could not be created.");
+  if (inserted.error || !inserted.data) {
+    // Another request may have reserved the same content-addressed path.
+    const raced = await ctx.supabase.from("ad_video_assets").select("id, validation_status")
+      .eq("workspace_id", ctx.workspaceId).eq("project_id", ctx.projectId).eq("object_path", path).maybeSingle();
+    if (raced.data) {
+      const token = raced.data.validation_status === "pending" ? await createUploadToken(ctx, path) : null;
+      return { assetId: raced.data.id, path, token, reused: true, validationStatus: raced.data.validation_status };
+    }
+    throw new VideoStorageError("video_storage", inserted.error?.message ?? "Video upload could not be prepared.");
   }
-  return { assetId: inserted.data.id, path, token: signed.data.token, reused: false, validationStatus: "pending" };
+  const signed = await createUploadToken(ctx, path);
+  if (!signed) {
+    await ctx.supabase.from("ad_video_assets").delete().eq("id", inserted.data.id).eq("workspace_id", ctx.workspaceId);
+    throw new VideoStorageError("video_storage", "Video upload URL could not be created.");
+  }
+  return { assetId: inserted.data.id, path, token: signed, reused: false, validationStatus: "pending" };
+}
+
+async function createUploadToken(ctx: VideoStorageContext, path: string): Promise<string | null> {
+  const signed = await ctx.supabase.storage.from(VIDEO_BUCKET).createSignedUploadUrl(path, { upsert: false });
+  return signed.error || !signed.data?.token ? null : signed.data.token;
 }
 
 export async function finalizeVideoUpload(ctx: VideoStorageContext, assetId: string, metadata: VideoUploadMetadata): Promise<FinalizedVideoAsset> {
@@ -136,7 +153,12 @@ export function hasVideoMagic(bytes: Uint8Array, mimeType: VideoMime): boolean {
 
 function validateMetadata(metadata: VideoUploadMetadata): void {
   if (!VIDEO_MIME_TYPES.includes(metadata.mimeType) || !/^[a-f0-9]{64}$/i.test(metadata.sha256) || !Number.isInteger(metadata.byteSize) || metadata.byteSize <= 0 || metadata.byteSize > VIDEO_MAX_BYTES) throw new VideoStorageError("video_invalid_metadata", `Video must be MP4 or WebM under ${VIDEO_MAX_BYTES / (1024 * 1024)} MB.`);
-  if (metadata.durationMs !== undefined && metadata.durationMs !== null && (!Number.isFinite(metadata.durationMs) || metadata.durationMs <= 0 || metadata.durationMs > VIDEO_MAX_DURATION_MS)) throw new VideoStorageError("video_invalid_metadata", "Video duration exceeds the 90 second limit.");
+  if (metadata.durationMs !== undefined && metadata.durationMs !== null && (!Number.isInteger(metadata.durationMs) || !Number.isFinite(metadata.durationMs) || metadata.durationMs <= 0 || metadata.durationMs > VIDEO_MAX_DURATION_MS)) throw new VideoStorageError("video_invalid_metadata", "Video duration exceeds the 90 second limit.");
+  for (const dimension of [metadata.width, metadata.height]) {
+    if (dimension !== undefined && dimension !== null && (!Number.isInteger(dimension) || dimension <= 0 || dimension > 7680)) {
+      throw new VideoStorageError("video_invalid_metadata", "Video dimensions are invalid.");
+    }
+  }
 }
 function mapAsset(row: any): FinalizedVideoAsset {
   return { id: row.id, workspaceId: row.workspace_id, projectId: row.project_id, objectPath: row.object_path, sha256: row.sha256, mimeType: row.mime_type, byteSize: row.byte_size, durationMs: row.duration_ms ?? null, width: row.width ?? null, height: row.height ?? null, validationStatus: row.validation_status, validationPendingReason: row.validation_status === "pending" ? "worker_codec_duration_attestation_required" : null };

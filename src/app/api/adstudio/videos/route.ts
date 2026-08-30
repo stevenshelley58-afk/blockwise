@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
   const access = await requireAdStudioRequest(request);
   if (!access.ok) return access.response;
   try {
-    const input = parseVideoProjectInput(await readJsonBody<unknown>(request));
+    const input = parseVideoProjectInput(await readJsonBody<unknown>(request), { requireReadiness: false, workspaceId: access.access.workspaceId });
     const project = await createVideoProject({
       supabase: access.supabase,
       workspaceId: access.access.workspaceId,

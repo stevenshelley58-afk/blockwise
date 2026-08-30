@@ -49,11 +49,14 @@ export async function claimNextVideoRenderJob(supabase: SupabaseClient, workspac
     .eq("id", found.data.id).eq("workspace_id", workspaceId).eq("status", "queued").select("*").maybeSingle();
   if (claimed.error) throw new Error(claimed.error.message);
   if (!claimed.data) return null;
+  await supabase.from("ad_video_projects").update({ status: "rendering", updated_at: now })
+    .eq("id", found.data.project_id).eq("workspace_id", workspaceId).in("status", ["render_queued", "queued"]);
   return mapJob(claimed.data);
 }
 
 export async function succeedVideoRenderJob(supabase: SupabaseClient, input: { workspaceId: string; projectId: string; jobId: string; output: RenderProviderOutput }): Promise<VideoRenderJob> {
   const now = new Date().toISOString();
+  await assertValidatedRenderOutputs(supabase, input.workspaceId, input.output);
   const result = await supabase.from("ad_video_render_jobs").update({
     status: "succeeded", output_mp4_asset_id: input.output.mp4AssetId, output_poster_asset_id: input.output.posterAssetId ?? null,
     output_captions_asset_id: input.output.captionsAssetId ?? null, provider_job_id: input.output.providerJobId ?? null,
@@ -61,8 +64,28 @@ export async function succeedVideoRenderJob(supabase: SupabaseClient, input: { w
     finished_at: now, updated_at: now, error_code: null, error_message: null,
   }).eq("id", input.jobId).eq("workspace_id", input.workspaceId).eq("project_id", input.projectId).eq("status", "running").select("*").single();
   if (result.error || !result.data) throw new Error(result.error?.message ?? "Render job is no longer running.");
-  await supabase.from("ad_video_projects").update({ status: "succeeded", updated_at: now, completed_at: now }).eq("id", input.projectId).eq("workspace_id", input.workspaceId);
+  await supabase.from("ad_video_projects").update({ status: "succeeded", updated_at: now, completed_at: now })
+    .eq("id", input.projectId).eq("workspace_id", input.workspaceId).eq("status", "rendering");
   return mapJob(result.data);
+}
+
+async function assertValidatedRenderOutputs(supabase: SupabaseClient, workspaceId: string, output: RenderProviderOutput): Promise<void> {
+  const ids = [output.mp4AssetId, output.posterAssetId, output.captionsAssetId].filter((id): id is string => Boolean(id));
+  const { data, error } = await supabase.from("ad_video_assets")
+    .select("id, mime_type, asset_role, validation_status")
+    .eq("workspace_id", workspaceId).eq("validation_status", "validated").in("id", ids);
+  if (error) throw new Error(error.message);
+  const byId = new Map((data ?? []).map((asset) => [asset.id, asset]));
+  const mp4 = byId.get(output.mp4AssetId);
+  if (!mp4 || mp4.mime_type !== "video/mp4" || mp4.asset_role !== "output") throw new Error("Render output MP4 is not a validated workspace asset.");
+  if (output.posterAssetId) {
+    const poster = byId.get(output.posterAssetId);
+    if (!poster || !["image/jpeg", "image/png"].includes(poster.mime_type) || poster.asset_role !== "poster") throw new Error("Render poster is not a validated workspace asset.");
+  }
+  if (output.captionsAssetId) {
+    const captions = byId.get(output.captionsAssetId);
+    if (!captions || captions.mime_type !== "text/vtt" || captions.asset_role !== "captions") throw new Error("Render captions are not a validated workspace asset.");
+  }
 }
 
 export async function failVideoRenderJob(supabase: SupabaseClient, input: { workspaceId: string; projectId: string; jobId: string; errorCode: string; errorMessage: string; retryable?: boolean }): Promise<VideoRenderJob> {
@@ -71,7 +94,8 @@ export async function failVideoRenderJob(supabase: SupabaseClient, input: { work
   const result = await supabase.from("ad_video_render_jobs").update({ status, error_code: input.errorCode, error_message: input.errorMessage.slice(0, 2000), updated_at: now, ...(status === "failed" ? { finished_at: now } : {}) })
     .eq("id", input.jobId).eq("workspace_id", input.workspaceId).eq("project_id", input.projectId).eq("status", "running").select("*").single();
   if (result.error || !result.data) throw new Error(result.error?.message ?? "Render job is no longer running.");
-  await supabase.from("ad_video_projects").update({ status, updated_at: now, ...(status === "failed" ? { completed_at: now } : {}) }).eq("id", input.projectId).eq("workspace_id", input.workspaceId);
+  await supabase.from("ad_video_projects").update({ status: input.retryable ? "render_queued" : "failed", updated_at: now, ...(status === "failed" ? { completed_at: now } : {}) })
+    .eq("id", input.projectId).eq("workspace_id", input.workspaceId).eq("status", "rendering");
   return mapJob(result.data);
 }
 

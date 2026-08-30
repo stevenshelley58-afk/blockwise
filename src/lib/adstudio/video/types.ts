@@ -60,7 +60,9 @@ export const videoBriefSchema = z.object({
 export type VideoBrief = z.infer<typeof videoBriefSchema>;
 export const videoAssetSchema = z.object({
   id: z.string().trim().min(1).max(160), kind: z.enum(["logo", "photo", "video", "testimonial", "proof", "music"]),
-  url: z.string().url().or(z.string().startsWith("storage://")), alt: z.string().max(240).optional(), consentId: z.string().trim().max(160).optional(),
+  // Stored Brand Pack/library assets use the auth-gated media proxy. The
+  // workspace prefix is checked by parseVideoProjectInput when context exists.
+  url: z.string().url().or(z.string().startsWith("storage://")).or(z.string().regex(/^\/api\/adstudio\/media\?path=[A-Za-z0-9._~%\-/]+$/u)), alt: z.string().max(240).optional(), consentId: z.string().trim().max(160).optional(),
 });
 export type VideoAsset = z.infer<typeof videoAssetSchema>;
 export const consentRecordSchema = z.object({

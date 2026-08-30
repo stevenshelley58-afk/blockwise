@@ -28,9 +28,9 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
   if (!limit.ok) return NextResponse.json({ error: "Script generation is temporarily limited. Try again shortly." }, { status: 429, headers: { "Retry-After": String(limit.retryAfterSeconds) } });
 
   try {
-    const projectInput = parseVideoProjectInput(project.project);
+    const projectInput = parseVideoProjectInput(project.project, { requireReadiness: true, workspaceId: access.access.workspaceId });
     const scriptPlan = await generateVideoScript(projectInput, { signal: request.signal });
-    const updated = await updateVideoProject(repositoryContext, id, { plan: { ...project.plan, scriptPlan }, status: "draft" }, project.version);
+    const updated = await updateVideoProject(repositoryContext, id, { plan: { ...project.plan, scriptPlan }, status: "script_ready" }, project.version);
     return NextResponse.json({ project: updated, scriptPlan });
   } catch (error) {
     if (error instanceof VideoValidationError) return NextResponse.json({ error: error.message, issues: error.issues }, { status: 422 });

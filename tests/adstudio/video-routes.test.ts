@@ -16,9 +16,17 @@ test("video routes authenticate and use workspace-scoped repository context", ()
     assert.match(source, /workspaceId: access\.access\.workspaceId/u);
     assert.match(source, /userId: access\.access\.userId/u);
   }
+  assert.match(get, /export async function PATCH/u);
+  assert.match(get, /expectedVersion/u);
+  assert.match(get, /renderJob/u);
+  assert.match(get, /createSignedUrl/u);
   assert.match(script, /checkRateLimit/u);
   assert.match(script, /adstudio-video-script/u);
   assert.match(render, /queueVideoRender/u);
+  assert.match(render, /validateVideoScriptPlan/u);
+  assert.match(script, /status: "script_ready"/u);
+  assert.match(render, /adstudio-video-render/u);
+  assert.match(create, /requireReadiness: false/u);
 });
 
 test("video routes return safe customer errors instead of provider details", () => {
@@ -28,4 +36,15 @@ test("video routes return safe customer errors instead of provider details", () 
   assert.match(render, /Video render could not be queued/u);
   assert.doesNotMatch(script, /OPENAI_API_KEY|ProviderRequestError|model profile/iu);
   assert.doesNotMatch(render, /OPENAI_API_KEY|ProviderRequestError|model profile/iu);
+});
+
+test("video integration seams keep media uploads and outputs workspace-fenced", () => {
+  const meta = fs.readFileSync(path.join(root, "src", "lib", "providers", "meta-execution.ts"), "utf8");
+  const migration = fs.readFileSync(path.join(root, "supabase", "migrations", "20260831010000_adstudio_video_projects.sql"), "utf8");
+  assert.match(meta, /new FormData\(\)/u);
+  assert.match(meta, /postMetaVideoObject/u);
+  assert.doesNotMatch(meta, /source: creative\.asset\.bytesBase64/u);
+  assert.match(migration, /image\/jpeg.*image\/png.*text\/vtt/su);
+  assert.match(migration, /foreign key \(workspace_id, output_mp4_asset_id\)/u);
+  assert.match(migration, /foreign key \(workspace_id, output_poster_asset_id\)/u);
 });

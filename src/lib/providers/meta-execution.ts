@@ -1586,10 +1586,7 @@ async function resolveCreativeMedia(
     return { imageHash: null, videoId: requireMetaId(response, "video") };
   }
   if (creative.asset.source !== "inline" || !creative.asset.bytesBase64) throw new Error("Validated video bytes are required before Meta upload.");
-  const response = await postMetaObject(input, requestLog, responseLog, `asset.${creative.localId}`, `/${plan.setup.metaAdAccountId}/advideos`, {
-    source: creative.asset.bytesBase64,
-    name: creative.asset.filename ?? `${creative.localId}.mp4`,
-  });
+  const response = await postMetaVideoObject(input, requestLog, responseLog, `asset.${creative.localId}`, plan.setup.metaAdAccountId, creative.asset.bytesBase64, creative.asset.filename ?? `${creative.localId}.mp4`, creative.asset.mimeType);
   return { imageHash: null, videoId: requireMetaId(response, "video") };
 }
 
@@ -1645,6 +1642,38 @@ async function postMetaObject(
     throw new Error(metaProviderErrorMessage(payload, `Meta request ${step} failed with ${response.status}.`));
   }
 
+  return payload;
+}
+
+/** Meta's /advideos source upload is multipart; a JSON base64 field is not a
+ * valid Graph upload and can be accepted by mocks while failing in production. */
+async function postMetaVideoObject(
+  input: MetaPublishExecutionInput,
+  requestLog: MetaProviderLogEntry[],
+  responseLog: MetaProviderLogEntry[],
+  step: string,
+  accountId: string,
+  bytesBase64: string,
+  filename: string,
+  mimeType?: string,
+) {
+  const path = `/${accountId}/advideos`;
+  const createdAt = new Date().toISOString();
+  requestLog.push({ step, method: "POST", path, body: { source: `<redacted ${bytesBase64.length} base64 chars>`, name: filename }, createdAt });
+  const bytes = Buffer.from(bytesBase64, "base64");
+  if (!bytes.length) throw new Error("Validated video bytes are required before Meta upload.");
+  const form = new FormData();
+  form.append("source", new Blob([bytes], { type: mimeType || "video/mp4" }), filename);
+  form.append("name", filename);
+  const response = await (input.fetchImpl ?? fetch)(`https://graph.facebook.com/${input.graphVersion ?? DEFAULT_META_GRAPH_VERSION}${path}`, {
+    method: "POST",
+    headers: { authorization: `Bearer ${input.accessToken}` },
+    body: form,
+    signal: AbortSignal.timeout(30_000),
+  });
+  const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+  responseLog.push({ step, method: "POST", path, response: payload, status: response.status, createdAt: new Date().toISOString() });
+  if (!response.ok) throw new Error(metaProviderErrorMessage(payload, `Meta request ${step} failed with ${response.status}.`));
   return payload;
 }
 
@@ -2202,9 +2231,13 @@ async function findMetaObjectByName(
 
 /** Keep persisted request logs small and free of image payloads. */
 function redactMetaRequestBody(body: Record<string, unknown>): Record<string, unknown> {
-  if (typeof body.bytes !== "string") return body;
+  if (typeof body.bytes !== "string" && typeof body.source !== "string") return body;
 
-  return { ...body, bytes: `<redacted ${body.bytes.length} base64 chars>` };
+  return {
+    ...body,
+    ...(typeof body.bytes === "string" ? { bytes: `<redacted ${body.bytes.length} base64 chars>` } : {}),
+    ...(typeof body.source === "string" ? { source: `<redacted ${body.source.length} base64 chars>` } : {}),
+  };
 }
 
 async function getMetaObjectStatus(

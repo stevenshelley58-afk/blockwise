@@ -12,7 +12,7 @@ export async function generateVideoScript(
   const providerPlan = await generateProviderVideoScript(input, options);
   if (providerPlan) {
     try {
-      return validateVideoScriptPlan(providerPlan, input);
+      return normalizeRenderedScenePlan(validateVideoScriptPlan(providerPlan, input), input);
     } catch {
       // A malformed provider answer is not customer copy. Continue through the
       // deterministic path, which is always bounded and policy checked.
@@ -27,18 +27,19 @@ export function generateDeterministicVideoScript(input: VideoProjectInput): Vide
   const cta = input.brief.cta ?? recipe.cta;
   const promise = "a clear local next step";
   const proof = input.brief.verifiedProof ? `Using verified local proof from ${input.brief.proofSource}.` : "We keep the conversation grounded in your situation.";
+  const sceneAssets = buildSceneAssetIds(input);
   const scenes: ScenePlan[] = input.durationSeconds === 15
     ? [
-      { index: 1, beat: recipe.sceneBeats[0].beat, narration: `In ${area}, what is your next property move?`, overlay: area, assetIds: input.assets.filter((asset) => asset.kind === "logo").map((asset) => asset.id).slice(0, 1) },
-      { index: 2, beat: recipe.sceneBeats[1].beat, narration: "We explain local options clearly, without pressure.", overlay: "Practical local guidance", assetIds: [] },
-      { index: 3, beat: recipe.sceneBeats[2].beat, narration: "Grounded advice gives you a clear local next step.", overlay: input.brief.verifiedProof ? "Verified local insight" : "Grounded advice", assetIds: input.assets.filter((asset) => asset.kind === "proof" || asset.kind === "testimonial").map((asset) => asset.id).slice(0, 1) },
-      { index: 4, beat: recipe.sceneBeats[3].beat, narration: "Start a practical conversation for your goals.", overlay: cta, assetIds: [] },
+      { index: 1, beat: recipe.sceneBeats[0].beat, narration: `In ${area}, what is your next property move?`, overlay: area, assetIds: sceneAssets[0] },
+      { index: 2, beat: recipe.sceneBeats[1].beat, narration: "We explain local options clearly, without pressure.", overlay: "Practical local guidance", assetIds: sceneAssets[1] },
+      { index: 3, beat: recipe.sceneBeats[2].beat, narration: "Grounded advice gives you a clear local next step.", overlay: input.brief.verifiedProof ? "Verified local insight" : "Grounded advice", assetIds: sceneAssets[2] },
+      { index: 4, beat: recipe.sceneBeats[3].beat, narration: "Start a practical conversation for your goals.", overlay: cta, assetIds: sceneAssets[3] },
     ]
     : [
-      { index: 1, beat: recipe.sceneBeats[0].beat, narration: `In ${area}, wondering what your next property move could look like?`, overlay: area, assetIds: input.assets.filter((asset) => asset.kind === "logo").map((asset) => asset.id).slice(0, 1) },
-      { index: 2, beat: recipe.sceneBeats[1].beat, narration: "We explain the practical local signals and options in plain language, without pressure.", overlay: "Practical local guidance", assetIds: [] },
-      { index: 3, beat: recipe.sceneBeats[2].beat, narration: `${proof} You will leave with ${promise}.`, overlay: input.brief.verifiedProof ? "Verified local insight" : "Grounded advice", assetIds: input.assets.filter((asset) => asset.kind === "proof" || asset.kind === "testimonial").map((asset) => asset.id).slice(0, 1) },
-      { index: 4, beat: recipe.sceneBeats[3].beat, narration: "Start with one useful conversation tailored to your timing and goals.", overlay: cta, assetIds: [] },
+      { index: 1, beat: recipe.sceneBeats[0].beat, narration: `In ${area}, wondering what your next property move could look like?`, overlay: area, assetIds: sceneAssets[0] },
+      { index: 2, beat: recipe.sceneBeats[1].beat, narration: "We explain the practical local signals and options in plain language, without pressure.", overlay: "Practical local guidance", assetIds: sceneAssets[1] },
+      { index: 3, beat: recipe.sceneBeats[2].beat, narration: `${proof} You will leave with ${promise}.`, overlay: input.brief.verifiedProof ? "Verified local insight" : "Grounded advice", assetIds: sceneAssets[2] },
+      { index: 4, beat: recipe.sceneBeats[3].beat, narration: "Start with one useful conversation tailored to your timing and goals.", overlay: cta, assetIds: sceneAssets[3] },
     ];
 
   const target = input.durationSeconds === 15 ? 35 : 68;
@@ -63,11 +64,56 @@ export function generateDeterministicVideoScript(input: VideoProjectInput): Vide
     source: "deterministic",
   };
   try {
-    return validateVideoScriptPlan(plan, input);
+    return normalizeRenderedScenePlan(validateVideoScriptPlan(plan, input), input);
   } catch (error) {
     if (error instanceof VideoValidationError) throw error;
     throw new VideoValidationError("The script could not be validated.");
   }
+}
+
+/** Ensure provider output and hook edits have a concrete render effect. */
+export function normalizeRenderedScenePlan(plan: VideoScriptPlan, input: VideoProjectInput): VideoScriptPlan {
+  const selectedHook = plan.hookVariants.find((hook) => hook.id === plan.selectedHookId);
+  const allowed = new Set(input.assets.map((asset) => asset.id));
+  const used = new Set<string>();
+  const scenes = plan.scenes.map((scene) => ({
+    ...scene,
+    assetIds: scene.assetIds.filter((assetId) => {
+      if (!allowed.has(assetId)) return false;
+      if (used.has(assetId)) return false;
+      used.add(assetId);
+      return true;
+    }),
+  }));
+  if (selectedHook) scenes[0] = { ...scenes[0], narration: selectedHook.text };
+  const media = input.assets.filter((asset) => asset.kind === "photo" || asset.kind === "video");
+  const proof = input.assets.filter((asset) => asset.kind === "proof" || asset.kind === "testimonial");
+  const logo = input.assets.find((asset) => asset.kind === "logo");
+  const candidates: Array<[number, VideoProjectInput["assets"][number] | undefined]> = [[0, media[0]], [1, media[1]], [2, proof[0] ?? media[2]], [3, logo]];
+  for (const [index, asset] of candidates) {
+    if (asset && !used.has(asset.id)) {
+      scenes[index] = { ...scenes[index], assetIds: [...scenes[index].assetIds, asset.id] };
+      used.add(asset.id);
+    }
+  }
+  return { ...plan, scenes };
+}
+
+function buildSceneAssetIds(input: VideoProjectInput): [string[], string[], string[], string[]] {
+  const used = new Set<string>();
+  const take = (asset: VideoProjectInput["assets"][number] | undefined) => {
+    if (!asset || used.has(asset.id)) return [];
+    used.add(asset.id);
+    return [asset.id];
+  };
+  const media = input.assets.filter((asset) => asset.kind === "photo" || asset.kind === "video");
+  const proof = input.assets.filter((asset) => asset.kind === "proof" || asset.kind === "testimonial");
+  const logo = input.assets.find((asset) => asset.kind === "logo");
+  const sceneOne = take(media[0]);
+  const sceneTwo = take(media[1]);
+  const sceneThree = take(proof[0] ?? media[2]);
+  const sceneFour = take(logo);
+  return [sceneOne, sceneTwo, sceneThree, sceneFour];
 }
 
 function fitWords(text: string, desired: number): string {

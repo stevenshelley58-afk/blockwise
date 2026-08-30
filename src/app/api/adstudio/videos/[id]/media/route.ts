@@ -38,10 +38,12 @@ function parseMetadata(body: Record<string, unknown>): { ok: true; value: Parame
   const mimeType = typeof body.mimeType === "string" ? body.mimeType.toLowerCase() as VideoMime : null;
   const byteSize = typeof body.byteSize === "number" ? body.byteSize : NaN;
   const durationMs = body.durationMs === null || body.durationMs === undefined ? null : typeof body.durationMs === "number" ? body.durationMs : NaN;
-  if (!/^[a-f0-9]{64}$/.test(sha256) || !mimeType || !(VIDEO_MIME_TYPES as readonly string[]).includes(mimeType) || !Number.isInteger(byteSize) || byteSize <= 0 || byteSize > VIDEO_MAX_BYTES || (durationMs !== null && (!Number.isFinite(durationMs) || durationMs <= 0))) {
+  const width = body.width === null || body.width === undefined ? null : body.width;
+  const height = body.height === null || body.height === undefined ? null : body.height;
+  if (!/^[a-f0-9]{64}$/.test(sha256) || !mimeType || !(VIDEO_MIME_TYPES as readonly string[]).includes(mimeType) || !Number.isInteger(byteSize) || byteSize <= 0 || byteSize > VIDEO_MAX_BYTES || (durationMs !== null && (!Number.isInteger(durationMs) || !Number.isFinite(durationMs) || durationMs <= 0 || durationMs > 90_000)) || (width !== null && (!Number.isInteger(width) || Number(width) <= 0 || Number(width) > 7680)) || (height !== null && (!Number.isInteger(height) || Number(height) <= 0 || Number(height) > 7680))) {
     return { ok: false, error: `Video must be MP4 or WebM under ${VIDEO_MAX_BYTES / (1024 * 1024)} MB.` };
   }
-  return { ok: true, value: { sha256, mimeType, byteSize, durationMs, width: integerOrNull(body.width), height: integerOrNull(body.height), provenance: objectOrEmpty(body.provenance), rights: objectOrEmpty(body.rights), consent: objectOrEmpty(body.consent) } };
+  return { ok: true, value: { sha256, mimeType, byteSize, durationMs, width: integerOrNull(width), height: integerOrNull(height), provenance: objectOrEmpty(body.provenance), rights: objectOrEmpty(body.rights), consent: objectOrEmpty(body.consent) } };
 }
 function integerOrNull(value: unknown): number | null { return value === null || value === undefined ? null : Number.isInteger(value) && Number(value) > 0 ? Number(value) : null; }
 function objectOrEmpty(value: unknown): Record<string, unknown> { return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {}; }

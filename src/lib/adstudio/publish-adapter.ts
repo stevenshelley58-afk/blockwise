@@ -90,6 +90,41 @@ export type ValidatedVideoPublishAsset = {
   durationMs?: number;
 };
 
+/** Resolve the latest worker-attested video output without exposing raw paths
+ * to the browser. Callers pass the result into plan construction; the publish
+ * worker later converts the workspace-fenced path to a short-lived Meta URL. */
+export async function loadValidatedVideoPublishAsset(
+  supabase: SupabaseClient,
+  workspaceId: string,
+  projectId: string,
+): Promise<ValidatedVideoPublishAsset | null> {
+  const project = await supabase.from("ad_video_projects").select("status")
+    .eq("id", projectId).eq("workspace_id", workspaceId).maybeSingle();
+  if (project.error) throw new PublishError("video_not_found", "Video project could not be loaded.");
+  if (!project.data || project.data.status !== "succeeded") return null;
+  const job = await supabase.from("ad_video_render_jobs")
+    .select("status, output_mp4_asset_id, output_poster_asset_id")
+    .eq("project_id", projectId).eq("workspace_id", workspaceId).eq("status", "succeeded")
+    .order("finished_at", { ascending: false }).limit(1).maybeSingle();
+  const jobData = job.data;
+  if (job.error || !jobData?.output_mp4_asset_id) return null;
+  const ids = [jobData.output_mp4_asset_id, jobData.output_poster_asset_id].filter((id): id is string => typeof id === "string" && id.length > 0);
+  const assets = await supabase.from("ad_video_assets")
+    .select("id, object_path, mime_type, validation_status")
+    .eq("workspace_id", workspaceId).eq("validation_status", "validated").in("id", ids);
+  if (assets.error) throw new PublishError("video_not_found", "Video output could not be loaded.");
+  const mp4 = (assets.data ?? []).find((asset) => asset.id === jobData.output_mp4_asset_id && asset.mime_type === "video/mp4");
+  if (!mp4 || !mp4.object_path.startsWith(`${workspaceId}/`) || mp4.object_path.includes("..")) return null;
+  const poster = (assets.data ?? []).find((asset) => asset.id === jobData.output_poster_asset_id && ["image/jpeg", "image/png"].includes(asset.mime_type) && asset.object_path.startsWith(`${workspaceId}/`) && !asset.object_path.includes(".."));
+  return {
+    projectStatus: "succeeded",
+    validationStatus: "validated",
+    storagePath: mp4.object_path,
+    mimeType: "video/mp4",
+    ...(poster ? { posterPath: poster.object_path } : {}),
+  };
+}
+
 export type PublishRequirements = {
   destinationMode: "website" | "instant_form";
   requiredCtaTypes: string[];
@@ -879,14 +914,43 @@ export async function resolvePublishCreativeAssets(
       throw new PublishError("creative_image_outside_workspace", `The finished ad media for ${creative.name} is outside this workspace.`);
     }
 
-    const bucket = asset.type === "video" ? "adstudio-videos" : "workspace-artifacts";
+    // Keep validated videos as short-lived signed URLs. Downloading a 500 MB
+    // MP4 into a Vercel function just to base64-expand and decode it again can
+    // exhaust memory; Meta accepts `file_url` for its video ingest endpoint.
+    if (asset.type === "video") {
+      const videoUrl = await serviceSupabase.storage.from("adstudio-videos").createSignedUrl(storagePath, 3600);
+      if (videoUrl.error || !videoUrl.data?.signedUrl) {
+        throw new PublishError("creative_image_missing", `The finished ad media for ${creative.name} could not be loaded. Regenerate the ad and try again.`);
+      }
+      let posterUrl = asset.posterUrl;
+      if (asset.posterPath && !posterUrl) {
+        if (!asset.posterPath.startsWith(`${plan.workspaceId}/`) || asset.posterPath.includes("..")) {
+          throw new PublishError("creative_image_outside_workspace", `The poster for ${creative.name} is outside this workspace.`);
+        }
+        const poster = await serviceSupabase.storage.from("adstudio-videos").createSignedUrl(asset.posterPath, 3600);
+        if (poster.error || !poster.data?.signedUrl) {
+          throw new PublishError("creative_image_missing", `The poster for ${creative.name} could not be loaded. Regenerate the video and try again.`);
+        }
+        posterUrl = poster.data.signedUrl;
+      }
+      return {
+        ...creative,
+        asset: {
+          ...asset,
+          source: "url" as const,
+          url: videoUrl.data.signedUrl,
+          ...(posterUrl ? { posterUrl } : {}),
+        },
+      };
+    }
+
+    const bucket = "workspace-artifacts";
     const { data, error } = await serviceSupabase.storage.from(bucket).download(storagePath);
     if (error || !data) {
       throw new PublishError("creative_image_missing", `The finished ad media for ${creative.name} could not be loaded. Regenerate the ad and try again.`);
     }
 
     const bytes = Buffer.from(await data.arrayBuffer());
-
     return {
       ...creative,
       asset: {

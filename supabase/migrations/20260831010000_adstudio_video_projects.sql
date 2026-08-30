@@ -5,7 +5,7 @@
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (
   'adstudio-videos', 'adstudio-videos', false, 524288000,
-  array['video/mp4', 'video/webm']::text[]
+  array['video/mp4', 'video/webm', 'image/jpeg', 'image/png', 'text/vtt']::text[]
 )
 on conflict (id) do update set
   name = excluded.name,
@@ -55,11 +55,12 @@ create table if not exists public.ad_video_assets (
   validation_attestation_json jsonb,
   created_at timestamptz not null default now(),
   validated_at timestamptz,
+  unique (workspace_id, id),
   unique (workspace_id, object_path),
   unique (workspace_id, sha256, mime_type),
   check ((validation_status = 'validated' and validated_at is not null) or validation_status <> 'validated'),
   check (object_path !~ '(^|/)\.\.(?:/|$)')
-  ,foreign key (workspace_id, project_id) references public.ad_video_projects(workspace_id, id) on delete set null
+  ,foreign key (workspace_id, project_id) references public.ad_video_projects(workspace_id, id) on delete cascade
 );
 
 create index if not exists ad_video_assets_workspace_project_idx
@@ -75,9 +76,9 @@ create table if not exists public.ad_video_render_jobs (
   provider_job_id text,
   provider_metadata_json jsonb not null default '{}'::jsonb,
   cost_metadata_json jsonb not null default '{}'::jsonb,
-  output_mp4_asset_id uuid references public.ad_video_assets(id) on delete set null,
-  output_poster_asset_id uuid references public.ad_video_assets(id) on delete set null,
-  output_captions_asset_id uuid references public.ad_video_assets(id) on delete set null,
+  output_mp4_asset_id uuid,
+  output_poster_asset_id uuid,
+  output_captions_asset_id uuid,
   idempotency_key text not null,
   error_code text,
   error_message text,
@@ -89,6 +90,17 @@ create table if not exists public.ad_video_render_jobs (
   foreign key (workspace_id, project_id) references public.ad_video_projects(workspace_id, id) on delete cascade,
   unique (workspace_id, idempotency_key)
 );
+
+-- Output references carry the workspace key so a job can never point at an
+-- asset from another workspace. Outputs are owned by their render job; a
+-- project/asset cleanup therefore cascades the dependent receipt safely.
+alter table public.ad_video_render_jobs
+  add constraint ad_video_render_jobs_mp4_asset_fk
+    foreign key (workspace_id, output_mp4_asset_id) references public.ad_video_assets(workspace_id, id) on delete cascade,
+  add constraint ad_video_render_jobs_poster_asset_fk
+    foreign key (workspace_id, output_poster_asset_id) references public.ad_video_assets(workspace_id, id) on delete cascade,
+  add constraint ad_video_render_jobs_captions_asset_fk
+    foreign key (workspace_id, output_captions_asset_id) references public.ad_video_assets(workspace_id, id) on delete cascade;
 
 create index if not exists ad_video_render_jobs_queue_idx
   on public.ad_video_render_jobs (workspace_id, status, queued_at);
