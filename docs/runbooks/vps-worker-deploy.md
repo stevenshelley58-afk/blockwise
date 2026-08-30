@@ -116,7 +116,16 @@ label/digest and that the expected revision matches. Run
 `scripts/vps/product-health.sh` and confirm a real
 `reporting.refresh` job reaches `completed` before applying migration B.
 Use reporting for this proof; do not create a campaign merely to test the
-queue.
+queue. After the app/worker release and reporting proof are healthy, run the
+canonical post-deploy gate so Frank records fast and de-duplicated full VPS
+reconciliation evidence:
+
+~~~bash
+scripts/vps/product-post-deploy.sh
+~~~
+
+The reconciliation hook is independently disableable. Its failure is recorded
+and warned without rolling back an already-healthy Blockwise release.
 
 The standalone `worker/docker-compose.worker.yml` is retained for a
 dedicated worker-only deployment. Do not run it alongside `product-worker`

@@ -46,6 +46,7 @@ source, not the acceptance target.
 | `docker compose --env-file /srv/blockwise/product/.env -f infra/coolify/docker-compose.product.yml --profile edge --profile realtime config --quiet` | Validate the rendered product Compose contract without printing secrets (the worker profile remains omitted) |
 | `docker compose ... --profile realtime up -d --no-build --pull never product-db product-rest product-auth product-storage` | Start base services for GoTrue/Storage bootstrap; apply product migrations and reload PostgREST before starting the app/edge |
 | `scripts/vps/product-health.sh` | Check Compose state and JSON `/api/health` readiness through the configured hostname and shared Frank edge |
+| `scripts/vps/product-post-deploy.sh` | Run the health gate, then request Frank's fixed-input fast/full reconciliation without coupling release health to control-plane availability |
 | `scripts/vps/product-backup.sh <directory>` | Capture database dump, globals, exact row counts, and SHA-256 manifest |
 | `scripts/vps/product-checksums.sh <directory>/SHA256SUMS` | Verify backup artifacts and print current exact row counts |
 | `npm run check:nul`, `npm run typecheck`, `npm test`, `npm run build` | Run repository release gates before building app/worker images |

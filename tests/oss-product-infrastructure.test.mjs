@@ -259,11 +259,16 @@ test("OSS product build and reconciliation contracts avoid local secrets and est
   assert.doesNotMatch(storageImporter, /FILE_STORAGE_BACKEND_PATH|docker volume/);
   const common = await read("scripts/vps/product-common.sh");
   const health = await read("scripts/vps/product-health.sh");
+  const postDeploy = await read("scripts/vps/product-post-deploy.sh");
   assert.match(common, /read_env_value/);
   assert.match(common, /compose_with_all_profiles/);
   assert.doesNotMatch(common, /source "\$ENV_FILE"/);
   assert.match(health, /--resolve/);
   assert.match(health, /BLOCKWISE_PUBLIC_URL/);
+  assert.match(postDeploy, /product-health\.sh/);
+  assert.match(postDeploy, /\/projects\/frank\/apps\/window\/infra\/control_plane\/post-deploy\.sh/);
+  assert.match(postDeploy, /healthy but post-deploy reconciliation failed/);
+  assert.doesNotMatch(postDeploy, /docker (?:compose|run|exec)|systemctl/);
   const allowlistedMigrations = migrations
     .split(/\r?\n/)
     .map((line) => line.trim())
@@ -304,6 +309,7 @@ test("new VPS shell entrypoints are staged with executable Git modes", async () 
     "scripts/vps/product-import.sh",
     "scripts/vps/product-migrate.sh",
     "scripts/vps/product-object-copy.sh",
+    "scripts/vps/product-post-deploy.sh",
     "scripts/vps/product-restore.sh",
     "scripts/vps/product-rollback.sh",
     "scripts/vps/product-row-counts.sh",
