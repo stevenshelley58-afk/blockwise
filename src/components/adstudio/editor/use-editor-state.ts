@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef } from "react";
 import type { AdTemplate, Layout, LayoutLayer, Placement, Rect, ColourMode, ColourRole } from "../../../../packages/ad-template-contract/src/types";
 import type { AdDocumentParsed } from "../../../../packages/ad-template-contract/src/schema";
+import { hydrateSavedEditorTextValues } from "@/lib/adstudio/editor-text-values";
 import { toMetaCta } from "@/lib/adstudio/meta-cta";
 
 // ---------------------------------------------------------------------------
@@ -164,7 +165,11 @@ export function useEditorState(pack: AdTemplate, initialDocument?: AdDocumentPar
           story: initialDocument.storyCropOverrides[value.inputKey],
         },
       })),
-      textValues: { ...base.textValues, ...initialDocument.sharedTextValues },
+      textValues: hydrateSavedEditorTextValues(
+        editorTextInputs(pack),
+        initialDocument.sharedTextValues,
+        base.textValues,
+      ),
       colourMode: initialDocument.colourMode,
       resolvedColourMap: { ...base.resolvedColourMap, ...initialDocument.resolvedColourMap },
       metaCopy: normalizeEditorMetaCopy({
