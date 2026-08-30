@@ -62,3 +62,20 @@ test("rejects placement-mismatched samples, duplicate replacements, and unsafe z
   unsafe.feedLayout.safeZones.push({ x: 1000, y: 0, width: 100, height: 100 });
   assert.equal(adTemplateSchema.safeParse(unsafe).success, false);
 });
+
+test("allows a template to require executable offer fulfilment without embedding an asset name", () => {
+  const required = clone();
+  (required.metadata.publishRequirements as Record<string, unknown>).fulfilment = {
+    required: true,
+    dependency: "Deliver the approved seller guide after form submission",
+  };
+  assert.equal(adTemplateSchema.safeParse(required).success, true);
+
+  const arbitraryAsset = clone();
+  (arbitraryAsset.metadata.publishRequirements as Record<string, unknown>).fulfilment = {
+    required: true,
+    dependency: "Deliver the approved seller guide",
+    asset: "seller-guide.pdf",
+  };
+  assert.equal(adTemplateSchema.safeParse(arbitraryAsset).success, false);
+});

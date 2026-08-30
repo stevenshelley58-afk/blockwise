@@ -1,18 +1,22 @@
 "use client";
 
-import { useCallback, useEffect, useState, type Dispatch, type SetStateAction } from "react";
+import { useCallback, useState, type Dispatch, type SetStateAction } from "react";
 
 import { InstantFormEditor } from "@/components/adstudio/instant-form-editor";
 import type { PublishRequirements } from "@/lib/adstudio/publish-adapter";
+import type { MetaParentState } from "@/lib/providers/meta-execution";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   buildExplicitMetaPublishControls,
   MIN_META_RADIUS_KM,
+  publishSetupFingerprint,
   type AudienceMode,
   type PlacementChoice,
   type PublishAudienceLocation,
+  type PublishBudgetMode,
+  type PublishFulfilmentDraft,
   type PublishSetupSummary,
   type PublishTargetMode,
   type ScheduleEndIntent,
@@ -50,6 +54,8 @@ export interface PublishFlowProps {
   initialIssues: string[];
   providerWritesEnabled: boolean;
   audienceLocations: PublishAudienceLocation[];
+  /** Optional last-checked Meta state for display only; publish re-verifies it server-side. */
+  parentState?: MetaParentState;
 }
 
 type PublishReceipt = {
@@ -79,15 +85,9 @@ type ActivationTargets = {
   adIds?: string[];
 };
 
-type FulfilmentDraft = {
-  exactOffer: string; eligibility: string; conditions: string; timeframe: string;
-  evidence: string; approval: string; disclaimer: string; privacyUrl: string; consent: string;
-  fulfilmentAsset: string; fulfilmentUrl: string; owner: string; expiry: string; tracking: string;
-};
-const emptyFulfilment: FulfilmentDraft = {
+const emptyFulfilment: PublishFulfilmentDraft = {
   exactOffer: "", eligibility: "", conditions: "", timeframe: "", evidence: "", approval: "",
-  disclaimer: "", privacyUrl: "", consent: "", fulfilmentAsset: "", fulfilmentUrl: "",
-  owner: "", expiry: "", tracking: "",
+  disclaimer: "", privacyUrl: "", consent: "", fulfilmentUrl: "", owner: "", expiry: "", tracking: "",
 };
 
 type ActivationReceipt = {
@@ -99,6 +99,8 @@ type ActivationReceipt = {
   targets?: ActivationTargets;
   message?: string;
   error?: string;
+  issues?: string[];
+  blockers?: string[];
 };
 
 export function PublishFlow({
@@ -112,6 +114,7 @@ export function PublishFlow({
   initialIssues,
   providerWritesEnabled,
   audienceLocations,
+  parentState,
 }: PublishFlowProps) {
   const [submitting, setSubmitting] = useState(false);
   const [receipt, setReceipt] = useState<PublishReceipt | null>(null);
@@ -123,6 +126,8 @@ export function PublishFlow({
   const [targetMode, setTargetMode] = useState<PublishTargetMode>("new_campaign_new_adset");
   const [campaignId, setCampaignId] = useState("");
   const [adSetIds, setAdSetIds] = useState("");
+  const [budgetMode, setBudgetMode] = useState<PublishBudgetMode>("");
+  const [specialAdCategoryCountry, setSpecialAdCategoryCountry] = useState("");
   const [dailyBudgetDollars, setDailyBudgetDollars] = useState("");
   const [audienceMode, setAudienceMode] = useState<AudienceMode>("");
   const [selectedLocationKeys, setSelectedLocationKeys] = useState<string[]>([]);
@@ -135,11 +140,11 @@ export function PublishFlow({
   const [startAt, setStartAt] = useState("");
   const [endIntent, setEndIntent] = useState<ScheduleEndIntent>("");
   const [endAt, setEndAt] = useState("");
-  const [setupConfirmed, setSetupConfirmed] = useState(false);
+  const [confirmedSetupFingerprint, setConfirmedSetupFingerprint] = useState<string | null>(null);
   const [publishedSetupSummary, setPublishedSetupSummary] = useState<PublishSetupSummary | null>(null);
   const [selectedVariants, setSelectedVariants] = useState<Array<"feed" | "story">>(["feed", "story"]);
-  const [offerEnabled, setOfferEnabled] = useState(false);
-  const [fulfilment, setFulfilment] = useState<FulfilmentDraft>(emptyFulfilment);
+  const [offerEnabled, setOfferEnabled] = useState(() => publishRequirements.fulfilmentRequired);
+  const [fulfilment, setFulfilment] = useState<PublishFulfilmentDraft>(emptyFulfilment);
   // BW-Q — activation is a SEPARATE explicit action after the PAUSED publish
   // receipt; it is never automatic.
   const [activating, setActivating] = useState(false);
@@ -150,14 +155,19 @@ export function PublishFlow({
   }, []);
 
   const parsedAdSetIds = adSetIds.split(",").map(id => id.trim()).filter(Boolean);
-  const controlsDraft = {
+  const unconfirmedControlsDraft = {
     destinationMode: publishRequirements.destinationMode,
     destinationUrl,
     targetMode,
     campaignId,
     adSetIds: parsedAdSetIds,
     variantIds: selectedVariants,
+    budgetMode,
     dailyBudgetDollars,
+    newCampaignObjective: publishRequirements.objective,
+    newCampaignSpecialAdCategory: publishRequirements.specialAdCategory,
+    newCampaignSpecialAdCategoryCountry: specialAdCategoryCountry,
+    parentState,
     audienceMode,
     availableLocations: audienceLocations,
     selectedLocationKeys,
@@ -170,30 +180,15 @@ export function PublishFlow({
     startAt,
     endIntent,
     endAt,
-    setupConfirmed,
+    offerEnabled,
+    fulfilmentRequired: publishRequirements.fulfilmentRequired,
+    fulfilment,
   };
+  const setupFingerprint = publishSetupFingerprint(unconfirmedControlsDraft);
+  const setupConfirmed = confirmedSetupFingerprint === setupFingerprint;
+  const controlsDraft = { ...unconfirmedControlsDraft, setupConfirmed };
   const fieldsBuild = buildExplicitMetaPublishControls({ ...controlsDraft, setupConfirmed: true });
   const publishBuild = buildExplicitMetaPublishControls(controlsDraft);
-
-  useEffect(() => {
-    setSetupConfirmed(false);
-  }, [
-    targetMode,
-    campaignId,
-    adSetIds,
-    dailyBudgetDollars,
-    audienceMode,
-    selectedLocationKeys.join("|"),
-    includeSurroundingSuburbs,
-    latitude,
-    longitude,
-    radiusKm,
-    placementChoices.join("|"),
-    startIntent,
-    startAt,
-    endIntent,
-    endAt,
-  ]);
 
   const handlePublish = useCallback(async () => {
     if (!publishBuild.controls || !publishBuild.summary) return;
@@ -207,21 +202,18 @@ export function PublishFlow({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            controls: {
-              ...publishBuild.controls,
-              ...(offerEnabled ? { fulfilment } : {}),
-            },
+            controls: publishBuild.controls,
           }),
         },
       );
       const body = (await res.json().catch(() => ({}))) as PublishReceipt;
-      setReceipt(body);
+      setReceipt(res.ok ? body : { ...body, error: body.error ?? "publish_failed" });
     } catch (err) {
       setReceipt({ error: err instanceof Error ? err.message : "Publish request failed." });
     } finally {
       setSubmitting(false);
     }
-  }, [adId, fulfilment, offerEnabled, publishBuild.controls, publishBuild.summary, workspaceId]);
+  }, [adId, publishBuild.controls, publishBuild.summary, workspaceId]);
 
   // BW-Q — a SECOND explicit click. Only ever offered after a publish receipt
   // that created PAUSED objects on Meta (mode "publish"), and it targets that
@@ -240,7 +232,7 @@ export function PublishFlow({
           },
         );
         const body = (await res.json().catch(() => ({}))) as ActivationReceipt;
-        setActivateReceipt(body);
+        setActivateReceipt(res.ok ? body : { ...body, error: body.error ?? "activation_failed" });
       } catch (err) {
         setActivateReceipt({ error: err instanceof Error ? err.message : "Activate request failed." });
       } finally {
@@ -273,9 +265,14 @@ export function PublishFlow({
   const requiresForm = publishRequirements.destinationMode === "instant_form";
   const formReady = !requiresForm || Boolean(initialState?.form) || formPinned;
   const destinationReady = validHttpsUrl(destinationUrl);
-  const selectedAdSetCount = targetMode === "existing_adset" ? parsedAdSetIds.length : 1;
+  const selectedAdSetCount = targetMode === "existing_adset" ? new Set(parsedAdSetIds).size : 1;
   const targetReady = targetMode === "new_campaign_new_adset" || (Boolean(campaignId.trim()) && (targetMode !== "existing_adset" || selectedAdSetCount > 0));
-  const fulfilmentReady = !offerEnabled || (Object.entries(fulfilment).every(([key, value]) => key === "fulfilmentAsset" || key === "fulfilmentUrl" ? true : Boolean(value.trim())) && Boolean(fulfilment.fulfilmentAsset.trim() || validHttpsUrl(fulfilment.fulfilmentUrl)));
+  const fulfilmentActive = publishRequirements.fulfilmentRequired || offerEnabled;
+  const fulfilmentReady = !fulfilmentActive || (
+    Object.values(fulfilment).every(value => Boolean(value.trim()))
+    && validHttpsUrl(fulfilment.privacyUrl)
+    && validHttpsUrl(fulfilment.fulfilmentUrl)
+  );
   const plannedAds = selectedVariants.length * selectedAdSetCount;
   const ready = issues.length === 0 && formReady && destinationReady && fulfilmentReady && targetReady && plannedAds > 0 && Boolean(publishBuild.controls);
 
@@ -380,6 +377,12 @@ export function PublishFlow({
         <PublishSetupFields
           targetMode={targetMode}
           audienceLocations={audienceLocations}
+          budgetMode={budgetMode}
+          setBudgetMode={setBudgetMode}
+          objective={publishRequirements.objective}
+          specialAdCategory={publishRequirements.specialAdCategory}
+          specialAdCategoryCountry={specialAdCategoryCountry}
+          setSpecialAdCategoryCountry={setSpecialAdCategoryCountry}
           dailyBudgetDollars={dailyBudgetDollars}
           setDailyBudgetDollars={setDailyBudgetDollars}
           audienceMode={audienceMode}
@@ -404,19 +407,23 @@ export function PublishFlow({
           setEndIntent={setEndIntent}
           endAt={endAt}
           setEndAt={setEndAt}
+          lastCheckedBudgetMode={parentState?.campaign?.budgetMode}
           setupConfirmed={setupConfirmed}
-          setSetupConfirmed={setSetupConfirmed}
+          setSetupConfirmed={confirmed => setConfirmedSetupFingerprint(confirmed ? setupFingerprint : null)}
           summary={fieldsBuild.summary}
           fieldsReady={Boolean(fieldsBuild.controls)}
+          fieldIssues={fieldsBuild.issues}
         />
 
         <div className="mb-6 rounded-(--r-card) border border-(--line) bg-(--surface) p-4">
           <Label className="text-sm font-semibold" htmlFor="publish-destination-url">
-            {requiresForm ? "Thank-you button destination" : "Article or website destination"}
+            {requiresForm ? "Ad destination" : "Article or website destination"}
           </Label>
           <p className="mt-1 text-xs text-muted-foreground">
             {requiresForm
-              ? "After someone submits the Instant Form, Meta's thank-you button opens this HTTPS page. It is required before anything can be created."
+              ? fulfilmentActive
+                ? "This is the ad's website destination. The form's thank-you action uses the separate fulfilment delivery URL below."
+                : "After someone submits the Instant Form, Meta's thank-you button opens this HTTPS page."
               : "Use the real HTTPS page promised by this ad. Blockwise never substitutes the privacy-policy URL."}
           </p>
           <Input
@@ -443,22 +450,44 @@ export function PublishFlow({
 
         <div className="mb-6 space-y-3 rounded-(--r-card) border border-(--line) bg-(--surface) p-4">
           <label className="flex min-h-11 items-center gap-3 text-sm font-semibold">
-            <input type="checkbox" checked={offerEnabled} onChange={event => setOfferEnabled(event.target.checked)} className="size-4 accent-primary" />
+            <input
+              type="checkbox"
+              checked={fulfilmentActive}
+              disabled={publishRequirements.fulfilmentRequired}
+              onChange={event => setOfferEnabled(event.target.checked)}
+              className="size-4 accent-primary"
+            />
             This ad includes an offer, guide or result promise
           </label>
-          <p className="text-xs text-muted-foreground">Turn this on only when the ad promises something the customer must receive or a claim that needs evidence.</p>
-          {offerEnabled ? <div className="grid gap-3 border-t border-border pt-4 sm:grid-cols-2">
+          <p className="text-xs text-muted-foreground">
+            {publishRequirements.fulfilmentRequired
+              ? `This template requires fulfilment${publishRequirements.fulfilmentDependency ? `: ${publishRequirements.fulfilmentDependency}` : "."}`
+              : "Turn this on when the ad promises something the customer must receive or a claim that needs evidence."}
+          </p>
+          {fulfilmentActive ? <div className="grid gap-3 border-t border-border pt-4 sm:grid-cols-2">
             {([
               ["exactOffer", "Exact offer"], ["eligibility", "Eligibility"], ["conditions", "Conditions"], ["timeframe", "Timeframe"],
               ["evidence", "Evidence"], ["approval", "Evidence approval"], ["disclaimer", "Disclaimer"], ["privacyUrl", "Privacy URL"],
+              ["fulfilmentUrl", "Fulfilment delivery URL"],
               ["consent", "Consent wording"], ["owner", "Fulfilment owner"], ["expiry", "Expiry"], ["tracking", "Tracking"],
             ] as const).map(([field, label]) => (
-              <div key={field}><Label htmlFor={"fulfilment-" + field}>{label}</Label><Input id={"fulfilment-" + field} value={fulfilment[field]} onChange={(event) => setFulfilment((current) => ({ ...current, [field]: event.target.value }))} className="mt-1 min-h-11 bg-muted/30" /></div>
+              <div key={field}>
+                <Label htmlFor={"fulfilment-" + field}>{label}</Label>
+                <Input
+                  id={"fulfilment-" + field}
+                  type={field === "privacyUrl" || field === "fulfilmentUrl" ? "url" : "text"}
+                  value={fulfilment[field]}
+                  onChange={(event) => setFulfilment((current) => ({ ...current, [field]: event.target.value }))}
+                  aria-invalid={(field === "privacyUrl" || field === "fulfilmentUrl") && Boolean(fulfilment[field]) && !validHttpsUrl(fulfilment[field])}
+                  className="mt-1 min-h-11 bg-muted/30"
+                />
+              </div>
             ))}
-            <div><Label htmlFor="fulfilment-asset">Fulfilment asset</Label><Input id="fulfilment-asset" value={fulfilment.fulfilmentAsset} onChange={(event) => setFulfilment((current) => ({ ...current, fulfilmentAsset: event.target.value }))} placeholder="Asset name or delivery file" className="mt-1 min-h-11 bg-muted/30" /></div>
-            <div><Label htmlFor="fulfilment-url">Fulfilment URL</Label><Input id="fulfilment-url" type="url" value={fulfilment.fulfilmentUrl} onChange={(event) => setFulfilment((current) => ({ ...current, fulfilmentUrl: event.target.value }))} placeholder="https://..." className="mt-1 min-h-11 bg-muted/30" /></div>
+            <p className="sm:col-span-2 rounded-(--r-ctl) bg-muted px-3 py-2 text-xs text-muted-foreground">
+              The exact fulfilment URL is bound to the Instant Form thank-you action. It can match the ad destination only when you explicitly enter the same URL. A typed file name is not accepted.
+            </p>
           </div> : null}
-          {offerEnabled && !fulfilmentReady ? <p className="text-xs text-amber-700">Complete every promise field and add a delivery asset or valid HTTPS URL.</p> : null}
+          {fulfilmentActive && !fulfilmentReady ? <p className="text-xs text-amber-700">Complete every promise field and add valid HTTPS privacy and fulfilment delivery URLs.</p> : null}
         </div>
 
         {/* Provider mode */}
@@ -492,7 +521,7 @@ export function PublishFlow({
 
       <footer className="flex shrink-0 items-center justify-between border-t border-(--line) bg-(--surface) px-5 py-4">
         {receipt?.error ? (
-          <p className="text-sm text-red-600">{receipt.error}</p>
+          <p className="max-w-[68ch] text-sm text-red-600">{publishReceiptMessage(receipt)}</p>
         ) : !formReady && issues.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             Save the Instant Form above to continue.
@@ -503,14 +532,14 @@ export function PublishFlow({
           </p>
         ) : !targetReady && issues.length === 0 ? (
           <p className="text-sm text-muted-foreground">Complete the campaign and ad set destination to continue.</p>
+        ) : !fulfilmentReady && issues.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Complete the offer evidence and delivery details to continue.</p>
         ) : !publishBuild.controls && issues.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             {targetMode === "existing_adset"
               ? "Confirm that the existing ad set settings stay unchanged."
               : "Complete and confirm the budget, audience, placements and schedule."}
           </p>
-        ) : !fulfilmentReady && issues.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Complete the offer and delivery details to continue.</p>
         ) : (
           <span />
         )}
@@ -531,6 +560,12 @@ export function PublishFlow({
 function PublishSetupFields({
   targetMode,
   audienceLocations,
+  budgetMode,
+  setBudgetMode,
+  objective,
+  specialAdCategory,
+  specialAdCategoryCountry,
+  setSpecialAdCategoryCountry,
   dailyBudgetDollars,
   setDailyBudgetDollars,
   audienceMode,
@@ -555,13 +590,21 @@ function PublishSetupFields({
   setEndIntent,
   endAt,
   setEndAt,
+  lastCheckedBudgetMode,
   setupConfirmed,
   setSetupConfirmed,
   summary,
   fieldsReady,
+  fieldIssues,
 }: {
   targetMode: PublishTargetMode;
   audienceLocations: PublishAudienceLocation[];
+  budgetMode: PublishBudgetMode;
+  setBudgetMode: (value: PublishBudgetMode) => void;
+  objective: string;
+  specialAdCategory: string | null;
+  specialAdCategoryCountry: string;
+  setSpecialAdCategoryCountry: (value: string) => void;
   dailyBudgetDollars: string;
   setDailyBudgetDollars: (value: string) => void;
   audienceMode: AudienceMode;
@@ -586,10 +629,12 @@ function PublishSetupFields({
   setEndIntent: (value: ScheduleEndIntent) => void;
   endAt: string;
   setEndAt: (value: string) => void;
+  lastCheckedBudgetMode?: "campaign" | "adset";
   setupConfirmed: boolean;
   setSetupConfirmed: (value: boolean) => void;
   summary: PublishSetupSummary | null;
   fieldsReady: boolean;
+  fieldIssues: string[];
 }) {
   if (targetMode === "existing_adset") {
     return (
@@ -601,6 +646,10 @@ function PublishSetupFields({
           </p>
         </div>
         <dl className="grid gap-2 rounded-(--r-ctl) bg-muted/50 p-3 text-sm sm:grid-cols-2">
+          <div className="flex items-baseline justify-between gap-3 sm:block">
+            <dt className="text-xs text-muted-foreground">Budget mode</dt>
+            <dd className="font-medium">{summary?.budgetMode ?? "Waiting for live Meta verification"}</dd>
+          </div>
           {(["Budget", "Audience", "Placements", "Schedule"] as const).map(label => (
             <div key={label} className="flex items-baseline justify-between gap-3 sm:block">
               <dt className="text-xs text-muted-foreground">{label}</dt>
@@ -608,6 +657,7 @@ function PublishSetupFields({
             </div>
           ))}
         </dl>
+        {fieldIssues.length > 0 ? <SetupIssues issues={fieldIssues} /> : null}
         <label className="flex min-h-11 items-start gap-3 rounded-(--r-ctl) border border-border px-3 py-2.5 text-sm font-medium">
           <input
             type="checkbox"
@@ -628,6 +678,8 @@ function PublishSetupFields({
     ["instagram_feed", "Instagram Feed"],
     ["instagram_story", "Instagram Stories"],
   ];
+  const inheritedBudgetMode = lastCheckedBudgetMode ?? "";
+  const effectiveBudgetMode = targetMode === "new_campaign_new_adset" ? budgetMode : inheritedBudgetMode;
 
   return (
     <div className="mb-6 space-y-5 rounded-(--r-card) border border-(--line) bg-(--surface) p-4">
@@ -636,9 +688,67 @@ function PublishSetupFields({
         <p className="mt-1 text-xs text-muted-foreground">Nothing is assumed. Set the spend, audience, placements and timing before Blockwise creates anything.</p>
       </div>
 
+      {targetMode === "new_campaign_new_adset" ? (
+        <div className="space-y-4 border-t border-border pt-4">
+          <dl className="grid gap-3 rounded-(--r-ctl) bg-muted/60 p-3 text-sm sm:grid-cols-2">
+            <div><dt className="text-xs text-muted-foreground">Campaign objective</dt><dd className="font-medium">{objective}</dd></div>
+            <div><dt className="text-xs text-muted-foreground">Special ad category</dt><dd className="font-medium">{specialAdCategory ?? "None declared"}</dd></div>
+          </dl>
+          <div>
+            <Label htmlFor="publish-special-category-country">Special ad category country</Label>
+            <Input
+              id="publish-special-category-country"
+              value={specialAdCategoryCountry}
+              onChange={event => setSpecialAdCategoryCountry(event.target.value.toUpperCase().slice(0, 2))}
+              placeholder="AU"
+              maxLength={2}
+              autoCapitalize="characters"
+              className="mt-1 min-h-11 bg-muted/30 uppercase sm:max-w-32"
+            />
+            <p className="mt-1 text-xs text-muted-foreground">Enter the two-letter country code. Blockwise will not assume it.</p>
+          </div>
+          <fieldset className="space-y-2">
+            <legend className="text-xs font-medium">Where Meta controls the budget</legend>
+            <div className="grid gap-2 sm:grid-cols-2">
+            {([
+              ["campaign", "Campaign budget (CBO)", "One campaign daily budget shared across its ad sets."],
+              ["adset", "Ad set budget (ABO)", "This new ad set gets its own daily budget."],
+            ] as const).map(([value, label, description]) => (
+              <label key={value} className="flex min-h-11 items-start gap-3 rounded-(--r-ctl) border border-border px-3 py-2.5 text-sm">
+                <input
+                  type="radio"
+                  name="publish-budget-mode"
+                  value={value}
+                  checked={budgetMode === value}
+                  onChange={() => setBudgetMode(value)}
+                  className="mt-0.5 size-4 shrink-0 accent-primary"
+                />
+                <span><span className="font-medium">{label}</span><span className="mt-0.5 block text-xs text-muted-foreground">{description}</span></span>
+              </label>
+            ))}
+            </div>
+          </fieldset>
+          </div>
+      ) : (
+        <div className="rounded-(--r-ctl) bg-muted/60 px-3 py-2.5">
+          <p className="text-xs text-muted-foreground">Existing campaign budget mode</p>
+          <p className="text-sm font-medium">
+            {lastCheckedBudgetMode === "campaign"
+              ? "Last checked: Campaign budget (CBO) · re-verified before creation"
+              : lastCheckedBudgetMode === "adset"
+                ? "Last checked: Ad set budget (ABO) · re-verified before creation"
+                : "Waiting for Meta verification — Blockwise will not guess CBO or ABO."}
+          </p>
+        </div>
+      )}
+
       <div className="grid gap-4 border-t border-border pt-4 sm:grid-cols-2">
         <div>
-          <Label htmlFor="publish-daily-budget">Daily budget (AUD)</Label>
+          <Label htmlFor="publish-daily-budget">
+            {targetMode === "existing_campaign_new_adset"
+              ? "New ad set daily budget if ABO (AUD)"
+              : effectiveBudgetMode === "campaign" ? "Campaign daily budget (AUD)" : "Ad set daily budget (AUD)"}
+          </Label>
           <Input
             id="publish-daily-budget"
             type="number"
@@ -650,7 +760,13 @@ function PublishSetupFields({
             placeholder="25.00"
             className="mt-1 min-h-11 bg-muted/30 tabular-nums"
           />
-          <p className="mt-1 text-xs text-muted-foreground">Maximum Meta spend for this ad set each day.</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {targetMode === "existing_campaign_new_adset"
+              ? "Blockwise re-checks Meta first. This applies only if the campaign is still ABO; live CBO keeps its campaign budget."
+              : effectiveBudgetMode === "campaign"
+              ? "Maximum Meta spend for the new campaign each day."
+              : "Maximum Meta spend for this new ad set each day."}
+          </p>
         </div>
 
         <div>
@@ -741,9 +857,10 @@ function PublishSetupFields({
       {summary ? <PublishSetupSummaryCard summary={summary} /> : (
         <p className="rounded-(--r-ctl) bg-muted px-3 py-2 text-xs text-muted-foreground">Complete the destination and every setup choice to see the exact activation summary.</p>
       )}
+      {!summary && fieldIssues.length > 0 ? <SetupIssues issues={fieldIssues} /> : null}
       <label className="flex min-h-11 items-start gap-3 rounded-(--r-ctl) border border-border px-3 py-2.5 text-sm font-medium">
         <input type="checkbox" checked={setupConfirmed} onChange={event => setSetupConfirmed(event.target.checked)} disabled={!fieldsReady} className="mt-0.5 size-4 shrink-0 accent-primary" />
-        I confirm this daily budget, audience, placement and schedule setup is correct.
+        I confirm this budget mode, spend, audience, placement, schedule, creative matrix and fulfilment setup is correct.
       </label>
     </div>
   );
@@ -752,11 +869,14 @@ function PublishSetupFields({
 function PublishSetupSummaryCard({ summary }: { summary: PublishSetupSummary }) {
   const rows = [
     ["Target", summary.target],
+    ["Budget mode", summary.budgetMode],
     ["Budget", summary.budget],
     ["Audience", summary.audience],
     ["Placements", summary.placements],
     ["Schedule", summary.schedule],
     ["Destination", summary.destination],
+    ["Creative matrix", summary.variants],
+    ["Offer fulfilment", summary.fulfilment],
   ];
   return (
     <div className="rounded-(--r-ctl) bg-muted/60 p-3">
@@ -764,6 +884,18 @@ function PublishSetupSummaryCard({ summary }: { summary: PublishSetupSummary }) 
       <dl className="mt-2 grid gap-x-4 gap-y-2 text-sm sm:grid-cols-2">
         {rows.map(([label, value]) => <div key={label} className="min-w-0"><dt className="text-xs text-muted-foreground">{label}</dt><dd className="break-words font-medium">{value}</dd></div>)}
       </dl>
+    </div>
+  );
+}
+
+function SetupIssues({ issues }: { issues: string[] }) {
+  const visible = [...new Set(issues)].slice(0, 6);
+  return (
+    <div className="rounded-(--r-ctl) border border-amber-200 bg-amber-50 px-3 py-2.5" role="status">
+      <p className="text-xs font-semibold text-amber-900">Complete this setup</p>
+      <ul className="mt-1 space-y-1">
+        {visible.map(issue => <li key={issue} className="text-xs text-amber-800">• {issue}</li>)}
+      </ul>
     </div>
   );
 }
@@ -778,15 +910,16 @@ function CopyRow({ label, value }: { label: string; value: string }) {
 }
 
 function ReceiptCard({ receipt }: { receipt: PublishReceipt }) {
-  if (receipt.error) {
+  const details = [...new Set([...(receipt.blockers ?? []), ...(receipt.issues ?? [])])];
+  if (receipt.error || details.length > 0) {
     return (
       <div className="mt-6 rounded-(--r-card) border border-red-200 bg-red-50 p-4" role="alert">
         <h3 className="mb-1 text-sm font-semibold text-red-800">Publish failed</h3>
-        <p className="text-sm text-red-700">{receipt.error}</p>
-        {receipt.issues && receipt.issues.length > 0 && (
+        <p className="text-sm text-red-700">{publishReceiptMessage(receipt)}</p>
+        {details.length > 0 && (
           <ul className="mt-2 space-y-1">
-            {receipt.issues.map((issue, i) => (
-              <li key={i} className="text-xs text-red-700">• {issue}</li>
+            {details.map(issue => (
+              <li key={issue} className="text-xs text-red-700">• {issue}</li>
             ))}
           </ul>
         )}
@@ -858,6 +991,22 @@ function validHttpsUrl(value: string): boolean {
   }
 }
 
+function publishReceiptMessage(receipt: PublishReceipt): string {
+  if (receipt.message?.trim()) return receipt.message.trim();
+  if ((receipt.blockers?.length ?? 0) > 0 || (receipt.issues?.length ?? 0) > 0) {
+    return "Blockwise did not create anything. Fix the items below and try again.";
+  }
+  const messages: Record<string, string> = {
+    meta_not_connected: "Connect the workspace to Meta before publishing.",
+    setup_incomplete: "Finish the workspace's Meta setup before publishing.",
+    not_ready: "This ad is not ready to publish yet.",
+    meta_token_missing: "Reconnect Meta so Blockwise can verify the account.",
+    publish_failed: "Meta did not finish creating the paused plan. Nothing was activated.",
+    publish_dependencies_missing: "The publish setup is incomplete. Review the fields above and try again.",
+  };
+  return receipt.error ? messages[receipt.error] ?? "Blockwise could not prepare this paused plan. Review the setup and try again." : "Blockwise could not prepare this paused plan.";
+}
+
 function formatIds(ids: Record<string, string> | undefined): string {
   if (!ids || Object.keys(ids).length === 0) return "—";
   return Object.values(ids).map(v => v.slice(0, 12)).join(", ");
@@ -926,10 +1075,16 @@ function ActivateSection({
 
 function ActivationReceiptCard({ receipt }: { receipt: ActivationReceipt }) {
   if (receipt.error) {
+    const details = [...new Set([...(receipt.blockers ?? []), ...(receipt.issues ?? [])])];
     return (
       <div className="mt-4 rounded-(--r-card) border border-red-200 bg-red-50 p-4" role="alert">
         <h3 className="mb-1 text-sm font-semibold text-red-800">Activation failed</h3>
-        <p className="text-sm text-red-700">{receipt.error}</p>
+        <p className="text-sm text-red-700">{receipt.message?.trim() || "Meta did not accept this activation request."}</p>
+        {details.length > 0 ? (
+          <ul className="mt-2 space-y-1">
+            {details.map(issue => <li key={issue} className="text-xs text-red-700">• {issue}</li>)}
+          </ul>
+        ) : null}
         <p className="mt-2 text-xs text-red-700">
           The campaign is still PAUSED on Meta — nothing started running.
         </p>
