@@ -75,6 +75,8 @@ export function LayeredCanvas({
   const onCropRef = useRef(onCropImage);
   const layoutRef = useRef(layout);
   const [ready, setReady] = useState(false);
+  const [isRendering, setIsRendering] = useState(true);
+  const [hasRendered, setHasRendered] = useState(false);
 
   onSelectRef.current = onSelect;
   onCropRef.current = onCropImage;
@@ -137,14 +139,13 @@ export function LayeredCanvas({
     const canvas = fabricRef.current;
     if (!ready || !canvas) return;
     const version = ++renderVersionRef.current;
+    setIsRendering(true);
     const render = async () => {
       const fabric = await import("fabric");
       if (renderVersionRef.current !== version || fabricRef.current !== canvas) return;
-      canvas.discardActiveObject();
-      canvas.clear();
-      canvas.backgroundColor = colours.background ?? "#ffffff";
-      layerTargetsRef.current = new Map();
-      targetIdsRef.current = new Map();
+      const nextLayerTargets = new Map<string, LayerTarget>();
+      const nextTargetIds = new Map<FabricObject, string>();
+      const nextObjects: FabricObject[] = [];
 
       for (const layer of layout.layers) {
         if (renderVersionRef.current !== version) return;
@@ -157,14 +158,27 @@ export function LayeredCanvas({
           textValues,
           cropOverrides,
         });
-        if (!object || renderVersionRef.current !== version) continue;
-        canvas.add(object);
-        layerTargetsRef.current.set(layer.layerId, { layer, object });
-        targetIdsRef.current.set(object, layer.layerId);
+        if (renderVersionRef.current !== version || fabricRef.current !== canvas) return;
+        if (!object) continue;
+        nextObjects.push(object);
+        nextLayerTargets.set(layer.layerId, { layer, object });
+        nextTargetIds.set(object, layer.layerId);
       }
-      const selected = selectedLayerId ? layerTargetsRef.current.get(selectedLayerId)?.object : null;
+      if (renderVersionRef.current !== version || fabricRef.current !== canvas) return;
+
+      canvas.discardActiveObject();
+      canvas.clear();
+      canvas.backgroundColor = colours.background ?? "#ffffff";
+      nextObjects.forEach(object => canvas.add(object));
+      layerTargetsRef.current = nextLayerTargets;
+      targetIdsRef.current = nextTargetIds;
+      const selected = selectedLayerId ? nextLayerTargets.get(selectedLayerId)?.object : null;
       if (selected?.selectable) canvas.setActiveObject(selected);
-      canvas.requestRenderAll();
+      canvas.renderAll();
+      if (renderVersionRef.current === version && fabricRef.current === canvas) {
+        setHasRendered(true);
+        setIsRendering(false);
+      }
     };
     void render();
     return () => {
@@ -184,7 +198,12 @@ export function LayeredCanvas({
   return (
     <div ref={hostRef} className={cn("relative h-full w-full overflow-hidden bg-white", className)}>
       <div className="sr-only" aria-live="polite">{selectedLayerId ? `Selected layer: ${layout.layers.find(layer => layer.layerId === selectedLayerId)?.layerId ?? selectedLayerId}` : "No layer selected"}</div>
-      {!ready && <div className="absolute inset-0 animate-pulse bg-muted" aria-hidden="true" />}
+      {(!ready || (isRendering && !hasRendered)) && (
+        <div
+          className="pointer-events-none absolute inset-0 z-10 animate-pulse bg-muted motion-reduce:animate-none"
+          aria-hidden="true"
+        />
+      )}
       <canvas
         ref={elementRef}
         role="img"

@@ -61,6 +61,24 @@ describe("customer Ad Studio workbench contract", () => {
     assert.match(editor, /Facebook Feed/);
   });
 
+  it("keeps the prior creative visible until the latest async Fabric render is ready", () => {
+    const canvas = readFileSync("src/components/adstudio/editor/layered-canvas.tsx", "utf8");
+    const createIndex = canvas.indexOf("const object = await createLayerObject");
+    const clearIndex = canvas.indexOf("canvas.clear()", createIndex);
+    const addIndex = canvas.indexOf("nextObjects.forEach(object => canvas.add(object))", clearIndex);
+
+    assert.ok(createIndex >= 0, "the replacement creative must be assembled asynchronously");
+    assert.ok(clearIndex > createIndex, "the visible canvas must not clear before replacement layers finish");
+    assert.ok(addIndex > clearIndex, "the completed replacement must be swapped into Fabric atomically");
+    assert.match(canvas, /const version = \+\+renderVersionRef\.current;[\s\S]*setIsRendering\(true\)/);
+    assert.match(canvas, /if \(renderVersionRef\.current !== version \|\| fabricRef\.current !== canvas\) return;[\s\S]*canvas\.discardActiveObject\(\);/);
+    assert.match(canvas, /canvas\.renderAll\(\);[\s\S]*if \(renderVersionRef\.current === version && fabricRef\.current === canvas\) \{[\s\S]*setHasRendered\(true\);[\s\S]*setIsRendering\(false\);/);
+    assert.match(canvas, /return \(\) => \{[\s\S]*renderVersionRef\.current \+= 1;/);
+    assert.match(canvas, /\(!ready \|\| \(isRendering && !hasRendered\)\)/);
+    assert.match(canvas, /pointer-events-none absolute inset-0 z-10/);
+    assert.match(canvas, /aria-hidden="true"/);
+  });
+
   it("keeps editor inputs rounded, labelled, and progressive", () => {
     const inputs = readFileSync("src/components/adstudio/editor/inputs-panel.tsx", "utf8");
     const copy = readFileSync("src/components/adstudio/editor/meta-copy-panel.tsx", "utf8");
