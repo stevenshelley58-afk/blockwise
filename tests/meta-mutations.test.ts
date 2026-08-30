@@ -2,9 +2,11 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
+import type { MetaPublishPlan } from "../src/lib/providers/meta-execution.ts";
 import {
   buildMetaPlanMutation,
   executeMetaPlanMutation,
+  type MetaPlanMutation,
 } from "../src/lib/providers/meta-mutations.ts";
 
 test("Meta mutation provider requests have a bounded timeout", () => {
@@ -52,6 +54,7 @@ test("activation rollback uses only the dedicated compensation transport", async
 
   const result = await executeMetaPlanMutation({
     mutation,
+    publishPlan: ownedPublishPlanForMutation(mutation),
     approvalStatus: "approved",
     accessToken: "token",
     fetchImpl: async (input, init) => {
@@ -130,6 +133,7 @@ test("a hung Supabase checkpoint cannot delay the emergency campaign PAUSE", asy
 
   const execution = executeMetaPlanMutation({
     mutation,
+    publishPlan: ownedPublishPlanForMutation(mutation),
     approvalStatus: "approved",
     accessToken: "token",
     fetchImpl: providerFetch,
@@ -195,6 +199,7 @@ test("executeMetaPlanMutation refuses live mutations without approved approval s
   await assert.rejects(
     executeMetaPlanMutation({
       mutation,
+      publishPlan: null,
       approvalStatus: "requested",
       accessToken: "token",
       fetchImpl: async () => new Response(JSON.stringify({ success: true }), { status: 200 }),
@@ -226,6 +231,7 @@ test("executeMetaPlanMutation keeps the campaign paused until child activation a
 
   const result = await executeMetaPlanMutation({
     mutation,
+    publishPlan: ownedPublishPlanForMutation(mutation),
     approvalStatus: "approved",
     accessToken: "token",
     fetchImpl: async (url, init) => {
@@ -284,6 +290,10 @@ test("partial activation failure pauses every possibly active object and checkpo
       adIds: ["ad_1"],
     },
   });
+  const publishPlan = ownedPublishPlanForMutation(mutation);
+  publishPlan.reconciledObjects.adIds.adopted_foreign = "ad_adopted_foreign";
+  publishPlan.reconciledObjects.provenance ??= { adSets: {}, ads: {} };
+  (publishPlan.reconciledObjects.provenance.ads ??= {}).adopted_foreign = "adopted";
   const requests: Array<{
     objectId: string;
     method: string;
@@ -294,6 +304,7 @@ test("partial activation failure pauses every possibly active object and checkpo
 
   const result = await executeMetaPlanMutation({
     mutation,
+    publishPlan,
     approvalStatus: "approved",
     accessToken: "token",
     onCheckpoint: async (checkpoint) => {
@@ -359,8 +370,91 @@ test("partial activation failure pauses every possibly active object and checkpo
     ["campaign_1", "campaign_1", "adset_1", "adset_2", "ad_1"],
   );
   assert.equal(requests.every((request) => request.signal instanceof AbortSignal), true);
+  assert.equal(requests.some((request) => request.objectId === "ad_adopted_foreign"), false);
   assert.deepEqual(checkpoints[0], { requestCount: 1, responseCount: 0, lastStatus: undefined });
   assert.equal(checkpoints.some((checkpoint) => checkpoint.lastStatus === 500), true);
+});
+
+test("worker rejects forged plan-backed targets and legacy planless provider mutations before Meta I/O", async () => {
+  const seed = buildMetaPlanMutation({
+    workspaceId: "workspace_demo",
+    planId: "plan_123",
+    action: "activate",
+    payload: { campaignId: "campaign_owned", adSetIds: ["adset_owned"], adIds: ["ad_owned"] },
+  });
+  const plan = ownedPublishPlanForMutation(seed);
+  const forged = [
+    buildMetaPlanMutation({
+      workspaceId: plan.workspaceId,
+      planId: plan.planId,
+      action: "activate",
+      payload: { campaignId: "campaign_owned", adSetIds: ["adset_foreign"], adIds: ["ad_owned"] },
+    }),
+    buildMetaPlanMutation({
+      workspaceId: plan.workspaceId,
+      planId: plan.planId,
+      action: "pause",
+      payload: { campaignId: "campaign_owned", adSetIds: ["adset_owned", "adset_foreign"], adIds: ["ad_owned"] },
+    }),
+    buildMetaPlanMutation({
+      workspaceId: plan.workspaceId,
+      planId: plan.planId,
+      action: "increase_budget",
+      payload: { adSetBudgets: [{ adSetId: "adset_foreign", dailyBudgetMinorUnits: 9000 }] },
+    }),
+  ];
+  let calls = 0;
+
+  for (const mutation of forged) {
+    await assert.rejects(
+      executeMetaPlanMutation({
+        mutation,
+        publishPlan: plan,
+        approvalStatus: "approved",
+        accessToken: "token",
+        fetchImpl: async () => {
+          calls += 1;
+          return new Response(JSON.stringify({ success: true }), { status: 200 });
+        },
+      }),
+      /durably owned|durable ownership proof/i,
+    );
+  }
+
+  const planless = buildMetaPlanMutation({
+    workspaceId: plan.workspaceId,
+    planId: null,
+    action: "pause",
+    payload: { campaignId: "campaign_foreign" },
+  });
+  await assert.rejects(
+    executeMetaPlanMutation({
+      mutation: planless,
+      publishPlan: null,
+      approvalStatus: "approved",
+      accessToken: "token",
+      fetchImpl: async () => {
+        calls += 1;
+        return new Response(JSON.stringify({ success: true }), { status: 200 });
+      },
+    }),
+    /without durable publish-plan ownership proof/i,
+  );
+  assert.equal(calls, 0);
+});
+
+test("Meta mutation routes never accept browser provider IDs as ownership authority", () => {
+  const planRoute = readFileSync("src/app/api/integrations/meta/publish-plans/[id]/mutations/route.ts", "utf8");
+  const manageRoute = readFileSync("src/app/api/integrations/meta/manage/route.ts", "utf8");
+  const worker = readFileSync("src/lib/providers/meta-mutation-worker.ts", "utf8");
+
+  assert.match(planRoute, /firstClientObjectIdField\(body\.payload \?\? \{\}\)/);
+  assert.match(planRoute, /buildOwnedMetaPausePayload\(plan\)/);
+  assert.match(planRoute, /buildOwnedMetaBudgetPayload\(plan,/);
+  assert.doesNotMatch(planRoute, /payload\.campaignId \?\?/);
+  assert.match(manageRoute, /body\.action !== "export_leads"/);
+  assert.doesNotMatch(manageRoute, /body\.(campaignId|adSetId|adSetIds|adIds)/);
+  assert.match(worker, /publishPlan,/);
 });
 
 test("activation retries re-establish the paused campaign guard and report an unconfirmed rollback", async () => {
@@ -385,6 +479,7 @@ test("activation retries re-establish the paused campaign guard and report an un
 
   const result = await executeMetaPlanMutation({
     mutation,
+    publishPlan: ownedPublishPlanForMutation(mutation),
     approvalStatus: "approved",
     accessToken: "token",
     fetchImpl: async (url, init) => {
@@ -423,3 +518,126 @@ test("activation retries re-establish the paused campaign guard and report an un
   assert.match(result.lastError ?? "", /^retry activation failed exactly/);
   assert.match(result.lastError ?? "", /Safety pause could not be confirmed for Meta object\(s\): adset_retry\./);
 });
+
+function ownedPublishPlanForMutation(mutation: MetaPlanMutation): MetaPublishPlan {
+  const planId = mutation.planId ?? "plan_123";
+  const campaignId = mutation.payload.campaignId;
+  const adSetObjectIds = [...new Set([
+    ...(mutation.payload.adSetIds ?? []),
+    ...(mutation.payload.adSetBudgets ?? []).map((budget) => budget.adSetId),
+  ])];
+  const adObjectIds = [...new Set(mutation.payload.adIds ?? [])];
+  const adSets = adSetObjectIds.map((objectId, index) => ({
+    localId: `adset_${index + 1}`,
+    name: `Ad set ${index + 1}`,
+    campaignLocalId: "campaign_main",
+    billingEvent: "IMPRESSIONS" as const,
+    optimizationGoal: "LEAD_GENERATION" as const,
+    status: "PAUSED" as const,
+    dailyBudgetMinorUnits: 3500,
+    targeting: { geo_locations: { countries: ["AU"] } },
+    objectId,
+  }));
+  const ads = adObjectIds.map((objectId, index) => ({
+    localId: `ad_${index + 1}`,
+    name: `Ad ${index + 1}`,
+    adSetLocalId: adSets[0]?.localId ?? "adset_1",
+    creativeLocalId: "creative_1",
+    status: "PAUSED" as const,
+    objectId,
+  }));
+  const requestLog: MetaPublishPlan["requestLog"] = [];
+  const responseLog: MetaPublishPlan["responseLog"] = [];
+  const recordCreate = (step: string, path: string, name: string, objectId: string) => {
+    requestLog.push({ step, method: "POST", path, body: { name }, createdAt: "2026-08-30T00:00:00.000Z" });
+    responseLog.push({ step, method: "POST", path, response: { id: objectId }, status: 200, createdAt: "2026-08-30T00:00:01.000Z" });
+  };
+  if (campaignId) {
+    recordCreate("campaign.create", "/act_123/campaigns", `Campaign [BW:${planId}:campaign_main]`, campaignId);
+  }
+  for (const adSet of adSets) {
+    recordCreate(`adset.${adSet.localId}`, "/act_123/adsets", `${adSet.name} [BW:${planId}:${adSet.localId}]`, adSet.objectId);
+  }
+  for (const ad of ads) {
+    recordCreate(`ad.${ad.localId}`, "/act_123/ads", `${ad.name} [BW:${planId}:${ad.localId}]`, ad.objectId);
+  }
+
+  return {
+    planId,
+    workspaceId: mutation.workspaceId,
+    adStudioCampaignId: "adstudio_123",
+    adStudioExportId: null,
+    legacyCampaignId: null,
+    providerConnectionId: "connection_123",
+    approvalRequestId: "approval_123",
+    adapter: "marketing_api",
+    status: "paused_live",
+    idempotencyKey: "meta-plan-123",
+    setup: {
+      metaAdAccountId: "act_123",
+      pageId: "page_123",
+      instagramActorId: null,
+      pixelId: null,
+      leadDestination: { type: "manual", label: "Manual review" },
+      privacyPolicyUrl: "https://example.com/privacy",
+      currency: "AUD",
+      timezone: "Australia/Perth",
+    },
+    controls: {
+      target: { mode: "new_campaign_new_adset" },
+      newCampaign: {
+        objective: "OUTCOME_LEADS",
+        specialAdCategories: ["HOUSING"],
+        specialAdCategoryCountries: ["AU"],
+        budgetMode: "adset",
+      },
+      dailyBudgetMinorUnits: 3500,
+      destinationUrl: "https://example.com",
+    },
+    campaign: {
+      localId: "campaign_main",
+      name: "Campaign",
+      objective: "OUTCOME_LEADS",
+      status: "PAUSED",
+      specialAdCategories: ["HOUSING"],
+      specialAdCategoryCountries: ["AU"],
+      budgetMode: "adset",
+    },
+    adSets: adSets.map(({ objectId: _objectId, ...adSet }) => adSet),
+    leadForms: [],
+    creatives: ads.length > 0 ? [{
+      localId: "creative_1",
+      name: "Creative",
+      pageId: "page_123",
+      instagramActorId: null,
+      headline: "Headline",
+      primaryText: "Primary",
+      description: "Description",
+      cta: "LEARN_MORE",
+      leadFormLocalId: "",
+      adStudioCreativeId: null,
+      format: null,
+    }] : [],
+    ads: ads.map(({ objectId: _objectId, ...ad }) => ad),
+    tracking: { utmSource: "meta", utmMedium: "paid_social", utmCampaign: "campaign", utmContentPrefix: "ad" },
+    requestLog,
+    responseLog,
+    reconciledObjects: {
+      ...(campaignId ? { campaignId, ownedCampaignId: campaignId } : {}),
+      leadFormIds: {},
+      adSetIds: Object.fromEntries(adSets.map((adSet) => [adSet.localId, adSet.objectId])),
+      ownedAdSetIds: Object.fromEntries(adSets.map((adSet) => [adSet.localId, adSet.objectId])),
+      creativeIds: {},
+      adIds: Object.fromEntries(ads.map((ad) => [ad.localId, ad.objectId])),
+      ownedAdIds: Object.fromEntries(ads.map((ad) => [ad.localId, ad.objectId])),
+      provenance: {
+        ...(campaignId ? { campaign: "created" as const } : {}),
+        adSets: Object.fromEntries(adSets.map((adSet) => [adSet.localId, "created" as const])),
+        ads: Object.fromEntries(ads.map((ad) => [ad.localId, "created" as const])),
+      },
+    },
+    lastError: null,
+    createdAt: "2026-08-30T00:00:00.000Z",
+    updatedAt: "2026-08-30T00:00:00.000Z",
+  };
+}
