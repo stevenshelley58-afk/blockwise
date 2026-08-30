@@ -111,3 +111,37 @@ test("image slots render with true cover instead of stretching a full-width sour
   assert.deepEqual(Array.from(left.slice(0, 3)), [0, 255, 0], "cover must trim the outer red stripe");
   assert.deepEqual(Array.from(right.slice(0, 3)), [0, 0, 255], "cover must trim the outer yellow stripe");
 });
+
+test("text tracking is authored in canvas pixels and cannot make valid labels disappear", async () => {
+  const template = templateWithIcon("arrow");
+  template.templateId = "renderer-pixel-tracking";
+  template.textInputs = [{ key: "kicker", label: "Kicker", placeholder: "NEW TO MARKET", maxLength: 20 }];
+  template.fonts = [{ file: "manrope-800.woff2" }];
+  template.feedLayout.layers = [
+    { type: "plate", layerId: "feed-bg-tracking", colourRole: "background", geometry: { x: 0, y: 0, width: 1080, height: 1350 }, protected: true },
+    {
+      type: "text", layerId: "feed-kicker-tracking", inputKey: "kicker",
+      font: { file: "manrope-800.woff2" }, fontSize: 40, lineHeight: 1.1,
+      tracking: 2, alignment: "left", maxCharacters: 20, maxLines: 1,
+      colourRole: "mainText", overflowBehaviour: "refuse",
+      geometry: { x: 80, y: 100, width: 500, height: 70 },
+    },
+  ];
+
+  const output = await renderPlacement({
+    template,
+    imageValues: {},
+    textValues: { kicker: "NEW TO MARKET" },
+    colourMap: colours,
+  }, "feed");
+  const rendered = await loadImage(output.png);
+  const sample = createCanvas(1080, 1350);
+  const context = sample.getContext("2d");
+  context.drawImage(rendered, 0, 0);
+  const pixels = context.getImageData(70, 90, 540, 100).data;
+  let darkPixels = 0;
+  for (let index = 0; index < pixels.length; index += 4) {
+    if (pixels[index] < 100 && pixels[index + 1] < 100 && pixels[index + 2] < 100) darkPixels += 1;
+  }
+  assert.ok(darkPixels > 100, "a normal 2px tracking value must render visible label text");
+});

@@ -245,8 +245,8 @@ function renderText(ctx: SKRSContext2D, layer: TextLayer, input: RenderInput, di
   let fits = false;
   for (; fontSize >= minimumSize - 0.001; fontSize -= 0.5) {
     ctx.font = fontDeclaration(textLayer, family, fontSize);
-    lines = wrapText(ctx, text, geometry.width, layer.tracking * fontSize);
-    const widest = Math.max(0, ...lines.map((line) => measuredWidth(ctx, line, layer.tracking * fontSize)));
+    lines = wrapText(ctx, text, geometry.width, layer.tracking);
+    const widest = Math.max(0, ...lines.map((line) => measuredWidth(ctx, line, layer.tracking)));
     const height = paintedHeight(ctx, lines, fontSize, layer.lineHeight);
     fits = lines.length <= layer.maxLines && widest <= geometry.width && height <= geometry.height;
     if (fits) break;
@@ -258,11 +258,11 @@ function renderText(ctx: SKRSContext2D, layer: TextLayer, input: RenderInput, di
   if (!fits) {
     fontSize = Math.max(1, minimumSize);
     ctx.font = fontDeclaration(textLayer, family, fontSize);
-    lines = wrapText(ctx, text, geometry.width, layer.tracking * fontSize).slice(0, layer.maxLines);
+    lines = wrapText(ctx, text, geometry.width, layer.tracking).slice(0, layer.maxLines);
     if (layer.overflowBehaviour === "truncate" && lines.length > 0) {
       let last = lines[lines.length - 1] ?? "";
       const suffix = "…";
-      while (last && measuredWidth(ctx, `${last}${suffix}`, layer.tracking * fontSize) > geometry.width) last = last.slice(0, -1);
+      while (last && measuredWidth(ctx, `${last}${suffix}`, layer.tracking) > geometry.width) last = last.slice(0, -1);
       lines[lines.length - 1] = `${last.trimEnd()}${suffix}`;
     }
   }
@@ -281,7 +281,7 @@ function renderText(ctx: SKRSContext2D, layer: TextLayer, input: RenderInput, di
     line,
     x,
     baseline + index * fontSize * layer.lineHeight,
-    layer.tracking * fontSize,
+    layer.tracking,
     layer.alignment,
   ));
   ctx.restore();

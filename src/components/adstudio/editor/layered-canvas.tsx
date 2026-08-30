@@ -302,7 +302,9 @@ async function createLayerObject({
       fontFamily: fontStem(layer.font.file),
       fontSize: layer.fontSize,
       lineHeight: layer.lineHeight,
-      charSpacing: layer.tracking * 1000,
+      // The artifact contract stores tracking in canvas pixels. Fabric uses
+      // thousandths of an em, so convert it at the active font size.
+      charSpacing: (layer.tracking / layer.fontSize) * 1000,
       textAlign: layer.alignment,
       fill: fill(layer.colourRole),
       splitByGrapheme: false,
@@ -451,7 +453,7 @@ function fitTextboxToLayer(
       : baseFontSize;
 
   for (let fontSize = Math.max(1, baseFontSize); fontSize >= minimumSize - 0.001; fontSize -= 0.5) {
-    setTextboxContent(textbox, text, fontSize);
+    setTextboxContent(textbox, text, fontSize, layer.tracking);
     if (textboxFitsLayer(textbox, layer)) return true;
   }
   if (layer.overflowBehaviour === "refuse") return false;
@@ -465,7 +467,7 @@ function fitTextboxToLayer(
     const middle = Math.floor((low + high) / 2);
     const prefix = graphemes.slice(0, middle).join("").trimEnd();
     const candidate = middle < graphemes.length ? `${prefix}${suffix}` : prefix;
-    setTextboxContent(textbox, candidate, minimumSize);
+    setTextboxContent(textbox, candidate, minimumSize, layer.tracking);
     if (textboxFitsLayer(textbox, layer)) {
       fitted = candidate;
       low = middle + 1;
@@ -473,12 +475,12 @@ function fitTextboxToLayer(
       high = middle - 1;
     }
   }
-  setTextboxContent(textbox, fitted, minimumSize);
+  setTextboxContent(textbox, fitted, minimumSize, layer.tracking);
   return textboxFitsLayer(textbox, layer);
 }
 
-function setTextboxContent(textbox: import("fabric").Textbox, text: string, fontSize: number): void {
-  textbox.set({ text, fontSize });
+function setTextboxContent(textbox: import("fabric").Textbox, text: string, fontSize: number, tracking: number): void {
+  textbox.set({ text, fontSize, charSpacing: (tracking / Math.max(1, fontSize)) * 1000 });
   textbox.initDimensions();
   textbox.setCoords();
 }
