@@ -73,7 +73,9 @@ describe("direct Ad Studio Library", () => {
           return {
             async createSignedUrl(path: string, _expiresIn: number, options?: { transform?: { width?: number } }) {
               return {
-                data: { signedUrl: `signed:${path}:${options?.transform?.width ?? "full"}` },
+                data: {
+                  signedUrl: `/storage/v1/object/sign/workspace-artifacts/${path}?token=test-${options?.transform?.width ?? "full"}`,
+                },
                 error: null,
               };
             },
@@ -109,7 +111,7 @@ describe("direct Ad Studio Library", () => {
           adId: "ad-1",
           templateId: "template-direct",
           name: "Auction Ready",
-          src: "signed:workspace-1/adstudio/ads/ad-1/feed.png:full",
+          src: "/storage/v1/object/sign/workspace-artifacts/workspace-1/adstudio/ads/ad-1/feed.png?token=test-full",
           revisionNumber: 3,
           updatedAt: "2026-08-30T07:00:00.000Z",
         },
