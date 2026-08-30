@@ -1,7 +1,8 @@
 # Frank's shared edge terminates public TLS. This internal router is explicitly
 # HTTP-only so proxying to product-caddy:80 cannot trigger an HTTPS redirect
-# loop or a second ACME certificate flow.
-http://{$BLOCKWISE_PRODUCT_DOMAIN} {
+# loop or a second ACME certificate flow. The Compose service hostname is an
+# explicit second site address for Node clients on the private product network.
+http://{$BLOCKWISE_PRODUCT_DOMAIN}, http://product-caddy {
   encode zstd gzip
 
   @health path /healthz

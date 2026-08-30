@@ -80,7 +80,8 @@ test("OSS product compose is isolated and has no managed deployment endpoint", a
   assert.doesNotMatch(compose, /vercel\.app|supabase\.co|supabase\.com/);
 
   const productCaddy = await read("infra/product/Caddyfile");
-  assert.match(productCaddy, /^http:\/\/\{\$BLOCKWISE_PRODUCT_DOMAIN\} \{/m);
+  assert.match(productCaddy, /^http:\/\/\{\$BLOCKWISE_PRODUCT_DOMAIN\}, http:\/\/product-caddy \{/m);
+  assert.match(productCaddy, /reverse_proxy product-auth:9999/);
   assert.doesNotMatch(productCaddy, /^\{\$BLOCKWISE_PRODUCT_DOMAIN\} \{/m);
 
   const envExample = await read("infra/product/.env.example");
