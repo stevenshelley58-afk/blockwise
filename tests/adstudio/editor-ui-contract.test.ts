@@ -13,11 +13,15 @@ describe("customer Ad Studio workbench contract", () => {
     assert.doesNotMatch(source, /mobilePanel/);
   });
 
-  it("uses the route workbench flow without fixed viewport shells", () => {
+  it("bounds the route workbench to the available viewport without fixed overlays", () => {
     const editorRoute = readFileSync("src/app/(customer)/ad-studio/templates/[templateId]/page.tsx", "utf8");
     const publishRoute = readFileSync("src/app/(customer)/ad-studio/templates/[templateId]/publish/page.tsx", "utf8");
     assert.doesNotMatch(editorRoute, /fixed inset-0/);
     assert.doesNotMatch(publishRoute, /fixed inset-0/);
+    assert.match(editorRoute, /h-\[calc\(100dvh-54px\)\]/);
+    assert.match(editorRoute, /md:h-\[calc\(100dvh-64px\)\]/);
+    assert.match(editorRoute, /min-h-0 flex-col overflow-hidden/);
+    assert.match(editorRoute, /min-h-0 flex-1 overflow-hidden/);
     assert.match(editorRoute, /<EditorShell/);
     assert.match(publishRoute, /<PublishFlow/);
   });
@@ -28,6 +32,23 @@ describe("customer Ad Studio workbench contract", () => {
     assert.match(canvas, /function fabricRectGeometry\(geometry: Rect\)/);
     assert.match(canvas, /left: geometry\.x/);
     assert.match(canvas, /top: geometry\.y/);
+    assert.match(canvas, /originX: "left" as const/);
+    assert.match(canvas, /originY: "top" as const/);
+    assert.match(canvas, /new fabric\.Textbox\([\s\S]*originX: "left"[\s\S]*originY: "top"/);
+    assert.match(canvas, /function fitImageToGeometry[\s\S]*originX: "left"[\s\S]*originY: "top"/);
+    assert.match(canvas, /function cropImageToGeometry[\s\S]*originX: "left"[\s\S]*originY: "top"/);
+    assert.match(canvas, /case "phone"/);
+    assert.match(canvas, /case "mail"/);
+    assert.match(canvas, /case "globe"/);
+    assert.match(canvas, /case "pin"/);
+    assert.match(canvas, /strokeLineCap: "round"/);
+    assert.match(canvas, /source\.length > layer\.maxCharacters/);
+    assert.match(canvas, /source\.slice\(0, layer\.maxCharacters\)/);
+    assert.match(canvas, /function fitTextboxToLayer/);
+    assert.match(canvas, /fontSize -= 0\.5/);
+    assert.match(canvas, /textbox\.textLines\.length <= layer\.maxLines/);
+    assert.match(canvas, /layer\.overflowBehaviour === "truncate" \? "…" : ""/);
+    assert.doesNotMatch(canvas, /new fabric\.Textbox\([\s\S]*height: geometry\.height,[\s\S]*fontFamily/);
     assert.match(canvas, /canvas\.setDimensions\(\{ width, height \}\)/);
     assert.doesNotMatch(canvas, /setDimensions\(\{ width: Math\.floor\(dims\.width \* zoom\)/);
     assert.doesNotMatch(canvas, /new fabric\.Rect\(\{ \.\.\.geometry/);

@@ -35,7 +35,7 @@ export default async function PackEditorPage({
   const brandColours = await loadLatestBrandColours(supabase, access.workspaceId);
 
   return (
-    <div className="flex min-h-[calc(100dvh-54px)] flex-col bg-background text-foreground md:min-h-[calc(100dvh-60px)]">
+    <div className="flex h-[calc(100dvh-54px)] min-h-0 flex-col overflow-hidden bg-background text-foreground md:h-[calc(100dvh-64px)]">
       <header className="flex min-h-12 shrink-0 items-center border-b border-border bg-card px-4 md:px-5">
         <Link
           href="/ad-studio"
@@ -58,7 +58,7 @@ export default async function PackEditorPage({
           </span>
         </span>
       </header>
-      <div className="min-h-0 flex-1 h-full">
+      <div className="min-h-0 flex-1 overflow-hidden">
         <EditorShell
           pack={pack}
           adId={adRef.adId}

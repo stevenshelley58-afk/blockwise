@@ -257,23 +257,27 @@ async function createLayerObject({
   }
 
   if (layer.type === "text") {
-    const text = textValues[layer.inputKey] ?? "";
+    const source = textValues[layer.inputKey] ?? "";
+    if (layer.overflowBehaviour === "refuse" && source.length > layer.maxCharacters) return null;
     await ensureLocalFont(layer.font);
+    const text = applyPreviewTextCase(source.slice(0, layer.maxCharacters), layer);
     const textbox = new fabric.Textbox(text, {
       left: geometry.x,
       top: geometry.y,
+      originX: "left",
+      originY: "top",
       width: geometry.width,
-      height: geometry.height,
       fontFamily: fontStem(layer.font.file),
       fontSize: layer.fontSize,
       lineHeight: layer.lineHeight,
       charSpacing: layer.tracking * 1000,
       textAlign: layer.alignment,
       fill: fill(layer.colourRole),
-      splitByGrapheme: true,
+      splitByGrapheme: false,
       editable: false,
       ...interactive,
     });
+    if (!fitTextboxToLayer(textbox, layer, text)) return null;
     textbox.clipPath = new fabric.Rect({ ...fabricRectGeometry(geometry), absolutePositioned: true });
     return textbox;
   }
@@ -289,15 +293,40 @@ async function createLayerObject({
     if (layer.shape === "ring") return new fabric.Circle({ left: geometry.x + geometry.width / 2, top: geometry.y + geometry.height / 2, originX: "center", originY: "center", radius: Math.min(geometry.width, geometry.height) / 2, fill: "", stroke: colour, strokeWidth: Math.max(2, Math.min(geometry.width, geometry.height) * .08), opacity: layer.opacity ?? 1, ...interactive });
     const radius = layer.shape === "pill" ? Math.min(geometry.width, geometry.height) / 2 : layer.shape === "rounded" ? Math.min(16, geometry.width / 4, geometry.height / 4) : 0;
     if (layer.shape === "circle") {
-      return new fabric.Circle({ left: geometry.x, top: geometry.y, radius: Math.min(geometry.width, geometry.height) / 2, fill: colour, opacity: layer.opacity ?? 1, ...interactive });
+      return new fabric.Circle({ left: geometry.x, top: geometry.y, originX: "left", originY: "top", radius: Math.min(geometry.width, geometry.height) / 2, fill: colour, opacity: layer.opacity ?? 1, ...interactive });
     }
     return new fabric.Rect({ ...fabricRectGeometry(geometry), rx: radius, ry: radius, fill: colour, opacity: layer.opacity ?? 1, ...interactive });
   }
 
   if (layer.type === "icon") {
     const x = geometry.x, y = geometry.y, w = geometry.width, h = geometry.height;
-    const iconPath = layer.icon === "arrow" ? `M ${x + w * .1} ${y + h / 2} L ${x + w * .9} ${y + h / 2} M ${x + w * .55} ${y + h * .18} L ${x + w * .9} ${y + h / 2} L ${x + w * .55} ${y + h * .82}` : `M ${x + w * .12} ${y + h * .52} L ${x + w * .4} ${y + h * .8} L ${x + w * .88} ${y + h * .2}`;
-    return new fabric.Path(iconPath, { fill: "", stroke: fill(layer.colourRole), strokeWidth: Math.max(2, Math.min(w, h) * .1), ...interactive });
+    const cx = x + w / 2, cy = y + h / 2, r = Math.min(w, h) * .36;
+    const px = (fraction: number) => x + w * fraction;
+    const py = (fraction: number) => y + h * fraction;
+    const iconPath = (() => {
+      switch (layer.icon) {
+        case "arrow":
+          return `M ${px(.1)} ${cy} L ${px(.9)} ${cy} M ${px(.55)} ${py(.18)} L ${px(.9)} ${cy} L ${px(.55)} ${py(.82)}`;
+        case "check":
+          return `M ${px(.18)} ${cy} L ${px(.42)} ${py(.76)} L ${px(.84)} ${py(.24)}`;
+        case "phone":
+          return `M ${px(.28)} ${py(.17)} C ${px(.18)} ${py(.23)} ${px(.18)} ${py(.38)} ${px(.3)} ${py(.56)} C ${px(.43)} ${py(.75)} ${px(.66)} ${py(.88)} ${px(.8)} ${py(.78)} L ${px(.68)} ${py(.61)} C ${px(.61)} ${py(.66)} ${px(.54)} ${py(.63)} ${px(.46)} ${py(.54)} C ${px(.38)} ${py(.45)} ${px(.35)} ${py(.38)} ${px(.4)} ${py(.31)} Z`;
+        case "mail":
+          return `M ${px(.12)} ${py(.22)} L ${px(.88)} ${py(.22)} L ${px(.88)} ${py(.78)} L ${px(.12)} ${py(.78)} Z M ${px(.13)} ${py(.24)} L ${cx} ${py(.55)} L ${px(.87)} ${py(.24)}`;
+        case "globe":
+          return `M ${cx - r} ${cy} A ${r} ${r} 0 1 0 ${cx + r} ${cy} A ${r} ${r} 0 1 0 ${cx - r} ${cy} M ${cx} ${cy - r} C ${cx - r * .48} ${cy - r * .52} ${cx - r * .48} ${cy + r * .52} ${cx} ${cy + r} M ${cx} ${cy - r} C ${cx + r * .48} ${cy - r * .52} ${cx + r * .48} ${cy + r * .52} ${cx} ${cy + r} M ${cx - r} ${cy} L ${cx + r} ${cy}`;
+        case "pin":
+          return `M ${cx} ${py(.9)} C ${px(.34)} ${py(.69)} ${px(.22)} ${py(.52)} ${px(.22)} ${py(.36)} C ${px(.22)} ${py(.16)} ${px(.35)} ${py(.08)} ${cx} ${py(.08)} C ${px(.65)} ${py(.08)} ${px(.78)} ${py(.16)} ${px(.78)} ${py(.36)} C ${px(.78)} ${py(.52)} ${px(.66)} ${py(.69)} ${cx} ${py(.9)} Z M ${px(.41)} ${py(.36)} A ${w * .09} ${w * .09} 0 1 0 ${px(.59)} ${py(.36)} A ${w * .09} ${w * .09} 0 1 0 ${px(.41)} ${py(.36)}`;
+      }
+    })();
+    return new fabric.Path(iconPath, {
+      fill: "",
+      stroke: fill(layer.colourRole),
+      strokeWidth: Math.max(2, Math.min(w, h) * .08),
+      strokeLineCap: "round",
+      strokeLineJoin: "round",
+      ...interactive,
+    });
   }
 
   const src = (layer.type === "image_slot" || layer.type === "logo") ? imageValues[layer.inputKey] ?? null : null;
@@ -327,6 +356,8 @@ async function createLayerObject({
       return new fabric.Circle({
         left: geometry.x,
         top: geometry.y,
+        originX: "left",
+        originY: "top",
         radius: Math.min(geometry.width, geometry.height) / 2,
         fill: "#f1f2f4",
         stroke: "#d3d7df",
@@ -354,11 +385,92 @@ async function createLayerObject({
   });
 }
 
+type PreviewTextLayer = Extract<LayoutLayer, { type: "text" }> & {
+  sizeRatio?: number;
+  case?: "upper" | "lower" | "none";
+};
+
+function applyPreviewTextCase(text: string, layer: PreviewTextLayer): string {
+  if (layer.case === "upper") return text.toUpperCase();
+  if (layer.case === "lower") return text.toLowerCase();
+  return text;
+}
+
+/**
+ * Fabric calculates a Textbox's rendered height from its wrapped lines; an
+ * authored `height` option is discarded. Fit against those real browser
+ * metrics so the editor honours the same line and overflow contract as the
+ * production renderer instead of hiding oversized copy behind a clip path.
+ */
+function fitTextboxToLayer(
+  textbox: import("fabric").Textbox,
+  layer: PreviewTextLayer,
+  text: string,
+): boolean {
+  const authoredRatio = Number(layer.sizeRatio);
+  const baseFontSize = Number.isFinite(authoredRatio) && authoredRatio > 0
+    ? layer.geometry.height * authoredRatio
+    : layer.fontSize;
+  const boxFloor = layer.geometry.height / Math.max(1, layer.maxLines * layer.lineHeight);
+  const minimumSize = layer.overflowBehaviour === "scale_down"
+    ? Math.max(1, Math.min(baseFontSize * 0.45, boxFloor))
+    : layer.overflowBehaviour === "truncate"
+      ? Math.max(1, Math.min(baseFontSize, boxFloor))
+      : baseFontSize;
+
+  for (let fontSize = Math.max(1, baseFontSize); fontSize >= minimumSize - 0.001; fontSize -= 0.5) {
+    setTextboxContent(textbox, text, fontSize);
+    if (textboxFitsLayer(textbox, layer)) return true;
+  }
+  if (layer.overflowBehaviour === "refuse") return false;
+
+  const suffix = layer.overflowBehaviour === "truncate" ? "…" : "";
+  const graphemes = splitGraphemes(text);
+  let low = 0;
+  let high = graphemes.length;
+  let fitted = "";
+  while (low <= high) {
+    const middle = Math.floor((low + high) / 2);
+    const prefix = graphemes.slice(0, middle).join("").trimEnd();
+    const candidate = middle < graphemes.length ? `${prefix}${suffix}` : prefix;
+    setTextboxContent(textbox, candidate, minimumSize);
+    if (textboxFitsLayer(textbox, layer)) {
+      fitted = candidate;
+      low = middle + 1;
+    } else {
+      high = middle - 1;
+    }
+  }
+  setTextboxContent(textbox, fitted, minimumSize);
+  return textboxFitsLayer(textbox, layer);
+}
+
+function setTextboxContent(textbox: import("fabric").Textbox, text: string, fontSize: number): void {
+  textbox.set({ text, fontSize });
+  textbox.initDimensions();
+  textbox.setCoords();
+}
+
+function textboxFitsLayer(textbox: import("fabric").Textbox, layer: PreviewTextLayer): boolean {
+  return textbox.textLines.length <= layer.maxLines
+    && textbox.width <= layer.geometry.width + 0.01
+    && textbox.height <= layer.geometry.height + 0.01;
+}
+
+function splitGraphemes(text: string): string[] {
+  if (typeof Intl.Segmenter === "function") {
+    return Array.from(new Intl.Segmenter(undefined, { granularity: "grapheme" }).segment(text), ({ segment }) => segment);
+  }
+  return Array.from(text);
+}
+
 /** Fabric uses left/top for object placement; pack contracts use x/y. */
 function fabricRectGeometry(geometry: Rect) {
   return {
     left: geometry.x,
     top: geometry.y,
+    originX: "left" as const,
+    originY: "top" as const,
     width: geometry.width,
     height: geometry.height,
   };
@@ -370,6 +482,8 @@ function fitImageToGeometry(image: import("fabric").FabricImage, geometry: Rect)
   image.set({
     left: geometry.x,
     top: geometry.y,
+    originX: "left",
+    originY: "top",
     scaleX: geometry.width / width,
     scaleY: geometry.height / height,
   });
@@ -385,6 +499,8 @@ function cropImageToGeometry(image: import("fabric").FabricImage, geometry: Rect
   image.set({
     left: geometry.x,
     top: geometry.y,
+    originX: "left",
+    originY: "top",
     cropX: crop.x * sourceWidth,
     cropY: crop.y * sourceHeight,
     width: cropWidth,
@@ -411,6 +527,8 @@ function maskForSlot(fabric: typeof import("fabric"), layer: ImageSlotLayer) {
     return new fabric.Circle({
       left: geometry.x,
       top: geometry.y,
+      originX: "left",
+      originY: "top",
       radius: Math.min(geometry.width, geometry.height) / 2,
       absolutePositioned: true,
     });
