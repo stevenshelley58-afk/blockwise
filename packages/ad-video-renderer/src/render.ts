@@ -71,7 +71,7 @@ async function encodeMp4(frames: string[], duration: number, fps: number, transi
   }
   if (musicPath) args.push("-stream_loop", "-1", "-i", musicPath); else args.push("-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=48000");
   const filters: string[] = [];
-  for (let i = 0; i < frames.length; i++) filters.push(`[${i}:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1,settb=AVTB,setpts=PTS-STARTPTS,format=yuv420p[v${i}]`);
+  for (let i = 0; i < frames.length; i++) filters.push(`[${i}:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,fps=${fps},setsar=1,settb=AVTB,setpts=PTS-STARTPTS,format=yuv420p[v${i}]`);
   const transition = transitions.find((item) => item !== "hard_cut") ?? "hard_cut";
   let videoLabel = "vout";
   if (transition === "hard_cut") filters.push(`${frames.map((_, i) => `[v${i}]`).join("")}concat=n=${frames.length}:v=1:a=0[vout]`);

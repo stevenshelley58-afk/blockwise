@@ -1,9 +1,12 @@
 import assert from "node:assert/strict";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import { renderVideoProject, RenderValidationError, validateRenderRequest } from "../../packages/ad-video-renderer/src/index.ts";
+const execFileAsync = promisify(execFile);
 
 const plan = {
   version: 1 as const, durationSeconds: 15 as const,
@@ -45,5 +48,16 @@ test("optional FFmpeg fixture emits an H.264/AAC vertical MP4", { skip: process.
     await new Promise<void>((resolve, reject) => probe.execFile("ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=codec_name,width,height", "-of", "json", result.mp4Path!], (error, stdout) => {
       if (error) return reject(error); assert.match(stdout, /"codec_name":\s*"h264"/u); assert.match(stdout, /"width":\s*1080/u); assert.match(stdout, /"height":\s*1920/u); resolve();
     }));
+  } finally { await rm(output, { recursive: true, force: true }); }
+});
+
+test("optional FFmpeg fixture uses a video beat as moving source media", { skip: process.env.ADVIDEO_RUN_FFMPEG_FIXTURE !== "1" }, async () => {
+  const output = await mkdtemp(join(tmpdir(), "ad-video-clip-")); const clip = join(output, "clip.mp4");
+  try {
+    await execFileAsync("ffmpeg", ["-hide_banner", "-loglevel", "error", "-y", "-f", "lavfi", "-i", "testsrc=size=320x240:rate=24", "-t", "1", "-c:v", "libx264", "-pix_fmt", "yuv420p", clip]);
+    const clipProject = { ...project, assets: [...project.assets, { id: "clip_1", kind: "video" as const, url: "storage://adstudio-videos/workspace/clip.mp4", attestation: { status: "validated" as const, codec: "h264", durationMs: 1000 } }] };
+    const clipPlan = { ...plan, scenes: plan.scenes.map((scene, index) => index === 0 ? { ...scene, assetIds: ["clip_1"] } : scene) as typeof plan.scenes };
+    const result = await renderVideoProject({ jobId: "clip_fixture", workspaceId: "workspace", projectId: "project", project: clipProject, plan: clipPlan }, { outputDir: output, executeFfmpeg: true, assetResolver: async (asset) => asset.id === "clip_1" ? { path: clip, mimeType: "video/mp4" } : null });
+    assert.ok(result.mp4Path); assert.match(result.sha256 ?? "", /^[a-f0-9]{64}$/u);
   } finally { await rm(output, { recursive: true, force: true }); }
 });

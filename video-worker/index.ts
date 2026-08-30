@@ -1,9 +1,11 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { mkdir, readFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import { claimNextVideoRenderJob, failVideoRenderJob, loadRenderRequest, succeedVideoRenderJob, type RenderProvider, type RenderProviderOutput } from "../src/lib/adstudio/video/render.ts";
 import type { VideoRenderJob } from "../src/lib/adstudio/video/repository.ts";
 import { renderVideoProject, outputSha256, type RenderRequest, type ResolvedAsset, type VideoAssetRef } from "@blockwise/ad-video-renderer";
@@ -12,6 +14,7 @@ const MAX_ATTEMPTS = clampInteger(process.env.ADVIDEO_MAX_ATTEMPTS, 3, 1, 8);
 const POLL_MS = clampInteger(process.env.ADVIDEO_POLL_MS, 2_000, 250, 60_000);
 const OUTPUT_ROOT = process.env.ADVIDEO_OUTPUT_DIR || join(tmpdir(), "blockwise-video-worker");
 const WORKER_NAME = process.env.ADVIDEO_WORKER_NAME || "adstudio-video-renderer";
+const execFileAsync = promisify(execFile);
 let stopping = false;
 
 export type WorkerConfig = { supabase: SupabaseClient; pollMs: number; maxAttempts: number; outputRoot: string; ffmpegPath?: string };
@@ -21,14 +24,43 @@ export class SupabaseVideoRenderProvider implements RenderProvider {
   constructor(private readonly supabase: SupabaseClient, private readonly outputRoot: string, private readonly ffmpegPath?: string) {}
 
   async render(input: RenderRequest): Promise<RenderProviderOutput> {
+    input = await this.attestPendingVideoSources(input);
     const outputDir = join(this.outputRoot, input.workspaceId, input.jobId);
-    const result = await renderVideoProject(input, { outputDir, executeFfmpeg: true, ffmpegPath: this.ffmpegPath, assetResolver: (asset) => this.resolveAsset(input.workspaceId, input.projectId, asset) });
-    if (!result.mp4Path || !result.sha256) throw new Error("Renderer did not produce an MP4 output.");
-    const mp4 = await readFile(result.mp4Path); const poster = await readFile(result.posterPath); const captions = await readFile(result.captionsPath);
-    const mp4AssetId = await this.uploadOutput(input, mp4, "video/mp4", "output", result.durationMs, result.width, result.height);
-    const posterAssetId = await this.uploadOutput(input, poster, "image/jpeg", "poster", null, result.width, result.height);
-    const captionsAssetId = await this.uploadOutput(input, captions, "text/vtt", "captions", null, null, null);
-    return { mp4AssetId, posterAssetId, captionsAssetId, providerJobId: input.jobId, providerMetadata: { ...result.providerMetadata, worker: WORKER_NAME, manifestPath: result.manifestPath }, costMetadata: result.costMetadata };
+    try {
+      const result = await renderVideoProject(input, { outputDir, executeFfmpeg: true, ffmpegPath: this.ffmpegPath, assetResolver: (asset) => this.resolveAsset(input.workspaceId, input.projectId, asset) });
+      if (!result.mp4Path || !result.sha256) throw new Error("Renderer did not produce an MP4 output.");
+      const mp4 = await readFile(result.mp4Path); const poster = await readFile(result.posterPath); const captions = await readFile(result.captionsPath);
+      const mp4AssetId = await this.uploadOutput(input, mp4, "video/mp4", "output", result.durationMs, result.width, result.height);
+      const posterAssetId = await this.uploadOutput(input, poster, "image/jpeg", "poster", null, result.width, result.height);
+      const captionsAssetId = await this.uploadOutput(input, captions, "text/vtt", "captions", null, null, null);
+      return { mp4AssetId, posterAssetId, captionsAssetId, providerJobId: input.jobId, providerMetadata: { ...result.providerMetadata, worker: WORKER_NAME, manifestPath: result.manifestPath }, costMetadata: result.costMetadata };
+    } finally { await rm(outputDir, { recursive: true, force: true }); }
+  }
+
+  /** Browser-finalized source rows are deliberately pending. Only this
+   * service-role worker may turn their bytes into a trusted codec attestation. */
+  private async attestPendingVideoSources(input: RenderRequest): Promise<RenderRequest> {
+    const project = JSON.parse(JSON.stringify(input.project)) as Record<string, unknown>;
+    const assets = Array.isArray(project.assets) ? project.assets as Array<Record<string, unknown>> : [];
+    const rows = await this.supabase.from("ad_video_assets").select("id,object_path,mime_type,validation_status").eq("workspace_id", input.workspaceId).eq("project_id", input.projectId).eq("asset_role", "source");
+    if (rows.error) throw new Error(`Video source ledger lookup failed: ${rows.error.message}`);
+    const byId = new Map((rows.data ?? []).map((row) => [String(row.id), row])); const byPath = new Map((rows.data ?? []).map((row) => [String(row.object_path), row]));
+    for (const asset of assets.filter((entry) => entry.kind === "video")) {
+      const row = byId.get(String(asset.id)) ?? byPath.get(storagePathFromReference(String(asset.url)) ?? "");
+      if (!row) throw new Error(`Video asset ${String(asset.id)} is missing from the workspace source ledger.`);
+      const source = await this.resolveAsset(input.workspaceId, input.projectId, asset as unknown as VideoAssetRef);
+      if (!source?.bytes && !source?.path) throw new Error(`Video asset ${String(asset.id)} is unavailable.`);
+      const sourcePath = source.path ?? join(this.outputRoot, input.workspaceId, input.jobId, `attest-${String(asset.id)}.video`);
+      if (source.bytes) { await mkdir(join(this.outputRoot, input.workspaceId, input.jobId), { recursive: true }); await writeFile(sourcePath, source.bytes); }
+      const metadata = await probeVideo(sourcePath);
+      if (metadata.durationMs <= 0 || metadata.durationMs > 90_000) throw new Error(`Video asset ${String(asset.id)} duration exceeds the 90 second limit.`);
+      if (!["h264", "hevc", "vp8", "vp9", "av1", "mpeg4"].includes(metadata.codec)) throw new Error(`Video asset ${String(asset.id)} uses unsupported codec ${metadata.codec}.`);
+      const attestation = { worker: WORKER_NAME, codec: metadata.codec, durationMs: metadata.durationMs, width: metadata.width, height: metadata.height };
+      const updated = await this.supabase.from("ad_video_assets").update({ validation_status: "validated", validated_at: new Date().toISOString(), duration_ms: metadata.durationMs, width: metadata.width, height: metadata.height, validation_attestation_json: attestation }).eq("id", row.id).eq("workspace_id", input.workspaceId).eq("project_id", input.projectId).eq("asset_role", "source").select("id").single();
+      if (updated.error || !updated.data) throw new Error(`Video asset ${String(asset.id)} attestation could not be saved: ${updated.error?.message ?? "not found"}`);
+      asset.attestation = { status: "validated", codec: metadata.codec, durationMs: metadata.durationMs };
+    }
+    return { ...input, project };
   }
 
   private async resolveAsset(workspaceId: string, projectId: string, asset: VideoAssetRef): Promise<ResolvedAsset | null> {
@@ -66,6 +98,14 @@ async function fetchRemoteAsset(asset: VideoAssetRef): Promise<ResolvedAsset> {
   const response = await fetch(url, { signal: AbortSignal.timeout(20_000), redirect: "error" }); if (!response.ok) throw new Error(`Remote asset ${asset.id} returned HTTP ${response.status}.`);
   const length = Number(response.headers.get("content-length") ?? 0); if (length > 25 * 1024 * 1024) throw new Error(`Remote asset ${asset.id} exceeds the 25 MB limit.`);
   const bytes = new Uint8Array(await response.arrayBuffer()); if (bytes.byteLength > 25 * 1024 * 1024) throw new Error(`Remote asset ${asset.id} exceeds the 25 MB limit.`); return { bytes, mimeType: response.headers.get("content-type") ?? undefined };
+}
+
+async function probeVideo(path: string): Promise<{ codec: string; durationMs: number; width: number; height: number }> {
+  try {
+    const { stdout } = await execFileAsync(process.env.ADVIDEO_FFPROBE_PATH || "ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=codec_name,width,height,duration:format=duration", "-of", "json", path], { maxBuffer: 128 * 1024 });
+    const parsed = JSON.parse(stdout) as { streams?: Array<{ codec_name?: string; width?: number; height?: number; duration?: string }>; format?: { duration?: string } }; const stream = parsed.streams?.[0]; const duration = Number(stream?.duration ?? parsed.format?.duration ?? 0); const width = Number(stream?.width ?? 0); const height = Number(stream?.height ?? 0); const codec = String(stream?.codec_name ?? "");
+    if (!codec || !Number.isFinite(duration) || !Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) throw new Error("missing codec metadata"); return { codec, durationMs: Math.round(duration * 1000), width, height };
+  } catch (error) { throw new Error(`Video codec attestation failed: ${error instanceof Error ? error.message.slice(0, 300) : String(error)}`); }
 }
 
 async function isPublicRemoteHost(hostname: string): Promise<boolean> {
@@ -111,5 +151,10 @@ process.once("SIGTERM", () => { stopping = true; }); process.once("SIGINT", () =
 if (import.meta.url === `file://${process.argv[1]}`) await main();
 
 function requiredEnv(name: string): string { const value = process.env[name]; if (!value?.trim()) throw new Error(`${name} is required.`); return value; }
+function storagePathFromReference(reference: string): string | null {
+  if (reference.startsWith("storage://")) { const raw = reference.slice("storage://".length); const slash = raw.indexOf("/"); return slash > 0 ? raw.slice(slash + 1) : null; }
+  if (reference.startsWith("/api/adstudio/media?")) return new URLSearchParams(reference.slice(reference.indexOf("?") + 1)).get("path");
+  return null;
+}
 function clampInteger(value: string | undefined, fallback: number, min: number, max: number): number { const parsed = Number(value); return Number.isInteger(parsed) ? Math.min(max, Math.max(min, parsed)) : fallback; }
 function delay(ms: number): Promise<void> { return new Promise((resolve) => setTimeout(resolve, ms)); }
