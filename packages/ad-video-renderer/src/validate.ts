@@ -54,7 +54,7 @@ function parseProject(value: unknown): VideoAdProject {
 
 function parsePlan(value: unknown): VideoScriptPlan {
   if (!value || typeof value !== "object" || Array.isArray(value)) fail("Script plan must be an object.");
-  const p = value as Record<string, unknown>;
+  const wrapper = value as Record<string, unknown>; const p = (wrapper.scriptPlan && typeof wrapper.scriptPlan === "object" && !Array.isArray(wrapper.scriptPlan) ? wrapper.scriptPlan : value) as Record<string, unknown>;
   if (p.version !== 1 || (p.durationSeconds !== 15 && p.durationSeconds !== 30)) fail("Script plan version or duration is invalid.");
   if (!Array.isArray(p.scenes) || p.scenes.length !== 4) fail("Script plan must contain exactly four beats.");
   if (!Array.isArray(p.hookVariants) || p.hookVariants.length !== 3) fail("Script plan must contain exactly three hook variants.");

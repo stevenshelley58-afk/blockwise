@@ -39,14 +39,19 @@ test("workspace media proxy references remain accepted immutable refs", () => {
   assert.equal(parsed.project.assets[0]?.url.startsWith("/api/adstudio/media?"), true);
 });
 
+test("worker queue plan envelopes with scriptPlan remain render-compatible", () => {
+  const parsed = validateRenderRequest({ jobId: "j", workspaceId: "w", projectId: "p", project, plan: { scriptPlan: plan } });
+  assert.equal(parsed.plan.version, 1);
+});
+
 test("optional FFmpeg fixture emits an H.264/AAC vertical MP4", { skip: process.env.ADVIDEO_RUN_FFMPEG_FIXTURE !== "1" }, async () => {
   const output = await mkdtemp(join(tmpdir(), "ad-video-ffmpeg-"));
   try {
     const result = await renderVideoProject({ jobId: "ffmpeg_fixture", workspaceId: "workspace", projectId: "project", project, plan }, { outputDir: output, executeFfmpeg: true });
     assert.ok(result.mp4Path); assert.match(result.sha256 ?? "", /^[a-f0-9]{64}$/u);
     const probe = await import("node:child_process");
-    await new Promise<void>((resolve, reject) => probe.execFile("ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=codec_name,width,height", "-of", "json", result.mp4Path!], (error, stdout) => {
-      if (error) return reject(error); assert.match(stdout, /"codec_name":\s*"h264"/u); assert.match(stdout, /"width":\s*1080/u); assert.match(stdout, /"height":\s*1920/u); resolve();
+    await new Promise<void>((resolve, reject) => probe.execFile("ffprobe", ["-v", "error", "-show_entries", "stream=codec_type,codec_name,width,height,duration:format=duration", "-of", "json", result.mp4Path!], (error, stdout) => {
+      if (error) return reject(error); assert.match(stdout, /"codec_name":\s*"h264"/u); assert.match(stdout, /"codec_name":\s*"aac"/u); assert.match(stdout, /"width":\s*1080/u); assert.match(stdout, /"height":\s*1920/u); const durations = [...stdout.matchAll(/"duration":\s*"([\d.]+)"/gu)].map((match) => Number(match[1])); const duration = durations.at(-1) ?? 0; const videoDuration = durations[0] ?? 0; assert.ok(Math.abs(duration - 15) < 0.1, `duration ${duration} should be 15s`); assert.ok(Math.abs(videoDuration - 15) < 0.1, `video duration ${videoDuration} should be 15s`); resolve();
     }));
   } finally { await rm(output, { recursive: true, force: true }); }
 });

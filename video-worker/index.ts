@@ -14,6 +14,7 @@ const MAX_ATTEMPTS = clampInteger(process.env.ADVIDEO_MAX_ATTEMPTS, 3, 1, 8);
 const POLL_MS = clampInteger(process.env.ADVIDEO_POLL_MS, 2_000, 250, 60_000);
 const OUTPUT_ROOT = process.env.ADVIDEO_OUTPUT_DIR || join(tmpdir(), "blockwise-video-worker");
 const WORKER_NAME = process.env.ADVIDEO_WORKER_NAME || "adstudio-video-renderer";
+const ALLOWED_ASSET_HOSTS = new Set((process.env.ADVIDEO_ALLOWED_ASSET_HOSTS || "").split(",").map((host) => host.trim().toLowerCase()).filter(Boolean));
 const execFileAsync = promisify(execFile);
 let stopping = false;
 
@@ -42,7 +43,7 @@ export class SupabaseVideoRenderProvider implements RenderProvider {
   private async attestPendingVideoSources(input: RenderRequest): Promise<RenderRequest> {
     const project = JSON.parse(JSON.stringify(input.project)) as Record<string, unknown>;
     const assets = Array.isArray(project.assets) ? project.assets as Array<Record<string, unknown>> : [];
-    const rows = await this.supabase.from("ad_video_assets").select("id,object_path,mime_type,validation_status").eq("workspace_id", input.workspaceId).eq("project_id", input.projectId).eq("asset_role", "source");
+    const rows = await this.supabase.from("ad_video_assets").select("id,object_path,mime_type,sha256,validation_status").eq("workspace_id", input.workspaceId).eq("project_id", input.projectId).eq("asset_role", "source");
     if (rows.error) throw new Error(`Video source ledger lookup failed: ${rows.error.message}`);
     const byId = new Map((rows.data ?? []).map((row) => [String(row.id), row])); const byPath = new Map((rows.data ?? []).map((row) => [String(row.object_path), row]));
     for (const asset of assets.filter((entry) => entry.kind === "video")) {
@@ -52,6 +53,9 @@ export class SupabaseVideoRenderProvider implements RenderProvider {
       if (!source?.bytes && !source?.path) throw new Error(`Video asset ${String(asset.id)} is unavailable.`);
       const sourcePath = source.path ?? join(this.outputRoot, input.workspaceId, input.jobId, `attest-${String(asset.id)}.video`);
       if (source.bytes) { await mkdir(join(this.outputRoot, input.workspaceId, input.jobId), { recursive: true }); await writeFile(sourcePath, source.bytes); }
+      const bytes = source.bytes ?? await readFile(sourcePath); const expectedHash = String(row.sha256 ?? "").toLowerCase();
+      if (!expectedHash || outputSha256(bytes) !== expectedHash) { await this.rejectSource(row.id, input, "sha256_mismatch"); throw new Error(`Video asset ${String(asset.id)} failed SHA-256 verification.`); }
+      if (!videoMagic(bytes, String(row.mime_type ?? "video/mp4"))) { await this.rejectSource(row.id, input, "magic_mismatch"); throw new Error(`Video asset ${String(asset.id)} failed MP4/WebM magic verification.`); }
       const metadata = await probeVideo(sourcePath);
       if (metadata.durationMs <= 0 || metadata.durationMs > 90_000) throw new Error(`Video asset ${String(asset.id)} duration exceeds the 90 second limit.`);
       if (!["h264", "hevc", "vp8", "vp9", "av1", "mpeg4"].includes(metadata.codec)) throw new Error(`Video asset ${String(asset.id)} uses unsupported codec ${metadata.codec}.`);
@@ -63,12 +67,17 @@ export class SupabaseVideoRenderProvider implements RenderProvider {
     return { ...input, project };
   }
 
+  private async rejectSource(assetId: string, input: RenderRequest, reason: string): Promise<void> {
+    await this.supabase.from("ad_video_assets").update({ validation_status: "rejected", validation_attestation_json: { worker: WORKER_NAME, reason } }).eq("id", assetId).eq("workspace_id", input.workspaceId).eq("project_id", input.projectId).eq("asset_role", "source");
+  }
+
   private async resolveAsset(workspaceId: string, projectId: string, asset: VideoAssetRef): Promise<ResolvedAsset | null> {
     if (/^https:\/\//u.test(asset.url)) return fetchRemoteAsset(asset);
     const isMediaProxy = asset.url.startsWith("/api/adstudio/media?");
     const raw = isMediaProxy ? new URLSearchParams(asset.url.slice(asset.url.indexOf("?") + 1)).get("path") ?? "" : asset.url.slice("storage://".length);
     const slash = raw.indexOf("/"); const bucket = isMediaProxy ? "workspace-artifacts" : raw.slice(0, slash); const path = isMediaProxy ? raw : raw.slice(slash + 1);
     if (isMediaProxy && !path) throw new Error(`Invalid workspace media reference for asset ${asset.id}.`);
+    if (!isMediaProxy && !["adstudio-videos", "workspace-artifacts"].includes(bucket)) throw new Error(`Asset ${asset.id} references an unapproved storage bucket.`);
     if (!path || path.includes("..") || !path.startsWith(`${workspaceId}/`)) throw new Error(`Asset ${asset.id} is outside the workspace storage prefix.`);
     const download = await this.supabase.storage.from(bucket).download(path);
     if (download.error || !download.data) throw new Error(`Asset ${asset.id} could not be downloaded: ${download.error?.message ?? "missing object"}`);
@@ -94,7 +103,7 @@ export class SupabaseVideoRenderProvider implements RenderProvider {
 }
 
 async function fetchRemoteAsset(asset: VideoAssetRef): Promise<ResolvedAsset> {
-  const url = new URL(asset.url); if (url.username || url.password || url.hostname === "localhost" || url.hostname.endsWith(".local") || url.hostname.endsWith(".internal") || !(await isPublicRemoteHost(url.hostname))) throw new Error(`Remote asset ${asset.id} uses a blocked host.`);
+  const url = new URL(asset.url); if (!ALLOWED_ASSET_HOSTS.has(url.hostname.toLowerCase()) || url.username || url.password || url.hostname === "localhost" || url.hostname.endsWith(".local") || url.hostname.endsWith(".internal") || !(await isPublicRemoteHost(url.hostname))) throw new Error(`Remote asset ${asset.id} uses a blocked host.`);
   const response = await fetch(url, { signal: AbortSignal.timeout(20_000), redirect: "error" }); if (!response.ok) throw new Error(`Remote asset ${asset.id} returned HTTP ${response.status}.`);
   const length = Number(response.headers.get("content-length") ?? 0); if (length > 25 * 1024 * 1024) throw new Error(`Remote asset ${asset.id} exceeds the 25 MB limit.`);
   const bytes = new Uint8Array(await response.arrayBuffer()); if (bytes.byteLength > 25 * 1024 * 1024) throw new Error(`Remote asset ${asset.id} exceeds the 25 MB limit.`); return { bytes, mimeType: response.headers.get("content-type") ?? undefined };
@@ -155,6 +164,10 @@ function storagePathFromReference(reference: string): string | null {
   if (reference.startsWith("storage://")) { const raw = reference.slice("storage://".length); const slash = raw.indexOf("/"); return slash > 0 ? raw.slice(slash + 1) : null; }
   if (reference.startsWith("/api/adstudio/media?")) return new URLSearchParams(reference.slice(reference.indexOf("?") + 1)).get("path");
   return null;
+}
+function videoMagic(bytes: Uint8Array, mimeType: string): boolean {
+  if (mimeType === "video/webm") return bytes.length >= 4 && bytes[0] === 0x1a && bytes[1] === 0x45 && bytes[2] === 0xdf && bytes[3] === 0xa3;
+  return bytes.length >= 12 && Buffer.from(bytes).subarray(4, 8).toString("ascii") === "ftyp";
 }
 function clampInteger(value: string | undefined, fallback: number, min: number, max: number): number { const parsed = Number(value); return Number.isInteger(parsed) ? Math.min(max, Math.max(min, parsed)) : fallback; }
 function delay(ms: number): Promise<void> { return new Promise((resolve) => setTimeout(resolve, ms)); }

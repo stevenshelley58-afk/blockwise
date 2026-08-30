@@ -10,8 +10,8 @@ job with a bounded error.
 
 The package keeps the composition contract isolated so a Remotion composition
 can replace the native Canvas frame compositor without changing the queue or
-storage contracts. The production container includes Chromium and FFmpeg;
-FFmpeg produces H.264 video and AAC audio at 1080x1920, 30 fps. The current
+storage contracts. The production container includes FFmpeg; FFmpeg produces
+H.264 video and AAC audio at 1080x1920, 30 fps. The current
 audio track is silence unless an approved music reference is present; music is
 attenuated to leave headroom for a future narration track. Remotion is licensed
 under its current commercial/open-source terms; confirm the applicable license
@@ -22,17 +22,22 @@ for the deployed use before enabling a Remotion renderer.
 From the repository checkout on the Coolify host:
 
 ```sh
+export ADVIDEO_IMAGE='registry.example/blockwise/adstudio-video-renderer@sha256:<image-digest>'
+export ADVIDEO_REVISION='<git-commit-sha>'
 export SUPABASE_URL='https://<project>.supabase.co'
 export SUPABASE_SERVICE_ROLE_KEY='<service-role-key>'
 export ADVIDEO_MAX_ATTEMPTS=3
+docker manifest inspect "$ADVIDEO_IMAGE" >/dev/null
 docker compose -f infra/coolify/docker-compose.video-renderer.yml pull
-docker compose -f infra/coolify/docker-compose.video-renderer.yml up -d --build
+docker compose -f infra/coolify/docker-compose.video-renderer.yml up -d
 ```
 
 The service requires `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` from the
 environment only. Optional settings are `ADVIDEO_WORKER_NAME`,
 `ADVIDEO_POLL_MS`, `ADVIDEO_MAX_ATTEMPTS`, `ADVIDEO_FFMPEG_PATH`, and
-`ADVIDEO_OUTPUT_DIR`. Do not put credentials in a compose file or image.
+`ADVIDEO_OUTPUT_DIR`. Public HTTPS assets are deny-by-default; explicitly set
+`ADVIDEO_ALLOWED_ASSET_HOSTS` to a comma-separated host allowlist after review.
+Do not put credentials in a compose file or image.
 
 ## Health and logs
 
@@ -48,13 +53,17 @@ or is marked failed by the normal bounded-attempt path.
 
 ## Rollback
 
-Pin the previous image tag in the compose file (or set the previous Coolify
-image tag), then run:
+Set `ADVIDEO_IMAGE` and `ADVIDEO_REVISION` to a previously verified immutable
+digest and commit SHA (recorded in the release log), then run:
 
 ```sh
 docker compose -f infra/coolify/docker-compose.video-renderer.yml up -d
 docker compose -f infra/coolify/docker-compose.video-renderer.yml ps
 ```
+
+Do not run this service alongside another renderer definition. Coolify must
+have exactly one stack claiming `ad_video_render_jobs`; stop the current stack
+before starting a rollback stack.
 
 Rollback never deletes Storage objects. Create-only object paths are SHA-256
 addressed, so rerunning a job is idempotent and cannot overwrite a prior

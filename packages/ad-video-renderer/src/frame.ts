@@ -20,6 +20,18 @@ export async function renderBeatFrame(project: VideoAdProject, beat: { narration
   return canvas.toBuffer("image/png");
 }
 
+/** Transparent text/safe-zone layer composited over moving clips by FFmpeg. */
+export function renderBeatOverlay(project: VideoAdProject, beat: { narration: string; overlay: string; index: number }): Buffer {
+  const primary = validColour(project.brandSnapshot?.primaryColour, "#11263d"); const secondary = validColour(project.brandSnapshot?.secondaryColour, "#d5a24a");
+  const canvas = createCanvas(1080, 1920); const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, 1080, 1920); ctx.fillStyle = "rgba(0,0,0,.36)"; ctx.fillRect(0, 0, 1080, 250); ctx.fillRect(0, 1080, 1080, 840);
+  ctx.fillStyle = secondary; ctx.font = "700 42px Arial"; ctx.fillText(beatName(beat.index), 70, 130);
+  ctx.fillStyle = secondary; ctx.font = "700 34px Arial"; drawWrapped(ctx, beat.overlay || "A clear local next step", 70, 1190, 860, 52, 4);
+  ctx.fillStyle = "#ffffff"; ctx.font = "400 38px Arial"; drawWrapped(ctx, beat.narration, 70, 1430, 860, 56, 5);
+  ctx.fillStyle = secondary; ctx.fillRect(70, 1770, 940, 4); ctx.fillStyle = "#ffffff"; ctx.font = "600 27px Arial"; ctx.fillText(project.brandSnapshot?.businessName?.trim() || "Local property team", 70, 1835);
+  return canvas.toBuffer("image/png");
+}
+
 async function drawVisual(ctx: SKRSContext2D, asset: VideoAssetRef, resolved: { bytes?: Uint8Array; path?: string } | undefined, x: number, y: number, width: number, height: number): Promise<void> {
   if (!resolved?.bytes && !resolved?.path) return;
   try {

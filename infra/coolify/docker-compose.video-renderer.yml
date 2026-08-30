@@ -1,11 +1,17 @@
 services:
   adstudio-video-renderer:
-    image: blockwise/adstudio-video-renderer:2026-08-31
-    build:
-      context: ../..
-      dockerfile: video-worker/Dockerfile
+    image: ${ADVIDEO_IMAGE:?ADVIDEO_IMAGE must be an immutable registry digest}
+    labels:
+      org.opencontainers.image.revision: ${ADVIDEO_REVISION:?ADVIDEO_REVISION is required}
+      org.opencontainers.image.source: https://github.com/blockwise/blockwise
     restart: unless-stopped
     init: true
+    read_only: true
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 256
+    mem_limit: 2g
+    cpus: 2.0
     environment:
       SUPABASE_URL: ${SUPABASE_URL:?SUPABASE_URL is required}
       SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:?SUPABASE_SERVICE_ROLE_KEY is required}
@@ -14,6 +20,7 @@ services:
       ADVIDEO_POLL_MS: ${ADVIDEO_POLL_MS:-2000}
       ADVIDEO_OUTPUT_DIR: /tmp/blockwise-video-worker
       ADVIDEO_FFMPEG_PATH: /usr/bin/ffmpeg
+      ADVIDEO_ALLOWED_ASSET_HOSTS: ${ADVIDEO_ALLOWED_ASSET_HOSTS:-}
     tmpfs:
       - /tmp:rw,noexec,nosuid,size=2g
     healthcheck:
