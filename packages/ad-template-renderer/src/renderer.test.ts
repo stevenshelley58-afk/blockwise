@@ -145,3 +145,37 @@ test("text tracking is authored in canvas pixels and cannot make valid labels di
   }
   assert.ok(darkPixels > 100, "a normal 2px tracking value must render visible label text");
 });
+
+test("a tall line vector renders as a vertical divider", async () => {
+  const template = templateWithIcon("arrow");
+  template.templateId = "renderer-vertical-line";
+  template.feedLayout.layers = [
+    { type: "plate", layerId: "feed-bg-line", colourRole: "background", geometry: { x: 0, y: 0, width: 1080, height: 1350 }, protected: true },
+    {
+      type: "vector",
+      layerId: "feed-column-divider",
+      shape: "line",
+      colourRole: "mainText",
+      opacity: 1,
+      geometry: { x: 538, y: 200, width: 4, height: 900 },
+    },
+  ];
+
+  const output = await renderPlacement({
+    template,
+    imageValues: {},
+    textValues: {},
+    colourMap: colours,
+  }, "feed");
+  const rendered = await loadImage(output.png);
+  const sample = createCanvas(1080, 1350);
+  const context = sample.getContext("2d");
+  context.drawImage(rendered, 0, 0);
+  const pixels = context.getImageData(536, 190, 8, 920).data;
+  let darkPixels = 0;
+  for (let index = 0; index < pixels.length; index += 4) {
+    if (pixels[index] < 100 && pixels[index + 1] < 100 && pixels[index + 2] < 100) darkPixels += 1;
+  }
+
+  assert.ok(darkPixels > 1_500, "the tall line must span its vertical geometry instead of collapsing into a short horizontal stroke");
+});

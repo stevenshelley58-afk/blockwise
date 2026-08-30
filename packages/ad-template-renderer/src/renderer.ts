@@ -401,10 +401,17 @@ function renderVector(ctx: SKRSContext2D, layer: Extract<LayoutLayer, { type: "v
   } else if (layer.shape === "line" || layer.shape === "wave") {
     ctx.strokeStyle = ctx.fillStyle as string;
     ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(x, y + height / 2);
+    ctx.beginPath();
     if (layer.shape === "wave") {
+      ctx.moveTo(x, y + height / 2);
       ctx.bezierCurveTo(x + width * .25, y - height / 2, x + width * .75, y + height * 1.5, x + width, y + height / 2);
-    } else ctx.lineTo(x + width, y + height / 2);
+    } else if (height > width) {
+      ctx.moveTo(x + width / 2, y);
+      ctx.lineTo(x + width / 2, y + height);
+    } else {
+      ctx.moveTo(x, y + height / 2);
+      ctx.lineTo(x + width, y + height / 2);
+    }
     ctx.stroke();
   } else if (layer.shape === "notched") {
     const notch = Math.min(width, height) * .2;
