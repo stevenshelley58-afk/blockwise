@@ -176,7 +176,7 @@ export async function generateAdStudioCopy(
     }, input.providerEnv, input.signal);
     const output = generation.output;
     const json = (output.json ?? {}) as Record<string, unknown>;
-    const current = input.copy ?? {};
+    const copy = parseCompleteAdStudioCopy(json);
 
     finalizationStarted = true;
     await recordAdStudioProviderRun({
@@ -198,12 +198,7 @@ export async function generateAdStudioCopy(
     });
 
     return {
-      copy: {
-        headline: clamp(json.headline, ADSTUDIO_COPY_LIMITS.headline, current.headline ?? ""),
-        primaryText: clamp(json.primaryText, ADSTUDIO_COPY_LIMITS.primaryText, current.primaryText ?? ""),
-        description: clamp(json.description, ADSTUDIO_COPY_LIMITS.description, current.description ?? ""),
-        cta: clamp(json.cta, ADSTUDIO_COPY_LIMITS.cta, current.cta ?? "Learn more"),
-      },
+      copy,
       alternates: {
         headline: clampList(json.altHeadlines, ADSTUDIO_COPY_LIMITS.headline),
         primaryText: clampList(json.altPrimaryTexts, ADSTUDIO_COPY_LIMITS.primaryText),
@@ -322,16 +317,7 @@ export async function generateAdStudioTemplateCopy(
       mutationId,
     }, input.providerEnv, input.signal);
     const json = (generation.output.json ?? {}) as Record<string, unknown>;
-    const onImageRaw = (json.onImage ?? {}) as Record<string, unknown>;
-    const onImage: Record<string, string> = {};
-    for (const field of input.fields) {
-      const raw = typeof onImageRaw[field.key] === "string" ? (onImageRaw[field.key] as string).trim() : "";
-      // Fall back to the sample so the clone never receives an empty label;
-      // the brief-grounded value is strongly preferred.
-      const value = raw || field.sample || "";
-      onImage[field.key] =
-        field.maxLength && value.length > field.maxLength ? value.slice(0, field.maxLength).trimEnd() : value;
-    }
+    const complete = parseCompleteAdStudioTemplateCopy(json, input.fields);
 
     finalizationStarted = true;
     await recordAdStudioProviderRun({
@@ -353,13 +339,8 @@ export async function generateAdStudioTemplateCopy(
     });
 
     return {
-      onImage,
-      copy: {
-        headline: clamp(json.headline, ADSTUDIO_COPY_LIMITS.headline, ""),
-        primaryText: clamp(json.primaryText, ADSTUDIO_COPY_LIMITS.primaryText, ""),
-        description: clamp(json.description, ADSTUDIO_COPY_LIMITS.description, ""),
-        cta: toMetaCta(clamp(json.cta, ADSTUDIO_COPY_LIMITS.cta, "Learn more")),
-      },
+      onImage: complete.onImage,
+      copy: { ...complete.copy, cta: toMetaCta(complete.copy.cta) },
       source: "ai",
     };
   } catch (error) {
@@ -399,9 +380,84 @@ function generationLogInput(input: AdStudioCopyGenerationInput) {
   };
 }
 
-function clamp(value: unknown, limit: number, fallback: string): string {
-  const text = typeof value === "string" ? value.trim() : "";
-  if (!text) return fallback;
+const REQUIRED_META_COPY_FIELDS = [
+  "primaryText",
+  "headline",
+  "description",
+  "cta",
+] as const satisfies readonly (keyof AdStudioCopyFields)[];
+
+export class IncompleteAdStudioCopyResponseError extends Error {
+  readonly missingFields: string[];
+  readonly unexpectedFields: string[];
+
+  constructor(missingFields: string[], unexpectedFields: string[] = []) {
+    const details = [
+      missingFields.length ? `missing ${missingFields.join(", ")}` : "",
+      unexpectedFields.length ? `unexpected ${unexpectedFields.join(", ")}` : "",
+    ].filter(Boolean).join("; ");
+    super(`AI returned an incomplete copy proposal (${details}). Regenerate the suggestions.`);
+    this.name = "IncompleteAdStudioCopyResponseError";
+    this.missingFields = missingFields;
+    this.unexpectedFields = unexpectedFields;
+  }
+}
+
+/** Parse all four Meta fields without substituting stale customer/template text. */
+export function parseCompleteAdStudioCopy(value: unknown): AdStudioCopyFields {
+  const record = value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+  const missing = REQUIRED_META_COPY_FIELDS.filter(field => !cleanRequiredText(record[field]));
+  if (missing.length) throw new IncompleteAdStudioCopyResponseError(missing.map(field => `copy.${field}`));
+  return {
+    primaryText: clampRequiredText(record.primaryText, ADSTUDIO_COPY_LIMITS.primaryText),
+    headline: clampRequiredText(record.headline, ADSTUDIO_COPY_LIMITS.headline),
+    description: clampRequiredText(record.description, ADSTUDIO_COPY_LIMITS.description),
+    cta: clampRequiredText(record.cta, ADSTUDIO_COPY_LIMITS.cta),
+  };
+}
+
+/**
+ * Parse the complete template proposal. Every declared design field must be
+ * present, and no undeclared field is accepted: partial AI output must never
+ * be disguised with template samples from a different campaign.
+ */
+export function parseCompleteAdStudioTemplateCopy(
+  value: unknown,
+  fields: readonly AdStudioTemplateCopyFieldSpec[],
+): { onImage: Record<string, string>; copy: AdStudioCopyFields } {
+  const record = value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+  const copy = parseCompleteAdStudioCopy(record);
+  const rawOnImage = record.onImage && typeof record.onImage === "object" && !Array.isArray(record.onImage)
+    ? record.onImage as Record<string, unknown>
+    : {};
+  const declared = new Set(fields.map(field => field.key));
+  const missing = fields
+    .filter(field => !cleanRequiredText(rawOnImage[field.key]))
+    .map(field => `onImage.${field.key}`);
+  const unexpected = Object.keys(rawOnImage)
+    .filter(key => !declared.has(key))
+    .map(key => `onImage.${key}`);
+  if (missing.length || unexpected.length) {
+    throw new IncompleteAdStudioCopyResponseError(missing, unexpected);
+  }
+  const onImage = Object.fromEntries(fields.map(field => {
+    const text = cleanRequiredText(rawOnImage[field.key]);
+    const limit = field.maxLength && field.maxLength > 0 ? field.maxLength : Number.POSITIVE_INFINITY;
+    return [field.key, text.length > limit ? text.slice(0, limit).trimEnd() : text];
+  }));
+  return { onImage, copy };
+}
+
+function cleanRequiredText(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function clampRequiredText(value: unknown, limit: number): string {
+  const text = cleanRequiredText(value);
   return text.length > limit ? text.slice(0, limit).trimEnd() : text;
 }
 

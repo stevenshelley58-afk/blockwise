@@ -226,7 +226,9 @@ describe("customer Ad Studio workbench contract", () => {
     assert.match(route, /fields,[\s\S]*?brandKit,[\s\S]*?context:/);
     assert.match(generation, /brandKit\?: Partial<AdStudioBrandKit> \| null/);
     assert.match(generation, /brandKit: input\.brandKit/);
-    assert.match(generation, /cta: toMetaCta\(clamp\(json\.cta, ADSTUDIO_COPY_LIMITS\.cta, "Learn more"\)\)/);
+    assert.match(generation, /const complete = parseCompleteAdStudioTemplateCopy\(json, input\.fields\)/);
+    assert.match(generation, /copy: \{ \.\.\.complete\.copy, cta: toMetaCta\(complete\.copy\.cta\) \}/);
+    assert.doesNotMatch(generation, /raw \|\| field\.sample/);
     assert.equal((route.match(/cta: toMetaCta\(result\.copy\.cta\)/g) ?? []).length, 1, "the endpoint must defensively return a supported Meta CTA enum");
   });
 
