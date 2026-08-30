@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState, type KeyboardEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Palette, PencilLine, RotateCcw, RotateCw, Save, Sparkles } from "lucide-react";
 import type { AdTemplate, Placement, ImageSlotLayer, LayoutLayer, Rect, ColourMode, ColourRole } from "../../../../packages/ad-template-contract/src/types";
@@ -323,6 +323,19 @@ function RedesignedEditor({ pack, templateId, state, activeLayout, brandColours,
   const [activeTarget, setActiveTarget] = useState<EditorTarget | null>(null);
   const [focusRequestId, setFocusRequestId] = useState(0);
   const [appearanceRole, setAppearanceRole] = useState<ColourRole>("background");
+  const [isDesktopInspector, setIsDesktopInspector] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const desktopMedia = window.matchMedia("(min-width: 1280px)");
+    const syncInspectorViewport = () => setIsDesktopInspector(desktopMedia.matches);
+    syncInspectorViewport();
+    desktopMedia.addEventListener("change", syncInspectorViewport);
+    return () => desktopMedia.removeEventListener("change", syncInspectorViewport);
+  }, []);
+
+  useEffect(() => {
+    if (isDesktopInspector) setMobileInspectorOpen(false);
+  }, [isDesktopInspector, setMobileInspectorOpen]);
 
   const openInspectorForTarget = useCallback((target: EditorTarget) => {
     setActiveTarget(target);
@@ -419,7 +432,7 @@ function RedesignedEditor({ pack, templateId, state, activeLayout, brandColours,
     <header className="grid shrink-0 grid-cols-1 gap-2 border-b border-border bg-card px-2 py-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:px-3 md:grid-cols-[minmax(0,1fr)_auto_auto] md:px-5">
       <Tabs value={state.activePlacement} onValueChange={value => changePlacement(value as Placement)} className="min-w-0"><TabsList aria-label="Facebook ad placement" className="grid h-auto w-full grid-cols-2 bg-muted/60 sm:flex sm:w-auto"><TabsTrigger value="feed" className="min-h-11 min-w-0 px-2 text-xs sm:px-3 md:px-4 md:text-sm">Facebook Feed<span className="hidden lg:inline"> · 1080 × 1350</span></TabsTrigger><TabsTrigger value="story" className="min-h-11 min-w-0 px-2 text-xs sm:px-3 md:px-4 md:text-sm">Facebook Story<span className="hidden lg:inline"> · 1080 × 1920</span></TabsTrigger></TabsList></Tabs>
       <span className="order-3 w-full truncate text-right text-[11px] text-muted-foreground sm:col-span-2 sm:text-xs md:order-none md:col-span-1 md:w-auto" role="status" aria-live="polite">{saveStatus}</span>
-      <div className="order-2 grid min-w-0 grid-cols-[2.75rem_2.75rem_minmax(0,0.8fr)_minmax(0,1.25fr)] items-center gap-1.5 sm:flex sm:justify-end md:order-none md:gap-2"><Button variant="ghost" size="icon" onClick={undo} disabled={!canUndo} aria-label="Undo" className="min-h-11 min-w-11 rounded-full"><RotateCcw /></Button><Button variant="ghost" size="icon" onClick={redo} disabled={!canRedo} aria-label="Redo" className="min-h-11 min-w-11 rounded-full"><RotateCw /></Button><Button onClick={handleSave} disabled={!canSave || state.isSaving || pendingImageUploads > 0} className="min-h-11 min-w-0 rounded-full px-2.5 sm:px-4"><span className="truncate">{state.isSaving ? "Saving…" : "Save"}</span><Save className="ml-1.5 size-4 shrink-0" /></Button><Button onClick={handlePublish} disabled={!canSave || state.isSaving || pendingImageUploads > 0} variant="outline" aria-label="Review and publish" className="min-h-11 min-w-0 rounded-full px-2.5 sm:px-4"><span className="sm:hidden">Review</span><span className="hidden sm:inline">Review & publish</span></Button></div>
+      <div className="order-2 grid min-w-0 grid-cols-[2.75rem_2.75rem_minmax(0,0.8fr)_minmax(0,1.25fr)] items-center gap-1.5 sm:flex sm:justify-end md:order-none md:gap-2"><Button variant="ghost" size="icon" onClick={undo} disabled={!canUndo} aria-label="Undo" className="min-h-11 min-w-11 rounded-full"><RotateCcw /></Button><Button variant="ghost" size="icon" onClick={redo} disabled={!canRedo} aria-label="Redo" className="min-h-11 min-w-11 rounded-full"><RotateCw /></Button><Button onClick={handleSave} disabled={!canSave || state.isSaving || pendingImageUploads > 0} aria-label={state.isSaving ? "Saving" : "Save"} title={state.isSaving ? "Saving" : "Save"} className="min-h-11 min-w-0 rounded-full px-2.5 sm:px-4"><span className="hidden truncate min-[360px]:inline">{state.isSaving ? "Saving…" : "Save"}</span><Save aria-hidden="true" className="size-4 shrink-0 min-[360px]:ml-1.5" /></Button><Button onClick={handlePublish} disabled={!canSave || state.isSaving || pendingImageUploads > 0} variant="outline" aria-label="Review and publish" className="min-h-11 min-w-0 rounded-full px-2.5 sm:px-4"><span className="sm:hidden">Review</span><span className="hidden sm:inline">Review & publish</span></Button></div>
     </header>
     <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden xl:flex-row">
       <section aria-label="Ad preview" className="order-first min-h-0 min-w-0 flex-1 overflow-y-auto bg-[#eef1f5] p-3 md:p-5 xl:order-none">
@@ -434,10 +447,12 @@ function RedesignedEditor({ pack, templateId, state, activeLayout, brandColours,
           />
         </div>
       </section>
-      <aside aria-label="Editor inspector" className="hidden w-[22rem] shrink-0 overflow-y-auto border-l border-border bg-card xl:block"><InspectorTabs value={inspectorTab} onChange={setInspectorTab} />{inspector}</aside>
+      {isDesktopInspector === true ? <aside aria-label="Editor inspector" className="w-[22rem] shrink-0 overflow-y-auto border-l border-border bg-card"><InspectorTabs value={inspectorTab} onChange={setInspectorTab} />{inspector}</aside> : null}
     </div>
-    <nav className="z-20 grid shrink-0 grid-cols-3 border-t border-border bg-card p-1.5 xl:hidden" aria-label="Editor tools">{INSPECTOR_TABS.map(({ value, label, icon: Icon }) => <button key={value} type="button" aria-pressed={inspectorTab === value && mobileInspectorOpen} onClick={() => { setInspectorTab(value); setMobileInspectorOpen(true); }} className={cn("flex min-h-11 items-center justify-center gap-1 rounded-full px-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", inspectorTab === value && mobileInspectorOpen ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted")}>{<Icon className="size-4" />}{label}</button>)}</nav>
-    <Sheet open={mobileInspectorOpen} onOpenChange={setMobileInspectorOpen}><SheetContent side="bottom" className="max-h-[82dvh] overflow-y-auto rounded-t-(--r-card) p-0 xl:hidden"><SheetHeader><SheetTitle>{INSPECTOR_TABS.find(tab => tab.value === inspectorTab)?.label}</SheetTitle><SheetDescription>Make one change at a time; your preview updates as you work.</SheetDescription></SheetHeader>{inspector}</SheetContent></Sheet>
+    {isDesktopInspector === false ? <>
+      <nav className="z-20 grid shrink-0 grid-cols-3 border-t border-border bg-card p-1.5" aria-label="Editor tools">{INSPECTOR_TABS.map(({ value, label, icon: Icon }) => <button key={value} type="button" aria-pressed={inspectorTab === value && mobileInspectorOpen} onClick={() => { setInspectorTab(value); setMobileInspectorOpen(true); }} className={cn("flex min-h-11 items-center justify-center gap-1 rounded-full px-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", inspectorTab === value && mobileInspectorOpen ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted")}>{<Icon className="size-4" />}{label}</button>)}</nav>
+      <Sheet open={mobileInspectorOpen} onOpenChange={setMobileInspectorOpen}><SheetContent side="bottom" className="max-h-[82dvh] overflow-y-auto rounded-t-(--r-card) p-0"><SheetHeader><SheetTitle>{INSPECTOR_TABS.find(tab => tab.value === inspectorTab)?.label}</SheetTitle><SheetDescription>Make one change at a time; your preview updates as you work.</SheetDescription></SheetHeader>{inspector}</SheetContent></Sheet>
+    </> : null}
     {cropTarget && <CropDialogHost cropTarget={cropTarget} state={state} pack={pack} onApply={updateCrop} onClose={() => setCropTarget(null)} />}
     {state.error && <Alert variant="destructive" role="alert" className="m-3"><AlertTitle>Check this before continuing</AlertTitle><AlertDescription className="flex items-center justify-between gap-3"><span>{state.error}</span><Button variant="outline" size="sm" onClick={() => saveConflict ? window.location.reload() : setError(null)} className="min-h-11 shrink-0">{saveConflict ? "Reload latest" : "Dismiss"}</Button></AlertDescription></Alert>}
   </div>;
