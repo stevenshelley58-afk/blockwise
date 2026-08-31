@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { requireOperator } from "@/lib/operator/auth";
+import { requireOwnerOperator } from "@/lib/operator/auth";
 import { recordAuditLog } from "@/lib/supabase/audit";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import {
@@ -39,7 +39,7 @@ function workspaceIdOf(row: Record<string, unknown> | null | undefined): string 
 
 /* ----------------------------- READ ----------------------------- */
 export async function GET(request: NextRequest) {
-  const auth = await requireOperator();
+  const auth = await requireOwnerOperator();
   if (!auth.ok) return auth.response;
 
   const params = request.nextUrl.searchParams;
@@ -86,7 +86,7 @@ export async function GET(request: NextRequest) {
 
 /* ---------------------------- UPDATE ---------------------------- */
 export async function PATCH(request: NextRequest) {
-  const auth = await requireOperator();
+  const auth = await requireOwnerOperator();
   if (!auth.ok) return auth.response;
 
   let body: { table?: string; id?: string; changes?: Record<string, unknown> };
@@ -140,7 +140,7 @@ export async function PATCH(request: NextRequest) {
 
 /* ---------------------------- INSERT ---------------------------- */
 export async function POST(request: NextRequest) {
-  const auth = await requireOperator();
+  const auth = await requireOwnerOperator();
   if (!auth.ok) return auth.response;
 
   let body: { table?: string; values?: Record<string, unknown> };
@@ -187,7 +187,7 @@ export async function POST(request: NextRequest) {
 
 /* ---------------------------- DELETE ---------------------------- */
 export async function DELETE(request: NextRequest) {
-  const auth = await requireOperator();
+  const auth = await requireOwnerOperator();
   if (!auth.ok) return auth.response;
 
   let body: { table?: string; ids?: unknown };

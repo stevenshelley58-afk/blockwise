@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { requireOperator } from "@/lib/operator/auth";
+import { requireOwnerOperator } from "@/lib/operator/auth";
 import {
   loadRuntimeProviderToken,
   upsertRuntimeProviderToken,
@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
  * keeps this release operation unavailable to an accidental browser form.
  */
 export async function POST(request: NextRequest) {
-  const guard = await requireOperator();
+  const guard = await requireOwnerOperator();
   if (!guard.ok) return guard.response;
   const provider = request.headers.get("x-blockwise-runtime-credential-sync");
   if (provider !== "openai" && provider !== "google") {

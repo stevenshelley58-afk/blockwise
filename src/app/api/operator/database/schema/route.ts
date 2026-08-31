@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 
 import { loadDbSchema } from "@/lib/operator/database";
-import { requireOperator } from "@/lib/operator/auth";
+import { requireOwnerOperator } from "@/lib/operator/auth";
 
 export const dynamic = "force-dynamic";
 
 /** Operator-only: list every public base table and its columns. */
 export async function GET() {
-  const auth = await requireOperator();
+  const auth = await requireOwnerOperator();
   if (!auth.ok) return auth.response;
 
   try {

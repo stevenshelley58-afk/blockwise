@@ -19,17 +19,30 @@ export type OperatorAuth =
     }
   | { ok: false; response: NextResponse };
 
+export type RequireOperatorOptions = {
+  /**
+   * Permission matrix: "owner" restricts the route to owner operators.
+   * Owner-only: database row/schema viewers, prompt management (promote,
+   * rollback, test), runtime provider credential sync, session revocation.
+   * Support: customer views/actions, analytics, user lookups.
+   */
+  minimumRole?: OperatorRole;
+};
+
 /**
  * Operator-only guard for /api/operator/* routes.
  *
  * Returns the supabase client if the caller is a logged-in operator through
  * profile (is_operator + operator_role), workspace role, or the legacy
- * OPERATOR_EMAILS break-glass fallback. Legacy-email access is always
- * audited so the named-role migration is observable. When
- * OPERATOR_MFA_REQUIRED=true, sessions below AAL2 are rejected — enable
- * before adding support staff.
+ * OPERATOR_EMAILS break-glass fallback. A named role NEVER grants access on
+ * its own: the platform-operator path requires is_operator = true AND a
+ * valid operator_role, and the role columns are protected from client
+ * writes by the protect_operator_roles migration (self-elevation raises).
+ * Legacy-email access is always audited so the named-role migration is
+ * observable. When OPERATOR_MFA_REQUIRED=true, sessions below AAL2 are
+ * rejected — enable before adding support staff.
  */
-export async function requireOperator(): Promise<OperatorAuth> {
+export async function requireOperator(options: RequireOperatorOptions = {}): Promise<OperatorAuth> {
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
@@ -48,10 +61,17 @@ export async function requireOperator(): Promise<OperatorAuth> {
   ]);
 
   const operatorRole = normalizeRole((profile as OperatorProfileRow)?.operator_role);
-  const isOperator = hasOperatorAccessFromRows(profile, memberships) || operatorRole !== null;
+  const isPlatformOperator =
+    (profile as OperatorProfileRow)?.is_operator === true && operatorRole !== null;
+  const isOperator = isPlatformOperator || hasOperatorAccessFromRows(profile, memberships);
   const isLegacyEmail = isLegacyOperatorEmail(user.email);
   if (!isOperator && !isLegacyEmail) {
     return { ok: false, response: NextResponse.json({ error: "forbidden" }, { status: 403 }) };
+  }
+
+  const effectiveRole: OperatorRole = operatorRole ?? "support";
+  if (options.minimumRole === "owner" && effectiveRole !== "owner") {
+    return { ok: false, response: NextResponse.json({ error: "owner_role_required" }, { status: 403 }) };
   }
 
   if (process.env.OPERATOR_MFA_REQUIRED === "true") {
@@ -85,8 +105,13 @@ export async function requireOperator(): Promise<OperatorAuth> {
     supabase,
     email: user.email,
     userId: user.id,
-    role: operatorRole ?? (isOperator ? "support" : "legacy-email"),
+    role: isOperator ? effectiveRole : "legacy-email",
   };
+}
+
+/** Owner-scoped operator guard (permission matrix: dangerous routes). */
+export async function requireOwnerOperator(): Promise<OperatorAuth> {
+  return requireOperator({ minimumRole: "owner" });
 }
 
 /** Gate dormant research operations before creating an auth or database client. */
