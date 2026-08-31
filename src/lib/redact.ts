@@ -41,3 +41,5 @@ function redactString(value: string): string {
     .replace(HEADER_SECRET_PATTERN, (_match, key: string, sep: string) => `${key}${sep}[redacted]`)
     .replace(EMAIL_BODY_MARKER, "[redacted email body]");
 }
+
+export { redactString };
