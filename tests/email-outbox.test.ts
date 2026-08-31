@@ -19,6 +19,7 @@ type OutboxTestDouble = {
 function makeSupabase(opts: {
   outboxRows?: Row[];
   suppressions?: string[];
+  failSuppressions?: boolean;
 } = {}): SupabaseClient & OutboxTestDouble {
   const outbox: Row[] = (opts.outboxRows ?? []).map((r) => ({ ...r }));
   const suppressions: string[] = [...(opts.suppressions ?? [])];
@@ -55,11 +56,15 @@ function makeSupabase(opts: {
         update(patch: Row) {
           return {
             eq(_col: string, val: string) {
-              return Promise.resolve().then(() => {
-                const row = outbox.find((r) => r.id === val);
-                if (row) Object.assign(row, patch);
-                return { error: null };
-              });
+              return {
+                select() {
+                  return Promise.resolve().then(() => {
+                    const row = outbox.find((r) => r.id === val);
+                    if (row) Object.assign(row, patch);
+                    return { data: row ? [row] : [], error: null };
+                  });
+                },
+              };
             },
           };
         },
@@ -80,7 +85,11 @@ function makeSupabase(opts: {
             eq(_col: string, val: string) {
               return {
                 limit: () =>
-                  Promise.resolve({ data: suppressions.some((s) => s.startsWith(`${val}:`)) ? [{ email: val }] : [], error: null }),
+                  Promise.resolve(
+                    opts.failSuppressions
+                      ? { data: null, error: { message: "suppression store unavailable" } }
+                      : { data: suppressions.some((s) => s.startsWith(`${val}:`)) ? [{ email: val }] : [], error: null },
+                  ),
               };
             },
           };
@@ -131,13 +140,18 @@ const baseMessage = {
 };
 
 describe("email outbox", () => {
-  it("enqueues a message with its idempotency key", async () => {
+  it("enqueues a message storing the rendered content in its payload", async () => {
     const supabase = makeSupabase();
     const result = await enqueueEmail(supabase, { ...baseMessage, idempotencyKey: "k1" });
     assert.equal(result.queued, true);
     assert.equal(supabase.outbox.length, 1);
     assert.equal(supabase.outbox[0].idempotency_key, "k1");
     assert.equal(supabase.outbox[0].status, "pending");
+    const payload = supabase.outbox[0].payload as Record<string, unknown>;
+    assert.equal(payload.subject, "Welcome");
+    assert.equal(payload.html, "<p>Welcome to Blockwise</p>");
+    assert.equal(payload.text, "Welcome to Blockwise");
+    assert.equal(payload.from, "hello@blockwise.sale");
   });
 
   it("collapses duplicate enqueues to the first message", async () => {
@@ -150,18 +164,34 @@ describe("email outbox", () => {
     assert.equal(supabase.outbox.length, 1);
   });
 
-  it("delivers a claimed message and marks it sent", async () => {
+  it("delivers a claimed message with its stored content and marks it sent", async () => {
     const supabase = makeSupabase();
-    supabase.setClaimedBatch([{ id: "ob-1", status: "pending", attempts: 1, max_attempts: 6, recipient: "a@b.test", message_type: "welcome", template_id: "welcome", template_version: 1, payload: { subject: "Hi", html: "<p>Hi</p>", text: "Hi" }, idempotency_key: "x" }]);
+    supabase.setClaimedBatch([{ id: "ob-1", status: "pending", attempts: 1, max_attempts: 6, recipient: "a@b.test", message_type: "welcome", template_id: "welcome", template_version: 1, payload: { subject: "Hi", html: "<p>Hi</p>", text: "Hi", from: "hello@blockwise.sale" }, idempotency_key: "x" }]);
     const sent: EmailMessage[] = [];
     const summary = await drainEmailOutbox(supabase, fakeProvider((m) => {
       sent.push(m);
       return { ok: true, providerMessageId: "pm-1" };
-    }), "hello@blockwise.sale");
+    }));
     assert.equal(summary.sent, 1);
     assert.equal(sent.length, 1);
     assert.equal(sent[0].idempotencyKey, "x");
+    assert.equal(sent[0].subject, "Hi");
+    assert.equal(sent[0].from, "hello@blockwise.sale");
     assert.equal(supabase.outbox[0].status, "sent");
+  });
+
+  it("dead-letters a claimed row that has no stored message content", async () => {
+    const supabase = makeSupabase();
+    supabase.setClaimedBatch([{ id: "ob-1", status: "pending", attempts: 1, max_attempts: 6, recipient: "a@b.test", message_type: "welcome", template_id: "welcome", template_version: 1, payload: {}, idempotency_key: "x2" }]);
+    let calls = 0;
+    const summary = await drainEmailOutbox(supabase, fakeProvider(() => {
+      calls += 1;
+      return { ok: true, providerMessageId: "pm-1" };
+    }));
+    assert.equal(calls, 0);
+    assert.equal(summary.dead, 1);
+    assert.equal(supabase.outbox[0].status, "dead");
+    assert.equal(supabase.outbox[0].last_error, "missing_message_content");
   });
 
   it("skips suppressed recipients without calling the provider", async () => {
@@ -173,22 +203,37 @@ describe("email outbox", () => {
     const summary = await drainEmailOutbox(supabase, fakeProvider(() => {
       calls += 1;
       return { ok: true, providerMessageId: null };
-    }), "hello@blockwise.sale");
+    }));
     assert.equal(calls, 0);
     assert.equal(summary.suppressed, 1);
     assert.equal(supabase.outbox[0].status, "suppressed");
   });
 
+  it("fails a message closed when the suppression state is unavailable", async () => {
+    const supabase = makeSupabase({ failSuppressions: true });
+    supabase.setClaimedBatch([{ id: "ob-1", status: "pending", attempts: 1, max_attempts: 6, recipient: "a@b.test", message_type: "welcome", template_id: "welcome", template_version: 1, payload: { subject: "Hi", html: "<p>Hi</p>", text: "Hi", from: "hello@blockwise.sale" }, idempotency_key: "s1" }]);
+    let calls = 0;
+    const summary = await drainEmailOutbox(supabase, fakeProvider(() => {
+      calls += 1;
+      return { ok: true, providerMessageId: null };
+    }));
+    assert.equal(calls, 0, "provider must not be called while suppression state is unknown");
+    assert.equal(summary.failed, 1);
+    const row = supabase.outbox[0];
+    assert.equal(row.status, "failed");
+    assert.equal(row.last_error, "suppression_check_unavailable");
+    assert.ok(typeof row.next_attempt_at === "string");
+  });
+
   it("retries transient failures with backoff and dead-letters exhausted attempts", async () => {
     const supabase = makeSupabase();
     supabase.setClaimedBatch([
-      { id: "ob-1", status: "sending", attempts: 1, max_attempts: 6, recipient: "r@x.test", message_type: "t", template_id: "t", template_version: 1, payload: {}, idempotency_key: "z1" },
-      { id: "ob-2", status: "sending", attempts: 6, max_attempts: 6, recipient: "r@x.test", message_type: "t", template_id: "t", template_version: 1, payload: {}, idempotency_key: "z2" },
+      { id: "ob-1", status: "sending", attempts: 1, max_attempts: 6, recipient: "r@x.test", message_type: "t", template_id: "t", template_version: 1, payload: { subject: "Hi", html: "<p>Hi</p>", text: "Hi", from: "hello@blockwise.sale" }, idempotency_key: "z1" },
+      { id: "ob-2", status: "sending", attempts: 6, max_attempts: 6, recipient: "r@x.test", message_type: "t", template_id: "t", template_version: 1, payload: { subject: "Hi", html: "<p>Hi</p>", text: "Hi", from: "hello@blockwise.sale" }, idempotency_key: "z2" },
     ]);
     const summary = await drainEmailOutbox(
       supabase,
       fakeProvider(() => ({ ok: false, error: "smtp_error: 451 temporary", permanent: false })),
-      "hello@blockwise.sale",
     );
     assert.equal(summary.failed, 1);
     assert.equal(summary.dead, 1);
@@ -202,12 +247,11 @@ describe("email outbox", () => {
   it("dead-letters permanent failures immediately and stores a redacted error", async () => {
     const supabase = makeSupabase();
     supabase.setClaimedBatch([
-      { id: "ob-1", status: "sending", attempts: 1, max_attempts: 6, recipient: "r@x.test", message_type: "t", template_id: "t", template_version: 1, payload: {}, idempotency_key: "z3" },
+      { id: "ob-1", status: "sending", attempts: 1, max_attempts: 6, recipient: "r@x.test", message_type: "t", template_id: "t", template_version: 1, payload: { subject: "Hi", html: "<p>Hi</p>", text: "Hi", from: "hello@blockwise.sale" }, idempotency_key: "z3" },
     ]);
     await drainEmailOutbox(
       supabase,
       fakeProvider(() => ({ ok: false, error: "resend_http_422: Bearer eyJhbGciOiJIUzI1NiJ9.x.y invalid", permanent: true })),
-      "hello@blockwise.sale",
     );
     assert.equal(supabase.outbox[0].status, "dead");
     assert.ok(!String(supabase.outbox[0].last_error).includes("eyJ"));

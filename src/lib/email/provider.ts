@@ -25,18 +25,25 @@ export interface EmailProvider {
 }
 
 /**
- * Provider selection. Fail-closed: an unconfigured provider throws, the
- * outbox worker records the failure and retries with backoff — mail is never
- * silently dropped or sent through a dummy path.
+ * Provider selection. EMAIL_PROVIDER must be configured explicitly — there
+ * is no implicit default (the legacy Resend path is never chosen by
+ * silence). An unconfigured provider reports a permanent failure so the
+ * outbox worker dead-letters instead of silently dropping mail.
  */
 export function makeEmailProvider(env: NodeJS.ProcessEnv = process.env): EmailProvider {
   switch (env.EMAIL_PROVIDER) {
     case "smtp":
       return makeSmtpProvider(env);
     case "resend":
+      return makeResendProvider(env);
     case undefined:
     case "":
-      return makeResendProvider(env);
+      return {
+        name: "unconfigured",
+        async send() {
+          return { ok: false, error: "email_provider_not_configured", permanent: true };
+        },
+      };
     default:
       throw new Error(`Unknown EMAIL_PROVIDER: ${env.EMAIL_PROVIDER}`);
   }
