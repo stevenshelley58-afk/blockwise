@@ -6,6 +6,7 @@ import type { AdStudioBrandKit } from "@/lib/adstudio/types";
 import { deriveFormGenerationInput, generateInstantForm, validateInstantForm } from "@/lib/adstudio/instant-form-generator";
 import { instantFormSchema, type InstantForm } from "@/lib/adstudio/instant-form-types";
 import { sha256Hex } from "@/lib/adstudio/document-token";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -55,6 +56,17 @@ export async function POST(request: NextRequest, context: RouteContext) {
   const { id } = await Promise.resolve(context.params);
   const access = await requireAdStudioRequest(request);
   if (!access.ok) return access.response;
+  const rateLimit = await checkRateLimit(access.supabase, access.access.workspaceId, access.access.userId, {
+    windowSeconds: 300,
+    maxRequests: 20,
+    bucket: "adstudio-instant-form",
+  });
+  if (!rateLimit.ok) {
+    return NextResponse.json(
+      { error: "Instant form generation limit reached. Try again later." },
+      { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } },
+    );
+  }
 
   const ad = await loadAd(access.supabase, id, access.access.workspaceId);
   if (!ad) return NextResponse.json({ error: "Ad not found" }, { status: 404 });
