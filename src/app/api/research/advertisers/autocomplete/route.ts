@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
   if (!guard.ok) return guard.response;
   const { supabase, access } = guard;
 
-  const rateLimit = await checkRateLimit(supabase, access.workspaceId, access.userId, {
+  const rateLimit = await checkRateLimit(access.workspaceId, access.userId, {
     windowSeconds: 60,
     maxRequests: 40,
     bucket: "advertisers-autocomplete",

@@ -11,10 +11,11 @@ type RpcResponse = { data: unknown; error: { message: string } | null };
 
 /**
  * Mock Supabase client whose rpc() is driven by the supplied responder.
- * The rewritten limiter is a single-statement RPC call, so the mock only
- * needs to model one atomic consume_rate_limit round-trip.
+ * The limiter is a single-statement RPC call, so the mock only needs to model
+ * one atomic consume_rate_limit round-trip. It stands in for the SERVICE-ROLE
+ * client, which is what checkRateLimit uses in production.
  */
-function makeSupabase(respond: () => RpcResponse) {
+function makeServiceClient(respond: () => RpcResponse) {
   const calls: Array<Record<string, unknown>> = [];
   return {
     client: {
@@ -23,7 +24,7 @@ function makeSupabase(respond: () => RpcResponse) {
         calls.push(args);
         return Promise.resolve(respond());
       },
-    } as unknown as Parameters<typeof checkRateLimit>[0],
+    } as unknown as Parameters<typeof checkRateLimit>[3],
     calls,
   };
 }
@@ -39,9 +40,9 @@ const config: RateLimitConfig = {
 // ---------------------------------------------------------------------------
 
 test("allowed response returns ok: true and passes the right parameters", async () => {
-  const { client, calls } = makeSupabase(() => ({ data: [{ allowed: true, retry_after_seconds: 0 }], error: null }));
+  const { client, calls } = makeServiceClient(() => ({ data: [{ allowed: true, retry_after_seconds: 0 }], error: null }));
 
-  const result = await checkRateLimit(client, "ws-1", "user-1", config);
+  const result = await checkRateLimit("ws-1", "user-1", config, client);
 
   assert.equal(result.ok, true);
   assert.equal(calls.length, 1);
@@ -55,45 +56,89 @@ test("allowed response returns ok: true and passes the right parameters", async 
 });
 
 test("exhausted response returns ok: false with the RPC retry hint", async () => {
-  const { client } = makeSupabase(() => ({ data: [{ allowed: false, retry_after_seconds: 42 }], error: null }));
+  const { client } = makeServiceClient(() => ({ data: [{ allowed: false, retry_after_seconds: 42 }], error: null }));
 
-  const result = await checkRateLimit(client, "ws-1", "user-1", config);
+  const result = await checkRateLimit("ws-1", "user-1", config, client);
 
   assert.deepEqual(result, { ok: false, retryAfterSeconds: 42 });
 });
 
 test("null workspaceId (IP-keyed) passes null through to the RPC", async () => {
-  const { client, calls } = makeSupabase(() => ({ data: [{ allowed: true, retry_after_seconds: 0 }], error: null }));
+  const { client, calls } = makeServiceClient(() => ({ data: [{ allowed: true, retry_after_seconds: 0 }], error: null }));
 
-  const result = await checkRateLimit(client, null, "1.2.3.4", { ...config, bucket: "demo-request" });
+  const result = await checkRateLimit(null, "1.2.3.4", { ...config, bucket: "demo-request" }, client);
 
   assert.equal(result.ok, true);
   assert.equal(calls[0].p_workspace_id, null);
 });
 
-test("database error fails open by default", async () => {
-  const { client } = makeSupabase(() => ({ data: null, error: { message: "connection refused" } }));
+// ---------------------------------------------------------------------------
+// Fail-closed defaults (review blocker 2: no fail-open on DB errors)
+// ---------------------------------------------------------------------------
 
-  const result = await checkRateLimit(client, "ws-1", "user-1", config);
+test("database error FAILS CLOSED by default", async () => {
+  const { client } = makeServiceClient(() => ({ data: null, error: { message: "connection refused" } }));
 
-  assert.equal(result.ok, true);
-});
-
-test("database error fails closed when failClosed is set", async () => {
-  const { client } = makeSupabase(() => ({ data: null, error: { message: "connection refused" } }));
-
-  const result = await checkRateLimit(client, "ws-1", "user-1", { ...config, failClosed: true });
+  const result = await checkRateLimit("ws-1", "user-1", config, client);
 
   assert.equal(result.ok, false);
   if (!result.ok) assert.equal(result.retryAfterSeconds, config.windowSeconds);
 });
 
-test("malformed RPC response fails closed when failClosed is set", async () => {
-  const { client } = makeSupabase(() => ({ data: [], error: null }));
+test("database error fails open only when failClosed is explicitly false", async () => {
+  const { client } = makeServiceClient(() => ({ data: null, error: { message: "connection refused" } }));
 
-  const result = await checkRateLimit(client, "ws-1", "user-1", { ...config, failClosed: true });
+  const result = await checkRateLimit("ws-1", "user-1", { ...config, failClosed: false }, client);
+
+  assert.equal(result.ok, true);
+});
+
+test("empty/malformed RPC response FAILS CLOSED by default", async () => {
+  const { client } = makeServiceClient(() => ({ data: [], error: null }));
+
+  const result = await checkRateLimit("ws-1", "user-1", config, client);
 
   assert.equal(result.ok, false);
+});
+
+test("thrown RPC error FAILS CLOSED by default", async () => {
+  const { client } = makeServiceClient(() => {
+    throw new Error("network down");
+  });
+
+  const result = await checkRateLimit("ws-1", "user-1", config, client);
+
+  assert.equal(result.ok, false);
+});
+
+// ---------------------------------------------------------------------------
+// Hostile-caller input bounds (review blocker 2: validate and bound inputs)
+// ---------------------------------------------------------------------------
+
+test("invalid config values are rejected before any RPC call", async () => {
+  const { client, calls } = makeServiceClient(() => ({ data: [{ allowed: true }], error: null }));
+
+  await assert.rejects(
+    () => checkRateLimit(null, "x", { ...config, maxRequests: 0 }, client),
+    /invalid maxRequests/,
+  );
+  await assert.rejects(
+    () => checkRateLimit(null, "x", { ...config, maxRequests: 1001 }, client),
+    /invalid maxRequests/,
+  );
+  await assert.rejects(
+    () => checkRateLimit(null, "x", { ...config, windowSeconds: 0 }, client),
+    /invalid windowSeconds/,
+  );
+  await assert.rejects(
+    () => checkRateLimit(null, "x", { ...config, windowSeconds: 86401 }, client),
+    /invalid windowSeconds/,
+  );
+  await assert.rejects(
+    () => checkRateLimit(null, "x", { ...config, bucket: "Bad Bucket!" }, client),
+    /invalid bucket/,
+  );
+  assert.equal(calls.length, 0, "no RPC is invoked for invalid configs");
 });
 
 // ---------------------------------------------------------------------------
@@ -106,20 +151,17 @@ test("malformed RPC response fails closed when failClosed is set", async () => {
  * UPDATE ... WHERE statement), so no interleaving can occur between the
  * increment and the check — exactly the guarantee the RPC provides.
  *
- * This test is the concurrency regression for the atomic path. It runs
- * against the mocked single-statement client because `npm run test:db`
- * (supabase db reset + test db) is not runnable in this environment (no
- * Supabase CLI/Docker); the SQL statement itself is exercised by
- * supabase/tests when a local database is available.
+ * This test is the application-level concurrency regression. The SQL itself
+ * (limit-change consistency, hostile-caller rejection, real parallelism) is
+ * covered by the pgTAP suite in supabase/tests/, executed by the required
+ * "Database migration and pgTAP checks" CI job.
  */
 test("parallel requests cannot overshoot the limit", async () => {
   const maxRequests = 5;
   let usedCount = 0;
   const windowEnd = Date.now() + 60_000;
 
-  // Single-statement atomic double: increment-and-check with no await between
-  // them, mirroring the RPC's one-statement guarantee.
-  const { client } = makeSupabase(() => {
+  const { client } = makeServiceClient(() => {
     if (usedCount >= maxRequests) {
       return { data: [{ allowed: false, retry_after_seconds: Math.max(1, Math.ceil((windowEnd - Date.now()) / 1000)) }], error: null };
     }
@@ -129,7 +171,7 @@ test("parallel requests cannot overshoot the limit", async () => {
 
   const results = await Promise.all(
     Array.from({ length: 25 }, () =>
-      checkRateLimit(client, "ws-1", "user-1", { ...config, maxRequests }),
+      checkRateLimit("ws-1", "user-1", { ...config, maxRequests }, client),
     ),
   );
 
@@ -144,23 +186,21 @@ test("parallel requests across subjects are limited independently", async () => 
   const maxRequests = 2;
   const counters = new Map<string, number>();
 
-  const makeSubjectClient = (subject: string) =>
-    makeSupabase(() => {
-      const used = counters.get(subject) ?? 0;
-      if (used >= maxRequests) {
-        return { data: [{ allowed: false, retry_after_seconds: 30 }], error: null };
-      }
-      counters.set(subject, used + 1);
-      return { data: [{ allowed: true, retry_after_seconds: 0 }], error: null };
-    }).client;
-
   const subjects = ["a", "b", "c"];
   const results = await Promise.all(
-    subjects.flatMap((subject) =>
-      Array.from({ length: 4 }, () =>
-        checkRateLimit(makeSubjectClient(subject), "ws-1", subject, { ...config, maxRequests }),
-      ),
-    ),
+    subjects.flatMap((subject) => {
+      const { client } = makeServiceClient(() => {
+        const used = counters.get(subject) ?? 0;
+        if (used >= maxRequests) {
+          return { data: [{ allowed: false, retry_after_seconds: 30 }], error: null };
+        }
+        counters.set(subject, used + 1);
+        return { data: [{ allowed: true, retry_after_seconds: 0 }], error: null };
+      });
+      return Array.from({ length: 4 }, () =>
+        checkRateLimit("ws-1", subject, { ...config, maxRequests }, client),
+      );
+    }),
   );
 
   assert.equal(results.filter((r) => r.ok).length, subjects.length * maxRequests);

@@ -4,10 +4,18 @@ import { createClient } from "@supabase/supabase-js";
 import { verifyInternalRequest } from "@/lib/internal-auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { loadPublishState, validatePublishState, freezePublicationSnapshot } from "@/lib/adstudio/publish-adapter";
-import type { MetaConnectionSetup } from "@/lib/providers/meta-execution";
+import type { MetaConnectionSetup, MetaPublishControls } from "@/lib/providers/meta-execution";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+type FreezeRequestBody = {
+  adId?: string;
+  workspaceId?: string;
+  connectionId?: string;
+  setup?: MetaConnectionSetup;
+  controls?: MetaPublishControls;
+};
 
 /**
  * GET /api/internal/adstudio/publish/state?adId=...&workspaceId=...
@@ -40,7 +48,7 @@ export async function GET(request: Request) {
 
   const supabase = createClient(supabaseUrl, supabaseKey);
 
-  const rateLimit = await checkRateLimit(supabase, null, "internal:adstudio.publish", {
+  const rateLimit = await checkRateLimit(null, "internal:adstudio.publish", {
     windowSeconds: 60,
     maxRequests: 120,
     bucket: "internal-api",
@@ -79,19 +87,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
 
-  let body: {
-    adId?: unknown;
-    workspaceId?: unknown;
-    connectionId?: unknown;
-    setup?: Partial<MetaConnectionSetup>;
-    controls?: Record<string, unknown>;
-  } | null = null;
+  let body: FreezeRequestBody | null = null;
   try {
-    body = JSON.parse(rawBody);
+    body = JSON.parse(rawBody) as FreezeRequestBody;
   } catch {
     return NextResponse.json({ error: "invalid_json" }, { status: 400 });
   }
-  if (!body || typeof body.adId !== "string" || typeof body.workspaceId !== "string") {
+  if (!body || !body.adId || !body.workspaceId || !body.setup) {
     return NextResponse.json({ error: "missing_params" }, { status: 400 });
   }
 
@@ -103,7 +105,7 @@ export async function POST(request: Request) {
 
   const supabase = createClient(supabaseUrl, supabaseKey);
 
-  const rateLimit = await checkRateLimit(supabase, null, "internal:adstudio.publish", {
+  const rateLimit = await checkRateLimit(null, "internal:adstudio.publish", {
     windowSeconds: 60,
     maxRequests: 120,
     bucket: "internal-api",
@@ -118,7 +120,7 @@ export async function POST(request: Request) {
 
   try {
     const state = await loadPublishState(supabase, body.adId, body.workspaceId);
-    const issues = validatePublishState(state, { controls: body.controls ?? {}, setup: body.setup ?? {} });
+    const issues = validatePublishState(state, { controls: body.controls ?? {}, setup: body.setup });
     if (issues.length > 0) {
       return NextResponse.json({ error: "not_ready", issues }, { status: 400 });
     }
@@ -126,8 +128,8 @@ export async function POST(request: Request) {
     const { snapshotId } = await freezePublicationSnapshot(supabase, {
       adId: body.adId,
       workspaceId: body.workspaceId,
-      connectionId: typeof body.connectionId === "string" ? body.connectionId : "",
-      setup: body.setup as MetaConnectionSetup,
+      connectionId: body.connectionId ?? "",
+      setup: body.setup,
       controls: body.controls ?? {},
     }, state);
 
