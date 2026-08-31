@@ -102,7 +102,7 @@ export interface EditorState {
   activePlacement: Placement;
   imageValues: EditorImageValue[];
   textValues: Record<string, string>;
-  colourMode: "template" | "brand_pack";
+  colourMode: "template" | "brand_pack" | "custom";
   resolvedColourMap: Record<ColourRole, string>;
   selectedLayerId: string | null;
   isDirty: boolean;
@@ -113,6 +113,25 @@ export interface EditorState {
   error: string | null;
   /** Meta primary text / headline / description / CTA (shared across placements). */
   metaCopy: MetaCopy;
+  /**
+   * "Use template copy" checkbox. ON fills EMPTY fields with the template's
+   * suggestions; OFF clears only the fields the template filled that the
+   * customer has not edited since (see templateFilled). Customer copy is
+   * never destroyed unpredictably.
+   */
+  templateCopyApplied: boolean;
+  /**
+   * Provenance of template-filled values that are still unedited: which text
+   * keys and meta fields hold exactly what the template put there. Edited or
+   * saved values are removed, so unchecking can never clear them.
+   */
+  templateFilled: { text: string[]; meta: string[] };
+  /**
+   * Customer-facing display name for Meta previews. Brand Pack value is the
+   * default; an explicit override here wins. Empty string → Brand Pack
+   * fallback (or a generic placeholder).
+   */
+  brandBusinessName: string;
 }
 
 /** True when a save response still covers the editor's current edit snapshot. */
@@ -120,13 +139,20 @@ export function saveCoversEditVersion(currentVersion: number | undefined, savedV
   return (currentVersion ?? 0) === savedVersion;
 }
 
-const initialState = (pack: AdTemplate): EditorState => {
-  const defaults = readEditorDefaults(pack);
+/**
+ * The editor's starting values. Exported for tests: a NEW ad starts with
+ * EMPTY placeholders — template copy is only ever inserted via the explicit
+ * "Use template copy" checkbox. Saved ads restore exactly what the customer
+ * last saved (never re-seeded from template defaults).
+ */
+export const initialEditorState = (pack: AdTemplate): EditorState => {
   return {
   pack,
   activePlacement: "feed",
   imageValues: pack.imageInputs.map(i => ({ inputKey: i.key, dataUrl: null, previewUrl: null, crops: {} })),
-  textValues: { ...Object.fromEntries(pack.textInputs.map(i => [i.key, ""])), ...defaults.textValues },
+  // New ads start EMPTY (placeholders only in preview) — never auto-insert
+  // template copy. Saved ads restore the customer's saved values below.
+  textValues: Object.fromEntries(pack.textInputs.map(i => [i.key, ""])),
   colourMode: "template",
   resolvedColourMap: { ...pack.semanticColours },
   selectedLayerId: null,
@@ -135,19 +161,18 @@ const initialState = (pack: AdTemplate): EditorState => {
   isSaving: false,
   lastSavedRevision: null,
   error: null,
-  metaCopy: {
-    primaryText: "",
-    headline: "",
-    description: "",
-    cta: "LEARN_MORE",
-    ...defaults.metaCopy,
-  },
+  // CTA keeps a sensible default even for new ads so the select is valid.
+  metaCopy: { primaryText: "", headline: "", description: "", cta: "LEARN_MORE" },
+  // Saved values belong to the customer — the template checkbox starts OFF.
+  templateCopyApplied: false,
+  templateFilled: { text: [], meta: [] },
+  brandBusinessName: "",
   };
 };
 
 export function useEditorState(pack: AdTemplate, initialDocument?: AdDocumentParsed, initialRevision?: number) {
   const [state, setState] = useState<EditorState>(() => {
-    const base = initialState(pack);
+    const base = initialEditorState(pack);
     if (!initialDocument) return base;
     return {
       ...base,
@@ -170,6 +195,11 @@ export function useEditorState(pack: AdTemplate, initialDocument?: AdDocumentPar
         cta: initialDocument.metaCta,
       },
       lastSavedRevision: initialRevision ?? null,
+      // Saved values belong to the customer — the template checkbox starts
+      // OFF and provenance is empty, so unchecking can never erase them.
+      templateCopyApplied: false,
+      templateFilled: { text: [], meta: [] },
+      brandBusinessName: initialDocument.brandBusinessName ?? "",
     };
   });
   const undoStack = useRef<EditorState[]>([]);
@@ -191,9 +221,13 @@ export function useEditorState(pack: AdTemplate, initialDocument?: AdDocumentPar
   const updateTextValue = useCallback((key: string, value: string) => {
     setState(prev => {
       pushUndo(prev);
+      // Editing a template-filled field makes it customer copy — remove it
+      // from template provenance so unchecking later cannot clear it.
+      const remaining = prev.templateFilled.text.filter(k => k !== key);
       return {
         ...prev,
         textValues: { ...prev.textValues, [key]: value },
+        templateFilled: { ...prev.templateFilled, text: remaining },
         isDirty: true,
         editVersion: (prev.editVersion ?? 0) + 1,
       };
@@ -241,16 +275,23 @@ export function useEditorState(pack: AdTemplate, initialDocument?: AdDocumentPar
   const updateMetaCopy = useCallback((field: keyof MetaCopy, value: string) => {
     setState(prev => {
       pushUndo(prev);
+      const remaining = prev.templateFilled.meta.filter(f => f !== field);
       return {
         ...prev,
         metaCopy: { ...prev.metaCopy, [field]: value },
+        templateFilled: { ...prev.templateFilled, meta: remaining },
         isDirty: true,
         editVersion: (prev.editVersion ?? 0) + 1,
       };
     });
   }, [pushUndo]);
 
-  const setColourMode = useCallback((mode: "template" | "brand_pack", colourMap?: Record<ColourRole, string>) => {
+  /** Update the overridable business name shown in Meta previews. */
+  const updateBusinessName = useCallback((value: string) => {
+    setState(prev => ({ ...prev, brandBusinessName: value, isDirty: true }));
+  }, []);
+
+  const setColourMode = useCallback((mode: EditorState["colourMode"], colourMap?: Record<ColourRole, string>) => {
     setState(prev => {
       pushUndo(prev);
       return {
@@ -259,6 +300,60 @@ export function useEditorState(pack: AdTemplate, initialDocument?: AdDocumentPar
         resolvedColourMap: colourMap ?? (mode === "template" ? { ...prev.pack.semanticColours } : prev.resolvedColourMap),
         isDirty: true,
         editVersion: (prev.editVersion ?? 0) + 1,
+      };
+    });
+  }, [pushUndo]);
+
+  /** Update one custom colour role while in custom mode. */
+  const updateCustomColour = useCallback((role: ColourRole, hex: string) => {
+    setState(prev => {
+      pushUndo(prev);
+      return {
+        ...prev,
+        colourMode: "custom",
+        resolvedColourMap: { ...prev.resolvedColourMap, [role]: hex },
+        isDirty: true,
+      };
+    });
+  }, [pushUndo]);
+
+  /**
+   * "Use template copy" checkbox. ON fills EMPTY fields with the template's
+   * suggested copy (one undoable step). OFF clears ONLY the fields the
+   * template filled that the customer has not edited since — saved or typed
+   * copy is never touched, so unchecking is predictable.
+   */
+  const setTemplateCopyApplied = useCallback((enabled: boolean) => {
+    setState(prev => {
+      pushUndo(prev);
+      if (enabled) {
+        const merged = applyTemplateCopy(prev.textValues, prev.metaCopy, prev.pack);
+        return {
+          ...prev,
+          textValues: merged.textValues,
+          metaCopy: merged.metaCopy,
+          // Provenance = everything the template just filled (edited keys are
+          // not refilled, so they cannot appear here).
+          templateFilled: {
+            text: Object.keys(merged.filledText),
+            meta: Object.keys(merged.filledMeta),
+          },
+          templateCopyApplied: true,
+          isDirty: true,
+        };
+      }
+      // Uncheck: clear only still-unedited template-filled fields.
+      const textValues = { ...prev.textValues };
+      for (const key of prev.templateFilled.text) textValues[key] = "";
+      const metaCopy = { ...prev.metaCopy };
+      for (const field of prev.templateFilled.meta) metaCopy[field as keyof MetaCopy] = "";
+      return {
+        ...prev,
+        textValues,
+        metaCopy,
+        templateFilled: { text: [], meta: [] },
+        templateCopyApplied: false,
+        isDirty: true,
       };
     });
   }, [pushUndo]);
@@ -315,6 +410,9 @@ export function useEditorState(pack: AdTemplate, initialDocument?: AdDocumentPar
     updateImagePreview,
     updateCrop,
     setColourMode,
+    updateCustomColour,
+    setTemplateCopyApplied,
+    updateBusinessName,
     undo,
     redo,
     markSaved,
@@ -368,17 +466,97 @@ export function brandPackColoursToRoleMap(
 /**
  * Resolve the render palette for a colour mode: brand roles override the
  * template palette, roles missing from the brand kit (e.g. inverseText)
- * keep the template value. Never invents a palette.
+ * keep the template value. Custom mode uses the customer's per-role palette
+ * verbatim. Never invents a palette.
  */
 export function resolveColourMap(
   templateColours: Record<ColourRole, string>,
-  mode: "template" | "brand_pack",
+  mode: EditorState["colourMode"],
   brandColourMap?: Partial<Record<ColourRole, string>> | null,
+  customColourMap?: Partial<Record<ColourRole, string>> | null,
 ): Record<ColourRole, string> {
   if (mode === "brand_pack" && brandColourMap) {
     return { ...templateColours, ...brandColourMap };
   }
+  if (mode === "custom" && customColourMap) {
+    return { ...templateColours, ...customColourMap };
+  }
   return { ...templateColours };
+}
+
+// ---------------------------------------------------------------------------
+// Template copy — the template's suggested overlay text and Meta copy. New
+// ads start EMPTY; the explicit "Use template copy" checkbox fills EMPTY
+// fields only, so saved customer copy is never erased. Populated fields stay
+// editable.
+// ---------------------------------------------------------------------------
+
+export interface TemplateCopyValues {
+  textValues: Record<string, string>;
+  metaCopy: MetaCopy;
+}
+
+/** The template's suggested copy, read from the portable defaults. */
+export function templateCopyValues(pack: AdTemplate): TemplateCopyValues {
+  const defaults = readEditorDefaults(pack);
+  return {
+    textValues: { ...defaults.textValues },
+    metaCopy: {
+      primaryText: defaults.metaCopy.primaryText ?? "",
+      headline: defaults.metaCopy.headline ?? "",
+      description: defaults.metaCopy.description ?? "",
+      cta: defaults.metaCopy.cta ?? "LEARN_MORE",
+    },
+  };
+}
+
+/** True when the template offers any copy worth inserting. */
+export function hasTemplateCopy(pack: AdTemplate): boolean {
+  const { textValues, metaCopy } = templateCopyValues(pack);
+  const hasText = Object.values(textValues).some(value => value.trim().length > 0);
+  const hasMeta = [metaCopy.primaryText, metaCopy.headline, metaCopy.description].some(value => value.trim().length > 0);
+  return hasText || hasMeta;
+}
+
+/**
+ * Merge template copy into the current values, filling ONLY empty fields.
+ * Customer copy — saved or freshly typed — is never overwritten. The filled
+ * maps record exactly which fields received template text (provenance for
+ * predictable unchecking).
+ */
+export function applyTemplateCopy(
+  currentTextValues: Record<string, string>,
+  currentMetaCopy: MetaCopy,
+  pack: AdTemplate,
+): {
+  textValues: Record<string, string>;
+  metaCopy: MetaCopy;
+  filledText: Record<string, string>;
+  filledMeta: Partial<Record<keyof MetaCopy, string>>;
+} {
+  const template = templateCopyValues(pack);
+  const textValues = { ...currentTextValues };
+  const filledText: Record<string, string> = {};
+  for (const [key, value] of Object.entries(template.textValues)) {
+    if (!(key in textValues) || textValues[key].trim() === "") {
+      textValues[key] = value;
+      filledText[key] = value;
+    }
+  }
+  const metaCopy = { ...currentMetaCopy };
+  const filledMeta: Partial<Record<keyof MetaCopy, string>> = {};
+  for (const field of ["primaryText", "headline", "description"] as const) {
+    if (metaCopy[field].trim() === "") {
+      metaCopy[field] = template.metaCopy[field];
+      filledMeta[field] = template.metaCopy[field];
+    }
+  }
+  // CTA is a selection — only filled when the customer has not chosen one.
+  if (metaCopy.cta.trim() === "") {
+    metaCopy.cta = template.metaCopy.cta;
+    filledMeta.cta = template.metaCopy.cta;
+  }
+  return { textValues, metaCopy, filledText, filledMeta };
 }
 
 // ---------------------------------------------------------------------------
@@ -422,6 +600,9 @@ export async function buildAdDocument(state: EditorState): Promise<AdDocumentPar
     metaHeadline: state.metaCopy.headline,
     metaDescription: state.metaCopy.description,
     metaCta: state.metaCopy.cta,
+    // Optional override — omitted entirely when empty so old documents and
+    // new documents serialize identically when the name is not overridden.
+    ...(state.brandBusinessName.trim() ? { brandBusinessName: state.brandBusinessName.trim() } : {}),
     revision: Math.max(1, (state.lastSavedRevision ?? 0) + 1),
   };
   return doc;

@@ -64,7 +64,9 @@ type PublishReceipt = {
   providerWritesEnabled?: boolean;
   snapshotId?: string;
   planId?: string;
+  /** "active" only after Meta confirms configured ACTIVE; "paused" = created but activation incomplete. */
   status?: string;
+  activationError?: string;
   plannedObjects?: { campaigns: number; adSets: number; leadForms: number; creatives: number; ads: number };
   reconciledObjects?: {
     campaignId?: string;
@@ -340,7 +342,7 @@ export function PublishFlow({
             ))}
           </div>
           <p className="rounded-(--r-ctl) bg-muted px-3 py-2 text-sm font-semibold" role="status" aria-live="polite">
-            {selectedVariants.length} selected {selectedVariants.length === 1 ? "variant" : "variants"} × {selectedAdSetCount} {selectedAdSetCount === 1 ? "ad set" : "ad sets"} = {plannedAds} paused {plannedAds === 1 ? "ad" : "ads"}
+            {selectedVariants.length} selected {selectedVariants.length === 1 ? "variant" : "variants"} × {selectedAdSetCount} {selectedAdSetCount === 1 ? "ad set" : "ad sets"} = {plannedAds} {plannedAds === 1 ? "ad" : "ads"} on Meta
           </p>
           {selectedVariants.length === 0 ? <p className="text-xs text-amber-700">Choose at least one creative variant.</p> : null}
         </div>
@@ -495,7 +497,7 @@ export function PublishFlow({
           <summary className="flex min-h-11 cursor-pointer items-center text-sm font-semibold">What happens next</summary>
           <p className="mt-1 text-xs text-muted-foreground">
             {providerWritesEnabled
-              ? "Your ad will be created in a paused state for your final review."
+              ? "Publishing saves your ad, creates the campaign, ad sets and ads on Meta, and turns them ACTIVE so they can start delivering. Blockwise confirms the result before reporting success."
               : "Preview only is on — nothing will be created. You can still review the complete plan."}
           </p>
         </details>
@@ -503,14 +505,13 @@ export function PublishFlow({
         {/* Receipt */}
         {receipt && <ReceiptCard receipt={receipt} />}
 
-        {/* BW-Q — Activate is a SEPARATE explicit click, only offered after a
-            paused publish receipt (mode "publish" = objects created PAUSED on
-            Meta). It targets that exact plan and never runs automatically. */}
-        {receipt?.mode === "publish" && receipt.planId && !receipt.error && (
-          <ActivateSection
+        {/* Safe retry — offered ONLY when Meta objects were created but
+            activation did not complete. It targets the exact plan (and Meta
+            object IDs) already created; it never creates duplicates. */}
+        {receipt?.mode === "publish" && receipt.status === "paused" && receipt.planId && !receipt.error && (
+          <RetryActivationSection
             key={receipt.planId}
             planId={receipt.planId}
-            providerWritesEnabled={providerWritesEnabled}
             activating={activating}
             receipt={activateReceipt}
             onActivate={handleActivate}
@@ -549,7 +550,7 @@ export function PublishFlow({
              disabled={!ready || submitting || Boolean(receipt && !receipt.error)}
             className="min-h-11 rounded-full px-6 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
-            {submitting ? "Freezing & creating PAUSED..." : "Freeze & Create PAUSED"}
+            {submitting ? "Publishing…" : "Publish"}
           </Button>
         </div>
       </footer>
@@ -948,9 +949,29 @@ function ReceiptCard({ receipt }: { receipt: PublishReceipt }) {
 
   if (receipt.mode === "publish") {
     const objects = receipt.reconciledObjects;
+    // Honest partial failure: Meta objects EXIST but activation did not
+    // complete — never claim the ad is active when it remains paused.
+    if (receipt.status === "paused") {
+      return (
+        <div className="mt-6 rounded-(--r-card) border border-amber-200 bg-amber-50 p-4" role="alert">
+          <h3 className="mb-1 text-sm font-semibold text-amber-900">Created on Meta — activation incomplete</h3>
+          <p className="text-sm text-amber-800">{receipt.message}</p>
+          {receipt.activationError ? <p className="mt-2 text-xs font-medium text-amber-900">Activation error: {receipt.activationError}</p> : null}
+          <dl className="mt-3 grid grid-cols-1 gap-1 text-xs text-amber-800 sm:grid-cols-2">
+            <ReceiptStat label="Plan" value={shortHash(receipt.planId ?? "")} />
+            <ReceiptStat label="Campaign ID" value={objects?.campaignId ?? "—"} />
+            <ReceiptStat label="Ad set IDs" value={formatIds(objects?.adSetIds)} />
+            <ReceiptStat label="Ad IDs" value={formatIds(objects?.adIds)} />
+          </dl>
+          <p className="mt-3 text-xs font-medium text-amber-800">
+            The campaign is still paused on Meta — nothing is running or spending. Use the retry below to finish publishing; it targets these exact objects.
+          </p>
+        </div>
+      );
+    }
     return (
       <div className="mt-6 rounded-(--r-card) border border-green-200 bg-green-50 p-4" role="status">
-        <h3 className="mb-1 text-sm font-semibold text-green-800">Created PAUSED on Meta</h3>
+        <h3 className="mb-1 text-sm font-semibold text-green-800">Published — active on Meta</h3>
         <p className="text-sm text-green-700">{receipt.message}</p>
         <dl className="mt-3 grid grid-cols-1 gap-1 text-xs text-green-800 sm:grid-cols-2">
           <ReceiptStat label="Campaign ID" value={objects?.campaignId ?? "—"} />
@@ -959,9 +980,6 @@ function ReceiptCard({ receipt }: { receipt: PublishReceipt }) {
           <ReceiptStat label="Creative IDs" value={formatIds(objects?.creativeIds)} />
           <ReceiptStat label="Ad IDs" value={formatIds(objects?.adIds)} />
         </dl>
-        <p className="mt-3 text-xs font-medium text-green-700">
-          All objects are PAUSED — nothing is running. Activation is a separate step.
-        </p>
       </div>
     );
   }
@@ -1001,10 +1019,10 @@ function publishReceiptMessage(receipt: PublishReceipt): string {
     setup_incomplete: "Finish the workspace's Meta setup before publishing.",
     not_ready: "This ad is not ready to publish yet.",
     meta_token_missing: "Reconnect Meta so Blockwise can verify the account.",
-    publish_failed: "Meta did not finish creating the paused plan. Nothing was activated.",
+    publish_failed: "Meta did not finish creating the campaign. Nothing was activated.",
     publish_dependencies_missing: "The publish setup is incomplete. Review the fields above and try again.",
   };
-  return receipt.error ? messages[receipt.error] ?? "Blockwise could not prepare this paused plan. Review the setup and try again." : "Blockwise could not prepare this paused plan.";
+  return receipt.error ? messages[receipt.error] ?? "Blockwise could not complete this publish. Review the setup and try again." : "Blockwise could not complete this publish.";
 }
 
 function formatIds(ids: Record<string, string> | undefined): string {
@@ -1013,58 +1031,43 @@ function formatIds(ids: Record<string, string> | undefined): string {
 }
 
 // ---------------------------------------------------------------------------
-// BW-Q — Activate: the second explicit click after a PAUSED publish.
+// Safe retry — finish activation for a publish that CREATED the Meta objects
+// but did not complete activation. Targets the exact existing plan (and Meta
+// object IDs) — never creates duplicates. Only offered when the receipt says
+// the objects exist and remain paused.
 // ---------------------------------------------------------------------------
 
-function ActivateSection({
+function RetryActivationSection({
   planId,
-  providerWritesEnabled,
   activating,
   receipt,
   onActivate,
   setupSummary,
 }: {
   planId: string;
-  providerWritesEnabled: boolean;
   activating: boolean;
   receipt: ActivationReceipt | null;
   onActivate: (planId: string) => void;
   setupSummary: PublishSetupSummary | null;
 }) {
-  const [activationConfirmed, setActivationConfirmed] = useState(false);
   return (
     <div className="mt-6 rounded-(--r-card) border border-(--line) bg-(--surface) p-4">
-      <h3 className="text-sm font-semibold">Activate on Meta</h3>
+      <h3 className="text-sm font-semibold">Finish publishing</h3>
       <p className="mt-1 text-xs text-muted-foreground">
-        Your campaign is <span className="font-medium text-foreground">PAUSED on Meta</span> — nothing is running.
-        Activating is a separate explicit step that turns the campaign, ad sets, and ads ACTIVE so they can start
-        delivering.
-      </p>
-      <p className="mt-1 text-xs text-muted-foreground">
-        {providerWritesEnabled
-          ? "This optional step will move the paused campaign live."
-          : "Dry run mode is on — this optional step will only show what would change."}
+        Your campaign was created on Meta but is still <span className="font-medium text-foreground">paused</span> — nothing is running.
+        Retrying activation turns the same campaign, ad sets, and ads ACTIVE. No new objects are created.
       </p>
       {setupSummary ? <div className="mt-3"><PublishSetupSummaryCard summary={setupSummary} /></div> : null}
-      <label className="mt-3 flex min-h-11 items-start gap-3 rounded-(--r-ctl) border border-border px-3 py-2.5 text-sm font-medium">
-        <input
-          type="checkbox"
-          checked={activationConfirmed}
-          onChange={event => setActivationConfirmed(event.target.checked)}
-          className="mt-0.5 size-4 shrink-0 accent-primary"
-        />
-        {setupSummary?.activationConfirmation ?? "I confirm I have reviewed this paused plan and want to activate it."}
-      </label>
       <div className="mt-3 flex items-center gap-3">
         <Button
           onClick={() => onActivate(planId)}
-          disabled={!activationConfirmed || activating || Boolean(receipt?.ok)}
+          disabled={activating || Boolean(receipt?.ok)}
           className="min-h-11 rounded-full px-5 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
-          {activating ? "Activating on Meta..." : "Activate on Meta"}
+          {activating ? "Activating on Meta..." : "Finish publishing — activate on Meta"}
         </Button>
         <span className="text-xs text-muted-foreground">
-          Plan {shortHash(planId)} · this only affects the paused objects from your publish.
+          Plan {shortHash(planId)} · targets only the objects this publish created.
         </span>
       </div>
 
