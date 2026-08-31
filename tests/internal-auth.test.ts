@@ -28,9 +28,9 @@ function makeSupabase(opts: { existingNonces?: Set<string>; onInsert?: (nonce: s
           delete: () => ({
             lt: () => Promise.resolve({ error: null }),
           }),
-          insert: (row: { nonce: string }, insertOpts?: { ignoreDuplicates?: boolean }) => ({
+          upsert: (row: { nonce: string }, upsertOpts?: { ignoreDuplicates?: boolean }) => ({
             select: () => {
-              if (!insertOpts?.ignoreDuplicates) return Promise.reject(new Error("expected ignoreDuplicates insert"));
+              if (!upsertOpts?.ignoreDuplicates) return Promise.reject(new Error("expected ignoreDuplicates upsert"));
               if (seen.has(row.nonce)) return Promise.resolve({ data: [], error: null });
               seen.add(row.nonce);
               opts.onInsert?.(row.nonce);

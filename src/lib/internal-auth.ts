@@ -87,7 +87,7 @@ function defaultNonceStore(supabase: SupabaseClient): NonceStore {
       // result means the nonce was already seen (replay).
       const { data } = await supabase
         .from("internal_request_nonces")
-        .insert({ nonce, expires_at: expiresAtIso }, { onConflict: "nonce", ignoreDuplicates: true })
+        .upsert({ nonce, expires_at: expiresAtIso }, { onConflict: "nonce", ignoreDuplicates: true })
         .select("nonce");
       return Array.isArray(data) && data.length > 0;
     },
