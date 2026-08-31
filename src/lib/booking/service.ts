@@ -144,8 +144,21 @@ export async function applyBookingWebhook(input: {
   providerEventId: string;
   serviceSupabase?: BookingServiceClient;
 }): Promise<{ duplicate: boolean; booking: OnboardingBooking | null }> {
-  const service = input.serviceSupabase ?? createSupabaseServiceClient();
   const event = parseCalcomWebhook({ raw: input.raw, providerEventId: input.providerEventId });
+  return applyProviderBookingEvent({ event, serviceSupabase: input.serviceSupabase });
+}
+
+/**
+ * Apply a provider-neutral booking event. Used by the Cal.com webhook and
+ * the SnagTime webhook; both converge here so dedupe, invitation resolution
+ * and booking persistence behave identically across providers.
+ */
+export async function applyProviderBookingEvent(input: {
+  event: ProviderBookingEvent;
+  serviceSupabase?: BookingServiceClient;
+}): Promise<{ duplicate: boolean; booking: OnboardingBooking | null }> {
+  const service = input.serviceSupabase ?? createSupabaseServiceClient();
+  const event = input.event;
   const leaseToken = randomUUID();
   const claimed = await claimWebhookEvent(service, event, leaseToken);
   if (!claimed) return { duplicate: true, booking: null };

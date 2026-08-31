@@ -1,10 +1,11 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
+export type BookingProvider = "calcom" | "snagtime";
 export type BookingMarket = "US" | "AU";
 export type BookingState = "link_sent" | "booked" | "rescheduled" | "cancelled" | "completed" | "failed";
 
 export type ProviderBookingEvent = {
-  provider: "calcom";
+  provider: BookingProvider;
   providerEventId: string;
   providerBookingId: string;
   providerEventTypeId: string | null;
