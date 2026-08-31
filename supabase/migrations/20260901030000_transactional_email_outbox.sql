@@ -35,6 +35,7 @@ create table public.email_outbox (
   attempts integer not null default 0,
   max_attempts integer not null default 6,
   next_attempt_at timestamptz not null default now(),
+  lease_expires_at timestamptz,
   sent_at timestamptz,
   last_error text
 );
@@ -55,9 +56,11 @@ create table public.email_suppressions (
 alter table public.email_outbox enable row level security;
 alter table public.email_suppressions enable row level security;
 
--- Atomically claim a batch for delivery: marks rows 'sending' and returns
--- them in one statement (FOR UPDATE SKIP LOCKED), so parallel workers can
--- never deliver the same message twice.
+-- Atomically claim a batch for delivery: marks rows 'sending' with a lease
+-- expiry and returns them in one statement (FOR UPDATE SKIP LOCKED), so
+-- parallel workers can never deliver the same message twice. Rows stuck in
+-- 'sending' with an EXPIRED lease (worker crash) are re-claimed by the
+-- lease window predicate; live leases are skipped.
 create or replace function public.claim_email_outbox_batch(p_batch_size integer)
 returns setof public.email_outbox
 language sql
@@ -66,12 +69,13 @@ set search_path = public
 as $$
   update public.email_outbox
   set status = 'sending',
-      attempts = attempts + 1
+      attempts = attempts + 1,
+      lease_expires_at = now() + interval '5 minutes'
   where id in (
     select id
     from public.email_outbox
-    where status in ('pending', 'failed')
-      and next_attempt_at <= now()
+    where (status in ('pending', 'failed') and next_attempt_at <= now())
+       or (status = 'sending' and (lease_expires_at is null or lease_expires_at <= now()))
     order by created_at
     limit greatest(1, least(coalesce(p_batch_size, 10), 100))
     for update skip locked
