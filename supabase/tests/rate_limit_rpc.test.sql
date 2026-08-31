@@ -15,7 +15,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(16);
+select plan(19);
 
 -- ---------------------------------------------------------------------------
 -- 1. Hostile / malformed caller inputs raise instead of poisoning buckets
@@ -149,7 +149,7 @@ select is(
 -- ---------------------------------------------------------------------------
 
 select is(
-  (select count(*) from information_schema.role_function_grants
+  (select count(*) from information_schema.role_routine_grants
    where specific_schema = 'public'
      and specific_name like 'consume_rate_limit%'
      and grantee in ('anon', 'authenticated', 'public')),
@@ -158,7 +158,7 @@ select is(
 );
 
 select is(
-  (select count(*) from information_schema.role_function_grants
+  (select count(*) from information_schema.role_routine_grants
    where specific_schema = 'public'
      and specific_name like 'consume_rate_limit%'
      and grantee = 'service_role'),
