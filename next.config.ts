@@ -1,5 +1,23 @@
 import type { NextConfig } from "next";
 
+function safeOrigin(url: string | undefined): string | null {
+  if (!url) return null;
+  try {
+    return new URL(url).origin;
+  } catch {
+    return null;
+  }
+}
+
+function sentryIngestOrigin(dsn: string | undefined): string | null {
+  if (!dsn) return null;
+  try {
+    return new URL(dsn).origin;
+  } catch {
+    return null;
+  }
+}
+
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
@@ -50,7 +68,33 @@ const nextConfig: NextConfig = {
     ];
   },
   async headers() {
+    // Security headers for the standalone Next server behind Caddy.
+    // connect-src is composed from the runtime origins the app actually
+    // talks to from the browser: its own origin, the Supabase REST/auth
+    // host, the Sentry ingest host, and Vercel analytics in preview.
+    const supabaseOrigin = safeOrigin(process.env.NEXT_PUBLIC_SUPABASE_URL);
+    const sentryOrigin = sentryIngestOrigin(process.env.NEXT_PUBLIC_SENTRY_DSN);
+    const connectSrc = ["'self'", supabaseOrigin, sentryOrigin, "https://va.vercel-scripts.com"]
+      .filter((value): value is string => Boolean(value))
+      .join(" ");
     return [
+      {
+        source: "/:path*",
+        headers: [
+          {
+            // 'unsafe-inline' for script-src is required by Next.js's inline
+            // bootstrap; removing it requires nonce-based middleware, tracked
+            // as follow-up hardening. style-src needs it for the Tailwind/
+            // shadcn runtime styles. Konva/canvas rendering uses blob: URLs.
+            key: "Content-Security-Policy",
+            value: `default-src 'self'; script-src 'self' 'unsafe-inline' https://va.vercel-scripts.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src ${connectSrc}; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'`,
+          },
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+        ],
+      },
       {
         source: "/adstudio-thumbnails/:path*",
         headers: [

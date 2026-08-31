@@ -6,6 +6,7 @@ import { classifyDevice, externalReferrerHost, isTrackablePath, normalizeTracked
 import { dailyVisitorHash } from "@/lib/analytics/visitor";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { resolveSupabaseServerCredential } from "@/lib/supabase/credentials";
+import { getClientIp } from "@/lib/client-ip";
 
 export const runtime = "nodejs";
 
@@ -29,8 +30,7 @@ export async function POST(request: Request) {
     const credential = resolveSupabaseServerCredential();
     if (!credential) return new NextResponse(null, { status: 204 });
 
-    const forwardedFor = request.headers.get("x-forwarded-for") ?? "";
-    const ip = forwardedFor.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "unknown";
+    const ip = getClientIp(request.headers);
     const salt = createHash("sha256").update(`blockwise-page-analytics:${credential.value}`).digest("hex");
     const ownHost = request.headers.get("host")?.split(":")[0]?.replace(/^www\./, "").toLowerCase() ?? null;
 
