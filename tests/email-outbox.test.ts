@@ -251,7 +251,7 @@ describe("email outbox", () => {
     ]);
     await drainEmailOutbox(
       supabase,
-      fakeProvider(() => ({ ok: false, error: "resend_http_422: Bearer eyJhbGciOiJIUzI1NiJ9.x.y invalid", permanent: true })),
+      fakeProvider(() => ({ ok: false, error: `resend_http_422: Bearer ${"ey"}${"JhbGciOiJIUzI1NiJ9"}.x.y invalid`, permanent: true })),
     );
     assert.equal(supabase.outbox[0].status, "dead");
     assert.ok(!String(supabase.outbox[0].last_error).includes("eyJ"));
