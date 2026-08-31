@@ -4,6 +4,7 @@ import { z } from "zod";
 import { sendDemoRequestNotification } from "@/lib/notify/demo-request-email";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { getClientIp } from "@/lib/client-ip";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -46,10 +47,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Rate limit by IP: 5 demo requests per hour per IP.
-  const ip =
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-    request.headers.get("x-real-ip") ??
-    "unknown";
+  const ip = getClientIp(request.headers);
   const serviceClient = createSupabaseServiceClient();
   const rateLimit = await checkRateLimit(null, ip, {
     windowSeconds: 3600,
