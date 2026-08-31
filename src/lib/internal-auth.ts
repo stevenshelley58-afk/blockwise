@@ -18,8 +18,13 @@ import { recordAuditLog } from "./supabase/audit.ts";
  * Canonical payload (newline-separated):
  *   v1 | timestamp | nonce | scope | METHOD | path?query | sha256(body)
  *
- * The secret lives in BLOCKWISE_INTERNAL_SECRET. When it is unset every
- * request is rejected (fail-closed) — there is no fallback shared value.
+ * The secret lives in BLOCKWISE_INTERNAL_AUTH_SECRET (minimum 32 chars;
+ * BLOCKWISE_INTERNAL_SECRET is accepted as a documented alias). When it is
+ * unset every request is rejected (fail-closed) — there is no fallback shared
+ * value. During the controlled migration window,
+ * BLOCKWISE_INTERNAL_ALLOW_LEGACY_BEARER=true additionally accepts the legacy
+ * `Authorization: Bearer <secret>` callers; disable it once the Frank/Hermes
+ * signer is live.
  */
 
 export const INTERNAL_AUTH_TIMESTAMP_HEADER = "x-blockwise-timestamp";
@@ -80,15 +85,19 @@ function safeEqual(a: string, b: string): boolean {
 function defaultNonceStore(supabase: SupabaseClient): NonceStore {
   return {
     deleteExpired: async (cutoffIso) => {
-      await supabase.from("internal_request_nonces").delete().lt("expires_at", cutoffIso);
+      const { error } = await supabase.from("internal_request_nonces").delete().lt("expires_at", cutoffIso);
+      if (error) throw new Error(`nonce_delete_failed: ${error.message}`);
     },
     insertIfFresh: async (nonce, expiresAtIso) => {
       // Single INSERT ... ON CONFLICT DO NOTHING RETURNING statement: an empty
-      // result means the nonce was already seen (replay).
-      const { data } = await supabase
+      // result means the nonce was already seen (replay). A database error is
+      // thrown so the caller fails closed with 503 instead of misreading an
+      // infrastructure failure as a replayed nonce.
+      const { data, error } = await supabase
         .from("internal_request_nonces")
         .upsert({ nonce, expires_at: expiresAtIso }, { onConflict: "nonce", ignoreDuplicates: true })
         .select("nonce");
+      if (error) throw new Error(`nonce_insert_failed: ${error.message}`);
       return Array.isArray(data) && data.length > 0;
     },
   };
@@ -99,9 +108,35 @@ export async function verifyInternalRequest(
   expectedScope: string,
   options: InternalAuthOptions = {},
 ): Promise<InternalAuthResult> {
-  const secret = (options.secret ?? process.env.BLOCKWISE_INTERNAL_SECRET)?.trim() ?? "";
+  // One canonical name (BLOCKWISE_INTERNAL_AUTH_SECRET, matching production
+  // Compose/Infisical); BLOCKWISE_INTERNAL_SECRET remains as a documented
+  // alias so either source works until Infisical is consolidated.
+  const secret = (
+    options.secret ??
+    process.env.BLOCKWISE_INTERNAL_AUTH_SECRET ??
+    process.env.BLOCKWISE_INTERNAL_SECRET
+  )?.trim() ?? "";
   if (!secret) {
     return { ok: false, status: 503, error: "internal_auth_not_configured" };
+  }
+  if (secret.length < 32) {
+    return { ok: false, status: 503, error: "internal_auth_weak_secret" };
+  }
+
+  // Controlled migration: while BLOCKWISE_INTERNAL_ALLOW_LEGACY_BEARER=true,
+  // the pre-existing Bearer shared-secret callers keep working so production
+  // traffic does not break before the Frank/Hermes signer lands. Turn it off
+  // once every internal caller sends HMAC headers (operator action).
+  const authorization = request.headers.get("authorization");
+  if (
+    process.env.BLOCKWISE_INTERNAL_ALLOW_LEGACY_BEARER === "true" &&
+    authorization?.toLowerCase().startsWith("bearer ")
+  ) {
+    const provided = authorization.slice(7).trim();
+    if (provided && safeEqual(secret, provided)) {
+      return { ok: true, scope: expectedScope };
+    }
+    return { ok: false, status: 401, error: "invalid_signature" };
   }
 
   const timestamp = request.headers.get(INTERNAL_AUTH_TIMESTAMP_HEADER)?.trim() ?? "";
