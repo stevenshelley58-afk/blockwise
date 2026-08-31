@@ -224,6 +224,11 @@ export const adDocumentSchema = z.object({
   metaHeadline: z.string(),
   metaDescription: z.string(),
   metaCta: z.string(),
+  // Customer-facing display name shown in Meta previews. Optional for
+  // backward compatibility: old documents parse without it; the default is
+  // the Brand Pack business name, and the customer may override it in the
+  // editor (empty string → fall back to the Brand Pack value).
+  brandBusinessName: z.string().optional(),
   revision: z.number().int().positive(),
   documentHash: z.string().length(64).regex(/^[a-f0-9]{64}$/),
   lastRenderedHash: z.string().length(64).regex(/^[a-f0-9]{64}$/).nullable(),

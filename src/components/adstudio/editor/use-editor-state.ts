@@ -112,13 +112,32 @@ export interface EditorState {
   error: string | null;
   /** Meta primary text / headline / description / CTA (shared across placements). */
   metaCopy: MetaCopy;
+  /**
+   * "Use template copy" checkbox. ON fills EMPTY fields with the template's
+   * suggestions; OFF clears only the fields the template filled that the
+   * customer has not edited since (see templateFilled). Customer copy is
+   * never destroyed unpredictably.
+   */
+  templateCopyApplied: boolean;
+  /**
+   * Provenance of template-filled values that are still unedited: which text
+   * keys and meta fields hold exactly what the template put there. Edited or
+   * saved values are removed, so unchecking can never clear them.
+   */
+  templateFilled: { text: string[]; meta: string[] };
+  /**
+   * Customer-facing display name for Meta previews. Brand Pack value is the
+   * default; an explicit override here wins. Empty string → Brand Pack
+   * fallback (or a generic placeholder).
+   */
+  brandBusinessName: string;
 }
 
 /**
  * Saved-document seed loaded server-side for an EXISTING ad. New ads pass
  * null and start with empty placeholder text — template copy is only ever
- * inserted by an explicit "Use template copy" click, and saved customer copy
- * is never erased on reopen.
+ * inserted via the explicit "Use template copy" checkbox, and saved customer
+ * copy is never erased on reopen.
  */
 export interface SavedEditorSeed {
   textValues: Record<string, string>;
@@ -126,6 +145,8 @@ export interface SavedEditorSeed {
   colourMode: EditorState["colourMode"];
   resolvedColourMap: Record<ColourRole, string> | null;
   lastSavedRevision: number;
+  /** Overridable display name saved with the document; null → Brand Pack default. */
+  brandBusinessName: string | null;
 }
 
 /**
@@ -157,6 +178,10 @@ export function initialEditorState(pack: TemplatePack, saved?: SavedEditorSeed |
     cta: "LEARN_MORE",
     ...(savedMeta?.cta ? { cta: savedMeta.cta } : {}),
   },
+  // Saved values belong to the customer — the template checkbox starts OFF.
+  templateCopyApplied: false,
+  templateFilled: { text: [], meta: [] },
+  brandBusinessName: saved?.brandBusinessName ?? "",
   };
 }
 
@@ -181,9 +206,13 @@ export function useEditorState(pack: TemplatePack, saved?: SavedEditorSeed | nul
   const updateTextValue = useCallback((key: string, value: string) => {
     setState(prev => {
       pushUndo(prev);
+      // Editing a template-filled field makes it customer copy — remove it
+      // from template provenance so unchecking later cannot clear it.
+      const remaining = prev.templateFilled.text.filter(k => k !== key);
       return {
         ...prev,
         textValues: { ...prev.textValues, [key]: value },
+        templateFilled: { ...prev.templateFilled, text: remaining },
         isDirty: true,
       };
     });
@@ -219,13 +248,20 @@ export function useEditorState(pack: TemplatePack, saved?: SavedEditorSeed | nul
   const updateMetaCopy = useCallback((field: keyof MetaCopy, value: string) => {
     setState(prev => {
       pushUndo(prev);
+      const remaining = prev.templateFilled.meta.filter(f => f !== field);
       return {
         ...prev,
         metaCopy: { ...prev.metaCopy, [field]: value },
+        templateFilled: { ...prev.templateFilled, meta: remaining },
         isDirty: true,
       };
     });
   }, [pushUndo]);
+
+  /** Update the overridable business name shown in Meta previews. */
+  const updateBusinessName = useCallback((value: string) => {
+    setState(prev => ({ ...prev, brandBusinessName: value, isDirty: true }));
+  }, []);
 
   const setColourMode = useCallback((mode: EditorState["colourMode"], colourMap?: Record<ColourRole, string>) => {
     setState(prev => {
@@ -286,17 +322,41 @@ export function useEditorState(pack: TemplatePack, saved?: SavedEditorSeed | nul
   }, []);
 
   /**
-   * "Use template copy" — fills EMPTY fields with the template's suggested
-   * copy in one undoable step. Saved or typed customer copy is preserved.
+   * "Use template copy" checkbox. ON fills EMPTY fields with the template's
+   * suggested copy (one undoable step). OFF clears ONLY the fields the
+   * template filled that the customer has not edited since — saved or typed
+   * copy is never touched, so unchecking is predictable.
    */
-  const useTemplateCopy = useCallback(() => {
+  const setTemplateCopyApplied = useCallback((enabled: boolean) => {
     setState(prev => {
       pushUndo(prev);
-      const merged = applyTemplateCopy(prev.textValues, prev.metaCopy, prev.pack);
+      if (enabled) {
+        const merged = applyTemplateCopy(prev.textValues, prev.metaCopy, prev.pack);
+        return {
+          ...prev,
+          textValues: merged.textValues,
+          metaCopy: merged.metaCopy,
+          // Provenance = everything the template just filled (edited keys are
+          // not refilled, so they cannot appear here).
+          templateFilled: {
+            text: Object.keys(merged.filledText),
+            meta: Object.keys(merged.filledMeta),
+          },
+          templateCopyApplied: true,
+          isDirty: true,
+        };
+      }
+      // Uncheck: clear only still-unedited template-filled fields.
+      const textValues = { ...prev.textValues };
+      for (const key of prev.templateFilled.text) textValues[key] = "";
+      const metaCopy = { ...prev.metaCopy };
+      for (const field of prev.templateFilled.meta) metaCopy[field as keyof MetaCopy] = "";
       return {
         ...prev,
-        textValues: merged.textValues,
-        metaCopy: merged.metaCopy,
+        textValues,
+        metaCopy,
+        templateFilled: { text: [], meta: [] },
+        templateCopyApplied: false,
         isDirty: true,
       };
     });
@@ -319,7 +379,8 @@ export function useEditorState(pack: TemplatePack, saved?: SavedEditorSeed | nul
     updateCrop,
     setColourMode,
     updateCustomColour,
-    useTemplateCopy,
+    setTemplateCopyApplied,
+    updateBusinessName,
     undo,
     redo,
     markSaved,
@@ -426,25 +487,43 @@ export function hasTemplateCopy(pack: TemplatePack): boolean {
 
 /**
  * Merge template copy into the current values, filling ONLY empty fields.
- * Customer copy — saved or freshly typed — is never overwritten.
+ * Customer copy — saved or freshly typed — is never overwritten. The filled
+ * maps record exactly which fields received template text (provenance for
+ * predictable unchecking).
  */
 export function applyTemplateCopy(
   currentTextValues: Record<string, string>,
   currentMetaCopy: MetaCopy,
   pack: TemplatePack,
-): { textValues: Record<string, string>; metaCopy: MetaCopy } {
+): {
+  textValues: Record<string, string>;
+  metaCopy: MetaCopy;
+  filledText: Record<string, string>;
+  filledMeta: Partial<Record<keyof MetaCopy, string>>;
+} {
   const template = templateCopyValues(pack);
   const textValues = { ...currentTextValues };
+  const filledText: Record<string, string> = {};
   for (const [key, value] of Object.entries(template.textValues)) {
-    if (!(key in textValues) || textValues[key].trim() === "") textValues[key] = value;
+    if (!(key in textValues) || textValues[key].trim() === "") {
+      textValues[key] = value;
+      filledText[key] = value;
+    }
   }
   const metaCopy = { ...currentMetaCopy };
+  const filledMeta: Partial<Record<keyof MetaCopy, string>> = {};
   for (const field of ["primaryText", "headline", "description"] as const) {
-    if (metaCopy[field].trim() === "") metaCopy[field] = template.metaCopy[field];
+    if (metaCopy[field].trim() === "") {
+      metaCopy[field] = template.metaCopy[field];
+      filledMeta[field] = template.metaCopy[field];
+    }
   }
   // CTA is a selection — only filled when the customer has not chosen one.
-  if (metaCopy.cta.trim() === "") metaCopy.cta = template.metaCopy.cta;
-  return { textValues, metaCopy };
+  if (metaCopy.cta.trim() === "") {
+    metaCopy.cta = template.metaCopy.cta;
+    filledMeta.cta = template.metaCopy.cta;
+  }
+  return { textValues, metaCopy, filledText, filledMeta };
 }
 
 // ---------------------------------------------------------------------------
@@ -507,6 +586,9 @@ export async function buildAdDocument(state: EditorState): Promise<AdDocumentPar
     metaHeadline: state.metaCopy.headline,
     metaDescription: state.metaCopy.description,
     metaCta: state.metaCopy.cta,
+    // Optional override — omitted entirely when empty so old documents and
+    // new documents serialize identically when the name is not overridden.
+    ...(state.brandBusinessName.trim() ? { brandBusinessName: state.brandBusinessName.trim() } : {}),
     revision: Math.max(1, state.lastSavedRevision ?? 0),
     documentHash: "0".repeat(64),
     lastRenderedHash: null,

@@ -25,6 +25,7 @@ import { FeedPreview, StoryPreview } from "./meta-previews";
 // ---------------------------------------------------------------------------
 
 export interface EditorBrandPack {
+  brandKitId: string;
   colours: BrandPackColours;
   /** Customer-facing business name for the Meta previews. */
   businessName: string;
@@ -48,6 +49,23 @@ export interface EditorShellProps {
    * auto-inserts template copy.
    */
   savedSeed?: SavedEditorSeed | null;
+  /**
+   * True when the ad HAS a saved revision but it cannot be parsed. The saved
+   * document is preserved unchanged, saving is blocked, and a recovery error
+   * is shown — a blank editor must never overwrite unreadable history.
+   */
+  savedUnparsable?: boolean;
+  /**
+   * The workspace asset library (Brand-Studio uploads) offered as sources for
+   * the creative's image slots, alongside direct upload from this device.
+   */
+  library?: EditorLibrary;
+}
+
+export interface EditorLibrary {
+  /** Brand kit id used to attach new uploads; null disables uploading. */
+  brandKitId: string | null;
+  assets: Array<{ id: string; src: string; label: string }>;
 }
 
 type EditorTab = "creative" | "copy" | "colours";
@@ -58,7 +76,7 @@ const TABS: Array<{ id: EditorTab; label: string }> = [
   { id: "colours", label: "Colours" },
 ];
 
-export function EditorShell({ pack, adId, workspaceId, canSave = true, brandPack = null, savedSeed = null }: EditorShellProps) {
+export function EditorShell({ pack, adId, workspaceId, canSave = true, brandPack = null, savedSeed = null, savedUnparsable = false, library = { brandKitId: null, assets: [] } }: EditorShellProps) {
   const router = useRouter();
   const {
     state,
@@ -72,7 +90,8 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandPack
     updateCrop,
     setColourMode,
     updateCustomColour,
-    useTemplateCopy,
+    setTemplateCopyApplied,
+    updateBusinessName,
     undo,
     redo,
     markSaved,
@@ -92,8 +111,20 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandPack
   const [generateError, setGenerateError] = useState<string | null>(null);
   const [generatedOnce, setGeneratedOnce] = useState(false);
 
+  // Asset library: which image input the customer is choosing an asset for.
+  const [pickingFor, setPickingFor] = useState<string | null>(null);
+  const [attachingAsset, setAttachingAsset] = useState(false);
+
+  // Recovery: an unreadable saved revision blocks saving/publishing until
+  // resolved — the stored document stays intact on the server.
+  const recoveryBlocked = savedUnparsable;
+
   const imageValuesMap = Object.fromEntries(state.imageValues.map(iv => [iv.inputKey, iv.dataUrl]));
-  const businessName = brandPack?.businessName?.trim() || "Your business";
+  // The customer's explicit business-name override wins; otherwise the Brand
+  // Pack default; otherwise a neutral placeholder.
+  const businessName = state.brandBusinessName.trim()
+    || brandPack?.businessName?.trim()
+    || "Your business";
   const logoUrl = brandPack?.logoUrl ?? null;
 
   /** Open the crop dialog for a slot (no-op until an image is picked). */
@@ -116,6 +147,10 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandPack
   );
 
   const handleSave = useCallback(async (): Promise<boolean> => {
+    if (recoveryBlocked) {
+      setError("This ad's last saved version could not be read, so saving is disabled to protect it. Reload the page or contact support — your saved work is unchanged.");
+      return false;
+    }
     setSaving(true);
     setError(null);
     try {
@@ -128,8 +163,16 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandPack
           body: JSON.stringify({ document, expectedRevision: state.lastSavedRevision ?? 0 }),
         },
       );
-      const body = (await res.json().catch(() => ({}))) as { ad?: { revisionNumber?: number }; error?: string };
-      if (!res.ok) throw new Error(body.error ?? `Save failed (${res.status})`);
+      const body = (await res.json().catch(() => ({}))) as { ad?: { revisionNumber?: number }; error?: string; code?: string };
+      if (!res.ok) {
+        if (res.status === 409 || body.code === "stale_revision") {
+          // Optimistic concurrency: another tab/window saved first. The
+          // customer's unsaved edits stay on screen — nothing is lost, but
+          // they must refresh to pick up the newer revision before saving.
+          throw new Error("This ad changed in another tab or window. Reload the editor to load the latest version — your unsaved edits are still here, but saving needs the newer revision first.");
+        }
+        throw new Error(body.error ?? `Save failed (${res.status})`);
+      }
       markSaved(body.ad?.revisionNumber ?? state.lastSavedRevision ?? 0);
       return true;
     } catch (err) {
@@ -138,7 +181,7 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandPack
     } finally {
       setSaving(false);
     }
-  }, [adId, workspaceId, state, markSaved, setSaving, setError]);
+  }, [adId, workspaceId, state, markSaved, setSaving, setError, recoveryBlocked]);
 
   /**
    * AI copy generation: posts the brief to the existing copy-proposal
@@ -184,12 +227,43 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandPack
    * first; if Save fails, refuse to navigate (the error banner explains why).
    */
   const handlePublish = useCallback(async () => {
+    if (recoveryBlocked) {
+      setError("This ad's last saved version could not be read, so publishing is disabled to protect it. Reload the page or contact support — your saved work is unchanged.");
+      return;
+    }
     if (state.isDirty || state.lastSavedRevision === null) {
       const saved = await handleSave();
       if (!saved) return; // error banner already set — refuse
     }
     router.push(`/ad-studio/packs/${encodeURIComponent(pack.packId)}/publish`);
-  }, [state.isDirty, state.lastSavedRevision, handleSave, router, pack.packId]);
+  }, [state.isDirty, state.lastSavedRevision, handleSave, router, pack.packId, recoveryBlocked]);
+
+  /**
+   * Attach a workspace library asset to an image input: fetch the asset
+   * (same-origin, authenticated), convert to a data URL (the save contract
+   * fetches document image values server-side) and store it like any upload.
+   */
+  const attachLibraryAsset = useCallback(async (inputKey: string, assetSrc: string) => {
+    setAttachingAsset(true);
+    setError(null);
+    try {
+      const res = await fetch(assetSrc);
+      if (!res.ok) throw new Error(`Could not load the selected asset (${res.status}).`);
+      const blob = await res.blob();
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result));
+        reader.onerror = () => reject(new Error("Could not read the selected asset."));
+        reader.readAsDataURL(blob);
+      });
+      updateImageValue(inputKey, dataUrl);
+      setPickingFor(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not attach the selected asset.");
+    } finally {
+      setAttachingAsset(false);
+    }
+  }, [updateImageValue, setError]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if ((e.ctrlKey || e.metaKey) && e.key === "z") {
@@ -268,14 +342,14 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandPack
           </button>
           <button
             onClick={handleSave}
-            disabled={!canSave || state.isSaving}
+            disabled={!canSave || state.isSaving || recoveryBlocked}
             className="rounded-(--r-control) border border-(--line) px-4 py-2 text-sm font-semibold text-foreground hover:bg-(--surface-subtle) disabled:opacity-50"
           >
             {state.isSaving ? "Saving..." : "Save"}
           </button>
           <button
             onClick={handlePublish}
-            disabled={!canSave || state.isSaving}
+            disabled={!canSave || state.isSaving || recoveryBlocked}
             className="rounded-(--r-control) bg-(--ui-primary) px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
             title={state.isDirty ? "Save first — publishing freezes the last saved revision" : "Publish this ad to Meta"}
           >
@@ -364,20 +438,40 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandPack
             {activeTab === "creative" && (
               <div className="space-y-4">
                 {showTemplateCopyButton && (
-                  <div className="rounded-(--r-control) border border-(--line) bg-(--surface-subtle) p-3">
-                    <p className="text-xs leading-relaxed text-muted-foreground">
-                      This template ships with suggested copy. Use it as a starting
-                      point — everything stays editable, and your own text is never
-                      overwritten.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={useTemplateCopy}
-                      className="mt-2 w-full rounded-(--r-control) border border-(--ui-primary) px-3 py-2 text-sm font-semibold text-(--ui-primary) transition hover:bg-(--ui-primary)/10"
-                    >
-                      Use template copy
-                    </button>
-                  </div>
+                  <label className="flex cursor-pointer items-start gap-3 rounded-(--r-control) border border-(--line) bg-(--surface-subtle) p-3">
+                    <input
+                      type="checkbox"
+                      checked={state.templateCopyApplied}
+                      onChange={event => setTemplateCopyApplied(event.target.checked)}
+                      className="mt-0.5 h-4 w-4 accent-(--ui-primary)"
+                      aria-label="Use template copy"
+                    />
+                    <span>
+                      <span className="block text-sm font-semibold text-foreground">Use template copy</span>
+                      <span className="mt-0.5 block text-xs leading-relaxed text-muted-foreground">
+                        Fill empty fields with this template&apos;s suggested copy.
+                        Everything stays editable, and your own text is never
+                        overwritten. Unchecking removes only the suggestions you
+                        have not edited.
+                      </span>
+                    </span>
+                  </label>
+                )}
+                {brandPack && (
+                  <label className="block">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Business name</span>
+                    <input
+                      type="text"
+                      value={state.brandBusinessName}
+                      onChange={event => updateBusinessName(event.target.value)}
+                      placeholder={brandPack.businessName?.trim() || "Your business"}
+                      className="mt-1 w-full rounded-(--r-control) border border-(--line) bg-(--surface) px-3 py-2 text-sm text-foreground outline-none focus:border-(--ui-primary)"
+                      aria-label="Business name for previews"
+                    />
+                    <span className="mt-1 block text-xs text-muted-foreground">
+                      Defaults to your Brand Pack ({brandPack.businessName?.trim() || "no name yet"}). Type to override.
+                    </span>
+                  </label>
                 )}
                 <InputsPanel
                   textInputs={editorTextInputs(pack)}
@@ -387,7 +481,35 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandPack
                   onTextChange={updateTextValue}
                   onImageChange={updateImageValue}
                   onCropClick={openCropForInput}
+                  onLibraryClick={library.assets.length > 0 ? setPickingFor : undefined}
                 />
+                {/* Workspace asset library — reuse Brand-Studio uploads here */}
+                {library.assets.length > 0 && (
+                  <section aria-label="Your asset library" className="rounded-(--r-control) border border-(--line) p-3">
+                    <h4 className="text-sm font-semibold text-foreground">Your asset library</h4>
+                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                      {pickingFor
+                        ? "Choose the asset to place in the selected slot."
+                        : "Pick a slot above, then choose an asset you uploaded in Brand Studio."}
+                    </p>
+                    <div className="mt-2 grid grid-cols-3 gap-2">
+                      {library.assets.map(asset => (
+                        <button
+                          key={asset.id}
+                          type="button"
+                          disabled={!pickingFor || attachingAsset}
+                          onClick={() => pickingFor && attachLibraryAsset(pickingFor, asset.src)}
+                          className="group overflow-hidden rounded-(--r-control) border border-(--line) bg-(--surface-subtle) transition hover:border-(--ui-primary) disabled:opacity-40"
+                          title={asset.label}
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={asset.src} alt={asset.label} className="h-16 w-full object-cover" />
+                        </button>
+                      ))}
+                    </div>
+                    {attachingAsset && <p className="mt-2 text-xs text-muted-foreground" role="status">Attaching…</p>}
+                  </section>
+                )}
               </div>
             )}
 
@@ -463,6 +585,21 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandPack
 
       {/* Crop dialog — per-placement crop for the selected image slot */}
       {cropTarget && <CropDialogHost cropTarget={cropTarget} state={state} pack={pack} onApply={updateCrop} onClose={() => setCropTarget(null)} />}
+
+      {/* Recovery banner — an unreadable saved revision blocks saving/publishing */}
+      {recoveryBlocked && (
+        <div
+          className="border-t border-red-300 bg-red-100 px-5 py-3 text-sm text-red-900"
+          role="alert"
+        >
+          <p className="font-semibold">We couldn&apos;t read your last saved version of this ad.</p>
+          <p className="mt-0.5">
+            Your saved work is safe and has not been changed. Saving and publishing are
+            disabled to protect it — reload the page to try again, or contact support if
+            this keeps happening.
+          </p>
+        </div>
+      )}
 
       {/* Error banner */}
       {state.error && (

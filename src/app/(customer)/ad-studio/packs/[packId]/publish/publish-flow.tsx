@@ -11,8 +11,13 @@ import type { PublishRequirements } from "@/lib/adstudio/publish-adapter";
 // Shows the last saved revision and drives POST /api/adstudio/ads/[id]/publish,
 // which completes the whole server-side lifecycle: freezes the snapshot,
 // creates the Meta objects and ACTIVATES them. The receipt reports "active"
-// only after Meta confirms; if activation did not complete the receipt says
-// exactly that and offers a safe retry targeting the already-created objects.
+// only after Meta confirms the CONFIGURED status of campaign, ad sets and ads;
+// if activation did not complete the receipt says exactly that and offers a
+// safe retry targeting the already-created objects.
+//
+// Budget, audience, placements and schedule are real, editable controls —
+// nothing is hardcoded. The summary reflects the customer's actual selections
+// (or the server's documented default when a field is left untouched).
 // ---------------------------------------------------------------------------
 
 export interface PublishFlowProps {
@@ -70,14 +75,21 @@ type ActivationReceipt = {
   error?: string;
 };
 
-/** The publish plan's fixed customer-facing settings (server defaults). */
-const PUBLISH_SUMMARY = {
-  objective: "Leads (instant form or website destination)",
-  dailyBudget: "$20.00 per day",
-  audience: "Homeowners in your service area",
-  placements: "Facebook and Instagram — Feed and Story",
-  schedule: "Starts as soon as Meta approves the ad; runs continuously",
-};
+/** Domain default geo (AdStudioCampaign.market.country is "AU" by model). */
+const DEFAULT_GEO_COUNTRY = "AU";
+const COUNTRY_OPTIONS = [
+  { value: "AU", label: "Australia" },
+  { value: "NZ", label: "New Zealand" },
+  { value: "US", label: "United States" },
+  { value: "GB", label: "United Kingdom" },
+];
+const SERVER_DEFAULT_DAILY_BUDGET_MINOR = 2000;
+
+function formatBudget(dollars: string): string {
+  const value = Number(dollars);
+  if (!Number.isFinite(value) || value <= 0) return "";
+  return value.toFixed(2);
+}
 
 export function PublishFlow({
   adId,
@@ -102,26 +114,62 @@ export function PublishFlow({
   const [retrying, setRetrying] = useState(false);
   const [retryReceipt, setRetryReceipt] = useState<ActivationReceipt | null>(null);
 
+  // --- Real publish controls (all customer-editable; empty = server default) ---
+  const [budgetDollars, setBudgetDollars] = useState("");
+  const [geoMode, setGeoMode] = useState<"country" | "custom_radius">("country");
+  const [geoCountry, setGeoCountry] = useState(DEFAULT_GEO_COUNTRY);
+  const [radiusKm, setRadiusKm] = useState("");
+  const [radiusLat, setRadiusLat] = useState("");
+  const [radiusLon, setRadiusLon] = useState("");
+  const [facebookEnabled, setFacebookEnabled] = useState(true);
+  const [instagramEnabled, setInstagramEnabled] = useState(true);
+  const [scheduleStart, setScheduleStart] = useState("");
+  const [scheduleEnd, setScheduleEnd] = useState("");
+
   const handlePinStateChange = useCallback((pinned: boolean) => {
     setFormPinned(pinned);
   }, []);
+
+  const radiusValid =
+    geoMode !== "custom_radius" ||
+    (Number(radiusKm) > 0 && Number.isFinite(Number(radiusLat)) && Number.isFinite(Number(radiusLon)));
+  const scheduleValid = !scheduleStart || !scheduleEnd || scheduleEnd > scheduleStart;
+  const placementsValid = facebookEnabled || instagramEnabled;
+  const budgetMinor = (() => {
+    const cents = Math.round(Number(budgetDollars) * 100);
+    return Number.isFinite(cents) && cents > 0 ? cents : null;
+  })();
 
   const handlePublish = useCallback(async () => {
     setSubmitting(true);
     setReceipt(null);
     setRetryReceipt(null);
     try {
+      const controls: Record<string, unknown> = {
+        destinationMode: publishRequirements.destinationMode,
+        geo:
+          geoMode === "country"
+            ? { type: "country", country: geoCountry }
+            : { type: "custom_radius", latitude: Number(radiusLat), longitude: Number(radiusLon), radiusKm: Number(radiusKm) },
+        schedule: {
+          startTime: scheduleStart ? new Date(scheduleStart).toISOString() : null,
+          endTime: scheduleEnd ? new Date(scheduleEnd).toISOString() : null,
+        },
+        placements: {
+          publisherPlatforms: [
+            ...(facebookEnabled ? ["facebook"] : []),
+            ...(instagramEnabled ? ["instagram"] : []),
+          ],
+        },
+        ...(budgetMinor ? { dailyBudgetMinorUnits: budgetMinor } : {}),
+        ...(destinationUrl.trim() ? { destinationUrl: destinationUrl.trim() } : {}),
+      };
       const res = await fetch(
         `/api/adstudio/ads/${encodeURIComponent(adId)}/publish?workspaceId=${encodeURIComponent(workspaceId)}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            controls: {
-              destinationMode: publishRequirements.destinationMode,
-              ...(destinationUrl.trim() ? { destinationUrl: destinationUrl.trim() } : {}),
-            },
-          }),
+          body: JSON.stringify({ controls }),
         },
       );
       const body = (await res.json().catch(() => ({}))) as PublishReceipt;
@@ -131,7 +179,7 @@ export function PublishFlow({
     } finally {
       setSubmitting(false);
     }
-  }, [adId, destinationUrl, publishRequirements.destinationMode, workspaceId]);
+  }, [adId, budgetMinor, destinationUrl, facebookEnabled, geoCountry, geoMode, instagramEnabled, publishRequirements.destinationMode, radiusKm, radiusLat, radiusLon, scheduleEnd, scheduleStart, workspaceId]);
 
   // Safe retry: the publish created Meta objects but activation did not
   // complete. The retry targets that exact plan and never creates duplicates.
@@ -183,7 +231,21 @@ export function PublishFlow({
   const requiresForm = publishRequirements.destinationMode === "instant_form";
   const formReady = !requiresForm || Boolean(initialState?.form) || formPinned;
   const destinationReady = publishRequirements.destinationMode !== "website" || validHttpsUrl(destinationUrl);
-  const ready = issues.length === 0 && formReady && destinationReady;
+  const ready = issues.length === 0 && formReady && destinationReady && radiusValid && scheduleValid && placementsValid;
+
+  const budgetSummary = budgetMinor
+    ? `$${formatBudget(budgetDollars)} per day`
+    : `Blockwise default ($${(SERVER_DEFAULT_DAILY_BUDGET_MINOR / 100).toFixed(2)} per day)`;
+  const geoSummary = geoMode === "country"
+    ? COUNTRY_OPTIONS.find((c) => c.value === geoCountry)?.label ?? geoCountry
+    : `Custom radius — ${radiusKm || "?"} km around ${radiusLat || "?"}, ${radiusLon || "?"}`;
+  const placementsSummary = [
+    ...(facebookEnabled ? ["Facebook"] : []),
+    ...(instagramEnabled ? ["Instagram"] : []),
+  ].join(" and ") || "None selected";
+  const scheduleSummary = scheduleStart
+    ? `Starts ${new Date(scheduleStart).toLocaleString()}${scheduleEnd ? `, ends ${new Date(scheduleEnd).toLocaleString()}` : ", runs until you pause it"}`
+    : "Starts as soon as Meta approves the ad; runs continuously";
 
   return (
     <div className="flex h-full flex-col bg-(--canvas)">
@@ -256,18 +318,110 @@ export function PublishFlow({
           </div>
         )}
 
-        {/* Explicit confirmation of everything the campaign will use */}
+        {/* Real publish controls — the customer chooses; nothing is fixed */}
         <div className="mb-6 rounded-(--r-card) border border-(--line) bg-(--surface) p-4">
-          <h3 className="text-sm font-semibold">Publish settings</h3>
+          <h3 className="text-sm font-semibold">Campaign settings</h3>
           <p className="mt-1 text-xs text-muted-foreground">
-            Confirm before publishing — these are the settings your campaign will use.
+            Set the budget, audience, placements and schedule for this campaign. Fields left
+            untouched use Blockwise&apos;s documented defaults.
           </p>
+
+          <div className="mt-4 grid grid-cols-1 gap-5 lg:grid-cols-2">
+            {/* Budget */}
+            <label className="block">
+              <span className="text-sm font-semibold">Daily budget (AUD)</span>
+              <input
+                type="number"
+                min="1"
+                step="0.5"
+                value={budgetDollars}
+                onChange={(event) => setBudgetDollars(event.target.value)}
+                placeholder="20.00"
+                className="mt-1 w-full rounded-(--r-control) border border-(--line) bg-(--canvas) px-3 py-2 text-sm outline-none focus:border-(--ui-primary)"
+                aria-label="Daily budget in Australian dollars"
+              />
+              <span className="mt-1 block text-xs text-muted-foreground">Leave blank for the default ($20.00 per day).</span>
+            </label>
+
+            {/* Audience */}
+            <fieldset className="block">
+              <legend className="text-sm font-semibold">Audience</legend>
+              <div className="mt-1 flex gap-4 text-sm">
+                <label className="flex items-center gap-1.5">
+                  <input type="radio" name="geo-mode" checked={geoMode === "country"} onChange={() => setGeoMode("country")} />
+                  Whole country
+                </label>
+                <label className="flex items-center gap-1.5">
+                  <input type="radio" name="geo-mode" checked={geoMode === "custom_radius"} onChange={() => setGeoMode("custom_radius")} />
+                  Custom radius
+                </label>
+              </div>
+              {geoMode === "country" ? (
+                <select
+                  value={geoCountry}
+                  onChange={(event) => setGeoCountry(event.target.value)}
+                  className="mt-2 w-full rounded-(--r-control) border border-(--line) bg-(--canvas) px-3 py-2 text-sm outline-none focus:border-(--ui-primary)"
+                  aria-label="Audience country"
+                >
+                  {COUNTRY_OPTIONS.map((c) => (
+                    <option key={c.value} value={c.value}>{c.label}</option>
+                  ))}
+                </select>
+              ) : (
+                <div className="mt-2 grid grid-cols-3 gap-2">
+                  <input type="text" inputMode="decimal" value={radiusLat} onChange={(e) => setRadiusLat(e.target.value)} placeholder="Latitude" className="rounded-(--r-control) border border-(--line) bg-(--canvas) px-2 py-2 text-sm outline-none focus:border-(--ui-primary)" aria-label="Latitude" />
+                  <input type="text" inputMode="decimal" value={radiusLon} onChange={(e) => setRadiusLon(e.target.value)} placeholder="Longitude" className="rounded-(--r-control) border border-(--line) bg-(--canvas) px-2 py-2 text-sm outline-none focus:border-(--ui-primary)" aria-label="Longitude" />
+                  <input type="number" min="1" value={radiusKm} onChange={(e) => setRadiusKm(e.target.value)} placeholder="Radius km" className="rounded-(--r-control) border border-(--line) bg-(--canvas) px-2 py-2 text-sm outline-none focus:border-(--ui-primary)" aria-label="Radius in kilometres" />
+                </div>
+              )}
+              {geoMode === "custom_radius" && !radiusValid && (
+                <p className="mt-1 text-xs text-red-600">Enter a latitude, longitude and a radius of at least 1 km.</p>
+              )}
+            </fieldset>
+
+            {/* Placements */}
+            <fieldset className="block">
+              <legend className="text-sm font-semibold">Placements</legend>
+              <div className="mt-1 flex flex-col gap-1.5 text-sm">
+                <label className="flex items-center gap-2">
+                  <input type="checkbox" checked={facebookEnabled} onChange={(e) => setFacebookEnabled(e.target.checked)} />
+                  Facebook (Feed)
+                </label>
+                <label className="flex items-center gap-2">
+                  <input type="checkbox" checked={instagramEnabled} onChange={(e) => setInstagramEnabled(e.target.checked)} />
+                  Instagram (Feed and Story)
+                </label>
+              </div>
+              {!placementsValid && <p className="mt-1 text-xs text-red-600">Choose at least one placement.</p>}
+            </fieldset>
+
+            {/* Schedule */}
+            <fieldset className="block">
+              <legend className="text-sm font-semibold">Schedule</legend>
+              <div className="mt-1 space-y-2">
+                <label className="block text-xs text-muted-foreground">
+                  Start (optional)
+                  <input type="datetime-local" value={scheduleStart} onChange={(e) => setScheduleStart(e.target.value)} className="mt-1 w-full rounded-(--r-control) border border-(--line) bg-(--canvas) px-3 py-2 text-sm text-foreground outline-none focus:border-(--ui-primary)" />
+                </label>
+                <label className="block text-xs text-muted-foreground">
+                  End (optional)
+                  <input type="datetime-local" value={scheduleEnd} onChange={(e) => setScheduleEnd(e.target.value)} className="mt-1 w-full rounded-(--r-control) border border-(--line) bg-(--canvas) px-3 py-2 text-sm text-foreground outline-none focus:border-(--ui-primary)" />
+                </label>
+              </div>
+              {!scheduleValid && <p className="mt-1 text-xs text-red-600">The end time must be after the start time.</p>}
+            </fieldset>
+          </div>
+        </div>
+
+        {/* Explicit confirmation summary of the ACTUAL selections */}
+        <div className="mb-6 rounded-(--r-card) border border-(--line) bg-(--surface) p-4">
+          <h3 className="text-sm font-semibold">Confirm before publishing</h3>
           <dl className="mt-3 grid grid-cols-1 gap-x-6 gap-y-2 text-xs sm:grid-cols-2">
-            <SummaryRow label="Objective" value={PUBLISH_SUMMARY.objective} />
-            <SummaryRow label="Budget" value={PUBLISH_SUMMARY.dailyBudget} />
-            <SummaryRow label="Audience" value={PUBLISH_SUMMARY.audience} />
-            <SummaryRow label="Placements" value={PUBLISH_SUMMARY.placements} />
-            <SummaryRow label="Schedule" value={PUBLISH_SUMMARY.schedule} />
+            <SummaryRow label="Objective" value="Leads (instant form or website destination)" />
+            <SummaryRow label="Budget" value={budgetSummary} />
+            <SummaryRow label="Audience" value={geoSummary} />
+            <SummaryRow label="Placements" value={placementsSummary} />
+            <SummaryRow label="Schedule" value={scheduleSummary} />
             <SummaryRow
               label="Destination"
               value={requiresForm
@@ -307,6 +461,10 @@ export function PublishFlow({
           </p>
         ) : !destinationReady && issues.length === 0 ? (
           <p className="text-sm text-muted-foreground">Add the real HTTPS article or website URL to continue.</p>
+        ) : !radiusValid ? (
+          <p className="text-sm text-muted-foreground">Complete the custom radius audience to continue.</p>
+        ) : !placementsValid ? (
+          <p className="text-sm text-muted-foreground">Choose at least one placement to continue.</p>
         ) : (
           <span />
         )}
@@ -392,7 +550,7 @@ function ReceiptCard({
     const objects = receipt.reconciledObjects;
     return (
       <div className="mt-6 rounded-(--r-card) border border-green-200 bg-green-50 p-4" role="status">
-        <h3 className="mb-1 text-sm font-semibold text-green-800">Published — your ad is active</h3>
+        <h3 className="mb-1 text-sm font-semibold text-green-800">Published — your campaign is set to active</h3>
         <p className="text-sm text-green-700">{receipt.message}</p>
         <dl className="mt-3 grid grid-cols-1 gap-1 text-xs text-green-800 sm:grid-cols-2">
           <ReceiptStat label="Campaign ID" value={objects?.campaignId ?? "—"} />
@@ -407,12 +565,13 @@ function ReceiptCard({
 
   if (receipt.mode === "publish" && receipt.status === "paused") {
     // Honest partial failure: objects were created on Meta but activation did
-    // not complete. Report the real state and offer a safe retry.
+    // not complete — they are genuinely PAUSED, nothing is running. Offer the
+    // safe retry that targets the exact objects already created.
     const objects = receipt.reconciledObjects;
     return (
       <div className="mt-6 space-y-4">
         <div className="rounded-(--r-card) border border-amber-200 bg-amber-50 p-4" role="status">
-          <h3 className="mb-1 text-sm font-semibold text-amber-900">Created on Meta — not active yet</h3>
+          <h3 className="mb-1 text-sm font-semibold text-amber-900">Created on Meta — currently paused, not running</h3>
           <p className="text-sm text-amber-800">{receipt.message}</p>
           {receipt.activationError && (
             <p className="mt-2 text-xs font-medium text-amber-900">Reason: {receipt.activationError}</p>
@@ -434,7 +593,7 @@ function ReceiptCard({
               {retrying ? "Publishing…" : "Finish publishing"}
             </button>
             <span className="ml-3 text-xs text-muted-foreground">
-              Safely activates the campaign already created on Meta — nothing is duplicated.
+              Safely activates the campaign already created on Meta — no duplicates are made.
             </span>
           </div>
         )}
@@ -452,7 +611,7 @@ function RetryReceiptCard({ receipt }: { receipt: ActivationReceipt }) {
         <h3 className="mb-1 text-sm font-semibold text-red-800">Publish retry failed</h3>
         <p className="text-sm text-red-700">{receipt.error}</p>
         <p className="mt-2 text-xs text-red-700">
-          Your campaign exists on Meta but is not running — nothing started without your approval.
+          Your campaign exists on Meta but is paused — nothing is running without your approval.
         </p>
       </div>
     );
@@ -470,7 +629,7 @@ function RetryReceiptCard({ receipt }: { receipt: ActivationReceipt }) {
   if (receipt.mode === "activate") {
     return (
       <div className="rounded-(--r-card) border border-green-200 bg-green-50 p-4" role="status">
-        <h3 className="mb-1 text-sm font-semibold text-green-800">Published — your ad is active</h3>
+        <h3 className="mb-1 text-sm font-semibold text-green-800">Published — your campaign is set to active</h3>
         <p className="text-sm text-green-700">{receipt.message}</p>
         <dl className="mt-3 grid grid-cols-1 gap-1 text-xs text-green-800 sm:grid-cols-2">
           <ReceiptStat label="Plan" value={shortHash(receipt.planId ?? "")} />

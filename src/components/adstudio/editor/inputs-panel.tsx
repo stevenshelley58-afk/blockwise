@@ -25,6 +25,8 @@ export interface InputsPanelProps {
   onImageChange: (key: string, dataUrl: string | null) => void;
   /** Opens the crop dialog for the input's slot in the ACTIVE placement. */
   onCropClick: (key: string) => void;
+  /** Opens the asset-library picker for this input (undefined → no library). */
+  onLibraryClick?: (key: string) => void;
   className?: string;
 }
 
@@ -36,6 +38,7 @@ export function InputsPanel({
   onTextChange,
   onImageChange,
   onCropClick,
+  onLibraryClick,
   className,
 }: InputsPanelProps) {
   return (
@@ -88,13 +91,15 @@ export function InputsPanel({
                 dataUrl={imageValues[input.key] ?? null}
                 onImageChange={onImageChange}
                 onCropClick={() => onCropClick(input.key)}
+                onLibraryClick={onLibraryClick ? () => onLibraryClick(input.key) : undefined}
               />
             ))}
           </div>
         )}
         <p className="text-[11px] leading-relaxed text-muted-foreground">
-          Picked images stay in this browser session only — there is no upload
-          library yet, so they are not stored on the server.
+          Picked images stay in this browser session until you save the ad —
+          saving stores them with the ad document. Assets uploaded in Brand
+          Studio are also available via the Library button.
         </p>
       </section>
     </div>
@@ -110,11 +115,13 @@ function ImageSlotControl({
   dataUrl,
   onImageChange,
   onCropClick,
+  onLibraryClick,
 }: {
   input: ImageInput;
   dataUrl: string | null;
   onImageChange: (key: string, dataUrl: string | null) => void;
   onCropClick: () => void;
+  onLibraryClick?: () => void;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const accept = input.acceptedTypes.length > 0 ? input.acceptedTypes.join(",") : "image/*";
@@ -167,6 +174,15 @@ function ImageSlotControl({
             >
               Crop…
             </button>
+            {onLibraryClick && (
+              <button
+                type="button"
+                onClick={onLibraryClick}
+                className="rounded-(--r-control) border border-(--line) px-3 py-1.5 text-xs font-medium text-foreground transition hover:bg-(--surface-subtle)"
+              >
+                Library…
+              </button>
+            )}
             <button
               type="button"
               onClick={() => onImageChange(input.key, null)}
@@ -177,13 +193,24 @@ function ImageSlotControl({
           </div>
         </div>
       ) : (
-        <button
-          type="button"
-          onClick={() => fileRef.current?.click()}
-          className="w-full rounded-(--r-control) border border-dashed border-(--line) px-3 py-3 text-sm font-medium text-muted-foreground transition hover:border-(--ui-primary) hover:text-(--ui-primary)"
-        >
-          Choose image…
-        </button>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            className="flex-1 rounded-(--r-control) border border-dashed border-(--line) px-3 py-3 text-sm font-medium text-muted-foreground transition hover:border-(--ui-primary) hover:text-(--ui-primary)"
+          >
+            Choose image…
+          </button>
+          {onLibraryClick && (
+            <button
+              type="button"
+              onClick={onLibraryClick}
+              className="rounded-(--r-control) border border-(--line) px-3 py-3 text-sm font-medium text-foreground transition hover:bg-(--surface-subtle)"
+            >
+              Library…
+            </button>
+          )}
+        </div>
       )}
     </div>
   );

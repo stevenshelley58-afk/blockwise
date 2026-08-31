@@ -56,6 +56,7 @@ function makeSavedSeed(overrides: Partial<SavedEditorSeed> = {}): SavedEditorSee
     colourMode: "template",
     resolvedColourMap: null,
     lastSavedRevision: 3,
+    brandBusinessName: null,
     ...overrides,
   };
 }
@@ -78,6 +79,9 @@ describe("new ads start with placeholders, not template copy", () => {
     assert.equal(state.colourMode, "template");
     assert.equal(state.lastSavedRevision, null);
     assert.equal(state.isDirty, false);
+    // The template checkbox starts OFF — the customer opts in explicitly.
+    assert.equal(state.templateCopyApplied, false);
+    assert.deepEqual(state.templateFilled, { text: [], meta: [] });
   });
 
   it("reports that the template offers copy to insert", () => {
@@ -162,6 +166,105 @@ describe("use template copy fills only empty fields", () => {
     const values = templateCopyValues(PACK);
     assert.equal(values.metaCopy.cta, "SIGN_UP");
     assert.equal(values.textValues.headline, "Template headline");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// "Use template copy" checkbox semantics — checking fills empty fields;
+// unchecking removes ONLY still-unedited template suggestions, never
+// customer copy.
+// ---------------------------------------------------------------------------
+
+describe("use template copy checkbox semantics", () => {
+  /** Drive the same state transitions the hook performs for the checkbox. */
+  function check(state: ReturnType<typeof initialEditorState>, enabled: boolean) {
+    if (enabled) {
+      const merged = applyTemplateCopy(state.textValues, state.metaCopy, PACK);
+      return {
+        ...state,
+        textValues: merged.textValues,
+        metaCopy: merged.metaCopy,
+        templateFilled: { text: Object.keys(merged.filledText), meta: Object.keys(merged.filledMeta) },
+        templateCopyApplied: true,
+      };
+    }
+    const textValues = { ...state.textValues };
+    for (const key of state.templateFilled.text) textValues[key] = "";
+    const metaCopy = { ...state.metaCopy };
+    for (const field of state.templateFilled.meta) metaCopy[field as keyof MetaCopy] = "";
+    return {
+      ...state,
+      textValues,
+      metaCopy,
+      templateFilled: { text: [], meta: [] },
+      templateCopyApplied: false,
+    };
+  }
+
+  it("checking fills empty fields and records provenance", () => {
+    const checked = check(initialEditorState(PACK), true);
+    assert.equal(checked.textValues.headline, "Template headline");
+    assert.equal(checked.metaCopy.primaryText, "Template primary");
+    assert.deepEqual(checked.templateFilled, { text: ["headline"], meta: ["primaryText", "headline", "description"] });
+    assert.equal(checked.templateCopyApplied, true);
+  });
+
+  it("unchecking clears the untouched template suggestions", () => {
+    const unchecked = check(check(initialEditorState(PACK), true), false);
+    assert.equal(unchecked.textValues.headline, "");
+    assert.equal(unchecked.metaCopy.primaryText, "");
+    assert.equal(unchecked.templateCopyApplied, false);
+  });
+
+  it("unchecking never clears edited or saved customer copy", () => {
+    const state = initialEditorState(PACK, makeSavedSeed());
+    const checked = { ...check(state, true) };
+    // Customer edits the template-filled primary text afterwards.
+    checked.metaCopy = { ...checked.metaCopy, primaryText: "Customer primary" };
+    const edited: typeof checked = {
+      ...checked,
+      templateFilled: { ...checked.templateFilled, meta: checked.templateFilled.meta.filter(f => f !== "primaryText") },
+    };
+    const unchecked = check(edited, false);
+    assert.equal(unchecked.metaCopy.primaryText, "Customer primary", "edited copy must survive unchecking");
+  });
+
+  it("checking around existing customer copy only fills the gaps", () => {
+    const state = initialEditorState(PACK, makeSavedSeed());
+    const checked = check(state, true);
+    assert.equal(checked.textValues.headline, "Customer's own headline");
+    // description was empty → filled; primaryText/headline kept customer values
+    assert.equal(checked.metaCopy.description, "Template description");
+    assert.equal(checked.metaCopy.primaryText, "Customer primary");
+    assert.deepEqual(checked.templateFilled.meta, ["description"]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Business name override — Brand Pack value is the default, the customer can
+// replace it, and the override persists in the document.
+// ---------------------------------------------------------------------------
+
+describe("business name override", () => {
+  it("a new ad starts with no override so the Brand Pack default applies", () => {
+    const state = initialEditorState(PACK);
+    assert.equal(state.brandBusinessName, "");
+  });
+
+  it("a saved override is restored", () => {
+    const state = initialEditorState(PACK, makeSavedSeed({ brandBusinessName: "Custom Name Co" }));
+    assert.equal(state.brandBusinessName, "Custom Name Co");
+  });
+
+  it("an override is persisted in the document; empty omits the field", async () => {
+    const base = initialEditorState(PACK, makeSavedSeed());
+    const withName = { ...base, brandBusinessName: "Custom Name Co", imageValues: [] as never[] };
+    const doc = await buildAdDocument(withName);
+    assert.equal(doc.brandBusinessName, "Custom Name Co");
+
+    const withoutName = { ...base, brandBusinessName: "   ", imageValues: [] as never[] };
+    const doc2 = await buildAdDocument(withoutName);
+    assert.equal(doc2.brandBusinessName, undefined, "empty override must be omitted, not empty-string");
   });
 });
 

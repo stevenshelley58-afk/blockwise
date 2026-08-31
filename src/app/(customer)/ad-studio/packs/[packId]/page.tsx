@@ -1,9 +1,10 @@
 import { notFound } from "next/navigation";
 
-import { EditorShell, type EditorBrandPack } from "@/components/adstudio/editor/editor-shell";
+import { EditorShell, type EditorBrandPack, type EditorLibrary } from "@/components/adstudio/editor/editor-shell";
 import { getOrCreateCustomerAd } from "@/lib/adstudio/create-customer-ad";
 import { loadSavedAdSeed } from "@/lib/adstudio/editor-seed";
 import { getImportedPack } from "@/lib/adstudio/pack-gallery";
+import { loadAdStudioLibraryPage } from "@/lib/adstudio/library-read-model";
 import { isExampleBrandKitSourceUrl, rowToBrandKit } from "@/lib/adstudio/persistence";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
 
@@ -32,12 +33,31 @@ export default async function PackEditorPage({
 
   // Saved revision for an EXISTING ad — restores copy, assets and colour
   // mode. Null for a brand new ad (empty placeholders + template suggestions).
-  const savedSeed = await loadSavedAdSeed(supabase, access.workspaceId, adId);
+  // An unparsable saved revision blocks saving (recovery mode) instead of
+  // silently starting fresh over the customer's history.
+  const saved = await loadSavedAdSeed(supabase, access.workspaceId, adId);
+  const savedSeed = saved?.status === "ok" ? saved.seed : null;
+  const savedUnparsable = saved?.status === "unparsable";
 
   // Brand Pack for the Colours tab and the Meta previews (avatar, business
   // name, palette): the workspace's latest non-demo kit, loaded server-side
   // (same pattern as /ad-studio/brand). Null → Brand Pack mode disabled.
   const brandPack = await loadLatestBrandPack(supabase, access.workspaceId);
+
+  // Workspace asset library (Brand-Studio uploads) offered as creative
+  // sources; newest first, small page so the editor payload stays light.
+  let library: EditorLibrary = { brandKitId: null, assets: [] };
+  try {
+    const page = await loadAdStudioLibraryPage({ supabase, workspaceId: access.workspaceId, kind: "assets", limit: 24 });
+    library = {
+      brandKitId: brandPack?.brandKitId ?? null,
+      assets: page.items
+        .filter((item): item is Extract<typeof item, { id: string }> => "id" in item)
+        .map((item) => ({ id: item.id, src: item.src, label: item.label })),
+    };
+  } catch {
+    // Library is optional — the editor works with direct uploads alone.
+  }
 
   return (
     <main className="fixed inset-0 flex flex-col bg-(--canvas) text-foreground">
@@ -72,6 +92,8 @@ export default async function PackEditorPage({
           canSave={true}
           brandPack={brandPack}
           savedSeed={savedSeed}
+          savedUnparsable={savedUnparsable}
+          library={library}
         />
       </div>
     </main>
@@ -101,6 +123,7 @@ async function loadLatestBrandPack(
 
     const kit = rowToBrandKit(row);
     return {
+      brandKitId: kit.brandKitId,
       colours: kit.colours,
       businessName: kit.identity.businessName?.trim() || "",
       logoUrl: kit.logos.primaryLogoUrl,

@@ -205,7 +205,9 @@ export async function POST(request: NextRequest, context: RouteContext) {
         reconciledObjects: completed.reconciledObjects,
         activationTargets: activation.targets,
         message:
-          "Published — your campaign is active on Meta. The campaign, ad sets, and ads are ACTIVE and can start delivering.",
+          "Published — Meta confirms your campaign, ad sets and ads are configured ACTIVE. " +
+          "Individual ads may briefly show as in review (effective status IN_PROCESS or PENDING_REVIEW) " +
+          "before they start delivering; that is Meta's normal approval flow, not a paused campaign.",
       });
     } catch (activationErr) {
       const detail = activationErr instanceof PublishError
