@@ -1,7 +1,7 @@
 # ADR 0001 — System of record
 
 Status: Accepted
-Date: 2026-08-03
+Date: 2026-08-31
 
 ## Context
 

@@ -1,47 +1,84 @@
 # Release Reconciliation — production release line vs canonical main
 
-Status: recorded. This document is the reconciliation receipt for the
-production release line against canonical `origin/main`.
+Status: **INCOMPLETE — reconciliation required.** The running production
+release is NOT built from canonical `main`. PR #383 must not merge until the
+release branch below exists and all new CI checks pass.
 
-## Receipt
+## Production runtime receipt (2026-08-31, host srv1625369)
+
+Evidence collected from the running containers and registry on the VPS, not
+from any checkout directory:
 
 | Field | Value |
 | --- | --- |
-| Reconciliation date | 2026-08-03 |
-| Deployed checkout path | `/projects/ad-template-builder-release` (detached HEAD, clean tree) |
-| Deployed SHA | `e6770c6c6f7f56e311761804796798231bc70a6b` ("Harden Ad Studio editor and v2 Story templates (#360)") |
-| origin/main SHA at initial verification | `e6770c6c6f7f56e311761804796798231bc70a6b` — identical to deployed; divergence 0 commits ahead / 0 commits behind |
-| origin/main SHA at reconciliation time | `e16febfa678ef895e1ade011c82404c8a83ffdc0` ("feat(ops): request Frank reconciliation after deploy") |
-| Divergence at reconciliation time | 0 commits ahead / 64 commits behind — `origin/main` advanced by fast-forward only; `e6770c6` is a direct ancestor of `e16febfa` |
-| Capability dropped | None. No capability was dropped by the reconciliation; the deployed release line contains nothing that canonical main lacks. |
+| Production stack | `blockwise-product` compose stack on `srv1625369` (100.78.126.112), edge via `blockwise-product-product-caddy-1` |
+| Running image | `blockwise-app:350efcee487e765c61c205ccb42b7099e03f9ac2` |
+| Image digest | `sha256:f98c607b49e9328b6a371751d66822af0e3ce441cf4d418292e689fc5675f201` (image created 2026-08-30T16:36:44Z) |
+| Source SHA of running image | `350efcee487e765c61c205ccb42b7099e03f9ac2` ("fix(renderer): respect vertical line geometry") — branch `codex/direct-meta-publish-persistence` |
+| Source checkout on host | `/opt/releases/only-process-blockwise-350efcee` (release dirs, not a dirty tree) |
+| `350efcee` vs `origin/main` | **NOT an ancestor of main.** merge-base is `544134a6`. Production has 5 commits main lacks; main has commits production lacks. |
+| Health result | `/api/health` → `200 {"app":"blockwise","status":"ready"}` (2026-08-31; compose healthcheck green, container `healthy`) |
+| Database | self-hosted Postgres 17.6 (`blockwise-product-product-db-1`), db `blockwise`, 122 public tables |
+| Migration ledger | `blockwise_product_migration_ledger`; latest applied `20260830050000_adstudio_manual_colour_mode.sql` at 2026-08-30T14:13:45Z |
+| Configuration | `/opt/releases/only-process-blockwise-350efcee/infra/coolify/docker-compose.product.yml` sha256 `20706487e7a684968a0a417ba5f170713686415c48690acf58651a71fcfaa71e`; Caddy config sha256 `a11467e5430b9294b98f349bc173853c87f49370801f85124ffdf47fe73b3b02` |
+| Backup receipts | `/srv/blockwise/backups/20260830T051532Z` (`database.dump`, `globals.sql`, `row-counts.json`, `SHA256SUMS`); pre-deploy backups `pre-935a61d-20260830T091014Z`, `pre-only-process-20260829T222306Z` |
+| Rollback target | image `e7719a9c` (`blockwise-app:e7719a9c…`, id `56dfdf5fa42c`, built 2026-08-30T15:06Z) — present on host |
 
-The deployed release line and canonical main agree: production runs committed
-source from git, and the release branch can fast-forward to `origin/main` at
-any time without a merge or rebase. The 64 commits main gained during the
-reconciliation window are ordinary forward work on the same line; they do not
-diverge from what production runs.
+Note: `docs/runbooks/vps-ssh.md` states the public app deploys through Vercel.
+The running production runtime observed on 2026-08-31 is the self-hosted
+compose stack above. The runbook needs updating to match reality.
+
+## Reconciliation work required (blocking Phase 0 exit)
+
+The deployed line `350efcee` and canonical `main` have diverged:
+
+- Production-only commits (on `codex/direct-meta-publish-persistence`, not on
+  `main`): `350efcee`, `e7719a9c`, `9d54f9fc`, `41c508b8`, `d2878c04`.
+- `main` has at least `e16febfa` plus prior history not in the production image.
+
+Required action: a protected release branch that merges `350efcee` (or its
+equivalent cherry-picked content) with `origin/main`, with tests resolving any
+conflicts, no deployed capability dropped, and a fresh deploy + receipt from
+the merged result. Until that deploy happens, the manifest fields for the NEW
+release stay pending and the running stack above remains the last-known-good.
+
+## Earlier (superseded) checkout-level verification
+
+A checkout-level check on 2026-08-31 verified `/projects/ad-template-builder-release`
+detached at `e6770c6…` equal to then-`origin/main` (0/0 divergence). This
+proved checkout ancestry only — it did not describe the running container, and
+is superseded by the runtime receipt above. It is retained for the audit trail.
 
 ## Main worktree intentionally behind
 
 The `/projects/blockwise` main worktree intentionally remains behind
-`origin/main` (verified 71 commits behind at reconciliation time) because it
-holds unrelated staged user work — the `frank/template-factory` deletions.
-That work is out of scope for this reconciliation and must not be touched,
+`origin/main` because it holds unrelated staged user work — the
+`frank/template-factory` deletions plus local editor-handoff commits. That
+work is out of scope for this reconciliation and must not be touched,
 committed, or reverted by release automation. It will rejoin canonical main
 through its own review path.
 
-## Required status checks (enable manually)
+## PR #383 status
 
-Branch protection cannot be changed without the admin API. A repository admin
-should mark the following checks as required for `main` (exact check names as
-registered by the workflows):
+PR #383 currently contains only the four documentation files. The CI workflow
+commit (`6c1c691f`, `.github/workflows/ci.yml`) is queued locally on
+`release/reconcile-production-main` but was NOT pushed: the stored PAT had
+`repo` scope only and GitHub rejects workflow-file pushes without `workflow`
+scope. The exposed PAT was removed from the local credential store on
+2026-08-31 and must be revoked by the account owner. A replacement token with
+`repo` + `workflow` scopes is required to push the workflow commit and update
+the PR. **Do not merge until the workflow commit is included and the `Build
+and test`, `Secret scan`, `SBOM` and `Container scan` jobs pass.**
 
-- `Build and test` (`.github/workflows/ci.yml`)
-- `Secret scan` (`.github/workflows/ci.yml`)
-- `SBOM` (`.github/workflows/ci.yml`)
-- `Container scan` (`.github/workflows/ci.yml`)
-- `Contract and static checks` (`.github/workflows/hard-reset-verification.yml`)
-- `Database migration and pgTAP checks` (`.github/workflows/hard-reset-verification.yml`)
+## Required status checks (enable via admin API)
 
-Until these are enabled, the reconciliation receipt above plus the CI runs on
-this branch are the release gate of record.
+Once a token with admin API access is available, protect `main` with:
+
+- Require pull requests (no direct pushes), disallow force pushes, block
+  merging with unresolved reviews or failing checks.
+- Required checks: `Build and test`, `Secret scan`, `SBOM`, `Container scan`
+  (`.github/workflows/ci.yml`), `Contract and static checks`,
+  `Database migration and pgTAP checks` (`.github/workflows/hard-reset-verification.yml`).
+
+Until enabled, the reconciliation receipt above plus green CI runs on the
+release branch are the release gate of record.
