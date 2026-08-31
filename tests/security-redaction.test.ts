@@ -29,6 +29,21 @@ describe("client ip derivation", () => {
   it("handles ipv6 entries", () => {
     assert.equal(getClientIp(headers({ "x-forwarded-for": "2001:db8::1, ::1" })), "::1");
   });
+
+  it("prefers the dedicated edge header stamped by the product Caddy", () => {
+    // infra/product/Caddyfile stamps X-Blockwise-Client-IP from {client_ip}
+    // after resolving through trusted proxies; a client cannot spoof it
+    // because the edge overwrites the header.
+    assert.equal(
+      getClientIp(headers({ "x-blockwise-client-ip": "203.0.113.9", "x-forwarded-for": "1.2.3.4, 9.9.9.9" })),
+      "203.0.113.9",
+    );
+    // A garbage edge value falls through to the XFF right-most rule.
+    assert.equal(
+      getClientIp(headers({ "x-blockwise-client-ip": "<script>", "x-forwarded-for": "1.2.3.4, 9.9.9.9" })),
+      "9.9.9.9",
+    );
+  });
 });
 
 describe("secret and PII redaction", () => {

@@ -53,7 +53,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
   }
   if (!ad) return NextResponse.json({ error: "Ad not found." }, { status: 404 });
 
-  const rateLimit = await checkRateLimit(access.supabase, access.access.workspaceId, access.access.userId, {
+  const rateLimit = await checkRateLimit(access.access.workspaceId, access.access.userId, {
     windowSeconds: 60 * 60,
     maxRequests: 120,
     bucket: "adstudio-media-upload",

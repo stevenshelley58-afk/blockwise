@@ -34,12 +34,11 @@ const HEADER_SECRET_PATTERN =
   /\b(x-api-key|api[_-]?key|authorization|set-cookie|private[_-]?token|shared[_-]?secret)(\s*[:=]\s*)[^\s,;&"]+/gi;
 const EMAIL_BODY_MARKER = /(?<=^|\s)(Dear|Hi|Hello)\s[^.,;\n]{2,40},?[\s\S]{0,400}/g;
 
-function redactString(value: string): string {
+/** Shared by the email outbox to redact provider errors before persisting. */
+export function redactString(value: string): string {
   return value
     .replace(BEARER_PATTERN, "[redacted]")
     .replace(JWT_PATTERN, "[redacted]")
     .replace(HEADER_SECRET_PATTERN, (_match, key: string, sep: string) => `${key}${sep}[redacted]`)
     .replace(EMAIL_BODY_MARKER, "[redacted email body]");
 }
-
-export { redactString };

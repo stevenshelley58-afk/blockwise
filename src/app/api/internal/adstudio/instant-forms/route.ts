@@ -24,7 +24,7 @@ export async function POST(request: Request) {
   if (!auth.ok) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
-  const rateLimit = await checkRateLimit(createSupabaseServiceClient(), null, "internal:adstudio.instant-forms", {
+  const rateLimit = await checkRateLimit(null, "internal:adstudio.instant-forms", {
     windowSeconds: 60,
     maxRequests: 120,
     bucket: "internal-api",
@@ -64,7 +64,7 @@ export async function PUT(request: Request) {
   if (!auth.ok) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
-  const rateLimit = await checkRateLimit(createSupabaseServiceClient(), null, "internal:adstudio.instant-forms", {
+  const rateLimit = await checkRateLimit(null, "internal:adstudio.instant-forms", {
     windowSeconds: 60,
     maxRequests: 120,
     bucket: "internal-api",

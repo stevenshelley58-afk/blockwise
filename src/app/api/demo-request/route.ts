@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
   // Rate limit by IP: 5 demo requests per hour per IP.
   const ip = getClientIp(request.headers);
   const serviceClient = createSupabaseServiceClient();
-  const rateLimit = await checkRateLimit(serviceClient, null, ip, {
+  const rateLimit = await checkRateLimit(null, ip, {
     windowSeconds: 3600,
     maxRequests: 5,
     bucket: "demo-request",
