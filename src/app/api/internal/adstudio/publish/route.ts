@@ -3,9 +3,18 @@ import { createClient } from "@supabase/supabase-js";
 
 import { verifyInternalRequest } from "@/lib/internal-auth";
 import { loadPublishState, validatePublishState, freezePublicationSnapshot } from "@/lib/adstudio/publish-adapter";
+import type { MetaConnectionSetup, MetaPublishControls } from "@/lib/providers/meta-execution";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+type FreezeRequestBody = {
+  adId?: string;
+  workspaceId?: string;
+  connectionId?: string;
+  setup?: MetaConnectionSetup;
+  controls?: MetaPublishControls;
+};
 
 /**
  * GET /api/internal/adstudio/publish/state?adId=...&workspaceId=...
@@ -64,13 +73,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
 
-  let body: Record<string, unknown> | null = null;
+  let body: FreezeRequestBody | null = null;
   try {
-    body = JSON.parse(rawBody) as Record<string, unknown>;
+    body = JSON.parse(rawBody) as FreezeRequestBody;
   } catch {
     return NextResponse.json({ error: "invalid_json" }, { status: 400 });
   }
-  if (!body || !body.adId || !body.workspaceId) {
+  if (!body || !body.adId || !body.workspaceId || !body.setup) {
     return NextResponse.json({ error: "missing_params" }, { status: 400 });
   }
 
@@ -84,7 +93,7 @@ export async function POST(request: Request) {
 
   try {
     const state = await loadPublishState(supabase, body.adId, body.workspaceId);
-    const issues = validatePublishState(state, { controls: body.controls ?? {}, setup: body.setup ?? {} });
+    const issues = validatePublishState(state, { controls: body.controls ?? {}, setup: body.setup });
     if (issues.length > 0) {
       return NextResponse.json({ error: "not_ready", issues }, { status: 400 });
     }
@@ -93,7 +102,7 @@ export async function POST(request: Request) {
       adId: body.adId,
       workspaceId: body.workspaceId,
       connectionId: body.connectionId ?? "",
-      setup: body.setup ?? {},
+      setup: body.setup,
       controls: body.controls ?? {},
     }, state);
 
