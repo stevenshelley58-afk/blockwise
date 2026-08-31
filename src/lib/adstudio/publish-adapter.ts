@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { TemplatePack } from "../../../packages/ad-template-pack-contract/src/types";
+import type { AdTemplate } from "../../../packages/ad-template-contract/src/types";
 import type { InstantForm } from "../adstudio/instant-form-types";
 import { deterministicUuid } from "./id.ts";
 import {
@@ -10,6 +10,7 @@ import {
   type MetaPublishPlan,
   type MetaReconciledObjectStatus,
 } from "../providers/meta-execution.ts";
+import { hasExplicitMetaPublishAudience, validateMetaOfferFulfilment } from "../providers/meta-execution.ts";
 import { buildMetaPlanMutation, type BuiltMetaPlanMutation } from "../providers/meta-mutations.ts";
 import { executeMetaMutationById } from "../providers/meta-mutation-worker.ts";
 import type { createSupabaseServiceClient } from "../supabase/service.ts";
@@ -34,7 +35,7 @@ import type {
 // Replaces "Submit and go live" with "Paused on Meta" + separate activation.
 // ---------------------------------------------------------------------------
 
-export interface PublishInputV2 {
+export interface PublishInput {
   adId: string;
   workspaceId: string;
   connectionId: string;
@@ -46,8 +47,8 @@ export interface PublishInputV2 {
 export interface PublishLoadResult {
   ad: {
     id: string;
-    templatePackId: string;
-    colourMode: "template" | "brand_pack" | "custom";
+    templateId: string;
+    colourMode: "template" | "brand_pack";
     metaPrimaryText: string;
     metaHeadline: string;
     metaDescription: string;
@@ -62,7 +63,7 @@ export interface PublishLoadResult {
     storyPngHash: string;
     storyPngPath: string;
   };
-  pack: TemplatePack;
+  pack: AdTemplate;
   form: InstantForm | null;
   formDraftId: string | null;
   formRevision: number | null;
@@ -71,16 +72,30 @@ export interface PublishLoadResult {
 export type PublishRequirements = {
   destinationMode: "website" | "instant_form";
   requiredCtaTypes: string[];
+  objective: string;
+  specialAdCategory: string | null;
+  fulfilmentRequired: boolean;
+  fulfilmentDependency: string | null;
 };
 
-/** Read only the optional v2 publish contract; the canonical pack schema stays unchanged. */
-export function readPublishRequirements(pack: unknown): PublishRequirements {
-  if (!pack || typeof pack !== "object") return { destinationMode: "instant_form", requiredCtaTypes: [] };
+/** Read only the template publish contract; the direct template metadata is read when present. */
+export function readTemplatePublishRequirements(pack: unknown): PublishRequirements {
+  const fallback: PublishRequirements = {
+    destinationMode: "instant_form",
+    requiredCtaTypes: [],
+    objective: "",
+    specialAdCategory: null,
+    fulfilmentRequired: false,
+    fulfilmentDependency: null,
+  };
+  if (!pack || typeof pack !== "object") return fallback;
   const candidate = (pack as Record<string, unknown>).publishRequirements;
   const metadata = (pack as Record<string, unknown>).metadata;
   const metadataRequirements = metadata && typeof metadata === "object" ? (metadata as Record<string, unknown>).publishRequirements : null;
-  const effectiveCandidate = candidate && typeof candidate === "object" ? candidate : metadataRequirements;
-  if (!effectiveCandidate || typeof effectiveCandidate !== "object") return { destinationMode: "instant_form", requiredCtaTypes: [] };
+  const effectiveCandidate = metadataRequirements && typeof metadataRequirements === "object"
+    ? metadataRequirements
+    : candidate;
+  if (!effectiveCandidate || typeof effectiveCandidate !== "object") return fallback;
   const record = effectiveCandidate as Record<string, unknown>;
   const nestedDestination = record.destination && typeof record.destination === "object"
     ? record.destination as Record<string, unknown>
@@ -88,12 +103,28 @@ export function readPublishRequirements(pack: unknown): PublishRequirements {
   const nestedKind = nestedDestination?.kind;
   const destinationMode = record.destinationMode === "website" || record.destinationMode === "instant_form"
     ? record.destinationMode
-    : nestedKind === "url" || nestedKind === "article" ? "website"
+    : nestedKind === "website" || nestedKind === "url" || nestedKind === "article" ? "website"
       : nestedKind === "instant_form" ? "instant_form" : "instant_form";
   const requiredCtaTypes = Array.isArray(record.requiredCtaTypes)
     ? record.requiredCtaTypes.filter((value): value is string => typeof value === "string" && value.trim().length > 0)
     : [];
-  return { destinationMode, requiredCtaTypes };
+  const fulfilment = record.fulfilment && typeof record.fulfilment === "object"
+    ? record.fulfilment as Record<string, unknown>
+    : null;
+  return {
+    destinationMode,
+    requiredCtaTypes,
+    objective: typeof record.objective === "string" && record.objective.trim()
+      ? record.objective.trim()
+      : fallback.objective,
+    specialAdCategory: typeof record.specialAdCategory === "string" && record.specialAdCategory.trim()
+      ? record.specialAdCategory.trim()
+      : record.specialAdCategory === null ? null : fallback.specialAdCategory,
+    fulfilmentRequired: fulfilment?.required === true,
+    fulfilmentDependency: typeof fulfilment?.dependency === "string" && fulfilment.dependency.trim()
+      ? fulfilment.dependency.trim()
+      : null,
+  };
 }
 
 function isHttpsUrl(value: unknown): value is string {
@@ -101,9 +132,22 @@ function isHttpsUrl(value: unknown): value is string {
   try { return new URL(value).protocol === "https:"; } catch { return false; }
 }
 
+function validateExecutableOfferFulfilment(
+  fulfilment: NonNullable<MetaPublishControls["fulfilment"]>,
+): string[] {
+  const issues: string[] = [];
+  if (fulfilment.fulfilmentAsset.trim()) {
+    issues.push("Typed asset names cannot deliver an offer. Add the validated HTTPS fulfilment URL instead.");
+  }
+  if (!isHttpsUrl(fulfilment.fulfilmentUrl)) {
+    issues.push("Offer fulfilment requires a valid HTTPS delivery URL.");
+  }
+  return issues;
+}
+
 /**
  * Load the authoritative server state for publishing.
- * Reads from ad_customer_ads, ad_revisions, ad_template_packs, ad_instant_form_drafts.
+ * Reads from ad_customer_ads, ad_revisions, ad_templates, ad_instant_form_drafts.
  * Rejects if the ad has unsaved changes (no active revision).
  */
 export async function loadPublishState(
@@ -114,7 +158,7 @@ export async function loadPublishState(
   // 1. Load ad
   const { data: ad, error: adError } = await supabase
     .from("ad_customer_ads")
-    .select("id, template_pack_id, colour_mode, meta_primary_text, meta_headline, meta_description, meta_cta, active_revision_id")
+    .select("id, template_id, colour_mode, meta_primary_text, meta_headline, meta_description, meta_cta, active_revision_id")
     .eq("id", adId)
     .eq("workspace_id", workspaceId)
     .single();
@@ -131,15 +175,15 @@ export async function loadPublishState(
 
   if (revError || !revision) throw new PublishError("revision_not_found", "Active revision not found");
 
-  // 3. Load template pack
+  // 3. Load template
   const { data: packRow, error: packError } = await supabase
-    .from("ad_template_packs")
-    .select("pack_json")
-    .eq("pack_id", ad.template_pack_id)
+    .from("ad_templates")
+    .select("template_json")
+    .eq("template_id", ad.template_id)
     .single();
 
-  if (packError || !packRow) throw new PublishError("pack_not_found", "Template pack not found");
-  const pack = packRow.pack_json as unknown as TemplatePack;
+  if (packError || !packRow) throw new PublishError("template_not_found", "Template not found");
+  const pack = packRow.template_json as unknown as AdTemplate;
 
   // 4. Load latest Instant Form draft
   const { data: formRow } = await supabase
@@ -155,7 +199,7 @@ export async function loadPublishState(
   return {
     ad: {
       id: ad.id,
-      templatePackId: ad.template_pack_id,
+      templateId: ad.template_id,
       colourMode: ad.colour_mode,
       metaPrimaryText: ad.meta_primary_text,
       metaHeadline: ad.meta_headline,
@@ -187,17 +231,31 @@ export function validatePublishState(
   options: { controls?: MetaPublishControls; setup?: Partial<MetaConnectionSetup> } = {},
 ): string[] {
   const issues: string[] = [];
-  const requirements = readPublishRequirements(state.pack);
+  issues.push(...validatePausedPublishControls(options.controls));
+  const requirements = readTemplatePublishRequirements(state.pack);
   const mode = options.controls?.destinationMode ?? requirements.destinationMode;
   const destinationUrl = options.controls?.destinationUrl?.trim();
+  if (requirements.fulfilmentRequired && !options.controls?.fulfilment) {
+    issues.push(
+      requirements.fulfilmentDependency
+        ? `This template requires offer fulfilment: ${requirements.fulfilmentDependency}`
+        : "This template requires executable offer fulfilment before publication.",
+    );
+  }
+  if (options.controls?.fulfilment) {
+    issues.push(...validateMetaOfferFulfilment(options.controls.fulfilment));
+    issues.push(...validateExecutableOfferFulfilment(options.controls.fulfilment));
+  }
 
   if (!state.revision.feedPngHash) issues.push("Missing Feed PNG");
   if (!state.revision.storyPngHash) issues.push("Missing Story PNG");
   if (!state.ad.metaPrimaryText) issues.push("Missing primary text");
   if (!state.ad.metaHeadline) issues.push("Missing headline");
   if (!state.ad.metaCta) issues.push("Missing CTA");
-  if (mode === "website" && (!destinationUrl || !isHttpsUrl(destinationUrl))) {
-    issues.push("Missing valid HTTPS destination URL/article — add the article or website URL before publishing");
+  if (!destinationUrl || !isHttpsUrl(destinationUrl)) {
+    issues.push(mode === "website"
+      ? "Missing valid HTTPS destination URL/article — add the article or website URL before publishing"
+      : "Missing valid HTTPS destination URL — add the Instant Form thank-you website URL before publishing");
   }
   if (requirements.requiredCtaTypes.length > 0 && !requirements.requiredCtaTypes.includes(state.ad.metaCta)) {
     issues.push(`CTA must be one of: ${requirements.requiredCtaTypes.join(", ")}`);
@@ -210,7 +268,7 @@ export function validatePublishState(
     if (state.form && !isHttpsUrl(state.form.privacy.url)) issues.push("Instant Form privacy policy must be a valid HTTPS URL");
     if (state.form && state.form.thankYou.actionType === "none") issues.push("Instant Form thank-you screen needs an action");
     if (state.form && state.form.thankYou.actionType === "call_now") issues.push("Instant Form call-now thank-you actions are not supported by this publisher yet");
-    if (state.form && ["visit_website", "download"].includes(state.form.thankYou.actionType) && !isHttpsUrl(state.form.thankYou.actionUrl ?? destinationUrl)) {
+    if (state.form && ["visit_website", "download"].includes(state.form.thankYou.actionType) && !isHttpsUrl(options.controls?.fulfilment?.fulfilmentUrl ?? destinationUrl)) {
       issues.push("Instant Form thank-you website action needs a valid HTTPS URL");
     }
   }
@@ -226,7 +284,7 @@ export function validatePublishState(
  */
 export async function freezePublicationSnapshot(
   supabase: SupabaseClient,
-  input: PublishInputV2,
+  input: PublishInput,
   state: PublishLoadResult,
 ): Promise<{ snapshotId: string }> {
   // Check if a snapshot already exists for this revision
@@ -247,7 +305,7 @@ export async function freezePublicationSnapshot(
     feedPngHash: state.revision.feedPngHash,
     storyPngHash: state.revision.storyPngHash,
     templateId: state.pack.templateId,
-    templateVersion: state.pack.version,
+    templateVersion: 1,
     metaPrimaryText: state.ad.metaPrimaryText,
     metaHeadline: state.ad.metaHeadline,
     metaDescription: state.ad.metaDescription,
@@ -342,41 +400,71 @@ export interface PausedPublishPlanInput {
 
 export function buildPausedMetaPublishPlan(input: PausedPublishPlanInput): MetaPublishPlan {
   const { state, setup } = input;
-  const label = state.pack.classification?.label?.trim() || state.pack.templateId || "Blockwise ad";
-  const country = controlsCountry(input.controls) || "AU";
-  const controls = normalizePausedControls(input.controls ?? {}, country);
+  const label = state.pack.metadata?.title?.trim?.() || state.pack.templateId || "Blockwise ad";
+  const controls = normalizePausedControls(input.controls ?? {});
   const now = new Date().toISOString();
-  const requirements = readPublishRequirements(state.pack);
+  const requirements = readTemplatePublishRequirements(state.pack);
   const mode = input.controls?.destinationMode ?? requirements.destinationMode;
   const issues = validatePublishState(state, { controls: { ...(input.controls ?? {}), destinationMode: mode }, setup });
   if (issues.length > 0) throw new PublishError("publish_dependencies_missing", issues.join("; "));
   const form = state.form;
   if (mode === "instant_form" && !form) throw new PublishError("publish_dependencies_missing", "No pinned Instant Form — generate and save one before publishing");
 
+  const target = controls.target;
+  if (!target) {
+    throw new PublishError("publish_dependencies_missing", "Choose exactly where the ads should be created.");
+  }
+  if (target?.mode === "existing_campaign_new_adset" && !target.campaignId.trim()) {
+    throw new PublishError("publish_dependencies_missing", "Select an existing Meta campaign.");
+  }
+  if (target?.mode === "existing_adset" && (!target.campaignId.trim() || target.adSetIds.length === 0)) {
+    throw new PublishError("publish_dependencies_missing", "Select an existing Meta campaign and at least one ad set.");
+  }
+  const existingCampaignId = target.mode !== "new_campaign_new_adset" ? target.campaignId.trim() : null;
+  const campaignContract = target.mode === "new_campaign_new_adset"
+    ? controls.newCampaign!
+    : controls.parentState!.campaign!;
   const campaign: MetaPublishCampaignPlan = {
     localId: "campaign_main",
-    name: `${label} — ${state.revision.revisionNumber}`,
-    objective: "OUTCOME_LEADS",
+    name: label + " - " + state.revision.revisionNumber,
+    objective: campaignContract.objective,
     status: "PAUSED",
-    specialAdCategories: ["HOUSING"],
-    specialAdCategoryCountries: [country],
-    budgetMode: "campaign",
+    specialAdCategories: campaignContract.specialAdCategories,
+    specialAdCategoryCountries: campaignContract.specialAdCategoryCountries,
+    budgetMode: campaignContract.budgetMode,
   };
 
-  const adSets: MetaPublishAdSetPlan[] = [
-    {
-      localId: "adset_primary",
-      name: `${label} homeowners`,
-      campaignLocalId: "campaign_main",
-      billingEvent: "IMPRESSIONS",
-      optimizationGoal: "LEAD_GENERATION",
-      status: "PAUSED",
-      dailyBudgetMinorUnits: controls.dailyBudgetMinorUnits ?? 2000,
-      targeting: buildPausedTargeting(controls),
-      startTime: controls.schedule?.startTime ?? null,
-      endTime: controls.schedule?.endTime ?? null,
-    },
-  ];
+  const adSets: MetaPublishAdSetPlan[] = target?.mode === "existing_adset"
+    ? target.adSetIds.map((existingId, index) => {
+        const parentAdSet = controls.parentState!.adSets!.find(candidate => candidate.id === existingId)!;
+        return {
+        localId: "adset_existing_" + (index + 1),
+        existingId,
+        name: label + " existing ad set " + (index + 1),
+        campaignLocalId: "campaign_main",
+        billingEvent: "IMPRESSIONS",
+        optimizationGoal: "LEAD_GENERATION" as const,
+        status: "PAUSED" as const,
+        dailyBudgetMinorUnits: parentAdSet.dailyBudgetMinorUnits,
+        targeting: parentAdSet.targeting,
+        startTime: null,
+        endTime: null,
+      };
+    })
+    : [{
+        localId: "adset_primary",
+        name: label + " homeowners",
+        campaignLocalId: "campaign_main",
+        billingEvent: "IMPRESSIONS",
+        optimizationGoal: "LEAD_GENERATION",
+        status: "PAUSED" as const,
+        dailyBudgetMinorUnits: campaignContract.budgetMode === "adset"
+          ? controls.dailyBudgetMinorUnits ?? 0
+          : 0,
+        targeting: buildPausedTargeting(controls),
+        startTime: controls.schedule?.startTime ?? null,
+        endTime: controls.schedule?.endTime ?? null,
+      }];
 
   const leadForms: MetaPublishLeadFormPlan[] = mode === "instant_form" ? [{
       localId: "form_primary",
@@ -386,32 +474,23 @@ export function buildPausedMetaPublishPlan(input: PausedPublishPlanInput): MetaP
       privacyPolicyUrl: form!.privacy.url,
       thankYouTitle: form!.thankYou.title,
       thankYouBody: form!.thankYou.body,
-      thankYouWebsiteUrl: form!.thankYou.actionUrl ?? controls.destinationUrl!,
+      thankYouWebsiteUrl: controls.fulfilment?.fulfilmentUrl ?? controls.destinationUrl!,
+      ...(controls.fulfilment ? { fulfilment: controls.fulfilment } : {}),
     }] : [];
 
-  const creatives: MetaPublishCreativePlan[] = [
-    buildPausedCreative(state, setup, label, "feed", state.revision.feedPngPath, "4:5", mode),
-    buildPausedCreative(state, setup, label, "story", state.revision.storyPngPath, "9:16", mode),
-  ];
-
-  const ads: MetaPublishAdPlan[] = [
-    {
-      localId: "ad_feed",
-      name: `${label} Feed ad`,
-      adSetLocalId: "adset_primary",
-      creativeLocalId: "creative_feed",
-      status: "PAUSED",
-      variantTag: null,
-    },
-    {
-      localId: "ad_story",
-      name: `${label} Story ad`,
-      adSetLocalId: "adset_primary",
-      creativeLocalId: "creative_story",
-      status: "PAUSED",
-      variantTag: null,
-    },
-  ];
+  const selectedVariants = [...new Set(input.controls!.variantIds!)];
+  if (selectedVariants.some((variant) => variant !== "feed" && variant !== "story")) throw new PublishError("invalid_variants", "Select Feed and/or Story variants only.");
+  const creatives: MetaPublishCreativePlan[] = selectedVariants.map((variant) => variant === "feed"
+    ? buildPausedCreative(state, setup, label, "feed", state.revision.feedPngPath, "4:5", mode)
+    : buildPausedCreative(state, setup, label, "story", state.revision.storyPngPath, "9:16", mode));
+  const ads: MetaPublishAdPlan[] = adSets.flatMap((adSet, adSetIndex) => selectedVariants.map((variant) => ({
+    localId: "ad_" + variant + "_" + (adSetIndex + 1),
+    name: label + " " + (variant === "feed" ? "Feed" : "Story") + " ad " + (adSetIndex + 1),
+    adSetLocalId: adSet.localId,
+    creativeLocalId: "creative_" + variant,
+    status: "PAUSED" as const,
+    variantTag: { variantId: variant, angle: variant, template: null },
+  })));
 
   const tracking: MetaPublishTrackingPlan = {
     utmSource: "meta",
@@ -420,7 +499,7 @@ export function buildPausedMetaPublishPlan(input: PausedPublishPlanInput): MetaP
     utmContentPrefix: slug(label),
   };
 
-  const idempotencyKey = buildPausedPlanIdempotencyKey(input, state, country);
+  const idempotencyKey = buildPausedPlanIdempotencyKey(input, state);
   const planId = deterministicUuid(`meta_publish_plan:${idempotencyKey}`);
 
   return {
@@ -445,8 +524,10 @@ export function buildPausedMetaPublishPlan(input: PausedPublishPlanInput): MetaP
     requestLog: [],
     responseLog: [],
     reconciledObjects: {
+      ...(existingCampaignId ? { campaignId: existingCampaignId } : {}),
       leadFormIds: {},
-      adSetIds: {},
+      adSetIds: Object.fromEntries(adSets.filter((adSet) => adSet.existingId)
+        .map((adSet) => [adSet.localId, adSet.existingId as string])),
       creativeIds: {},
       adIds: {},
     },
@@ -512,42 +593,168 @@ function buildPausedTargeting(controls: MetaPublishControls): Record<string, unk
           ],
           location_types: ["home", "recent"],
         }
-      : {
-          countries: [controls.geo?.type === "country" ? controls.geo.country : "AU"],
-          location_types: ["home", "recent"],
-        };
+      : null;
+  if (!geoLocations || !controls.placements?.publisherPlatforms?.length) {
+    throw new PublishError(
+      "publish_dependencies_missing",
+      "Choose an explicit city or radius audience and exact placements before creating the ad set.",
+    );
+  }
 
   return {
     geo_locations: geoLocations,
-    publisher_platforms: controls.placements?.publisherPlatforms ?? ["facebook", "instagram"],
+    publisher_platforms: controls.placements.publisherPlatforms,
     ...(controls.placements?.facebookPositions?.length ? { facebook_positions: controls.placements.facebookPositions } : {}),
     ...(controls.placements?.instagramPositions?.length ? { instagram_positions: controls.placements.instagramPositions } : {}),
   };
 }
 
-function normalizePausedControls(controls: MetaPublishControls, country: string): MetaPublishControls {
-  return {
-    dailyBudgetMinorUnits: controls.dailyBudgetMinorUnits && controls.dailyBudgetMinorUnits > 0
-      ? Math.round(controls.dailyBudgetMinorUnits)
-      : 2000,
-    ...(controls.destinationUrl?.trim() ? { destinationUrl: controls.destinationUrl.trim() } : {}),
-    ...(controls.destinationMode ? { destinationMode: controls.destinationMode } : {}),
-    geo: controls.geo ?? { type: "country", country },
-    schedule: {
-      startTime: controls.schedule?.startTime ?? null,
-      endTime: controls.schedule?.endTime ?? null,
-    },
-    placements: {
-      publisherPlatforms: controls.placements?.publisherPlatforms?.length ? controls.placements.publisherPlatforms : ["facebook", "instagram"],
-      facebookPositions: controls.placements?.facebookPositions ?? [],
-      instagramPositions: controls.placements?.instagramPositions ?? [],
-    },
-  };
+function validatePausedPublishControls(controls: MetaPublishControls | undefined): string[] {
+  const issues: string[] = [];
+  const target = controls?.target;
+  if (!target) {
+    return ["Choose a new or existing Meta campaign and ad set destination."];
+  }
+
+  const variants = controls.variantIds;
+  if (!Array.isArray(variants) || variants.length === 0) {
+    issues.push("Choose at least one Feed or Story variant before publishing.");
+  } else if (variants.some(variant => variant !== "feed" && variant !== "story")) {
+    issues.push("Only Feed and Story variants can be published.");
+  }
+
+  if (target.mode === "existing_adset") {
+    const normalizedIds = target.adSetIds.map(value => value.trim()).filter(Boolean);
+    if (normalizedIds.length !== target.adSetIds.length || normalizedIds.length === 0) {
+      issues.push("Choose at least one valid existing ad set ID.");
+    }
+    if (new Set(normalizedIds).size !== normalizedIds.length) {
+      issues.push("Each existing ad set ID can appear only once.");
+    }
+  }
+
+  if (target.mode === "new_campaign_new_adset") {
+    const campaign = controls.newCampaign;
+    if (
+      !campaign?.objective?.trim()
+      || !Array.isArray(campaign.specialAdCategories)
+      || !Array.isArray(campaign.specialAdCategoryCountries)
+      || campaign.specialAdCategoryCountries.length === 0
+      || (campaign.budgetMode !== "campaign" && campaign.budgetMode !== "adset")
+    ) {
+      issues.push("Confirm the new campaign objective, special category country and CBO/ABO budget mode.");
+    }
+  } else {
+    const parentCampaign = controls.parentState?.campaign;
+    if (!parentCampaign || parentCampaign.id.trim() !== target.campaignId.trim()) {
+      issues.push("Read and verify the selected campaign's live Meta settings before publishing.");
+    }
+    if (target.mode === "existing_adset") {
+      const parentAdSets = controls.parentState?.adSets ?? [];
+      const byId = new Map(parentAdSets.map(adSet => [adSet.id.trim(), adSet]));
+      for (const id of target.adSetIds) {
+        const parent = byId.get(id.trim());
+        if (!parent || parent.campaignId.trim() !== target.campaignId.trim()) {
+          issues.push(`Read and verify live Meta settings for ad set ${id.trim() || "(blank)"}.`);
+        } else {
+          if (parent.optimizationGoal !== "LEAD_GENERATION") {
+            issues.push(`Ad set ${id} must use Lead Generation optimization for this template.`);
+          }
+          if (parent.billingEvent !== "IMPRESSIONS") {
+            issues.push(`Ad set ${id} must use Impressions billing for this template.`);
+          }
+        }
+      }
+    }
+  }
+
+  const createsNewAdSet = target.mode === "new_campaign_new_adset"
+    || target.mode === "existing_campaign_new_adset";
+  if (!createsNewAdSet) {
+    if (
+      Object.hasOwn(controls, "dailyBudgetMinorUnits")
+      || Object.hasOwn(controls, "geo")
+      || Object.hasOwn(controls, "placements")
+      || Object.hasOwn(controls, "schedule")
+    ) {
+      issues.push("Existing ad sets must keep their live budget, audience, placements and schedule unchanged.");
+    }
+    return issues;
+  }
+
+  const budgetMode = target.mode === "new_campaign_new_adset"
+    ? controls.newCampaign?.budgetMode
+    : controls.parentState?.campaign?.budgetMode;
+  if (!Number.isInteger(controls.dailyBudgetMinorUnits) || (controls.dailyBudgetMinorUnits ?? 0) <= 0) {
+    issues.push(
+      target.mode === "new_campaign_new_adset" && budgetMode === "campaign"
+        ? "Set an explicit positive campaign daily budget."
+        : "Set a positive daily budget for the new ad set. It is applied only when Meta verifies ABO.",
+    );
+  }
+  if (!hasExplicitMetaPublishAudience(controls) || (controls.geo?.type !== "cities" && controls.geo?.type !== "custom_radius")) {
+    issues.push("Select an explicit city or custom-radius audience before creating a new ad set.");
+  }
+
+  const platforms = controls.placements?.publisherPlatforms ?? [];
+  const selectedPlatforms = new Set(platforms);
+  const supportedPlatforms = platforms.every((platform) => platform === "facebook" || platform === "instagram");
+  const hasFacebookPositions = !selectedPlatforms.has("facebook")
+    || Boolean(controls.placements?.facebookPositions?.length);
+  const hasInstagramPositions = !selectedPlatforms.has("instagram")
+    || Boolean(controls.placements?.instagramPositions?.length);
+  if (platforms.length === 0 || !supportedPlatforms || !hasFacebookPositions || !hasInstagramPositions) {
+    issues.push("Select explicit Facebook or Instagram placements before creating a new ad set.");
+  }
+
+  const schedule = controls.schedule;
+  const hasExplicitScheduleIntent = Boolean(
+    schedule
+    && Object.prototype.hasOwnProperty.call(schedule, "startTime")
+    && Object.prototype.hasOwnProperty.call(schedule, "endTime")
+    && isNullableIsoDateTime(schedule.startTime)
+    && isNullableIsoDateTime(schedule.endTime),
+  );
+  if (!hasExplicitScheduleIntent) {
+    issues.push("Confirm an explicit start and end schedule intent before creating a new ad set.");
+  } else if (schedule?.startTime && schedule.endTime && Date.parse(schedule.endTime) <= Date.parse(schedule.startTime)) {
+    issues.push("The ad set end time must be after its start time.");
+  }
+
+  return issues;
 }
 
-function controlsCountry(controls: MetaPublishControls | undefined): string | null {
-  if (controls?.geo?.type === "country" && controls.geo.country?.trim()) return controls.geo.country.trim();
-  return null;
+function isNullableIsoDateTime(value: string | null | undefined): boolean {
+  return value === null || (typeof value === "string" && value.trim().length > 0 && !Number.isNaN(Date.parse(value)));
+}
+
+function normalizePausedControls(controls: MetaPublishControls): MetaPublishControls {
+  const usesExistingAdSet = controls.target?.mode === "existing_adset";
+  return {
+    ...(controls.target
+      ? {
+          target: controls.target.mode === "existing_adset"
+            ? { ...controls.target, campaignId: controls.target.campaignId.trim(), adSetIds: controls.target.adSetIds.map(value => value.trim()).filter(Boolean) }
+            : controls.target.mode === "existing_campaign_new_adset"
+              ? { ...controls.target, campaignId: controls.target.campaignId.trim() }
+              : controls.target,
+        }
+      : {}),
+    ...(controls.variantIds ? { variantIds: [...new Set(controls.variantIds)] } : {}),
+    ...(controls.newCampaign ? { newCampaign: controls.newCampaign } : {}),
+    ...(controls.parentState ? { parentState: controls.parentState } : {}),
+    ...(controls.destinationUrl?.trim() ? { destinationUrl: controls.destinationUrl.trim() } : {}),
+    ...(controls.destinationMode ? { destinationMode: controls.destinationMode } : {}),
+    ...(controls.fulfilment ? { fulfilment: controls.fulfilment } : {}),
+    ...(!usesExistingAdSet ? {
+      ...(controls.dailyBudgetMinorUnits !== undefined
+        ? { dailyBudgetMinorUnits: Math.round(controls.dailyBudgetMinorUnits) }
+        : {}),
+      ...(controls.geo ? { geo: controls.geo } : {}),
+      ...(controls.schedule ? { schedule: { ...controls.schedule } } : {}),
+      ...(controls.placements ? { placements: { ...controls.placements } } : {}),
+    } : {}),
+  };
 }
 
 /**
@@ -558,7 +765,6 @@ function controlsCountry(controls: MetaPublishControls | undefined): string | nu
 function buildPausedPlanIdempotencyKey(
   input: PausedPublishPlanInput,
   state: PublishLoadResult,
-  country: string,
 ): string {
   const fingerprint = createHash("sha256")
     .update(
@@ -569,7 +775,6 @@ function buildPausedPlanIdempotencyKey(
         storyPngHash: state.revision.storyPngHash,
         setup: input.setup,
         controls: input.controls ?? {},
-        country,
       }),
     )
     .digest("hex")
@@ -672,7 +877,7 @@ export function activationTargets(plan: MetaPublishPlan): ActivationTargets | nu
   if (!campaignId) return null;
   return {
     campaignId,
-    adSetIds: Object.values(plan.reconciledObjects.adSetIds).filter((id): id is string => Boolean(id)),
+    adSetIds: plan.adSets.filter((adSet) => !adSet.existingId).map((adSet) => plan.reconciledObjects.adSetIds[adSet.localId]).filter((id): id is string => Boolean(id)),
     adIds: Object.values(plan.reconciledObjects.adIds).filter((id): id is string => Boolean(id)),
   };
 }
@@ -757,7 +962,7 @@ export function planActivation(
       targets,
       message:
         "Activation was NOT applied — provider writes are disabled (BLOCKWISE_ENABLE_PROVIDER_WRITES=false). " +
-        "The campaign stays PAUSED on Meta. Enable provider writes and publish again.",
+        "The campaign stays PAUSED on Meta. Enable provider writes and click Activate again.",
     };
   }
 
@@ -798,7 +1003,7 @@ export function markPlanObjectsActive(plan: MetaPublishPlan): MetaPublishPlan {
   }
 
   objectStatuses.adSets = Object.fromEntries(
-    Object.entries(plan.reconciledObjects.adSetIds).map(([localId, id]) => [
+    Object.entries(plan.reconciledObjects.adSetIds).filter(([localId]) => !plan.adSets.find((adSet) => adSet.localId === localId)?.existingId).map(([localId, id]) => [
       localId,
       { id, configuredStatus: "ACTIVE", effectiveStatus: "ACTIVE" },
     ]),

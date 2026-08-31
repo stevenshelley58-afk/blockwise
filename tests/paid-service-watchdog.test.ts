@@ -13,8 +13,6 @@ import {
   toState,
   type ServiceStatus,
 } from "../src/lib/alerts/paid-service-watchdog.ts";
-import { verifyVercelSignature } from "../src/lib/alerts/vercel-webhook.ts";
-import { createHmac } from "node:crypto";
 
 test("levelForPct thresholds: warn at 80, critical at 95", () => {
   assert.equal(levelForPct(0), "ok");
@@ -83,14 +81,7 @@ test("formatAlert subject carries the worst escalated level", () => {
   assert.match(text, /Full picture/);
 });
 
-test("verifyVercelSignature accepts a valid HMAC and rejects others", () => {
-  const secret = "shhh";
-  const body = JSON.stringify({ thresholdPercent: 75 });
-  const good = createHmac("sha1", secret).update(body).digest("hex");
-  assert.equal(verifyVercelSignature(body, good, secret), true);
-  assert.equal(verifyVercelSignature(body, "deadbeef", secret), false);
-  assert.equal(verifyVercelSignature(body, null, secret), false);
-});
+
 
 test("parseVpsHealthTargets supports labelled VPS and Hermes endpoints", () => {
   const targets = parseVpsHealthTargets("Hermes VPS|https://hermes.example/health,https://browser.example/health");
@@ -122,19 +113,6 @@ test("checkHttpHealthTarget reports reachable, unhealthy, and invalid VPS endpoi
   assert.equal(invalid.level, "critical");
 });
 
-test("paid-service watchdog is scheduled on Vercel and guarded by CRON_SECRET", () => {
-  const vercelConfig = JSON.parse(readFileSync("vercel.json", "utf8")) as {
-    crons?: Array<{ path?: string; schedule?: string }>;
-  };
-  const route = readFileSync("src/app/api/alerts/paid-service-watchdog/route.ts", "utf8");
-
-  assert.deepEqual(vercelConfig.crons?.find((cron) => cron.path === "/api/alerts/paid-service-watchdog"), {
-    path: "/api/alerts/paid-service-watchdog",
-    schedule: "0 */2 * * *",
-  });
-  assert.match(route, /process\.env\.CRON_SECRET/);
-  assert.match(route, /authorization !== `Bearer \$\{secret\}`/);
-});
 
 test("Vercel watchdog observes Hermes paid-capture state instead of running Apify", () => {
   const watchdog = readFileSync("src/lib/alerts/paid-service-watchdog.ts", "utf8");

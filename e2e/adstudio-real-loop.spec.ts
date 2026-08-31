@@ -1,516 +1,509 @@
 import { existsSync, readFileSync } from "node:fs";
 import { test, expect, type Page } from "@playwright/test";
 
-import { customerCopyForAccessibleLabel } from "./adstudio-real-loop-copy-binding.ts";
-import { readAdStudioCreativeJobStatus } from "../src/lib/adstudio/job-status.ts";
-
-const storageStatePath =
-  process.env.ADSTUDIO_E2E_STORAGE_STATE ?? "e2e/.auth/adstudio-test.storage-state.json";
+const storageStatePath = process.env.ADSTUDIO_E2E_STORAGE_STATE ?? "e2e/.auth/adstudio-test.storage-state.json";
 const workspaceId = process.env.ADSTUDIO_E2E_WORKSPACE_ID;
-const previewUrl = process.env.PLAYWRIGHT_BASE_URL;
-const canRun = Boolean(previewUrl && workspaceId && hasAuthState(storageStatePath));
-const describeAdStudioRealLoop = canRun ? test.describe : test.describe.skip;
+const templateId = process.env.ADSTUDIO_E2E_TEMPLATE_ID;
+const baseUrl = process.env.PLAYWRIGHT_BASE_URL;
+const loginBaseUrl = process.env.ADSTUDIO_E2E_LOGIN_URL || baseUrl;
+const email = process.env.ADSTUDIO_E2E_EMAIL;
+const password = process.env.ADSTUDIO_E2E_PASSWORD;
+// This is deliberately opt-in. Even when a reviewer wants to exercise the
+// final publish POST, it must be a provider-write-disabled dry run.
+const allowDryRunPublish = process.env.ADSTUDIO_E2E_PUBLISH_TEST_MODE === "dry-run";
+const initialImagePath = "public/ads/ad-coastline.jpg";
+const replacementImagePath = "public/ads/ad-hillview.jpg";
 
-// In CI a missing precondition is a FAILURE, not a skip — the silent skip is
-// how runtime regressions shipped green. Locally it still skips quietly.
-if (!canRun && process.env.CI) {
-  test("Ad Studio real-loop preconditions are present in CI", () => {
-    const missing = [
-      !previewUrl && "PLAYWRIGHT_BASE_URL",
-      !workspaceId && "ADSTUDIO_E2E_WORKSPACE_ID",
-      !hasAuthState(storageStatePath) && `auth storage state at ${storageStatePath}`,
-    ].filter(Boolean);
-    throw new Error(`Ad Studio real-loop e2e cannot run in CI — missing: ${missing.join(", ")}.`);
-  });
-}
+// This file creates and updates customer data. Override Playwright's global
+// fullyParallel setting so login/create/save cannot race another test using
+// the same seeded workspace and pack.
+test.describe.configure({ mode: "serial" });
 
-describeAdStudioRealLoop("Ad Studio real loop", () => {
-  test.use({ storageState: storageStatePath });
-  // Every case uses the same dedicated workspace and campaign fixture. Running
-  // them in parallel lets one page's campaign mutations invalidate another
-  // page's assumptions, so keep the real deployed loop deterministic.
-  test.describe.configure({ mode: "serial" });
-  // Real AI generation + edit + export can take several minutes end to end.
-  test.setTimeout(600_000);
-
-  test("keeps the sample-first workspace usable at supported viewport sizes", async ({ page }) => {
-    await page.addInitScript(() => localStorage.setItem("bw-consent", "essential"));
-    const viewports = [
-      { width: 1440, height: 900 },
-      { width: 768, height: 1024 },
-      { width: 390, height: 844 },
-      { width: 320, height: 844 },
-    ];
-
-    for (const viewport of viewports) {
-      await page.setViewportSize(viewport);
-      await page.goto(`/ad-studio?workspaceId=${encodeURIComponent(workspaceId ?? "")}`);
-      await expect(page.getByLabel("Ad Studio workspace")).toBeVisible({ timeout: 30_000 });
-      await openNewAd(page);
-      await expect(page.getByRole("heading", { name: /choose a template/i })).toBeVisible();
-      await expect(page.getByText(/^\d+ templates?$/)).toBeVisible();
-      const templateGrid = page.locator(".studio-explore-grid");
-      await expect(templateGrid).toBeVisible();
-      expect(
-        await templateGrid.evaluate((element) =>
-          getComputedStyle(element).gridTemplateColumns.trim().split(/\s+/).filter(Boolean).length
-        ),
-        `template gallery should use its responsive column count at ${viewport.width}x${viewport.height}`,
-      ).toBe(viewport.width > 900 ? 4 : 2);
-      await page.locator('.studio-newad-x[aria-label="Close"]').click();
-      expect(
-        await page.evaluate(
-          () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
-        ),
-        `workspace should not overflow horizontally at ${viewport.width}x${viewport.height}`,
-      ).toBe(true);
-    }
-  });
-
-  test("keeps template choice and draft dismissal in the right order", async ({ page }) => {
-    await page.addInitScript(() => localStorage.setItem("bw-consent", "essential"));
-    await page.goto(`/ad-studio?workspaceId=${encodeURIComponent(workspaceId ?? "")}`);
-    await openNewAd(page);
-    await expect(page.getByRole("heading", { name: /choose a template/i })).toBeVisible();
-    await expect(page.getByText(/^12 templates$/)).toBeVisible();
-    await chooseCloneSample(page);
-    await expect(page.locator('.studio-newad input[type="file"]')).toHaveCount(2);
-
-    await page.locator('.studio-newad-x[aria-label="Close"]').click();
-    const discardDialog = page.getByRole("alertdialog", { name: /discard this ad draft/i });
-    await expect(discardDialog).toBeVisible();
-    await discardDialog.getByRole("button", { name: /keep editing/i }).click();
-    await expect(page.getByRole("button", { name: /generate ad/i })).toBeVisible();
-    await page.locator('.studio-newad-x[aria-label="Close"]').click();
-    await page.getByRole("alertdialog", { name: /discard this ad draft/i })
-      .getByRole("button", { name: /discard draft/i })
-      .click();
-    await expect(page.getByRole("dialog")).toBeHidden();
-  });
-
-  test("gates first-run, clones a sample, persists a targeted edit, reloads, and exports", async ({ page }, testInfo) => {
-    // The cookie banner renders late (post-hydration) and overlays the dialog
-    // footer, intercepting the Generate Ad click — a click-if-visible dismissal
-    // races it. Seeding the stored choice keeps it from ever rendering.
-    await page.addInitScript(() => localStorage.setItem("bw-consent", "essential"));
-    await page.goto(`/ad-studio?workspaceId=${encodeURIComponent(workspaceId ?? "")}`);
-
-    if (await page.getByRole("heading", { name: /approve your brand kit first/i }).isVisible().catch(() => false)) {
-      await page.getByRole("link", { name: /open brand studio/i }).click();
-      await approveBrandKit(page);
-      await page.goto(`/ad-studio?workspaceId=${encodeURIComponent(workspaceId ?? "")}`);
-    }
-
-    // The soft brand prompt ("Set your brand before launch?") is skippable and
-    // otherwise intercepts every click on the workbench.
-    const skipBrand = page.getByRole("button", { name: /skip for now/i });
-    if (await skipBrand.isVisible().catch(() => false)) {
-      await skipBrand.click();
-    }
-
-    await openNewAd(page);
-    await chooseCloneSample(page);
-    await uploadRequiredSampleImages(
-      page,
-      testInfo.outputPath("listing.png"),
-      testInfo.outputPath("logo.png"),
-    );
-    // Exercise the supported manual-copy path so this image-generation test
-    // does not spend a separate model call generating prose first.
-    await page.getByRole("radio", { name: /i'll write it myself/i }).check();
-    const feedCopy = page.getByRole("region", { name: /editable ad copy/i });
-    await feedCopy.getByLabel("Primary text", { exact: true }).fill(
-      "See this renovated Scarborough home this weekend. Spacious modern living for family comfort.",
-    );
-    await feedCopy.getByLabel("Headline", { exact: true }).fill("Open Home This Saturday");
-    await feedCopy.getByLabel("Description", { exact: true }).fill(
-      "Renovated family home open this Saturday in Scarborough",
-    );
-    await fillCustomerCopyFields(page);
-    const generationResponse = page.waitForResponse(
-      (response) => {
-        const url = new URL(response.url());
-        return url.pathname === "/api/adstudio/campaigns" && response.request().method() === "POST";
-      },
-      // The synchronous degraded-mode pipeline (copy + clone + vision QA in
-      // one request) runs against a 240s server deadline (route maxDuration
-      // 300) — wait past it so the server's own answer arrives, not a guess.
-      { timeout: 280_000 },
-    );
-    // If the click below stalls past this watcher's timeout, its rejection
-    // must not surface as an unhandled rejection that ends the whole test —
-    // it is consumed via the race and the await further down.
-    void generationResponse.catch(() => {});
-    // submit() bails out with a footer alert (requirement blockers) or an
-    // inline error instead of a disabled button, so a blocked submit produces
-    // NO network request at all. Racing the alert against the response turns
-    // that silent timeout into the dialog's own message.
-    const dialogBlocked = page
-      .locator(".studio-newad-requirements, .studio-newad-error")
-      .first()
-      .waitFor({ state: "visible", timeout: 280_000 })
-      .then(() => page.locator(".studio-newad-requirements, .studio-newad-error").first().textContent())
-      .then((text) => text?.trim() || "the dialog blocked the submit without a message")
-      .catch(() => null);
-    await page.getByRole("button", { name: /generate ad/i }).click();
-    const blockedMessage = await Promise.race([
-      generationResponse.then(() => null).catch(() => null),
-      dialogBlocked,
-    ]);
-    if (blockedMessage) {
-      throw new Error(`Generate ad never sent POST /api/adstudio/campaigns — dialog says: ${blockedMessage}`);
-    }
-    const generated = await generationResponse;
-    expect(generated.ok(), await generated.text()).toBe(true);
-    const generatedPayload = (await generated.json()) as {
-      campaignPack?: { campaign?: { campaignId?: string } };
-      jobId?: string;
-    };
-    // Async path (202 + job polling) or sync fallback (201 + pack) — both valid.
-    const campaignId = generatedPayload.jobId
-      ? await waitForGenerationJob(page, generatedPayload.jobId)
-      : generatedPayload.campaignPack?.campaign?.campaignId;
-    expect(campaignId).toBeTruthy();
-
-    await expect(page.getByRole("dialog")).toBeHidden({ timeout: 90_000 });
-    await openPanel(page, "Edit");
-    const editedImage = await editGeneratedClone(page);
-    await waitForSavedStatus(page);
-
-    await page.goto(`/ad-studio?campaignId=${encodeURIComponent(campaignId)}&workspaceId=${encodeURIComponent(workspaceId ?? "")}`);
-    // Reload intentionally returns to Home. Reopen the post-clone editor before
-    // asserting that the saved revision is the image mounted on its canvas.
-    await openPanel(page, "Edit");
-    await expect(page.locator(".studio-inplace-frame img").filter({ visible: true }).first()).toHaveAttribute(
-      "src",
-      editedImage,
-      { timeout: 30_000 },
-    );
-
-    await openPanel(page, "Publish");
-    await assertBlockwiseCampaignPreset(page);
-    await exportCreatives(page);
-  });
-});
-
-test("Ad Studio real-loop E2E requires a preview URL, dedicated workspace, and auth fixture", async () => {
-  test.skip(!previewUrl, "Set PLAYWRIGHT_BASE_URL to run the Ad Studio real-loop E2E against Vercel Preview.");
-  test.skip(canRun, "Real-loop E2E preconditions are present.");
-  expect(previewUrl, "PLAYWRIGHT_BASE_URL must point at a Vercel Preview URL").toBeTruthy();
-  expect(workspaceId, "ADSTUDIO_E2E_WORKSPACE_ID must be a dedicated test workspace").toBeTruthy();
-  expect(hasAuthState(storageStatePath), "ADSTUDIO_E2E_STORAGE_STATE must point at an authenticated storageState").toBe(true);
-});
-
-async function approveBrandKit(page: Page) {
-  const scanUrl = process.env.ADSTUDIO_E2E_BRAND_URL ?? "https://example-real-estate.test";
-  const urlInput = page.getByLabel(/website|url/i).first();
-  await urlInput.fill(scanUrl);
-  await page.getByRole("button", { name: /scan|extract/i }).click();
-  await page.getByRole("button", { name: /approve/i }).click({ timeout: 60_000 });
-}
-
-async function openNewAd(page: Page) {
-  const button = page.getByRole("button", { name: /create ad|new ad|add ad|^create$/i }).first();
-  if (await button.isVisible().catch(() => false)) {
-    await expect(button).toBeEnabled({ timeout: 30_000 });
-    await button.click();
-    await expect(page.getByRole("heading", { name: /choose a template/i })).toBeVisible({ timeout: 30_000 });
-    return;
-  }
-
-  const mobileDetails = page.locator(".studio-mobile-campaign-btn");
-  if (await mobileDetails.isVisible().catch(() => false)) {
-    await mobileDetails.click();
-    const browse = page.getByRole("button", { name: /browse|create new/i }).first();
-    await expect(browse).toBeEnabled({ timeout: 30_000 });
-    await browse.click();
-    return;
-  }
-
-  const browse = page.getByRole("button", { name: /browse|create new/i }).first();
-  await expect(browse).toBeEnabled({ timeout: 30_000 });
-  await browse.click();
-}
-
-async function assertBlockwiseCampaignPreset(page: Page) {
-  for (const viewport of [
-    { width: 1440, height: 900 },
-    { width: 390, height: 844 },
-  ]) {
-    await page.setViewportSize(viewport);
-    await expect(page.getByRole("heading", { name: "Choose your audience" })).toBeVisible();
-    await expect(page.getByText("Blockwise Campaign", { exact: true })).toBeVisible();
-    await expect(page.getByText("Managed for you", { exact: true })).toBeVisible();
-    await expect(page.getByRole("button", { name: /use existing|create new/i })).toHaveCount(0);
-    expect(
-      await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth),
-      `Blockwise Campaign should not overflow at ${viewport.width}x${viewport.height}`,
-    ).toBe(true);
-  }
-  await expect(page.locator(".studio-publish-mobile-progress")).toHaveAttribute("aria-label", "Step 1 of 5");
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.getByRole("button", { name: "Budget", exact: true }).click();
-
-  for (const viewport of [
-    { width: 1440, height: 900 },
-    { width: 390, height: 844 },
-  ]) {
-    await page.setViewportSize(viewport);
-    await expect(page.getByRole("heading", { name: "Budget", exact: true })).toBeVisible();
-    const sevenDays = page.getByRole("button", { name: /^7 days/i });
-    const thirtyDays = page.getByRole("button", { name: /^30 days/i });
-    const ninetyDays = page.getByRole("button", { name: /^90 days/i });
-    const custom = page.getByRole("button", { name: /^Custom/i });
-    await expect(thirtyDays).toHaveAttribute("aria-pressed", "true");
-    await expect(sevenDays).toBeVisible();
-    await expect(ninetyDays).toBeVisible();
-    await custom.click();
-    await expect(page.getByLabel("Campaign end date")).toBeVisible();
-    await page.getByRole("radio", { name: "Run until stopped" }).check();
-    await expect(page.getByText("No fixed total", { exact: true })).toBeVisible();
-    await thirtyDays.click();
-    expect(
-      await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth),
-      `Campaign duration should not overflow at ${viewport.width}x${viewport.height}`,
-    ).toBe(true);
-  }
-  await page.setViewportSize({ width: 1440, height: 900 });
-}
-
-// Async recovery: poll the jobs endpoint with the page's session until the
-// durable job completes, mirroring the fallback path in the dialog.
-async function waitForGenerationJob(page: Page, jobId: string): Promise<string> {
-  const deadline = Date.now() + 10 * 60_000;
-  for (;;) {
-    const response = await page.request.get(`/api/adstudio/jobs/${encodeURIComponent(jobId)}`);
-    expect(response.ok(), await response.text()).toBe(true);
-    const job = readAdStudioCreativeJobStatus(await response.json());
-    if (!job) throw new Error("Generation job returned an invalid status response.");
-    if (job.status === "done" && job.campaign_id) return job.campaign_id;
-    if (job.status === "failed") throw new Error(`Generation job failed: ${job.error ?? "unknown error"}`);
-    if (Date.now() > deadline) throw new Error("Generation job did not finish within 10 minutes.");
-    await page.waitForTimeout(2_500);
-  }
-}
-
-// The real loop uses the approved sanitized sample and no alternate creation
-// path. The private source ad is never exposed to the browser.
-async function chooseCloneSample(page: Page) {
-  const sample = page.getByRole("button", { name: /use find your forever home .* template/i }).first();
-  await expect(sample).toBeVisible({ timeout: 30_000 });
-  await sample.click();
-}
-
-async function fillCustomerCopyFields(page: Page) {
-  const fields = page.locator(".studio-newad-copyfields input");
-  const count = await fields.count();
-  expect(count, "the selected template should expose on-image copy fields").toBeGreaterThan(0);
-  for (let index = 0; index < count; index += 1) {
-    const input = fields.nth(index);
-    const { id, label } = await input.evaluate((element) => {
-      const inputElement = element as HTMLInputElement;
-      return {
-        id: inputElement.id,
-        // Labels are siblings in the production DOM (<label htmlFor=...>),
-        // not ancestors. HTMLInputElement.labels follows either valid binding.
-        label: inputElement.labels?.[0]?.textContent?.trim() ?? "",
-      };
-    });
-    await input.fill(customerCopyForAccessibleLabel(label, id));
-  }
-}
-
-// Samples expose one file input per declared image slot. An unfilled required
-// slot blocks
-// submit() with a footer alert, not a disabled button. Fill them all, waiting
-// out each slot's upload round-trip before starting the next.
-async function uploadRequiredSampleImages(page: Page, listingPath: string, logoPath: string) {
-  await Promise.all([
-    writeListingPng(page, listingPath),
-    writeLogoPng(page, logoPath),
-  ]);
-  const inputs = page.locator('.studio-newad input[type="file"]');
-  const count = await inputs.count();
-  expect(count, "the brief step should expose at least one image slot").toBeGreaterThan(0);
-  for (let index = 0; index < count; index += 1) {
-    const input = inputs.nth(index);
-    await input.setInputFiles(index === 1 ? logoPath : listingPath);
-    const preparingImage = page.getByRole("button", { name: /preparing image/i });
-    await expect(
-      preparingImage,
-      `image slot ${index + 1} of ${count} should start uploading`,
-    ).toBeVisible({ timeout: 10_000 });
-    await expect(
-      preparingImage,
-      `image slot ${index + 1} of ${count} should finish uploading`,
-    ).toBeHidden({ timeout: 60_000 });
-  }
-  await expect(page.getByRole("button", { name: /generate ad/i })).toBeEnabled({ timeout: 30_000 });
-}
-
-async function editGeneratedClone(page: Page): Promise<string> {
-  // The finished render is visible before its persisted offline editor map is
-  // merged into the campaign. Wait on the actual edit-readiness affordance,
-  // not the plain preview image shown during that short preparing state.
-  const textRegion = page.locator(".studio-inplace-region.text").filter({ visible: true }).first();
-  await expect(textRegion).toBeVisible({ timeout: 300_000 });
-  const image = page.locator(".studio-inplace-frame img").filter({ visible: true }).first();
-  await expect(image).toBeVisible({ timeout: 30_000 });
-  const originalImage = await image.getAttribute("src");
-  expect(originalImage).toBeTruthy();
-
-  await textRegion.click();
-  const editor = page.locator(".studio-inplace-editor textarea");
-  await expect(editor).toBeVisible();
-  await editor.fill("JUST LISTED TODAY");
-
-  const editResponse = page.waitForResponse(
-    (response) => {
-      const url = new URL(response.url());
-      return /\/api\/adstudio\/creatives\/[^/]+\/edit$/u.test(url.pathname) && response.request().method() === "POST";
-    },
-    { timeout: 280_000 },
-  );
-  await page.getByRole("button", { name: /confirm edit/i }).click();
-  const edited = await editResponse;
-  expect(edited.ok(), await edited.text()).toBe(true);
-  await expect(image).not.toHaveAttribute("src", originalImage ?? "", { timeout: 90_000 });
-  const editedImage = await image.getAttribute("src");
-  expect(editedImage).toBeTruthy();
-  return editedImage ?? "";
-}
-
-async function openPanel(page: Page, label: "Edit" | "Text" | "Publish") {
-  const button = page.getByRole("button", { name: new RegExp(`^${label}$`, "i") }).first();
-  await expect(button).toBeVisible({ timeout: 30_000 });
-  await button.click();
-}
-
-async function exportCreatives(page: Page) {
-  const exportResponse = page.waitForResponse(
-    (response) => {
-      const url = new URL(response.url());
-      return url.pathname.includes("/api/adstudio/export-packages/") &&
-        url.pathname.endsWith("/download") &&
-        response.request().method() === "POST";
-    },
-    // Browser-side rendering of all formats precedes the download request.
-    { timeout: 150_000 },
-  );
-  void exportResponse.catch(() => {});
-  const download = page.waitForEvent("download", { timeout: 30_000 }).catch(() => null);
-
-  // The export flow refuses silently via a 2.4s toast (copy limits, render
-  // failures, save errors) — race it so the app's own refusal message becomes
-  // the test failure instead of a blind timeout. The filter keeps benign
-  // toasts (e.g. the quality-upgrade "Sharpened your ad") from matching.
-  const refusalToast = page
-    .locator(".studio-toast", { hasText: /fix the ad copy|export failed|could not|failed|retry/i })
-    .first()
-    .waitFor({ state: "visible", timeout: 150_000 })
-    .then(() => page.locator(".studio-toast").first().textContent())
-    .then((text) => text?.trim() || "the export was refused without a message")
-    .catch(() => null);
-
-  await page.getByRole("button", { name: /export/i }).click();
-
-  const refused = await Promise.race([
-    exportResponse.then(() => null).catch(() => null),
-    refusalToast,
-  ]);
-  if (refused) {
-    throw new Error(`Export never sent the download request — the app says: ${refused}`);
-  }
-  const response = await exportResponse;
-  expect(response.ok(), await response.text()).toBe(true);
-  expect(response.headers()["content-type"] ?? "").toMatch(/zip|octet-stream/i);
-
-  const zip = await download;
-  if (zip) expect(zip.suggestedFilename()).toMatch(/creatives\.zip$/);
-}
-
-async function waitForSavedStatus(page: Page) {
-  await expect
-    .poll(
-      async () =>
-        (await page.locator('.studio-statusbar [data-state="saved"]').isVisible().catch(() => false)) ||
-        (await page.locator('.studio-mobile-status[data-state="saved"]').isVisible().catch(() => false)),
-      { timeout: 30_000 },
-    )
-    .toBe(true);
-}
-
-// A 1x1 stub PNG travels the whole pipeline only to be rejected by the image
-// provider ("You uploaded an unsupported image"), so draw a plausible
-// 1080x1350 listing photo on a canvas instead — real dimensions, real content.
-async function writeListingPng(page: Page, path: string) {
-  const dataUrl = await page.evaluate(() => {
-    const canvas = document.createElement("canvas");
-    canvas.width = 1080;
-    canvas.height = 1350;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) throw new Error("canvas 2d context unavailable");
-    const sky = ctx.createLinearGradient(0, 0, 0, 700);
-    sky.addColorStop(0, "#87b7e0");
-    sky.addColorStop(1, "#dbe9f4");
-    ctx.fillStyle = sky;
-    ctx.fillRect(0, 0, 1080, 700);
-    ctx.fillStyle = "#6f9e5f";
-    ctx.fillRect(0, 700, 1080, 650);
-    ctx.fillStyle = "#7a5844";
-    ctx.beginPath();
-    ctx.moveTo(160, 430);
-    ctx.lineTo(540, 240);
-    ctx.lineTo(920, 430);
-    ctx.closePath();
-    ctx.fill();
-    ctx.fillStyle = "#e8e0d2";
-    ctx.fillRect(200, 430, 680, 370);
-    ctx.fillStyle = "#4a3b2f";
-    ctx.fillRect(500, 620, 90, 180);
-    ctx.fillStyle = "#9ec7e8";
-    ctx.fillRect(280, 500, 120, 100);
-    ctx.fillRect(680, 500, 120, 100);
-    return canvas.toDataURL("image/png");
-  });
-  const base64 = dataUrl.split(",")[1] ?? "";
-  await import("node:fs/promises").then((fs) => fs.writeFile(path, Buffer.from(base64, "base64")));
-}
-
-async function writeLogoPng(page: Page, path: string) {
-  const dataUrl = await page.evaluate(() => {
-    const canvas = document.createElement("canvas");
-    canvas.width = 960;
-    canvas.height = 320;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) throw new Error("canvas 2d context unavailable");
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = "#102a43";
-    ctx.beginPath();
-    ctx.moveTo(70, 205);
-    ctx.lineTo(170, 95);
-    ctx.lineTo(270, 205);
-    ctx.lineTo(235, 205);
-    ctx.lineTo(170, 135);
-    ctx.lineTo(105, 205);
-    ctx.closePath();
-    ctx.fill();
-    ctx.font = "700 54px Arial";
-    ctx.textBaseline = "middle";
-    ctx.fillText("SCARBOROUGH HOMES", 305, 160);
-    return canvas.toDataURL("image/png");
-  });
-  const base64 = dataUrl.split(",")[1] ?? "";
-  await import("node:fs/promises").then((fs) => fs.writeFile(path, Buffer.from(base64, "base64")));
-}
-
-function hasAuthState(path: string): boolean {
-  if (!existsSync(path)) return false;
+const baseUrlIsAllowed = (() => {
+  if (!baseUrl) return false;
   try {
-    const state = JSON.parse(readFileSync(path, "utf8")) as { cookies?: unknown[]; origins?: unknown[] };
-    return (Array.isArray(state.cookies) && state.cookies.length > 0) || (Array.isArray(state.origins) && state.origins.length > 0);
-  } catch {
-    return false;
+    const url = new URL(baseUrl);
+    return url.protocol === "https:" && (url.hostname === "blockwise.sale" || isOwnedVercelHost(url.hostname));
+  } catch { return false; }
+})();
+const loginBaseUrlIsAllowed = (() => {
+  if (!loginBaseUrl) return false;
+  try {
+    const url = new URL(loginBaseUrl);
+    return url.protocol === "https:" && (url.hostname === "blockwise.sale" || isOwnedVercelHost(url.hostname));
+  } catch { return false; }
+})();
+const loginUsesDifferentOrigin = (() => {
+  if (!baseUrl || !loginBaseUrl || !baseUrlIsAllowed || !loginBaseUrlIsAllowed) return false;
+  return new URL(baseUrl).origin !== new URL(loginBaseUrl).origin;
+})();
+const hasAuthState = existsSync(storageStatePath) && (() => {
+  try {
+    const state = JSON.parse(readFileSync(storageStatePath, "utf8")) as { cookies?: unknown[]; origins?: unknown[] };
+    return (state.cookies?.length ?? 0) > 0 || (state.origins?.length ?? 0) > 0;
+  } catch { return false; }
+})();
+const hasWorkspace = Boolean(workspaceId?.trim());
+const hasTemplate = Boolean(templateId?.trim());
+const canRun = Boolean(baseUrlIsAllowed && hasWorkspace && hasTemplate && hasAuthState);
+const canLogin = Boolean(baseUrlIsAllowed && loginBaseUrlIsAllowed && email?.trim() && password);
+const canLoginAndCreate = Boolean(canLogin && hasWorkspace && hasTemplate);
+const missingPreconditions = [
+  !baseUrl && "PLAYWRIGHT_BASE_URL",
+  baseUrl && !baseUrlIsAllowed && "PLAYWRIGHT_BASE_URL (must be https://blockwise.sale or this project's Vercel deployment)",
+  loginBaseUrl && !loginBaseUrlIsAllowed && "ADSTUDIO_E2E_LOGIN_URL (must be https://blockwise.sale or this project's Vercel deployment)",
+  !hasWorkspace && "ADSTUDIO_E2E_WORKSPACE_ID",
+  !hasTemplate && "ADSTUDIO_E2E_TEMPLATE_ID (must identify an available template)",
+  !hasAuthState && `authenticated storage state at ${storageStatePath}`,
+].filter(Boolean);
+if ((!canRun || !canLogin) && process.env.CI) {
+  test("Ad Studio real-loop preconditions are present in CI", () => {
+    throw new Error(`Ad Studio E2E preconditions missing or invalid: ${[...missingPreconditions, !email && "ADSTUDIO_E2E_EMAIL", !password && "ADSTUDIO_E2E_PASSWORD"].filter(Boolean).join(", ")}.`);
+  });
+}
+
+test.describe("Ad Studio login", () => {
+  test.skip(!canLoginAndCreate, "Set PLAYWRIGHT_BASE_URL, ADSTUDIO_E2E_EMAIL, ADSTUDIO_E2E_PASSWORD, ADSTUDIO_E2E_WORKSPACE_ID and ADSTUDIO_E2E_TEMPLATE_ID.");
+  test.use({ storageState: { cookies: [], origins: [] } });
+  test("logs in and creates an ad in one authenticated flow", async ({ page }) => {
+    // Production may enforce Turnstile. The login helper can authenticate on
+    // an explicitly configured captcha-free Preview and transfer only the
+    // Supabase session cookies to PLAYWRIGHT_BASE_URL. Prove that login on
+    // that origin, then separately prove the target starts unauthenticated.
+    await page.goto(`${loginBaseUrl!.replace(/\/+$/, "")}/login`);
+    await page.getByLabel("Email").fill(email!);
+    await page.getByLabel("Password").fill(password!);
+    await page.getByRole("button", { name: "Sign in" }).click();
+    await expect(page).toHaveURL(/\/home(?:\?|$)/, { timeout: 30_000 });
+    if (loginUsesDifferentOrigin) {
+      await page.goto(`${baseUrl!.replace(/\/+$/, "")}/ad-studio?workspaceId=${encodeURIComponent(workspaceId!)}`);
+      await expect(page).toHaveURL(/\/login(?:\?|$)/);
+    } else {
+      await runEditorFlow(page);
+    }
+  });
+});
+
+test.describe("Ad Studio authenticated real loop", () => {
+  test.skip(!canRun, "Set PLAYWRIGHT_BASE_URL, ADSTUDIO_E2E_WORKSPACE_ID, ADSTUDIO_E2E_TEMPLATE_ID and authenticated storage state.");
+  test.use({ storageState: storageStatePath });
+  test.setTimeout(180_000);
+
+  for (const viewport of [{ width: 1440, height: 900 }, { width: 768, height: 1024 }, { width: 390, height: 844 }, { width: 320, height: 844 }]) {
+    test(`opens the gallery without overflow at ${viewport.width}x${viewport.height}`, async ({ page }) => {
+      await page.setViewportSize(viewport);
+      await page.addInitScript(() => localStorage.setItem("bw-consent", "essential"));
+      await page.goto(`/ad-studio?workspaceId=${encodeURIComponent(workspaceId!)}`);
+      await expect(page.getByRole("heading", { name: "Ad Studio" })).toBeVisible();
+      const templateHref = `/ad-studio/templates/${encodeURIComponent(templateId!)}`;
+      const templateCard = page.locator(`a[href="${templateHref}"]`);
+      await expect(templateCard, `ADSTUDIO_E2E_TEMPLATE_ID=${templateId} is not visible in the gallery at ${viewport.width}x${viewport.height}`).toBeVisible();
+      await expect(templateCard).toHaveAttribute("href", templateHref);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+    });
   }
+
+  test("completes login-to-review customer flow with Feed and Story persistence", async ({ page }) => {
+    await runEditorFlow(page);
+  });
+});
+
+async function runEditorFlow(page: Page) {
+  const runtime = installRuntimeGuards(page);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.addInitScript(() => localStorage.setItem("bw-consent", "essential"));
+  await page.goto(`/ad-studio?workspaceId=${encodeURIComponent(workspaceId!)}`);
+  const template = page.locator(`a[href="/ad-studio/templates/${encodeURIComponent(templateId!)}"]`);
+  await expect(template, `ADSTUDIO_E2E_TEMPLATE_ID=${templateId} is not present in the template gallery`).toHaveCount(1);
+  await expect(template).toBeVisible();
+  await template.click();
+  const editor = page.getByRole("region", { name: "Ad Studio editor" });
+  await expect(editor).toBeVisible();
+
+  // The seeded workspace has a reviewed Brand Pack. Toggle the appearance
+  // mode before saving so the durable revision covers more than copy/media.
+  await page.getByRole("tab", { name: "Appearance", exact: true }).click();
+  const appearancePanel = page.getByRole("complementary", { name: "Appearance" });
+  const workspaceColours = appearancePanel.getByLabel("Use workspace colours", { exact: true });
+  await expect(workspaceColours).toBeVisible();
+  await expect(workspaceColours).toBeEnabled();
+  await workspaceColours.check();
+  await expect(workspaceColours).toBeChecked();
+  await page.getByRole("tab", { name: "Content", exact: true }).click();
+
+  // Only property/media slots are required. Optional logo and portrait slots
+  // deliberately stay neutral so the test cannot turn a property photo into a
+  // fake brand mark or agent identity.
+  const imageInputs = page.locator('input[type="file"][required]');
+  const imageCount = await imageInputs.count();
+  expect(imageCount, "the selected pack should expose at least one required property image input").toBeGreaterThan(0);
+  for (let i = 0; i < imageCount; i += 1) {
+    await imageInputs.nth(i).setInputFiles(initialImagePath);
+    await waitForImageUploads(page);
+  }
+  await expect(page.locator('img[alt$="preview"]')).toHaveCount(imageCount);
+  // Exercise the visible replacement control, not only the underlying hidden
+  // input. The second fixture also proves the preview changes after replace.
+  const firstPreview = page.locator('img[alt$="preview"]').first();
+  const beforeReplacement = await firstPreview.getAttribute("src");
+  await page.getByRole("button", { name: "Replace", exact: true }).first().click();
+  await imageInputs.first().setInputFiles(replacementImagePath);
+  await waitForImageUploads(page);
+  await expect(firstPreview).toBeVisible();
+  expect(await firstPreview.getAttribute("src")).not.toBe(beforeReplacement);
+  await expect(editor.locator('[role="alert"]')).toHaveCount(0);
+  const overlayInputs = page.locator('section[aria-label="Text"] input[type="text"]');
+  const overlayCount = await overlayInputs.count();
+  const overlayValue = "E2E open home this Saturday";
+  for (let i = 0; i < overlayCount; i += 1) await overlayInputs.nth(i).fill(i === 0 ? overlayValue : `E2E overlay ${i + 1}`);
+
+  // Both placements must remain authorized and usable before Save. The actual
+  // persisted Feed/Story PNGs are checked again on the Review & publish page.
+  await assertEditorPlacement(page, "feed");
+  await assertEditorPlacement(page, "story");
+  await assertEditorPlacement(page, "feed");
+
+  await page.getByRole("tab", { name: "Copy", exact: true }).click();
+  const metaCopy = page.getByRole("complementary", { name: "Meta copy" });
+  await expect(metaCopy).toBeVisible();
+  await expect(metaCopy.getByLabel("Primary text", { exact: true })).toBeVisible();
+  await metaCopy.getByLabel("Primary text", { exact: true }).fill("A clear test listing for a real estate campaign.");
+  await metaCopy.getByLabel("Headline", { exact: true }).fill("Open home this Saturday");
+  await metaCopy.getByLabel("Description", { exact: true }).fill("Book your inspection today");
+
+  const firstSaveResult = await saveEditor(page);
+  const firstDocument = (firstSaveResult.request.postDataJSON() as { document?: { sharedImageValues?: Record<string, string>; colourMode?: string } }).document;
+  expect(Object.keys(firstDocument?.sharedImageValues ?? {})).toHaveLength(imageCount);
+  expect(firstDocument?.colourMode).toBe("brand_pack");
+  for (const ref of Object.values(firstDocument?.sharedImageValues ?? {})) {
+    expect(ref).toContain("/api/adstudio/customer-media?");
+    expect(ref).not.toMatch(/^data:image\//i);
+  }
+  expect(firstSaveResult.response.ok(), JSON.stringify(firstSaveResult.body)).toBe(true);
+  expect(firstSaveResult.body.ad?.feedPngHash).toBeTruthy();
+  expect(firstSaveResult.body.ad?.storyPngHash).toBeTruthy();
+  const firstRevisionNumber = firstSaveResult.body.ad?.revisionNumber;
+  expect(firstRevisionNumber).toBeGreaterThan(0);
+  await expect(page.getByText("Saved", { exact: true })).toBeVisible();
+
+  await metaCopy.getByLabel("Headline", { exact: true }).fill("JUST LISTED TODAY");
+  const secondSaveResult = await saveEditor(page);
+  expect(secondSaveResult.response.ok(), JSON.stringify(secondSaveResult.body)).toBe(true);
+  expect(secondSaveResult.body.ad?.revisionNumber).toBeGreaterThan(firstRevisionNumber!);
+  await expect(page.getByText("Saved", { exact: true })).toBeVisible();
+  await page.reload();
+  await expect(page.locator('section[aria-label="Text"] input[type="text"]').first()).toHaveValue(overlayValue);
+  await page.getByRole("tab", { name: "Appearance", exact: true }).click();
+  await expect(page.getByRole("complementary", { name: "Appearance" }).getByLabel("Use workspace colours", { exact: true })).toBeChecked();
+  await page.getByRole("tab", { name: "Copy", exact: true }).click();
+  await expect(page.getByRole("complementary", { name: "Meta copy" }).getByLabel("Headline", { exact: true })).toHaveValue("JUST LISTED TODAY");
+
+  // Review freezes the last saved revision and must render both authenticated
+  // media responses. It is safe to inspect this page without publishing.
+  await page.getByRole("button", { name: "Review & publish", exact: true }).click();
+  await expect(page).toHaveURL(/\/ad-studio\/templates\/[^/]+\/publish(?:\?|$)/);
+  const frozenFeed = page.getByRole("img", { name: "Saved Feed ad" });
+  const frozenStory = page.getByRole("img", { name: "Saved Story ad" });
+  await expect(frozenFeed).toBeVisible();
+  await expect(frozenStory).toBeVisible();
+  await expect.poll(() => frozenFeed.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
+  await expect.poll(() => frozenStory.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
+  for (const frozenImage of [frozenFeed, frozenStory]) {
+    const src = await frozenImage.getAttribute("src");
+    expect(src, "frozen creative should expose a same-origin media export").toMatch(/^\/api\/adstudio\/media\?path=/);
+    const exported = await page.evaluate(async (imageSrc) => {
+      const response = await fetch(imageSrc);
+      const bytes = await response.arrayBuffer();
+      return { status: response.status, contentType: response.headers.get("content-type"), byteLength: bytes.byteLength };
+    }, src!);
+    expect(exported.status).toBe(200);
+    expect(exported.contentType).toMatch(/^image\/png(?:;|$)/i);
+    expect(exported.byteLength).toBeGreaterThan(100);
+  }
+  await configurePublishPlanner(page);
+  await expect(page.getByText(/Preview only.*nothing will be created/i)).toBeVisible();
+
+  const freezeAndCreate = page.getByRole("button", { name: "Freeze & Create PAUSED", exact: true });
+  await expect(freezeAndCreate).toBeVisible();
+  if (allowDryRunPublish) {
+    // The explicit test-mode flag is not enough by itself: the deployment
+    // must also advertise the dry-run badge, and the response must confirm
+    // providerWritesEnabled=false. This prevents an accidental Meta write if
+    // someone points the test at a wrongly configured deployment.
+    // Never let the opt-in flag turn a writes-enabled deployment into a Meta
+    // mutation. The server-rendered dry-run notice is the preflight guard;
+    // the response assertion below is a second defense after the request.
+    await page.getByText("What happens next", { exact: true }).click();
+    await expect(page.getByText(/Preview only is on.*nothing will be created/i)).toBeVisible();
+    await expect(freezeAndCreate).toBeEnabled();
+    const publishRequest = page.waitForRequest(request => request.url().includes("/api/adstudio/ads/") && request.url().includes("/publish?") && request.method() === "POST");
+    const publishResponse = page.waitForResponse(response => response.url().includes("/api/adstudio/ads/") && response.url().includes("/publish?") && response.request().method() === "POST");
+    await freezeAndCreate.click();
+    const [request, response] = await Promise.all([publishRequest, publishResponse]);
+    const requestBody = request.postDataJSON() as {
+      controls?: {
+        target?: { mode?: string };
+        destinationUrl?: string;
+        variantIds?: string[];
+        dailyBudgetMinorUnits?: number;
+        newCampaign?: { budgetMode?: string; specialAdCategoryCountries?: string[] };
+        geo?: { type?: string; latitude?: number; longitude?: number; radiusKm?: number };
+        placements?: { publisherPlatforms?: string[]; facebookPositions?: string[]; instagramPositions?: string[] };
+        schedule?: { startTime?: string | null; endTime?: string | null };
+        fulfilment?: { exactOffer?: string; fulfilmentAsset?: string; fulfilmentUrl?: string };
+      };
+    };
+    expect(requestBody.controls).toMatchObject({
+      target: { mode: "new_campaign_new_adset" },
+      destinationUrl: "https://example.com/e2e-listing",
+      variantIds: ["feed", "story"],
+      dailyBudgetMinorUnits: 2_500,
+      newCampaign: { budgetMode: "adset", specialAdCategoryCountries: ["AU"] },
+      geo: { type: "custom_radius", latitude: -31.9523, longitude: 115.8613, radiusKm: 25 },
+      placements: {
+        publisherPlatforms: ["facebook", "instagram"],
+        facebookPositions: ["feed", "story"],
+        instagramPositions: ["stream", "story"],
+      },
+      fulfilment: {
+        exactOffer: "E2E property guide",
+        fulfilmentAsset: "",
+        fulfilmentUrl: "https://example.com/e2e-guide",
+      },
+    });
+    expect(Date.parse(requestBody.controls?.schedule?.startTime ?? "")).toBeLessThan(
+      Date.parse(requestBody.controls?.schedule?.endTime ?? ""),
+    );
+    const body = await response.json() as {
+      mode?: string;
+      status?: string;
+      providerWritesEnabled?: boolean;
+      plannedObjects?: { campaigns?: number; adSets?: number; creatives?: number; ads?: number };
+      reconciledObjects?: Record<string, string>;
+      message?: string;
+      error?: string;
+    };
+    expect(response.ok(), JSON.stringify(body)).toBe(true);
+    expect(body.mode, JSON.stringify(body)).toBe("dry_run");
+    expect(body.status, JSON.stringify(body)).toBe("paused_disabled");
+    expect(body.providerWritesEnabled, JSON.stringify(body)).toBe(false);
+    expect(body.plannedObjects, JSON.stringify(body)).toMatchObject({ campaigns: 1, adSets: 1, creatives: 2, ads: 2 });
+    expect(body.reconciledObjects ?? {}, "dry run must not report any provider object IDs").toEqual({});
+    expect(body.message, JSON.stringify(body)).toMatch(/NO Meta objects were created/i);
+    await expect(page.getByRole("status").filter({ hasText: /Dry run/ })).toBeVisible();
+    await expect(page.getByRole("button", { name: /Activate/i })).toHaveCount(0);
+  }
+
+  await page.goto(`/ad-studio/templates/${encodeURIComponent(templateId!)}`);
+  for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 }, { width: 320, height: 844 }]) {
+    await page.setViewportSize(viewport);
+    await expect(page.getByRole("region", { name: "Ad Studio editor" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Save", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Review & publish", exact: true })).toBeVisible();
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth),
+      `editor should not create horizontal document overflow at ${viewport.width}px`,
+    ).toBe(true);
+
+    await assertEditorPlacement(page, "feed");
+    await assertEditorPlacement(page, "story");
+    await assertEditorPlacement(page, "feed");
+
+    const contentControl = viewport.width < 1280
+      ? page.getByRole("button", { name: "Content", exact: true })
+      : page.getByRole("tab", { name: "Content", exact: true });
+    await contentControl.click();
+    await expect(page.getByRole("complementary", { name: "Content" })).toBeVisible();
+    const contentPanel = page.getByRole("complementary", { name: "Content" });
+    await expect(contentPanel.getByLabel(/Choose image for|Replace/).first()).toBeAttached();
+    if (viewport.width < 1280) await page.getByRole("button", { name: "Close", exact: true }).click();
+
+    const copyControl = viewport.width < 1280
+      ? page.getByRole("button", { name: "Copy", exact: true })
+      : page.getByRole("tab", { name: "Copy", exact: true });
+    await copyControl.click();
+    await expect(page.getByRole("complementary", { name: "Meta copy" })).toBeVisible();
+    await expect(page.getByRole("complementary", { name: "Meta copy" }).getByLabel("Headline", { exact: true })).toHaveValue("JUST LISTED TODAY");
+    if (viewport.width < 1280) await page.getByRole("button", { name: "Close", exact: true }).click();
+
+    const appearanceControl = viewport.width < 1280
+      ? page.getByRole("button", { name: "Appearance", exact: true })
+      : page.getByRole("tab", { name: "Appearance", exact: true });
+    await appearanceControl.click();
+    const appearancePanel = page.getByRole("complementary", { name: "Appearance" });
+    await expect(appearancePanel).toBeVisible();
+    await expect(appearancePanel.getByLabel("Use workspace colours", { exact: true })).toBeChecked();
+    if (viewport.width < 1280) await page.getByRole("button", { name: "Close", exact: true }).click();
+  }
+
+  await runtime.assertHealthy("editor and Review & publish flow");
+}
+
+function isOwnedVercelHost(hostname: string): boolean {
+  return /^blockwise(?:-[a-z0-9-]+)?-steven-shelleys-projects\.vercel\.app$/i.test(hostname);
+}
+
+type SaveResult = {
+  request: import("@playwright/test").Request;
+  response: import("@playwright/test").Response;
+  body: { ad?: { feedPngHash?: string; storyPngHash?: string; revisionNumber?: number }; error?: string };
+};
+
+async function saveEditor(page: Page): Promise<SaveResult> {
+  const responsePromise = page.waitForResponse(response => response.url().includes("/api/adstudio/ads/") && response.url().includes("/save?") && response.request().method() === "POST");
+  const requestPromise = page.waitForRequest(request => request.url().includes("/api/adstudio/ads/") && request.url().includes("/save?") && request.method() === "POST");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  const [request, response] = await Promise.all([requestPromise, responsePromise]);
+  const body = await response.json() as SaveResult["body"];
+  return { request, response, body };
+}
+
+async function waitForImageUploads(page: Page) {
+  // The preview appears before the direct storage upload finishes. Saving is
+  // only valid after every prepare/upload/finalize sequence has completed.
+  await expect(page.getByText(/Uploading/)).toHaveCount(0, { timeout: 60_000 });
+}
+
+async function configurePublishPlanner(page: Page) {
+  const feedVariant = page.getByLabel("Feed (4:5)", { exact: true });
+  const storyVariant = page.getByLabel("Story (9:16)", { exact: true });
+  await expect(feedVariant).toBeChecked();
+  await expect(storyVariant).toBeChecked();
+  await storyVariant.uncheck();
+  await expect(page.getByRole("status").filter({ hasText: /1 selected variant.*1 ad set.*1 paused ad/ })).toBeVisible();
+  await storyVariant.check();
+  await expect(page.getByRole("status").filter({ hasText: /2 selected variants.*1 ad set.*2 paused ads/ })).toBeVisible();
+
+  // Exercise every supported target shape before completing the sole
+  // direct-template E2E path with a new campaign and new ad set.
+  const target = page.getByLabel("Campaign and ad set", { exact: true });
+  expect(await target.locator("option").allTextContents()).toEqual([
+    "New campaign and new ad set",
+    "Existing campaign and new ad set",
+    "Existing campaign and one or more existing ad sets",
+  ]);
+  await target.selectOption("existing_adset");
+  const existingCampaign = page.getByLabel("Existing campaign ID", { exact: true });
+  const existingAdSets = page.getByLabel("Existing ad set IDs", { exact: true });
+  await existingCampaign.fill("e2e-existing-campaign");
+  await existingAdSets.fill("e2e-existing-adset-1, e2e-existing-adset-2");
+  await expect(existingCampaign).toHaveValue("e2e-existing-campaign");
+  await expect(existingAdSets).toHaveValue("e2e-existing-adset-1, e2e-existing-adset-2");
+  await expect(page.getByRole("heading", { name: "Existing ad set settings", exact: true })).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: /2 selected variants.*2 ad sets.*4 paused ads/ })).toBeVisible();
+
+  await target.selectOption("existing_campaign_new_adset");
+  await page.getByLabel("Existing campaign ID", { exact: true }).fill("e2e-existing-campaign");
+  await expect(page.getByLabel("Existing ad set IDs", { exact: true })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "New ad set setup", exact: true })).toBeVisible();
+
+  await target.selectOption("new_campaign_new_adset");
+  await expect(page.getByLabel("Existing campaign ID", { exact: true })).toHaveCount(0);
+  await page.getByLabel("Special ad category country", { exact: true }).fill("AU");
+
+  const campaignBudget = page.getByLabel(/^Campaign budget \(CBO\)/);
+  const adSetBudget = page.getByLabel(/^Ad set budget \(ABO\)/);
+  await campaignBudget.check();
+  await expect(campaignBudget).toBeChecked();
+  await adSetBudget.check();
+  await expect(adSetBudget).toBeChecked();
+  await expect(campaignBudget).not.toBeChecked();
+  await page.getByLabel("Ad set daily budget (AUD)", { exact: true }).fill("25.00");
+
+  await page.getByLabel("Audience location", { exact: true }).selectOption("custom_radius");
+  await page.getByLabel("Latitude", { exact: true }).fill("-31.9523");
+  await page.getByLabel("Longitude", { exact: true }).fill("115.8613");
+  await page.getByLabel("Radius (km)", { exact: true }).fill("25");
+
+  for (const placement of ["Facebook Feed", "Facebook Stories", "Instagram Feed", "Instagram Stories"]) {
+    const choice = page.getByLabel(placement, { exact: true });
+    await choice.check();
+    await expect(choice).toBeChecked();
+  }
+
+  await page.getByLabel("Starts", { exact: true }).selectOption("scheduled");
+  await page.getByLabel("Scheduled start date and time", { exact: true }).fill("2030-01-15T09:30");
+  await page.getByLabel("Ends", { exact: true }).selectOption("scheduled");
+  await page.getByLabel("Scheduled end date and time", { exact: true }).fill("2030-01-22T09:30");
+  await page.getByLabel(/^(Ad destination|Article or website destination)$/).fill("https://example.com/e2e-listing");
+
+  const offer = page.getByLabel("This ad includes an offer, guide or result promise", { exact: true });
+  if (!(await offer.isChecked())) {
+    await expect(offer).toBeEnabled();
+    await offer.check();
+  }
+  await expect(offer).toBeChecked();
+  const fulfilmentFields: Array<[string, string]> = [
+    ["Exact offer", "E2E property guide"],
+    ["Eligibility", "All E2E enquiries"],
+    ["Conditions", "Dry-run fixture only"],
+    ["Timeframe", "Immediately after submission"],
+    ["Evidence", "E2E evidence record"],
+    ["Evidence approval", "Approved for dry-run verification"],
+    ["Disclaimer", "Test fixture; no real offer."],
+    ["Privacy URL", "https://example.com/privacy"],
+    ["Fulfilment delivery URL", "https://example.com/e2e-guide"],
+    ["Consent wording", "I agree to receive the test guide."],
+    ["Fulfilment owner", "E2E test team"],
+    ["Expiry", "2030-12-31"],
+    ["Tracking", "E2E dry-run receipt"],
+  ];
+  for (const [label, value] of fulfilmentFields) {
+    const field = page.getByLabel(label, { exact: true });
+    await field.fill(value);
+    await expect(field).toHaveValue(value);
+  }
+
+  const summary = page.getByText("Review the exact setup", { exact: true }).locator("..");
+  await expect(summary).toContainText(/New campaign.*new ad set/);
+  await expect(summary).toContainText("Ad set budget (ABO)");
+  await expect(summary).toContainText("A$25.00 per day for the new ad set");
+  await expect(summary).toContainText("25 km around -31.9523, 115.8613");
+  for (const placement of ["Facebook Feed", "Facebook Stories", "Instagram Feed", "Instagram Stories"]) {
+    await expect(summary).toContainText(placement);
+  }
+  await expect(summary).toContainText("Feed + Story");
+  await expect(summary).toContainText("E2E property guide");
+
+  const confirmation = page.getByLabel(/^I confirm this budget mode, spend, audience, placement, schedule, creative matrix and fulfilment setup is correct/);
+  await expect(confirmation).toBeEnabled();
+  await confirmation.check();
+  await expect(confirmation).toBeChecked();
+}
+
+async function assertEditorPlacement(page: Page, placement: "feed" | "story") {
+  const label = placement === "feed" ? /Feed/ : /Story/;
+  await page.getByRole("tab", { name: label }).click();
+  await expect(page.getByRole("img", { name: new RegExp(`${placement} layered ad preview`, "i") })).toBeVisible();
+}
+
+function installRuntimeGuards(page: Page) {
+  const consoleErrors: string[] = [];
+  const pageErrors: string[] = [];
+  const failedImages: string[] = [];
+  const providerRequests: string[] = [];
+
+  page.on("console", message => {
+    if (message.type() === "error") consoleErrors.push(message.text());
+  });
+  page.on("pageerror", error => pageErrors.push(error.message));
+  page.on("requestfailed", request => {
+    if (request.resourceType() === "image") failedImages.push(`${request.url()} — ${request.failure()?.errorText ?? "failed"}`);
+  });
+  page.on("request", request => {
+    if (/graph\.facebook\.com|graph\.instagram\.com/i.test(request.url())) providerRequests.push(request.url());
+  });
+
+  return {
+    async assertHealthy(label: string) {
+      const brokenImages = await page.locator("img").evaluateAll(images => images
+        .filter(image => !image.complete || image.naturalWidth === 0)
+        .map(image => `${image.getAttribute("alt") ?? "image"}: ${image.getAttribute("src") ?? "(missing src)"}`));
+      expect(brokenImages, `${label} has broken images`).toEqual([]);
+      expect(failedImages, `${label} had failed image requests`).toEqual([]);
+      expect(consoleErrors, `${label} emitted console.error`).toEqual([]);
+      expect(pageErrors, `${label} emitted pageerror`).toEqual([]);
+      expect(providerRequests, `${label} attempted a browser-side provider request`).toEqual([]);
+    },
+  };
 }

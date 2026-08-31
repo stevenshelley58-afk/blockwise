@@ -3,6 +3,8 @@ import { existsSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
 
+import { START_TEMPLATES } from "../src/components/home-landing/data.ts";
+
 // The homepage renders from src/app/page.tsx plus the home-landing component
 // tree (desktop + mobile variants of every section). Guards that used to read
 // page.tsx alone now read the combined homepage source.
@@ -19,6 +21,7 @@ function readHomeSources(): { page: string; combined: string } {
 
 test("public homepage does not redirect anonymous visitors to the login screen", () => {
   const { page, combined } = readHomeSources();
+  const homepageCss = readFileSync("src/app/homepage.css", "utf8");
 
   assert.doesNotMatch(page, /redirect\(/);
   // Signup flow stays reachable; wording of buttons/sections is free to change.
@@ -26,6 +29,11 @@ test("public homepage does not redirect anonymous visitors to the login screen",
   // C5: sign-in stays in its own component so Space-key activations scroll the
   // page rather than navigating to /login. Label text itself is not pinned.
   assert.match(combined, /SignInLink/);
+  assert.match(
+    homepageCss,
+    /@media \(max-width: 767\.98px\)[\s\S]*?\.hw-header \.hw-login \{ display: inline-flex; \}/,
+    "mobile header must keep Log in visible beside Free trial",
+  );
 });
 
 test("public audit report route stays public and off the protected Ad Radar surface", () => {
@@ -44,6 +52,10 @@ test("public audit report route stays public and off the protected Ad Radar surf
 
 test("landing page anchors, sections, and claims stay connected", () => {
   const { page, combined } = readHomeSources();
+  const workspaceHeroCss = readFileSync(
+    "src/components/home-landing/workspace-hero.css",
+    "utf8",
+  );
   const oldProductName = new RegExp("Aur" + "alis", "i");
   const deadAnchor = new RegExp('href="' + '#"');
   const staleSignupAnchor = 'href="#sig' + 'nup"';
@@ -94,18 +106,29 @@ test("landing page anchors, sections, and claims stay connected", () => {
     previousIndex = index;
   }
 
-  assert.match(combined, /Your competitors are advertising\. Are&nbsp;you\?/);
+  assert.match(combined, /Your competitors<\/span>\s*<span[^>]*>are advertising\.<\/span>\s*<span[^>]*>Are you\?<\/span>/);
+  assert.doesNotMatch(combined, /hw-ws__eyebrow/);
   assert.match(
     combined,
-    /Ads built from what&rsquo;s actually working in your area\. Start getting leads today\./,
+    /Create, approve and track Meta ads from one beautifully simple workspace\./,
   );
   assert.match(combined, /Know the property before the call/);
   assert.match(combined, /Run a property check/);
   // Illustrative dashboard and offer values must be labelled as examples so
   // prospects cannot mistake them for promised customer results.
-  assert.match(combined, />Examples</);
-  assert.match(combined, /Example angle/);
-  assert.match(combined, /Example data/);
+  assert.match(combined, /Example campaign/);
+  assert.match(combined, /Performance/);
+  assert.match(combined, /Prepared ads/);
+  assert.match(
+    workspaceHeroCss,
+    /@media \(max-width: 600px\)[\s\S]*?\.hw-ws-product \{ height: 326px; margin-top: 28px;/,
+    "mobile hero must use the compact first-viewport product proof",
+  );
+  assert.match(
+    workspaceHeroCss,
+    /@media \(max-width: 600px\)[\s\S]*?\.hw-ws-product__ads \{ display: none; \}/,
+    "mobile hero must not show clipped prepared-ad cards",
+  );
 
   const ids = [...combined.matchAll(/id="([^"]+)"/g)].map((match) => match[1]);
   assert.equal(new Set(ids).size, ids.length, "landing and setup form IDs must be unique");
@@ -123,13 +146,37 @@ test("landing page anchors, sections, and claims stay connected", () => {
 });
 
 test("landing page local image assets resolve from public/", () => {
-  const { combined } = readHomeSources();
-  const assets = [
-    ...combined.matchAll(/(?:src|photoSrc)=(?:"|\{")(\/(?:hero|ads|home)\/[^"]+)"/g),
+  const componentSources = [
+    readFileSync("src/app/page.tsx", "utf8"),
+    ...readdirSync(HOME_LANDING_DIR)
+      .filter((file) => file.endsWith(".tsx"))
+      .sort()
+      .map((file) => readFileSync(path.join(HOME_LANDING_DIR, file), "utf8")),
+  ].join("\n");
+  const styleSources = [
+    readFileSync("src/app/homepage.css", "utf8"),
+    ...readdirSync(HOME_LANDING_DIR)
+      .filter((file) => file.endsWith(".css"))
+      .sort()
+      .map((file) => readFileSync(path.join(HOME_LANDING_DIR, file), "utf8")),
+  ].join("\n");
+  const componentAssets = [
+    ...componentSources.matchAll(
+      /(?:src|photoSrc|imageSrc)=\s*(?:"|\{")(\/[^"]+\.(?:avif|gif|jpe?g|png|svg|webp))"/g,
+    ),
   ].map((match) => match[1]);
+  const styleAssets = [
+    ...styleSources.matchAll(
+      /url\(\s*(?:"|')?(\/[^)"']+\.(?:avif|gif|jpe?g|png|svg|webp))(?:"|')?\s*\)/g,
+    ),
+  ].map((match) => match[1]);
+  const templateAssets = START_TEMPLATES.map(({ imageSrc }) => imageSrc);
+  const assets = [...componentAssets, ...styleAssets, ...templateAssets];
+  const uniqueAssets = [...new Set(assets)];
 
-  assert.ok(assets.length > 0, "homepage should reference bundled /home assets");
-  for (const asset of assets) {
+  assert.ok(templateAssets.length > 0, "#start should provide bundled template previews");
+  assert.ok(uniqueAssets.length > 0, "homepage should reference bundled local image assets");
+  for (const asset of uniqueAssets) {
     assert.ok(existsSync(path.join("public", asset.slice(1))), `${asset} should exist under public/`);
   }
 });

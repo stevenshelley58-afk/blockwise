@@ -1,6 +1,5 @@
 "use client";
 
-import { track } from "@vercel/analytics";
 import { useRef, useState, type FormEvent } from "react";
 
 type Metrics = {
@@ -132,11 +131,6 @@ export function AuditLeadForm({ area, label, signupHref, metrics, analytics }: A
 }
 
 function fireSafe(event: string, props: Record<string, string | number | boolean>) {
-  try {
-    track(event, props);
-  } catch {
-    // analytics best-effort
-  }
   if (typeof window === "undefined") return;
   const w = window as Window & { fbq?: (...args: unknown[]) => void; gtag?: (...args: unknown[]) => void };
   try {

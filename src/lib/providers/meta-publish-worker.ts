@@ -18,6 +18,7 @@ import {
 import { loadMutation, updateMutation } from "./meta-mutation-worker.ts";
 import {
   buildMetaPlanMutation,
+  buildOwnedMetaActivationPayload,
   executeMetaPlanMutation,
 } from "./meta-mutations.ts";
 import { DEFAULT_META_GRAPH_VERSION } from "./meta-graph-version.ts";
@@ -554,11 +555,7 @@ async function activateFreeCampaign(
     workspaceId: plan.workspaceId,
     planId: plan.planId,
     action: "activate",
-    payload: {
-      campaignId: plan.reconciledObjects.campaignId,
-      adSetIds: Object.values(plan.reconciledObjects.adSetIds),
-      adIds: Object.values(plan.reconciledObjects.adIds),
-    },
+    payload: buildOwnedMetaActivationPayload(plan),
     mutationId,
   });
   const { error: createError } = await input.serviceSupabase
@@ -615,6 +612,7 @@ async function activateFreeCampaign(
   }
   const result = await executeMetaPlanMutation({
     mutation: applyingMutation,
+    publishPlan: plan,
     approvalStatus: "approved",
     accessToken: tokens.accessToken,
     fetchImpl: input.fetchImpl,

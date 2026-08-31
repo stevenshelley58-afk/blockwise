@@ -36,8 +36,10 @@ export async function uploadAdStudioMedia(input: {
     throw new Error("We uploaded the image but couldn't attach it to your workspace.");
   }
 
-  return {
-    src: `/api/adstudio/media?path=${encodeURIComponent(storagePath)}`,
-    storagePath,
-  };
+  const signed = await supabase.storage.from("workspace-artifacts").createSignedUrl(storagePath, 60 * 60);
+  if (signed.error || !signed.data?.signedUrl) {
+    throw new Error("We uploaded the image but couldn't prepare its preview.");
+  }
+
+  return { src: signed.data.signedUrl, storagePath };
 }

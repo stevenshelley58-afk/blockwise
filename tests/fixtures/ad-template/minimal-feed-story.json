@@ -1,0 +1,67 @@
+{
+  "schema": "blockwise.ad-template",
+  "templateId": "fixture-minimal",
+  "createdAt": "2026-08-13T00:00:00.000Z",
+  "feedLayout": {
+    "placement": "feed",
+    "layers": [
+      {
+        "type": "plate",
+        "layerId": "feed-background",
+        "colourRole": "background",
+        "geometry": { "x": 0, "y": 0, "width": 1080, "height": 1350 },
+        "protected": true
+      }
+    ],
+    "safeZones": []
+  },
+  "storyLayout": {
+    "placement": "story",
+    "layers": [
+      {
+        "type": "plate",
+        "layerId": "story-background",
+        "colourRole": "background",
+        "geometry": { "x": 0, "y": 0, "width": 1080, "height": 1920 },
+        "protected": true
+      }
+    ],
+    "safeZones": []
+  },
+  "imageInputs": [],
+  "textInputs": [],
+  "semanticColours": {
+    "background": "#101828",
+    "primary": "#475467",
+    "secondary": "#667085",
+    "accent": "#F79009",
+    "mainText": "#FFFFFF",
+    "inverseText": "#101828"
+  },
+  "assets": {},
+  "fonts": [],
+  "metadata": {
+    "title": "Layered fixture",
+    "description": "A source-free layered fixture",
+    "gallerySamples": {},
+    "metaCopyDefaults": {
+      "primaryText": [],
+      "headlines": [],
+      "descriptions": [],
+      "cta": "LEARN_MORE"
+    },
+    "aiWritingGuidance": {
+      "summary": "Use verified claims only.",
+      "fields": {}
+    },
+    "publishRequirements": {
+      "objective": "OUTCOME_LEADS",
+      "specialAdCategory": null,
+      "instantForm": { "required": false, "dependency": null },
+      "destination": { "required": false, "kind": "none", "dependency": null },
+      "requiredCtaTypes": []
+    },
+    "replacementAssets": [],
+    "realAssetRefs": []
+  }
+}

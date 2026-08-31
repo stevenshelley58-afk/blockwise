@@ -51,14 +51,14 @@ export async function executeMetaMutationById(input: {
   // A plan-backed mutation resolves its token from the plan's provider
   // connection. Inline management of a Meta-created object has no plan, so we
   // resolve the workspace's Meta provider connection directly.
-  const providerConnectionId = mutation.planId
-    ? (
-        await loadMetaPublishPlan(input.serviceSupabase, {
-          workspaceId: input.workspaceId,
-          planId: mutation.planId,
-        })
-      ).providerConnectionId
-    : await resolveWorkspaceMetaConnectionId(input.serviceSupabase, input.workspaceId);
+  const publishPlan = mutation.planId
+    ? await loadMetaPublishPlan(input.serviceSupabase, {
+        workspaceId: input.workspaceId,
+        planId: mutation.planId,
+      })
+    : null;
+  const providerConnectionId = publishPlan?.providerConnectionId ??
+    await resolveWorkspaceMetaConnectionId(input.serviceSupabase, input.workspaceId);
   const approvalStatus = mutation.approvalRequestId
     ? await loadApprovalStatus(input.serviceSupabase, input.workspaceId, mutation.approvalRequestId)
     : "draft";
@@ -78,6 +78,7 @@ export async function executeMetaMutationById(input: {
 
     const result = await executeMetaPlanMutation({
       mutation,
+      publishPlan,
       approvalStatus,
       accessToken: tokens.accessToken,
       fetchImpl: input.fetchImpl,

@@ -1,0 +1,35 @@
+# Frank's shared edge terminates public TLS. This internal router is explicitly
+# HTTP-only so proxying to product-caddy:80 cannot trigger an HTTPS redirect
+# loop or a second ACME certificate flow.
+http://{$BLOCKWISE_PRODUCT_DOMAIN} {
+  encode zstd gzip
+
+  @health path /healthz
+  handle @health {
+    respond "ok" 200
+  }
+
+  handle_path /rest/v1/* {
+    reverse_proxy product-rest:3000
+  }
+
+  handle_path /auth/v1/* {
+    reverse_proxy product-auth:9999
+  }
+
+  handle_path /storage/v1/* {
+    reverse_proxy product-storage:5000
+  }
+
+  handle_path /realtime/v1/* {
+    reverse_proxy product-realtime:4000
+  }
+
+  handle /api/* {
+    reverse_proxy product-app:3000
+  }
+
+  handle {
+    reverse_proxy product-app:3000
+  }
+}

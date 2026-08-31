@@ -2,7 +2,10 @@ import { NextResponse } from "next/server";
 
 import { getDeploymentReadiness } from "@/lib/config/env";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
-import { resolveSupabaseServerCredential } from "@/lib/supabase/credentials";
+import {
+  resolveSupabaseServerCredential,
+  supabaseServerCredentialHeaders,
+} from "@/lib/supabase/credentials";
 
 export const runtime = "nodejs";
 
@@ -21,9 +24,10 @@ export async function GET(request: Request) {
   const readiness = getDeploymentReadiness();
   const supabase = await getSupabaseReadiness();
   const ready = readiness.ok && supabase.ok;
+  const status = ready ? 200 : 503;
 
   if (!authenticated) {
-    return NextResponse.json({ app: "blockwise", status: ready ? "ready" : "degraded" });
+    return NextResponse.json({ app: "blockwise", status: ready ? "ready" : "degraded" }, { status });
   }
 
   return NextResponse.json({
@@ -41,18 +45,39 @@ export async function GET(request: Request) {
       },
       supabase,
     },
-  });
+  }, { status });
 }
 
 async function getSupabaseReadiness(): Promise<SupabaseReadiness> {
   const checkedAt = new Date().toISOString();
+  // The public Supabase URL is routed through Frank's shared edge. During
+  // startup product-caddy waits for this app to become healthy, Compose
+  // provides a direct PostgREST root instead. supabase-js appends /rest/v1,
+  // which is correct for the public gateway but invalid for PostgREST itself.
+  const directPostgrestUrl = process.env.BLOCKWISE_READINESS_SUPABASE_URL;
+  const credential = resolveSupabaseServerCredential();
 
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !resolveSupabaseServerCredential()) {
+  if (!(directPostgrestUrl || process.env.NEXT_PUBLIC_SUPABASE_URL) || !credential) {
     return { ok: false, status: "configuration_incomplete", checkedAt };
   }
 
   try {
-    const supabase = createSupabaseServiceClient();
+    if (directPostgrestUrl) {
+      const url = new URL("workspaces", `${directPostgrestUrl.replace(/\/+$/u, "")}/`);
+      url.searchParams.set("select", "id");
+      url.searchParams.set("limit", "1");
+      const response = await fetch(url, { headers: supabaseServerCredentialHeaders(credential) });
+
+      if (!response.ok) {
+        return { ok: false, status: "error", checkedAt, message: `PostgREST readiness returned ${response.status}.` };
+      }
+
+      return { ok: true, status: "connected", checkedAt };
+    }
+
+    const supabase = createSupabaseServiceClient({
+      env: process.env,
+    });
     const { error } = await supabase.from("workspaces").select("id").limit(1);
 
     if (error) {

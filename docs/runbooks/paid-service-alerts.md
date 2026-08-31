@@ -1,4 +1,10 @@
-# Paid-Service Alerts Runbook
+# Paid-Service Alerts Runbook (historical managed runtime)
+
+> HISTORICAL ONLY: This runbook describes Vercel Cron, Vercel Spend
+> Management, and managed Supabase alerting. It is not a current product
+> deployment runbook and must not be used as evidence for the self-hosted VPS
+> cutover. Keep it for historical reference until an OSS scheduler/alerting
+> procedure replaces it.
 
 Blockwise warns by **email + WhatsApp** before any paid service hits its limit,
 and immediately when a provider outage would break ad creation.

@@ -1,0 +1,343 @@
+name: blockwise-product
+
+services:
+  product-db:
+    image: postgres:17.6-alpine
+    restart: unless-stopped
+    # Realtime consumes PostgreSQL's logical replication stream. Keep this
+    # explicit so enabling the realtime profile cannot silently start without
+    # CDC support.
+    command:
+      - postgres
+      - -c
+      - wal_level=logical
+      - -c
+      - max_replication_slots=10
+      - -c
+      - max_wal_senders=10
+    environment:
+      POSTGRES_DB: ${BLOCKWISE_DB_NAME:?BLOCKWISE_DB_NAME is required}
+      POSTGRES_USER: ${BLOCKWISE_DB_USER:?BLOCKWISE_DB_USER is required}
+      POSTGRES_PASSWORD: ${BLOCKWISE_DB_PASSWORD:?BLOCKWISE_DB_PASSWORD is required}
+      BLOCKWISE_DB_AUTHENTICATOR_PASSWORD: ${BLOCKWISE_DB_AUTHENTICATOR_PASSWORD:?BLOCKWISE_DB_AUTHENTICATOR_PASSWORD is required}
+    volumes:
+      - blockwise-product-db-data:/var/lib/postgresql/data
+      - ../product/db-init:/docker-entrypoint-initdb.d:ro
+    networks: [blockwise-product]
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  product-rest:
+    image: postgrest/postgrest:v14.15
+    restart: unless-stopped
+    depends_on:
+      product-db: { condition: service_healthy }
+    environment:
+      PGRST_DB_URI: postgres://${BLOCKWISE_DB_AUTHENTICATOR:?BLOCKWISE_DB_AUTHENTICATOR is required}:${BLOCKWISE_DB_AUTHENTICATOR_PASSWORD:?BLOCKWISE_DB_AUTHENTICATOR_PASSWORD is required}@product-db:5432/${BLOCKWISE_DB_NAME}
+      PGRST_DB_SCHEMAS: public,graphql_public
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: ${BLOCKWISE_AUTH_JWT_SECRET:?BLOCKWISE_AUTH_JWT_SECRET is required}
+      PGRST_DB_USE_LEGACY_GUCS: "false"
+      PGRST_ADMIN_SERVER_PORT: 3001
+      PGRST_ADMIN_SERVER_HOST: localhost
+    networks: [blockwise-product]
+    healthcheck:
+      test: [CMD, "postgrest", "--ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  product-auth:
+    image: supabase/gotrue:v2.189.0
+    restart: unless-stopped
+    depends_on:
+      product-db: { condition: service_healthy }
+    environment:
+      GOTRUE_API_HOST: 0.0.0.0
+      GOTRUE_API_PORT: 9999
+      API_EXTERNAL_URL: ${BLOCKWISE_AUTH_API_EXTERNAL_URL:?BLOCKWISE_AUTH_API_EXTERNAL_URL is required}
+      GOTRUE_DB_DRIVER: postgres
+      GOTRUE_DB_DATABASE_URL: postgres://${BLOCKWISE_DB_USER}:${BLOCKWISE_DB_PASSWORD}@product-db:5432/${BLOCKWISE_DB_NAME}?options=-csearch_path%3Dauth%2Cpublic
+      DB_NAMESPACE: auth
+      GOTRUE_SITE_URL: ${BLOCKWISE_AUTH_SITE_URL:?BLOCKWISE_AUTH_SITE_URL is required}
+      GOTRUE_URI_ALLOW_LIST: ${BLOCKWISE_AUTH_URI_ALLOW_LIST}
+      GOTRUE_JWT_SECRET: ${BLOCKWISE_AUTH_JWT_SECRET:?BLOCKWISE_AUTH_JWT_SECRET is required}
+      GOTRUE_JWT_ISSUER: ${BLOCKWISE_AUTH_API_EXTERNAL_URL}
+      GOTRUE_JWT_ADMIN_ROLES: service_role
+      GOTRUE_JWT_AUD: authenticated
+      GOTRUE_JWT_DEFAULT_GROUP_NAME: authenticated
+      GOTRUE_JWT_EXP: ${BLOCKWISE_AUTH_JWT_EXP:-3600}
+      GOTRUE_EXTERNAL_EMAIL_ENABLED: ${BLOCKWISE_AUTH_EXTERNAL_EMAIL_ENABLED:-true}
+      GOTRUE_MAILER_AUTOCONFIRM: ${BLOCKWISE_AUTH_MAILER_AUTOCONFIRM:-false}
+      GOTRUE_SMTP_HOST: ${BLOCKWISE_AUTH_SMTP_HOST}
+      GOTRUE_SMTP_PORT: ${BLOCKWISE_AUTH_SMTP_PORT:-587}
+      GOTRUE_SMTP_USER: ${BLOCKWISE_AUTH_SMTP_USER}
+      GOTRUE_SMTP_PASS: ${BLOCKWISE_AUTH_SMTP_PASS}
+      GOTRUE_SMTP_ADMIN_EMAIL: ${BLOCKWISE_AUTH_SMTP_ADMIN_EMAIL}
+      GOTRUE_SMTP_SENDER_NAME: ${BLOCKWISE_AUTH_SMTP_SENDER_NAME:-Blockwise}
+    networks: [blockwise-product]
+    healthcheck:
+      test: [CMD, "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:9999/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+
+  product-storage:
+    image: supabase/storage-api:v1.60.4
+    restart: unless-stopped
+    depends_on:
+      product-db: { condition: service_healthy }
+      product-rest: { condition: service_healthy }
+    environment:
+      DATABASE_URL: postgres://${BLOCKWISE_DB_USER}:${BLOCKWISE_DB_PASSWORD}@product-db:5432/${BLOCKWISE_DB_NAME}?options=-csearch_path%3Dstorage%2Cpublic
+      PGRST_JWT_SECRET: ${BLOCKWISE_AUTH_JWT_SECRET:?BLOCKWISE_AUTH_JWT_SECRET is required}
+      AUTH_JWT_SECRET: ${BLOCKWISE_AUTH_JWT_SECRET}
+      ANON_KEY: ${BLOCKWISE_AUTH_ANON_KEY:?BLOCKWISE_AUTH_ANON_KEY is required}
+      SERVICE_KEY: ${BLOCKWISE_STORAGE_SERVICE_KEY:?BLOCKWISE_STORAGE_SERVICE_KEY is required}
+      POSTGREST_URL: http://product-rest:3000
+      STORAGE_PUBLIC_URL: ${BLOCKWISE_PUBLIC_URL:?BLOCKWISE_PUBLIC_URL is required}/storage/v1
+      REQUEST_ALLOW_X_FORWARDED_PATH: "true"
+      FILE_SIZE_LIMIT: ${BLOCKWISE_STORAGE_FILE_SIZE_LIMIT:-10485760}
+      TENANT_ID: blockwise
+      REGION: local
+      GLOBAL_S3_BUCKET: blockwise
+      STORAGE_BACKEND: file
+      FILE_STORAGE_BACKEND_PATH: /var/lib/storage
+    volumes:
+      - blockwise-product-storage-data:/var/lib/storage
+    networks: [blockwise-product]
+    healthcheck:
+      test: [CMD, "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:5000/status"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+
+  product-realtime:
+    image: supabase/realtime:v2.102.3
+    container_name: blockwise-realtime.supabase-realtime
+    restart: unless-stopped
+    profiles: [realtime]
+    depends_on:
+      product-db: { condition: service_healthy }
+    environment:
+      DB_HOST: product-db
+      DB_NAME: ${BLOCKWISE_DB_NAME}
+      DB_USER: ${BLOCKWISE_DB_USER}
+      DB_PASSWORD: ${BLOCKWISE_DB_PASSWORD}
+      DB_PORT: 5432
+      DB_AFTER_CONNECT_QUERY: SET search_path TO _realtime
+      DB_ENC_KEY: ${BLOCKWISE_REALTIME_DB_ENC_KEY:?BLOCKWISE_REALTIME_DB_ENC_KEY is required}
+      API_JWT_SECRET: ${BLOCKWISE_AUTH_JWT_SECRET:?BLOCKWISE_AUTH_JWT_SECRET is required}
+      ANON_KEY: ${BLOCKWISE_AUTH_ANON_KEY:?BLOCKWISE_AUTH_ANON_KEY is required}
+      METRICS_JWT_SECRET: ${BLOCKWISE_AUTH_JWT_SECRET}
+      SECRET_KEY_BASE: ${BLOCKWISE_REALTIME_SECRET_KEY_BASE:?BLOCKWISE_REALTIME_SECRET_KEY_BASE is required}
+      APP_NAME: blockwise-realtime
+      PORT: 4000
+      ERL_AFLAGS: -proto_dist inet_tcp
+      DNS_NODES: "''"
+      RLIMIT_NOFILE: "10000"
+      SEED_SELF_HOST: "true"
+    networks: [blockwise-product]
+    healthcheck:
+      test: [CMD-SHELL, "curl -sSfL --head -o /dev/null -H \"Authorization: Bearer $${ANON_KEY}\" http://127.0.0.1:4000/api/tenants/blockwise-realtime/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+
+  product-app:
+    image: ${BLOCKWISE_APP_IMAGE:?BLOCKWISE_APP_IMAGE is required}
+    build:
+      context: ../..
+      dockerfile: infra/product/Dockerfile
+      args:
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:?NEXT_PUBLIC_APP_URL is required}
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-${BLOCKWISE_PUBLIC_URL}}
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+        NEXT_PUBLIC_RESEARCH_STORAGE_URL: ${NEXT_PUBLIC_RESEARCH_STORAGE_URL:-https://hermes.blockwise.sale/research-media}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+        NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${NEXT_PUBLIC_TURNSTILE_SITE_KEY:-}
+        NEXT_PUBLIC_SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN:-}
+        NEXT_PUBLIC_GOOGLE_ADS_ID: ${NEXT_PUBLIC_GOOGLE_ADS_ID:-}
+        NEXT_PUBLIC_BLOCKWISE_SAMPLE_DATA: ${NEXT_PUBLIC_BLOCKWISE_SAMPLE_DATA:-false}
+    restart: unless-stopped
+    depends_on:
+      product-rest: { condition: service_healthy }
+      product-auth: { condition: service_healthy }
+      product-storage: { condition: service_healthy }
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:?NEXT_PUBLIC_APP_URL is required}
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-${BLOCKWISE_PUBLIC_URL}}
+      NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:?NEXT_PUBLIC_SUPABASE_URL is required}
+      NEXT_PUBLIC_RESEARCH_STORAGE_URL: ${NEXT_PUBLIC_RESEARCH_STORAGE_URL:-https://hermes.blockwise.sale/research-media}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:?NEXT_PUBLIC_SUPABASE_ANON_KEY is required}
+      # Readiness must not call the public/shared edge: product-caddy waits on
+      # this app's health, so that would create a startup cycle.
+      BLOCKWISE_READINESS_SUPABASE_URL: http://product-rest:3000
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:?SUPABASE_SERVICE_ROLE_KEY is required}
+      TOKEN_ENCRYPTION_KEY: ${TOKEN_ENCRYPTION_KEY:?TOKEN_ENCRYPTION_KEY is required}
+      # AI and Meta are opt-in providers. Core auth, Ad Studio editing and
+      # durable saves must boot without either external credential set.
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      META_APP_ID: ${META_APP_ID:-}
+      META_APP_SECRET: ${META_APP_SECRET:-}
+      NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${NEXT_PUBLIC_TURNSTILE_SITE_KEY:-}
+      NEXT_PUBLIC_SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN:-}
+      NEXT_PUBLIC_GOOGLE_ADS_ID: ${NEXT_PUBLIC_GOOGLE_ADS_ID:-}
+      NEXT_PUBLIC_BLOCKWISE_SAMPLE_DATA: ${NEXT_PUBLIC_BLOCKWISE_SAMPLE_DATA:-false}
+      CRON_SECRET: ${CRON_SECRET:-}
+      BLOCKWISE_INTERNAL_AUTH_SECRET: ${BLOCKWISE_INTERNAL_AUTH_SECRET:-}
+      OPENAI_ADMIN_KEY: ${OPENAI_ADMIN_KEY:-}
+      GOOGLE_AI_API_KEY: ${GOOGLE_AI_API_KEY:-}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      AZURE_OPENAI_API_KEY: ${AZURE_OPENAI_API_KEY:-}
+      AZURE_OPENAI_ENDPOINT: ${AZURE_OPENAI_ENDPOINT:-}
+      AZURE_OPENAI_API_VERSION: ${AZURE_OPENAI_API_VERSION:-}
+      AZURE_OPENAI_DEPLOYMENT: ${AZURE_OPENAI_DEPLOYMENT:-}
+      AZURE_OPENAI_CHAT_DEPLOYMENT: ${AZURE_OPENAI_CHAT_DEPLOYMENT:-}
+      AZURE_OPENAI_TEXT_DEPLOYMENT: ${AZURE_OPENAI_TEXT_DEPLOYMENT:-}
+      AZURE_OPENAI_CHAT_COMPLETIONS_URL: ${AZURE_OPENAI_CHAT_COMPLETIONS_URL:-}
+      BLOCKWISE_AZURE_OPENAI_TEXT_DEPLOYMENT: ${BLOCKWISE_AZURE_OPENAI_TEXT_DEPLOYMENT:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      CLOUDFLARE_AI_GATEWAY_URL: ${CLOUDFLARE_AI_GATEWAY_URL:-}
+      CLOUDFLARE_AI_GATEWAY_TOKEN: ${CLOUDFLARE_AI_GATEWAY_TOKEN:-}
+      BLOCKWISE_OPENAI_TEXT_MODEL: ${BLOCKWISE_OPENAI_TEXT_MODEL:-}
+      BLOCKWISE_OPENAI_IMAGE_MODEL: ${BLOCKWISE_OPENAI_IMAGE_MODEL:-}
+      BLOCKWISE_OPENROUTER_TEXT_MODEL: ${BLOCKWISE_OPENROUTER_TEXT_MODEL:-}
+      BLOCKWISE_OPENROUTER_IMAGE_MODEL: ${BLOCKWISE_OPENROUTER_IMAGE_MODEL:-}
+      META_API_VERSION: ${META_API_VERSION:-}
+      META_GRAPH_API_VERSION: ${META_GRAPH_API_VERSION:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_ADS_DEVELOPER_TOKEN: ${GOOGLE_ADS_DEVELOPER_TOKEN:-}
+      GOOGLE_ADS_LOGIN_CUSTOMER_ID: ${GOOGLE_ADS_LOGIN_CUSTOMER_ID:-}
+      GOOGLE_ADS_API_VERSION: ${GOOGLE_ADS_API_VERSION:-}
+      GOOGLE_ADS_ENABLED: ${GOOGLE_ADS_ENABLED:-false}
+      GOOGLE_PLACES_API_KEY: ${GOOGLE_PLACES_API_KEY:-}
+      GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY:-}
+      META_BUSINESS_ID: ${META_BUSINESS_ID:-}
+      META_SYSTEM_USER_TOKEN: ${META_SYSTEM_USER_TOKEN:-}
+      META_MONITOR_BUDGET_AUD: ${META_MONITOR_BUDGET_AUD:-}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      STRIPE_PRICE_ID: ${STRIPE_PRICE_ID:-}
+      STRIPE_PRICE_IDS_JSON: ${STRIPE_PRICE_IDS_JSON:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      RESEND_TRACKING_DOMAIN: ${RESEND_TRACKING_DOMAIN:-}
+      RESEND_TEMPLATE_DEMO_REQUEST: ${RESEND_TEMPLATE_DEMO_REQUEST:-}
+      RESEND_TEMPLATE_ALERT: ${RESEND_TEMPLATE_ALERT:-}
+      RESEND_TEMPLATE_SUBURB_REPORT: ${RESEND_TEMPLATE_SUBURB_REPORT:-}
+      RESEND_TEMPLATE_LEAD_WELCOME: ${RESEND_TEMPLATE_LEAD_WELCOME:-}
+      RESEND_TEMPLATE_LEAD_FOLLOWUP: ${RESEND_TEMPLATE_LEAD_FOLLOWUP:-}
+      RESEND_TEMPLATE_LEAD_DIGEST: ${RESEND_TEMPLATE_LEAD_DIGEST:-}
+      DEMO_NOTIFY_FROM: ${DEMO_NOTIFY_FROM:-}
+      DEMO_NOTIFY_TO: ${DEMO_NOTIFY_TO:-}
+      ALERT_EMAIL_FROM: ${ALERT_EMAIL_FROM:-}
+      ALERT_EMAIL_TO: ${ALERT_EMAIL_TO:-}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+      TWILIO_WHATSAPP_FROM: ${TWILIO_WHATSAPP_FROM:-}
+      ALERT_WHATSAPP_TO: ${ALERT_WHATSAPP_TO:-}
+      VERCEL_SPEND_WEBHOOK_SECRET: ${VERCEL_SPEND_WEBHOOK_SECRET:-}
+      OPERATOR_EMAILS: ${OPERATOR_EMAILS:-}
+      OPERATOR_MAIL_FROM: ${OPERATOR_MAIL_FROM:-}
+      OPERATOR_MAIL_REPLY_TO: ${OPERATOR_MAIL_REPLY_TO:-}
+      CALCOM_ONBOARDING_URL_AU: ${CALCOM_ONBOARDING_URL_AU:-}
+      CALCOM_ONBOARDING_URL_US: ${CALCOM_ONBOARDING_URL_US:-}
+      CALCOM_WEBHOOK_SECRET: ${CALCOM_WEBHOOK_SECRET:-}
+      BOOKING_INVITATION_SECRET: ${BOOKING_INVITATION_SECRET:-}
+      VPS_HEALTH_URLS: ${VPS_HEALTH_URLS:-}
+      OPENAI_MONTHLY_BUDGET_USD: ${OPENAI_MONTHLY_BUDGET_USD:-50}
+      BLOCKWISE_ENABLE_PROVIDER_WRITES: ${BLOCKWISE_ENABLE_PROVIDER_WRITES:-false}
+      BLOCKWISE_REALTIME_ENABLED: ${BLOCKWISE_REALTIME_ENABLED:-true}
+      BLOCKWISE_GIT_SHA: ${BLOCKWISE_GIT_SHA}
+    networks: [blockwise-product]
+    healthcheck:
+      test: [CMD, "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+
+  product-worker:
+    image: ${BLOCKWISE_WORKER_IMAGE:?BLOCKWISE_WORKER_IMAGE is required}
+    profiles: [worker]
+    build:
+      context: ../..
+      dockerfile: worker/Dockerfile
+      args:
+        GIT_SHA: ${BLOCKWISE_GIT_SHA}
+        BUILD_DATE: ${BLOCKWISE_BUILD_DATE}
+    restart: unless-stopped
+    depends_on:
+      product-rest: { condition: service_healthy }
+      product-auth: { condition: service_healthy }
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    stop_grace_period: 30s
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:?NEXT_PUBLIC_SUPABASE_URL is required}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:?SUPABASE_SERVICE_ROLE_KEY is required}
+      TOKEN_ENCRYPTION_KEY: ${TOKEN_ENCRYPTION_KEY:?TOKEN_ENCRYPTION_KEY is required}
+      BLOCKWISE_WORKER_REVISION: ${BLOCKWISE_GIT_SHA}
+      BLOCKWISE_WORKER_EXPECTED_REVISION: ${BLOCKWISE_WORKER_EXPECTED_REVISION:-}
+      BLOCKWISE_ENABLE_PROVIDER_WRITES: ${BLOCKWISE_ENABLE_PROVIDER_WRITES:-false}
+    networks: [blockwise-product]
+
+  product-caddy:
+    image: caddy:2.11.3-alpine
+    # Frank's edge owns host ports 80/443 on the shared VPS. Keep this
+    # product edge internal by default; enable the edge profile only after
+    # Frank's persistent network attachment and host route are configured.
+    profiles: [edge]
+    restart: unless-stopped
+    depends_on:
+      product-app: { condition: service_healthy }
+      product-rest: { condition: service_healthy }
+      product-auth: { condition: service_healthy }
+      product-storage: { condition: service_healthy }
+    environment:
+      BLOCKWISE_PRODUCT_DOMAIN: ${BLOCKWISE_PRODUCT_DOMAIN:?BLOCKWISE_PRODUCT_DOMAIN is required}
+    ports:
+      - "${BLOCKWISE_PRODUCT_HTTP_BIND:-127.0.0.1}:${BLOCKWISE_PRODUCT_HTTP_PORT:-8080}:80"
+      - "${BLOCKWISE_PRODUCT_HTTPS_BIND:-127.0.0.1}:${BLOCKWISE_PRODUCT_HTTPS_PORT:-8443}:443"
+    volumes:
+      - ../product/Caddyfile:/etc/caddy/Caddyfile:ro
+      - blockwise-product-caddy-data:/data
+      - blockwise-product-caddy-config:/config
+    networks: [blockwise-product]
+    healthcheck:
+      test: [CMD-SHELL, "wget --header=\"Host: $${BLOCKWISE_PRODUCT_DOMAIN}\" -qO- http://127.0.0.1/healthz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  product-backup:
+    image: postgres:17.6-alpine
+    profiles: [backup]
+    environment:
+      PGPASSWORD: ${BLOCKWISE_DB_PASSWORD:?BLOCKWISE_DB_PASSWORD is required}
+    volumes:
+      - ${BLOCKWISE_BACKUP_DIR:?BLOCKWISE_BACKUP_DIR is required}:/backups
+    networks: [blockwise-product]
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["echo 'Use scripts/vps/product-backup.sh from the host; this profile is intentionally idle.'; sleep infinity"]
+
+networks:
+  blockwise-product:
+    name: blockwise-product
+    driver: bridge
+
+volumes:
+  blockwise-product-db-data:
+    name: ${BLOCKWISE_DB_VOLUME_NAME:-blockwise-product-db-data}
+  blockwise-product-storage-data:
+    name: ${BLOCKWISE_STORAGE_VOLUME_NAME:-blockwise-product-storage-data}
+  blockwise-product-caddy-data:
+    name: blockwise-product-caddy-data
+  blockwise-product-caddy-config:
+    name: blockwise-product-caddy-config

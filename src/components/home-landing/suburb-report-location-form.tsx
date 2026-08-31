@@ -1,6 +1,5 @@
 "use client";
 
-import { track } from "@vercel/analytics";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -119,8 +118,12 @@ function slugify(value: string): string {
 }
 
 function fireSafe(event: string, properties: Record<string, string>) {
+  if (typeof window === "undefined") return;
+  const trackingWindow = window as Window & {
+    gtag?: (...args: unknown[]) => void;
+  };
   try {
-    track(event, properties);
+    trackingWindow.gtag?.("event", event, properties);
   } catch {
     /* analytics is best effort */
   }

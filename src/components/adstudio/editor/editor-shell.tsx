@@ -1,82 +1,61 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState, type KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
-import type { TemplatePack, Placement, LayoutLayer, ImageSlotLayer, Rect } from "../../../../packages/ad-template-pack-contract/src/types";
-import { brandPackColoursToRoleMap, buildAdDocument, editorTextInputs, hasTemplateCopy, resolveColourMap, useEditorState, type BrandPackColours, type EditorState, type SavedEditorSeed } from "./use-editor-state";
-import { ColourPanel } from "./colour-panel";
+import { Palette, PencilLine, RotateCcw, RotateCw, Save, Sparkles } from "lucide-react";
+import type { AdTemplate, Placement, ImageSlotLayer, LayoutLayer, Rect } from "../../../../packages/ad-template-contract/src/types";
+import type { AdDocumentParsed } from "../../../../packages/ad-template-contract/src/schema";
+import { PLACEMENT_DIMENSIONS } from "../../../../packages/ad-template-contract/src/types";
+import { buildAdDocument, brandPackColoursToRoleMap, editorTextInputs, previewTextValues, resolveColourMap, useEditorState, type BrandPackColours, type EditorState, type MetaCopy } from "./use-editor-state";
+import { ColourToggle } from "./colour-toggle";
 import { CropDialog } from "./crop-dialog";
 import { InputsPanel } from "./inputs-panel";
-import { LayoutSchematic } from "./layout-schematic";
+import { LayeredCanvas } from "./layered-canvas";
 import { MetaCopyPanel } from "./meta-copy-panel";
-import { FeedPreview, StoryPreview } from "./meta-previews";
+import { uploadCustomerImage } from "./customer-image-upload";
+import { cn } from "@/lib/utils";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // ---------------------------------------------------------------------------
-// Editor Shell — Creative / Ad copy / Colours tabs.
+// Editor Shell — Phase 6 foundation
 //
-// Center stage shows a placement-specific Meta preview (Feed 4:5 card or
-// full-bleed 9:16 Story) built from the real creative, copy, assets and
-// resolved palette — it updates live with every edit.
-//   Creative — "Use template copy", editable on-image text, uploaded assets.
-//   Ad copy  — brief + AI generation, editable Meta copy, CTA.
-//   Colours  — template / Brand Pack / custom per-role colour modes.
+// Feed and Story tabs, live SVG layout preview (follows the active
+// placement, click-to-select layers), shared text/image content inputs,
+// layer selection, template-vs-Brand-Pack colour toggle, undo/redo,
+// dirty/saved/error state.
 // Save persists the AdDocument through POST /api/adstudio/ads/[id]/save —
 // the server renders Feed AND Story PNGs.
 // ---------------------------------------------------------------------------
 
-export interface EditorBrandPack {
-  brandKitId: string;
-  colours: BrandPackColours;
-  /** Customer-facing business name for the Meta previews. */
-  businessName: string;
-  /** Brand Pack logo for the Meta preview avatar; null → initials fallback. */
-  logoUrl: string | null;
-}
-
 export interface EditorShellProps {
-  pack: TemplatePack;
+  pack: AdTemplate;
   /** Customer ad row the document saves against (created server-side). */
   adId: string;
   /** Workspace scope for the Save API call. */
   workspaceId: string;
   /** Whether Save is enabled. */
   canSave?: boolean;
-  /** The workspace Brand Pack (latest non-demo kit), or null when none. */
-  brandPack?: EditorBrandPack | null;
   /**
-   * Saved-document seed for an EXISTING ad (server-loaded). Null for a brand
-   * new ad — the editor then starts with empty placeholders and never
-   * auto-inserts template copy.
+   * The workspace Brand Pack's colours block (loaded server-side by the pack
+   * page — latest non-demo kit). Null when the workspace has no Brand Pack;
+   * the colour toggle is then disabled and the template palette stays.
    */
-  savedSeed?: SavedEditorSeed | null;
-  /**
-   * True when the ad HAS a saved revision but it cannot be parsed. The saved
-   * document is preserved unchanged, saving is blocked, and a recovery error
-   * is shown — a blank editor must never overwrite unreadable history.
-   */
-  savedUnparsable?: boolean;
-  /**
-   * The workspace asset library (Brand-Studio uploads) offered as sources for
-   * the creative's image slots, alongside direct upload from this device.
-   */
-  library?: EditorLibrary;
+  brandColours?: BrandPackColours | null;
+  initialDocument?: AdDocumentParsed;
+  initialRevision?: number;
 }
 
-export interface EditorLibrary {
-  /** Brand kit id used to attach new uploads; null disables uploading. */
-  brandKitId: string | null;
-  assets: Array<{ id: string; src: string; label: string }>;
-}
-
-type EditorTab = "creative" | "copy" | "colours";
-
-const TABS: Array<{ id: EditorTab; label: string }> = [
-  { id: "creative", label: "Creative" },
-  { id: "copy", label: "Ad copy" },
-  { id: "colours", label: "Colours" },
+type InspectorTab = "content" | "copy" | "appearance";
+const INSPECTOR_TABS: Array<{ value: InspectorTab; label: string; icon: typeof PencilLine }> = [
+  { value: "content", label: "Content", icon: PencilLine },
+  { value: "copy", label: "Copy", icon: Sparkles },
+  { value: "appearance", label: "Appearance", icon: Palette },
 ];
 
-export function EditorShell({ pack, adId, workspaceId, canSave = true, brandPack = null, savedSeed = null, savedUnparsable = false, library = { brandKitId: null, assets: [] } }: EditorShellProps) {
+export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColours = null, initialDocument, initialRevision }: EditorShellProps) {
   const router = useRouter();
   const {
     state,
@@ -87,51 +66,59 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandPack
     selectLayer,
     updateTextValue,
     updateImageValue,
+    updateImagePreview,
     updateCrop,
     setColourMode,
-    updateCustomColour,
-    setTemplateCopyApplied,
-    updateBusinessName,
     undo,
     redo,
     markSaved,
     setSaving,
     setError,
     updateMetaCopy,
-  } = useEditorState(pack, savedSeed);
-
-  const [activeTab, setActiveTab] = useState<EditorTab>("creative");
+  } = useEditorState(pack, initialDocument, initialRevision);
 
   /** Which slot's crop dialog is open — always the ACTIVE placement's crop. */
   const [cropTarget, setCropTarget] = useState<{ slot: ImageSlotLayer; placement: Placement } | null>(null);
+  const [proposalBrief, setProposalBrief] = useState("");
+  const [proposal, setProposal] = useState<{ onImage: Record<string, string>; copy: MetaCopy; source: string } | null>(null);
+  const [proposalBusy, setProposalBusy] = useState(false);
+  const [pendingImageUploads, setPendingImageUploads] = useState(0);
+  const [saveConflict, setSaveConflict] = useState(false);
+  const [inspectorTab, setInspectorTab] = useState<InspectorTab>("content");
+  const [mobileInspectorOpen, setMobileInspectorOpen] = useState(false);
+  const imageUploadTokens = useRef(new Map<string, number>());
 
-  // AI copy workflow state — generating / failure / retry are all explicit.
-  const [brief, setBrief] = useState("");
-  const [generating, setGenerating] = useState(false);
-  const [generateError, setGenerateError] = useState<string | null>(null);
-  const [generatedOnce, setGeneratedOnce] = useState(false);
-
-  // Asset library: which image input the customer is choosing an asset for.
-  const [pickingFor, setPickingFor] = useState<string | null>(null);
-  const [attachingAsset, setAttachingAsset] = useState(false);
-
-  // Recovery: an unreadable saved revision blocks saving/publishing until
-  // resolved — the stored document stays intact on the server.
-  const recoveryBlocked = savedUnparsable;
-
-  const imageValuesMap = Object.fromEntries(state.imageValues.map(iv => [iv.inputKey, iv.dataUrl]));
-  // The customer's explicit business-name override wins; otherwise the Brand
-  // Pack default; otherwise a neutral placeholder.
-  const businessName = state.brandBusinessName.trim()
-    || brandPack?.businessName?.trim()
-    || "Your business";
-  const logoUrl = brandPack?.logoUrl ?? null;
+  const handleImageChange = useCallback(async (key: string, change: { file: File; previewUrl: string } | null) => {
+    const token = (imageUploadTokens.current.get(key) ?? 0) + 1;
+    imageUploadTokens.current.set(key, token);
+    if (!change) {
+      updateImageValue(key, null, null);
+      return;
+    }
+    // Keep the last verified ref visible if a replacement upload fails. The
+    // preview is optimistic, but it must never replace a persisted image with
+    // an invalid or half-uploaded value.
+    const previousValue = state.imageValues.find(value => value.inputKey === key);
+    setPendingImageUploads(count => count + 1);
+    updateImagePreview(key, change.previewUrl);
+    try {
+      const uploaded = await uploadCustomerImage({ file: change.file, adId, workspaceId });
+      if (imageUploadTokens.current.get(key) !== token) return;
+      updateImageValue(key, uploaded.ref, change.previewUrl);
+    } catch (error) {
+      if (imageUploadTokens.current.get(key) !== token) return;
+      updateImageValue(key, previousValue?.dataUrl ?? null, null);
+      setError(error instanceof Error ? error.message : "Image upload failed.");
+    } finally {
+      setPendingImageUploads(count => Math.max(0, count - 1));
+    }
+  }, [adId, workspaceId, state.imageValues, updateImagePreview, updateImageValue, setError]);
 
   /** Open the crop dialog for a slot (no-op until an image is picked). */
   const openCrop = useCallback(
     (slot: ImageSlotLayer) => {
       const value = state.imageValues.find(iv => iv.inputKey === slot.inputKey);
-      if (!value?.dataUrl) return; // nothing to crop yet
+      if (!value?.dataUrl && !value?.previewUrl) return; // nothing to crop yet
       setCropTarget({ slot, placement: state.activePlacement });
     },
     [state.imageValues, state.activePlacement],
@@ -140,19 +127,31 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandPack
   /** Resolve an input key to its first image slot in the active layout. */
   const openCropForInput = useCallback(
     (key: string) => {
-      const slot = activeLayout.layers.find((l): l is ImageSlotLayer => l.type === "image_slot" && l.inputKey === key);
+      const slot = activeLayout.layers.find((l: LayoutLayer): l is ImageSlotLayer => l.type === "image_slot" && l.inputKey === key);
       if (slot) openCrop(slot);
     },
     [activeLayout, openCrop],
   );
 
   const handleSave = useCallback(async (): Promise<boolean> => {
-    if (recoveryBlocked) {
-      setError("This ad's last saved version could not be read, so saving is disabled to protect it. Reload the page or contact support — your saved work is unchanged.");
+    const missingImages = pack.imageInputs.filter(input => input.required !== false
+      && !input.defaultAssetKey
+      && !state.imageValues.find(value => value.inputKey === input.key)?.dataUrl);
+    const missingText = editorTextInputs(pack).filter(input => !(state.textValues[input.key] ?? input.placeholder).trim());
+    if (missingImages.length > 0 || missingText.length > 0) {
+      const requirements = [
+        missingImages.length > 0 ? `Add required images: ${missingImages.map(input => input.label).join(", ")}.` : "",
+        missingText.length > 0 ? `Complete required text: ${missingText.map(input => input.label).join(", ")}.` : "",
+      ].filter(Boolean).join(" ");
+      setInspectorTab("content");
+      if (typeof window !== "undefined" && window.matchMedia("(max-width: 1279px)").matches) setMobileInspectorOpen(true);
+      setError(requirements);
       return false;
     }
+    const savedEditVersion = state.editVersion ?? 0;
     setSaving(true);
     setError(null);
+    setSaveConflict(false);
     try {
       const document = await buildAdDocument(state);
       const res = await fetch(
@@ -163,17 +162,15 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandPack
           body: JSON.stringify({ document, expectedRevision: state.lastSavedRevision ?? 0 }),
         },
       );
-      const body = (await res.json().catch(() => ({}))) as { ad?: { revisionNumber?: number }; error?: string; code?: string };
-      if (!res.ok) {
-        if (res.status === 409 || body.code === "stale_revision") {
-          // Optimistic concurrency: another tab/window saved first. The
-          // customer's unsaved edits stay on screen — nothing is lost, but
-          // they must refresh to pick up the newer revision before saving.
-          throw new Error("This ad changed in another tab or window. Reload the editor to load the latest version — your unsaved edits are still here, but saving needs the newer revision first.");
-        }
-        throw new Error(body.error ?? `Save failed (${res.status})`);
+      const body = (await res.json().catch(() => ({}))) as { ad?: { revisionNumber?: number }; code?: string; error?: string };
+      if (res.status === 409 || body.code === "stale_revision") {
+        setSaveConflict(true);
+        setError("This ad changed in another session. Reload the latest saved version before continuing.");
+        return false;
       }
-      markSaved(body.ad?.revisionNumber ?? state.lastSavedRevision ?? 0);
+      if (!res.ok) throw new Error(body.error ?? `Save failed (${res.status})`);
+      markSaved(body.ad?.revisionNumber ?? state.lastSavedRevision ?? 0, savedEditVersion);
+      setSaveConflict(false);
       return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Save failed");
@@ -181,45 +178,25 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandPack
     } finally {
       setSaving(false);
     }
-  }, [adId, workspaceId, state, markSaved, setSaving, setError, recoveryBlocked]);
+  }, [adId, workspaceId, pack, state, markSaved, setSaving, setError]);
 
-  /**
-   * AI copy generation: posts the brief to the existing copy-proposal
-   * endpoint and inserts the generated primary text, headline and
-   * description straight into the ordinary editable fields. The CTA
-   * selection is preserved. On-image overlay suggestions are applied to the
-   * text fields too — every field stays editable either way.
-   */
-  const generateCopy = useCallback(async () => {
-    setGenerating(true);
-    setGenerateError(null);
+  const proposeCopy = useCallback(async () => {
+    setProposalBusy(true);
     try {
       const response = await fetch(`/api/adstudio/ads/${encodeURIComponent(adId)}/copy-proposal?workspaceId=${encodeURIComponent(workspaceId)}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ brief, copy: state.metaCopy }),
+        body: JSON.stringify({ brief: proposalBrief, copy: state.metaCopy }),
       });
-      const body = (await response.json().catch(() => ({}))) as {
-        onImage?: Record<string, string>;
-        copy?: Partial<{ primaryText: string; headline: string; description: string; cta: string }>;
-        error?: string;
-      };
-      if (!response.ok || !body.copy) throw new Error(body.error ?? "Copy generation failed.");
-      const { primaryText = "", headline = "", description = "" } = body.copy;
-      updateMetaCopy("primaryText", primaryText);
-      updateMetaCopy("headline", headline);
-      updateMetaCopy("description", description);
-      // CTA is a deliberate selection — generation never overwrites it.
-      for (const [key, value] of Object.entries(body.onImage ?? {})) {
-        if (typeof value === "string" && value.trim()) updateTextValue(key, value);
-      }
-      setGeneratedOnce(true);
-    } catch (err) {
-      setGenerateError(err instanceof Error ? err.message : "Copy generation failed.");
+      const body = await response.json() as { onImage?: Record<string, string>; copy?: MetaCopy; source?: string; error?: string };
+      if (!response.ok || !body.copy) throw new Error(body.error ?? "Copy proposal failed.");
+      setProposal({ onImage: body.onImage ?? {}, copy: body.copy, source: body.source ?? "ai" });
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Copy proposal failed.");
     } finally {
-      setGenerating(false);
+      setProposalBusy(false);
     }
-  }, [adId, workspaceId, brief, state.metaCopy, updateMetaCopy, updateTextValue]);
+  }, [adId, workspaceId, proposalBrief, state.metaCopy, setError]);
 
   /**
    * Publish always freezes the LAST SAVED revision (server-side). If the
@@ -227,413 +204,188 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandPack
    * first; if Save fails, refuse to navigate (the error banner explains why).
    */
   const handlePublish = useCallback(async () => {
-    if (recoveryBlocked) {
-      setError("This ad's last saved version could not be read, so publishing is disabled to protect it. Reload the page or contact support — your saved work is unchanged.");
-      return;
-    }
     if (state.isDirty || state.lastSavedRevision === null) {
       const saved = await handleSave();
       if (!saved) return; // error banner already set — refuse
     }
-    router.push(`/ad-studio/packs/${encodeURIComponent(pack.packId)}/publish`);
-  }, [state.isDirty, state.lastSavedRevision, handleSave, router, pack.packId, recoveryBlocked]);
+    router.push(`/ad-studio/templates/${encodeURIComponent(pack.templateId)}/publish`);
+  }, [state.isDirty, state.lastSavedRevision, handleSave, router, pack.templateId]);
 
-  /**
-   * Attach a workspace library asset to an image input: fetch the asset
-   * (same-origin, authenticated), convert to a data URL (the save contract
-   * fetches document image values server-side) and store it like any upload.
-   */
-  const attachLibraryAsset = useCallback(async (inputKey: string, assetSrc: string) => {
-    setAttachingAsset(true);
-    setError(null);
-    try {
-      const res = await fetch(assetSrc);
-      if (!res.ok) throw new Error(`Could not load the selected asset (${res.status}).`);
-      const blob = await res.blob();
-      const dataUrl = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(String(reader.result));
-        reader.onerror = () => reject(new Error("Could not read the selected asset."));
-        reader.readAsDataURL(blob);
-      });
-      updateImageValue(inputKey, dataUrl);
-      setPickingFor(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not attach the selected asset.");
-    } finally {
-      setAttachingAsset(false);
-    }
-  }, [updateImageValue, setError]);
-
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === "z") {
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    const modifier = e.ctrlKey || e.metaKey;
+    const key = e.key.toLowerCase();
+    if (modifier && key === "z") {
       e.preventDefault();
       if (e.shiftKey) redo();
       else undo();
+    }
+    if (modifier && key === "y") {
+      e.preventDefault();
+      redo();
     }
     if (e.key === "Escape") {
       selectLayer(null);
     }
   }, [undo, redo, selectLayer]);
 
-  /** Colour mode selection — Brand Pack overlays its roles onto the template palette. */
-  const handleSelectColourMode = useCallback(
-    (mode: EditorState["colourMode"]) => {
-      if (mode === "brand_pack" && brandPack) {
-        setColourMode("brand_pack", resolveColourMap(pack.semanticColours, "brand_pack", brandPackColoursToRoleMap(brandPack.colours)));
+  // Template colours always resolve; checking the toggle overlays the
+  // workspace Brand Pack palette. Roles the brand kit lacks (inverseText)
+  // keep the template value — never invent a palette.
+  const handleColourToggle = useCallback(
+    (useBrandPack: boolean) => {
+      if (useBrandPack) {
+        setColourMode(
+          "brand_pack",
+          resolveColourMap(pack.semanticColours, "brand_pack", brandPackColoursToRoleMap(brandColours)),
+        );
       } else {
-        setColourMode(mode);
+        setColourMode("template");
       }
     },
-    [brandPack, pack.semanticColours, setColourMode],
+    [pack.semanticColours, brandColours, setColourMode],
   );
 
-  const showTemplateCopyButton = hasTemplateCopy(pack);
+  return <RedesignedEditor
+    pack={pack}
+    state={state}
+    activeLayout={activeLayout}
+    templateId={pack.templateId}
+    brandColours={brandColours}
+    canSave={canSave}
+    canUndo={canUndo}
+    canRedo={canRedo}
+    saveConflict={saveConflict}
+    pendingImageUploads={pendingImageUploads}
+    inspectorTab={inspectorTab}
+    setInspectorTab={setInspectorTab}
+    mobileInspectorOpen={mobileInspectorOpen}
+    setMobileInspectorOpen={setMobileInspectorOpen}
+    handleSave={handleSave}
+    handlePublish={handlePublish}
+    handleKeyDown={handleKeyDown}
+    undo={undo}
+    redo={redo}
+    setActivePlacement={setActivePlacement}
+    selectLayer={selectLayer}
+    handleColourToggle={handleColourToggle}
+    handleImageChange={handleImageChange}
+    openCrop={openCrop}
+    openCropForInput={openCropForInput}
+    updateTextValue={updateTextValue}
+    updateMetaCopy={updateMetaCopy}
+    updateCrop={updateCrop}
+    setError={setError}
+    cropTarget={cropTarget}
+    setCropTarget={setCropTarget}
+    proposalBrief={proposalBrief}
+    setProposalBrief={setProposalBrief}
+    proposal={proposal}
+    proposalBusy={proposalBusy}
+    proposeCopy={proposeCopy}
+  />;
+}
 
+function RedesignedEditor({ pack, templateId, state, activeLayout, brandColours, canSave, canUndo, canRedo, saveConflict, pendingImageUploads, inspectorTab, setInspectorTab, mobileInspectorOpen, setMobileInspectorOpen, handleSave, handlePublish, handleKeyDown, undo, redo, setActivePlacement, selectLayer, handleColourToggle, handleImageChange, openCrop, openCropForInput, updateTextValue, updateMetaCopy, updateCrop, setError, cropTarget, setCropTarget, proposalBrief, setProposalBrief, proposal, proposalBusy, proposeCopy }: {
+  pack: AdTemplate; templateId: string; state: EditorState; activeLayout: AdTemplate["feedLayout"]; brandColours: BrandPackColours | null; canSave: boolean; canUndo: boolean; canRedo: boolean; saveConflict: boolean; pendingImageUploads: number;
+  inspectorTab: InspectorTab; setInspectorTab: (value: InspectorTab) => void; mobileInspectorOpen: boolean; setMobileInspectorOpen: (value: boolean) => void; handleSave: () => Promise<boolean>; handlePublish: () => Promise<void>; handleKeyDown: (event: KeyboardEvent) => void; undo: () => void; redo: () => void; setActivePlacement: (value: Placement) => void; selectLayer: (value: string | null) => void;
+  handleColourToggle: (value: boolean) => void; handleImageChange: (key: string, change: { file: File; previewUrl: string } | null) => Promise<void>; openCrop: (slot: ImageSlotLayer) => void; openCropForInput: (key: string) => void; updateTextValue: (key: string, value: string) => void; updateMetaCopy: (field: keyof MetaCopy, value: string) => void; updateCrop: (key: string, placement: Placement, crop: Rect) => void; setError: (value: string | null) => void;
+  cropTarget: { slot: ImageSlotLayer; placement: Placement } | null; setCropTarget: (value: { slot: ImageSlotLayer; placement: Placement } | null) => void; proposalBrief: string; setProposalBrief: (value: string) => void; proposal: { onImage: Record<string, string>; copy: MetaCopy; source: string } | null; proposalBusy: boolean; proposeCopy: () => Promise<void>;
+}) {
+  const defaultImageValues = Object.fromEntries(pack.imageInputs.flatMap(input => input.defaultAssetKey
+    ? [[input.key, `/api/adstudio/templates/${encodeURIComponent(templateId)}/assets/${encodeURIComponent(input.defaultAssetKey)}`] as const]
+    : []));
+  const customerImageValues = Object.fromEntries(state.imageValues.flatMap(value => {
+    const image = value.previewUrl ?? value.dataUrl;
+    return image ? [[value.inputKey, image] as const] : [];
+  }));
+  const previewImages = { ...defaultImageValues, ...customerImageValues };
+  const previewCopy = previewTextValues(pack, state.textValues);
+  const inspector = <InspectorContent tab={inspectorTab} pack={pack} state={state} defaultImageValues={defaultImageValues} brandColours={brandColours} onTextChange={updateTextValue} onImageChange={handleImageChange} onCropClick={openCropForInput} onMetaChange={updateMetaCopy} onColourToggle={handleColourToggle} proposalBrief={proposalBrief} proposal={proposal} proposalBusy={proposalBusy} onBriefChange={setProposalBrief} onPropose={proposeCopy} />;
+  const saveStatus = pendingImageUploads > 0 ? "Uploading…" : state.isSaving ? "Saving…" : state.isDirty ? "Unsaved changes" : state.lastSavedRevision !== null ? "Saved" : "Not saved yet";
+  return <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background text-foreground" onKeyDown={handleKeyDown} tabIndex={0} role="region" aria-label="Ad Studio editor">
+    <header className="flex min-h-14 shrink-0 flex-wrap items-center gap-2 border-b border-border bg-card px-3 py-2 md:h-16 md:flex-nowrap md:justify-between md:px-5 md:py-0">
+      <Tabs value={state.activePlacement} onValueChange={value => setActivePlacement(value as Placement)} className="min-w-0 flex-1"><TabsList aria-label="Ad format" className="max-w-full overflow-x-auto bg-muted/60 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"><TabsTrigger value="feed" className="min-h-11 px-3 text-xs md:px-4 md:text-sm">Feed · 1080 × 1350</TabsTrigger><TabsTrigger value="story" className="min-h-11 px-3 text-xs md:px-4 md:text-sm">Story · 1080 × 1920</TabsTrigger></TabsList></Tabs>
+      <span className="order-last w-full truncate text-right text-[11px] text-muted-foreground sm:order-none sm:w-auto sm:text-xs" role="status" aria-live="polite">{saveStatus}</span>
+      <div className="ml-auto flex shrink-0 items-center gap-1.5 md:gap-2"><Button variant="ghost" size="icon" onClick={undo} disabled={!canUndo} aria-label="Undo" className="min-h-11 min-w-11 rounded-full"><RotateCcw /></Button><Button variant="ghost" size="icon" onClick={redo} disabled={!canRedo} aria-label="Redo" className="min-h-11 min-w-11 rounded-full"><RotateCw /></Button><Button onClick={handleSave} disabled={!canSave || state.isSaving || pendingImageUploads > 0} className="min-h-11 rounded-full px-4">{state.isSaving ? "Saving…" : "Save"}<Save className="ml-1.5 size-4" /></Button><Button onClick={handlePublish} disabled={!canSave || state.isSaving || pendingImageUploads > 0} variant="outline" className="min-h-11 rounded-full px-4">Review & publish</Button></div>
+    </header>
+    <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden xl:flex-row">
+      <section aria-label="Ad preview" className="order-first flex min-h-0 min-w-0 flex-1 items-center justify-center bg-muted/30 p-3 md:p-6 xl:order-none"><div className="relative flex h-full min-h-0 w-full max-w-[94%] items-center justify-center"><div className="relative min-h-0 min-w-0 overflow-hidden rounded-(--r-card) bg-white shadow-float" style={{ aspectRatio: `${PLACEMENT_DIMENSIONS[state.activePlacement].width} / ${PLACEMENT_DIMENSIONS[state.activePlacement].height}`, height: "min(78vh, calc(100% - 1rem), 860px)", maxHeight: "100%", maxWidth: "100%", width: "auto" }}><LayeredCanvas templateId={templateId} layout={activeLayout} colours={state.resolvedColourMap} imageValues={previewImages} textValues={previewCopy} cropOverrides={Object.fromEntries(state.imageValues.map(iv => [iv.inputKey, iv.crops[state.activePlacement]]))} selectedLayerId={state.selectedLayerId} onSelect={selectLayer} onCropImage={openCrop} className="h-full w-full" /></div></div></section>
+      <aside aria-label="Editor inspector" className="hidden w-[22rem] shrink-0 overflow-y-auto border-l border-border bg-card xl:block"><InspectorTabs value={inspectorTab} onChange={setInspectorTab} />{inspector}</aside>
+    </div>
+    <nav className="z-20 grid shrink-0 grid-cols-3 border-t border-border bg-card p-1.5 xl:hidden" aria-label="Editor tools">{INSPECTOR_TABS.map(({ value, label, icon: Icon }) => <button key={value} type="button" aria-pressed={inspectorTab === value && mobileInspectorOpen} onClick={() => { setInspectorTab(value); setMobileInspectorOpen(true); }} className={cn("flex min-h-11 items-center justify-center gap-1 rounded-full px-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", inspectorTab === value && mobileInspectorOpen ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted")}>{<Icon className="size-4" />}{label}</button>)}</nav>
+    <Sheet open={mobileInspectorOpen} onOpenChange={setMobileInspectorOpen}><SheetContent side="bottom" className="max-h-[82dvh] overflow-y-auto rounded-t-(--r-card) p-0 xl:hidden"><SheetHeader><SheetTitle>{INSPECTOR_TABS.find(tab => tab.value === inspectorTab)?.label}</SheetTitle><SheetDescription>Make one change at a time; your preview updates as you work.</SheetDescription></SheetHeader>{inspector}</SheetContent></Sheet>
+    {cropTarget && <CropDialogHost cropTarget={cropTarget} state={state} pack={pack} onApply={updateCrop} onClose={() => setCropTarget(null)} />}
+    {state.error && <Alert variant="destructive" role="alert" className="m-3"><AlertTitle>Check this before continuing</AlertTitle><AlertDescription className="flex items-center justify-between gap-3"><span>{state.error}</span><Button variant="outline" size="sm" onClick={() => saveConflict ? window.location.reload() : setError(null)} className="min-h-11 shrink-0">{saveConflict ? "Reload latest" : "Dismiss"}</Button></AlertDescription></Alert>}
+  </div>;
+}
+
+function InspectorTabs({ value, onChange }: { value: InspectorTab; onChange: (value: InspectorTab) => void }) {
+  return <Tabs value={value} onValueChange={next => onChange(next as InspectorTab)} className="border-b border-border p-3"><TabsList aria-label="Editor sections" className="grid h-auto w-full grid-cols-3 gap-1 bg-muted/50 p-1">{INSPECTOR_TABS.map(({ value: tab, label, icon: Icon }) => <TabsTrigger key={tab} value={tab} className="min-h-11 justify-center gap-2 px-2 text-xs"><Icon className="size-4" />{label}</TabsTrigger>)}</TabsList></Tabs>;
+}
+
+function InspectorContent({ tab, pack, state, defaultImageValues, brandColours, onTextChange, onImageChange, onCropClick, onMetaChange, onColourToggle, proposalBrief, proposal, proposalBusy, onBriefChange, onPropose }: { tab: InspectorTab; pack: AdTemplate; state: EditorState; defaultImageValues: Record<string, string>; brandColours: BrandPackColours | null; onTextChange: (key: string, value: string) => void; onImageChange: (key: string, change: { file: File; previewUrl: string } | null) => Promise<void>; onCropClick: (key: string) => void; onMetaChange: (field: keyof MetaCopy, value: string) => void; onColourToggle: (value: boolean) => void; proposalBrief: string; proposal: { onImage: Record<string, string>; copy: MetaCopy; source: string } | null; proposalBusy: boolean; onBriefChange: (value: string) => void; onPropose: () => Promise<void> }) {
+  if (tab === "copy") return <div><MetaCopyPanel values={state.metaCopy} onChange={onMetaChange} /><ProposalPanel brief={proposalBrief} proposal={proposal} busy={proposalBusy} textInputs={editorTextInputs(pack)} onBriefChange={onBriefChange} onPropose={onPropose} onApplyText={onTextChange} onApplyMeta={onMetaChange} /></div>;
+  if (tab === "appearance") return <aside aria-label="Appearance" className="space-y-4 border-t border-border p-4"><div><h3 className="text-sm font-semibold">Appearance</h3><p className="mt-1 text-xs leading-relaxed text-muted-foreground">Choose the colours that feel right for this ad.</p></div><ColourToggle useBrandPack={state.colourMode === "brand_pack"} brandPackAvailable={!!brandColours} resolvedColourMap={state.resolvedColourMap} onToggle={onColourToggle} /></aside>;
+  return <InputsPanel textInputs={pack.textInputs} imageInputs={pack.imageInputs} textValues={state.textValues} imageValues={Object.fromEntries(state.imageValues.map(iv => [iv.inputKey, iv.previewUrl ?? iv.dataUrl]))} defaultImageValues={defaultImageValues} onTextChange={onTextChange} onImageChange={onImageChange} onCropClick={onCropClick} />;
+}
+
+function ProposalPanel({
+  className,
+  brief,
+  proposal,
+  busy,
+  textInputs,
+  onBriefChange,
+  onPropose,
+  onApplyText,
+  onApplyMeta,
+}: {
+  className?: string;
+  brief: string;
+  proposal: { onImage: Record<string, string>; copy: MetaCopy; source: string } | null;
+  busy: boolean;
+  textInputs: Array<{ key: string; label: string }>;
+  onBriefChange: (value: string) => void;
+  onPropose: () => void;
+  onApplyText: (key: string, value: string) => void;
+  onApplyMeta: (field: keyof MetaCopy, value: string) => void;
+}) {
   return (
-    <div
-      className="flex h-full flex-col bg-(--canvas)"
-      onKeyDown={handleKeyDown}
-      tabIndex={0}
-      role="region"
-      aria-label="Ad Studio editor"
-    >
-      {/* Top bar: placement tabs + actions */}
-      <header className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-(--line) bg-(--surface) px-3 sm:px-5">
-        <div className="flex min-w-0 items-center gap-1">
-          {(["feed", "story"] as Placement[]).map(p => (
-            <button
-              key={p}
-              onClick={() => setActivePlacement(p)}
-              className={`rounded-(--r-control) px-3 py-2 text-sm font-medium transition sm:px-4 ${
-                state.activePlacement === p
-                  ? "bg-(--ui-primary) text-white"
-                  : "text-muted-foreground hover:bg-(--surface-subtle)"
-              }`}
-              aria-pressed={state.activePlacement === p}
-            >
-              {p === "feed" ? "Feed" : "Story"}
-            </button>
+    <section aria-label="Copy suggestions" className={cn("mt-6 border-t border-border pt-4", className)}>
+      <details>
+        <summary className="flex min-h-11 cursor-pointer items-center justify-between gap-3 rounded-(--r-card) px-2 text-sm font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          Need help writing?
+          <span className="text-xs font-normal text-muted-foreground">Suggestions</span>
+        </summary>
+        <div className="mt-3">
+      <p className="mb-3 text-xs leading-relaxed text-muted-foreground">Get a draft for the overlay and Meta copy. Nothing changes until you apply a suggestion.</p>
+      <label htmlFor="copy-suggestion-brief" className="mb-1 block text-sm font-medium text-foreground">What should the ad say?</label>
+      <textarea id="copy-suggestion-brief" value={brief} onChange={event => onBriefChange(event.target.value)} rows={4} placeholder="Describe the property, offer or audience…" className="min-h-24 w-full rounded-(--r-card) border border-input bg-muted/30 px-3 py-2 text-base shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50" />
+      <button type="button" onClick={onPropose} disabled={busy} className="mt-2 min-h-11 w-full rounded-full bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50">{busy ? "Preparing suggestion…" : "Suggest copy"}</button>
+      {proposal ? (
+        <div className="mt-4 space-y-3 text-sm">
+          <span className="text-[11px] text-muted-foreground">{proposal.source === "fallback" ? "Starting point" : "Suggested draft"}</span>
+          {textInputs.filter(input => proposal.onImage[input.key]).map(input => (
+            <div key={input.key}>
+              <span className="text-xs text-muted-foreground">{input.label}</span>
+              <p className="mt-0.5 rounded-(--r-card) border border-border bg-background p-2">{proposal.onImage[input.key]}</p>
+              <Button type="button" variant="link" onClick={() => onApplyText(input.key, proposal.onImage[input.key])} className="mt-1 min-h-11 h-auto justify-start whitespace-normal px-0 py-2 text-left text-xs font-medium text-primary">Use overlay suggestion</Button>
+            </div>
+          ))}
+          {(Object.keys(proposal.copy) as Array<keyof MetaCopy>).map(field => (
+            <div key={field}>
+              <span className="text-xs capitalize text-muted-foreground">{field.replace(/([A-Z])/g, " $1")}</span>
+              <p className="mt-0.5 rounded-(--r-card) border border-border bg-background p-2 whitespace-pre-wrap">{proposal.copy[field]}</p>
+              <Button type="button" variant="link" onClick={() => onApplyMeta(field, proposal.copy[field])} className="mt-1 min-h-11 h-auto justify-start whitespace-normal px-0 py-2 text-left text-xs font-medium text-primary">Use suggestion</Button>
+            </div>
           ))}
         </div>
-
-        <div className="flex items-center gap-2">
-          {state.isDirty && (
-            <span className="hidden text-xs text-muted-foreground sm:inline">Unsaved changes</span>
-          )}
-          {state.lastSavedRevision !== null && !state.isDirty && (
-            <span className="hidden text-xs text-muted-foreground sm:inline">Saved</span>
-          )}
-          <button
-            onClick={undo}
-            disabled={!canUndo}
-            className="rounded-(--r-control) p-2 text-muted-foreground hover:bg-(--surface-subtle) disabled:opacity-30"
-            aria-label="Undo"
-          >
-            ↩
-          </button>
-          <button
-            onClick={redo}
-            disabled={!canRedo}
-            className="rounded-(--r-control) p-2 text-muted-foreground hover:bg-(--surface-subtle) disabled:opacity-30"
-            aria-label="Redo"
-          >
-            ↪
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={!canSave || state.isSaving || recoveryBlocked}
-            className="rounded-(--r-control) border border-(--line) px-4 py-2 text-sm font-semibold text-foreground hover:bg-(--surface-subtle) disabled:opacity-50"
-          >
-            {state.isSaving ? "Saving..." : "Save"}
-          </button>
-          <button
-            onClick={handlePublish}
-            disabled={!canSave || state.isSaving || recoveryBlocked}
-            className="rounded-(--r-control) bg-(--ui-primary) px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
-            title={state.isDirty ? "Save first — publishing freezes the last saved revision" : "Publish this ad to Meta"}
-          >
-            Publish
-          </button>
+      ) : null}
         </div>
-      </header>
-
-      {/* Main area: layers + live Meta preview + tabbed panel */}
-      <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-        {/* Layer panel — desktop only; on mobile the preview + tabs matter more */}
-        <aside className="hidden w-52 shrink-0 overflow-y-auto border-r border-(--line) bg-(--surface) p-3 lg:block">
-          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Layers
-          </h3>
-          <ul className="space-y-1">
-            {[...activeLayout.layers].reverse().map(layer => (
-              <li key={layer.layerId}>
-                <button
-                  onClick={() => selectLayer(layer.layerId)}
-                  className={`w-full rounded-(--r-control) px-3 py-2 text-left text-sm transition ${
-                    state.selectedLayerId === layer.layerId
-                      ? "bg-(--ui-primary)/10 text-(--ui-primary) ring-1 ring-(--ui-primary)/30"
-                      : "text-foreground hover:bg-(--surface-subtle)"
-                  }`}
-                >
-                  <span className="text-xs text-muted-foreground">{layerTypeLabel(layer.type)}</span>
-                  <span className="ml-2">{layerLabel(layer)}</span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </aside>
-
-        {/* Live Meta preview for the ACTIVE placement */}
-        <main
-          className="flex min-h-[60vh] flex-1 items-start justify-center overflow-y-auto bg-(--surface-subtle) p-4 sm:p-6 lg:min-h-0 lg:items-center"
-          aria-label={`${state.activePlacement} preview`}
-        >
-          {state.activePlacement === "feed" ? (
-            <FeedPreview
-              layout={activeLayout}
-              colours={state.resolvedColourMap}
-              textValues={state.textValues}
-              imageValues={imageValuesMap}
-              copy={state.metaCopy}
-              businessName={businessName}
-              logoUrl={logoUrl}
-              className="my-auto"
-            />
-          ) : (
-            <StoryPreview
-              layout={activeLayout}
-              colours={state.resolvedColourMap}
-              textValues={state.textValues}
-              imageValues={imageValuesMap}
-              copy={state.metaCopy}
-              businessName={businessName}
-              logoUrl={logoUrl}
-              className="my-auto"
-            />
-          )}
-        </main>
-
-        {/* Tabbed panel — side column on desktop, full-width section on mobile */}
-        <aside className="w-full shrink-0 border-t border-(--line) bg-(--surface) lg:w-80 lg:border-l lg:border-t-0">
-          <div role="tablist" aria-label="Editor panels" className="flex border-b border-(--line)">
-            {TABS.map(tab => (
-              <button
-                key={tab.id}
-                role="tab"
-                aria-selected={activeTab === tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 border-b-2 px-3 py-2.5 text-sm font-medium transition ${
-                  activeTab === tab.id
-                    ? "border-(--ui-primary) text-(--ui-primary)"
-                    : "border-transparent text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-          <div className="max-h-[60vh] overflow-y-auto p-4 lg:max-h-[calc(100vh-8.5rem)]">
-            {activeTab === "creative" && (
-              <div className="space-y-4">
-                {showTemplateCopyButton && (
-                  <label className="flex cursor-pointer items-start gap-3 rounded-(--r-control) border border-(--line) bg-(--surface-subtle) p-3">
-                    <input
-                      type="checkbox"
-                      checked={state.templateCopyApplied}
-                      onChange={event => setTemplateCopyApplied(event.target.checked)}
-                      className="mt-0.5 h-4 w-4 accent-(--ui-primary)"
-                      aria-label="Use template copy"
-                    />
-                    <span>
-                      <span className="block text-sm font-semibold text-foreground">Use template copy</span>
-                      <span className="mt-0.5 block text-xs leading-relaxed text-muted-foreground">
-                        Fill empty fields with this template&apos;s suggested copy.
-                        Everything stays editable, and your own text is never
-                        overwritten. Unchecking removes only the suggestions you
-                        have not edited.
-                      </span>
-                    </span>
-                  </label>
-                )}
-                {brandPack && (
-                  <label className="block">
-                    <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Business name</span>
-                    <input
-                      type="text"
-                      value={state.brandBusinessName}
-                      onChange={event => updateBusinessName(event.target.value)}
-                      placeholder={brandPack.businessName?.trim() || "Your business"}
-                      className="mt-1 w-full rounded-(--r-control) border border-(--line) bg-(--surface) px-3 py-2 text-sm text-foreground outline-none focus:border-(--ui-primary)"
-                      aria-label="Business name for previews"
-                    />
-                    <span className="mt-1 block text-xs text-muted-foreground">
-                      Defaults to your Brand Pack ({brandPack.businessName?.trim() || "no name yet"}). Type to override.
-                    </span>
-                  </label>
-                )}
-                <InputsPanel
-                  textInputs={editorTextInputs(pack)}
-                  imageInputs={pack.imageInputs}
-                  textValues={state.textValues}
-                  imageValues={imageValuesMap}
-                  onTextChange={updateTextValue}
-                  onImageChange={updateImageValue}
-                  onCropClick={openCropForInput}
-                  onLibraryClick={library.assets.length > 0 ? setPickingFor : undefined}
-                />
-                {/* Workspace asset library — reuse Brand-Studio uploads here */}
-                {library.assets.length > 0 && (
-                  <section aria-label="Your asset library" className="rounded-(--r-control) border border-(--line) p-3">
-                    <h4 className="text-sm font-semibold text-foreground">Your asset library</h4>
-                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                      {pickingFor
-                        ? "Choose the asset to place in the selected slot."
-                        : "Pick a slot above, then choose an asset you uploaded in Brand Studio."}
-                    </p>
-                    <div className="mt-2 grid grid-cols-3 gap-2">
-                      {library.assets.map(asset => (
-                        <button
-                          key={asset.id}
-                          type="button"
-                          disabled={!pickingFor || attachingAsset}
-                          onClick={() => pickingFor && attachLibraryAsset(pickingFor, asset.src)}
-                          className="group overflow-hidden rounded-(--r-control) border border-(--line) bg-(--surface-subtle) transition hover:border-(--ui-primary) disabled:opacity-40"
-                          title={asset.label}
-                        >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={asset.src} alt={asset.label} className="h-16 w-full object-cover" />
-                        </button>
-                      ))}
-                    </div>
-                    {attachingAsset && <p className="mt-2 text-xs text-muted-foreground" role="status">Attaching…</p>}
-                  </section>
-                )}
-              </div>
-            )}
-
-            {activeTab === "copy" && (
-              <div className="space-y-4">
-                <section aria-label="AI copy generation" className="rounded-(--r-control) border border-(--line) bg-(--surface-subtle) p-3">
-                  <h4 className="mb-1 text-sm font-semibold text-foreground">Generate copy with AI</h4>
-                  <p className="mb-2 text-xs leading-relaxed text-muted-foreground">
-                    Describe the property, offer or audience. Generated primary text,
-                    headline and description are inserted below — edit them freely.
-                    Your CTA choice is kept.
-                  </p>
-                  <textarea
-                    value={brief}
-                    onChange={event => setBrief(event.target.value)}
-                    rows={4}
-                    placeholder="e.g. Family home open this Saturday in Joondalup, first-home buyers, highlight the renovated kitchen…"
-                    className="w-full rounded-(--r-control) border border-(--line) bg-(--surface) px-3 py-2 text-sm text-foreground outline-none focus:border-(--ui-primary)"
-                    aria-label="Copy brief"
-                  />
-                  <div className="mt-2 flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={generateCopy}
-                      disabled={generating || brief.trim().length === 0}
-                      className="flex-1 rounded-(--r-control) bg-(--ui-primary) px-3 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
-                    >
-                      {generating ? "Generating…" : generatedOnce ? "Regenerate copy" : "Generate copy"}
-                    </button>
-                    {generateError && (
-                      <button
-                        type="button"
-                        onClick={generateCopy}
-                        disabled={generating}
-                        className="rounded-(--r-control) border border-(--line) px-3 py-2 text-sm font-medium text-foreground transition hover:bg-(--surface)"
-                      >
-                        Try again
-                      </button>
-                    )}
-                  </div>
-                  {generating && (
-                    <p className="mt-2 text-xs text-muted-foreground" role="status">
-                      Drafting your copy — this usually takes a few seconds…
-                    </p>
-                  )}
-                  {generateError && (
-                    <p className="mt-2 text-xs text-red-600" role="alert">
-                      {generateError} Your existing copy is unchanged.
-                    </p>
-                  )}
-                </section>
-
-                <MetaCopyPanel
-                  values={state.metaCopy}
-                  onChange={updateMetaCopy}
-                />
-              </div>
-            )}
-
-            {activeTab === "colours" && (
-              <ColourPanel
-                colourMode={state.colourMode}
-                templateColours={pack.semanticColours}
-                brandColours={brandPack?.colours ?? null}
-                resolvedColourMap={state.resolvedColourMap}
-                onSelectMode={handleSelectColourMode}
-                onChangeCustomRole={updateCustomColour}
-              />
-            )}
-          </div>
-        </aside>
-      </div>
-
-      {/* Crop dialog — per-placement crop for the selected image slot */}
-      {cropTarget && <CropDialogHost cropTarget={cropTarget} state={state} pack={pack} onApply={updateCrop} onClose={() => setCropTarget(null)} />}
-
-      {/* Recovery banner — an unreadable saved revision blocks saving/publishing */}
-      {recoveryBlocked && (
-        <div
-          className="border-t border-red-300 bg-red-100 px-5 py-3 text-sm text-red-900"
-          role="alert"
-        >
-          <p className="font-semibold">We couldn&apos;t read your last saved version of this ad.</p>
-          <p className="mt-0.5">
-            Your saved work is safe and has not been changed. Saving and publishing are
-            disabled to protect it — reload the page to try again, or contact support if
-            this keeps happening.
-          </p>
-        </div>
-      )}
-
-      {/* Error banner */}
-      {state.error && (
-        <div
-          className="border-t border-red-200 bg-red-50 px-5 py-2 text-sm text-red-700"
-          role="alert"
-        >
-          {state.error}
-        </div>
-      )}
-    </div>
+      </details>
+    </section>
   );
 }
-
-function layerTypeLabel(type: LayoutLayer["type"]): string {
-  switch (type) {
-    case "plate": return "BG";
-    case "image_slot": return "IMG";
-    case "overlay_patch": return "FX";
-    case "text": return "TXT";
-    case "logo": return "LOG";
-  }
-}
-
-function layerLabel(layer: LayoutLayer): string {
-  switch (layer.type) {
-    case "plate": return "Background";
-    case "image_slot": return layer.inputKey;
-    case "overlay_patch": return `Overlay ${Math.round(layer.opacity * 100)}%`;
-    case "text": return layer.inputKey;
-    case "logo": return layer.inputKey;
-  }
-}
-
 // ---------------------------------------------------------------------------
 // CropDialogHost — resolves the open crop target into CropDialog props.
 // The crop rect always targets the placement the slot belongs to, so Feed
@@ -649,18 +401,18 @@ function CropDialogHost({
 }: {
   cropTarget: { slot: ImageSlotLayer; placement: Placement };
   state: EditorState;
-  pack: TemplatePack;
+  pack: AdTemplate;
   onApply: (key: string, placement: Placement, crop: Rect) => void;
   onClose: () => void;
 }) {
   const { slot, placement } = cropTarget;
   const input = pack.imageInputs.find(i => i.key === slot.inputKey);
   const value = state.imageValues.find(iv => iv.inputKey === slot.inputKey);
-  if (!input || !value?.dataUrl) return null;
+  if (!input || (!value?.dataUrl && !value?.previewUrl)) return null;
 
   return (
     <CropDialog
-      imageUrl={value.dataUrl}
+      imageUrl={value.previewUrl ?? value.dataUrl!}
       input={input}
       crop={value.crops[placement] ?? slot.defaultCrop}
       aspectRatio={slot.geometry.width / slot.geometry.height}

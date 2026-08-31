@@ -87,15 +87,17 @@ export const RADAR_ADS = [
 ] as const;
 
 /**
- * Curated feed templates for the #start studio. Each entry references a real
- * AdStudio sample image directly (no gallery JSON in the landing bundle) and
- * carries short, realistic copy so the live preview reads at a glance.
+ * Curated feed templates for the #start studio. Each entry references an
+ * immutable, content-hashed AdStudio preview directly (no gallery JSON in the
+ * landing bundle) and carries short, realistic copy so the live preview reads
+ * at a glance.
  */
 export const START_TEMPLATES = [
   {
     id: "free-appraisal",
     label: "Free appraisal",
-    imageSrc: "/adstudio-samples/meta/meta-appraisal-feed-002-sample.png",
+    imageSrc:
+      "/adstudio-thumbnails/meta/f1eef3fb49b782ab7666cd14a7f793151f5fd439c724085ce68996e9ebb24f78-preview.webp",
     copy: "Thinking of selling? Find out what your home could be worth with a free property appraisal.",
     footHeading: "Find out what your home could be worth",
     footSub: "Book a free property appraisal",
@@ -103,7 +105,8 @@ export const START_TEMPLATES = [
   {
     id: "seller-consult",
     label: "Seller consult",
-    imageSrc: "/adstudio-samples/meta/meta-seller-consult-feed-097-sample.png",
+    imageSrc:
+      "/adstudio-thumbnails/meta/e5f5c79cf1406642a592ca040d4b93a2ac7dca8d79e0ac4c437c2a8f70a337ec-preview.webp",
     copy: "Curious what buyers would pay for your home? Get a free, no-obligation consultation.",
     footHeading: "Free seller consultation",
     footSub: "Local market expertise",
@@ -111,7 +114,8 @@ export const START_TEMPLATES = [
   {
     id: "buyers-wanted",
     label: "Buyers wanted",
-    imageSrc: "/adstudio-samples/meta/meta-buyers-wanted-feed-126-sample.png",
+    imageSrc:
+      "/adstudio-thumbnails/meta/fdc9222b4d16c2666d7767372301545b54679819d1beb3359aef4c05170e59b0-preview.webp",
     copy: "We have qualified buyers waiting for homes like yours. List with us and meet them.",
     footHeading: "Meet ready buyers",
     footSub: "Sell faster",
@@ -119,7 +123,8 @@ export const START_TEMPLATES = [
   {
     id: "market-report",
     label: "Market report",
-    imageSrc: "/adstudio-samples/meta/meta-market-report-feed-139-sample.png",
+    imageSrc:
+      "/adstudio-thumbnails/meta/eb4bce514070f6ce1566fc8fd2570755157d99eb50518e210739b276a6a1f370-preview.webp",
     copy: "What's your suburb really worth right now? Get the latest market report for your area.",
     footHeading: "Free suburb market report",
     footSub: "Updated monthly",
@@ -127,7 +132,8 @@ export const START_TEMPLATES = [
   {
     id: "offmarket-alerts",
     label: "Off-market alerts",
-    imageSrc: "/adstudio-samples/meta/meta-offmarket-alerts-feed-130-sample.png",
+    imageSrc:
+      "/adstudio-thumbnails/meta/b0bb808e7012fa214616e43564a3541afabe23064c7bf05a0391f1ca640b5460-preview.webp",
     copy: "See homes for sale before they hit the market. Get off-market alerts for your suburb.",
     footHeading: "Off-market property alerts",
     footSub: "Be first to know",
@@ -135,7 +141,8 @@ export const START_TEMPLATES = [
   {
     id: "agent-intro",
     label: "Agent intro",
-    imageSrc: "/adstudio-samples/meta/meta-agent-intro-feed-037-sample.png",
+    imageSrc:
+      "/adstudio-thumbnails/meta/0d83ce43550e78876dc2958337f92e2fa438b9aaa90778058a5b1ad14f7c1064-preview.webp",
     copy: "Meet your local agent. Trusted advice, real results, and a plan for your next move.",
     footHeading: "Meet your local agent",
     footSub: "Trusted local expertise",

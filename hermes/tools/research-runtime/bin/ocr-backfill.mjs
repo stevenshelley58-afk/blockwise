@@ -11,6 +11,7 @@
  * Env:
  *   HERMES_SUPABASE_URL / SUPABASE_URL   — Supabase project URL
  *   HERMES_SUPABASE_SERVICE_ROLE_KEY      — service-role key (or HERMES_SUPABASE_ANON_KEY)
+ *   HERMES_RESEARCH_STORAGE_URL           — Hermes-owned Storage API URL
  *   HERMES_RESEARCH_AD_CREATIVES_BUCKET   — storage bucket (default: research-ad-creatives)
  *   HERMES_OCR_BATCH_SIZE                 — creatives per batch (default: 200)
  *   HERMES_OCR_CONCURRENCY                — parallel OCR workers (default: 4)
@@ -27,11 +28,12 @@ import { mkdtemp, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { hermesSupabaseHeaders, resolveHermesSupabaseCredential } from "./supabase-credentials.mjs";
+import { assertHermesOwnedStorageUrl, hermesSupabaseHeaders, resolveHermesSupabaseCredential } from "./supabase-credentials.mjs";
 
 const env = process.env;
 const dryRun = process.argv.includes("--dry-run");
 const supabaseUrl = String(env.HERMES_SUPABASE_URL || env.SUPABASE_URL || "").replace(/\/+$/u, "");
+const storageUrl = env.HERMES_RESEARCH_STORAGE_URL ? assertHermesOwnedStorageUrl(env.HERMES_RESEARCH_STORAGE_URL) : "";
 const credential = resolveHermesSupabaseCredential(env);
 const mediaBucket = env.HERMES_RESEARCH_AD_CREATIVES_BUCKET || "research-ad-creatives";
 const batchSize = Math.max(1, Math.min(1000, Number.parseInt(env.HERMES_OCR_BATCH_SIZE || "200", 10)));
@@ -41,6 +43,7 @@ const fetchTimeoutMs = Math.max(1_000, Math.min(60_000, Number.parseInt(env.HERM
 const minTextLength = Math.max(1, Number.parseInt(env.HERMES_OCR_MIN_TEXT_LENGTH || "3", 10));
 
 if (!supabaseUrl) throw new Error("Missing HERMES_SUPABASE_URL/SUPABASE_URL");
+if (!storageUrl) throw new Error("Missing HERMES_RESEARCH_STORAGE_URL");
 if (!credential) throw new Error("Missing Hermes Supabase server credential");
 
 const stats = { scanned: 0, done: 0, empty: 0, failed: 0, skipped: 0, fetchFailed: 0, totalChars: 0 };
@@ -174,7 +177,7 @@ function resolveImageUrl(creative) {
   // Prefer stored image (Supabase storage) over external URL (Meta CDN may expire).
   if (creative.image_storage_path) {
     const objectPath = String(creative.image_storage_path).split("/").map(encodeURIComponent).join("/");
-    return `${supabaseUrl}/storage/v1/object/public/${encodeURIComponent(mediaBucket)}/${objectPath}`;
+    return `${storageUrl}/storage/v1/object/public/${encodeURIComponent(mediaBucket)}/${objectPath}`;
   }
   if (creative.primary_image_url && /^https?:\/\//iu.test(creative.primary_image_url)) {
     return creative.primary_image_url;

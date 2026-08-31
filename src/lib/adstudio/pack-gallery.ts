@@ -1,110 +1,65 @@
-import { templatePackAnySchema } from "../../../packages/ad-template-pack-contract/src/index.ts";
-import type { Layout, TemplatePack } from "../../../packages/ad-template-pack-contract/src/types";
+import { adTemplateSchema } from "../../../packages/ad-template-contract/src/schema.ts";
+import type { AdTemplate, Layout } from "../../../packages/ad-template-contract/src/types.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-// ---------------------------------------------------------------------------
-// Read model for imported template packs (ad-template-pack-import migration).
-// Packs are built in Frank, imported through the signed import endpoint, and
-// stored immutably in ad_template_packs (global — shared by every workspace).
-// This module is read-only: it never writes to the import tables.
-// ---------------------------------------------------------------------------
-
-export interface ImportedPackSummary {
-  packId: string;
-  templateId: string;
-  name: string;
-  version: number;
-  importedAt: string;
-  imageInputs: number;
-  textInputs: number;
-  feedLayout: Layout;
-  storyLayout: Layout;
-  semanticColours: TemplatePack["semanticColours"];
-  gallerySampleUrl: string | null;
+export interface TemplateSummary {
+  templateId: string; name: string; importedAt: string;
+  imageInputs: number; textInputs: number; feedLayout: Layout; storyLayout: Layout;
+  semanticColours: Record<string, string>; gallerySampleUrl: string; description: string;
 }
-
-type PackRow = {
-  pack_id: unknown;
-  template_id: unknown;
-  version: unknown;
-  pack_json: unknown;
-  created_at: unknown;
-};
-
+export type GallerySamplePlacement = "feed" | "story";
+type TemplateRow = { template_id: unknown; template_json: unknown; created_at: unknown };
 function record(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
 }
 
-export function readGallerySampleUrl(value: unknown): string | null {
-  const raw = record(value);
-  const metadataGallery = record(record(raw?.metadata)?.gallerySamples);
-  const gallery = metadataGallery ?? record(raw?.gallerySample);
-  const provenance = record(raw?.provenance);
-  const sample = record(gallery?.feed) ?? record(gallery) ?? record(provenance?.sample);
-  const safeFeed = record(record(raw?.safePreviews)?.feed);
-  const candidate = sample?.imageSrc ?? sample?.url ?? safeFeed?.url;
-  return typeof candidate === "string" && candidate.trim() ? candidate.trim() : null;
+const SAFE_ROUTE_PART = /^[A-Za-z0-9._:-]+$/;
+
+export function templateAssetStoragePath(templateId: string, assetKey: string, fileName: string): string {
+  return ["templates", templateId, `${assetKey}-${fileName}`]
+    .map(component => encodeURIComponent(component))
+    .join("/");
 }
 
-/** All active imported packs, newest first. Invalid rows are skipped, never fatal. */
-export async function listImportedPacks(
-  supabase: SupabaseClient,
-): Promise<ImportedPackSummary[]> {
-  const { data, error } = await supabase
-    .from("ad_template_packs")
-    .select("pack_id, template_id, version, pack_json, created_at")
-    .order("created_at", { ascending: false });
+export function gallerySampleProxyUrl(templateId: string, placement: GallerySamplePlacement = "feed"): string | null {
+  if (!SAFE_ROUTE_PART.test(templateId)) return null;
+  return `/api/adstudio/templates/${encodeURIComponent(templateId)}/sample?placement=${placement}`;
+}
 
+export function templateAssetProxyUrl(templateId: string, assetKey: string): string | null {
+  if (!SAFE_ROUTE_PART.test(templateId) || !SAFE_ROUTE_PART.test(assetKey)) return null;
+  return `/api/adstudio/templates/${encodeURIComponent(templateId)}/assets/${encodeURIComponent(assetKey)}`;
+}
+
+/* Hermes final layered templates are the sole customer gallery source. */
+export async function listTemplates(supabase: SupabaseClient): Promise<TemplateSummary[]> {
+  const { data, error } = await supabase.from("ad_templates").select("template_id, template_json, created_at").order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
-
-  const summaries: ImportedPackSummary[] = [];
-  for (const row of (data ?? []) as PackRow[]) {
-    const pack = parsePackJson(row.pack_json);
-    if (!pack) continue;
-    summaries.push(summaryFromPack(pack, row));
-  }
-  return summaries;
+  return ((data ?? []) as TemplateRow[]).flatMap((row) => {
+    const template = parseTemplateJson(row.template_json);
+    return template ? [summaryFromTemplate(template, row)] : [];
+  });
 }
-
-/** Single pack by pack_id, or null when missing / invalid. */
-export async function getImportedPack(
-  supabase: SupabaseClient,
-  packId: string,
-): Promise<TemplatePack | null> {
-  const { data, error } = await supabase
-    .from("ad_template_packs")
-    .select("pack_json")
-    .eq("pack_id", packId)
-    .maybeSingle();
-
+export async function getTemplate(supabase: SupabaseClient, templateId: string): Promise<AdTemplate | null> {
+  const { data, error } = await supabase.from("ad_templates").select("template_json").eq("template_id", templateId).maybeSingle();
   if (error) throw new Error(error.message);
-  if (!data) return null;
-  return parsePackJson((data as { pack_json: unknown }).pack_json);
+  return parseTemplateJson(data ? (data as { template_json: unknown }).template_json : null);
 }
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function summaryFromPack(pack: TemplatePack, row: PackRow): ImportedPackSummary {
-  const label = pack.classification?.label?.trim();
+function summaryFromTemplate(template: AdTemplate, row: TemplateRow): TemplateSummary {
+  const metadata = record(template.metadata);
+  const templateId = String(row.template_id ?? template.templateId);
   return {
-    packId: String(row.pack_id ?? pack.packId),
-    templateId: pack.templateId,
-    name: (record((pack as unknown as Record<string, unknown>).metadata)?.title as string | undefined) ?? (label && label.length > 0 ? label : pack.templateId),
-    version: pack.version,
-    importedAt: typeof row.created_at === "string" ? row.created_at : pack.createdAt,
-    imageInputs: pack.imageInputs.length,
-    textInputs: pack.textInputs.length,
-    feedLayout: pack.feedLayout,
-    storyLayout: pack.storyLayout,
-    semanticColours: { ...pack.semanticColours },
-    gallerySampleUrl: readGallerySampleUrl(row.pack_json),
+    templateId,
+    name: typeof metadata?.title === "string" ? metadata.title : template.templateId,
+    description: typeof metadata?.description === "string" ? metadata.description : "Editable Feed and Story ad",
+    importedAt: typeof row.created_at === "string" ? row.created_at : template.createdAt,
+    imageInputs: template.imageInputs.length, textInputs: template.textInputs.length,
+    feedLayout: template.feedLayout as Layout, storyLayout: template.storyLayout as Layout,
+    semanticColours: { ...template.semanticColours },
+    gallerySampleUrl: gallerySampleProxyUrl(templateId)!,
   };
 }
-
-function parsePackJson(value: unknown): TemplatePack | null {
-  if (!value || typeof value !== "object") return null;
-  const parsed = templatePackAnySchema.safeParse(value);
-  return parsed.success ? (parsed.data as TemplatePack) : null;
+export function parseTemplateJson(value: unknown): AdTemplate | null {
+  const parsed = adTemplateSchema.safeParse(value);
+  return parsed.success ? parsed.data as AdTemplate : null;
 }

@@ -1,9 +1,9 @@
 # Product Rebuild — Blockwise is customer-only
 
 Law (AGENTS.md): **Blockwise is the customer product.** Customers pick
-Frank-built template packs, edit ads, Save PNGs, Publish to Meta, and manage
+Hermes-authored layered templates, edit ads, Save PNGs, Publish to Meta, and manage
 campaigns and billing. Blockwise does **not** scrape ads, write blogs, or
-generate templates — those are Frank's tools.
+generate templates - Hermes supplies the direct artifacts and Frank is only the internal UI layer.
 
 This doc is the inventory of what stays, what is leftover, and what is already
 gone. Grep terms audited: `reference_clone`, `reference-clone`,
@@ -17,7 +17,7 @@ gone. Grep terms audited: `reference_clone`, `reference-clone`,
 
 | Surface | Paths |
 |---|---|
-| AdStudio editor (picks Frank packs, edits ads, Save PNG, Publish) | `src/app/(customer)/ad-studio/**`, `src/app/api/adstudio/**`, `src/lib/adstudio/**` |
+| AdStudio editor (picks direct templates, edits ads, Save PNG, Publish) | `src/app/(customer)/ad-studio/**`, `src/app/api/adstudio/**`, `src/lib/adstudio/**` |
 | Ad Radar customer view (browse/search ads & advertisers) | `src/app/(customer)/ad-radar/**`, `src/app/api/research/ad-radar/**`, `src/app/api/research/ads/**`, `src/app/api/research/advertisers/**`, `src/app/api/research/locations/**`, `src/app/api/research/swipe-file/**` |
 | Property check / suburb reports | `src/app/(customer)/property-check/**`, `src/app/suburb/**`, `src/app/api/property-checks/**`, `src/app/api/research/audit/**`, `src/app/api/research/local-ad-radar/**` |
 | Booking / leads / results / self-serve / settings / onboarding / connect-meta | `src/app/(customer)/booking`, `(customer)/leads`, `(customer)/results`, `(customer)/self-serve`, `(customer)/settings`, `(customer)/onboarding`, `(customer)/connect-meta`, `src/app/api/leads/**` etc. |

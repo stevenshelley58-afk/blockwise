@@ -385,11 +385,23 @@ export function normaliseMediaUrl(value: unknown): string | null {
   const url = cleanString(value);
   if (url && hasUnresolvedTemplateMarker(url)) return null;
   if (!url) return null;
-  if (/^https?:\/\//i.test(url)) return url;
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "");
-  if (!supabaseUrl) return null;
+  if (/^https?:\/\//i.test(url)) {
+    try {
+      const hostname = new URL(url).hostname.toLowerCase();
+      if (hostname.endsWith(".supabase.co") || hostname === "supabase.co" || hostname.endsWith(".supabase.com") || hostname === "supabase.com") {
+        return null;
+      }
+    } catch {
+      return null;
+    }
+    return url;
+  }
+  // Research creatives are owned by Hermes, not the customer product storage
+  // service. There is intentionally no product-URL fallback here.
+  const storageUrl = process.env.NEXT_PUBLIC_RESEARCH_STORAGE_URL?.replace(/\/$/, "");
+  if (!storageUrl) return null;
   const encodedPath = url.split("/").map(encodeURIComponent).join("/");
-  return `${supabaseUrl}/storage/v1/object/public/research-ad-creatives/${encodedPath}`;
+  return `${storageUrl}/storage/v1/object/public/research-ad-creatives/${encodedPath}`;
 }
 
 function cleanString(value: unknown): string | null {

@@ -1,5 +1,5 @@
 import { assetUrlForRow, type AdStudioBrandAssetRow } from "./assets.ts";
-import { storagePathFromMediaSrc, workspaceMediaSrc } from "./image-src.ts";
+import { storagePathFromMediaSrc } from "./image-src.ts";
 import { createAdStudioMediaUrls } from "./media-urls.ts";
 import { isExampleBrandKitSourceUrl } from "./persistence.ts";
 
@@ -99,7 +99,7 @@ export async function loadAdStudioLibraryPage(input: {
       const raw = assetUrlForRow(input.workspaceId, row);
       const path = storagePathFromSource(input.workspaceId, raw);
       const src = path ? signed[path]?.grid : raw;
-      const fullSrc = (path ? workspaceMediaSrc(input.workspaceId, path) : raw) ?? src;
+      const fullSrc = (path ? signed[path]?.full : raw) ?? src;
       if (!src || !fullSrc) continue;
       items.push({
         id: String(row.id ?? items.length),

@@ -1,172 +1,147 @@
 # Blockwise Production Readiness
 
-Checked against the repo on 2026-06-12.
+Status: target implemented, live cutover gated (2026-08-29).
 
-This is the current product go-live checklist. Older launch plans and
-subsystem notes are implementation history, not launch approval.
+The owner-approved product target is the self-hosted VPS stack defined by
+`infra/coolify/docker-compose.product.yml`: Caddy, the Next standalone app,
+GoTrue, PostgREST, PostgreSQL, Storage API, optional Realtime, and the durable
+worker. The compose foundation is present in the repository; this does not
+claim that the public DNS has been cut over. Until the gates below are signed
+off, the previous managed endpoint remains available only as a rollback source.
 
-Production readiness must be verified from Vercel Preview or Production URLs.
-Do not use localhost or a local dev server as launch evidence.
+Core product readiness is intentionally independent of external AI and ad
+network credentials. Login, workspace access, Ad Studio editing, rendering,
+and durable saves use the self-hosted database/auth/storage services and must
+boot with `OPENAI_API_KEY`, `META_APP_ID`, and `META_APP_SECRET` unset. Those
+values are optional provider gates: `/api/health` reports their individual
+missing/invalid status under `readiness.providers` without marking the core
+deployment unhealthy. Configure real values only when enabling the relevant
+provider; never use example or fake credentials.
 
-## Real Verification Commands
+The application may use `@supabase/supabase-js` as a protocol client only. It
+must point to the self-hosted Caddy origin through `NEXT_PUBLIC_SUPABASE_URL`;
+the client library must not be read as evidence that a managed Supabase
+runtime is part of the target architecture.
 
-These package scripts exist and are the release command set:
+The shared VPS already has Frank's `frank-caddy` edge on host ports 80/443.
+Product Caddy is loopback-bound and profile-gated; before enabling its `edge`
+profile, persistently attach `frank-caddy` to the external `blockwise-product`
+network in Frank's Compose/service definition and add the product hostname host
+route to `product-caddy:80`. A one-off `docker network connect` is not a
+completed deployment prerequisite.
+
+Current operational references: [OSS migration](oss-product-migration.md),
+[VPS SSH](vps-ssh.md), [worker deploy](vps-worker-deploy.md), and
+[rollback](rollback.md). Historical managed deployment notes are intentionally
+not linked as current runbooks.
+
+## Evidence and release commands
+
+Run runtime checks on the controlled VPS hostname through Caddy. Do not use a
+local dev server as launch evidence. The old managed deployment is a rollback
+source, not the acceptance target.
 
 | Command | Purpose |
 | --- | --- |
-| `npm run check:nul` | Reject NUL-byte corruption |
-| `npm run verify:hard-reset` | Research hard-reset static and contract checks |
-| `npm test` | Full Node test suite |
-| `npm run test:research` | Focused research-engine tests |
-| `npm run test:e2e:preview` | Preview-backed Playwright E2E with preflight |
-| `npm run typecheck` | TypeScript gate |
-| `npm run build` | Next.js production build |
-| `npm run verify-env` | Required env-var validation |
-| `npm run verify-env:first-tester` | Required first-tester service env validation |
-| VPS worker deploy runbook | Deploy committed queue-worker source |
+| `docker compose --env-file /srv/blockwise/product/.env -f infra/coolify/docker-compose.product.yml --profile edge --profile realtime config --quiet` | Validate the rendered product Compose contract without printing secrets (the worker profile remains omitted) |
+| `docker compose ... --profile realtime up -d --no-build --pull never product-db product-rest product-auth product-storage` | Start base services for GoTrue/Storage bootstrap; apply product migrations and reload PostgREST before starting the app/edge |
+| `scripts/vps/product-health.sh` | Check Compose state and JSON `/api/health` readiness through the configured hostname and shared Frank edge |
+| `scripts/vps/product-post-deploy.sh` | Run the health gate, then request Frank's fixed-input fast/full reconciliation without coupling release health to control-plane availability |
+| `scripts/vps/product-backup.sh <directory>` | Capture database dump, globals, exact row counts, and SHA-256 manifest |
+| `scripts/vps/product-checksums.sh <directory>/SHA256SUMS` | Verify backup artifacts and print current exact row counts |
+| `npm run check:nul`, `npm run typecheck`, `npm test`, `npm run build` | Run repository release gates before building app/worker images |
+| `scripts/vps/product-row-counts.sh` | Reconcile public, auth, storage, and private schema counts |
 
-There is no `lint` script and no `audit:repo` script. Do not reference either
-as a release gate unless a later task adds real package scripts.
+The product scripts read the rendered env through
+`BLOCKWISE_PRODUCT_ENV_FILE=/srv/blockwise/product/.env`; never print or
+commit that file. The worker release must also pass the preflight in
+`docs/runbooks/vps-worker-deploy.md`.
 
-## Repo Gates Already Implemented
+## Foundation already implemented
 
-- [x] `next.config.ts` no longer uses `typescript.ignoreBuildErrors`.
-- [x] GitHub CI runs `npm run verify:hard-reset`, `npm run typecheck`,
-  `npm test`, and `npm run build`.
-- [x] Supabase `job_queue` and the VPS worker own durable jobs and retries.
-- [x] Vercel Cron owns scheduled enqueueing.
-- [x] `/api/health` has public/basic and bearer-token detailed modes.
-- [x] Google Ads env vars are provider-readiness fields, not top-level fatal
-  env failures.
-- [x] Legal pages and Meta data-deletion callback exist.
-- [x] Provider writes are guarded by `BLOCKWISE_ENABLE_PROVIDER_WRITES`.
-- [x] Meta publish worker records `failed` when execution throws after the plan
-  enters `publishing`.
-- [x] Meta publish, Meta mutation, non-manual lead delivery, and Trigger
-  workers check approval/provider-write posture before external writes.
-- [x] Manual export remains separate from live provider publish.
-- [x] Rollback runbook exists for Vercel rollback, provider-write disablement,
-  VPS queue/worker control, and Meta object cleanup.
-- [x] Research runtime docs reflect Hermes as the active runtime owner.
+- [x] Product Compose defines isolated named volumes and the
+  `blockwise-product` network for PostgreSQL, PostgREST, GoTrue, Storage API,
+  optional Realtime, Next, profile-gated Caddy, and the profile-gated
+  `product-worker` service.
+- [x] Caddy routes `/rest/v1`, `/auth/v1`, `/storage/v1`, `/realtime/v1`,
+  `/api`, and the Next app while exposing `/healthz`.
+- [x] The app and worker images accept an immutable Git revision; the worker
+  is read-only, non-root, capability-dropped, and provider-write guarded.
+- [x] Guarded backup, export, migration, import, restore, checksum, row-count,
+  cutover, rollback, and object-copy scripts exist under `scripts/vps/`.
+- [x] Frank template-v2 packs/provenance remain product artifacts, while
+  Hermes research/agent execution and research data remain on their separate
+  VPS runtime. Product migration must never replay Hermes migrations.
 
-## P0 - Must Finish Before Launch
+## P0 - Required before live cutover
 
-- [ ] Vercel Preview and Production env vars are complete and non-placeholder:
-  `OPENROUTER_API_KEY`, `OPENAI_API_KEY`, Supabase URL/anon/service-role keys,
-  `TOKEN_ENCRYPTION_KEY`, `META_APP_ID`, `META_APP_SECRET`,
-  `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `NEXT_PUBLIC_SENTRY_DSN`, `CRON_SECRET`,
-  and notification/provider keys needed for the enabled flows.
-- [ ] Vercel deployment logs show the configured build command runs the real
-  release gates: `npm run verify-env`, `npm run typecheck`, `npm test`, and
-  `npm run build`, or an equivalent `npm run check && npm run build`.
-- [ ] `npm run verify-env:first-tester` is run against Production env vars.
-  Preview may warn on incomplete boot env; the first-tester check must fail on
-  missing launch-critical env.
-- [ ] Latest Vercel Preview URL is recorded and tested on desktop and mobile.
-- [ ] `npm run test:e2e:preview` runs against a seeded Vercel Preview URL.
-  Skipped Playwright tests do not count as launch evidence.
-- [ ] Stripe is either fully implemented and verified with checkout, portal,
-  webhooks, and synced subscription state, or billing/payment UI and paid
-  claims stay hidden behind the current fallback messaging.
-- [ ] Meta App Review is approved for the exact permissions requested by the
-  app.
-- [ ] Current official Meta docs are checked for Graph API version, required
-  permissions, lead-ad creative requirements, lead form requirements, and
-  housing special-ad-category constraints.
-- [ ] Meta OAuth is verified on Vercel with a real test business: connect,
-  callback, encrypted token storage, ad account selection, Page selection, lead
-  destination, privacy policy URL, currency, and timezone.
-- [ ] Meta disconnect is verified on Vercel through the server route; client
-  writes to `provider_connections` are not required.
-- [ ] First-run navigation is verified on Vercel: signup confirmation,
-  returning login, `/home`, `/self-serve`, onboarding, and first ad creation
-  send a new user to the intended path without dead-end hops.
-- [ ] Ad Studio first-ad generation is verified from Vercel with a confirmed
-  trial user and decrements the trial pack count correctly.
-- [ ] Meta publish is verified from Vercel with real creative assets and creates
-  valid paused Meta campaign, ad set, lead form, creative, and ad objects.
-- [ ] Publish UI is verified to distinguish approval requested, queued,
-  publishing, paused on Meta, failed, and blocked states. Queued or paused
-  objects must not be labelled live.
-- [ ] Human approval is verified for publish, activation, budget changes, lead
-  export, and non-manual lead delivery.
-- [ ] `BLOCKWISE_ENABLE_PROVIDER_WRITES=false` remains set in Vercel and on
-  the VPS worker until Meta publish and approval checks pass on Vercel.
-- [ ] Data deletion is verified end to end: workspace deletion, Meta
-  data-deletion callback, provider token deletion, lead deletion/anonymisation,
-  audit retention, and backup retention match the public policy.
-- [ ] Privacy Policy, Terms, and Data Deletion pages match implemented behavior
-  and are reviewed for Australian use.
+- [ ] Provision the product VPS and render `/srv/blockwise/product/.env` from
+  the example with real secrets injected by the approved secret manager. Use
+  distinct JWT, Realtime, PostgREST authenticator, database, and token-
+  encryption secrets as documented by the migration runbook.
+- [ ] Resolve app/worker/base-service image tags to approved immutable digests;
+  record each digest with the full Git SHA and build date.
+- [ ] Run the Compose config check and health check with Caddy TLS, then run
+  app smoke tests for signup/login/recovery, workspace switching, invitations,
+  RLS denial across workspaces, RPC queue operations, private object
+  upload/download, and Realtime or polling invalidation.
+- [ ] Capture the source database dump, globals, GoTrue-compatible Auth export
+  (including unchanged UUIDs, identities, password/recovery metadata), bucket
+  metadata, and five-field object manifest outside the repository.
+- [ ] Rehearse the complete import on disposable product volumes. Apply only
+  the allowlist in `infra/product/product-migrations.txt`; never import
+  Hermes/research migrations into the product database.
+- [ ] Reconcile exact row counts, Auth UUIDs, object checksums/bytes/MIME, and
+  migration receipts with the source export. Keep the old endpoint and all old
+  volumes untouched during the retention window.
+- [ ] Verify the controlled VPS hostname end to end: OAuth callback URLs,
+  SMTP/recovery, Meta connect/disconnect, provider token vault access, Ad
+  Studio generation, paused publish flow, leads, billing fallback, health,
+  alerting, and deletion behavior.
+- [ ] Keep `BLOCKWISE_ENABLE_PROVIDER_WRITES=false` on the app and omit the
+  worker through the canary. Enable provider writes and start the worker only
+  as a separate, approved cutover gate after publish and human-approval checks
+  pass; an offline worker preflight is not canary readiness.
+- [ ] Freeze writes, take the final export, switch DNS and external callbacks,
+  and only then enable the reviewed worker/provider-write posture. Record the
+  exact cutover time and release SHA.
 
-## P1 - Must Finish Before Real Customer Data Or Spend
+## P1 - Required before real customer data or spend
 
-- [ ] Verify signup/signin production UX: terms/privacy links, password reset,
-  email confirmation, invited-user flow, abuse protection, and clear errors.
-- [ ] Make Turnstile or equivalent signup abuse protection mandatory in
-  production, or document the Supabase-side rate-limit alternative.
-- [ ] Verify Settings save paths under production RLS: account, workspace, team
-  roles, invites, Meta setup, billing email, notification preferences, and
-  deletion request.
-- [ ] Verify Dashboard/Monitor uses live Meta data for connected accounts and
-  clearly labelled sample data only for unconnected/demo workspaces.
-- [ ] Verify valid-lead metrics come from real Blockwise lead labels, not
-  provider-sync estimates or placeholders.
-- [ ] Verify Leads page dedupe, manual review, CRM/webhook/email delivery
-  attempts, approval creation, retry behavior, and PII export restrictions.
-- [ ] Confirm ACMA compliance for customer follow-up messaging: consent, sender
-  identity, contact details, unsubscribe, and proof of consent.
-- [ ] Confirm ACCC compliance for generated and landing-page claims: all claims
-  are true, specific, and substantiated.
-- [ ] Confirm Australian Privacy Principles obligations: collection notice,
-  use/disclosure, overseas disclosure, security, access, correction, and
-  deletion.
-- [ ] Configure and validate CSP, HSTS, Permissions Policy, CSRF review, and
-  route-level rate limiting for mutating public or authenticated endpoints.
-- [ ] Configure recommended security env vars:
-  `CLOUDFLARE_AI_GATEWAY_URL`, `CLOUDFLARE_AI_GATEWAY_TOKEN`,
-  `AGENT_ALLOWED_OUTBOUND_DOMAINS`, and `SECURITY_AUDIT_LOG_DRAIN_URL` where
-  supported.
-- [ ] Put operator/admin/workforce surfaces behind production access controls
-  such as Cloudflare Zero Trust, SSO, and MFA.
-- [ ] Verify the VPS `job_queue` worker: Meta publish, Meta mutation, scheduled lead sync, token health, lead delivery, provider sync, Ad Studio recovery, and retry/failure visibility.
-- [ ] Verify the paid-service watchdog as the Vercel Cron configured in
-  `vercel.json` for `/api/alerts/paid-service-watchdog`.
-- [ ] Configure Sentry, analytics, audit log drain, and production alerting for
-  route errors, failed jobs, provider failures, and security events.
-- [ ] Create production operator, demo workspace, and smoke-test workspace with
-  test Meta assets.
+- [ ] Validate tenant isolation and RLS on every customer path, including
+  storage paths, server RPCs, queue payloads, exports, and agent boundaries.
+- [ ] Verify Meta App Review, Graph API version, permissions, OAuth, paused
+  campaign creation, approval-gated activation/budget changes, and provider
+  failure handling with a real test business.
+- [ ] Verify signup abuse controls, legal pages, Australian privacy/marketing
+  obligations, CSP/HSTS/CSRF/rate limits, operator access controls, and
+  deletion/backup retention behavior.
+- [ ] Verify durable worker jobs for Meta publish/mutation, lead sync/delivery,
+  reporting refresh, token health, provider sync, Ad Studio recovery, retries,
+  lease heartbeat, and failure visibility. Scheduled enqueueing is a separate
+  VPS scheduler/webhook gate; it is not a Vercel requirement.
+- [ ] Configure Sentry, audit drain, email/WhatsApp alerts, off-host encrypted
+  backups, and incident ownership. Keep Hermes/Apify credentials only in the
+  Hermes runtime and keep Frank/Hermes research data separated.
+- [ ] Run desktop and mobile acceptance tests against the controlled VPS
+  origin, then repeat the critical smoke checks after DNS cutover.
 
-## P2 - Launch Polish
+## Final sign-off record
 
-- [ ] Reconcile trial wording across landing, signup, trial pill, onboarding,
-  and Ad Studio. Current target phrase is "10 free ad packs".
-- [ ] Complete mobile QA on Vercel for landing, signup, onboarding, Ad Studio,
-  publish blockers, Dashboard, Leads, Settings, and operator approvals.
-- [ ] Verify PWA install/offline behavior from Vercel or hide PWA affordances
-  until ready.
-- [ ] Remove or supersede stale launch/runbook docs that mention localhost as
-  acceptance evidence, VPS-only product deployment, or obsolete handoff steps
-  for product go-live.
-- [ ] Add a support runbook for Meta connection failures, failed publish plans,
-  stuck approvals, lead delivery failures, billing failures, and deletion
-  requests.
+- [ ] Product VPS hostname and Caddy certificate recorded.
+- [ ] Product app/worker image digests, full Git SHA, and deployed timestamp
+  recorded.
+- [ ] Source export, Auth import receipt, object manifest, backup checksum
+  manifest, and exact row-count comparison recorded.
+- [ ] DNS, SMTP, OAuth callbacks, webhooks, scheduler, and provider-write
+  changes recorded as separate reviewed gates.
+- [ ] `BLOCKWISE_ENABLE_PROVIDER_WRITES=true` approved after the canary, with a
+  named incident owner and tested rollback.
 
-## Final Launch Sign-Off
+## Definition of live
 
-- [ ] Latest Vercel Preview URL is recorded.
-- [ ] Production URL is recorded.
-- [ ] Vercel deployment ID is recorded.
-- [ ] Supabase project and migration version are recorded.
-- [ ] VPS worker image/source SHA and deployed version are recorded.
-- [ ] Meta app ID, Graph API version, approved permissions, and App Review
-  approval date are recorded.
-- [ ] `BLOCKWISE_ENABLE_PROVIDER_WRITES=true` change is approved by an operator
-  after the Vercel publish checks pass.
-- [ ] First paid/customer workspace has an assigned human owner for support and
-  incident response.
-
-## Definition Of Live
-
-Blockwise is live only when the P0 list is complete, the final sign-off fields
-are recorded, and provider writes are deliberately enabled in both Vercel and
-the VPS worker after approval-gated Meta publish checks pass.
+Blockwise is live only when the self-hosted product stack serves the intended
+public DNS through Caddy, all P0 checks and sign-off evidence are complete,
+the final data reconciliation passes, and provider writes are deliberately
+enabled. A healthy Compose deployment or a completed migration rehearsal alone
+does not mean cutover is complete.

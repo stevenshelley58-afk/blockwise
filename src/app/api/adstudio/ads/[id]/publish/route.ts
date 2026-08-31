@@ -233,7 +233,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     }
   } catch (err) {
     if (err instanceof PublishError) {
-      const status = err.code === "ad_not_found" || err.code === "revision_not_found" || err.code === "pack_not_found"
+      const status = err.code === "ad_not_found" || err.code === "revision_not_found" || err.code === "template_not_found"
         ? 404
         : err.code === "not_saved"
           ? 400

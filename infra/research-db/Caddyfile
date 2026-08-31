@@ -9,6 +9,12 @@
 		reverse_proxy blockwise-research-rest:3000
 	}
 
+	# Authenticated research workers use this internal Storage API. The public
+	# edge has a separate gateway that allows only object/public reads.
+	handle_path /storage/v1/* {
+		reverse_proxy blockwise-research-storage:5000
+	}
+
 	handle {
 		respond "not found" 404
 	}

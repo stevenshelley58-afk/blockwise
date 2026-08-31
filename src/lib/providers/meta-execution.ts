@@ -37,11 +37,78 @@ export type MetaConnectionSetup = {
   timezone: string;
 };
 
+export type MetaPublishTarget =
+  | { mode: "new_campaign_new_adset" }
+  | { mode: "existing_campaign_new_adset"; campaignId: string }
+  | { mode: "existing_adset"; campaignId: string; adSetIds: string[] };
+
+export type MetaExistingCampaignState = {
+  id: string;
+  objective: string;
+  specialAdCategories: string[];
+  specialAdCategoryCountries: string[];
+  budgetMode: "campaign" | "adset";
+};
+export type MetaExistingAdSetState = {
+  id: string;
+  campaignId: string;
+  targeting: Record<string, unknown>;
+  optimizationGoal: string;
+  billingEvent: string;
+  dailyBudgetMinorUnits: number;
+  destination: Record<string, unknown> | null;
+  promotedObject: Record<string, unknown> | null;
+};
+export type MetaParentState = {
+  campaign?: MetaExistingCampaignState;
+  adSets?: MetaExistingAdSetState[];
+};
+
+export type MetaOfferFulfilment = {
+  exactOffer: string;
+  eligibility: string;
+  conditions: string;
+  timeframe: string;
+  evidence: string;
+  approval: string;
+  disclaimer: string;
+  privacyUrl: string;
+  consent: string;
+  fulfilmentAsset: string;
+  fulfilmentUrl: string;
+  owner: string;
+  expiry: string;
+  tracking: string;
+};
+
+export function validateMetaOfferFulfilment(value: MetaOfferFulfilment | null | undefined): string[] {
+  if (!value) return ["Offer fulfilment details are required before publication."];
+  const required: Array<keyof MetaOfferFulfilment> = [
+    "exactOffer", "eligibility", "conditions", "timeframe", "evidence", "approval",
+    "disclaimer", "privacyUrl", "consent", "owner", "expiry", "tracking",
+  ];
+  const issues = required.filter((key) => !value[key]?.trim()).map((key) => "Missing offer fulfilment field: " + key);
+  if (!value.fulfilmentAsset.trim() && !value.fulfilmentUrl.trim()) issues.push("Provide a fulfilment asset or HTTPS URL.");
+  if (value.fulfilmentUrl.trim()) {
+    try { if (new URL(value.fulfilmentUrl).protocol !== "https:") issues.push("Fulfilment URL must use HTTPS."); }
+    catch { issues.push("Fulfilment URL must be valid HTTPS."); }
+  }
+  if (value.privacyUrl.trim()) {
+    try { if (new URL(value.privacyUrl).protocol !== "https:") issues.push("Privacy URL must use HTTPS."); }
+    catch { issues.push("Privacy URL must be valid HTTPS."); }
+  }
+  return issues;
+}
+
 export type MetaPublishControls = {
+  target?: MetaPublishTarget;
   dailyBudgetMinorUnits?: number;
+  newCampaign?: { objective: string; specialAdCategories: string[]; specialAdCategoryCountries: string[]; budgetMode: "campaign" | "adset" };
+  parentState?: MetaParentState;
   /** Explicit article/website destination for the ad and (when applicable) form thank-you button. */
   destinationUrl?: string;
   destinationMode?: "website" | "instant_form";
+  variantIds?: Array<"feed" | "story">;
   geo?:
     | { type: "country"; country: string }
     | { type: "custom_radius"; latitude: number; longitude: number; radiusKm: number }
@@ -54,6 +121,7 @@ export type MetaPublishControls = {
     startTime?: string | null;
     endTime?: string | null;
   };
+  fulfilment?: MetaOfferFulfilment;
   placements?: {
     publisherPlatforms?: string[];
     facebookPositions?: string[];
@@ -64,15 +132,16 @@ export type MetaPublishControls = {
 export type MetaPublishCampaignPlan = {
   localId: string;
   name: string;
-  objective: "OUTCOME_LEADS";
+  objective: string;
   status: "PAUSED";
-  specialAdCategories: ["HOUSING"];
+  specialAdCategories: string[];
   specialAdCategoryCountries: string[];
   budgetMode: "campaign" | "adset";
 };
 
 export type MetaPublishAdSetPlan = {
   localId: string;
+  existingId?: string;
   name: string;
   campaignLocalId: string;
   billingEvent: "IMPRESSIONS";
@@ -106,6 +175,7 @@ export type MetaPublishLeadFormPlan = {
   thankYouTitle: string;
   thankYouBody: string;
   thankYouWebsiteUrl: string;
+  fulfilment?: MetaOfferFulfilment;
 };
 
 export type MetaPublishCreativePlan = {
@@ -152,12 +222,24 @@ export type MetaReconciledObjectStatus = {
   configuredStatus: string | null;
 };
 
+export type MetaReconciledObjectProvenance = "created" | "adopted";
+
 export type MetaReconciledObjects = {
   campaignId?: string;
+  /** Provider objects with a durable successful create response recorded by this plan. */
+  ownedCampaignId?: string;
   leadFormIds: Record<string, string>;
   adSetIds: Record<string, string>;
+  ownedAdSetIds?: Record<string, string>;
   creativeIds: Record<string, string>;
   adIds: Record<string, string>;
+  ownedAdIds?: Record<string, string>;
+  /** Exact-name recovery is adoption, not proof that Blockwise created the object. */
+  provenance?: {
+    campaign?: MetaReconciledObjectProvenance;
+    adSets?: Record<string, MetaReconciledObjectProvenance>;
+    ads?: Record<string, MetaReconciledObjectProvenance>;
+  };
   objectStatuses?: {
     campaign?: MetaReconciledObjectStatus;
     adSets?: Record<string, MetaReconciledObjectStatus>;
@@ -316,9 +398,11 @@ export function buildMetaPublishPlan(input: {
   const selectedVariantIds = (input.variantIds ?? []).filter((id) => typeof id === "string" && id.trim().length > 0);
   const abTest = selectedVariantIds.length > 0;
   const campaignPack = abTest ? filterPackToVariants(input.campaignPack, selectedVariantIds) : input.campaignPack;
-  const controls = normalizeMetaPublishControls(input.controls, campaignPack);
+  const controls = normalizeMetaPublishControls(input.controls, campaignPack, input);
   const setup = normalizeMetaConnectionSetup(input.setup);
-  const existingMetaCampaignId = input.existingMetaCampaignId?.trim() || null;
+  const existingMetaCampaignId = controls.target?.mode === "new_campaign_new_adset"
+    ? null
+    : controls.target?.campaignId?.trim() || input.existingMetaCampaignId?.trim() || null;
   const campaign: MetaPublishCampaignPlan = {
     localId: "campaign_main",
     name: campaignPack.campaign.name,
@@ -333,7 +417,7 @@ export function buildMetaPublishPlan(input: {
   const adSets = buildAdSetPlans(campaignPack, controls);
   const leadForms = buildLeadFormPlans(campaignPack, setup, controls.destinationUrl);
   const creatives = buildCreativePlans(campaignPack, setup);
-  const ads = buildAdPlans(campaignPack);
+  const ads = buildAdPlans(campaignPack, adSets);
   const tracking: MetaPublishTrackingPlan = {
     utmSource: "meta",
     utmMedium: "paid_social",
@@ -385,6 +469,8 @@ export function buildMetaPublishPlan(input: {
     reconciledObjects: {
       ...emptyReconciledObjects(),
       ...(existingMetaCampaignId ? { campaignId: existingMetaCampaignId } : {}),
+      adSetIds: Object.fromEntries(adSets.filter((adSet) => adSet.existingId)
+        .map((adSet) => [adSet.localId, adSet.existingId as string])),
     },
     lastError: null,
     createdAt: now,
@@ -610,11 +696,42 @@ async function publishWithMarketingApi(
     ...plan.reconciledObjects,
     leadFormIds: { ...plan.reconciledObjects.leadFormIds },
     adSetIds: { ...plan.reconciledObjects.adSetIds },
+    ownedAdSetIds: { ...(plan.reconciledObjects.ownedAdSetIds ?? {}) },
     creativeIds: { ...plan.reconciledObjects.creativeIds },
     adIds: { ...plan.reconciledObjects.adIds },
+    ownedAdIds: { ...(plan.reconciledObjects.ownedAdIds ?? {}) },
+    provenance: {
+      ...(plan.reconciledObjects.provenance ?? {}),
+      adSets: { ...(plan.reconciledObjects.provenance?.adSets ?? {}) },
+      ads: { ...(plan.reconciledObjects.provenance?.ads ?? {}) },
+    },
   };
 
+  synchronizeMetaCreationEvidence(plan, requestLog, responseLog, reconciledObjects);
+
   try {
+    const destinationUrl = plan.controls.destinationUrl?.trim();
+    if (!destinationUrl || !isHttpsDestination(destinationUrl)) {
+      throw new Error("Publish plan is missing a valid HTTPS destination URL.");
+    }
+    // The live account, Page and every reused parent are authoritative. This
+    // entire preflight is GET-only and completes before the first Meta POST.
+    const parentPreflight = await preflightMetaPublishParents(
+      plan,
+      input,
+      requestLog,
+      responseLog,
+      reconciledObjects,
+    );
+    await preflightAdoptedMetaDeliveryObjects(
+      plan,
+      input,
+      requestLog,
+      responseLog,
+      reconciledObjects,
+      parentPreflight.campaignBudgetMode,
+    );
+
     if (!reconciledObjects.campaignId) {
       const providerName = buildMetaProviderObjectName(plan, plan.campaign.localId, plan.campaign.name);
       const existingId = input.reconcileMissingObjects
@@ -628,7 +745,18 @@ async function publishWithMarketingApi(
           )
         : null;
       if (existingId) {
+        await assertAdoptedMetaCampaignMatchesPlan(
+          plan,
+          input,
+          requestLog,
+          responseLog,
+          existingId,
+          parentPreflight.campaignBudgetMode,
+          "campaign.reconcile_missing.validate",
+        );
         reconciledObjects.campaignId = existingId;
+        reconciledObjects.provenance!.campaign = "adopted";
+        delete reconciledObjects.ownedCampaignId;
       } else {
         const response = await postMetaObject(input, requestLog, responseLog, "campaign.create", `/${plan.setup.metaAdAccountId}/campaigns`, {
           name: providerName,
@@ -636,10 +764,16 @@ async function publishWithMarketingApi(
           status: "PAUSED",
           special_ad_categories: plan.campaign.specialAdCategories,
           special_ad_category_country: plan.campaign.specialAdCategoryCountries,
-          bid_strategy: META_LOWEST_COST_BID_STRATEGY,
-          daily_budget: String(plan.controls.dailyBudgetMinorUnits ?? 2000),
+          ...(parentPreflight.campaignBudgetMode === "campaign"
+            ? {
+                bid_strategy: META_LOWEST_COST_BID_STRATEGY,
+                daily_budget: String(requireExplicitDailyBudget(plan)),
+              }
+            : {}),
         });
         reconciledObjects.campaignId = requireMetaId(response, "campaign");
+        reconciledObjects.ownedCampaignId = reconciledObjects.campaignId;
+        reconciledObjects.provenance!.campaign = "created";
       }
       await checkpointMetaPublishProgress(input, requestLog, responseLog, reconciledObjects);
     }
@@ -691,7 +825,7 @@ async function publishWithMarketingApi(
           `/${plan.setup.pageId}/leadgen_forms`,
           {
             name: providerName,
-            follow_up_action_url: leadForm.thankYouWebsiteUrl,
+            follow_up_action_url: leadFormDeliveryUrl(plan, leadForm),
             privacy_policy: {
               url: leadForm.privacyPolicyUrl,
               link_text: "Privacy Policy",
@@ -709,7 +843,7 @@ async function publishWithMarketingApi(
               body: leadForm.thankYouBody,
               button_text: "Visit website",
               button_type: "VIEW_WEBSITE",
-              website_url: leadForm.thankYouWebsiteUrl,
+              website_url: leadFormDeliveryUrl(plan, leadForm),
             },
           },
           input.pageAccessToken ?? input.accessToken,
@@ -734,27 +868,42 @@ async function publishWithMarketingApi(
           )
         : null;
       if (existingId) {
+        await assertAdoptedMetaAdSetMatchesPlan(
+          plan,
+          input,
+          requestLog,
+          responseLog,
+          reconciledObjects,
+          adSet,
+          existingId,
+          parentPreflight.campaignBudgetMode,
+          `adset.${adSet.localId}.reconcile_missing.validate`,
+        );
         reconciledObjects.adSetIds[adSet.localId] = existingId;
+        (reconciledObjects.provenance!.adSets ??= {})[adSet.localId] = "adopted";
+        delete reconciledObjects.ownedAdSetIds?.[adSet.localId];
       } else {
         const response = await postMetaObject(input, requestLog, responseLog, `adset.${adSet.localId}`, `/${plan.setup.metaAdAccountId}/adsets`, {
           name: providerName,
           campaign_id: reconciledObjects.campaignId,
           billing_event: adSet.billingEvent,
           optimization_goal: adSet.optimizationGoal,
-          destination_type: "ON_AD",
+          destination_type: expectedMetaDestinationType(plan),
           promoted_object: { page_id: plan.setup.pageId },
           targeting: adSet.targeting,
           status: "PAUSED",
-          ...(plan.campaign.budgetMode === "adset"
+          ...(parentPreflight.campaignBudgetMode === "adset"
             ? {
                 bid_strategy: META_LOWEST_COST_BID_STRATEGY,
-                daily_budget: String(adSet.dailyBudgetMinorUnits),
+                daily_budget: String(requireExplicitDailyBudget(plan)),
               }
             : {}),
           ...(adSet.startTime ? { start_time: adSet.startTime } : {}),
           ...(adSet.endTime ? { end_time: adSet.endTime } : {}),
         });
         reconciledObjects.adSetIds[adSet.localId] = requireMetaId(response, "ad set");
+        (reconciledObjects.ownedAdSetIds ??= {})[adSet.localId] = reconciledObjects.adSetIds[adSet.localId]!;
+        (reconciledObjects.provenance!.adSets ??= {})[adSet.localId] = "created";
       }
       await checkpointMetaPublishProgress(input, requestLog, responseLog, reconciledObjects);
     }
@@ -783,11 +932,7 @@ async function publishWithMarketingApi(
       } else {
         const imageHash = await resolveCreativeImageHash(plan, creative, input, requestLog, responseLog);
         const leadFormId = reconciledObjects.leadFormIds[creative.leadFormLocalId];
-        const linkBase = plan.controls.destinationUrl?.trim();
-        if (!linkBase || !isHttpsDestination(linkBase)) {
-          throw new Error("Publish plan is missing a valid HTTPS destination URL.");
-        }
-        const utmLink = buildUtmLink(linkBase, plan.tracking, creative.localId);
+        const utmLink = buildUtmLink(destinationUrl, plan.tracking, creative.localId);
         const response = await postMetaObject(input, requestLog, responseLog, `creative.${creative.localId}`, `/${plan.setup.metaAdAccountId}/adcreatives`, {
           name: providerName,
           object_story_spec: {
@@ -826,7 +971,19 @@ async function publishWithMarketingApi(
           )
         : null;
       if (existingId) {
+        await assertAdoptedMetaAdMatchesPlan(
+          plan,
+          input,
+          requestLog,
+          responseLog,
+          reconciledObjects,
+          ad,
+          existingId,
+          `ad.${ad.localId}.reconcile_missing.validate`,
+        );
         reconciledObjects.adIds[ad.localId] = existingId;
+        (reconciledObjects.provenance!.ads ??= {})[ad.localId] = "adopted";
+        delete reconciledObjects.ownedAdIds?.[ad.localId];
       } else {
         const response = await postMetaObject(input, requestLog, responseLog, `ad.${ad.localId}`, `/${plan.setup.metaAdAccountId}/ads`, {
           name: providerName,
@@ -835,6 +992,8 @@ async function publishWithMarketingApi(
           status: "PAUSED",
         });
         reconciledObjects.adIds[ad.localId] = requireMetaId(response, "ad");
+        (reconciledObjects.ownedAdIds ??= {})[ad.localId] = reconciledObjects.adIds[ad.localId]!;
+        (reconciledObjects.provenance!.ads ??= {})[ad.localId] = "created";
       }
       await checkpointMetaPublishProgress(input, requestLog, responseLog, reconciledObjects);
     }
@@ -859,6 +1018,511 @@ async function publishWithMarketingApi(
       updatedAt: new Date().toISOString(),
     };
   }
+}
+
+type MetaPublishParentPreflight = {
+  campaignBudgetMode: "campaign" | "adset";
+};
+
+/**
+ * Fail closed before any provider write. The browser's parentState is display
+ * data only: account membership, Page ownership and parent compatibility are
+ * read from Meta again immediately before publication.
+ */
+async function preflightMetaPublishParents(
+  plan: MetaPublishPlan,
+  input: MetaPublishExecutionInput,
+  requestLog: MetaProviderLogEntry[],
+  responseLog: MetaProviderLogEntry[],
+  reconciledObjects: MetaReconciledObjects,
+): Promise<MetaPublishParentPreflight> {
+  const target = plan.controls.target ?? { mode: "new_campaign_new_adset" as const };
+  if (target.mode !== "existing_adset") requireExplicitDailyBudget(plan);
+  // Resolve every fulfilment binding before network I/O so a guide/promise can
+  // never create a parent and fail only when the Instant Form is posted.
+  for (const leadForm of plan.leadForms) leadFormDeliveryUrl(plan, leadForm);
+  if (plan.controls.fulfilment && plan.leadForms.length === 0) requireExplicitFulfilmentUrl(plan.controls.fulfilment);
+  if (target.mode === "new_campaign_new_adset") {
+    const requested = plan.controls.newCampaign;
+    if (!requested) {
+      throw new Error("Choose campaign budget ownership, objective and special-ad category before any Meta objects are written.");
+    }
+    if (
+      requested.objective !== plan.campaign.objective ||
+      requested.budgetMode !== plan.campaign.budgetMode ||
+      !sameStrings(
+        uniqueStrings(requested.specialAdCategories.map((value) => value.toUpperCase())),
+        uniqueStrings(plan.campaign.specialAdCategories.map((value) => value.toUpperCase())),
+      ) ||
+      !sameStrings(
+        uniqueStrings(requested.specialAdCategoryCountries.map((value) => value.toUpperCase())),
+        uniqueStrings(plan.campaign.specialAdCategoryCountries.map((value) => value.toUpperCase())),
+      )
+    ) {
+      throw new Error("The new-campaign settings do not match the approved publish plan; no provider objects were written.");
+    }
+  }
+
+  const account = await getMetaPreflightObject(
+    input,
+    requestLog,
+    responseLog,
+    "preflight.account",
+    `/${plan.setup.metaAdAccountId}?fields=id,account_id,account_status,disable_reason,currency,timezone_name`,
+  );
+  const returnedAccountId = optionalString(account.id ?? account.account_id);
+  if (!returnedAccountId || normalizeMetaAccountId(returnedAccountId) !== normalizeMetaAccountId(plan.setup.metaAdAccountId)) {
+    throw new Error("Meta returned a different ad account; no provider objects were written.");
+  }
+  if (Number(account.account_status) !== 1 || Number(account.disable_reason ?? 0) !== 0) {
+    throw new Error("The selected Meta ad account is not active; no provider objects were written.");
+  }
+  const liveCurrency = optionalString(account.currency);
+  const liveTimezone = optionalString(account.timezone_name);
+  if (liveCurrency && liveCurrency.toUpperCase() !== plan.setup.currency.toUpperCase()) {
+    throw new Error("The Meta ad-account currency changed; reconnect it before publishing.");
+  }
+  if (liveTimezone && liveTimezone !== plan.setup.timezone) {
+    throw new Error("The Meta ad-account timezone changed; reconnect it before publishing.");
+  }
+
+  const page = await getMetaPreflightObject(
+    input,
+    requestLog,
+    responseLog,
+    "preflight.page",
+    `/${plan.setup.pageId}?fields=id,name,tasks,instagram_business_account{id}`,
+    input.pageAccessToken ?? input.accessToken,
+  );
+  if (optionalString(page.id) !== plan.setup.pageId) {
+    throw new Error("The selected Meta Page is no longer accessible; no provider objects were written.");
+  }
+  if (plan.setup.instagramActorId) {
+    const instagram = recordValue(page.instagram_business_account);
+    if (optionalString(instagram?.id) !== plan.setup.instagramActorId) {
+      throw new Error("The selected Instagram identity is not attached to the selected Page; no provider objects were written.");
+    }
+  }
+  for (const creative of plan.creatives) {
+    if (creative.pageId !== plan.setup.pageId || (creative.instagramActorId ?? null) !== (plan.setup.instagramActorId ?? null)) {
+      throw new Error("Creative identity no longer matches the verified Meta Page; no provider objects were written.");
+    }
+  }
+
+  const selectedCampaignId = target.mode === "new_campaign_new_adset" ? null : target.campaignId.trim();
+  if (selectedCampaignId && reconciledObjects.campaignId !== selectedCampaignId) {
+    throw new Error("The persisted campaign does not match the selected Meta campaign; no provider objects were written.");
+  }
+
+  let campaignBudgetMode: "campaign" | "adset" = plan.controls.newCampaign?.budgetMode ?? plan.campaign.budgetMode;
+  const campaignId = selectedCampaignId ?? reconciledObjects.campaignId ?? null;
+  if (campaignId) {
+    const campaign = await getMetaCampaignBidStrategy(
+      input,
+      requestLog,
+      responseLog,
+      "preflight.campaign",
+      campaignId,
+    );
+    assertCampaignAccountMatches(plan.setup.metaAdAccountId, campaign);
+    if (campaign.id !== campaignId) {
+      throw new Error("Meta returned a different campaign; no provider objects were written.");
+    }
+    if (campaign.objective !== plan.campaign.objective) {
+      throw new Error("The selected Meta campaign objective changed; choose it again before publishing.");
+    }
+    assertSameMetaStringSet("special-ad category", campaign.specialAdCategories, plan.campaign.specialAdCategories);
+    assertSameMetaStringSet(
+      "special-ad category country",
+      campaign.specialAdCategoryCountries,
+      plan.campaign.specialAdCategoryCountries,
+    );
+    campaignBudgetMode = hasMetaCampaignBudget(campaign) ? "campaign" : "adset";
+    if (selectedCampaignId && campaignBudgetMode !== plan.campaign.budgetMode) {
+      throw new Error(
+        `The selected Meta campaign now uses ${campaignBudgetMode}-level budgeting, not ${plan.campaign.budgetMode}-level budgeting. ` +
+        "Choose it again before publishing; no provider objects were written.",
+      );
+    }
+
+    if (selectedCampaignId) {
+      assertReusedParentActive("campaign", campaignId, campaign.configuredStatus, campaign.effectiveStatus);
+    } else {
+      const ownership = getCampaignOwnershipEvidence(plan, requestLog, responseLog, campaignId);
+      const provenance = reconciledObjects.provenance?.campaign;
+      if (!ownership.ownedByPlan && provenance !== "adopted") {
+        throw new Error("The resumed campaign is not owned by this publish plan; no provider objects were written.");
+      }
+      assertAdoptedOrCreatedCampaignMatchesPlan(
+        plan,
+        campaign,
+        campaignId,
+        campaignBudgetMode,
+        ownership.expectedName,
+        provenance === "adopted" ? "adopted" : "created",
+      );
+      if (ownership.ownedByPlan) {
+        reconciledObjects.ownedCampaignId = campaignId;
+        reconciledObjects.provenance!.campaign = "created";
+      } else {
+        delete reconciledObjects.ownedCampaignId;
+      }
+    }
+  }
+
+  if (target.mode === "existing_adset") {
+    const requestedIds = uniqueStrings(target.adSetIds);
+    const persistedIds = uniqueStrings(Object.values(reconciledObjects.adSetIds));
+    if (!sameStrings(requestedIds, persistedIds)) {
+      throw new Error("The persisted ad sets do not match the selected Meta ad sets; no provider objects were written.");
+    }
+
+    for (const adSetId of requestedIds) {
+      const adSet = await getMetaPreflightObject(
+        input,
+        requestLog,
+        responseLog,
+        `preflight.adset.${adSetId}`,
+        `/${adSetId}?fields=id,account_id,campaign_id,status,effective_status,configured_status,optimization_goal,billing_event,targeting,destination_type,promoted_object,daily_budget,lifetime_budget`,
+      );
+      if (optionalString(adSet.id) !== adSetId || optionalString(adSet.campaign_id) !== target.campaignId) {
+        throw new Error(`Meta ad set ${adSetId} does not belong to the selected campaign; no provider objects were written.`);
+      }
+      const adSetAccount = optionalString(adSet.account_id);
+      if (adSetAccount && normalizeMetaAccountId(adSetAccount) !== normalizeMetaAccountId(plan.setup.metaAdAccountId)) {
+        throw new Error(`Meta ad set ${adSetId} belongs to a different ad account; no provider objects were written.`);
+      }
+      assertReusedParentActive(
+        "ad set",
+        adSetId,
+        optionalString(adSet.configured_status),
+        optionalString(adSet.effective_status),
+      );
+      if (optionalString(adSet.optimization_goal) !== "LEAD_GENERATION" || optionalString(adSet.billing_event) !== "IMPRESSIONS") {
+        throw new Error(`Meta ad set ${adSetId} is not a compatible lead-generation ad set; no provider objects were written.`);
+      }
+      if (optionalString(adSet.destination_type) !== expectedMetaDestinationType(plan)) {
+        throw new Error(`Meta ad set ${adSetId} has a different destination type; no provider objects were written.`);
+      }
+      const promotedObject = recordValue(adSet.promoted_object);
+      if (optionalString(promotedObject?.page_id) !== plan.setup.pageId) {
+        throw new Error(`Meta ad set ${adSetId} is promoted by a different Page; no provider objects were written.`);
+      }
+      const targeting = recordValue(adSet.targeting);
+      if (!targeting || Object.keys(targeting).length === 0) {
+        throw new Error(`Meta ad set ${adSetId} has no verifiable targeting; no provider objects were written.`);
+      }
+      if (
+        campaignBudgetMode === "adset" &&
+        (optionalMetaBudget(adSet.daily_budget) ?? 0) <= 0 &&
+        (optionalMetaBudget(adSet.lifetime_budget) ?? 0) <= 0
+      ) {
+        throw new Error(`Meta ad set ${adSetId} has no ad-set budget; no provider objects were written.`);
+      }
+    }
+  }
+
+  return { campaignBudgetMode };
+}
+
+async function preflightAdoptedMetaDeliveryObjects(
+  plan: MetaPublishPlan,
+  input: MetaPublishExecutionInput,
+  requestLog: MetaProviderLogEntry[],
+  responseLog: MetaProviderLogEntry[],
+  reconciledObjects: MetaReconciledObjects,
+  campaignBudgetMode: "campaign" | "adset",
+) {
+  for (const adSet of plan.adSets) {
+    if (reconciledObjects.provenance?.adSets?.[adSet.localId] !== "adopted") continue;
+    const objectId = optionalString(reconciledObjects.adSetIds[adSet.localId]);
+    if (!objectId) throw new Error(`Adopted Meta ad set ${adSet.localId} is missing its persisted ID.`);
+    await assertAdoptedMetaAdSetMatchesPlan(
+      plan,
+      input,
+      requestLog,
+      responseLog,
+      reconciledObjects,
+      adSet,
+      objectId,
+      campaignBudgetMode,
+      `preflight.adopted_adset.${adSet.localId}`,
+    );
+  }
+
+  for (const ad of plan.ads) {
+    if (reconciledObjects.provenance?.ads?.[ad.localId] !== "adopted") continue;
+    const objectId = optionalString(reconciledObjects.adIds[ad.localId]);
+    if (!objectId) throw new Error(`Adopted Meta ad ${ad.localId} is missing its persisted ID.`);
+    await assertAdoptedMetaAdMatchesPlan(
+      plan,
+      input,
+      requestLog,
+      responseLog,
+      reconciledObjects,
+      ad,
+      objectId,
+      `preflight.adopted_ad.${ad.localId}`,
+    );
+  }
+}
+
+async function assertAdoptedMetaCampaignMatchesPlan(
+  plan: MetaPublishPlan,
+  input: MetaPublishExecutionInput,
+  requestLog: MetaProviderLogEntry[],
+  responseLog: MetaProviderLogEntry[],
+  campaignId: string,
+  campaignBudgetMode: "campaign" | "adset",
+  step: string,
+) {
+  const campaign = await getMetaCampaignBidStrategy(input, requestLog, responseLog, step, campaignId);
+  assertAdoptedOrCreatedCampaignMatchesPlan(
+    plan,
+    campaign,
+    campaignId,
+    campaignBudgetMode,
+    buildMetaProviderObjectName(plan, plan.campaign.localId, plan.campaign.name),
+    "adopted",
+  );
+}
+
+function assertAdoptedOrCreatedCampaignMatchesPlan(
+  plan: MetaPublishPlan,
+  campaign: MetaCampaignBidStrategyState,
+  campaignId: string,
+  campaignBudgetMode: "campaign" | "adset",
+  expectedName: string,
+  provenance: MetaReconciledObjectProvenance,
+) {
+  if (campaign.id !== campaignId) {
+    throw new Error(`Meta returned a different ${provenance} campaign; refusing to continue.`);
+  }
+  assertCampaignAccountMatches(plan.setup.metaAdAccountId, campaign);
+  if (campaign.name !== expectedName || campaign.objective !== plan.campaign.objective) {
+    throw new Error(`The ${provenance} Meta campaign no longer matches this publish plan.`);
+  }
+  assertSameMetaStringSet("special-ad category", campaign.specialAdCategories, plan.campaign.specialAdCategories);
+  assertSameMetaStringSet(
+    "special-ad category country",
+    campaign.specialAdCategoryCountries,
+    plan.campaign.specialAdCategoryCountries,
+  );
+  if (campaign.configuredStatus !== "PAUSED" || campaign.effectiveStatus !== "PAUSED") {
+    throw new Error(`The ${provenance} Meta campaign is not exactly PAUSED; refusing to continue.`);
+  }
+  const liveBudgetMode = hasMetaCampaignBudget(campaign) ? "campaign" : "adset";
+  if (liveBudgetMode !== campaignBudgetMode) {
+    throw new Error(`The ${provenance} Meta campaign budget owner no longer matches this publish plan.`);
+  }
+  if (campaignBudgetMode === "campaign") {
+    if (
+      campaign.dailyBudgetMinorUnits !== requireExplicitDailyBudget(plan) ||
+      (campaign.lifetimeBudgetMinorUnits ?? 0) !== 0
+    ) {
+      throw new Error(`The ${provenance} Meta campaign budget no longer matches this publish plan.`);
+    }
+    if (provenance === "adopted" && campaign.bidStrategy !== META_LOWEST_COST_BID_STRATEGY) {
+      throw new Error("The adopted Meta campaign does not have the approved lowest-cost bid strategy.");
+    }
+  }
+}
+
+async function assertAdoptedMetaAdSetMatchesPlan(
+  plan: MetaPublishPlan,
+  input: MetaPublishExecutionInput,
+  requestLog: MetaProviderLogEntry[],
+  responseLog: MetaProviderLogEntry[],
+  reconciledObjects: MetaReconciledObjects,
+  adSet: MetaPublishAdSetPlan,
+  objectId: string,
+  campaignBudgetMode: "campaign" | "adset",
+  step: string,
+) {
+  const payload = await getMetaPreflightObject(
+    input,
+    requestLog,
+    responseLog,
+    step,
+    `/${objectId}?fields=id,name,account_id,campaign_id,configured_status,effective_status,status,optimization_goal,billing_event,targeting,destination_type,promoted_object,daily_budget,lifetime_budget,bid_strategy`,
+  );
+  const promotedObject = recordValue(payload.promoted_object);
+  const targeting = recordValue(payload.targeting);
+  const expectedCampaignId = optionalString(reconciledObjects.campaignId);
+  if (
+    optionalString(payload.id) !== objectId ||
+    optionalString(payload.name) !== buildMetaProviderObjectName(plan, adSet.localId, adSet.name) ||
+    !sameMetaAccount(plan.setup.metaAdAccountId, optionalString(payload.account_id)) ||
+    !expectedCampaignId ||
+    optionalString(payload.campaign_id) !== expectedCampaignId ||
+    !metaObjectConfirmsPaused(payload) ||
+    optionalString(payload.optimization_goal) !== adSet.optimizationGoal ||
+    optionalString(payload.billing_event) !== adSet.billingEvent ||
+    optionalString(payload.destination_type) !== expectedMetaDestinationType(plan) ||
+    optionalString(promotedObject?.page_id) !== plan.setup.pageId ||
+    !targeting ||
+    JSON.stringify(canonicalizeMetaExecutionValue(targeting)) !== JSON.stringify(canonicalizeMetaExecutionValue(adSet.targeting))
+  ) {
+    throw new Error(`Adopted Meta ad set ${objectId} does not authoritatively match this publish plan.`);
+  }
+  const dailyBudget = optionalMetaBudget(payload.daily_budget) ?? 0;
+  const lifetimeBudget = optionalMetaBudget(payload.lifetime_budget) ?? 0;
+  if (campaignBudgetMode === "adset") {
+    if (
+      dailyBudget !== requireExplicitDailyBudget(plan) ||
+      lifetimeBudget !== 0 ||
+      optionalString(payload.bid_strategy) !== META_LOWEST_COST_BID_STRATEGY
+    ) {
+      throw new Error(`Adopted Meta ad set ${objectId} has different budget settings.`);
+    }
+  } else if (dailyBudget !== 0 || lifetimeBudget !== 0) {
+    throw new Error(`Adopted Meta ad set ${objectId} unexpectedly owns a budget.`);
+  }
+}
+
+async function assertAdoptedMetaAdMatchesPlan(
+  plan: MetaPublishPlan,
+  input: MetaPublishExecutionInput,
+  requestLog: MetaProviderLogEntry[],
+  responseLog: MetaProviderLogEntry[],
+  reconciledObjects: MetaReconciledObjects,
+  ad: MetaPublishAdPlan,
+  objectId: string,
+  step: string,
+) {
+  const payload = await getMetaPreflightObject(
+    input,
+    requestLog,
+    responseLog,
+    step,
+    `/${objectId}?fields=id,name,account_id,adset_id,creative{id},configured_status,effective_status,status`,
+  );
+  const creative = recordValue(payload.creative);
+  const expectedAdSetId = optionalString(reconciledObjects.adSetIds[ad.adSetLocalId]);
+  const expectedCreativeId = optionalString(reconciledObjects.creativeIds[ad.creativeLocalId]);
+  if (
+    optionalString(payload.id) !== objectId ||
+    optionalString(payload.name) !== buildMetaProviderObjectName(plan, ad.localId, ad.name) ||
+    !sameMetaAccount(plan.setup.metaAdAccountId, optionalString(payload.account_id)) ||
+    !expectedAdSetId ||
+    optionalString(payload.adset_id) !== expectedAdSetId ||
+    !expectedCreativeId ||
+    optionalString(creative?.id) !== expectedCreativeId ||
+    !metaObjectConfirmsPaused(payload)
+  ) {
+    throw new Error(`Adopted Meta ad ${objectId} does not authoritatively match this publish plan.`);
+  }
+}
+
+function sameMetaAccount(expectedAccountId: string, actualAccountId: string | null): boolean {
+  return actualAccountId !== null && normalizeMetaAccountId(actualAccountId) === normalizeMetaAccountId(expectedAccountId);
+}
+
+function metaObjectConfirmsPaused(payload: Record<string, unknown>): boolean {
+  const configured = optionalString(payload.configured_status)?.toUpperCase() ?? null;
+  const effective = optionalString(payload.effective_status)?.toUpperCase() ?? null;
+  return configured === "PAUSED" &&
+    (effective === "PAUSED" || effective?.endsWith("_PAUSED") === true);
+}
+
+async function getMetaPreflightObject(
+  input: MetaPublishExecutionInput,
+  requestLog: MetaProviderLogEntry[],
+  responseLog: MetaProviderLogEntry[],
+  step: string,
+  path: string,
+  accessToken = input.accessToken,
+): Promise<Record<string, unknown>> {
+  const createdAt = new Date().toISOString();
+  requestLog.push({ step, method: "GET", path, createdAt });
+  const response = await (input.fetchImpl ?? fetch)(
+    `https://graph.facebook.com/${input.graphVersion ?? DEFAULT_META_GRAPH_VERSION}${path}`,
+    {
+      method: "GET",
+      headers: { authorization: `Bearer ${accessToken}` },
+      signal: AbortSignal.timeout(30_000),
+    },
+  );
+  const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+  responseLog.push({ step, method: "GET", path, response: payload, status: response.status, createdAt: new Date().toISOString() });
+  if (!response.ok) {
+    throw new Error(metaProviderErrorMessage(payload, `Meta preflight ${step} failed with ${response.status}.`));
+  }
+  return payload;
+}
+
+function requireExplicitDailyBudget(plan: MetaPublishPlan): number {
+  const value = plan.controls.dailyBudgetMinorUnits;
+  if (!Number.isInteger(value) || (value ?? 0) <= 0) {
+    throw new Error("A positive integer daily budget is required before any Meta objects are written.");
+  }
+  return value!;
+}
+
+function requireExplicitFulfilmentUrl(fulfilment: MetaOfferFulfilment): string {
+  const issues = validateMetaOfferFulfilment(fulfilment);
+  if (issues.length > 0) {
+    throw new Error(`Offer fulfilment is incomplete: ${issues.join("; ")}`);
+  }
+  const value = fulfilment.fulfilmentUrl.trim();
+  if (!value || !isHttpsDestination(value)) {
+    throw new Error("Offer, guide and promise delivery requires an explicit HTTPS fulfilment URL before any Meta objects are written.");
+  }
+  return value;
+}
+
+function leadFormDeliveryUrl(plan: MetaPublishPlan, leadForm: MetaPublishLeadFormPlan): string {
+  const fulfilment = plan.controls.fulfilment;
+  if (!fulfilment) return leadForm.thankYouWebsiteUrl;
+
+  const exactUrl = requireExplicitFulfilmentUrl(fulfilment);
+  if (
+    !leadForm.fulfilment ||
+    leadForm.fulfilment.fulfilmentUrl.trim() !== exactUrl ||
+    leadForm.thankYouWebsiteUrl.trim() !== exactUrl
+  ) {
+    throw new Error(
+      "The Instant Form thank-you/follow-up URL does not match the approved fulfilment URL; no provider objects were written.",
+    );
+  }
+  return exactUrl;
+}
+
+function expectedMetaDestinationType(plan: MetaPublishPlan): "ON_AD" | "WEBSITE" {
+  return (plan.controls.destinationMode ?? (plan.leadForms.length > 0 ? "instant_form" : "website")) === "instant_form"
+    ? "ON_AD"
+    : "WEBSITE";
+}
+
+function assertReusedParentActive(
+  kind: "campaign" | "ad set",
+  id: string,
+  configuredStatus: string | null,
+  effectiveStatus: string | null,
+) {
+  const configured = configuredStatus?.toUpperCase() ?? null;
+  const effective = effectiveStatus?.toUpperCase() ?? null;
+  if (configured !== "ACTIVE" || effective !== "ACTIVE") {
+    throw new Error(`The reused Meta ${kind} ${id} is not active; Blockwise will not mutate or activate reused parents.`);
+  }
+}
+
+function assertSameMetaStringSet(label: string, live: string[], expected: string[]) {
+  if (!sameStrings(uniqueStrings(live.map((value) => value.toUpperCase())), uniqueStrings(expected.map((value) => value.toUpperCase())))) {
+    throw new Error(`The selected Meta campaign ${label} changed; choose it again before publishing.`);
+  }
+}
+
+function uniqueStrings(values: string[]): string[] {
+  return [...new Set(values.map((value) => value.trim()).filter(Boolean))].sort();
+}
+
+function sameStrings(left: string[], right: string[]): boolean {
+  return left.length === right.length && left.every((value, index) => value === right[index]);
+}
+
+function recordValue(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
 }
 
 async function resolveCreativeImageHash(
@@ -964,8 +1628,15 @@ async function checkpointMetaPublishProgress(
       ...reconciledObjects,
       leadFormIds: { ...reconciledObjects.leadFormIds },
       adSetIds: { ...reconciledObjects.adSetIds },
+      ownedAdSetIds: { ...(reconciledObjects.ownedAdSetIds ?? {}) },
       creativeIds: { ...reconciledObjects.creativeIds },
       adIds: { ...reconciledObjects.adIds },
+      ownedAdIds: { ...(reconciledObjects.ownedAdIds ?? {}) },
+      provenance: {
+        ...(reconciledObjects.provenance ?? {}),
+        adSets: { ...(reconciledObjects.provenance?.adSets ?? {}) },
+        ads: { ...(reconciledObjects.provenance?.ads ?? {}) },
+      },
     },
     lastError: null,
     updatedAt: new Date().toISOString(),
@@ -992,6 +1663,7 @@ async function repairOwnedCampaignBidStrategyIfNeeded(
   reconciledObjects: MetaReconciledObjects,
   campaignId: string,
 ): Promise<boolean> {
+  if (plan.campaign.budgetMode === "adset") return false;
   const ownership = getCampaignOwnershipEvidence(plan, requestLog, responseLog, campaignId);
   if (!ownership.ownedByPlan || !ownership.predatesBidStrategyContract) return false;
   if (plan.status !== "publishing") {
@@ -1102,34 +1774,184 @@ function getCampaignOwnershipEvidence(
       isSuccessfulMetaResponse(entry) &&
       entry.response?.id === campaignId,
   );
-  const reconcileRequested = requestLog.some(
-    (entry) =>
-      entry.step === "campaign.reconcile_missing" &&
-      entry.method === "GET" &&
-      entry.path.startsWith(`/${plan.setup.metaAdAccountId}/campaigns?`),
-  );
-  const reconciledByExactMarker = reconcileRequested && responseLog.some(
-    (entry) =>
-      entry.step === "campaign.reconcile_missing" &&
-      entry.method === "GET" &&
-      entry.path.startsWith(`/${plan.setup.metaAdAccountId}/campaigns?`) &&
-      isSuccessfulMetaResponse(entry) &&
-      entry.response?.matchedObjectId === campaignId,
-  );
-  const ownedByPlan = createdByPlan || reconciledByExactMarker;
-
   return {
     expectedName,
-    ownedByPlan,
-    predatesBidStrategyContract: ownedByPlan && (
-      !creationRequest || !Object.prototype.hasOwnProperty.call(creationRequest.body ?? {}, "bid_strategy")
-    ),
+    ownedByPlan: createdByPlan,
+    predatesBidStrategyContract: createdByPlan &&
+      !Object.prototype.hasOwnProperty.call(creationRequest?.body ?? {}, "bid_strategy"),
   };
 }
 
+export type MetaDurablyCreatedObjects = {
+  campaignId?: string;
+  adSetIds: Record<string, string>;
+  adIds: Record<string, string>;
+};
+
+/**
+ * Ownership is reconstructed from the immutable create exchange, not from a
+ * mutable `owned*` map or an exact-name lookup. A successful response that
+ * binds the deterministic create request to the persisted ID is required.
+ */
+export function getDurablyCreatedMetaObjects(plan: MetaPublishPlan): MetaDurablyCreatedObjects {
+  const created: MetaDurablyCreatedObjects = { adSetIds: {}, adIds: {} };
+  const campaignId = optionalString(plan.reconciledObjects.campaignId);
+  if (campaignId && hasDurableMetaCreateExchange(
+    plan,
+    "campaign.create",
+    `/${plan.setup.metaAdAccountId}/campaigns`,
+    buildMetaProviderObjectName(plan, plan.campaign.localId, plan.campaign.name),
+    campaignId,
+  )) {
+    created.campaignId = campaignId;
+  }
+
+  for (const adSet of plan.adSets) {
+    if (adSet.existingId) continue;
+    const objectId = optionalString(plan.reconciledObjects.adSetIds[adSet.localId]);
+    if (objectId && hasDurableMetaCreateExchange(
+      plan,
+      `adset.${adSet.localId}`,
+      `/${plan.setup.metaAdAccountId}/adsets`,
+      buildMetaProviderObjectName(plan, adSet.localId, adSet.name),
+      objectId,
+    )) {
+      created.adSetIds[adSet.localId] = objectId;
+    }
+  }
+
+  for (const ad of plan.ads) {
+    const objectId = optionalString(plan.reconciledObjects.adIds[ad.localId]);
+    if (objectId && hasDurableMetaCreateExchange(
+      plan,
+      `ad.${ad.localId}`,
+      `/${plan.setup.metaAdAccountId}/ads`,
+      buildMetaProviderObjectName(plan, ad.localId, ad.name),
+      objectId,
+    )) {
+      created.adIds[ad.localId] = objectId;
+    }
+  }
+
+  return created;
+}
+
+function synchronizeMetaCreationEvidence(
+  plan: MetaPublishPlan,
+  requestLog: MetaProviderLogEntry[],
+  responseLog: MetaProviderLogEntry[],
+  reconciledObjects: MetaReconciledObjects,
+) {
+  const evidencePlan: MetaPublishPlan = { ...plan, requestLog, responseLog, reconciledObjects };
+  const durable = getDurablyCreatedMetaObjects(evidencePlan);
+  const provenance = reconciledObjects.provenance ??= { adSets: {}, ads: {} };
+  provenance.adSets ??= {};
+  provenance.ads ??= {};
+
+  const campaignId = optionalString(reconciledObjects.campaignId);
+  if (campaignId && durable.campaignId === campaignId) {
+    reconciledObjects.ownedCampaignId = campaignId;
+    provenance.campaign = "created";
+  } else {
+    delete reconciledObjects.ownedCampaignId;
+    if (campaignId && hasExactNameAdoptionExchange(
+      evidencePlan,
+      "campaign.reconcile_missing",
+      `/${plan.setup.metaAdAccountId}/campaigns`,
+      campaignId,
+    )) {
+      provenance.campaign = "adopted";
+    } else if (provenance.campaign === "created") {
+      delete provenance.campaign;
+    }
+  }
+
+  for (const [localId, objectId] of Object.entries(reconciledObjects.adSetIds)) {
+    if (durable.adSetIds[localId] === objectId) {
+      (reconciledObjects.ownedAdSetIds ??= {})[localId] = objectId;
+      provenance.adSets[localId] = "created";
+    } else {
+      delete reconciledObjects.ownedAdSetIds?.[localId];
+      if (hasExactNameAdoptionExchange(
+        evidencePlan,
+        `adset.${localId}.reconcile_missing`,
+        `/${plan.setup.metaAdAccountId}/adsets`,
+        objectId,
+      )) {
+        provenance.adSets[localId] = "adopted";
+      } else if (provenance.adSets[localId] === "created") {
+        delete provenance.adSets[localId];
+      }
+    }
+  }
+
+  for (const [localId, objectId] of Object.entries(reconciledObjects.adIds)) {
+    if (durable.adIds[localId] === objectId) {
+      (reconciledObjects.ownedAdIds ??= {})[localId] = objectId;
+      provenance.ads[localId] = "created";
+    } else {
+      delete reconciledObjects.ownedAdIds?.[localId];
+      if (hasExactNameAdoptionExchange(
+        evidencePlan,
+        `ad.${localId}.reconcile_missing`,
+        `/${plan.setup.metaAdAccountId}/ads`,
+        objectId,
+      )) {
+        provenance.ads[localId] = "adopted";
+      } else if (provenance.ads[localId] === "created") {
+        delete provenance.ads[localId];
+      }
+    }
+  }
+}
+
+function hasExactNameAdoptionExchange(
+  plan: MetaPublishPlan,
+  step: string,
+  edgePath: string,
+  objectId: string,
+): boolean {
+  const requested = plan.requestLog.some((entry) =>
+    entry.step === step && entry.method === "GET" && entry.path.startsWith(`${edgePath}?`)
+  );
+  return requested && plan.responseLog.some((entry) =>
+    entry.step === step &&
+    entry.method === "GET" &&
+    entry.path.startsWith(`${edgePath}?`) &&
+    isSuccessfulMetaResponse(entry) &&
+    entry.response?.matchedObjectId === objectId
+  );
+}
+
+function hasDurableMetaCreateExchange(
+  plan: MetaPublishPlan,
+  step: string,
+  path: string,
+  expectedName: string,
+  objectId: string,
+): boolean {
+  const requested = plan.requestLog.some((entry) =>
+    entry.step === step &&
+    entry.method === "POST" &&
+    entry.path === path &&
+    entry.body?.name === expectedName
+  );
+  return requested && plan.responseLog.some((entry) =>
+    entry.step === step &&
+    entry.method === "POST" &&
+    entry.path === path &&
+    isSuccessfulMetaResponse(entry) &&
+    entry.response?.id === objectId
+  );
+}
+
 type MetaCampaignBidStrategyState = {
+  id: string | null;
   name: string | null;
   accountId: string | null;
+  objective: string | null;
+  specialAdCategories: string[];
+  specialAdCategoryCountries: string[];
   dailyBudgetMinorUnits: number | null;
   lifetimeBudgetMinorUnits: number | null;
   configuredStatus: string | null;
@@ -1144,7 +1966,7 @@ async function getMetaCampaignBidStrategy(
   step: string,
   campaignId: string,
 ): Promise<MetaCampaignBidStrategyState> {
-  const path = `/${campaignId}?fields=id,name,account_id,daily_budget,lifetime_budget,status,effective_status,configured_status,bid_strategy`;
+  const path = `/${campaignId}?fields=id,name,account_id,objective,special_ad_categories,special_ad_category_country,daily_budget,lifetime_budget,status,effective_status,configured_status,bid_strategy`;
   const createdAt = new Date().toISOString();
   requestLog.push({ step, method: "GET", path, createdAt });
   const response = await (input.fetchImpl ?? fetch)(
@@ -1168,12 +1990,16 @@ async function getMetaCampaignBidStrategy(
     throw new Error(metaProviderErrorMessage(payload, `Meta campaign verification failed with ${response.status}.`));
   }
   return {
+    id: optionalString(payload.id),
     name: optionalString(payload.name),
     accountId: optionalString(payload.account_id),
+    objective: optionalString(payload.objective),
+    specialAdCategories: metaStringList(payload.special_ad_categories),
+    specialAdCategoryCountries: metaStringList(payload.special_ad_category_country),
     dailyBudgetMinorUnits: optionalMetaBudget(payload.daily_budget),
     lifetimeBudgetMinorUnits: optionalMetaBudget(payload.lifetime_budget),
-    configuredStatus: optionalString(payload.configured_status ?? payload.status),
-    effectiveStatus: optionalString(payload.effective_status ?? payload.status),
+    configuredStatus: optionalString(payload.configured_status),
+    effectiveStatus: optionalString(payload.effective_status),
     bidStrategy: optionalString(payload.bid_strategy),
   };
 }
@@ -1369,9 +2195,25 @@ async function getMetaObjectStatus(
 function buildAdSetPlans(pack: AdStudioCampaignPack, controls: MetaPublishControls): MetaPublishAdSetPlan[] {
   const suburb = pack.campaign.market.suburb;
   const targeting = buildTargeting(controls);
+  const target = controls.target;
+  if (target?.mode === "existing_adset") {
+    return target.adSetIds.map((existingId, index) => ({
+      localId: "adset_existing_" + (index + 1),
+      existingId,
+      name: suburb + " existing ad set " + (index + 1),
+      campaignLocalId: "campaign_main",
+      billingEvent: "IMPRESSIONS",
+      optimizationGoal: "LEAD_GENERATION",
+      status: "PAUSED",
+      dailyBudgetMinorUnits: controls.dailyBudgetMinorUnits ?? 2000,
+      targeting,
+      startTime: controls.schedule?.startTime ?? null,
+      endTime: controls.schedule?.endTime ?? null,
+    }));
+  }
   return [{
     localId: "adset_primary",
-    name: `${suburb} homeowners`,
+    name: suburb + " homeowners",
     campaignLocalId: "campaign_main",
     billingEvent: "IMPRESSIONS",
     optimizationGoal: "LEAD_GENERATION",
@@ -1532,22 +2374,23 @@ function isHttpsDestination(value: string): boolean {
   try { return new URL(value).protocol === "https:"; } catch { return false; }
 }
 
-function buildAdPlans(pack: AdStudioCampaignPack): MetaPublishAdPlan[] {
-  return pack.copyPacks.slice(0, 6).map((copy, index) => {
+function buildAdPlans(pack: AdStudioCampaignPack, adSets: MetaPublishAdSetPlan[]): MetaPublishAdPlan[] {
+  const copies = pack.copyPacks.slice(0, 6);
+  return adSets.flatMap((adSet, adSetIndex) => copies.map((copy, index) => {
     const variant = pack.variants.find((item) => item.variantId === copy.variantId) ?? null;
     const variantTag: MetaAdVariantTag | null = variant
       ? { variantId: variant.variantId, angle: variant.angle, template: pack.campaign.templateKey ?? pack.campaign.offerId ?? null }
       : null;
-
+    const ordinal = adSetIndex * copies.length + index + 1;
     return {
-      localId: `ad_${index + 1}`,
-      name: `${pack.campaign.name} ad ${index + 1}${variantTag ? buildAdVariantTagSuffix(variantTag) : ""}`,
-      adSetLocalId: "adset_primary",
-      creativeLocalId: `creative_${index + 1}`,
-      status: "PAUSED",
+      localId: "ad_" + ordinal,
+      name: pack.campaign.name + " ad " + ordinal + (variantTag ? buildAdVariantTagSuffix(variantTag) : ""),
+      adSetLocalId: adSet.localId,
+      creativeLocalId: "creative_" + (index + 1),
+      status: "PAUSED" as const,
       variantTag,
     };
-  });
+  }));
 }
 
 /**
@@ -1566,10 +2409,20 @@ export function buildAdVariantTagSuffix(tag: MetaAdVariantTag): string {
   return ` | bw:${parts.join(";")}`;
 }
 
-function normalizeMetaPublishControls(controls: MetaPublishControls | undefined, pack: AdStudioCampaignPack): MetaPublishControls {
+function normalizeMetaPublishControls(
+  controls: MetaPublishControls | undefined,
+  pack: AdStudioCampaignPack,
+  input: { existingMetaCampaignId?: string | null; existingMetaCampaignBudgetMode?: "campaign" | "adset" },
+): MetaPublishControls {
   const destinationUrl = controls?.destinationUrl?.trim();
+  const suppliedTarget = controls?.target;
+  const target: MetaPublishTarget = suppliedTarget
+    ?? (input.existingMetaCampaignId?.trim()
+      ? { mode: "existing_campaign_new_adset", campaignId: input.existingMetaCampaignId.trim() }
+      : { mode: "new_campaign_new_adset" });
 
   return {
+    target,
     dailyBudgetMinorUnits: controls?.dailyBudgetMinorUnits && controls.dailyBudgetMinorUnits > 0
       ? Math.round(controls.dailyBudgetMinorUnits)
       : 2000,
@@ -1747,8 +2600,11 @@ function emptyReconciledObjects(): MetaReconciledObjects {
   return {
     leadFormIds: {},
     adSetIds: {},
+    ownedAdSetIds: {},
     creativeIds: {},
     adIds: {},
+    ownedAdIds: {},
+    provenance: { adSets: {}, ads: {} },
   };
 }
 
@@ -1768,6 +2624,17 @@ function normalizeMetaAccountId(value: string): string {
 
 function optionalString(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function metaStringList(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.flatMap((entry) => {
+      const normalized = optionalString(entry);
+      return normalized ? [normalized] : [];
+    });
+  }
+  const normalized = optionalString(value);
+  return normalized ? [normalized] : [];
 }
 
 function optionalMetaBudget(value: unknown): number | null {
