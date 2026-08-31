@@ -80,3 +80,7 @@ Steven_Shelley_Resume.*
 record-meta-segments.cmd
 .codex/
 .impeccable/
+
+# Local tool logs must never be committed
+tailwindcss-*.log
+*.tsbuildinfo

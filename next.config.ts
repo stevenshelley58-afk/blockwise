@@ -69,12 +69,28 @@ const nextConfig: NextConfig = {
   },
   async headers() {
     // Security headers for the standalone Next server behind Caddy.
-    // connect-src is composed from the runtime origins the app actually
-    // talks to from the browser: its own origin, the Supabase REST/auth
-    // host, the Sentry ingest host, and Vercel analytics in preview.
+    // Directives are composed from the verified browser-loaded provider
+    // inventory (do not add origins without a code reference):
+    // - script: self, Next inline bootstrap, Cloudflare Turnstile
+    //   (components/auth/turnstile-verification.tsx), Google Tag Manager
+    //   gtag.js (components/marketing-analytics.tsx), Vercel analytics.
+    // - frame: Cloudflare Turnstile widget iframe.
+    // - image/media: self, data:, blob: (Konva canvas), Meta ad creatives
+    //   rendered by Ad Radar/creative viewer (*.fbcdn.net,
+    //   *.cdninstagram.com), Facebook page images.
+    // - connect: self, Supabase REST/auth, Sentry ingest, Vercel analytics,
+    //   Google Analytics/gtag collect endpoints.
     const supabaseOrigin = safeOrigin(process.env.NEXT_PUBLIC_SUPABASE_URL);
     const sentryOrigin = sentryIngestOrigin(process.env.NEXT_PUBLIC_SENTRY_DSN);
-    const connectSrc = ["'self'", supabaseOrigin, sentryOrigin, "https://va.vercel-scripts.com"]
+    const connectSrc = [
+      "'self'",
+      supabaseOrigin,
+      sentryOrigin,
+      "https://va.vercel-scripts.com",
+      "https://www.google-analytics.com",
+      "https://analytics.google.com",
+      "https://www.googletagmanager.com",
+    ]
       .filter((value): value is string => Boolean(value))
       .join(" ");
     return [
@@ -87,7 +103,20 @@ const nextConfig: NextConfig = {
             // as follow-up hardening. style-src needs it for the Tailwind/
             // shadcn runtime styles. Konva/canvas rendering uses blob: URLs.
             key: "Content-Security-Policy",
-            value: `default-src 'self'; script-src 'self' 'unsafe-inline' https://va.vercel-scripts.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src ${connectSrc}; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'`,
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com https://www.googletagmanager.com https://va.vercel-scripts.com",
+              "style-src 'self' 'unsafe-inline'",
+              "img-src 'self' data: blob: https://*.fbcdn.net https://*.cdninstagram.com https://www.facebook.com",
+              "media-src 'self' blob: https://*.fbcdn.net https://*.cdninstagram.com",
+              "font-src 'self' data:",
+              `connect-src ${connectSrc}`,
+              "frame-src 'self' https://challenges.cloudflare.com",
+              "frame-ancestors 'none'",
+              "object-src 'none'",
+              "base-uri 'self'",
+              "form-action 'self'",
+            ].join("; "),
           },
           { key: "X-Frame-Options", value: "DENY" },
           { key: "X-Content-Type-Options", value: "nosniff" },

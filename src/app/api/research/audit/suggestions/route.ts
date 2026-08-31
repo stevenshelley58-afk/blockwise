@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = createSupabaseServiceClient();
     const ip = getClientIp(request.headers);
-    const rateLimit = await checkRateLimit(supabase, null, ip, {
+    const rateLimit = await checkRateLimit(null, ip, {
       bucket: "public-audit-suggestions",
       maxRequests: 10,
       windowSeconds: 60 * 60,
