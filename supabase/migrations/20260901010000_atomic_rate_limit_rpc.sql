@@ -95,8 +95,16 @@ begin
     return;
   end if;
 
-  -- Rejected: report the actual window reset. The stored limit is now the
-  -- requested one (set above by the conflict update), so this is consistent.
+  -- Rejected: the WHERE guard skipped the update, so the stored limit was
+  -- NOT synced to the requested one by the upsert. Sync it now (no counter
+  -- increment on rejected calls) so the stored state always reflects the
+  -- caller's configured limit, then report the actual window reset.
+  update public.rate_limits
+  set limit_count = p_limit_count
+  where workspace_id is not distinct from p_workspace_id
+    and subject_key = btrim(p_subject_key)
+    and bucket = p_bucket;
+
   select greatest(1, ceil(extract(epoch from (rl.resets_at - now())))::integer)
     into v_retry_after
   from public.rate_limits rl
