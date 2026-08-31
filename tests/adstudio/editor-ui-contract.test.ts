@@ -57,8 +57,12 @@ describe("customer Ad Studio workbench contract", () => {
     assert.match(shell, /key === "y"/);
     assert.match(colours, /Add workspace colours in Brand Studio/);
     assert.match(colours, /useId/);
-    assert.match(colours, /aria-labelledby=\{`\$\{switchId\}-label`\}/);
-    assert.doesNotMatch(colours, /<Label[\s\S]*<Switch/);
+    // Three mutually exclusive colour modes (template / workspace / custom),
+    // exposed as an accessible radio group with per-role custom pickers.
+    assert.match(colours, /role="radiogroup"/);
+    assert.match(colours, /aria-label="Colour mode"/);
+    assert.match(colours, /type="color"/);
+    assert.doesNotMatch(colours, /<Switch/);
     assert.doesNotMatch(shell, /Safe deterministic draft|AI draft/);
   });
 
