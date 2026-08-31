@@ -10,7 +10,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(6);
+select plan(7);
 
 -- Test fixtures: u1 is a plain user, u2 is an owner operator.
 insert into auth.users (
@@ -92,6 +92,8 @@ select set_config(
   '{"role":"authenticated","sub":"d2000000-0000-4000-8000-000000000002"}',
   true
 );
+-- The RPC reads the per-claim setting that PostgREST populates.
+select set_config('request.jwt.claim.sub', 'd2000000-0000-4000-8000-000000000002', true);
 
 select lives_ok(
   $$
