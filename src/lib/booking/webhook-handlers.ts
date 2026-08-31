@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { BookingWebhookError, verifyCalcomWebhook } from "./provider.ts";
-import { parseSnagtimeWebhook, verifySnagtimeWebhook } from "./snagtime-contract.ts";
+import { parseSnagtimeWebhook, resolveSnagtimeEventId, verifySnagtimeWebhook } from "./snagtime-contract.ts";
 import { applyProviderBookingEvent, applyBookingWebhook, bookingEventId } from "./service.ts";
 
 /**
@@ -72,17 +72,16 @@ export async function handleSnagtimeBookingWebhook(request: Request): Promise<Ne
   } catch {
     return NextResponse.json({ error: "Invalid booking webhook JSON." }, { status: 400 });
   }
-  const providerEventId = bookingEventId(
-    rawBody,
-    request.headers.get("x-snagtime-event-id") ?? request.headers.get("x-webhook-id"),
-  );
   try {
+    // The event identity is the HMAC-covered envelope id; an unmatched or
+    // missing transport header event id is rejected rather than trusted.
+    const providerEventId = resolveSnagtimeEventId(raw, request.headers.get("x-snagtime-event-id"));
     const event = parseSnagtimeWebhook({ raw, providerEventId });
     const result = await applyProviderBookingEvent({ event });
     return NextResponse.json({ received: true, duplicate: result.duplicate });
   } catch (error) {
-    if (error instanceof BookingWebhookError && error.status === 202) {
-      return NextResponse.json({ received: true, ignored: true }, { status: 202 });
+    if (error instanceof BookingWebhookError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
     }
     console.error("Booking webhook failed", error);
     return NextResponse.json({ error: "Booking webhook failed." }, { status: 500 });

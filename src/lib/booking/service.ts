@@ -7,6 +7,7 @@ import {
   buildHostedBookingUrl,
   normalizeBookingMarket,
   parseCalcomWebhook,
+  resolveBookingProvider,
   verifyBookingInvitationToken,
   type BookingMarket,
   type BookingState,
@@ -83,16 +84,18 @@ export async function createBookingInvitation(input: {
   if (existingError) throw new Error(`Booking invitation could not be checked: ${existingError.message}`);
   if (existing) return normalizeBooking(existing as BookingRow);
   const invitationId = randomUUID();
+  const provider = resolveBookingProvider();
   const hostedBookingUrl = buildHostedBookingUrl({
     market: input.market,
     invitationId,
+    provider,
   });
   const { data, error } = await service
     .from("workspace_onboarding_bookings")
     .insert({
       id: invitationId,
       workspace_id: input.workspaceId,
-      provider: "calcom",
+      provider,
       market: input.market,
       status: "link_sent",
       mutation_key: normalizedMutationKey,
@@ -309,13 +312,25 @@ async function persistProviderBooking(
 
   const { data: existing } = await service
     .from("workspace_onboarding_bookings")
-    .select("id,workspace_id,market,hosted_booking_url")
+    .select("id,workspace_id,market,hosted_booking_url,status,booked_at,cancelled_at,completed_at")
     .eq("provider", event.provider)
     .eq("provider_booking_id", event.providerBookingId)
     .maybeSingle();
   let result;
   if (existing?.id) {
     assertBookingWorkspaceBinding(existing.workspace_id, workspaceId);
+    if (isOutOfOrderEvent(existing, event.occurredAt)) {
+      // Never regress the booking: a late-arriving (or replayed) event older
+      // than the latest recorded lifecycle transition is acknowledged without
+      // being applied.
+      const { data: current, error: reloadError } = await service
+        .from("workspace_onboarding_bookings")
+        .select("*")
+        .eq("id", existing.id)
+        .maybeSingle();
+      if (reloadError) throw new Error(`Booking state could not be stored: ${reloadError.message}`);
+      if (current) return normalizeBooking(current as BookingRow);
+    }
     result = await service
       .from("workspace_onboarding_bookings")
       .update(patch)
@@ -350,6 +365,30 @@ export function assertBookingWorkspaceBinding(
   if (existingWorkspaceId !== resolvedWorkspaceId) {
     throw new Error("Booking provider ID is already bound to another workspace.");
   }
+}
+
+/**
+ * Out-of-order protection: an event whose occurredAt is not after the latest
+ * recorded lifecycle transition (booked/rescheduled, cancelled, completed) is
+ * stale — deliveries may be retried or arrive out of order, and applying them
+ * would regress convergent state.
+ */
+export function isOutOfOrderEvent(
+  existing: {
+    booked_at: string | null;
+    cancelled_at: string | null;
+    completed_at: string | null;
+  },
+  occurredAt: string,
+): boolean {
+  const incoming = new Date(occurredAt).getTime();
+  if (!Number.isFinite(incoming)) return false;
+  for (const timestamp of [existing.booked_at, existing.cancelled_at, existing.completed_at]) {
+    if (!timestamp) continue;
+    const recorded = new Date(timestamp).getTime();
+    if (Number.isFinite(recorded) && incoming <= recorded) return true;
+  }
+  return false;
 }
 
 function normalizeBooking(row: BookingRow): OnboardingBooking {

@@ -61,17 +61,55 @@ export function getHostedBookingUrl(
   }
 }
 
+/**
+ * Provider selection for new invitations: when the SnagTime booking base URL
+ * is configured the fork owns onboarding bookings; otherwise new invitations
+ * fall back to the legacy Cal.com path so existing bookings keep working
+ * during the coexistence window.
+ */
+export function resolveBookingProvider(env: NodeJS.ProcessEnv = process.env): BookingProvider {
+  return env.SNAGTIME_BASE_URL?.trim() ? "snagtime" : "calcom";
+}
+
+function getSnagtimeBookingUrl(env: NodeJS.ProcessEnv): string | null {
+  const base = env.SNAGTIME_BASE_URL?.trim();
+  if (!base) return null;
+  try {
+    const url = new URL(base);
+    return url.protocol === "https:" ? url.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
 export function buildHostedBookingUrl(input: {
   market: BookingMarket;
   invitationId: string;
+  provider?: BookingProvider;
   env?: NodeJS.ProcessEnv;
 }): string {
-  const configured = getHostedBookingUrl(input.market, input.env);
+  const env = input.env ?? process.env;
+  const provider = input.provider ?? resolveBookingProvider(env);
+  if (provider === "snagtime") {
+    const base = getSnagtimeBookingUrl(env);
+    if (!base) {
+      throw new BookingConfigurationError("The SnagTime booking base URL is not configured.");
+    }
+    const url = new URL(base);
+    const invitationToken = signBookingInvitation(input.invitationId, env);
+    url.searchParams.set("invitation", invitationToken);
+    url.searchParams.set("market", input.market);
+    url.searchParams.set("utm_source", "blockwise");
+    url.searchParams.set("utm_medium", "product");
+    url.searchParams.set("utm_campaign", "onboarding");
+    return url.toString();
+  }
+  const configured = getHostedBookingUrl(input.market, env);
   if (!configured) {
     throw new BookingConfigurationError(`The ${input.market} onboarding booking URL is not configured.`);
   }
   const url = new URL(configured);
-  const invitationToken = signBookingInvitation(input.invitationId, input.env);
+  const invitationToken = signBookingInvitation(input.invitationId, env);
   url.searchParams.set("utm_source", "blockwise");
   url.searchParams.set("utm_medium", "product");
   url.searchParams.set("utm_campaign", "onboarding");
