@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
 import { verifyInternalRequest } from "@/lib/internal-auth";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { loadPublishState, validatePublishState, freezePublicationSnapshot } from "@/lib/adstudio/publish-adapter";
 import type { MetaConnectionSetup, MetaPublishControls } from "@/lib/providers/meta-execution";
 
@@ -47,6 +48,19 @@ export async function GET(request: Request) {
 
   const supabase = createClient(supabaseUrl, supabaseKey);
 
+  const rateLimit = await checkRateLimit(supabase, null, "internal:adstudio.publish", {
+    windowSeconds: 60,
+    maxRequests: 120,
+    bucket: "internal-api",
+    failClosed: true,
+  });
+  if (!rateLimit.ok) {
+    return NextResponse.json(
+      { error: "rate_limited" },
+      { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } },
+    );
+  }
+
   try {
     const state = await loadPublishState(supabase, adId, workspaceId);
     const issues = validatePublishState(state);
@@ -90,6 +104,19 @@ export async function POST(request: Request) {
   }
 
   const supabase = createClient(supabaseUrl, supabaseKey);
+
+  const rateLimit = await checkRateLimit(supabase, null, "internal:adstudio.publish", {
+    windowSeconds: 60,
+    maxRequests: 120,
+    bucket: "internal-api",
+    failClosed: true,
+  });
+  if (!rateLimit.ok) {
+    return NextResponse.json(
+      { error: "rate_limited" },
+      { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } },
+    );
+  }
 
   try {
     const state = await loadPublishState(supabase, body.adId, body.workspaceId);
