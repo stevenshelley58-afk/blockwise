@@ -60,7 +60,7 @@ export default async function PackEditorPage({
   }
 
   return (
-    <main className="fixed inset-0 flex flex-col bg-(--canvas) text-foreground">
+    <main className="flex h-[calc(100dvh-3.375rem)] flex-col bg-(--canvas) text-foreground pb-[calc(4.75rem+env(safe-area-inset-bottom))] md:h-[calc(100dvh-3.75rem)] md:pb-0">
       <header className="flex h-12 shrink-0 items-center border-b border-(--line) bg-(--surface) px-5">
         <a
           href="/ad-studio"
