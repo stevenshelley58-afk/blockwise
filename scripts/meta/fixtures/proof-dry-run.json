@@ -1,0 +1,164 @@
+{
+  "scenario": {
+    "externalBusinessId": "990311000000111",
+    "blockwiseBusinessId": "3701213676688100",
+    "adAccountId": "act_990222000000333",
+    "pageId": "990444000000555",
+    "instagramActorId": "990666000000777",
+    "appId": "990000000000002",
+    "appTokenAvailable": true
+  },
+  "routes": {
+    "GET /me": {
+      "id": "990000000000001",
+      "name": "Blockwise proof system user"
+    },
+    "GET /debug_token": {
+      "data": {
+        "app_id": "990000000000002",
+        "type": "SYSTEM_USER",
+        "application": "Blockwise proof app",
+        "expires_at": 0,
+        "scopes": [
+          "ads_read",
+          "ads_management",
+          "business_management",
+          "leads_retrieval",
+          "pages_manage_ads",
+          "pages_show_list",
+          "pages_read_engagement"
+        ]
+      }
+    },
+    "GET /me/adaccounts": {
+      "data": [
+        {
+          "id": "act_990222000000333",
+          "account_id": "990222000000333",
+          "name": "External proof ad account",
+          "currency": "AUD",
+          "timezone_name": "Australia/Perth",
+          "account_status": 1,
+          "business": {
+            "id": "990311000000111",
+            "name": "External business"
+          }
+        }
+      ],
+      "paging": {}
+    },
+    "GET /me/accounts": {
+      "data": [
+        {
+          "id": "990444000000555",
+          "access_token": "EAAG_dryrun_page_token_0123456789abcdef"
+        }
+      ],
+      "paging": {}
+    },
+    "GET /act_990222000000333": {
+      "id": "act_990222000000333",
+      "account_id": "990222000000333",
+      "name": "External proof ad account",
+      "account_status": 1,
+      "disable_reason": 0,
+      "currency": "AUD",
+      "timezone_name": "Australia/Perth",
+      "business": { "id": "990311000000111" }
+    },
+    "GET /990444000000555": {
+      "id": "990444000000555",
+      "name": "External proof page",
+      "tasks": ["MANAGE", "CREATE_CONTENT", "MODERATE"],
+      "instagram_business_account": {
+        "id": "990666000000777",
+        "username": "external_proof_business"
+      }
+    },
+    "GET /act_990222000000333/campaigns": {
+      "data": [],
+      "paging": {}
+    },
+    "GET /act_990222000000333/insights": {
+      "data": [
+        {
+          "ad_id": "990888000001002",
+          "ad_name": "Proof ad",
+          "campaign_id": "990888000000999",
+          "campaign_name": "Proof campaign",
+          "adset_id": "990888000001000",
+          "adset_name": "Proof ad set",
+          "spend": "0",
+          "impressions": "0",
+          "clicks": "0",
+          "actions": [],
+          "date_start": "2026-01-01"
+        }
+      ],
+      "paging": {}
+    },
+    "POST /act_990222000000333/campaigns": { "id": "990888000000999" },
+    "POST /act_990222000000333/adimages": {
+      "images": {
+        "creative_feed.png": { "hash": "proof_image_hash_dryrun" },
+        "creative_story.png": { "hash": "proof_image_hash_dryrun" }
+      }
+    },
+    "POST /990444000000555/leadgen_forms": { "id": "990888000001003" },
+    "POST /990888000001003/test_leads": { "id": "990888000001004" },
+    "POST /act_990222000000333/adsets": { "id": "990888000001000" },
+    "POST /act_990222000000333/adcreatives": { "id": "990888000001001" },
+    "POST /act_990222000000333/ads": { "id": "990888000001002" },
+    "GET /990888000000999": {
+      "id": "990888000000999",
+      "account_id": "990222000000333",
+      "configured_status": "PAUSED",
+      "effective_status": "PAUSED"
+    },
+    "GET /990888000001000": {
+      "id": "990888000001000",
+      "account_id": "990222000000333",
+      "configured_status": "PAUSED",
+      "effective_status": "PAUSED"
+    },
+    "GET /990888000001001": {
+      "id": "990888000001001",
+      "name": "Proof creative"
+    },
+    "GET /990888000001002": {
+      "id": "990888000001002",
+      "account_id": "990222000000333",
+      "configured_status": "PAUSED",
+      "effective_status": "PAUSED"
+    },
+    "GET /990888000001002/insights": {
+      "data": [{ "impressions": "0", "spend": "0", "clicks": "0" }],
+      "paging": {}
+    },
+    "GET /990444000000555/leadgen_forms": {
+      "data": [
+        { "id": "990888000001003", "name": "Proof form", "status": "ACTIVE" }
+      ],
+      "paging": {}
+    },
+    "GET /990888000001003/leads": {
+      "data": [
+        {
+          "id": "990888000001004",
+          "created_time": "2026-01-01T00:00:00Z",
+          "form_id": "990888000001003",
+          "field_data": [
+            { "name": "email", "values": ["proof-test@example.com"] }
+          ]
+        }
+      ],
+      "paging": {}
+    },
+    "DELETE /990888000001002": { "success": true },
+    "DELETE /990888000001001": { "success": true },
+    "DELETE /990888000001000": { "success": true },
+    "DELETE /990888000000999": { "success": true },
+    "DELETE /990888000001003": { "success": true },
+    "DELETE /990888000001004": { "success": true }
+  }
+}
