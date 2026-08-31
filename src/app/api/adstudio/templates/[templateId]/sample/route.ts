@@ -3,6 +3,7 @@ import { renderPlacement } from "../../../../../../../packages/ad-template-rende
 import type { AdTemplate } from "../../../../../../../packages/ad-template-contract/src/types.ts";
 import { requireAdStudioRequest } from "@/lib/adstudio/http";
 import { getTemplate, templateAssetStoragePath, type GallerySamplePlacement } from "@/lib/adstudio/pack-gallery";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const runtime = "nodejs";
@@ -16,6 +17,17 @@ export async function GET(
 ) {
   const context = await requireAdStudioRequest(request);
   if (!context.ok) return context.response;
+  const rateLimit = await checkRateLimit(context.supabase, context.access.workspaceId, context.access.userId, {
+    windowSeconds: 300,
+    maxRequests: 30,
+    bucket: "adstudio-render",
+  });
+  if (!rateLimit.ok) {
+    return NextResponse.json(
+      { error: "Render limit reached. Try again later." },
+      { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } },
+    );
+  }
   const { templateId } = await params;
   const placement = parsePlacement(request.nextUrl.searchParams.get("placement"));
   if (!placement) return notFoundResponse();
