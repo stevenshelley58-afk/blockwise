@@ -9,9 +9,17 @@
 -- UNIQUE treats NULLs as distinct, which silently disabled race protection
 -- for anonymous limits.
 --
--- SECURITY DEFINER so the check works for both service-role callers and
--- RLS-constrained authenticated clients (rate_limits policies deny client
--- writes by design). The function only touches public.rate_limits.
+-- SECURITY DEFINER but SERVICE-ROLE ONLY: authenticated callers are revoked.
+-- The application invokes this RPC exclusively through the service-role
+-- server client, so hostile callers cannot choose arbitrary workspace ids,
+-- buckets or limits to poison other users' budget. All inputs are validated
+-- and bounded inside the function (bucket name pattern, subject length,
+-- limit 1..1000, window 1..86400s); violations raise, and the TypeScript
+-- wrapper fails closed.
+--
+-- The rejection branch reads the row AFTER a failed increment, so the
+-- requested limit (already stored by the upsert) is used consistently and
+-- the function ALWAYS returns exactly one row.
 --
 -- Rollback:
 --   drop function public.consume_rate_limit(uuid, text, text, integer, integer);
@@ -35,54 +43,80 @@ create or replace function public.consume_rate_limit(
   p_window_seconds integer
 )
 returns table (allowed boolean, retry_after_seconds integer)
-language sql
+language plpgsql
 security definer
 set search_path = public
 as $$
-  with window_bounds as (
-    select
-      to_timestamp(floor(extract(epoch from now()) / p_window_seconds) * p_window_seconds)
-        as window_start,
-      to_timestamp(floor(extract(epoch from now()) / p_window_seconds) * p_window_seconds)
-        + make_interval(secs => p_window_seconds) as window_end
-  ),
-  upsert as (
-    insert into public.rate_limits (workspace_id, subject_key, bucket, limit_count, used_count, resets_at)
-    select p_workspace_id, p_subject_key, p_bucket, p_limit_count, 1, window_end
-    from window_bounds
-    on conflict (workspace_id, subject_key, bucket) do update
-      set used_count = case
-            when public.rate_limits.resets_at <= now() then 1
-            else public.rate_limits.used_count + 1
-          end,
-          limit_count = excluded.limit_count,
-          resets_at = case
-            when public.rate_limits.resets_at <= now() then excluded.resets_at
-            else public.rate_limits.resets_at
-          end
-    -- Only matches when the window has rolled over or budget remains; when
-    -- the bucket is exhausted the UPDATE matches zero rows and nothing is
-    -- returned, so the caller falls through to the rejection branch below.
+declare
+  v_window_start timestamptz;
+  v_window_end timestamptz;
+  v_used integer;
+  v_retry_after integer;
+begin
+  -- Input validation: the service-role caller passes app-controlled values,
+  -- but bounds here make the contract explicit and protect against bugs.
+  if p_limit_count is null or p_limit_count < 1 or p_limit_count > 1000 then
+    raise exception 'invalid_limit_count';
+  end if;
+  if p_window_seconds is null or p_window_seconds < 1 or p_window_seconds > 86400 then
+    raise exception 'invalid_window_seconds';
+  end if;
+  if p_subject_key is null or length(btrim(p_subject_key)) = 0 or length(p_subject_key) > 200 then
+    raise exception 'invalid_subject_key';
+  end if;
+  if p_bucket is null or p_bucket !~ '^[a-z0-9_-]{1,64}$' then
+    raise exception 'invalid_bucket';
+  end if;
+
+  v_window_start := to_timestamp(floor(extract(epoch from now()) / p_window_seconds) * p_window_seconds);
+  v_window_end := v_window_start + make_interval(secs => p_window_seconds);
+
+  insert into public.rate_limits (workspace_id, subject_key, bucket, limit_count, used_count, resets_at)
+  values (p_workspace_id, p_subject_key, p_bucket, p_limit_count, 1, v_window_end)
+  on conflict (workspace_id, subject_key, bucket) do update
+    set used_count = case
+          when public.rate_limits.resets_at <= now() then 1
+          else public.rate_limits.used_count + 1
+        end,
+        limit_count = excluded.limit_count,
+        resets_at = case
+          when public.rate_limits.resets_at <= now() then excluded.resets_at
+          else public.rate_limits.resets_at
+        end
+    -- Evaluated against the existing row: the window has rolled over, or the
+    -- used budget is still below the NEW (requested) limit.
     where public.rate_limits.resets_at <= now()
-       or public.rate_limits.used_count < public.rate_limits.limit_count
-    returning true as consumed
-  )
-  select true as allowed, 0::integer as retry_after_seconds
-  from upsert
-  union all
-  select false as allowed,
-         greatest(1, ceil(extract(epoch from (rl.resets_at - now())))::integer) as retry_after_seconds
+       or public.rate_limits.used_count < excluded.limit_count
+  returning used_count
+  into v_used;
+
+  if found then
+    return query select true::boolean, 0::integer;
+    return;
+  end if;
+
+  -- Rejected: the WHERE guard skipped the update, so the stored limit was
+  -- NOT synced to the requested one by the upsert. Sync it now (no counter
+  -- increment on rejected calls) so the stored state always reflects the
+  -- caller's configured limit, then report the actual window reset.
+  update public.rate_limits
+  set limit_count = p_limit_count
+  where workspace_id is not distinct from p_workspace_id
+    and subject_key = btrim(p_subject_key)
+    and bucket = p_bucket;
+
+  select greatest(1, ceil(extract(epoch from (rl.resets_at - now())))::integer)
+    into v_retry_after
   from public.rate_limits rl
   where rl.workspace_id is not distinct from p_workspace_id
-    and rl.subject_key = p_subject_key
-    and rl.bucket = p_bucket
-    and rl.resets_at > now()
-    and rl.used_count >= p_limit_count
-    and not exists (select 1 from upsert)
-  limit 1
+    and rl.subject_key = btrim(p_subject_key)
+    and rl.bucket = p_bucket;
+
+  return query select false::boolean, coalesce(v_retry_after, p_window_seconds)::integer;
+end;
 $$;
 
 revoke all on function public.consume_rate_limit(uuid, text, text, integer, integer) from public;
 revoke all on function public.consume_rate_limit(uuid, text, text, integer, integer) from anon;
+revoke all on function public.consume_rate_limit(uuid, text, text, integer, integer) from authenticated;
 grant execute on function public.consume_rate_limit(uuid, text, text, integer, integer) to service_role;
-grant execute on function public.consume_rate_limit(uuid, text, text, integer, integer) to authenticated;
