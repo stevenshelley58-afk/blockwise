@@ -70,6 +70,29 @@ export function signSnagtimePayload(input: {
   return createHmac("sha256", input.secret).update(`${input.timestamp}.${input.rawBody}`).digest("hex");
 }
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * The signed envelope's `id` is the immutable event id — it is covered by the
+ * HMAC, unlike transport headers. A captured signed body therefore cannot be
+ * replayed inside the timestamp window with a different event identity: any
+ * x-snagtime-event-id header must match the envelope id exactly.
+ */
+export function resolveSnagtimeEventId(
+  raw: Record<string, unknown>,
+  headerEventId: string | null | undefined,
+): string {
+  const envelopeId = typeof raw.id === "string" ? raw.id.trim() : "";
+  if (!UUID_PATTERN.test(envelopeId)) {
+    throw new BookingWebhookError("Booking webhook is missing an immutable event id.", 400);
+  }
+  const headerId = headerEventId?.trim() ?? "";
+  if (headerId && headerId !== envelopeId) {
+    throw new BookingWebhookError("Booking webhook event id does not match the signed envelope.", 400);
+  }
+  return envelopeId;
+}
+
 export function parseSnagtimeWebhook(input: {
   raw: Record<string, unknown>;
   providerEventId: string;

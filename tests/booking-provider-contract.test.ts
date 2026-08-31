@@ -4,11 +4,13 @@ import { describe, it } from "node:test";
 
 import {
   parseSnagtimeWebhook,
+  resolveSnagtimeEventId,
   SNAGTIME_EVENT_SPEC,
   signSnagtimePayload,
   verifySnagtimeWebhook,
 } from "../src/lib/booking/snagtime-contract.ts";
-import { BookingWebhookError } from "../src/lib/booking/provider.ts";
+import { BookingConfigurationError, BookingWebhookError, buildHostedBookingUrl, resolveBookingProvider, signBookingInvitation } from "../src/lib/booking/provider.ts";
+import { isOutOfOrderEvent } from "../src/lib/booking/service.ts";
 
 const SECRET = "test-snagtime-webhook-secret";
 
@@ -99,6 +101,121 @@ describe("snagtime event contract", () => {
   });
 });
 
+describe("out-of-order event protection", () => {
+  const existing = {
+    booked_at: "2026-08-31T04:00:00.000Z",
+    cancelled_at: null,
+    completed_at: null,
+  };
+
+  it("treats an event older than the latest transition as stale", () => {
+    assert.equal(isOutOfOrderEvent(existing, "2026-08-31T03:59:00.000Z"), true);
+    assert.equal(isOutOfOrderEvent(existing, "2026-08-31T04:00:00.000Z"), true);
+  });
+
+  it("applies events that are newer than every recorded transition", () => {
+    assert.equal(isOutOfOrderEvent(existing, "2026-08-31T05:00:00.000Z"), false);
+    assert.equal(
+      isOutOfOrderEvent({ booked_at: null, cancelled_at: null, completed_at: null }, "2026-08-31T04:00:00.000Z"),
+      false,
+    );
+  });
+
+  it("treats a stale event as stale against a recorded cancellation", () => {
+    assert.equal(
+      isOutOfOrderEvent(
+        { booked_at: "2026-08-31T04:00:00.000Z", cancelled_at: "2026-08-31T06:00:00.000Z", completed_at: null },
+        "2026-08-31T05:00:00.000Z",
+      ),
+      true,
+    );
+  });
+});
+
+describe("snagtime event identity", () => {
+  const ENVELOPE_ID = "6a2f0a44-2df2-4d63-9d1e-6a30ec5f51f0";
+
+  it("uses the HMAC-covered envelope id as the immutable event id", () => {
+    assert.equal(resolveSnagtimeEventId(envelope(), null), ENVELOPE_ID);
+    assert.equal(resolveSnagtimeEventId(envelope(), ` ${ENVELOPE_ID} `), ENVELOPE_ID);
+  });
+
+  it("rejects an envelope without a valid event id", () => {
+    assert.throws(
+      () => resolveSnagtimeEventId(envelope({ id: "" }), null),
+      (error: unknown) => error instanceof BookingWebhookError && error.status === 400,
+    );
+    assert.throws(
+      () => resolveSnagtimeEventId(envelope({ id: "attacker-chosen-id" }), null),
+      BookingWebhookError,
+    );
+  });
+
+  it("rejects a replay that swaps the transport event-id header", () => {
+    // A captured signed body replayed with a different event id header must
+    // not be processed under the attacker's identity.
+    assert.throws(
+      () => resolveSnagtimeEventId(envelope(), "00000000-0000-4000-8000-000000000009"),
+      (error: unknown) => error instanceof BookingWebhookError && error.status === 400,
+    );
+  });
+});
+
+describe("provider-aware invitations", () => {
+  const INVITATION_SECRET = "test-booking-invitation-secret";
+
+  it("selects the snagtime provider only when SNAGTIME_BASE_URL is configured", () => {
+    assert.equal(resolveBookingProvider({ SNAGTIME_BASE_URL: "https://book.blockwise.sale" } as unknown as NodeJS.ProcessEnv), "snagtime");
+    assert.equal(resolveBookingProvider({} as unknown as NodeJS.ProcessEnv), "calcom");
+    assert.equal(resolveBookingProvider({ SNAGTIME_BASE_URL: "  " } as unknown as NodeJS.ProcessEnv), "calcom");
+  });
+
+  it("builds snagtime invitation URLs from SNAGTIME_BASE_URL with the signed token", () => {
+    const url = new URL(buildHostedBookingUrl({
+      market: "AU",
+      invitationId: "d1000000-0000-4000-8000-00000000000a",
+      provider: "snagtime",
+      env: {
+        SNAGTIME_BASE_URL: "https://book.blockwise.sale/onboarding",
+        BOOKING_INVITATION_SECRET: INVITATION_SECRET,
+      } as unknown as NodeJS.ProcessEnv,
+    }));
+    assert.equal(url.origin + url.pathname, "https://book.blockwise.sale/onboarding");
+    assert.equal(url.searchParams.get("market"), "AU");
+    const token = url.searchParams.get("invitation") ?? "";
+    assert.equal(
+      token,
+      signBookingInvitation("d1000000-0000-4000-8000-00000000000a", { BOOKING_INVITATION_SECRET: INVITATION_SECRET } as unknown as NodeJS.ProcessEnv),
+    );
+  });
+
+  it("fails closed when the snagtime base URL is missing for a snagtime invitation", () => {
+    assert.throws(
+      () => buildHostedBookingUrl({
+        market: "AU",
+        invitationId: "d1000000-0000-4000-8000-00000000000a",
+        provider: "snagtime",
+        env: {} as unknown as NodeJS.ProcessEnv,
+      }),
+      BookingConfigurationError,
+    );
+  });
+
+  it("still builds the legacy calcom invitation path when the fork is not configured", () => {
+    const url = new URL(buildHostedBookingUrl({
+      market: "AU",
+      invitationId: "d1000000-0000-4000-8000-00000000000a",
+      provider: "calcom",
+      env: {
+        CALCOM_ONBOARDING_URL_AU: "https://cal.com/blockwise/onboarding-au",
+        BOOKING_INVITATION_SECRET: INVITATION_SECRET,
+      } as unknown as NodeJS.ProcessEnv,
+    }));
+    assert.equal(url.host, "cal.com");
+    assert.match(url.searchParams.get("metadata[invitation") ?? url.toString(), /d1000000/);
+  });
+});
+
 describe("dual provider webhook coexistence contract", () => {
   const legacy = readFileSync("src/app/api/booking/webhook/route.ts", "utf8");
   const calcomRoute = readFileSync("src/app/api/booking/webhooks/calcom/route.ts", "utf8");
@@ -116,6 +233,15 @@ describe("dual provider webhook coexistence contract", () => {
     assert.match(snagtimeRoute, /handleSnagtimeBookingWebhook/);
     assert.match(handlers, /SNAGTIME_WEBHOOK_SECRET/);
     assert.match(handlers, /x-snagtime-signature/);
+    // The event identity must come from the HMAC-covered envelope, not the
+    // replayable transport header.
+    assert.match(handlers, /resolveSnagtimeEventId/);
+  });
+
+  it("creates invitations provider-aware and guards against out-of-order events", () => {
+    assert.match(service, /resolveBookingProvider\(\)/);
+    assert.doesNotMatch(service, /provider: "calcom"/);
+    assert.match(service, /isOutOfOrderEvent/);
   });
 
   it("converges both providers through the shared event application path", () => {
