@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     request.headers.get("x-real-ip") ??
     "unknown";
   const supabase = createSupabaseServiceClient();
-  const rateLimit = await checkRateLimit(supabase, null, ip, {
+  const rateLimit = await checkRateLimit(null, ip, {
     windowSeconds: 60,
     maxRequests: 40,
     bucket: "ad-radar-suggestions",

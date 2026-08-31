@@ -40,7 +40,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "A valid booking mutation ID is required." }, { status: 400 });
   }
 
-  const rateLimit = await checkRateLimit(context.service, context.workspaceId, context.workspaceId, {
+  const rateLimit = await checkRateLimit(context.workspaceId, context.workspaceId, {
     windowSeconds: 3600,
     maxRequests: 10,
     bucket: "booking-invitation",

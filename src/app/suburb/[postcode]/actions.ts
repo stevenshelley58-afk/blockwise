@@ -30,7 +30,7 @@ export async function emailSuburbReport(
     const supabase = createSupabaseServiceClient();
     const requestHeaders = await headers();
     const subjectKey = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() || "anonymous";
-    const rateLimit = await checkRateLimit(supabase, null, subjectKey, {
+    const rateLimit = await checkRateLimit(null, subjectKey, {
       bucket: "suburb-report-email",
       maxRequests: 5,
       windowSeconds: 3600,

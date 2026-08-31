@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
   const context = await requireApiWorkspace(request, "property_check");
   if (!context.ok) return context.response;
 
-  const rateLimit = await checkRateLimit(context.supabase, context.access.workspaceId, context.access.userId, {
+  const rateLimit = await checkRateLimit(context.access.workspaceId, context.access.userId, {
     windowSeconds: 60,
     maxRequests: 40,
     bucket: "property-address-autocomplete",

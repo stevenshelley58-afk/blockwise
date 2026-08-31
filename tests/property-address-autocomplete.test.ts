@@ -92,6 +92,6 @@ test("Property Check address autocomplete is workspace guarded and rate limited"
   const route = readFileSync("src/app/api/property-checks/addresses/autocomplete/route.ts", "utf8");
 
   assert.match(route, /requireApiWorkspace\(request, "property_check"\)/);
-  assert.match(route, /checkRateLimit\(context\.supabase, context\.access\.workspaceId, context\.access\.userId/);
+  assert.match(route, /checkRateLimit\(context\.access\.workspaceId, context\.access\.userId/);
   assert.match(route, /bucket: "property-address-autocomplete"/);
 });

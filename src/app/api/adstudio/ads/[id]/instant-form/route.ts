@@ -56,7 +56,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
   const { id } = await Promise.resolve(context.params);
   const access = await requireAdStudioRequest(request);
   if (!access.ok) return access.response;
-  const rateLimit = await checkRateLimit(access.supabase, access.access.workspaceId, access.access.userId, {
+  const rateLimit = await checkRateLimit(access.access.workspaceId, access.access.userId, {
     windowSeconds: 300,
     maxRequests: 20,
     bucket: "adstudio-instant-form",

@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
 
   const supabase = createSupabaseServiceClient();
 
-  const rateLimit = await checkRateLimit(supabase, null, ip, {
+  const rateLimit = await checkRateLimit(null, ip, {
     windowSeconds: 3600,
     maxRequests: 8,
     bucket: "audit-lead",
