@@ -505,10 +505,11 @@ export function PublishFlow({
         {/* Receipt */}
         {receipt && <ReceiptCard receipt={receipt} />}
 
-        {/* Safe retry — offered ONLY when Meta objects were created but
-            activation did not complete. It targets the exact plan (and Meta
-            object IDs) already created; it never creates duplicates. */}
-        {receipt?.mode === "publish" && receipt.status === "paused" && receipt.planId && !receipt.error && (
+        {/* Safe retry — offered when Meta objects were created but activation
+            did not complete (confirmed paused, or unconfirmed state — the
+            retry's idempotent guard is safe in both). It targets the exact
+            plan (and Meta object IDs) already created; never duplicates. */}
+        {receipt?.mode === "publish" && (receipt.status === "paused" || receipt.status === "unknown") && receipt.planId && !receipt.error && (
           <RetryActivationSection
             key={receipt.planId}
             planId={receipt.planId}
@@ -949,8 +950,25 @@ function ReceiptCard({ receipt }: { receipt: PublishReceipt }) {
 
   if (receipt.mode === "publish") {
     const objects = receipt.reconciledObjects;
-    // Honest partial failure: Meta objects EXIST but activation did not
-    // complete — never claim the ad is active when it remains paused.
+    // Indeterminate: activation failed AND the safety pause could not be
+    // confirmed — objects may be ACTIVE and spending. Never claim paused.
+    if (receipt.status === "unknown") {
+      return (
+        <div className="mt-6 rounded-(--r-card) border border-red-300 bg-red-50 p-4" role="alert">
+          <h3 className="mb-1 text-sm font-semibold text-red-900">Created on Meta — state unconfirmed</h3>
+          <p className="text-sm text-red-800">{receipt.message}</p>
+          {receipt.activationError ? <p className="mt-2 text-xs font-medium text-red-900">Activation error: {receipt.activationError}</p> : null}
+          <dl className="mt-3 grid grid-cols-1 gap-1 text-xs text-red-800 sm:grid-cols-2">
+            <ReceiptStat label="Plan" value={shortHash(receipt.planId ?? "")} />
+            <ReceiptStat label="Campaign ID" value={objects?.campaignId ?? "—"} />
+            <ReceiptStat label="Ad set IDs" value={formatIds(objects?.adSetIds)} />
+            <ReceiptStat label="Ad IDs" value={formatIds(objects?.adIds)} />
+          </dl>
+        </div>
+      );
+    }
+    // Confirmed partial failure: Meta objects EXIST and the safety pause was
+    // verified — activation did not complete, nothing is running.
     if (receipt.status === "paused") {
       return (
         <div className="mt-6 rounded-(--r-card) border border-amber-200 bg-amber-50 p-4" role="alert">

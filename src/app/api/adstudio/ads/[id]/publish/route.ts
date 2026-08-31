@@ -210,6 +210,10 @@ export async function POST(request: NextRequest, context: RouteContext) {
           "before they start delivering; that is Meta's normal approval flow, not a paused campaign.",
       });
     } catch (activationErr) {
+      // Indeterminate state: activation failed AND the safety pause could not
+      // be confirmed for every object — some objects may still be ACTIVE and
+      // spending. Never report "paused" for an unverified state.
+      const unconfirmed = activationErr instanceof PublishError && activationErr.code === "activation_unconfirmed";
       const detail = activationErr instanceof PublishError
         ? activationErr.message
         : activationErr instanceof Error
@@ -221,14 +225,16 @@ export async function POST(request: NextRequest, context: RouteContext) {
         providerWritesEnabled: true,
         snapshotId,
         planId: completed.planId,
-        // The REAL state: objects exist on Meta but are still paused — never
-        // claim the ad is active when activation did not complete.
-        status: "paused",
+        // The REAL state: with a confirmed safety pause the objects exist and
+        // remain paused; unconfirmed means the state could not be verified.
+        status: unconfirmed ? "unknown" : "paused",
         reconciledObjects: completed.reconciledObjects,
         activationError: detail,
-        message:
-          "Your ad was created on Meta, but activation did not complete — nothing is running yet. " +
-          "You can safely retry publishing; it targets the exact objects already created.",
+        message: unconfirmed
+          ? "Your ad was created on Meta, but activation failed and Blockwise could not confirm that every object was paused. " +
+            "Some campaign objects may be ACTIVE — check Meta Ads Manager now. Retrying publish is still safe; it targets the exact objects already created."
+          : "Your ad was created on Meta, but activation did not complete — nothing is running yet. " +
+            "You can safely retry publishing; it targets the exact objects already created.",
       });
     }
   } catch (err) {
