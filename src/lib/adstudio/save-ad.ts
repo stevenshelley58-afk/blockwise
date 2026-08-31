@@ -139,10 +139,16 @@ export async function saveAd(input: SaveAdInput): Promise<SaveAdOutput> {
     },
   ]);
 
-  // Advance active revision
+  // Advance active revision — the row mirrors the saved document's colour
+  // mode and resolved palette (template, brand_pack, or custom).
   await input.supabase
     .from("ad_customer_ads")
-    .update({ active_revision_id: revision.id, updated_at: new Date().toISOString() })
+    .update({
+      active_revision_id: revision.id,
+      colour_mode: input.document.colourMode,
+      resolved_colour_map: input.document.resolvedColourMap,
+      updated_at: new Date().toISOString(),
+    })
     .eq("id", input.adId);
 
   return {

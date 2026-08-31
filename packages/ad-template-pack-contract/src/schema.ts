@@ -203,7 +203,10 @@ export type TemplatePackV2Parsed = z.infer<typeof templatePackV2Schema>;
 // AdDocument v1 (customer-side document referencing a pack)
 // ---------------------------------------------------------------------------
 
-export const colourModeSchema = z.enum(["template", "brand_pack"]);
+// "custom" documents store the customer's per-role palette in
+// resolvedColourMap. Older documents only ever contain "template" or
+// "brand_pack", so the wider enum still parses every saved document.
+export const colourModeSchema = z.enum(["template", "brand_pack", "custom"]);
 
 export const adDocumentSchema = z.object({
   schema: z.literal("blockwise.ad-document/v1"),

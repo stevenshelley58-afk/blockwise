@@ -20,6 +20,7 @@ import type { MetaCopy } from "./use-editor-state";
 export interface MetaCopyPanelProps {
   values: MetaCopy;
   onChange: (field: keyof MetaCopy, value: string) => void;
+  className?: string;
 }
 
 /** Meta's standard CTAs (the same set the meta lead-ad pack schema allows). */
@@ -38,14 +39,11 @@ const LIMITS: Record<keyof MetaCopy, number> = {
   cta: 25,
 };
 
-export function MetaCopyPanel({ values, onChange }: MetaCopyPanelProps) {
+export function MetaCopyPanel({ values, onChange, className }: MetaCopyPanelProps) {
   const customCta = !(META_CTA_OPTIONS as readonly string[]).includes(values.cta);
 
   return (
-    <aside className="w-72 shrink-0 overflow-y-auto border-l border-(--line) bg-(--surface) p-4">
-      <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        Meta copy
-      </h3>
+    <div className={className}>
       <p className="mb-4 text-xs leading-relaxed text-muted-foreground">
         Primary text, headline, description and CTA show with the design in
         every placement — edit once, all placements update.
@@ -110,7 +108,7 @@ export function MetaCopyPanel({ values, onChange }: MetaCopyPanelProps) {
       </div>
 
       <TruncationPreview values={values} />
-    </aside>
+    </div>
   );
 }
 
@@ -179,7 +177,7 @@ function TruncationPreview({ values }: { values: MetaCopy }) {
   return (
     <section aria-label="Truncation preview" className="mt-5">
       <h4 className="mb-2 text-xs font-semibold text-foreground">
-        Feed preview
+        Copy truncation
       </h4>
       <div className="rounded-(--r-card) border border-(--line) bg-white p-3 text-[13px] leading-snug text-neutral-800">
         <p className="line-clamp-4">{primary || "Primary text"}</p>

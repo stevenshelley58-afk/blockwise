@@ -103,7 +103,7 @@ export interface EditorState {
   activePlacement: Placement;
   imageValues: EditorImageValue[];
   textValues: Record<string, string>;
-  colourMode: "template" | "brand_pack";
+  colourMode: "template" | "brand_pack" | "custom";
   resolvedColourMap: Record<ColourRole, string>;
   selectedLayerId: string | null;
   isDirty: boolean;
@@ -114,32 +114,54 @@ export interface EditorState {
   metaCopy: MetaCopy;
 }
 
-const initialState = (pack: TemplatePack): EditorState => {
-  const defaults = readEditorDefaults(pack);
+/**
+ * Saved-document seed loaded server-side for an EXISTING ad. New ads pass
+ * null and start with empty placeholder text — template copy is only ever
+ * inserted by an explicit "Use template copy" click, and saved customer copy
+ * is never erased on reopen.
+ */
+export interface SavedEditorSeed {
+  textValues: Record<string, string>;
+  metaCopy: MetaCopy;
+  colourMode: EditorState["colourMode"];
+  resolvedColourMap: Record<ColourRole, string> | null;
+  lastSavedRevision: number;
+}
+
+/**
+ * The editor's starting state. Exported for tests: a new ad (saved = null)
+ * starts with EMPTY placeholders; an existing ad restores its saved values.
+ */
+export function initialEditorState(pack: TemplatePack, saved?: SavedEditorSeed | null): EditorState {
+  const emptyTextValues = Object.fromEntries(pack.textInputs.map(i => [i.key, ""]));
+  const savedMeta = saved?.metaCopy;
   return {
   pack,
   activePlacement: "feed",
   imageValues: pack.imageInputs.map(i => ({ inputKey: i.key, dataUrl: null, crops: {} })),
-  textValues: { ...Object.fromEntries(pack.textInputs.map(i => [i.key, ""])), ...defaults.textValues },
-  colourMode: "template",
-  resolvedColourMap: { ...pack.semanticColours },
+  // New ads start EMPTY (placeholders only) — never auto-insert template copy.
+  // Saved ads restore exactly what the customer last saved.
+  textValues: saved ? { ...emptyTextValues, ...saved.textValues } : emptyTextValues,
+  colourMode: saved?.colourMode ?? "template",
+  resolvedColourMap: saved?.resolvedColourMap ?? { ...pack.semanticColours },
   selectedLayerId: null,
   isDirty: false,
   isSaving: false,
-  lastSavedRevision: null,
+  lastSavedRevision: saved?.lastSavedRevision ?? null,
   error: null,
   metaCopy: {
-    primaryText: "",
-    headline: "",
-    description: "",
+    primaryText: savedMeta?.primaryText ?? "",
+    headline: savedMeta?.headline ?? "",
+    description: savedMeta?.description ?? "",
+    // CTA keeps a sensible default even for new ads so the select is valid.
     cta: "LEARN_MORE",
-    ...defaults.metaCopy,
+    ...(savedMeta?.cta ? { cta: savedMeta.cta } : {}),
   },
   };
-};
+}
 
-export function useEditorState(pack: TemplatePack) {
-  const [state, setState] = useState<EditorState>(() => initialState(pack));
+export function useEditorState(pack: TemplatePack, saved?: SavedEditorSeed | null) {
+  const [state, setState] = useState<EditorState>(() => initialEditorState(pack, saved));
   const undoStack = useRef<EditorState[]>([]);
   const redoStack = useRef<EditorState[]>([]);
 
@@ -205,13 +227,26 @@ export function useEditorState(pack: TemplatePack) {
     });
   }, [pushUndo]);
 
-  const setColourMode = useCallback((mode: "template" | "brand_pack", colourMap?: Record<ColourRole, string>) => {
+  const setColourMode = useCallback((mode: EditorState["colourMode"], colourMap?: Record<ColourRole, string>) => {
     setState(prev => {
       pushUndo(prev);
       return {
         ...prev,
         colourMode: mode,
         resolvedColourMap: colourMap ?? (mode === "template" ? { ...prev.pack.semanticColours } : prev.resolvedColourMap),
+        isDirty: true,
+      };
+    });
+  }, [pushUndo]);
+
+  /** Update one custom colour role while in custom mode. */
+  const updateCustomColour = useCallback((role: ColourRole, hex: string) => {
+    setState(prev => {
+      pushUndo(prev);
+      return {
+        ...prev,
+        colourMode: "custom",
+        resolvedColourMap: { ...prev.resolvedColourMap, [role]: hex },
         isDirty: true,
       };
     });
@@ -250,6 +285,23 @@ export function useEditorState(pack: TemplatePack) {
     setState(prev => ({ ...prev, error }));
   }, []);
 
+  /**
+   * "Use template copy" — fills EMPTY fields with the template's suggested
+   * copy in one undoable step. Saved or typed customer copy is preserved.
+   */
+  const useTemplateCopy = useCallback(() => {
+    setState(prev => {
+      pushUndo(prev);
+      const merged = applyTemplateCopy(prev.textValues, prev.metaCopy, prev.pack);
+      return {
+        ...prev,
+        textValues: merged.textValues,
+        metaCopy: merged.metaCopy,
+        isDirty: true,
+      };
+    });
+  }, [pushUndo]);
+
   const activeLayout: Layout = state.activePlacement === "feed" ? state.pack.feedLayout : state.pack.storyLayout;
 
   const canUndo = undoStack.current.length > 0;
@@ -266,6 +318,8 @@ export function useEditorState(pack: TemplatePack) {
     updateImageValue,
     updateCrop,
     setColourMode,
+    updateCustomColour,
+    useTemplateCopy,
     undo,
     redo,
     markSaved,
@@ -319,17 +373,78 @@ export function brandPackColoursToRoleMap(
 /**
  * Resolve the render palette for a colour mode: brand roles override the
  * template palette, roles missing from the brand kit (e.g. inverseText)
- * keep the template value. Never invents a palette.
+ * keep the template value. Custom mode uses the customer's per-role palette
+ * verbatim. Never invents a palette.
  */
 export function resolveColourMap(
   templateColours: Record<ColourRole, string>,
-  mode: "template" | "brand_pack",
+  mode: EditorState["colourMode"],
   brandColourMap?: Partial<Record<ColourRole, string>> | null,
+  customColourMap?: Partial<Record<ColourRole, string>> | null,
 ): Record<ColourRole, string> {
   if (mode === "brand_pack" && brandColourMap) {
     return { ...templateColours, ...brandColourMap };
   }
+  if (mode === "custom" && customColourMap) {
+    return { ...templateColours, ...customColourMap };
+  }
   return { ...templateColours };
+}
+
+// ---------------------------------------------------------------------------
+// Template copy — the pack's suggested overlay text and Meta copy. New ads
+// start EMPTY; an explicit "Use template copy" click fills EMPTY fields only,
+// so saved customer copy is never erased. Populated fields stay editable.
+// ---------------------------------------------------------------------------
+
+export interface TemplateCopyValues {
+  textValues: Record<string, string>;
+  metaCopy: MetaCopy;
+}
+
+/** The template's suggested copy, read from the portable defaults. */
+export function templateCopyValues(pack: TemplatePack): TemplateCopyValues {
+  const defaults = readEditorDefaults(pack);
+  return {
+    textValues: { ...defaults.textValues },
+    metaCopy: {
+      primaryText: defaults.metaCopy.primaryText ?? "",
+      headline: defaults.metaCopy.headline ?? "",
+      description: defaults.metaCopy.description ?? "",
+      cta: defaults.metaCopy.cta ?? "LEARN_MORE",
+    },
+  };
+}
+
+/** True when the template offers any copy worth inserting. */
+export function hasTemplateCopy(pack: TemplatePack): boolean {
+  const { textValues, metaCopy } = templateCopyValues(pack);
+  const hasText = Object.values(textValues).some(value => value.trim().length > 0);
+  const hasMeta = [metaCopy.primaryText, metaCopy.headline, metaCopy.description].some(value => value.trim().length > 0);
+  return hasText || hasMeta;
+}
+
+/**
+ * Merge template copy into the current values, filling ONLY empty fields.
+ * Customer copy — saved or freshly typed — is never overwritten.
+ */
+export function applyTemplateCopy(
+  currentTextValues: Record<string, string>,
+  currentMetaCopy: MetaCopy,
+  pack: TemplatePack,
+): { textValues: Record<string, string>; metaCopy: MetaCopy } {
+  const template = templateCopyValues(pack);
+  const textValues = { ...currentTextValues };
+  for (const [key, value] of Object.entries(template.textValues)) {
+    if (!(key in textValues) || textValues[key].trim() === "") textValues[key] = value;
+  }
+  const metaCopy = { ...currentMetaCopy };
+  for (const field of ["primaryText", "headline", "description"] as const) {
+    if (metaCopy[field].trim() === "") metaCopy[field] = template.metaCopy[field];
+  }
+  // CTA is a selection — only filled when the customer has not chosen one.
+  if (metaCopy.cta.trim() === "") metaCopy.cta = template.metaCopy.cta;
+  return { textValues, metaCopy };
 }
 
 // ---------------------------------------------------------------------------

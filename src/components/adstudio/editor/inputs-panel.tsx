@@ -25,6 +25,7 @@ export interface InputsPanelProps {
   onImageChange: (key: string, dataUrl: string | null) => void;
   /** Opens the crop dialog for the input's slot in the ACTIVE placement. */
   onCropClick: (key: string) => void;
+  className?: string;
 }
 
 export function InputsPanel({
@@ -35,12 +36,10 @@ export function InputsPanel({
   onTextChange,
   onImageChange,
   onCropClick,
+  className,
 }: InputsPanelProps) {
   return (
-    <aside className="w-72 shrink-0 overflow-y-auto border-l border-(--line) bg-(--surface) p-4">
-      <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        Content
-      </h3>
+    <div className={className}>
       <p className="mb-4 text-xs leading-relaxed text-muted-foreground">
         These values fill both the Feed and Story designs — edit once, both update.
       </p>
@@ -98,7 +97,7 @@ export function InputsPanel({
           library yet, so they are not stored on the server.
         </p>
       </section>
-    </aside>
+    </div>
   );
 }
 

@@ -47,7 +47,7 @@ export interface PublishLoadResult {
   ad: {
     id: string;
     templatePackId: string;
-    colourMode: "template" | "brand_pack";
+    colourMode: "template" | "brand_pack" | "custom";
     metaPrimaryText: string;
     metaHeadline: string;
     metaDescription: string;
@@ -757,7 +757,7 @@ export function planActivation(
       targets,
       message:
         "Activation was NOT applied — provider writes are disabled (BLOCKWISE_ENABLE_PROVIDER_WRITES=false). " +
-        "The campaign stays PAUSED on Meta. Enable provider writes and click Activate again.",
+        "The campaign stays PAUSED on Meta. Enable provider writes and publish again.",
     };
   }
 

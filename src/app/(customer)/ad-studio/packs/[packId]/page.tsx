@@ -1,20 +1,21 @@
 import { notFound } from "next/navigation";
 
-import { EditorShell } from "@/components/adstudio/editor/editor-shell";
+import { EditorShell, type EditorBrandPack } from "@/components/adstudio/editor/editor-shell";
 import { getOrCreateCustomerAd } from "@/lib/adstudio/create-customer-ad";
+import { loadSavedAdSeed } from "@/lib/adstudio/editor-seed";
 import { getImportedPack } from "@/lib/adstudio/pack-gallery";
 import { isExampleBrandKitSourceUrl, rowToBrandKit } from "@/lib/adstudio/persistence";
-import type { AdStudioBrandKit } from "@/lib/adstudio/types";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
 
 export const dynamic = "force-dynamic";
 
 // ---------------------------------------------------------------------------
 // Ad Studio — layered editor for one imported template pack.
-// Feed/Story tabs, layer list and canvas come from the existing EditorShell.
-// Opening a pack server-side creates (idempotently) the customer ad row the
-// Save button persists against; Save renders Feed + Story PNGs via saveAd.
-// Publish is not wired yet.
+// Feed/Story tabs, live Meta previews and the Creative / Ad copy / Colours
+// tabs come from the existing EditorShell. Opening a pack server-side creates
+// (idempotently) the customer ad row the Save button persists against; the
+// LAST SAVED revision is restored into the editor so saved customer copy is
+// never erased on reopen. New ads start with empty placeholders.
 // ---------------------------------------------------------------------------
 
 export default async function PackEditorPage({
@@ -29,10 +30,14 @@ export default async function PackEditorPage({
 
   const { adId } = await getOrCreateCustomerAd(supabase, access.workspaceId, pack);
 
-  // Brand Pack colours for the template-vs-brand toggle: the workspace's
-  // latest non-demo kit, loaded server-side (same pattern as /ad-studio/brand).
-  // Null → toggle disabled, editor stays on the template palette.
-  const brandColours = await loadLatestBrandColours(supabase, access.workspaceId);
+  // Saved revision for an EXISTING ad — restores copy, assets and colour
+  // mode. Null for a brand new ad (empty placeholders + template suggestions).
+  const savedSeed = await loadSavedAdSeed(supabase, access.workspaceId, adId);
+
+  // Brand Pack for the Colours tab and the Meta previews (avatar, business
+  // name, palette): the workspace's latest non-demo kit, loaded server-side
+  // (same pattern as /ad-studio/brand). Null → Brand Pack mode disabled.
+  const brandPack = await loadLatestBrandPack(supabase, access.workspaceId);
 
   return (
     <main className="fixed inset-0 flex flex-col bg-(--canvas) text-foreground">
@@ -65,18 +70,23 @@ export default async function PackEditorPage({
           adId={adId}
           workspaceId={access.workspaceId}
           canSave={true}
-          brandColours={brandColours}
+          brandPack={brandPack}
+          savedSeed={savedSeed}
         />
       </div>
     </main>
   );
 }
 
-/** Latest non-demo Brand Pack colours for a workspace, or null when none. */
-async function loadLatestBrandColours(
+/**
+ * Latest non-demo Brand Pack for a workspace (colours, business name, logo),
+ * or null when none. Logo/business defaults feed the Meta previews; sensible
+ * initials apply when no logo exists (handled by the preview component).
+ */
+async function loadLatestBrandPack(
   supabase: Awaited<ReturnType<typeof import("@/lib/supabase/server").createSupabaseServerClient>>,
   workspaceId: string,
-): Promise<AdStudioBrandKit["colours"] | null> {
+): Promise<EditorBrandPack | null> {
   try {
     const { data } = await supabase
       .from("adstudio_brand_kits")
@@ -89,7 +99,12 @@ async function loadLatestBrandColours(
     const row = nonDemoRows.find((candidate) => String(candidate.source_url ?? "").trim()) ?? nonDemoRows[0];
     if (!row) return null;
 
-    return rowToBrandKit(row).colours;
+    const kit = rowToBrandKit(row);
+    return {
+      colours: kit.colours,
+      businessName: kit.identity.businessName?.trim() || "",
+      logoUrl: kit.logos.primaryLogoUrl,
+    };
   } catch {
     return null;
   }
