@@ -1,6 +1,6 @@
 # Meta Partner-Assisted Connection — Implementation Blueprint
 
-- Status: implementation-ready only after Prerequisite A and Step 0 pass
+- Status: **NO-GO — automated partner connection stopped at Step 0 on 2026-08-31**
 - Target branch: fresh feature branches from `origin/main`
 - Plan owner: Blockwise
 - Primary surface: `/connect-meta`
@@ -10,20 +10,13 @@
 
 ### Controlling execution authority
 
-The repository currently contains a real contradiction: root `AGENTS.md` still
-names Vercel Preview as the acceptance runtime, while the newer, owner-approved
-2026-08-29 runbooks (`docs/runbooks/production-readiness.md`,
+Prerequisite A is complete. Root `AGENTS.md` and the owner-approved runbooks
+(`docs/runbooks/production-readiness.md`,
 `docs/runbooks/oss-product-migration.md`, and `docs/runbooks/rollback.md`) name
-the self-hosted product VPS/Caddy stack as the product target and mark Vercel
-material historical. For this blueprint, the newer owner-approved product
-target controls: runtime acceptance happens on an isolated controlled VPS
-staging hostname, then the controlled production VPS hostname. Localhost and a
-historical Vercel project are not acceptance.
-
-**Prerequisite A is mandatory:** before product implementation, update the
-acceptance paragraph in root `AGENTS.md` to the self-hosted target, with links
-to those three runbooks. Until that authority-reconciliation PR merges, stop;
-do not make runtime or UI PRs under conflicting instructions.
+the self-hosted product VPS/Caddy stack as the product target. Runtime
+acceptance happens on an isolated controlled VPS staging hostname, then the
+controlled production VPS hostname. Localhost and Vercel Preview are not
+acceptance targets.
 
 Every migration added by this plan must also be added in chronological order to
 `infra/product/product-migrations.txt`. Every runtime setting added by this plan
@@ -57,13 +50,19 @@ or token-vault pipelines.
 
 ## 2. Mandatory platform warning and go/no-go rule
 
-Partner sharing is not proof that Meta will permit an unapproved app to manage
-another business's account. Meta's current public Marketing API material says
-that an app managing other people's ad accounts requires the upper Marketing
-API Access Tier: **Full Access** (called Advanced Access before Meta's May 4,
-2026 terminology change). This platform tier is distinct from the
-`ads_management` permission. Therefore, Step 0 is a release blocker and may
-prove that this interim path is impossible until Meta approval.
+Partner sharing does not permit an unapproved app to manage another business's
+account. Meta's current controls must not be conflated:
+
+- the app-level **Marketing API Access Tier** is `Limited Access` or
+  `Full Access` (the tier labels were `Standard Access` and `Advanced Access`
+  before Meta's May 4, 2026 terminology change); and
+- individual permissions such as `ads_read` and `ads_management` continue to
+  use `Standard Access` and `Advanced Access`.
+
+Meta says apps managing other people's ad accounts need Advanced Access to
+`ads_read` and/or `ads_management`. Customer partner sharing changes asset
+availability; it cannot promote the app to Full Access or grant a permission's
+Advanced Access. Step 0 is therefore a release blocker.
 
 The implementation agent must not:
 
@@ -75,7 +74,10 @@ The implementation agent must not:
 - continue past Step 0 if Meta rejects the system-user token because of app
   access level, business verification, or permission tier.
 
-If Step 0 fails, stop the automated partner-connection project. Keep OAuth work
+Step 0 is `NO_GO` and `UNPROVEN`; the automated partner-connection project is
+stopped. See `docs/runbooks/meta-partner-external-proof.md` and the sanitized
+receipt at
+`docs/evidence/meta-partner-proof/2026-08-31/receipt.json`. Keep OAuth work
 continuing through App Review and change the interim customer offer to creative
 export plus explicitly manual/operator publishing. Do not disguise manual work
 as an API connection.
@@ -86,6 +88,10 @@ Current reference material:
   <https://www.postman.com/meta/facebook-marketing-api/documentation/0zr4mes/facebook-marketing-api-mapi>
 - Meta's May 2026 Marketing API Access Tier announcement:
   <https://developers.meta.com/blog/updates-to-ads-management-standard-access-feature/>
+- Meta's access-level overview:
+  <https://developers.facebook.com/docs/graph-api/overview/access-levels/>
+- Meta's permission reference:
+  <https://developers.facebook.com/docs/permissions/reference/>
 - Meta's Instagram API Postman collection, which documents the linked-Page
   requirement for Instagram professional accounts:
   <https://www.postman.com/meta/instagram/documentation/6yqw8pt/instagram-api>
@@ -300,7 +306,7 @@ Existing Meta setup / publish / reporting / leads pipelines
 
 ```text
 Prerequisite A  Reconcile VPS acceptance authority in AGENTS.md
-  └─ Step 0  External-account proof gate
+  └─ Step 0  External-account proof gate — NO-GO / UNPROVEN / STOP
        └─ Step 1  Shared-token containment and rollout safety
             └─ Step 2  Durable request schema and contracts
                  ├─ Step 3  Meta capability adapter and route hardening
@@ -323,127 +329,106 @@ types are merged. They own different files. All other steps are serial.
 - **Model tier:** strongest available
 - **PR:** `docs/meta-partner-proof`
 - **Depends on:** Prerequisite A merged
-  **Production mutation:** no Blockwise production mutation; a disposable external
-  Meta campaign/form/creative/ad and test lead are created, verified, and removed
+- **Decision:** **NO_GO**
+- **Proof state:** **UNPROVEN**
+- **Production mutation:** none; no external run occurred and no Meta object was
+  read or mutated
 
 #### Cold-start context
 
 The code assumes a Blockwise system-user token can act on assets that an
 unrelated customer shares to the Blockwise Business Portfolio. Current Meta
-materials warn that managing other businesses' ad accounts may still require
-the Marketing API access tier. A developer-role or Blockwise-owned ad account
-does not prove the workaround.
+materials establish that the app-level Marketing API Access Tier and each
+permission's access level remain app controls. A customer's partner assignment
+cannot upgrade either control. A developer-role or Blockwise-owned ad account
+would not prove the workaround.
 
-#### Tasks
+On 2026-08-31, Step 0 stopped before execution because:
 
-1. Name two people in the proof PR: `proof_executor` and an independent
-   `proof_reviewer`. The reviewer must not be the person who ran the test.
-2. Create or select a test Business Portfolio that:
-   - is not owned by Blockwise;
-   - has no user added as a Meta app developer/tester/admin;
-   - owns one disposable ad account, one Facebook Page, and optionally one
-     linked Instagram professional account;
-   - has no live spend attached to the test campaign used below.
-3. In Blockwise's Business Portfolio:
-   - confirm Business Verification state;
-   - confirm the app is installed for the Blockwise system user;
-   - record the app mode and Marketing API Access Tier (`Full Access` or
-     `Limited Access`), without assuming the tier is sufficient;
-   - confirm the exact product permission set: `ads_read`, `ads_management`,
-     `business_management`, `leads_retrieval`, `pages_manage_ads`,
-     `pages_show_list`, and `pages_read_engagement`;
-   - record the token only in the approved private runtime-token vault or a
-     one-session local secret manager. Never write it to the repo.
-4. From the external Business Portfolio, add Blockwise as a partner and share:
-   - the disposable ad account with `Manage campaigns (ads)` and
-     `View performance` partial access;
-   - the Facebook Page with the minimum Page task needed for ad identity and
-     Page token resolution;
-   - do **not** share the linked Instagram account separately on the first pass.
-     First prove whether the Page-linked professional identity is discoverable
-     and usable through the shared Page. Repeat with a separate Instagram asset
-     assignment only if the first pass fails for an Instagram-specific access
-     reason, and record that evidence in the proof runbook.
-5. Add `scripts/meta/verify-partner-external.mjs`. It must import the repository
-   Meta adapters rather than reimplementing Graph calls, accept the token from
-   stdin/approved vault only, refuse Blockwise-owned/app-role fixtures, create
-   only `PAUSED` objects, and always run bounded cleanup in `finally`.
-6. Through that script and the actual repository adapters, run read probes
-   against the configured Graph version:
-   - system-token identity/debug information;
-   - ad-account `id,name,currency,timezone_name,account_status,business`;
-   - Page access-token resolution;
-   - Page-linked `instagram_business_account` discovery without a separate
-     Instagram asset assignment;
-   - campaign listing and reporting Insights for the external ad account.
-7. Execute one complete disposable product path, not a campaign-only probe:
-   - build the same `OUTCOME_LEADS` + `HOUSING` publish plan used by Ad Studio;
-   - create the campaign, ad set, Instant Form, creative, and ad through the
-     repository executor, with every deliverable object exactly `PAUSED`;
-   - use the shared Page as the ad identity and, if discovered, the Page-linked
-     Instagram professional identity;
-   - read every object back and verify account/Page/identity ownership and
-     `PAUSED` status;
-   - submit one synthetic test lead using Meta's approved Lead Ads testing path,
-     retrieve it through the repository lead adapter, then delete the local
-     test-lead data;
-   - read reporting for the created objects;
-   - delete/archive every disposable Meta object through the proven safe order;
-   - record cleanup receipts and fail the proof if any object remains.
-8. Add `docs/runbooks/meta-partner-external-proof.md` containing:
-   - the exact prerequisites;
-   - redacted successful request/response contracts;
-   - the precise permission/task combination that worked;
-   - the failure interpretation table;
-   - the date after which the proof must be rerun: 90 days, a Graph version
-     change, an app-mode/access-tier change, or a permission change, whichever
-     occurs first.
-9. Commit a sanitized receipt at
-   `docs/evidence/meta-partner-proof/<YYYY-MM-DD>/receipt.json` containing the
-   commit SHA, Graph version, app ID, app mode, access tier, permission list,
-   external-business attestation, UTC start/end times, hashed Meta object IDs,
-   each read/write/delete outcome, cleanup completion, fixture SHA-256 hashes,
-   `expires_at`, `proof_executor`, and `proof_reviewer`. Never store names,
-   tokens, lead data, or raw customer IDs. The reviewer verifies the receipt
-   against the live run and approves the PR explicitly.
-10. Add sanitized JSON fixtures beside the receipt for the exact responses that
-    later capability tests consume. Add a test that rejects an expired receipt
-    whenever partner starts are enabled.
+- owner-supplied dashboard screenshots show the app is unpublished and App
+  Review is incomplete;
+- the current environment has no configured `META_BUSINESS_ID` or
+  `META_SYSTEM_USER_TOKEN`;
+- no genuinely external non-app-role test business is available; and
+- no independent human reviewer is available.
+
+The controlling runbook is
+`docs/runbooks/meta-partner-external-proof.md`. The machine-readable stop
+receipt is
+`docs/evidence/meta-partner-proof/2026-08-31/receipt.json`.
+
+#### Recorded actions
+
+1. Reviewed the owner-supplied dashboard state and Meta's current primary
+   documentation.
+2. Performed presence-only configuration checks without printing values.
+3. Recorded the missing prerequisites and non-execution state in a sanitized
+   JSON receipt.
+4. Did not add a write-capable proof script.
+5. Did not contact an external Meta business or make a Meta API call.
+6. Did not create, update, archive, or delete any Meta object.
+7. Hard-stopped all downstream partner-connection implementation.
+
+#### Correct contract for any future proof
+
+A future run requires a new authorization after every receipt recheck condition
+is satisfied. It must use these corrected semantics:
+
+- Marketing API Access Tier is app-level `Limited Access`/`Full Access`.
+  Individual permission access remains `Standard Access`/`Advanced Access`.
+- Campaign, ad set, and ad are created with `status=PAUSED` and read back as
+  non-delivering. Instant Form and ad creative do not have `PAUSED`; never send
+  that value to those object types.
+- Page-linked Instagram discovery proves only linkage. Instagram ad-identity
+  proof requires a paused creative/ad using the actor plus successful readback.
+- Lead testing requires Leads Access Manager to grant the intended app/CRM and
+  system user access, followed by the documented sequence:
+  `POST /{form-id}/test_leads`, `GET /{form-id}/test_leads`, then
+  `DELETE /{lead-id}`.
+- Cleanup uses each object's archive/delete contract and verifies terminal
+  non-delivery by readback. It must not claim physical deletion. Test lead, ad,
+  ad set, campaign, creative, and form outcomes are recorded separately.
+- The executor and independent human reviewer must be different people.
 
 #### Go criteria
 
-The full PAUSED product path, Page identity, reporting read, synthetic lead
-retrieval, and cleanup all succeed using the Blockwise system-user token against
-the non-app-role external business; the independent reviewer signs the receipt.
+Not met. A future receipt may say `GO` only when the complete non-delivering
+product path, Page and optional Instagram ad identity, reporting, synthetic lead
+retrieval, type-specific cleanup, and independent review all succeed against a
+genuinely external non-app-role business with the approved app configuration.
 
 #### Stop criteria
 
-Stop if Meta returns an access-tier/App Review error, any product permission or
-capability is missing, the Page cannot be used as ad identity, test leads cannot
-be retrieved, cleanup is incomplete, the receipt is not independently reviewed,
-or the only working path adds the customer as an app role. Document the failure
-and do not implement customer claims.
+Met. App publication/review, app-tier/permission evidence, credentials, external
+fixture, live execution, and independent review are absent. The proof remains
+`UNPROVEN`; do not implement customer claims or any later partner step.
 
 #### Verification
 
 ```powershell
-npm test -- --test-name-pattern="meta partner proof"
+Get-Content docs/evidence/meta-partner-proof/2026-08-31/receipt.json |
+  ConvertFrom-Json | Out-Null
 npm run typecheck
+npm test
 ```
 
 #### Exit criteria
 
-- Sanitized proof receipt and exact fixtures are committed and reviewed.
-- Runbook names the exact access tier, permissions, tasks, and Graph version.
-- Every disposable Meta object has a successful cleanup receipt.
-- A human can distinguish `permission missing`, `asset not shared`,
-  `access tier missing`, and `invalid token` from the recorded error table.
+- Sanitized receipt says `NO_GO` and `UNPROVEN`.
+- Receipt says no external run, Meta mutation, test lead, or reviewer existed.
+- Runbook distinguishes app tier from permission access and records the
+  corrected object, lead-test, Instagram, and cleanup semantics.
+- Receipt has an expired-at-issuance proof time, machine-readable stop reason,
+  and explicit recheck prerequisites/triggers.
+- OAuth/App Review and the honest manual fallback are authorized; automated
+  partner implementation remains stopped.
 
 #### Rollback
 
-Proof-script/runbook/fixture PR. Revert its repository changes if the proof is
-invalidated, turn partner starts off, and retain the sanitized failure receipt.
-Do not leave any disposable Meta object or local test-lead data behind.
+Retain this sanitized failure receipt as the controlling stop evidence. A later
+proof must add a new dated receipt; it must not overwrite or reinterpret this
+receipt as a successful run. No Meta cleanup is required because no Meta object
+was mutated.
 
 ---
 
@@ -451,7 +436,7 @@ Do not leave any disposable Meta object or local test-lead data behind.
 
 - **Model tier:** strongest available
 - **PR:** `fix/meta-partner-token-containment`
-  **Depends on:** Step 0 passed
+   **Depends on:** Step 0 passed; currently blocked by the Step 0 NO-GO receipt
 
 #### Cold-start context
 
@@ -800,9 +785,9 @@ under `legacy_archive`.
 #### Cold-start context
 
 The existing claim trusts a basic `id,name` read as proof of campaign-management
-access. Step 0 produced the exact successful Graph response contract for the
-current Meta access tier and Graph version. Implement only that proven contract;
-do not invent endpoints or permission labels.
+access. Step 0 produced no successful Graph response contract and this step is
+blocked. If a later independently reviewed proof passes, implement only that
+new receipt's proven contract; do not invent endpoints or permission labels.
 
 #### Owned files
 
@@ -1743,6 +1728,33 @@ For every mutation:
    condition.
 
 ### Plan amendments
+
+#### 2026-08-31 — Step 0 NO-GO evidence correction
+
+- **Evidence:** Meta's current primary documentation distinguishes the
+  app-level Marketing API Access Tier (`Limited Access`/`Full Access`) from
+  individual permission access (`Standard Access`/`Advanced Access`). Customer
+  partner sharing cannot upgrade either app control. Owner-supplied dashboard
+  screenshots show the app unpublished with App Review incomplete. The
+  inspected environment has neither required Business ID nor system-user token;
+  no external fixture or independent reviewer exists.
+- **Execution:** no external run occurred, no Meta API call was made, no object
+  was mutated, and no test lead was created. The receipt is `NO_GO` and
+  `UNPROVEN`, expired at issuance, and contains no secrets, raw IDs, names, lead
+  data, or customer data.
+- **Corrections:** only campaign, ad set, and ad receive `PAUSED`; Instant Form
+  and ad creative do not. Page-linked Instagram discovery is not ad-identity
+  proof. A lead test requires Leads Access Manager state plus the documented
+  POST/GET/DELETE lifecycle. Cleanup means type-specific archive/delete and
+  terminal readback, not a claim of physical deletion.
+- **Affected edges:** Step 0 is terminal. Steps 1–9 must not begin until a new,
+  dated, independently reviewed receipt satisfies every recheck prerequisite
+  and records `GO`/`PASSED`.
+- **Authorized fallback:** continue OAuth and App Review; provide creative
+  export plus explicitly manual/operator publishing. Never present manual work
+  as an API connection.
+- **Controlling evidence:** `docs/runbooks/meta-partner-external-proof.md` and
+  `docs/evidence/meta-partner-proof/2026-08-31/receipt.json`.
 
 #### 2026-08-31 — adversarial cold-start review
 
