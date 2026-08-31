@@ -1,14 +1,27 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+
+import { verifyInternalRequest } from "@/lib/internal-auth";
 import { loadPublishState, validatePublishState, freezePublicationSnapshot } from "@/lib/adstudio/publish-adapter";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 /**
  * GET /api/internal/adstudio/publish/state?adId=...&workspaceId=...
  *
  * Loads the authoritative publish state: ad metadata, active revision
  * PNG outputs, direct template, and latest Instant Form.
+ *
+ * Internal-only: requires the BLOCKWISE_INTERNAL_SECRET HMAC headers
+ * (scope "adstudio.publish").
  */
 export async function GET(request: Request) {
+  const auth = await verifyInternalRequest(request, "adstudio.publish");
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+
   const { searchParams } = new URL(request.url);
   const adId = searchParams.get("adId");
   const workspaceId = searchParams.get("workspaceId");
@@ -40,9 +53,23 @@ export async function GET(request: Request) {
  *
  * Freezes a publication snapshot for the given ad + revision.
  * Body: { adId, workspaceId, connectionId, setup, controls }
+ *
+ * Internal-only: requires the BLOCKWISE_INTERNAL_SECRET HMAC headers
+ * (scope "adstudio.publish").
  */
 export async function POST(request: Request) {
-  const body = await request.json().catch(() => null);
+  const rawBody = await request.text();
+  const auth = await verifyInternalRequest(request, "adstudio.publish", { body: rawBody });
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+
+  let body: Record<string, unknown> | null = null;
+  try {
+    body = JSON.parse(rawBody) as Record<string, unknown>;
+  } catch {
+    return NextResponse.json({ error: "invalid_json" }, { status: 400 });
+  }
   if (!body || !body.adId || !body.workspaceId) {
     return NextResponse.json({ error: "missing_params" }, { status: 400 });
   }
