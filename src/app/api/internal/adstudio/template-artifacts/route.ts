@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
   if (!auth.ok) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
-  const rateLimit = await checkRateLimit(createSupabaseServiceClient(), null, "internal:adstudio.templates", {
+  const rateLimit = await checkRateLimit(null, "internal:adstudio.templates", {
     windowSeconds: 60,
     maxRequests: 120,
     bucket: "internal-api",

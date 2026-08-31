@@ -48,7 +48,7 @@ export async function GET(request: Request) {
 
   const supabase = createClient(supabaseUrl, supabaseKey);
 
-  const rateLimit = await checkRateLimit(supabase, null, "internal:adstudio.publish", {
+  const rateLimit = await checkRateLimit(null, "internal:adstudio.publish", {
     windowSeconds: 60,
     maxRequests: 120,
     bucket: "internal-api",
@@ -105,7 +105,7 @@ export async function POST(request: Request) {
 
   const supabase = createClient(supabaseUrl, supabaseKey);
 
-  const rateLimit = await checkRateLimit(supabase, null, "internal:adstudio.publish", {
+  const rateLimit = await checkRateLimit(null, "internal:adstudio.publish", {
     windowSeconds: 60,
     maxRequests: 120,
     bucket: "internal-api",

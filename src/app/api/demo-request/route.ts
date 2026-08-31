@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
     request.headers.get("x-real-ip") ??
     "unknown";
   const serviceClient = createSupabaseServiceClient();
-  const rateLimit = await checkRateLimit(serviceClient, null, ip, {
+  const rateLimit = await checkRateLimit(null, ip, {
     windowSeconds: 3600,
     maxRequests: 5,
     bucket: "demo-request",

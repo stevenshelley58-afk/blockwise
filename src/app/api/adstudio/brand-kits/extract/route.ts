@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     return context.response;
   }
 
-  const rateLimit = await checkRateLimit(context.supabase, context.access.workspaceId, context.access.userId, {
+  const rateLimit = await checkRateLimit(context.access.workspaceId, context.access.userId, {
     windowSeconds: 300,
     maxRequests: 10,
     bucket: "adstudio-brand-extract",

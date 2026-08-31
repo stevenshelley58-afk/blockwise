@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
       request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
       request.headers.get("x-real-ip") ??
       "unknown";
-    const rateLimit = await checkRateLimit(supabase, null, ip, {
+    const rateLimit = await checkRateLimit(null, ip, {
       bucket: "public-audit-suggestions",
       maxRequests: 10,
       windowSeconds: 60 * 60,
