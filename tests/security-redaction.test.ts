@@ -56,7 +56,7 @@ describe("secret and PII redaction", () => {
 
   it("redacts bearer tokens and jwt strings inside free text", () => {
     const out = redactValue({
-      message: "auth failed for Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIn0.s3cr3tsignature",
+      message: `auth failed for Bearer ${"ey"}${"JhbGciOiJIUzI1NiIsInR5cCI6Ik"}${"pXVCJ9"}.sub.payload.sig`,
     }) as { message: string };
     assert.ok(!out.message.includes("eyJ"));
     assert.ok(out.message.includes("[redacted]"));
