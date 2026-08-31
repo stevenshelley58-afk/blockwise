@@ -36,7 +36,7 @@ describe("secret and PII redaction", () => {
     const out = redactValue({
       authorization: "Bearer super-secret-value",
       cookie: "session=abc",
-      apiKey: "sk-live-123",
+      apiKey: "example-api-key-value",
       refresh_token: "r1",
       message: "rate limit exceeded",
       subject_key: "1.2.3.4",
@@ -64,9 +64,9 @@ describe("secret and PII redaction", () => {
 
   it("redacts header-style secrets in error text", () => {
     const out = redactValue({
-      message: 'request rejected: x-api-key: sk-123456789abcdef; authorization: Bearer xyz',
+      message: 'request rejected: x-api-key: EXAMPLE-KEY-VALUE-123; authorization: Bearer xyz',
     }) as { message: string };
-    assert.ok(!out.message.includes("sk-123456789abcdef"));
+    assert.ok(!out.message.includes("EXAMPLE-KEY-VALUE-123"));
     assert.ok(out.message.includes("[redacted]"));
   });
 
