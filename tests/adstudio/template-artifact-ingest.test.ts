@@ -279,23 +279,11 @@ describe("direct template route and migration contract", () => {
     assert.match(route, /template_artifact_conflict" \? 409/);
   });
 
-  it("accepts exactly one valid Bearer secret and rejects malformed or missing credentials", () => {
+  it("verifies internal HMAC requests and rejects unauthenticated calls", () => {
     const route = readFileSync("src/app/api/internal/adstudio/template-artifacts/route.ts", "utf8");
-    assert.match(route, /authorization\?\.match\(\/\^Bearer\\s\+\(\.\+\)\$\/i\)/);
-    assert.doesNotMatch(route, /\^Bearer\\\\s\+/);
-
-    const authorize = (authorization: string | null, configuredSecret: string | undefined) => {
-      const expected = configuredSecret?.trim();
-      const provided = authorization?.match(/^Bearer\s+(.+)$/i)?.[1]?.trim();
-      return Boolean(expected && provided && provided === expected);
-    };
-    assert.equal(authorize("Bearer internal-secret", "internal-secret"), true);
-    assert.equal(authorize("bearer   internal-secret", "internal-secret"), true);
-    assert.equal(authorize("Bearer wrong", "internal-secret"), false);
-    assert.equal(authorize("Bearer\\s+internal-secret", "internal-secret"), false);
-    assert.equal(authorize("internal-secret", "internal-secret"), false);
-    assert.equal(authorize(null, "internal-secret"), false);
-    assert.equal(authorize("Bearer internal-secret", ""), false);
+    assert.match(route, /verifyInternalRequest\(request, "adstudio\.templates"/);
+    assert.match(route, /if \(!auth\.ok\)[\s\S]*status: auth\.status/);
+    assert.doesNotMatch(route, /authorization\?\.match\(\/\^Bearer/);
   });
 
   it("keeps legacy customer data while allowing direct-template customer inserts", () => {
