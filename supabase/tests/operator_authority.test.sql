@@ -7,13 +7,15 @@ insert into auth.users (instance_id, id, aud, role, email, encrypted_password, r
 values
   ('00000000-0000-0000-0000-000000000000', 'e1000000-0000-4000-8000-000000000001', 'authenticated', 'authenticated', 'authority-admin@test.local', '', '{}', '{}', now(), now(), now()),
   ('00000000-0000-0000-0000-000000000000', 'e2000000-0000-4000-8000-000000000002', 'authenticated', 'authenticated', 'authority-owner@test.local', '', '{}', '{}', now(), now(), now()),
-  ('00000000-0000-0000-0000-000000000000', 'e3000000-0000-4000-8000-000000000003', 'authenticated', 'authenticated', 'authority-target@test.local', '', '{}', '{}', now(), now(), now())
+  ('00000000-0000-0000-0000-000000000000', 'e3000000-0000-4000-8000-000000000003', 'authenticated', 'authenticated', 'authority-target@test.local', '', '{}', '{}', now(), now(), now()),
+  ('00000000-0000-0000-0000-000000000000', 'e5000000-0000-4000-8000-000000000005', 'authenticated', 'authenticated', 'authority-membership@test.local', '', '{}', '{}', now(), now(), now())
 on conflict (id) do nothing;
 
 insert into public.profiles (id, email, is_operator, operator_role)
 values
   ('e1000000-0000-4000-8000-000000000001', 'authority-admin@test.local', false, null),
   ('e2000000-0000-4000-8000-000000000002', 'authority-owner@test.local', true, 'owner'),
+  ('e5000000-0000-4000-8000-000000000005', 'authority-membership@test.local', false, null),
   ('e3000000-0000-4000-8000-000000000003', 'authority-target@test.local', false, null)
 on conflict (id) do nothing;
 
@@ -24,10 +26,16 @@ on conflict (id) do nothing;
 insert into public.workspace_members (workspace_id, profile_id, role)
 values
   ('e4000000-0000-4000-8000-000000000004', 'e1000000-0000-4000-8000-000000000001', 'admin'),
-  ('e4000000-0000-4000-8000-000000000004', 'e3000000-0000-4000-8000-000000000003', 'member')
+  ('e4000000-0000-4000-8000-000000000004', 'e3000000-0000-4000-8000-000000000003', 'member'),
+  ('e4000000-0000-4000-8000-000000000004', 'e5000000-0000-4000-8000-000000000005', 'operator')
 on conflict do nothing;
 
 set local role authenticated;
+select set_config('request.jwt.claims', '{"role":"authenticated","sub":"e1000000-0000-4000-8000-000000000001"}', true);
+select set_config('request.jwt.claims', '{"role":"authenticated","sub":"e5000000-0000-4000-8000-000000000005"}', true);
+select set_config('request.jwt.claim.role', 'authenticated', true);
+select set_config('request.jwt.claim.sub', 'e5000000-0000-4000-8000-000000000005', true);
+select is(public.is_operator(), false, 'membership-only operator is not a platform operator');
 select set_config('request.jwt.claims', '{"role":"authenticated","sub":"e1000000-0000-4000-8000-000000000001"}', true);
 select set_config('request.jwt.claim.sub', 'e1000000-0000-4000-8000-000000000001', true);
 

@@ -53,10 +53,9 @@ returns trigger
 language plpgsql security definer set search_path = public
 as $$
 declare
-  v_jwt_role text := current_setting('request.jwt.claim.role', true);
+  v_effective_role text := coalesce(nullif(current_setting('request.jwt.claim.role', true), ''), nullif(current_setting('role', true), ''), current_user);
 begin
-  if coalesce(v_jwt_role, '') in ('service_role', 'postgres')
-     or current_user = 'postgres'
+  if v_effective_role in ('service_role', 'postgres')
      or current_setting('is_superuser', true) = 'on' then
     return new;
   end if;
@@ -74,7 +73,8 @@ create trigger protect_workspace_operator_membership
   for each row execute function public.protect_workspace_operator_membership();
 
 revoke all on function public.protect_workspace_operator_membership() from public, anon, authenticated;
-grant execute on function public.protect_workspace_operator_membership() to service_role;
+-- Trigger functions are invoked by PostgreSQL; no direct client execution is needed.
+revoke execute on function public.protect_workspace_operator_membership() from service_role;
 
 create or replace function public.set_operator_role(p_user_id uuid, p_role text)
 returns void language plpgsql security definer set search_path = public
@@ -83,9 +83,13 @@ declare
   v_caller_id uuid;
   v_caller_is_owner boolean := false;
   v_target_is_owner boolean := false;
+  v_target_role text;
   v_owner_count integer := 0;
-  v_effective_role text := coalesce(current_setting('role', true), current_user);
+  v_effective_role text := coalesce(nullif(current_setting('request.jwt.claim.role', true), ''), nullif(current_setting('role', true), ''), current_user);
 begin
+  -- Serialize all operator mutations so last-owner checks cannot race.
+  perform pg_advisory_xact_lock(hashtextextended('blockwise.operator-owners', 0));
+
   if p_role is not null and p_role not in ('owner', 'support') then
     raise exception 'invalid_operator_role';
   end if;
@@ -93,7 +97,7 @@ begin
     raise exception 'invalid_user';
   end if;
 
-  if not (v_effective_role in ('postgres') or current_setting('is_superuser', true) = 'on') then
+  if not (v_effective_role in ('postgres', 'service_role') or current_setting('is_superuser', true) = 'on') then
     begin
       v_caller_id := (nullif(current_setting('request.jwt.claim.sub', true), ''))::uuid;
     exception when others then
@@ -110,8 +114,8 @@ begin
     end if;
   end if;
 
-  select p.is_operator and p.operator_role = 'owner'
-    into v_target_is_owner
+  select p.operator_role, p.is_operator and p.operator_role = 'owner'
+    into v_target_role, v_target_is_owner
   from public.profiles p where p.id = p_user_id;
   if not found then
     raise exception 'operator_user_not_found';
@@ -135,8 +139,56 @@ begin
         else coalesce(operator_since, now())
       end
   where id = p_user_id;
+
+  if not found then
+    raise exception 'operator_user_not_found';
+  end if;
+
+  insert into public.audit_logs (workspace_id, actor_profile_id, action, target_type, target_id, metadata, correlation_id)
+  values (null, v_caller_id, 'operator.role.changed', 'profile', p_user_id,
+    jsonb_build_object('role', p_role, 'previous_role', v_target_role, 'durable', true),
+    gen_random_uuid()::text);
 end;
 $$;
 
 revoke all on function public.set_operator_role(uuid, text) from public, anon;
 grant execute on function public.set_operator_role(uuid, text) to authenticated, service_role;
+
+-- Revoke refresh sessions in the self-hosted GoTrue database. This is not a
+-- long-term suspension: already-issued access tokens remain valid until their
+-- configured short TTL expires.
+create or replace function public.revoke_user_sessions(p_user_id uuid)
+returns integer
+language plpgsql security definer set search_path = public, auth
+as $$
+declare
+  v_owner boolean := false;
+  v_owner_count integer := 0;
+  v_revoked integer := 0;
+begin
+  if p_user_id is null then
+    raise exception 'invalid_user';
+  end if;
+
+  -- Keep the last-owner check and deletion in one serialized transaction.
+  perform pg_advisory_xact_lock(hashtextextended('blockwise.operator-owners', 0));
+  select is_operator = true and operator_role = 'owner'
+    into v_owner
+  from public.profiles where id = p_user_id;
+  if v_owner then
+    select count(*)::integer into v_owner_count
+    from public.profiles
+    where is_operator = true and operator_role = 'owner';
+    if v_owner_count <= 1 then
+      raise exception 'last_operator_owner';
+    end if;
+  end if;
+
+  delete from auth.sessions where user_id = p_user_id;
+  get diagnostics v_revoked = row_count;
+  return v_revoked;
+end;
+$$;
+
+revoke all on function public.revoke_user_sessions(uuid) from public, anon, authenticated;
+grant execute on function public.revoke_user_sessions(uuid) to service_role;

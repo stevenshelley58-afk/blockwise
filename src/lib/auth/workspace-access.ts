@@ -127,7 +127,7 @@ export async function requireWorkspaceAccess(
   }
 
   const [{ data: profile }, { data: memberships }] = await Promise.all([
-    supabase.from("profiles").select("is_operator").eq("id", claims.sub).maybeSingle(),
+    supabase.from("profiles").select("is_operator, operator_role").eq("id", claims.sub).maybeSingle(),
     supabase
       .from("workspace_members")
       .select("role, workspaces(id, name, mode, region)")

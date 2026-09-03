@@ -88,4 +88,4 @@
 20260830020000_direct_template_artifact.sql
 20260901020000_operator_roles.sql
 20260901025000_protect_operator_roles.sql
-20260901030000_canonical_operator_authority.sql
+20260901026000_canonical_operator_authority.sql

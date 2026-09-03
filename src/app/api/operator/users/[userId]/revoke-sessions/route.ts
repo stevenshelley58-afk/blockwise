@@ -38,17 +38,6 @@ export async function POST(request: Request, context: RouteContext) {
     .maybeSingle();
   if (!target) return NextResponse.json({ error: "User not found." }, { status: 404 });
 
-  if (target.is_operator === true && target.operator_role === "owner") {
-    const { count } = await admin
-      .from("profiles")
-      .select("id", { count: "exact", head: true })
-      .eq("is_operator", true)
-      .eq("operator_role", "owner");
-    if ((count ?? 0) <= 1) {
-      return NextResponse.json({ error: "Cannot revoke the last owner." }, { status: 409 });
-    }
-  }
-
   const correlationId = crypto.randomUUID();
   const intent = await admin.from("audit_logs").insert({
     workspace_id: null,
@@ -64,7 +53,7 @@ export async function POST(request: Request, context: RouteContext) {
     return NextResponse.json({ error: "Revocation could not be recorded." }, { status: 503 });
   }
 
-  const { error } = await admin.auth.admin.signOut(userId, "global");
+  const { error: revokeError } = await admin.rpc("revoke_user_sessions", { p_user_id: userId });
   const result = await admin.from("audit_logs").insert({
     workspace_id: null,
     actor_profile_id: auth.userId,
@@ -72,13 +61,17 @@ export async function POST(request: Request, context: RouteContext) {
     target_type: "auth_user",
     target_id: userId,
     correlation_id: correlationId,
-    metadata: { reason, operatorEmail: auth.email, operatorRole: auth.role, phase: error ? "failed" : "complete", error: error?.message ?? null },
+    metadata: { reason, operatorEmail: auth.email, operatorRole: auth.role, phase: revokeError ? "failed" : "complete", error: revokeError?.message ?? null },
   });
   if (result.error) {
     console.error("[operator] revocation result audit failed", result.error.message);
+    return NextResponse.json({ error: "Revocation result could not be recorded." }, { status: 503 });
   }
-  if (error) {
-    console.error("[operator] session revocation failed", error.message);
+  if (revokeError) {
+    console.error("[operator] session revocation failed", revokeError.message);
+    if (revokeError.message.includes("last_operator_owner")) {
+      return NextResponse.json({ error: "Cannot revoke the last owner." }, { status: 409 });
+    }
     return NextResponse.json({ error: "Revocation failed." }, { status: 502 });
   }
 
