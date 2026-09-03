@@ -69,7 +69,8 @@ async function renderLayer(ctx: SKRSContext2D, layer: LayoutLayer, input: Render
 
 type CanvasDimensions = { width: number; height: number };
 
-function resolveGeometry(geometry: Rect, dims: CanvasDimensions): Rect {
+/** Internal parity fixture helper; the package index intentionally exposes only render APIs. */
+export function resolveRenderGeometry(geometry: Rect, dims: CanvasDimensions): Rect {
   const values = [geometry.x, geometry.y, geometry.width, geometry.height];
   if (values.every((value) => Number.isFinite(value)) && values.every((value) => Math.abs(value) <= 1.001)) {
     return { x: geometry.x * dims.width, y: geometry.y * dims.height, width: geometry.width * dims.width, height: geometry.height * dims.height };
@@ -78,7 +79,7 @@ function resolveGeometry(geometry: Rect, dims: CanvasDimensions): Rect {
 }
 
 async function renderPlate(ctx: SKRSContext2D, layer: Extract<LayoutLayer, { type: "plate" }>, input: RenderInput, dims: CanvasDimensions): Promise<void> {
-  const geometry = resolveGeometry(layer.geometry, dims);
+  const geometry = resolveRenderGeometry(layer.geometry, dims);
   if (layer.assetKey) {
     const bytes = input.imageValues[layer.assetKey];
     if (!bytes) throw new Error(`Missing immutable plate asset: ${layer.assetKey}`);
@@ -108,7 +109,7 @@ function registerTemplateFonts(template: AdTemplate, fontValues: Record<string, 
 }
 
 async function renderOverlay(ctx: SKRSContext2D, layer: Extract<LayoutLayer, { type: "overlay_patch" }>, input: RenderInput, dims: CanvasDimensions): Promise<void> {
-  const geometry = resolveGeometry(layer.geometry, dims);
+  const geometry = resolveRenderGeometry(layer.geometry, dims);
   if (layer.assetKey) {
     const bytes = input.imageValues[layer.assetKey];
     if (!bytes) throw new Error(`Missing immutable overlay asset: ${layer.assetKey}`);
@@ -130,7 +131,7 @@ async function renderImageSlot(ctx: SKRSContext2D, layer: ImageSlotLayer, input:
   if (!imageBuf) return;
   const img = await loadImage(imageBuf);
   const crop = normalizeCrop(input.cropOverrides?.[layer.inputKey] ?? layer.defaultCrop);
-  const geometry = resolveGeometry(layer.geometry, dims);
+  const geometry = resolveRenderGeometry(layer.geometry, dims);
   const sx = crop.x * img.width;
   const sy = crop.y * img.height;
   const sw = crop.width * img.width;
@@ -138,7 +139,7 @@ async function renderImageSlot(ctx: SKRSContext2D, layer: ImageSlotLayer, input:
 
   ctx.save();
   if (layer.mask === "rounded_rect") {
-    roundRect(ctx, geometry.x, geometry.y, geometry.width, geometry.height, 16);
+    roundRect(ctx, geometry.x, geometry.y, geometry.width, geometry.height, imageMaskRadius(geometry));
     ctx.clip();
   } else if (layer.mask === "circle") {
     ctx.beginPath();
@@ -149,6 +150,11 @@ async function renderImageSlot(ctx: SKRSContext2D, layer: ImageSlotLayer, input:
   }
   ctx.drawImage(img, sx, sy, sw, sh, geometry.x, geometry.y, geometry.width, geometry.height);
   ctx.restore();
+}
+
+/** Internal parity fixture helper; not part of the package index API. */
+export function imageMaskRadius(geometry: Pick<Rect, "width" | "height">): number {
+  return Math.min(16, geometry.width / 2, geometry.height / 2);
 }
 
 function normalizeCrop(crop: Rect): Rect {
@@ -169,13 +175,24 @@ type RenderTextLayer = TextLayer & {
   case?: "upper" | "lower" | "none";
 };
 
+/**
+ * Resolve the authored text size after geometry normalization. The optional
+ * ratio is the pack's scale-independent type treatment and is intentionally
+ * shared as a formula with the Fabric editor's geometry helper.
+ */
+/** Internal parity fixture helper; the package index intentionally exposes only render APIs. */
+export function effectiveTextFontSize(layer: Pick<TextLayer, "fontSize"> & { sizeRatio?: number }, geometry: Rect): number {
+  const ratio = Number(layer.sizeRatio);
+  return Number.isFinite(ratio) && ratio > 0 ? geometry.height * ratio : layer.fontSize;
+}
+
 function renderText(ctx: SKRSContext2D, layer: TextLayer, input: RenderInput, dims: CanvasDimensions): void {
   const source = input.textValues[layer.inputKey];
   if (!source) return;
   if (layer.overflowBehaviour === "refuse" && source.length > layer.maxCharacters) return;
   const textLayer = layer as RenderTextLayer;
   const text = applyTextCase(source.slice(0, layer.maxCharacters), textLayer.case);
-  const geometry = resolveGeometry(layer.geometry, dims);
+  const geometry = resolveRenderGeometry(layer.geometry, dims);
   ctx.save();
   ctx.fillStyle = input.colourMap[layer.colourRole] ?? "#000000";
   ctx.textAlign = layer.alignment;
@@ -186,10 +203,7 @@ function renderText(ctx: SKRSContext2D, layer: TextLayer, input: RenderInput, di
   // such as "Barlow" would silently select a host fallback face.
   const requestedFamily = textLayer.fontFamily?.trim();
   const family = requestedFamily && GlobalFonts.has(requestedFamily) ? requestedFamily : registeredFamily;
-  const authoredRatio = Number(textLayer.sizeRatio);
-  const baseFontSize = Number.isFinite(authoredRatio) && authoredRatio > 0
-    ? geometry.height * authoredRatio
-    : layer.fontSize;
+  const baseFontSize = effectiveTextFontSize(textLayer, geometry);
   // A shrink floor must also be bounded by the box's line budget. The old
   // unconditional 8px floor could exceed short authored boxes and clip
   // descenders; truncation gets the same geometry guard while refusal remains
@@ -341,7 +355,7 @@ async function renderLogo(ctx: SKRSContext2D, layer: Extract<LayoutLayer, { type
   const imageBuf = input.imageValues[layer.inputKey];
   if (!imageBuf) return;
   const img = await loadImage(imageBuf);
-  const geometry = resolveGeometry(layer.geometry, dims);
+  const geometry = resolveRenderGeometry(layer.geometry, dims);
   ctx.drawImage(img, geometry.x, geometry.y, geometry.width, geometry.height);
 }
 
@@ -349,7 +363,7 @@ function renderVector(ctx: SKRSContext2D, layer: Extract<LayoutLayer, { type: "v
   ctx.save();
   ctx.globalAlpha = Math.min(1, Math.max(0, layer.opacity));
   ctx.fillStyle = input.colourMap[layer.colourRole] ?? "#000000";
-  const { x, y, width, height } = resolveGeometry(layer.geometry, dims);
+  const { x, y, width, height } = resolveRenderGeometry(layer.geometry, dims);
   if (layer.shape === "circle" || layer.shape === "ring") {
     ctx.beginPath();
     ctx.arc(x + width / 2, y + height / 2, Math.min(width, height) / 2, 0, Math.PI * 2);
@@ -377,7 +391,7 @@ function renderVector(ctx: SKRSContext2D, layer: Extract<LayoutLayer, { type: "v
 }
 
 function renderIcon(ctx: SKRSContext2D, layer: Extract<LayoutLayer, { type: "icon" }>, input: RenderInput, dims: CanvasDimensions): void {
-  const { x, y, width, height } = resolveGeometry(layer.geometry, dims);
+  const { x, y, width, height } = resolveRenderGeometry(layer.geometry, dims);
   const cx = x + width / 2;
   const cy = y + height / 2;
   const radius = Math.min(width, height) * 0.34;

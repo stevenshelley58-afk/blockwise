@@ -1,4 +1,4 @@
-import type { Rect } from "../../../../packages/ad-template-contract/src/types";
+import type { Rect, TextLayer } from "../../../../packages/ad-template-contract/src/types";
 
 export interface CanvasDimensions {
   width: number;
@@ -44,6 +44,64 @@ export function fabricCircleGeometry(geometry: Rect) {
     originY: "top" as const,
     radius: diameter / 2,
   };
+}
+
+/** Server icon fallbacks use a 0.34×minimum-dimension circle, not a box-filling circle. */
+export function fabricIconCircleGeometry(geometry: Rect) {
+  const radius = Math.min(geometry.width, geometry.height) * 0.34;
+  return {
+    // Use a center origin because Fabric includes stroke width in transformed
+    // dimensions for left/top origins, which would shift the visible circle
+    // by half its stroke compared with the server's centered arc.
+    left: geometry.x + geometry.width / 2,
+    top: geometry.y + geometry.height / 2,
+    originX: "center" as const,
+    originY: "center" as const,
+    radius,
+  };
+}
+
+/**
+ * Template packs may include the optional type-treatment metadata produced by
+ * Frank's authoring tools. `sizeRatio` is expressed against the resolved
+ * layer height, just like the canonical server renderer. Keep this helper
+ * independent of Fabric so the editor and its geometry fixtures can assert
+ * the same effective authored size without constructing a canvas.
+ */
+export function effectiveTextFontSize(layer: Pick<TextLayer, "fontSize"> & { sizeRatio?: number }, geometry: Rect): number {
+  const ratio = Number(layer.sizeRatio);
+  if (Number.isFinite(ratio) && ratio > 0) return geometry.height * ratio;
+  return layer.fontSize;
+}
+
+/** The canonical renderer draws unknown icons as a stroked circle. */
+export type FabricIconShape = "arrow" | "check" | "circle";
+
+export function resolveIconShape(icon: string): FabricIconShape {
+  if (icon === "arrow") return "arrow";
+  if (icon === "check" || icon === "tick") return "check";
+  return "circle";
+}
+
+/**
+ * Return local path data for the two supported path icons. Circle fallbacks
+ * are represented by a Fabric Circle instead, keeping its bounds centred in
+ * the authored rectangle.
+ */
+export function fabricIconPathData(icon: string, width: number, height: number): string | null {
+  const shape = resolveIconShape(icon);
+  if (shape === "arrow") {
+    return `M ${width * .1} ${height / 2} L ${width * .9} ${height / 2} M ${width * .55} ${height * .18} L ${width * .9} ${height / 2} L ${width * .55} ${height * .82}`;
+  }
+  if (shape === "check") {
+    return `M ${width * .18} ${height / 2} L ${width * .42} ${height * .76} L ${width * .84} ${height * .24}`;
+  }
+  return null;
+}
+
+/** Rounded image masks use the canonical 16px radius, clamped to the box. */
+export function imageMaskRadius(geometry: Pick<Rect, "width" | "height">): number {
+  return Math.min(16, geometry.width / 2, geometry.height / 2);
 }
 
 /**

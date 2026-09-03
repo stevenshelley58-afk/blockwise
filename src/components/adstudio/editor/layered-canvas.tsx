@@ -13,7 +13,17 @@ import type {
 import { PLACEMENT_DIMENSIONS } from "../../../../packages/ad-template-contract/src/types";
 import { templateAssetProxyUrl } from "@/lib/adstudio/pack-gallery";
 import { cn } from "@/lib/utils";
-import { fabricCircleGeometry, fabricPathPosition, fabricRectGeometry, resolveGeometry } from "./layer-geometry";
+import {
+  effectiveTextFontSize,
+  fabricCircleGeometry,
+  fabricIconCircleGeometry,
+  fabricIconPathData,
+  fabricPathPosition,
+  fabricRectGeometry,
+  imageMaskRadius,
+  resolveIconShape,
+  resolveGeometry,
+} from "./layer-geometry";
 
 type LayerTarget = { layer: LayoutLayer; object: FabricObject };
 
@@ -263,7 +273,9 @@ async function createLayerObject({
   }
 
   if (layer.type === "text") {
-    const text = textValues[layer.inputKey] ?? "";
+    const source = textValues[layer.inputKey] ?? "";
+    if (layer.overflowBehaviour === "refuse" && source.length > layer.maxCharacters) return null;
+    const text = source.slice(0, layer.maxCharacters);
     await ensureLocalFont(layer.font);
     const textbox = new fabric.Textbox(text, {
       left: geometry.x,
@@ -273,7 +285,7 @@ async function createLayerObject({
       width: geometry.width,
       height: geometry.height,
       fontFamily: fontStem(layer.font.file),
-      fontSize: layer.fontSize,
+      fontSize: effectiveTextFontSize(layer, geometry),
       lineHeight: layer.lineHeight,
       charSpacing: layer.tracking * 1000,
       textAlign: layer.alignment,
@@ -314,7 +326,18 @@ async function createLayerObject({
 
   if (layer.type === "icon") {
     const w = geometry.width, h = geometry.height;
-    const iconPath = layer.icon === "arrow" ? `M ${w * .1} ${h / 2} L ${w * .9} ${h / 2} M ${w * .55} ${h * .18} L ${w * .9} ${h / 2} L ${w * .55} ${h * .82}` : `M ${w * .12} ${h * .52} L ${w * .4} ${h * .8} L ${w * .88} ${h * .2}`;
+    const iconShape = resolveIconShape(layer.icon);
+    if (iconShape === "circle") {
+      return new fabric.Circle({
+        ...fabricIconCircleGeometry(geometry),
+        fill: "",
+        stroke: fill(layer.colourRole),
+        strokeWidth: Math.max(2, Math.min(w, h) * .1),
+        ...interactive,
+      });
+    }
+    const iconPath = fabricIconPathData(layer.icon, w, h);
+    if (!iconPath) return null;
     const path = new fabric.Path(iconPath, { fill: "", stroke: fill(layer.colourRole), strokeWidth: Math.max(2, Math.min(w, h) * .1), ...interactive });
     path.set(fabricPathPosition(path, geometry));
     return path;
@@ -342,7 +365,7 @@ async function createLayerObject({
     if (layer.type === "logo") {
       return new fabric.Rect({ ...fabricRectGeometry(geometry), rx: Math.min(12, geometry.height / 3), ry: Math.min(12, geometry.height / 3), fill: "#f1f2f4", stroke: "#d3d7df", strokeWidth: 2, ...interactive });
     }
-    const radius = layer.mask === "rounded_rect" ? Math.min(24, geometry.width / 4, geometry.height / 4) : 0;
+    const radius = layer.mask === "rounded_rect" ? imageMaskRadius(geometry) : 0;
     if (layer.mask === "circle") {
       return new fabric.Circle({
         ...fabricCircleGeometry(geometry),
@@ -424,6 +447,6 @@ function maskForSlot(fabric: typeof import("fabric"), layer: ImageSlotLayer, geo
       absolutePositioned: true,
     });
   }
-  const radius = layer.mask === "rounded_rect" ? Math.min(24, geometry.width / 4, geometry.height / 4) : 0;
+  const radius = layer.mask === "rounded_rect" ? imageMaskRadius(geometry) : 0;
   return new fabric.Rect({ ...fabricRectGeometry(geometry), rx: radius, ry: radius, absolutePositioned: true });
 }
