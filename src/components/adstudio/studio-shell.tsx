@@ -5,11 +5,12 @@ import {
   FolderOpen,
   LayoutGrid,
   Palette,
-  Sparkles,
+  SquarePen,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
+import { BlockwiseLogo } from "@/components/blockwise-logo";
 import { cn } from "@/lib/utils";
 
 type StudioShellProps = {
@@ -20,7 +21,7 @@ type StudioShellProps = {
 };
 
 const items = [
-  { href: "/ad-studio", label: "Create", icon: Sparkles, exact: true },
+  { href: "/ad-studio", label: "Create", icon: SquarePen, exact: true },
   { href: "/ad-studio/ads", label: "Ads", icon: LayoutGrid },
   { href: "/ad-studio/assets", label: "Assets", icon: FolderOpen },
   { href: "/ad-studio/brand", label: "Brand Pack", icon: Palette },
@@ -57,9 +58,13 @@ export function StudioShell({
         aria-label="Ad Studio navigation"
       >
         <div className="flex items-center gap-3 px-5 py-7">
-          <div className="grid size-9 place-items-center rounded-xl bg-(--surface) font-display text-base font-extrabold text-(--ink)">
-            A
-          </div>
+          <Link
+            href="/self-serve"
+            aria-label="Back to Blockwise"
+            className="grid size-9 shrink-0 place-items-center rounded-xl bg-(--surface) text-(--ink) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+          >
+            <BlockwiseLogo tokens showWordmark={false} />
+          </Link>
           <div>
             <p className="font-display text-[15.5px] font-extrabold leading-tight">
               Ad Studio
@@ -121,15 +126,15 @@ export function StudioShell({
         {!contextual ? (
           <header className="flex min-h-14 items-center border-b border-border bg-(--ink) px-4 text-(--surface) md:hidden">
             <Link
-              href="/ad-studio"
-              className="flex min-w-0 items-center gap-2 font-display text-[15.5px] font-extrabold"
-              aria-label="Ad Studio home"
+              href="/self-serve"
+              className="grid size-8 shrink-0 place-items-center rounded-lg bg-(--surface) text-(--ink) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+              aria-label="Back to Blockwise"
             >
-              <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-(--surface) text-sm text-(--ink)">
-                A
-              </span>
-              <span className="truncate">Ad Studio</span>
+              <BlockwiseLogo tokens showWordmark={false} />
             </Link>
+            <span className="min-w-0 truncate font-display text-[15.5px] font-extrabold">
+              Ad Studio
+            </span>
             <span
               className="ml-auto max-w-[42%] truncate text-[11px] text-white/60"
               title={workspaceName}
