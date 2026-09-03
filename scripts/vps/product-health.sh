@@ -5,6 +5,17 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/product-common.sh"
 compose_with_all_profiles ps
 
+mail_enabled="$(read_env_value BLOCKWISE_MAIL_ENABLED || true)"
+deployment_env="$(read_env_value BLOCKWISE_DEPLOYMENT_ENV || true)"
+if [[ "$deployment_env" == "production" && "$mail_enabled" != "true" ]]; then
+  echo "BLOCKWISE_MAIL_ENABLED must be true for production readiness" >&2
+  exit 2
+fi
+if [[ "$mail_enabled" == "true" ]] && ! compose_with_all_profiles ps --status running --services | grep -Fxq product-mail; then
+  echo "BLOCKWISE_MAIL_ENABLED=true but product-mail is not running" >&2
+  exit 2
+fi
+
 # A worker is deliberately not part of the foundation/canary posture. Catch a
 # stale worker left running from an earlier cutover before reporting readiness.
 provider_writes="$(read_env_value BLOCKWISE_ENABLE_PROVIDER_WRITES || true)"

@@ -8,12 +8,33 @@ import {
   REQUIRED_ENV_KEYS,
   RECOMMENDED_SECURITY_ENV_KEYS,
   getDeploymentReadiness,
+  getMailReadiness,
   getInvalidEnvKeys,
   getInvalidFirstTesterEnvKeys,
   getMissingRecommendedSecurityEnvKeys,
   getProviderReadiness,
   parseEnvFile,
 } from "../src/lib/config/env.ts";
+
+test("enabled mail is a fail-closed production readiness gate", () => {
+  const readiness = getMailReadiness({
+    BLOCKWISE_MAIL_ENABLED: "true",
+    BLOCKWISE_MAIL_PUBLIC_URL: "https://mail.blockwise.sale",
+    EMAIL_PROVIDER: "resend",
+  } as unknown as NodeJS.ProcessEnv);
+  assert.equal(readiness.ok, false);
+  assert.ok(readiness.invalid.includes("EMAIL_PROVIDER"));
+  assert.ok(readiness.missing.includes("SMTP_PASSWORD"));
+});
+
+test("production readiness cannot report ready when mail is explicitly disabled", () => {
+  const readiness = getMailReadiness({
+    BLOCKWISE_DEPLOYMENT_ENV: "production",
+    BLOCKWISE_MAIL_ENABLED: "false",
+  } as unknown as NodeJS.ProcessEnv);
+  assert.equal(readiness.ok, false);
+  assert.deepEqual(readiness.invalid, ["BLOCKWISE_MAIL_ENABLED"]);
+});
 
 test("external AI and Meta credentials are optional provider readiness gates", () => {
   assert.equal(REQUIRED_ENV_KEYS.includes("OPENAI_API_KEY" as never), false);
