@@ -234,6 +234,10 @@ type BrandKitResponse = {
     status?: "persisted" | "not_persisted";
     warning?: string;
   };
+  logoAssets?: {
+    status?: "stored" | "partial";
+    warnings?: string[];
+  };
 };
 
 function requirePersistedBrandKit(payload: BrandKitResponse, response: Response, action: string): AdStudioBrandKit {
@@ -250,6 +254,16 @@ function normalizedWebsiteUrl(value: string): string {
   const trimmed = value.trim();
   if (!trimmed) return "";
   return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+}
+
+function LogoPreview({ src, alt, className }: { src: string | null | undefined; alt: string; className: string }) {
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+
+  if (!src || failedSrc === src) {
+    return <span className="text-xs text-muted-foreground">Not found</span>;
+  }
+
+  return <img src={src} alt={alt} className={className} onError={() => setFailedSrc(src)} />;
 }
 
 export function BrandStudio({ brandKit: initialKit, returnTo = "/ad-studio" }: { brandKit: AdStudioBrandKit | null; returnTo?: string }) {
@@ -460,7 +474,12 @@ function BrandStudioEditor({ brandKit: initialKit, returnTo }: { brandKit: AdStu
       setLogoFile(null);
       setLogoPreviewUrl(scannedKit.logos.primaryLogoUrl ?? "");
       setScanUrl(scannedKit.source.url.replace(/^https?:\/\//, ""));
-      flash("ok", "Scan complete — kit updated from your site.");
+      flash(
+        json.logoAssets?.status === "partial" ? "err" : "ok",
+        json.logoAssets?.status === "partial"
+          ? "Brand details updated, but some logos could not be copied. Upload your primary logo below if it is missing."
+          : "Scan complete — kit updated from your site.",
+      );
     } catch (error) {
       flash("err", error instanceof Error ? error.message : "Could not scan the site.");
     } finally {
@@ -522,6 +541,7 @@ function BrandStudioEditor({ brandKit: initialKit, returnTo }: { brandKit: AdStu
   const voiceLine = (kit.tone.voice || "").split(".")[0];
   const approved = kit.reviewStatus === "approved";
   const logoDisplayName = logoFile?.name ?? (logoPreviewUrl ? "Primary logo" : undefined);
+  const reversedLogoUrl = kit.logos.lightLogoUrl ?? kit.logos.darkLogoUrl;
   return (
     <div className="tw min-h-full bg-background font-sans text-foreground" aria-label="Brand Pack">
       <div className="flex min-h-20 flex-wrap items-center gap-3 border-b border-border bg-card px-4 py-4 md:px-6">
@@ -579,34 +599,26 @@ function BrandStudioEditor({ brandKit: initialKit, returnTo }: { brandKit: AdStu
 
         <div className="mx-auto grid w-full max-w-[1120px] gap-3 px-4 md:px-6 md:grid-cols-3">
           <div className="overflow-hidden rounded-(--r-card) border border-border bg-card shadow-card">
-            <div className="grid min-h-24 place-items-center p-4" style={{ background: "#fff", color: kit.colours.primary }}>
-              {logoPreviewUrl ? <img src={logoPreviewUrl} alt={`${brandName} primary logo`} /> : <span className="text-xs text-muted-foreground">Not found</span>}
+            <div className="grid min-h-24 place-items-center p-4" style={{ background: kit.colours.primary, color: kit.colours.text }}>
+              <LogoPreview src={logoPreviewUrl} alt={`${brandName} primary logo`} className="max-h-16 max-w-full object-contain" />
             </div>
             <small className="flex justify-between gap-2 px-3 py-2 text-xs text-muted-foreground">
               <b>Primary</b>
-              <em>on light</em>
+              <em>on brand colour</em>
             </small>
           </div>
           <div className="overflow-hidden rounded-(--r-card) border border-border bg-card shadow-card">
             <div className="grid min-h-24 place-items-center p-4" style={{ background: "#16181d", color: "#fff" }}>
-              {kit.logos.lightLogoUrl ? (
-                <img src={kit.logos.lightLogoUrl} alt={`${brandName} light logo`} />
-              ) : (
-                <span className="text-xs text-muted-foreground">Not found</span>
-              )}
+              <LogoPreview src={reversedLogoUrl} alt={`${brandName} reversed logo`} className="max-h-16 max-w-full object-contain" />
             </div>
             <small className="flex justify-between gap-2 px-3 py-2 text-xs text-muted-foreground">
-              <b>Dark</b>
+              <b>Reversed</b>
               <em>on dark</em>
             </small>
           </div>
           <div className="overflow-hidden rounded-(--r-card) border border-border bg-card shadow-card">
             <div className="grid min-h-24 place-items-center bg-muted p-4 text-background">
-              {kit.logos.faviconUrl ? (
-                <img src={kit.logos.faviconUrl} alt={`${brandName} brand mark`} />
-              ) : (
-                <span className="text-xs text-muted-foreground">Not found</span>
-              )}
+              <LogoPreview src={kit.logos.faviconUrl} alt={`${brandName} brand mark`} className="max-h-14 max-w-20 object-contain" />
             </div>
             <small className="flex justify-between gap-2 px-3 py-2 text-xs text-muted-foreground">
               <b>Mark</b>
@@ -626,6 +638,8 @@ function BrandStudioEditor({ brandKit: initialKit, returnTo }: { brandKit: AdStu
                 helperText="PNG, JPG, WebP, or SVG / up to 5 MB"
                 previewUrl={logoPreviewUrl}
                 previewAlt=""
+                previewFit="contain"
+                previewBackground={kit.colours.primary}
                 fileName={logoDisplayName}
                 fileSize={logoFile?.size}
                 fileType={logoFile?.type}
@@ -844,7 +858,7 @@ function BrandStudioEditor({ brandKit: initialKit, returnTo }: { brandKit: AdStu
               <div className="flex items-start justify-between gap-3"><div><h2 className="font-display text-[17px] font-extrabold tracking-[-0.015em]">Live creative preview</h2><p className="mt-1 text-xs text-muted-foreground">Updates as you edit</p></div><Badge variant="secondary">Feed</Badge></div>
               <div className="flex flex-wrap justify-center gap-3">
                 <div className="relative aspect-[9/16] w-32 overflow-hidden rounded-(--r-card) bg-muted p-2 text-background">
-                  <span className="rounded-full bg-background px-2 py-1 text-[9px] font-semibold" style={{ color: kit.colours.primary }}>
+                  <span className="rounded-full px-2 py-1 text-[9px] font-semibold" style={{ background: kit.colours.primary, color: kit.colours.text }}>
                     {logoPreviewUrl ? <img src={logoPreviewUrl} alt="" className="max-h-5 max-w-full object-contain" /> : brandName}
                   </span>
                   <h5 className="absolute inset-x-2 bottom-9 text-xs font-extrabold">{headlineSample}</h5>
