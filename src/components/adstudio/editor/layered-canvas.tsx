@@ -119,12 +119,11 @@ export function LayeredCanvas({
     const resize = () => {
       const width = Math.max(1, host.clientWidth);
       const height = Math.max(1, host.clientHeight);
-      const zoom = Math.max(0.01, Math.min(width / dims.width, height / dims.height));
-      // The host is already the zoomed display box. Keep the canvas CSS size
-      // in host pixels and use the viewport transform for pack coordinates;
-      // multiplying the logical dimensions here shrinks the preview twice.
-      canvas.setDimensions({ width, height });
-      canvas.setViewportTransform([zoom, 0, 0, zoom, 0, 0]);
+      // Fabric's backing store stays in pack coordinates so objects and hit
+      // testing remain aligned. Only the CSS box follows the responsive host.
+      canvas.setDimensions({ width: dims.width, height: dims.height });
+      canvas.setDimensions({ width, height }, { cssOnly: true });
+      canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
       canvas.requestRenderAll();
     };
     resize();
@@ -151,6 +150,7 @@ export function LayeredCanvas({
         const object = await createLayerObject({
           fabric,
           templateId,
+          placement: layout.placement,
           layer,
           colours,
           imageValues,
@@ -197,6 +197,7 @@ export function LayeredCanvas({
 async function createLayerObject({
   fabric,
   templateId,
+  placement,
   layer,
   colours,
   imageValues,
@@ -205,13 +206,17 @@ async function createLayerObject({
 }: {
   fabric: typeof import("fabric");
   templateId: string;
+  placement: Layout["placement"];
   layer: LayoutLayer;
   colours: AdTemplate["semanticColours"];
   imageValues: Record<string, string | null | undefined>;
   textValues: Record<string, string | null | undefined>;
   cropOverrides: Record<string, Rect | null | undefined>;
 }): Promise<FabricObject | null> {
-  const geometry = layer.geometry;
+  // Packs may author geometry as normalized ratios. Keep the editor's Fabric
+  // scene in the same logical coordinates as the server renderer, regardless
+  // of whether a signed pack used pixels or ratios for this placement.
+  const geometry = resolveGeometry(layer.geometry, PLACEMENT_DIMENSIONS[placement]);
   const passive = { selectable: false, evented: false, objectCaching: true } as const;
   const interactive = {
     selectable: true,
@@ -306,7 +311,7 @@ async function createLayerObject({
       const image = await fabric.FabricImage.fromURL(src);
       if (layer.type === "image_slot") {
         cropImageToGeometry(image, geometry, cropOverrides[layer.inputKey] ?? layer.defaultCrop);
-        image.clipPath = maskForSlot(fabric, layer);
+        image.clipPath = maskForSlot(fabric, layer, geometry);
       } else {
         fitImageToGeometry(image, geometry);
       }
@@ -352,6 +357,19 @@ async function createLayerObject({
     fill: fill("primary"),
     ...interactive,
   });
+}
+
+function resolveGeometry(geometry: Rect, dims: { width: number; height: number }): Rect {
+  const values = [geometry.x, geometry.y, geometry.width, geometry.height];
+  if (values.every((value) => Number.isFinite(value)) && values.every((value) => Math.abs(value) <= 1.001)) {
+    return {
+      x: geometry.x * dims.width,
+      y: geometry.y * dims.height,
+      width: geometry.width * dims.width,
+      height: geometry.height * dims.height,
+    };
+  }
+  return geometry;
 }
 
 /** Fabric uses left/top for object placement; pack contracts use x/y. */
@@ -405,8 +423,7 @@ function normalizedCrop(crop: Rect): Rect {
   };
 }
 
-function maskForSlot(fabric: typeof import("fabric"), layer: ImageSlotLayer) {
-  const geometry = layer.geometry;
+function maskForSlot(fabric: typeof import("fabric"), layer: ImageSlotLayer, geometry: Rect) {
   if (layer.mask === "circle") {
     return new fabric.Circle({
       left: geometry.x,

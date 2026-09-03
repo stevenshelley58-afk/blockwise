@@ -51,7 +51,7 @@ export function StudioShell({
           ? "Meta connection status unavailable"
           : "Meta not connected";
   return (
-    <div className="tw flex min-h-dvh bg-background text-foreground">
+    <div className={cn("tw flex bg-background text-foreground", contextual ? "h-dvh overflow-hidden" : "min-h-dvh")}>
       <aside
         className="hidden w-[220px] shrink-0 flex-col bg-(--ink) text-(--surface) md:flex"
         aria-label="Ad Studio navigation"
@@ -138,7 +138,7 @@ export function StudioShell({
             </span>
           </header>
         ) : null}
-        <main className={cn("min-w-0 flex-1", !contextual && "pb-24 md:pb-0")}>
+        <main className={cn("min-w-0 flex-1", contextual ? "min-h-0 overflow-hidden" : "pb-24 md:pb-0")}>
           {children}
         </main>
         {!contextual ? (
