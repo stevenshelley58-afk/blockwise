@@ -94,9 +94,9 @@ const nextConfig: NextConfig = {
     ]
       .filter((value): value is string => Boolean(value))
       .join(" ");
-    const cspSelf = String.fromCharCode(39) + "self" + String.fromCharCode(39);
-    const imgSrc = [cspSelf, "data:", "blob:", researchStorageOrigin, "https://*.fbcdn.net", "https://*.cdninstagram.com", "https://www.facebook.com"].filter(Boolean).join(" ");
-    const mediaSrc = [cspSelf, "blob:", researchStorageOrigin, "https://*.fbcdn.net", "https://*.cdninstagram.com"].filter(Boolean).join(" ");
+    const imgSrc = ["'self'", "data:", "blob:", researchStorageOrigin, "https://*.fbcdn.net", "https://*.cdninstagram.com", "https://www.facebook.com"].filter((value): value is string => Boolean(value)).join(" ");
+    const mediaSrc = ["'self'", "blob:", researchStorageOrigin, "https://*.fbcdn.net", "https://*.cdninstagram.com"].filter((value): value is string => Boolean(value)).join(" ");
+    return [
       {
         source: "/:path*",
         headers: [
