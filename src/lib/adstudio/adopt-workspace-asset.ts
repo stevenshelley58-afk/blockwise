@@ -71,6 +71,7 @@ export class AdoptAssetError extends Error {
 async function discard(input: { serviceSupabase: SupabaseClient }, reservationId: string, workspaceId: string, adId: string, path: string) {
   await input.serviceSupabase.rpc("adstudio_discard_customer_image_upload", { p_reservation_id: reservationId, p_workspace_id: workspaceId, p_ad_id: adId, p_object_path: path });
   await input.serviceSupabase.storage.from(CUSTOMER_IMAGE_BUCKET).remove([path]);
+  await input.serviceSupabase.rpc("adstudio_complete_customer_image_stale_cleanup", { p_reservation_id: reservationId, p_object_path: path });
 }
 
 function ledgerResult(value: unknown): { ok: boolean; status?: string; reservationId?: string; code?: string } {
