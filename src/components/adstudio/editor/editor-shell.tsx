@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState, type KeyboardEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Palette, PencilLine, RotateCcw, RotateCw, Save, Sparkles } from "lucide-react";
 import type { AdTemplate, Placement, ImageSlotLayer, LayoutLayer, Rect, ColourRole } from "../../../../packages/ad-template-contract/src/types";
@@ -104,6 +104,7 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
   const [inspectorTab, setInspectorTab] = useState<InspectorTab>("content");
   const [mobileInspectorOpen, setMobileInspectorOpen] = useState(false);
   const imageUploadTokens = useRef(new Map<string, number>());
+  const [pendingCropKey, setPendingCropKey] = useState<string | null>(null);
 
   const handleImageChange = useCallback(async (key: string, change: { file: File; previewUrl: string } | null) => {
     const token = (imageUploadTokens.current.get(key) ?? 0) + 1;
@@ -149,6 +150,14 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
     },
     [activeLayout, openCrop],
   );
+
+  useEffect(() => {
+    if (!pendingCropKey) return;
+    const value = state.imageValues.find(item => item.inputKey === pendingCropKey);
+    if (!value?.dataUrl) return;
+    openCropForInput(pendingCropKey);
+    setPendingCropKey(null);
+  }, [pendingCropKey, state.imageValues, openCropForInput]);
 
   const handleSave = useCallback(async (): Promise<boolean> => {
     const missingImages = pack.imageInputs.filter(input => input.required !== false
@@ -274,12 +283,12 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
       const body = await response.json().catch(() => ({})) as { ref?: string; error?: string };
       if (!response.ok || !body.ref) throw new Error(body.error ?? "We could not use that workspace image.");
       updateImageValue(key, body.ref, null);
-      setTimeout(() => openCropForInput(key), 0);
+      setPendingCropKey(key);
     } catch (error) {
       updateImageValue(key, previousValue?.dataUrl ?? null, previousValue?.previewUrl ?? null);
       setError(error instanceof Error ? error.message : "We could not use that workspace image.");
     } finally { setPendingImageUploads(count => Math.max(0, count - 1)); }
-  }, [adId, workspaceId, state.imageValues, updateImageValue, setError, openCropForInput]);
+  }, [adId, workspaceId, state.imageValues, updateImageValue, setError]);
 
   const persistableLibraryAssets = libraryAssets?.filter((asset): asset is { id: string; url: string; label: string } => Boolean(asset.id));
   return <RedesignedEditor

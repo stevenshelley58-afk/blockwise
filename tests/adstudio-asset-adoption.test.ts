@@ -47,8 +47,7 @@ test("failed discard claim never removes the customer object", async () => {
   const calls: string[] = [];
   const service = { storage: { from: () => ({ async remove() { calls.push("remove"); return { error: null }; } }) }, async rpc(name: string) { calls.push(name); return { data: false, error: null }; } };
   const module = await import("../src/lib/adstudio/adopt-workspace-asset.ts");
-  const discard = (module as any).__testDiscard;
-  assert.equal(typeof discard, "function");
+  const { discardCustomerImageUpload: discard } = module as typeof import("../../src/lib/adstudio/adopt-workspace-asset");
   await discard({ serviceSupabase: service }, "reservation-1", "workspace-a", "ad-a", "workspace-a/adstudio/ads/ad-a/images/hash.png");
   assert.deepEqual(calls, ["adstudio_discard_customer_image_upload"]);
 });
