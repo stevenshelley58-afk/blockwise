@@ -14,7 +14,11 @@ export default async function CustomerAdEditorPage({ params }: { params: Promise
   const { supabase, access } = await requirePageSurfaceAccess("adstudio");
   let ad;
   try { ad = await loadCustomerAd(supabase, access.workspaceId, id); }
-  catch (error) { if (error instanceof CustomerAdNotFoundError) notFound(); if (error instanceof InvalidActiveRevisionError) return <Recovery adId={id} />; throw error; }
+  catch (error) {
+    if (error instanceof CustomerAdNotFoundError) notFound();
+    if (error instanceof InvalidActiveRevisionError) return <RecoveryScreen adId={id} revisionId={error.revisionId} issues={error.issues} />;
+    throw error;
+  }
   const pack = await getTemplate(supabase, ad.templateId);
   if (!pack) notFound();
   const [brand, libraryAssets] = await Promise.all([
@@ -26,6 +30,6 @@ export default async function CustomerAdEditorPage({ params }: { params: Promise
   </div>;
 }
 
-function Recovery({ adId }: { adId: string }) {
-  return <div className="grid min-h-screen place-items-center p-6"><div role="alert" className="max-w-lg rounded-lg border border-red-200 bg-red-50 p-6 text-red-900"><h1 className="font-semibold">We couldn&apos;t open this saved ad</h1><p className="mt-2 text-sm">The saved revision is preserved and needs recovery. Contact support and provide ad ID <code>{adId}</code>.</p></div></div>;
+function RecoveryScreen({ adId, revisionId, issues }: { adId: string; revisionId: string | null; issues: string[] }) {
+  return <div className="grid min-h-screen place-items-center p-6"><div role="alert" className="max-w-lg rounded-lg border border-red-200 bg-red-50 p-6 text-red-900"><h1 className="font-semibold">We couldn&apos;t open this saved ad</h1><p className="mt-2 text-sm">The saved revision is preserved and needs recovery. Contact support and provide ad ID <code>{adId}</code> and revision ID <code>{revisionId ?? "unknown"}</code>.</p><ul className="mt-3 list-disc pl-5 text-sm">{issues.map((issue) => <li key={issue}>{issue}</li>)}</ul></div></div>;
 }

@@ -273,21 +273,22 @@ describe("malformed saved documents fail closed", () => {
     assert.equal(error.code, "invalid_active_revision");
   });
 
-  it("the editor page preserves the document, blocks saving, and offers explicit recovery", () => {
-    const page = readFileSync("src/app/(customer)/ad-studio/templates/[templateId]/page.tsx", "utf8");
+  it("the stable ad route preserves the document, blocks saving, and offers read-only recovery", () => {
+    const page = readFileSync("src/app/(customer)/ad-studio/ads/[id]/page.tsx", "utf8");
     assert.match(page, /RecoveryScreen/);
     assert.match(page, /InvalidActiveRevisionError/);
-    assert.match(page, /detachDamagedRevision/);
-    // The recovery action only detaches the active pointer — it never deletes.
-    const lib = readFileSync("src/lib/adstudio/create-customer-ad.ts", "utf8");
-    assert.match(lib, /active_revision_id: null/);
-    assert.doesNotMatch(lib, /\.delete\(\)/);
+    assert.match(page, /revisionId=\{error\.revisionId\}/);
+    assert.match(page, /issues=\{error\.issues\}/);
+    assert.doesNotMatch(page, /detachDamagedRevision|detachActiveRevision|\.delete\(\)/);
   });
 
-  it("the server logs the revision ID and zod issues for recovery support", () => {
-    const lib = readFileSync("src/lib/adstudio/create-customer-ad.ts", "utf8");
-    assert.match(lib, /revisionId: existingRow\.active_revision_id/);
-    assert.match(lib, /issues/);
+  it("the recovery branch exposes support evidence without an editor or mutation", () => {
+    const page = readFileSync("src/app/(customer)/ad-studio/ads/[id]/page.tsx", "utf8");
+    const recovery = page.slice(page.indexOf("function RecoveryScreen"));
+    assert.match(recovery, /adId/);
+    assert.match(recovery, /revisionId/);
+    assert.match(recovery, /issues/);
+    assert.doesNotMatch(recovery, /EditorShell|Save|detach|delete|update/);
   });
 });
 
