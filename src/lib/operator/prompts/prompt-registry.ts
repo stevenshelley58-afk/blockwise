@@ -1,4 +1,5 @@
 import { createSupabaseServiceClient } from "../../supabase/service.ts";
+import { META_COPY_CTA_VALUES, META_COPY_CONSTRAINTS } from "../../adstudio/meta-copy-contract.ts";
 
 export const PROMPT_GROUPS = [
   {
@@ -166,9 +167,9 @@ primaryText is one JSON string with actual newline characters: a one-line hook, 
 - Avoid age, family status, religion, ethnicity, nationality, disability, gender, or life-stage assumptions.
 - Plain local English. Warm, useful, local, never hype or pressure.
 - Do not turn raw customer wording into finished copy when it contains claims, targeting, or weak placeholder language.
-- Respect character limits exactly: headline <= 40 chars, primaryText <= 125 chars, description <= 90 chars, cta <= 24 chars.
+- Respect the canonical Meta copy limits exactly: primaryText <= ${META_COPY_CONSTRAINTS.primaryText} chars, headline <= ${META_COPY_CONSTRAINTS.headline} chars, description <= ${META_COPY_CONSTRAINTS.description} chars, cta <= ${META_COPY_CONSTRAINTS.cta} chars.
 - Format primaryText as a one-line hook followed by 2-4 short benefit or offer lines separated by newline characters. No hashtags. No emoji unless the brand voice explicitly calls for it.
-- The CTA is a short button label such as "Book free appraisal", "Download checklist", or "Get the report".`,
+- The CTA must be exactly one of: ${META_COPY_CTA_VALUES.join(", ")}. Use the enum value, not a human-readable label.`,
   "adstudio.image.system": `Create customer-facing real-estate ad imagery prompts. Follow brand and compliance constraints before customer input. Generate background and style instructions only; do not ask the image model to render final ad text, prices, claims, or guarantees.`,
   "adstudio.image.input_template": `{{BRAND_CONSTRAINTS}}
 
