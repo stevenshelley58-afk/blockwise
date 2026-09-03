@@ -302,6 +302,7 @@ services:
       product-storage: { condition: service_healthy }
     environment:
       BLOCKWISE_PRODUCT_DOMAIN: ${BLOCKWISE_PRODUCT_DOMAIN:?BLOCKWISE_PRODUCT_DOMAIN is required}
+      TRUSTED_PROXY_RANGES: ${TRUSTED_PROXY_RANGES:?TRUSTED_PROXY_RANGES is required}
     ports:
       - "${BLOCKWISE_PRODUCT_HTTP_BIND:-127.0.0.1}:${BLOCKWISE_PRODUCT_HTTP_PORT:-8080}:80"
       - "${BLOCKWISE_PRODUCT_HTTPS_BIND:-127.0.0.1}:${BLOCKWISE_PRODUCT_HTTPS_PORT:-8443}:443"
@@ -331,6 +332,9 @@ networks:
   blockwise-product:
     name: blockwise-product
     driver: bridge
+    ipam:
+      config:
+        - subnet: ${BLOCKWISE_PRODUCT_NETWORK_SUBNET:-172.30.0.0/24}
 
 volumes:
   blockwise-product-db-data:
