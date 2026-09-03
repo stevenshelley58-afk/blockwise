@@ -48,6 +48,7 @@ describe("customer Ad Studio workbench contract", () => {
     assert.doesNotMatch(canvas, /setDimensions\(\{ width: Math\.floor\(dims\.width \* zoom\)/);
     assert.match(canvas, /resolveGeometry\(layer\.geometry, PLACEMENT_DIMENSIONS\[placement\]\)/);
     assert.match(canvas, /fabricPathPosition\(path, geometry\)/);
+    assert.match(canvas, /function maskForSlot[\s\S]*?\.\.\.fabricCircleGeometry\(geometry\)/);
     assert.match(canvas, /M 0 \$\{geometry\.height \/ 2\}/);
     assert.match(canvas, /\{ x: 0, y: 0 \}/);
     assert.match(canvas, /const w = geometry\.width, h = geometry\.height/);

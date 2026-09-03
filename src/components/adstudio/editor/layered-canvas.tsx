@@ -420,11 +420,7 @@ function normalizedCrop(crop: Rect): Rect {
 function maskForSlot(fabric: typeof import("fabric"), layer: ImageSlotLayer, geometry: Rect) {
   if (layer.mask === "circle") {
     return new fabric.Circle({
-      left: geometry.x,
-      top: geometry.y,
-      originX: "left",
-      originY: "top",
-      radius: Math.min(geometry.width, geometry.height) / 2,
+      ...fabricCircleGeometry(geometry),
       absolutePositioned: true,
     });
   }
