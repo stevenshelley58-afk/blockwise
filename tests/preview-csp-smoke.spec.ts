@@ -4,7 +4,7 @@ const previewUrl = process.env.PREVIEW_URL ?? "";
 
 test.beforeAll(() => {
   const url = new URL(previewUrl);
-  if (url.protocol !== "https:" || /^(localhost|127\\.0\\.0\\.1|::1)$/i.test(url.hostname)) {
+  if (url.protocol !== "https:" || /^(localhost|127.0.0.1|::1)$/i.test(url.hostname)) {
     throw new Error("PREVIEW_URL must be an HTTPS Vercel Preview URL, never localhost");
   }
 });
