@@ -3,8 +3,14 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { ArrowLeft, ArrowRight, Check, Globe2, Plus, Save, X } from "lucide-react";
 
 import { AssetUploadDropzone } from "@/components/asset-upload-dropzone";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import type { AdStudioBrandKit } from "@/lib/adstudio";
 import { mediaUrlForStoragePath } from "@/lib/adstudio/assets";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
@@ -18,6 +24,10 @@ import {
 
 /* ------------------------------------------------------------------ */
 /* colour helpers                                                      */
+/* ------------------------------------------------------------------ */
+
+/* ------------------------------------------------------------------ */
+/* swatch + in-app picker                                              */
 /* ------------------------------------------------------------------ */
 
 type Hsv = { h: number; s: number; v: number };
@@ -45,15 +55,10 @@ function hsvToHex({ h, s, v }: Hsv): string {
   const c = v * s;
   const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
   const m = v - c;
-  const [r, g, b] =
-    h < 60 ? [c, x, 0] : h < 120 ? [x, c, 0] : h < 180 ? [0, c, x] : h < 240 ? [0, x, c] : h < 300 ? [x, 0, c] : [c, 0, x];
+  const [r, g, b] = h < 60 ? [c, x, 0] : h < 120 ? [x, c, 0] : h < 180 ? [0, c, x] : h < 240 ? [0, x, c] : h < 300 ? [x, 0, c] : [c, 0, x];
   const f = (n: number) => Math.round((n + m) * 255).toString(16).padStart(2, "0");
   return `#${f(r)}${f(g)}${f(b)}`.toUpperCase();
 }
-
-/* ------------------------------------------------------------------ */
-/* swatch + in-app picker                                              */
-/* ------------------------------------------------------------------ */
 
 type SwatchProps = {
   label: string;
@@ -94,53 +99,34 @@ function ColorSwatch({ label, value, sitePalette, open, onOpen, onClose, onChang
   }
 
   return (
-    <div className={`relative grid justify-items-center gap-2 ${open ? "z-40" : ""}`}>
+    <div data-brand-swatch className={`relative grid justify-items-center gap-2 ${open ? "z-40" : ""}`}>
       <button
         type="button"
-        className="min-h-16 min-w-16 rounded-(--r-card) border border-(--ui-border) shadow-sm transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2"
+        className="size-16 rounded-(--r-card) border border-border shadow-sm transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
         style={{ background: value }}
         aria-label={`Edit ${label} colour`}
+        aria-expanded={open}
         onClick={(event) => {
           event.stopPropagation();
           open ? onClose() : onOpen();
         }}
       />
-      <b>{label}</b>
-      <small>{value.toUpperCase()}</small>
+      <span className="text-xs font-semibold">{label}</span>
+      <span className="font-mono text-[11px] text-muted-foreground">{value.toUpperCase()}</span>
 
       {open && (
-        <div className="absolute left-1/2 top-20 z-40 grid w-[min(248px,calc(100vw-2rem))] -translate-x-1/2 gap-3 rounded-(--r-card) border border-(--ui-border) bg-(--ui-background) p-4 shadow-lg" onClick={(event) => event.stopPropagation()}>
-          <div
-            ref={svRef}
-            className="relative aspect-[5/3.4] w-full cursor-crosshair touch-none rounded-(--r-control) bg-[linear-gradient(0deg,#000,transparent),linear-gradient(90deg,#fff,transparent),var(--h,#888)]"
-            style={{ ["--h" as string]: `hsl(${hsv.h},100%,50%)` }}
-            onPointerDown={(event) => {
-              event.currentTarget.setPointerCapture(event.pointerId);
-              pickFromField(event);
-            }}
-            onPointerMove={(event) => {
-              if (event.buttons === 1) pickFromField(event);
-            }}
-          >
-            <span className="absolute h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow" style={{ left: `${hsv.s * 100}%`, top: `${(1 - hsv.v) * 100}%` }} />
-          </div>
-          <input
-            className="min-h-11 w-full accent-(--ui-primary)"
-            type="range"
-            min={0}
-            max={360}
-            value={hsv.h}
-            onChange={(event) => commit({ ...hsv, h: Number(event.target.value) })}
-          />
+        <div className="absolute left-1/2 top-20 z-40 grid w-[min(248px,calc(100vw-2rem))] -translate-x-1/2 gap-3 rounded-(--r-card) border border-border bg-popover p-4 text-popover-foreground shadow-float" onClick={(event) => event.stopPropagation()}>
+          <div ref={svRef} className="relative aspect-[5/3.4] w-full cursor-crosshair touch-none rounded-(--r-control) bg-[linear-gradient(0deg,#000,transparent),linear-gradient(90deg,#fff,transparent),var(--h,#888)]" style={{ ["--h" as string]: `hsl(${hsv.h},100%,50%)` }} onPointerDown={(event) => { event.currentTarget.setPointerCapture(event.pointerId); pickFromField(event); }} onPointerMove={(event) => { if (event.buttons === 1) pickFromField(event); }}><span className="absolute h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow" style={{ left: `${hsv.s * 100}%`, top: `${(1 - hsv.v) * 100}%` }} /></div>
+          <input className="min-h-11 w-full accent-primary" type="range" min={0} max={360} value={hsv.h} aria-label={`${label} hue`} onChange={(event) => commit({ ...hsv, h: Number(event.target.value) })} />
           {sitePalette.length > 0 && (
             <div className="grid gap-2">
-              <small className="text-xs font-semibold text-(--ui-muted-foreground)">From your site</small>
+              <span className="text-xs font-semibold text-muted-foreground">From your site</span>
               <div className="flex flex-wrap gap-2">
                 {sitePalette.map((colour) => (
                   <button
                     key={colour}
                     type="button"
-                    className="min-h-11 min-w-11 rounded-md border border-(--ui-border) focus-visible:outline-2 focus-visible:outline-offset-2"
+                    className="size-11 rounded-md border border-border focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
                     style={{ background: colour }}
                     aria-label={`Use ${colour}`}
                     onClick={() => commit(hexToHsv(colour))}
@@ -150,9 +136,10 @@ function ColorSwatch({ label, value, sitePalette, open, onOpen, onClose, onChang
             </div>
           )}
           <div className="flex items-center gap-2">
-            <span className="flex min-h-11 flex-1 items-center gap-1 rounded-(--r-control) border border-(--ui-border) px-3 text-sm">
+            <label className="flex min-h-11 flex-1 items-center gap-1 rounded-(--r-control) border border-input bg-background px-3 text-sm" htmlFor={`${label.toLowerCase()}-hex-value`}>
               #
               <input
+                id={`${label.toLowerCase()}-hex-value`}
                 aria-label={`${label} hex value`}
                 className="min-w-0 flex-1 bg-transparent outline-none"
                 value={hexText}
@@ -166,10 +153,8 @@ function ColorSwatch({ label, value, sitePalette, open, onOpen, onClose, onChang
                   }
                 }}
               />
-            </span>
-            <button type="button" className="min-h-11 rounded-full bg-(--ui-primary) px-4 text-sm font-semibold text-(--ui-primary-foreground) focus-visible:outline-2 focus-visible:outline-offset-2" onClick={onClose}>
-              Done
-            </button>
+            </label>
+            <Button type="button" size="sm" onClick={onClose}>Done</Button>
           </div>
         </div>
       )}
@@ -198,13 +183,13 @@ function TagRow({
   return (
     <div className="flex flex-wrap items-center gap-2">
       {items.map((item) => (
-        <span key={item} className={`inline-flex min-h-11 items-center gap-2 rounded-full px-3 text-sm font-semibold ${tone === "no" ? "bg-(--ui-destructive)/10 text-(--ui-destructive)" : "bg-(--ui-muted) text-(--ui-foreground)"}`}>
+        <span key={item} className={`inline-flex min-h-11 items-center gap-1 rounded-full px-3 text-sm font-semibold ${tone === "no" ? "bg-error-soft text-error" : "bg-muted text-foreground"}`}>
           {item}
-          <button type="button" aria-label={`Remove ${item}`} onClick={() => onRemove(item)}>Remove</button>
+          <button type="button" className="grid size-8 place-items-center rounded-full hover:bg-background/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50" aria-label={`Remove ${item}`} onClick={() => onRemove(item)}><X size={14} aria-hidden /></button>
         </span>
       ))}
       {adding ? (
-        <input aria-label="New phrase" className="min-h-11 min-w-0 rounded-full border border-(--ui-border) px-3 text-sm outline-none focus-visible:ring-2"
+        <Input aria-label="New phrase" className="h-11 min-w-0 rounded-full px-3 text-sm"
           autoFocus
           value={draft}
           placeholder="type, press Enter"
@@ -219,16 +204,14 @@ function TagRow({
           }}
         />
       ) : (
-        <button type="button" className="min-h-11 rounded-full border border-dashed border-(--ui-border) px-4 text-sm font-semibold text-(--ui-muted-foreground) focus-visible:outline-2" onClick={() => setAdding(true)}>
-          ＋ Add phrase
-        </button>
+        <Button type="button" variant="ghost-pill" size="sm" className="min-h-11 border-dashed text-muted-foreground" onClick={() => setAdding(true)}><Plus size={15} aria-hidden /> Add phrase</Button>
       )}
     </div>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/* Brand Studio                                                        */
+/* Brand Pack                                                           */
 /* ------------------------------------------------------------------ */
 
 const VOICE_PRESETS = ["Warm & personal", "Premium & understated", "Straight-talking", "Data-led"];
@@ -309,20 +292,19 @@ export function BrandStudio({ brandKit: initialKit, returnTo = "/ad-studio" }: {
   }
 
   return (
-    <main className="tw flex min-h-screen flex-col bg-(--ui-background) font-sans text-(--ui-foreground)" aria-label="Brand Studio">
-
-      <div className="flex min-h-16 flex-wrap items-center gap-3 border-b border-(--ui-border) bg-(--ui-background) px-4 py-3 md:px-6">
-        <Link href={returnTo} className="min-h-11 inline-flex items-center text-sm font-semibold text-(--ui-muted-foreground) underline-offset-4 hover:underline focus-visible:outline-2">
-          {"< Close"}
-        </Link>
-        <h1>Brand Studio</h1>
-        <div className="ml-auto flex min-h-11 items-center gap-3 text-sm font-semibold" aria-live="polite">{notice && <span className={notice.tone === "err" ? "text-(--ui-destructive)" : "text-(--ui-success)"}>{notice.text}</span>}</div>
-      </div>
-
-      <div className="grid flex-1 place-items-center bg-(--ui-muted)/30 p-4 md:p-8">
-        <div className="grid w-full max-w-2xl gap-4 rounded-(--r-panel) border border-(--ui-border) bg-(--ui-background) p-5 shadow-sm md:p-8">
-          <span className="w-fit rounded-full bg-(--ui-muted) px-3 py-1 text-xs font-semibold text-(--ui-muted-foreground)">Optional setup</span>
-          <h2>Enter your website. We’ll build your brand kit.</h2>
+    <div className="tw min-h-[calc(100dvh-3.5rem)] bg-background px-4 py-6 font-sans text-foreground md:px-8 md:py-8" aria-label="Brand Pack">
+      <div className="mx-auto grid w-full max-w-[720px] gap-6">
+        <div className="grid gap-2">
+          <p className="font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">Brand Pack</p>
+          <h1 className="font-display text-3xl font-extrabold tracking-[-0.02em] md:text-4xl">Build your Brand Pack</h1>
+          <p className="max-w-[65ch] text-sm leading-6 text-muted-foreground">Add your website and we’ll prepare the identity, assets, colours, voice, and compliance details you can review before use.</p>
+        </div>
+        <Card className="grid gap-5 rounded-(--r-panel) border-border bg-card p-5 shadow-card md:p-7" aria-busy={busy}>
+          <Badge variant="secondary" className="w-fit text-muted-foreground">Optional setup</Badge>
+          <div className="grid gap-1">
+            <h2 className="font-display text-xl font-extrabold tracking-[-0.015em]">Enter your website. We’ll build your brand kit.</h2>
+            <p className="text-sm leading-6 text-muted-foreground">One website is enough to get started. You can review every detail before approving it.</p>
+          </div>
           <form
             className="grid gap-3"
             onSubmit={(event) => {
@@ -330,31 +312,29 @@ export function BrandStudio({ brandKit: initialKit, returnTo = "/ad-studio" }: {
               void scanSite();
             }}
           >
-            <label htmlFor="brand-website">Your website address</label>
+            <Label htmlFor="brand-website">Your website address</Label>
             <div className="flex flex-col gap-3 sm:flex-row">
-              <span className="flex min-h-12 min-w-0 flex-1 items-center gap-2 rounded-(--r-control) border border-(--ui-border) bg-(--ui-background) px-3">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-                <circle cx="12" cy="12" r="9" />
-                <path d="M3 12h18M12 3c2.5 2.6 3.8 5.7 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.7-3.8-9s1.3-6.4 3.8-9z" />
-              </svg>
-              <input aria-label="Website address" className="min-w-0 flex-1 bg-transparent outline-none"
+              <div className="flex min-w-0 flex-1 items-center gap-2">
+                <Globe2 size={16} className="shrink-0 text-muted-foreground" aria-hidden />
+                <Input aria-label="Website address" className="h-11 rounded-(--r-card)"
                 id="brand-website"
                 value={scanUrl}
                 inputMode="url"
                 autoComplete="url"
                 placeholder="e.g. youragency.com.au"
                 onChange={(event) => setScanUrl(event.target.value)}
-              />
-              </span>
-              <button type="submit" className="min-h-12 rounded-full bg-(--ui-primary) px-5 font-semibold text-(--ui-primary-foreground) disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2" disabled={busy}>
-                {busy ? "Building your kit…" : "Build my brand kit"}
-              </button>
+                />
+              </div>
+              <Button type="submit" size="lg" disabled={busy}><span>{busy ? "Building your kit…" : "Build my brand kit"}</span><ArrowRight size={16} aria-hidden /></Button>
             </div>
-            <small>You can skip this and keep generating ads. Add it when you want consistent brand details.</small>
+            <p className="text-xs leading-5 text-muted-foreground">You can skip this and keep generating ads. Add it when you want consistent brand details.</p>
           </form>
-        </div>
+          <div className="min-h-6" aria-live="polite" role={notice?.tone === "err" ? "alert" : undefined}>
+            {notice ? <p className={`text-sm font-semibold ${notice.tone === "err" ? "text-error" : "text-success"}`}>{notice.text}</p> : null}
+          </div>
+        </Card>
       </div>
-    </main>
+    </div>
   );
 }
 
@@ -370,11 +350,20 @@ function BrandStudioEditor({ brandKit: initialKit, returnTo }: { brandKit: AdStu
   const headlineSample = "What's your home worth in today's market?";
 
   useEffect(() => {
-    function close() {
+    function closeOnOutsideClick(event: MouseEvent) {
+      const target = event.target;
+      if (target instanceof Element && target.closest("[data-brand-swatch]")) return;
       setOpenSwatch(null);
     }
-    document.addEventListener("click", close);
-    return () => document.removeEventListener("click", close);
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpenSwatch(null);
+    }
+    document.addEventListener("click", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("click", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
   }, []);
 
   function flash(tone: "ok" | "err", text: string) {
@@ -533,29 +522,24 @@ function BrandStudioEditor({ brandKit: initialKit, returnTo }: { brandKit: AdStu
   const voiceLine = (kit.tone.voice || "").split(".")[0];
   const approved = kit.reviewStatus === "approved";
   const logoDisplayName = logoFile?.name ?? (logoPreviewUrl ? "Primary logo" : undefined);
-
   return (
-    <main className="tw min-h-screen bg-(--ui-background) font-sans text-(--ui-foreground)" aria-label="Brand Studio">
-
-      <div className="flex min-h-16 flex-wrap items-center gap-3 border-b border-(--ui-border) bg-(--ui-background) px-4 py-3 md:px-6">
-        <Link href={returnTo} className="min-h-11 inline-flex items-center text-sm font-semibold text-(--ui-muted-foreground) underline-offset-4 hover:underline focus-visible:outline-2">
-          ‹ Close
-        </Link>
-        <h1>Brand Studio</h1>
-        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${approved ? "bg-(--ui-success-soft) text-(--ui-success)" : "bg-(--ui-warning-soft) text-(--ui-warning)"}`}>{approved ? "✓ Approved" : "Pending review"}</span>
+    <div className="tw min-h-full bg-background font-sans text-foreground" aria-label="Brand Pack">
+      <div className="flex min-h-20 flex-wrap items-center gap-3 border-b border-border bg-card px-4 py-4 md:px-6">
+        <Button variant="ghost-pill" size="sm" asChild><Link href={returnTo}><ArrowLeft size={15} aria-hidden /> Back</Link></Button>
+        <div className="grid gap-0.5"><p className="font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">Ad Studio</p><h1 className="font-display text-2xl font-extrabold tracking-[-0.02em] md:text-[27px]">Brand Pack</h1></div>
+        <Badge variant="secondary" className={approved ? "bg-success-soft text-success" : "bg-warning-soft text-warning"}>{approved ? <><Check size={13} aria-hidden /> Approved</> : "Pending review"}</Badge>
         <div className="ml-auto flex min-h-11 flex-wrap items-center justify-end gap-3 text-sm font-semibold" aria-live="polite">
-          {notice && <span className={notice.tone === "err" ? "text-(--ui-destructive)" : "text-(--ui-success)"}>{notice.text}</span>}
-          <button className="min-h-11 rounded-full bg-(--ui-primary) px-5 font-semibold text-(--ui-primary-foreground) disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2" type="button" disabled={busy !== ""} onClick={() => void approveKit()}>
-            {busy === "approve" ? "Approving…" : "✓ Approve kit"}
-          </button>
+          {notice && <span role={notice.tone === "err" ? "alert" : undefined} className={`text-sm font-semibold ${notice.tone === "err" ? "text-error" : "text-success"}`}>{notice.text}</span>}
+          <Button type="button" size="lg" disabled={busy !== ""} onClick={() => void approveKit()}><Save size={16} aria-hidden /> {busy === "approve" ? "Saving changes…" : "Save changes"}</Button>
         </div>
       </div>
 
       <div className="min-h-0 overflow-auto">
-        <div className="border-b border-(--ui-border) bg-(--ui-muted)/30 px-4 pb-8 pt-6 md:px-8 md:pt-8">
-          <div className="font-mono text-xs uppercase tracking-[0.12em] text-(--ui-muted-foreground)">Brand kit · Real estate · {kit.identity.marketRegion ?? "AU"}</div>
-          <h2>
+        <div className="border-b border-border bg-muted/30 px-4 pb-8 pt-6 md:px-8 md:pt-8">
+          <div className="font-mono text-xs uppercase tracking-[0.12em] text-muted-foreground">Brand Pack · {kit.identity.marketRegion ?? "AU"}</div>
+          <h2 className="font-display text-3xl font-extrabold tracking-[-0.02em] md:text-4xl">
             <input
+              className="w-full min-w-0 bg-transparent font-inherit outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
               value={kit.identity.businessName}
               aria-label="Agency name"
               onChange={(event) => setIdentity("businessName", event.target.value)}
@@ -569,15 +553,16 @@ function BrandStudioEditor({ brandKit: initialKit, returnTo }: { brandKit: AdStu
             }}
           >
             <strong>Enter your website and we’ll do the setup</strong>
-            <span className="text-sm text-(--ui-muted-foreground)">We’ll pull in your logo, colours, fonts, and business details automatically.</span>
-            <label htmlFor="brand-website">Your website address</label>
+            <span className="text-sm text-muted-foreground">We’ll pull in your logo, colours, fonts, and business details automatically.</span>
+            <Label htmlFor="brand-website">Your website address</Label>
             <div className="flex flex-col gap-3 sm:flex-row">
-              <span className="flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded-(--r-control) border border-(--ui-border) bg-(--ui-background) px-3">
+              <span className="flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded-(--r-control) border border-input bg-background px-3">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
                 <circle cx="12" cy="12" r="9" />
                 <path d="M3 12h18M12 3c2.5 2.6 3.8 5.7 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.7-3.8-9s1.3-6.4 3.8-9z" />
               </svg>
-                <input
+                <Input
+                  className="h-11 border-0 bg-transparent shadow-none focus-visible:ring-0"
                   id="brand-website"
                   value={scanUrl}
                   inputMode="url"
@@ -586,55 +571,53 @@ function BrandStudioEditor({ brandKit: initialKit, returnTo }: { brandKit: AdStu
                   onChange={(event) => setScanUrl(event.target.value)}
                 />
               </span>
-              <button type="submit" className="min-h-11 rounded-full bg-(--ui-primary) px-5 font-semibold text-(--ui-primary-foreground) disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2" disabled={busy !== ""}>
-                {busy === "scan" ? "Updating your kit…" : "Update from website"}
-              </button>
+              <Button type="submit" variant="ghost-pill" size="lg" disabled={busy !== ""}>{busy === "scan" ? "Updating your kit…" : "Update from website"}</Button>
             </div>
-            <small>Review and change anything below before you approve it.</small>
+            <small className="text-muted-foreground">Review and change anything below before you approve it.</small>
           </form>
         </div>
 
-        <div className="mx-4 grid gap-3 md:mx-8 md:grid-cols-3">
-          <div className="overflow-hidden rounded-(--r-card) border border-(--ui-border) bg-(--ui-background) shadow-sm">
+        <div className="mx-auto grid w-full max-w-[1120px] gap-3 px-4 md:px-6 md:grid-cols-3">
+          <div className="overflow-hidden rounded-(--r-card) border border-border bg-card shadow-card">
             <div className="grid min-h-24 place-items-center p-4" style={{ background: "#fff", color: kit.colours.primary }}>
-              {logoPreviewUrl ? <img src={logoPreviewUrl} alt={`${brandName} primary logo`} /> : <span className="text-xs text-(--ui-muted-foreground)">Not found</span>}
+              {logoPreviewUrl ? <img src={logoPreviewUrl} alt={`${brandName} primary logo`} /> : <span className="text-xs text-muted-foreground">Not found</span>}
             </div>
-            <small className="flex justify-between gap-2 px-3 py-2 text-xs text-(--ui-muted-foreground)">
+            <small className="flex justify-between gap-2 px-3 py-2 text-xs text-muted-foreground">
               <b>Primary</b>
               <em>on light</em>
             </small>
           </div>
-          <div className="overflow-hidden rounded-(--r-card) border border-(--ui-border) bg-(--ui-background) shadow-sm">
+          <div className="overflow-hidden rounded-(--r-card) border border-border bg-card shadow-card">
             <div className="grid min-h-24 place-items-center p-4" style={{ background: "#16181d", color: "#fff" }}>
               {kit.logos.lightLogoUrl ? (
                 <img src={kit.logos.lightLogoUrl} alt={`${brandName} light logo`} />
               ) : (
-                <span className="text-xs text-(--ui-muted-foreground)">Not found</span>
+                <span className="text-xs text-muted-foreground">Not found</span>
               )}
             </div>
-            <small className="flex justify-between gap-2 px-3 py-2 text-xs text-(--ui-muted-foreground)">
+            <small className="flex justify-between gap-2 px-3 py-2 text-xs text-muted-foreground">
               <b>Dark</b>
               <em>on dark</em>
             </small>
           </div>
-          <div className="overflow-hidden rounded-(--r-card) border border-(--ui-border) bg-(--ui-background) shadow-sm">
-            <div className="grid min-h-24 place-items-center bg-(--ui-muted) p-4 text-(--ui-background)">
+          <div className="overflow-hidden rounded-(--r-card) border border-border bg-card shadow-card">
+            <div className="grid min-h-24 place-items-center bg-muted p-4 text-background">
               {kit.logos.faviconUrl ? (
                 <img src={kit.logos.faviconUrl} alt={`${brandName} brand mark`} />
               ) : (
-                <span className="text-xs text-(--ui-muted-foreground)">Not found</span>
+                <span className="text-xs text-muted-foreground">Not found</span>
               )}
             </div>
-            <small className="flex justify-between gap-2 px-3 py-2 text-xs text-(--ui-muted-foreground)">
+            <small className="flex justify-between gap-2 px-3 py-2 text-xs text-muted-foreground">
               <b>Mark</b>
               <em>on photo</em>
             </small>
           </div>
         </div>
 
-        <div className="mx-auto grid w-full max-w-6xl gap-5 px-4 py-6 md:grid-cols-[minmax(0,1fr)_320px] md:px-8">
+        <div className="mx-auto grid w-full max-w-[1120px] gap-5 px-4 py-6 pb-28 md:grid-cols-[minmax(0,1fr)_360px] md:px-6 md:pb-16">
           <div className="grid min-w-0 content-start gap-5">
-            <section className="grid gap-4 rounded-(--r-panel) border border-(--ui-border) bg-(--ui-background) p-5 shadow-sm">
+            <Card className="grid gap-4 rounded-(--r-panel) border-border bg-card p-5 shadow-card md:p-6">
               <h3>Logo</h3>
               <AssetUploadDropzone
                 className="min-h-28"
@@ -663,9 +646,9 @@ function BrandStudioEditor({ brandKit: initialKit, returnTo }: { brandKit: AdStu
                     : undefined
                 }
               />
-            </section>
+            </Card>
 
-            <section className="grid gap-4 rounded-(--r-panel) border border-(--ui-border) bg-(--ui-background) p-5 shadow-sm">
+            <Card className="grid gap-4 rounded-(--r-panel) border-border bg-card p-5 shadow-card md:p-6">
               <h3>Colours</h3>
               <div className="flex flex-wrap gap-4">
                 {COLOUR_LABELS.map(({ key, label }) => (
@@ -681,58 +664,62 @@ function BrandStudioEditor({ brandKit: initialKit, returnTo }: { brandKit: AdStu
                   />
                 ))}
               </div>
-              <span className="text-sm text-(--ui-muted-foreground)">Click a swatch to change it — the preview updates as you pick.</span>
-            </section>
+              <span className="text-sm text-muted-foreground">Click a swatch to change it — the preview updates as you pick.</span>
+            </Card>
 
-            <section className="grid gap-4 rounded-(--r-panel) border border-(--ui-border) bg-(--ui-background) p-5 shadow-sm">
+            <Card className="grid gap-4 rounded-(--r-panel) border-border bg-card p-5 shadow-card md:p-6">
               <h3>Typography</h3>
               <div className="grid items-center gap-5 sm:grid-cols-[106px_1fr]">
-                <div className="grid min-h-24 place-items-center rounded-(--r-card) bg-(--ui-muted) text-5xl font-extrabold">Aa</div>
+                <div className="grid min-h-24 place-items-center rounded-(--r-card) bg-muted text-5xl font-extrabold">Aa</div>
                 <div className="grid min-w-0 gap-4">
                   <div>
-                    <small>
-                      Headings ·{" "}
-                      <input
-                        className="min-h-11 max-w-full rounded-(--r-control) border border-(--ui-border) px-3 text-sm outline-none focus-visible:ring-2"
+                    <Label htmlFor="heading-font">
+                      Headings
+                      <Input
+                        id="heading-font"
+                        className="min-h-11 max-w-full rounded-(--r-control) px-3 text-sm"
                         value={kit.typography.headingFont}
                         aria-label="Heading font"
                        onChange={(event) =>
                           setKit((c) => ({ ...c, typography: { ...c.typography, headingFont: event.target.value } }))
                         }
                       />
-                    </small>
+                    </Label>
                     <span className="font-display text-lg font-extrabold">{headlineSample}</span>
                   </div>
                   <div>
-                    <small>
-                      Body ·{" "}
-                      <input
-                        className="min-h-11 max-w-full rounded-(--r-control) border border-(--ui-border) px-3 text-sm outline-none focus-visible:ring-2"
+                    <Label htmlFor="body-font">
+                      Body
+                      <Input
+                        id="body-font"
+                        className="min-h-11 max-w-full rounded-(--r-control) px-3 text-sm"
                         value={kit.typography.bodyFont}
                         aria-label="Body font"
                         onChange={(event) =>
                           setKit((c) => ({ ...c, typography: { ...c.typography, bodyFont: event.target.value } }))
                         }
                       />
-                    </small>
-                    <span className="text-sm text-(--ui-muted-foreground)">
+                    </Label>
+                    <span className="text-sm text-muted-foreground">
                       Local sales are setting new benchmarks. Get a free, no-pressure appraisal.
                     </span>
                   </div>
                 </div>
               </div>
-            </section>
+            </Card>
 
-            <section className="grid gap-4 rounded-(--r-panel) border border-(--ui-border) bg-(--ui-background) p-5 shadow-sm">
+            <Card className="grid gap-4 rounded-(--r-panel) border-border bg-card p-5 shadow-card md:p-6">
               <h3>Voice &amp; tone</h3>
               <div className="grid gap-2">
-                <label>
+                <Label htmlFor="brand-voice">
                   How should your ads sound?
-                  <small>
+                  <span className="ml-2 font-normal text-muted-foreground">
                     {(kit.tone.voice || "").length} / {VOICE_LIMIT}
-                  </small>
-                </label>
+                  </span>
+                </Label>
                 <textarea
+                  id="brand-voice"
+                  className="min-h-24 w-full rounded-(--r-card) border border-input bg-background px-3 py-2.5 text-sm leading-6 outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
                   value={kit.tone.voice}
                   maxLength={VOICE_LIMIT}
                   rows={3}
@@ -740,9 +727,11 @@ function BrandStudioEditor({ brandKit: initialKit, returnTo }: { brandKit: AdStu
                 />
                 <div className="flex flex-wrap gap-2">
                   {VOICE_PRESETS.map((preset) => (
-                    <button
+                    <Button
                       key={preset}
                       type="button"
+                      variant="ghost-pill"
+                      size="sm"
                       onClick={() =>
                         setTone(
                           "voice",
@@ -753,13 +742,13 @@ function BrandStudioEditor({ brandKit: initialKit, returnTo }: { brandKit: AdStu
                         )
                       }
                     >
-                      + {preset}
-                    </button>
+                      <Plus size={14} aria-hidden /> {preset}
+                    </Button>
                   ))}
                 </div>
               </div>
               <div className="grid gap-2">
-                <label>Use phrases like</label>
+                <Label>Use phrases like</Label>
                 <TagRow
                   items={kit.tone.preferredPhrases}
                   tone="yes"
@@ -773,7 +762,7 @@ function BrandStudioEditor({ brandKit: initialKit, returnTo }: { brandKit: AdStu
                 />
               </div>
               <div className="grid gap-2">
-                <label>Never say</label>
+                <Label>Never say</Label>
                 <TagRow
                   items={kit.tone.avoid}
                   tone="no"
@@ -786,52 +775,56 @@ function BrandStudioEditor({ brandKit: initialKit, returnTo }: { brandKit: AdStu
                   }
                 />
               </div>
-            </section>
+            </Card>
 
             <div className="grid gap-5 lg:grid-cols-2">
-              <section className="grid gap-4 rounded-(--r-panel) border border-(--ui-border) bg-(--ui-background) p-5 shadow-sm">
+              <Card className="grid gap-4 rounded-(--r-panel) border-border bg-card p-5 shadow-card md:p-6">
                 <h3>Identity &amp; contact</h3>
                 <div className="grid gap-2">
-                  <div className="grid gap-1 border-b border-(--ui-border) pb-2 sm:grid-cols-[84px_1fr] sm:items-center">
-                    <label htmlFor="brand-agency" className="text-sm text-(--ui-muted-foreground)">Agency</label>
-                    <input id="brand-agency" className="min-h-11 min-w-0 rounded-(--r-control) border border-(--ui-border) px-3 text-sm outline-none focus-visible:ring-2" value={kit.identity.businessName} onChange={(e) => setIdentity("businessName", e.target.value)} />
+                  <div className="grid gap-1 border-b border-border pb-2 sm:grid-cols-[84px_1fr] sm:items-center">
+                    <Label htmlFor="brand-agency" className="text-sm text-muted-foreground">Agency</Label>
+                    <Input id="brand-agency" className="min-h-11 min-w-0 rounded-(--r-control) border-0 px-3 text-sm shadow-none focus-visible:ring-2 focus-visible:ring-ring/50" value={kit.identity.businessName} onChange={(e) => setIdentity("businessName", e.target.value)} />
                   </div>
-                  <div className="grid gap-1 border-b border-(--ui-border) pb-2 sm:grid-cols-[84px_1fr] sm:items-center">
-                    <label htmlFor="brand-agent" className="text-sm text-(--ui-muted-foreground)">Agent</label>
-                    <input id="brand-agent" className="min-h-11 min-w-0 rounded-(--r-control) border border-(--ui-border) px-3 text-sm outline-none focus-visible:ring-2" value={kit.identity.tradingName ?? ""} onChange={(e) => setIdentity("tradingName", e.target.value)} />
+                  <div className="grid gap-1 border-b border-border pb-2 sm:grid-cols-[84px_1fr] sm:items-center">
+                    <Label htmlFor="brand-agent" className="text-sm text-muted-foreground">Agent</Label>
+                    <Input id="brand-agent" className="min-h-11 min-w-0 rounded-(--r-control) border-0 px-3 text-sm shadow-none focus-visible:ring-2 focus-visible:ring-ring/50" value={kit.identity.tradingName ?? ""} onChange={(e) => setIdentity("tradingName", e.target.value)} />
                   </div>
-                  <div className="grid gap-1 border-b border-(--ui-border) pb-2 sm:grid-cols-[84px_1fr] sm:items-center">
-                    <label htmlFor="brand-phone" className="text-sm text-(--ui-muted-foreground)">Phone</label>
-                    <input id="brand-phone" type="tel" className="min-h-11 min-w-0 rounded-(--r-control) border border-(--ui-border) px-3 text-sm outline-none focus-visible:ring-2" value={kit.contact.phone ?? ""} onChange={(e) => setContact("phone", e.target.value)} />
+                  <div className="grid gap-1 border-b border-border pb-2 sm:grid-cols-[84px_1fr] sm:items-center">
+                    <Label htmlFor="brand-phone" className="text-sm text-muted-foreground">Phone</Label>
+                    <Input id="brand-phone" type="tel" className="min-h-11 min-w-0 rounded-(--r-control) border-0 px-3 text-sm shadow-none focus-visible:ring-2 focus-visible:ring-ring/50" value={kit.contact.phone ?? ""} onChange={(e) => setContact("phone", e.target.value)} />
                   </div>
-                  <div className="grid gap-1 border-b border-(--ui-border) pb-2 sm:grid-cols-[84px_1fr] sm:items-center">
-                    <label htmlFor="brand-email" className="text-sm text-(--ui-muted-foreground)">Email</label>
-                    <input id="brand-email" type="email" className="min-h-11 min-w-0 rounded-(--r-control) border border-(--ui-border) px-3 text-sm outline-none focus-visible:ring-2" value={kit.contact.email ?? ""} onChange={(e) => setContact("email", e.target.value)} />
+                  <div className="grid gap-1 border-b border-border pb-2 sm:grid-cols-[84px_1fr] sm:items-center">
+                    <Label htmlFor="brand-email" className="text-sm text-muted-foreground">Email</Label>
+                    <Input id="brand-email" type="email" className="min-h-11 min-w-0 rounded-(--r-control) border-0 px-3 text-sm shadow-none focus-visible:ring-2 focus-visible:ring-ring/50" value={kit.contact.email ?? ""} onChange={(e) => setContact("email", e.target.value)} />
                   </div>
-                  <div className="grid gap-1 border-b border-(--ui-border) pb-2 sm:grid-cols-[84px_1fr] sm:items-center">
-                    <span>Region</span>
-                    <input aria-label="Region" className="min-h-11 min-w-0 rounded-(--r-control) border border-(--ui-border) px-3 text-sm outline-none focus-visible:ring-2" value={kit.identity.marketRegion ?? ""} onChange={(e) => setIdentity("marketRegion", e.target.value)} />
+                  <div className="grid gap-1 border-b border-border pb-2 sm:grid-cols-[84px_1fr] sm:items-center">
+                    <Label htmlFor="brand-region" className="text-sm text-muted-foreground">Region</Label>
+                    <Input id="brand-region" className="min-h-11 min-w-0 rounded-(--r-control) border-0 px-3 text-sm shadow-none focus-visible:ring-2 focus-visible:ring-ring/50" value={kit.identity.marketRegion ?? ""} onChange={(e) => setIdentity("marketRegion", e.target.value)} />
                   </div>
-                  <div className="grid gap-1 border-b border-(--ui-border) pb-2 sm:grid-cols-[84px_1fr] sm:items-center">
-                    <span>Licence</span>
-                    <input aria-label="Licence" className="min-h-11 min-w-0 rounded-(--r-control) border border-(--ui-border) px-3 text-sm outline-none focus-visible:ring-2" value={kit.identity.licenceText ?? ""} onChange={(e) => setIdentity("licenceText", e.target.value)} />
+                  <div className="grid gap-1 border-b border-border pb-2 sm:grid-cols-[84px_1fr] sm:items-center">
+                    <Label htmlFor="brand-licence" className="text-sm text-muted-foreground">Licence</Label>
+                    <Input id="brand-licence" className="min-h-11 min-w-0 rounded-(--r-control) border-0 px-3 text-sm shadow-none focus-visible:ring-2 focus-visible:ring-ring/50" value={kit.identity.licenceText ?? ""} onChange={(e) => setIdentity("licenceText", e.target.value)} />
                   </div>
                 </div>
-              </section>
-              <section className="grid gap-4 rounded-(--r-panel) border border-(--ui-border) bg-(--ui-background) p-5 shadow-sm">
+              </Card>
+              <Card className="grid gap-4 rounded-(--r-panel) border-border bg-card p-5 shadow-card md:p-6">
                 <h3>Compliance</h3>
                 <div className="grid gap-2">
                   {kit.compliance.disclaimers.map((disclaimer, index) => (
                     <textarea
                       key={index}
+                      className="min-h-20 w-full rounded-(--r-card) border border-input bg-background px-3 py-2.5 text-sm leading-6 outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                      aria-label={`Disclaimer ${index + 1}`}
                       rows={2}
                       value={disclaimer}
                       onChange={(event) => setDisclaimer(index, event.target.value)}
                     />
                   ))}
-                  <button
+                  <Button
                     type="button"
-                    className="min-h-11 rounded-(--r-control) border border-dashed border-(--ui-border) px-3 text-sm font-semibold text-(--ui-muted-foreground) focus-visible:outline-2"
+                    variant="ghost-pill"
+                    size="sm"
+                    className="min-h-11 border-dashed text-sm font-semibold text-muted-foreground"
                     onClick={() =>
                       setKit((c) => ({
                         ...c,
@@ -839,47 +832,47 @@ function BrandStudioEditor({ brandKit: initialKit, returnTo }: { brandKit: AdStu
                       }))
                     }
                   >
-                    ＋ Add disclaimer
-                  </button>
+                    <Plus size={15} aria-hidden /> Add disclaimer
+                  </Button>
                 </div>
-              </section>
+              </Card>
             </div>
           </div>
 
           <aside className="h-max md:sticky md:top-5">
-            <div className="grid justify-items-center gap-4 rounded-(--r-panel) border border-(--ui-border) bg-(--ui-foreground) p-5 text-(--ui-background)">
-              <span className="font-mono text-xs uppercase tracking-[0.12em] text-(--ui-muted-foreground)">Live preview</span>
+            <Card className="grid gap-5 rounded-(--r-panel) border-border bg-card p-5 shadow-card md:p-6">
+              <div className="flex items-start justify-between gap-3"><div><h2 className="font-display text-[17px] font-extrabold tracking-[-0.015em]">Live creative preview</h2><p className="mt-1 text-xs text-muted-foreground">Updates as you edit</p></div><Badge variant="secondary">Feed</Badge></div>
               <div className="flex flex-wrap justify-center gap-3">
-                <div className="relative aspect-[9/16] w-32 overflow-hidden rounded-(--r-card) bg-(--ui-muted) p-2 text-(--ui-background)">
-                  <span className="rounded-full bg-(--ui-background) px-2 py-1 text-[9px] font-semibold" style={{ color: kit.colours.primary }}>
-                    {logoPreviewUrl ? <img src={logoPreviewUrl} alt="" /> : brandName}
+                <div className="relative aspect-[9/16] w-32 overflow-hidden rounded-(--r-card) bg-muted p-2 text-background">
+                  <span className="rounded-full bg-background px-2 py-1 text-[9px] font-semibold" style={{ color: kit.colours.primary }}>
+                    {logoPreviewUrl ? <img src={logoPreviewUrl} alt="" className="max-h-5 max-w-full object-contain" /> : brandName}
                   </span>
                   <h5 className="absolute inset-x-2 bottom-9 text-xs font-extrabold">{headlineSample}</h5>
-                  <span className="absolute inset-x-2 bottom-2 rounded bg-(--ui-background) py-1 text-center text-[9px] font-bold" style={{ color: kit.colours.primary }}>
+                  <span className="absolute inset-x-2 bottom-2 rounded bg-background py-1 text-center text-[9px] font-bold" style={{ color: kit.colours.primary }}>
                     Book free appraisal
                   </span>
                 </div>
-                <div className="w-32 overflow-hidden rounded-(--r-card) bg-(--ui-background) text-(--ui-foreground)">
+                <div className="w-32 overflow-hidden rounded-(--r-card) border border-border bg-background text-foreground">
                   <div className="flex items-center gap-1 p-2 text-[9px]">
-                    {kit.logos.faviconUrl && <img src={kit.logos.faviconUrl} alt="" />}
+                    {kit.logos.faviconUrl && <img src={kit.logos.faviconUrl} alt="" className="size-3 object-contain" />}
                     <b>{brandName}</b>
                   </div>
-                  <div className="h-20 bg-(--ui-muted)" />
-                  <div className="flex items-center justify-between gap-1 bg-(--ui-muted) p-2 text-[9px]">
+                  <div className="h-20 bg-muted" />
+                  <div className="flex items-center justify-between gap-1 bg-muted p-2 text-[9px]">
                     <b>Free appraisal</b>
                     <span style={{ background: kit.colours.secondary }}>Book</span>
                   </div>
                 </div>
               </div>
-              <small>
+              <p className="border-t border-border pt-4 text-sm text-muted-foreground">
                 Re-renders as you edit — voice line:
                 <br />
                 <b>{voiceLine || "describe your voice above"}</b>
-              </small>
-            </div>
+              </p>
+            </Card>
           </aside>
         </div>
       </div>
-    </main>
+    </div>
   );
 }
