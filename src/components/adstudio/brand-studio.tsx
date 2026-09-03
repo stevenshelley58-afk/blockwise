@@ -94,10 +94,10 @@ function ColorSwatch({ label, value, sitePalette, open, onOpen, onClose, onChang
   }
 
   return (
-    <div className={`bs-swatch${open ? " open" : ""}`}>
+    <div className={`relative grid justify-items-center gap-2 ${open ? "z-40" : ""}`}>
       <button
         type="button"
-        className="well"
+        className="min-h-16 min-w-16 rounded-(--r-card) border border-(--ui-border) shadow-sm transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2"
         style={{ background: value }}
         aria-label={`Edit ${label} colour`}
         onClick={(event) => {
@@ -109,10 +109,10 @@ function ColorSwatch({ label, value, sitePalette, open, onOpen, onClose, onChang
       <small>{value.toUpperCase()}</small>
 
       {open && (
-        <div className="bs-picker" onClick={(event) => event.stopPropagation()}>
+        <div className="absolute left-1/2 top-20 z-40 grid w-[min(248px,calc(100vw-2rem))] -translate-x-1/2 gap-3 rounded-(--r-card) border border-(--ui-border) bg-(--ui-background) p-4 shadow-lg" onClick={(event) => event.stopPropagation()}>
           <div
             ref={svRef}
-            className="sv"
+            className="relative aspect-[5/3.4] w-full cursor-crosshair touch-none rounded-(--r-control) bg-[linear-gradient(0deg,#000,transparent),linear-gradient(90deg,#fff,transparent),var(--h,#888)]"
             style={{ ["--h" as string]: `hsl(${hsv.h},100%,50%)` }}
             onPointerDown={(event) => {
               event.currentTarget.setPointerCapture(event.pointerId);
@@ -122,10 +122,10 @@ function ColorSwatch({ label, value, sitePalette, open, onOpen, onClose, onChang
               if (event.buttons === 1) pickFromField(event);
             }}
           >
-            <span className="cur" style={{ left: `${hsv.s * 100}%`, top: `${(1 - hsv.v) * 100}%` }} />
+            <span className="absolute h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow" style={{ left: `${hsv.s * 100}%`, top: `${(1 - hsv.v) * 100}%` }} />
           </div>
           <input
-            className="hue"
+            className="min-h-11 w-full accent-(--ui-primary)"
             type="range"
             min={0}
             max={360}
@@ -133,13 +133,14 @@ function ColorSwatch({ label, value, sitePalette, open, onOpen, onClose, onChang
             onChange={(event) => commit({ ...hsv, h: Number(event.target.value) })}
           />
           {sitePalette.length > 0 && (
-            <div className="from-site">
-              <small>From your site</small>
-              <div className="dots">
+            <div className="grid gap-2">
+              <small className="text-xs font-semibold text-(--ui-muted-foreground)">From your site</small>
+              <div className="flex flex-wrap gap-2">
                 {sitePalette.map((colour) => (
                   <button
                     key={colour}
                     type="button"
+                    className="min-h-11 min-w-11 rounded-md border border-(--ui-border) focus-visible:outline-2 focus-visible:outline-offset-2"
                     style={{ background: colour }}
                     aria-label={`Use ${colour}`}
                     onClick={() => commit(hexToHsv(colour))}
@@ -148,10 +149,12 @@ function ColorSwatch({ label, value, sitePalette, open, onOpen, onClose, onChang
               </div>
             </div>
           )}
-          <div className="pick-foot">
-            <span className="hexwrap">
+          <div className="flex items-center gap-2">
+            <span className="flex min-h-11 flex-1 items-center gap-1 rounded-(--r-control) border border-(--ui-border) px-3 text-sm">
               #
               <input
+                aria-label={`${label} hex value`}
+                className="min-w-0 flex-1 bg-transparent outline-none"
                 value={hexText}
                 maxLength={6}
                 onChange={(event) => {
@@ -164,7 +167,7 @@ function ColorSwatch({ label, value, sitePalette, open, onOpen, onClose, onChang
                 }}
               />
             </span>
-            <button type="button" className="ok" onClick={onClose}>
+            <button type="button" className="min-h-11 rounded-full bg-(--ui-primary) px-4 text-sm font-semibold text-(--ui-primary-foreground) focus-visible:outline-2 focus-visible:outline-offset-2" onClick={onClose}>
               Done
             </button>
           </div>
@@ -193,15 +196,15 @@ function TagRow({
   const [draft, setDraft] = useState("");
 
   return (
-    <div className="bs-tagrow">
+    <div className="flex flex-wrap items-center gap-2">
       {items.map((item) => (
-        <span key={item} className={tone === "no" ? "no" : ""}>
+        <span key={item} className={`inline-flex min-h-11 items-center gap-2 rounded-full px-3 text-sm font-semibold ${tone === "no" ? "bg-(--ui-destructive)/10 text-(--ui-destructive)" : "bg-(--ui-muted) text-(--ui-foreground)"}`}>
           {item}
           <button type="button" aria-label={`Remove ${item}`} onClick={() => onRemove(item)}>Remove</button>
         </span>
       ))}
       {adding ? (
-        <input
+        <input aria-label="New phrase" className="min-h-11 min-w-0 rounded-full border border-(--ui-border) px-3 text-sm outline-none focus-visible:ring-2"
           autoFocus
           value={draft}
           placeholder="type, press Enter"
@@ -216,7 +219,7 @@ function TagRow({
           }}
         />
       ) : (
-        <button type="button" className="addbtn" onClick={() => setAdding(true)}>
+        <button type="button" className="min-h-11 rounded-full border border-dashed border-(--ui-border) px-4 text-sm font-semibold text-(--ui-muted-foreground) focus-visible:outline-2" onClick={() => setAdding(true)}>
           ＋ Add phrase
         </button>
       )}
@@ -306,36 +309,35 @@ export function BrandStudio({ brandKit: initialKit, returnTo = "/ad-studio" }: {
   }
 
   return (
-    <main className="bs-screen" aria-label="Brand Studio">
-      <style>{BRAND_STYLES}</style>
+    <main className="tw flex min-h-screen flex-col bg-(--ui-background) font-sans text-(--ui-foreground)" aria-label="Brand Studio">
 
-      <div className="bs-top">
-        <Link href={returnTo} className="back">
+      <div className="flex min-h-16 flex-wrap items-center gap-3 border-b border-(--ui-border) bg-(--ui-background) px-4 py-3 md:px-6">
+        <Link href={returnTo} className="min-h-11 inline-flex items-center text-sm font-semibold text-(--ui-muted-foreground) underline-offset-4 hover:underline focus-visible:outline-2">
           {"< Close"}
         </Link>
         <h1>Brand Studio</h1>
-        <div className="grow">{notice && <span className={`notice ${notice.tone}`}>{notice.text}</span>}</div>
+        <div className="ml-auto flex min-h-11 items-center gap-3 text-sm font-semibold" aria-live="polite">{notice && <span className={notice.tone === "err" ? "text-(--ui-destructive)" : "text-(--ui-success)"}>{notice.text}</span>}</div>
       </div>
 
-      <div className="bs-empty">
-        <div className="bs-empty-panel">
-          <span className="chip warn">Optional setup</span>
+      <div className="grid flex-1 place-items-center bg-(--ui-muted)/30 p-4 md:p-8">
+        <div className="grid w-full max-w-2xl gap-4 rounded-(--r-panel) border border-(--ui-border) bg-(--ui-background) p-5 shadow-sm md:p-8">
+          <span className="w-fit rounded-full bg-(--ui-muted) px-3 py-1 text-xs font-semibold text-(--ui-muted-foreground)">Optional setup</span>
           <h2>Enter your website. We’ll build your brand kit.</h2>
           <form
-            className="site-setup"
+            className="grid gap-3"
             onSubmit={(event) => {
               event.preventDefault();
               void scanSite();
             }}
           >
             <label htmlFor="brand-website">Your website address</label>
-            <div className="scanline">
-              <span className="url">
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <span className="flex min-h-12 min-w-0 flex-1 items-center gap-2 rounded-(--r-control) border border-(--ui-border) bg-(--ui-background) px-3">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
                 <circle cx="12" cy="12" r="9" />
                 <path d="M3 12h18M12 3c2.5 2.6 3.8 5.7 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.7-3.8-9s1.3-6.4 3.8-9z" />
               </svg>
-              <input
+              <input aria-label="Website address" className="min-w-0 flex-1 bg-transparent outline-none"
                 id="brand-website"
                 value={scanUrl}
                 inputMode="url"
@@ -344,7 +346,7 @@ export function BrandStudio({ brandKit: initialKit, returnTo = "/ad-studio" }: {
                 onChange={(event) => setScanUrl(event.target.value)}
               />
               </span>
-              <button type="submit" className="go" disabled={busy}>
+              <button type="submit" className="min-h-12 rounded-full bg-(--ui-primary) px-5 font-semibold text-(--ui-primary-foreground) disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2" disabled={busy}>
                 {busy ? "Building your kit…" : "Build my brand kit"}
               </button>
             </div>
@@ -533,26 +535,25 @@ function BrandStudioEditor({ brandKit: initialKit, returnTo }: { brandKit: AdStu
   const logoDisplayName = logoFile?.name ?? (logoPreviewUrl ? "Primary logo" : undefined);
 
   return (
-    <main className="bs-screen" aria-label="Brand Studio">
-      <style>{BRAND_STYLES}</style>
+    <main className="tw min-h-screen bg-(--ui-background) font-sans text-(--ui-foreground)" aria-label="Brand Studio">
 
-      <div className="bs-top">
-        <Link href={returnTo} className="back">
+      <div className="flex min-h-16 flex-wrap items-center gap-3 border-b border-(--ui-border) bg-(--ui-background) px-4 py-3 md:px-6">
+        <Link href={returnTo} className="min-h-11 inline-flex items-center text-sm font-semibold text-(--ui-muted-foreground) underline-offset-4 hover:underline focus-visible:outline-2">
           ‹ Close
         </Link>
         <h1>Brand Studio</h1>
-        <span className={`chip ${approved ? "good" : "warn"}`}>{approved ? "✓ Approved" : "Pending review"}</span>
-        <div className="grow">
-          {notice && <span className={`notice ${notice.tone}`}>{notice.text}</span>}
-          <button className="btn pri" type="button" disabled={busy !== ""} onClick={() => void approveKit()}>
+        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${approved ? "bg-(--ui-success-soft) text-(--ui-success)" : "bg-(--ui-warning-soft) text-(--ui-warning)"}`}>{approved ? "✓ Approved" : "Pending review"}</span>
+        <div className="ml-auto flex min-h-11 flex-wrap items-center justify-end gap-3 text-sm font-semibold" aria-live="polite">
+          {notice && <span className={notice.tone === "err" ? "text-(--ui-destructive)" : "text-(--ui-success)"}>{notice.text}</span>}
+          <button className="min-h-11 rounded-full bg-(--ui-primary) px-5 font-semibold text-(--ui-primary-foreground) disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2" type="button" disabled={busy !== ""} onClick={() => void approveKit()}>
             {busy === "approve" ? "Approving…" : "✓ Approve kit"}
           </button>
         </div>
       </div>
 
-      <div className="bs-scroll">
-        <div className="bs-hero">
-          <div className="kick">Brand kit · Real estate · {kit.identity.marketRegion ?? "AU"}</div>
+      <div className="min-h-0 overflow-auto">
+        <div className="border-b border-(--ui-border) bg-(--ui-muted)/30 px-4 pb-8 pt-6 md:px-8 md:pt-8">
+          <div className="font-mono text-xs uppercase tracking-[0.12em] text-(--ui-muted-foreground)">Brand kit · Real estate · {kit.identity.marketRegion ?? "AU"}</div>
           <h2>
             <input
               value={kit.identity.businessName}
@@ -561,17 +562,17 @@ function BrandStudioEditor({ brandKit: initialKit, returnTo }: { brandKit: AdStu
             />
           </h2>
           <form
-            className="site-setup"
+            className="mt-5 grid max-w-2xl gap-3"
             onSubmit={(event) => {
               event.preventDefault();
               void scanSite();
             }}
           >
             <strong>Enter your website and we’ll do the setup</strong>
-            <span className="site-setup-copy">We’ll pull in your logo, colours, fonts, and business details automatically.</span>
+            <span className="text-sm text-(--ui-muted-foreground)">We’ll pull in your logo, colours, fonts, and business details automatically.</span>
             <label htmlFor="brand-website">Your website address</label>
-            <div className="scanline">
-              <span className="url">
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <span className="flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded-(--r-control) border border-(--ui-border) bg-(--ui-background) px-3">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
                 <circle cx="12" cy="12" r="9" />
                 <path d="M3 12h18M12 3c2.5 2.6 3.8 5.7 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.7-3.8-9s1.3-6.4 3.8-9z" />
@@ -585,7 +586,7 @@ function BrandStudioEditor({ brandKit: initialKit, returnTo }: { brandKit: AdStu
                   onChange={(event) => setScanUrl(event.target.value)}
                 />
               </span>
-              <button type="submit" className="go" disabled={busy !== ""}>
+              <button type="submit" className="min-h-11 rounded-full bg-(--ui-primary) px-5 font-semibold text-(--ui-primary-foreground) disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2" disabled={busy !== ""}>
                 {busy === "scan" ? "Updating your kit…" : "Update from website"}
               </button>
             </div>
@@ -593,50 +594,50 @@ function BrandStudioEditor({ brandKit: initialKit, returnTo }: { brandKit: AdStu
           </form>
         </div>
 
-        <div className="bs-logo-proof">
-          <div className="lp">
-            <div className="face" style={{ background: "#fff", color: kit.colours.primary }}>
-              {logoPreviewUrl ? <img src={logoPreviewUrl} alt={`${brandName} primary logo`} /> : <span className="missing">Not found</span>}
+        <div className="mx-4 grid gap-3 md:mx-8 md:grid-cols-3">
+          <div className="overflow-hidden rounded-(--r-card) border border-(--ui-border) bg-(--ui-background) shadow-sm">
+            <div className="grid min-h-24 place-items-center p-4" style={{ background: "#fff", color: kit.colours.primary }}>
+              {logoPreviewUrl ? <img src={logoPreviewUrl} alt={`${brandName} primary logo`} /> : <span className="text-xs text-(--ui-muted-foreground)">Not found</span>}
             </div>
-            <small>
+            <small className="flex justify-between gap-2 px-3 py-2 text-xs text-(--ui-muted-foreground)">
               <b>Primary</b>
               <em>on light</em>
             </small>
           </div>
-          <div className="lp">
-            <div className="face" style={{ background: "#001b3d", color: "#fff" }}>
+          <div className="overflow-hidden rounded-(--r-card) border border-(--ui-border) bg-(--ui-background) shadow-sm">
+            <div className="grid min-h-24 place-items-center p-4" style={{ background: "#16181d", color: "#fff" }}>
               {kit.logos.lightLogoUrl ? (
                 <img src={kit.logos.lightLogoUrl} alt={`${brandName} light logo`} />
               ) : (
-                <span className="missing">Not found</span>
+                <span className="text-xs text-(--ui-muted-foreground)">Not found</span>
               )}
             </div>
-            <small>
+            <small className="flex justify-between gap-2 px-3 py-2 text-xs text-(--ui-muted-foreground)">
               <b>Dark</b>
               <em>on dark</em>
             </small>
           </div>
-          <div className="lp">
-            <div className="face photo">
+          <div className="overflow-hidden rounded-(--r-card) border border-(--ui-border) bg-(--ui-background) shadow-sm">
+            <div className="grid min-h-24 place-items-center bg-(--ui-muted) p-4 text-(--ui-background)">
               {kit.logos.faviconUrl ? (
                 <img src={kit.logos.faviconUrl} alt={`${brandName} brand mark`} />
               ) : (
-                <span className="missing">Not found</span>
+                <span className="text-xs text-(--ui-muted-foreground)">Not found</span>
               )}
             </div>
-            <small>
+            <small className="flex justify-between gap-2 px-3 py-2 text-xs text-(--ui-muted-foreground)">
               <b>Mark</b>
               <em>on photo</em>
             </small>
           </div>
         </div>
 
-        <div className="bs-body">
-          <div className="bs-main">
-            <section className="bs-card">
+        <div className="mx-auto grid w-full max-w-6xl gap-5 px-4 py-6 md:grid-cols-[minmax(0,1fr)_320px] md:px-8">
+          <div className="grid min-w-0 content-start gap-5">
+            <section className="grid gap-4 rounded-(--r-panel) border border-(--ui-border) bg-(--ui-background) p-5 shadow-sm">
               <h3>Logo</h3>
               <AssetUploadDropzone
-                className="bs-logo-upload"
+                className="min-h-28"
                 label="Upload logo"
                 actionText="Upload logo"
                 helperText="PNG, JPG, WebP, or SVG / up to 5 MB"
@@ -664,9 +665,9 @@ function BrandStudioEditor({ brandKit: initialKit, returnTo }: { brandKit: AdStu
               />
             </section>
 
-            <section className="bs-card">
+            <section className="grid gap-4 rounded-(--r-panel) border border-(--ui-border) bg-(--ui-background) p-5 shadow-sm">
               <h3>Colours</h3>
-              <div className="bs-swrow">
+              <div className="flex flex-wrap gap-4">
                 {COLOUR_LABELS.map(({ key, label }) => (
                   <ColorSwatch
                     key={key}
@@ -680,33 +681,34 @@ function BrandStudioEditor({ brandKit: initialKit, returnTo }: { brandKit: AdStu
                   />
                 ))}
               </div>
-              <span className="subtle">Click a swatch to change it — the preview updates as you pick.</span>
+              <span className="text-sm text-(--ui-muted-foreground)">Click a swatch to change it — the preview updates as you pick.</span>
             </section>
 
-            <section className="bs-card">
+            <section className="grid gap-4 rounded-(--r-panel) border border-(--ui-border) bg-(--ui-background) p-5 shadow-sm">
               <h3>Typography</h3>
-              <div className="bs-spec">
-                <div className="aa">Aa</div>
-                <div className="rows">
+              <div className="grid items-center gap-5 sm:grid-cols-[106px_1fr]">
+                <div className="grid min-h-24 place-items-center rounded-(--r-card) bg-(--ui-muted) text-5xl font-extrabold">Aa</div>
+                <div className="grid min-w-0 gap-4">
                   <div>
                     <small>
                       Headings ·{" "}
                       <input
-                        className="font-name"
+                        className="min-h-11 max-w-full rounded-(--r-control) border border-(--ui-border) px-3 text-sm outline-none focus-visible:ring-2"
                         value={kit.typography.headingFont}
                         aria-label="Heading font"
-                        onChange={(event) =>
+                      className="min-h-11 rounded-full bg-(--ui-muted) px-3 text-xs font-semibold text-(--ui-muted-foreground) focus-visible:outline-2"
+                      onChange={(event) =>
                           setKit((c) => ({ ...c, typography: { ...c.typography, headingFont: event.target.value } }))
                         }
                       />
                     </small>
-                    <span className="h-sample">{headlineSample}</span>
+                    <span className="font-display text-lg font-extrabold">{headlineSample}</span>
                   </div>
                   <div>
                     <small>
                       Body ·{" "}
                       <input
-                        className="font-name"
+                        className="min-h-11 max-w-full rounded-(--r-control) border border-(--ui-border) px-3 text-sm outline-none focus-visible:ring-2"
                         value={kit.typography.bodyFont}
                         aria-label="Body font"
                         onChange={(event) =>
@@ -714,7 +716,7 @@ function BrandStudioEditor({ brandKit: initialKit, returnTo }: { brandKit: AdStu
                         }
                       />
                     </small>
-                    <span className="b-sample">
+                    <span className="text-sm text-(--ui-muted-foreground)">
                       Local sales are setting new benchmarks. Get a free, no-pressure appraisal.
                     </span>
                   </div>
@@ -722,9 +724,9 @@ function BrandStudioEditor({ brandKit: initialKit, returnTo }: { brandKit: AdStu
               </div>
             </section>
 
-            <section className="bs-card">
+            <section className="grid gap-4 rounded-(--r-panel) border border-(--ui-border) bg-(--ui-background) p-5 shadow-sm">
               <h3>Voice &amp; tone</h3>
-              <div className="f">
+              <div className="grid gap-2">
                 <label>
                   How should your ads sound?
                   <small>
@@ -737,7 +739,7 @@ function BrandStudioEditor({ brandKit: initialKit, returnTo }: { brandKit: AdStu
                   rows={3}
                   onChange={(event) => setTone("voice", event.target.value)}
                 />
-                <div className="presets">
+                <div className="flex flex-wrap gap-2">
                   {VOICE_PRESETS.map((preset) => (
                     <button
                       key={preset}
@@ -757,7 +759,7 @@ function BrandStudioEditor({ brandKit: initialKit, returnTo }: { brandKit: AdStu
                   ))}
                 </div>
               </div>
-              <div className="f">
+              <div className="grid gap-2">
                 <label>Use phrases like</label>
                 <TagRow
                   items={kit.tone.preferredPhrases}
@@ -771,7 +773,7 @@ function BrandStudioEditor({ brandKit: initialKit, returnTo }: { brandKit: AdStu
                   }
                 />
               </div>
-              <div className="f">
+              <div className="grid gap-2">
                 <label>Never say</label>
                 <TagRow
                   items={kit.tone.avoid}
@@ -787,39 +789,39 @@ function BrandStudioEditor({ brandKit: initialKit, returnTo }: { brandKit: AdStu
               </div>
             </section>
 
-            <div className="bs-two">
-              <section className="bs-card">
+            <div className="grid gap-5 lg:grid-cols-2">
+              <section className="grid gap-4 rounded-(--r-panel) border border-(--ui-border) bg-(--ui-background) p-5 shadow-sm">
                 <h3>Identity &amp; contact</h3>
-                <div className="bs-kv">
-                  <div className="r">
-                    <span>Agency</span>
-                    <input value={kit.identity.businessName} onChange={(e) => setIdentity("businessName", e.target.value)} />
+                <div className="grid gap-2">
+                  <div className="grid gap-1 border-b border-(--ui-border) pb-2 sm:grid-cols-[84px_1fr] sm:items-center">
+                    <label htmlFor="brand-agency" className="text-sm text-(--ui-muted-foreground)">Agency</label>
+                    <input id="brand-agency" className="min-h-11 min-w-0 rounded-(--r-control) border border-(--ui-border) px-3 text-sm outline-none focus-visible:ring-2" value={kit.identity.businessName} onChange={(e) => setIdentity("businessName", e.target.value)} />
                   </div>
-                  <div className="r">
-                    <span>Agent</span>
-                    <input value={kit.identity.tradingName ?? ""} onChange={(e) => setIdentity("tradingName", e.target.value)} />
+                  <div className="grid gap-1 border-b border-(--ui-border) pb-2 sm:grid-cols-[84px_1fr] sm:items-center">
+                    <label htmlFor="brand-agent" className="text-sm text-(--ui-muted-foreground)">Agent</label>
+                    <input id="brand-agent" className="min-h-11 min-w-0 rounded-(--r-control) border border-(--ui-border) px-3 text-sm outline-none focus-visible:ring-2" value={kit.identity.tradingName ?? ""} onChange={(e) => setIdentity("tradingName", e.target.value)} />
                   </div>
-                  <div className="r">
-                    <span>Phone</span>
-                    <input value={kit.contact.phone ?? ""} onChange={(e) => setContact("phone", e.target.value)} />
+                  <div className="grid gap-1 border-b border-(--ui-border) pb-2 sm:grid-cols-[84px_1fr] sm:items-center">
+                    <label htmlFor="brand-phone" className="text-sm text-(--ui-muted-foreground)">Phone</label>
+                    <input id="brand-phone" type="tel" className="min-h-11 min-w-0 rounded-(--r-control) border border-(--ui-border) px-3 text-sm outline-none focus-visible:ring-2" value={kit.contact.phone ?? ""} onChange={(e) => setContact("phone", e.target.value)} />
                   </div>
-                  <div className="r">
-                    <span>Email</span>
-                    <input value={kit.contact.email ?? ""} onChange={(e) => setContact("email", e.target.value)} />
+                  <div className="grid gap-1 border-b border-(--ui-border) pb-2 sm:grid-cols-[84px_1fr] sm:items-center">
+                    <label htmlFor="brand-email" className="text-sm text-(--ui-muted-foreground)">Email</label>
+                    <input id="brand-email" type="email" className="min-h-11 min-w-0 rounded-(--r-control) border border-(--ui-border) px-3 text-sm outline-none focus-visible:ring-2" value={kit.contact.email ?? ""} onChange={(e) => setContact("email", e.target.value)} />
                   </div>
-                  <div className="r">
+                  <div className="grid gap-1 border-b border-(--ui-border) pb-2 sm:grid-cols-[84px_1fr] sm:items-center">
                     <span>Region</span>
-                    <input value={kit.identity.marketRegion ?? ""} onChange={(e) => setIdentity("marketRegion", e.target.value)} />
+                    <input aria-label="Region" className="min-h-11 min-w-0 rounded-(--r-control) border border-(--ui-border) px-3 text-sm outline-none focus-visible:ring-2" value={kit.identity.marketRegion ?? ""} onChange={(e) => setIdentity("marketRegion", e.target.value)} />
                   </div>
-                  <div className="r">
+                  <div className="grid gap-1 border-b border-(--ui-border) pb-2 sm:grid-cols-[84px_1fr] sm:items-center">
                     <span>Licence</span>
-                    <input value={kit.identity.licenceText ?? ""} onChange={(e) => setIdentity("licenceText", e.target.value)} />
+                    <input aria-label="Licence" className="min-h-11 min-w-0 rounded-(--r-control) border border-(--ui-border) px-3 text-sm outline-none focus-visible:ring-2" value={kit.identity.licenceText ?? ""} onChange={(e) => setIdentity("licenceText", e.target.value)} />
                   </div>
                 </div>
               </section>
-              <section className="bs-card">
+              <section className="grid gap-4 rounded-(--r-panel) border border-(--ui-border) bg-(--ui-background) p-5 shadow-sm">
                 <h3>Compliance</h3>
-                <div className="bs-disc">
+                <div className="grid gap-2">
                   {kit.compliance.disclaimers.map((disclaimer, index) => (
                     <textarea
                       key={index}
@@ -830,7 +832,7 @@ function BrandStudioEditor({ brandKit: initialKit, returnTo }: { brandKit: AdStu
                   ))}
                   <button
                     type="button"
-                    className="add"
+                    className="min-h-11 rounded-(--r-control) border border-dashed border-(--ui-border) px-3 text-sm font-semibold text-(--ui-muted-foreground) focus-visible:outline-2"
                     onClick={() =>
                       setKit((c) => ({
                         ...c,
@@ -845,26 +847,26 @@ function BrandStudioEditor({ brandKit: initialKit, returnTo }: { brandKit: AdStu
             </div>
           </div>
 
-          <aside className="bs-rail">
-            <div className="rail-stage">
-              <span className="lbl">Live preview</span>
-              <div className="minis">
-                <div className="mini-story">
-                  <span className="bc" style={{ color: kit.colours.primary }}>
+          <aside className="h-max md:sticky md:top-5">
+            <div className="grid justify-items-center gap-4 rounded-(--r-panel) border border-(--ui-border) bg-(--ui-foreground) p-5 text-(--ui-background)">
+              <span className="font-mono text-xs uppercase tracking-[0.12em] text-(--ui-muted-foreground)">Live preview</span>
+              <div className="flex flex-wrap justify-center gap-3">
+                <div className="relative aspect-[9/16] w-32 overflow-hidden rounded-(--r-card) bg-(--ui-muted) p-2 text-(--ui-background)">
+                  <span className="rounded-full bg-(--ui-background) px-2 py-1 text-[9px] font-semibold" style={{ color: kit.colours.primary }}>
                     {logoPreviewUrl ? <img src={logoPreviewUrl} alt="" /> : brandName}
                   </span>
-                  <h5>{headlineSample}</h5>
-                  <span className="cta" style={{ color: kit.colours.primary }}>
+                  <h5 className="absolute inset-x-2 bottom-9 text-xs font-extrabold">{headlineSample}</h5>
+                  <span className="absolute inset-x-2 bottom-2 rounded bg-(--ui-background) py-1 text-center text-[9px] font-bold" style={{ color: kit.colours.primary }}>
                     Book free appraisal
                   </span>
                 </div>
-                <div className="mini-feed">
-                  <div className="fh">
+                <div className="w-32 overflow-hidden rounded-(--r-card) bg-(--ui-background) text-(--ui-foreground)">
+                  <div className="flex items-center gap-1 p-2 text-[9px]">
                     {kit.logos.faviconUrl && <img src={kit.logos.faviconUrl} alt="" />}
                     <b>{brandName}</b>
                   </div>
-                  <div className="img" />
-                  <div className="ft">
+                  <div className="h-20 bg-(--ui-muted)" />
+                  <div className="flex items-center justify-between gap-1 bg-(--ui-muted) p-2 text-[9px]">
                     <b>Free appraisal</b>
                     <span style={{ background: kit.colours.secondary }}>Book</span>
                   </div>
@@ -882,173 +884,3 @@ function BrandStudioEditor({ brandKit: initialKit, returnTo }: { brandKit: AdStu
     </main>
   );
 }
-
-/* ------------------------------------------------------------------ */
-/* styles                                                              */
-/* ------------------------------------------------------------------ */
-
-const BRAND_STYLES = `
-.bs-screen{position:relative;min-height:calc(100dvh - 1px);display:flex;flex-direction:column;background:var(--background,#f6f7f9);color:var(--foreground,#16181d);font-size:14px}
-.bs-screen *{box-sizing:border-box}
-.bs-screen button,.bs-screen input,.bs-screen textarea{font:inherit}
-.bs-screen button{cursor:pointer;border:0;background:none;color:inherit}
-.bs-screen .asset-upload-trigger{border:1.5px dashed var(--line);background:#fff;color:var(--ink)}
-.bs-screen .asset-upload-clear{border:1px solid var(--line);background:#fff;color:var(--muted)}
-.bs-screen .btn{min-height:44px;padding:0 16px;border-radius:var(--r-pill,9999px);display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:13.5px}
-.bs-screen .btn.pri{background:var(--ink,#16181d);color:var(--surface,#fff);box-shadow:var(--shadow-card,0 1px 2px rgba(16,18,23,.04),0 8px 24px rgba(16,18,23,.06))}
-.bs-screen .btn.pri:hover{background:var(--accent-strong)}
-.bs-screen .btn.sec{background:var(--surface,#fff);border:1px solid var(--line,#e9ebef);box-shadow:var(--shadow-card,0 1px 2px rgba(16,18,23,.04),0 8px 24px rgba(16,18,23,.06))}
-.bs-screen .btn:disabled{opacity:.55;cursor:not-allowed}
-.bs-screen .chip{font-size:11.5px;font-weight:650;border-radius:999px;padding:5px 11px}
-.bs-screen .chip.good{background:#ecfdf5;color:#006d38}
-.bs-screen .chip.warn{background:#fdf8ee;color:#8a5a00}
-.bs-top{min-height:58px;background:var(--surface,#fff);border-bottom:1px solid var(--line,#e9ebef);display:flex;align-items:center;gap:14px;padding:7px 20px;flex:0 0 auto;flex-wrap:wrap}
-.bs-top .back{color:var(--muted);font-weight:600;font-size:13px;text-decoration:none}
-.bs-top h1{font-size:15.5px;font-weight:680;margin:0}
-.bs-top .grow{margin-left:auto;display:flex;gap:9px;align-items:center}
-.bs-top .notice{font-size:12.5px;font-weight:600}
-.bs-top .notice.ok{color:#006d38}
-.bs-top .notice.err{color:#ba1a1a}
-.bs-scroll{flex:1;min-height:0;overflow:auto}
-.bs-empty{flex:1;min-height:0;display:grid;place-items:center;padding:28px;background:#f8fafc}
-.bs-empty-panel{width:min(620px,100%);display:grid;gap:16px;background:#fff;border:1px solid var(--line-soft);border-radius:14px;padding:28px;box-shadow:0 12px 34px rgba(15,23,42,.08)}
-.bs-empty-panel h2{font-size:28px;line-height:1.1;margin:0;color:var(--ink)}
-.bs-empty-panel p{margin:0;color:var(--muted);line-height:1.55}
-.bs-screen .site-setup{display:grid;gap:8px;margin:0}
-.bs-screen .site-setup>label{font-size:12.5px;font-weight:650;color:inherit}
-.bs-screen .site-setup>small{font-size:12px;line-height:1.45;color:var(--muted)}
-.bs-empty .scanline{display:flex;gap:9px}
-.bs-empty .url{flex:1;height:48px;border-radius:10px;background:#fff;border:1px solid var(--line);display:flex;align-items:center;gap:10px;padding:0 14px;color:var(--muted);font-size:15px}
-.bs-empty .url svg{color:var(--muted);flex:0 0 auto}
-.bs-empty .url input{flex:1;background:transparent;border:0;outline:0;color:var(--ink);min-width:0}
-.bs-empty .url:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-tint)}
-.bs-empty .go{min-height:48px;padding:0 20px;border-radius:10px;background:var(--accent);color:#fff;font-weight:650;white-space:nowrap}
-.bs-empty .go:disabled{opacity:.6}
-.bs-hero{background:linear-gradient(170deg,#001b3d 0%,#0d3263 90%);color:#fff;padding:30px 28px 78px}
-.bs-hero .kick{font-size:11px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:#9aaac3}
-.bs-hero h2{margin:8px 0 0}
-.bs-hero h2 input{font-family:Georgia,serif;font-size:38px;letter-spacing:-.5px;line-height:1.05;background:transparent;border:0;outline:0;color:#fff;width:100%;border-bottom:1.5px dashed transparent}
-.bs-hero h2 input:hover{border-bottom-color:rgba(255,255,255,.25)}
-.bs-hero h2 input:focus{border-bottom-color:#31c46f}
-.bs-hero .site-setup{margin-top:18px;max-width:680px;padding:16px;border:1px solid rgba(255,255,255,.16);border-radius:14px;background:rgba(255,255,255,.07)}
-.bs-hero .site-setup>strong{font-size:15px;font-weight:700;color:#fff}
-.bs-hero .site-setup-copy{font-size:13px;line-height:1.45;color:#d6e3ff}
-.bs-hero .site-setup>label{margin-top:4px;color:#fff}
-.bs-hero .site-setup>small{color:#d6e3ff}
-.bs-hero .scanline{display:flex;gap:9px}
-.bs-hero .url{flex:1;height:42px;border-radius:10px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;gap:10px;padding:0 14px;color:#d6e3ff;font-size:13.5px}
-.bs-hero .url svg{color:#9aaac3;flex:0 0 auto}
-.bs-hero .url input{flex:1;background:transparent;border:0;outline:0;color:#d6e3ff;min-width:0}
-.bs-hero .url input::placeholder{color:#b8c6dc;opacity:1}
-.bs-hero .url:focus-within{border-color:#fff;box-shadow:0 0 0 3px rgba(255,255,255,.18)}
-.bs-hero .go{height:42px;padding:0 18px;border-radius:10px;background:#fff;color:var(--ink);font-weight:650;white-space:nowrap}
-.bs-hero .go:disabled{opacity:.6}
-.bs-logo-proof{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;max-width:740px;margin:-50px 28px 0;position:relative;z-index:2}
-.bs-logo-proof .lp{border-radius:14px;box-shadow:0 12px 34px rgba(15,23,42,.16);overflow:hidden;background:#fff}
-.bs-logo-proof .face{height:90px;display:grid;place-items:center;font-weight:800;font-size:21px;letter-spacing:-.3px}
-.bs-logo-proof .face img{display:block;max-width:78%;max-height:58px;object-fit:contain}
-.bs-logo-proof .face .missing{font-size:12px;font-weight:600;letter-spacing:0;color:#94a3b8}
-.bs-logo-proof .face.photo .missing{color:#dbeafe;text-shadow:none}
-.bs-logo-proof .face.photo{background:linear-gradient(160deg,#3a608f,#0d3263);color:#fff;text-shadow:0 2px 10px rgba(0,0,0,.4)}
-.bs-logo-proof small{display:flex;justify-content:space-between;padding:8px 12px;font-size:11px;color:var(--muted);background:#fff}
-.bs-logo-proof small b{font-weight:650;color:var(--ink)}
-.bs-logo-proof small em{font-style:normal;color:var(--faint,#94a3b8)}
-.bs-body{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:22px;padding:24px 28px 40px}
-.bs-main{display:grid;gap:18px;align-content:start;min-width:0}
-.bs-card{background:#fff;border-radius:14px;box-shadow:0 1px 2px rgba(15,23,42,.05),0 0 0 1px rgba(15,23,42,.03);padding:20px;display:grid;gap:14px}
-.bs-card h3{font-size:15.5px;font-weight:680;letter-spacing:-.2px;margin:0}
-.bs-card .subtle{font-size:12.5px;color:var(--muted)}
-.bs-swrow{display:flex;gap:14px;flex-wrap:wrap}
-.bs-swatch{display:grid;gap:7px;justify-items:center;position:relative}
-.bs-swatch .well{width:64px;height:64px;border-radius:16px;border:1px solid rgba(15,23,42,.08);box-shadow:0 1px 2px rgba(15,23,42,.05);transition:transform .12s;padding:0}
-.bs-swatch .well:hover{transform:translateY(-2px)}
-.bs-swatch.open .well{outline:2.5px solid var(--accent);outline-offset:2px}
-.bs-swatch b{font-size:12px;font-weight:650}
-.bs-swatch small{font-size:10.5px;color:var(--faint,#94a3b8);letter-spacing:.4px}
-.bs-picker{position:absolute;top:76px;left:50%;transform:translateX(-50%);z-index:40;width:248px;background:#fff;border-radius:14px;box-shadow:0 10px 32px rgba(15,23,42,.16),0 2px 6px rgba(15,23,42,.07);padding:14px;display:grid;gap:11px}
-.bs-picker::before{content:"";position:absolute;top:-6px;left:50%;transform:translateX(-50%) rotate(45deg);width:12px;height:12px;background:#fff;border-radius:2px}
-.bs-picker .sv{position:relative;width:100%;aspect-ratio:5/3.4;border-radius:10px;cursor:crosshair;touch-action:none;background:linear-gradient(0deg,#000,transparent),linear-gradient(90deg,#fff,transparent),var(--h,#888)}
-.bs-picker .sv .cur{position:absolute;width:14px;height:14px;border-radius:99px;border:2.5px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);transform:translate(-7px,-7px);pointer-events:none}
-.bs-picker .hue{appearance:none;-webkit-appearance:none;width:100%;height:12px;border-radius:99px;outline:0;cursor:pointer;background:linear-gradient(90deg,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00)}
-.bs-picker .hue::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:99px;background:#fff;border:1.5px solid rgba(0,0,0,.15);box-shadow:0 1px 4px rgba(0,0,0,.3)}
-.bs-picker .from-site{display:grid;gap:6px}
-.bs-picker .from-site small{font-size:10.5px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--faint,#94a3b8)}
-.bs-picker .from-site .dots{display:flex;gap:7px}
-.bs-picker .from-site .dots button{width:22px;height:22px;border-radius:7px;border:1px solid rgba(15,23,42,.1);padding:0}
-.bs-picker .pick-foot{display:flex;align-items:center;gap:8px}
-.bs-picker .hexwrap{flex:1;height:34px;border:1px solid var(--line);border-radius:8px;display:flex;align-items:center;padding:0 10px;gap:6px;font-weight:600;font-size:12.5px}
-.bs-picker .hexwrap input{border:0;outline:0;width:100%;text-transform:uppercase;letter-spacing:.5px;background:transparent}
-.bs-picker .ok{height:34px;padding:0 13px;border-radius:8px;background:var(--accent);color:#fff;font-weight:650;font-size:12.5px}
-.bs-spec{display:grid;grid-template-columns:106px 1fr;gap:18px;align-items:center}
-.bs-spec .aa{font-family:Georgia,serif;font-size:54px;font-weight:750;letter-spacing:-2px;background:var(--accent-tint);color:var(--accent-strong);border-radius:12px;display:grid;place-items:center;height:100px}
-.bs-spec .rows{display:grid;gap:12px;min-width:0}
-.bs-spec small{display:block;color:var(--faint,#94a3b8);font-size:11px;text-transform:uppercase;letter-spacing:.6px;font-weight:700;margin-bottom:3px}
-.bs-spec .font-name{border:0;background:var(--line-soft);border-radius:7px;padding:3px 8px;font-weight:650;font-size:11px;width:120px;outline:0;text-transform:none;letter-spacing:0}
-.bs-spec .h-sample{font-family:Georgia,serif;font-size:19px;font-weight:750;letter-spacing:-.2px;display:block}
-.bs-spec .b-sample{font-size:13px;color:var(--muted);display:block}
-.bs-card .f{display:grid;gap:7px}
-.bs-card .f>label{font-size:12.5px;font-weight:650;display:flex;justify-content:space-between;align-items:center}
-.bs-card .f>label small{color:var(--faint,#94a3b8);font-weight:550;font-size:11.5px}
-.bs-card .f textarea{width:100%;border:1px solid var(--line);border-radius:10px;background:#fff;padding:12px 13px;font-size:13.5px;line-height:1.55;resize:vertical;outline:0;min-height:74px;color:var(--ink)}
-.bs-card .f textarea:focus{border-color:var(--accent);box-shadow:0 0 0 2.5px var(--accent-tint)}
-.bs-card .presets{display:flex;flex-wrap:wrap;gap:6px}
-.bs-card .presets button{font-size:12px;font-weight:600;color:var(--muted);background:var(--line-soft);border-radius:999px;padding:6px 12px}
-.bs-card .presets button:hover{background:var(--accent-tint);color:var(--accent)}
-.bs-tagrow{display:flex;flex-wrap:wrap;gap:6px}
-.bs-tagrow span{display:inline-flex;align-items:center;gap:7px;background:var(--accent-tint);color:var(--accent);border-radius:999px;padding:7px 12px;font-size:12.5px;font-weight:600}
-.bs-tagrow span.no{background:#fdf3f2;color:#ba1a1a}
-.bs-tagrow span button{min-height:28px;padding:0 4px;border:0;background:transparent;color:inherit;cursor:pointer;font-size:10px;font-weight:700;opacity:.65;text-decoration:underline;text-underline-offset:2px}
-.bs-tagrow span button:hover,.bs-tagrow span button:focus-visible{opacity:1}
-.bs-tagrow .addbtn{display:inline-flex;align-items:center;gap:6px;border:1.5px dashed var(--line);color:var(--muted);border-radius:999px;padding:6px 13px;font-size:12.5px;font-weight:600;background:transparent}
-.bs-tagrow .addbtn:hover{color:var(--accent);border-color:var(--accent)}
-.bs-tagrow input{border:1.5px solid var(--accent);border-radius:999px;padding:6px 13px;font-size:12.5px;font-weight:600;outline:0;width:160px;background:#fff;color:var(--ink)}
-.bs-two{display:grid;grid-template-columns:1fr 1fr;gap:18px}
-.bs-kv{display:grid;gap:4px;font-size:13px}
-.bs-kv .r{display:grid;grid-template-columns:84px 1fr;align-items:center;gap:12px;border-bottom:1px solid var(--line-soft);min-height:38px}
-.bs-kv .r:last-child{border:0}
-.bs-kv .r span{color:var(--muted)}
-.bs-kv .r input{border:0;outline:0;background:transparent;font-weight:600;width:100%;border-bottom:1.5px dashed transparent;padding:2px 0;color:var(--ink)}
-.bs-kv .r input:hover{border-bottom-color:var(--line)}
-.bs-kv .r input:focus{border-bottom-color:var(--accent)}
-.bs-disc{display:grid;gap:7px}
-.bs-disc textarea{font-size:12.5px;line-height:1.5;color:var(--muted);background:#f8fafc;border-radius:9px;padding:10px 12px;border:0;outline:0;resize:none;width:100%}
-.bs-disc textarea:focus{outline:2px solid var(--accent-tint)}
-.bs-disc .add{border:1.5px dashed var(--line);color:var(--faint,#94a3b8);border-radius:9px;padding:9px;font-size:12px;font-weight:600;background:transparent}
-.bs-rail{display:grid;gap:14px;align-content:start;position:sticky;top:20px;height:max-content}
-.bs-rail .rail-stage{background:#001b3d;border-radius:14px;padding:18px 16px;display:grid;gap:12px;justify-items:center}
-.bs-rail .lbl{color:#94a3b8;font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase}
-.bs-rail .minis{display:flex;gap:12px}
-.bs-rail .mini-story{width:126px;aspect-ratio:9/16;border-radius:14px;position:relative;overflow:hidden;background:linear-gradient(168deg,#3a608f,#0d3263);color:#fff;box-shadow:0 14px 34px rgba(0,0,0,.45)}
-.bs-rail .mini-story::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 35%,rgba(8,12,20,.85) 82%)}
-.bs-rail .mini-story .bc{position:absolute;top:7px;left:7px;background:rgba(255,255,255,.94);border-radius:99px;padding:3px 7px;font-size:6.5px;font-weight:750}
-.bs-rail .mini-story .bc img{display:block;max-width:54px;max-height:10px;object-fit:contain}
-.bs-rail .mini-story h5{position:absolute;left:8px;right:8px;bottom:24px;font-family:Georgia,serif;font-size:10px;line-height:1.25;font-weight:750;z-index:1;margin:0}
-.bs-rail .mini-story .cta{position:absolute;left:8px;right:8px;bottom:6px;height:15px;border-radius:4px;background:#fff;font-size:6.5px;font-weight:750;display:grid;place-items:center;z-index:1}
-.bs-rail .mini-feed{width:126px;border-radius:12px;background:#fff;overflow:hidden;box-shadow:0 14px 34px rgba(0,0,0,.45)}
-.bs-rail .mini-feed .fh{display:flex;align-items:center;gap:4px;padding:6px 7px}
-.bs-rail .mini-feed .fh img{width:11px;height:11px;object-fit:contain}
-.bs-rail .mini-feed .fh b{font-size:7px;color:var(--ink)}
-.bs-rail .mini-feed .img{height:72px;background:linear-gradient(160deg,#3a608f,#0d3263)}
-.bs-rail .mini-feed .ft{display:flex;justify-content:space-between;align-items:center;background:#f1f5f9;padding:5px 7px}
-.bs-rail .mini-feed .ft b{font-size:6.5px;color:var(--ink)}
-.bs-rail .mini-feed .ft span{color:#fff;border-radius:3px;padding:2px 5px;font-size:6px;font-weight:700}
-.bs-rail .rail-stage small{color:#94a3b8;font-size:11px;text-align:center;line-height:1.5}
-.bs-rail .rail-stage small b{color:#d6e3ff}
-@media(max-width:1000px){
-  .bs-body{grid-template-columns:1fr}
-  .bs-rail{position:static}
-  .bs-logo-proof{grid-template-columns:1fr;margin:-50px 16px 0}
-  .bs-hero h2 input{font-size:28px}
-  .bs-screen .scanline{display:grid}
-  .bs-screen .go{width:100%;min-height:44px}
-  .bs-two{grid-template-columns:1fr}
-}
-@media(max-width:520px){
-  .bs-top{gap:8px;padding:7px 12px}
-  .bs-top h1{font-size:15px}
-  .bs-top .grow{width:100%;margin-left:0;justify-content:flex-end}
-  .bs-hero{padding:24px 16px 68px}
-  .bs-body{padding:18px 16px 32px}
-  .bs-card{padding:16px}
-}
-`;
