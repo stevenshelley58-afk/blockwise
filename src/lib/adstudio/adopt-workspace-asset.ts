@@ -87,7 +87,7 @@ async function removeStale(supabase: SupabaseClient, entries: Array<{ id: string
   }
 }
 
-function ledgerResult(value: unknown): { ok: boolean; status?: string; reservationId?: string; code?: string; stalePaths?: Array<{ id: string; path: string }> } {
+function ledgerResult(value: unknown): { ok: boolean; status?: string; reservationId?: string; code?: "storage" | "database" | "source_not_found" | "source_invalid" | "source_expired" | "quota" | "cleanup"; stalePaths?: Array<{ id: string; path: string }> } {
   if (!value || typeof value !== "object") return { ok: false };
   const v = value as Record<string, unknown>;
   return { ok: v.ok === true, status: typeof v.status === "string" ? v.status : undefined, reservationId: typeof v.reservation_id === "string" ? v.reservation_id : undefined, code: typeof v.code === "string" ? v.code : undefined, stalePaths: Array.isArray(v.stale_paths) ? v.stale_paths.flatMap((e) => e && typeof e === "object" && typeof (e as any).id === "string" && typeof (e as any).path === "string" ? [{ id: (e as any).id, path: (e as any).path }] : []) : undefined };
