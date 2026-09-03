@@ -1,13 +1,7 @@
-import { createHash } from "node:crypto";
-
 export const CUSTOMER_IMAGE_PREFIX = "/api/adstudio/customer-media?";
 export const CUSTOMER_IMAGE_BUCKET = "adstudio-customer-images";
 const MIME_EXTENSIONS = { "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp" } as const;
 export type CustomerImageMime = keyof typeof MIME_EXTENSIONS;
-
-export function imageSha256(bytes: Buffer): string {
-  return createHash("sha256").update(bytes).digest("hex");
-}
 
 export function buildCustomerImageRef(workspaceId: string, adId: string, sha256: string, mime: CustomerImageMime): string {
   const path = `${workspaceId}/adstudio/ads/${adId}/images/${sha256}.${MIME_EXTENSIONS[mime]}`;

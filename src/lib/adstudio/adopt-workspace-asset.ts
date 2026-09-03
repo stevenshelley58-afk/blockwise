@@ -1,7 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { isWorkspaceMediaPath } from "./media-urls.ts";
-import { buildCustomerImageRef, CUSTOMER_IMAGE_BUCKET, imageSha256, parseCustomerImageRef, type CustomerImageMime } from "./customer-image-ref.ts";
+import { buildCustomerImageRef, CUSTOMER_IMAGE_BUCKET, parseCustomerImageRef, type CustomerImageMime } from "./customer-image-ref.ts";
+import { imageSha256 } from "./customer-image-hash.server.ts";
 import { CUSTOMER_IMAGE_MAX_BYTES, validateCustomerImageBytes } from "./image-validation.ts";
 
 type AssetRow = { id: unknown; workspace_id: unknown; storage_path: unknown; asset_type: unknown };
@@ -90,7 +91,12 @@ async function removeStale(supabase: SupabaseClient, entries: Array<{ id: string
 function ledgerResult(value: unknown): { ok: boolean; status?: string; reservationId?: string; code?: string; stalePaths?: Array<{ id: string; path: string }> } {
   if (!value || typeof value !== "object") return { ok: false };
   const v = value as Record<string, unknown>;
-  return { ok: v.ok === true, status: typeof v.status === "string" ? v.status : undefined, reservationId: typeof v.reservation_id === "string" ? v.reservation_id : undefined, code: typeof v.code === "string" ? v.code : undefined, stalePaths: Array.isArray(v.stale_paths) ? v.stale_paths.flatMap((e) => e && typeof e === "object" && typeof (e as any).id === "string" && typeof (e as any).path === "string" ? [{ id: (e as any).id, path: (e as any).path }] : []) : undefined };
+  const stalePaths = Array.isArray(v.stale_paths) ? v.stale_paths.flatMap((entry): Array<{ id: string; path: string }> => {
+    if (!entry || typeof entry !== "object") return [];
+    const row = entry as Record<string, unknown>;
+    return typeof row.id === "string" && typeof row.path === "string" ? [{ id: row.id, path: row.path }] : [];
+  }) : undefined;
+  return { ok: v.ok === true, status: typeof v.status === "string" ? v.status : undefined, reservationId: typeof v.reservation_id === "string" ? v.reservation_id : undefined, code: typeof v.code === "string" ? v.code : undefined, stalePaths };
 }
 
 function sniffMime(bytes: Buffer): CustomerImageMime | null {

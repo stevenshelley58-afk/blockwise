@@ -2,7 +2,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { requireAdStudioRequest } from "@/lib/adstudio/http";
-import { buildCustomerImageRef, CUSTOMER_IMAGE_BUCKET, imageSha256, parseCustomerImageRef, type CustomerImageMime } from "@/lib/adstudio/customer-image-ref";
+import { buildCustomerImageRef, CUSTOMER_IMAGE_BUCKET, parseCustomerImageRef, type CustomerImageMime } from "@/lib/adstudio/customer-image-ref";
+import { imageSha256 } from "@/lib/adstudio/customer-image-hash.server";
 import { CUSTOMER_IMAGE_MAX_BYTES, CustomerImageValidationError, validateCustomerImageBytes } from "@/lib/adstudio/image-validation";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
