@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Toaster } from "@/components/ui/sonner";
 import { AD_IMAGE_MAX_BYTES, AD_IMAGE_UPLOAD_TYPES, validateAssetUploadFile } from "@/lib/upload/asset-file";
 import { filterAndSortAssets } from "@/lib/adstudio/library-contract";
 import type { LibraryAssetModel } from "@/lib/adstudio/library-read-model";
@@ -114,7 +115,9 @@ export function MediaLibrary({ workspaceId, brandKitId, assets, nextAssetCursor:
   const uploadErrors = uploadItems.filter((item) => item.state === "error");
   const duplicates = uploadItems.filter((item) => item.state === "duplicate");
   return (
-    <div className="mx-auto w-full max-w-[1120px] px-4 pb-28 pt-8 md:px-6 md:pb-16 md:pt-10">
+    <>
+      <Toaster />
+      <div className="mx-auto w-full max-w-[1120px] px-4 pb-28 pt-8 md:px-6 md:pb-16 md:pt-10">
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div><h1 className="font-display text-[27px] font-extrabold tracking-[-.02em]">Assets</h1><p className="mt-2 max-w-[62ch] text-sm leading-6 text-muted-foreground">Keep your media ready for the next ad.</p></div>
         <Button type="button" size="pill" className="min-h-11" disabled={!brandKitId} onClick={openPicker}><Upload aria-hidden /> Upload assets</Button>
@@ -146,7 +149,8 @@ export function MediaLibrary({ workspaceId, brandKitId, assets, nextAssetCursor:
       )}
       {nextCursor ? <div className="mt-6 flex justify-center"><Button type="button" variant="outline" size="pill" disabled={loadingMore} onClick={() => void loadMore()}>{loadingMore ? "Loading…" : "Load more"}</Button></div> : null}
       <AssetDetails asset={selectedAsset} onClose={() => setSelectedAsset(null)} />
-    </div>
+      </div>
+    </>
   );
 }
 
