@@ -21,14 +21,14 @@ export async function GET(request: NextRequest, context: Context) {
 }
 
 export async function POST(request: NextRequest, context: Context) {
-  const body = (await request.json().catch(() => ({}))) as { workspaceId?: unknown; notes?: unknown; mutationId?: unknown };
+  const body = (await request.json().catch(() => ({}))) as { workspaceId?: unknown; notes?: unknown; mutationId?: unknown; publishSummary?: unknown; controls?: unknown };
   const requestedWorkspace = typeof body.workspaceId === "string" ? body.workspaceId : null;
   const guard = await requireApiWorkspace(request, "adstudio", requestedWorkspace);
   if (!guard.ok) return guard.response;
   if (!guard.access.isOperator && !["owner", "admin"].includes(guard.access.role)) return NextResponse.json({ error: "Only a workspace owner or admin can request manual publishing." }, { status: 403 });
   const { id } = await Promise.resolve(context.params);
   try {
-    const result = await createOrLoadManualPublishRequest({ serviceSupabase: createSupabaseServiceClient(), workspaceId: guard.access.workspaceId, adId: id, mutationId: typeof body.mutationId === "string" ? body.mutationId : "", notes: typeof body.notes === "string" ? body.notes : null, actorProfileId: guard.access.userId });
+    const result = await createOrLoadManualPublishRequest({ serviceSupabase: createSupabaseServiceClient(), workspaceId: guard.access.workspaceId, adId: id, mutationId: typeof body.mutationId === "string" ? body.mutationId : "", notes: typeof body.notes === "string" ? body.notes : null, publishSummary: body.publishSummary, controls: body.controls, actorProfileId: guard.access.userId });
     return NextResponse.json({ request: result }, { status: 201 });
   } catch (error) { return manualError(error); }
 }

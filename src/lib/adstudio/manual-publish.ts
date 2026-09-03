@@ -30,6 +30,8 @@ export type ManualPublishRequest = {
   feedPngPath: string | null;
   storyPngPath: string | null;
   notes: string | null;
+  publishSummary: Record<string, unknown>;
+  publishControls: Record<string, unknown>;
   status: ManualPublishStatus;
   statusReason: string | null;
   createdAt: string;
@@ -48,6 +50,14 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-
 function requireUuid(value: unknown, label: string): string {
   if (typeof value !== "string" || !UUID_RE.test(value)) throw new ManualPublishError("invalid_input", `${label} must be a UUID.`);
   return value;
+}
+
+function requirePlainObject(value: unknown, label: string): Record<string, unknown> {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) throw new ManualPublishError("invalid_input", `${label} must be a JSON object.`);
+  let serialized: string;
+  try { serialized = JSON.stringify(value); } catch { throw new ManualPublishError("invalid_input", `${label} must be valid JSON.`); }
+  if (serialized.length > 32_000) throw new ManualPublishError("invalid_input", `${label} is too large.`);
+  return value as Record<string, unknown>;
 }
 
 function statusFromMetadata(row: AuditRow): ManualPublishStatus | null {
@@ -74,6 +84,8 @@ function toRequest(events: AuditRow[]): ManualPublishRequest | null {
     feedPngPath: typeof metadata.feedPngPath === "string" ? metadata.feedPngPath : null,
     storyPngPath: typeof metadata.storyPngPath === "string" ? metadata.storyPngPath : null,
     notes: typeof metadata.notes === "string" ? metadata.notes : null,
+    publishSummary: metadata.publishSummary && typeof metadata.publishSummary === "object" && !Array.isArray(metadata.publishSummary) ? metadata.publishSummary as Record<string, unknown> : {},
+    publishControls: metadata.publishControls && typeof metadata.publishControls === "object" && !Array.isArray(metadata.publishControls) ? metadata.publishControls as Record<string, unknown> : {},
     status,
     statusReason: statusEvent && typeof statusEvent.metadata?.reason === "string" ? statusEvent.metadata.reason : null,
     createdAt: created.created_at,
@@ -97,12 +109,16 @@ export async function createOrLoadManualPublishRequest(input: {
   adId: string;
   mutationId: string;
   notes?: string | null;
+  publishSummary: unknown;
+  controls: unknown;
   actorProfileId: string;
 }): Promise<ManualPublishRequest> {
   const workspaceId = requireUuid(input.workspaceId, "workspaceId");
   const adId = requireUuid(input.adId, "adId");
   const mutationId = requireUuid(input.mutationId, "mutationId");
   const notes = input.notes?.trim() || null;
+  const publishSummary = requirePlainObject(input.publishSummary, "publishSummary");
+  const publishControls = requirePlainObject(input.controls, "controls");
   if (notes && notes.length > 1000) throw new ManualPublishError("invalid_input", "notes must be 1,000 characters or fewer.");
 
   const existing = await loadEvents(input.serviceSupabase, { mutationId });
@@ -117,6 +133,7 @@ export async function createOrLoadManualPublishRequest(input: {
   if (!ad.active_revision_id) throw new ManualPublishError("not_saved", "Save the ad before requesting manual publishing.");
   const { data: revision, error: revisionError } = await input.serviceSupabase.from("ad_revisions").select("id,workspace_id,revision_number,document_hash,feed_png_path,story_png_path").eq("id", ad.active_revision_id).eq("ad_id", adId).eq("workspace_id", workspaceId).maybeSingle();
   if (revisionError || !revision) throw new ManualPublishError("revision_not_found", "The active saved revision could not be found.", 404);
+  if (typeof revision.feed_png_path !== "string" || !revision.feed_png_path || typeof revision.story_png_path !== "string" || !revision.story_png_path) throw new ManualPublishError("renders_missing", "Save both Feed and Story PNGs before requesting manual publishing.");
 
   const metadata = {
     requestType: "manual_meta_publish",
@@ -130,6 +147,8 @@ export async function createOrLoadManualPublishRequest(input: {
     feedPngPath: revision.feed_png_path ?? null,
     storyPngPath: revision.story_png_path ?? null,
     notes,
+    publishSummary,
+    publishControls,
     status: "requested",
   } satisfies Record<string, unknown>;
   const { error } = await input.serviceSupabase.from("audit_logs").insert({

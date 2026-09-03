@@ -18,4 +18,8 @@ test("manual publishing backend has no provider activation side effects", async 
   assert.doesNotMatch(source, /provider_connections|meta_connected_at|first_campaign_live_at|fetch\s*\(/i);
   assert.match(source, /audit_logs/);
   assert.match(source, /id:\s*mutationId/);
+  assert.match(source, /publishSummary/);
+  assert.match(source, /publishControls/);
+  assert.match(source, /renders_missing/);
+  assert.match(source, /32_000/);
 });
