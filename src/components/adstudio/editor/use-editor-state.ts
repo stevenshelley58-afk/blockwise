@@ -316,8 +316,13 @@ export function useEditorState(pack: AdTemplate, initialDocument?: AdDocumentPar
 
   /** Update the overridable business name shown in Meta previews. */
   const updateBusinessName = useCallback((value: string) => {
-    lastTextEdit.current = null;
-    setState(prev => { pushUndo(prev); return { ...prev, brandBusinessName: value, isDirty: true, editVersion: (prev.editVersion ?? 0) + 1 }; });
+    setState(prev => {
+      const now = Date.now();
+      const coalesce = lastTextEdit.current?.key === "brandBusinessName" && now - lastTextEdit.current.at < 900;
+      if (!coalesce) pushUndo(prev);
+      lastTextEdit.current = { key: "brandBusinessName", at: now };
+      return { ...prev, brandBusinessName: value, isDirty: true, editVersion: (prev.editVersion ?? 0) + 1 };
+    });
   }, [pushUndo]);
 
   const setColourMode = useCallback((mode: EditorState["colourMode"], colourMap?: Record<ColourRole, string>) => {

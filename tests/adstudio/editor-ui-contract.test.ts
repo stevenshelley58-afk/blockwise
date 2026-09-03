@@ -15,10 +15,12 @@ describe("customer Ad Studio workbench contract", () => {
 
   it("uses the route workbench flow without fixed viewport shells", () => {
     const editorRoute = readFileSync("src/app/(customer)/ad-studio/templates/[templateId]/page.tsx", "utf8");
+    const stableEditorRoute = readFileSync("src/app/(customer)/ad-studio/ads/[id]/page.tsx", "utf8");
     const publishRoute = readFileSync("src/app/(customer)/ad-studio/templates/[templateId]/publish/page.tsx", "utf8");
     assert.doesNotMatch(editorRoute, /fixed inset-0/);
     assert.doesNotMatch(publishRoute, /fixed inset-0/);
     assert.match(editorRoute, /Create ad/);
+    assert.match(stableEditorRoute, /<EditorShell/);
     assert.match(publishRoute, /<PublishFlow/);
   });
 
@@ -53,6 +55,8 @@ describe("customer Ad Studio workbench contract", () => {
     assert.match(copy, /border border-input/);
     assert.match(shell, /AI brief/);
     assert.match(shell, /Generate copy/);
+    assert.match(shell, /"design" \| "meta" \| "split"/);
+    assert.match(shell, /publish\?adId=/);
     assert.match(shell, /e\.key\.toLowerCase\(\)/);
     assert.match(shell, /key === "y"/);
     assert.match(colours, /Template colours/);
