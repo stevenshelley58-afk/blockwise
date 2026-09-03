@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import { EditorShell } from "@/components/adstudio/editor/editor-shell";
 import { loadCustomerAd, InvalidActiveRevisionError, CustomerAdNotFoundError } from "@/lib/adstudio/create-customer-ad";
 import { getTemplate } from "@/lib/adstudio/pack-gallery";
@@ -23,10 +22,6 @@ export default async function CustomerAdEditorPage({ params }: { params: Promise
     loadAdStudioWorkspaceLibraryAssets(supabase, access.workspaceId),
   ]);
   return <div className="flex min-h-[calc(100dvh-54px)] flex-col bg-background text-foreground md:min-h-[calc(100dvh-60px)]">
-    <header className="hidden">
-      <Link href="/ad-studio/ads" className="text-sm text-muted-foreground hover:text-foreground">All ads</Link>
-      <span className="ml-4 truncate text-sm font-medium">{pack.metadata.title || pack.templateId}</span>
-    </header>
     <div className="min-h-0 flex-1"><EditorShell pack={pack} adId={ad.adId} workspaceId={access.workspaceId} canSave brandColours={brand.colours} brandBusinessName={brand.businessName} brandLogoUrl={brand.logoUrl} libraryAssets={libraryAssets} initialDocument={ad.initialDocument} initialRevision={ad.revisionNumber} adName={ad.name} /></div>
   </div>;
 }

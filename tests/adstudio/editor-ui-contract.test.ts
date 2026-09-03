@@ -18,7 +18,7 @@ describe("customer Ad Studio workbench contract", () => {
     const publishRoute = readFileSync("src/app/(customer)/ad-studio/templates/[templateId]/publish/page.tsx", "utf8");
     assert.doesNotMatch(editorRoute, /fixed inset-0/);
     assert.doesNotMatch(publishRoute, /fixed inset-0/);
-    assert.match(editorRoute, /<EditorShell/);
+    assert.match(editorRoute, /Create ad/);
     assert.match(publishRoute, /<PublishFlow/);
   });
 
@@ -51,11 +51,11 @@ describe("customer Ad Studio workbench contract", () => {
     assert.match(inputs, /rounded-\(--r-card\)/);
     assert.match(copy, /id="meta-copy-cta"/);
     assert.match(copy, /border border-input/);
-    assert.match(shell, /<details>/);
-    assert.match(shell, /min-h-11 h-auto justify-start/);
+    assert.match(shell, /AI brief/);
+    assert.match(shell, /Generate copy/);
     assert.match(shell, /e\.key\.toLowerCase\(\)/);
     assert.match(shell, /key === "y"/);
-    assert.match(colours, /Add workspace colours in Brand Studio/);
+    assert.match(colours, /Template colours/);
     assert.match(colours, /useId/);
     // Three mutually exclusive colour modes (template / workspace / custom),
     // exposed as an accessible radio group with per-role custom pickers.

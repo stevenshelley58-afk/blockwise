@@ -108,6 +108,7 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
   const imageUploadTokens = useRef(new Map<string, number>());
   const [pendingCropKey, setPendingCropKey] = useState<string | null>(null);
   const [name, setName] = useState(adName);
+  const persistedName = useRef(adName);
 
   const handleImageChange = useCallback(async (key: string, change: { file: File; previewUrl: string } | null) => {
     const token = (imageUploadTokens.current.get(key) ?? 0) + 1;
@@ -219,13 +220,14 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
 
   const persistName = useCallback(async () => {
     const next = name.trim().replace(/\s+/g, " ");
-    if (!next || next === adName) return;
+    if (!next || next === persistedName.current) return;
     try {
       const response = await fetch(`/api/adstudio/ads/${encodeURIComponent(adId)}/rename?workspaceId=${encodeURIComponent(workspaceId)}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: next }) });
       if (!response.ok) throw new Error("Ad name could not be saved.");
+      persistedName.current = next;
       setName(next);
     } catch (error) { setError(error instanceof Error ? error.message : "Ad name could not be saved."); }
-  }, [name, adName, adId, workspaceId, setError]);
+  }, [name, adId, workspaceId, setError]);
 
   const proposeCopy = useCallback(async () => {
     setProposalBusy(true);
@@ -256,8 +258,8 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
       const saved = await handleSave();
       if (!saved) return; // error banner already set — refuse
     }
-    router.push(`/ad-studio/ads/${encodeURIComponent(adId)}/publish`);
-  }, [state.isDirty, state.lastSavedRevision, handleSave, router, adId]);
+    router.push(`/ad-studio/templates/${encodeURIComponent(pack.templateId)}/publish?adId=${encodeURIComponent(adId)}`);
+  }, [state.isDirty, state.lastSavedRevision, handleSave, router, adId, pack.templateId]);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     const modifier = e.ctrlKey || e.metaKey;
@@ -393,7 +395,7 @@ function RedesignedEditor({ pack, templateId, state, activeLayout, brandColours,
   }));
   const previewImages = { ...defaultImageValues, ...customerImageValues };
   const previewCopy = previewTextValues(pack, state.textValues);
-  const [previewMode, setPreviewMode] = useState<"creative" | "feed" | "story">("creative");
+  const [previewMode, setPreviewMode] = useState<"design" | "meta" | "split">("design");
   const [zoom, setZoom] = useState<"fit" | 1 | 1.25 | 0.8>("fit");
   const metaPreviewBase = {
     templateId,
@@ -404,7 +406,7 @@ function RedesignedEditor({ pack, templateId, state, activeLayout, brandColours,
     businessName: state.brandBusinessName.trim() || brandBusinessName,
     logoUrl: brandLogoUrl,
   } as const;
-  const metaPreview = previewMode === "feed" ? (
+  const metaPreview = state.activePlacement === "feed" ? (
     <FeedPreview
       {...metaPreviewBase}
       layout={pack.feedLayout}
@@ -423,15 +425,15 @@ function RedesignedEditor({ pack, templateId, state, activeLayout, brandColours,
   const saveStatus = pendingImageUploads > 0 ? "Uploading…" : state.isSaving ? "Saving…" : state.isDirty ? "Unsaved changes" : state.lastSavedRevision !== null ? "Saved" : "Not saved yet";
   return <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background text-foreground" onKeyDown={handleKeyDown} tabIndex={0} role="region" aria-label="Ad Studio editor">
     <header className="flex min-h-14 shrink-0 flex-wrap items-center gap-2 border-b border-border bg-card px-3 py-2 md:h-16 md:flex-nowrap md:justify-between md:px-5 md:py-0">
-      <Button variant="ghost" size="icon" aria-label="Back to all ads" className="min-h-11 min-w-11 rounded-full" onClick={() => { if (!state.isDirty || window.confirm("You have unsaved changes. Leave this ad?")) window.location.href = "/ad-studio/ads"; }}><ArrowLeft className="size-4" /></Button><input aria-label="Ad name" value={name} onChange={event => setName(event.target.value)} onBlur={() => void persistName()} onKeyDown={event => { if (event.key === "Enter") { event.currentTarget.blur(); } }} className="min-w-0 max-w-[220px] flex-1 truncate border-0 bg-transparent px-1 text-sm font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+      <Button variant="ghost" size="icon" aria-label="Back to all ads" className="min-h-11 min-w-11 rounded-full" onClick={() => { if (!state.isDirty || window.confirm("You have unsaved changes. Leave this ad?")) window.location.href = "/ad-studio/ads"; }}><ArrowLeft className="size-4" /></Button><input aria-label="Ad name" maxLength={120} value={name} onChange={event => setName(event.target.value)} onBlur={() => { if (!name.trim()) setName(persistedName.current); else void persistName(); }} onKeyDown={event => { if (event.key === "Enter") { event.currentTarget.blur(); } }} className="min-w-0 max-w-[220px] flex-1 truncate border-0 bg-transparent px-1 text-sm font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring" />
       <Tabs value={state.activePlacement} onValueChange={value => setActivePlacement(value as Placement)} className="min-w-0 flex-1"><TabsList aria-label="Ad format" className="max-w-full overflow-x-auto bg-muted/60 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"><TabsTrigger value="feed" className="min-h-11 px-3 text-xs md:px-4 md:text-sm">Feed</TabsTrigger><TabsTrigger value="story" className="min-h-11 px-3 text-xs md:px-4 md:text-sm">Story</TabsTrigger></TabsList></Tabs>
       <span className="order-last w-full truncate text-right text-[11px] text-muted-foreground sm:order-none sm:w-auto sm:text-xs" role="status" aria-live="polite">{saveStatus}</span>
       <div className="ml-auto flex shrink-0 items-center gap-1.5 md:gap-2"><Button variant="ghost" size="icon" onClick={undo} disabled={!canUndo} aria-label="Undo" className="min-h-11 min-w-11 rounded-full"><RotateCcw /></Button><Button variant="ghost" size="icon" onClick={redo} disabled={!canRedo} aria-label="Redo" className="min-h-11 min-w-11 rounded-full"><RotateCw /></Button><Button onClick={handleSave} disabled={!canSave || state.isSaving || pendingImageUploads > 0} className="min-h-11 rounded-full px-4">{state.isSaving ? "Saving…" : "Save"}<Save className="ml-1.5 size-4" /></Button><Button onClick={handlePublish} disabled={!canSave || state.isSaving || pendingImageUploads > 0} variant="outline" className="min-h-11 rounded-full px-4">Review & publish</Button></div>
     </header>
     <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden xl:flex-row">
-      <section aria-label="Ad preview" className="order-first flex min-h-0 min-w-0 flex-1 flex-col items-center justify-center gap-2 bg-muted/30 p-3 md:p-6 xl:order-none">
+      <section aria-label="Ad preview" className="order-first flex min-h-0 min-w-0 flex-1 flex-col items-center justify-center gap-2 bg-[#15171c] p-3 md:p-6 xl:order-none">
         <div className="flex shrink-0 flex-wrap items-center justify-center gap-1 rounded-full border border-border bg-card p-1" role="radiogroup" aria-label="Preview mode">
-          {([["creative", "Creative"], ["feed", "Feed preview"], ["story", "Story preview"]] as const).map(([value, label]) => (
+          {([["design", "Design"], ["meta", "Meta preview"], ["split", "Split"]] as const).map(([value, label]) => (
             <button
               key={value}
               type="button"
@@ -447,12 +449,12 @@ function RedesignedEditor({ pack, templateId, state, activeLayout, brandColours,
             </button>
           ))}
         </div>
-        {previewMode === "creative" && <div className="flex items-center gap-1 rounded-full border border-border bg-card p-1" aria-label="Canvas zoom"><button type="button" className="min-h-9 rounded-full px-3 text-xs font-semibold hover:bg-muted" onClick={() => setZoom("fit")}>Fit</button><button type="button" className="min-h-9 rounded-full px-3 text-xs font-semibold hover:bg-muted" onClick={() => setZoom(1)}>100%</button><button type="button" className="min-h-9 min-w-9 rounded-full hover:bg-muted" aria-label="Zoom out" onClick={() => setZoom(0.8)}><ZoomOut className="mx-auto size-4" /></button><button type="button" className="min-h-9 min-w-9 rounded-full hover:bg-muted" aria-label="Zoom in" onClick={() => setZoom(1.25)}><ZoomIn className="mx-auto size-4" /></button></div>}
-        {previewMode === "creative" ? (
+        {previewMode !== "meta" && <div className="flex items-center gap-1 rounded-full border border-border bg-card p-1" aria-label="Canvas zoom"><button type="button" className="min-h-9 rounded-full px-3 text-xs font-semibold hover:bg-muted" onClick={() => setZoom("fit")}>Fit</button><button type="button" className="min-h-9 rounded-full px-3 text-xs font-semibold hover:bg-muted" onClick={() => setZoom(1)}>100%</button><button type="button" className="min-h-9 min-w-9 rounded-full hover:bg-muted" aria-label="Zoom out" onClick={() => setZoom(0.8)}><ZoomOut className="mx-auto size-4" /></button><button type="button" className="min-h-9 min-w-9 rounded-full hover:bg-muted" aria-label="Zoom in" onClick={() => setZoom(1.25)}><ZoomIn className="mx-auto size-4" /></button></div>}
+        {previewMode === "design" ? (
           <div className="relative flex min-h-0 w-full max-w-[94%] flex-1 items-center justify-center"><div className="relative min-h-0 min-w-0 overflow-hidden rounded-(--r-card) bg-white shadow-float" style={{ aspectRatio: `${PLACEMENT_DIMENSIONS[state.activePlacement].width} / ${PLACEMENT_DIMENSIONS[state.activePlacement].height}`, height: zoom === "fit" ? "min(78vh, calc(100% - 1rem), 860px)" : `${zoom * 78}vh`, maxHeight: "100%", maxWidth: "100%", width: "auto" }}><LayeredCanvas templateId={templateId} layout={activeLayout} colours={state.resolvedColourMap} imageValues={previewImages} textValues={previewCopy} cropOverrides={Object.fromEntries(state.imageValues.map(iv => [iv.inputKey, iv.crops[state.activePlacement]]))} selectedLayerId={state.selectedLayerId} onSelect={selectLayer} onCropImage={openCrop} className="h-full w-full" /></div></div>
-        ) : (
+        ) : previewMode === "meta" ? (
           <div className="flex min-h-0 w-full flex-1 items-center justify-center overflow-hidden">{metaPreview}</div>
-        )}
+        ) : <div className="flex min-h-0 w-full flex-1 flex-col items-center justify-center gap-3 overflow-auto md:flex-row"><div className="flex min-h-0 min-w-0 max-w-full flex-1 items-center justify-center"><LayeredCanvas templateId={templateId} layout={activeLayout} colours={state.resolvedColourMap} imageValues={previewImages} textValues={previewCopy} cropOverrides={Object.fromEntries(state.imageValues.map(iv => [iv.inputKey, iv.crops[state.activePlacement]]))} selectedLayerId={state.selectedLayerId} onSelect={selectLayer} onCropImage={openCrop} className="max-h-full max-w-full" /></div><div className="flex min-h-0 min-w-0 max-w-full flex-1 items-center justify-center overflow-hidden">{metaPreview}</div></div>}
       </section>
       <aside aria-label="Editor inspector" className="hidden w-[22rem] shrink-0 overflow-y-auto border-l border-border bg-card xl:block"><InspectorTabs value={inspectorTab} onChange={setInspectorTab} />{inspector}</aside>
     </div>
@@ -488,18 +490,15 @@ function ProposalPanel({
 }) {
   return (
     <section aria-label="Copy suggestions" className={cn("mt-6 border-t border-border pt-4", className)}>
-      <details>
-        <summary className="flex min-h-11 cursor-pointer items-center justify-between gap-3 rounded-(--r-card) px-2 text-sm font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-          Need help writing?
-          <span className="text-xs font-normal text-muted-foreground">Suggestions</span>
-        </summary>
+      <div>
+        <h3 className="mb-2 px-2 text-sm font-semibold text-foreground">AI brief</h3>
         <div className="mt-3">
       <p className="mb-3 text-xs leading-relaxed text-muted-foreground">Generate a first draft for the creative and Meta fields. The result lands in the editable fields as one undoable change.</p>
       <label htmlFor="copy-suggestion-brief" className="mb-1 block text-sm font-medium text-foreground">What should the ad say?</label>
       <textarea id="copy-suggestion-brief" value={brief} onChange={event => onBriefChange(event.target.value)} rows={4} placeholder="Describe the property, offer or audience…" className="min-h-24 w-full rounded-(--r-card) border border-input bg-muted/30 px-3 py-2 text-base shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50" />
       <button type="button" onClick={onPropose} disabled={busy} className="mt-2 min-h-11 h-auto w-full justify-start rounded-full bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50">{busy ? "Generating…" : "Generate copy"}</button>
         </div>
-      </details>
+      </div>
     </section>
   );
 }

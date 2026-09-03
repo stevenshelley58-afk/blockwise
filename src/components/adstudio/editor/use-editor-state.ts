@@ -214,6 +214,7 @@ export function useEditorState(pack: AdTemplate, initialDocument?: AdDocumentPar
   }, []);
 
   const setActivePlacement = useCallback((placement: Placement) => {
+    lastTextEdit.current = null;
     setState(prev => ({ ...prev, activePlacement: placement }));
   }, []);
 
@@ -242,6 +243,7 @@ export function useEditorState(pack: AdTemplate, initialDocument?: AdDocumentPar
 
   /** Apply generated overlay + Meta copy as one undoable change. */
   const applyGeneratedCopy = useCallback((onImage: Record<string, string>, copy: MetaCopy) => {
+    lastTextEdit.current = null;
     setState(prev => {
       pushUndo(prev);
       return {
@@ -256,6 +258,7 @@ export function useEditorState(pack: AdTemplate, initialDocument?: AdDocumentPar
   }, [pushUndo]);
 
   const updateImageValue = useCallback((key: string, dataUrl: string | null, previewUrl: string | null = null) => {
+    lastTextEdit.current = null;
     setState(prev => {
       pushUndo(prev);
       return {
@@ -279,6 +282,7 @@ export function useEditorState(pack: AdTemplate, initialDocument?: AdDocumentPar
   }, []);
 
   const updateCrop = useCallback((key: string, placement: Placement, crop: Rect) => {
+    lastTextEdit.current = null;
     setState(prev => {
       pushUndo(prev);
       return {
@@ -295,7 +299,10 @@ export function useEditorState(pack: AdTemplate, initialDocument?: AdDocumentPar
   /** Update one Meta copy field (primary text, headline, description, CTA). */
   const updateMetaCopy = useCallback((field: keyof MetaCopy, value: string) => {
     setState(prev => {
-      pushUndo(prev);
+      const now = Date.now();
+      const coalesce = lastTextEdit.current?.key === `meta:${field}` && now - lastTextEdit.current.at < 900;
+      if (!coalesce) pushUndo(prev);
+      lastTextEdit.current = { key: `meta:${field}`, at: now };
       const remaining = prev.templateFilled.meta.filter(f => f !== field);
       return {
         ...prev,
@@ -309,10 +316,12 @@ export function useEditorState(pack: AdTemplate, initialDocument?: AdDocumentPar
 
   /** Update the overridable business name shown in Meta previews. */
   const updateBusinessName = useCallback((value: string) => {
-    setState(prev => ({ ...prev, brandBusinessName: value, isDirty: true }));
-  }, []);
+    lastTextEdit.current = null;
+    setState(prev => { pushUndo(prev); return { ...prev, brandBusinessName: value, isDirty: true, editVersion: (prev.editVersion ?? 0) + 1 }; });
+  }, [pushUndo]);
 
   const setColourMode = useCallback((mode: EditorState["colourMode"], colourMap?: Record<ColourRole, string>) => {
+    lastTextEdit.current = null;
     setState(prev => {
       pushUndo(prev);
       return {
@@ -327,6 +336,7 @@ export function useEditorState(pack: AdTemplate, initialDocument?: AdDocumentPar
 
   /** Update one custom colour role while in custom mode. */
   const updateCustomColour = useCallback((role: ColourRole, hex: string) => {
+    lastTextEdit.current = null;
     setState(prev => {
       pushUndo(prev);
       return {
@@ -345,6 +355,7 @@ export function useEditorState(pack: AdTemplate, initialDocument?: AdDocumentPar
    * copy is never touched, so unchecking is predictable.
    */
   const setTemplateCopyApplied = useCallback((enabled: boolean) => {
+    lastTextEdit.current = null;
     setState(prev => {
       pushUndo(prev);
       if (enabled) {
@@ -380,6 +391,7 @@ export function useEditorState(pack: AdTemplate, initialDocument?: AdDocumentPar
   }, [pushUndo]);
 
   const undo = useCallback(() => {
+    lastTextEdit.current = null;
     const prev = undoStack.current.pop();
     if (prev) {
       redoStack.current.push(state);
@@ -388,6 +400,7 @@ export function useEditorState(pack: AdTemplate, initialDocument?: AdDocumentPar
   }, [state]);
 
   const redo = useCallback(() => {
+    lastTextEdit.current = null;
     const next = redoStack.current.pop();
     if (next) {
       undoStack.current.push(state);
