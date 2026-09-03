@@ -69,6 +69,17 @@ function makeRequest(
   return new Request(url, { method, headers, body: method === "GET" ? undefined : body });
 }
 
+async function withLegacyBearerEnabled<T>(fn: () => Promise<T>): Promise<T> {
+  const previous = process.env.BLOCKWISE_INTERNAL_ALLOW_LEGACY_BEARER;
+  process.env.BLOCKWISE_INTERNAL_ALLOW_LEGACY_BEARER = "true";
+  try {
+    return await fn();
+  } finally {
+    if (previous === undefined) delete process.env.BLOCKWISE_INTERNAL_ALLOW_LEGACY_BEARER;
+    else process.env.BLOCKWISE_INTERNAL_ALLOW_LEGACY_BEARER = previous;
+  }
+}
+
 function validHeaders(overrides: Record<string, string> = {}, secret = SECRET) {
   const timestamp = String(Math.floor(Date.now() / 1000));
   const nonce = overrides["x-blockwise-nonce"] ?? crypto.randomUUID();
@@ -114,6 +125,57 @@ test("valid signed POST request with body is accepted", async () => {
   );
 
   assert.equal(result.ok, true);
+});
+
+test("successful legacy bearer access is audited without nonce replay protection", async () => {
+  const { client, audits, seen } = makeSupabase();
+  const result = await withLegacyBearerEnabled(() => verifyInternalRequest(
+    makeRequest("https://blockwise.sale/api/internal/adstudio/publish/state", {
+      authorization: `Bearer ${SECRET}`,
+    }),
+    "adstudio.publish",
+    { secret: SECRET, supabase: client as never },
+  ));
+
+  assert.deepEqual(result, { ok: true, scope: "adstudio.publish" });
+  assert.equal(seen.size, 0);
+  assert.equal(audits.length, 1);
+  assert.equal(audits[0].metadata.authMethod, "legacy_bearer");
+  assert.equal(audits[0].metadata.nonceReplayProtection, false);
+});
+
+test("legacy bearer access fails closed when its audit receipt cannot persist", async () => {
+  const { client } = makeSupabase();
+  const failing = {
+    from(table: string) {
+      if (table === "audit_logs") {
+        return { insert: () => Promise.resolve({ error: { message: "audit down" } }) };
+      }
+      return client.from(table);
+    },
+  };
+  const result = await withLegacyBearerEnabled(() => verifyInternalRequest(
+    makeRequest("https://blockwise.sale/api/internal/adstudio/publish/state", {
+      authorization: `Bearer ${SECRET}`,
+    }),
+    "adstudio.publish",
+    { secret: SECRET, supabase: failing as never },
+  ));
+
+  assert.deepEqual(result, { ok: false, status: 503, error: "internal_auth_unavailable" });
+});
+
+test("legacy bearer access remains rejected when compatibility is disabled", async () => {
+  const { client } = makeSupabase();
+  const result = await verifyInternalRequest(
+    makeRequest("https://blockwise.sale/api/internal/adstudio/publish/state", {
+      authorization: `Bearer ${SECRET}`,
+    }),
+    "adstudio.publish",
+    { secret: SECRET, supabase: client as never },
+  );
+
+  assert.deepEqual(result, { ok: false, status: 401, error: "missing_internal_auth_headers" });
 });
 
 test("missing secret fails closed with 503", async () => {

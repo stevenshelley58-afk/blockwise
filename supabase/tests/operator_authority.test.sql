@@ -23,6 +23,9 @@ insert into public.workspaces (id, name, mode, region, created_by)
 values ('e4000000-0000-4000-8000-000000000004', 'Authority Workspace', 'monitor', 'AU', 'e2000000-0000-4000-8000-000000000002')
 on conflict (id) do nothing;
 
+-- Operator memberships are service-managed, so seed the fixture through the
+-- same privileged role used by the production RPC before testing client denial.
+set local role service_role;
 insert into public.workspace_members (workspace_id, profile_id, role)
 values
   ('e4000000-0000-4000-8000-000000000004', 'e1000000-0000-4000-8000-000000000001', 'admin'),
@@ -31,7 +34,6 @@ values
 on conflict do nothing;
 
 set local role authenticated;
-select set_config('request.jwt.claims', '{"role":"authenticated","sub":"e1000000-0000-4000-8000-000000000001"}', true);
 select set_config('request.jwt.claims', '{"role":"authenticated","sub":"e5000000-0000-4000-8000-000000000005"}', true);
 select set_config('request.jwt.claim.role', 'authenticated', true);
 select set_config('request.jwt.claim.sub', 'e5000000-0000-4000-8000-000000000005', true);
@@ -72,6 +74,9 @@ select lives_ok(
   $$ select public.set_operator_role('e2000000-0000-4000-8000-000000000002', null) $$,
   'owner can demote themselves when another owner exists'
 );
+
+select set_config('request.jwt.claims', '{"role":"authenticated","sub":"e3000000-0000-4000-8000-000000000003"}', true);
+select set_config('request.jwt.claim.sub', 'e3000000-0000-4000-8000-000000000003', true);
 
 select throws_ok(
   $$ select public.set_operator_role('e3000000-0000-4000-8000-000000000003', null) $$,

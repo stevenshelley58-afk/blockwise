@@ -66,8 +66,11 @@ test("operator prompt preview surfaces avoid stale Phase 1 test copy", () => {
 
 test("operator sidebar does not hardcode Hermes runtime health", () => {
   const appShell = readFileSync("src/components/app-shell.tsx", "utf8");
+  const legacyShell = readFileSync("src/components/route-aware-legacy-shell.tsx", "utf8");
 
-  assert.match(appShell, /Hermes Engine/);
-  assert.match(appShell, /Open runtime workspace/);
+  assert.match(appShell, /<RouteAwareLegacyShell/);
+  assert.match(legacyShell, /Hermes Engine/);
+  assert.match(legacyShell, /Open runtime workspace/);
   assert.doesNotMatch(appShell, /Operational/);
+  assert.doesNotMatch(legacyShell, /Operational/);
 });

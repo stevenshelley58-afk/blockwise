@@ -294,7 +294,7 @@ function MetaSetupForm({ workspaceId, canManage }: { workspaceId: string; canMan
       <div className="flex items-center justify-between gap-4">
         <div className="flex flex-col gap-1">
           <strong className="text-sm font-medium">Meta publishing setup</strong>
-          <span className="text-sm text-muted-foreground">Required assets for paused Meta lead campaigns.</span>
+          <span className="text-sm text-muted-foreground">Required assets for publishing Meta lead campaigns.</span>
         </div>
         <StatusPill tone={blockers.length === 0 ? "green" : "amber"}>{blockers.length === 0 ? "ready" : "missing setup"}</StatusPill>
       </div>

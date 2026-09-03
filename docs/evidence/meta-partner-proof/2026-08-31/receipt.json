@@ -1,0 +1,99 @@
+{
+  "schema_version": 1,
+  "receipt_type": "meta_partner_external_proof_stop",
+  "decision": "NO_GO",
+  "proof_status": "UNPROVEN",
+  "terminal": true,
+  "decision_date": "2026-08-31",
+  "evaluated_at_utc": "2026-08-31T04:04:17Z",
+  "expires_at_utc": "2026-08-31T04:04:17Z",
+  "repository_base_commit": "c624a0a4b924f538a850f98dc8587a20ac8002e7",
+  "stop_reason": {
+    "code": "META_PARTNER_EXTERNAL_PROOF_PREREQUISITES_MISSING",
+    "summary": "The app and evidence set cannot support a controlled external proof, so automated partner connection work is stopped.",
+    "blocking_conditions": [
+      "APP_UNPUBLISHED",
+      "APP_REVIEW_INCOMPLETE",
+      "MARKETING_API_FULL_ACCESS_UNCONFIRMED",
+      "REQUIRED_PERMISSION_ADVANCED_ACCESS_UNCONFIRMED",
+      "META_BUSINESS_ID_ABSENT",
+      "META_SYSTEM_USER_TOKEN_ABSENT",
+      "EXTERNAL_NON_APP_ROLE_BUSINESS_ABSENT",
+      "INDEPENDENT_HUMAN_REVIEWER_ABSENT"
+    ]
+  },
+  "evidence": {
+    "owner_dashboard_screenshot_reviewed": true,
+    "owner_dashboard_screenshot_retained_in_receipt": false,
+    "observed_app_mode": "UNPUBLISHED",
+    "observed_app_review": "INCOMPLETE",
+    "observed_marketing_api_access_tier": "UNCONFIRMED",
+    "observed_permission_access_levels": "UNCONFIRMED",
+    "meta_business_id_configured": false,
+    "meta_system_user_token_configured": false,
+    "external_business_available": false,
+    "independent_human_reviewer_available": false
+  },
+  "execution": {
+    "external_run_occurred": false,
+    "meta_api_reads_occurred": false,
+    "meta_objects_mutated": false,
+    "test_lead_created": false,
+    "cleanup_required": false,
+    "cleanup_status": "NOT_REQUIRED_NO_MUTATIONS",
+    "proof_executor": null,
+    "proof_reviewer": null
+  },
+  "object_outcomes": {
+    "campaign": "NOT_RUN",
+    "ad_set": "NOT_RUN",
+    "instant_form": "NOT_RUN",
+    "ad_creative": "NOT_RUN",
+    "ad": "NOT_RUN",
+    "test_lead": "NOT_RUN",
+    "reporting": "NOT_RUN",
+    "instagram_ad_identity": "NOT_RUN"
+  },
+  "authorized_fallback": {
+    "oauth_and_app_review_continue": true,
+    "creative_export_allowed": true,
+    "manual_operator_publishing_allowed": true,
+    "manual_work_may_be_described_as_api_connection": false
+  },
+  "recheck_requires_all": [
+    "APP_PUBLISHED",
+    "APP_REVIEW_COMPLETE",
+    "MARKETING_API_FULL_ACCESS_CONFIRMED",
+    "REQUIRED_PERMISSION_ADVANCED_ACCESS_CONFIRMED",
+    "META_BUSINESS_ID_CONFIGURED_IN_CONTROLLED_RUNTIME",
+    "META_SYSTEM_USER_TOKEN_CONFIGURED_IN_PRIVATE_VAULT",
+    "EXTERNAL_NON_APP_ROLE_BUSINESS_AVAILABLE",
+    "INDEPENDENT_EXECUTOR_AND_REVIEWER_AVAILABLE"
+  ],
+  "recheck_triggers": [
+    "GRAPH_VERSION_CHANGE",
+    "APP_MODE_CHANGE",
+    "MARKETING_API_ACCESS_TIER_CHANGE",
+    "PERMISSION_ACCESS_LEVEL_CHANGE",
+    "PARTNER_ASSIGNMENT_CONTRACT_CHANGE",
+    "LEAD_TEST_CONTRACT_CHANGE",
+    "META_OBJECT_STATUS_OR_CLEANUP_CONTRACT_CHANGE"
+  ],
+  "privacy": {
+    "contains_secrets": false,
+    "contains_raw_meta_ids": false,
+    "contains_names": false,
+    "contains_lead_data": false,
+    "contains_customer_data": false
+  },
+  "primary_sources": [
+    "https://developers.meta.com/blog/updates-to-ads-management-standard-access-feature/",
+    "https://www.postman.com/meta/facebook-marketing-api/documentation/0zr4mes/facebook-marketing-api-mapi",
+    "https://developers.facebook.com/docs/graph-api/overview/access-levels/",
+    "https://developers.facebook.com/docs/permissions/reference/",
+    "https://www.postman.com/meta/facebook-marketing-api/documentation/9jo4f5y/mapi-onboarding",
+    "https://developers.facebook.com/documentation/ads-commerce/marketing-api/guides/lead-ads/create",
+    "https://developers.facebook.com/documentation/ads-commerce/marketing-api/guides/lead-ads/retrieving",
+    "https://developers.facebook.com/documentation/ads-commerce/marketing-api/guides/lead-ads/testing-troubleshooting"
+  ]
+}

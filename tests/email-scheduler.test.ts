@@ -10,6 +10,8 @@ test("email drain scheduler fails closed and signs the internal request", () => 
   assert.match(source, /x-blockwise-signature/);
   assert.match(source, /email\.drain/);
   assert.ok(existsSync("infra/product/systemd/blockwise-email-outbox-drain.service"));
+  const readme = readFileSync("infra/product/systemd/README.md", "utf8");
+  assert.match(readme, /install -o root -g root -m 0755 scripts\/vps\/email-outbox-drain\.sh \/usr\/local\/libexec\/blockwise-email-outbox-drain/);
   const service = readFileSync("infra/product/systemd/blockwise-email-outbox-drain.service", "utf8");
   assert.match(service, /User=hermes/);
   assert.match(service, /ExecStart=\/usr\/local\/libexec\/blockwise-email-outbox-drain/);
