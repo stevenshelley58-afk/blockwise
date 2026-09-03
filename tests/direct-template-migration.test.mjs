@@ -20,3 +20,16 @@ test("direct Meta publish plans have their own customer-ad parent", () => {
   assert.match(sql, /meta_publish_plans_customer_ad_updated_idx/i);
   assert.match(allowlist, /20260830030000_direct_customer_meta_publish_plans\.sql/);
 });
+
+test("direct template quarantine is a chronological, reversible customer-read boundary", () => {
+  const migrationName = "20260903130000_ad_template_library_status.sql";
+  const sql = readFileSync(`supabase/migrations/${migrationName}`, "utf8");
+  const allowlist = readFileSync("infra/product/product-migrations.txt", "utf8");
+
+  assert.match(sql, /add column if not exists library_status text not null default 'active'/i);
+  assert.match(sql, /constraint ad_templates_library_status_check[\s\S]*library_status in \('active', 'quarantined'\)/i);
+  assert.match(sql, /create policy ad_templates_authenticated_select[\s\S]*using \(library_status = 'active'\)/i);
+  assert.match(sql, /create policy ad_template_assets_direct_authenticated_select[\s\S]*visible_template\.library_status = 'active'/i);
+  assert.doesNotMatch(sql, /delete\s+from\s+public\.ad_templates|delete\s+from\s+public\.ad_template_assets_direct/i);
+  assert.match(allowlist, new RegExp(`${migrationName.replaceAll(".", "\\.")}\\s*$`, "m"));
+});

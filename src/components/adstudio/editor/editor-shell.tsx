@@ -16,6 +16,7 @@ import { MetaCopyPanel } from "./meta-copy-panel";
 import { MetaPlacementPreview, type MetaPreviewBrand } from "./meta-placement-preview";
 import { editorTargetForLayer, type EditorTarget, type MetaEditField } from "./editor-target";
 import { uploadCustomerImage } from "./customer-image-upload";
+import { templateAssetProxyUrl } from "@/lib/adstudio/pack-gallery";
 import { cn } from "@/lib/utils";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -269,6 +270,7 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
 
   return <RedesignedEditor
     pack={pack}
+    adId={adId}
     state={state}
     activeLayout={activeLayout}
     templateId={pack.templateId}
@@ -314,8 +316,8 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
   />;
 }
 
-function RedesignedEditor({ pack, templateId, state, activeLayout, brandColours, brandPreview, canSave, canUndo, canRedo, saveConflict, pendingImageUploads, inspectorTab, setInspectorTab, mobileInspectorOpen, setMobileInspectorOpen, handleSave, handlePublish, handleKeyDown, undo, redo, setActivePlacement, selectLayer, handleColourModeChange, updateColour, resetColour, handleImageChange, openCropForInput, updateTextValue, applyTemplateText, applyTemplateMetaCopy, updateMetaCopy, updateCrop, setError, cropTarget, setCropTarget, proposalBrief, setProposalBrief, proposal, proposalBusy, proposalError, proposeCopy, applyProposal, dismissProposal }: {
-  pack: AdTemplate; templateId: string; state: EditorState; activeLayout: AdTemplate["feedLayout"]; brandColours: BrandPackColours | null; brandPreview: MetaPreviewBrand | null; canSave: boolean; canUndo: boolean; canRedo: boolean; saveConflict: boolean; pendingImageUploads: number;
+function RedesignedEditor({ pack, adId, templateId, state, activeLayout, brandColours, brandPreview, canSave, canUndo, canRedo, saveConflict, pendingImageUploads, inspectorTab, setInspectorTab, mobileInspectorOpen, setMobileInspectorOpen, handleSave, handlePublish, handleKeyDown, undo, redo, setActivePlacement, selectLayer, handleColourModeChange, updateColour, resetColour, handleImageChange, openCropForInput, updateTextValue, applyTemplateText, applyTemplateMetaCopy, updateMetaCopy, updateCrop, setError, cropTarget, setCropTarget, proposalBrief, setProposalBrief, proposal, proposalBusy, proposalError, proposeCopy, applyProposal, dismissProposal }: {
+  pack: AdTemplate; adId: string; templateId: string; state: EditorState; activeLayout: AdTemplate["feedLayout"]; brandColours: BrandPackColours | null; brandPreview: MetaPreviewBrand | null; canSave: boolean; canUndo: boolean; canRedo: boolean; saveConflict: boolean; pendingImageUploads: number;
   inspectorTab: InspectorTab; setInspectorTab: (value: InspectorTab) => void; mobileInspectorOpen: boolean; setMobileInspectorOpen: (value: boolean) => void; handleSave: () => Promise<boolean>; handlePublish: () => Promise<void>; handleKeyDown: (event: KeyboardEvent) => void; undo: () => void; redo: () => void; setActivePlacement: (value: Placement) => void; selectLayer: (value: string | null) => void;
   handleColourModeChange: (mode: ColourMode) => void; updateColour: (role: ColourRole, value: string) => boolean; resetColour: (role: ColourRole) => void; handleImageChange: (key: string, change: { file: File; previewUrl: string } | null) => Promise<void>; openCropForInput: (key: string) => void; updateTextValue: (key: string, value: string) => void; applyTemplateText: () => void; applyTemplateMetaCopy: () => void; updateMetaCopy: (field: keyof MetaCopy, value: string) => void; updateCrop: (key: string, placement: Placement, crop: Rect) => void; setError: (value: string | null) => void;
   cropTarget: { slot: ImageSlotLayer; placement: Placement } | null; setCropTarget: (value: { slot: ImageSlotLayer; placement: Placement } | null) => void; proposalBrief: string; setProposalBrief: (value: string) => void; proposal: AiCopyProposal | null; proposalBusy: boolean; proposalError: string | null; proposeCopy: () => Promise<void>; applyProposal: (payload: SelectedAiCopyPayload) => void; dismissProposal: () => void;
@@ -383,7 +385,7 @@ function RedesignedEditor({ pack, templateId, state, activeLayout, brandColours,
   }, [activeTarget, pack.feedLayout, pack.storyLayout, selectLayer, setActivePlacement]);
 
   const defaultImageValues = Object.fromEntries(pack.imageInputs.flatMap(input => input.defaultAssetKey
-    ? [[input.key, `/api/adstudio/templates/${encodeURIComponent(templateId)}/assets/${encodeURIComponent(input.defaultAssetKey)}`] as const]
+    ? [[input.key, templateAssetProxyUrl(templateId, input.defaultAssetKey, adId)!] as const]
     : []));
   const customerImageValues = Object.fromEntries(state.imageValues.flatMap(value => {
     const image = value.previewUrl ?? value.dataUrl;
@@ -452,7 +454,7 @@ function RedesignedEditor({ pack, templateId, state, activeLayout, brandColours,
             copy={state.metaCopy}
             activeField={activeTarget?.kind === "meta" ? activeTarget.field : null}
             onEditField={field => openInspectorForTarget({ kind: "meta", field })}
-            creative={<LayeredCanvas templateId={templateId} layout={activeLayout} colours={state.resolvedColourMap} imageValues={previewImages} textValues={previewCopy} cropOverrides={Object.fromEntries(state.imageValues.map(iv => [iv.inputKey, iv.crops[state.activePlacement]]))} selectedLayerId={state.selectedLayerId} onTargetSelect={openInspectorForTarget} className="h-full w-full" />}
+            creative={<LayeredCanvas templateId={templateId} existingAdId={adId} layout={activeLayout} colours={state.resolvedColourMap} imageValues={previewImages} textValues={previewCopy} cropOverrides={Object.fromEntries(state.imageValues.map(iv => [iv.inputKey, iv.crops[state.activePlacement]]))} selectedLayerId={state.selectedLayerId} onTargetSelect={openInspectorForTarget} className="h-full w-full" />}
           />
         </div>
       </section>

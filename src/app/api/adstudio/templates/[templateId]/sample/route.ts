@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { renderPlacement } from "../../../../../../../packages/ad-template-renderer/src/renderer.ts";
 import type { AdTemplate } from "../../../../../../../packages/ad-template-contract/src/types.ts";
 import { requireAdStudioRequest } from "@/lib/adstudio/http";
-import { getTemplate, templateAssetStoragePath, type GallerySamplePlacement } from "@/lib/adstudio/pack-gallery";
+import { getCustomerTemplate, templateAssetStoragePath, type GallerySamplePlacement } from "@/lib/adstudio/pack-gallery";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const runtime = "nodejs";
@@ -20,7 +20,7 @@ export async function GET(
   const placement = parsePlacement(request.nextUrl.searchParams.get("placement"));
   if (!placement) return notFoundResponse();
 
-  const template = await getTemplate(context.supabase, templateId);
+  const template = await getCustomerTemplate(context.supabase, templateId);
   if (!template) return notFoundResponse();
 
   try {

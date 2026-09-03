@@ -20,12 +20,12 @@ test("manual colour mode expands the exact customer-ad constraint without an unp
   assert.doesNotMatch(sql, /drop table|drop column|cascade/i);
 });
 
-test("manual colour migration is the unique latest product migration", () => {
+test("manual colour migration remains unique and precedes later product migrations", () => {
   const allowlist = readFileSync("infra/product/product-migrations.txt", "utf8")
     .split(/\r?\n/u)
     .map(line => line.trim())
     .filter(Boolean);
 
-  assert.equal(allowlist.at(-1), migrationName);
   assert.equal(allowlist.filter(name => name === migrationName).length, 1);
+  assert.ok(allowlist.indexOf(migrationName) < allowlist.indexOf("20260903130000_ad_template_library_status.sql"));
 });

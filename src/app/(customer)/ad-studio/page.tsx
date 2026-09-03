@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { StudioNavigation } from "@/components/adstudio/studio-navigation";
-import { listTemplates } from "@/lib/adstudio/pack-gallery";
+import { listCustomerTemplates } from "@/lib/adstudio/pack-gallery";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 
 export default async function AdStudioPage() {
   const { supabase } = await requirePageSurfaceAccess("adstudio");
-  const templates = await listTemplates(supabase);
+  const templates = await listCustomerTemplates(supabase);
 
   return (
     <div className="flex min-h-[calc(100dvh-54px)] flex-col bg-background text-foreground md:min-h-[calc(100dvh-60px)]">

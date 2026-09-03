@@ -10,6 +10,7 @@ import { adTemplateSchema } from "@/lib/adstudio/ingest-artifact";
 import { toMetaCta } from "@/lib/adstudio/meta-cta";
 import { isExampleBrandKitSourceUrl, rowToBrandKit } from "@/lib/adstudio/persistence";
 import type { AdStudioBrandKit } from "@/lib/adstudio/types";
+import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const runtime = "nodejs";
 
@@ -39,7 +40,9 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     .eq("workspace_id", access.access.workspaceId)
     .maybeSingle();
   if (!ad) return NextResponse.json({ error: "Ad not found" }, { status: 404 });
-  const { data: packRow } = await access.supabase
+  // Ownership was proved above. Resolve the immutable source template through
+  // the internal reader so copy remains available for quarantined saved ads.
+  const { data: packRow } = await createSupabaseServiceClient()
     .from("ad_templates")
     .select("template_json")
     .eq("template_id", ad.template_id)

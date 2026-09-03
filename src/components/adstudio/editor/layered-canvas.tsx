@@ -38,6 +38,8 @@ function ensureLocalFont(font: { file: string }): Promise<void> {
 
 export interface LayeredCanvasProps {
   templateId: string;
+  /** Existing saved-ad identity authorizing assets for quarantined history. */
+  existingAdId: string;
   layout: Layout;
   colours: AdTemplate["semanticColours"];
   imageValues?: Record<string, string | null | undefined>;
@@ -59,6 +61,7 @@ export interface LayeredCanvasProps {
  */
 export function LayeredCanvas({
   templateId,
+  existingAdId,
   layout,
   colours,
   imageValues = {},
@@ -162,6 +165,7 @@ export function LayeredCanvas({
         const object = await createLayerObject({
           fabric,
           templateId,
+          existingAdId,
           layer,
           colours,
           imageValues,
@@ -195,7 +199,7 @@ export function LayeredCanvas({
     return () => {
       renderVersionRef.current += 1;
     };
-  }, [colours, cropOverrides, imageValues, layout, templateId, ready, textValues]);
+  }, [colours, cropOverrides, existingAdId, imageValues, layout, templateId, ready, textValues]);
 
   useEffect(() => {
     const canvas = fabricRef.current;
@@ -229,6 +233,7 @@ export function LayeredCanvas({
 async function createLayerObject({
   fabric,
   templateId,
+  existingAdId,
   layer,
   colours,
   imageValues,
@@ -237,6 +242,7 @@ async function createLayerObject({
 }: {
   fabric: typeof import("fabric");
   templateId: string;
+  existingAdId: string;
   layer: LayoutLayer;
   colours: AdTemplate["semanticColours"];
   imageValues: Record<string, string | null | undefined>;
@@ -264,7 +270,7 @@ async function createLayerObject({
   const fill = (role: keyof AdTemplate["semanticColours"]) => colours[role] ?? "#d3d7df";
 
   if (layer.type === "plate") {
-    const assetUrl = layer.assetKey ? templateAssetProxyUrl(templateId, layer.assetKey) : null;
+    const assetUrl = layer.assetKey ? templateAssetProxyUrl(templateId, layer.assetKey, existingAdId) : null;
     if (assetUrl) {
       try {
         const image = await fabric.FabricImage.fromURL(assetUrl);

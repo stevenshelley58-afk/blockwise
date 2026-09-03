@@ -8,9 +8,10 @@ import {
   getOrCreateCustomerAd,
   parseCustomerAdId,
 } from "@/lib/adstudio/create-customer-ad";
-import { getTemplate } from "@/lib/adstudio/pack-gallery";
+import { getTemplateForExistingCustomerAd } from "@/lib/adstudio/pack-gallery";
 import { loadPublishState, PublishError, readTemplatePublishRequirements, validatePublishState } from "@/lib/adstudio/publish-adapter";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
+import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const dynamic = "force-dynamic";
 
@@ -42,7 +43,14 @@ export default async function PublishPage({
   if (!requestedAdId) notFound();
 
   const { supabase, access } = await requirePageSurfaceAccess("adstudio");
-  const pack = await getTemplate(supabase, templateId);
+  const serviceSupabase = createSupabaseServiceClient();
+  const pack = await getTemplateForExistingCustomerAd({
+    customerSupabase: supabase,
+    internalSupabase: serviceSupabase,
+    workspaceId: access.workspaceId,
+    adId: requestedAdId,
+    templateId,
+  });
   if (!pack) notFound();
 
   let adId: string;
@@ -68,7 +76,7 @@ export default async function PublishPage({
   let state: Awaited<ReturnType<typeof loadPublishState>> | null = null;
   let notSaved = false;
   try {
-    state = await loadPublishState(supabase, adId, access.workspaceId);
+    state = await loadPublishState(supabase, adId, access.workspaceId, { templateSupabase: serviceSupabase });
   } catch (err) {
     if (err instanceof PublishError && err.code === "not_saved") {
       notSaved = true;

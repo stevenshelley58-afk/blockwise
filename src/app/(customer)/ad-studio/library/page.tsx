@@ -6,15 +6,17 @@ import {
 } from "@/lib/adstudio/library-read-model";
 import { isExampleBrandKitSourceUrl } from "@/lib/adstudio/persistence";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
+import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const dynamic = "force-dynamic";
 
 export default async function MediaLibraryPage() {
   const { supabase, access } = await requirePageSurfaceAccess("adstudio");
   const workspaceId = access.workspaceId;
+  const templateSupabase = createSupabaseServiceClient();
   const [assetsPage, adsPage, brandKitRows] = await Promise.all([
     loadAdStudioLibraryPage({ supabase, workspaceId, kind: "assets", limit: 24 }),
-    loadAdStudioLibraryPage({ supabase, workspaceId, kind: "ads", limit: 24 }),
+    loadAdStudioLibraryPage({ supabase, templateSupabase, workspaceId, kind: "ads", limit: 24 }),
     supabase
       .from("adstudio_brand_kits")
       .select("id, source_url")
