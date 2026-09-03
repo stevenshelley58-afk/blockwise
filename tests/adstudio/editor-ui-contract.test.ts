@@ -35,16 +35,19 @@ describe("customer Ad Studio workbench contract", () => {
 
   it("keeps Fabric geometry aligned with the pack x/y contract", () => {
     const canvas = readFileSync("src/components/adstudio/editor/layered-canvas.tsx", "utf8");
+    const geometry = readFileSync("src/components/adstudio/editor/layer-geometry.ts", "utf8");
     const editor = readFileSync("src/components/adstudio/editor/editor-shell.tsx", "utf8");
-    assert.match(canvas, /function fabricRectGeometry\(geometry: Rect\)/);
-    assert.match(canvas, /left: geometry\.x/);
-    assert.match(canvas, /top: geometry\.y/);
+    assert.match(geometry, /function fabricRectGeometry\(geometry: Rect\)/);
+    assert.match(geometry, /left: geometry\.x/);
+    assert.match(geometry, /top: geometry\.y/);
+    assert.match(geometry, /originX: "left"/);
+    assert.match(geometry, /originY: "top"/);
     assert.match(canvas, /canvas\.setDimensions\(\{ width: dims\.width, height: dims\.height \}\)/);
     assert.match(canvas, /canvas\.setDimensions\(\{ width, height \}, \{ cssOnly: true \}\)/);
     assert.match(canvas, /canvas\.setViewportTransform\(\[1, 0, 0, 1, 0, 0\]\)/);
     assert.doesNotMatch(canvas, /setDimensions\(\{ width: Math\.floor\(dims\.width \* zoom\)/);
     assert.match(canvas, /resolveGeometry\(layer\.geometry, PLACEMENT_DIMENSIONS\[placement\]\)/);
-    assert.match(canvas, /values\.every\(\(value\) => Math\.abs\(value\) <= 1\.001\)/);
+    assert.match(geometry, /values\.every\(\(value\) => Math\.abs\(value\) <= 1\.001\)/);
     assert.doesNotMatch(canvas, /new fabric\.Rect\(\{ \.\.\.geometry/);
     assert.match(canvas, /ensureLocalFont/);
     assert.match(canvas, /fontStem\(layer\.font\.file\)/);

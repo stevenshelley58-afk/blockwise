@@ -13,6 +13,7 @@ import type {
 import { PLACEMENT_DIMENSIONS } from "../../../../packages/ad-template-contract/src/types";
 import { templateAssetProxyUrl } from "@/lib/adstudio/pack-gallery";
 import { cn } from "@/lib/utils";
+import { fabricRectGeometry, resolveGeometry } from "./layer-geometry";
 
 type LayerTarget = { layer: LayoutLayer; object: FabricObject };
 
@@ -267,6 +268,8 @@ async function createLayerObject({
     const textbox = new fabric.Textbox(text, {
       left: geometry.x,
       top: geometry.y,
+      originX: "left",
+      originY: "top",
       width: geometry.width,
       height: geometry.height,
       fontFamily: fontStem(layer.font.file),
@@ -294,7 +297,7 @@ async function createLayerObject({
     if (layer.shape === "ring") return new fabric.Circle({ left: geometry.x + geometry.width / 2, top: geometry.y + geometry.height / 2, originX: "center", originY: "center", radius: Math.min(geometry.width, geometry.height) / 2, fill: "", stroke: colour, strokeWidth: Math.max(2, Math.min(geometry.width, geometry.height) * .08), opacity: layer.opacity ?? 1, ...interactive });
     const radius = layer.shape === "pill" ? Math.min(geometry.width, geometry.height) / 2 : layer.shape === "rounded" ? Math.min(16, geometry.width / 4, geometry.height / 4) : 0;
     if (layer.shape === "circle") {
-      return new fabric.Circle({ left: geometry.x, top: geometry.y, radius: Math.min(geometry.width, geometry.height) / 2, fill: colour, opacity: layer.opacity ?? 1, ...interactive });
+      return new fabric.Circle({ left: geometry.x, top: geometry.y, originX: "left", originY: "top", radius: Math.min(geometry.width, geometry.height) / 2, fill: colour, opacity: layer.opacity ?? 1, ...interactive });
     }
     return new fabric.Rect({ ...fabricRectGeometry(geometry), rx: radius, ry: radius, fill: colour, opacity: layer.opacity ?? 1, ...interactive });
   }
@@ -359,35 +362,14 @@ async function createLayerObject({
   });
 }
 
-function resolveGeometry(geometry: Rect, dims: { width: number; height: number }): Rect {
-  const values = [geometry.x, geometry.y, geometry.width, geometry.height];
-  if (values.every((value) => Number.isFinite(value)) && values.every((value) => Math.abs(value) <= 1.001)) {
-    return {
-      x: geometry.x * dims.width,
-      y: geometry.y * dims.height,
-      width: geometry.width * dims.width,
-      height: geometry.height * dims.height,
-    };
-  }
-  return geometry;
-}
-
-/** Fabric uses left/top for object placement; pack contracts use x/y. */
-function fabricRectGeometry(geometry: Rect) {
-  return {
-    left: geometry.x,
-    top: geometry.y,
-    width: geometry.width,
-    height: geometry.height,
-  };
-}
-
 function fitImageToGeometry(image: import("fabric").FabricImage, geometry: Rect) {
   const width = Math.max(1, image.width);
   const height = Math.max(1, image.height);
   image.set({
     left: geometry.x,
     top: geometry.y,
+    originX: "left",
+    originY: "top",
     scaleX: geometry.width / width,
     scaleY: geometry.height / height,
   });
@@ -403,6 +385,8 @@ function cropImageToGeometry(image: import("fabric").FabricImage, geometry: Rect
   image.set({
     left: geometry.x,
     top: geometry.y,
+    originX: "left",
+    originY: "top",
     cropX: crop.x * sourceWidth,
     cropY: crop.y * sourceHeight,
     width: cropWidth,
@@ -428,6 +412,8 @@ function maskForSlot(fabric: typeof import("fabric"), layer: ImageSlotLayer, geo
     return new fabric.Circle({
       left: geometry.x,
       top: geometry.y,
+      originX: "left",
+      originY: "top",
       radius: Math.min(geometry.width, geometry.height) / 2,
       absolutePositioned: true,
     });
