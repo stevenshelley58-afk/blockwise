@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Palette, PencilLine, RotateCcw, RotateCw, Save, Sparkles, ZoomIn, ZoomOut } from "lucide-react";
-import type { AdTemplate, Placement, ImageSlotLayer, LayoutLayer, Rect, ColourRole } from "../../../../packages/ad-template-contract/src/types";
+import type { AdTemplate, Placement, ImageSlotLayer, LayoutLayer, Layout, Rect, ColourRole } from "../../../../packages/ad-template-contract/src/types";
 import type { AdDocumentParsed } from "../../../../packages/ad-template-contract/src/schema";
 import { PLACEMENT_DIMENSIONS } from "../../../../packages/ad-template-contract/src/types";
 import { buildAdDocument, brandPackColoursToRoleMap, editorTextInputs, hasTemplateCopy, previewTextValues, resolveColourMap, useEditorState, type BrandPackColours, type EditorState, type MetaCopy } from "./use-editor-state";
@@ -53,7 +53,7 @@ export interface EditorShellProps {
   brandBusinessName?: string;
   /**
    * Workspace library assets (Brand Studio uploads) offered as a per-slot
-   * "Library…" source in the Content tab, alongside direct upload.
+   * "Library…" source in the Creative tab, alongside direct upload.
    */
   libraryAssets?: Array<{ id?: string; url: string; label: string }>;
   /** Brand Pack primary logo URL for the Meta preview avatar (null → initials). */
@@ -63,9 +63,9 @@ export interface EditorShellProps {
   adName?: string;
 }
 
-type InspectorTab = "content" | "copy" | "colours";
+type InspectorTab = "creative" | "copy" | "colours";
 const INSPECTOR_TABS: Array<{ value: InspectorTab; label: string; icon: typeof PencilLine }> = [
-  { value: "content", label: "Creative", icon: PencilLine },
+  { value: "creative", label: "Creative", icon: PencilLine },
   { value: "copy", label: "Ad copy", icon: Sparkles },
   { value: "colours", label: "Colours", icon: Palette },
 ];
@@ -103,7 +103,7 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
   const [proposalBusy, setProposalBusy] = useState(false);
   const [pendingImageUploads, setPendingImageUploads] = useState(0);
   const [saveConflict, setSaveConflict] = useState(false);
-  const [inspectorTab, setInspectorTab] = useState<InspectorTab>("content");
+  const [inspectorTab, setInspectorTab] = useState<InspectorTab>("creative");
   const [mobileInspectorOpen, setMobileInspectorOpen] = useState(false);
   const imageUploadTokens = useRef(new Map<string, number>());
   const [pendingCropKey, setPendingCropKey] = useState<string | null>(null);
@@ -181,7 +181,7 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
         missingImages.length > 0 ? `Add required images: ${missingImages.map(input => input.label).join(", ")}.` : "",
         missingText.length > 0 ? `Complete required text: ${missingText.map(input => input.label).join(", ")}.` : "",
       ].filter(Boolean).join(" ");
-      setInspectorTab("content");
+      setInspectorTab("creative");
       if (typeof window !== "undefined" && window.matchMedia("(max-width: 1279px)").matches) setMobileInspectorOpen(true);
       setError(requirements);
       return false;
@@ -467,7 +467,21 @@ function RedesignedEditor({ pack, templateId, state, activeLayout, brandColours,
   </div>;
 }
 
-function DesignCanvas({ templateId, layout, placement, colours, imageValues, textValues, cropOverrides, selectedLayerId, onSelect, onCropImage, zoom = "fit" }: any) {
+type DesignCanvasProps = {
+  templateId: string;
+  layout: Layout;
+  placement: Placement;
+  colours: AdTemplate["semanticColours"];
+  imageValues: Record<string, string | null>;
+  textValues: Record<string, string>;
+  cropOverrides?: Record<string, Rect | null | undefined>;
+  selectedLayerId?: string | null;
+  onSelect?: (layerId: string | null) => void;
+  onCropImage?: (slot: ImageSlotLayer) => void;
+  zoom?: "fit" | 0.8 | 1 | 1.25;
+};
+
+function DesignCanvas({ templateId, layout, placement, colours, imageValues, textValues, cropOverrides, selectedLayerId, onSelect, onCropImage, zoom = "fit" }: DesignCanvasProps) {
   const viewport = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: 800, height: 700 });
   useEffect(() => { const node = viewport.current; if (!node) return; const observer = new ResizeObserver(() => setSize({ width: node.clientWidth, height: node.clientHeight })); observer.observe(node); return () => observer.disconnect(); }, []);
