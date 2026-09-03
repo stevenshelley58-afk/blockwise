@@ -1,4 +1,5 @@
 import type { Rect } from "../../../../packages/ad-template-contract/src/types";
+import type { TextLayer } from "../../../../packages/ad-template-contract/src/types";
 
 export interface CanvasDimensions {
   width: number;
@@ -44,6 +45,61 @@ export function fabricCircleGeometry(geometry: Rect) {
     originY: "top" as const,
     radius: diameter / 2,
   };
+}
+
+/** Server icon fallbacks use a 0.34×minimum-dimension circle, not a box-filling circle. */
+export function fabricIconCircleGeometry(geometry: Rect) {
+  const radius = Math.min(geometry.width, geometry.height) * 0.34;
+  return {
+    left: geometry.x + geometry.width / 2 - radius,
+    top: geometry.y + geometry.height / 2 - radius,
+    originX: "left" as const,
+    originY: "top" as const,
+    radius,
+  };
+}
+
+/**
+ * Template packs may include the optional type-treatment metadata produced by
+ * Frank's authoring tools. `sizeRatio` is expressed against the resolved
+ * layer height, just like the canonical server renderer. Keep this helper
+ * independent of Fabric so the editor and its geometry fixtures can assert
+ * the same effective authored size without constructing a canvas.
+ */
+export function effectiveTextFontSize(layer: Pick<TextLayer, "fontSize"> & { sizeRatio?: number }, geometry: Rect): number {
+  const ratio = Number(layer.sizeRatio);
+  if (Number.isFinite(ratio) && ratio > 0) return geometry.height * ratio;
+  return layer.fontSize;
+}
+
+/** The canonical renderer draws unknown icons as a stroked circle. */
+export type FabricIconShape = "arrow" | "check" | "circle";
+
+export function resolveIconShape(icon: string): FabricIconShape {
+  if (icon === "arrow") return "arrow";
+  if (icon === "check" || icon === "tick") return "check";
+  return "circle";
+}
+
+/**
+ * Return local path data for the two supported path icons. Circle fallbacks
+ * are represented by a Fabric Circle instead, keeping its bounds centred in
+ * the authored rectangle.
+ */
+export function fabricIconPathData(icon: string, width: number, height: number): string | null {
+  const shape = resolveIconShape(icon);
+  if (shape === "arrow") {
+    return `M ${width * .1} ${height / 2} L ${width * .9} ${height / 2} M ${width * .55} ${height * .18} L ${width * .9} ${height / 2} L ${width * .55} ${height * .82}`;
+  }
+  if (shape === "check") {
+    return `M ${width * .18} ${height / 2} L ${width * .42} ${height * .76} L ${width * .84} ${height * .24}`;
+  }
+  return null;
+}
+
+/** Rounded image masks use the same fixed corner radius as the server. */
+export function imageMaskRadius(): number {
+  return 16;
 }
 
 /**
