@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, test } from "node:test";
 
 import {
   getMetaPartnerConfig,
+  isMetaPartnerStartEnabled,
   listPartnerVisibleAdAccounts,
   verifyPartnerAccountAccess,
 } from "../src/lib/providers/meta-partner.ts";
@@ -34,6 +35,21 @@ describe("getMetaPartnerConfig", () => {
     assert.equal(getMetaPartnerConfig(), null);
   });
 
+  test("is disabled unless the explicit start gate is exactly true", () => {
+    process.env.META_BUSINESS_ID = "3701213676688100";
+    process.env.META_SYSTEM_USER_TOKEN = "EAAG_real_token";
+    delete process.env.BLOCKWISE_META_PARTNER_STARTS_ENABLED;
+    assert.equal(isMetaPartnerStartEnabled(), false);
+    assert.equal(getMetaPartnerConfig(), null);
+
+    process.env.BLOCKWISE_META_PARTNER_STARTS_ENABLED = "TRUE";
+    assert.equal(isMetaPartnerStartEnabled(), false);
+    process.env.BLOCKWISE_META_PARTNER_STARTS_ENABLED = "true";
+    assert.equal(isMetaPartnerStartEnabled(), true);
+    process.env.BLOCKWISE_META_PARTNER_STARTS_ENABLED = "1";
+    assert.equal(isMetaPartnerStartEnabled(), false);
+  });
+
   test("treats a PLACEHOLDER token as unconfigured", () => {
     process.env.META_BUSINESS_ID = "3701213676688100";
     process.env.META_SYSTEM_USER_TOKEN = "PLACEHOLDER_PASTE_REAL_EAAG_TOKEN";
@@ -43,6 +59,7 @@ describe("getMetaPartnerConfig", () => {
   test("returns trimmed values when fully configured", () => {
     process.env.META_BUSINESS_ID = "  3701213676688100  ";
     process.env.META_SYSTEM_USER_TOKEN = "  EAAG_real_token  ";
+    process.env.BLOCKWISE_META_PARTNER_STARTS_ENABLED = "true";
     assert.deepEqual(getMetaPartnerConfig(), {
       businessId: "3701213676688100",
       systemToken: "EAAG_real_token",
@@ -52,9 +69,11 @@ describe("getMetaPartnerConfig", () => {
 
 test("listPartnerVisibleAdAccounts maps Graph accounts into claim candidates", async () => {
   const requested: string[] = [];
+  const requestHeaders: Headers[] = [];
   const original = globalThis.fetch;
-  globalThis.fetch = async (input) => {
+  globalThis.fetch = async (input, init) => {
     requested.push(String(input));
+    requestHeaders.push(new Headers(init?.headers));
     return json({
       data: [
         {
@@ -90,7 +109,8 @@ test("listPartnerVisibleAdAccounts maps Graph accounts into claim candidates", a
     assert.equal(accounts[1].isActive, false);
     assert.equal(accounts[1].businessName, null);
     assert.ok(requested[0].includes("/me/adaccounts"));
-    assert.ok(requested[0].includes("access_token=EAAG_real_token"));
+    assert.ok(!requested[0].includes("access_token="));
+    assert.equal(requestHeaders[0].get("authorization"), "Bearer EAAG_real_token");
   } finally {
     globalThis.fetch = original;
   }
@@ -98,9 +118,11 @@ test("listPartnerVisibleAdAccounts maps Graph accounts into claim candidates", a
 
 test("verifyPartnerAccountAccess prefixes act_ and reports reachability", async () => {
   const requested: string[] = [];
+  const requestHeaders: Headers[] = [];
   const original = globalThis.fetch;
-  globalThis.fetch = async (input) => {
+  globalThis.fetch = async (input, init) => {
     requested.push(String(input));
+    requestHeaders.push(new Headers(init?.headers));
     return json({ id: "act_9001", name: "Northstar Realty" });
   };
 
@@ -109,6 +131,8 @@ test("verifyPartnerAccountAccess prefixes act_ and reports reachability", async 
     assert.equal(ok, true);
     assert.ok(requested[0].includes("/act_9001"));
     assert.ok(!requested[0].includes("/act_act_"));
+    assert.ok(!requested[0].includes("access_token="));
+    assert.equal(requestHeaders[0].get("authorization"), "Bearer EAAG_real_token");
   } finally {
     globalThis.fetch = original;
   }
