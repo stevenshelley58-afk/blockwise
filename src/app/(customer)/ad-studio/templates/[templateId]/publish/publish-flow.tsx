@@ -217,6 +217,8 @@ export function PublishFlow({
             workspaceId,
             mutationId: manualMutationId,
             notes: manualNotes.trim() || undefined,
+            controls: publishBuild.controls,
+            publishSummary: publishBuild.summary,
           }),
         },
       );
