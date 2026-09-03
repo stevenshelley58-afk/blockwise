@@ -2,8 +2,14 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { isDeepStrictEqual } from "node:util";
+import { createHash, createHmac } from "node:crypto";
 
 import { ingestTemplateArtifact } from "../../src/lib/adstudio/ingest-artifact.ts";
+import {
+  INTERNAL_REQUEST_MAX_CLOCK_SKEW_SECONDS,
+  TEMPLATE_ARTIFACT_SIGNATURE_SCOPE,
+  verifyInternalRequestSignature,
+} from "../../src/lib/adstudio/internal-request-signature.ts";
 
 const bytes = (value: string) => Buffer.from(value).toString("base64");
 
@@ -279,23 +285,14 @@ describe("direct template route and migration contract", () => {
     assert.match(route, /template_artifact_conflict" \? 409/);
   });
 
-  it("accepts exactly one valid Bearer secret and rejects malformed or missing credentials", () => {
+  it("requires the Hermes HMAC headers and never accepts the retired Bearer transport", () => {
     const route = readFileSync("src/app/api/internal/adstudio/template-artifacts/route.ts", "utf8");
-    assert.match(route, /authorization\?\.match\(\/\^Bearer\\s\+\(\.\+\)\$\/i\)/);
-    assert.doesNotMatch(route, /\^Bearer\\\\s\+/);
-
-    const authorize = (authorization: string | null, configuredSecret: string | undefined) => {
-      const expected = configuredSecret?.trim();
-      const provided = authorization?.match(/^Bearer\s+(.+)$/i)?.[1]?.trim();
-      return Boolean(expected && provided && provided === expected);
-    };
-    assert.equal(authorize("Bearer internal-secret", "internal-secret"), true);
-    assert.equal(authorize("bearer   internal-secret", "internal-secret"), true);
-    assert.equal(authorize("Bearer wrong", "internal-secret"), false);
-    assert.equal(authorize("Bearer\\s+internal-secret", "internal-secret"), false);
-    assert.equal(authorize("internal-secret", "internal-secret"), false);
-    assert.equal(authorize(null, "internal-secret"), false);
-    assert.equal(authorize("Bearer internal-secret", ""), false);
+    assert.match(route, /x-blockwise-timestamp/);
+    assert.match(route, /x-blockwise-nonce/);
+    assert.match(route, /x-blockwise-scope/);
+    assert.match(route, /x-blockwise-signature/);
+    assert.match(route, /claim_blockwise_internal_request_nonce/);
+    assert.doesNotMatch(route, /authorization|Bearer/);
   });
 
   it("keeps legacy customer data while allowing direct-template customer inserts", () => {
@@ -312,5 +309,66 @@ describe("direct template route and migration contract", () => {
     assert.doesNotMatch(migration, /drop table[^;]*cascade/i);
     assert.match(createCustomerAd, /template_id: template\.templateId/);
     assert.doesNotMatch(createCustomerAd, /template_pack_id:|template_version:/);
+  });
+});
+
+describe("Hermes internal request signature", () => {
+  const secret = "shared-internal-secret";
+  const body = JSON.stringify({ template: { templateId: "source-match-006" } });
+  const timestamp = "1788436800";
+  const nonce = "0123456789abcdef0123456789abcdef";
+  const path = "/api/internal/adstudio/template-artifacts";
+  const nowMs = Number(timestamp) * 1_000;
+
+  function signature(overrides: { body?: string; method?: string; path?: string; scope?: string } = {}) {
+    const signedBody = overrides.body ?? body;
+    return createHmac("sha256", secret).update([
+      "v1",
+      timestamp,
+      nonce,
+      overrides.scope ?? TEMPLATE_ARTIFACT_SIGNATURE_SCOPE,
+      overrides.method ?? "POST",
+      overrides.path ?? path,
+      createHash("sha256").update(signedBody).digest("hex"),
+    ].join("\n")).digest("hex");
+  }
+
+  function verify(overrides: Partial<Parameters<typeof verifyInternalRequestSignature>[0]> = {}) {
+    return verifyInternalRequestSignature({
+      body,
+      method: "POST",
+      path,
+      timestamp,
+      nonce,
+      scope: TEMPLATE_ARTIFACT_SIGNATURE_SCOPE,
+      signature: signature(),
+      secret,
+      nowMs,
+      ...overrides,
+    });
+  }
+
+  it("accepts the exact v1 Hermes signing contract", () => {
+    assert.deepEqual(verify(), {
+      nonce,
+      scope: TEMPLATE_ARTIFACT_SIGNATURE_SCOPE,
+      expiresAt: new Date(
+        (Number(timestamp) + INTERNAL_REQUEST_MAX_CLOCK_SKEW_SECONDS) * 1_000,
+      ).toISOString(),
+    });
+  });
+
+  it("rejects tampering, stale timestamps, malformed headers, and missing configuration", () => {
+    const exactSignature = signature();
+    const tamperedSignature = `${exactSignature.slice(0, -1)}${exactSignature.endsWith("0") ? "1" : "0"}`;
+    assert.equal(verify({ body: `${body} ` }), null);
+    assert.equal(verify({ method: "GET" }), null);
+    assert.equal(verify({ path: `${path}/other` }), null);
+    assert.equal(verify({ scope: "adstudio.other" }), null);
+    assert.equal(verify({ signature: tamperedSignature }), null);
+    assert.equal(verify({ timestamp: String(Number(timestamp) - INTERNAL_REQUEST_MAX_CLOCK_SKEW_SECONDS) }), null);
+    assert.equal(verify({ nonce: "not-a-hermes-nonce" }), null);
+    assert.equal(verify({ signature: "not-a-signature" }), null);
+    assert.equal(verify({ secret: "" }), null);
   });
 });

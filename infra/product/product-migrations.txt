@@ -90,3 +90,4 @@
 20260830040000_adstudio_cheap_copy_deepseek.sql
 20260830050000_adstudio_manual_colour_mode.sql
 20260903130000_ad_template_library_status.sql
+20260903134500_internal_request_nonce_replay_guard.sql
