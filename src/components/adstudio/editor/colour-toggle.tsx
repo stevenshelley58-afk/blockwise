@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 // ---------------------------------------------------------------------------
 // Colour panel — three mutually exclusive modes:
 //   1. Template colours  — the template's own palette.
-//   2. Workspace colours — the workspace Brand Pack palette (disabled when
+//   2. Brand Pack colours — the workspace Brand Pack palette (disabled when
 //      the workspace has no Brand Pack yet).
 //   3. Custom colours    — a per-role colour picker + hex input for every
 //      supported role (background, primary, secondary, accent, main text,
@@ -22,8 +22,8 @@ export type ColourMode = "template" | "brand_pack" | "custom";
 
 const MODE_OPTIONS: Array<{ value: ColourMode; label: string }> = [
   { value: "template", label: "Template" },
-  { value: "brand_pack", label: "Workspace" },
-  { value: "custom", label: "Custom" },
+  { value: "brand_pack", label: "Brand Pack" },
+  { value: "custom", label: "Custom colours" },
 ];
 
 const ROLE_LABELS: Record<ColourRole, string> = {
@@ -92,8 +92,8 @@ export function ColourToggle({
           {mode === "custom"
             ? "Fine-tune each colour role individually."
             : brandPackAvailable
-              ? "Use your workspace colours instead of the template palette."
-              : "Add workspace colours in Brand Studio to use them here."}
+              ? "Use Brand Pack colours instead of the template palette."
+            : "Add Template colours or a Brand Pack in Brand Studio to use them here."}
         </span>
         <span className="flex shrink-0 items-center gap-1" aria-hidden="true">
           {COLOUR_ROLES.map((role) => (

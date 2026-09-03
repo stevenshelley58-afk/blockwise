@@ -49,9 +49,9 @@ export interface InputsPanelProps {
   businessNameDefault?: string;
   onBusinessNameChange?: (value: string) => void;
   /** Workspace library assets (Brand Studio uploads) available to pick. */
-  libraryAssets?: Array<{ url: string; label: string }>;
+  libraryAssets?: Array<{ id?: string; url: string; label: string }>;
   /** Picks a library asset for an image slot. */
-  onLibraryPick?: (key: string, url: string) => void;
+  onLibraryPick?: (key: string, sourceAssetId: string) => void | Promise<void>;
 }
 
 export function InputsPanel({
@@ -78,9 +78,9 @@ export function InputsPanel({
   const missingRequiredImages = requiredImageInputs.filter(input => !imageValues[input.key] && !defaultImageValues[input.key]);
 
   return (
-    <aside aria-label="Content" className={cn("w-full shrink-0 overflow-y-auto bg-card p-4 xl:w-auto", className)}>
+    <aside aria-label="Creative" className={cn("w-full shrink-0 overflow-y-auto bg-card p-4 xl:w-auto", className)}>
       <h3 className="mb-3 text-sm font-semibold text-foreground">
-        Content
+        Creative
       </h3>
       <p className="mb-4 text-xs leading-relaxed text-muted-foreground">
         These values fill both the Feed and Story designs — edit once, both update.
@@ -110,11 +110,11 @@ export function InputsPanel({
 
       {onBusinessNameChange ? (
         <div className="mb-5">
-          <Label htmlFor="content-business-name" className="mb-1 block text-sm font-medium">
+          <Label htmlFor="creative-business-name" className="mb-1 block text-sm font-medium">
             Business name
           </Label>
           <Input
-            id="content-business-name"
+            id="creative-business-name"
             type="text"
             value={businessName ?? ""}
             placeholder={businessNameDefault || "Your business name"}
@@ -140,18 +140,18 @@ export function InputsPanel({
               const value = textValues[input.key] ?? "";
               return (
                 <div key={input.key} className="block">
-                  <Label htmlFor={`content-${input.key}`} className="mb-1 block text-sm font-medium">{input.label}</Label>
+                  <Label htmlFor={`creative-${input.key}`} className="mb-1 block text-sm font-medium">{input.label}</Label>
                   <Input
-                    id={`content-${input.key}`}
+                    id={`creative-${input.key}`}
                     type="text"
                     value={value}
                     placeholder={input.placeholder || undefined}
                     maxLength={input.maxLength}
                     onChange={e => onTextChange(input.key, e.target.value)}
                     className="min-h-11 rounded-(--r-card) bg-muted/30"
-                    aria-describedby={`content-${input.key}-count`}
+                    aria-describedby={`creative-${input.key}-count`}
                   />
-                  <span id={`content-${input.key}-count`} className="mt-1 block text-right text-[11px] tabular-nums text-muted-foreground">
+                  <span id={`creative-${input.key}-count`} className="mt-1 block text-right text-[11px] tabular-nums text-muted-foreground">
                     {value.length}/{input.maxLength}
                   </span>
                 </div>
@@ -234,8 +234,8 @@ function ImageSlotControl({
   defaultUrl: string | null;
   onImageChange: (key: string, change: { file: File; previewUrl: string } | null) => void;
   onCropClick: () => void;
-  libraryAssets?: Array<{ url: string; label: string }>;
-  onLibraryPick?: (key: string, url: string) => void;
+  libraryAssets?: Array<{ id?: string; url: string; label: string }>;
+  onLibraryPick?: (key: string, sourceAssetId: string) => void | Promise<void>;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const libraryRef = useRef<HTMLDetailsElement>(null);
@@ -254,8 +254,8 @@ function ImageSlotControl({
     reader.readAsDataURL(file);
   };
 
-  const pickFromLibrary = (url: string) => {
-    onLibraryPick?.(input.key, url);
+  const pickFromLibrary = (sourceAssetId: string) => {
+    void onLibraryPick?.(input.key, sourceAssetId);
     if (libraryRef.current) libraryRef.current.open = false;
   };
 
@@ -267,9 +267,9 @@ function ImageSlotControl({
       <div className="grid grid-cols-3 gap-2 border-t border-border p-2">
         {libraryAssets!.map(asset => (
           <button
-            key={asset.url}
+            key={asset.id ?? asset.url}
             type="button"
-            onClick={() => pickFromLibrary(asset.url)}
+            onClick={() => asset.id && pickFromLibrary(asset.id)}
             className="group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-(--r-ctl)"
             aria-label={`Use library image ${asset.label}`}
           >
