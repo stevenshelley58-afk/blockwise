@@ -95,8 +95,8 @@ export function StudioShell({
               className={cn(
                 "mr-2 inline-block size-1.5 rounded-full",
                 metaConnectionStatus === "connected"
-                  ? "bg-emerald-400"
-                  : "bg-white/40",
+                  ? "bg-success"
+                  : "bg-(--faint)",
               )}
               aria-hidden
             />
@@ -118,39 +118,32 @@ export function StudioShell({
         </div>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex min-h-14 items-center border-b border-border bg-(--ink) px-4 text-(--surface) md:hidden">
-          {contextual ? (
+        {!contextual ? (
+          <header className="flex min-h-14 items-center border-b border-border bg-(--ink) px-4 text-(--surface) md:hidden">
             <Link
-              href="/ad-studio/ads"
-              className="mr-3 inline-flex min-h-11 items-center text-[11px] text-white/70"
-              aria-label="Back to ads"
+              href="/ad-studio"
+              className="flex min-w-0 items-center gap-2 font-display text-[15.5px] font-extrabold"
+              aria-label="Ad Studio home"
             >
-              <ArrowLeft size={16} aria-hidden />
+              <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-(--surface) text-sm text-(--ink)">
+                A
+              </span>
+              <span className="truncate">Ad Studio</span>
             </Link>
-          ) : null}
-          <Link
-            href="/ad-studio"
-            className="flex min-w-0 items-center gap-2 font-display text-[15.5px] font-extrabold"
-            aria-label="Ad Studio home"
-          >
-            <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-(--surface) text-sm text-(--ink)">
-              A
+            <span
+              className="ml-auto max-w-[42%] truncate text-[11px] text-white/60"
+              title={workspaceName}
+            >
+              {workspaceName}
             </span>
-            <span className="truncate">Ad Studio</span>
-          </Link>
-          <span
-            className="ml-auto max-w-[42%] truncate text-[11px] text-white/60"
-            title={workspaceName}
-          >
-            {workspaceName}
-          </span>
-        </header>
+          </header>
+        ) : null}
         <main className={cn("min-w-0 flex-1", !contextual && "pb-24 md:pb-0")}>
           {children}
         </main>
         {!contextual ? (
           <nav
-          className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-border bg-card px-1 pt-1.5 pb-[calc(.5rem+env(safe-area-inset-bottom))] md:hidden"
+            className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-border bg-card px-1 pt-1.5 pb-[calc(.5rem+env(safe-area-inset-bottom))] md:hidden"
             aria-label="Studio mobile navigation"
           >
             {items.map(({ href, label, icon: Icon, exact }) => {
