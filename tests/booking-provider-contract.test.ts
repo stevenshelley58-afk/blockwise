@@ -73,7 +73,20 @@ describe("snagtime event contract", () => {
     assert.equal(event.state, "booked");
     assert.equal(event.invitationToken, "inv-uuid.sig");
     assert.equal(event.customerEmail, "customer@example.com");
+    assert.equal(event.providerEventTypeId, "7");
     assert.equal(event.scheduledStartAt, "2026-09-02T09:00:00.000Z");
+  });
+
+  it("accepts SnagTime CUID event type IDs and normalizes them to strings", () => {
+    const raw = envelope();
+    ((raw.data as Record<string, unknown>).booking as Record<string, unknown>).eventTypeId = "evt_cuid_123";
+    const event = parseSnagtimeWebhook({ raw, providerEventId: "evt-cuid" });
+    assert.equal(event.providerEventTypeId, "evt_cuid_123");
+
+    for (const eventTypeId of ["", ` ${"x".repeat(129)} `, -1, 1.5, Number.MAX_SAFE_INTEGER + 1]) {
+      ((raw.data as Record<string, unknown>).booking as Record<string, unknown>).eventTypeId = eventTypeId;
+      assert.throws(() => parseSnagtimeWebhook({ raw, providerEventId: "evt-invalid-type" }), BookingWebhookError);
+    }
   });
 
   it("maps rescheduled and cancelled events, and rejects unsupported types without failing the delivery", () => {

@@ -17,7 +17,7 @@ import {
  *   "type": "booking.created" | "booking.rescheduled" | "booking.cancelled",
  *   "occurredAt": "<ISO-8601>",
  *   "data": {
- *     "booking": { "uid": "...", "eventTypeId": 1|null, "startTime": "...",
+ *     "booking": { "uid": "...", "eventTypeId": "cuid"|1|null, "startTime": "...",
  *                  "endTime": "...", "rescheduleUrl": "..."|null },
  *     "invitation": "<opaque Blockwise invitation token>",
  *     "attendee": { "email": "...", "name": "..." } | null
@@ -241,8 +241,13 @@ function normalizeIso(value: string): string {
 
 function optionalEventTypeId(value: unknown): string | null {
   if (value === null) return null;
-  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0) {
+  if (typeof value === "string") {
+    const normalized = value.trim();
+    if (normalized && normalized.length <= 128) return normalized;
+  } else if (typeof value === "number" && Number.isSafeInteger(value) && value >= 0) {
+    return String(value);
+  }
+  {
     throw new BookingWebhookError("Booking webhook data.booking.eventTypeId is invalid.", 400);
   }
-  return String(value);
 }
