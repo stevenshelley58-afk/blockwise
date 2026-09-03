@@ -44,7 +44,16 @@ describe("paused Ad Studio Meta publish planning", () => {
   it("maps legacy human CTA labels to a provider enum in the publish plan", () => {
     const state = publishState();
     state.ad.metaCta = "Book free appraisal";
-    (state.pack as { publishRequirements: { requiredCtaTypes: string[] } }).publishRequirements.requiredCtaTypes = [];
+    state.pack = {
+      ...state.pack,
+      metadata: {
+        ...state.pack.metadata,
+        publishRequirements: {
+          ...state.pack.metadata.publishRequirements,
+          requiredCtaTypes: [],
+        },
+      },
+    };
     const plan = buildPausedMetaPublishPlan(buildInput(validNewAdSetControls(), state));
     assert.deepEqual(plan.creatives.map(creative => creative.cta), ["CONTACT_US", "CONTACT_US"]);
   });
