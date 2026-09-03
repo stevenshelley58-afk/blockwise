@@ -11,6 +11,8 @@ export type AdStudioBrandAssetRow = {
   storage_path?: unknown;
   metadata_json?: unknown;
   created_at?: unknown;
+  width?: unknown;
+  height?: unknown;
 };
 
 export type AdStudioMediaLibraryAsset = {
