@@ -10,6 +10,8 @@ test("Next client Sentry initialization lives in the native instrumentation clie
   assert.match(client, /Sentry\.init\(/);
   assert.match(client, /NEXT_PUBLIC_SENTRY_DSN/);
   assert.match(client, /replaysOnErrorSampleRate:\s*1\.0/);
+  assert.match(client, /beforeSend\(event\)/);
+  assert.match(client, /redactValue\(event\)/);
 });
 
 test("VPS queue runtime durably records and logs task failures", () => {

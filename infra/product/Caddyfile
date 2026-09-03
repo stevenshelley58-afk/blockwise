@@ -1,50 +1,53 @@
+{
+	servers {
+		trusted_proxies static {$TRUSTED_PROXY_RANGES}
+		trusted_proxies_strict
+	}
+}
+
 # Frank's shared edge terminates public TLS. This internal router is explicitly
 # HTTP-only so proxying to product-caddy:80 cannot trigger an HTTPS redirect
 # loop or a second ACME certificate flow.
 #
 # Proxy chain: Frank edge -> product-caddy -> product-app.
-# trusted_proxies names the Frank edge network as the ONLY trusted hop, so
-# {client_ip} resolves to the real customer address and Caddy ignores any
-# client-supplied X-Forwarded-For entries. The resolved client IP is stamped
-# into X-Blockwise-Client-IP (overwriting whatever the client sent), and the
-# application trusts ONLY that header for rate limiting and audit.
+# Global trusted_proxies configuration names the Frank edge network
+# as the ONLY trusted hop, so {client_ip} resolves to the real customer
+# address and Caddy ignores any client-supplied X-Forwarded-For entries. The
+# resolved client IP is stamped into X-Blockwise-Client-IP (overwriting
+# whatever the client sent), and the application trusts ONLY that header.
 http://{$BLOCKWISE_PRODUCT_DOMAIN} {
-  encode zstd gzip
+	encode zstd gzip
 
-  # Ranges allowed to be the upstream proxy. Set TRUSTED_PROXY_RANGES in the
-  # Compose environment to the Frank edge network/subnet in production.
-  trusted_proxies {$TRUSTED_PROXY_RANGES|private_ranges}
+	@health path /healthz
+	handle @health {
+		respond "ok" 200
+	}
 
-  @health path /healthz
-  handle @health {
-    respond "ok" 200
-  }
+	handle_path /rest/v1/* {
+		reverse_proxy product-rest:3000
+	}
 
-  handle_path /rest/v1/* {
-    reverse_proxy product-rest:3000
-  }
+	handle_path /auth/v1/* {
+		reverse_proxy product-auth:9999
+	}
 
-  handle_path /auth/v1/* {
-    reverse_proxy product-auth:9999
-  }
+	handle_path /storage/v1/* {
+		reverse_proxy product-storage:5000
+	}
 
-  handle_path /storage/v1/* {
-    reverse_proxy product-storage:5000
-  }
+	handle_path /realtime/v1/* {
+		reverse_proxy product-realtime:4000
+	}
 
-  handle_path /realtime/v1/* {
-    reverse_proxy product-realtime:4000
-  }
+	handle /api/* {
+		reverse_proxy product-app:3000 {
+			header_up X-Blockwise-Client-IP "{client_ip}"
+		}
+	}
 
-  handle /api/* {
-    reverse_proxy product-app:3000 {
-      header_up X-Blockwise-Client-IP "{client_ip}"
-    }
-  }
-
-  handle {
-    reverse_proxy product-app:3000 {
-      header_up X-Blockwise-Client-IP "{client_ip}"
-    }
-  }
+	handle {
+		reverse_proxy product-app:3000 {
+			header_up X-Blockwise-Client-IP "{client_ip}"
+		}
+	}
 }
