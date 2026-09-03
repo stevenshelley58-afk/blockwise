@@ -80,11 +80,24 @@ test("OSS product compose is isolated and has no managed deployment endpoint", a
 
   const productCaddy = await read("infra/product/Caddyfile");
   assert.match(productCaddy, /^http:\/\/\{\$BLOCKWISE_PRODUCT_DOMAIN\} \{/m);
+  assert.match(productCaddy, /trusted_proxies static/);
+  assert.match(productCaddy, /trusted_proxies_strict/);
+  assert.doesNotMatch(productCaddy, /private_ranges/);
+  assert.doesNotMatch(productCaddy, /^trusted_proxies /m);
   assert.doesNotMatch(productCaddy, /^\{\$BLOCKWISE_PRODUCT_DOMAIN\} \{/m);
 
   const envExample = await read("infra/product/.env.example");
   assert.match(envExample, /^OPENAI_API_KEY=$/m);
   assert.match(envExample, /^META_APP_ID=$/m);
+  assert.match(compose, /TRUSTED_PROXY_RANGES/);
+  assert.ok(compose.includes("ip_range: ${BLOCKWISE_PRODUCT_NETWORK_IP_RANGE:-172.30.0.128/25}"));
+  assert.ok(compose.includes("BLOCKWISE_PRODUCT_NETWORK_IP_RANGE"));
+  const edgeCompose = await read("infra/coolify/docker-compose.edge.yml");
+  assert.ok(edgeCompose.includes("ipv4_address: ${FRANK_PRODUCT_EDGE_IP:-172.30.0.2}"));
+  assert.match(edgeCompose, /name: blockwise-product/);
+  assert.ok(envExample.includes("FRANK_PRODUCT_EDGE_IP=172.30.0.2"));
+  assert.ok(envExample.includes("TRUSTED_PROXY_RANGES=172.30.0.2/32"));
+  assert.ok(envExample.includes("BLOCKWISE_PRODUCT_NETWORK_IP_RANGE=172.30.0.128/25"));
   assert.match(envExample, /^META_APP_SECRET=$/m);
   assert.match(envExample, /^BLOCKWISE_DB_VOLUME_NAME=blockwise-product-db-data$/m);
   assert.match(envExample, /^BLOCKWISE_STORAGE_VOLUME_NAME=blockwise-product-storage-data$/m);
