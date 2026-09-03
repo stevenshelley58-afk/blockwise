@@ -2,6 +2,8 @@ import { assetUrlForRow, type AdStudioBrandAssetRow } from "./assets.ts";
 import { storagePathFromMediaSrc } from "./image-src.ts";
 import { createAdStudioMediaUrls } from "./media-urls.ts";
 import { isExampleBrandKitSourceUrl } from "./persistence.ts";
+import { adFormatLabel } from "./library-contract.ts";
+export { adFormatLabel } from "./library-contract.ts";
 
 // Inlined from deleted asset-roles.ts
 export type AssetRole = "property" | "person" | "logo" | "background";
@@ -21,6 +23,7 @@ export type LibraryAdModel = {
   name: string;
   src: string | null;
   format: string;
+  updatedAt: string | null;
 };
 
 type QueryClient = {
@@ -123,7 +126,7 @@ export async function loadAdStudioLibraryPage(input: {
       const revision = revisionByAd.get(String(row.id));
       const feedPath = typeof revision?.feed_png_path === "string" ? revision.feed_png_path : null;
       const storyPath = typeof revision?.story_png_path === "string" ? revision.story_png_path : null;
-      const raw = typeof revision?.feed_png_path === "string" ? revision.feed_png_path : typeof revision?.story_png_path === "string" ? revision.story_png_path : null;
+      const raw = firstPreviewPath(revision);
       const path = storagePathFromSource(input.workspaceId, raw);
       const src = path ? (signed[path]?.grid ?? null) : null;
       const templateId = String(row.template_id ?? "");
@@ -132,7 +135,8 @@ export async function loadAdStudioLibraryPage(input: {
         templateId: String(row.template_id ?? ""),
         name: typeof row.name === "string" && row.name.trim() ? row.name : "Untitled ad",
         src: src ?? (templateId ? `/api/adstudio/templates/${encodeURIComponent(templateId)}/sample?placement=feed` : null),
-        format: feedPath && storyPath ? "feed + story" : feedPath ? "feed" : storyPath ? "story" : "feed + story",
+        format: adFormatLabel(Boolean(feedPath), Boolean(storyPath)),
+        updatedAt: typeof row.updated_at === "string" ? row.updated_at : null,
       });
     }
   }
@@ -147,6 +151,12 @@ export async function loadAdStudioLibraryPage(input: {
         ? Buffer.from(JSON.stringify({ orderAt: lastOrderAt, id: lastId } satisfies Cursor)).toString("base64url")
         : null,
   };
+}
+
+function firstPreviewPath(revision: Record<string, unknown> | undefined): string | null {
+  if (typeof revision?.feed_png_path === "string") return revision.feed_png_path;
+  if (typeof revision?.story_png_path === "string") return revision.story_png_path;
+  return null;
 }
 
 function decodeCursor(value: string | null | undefined): Cursor | null {
