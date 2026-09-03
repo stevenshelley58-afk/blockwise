@@ -26,6 +26,13 @@ test("Brand Pack keeps honest first-run and save states", () => {
   assert.match(source, /busy === "scan"/);
 });
 
+test("colour picker stays open for in-picker clicks and supports Escape dismissal", () => {
+  assert.match(source, /data-brand-swatch/);
+  assert.match(source, /target\.closest\("\[data-brand-swatch\]"\)/);
+  assert.match(source, /event\.key === "Escape"/);
+  assert.match(source, /aria-expanded=\{open\}/);
+});
+
 test("the removed parallel Brand Pack visual system is absent", () => {
   assert.equal(existsSync("src/components/adstudio/brand-studio-styles.ts"), false);
   assert.equal(existsSync("src/components/adstudio/brand-preview.tsx"), false);

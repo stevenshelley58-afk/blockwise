@@ -99,12 +99,13 @@ function ColorSwatch({ label, value, sitePalette, open, onOpen, onClose, onChang
   }
 
   return (
-    <div className={`relative grid justify-items-center gap-2 ${open ? "z-40" : ""}`}>
+    <div data-brand-swatch className={`relative grid justify-items-center gap-2 ${open ? "z-40" : ""}`}>
       <button
         type="button"
         className="size-16 rounded-(--r-card) border border-border shadow-sm transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
         style={{ background: value }}
         aria-label={`Edit ${label} colour`}
+        aria-expanded={open}
         onClick={(event) => {
           event.stopPropagation();
           open ? onClose() : onOpen();
@@ -349,11 +350,20 @@ function BrandStudioEditor({ brandKit: initialKit, returnTo }: { brandKit: AdStu
   const headlineSample = "What's your home worth in today's market?";
 
   useEffect(() => {
-    function close() {
+    function closeOnOutsideClick(event: MouseEvent) {
+      const target = event.target;
+      if (target instanceof Element && target.closest("[data-brand-swatch]")) return;
       setOpenSwatch(null);
     }
-    document.addEventListener("click", close);
-    return () => document.removeEventListener("click", close);
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpenSwatch(null);
+    }
+    document.addEventListener("click", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("click", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
   }, []);
 
   function flash(tone: "ok" | "err", text: string) {
