@@ -240,7 +240,7 @@ The two workstreams can move independently only after one exact contract exists.
    contracts/scraper/v1/CHANGELOG.md
    ```
 
-4. Implement the exact endpoints, `StructuralShapeV1` request-recipe/schema fingerprint, requested/effective scope, coverage, unified state/event/error taxonomy, multi-dimensional budgets/deadlines, deterministic checksum/signature fixtures, authentication, `IdempotencyMaterialV1`, artifact and retention rules in the companion plan. Add named schemas for request recipe/shape, coverage, scope, acquisition/budget/dataset/signature receipts, verification keys, warnings and terminal errors.
+4. Implement the exact companion-plan endpoints and rules. The frozen schemas include request recipe/`StructuralShapeV1`, scope, coverage, unified states/events/errors, multidimensional budgets/deadlines, acquisition/dataset/signature receipts, trusted verification-key metadata, `IdempotencyMaterialV1`, artifacts, warnings and retention. Publish deterministic checksum/signature fixtures.
 5. Add a second canonical contract package for Hermes-to-runtime execution:
 
    ```text
