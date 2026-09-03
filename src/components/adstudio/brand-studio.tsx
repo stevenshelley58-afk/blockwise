@@ -197,9 +197,7 @@ function TagRow({
       {items.map((item) => (
         <span key={item} className={tone === "no" ? "no" : ""}>
           {item}
-          <b role="button" aria-label={`Remove ${item}`} onClick={() => onRemove(item)}>
-            ✕
-          </b>
+          <button type="button" aria-label={`Remove ${item}`} onClick={() => onRemove(item)}>Remove</button>
         </span>
       ))}
       {adding ? (
@@ -896,15 +894,15 @@ const BRAND_STYLES = `
 .bs-screen button{cursor:pointer;border:0;background:none;color:inherit}
 .bs-screen .asset-upload-trigger{border:1.5px dashed var(--line);background:#fff;color:var(--ink)}
 .bs-screen .asset-upload-clear{border:1px solid var(--line);background:#fff;color:var(--muted)}
-.bs-screen .btn{height:38px;padding:0 16px;border-radius:9px;display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:13.5px}
-.bs-screen .btn.pri{background:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(18,62,117,.28)}
+.bs-screen .btn{min-height:44px;padding:0 16px;border-radius:var(--r-pill,9999px);display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:13.5px}
+.bs-screen .btn.pri{background:var(--ink,#16181d);color:var(--surface,#fff);box-shadow:var(--shadow-card,0 1px 2px rgba(16,18,23,.04),0 8px 24px rgba(16,18,23,.06))}
 .bs-screen .btn.pri:hover{background:var(--accent-strong)}
-.bs-screen .btn.sec{background:#fff;border:1px solid var(--line);box-shadow:0 1px 2px rgba(15,23,42,.05)}
+.bs-screen .btn.sec{background:var(--surface,#fff);border:1px solid var(--line,#e9ebef);box-shadow:var(--shadow-card,0 1px 2px rgba(16,18,23,.04),0 8px 24px rgba(16,18,23,.06))}
 .bs-screen .btn:disabled{opacity:.55;cursor:not-allowed}
 .bs-screen .chip{font-size:11.5px;font-weight:650;border-radius:999px;padding:5px 11px}
 .bs-screen .chip.good{background:#ecfdf5;color:#006d38}
 .bs-screen .chip.warn{background:#fdf8ee;color:#8a5a00}
-.bs-top{height:58px;background:#fff;border-bottom:1px solid var(--line-soft);display:flex;align-items:center;gap:14px;padding:0 20px;flex:0 0 auto}
+.bs-top{min-height:58px;background:var(--surface,#fff);border-bottom:1px solid var(--line,#e9ebef);display:flex;align-items:center;gap:14px;padding:7px 20px;flex:0 0 auto;flex-wrap:wrap}
 .bs-top .back{color:var(--muted);font-weight:600;font-size:13px;text-decoration:none}
 .bs-top h1{font-size:15.5px;font-weight:680;margin:0}
 .bs-top .grow{margin-left:auto;display:flex;gap:9px;align-items:center}
@@ -955,7 +953,7 @@ const BRAND_STYLES = `
 .bs-logo-proof small{display:flex;justify-content:space-between;padding:8px 12px;font-size:11px;color:var(--muted);background:#fff}
 .bs-logo-proof small b{font-weight:650;color:var(--ink)}
 .bs-logo-proof small em{font-style:normal;color:var(--faint,#94a3b8)}
-.bs-body{display:grid;grid-template-columns:1fr 320px;gap:22px;padding:24px 28px 40px}
+.bs-body{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:22px;padding:24px 28px 40px}
 .bs-main{display:grid;gap:18px;align-content:start;min-width:0}
 .bs-card{background:#fff;border-radius:14px;box-shadow:0 1px 2px rgba(15,23,42,.05),0 0 0 1px rgba(15,23,42,.03);padding:20px;display:grid;gap:14px}
 .bs-card h3{font-size:15.5px;font-weight:680;letter-spacing:-.2px;margin:0}
@@ -999,8 +997,8 @@ const BRAND_STYLES = `
 .bs-tagrow{display:flex;flex-wrap:wrap;gap:6px}
 .bs-tagrow span{display:inline-flex;align-items:center;gap:7px;background:var(--accent-tint);color:var(--accent);border-radius:999px;padding:7px 12px;font-size:12.5px;font-weight:600}
 .bs-tagrow span.no{background:#fdf3f2;color:#ba1a1a}
-.bs-tagrow span b{cursor:pointer;opacity:.55;font-weight:700}
-.bs-tagrow span b:hover{opacity:1}
+.bs-tagrow span button{min-height:28px;padding:0 4px;border:0;background:transparent;color:inherit;cursor:pointer;font-size:10px;font-weight:700;opacity:.65;text-decoration:underline;text-underline-offset:2px}
+.bs-tagrow span button:hover,.bs-tagrow span button:focus-visible{opacity:1}
 .bs-tagrow .addbtn{display:inline-flex;align-items:center;gap:6px;border:1.5px dashed var(--line);color:var(--muted);border-radius:999px;padding:6px 13px;font-size:12.5px;font-weight:600;background:transparent}
 .bs-tagrow .addbtn:hover{color:var(--accent);border-color:var(--accent)}
 .bs-tagrow input{border:1.5px solid var(--accent);border-radius:999px;padding:6px 13px;font-size:12.5px;font-weight:600;outline:0;width:160px;background:#fff;color:var(--ink)}
@@ -1044,5 +1042,13 @@ const BRAND_STYLES = `
   .bs-screen .scanline{display:grid}
   .bs-screen .go{width:100%;min-height:44px}
   .bs-two{grid-template-columns:1fr}
+}
+@media(max-width:520px){
+  .bs-top{gap:8px;padding:7px 12px}
+  .bs-top h1{font-size:15px}
+  .bs-top .grow{width:100%;margin-left:0;justify-content:flex-end}
+  .bs-hero{padding:24px 16px 68px}
+  .bs-body{padding:18px 16px 32px}
+  .bs-card{padding:16px}
 }
 `;
