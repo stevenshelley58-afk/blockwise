@@ -44,7 +44,11 @@ export async function adoptWorkspaceAsset(input: {
   });
   if (prepared.error) throw new AdoptAssetError("storage", "We could not prepare this image.");
   const result = ledgerResult(prepared.data);
-  if (!result.ok) throw new AdoptAssetError(result.code === "workspace_upload_quota" ? "quota" : "storage", "We could not store this image.");
+  if (!result.ok) {
+    if (result.code === "upload_cleanup_in_progress") throw new AdoptAssetError("cleanup", "This image is being cleaned up. Try again.");
+    throw new AdoptAssetError(result.code === "workspace_upload_quota" ? "quota" : "storage", "We could not store this image.");
+  }
+  await removeStale(input.serviceSupabase, result.stalePaths);
   if (result.status === "finalized") return { ref, sourceAssetId: String(asset.id) };
   if (!result.reservationId) throw new AdoptAssetError("storage", "We could not reserve this image.");
   const upload = await input.serviceSupabase.storage.from(CUSTOMER_IMAGE_BUCKET).upload(parsed.path, bytes, { contentType: mime, upsert: false });
@@ -65,19 +69,28 @@ export async function adoptWorkspaceAsset(input: {
 
 export class AdoptAssetError extends Error {
   readonly code: "source_not_found" | "source_invalid" | "source_expired" | "quota" | "storage" | "database";
-  constructor(code: "source_not_found" | "source_invalid" | "source_expired" | "quota" | "storage" | "database", message: string) { super(message); this.code = code; }
+  constructor(code: "source_not_found" | "source_invalid" | "source_expired" | "quota" | "storage" | "database" | "cleanup", message: string) { super(message); this.code = code; }
 }
 
 async function discard(input: { serviceSupabase: SupabaseClient }, reservationId: string, workspaceId: string, adId: string, path: string) {
-  await input.serviceSupabase.rpc("adstudio_discard_customer_image_upload", { p_reservation_id: reservationId, p_workspace_id: workspaceId, p_ad_id: adId, p_object_path: path });
+  const claimed = await input.serviceSupabase.rpc("adstudio_discard_customer_image_upload", { p_reservation_id: reservationId, p_workspace_id: workspaceId, p_ad_id: adId, p_object_path: path });
+  if (claimed.error || claimed.data !== true) return;
   await input.serviceSupabase.storage.from(CUSTOMER_IMAGE_BUCKET).remove([path]);
   await input.serviceSupabase.rpc("adstudio_complete_customer_image_stale_cleanup", { p_reservation_id: reservationId, p_object_path: path });
 }
 
-function ledgerResult(value: unknown): { ok: boolean; status?: string; reservationId?: string; code?: string } {
+async function removeStale(supabase: SupabaseClient, entries: Array<{ id: string; path: string }> | undefined) {
+  for (const entry of entries ?? []) {
+    const removed = await supabase.storage.from(CUSTOMER_IMAGE_BUCKET).remove([entry.path]);
+    if (removed.error) continue;
+    await supabase.rpc("adstudio_complete_customer_image_stale_cleanup", { p_reservation_id: entry.id, p_object_path: entry.path });
+  }
+}
+
+function ledgerResult(value: unknown): { ok: boolean; status?: string; reservationId?: string; code?: string; stalePaths?: Array<{ id: string; path: string }> } {
   if (!value || typeof value !== "object") return { ok: false };
   const v = value as Record<string, unknown>;
-  return { ok: v.ok === true, status: typeof v.status === "string" ? v.status : undefined, reservationId: typeof v.reservation_id === "string" ? v.reservation_id : undefined, code: typeof v.code === "string" ? v.code : undefined };
+  return { ok: v.ok === true, status: typeof v.status === "string" ? v.status : undefined, reservationId: typeof v.reservation_id === "string" ? v.reservation_id : undefined, code: typeof v.code === "string" ? v.code : undefined, stalePaths: Array.isArray(v.stale_paths) ? v.stale_paths.flatMap((e) => e && typeof e === "object" && typeof (e as any).id === "string" && typeof (e as any).path === "string" ? [{ id: (e as any).id, path: (e as any).path }] : []) : undefined };
 }
 
 function sniffMime(bytes: Buffer): CustomerImageMime | null {

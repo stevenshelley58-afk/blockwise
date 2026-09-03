@@ -43,6 +43,7 @@ type MediaLibraryProps = {
   ads: LibraryAd[];
   nextAssetCursor: string | null;
   nextAdCursor: string | null;
+  assetsOnly?: boolean;
 };
 
 type RoleFilter = AssetRole | "all";
@@ -61,6 +62,7 @@ export function MediaLibrary({
   ads,
   nextAssetCursor: initialAssetCursor,
   nextAdCursor: initialAdCursor,
+  assetsOnly = false,
 }: MediaLibraryProps) {
   const [uploaded, setUploaded] = useState<LibraryAsset[]>([]);
   const [loadedAssets, setLoadedAssets] = useState(assets);
@@ -168,7 +170,7 @@ export function MediaLibrary({
       <Tabs defaultValue="assets">
         <TabsList>
           <TabsTrigger value="assets">Assets ({allAssets.length})</TabsTrigger>
-          <TabsTrigger value="ads">Ads ({loadedAds.length})</TabsTrigger>
+          {!assetsOnly ? <TabsTrigger value="ads">Ads ({loadedAds.length})</TabsTrigger> : null}
         </TabsList>
 
         <TabsContent value="assets" className="mt-4">
@@ -224,7 +226,7 @@ export function MediaLibrary({
           ) : null}
         </TabsContent>
 
-        <TabsContent value="ads" className="mt-4">
+        {!assetsOnly ? <TabsContent value="ads" className="mt-4">
           {loadedAds.length > 0 ? (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
               {loadedAds.map((ad) => (
@@ -275,7 +277,7 @@ export function MediaLibrary({
               </Button>
             </div>
           ) : null}
-        </TabsContent>
+        </TabsContent> : null}
       </Tabs>
     </div>
   );
