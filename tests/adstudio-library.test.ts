@@ -16,6 +16,14 @@ test("ad library status is conservative and never treats Meta creation as active
   assert.equal(deriveAdLibraryStatus({ metaEffectiveStatus: "ACTIVE" }), "active");
   assert.equal(deriveAdLibraryStatus({ metaEffectiveStatus: "PAUSED", endedAt: "2026-09-01T00:00:00Z" }), "ended");
   assert.equal(deriveAdLibraryStatus({ status: "created_on_meta" }), "saved");
+  assert.equal(deriveAdLibraryStatus({ mutationActions: [
+    { action: "activate", status: "applied", updatedAt: "2026-09-03T00:00:00Z" },
+    { action: "pause", status: "applied", updatedAt: "2026-09-02T00:00:00Z" },
+  ] }), "active");
+  assert.equal(deriveAdLibraryStatus({ mutationActions: [
+    { action: "activate", status: "applied", updatedAt: "2026-09-02T00:00:00Z" },
+    { action: "pause", status: "applied", updatedAt: "2026-09-03T00:00:00Z" },
+  ] }), "ended");
 });
 
 test("ad format labels reflect the saved revision render outputs", () => {
@@ -38,13 +46,13 @@ test("ad library filtering and sorting preserve exact ad identity", () => {
 
 test("asset library filters every role and sorts without mutating the source", () => {
   const assets = [
-    { id: "logo", label: "North logo", type: "logo", role: "logo" as const, createdAt: "2026-09-02T00:00:00Z" },
-    { id: "person", label: "Mia headshot", type: "headshot", role: "person" as const, createdAt: "2026-09-03T00:00:00Z" },
+    { id: "logo", label: "North logo", type: "logo", role: "logo" as const, createdAt: "2026-09-02T00:00:00Z", lastUsedAt: "2026-09-04T00:00:00Z" },
+    { id: "person", label: "Mia headshot", type: "headshot", role: "person" as const, createdAt: "2026-09-03T00:00:00Z", lastUsedAt: null },
     { id: "property", label: "Front elevation", type: "listing_image", role: "property" as const, createdAt: "2026-09-01T00:00:00Z" },
   ];
   assert.deepEqual(filterAndSortAssets(assets, { role: "person" }).map((asset) => asset.id), ["person"]);
   assert.deepEqual(filterAndSortAssets(assets, { query: "logo" }).map((asset) => asset.id), ["logo"]);
-  assert.deepEqual(filterAndSortAssets(assets, { sort: "recent" }).map((asset) => asset.id), ["person", "logo", "property"]);
+  assert.deepEqual(filterAndSortAssets(assets, { sort: "recent" }).map((asset) => asset.id), ["logo", "person", "property"]);
   assert.deepEqual(assets.map((asset) => asset.id), ["logo", "person", "property"]);
 });
 

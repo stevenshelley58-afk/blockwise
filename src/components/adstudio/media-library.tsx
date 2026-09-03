@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { AD_IMAGE_MAX_BYTES, AD_IMAGE_UPLOAD_TYPES, validateAssetUploadFile } from "@/lib/upload/asset-file";
 import { filterAndSortAssets } from "@/lib/adstudio/library-contract";
@@ -127,7 +128,10 @@ export function MediaLibrary({ workspaceId, brandKitId, assets, nextAssetCursor:
             <RoleButton active={filter === "all"} count={allAssets.length} onClick={() => setFilter("all")}>All</RoleButton>
             {ROLE_ORDER.map((role) => <RoleButton key={role} active={filter === role} count={counts[role]} onClick={() => setFilter(role)}>{ROLE_META[role].plural}</RoleButton>)}
           </div>
-          <label><span className="sr-only">Sort assets</span><select value={sort} onChange={(event) => setSort(event.target.value as SortMode)} aria-label="Sort assets" className="h-11 rounded-(--r-card) border border-(--line-heavy) bg-(--surface) px-3 text-sm font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><option value="recent">Recently used</option><option value="name">Name</option><option value="role">Role</option></select></label>
+          <Select value={sort} onValueChange={(value) => setSort(value as SortMode)}>
+            <SelectTrigger aria-label="Sort assets" className="h-11 w-full rounded-(--r-card) border-(--line-heavy) bg-(--surface) text-sm font-semibold text-foreground lg:w-auto"><SelectValue /></SelectTrigger>
+            <SelectContent><SelectItem value="recent">Recently used</SelectItem><SelectItem value="name">Name</SelectItem><SelectItem value="role">Role</SelectItem></SelectContent>
+          </Select>
         </div>
       </section>
 

@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   AD_LIBRARY_STATUS_LABEL,
   filterAndSortAds,
@@ -61,14 +62,16 @@ export function AdsLibrary({ ads }: { ads: LibraryAdModel[] }) {
               </FilterButton>
             ))}
           </div>
-          <label className="flex min-h-11 shrink-0 items-center gap-2 text-xs font-semibold text-muted-foreground">
-            <span className="sr-only">Sort ads</span>
-            <select value={sort} onChange={(event) => setSort(event.target.value as SortMode)} aria-label="Sort ads" className="h-11 rounded-(--r-card) border border-(--line-heavy) bg-(--surface) px-3 text-sm font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-              <option value="recent">Recently edited</option>
-              <option value="name">Name</option>
-              <option value="status">Status</option>
-            </select>
-          </label>
+          <Select value={sort} onValueChange={(value) => setSort(value as SortMode)}>
+            <SelectTrigger aria-label="Sort ads" className="h-11 w-full shrink-0 rounded-(--r-card) border-(--line-heavy) bg-(--surface) text-sm font-semibold text-foreground lg:w-auto">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="recent">Recently edited</SelectItem>
+              <SelectItem value="name">Name</SelectItem>
+              <SelectItem value="status">Status</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </section>
 

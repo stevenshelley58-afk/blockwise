@@ -26,7 +26,14 @@ export function deriveAdLibraryStatus(input: {
   metaConfiguredStatus?: unknown;
   metaEffectiveStatus?: unknown;
   endedAt?: unknown;
-  mutationActions?: readonly { action?: unknown; status?: unknown }[];
+  mutationActions?: readonly {
+    action?: unknown;
+    status?: unknown;
+    updatedAt?: unknown;
+    updated_at?: unknown;
+    createdAt?: unknown;
+    created_at?: unknown;
+  }[];
 }): AdLibraryStatus {
   const values = [
     input.status,
@@ -38,11 +45,22 @@ export function deriveAdLibraryStatus(input: {
     .filter((value): value is string => typeof value === "string")
     .map((value) => value.trim().toLowerCase().replace(/[\s-]+/g, "_"));
 
-  const appliedActions = (input.mutationActions ?? []).filter((mutation) => mutation.status === "applied").map((mutation) => mutation.action);
-  if (input.endedAt || appliedActions.includes("pause") || values.some((value) => ["ended", "archived", "deleted", "expired", "completed"].includes(value))) {
+  const latestAppliedMutation = [...(input.mutationActions ?? [])]
+    .filter((mutation) => normalizeStatusValue(mutation.status) === "applied")
+    .map((mutation, index) => ({
+      mutation,
+      index,
+      at: mutation.updatedAt ?? mutation.updated_at ?? mutation.createdAt ?? mutation.created_at,
+    }))
+    .sort((a, b) => dateValue(b.at) - dateValue(a.at) || a.index - b.index)[0]?.mutation;
+  const latestAction = normalizeStatusValue(latestAppliedMutation?.action);
+  if (latestAction === "activate") {
+    return "active";
+  }
+  if (latestAction === "pause" || input.endedAt || values.some((value) => ["ended", "archived", "deleted", "expired", "completed"].includes(value))) {
     return "ended";
   }
-  if (appliedActions.includes("activate") || values.some((value) => ["active", "active_delivery", "delivering"].includes(value))) {
+  if (values.some((value) => ["active", "active_delivery", "delivering"].includes(value))) {
     return "active";
   }
   if (values.some((value) => ["paused", "paused_live", "created_on_meta_paused", "created_paused"].includes(value))) {
@@ -81,8 +99,12 @@ export function filterAndSortAds<T extends LibraryAdFilterItem>(
 }
 
 const STATUS_ORDER: AdLibraryStatus[] = ["saved", "created_on_meta_paused", "active", "ended"];
-function dateValue(value: string | null): number {
-  const parsed = value ? Date.parse(value) : 0;
+function normalizeStatusValue(value: unknown): string {
+  return typeof value === "string" ? value.trim().toLowerCase().replace(/[\s-]+/g, "_") : "";
+}
+
+function dateValue(value: unknown): number {
+  const parsed = typeof value === "string" ? Date.parse(value) : 0;
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
@@ -92,6 +114,7 @@ export type LibraryAssetFilterItem = {
   type: string;
   role: "property" | "person" | "logo" | "background";
   createdAt: string | null;
+  lastUsedAt?: string | null;
 };
 
 export function filterAndSortAssets<T extends LibraryAssetFilterItem>(
@@ -108,6 +131,8 @@ export function filterAndSortAssets<T extends LibraryAssetFilterItem>(
     .sort((a, b) => {
       if (sort === "name") return a.label.localeCompare(b.label) || a.id.localeCompare(b.id);
       if (sort === "role") return roleOrder.indexOf(a.role) - roleOrder.indexOf(b.role) || a.label.localeCompare(b.label);
-      return dateValue(b.createdAt) - dateValue(a.createdAt) || a.id.localeCompare(b.id);
+      // Last-use metadata is optional in the existing asset model. When it is
+      // unavailable, creation time is the honest and deterministic fallback.
+      return dateValue(b.lastUsedAt ?? b.createdAt) - dateValue(a.lastUsedAt ?? a.createdAt) || a.id.localeCompare(b.id);
     });
 }
