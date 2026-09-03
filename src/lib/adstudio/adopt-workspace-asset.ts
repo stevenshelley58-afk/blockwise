@@ -1,8 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { isWorkspaceMediaPath } from "./media-urls";
-import { buildCustomerImageRef, CUSTOMER_IMAGE_BUCKET, imageSha256, parseCustomerImageRef, type CustomerImageMime } from "./customer-image-ref";
-import { CUSTOMER_IMAGE_MAX_BYTES, validateCustomerImageBytes } from "./image-validation";
+import { isWorkspaceMediaPath } from "./media-urls.ts";
+import { buildCustomerImageRef, CUSTOMER_IMAGE_BUCKET, imageSha256, parseCustomerImageRef, type CustomerImageMime } from "./customer-image-ref.ts";
+import { CUSTOMER_IMAGE_MAX_BYTES, validateCustomerImageBytes } from "./image-validation.ts";
 
 type AssetRow = { id: unknown; workspace_id: unknown; storage_path: unknown; asset_type: unknown };
 
