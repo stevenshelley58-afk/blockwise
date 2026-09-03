@@ -336,6 +336,7 @@ networks:
     ipam:
       config:
         - subnet: ${BLOCKWISE_PRODUCT_NETWORK_SUBNET:-172.30.0.0/24}
+          ip_range: 172.30.0.128/25
 
 volumes:
   blockwise-product-db-data:
