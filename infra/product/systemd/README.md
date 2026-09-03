@@ -10,5 +10,6 @@ Install the script root-owned outside the writable checkout, then install and en
     sudo systemctl enable --now blockwise-email-outbox-drain.timer
 
 The service runs as unprivileged hermes and loads the root-readable deployment environment before dropping privileges.
+Keep /srv/blockwise/product/.env owned by root with mode 0600 so only systemd can read the secrets.
 The timer is fail-closed when EMAIL_PROVIDER or the signed internal-auth secret is absent.
-Keep /srv/blockwise/product/.env mode 0600; the signer never puts the secret in process arguments.
+The signer never puts the secret in process arguments.
