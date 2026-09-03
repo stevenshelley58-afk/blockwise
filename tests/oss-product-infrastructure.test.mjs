@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import { test } from "node:test";
 
 const root = new URL("../", import.meta.url);
@@ -271,6 +271,16 @@ test("OSS product build and reconciliation contracts avoid local secrets and est
     .map((line) => line.trim())
     .filter((line) => line && !line.startsWith("#"));
   assert.ok(allowlistedMigrations.includes("202605260001_initial_blockwise.sql"));
+  const migrationFiles = (await readdir("supabase/migrations"))
+    .filter((name) => name.endsWith(".sql"));
+  const allowlistBaseline = "20260830020000_direct_template_artifact.sql";
+  const futureProductionMigrations = migrationFiles.filter((name) =>
+    name > allowlistBaseline && !/research|apify/i.test(name));
+  assert.deepEqual(
+    futureProductionMigrations.filter((name) => !allowlistedMigrations.includes(name)),
+    [],
+    "new production migrations must be added to the product allowlist",
+  );
   assert.ok(allowlistedMigrations.every((line) => !/research|hermes/i.test(line)));
   assert.deepEqual([...allowlistedMigrations].sort(), allowlistedMigrations);
 });
