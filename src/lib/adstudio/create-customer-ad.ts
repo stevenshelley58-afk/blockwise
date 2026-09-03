@@ -75,10 +75,3 @@ export async function loadCustomerAd(supabase: SupabaseClient, workspaceId: stri
   if (!parsed.success) throw new InvalidActiveRevisionError(row.active_revision_id, parsed.error.issues.map(i => `${i.path.join(".") || "(document)"}: ${i.message}`));
   return { adId: row.id, workspaceId, name: row.name, templateId: row.template_id, initialDocument: parsed.data, revisionNumber: Number(revision.revision_number) };
 }
-
-
-/**
- * Explicit recovery action: detach the damaged revision as the ad's ACTIVE
- * revision so the editor can open with a fresh document. The revision row
- * itself is NOT deleted — it stays in ad_revisions for support recovery.
- */
