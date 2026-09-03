@@ -94,8 +94,26 @@ const nextConfig: NextConfig = {
     ]
       .filter((value): value is string => Boolean(value))
       .join(" ");
-    const imgSrc = ["'self'", "data:", "blob:", researchStorageOrigin, "https://*.fbcdn.net", "https://*.cdninstagram.com", "https://www.facebook.com"].filter((value): value is string => Boolean(value)).join(" ");
-    const mediaSrc = ["'self'", "blob:", researchStorageOrigin, "https://*.fbcdn.net", "https://*.cdninstagram.com"].filter((value): value is string => Boolean(value)).join(" ");
+    const imgSrc = [
+      "'self'",
+      "data:",
+      "blob:",
+      researchStorageOrigin,
+      "https://*.fbcdn.net",
+      "https://*.cdninstagram.com",
+      "https://www.facebook.com",
+    ]
+      .filter((value): value is string => Boolean(value))
+      .join(" ");
+    const mediaSrc = [
+      "'self'",
+      "blob:",
+      researchStorageOrigin,
+      "https://*.fbcdn.net",
+      "https://*.cdninstagram.com",
+    ]
+      .filter((value): value is string => Boolean(value))
+      .join(" ");
     return [
       {
         source: "/:path*",
