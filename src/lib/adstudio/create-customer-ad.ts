@@ -3,14 +3,15 @@ import type { AdTemplate } from "../../../packages/ad-template-contract/src/type
 import { adDocumentSchema, type AdDocumentParsed } from "../../../packages/ad-template-contract/src/schema.ts";
 
 // ---------------------------------------------------------------------------
-// Customer ad rows (ad_customer_ads) — created server-side so the editor has
-// an adId to Save against. One ad per (workspace, direct template): opening a
-// template reuses the existing row (idempotent), so re-saves keep revision history.
+// Customer ad rows (ad_customer_ads) — created only by an explicit action.
+// A template is a starting point, not an identity: a workspace may create
+// multiple intentional ads from the same template.
 // ---------------------------------------------------------------------------
 
 export interface CustomerAdRef {
   adId: string;
   workspaceId: string;
+  name?: string;
   initialDocument?: AdDocumentParsed;
   revisionNumber?: number;
 }
@@ -18,54 +19,25 @@ export interface CustomerAdRef {
 /** A saved revision is user data; never replace it with a blank document. */
 export class InvalidActiveRevisionError extends Error {
   readonly code = "invalid_active_revision" as const;
+  /** The revision row that could not be parsed (for logs and recovery UI). */
+  readonly revisionId: string | null;
+  /** Human-readable zod issues, safe to show in the recovery screen. */
+  readonly issues: string[];
 
-  constructor() {
+  constructor(revisionId: string | null = null, issues: string[] = []) {
     super("The saved ad revision is invalid and cannot be loaded safely.");
     this.name = "InvalidActiveRevisionError";
+    this.revisionId = revisionId;
+    this.issues = issues;
   }
 }
 
-export async function getOrCreateCustomerAd(
+export async function createCustomerAd(
   supabase: SupabaseClient,
   workspaceId: string,
   pack: AdTemplate,
+  idempotencyKey?: string,
 ): Promise<CustomerAdRef> {
-  const { data: existing, error: existingError } = await supabase
-    .from("ad_customer_ads")
-    .select("id, active_revision_id")
-    .eq("workspace_id", workspaceId)
-    .eq("template_id", pack.templateId)
-    .maybeSingle();
-  if (existingError) {
-    throw new Error(`Failed to load customer ad: ${existingError.message}`);
-  }
-
-  if (existing) {
-    const existingRow = existing as { id: string; active_revision_id?: string | null };
-    if (!existingRow.active_revision_id) return { adId: existingRow.id, workspaceId };
-    const { data: revision, error: revisionError } = await supabase
-      .from("ad_revisions")
-      .select("document_json, revision_number")
-      .eq("id", existingRow.active_revision_id)
-      .eq("workspace_id", workspaceId)
-      .maybeSingle();
-    if (revisionError) {
-      throw new Error(`Failed to load saved ad revision: ${revisionError.message}`);
-    }
-    // An active revision is authoritative user data. If it is absent or fails
-    // validation, fail closed so the editor cannot silently hydrate defaults
-    // and overwrite the user's saved content on the next save.
-    if (!revision) throw new InvalidActiveRevisionError();
-    const parsedRevision = adDocumentSchema.safeParse(revision.document_json);
-    if (!parsedRevision.success) throw new InvalidActiveRevisionError();
-    return {
-      adId: existingRow.id,
-      workspaceId,
-      initialDocument: parsedRevision.data as AdDocumentParsed,
-      revisionNumber: revision.revision_number as number | undefined,
-    };
-  }
-
   const { data: created, error } = await supabase
     .from("ad_customer_ads")
     .insert({
@@ -73,13 +45,33 @@ export async function getOrCreateCustomerAd(
       template_id: pack.templateId,
       colour_mode: "template",
       resolved_colour_map: pack.semanticColours,
+      creation_key: idempotencyKey ?? null,
     })
     .select("id")
     .single();
 
+  if (error?.code === "23505" && idempotencyKey) {
+    const { data: replay } = await supabase.from("ad_customer_ads").select("id").eq("workspace_id", workspaceId).eq("creation_key", idempotencyKey).single();
+    if (replay) return { adId: String(replay.id), workspaceId };
+  }
   if (error || !created) {
     throw new Error(error?.message ?? "Failed to create customer ad");
   }
 
   return { adId: (created as { id: string }).id, workspaceId };
+}
+export class CustomerAdNotFoundError extends Error {}
+
+/** Load an existing ad and its active revision. This function is read-only. */
+export async function loadCustomerAd(supabase: SupabaseClient, workspaceId: string, adId: string): Promise<CustomerAdRef & { templateId: string }> {
+  const { data: ad, error } = await supabase.from("ad_customer_ads").select("id, name, template_id, active_revision_id").eq("id", adId).eq("workspace_id", workspaceId).maybeSingle();
+  if (error) throw new Error(`Failed to load ad: ${error.message}`);
+  if (!ad) throw new CustomerAdNotFoundError("Ad not found");
+  const row = ad as { id: string; name?: string; template_id: string; active_revision_id?: string | null };
+  if (!row.active_revision_id) return { adId: row.id, workspaceId, name: row.name, templateId: row.template_id };
+  const { data: revision, error: revisionError } = await supabase.from("ad_revisions").select("document_json, revision_number").eq("id", row.active_revision_id).eq("workspace_id", workspaceId).maybeSingle();
+  if (revisionError || !revision) throw new InvalidActiveRevisionError(row.active_revision_id, ["The saved revision row could not be loaded."]);
+  const parsed = adDocumentSchema.safeParse(revision.document_json);
+  if (!parsed.success) throw new InvalidActiveRevisionError(row.active_revision_id, parsed.error.issues.map(i => `${i.path.join(".") || "(document)"}: ${i.message}`));
+  return { adId: row.id, workspaceId, name: row.name, templateId: row.template_id, initialDocument: parsed.data, revisionNumber: Number(revision.revision_number) };
 }

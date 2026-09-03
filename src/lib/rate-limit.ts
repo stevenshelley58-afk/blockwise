@@ -55,13 +55,14 @@ export async function checkRateLimit(
   if (!/^[a-z0-9_-]{1,64}$/.test(config.bucket)) {
     throw new Error(`rate-limit: invalid bucket name ${config.bucket}`);
   }
+  const normalizedSubjectKey = subjectKey.trim();
 
   let data: unknown;
   let errorMessage: string | null = null;
   try {
     const result = await supabase.rpc("consume_rate_limit", {
       p_workspace_id: workspaceId,
-      p_subject_key: subjectKey,
+      p_subject_key: normalizedSubjectKey,
       p_bucket: config.bucket,
       p_limit_count: config.maxRequests,
       p_window_seconds: config.windowSeconds,

@@ -15,10 +15,12 @@ describe("customer Ad Studio workbench contract", () => {
 
   it("uses the route workbench flow without fixed viewport shells", () => {
     const editorRoute = readFileSync("src/app/(customer)/ad-studio/templates/[templateId]/page.tsx", "utf8");
+    const stableEditorRoute = readFileSync("src/app/(customer)/ad-studio/ads/[id]/page.tsx", "utf8");
     const publishRoute = readFileSync("src/app/(customer)/ad-studio/templates/[templateId]/publish/page.tsx", "utf8");
     assert.doesNotMatch(editorRoute, /fixed inset-0/);
     assert.doesNotMatch(publishRoute, /fixed inset-0/);
-    assert.match(editorRoute, /<EditorShell/);
+    assert.match(editorRoute, /Create ad/);
+    assert.match(stableEditorRoute, /<EditorShell/);
     assert.match(publishRoute, /<PublishFlow/);
   });
 
@@ -51,14 +53,20 @@ describe("customer Ad Studio workbench contract", () => {
     assert.match(inputs, /rounded-\(--r-card\)/);
     assert.match(copy, /id="meta-copy-cta"/);
     assert.match(copy, /border border-input/);
-    assert.match(shell, /<details>/);
-    assert.match(shell, /min-h-11 h-auto justify-start/);
+    assert.match(shell, /AI brief/);
+    assert.match(shell, /Generate copy/);
+    assert.match(shell, /"design" \| "meta" \| "split"/);
+    assert.match(shell, /publish\?adId=/);
     assert.match(shell, /e\.key\.toLowerCase\(\)/);
     assert.match(shell, /key === "y"/);
-    assert.match(colours, /Add workspace colours in Brand Studio/);
+    assert.match(colours, /Template colours/);
     assert.match(colours, /useId/);
-    assert.match(colours, /aria-labelledby=\{`\$\{switchId\}-label`\}/);
-    assert.doesNotMatch(colours, /<Label[\s\S]*<Switch/);
+    // Three mutually exclusive colour modes (template / workspace / custom),
+    // exposed as an accessible radio group with per-role custom pickers.
+    assert.match(colours, /role="radiogroup"/);
+    assert.match(colours, /aria-label="Colour mode"/);
+    assert.match(colours, /type="color"/);
+    assert.doesNotMatch(colours, /<Switch/);
     assert.doesNotMatch(shell, /Safe deterministic draft|AI draft/);
   });
 
