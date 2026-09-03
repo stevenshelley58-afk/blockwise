@@ -202,7 +202,11 @@ describe("explicit Meta publish setup", () => {
     assert.match(source, /I confirm this budget mode, spend, audience, placement, schedule, creative matrix and fulfilment setup is correct/);
     assert.doesNotMatch(source, /Fulfilment asset/);
     assert.match(source, /A typed file name is not accepted/);
-    assert.match(source, /activationConfirmed/);
+    // Publish is one action; the only follow-up is the safe retry that
+    // finishes activation for an existing plan (no duplicate objects).
+    assert.match(source, /Finish publishing — activate on Meta/);
+    assert.match(source, /No new objects are created/);
+    assert.match(source, /targets only the objects this publish created/);
   });
 
   it("loads workspace-scoped saved campaign locations into the publish UI", () => {
