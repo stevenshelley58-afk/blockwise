@@ -23,6 +23,9 @@ insert into public.workspaces (id, name, mode, region, created_by)
 values ('e4000000-0000-4000-8000-000000000004', 'Authority Workspace', 'monitor', 'AU', 'e2000000-0000-4000-8000-000000000002')
 on conflict (id) do nothing;
 
+-- Operator memberships are service-managed, so seed the fixture through the
+-- same privileged role used by the production RPC before testing client denial.
+set local role service_role;
 insert into public.workspace_members (workspace_id, profile_id, role)
 values
   ('e4000000-0000-4000-8000-000000000004', 'e1000000-0000-4000-8000-000000000001', 'admin'),
