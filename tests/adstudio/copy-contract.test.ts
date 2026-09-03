@@ -121,6 +121,8 @@ test("editor and preview keep the clarity and fidelity contracts visible", () =>
   assert.match(shell, /col-span-2 row-start-3/);
   assert.match(shell, /col-start-3 row-start-3/);
   assert.match(shell, /xl:absolute xl:inset-x-0/);
+  assert.match(shell, /xl:pointer-events-none xl:absolute/);
+  assert.match(shell, /className="min-w-0 xl:pointer-events-auto"/);
   assert.doesNotMatch(preview, /👍|💬|↗/u);
   assert.doesNotMatch(preview, /your-business\.com\.au/);
   assert.match(preview, /ThumbsUp/);
