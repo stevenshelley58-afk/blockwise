@@ -14,6 +14,13 @@ test("Ad Studio shell uses the Blockwise symbol as the customer-home link", () =
   assert.doesNotMatch(shell, /\bA\s*<\//);
 });
 
+test("Ad Studio keeps the Blockwise mark white without a logo background wrapper", () => {
+  assert.match(shell, /size-9[^\n]*bg-transparent text-white/);
+  assert.match(shell, /size-8[^\n]*bg-transparent text-white/);
+  assert.equal((shell.match(/bg-transparent/g) ?? []).length, 2);
+  assert.doesNotMatch(shell, /bg-\(--surface\) text-\(--ink\)/);
+});
+
 test("Ad Studio creation navigation uses a calm creation icon", () => {
   assert.match(shell, /SquarePen/);
   assert.doesNotMatch(shell, /Sparkles/);
