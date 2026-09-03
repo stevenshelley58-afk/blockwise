@@ -14,7 +14,9 @@ import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
 export const dynamic = "force-dynamic";
 
 export default async function AdStudioPage() {
-  const { supabase, access } = await requirePageSurfaceAccess("adstudio");
+  const { supabase, access, auth } = await requirePageSurfaceAccess("adstudio");
+  const timeZone = resolveTimeZone(auth.claims?.user_metadata?.timezone, access.region);
+  const dateLocale = access.region === "US" ? "en-US" : "en-AU";
   const [templatesResult, assetsResult, adsResult] = await Promise.allSettled([
     listTemplates(supabase),
     loadAdStudioLibraryPage({
@@ -109,7 +111,7 @@ export default async function AdStudioPage() {
                 <div className="flex min-w-0 flex-1 flex-col justify-center p-5 md:p-8">
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <Clock3 size={14} aria-hidden />
-                    <span className="truncate">Last edited · {formatLastEdited(ad.updatedAt)}</span>
+                    <span className="truncate">Last edited · {formatLastEdited(ad.updatedAt, timeZone, dateLocale)}</span>
                   </div>
                   <p className="mt-2 text-xs text-muted-foreground">Saved ad · {ad.format}</p>
                   <h3 className="mt-3 max-w-[18ch] truncate font-display text-2xl font-extrabold">
@@ -274,10 +276,23 @@ function TemplateSection({ templates }: { templates: TemplateSummary[] }) {
   );
 }
 
-function formatLastEdited(value: string | null): string {
+function formatLastEdited(value: string | null, timeZone: string, locale: "en-AU" | "en-US"): string {
   if (!value) return "recently";
   const date = new Date(value);
   return Number.isNaN(date.getTime())
     ? "recently"
-    : new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(date);
+    : new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short", timeZone }).format(date);
+}
+
+function resolveTimeZone(value: unknown, region: string | undefined): string {
+  const candidate = typeof value === "string" ? value.trim() : "";
+  if (candidate) {
+    try {
+      new Intl.DateTimeFormat("en", { timeZone: candidate }).format();
+      return candidate;
+    } catch {
+      // Fall through to the workspace-region default for malformed metadata.
+    }
+  }
+  return region === "US" ? "America/New_York" : "Australia/Sydney";
 }

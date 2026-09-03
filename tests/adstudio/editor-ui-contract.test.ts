@@ -22,6 +22,7 @@ describe("customer Ad Studio workbench contract", () => {
     assert.match(editorRoute, /Create ad/);
     assert.match(stableEditorRoute, /<EditorShell/);
     assert.match(stableEditorRoute, /h-full min-h-0 flex-col overflow-hidden/);
+    assert.match(stableEditorRoute, /h-full min-h-0 overflow-y-auto/);
     assert.match(publishRoute, /<PublishFlow/);
   });
 
@@ -42,6 +43,8 @@ describe("customer Ad Studio workbench contract", () => {
     assert.match(canvas, /canvas\.setDimensions\(\{ width, height \}, \{ cssOnly: true \}\)/);
     assert.match(canvas, /canvas\.setViewportTransform\(\[1, 0, 0, 1, 0, 0\]\)/);
     assert.doesNotMatch(canvas, /setDimensions\(\{ width: Math\.floor\(dims\.width \* zoom\)/);
+    assert.match(canvas, /resolveGeometry\(layer\.geometry, PLACEMENT_DIMENSIONS\[placement\]\)/);
+    assert.match(canvas, /values\.every\(\(value\) => Math\.abs\(value\) <= 1\.001\)/);
     assert.doesNotMatch(canvas, /new fabric\.Rect\(\{ \.\.\.geometry/);
     assert.match(canvas, /ensureLocalFont/);
     assert.match(canvas, /fontStem\(layer\.font\.file\)/);
@@ -65,7 +68,10 @@ describe("customer Ad Studio workbench contract", () => {
   it("keeps Home cards contained and exposes exact edit/review destinations", () => {
     const home = readFileSync("src/app/(customer)/ad-studio/page.tsx", "utf8");
     assert.match(home, /<li key=\{template\.templateId\} className="min-w-0">/);
-    assert.match(home, /formatLastEdited\(ad\.updatedAt\)/);
+    assert.match(home, /formatLastEdited\(ad\.updatedAt, timeZone, dateLocale\)/);
+    assert.match(home, /timeZone/);
+    assert.match(home, /resolveTimeZone\(auth\.claims\?\.user_metadata\?\.timezone, access\.region\)/);
+    assert.match(home, /dateLocale = access\.region === "US" \? "en-US" : "en-AU"/);
     assert.match(home, /href=\{`\/ad-studio\/ads\/\$\{encodeURIComponent\(ad\.adId\)\}`\}/);
     assert.match(home, /href=\{`\/ad-studio\/templates\/\$\{encodeURIComponent\(ad\.templateId\)\}\/publish\?adId=\$\{encodeURIComponent\(ad\.adId\)\}`\}/);
     assert.match(home, /<Link[^>]*>Edit/);
