@@ -204,9 +204,12 @@ export function useEditorState(pack: AdTemplate, initialDocument?: AdDocumentPar
   });
   const undoStack = useRef<EditorState[]>([]);
   const redoStack = useRef<EditorState[]>([]);
+  const lastTextEdit = useRef<{ key: string; at: number } | null>(null);
+  const HISTORY_LIMIT = 50;
 
   const pushUndo = useCallback((prev: EditorState) => {
     undoStack.current.push(prev);
+    if (undoStack.current.length > HISTORY_LIMIT) undoStack.current.splice(0, undoStack.current.length - HISTORY_LIMIT);
     redoStack.current = [];
   }, []);
 
@@ -220,7 +223,10 @@ export function useEditorState(pack: AdTemplate, initialDocument?: AdDocumentPar
 
   const updateTextValue = useCallback((key: string, value: string) => {
     setState(prev => {
-      pushUndo(prev);
+      const now = Date.now();
+      const coalesce = lastTextEdit.current?.key === key && now - lastTextEdit.current.at < 900;
+      if (!coalesce) pushUndo(prev);
+      lastTextEdit.current = { key, at: now };
       // Editing a template-filled field makes it customer copy — remove it
       // from template provenance so unchecking later cannot clear it.
       const remaining = prev.templateFilled.text.filter(k => k !== key);
@@ -228,6 +234,21 @@ export function useEditorState(pack: AdTemplate, initialDocument?: AdDocumentPar
         ...prev,
         textValues: { ...prev.textValues, [key]: value },
         templateFilled: { ...prev.templateFilled, text: remaining },
+        isDirty: true,
+        editVersion: (prev.editVersion ?? 0) + 1,
+      };
+    });
+  }, [pushUndo]);
+
+  /** Apply generated overlay + Meta copy as one undoable change. */
+  const applyGeneratedCopy = useCallback((onImage: Record<string, string>, copy: MetaCopy) => {
+    setState(prev => {
+      pushUndo(prev);
+      return {
+        ...prev,
+        textValues: { ...prev.textValues, ...onImage },
+        metaCopy: { ...prev.metaCopy, ...copy },
+        templateFilled: { text: [], meta: [] },
         isDirty: true,
         editVersion: (prev.editVersion ?? 0) + 1,
       };
@@ -370,6 +391,7 @@ export function useEditorState(pack: AdTemplate, initialDocument?: AdDocumentPar
     const next = redoStack.current.pop();
     if (next) {
       undoStack.current.push(state);
+      if (undoStack.current.length > HISTORY_LIMIT) undoStack.current.splice(0, undoStack.current.length - HISTORY_LIMIT);
       setState({ ...next, isSaving: state.isSaving, isDirty: true, editVersion: (state.editVersion ?? 0) + 1 });
     }
   }, [state]);
@@ -419,6 +441,7 @@ export function useEditorState(pack: AdTemplate, initialDocument?: AdDocumentPar
     setSaving,
     setError,
     updateMetaCopy,
+    applyGeneratedCopy,
   };
 }
 

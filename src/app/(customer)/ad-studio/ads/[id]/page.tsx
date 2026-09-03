@@ -23,11 +23,11 @@ export default async function CustomerAdEditorPage({ params }: { params: Promise
     loadAdStudioWorkspaceLibraryAssets(supabase, access.workspaceId),
   ]);
   return <div className="flex min-h-[calc(100dvh-54px)] flex-col bg-background text-foreground md:min-h-[calc(100dvh-60px)]">
-    <header className="flex min-h-12 shrink-0 items-center border-b border-border bg-card px-4 md:px-5">
+    <header className="hidden">
       <Link href="/ad-studio/ads" className="text-sm text-muted-foreground hover:text-foreground">All ads</Link>
       <span className="ml-4 truncate text-sm font-medium">{pack.metadata.title || pack.templateId}</span>
     </header>
-    <div className="min-h-0 flex-1"><EditorShell pack={pack} adId={ad.adId} workspaceId={access.workspaceId} canSave brandColours={brand.colours} brandBusinessName={brand.businessName} brandLogoUrl={brand.logoUrl} libraryAssets={libraryAssets} initialDocument={ad.initialDocument} initialRevision={ad.revisionNumber} /></div>
+    <div className="min-h-0 flex-1"><EditorShell pack={pack} adId={ad.adId} workspaceId={access.workspaceId} canSave brandColours={brand.colours} brandBusinessName={brand.businessName} brandLogoUrl={brand.logoUrl} libraryAssets={libraryAssets} initialDocument={ad.initialDocument} initialRevision={ad.revisionNumber} adName={ad.name} /></div>
   </div>;
 }
 

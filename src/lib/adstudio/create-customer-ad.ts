@@ -11,6 +11,7 @@ import { adDocumentSchema, type AdDocumentParsed } from "../../../packages/ad-te
 export interface CustomerAdRef {
   adId: string;
   workspaceId: string;
+  name?: string;
   initialDocument?: AdDocumentParsed;
   revisionNumber?: number;
 }
@@ -63,16 +64,16 @@ export class CustomerAdNotFoundError extends Error {}
 
 /** Load an existing ad and its active revision. This function is read-only. */
 export async function loadCustomerAd(supabase: SupabaseClient, workspaceId: string, adId: string): Promise<CustomerAdRef & { templateId: string }> {
-  const { data: ad, error } = await supabase.from("ad_customer_ads").select("id, template_id, active_revision_id").eq("id", adId).eq("workspace_id", workspaceId).maybeSingle();
+  const { data: ad, error } = await supabase.from("ad_customer_ads").select("id, name, template_id, active_revision_id").eq("id", adId).eq("workspace_id", workspaceId).maybeSingle();
   if (error) throw new Error(`Failed to load ad: ${error.message}`);
   if (!ad) throw new CustomerAdNotFoundError("Ad not found");
-  const row = ad as { id: string; template_id: string; active_revision_id?: string | null };
-  if (!row.active_revision_id) return { adId: row.id, workspaceId, templateId: row.template_id };
+  const row = ad as { id: string; name?: string; template_id: string; active_revision_id?: string | null };
+  if (!row.active_revision_id) return { adId: row.id, workspaceId, name: row.name, templateId: row.template_id };
   const { data: revision, error: revisionError } = await supabase.from("ad_revisions").select("document_json, revision_number").eq("id", row.active_revision_id).eq("workspace_id", workspaceId).maybeSingle();
   if (revisionError || !revision) throw new InvalidActiveRevisionError(row.active_revision_id, ["The saved revision row could not be loaded."]);
   const parsed = adDocumentSchema.safeParse(revision.document_json);
   if (!parsed.success) throw new InvalidActiveRevisionError(row.active_revision_id, parsed.error.issues.map(i => `${i.path.join(".") || "(document)"}: ${i.message}`));
-  return { adId: row.id, workspaceId, templateId: row.template_id, initialDocument: parsed.data, revisionNumber: Number(revision.revision_number) };
+  return { adId: row.id, workspaceId, name: row.name, templateId: row.template_id, initialDocument: parsed.data, revisionNumber: Number(revision.revision_number) };
 }
 
 

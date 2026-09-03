@@ -78,9 +78,9 @@ export function InputsPanel({
   const missingRequiredImages = requiredImageInputs.filter(input => !imageValues[input.key] && !defaultImageValues[input.key]);
 
   return (
-    <aside aria-label="Content" className={cn("w-full shrink-0 overflow-y-auto bg-card p-4 xl:w-auto", className)}>
+    <aside aria-label="Creative" className={cn("w-full shrink-0 overflow-y-auto bg-card p-4 xl:w-auto", className)}>
       <h3 className="mb-3 text-sm font-semibold text-foreground">
-        Content
+        Creative
       </h3>
       <p className="mb-4 text-xs leading-relaxed text-muted-foreground">
         These values fill both the Feed and Story designs — edit once, both update.
@@ -110,11 +110,11 @@ export function InputsPanel({
 
       {onBusinessNameChange ? (
         <div className="mb-5">
-          <Label htmlFor="content-business-name" className="mb-1 block text-sm font-medium">
+          <Label htmlFor="creative-business-name" className="mb-1 block text-sm font-medium">
             Business name
           </Label>
           <Input
-            id="content-business-name"
+            id="creative-business-name"
             type="text"
             value={businessName ?? ""}
             placeholder={businessNameDefault || "Your business name"}
@@ -140,18 +140,18 @@ export function InputsPanel({
               const value = textValues[input.key] ?? "";
               return (
                 <div key={input.key} className="block">
-                  <Label htmlFor={`content-${input.key}`} className="mb-1 block text-sm font-medium">{input.label}</Label>
+                  <Label htmlFor={`creative-${input.key}`} className="mb-1 block text-sm font-medium">{input.label}</Label>
                   <Input
-                    id={`content-${input.key}`}
+                    id={`creative-${input.key}`}
                     type="text"
                     value={value}
                     placeholder={input.placeholder || undefined}
                     maxLength={input.maxLength}
                     onChange={e => onTextChange(input.key, e.target.value)}
                     className="min-h-11 rounded-(--r-card) bg-muted/30"
-                    aria-describedby={`content-${input.key}-count`}
+                    aria-describedby={`creative-${input.key}-count`}
                   />
-                  <span id={`content-${input.key}-count`} className="mt-1 block text-right text-[11px] tabular-nums text-muted-foreground">
+                  <span id={`creative-${input.key}-count`} className="mt-1 block text-right text-[11px] tabular-nums text-muted-foreground">
                     {value.length}/{input.maxLength}
                   </span>
                 </div>

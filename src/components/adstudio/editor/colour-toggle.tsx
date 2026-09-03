@@ -22,8 +22,8 @@ export type ColourMode = "template" | "brand_pack" | "custom";
 
 const MODE_OPTIONS: Array<{ value: ColourMode; label: string }> = [
   { value: "template", label: "Template" },
-  { value: "brand_pack", label: "Workspace" },
-  { value: "custom", label: "Custom" },
+  { value: "brand_pack", label: "Brand Pack" },
+  { value: "custom", label: "Custom colours" },
 ];
 
 const ROLE_LABELS: Record<ColourRole, string> = {
@@ -93,7 +93,7 @@ export function ColourToggle({
             ? "Fine-tune each colour role individually."
             : brandPackAvailable
               ? "Use your workspace colours instead of the template palette."
-              : "Add workspace colours in Brand Studio to use them here."}
+            : "Add Brand Pack colours in Brand Studio to use them here."}
         </span>
         <span className="flex shrink-0 items-center gap-1" aria-hidden="true">
           {COLOUR_ROLES.map((role) => (
