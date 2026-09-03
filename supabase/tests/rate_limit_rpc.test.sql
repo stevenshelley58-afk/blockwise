@@ -5,17 +5,17 @@
 --   2. limit changes are applied consistently (stored limit is the requested
 --      one; rejection reads the new limit and always returns one row);
 --   3. concurrency: increments are serialized by the row lock so parallel
---      callers can never overshoot (simulated here by repeated single-statement
---      calls; cross-connection parallelism is exercised by the application
---      concurrency test plus the RPC's single-statement design).
+--      callers can never overshoot (the two dblink sessions below exercise
+--      the real cross-connection race).
 --   4. execute privilege: authenticated/public roles are revoked.
 --
 -- Run by the "Database migration and pgTAP checks" CI job after migrations.
 
 create extension if not exists pgtap with schema extensions;
+create extension if not exists dblink with schema extensions;
 
 begin;
-select plan(19);
+select plan(25);
 
 -- ---------------------------------------------------------------------------
 -- 1. Hostile / malformed caller inputs raise instead of poisoning buckets
@@ -79,6 +79,17 @@ select is(
 );
 
 -- ...then the bucket exhausts and the rejection row reports the reset.
+select is(
+  (select allowed from public.consume_rate_limit(null, ' 198.51.100.8 ', 'pgtap-normalization', 2, 60)),
+  true,
+  'subject keys are trimmed before storage'
+);
+
+select is(
+  (select count(*) from public.rate_limits where subject_key = '198.51.100.8' and bucket = 'pgtap-normalization'),
+  1::bigint,
+  'whitespace does not split a subject bucket'
+);
 update public.rate_limits set used_count = 3
 where subject_key = '198.51.100.7' and bucket = 'pgtap-bucket';
 
@@ -98,6 +109,47 @@ select ok(
   (select retry_after_seconds from public.consume_rate_limit(null, '198.51.100.7', 'pgtap-bucket', 3, 60)) >= 1,
   'rejected rows carry a positive retry hint'
 );
+
+-- A real two-connection race against a fresh limit-1 bucket must allow one
+-- request and reject the other. dblink_send_query starts both transactions
+-- before either result is collected, so the unique-row lock is exercised.
+select extensions.dblink_connect(
+  'rate_concurrency_1',
+  'host=' || host(inet_server_addr()) || ' port=5432 dbname=' || current_database()
+    || ' user=' || current_user || ' password=' || current_user
+);
+select extensions.dblink_connect(
+  'rate_concurrency_2',
+  'host=' || host(inet_server_addr()) || ' port=5432 dbname=' || current_database()
+    || ' user=' || current_user || ' password=' || current_user
+);
+select ok(
+  extensions.dblink_send_query(
+    'rate_concurrency_1',
+    'select allowed from public.consume_rate_limit(null, ''203.0.113.77'', ''pgtap-concurrency'', 1, 60)'
+  ) = 1,
+  'first cross-connection rate-limit request sent'
+);
+select ok(
+  extensions.dblink_send_query(
+    'rate_concurrency_2',
+    'select allowed from public.consume_rate_limit(null, ''203.0.113.77'', ''pgtap-concurrency'', 1, 60)'
+  ) = 1,
+  'second cross-connection rate-limit request sent'
+);
+select ok(
+  (select allowed from extensions.dblink_get_result('rate_concurrency_1') as result(allowed boolean))
+    is distinct from
+  (select allowed from extensions.dblink_get_result('rate_concurrency_2') as result(allowed boolean)),
+  'cross-connection requests allow exactly one winner'
+);
+select is(
+  (select used_count from public.rate_limits where subject_key = '203.0.113.77' and bucket = 'pgtap-concurrency'),
+  1::integer,
+  'cross-connection requests never overshoot the limit'
+);
+select extensions.dblink_disconnect('rate_concurrency_1');
+select extensions.dblink_disconnect('rate_concurrency_2');
 
 -- ---------------------------------------------------------------------------
 -- 3. Limit change consistency: a smaller requested limit takes effect

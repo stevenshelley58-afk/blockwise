@@ -43,7 +43,7 @@ export type InternalAuthSuccess = { ok: true; scope: string };
 export type InternalAuthResult = InternalAuthSuccess | InternalAuthFailure;
 
 export type InternalAuthOptions = {
-  /** Override the secret (tests). Defaults to BLOCKWISE_INTERNAL_SECRET. */
+  /** Override the secret (tests). Defaults to BLOCKWISE_INTERNAL_AUTH_SECRET (or its alias). */
   secret?: string | null;
   /** Override the clock (tests). */
   now?: () => Date;
@@ -54,6 +54,45 @@ export type InternalAuthOptions = {
   /** Disable the audit receipt (tests). */
   audit?: boolean;
 };
+
+async function auditAcceptedRequest(
+  request: Request,
+  supabase: SupabaseClient | undefined,
+  metadata: Record<string, unknown>,
+  correlationId: string | null,
+  strict = false,
+): Promise<void> {
+  try {
+    const client = supabase ?? (await import("./supabase/service.ts")).createSupabaseServiceClient();
+    const url = new URL(request.url);
+    const entry = {
+      workspaceId: null,
+      actorProfileId: null,
+      action: "internal.api.request",
+      targetType: "internal_api",
+      targetId: null,
+      correlationId,
+      metadata: { ...metadata, method: request.method, path: url.pathname },
+    };
+    if (strict) {
+      const { error } = await client.from("audit_logs").insert({
+        workspace_id: entry.workspaceId,
+        actor_profile_id: entry.actorProfileId,
+        action: entry.action,
+        target_type: entry.targetType,
+        target_id: entry.targetId,
+        correlation_id: entry.correlationId,
+        metadata: entry.metadata,
+      });
+      if (error) throw new Error(`audit_insert_failed: ${error.message}`);
+    } else {
+      await recordAuditLog(client, entry);
+    }
+  } catch (error) {
+    console.error("[internal-auth] accepted request audit failed", error instanceof Error ? error.message : error);
+    if (strict) throw error;
+  }
+}
 
 type NonceStore = {
   deleteExpired: (cutoffIso: string) => Promise<void>;
@@ -124,9 +163,10 @@ export async function verifyInternalRequest(
   }
 
   // Controlled migration: while BLOCKWISE_INTERNAL_ALLOW_LEGACY_BEARER=true,
-  // the pre-existing Bearer shared-secret callers keep working so production
-  // traffic does not break before the Frank/Hermes signer lands. Turn it off
-  // once every internal caller sends HMAC headers (operator action).
+  // the pre-existing Bearer shared-secret callers keep working so traffic does
+  // not break before the Frank/Hermes signer lands. Legacy bearer requests do
+  // not have nonce replay protection, so this switch must be disabled after
+  // every internal caller sends HMAC headers.
   const authorization = request.headers.get("authorization");
   if (
     process.env.BLOCKWISE_INTERNAL_ALLOW_LEGACY_BEARER === "true" &&
@@ -134,6 +174,19 @@ export async function verifyInternalRequest(
   ) {
     const provided = authorization.slice(7).trim();
     if (provided && safeEqual(secret, provided)) {
+      // Keep the compatibility path auditable, while explicitly recording
+      // that this accepted request had no nonce replay protection.
+      if (options.audit !== false) {
+        try {
+          await auditAcceptedRequest(request, options.supabase, {
+            scope: expectedScope,
+            authMethod: "legacy_bearer",
+            nonceReplayProtection: false,
+          }, null, true);
+        } catch {
+          return { ok: false, status: 503, error: "internal_auth_unavailable" };
+        }
+      }
       return { ok: true, scope: expectedScope };
     }
     return { ok: false, status: 401, error: "invalid_signature" };
@@ -194,15 +247,11 @@ export async function verifyInternalRequest(
   }
 
   if (options.audit !== false) {
-    await recordAuditLog(supabase, {
-      workspaceId: null,
-      actorProfileId: null,
-      action: "internal.api.request",
-      targetType: "internal_api",
-      targetId: null,
-      correlationId: nonce,
-      metadata: { scope: expectedScope, method: request.method, path: url.pathname },
-    });
+    await auditAcceptedRequest(request, supabase, {
+      scope: expectedScope,
+      authMethod: "hmac",
+      nonceReplayProtection: true,
+    }, nonce);
   }
 
   return { ok: true, scope };
