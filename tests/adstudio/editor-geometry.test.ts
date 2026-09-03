@@ -52,11 +52,7 @@ describe("Ad Studio editor geometry contract", () => {
   });
 
   it("anchors Fabric line and icon paths using their normalized command bounds", async () => {
-    const { JSDOM } = await import("jsdom");
-    const dom = new JSDOM("<!doctype html><html><body></body></html>");
-    (globalThis as { window?: unknown }).window = dom.window;
-    (globalThis as { document?: unknown }).document = dom.window.document;
-    const { Path } = await import("fabric");
+    const { Path } = await import("fabric/node");
     const { fabricPathPosition } = await import("../../src/components/adstudio/editor/layer-geometry.ts");
     const geometry = { x: 100, y: 200, width: 300, height: 100 };
 
