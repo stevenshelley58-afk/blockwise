@@ -33,6 +33,7 @@ describe("operator role and session control contract", () => {
     assert.match(canonical, /private\.is_operator/);
     assert.match(canonical, /revoke_user_sessions/);
     assert.match(canonical, /pg_advisory_xact_lock/);
+    assert.doesNotMatch(canonical, /current_user\s*=\s*'postgres'/);
   });
 
   it("audits legacy break-glass email access with named actor", () => {
