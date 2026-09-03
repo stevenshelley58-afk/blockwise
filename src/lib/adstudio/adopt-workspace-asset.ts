@@ -79,6 +79,8 @@ async function discard(input: { serviceSupabase: SupabaseClient }, reservationId
   await input.serviceSupabase.rpc("adstudio_complete_customer_image_stale_cleanup", { p_reservation_id: reservationId, p_object_path: path });
 }
 
+export const __testDiscard = discard;
+
 async function removeStale(supabase: SupabaseClient, entries: Array<{ id: string; path: string }> | undefined) {
   for (const entry of entries ?? []) {
     const removed = await supabase.storage.from(CUSTOMER_IMAGE_BUCKET).remove([entry.path]);

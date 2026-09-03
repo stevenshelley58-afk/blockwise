@@ -274,11 +274,12 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
       const body = await response.json().catch(() => ({})) as { ref?: string; error?: string };
       if (!response.ok || !body.ref) throw new Error(body.error ?? "We could not use that workspace image.");
       updateImageValue(key, body.ref, null);
+      setTimeout(() => openCropForInput(key), 0);
     } catch (error) {
       updateImageValue(key, previousValue?.dataUrl ?? null, previousValue?.previewUrl ?? null);
       setError(error instanceof Error ? error.message : "We could not use that workspace image.");
     } finally { setPendingImageUploads(count => Math.max(0, count - 1)); }
-  }, [adId, workspaceId, state.imageValues, updateImageValue, setError]);
+  }, [adId, workspaceId, state.imageValues, updateImageValue, setError, openCropForInput]);
 
   const persistableLibraryAssets = libraryAssets?.filter((asset): asset is { id: string; url: string; label: string } => Boolean(asset.id));
   return <RedesignedEditor
