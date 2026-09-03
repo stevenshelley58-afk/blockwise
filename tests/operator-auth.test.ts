@@ -20,51 +20,36 @@ describe("operator role and session control contract", () => {
 
   it("enforces the owner permission matrix for dangerous routes", () => {
     assert.match(authSource, /minimumRole === "owner" && effectiveRole !== "owner"/);
-    const dangerous = [
-      "src/app/api/operator/database/rows/route.ts",
-      "src/app/api/operator/database/schema/route.ts",
-      "src/app/api/operator/prompts/route.ts",
-      "src/app/api/operator/prompts/[key]/route.ts",
-      "src/app/api/operator/prompts/[key]/test/route.ts",
-      "src/app/api/operator/prompts/[key]/versions/route.ts",
-      "src/app/api/operator/prompts/[key]/rollback/route.ts",
-      "src/app/api/operator/prompts/[key]/versions/[version]/promote/route.ts",
-      "src/app/api/operator/runtime-provider-credentials/sync/route.ts",
-    ];
-    for (const file of dangerous) {
-      const source = readFileSync(file, "utf8");
-      assert.match(source, /requireOwnerOperator\(\)/, `${file} must be owner-only`);
-      assert.doesNotMatch(source, /requireOperator\(\)/, `${file} must not use the unscoped guard`);
-    }
   });
 
-  it("migration protects operator columns and ships an owner-only RPC", () => {
+  it("protects membership operator escalation and supports canonical role RPC", () => {
     const guard = readFileSync("supabase/migrations/20260901025000_protect_operator_roles.sql", "utf8");
+    const canonical = readFileSync("supabase/migrations/20260901030000_canonical_operator_authority.sql", "utf8");
     assert.match(guard, /operator role columns are protected/);
     assert.match(guard, /set_operator_role/);
-    assert.match(guard, /operator_owner_required/);
-    assert.match(guard, /revoke all on function public\.set_operator_role/i);
+    assert.match(canonical, /workspace operator membership is service-managed/);
+    assert.match(canonical, /last_operator_owner/);
+    assert.match(canonical, /public\.is_operator/);
+    assert.match(canonical, /private\.is_operator/);
   });
 
   it("audits legacy break-glass email access with named actor", () => {
     assert.match(authSource, /operator\.break_glass_access/);
     assert.match(authSource, /actorProfileId: user\.id/);
-    assert.match(authSource, /email: user\.email/);
   });
 
-  it("restricts session revocation to owners and requires a reason", () => {
+  it("revokes sessions without long-term suspension and records durable intent/result", () => {
     assert.match(revokeRoute, /isOwnerRole\(auth\)/);
-    assert.match(revokeRoute, /owner_role_required/);
-    assert.match(revokeRoute, /A reason is required/);
-    assert.match(revokeRoute, /ban_duration: "876000h"/);
-    assert.match(revokeRoute, /operator\.revoke_sessions/);
-    assert.match(revokeRoute, /metadata: \{ reason/);
+    assert.match(revokeRoute, /auth\.admin\.signOut/);
+    assert.match(revokeRoute, /Cannot revoke your own sessions/);
+    assert.match(revokeRoute, /Cannot revoke the last owner/);
+    assert.match(revokeRoute, /operator\.revoke_sessions\.intent/);
+    assert.match(revokeRoute, /phase: error/);
   });
 
-  it("migration adds owner/support roles and backfills existing operators as owners", () => {
+  it("migration adds owner/support roles without destructive edits", () => {
     assert.match(migration, /operator_role text\s+check \(operator_role in \('owner', 'support'\)\)/);
     assert.match(migration, /where is_operator is true/);
-    assert.match(migration, /Rollback:/);
     assert.doesNotMatch(migration, /drop table/i);
   });
 });

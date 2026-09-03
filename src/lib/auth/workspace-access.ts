@@ -54,15 +54,15 @@ type MembershipRow = {
 type WorkspaceAccessAuthContext = {
   supabase: SupabaseServerClient;
   claims: { sub: string } | null;
-  profile: { is_operator?: boolean | null } | null;
+  profile: { is_operator?: boolean | null; operator_role?: string | null } | null;
   memberships: MembershipRow[];
 };
 
 export function hasOperatorAccessFromRows(
-  profile: { is_operator?: boolean | null } | null | undefined,
+  profile: { is_operator?: boolean | null; operator_role?: string | null } | null | undefined,
   memberships: Array<{ role?: string | null }> | null | undefined,
 ): boolean {
-  return Boolean(profile?.is_operator) || (memberships ?? []).some((membership) => membership.role === "operator");
+  return profile?.is_operator === true && (profile.operator_role === "owner" || profile.operator_role === "support");
 }
 
 export function resolveRequestedWorkspaceAccess(input: ResolveWorkspaceInput): WorkspaceAccessResult {
