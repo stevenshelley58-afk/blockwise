@@ -1,28 +1,39 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import test from "node:test";
+import { register } from "tsx/esm/api";
 
-const create = readFileSync("src/lib/adstudio/create-customer-ad.ts", "utf8");
-const template = readFileSync("src/app/(customer)/ad-studio/templates/[templateId]/page.tsx", "utf8");
-const migration = readFileSync("supabase/migrations/202609030001_adstudio_customer_ad_creation.sql", "utf8");
-const library = readFileSync("src/lib/adstudio/library-read-model.ts", "utf8");
+register();
+const { createCustomerAd, loadCustomerAd, CustomerAdNotFoundError } = await import("../src/lib/adstudio/create-customer-ad.ts");
+const { adFormatLabel } = await import("../src/lib/adstudio/library-contract.ts");
+const pack = { templateId: "pack-1", semanticColours: {} };
 
-test("creation is explicit, replayable by key, and permits intentional duplicates", () => {
-  assert.match(create, /export async function createCustomerAd/);
-  assert.match(create, /eq\("creation_key", idempotencyKey\)/);
-  assert.doesNotMatch(create, /getOrCreateCustomerAd/);
-  assert.match(migration, /unique index if not exists .*workspace_creation_key/);
-  assert.match(migration, /on public\.ad_customer_ads/);
+function fakeCreateClient({ insertResult, replay = null }) {
+  const calls = [];
+  let first = true;
+  const client = { calls, from(table) { const call = { table, filters: [] }; calls.push(call); const chain = { insert(row) { call.insert = row; return chain; }, select(fields) { call.select = fields; return chain; }, eq(field, value) { call.filters.push([field, value]); return chain; }, single: async () => { const result = first ? insertResult : { data: replay, error: null }; first = false; return result; } }; return chain; } };
+  return client;
+}
+
+test("same idempotency key replays one ad while distinct keys create independently", async () => {
+  const replayClient = fakeCreateClient({ insertResult: { data: null, error: { code: "23505", message: "duplicate" } }, replay: { id: "ad-existing" } });
+  assert.deepEqual(await createCustomerAd(replayClient, "workspace-a", pack, "key-same"), { adId: "ad-existing", workspaceId: "workspace-a" });
+  assert.equal(replayClient.calls[0].insert.creation_key, "key-same");
+  assert.deepEqual(replayClient.calls[1].filters, [["workspace_id", "workspace-a"], ["creation_key", "key-same"]]);
+  const first = fakeCreateClient({ insertResult: { data: { id: "ad-one" }, error: null } });
+  const second = fakeCreateClient({ insertResult: { data: { id: "ad-two" }, error: null } });
+  assert.equal((await createCustomerAd(first, "workspace-a", pack, "key-one")).adId, "ad-one");
+  assert.equal((await createCustomerAd(second, "workspace-a", pack, "key-two")).adId, "ad-two");
+  assert.notEqual(first.calls[0].insert.creation_key, second.calls[0].insert.creation_key);
 });
 
-test("template GET has no creation call and carries one stable form key", () => {
-  assert.doesNotMatch(template.split('async function createAdAction')[0].replace(/import .*createCustomerAd.*\n/, ""), /createCustomerAd\(/);
-  assert.match(template, /name="creationKey"/);
-  assert.match(template, /createCustomerAd\(supabase, access\.workspaceId, pack, creationKey/);
+test("missing ads are workspace scoped and never silently loaded", async () => {
+  const client = { from() { const chain = { select: () => chain, eq: () => chain, maybeSingle: async () => ({ data: null, error: null }) }; return chain; } };
+  await assert.rejects(() => loadCustomerAd(client, "workspace-a", "ad-missing"), CustomerAdNotFoundError);
 });
 
-test("library reads current ads and includes ads without a rendered preview", () => {
-  assert.match(library, /from\(input\.kind === "assets" \? "adstudio_brand_assets" : "ad_customer_ads"\)/);
-  assert.match(library, /src: src \?\? .*sample\?placement=feed/);
-  assert.match(library, /format: feedPath && storyPath/);
+test("library format labels reflect available placements", () => {
+  assert.equal(adFormatLabel(true, true), "Feed + Story");
+  assert.equal(adFormatLabel(true, false), "Feed");
+  assert.equal(adFormatLabel(false, true), "Story");
+  assert.equal(adFormatLabel(false, false), "Feed + Story");
 });

@@ -13,7 +13,11 @@ export async function POST(request: NextRequest) {
   const body = await readJsonBody<{ templateId?: unknown; idempotencyKey?: unknown }>(request);
   const templateId = typeof body.templateId === "string" ? body.templateId.trim() : "";
   if (!templateId || templateId.length > 200) return NextResponse.json({ error: "A valid templateId is required." }, { status: 400 });
-  const key = typeof body.idempotencyKey === "string" && body.idempotencyKey.trim() ? body.idempotencyKey.trim().slice(0, 200) : undefined;
+  const suppliedKey = request.headers.get("Idempotency-Key") ?? (typeof body.idempotencyKey === "string" ? body.idempotencyKey : "");
+  const key = suppliedKey.trim() || undefined;
+  if (key && !/^[a-z0-9-]{20,200}$/i.test(key)) {
+    return NextResponse.json({ error: "Idempotency-Key must be a valid opaque key." }, { status: 400 });
+  }
   const pack = await getTemplate(access.supabase, templateId);
   if (!pack) return NextResponse.json({ error: "Template not found." }, { status: 404 });
   try {
