@@ -3,7 +3,7 @@ import Link from "next/link";
 
 import { PublishFlow } from "./publish-flow";
 import { normalizeSavedPublishAudienceLocations } from "./publish-controls";
-import { getOrCreateCustomerAd } from "@/lib/adstudio/create-customer-ad";
+import { loadCustomerAd } from "@/lib/adstudio/create-customer-ad";
 import { getTemplate } from "@/lib/adstudio/pack-gallery";
 import { loadPublishState, PublishError, readTemplatePublishRequirements, validatePublishState } from "@/lib/adstudio/publish-adapter";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
@@ -11,12 +11,13 @@ import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
 export const dynamic = "force-dynamic";
 
 // ---------------------------------------------------------------------------
-// Ad Studio — separate Publish flow (BW-M).
+// Ad Studio — Publish flow.
 //
-// Freezes the LAST SAVED revision and creates Meta objects PAUSED through the
-// existing publish adapter + Meta pipeline. Activation is a later task — this
-// surface never says "live". Server-renders the frozen publish state, issues,
-// and provider-write mode; the client handles the Freeze & Create PAUSED call.
+// One click completes the whole server-side lifecycle: freezes the LAST
+// SAVED revision, creates the Meta objects and activates them. The receipt
+// reports "active" only after Meta confirms; partial failures report the
+// real state with a safe retry. Server-renders the frozen publish state,
+// issues, and provider-write mode; the client drives the publish call.
 // ---------------------------------------------------------------------------
 
 function providerWritesEnabled() {
@@ -25,15 +26,20 @@ function providerWritesEnabled() {
 
 export default async function PublishPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ templateId: string }>;
+  searchParams?: Promise<{ adId?: string }>;
 }) {
   const { templateId } = await params;
   const { supabase, access } = await requirePageSurfaceAccess("adstudio");
   const pack = await getTemplate(supabase, templateId);
   if (!pack) notFound();
 
-  const { adId } = await getOrCreateCustomerAd(supabase, access.workspaceId, pack);
+  const adId = (await searchParams)?.adId?.trim();
+  if (!adId) notFound();
+  const ad = await loadCustomerAd(supabase, access.workspaceId, adId);
+  if (ad.templateId !== templateId) notFound();
   const { data: campaignMarkets, error: campaignMarketsError } = await supabase
     .from("adstudio_campaigns")
     .select("market_json")

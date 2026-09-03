@@ -112,8 +112,11 @@ export const adDocumentSchema = z.object({
   schema: z.literal("blockwise.ad-document"), templateId: z.string().min(1),
   sharedImageValues: z.record(z.string().min(1)), sharedTextValues: z.record(z.string()),
   feedCropOverrides: z.record(rectSchema), storyCropOverrides: z.record(rectSchema),
-  colourMode: z.enum(["template", "brand_pack"]), resolvedColourMap: z.record(z.string().min(1)),
+  colourMode: z.enum(["template", "brand_pack", "custom"]), resolvedColourMap: z.record(z.string().min(1)),
   metaPrimaryText: z.string(), metaHeadline: z.string(), metaDescription: z.string(), metaCta: z.string(),
+  // Optional customer-facing display-name override (Brand Pack value is the
+  // default). Omitted entirely on older documents — backward compatible.
+  brandBusinessName: z.string().min(1).optional(),
   revision: z.number().int().positive(), lastRenderedAt: z.string().datetime().nullable().optional(),
 }).strict();
 export type AdDocumentParsed = z.infer<typeof adDocumentSchema>;

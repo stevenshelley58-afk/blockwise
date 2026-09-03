@@ -6,7 +6,8 @@ import {
   CustomerImageStorageError,
   resolveCustomerImageValues,
 } from "../../src/lib/adstudio/customer-image-storage.ts";
-import { buildCustomerImageRef, imageSha256 } from "../../src/lib/adstudio/customer-image-ref.ts";
+import { buildCustomerImageRef } from "../../src/lib/adstudio/customer-image-ref.ts";
+import { imageSha256 } from "../../src/lib/adstudio/customer-image-hash.server.ts";
 
 const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=", "base64");
 const workspaceId = "workspace-test";
