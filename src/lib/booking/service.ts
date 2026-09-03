@@ -193,7 +193,7 @@ export async function applyProviderBookingEvent(input: {
         eventName: "onboarding_booked",
         workspaceId: invitation.workspaceId,
         idempotencyKey: `booking:${invitation.workspaceId}:onboarding-booked`,
-        occurredAt: new Date(booking.bookedAt ?? event.occurredAt),
+        occurredAt: new Date(persisted.booking?.bookedAt ?? event.occurredAt),
         properties: {
           provider: event.provider,
           provider_event_id: event.providerEventId,
