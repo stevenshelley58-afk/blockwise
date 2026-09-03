@@ -13,7 +13,7 @@ import type {
 import { PLACEMENT_DIMENSIONS } from "../../../../packages/ad-template-contract/src/types";
 import { templateAssetProxyUrl } from "@/lib/adstudio/pack-gallery";
 import { cn } from "@/lib/utils";
-import { fabricCircleGeometry, fabricPathGeometry, fabricRectGeometry, resolveGeometry } from "./layer-geometry";
+import { fabricCircleGeometry, fabricPathPosition, fabricRectGeometry, resolveGeometry } from "./layer-geometry";
 
 type LayerTarget = { layer: LayoutLayer; object: FabricObject };
 
@@ -288,11 +288,21 @@ async function createLayerObject({
 
   if (layer.type === "vector") {
     const colour = fill(layer.colourRole);
-    if (layer.shape === "line") return new fabric.Path(`M 0 ${geometry.height / 2} L ${geometry.width} ${geometry.height / 2}`, { ...fabricPathGeometry(geometry), fill: "", stroke: colour, strokeWidth: 2, ...interactive });
-    if (layer.shape === "wave") return new fabric.Path(`M 0 ${geometry.height / 2} C ${geometry.width * .25} ${-geometry.height / 2} ${geometry.width * .75} ${geometry.height * 1.5} ${geometry.width} ${geometry.height / 2}`, { ...fabricPathGeometry(geometry), fill: "", stroke: colour, strokeWidth: 2, ...interactive });
+    if (layer.shape === "line") {
+      const path = new fabric.Path(`M 0 ${geometry.height / 2} L ${geometry.width} ${geometry.height / 2}`, { fill: "", stroke: colour, strokeWidth: 2, ...interactive });
+      path.set(fabricPathPosition(path, geometry));
+      return path;
+    }
+    if (layer.shape === "wave") {
+      const path = new fabric.Path(`M 0 ${geometry.height / 2} C ${geometry.width * .25} ${-geometry.height / 2} ${geometry.width * .75} ${geometry.height * 1.5} ${geometry.width} ${geometry.height / 2}`, { fill: "", stroke: colour, strokeWidth: 2, ...interactive });
+      path.set(fabricPathPosition(path, geometry));
+      return path;
+    }
     if (layer.shape === "notched") {
       const w = geometry.width, h = geometry.height, n = Math.min(w, h) * .2;
-      return new fabric.Polygon([{ x: 0, y: 0 }, { x: w - n, y: 0 }, { x: w, y: n }, { x: w, y: h }, { x: n, y: h }, { x: 0, y: h - n }], { ...fabricPathGeometry(geometry), fill: colour, ...interactive });
+      const polygon = new fabric.Polygon([{ x: 0, y: 0 }, { x: w - n, y: 0 }, { x: w, y: n }, { x: w, y: h }, { x: n, y: h }, { x: 0, y: h - n }], { fill: colour, ...interactive });
+      polygon.set(fabricPathPosition(polygon, geometry));
+      return polygon;
     }
     if (layer.shape === "ring") return new fabric.Circle({ left: geometry.x + geometry.width / 2, top: geometry.y + geometry.height / 2, originX: "center", originY: "center", radius: Math.min(geometry.width, geometry.height) / 2, fill: "", stroke: colour, strokeWidth: Math.max(2, Math.min(geometry.width, geometry.height) * .08), opacity: layer.opacity ?? 1, ...interactive });
     const radius = layer.shape === "pill" ? Math.min(geometry.width, geometry.height) / 2 : layer.shape === "rounded" ? Math.min(16, geometry.width / 4, geometry.height / 4) : 0;
@@ -305,7 +315,9 @@ async function createLayerObject({
   if (layer.type === "icon") {
     const w = geometry.width, h = geometry.height;
     const iconPath = layer.icon === "arrow" ? `M ${w * .1} ${h / 2} L ${w * .9} ${h / 2} M ${w * .55} ${h * .18} L ${w * .9} ${h / 2} L ${w * .55} ${h * .82}` : `M ${w * .12} ${h * .52} L ${w * .4} ${h * .8} L ${w * .88} ${h * .2}`;
-    return new fabric.Path(iconPath, { ...fabricPathGeometry(geometry), fill: "", stroke: fill(layer.colourRole), strokeWidth: Math.max(2, Math.min(w, h) * .1), ...interactive });
+    const path = new fabric.Path(iconPath, { fill: "", stroke: fill(layer.colourRole), strokeWidth: Math.max(2, Math.min(w, h) * .1), ...interactive });
+    path.set(fabricPathPosition(path, geometry));
+    return path;
   }
 
   const src = (layer.type === "image_slot" || layer.type === "logo") ? imageValues[layer.inputKey] ?? null : null;

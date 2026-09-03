@@ -45,11 +45,16 @@ export function fabricCircleGeometry(geometry: Rect) {
   };
 }
 
-/** Path and polygon data are local to a Fabric object, not canvas coordinates. */
-export function fabricPathGeometry(geometry: Rect) {
+/**
+ * Path and polygon data are local to a Fabric object, not canvas coordinates.
+ * Fabric normalizes path data around pathOffset, so include the local command
+ * bounds when translating the object back into pack canvas coordinates.
+ */
+export function fabricPathPosition(path: { width: number; height: number; pathOffset?: { x: number; y: number } }, geometry: Rect) {
+  const pathOffset = path.pathOffset ?? { x: path.width / 2, y: path.height / 2 };
   return {
-    left: geometry.x,
-    top: geometry.y,
+    left: geometry.x + pathOffset.x - path.width / 2,
+    top: geometry.y + pathOffset.y - path.height / 2,
     originX: "left" as const,
     originY: "top" as const,
   };
