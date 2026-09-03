@@ -9,6 +9,19 @@ import { createSupabaseServiceClient } from "@/lib/supabase/service";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+function internalAuthenticationError(status: 401 | 503, diagnostic?: string) {
+  const includeDiagnostic = process.env.BLOCKWISE_INTERNAL_AUTH_DEBUG === "true";
+  return NextResponse.json(
+    {
+      error: status === 503
+        ? "Internal authentication unavailable."
+        : "Internal authentication required.",
+      ...(includeDiagnostic && diagnostic ? { diagnostic } : {}),
+    },
+    { status },
+  );
+}
+
 export async function POST(request: NextRequest) {
   const rawBody = await request.text();
   let signatureFailure: string | undefined;
@@ -30,7 +43,7 @@ export async function POST(request: NextRequest) {
       path: request.nextUrl.pathname,
       bodyBytes: Buffer.byteLength(rawBody),
     });
-    return NextResponse.json({ error: "Internal authentication required." }, { status: 401 });
+    return internalAuthenticationError(401, `signature:${signatureFailure ?? "unknown"}`);
   }
 
   const supabase = createSupabaseServiceClient();
@@ -44,10 +57,10 @@ export async function POST(request: NextRequest) {
   );
   if (nonceError) {
     console.error("Failed to claim internal request nonce.", nonceError);
-    return NextResponse.json({ error: "Internal authentication unavailable." }, { status: 503 });
+    return internalAuthenticationError(503, "nonce:unavailable");
   }
   if (nonceClaimed !== true) {
-    return NextResponse.json({ error: "Internal authentication required." }, { status: 401 });
+    return internalAuthenticationError(401, `nonce:${typeof nonceClaimed}:${String(nonceClaimed)}`);
   }
 
   let body: unknown;
