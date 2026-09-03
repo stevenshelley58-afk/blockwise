@@ -9,7 +9,7 @@ import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
 
 export const dynamic = "force-dynamic";
 
-export default async function MediaLibraryPage() {
+export async function MediaLibraryPage() {
   const { supabase, access } = await requirePageSurfaceAccess("adstudio");
   const workspaceId = access.workspaceId;
   const [assetsPage, adsPage, brandKitRows] = await Promise.all([
@@ -37,3 +37,5 @@ export default async function MediaLibraryPage() {
     />
   );
 }
+
+export default MediaLibraryPage;

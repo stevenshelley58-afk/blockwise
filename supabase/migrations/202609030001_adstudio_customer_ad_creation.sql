@@ -8,7 +8,7 @@ alter table if exists public.ad_customer_ads
 
 do $$ begin
   if to_regclass('public.ad_customer_ads') is not null
-     and not exists (select 1 from pg_constraint where conname = 'ad_customer_ads_status_check') then
+     and not exists (select 1 from pg_constraint where conrelid = 'public.ad_customer_ads'::regclass and conname = 'ad_customer_ads_status_check') then
     alter table public.ad_customer_ads add constraint ad_customer_ads_status_check
       check (status in ('draft', 'published', 'archived'));
   end if;

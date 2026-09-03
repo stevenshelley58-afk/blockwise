@@ -73,8 +73,6 @@ export async function loadCustomerAd(supabase: SupabaseClient, workspaceId: stri
   return { adId: row.id, workspaceId, templateId: row.template_id, initialDocument: parsed.data, revisionNumber: Number(revision.revision_number) };
 }
 
-/** @deprecated GET routes must use loadCustomerAd; creation is explicit. */
-export const getOrCreateCustomerAd = createCustomerAd;
 
 /**
  * Explicit recovery action: detach the damaged revision as the ad's ACTIVE

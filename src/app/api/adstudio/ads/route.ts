@@ -20,6 +20,7 @@ export async function POST(request: NextRequest) {
     const ad = await createCustomerAd(access.supabase, access.access.workspaceId, pack, key);
     return NextResponse.json(ad, { status: 201 });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Could not create ad." }, { status: 500 });
+    console.error("[adstudio] customer ad creation failed", { workspaceId: access.access.workspaceId, templateId });
+    return NextResponse.json({ error: "Could not create ad. Please try again." }, { status: 500 });
   }
 }

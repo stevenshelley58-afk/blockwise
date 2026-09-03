@@ -4,6 +4,7 @@ import { EditorShell } from "@/components/adstudio/editor/editor-shell";
 import { loadCustomerAd, InvalidActiveRevisionError } from "@/lib/adstudio/create-customer-ad";
 import { getTemplate } from "@/lib/adstudio/pack-gallery";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
+import { loadAdStudioBrandDefaults } from "@/lib/adstudio/brand-defaults";
 
 export const dynamic = "force-dynamic";
 
@@ -16,12 +17,13 @@ export default async function CustomerAdEditorPage({ params }: { params: Promise
   catch (error) { if (error instanceof InvalidActiveRevisionError) return <Recovery adId={id} />; throw error; }
   const pack = await getTemplate(supabase, ad.templateId);
   if (!pack) notFound();
+  const brand = await loadAdStudioBrandDefaults(supabase, access.workspaceId);
   return <div className="flex min-h-[calc(100dvh-54px)] flex-col bg-background text-foreground md:min-h-[calc(100dvh-60px)]">
     <header className="flex min-h-12 shrink-0 items-center border-b border-border bg-card px-4 md:px-5">
-      <Link href="/ad-studio/library" className="text-sm text-muted-foreground hover:text-foreground">All ads</Link>
+      <Link href="/ad-studio/ads" className="text-sm text-muted-foreground hover:text-foreground">All ads</Link>
       <span className="ml-4 truncate text-sm font-medium">{pack.metadata.title || pack.templateId}</span>
     </header>
-    <div className="min-h-0 flex-1"><EditorShell pack={pack} adId={ad.adId} workspaceId={access.workspaceId} canSave initialDocument={ad.initialDocument} initialRevision={ad.revisionNumber} /></div>
+    <div className="min-h-0 flex-1"><EditorShell pack={pack} adId={ad.adId} workspaceId={access.workspaceId} canSave brandColours={brand.colours} brandBusinessName={brand.businessName} brandLogoUrl={brand.logoUrl} initialDocument={ad.initialDocument} initialRevision={ad.revisionNumber} /></div>
   </div>;
 }
 

@@ -19,7 +19,7 @@ export type LibraryAdModel = {
   adId: string;
   templateId: string;
   name: string;
-  src: string;
+  src: string | null;
   format: string;
   status: string;
   published: boolean;
@@ -123,16 +123,16 @@ export async function loadAdStudioLibraryPage(input: {
       const revision = revisionByAd.get(String(row.id));
       const raw = typeof revision?.feed_png_path === "string" ? revision.feed_png_path : typeof revision?.story_png_path === "string" ? revision.story_png_path : null;
       const path = storagePathFromSource(input.workspaceId, raw);
-      const src = path ? signed[path]?.grid : raw;
-      if (!src) continue;
+      const src = path ? (signed[path]?.grid ?? null) : null;
+      const templateId = String(row.template_id ?? "");
       items.push({
         adId: String(row.id),
         templateId: String(row.template_id ?? ""),
         name: typeof row.name === "string" && row.name.trim() ? row.name : "Untitled ad",
-        src,
-        format: "feed",
-        status: String(row.status ?? "draft"),
-        published: Boolean(row.published_at),
+        src: src ?? (templateId ? `/api/adstudio/templates/${encodeURIComponent(templateId)}/sample?placement=feed` : null),
+        format: raw ? "feed" : "feed + story",
+        status: "Saved",
+        published: false,
       });
     }
   }
