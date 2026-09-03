@@ -59,11 +59,13 @@ export async function createCustomerAd(
 
   return { adId: (created as { id: string }).id, workspaceId };
 }
+export class CustomerAdNotFoundError extends Error {}
 
 /** Load an existing ad and its active revision. This function is read-only. */
 export async function loadCustomerAd(supabase: SupabaseClient, workspaceId: string, adId: string): Promise<CustomerAdRef & { templateId: string }> {
   const { data: ad, error } = await supabase.from("ad_customer_ads").select("id, template_id, active_revision_id").eq("id", adId).eq("workspace_id", workspaceId).maybeSingle();
-  if (error || !ad) throw new Error(error?.message ?? "Ad not found");
+  if (error) throw new Error(`Failed to load ad: ${error.message}`);
+  if (!ad) throw new CustomerAdNotFoundError("Ad not found");
   const row = ad as { id: string; template_id: string; active_revision_id?: string | null };
   if (!row.active_revision_id) return { adId: row.id, workspaceId, templateId: row.template_id };
   const { data: revision, error: revisionError } = await supabase.from("ad_revisions").select("document_json, revision_number").eq("id", row.active_revision_id).eq("workspace_id", workspaceId).maybeSingle();

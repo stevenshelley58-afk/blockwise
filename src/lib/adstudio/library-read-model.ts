@@ -21,8 +21,6 @@ export type LibraryAdModel = {
   name: string;
   src: string | null;
   format: string;
-  status: string;
-  published: boolean;
 };
 
 type QueryClient = {
@@ -84,7 +82,9 @@ export async function loadAdStudioLibraryPage(input: {
   } else {
     for (const row of pageRows) {
       const revision = revisionByAd.get(String(row.id));
-      const raw = typeof revision?.feed_png_path === "string" ? revision.feed_png_path : typeof revision?.story_png_path === "string" ? revision.story_png_path : null;
+      const feedPath = typeof revision?.feed_png_path === "string" ? revision.feed_png_path : null;
+      const storyPath = typeof revision?.story_png_path === "string" ? revision.story_png_path : null;
+      const raw = feedPath ?? storyPath;
       const path = storagePathFromSource(input.workspaceId, raw);
       if (path) paths.add(path);
     }
@@ -121,6 +121,8 @@ export async function loadAdStudioLibraryPage(input: {
     items = [];
     for (const row of pageRows) {
       const revision = revisionByAd.get(String(row.id));
+      const feedPath = typeof revision?.feed_png_path === "string" ? revision.feed_png_path : null;
+      const storyPath = typeof revision?.story_png_path === "string" ? revision.story_png_path : null;
       const raw = typeof revision?.feed_png_path === "string" ? revision.feed_png_path : typeof revision?.story_png_path === "string" ? revision.story_png_path : null;
       const path = storagePathFromSource(input.workspaceId, raw);
       const src = path ? (signed[path]?.grid ?? null) : null;
@@ -130,9 +132,7 @@ export async function loadAdStudioLibraryPage(input: {
         templateId: String(row.template_id ?? ""),
         name: typeof row.name === "string" && row.name.trim() ? row.name : "Untitled ad",
         src: src ?? (templateId ? `/api/adstudio/templates/${encodeURIComponent(templateId)}/sample?placement=feed` : null),
-        format: raw ? "feed" : "feed + story",
-        status: "Saved",
-        published: false,
+        format: feedPath && storyPath ? "feed + story" : feedPath ? "feed" : storyPath ? "story" : "feed + story",
       });
     }
   }

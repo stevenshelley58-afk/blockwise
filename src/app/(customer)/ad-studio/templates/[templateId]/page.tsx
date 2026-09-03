@@ -22,6 +22,7 @@ async function createAdAction(formData: FormData) {
   const { supabase, access } = await requirePageSurfaceAccess("adstudio");
   const templateId = String(formData.get("templateId") ?? "");
   const creationKey = String(formData.get("creationKey") ?? "");
+  if (!/^[a-z0-9-]{20,80}$/i.test(creationKey)) throw new Error("Invalid creation request.");
   const pack = await getTemplate(supabase, templateId);
   if (!pack) notFound();
   const ad = await createCustomerAd(supabase, access.workspaceId, pack, creationKey || undefined);

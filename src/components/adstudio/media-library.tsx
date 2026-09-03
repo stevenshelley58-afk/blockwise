@@ -235,7 +235,7 @@ export function MediaLibrary({
                 >
                   <Card className="gap-0 overflow-hidden py-0 transition-shadow hover:shadow-md">
                     <div className="aspect-[4/5] w-full overflow-hidden bg-(--surface-subtle)">
-                      <img
+                      {ad.src ? <img
                         src={ad.src}
                         alt={ad.name}
                         width={640}
@@ -244,7 +244,7 @@ export function MediaLibrary({
                         loading="lazy"
                         decoding="async"
                         className="size-full object-cover"
-                      />
+                      /> : <div className="grid size-full place-items-center text-xs text-muted-foreground">Preview unavailable</div>}
                     </div>
                     <div className="px-3 py-2">
                       <p className="truncate text-xs font-semibold">{ad.name}</p>

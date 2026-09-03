@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { EditorShell } from "@/components/adstudio/editor/editor-shell";
-import { loadCustomerAd, InvalidActiveRevisionError } from "@/lib/adstudio/create-customer-ad";
+import { loadCustomerAd, InvalidActiveRevisionError, CustomerAdNotFoundError } from "@/lib/adstudio/create-customer-ad";
 import { getTemplate } from "@/lib/adstudio/pack-gallery";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
 import { loadAdStudioBrandDefaults } from "@/lib/adstudio/brand-defaults";
@@ -14,7 +14,7 @@ export default async function CustomerAdEditorPage({ params }: { params: Promise
   const { supabase, access } = await requirePageSurfaceAccess("adstudio");
   let ad;
   try { ad = await loadCustomerAd(supabase, access.workspaceId, id); }
-  catch (error) { if (error instanceof InvalidActiveRevisionError) return <Recovery adId={id} />; throw error; }
+  catch (error) { if (error instanceof CustomerAdNotFoundError) notFound(); if (error instanceof InvalidActiveRevisionError) return <Recovery adId={id} />; throw error; }
   const pack = await getTemplate(supabase, ad.templateId);
   if (!pack) notFound();
   const brand = await loadAdStudioBrandDefaults(supabase, access.workspaceId);

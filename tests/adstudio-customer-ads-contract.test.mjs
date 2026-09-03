@@ -24,5 +24,5 @@ test("template GET has no creation call and carries one stable form key", () => 
 test("library reads current ads and includes ads without a rendered preview", () => {
   assert.match(library, /from\(input\.kind === "assets" \? "adstudio_brand_assets" : "ad_customer_ads"\)/);
   assert.match(library, /src: src \?\? .*sample\?placement=feed/);
-  assert.match(library, /status: "Saved"/);
+  assert.match(library, /format: feedPath && storyPath/);
 });
