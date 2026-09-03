@@ -20,7 +20,8 @@ export async function adoptWorkspaceAsset(input: {
     .eq("id", input.sourceAssetId)
     .eq("workspace_id", input.workspaceId)
     .maybeSingle();
-  if (rowError || !row) throw new AdoptAssetError("source_not_found", "Workspace asset was not found.");
+  if (rowError) throw new AdoptAssetError("database", "We could not look up that workspace image.");
+  if (!row) throw new AdoptAssetError("source_not_found", "Workspace asset was not found.");
   const asset = row as AssetRow;
   const sourcePath = typeof asset.storage_path === "string" ? asset.storage_path.trim() : "";
   if (!isWorkspaceMediaPath(input.workspaceId, sourcePath)) throw new AdoptAssetError("source_invalid", "Workspace asset is not safely stored.");
@@ -45,18 +46,31 @@ export async function adoptWorkspaceAsset(input: {
   const result = ledgerResult(prepared.data);
   if (!result.ok) throw new AdoptAssetError(result.code === "workspace_upload_quota" ? "quota" : "storage", "We could not store this image.");
   if (result.status === "finalized") return { ref, sourceAssetId: String(asset.id) };
-  const upload = await input.serviceSupabase.storage.from(CUSTOMER_IMAGE_BUCKET).upload(parsed.path, bytes, { contentType: mime, upsert: true });
-  if (upload.error) throw new AdoptAssetError("storage", "We could not store this image.");
-  const finalized = await input.serviceSupabase.rpc("adstudio_finalize_customer_image_upload", {
-    p_reservation_id: result.reservationId, p_workspace_id: input.workspaceId, p_ad_id: input.adId,
-    p_object_path: parsed.path, p_sha256: sha256, p_mime_type: mime, p_byte_size: bytes.length,
-  });
-  if (finalized.error || !ledgerResult(finalized.data).ok) throw new AdoptAssetError("storage", "We could not verify this image.");
+  if (!result.reservationId) throw new AdoptAssetError("storage", "We could not reserve this image.");
+  const upload = await input.serviceSupabase.storage.from(CUSTOMER_IMAGE_BUCKET).upload(parsed.path, bytes, { contentType: mime, upsert: false });
+  if (upload.error) {
+    const existing = await input.serviceSupabase.storage.from(CUSTOMER_IMAGE_BUCKET).info(parsed.path);
+    if (existing.error || existing.data?.size !== bytes.length) { await discard(input, result.reservationId, input.workspaceId, input.adId, parsed.path); throw new AdoptAssetError("storage", "We could not store this image."); }
+  }
+  const info = await input.serviceSupabase.storage.from(CUSTOMER_IMAGE_BUCKET).info(parsed.path);
+  if (info.error || info.data?.size !== bytes.length) { await discard(input, result.reservationId, input.workspaceId, input.adId, parsed.path); throw new AdoptAssetError("storage", "We could not verify this image."); }
+  const downloaded = await input.serviceSupabase.storage.from(CUSTOMER_IMAGE_BUCKET).download(parsed.path);
+  if (downloaded.error || !downloaded.data || imageSha256(Buffer.from(await downloaded.data.arrayBuffer())) !== sha256) { await discard(input, result.reservationId, input.workspaceId, input.adId, parsed.path); throw new AdoptAssetError("storage", "We could not verify this image."); }
+  const claimed = await input.serviceSupabase.rpc("adstudio_claim_customer_image_finalize", { p_reservation_id: result.reservationId, p_workspace_id: input.workspaceId, p_ad_id: input.adId, p_object_path: parsed.path, p_sha256: sha256, p_mime_type: mime, p_byte_size: bytes.length });
+  if (claimed.error || !ledgerResult(claimed.data).ok) { await discard(input, result.reservationId, input.workspaceId, input.adId, parsed.path); throw new AdoptAssetError("storage", "This image is already being finalized. Try again."); }
+  const finalized = await input.serviceSupabase.rpc("adstudio_finalize_customer_image_upload", { p_reservation_id: result.reservationId, p_workspace_id: input.workspaceId, p_ad_id: input.adId, p_object_path: parsed.path, p_sha256: sha256, p_mime_type: mime, p_byte_size: bytes.length });
+  if (finalized.error || !ledgerResult(finalized.data).ok) { await discard(input, result.reservationId, input.workspaceId, input.adId, parsed.path); throw new AdoptAssetError("storage", "We could not verify this image."); }
   return { ref, sourceAssetId: String(asset.id) };
 }
 
 export class AdoptAssetError extends Error {
-  constructor(readonly code: "source_not_found" | "source_invalid" | "source_expired" | "quota" | "storage", message: string) { super(message); }
+  readonly code: "source_not_found" | "source_invalid" | "source_expired" | "quota" | "storage" | "database";
+  constructor(code: "source_not_found" | "source_invalid" | "source_expired" | "quota" | "storage" | "database", message: string) { super(message); this.code = code; }
+}
+
+async function discard(input: { serviceSupabase: SupabaseClient }, reservationId: string, workspaceId: string, adId: string, path: string) {
+  await input.serviceSupabase.rpc("adstudio_discard_customer_image_upload", { p_reservation_id: reservationId, p_workspace_id: workspaceId, p_ad_id: adId, p_object_path: path });
+  await input.serviceSupabase.storage.from(CUSTOMER_IMAGE_BUCKET).remove([path]);
 }
 
 function ledgerResult(value: unknown): { ok: boolean; status?: string; reservationId?: string; code?: string } {

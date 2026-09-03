@@ -49,7 +49,7 @@ export interface InputsPanelProps {
   businessNameDefault?: string;
   onBusinessNameChange?: (value: string) => void;
   /** Workspace library assets (Brand Studio uploads) available to pick. */
-  libraryAssets?: Array<{ id: string; url: string; label: string }>;
+  libraryAssets?: Array<{ id?: string; url: string; label: string }>;
   /** Picks a library asset for an image slot. */
   onLibraryPick?: (key: string, sourceAssetId: string) => void | Promise<void>;
 }
@@ -234,7 +234,7 @@ function ImageSlotControl({
   defaultUrl: string | null;
   onImageChange: (key: string, change: { file: File; previewUrl: string } | null) => void;
   onCropClick: () => void;
-  libraryAssets?: Array<{ id: string; url: string; label: string }>;
+  libraryAssets?: Array<{ id?: string; url: string; label: string }>;
   onLibraryPick?: (key: string, sourceAssetId: string) => void | Promise<void>;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
@@ -267,9 +267,9 @@ function ImageSlotControl({
       <div className="grid grid-cols-3 gap-2 border-t border-border p-2">
         {libraryAssets!.map(asset => (
           <button
-            key={asset.id}
+            key={asset.id ?? asset.url}
             type="button"
-            onClick={() => pickFromLibrary(asset.id)}
+            onClick={() => asset.id && pickFromLibrary(asset.id)}
             className="group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-(--r-ctl)"
             aria-label={`Use library image ${asset.label}`}
           >

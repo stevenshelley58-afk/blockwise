@@ -55,7 +55,7 @@ export interface EditorShellProps {
    * Workspace library assets (Brand Studio uploads) offered as a per-slot
    * "Library…" source in the Content tab, alongside direct upload.
    */
-  libraryAssets?: Array<{ id: string; url: string; label: string }>;
+  libraryAssets?: Array<{ id?: string; url: string; label: string }>;
   /** Brand Pack primary logo URL for the Meta preview avatar (null → initials). */
   brandLogoUrl?: string | null;
   initialDocument?: AdDocumentParsed;
@@ -280,6 +280,7 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
     } finally { setPendingImageUploads(count => Math.max(0, count - 1)); }
   }, [adId, workspaceId, state.imageValues, updateImageValue, setError]);
 
+  const persistableLibraryAssets = libraryAssets?.filter((asset): asset is { id: string; url: string; label: string } => Boolean(asset.id));
   return <RedesignedEditor
     pack={pack}
     state={state}
@@ -288,7 +289,7 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
     brandColours={brandColours}
     brandBusinessName={brandBusinessName}
     brandLogoUrl={brandLogoUrl}
-    libraryAssets={libraryAssets}
+    libraryAssets={persistableLibraryAssets}
     canSave={canSave}
     canUndo={canUndo}
     canRedo={canRedo}
@@ -328,7 +329,7 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
 }
 
 function RedesignedEditor({ pack, templateId, state, activeLayout, brandColours, brandBusinessName, brandLogoUrl, libraryAssets, canSave, canUndo, canRedo, saveConflict, pendingImageUploads, inspectorTab, setInspectorTab, mobileInspectorOpen, setMobileInspectorOpen, handleSave, handlePublish, handleKeyDown, undo, redo, setActivePlacement, selectLayer, handleColourModeChange, handleCustomColourChange, handleTemplateCopyChange, handleBusinessNameChange, handleLibraryPick, handleImageChange, openCrop, openCropForInput, updateTextValue, updateMetaCopy, updateCrop, setError, cropTarget, setCropTarget, proposalBrief, setProposalBrief, proposal, proposalBusy, proposeCopy }: {
-  pack: AdTemplate; templateId: string; state: EditorState; activeLayout: AdTemplate["feedLayout"]; brandColours: BrandPackColours | null; brandBusinessName: string; brandLogoUrl: string | null; libraryAssets?: Array<{ id?: string; url: string; label: string }>; canSave: boolean; canUndo: boolean; canRedo: boolean; saveConflict: boolean; pendingImageUploads: number;
+  pack: AdTemplate; templateId: string; state: EditorState; activeLayout: AdTemplate["feedLayout"]; brandColours: BrandPackColours | null; brandBusinessName: string; brandLogoUrl: string | null; libraryAssets?: Array<{ id: string; url: string; label: string }>; canSave: boolean; canUndo: boolean; canRedo: boolean; saveConflict: boolean; pendingImageUploads: number;
   inspectorTab: InspectorTab; setInspectorTab: (value: InspectorTab) => void; mobileInspectorOpen: boolean; setMobileInspectorOpen: (value: boolean) => void; handleSave: () => Promise<boolean>; handlePublish: () => Promise<void>; handleKeyDown: (event: KeyboardEvent) => void; undo: () => void; redo: () => void; setActivePlacement: (value: Placement) => void; selectLayer: (value: string | null) => void;
   handleColourModeChange: (mode: ColourMode) => void; handleCustomColourChange: (role: ColourRole, hex: string) => void; handleTemplateCopyChange: (enabled: boolean) => void; handleBusinessNameChange: (value: string) => void; handleLibraryPick: (key: string, sourceAssetId: string) => Promise<void>; handleImageChange: (key: string, change: { file: File; previewUrl: string } | null) => Promise<void>; openCrop: (slot: ImageSlotLayer) => void; openCropForInput: (key: string) => void; updateTextValue: (key: string, value: string) => void; updateMetaCopy: (field: keyof MetaCopy, value: string) => void; updateCrop: (key: string, placement: Placement, crop: Rect) => void; setError: (value: string | null) => void;
   cropTarget: { slot: ImageSlotLayer; placement: Placement } | null; setCropTarget: (value: { slot: ImageSlotLayer; placement: Placement } | null) => void; proposalBrief: string; setProposalBrief: (value: string) => void; proposal: { onImage: Record<string, string>; copy: MetaCopy; source: string } | null; proposalBusy: boolean; proposeCopy: () => Promise<void>;

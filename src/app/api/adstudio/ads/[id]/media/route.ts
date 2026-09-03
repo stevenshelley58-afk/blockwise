@@ -40,13 +40,16 @@ export async function POST(request: NextRequest, context: RouteContext) {
     const sourceAssetId = typeof body.sourceAssetId === "string" ? body.sourceAssetId.trim() : "";
     if (!sourceAssetId) return NextResponse.json({ error: "Select a workspace image first.", code: "invalid_source" }, { status: 400 });
     const { data: ad, error: adError } = await access.supabase.from("ad_customer_ads").select("id").eq("id", id).eq("workspace_id", access.access.workspaceId).maybeSingle();
+    if (adError) return NextResponse.json({ error: "We could not verify this ad." }, { status: 500 });
     if (adError || !ad) return NextResponse.json({ error: "Ad not found." }, { status: 404 });
+    const rateLimit = await checkRateLimit(access.supabase, access.access.workspaceId, access.access.userId, { windowSeconds: 60 * 60, maxRequests: 120, bucket: "adstudio-media-upload" });
+    if (!rateLimit.ok) return NextResponse.json({ error: "Upload limit reached. Try again later." }, { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } });
     const service = createSupabaseServiceClient();
     try {
       const adopted = await adoptWorkspaceAsset({ accessSupabase: access.supabase, serviceSupabase: service, workspaceId: access.access.workspaceId, adId: id, sourceAssetId });
       return NextResponse.json(adopted, { headers: { "cache-control": "private, no-store" } });
     } catch (error) {
-      const status = error instanceof AdoptAssetError && error.code === "source_not_found" ? 404 : error instanceof AdoptAssetError && error.code === "quota" ? 413 : error instanceof AdoptAssetError && error.code === "source_expired" ? 410 : 400;
+      const status = error instanceof AdoptAssetError && error.code === "source_not_found" ? 404 : error instanceof AdoptAssetError && error.code === "database" ? 500 : error instanceof AdoptAssetError && error.code === "quota" ? 413 : error instanceof AdoptAssetError && error.code === "source_expired" ? 410 : 400;
       console.error("Ad Studio workspace asset adoption failed", { code: error instanceof AdoptAssetError ? error.code : "storage" });
       return NextResponse.json({ error: error instanceof AdoptAssetError ? error.message : "We could not use this workspace image.", code: error instanceof AdoptAssetError ? error.code : "storage" }, { status });
     }
