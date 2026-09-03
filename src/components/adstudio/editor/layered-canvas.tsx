@@ -447,7 +447,7 @@ function fitTextboxToLayer(
     : layer.fontSize;
   const boxFloor = layer.geometry.height / Math.max(1, layer.maxLines * layer.lineHeight);
   const minimumSize = layer.overflowBehaviour === "scale_down"
-    ? Math.max(1, Math.min(baseFontSize * 0.45, boxFloor))
+    ? 1
     : layer.overflowBehaviour === "truncate"
       ? Math.max(1, Math.min(baseFontSize, boxFloor))
       : baseFontSize;
@@ -458,15 +458,17 @@ function fitTextboxToLayer(
   }
   if (layer.overflowBehaviour === "refuse") return false;
 
-  const suffix = layer.overflowBehaviour === "truncate" ? "…" : "";
-  const graphemes = splitGraphemes(text);
+  if (layer.overflowBehaviour === "scale_down") return false;
+
+  const suffix = "…";
+  const words = text.trim().split(/\s+/u).filter(Boolean);
   let low = 0;
-  let high = graphemes.length;
+  let high = words.length;
   let fitted = "";
   while (low <= high) {
     const middle = Math.floor((low + high) / 2);
-    const prefix = graphemes.slice(0, middle).join("").trimEnd();
-    const candidate = middle < graphemes.length ? `${prefix}${suffix}` : prefix;
+    const prefix = words.slice(0, middle).join(" ");
+    const candidate = middle < words.length ? `${prefix}${suffix}` : prefix;
     setTextboxContent(textbox, candidate, minimumSize, layer.tracking);
     if (textboxFitsLayer(textbox, layer)) {
       fitted = candidate;
@@ -491,13 +493,6 @@ function textboxFitsLayer(textbox: import("fabric").Textbox, layer: PreviewTextL
     && textbox.height <= layer.geometry.height + 0.01;
 }
 
-function splitGraphemes(text: string): string[] {
-  if (typeof Intl.Segmenter === "function") {
-    return Array.from(new Intl.Segmenter(undefined, { granularity: "grapheme" }).segment(text), ({ segment }) => segment);
-  }
-  return Array.from(text);
-}
-
 /** Fabric uses left/top for object placement; pack contracts use x/y. */
 function fabricRectGeometry(geometry: Rect) {
   return {
@@ -513,13 +508,16 @@ function fabricRectGeometry(geometry: Rect) {
 function fitImageToGeometry(image: import("fabric").FabricImage, geometry: Rect) {
   const width = Math.max(1, image.width);
   const height = Math.max(1, image.height);
+  const scale = Math.min(geometry.width / width, geometry.height / height);
+  const renderedWidth = width * scale;
+  const renderedHeight = height * scale;
   image.set({
-    left: geometry.x,
-    top: geometry.y,
+    left: geometry.x + (geometry.width - renderedWidth) / 2,
+    top: geometry.y + (geometry.height - renderedHeight) / 2,
     originX: "left",
     originY: "top",
-    scaleX: geometry.width / width,
-    scaleY: geometry.height / height,
+    scaleX: scale,
+    scaleY: scale,
   });
 }
 

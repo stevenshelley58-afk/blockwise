@@ -3,8 +3,8 @@
 import { useState, useCallback, useRef } from "react";
 import type { AdTemplate, Layout, LayoutLayer, Placement, Rect, ColourMode, ColourRole } from "../../../../packages/ad-template-contract/src/types";
 import type { AdDocumentParsed } from "../../../../packages/ad-template-contract/src/schema";
-import { hydrateSavedEditorTextValues } from "@/lib/adstudio/editor-text-values";
-import { toMetaCta } from "@/lib/adstudio/meta-cta";
+import { hydrateSavedEditorTextValues } from "../../../lib/adstudio/editor-text-values.ts";
+import { toMetaCta } from "../../../lib/adstudio/meta-cta.ts";
 
 // ---------------------------------------------------------------------------
 // Editor state — Phase 6 foundation
@@ -43,6 +43,28 @@ export function normalizeEditorMetaCopy(copy: Partial<MetaCopy> | null | undefin
     description: copy?.description ?? "",
     cta: toMetaCta(copy?.cta ?? "LEARN_MORE"),
   };
+}
+
+/**
+ * Hydrate a persisted document over authored template defaults. Historical
+ * unsaved/blank documents must not turn a complete Meta preview back into
+ * placeholder copy, while subsequent editor changes remain fully editable.
+ */
+export function hydrateEditorMetaCopy(
+  saved: Partial<MetaCopy> | null | undefined,
+  authored: Partial<MetaCopy> | null | undefined,
+): MetaCopy {
+  const fallback = normalizeEditorMetaCopy(authored);
+  const value = (field: keyof MetaCopy): string => {
+    const candidate = saved?.[field];
+    return typeof candidate === "string" && candidate.trim().length > 0 ? candidate : fallback[field];
+  };
+  return normalizeEditorMetaCopy({
+    primaryText: value("primaryText"),
+    headline: value("headline"),
+    description: value("description"),
+    cta: value("cta"),
+  });
 }
 
 export interface EditorTextInput {
@@ -172,12 +194,12 @@ export function useEditorState(pack: AdTemplate, initialDocument?: AdDocumentPar
       ),
       colourMode: initialDocument.colourMode,
       resolvedColourMap: { ...base.resolvedColourMap, ...initialDocument.resolvedColourMap },
-      metaCopy: normalizeEditorMetaCopy({
+      metaCopy: hydrateEditorMetaCopy({
         primaryText: initialDocument.metaPrimaryText,
         headline: initialDocument.metaHeadline,
         description: initialDocument.metaDescription,
         cta: initialDocument.metaCta,
-      }),
+      }, base.metaCopy),
       lastSavedRevision: initialRevision ?? null,
     };
   });

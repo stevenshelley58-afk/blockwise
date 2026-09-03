@@ -426,7 +426,16 @@ function RedesignedEditor({ pack, templateId, state, activeLayout, brandColours,
     onDismissProposal={dismissProposal}
     brandRoleColours={brandRoleColours}
   />;
-  const resolvedBrandPreview = brandPreview ?? { businessName: "Your business", displayDomain: "yourwebsite.com", logoUrl: null };
+  const destinationKind = pack.metadata.publishRequirements.destination.kind;
+  const destinationDependency = pack.metadata.publishRequirements.destination.dependency?.trim() ?? "";
+  const authoredDestination = (() => {
+    try {
+      return new URL(destinationDependency).hostname;
+    } catch {
+      return destinationKind === "instant_form" ? "Instant form" : destinationKind === "none" ? "No destination" : "yourwebsite.com";
+    }
+  })();
+  const resolvedBrandPreview = brandPreview ?? { businessName: "Your business", displayDomain: authoredDestination, logoUrl: null };
   const saveStatus = pendingImageUploads > 0 ? "Uploading…" : state.isSaving ? "Saving…" : state.isDirty ? "Unsaved changes" : state.lastSavedRevision !== null ? "Saved" : "Not saved yet";
   return <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background text-foreground" onKeyDown={handleKeyDown} tabIndex={0} role="region" aria-label="Ad Studio editor">
     <header className="grid shrink-0 grid-cols-1 gap-2 border-b border-border bg-card px-2 py-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:px-3 md:grid-cols-[minmax(0,1fr)_auto_auto] md:px-5">

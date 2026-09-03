@@ -191,6 +191,25 @@ export function resolveCoverSourceRect(
   return region;
 }
 
+/** Preserve the complete source inside a logo slot without distortion. */
+export function resolveContainDestinationRect(
+  sourceWidth: number,
+  sourceHeight: number,
+  destination: { x: number; y: number; width: number; height: number },
+): { x: number; y: number; width: number; height: number } {
+  const width = Math.max(1, sourceWidth);
+  const height = Math.max(1, sourceHeight);
+  const scale = Math.min(destination.width / width, destination.height / height);
+  const renderedWidth = width * scale;
+  const renderedHeight = height * scale;
+  return {
+    x: destination.x + (destination.width - renderedWidth) / 2,
+    y: destination.y + (destination.height - renderedHeight) / 2,
+    width: renderedWidth,
+    height: renderedHeight,
+  };
+}
+
 function normalizeCrop(crop: Rect): Rect {
   // Keep the source rectangle non-empty even for malformed overrides at the
   // lower/right edge. drawImage rejects a zero-sized source rectangle.
@@ -236,7 +255,7 @@ function renderText(ctx: SKRSContext2D, layer: TextLayer, input: RenderInput, di
   // strict at the explicit authored size.
   const boxFloor = geometry.height / Math.max(1, layer.maxLines * layer.lineHeight);
   const minimumSize = layer.overflowBehaviour === "scale_down"
-    ? Math.max(1, Math.min(baseFontSize * 0.45, boxFloor))
+    ? 1
     : layer.overflowBehaviour === "truncate"
       ? Math.max(1, Math.min(baseFontSize, boxFloor))
       : baseFontSize;
@@ -262,7 +281,9 @@ function renderText(ctx: SKRSContext2D, layer: TextLayer, input: RenderInput, di
     if (layer.overflowBehaviour === "truncate" && lines.length > 0) {
       let last = lines[lines.length - 1] ?? "";
       const suffix = "…";
-      while (last && measuredWidth(ctx, `${last}${suffix}`, layer.tracking) > geometry.width) last = last.slice(0, -1);
+      const words = last.trim().split(/\s+/u).filter(Boolean);
+      while (words.length > 0 && measuredWidth(ctx, `${words.join(" ")}${suffix}`, layer.tracking) > geometry.width) words.pop();
+      last = words.join(" ");
       lines[lines.length - 1] = `${last.trimEnd()}${suffix}`;
     }
   }
@@ -353,18 +374,6 @@ function wrapText(ctx: SKRSContext2D, text: string, maxWidth: number, tracking =
     }
     let line = "";
     for (const word of words) {
-      if (measuredWidth(ctx, word, tracking) > maxWidth) {
-        if (line) output.push(line);
-        line = "";
-        for (const glyph of graphemes(word)) {
-          const candidate = `${line}${glyph}`;
-          if (line && measuredWidth(ctx, candidate, tracking) > maxWidth) {
-            output.push(line);
-            line = glyph;
-          } else line = candidate;
-        }
-        continue;
-      }
       const candidate = `${line} ${word}`;
       if (!line || measuredWidth(ctx, candidate.trim(), tracking) <= maxWidth) line = line ? candidate : word;
       else {
@@ -382,7 +391,8 @@ async function renderLogo(ctx: SKRSContext2D, layer: Extract<LayoutLayer, { type
   if (!imageBuf) return;
   const img = await loadImage(imageBuf);
   const geometry = resolveGeometry(layer.geometry, dims);
-  ctx.drawImage(img, geometry.x, geometry.y, geometry.width, geometry.height);
+  const contained = resolveContainDestinationRect(img.width, img.height, geometry);
+  ctx.drawImage(img, contained.x, contained.y, contained.width, contained.height);
 }
 
 function renderVector(ctx: SKRSContext2D, layer: Extract<LayoutLayer, { type: "vector" }>, input: RenderInput, dims: CanvasDimensions): void {
