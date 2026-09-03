@@ -20,6 +20,48 @@ export type AdStudioPlatform = z.infer<typeof adStudioPlatformSchema>;
 export type AdStudioFormat = z.infer<typeof adStudioFormatSchema>;
 export type AdStudioReviewStatus = z.infer<typeof reviewStatusSchema>;
 
+/**
+ * The one customer-facing Meta copy contract. Keep this in the shared
+ * contract module so generation, editing, previews, and persistence cannot
+ * drift into different limits.
+ */
+export const META_COPY_CONSTRAINTS = {
+  primaryText: 125,
+  headline: 40,
+  description: 30,
+  cta: 25,
+} as const;
+
+export const META_COPY_CTA_VALUES = [
+  "LEARN_MORE",
+  "SIGN_UP",
+  "DOWNLOAD",
+  "CONTACT_US",
+] as const;
+
+export type AdStudioMetaCopy = {
+  primaryText: string;
+  headline: string;
+  description: string;
+  cta: string;
+};
+
+export type MetaCopyField = keyof AdStudioMetaCopy;
+
+/** Return deterministic length violations for server and client boundaries. */
+export function metaCopyLimitIssues(copy: Partial<Record<MetaCopyField, unknown>>): Array<{
+  field: MetaCopyField;
+  maxLength: number;
+  actualLength: number;
+}> {
+  return (Object.keys(META_COPY_CONSTRAINTS) as MetaCopyField[]).flatMap((field) => {
+    const value = copy[field];
+    if (typeof value !== "string") return [];
+    const maxLength = META_COPY_CONSTRAINTS[field];
+    return value.length > maxLength ? [{ field, maxLength, actualLength: value.length }] : [];
+  });
+}
+
 // Square (1:1) dropped from generation 2026-07: Meta crops 4:5 for square
 // placements. The "1:1" enum value stays in adStudioFormatSchema so existing
 // saved creatives keep parsing and rendering.
@@ -341,13 +383,34 @@ export type AdStudioCreative = {
   previewSvg: string;
 };
 
+const providerMetaCopyArraySchema = z.preprocess(
+  (value) => typeof value === "string" ? [value] : value,
+  z.array(z.string().min(1)).min(1),
+);
+
+/** Normalize human CTA labels, while rejecting values Meta cannot publish. */
+function normalizeProviderCta(value: unknown): unknown {
+  if (typeof value !== "string") return value;
+  const normalized = value.trim().toUpperCase().replace(/[ -]+/gu, "_");
+  const aliases: Record<string, typeof META_COPY_CTA_VALUES[number]> = {
+    LEARN_MORE: "LEARN_MORE",
+    LEARNMORE: "LEARN_MORE",
+    SIGN_UP: "SIGN_UP",
+    SIGNUP: "SIGN_UP",
+    DOWNLOAD: "DOWNLOAD",
+    CONTACT_US: "CONTACT_US",
+    CONTACT: "CONTACT_US",
+  };
+  return aliases[normalized] ?? value;
+}
+
 export const metaLeadAdPackSchema = z.object({
   platform: z.literal("meta"),
   specialAdCategory: z.union([z.literal("housing"), z.null()]),
-  primaryText: z.array(z.string()).min(1),
-  headlines: z.array(z.string()).min(1),
-  descriptions: z.array(z.string()).min(1),
-  cta: z.enum(["LEARN_MORE", "SIGN_UP", "DOWNLOAD", "CONTACT_US"]),
+  primaryText: providerMetaCopyArraySchema,
+  headlines: providerMetaCopyArraySchema,
+  descriptions: providerMetaCopyArraySchema,
+  cta: z.preprocess(normalizeProviderCta, z.enum(META_COPY_CTA_VALUES)),
   leadForm: z.object({
     headline: z.string().min(1),
     questions: z.array(z.string()),

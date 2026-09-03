@@ -318,7 +318,7 @@ describe("Meta Feed and Story previews", () => {
   it("both previews take the live business name and fall back to Brand Pack initials", () => {
     assert.match(source, /businessInitials/);
     assert.match(source, /businessName \|\| "Your business"/);
-    assert.match(source, /logoUrl \?/);
+    assert.match(source, /safeLogoUrl \?/);
   });
 });
 

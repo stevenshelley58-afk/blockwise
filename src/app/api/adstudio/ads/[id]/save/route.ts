@@ -7,6 +7,7 @@ import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { adDocumentSchema, type AdDocumentParsed } from "../../../../../../../packages/ad-template-contract/src/schema.ts";
 import { containsInlineImageData, } from "@/lib/adstudio/persisted-document";
 import { CustomerImageStorageError, resolveCustomerImageValues } from "@/lib/adstudio/customer-image-storage";
+import { metaCopyLimitIssues } from "@/lib/adstudio/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -51,6 +52,18 @@ export async function POST(request: NextRequest, context: RouteContext) {
   }
 
   const document = parsed.data as AdDocumentParsed;
+  const metaCopyIssue = metaCopyLimitIssues({
+    primaryText: document.metaPrimaryText,
+    headline: document.metaHeadline,
+    description: document.metaDescription,
+    cta: document.metaCta,
+  })[0];
+  if (metaCopyIssue) {
+    return NextResponse.json(
+      { error: `${metaCopyIssue.field} must be ${metaCopyIssue.maxLength} characters or fewer.`, code: "meta_copy_too_long" },
+      { status: 400 },
+    );
+  }
   if (containsInlineImageData(document.sharedImageValues)) {
     return NextResponse.json(
       { error: "Upload images before saving this ad.", code: "image_upload_required" },
@@ -90,7 +103,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
           ? 404
           : err.code === "stale_revision" || err.code === "template_hash_mismatch"
             ? 409
-            : err.code.startsWith("image_")
+            : err.code.startsWith("image_") || err.code === "meta_copy_too_long"
               ? 400
               : 500;
       return NextResponse.json(

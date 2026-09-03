@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo } from "react";
 import type { MetaCopy } from "./use-editor-state";
+import { META_COPY_CTA_VALUES, META_COPY_CONSTRAINTS } from "../../../lib/adstudio/types";
+import { ctaLabelText, truncateForPreview } from "./preview-text";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,20 +28,10 @@ export interface MetaCopyPanelProps {
 }
 
 /** Meta's standard CTAs (the same set the meta lead-ad pack schema allows). */
-export const META_CTA_OPTIONS = [
-  "LEARN_MORE",
-  "SIGN_UP",
-  "DOWNLOAD",
-  "CONTACT_US",
-] as const;
+export const META_CTA_OPTIONS = META_COPY_CTA_VALUES;
 
 /** Meta truncation limits used for the live preview. */
-const LIMITS: Record<keyof MetaCopy, number> = {
-  primaryText: 125,
-  headline: 40,
-  description: 30,
-  cta: 25,
-};
+const LIMITS = META_COPY_CONSTRAINTS;
 
 export function MetaCopyPanel({ className, values, onChange }: MetaCopyPanelProps) {
   const customCta = !(META_CTA_OPTIONS as readonly string[]).includes(values.cta);
@@ -94,7 +85,7 @@ export function MetaCopyPanel({ className, values, onChange }: MetaCopyPanelProp
           >
             {META_CTA_OPTIONS.map(cta => (
               <option key={cta} value={cta}>
-                {cta.replaceAll("_", " ")}
+                {ctaLabelText(cta)}
               </option>
             ))}
             <option value="CUSTOM">Custom…</option>
@@ -176,13 +167,10 @@ function TextField({
 // ---------------------------------------------------------------------------
 
 function TruncationPreview({ values }: { values: MetaCopy }) {
-  const primary = useMemo(
-    () => truncate(values.primaryText, LIMITS.primaryText),
-    [values.primaryText],
-  );
-  const headline = truncate(values.headline, LIMITS.headline);
-  const description = truncate(values.description, LIMITS.description);
-  const cta = truncate(values.cta, LIMITS.cta) || "Learn more";
+  const primary = truncateForPreview(values.primaryText, LIMITS.primaryText);
+  const headline = truncateForPreview(values.headline, LIMITS.headline);
+  const description = truncateForPreview(values.description, LIMITS.description);
+  const cta = truncateForPreview(ctaLabelText(values.cta), LIMITS.cta) || "Learn more";
 
   return (
     <section aria-label="Truncation preview" className="mt-5">
@@ -202,16 +190,8 @@ function TruncationPreview({ values }: { values: MetaCopy }) {
         </p>
       </div>
       <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
-        Copy is truncated in feed at 125 / 40 / 30 characters (primary text,
-        headline, description). Longest text is cut first.
+        Feed and Story use the same limits: {LIMITS.primaryText} / {LIMITS.headline} / {LIMITS.description} / {LIMITS.cta} characters (primary text, headline, description, CTA).
       </p>
     </section>
   );
-}
-
-function truncate(value: string, max: number): string {
-  const collapsed = value.replace(/\s+/g, " ").trim();
-  if (collapsed.length <= max) return collapsed;
-  const cut = collapsed.slice(0, max).replace(/\s+\S*$/u, "");
-  return `${cut}…`;
 }

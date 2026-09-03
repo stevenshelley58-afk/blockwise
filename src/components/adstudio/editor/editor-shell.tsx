@@ -19,6 +19,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { META_COPY_CONSTRAINTS } from "../../../lib/adstudio/types";
 
 // ---------------------------------------------------------------------------
 // Editor Shell — Phase 6 foundation
@@ -53,7 +54,7 @@ export interface EditorShellProps {
   brandBusinessName?: string;
   /**
    * Workspace library assets (Brand Studio uploads) offered as a per-slot
-   * "Library…" source in the Creative tab, alongside direct upload.
+   * "Library…" source in the Visual tab, alongside direct upload.
    */
   libraryAssets?: Array<{ id?: string; url: string; label: string }>;
   /** Brand Pack primary logo URL for the Meta preview avatar (null → initials). */
@@ -65,7 +66,7 @@ export interface EditorShellProps {
 
 type InspectorTab = "creative" | "copy" | "colours";
 const INSPECTOR_TABS: Array<{ value: InspectorTab; label: string; icon: typeof PencilLine }> = [
-  { value: "creative", label: "Creative", icon: PencilLine },
+  { value: "creative", label: "Visual", icon: PencilLine },
   { value: "copy", label: "Ad copy", icon: Sparkles },
   { value: "colours", label: "Colours", icon: Palette },
 ];
@@ -166,10 +167,10 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
   const handleSave = useCallback(async (): Promise<boolean> => {
     const overLimit = [
       ...editorTextInputs(pack).filter(input => (state.textValues[input.key] ?? "").length > input.maxLength).map(input => `${input.label} is over its ${input.maxLength}-character limit.`),
-      state.metaCopy.primaryText.length > 125 ? "Primary text is over its 125-character limit." : "",
-      state.metaCopy.headline.length > 40 ? "Headline is over its 40-character limit." : "",
-      state.metaCopy.description.length > 30 ? "Description is over its 30-character limit." : "",
-      state.metaCopy.cta.length > 25 ? "Call to action is over its 25-character limit." : "",
+      state.metaCopy.primaryText.length > META_COPY_CONSTRAINTS.primaryText ? `Primary text is over its ${META_COPY_CONSTRAINTS.primaryText}-character limit.` : "",
+      state.metaCopy.headline.length > META_COPY_CONSTRAINTS.headline ? `Headline is over its ${META_COPY_CONSTRAINTS.headline}-character limit.` : "",
+      state.metaCopy.description.length > META_COPY_CONSTRAINTS.description ? `Description is over its ${META_COPY_CONSTRAINTS.description}-character limit.` : "",
+      state.metaCopy.cta.length > META_COPY_CONSTRAINTS.cta ? `Call to action is over its ${META_COPY_CONSTRAINTS.cta}-character limit.` : "",
     ].filter(Boolean);
     if (overLimit.length > 0) { setError(`Shorten copy before saving: ${overLimit.join(" ")}`); return false; }
     const missingImages = pack.imageInputs.filter(input => input.required !== false
@@ -426,9 +427,9 @@ function RedesignedEditor({ pack, templateId, state, activeLayout, brandColours,
   const inspector = <InspectorContent tab={inspectorTab} pack={pack} state={state} defaultImageValues={defaultImageValues} brandColours={brandColours} brandBusinessName={brandBusinessName} libraryAssets={libraryAssets} onTextChange={updateTextValue} onImageChange={handleImageChange} onCropClick={openCropForInput} onMetaChange={updateMetaCopy} onColourModeChange={handleColourModeChange} onCustomColourChange={handleCustomColourChange} onTemplateCopyChange={handleTemplateCopyChange} onBusinessNameChange={handleBusinessNameChange} onLibraryPick={handleLibraryPick} proposalBrief={proposalBrief} proposal={proposal} proposalBusy={proposalBusy} onBriefChange={setProposalBrief} onPropose={proposeCopy} />;
   const saveStatus = pendingImageUploads > 0 ? "Uploading…" : state.isSaving ? "Saving…" : state.isDirty ? "Unsaved changes" : state.lastSavedRevision !== null ? "Saved" : "Not saved yet";
   return <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background text-foreground" onKeyDown={handleKeyDown} tabIndex={0} role="region" aria-label="Ad Studio editor">
-    <header className="grid min-h-14 shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-1.5 gap-y-1 border-b border-border bg-card px-2 py-1.5 md:flex md:h-16 md:flex-nowrap md:justify-between md:gap-2 md:px-5 md:py-0">
+    <header className="relative grid min-h-14 shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-1.5 gap-y-1 border-b border-border bg-card px-2 py-1.5 md:flex md:h-16 md:flex-nowrap md:justify-between md:gap-2 md:px-5 md:py-0">
       <Button variant="ghost" size="icon" aria-label="Back to all ads" className="col-start-1 row-start-1 min-h-11 min-w-11 rounded-full md:order-1" onClick={() => { if (!state.isDirty || window.confirm("You have unsaved changes. Leave this ad?")) window.location.href = "/ad-studio/ads"; }}><ArrowLeft className="size-4" /></Button><input aria-label="Ad name" maxLength={120} value={name} onChange={event => setName(event.target.value)} onBlur={() => void persistName()} onKeyDown={event => { if (event.key === "Enter") { event.currentTarget.blur(); } }} className="col-start-2 row-start-1 min-w-0 max-w-[220px] flex-1 truncate border-0 bg-transparent px-1 text-sm font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring md:order-2" />
-      <Tabs value={state.activePlacement} onValueChange={value => setActivePlacement(value as Placement)} className="col-start-1 row-start-2 min-w-0 md:order-3 md:flex-1"><TabsList aria-label="Ad format" className="max-w-full overflow-x-auto bg-muted/60 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"><TabsTrigger value="feed" className="min-h-11 px-3 text-xs md:px-4 md:text-sm">Feed</TabsTrigger><TabsTrigger value="story" className="min-h-11 px-3 text-xs md:px-4 md:text-sm">Story</TabsTrigger></TabsList></Tabs>
+      <div className="col-span-3 row-start-2 flex min-w-0 justify-center md:absolute md:inset-x-0 md:top-1/2 md:-translate-y-1/2"><Tabs value={state.activePlacement} onValueChange={value => setActivePlacement(value as Placement)} className="min-w-0"><TabsList aria-label="Ad format" className="max-w-full overflow-x-auto bg-muted/60 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"><TabsTrigger value="feed" className="min-h-11 px-3 text-xs md:px-4 md:text-sm">Feed</TabsTrigger><TabsTrigger value="story" className="min-h-11 px-3 text-xs md:px-4 md:text-sm">Story</TabsTrigger></TabsList></Tabs></div>
       <span className="col-start-2 row-start-2 min-w-0 truncate text-right text-[10px] text-muted-foreground md:order-4 md:w-auto md:text-xs" role="status" aria-live="polite">{saveStatus}</span>
       <div className="col-start-3 row-start-2 ml-auto flex shrink-0 items-center gap-0.5 md:order-5 md:gap-2"><Button variant="ghost" size="icon" onClick={undo} disabled={!canUndo} aria-label="Undo" className="min-h-11 min-w-11 rounded-full"><RotateCcw /></Button><Button variant="ghost" size="icon" onClick={redo} disabled={!canRedo} aria-label="Redo" className="min-h-11 min-w-11 rounded-full"><RotateCw /></Button><Button onClick={handleSave} disabled={!canSave || state.isSaving || pendingImageUploads > 0} aria-label={state.isSaving ? "Saving" : "Save"} className="min-h-11 min-w-11 rounded-full px-2 md:min-w-0 md:px-4"><span className="hidden md:inline">{state.isSaving ? "Saving…" : "Save"}</span><Save className="size-4 md:ml-1.5" /></Button></div>
       <Button onClick={handlePublish} disabled={!canSave || state.isSaving || pendingImageUploads > 0} variant="outline" className="col-start-3 row-start-1 min-h-11 rounded-full bg-primary px-3 text-xs text-primary-foreground hover:bg-primary/90 md:order-6 md:border md:border-input md:bg-background md:px-4 md:text-sm md:text-foreground md:hover:bg-accent"><span className="md:hidden">Review</span><span className="hidden md:inline">Review & publish</span></Button>
@@ -498,7 +499,7 @@ function InspectorTabs({ value, onChange }: { value: InspectorTab; onChange: (va
 }
 
 function InspectorContent({ tab, pack, state, defaultImageValues, brandColours, brandBusinessName, libraryAssets, onTextChange, onImageChange, onCropClick, onMetaChange, onColourModeChange, onCustomColourChange, onTemplateCopyChange, onBusinessNameChange, onLibraryPick, proposalBrief, proposal, proposalBusy, onBriefChange, onPropose }: { tab: InspectorTab; pack: AdTemplate; state: EditorState; defaultImageValues: Record<string, string>; brandColours: BrandPackColours | null; brandBusinessName: string; libraryAssets?: Array<{ id: string; url: string; label: string }>; onTextChange: (key: string, value: string) => void; onImageChange: (key: string, change: { file: File; previewUrl: string } | null) => Promise<void>; onCropClick: (key: string) => void; onMetaChange: (field: keyof MetaCopy, value: string) => void; onColourModeChange: (mode: ColourMode) => void; onCustomColourChange: (role: ColourRole, hex: string) => void; onTemplateCopyChange: (enabled: boolean) => void; onBusinessNameChange: (value: string) => void; onLibraryPick: (key: string, sourceAssetId: string) => Promise<void>; proposalBrief: string; proposal: { onImage: Record<string, string>; copy: MetaCopy; source: string } | null; proposalBusy: boolean; onBriefChange: (value: string) => void; onPropose: () => Promise<void> }) {
-  if (tab === "copy") return <div><MetaCopyPanel values={state.metaCopy} onChange={onMetaChange} /><ProposalPanel brief={proposalBrief} busy={proposalBusy} onBriefChange={onBriefChange} onPropose={onPropose} /></div>;
+  if (tab === "copy") return <div><ProposalPanel brief={proposalBrief} busy={proposalBusy} onBriefChange={onBriefChange} onPropose={onPropose} /><MetaCopyPanel values={state.metaCopy} onChange={onMetaChange} /></div>;
   if (tab === "colours") return <aside aria-label="Colours" className="space-y-4 border-t border-border p-4"><div><h3 className="text-sm font-semibold">Colours</h3><p className="mt-1 text-xs leading-relaxed text-muted-foreground">Choose the colours that feel right for this ad.</p></div><ColourToggle mode={state.colourMode} brandPackAvailable={!!brandColours} resolvedColourMap={state.resolvedColourMap} onModeChange={onColourModeChange} onCustomColourChange={onCustomColourChange} /></aside>;
   return <InputsPanel textInputs={pack.textInputs} imageInputs={pack.imageInputs} textValues={state.textValues} imageValues={Object.fromEntries(state.imageValues.map(iv => [iv.inputKey, iv.previewUrl ?? iv.dataUrl]))} defaultImageValues={defaultImageValues} onTextChange={onTextChange} onImageChange={onImageChange} onCropClick={onCropClick} templateCopyApplied={state.templateCopyApplied} templateCopyAvailable={hasTemplateCopy(pack)} onTemplateCopyChange={onTemplateCopyChange} businessName={state.brandBusinessName} businessNameDefault={brandBusinessName} onBusinessNameChange={onBusinessNameChange} libraryAssets={libraryAssets} onLibraryPick={onLibraryPick} />;
 }
@@ -521,7 +522,7 @@ function ProposalPanel({
       <div>
         <h3 className="mb-2 px-2 text-sm font-semibold text-foreground">AI brief</h3>
         <div className="mt-3">
-      <p className="mb-3 text-xs leading-relaxed text-muted-foreground">Generate a first draft for the creative and Meta fields. The result lands in the editable fields as one undoable change.</p>
+       <p className="mb-3 text-xs leading-relaxed text-muted-foreground">Replaces the current on-image text and Meta copy as one undoable change. Limits: primary {META_COPY_CONSTRAINTS.primaryText}, headline {META_COPY_CONSTRAINTS.headline}, description {META_COPY_CONSTRAINTS.description}, CTA {META_COPY_CONSTRAINTS.cta} characters.</p>
       <label htmlFor="copy-suggestion-brief" className="mb-1 block text-sm font-medium text-foreground">What should the ad say?</label>
       <textarea id="copy-suggestion-brief" value={brief} onChange={event => onBriefChange(event.target.value)} rows={4} placeholder="Describe the property, offer or audience…" className="min-h-24 w-full rounded-(--r-card) border border-input bg-muted/30 px-3 py-2 text-base shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50" />
       <button type="button" onClick={onPropose} disabled={busy} className="mt-2 min-h-11 h-auto w-full justify-start rounded-full bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50">{busy ? "Generating…" : "Generate copy"}</button>

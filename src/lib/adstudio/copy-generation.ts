@@ -19,13 +19,13 @@ import {
   recordAdStudioProviderRun,
   type ProviderRunAttempt,
 } from "../operator/prompts/redact-prompt-run.ts";
+import {
+  META_COPY_CTA_VALUES,
+  META_COPY_CONSTRAINTS,
+  type AdStudioMetaCopy,
+} from "./types.ts";
 
-export type AdStudioCopyFields = {
-  primaryText: string;
-  headline: string;
-  description: string;
-  cta: string;
-};
+export type AdStudioCopyFields = AdStudioMetaCopy;
 
 export type AdStudioAiWritingGuidance = {
   summary: string;
@@ -96,12 +96,8 @@ const COPY_PROMPT_KEYS: PromptKey[] = [
   "adstudio.copy.compliance_rules",
 ];
 
-export const ADSTUDIO_COPY_LIMITS: Record<keyof AdStudioCopyFields, number> = {
-  primaryText: 125,
-  headline: 40,
-  description: 90,
-  cta: 24,
-};
+/** @deprecated Use META_COPY_CONSTRAINTS from ./types.ts. */
+export const ADSTUDIO_COPY_LIMITS = META_COPY_CONSTRAINTS;
 
 export const ADSTUDIO_GUIDANCE_LIMITS = {
   summary: 600,
@@ -158,6 +154,7 @@ export async function generateAdStudioCopy(
     const output = generation.output;
     const json = (output.json ?? {}) as Record<string, unknown>;
     const current = input.copy ?? {};
+    const normalizedCopy = normalizeAdStudioCopy(json, current);
 
     finalizationStarted = true;
     await recordAdStudioProviderRun({
@@ -180,14 +177,11 @@ export async function generateAdStudioCopy(
 
     return {
       copy: {
-        headline: clamp(json.headline, ADSTUDIO_COPY_LIMITS.headline, current.headline ?? ""),
-        primaryText: clamp(json.primaryText, ADSTUDIO_COPY_LIMITS.primaryText, current.primaryText ?? ""),
-        description: clamp(json.description, ADSTUDIO_COPY_LIMITS.description, current.description ?? ""),
-        cta: clamp(json.cta, ADSTUDIO_COPY_LIMITS.cta, current.cta ?? "Learn more"),
+        ...normalizedCopy,
       },
       alternates: {
-        headline: clampList(json.altHeadlines, ADSTUDIO_COPY_LIMITS.headline),
-        primaryText: clampList(json.altPrimaryTexts, ADSTUDIO_COPY_LIMITS.primaryText),
+        headline: clampList(json.altHeadlines, META_COPY_CONSTRAINTS.headline),
+        primaryText: clampList(json.altPrimaryTexts, META_COPY_CONSTRAINTS.primaryText),
       },
       source: "ai",
     };
@@ -300,6 +294,7 @@ export async function generateAdStudioTemplateCopy(
       mutationId,
     }, input.providerEnv, input.signal);
     const json = (generation.output.json ?? {}) as Record<string, unknown>;
+    const normalizedCopy = normalizeAdStudioCopy(json);
     const onImageRaw = (json.onImage ?? {}) as Record<string, unknown>;
     const onImage: Record<string, string> = {};
     for (const field of input.fields) {
@@ -333,10 +328,7 @@ export async function generateAdStudioTemplateCopy(
     return {
       onImage,
       copy: {
-        headline: clamp(json.headline, ADSTUDIO_COPY_LIMITS.headline, ""),
-        primaryText: clamp(json.primaryText, ADSTUDIO_COPY_LIMITS.primaryText, ""),
-        description: clamp(json.description, ADSTUDIO_COPY_LIMITS.description, ""),
-        cta: clamp(json.cta, ADSTUDIO_COPY_LIMITS.cta, "Learn more"),
+        ...normalizedCopy,
       },
       source: "ai",
     };
@@ -377,10 +369,82 @@ function generationLogInput(input: AdStudioCopyGenerationInput) {
   };
 }
 
-function clamp(value: unknown, limit: number, fallback: string): string {
-  const text = typeof value === "string" ? value.trim() : "";
-  if (!text) return fallback;
+export class AdStudioCopyNormalizationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AdStudioCopyNormalizationError";
+  }
+}
+
+/**
+ * Normalize provider payloads at the paid boundary. Providers sometimes
+ * return a singular string where the schema asks for an array (or use the
+ * plural field names from Meta's publish pack). Missing required fields fail
+ * explicitly; they never become a silent empty string.
+ */
+export function normalizeAdStudioCopy(
+  value: Record<string, unknown>,
+  current: Partial<AdStudioCopyFields> = {},
+): AdStudioCopyFields {
+  const primaryText = normalizeRequiredCopyField(
+    firstProviderString(value.primaryText ?? value.primaryTexts ?? value.primary_text),
+    current.primaryText,
+    META_COPY_CONSTRAINTS.primaryText,
+    "primary text",
+  );
+  const headline = normalizeRequiredCopyField(
+    firstProviderString(value.headline ?? value.headlines),
+    current.headline,
+    META_COPY_CONSTRAINTS.headline,
+    "headline",
+  );
+  const description = normalizeRequiredCopyField(
+    firstProviderString(value.description ?? value.descriptions),
+    current.description,
+    META_COPY_CONSTRAINTS.description,
+    "description",
+  );
+  const rawCta = firstProviderString(value.cta ?? value.callToAction);
+  const cta = normalizeProviderCta(rawCta ?? current.cta);
+  return { primaryText, headline, description, cta };
+}
+
+function normalizeRequiredCopyField(
+  value: string | undefined,
+  fallback: string | undefined,
+  limit: number,
+  field: string,
+): string {
+  const text = (value ?? fallback ?? "").trim();
+  if (!text) throw new AdStudioCopyNormalizationError(`Provider returned no ${field}.`);
   return text.length > limit ? text.slice(0, limit).trimEnd() : text;
+}
+
+function firstProviderString(value: unknown): string | undefined {
+  if (typeof value === "string") return value.trim() || undefined;
+  if (Array.isArray(value)) {
+    const first = value.find((item): item is string => typeof item === "string" && item.trim().length > 0);
+    return first?.trim();
+  }
+  return undefined;
+}
+
+function normalizeProviderCta(value: string | undefined): string {
+  const text = value?.trim() ?? "";
+  if (!text) return "LEARN_MORE";
+  const normalized = text.toUpperCase().replace(/[ -]+/gu, "_");
+  const aliases: Record<string, typeof META_COPY_CTA_VALUES[number]> = {
+    LEARN_MORE: "LEARN_MORE",
+    LEARNMORE: "LEARN_MORE",
+    SIGN_UP: "SIGN_UP",
+    SIGNUP: "SIGN_UP",
+    DOWNLOAD: "DOWNLOAD",
+    CONTACT_US: "CONTACT_US",
+    CONTACT: "CONTACT_US",
+  };
+  const mapped = aliases[normalized];
+  if (mapped && META_COPY_CTA_VALUES.includes(mapped)) return mapped;
+  throw new AdStudioCopyNormalizationError(`Provider returned an unsupported CTA: ${text}.`);
 }
 
 function clampList(value: unknown, limit: number): string[] {

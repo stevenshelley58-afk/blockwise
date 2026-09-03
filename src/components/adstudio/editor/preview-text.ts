@@ -7,7 +7,9 @@
 export function truncateForPreview(value: string, max: number): string {
   const collapsed = value.replace(/\s+/g, " ").trim();
   if (collapsed.length <= max) return collapsed;
-  return `${collapsed.slice(0, max).replace(/\s+\S*$/u, "")}…`;
+  if (max <= 1) return "…".slice(0, max);
+  const cut = collapsed.slice(0, max - 1).replace(/\s+\S*$/u, "").trimEnd();
+  return `${cut}…`;
 }
 
 /** Human CTA label from the stored Meta CTA value ("LEARN_MORE" → "Learn more"). */
