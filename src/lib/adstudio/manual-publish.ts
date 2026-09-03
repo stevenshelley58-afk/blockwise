@@ -1,5 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { deterministicUuid } from "./id.ts";
+
 export const MANUAL_REQUEST_TARGET = "adstudio_manual_meta_publish";
 export const MANUAL_REQUEST_ACTION = "requested";
 export const MANUAL_STATUS_ACTION = "status_changed";
@@ -39,9 +41,14 @@ export type ManualPublishRequest = {
 };
 
 export class ManualPublishError extends Error {
-  constructor(readonly code: string, message: string, readonly status = 400) {
+  readonly code: string;
+  readonly status: number;
+
+  constructor(code: string, message: string, status = 400) {
     super(message);
     this.name = "ManualPublishError";
+    this.code = code;
+    this.status = status;
   }
 }
 
@@ -209,8 +216,11 @@ export async function updateManualPublishStatus(input: { serviceSupabase: Supaba
   const events = await loadEvents(input.serviceSupabase, { mutationId: requestId });
   const current = toRequest(events);
   if (!current) throw new ManualPublishError("not_found", "Manual publishing request was not found.", 404);
+  if (current.status === input.status) return current;
   if (!allowedManualStatusTransition(current.status, input.status)) throw new ManualPublishError("invalid_transition", `Cannot change request from ${current.status} to ${input.status}.`, 409);
+  const transitionId = deterministicUuid(`manual_meta_publish_transition:${requestId}:${current.status}`);
   const { error } = await input.serviceSupabase.from("audit_logs").insert({
+    id: transitionId,
     workspace_id: current.workspaceId,
     actor_profile_id: input.actorProfileId,
     action: MANUAL_STATUS_ACTION,
@@ -219,8 +229,9 @@ export async function updateManualPublishStatus(input: { serviceSupabase: Supaba
     correlation_id: requestId,
     metadata: { requestType: "manual_meta_publish", status: input.status, reason },
   });
-  if (error) throw new ManualPublishError("storage_error", "The request status could not be recorded.", 500);
+  if (error && error.code !== "23505") throw new ManualPublishError("storage_error", "The request status could not be recorded.", 500);
   const updated = toRequest(await loadEvents(input.serviceSupabase, { mutationId: requestId }));
-  if (!updated || updated.status !== input.status) throw new ManualPublishError("status_race", "The request changed while it was being updated; reload and try again.", 409);
+  if (!updated) throw new ManualPublishError("status_race", "The request changed while it was being updated; reload and try again.", 409);
+  if (updated.status !== input.status) throw new ManualPublishError("status_race", `Another operator changed this request to ${updated.status}; reload before continuing.`, 409);
   return updated;
 }

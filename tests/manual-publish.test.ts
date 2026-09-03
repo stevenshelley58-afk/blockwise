@@ -22,4 +22,6 @@ test("manual publishing backend has no provider activation side effects", async 
   assert.match(source, /publishControls/);
   assert.match(source, /renders_missing/);
   assert.match(source, /32_000/);
+  assert.match(source, /manual_meta_publish_transition:/);
+  assert.match(source, /error\.code !== "23505"/);
 });

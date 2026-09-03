@@ -56,6 +56,7 @@ export interface PublishFlowProps {
   audienceLocations: PublishAudienceLocation[];
   /** Optional last-checked Meta state for display only; publish re-verifies it server-side. */
   parentState?: MetaParentState;
+  canRequestManualPublish: boolean;
 }
 
 type PublishReceipt = {
@@ -124,6 +125,7 @@ export function PublishFlow({
   providerWritesEnabled,
   audienceLocations,
   parentState,
+  canRequestManualPublish,
 }: PublishFlowProps) {
   const [submitting, setSubmitting] = useState(false);
   const [receipt, setReceipt] = useState<PublishReceipt | null>(null);
@@ -384,7 +386,8 @@ export function PublishFlow({
           </div>
           <label className="block text-xs font-semibold" htmlFor="manual-publish-notes">Optional note</label>
           <textarea id="manual-publish-notes" value={manualNotes} onChange={(event) => setManualNotes(event.target.value)} maxLength={500} placeholder="Tell the operator anything important about this request" className="min-h-20 w-full resize-y rounded-(--r-card) border border-(--line-heavy) bg-(--surface) px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
-          {manualPublish.status === "requested" || manualPublish.status === "in_review" || manualPublish.status === "published" || manualPublish.status === "cancelled" ? <p className="text-sm font-semibold text-success" role="status" aria-live="polite">{manualPublish.status === "published" ? "Completed by Blockwise. Check your Meta account for the result." : manualPublish.status === "cancelled" ? "This request was cancelled. You can send a new request when ready." : manualPublish.status === "in_review" ? "A Blockwise operator is reviewing your request." : "Request sent. A Blockwise operator will review it."}</p> : null}
+          {manualPublish.status === "requested" || manualPublish.status === "in_review" || manualPublish.status === "published" || manualPublish.status === "cancelled" ? <p className={`text-sm font-semibold ${manualPublish.status === "cancelled" ? "text-muted-foreground" : "text-success"}`} role="status" aria-live="polite">{manualPublish.status === "published" ? "Completed by Blockwise. Check your Meta account for the result." : manualPublish.status === "cancelled" ? "This request was cancelled. You can send a new request when ready." : manualPublish.status === "in_review" ? "A Blockwise operator is reviewing your request." : "Request sent. A Blockwise operator will review it."}</p> : null}
+          {!canRequestManualPublish ? <p className="text-sm text-muted-foreground">Ask a workspace owner or admin to send this publishing request.</p> : null}
           {manualPublish.status === "failed" ? <p className="text-sm font-semibold text-error" role="alert">{manualPublish.error}</p> : null}
           {manualPublish.mutationId ? <p className="font-mono text-[10px] text-(--faint)">Request reference: {manualPublish.mutationId.slice(0, 8)}</p> : null}
         </div>
@@ -588,7 +591,7 @@ export function PublishFlow({
         <div className="ml-auto">
           <Button
             onClick={handleManualPublish}
-             disabled={!ready || submitting || manualPublish.status === "requested" || manualPublish.status === "in_review" || manualPublish.status === "published"}
+             disabled={!canRequestManualPublish || !ready || submitting || manualPublish.status === "requested" || manualPublish.status === "in_review" || manualPublish.status === "published"}
             className="min-h-11 rounded-full px-6 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             {submitting ? "Sending request…" : manualPublish.status === "requested" || manualPublish.status === "in_review" ? "Request sent" : "Request manual publishing"}

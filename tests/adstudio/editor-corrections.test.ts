@@ -326,8 +326,12 @@ describe("publish reports active state honestly with safe retry", () => {
   const flow = readFileSync("src/app/(customer)/ad-studio/templates/[templateId]/publish/publish-flow.tsx", "utf8");
   const route = readFileSync("src/app/api/adstudio/ads/[id]/publish/route.ts", "utf8");
 
-  it("publish is a single explicit action with no paused language", () => {
-    assert.match(flow, /\{submitting \? "Publishing…" : "Publish"\}/);
+  it("the customer action uses the manual handoff while partner automation is gated", () => {
+    assert.match(flow, /Request manual publishing/);
+    assert.match(flow, /\/manual-publish/);
+    assert.match(flow, /does not connect your Meta account to Blockwise or bypass Meta/);
+    assert.match(flow, /Ask a workspace owner or admin/);
+    assert.match(flow, /disabled=\{!canRequestManualPublish/);
     assert.doesNotMatch(flow, /Freeze & Create|Paused on Meta|Activate Campaign|paused ads/);
   });
 

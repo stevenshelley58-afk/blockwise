@@ -115,6 +115,7 @@ export default async function PublishPage({
           initialIssues={issues}
           providerWritesEnabled={providerWrites}
           audienceLocations={audienceLocations}
+          canRequestManualPublish={access.isOperator || access.role === "owner" || access.role === "admin"}
         />
       </div>
     </div>
