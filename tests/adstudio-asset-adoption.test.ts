@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { adoptWorkspaceAsset, AdoptAssetError } from "../src/lib/adstudio/adopt-workspace-asset.ts";
 
@@ -45,7 +46,12 @@ test("valid adoption follows prepare, upload, verify, claim, finalize", async ()
 
 test("failed discard claim never removes the customer object", async () => {
   const calls: string[] = [];
-  const service = { storage: { from: () => ({ async remove() { calls.push("remove"); return { error: null }; } }) }, async rpc(name: string) { calls.push(name); return { data: false, error: null }; } };
+  // The production helper accepts a full client; this test only exercises its
+  // RPC and storage calls, so keep the narrow fake explicit at the boundary.
+  const service = {
+    storage: { from: () => ({ async remove() { calls.push("remove"); return { error: null }; } }) },
+    async rpc(name: string) { calls.push(name); return { data: false, error: null }; },
+  } as unknown as SupabaseClient;
   const module = await import("../src/lib/adstudio/adopt-workspace-asset.ts");
   const { discardCustomerImageUpload: discard } = module as typeof import("../src/lib/adstudio/adopt-workspace-asset");
   await discard({ serviceSupabase: service }, "reservation-1", "workspace-a", "ad-a", "workspace-a/adstudio/ads/ad-a/images/hash.png");

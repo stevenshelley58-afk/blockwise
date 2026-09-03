@@ -696,8 +696,7 @@ function BrandStudioEditor({ brandKit: initialKit, returnTo }: { brandKit: AdStu
                         className="min-h-11 max-w-full rounded-(--r-control) border border-(--ui-border) px-3 text-sm outline-none focus-visible:ring-2"
                         value={kit.typography.headingFont}
                         aria-label="Heading font"
-                      className="min-h-11 rounded-full bg-(--ui-muted) px-3 text-xs font-semibold text-(--ui-muted-foreground) focus-visible:outline-2"
-                      onChange={(event) =>
+                       onChange={(event) =>
                           setKit((c) => ({ ...c, typography: { ...c.typography, headingFont: event.target.value } }))
                         }
                       />
