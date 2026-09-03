@@ -1,8 +1,8 @@
 {
-  servers {
-    trusted_proxies static {$TRUSTED_PROXY_RANGES}
-    trusted_proxies_strict
-  }
+	servers {
+		trusted_proxies static {$TRUSTED_PROXY_RANGES}
+		trusted_proxies_strict
+	}
 }
 
 # Frank's shared edge terminates public TLS. This internal router is explicitly
@@ -16,42 +16,38 @@
 # resolved client IP is stamped into X-Blockwise-Client-IP (overwriting
 # whatever the client sent), and the application trusts ONLY that header.
 http://{$BLOCKWISE_PRODUCT_DOMAIN} {
-  encode zstd gzip
+	encode zstd gzip
 
-  @health path /healthz
-  handle @health {
-    respond "ok" 200
-  }
+	@health path /healthz
+	handle @health {
+		respond "ok" 200
+	}
 
-  handle_path /rest/v1/* {
-    reverse_proxy product-rest:3000 {
-    }
-  }
+	handle_path /rest/v1/* {
+		reverse_proxy product-rest:3000
+	}
 
-  handle_path /auth/v1/* {
-    reverse_proxy product-auth:9999 {
-    }
-  }
+	handle_path /auth/v1/* {
+		reverse_proxy product-auth:9999
+	}
 
-  handle_path /storage/v1/* {
-    reverse_proxy product-storage:5000 {
-    }
-  }
+	handle_path /storage/v1/* {
+		reverse_proxy product-storage:5000
+	}
 
-  handle_path /realtime/v1/* {
-    reverse_proxy product-realtime:4000 {
-    }
-  }
+	handle_path /realtime/v1/* {
+		reverse_proxy product-realtime:4000
+	}
 
-  handle /api/* {
-    reverse_proxy product-app:3000 {
-      header_up X-Blockwise-Client-IP "{client_ip}"
-    }
-  }
+	handle /api/* {
+		reverse_proxy product-app:3000 {
+			header_up X-Blockwise-Client-IP "{client_ip}"
+		}
+	}
 
-  handle {
-    reverse_proxy product-app:3000 {
-      header_up X-Blockwise-Client-IP "{client_ip}"
-    }
-  }
+	handle {
+		reverse_proxy product-app:3000 {
+			header_up X-Blockwise-Client-IP "{client_ip}"
+		}
+	}
 }
