@@ -11,7 +11,7 @@ import {
 } from "../src/lib/operator/email-service.ts";
 
 test("operator mailbox config defaults to steven at the Blockwise domain", () => {
-  const config = getOperatorMailboxConfig({ ...process.env, RESEND_API_KEY: "re_test" });
+  const config = getOperatorMailboxConfig({ ...process.env, EMAIL_PROVIDER: "resend", RESEND_API_KEY: "re_test" });
 
   assert.equal(config.mailboxAddress, "steven@blockwise.sale");
   assert.equal(config.mailboxDomain, "blockwise.sale");
@@ -21,6 +21,12 @@ test("operator mailbox config defaults to steven at the Blockwise domain", () =>
   assert.equal(config.configured, true);
 });
 
+test("reports inbound and outbound capabilities separately", () => {
+  const smtp = getOperatorMailboxConfig({ EMAIL_PROVIDER: "smtp", SMTP_HOST: "stalwart.internal" } as unknown as NodeJS.ProcessEnv);
+  assert.equal(smtp.outboundConfigured, true);
+  assert.equal(smtp.inboundConfigured, false);
+  assert.equal(smtp.configured, false);
+});
 test("parseEmailRecipients accepts comma, semicolon, and newline separated recipients", () => {
   assert.deepEqual(parseEmailRecipients("alex@example.com; sam@example.com\nalex@example.com"), [
     "alex@example.com",

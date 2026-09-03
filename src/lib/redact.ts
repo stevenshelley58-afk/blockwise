@@ -36,7 +36,8 @@ const URL_SENSITIVE_QUERY_PATTERN =
   /(https?:\/\/[^\s?#]+)\?[^\s#]*(?:email|token|secret|session|authorization|api[_-]?key|password|ip_address|username)=[^\s#]*/gi;
 const EMAIL_BODY_MARKER = /(?<=^|\s)(Dear|Hi|Hello)\s[^.,;\n]{2,40},?[\s\S]{0,400}/g;
 
-function redactString(value: string): string {
+/** Shared by the email outbox to redact provider errors before persisting. */
+export function redactString(value: string): string {
   return value
     .replace(BEARER_PATTERN, "[redacted]")
     .replace(JWT_PATTERN, "[redacted]")

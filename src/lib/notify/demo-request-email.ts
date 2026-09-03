@@ -1,5 +1,5 @@
+import { redactString } from "@/lib/redact";
 import {
-  getOperatorMailboxConfig,
   parseEmailRecipients,
   sendOperatorEmail,
 } from "@/lib/operator/email-service";
@@ -11,6 +11,7 @@ export type DemoRequestNotification = {
   phone?: string | null;
   suburb?: string | null;
   message?: string | null;
+  demoRequestId?: string;
 };
 
 export type AuditCampaignPlan = DemoRequestNotification & {
@@ -22,10 +23,12 @@ export type AuditCampaignPlan = DemoRequestNotification & {
   topFormat?: string | null;
   topAngles?: string | null;
   reportUrl: string;
+  demoRequestId?: string;
 };
 
 export type EmailDeliveryResult = {
   sent: boolean;
+  queued: boolean;
   messageId: string | null;
   error: string | null;
 };
@@ -36,8 +39,8 @@ export async function sendDemoRequestNotification(
   const recipients = parseEmailRecipients(
     process.env.DEMO_NOTIFY_TO || process.env.ALERT_EMAIL_TO || "",
   );
-  if (!getOperatorMailboxConfig().configured || recipients.length === 0) {
-    return { sent: false, messageId: null, error: "Operator email notification is not configured." };
+  if (recipients.length === 0) {
+    return { sent: false, queued: false, messageId: null, error: "Operator email notification has no recipient." };
   }
 
   const lines = [
@@ -55,20 +58,17 @@ export async function sendDemoRequestNotification(
       subject: `New demo request — ${lead.name}${lead.suburb ? ` (${lead.suburb})` : ""}`,
       text: lines.join("\n"),
       replyTo: lead.email,
+      deliveryProjection: lead.demoRequestId ? { kind: "demo_request_operator", id: lead.demoRequestId } : undefined,
     });
-    return { sent: true, messageId: result.id, error: null };
+    return { sent: false, queued: true, messageId: result.id, error: null };
   } catch (error) {
-    return { sent: false, messageId: null, error: deliveryError(error) };
+    return { sent: false, queued: false, messageId: null, error: deliveryError(error) };
   }
 }
 
 export async function sendAuditCampaignPlanEmail(
   lead: AuditCampaignPlan,
 ): Promise<EmailDeliveryResult> {
-  if (!getOperatorMailboxConfig().configured) {
-    return { sent: false, messageId: null, error: "Campaign-plan email is not configured." };
-  }
-
   const place = lead.suburb?.trim() || "local";
   const goal = campaignGoalLabel(lead.goal);
   const snapshot = [
@@ -108,10 +108,11 @@ export async function sendAuditCampaignPlanEmail(
       to: [lead.email],
       subject: `Your ${place} campaign plan`,
       text: text.join("\n"),
+      deliveryProjection: lead.demoRequestId ? { kind: "demo_request_customer", id: lead.demoRequestId } : undefined,
     });
-    return { sent: true, messageId: result.id, error: null };
+    return { sent: false, queued: true, messageId: result.id, error: null };
   } catch (error) {
-    return { sent: false, messageId: null, error: deliveryError(error) };
+    return { sent: false, queued: false, messageId: null, error: deliveryError(error) };
   }
 }
 
@@ -125,5 +126,5 @@ function campaignGoalLabel(goal: string | null | undefined): string {
 
 function deliveryError(error: unknown): string {
   const message = error instanceof Error ? error.message : "Email delivery failed.";
-  return message.slice(0, 500);
+  return redactString(message).slice(0, 500);
 }
