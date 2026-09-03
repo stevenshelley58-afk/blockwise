@@ -3,7 +3,9 @@
 -- new submissions explicitly enter the pending recovery state.
 alter table public.email_outbox
   add column if not exists lease_token uuid,
-  add column if not exists provider_message_id text;
+  add column if not exists provider_message_id text,
+  add column if not exists settlement_projected_at timestamptz,
+  add column if not exists settlement_projection_error text;
 
 create or replace function public.claim_email_outbox_batch(p_batch_size integer)
 returns setof public.email_outbox
@@ -64,3 +66,7 @@ alter table public.demo_requests drop constraint if exists demo_requests_custome
 alter table public.demo_requests add constraint demo_requests_customer_email_status_check check (customer_email_status in ('not_required', 'pending', 'queued', 'sent', 'failed'));
 alter table public.report_email_leads drop constraint if exists report_email_leads_delivery_status_check;
 alter table public.report_email_leads add constraint report_email_leads_delivery_status_check check (delivery_status in ('pending', 'queued', 'sent', 'failed'));
+
+create index if not exists email_outbox_settlement_recovery_idx
+  on public.email_outbox (created_at)
+  where status in ('sent', 'failed', 'dead', 'suppressed') and settlement_projected_at is null;

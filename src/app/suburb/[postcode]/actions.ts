@@ -52,6 +52,7 @@ export async function emailSuburbReport(
         subject: `Your ${parsed.data.suburb} ad report`,
         idempotencyKey: `suburb-report:${lead.id}`,
         supabase,
+        deliveryProjection: { kind: "report_email", id: lead.id },
         text: [
           `Your live ${parsed.data.suburb} ad report is ready.`,
           `${baseUrl}/suburb/${parsed.data.postcode}`,

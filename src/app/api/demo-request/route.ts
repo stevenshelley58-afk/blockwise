@@ -20,7 +20,7 @@ const payloadSchema = z.object({
   suburb: z.string().trim().max(120).optional().or(z.literal("")),
   message: z.string().trim().max(2000).optional().or(z.literal("")),
   // Honeypot: real users never fill this hidden field.
-  company_website: z.string().max(0).optional().or(z.literal("")),
+  company_website: z.string().max(200).optional().or(z.literal("")),
 });
 
 function clean(value: string | undefined): string | null {
@@ -92,6 +92,7 @@ export async function POST(request: NextRequest) {
     phone: clean(parsed.data.phone),
     suburb: clean(parsed.data.suburb),
     message: clean(parsed.data.message),
+    demoRequestId: inserted.id,
   });
   const { error: notificationUpdateError } = await serviceClient
     .from("demo_requests")

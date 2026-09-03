@@ -54,15 +54,15 @@ type MembershipRow = {
 type WorkspaceAccessAuthContext = {
   supabase: SupabaseServerClient;
   claims: { sub: string } | null;
-  profile: { is_operator?: boolean | null } | null;
+  profile: { is_operator?: boolean | null; operator_role?: string | null } | null;
   memberships: MembershipRow[];
 };
 
 export function hasOperatorAccessFromRows(
-  profile: { is_operator?: boolean | null } | null | undefined,
+  profile: { is_operator?: boolean | null; operator_role?: string | null } | null | undefined,
   memberships: Array<{ role?: string | null }> | null | undefined,
 ): boolean {
-  return Boolean(profile?.is_operator) || (memberships ?? []).some((membership) => membership.role === "operator");
+  return profile?.is_operator === true && (profile.operator_role === "owner" || profile.operator_role === "support");
 }
 
 export function resolveRequestedWorkspaceAccess(input: ResolveWorkspaceInput): WorkspaceAccessResult {
@@ -127,7 +127,7 @@ export async function requireWorkspaceAccess(
   }
 
   const [{ data: profile }, { data: memberships }] = await Promise.all([
-    supabase.from("profiles").select("is_operator").eq("id", claims.sub).maybeSingle(),
+    supabase.from("profiles").select("is_operator, operator_role").eq("id", claims.sub).maybeSingle(),
     supabase
       .from("workspace_members")
       .select("role, workspaces(id, name, mode, region)")

@@ -13,6 +13,11 @@ import type { EmailMessage, EmailProvider } from "./provider.ts";
  * at-least-once: lease fencing prevents stale workers settling reclaimed rows,
  * but a crash after provider acceptance can still result in a duplicate. */
 
+export type EmailDeliveryProjection =
+  | { kind: "demo_request_operator"; id: string }
+  | { kind: "demo_request_customer"; id: string }
+  | { kind: "report_email"; id: string };
+
 export type OutboxEnqueueInput = {
   messageType: string;
   templateId: string;
@@ -27,6 +32,8 @@ export type OutboxEnqueueInput = {
   timezone?: string;
   payload?: Record<string, unknown>;
   idempotencyKey: string;
+  /** Optional stable business row to project after provider settlement. */
+  deliveryProjection?: EmailDeliveryProjection;
   /** Do not deliver before this timestamp (used by scheduled follow-ups). */
   nextAttemptAt?: string;
 };
@@ -44,6 +51,8 @@ type OutboxRow = {
   locale: string;
   timezone: string;
   payload: Record<string, unknown> | null;
+  provider_message_id: string | null;
+  settlement_projected_at: string | null;
   idempotency_key: string;
   attempts: number;
   max_attempts: number;
@@ -75,6 +84,7 @@ export async function enqueueEmail(
           subject: input.subject,
           html: input.html,
           text: input.text,
+          _deliveryProjection: input.deliveryProjection ?? null,
         },
         idempotency_key: input.idempotencyKey,
         status: "pending",
@@ -151,6 +161,7 @@ export async function drainEmailOutbox(
   batchSize = 10,
 ): Promise<DrainSummary> {
   provider.assertConfigured?.();
+  await projectPendingEmailSettlements(supabase);
   const { data: claimed, error: claimError } = await supabase.rpc("claim_email_outbox_batch", {
     p_batch_size: batchSize,
   });
@@ -168,6 +179,7 @@ export async function drainEmailOutbox(
       summary.failed += 1;
       continue;
     }
+    const projection = deliveryProjectionFromPayload(row.payload);
     let suppressed: boolean;
     try {
       suppressed = await isEmailSuppressed(supabase, row.recipient);
@@ -177,12 +189,13 @@ export async function drainEmailOutbox(
         status: "failed",
         lastError: "suppression_check_unavailable",
         nextAttemptAt: retryAt(row.attempts),
+        projection,
       });
       summary.failed += 1;
       continue;
     }
     if (suppressed) {
-      const finalized = await finalizeRow(supabase, row.id, leaseToken, { status: "suppressed", lastError: "suppressed" });
+      const finalized = await finalizeRow(supabase, row.id, leaseToken, { status: "suppressed", lastError: "suppressed", projection });
       if (finalized) summary.suppressed += 1;
       else summary.failed += 1;
       continue;
@@ -194,19 +207,26 @@ export async function drainEmailOutbox(
       const finalized = await finalizeRow(supabase, row.id, leaseToken, {
         status: "dead",
         lastError: "missing_message_content",
+        projection,
       });
       if (finalized) summary.dead += 1;
       else summary.failed += 1;
       continue;
     }
 
-    const result = await provider.send(message);
+    let result: Awaited<ReturnType<EmailProvider["send"]>>;
+    try {
+      result = await provider.send(message);
+    } catch (error) {
+      result = { ok: false, error: redactString(error instanceof Error ? error.message : String(error)), permanent: false };
+    }
     if (result.ok) {
       const finalized = await finalizeRow(supabase, row.id, leaseToken, {
         status: "sent",
         sentAt: true,
         lastError: null,
         providerMessageId: result.providerMessageId,
+        projection,
       });
       if (finalized) {
         summary.sent += 1;
@@ -221,6 +241,7 @@ export async function drainEmailOutbox(
       status: dead ? "dead" : "failed",
       lastError: redactString(result.error),
       nextAttemptAt: dead ? undefined : retryAt(row.attempts),
+      projection,
     });
     if (finalized) {
       if (dead) summary.dead += 1;
@@ -228,6 +249,7 @@ export async function drainEmailOutbox(
     } else summary.failed += 1;
   }
 
+  await projectPendingEmailSettlements(supabase);
   return summary;
 }
 
@@ -269,6 +291,7 @@ type FinalizeInput = {
   lastError: string | null;
   nextAttemptAt?: string;
   providerMessageId?: string | null;
+  projection?: EmailDeliveryProjection;
 };
 
 /** Returns true when the row was actually finalized. */
@@ -297,9 +320,63 @@ async function finalizeRow(
     console.error(`[email-outbox] finalize ${input.status} failed for ${id}`, error.message);
     return false;
   }
-  return Array.isArray(data) && data.length > 0;
+  if (!(Array.isArray(data) && data.length > 0)) return false;
+  try {
+    await applyEmailSettlementProjection(supabase, id, input.status, input.providerMessageId ?? null, input.lastError, input.projection);
+    await supabase.from("email_outbox").update({ settlement_projected_at: new Date().toISOString(), settlement_projection_error: null }).eq("id", id);
+  } catch (projectionError) {
+    const message = redactString(projectionError instanceof Error ? projectionError.message : String(projectionError));
+    console.error("[email-outbox] settlement projection failed for " + id, message);
+    await supabase.from("email_outbox").update({ settlement_projection_error: message }).eq("id", id);
+  }
+  return true;
 }
 
+type SettlementStatus = "sent" | "failed" | "dead" | "suppressed";
+
+function deliveryProjectionFromPayload(payload: Record<string, unknown> | null): EmailDeliveryProjection | undefined {
+  const value = payload?._deliveryProjection;
+  if (!value || typeof value !== "object") return undefined;
+  const candidate = value as { kind?: unknown; id?: unknown };
+  if (typeof candidate.id !== "string" || !candidate.id.trim()) return undefined;
+  if (candidate.kind !== "demo_request_operator" && candidate.kind !== "demo_request_customer" && candidate.kind !== "report_email") return undefined;
+  return { kind: candidate.kind, id: candidate.id };
+}
+
+async function applyEmailSettlementProjection(
+  supabase: SupabaseClient, id: string, status: SettlementStatus, providerMessageId: string | null, error: string | null, projection?: EmailDeliveryProjection,
+): Promise<void> {
+  if (!projection) return;
+  const delivered = status === "sent";
+  const patch = delivered
+    ? {
+        ...(projection.kind === "demo_request_operator" ? { operator_notification_status: "sent", operator_notified_at: new Date().toISOString(), operator_notification_message_id: providerMessageId } : {}),
+        ...(projection.kind === "demo_request_customer" ? { customer_email_status: "sent", customer_emailed_at: new Date().toISOString(), customer_email_message_id: providerMessageId } : {}),
+        ...(projection.kind === "report_email" ? { delivery_status: "sent", delivered_at: new Date().toISOString(), delivery_message_id: providerMessageId } : {}),
+      }
+    : projection.kind === "demo_request_operator"
+      ? { operator_notification_status: "failed", operator_notification_error: error }
+      : projection.kind === "demo_request_customer"
+        ? { customer_email_status: "failed", customer_email_error: error }
+        : { delivery_status: "failed", delivery_error: error };
+  const table = projection.kind === "report_email" ? "report_email_leads" : "demo_requests";
+  const { error: updateError } = await supabase.from(table).update(patch).eq("id", projection.id);
+  if (updateError) throw new Error("delivery projection update failed: " + updateError.message);
+}
+
+async function projectPendingEmailSettlements(supabase: SupabaseClient): Promise<void> {
+  const { data, error } = await supabase.from("email_outbox").select("id,status,payload,provider_message_id,last_error").in("status", ["sent", "failed", "dead", "suppressed"]).is("settlement_projected_at", null).limit(100);
+  if (error) { console.error("[email-outbox] settlement recovery scan failed", error.message); return; }
+  for (const row of (data ?? []) as Array<{ id: string; status: SettlementStatus; payload: Record<string, unknown> | null; provider_message_id: string | null; last_error: string | null }>) {
+    try {
+      await applyEmailSettlementProjection(supabase, row.id, row.status, row.provider_message_id, row.last_error, deliveryProjectionFromPayload(row.payload));
+      await supabase.from("email_outbox").update({ settlement_projected_at: new Date().toISOString(), settlement_projection_error: null }).eq("id", row.id);
+    } catch (projectionError) {
+      const message = redactString(projectionError instanceof Error ? projectionError.message : String(projectionError));
+      await supabase.from("email_outbox").update({ settlement_projection_error: message }).eq("id", row.id);
+    }
+  }
+}
 export type PendingLeadWelcomeRecovery = { scanned: number; queued: number; failed: number };
 
 /** Repairs the route-commit/outbox-commit gap without relying on a later user submission. */

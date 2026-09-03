@@ -1,10 +1,12 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(10);
+select plan(12);
 select has_table('public', 'email_outbox', 'transactional email outbox exists');
 select has_column('public', 'email_outbox', 'lease_token', 'outbox has a fencing token');
 select has_column('public', 'email_outbox', 'provider_message_id', 'outbox stores provider message id');
+select has_column('public', 'email_outbox', 'settlement_projected_at', 'outbox projection checkpoint exists');
+select has_column('public', 'email_outbox', 'settlement_projection_error', 'outbox projection error exists');
 select has_function('public', 'claim_email_outbox_batch', array['integer'], 'claim RPC exists');
 select has_table('public', 'email_suppressions', 'email suppression table exists');
 select has_table('public', 'email_lifecycle_events', 'lifecycle events table exists');

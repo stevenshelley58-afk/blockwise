@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { enqueueEmail } from "../email/outbox.ts";
+import { enqueueEmail, type EmailDeliveryProjection } from "../email/outbox.ts";
 import { assertEmailProviderConfigured } from "../email/provider.ts";
 import { createSupabaseServiceClient } from "../supabase/service.ts";
 const RESEND_API_BASE = "https://api.resend.com";
@@ -230,6 +230,7 @@ export async function sendOperatorEmail(input: {
   replyTo?: string | null;
   idempotencyKey?: string;
   supabase?: SupabaseClient;
+  deliveryProjection?: EmailDeliveryProjection;
 }): Promise<{ id: string; from: string; queued: true }> {
   const config = getOperatorMailboxConfig();
   const subject = input.subject.trim();
@@ -254,6 +255,7 @@ export async function sendOperatorEmail(input: {
     to: recipient, from: config.fromAddress, replyTo: input.replyTo || config.replyAddress,
     subject, html: textToHtml(text), text,
     idempotencyKey: `${baseKey}:${createHash("sha256").update(recipient).digest("hex")}`,
+    deliveryProjection: input.deliveryProjection,
   })));
   const first = results[0];
   const id = first.queued ? first.id : (first.duplicateOf ?? "queued");

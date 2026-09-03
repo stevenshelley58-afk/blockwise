@@ -13,6 +13,7 @@ type Row = Record<string, unknown>;
 type OutboxTestDouble = {
   outbox: Row[];
   suppressions: string[];
+  businessRows: Record<string, Row[]>;
   setClaimedBatch(rows: Row[]): void;
 };
 
@@ -21,12 +22,14 @@ function makeSupabase(opts: {
   outboxRows?: Row[];
   suppressions?: string[];
   failSuppressions?: boolean;
+  businessRows?: Record<string, Row[]>;
 } = {}): SupabaseClient & OutboxTestDouble {
   const outbox: Row[] = (opts.outboxRows ?? []).map((r) => ({ ...r }));
   const suppressions: string[] = [...(opts.suppressions ?? [])];
+  const businessRows: Record<string, Row[]> = Object.fromEntries(Object.entries(opts.businessRows ?? {}).map(([name, rows]) => [name, rows.map((r) => ({ ...r }))]));
 
   const table = (name: string) => {
-    if (name === "email_outbox") {
+    if (name === 'email_outbox') {
       return {
         upsert(row: Row, upsertOpts?: { onConflict?: string; ignoreDuplicates?: boolean }) {
           return {
@@ -36,7 +39,7 @@ function makeSupabase(opts: {
                   const existing = outbox.find((r) => r.idempotency_key === row.idempotency_key);
                   if (existing) return { data: [], error: null };
                 }
-                const id = row.id ?? `ob-${outbox.length + 1}`;
+                const id = row.id ?? 'ob-' + (outbox.length + 1);
                 const inserted = { id, ...row };
                 outbox.push(inserted);
                 return { data: [inserted], error: null };
@@ -45,22 +48,21 @@ function makeSupabase(opts: {
           };
         },
         select(_cols?: string) {
-          return {
-            eq(col: string, val: string) {
-              return {
-                maybeSingle: () => Promise.resolve({ data: outbox.find((r) => r[col] === val) ?? null, error: null }),
-                limit: () => Promise.resolve({ data: [], error: null }),
-              };
-            },
+          const filters: Array<(row: Row) => boolean> = [];
+          const builder = {
+            eq(col: string, val: unknown) { filters.push((row) => row[col] === val); return builder; },
+            in(col: string, vals: unknown[]) { filters.push((row) => vals.includes(row[col])); return builder; },
+            is(col: string, val: unknown) { filters.push((row) => val === null ? row[col] == null : row[col] === val); return builder; },
+            order() { return builder; },
+            limit() { return Promise.resolve({ data: outbox.filter((row) => filters.every((matches) => matches(row))), error: null }); },
+            maybeSingle() { const row = outbox.find((candidate) => filters.every((matches) => matches(candidate))); return Promise.resolve({ data: row ?? null, error: null }); },
           };
+          return builder;
         },
         update(patch: Row) {
           const filters: Record<string, unknown> = {};
           const builder = {
-            eq(col: string, val: unknown) {
-              filters[col] = val;
-              return builder;
-            },
+            eq(col: string, val: unknown) { filters[col] = val; return builder; },
             select() {
               return Promise.resolve().then(() => {
                 const row = outbox.find((r) => Object.entries(filters).every(([key, value]) => r[key] === value));
@@ -73,12 +75,12 @@ function makeSupabase(opts: {
         },
       };
     }
-    if (name === "email_suppressions") {
+    if (name === 'email_suppressions') {
       return {
         upsert(row: Row, upsertOpts?: { onConflict?: string; ignoreDuplicates?: boolean }) {
           void upsertOpts;
           return Promise.resolve().then(() => {
-            const key = `${row.email}:${row.reason}`;
+            const key = String(row.email) + ':' + String(row.reason);
             if (!suppressions.includes(key)) suppressions.push(key);
             return { error: null };
           });
@@ -86,28 +88,40 @@ function makeSupabase(opts: {
         select(_cols?: string) {
           return {
             eq(_col: string, val: string) {
-              return {
-                limit: () =>
-                  Promise.resolve(
-                    opts.failSuppressions
-                      ? { data: null, error: { message: "suppression store unavailable" } }
-                      : { data: suppressions.some((s) => s.startsWith(`${val}:`)) ? [{ email: val }] : [], error: null },
-                  ),
-              };
+              return { limit: () => Promise.resolve(opts.failSuppressions ? { data: null, error: { message: 'suppression store unavailable' } } : { data: suppressions.some((entry) => entry.startsWith(val + ':')) ? [{ email: val }] : [], error: null }) };
             },
           };
         },
       };
     }
-    throw new Error(`unexpected table ${name}`);
+    if (name === 'demo_requests' || name === 'report_email_leads') {
+      const rows = businessRows[name] ?? [];
+      return {
+        update(patch: Row) {
+          const filters: Record<string, unknown> = {};
+          return {
+            eq(col: string, val: unknown) {
+              filters[col] = val;
+              return Promise.resolve().then(() => {
+                const row = rows.find((candidate) => Object.entries(filters).every(([key, value]) => candidate[key] === value));
+                if (row) Object.assign(row, patch);
+                return { data: row ? [row] : [], error: row ? null : { message: 'business row not found' } };
+              });
+            },
+          };
+        },
+      };
+    }
+    throw new Error('unexpected table ' + name);
   };
 
   let claimedBatch: Row[] = [];
   return {
     outbox,
     suppressions,
+    businessRows,
     setClaimedBatch(rows: Row[]) {
-      claimedBatch = rows.map((row) => ({ ...row, status: "sending", lease_token: row.lease_token ?? ("lease-" + row.id) }));
+      claimedBatch = rows.map((row) => ({ ...row, status: 'sending', lease_token: row.lease_token ?? ('lease-' + row.id) }));
       for (const row of claimedBatch) {
         const existing = outbox.find((r) => r.id === row.id);
         if (existing) Object.assign(existing, row);
@@ -116,13 +130,12 @@ function makeSupabase(opts: {
     },
     from: table,
     rpc(fn: string, args: Record<string, unknown>) {
-      if (fn !== "claim_email_outbox_batch") return Promise.resolve({ data: null, error: { message: `unexpected rpc ${fn}` } });
+      if (fn !== 'claim_email_outbox_batch') return Promise.resolve({ data: null, error: { message: 'unexpected rpc ' + fn } });
       const size = Number(args.p_batch_size ?? 10);
       return Promise.resolve({ data: claimedBatch.slice(0, size).map((r) => ({ ...r, attempts: (r.attempts as number) + 1 })), error: null });
     },
   } as never;
 }
-
 function fakeProvider(behaviour: (message: EmailMessage) => Awaited<ReturnType<EmailProvider["send"]>>): EmailProvider {
   return {
     name: "smtp",
@@ -289,6 +302,33 @@ describe("email outbox", () => {
     assert.ok(!String(supabase.outbox[0].last_error).includes("eyJ"));
     assert.ok(String(supabase.outbox[0].last_error).includes("[redacted]"));
   });
+  it("turns provider exceptions into retryable failures and continues the batch", async () => {
+    const supabase = makeSupabase();
+    supabase.setClaimedBatch([
+      { id: "ob-throw", status: "sending", attempts: 1, max_attempts: 6, recipient: "r@x.test", message_type: "t", template_id: "t", template_version: 1, payload: { subject: "Hi", html: "<p>Hi</p>", text: "Hi", from: "hello@blockwise.sale" }, idempotency_key: "throw" },
+      { id: "ob-after-throw", status: "sending", attempts: 1, max_attempts: 6, recipient: "r@x.test", message_type: "t", template_id: "t", template_version: 1, payload: { subject: "Hi", html: "<p>Hi</p>", text: "Hi", from: "hello@blockwise.sale" }, idempotency_key: "after-throw" },
+    ]);
+    let calls = 0;
+    const summary = await drainEmailOutbox(supabase, fakeProvider(() => { calls += 1; if (calls === 1) throw new Error("provider network secret"); return { ok: true, providerMessageId: "pm-after-throw" }; }));
+    assert.equal(calls, 2); assert.equal(summary.failed, 1); assert.equal(summary.sent, 1);
+    assert.equal(supabase.outbox.find((row) => row.id === "ob-throw")?.status, "failed");
+    assert.equal(supabase.outbox.find((row) => row.id === "ob-after-throw")?.status, "sent");
+    assert.equal(supabase.outbox.find((row) => row.id === "ob-throw")?.last_error, "provider network secret");
+  });
+
+  it("projects queued business statuses only after provider settlement", async () => {
+    const supabase = makeSupabase({ businessRows: { demo_requests: [{ id: "demo-1", operator_notification_status: "queued", customer_email_status: "queued" }], report_email_leads: [{ id: "lead-1", delivery_status: "queued" }] } });
+    supabase.setClaimedBatch([
+      { id: "operator-mail", status: "sending", attempts: 1, max_attempts: 6, recipient: "operator@example.com", message_type: "t", template_id: "t", template_version: 1, payload: { subject: "Hi", html: "<p>Hi</p>", text: "Hi", from: "hello@blockwise.sale", _deliveryProjection: { kind: "demo_request_operator", id: "demo-1" } }, idempotency_key: "projection-sent" },
+      { id: "report-mail", status: "sending", attempts: 1, max_attempts: 6, recipient: "lead@example.com", message_type: "t", template_id: "t", template_version: 1, payload: { subject: "Hi", html: "<p>Hi</p>", text: "Hi", from: "hello@blockwise.sale", _deliveryProjection: { kind: "report_email", id: "lead-1" } }, idempotency_key: "projection-failed" },
+    ]);
+    const rows = supabase.businessRows; assert.equal(rows.demo_requests[0].operator_notification_status, "queued");
+    const summary = await drainEmailOutbox(supabase, fakeProvider((message) => message.to.startsWith("operator") ? { ok: true, providerMessageId: "pm-op" } : { ok: false, error: "temporary", permanent: false }));
+    assert.equal(summary.sent, 1); assert.equal(summary.failed, 1);
+    assert.equal(rows.demo_requests[0].operator_notification_status, "sent"); assert.equal(rows.demo_requests[0].operator_notified_at !== undefined, true);
+    assert.equal(rows.report_email_leads[0].delivery_status, "failed");
+  });
+
   it("keeps reserved delivery fields from being overridden by payload", async () => {
     const supabase = makeSupabase();
     await enqueueEmail(supabase, { ...baseMessage, subject: "Reserved", payload: { subject: "attacker", html: "bad", from: "bad@example.com" }, idempotencyKey: "reserved" });

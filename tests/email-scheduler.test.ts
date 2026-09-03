@@ -10,6 +10,10 @@ test("email drain scheduler fails closed and signs the internal request", () => 
   assert.match(source, /x-blockwise-signature/);
   assert.match(source, /email\.drain/);
   assert.ok(existsSync("infra/product/systemd/blockwise-email-outbox-drain.service"));
+  const service = readFileSync("infra/product/systemd/blockwise-email-outbox-drain.service", "utf8");
+  assert.match(service, /User=hermes/);
+  assert.match(service, /ExecStart=\/usr\/local\/libexec\/blockwise-email-outbox-drain/);
+  assert.doesNotMatch(service, /ExecStart=.*projects\/blockwise/);
   assert.ok(existsSync("infra/product/systemd/blockwise-email-outbox-drain.timer"));
   assert.match(source, /node -e/);
   assert.doesNotMatch(source, /openssl dgst -sha256 -hmac/);

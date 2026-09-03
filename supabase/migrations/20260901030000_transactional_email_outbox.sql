@@ -42,7 +42,10 @@ create table public.email_outbox (
   next_attempt_at timestamptz not null default now(),
   lease_expires_at timestamptz,
   sent_at timestamptz,
-  last_error text
+  last_error text,
+  -- Durable projection checkpoint lets the drain recover business status updates.
+  settlement_projected_at timestamptz,
+  settlement_projection_error text
 );
 
 create index email_outbox_due_idx

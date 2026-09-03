@@ -81,6 +81,7 @@ const nextConfig: NextConfig = {
     // - connect: self, Supabase REST/auth, Sentry ingest, Vercel analytics,
     //   Google Analytics/gtag collect endpoints.
     const supabaseOrigin = safeOrigin(process.env.NEXT_PUBLIC_SUPABASE_URL);
+    const researchStorageOrigin = safeOrigin(process.env.NEXT_PUBLIC_RESEARCH_STORAGE_URL);
     const sentryOrigin = sentryIngestOrigin(process.env.NEXT_PUBLIC_SENTRY_DSN);
     const connectSrc = [
       "'self'",
@@ -90,6 +91,26 @@ const nextConfig: NextConfig = {
       "https://www.google-analytics.com",
       "https://analytics.google.com",
       "https://www.googletagmanager.com",
+    ]
+      .filter((value): value is string => Boolean(value))
+      .join(" ");
+    const imgSrc = [
+      "'self'",
+      "data:",
+      "blob:",
+      researchStorageOrigin,
+      "https://*.fbcdn.net",
+      "https://*.cdninstagram.com",
+      "https://www.facebook.com",
+    ]
+      .filter((value): value is string => Boolean(value))
+      .join(" ");
+    const mediaSrc = [
+      "'self'",
+      "blob:",
+      researchStorageOrigin,
+      "https://*.fbcdn.net",
+      "https://*.cdninstagram.com",
     ]
       .filter((value): value is string => Boolean(value))
       .join(" ");
@@ -107,8 +128,8 @@ const nextConfig: NextConfig = {
               "default-src 'self'",
               "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com https://www.googletagmanager.com https://va.vercel-scripts.com",
               "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: blob: https://*.fbcdn.net https://*.cdninstagram.com https://www.facebook.com",
-              "media-src 'self' blob: https://*.fbcdn.net https://*.cdninstagram.com",
+              "img-src " + imgSrc,
+              "media-src " + mediaSrc,
               "font-src 'self' data:",
               `connect-src ${connectSrc}`,
               "frame-src 'self' https://challenges.cloudflare.com",

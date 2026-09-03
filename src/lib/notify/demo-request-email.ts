@@ -11,6 +11,7 @@ export type DemoRequestNotification = {
   phone?: string | null;
   suburb?: string | null;
   message?: string | null;
+  demoRequestId?: string;
 };
 
 export type AuditCampaignPlan = DemoRequestNotification & {
@@ -22,6 +23,7 @@ export type AuditCampaignPlan = DemoRequestNotification & {
   topFormat?: string | null;
   topAngles?: string | null;
   reportUrl: string;
+  demoRequestId?: string;
 };
 
 export type EmailDeliveryResult = {
@@ -56,6 +58,7 @@ export async function sendDemoRequestNotification(
       subject: `New demo request — ${lead.name}${lead.suburb ? ` (${lead.suburb})` : ""}`,
       text: lines.join("\n"),
       replyTo: lead.email,
+      deliveryProjection: lead.demoRequestId ? { kind: "demo_request_operator", id: lead.demoRequestId } : undefined,
     });
     return { sent: false, queued: true, messageId: result.id, error: null };
   } catch (error) {
@@ -105,6 +108,7 @@ export async function sendAuditCampaignPlanEmail(
       to: [lead.email],
       subject: `Your ${place} campaign plan`,
       text: text.join("\n"),
+      deliveryProjection: lead.demoRequestId ? { kind: "demo_request_customer", id: lead.demoRequestId } : undefined,
     });
     return { sent: false, queued: true, messageId: result.id, error: null };
   } catch (error) {

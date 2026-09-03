@@ -24,7 +24,7 @@ export async function resolveHomePath(supabase: SupabaseServerClient): Promise<s
   }
 
   const [{ data: profile }, { data: memberships }] = await Promise.all([
-    supabase.from("profiles").select("is_operator").eq("id", user.id).maybeSingle(),
+    supabase.from("profiles").select("is_operator, operator_role").eq("id", user.id).maybeSingle(),
     supabase
       .from("workspace_members")
       .select("role, workspaces(mode)")

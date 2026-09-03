@@ -28,7 +28,7 @@ const payloadSchema = z.object({
   top_platform: z.string().trim().max(60).optional().or(z.literal("")),
   top_format: z.string().trim().max(60).optional().or(z.literal("")),
   top_angles: z.string().trim().max(200).optional().or(z.literal("")),
-  company_website: z.string().max(0).optional().or(z.literal("")),
+  company_website: z.string().max(200).optional().or(z.literal("")),
 });
 
 function clean(value: string | undefined): string | null {
@@ -138,6 +138,7 @@ export async function POST(request: NextRequest) {
       topFormat: clean(parsed.data.top_format),
       topAngles: clean(parsed.data.top_angles),
       reportUrl: reportUrl.toString(),
+      demoRequestId: inserted.id,
     }),
     sendDemoRequestNotification({
       name,
@@ -146,6 +147,7 @@ export async function POST(request: NextRequest) {
       phone: clean(parsed.data.phone),
       suburb: location,
       message,
+      demoRequestId: inserted.id,
     }),
   ]);
   const { error: deliveryUpdateError } = await supabase
