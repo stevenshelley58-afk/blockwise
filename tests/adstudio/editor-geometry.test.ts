@@ -17,6 +17,13 @@ describe("Ad Studio editor geometry contract", () => {
       height: 1350,
     });
     assert.deepEqual(fabricCircleGeometry({ x: 80, y: 90, width: 240, height: 180 }), {
+      left: 110,
+      top: 90,
+      originX: "left",
+      originY: "top",
+      radius: 90,
+    });
+    assert.deepEqual(fabricCircleGeometry({ x: 80, y: 90, width: 180, height: 180 }), {
       left: 80,
       top: 90,
       originX: "left",

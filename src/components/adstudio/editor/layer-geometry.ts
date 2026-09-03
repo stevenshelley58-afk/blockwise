@@ -36,12 +36,13 @@ export function fabricRectGeometry(geometry: Rect) {
 }
 
 export function fabricCircleGeometry(geometry: Rect) {
+  const diameter = Math.min(geometry.width, geometry.height);
   return {
-    left: geometry.x,
-    top: geometry.y,
+    left: geometry.x + (geometry.width - diameter) / 2,
+    top: geometry.y + (geometry.height - diameter) / 2,
     originX: "left" as const,
     originY: "top" as const,
-    radius: Math.min(geometry.width, geometry.height) / 2,
+    radius: diameter / 2,
   };
 }
 
