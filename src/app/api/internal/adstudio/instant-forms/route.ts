@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 
 import { verifyInternalRequest } from "@/lib/internal-auth";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { formGenerationInputSchema } from "@/lib/adstudio/instant-form-types";
 import { generateInstantForm, validateInstantForm } from "@/lib/adstudio/instant-form-generator";
 
@@ -21,6 +23,15 @@ export async function POST(request: Request) {
   const auth = await verifyInternalRequest(request, "adstudio.instant-forms", { body: rawBody });
   if (!auth.ok) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+  const rateLimit = await checkRateLimit(null, "internal:adstudio.instant-forms", {
+    windowSeconds: 60,
+    maxRequests: 120,
+    bucket: "internal-api",
+    failClosed: true,
+  });
+  if (!rateLimit.ok) {
+    return NextResponse.json({ error: "rate_limited" }, { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } });
   }
 
   let body: unknown;
@@ -52,6 +63,15 @@ export async function PUT(request: Request) {
   const auth = await verifyInternalRequest(request, "adstudio.instant-forms", { body: rawBody });
   if (!auth.ok) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+  const rateLimit = await checkRateLimit(null, "internal:adstudio.instant-forms", {
+    windowSeconds: 60,
+    maxRequests: 120,
+    bucket: "internal-api",
+    failClosed: true,
+  });
+  if (!rateLimit.ok) {
+    return NextResponse.json({ error: "rate_limited" }, { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } });
   }
 
   let body: unknown;

@@ -5,6 +5,7 @@ import { errorResponse, readJsonBody, requireAdStudioRequest } from "@/lib/adstu
 import { buildAdStudioLiveResult, extractBrandKitFromWebsite } from "@/lib/adstudio";
 import { normalizeAndValidateExtractionUrl } from "@/lib/adstudio/extraction-url";
 import { isExampleBrandKitSourceUrl, persistAdStudioBrandKit } from "@/lib/adstudio/persistence";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const runtime = "nodejs";
@@ -24,6 +25,18 @@ export async function POST(request: NextRequest) {
 
   if (!context.ok) {
     return context.response;
+  }
+
+  const rateLimit = await checkRateLimit(context.access.workspaceId, context.access.userId, {
+    windowSeconds: 300,
+    maxRequests: 10,
+    bucket: "adstudio-brand-extract",
+  });
+  if (!rateLimit.ok) {
+    return NextResponse.json(
+      { error: "Brand kit extraction limit reached. Try again later." },
+      { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } },
+    );
   }
 
   const body = await readJsonBody<ExtractBody>(request);

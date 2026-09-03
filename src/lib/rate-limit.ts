@@ -1,12 +1,19 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { createSupabaseServiceClient } from "./supabase/service.ts";
 
 export type RateLimitConfig = {
-  /** Length of the fixed window in seconds. */
+  /** Length of the fixed window in seconds (1..86400). */
   windowSeconds: number;
-  /** Maximum number of requests allowed in the window. */
+  /** Maximum number of requests allowed in the window (1..1000). */
   maxRequests: number;
-  /** Logical name for the bucket (e.g. "ads-search", "ai-generate", "demo-request"). */
+  /** Logical name for the bucket (e.g. "ads-search", "ai-generate", "demo-request"). Must match ^[a-z0-9_-]{1,64}$. */
   bucket: string;
+  /**
+   * When true, a database error rejects the request instead of allowing it.
+   * Defaults to true: the limiter exists to protect costly and abuse-sensitive
+   * operations, so an unavailable limiter fails closed. Pass false only for
+   * best-effort cosmetic limits.
+   */
+  failClosed?: boolean;
 };
 
 export type RateLimitResult =
@@ -14,98 +21,76 @@ export type RateLimitResult =
   | { ok: false; retryAfterSeconds: number };
 
 /**
- * Fixed-window rate limiter using the public.rate_limits table.
+ * Fixed-window rate limiter backed by the public.consume_rate_limit RPC.
  *
- * The table schema:
- *   workspace_id uuid (nullable — null for unauthenticated/IP-keyed limits)
- *   subject_key  text  — the entity being rate-limited (userId, IP, …)
- *   bucket       text  — the action being limited
- *   limit_count  int   — max allowed in the window
- *   used_count   int   — how many have been used
- *   resets_at    timestamptz — when the window resets
- *   unique (workspace_id, subject_key, bucket)
+ * Always executed through the SERVICE-ROLE client: the RPC is SECURITY
+ * DEFINER but revoked from authenticated roles, so user-scoped clients can
+ * neither call it directly nor choose arbitrary workspace ids, buckets or
+ * limits to poison another subject's budget. The subject key must be derived
+ * server-side (authenticated user id, or the trusted-proxy client IP) —
+ * never from client-controlled input.
  *
- * Upserts a new row on first request in a window, increments on subsequent
- * requests, and rejects once used_count reaches limit_count.
+ * The RPC increments and checks in a single statement
+ * (INSERT ... ON CONFLICT DO UPDATE ... WHERE), so parallel requests cannot
+ * overshoot the limit — there is no read-then-write race. See
+ * supabase/migrations/20260901010000_atomic_rate_limit_rpc.sql.
  */
 export async function checkRateLimit(
-  supabase: SupabaseClient,
   workspaceId: string | null,
   subjectKey: string,
   config: RateLimitConfig,
+  serviceSupabase?: ReturnType<typeof createSupabaseServiceClient>,
 ): Promise<RateLimitResult> {
-  const now = new Date();
-  const nowSec = Math.floor(now.getTime() / 1000);
-  const windowStartSec = nowSec - (nowSec % config.windowSeconds);
-  const resetsAt = new Date((windowStartSec + config.windowSeconds) * 1000);
+  const failClosed = config.failClosed ?? true;
+  const supabase = serviceSupabase ?? createSupabaseServiceClient();
 
-  const { data: existing } = await selectRateLimitRow(supabase, workspaceId, subjectKey, config.bucket, now);
+  // Client-side bounds mirror the RPC's own validation so malformed configs
+  // are caught in development instead of surfacing as 5xx at runtime.
+  if (!Number.isInteger(config.maxRequests) || config.maxRequests < 1 || config.maxRequests > 1000) {
+    throw new Error(`rate-limit: invalid maxRequests ${config.maxRequests} for bucket ${config.bucket}`);
+  }
+  if (!Number.isInteger(config.windowSeconds) || config.windowSeconds < 1 || config.windowSeconds > 86400) {
+    throw new Error(`rate-limit: invalid windowSeconds ${config.windowSeconds} for bucket ${config.bucket}`);
+  }
+  if (!/^[a-z0-9_-]{1,64}$/.test(config.bucket)) {
+    throw new Error(`rate-limit: invalid bucket name ${config.bucket}`);
+  }
+  const normalizedSubjectKey = subjectKey.trim();
 
-  if (existing) {
-    if (existing.used_count >= existing.limit_count) {
-      const resetMs = new Date(existing.resets_at).getTime();
-      const retryAfterSeconds = Math.max(1, Math.ceil((resetMs - Date.now()) / 1000));
-      return { ok: false, retryAfterSeconds };
-    }
-
-    // Increment within the window.
-    await supabase
-      .from("rate_limits")
-      .update({ used_count: existing.used_count + 1 })
-      .eq("id", existing.id);
-
-    return { ok: true };
+  let data: unknown;
+  let errorMessage: string | null = null;
+  try {
+    const result = await supabase.rpc("consume_rate_limit", {
+      p_workspace_id: workspaceId,
+      p_subject_key: normalizedSubjectKey,
+      p_bucket: config.bucket,
+      p_limit_count: config.maxRequests,
+      p_window_seconds: config.windowSeconds,
+    });
+    data = result.data;
+    errorMessage = result.error?.message ?? null;
+  } catch (error) {
+    errorMessage = error instanceof Error ? error.message : String(error);
   }
 
-  // No active window — insert a new one.
-  const insertRow: Record<string, unknown> = {
-    subject_key: subjectKey,
-    bucket: config.bucket,
-    limit_count: config.maxRequests,
-    used_count: 1,
-    resets_at: resetsAt.toISOString(),
-  };
-
-  if (workspaceId !== null) {
-    insertRow.workspace_id = workspaceId;
+  if (errorMessage) {
+    console.error(`[rate-limit] consume_rate_limit failed for bucket ${config.bucket}`, errorMessage);
+    return failClosed
+      ? { ok: false, retryAfterSeconds: config.windowSeconds }
+      : { ok: true };
   }
 
-  const { error: insertError } = await supabase.from("rate_limits").insert(insertRow);
-
-  if (insertError) {
-    // Likely a race — another request inserted first. Re-read and check.
-    const { data: raceData } = await selectRateLimitRow(supabase, workspaceId, subjectKey, config.bucket, now);
-
-    if (raceData && raceData.used_count >= raceData.limit_count) {
-      const resetMs = new Date(raceData.resets_at).getTime();
-      const retryAfterSeconds = Math.max(1, Math.ceil((resetMs - Date.now()) / 1000));
-      return { ok: false, retryAfterSeconds };
-    }
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row || typeof (row as { allowed?: unknown }).allowed !== "boolean") {
+    // The RPC always returns exactly one row; anything else is unexpected.
+    console.error(`[rate-limit] unexpected consume_rate_limit response for bucket ${config.bucket}`);
+    return failClosed
+      ? { ok: false, retryAfterSeconds: config.windowSeconds }
+      : { ok: true };
   }
 
-  return { ok: true };
-}
-
-async function selectRateLimitRow(
-  supabase: SupabaseClient,
-  workspaceId: string | null,
-  subjectKey: string,
-  bucket: string,
-  now: Date,
-): Promise<{ data: { id: string; used_count: number; limit_count: number; resets_at: string } | null }> {
-  const base = supabase
-    .from("rate_limits")
-    .select("id, used_count, limit_count, resets_at")
-    .eq("subject_key", subjectKey)
-    .eq("bucket", bucket)
-    .gte("resets_at", now.toISOString());
-
-  const query =
-    workspaceId !== null
-      ? base.eq("workspace_id", workspaceId)
-      : base.is("workspace_id", null);
-
-  return query.maybeSingle() as unknown as Promise<{
-    data: { id: string; used_count: number; limit_count: number; resets_at: string } | null;
-  }>;
+  const allowed = (row as { allowed: boolean }).allowed;
+  return allowed
+    ? { ok: true }
+    : { ok: false, retryAfterSeconds: Math.max(1, Number((row as { retry_after_seconds?: number }).retry_after_seconds) || config.windowSeconds) };
 }
