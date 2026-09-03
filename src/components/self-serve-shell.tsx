@@ -60,6 +60,7 @@ type SelfServeShellProps = {
     role: string;
   };
   trialStatus: React.ReactNode;
+  metaConnectionStatus: "connected" | "attention" | "not_connected" | "unknown";
 };
 
 type NavGroup = {
@@ -175,6 +176,7 @@ export function SelfServeShell({
   workspaceRegion,
   account,
   trialStatus,
+  metaConnectionStatus,
 }: SelfServeShellProps) {
   const pathname = usePathname() ?? "";
   const { prefetchNow } = useSmartPrefetch();
@@ -186,7 +188,7 @@ export function SelfServeShell({
   }, [userId, workspaceId]);
 
   if (pathname.startsWith("/ad-studio")) {
-    return <StudioShell workspaceName={workspaceName} accountName={account.name}>{children}</StudioShell>;
+    return <StudioShell workspaceName={workspaceName} accountName={account.name} metaConnectionStatus={metaConnectionStatus}>{children}</StudioShell>;
   }
 
   return (

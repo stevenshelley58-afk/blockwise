@@ -95,6 +95,16 @@ export async function AppShell({ children, requiredAccess = "authenticated" }: A
   const accountEmail = profile?.email ?? claims.email ?? "";
   const accountName = profile?.full_name ?? accountEmail ?? "Signed in";
   const roleLabel = isOperator ? "operator" : primaryMembership?.role ?? "member";
+  const metaConnectionResult = variant === "self_serve"
+    ? await supabase.from("provider_connections").select("status").eq("workspace_id", workspace?.id ?? "").eq("provider", "meta").maybeSingle()
+    : null;
+  const metaConnectionStatus = metaConnectionResult?.error
+    ? "unknown"
+    : metaConnectionResult?.data?.status === "connected"
+      ? "connected"
+      : metaConnectionResult?.data?.status
+        ? "attention"
+        : "not_connected";
 
   // Self-serve workspaces render on the shadcn/ui shell; operator and monitor
   // workspaces keep the existing CSS shell until their own migrations.
@@ -121,6 +131,7 @@ export async function AppShell({ children, requiredAccess = "authenticated" }: A
             />
           </Suspense>
         }
+        metaConnectionStatus={metaConnectionStatus}
       >
         {children}
       </SelfServeShell>
