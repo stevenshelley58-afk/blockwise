@@ -55,6 +55,29 @@ export type InternalAuthOptions = {
   audit?: boolean;
 };
 
+async function auditAcceptedRequest(
+  request: Request,
+  supabase: SupabaseClient | undefined,
+  metadata: Record<string, unknown>,
+  correlationId: string | null,
+): Promise<void> {
+  try {
+    const client = supabase ?? (await import("./supabase/service.ts")).createSupabaseServiceClient();
+    const url = new URL(request.url);
+    await recordAuditLog(client, {
+      workspaceId: null,
+      actorProfileId: null,
+      action: "internal.api.request",
+      targetType: "internal_api",
+      targetId: null,
+      correlationId,
+      metadata: { ...metadata, method: request.method, path: url.pathname },
+    });
+  } catch (error) {
+    console.error("[internal-auth] accepted request audit failed", error instanceof Error ? error.message : error);
+  }
+}
+
 type NonceStore = {
   deleteExpired: (cutoffIso: string) => Promise<void>;
   insertIfFresh: (nonce: string, expiresAtIso: string) => Promise<boolean>;
@@ -124,9 +147,10 @@ export async function verifyInternalRequest(
   }
 
   // Controlled migration: while BLOCKWISE_INTERNAL_ALLOW_LEGACY_BEARER=true,
-  // the pre-existing Bearer shared-secret callers keep working so production
-  // traffic does not break before the Frank/Hermes signer lands. Turn it off
-  // once every internal caller sends HMAC headers (operator action).
+  // the pre-existing Bearer shared-secret callers keep working so traffic does
+  // not break before the Frank/Hermes signer lands. Legacy bearer requests do
+  // not have nonce replay protection, so this switch must be disabled after
+  // every internal caller sends HMAC headers.
   const authorization = request.headers.get("authorization");
   if (
     process.env.BLOCKWISE_INTERNAL_ALLOW_LEGACY_BEARER === "true" &&
@@ -134,6 +158,15 @@ export async function verifyInternalRequest(
   ) {
     const provided = authorization.slice(7).trim();
     if (provided && safeEqual(secret, provided)) {
+      // Keep the compatibility path auditable, while explicitly recording
+      // that this accepted request had no nonce replay protection.
+      if (options.audit !== false) {
+        await auditAcceptedRequest(request, options.supabase, {
+          scope: expectedScope,
+          authMethod: "legacy_bearer",
+          nonceReplayProtection: false,
+        }, null);
+      }
       return { ok: true, scope: expectedScope };
     }
     return { ok: false, status: 401, error: "invalid_signature" };
@@ -194,15 +227,11 @@ export async function verifyInternalRequest(
   }
 
   if (options.audit !== false) {
-    await recordAuditLog(supabase, {
-      workspaceId: null,
-      actorProfileId: null,
-      action: "internal.api.request",
-      targetType: "internal_api",
-      targetId: null,
-      correlationId: nonce,
-      metadata: { scope: expectedScope, method: request.method, path: url.pathname },
-    });
+    await auditAcceptedRequest(request, supabase, {
+      scope: expectedScope,
+      authMethod: "hmac",
+      nonceReplayProtection: true,
+    }, nonce);
   }
 
   return { ok: true, scope };
