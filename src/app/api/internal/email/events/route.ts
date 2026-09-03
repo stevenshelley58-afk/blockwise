@@ -31,14 +31,16 @@ function normalize(event: EmailEvent): { email: string; reason: "bounce" | "comp
 }
 
 export async function POST(request: Request) {
-  const auth = await verifyInternalRequest(request, "email.events");
+  // Read once and authenticate the exact bytes that will be parsed below.
+  const rawBody = await request.text();
+  const auth = await verifyInternalRequest(request, "email.events", { body: rawBody });
   if (!auth.ok) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
 
   let body: unknown;
   try {
-    body = await request.json();
+    body = JSON.parse(rawBody);
   } catch {
     return NextResponse.json({ error: "invalid_json" }, { status: 400 });
   }

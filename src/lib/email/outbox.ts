@@ -1,18 +1,17 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { redactString } from "../redact.ts";
+import { escapeHtml } from "./provider.ts";
 import type { EmailMessage, EmailProvider } from "./provider.ts";
 
 /**
  * Durable transactional email outbox.
  *
- * Enqueue happens after the business-state change commits: the outbox row is
- * durable and idempotent, so a retry of the business action collapses onto
- * the same message via the idempotency key. Delivery is a separate worker
- * pass through a provider-neutral interface with exponential backoff, lease
- * expiry, dead-lettering and suppression enforcement. Duplicate enqueues
- * with the same idempotency key collapse to one message.
- */
+ * Producers should enqueue in the same transaction as the business state when
+ * practical. Where the current route commits first, it records an explicit
+ * pending recovery state and the drain scanner repairs the gap. Delivery is
+ * at-least-once: lease fencing prevents stale workers settling reclaimed rows,
+ * but a crash after provider acceptance can still result in a duplicate. */
 
 export type OutboxEnqueueInput = {
   messageType: string;
@@ -28,6 +27,8 @@ export type OutboxEnqueueInput = {
   timezone?: string;
   payload?: Record<string, unknown>;
   idempotencyKey: string;
+  /** Do not deliver before this timestamp (used by scheduled follow-ups). */
+  nextAttemptAt?: string;
 };
 
 export type OutboxEnqueueResult =
@@ -47,6 +48,7 @@ type OutboxRow = {
   attempts: number;
   max_attempts: number;
   status: string;
+  lease_token: string | null;
 };
 
 export async function enqueueEmail(
@@ -66,15 +68,17 @@ export async function enqueueEmail(
         // The rendered message content is stored here and read back at
         // delivery time — enqueue without content is a programming error.
         payload: {
+          ...(input.payload ?? {}),
+          // Reserved delivery fields always win over caller payload variables.
           from: input.from,
           replyTo: input.replyTo ?? null,
           subject: input.subject,
           html: input.html,
           text: input.text,
-          ...(input.payload ?? {}),
         },
         idempotency_key: input.idempotencyKey,
         status: "pending",
+        ...(input.nextAttemptAt ? { next_attempt_at: input.nextAttemptAt } : {}),
       },
       { onConflict: "idempotency_key", ignoreDuplicates: true },
     )
@@ -146,6 +150,7 @@ export async function drainEmailOutbox(
   provider: EmailProvider,
   batchSize = 10,
 ): Promise<DrainSummary> {
+  provider.assertConfigured?.();
   const { data: claimed, error: claimError } = await supabase.rpc("claim_email_outbox_batch", {
     p_batch_size: batchSize,
   });
@@ -157,12 +162,18 @@ export async function drainEmailOutbox(
   const summary: DrainSummary = { claimed: rows.length, sent: 0, suppressed: 0, failed: 0, dead: 0 };
 
   for (const row of rows) {
+    const leaseToken = row.lease_token?.trim();
+    if (!leaseToken) {
+      console.error(`[email-outbox] claimed row ${row.id} has no lease token; leaving it for lease recovery`);
+      summary.failed += 1;
+      continue;
+    }
     let suppressed: boolean;
     try {
       suppressed = await isEmailSuppressed(supabase, row.recipient);
     } catch {
       // Suppression state unknown -> fail the message for a later pass.
-      await finalizeRow(supabase, row.id, {
+      await finalizeRow(supabase, row.id, leaseToken, {
         status: "failed",
         lastError: "suppression_check_unavailable",
         nextAttemptAt: retryAt(row.attempts),
@@ -171,7 +182,7 @@ export async function drainEmailOutbox(
       continue;
     }
     if (suppressed) {
-      const finalized = await finalizeRow(supabase, row.id, { status: "suppressed", lastError: "suppressed" });
+      const finalized = await finalizeRow(supabase, row.id, leaseToken, { status: "suppressed", lastError: "suppressed" });
       if (finalized) summary.suppressed += 1;
       else summary.failed += 1;
       continue;
@@ -180,7 +191,7 @@ export async function drainEmailOutbox(
     const message = toMessage(row);
     if (!message) {
       // Enqueue without content: dead-letter, never deliver a broken body.
-      const finalized = await finalizeRow(supabase, row.id, {
+      const finalized = await finalizeRow(supabase, row.id, leaseToken, {
         status: "dead",
         lastError: "missing_message_content",
       });
@@ -191,10 +202,11 @@ export async function drainEmailOutbox(
 
     const result = await provider.send(message);
     if (result.ok) {
-      const finalized = await finalizeRow(supabase, row.id, {
+      const finalized = await finalizeRow(supabase, row.id, leaseToken, {
         status: "sent",
         sentAt: true,
         lastError: null,
+        providerMessageId: result.providerMessageId,
       });
       if (finalized) {
         summary.sent += 1;
@@ -205,17 +217,15 @@ export async function drainEmailOutbox(
     }
 
     const dead = result.permanent || row.attempts >= row.max_attempts;
-    const finalized = await finalizeRow(supabase, row.id, {
+    const finalized = await finalizeRow(supabase, row.id, leaseToken, {
       status: dead ? "dead" : "failed",
       lastError: redactString(result.error),
       nextAttemptAt: dead ? undefined : retryAt(row.attempts),
     });
-    if (dead) {
-      summary.dead += 1;
-    } else {
-      summary.failed += 1;
-    }
-    void finalized;
+    if (finalized) {
+      if (dead) summary.dead += 1;
+      else summary.failed += 1;
+    } else summary.failed += 1;
   }
 
   return summary;
@@ -258,12 +268,14 @@ type FinalizeInput = {
   sentAt?: boolean;
   lastError: string | null;
   nextAttemptAt?: string;
+  providerMessageId?: string | null;
 };
 
 /** Returns true when the row was actually finalized. */
 async function finalizeRow(
   supabase: SupabaseClient,
   id: string,
+  leaseToken: string,
   input: FinalizeInput,
 ): Promise<boolean> {
   const update: Record<string, unknown> = {
@@ -271,12 +283,58 @@ async function finalizeRow(
     last_error: input.lastError,
   };
   if (input.sentAt) update.sent_at = new Date().toISOString();
+  if (input.providerMessageId !== undefined) update.provider_message_id = input.providerMessageId;
   if (input.nextAttemptAt) update.next_attempt_at = input.nextAttemptAt;
 
-  const { data, error } = await supabase.from("email_outbox").update(update).eq("id", id).select("id");
+  const { data, error } = await supabase
+    .from("email_outbox")
+    .update({ ...update, lease_token: null, lease_expires_at: null })
+    .eq("id", id)
+    .eq("lease_token", leaseToken)
+    .eq("status", "sending")
+    .select("id");
   if (error) {
     console.error(`[email-outbox] finalize ${input.status} failed for ${id}`, error.message);
     return false;
   }
   return Array.isArray(data) && data.length > 0;
+}
+
+export type PendingLeadWelcomeRecovery = { scanned: number; queued: number; failed: number };
+
+/** Repairs the route-commit/outbox-commit gap without relying on a later user submission. */
+export async function recoverPendingLeadWelcomeEmails(
+  supabase: SupabaseClient,
+  limit = 100,
+): Promise<PendingLeadWelcomeRecovery> {
+  const { data: pending, error } = await supabase
+    .from("demo_requests")
+    .select("id,name,email")
+    .in("lead_welcome_enqueue_status", ["pending", "failed"])
+    .order("created_at", { ascending: true })
+    .limit(Math.max(1, Math.min(limit, 500)));
+  if (error) throw new Error(`lead_welcome recovery scan failed: ${error.message}`);
+  const rows = (pending ?? []) as Array<{ id: string; name: string; email: string }>;
+  let queued = 0;
+  let failed = 0;
+  for (const row of rows) {
+    const firstName = escapeHtml(row.name.split(/\s+/)[0] || "there");
+    try {
+      await enqueueEmail(supabase, {
+        messageType: "lead_welcome", templateId: "lead-welcome", templateVersion: 1,
+        to: row.email, from: process.env.DEMO_NOTIFY_FROM?.trim() || "hello@blockwise.sale",
+        replyTo: "support@blockwise.sale", subject: "Your Blockwise demo request — what happens next",
+        html: `<p>Hi ${firstName},</p><p>Thanks for requesting a demo. The Blockwise team has your details and will be in touch within one business day.</p><p>— Blockwise</p>`,
+        text: `Hi ${row.name.split(/\s+/)[0] || "there"},\n\nThanks for requesting a demo. The Blockwise team has your details and will be in touch within one business day.\n\n— Blockwise`,
+        payload: { demoRequestId: row.id }, idempotencyKey: `lead-welcome:${row.id}`,
+      });
+      const update = await supabase.from("demo_requests").update({ lead_welcome_enqueue_status: "queued", lead_welcome_enqueue_error: null }).eq("id", row.id);
+      if (update.error) throw update.error;
+      queued += 1;
+    } catch (recoveryError) {
+      failed += 1;
+      await supabase.from("demo_requests").update({ lead_welcome_enqueue_status: "failed", lead_welcome_enqueue_error: redactString(recoveryError instanceof Error ? recoveryError.message : String(recoveryError)) }).eq("id", row.id);
+    }
+  }
+  return { scanned: rows.length, queued, failed };
 }

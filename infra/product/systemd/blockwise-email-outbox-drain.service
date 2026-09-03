@@ -1,0 +1,10 @@
+[Unit]
+Description=Blockwise transactional email outbox drain
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/projects/blockwise
+EnvironmentFile=/srv/blockwise/product/.env
+ExecStart=/projects/blockwise/scripts/vps/email-outbox-drain.sh

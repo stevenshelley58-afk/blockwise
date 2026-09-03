@@ -86,3 +86,6 @@
 202608250002_harden_customer_image_upload_status.sql
 20260829010000_adstudio_transactional_writes.sql
 20260830020000_direct_template_artifact.sql
+
+20260901030000_transactional_email_outbox.sql
+20260903010000_transactional_email_outbox_lease_recovery.sql

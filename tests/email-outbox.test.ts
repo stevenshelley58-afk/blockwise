@@ -4,6 +4,7 @@ import { describe, it } from "node:test";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { drainEmailOutbox, enqueueEmail, isEmailSuppressed, recordEmailSuppression } from "../src/lib/email/outbox.ts";
+import { scheduleFollowUpEmail } from "../src/lib/email/lead-lifecycle.ts";
 import type { EmailProvider } from "../src/lib/email/provider.ts";
 import type { EmailMessage } from "../src/lib/email/provider.ts";
 
@@ -54,19 +55,21 @@ function makeSupabase(opts: {
           };
         },
         update(patch: Row) {
-          return {
-            eq(_col: string, val: string) {
-              return {
-                select() {
-                  return Promise.resolve().then(() => {
-                    const row = outbox.find((r) => r.id === val);
-                    if (row) Object.assign(row, patch);
-                    return { data: row ? [row] : [], error: null };
-                  });
-                },
-              };
+          const filters: Record<string, unknown> = {};
+          const builder = {
+            eq(col: string, val: unknown) {
+              filters[col] = val;
+              return builder;
+            },
+            select() {
+              return Promise.resolve().then(() => {
+                const row = outbox.find((r) => Object.entries(filters).every(([key, value]) => r[key] === value));
+                if (row) Object.assign(row, patch);
+                return { data: row ? [row] : [], error: null };
+              });
             },
           };
+          return builder;
         },
       };
     }
@@ -104,9 +107,11 @@ function makeSupabase(opts: {
     outbox,
     suppressions,
     setClaimedBatch(rows: Row[]) {
-      claimedBatch = rows;
-      for (const row of rows) {
-        if (!outbox.some((r) => r.id === row.id)) outbox.push({ ...row });
+      claimedBatch = rows.map((row) => ({ ...row, status: "sending", lease_token: row.lease_token ?? ("lease-" + row.id) }));
+      for (const row of claimedBatch) {
+        const existing = outbox.find((r) => r.id === row.id);
+        if (existing) Object.assign(existing, row);
+        else outbox.push({ ...row });
       }
     },
     from: table,
@@ -154,6 +159,20 @@ describe("email outbox", () => {
     assert.equal(payload.from, "hello@blockwise.sale");
   });
 
+  it("preserves a scheduled not-before timestamp", async () => {
+    const supabase = makeSupabase();
+    await enqueueEmail(supabase, { ...baseMessage, nextAttemptAt: "2099-01-01T00:00:00.000Z", idempotencyKey: "scheduled" });
+    assert.equal(supabase.outbox[0].next_attempt_at, "2099-01-01T00:00:00.000Z");
+  });
+
+  it("schedules follow-ups with an explicit not-before timestamp", async () => {
+    const supabase = makeSupabase();
+    await scheduleFollowUpEmail({
+      to: "customer@example.com", from: "hello@blockwise.sale", subject: "Follow up", text: "Tomorrow",
+      scheduledAt: "2099-01-01T09:00:00.000Z", leadId: "lead-1", supabase,
+    });
+    assert.equal(supabase.outbox[0].next_attempt_at, "2099-01-01T09:00:00.000Z");
+  });
   it("collapses duplicate enqueues to the first message", async () => {
     const supabase = makeSupabase();
     const first = await enqueueEmail(supabase, { ...baseMessage, idempotencyKey: "dup" });
@@ -166,7 +185,7 @@ describe("email outbox", () => {
 
   it("delivers a claimed message with its stored content and marks it sent", async () => {
     const supabase = makeSupabase();
-    supabase.setClaimedBatch([{ id: "ob-1", status: "pending", attempts: 1, max_attempts: 6, recipient: "a@b.test", message_type: "welcome", template_id: "welcome", template_version: 1, payload: { subject: "Hi", html: "<p>Hi</p>", text: "Hi", from: "hello@blockwise.sale" }, idempotency_key: "x" }]);
+    supabase.setClaimedBatch([{ id: "ob-1", status: "sending", lease_token: null, attempts: 1, max_attempts: 6, recipient: "a@b.test", message_type: "welcome", template_id: "welcome", template_version: 1, payload: { subject: "Hi", html: "<p>Hi</p>", text: "Hi", from: "hello@blockwise.sale" }, idempotency_key: "x" }]);
     const sent: EmailMessage[] = [];
     const summary = await drainEmailOutbox(supabase, fakeProvider((m) => {
       sent.push(m);
@@ -178,8 +197,21 @@ describe("email outbox", () => {
     assert.equal(sent[0].subject, "Hi");
     assert.equal(sent[0].from, "hello@blockwise.sale");
     assert.equal(supabase.outbox[0].status, "sent");
+    assert.equal(supabase.outbox[0].provider_message_id, "pm-1");
   });
 
+  it("does not settle a row reclaimed by another lease owner", async () => {
+    const supabase = makeSupabase();
+    supabase.setClaimedBatch([{ id: "ob-stale", status: "sending", attempts: 1, max_attempts: 6, recipient: "a@b.test", message_type: "welcome", template_id: "welcome", template_version: 1, payload: { subject: "Hi", html: "<p>Hi</p>", text: "Hi", from: "hello@blockwise.sale" }, idempotency_key: "stale" }]);
+    const summary = await drainEmailOutbox(supabase, fakeProvider(() => {
+      supabase.outbox[0].lease_token = "reclaimed-by-other-worker";
+      return { ok: true, providerMessageId: "pm-stale" };
+    }));
+    assert.equal(summary.sent, 0);
+    assert.equal(summary.failed, 1);
+    assert.equal(supabase.outbox[0].status, "sending");
+    assert.equal(supabase.outbox[0].provider_message_id, undefined);
+  });
   it("dead-letters a claimed row that has no stored message content", async () => {
     const supabase = makeSupabase();
     supabase.setClaimedBatch([{ id: "ob-1", status: "pending", attempts: 1, max_attempts: 6, recipient: "a@b.test", message_type: "welcome", template_id: "welcome", template_version: 1, payload: {}, idempotency_key: "x2" }]);
@@ -257,4 +289,12 @@ describe("email outbox", () => {
     assert.ok(!String(supabase.outbox[0].last_error).includes("eyJ"));
     assert.ok(String(supabase.outbox[0].last_error).includes("[redacted]"));
   });
+  it("keeps reserved delivery fields from being overridden by payload", async () => {
+    const supabase = makeSupabase();
+    await enqueueEmail(supabase, { ...baseMessage, subject: "Reserved", payload: { subject: "attacker", html: "bad", from: "bad@example.com" }, idempotencyKey: "reserved" });
+    const payload = supabase.outbox[0].payload as Record<string, unknown>;
+    assert.equal(payload.subject, "Reserved");
+    assert.equal(payload.from, "hello@blockwise.sale");
+  });
+
 });

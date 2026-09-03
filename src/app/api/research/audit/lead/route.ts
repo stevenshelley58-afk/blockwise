@@ -151,23 +151,23 @@ export async function POST(request: NextRequest) {
   const { error: deliveryUpdateError } = await supabase
     .from("demo_requests")
     .update({
-      customer_email_status: customerEmail.sent ? "sent" : "failed",
+      customer_email_status: customerEmail.sent ? "sent" : customerEmail.queued ? "queued" : "failed",
       customer_emailed_at: customerEmail.sent ? new Date().toISOString() : null,
       customer_email_error: customerEmail.error,
-      customer_email_message_id: customerEmail.messageId,
-      operator_notification_status: operatorNotification.sent ? "sent" : "failed",
+      customer_email_message_id: customerEmail.sent ? customerEmail.messageId : null,
+      operator_notification_status: operatorNotification.sent ? "sent" : operatorNotification.queued ? "queued" : "failed",
       operator_notified_at: operatorNotification.sent ? new Date().toISOString() : null,
       operator_notification_error: operatorNotification.error,
-      operator_notification_message_id: operatorNotification.messageId,
+      operator_notification_message_id: operatorNotification.sent ? operatorNotification.messageId : null,
     })
     .eq("id", inserted.id);
   if (deliveryUpdateError) {
     console.error("audit-lead delivery status update failed", deliveryUpdateError);
   }
-  if (!operatorNotification.sent) {
+  if (!operatorNotification.sent && !operatorNotification.queued) {
     console.error("audit-lead operator notification failed", operatorNotification.error);
   }
-  if (!customerEmail.sent) {
+  if (!customerEmail.sent && !customerEmail.queued) {
     console.error("audit-lead customer email failed", customerEmail.error);
     return NextResponse.json(
       { error: "We saved your request but could not send the plan. Please try again shortly." },

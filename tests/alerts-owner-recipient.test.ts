@@ -36,33 +36,10 @@ test("copy-generation wires the model-fallback alert at the cascade fallback poi
   assert.match(source, /fromModel: candidate\.model/);
 });
 
-test("fallback emails carry a Resend idempotency key", async () => {
-  const originalFetch = globalThis.fetch;
-  const original = {
-    RESEND_API_KEY: process.env.RESEND_API_KEY,
-    ALERT_EMAIL_FROM: process.env.ALERT_EMAIL_FROM,
-  };
-  let headers: HeadersInit | undefined;
-  process.env.RESEND_API_KEY = "re_test";
-  process.env.ALERT_EMAIL_FROM = "Blockwise <alerts@blockwise.test>";
-  globalThis.fetch = (async (_url: string | URL | Request, init?: RequestInit) => {
-    headers = init?.headers;
-    return new Response("{}", { status: 200 });
-  }) as typeof fetch;
-  try {
-    assert.equal(await sendAlertEmail({
-      subject: "fallback",
-      text: "fallback",
-      idempotencyKey: "model-fallback/run-1",
-    }), true);
-    assert.equal(new Headers(headers).get("Idempotency-Key"), "model-fallback/run-1");
-  } finally {
-    globalThis.fetch = originalFetch;
-    if (original.RESEND_API_KEY === undefined) delete process.env.RESEND_API_KEY;
-    else process.env.RESEND_API_KEY = original.RESEND_API_KEY;
-    if (original.ALERT_EMAIL_FROM === undefined) delete process.env.ALERT_EMAIL_FROM;
-    else process.env.ALERT_EMAIL_FROM = original.ALERT_EMAIL_FROM;
-  }
+test("fallback email is queued through the provider-neutral outbox", () => {
+  const source = readFileSync("src/lib/alerts/notify.ts", "utf8");
+  assert.match(source, /enqueueEmail\(createSupabaseServiceClient\(\)/);
+  assert.doesNotMatch(source, /api\.resend\.com/);
 });
 
 test("fallback WhatsApp delivery has a hard timeout off the render critical path", async () => {

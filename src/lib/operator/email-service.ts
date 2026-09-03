@@ -1,3 +1,9 @@
+import { createHash } from "node:crypto";
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+import { enqueueEmail } from "../email/outbox.ts";
+import { assertEmailProviderConfigured } from "../email/provider.ts";
+import { createSupabaseServiceClient } from "../supabase/service.ts";
 const RESEND_API_BASE = "https://api.resend.com";
 const DEFAULT_MAILBOX_ADDRESS = "steven@blockwise.sale";
 const DEFAULT_MAILBOX_DOMAIN = "blockwise.sale";
@@ -10,6 +16,8 @@ export type OperatorMailboxConfig = {
   fromAddress: string;
   replyAddress: string;
   configured: boolean;
+  outboundConfigured: boolean;
+  inboundConfigured: boolean;
 };
 
 export type OperatorEmailAttachment = {
@@ -91,13 +99,19 @@ export function getOperatorMailboxConfig(env: NodeJS.ProcessEnv = process.env): 
     normalizeDomain(env.OPERATOR_MAILBOX_DOMAIN) || domainFromEmail(mailboxAddress) || DEFAULT_MAILBOX_DOMAIN;
   const replyAddress = normalizeEmailAddress(env.OPERATOR_MAIL_REPLY_TO) || mailboxAddress;
 
+  const outboundConfigured = (() => { try { assertEmailProviderConfigured(env); return true; } catch { return false; } })();
+  const inboundConfigured = env.EMAIL_PROVIDER?.trim().toLowerCase() === "resend" && Boolean(env.RESEND_API_KEY?.trim());
+
   return {
     mailboxAddress,
     mailboxDomain,
     mailboxLabel: env.OPERATOR_MAILBOX_LABEL?.trim() || `All @${mailboxDomain}`,
     fromAddress: env.OPERATOR_MAIL_FROM?.trim() || DEFAULT_MAIL_FROM,
     replyAddress,
-    configured: Boolean(env.RESEND_API_KEY?.trim()),
+    // `configured` remains the inbound capability used by the mailbox UI.
+    configured: inboundConfigured,
+    outboundConfigured,
+    inboundConfigured,
   };
 }
 
@@ -214,7 +228,9 @@ export async function sendOperatorEmail(input: {
   subject: string;
   text: string;
   replyTo?: string | null;
-}): Promise<{ id: string; from: string }> {
+  idempotencyKey?: string;
+  supabase?: SupabaseClient;
+}): Promise<{ id: string; from: string; queued: true }> {
   const config = getOperatorMailboxConfig();
   const subject = input.subject.trim();
   const text = input.text.trim();
@@ -230,19 +246,18 @@ export async function sendOperatorEmail(input: {
     throw new OperatorEmailError("Message body is required.", 400);
   }
 
-  const data = await resendRequest<ResendSendResponse>("/emails", {
-    method: "POST",
-    body: JSON.stringify({
-      from: config.fromAddress,
-      to,
-      subject,
-      text,
-      html: textToHtml(text),
-      reply_to: input.replyTo || config.replyAddress,
-    }),
-  });
-
-  return { id: data.id, from: config.fromAddress };
+  const service = input.supabase ?? createSupabaseServiceClient();
+  const bucket = Math.floor(Date.now() / 3_600_000);
+  const baseKey = input.idempotencyKey?.trim() || `operator:${createHash("sha256").update([subject, text, input.replyTo ?? "", String(bucket)].join("\0")).digest("hex")}`;
+  const results = await Promise.all(to.map((recipient) => enqueueEmail(service, {
+    messageType: "operator_message", templateId: "operator-message", templateVersion: 1,
+    to: recipient, from: config.fromAddress, replyTo: input.replyTo || config.replyAddress,
+    subject, html: textToHtml(text), text,
+    idempotencyKey: `${baseKey}:${createHash("sha256").update(recipient).digest("hex")}`,
+  })));
+  const first = results[0];
+  const id = first.queued ? first.id : (first.duplicateOf ?? "queued");
+  return { id, from: config.fromAddress, queued: true };
 }
 
 export class OperatorEmailError extends Error {
@@ -256,6 +271,9 @@ export class OperatorEmailError extends Error {
 }
 
 async function resendRequest<T>(path: string, init: RequestInit): Promise<T> {
+  if (process.env.EMAIL_PROVIDER?.trim().toLowerCase() !== "resend") {
+    throw new OperatorEmailError("Operator inbox requires the explicit Resend compatibility provider.", 503);
+  }
   const apiKey = process.env.RESEND_API_KEY?.trim();
   if (!apiKey) {
     throw new OperatorEmailError("Resend is not configured.", 503);

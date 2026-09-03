@@ -1,7 +1,7 @@
 import { recordCustomerActivationMilestone } from "../activation/customer-activation.ts";
 import { createBookingInvitation, getLatestOnboardingBooking } from "../booking/service.ts";
 import { normalizeBookingMarket } from "../booking/provider.ts";
-import { sendOperatorEmail, getOperatorMailboxConfig } from "./email-service.ts";
+import { sendOperatorEmail } from "./email-service.ts";
 import { recordAuditLog } from "../supabase/audit.ts";
 import { createSupabaseServiceClient } from "../supabase/service.ts";
 
@@ -191,14 +191,14 @@ export async function runOperatorCustomerAction(input: {
       mutationKey,
       serviceSupabase: service,
     });
-    let delivery: "email" | "manual" = "manual";
-    if (customer.email && getOperatorMailboxConfig().configured) {
+    let delivery: "queued" | "manual" = "manual";
+    if (customer.email) {
       await sendOperatorEmail({
         to: [customer.email],
         subject: "Book your Blockwise onboarding call",
         text: `Choose a convenient onboarding time with the Blockwise team:\n\n${booking.hostedBookingUrl}\n\nYour product access is not affected if you book later.`,
       });
-      delivery = "email";
+      delivery = "queued";
     }
     result = { action: input.action, bookingUrl: booking.hostedBookingUrl, delivery };
   } else {

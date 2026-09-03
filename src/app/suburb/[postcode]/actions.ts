@@ -3,7 +3,7 @@
 import { headers } from "next/headers";
 import { z } from "zod";
 
-import { getOperatorMailboxConfig, sendOperatorEmail } from "@/lib/operator/email-service";
+import { sendOperatorEmail } from "@/lib/operator/email-service";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
@@ -45,16 +45,13 @@ export async function emailSuburbReport(
     }).select("id").single();
     if (error) throw error;
 
-    if (!getOperatorMailboxConfig().configured) {
-      await markReportEmailFailed(supabase, lead.id, "Report email is not configured.");
-      return { ok: false, error: "Email delivery is temporarily unavailable. Please use the live report link." };
-    }
-
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || "https://blockwise.sale";
     try {
       const delivery = await sendOperatorEmail({
         to: [parsed.data.email],
         subject: `Your ${parsed.data.suburb} ad report`,
+        idempotencyKey: `suburb-report:${lead.id}`,
+        supabase,
         text: [
           `Your live ${parsed.data.suburb} ad report is ready.`,
           `${baseUrl}/suburb/${parsed.data.postcode}`,
@@ -64,9 +61,9 @@ export async function emailSuburbReport(
       const { error: deliveryUpdateError } = await supabase
         .from("report_email_leads")
         .update({
-          delivery_status: "sent",
-          delivered_at: new Date().toISOString(),
-          delivery_message_id: delivery.id,
+          delivery_status: "queued",
+          delivered_at: null,
+          delivery_message_id: null,
           delivery_error: null,
         })
         .eq("id", lead.id);

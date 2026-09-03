@@ -7,9 +7,11 @@
 -- are separate from marketing consent: they stop transactional retries after
 -- hard bounces/complaints.
 --
--- PII rule: payload holds template variables only — never raw message bodies,
--- credentials, or payment data. Error text is redacted before storage
--- (src/lib/redact.ts).
+-- Delivery payload stores the rendered subject, HTML/text bodies, sender and
+-- reply-to alongside template metadata. These fields can contain customer PII;
+-- no automatic retention is implied by this table; operations must remove
+-- sent/dead rows under the product retention policy. Never put secrets or
+-- credentials in payload. Error text is redacted before storage (src/lib/redact.ts).
 --
 -- RLS: tables are service-role only (RLS enabled, no policies) — clients
 -- never read or write mail state directly.
@@ -29,6 +31,9 @@ create table public.email_outbox (
   locale text not null default 'en-AU',
   timezone text not null default 'Australia/Perth',
   payload jsonb not null default '{}'::jsonb,
+  -- Fencing token changes on every claim; stale workers cannot settle a reclaim.
+  lease_token uuid,
+  provider_message_id text,
   idempotency_key text not null unique,
   status text not null default 'pending'
     check (status in ('pending', 'sending', 'sent', 'failed', 'suppressed', 'dead')),
@@ -70,6 +75,7 @@ as $$
   update public.email_outbox
   set status = 'sending',
       attempts = attempts + 1,
+      lease_token = gen_random_uuid(),
       lease_expires_at = now() + interval '5 minutes'
   where id in (
     select id
