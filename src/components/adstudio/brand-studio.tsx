@@ -890,7 +890,7 @@ function BrandStudioEditor({ brandKit: initialKit, returnTo }: { brandKit: AdStu
 /* ------------------------------------------------------------------ */
 
 const BRAND_STYLES = `
-.bs-screen{position:fixed;inset:0;z-index:100;display:flex;flex-direction:column;background:#f8fafc;color:var(--ink);font-size:14px}
+.bs-screen{position:relative;min-height:calc(100dvh - 1px);display:flex;flex-direction:column;background:var(--background,#f6f7f9);color:var(--foreground,#16181d);font-size:14px}
 .bs-screen *{box-sizing:border-box}
 .bs-screen button,.bs-screen input,.bs-screen textarea{font:inherit}
 .bs-screen button{cursor:pointer;border:0;background:none;color:inherit}

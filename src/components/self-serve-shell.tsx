@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 
 import { BlockwiseLogo } from "@/components/blockwise-logo";
+import { StudioShell } from "@/components/adstudio/studio-shell";
 import { CommandMenu } from "@/components/command-menu";
 import { SidebarThemeToggle } from "@/components/sidebar-theme-toggle";
 import { isItemActive, navByVariant, selfServeIcons, type NavItem } from "@/components/sidebar-nav";
@@ -183,6 +184,10 @@ export function SelfServeShell({
   useEffect(() => {
     void syncReadModelIdentity({ userId, workspaceId });
   }, [userId, workspaceId]);
+
+  if (pathname.startsWith("/ad-studio")) {
+    return <StudioShell workspaceName={workspaceName} accountName={account.name}>{children}</StudioShell>;
+  }
 
   return (
     <SidebarProvider
