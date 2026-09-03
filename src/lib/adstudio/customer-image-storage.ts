@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { CustomerImageValidationError, validateCustomerImageBytes, validateCustomerImageDataUrl } from "./image-validation.ts";
-import { buildCustomerImageRef, CUSTOMER_IMAGE_BUCKET, imageSha256, parseCustomerImageRef, type CustomerImageMime } from "./customer-image-ref.ts";
+import { buildCustomerImageRef, CUSTOMER_IMAGE_BUCKET, parseCustomerImageRef, type CustomerImageMime } from "./customer-image-ref.ts";
+import { imageSha256 } from "./customer-image-hash.server.ts";
 
 export class CustomerImageStorageError extends Error {
   readonly inputKey: string;

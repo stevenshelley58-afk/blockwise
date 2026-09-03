@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { errorResponse, readJsonBody, requireAdStudioRequest } from "@/lib/adstudio/http";
 import {
   PublishError,
+  activatePausedMetaPublish,
   backfillPublishMetaCopy,
   buildPausedMetaPublishPlan,
   freezePublicationSnapshot,
@@ -41,14 +42,18 @@ function providerWritesEnabled() {
 /**
  * POST /api/adstudio/ads/[id]/publish?workspaceId=...
  *
- * Separate Publish flow (BW-M): freezes the LAST SAVED revision into a
- * publication snapshot, then creates Meta objects PAUSED through the existing
- * Meta pipeline (marketing_api adapter). Activation is a later task — this
- * flow never reports "live".
+ * Complete Publish lifecycle (BW-M + BW-Q): freezes the LAST SAVED revision
+ * into a publication snapshot, creates the Meta objects through the existing
+ * Meta pipeline (marketing_api adapter), then ACTIVATES them — the response
+ * reports "active" only after Meta confirms the campaign/ad sets/ads are
+ * ACTIVE. If activation fails after the objects were created, the receipt
+ * reports the REAL state (created, still paused on Meta) plus the planId so
+ * the UI can offer a safe retry — it never claims the ad is live when it
+ * remains paused.
  *
  * When BLOCKWISE_ENABLE_PROVIDER_WRITES is not "true" the API returns a clear
- * dry-run / paused-disabled receipt: snapshot frozen + plan drafted, NO Meta
- * writes, and no fake "live" success.
+ * dry-run receipt: snapshot frozen + plan drafted, NO Meta writes, and no
+ * fake success.
  */
 export async function POST(request: NextRequest, context: RouteContext) {
   const { id } = await Promise.resolve(context.params);
@@ -177,20 +182,61 @@ export async function POST(request: NextRequest, context: RouteContext) {
       );
     }
 
-    return NextResponse.json({
-      ok: true,
-      mode: "publish",
-      providerWritesEnabled: true,
-      snapshotId,
-      planId: completed.planId,
-      // NEVER "live" — these objects are PAUSED on Meta. Activation is a
-      // separate later task.
-      status: "paused",
-      reconciledObjects: completed.reconciledObjects,
-      message:
-        "Created PAUSED on Meta: campaign, ad set, lead form, creatives, and ads. " +
-        "Nothing is running — activation is a separate step.",
-    });
+    // 9. Activate — the customer's Publish click IS the explicit approval.
+    // Success is only reported when Meta confirms the objects are ACTIVE.
+    // Failure is reported honestly: objects were created and remain paused,
+    // with the planId for a safe retry.
+    try {
+      const activation = await activatePausedMetaPublish(serviceSupabase, {
+        adId: id,
+        workspaceId: access.access.workspaceId,
+        planId: completed.planId,
+        requestedBy: access.access.userId,
+        providerWritesEnabled: true,
+      });
+
+      return NextResponse.json({
+        ok: true,
+        mode: "publish",
+        providerWritesEnabled: true,
+        snapshotId,
+        planId: completed.planId,
+        status: "active",
+        reconciledObjects: completed.reconciledObjects,
+        activationTargets: activation.targets,
+        message:
+          "Published — Meta confirms your campaign, ad sets and ads are configured ACTIVE. " +
+          "Individual ads may briefly show as in review (effective status IN_PROCESS or PENDING_REVIEW) " +
+          "before they start delivering; that is Meta's normal approval flow, not a paused campaign.",
+      });
+    } catch (activationErr) {
+      // Indeterminate state: activation failed AND the safety pause could not
+      // be confirmed for every object — some objects may still be ACTIVE and
+      // spending. Never report "paused" for an unverified state.
+      const unconfirmed = activationErr instanceof PublishError && activationErr.code === "activation_unconfirmed";
+      const detail = activationErr instanceof PublishError
+        ? activationErr.message
+        : activationErr instanceof Error
+          ? activationErr.message
+          : "Activation failed.";
+      return NextResponse.json({
+        ok: true,
+        mode: "publish",
+        providerWritesEnabled: true,
+        snapshotId,
+        planId: completed.planId,
+        // The REAL state: with a confirmed safety pause the objects exist and
+        // remain paused; unconfirmed means the state could not be verified.
+        status: unconfirmed ? "unknown" : "paused",
+        reconciledObjects: completed.reconciledObjects,
+        activationError: detail,
+        message: unconfirmed
+          ? "Your ad was created on Meta, but activation failed and Blockwise could not confirm that every object was paused. " +
+            "Some campaign objects may be ACTIVE — check Meta Ads Manager now. Retrying publish is still safe; it targets the exact objects already created."
+          : "Your ad was created on Meta, but activation did not complete — nothing is running yet. " +
+            "You can safely retry publishing; it targets the exact objects already created.",
+      });
+    }
   } catch (err) {
     if (err instanceof PublishError) {
       const status = err.code === "ad_not_found" || err.code === "revision_not_found" || err.code === "template_not_found"
