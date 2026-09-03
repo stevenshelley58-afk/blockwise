@@ -8,6 +8,7 @@ export interface TemplateSummary {
   semanticColours: Record<string, string>; gallerySampleUrl: string; description: string;
 }
 export type GallerySamplePlacement = "feed" | "story";
+export type TemplateLibraryStatus = "active" | "quarantined";
 type TemplateRow = { template_id: unknown; template_json: unknown; created_at: unknown };
 function record(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
@@ -26,24 +27,69 @@ export function gallerySampleProxyUrl(templateId: string, placement: GallerySamp
   return `/api/adstudio/templates/${encodeURIComponent(templateId)}/sample?placement=${placement}`;
 }
 
-export function templateAssetProxyUrl(templateId: string, assetKey: string): string | null {
+export function templateAssetProxyUrl(templateId: string, assetKey: string, existingAdId?: string): string | null {
   if (!SAFE_ROUTE_PART.test(templateId) || !SAFE_ROUTE_PART.test(assetKey)) return null;
-  return `/api/adstudio/templates/${encodeURIComponent(templateId)}/assets/${encodeURIComponent(assetKey)}`;
+  const path = `/api/adstudio/templates/${encodeURIComponent(templateId)}/assets/${encodeURIComponent(assetKey)}`;
+  if (!existingAdId) return path;
+  return SAFE_ROUTE_PART.test(existingAdId) ? `${path}?adId=${encodeURIComponent(existingAdId)}` : null;
 }
 
 /* Hermes final layered templates are the sole customer gallery source. */
-export async function listTemplates(supabase: SupabaseClient): Promise<TemplateSummary[]> {
-  const { data, error } = await supabase.from("ad_templates").select("template_id, template_json, created_at").order("created_at", { ascending: false });
+export async function listCustomerTemplates(supabase: SupabaseClient): Promise<TemplateSummary[]> {
+  const { data, error } = await supabase
+    .from("ad_templates")
+    .select("template_id, template_json, created_at")
+    .eq("library_status", "active")
+    .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
   return ((data ?? []) as TemplateRow[]).flatMap((row) => {
     const template = parseTemplateJson(row.template_json);
     return template ? [summaryFromTemplate(template, row)] : [];
   });
 }
-export async function getTemplate(supabase: SupabaseClient, templateId: string): Promise<AdTemplate | null> {
-  const { data, error } = await supabase.from("ad_templates").select("template_json").eq("template_id", templateId).maybeSingle();
+export async function getCustomerTemplate(supabase: SupabaseClient, templateId: string): Promise<AdTemplate | null> {
+  const { data, error } = await supabase
+    .from("ad_templates")
+    .select("template_json")
+    .eq("template_id", templateId)
+    .eq("library_status", "active")
+    .maybeSingle();
   if (error) throw new Error(error.message);
   return parseTemplateJson(data ? (data as { template_json: unknown }).template_json : null);
+}
+
+/** Service-role/operator inspection only. Customer routes must use getCustomerTemplate. */
+export async function getTemplateForInternalInspection(supabase: SupabaseClient, templateId: string): Promise<AdTemplate | null> {
+  const { data, error } = await supabase
+    .from("ad_templates")
+    .select("template_json")
+    .eq("template_id", templateId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return parseTemplateJson(data ? (data as { template_json: unknown }).template_json : null);
+}
+
+/**
+ * Preserves a workspace's own saved-ad history without reopening the template
+ * to general customer discovery. The customer client proves row ownership;
+ * only then may the internal client resolve a quarantined template.
+ */
+export async function getTemplateForExistingCustomerAd(input: {
+  customerSupabase: SupabaseClient;
+  internalSupabase: SupabaseClient;
+  workspaceId: string;
+  adId: string;
+  templateId: string;
+}): Promise<AdTemplate | null> {
+  const { data: ad, error } = await input.customerSupabase
+    .from("ad_customer_ads")
+    .select("id")
+    .eq("id", input.adId)
+    .eq("workspace_id", input.workspaceId)
+    .eq("template_id", input.templateId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return ad ? getTemplateForInternalInspection(input.internalSupabase, input.templateId) : null;
 }
 function summaryFromTemplate(template: AdTemplate, row: TemplateRow): TemplateSummary {
   const metadata = record(template.metadata);

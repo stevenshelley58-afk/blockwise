@@ -8,10 +8,11 @@ import {
   parseCustomerAdId,
 } from "@/lib/adstudio/create-customer-ad";
 import { resolveAdvertiserDomain } from "@/lib/adstudio/advertiser-domain";
-import { getTemplate } from "@/lib/adstudio/pack-gallery";
+import { getCustomerTemplate, getTemplateForExistingCustomerAd } from "@/lib/adstudio/pack-gallery";
 import { isExampleBrandKitSourceUrl, rowToBrandKit } from "@/lib/adstudio/persistence";
 import type { AdStudioBrandKit } from "@/lib/adstudio/types";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
+import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const dynamic = "force-dynamic";
 
@@ -37,7 +38,15 @@ export default async function TemplateEditorPage({
   if (query.adId !== undefined && !requestedAdId) notFound();
 
   const { supabase, access } = await requirePageSurfaceAccess("adstudio");
-  const template = await getTemplate(supabase, templateId);
+  const template = requestedAdId
+    ? await getTemplateForExistingCustomerAd({
+        customerSupabase: supabase,
+        internalSupabase: createSupabaseServiceClient(),
+        workspaceId: access.workspaceId,
+        adId: requestedAdId,
+        templateId,
+      })
+    : await getCustomerTemplate(supabase, templateId);
   if (!template) notFound();
 
   let adRef: Awaited<ReturnType<typeof getOrCreateCustomerAd>>;

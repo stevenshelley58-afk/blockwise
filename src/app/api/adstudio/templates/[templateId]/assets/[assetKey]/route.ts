@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { requireAdStudioRequest } from "@/lib/adstudio/http";
-import { getTemplate, templateAssetStoragePath } from "@/lib/adstudio/pack-gallery";
+import { parseCustomerAdId } from "@/lib/adstudio/create-customer-ad";
+import { getCustomerTemplate, getTemplateForExistingCustomerAd, templateAssetStoragePath } from "@/lib/adstudio/pack-gallery";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const runtime = "nodejs";
@@ -14,12 +15,22 @@ export async function GET(
   const context = await requireAdStudioRequest(request);
   if (!context.ok) return context.response;
   const { templateId, assetKey } = await params;
-  const template = await getTemplate(context.supabase, templateId);
+  const requestedAdId = parseCustomerAdId(request.nextUrl.searchParams.get("adId") ?? undefined);
+  const service = createSupabaseServiceClient();
+  const activeTemplate = await getCustomerTemplate(context.supabase, templateId);
+  const template = activeTemplate ?? (requestedAdId
+    ? await getTemplateForExistingCustomerAd({
+        customerSupabase: context.supabase,
+        internalSupabase: service,
+        workspaceId: context.access.workspaceId,
+        adId: requestedAdId,
+        templateId,
+      })
+    : null);
   const declared = template?.assets[assetKey];
   if (!template || !declared || !IMAGE_MIME_TYPES.has(declared.mimeType)) return notFoundResponse();
 
   const expectedPath = templateAssetStoragePath(templateId, assetKey, declared.fileName);
-  const service = createSupabaseServiceClient();
   const { data: asset, error } = await service.from("ad_template_assets_direct")
     .select("asset_key,file_name,mime_type,storage_path")
     .eq("template_id", templateId).eq("asset_key", assetKey).maybeSingle();

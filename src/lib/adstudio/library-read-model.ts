@@ -33,6 +33,8 @@ type Cursor = { orderAt: string; id: string };
 
 export async function loadAdStudioLibraryPage(input: {
   supabase: QueryClient;
+  /** Internal template reader; ad rows remain workspace-scoped on supabase. */
+  templateSupabase?: QueryClient;
   workspaceId: string;
   kind: "assets" | "ads";
   limit?: number;
@@ -81,7 +83,7 @@ export async function loadAdStudioLibraryPage(input: {
         ? input.supabase.from("ad_revisions").select("id,ad_id,revision_number,feed_png_path").eq("workspace_id", input.workspaceId).in("id", revisionIds)
         : Promise.resolve({ data: [], error: null }),
       templateIds.length
-        ? input.supabase.from("ad_templates").select("template_id,template_json").in("template_id", templateIds)
+        ? (input.templateSupabase ?? input.supabase).from("ad_templates").select("template_id,template_json").in("template_id", templateIds)
         : Promise.resolve({ data: [], error: null }),
     ]);
     if (revisionsResult.error) throw new Error(revisionsResult.error.message);
