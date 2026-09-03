@@ -88,7 +88,7 @@ declare
   v_effective_role text := coalesce(nullif(current_setting('request.jwt.claim.role', true), ''), nullif(current_setting('role', true), ''), current_user);
 begin
   -- Serialize all operator mutations so last-owner checks cannot race.
-  perform pg_advisory_xact_lock(hashtextextended('blockwise.operator-owners', 0));
+  perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('blockwise.operator-owners', 0));
 
   if p_role is not null and p_role not in ('owner', 'support') then
     raise exception 'invalid_operator_role';
@@ -159,19 +159,20 @@ grant execute on function public.set_operator_role(uuid, text) to authenticated,
 -- configured short TTL expires.
 create or replace function public.revoke_user_sessions(p_user_id uuid)
 returns integer
-language plpgsql security definer set search_path = public, auth
+language plpgsql security definer set search_path = ''
 as $$
 declare
   v_owner boolean := false;
   v_owner_count integer := 0;
   v_revoked integer := 0;
+  v_refresh_revoked integer := 0;
 begin
   if p_user_id is null then
     raise exception 'invalid_user';
   end if;
 
   -- Keep the last-owner check and deletion in one serialized transaction.
-  perform pg_advisory_xact_lock(hashtextextended('blockwise.operator-owners', 0));
+  perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('blockwise.operator-owners', 0));
   select is_operator = true and operator_role = 'owner'
     into v_owner
   from public.profiles where id = p_user_id;
@@ -184,9 +185,11 @@ begin
     end if;
   end if;
 
+  delete from auth.refresh_tokens where user_id = p_user_id;
+  get diagnostics v_refresh_revoked = row_count;
   delete from auth.sessions where user_id = p_user_id;
   get diagnostics v_revoked = row_count;
-  return v_revoked;
+  return v_revoked + v_refresh_revoked;
 end;
 $$;
 

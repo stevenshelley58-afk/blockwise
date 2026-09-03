@@ -32,6 +32,7 @@ describe("operator role and session control contract", () => {
     assert.match(canonical, /public\.is_operator/);
     assert.match(canonical, /private\.is_operator/);
     assert.match(canonical, /revoke_user_sessions/);
+    assert.match(canonical, /auth\.refresh_tokens/);
     assert.match(canonical, /pg_advisory_xact_lock/);
     assert.doesNotMatch(canonical, /current_user\s*=\s*'postgres'/);
   });
