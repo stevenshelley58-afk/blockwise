@@ -11,6 +11,7 @@ export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
   const rawBody = await request.text();
+  let signatureFailure: string | undefined;
   const verifiedSignature = verifyInternalRequestSignature({
     body: rawBody,
     method: request.method,
@@ -20,8 +21,15 @@ export async function POST(request: NextRequest) {
     scope: request.headers.get("x-blockwise-scope"),
     signature: request.headers.get("x-blockwise-signature"),
     secret: process.env.BLOCKWISE_INTERNAL_AUTH_SECRET,
+    onFailure: (reason) => { signatureFailure = reason; },
   });
   if (!verifiedSignature) {
+    console.warn("Rejected signed internal template request.", {
+      reason: signatureFailure,
+      method: request.method,
+      path: request.nextUrl.pathname,
+      bodyBytes: Buffer.byteLength(rawBody),
+    });
     return NextResponse.json({ error: "Internal authentication required." }, { status: 401 });
   }
 
