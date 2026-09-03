@@ -2,7 +2,7 @@ create extension if not exists pgtap with schema extensions;
 
 begin;
 
-select plan(13);
+select plan(14);
 
 select has_column('public', 'ad_templates', 'library_status', 'direct templates have a customer library status');
 select col_type_is('public', 'ad_templates', 'library_status', 'text', 'library status is text');
