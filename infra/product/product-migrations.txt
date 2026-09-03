@@ -87,3 +87,4 @@
 20260829010000_adstudio_transactional_writes.sql
 20260830020000_direct_template_artifact.sql
 20260901000000_internal_request_nonces.sql
+20260901010000_atomic_rate_limit_rpc.sql

@@ -55,6 +55,7 @@ declare
 begin
   -- Input validation: the service-role caller passes app-controlled values,
   -- but bounds here make the contract explicit and protect against bugs.
+  p_subject_key := btrim(p_subject_key);
   if p_limit_count is null or p_limit_count < 1 or p_limit_count > 1000 then
     raise exception 'invalid_limit_count';
   end if;

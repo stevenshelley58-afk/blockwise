@@ -71,6 +71,14 @@ test("null workspaceId (IP-keyed) passes null through to the RPC", async () => {
   assert.equal(result.ok, true);
   assert.equal(calls[0].p_workspace_id, null);
 });
+test("subject keys are trimmed before the RPC call", async () => {
+  const { client, calls } = makeServiceClient(() => ({ data: [{ allowed: true, retry_after_seconds: 0 }], error: null }));
+
+  await checkRateLimit(null, " 1.2.3.4 ", { ...config, bucket: "demo-request" }, client);
+
+  assert.equal(calls[0].p_subject_key, "1.2.3.4");
+});
+
 
 // ---------------------------------------------------------------------------
 // Fail-closed defaults (review blocker 2: no fail-open on DB errors)
@@ -151,10 +159,9 @@ test("invalid config values are rejected before any RPC call", async () => {
  * UPDATE ... WHERE statement), so no interleaving can occur between the
  * increment and the check — exactly the guarantee the RPC provides.
  *
- * This test is the application-level concurrency regression. The SQL itself
- * (limit-change consistency, hostile-caller rejection, real parallelism) is
- * covered by the pgTAP suite in supabase/tests/, executed by the required
- * "Database migration and pgTAP checks" CI job.
+ * The Node harness has no live Postgres or second DB session, so this checks
+ * wrapper dispatch under Promise.all. The pgTAP suite separately exercises
+ * genuine cross-connection serialization with two dblink sessions.
  */
 test("parallel requests cannot overshoot the limit", async () => {
   const maxRequests = 5;
