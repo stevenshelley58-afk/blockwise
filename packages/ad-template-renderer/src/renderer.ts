@@ -69,6 +69,7 @@ async function renderLayer(ctx: SKRSContext2D, layer: LayoutLayer, input: Render
 
 type CanvasDimensions = { width: number; height: number };
 
+/** Internal parity fixture helper; the package index intentionally exposes only render APIs. */
 export function resolveRenderGeometry(geometry: Rect, dims: CanvasDimensions): Rect {
   const values = [geometry.x, geometry.y, geometry.width, geometry.height];
   if (values.every((value) => Number.isFinite(value)) && values.every((value) => Math.abs(value) <= 1.001)) {
@@ -138,7 +139,7 @@ async function renderImageSlot(ctx: SKRSContext2D, layer: ImageSlotLayer, input:
 
   ctx.save();
   if (layer.mask === "rounded_rect") {
-    roundRect(ctx, geometry.x, geometry.y, geometry.width, geometry.height, 16);
+    roundRect(ctx, geometry.x, geometry.y, geometry.width, geometry.height, imageMaskRadius(geometry));
     ctx.clip();
   } else if (layer.mask === "circle") {
     ctx.beginPath();
@@ -149,6 +150,11 @@ async function renderImageSlot(ctx: SKRSContext2D, layer: ImageSlotLayer, input:
   }
   ctx.drawImage(img, sx, sy, sw, sh, geometry.x, geometry.y, geometry.width, geometry.height);
   ctx.restore();
+}
+
+/** Internal parity fixture helper; not part of the package index API. */
+export function imageMaskRadius(geometry: Pick<Rect, "width" | "height">): number {
+  return Math.min(16, geometry.width / 2, geometry.height / 2);
 }
 
 function normalizeCrop(crop: Rect): Rect {
@@ -174,6 +180,7 @@ type RenderTextLayer = TextLayer & {
  * ratio is the pack's scale-independent type treatment and is intentionally
  * shared as a formula with the Fabric editor's geometry helper.
  */
+/** Internal parity fixture helper; the package index intentionally exposes only render APIs. */
 export function effectiveTextFontSize(layer: Pick<TextLayer, "fontSize"> & { sizeRatio?: number }, geometry: Rect): number {
   const ratio = Number(layer.sizeRatio);
   return Number.isFinite(ratio) && ratio > 0 ? geometry.height * ratio : layer.fontSize;

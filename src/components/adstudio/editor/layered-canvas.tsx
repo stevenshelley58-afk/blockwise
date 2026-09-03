@@ -273,7 +273,9 @@ async function createLayerObject({
   }
 
   if (layer.type === "text") {
-    const text = textValues[layer.inputKey] ?? "";
+    const source = textValues[layer.inputKey] ?? "";
+    if (layer.overflowBehaviour === "refuse" && source.length > layer.maxCharacters) return null;
+    const text = source.slice(0, layer.maxCharacters);
     await ensureLocalFont(layer.font);
     const textbox = new fabric.Textbox(text, {
       left: geometry.x,
@@ -363,7 +365,7 @@ async function createLayerObject({
     if (layer.type === "logo") {
       return new fabric.Rect({ ...fabricRectGeometry(geometry), rx: Math.min(12, geometry.height / 3), ry: Math.min(12, geometry.height / 3), fill: "#f1f2f4", stroke: "#d3d7df", strokeWidth: 2, ...interactive });
     }
-    const radius = layer.mask === "rounded_rect" ? imageMaskRadius() : 0;
+    const radius = layer.mask === "rounded_rect" ? imageMaskRadius(geometry) : 0;
     if (layer.mask === "circle") {
       return new fabric.Circle({
         ...fabricCircleGeometry(geometry),
@@ -445,6 +447,6 @@ function maskForSlot(fabric: typeof import("fabric"), layer: ImageSlotLayer, geo
       absolutePositioned: true,
     });
   }
-  const radius = layer.mask === "rounded_rect" ? imageMaskRadius() : 0;
+  const radius = layer.mask === "rounded_rect" ? imageMaskRadius(geometry) : 0;
   return new fabric.Rect({ ...fabricRectGeometry(geometry), rx: radius, ry: radius, absolutePositioned: true });
 }

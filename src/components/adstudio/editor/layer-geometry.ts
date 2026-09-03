@@ -1,5 +1,4 @@
-import type { Rect } from "../../../../packages/ad-template-contract/src/types";
-import type { TextLayer } from "../../../../packages/ad-template-contract/src/types";
+import type { Rect, TextLayer } from "../../../../packages/ad-template-contract/src/types";
 
 export interface CanvasDimensions {
   width: number;
@@ -51,10 +50,13 @@ export function fabricCircleGeometry(geometry: Rect) {
 export function fabricIconCircleGeometry(geometry: Rect) {
   const radius = Math.min(geometry.width, geometry.height) * 0.34;
   return {
-    left: geometry.x + geometry.width / 2 - radius,
-    top: geometry.y + geometry.height / 2 - radius,
-    originX: "left" as const,
-    originY: "top" as const,
+    // Use a center origin because Fabric includes stroke width in transformed
+    // dimensions for left/top origins, which would shift the visible circle
+    // by half its stroke compared with the server's centered arc.
+    left: geometry.x + geometry.width / 2,
+    top: geometry.y + geometry.height / 2,
+    originX: "center" as const,
+    originY: "center" as const,
     radius,
   };
 }
@@ -97,9 +99,9 @@ export function fabricIconPathData(icon: string, width: number, height: number):
   return null;
 }
 
-/** Rounded image masks use the same fixed corner radius as the server. */
-export function imageMaskRadius(): number {
-  return 16;
+/** Rounded image masks use the canonical 16px radius, clamped to the box. */
+export function imageMaskRadius(geometry: Pick<Rect, "width" | "height">): number {
+  return Math.min(16, geometry.width / 2, geometry.height / 2);
 }
 
 /**

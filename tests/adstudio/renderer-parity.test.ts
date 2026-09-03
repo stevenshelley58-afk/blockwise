@@ -3,6 +3,12 @@ import assert from "node:assert/strict";
 import { createCanvas, loadImage, type SKRSContext2D } from "@napi-rs/canvas";
 import type { AdTemplate } from "../../packages/ad-template-contract/src/types";
 import { renderPlacement } from "../../packages/ad-template-renderer/src/renderer.ts";
+import {
+  effectiveTextFontSize,
+  fabricIconCircleGeometry,
+  fabricRectGeometry,
+  resolveGeometry,
+} from "../../src/components/adstudio/editor/layer-geometry.ts";
 
 function iconTemplate(icon: string): AdTemplate {
   return {
@@ -57,6 +63,52 @@ function pixelAlpha(ctx: SKRSContext2D, x: number, y: number): number {
 }
 
 describe("canonical renderer parity fixtures", () => {
+  it("sets the effective sizeRatio on an actual Fabric Textbox", async () => {
+    const { Textbox, getEnv } = await import("fabric/node");
+    const document = getEnv().document;
+    const createElement = document.createElement.bind(document);
+    document.createElement = ((tagName: string, options?: ElementCreationOptions) => {
+      const element = createElement(tagName, options);
+      if (tagName.toLowerCase() === "canvas") {
+        const measuringCanvas = createCanvas(1, 1);
+        Object.defineProperty(element, "getContext", { configurable: true, value: () => measuringCanvas.getContext("2d") });
+      }
+      return element;
+    }) as typeof document.createElement;
+
+    const authored = { x: 0.1, y: 0.2, width: 0.5, height: 0.4 };
+    const geometry = resolveGeometry(authored, { width: 1080, height: 1920 });
+    const textbox = new Textbox("Parity", {
+      ...fabricRectGeometry(geometry),
+      width: geometry.width,
+      fontSize: effectiveTextFontSize({ fontSize: 96, sizeRatio: 0.05 }, geometry),
+      lineHeight: 1.1,
+      splitByGrapheme: true,
+    });
+    assert.ok(Math.abs(textbox.fontSize - 38.4) < 1e-9);
+    assert.equal(textbox.left, geometry.x);
+    assert.equal(textbox.top, geometry.y);
+    assert.ok(textbox.getBoundingRect().width <= geometry.width + 1);
+  });
+
+  it("keeps an actual Fabric unknown-icon fallback centred with a stroked bound", async () => {
+    const { Circle } = await import("fabric/node");
+    const geometry = resolveGeometry({ x: 0.25, y: 0.25, width: 0.5, height: 0.5 }, { width: 1080, height: 1350 });
+    const strokeWidth = Math.max(2, Math.min(geometry.width, geometry.height) * 0.1);
+    const circle = new Circle({
+      ...fabricIconCircleGeometry(geometry),
+      fill: "",
+      stroke: "#ff0000",
+      strokeWidth,
+    });
+    const bounds = circle.getBoundingRect();
+    assert.equal(circle.fill, "");
+    assert.equal(circle.strokeWidth, strokeWidth);
+    assert.ok(Math.abs(circle.getCenterPoint().x - (geometry.x + geometry.width / 2)) < 1e-9);
+    assert.ok(Math.abs(circle.getCenterPoint().y - (geometry.y + geometry.height / 2)) < 1e-9);
+    assert.ok(Math.abs(bounds.width - (circle.radius * 2 + strokeWidth)) < 1e-9);
+  });
+
   it("renders an unknown icon as a centred stroked circle in normalized geometry", async () => {
     const output = await renderPlacement({
       template: iconTemplate("future-icon"),

@@ -84,16 +84,22 @@ describe("Ad Studio editor geometry contract", () => {
     assert.equal(resolveIconShape("unrecognised-icon"), "circle");
     assert.equal(fabricIconPathData("unrecognised-icon", geometry.width, geometry.height), null);
     const circle = fabricIconCircleGeometry(geometry);
-    assert.equal(circle.originX, "left");
-    assert.equal(circle.originY, "top");
-    assert.ok(Math.abs(circle.left - 194.4) < 1e-9);
-    assert.ok(Math.abs(circle.top - 584.4) < 1e-9);
+    assert.equal(circle.originX, "center");
+    assert.equal(circle.originY, "center");
+    assert.ok(Math.abs(circle.left - 378) < 1e-9);
+    assert.ok(Math.abs(circle.top - 768) < 1e-9);
     assert.ok(Math.abs(circle.radius - 183.6) < 1e-9);
     assert.equal(fabricIconPathData("check", 100, 100), "M 18 50 L 42 76 L 84 24");
   });
 
   it("keeps rounded image mask corners at the canonical 16px radius", async () => {
     const { imageMaskRadius } = await import("../../src/components/adstudio/editor/layer-geometry.ts");
-    assert.equal(imageMaskRadius(), 16);
+    const { imageMaskRadius: serverImageMaskRadius } = await import("../../packages/ad-template-renderer/src/renderer.ts");
+    assert.equal(imageMaskRadius({ width: 100, height: 80 }), 16);
+    assert.equal(serverImageMaskRadius({ width: 100, height: 80 }), 16);
+    // A small authored box must not inherit a radius larger than either half
+    // dimension; both renderers clamp the same way before drawing/clipping.
+    assert.equal(imageMaskRadius({ width: 5, height: 3 }), 1.5);
+    assert.equal(serverImageMaskRadius({ width: 5, height: 3 }), 1.5);
   });
 });
