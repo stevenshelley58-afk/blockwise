@@ -14,6 +14,13 @@ test("Brand Studio explains the website-first setup path", () => {
   assert.match(source, /type="submit"/);
 });
 
+test("website extraction copies discovered logos behind the authenticated media route", () => {
+  const source = readFileSync("src/app/api/adstudio/brand-kits/extract/route.ts", "utf8");
+
+  assert.match(source, /storeBrandKitLogoAssets/);
+  assert.match(source, /logoAssets:/);
+});
+
 test("Brand Studio keeps setup optional and treats missing persistence as a failure", () => {
   assert.match(source, /Optional setup/);
   assert.match(source, /You can skip this and keep generating ads/);
