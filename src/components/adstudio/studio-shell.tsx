@@ -61,7 +61,7 @@ export function StudioShell({
           <Link
             href="/self-serve"
             aria-label="Back to Blockwise"
-            className="grid size-9 shrink-0 place-items-center rounded-xl bg-(--surface) text-(--ink) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+            className="grid size-9 shrink-0 place-items-center rounded-xl bg-transparent text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
           >
             <BlockwiseLogo tokens showWordmark={false} />
           </Link>
@@ -127,7 +127,7 @@ export function StudioShell({
           <header className="flex min-h-14 items-center border-b border-border bg-(--ink) px-4 text-(--surface) md:hidden">
             <Link
               href="/self-serve"
-              className="grid size-8 shrink-0 place-items-center rounded-lg bg-(--surface) text-(--ink) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+              className="grid size-8 shrink-0 place-items-center rounded-lg bg-transparent text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
               aria-label="Back to Blockwise"
             >
               <BlockwiseLogo tokens showWordmark={false} />
