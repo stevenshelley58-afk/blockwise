@@ -9,7 +9,7 @@ import {
   signSnagtimePayload,
   verifySnagtimeWebhook,
 } from "../src/lib/booking/snagtime-contract.ts";
-import { BookingConfigurationError, BookingWebhookError, buildHostedBookingUrl, resolveBookingProvider, signBookingInvitation } from "../src/lib/booking/provider.ts";
+import { BookingConfigurationError, BookingWebhookError, buildHostedBookingUrl, getBookingProviderReadiness, resolveBookingProvider, signBookingInvitation } from "../src/lib/booking/provider.ts";
 import { isOutOfOrderEvent } from "../src/lib/booking/service.ts";
 
 const SECRET = "test-snagtime-webhook-secret";
@@ -99,6 +99,25 @@ describe("snagtime event contract", () => {
       BookingWebhookError,
     );
   });
+
+  it("rejects schema drift and non-canonical timestamps before application", () => {
+    assert.throws(
+      () => parseSnagtimeWebhook({ raw: envelope({ extra: true }), providerEventId: "e7" }),
+      (error: unknown) => error instanceof BookingWebhookError && error.status === 400,
+    );
+    assert.throws(
+      () => parseSnagtimeWebhook({ raw: envelope({ occurredAt: "2026-08-31T04:00:00+00:00" }), providerEventId: "e8" }),
+      (error: unknown) => error instanceof BookingWebhookError && error.status === 400,
+    );
+    assert.throws(
+      () => parseSnagtimeWebhook({ raw: envelope({ occurredAt: "2026-02-30T04:00:00.000Z" }), providerEventId: "e9" }),
+      (error: unknown) => error instanceof BookingWebhookError && error.status === 400,
+    );
+    const raw = JSON.stringify(envelope());
+    const signed = signedRequestParts(raw, 1725076800);
+    assert.equal(verifySnagtimeWebhook({ rawBody: raw, ...signed, secret: SECRET, now: new Date("2026-08-31T00:00:00.000Z") }), false);
+    assert.equal(verifySnagtimeWebhook({ rawBody: raw, signature: signed.signature, timestamp: "1725076800.5", secret: SECRET, now: new Date("2024-08-31T00:00:00.000Z") }), false);
+  });
 });
 
 describe("out-of-order event protection", () => {
@@ -164,10 +183,27 @@ describe("snagtime event identity", () => {
 describe("provider-aware invitations", () => {
   const INVITATION_SECRET = "test-booking-invitation-secret";
 
-  it("selects the snagtime provider only when SNAGTIME_BASE_URL is configured", () => {
-    assert.equal(resolveBookingProvider({ SNAGTIME_BASE_URL: "https://book.blockwise.sale" } as unknown as NodeJS.ProcessEnv), "snagtime");
-    assert.equal(resolveBookingProvider({} as unknown as NodeJS.ProcessEnv), "calcom");
-    assert.equal(resolveBookingProvider({ SNAGTIME_BASE_URL: "  " } as unknown as NodeJS.ProcessEnv), "calcom");
+  it("requires an explicit allowlisted provider", () => {
+    assert.equal(resolveBookingProvider({ BOOKING_PROVIDER: "snagtime" } as unknown as NodeJS.ProcessEnv), "snagtime");
+    assert.equal(resolveBookingProvider({ BOOKING_PROVIDER: "calcom" } as unknown as NodeJS.ProcessEnv), "calcom");
+    assert.throws(() => resolveBookingProvider({} as unknown as NodeJS.ProcessEnv), BookingConfigurationError);
+    assert.throws(() => resolveBookingProvider({ BOOKING_PROVIDER: "other" } as unknown as NodeJS.ProcessEnv), BookingConfigurationError);
+  });
+
+  it("reports provider-specific readiness and fails closed for missing selection", () => {
+    assert.deepEqual(getBookingProviderReadiness({} as unknown as NodeJS.ProcessEnv), {
+      provider: null,
+      ok: false,
+      missing: ["BOOKING_PROVIDER"],
+      invalid: [],
+    });
+    const ready = getBookingProviderReadiness({
+      BOOKING_PROVIDER: "snagtime",
+      SNAGTIME_BASE_URL: "https://book.blockwise.sale",
+      SNAGTIME_WEBHOOK_SECRET: "webhook-secret",
+      BOOKING_INVITATION_SECRET: "invitation-secret",
+    } as unknown as NodeJS.ProcessEnv);
+    assert.equal(ready.ok, true);
   });
 
   it("builds snagtime invitation URLs from SNAGTIME_BASE_URL with the signed token", () => {

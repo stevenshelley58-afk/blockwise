@@ -15,6 +15,12 @@ import {
 } from "./provider.ts";
 
 type BookingServiceClient = ReturnType<typeof createSupabaseServiceClient>;
+export type BookingApplyStatus = "applied" | "stale" | "duplicate";
+export type BookingApplyResult = {
+  status: BookingApplyStatus;
+  duplicate: boolean;
+  booking: OnboardingBooking | null;
+};
 
 export type OnboardingBooking = {
   id: string;
@@ -138,15 +144,17 @@ export async function getLatestOnboardingBooking(input: {
   return data ? normalizeBooking(data as BookingRow) : null;
 }
 
-export function bookingEventId(rawBody: string, headerEventId?: string | null): string {
-  return headerEventId?.trim() || createHash("sha256").update(rawBody).digest("hex");
+export function bookingEventId(rawBody: string, _headerEventId?: string | null): string {
+  // Cal.com transport headers are not part of the signed body. Derive the
+  // dedupe identity only from the exact HMAC-covered bytes.
+  return createHash("sha256").update(rawBody).digest("hex");
 }
 
 export async function applyBookingWebhook(input: {
   raw: Record<string, unknown>;
   providerEventId: string;
   serviceSupabase?: BookingServiceClient;
-}): Promise<{ duplicate: boolean; booking: OnboardingBooking | null }> {
+}): Promise<BookingApplyResult> {
   const event = parseCalcomWebhook({ raw: input.raw, providerEventId: input.providerEventId });
   return applyProviderBookingEvent({ event, serviceSupabase: input.serviceSupabase });
 }
@@ -159,26 +167,26 @@ export async function applyBookingWebhook(input: {
 export async function applyProviderBookingEvent(input: {
   event: ProviderBookingEvent;
   serviceSupabase?: BookingServiceClient;
-}): Promise<{ duplicate: boolean; booking: OnboardingBooking | null }> {
+}): Promise<BookingApplyResult> {
   const service = input.serviceSupabase ?? createSupabaseServiceClient();
   const event = input.event;
   const leaseToken = randomUUID();
   const claimed = await claimWebhookEvent(service, event, leaseToken);
-  if (!claimed) return { duplicate: true, booking: null };
+  if (!claimed) return { status: "duplicate", duplicate: true, booking: null };
 
   try {
     const invitation = await resolveBookingInvitation(service, event);
-    const booking = await persistProviderBooking(
+    const persisted = await persistProviderBooking(
       service,
       invitation.workspaceId,
       invitation.invitationId,
       event,
     );
-    if (event.state === "booked" || event.state === "rescheduled") {
+    if (persisted.status === "applied" && (event.state === "booked" || event.state === "rescheduled")) {
       await recordCustomerActivationMilestone({
         workspaceId: invitation.workspaceId,
         milestone: "onboarding_booked",
-        occurredAt: booking.bookedAt ?? event.occurredAt,
+        occurredAt: persisted.booking?.bookedAt ?? event.occurredAt,
         serviceSupabase: service,
       });
       await recordWorkspaceFunnelEventBestEffort(service, {
@@ -191,7 +199,7 @@ export async function applyProviderBookingEvent(input: {
           provider_event_id: event.providerEventId,
         },
       });
-    } else if (event.state === "completed") {
+    } else if (persisted.status === "applied" && event.state === "completed") {
       await recordCustomerActivationMilestone({
         workspaceId: invitation.workspaceId,
         milestone: "onboarding_completed",
@@ -210,7 +218,7 @@ export async function applyProviderBookingEvent(input: {
       });
     }
     await finishWebhookEvent(service, event.provider, event.providerEventId, leaseToken, "processed");
-    return { duplicate: false, booking };
+    return { status: persisted.status, duplicate: false, booking: persisted.booking };
   } catch (error) {
     await finishWebhookEvent(
       service,
@@ -286,76 +294,34 @@ async function persistProviderBooking(
   workspaceId: string,
   invitationId: string,
   event: ProviderBookingEvent,
-): Promise<OnboardingBooking> {
-  const now = event.occurredAt;
-  const reminder24hDueAt = addMilliseconds(now, 24 * 60 * 60 * 1000);
-  const reminderPreSessionDueAt = event.scheduledStartAt
-    ? addMilliseconds(event.scheduledStartAt, -24 * 60 * 60 * 1000)
-    : null;
-  const patch = {
-    provider: event.provider,
-    provider_booking_id: event.providerBookingId,
-    provider_event_type_id: event.providerEventTypeId,
-    status: event.state,
-    reschedule_url: event.rescheduleUrl,
-    customer_email: event.customerEmail,
-    customer_name: event.customerName,
-    scheduled_start_at: event.scheduledStartAt,
-    scheduled_end_at: event.scheduledEndAt,
-    booked_at: ["booked", "rescheduled"].includes(event.state) ? now : undefined,
-    cancelled_at: event.state === "cancelled" ? now : null,
-    completed_at: event.state === "completed" ? now : null,
-    reminder_24h_due_at: ["booked", "rescheduled"].includes(event.state) ? reminder24hDueAt : null,
-    reminder_pre_session_due_at: ["booked", "rescheduled"].includes(event.state) ? reminderPreSessionDueAt : null,
-    last_provider_event_id: event.providerEventId,
-  };
-
-  const { data: existing } = await service
-    .from("workspace_onboarding_bookings")
-    .select("id,workspace_id,market,hosted_booking_url,status,booked_at,cancelled_at,completed_at")
-    .eq("provider", event.provider)
-    .eq("provider_booking_id", event.providerBookingId)
-    .maybeSingle();
-  let result;
-  if (existing?.id) {
-    assertBookingWorkspaceBinding(existing.workspace_id, workspaceId);
-    if (isOutOfOrderEvent(existing, event.occurredAt)) {
-      // Never regress the booking: a late-arriving (or replayed) event older
-      // than the latest recorded lifecycle transition is acknowledged without
-      // being applied.
-      const { data: current, error: reloadError } = await service
-        .from("workspace_onboarding_bookings")
-        .select("*")
-        .eq("id", existing.id)
-        .maybeSingle();
-      if (reloadError) throw new Error(`Booking state could not be stored: ${reloadError.message}`);
-      if (current) return normalizeBooking(current as BookingRow);
-    }
-    result = await service
-      .from("workspace_onboarding_bookings")
-      .update(patch)
-      .eq("id", existing.id)
-      .select("*")
-      .single();
-  } else {
-    const { data: invitation } = await service
-      .from("workspace_onboarding_bookings")
-      .select("id,workspace_id,market,hosted_booking_url")
-      .eq("id", invitationId)
-      .maybeSingle();
-    if (!invitation?.id || invitation.workspace_id !== workspaceId) {
-      throw new Error("Booking invitation workspace binding changed before webhook processing.");
-    }
-    result = await service
-      .from("workspace_onboarding_bookings")
-      .update(patch)
-      .eq("id", invitation.id)
-      .eq("workspace_id", workspaceId)
-      .select("*")
-      .single();
+): Promise<{ status: Exclude<BookingApplyStatus, "duplicate">; booking: OnboardingBooking }> {
+  const { data, error } = await service.rpc("apply_booking_provider_event", {
+    p_invitation_id: invitationId,
+    p_workspace_id: workspaceId,
+    p_provider: event.provider,
+    p_provider_booking_id: event.providerBookingId,
+    p_provider_event_id: event.providerEventId,
+    p_provider_event_type_id: event.providerEventTypeId,
+    p_state: event.state,
+    p_occurred_at: event.occurredAt,
+    p_reschedule_url: event.rescheduleUrl,
+    p_customer_email: event.customerEmail,
+    p_customer_name: event.customerName,
+    p_scheduled_start_at: event.scheduledStartAt,
+    p_scheduled_end_at: event.scheduledEndAt,
+  });
+  if (error) throw new Error(`Booking state could not be stored: ${error.message}`);
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row || !["applied", "stale"].includes(row.result_status) || typeof row.booking_id !== "string") {
+    throw new Error("Booking state RPC returned an invalid result.");
   }
-  if (result.error) throw new Error(`Booking state could not be stored: ${result.error.message}`);
-  return normalizeBooking(result.data as BookingRow);
+  const { data: booking, error: loadError } = await service
+    .from("workspace_onboarding_bookings")
+    .select("*")
+    .eq("id", row.booking_id)
+    .single();
+  if (loadError || !booking) throw new Error(`Booking state could not be loaded: ${loadError?.message ?? "missing row"}`);
+  return { status: row.result_status, booking: normalizeBooking(booking as BookingRow) };
 }
 
 export function assertBookingWorkspaceBinding(
@@ -415,9 +381,4 @@ function normalizeBooking(row: BookingRow): OnboardingBooking {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
-}
-
-function addMilliseconds(value: string, milliseconds: number): string | null {
-  const timestamp = new Date(value).getTime();
-  return Number.isFinite(timestamp) ? new Date(timestamp + milliseconds).toISOString() : null;
 }

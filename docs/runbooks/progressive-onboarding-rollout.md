@@ -112,8 +112,12 @@ explicit Stripe retrieval.
 
 ## Cal.com
 
-Set `CALCOM_ONBOARDING_URL_US`, `CALCOM_ONBOARDING_URL_AU`,
-`BOOKING_INVITATION_SECRET`, and `CALCOM_WEBHOOK_SECRET`.
+Set `BOOKING_PROVIDER` explicitly to `calcom` or `snagtime`. For the legacy
+Cal.com route, set `CALCOM_ONBOARDING_URL_US`, `CALCOM_ONBOARDING_URL_AU`,
+`BOOKING_INVITATION_SECRET`, and `CALCOM_WEBHOOK_SECRET`. For SnagTime, set
+`SNAGTIME_BASE_URL`, `SNAGTIME_WEBHOOK_SECRET`, and the invitation secret.
+Readiness fails closed for an invalid provider or missing provider-specific
+configuration; `/api/booking/webhook` remains the legacy Cal.com endpoint.
 
 Verify booked, rescheduled, cancelled, and completed webhook events against the
 provider event ID and confirm replay is idempotent. If webhook credentials are

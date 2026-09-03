@@ -38,10 +38,11 @@ export async function handleCalcomBookingWebhook(request: Request): Promise<Next
   );
   try {
     const result = await applyBookingWebhook({ raw, providerEventId });
-    return NextResponse.json({ received: true, duplicate: result.duplicate });
+    return NextResponse.json({ received: true, status: result.status, duplicate: result.duplicate });
   } catch (error) {
-    if (error instanceof BookingWebhookError && error.status === 202) {
-      return NextResponse.json({ received: true, ignored: true }, { status: 202 });
+    if (error instanceof BookingWebhookError) {
+      if (error.status === 202) return NextResponse.json({ received: true, ignored: true }, { status: 202 });
+      return NextResponse.json({ error: error.message }, { status: error.status });
     }
     console.error("Booking webhook failed", error);
     return NextResponse.json({ error: "Booking webhook failed." }, { status: 500 });
@@ -78,7 +79,7 @@ export async function handleSnagtimeBookingWebhook(request: Request): Promise<Ne
     const providerEventId = resolveSnagtimeEventId(raw, request.headers.get("x-snagtime-event-id"));
     const event = parseSnagtimeWebhook({ raw, providerEventId });
     const result = await applyProviderBookingEvent({ event });
-    return NextResponse.json({ received: true, duplicate: result.duplicate });
+    return NextResponse.json({ received: true, status: result.status, duplicate: result.duplicate });
   } catch (error) {
     if (error instanceof BookingWebhookError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
