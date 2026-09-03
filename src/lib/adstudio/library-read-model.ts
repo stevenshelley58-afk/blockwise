@@ -6,9 +6,6 @@ import { isExampleBrandKitSourceUrl } from "./persistence.ts";
 // Inlined from deleted asset-roles.ts
 export type AssetRole = "property" | "person" | "logo" | "background";
 
-// Stub: legacy creative-preview.ts deleted in Phase 1
-function creativeLibraryPreview(_creative: unknown): string | null { return null; }
-
 export type LibraryAssetModel = {
   id: string;
   src: string;
@@ -19,11 +16,13 @@ export type LibraryAssetModel = {
 };
 
 export type LibraryAdModel = {
-  creativeId: string;
-  campaignId: string;
-  campaignName: string;
+  adId: string;
+  templateId: string;
+  name: string;
   src: string;
   format: string;
+  status: string;
+  published: boolean;
 };
 
 type QueryClient = {
@@ -48,7 +47,7 @@ export async function loadAdStudioLibraryPage(input: {
   const cursor = decodeCursor(input.cursor);
   const orderColumn = input.kind === "assets" ? "created_at" : "updated_at";
   let query = input.supabase
-    .from(input.kind === "assets" ? "adstudio_brand_assets" : "adstudio_creatives")
+    .from(input.kind === "assets" ? "adstudio_brand_assets" : "ad_customer_ads")
     .select("*")
     .eq("workspace_id", input.workspaceId)
     .order(orderColumn, { ascending: false })
@@ -66,6 +65,15 @@ export async function loadAdStudioLibraryPage(input: {
   const hasMore = rows.length > limit;
   const pageRows = rows.slice(0, limit);
   const paths = new Set<string>();
+  let revisionByAd = new Map<string, Record<string, unknown>>();
+  if (input.kind === "ads") {
+    const revisionIds = pageRows.map(row => typeof row.active_revision_id === "string" ? row.active_revision_id : "").filter(Boolean);
+    const { data: revisions, error: revisionError } = revisionIds.length
+      ? await input.supabase.from("ad_revisions").select("id,ad_id,feed_png_path,story_png_path").eq("workspace_id", input.workspaceId).in("id", revisionIds)
+      : { data: [], error: null };
+    if (revisionError) throw new Error(revisionError.message);
+    revisionByAd = new Map(((revisions ?? []) as Array<Record<string, unknown>>).map(r => [String(r.ad_id), r]));
+  }
 
   if (input.kind === "assets") {
     for (const row of pageRows as AdStudioBrandAssetRow[]) {
@@ -75,10 +83,9 @@ export async function loadAdStudioLibraryPage(input: {
     }
   } else {
     for (const row of pageRows) {
-      const path = storagePathFromSource(
-        input.workspaceId,
-        creativeLibraryPreview(row),
-      );
+      const revision = revisionByAd.get(String(row.id));
+      const raw = typeof revision?.feed_png_path === "string" ? revision.feed_png_path : typeof revision?.story_png_path === "string" ? revision.story_png_path : null;
+      const path = storagePathFromSource(input.workspaceId, raw);
       if (path) paths.add(path);
     }
   }
@@ -111,37 +118,21 @@ export async function loadAdStudioLibraryPage(input: {
       });
     }
   } else {
-    const campaignIds = [...new Set(pageRows.map((row) => String(row.campaign_id ?? "")).filter(Boolean))];
-    const { data: campaigns, error: campaignError } = campaignIds.length
-      ? await input.supabase
-          .from("adstudio_campaigns")
-          .select("id,name,status")
-          .eq("workspace_id", input.workspaceId)
-          .in("id", campaignIds)
-          .neq("status", "archived")
-      : { data: [], error: null };
-    if (campaignError) throw new Error(campaignError.message);
-    const campaignById = new Map(
-      ((campaigns ?? []) as Array<{ id: unknown; name: unknown }>).map((campaign) => [
-        String(campaign.id),
-        typeof campaign.name === "string" && campaign.name.trim() ? campaign.name : "Untitled ad",
-      ]),
-    );
     items = [];
     for (const row of pageRows) {
-      const campaignId = String(row.campaign_id ?? "");
-      const campaignName = campaignById.get(campaignId);
-      if (!campaignName) continue;
-      const raw = creativeLibraryPreview(row);
+      const revision = revisionByAd.get(String(row.id));
+      const raw = typeof revision?.feed_png_path === "string" ? revision.feed_png_path : typeof revision?.story_png_path === "string" ? revision.story_png_path : null;
       const path = storagePathFromSource(input.workspaceId, raw);
       const src = path ? signed[path]?.grid : raw;
       if (!src) continue;
       items.push({
-        creativeId: String(row.id ?? items.length),
-        campaignId,
-        campaignName,
+        adId: String(row.id),
+        templateId: String(row.template_id ?? ""),
+        name: typeof row.name === "string" && row.name.trim() ? row.name : "Untitled ad",
         src,
-        format: String(row.format ?? ""),
+        format: "feed",
+        status: String(row.status ?? "draft"),
+        published: Boolean(row.published_at),
       });
     }
   }

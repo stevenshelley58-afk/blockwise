@@ -229,15 +229,15 @@ export function MediaLibrary({
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
               {loadedAds.map((ad) => (
                 <Link
-                  key={ad.creativeId}
-                  href={`/ad-studio?campaignId=${encodeURIComponent(ad.campaignId)}`}
+                  key={ad.adId}
+                  href={`/ad-studio/ads/${encodeURIComponent(ad.adId)}`}
                   className="rounded-(--r-card) focus-visible:outline-2 focus-visible:outline-(--accent)"
                 >
                   <Card className="gap-0 overflow-hidden py-0 transition-shadow hover:shadow-md">
                     <div className="aspect-[4/5] w-full overflow-hidden bg-(--surface-subtle)">
                       <img
                         src={ad.src}
-                        alt={ad.campaignName}
+                        alt={ad.name}
                         width={640}
                         height={800}
                         sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 240px"
@@ -247,7 +247,7 @@ export function MediaLibrary({
                       />
                     </div>
                     <div className="px-3 py-2">
-                      <p className="truncate text-xs font-semibold">{ad.campaignName}</p>
+                      <p className="truncate text-xs font-semibold">{ad.name}</p>
                       <p className="text-[11px] text-muted-foreground">{formatLabel(ad.format)}</p>
                     </div>
                   </Card>
