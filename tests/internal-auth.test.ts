@@ -144,6 +144,27 @@ test("successful legacy bearer access is audited without nonce replay protection
   assert.equal(audits[0].metadata.nonceReplayProtection, false);
 });
 
+test("legacy bearer access fails closed when its audit receipt cannot persist", async () => {
+  const { client } = makeSupabase();
+  const failing = {
+    from(table: string) {
+      if (table === "audit_logs") {
+        return { insert: () => Promise.resolve({ error: { message: "audit down" } }) };
+      }
+      return client.from(table);
+    },
+  };
+  const result = await withLegacyBearerEnabled(() => verifyInternalRequest(
+    makeRequest("https://blockwise.sale/api/internal/adstudio/publish/state", {
+      authorization: `Bearer ${SECRET}`,
+    }),
+    "adstudio.publish",
+    { secret: SECRET, supabase: failing as never },
+  ));
+
+  assert.deepEqual(result, { ok: false, status: 503, error: "internal_auth_unavailable" });
+});
+
 test("legacy bearer access remains rejected when compatibility is disabled", async () => {
   const { client } = makeSupabase();
   const result = await verifyInternalRequest(

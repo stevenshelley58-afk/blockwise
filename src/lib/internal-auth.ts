@@ -43,7 +43,7 @@ export type InternalAuthSuccess = { ok: true; scope: string };
 export type InternalAuthResult = InternalAuthSuccess | InternalAuthFailure;
 
 export type InternalAuthOptions = {
-  /** Override the secret (tests). Defaults to BLOCKWISE_INTERNAL_SECRET. */
+  /** Override the secret (tests). Defaults to BLOCKWISE_INTERNAL_AUTH_SECRET (or its alias). */
   secret?: string | null;
   /** Override the clock (tests). */
   now?: () => Date;
@@ -60,11 +60,12 @@ async function auditAcceptedRequest(
   supabase: SupabaseClient | undefined,
   metadata: Record<string, unknown>,
   correlationId: string | null,
+  strict = false,
 ): Promise<void> {
   try {
     const client = supabase ?? (await import("./supabase/service.ts")).createSupabaseServiceClient();
     const url = new URL(request.url);
-    await recordAuditLog(client, {
+    const entry = {
       workspaceId: null,
       actorProfileId: null,
       action: "internal.api.request",
@@ -72,9 +73,24 @@ async function auditAcceptedRequest(
       targetId: null,
       correlationId,
       metadata: { ...metadata, method: request.method, path: url.pathname },
-    });
+    };
+    if (strict) {
+      const { error } = await client.from("audit_logs").insert({
+        workspace_id: entry.workspaceId,
+        actor_profile_id: entry.actorProfileId,
+        action: entry.action,
+        target_type: entry.targetType,
+        target_id: entry.targetId,
+        correlation_id: entry.correlationId,
+        metadata: entry.metadata,
+      });
+      if (error) throw new Error(`audit_insert_failed: ${error.message}`);
+    } else {
+      await recordAuditLog(client, entry);
+    }
   } catch (error) {
     console.error("[internal-auth] accepted request audit failed", error instanceof Error ? error.message : error);
+    if (strict) throw error;
   }
 }
 
@@ -161,11 +177,15 @@ export async function verifyInternalRequest(
       // Keep the compatibility path auditable, while explicitly recording
       // that this accepted request had no nonce replay protection.
       if (options.audit !== false) {
-        await auditAcceptedRequest(request, options.supabase, {
-          scope: expectedScope,
-          authMethod: "legacy_bearer",
-          nonceReplayProtection: false,
-        }, null);
+        try {
+          await auditAcceptedRequest(request, options.supabase, {
+            scope: expectedScope,
+            authMethod: "legacy_bearer",
+            nonceReplayProtection: false,
+          }, null, true);
+        } catch {
+          return { ok: false, status: 503, error: "internal_auth_unavailable" };
+        }
       }
       return { ok: true, scope: expectedScope };
     }
