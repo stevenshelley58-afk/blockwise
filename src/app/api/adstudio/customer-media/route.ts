@@ -1,7 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { requireAdStudioRequest } from "@/lib/adstudio/http";
-import { CUSTOMER_IMAGE_BUCKET, imageSha256, parseCustomerImageRef } from "@/lib/adstudio/customer-image-ref";
+import { CUSTOMER_IMAGE_BUCKET, parseCustomerImageRef } from "@/lib/adstudio/customer-image-ref";
+import { imageSha256 } from "@/lib/adstudio/customer-image-hash.server";
 import { CUSTOMER_IMAGE_MAX_BYTES, validateCustomerImageBytes } from "@/lib/adstudio/image-validation";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
