@@ -35,3 +35,22 @@ export function fabricRectGeometry(geometry: Rect) {
   };
 }
 
+export function fabricCircleGeometry(geometry: Rect) {
+  return {
+    left: geometry.x,
+    top: geometry.y,
+    originX: "left" as const,
+    originY: "top" as const,
+    radius: Math.min(geometry.width, geometry.height) / 2,
+  };
+}
+
+/** Path and polygon data are local to a Fabric object, not canvas coordinates. */
+export function fabricPathGeometry(geometry: Rect) {
+  return {
+    left: geometry.x,
+    top: geometry.y,
+    originX: "left" as const,
+    originY: "top" as const,
+  };
+}
