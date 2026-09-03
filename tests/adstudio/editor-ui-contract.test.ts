@@ -21,7 +21,15 @@ describe("customer Ad Studio workbench contract", () => {
     assert.doesNotMatch(publishRoute, /fixed inset-0/);
     assert.match(editorRoute, /Create ad/);
     assert.match(stableEditorRoute, /<EditorShell/);
+    assert.match(stableEditorRoute, /h-full min-h-0 flex-col overflow-hidden/);
     assert.match(publishRoute, /<PublishFlow/);
+  });
+
+  it("constrains contextual editor geometry to the Studio viewport", () => {
+    const studioShell = readFileSync("src/components/adstudio/studio-shell.tsx", "utf8");
+    assert.match(studioShell, /contextual \? "h-dvh overflow-hidden" : "min-h-dvh"/);
+    assert.match(studioShell, /contextual \? "min-h-0 overflow-hidden"/);
+    assert.match(studioShell, /<main className=\{cn\("min-w-0 flex-1"/);
   });
 
   it("keeps Fabric geometry aligned with the pack x/y contract", () => {
@@ -30,7 +38,9 @@ describe("customer Ad Studio workbench contract", () => {
     assert.match(canvas, /function fabricRectGeometry\(geometry: Rect\)/);
     assert.match(canvas, /left: geometry\.x/);
     assert.match(canvas, /top: geometry\.y/);
-    assert.match(canvas, /canvas\.setDimensions\(\{ width, height \}\)/);
+    assert.match(canvas, /canvas\.setDimensions\(\{ width: dims\.width, height: dims\.height \}\)/);
+    assert.match(canvas, /canvas\.setDimensions\(\{ width, height \}, \{ cssOnly: true \}\)/);
+    assert.match(canvas, /canvas\.setViewportTransform\(\[1, 0, 0, 1, 0, 0\]\)/);
     assert.doesNotMatch(canvas, /setDimensions\(\{ width: Math\.floor\(dims\.width \* zoom\)/);
     assert.doesNotMatch(canvas, /new fabric\.Rect\(\{ \.\.\.geometry/);
     assert.match(canvas, /ensureLocalFont/);
@@ -40,6 +50,26 @@ describe("customer Ad Studio workbench contract", () => {
     assert.match(canvas, /layer\.shape === "ring"/);
     assert.match(canvas, /new fabric\.Path/);
     assert.match(editor, /\[scrollbar-width:none\]/);
+  });
+
+  it("keeps mobile editor actions compact without hiding workflow controls", () => {
+    const shell = readFileSync("src/components/adstudio/editor/editor-shell.tsx", "utf8");
+    assert.match(shell, /grid-cols-\[auto_minmax\(0,1fr\)_auto\]/);
+    assert.match(shell, /<span className="md:hidden">Review<\/span>/);
+    assert.match(shell, /className="hidden md:inline">\{state\.isSaving \? "Saving…" : "Save"\}<\/span>/);
+    assert.match(shell, /grid-cols-4/);
+    assert.match(shell, /<Eye className="size-4" \/>Preview/);
+    assert.match(shell, /setPreviewMode\("meta"\)/);
+  });
+
+  it("keeps Home cards contained and exposes exact edit/review destinations", () => {
+    const home = readFileSync("src/app/(customer)/ad-studio/page.tsx", "utf8");
+    assert.match(home, /<li key=\{template\.templateId\} className="min-w-0">/);
+    assert.match(home, /formatLastEdited\(ad\.updatedAt\)/);
+    assert.match(home, /href=\{`\/ad-studio\/ads\/\$\{encodeURIComponent\(ad\.adId\)\}`\}/);
+    assert.match(home, /href=\{`\/ad-studio\/templates\/\$\{encodeURIComponent\(ad\.templateId\)\}\/publish\?adId=\$\{encodeURIComponent\(ad\.adId\)\}`\}/);
+    assert.match(home, /<Link[^>]*>Edit/);
+    assert.match(home, /<Link[^>]*>Review<\/Link>/);
   });
 
   it("keeps editor inputs rounded, labelled, and progressive", () => {

@@ -119,12 +119,11 @@ export function LayeredCanvas({
     const resize = () => {
       const width = Math.max(1, host.clientWidth);
       const height = Math.max(1, host.clientHeight);
-      const zoom = Math.max(0.01, Math.min(width / dims.width, height / dims.height));
-      // The host is already the zoomed display box. Keep the canvas CSS size
-      // in host pixels and use the viewport transform for pack coordinates;
-      // multiplying the logical dimensions here shrinks the preview twice.
-      canvas.setDimensions({ width, height });
-      canvas.setViewportTransform([zoom, 0, 0, zoom, 0, 0]);
+      // Fabric's backing store stays in pack coordinates so objects and hit
+      // testing remain aligned. Only the CSS box follows the responsive host.
+      canvas.setDimensions({ width: dims.width, height: dims.height });
+      canvas.setDimensions({ width, height }, { cssOnly: true });
+      canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
       canvas.requestRenderAll();
     };
     resize();
