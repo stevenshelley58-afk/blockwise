@@ -15,6 +15,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 export type RequestAuthProfile = {
   full_name?: string | null;
   is_operator?: boolean | null;
+  operator_role?: string | null;
 } | null;
 
 export type RequestAuthMembershipRow = {
@@ -38,7 +39,7 @@ export const getRequestAuthContext = cache(async () => {
   }
 
   const [{ data: profile }, { data: memberships }] = await Promise.all([
-    supabase.from("profiles").select("full_name, is_operator").eq("id", user.id).maybeSingle(),
+    supabase.from("profiles").select("full_name, is_operator, operator_role").eq("id", user.id).maybeSingle(),
     supabase
       .from("workspace_members")
       .select("role, workspaces(id, name, mode, region)")

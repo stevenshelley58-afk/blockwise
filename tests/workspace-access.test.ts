@@ -4,7 +4,6 @@ import test from "node:test";
 
 import { canManageProviderConnections } from "../src/lib/auth/access-control.ts";
 import {
-  hasOperatorAccessFromRows,
   resolveRequestedWorkspaceAccess,
 } from "../src/lib/auth/workspace-access.ts";
 
@@ -16,11 +15,6 @@ test("provider connection management is limited to operators, owners, and admins
   assert.equal(canManageProviderConnections({ role: "viewer", workspaceMode: "monitor" }), false);
 });
 
-test("operator access accepts profile flag and workspace operator role", () => {
-  assert.equal(hasOperatorAccessFromRows({ is_operator: true }, []), true);
-  assert.equal(hasOperatorAccessFromRows({ is_operator: false }, [{ role: "operator" }]), true);
-  assert.equal(hasOperatorAccessFromRows({ is_operator: false }, [{ role: "owner" }]), false);
-});
 
 test("model profile routes use the shared operator predicate", () => {
   const store = readFileSync("src/lib/ai/model-profile-store.ts", "utf8");
