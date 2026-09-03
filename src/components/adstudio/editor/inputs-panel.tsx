@@ -49,9 +49,9 @@ export interface InputsPanelProps {
   businessNameDefault?: string;
   onBusinessNameChange?: (value: string) => void;
   /** Workspace library assets (Brand Studio uploads) available to pick. */
-  libraryAssets?: Array<{ url: string; label: string }>;
+  libraryAssets?: Array<{ id: string; url: string; label: string }>;
   /** Picks a library asset for an image slot. */
-  onLibraryPick?: (key: string, url: string) => void;
+  onLibraryPick?: (key: string, sourceAssetId: string) => void | Promise<void>;
 }
 
 export function InputsPanel({
@@ -234,8 +234,8 @@ function ImageSlotControl({
   defaultUrl: string | null;
   onImageChange: (key: string, change: { file: File; previewUrl: string } | null) => void;
   onCropClick: () => void;
-  libraryAssets?: Array<{ url: string; label: string }>;
-  onLibraryPick?: (key: string, url: string) => void;
+  libraryAssets?: Array<{ id: string; url: string; label: string }>;
+  onLibraryPick?: (key: string, sourceAssetId: string) => void | Promise<void>;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const libraryRef = useRef<HTMLDetailsElement>(null);
@@ -254,8 +254,8 @@ function ImageSlotControl({
     reader.readAsDataURL(file);
   };
 
-  const pickFromLibrary = (url: string) => {
-    onLibraryPick?.(input.key, url);
+  const pickFromLibrary = (sourceAssetId: string) => {
+    void onLibraryPick?.(input.key, sourceAssetId);
     if (libraryRef.current) libraryRef.current.open = false;
   };
 
@@ -267,9 +267,9 @@ function ImageSlotControl({
       <div className="grid grid-cols-3 gap-2 border-t border-border p-2">
         {libraryAssets!.map(asset => (
           <button
-            key={asset.url}
+            key={asset.id}
             type="button"
-            onClick={() => pickFromLibrary(asset.url)}
+            onClick={() => pickFromLibrary(asset.id)}
             className="group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-(--r-ctl)"
             aria-label={`Use library image ${asset.label}`}
           >

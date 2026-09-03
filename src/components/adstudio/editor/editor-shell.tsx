@@ -55,7 +55,7 @@ export interface EditorShellProps {
    * Workspace library assets (Brand Studio uploads) offered as a per-slot
    * "Library…" source in the Content tab, alongside direct upload.
    */
-  libraryAssets?: Array<{ url: string; label: string }>;
+  libraryAssets?: Array<{ id: string; url: string; label: string }>;
   /** Brand Pack primary logo URL for the Meta preview avatar (null → initials). */
   brandLogoUrl?: string | null;
   initialDocument?: AdDocumentParsed;
@@ -265,12 +265,20 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
   );
 
   /** Pick a workspace library asset for a slot (persistable media ref). */
-  const handleLibraryPick = useCallback(
-    (key: string, url: string) => {
-      updateImageValue(key, url, null);
-    },
-    [updateImageValue],
-  );
+  const handleLibraryPick = useCallback(async (key: string, sourceAssetId: string) => {
+    const previousValue = state.imageValues.find(value => value.inputKey === key);
+    setPendingImageUploads(count => count + 1);
+    setError(null);
+    try {
+      const response = await fetch(`/api/adstudio/ads/${encodeURIComponent(adId)}/media?workspaceId=${encodeURIComponent(workspaceId)}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ operation: "adopt", sourceAssetId }) });
+      const body = await response.json().catch(() => ({})) as { ref?: string; error?: string };
+      if (!response.ok || !body.ref) throw new Error(body.error ?? "We could not use that workspace image.");
+      updateImageValue(key, body.ref, null);
+    } catch (error) {
+      updateImageValue(key, previousValue?.dataUrl ?? null, previousValue?.previewUrl ?? null);
+      setError(error instanceof Error ? error.message : "We could not use that workspace image.");
+    } finally { setPendingImageUploads(count => Math.max(0, count - 1)); }
+  }, [adId, workspaceId, state.imageValues, updateImageValue, setError]);
 
   return <RedesignedEditor
     pack={pack}
@@ -320,9 +328,9 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
 }
 
 function RedesignedEditor({ pack, templateId, state, activeLayout, brandColours, brandBusinessName, brandLogoUrl, libraryAssets, canSave, canUndo, canRedo, saveConflict, pendingImageUploads, inspectorTab, setInspectorTab, mobileInspectorOpen, setMobileInspectorOpen, handleSave, handlePublish, handleKeyDown, undo, redo, setActivePlacement, selectLayer, handleColourModeChange, handleCustomColourChange, handleTemplateCopyChange, handleBusinessNameChange, handleLibraryPick, handleImageChange, openCrop, openCropForInput, updateTextValue, updateMetaCopy, updateCrop, setError, cropTarget, setCropTarget, proposalBrief, setProposalBrief, proposal, proposalBusy, proposeCopy }: {
-  pack: AdTemplate; templateId: string; state: EditorState; activeLayout: AdTemplate["feedLayout"]; brandColours: BrandPackColours | null; brandBusinessName: string; brandLogoUrl: string | null; libraryAssets?: Array<{ url: string; label: string }>; canSave: boolean; canUndo: boolean; canRedo: boolean; saveConflict: boolean; pendingImageUploads: number;
+  pack: AdTemplate; templateId: string; state: EditorState; activeLayout: AdTemplate["feedLayout"]; brandColours: BrandPackColours | null; brandBusinessName: string; brandLogoUrl: string | null; libraryAssets?: Array<{ id?: string; url: string; label: string }>; canSave: boolean; canUndo: boolean; canRedo: boolean; saveConflict: boolean; pendingImageUploads: number;
   inspectorTab: InspectorTab; setInspectorTab: (value: InspectorTab) => void; mobileInspectorOpen: boolean; setMobileInspectorOpen: (value: boolean) => void; handleSave: () => Promise<boolean>; handlePublish: () => Promise<void>; handleKeyDown: (event: KeyboardEvent) => void; undo: () => void; redo: () => void; setActivePlacement: (value: Placement) => void; selectLayer: (value: string | null) => void;
-  handleColourModeChange: (mode: ColourMode) => void; handleCustomColourChange: (role: ColourRole, hex: string) => void; handleTemplateCopyChange: (enabled: boolean) => void; handleBusinessNameChange: (value: string) => void; handleLibraryPick: (key: string, url: string) => void; handleImageChange: (key: string, change: { file: File; previewUrl: string } | null) => Promise<void>; openCrop: (slot: ImageSlotLayer) => void; openCropForInput: (key: string) => void; updateTextValue: (key: string, value: string) => void; updateMetaCopy: (field: keyof MetaCopy, value: string) => void; updateCrop: (key: string, placement: Placement, crop: Rect) => void; setError: (value: string | null) => void;
+  handleColourModeChange: (mode: ColourMode) => void; handleCustomColourChange: (role: ColourRole, hex: string) => void; handleTemplateCopyChange: (enabled: boolean) => void; handleBusinessNameChange: (value: string) => void; handleLibraryPick: (key: string, sourceAssetId: string) => Promise<void>; handleImageChange: (key: string, change: { file: File; previewUrl: string } | null) => Promise<void>; openCrop: (slot: ImageSlotLayer) => void; openCropForInput: (key: string) => void; updateTextValue: (key: string, value: string) => void; updateMetaCopy: (field: keyof MetaCopy, value: string) => void; updateCrop: (key: string, placement: Placement, crop: Rect) => void; setError: (value: string | null) => void;
   cropTarget: { slot: ImageSlotLayer; placement: Placement } | null; setCropTarget: (value: { slot: ImageSlotLayer; placement: Placement } | null) => void; proposalBrief: string; setProposalBrief: (value: string) => void; proposal: { onImage: Record<string, string>; copy: MetaCopy; source: string } | null; proposalBusy: boolean; proposeCopy: () => Promise<void>;
 }) {
   const defaultImageValues = Object.fromEntries(pack.imageInputs.flatMap(input => input.defaultAssetKey
@@ -405,7 +413,7 @@ function InspectorTabs({ value, onChange }: { value: InspectorTab; onChange: (va
   return <Tabs value={value} onValueChange={next => onChange(next as InspectorTab)} className="border-b border-border p-3"><TabsList aria-label="Editor sections" className="grid h-auto w-full grid-cols-3 gap-1 bg-muted/50 p-1">{INSPECTOR_TABS.map(({ value: tab, label, icon: Icon }) => <TabsTrigger key={tab} value={tab} className="min-h-11 justify-center gap-2 px-2 text-xs"><Icon className="size-4" />{label}</TabsTrigger>)}</TabsList></Tabs>;
 }
 
-function InspectorContent({ tab, pack, state, defaultImageValues, brandColours, brandBusinessName, libraryAssets, onTextChange, onImageChange, onCropClick, onMetaChange, onColourModeChange, onCustomColourChange, onTemplateCopyChange, onBusinessNameChange, onLibraryPick, proposalBrief, proposal, proposalBusy, onBriefChange, onPropose }: { tab: InspectorTab; pack: AdTemplate; state: EditorState; defaultImageValues: Record<string, string>; brandColours: BrandPackColours | null; brandBusinessName: string; libraryAssets?: Array<{ url: string; label: string }>; onTextChange: (key: string, value: string) => void; onImageChange: (key: string, change: { file: File; previewUrl: string } | null) => Promise<void>; onCropClick: (key: string) => void; onMetaChange: (field: keyof MetaCopy, value: string) => void; onColourModeChange: (mode: ColourMode) => void; onCustomColourChange: (role: ColourRole, hex: string) => void; onTemplateCopyChange: (enabled: boolean) => void; onBusinessNameChange: (value: string) => void; onLibraryPick: (key: string, url: string) => void; proposalBrief: string; proposal: { onImage: Record<string, string>; copy: MetaCopy; source: string } | null; proposalBusy: boolean; onBriefChange: (value: string) => void; onPropose: () => Promise<void> }) {
+function InspectorContent({ tab, pack, state, defaultImageValues, brandColours, brandBusinessName, libraryAssets, onTextChange, onImageChange, onCropClick, onMetaChange, onColourModeChange, onCustomColourChange, onTemplateCopyChange, onBusinessNameChange, onLibraryPick, proposalBrief, proposal, proposalBusy, onBriefChange, onPropose }: { tab: InspectorTab; pack: AdTemplate; state: EditorState; defaultImageValues: Record<string, string>; brandColours: BrandPackColours | null; brandBusinessName: string; libraryAssets?: Array<{ id: string; url: string; label: string }>; onTextChange: (key: string, value: string) => void; onImageChange: (key: string, change: { file: File; previewUrl: string } | null) => Promise<void>; onCropClick: (key: string) => void; onMetaChange: (field: keyof MetaCopy, value: string) => void; onColourModeChange: (mode: ColourMode) => void; onCustomColourChange: (role: ColourRole, hex: string) => void; onTemplateCopyChange: (enabled: boolean) => void; onBusinessNameChange: (value: string) => void; onLibraryPick: (key: string, sourceAssetId: string) => Promise<void>; proposalBrief: string; proposal: { onImage: Record<string, string>; copy: MetaCopy; source: string } | null; proposalBusy: boolean; onBriefChange: (value: string) => void; onPropose: () => Promise<void> }) {
   if (tab === "copy") return <div><MetaCopyPanel values={state.metaCopy} onChange={onMetaChange} /><ProposalPanel brief={proposalBrief} proposal={proposal} busy={proposalBusy} textInputs={editorTextInputs(pack)} onBriefChange={onBriefChange} onPropose={onPropose} onApplyText={onTextChange} onApplyMeta={onMetaChange} /></div>;
   if (tab === "colours") return <aside aria-label="Colours" className="space-y-4 border-t border-border p-4"><div><h3 className="text-sm font-semibold">Colours</h3><p className="mt-1 text-xs leading-relaxed text-muted-foreground">Choose the colours that feel right for this ad.</p></div><ColourToggle mode={state.colourMode} brandPackAvailable={!!brandColours} resolvedColourMap={state.resolvedColourMap} onModeChange={onColourModeChange} onCustomColourChange={onCustomColourChange} /></aside>;
   return <InputsPanel textInputs={pack.textInputs} imageInputs={pack.imageInputs} textValues={state.textValues} imageValues={Object.fromEntries(state.imageValues.map(iv => [iv.inputKey, iv.previewUrl ?? iv.dataUrl]))} defaultImageValues={defaultImageValues} onTextChange={onTextChange} onImageChange={onImageChange} onCropClick={onCropClick} templateCopyApplied={state.templateCopyApplied} templateCopyAvailable={hasTemplateCopy(pack)} onTemplateCopyChange={onTemplateCopyChange} businessName={state.brandBusinessName} businessNameDefault={brandBusinessName} onBusinessNameChange={onBusinessNameChange} libraryAssets={libraryAssets} onLibraryPick={onLibraryPick} />;
