@@ -92,6 +92,15 @@ export async function executeMetaMutationById(input: {
       lastError: result.lastError,
       updatedAt: new Date().toISOString(),
     };
+    // Carried for callers (activation receipts) so an indeterminate pause
+    // state after a failed activate can be reported honestly — it is not
+    // persisted on the mutation row.
+    const unconfirmedPauseIds = "unconfirmedPauseIds" in result
+      ? (result as { unconfirmedPauseIds?: string[] }).unconfirmedPauseIds
+      : undefined;
+    const executionOutcome = unconfirmedPauseIds?.length
+      ? { ...updated, unconfirmedPauseIds }
+      : updated;
 
     await updateMutation(input.serviceSupabase, updated);
     await input.serviceSupabase.from("audit_logs").insert({
@@ -117,7 +126,7 @@ export async function executeMetaMutationById(input: {
       });
     }
 
-    return updated;
+    return executionOutcome;
   } catch (error) {
     const failed = {
       ...mutation,

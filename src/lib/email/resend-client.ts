@@ -1,8 +1,8 @@
 /**
- * Unified Resend client for all Blockwise email operations.
+ * Explicit Resend compatibility client for legacy integrations.
  *
- * Consolidates the three legacy raw-fetch callers (operator mailbox, alerts,
- * demo-request notifications) into a single SDK-backed module with:
+ * New transactional sends use the provider-neutral outbox. This module remains
+ * only for explicit compatibility callers with EMAIL_PROVIDER=resend:
  * - Idempotency keys on every send
  * - Template-based sending (Resend-managed templates with variables)
  * - Custom tracking domain support (resend.blockwise.sale)
@@ -24,6 +24,9 @@ let _client: Resend | null = null;
 
 export function getResendClient(): Resend {
   if (_client) return _client;
+  if (process.env.EMAIL_PROVIDER?.trim().toLowerCase() !== "resend") {
+    throw new ResendClientError("Resend is available only as the explicit compatibility provider.", 503);
+  }
   const apiKey = process.env.RESEND_API_KEY?.trim();
   if (!apiKey) {
     throw new ResendClientError("RESEND_API_KEY is not configured.", 503);
@@ -33,7 +36,7 @@ export function getResendClient(): Resend {
 }
 
 export function isResendConfigured(): boolean {
-  return Boolean(process.env.RESEND_API_KEY?.trim());
+  return process.env.EMAIL_PROVIDER?.trim().toLowerCase() === "resend" && Boolean(process.env.RESEND_API_KEY?.trim());
 }
 
 export class ResendClientError extends Error {

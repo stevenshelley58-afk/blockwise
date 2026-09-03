@@ -1,0 +1,29 @@
+name: Vercel Preview CSP Smoke
+on:
+  workflow_dispatch:
+    inputs:
+      preview_url:
+        description: "Deployed Vercel Preview URL (https:// only; no localhost)"
+        required: true
+        type: string
+jobs:
+  browser-csp:
+    name: Browser CSP smoke (Preview)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Check deployed Preview CSP in a browser
+        env:
+          PREVIEW_URL: ${{ inputs.preview_url }}
+        run: npx playwright test tests/preview-csp-smoke.spec.ts

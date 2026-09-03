@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
+import { drainEmailOutbox } from "../src/lib/email/outbox.ts";
 import { makeEmailProvider } from "../src/lib/email/provider.ts";
 
 describe("email provider selection", () => {
@@ -30,6 +31,18 @@ describe("email provider selection", () => {
     assert.throws(() => makeEmailProvider({ EMAIL_PROVIDER: "mailflare" } as unknown as NodeJS.ProcessEnv));
   });
 
+  it("fails the drain preflight for missing provider configuration", () => {
+    const provider = makeEmailProvider({ EMAIL_PROVIDER: "smtp" } as unknown as NodeJS.ProcessEnv);
+    assert.throws(() => provider.assertConfigured?.(), /SMTP_HOST/);
+  });
+
+  it("preflights configuration before claiming any row", async () => {
+    let claimCalls = 0;
+    const supabase = { rpc: async () => { claimCalls += 1; return { data: [], error: null }; } } as never;
+    const provider = makeEmailProvider({ EMAIL_PROVIDER: "smtp" } as unknown as NodeJS.ProcessEnv);
+    await assert.rejects(drainEmailOutbox(supabase, provider), /SMTP_HOST/);
+    assert.equal(claimCalls, 0);
+  });
   it("selects the smtp provider when configured", () => {
     const provider = makeEmailProvider({
       EMAIL_PROVIDER: "smtp",

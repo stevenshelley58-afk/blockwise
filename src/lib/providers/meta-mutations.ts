@@ -65,7 +65,11 @@ export type MetaMutationLogEntry = {
 type MetaMutationExecutionResult = Pick<
   MetaPlanMutation,
   "status" | "requestLog" | "responseLog" | "lastError"
->;
+> & {
+  /** Populated when activation failed AND the safety pause could not be
+   * confirmed for some objects — those may still be ACTIVE on Meta. */
+  unconfirmedPauseIds?: string[];
+};
 
 const META_MUTATION_REQUEST_TIMEOUT_MS = 30_000;
 const META_ACTIVATION_COMPENSATION_TIMEOUT_MS = 90_000;
@@ -373,6 +377,7 @@ export async function executeMetaPlanMutation(input: {
         lastError: unconfirmedIds.length === 0
           ? primaryError
           : `${primaryError} Safety pause could not be confirmed for Meta object(s): ${unconfirmedIds.join(", ")}.`,
+        ...(unconfirmedIds.length > 0 ? { unconfirmedPauseIds: unconfirmedIds } : {}),
       };
     }
 

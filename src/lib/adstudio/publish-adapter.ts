@@ -1165,6 +1165,15 @@ export async function activatePausedMetaPublish(
   });
 
   if (executed.status !== "applied") {
+    // An unconfirmed safety pause means some objects may still be ACTIVE on
+    // Meta — surfaced as a distinct code so receipts never claim a confirmed
+    // pause that could not be verified.
+    if ("unconfirmedPauseIds" in executed && Array.isArray(executed.unconfirmedPauseIds) && executed.unconfirmedPauseIds.length > 0) {
+      throw new PublishError(
+        "activation_unconfirmed",
+        executed.lastError ?? "Meta activation failed and Blockwise could not confirm that every object was paused.",
+      );
+    }
     throw new PublishError(
       "activation_failed",
       executed.lastError ?? "Meta could not activate the paused campaign — it stays PAUSED on Meta.",

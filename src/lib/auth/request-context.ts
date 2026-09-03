@@ -14,6 +14,7 @@ export type RequestAuthProfile = {
   full_name: string | null;
   email: string | null;
   is_operator: boolean | null;
+  operator_role: string | null;
 };
 
 export type RequestAuthMembershipRow = {
@@ -77,7 +78,7 @@ export async function loadRequestAuthContext(supabase: SupabaseServerClient): Pr
         },
         () =>
           Promise.all([
-            supabase.from("profiles").select("full_name,email,is_operator").eq("id", claims.sub).maybeSingle(),
+            supabase.from("profiles").select("full_name,email,is_operator,operator_role").eq("id", claims.sub).maybeSingle(),
             supabase
               .from("workspace_members")
               .select("role, workspaces(id, name, mode, region)")

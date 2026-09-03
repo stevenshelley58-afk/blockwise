@@ -1,4 +1,5 @@
 import * as Sentry from "@sentry/nextjs";
+import { redactValue } from "@/lib/redact";
 
 Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
@@ -6,4 +7,7 @@ Sentry.init({
   environment: process.env.NEXT_PUBLIC_VERCEL_ENV ?? process.env.VERCEL_ENV ?? "development",
   replaysOnErrorSampleRate: 1.0,
   integrations: [],
+  beforeSend(event) {
+    return redactValue(event) as typeof event;
+  },
 });

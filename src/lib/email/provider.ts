@@ -21,17 +21,52 @@ export type EmailSendResult =
 
 export interface EmailProvider {
   readonly name: "resend" | "smtp" | "unconfigured";
+  assertConfigured?: () => void;
   send(message: EmailMessage): Promise<EmailSendResult>;
 }
 
 /**
  * Provider selection. EMAIL_PROVIDER must be configured explicitly — there
- * is no implicit default (the legacy Resend path is never chosen by
- * silence). An unconfigured provider reports a permanent failure so the
- * outbox worker dead-letters instead of silently dropping mail.
+ * is no implicit default. An unconfigured provider remains available as a
+ * testable fail-closed object, but the drain calls assertConfigured before it
+ * claims anything so healthy queued mail is never dead-lettered for config.
  */
+export class EmailProviderConfigurationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "EmailProviderConfigurationError";
+  }
+}
+
+export function assertEmailProviderConfigured(env: NodeJS.ProcessEnv = process.env): void {
+  switch (env.EMAIL_PROVIDER?.trim().toLowerCase()) {
+    case "smtp": {
+      const host = env.SMTP_HOST?.trim();
+      const port = Number(env.SMTP_PORT ?? 587);
+      if (!host) throw new EmailProviderConfigurationError("SMTP_HOST is required.");
+      if (!Number.isInteger(port) || port < 1 || port > 65535) {
+        throw new EmailProviderConfigurationError("SMTP_PORT must be a valid TCP port.");
+      }
+      if (Boolean(env.SMTP_USER?.trim()) !== Boolean(env.SMTP_PASSWORD?.trim())) {
+        throw new EmailProviderConfigurationError("SMTP_USER and SMTP_PASSWORD must be provided together.");
+      }
+      return;
+    }
+    case "resend":
+      if (!env.RESEND_API_KEY?.trim()) {
+        throw new EmailProviderConfigurationError("RESEND_API_KEY is required for the explicit Resend compatibility provider.");
+      }
+      return;
+    case undefined:
+    case "":
+      throw new EmailProviderConfigurationError("EMAIL_PROVIDER must be explicitly configured.");
+    default:
+      throw new EmailProviderConfigurationError(`Unknown EMAIL_PROVIDER: ${env.EMAIL_PROVIDER}`);
+  }
+}
+
 export function makeEmailProvider(env: NodeJS.ProcessEnv = process.env): EmailProvider {
-  switch (env.EMAIL_PROVIDER) {
+  switch (env.EMAIL_PROVIDER?.trim().toLowerCase()) {
     case "smtp":
       return makeSmtpProvider(env);
     case "resend":
@@ -40,6 +75,7 @@ export function makeEmailProvider(env: NodeJS.ProcessEnv = process.env): EmailPr
     case "":
       return {
         name: "unconfigured",
+        assertConfigured: () => assertEmailProviderConfigured(env),
         async send() {
           return { ok: false, error: "email_provider_not_configured", permanent: true };
         },
@@ -53,6 +89,7 @@ export function makeResendProvider(env: NodeJS.ProcessEnv): EmailProvider {
   const apiKey = env.RESEND_API_KEY;
   return {
     name: "resend",
+    assertConfigured: () => assertEmailProviderConfigured(env),
     async send(message) {
       if (!apiKey) {
         return { ok: false, error: "resend_not_configured", permanent: true };
@@ -94,6 +131,7 @@ export function makeSmtpProvider(env: NodeJS.ProcessEnv): EmailProvider {
   const pass = env.SMTP_PASSWORD;
   return {
     name: "smtp",
+    assertConfigured: () => assertEmailProviderConfigured(env),
     async send(message) {
       if (!host) {
         return { ok: false, error: "smtp_not_configured", permanent: true };
@@ -130,4 +168,13 @@ export function makeSmtpProvider(env: NodeJS.ProcessEnv): EmailProvider {
       }
     },
   };
+}
+
+export function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
