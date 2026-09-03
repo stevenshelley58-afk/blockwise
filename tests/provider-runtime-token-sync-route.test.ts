@@ -8,7 +8,7 @@ const route = readFileSync(
 );
 
 test("runtime credential sync is operator-only, confirmation-bound, and never accepts or returns a token", () => {
-  assert.match(route, /await requireOperator\(\)/);
+  assert.match(route, /await requireOwnerOperator\(\)/);
   assert.match(route, /x-blockwise-runtime-credential-sync/);
   assert.match(route, /process\.env\.OPENAI_API_KEY/);
   assert.match(route, /process\.env\.GOOGLE_AI_API_KEY/);
