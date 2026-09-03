@@ -66,8 +66,8 @@ describe("customer Ad Studio workbench contract", () => {
   it("keeps mobile editor actions compact without hiding workflow controls", () => {
     const shell = readFileSync("src/components/adstudio/editor/editor-shell.tsx", "utf8");
     assert.match(shell, /grid-cols-\[auto_minmax\(0,1fr\)_auto\]/);
-    assert.match(shell, /<span className="md:hidden">Review<\/span>/);
-    assert.match(shell, /className="hidden md:inline">\{state\.isSaving \? "Saving…" : "Save"\}<\/span>/);
+    assert.match(shell, /<span className="xl:hidden">Review<\/span>/);
+    assert.match(shell, /className="hidden xl:inline">\{state\.isSaving \? "Saving…" : "Save"\}<\/span>/);
     assert.match(shell, /grid-cols-4/);
     assert.match(shell, /<Eye className="size-4" \/>Preview/);
     assert.match(shell, /setPreviewMode\("meta"\)/);

@@ -4,12 +4,11 @@ import test from "node:test";
 
 import {
   AdStudioCopyNormalizationError,
+  normalizeAdStudioOnImage,
   normalizeAdStudioCopy,
 } from "../../src/lib/adstudio/copy-generation.ts";
-import {
-  META_COPY_CONSTRAINTS,
-  metaLeadAdPackSchema,
-} from "../../src/lib/adstudio/types.ts";
+import { META_COPY_CONSTRAINTS, truncateAtWordBoundary } from "../../src/lib/adstudio/meta-copy-contract.ts";
+import { metaLeadAdPackSchema } from "../../src/lib/adstudio/types.ts";
 import { validateMetaCopyForSave, SaveError } from "../../src/lib/adstudio/save-ad.ts";
 import { truncateForPreview } from "../../src/components/adstudio/editor/preview-text.ts";
 
@@ -41,10 +40,30 @@ test("malformed provider copy fails explicitly instead of silently becoming empt
     () => normalizeAdStudioCopy({ primaryText: [], headline: [], description: [], cta: "" }),
     (error: unknown) => error instanceof AdStudioCopyNormalizationError && /primary text/.test(error.message),
   );
+  const mapped = normalizeAdStudioCopy({ primaryText: "ok", headline: "ok", description: "ok", cta: "Book free appraisal" });
+  assert.equal(mapped.cta, "CONTACT_US");
+});
+
+test("missing provider fields are never masked by current copy, samples, or raw mid-word truncation", () => {
   assert.throws(
-    () => normalizeAdStudioCopy({ primaryText: "ok", headline: "ok", description: "ok", cta: "Invent a CTA" }),
-    (error: unknown) => error instanceof AdStudioCopyNormalizationError && /unsupported CTA/.test(error.message),
+    () => normalizeAdStudioCopy(
+      { primaryText: "new primary", headline: "new headline", description: "new description" },
+      { primaryText: "old primary", headline: "old headline", description: "old description", cta: "LEARN_MORE" },
+    ),
+    (error: unknown) => error instanceof AdStudioCopyNormalizationError && /CTA/.test(error.message),
   );
+  assert.throws(
+    () => normalizeAdStudioOnImage({}, [{ key: "address", label: "Address", sample: "123 Old Road" }]),
+    (error: unknown) => error instanceof AdStudioCopyNormalizationError && /address/.test(error.message),
+  );
+  assert.equal(
+    normalizeAdStudioOnImage(
+      { address: "18 Smith Street Scarborough" },
+      [{ key: "address", label: "Address", maxLength: 18, sample: "123 Old Road" }],
+    ).address,
+    "18 Smith Street",
+  );
+  assert.equal(truncateAtWordBoundary("18 Smith Street Scarborough", 18), "18 Smith Street");
 });
 
 test("provider schema normalizes singular Meta fields while retaining array output", () => {
@@ -97,7 +116,11 @@ test("editor and preview keep the clarity and fidelity contracts visible", () =>
   const copyFields = shell.indexOf("<MetaCopyPanel");
   assert.ok(aiBrief >= 0 && aiBrief < copyFields, "AI brief must precede editable Meta fields");
   assert.match(shell, /label: "Visual"/);
-  assert.match(shell, /md:absolute md:inset-x-0/);
+  assert.match(shell, /grid-rows-\[auto_auto_auto\]/);
+  assert.match(shell, /col-span-3 row-start-2 flex min-w-0 justify-center/);
+  assert.match(shell, /col-span-2 row-start-3/);
+  assert.match(shell, /col-start-3 row-start-3/);
+  assert.match(shell, /xl:absolute xl:inset-x-0/);
   assert.doesNotMatch(preview, /👍|💬|↗/u);
   assert.doesNotMatch(preview, /your-business\.com\.au/);
   assert.match(preview, /ThumbsUp/);

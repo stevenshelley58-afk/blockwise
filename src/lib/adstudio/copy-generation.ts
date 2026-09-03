@@ -22,8 +22,10 @@ import {
 import {
   META_COPY_CTA_VALUES,
   META_COPY_CONSTRAINTS,
+  truncateAtWordBoundary,
   type AdStudioMetaCopy,
-} from "./types.ts";
+} from "./meta-copy-contract.ts";
+import { toMetaCta } from "./meta-cta.ts";
 
 export type AdStudioCopyFields = AdStudioMetaCopy;
 
@@ -96,7 +98,7 @@ const COPY_PROMPT_KEYS: PromptKey[] = [
   "adstudio.copy.compliance_rules",
 ];
 
-/** @deprecated Use META_COPY_CONSTRAINTS from ./types.ts. */
+/** @deprecated Use META_COPY_CONSTRAINTS from ./meta-copy-contract.ts. */
 export const ADSTUDIO_COPY_LIMITS = META_COPY_CONSTRAINTS;
 
 export const ADSTUDIO_GUIDANCE_LIMITS = {
@@ -153,8 +155,7 @@ export async function generateAdStudioCopy(
     }, input.providerEnv, input.signal);
     const output = generation.output;
     const json = (output.json ?? {}) as Record<string, unknown>;
-    const current = input.copy ?? {};
-    const normalizedCopy = normalizeAdStudioCopy(json, current);
+    const normalizedCopy = normalizeAdStudioCopy(json, input.copy);
 
     finalizationStarted = true;
     await recordAdStudioProviderRun({
@@ -295,16 +296,7 @@ export async function generateAdStudioTemplateCopy(
     }, input.providerEnv, input.signal);
     const json = (generation.output.json ?? {}) as Record<string, unknown>;
     const normalizedCopy = normalizeAdStudioCopy(json);
-    const onImageRaw = (json.onImage ?? {}) as Record<string, unknown>;
-    const onImage: Record<string, string> = {};
-    for (const field of input.fields) {
-      const raw = typeof onImageRaw[field.key] === "string" ? (onImageRaw[field.key] as string).trim() : "";
-      // Fall back to the sample so the clone never receives an empty label;
-      // the brief-grounded value is strongly preferred.
-      const value = raw || field.sample || "";
-      onImage[field.key] =
-        field.maxLength && value.length > field.maxLength ? value.slice(0, field.maxLength).trimEnd() : value;
-    }
+    const onImage = normalizeAdStudioOnImage(json.onImage, input.fields);
 
     finalizationStarted = true;
     await recordAdStudioProviderRun({
@@ -384,40 +376,36 @@ export class AdStudioCopyNormalizationError extends Error {
  */
 export function normalizeAdStudioCopy(
   value: Record<string, unknown>,
-  current: Partial<AdStudioCopyFields> = {},
+  _current?: Partial<AdStudioCopyFields>,
 ): AdStudioCopyFields {
   const primaryText = normalizeRequiredCopyField(
     firstProviderString(value.primaryText ?? value.primaryTexts ?? value.primary_text),
-    current.primaryText,
     META_COPY_CONSTRAINTS.primaryText,
     "primary text",
   );
   const headline = normalizeRequiredCopyField(
     firstProviderString(value.headline ?? value.headlines),
-    current.headline,
     META_COPY_CONSTRAINTS.headline,
     "headline",
   );
   const description = normalizeRequiredCopyField(
     firstProviderString(value.description ?? value.descriptions),
-    current.description,
     META_COPY_CONSTRAINTS.description,
     "description",
   );
   const rawCta = firstProviderString(value.cta ?? value.callToAction);
-  const cta = normalizeProviderCta(rawCta ?? current.cta);
+  const cta = normalizeProviderCta(rawCta);
   return { primaryText, headline, description, cta };
 }
 
 function normalizeRequiredCopyField(
   value: string | undefined,
-  fallback: string | undefined,
   limit: number,
   field: string,
 ): string {
-  const text = (value ?? fallback ?? "").trim();
+  const text = (value ?? "").trim();
   if (!text) throw new AdStudioCopyNormalizationError(`Provider returned no ${field}.`);
-  return text.length > limit ? text.slice(0, limit).trimEnd() : text;
+  return truncateAtWordBoundary(text, limit);
 }
 
 function firstProviderString(value: unknown): string | undefined {
@@ -431,19 +419,9 @@ function firstProviderString(value: unknown): string | undefined {
 
 function normalizeProviderCta(value: string | undefined): string {
   const text = value?.trim() ?? "";
-  if (!text) return "LEARN_MORE";
-  const normalized = text.toUpperCase().replace(/[ -]+/gu, "_");
-  const aliases: Record<string, typeof META_COPY_CTA_VALUES[number]> = {
-    LEARN_MORE: "LEARN_MORE",
-    LEARNMORE: "LEARN_MORE",
-    SIGN_UP: "SIGN_UP",
-    SIGNUP: "SIGN_UP",
-    DOWNLOAD: "DOWNLOAD",
-    CONTACT_US: "CONTACT_US",
-    CONTACT: "CONTACT_US",
-  };
-  const mapped = aliases[normalized];
-  if (mapped && META_COPY_CTA_VALUES.includes(mapped)) return mapped;
+  if (!text) throw new AdStudioCopyNormalizationError("Provider returned no CTA.");
+  const mapped = toMetaCta(text);
+  if (META_COPY_CTA_VALUES.includes(mapped)) return mapped;
   throw new AdStudioCopyNormalizationError(`Provider returned an unsupported CTA: ${text}.`);
 }
 
@@ -452,8 +430,26 @@ function clampList(value: unknown, limit: number): string[] {
   return value
     .filter((item): item is string => typeof item === "string" && item.trim().length > 0)
     .slice(0, 2)
-    .map((item) => (item.length > limit ? item.slice(0, limit).trimEnd() : item.trim()));
+    .map((item) => truncateAtWordBoundary(item, limit));
 }
+
+/** Normalize every declared on-image field without inventing campaign facts. */
+export function normalizeAdStudioOnImage(
+  value: unknown,
+  fields: AdStudioTemplateCopyFieldSpec[],
+): Record<string, string> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new AdStudioCopyNormalizationError("Provider returned no on-image copy object.");
+  }
+  const rawFields = value as Record<string, unknown>;
+  return Object.fromEntries(fields.map((field) => {
+    const raw = typeof rawFields[field.key] === "string" ? (rawFields[field.key] as string).trim() : "";
+    if (!raw) throw new AdStudioCopyNormalizationError(`Provider returned no on-image field: ${field.key}.`);
+    return [field.key, field.maxLength ? truncateAtWordBoundary(raw, field.maxLength) : raw];
+  }));
+}
+
+export { truncateAtWordBoundary } from "./meta-copy-contract.ts";
 
 // Only forward references a vision model can actually read.
 function usableModelImage(ref: string | undefined): string | undefined {

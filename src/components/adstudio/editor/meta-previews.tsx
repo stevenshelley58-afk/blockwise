@@ -5,7 +5,7 @@ import { ArrowUp, MessageCircle, MoreHorizontal, Share2, ThumbsUp } from "lucide
 import { LayeredCanvas } from "./layered-canvas";
 import { businessInitials, ctaLabelText, domainLabel, truncateForPreview } from "./preview-text";
 import type { MetaCopy } from "./use-editor-state";
-import { META_COPY_CONSTRAINTS } from "../../../lib/adstudio/types";
+import { META_COPY_CONSTRAINTS } from "../../../lib/adstudio/meta-copy-contract";
 
 // ---------------------------------------------------------------------------
 // Meta previews — placement-specific mockups of how the ad appears on

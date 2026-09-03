@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AdDocumentParsed } from "../../../packages/ad-template-contract/src/schema";
 import type { AdTemplate } from "../../../packages/ad-template-contract/src/types";
 import { documentToken } from "./document-token.ts";
-import { metaCopyLimitIssues } from "./types.ts";
+import { metaCopyLimitIssues } from "./meta-copy-contract.ts";
 
 // ---------------------------------------------------------------------------
 // Types

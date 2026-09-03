@@ -1,8 +1,9 @@
 "use client";
 
 import type { MetaCopy } from "./use-editor-state";
-import { META_COPY_CTA_VALUES, META_COPY_CONSTRAINTS } from "../../../lib/adstudio/types";
+import { META_COPY_CTA_VALUES, META_COPY_CONSTRAINTS } from "../../../lib/adstudio/meta-copy-contract";
 import { ctaLabelText, truncateForPreview } from "./preview-text";
+import { isMetaCta, toMetaCta } from "../../../lib/adstudio/meta-cta";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,9 +17,8 @@ import { Label } from "@/components/ui/label";
 // the same copy, so an edit here updates every placement. Save embeds these
 // in the AdDocument and the save route validates them against the contract.
 //
-// The CTA field is a select of Meta's standard call-to-action values with a
-// "Custom…" escape hatch — AdDocument stores whatever string the user picks
-// or types.
+// The CTA field only exposes values Meta can publish. Legacy labels are mapped
+// to a supported value for display rather than forwarded as custom buttons.
 // ---------------------------------------------------------------------------
 
 export interface MetaCopyPanelProps {
@@ -34,7 +34,7 @@ export const META_CTA_OPTIONS = META_COPY_CTA_VALUES;
 const LIMITS = META_COPY_CONSTRAINTS;
 
 export function MetaCopyPanel({ className, values, onChange }: MetaCopyPanelProps) {
-  const customCta = !(META_CTA_OPTIONS as readonly string[]).includes(values.cta);
+  const selectedCta = isMetaCta(values.cta) ? values.cta : toMetaCta(values.cta || "LEARN_MORE");
 
   return (
     <aside aria-label="Meta copy" className={cn("w-full shrink-0 overflow-y-auto bg-card p-4 xl:w-auto", className)}>
@@ -75,11 +75,8 @@ export function MetaCopyPanel({ className, values, onChange }: MetaCopyPanelProp
             Call to action
           </Label>
           <select
-            value={customCta ? "CUSTOM" : values.cta}
-            onChange={e => {
-              const next = e.target.value;
-              onChange("cta", next === "CUSTOM" ? "" : next);
-            }}
+            value={selectedCta}
+            onChange={e => onChange("cta", e.target.value)}
             id="meta-copy-cta"
             className="min-h-11 w-full rounded-(--r-card) border border-input bg-muted/30 px-3 text-base shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
           >
@@ -88,19 +85,7 @@ export function MetaCopyPanel({ className, values, onChange }: MetaCopyPanelProp
                 {ctaLabelText(cta)}
               </option>
             ))}
-            <option value="CUSTOM">Custom…</option>
           </select>
-          {customCta && (
-            <div className="mt-2">
-              <TextField
-                label="Custom CTA"
-                field="cta"
-                value={values.cta}
-                onChange={onChange}
-                maxLength={LIMITS.cta}
-              />
-            </div>
-          )}
         </div>
       </div>
 
