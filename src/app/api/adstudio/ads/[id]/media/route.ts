@@ -43,7 +43,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     const { data: ad, error: adError } = await access.supabase.from("ad_customer_ads").select("id").eq("id", id).eq("workspace_id", access.access.workspaceId).maybeSingle();
     if (adError) return NextResponse.json({ error: "We could not verify this ad." }, { status: 500 });
     if (!ad) return NextResponse.json({ error: "Ad not found." }, { status: 404 });
-    const rateLimit = await checkRateLimit(access.supabase, access.access.workspaceId, access.access.userId, { windowSeconds: 60 * 60, maxRequests: 120, bucket: "adstudio-media-upload" });
+    const rateLimit = await checkRateLimit(access.access.workspaceId, access.access.userId, { windowSeconds: 60 * 60, maxRequests: 120, bucket: "adstudio-media-upload" });
     if (!rateLimit.ok) return NextResponse.json({ error: "Upload limit reached. Try again later." }, { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } });
     const service = createSupabaseServiceClient();
     try {
