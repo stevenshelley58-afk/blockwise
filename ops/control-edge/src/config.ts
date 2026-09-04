@@ -1,5 +1,5 @@
-import { readFileSync, lstatSync, realpathSync } from "node:fs";
-import { dirname } from "node:path";
+import { readFileSync, lstatSync } from "node:fs";
+import { dirname, join, parse, resolve } from "node:path";
 
 export type ControlConfig = {
   port: number;
@@ -14,23 +14,6 @@ export type ControlConfig = {
   workerEnabled: boolean;
   workerIntervalMs: number;
 };
-
-function requiredFile(name: string, maxBytes = 8192): string {
-  const file = process.env[name]?.trim();
-  if (!file) throw new Error(`${name} is required; credentials must use *_FILE`);
-  const stat = lstatSync(file);
-  if (stat.isSymbolicLink() || !stat.isFile() || stat.size < 1 || stat.size > maxBytes) {
-    throw new Error(`${name} must point to a regular bounded file`);
-  }
-  if (process.platform !== "win32") {
-    if ((stat.mode & 0o077) !== 0 || stat.uid !== process.getuid?.()) {
-      throw new Error(`${name} must be owner-readable only`);
-    }
-    const parent = lstatSync(dirname(realpathSync(file)));
-    if ((parent.mode & 0o077) !== 0) throw new Error(`${name} parent directory is too permissive`);
-  }
-  return readFileSync(file, "utf8").trim();
-}
 
 function positiveInt(name: string, fallback: number, min: number, max: number): number {
   const value = Number(process.env[name] ?? fallback);
@@ -66,14 +49,25 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ControlConfig 
 function requiredFileFrom(env: NodeJS.ProcessEnv, name: string, maxBytes: number): string {
   const file = env[name]?.trim();
   if (!file) throw new Error(`${name} is required; credentials must use *_FILE`);
+  assertNoSymlinkComponents(file, name);
   const stat = lstatSync(file);
   if (stat.isSymbolicLink() || !stat.isFile() || stat.size < 1 || stat.size > maxBytes) throw new Error(`${name} must point to a regular bounded file`);
   if (process.platform !== "win32") {
     if ((stat.mode & 0o077) !== 0 || stat.uid !== process.getuid?.()) throw new Error(`${name} must be owner-readable only`);
-    const parent = lstatSync(dirname(realpathSync(file)));
+    const parent = lstatSync(dirname(resolve(file)));
     if ((parent.mode & 0o077) !== 0) throw new Error(`${name} parent directory is too permissive`);
   }
   return readFileSync(file, "utf8").trim();
+}
+
+function assertNoSymlinkComponents(file: string, name: string): void {
+  const absolute = resolve(file);
+  const root = parse(absolute).root;
+  let current = root;
+  for (const component of absolute.slice(root.length).split(/[\\/]+/).filter(Boolean)) {
+    current = join(current, component);
+    if (lstatSync(current).isSymbolicLink()) throw new Error(`${name} path contains a symlink component`);
+  }
 }
 
 function positiveIntFrom(env: NodeJS.ProcessEnv, name: string, fallback: number, min: number, max: number): number {

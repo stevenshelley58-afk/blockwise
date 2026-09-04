@@ -3,7 +3,7 @@ import type { OpsActionEnvelope } from "../../../src/lib/ops/action-contract.ts"
 import type { NonceStore } from "./auth.ts";
 
 export type ClaimedAction = {
-  id: string; action_id: string; workspace_id: string; customer_id: string; actor_operator_id: string; actor_role: string;
+  id: string; action_id: string; idempotency_key: string; created_at: string; workspace_id: string; customer_id: string; actor_operator_id: string; actor_role: string;
   action_type: string; target_type: string; target_id: string; expected_version: number; reason: string; payload: Record<string, unknown>;
   attempts: number; max_attempts: number; expires_at: string; lease_token: string;
 };
@@ -11,6 +11,7 @@ export type ActionStatus = { actionId: string; workspaceId: string; status: stri
 
 export interface ActionRepository extends NonceStore {
   ready(): Promise<boolean>;
+  reap(): Promise<number>;
   enqueue(action: OpsActionEnvelope): Promise<{ id: string; actionId: string; status: string }>;
   status(actionId: string, workspaceId: string): Promise<ActionStatus | null>;
   claim(): Promise<ClaimedAction | null>;
@@ -23,6 +24,7 @@ export class SupabaseActionRepository implements ActionRepository {
   private readonly db: SupabaseClient;
   constructor(db: SupabaseClient) { this.db = db; }
   async ready(): Promise<boolean> { const { error } = await this.db.from("ops_action_capabilities").select("action_type").limit(1); return !error; }
+  async reap(): Promise<number> { const value = await this.rpcScalar("reap_ops_actions", {}); return Number(value ?? 0); }
   async consume(nonce: string, expiresAt: Date): Promise<boolean> {
     await this.db.from("internal_request_nonces").delete().lt("expires_at", new Date(Date.now() - 600000).toISOString());
     const { data, error } = await this.db.from("internal_request_nonces").upsert({ nonce, expires_at: expiresAt.toISOString() }, { onConflict: "nonce", ignoreDuplicates: true }).select("nonce");
@@ -52,7 +54,13 @@ export class SupabaseActionRepository implements ActionRepository {
     const values = (receipts.data ?? []) as Array<Record<string, unknown>>;
     return { actionId, workspaceId, status: String(row.data.status), receiptIds: values.map((x) => String(x.receipt_id)), latestReceipt: values.at(-1) ?? null };
   }
-  async claim(): Promise<ClaimedAction | null> { return this.rpcOne("claim_ops_action", { p_lease_seconds: 600 }); }
+  async claim(): Promise<ClaimedAction | null> {
+    const row = await this.rpcOne("claim_ops_action", { p_lease_seconds: 600 });
+    if (!row) return null;
+    const detail = await this.db.from("ops_action_outbox").select("idempotency_key,created_at").eq("id", row.id).single();
+    if (detail.error || !detail.data) throw new Error("claimed action identity unavailable");
+    return { ...row, idempotency_key: String(detail.data.idempotency_key), created_at: String(detail.data.created_at) };
+  }
   async heartbeat(id: string, leaseToken: string): Promise<boolean> { return Boolean(await this.rpcScalar("heartbeat_ops_action", { p_id: id, p_lease_token: leaseToken, p_lease_seconds: 600 })); }
   async complete(id: string, leaseToken: string, safeResult: Record<string, unknown>): Promise<boolean> { return Boolean(await this.rpcScalar("complete_ops_action", { p_id: id, p_lease_token: leaseToken, p_safe_result: safeResult })); }
   async fail(id: string, leaseToken: string, error: string, retryable: boolean): Promise<string | null> { const value = await this.rpcScalar("fail_ops_action", { p_id: id, p_lease_token: leaseToken, p_error: error.slice(0, 500), p_retryable: retryable }); return value == null ? null : String(value); }

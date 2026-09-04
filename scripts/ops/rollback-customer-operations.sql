@@ -100,6 +100,14 @@ drop function if exists public.complete_ops_projection(uuid,uuid,uuid);
 drop function if exists public.claim_ops_projection(text,integer);
 drop function if exists public.enqueue_ops_projection(uuid,text,text,text,text,text,bigint,jsonb);
 drop function if exists public.reap_ops_actions();
+-- The enquiry assignment capability was added after the original customer-ops
+-- rollback list. Revoke it before dropping its trigger/function so a stale
+-- PostgREST schema cache or privilege grant cannot retain the mutation path.
+revoke all on function public.assign_ops_enquiry(uuid,uuid,uuid,bigint,uuid) from public, anon, authenticated, service_role;
+revoke all on function public.ops_enquiry_association_version() from public, anon, authenticated, service_role;
+drop function if exists public.assign_ops_enquiry(uuid,uuid,uuid,bigint,uuid);
+drop trigger if exists ops_enquiry_association_version on public.ops_enquiry_associations;
+drop function if exists public.ops_enquiry_association_version();
 drop function if exists public.fail_ops_action(uuid,uuid,text,boolean);
 drop function if exists public.complete_ops_action(uuid,uuid,jsonb);
 drop function if exists public.heartbeat_ops_action(uuid,uuid,integer);

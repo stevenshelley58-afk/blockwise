@@ -4,7 +4,7 @@ import { parseOpsAction, actionCapability, type OpsActionEnvelope } from "../../
 import { authenticate } from "./auth.ts";
 import { loadConfig, type ControlConfig } from "./config.ts";
 import { createSupabaseRepository, type ActionRepository } from "./repository.ts";
-import { InternalBlockwiseExecutor, runOneAction } from "./executor.ts";
+import { InternalBlockwiseExecutor, runMaintenance } from "./executor.ts";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const CORRELATION = /^[A-Za-z0-9._:-]{8,128}$/;
@@ -59,7 +59,7 @@ export async function startControlEdge(config = loadConfig()): Promise<void> {
   const repo = await createSupabaseRepository(config.supabaseUrl, config.supabaseServiceRoleKey); const executor = new InternalBlockwiseExecutor(config.executorUrl, config.executorSecret);
   const server = createControlEdgeServer({ config, repo, executor });
   server.listen(config.port, config.host, () => console.log(JSON.stringify({ event: "control_edge_started", host: config.host, port: config.port, worker: config.workerEnabled })));
-  if (config.workerEnabled) { const tick = async () => { try { await runOneAction(repo, executor); } catch (error) { console.error(JSON.stringify({ event: "control_edge_worker_error", error: error instanceof Error ? error.message.slice(0, 160) : "unknown" })); } }; await tick(); const timer = setInterval(tick, config.workerIntervalMs); timer.unref(); }
+  if (config.workerEnabled) { const tick = async () => { try { await runMaintenance(repo, executor); } catch (error) { console.error(JSON.stringify({ event: "control_edge_worker_error", error: error instanceof Error ? error.message.slice(0, 160) : "unknown" })); } }; await tick(); const timer = setInterval(tick, config.workerIntervalMs); timer.unref(); }
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) startControlEdge().catch((error) => { console.error(error instanceof Error ? error.message : "control edge failed"); process.exitCode = 1; });

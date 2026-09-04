@@ -57,7 +57,9 @@ the deployment's equivalent non-root UID); otherwise the fail-closed file
 checks intentionally refuse to start.
 
 `CONTROL_EDGE_WORKER_ENABLED=true` enables the lease claimant in the same
-process. For larger deployments, run a second replica with the worker enabled;
+process. Each worker tick first runs the durable `reap_ops_actions` lease
+recovery RPC and then claims at most one action; expired leases are therefore
+recovered after a crash without an ad-hoc in-memory queue. For larger deployments, run a second replica with the worker enabled;
 the database claim RPC uses `SKIP LOCKED`, lease tokens, version fencing, and
 monotonic receipts, so crash replay is safe. A lost lease cannot settle an
 action. HTTP `429` and `5xx` executor responses retry; other 4xx responses are
@@ -68,9 +70,11 @@ permanent failures.
 Frank PR #121 currently has a legacy bearer-only dispatcher payload. It must
 be updated to send the complete action envelope, HMAC headers, nonce, and
 `ops.write` scope, then poll the signed `ops.read` status route using the
-workspace header. The Blockwise internal executor route must be implemented by
-the product app/domain owner and must itself enforce the action target and
-expected-version checks before performing the existing invitation, session,
-enquiry, or billing capability. Until that patch and the VPS private-network
-deployment are complete, this service is a tested foundation, not a live
-operator control path.
+workspace header. The product-side executor is shipped at
+`/api/internal/customer-ops/actions`; it re-reads the leased outbox row,
+deep-compares the immutable envelope, re-checks the operator role, and calls
+the existing invitation/session/enquiry/billing domain capabilities. AAL2 is
+an evidence boundary: Frank must perform live MFA before signing; the product
+executor does not trust an unverified caller claim. Until the Frank patch and
+private-network VPS deployment are complete, this is not a live operator
+control path.

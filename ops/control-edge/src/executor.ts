@@ -13,16 +13,19 @@ export class InternalBlockwiseExecutor {
   async execute(action: ClaimedAction): Promise<ExecutorResult> {
     if (!AVAILABLE.has(action.action_type)) throw new ExecutorError("action_capability_not_available", false);
     if (!this.baseUrl) throw new ExecutorError("action_executor_not_configured", false);
-    const body = JSON.stringify({ schema: "blockwise.ops.action.v1", actionId: action.action_id, leaseToken: action.lease_token, workspaceId: action.workspace_id, customerId: action.customer_id, actor: { operatorId: action.actor_operator_id, role: action.actor_role, aal: "aal2" }, action: action.action_type, target: { type: action.target_type, id: action.target_id }, expectedVersion: action.expected_version, reason: action.reason, payload: action.payload, createdAt: new Date(Date.now() - 1000).toISOString(), expiresAt: action.expires_at });
+    const body = JSON.stringify({ schema: "blockwise.ops.action.v1", actionId: action.action_id, leaseToken: action.lease_token, workspaceId: action.workspace_id, customerId: action.customer_id, actor: { operatorId: action.actor_operator_id, role: action.actor_role, aal: "aal2" }, action: action.action_type, target: { type: action.target_type, id: action.target_id }, expectedVersion: action.expected_version, idempotencyKey: action.idempotency_key, reason: action.reason, payload: action.payload, createdAt: new Date(action.created_at).toISOString(), expiresAt: new Date(action.expires_at).toISOString() });
     const url = new URL("/api/internal/customer-ops/actions", this.baseUrl);
     const timestamp = Math.floor(Date.now() / 1000).toString(); const nonce = randomBytes(18).toString("base64url");
     const signature = signRequest(this.secret, { timestamp, nonce, scope: "ops.execute", method: "POST", path: `${url.pathname}${url.search}`, body });
     const response = await new Promise<{ status: number; body: string }>((resolve, reject) => {
-      const timer = setTimeout(() => reject(new ExecutorError("executor_timeout", true)), this.timeoutMs);
-      const req = request(url, { method: "POST", headers: { "content-type": "application/json", "content-length": Buffer.byteLength(body), "x-blockwise-timestamp": timestamp, "x-blockwise-nonce": nonce, "x-blockwise-scope": "ops.execute", "x-blockwise-signature": signature } }, (res) => {
-        const chunks: Buffer[] = []; res.on("data", (chunk) => chunks.push(Buffer.from(chunk))); res.on("end", () => { clearTimeout(timer); resolve({ status: res.statusCode ?? 599, body: Buffer.concat(chunks).toString("utf8").slice(0, 8192) }); });
+      let settled = false; let outbound: ReturnType<typeof request> | null = null;
+      const timer = setTimeout(() => { if (!settled) { settled = true; outbound?.destroy(); reject(new ExecutorError("executor_timeout", true)); } }, this.timeoutMs);
+      outbound = request(url, { method: "POST", headers: { "content-type": "application/json", "content-length": Buffer.byteLength(body), "x-blockwise-timestamp": timestamp, "x-blockwise-nonce": nonce, "x-blockwise-scope": "ops.execute", "x-blockwise-signature": signature } }, (res) => {
+        const chunks: Buffer[] = []; let size = 0;
+        res.on("data", (chunk) => { if (settled) return; const value = Buffer.from(chunk); size += value.length; if (size > 8192) { settled = true; res.destroy(); reject(new ExecutorError("executor_response_too_large", false)); return; } chunks.push(value); });
+        res.on("end", () => { if (settled) return; settled = true; clearTimeout(timer); resolve({ status: res.statusCode ?? 599, body: Buffer.concat(chunks).toString("utf8") }); });
       });
-      req.on("error", (error) => { clearTimeout(timer); reject(new ExecutorError(error.message.slice(0, 200), true)); }); req.write(body); req.end();
+      outbound.on("error", (error) => { if (settled) return; settled = true; clearTimeout(timer); reject(new ExecutorError(error.message.slice(0, 200), true)); }); outbound.write(body); outbound.end();
     });
     if (response.status === 429 || response.status >= 500) throw new ExecutorError(`executor_http_${response.status}`, true);
     if (response.status < 200 || response.status >= 300) throw new ExecutorError(`executor_http_${response.status}`, false);
@@ -42,4 +45,9 @@ export async function runOneAction(repo: ActionRepository, executor: InternalBlo
     try { await repo.fail(action.id, action.lease_token, typed.message, typed.retryable); } catch { /* the lease/reaper owns recovery */ }
   }
   return true;
+}
+
+export async function runMaintenance(repo: ActionRepository, executor: InternalBlockwiseExecutor): Promise<boolean> {
+  await repo.reap();
+  return runOneAction(repo, executor);
 }

@@ -65,6 +65,12 @@ Receipts are append-only and each transition is mirrored to `audit_logs`.
 Claims, heartbeats, settlement, and failure all reject or supersede stale
 versions for the same workspace/target under a transaction lock.
 
+The `aal2` field is an evidence boundary, not an MFA implementation in this
+service: Frank must authenticate the current operator at AAL2 before signing
+and enqueueing an action. The control edge and product executor re-check the
+recorded operator ID/role and reject a revoked or demoted operator at execution;
+they do not treat a caller-provided AAL2 claim as a substitute for live MFA.
+
 The database trigger binds every target to the requested workspace before an
 intent is stored: profiles and sessions must be workspace members, invitations
 and bookings must belong to the workspace, enquiries must already have an
