@@ -314,6 +314,16 @@ begin
   if p_workspace_id is null or p_enquiry_id is null or p_expected_version is null or p_expected_version < 1 or p_actor_profile_id is null then
     raise exception 'invalid enquiry assignment identity' using errcode = '22023';
   end if;
+  perform 1 from public.workspaces where id=p_workspace_id for update;
+  if not found then
+    raise exception 'workspace_not_found' using errcode = '23503';
+  end if;
+  if not exists (
+    select 1 from public.profiles
+      where id=p_actor_profile_id and is_operator=true and operator_role in ('owner','support')
+  ) then
+    raise exception 'operator_required' using errcode = '42501';
+  end if;
   if p_assignee_profile_id is not null and not exists (
     select 1 from public.workspace_members where workspace_id=p_workspace_id and profile_id=p_assignee_profile_id
   ) then
