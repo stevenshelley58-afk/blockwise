@@ -70,7 +70,7 @@ jobs:
           set -Eeuo pipefail
           test "$(docker image inspect "$PRODUCT_IMAGE" --format '{{.Config.User}}')" = "65532"
           test "$(docker image inspect "$PRODUCT_IMAGE" --format '{{json .Config.Entrypoint}}')" = '["/nodejs/bin/node"]'
-          docker run --rm "$PRODUCT_IMAGE" -e "const fs=require('fs'); for (const p of ['server.js','public','.next/static']) if (!fs.existsSync(p)) process.exit(1)"
+          docker run --rm "$PRODUCT_IMAGE" -e "const fs=require('fs'); const {createCanvas}=require('@napi-rs/canvas'); const sharp=require('sharp'); if (!createCanvas(1,1).toDataURL().startsWith('data:image/png')) process.exit(1); sharp({create:{width:1,height:1,channels:4,background:{r:0,g:0,b:0,alpha:0}}}).png().toBuffer().then(b=>{if(!b.length)process.exit(1)}).catch(()=>process.exit(1)); for (const p of ['server.js','public','public/fonts','.next/static']) if (!fs.existsSync(p)) process.exit(1)"
           container_id=$(docker run -d --user 65532:65532 --publish 18080:3000 \
             --env HOSTNAME=0.0.0.0 \
             --env PORT=3000 \
