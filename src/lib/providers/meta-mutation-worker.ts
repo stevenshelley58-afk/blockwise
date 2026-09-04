@@ -1,5 +1,6 @@
 import { executeMetaPlanMutation, type MetaPlanMutation, type MetaPlanMutationAction } from "./meta-mutations.ts";
 import { loadStoredProviderTokens } from "./provider-connections.ts";
+import { metaPublishProviderWritesEnabled } from "./meta-provider-write-gate.ts";
 import { loadMetaPublishPlan } from "./meta-execution.ts";
 import { queueReportingRefresh } from "../meta-monitor/reporting-refresh-queue.ts";
 import type { createSupabaseServiceClient } from "../supabase/service.ts";
@@ -33,14 +34,18 @@ export async function executeMetaMutationById(input: {
   mutationId: string;
   fetchImpl?: typeof fetch;
   compensationFetchImpl?: typeof fetch;
+  onCheckpoint?: () => Promise<void>;
 }) {
   const mutation = await loadMutation(input.serviceSupabase, input.workspaceId, input.mutationId);
 
-  if (!providerWritesEnabled()) {
+  const planBackedActivationAllowed = mutation.action !== "activate" || !mutation.planId ||
+    metaPublishProviderWritesEnabled(mutation.workspaceId);
+  if (!providerWritesEnabled() || !planBackedActivationAllowed) {
     const skipped = {
       ...mutation,
       status: "failed" as const,
-      lastError: "Provider writes are disabled by BLOCKWISE_ENABLE_PROVIDER_WRITES.",
+      lastError: "Provider writes are disabled for this workspace by the Meta publish safety gate.",
+      unconfirmedPauseIds: undefined as string[] | undefined,
       updatedAt: new Date().toISOString(),
     };
     await updateMutation(input.serviceSupabase, skipped);
@@ -69,6 +74,7 @@ export async function executeMetaMutationById(input: {
     updatedAt: new Date().toISOString(),
   });
 
+  let providerExecutionOutcome: MetaPlanMutation | null = null;
   try {
     const tokens = await loadStoredProviderTokens(input.serviceSupabase, providerConnectionId);
 
@@ -83,6 +89,7 @@ export async function executeMetaMutationById(input: {
       accessToken: tokens.accessToken,
       fetchImpl: input.fetchImpl,
       compensationFetchImpl: input.compensationFetchImpl,
+      onCheckpoint: input.onCheckpoint ? async () => input.onCheckpoint?.() : undefined,
     });
     const updated = {
       ...mutation,
@@ -98,22 +105,15 @@ export async function executeMetaMutationById(input: {
     const unconfirmedPauseIds = "unconfirmedPauseIds" in result
       ? (result as { unconfirmedPauseIds?: string[] }).unconfirmedPauseIds
       : undefined;
-    const executionOutcome = unconfirmedPauseIds?.length
-      ? { ...updated, unconfirmedPauseIds }
-      : updated;
+    const executionOutcome = { ...updated, unconfirmedPauseIds };
+    providerExecutionOutcome = updated;
 
-    await updateMutation(input.serviceSupabase, updated);
-    await input.serviceSupabase.from("audit_logs").insert({
-      workspace_id: input.workspaceId,
-      actor_profile_id: mutation.requestedBy,
-      action: `meta.${mutation.action}`,
-      target_type: "meta_publish_plan_mutation",
-      target_id: mutation.mutationId,
-      metadata: {
-        planId: mutation.planId,
-        status: result.status,
-        lastError: result.lastError,
-      },
+    const outcomeStatus = mutation.action === "activate" && result.status === "failed"
+      ? unconfirmedPauseIds?.length ? "unconfirmed" : "confirmed_paused"
+      : null;
+    await finalizeMutationWithAudit(input.serviceSupabase, updated, {
+      outcomeStatus,
+      unconfirmedPauseIds: unconfirmedPauseIds ?? [],
     });
 
     if (result.status === "applied") {
@@ -134,9 +134,59 @@ export async function executeMetaMutationById(input: {
       lastError: error instanceof Error ? error.message : "Meta mutation worker failed.",
       updatedAt: new Date().toISOString(),
     };
-    await updateMutation(input.serviceSupabase, failed);
+    if (providerExecutionOutcome && mutation.action === "activate") {
+      await markActivationFinalizationUnconfirmed(input.serviceSupabase, providerExecutionOutcome).catch(() => undefined);
+    } else if (!providerExecutionOutcome) {
+      await finalizeMutationWithAudit(input.serviceSupabase, failed, {
+        outcomeStatus: mutation.action === "activate" ? "confirmed_paused" : null,
+        unconfirmedPauseIds: [],
+      }).catch(async () => updateMutation(input.serviceSupabase, failed));
+    }
     throw error;
   }
+}
+
+async function finalizeMutationWithAudit(
+  serviceSupabase: SupabaseServiceClient,
+  mutation: MetaPlanMutation,
+  outcome: { outcomeStatus: "confirmed_paused" | "unconfirmed" | null; unconfirmedPauseIds: string[] },
+) {
+  const { data, error } = await serviceSupabase.rpc("finalize_meta_publish_plan_mutation", {
+    p_workspace_id: mutation.workspaceId,
+    p_mutation_id: mutation.mutationId,
+    p_status: mutation.status,
+    p_request_log: mutation.requestLog,
+    p_response_log: mutation.responseLog,
+    p_last_error: mutation.lastError,
+    p_outcome_status: outcome.outcomeStatus,
+    p_unconfirmed_pause_ids: outcome.unconfirmedPauseIds,
+  });
+  if (error || data !== true) throw new Error(error?.message ?? "Meta mutation outcome and audit could not be finalized atomically.");
+}
+
+async function markActivationFinalizationUnconfirmed(
+  serviceSupabase: SupabaseServiceClient,
+  mutation: MetaPlanMutation,
+) {
+  const ids = [
+    typeof mutation.payload.campaignId === "string" ? mutation.payload.campaignId : null,
+    ...(mutation.payload.adSetIds ?? []),
+    ...(mutation.payload.adIds ?? []),
+  ].filter((value): value is string => Boolean(value));
+  const { error } = await serviceSupabase
+    .from("meta_publish_plan_mutations")
+    .update({
+      status: "failed",
+      request_log_json: mutation.requestLog,
+      response_log_json: mutation.responseLog,
+      outcome_status: "unconfirmed",
+      unconfirmed_pause_ids_json: ids,
+      last_error: "Meta returned a provider outcome, but its durable audit finalization failed. Verify these objects in Meta Ads Manager.",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("workspace_id", mutation.workspaceId)
+    .eq("id", mutation.mutationId);
+  if (error) throw new Error(error.message);
 }
 
 /**

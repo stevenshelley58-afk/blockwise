@@ -1,5 +1,6 @@
 import { assetUrlForRow, type AdStudioBrandAssetRow } from "./assets.ts";
 import { storagePathFromMediaSrc } from "./image-src.ts";
+import { gallerySampleProxyUrl } from "./pack-gallery.ts";
 import { createAdStudioMediaUrls } from "./media-urls.ts";
 import { isExampleBrandKitSourceUrl } from "./persistence.ts";
 import { adFormatLabel, deriveAdLibraryStatus, type AdLibraryStatus } from "./library-contract.ts";
@@ -173,7 +174,7 @@ export async function loadAdStudioLibraryPage(input: {
         adId: String(row.id),
         templateId: String(row.template_id ?? ""),
         name: typeof row.name === "string" && row.name.trim() ? row.name : "Untitled ad",
-        src: src ?? (templateId ? `/api/adstudio/templates/${encodeURIComponent(templateId)}/sample?placement=feed` : null),
+        src: src ?? (templateId ? gallerySampleProxyUrl(templateId, "feed", String(row.id)) : null),
         format: adFormatLabel(Boolean(feedPath), Boolean(storyPath)),
         updatedAt: typeof row.updated_at === "string" ? row.updated_at : null,
         revisionId: typeof revision?.id === "string" ? revision.id : null,

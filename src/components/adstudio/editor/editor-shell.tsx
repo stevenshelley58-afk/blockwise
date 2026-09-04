@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { META_COPY_CONSTRAINTS } from "../../../lib/adstudio/meta-copy-contract";
+import { templateAssetProxyUrl } from "@/lib/adstudio/pack-gallery";
 
 // ---------------------------------------------------------------------------
 // Editor Shell — Phase 6 foundation
@@ -100,7 +101,7 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
   /** Which slot's crop dialog is open — always the ACTIVE placement's crop. */
   const [cropTarget, setCropTarget] = useState<{ slot: ImageSlotLayer; placement: Placement } | null>(null);
   const [proposalBrief, setProposalBrief] = useState("");
-  const [proposal, setProposal] = useState<{ onImage: Record<string, string>; copy: MetaCopy; source: string } | null>(null);
+  const [proposal, setProposal] = useState<{ onImage: Record<string, string>; copy: Partial<MetaCopy>; source: string } | null>(null);
   const [proposalBusy, setProposalBusy] = useState(false);
   const [pendingImageUploads, setPendingImageUploads] = useState(0);
   const [saveConflict, setSaveConflict] = useState(false);
@@ -240,16 +241,27 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ brief: proposalBrief, copy: state.metaCopy }),
       });
-      const body = await response.json() as { onImage?: Record<string, string>; copy?: MetaCopy; source?: string; error?: string };
+      const body = await response.json() as { onImage?: Record<string, string>; copy?: Partial<MetaCopy>; source?: string; error?: string };
       if (!response.ok || !body.copy) throw new Error(body.error ?? "Copy proposal failed.");
-      applyGeneratedCopy(body.onImage ?? {}, body.copy);
+      setProposal({ onImage: body.onImage ?? {}, copy: body.copy, source: body.source ?? "AI" });
       setError(null);
     } catch (error) {
       setError(error instanceof Error ? error.message : "Copy proposal failed.");
     } finally {
       setProposalBusy(false);
     }
-  }, [adId, workspaceId, proposalBrief, state.metaCopy, setError, applyGeneratedCopy]);
+  }, [adId, workspaceId, proposalBrief, state.metaCopy, setError]);
+
+  const applyProposal = useCallback((field?: keyof MetaCopy) => {
+    if (!proposal) return;
+    if (field) {
+      const value = proposal.copy[field];
+      if (typeof value === "string") applyGeneratedCopy({}, { ...state.metaCopy, [field]: value });
+      return;
+    }
+    applyGeneratedCopy(proposal.onImage, { ...state.metaCopy, ...proposal.copy });
+    setProposal(null);
+  }, [proposal, state.metaCopy, applyGeneratedCopy]);
 
   /**
    * Publish always freezes the LAST SAVED revision (server-side). If the
@@ -334,6 +346,7 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
   const persistableLibraryAssets = libraryAssets?.filter((asset): asset is { id: string; url: string; label: string } => Boolean(asset.id));
   return <RedesignedEditor
     pack={pack}
+    adId={adId}
     state={state}
     activeLayout={activeLayout}
     templateId={pack.templateId}
@@ -375,6 +388,7 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
     setProposalBrief={setProposalBrief}
     proposalBusy={proposalBusy}
     proposal={proposal}
+    applyProposal={applyProposal}
     proposeCopy={proposeCopy}
     name={name}
     setName={setName}
@@ -382,15 +396,15 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
   />;
 }
 
-function RedesignedEditor({ pack, templateId, state, activeLayout, brandColours, brandBusinessName, brandLogoUrl, libraryAssets, canSave, canUndo, canRedo, saveConflict, pendingImageUploads, inspectorTab, setInspectorTab, mobileInspectorOpen, setMobileInspectorOpen, handleSave, handlePublish, handleKeyDown, undo, redo, setActivePlacement, selectLayer, handleColourModeChange, handleCustomColourChange, handleTemplateCopyChange, handleBusinessNameChange, handleLibraryPick, handleImageChange, openCrop, openCropForInput, updateTextValue, updateMetaCopy, updateCrop, setError, cropTarget, setCropTarget, proposalBrief, setProposalBrief, proposal, proposalBusy, proposeCopy, name, setName, persistName }: {
-  pack: AdTemplate; templateId: string; state: EditorState; activeLayout: AdTemplate["feedLayout"]; brandColours: BrandPackColours | null; brandBusinessName: string; brandLogoUrl: string | null; libraryAssets?: Array<{ id: string; url: string; label: string }>; canSave: boolean; canUndo: boolean; canRedo: boolean; saveConflict: boolean; pendingImageUploads: number;
+function RedesignedEditor({ pack, adId, templateId, state, activeLayout, brandColours, brandBusinessName, brandLogoUrl, libraryAssets, canSave, canUndo, canRedo, saveConflict, pendingImageUploads, inspectorTab, setInspectorTab, mobileInspectorOpen, setMobileInspectorOpen, handleSave, handlePublish, handleKeyDown, undo, redo, setActivePlacement, selectLayer, handleColourModeChange, handleCustomColourChange, handleTemplateCopyChange, handleBusinessNameChange, handleLibraryPick, handleImageChange, openCrop, openCropForInput, updateTextValue, updateMetaCopy, updateCrop, setError, cropTarget, setCropTarget, proposalBrief, setProposalBrief, proposal, applyProposal, proposalBusy, proposeCopy, name, setName, persistName }: {
+  pack: AdTemplate; adId: string; templateId: string; state: EditorState; activeLayout: AdTemplate["feedLayout"]; brandColours: BrandPackColours | null; brandBusinessName: string; brandLogoUrl: string | null; libraryAssets?: Array<{ id: string; url: string; label: string }>; canSave: boolean; canUndo: boolean; canRedo: boolean; saveConflict: boolean; pendingImageUploads: number;
   inspectorTab: InspectorTab; setInspectorTab: (value: InspectorTab) => void; mobileInspectorOpen: boolean; setMobileInspectorOpen: (value: boolean) => void; handleSave: () => Promise<boolean>; handlePublish: () => Promise<void>; handleKeyDown: (event: KeyboardEvent) => void; undo: () => void; redo: () => void; setActivePlacement: (value: Placement) => void; selectLayer: (value: string | null) => void;
   handleColourModeChange: (mode: ColourMode) => void; handleCustomColourChange: (role: ColourRole, hex: string) => void; handleTemplateCopyChange: (enabled: boolean) => void; handleBusinessNameChange: (value: string) => void; handleLibraryPick: (key: string, sourceAssetId: string) => Promise<void>; handleImageChange: (key: string, change: { file: File; previewUrl: string } | null) => Promise<void>; openCrop: (slot: ImageSlotLayer) => void; openCropForInput: (key: string) => void; updateTextValue: (key: string, value: string) => void; updateMetaCopy: (field: keyof MetaCopy, value: string) => void; updateCrop: (key: string, placement: Placement, crop: Rect) => void; setError: (value: string | null) => void;
-  cropTarget: { slot: ImageSlotLayer; placement: Placement } | null; setCropTarget: (value: { slot: ImageSlotLayer; placement: Placement } | null) => void; proposalBrief: string; setProposalBrief: (value: string) => void; proposal: { onImage: Record<string, string>; copy: MetaCopy; source: string } | null; proposalBusy: boolean; proposeCopy: () => Promise<void>;
+  cropTarget: { slot: ImageSlotLayer; placement: Placement } | null; setCropTarget: (value: { slot: ImageSlotLayer; placement: Placement } | null) => void; proposalBrief: string; setProposalBrief: (value: string) => void; proposal: { onImage: Record<string, string>; copy: Partial<MetaCopy>; source: string } | null; applyProposal: (field?: keyof MetaCopy) => void; proposalBusy: boolean; proposeCopy: () => Promise<void>;
   name: string; setName: (value: string) => void; persistName: () => Promise<void>;
 }) {
   const defaultImageValues = Object.fromEntries(pack.imageInputs.flatMap(input => input.defaultAssetKey
-    ? [[input.key, `/api/adstudio/templates/${encodeURIComponent(templateId)}/assets/${encodeURIComponent(input.defaultAssetKey)}`] as const]
+    ? [[input.key, templateAssetProxyUrl(templateId, input.defaultAssetKey, adId)!] as const]
     : []));
   const customerImageValues = Object.fromEntries(state.imageValues.flatMap(value => {
     const image = value.previewUrl ?? value.dataUrl;
@@ -406,6 +420,7 @@ function RedesignedEditor({ pack, templateId, state, activeLayout, brandColours,
   const [mobileLayersOpen, setMobileLayersOpen] = useState(false);
   const metaPreviewBase = {
     templateId,
+    existingAdId: adId,
     colours: state.resolvedColourMap,
     textValues: previewCopy,
     imageValues: previewImages,
@@ -430,7 +445,7 @@ function RedesignedEditor({ pack, templateId, state, activeLayout, brandColours,
     />
   );
   const metaPreview = state.activePlacement === "feed" ? feedMetaPreview : storyMetaPreview;
-  const inspector = <InspectorContent tab={inspectorTab} pack={pack} state={state} defaultImageValues={defaultImageValues} brandColours={brandColours} brandBusinessName={brandBusinessName} libraryAssets={libraryAssets} onTextChange={updateTextValue} onImageChange={handleImageChange} onCropClick={openCropForInput} onMetaChange={updateMetaCopy} onColourModeChange={handleColourModeChange} onCustomColourChange={handleCustomColourChange} onTemplateCopyChange={handleTemplateCopyChange} onBusinessNameChange={handleBusinessNameChange} onLibraryPick={handleLibraryPick} proposalBrief={proposalBrief} proposal={proposal} proposalBusy={proposalBusy} onBriefChange={setProposalBrief} onPropose={proposeCopy} />;
+  const inspector = <InspectorContent tab={inspectorTab} pack={pack} state={state} defaultImageValues={defaultImageValues} brandColours={brandColours} brandBusinessName={brandBusinessName} libraryAssets={libraryAssets} onTextChange={updateTextValue} onImageChange={handleImageChange} onCropClick={openCropForInput} onMetaChange={updateMetaCopy} onColourModeChange={handleColourModeChange} onCustomColourChange={handleCustomColourChange} onTemplateCopyChange={handleTemplateCopyChange} onBusinessNameChange={handleBusinessNameChange} onLibraryPick={handleLibraryPick} proposalBrief={proposalBrief} proposal={proposal} applyProposal={applyProposal} proposalBusy={proposalBusy} onBriefChange={setProposalBrief} onPropose={proposeCopy} />;
   const saveStatus = pendingImageUploads > 0 ? "Uploading…" : state.isSaving ? "Saving…" : state.isDirty ? "Unsaved changes" : state.lastSavedRevision !== null ? "Saved" : "Not saved yet";
   const workingLayout = state.activePlacement === "feed" ? pack.feedLayout : pack.storyLayout;
   const selectedLayer = workingLayout.layers.find(layer => layer.layerId === state.selectedLayerId) ?? null;
@@ -447,6 +462,7 @@ function RedesignedEditor({ pack, templateId, state, activeLayout, brandColours,
   const canvasFor = (placement: Placement, canvasZoom: "fit" | 0.8 | 1 | 1.25 = zoom, interactive = true) => (
     <DesignCanvas
       templateId={templateId}
+      existingAdId={adId}
       layout={placement === "feed" ? pack.feedLayout : pack.storyLayout}
       placement={placement}
       colours={state.resolvedColourMap}
@@ -536,6 +552,7 @@ function PlacementCanvas({ label, active = false, children }: { label: string; a
 
 type DesignCanvasProps = {
   templateId: string;
+  existingAdId: string;
   layout: Layout;
   placement: Placement;
   colours: AdTemplate["semanticColours"];
@@ -548,7 +565,7 @@ type DesignCanvasProps = {
   zoom?: "fit" | 0.8 | 1 | 1.25;
 };
 
-function DesignCanvas({ templateId, layout, placement, colours, imageValues, textValues, cropOverrides, selectedLayerId, onSelect, onCropImage, zoom = "fit" }: DesignCanvasProps) {
+function DesignCanvas({ templateId, existingAdId, layout, placement, colours, imageValues, textValues, cropOverrides, selectedLayerId, onSelect, onCropImage, zoom = "fit" }: DesignCanvasProps) {
   const viewport = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: 800, height: 700 });
   useEffect(() => { const node = viewport.current; if (!node) return; const observer = new ResizeObserver(() => setSize({ width: node.clientWidth, height: node.clientHeight })); observer.observe(node); return () => observer.disconnect(); }, []);
@@ -556,15 +573,15 @@ function DesignCanvas({ templateId, layout, placement, colours, imageValues, tex
   const fit = Math.min((size.width - 24) / dims.width, (size.height - 24) / dims.height, 1);
   const scale = zoom === "fit" ? Math.max(0.05, Math.min(1, fit)) : zoom;
   const width = Math.round(dims.width * scale), height = Math.round(dims.height * scale);
-  return <div ref={viewport} className="flex min-h-0 min-w-0 flex-1 items-start justify-start overflow-auto p-3"><div className="m-auto" style={{ width, height, minWidth: width, minHeight: height }}><LayeredCanvas templateId={templateId} layout={layout} colours={colours} imageValues={imageValues} textValues={textValues} cropOverrides={cropOverrides} selectedLayerId={selectedLayerId} onSelect={onSelect} onCropImage={onCropImage} className="h-full w-full" /></div></div>;
+  return <div ref={viewport} className="flex min-h-0 min-w-0 flex-1 items-start justify-start overflow-auto p-3"><div className="m-auto" style={{ width, height, minWidth: width, minHeight: height }}><LayeredCanvas templateId={templateId} existingAdId={existingAdId} layout={layout} colours={colours} imageValues={imageValues} textValues={textValues} cropOverrides={cropOverrides} selectedLayerId={selectedLayerId} onSelect={onSelect} onCropImage={onCropImage} className="h-full w-full" /></div></div>;
 }
 
 function InspectorTabs({ value, onChange }: { value: InspectorTab; onChange: (value: InspectorTab) => void }) {
   return <Tabs value={value} onValueChange={next => onChange(next as InspectorTab)} className="border-b border-border p-3"><TabsList aria-label="Editor sections" className="grid h-auto w-full grid-cols-3 gap-1 bg-muted/50 p-1">{INSPECTOR_TABS.map(({ value: tab, label, icon: Icon }) => <TabsTrigger key={tab} value={tab} className="min-h-11 justify-center gap-2 px-2 text-xs"><Icon className="size-4" />{label}</TabsTrigger>)}</TabsList></Tabs>;
 }
 
-function InspectorContent({ tab, pack, state, defaultImageValues, brandColours, brandBusinessName, libraryAssets, onTextChange, onImageChange, onCropClick, onMetaChange, onColourModeChange, onCustomColourChange, onTemplateCopyChange, onBusinessNameChange, onLibraryPick, proposalBrief, proposal, proposalBusy, onBriefChange, onPropose }: { tab: InspectorTab; pack: AdTemplate; state: EditorState; defaultImageValues: Record<string, string>; brandColours: BrandPackColours | null; brandBusinessName: string; libraryAssets?: Array<{ id: string; url: string; label: string }>; onTextChange: (key: string, value: string) => void; onImageChange: (key: string, change: { file: File; previewUrl: string } | null) => Promise<void>; onCropClick: (key: string) => void; onMetaChange: (field: keyof MetaCopy, value: string) => void; onColourModeChange: (mode: ColourMode) => void; onCustomColourChange: (role: ColourRole, hex: string) => void; onTemplateCopyChange: (enabled: boolean) => void; onBusinessNameChange: (value: string) => void; onLibraryPick: (key: string, sourceAssetId: string) => Promise<void>; proposalBrief: string; proposal: { onImage: Record<string, string>; copy: MetaCopy; source: string } | null; proposalBusy: boolean; onBriefChange: (value: string) => void; onPropose: () => Promise<void> }) {
-  if (tab === "copy") return <div><ProposalPanel brief={proposalBrief} busy={proposalBusy} onBriefChange={onBriefChange} onPropose={onPropose} /><MetaCopyPanel values={state.metaCopy} onChange={onMetaChange} /></div>;
+function InspectorContent({ tab, pack, state, defaultImageValues, brandColours, brandBusinessName, libraryAssets, onTextChange, onImageChange, onCropClick, onMetaChange, onColourModeChange, onCustomColourChange, onTemplateCopyChange, onBusinessNameChange, onLibraryPick, proposalBrief, proposal, applyProposal, proposalBusy, onBriefChange, onPropose }: { tab: InspectorTab; pack: AdTemplate; state: EditorState; defaultImageValues: Record<string, string>; brandColours: BrandPackColours | null; brandBusinessName: string; libraryAssets?: Array<{ id: string; url: string; label: string }>; onTextChange: (key: string, value: string) => void; onImageChange: (key: string, change: { file: File; previewUrl: string } | null) => Promise<void>; onCropClick: (key: string) => void; onMetaChange: (field: keyof MetaCopy, value: string) => void; onColourModeChange: (mode: ColourMode) => void; onCustomColourChange: (role: ColourRole, hex: string) => void; onTemplateCopyChange: (enabled: boolean) => void; onBusinessNameChange: (value: string) => void; onLibraryPick: (key: string, sourceAssetId: string) => Promise<void>; proposalBrief: string; proposal: { onImage: Record<string, string>; copy: Partial<MetaCopy>; source: string } | null; applyProposal: (field?: keyof MetaCopy) => void; proposalBusy: boolean; onBriefChange: (value: string) => void; onPropose: () => Promise<void> }) {
+  if (tab === "copy") return <div><ProposalPanel brief={proposalBrief} proposal={proposal} applyProposal={applyProposal} busy={proposalBusy} onBriefChange={onBriefChange} onPropose={onPropose} /><MetaCopyPanel values={state.metaCopy} onChange={onMetaChange} /></div>;
   if (tab === "colours") return <aside aria-label="Colours" className="space-y-4 border-t border-border p-4"><div><h3 className="text-sm font-semibold">Colours</h3><p className="mt-1 text-xs leading-relaxed text-muted-foreground">Choose the colours that feel right for this ad.</p></div><ColourToggle mode={state.colourMode} brandPackAvailable={!!brandColours} resolvedColourMap={state.resolvedColourMap} onModeChange={onColourModeChange} onCustomColourChange={onCustomColourChange} /></aside>;
   return <InputsPanel textInputs={pack.textInputs} imageInputs={pack.imageInputs} textValues={state.textValues} imageValues={Object.fromEntries(state.imageValues.map(iv => [iv.inputKey, iv.previewUrl ?? iv.dataUrl]))} defaultImageValues={defaultImageValues} onTextChange={onTextChange} onImageChange={onImageChange} onCropClick={onCropClick} templateCopyApplied={state.templateCopyApplied} templateCopyAvailable={hasTemplateCopy(pack)} onTemplateCopyChange={onTemplateCopyChange} businessName={state.brandBusinessName} businessNameDefault={brandBusinessName} onBusinessNameChange={onBusinessNameChange} libraryAssets={libraryAssets} onLibraryPick={onLibraryPick} />;
 }
@@ -572,12 +589,16 @@ function InspectorContent({ tab, pack, state, defaultImageValues, brandColours, 
 function ProposalPanel({
   className,
   brief,
+  proposal,
+  applyProposal,
   busy,
   onBriefChange,
   onPropose,
 }: {
   className?: string;
   brief: string;
+  proposal: { onImage: Record<string, string>; copy: Partial<MetaCopy>; source: string } | null;
+  applyProposal: (field?: keyof MetaCopy) => void;
   busy: boolean;
   onBriefChange: (value: string) => void;
   onPropose: () => void;
@@ -587,10 +608,11 @@ function ProposalPanel({
       <div>
         <h3 className="mb-2 px-2 text-sm font-semibold text-foreground">AI brief</h3>
         <div className="mt-3">
-       <p className="mb-3 text-xs leading-relaxed text-muted-foreground">Replaces the current on-image text and Meta copy as one undoable change. Limits: primary {META_COPY_CONSTRAINTS.primaryText}, headline {META_COPY_CONSTRAINTS.headline}, description {META_COPY_CONSTRAINTS.description}, CTA {META_COPY_CONSTRAINTS.cta} characters.</p>
+      <p className="mb-3 text-xs leading-relaxed text-muted-foreground">Generate a draft to review. Nothing changes until you apply it. Limits: primary {META_COPY_CONSTRAINTS.primaryText}, headline {META_COPY_CONSTRAINTS.headline}, description {META_COPY_CONSTRAINTS.description}, CTA {META_COPY_CONSTRAINTS.cta} characters.</p>
       <label htmlFor="copy-suggestion-brief" className="mb-1 block text-sm font-medium text-foreground">What should the ad say?</label>
       <textarea id="copy-suggestion-brief" value={brief} onChange={event => onBriefChange(event.target.value)} rows={4} placeholder="Describe the property, offer or audience…" className="min-h-24 w-full rounded-(--r-card) border border-input bg-muted/30 px-3 py-2 text-base shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50" />
       <button type="button" onClick={onPropose} disabled={busy} className="mt-2 min-h-11 h-auto w-full justify-start rounded-full bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50">{busy ? "Generating…" : "Generate copy"}</button>
+      {proposal && <div className="mt-4 rounded-(--r-card) border border-border bg-muted/30 p-3"><p className="text-xs font-semibold" role="status" aria-live="polite">Proposal ready</p><p className="mt-1 text-xs text-muted-foreground">Review the generated fields, then apply all or just one field.</p><div className="mt-2 space-y-2">{(["primaryText", "headline", "description", "cta"] as const).filter(field => typeof proposal.copy[field] === "string").map(field => <div key={field} className="flex items-start justify-between gap-2"><span className="line-clamp-2 text-xs">{proposal.copy[field]}</span><button type="button" className="min-h-11 shrink-0 rounded-full border border-border px-3 text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" onClick={() => applyProposal(field)}>Apply {field === "primaryText" ? "primary text" : field}</button></div>)}</div><button type="button" className="mt-3 min-h-11 w-full rounded-full bg-primary px-3 text-sm font-semibold text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" onClick={() => applyProposal()}>Apply all</button></div>}
         </div>
       </div>
     </section>

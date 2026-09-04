@@ -3,26 +3,23 @@ import Link from "next/link";
 
 import { PublishFlow } from "./publish-flow";
 import { normalizeSavedPublishAudienceLocations } from "./publish-controls";
-import { loadCustomerAd } from "@/lib/adstudio/create-customer-ad";
-import { getTemplate } from "@/lib/adstudio/pack-gallery";
+import { CustomerAdNotFoundError, loadCustomerAd, parseCustomerAdId } from "@/lib/adstudio/create-customer-ad";
+import { getTemplateForExistingCustomerAd } from "@/lib/adstudio/pack-gallery";
 import { loadPublishState, PublishError, readTemplatePublishRequirements, validatePublishState } from "@/lib/adstudio/publish-adapter";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
+import { metaPublishProviderWritesEnabled } from "@/lib/providers/meta-provider-write-gate";
+import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const dynamic = "force-dynamic";
 
 // ---------------------------------------------------------------------------
 // Ad Studio — Publish flow.
 //
-// One click completes the whole server-side lifecycle: freezes the LAST
-// SAVED revision, creates the Meta objects and activates them. The receipt
-// reports "active" only after Meta confirms; partial failures report the
-// real state with a safe retry. Server-renders the frozen publish state,
-// issues, and provider-write mode; the client drives the publish call.
+// Two explicit steps: freeze the LAST SAVED revision and create PAUSED Meta
+// objects, then let the customer separately approve activation. Server-renders
+// the frozen publish state, issues, and provider-write mode; the client drives
+// both explicit actions.
 // ---------------------------------------------------------------------------
-
-function providerWritesEnabled() {
-  return process.env.BLOCKWISE_ENABLE_PROVIDER_WRITES === "true";
-}
 
 export default async function PublishPage({
   params,
@@ -32,14 +29,26 @@ export default async function PublishPage({
   searchParams?: Promise<{ adId?: string }>;
 }) {
   const { templateId } = await params;
-  const { supabase, access } = await requirePageSurfaceAccess("adstudio");
-  const pack = await getTemplate(supabase, templateId);
-  if (!pack) notFound();
-
-  const adId = (await searchParams)?.adId?.trim();
+  const adId = parseCustomerAdId((await searchParams)?.adId);
   if (!adId) notFound();
-  const ad = await loadCustomerAd(supabase, access.workspaceId, adId);
+  const { supabase, access } = await requirePageSurfaceAccess("adstudio");
+  let ad;
+  try {
+    ad = await loadCustomerAd(supabase, access.workspaceId, adId);
+  } catch (error) {
+    if (error instanceof CustomerAdNotFoundError) notFound();
+    throw error;
+  }
   if (ad.templateId !== templateId) notFound();
+  const serviceSupabase = createSupabaseServiceClient();
+  const pack = await getTemplateForExistingCustomerAd({
+    customerSupabase: supabase,
+    internalSupabase: serviceSupabase,
+    workspaceId: access.workspaceId,
+    adId,
+    templateId,
+  });
+  if (!pack) notFound();
   const { data: campaignMarkets, error: campaignMarketsError } = await supabase
     .from("adstudio_campaigns")
     .select("market_json")
@@ -56,7 +65,7 @@ export default async function PublishPage({
   let state: Awaited<ReturnType<typeof loadPublishState>> | null = null;
   let notSaved = false;
   try {
-    state = await loadPublishState(supabase, adId, access.workspaceId);
+    state = await loadPublishState(supabase, adId, access.workspaceId, { templateSupabase: serviceSupabase });
   } catch (err) {
     if (err instanceof PublishError && err.code === "not_saved") {
       notSaved = true;
@@ -72,7 +81,7 @@ export default async function PublishPage({
   const issues = state
     ? validatePublishState(state, { controls: validationControls }).filter((issue) => !isInteractiveDependencyIssue(issue))
     : [];
-  const providerWrites = providerWritesEnabled();
+  const providerWrites = metaPublishProviderWritesEnabled(access.workspaceId);
   const { data: metaConnection } = await supabase
     .from("provider_connections")
     .select("status")
@@ -81,7 +90,8 @@ export default async function PublishPage({
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  const automatedPublishAvailable = providerWrites && metaConnection?.status === "connected";
+  const metaConnectionConnected = metaConnection?.status === "connected";
+  const automatedPublishAvailable = providerWrites && metaConnectionConnected;
   const metadata = (pack as unknown as { metadata?: { title?: string } }).metadata;
   const templateName = metadata?.title?.trim() || pack.metadata.title || pack.templateId;
 
@@ -89,7 +99,7 @@ export default async function PublishPage({
     <div className="flex min-h-[calc(100dvh-54px)] flex-col bg-background text-foreground md:min-h-[calc(100dvh-60px)]">
       <header className="flex min-h-12 shrink-0 items-center border-b border-border bg-card px-4 md:px-5">
         <Link
-          href={`/ad-studio/templates/${encodeURIComponent(templateId)}`}
+          href={`/ad-studio/ads/${encodeURIComponent(adId)}`}
           className="inline-flex min-h-11 items-center gap-1.5 text-sm text-muted-foreground transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
@@ -126,6 +136,7 @@ export default async function PublishPage({
           audienceLocations={audienceLocations}
           canRequestManualPublish={access.isOperator || access.role === "owner" || access.role === "admin"}
           automatedPublishAvailable={automatedPublishAvailable}
+          metaConnectionConnected={metaConnectionConnected}
         />
       </div>
     </div>

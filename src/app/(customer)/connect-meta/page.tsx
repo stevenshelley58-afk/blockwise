@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { ConnectMetaGuide } from "@/components/meta/connect-meta-guide";
 import { canManageProviderConnections } from "@/lib/auth/access-control";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
+import { getMetaPartnerBusinessId } from "@/lib/providers/meta-partner";
 
 export const dynamic = "force-dynamic";
 
@@ -30,23 +31,28 @@ export default async function ConnectMetaPage() {
 
   return (
     <main
-      aria-label="Connect Meta"
-      className="mx-auto w-full max-w-[640px] px-4 pt-6 pb-28 md:px-6 md:pt-8 md:pb-16"
+      aria-label="Share Meta assets"
+      className="mx-auto w-full max-w-[760px] px-4 pt-6 pb-28 md:px-6 md:pt-8 md:pb-16"
     >
       <header className="mb-6">
         <p className="font-mono text-[9.5px] font-medium tracking-[0.12em] text-(--faint) uppercase">
-          Meta publishing
+          Meta partner access
         </p>
         <h1 className="mt-1 font-display text-[24px] font-extrabold tracking-[-0.02em] md:text-[27px]">
-          Publish your ads with Blockwise
+          Share your Meta assets with Blockwise
         </h1>
         <p className="mt-1 text-[13px] text-muted-foreground">
-          Meta app review is still in progress. You can prepare your ad now and request manual publishing by an
-          authorised Blockwise operator. This is not an API connection and does not bypass Meta&apos;s review.
+          Follow the real Meta screens below to share your ad account, Facebook
+          Page, and optional Instagram account. An authorised Blockwise operator
+          will verify the exact assets before publishing anything.
         </p>
       </header>
 
-      <ConnectMetaGuide workspaceId={access.workspaceId} canManage={canManage} />
+      <ConnectMetaGuide
+        workspaceId={access.workspaceId}
+        canManage={canManage}
+        businessId={getMetaPartnerBusinessId()}
+      />
     </main>
   );
 }

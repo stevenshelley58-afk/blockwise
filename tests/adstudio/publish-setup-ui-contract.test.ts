@@ -202,9 +202,18 @@ describe("explicit Meta publish setup", () => {
     assert.match(source, /I confirm this budget mode, spend, audience, placement, schedule, creative matrix and fulfilment setup is correct/);
     assert.doesNotMatch(source, /Fulfilment asset/);
     assert.match(source, /A typed file name is not accepted/);
-    // Publish is one action; the only follow-up is the safe retry that
-    // finishes activation for an existing plan (no duplicate objects).
-    assert.match(source, /Finish publishing — activate on Meta/);
+    // Creation and activation are separate explicit actions for the exact plan.
+    assert.match(source, /Create paused on Meta/);
+    assert.match(source, /Activate on Meta/);
+    assert.match(source, /AlertDialog/);
+    assert.match(source, /Keep paused/);
+    assert.match(source, /Activate ads/);
+    assert.match(source, /Audience \/ targeting/);
+    assert.doesNotMatch(source, /window\.confirm/);
+    assert.match(source, /clientMutationKey/);
+    assert.match(source, /controlsFingerprint/);
+    assert.match(source, /status === "publishing"/);
+    assert.match(source, /View results/);
     assert.match(source, /No new objects are created/);
     assert.match(source, /targets only the objects this publish created/);
   });

@@ -202,6 +202,15 @@ async function runEditorFlow(page: Page) {
   // media responses. It is safe to inspect this page without publishing.
   await page.getByRole("button", { name: "Review & publish", exact: true }).click();
   await expect(page).toHaveURL(/\/ad-studio\/templates\/[^/]+\/publish(?:\?|$)/);
+  for (const heading of [
+    "1. Creative & copy",
+    "2. Destination & form",
+    "3. Audience, budget & schedule",
+    "4. Review & create paused",
+  ]) {
+    await expect(page.getByRole("heading", { name: heading, exact: true })).toBeVisible();
+  }
+  await expect(page.getByText(/Step\s+2\s+of\s+4/i)).toBeVisible();
   const frozenFeed = page.getByRole("img", { name: "Saved Feed ad" });
   const frozenStory = page.getByRole("img", { name: "Saved Story ad" });
   await expect(frozenFeed).toBeVisible();
@@ -223,7 +232,7 @@ async function runEditorFlow(page: Page) {
   await configurePublishPlanner(page);
   await expect(page.getByText(/Preview only.*nothing will be created/i)).toBeVisible();
 
-  const freezeAndCreate = page.getByRole("button", { name: "Freeze & Create PAUSED", exact: true });
+  const freezeAndCreate = page.getByRole("button", { name: "Preview paused plan", exact: true });
   await expect(freezeAndCreate).toBeVisible();
   if (allowDryRunPublish) {
     // The explicit test-mode flag is not enough by itself: the deployment
@@ -278,6 +287,9 @@ async function runEditorFlow(page: Page) {
       mode?: string;
       status?: string;
       providerWritesEnabled?: boolean;
+      snapshotId?: string;
+      planId?: string;
+      source?: { creativeRevision?: number; formRevision?: number };
       plannedObjects?: { campaigns?: number; adSets?: number; creatives?: number; ads?: number };
       reconciledObjects?: Record<string, string>;
       message?: string;
@@ -290,7 +302,10 @@ async function runEditorFlow(page: Page) {
     expect(body.plannedObjects, JSON.stringify(body)).toMatchObject({ campaigns: 1, adSets: 1, creatives: 2, ads: 2 });
     expect(body.reconciledObjects ?? {}, "dry run must not report any provider object IDs").toEqual({});
     expect(body.message, JSON.stringify(body)).toMatch(/NO Meta objects were created/i);
-    await expect(page.getByRole("status").filter({ hasText: /Dry run/ })).toBeVisible();
+    expect(body.snapshotId, JSON.stringify(body)).toBeTruthy();
+    expect(body.planId, JSON.stringify(body)).toBeTruthy();
+    expect(body.source, JSON.stringify(body)).toMatchObject({ creativeRevision: secondSaveResult.body.ad?.revisionNumber });
+    await expect(page.getByRole("status").filter({ hasText: /Preview complete/ })).toBeVisible();
     await expect(page.getByRole("button", { name: /Activate/i })).toHaveCount(0);
   }
 
