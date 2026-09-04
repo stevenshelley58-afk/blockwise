@@ -1,5 +1,3 @@
-import { lstatSync, readFileSync } from "node:fs";
-
 export type SupabaseServerCredential = {
   value: string;
   kind: "secret" | "legacy_jwt";
@@ -18,11 +16,17 @@ export function isLegacySupabaseJwt(value: string): boolean {
 
 function readRootOwnedSecretFile(path: string): string {
   if (!path.startsWith("/")) throw new Error("SUPABASE_SERVICE_ROLE_KEY_FILE must be absolute.");
-  const stat = lstatSync(path);
+  const getBuiltinModule = (process as typeof process & { getBuiltinModule?: (name: string) => unknown }).getBuiltinModule;
+  const fs = getBuiltinModule?.("node:fs") as {
+    lstatSync: (file: string) => { isFile(): boolean; isSymbolicLink(): boolean; uid?: number; mode: number };
+    readFileSync: (file: string, encoding: string) => string;
+  } | undefined;
+  if (!fs) throw new Error("node:fs is unavailable for SUPABASE_SERVICE_ROLE_KEY_FILE.");
+  const stat = fs.lstatSync(path);
   if (!stat.isFile() || stat.isSymbolicLink() || stat.uid !== 0 || (stat.mode & 0o077) !== 0) {
     throw new Error("SUPABASE_SERVICE_ROLE_KEY_FILE must be a root-owned 0600 regular file.");
   }
-  return cleanSupabaseEnv(readFileSync(path, "utf8"));
+  return cleanSupabaseEnv(fs.readFileSync(path, "utf8"));
 }
 
 export function resolveSupabaseServerCredential(
