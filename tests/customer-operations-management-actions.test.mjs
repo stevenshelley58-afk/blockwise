@@ -16,19 +16,17 @@ test("customer operations management mutation is service-only and tenant/CAS bou
   assert.match(sql, /grant execute on function public\.execute_ops_customer_action[^\n]+service_role/);
 });
 
-test("control-edge executor exposes only the implemented management actions", async () => {
+test("provider actions are excluded from the web/control-edge executor", async () => {
   const source = await readFile(route, "utf8");
-  for (const action of ["enquiry_close", "enquiry_reply", "consent_grant", "consent_withdraw", "consent_unsubscribe", "suppression_add", "suppression_remove"]) {
-    assert.match(source, new RegExp(action));
-  }
-  assert.match(source, /execute_ops_customer_action/);
+  assert.match(source, /const ACTIONS = new Set/);
+  assert.doesNotMatch(source, /const ACTIONS = new Set\([^)]*enquiry_close/);
 });
 
 test("Chatwoot action lane is worker-only and action-bound", async () => {
   const worker = await readFile("worker/ops-actions.ts", "utf8");
   assert.match(worker, /claim_ops_provider_action/);
   assert.match(worker, /CHATWOOT_API_TOKEN_FILE/);
-  assert.match(worker, /provider_conversation_id_ciphertext/);
+  assert.match(worker, /resolve_ops_provider_action_identity/);
   assert.match(worker, /blockwise_external_id/);
   assert.match(worker, /idempotency-key/);
   assert.match(worker, /complete_ops_action/);
