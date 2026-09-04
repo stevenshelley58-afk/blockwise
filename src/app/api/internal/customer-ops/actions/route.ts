@@ -71,7 +71,8 @@ export async function POST(request: Request) {
       if (targetId === String(queued.actor_operator_id)) return NextResponse.json({ error: "cannot_revoke_actor_session" }, { status: 409 });
       await requireRpc(service, "revoke_user_sessions", { p_user_id: targetId });
     } else if (actionType === "team_role_change") {
-      return NextResponse.json({ error: "action_capability_not_available" }, { status: 409 });
+      const mutation = await requireRpc(service, "execute_ops_customer_action", { p_action_id: actionId, p_workspace_id: workspaceId, p_target_id: targetId, p_action_type: actionType, p_expected_version: Number(expectedVersion), p_actor_profile_id: String(queued.actor_operator_id), p_payload: queuedPayload });
+      if (!mutation || typeof mutation !== "object") throw new ActionExecutionError("action_mutation_failed", 502);
     } else if (actionType === "enquiry_assign") {
       const assignee = queuedPayload.assigneeProfileId === null ? null : id(queuedPayload.assigneeProfileId);
       if (queuedPayload.assigneeProfileId !== null && !assignee) return NextResponse.json({ error: "invalid_assignee" }, { status: 422 });

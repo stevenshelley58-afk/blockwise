@@ -25,12 +25,14 @@ on conflict (action_type) do nothing;
 -- leave these disabled until a readiness check explicitly enables them.
 update public.ops_action_capabilities set capability_state='capability_required', description='Hermes Chatwoot action lane requires verified provider readiness'
 where action_type in ('enquiry_close','enquiry_reply','enquiry_reopen');
+update public.ops_action_capabilities set capability_state='available', description='owner-only CAS role mutation with last-owner protection'
+where action_type='team_role_change';
 
 create or replace function public.set_ops_chatwoot_capability(p_enabled boolean, p_reason text)
 returns boolean language plpgsql security definer set search_path = '' as $$
 begin
   update public.ops_action_capabilities set capability_state=case when p_enabled then 'available' else 'capability_required' end,
-    description=left(coalesce(p_reason,'Chatwoot worker readiness unavailable'),256)
+    description=left(coalesce(p_reason,'Chatwoot worker readiness unavailable'),256), updated_at=now()
     where action_type in ('enquiry_close','enquiry_reply','enquiry_reopen');
   return true;
 end;
@@ -184,8 +186,7 @@ create table if not exists private.ops_enquiry_action_messages (
   created_at timestamptz not null default now()
 );
 alter table private.ops_enquiry_action_messages enable row level security;
-revoke all on private.ops_enquiry_action_messages from public, anon, authenticated;
-grant select, insert on private.ops_enquiry_action_messages to service_role;
+revoke all on private.ops_enquiry_action_messages from public, anon, authenticated, service_role;
 create or replace function public.ops_enquiry_action_messages_immutable()
 returns trigger language plpgsql set search_path='' as $$
 begin raise exception 'enquiry action messages are immutable' using errcode='42501'; end;
@@ -233,35 +234,7 @@ begin
         jsonb_build_object('expectedVersion',p_expected_version,'role',v_role));
     return jsonb_build_object('status','applied','role',v_role);
   elsif p_action_type like 'enquiry_%' then
-    select * into v_enquiry from public.ops_enquiry_associations
-      where id=p_target_id and workspace_id=p_workspace_id for update;
-    if not found then raise exception 'operations enquiry target is not owned by workspace' using errcode='42501'; end if;
-    if v_enquiry.ops_version <> p_expected_version then raise exception 'operations action target version is stale' using errcode='40001'; end if;
-    if p_action_type in ('enquiry_close','enquiry_reopen') then
-      update public.ops_enquiry_associations set status=case when p_action_type='enquiry_close' then 'closed' else 'open' end, updated_at=now()
-        where id=p_target_id and workspace_id=p_workspace_id and ops_version=p_expected_version;
-      get diagnostics v_updated = row_count;
-      if v_updated <> 1 then raise exception 'enquiry version conflict' using errcode='40001'; end if;
-      v_status := case when p_action_type='enquiry_close' then 'closed' else 'open' end;
-    else
-      v_status := v_enquiry.status;
-      if nullif(btrim(p_payload->>'body'),'') is null then raise exception 'enquiry reply body is required' using errcode='22023'; end if;
-      insert into private.ops_enquiry_action_messages(action_id,workspace_id,enquiry_id,body)
-        values(p_action_id,p_workspace_id,p_target_id,left(p_payload->>'body',4000))
-        on conflict(action_id) do nothing;
-      v_projection := public.enqueue_ops_projection(
-        p_workspace_id, 'chatwoot', 'enquiry', p_target_id::text, 'upsert',
-        'ops-action:' || p_action_id::text, nextval('public.ops_projection_source_version_seq'),
-        jsonb_build_object('workspaceId',p_workspace_id::text,'sourceEventId',p_action_id::text,
-          'status',v_enquiry.status,'subject',coalesce(v_enquiry.subject,''),
-          'reply',left(coalesce(p_payload->>'body',''),4000),
-          'requesterEmail',left(coalesce(v_enquiry.requester_email,''),320),
-          'requesterName',left(coalesce(v_enquiry.requester_name,''),256)));
-    end if;
-    insert into public.audit_logs(workspace_id,actor_profile_id,action,target_type,target_id,correlation_id,metadata)
-      values(p_workspace_id,p_actor_profile_id,'ops.'||p_action_type,'enquiry',p_target_id,p_action_id::text,
-        jsonb_build_object('expectedVersion',p_expected_version,'status',v_status));
-    return jsonb_build_object('status',v_status,'projectionQueued',v_projection is not null);
+    raise exception 'Chatwoot enquiry actions are provider-owned and must be executed by Hermes' using errcode='55000';
   end if;
 
   select p.email into v_email from public.profiles p

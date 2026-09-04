@@ -84,7 +84,7 @@ export const OPS_ACTION_CAPABILITIES: Record<OpsActionName, OpsActionCapabilityD
   team_invite: { capability: "available", description: "existing team invitation reservation and delivery path" },
   team_resend: { capability: "available", description: "existing pending invitation resend path" },
   team_cancel: { capability: "available", description: "existing invitation cancellation RPC" },
-  team_role_change: { capability: "capability_required", description: "operator role mutation executor is not registered" },
+  team_role_change: { capability: "available", description: "owner-only CAS role mutation with last-owner protection" },
   team_suspend: { capability: "unsupported", description: "account suspension capability is not implemented" },
   team_reactivate: { capability: "unsupported", description: "account reactivation capability is not implemented" },
   session_revoke: { capability: "available", description: "existing owner-only session revocation RPC" },

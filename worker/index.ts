@@ -23,7 +23,7 @@ import { pathToFileURL } from "node:url";
 import { resolveSupabaseServerCredential } from "../src/lib/supabase/credentials.ts";
 import { createSupabaseServiceClient } from "../src/lib/supabase/service.ts";
 import { reapOpsProjections, runGlobalProjectionOnce, runOpsProjectionOnce } from "./ops-projection.ts";
-import { assertChatwootActionReadiness, runOpsActionOnce } from "./ops-actions.ts";
+import { checkChatwootActionReadiness, runOpsActionOnce } from "./ops-actions.ts";
 
 type ServiceSupabase = ReturnType<typeof createSupabaseServiceClient>;
 type HandlerExecutionContext = {
@@ -197,6 +197,7 @@ const META_ACTIVATION_COMPENSATION_REQUEST_TIMEOUT_MS = 30_000;
 const LEASE_LOSS_HANDLER_DRAIN_TIMEOUT_MS = 100_000;
 const JOB_EXECUTION_TIMEOUT_MS = positiveNumber("WORKER_JOB_TIMEOUT_MS", 15 * 60_000);
 const JOB_TIMEOUT_HANDLER_DRAIN_MS = 30_000;
+const CAPABILITY_REFRESH_MS = positiveNumber("WORKER_CAPABILITY_REFRESH_MS", 60_000);
 
 if (HEARTBEAT_EVERY_MS >= LEASE_SECONDS * 1_000) {
   throw new Error("WORKER_HEARTBEAT_INTERVAL_MS must be shorter than WORKER_LEASE_SECONDS.");
@@ -703,10 +704,14 @@ async function main() {
   await reap(supabase);
   const projectionsEnabled = process.env.BLOCKWISE_OPS_PROJECTION_WORKER === "true";
   const actionsEnabled = process.env.BLOCKWISE_OPS_ACTION_WORKER === "true";
-  if (actionsEnabled) {
-    try { assertChatwootActionReadiness(); await supabase.rpc("set_ops_chatwoot_capability", { p_enabled: true, p_reason: "verified Hermes Chatwoot worker readiness" }); }
-    catch { await supabase.rpc("set_ops_chatwoot_capability", { p_enabled: false, p_reason: "Chatwoot worker readiness unavailable" }); log("Chatwoot action capability disabled: readiness check failed"); }
-  }
+  let lastCapabilityCheck = 0;
+  const refreshCapabilities = async () => {
+    if (!actionsEnabled) { await supabase.rpc("set_ops_chatwoot_capability", { p_enabled: false, p_reason: "Chatwoot action worker disabled" }); return; }
+    try { await checkChatwootActionReadiness(); await supabase.rpc("set_ops_chatwoot_capability", { p_enabled: true, p_reason: "verified Hermes Chatwoot worker and provider health" }); }
+    catch { await supabase.rpc("set_ops_chatwoot_capability", { p_enabled: false, p_reason: "Chatwoot worker or provider health unavailable" }); log("Chatwoot action capability disabled: readiness/health check failed"); }
+    lastCapabilityCheck = Date.now();
+  };
+  await refreshCapabilities();
   if (projectionsEnabled) {
     await reapOpsProjections(supabase);
     log("customer-operations projection lane enabled");
@@ -719,6 +724,7 @@ async function main() {
   try {
     while (!shutdownRequested) {
       try {
+        if (Date.now() - lastCapabilityCheck >= CAPABILITY_REFRESH_MS) await refreshCapabilities();
         if (projectionsEnabled) {
           await runOpsProjectionOnce(supabase);
           await runGlobalProjectionOnce(supabase);

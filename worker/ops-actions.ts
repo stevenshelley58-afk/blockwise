@@ -19,6 +19,14 @@ export function assertChatwootActionReadiness(): void {
   secretFile("BLOCKWISE_OPS_CORRELATION_KEY_FILE");
 }
 
+/** Bounded provider health is part of capability truth, not a startup-only config check. */
+export async function checkChatwootActionReadiness(fetchImpl: typeof fetch = fetch): Promise<void> {
+  assertChatwootActionReadiness();
+  const base = httpsEnv("CHATWOOT_BASE_URL");
+  const account = env("CHATWOOT_ACCOUNT_ID");
+  await call(base, `/api/v1/accounts/${encodeURIComponent(account)}/conversations?per_page=1`, "GET", secretFile("CHATWOOT_API_TOKEN_FILE"), "chatwoot:capability-health", undefined, fetchImpl);
+}
+
 export async function runOpsActionOnce(supabase: Supabase, fetchImpl: typeof fetch = fetch): Promise<boolean> {
   const claimed = await Promise.resolve(supabase.rpc("claim_ops_provider_action", { p_lease_seconds: 600 }));
   if (claimed.error) throw new Error("customer operations action claim failed");

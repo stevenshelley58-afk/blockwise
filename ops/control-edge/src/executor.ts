@@ -3,7 +3,7 @@ import { request } from "node:https";
 import type { ClaimedAction, ActionRepository } from "./repository.ts";
 import { signRequest } from "./auth.ts";
 
-const AVAILABLE = new Set(["team_invite", "team_resend", "team_cancel", "session_revoke", "enquiry_assign", "billing_reconcile"]);
+const AVAILABLE = new Set(["team_invite", "team_resend", "team_cancel", "team_role_change", "session_revoke", "enquiry_assign", "billing_reconcile"]);
 export class ExecutorError extends Error { readonly retryable: boolean; constructor(message: string, retryable: boolean) { super(message); this.retryable = retryable; } }
 export type ExecutorResult = { operationId?: string; status?: string };
 
