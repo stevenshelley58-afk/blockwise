@@ -83,7 +83,7 @@ select lives_ok($$ select public.enqueue_ops_action(
   '88888888-8888-4888-8888-888888888890', 'ops:test:current-invitation',
   '86666666-6666-4666-8666-666666666666', '86666666-6666-4666-8666-666666666666',
   'team_cancel', 'invitation', '89999999-9999-4999-8999-999999999999',
-  '87777777-7777-4777-8777-777777777777', 'owner', 'aal2', 2,
+  '87777777-7777-4777-8777-777777777777', 'owner', 'aal2', (select ops_version from public.workspace_invitations where id='89999999-9999-4999-8999-999999999999'),
   'current invitation test', now()-interval '1 hour', now()+interval '2 hours', '{}'::jsonb
 ) $$, 'current invitation versions pass');
 
@@ -200,7 +200,7 @@ select lives_ok($$ select public.enqueue_ops_action(
   '88888888-8888-4888-8888-888888888897', 'ops:test:new-invite-after-ambiguous',
   '86666666-6666-4666-8666-666666666666', '86666666-6666-4666-8666-666666666666',
   'team_resend', 'invitation', '89999999-9999-4999-8999-999999999999',
-  '87777777-7777-4777-8777-777777777777', 'owner', 'aal2', 2,
+  '87777777-7777-4777-8777-777777777777', 'owner', 'aal2', (select ops_version from public.workspace_invitations where id='89999999-9999-4999-8999-999999999999'),
   'explicit resend after ambiguous delivery', now()-interval '1 hour', now()+interval '2 hours', '{}'::jsonb
 ) $$, 'new action is queued but delivery reservation remains fenced');
 select throws_ok($$ select public.begin_ops_invitation_delivery(
@@ -225,7 +225,7 @@ select lives_ok($$ select public.enqueue_ops_action(
   '88888888-8888-4888-8888-888888888899', 'ops:test:native-resend',
   '86666666-6666-4666-8666-666666666666', '86666666-6666-4666-8666-666666666666',
   'team_resend', 'invitation', '89999999-9999-4999-8999-999999999901',
-  '87777777-7777-4777-8777-777777777777', 'owner', 'aal2', 1,
+  '87777777-7777-4777-8777-777777777777', 'owner', 'aal2', (select ops_version from public.workspace_invitations where id='89999999-9999-4999-8999-999999999901'),
   'native resend reservation', now()-interval '1 hour', now()+interval '2 hours', '{}'::jsonb
 ) $$, 'team resend invitation action is accepted');
 select is((public.begin_ops_invitation_delivery('88888888-8888-4888-8888-888888888899','ops:test:native-resend','86666666-6666-4666-8666-666666666666','89999999-9999-4999-8999-999999999901')->>'state'), 'reserved', 'team resend reserves against its invitation target');
