@@ -136,6 +136,7 @@ async function requireRpc(service: ReturnType<typeof createSupabaseServiceClient
   const { data, error } = await service.rpc(fn, args);
   if (!error) return data;
   const message = error.message.toLowerCase();
+  if (message.includes("invitation delivery needs reconciliation")) throw new ActionExecutionError("invitation_delivery_needs_reconciliation", 409);
   if (message.includes("last_operator_owner")) throw new ActionExecutionError("last_operator_owner", 409);
   if (message.includes("not a workspace member")) throw new ActionExecutionError("invalid_workspace_member", 403);
   if (message.includes("invalid") && (message.includes("user") || message.includes("profile"))) throw new ActionExecutionError("invalid_target", 409);

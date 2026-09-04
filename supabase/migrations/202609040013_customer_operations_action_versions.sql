@@ -366,6 +366,9 @@ create table if not exists private.ops_invitation_delivery_ledger (
 );
 alter table private.ops_invitation_delivery_ledger enable row level security;
 revoke all on private.ops_invitation_delivery_ledger from public, anon, authenticated, service_role;
+create unique index ops_invitation_delivery_unresolved_invitation
+  on private.ops_invitation_delivery_ledger(invitation_id)
+  where state in ('reserved','started','needs_reconciliation');
 
 create or replace function public.begin_ops_invitation_delivery(
   p_action_id uuid, p_idempotency_key text, p_workspace_id uuid, p_invitation_id uuid
@@ -393,6 +396,13 @@ begin
     raise exception 'invitation delivery reservation identity conflict' using errcode='23505';
   end if;
   return jsonb_build_object('state',v_row.state);
+exception when unique_violation then
+  if exists (select 1 from private.ops_invitation_delivery_ledger
+    where invitation_id=p_invitation_id and action_id<>p_action_id
+      and state in ('reserved','started','needs_reconciliation')) then
+    raise exception 'invitation delivery needs reconciliation' using errcode='55000';
+  end if;
+  raise;
 end; $$;
 
 create or replace function public.start_ops_invitation_delivery(p_action_id uuid)

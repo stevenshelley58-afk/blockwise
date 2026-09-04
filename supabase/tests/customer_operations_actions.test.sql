@@ -1,7 +1,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(50);
+select plan(52);
 
 select has_table('public', 'ops_action_capabilities', 'action capability registry exists');
 select has_table('public', 'ops_action_outbox', 'action outbox exists');
@@ -191,6 +191,22 @@ select throws_ok($$ select public.enqueue_ops_action(
   '87777777-7777-4777-8777-777777777777', 'support', 'aal2', 1,
   'support owner test', now() - interval '1 hour', now() + interval '2 hours', '{}'::jsonb
 ) $$, '42501', 'owner_role_required', 'owner-only actions reject support actors');
+
+-- A second action cannot bypass an unresolved external invite delivery.
+insert into private.ops_invitation_delivery_ledger(action_id,idempotency_key,workspace_id,invitation_id,state,baseline_send_attempt_count)
+values ('88888888-8888-4888-8888-888888888890','ops:test:ambiguous-invite',
+  '86666666-6666-4666-8666-666666666666','89999999-9999-4999-8999-999999999999','needs_reconciliation',0);
+select lives_ok($$ select public.enqueue_ops_action(
+  '88888888-8888-4888-8888-888888888897', 'ops:test:new-invite-after-ambiguous',
+  '86666666-6666-4666-8666-666666666666', '86666666-6666-4666-8666-666666666666',
+  'team_resend', 'invitation', '89999999-9999-4999-8999-999999999999',
+  '87777777-7777-4777-8777-777777777777', 'owner', 'aal2', 2,
+  'explicit resend after ambiguous delivery', now()-interval '1 hour', now()+interval '2 hours', '{}'::jsonb
+) $$, 'new action is queued but delivery reservation remains fenced');
+select throws_ok($$ select public.begin_ops_invitation_delivery(
+  '88888888-8888-4888-8888-888888888897','ops:test:new-invite-after-ambiguous',
+  '86666666-6666-4666-8666-666666666666','89999999-9999-4999-8999-999999999999'
+) $$, '55000', 'invitation delivery needs reconciliation', 'unresolved invite cannot be bypassed by a new action');
 
 select * from finish();
 rollback;

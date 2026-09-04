@@ -1,4 +1,4 @@
-select plan(25);
+select plan(26);
 
 select has_column('public', 'email_outbox', 'workspace_id', 'email ownership is an explicit tenant field');
 select has_column('private', 'ops_provider_operation_ledger', 'completed_steps', 'provider steps are durable');
@@ -21,6 +21,7 @@ select ok(exists(select 1 from pg_trigger where tgrelid='public.workspaces'::reg
 select ok(exists(select 1 from pg_trigger where tgrelid='public.workspace_invitations'::regclass and tgname='ops_invitation_target_version'), 'invitation updates advance action versions');
 select ok(exists(select 1 from pg_trigger where tgrelid='public.billing_offer_acceptances'::regclass and tgname='ops_billing_target_version'), 'billing updates advance action versions');
 select has_table('private', 'ops_invitation_delivery_ledger', 'invitation side effects have a durable reservation ledger');
+select ok(exists(select 1 from pg_index where indexrelid='private.ops_invitation_delivery_unresolved_invitation'::regclass and indisunique), 'an invitation has at most one unresolved delivery');
 select has_function('public', 'begin_ops_invitation_delivery', array['uuid','text','uuid','uuid'], 'invitation reservation RPC exists');
 select has_function('public', 'start_ops_invitation_delivery', array['uuid'], 'invitation start RPC exists');
 select has_function('public', 'reconcile_ops_invitation_delivery', array['uuid'], 'invitation reconciliation RPC exists');
