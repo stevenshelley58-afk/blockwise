@@ -6,6 +6,7 @@ const shell = readFileSync("src/components/adstudio/studio-shell.tsx", "utf8");
 const home = readFileSync("src/app/(customer)/ad-studio/page.tsx", "utf8");
 const templates = readFileSync("src/app/(customer)/ad-studio/templates/page.tsx", "utf8");
 const gallery = readFileSync("src/components/adstudio/template-gallery.tsx", "utf8");
+const adsLibrary = readFileSync("src/components/adstudio/ads-library.tsx", "utf8");
 
 test("Ad Studio shell uses the Blockwise symbol as the customer-home link", () => {
   assert.match(shell, /import \{ BlockwiseLogo \} from "@\/components\/blockwise-logo"/);
@@ -35,6 +36,14 @@ test("Ad Studio navigation exposes the simplified Home, Templates, Library, and 
 
 test("template search preserves the active guided filter", () => {
   assert.match(templates, /filter !== "all" \? <input type="hidden" name="filter" value=\{filter\} \/> : null/);
+});
+
+test("template and saved-ad empty states stay focused at narrow widths", () => {
+  assert.match(gallery, /const hasActiveFilter = Boolean\(query\) \|\| filter !== "all"/);
+  assert.match(gallery, /New templates are being prepared/);
+  assert.match(gallery, /Reviewed Feed and Story packs will appear here/);
+  assert.doesNotMatch(templates, /No templates have been imported yet/);
+  assert.match(adsLibrary, /<li className="min-w-0">/);
 });
 
 test("template cards create the selected customer ad directly", () => {
