@@ -134,7 +134,7 @@ select lives_ok($$ select public.enqueue_ops_action(
   '88888888-8888-4888-8888-888888888896', 'ops:test:current-billing',
   '86666666-6666-4666-8666-666666666666', '86666666-6666-4666-8666-666666666666',
   'billing_reconcile', 'billing', '86666666-6666-4666-8666-666666666666',
-  '87777777-7777-4777-8777-777777777777', 'owner', 'aal2', 3,
+  '87777777-7777-4777-8777-777777777777', 'owner', 'aal2', 4,
   'current billing test', now()-interval '1 hour', now()+interval '2 hours', '{}'::jsonb
 ) $$, 'current billing versions pass');
 
