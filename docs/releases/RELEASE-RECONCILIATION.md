@@ -9,7 +9,9 @@ assert that a historical runtime receipt describes current main.
 ## Current known facts
 
 - PRs #386, #387, #395, #396, #397, and #398 are merged into main.
-- Draft PR #405 (Stalwart/GoTrue delivery foundation) remains pending.
+- PR #405 (Stalwart/GoTrue delivery foundation) is merged into main; it has
+  not been deployed as part of this release-control PR.
+- Frank PR #117 is also merged; neither it nor #405 is deployed by this PR.
 - The provider-neutral SnagTime contract is merged, but the SnagTime fork,
   deployment, and cutover remain pending.
 - Mini Frank is excluded from Blockwise scope.

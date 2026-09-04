@@ -139,6 +139,7 @@ jobs:
           path: |
             product-sbom.spdx.json
             sbom-image-binding.txt
+            product-image-evidence.txt
           if-no-files-found: error
           retention-days: 30
 
@@ -184,12 +185,14 @@ jobs:
           test "$(grep -c '^    statement:' .trivyignore.yaml)" -eq "$ids"
           test "$(grep -c '^      - pkg:deb/debian/libsqlite3-0@3.46.1-7%2Bdeb13u1$' .trivyignore.yaml)" -eq "$ids"
           awk '
-            /^  - id: CVE-/ { if (seen && (p != 1 || e != 1 || s != 1)) exit 1; seen=1; p=e=s=0; next }
+            /^  - id: CVE-/ { if (seen && (p != 1 || q != 1 || e != 1 || s != 1)) exit 1; seen=1; p=q=e=s=0; next }
             /^    purls:/ { p++; next }
+            /^      - pkg:deb\/debian\/libsqlite3-0@3.46.1-7%2Bdeb13u1$/ { q++; next }
+            /^      - pkg:/ { exit 1 }
             /^    expired_at: 2026-10-05$/ { e++; next }
             /^    statement: "[^"].*"$/ { s++; next }
             /^    statement:/ { exit 1 }
-            END { if (!seen || p != 1 || e != 1 || s != 1) exit 1 }
+            END { if (!seen || p != 1 || q != 1 || e != 1 || s != 1) exit 1 }
           ' .trivyignore.yaml
           test "$ids" -eq "$(grep '^  - id: CVE-' .trivyignore.yaml | sort -u | wc -l)"
 
@@ -215,5 +218,6 @@ jobs:
           path: |
             trivy-results.sarif
             trivy-image-binding.txt
+            product-image-evidence.txt
           if-no-files-found: warn
           retention-days: 30
