@@ -1,0 +1,25 @@
+services:
+  customer-ops-control-edge:
+    build:
+      context: ../..
+      dockerfile: ops/control-edge/Dockerfile
+    restart: unless-stopped
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    networks: [hermes-private, blockwise-product]
+    env_file: [/etc/blockwise/customer-ops/control-edge.env]
+    volumes:
+      - /etc/blockwise/customer-ops/secrets:/run/secrets:ro
+    environment:
+      BLOCKWISE_INTERNAL_AUTH_SECRET_FILE: /run/secrets/internal-auth
+      SUPABASE_SERVICE_ROLE_KEY_FILE: /run/secrets/supabase-service-role
+      BLOCKWISE_ACTION_EXECUTOR_SECRET_FILE: /run/secrets/action-executor
+    expose: ["8660"]
+
+networks:
+  hermes-private:
+    external: true
+  blockwise-product:
+    external: true
