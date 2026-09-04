@@ -106,7 +106,8 @@ async function invite(service: ReturnType<typeof createSupabaseServiceClient>, w
   const redirectTo = new URL("/auth/confirm", process.env.NEXT_PUBLIC_APP_URL ?? "https://blockwise.sale"); redirectTo.searchParams.set("next", "/settings#team");
   const delivery = await service.auth.admin.inviteUserByEmail(normalized, { redirectTo: redirectTo.toString() });
   if (delivery.error) throw new Error("invitation_delivery_failed");
-  await service.from("workspace_invitations").update({ send_attempt_count: 1, last_sent_at: new Date().toISOString(), last_send_error: null, updated_at: new Date().toISOString() }).eq("id", invitationId).eq("workspace_id", workspaceId).eq("status", "pending");
+  const { error: updateError } = await service.from("workspace_invitations").update({ send_attempt_count: 1, last_sent_at: new Date().toISOString(), last_send_error: null, updated_at: new Date().toISOString() }).eq("id", invitationId).eq("workspace_id", workspaceId).eq("status", "pending");
+  if (updateError) throw new Error("invitation_state_update_failed");
 }
 async function invitationDetails(service: ReturnType<typeof createSupabaseServiceClient>, workspaceId: string, invitationId: string): Promise<{ email: string; role: string }> { const { data, error } = await service.from("workspace_invitations").select("email,role").eq("id", invitationId).eq("workspace_id", workspaceId).eq("status", "pending").maybeSingle(); if (error) throw new Error("invitation_lookup_failed"); if (typeof data?.email !== "string" || typeof data.role !== "string") throw new ActionExecutionError("invitation_not_found", 404); return { email: data.email, role: data.role }; }
 async function requireRpc(service: ReturnType<typeof createSupabaseServiceClient>, fn: string, args: Record<string, unknown>): Promise<unknown> {
