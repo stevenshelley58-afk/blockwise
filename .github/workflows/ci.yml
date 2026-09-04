@@ -192,6 +192,8 @@ jobs:
             /^    expired_at: 2026-10-05$/ { e++; next }
             /^    statement: "[^"].*"$/ { s++; next }
             /^    statement:/ { exit 1 }
+            /^    [A-Za-z_][A-Za-z0-9_]*:/ { exit 1 }
+            /^      - / { exit 1 }
             END { if (!seen || p != 1 || q != 1 || e != 1 || s != 1) exit 1 }
           ' .trivyignore.yaml
           test "$ids" -eq "$(grep '^  - id: CVE-' .trivyignore.yaml | sort -u | wc -l)"
