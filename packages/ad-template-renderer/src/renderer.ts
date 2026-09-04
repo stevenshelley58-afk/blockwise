@@ -12,7 +12,11 @@ import type {
   Placement,
   ColourRole,
 } from "@blockwise/ad-template-contract";
-import { MINIMUM_MULTILINE_LINE_HEIGHT, MINIMUM_TEXT_SIZE_PX } from "@blockwise/ad-template-contract";
+import {
+  MINIMUM_MULTILINE_LINE_HEIGHT,
+  MINIMUM_TEXT_SIZE_PX,
+  MINIMUM_VECTOR_LINE_LENGTH_PX,
+} from "@blockwise/ad-template-contract";
 
 export interface RenderInput {
   template: AdTemplate;
@@ -579,10 +583,24 @@ function renderVector(ctx: SKRSContext2D, layer: Extract<LayoutLayer, { type: "v
   } else if (layer.shape === "line" || layer.shape === "wave") {
     ctx.strokeStyle = ctx.fillStyle as string;
     ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(x, y + height / 2);
+    ctx.beginPath();
     if (layer.shape === "wave") {
+      ctx.moveTo(x, y + height / 2);
       ctx.bezierCurveTo(x + width * .25, y - height / 2, x + width * .75, y + height * 1.5, x + width, y + height / 2);
-    } else ctx.lineTo(x + width, y + height / 2);
+    } else {
+      const lineLength = Math.max(width, height);
+      if (lineLength < MINIMUM_VECTOR_LINE_LENGTH_PX) {
+        ctx.restore();
+        throw new Error(`${layer.layerId} line vector must be at least ${MINIMUM_VECTOR_LINE_LENGTH_PX}px long`);
+      }
+      if (height > width) {
+        ctx.moveTo(x + width / 2, y);
+        ctx.lineTo(x + width / 2, y + height);
+      } else {
+        ctx.moveTo(x, y + height / 2);
+        ctx.lineTo(x + width, y + height / 2);
+      }
+    }
     ctx.stroke();
   } else if (layer.shape === "notched") {
     const notch = Math.min(width, height) * .2;
@@ -598,18 +616,56 @@ function renderIcon(ctx: SKRSContext2D, layer: Extract<LayoutLayer, { type: "ico
   const { x, y, width, height } = resolveRenderGeometry(layer.geometry, dims);
   const cx = x + width / 2;
   const cy = y + height / 2;
-  const radius = Math.min(width, height) * 0.34;
   ctx.save();
   ctx.strokeStyle = input.colourMap[layer.colourRole] ?? "#000000";
   ctx.lineWidth = Math.max(2, Math.min(width, height) * 0.1);
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
   ctx.beginPath();
   if (layer.icon === "arrow") {
     ctx.moveTo(x + width * .1, cy); ctx.lineTo(x + width * .9, cy);
     ctx.moveTo(x + width * .55, y + height * .18); ctx.lineTo(x + width * .9, cy); ctx.lineTo(x + width * .55, y + height * .82); ctx.stroke();
   } else if (layer.icon === "check" || layer.icon === "tick") {
     ctx.moveTo(x + width * 0.18, cy); ctx.lineTo(x + width * 0.42, y + height * 0.76); ctx.lineTo(x + width * 0.84, y + height * 0.24); ctx.stroke();
+  } else if (layer.icon === "phone") {
+    ctx.moveTo(x + width * .22, y + height * .16);
+    ctx.bezierCurveTo(x + width * .12, y + height * .24, x + width * .2, y + height * .52, x + width * .43, y + height * .73);
+    ctx.bezierCurveTo(x + width * .64, y + height * .92, x + width * .82, y + height * .89, x + width * .88, y + height * .76);
+    ctx.lineTo(x + width * .68, y + height * .6);
+    ctx.lineTo(x + width * .54, y + height * .7);
+    ctx.bezierCurveTo(x + width * .43, y + height * .64, x + width * .34, y + height * .54, x + width * .29, y + height * .42);
+    ctx.lineTo(x + width * .39, y + height * .3);
+    ctx.closePath();
+    ctx.stroke();
+  } else if (layer.icon === "mail") {
+    ctx.rect(x + width * .1, y + height * .22, width * .8, height * .58);
+    ctx.moveTo(x + width * .1, y + height * .24);
+    ctx.lineTo(cx, y + height * .56);
+    ctx.lineTo(x + width * .9, y + height * .24);
+    ctx.stroke();
+  } else if (layer.icon === "globe") {
+    const radius = Math.min(width, height) * .36;
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.moveTo(cx, cy - radius);
+    ctx.bezierCurveTo(cx - radius * .45, cy - radius * .55, cx - radius * .45, cy + radius * .55, cx, cy + radius);
+    ctx.moveTo(cx, cy - radius);
+    ctx.bezierCurveTo(cx + radius * .45, cy - radius * .55, cx + radius * .45, cy + radius * .55, cx, cy + radius);
+    ctx.moveTo(cx - radius, cy);
+    ctx.lineTo(cx + radius, cy);
+    ctx.stroke();
+  } else if (layer.icon === "location") {
+    ctx.moveTo(cx, y + height * .9);
+    ctx.bezierCurveTo(x + width * .28, y + height * .68, x + width * .2, y + height * .5, x + width * .2, y + height * .36);
+    ctx.bezierCurveTo(x + width * .2, y + height * .14, x + width * .34, y + height * .08, cx, y + height * .08);
+    ctx.bezierCurveTo(x + width * .66, y + height * .08, x + width * .8, y + height * .14, x + width * .8, y + height * .36);
+    ctx.bezierCurveTo(x + width * .8, y + height * .5, x + width * .72, y + height * .68, cx, y + height * .9);
+    ctx.closePath();
+    ctx.moveTo(cx + width * .09, y + height * .35);
+    ctx.arc(cx, y + height * .35, width * .09, 0, Math.PI * 2);
+    ctx.stroke();
   } else {
-    ctx.arc(cx, cy, radius, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+    throw new Error(`unsupported icon ${normalizeLayerId(layer.layerId)}`);
   }
   ctx.restore();
 }

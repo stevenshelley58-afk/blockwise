@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { MINIMUM_MULTILINE_LINE_HEIGHT, MINIMUM_TEXT_SIZE_PX } from "./types.ts";
+import {
+  MINIMUM_MULTILINE_LINE_HEIGHT,
+  MINIMUM_TEXT_SIZE_PX,
+  MINIMUM_VECTOR_LINE_LENGTH_PX,
+  SUPPORTED_ICON_NAMES,
+} from "./types.ts";
 
 const colourRoleSchema = z.enum(["background", "primary", "secondary", "accent", "mainText", "inverseText"]);
 const rectSchema = z.object({ x: z.number().finite(), y: z.number().finite(), width: z.number().positive(), height: z.number().positive() }).strict();
@@ -29,7 +34,7 @@ const layerSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("text"), layerId: z.string().min(1), inputKey: z.string().min(1), font: fontSchema, fontSize: z.number().positive(), sizeRatio: z.number().finite().positive().optional(), lineHeight: z.number().positive(), tracking: z.number().finite().min(-4).max(4), alignment: z.enum(["left", "center", "right"]), maxCharacters: z.number().int().positive(), maxLines: z.number().int().positive(), colourRole: colourRoleSchema, overflowBehaviour: z.enum(["refuse", "truncate", "scale_down"]), geometry: rectSchema }).strict(),
   z.object({ type: z.literal("logo"), layerId: z.string().min(1), inputKey: z.string().min(1), geometry: rectSchema }).strict(),
   z.object({ type: z.literal("vector"), layerId: z.string().min(1), geometry: rectSchema, shape: z.enum(["rect", "rounded", "circle", "line", "pill", "notched", "wave", "ring"]), colourRole: colourRoleSchema, opacity: z.number().min(0).max(1) }).strict(),
-  z.object({ type: z.literal("icon"), layerId: z.string().min(1), geometry: rectSchema, icon: z.string().min(1), colourRole: colourRoleSchema }).strict(),
+  z.object({ type: z.literal("icon"), layerId: z.string().min(1), geometry: rectSchema, icon: z.enum(SUPPORTED_ICON_NAMES), colourRole: colourRoleSchema }).strict(),
 ]);
 
 const layoutSchema = z.object({
@@ -75,6 +80,12 @@ const layoutSchema = z.object({
       if (Math.abs(geometry.width - geometry.height) > squareTolerance) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, message: "ring vectors must use square geometry" });
       }
+    }
+    if (layer.type === "vector" && layer.shape === "line" && Math.max(geometry.width, geometry.height) < MINIMUM_VECTOR_LINE_LENGTH_PX) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `${layout.placement} line vector ${layer.layerId} must be at least ${MINIMUM_VECTOR_LINE_LENGTH_PX}px long`,
+      });
     }
   }
   for (const zone of layout.safeZones) {
