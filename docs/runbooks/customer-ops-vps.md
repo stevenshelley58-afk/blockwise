@@ -8,16 +8,19 @@ or production.
 ## Components and boundaries
 
 `infra/customer-ops/docker-compose.yml` runs Mautic CRM/campaign cron/worker,
-Chatwoot web/Sidekiq, and SnagTime web/worker. Chatwoot and SnagTime use
+Chatwoot web/Sidekiq, and SnagTime web/worker. The Blockwise product
+`product-worker` projection lane consumes the durable ops outbox and publishes
+the Frank bundle; `ops/control-edge/docker-compose.yml` supplies the private
+action/recovery edge. Chatwoot and SnagTime use
 independent PostgreSQL databases and login roles. Mautic uses its own MariaDB
 database and login because the upstream image requires MySQL/MariaDB. Chatwoot
 uses only the private customer-ops Redis instance. Mail is provided by the
 existing opt-in `product-mail` service; this stack deliberately has no second
 Stalwart server or mail volumes.
 
-The Hermes CRM/support projection adapter is intentionally not an image in this
-stack; its dedicated worker PR must provide the immutable adapter and contract
-receipt before projection delivery is enabled. Blockwise's existing
+The worker and control edge are separate from this customer-ops Compose
+project because they use the Blockwise product database and private Frank
+networks. Blockwise's existing
 `infra/product/systemd/blockwise-email-outbox-drain.*` and
 `scripts/vps/email-outbox-drain.sh` remain the outbox contract; this stack does
 not duplicate it.
@@ -72,17 +75,53 @@ The runtime must expose `node apps/web/server.js`, `node dist/worker.mjs`,
 settings. The image must be built from the merged SnagTime main branch, not
 from this Blockwise checkout.
 
+## Projection worker and private control edge
+
+Build and publish the Blockwise worker and control-edge images from the same
+merged SHA, then set their immutable `@sha256:` references in the operator env
+files. The product worker must have `BLOCKWISE_OPS_PROJECTION_WORKER=true`,
+`BLOCKWISE_ENABLE_PROVIDER_WRITES=true`, the configured Mautic/Chatwoot source
+IDs, and a writable `HERMES_OPS_PROJECTION_ROOT` bind mount owned by the worker
+UID. The worker uses `claim_ops_projection` and
+`claim_ops_global_projection`, heartbeats leases, reaps expired claims, and
+publishes `current.json` only after provider settlement. A lost lease cannot
+settle a projection.
+
+The control edge is a separate private Compose project. Set
+`CONTROL_EDGE_IMAGE` to its immutable digest and mount only the three
+root-owned `0600` files named by `CONTROL_EDGE_*_HOST_FILE`; do not mount the
+whole secret directory. Attach it only to the existing `hermes-private` and
+`blockwise-product` networks, publish no host port, and require its
+`/health/live` Compose healthcheck. `CONTROL_EDGE_WORKER_ENABLED=true` enables
+the RPC lease claimant/reaper for append-only action receipts; it retries only
+transient executor failures and fails closed on target/version/auth errors.
+
+Validate both rendered contracts before starting either project:
+
+```bash
+docker compose --env-file /srv/blockwise/product/.env \
+  -f infra/coolify/docker-compose.product.yml --profile worker config --quiet
+docker compose --env-file /etc/blockwise/customer-ops/control-edge.env \
+  -f ops/control-edge/docker-compose.yml config --quiet
+```
+
+The Frank handoff reads the worker's atomic `current.json` pointer and exact
+generation receipt from `HERMES_OPS_PROJECTION_ROOT`. Frank must attach that
+mount read-only and reject an expired `fresh_until`, mismatched source
+revision/receipt provenance, or a missing publication receipt.
+
 ## Install and validate
 
 Copy `infra/customer-ops/customer-ops.env.example` to a path outside the
-checkout and replace all example values. Keep API tokens for the smoke test in
+checkout and replace all example values. Keep API tokens for bootstrap/smoke in
 `mautic_api_token` and `chatwoot_api_token` files under the secret directory;
-set the optional `CHATWOOT_WEBHOOK_PROBE_URL` after a reviewed adapter exists. The installer generates only
-missing random application/database secrets and never prints their contents.
+the installer generates only missing random application/database secrets and
+never prints their contents.
 Google and SMTP provider credentials must already exist as non-empty
 mode-0600 files (`google_client_secret`, `mautic_smtp_password`,
 `chatwoot_smtp_password`, `snagtime_smtp_password`, and
-`chatwoot_inbox_password`); provider credentials are never generated. Use
+`chatwoot_inbox_password`, and `chatwoot_webhook_probe_secret`); provider
+credentials are never generated. Use
 distinct Stalwart SMTP users for Mautic, Chatwoot, and SnagTime. Product-mail bootstrap,
 recovery-admin removal, mailbox creation, and mail volume backup/restore
 remain governed by `docs/runbooks/stalwart-mail.md` and
@@ -138,9 +177,10 @@ for all three service identities in the pinned ephemeral `smtp-client`, runs sup
 authentication from an ephemeral Chatwoot client on the private mail network,
 checks Mautic API authentication, Chatwoot API, SnagTime readiness plus
 Google/Calendar configuration, and the configured Frank projection freshness
-schema. When `CHATWOOT_WEBHOOK_PROBE_URL` is set, it
-also sends a signed, non-credentialed probe and requires a 2xx response; until
-the adapter contract exists, the webhook assertion is explicitly deferred.
+schema. It sends a signed, non-credentialed probe to the required
+`CHATWOOT_WEBHOOK_PROBE_URL` and requires a 2xx response. The bootstrap command
+below registers the webhook through Chatwoot's API when `CHATWOOT_WEBHOOK_URL`
+is supplied.
 It never emits credentials or API response bodies.
 
 Frank freshness must return the PR #118 `/api/ops/overview` contract:
@@ -159,8 +199,8 @@ acceptance gates after provider setup.
 
 The Mautic entrypoint reads the operator-supplied `mautic_smtp_password` file and
 sets its SMTP transport to `${MAIL_PUBLIC_HOST}:587` with STARTTLS. Confirm the
-Mautic mailer settings in its UI/API and send a controlled message to an
-external mailbox. Chatwoot web/worker use the product-mail submission network
+Mautic mailer settings with `customer-ops-bootstrap.sh` and send a controlled
+message to an external mailbox. Chatwoot web/worker use the product-mail submission network
 with their distinct `chatwoot_smtp_password` identity. After Chatwoot bootstrap, use the
 operator-supplied `CHATWOOT_INBOX_USER` and `chatwoot_inbox_password` to create
 its email channel with the support mailbox's IMAP host/port
@@ -170,13 +210,57 @@ acceptance:
 
 1. Send an inbound message from an unrelated external mailbox.
 2. Record the resulting Chatwoot conversation/inbox receipt and the signed
-   projection receipt (the Hermes adapter remains explicitly deferred).
+   projection receipt published by the Blockwise worker and consumed by Frank.
 3. Reply from Chatwoot and verify delivery at the external mailbox over
    authenticated SMTP.
 
 Also create a disposable SnagTime booking, verify the Google Calendar block,
 and record the booking/enquiry receipt plus Frank projection freshness. A
 health endpoint alone is not customer-operations acceptance.
+
+## Idempotent provider bootstrap
+
+After the SMTP identities exist, run the credential-safe bootstrap against the
+same protected env file:
+
+```bash
+scripts/vps/customer-ops-bootstrap.sh \
+  --env-file /etc/blockwise/customer-ops/customer-ops.env --check
+scripts/vps/customer-ops-bootstrap.sh \
+  --env-file /etc/blockwise/customer-ops/customer-ops.env --apply
+```
+
+`--apply` creates the documented Mautic lifecycle field and registers the
+operator-supplied Chatwoot email-inbox JSON and signed webhook URL when those
+files/settings are present. Existing resources are accepted as idempotent `409`
+conflicts and can be verified again with `--check`; other provider errors fail
+closed. The
+bootstrap requires explicit lifecycle segment/campaign mappings, distinct
+Stalwart identities, and API tokens in root-owned `0600` files. It verifies
+GoTrue and transactional-outbox SMTP routing to the shared `product-mail`,
+Mautic/Chatwoot API authentication, and SnagTime readiness; it never claims a
+signup, external-mail, booking, or action receipt.
+
+## Receipt-based staging smoke matrix
+
+Record each provider receipt ID and the Frank publication receipt in the
+staging evidence directory. A health response is not a receipt:
+
+| Flow | Required evidence |
+| --- | --- |
+| Signup magic link | GoTrue request ID, received message ID, accepted callback/session |
+| Transactional mail | `email_outbox` delivery receipt and external mailbox message ID |
+| External support mail | Chatwoot inbox/conversation/message IDs, signed webhook receipt, Frank enquiry projection receipt |
+| Support reply | Chatwoot outbound message ID and external mailbox message ID |
+| Mautic contact/flow | contact ID, lifecycle field/tag, segment and campaign membership receipts |
+| SnagTime booking | booking ID, Google event ID, booking projection receipt |
+| Control action | action ID, append-only action receipt, target `ops_version` |
+
+The final gate is the Frank `/api/ops/overview` provenance check in
+`customer-ops-smoke.sh`: every projection must be ready/fresh and share one
+source revision, source receipt set, and publication receipt. Missing provider
+credentials, DNS, or any receipt is a failed staging gate, not a synthetic
+pass.
 
 ## Encrypted backup and restore
 

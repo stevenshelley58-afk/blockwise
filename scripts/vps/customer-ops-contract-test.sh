@@ -120,14 +120,27 @@ CADDY_VALIDATOR='caddy:2.11.3-alpine@sha256:86deaf5e3d3408a6ccec08fbb79989783dd2
 grep -q "$CADDY_VALIDATOR" "$ROOT_DIR/scripts/vps/customer-ops-install.sh" || { echo 'pinned Caddy validator missing' >&2; exit 1; }
 grep -q "$CADDY_VALIDATOR" "$ROOT_DIR/.github/workflows/hard-reset-verification.yml" || { echo 'CI Caddy validator digest differs or is missing' >&2; exit 1; }
 grep -q 'customer-ops-contract-test.sh' "$ROOT_DIR/.github/workflows/hard-reset-verification.yml" || { echo 'customer-ops contract test is not wired into CI' >&2; exit 1; }
+grep -q 'BLOCKWISE_OPS_PROJECTION_WORKER' "$PRODUCT_COMPOSE_FILE" || { echo 'Blockwise projection worker feature gate missing' >&2; exit 1; }
+grep -q 'WORKER_REAP_INTERVAL_MS' "$PRODUCT_COMPOSE_FILE" || { echo 'worker recovery scheduler is not configured' >&2; exit 1; }
+grep -q 'healthcheck:' "$PRODUCT_COMPOSE_FILE" || { echo 'product worker healthcheck missing' >&2; exit 1; }
 ! grep -q 'contract-placeholder' "$COMPOSE_FILE" || { echo 'moving placeholder image remains' >&2; exit 1; }
 grep -q 'run --rm --no-deps' "$ROOT_DIR/scripts/vps/customer-ops-smoke.sh" || { echo 'private-network IMAPS client contract missing' >&2; exit 1; }
 grep -q -- '--profile smoke' "$ROOT_DIR/scripts/vps/customer-ops-smoke.sh" || { echo 'private-network SMTP client profile missing' >&2; exit 1; }
 grep -q -- '--tls-sni-name' "$ROOT_DIR/scripts/vps/customer-ops-install.sh" || { echo 'installer SMTP SNI contract missing' >&2; exit 1; }
 grep -q -- '--profile smoke' "$ROOT_DIR/scripts/vps/customer-ops-install.sh" || { echo 'installer private SMTP client profile missing' >&2; exit 1; }
+grep -q 'CONTROL_EDGE_IMAGE' "$ROOT_DIR/ops/control-edge/docker-compose.yml" || { echo 'control-edge immutable image contract missing' >&2; exit 1; }
+grep -Eq '^FROM node:[^@]+@sha256:[0-9a-f]{64}$' "$ROOT_DIR/ops/control-edge/Dockerfile" || { echo 'control-edge base image is not digest-pinned' >&2; exit 1; }
+grep -q 'CONTROL_EDGE_INTERNAL_AUTH_HOST_FILE' "$ROOT_DIR/ops/control-edge/docker-compose.yml" || { echo 'control-edge strict per-file secret mount missing' >&2; exit 1; }
+grep -q 'healthcheck:' "$ROOT_DIR/ops/control-edge/docker-compose.yml" || { echo 'control-edge healthcheck missing' >&2; exit 1; }
+grep -q 'customer-ops-bootstrap.sh' "$ROOT_DIR/scripts/vps/customer-ops-bootstrap.sh" || { echo 'customer-ops bootstrap script missing' >&2; exit 1; }
+grep -q 'MAUTIC_LIFECYCLE_FIELDS_JSON' "$ROOT_DIR/scripts/vps/customer-ops-bootstrap.sh" || { echo 'Mautic lifecycle field bootstrap contract missing' >&2; exit 1; }
+grep -q 'fields/contact/new' "$ROOT_DIR/scripts/vps/customer-ops-bootstrap.sh" || { echo 'Mautic documented fields API bootstrap missing' >&2; exit 1; }
+grep -Fq 'accounts/${CHATWOOT_ACCOUNT_ID}/inboxes' "$ROOT_DIR/scripts/vps/customer-ops-bootstrap.sh" || { echo 'Chatwoot email inbox API bootstrap missing' >&2; exit 1; }
+grep -Fq 'accounts/${CHATWOOT_ACCOUNT_ID}/webhooks' "$ROOT_DIR/scripts/vps/customer-ops-bootstrap.sh" || { echo 'Chatwoot webhook API bootstrap missing' >&2; exit 1; }
+! grep -qi 'adapter.*deferred' "$ROOT_DIR/docs/runbooks/customer-ops-vps.md" || { echo 'obsolete adapter deferred language remains' >&2; exit 1; }
 grep -q 'FROM alpine:3.22.1@sha256:' "$ROOT_DIR/infra/customer-ops/smtp-client/Dockerfile" || { echo 'SMTP client base image is not digest-pinned' >&2; exit 1; }
 if grep -Eq '(^|[/:])latest([@:]|$)' "$COMPOSE_FILE"; then echo 'floating latest image tag found' >&2; exit 1; fi
-for script in customer-ops-install.sh customer-ops-backup.sh customer-ops-restore.sh customer-ops-smoke.sh customer-ops-contract-test.sh; do
+for script in customer-ops-install.sh customer-ops-backup.sh customer-ops-restore.sh customer-ops-smoke.sh customer-ops-bootstrap.sh customer-ops-contract-test.sh; do
   bash -n "$ROOT_DIR/scripts/vps/$script"
 done
 bash -n "$ROOT_DIR/infra/customer-ops/postgres-init/001-roles.sh"

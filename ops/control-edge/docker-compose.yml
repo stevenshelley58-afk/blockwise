@@ -1,5 +1,9 @@
 services:
   customer-ops-control-edge:
+    # Publish this image from the exact merged Blockwise SHA. The control edge
+    # has no public port and is reachable only on the private networks below.
+    image: "${CONTROL_EDGE_IMAGE:?Set CONTROL_EDGE_IMAGE to an immutable digest-pinned image}"
+    pull_policy: never
     build:
       context: ../..
       dockerfile: ops/control-edge/Dockerfile
@@ -11,12 +15,20 @@ services:
     networks: [hermes-private, blockwise-product]
     env_file: [/etc/blockwise/customer-ops/control-edge.env]
     volumes:
-      - /etc/blockwise/customer-ops/secrets:/run/secrets:ro
+      - "${CONTROL_EDGE_INTERNAL_AUTH_HOST_FILE:?Set CONTROL_EDGE_INTERNAL_AUTH_HOST_FILE to a root-owned 0600 file}:/run/secrets/internal-auth:ro"
+      - "${CONTROL_EDGE_SUPABASE_SERVICE_ROLE_HOST_FILE:?Set CONTROL_EDGE_SUPABASE_SERVICE_ROLE_HOST_FILE to a root-owned 0600 file}:/run/secrets/supabase-service-role:ro"
+      - "${CONTROL_EDGE_EXECUTOR_SECRET_HOST_FILE:?Set CONTROL_EDGE_EXECUTOR_SECRET_HOST_FILE to a root-owned 0600 file}:/run/secrets/action-executor:ro"
     environment:
       BLOCKWISE_INTERNAL_AUTH_SECRET_FILE: /run/secrets/internal-auth
       SUPABASE_SERVICE_ROLE_KEY_FILE: /run/secrets/supabase-service-role
       BLOCKWISE_ACTION_EXECUTOR_SECRET_FILE: /run/secrets/action-executor
     expose: ["8660"]
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "--quiet", "http://127.0.0.1:8660/health/live"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
 
 networks:
   hermes-private:

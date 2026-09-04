@@ -338,6 +338,12 @@ services:
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
     stop_grace_period: 30s
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('node:fs').accessSync('/app/REVISION')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     volumes:
       - ${HERMES_OPS_PROJECTION_ROOT:-/srv/frank/data/window/ops-projections}:/data/ops-projections:rw
       - ${MAUTIC_TOKEN_HOST_FILE:-/srv/blockwise/secrets/mautic_token}:/run/secrets/mautic_token:ro
@@ -372,6 +378,11 @@ services:
       CHATWOOT_GLOBAL_SOURCE_ID: ${CHATWOOT_GLOBAL_SOURCE_ID:-}
       BLOCKWISE_OPS_CORRELATION_KEY_FILE: /run/secrets/ops_correlation_key
       HERMES_OPS_PROJECTION_ROOT: ${HERMES_OPS_PROJECTION_ROOT:-/data/ops-projections}
+      WORKER_POLL_IDLE_MS: ${WORKER_POLL_IDLE_MS:-3000}
+      WORKER_POLL_BUSY_MS: ${WORKER_POLL_BUSY_MS:-250}
+      WORKER_LEASE_SECONDS: ${WORKER_LEASE_SECONDS:-600}
+      WORKER_HEARTBEAT_INTERVAL_MS: ${WORKER_HEARTBEAT_INTERVAL_MS:-200000}
+      WORKER_REAP_INTERVAL_MS: ${WORKER_REAP_INTERVAL_MS:-60000}
     networks: [blockwise-product]
 
   product-caddy:
