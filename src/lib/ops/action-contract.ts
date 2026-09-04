@@ -139,6 +139,7 @@ export function actionCapability(action: OpsActionName): OpsActionCapabilityDefi
 /** Validate an untrusted action request and return a normalized envelope. */
 export function parseOpsAction(input: unknown): OpsActionEnvelope {
   const value = record(input, "action");
+  if (value.schema !== BLOCKWISE_ACTION_CONTRACT_VERSION) throw new Error("action schema is invalid");
   const action = string(value.action, "action");
   if (!(action in OPS_ACTION_CAPABILITIES)) throw new Error("unsupported operations action");
   const name = action as OpsActionName;
