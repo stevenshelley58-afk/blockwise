@@ -26,7 +26,9 @@ test("lease loss aborts in-flight primary provider I/O", async () => {
     renew: async () => { renewals += 1; return renewals === 1; },
   });
   await heartbeat.renewNow();
-  await assert.rejects(heartbeat.fetch("https://graph.facebook.test/provider"), /lease was lost/i);
+  const abortedFetch = assert.rejects(heartbeat.fetch("https://graph.facebook.test/provider"), /lease was lost/i);
+  await assert.rejects(heartbeat.renewNow(), /lease was lost/i);
+  await abortedFetch;
   assert.throws(() => heartbeat.assertOwned(), /lease was lost/i);
   heartbeat.stop();
 });
