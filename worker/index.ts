@@ -22,6 +22,7 @@ import { pathToFileURL } from "node:url";
 
 import { resolveSupabaseServerCredential } from "../src/lib/supabase/credentials.ts";
 import { createSupabaseServiceClient } from "../src/lib/supabase/service.ts";
+import { reapOpsProjections, runOpsProjectionOnce } from "./ops-projection.ts";
 
 type ServiceSupabase = ReturnType<typeof createSupabaseServiceClient>;
 type HandlerExecutionContext = {
@@ -699,6 +700,11 @@ async function main() {
   const reaper = setInterval(() => void reap(supabase), REAP_EVERY_MS);
   reaper.unref?.();
   await reap(supabase);
+  const projectionsEnabled = process.env.BLOCKWISE_OPS_PROJECTION_WORKER === "true";
+  if (projectionsEnabled) {
+    await reapOpsProjections(supabase);
+    log("customer-operations projection lane enabled");
+  }
 
   // Single-threaded claim loop. claim_job_v2 is concurrency-safe (FOR UPDATE SKIP
   // LOCKED), so multiple worker replicas can run this same loop without
@@ -707,6 +713,7 @@ async function main() {
   try {
     while (!shutdownRequested) {
       try {
+        if (projectionsEnabled) await runOpsProjectionOnce(supabase);
         const did = await runOnce(supabase, { shutdownSignal: shutdownController.signal });
         if (!shutdownRequested) await sleep(did ? POLL_BUSY_MS : POLL_IDLE_MS);
       } catch (err) {
