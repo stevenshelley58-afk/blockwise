@@ -23,7 +23,7 @@ lock table public.audit_logs, public.billing_offer_acceptances,
   public.demo_requests, public.email_suppressions, public.lead_events,
   public.leads, public.ops_enquiry_associations, public.ops_projection_outbox,
   public.ops_provider_snapshots, public.ops_global_projection_outbox,
-  public.ops_provider_correlations, private.ops_provider_operation_ledger,
+  private.ops_provider_operation_ledger,
   public.ops_action_capabilities, public.ops_action_outbox,
   public.ops_action_receipts, public.email_outbox, public.profiles,
   public.report_email_leads, public.workspace_members,
@@ -59,8 +59,6 @@ select :'rollback_run_id', 'ops_provider_operation_ledger', operation_key, to_js
 insert into legacy_archive.customer_operations_tables_archive (run_id, table_name, row_id, row_data)
 select :'rollback_run_id', 'email_outbox', id::text, to_jsonb(o) from public.email_outbox o;
 insert into legacy_archive.customer_operations_tables_archive (run_id, table_name, row_id, row_data)
-select :'rollback_run_id', 'ops_provider_correlations', workspace_id::text || ':' || provider || ':' || aggregate_type || ':' || aggregate_id, to_jsonb(o) from public.ops_provider_correlations o;
-insert into legacy_archive.customer_operations_tables_archive (run_id, table_name, row_id, row_data)
 select :'rollback_run_id', 'ops_action_capabilities', action_type, to_jsonb(o) from public.ops_action_capabilities o;
 insert into legacy_archive.customer_operations_tables_archive (run_id, table_name, row_id, row_data)
 select :'rollback_run_id', 'ops_action_outbox', id::text, to_jsonb(o) from public.ops_action_outbox o;
@@ -86,9 +84,6 @@ begin
   select count(*) into v_live from public.email_outbox;
   select count(*) into v_archived from legacy_archive.customer_operations_tables_archive where table_name = 'email_outbox' and run_id = :'rollback_run_id';
   if v_live <> v_archived then raise exception 'rollback archive row-count mismatch for email_outbox: live %, archived %', v_live, v_archived; end if;
-  select count(*) into v_live from public.ops_provider_correlations;
-  select count(*) into v_archived from legacy_archive.customer_operations_tables_archive where table_name = 'ops_provider_correlations' and run_id = :'rollback_run_id';
-  if v_live <> v_archived then raise exception 'rollback archive row-count mismatch for provider correlations: live %, archived %', v_live, v_archived; end if;
 end $$;
 
 drop trigger if exists ops_workspace_projection on public.workspaces;
