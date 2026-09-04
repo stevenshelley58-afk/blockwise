@@ -134,7 +134,9 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
     // 3. Freeze the LAST SAVED revision — rejects when the ad has unsaved
     // changes (no active revision). This is the authoritative server state.
-    const loaded = await loadPublishState(access.supabase, id, access.access.workspaceId);
+    const loaded = await loadPublishState(access.supabase, id, access.access.workspaceId, {
+      templateSupabase: serviceSupabase,
+    });
 
     const state = loaded;
 

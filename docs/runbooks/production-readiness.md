@@ -62,7 +62,11 @@ commit that file. The worker release must also pass the preflight in
 - [x] Product Compose defines isolated named volumes and the
   `blockwise-product` network for PostgreSQL, PostgREST, GoTrue, Storage API,
   optional Realtime, Next, profile-gated Caddy, and the profile-gated
-  `product-worker` service.
+  `product-worker` service plus the opt-in Stalwart `product-mail` profile.
+- [x] Stalwart mail configuration/data volumes, SMTP-only host exposure,
+  non-root hardening, `/healthz/ready`, fail-closed mail validation, mail
+  volume backup, and external GoTrue/JMAP acceptance harness are documented in
+  `docs/runbooks/stalwart-mail.md`.
 - [x] Caddy routes `/rest/v1`, `/auth/v1`, `/storage/v1`, `/realtime/v1`,
   `/api`, and the Next app while exposing `/healthz`.
 - [x] The app and worker images accept an immutable Git revision; the worker

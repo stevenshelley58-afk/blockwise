@@ -50,6 +50,39 @@ services:
       timeout: 5s
       retries: 12
 
+  # Stalwart is the only mail transport for the product foundation. It keeps
+  # its configuration/database and message blobs in separate durable volumes.
+  # The mail profile is deliberately opt-in until DNS, TLS and an account have
+  # been bootstrapped. Only SMTP (25) and submission (587) are published;
+  # JMAP/IMAP/HTTP administration stays on the product network for now.
+  product-mail:
+    image: stalwartlabs/stalwart:v0.16.18@sha256:0df5900cab389a8ec47b7521ef0681ec93598caf72a09097685845211861f6c2
+    profiles: [mail]
+    restart: unless-stopped
+    environment:
+      STALWART_PUBLIC_URL: ${BLOCKWISE_MAIL_PUBLIC_URL:?BLOCKWISE_MAIL_PUBLIC_URL is required}
+      STALWART_RECOVERY_ADMIN: ${STALWART_RECOVERY_ADMIN:-}
+    ports:
+      - "${BLOCKWISE_MAIL_SMTP_BIND:-127.0.0.1}:${BLOCKWISE_MAIL_SMTP_PORT:-25}:25"
+      - "${BLOCKWISE_MAIL_SUBMISSION_BIND:-127.0.0.1}:${BLOCKWISE_MAIL_SUBMISSION_PORT:-1587}:587"
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev
+    # The image runs as UID 2000 and carries cap_net_bind_service so it can
+    # listen on 25/587. Keep that one capability; drop the rest.
+    cap_drop: [CHOWN, DAC_OVERRIDE, FOWNER, FSETID, KILL, SETGID, SETUID, SETPCAP, NET_RAW, SYS_CHROOT, MKNOD, AUDIT_WRITE, SETFCAP]
+    security_opt: [no-new-privileges:true]
+    volumes:
+      - blockwise-product-mail-config:/etc/stalwart
+      - blockwise-product-mail-data:/var/lib/stalwart
+    networks: [blockwise-product]
+    healthcheck:
+      test: [CMD, "curl", "-fsS", "http://127.0.0.1:8080/healthz/ready"]
+      interval: 15s
+      timeout: 5s
+      start_period: 30s
+      retries: 12
+
   product-auth:
     image: supabase/gotrue:v2.189.0
     restart: unless-stopped
@@ -72,7 +105,7 @@ services:
       GOTRUE_JWT_EXP: ${BLOCKWISE_AUTH_JWT_EXP:-3600}
       GOTRUE_EXTERNAL_EMAIL_ENABLED: ${BLOCKWISE_AUTH_EXTERNAL_EMAIL_ENABLED:-true}
       GOTRUE_MAILER_AUTOCONFIRM: ${BLOCKWISE_AUTH_MAILER_AUTOCONFIRM:-false}
-      GOTRUE_SMTP_HOST: ${BLOCKWISE_AUTH_SMTP_HOST}
+      GOTRUE_SMTP_HOST: ${BLOCKWISE_AUTH_SMTP_HOST:-product-mail}
       GOTRUE_SMTP_PORT: ${BLOCKWISE_AUTH_SMTP_PORT:-587}
       GOTRUE_SMTP_USER: ${BLOCKWISE_AUTH_SMTP_USER}
       GOTRUE_SMTP_PASS: ${BLOCKWISE_AUTH_SMTP_PASS}
@@ -169,6 +202,7 @@ services:
       product-storage: { condition: service_healthy }
     environment:
       NODE_ENV: production
+      BLOCKWISE_DEPLOYMENT_ENV: ${BLOCKWISE_DEPLOYMENT_ENV:-production}
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:?NEXT_PUBLIC_APP_URL is required}
       NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-${BLOCKWISE_PUBLIC_URL}}
       NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:?NEXT_PUBLIC_SUPABASE_URL is required}
@@ -264,6 +298,17 @@ services:
       BLOCKWISE_ENABLE_PROVIDER_WRITES: ${BLOCKWISE_ENABLE_PROVIDER_WRITES:-false}
       BLOCKWISE_META_PUBLISH_WORKSPACE_ALLOWLIST: ${BLOCKWISE_META_PUBLISH_WORKSPACE_ALLOWLIST:-}
       BLOCKWISE_REALTIME_ENABLED: ${BLOCKWISE_REALTIME_ENABLED:-true}
+      BLOCKWISE_MAIL_ENABLED: ${BLOCKWISE_MAIL_ENABLED:-false}
+      BLOCKWISE_MAIL_HOSTNAME: ${BLOCKWISE_MAIL_HOSTNAME:-}
+      BLOCKWISE_MAIL_DOMAIN: ${BLOCKWISE_MAIL_DOMAIN:-}
+      BLOCKWISE_MAIL_PUBLIC_URL: ${BLOCKWISE_MAIL_PUBLIC_URL:-}
+      BLOCKWISE_AUTH_SMTP_HOST: ${BLOCKWISE_AUTH_SMTP_HOST:-product-mail}
+      BLOCKWISE_AUTH_SMTP_PORT: ${BLOCKWISE_AUTH_SMTP_PORT:-587}
+      BLOCKWISE_AUTH_SMTP_USER: ${BLOCKWISE_AUTH_SMTP_USER:-}
+      BLOCKWISE_AUTH_SMTP_PASS: ${BLOCKWISE_AUTH_SMTP_PASS:-}
+      BLOCKWISE_AUTH_SMTP_ADMIN_EMAIL: ${BLOCKWISE_AUTH_SMTP_ADMIN_EMAIL:-}
+      BLOCKWISE_AUTH_SMTP_CONFIGURED: ${BLOCKWISE_AUTH_SMTP_CONFIGURED:-false}
+      STALWART_WEBHOOK_SECRET: ${STALWART_WEBHOOK_SECRET:-}
       BLOCKWISE_GIT_SHA: ${BLOCKWISE_GIT_SHA}
     networks: [blockwise-product]
     healthcheck:
@@ -358,3 +403,7 @@ volumes:
     name: blockwise-product-caddy-data
   blockwise-product-caddy-config:
     name: blockwise-product-caddy-config
+  blockwise-product-mail-config:
+    name: ${BLOCKWISE_MAIL_CONFIG_VOLUME_NAME:-blockwise-product-mail-config}
+  blockwise-product-mail-data:
+    name: ${BLOCKWISE_MAIL_DATA_VOLUME_NAME:-blockwise-product-mail-data}

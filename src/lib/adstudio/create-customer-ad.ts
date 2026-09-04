@@ -62,6 +62,15 @@ export async function createCustomerAd(
 }
 export class CustomerAdNotFoundError extends Error {}
 
+export function parseCustomerAdId(value: string | string[] | undefined): string | null {
+  const candidate = Array.isArray(value) ? (value.length === 1 ? value[0] : null) : value;
+  if (!candidate) return null;
+  const normalized = candidate.trim().toLowerCase();
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(normalized)
+    ? normalized
+    : null;
+}
+
 /** Load an existing ad and its active revision. This function is read-only. */
 export async function loadCustomerAd(supabase: SupabaseClient, workspaceId: string, adId: string): Promise<CustomerAdRef & { templateId: string }> {
   const { data: ad, error } = await supabase.from("ad_customer_ads").select("id, name, template_id, active_revision_id").eq("id", adId).eq("workspace_id", workspaceId).maybeSingle();

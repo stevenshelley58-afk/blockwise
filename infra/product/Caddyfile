@@ -39,6 +39,13 @@ http://{$BLOCKWISE_PRODUCT_DOMAIN} {
 		reverse_proxy product-realtime:4000
 	}
 
+	# Stalwart reaches this route directly over the private Docker network.
+	# Never let the public product hostname proxy the webhook endpoint.
+	@stalwart_webhook_public path /api/internal/email/stalwart /api/internal/email/stalwart/*
+	handle @stalwart_webhook_public {
+		respond "not found" 404
+	}
+
 	handle /api/* {
 		reverse_proxy product-app:3000 {
 			header_up X-Blockwise-Client-IP "{client_ip}"
