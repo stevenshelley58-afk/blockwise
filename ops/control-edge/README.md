@@ -27,7 +27,7 @@ Available execution matrix in this slice:
 | `team_invite` | workspace | internal Blockwise executor |
 | `team_resend`, `team_cancel` | invitation | internal Blockwise executor |
 | `session_revoke` | session/profile ID | internal Blockwise executor |
-| `enquiry_assign` | associated enquiry | internal Blockwise executor |
+| `enquiry_assign` | exact associated or global enquiry ID | internal Blockwise executor; atomically binds global → workspace |
 | `billing_reconcile` | billing | internal Blockwise executor |
 
 Role changes, consent/suppression changes, enquiry close/reply, booking

@@ -43,7 +43,7 @@ action name.
 | `session_revoke` | session | available: existing owner-only RPC |
 | `consent_grant`, `consent_withdraw`, `consent_unsubscribe` | profile | capability required |
 | `suppression_add`, `suppression_remove` | profile | capability required |
-| `enquiry_assign` | enquiry | available: explicit association RPC |
+| `enquiry_assign` | enquiry | available: atomic global-to-workspace association RPC |
 | `enquiry_close`, `enquiry_reply` | enquiry | capability required |
 | `booking_cancel`, `booking_reschedule` | booking | capability required |
 | `billing_reconcile` | billing | available: existing reconciliation path |
@@ -73,8 +73,12 @@ they do not treat a caller-provided AAL2 claim as a substitute for live MFA.
 
 The database trigger binds every target to the requested workspace before an
 intent is stored: profiles and sessions must be workspace members, invitations
-and bookings must belong to the workspace, enquiries must already have an
-explicit workspace association (global/unassigned enquiries are not inferred),
+and bookings must belong to the workspace. `enquiry_assign` is the one
+intentional exception: it may target the exact ID of an unassigned global
+enquiry (`workspace_id is null`) or an enquiry already owned by the requested
+workspace, and atomically binds the former during assignment. Close/reply
+actions require an existing workspace association; global/unassigned
+enquiries are never inferred by email or another fuzzy match.
 and billing/workspace actions target the workspace UUID. A stale or
 cross-workspace target is rejected before capability evaluation. Each enqueue,
 claim, retry, supersede, settle, expiry, or terminal failure transition
