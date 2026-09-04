@@ -22,3 +22,7 @@ ea694c548722248ee7a89dc0121e9435e2db3954:tests/adstudio/vault-template-provider-
 802408cb735dd2f71b2bb20bca1a4979cd190fe5:tests/provider-runtime-token-vault.test.ts:generic-api-key:9
 bcfe63c189beb2776087471c619414e67a20e6eb:tests/meta-free-live-conversion.test.ts:generic-api-key:76
 ba170a7813e81260bd9a6612f10aaa3bf52d86ce:tests/meta-free-live-conversion.test.ts:generic-api-key:76
+df11065c4f2bd2025fb929e1c64f4ddac2970d68:src/lib/adstudio/synthetic-agents.ts:generic-api-key:18
+df11065c4f2bd2025fb929e1c64f4ddac2970d68:src/lib/adstudio/synthetic-agents.ts:generic-api-key:20
+df11065c4f2bd2025fb929e1c64f4ddac2970d68:src/lib/adstudio/synthetic-agents.ts:generic-api-key:23
+df11065c4f2bd2025fb929e1c64f4ddac2970d68:src/lib/adstudio/synthetic-agents.ts:generic-api-key:27
