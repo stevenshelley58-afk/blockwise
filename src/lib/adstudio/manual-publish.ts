@@ -147,7 +147,7 @@ export async function createOrLoadManualPublishRequest(input: {
   const existing = await loadEvents(input.serviceSupabase, { workspaceId, mutationId });
   if (existing.length) {
     const request = toRequest(existing);
-    if (!request || request.workspaceId !== workspaceId || request.adId !== adId) throw new ManualPublishError("idempotency_conflict", "mutationId is already used for another request.", 409);
+    if (!request || request.workspaceId !== workspaceId || request.adId !== adId || request.revisionId !== revisionId || request.documentHash !== documentHash) throw new ManualPublishError("idempotency_conflict", "mutationId is already used for a different reviewed ad revision.", 409);
     return request;
   }
 
@@ -165,6 +165,7 @@ export async function createOrLoadManualPublishRequest(input: {
     description: typeof document.metaDescription === "string" ? document.metaDescription : typeof ad.meta_description === "string" ? ad.meta_description : "",
     cta: typeof document.metaCta === "string" ? document.metaCta : typeof ad.meta_cta === "string" ? ad.meta_cta : "LEARN_MORE",
   };
+  if (!metaCopy.primaryText.trim() || !metaCopy.headline.trim() || !metaCopy.cta.trim()) throw new ManualPublishError("meta_copy_missing", "Add Meta primary text, headline, and call to action before requesting manual publishing.");
 
   const metadata = {
     requestType: "manual_meta_publish",
@@ -196,7 +197,7 @@ export async function createOrLoadManualPublishRequest(input: {
   if (error && error.code !== "23505") throw new ManualPublishError("storage_error", "The manual publishing request could not be recorded.", 500);
   const created = await loadEvents(input.serviceSupabase, { workspaceId, mutationId });
   const request = toRequest(created);
-  if (!request || request.workspaceId !== workspaceId || request.adId !== adId) throw new ManualPublishError("idempotency_conflict", "mutationId is already used for another request.", 409);
+  if (!request || request.workspaceId !== workspaceId || request.adId !== adId || request.revisionId !== revisionId || request.documentHash !== documentHash) throw new ManualPublishError("idempotency_conflict", "mutationId is already used for a different reviewed ad revision.", 409);
   return request;
 }
 
