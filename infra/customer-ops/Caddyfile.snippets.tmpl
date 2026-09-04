@@ -1,0 +1,26 @@
+# Customer-ops ingress template. The installer renders this file with the
+# operator's hostname env values before handing it to the separately managed
+# Frank/shared edge; it is never mounted by the product Compose project.
+#
+# Caddy terminates public TLS. The upstreams below are private Compose service
+# names on blockwise-customer-ops-edge.
+
+${MAUTIC_HOST} {
+    encode gzip
+    reverse_proxy mautic:80
+}
+
+${CHATWOOT_HOST} {
+    encode gzip
+    reverse_proxy chatwoot-web:3000
+}
+
+${SNAGTIME_HOST} {
+    encode gzip
+    reverse_proxy snagtime-web:3000
+}
+
+# product-mail deliberately keeps its HTTP/JMAP/admin listener private in the
+# canonical product Compose contract. SMTP/IMAP are validated directly; do not
+# publish a public Caddy route for mail unless the product-mail runbook is
+# explicitly revised and the edge is attached to the shared mail network.
