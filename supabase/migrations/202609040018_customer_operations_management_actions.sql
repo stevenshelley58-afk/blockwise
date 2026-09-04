@@ -3,6 +3,10 @@
 -- effects remain in the Hermes projection worker and are never performed here.
 begin;
 
+alter table public.ops_action_capabilities add column if not exists verified_at timestamptz;
+alter table public.ops_action_capabilities add column if not exists expires_at timestamptz;
+alter table public.ops_action_capabilities add column if not exists verification_error text;
+
 -- The action enum is a CHECK in the original outbox migration; extend it for
 -- already-migrated databases as well as fresh replays.
 alter table public.ops_action_capabilities drop constraint if exists ops_action_capabilities_action_type_check;
@@ -32,7 +36,10 @@ create or replace function public.set_ops_chatwoot_capability(p_enabled boolean,
 returns boolean language plpgsql security definer set search_path = '' as $$
 begin
   update public.ops_action_capabilities set capability_state=case when p_enabled then 'available' else 'capability_required' end,
-    description=left(coalesce(p_reason,'Chatwoot worker readiness unavailable'),256), updated_at=now()
+    description=left(coalesce(p_reason,'Chatwoot worker readiness unavailable'),256), updated_at=now(),
+    verified_at=case when p_enabled then now() else null end,
+    expires_at=case when p_enabled then now()+interval '2 minutes' else null end,
+    verification_error=case when p_enabled then null else left(coalesce(p_reason,'unavailable'),512) end
     where action_type in ('enquiry_close','enquiry_reply','enquiry_reopen');
   return true;
 end;
