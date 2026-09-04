@@ -22,7 +22,7 @@ command -v openssl >/dev/null || { echo 'openssl is required' >&2; exit 69; }
 command -v swaks >/dev/null || { echo 'swaks is required for the SMTP STARTTLS/AUTH acceptance gate' >&2; exit 69; }
 
 quiet_http() { curl --fail --silent --show-error --output /dev/null --write-out '%{http_code}' "$@"; }
-smtp_host="${SMTP_PUBLIC_HOST:-${MAIL_PUBLIC_HOST:?MAIL_PUBLIC_HOST is required}}"
+smtp_host="${MAIL_PUBLIC_HOST:?MAIL_PUBLIC_HOST is required}"
 smtp_port="${SMTP_PORT:-587}"
 smtp_auth_check() {
   local label="$1" user="$2" secret_file="$3"
