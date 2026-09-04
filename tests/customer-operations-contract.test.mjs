@@ -26,6 +26,8 @@ test("product allowlist and rollback procedure cover the ops contract", () => {
   assert.match(rollback, /ops_action_outbox/);
   assert.match(rollback, /ops_action_receipts/);
   assert.match(rollback, /ops_action_capabilities/);
+  assert.match(rollback, /ops_action_processing_receipt/);
+  assert.match(rollback, /ops_action_target_binding/);
   assert.match(rollback, /lock table public\.audit_logs/);
   assert.match(rollback, /in access exclusive mode/);
 });
