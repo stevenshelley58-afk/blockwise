@@ -3,6 +3,35 @@
 -- leased job is being processed and is never copied into a durable receipt.
 begin;
 
+create table if not exists public.ops_provider_correlations (
+  workspace_id uuid not null references public.workspaces(id) on delete cascade,
+  provider text not null check (provider in ('mautic','chatwoot')),
+  aggregate_type text not null,
+  aggregate_id text not null,
+  provider_record_suffix text not null check (provider_record_suffix ~ '\\*'),
+  source_version bigint not null check (source_version > 0),
+  updated_at timestamptz not null default now(),
+  primary key (workspace_id, provider, aggregate_type, aggregate_id)
+);
+alter table public.ops_provider_correlations enable row level security;
+revoke all on public.ops_provider_correlations from public, anon, authenticated;
+grant select on public.ops_provider_correlations to service_role;
+
+create or replace function public.resolve_ops_provider_correlation(p_workspace_id uuid, p_provider text, p_aggregate_type text, p_aggregate_id text)
+returns text language sql security definer set search_path = '' as $$
+  select provider_record_suffix from public.ops_provider_correlations where workspace_id = p_workspace_id and provider = p_provider and aggregate_type = p_aggregate_type and aggregate_id = p_aggregate_id;
+$$;
+create or replace function public.record_ops_provider_correlation(p_workspace_id uuid, p_provider text, p_aggregate_type text, p_aggregate_id text, p_provider_record_suffix text, p_source_version bigint)
+returns boolean language plpgsql security definer set search_path = '' as $$
+begin
+  if p_provider_record_suffix is null or p_provider_record_suffix !~ '\\*' then raise exception 'provider correlation must be masked' using errcode = '22023'; end if;
+  insert into public.ops_provider_correlations values (p_workspace_id,p_provider,p_aggregate_type,p_aggregate_id,left(p_provider_record_suffix,12),p_source_version,now()) on conflict (workspace_id,provider,aggregate_type,aggregate_id) do update set provider_record_suffix=excluded.provider_record_suffix,source_version=greatest(public.ops_provider_correlations.source_version,excluded.source_version),updated_at=now();
+  return true;
+end;
+$$;
+revoke all on function public.resolve_ops_provider_correlation(uuid,text,text,text), public.record_ops_provider_correlation(uuid,text,text,text,text,bigint) from public, anon, authenticated;
+grant execute on function public.resolve_ops_provider_correlation(uuid,text,text,text), public.record_ops_provider_correlation(uuid,text,text,text,text,bigint) to service_role;
+
 create or replace function public.resolve_ops_projection_data(
   p_workspace_id uuid, p_provider text, p_aggregate_type text, p_aggregate_id text
 )
@@ -26,7 +55,9 @@ begin
     -- Association rows are the only legal customer link. A global enquiry has
     -- no workspace and therefore returns NULL: no email-based inference.
     select jsonb_build_object('subject', left(coalesce(e.subject,''),512), 'status', left(coalesce(e.status,''),64)) into v_data
-    from public.ops_enquiry_associations e where e.id::text = p_aggregate_id and e.workspace_id = p_workspace_id;
+    from public.ops_enquiry_associations e
+    where e.workspace_id = p_workspace_id
+      and (e.id::text = p_aggregate_id or (e.source_system = 'blockwise' and e.source_id = p_aggregate_id));
   end if;
   return v_data;
 end;

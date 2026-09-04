@@ -6,7 +6,8 @@
  * a service-only RPC, calls the configured OSS provider, then stores only a
  * normalized observation through the snapshot RPC. Frank never runs this code.
  */
-import { readFileSync, statSync } from "node:fs";
+import { lstatSync, readFileSync } from "node:fs";
+import { isAbsolute, dirname, resolve } from "node:path";
 import type { createSupabaseServiceClient } from "../src/lib/supabase/service.ts";
 import { buildProjectionEnvelope, mapProjectionForAdapter, type BlockwiseProjectionEnvelope } from "../src/lib/ops/projection-contract.ts";
 
@@ -25,8 +26,9 @@ export async function runOpsProjectionOnce(supabase: Supabase, fetchImpl: Fetche
   const row = ((data ?? []) as Row[])[0];
   if (!row) return false;
   let leaseLost = false;
+  let heartbeatInFlight: Promise<unknown> | null = null;
   const heartbeat = setInterval(() => {
-    void supabase.rpc("heartbeat_ops_projection", { p_workspace_id: row.workspace_id, p_id: row.id, p_lease_token: row.lease_token, p_lease_seconds: LEASE_SECONDS }).then((result: { data: unknown; error: { message: string } | null }) => { if (result.error || result.data !== true) leaseLost = true; });
+    heartbeatInFlight = supabase.rpc("heartbeat_ops_projection", { p_workspace_id: row.workspace_id, p_id: row.id, p_lease_token: row.lease_token, p_lease_seconds: LEASE_SECONDS }).then((result: { data: unknown; error: { message: string } | null }) => { if (result.error || result.data !== true) leaseLost = true; });
   }, 60_000);
   try {
     await processProjection(supabase, row, fetchImpl);
@@ -37,7 +39,7 @@ export async function runOpsProjectionOnce(supabase: Supabase, fetchImpl: Fetche
     const message = redact(cause instanceof Error ? cause.message : String(cause));
     const failed = await supabase.rpc("fail_ops_projection", { p_workspace_id: row.workspace_id, p_id: row.id, p_lease_token: row.lease_token, p_error: message });
     if (failed.error) throw new Error(`fail_ops_projection failed: ${redact(failed.error.message)}`);
-  } finally { clearInterval(heartbeat); }
+  } finally { clearInterval(heartbeat); if (heartbeatInFlight) await heartbeatInFlight; }
   return true;
 }
 
@@ -53,7 +55,14 @@ async function processProjection(supabase: Supabase, row: Row, fetchImpl: Fetche
   if (!resolved.data || typeof resolved.data !== "object") throw new Error("projection data is unavailable; refusing provider call");
   const sourcePayload = { ...(resolved.data as Record<string, unknown>), workspaceId: row.workspace_id };
   const envelope = buildProjectionEnvelope({ workspaceId: row.workspace_id, provider: row.provider, aggregate: { type: row.aggregate_type, id: row.aggregate_id }, operation: row.operation, source: { eventId: row.source_event_id, version: row.source_version }, payload: sourcePayload as BlockwiseProjectionEnvelope["payload"] });
-  const result = await providerCall(row.provider, mapProjectionForAdapter(envelope), row.id, fetchImpl);
+  const mapping = mapProjectionForAdapter(envelope);
+  const existing = await supabase.rpc("resolve_ops_provider_correlation", { p_workspace_id: row.workspace_id, p_provider: row.provider, p_aggregate_type: row.aggregate_type, p_aggregate_id: row.aggregate_id });
+  if (existing.error) throw new Error(`provider correlation lookup failed: ${redact(existing.error.message)}`);
+  const result = existing.data ? { providerRecordSuffix: String(existing.data), safeData: { detail: "reconciled from provider correlation" } } : await providerCall(row.provider, mapping, row.id, fetchImpl);
+  if (!existing.data && result.providerRecordSuffix) {
+    const recorded = await supabase.rpc("record_ops_provider_correlation", { p_workspace_id: row.workspace_id, p_provider: row.provider, p_aggregate_type: row.aggregate_type, p_aggregate_id: row.aggregate_id, p_provider_record_suffix: result.providerRecordSuffix, p_source_version: row.source_version });
+    if (recorded.error || recorded.data !== true) throw new Error("provider correlation could not be recorded");
+  }
   const snapshot = result ?? { safeData: {} };
   const saved = await supabase.rpc("upsert_ops_provider_snapshot", { p_workspace_id: row.workspace_id, p_provider: row.provider, p_snapshot_kind: snapshotKind(row.aggregate_type), p_aggregate_type: row.aggregate_type, p_aggregate_id: row.aggregate_id, p_status: snapshot.status ?? null, p_stage: snapshot.stage ?? null, p_subject: snapshot.subject ?? null, p_channel: snapshot.channel ?? null, p_delivery_status: snapshot.deliveryStatus ?? null, p_provider_record_suffix: snapshot.providerRecordSuffix ?? null, p_occurred_at: snapshot.occurredAt ?? null, p_last_activity_at: snapshot.lastActivityAt ?? null, p_source_event_id: row.source_event_id, p_source_version: row.source_version, p_safe_data: snapshot.safeData ?? {} });
   if (saved.error) throw new Error(`provider snapshot write failed: ${redact(saved.error.message)}`);
@@ -64,21 +73,42 @@ function snapshotKind(type: Row["aggregate_type"]): "delivery" | "flow" | "lifec
 async function providerCall(provider: Row["provider"], mapping: ReturnType<typeof mapProjectionForAdapter>, idempotencyKey: string, fetchImpl: Fetcher): Promise<ProviderResult> {
   const base = requiredHttpsEnv(provider === "mautic" ? "MAUTIC_BASE_URL" : "CHATWOOT_BASE_URL");
   const token = readSecretFile(provider === "mautic" ? "MAUTIC_TOKEN_FILE" : "CHATWOOT_API_TOKEN_FILE");
-  const url = new URL(provider === "mautic" ? "/api/contacts" : "/api/v1/accounts/" + requiredEnv("CHATWOOT_ACCOUNT_ID") + "/conversations", base);
+  const account = provider === "chatwoot" ? requiredEnv("CHATWOOT_ACCOUNT_ID") : "";
+  const url = new URL(provider === "mautic"
+    ? (mapping.resource === "lifecycle" ? `/api/segments/${encodeURIComponent(requiredEnv("MAUTIC_LIFECYCLE_SEGMENT_ID"))}/contact/${encodeURIComponent(mapping.fields.externalId)}` : "/api/contacts")
+    : `/api/v1/accounts/${encodeURIComponent(account)}/contacts`, base);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(new Error("provider request timed out")), REQUEST_TIMEOUT_MS);
   try {
-    const response = await fetchImpl(url, { method: "POST", redirect: "error", headers: { authorization: `Bearer ${token}`, "content-type": "application/json", "idempotency-key": idempotencyKey }, body: JSON.stringify(mapping.fields), signal: controller.signal });
+    const fields = provider === "mautic"
+      ? (mapping.resource === "lifecycle" ? { stage: mapping.fields.stage, externalId: mapping.fields.externalId, tag: requiredEnv("MAUTIC_LIFECYCLE_TAG") } : { ...mapping.fields, "fields[blockwise_external_id]": mapping.fields.externalId, tags: [requiredEnv("MAUTIC_CONTACT_TAG")] })
+      : { identifier: mapping.fields.externalId };
+    const method = provider === "chatwoot" && mapping.resource !== "enquiry" ? "PATCH" : "POST";
+    const response = await fetchImpl(url, { method, redirect: "error", headers: { authorization: `Bearer ${token}`, "content-type": "application/json", "idempotency-key": idempotencyKey, "x-blockwise-correlation": idempotencyKey }, body: JSON.stringify(fields), signal: controller.signal });
     if (response.status === 429 || response.status >= 500) throw new Error(`provider temporary failure (${response.status})`);
     if (!response.ok) throw new Error(`provider rejected projection (${response.status})`);
-    const body = await response.json().catch(() => ({})) as Record<string, unknown>;
+    const body = await response.json().catch(() => null) as Record<string, unknown> | null;
+    if (!body || typeof body !== "object") throw new Error("provider returned an invalid response");
     return { status: string(body.status), stage: string(body.stage), subject: string(body.subject), channel: string(body.channel), deliveryStatus: string(body.delivery_status), providerRecordSuffix: maskedSuffix(body.id), safeData: { detail: "provider acknowledged" } };
   } finally { clearTimeout(timer); }
 }
 
 function requiredEnv(name: string): string { const value = process.env[name]?.trim(); if (!value) throw new Error(`${name} is not configured`); return value; }
 function requiredHttpsEnv(name: string): URL { const url = new URL(requiredEnv(name)); if (url.protocol !== "https:") throw new Error(`${name} must use HTTPS`); return url; }
-function readSecretFile(name: string): string { const path = requiredEnv(name); const mode = statSync(path).mode & 0o777; if (mode & 0o077) throw new Error(`${name} file permissions are too broad`); const value = readFileSync(path, "utf8").trim(); if (!value) throw new Error(`${name} is empty`); return value; }
+function readSecretFile(name: string): string {
+  const path = requiredEnv(name);
+  if (!isAbsolute(path)) throw new Error(`${name} must be an absolute path`);
+  const resolved = resolve(path);
+  const file = lstatSync(resolved);
+  if (!file.isFile() || (file.isSymbolicLink?.() ?? false)) throw new Error(`${name} must be a regular non-symlink file`);
+  if (process.platform !== "win32") {
+    if ((file.mode & 0o777) !== 0o600) throw new Error(`${name} must be mode 0600`);
+    if (typeof process.getuid === "function" && file.uid !== process.getuid()) throw new Error(`${name} has an unexpected owner`);
+    const parent = lstatSync(dirname(resolved));
+    if (!parent.isDirectory() || (parent.mode & 0o022)) throw new Error(`${name} parent directory is writable by group/other`);
+  }
+  const value = readFileSync(resolved, "utf8").trim(); if (!value) throw new Error(`${name} is empty`); return value;
+}
 function string(value: unknown): string | undefined { return typeof value === "string" && value.length < 512 ? value : undefined; }
 function maskedSuffix(value: unknown): string | undefined { const raw = string(value); return raw ? `****${raw.slice(-4)}` : undefined; }
 function redact(value: string): string { return value.replace(/(bearer\s+)[^\s]+/gi, "$1[redacted]").replace(/[\w.+-]+@[\w.-]+/g, "[email]").slice(0, 512); }
