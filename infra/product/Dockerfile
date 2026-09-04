@@ -40,7 +40,7 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 # npm is needed only while building; removing it from the runtime image
 # eliminates unused CLI dependency exposure without changing the app runtime.
-RUN sed -i 's|deb.debian.org/debian|snapshot.debian.org/archive/debian/20260904T000000Z|g; s|deb.debian.org/debian-security|snapshot.debian.org/archive/debian-security/20260904T000000Z|g' /etc/apt/sources.list.d/debian.sources \
+RUN sed -i 's|deb.debian.org/debian-security|snapshot.debian.org/archive/debian-security/20260904T000000Z|g; s|deb.debian.org/debian|snapshot.debian.org/archive/debian/20260904T000000Z|g' /etc/apt/sources.list.d/debian.sources \
   && echo 'Acquire::Check-Valid-Until "false";' > /etc/apt/apt.conf.d/99snapshot \
   && apt-get update \
   && apt-get install --no-install-recommends -y \

@@ -21,7 +21,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
-          node-version: 22
+          node-version: 22.23.2
           cache: npm
       - name: Install dependencies
         run: npm ci
@@ -38,8 +38,10 @@ jobs:
           host = (u.hostname or '').lower()
           if u.scheme != 'https' or u.username or u.password or u.query or u.fragment:
               raise SystemExit('Preview URL must be credential-free HTTPS')
-          if host not in {'blockwise-tan.vercel.app'} and not re.fullmatch(r'blockwise-[a-z0-9-]+\.vercel\.app', host):
+          if host != 'blockwise-tan.vercel.app' and not re.fullmatch(r'blockwise-[a-z0-9-]+-steven-shelleys-projects\.vercel\.app', host):
               raise SystemExit('Preview URL is outside the Blockwise Vercel host allowlist')
+          if u.port not in (None, 443):
+              raise SystemExit('Preview URL must use HTTPS default port')
           if not re.fullmatch(r'[0-9a-f]{40}', os.environ['EXPECTED_SHA']):
               raise SystemExit('source_sha must be a full Git SHA')
           if os.environ['EXPECTED_SHA'] != os.environ['GITHUB_SHA']:
