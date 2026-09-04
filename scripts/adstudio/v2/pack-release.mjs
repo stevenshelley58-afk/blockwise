@@ -179,7 +179,13 @@ export function assertCandidateEvidence({ templateId, doc, evidence, templateByt
     || Object.values(stressResults).some((result) => result?.passed !== true)) {
     throw new Error(`${templateId}: evidence stressFixtureResults must contain 10 passing cases`);
   }
-  return { feedPassed: true, storyPassed: true, stressFixtureResults: qa.stressFixtureResults };
+  return {
+    feedPassed: true,
+    storyPassed: true,
+    stressFixtureResults: Object.fromEntries(
+      Object.keys(stressResults).map((fixture) => [fixture, "pass"]),
+    ),
+  };
 }
 
 function loadSigningKey(publicReleaseEnabled) {
