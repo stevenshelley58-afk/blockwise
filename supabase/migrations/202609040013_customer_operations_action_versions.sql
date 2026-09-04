@@ -183,7 +183,7 @@ begin
 
   select coalesce(jsonb_agg(jsonb_build_object('id',s.id,'customer_id',s.workspace_id,
     'workspace_id',s.workspace_id,'name','Mautic '||coalesce(s.stage,'lifecycle'),
-    'type','lifecycle','status',s.status,'stage',s.stage,
+    'type','lifecycle','status',s.status,'stage',s.stage,'profile_id',nullif(s.aggregate_id,''),'flow_id',nullif(s.safe_data->>'flow_key',''),
     'campaign',coalesce(s.safe_data->>'campaign_status','not_configured'),
     'enrolled_at',s.created_at,'last_activity_at',s.last_activity_at,
     'updated_at',s.updated_at,'snapshot_kind',s.snapshot_kind,
