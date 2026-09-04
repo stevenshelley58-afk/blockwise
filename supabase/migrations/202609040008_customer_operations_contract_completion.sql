@@ -11,6 +11,12 @@ alter table private.ops_provider_operation_ledger add column if not exists compl
 alter table private.ops_provider_operation_ledger add column if not exists step_digests jsonb not null default '{}';
 revoke all on private.ops_provider_operation_ledger from service_role;
 
+-- The protected operation ledger supersedes the old masked-suffix correlation
+-- cache. Remove the unused surface during forward migration as well as rollback.
+drop function if exists public.resolve_ops_provider_correlation(uuid,text,text,text);
+drop function if exists public.record_ops_provider_correlation(uuid,text,text,text,text,bigint);
+drop table if exists public.ops_provider_correlations;
+
 create or replace function public.record_ops_provider_step(
   p_operation_key text, p_step text, p_resource text default null,
   p_provider_id_ciphertext text default null, p_provider_id_digest text default null
