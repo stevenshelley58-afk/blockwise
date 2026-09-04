@@ -185,6 +185,114 @@ test("multi-line text below a 1.0 line height is aggregated and single-line text
   }));
 });
 
+test("c15 Story essential text collision is rejected with its signed painted overlap while adjacent text passes", async () => {
+  const template = templateFixture();
+  template.fonts = [{ file: "manrope-400.woff2" }, { file: "manrope-800.woff2" }];
+  template.textInputs = [
+    {
+      key: "aboutCopy",
+      label: "About",
+      placeholder: "Ready to move into a home\nwith a minimalist design?\nCheck out this property! It\nhas a cozy living room,\nremodeled kitchen, huge\nbackyard, and so on.",
+      maxLength: 220,
+    },
+    { key: "featuresHeading", label: "Features", placeholder: "PROPERTY FEATURES", maxLength: 24 },
+  ];
+  template.storyLayout.layers.push({
+    type: "text",
+    layerId: "story-about-copy",
+    inputKey: "aboutCopy",
+    font: { file: "manrope-400.woff2" },
+    fontSize: 32,
+    lineHeight: 1.12,
+    tracking: 0,
+    alignment: "left",
+    maxCharacters: 220,
+    maxLines: 6,
+    colourRole: "mainText",
+    overflowBehaviour: "scale_down",
+    geometry: { x: 72, y: 1108, width: 936, height: 216 },
+  }, {
+    type: "text",
+    layerId: "story-features-heading",
+    inputKey: "featuresHeading",
+    font: { file: "manrope-800.woff2" },
+    fontSize: 38,
+    lineHeight: 1,
+    tracking: 0,
+    alignment: "left",
+    maxCharacters: 24,
+    maxLines: 1,
+    colourRole: "mainText",
+    overflowBehaviour: "scale_down",
+    geometry: { x: 120, y: 1218, width: 888, height: 46 },
+  });
+
+  const renderInput = {
+    template,
+    imageValues: {},
+    textValues: { aboutCopy: template.textInputs[0]!.placeholder, featuresHeading: "PROPERTY FEATURES" },
+    colourMap: colours,
+  };
+  const failure = await renderPlacement(renderInput, "story").then(() => null, (error: unknown) => error);
+  assert.ok(failure instanceof TextPreflightError);
+  const overlap = failure.violations.find(({ kind }) => kind === "essential_text_overlap");
+  assert.deepEqual(overlap, {
+    placement: "story",
+    layerId: "story-about-copy",
+    otherLayerId: "story-features-heading",
+    kind: "essential_text_overlap",
+    overlapPx: 100,
+    reason: "story essential text layers story-about-copy and story-features-heading overlap by 100px vertically",
+  });
+
+  template.storyLayout.layers[1]!.geometry = { x: 72, y: 1094, width: 936, height: 192 };
+  if (template.storyLayout.layers[1]!.type === "text") template.storyLayout.layers[1]!.lineHeight = 1;
+  template.storyLayout.layers[2]!.geometry = { x: 120, y: 1292, width: 888, height: 38 };
+  await assert.doesNotReject(renderPlacement(renderInput, "story"));
+});
+
+test("c15 Story address is rejected when its exact painted bounds exceed right geometry by 4px", async () => {
+  const template = templateFixture();
+  template.fonts = [{ file: "manrope-400.woff2" }];
+  template.textInputs = [{
+    key: "propertyAddress",
+    label: "Address",
+    placeholder: "123 Anywhere St.,\nAny City, ST 12345",
+    maxLength: 60,
+  }];
+  template.storyLayout.layers.push({
+    type: "text",
+    layerId: "story-address",
+    inputKey: "propertyAddress",
+    font: { file: "manrope-400.woff2" },
+    fontSize: 32,
+    lineHeight: 1.15,
+    tracking: -0.5,
+    alignment: "right",
+    maxCharacters: 60,
+    maxLines: 2,
+    colourRole: "mainText",
+    overflowBehaviour: "scale_down",
+    geometry: { x: 624, y: 706, width: 344, height: 86 },
+  });
+
+  const failure = await renderPlacement({
+    template,
+    imageValues: {},
+    textValues: { propertyAddress: "123 Anywhere St.,\nAny City, ST 12345" },
+    colourMap: colours,
+  }, "story").then(() => null, (error: unknown) => error);
+  assert.ok(failure instanceof TextPreflightError);
+  assert.deepEqual(failure.violations, [{
+    placement: "story",
+    layerId: "story-address",
+    kind: "painted_bounds_outside_geometry",
+    edge: "right",
+    overflowPx: 4,
+    reason: "story text layer story-address painted bounds exceed geometry by 4px on right",
+  }]);
+});
+
 test("rendering fails when any output pixel remains transparent", async () => {
   const template = templateFixture();
   const transparent = createCanvas(1080, 1350).toBuffer("image/png");

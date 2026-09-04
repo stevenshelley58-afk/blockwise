@@ -55,7 +55,23 @@ type MultilineLineHeightPreflightViolation = TextPreflightViolationBase & {
   minimumLineHeight: number;
 };
 
-export type TextPreflightViolation = TextReadabilityPreflightViolation | MultilineLineHeightPreflightViolation;
+type PaintedBoundsPreflightViolation = TextPreflightViolationBase & {
+  kind: "painted_bounds_outside_geometry";
+  edge: "left" | "top" | "right" | "bottom";
+  overflowPx: number;
+};
+
+type EssentialTextOverlapPreflightViolation = TextPreflightViolationBase & {
+  kind: "essential_text_overlap";
+  otherLayerId: string;
+  overlapPx: number;
+};
+
+export type TextPreflightViolation =
+  | TextReadabilityPreflightViolation
+  | MultilineLineHeightPreflightViolation
+  | PaintedBoundsPreflightViolation
+  | EssentialTextOverlapPreflightViolation;
 
 /**
  * One deterministic, machine-readable refusal for every text-fit problem in a
@@ -293,9 +309,18 @@ function renderText(ctx: SKRSContext2D, layer: TextLayer, input: RenderInput, pl
   if (prepared.kind === "skip") return;
   if (prepared.kind === "violation") throw new TextPreflightError([prepared.violation]);
 
+  paintPreparedText(ctx, layer, prepared, input.colourMap[layer.colourRole] ?? "#000000");
+}
+
+function paintPreparedText(
+  ctx: SKRSContext2D,
+  layer: TextLayer,
+  prepared: PreparedText,
+  fillStyle: string,
+): void {
   const { textLayer, geometry, fontSize, lines, trackingPixels } = prepared;
   ctx.save();
-  ctx.fillStyle = input.colourMap[layer.colourRole] ?? "#000000";
+  ctx.fillStyle = fillStyle;
   ctx.textAlign = layer.alignment;
   ctx.textBaseline = "alphabetic";
   ctx.font = fontDeclaration(textLayer, resolveTextFontFamily(textLayer), fontSize);
@@ -321,17 +346,59 @@ function renderText(ctx: SKRSContext2D, layer: TextLayer, input: RenderInput, pl
 }
 
 function assertTextPreflight(input: RenderInput, placements: readonly Placement[]): void {
-  const ctx = createCanvas(1, 1).getContext("2d");
   const violations: TextPreflightViolation[] = [];
   for (const placement of placements) {
+    const dims = DIMENSIONS[placement];
+    const diagnosticCanvas = createCanvas(dims.width, dims.height);
+    const ctx = diagnosticCanvas.getContext("2d");
     const layout = placement === "feed" ? input.template.feedLayout : input.template.storyLayout;
+    const essentialText: Array<{ layer: TextLayer; paintedBounds: PixelBounds }> = [];
     for (const layer of layout.layers) {
       if (layer.type !== "text") continue;
       if (layer.maxLines > 1 && layer.lineHeight < MINIMUM_MULTILINE_LINE_HEIGHT) {
         violations.push(multilineLineHeightViolation(placement, layer));
       }
-      const prepared = prepareText(ctx, layer, input, placement, DIMENSIONS[placement]);
-      if (prepared.kind === "violation") violations.push(prepared.violation);
+      const prepared = prepareText(ctx, layer, input, placement, dims);
+      if (prepared.kind === "violation") {
+        violations.push(prepared.violation);
+        continue;
+      }
+      if (prepared.kind === "skip") continue;
+
+      ctx.clearRect(0, 0, dims.width, dims.height);
+      paintPreparedText(ctx, layer, prepared, "#000000");
+      const paintedBounds = alphaBounds(ctx, dims);
+      const overflow = paintedBounds ? worstBoundsOverflow(paintedBounds, prepared.geometry) : null;
+      if (overflow && overflow.pixels > 0.5) {
+        violations.push(paintedBoundsViolation(placement, layer.layerId, overflow.edge, overflow.pixels));
+      }
+      if (paintedBounds && essentialTextRole(layer)) essentialText.push({ layer, paintedBounds });
+    }
+
+    for (let leftIndex = 0; leftIndex < essentialText.length; leftIndex += 1) {
+      for (let rightIndex = leftIndex + 1; rightIndex < essentialText.length; rightIndex += 1) {
+        const left = essentialText[leftIndex]!;
+        const right = essentialText[rightIndex]!;
+        const horizontal = intersectionLength(
+          left.paintedBounds.x,
+          left.paintedBounds.width,
+          right.paintedBounds.x,
+          right.paintedBounds.width,
+        );
+        const [upper, lower] = left.paintedBounds.y <= right.paintedBounds.y ? [left, right] : [right, left];
+        // Preserve the sign of the painted vertical gap. Clamping to the
+        // smaller box intersection hid deep collisions such as c15's About
+        // copy running underneath its Property Features heading.
+        const vertical = upper.paintedBounds.y + upper.paintedBounds.height - lower.paintedBounds.y;
+        if (horizontal > 0.5 && vertical > 0.5) {
+          violations.push(essentialTextOverlapViolation(
+            placement,
+            left.layer.layerId,
+            right.layer.layerId,
+            vertical,
+          ));
+        }
+      }
     }
   }
   if (violations.length > 0) throw new TextPreflightError(violations);
@@ -445,9 +512,57 @@ function multilineLineHeightViolation(
   };
 }
 
+function paintedBoundsViolation(
+  placement: Placement,
+  layerId: string,
+  edge: PaintedBoundsPreflightViolation["edge"],
+  overflowPx: number,
+): PaintedBoundsPreflightViolation {
+  const safeLayerId = normalizeLayerId(layerId);
+  const safeOverflowPx = Math.max(1, Math.round(overflowPx));
+  return {
+    placement,
+    layerId: safeLayerId,
+    kind: "painted_bounds_outside_geometry",
+    edge,
+    overflowPx: safeOverflowPx,
+    reason: `${placement} text layer ${safeLayerId} painted bounds exceed geometry by ${safeOverflowPx}px on ${edge}`,
+  };
+}
+
+function essentialTextOverlapViolation(
+  placement: Placement,
+  layerId: string,
+  otherLayerId: string,
+  overlapPx: number,
+): EssentialTextOverlapPreflightViolation {
+  const safeLayerId = normalizeLayerId(layerId);
+  const safeOtherLayerId = normalizeLayerId(otherLayerId);
+  const safeOverlapPx = Math.max(1, Math.round(overlapPx));
+  return {
+    placement,
+    layerId: safeLayerId,
+    otherLayerId: safeOtherLayerId,
+    kind: "essential_text_overlap",
+    overlapPx: safeOverlapPx,
+    reason: `${placement} essential text layers ${safeLayerId} and ${safeOtherLayerId} overlap by ${safeOverlapPx}px vertically`,
+  };
+}
+
 function normalizeTextPreflightViolation(violation: TextPreflightViolation): TextPreflightViolation {
   if (violation.kind === "multiline_line_height_below_minimum") {
     return multilineLineHeightViolation(violation.placement, violation);
+  }
+  if (violation.kind === "painted_bounds_outside_geometry") {
+    return paintedBoundsViolation(violation.placement, violation.layerId, violation.edge, violation.overflowPx);
+  }
+  if (violation.kind === "essential_text_overlap") {
+    return essentialTextOverlapViolation(
+      violation.placement,
+      violation.layerId,
+      violation.otherLayerId,
+      violation.overlapPx,
+    );
   }
   return textPreflightViolation(
     violation.placement,
@@ -459,6 +574,62 @@ function normalizeTextPreflightViolation(violation: TextPreflightViolation): Tex
 
 function normalizeLayerId(layerId: string): string {
   return layerId.replace(/[^A-Za-z0-9._:-]/g, "_").slice(0, 160) || "unnamed-layer";
+}
+
+function essentialTextRole(layer: Pick<TextLayer, "inputKey" | "layerId">): string | null {
+  const identity = `${layer.inputKey} ${layer.layerId}`
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .toLowerCase();
+  if (/(about.*(heading|title|label)|(?:heading|title|label).*about)/.test(identity)) return "about-heading";
+  if (/(about.*(copy|body)|(?:copy|body).*about)/.test(identity)) return "about-copy";
+  if (/(features?.*(heading|title|label)|(?:heading|title|label).*features?)/.test(identity)) return "feature-heading";
+  if (/(features?.*(copy|list|row|item|\d)|(?:copy|list|row|item).*features?)/.test(identity)) return "feature-row";
+  if (/(headline|title|heading)/.test(identity)) return "headline";
+  if (/(support|subhead|description|body)/.test(identity)) return "supporting";
+  if (/(handle|username|agent|instagram|social)/.test(identity)) return "handle";
+  if (/(arrow|cta|action|learn|contact)/.test(identity)) return "action";
+  if (/(address|price|phone|email|website|brand)/.test(identity)) return "detail";
+  return null;
+}
+
+function intersectionLength(leftStart: number, leftLength: number, rightStart: number, rightLength: number): number {
+  return Math.max(0, Math.min(leftStart + leftLength, rightStart + rightLength) - Math.max(leftStart, rightStart));
+}
+
+type PixelBounds = { x: number; y: number; width: number; height: number };
+
+function alphaBounds(ctx: SKRSContext2D, dims: CanvasDimensions): PixelBounds | null {
+  const pixels = ctx.getImageData(0, 0, dims.width, dims.height).data;
+  let minX = dims.width;
+  let minY = dims.height;
+  let maxX = -1;
+  let maxY = -1;
+  for (let y = 0; y < dims.height; y += 1) {
+    for (let x = 0; x < dims.width; x += 1) {
+      if (pixels[(y * dims.width + x) * 4 + 3] === 0) continue;
+      minX = Math.min(minX, x);
+      minY = Math.min(minY, y);
+      maxX = Math.max(maxX, x);
+      maxY = Math.max(maxY, y);
+    }
+  }
+  return maxX < minX || maxY < minY
+    ? null
+    : { x: minX, y: minY, width: maxX - minX + 1, height: maxY - minY + 1 };
+}
+
+function worstBoundsOverflow(
+  bounds: PixelBounds,
+  geometry: Rect,
+): { edge: PaintedBoundsPreflightViolation["edge"]; pixels: number } | null {
+  const candidates: Array<{ edge: PaintedBoundsPreflightViolation["edge"]; pixels: number }> = [
+    { edge: "left", pixels: geometry.x - bounds.x },
+    { edge: "top", pixels: geometry.y - bounds.y },
+    { edge: "right", pixels: bounds.x + bounds.width - (geometry.x + geometry.width) },
+    { edge: "bottom", pixels: bounds.y + bounds.height - (geometry.y + geometry.height) },
+  ];
+  const overflow = candidates.reduce((worst, candidate) => candidate.pixels > worst.pixels ? candidate : worst);
+  return overflow.pixels > 0 ? overflow : null;
 }
 
 function applyTextCase(text: string, mode: RenderTextLayer["case"]): string {
