@@ -137,6 +137,19 @@ alter table private.ops_chatwoot_webhook_events enable row level security;
 alter table private.ops_enquiry_messages enable row level security;
 alter table private.ops_enquiry_messages drop constraint if exists ops_enquiry_messages_provider_message_id_check;
 alter table private.ops_enquiry_messages add constraint ops_enquiry_messages_provider_message_id_check check (provider_message_id ~ '^[0-9a-f]{64}$');
+alter table private.ops_enquiry_messages alter column workspace_id drop not null;
+create unique index if not exists ops_chatwoot_enquiry_source_unique on public.ops_enquiry_associations(source_system,source_id) where source_system='chatwoot';
+
+create or replace function public.sync_ops_chatwoot_enquiry_workspace()
+returns trigger language plpgsql security definer set search_path = '' as $$
+begin
+  update private.ops_provider_operation_ledger set workspace_id=new.workspace_id
+    where provider='chatwoot' and aggregate_type='enquiry' and aggregate_id=new.id::text and new.workspace_id is not null;
+  update private.ops_enquiry_messages set workspace_id=new.workspace_id where enquiry_id=new.id and new.workspace_id is not null;
+  return new;
+end; $$;
+drop trigger if exists ops_chatwoot_enquiry_workspace_sync on public.ops_enquiry_associations;
+create trigger ops_chatwoot_enquiry_workspace_sync after update of workspace_id on public.ops_enquiry_associations for each row execute function public.sync_ops_chatwoot_enquiry_workspace();
 revoke all on private.ops_chatwoot_webhook_events, private.ops_enquiry_messages from public,anon,authenticated,service_role;
 
 create or replace function public.record_ops_chatwoot_webhook(
@@ -181,7 +194,7 @@ grant execute on function public.record_ops_chatwoot_webhook(text,text,text,text
 create or replace function public.record_ops_chatwoot_webhook_adopt(
   p_event_id text, p_payload_hash text, p_account_id text, p_inbox_id text,
   p_event_type text, p_provider_conversation_id text, p_provider_message_id text,
-  p_contact_id_digest text, p_status text, p_body text
+  p_contact_id_digest text, p_conversation_ciphertext text, p_status text, p_body text
 ) returns jsonb language plpgsql security definer set search_path = '' as $$
 declare v_workspace uuid; v_enquiry uuid; v_existing text;
 begin
@@ -190,18 +203,20 @@ begin
     or p_provider_conversation_id !~ '^[0-9]+$' or p_contact_id_digest !~ '^[0-9a-f]{64}$'
     or p_payload_hash !~ '^[0-9a-f]{64}$' or char_length(coalesce(p_body,'')) > 4000 then raise exception 'invalid Chatwoot adoption webhook' using errcode='22023'; end if;
   select l.workspace_id into v_workspace from private.ops_provider_operation_ledger l
-    where l.provider='chatwoot' and l.aggregate_type='contact' and l.provider_contact_id_digest=p_contact_id_digest
+    where l.provider='chatwoot' and l.provider_contact_id_digest=p_contact_id_digest
       and l.intent->>'accountId'=p_account_id and l.intent->>'inboxId'=p_inbox_id
     order by l.updated_at desc limit 1;
-  if v_workspace is null then return jsonb_build_object('status','ignored'); end if;
   select e.id into v_enquiry from private.ops_provider_operation_ledger l join public.ops_enquiry_associations e on e.id=l.aggregate_id::uuid
-    where l.provider='chatwoot' and l.aggregate_type='enquiry' and l.provider_conversation_id_digest=encode(public.digest(p_provider_conversation_id,'sha256'),'hex') and e.workspace_id=v_workspace limit 1;
+    where l.provider='chatwoot' and l.aggregate_type='enquiry' and l.provider_conversation_id_digest=encode(public.digest(p_provider_conversation_id,'sha256'),'hex') and (e.workspace_id=v_workspace or (e.workspace_id is null and v_workspace is null)) limit 1;
   if v_enquiry is null then
     insert into public.ops_enquiry_associations(workspace_id,source_system,source_id,enquiry_type,status,subject)
-      values(v_workspace,'chatwoot','conversation:'||encode(public.digest(p_provider_conversation_id,'sha256'),'hex'),'support',case when p_status='resolved' then 'closed' else coalesce(nullif(p_status,''),'open') end,'Chatwoot enquiry') returning id into v_enquiry;
+      values(v_workspace,'chatwoot','conversation:'||encode(public.digest(p_provider_conversation_id,'sha256'),'hex'),'support',case when p_status='resolved' then 'closed' else coalesce(nullif(p_status,''),'open') end,'Chatwoot enquiry') on conflict (source_system,source_id) where source_system='chatwoot' do nothing returning id into v_enquiry;
+    if v_enquiry is null then select id into v_enquiry from public.ops_enquiry_associations where source_system='chatwoot' and source_id='conversation:'||encode(public.digest(p_provider_conversation_id,'sha256'),'hex') for update; end if;
     insert into private.ops_provider_operation_ledger(operation_key,workspace_id,provider,aggregate_type,aggregate_id,source_version,intent,provider_conversation_id_digest)
       values('chatwoot:conversation:'||encode(public.digest(p_provider_conversation_id,'sha256'),'hex'),v_workspace,'chatwoot','enquiry',v_enquiry::text,1,jsonb_build_object('accountId',p_account_id,'inboxId',p_inbox_id),encode(public.digest(p_provider_conversation_id,'sha256'),'hex')) on conflict(operation_key) do nothing;
+    update private.ops_provider_operation_ledger set provider_conversation_id_ciphertext=left(p_conversation_ciphertext,2048), provider_conversation_id_digest=encode(public.digest(p_provider_conversation_id,'sha256'),'hex') where operation_key='chatwoot:conversation:'||encode(public.digest(p_provider_conversation_id,'sha256'),'hex');
   end if;
+  update private.ops_provider_operation_ledger set provider_conversation_id_ciphertext=left(p_conversation_ciphertext,2048), provider_conversation_id_digest=encode(public.digest(p_provider_conversation_id,'sha256'),'hex') where aggregate_type='enquiry' and aggregate_id=v_enquiry::text and provider='chatwoot';
   select payload_hash into v_existing from private.ops_chatwoot_webhook_events where event_id=left(p_event_id,256);
   if v_existing is not null and v_existing <> p_payload_hash then raise exception 'Chatwoot webhook event hash mismatch' using errcode='22023'; end if;
   insert into private.ops_chatwoot_webhook_events(event_id,payload_hash,provider_conversation_id,event_type) values(left(p_event_id,256),p_payload_hash,p_provider_conversation_id,p_event_type) on conflict(event_id) do nothing;
@@ -212,8 +227,8 @@ begin
   update private.ops_chatwoot_webhook_events set status='processed',processed_at=now() where event_id=left(p_event_id,256);
   return jsonb_build_object('status','processed','workspaceId',v_workspace::text,'enquiryId',v_enquiry::text);
 end; $$;
-revoke all on function public.record_ops_chatwoot_webhook_adopt(text,text,text,text,text,text,text,text,text,text) from public,anon,authenticated;
-grant execute on function public.record_ops_chatwoot_webhook_adopt(text,text,text,text,text,text,text,text,text,text) to service_role;
+revoke all on function public.record_ops_chatwoot_webhook_adopt(text,text,text,text,text,text,text,text,text,text,text) from public,anon,authenticated;
+grant execute on function public.record_ops_chatwoot_webhook_adopt(text,text,text,text,text,text,text,text,text,text,text) to service_role;
 
 create or replace function public.resolve_ops_enquiry_threads()
 returns jsonb language sql security definer set search_path = '' as $$
