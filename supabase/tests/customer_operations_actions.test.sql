@@ -1,7 +1,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(52);
+select plan(50);
 
 select has_table('public', 'ops_action_capabilities', 'action capability registry exists');
 select has_table('public', 'ops_action_outbox', 'action outbox exists');

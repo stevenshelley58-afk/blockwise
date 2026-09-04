@@ -272,6 +272,24 @@ begin
     select e.ops_version into v_current from public.ops_enquiry_associations e
       where e.id=new.target_id
         and (e.workspace_id=new.workspace_id or e.workspace_id is null) for update;
+  elsif new.action_type in ('team_role_change','team_suspend','team_reactivate',
+      'consent_grant','consent_withdraw','consent_unsubscribe','suppression_add','suppression_remove') then
+    if new.target_type <> 'profile' then
+      raise exception 'operations action target is not owned by workspace' using errcode='42501';
+    end if;
+    select wm.ops_version into v_current from public.workspace_members wm
+      where wm.workspace_id=new.workspace_id and wm.profile_id=new.target_id for update;
+  elsif new.action_type in ('billing_cancel_at_period_end','billing_portal_link') then
+    if new.target_type <> 'billing' or new.target_id <> new.workspace_id then
+      raise exception 'operations action target is not owned by workspace' using errcode='42501';
+    end if;
+    select w.ops_version into v_current from public.workspaces w where w.id=new.workspace_id for update;
+  elsif new.action_type in ('enquiry_close','enquiry_reply') then
+    if new.target_type <> 'enquiry' then
+      raise exception 'operations action target is not owned by workspace' using errcode='42501';
+    end if;
+    select e.ops_version into v_current from public.ops_enquiry_associations e
+      where e.id=new.target_id and e.workspace_id=new.workspace_id for update;
   else
     raise exception 'operations action target is not owned by workspace' using errcode='42501';
   end if;
