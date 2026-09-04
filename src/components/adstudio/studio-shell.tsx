@@ -40,9 +40,7 @@ export function StudioShell({
   metaConnectionStatus,
 }: StudioShellProps) {
   const pathname = usePathname() ?? "/ad-studio";
-  const contextual =
-    pathname.startsWith("/ad-studio/templates/") ||
-    pathname.startsWith("/ad-studio/ads/");
+  const contextual = pathname.startsWith("/ad-studio/ads/");
   const connectionLabel =
     metaConnectionStatus === "connected"
       ? "Meta connected"

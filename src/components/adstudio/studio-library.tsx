@@ -68,10 +68,10 @@ export function StudioLibrary({
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="ads" className="mt-6">
+        <TabsContent value="ads" forceMount className="mt-6 data-[state=inactive]:hidden">
           {adsError ? <LibraryReadError label="saved ads" /> : <AdsLibrary ads={ads} embedded />}
         </TabsContent>
-        <TabsContent value="assets" className="mt-6">
+        <TabsContent value="assets" forceMount className="mt-6 data-[state=inactive]:hidden">
           {assetsError ? <LibraryReadError label="workspace media" /> : <MediaLibrary workspaceId={workspaceId} brandKitId={brandKitId} assets={assets} nextAssetCursor={nextAssetCursor} embedded />}
         </TabsContent>
       </Tabs>

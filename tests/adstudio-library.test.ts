@@ -86,6 +86,8 @@ test("the Library route unifies ads and assets without retiring their feature ro
   assert.match(shell, /TabsList/);
   assert.match(shell, /value="ads"/);
   assert.match(shell, /value="assets"/);
+  assert.equal((shell.match(/forceMount/g) ?? []).length, 2);
+  assert.match(shell, /data-\[state=inactive\]:hidden/);
   assert.match(ads, /embedded\?: boolean/);
   assert.match(assets, /embedded\?: boolean/);
 });

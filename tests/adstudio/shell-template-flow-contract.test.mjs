@@ -29,6 +29,12 @@ test("Ad Studio navigation exposes the simplified Home, Templates, Library, and 
   assert.match(shell, /label: "Library", icon: Library/);
   assert.match(shell, /label: "Brand Pack", icon: Palette/);
   assert.doesNotMatch(shell, /Sparkles/);
+  assert.match(shell, /const contextual = pathname\.startsWith\("\/ad-studio\/ads\/"\)/);
+  assert.doesNotMatch(shell, /contextual[\s\S]{0,120}templates/);
+});
+
+test("template search preserves the active guided filter", () => {
+  assert.match(templates, /filter !== "all" \? <input type="hidden" name="filter" value=\{filter\} \/> : null/);
 });
 
 test("template cards create the selected customer ad directly", () => {
