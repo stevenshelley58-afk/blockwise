@@ -99,6 +99,50 @@ describe("deterministic Story composition", () => {
     assert.equal(result.passed, true, result.blockers.join("; "));
   });
 
+  it("rejects the c15 About and Property Features collision as essential text overlap", async () => {
+    const doc = goodDoc();
+    const about = doc.formats.story.layers.find((layer) => layer.id === "story-text-supporting");
+    about.id = "story-about-copy";
+    about.inputKey = "aboutCopy";
+    about.box = { x: 0.1, y: 1108 / 1920, width: 0.78, height: 216 / 1920 };
+    doc.formats.story.layers.push(text("story-features-heading", "featuresHeading", 1218 / 1920, 0.72, 48 / 1920));
+
+    const result = await evaluateStoryQa(doc, await ivoryPreview());
+
+    assert.equal(result.passed, false);
+    assert.match(result.blockers.join("; "), /story-about-copy \(about-copy\).*story-features-heading \(feature-heading\).*overlap by 106px/);
+  });
+
+  it("allows adjacent About copy, feature heading, and feature rows without overlap", async () => {
+    const doc = goodDoc();
+    const about = doc.formats.story.layers.find((layer) => layer.id === "story-text-supporting");
+    about.id = "story-about-copy";
+    about.inputKey = "aboutCopy";
+    about.box = { x: 0.1, y: 0.51, width: 0.78, height: 0.06 };
+    doc.formats.story.layers.push(
+      text("story-features-heading", "featuresHeading", 0.57, 0.72, 0.025),
+      text("story-feature-row-1", "featureRow1", 0.595, 0.34, 0.02),
+      { ...text("story-feature-row-2", "featureRow2", 0.595, 0.34, 0.02), box: { x: 0.48, y: 0.595, width: 0.34, height: 0.02 } },
+    );
+
+    const result = await evaluateStoryQa(doc, await ivoryPreview());
+
+    assert.equal(result.passed, true, result.blockers.join("; "));
+  });
+
+  it("rejects the c15 Story address when painted ink exceeds its geometry by four pixels", async () => {
+    const doc = goodDoc();
+    const address = text("story-address", "address", 0.51, 344 / 1080, 50 / 1920);
+    address.box.x = 624 / 1080;
+    address.typo.paintedBounds = { x: 713, y: 990, width: 259, height: 38 };
+    doc.formats.story.layers.push(address);
+
+    const result = await evaluateStoryQa(doc, await ivoryPreview());
+
+    assert.equal(result.passed, false);
+    assert.match(result.blockers.join("; "), /story-address painted bounds exceed declared geometry \(right 4px\)/);
+  });
+
   it("rejects a rendered dark backing even when the policy names an ivory patch", async () => {
     const result = await evaluateStoryQa(goodDoc(), await darkPreview());
     assert.equal(result.passed, false);
