@@ -153,6 +153,7 @@ begin
 end; $$;
 drop trigger if exists ops_chatwoot_enquiry_workspace_sync on public.ops_enquiry_associations;
 create trigger ops_chatwoot_enquiry_workspace_sync after update of workspace_id on public.ops_enquiry_associations for each row execute function public.sync_ops_chatwoot_enquiry_workspace();
+revoke all on function public.sync_ops_chatwoot_enquiry_workspace() from public, anon, authenticated, service_role;
 revoke all on private.ops_chatwoot_webhook_events, private.ops_enquiry_messages from public,anon,authenticated,service_role;
 
 create or replace function public.record_ops_chatwoot_webhook(
@@ -204,8 +205,8 @@ declare v_workspace uuid; v_enquiry uuid; v_existing text;
 begin
   if p_event_type not in ('conversation_created','message_created','message_updated','conversation_status_changed','conversation_updated')
     or p_account_id !~ '^[0-9]+$' or p_inbox_id !~ '^[0-9]+$'
-    or p_provider_conversation_id !~ '^[0-9]+$' or p_contact_id_digest !~ '^[0-9a-f]{64}$'
-    or p_payload_hash !~ '^[0-9a-f]{64}$' or char_length(coalesce(p_body,'')) > 4000 then raise exception 'invalid Chatwoot adoption webhook' using errcode='22023'; end if;
+    or p_provider_conversation_id !~ '^[0-9]+$' or p_contact_id_digest !~ '^[0-9a-f]{64}$' or p_conversation_ciphertext !~ '^v1:[A-Za-z0-9_-]+:[A-Za-z0-9_-]+:[A-Za-z0-9_-]+$'
+    or p_payload_hash !~ '^[0-9a-f]{64}$' or char_length(coalesce(p_body,'')) > 4000 or jsonb_typeof(coalesce(p_attachments,'[]'::jsonb)) <> 'array' or jsonb_array_length(coalesce(p_attachments,'[]'::jsonb)) > 10 then raise exception 'invalid Chatwoot adoption webhook' using errcode='22023'; end if;
   select l.workspace_id into v_workspace from private.ops_provider_operation_ledger l
     where l.provider='chatwoot' and l.provider_contact_id_digest=p_contact_id_digest
       and l.intent->>'accountId'=p_account_id and l.intent->>'inboxId'=p_inbox_id
