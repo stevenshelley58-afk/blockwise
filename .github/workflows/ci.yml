@@ -133,10 +133,13 @@ jobs:
       - name: Validate scoped Trivy exceptions
         run: |
           ids=$(grep -c '^  - id: CVE-' .trivyignore.yaml)
-          expiries=$(grep -c '^    expired_at: 2026-10-04$' .trivyignore.yaml)
+          expiries=$(grep -c '^    expired_at: 2026-10-05$' .trivyignore.yaml)
           test "$ids" -gt 0
           test "$ids" -eq "$expiries"
           test "$(grep -c '^    expired_at:' .trivyignore.yaml)" -eq "$expiries"
+          test "$(grep -c '^    purls:' .trivyignore.yaml)" -eq "$ids"
+          test "$(grep -c '^    statement:' .trivyignore.yaml)" -eq "$ids"
+          test "$ids" -eq "$(grep '^  - id: CVE-' .trivyignore.yaml | sort -u | wc -l)"
 
       - name: Scan product image for HIGH and CRITICAL vulnerabilities
         run: >-

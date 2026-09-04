@@ -1,59 +1,15 @@
 # Temporary, CVE-specific exceptions for distro packages in node:22-trixie-slim.
-# Owner: Blockwise release engineering. Review/renew by 2026-10-04; remove each
+# Owner: Blockwise release engineering. Review/renew by 2026-10-05 UTC; remove each
 # entry as soon as Debian publishes a fixed package. These are not blanket
 # ignores: every entry below was reported with an empty Fixed Version by Trivy.
 vulnerabilities:
   - id: CVE-2026-11822
-    expired_at: 2026-10-04
-    statement: "No fixed version reported; libsqlite3-0 is an unused base-image library and Blockwise does not invoke SQLite/FTS5 at runtime; review by 2026-10-04."
+    purls:
+      - pkg:deb/debian/libsqlite3-0@3.46.1-7%2Bdeb13u1
+    expired_at: 2026-10-05
+    statement: "No fixed version reported; libsqlite3-0 is an unused base-image library and Blockwise does not invoke SQLite/FTS5 at runtime; expires 2026-10-05 UTC."
   - id: CVE-2026-11824
-    expired_at: 2026-10-04
-    statement: "No fixed version reported; libsqlite3-0 is an unused base-image library and Blockwise does not invoke SQLite/FTS5 at runtime; review by 2026-10-04."
-  - id: CVE-2026-76642
-    expired_at: 2026-10-04
-    statement: "No upstream fixed version reported; review by 2026-10-04."
-  - id: CVE-2026-78408
-    expired_at: 2026-10-04
-    statement: "No upstream fixed version reported; review by 2026-10-04."
-  - id: CVE-2026-78409
-    expired_at: 2026-10-04
-    statement: "No upstream fixed version reported; review by 2026-10-04."
-  - id: CVE-2026-78410
-    expired_at: 2026-10-04
-    statement: "No upstream fixed version reported; review by 2026-10-04."
-  - id: CVE-2026-41992
-    expired_at: 2026-10-04
-    statement: "No upstream fixed version reported; review by 2026-10-04."
-  - id: CVE-2026-54369
-    expired_at: 2026-10-04
-    statement: "No upstream fixed version reported; review by 2026-10-04."
-  - id: CVE-2026-16742
-    expired_at: 2026-10-04
-    statement: "No upstream fixed version reported; review by 2026-10-04."
-  - id: CVE-2025-69720
-    expired_at: 2026-10-04
-    statement: "No upstream fixed version reported; review by 2026-10-04."
-  - id: CVE-2026-13221
-    expired_at: 2026-10-04
-    statement: "No upstream fixed version reported; review by 2026-10-04."
-  - id: CVE-2026-42496
-    expired_at: 2026-10-04
-    statement: "No upstream fixed version reported; review by 2026-10-04."
-  - id: CVE-2026-8376
-    expired_at: 2026-10-04
-    statement: "No upstream fixed version reported; review by 2026-10-04."
-  - id: CVE-2026-42497
-    expired_at: 2026-10-04
-    statement: "No upstream fixed version reported; review by 2026-10-04."
-  - id: CVE-2026-48962
-    expired_at: 2026-10-04
-    statement: "No upstream fixed version reported; review by 2026-10-04."
-  - id: CVE-2026-57432
-    expired_at: 2026-10-04
-    statement: "No upstream fixed version reported; review by 2026-10-04."
-  - id: CVE-2026-57433
-    expired_at: 2026-10-04
-    statement: "No upstream fixed version reported; review by 2026-10-04."
-  - id: CVE-2026-9538
-    expired_at: 2026-10-04
-    statement: "No upstream fixed version reported; review by 2026-10-04."
+    purls:
+      - pkg:deb/debian/libsqlite3-0@3.46.1-7%2Bdeb13u1
+    expired_at: 2026-10-05
+    statement: "No fixed version reported; libsqlite3-0 is an unused base-image library and Blockwise does not invoke SQLite/FTS5 at runtime; expires 2026-10-05 UTC."
