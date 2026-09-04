@@ -33,3 +33,30 @@ test("direct template quarantine is a chronological, reversible customer-read bo
   assert.doesNotMatch(sql, /delete\s+from\s+public\.ad_templates|delete\s+from\s+public\.ad_template_assets_direct/i);
   assert.match(allowlist, new RegExp(`${migrationName.replaceAll(".", "\\.")}\\s*$`, "m"));
 });
+
+test("review activation defaults new imports closed and requires explicit service-only evidence", () => {
+  const columnsName = "20260904010000_ad_template_review_activation_columns.sql";
+  const quarantineName = "20260904011000_quarantine_unreviewed_ad_templates.sql";
+  const activationName = "20260904012000_enforce_ad_template_review_activation.sql";
+  const columns = readFileSync(`supabase/migrations/${columnsName}`, "utf8");
+  const quarantine = readFileSync(`supabase/migrations/${quarantineName}`, "utf8");
+  const activation = readFileSync(`supabase/migrations/${activationName}`, "utf8");
+  const allowlist = readFileSync("infra/product/product-migrations.txt", "utf8");
+
+  assert.match(columns, /add column if not exists library_review_run_id text/i);
+  assert.match(columns, /add column if not exists library_reviewed_at timestamptz/i);
+  assert.match(columns, /alter column library_status set default 'quarantined'/i);
+
+  assert.match(quarantine, /update public\.ad_templates[\s\S]*library_status = 'quarantined'/i);
+  assert.doesNotMatch(quarantine, /delete\s+from|drop\s+table/i);
+
+  assert.match(activation, /constraint ad_templates_active_review_check[\s\S]*library_review_run_id is not null[\s\S]*library_reviewed_at is not null/i);
+  assert.match(activation, /create or replace function public\.activate_reviewed_ad_template/i);
+  assert.match(activation, /jsonb_object_keys\(current_template -> 'assets'\)[\s\S]*ad_template_assets_direct/i);
+  assert.match(activation, /revoke all on function public\.activate_reviewed_ad_template\(text, text\) from public, anon, authenticated/i);
+  assert.match(activation, /grant execute on function public\.activate_reviewed_ad_template\(text, text\) to service_role/i);
+
+  const ordered = [columnsName, quarantineName, activationName].map(name => allowlist.indexOf(name));
+  assert.ok(ordered.every(index => index >= 0));
+  assert.ok(ordered[0] < ordered[1] && ordered[1] < ordered[2]);
+});
