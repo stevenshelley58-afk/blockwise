@@ -15,7 +15,7 @@ fi
 
 compose() { docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" "$@"; }
 compose_with_all_profiles() {
-  docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" --profile worker --profile realtime --profile edge "$@"
+  docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" --profile worker --profile realtime --profile edge --profile mail "$@"
 }
 
 stop_product_writers() {
