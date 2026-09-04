@@ -71,6 +71,7 @@ CHATWOOT_SMTP_USER=chatwoot
 SNAGTIME_SMTP_USER=snagtime
 CHATWOOT_INBOX_USER=support
 GOOGLE_CLIENT_ID=contract-google-client
+BOOKING_CAPABILITY_KEY_ID=contract-booking-key
 SNAGTIME_IMAGE=ghcr.io/example/snagtime@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
 SNAGTIME_REVISION=0123456789abcdef0123456789abcdef01234567
 CUSTOMER_OPS_SECRETS_DIR=/tmp/blockwise-customer-ops-contract-secrets
@@ -125,7 +126,7 @@ grep -q 'BLOCKWISE_OPS_PROJECTION_WORKER' "$PRODUCT_COMPOSE_FILE" || { echo 'Blo
 grep -q 'WORKER_REAP_INTERVAL_MS' "$PRODUCT_COMPOSE_FILE" || { echo 'worker recovery scheduler is not configured' >&2; exit 1; }
 grep -q 'healthcheck:' "$PRODUCT_COMPOSE_FILE" || { echo 'product worker healthcheck missing' >&2; exit 1; }
 grep -q 'BLOCKWISE_WORKER_EXPECTED_REVISION:?BLOCKWISE_WORKER_EXPECTED_REVISION is required' "$PRODUCT_COMPOSE_FILE" || { echo 'worker expected revision guard missing' >&2; exit 1; }
-grep -q 'SUPABASE_SERVICE_ROLE_KEY_FILE: /run/secrets/supabase-service-role' "$PRODUCT_COMPOSE_FILE" || { echo 'worker service-role file env missing' >&2; exit 1; }
+grep -q 'SUPABASE_SERVICE_ROLE_KEY_FILE: /run/blockwise-secrets/supabase-service-role' "$PRODUCT_COMPOSE_FILE" || { echo 'worker service-role file env missing' >&2; exit 1; }
 ! awk -v service='product-worker' '$0 ~ "^  " service ":" { in_service=1; next } in_service && /^  [A-Za-z0-9_-]+:/ { exit } in_service && /^    build:/ { found=1 } END { exit found ? 0 : 1 }' "$PRODUCT_COMPOSE_FILE" || { echo 'production product-worker build section remains' >&2; exit 1; }
 ! grep -q 'ops-projections:rw' "$ROOT_DIR/worker/docker-compose.worker.yml" || { echo 'standalone worker must not write Frank projections' >&2; exit 1; }
 test "$(grep -c '/data/ops-projections:rw' "$PRODUCT_COMPOSE_FILE")" -eq 1 || { echo 'projection root must have exactly one active writer' >&2; exit 1; }
@@ -153,7 +154,7 @@ grep -q 'chatwoot_webhook_probe_secret' "$ROOT_DIR/scripts/vps/customer-ops-boot
 for service in mautic-cron mautic-worker snagtime-worker; do
   awk -v service="$service" '$0 ~ "^  " service ":" { in_service=1; next } in_service && /^  [A-Za-z0-9_-]+:/ { exit } in_service { print }' "$ROOT_DIR/infra/customer-ops/docker-compose.yml" | grep -q 'healthcheck:' || { echo "$service healthcheck missing" >&2; exit 1; }
 done
-grep -q 'SNAGTIME_WORKER_HEARTBEAT_FILE' "$ROOT_DIR/infra/customer-ops/docker-compose.yml" || { echo 'SnagTime queue heartbeat contract missing' >&2; exit 1; }
+grep -q 'api/health/operator' "$ROOT_DIR/infra/customer-ops/docker-compose.yml" || { echo 'SnagTime operator health contract missing' >&2; exit 1; }
 grep -Fq 'accounts/${CHATWOOT_ACCOUNT_ID}/inboxes' "$ROOT_DIR/scripts/vps/customer-ops-bootstrap.sh" || { echo 'Chatwoot email inbox API bootstrap missing' >&2; exit 1; }
 grep -Fq 'accounts/${CHATWOOT_ACCOUNT_ID}/webhooks' "$ROOT_DIR/scripts/vps/customer-ops-bootstrap.sh" || { echo 'Chatwoot webhook API bootstrap missing' >&2; exit 1; }
 ! grep -qi 'adapter.*deferred' "$ROOT_DIR/docs/runbooks/customer-ops-vps.md" || { echo 'obsolete adapter deferred language remains' >&2; exit 1; }
