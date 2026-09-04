@@ -1,7 +1,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(42);
+select plan(52);
 
 select has_table('public', 'ops_action_capabilities', 'action capability registry exists');
 select has_table('public', 'ops_action_outbox', 'action outbox exists');
@@ -50,6 +50,7 @@ select is((select count(*)::int from public.ops_action_receipts where action_id 
 select is(public.fail_ops_action((select id from public.ops_action_outbox where action_id = '88888888-8888-4888-8888-888888888881'), (select lease_token from public.ops_action_outbox where action_id = '88888888-8888-4888-8888-888888888881'), 'temporary worker failure', true), 'pending', 'retry transition is durable');
 select is((select count(*)::int from public.ops_action_receipts where action_id = '88888888-8888-4888-8888-888888888881' and status = 'pending'), 2, 'repeated pending transitions retain separate receipts');
 
+update public.workspaces set updated_at=now() where id='86666666-6666-4666-8666-666666666666';
 select lives_ok($$ select public.enqueue_ops_action(
   '88888888-8888-4888-8888-888888888882', 'ops:test:invite:v2',
   '86666666-6666-4666-8666-666666666666', '86666666-6666-4666-8666-666666666666',
@@ -64,6 +65,78 @@ select ok(not public.complete_ops_action((select id from public.ops_action_outbo
 select is((select count(*)::int from public.claim_ops_action(60)), 1, 'newer action is claimable');
 select ok(public.complete_ops_action((select id from public.ops_action_outbox where action_id = '88888888-8888-4888-8888-888888888882'), (select lease_token from public.ops_action_outbox where action_id = '88888888-8888-4888-8888-888888888882'), '{"status":"accepted"}'::jsonb), 'current action settles through RPC');
 select is((select status from public.ops_action_outbox where action_id = '88888888-8888-4888-8888-888888888882'), 'completed', 'settlement status is durable');
+
+-- Source-row versions, rather than queue ordering, are the authoritative CAS.
+update public.workspaces set updated_at=now() where id='86666666-6666-4666-8666-666666666666';
+insert into public.workspace_invitations (id,workspace_id,email,email_normalized,role,invited_by)
+values ('89999999-9999-4999-8999-999999999999','86666666-6666-4666-8666-666666666666','invite-target@example.test','invite-target@example.test','member','87777777-7777-4777-8777-777777777777')
+on conflict (id) do nothing;
+update public.workspace_invitations set updated_at=now() where id='89999999-9999-4999-8999-999999999999';
+select throws_ok($$ select public.enqueue_ops_action(
+  '88888888-8888-4888-8888-888888888889', 'ops:test:stale-invitation',
+  '86666666-6666-4666-8666-666666666666', '86666666-6666-4666-8666-666666666666',
+  'team_cancel', 'invitation', '89999999-9999-4999-8999-999999999999',
+  '87777777-7777-4777-8777-777777777777', 'owner', 'aal2', 1,
+  'stale invitation test', now()-interval '1 hour', now()+interval '2 hours', '{}'::jsonb
+) $$, '40001', 'operations action target version is stale', 'stale invitation versions reject');
+select lives_ok($$ select public.enqueue_ops_action(
+  '88888888-8888-4888-8888-888888888890', 'ops:test:current-invitation',
+  '86666666-6666-4666-8666-666666666666', '86666666-6666-4666-8666-666666666666',
+  'team_cancel', 'invitation', '89999999-9999-4999-8999-999999999999',
+  '87777777-7777-4777-8777-777777777777', 'owner', 'aal2', 2,
+  'current invitation test', now()-interval '1 hour', now()+interval '2 hours', '{}'::jsonb
+) $$, 'current invitation versions pass');
+
+update public.workspace_members set updated_at=now() where workspace_id='86666666-6666-4666-8666-666666666666' and profile_id='87777777-7777-4777-8777-777777777777';
+select throws_ok($$ select public.enqueue_ops_action(
+  '88888888-8888-4888-8888-888888888891', 'ops:test:stale-session',
+  '86666666-6666-4666-8666-666666666666', '86666666-6666-4666-8666-666666666666',
+  'session_revoke', 'session', '87777777-7777-4777-8777-777777777777',
+  '87777777-7777-4777-8777-777777777777', 'owner', 'aal2', 1,
+  'stale session test', now()-interval '1 hour', now()+interval '2 hours', '{}'::jsonb
+) $$, '40001', 'operations action target version is stale', 'stale member versions reject');
+select lives_ok($$ select public.enqueue_ops_action(
+  '88888888-8888-4888-8888-888888888892', 'ops:test:current-session',
+  '86666666-6666-4666-8666-666666666666', '86666666-6666-4666-8666-666666666666',
+  'session_revoke', 'session', '87777777-7777-4777-8777-777777777777',
+  '87777777-7777-4777-8777-777777777777', 'owner', 'aal2', 2,
+  'current session test', now()-interval '1 hour', now()+interval '2 hours', '{}'::jsonb
+) $$, 'current member versions pass');
+
+insert into public.ops_enquiry_associations (id,workspace_id,source_system,source_id,enquiry_type,status,subject)
+values ('8aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','86666666-6666-4666-8666-666666666666','blockwise','action-test-enquiry','support','open','Action test enquiry')
+on conflict (id) do nothing;
+update public.ops_enquiry_associations set updated_at=now() where id='8aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+select throws_ok($$ select public.enqueue_ops_action(
+  '88888888-8888-4888-8888-888888888893', 'ops:test:stale-enquiry',
+  '86666666-6666-4666-8666-666666666666', '86666666-6666-4666-8666-666666666666',
+  'enquiry_assign', 'enquiry', '8aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+  '87777777-7777-4777-8777-777777777777', 'owner', 'aal2', 1,
+  'stale enquiry test', now()-interval '1 hour', now()+interval '2 hours', '{"assigneeProfileId":null}'::jsonb
+) $$, '40001', 'operations action target version is stale', 'stale enquiry versions reject');
+select lives_ok($$ select public.enqueue_ops_action(
+  '88888888-8888-4888-8888-888888888894', 'ops:test:current-enquiry',
+  '86666666-6666-4666-8666-666666666666', '86666666-6666-4666-8666-666666666666',
+  'enquiry_assign', 'enquiry', '8aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+  '87777777-7777-4777-8777-777777777777', 'owner', 'aal2', 2,
+  'current enquiry test', now()-interval '1 hour', now()+interval '2 hours', '{"assigneeProfileId":null}'::jsonb
+) $$, 'current enquiry versions pass');
+
+update public.workspaces set updated_at=now() where id='86666666-6666-4666-8666-666666666666';
+select throws_ok($$ select public.enqueue_ops_action(
+  '88888888-8888-4888-8888-888888888895', 'ops:test:stale-billing',
+  '86666666-6666-4666-8666-666666666666', '86666666-6666-4666-8666-666666666666',
+  'billing_reconcile', 'billing', '86666666-6666-4666-8666-666666666666',
+  '87777777-7777-4777-8777-777777777777', 'owner', 'aal2', 2,
+  'stale billing test', now()-interval '1 hour', now()+interval '2 hours', '{}'::jsonb
+) $$, '40001', 'operations action target version is stale', 'stale billing versions reject');
+select lives_ok($$ select public.enqueue_ops_action(
+  '88888888-8888-4888-8888-888888888896', 'ops:test:current-billing',
+  '86666666-6666-4666-8666-666666666666', '86666666-6666-4666-8666-666666666666',
+  'billing_reconcile', 'billing', '86666666-6666-4666-8666-666666666666',
+  '87777777-7777-4777-8777-777777777777', 'owner', 'aal2', 3,
+  'current billing test', now()-interval '1 hour', now()+interval '2 hours', '{}'::jsonb
+) $$, 'current billing versions pass');
 
 select lives_ok($$ select public.enqueue_ops_action(
   '88888888-8888-4888-8888-888888888883', 'ops:test:role:gated',

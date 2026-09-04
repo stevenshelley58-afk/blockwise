@@ -53,6 +53,11 @@ test("Frank action targets have authoritative positive source-row versions", () 
   assert.match(migration, /'ops_version',e\.ops_version/);
   assert.match(migration, /'ops_version',a\.ops_version/);
   assert.match(migration, /where i\.workspace_id=any\(v_workspace_ids::uuid\[\]\) and i\.status='pending'/i);
+  assert.match(migration, /create or replace function public\.ops_action_target_binding/i);
+  assert.match(migration, /new\.expected_version <> v_current/);
+  assert.match(migration, /workspace_members wm[\s\S]*wm\.profile_id=new\.target_id/);
+  assert.match(migration, /new\.action_type = 'billing_reconcile'[\s\S]*new\.target_id <> new\.workspace_id/);
+  assert.match(migration, /e\.workspace_id=new\.workspace_id or e\.workspace_id is null/);
 });
 
 test("ops surface is service-only and provider-free", () => {

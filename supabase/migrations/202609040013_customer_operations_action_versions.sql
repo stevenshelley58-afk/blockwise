@@ -207,11 +207,21 @@ begin
     'created_at',e.created_at,'updated_at',e.updated_at,'ops_version',e.ops_version)
     order by e.updated_at desc),'[]'::jsonb) into v_enquiries from public.ops_enquiry_associations e
     where e.workspace_id=any(v_workspace_ids::uuid[]) or e.workspace_id is null;
-  select coalesce(jsonb_agg(jsonb_build_object('id',a.id,'customer_id',a.workspace_id,
-    'workspace_id',a.workspace_id,'kind',a.target_type,'title',a.action,
-    'occurred_at',a.created_at,'created_at',a.created_at,'ops_version',a.ops_version)
-    order by a.created_at desc),'[]'::jsonb) into v_activity from public.audit_logs a
-    where a.workspace_id=any(v_workspace_ids::uuid[]);
+  select coalesce(jsonb_agg(x.item order by x.sort_at desc),'[]'::jsonb) into v_activity from (
+    -- Session revoke targets are member profile IDs, so publish the member's
+    -- authoritative version as the session row. Audit rows remain separate
+    -- activity evidence and never masquerade as a mutable session target.
+    select jsonb_build_object('id',wm.profile_id,'customer_id',wm.workspace_id,
+      'workspace_id',wm.workspace_id,'kind','session','title','Active sessions',
+      'occurred_at',wm.updated_at,'created_at',wm.created_at,
+      'ops_version',wm.ops_version) item, wm.updated_at sort_at
+      from public.workspace_members wm where wm.workspace_id=any(v_workspace_ids::uuid[])
+    union all
+    select jsonb_build_object('id',a.id,'customer_id',a.workspace_id,
+      'workspace_id',a.workspace_id,'kind',a.target_type,'title',a.action,
+      'occurred_at',a.created_at,'created_at',a.created_at,'ops_version',a.ops_version) item, a.created_at sort_at
+      from public.audit_logs a where a.workspace_id=any(v_workspace_ids::uuid[])
+  ) x;
 
   return jsonb_build_object('project_id','blockwise','source_revision',v_revision,
     'source_receipt_ids',to_jsonb(v_receipts),'workspace_ids',to_jsonb(v_workspace_ids),
@@ -222,5 +232,92 @@ begin
 end; $$;
 revoke all on function public.resolve_ops_frank_bundle() from public, anon, authenticated;
 grant execute on function public.resolve_ops_frank_bundle() to service_role;
+
+-- The earlier action-stack binding checked ownership but did not compare the
+-- queued version with the locked source row. Replace it after every versioned
+-- source table exists. Unknown/future targets fail closed.
+create or replace function public.ops_action_target_binding()
+returns trigger language plpgsql security definer set search_path = '' as $$
+declare v_current bigint;
+begin
+  if new.action_type = 'team_invite' then
+    if new.target_type <> 'workspace' or new.target_id <> new.workspace_id then
+      raise exception 'operations action target is not owned by workspace' using errcode='42501';
+    end if;
+    select w.ops_version into v_current from public.workspaces w where w.id=new.workspace_id for update;
+  elsif new.action_type = 'billing_reconcile' then
+    if new.target_type <> 'billing' or new.target_id <> new.workspace_id then
+      raise exception 'operations action target is not owned by workspace' using errcode='42501';
+    end if;
+    select w.ops_version into v_current from public.workspaces w where w.id=new.workspace_id for update;
+  elsif new.action_type in ('team_resend','team_cancel') then
+    if new.target_type <> 'invitation' then
+      raise exception 'operations action target is not owned by workspace' using errcode='42501';
+    end if;
+    select i.ops_version into v_current from public.workspace_invitations i
+      where i.id=new.target_id and i.workspace_id=new.workspace_id for update;
+  elsif new.action_type = 'session_revoke' then
+    if new.target_type <> 'session' then
+      raise exception 'operations action target is not owned by workspace' using errcode='42501';
+    end if;
+    if not exists (select 1 from auth.users u where u.id=new.target_id) then
+      raise exception 'operations action target is not owned by workspace' using errcode='42501';
+    end if;
+    select wm.ops_version into v_current from public.workspace_members wm
+      where wm.workspace_id=new.workspace_id and wm.profile_id=new.target_id for update;
+  elsif new.action_type = 'enquiry_assign' then
+    if new.target_type <> 'enquiry' then
+      raise exception 'operations action target is not owned by workspace' using errcode='42501';
+    end if;
+    select e.ops_version into v_current from public.ops_enquiry_associations e
+      where e.id=new.target_id
+        and (e.workspace_id=new.workspace_id or e.workspace_id is null) for update;
+  else
+    raise exception 'operations action target is not owned by workspace' using errcode='42501';
+  end if;
+  if v_current is null then
+    raise exception 'operations action target is not owned by workspace' using errcode='42501';
+  end if;
+  if new.expected_version <> v_current then
+    raise exception 'operations action target version is stale' using errcode='40001';
+  end if;
+  return new;
+end;
+$$;
+
+-- Global website enquiries become tenant-scoped only at the explicit human
+-- association step. The action remains workspace-owned, but its source row
+-- may still have workspace_id NULL until this CAS succeeds.
+create or replace function public.assign_ops_enquiry(
+  p_workspace_id uuid, p_enquiry_id uuid, p_assignee_profile_id uuid,
+  p_expected_version bigint, p_actor_profile_id uuid
+)
+returns boolean language plpgsql security definer set search_path = '' as $$
+declare v_updated integer;
+begin
+  if p_workspace_id is null or p_enquiry_id is null or p_expected_version is null or p_expected_version < 1 or p_actor_profile_id is null then
+    raise exception 'invalid enquiry assignment identity' using errcode = '22023';
+  end if;
+  if p_assignee_profile_id is not null and not exists (
+    select 1 from public.workspace_members where workspace_id=p_workspace_id and profile_id=p_assignee_profile_id
+  ) then
+    raise exception 'enquiry assignee is not a workspace member' using errcode = '42501';
+  end if;
+  update public.ops_enquiry_associations
+    set workspace_id=p_workspace_id, assignee_profile_id=p_assignee_profile_id
+    where id=p_enquiry_id and (workspace_id=p_workspace_id or workspace_id is null)
+      and ops_version=p_expected_version;
+  get diagnostics v_updated = row_count;
+  if v_updated = 1 then
+    insert into public.audit_logs (workspace_id, actor_profile_id, action, target_type, target_id, metadata)
+      values (p_workspace_id, p_actor_profile_id, 'ops.enquiry_assigned', 'enquiry', p_enquiry_id,
+        jsonb_build_object('assigneeProfileId',p_assignee_profile_id,'expectedVersion',p_expected_version));
+  end if;
+  return v_updated = 1;
+end;
+$$;
+revoke all on function public.ops_action_target_binding() from public, anon, authenticated, service_role;
+revoke all on function public.assign_ops_enquiry(uuid,uuid,uuid,bigint,uuid) from public, anon, authenticated;
+grant execute on function public.assign_ops_enquiry(uuid,uuid,uuid,bigint,uuid) to service_role;
 
 commit;
