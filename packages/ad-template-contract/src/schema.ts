@@ -1,8 +1,26 @@
 import { z } from "zod";
+import { MINIMUM_TEXT_SIZE_PX } from "./types.ts";
 
 const colourRoleSchema = z.enum(["background", "primary", "secondary", "accent", "mainText", "inverseText"]);
 const rectSchema = z.object({ x: z.number().finite(), y: z.number().finite(), width: z.number().positive(), height: z.number().positive() }).strict();
 const fontSchema = z.object({ file: z.string().min(1) }).strict();
+
+function resolveRect(
+  geometry: z.infer<typeof rectSchema>,
+  width: number,
+  height: number,
+): z.infer<typeof rectSchema> {
+  const values = [geometry.x, geometry.y, geometry.width, geometry.height];
+  if (values.every((value) => Math.abs(value) <= 1.001)) {
+    return {
+      x: geometry.x * width,
+      y: geometry.y * height,
+      width: geometry.width * width,
+      height: geometry.height * height,
+    };
+  }
+  return geometry;
+}
 
 const layerSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("plate"), layerId: z.string().min(1), colourRole: colourRoleSchema, assetKey: z.string().min(1).optional(), geometry: rectSchema, protected: z.boolean() }).strict(),
@@ -21,14 +39,41 @@ const layoutSchema = z.object({
 }).strict().superRefine((layout, ctx) => {
   const width = 1080;
   const height = layout.placement === "feed" ? 1350 : 1920;
+  const minimumTextSize = MINIMUM_TEXT_SIZE_PX[layout.placement];
+  const background = layout.layers[0];
+  const backgroundGeometry = background ? resolveRect(background.geometry, width, height) : null;
+  if (
+    background?.type !== "plate"
+    || !background.protected
+    || !backgroundGeometry
+    || Math.abs(backgroundGeometry.x) > 0.5
+    || Math.abs(backgroundGeometry.y) > 0.5
+    || Math.abs(backgroundGeometry.width - width) > 0.5
+    || Math.abs(backgroundGeometry.height - height) > 0.5
+  ) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: `${layout.placement} first layer must be a protected full-canvas background plate`,
+    });
+  }
   for (const layer of layout.layers) {
-    const geometry = layer.geometry;
+    const geometry = resolveRect(layer.geometry, width, height);
     if (geometry.x < 0 || geometry.y < 0 || geometry.x + geometry.width > width || geometry.y + geometry.height > height) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: "layer geometry is outside placement bounds" });
     }
+    if (layer.type === "text" && layer.fontSize < minimumTextSize) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: `${layout.placement} text must be at least ${minimumTextSize}px` });
+    }
+    if (layer.type === "vector" && layer.shape === "ring") {
+      const squareTolerance = Math.max(1, Math.min(geometry.width, geometry.height) * 0.01);
+      if (Math.abs(geometry.width - geometry.height) > squareTolerance) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "ring vectors must use square geometry" });
+      }
+    }
   }
   for (const zone of layout.safeZones) {
-    if (zone.x < 0 || zone.y < 0 || zone.x + zone.width > width || zone.y + zone.height > height) {
+    const geometry = resolveRect(zone, width, height);
+    if (geometry.x < 0 || geometry.y < 0 || geometry.x + geometry.width > width || geometry.y + geometry.height > height) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: "safe zone is outside placement bounds" });
     }
   }
@@ -87,6 +132,11 @@ export const adTemplateSchema = z.object({
     if ("inputKey" in layer && !declaredInputs.has(layer.inputKey)) report("layer input is not declared");
     if ("assetKey" in layer && layer.assetKey && !assetKeys.has(layer.assetKey)) report("layer asset is not declared");
     if (layer.type === "text" && !fontFiles.includes(layer.font.file)) report("text font is not declared");
+    if (layer.type === "text") {
+      const input = template.textInputs.find((candidate) => candidate.key === layer.inputKey);
+      const hardLineCount = input?.placeholder.split(/\r\n?|\n/u).length ?? 0;
+      if (hardLineCount > layer.maxLines) report("text placeholder hard lines exceed the referencing layer maxLines");
+    }
   }
   const feedSample = template.metadata.gallerySamples.feed;
   if (feedSample && feedSample.placement !== "feed") report("feed gallery sample must use feed placement");
