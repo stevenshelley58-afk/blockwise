@@ -20,6 +20,12 @@ export type MetaPartnerConfig = {
 
 export const META_PARTNER_STARTS_ENABLED_ENV = "BLOCKWISE_META_PARTNER_STARTS_ENABLED";
 
+/** Public onboarding information, available to the manual guide while automated partner starts stay disabled. */
+export function getMetaPartnerBusinessId(): string | null {
+  const businessId = process.env.META_BUSINESS_ID?.trim();
+  return businessId && /^\d{6,25}$/.test(businessId) ? businessId : null;
+}
+
 /**
  * Partner-start is deliberately opt-in. Existing provider connections continue
  * to use their stored vault credentials; this gate only protects the unproven
@@ -41,7 +47,7 @@ export const META_PARTNER_SCOPES = ["ads_management", "business_management"];
 export function getMetaPartnerConfig(): MetaPartnerConfig | null {
   if (!isMetaPartnerStartEnabled()) return null;
 
-  const businessId = process.env.META_BUSINESS_ID?.trim();
+  const businessId = getMetaPartnerBusinessId();
   const systemToken = process.env.META_SYSTEM_USER_TOKEN?.trim();
 
   // A placeholder value is treated as unconfigured so the connect page can

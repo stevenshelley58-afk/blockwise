@@ -7,6 +7,7 @@ import { queueReportingRefresh } from "@/lib/meta-monitor/reporting-refresh-queu
 import { resolveMonitorDateRange } from "@/lib/monitor/dashboard-data";
 import {
   getMetaPartnerConfig,
+  isMetaPartnerStartEnabled,
   META_PARTNER_SCOPES,
   verifyPartnerAccountAccess,
 } from "@/lib/providers/meta-partner";
@@ -44,6 +45,7 @@ type AssignmentRow = {
  * publishing) works unchanged.
  */
 export async function POST(request: NextRequest) {
+  if (!isMetaPartnerStartEnabled()) return NextResponse.json({ error: "Meta partner access is not currently enabled." }, { status: 503 });
   const body = (await request.json().catch(() => ({}))) as ClaimBody;
   const guard = await requireApiWorkspace(
     request,

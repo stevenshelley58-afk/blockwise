@@ -6,10 +6,12 @@ import { StatusPill } from "@/components/status-pill";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
 import { loadOperatorCustomerDetail } from "@/lib/operator/customers";
 import { listManualPublishRequestsForWorkspace } from "@/lib/adstudio/manual-publish";
+import { listMetaPartnerAccessRequestsForWorkspace } from "@/lib/providers/meta-partner-access-requests";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 import { CustomerActions } from "./customer-actions";
 import { ManualPublishRequests } from "./manual-publish-requests";
+import { MetaPartnerAccessRequests } from "./meta-partner-access-requests";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +24,7 @@ const detailSections = [
   ["credits", "Credits"],
   ["brand", "Brand Pack"],
   ["meta", "Meta & campaigns"],
+  ["meta-partner-access", "Meta access"],
   ["manual-publishing", "Manual publishing"],
   ["team", "Team"],
   ["bookings", "Bookings"],
@@ -38,6 +41,10 @@ export default async function OperatorCustomerDetailPage({ params }: PageProps) 
   });
   if (!detail) notFound();
   const manualPublishRequests = await listManualPublishRequestsForWorkspace(
+    serviceSupabase,
+    workspaceId,
+  );
+  const metaPartnerRequests = await listMetaPartnerAccessRequestsForWorkspace(
     serviceSupabase,
     workspaceId,
   );
@@ -75,6 +82,7 @@ export default async function OperatorCustomerDetailPage({ params }: PageProps) 
       </section>
 
       <CustomerActions workspaceId={workspaceId} />
+      <MetaPartnerAccessRequests requests={metaPartnerRequests} />
       <ManualPublishRequests requests={manualPublishRequests} />
 
       <DetailPanel id="activation" title="Activation timeline">

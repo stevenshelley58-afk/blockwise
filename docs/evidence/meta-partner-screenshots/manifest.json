@@ -1,0 +1,19 @@
+{
+  "captured_ui": "Meta Business Settings",
+  "added_at": "2026-09-04T00:00:00Z",
+  "review_by": "2026-12-03T00:00:00Z",
+  "source": "Existing Blockwise partner-access prototype; real Meta UI crops originally referenced to the public Sellforte support guide",
+  "reuse_decision": "Temporary instructional use for the owner-requested interim partner-access workflow; replace with Blockwise-operated captures at the next Meta proof run",
+  "processing": [
+    "cropped before this change",
+    "converted to WebP with Sharp",
+    "metadata stripped by re-encoding",
+    "no customer names or asset IDs visible"
+  ],
+  "files": [
+    "public/help/meta/partner-access/01-partners.webp",
+    "public/help/meta/partner-access/02-give-access.webp",
+    "public/help/meta/partner-access/03-business-id.webp",
+    "public/help/meta/partner-access/04-assets-and-permissions.webp"
+  ]
+}
