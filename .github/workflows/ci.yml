@@ -74,8 +74,9 @@ jobs:
 
       - name: Record immutable image evidence
         run: |
-          docker image inspect "$PRODUCT_IMAGE" --format 'image_id={{.Id}}' > product-image-evidence.txt
-          sha256sum product-image.tar.gz >> product-image-evidence.txt
+          echo "source_sha=$GITHUB_SHA" > product-image-evidence.txt
+          docker image inspect "$PRODUCT_IMAGE" --format 'image_id={{.Id}}' >> product-image-evidence.txt
+          echo "sha256=$(sha256sum product-image.tar.gz | cut -d' ' -f1)" >> product-image-evidence.txt
 
       - name: Upload image artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -105,8 +106,19 @@ jobs:
         with:
           name: product-image
 
+      - name: Download immutable image evidence
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: product-image-evidence
+
       - name: Load product image
-        run: gzip -dc product-image.tar.gz | docker load
+        run: |
+          expected=$(sed -n 's/^sha256=//p' product-image-evidence.txt)
+          test -n "$expected"
+          echo "$expected  product-image.tar.gz" | sha256sum --check
+          gzip -dc product-image.tar.gz | docker load
+          test "$(docker image inspect "$PRODUCT_IMAGE" --format '{{.Id}}')" = "$(sed -n 's/^image_id=//p' product-image-evidence.txt)"
+          test "$(sed -n 's/^source_sha=//p' product-image-evidence.txt)" = "$GITHUB_SHA"
 
       - name: Bind SBOM to immutable image ID
         run: docker image inspect "$PRODUCT_IMAGE" --format 'image_id={{.Id}}' > sbom-image-binding.txt
@@ -144,8 +156,19 @@ jobs:
         with:
           name: product-image
 
+      - name: Download immutable image evidence
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: product-image-evidence
+
       - name: Load product image
-        run: gzip -dc product-image.tar.gz | docker load
+        run: |
+          expected=$(sed -n 's/^sha256=//p' product-image-evidence.txt)
+          test -n "$expected"
+          echo "$expected  product-image.tar.gz" | sha256sum --check
+          gzip -dc product-image.tar.gz | docker load
+          test "$(docker image inspect "$PRODUCT_IMAGE" --format '{{.Id}}')" = "$(sed -n 's/^image_id=//p' product-image-evidence.txt)"
+          test "$(sed -n 's/^source_sha=//p' product-image-evidence.txt)" = "$GITHUB_SHA"
 
       - name: Bind Trivy report to immutable image ID
         run: docker image inspect "$PRODUCT_IMAGE" --format 'image_id={{.Id}}' > trivy-image-binding.txt
@@ -160,6 +183,14 @@ jobs:
           test "$(grep -c '^    purls:' .trivyignore.yaml)" -eq "$ids"
           test "$(grep -c '^    statement:' .trivyignore.yaml)" -eq "$ids"
           test "$(grep -c '^      - pkg:deb/debian/libsqlite3-0@3.46.1-7%2Bdeb13u1$' .trivyignore.yaml)" -eq "$ids"
+          awk '
+            /^  - id: CVE-/ { if (seen && (p != 1 || e != 1 || s != 1)) exit 1; seen=1; p=e=s=0; next }
+            /^    purls:/ { p++; next }
+            /^    expired_at: 2026-10-05$/ { e++; next }
+            /^    statement: "[^"].*"$/ { s++; next }
+            /^    statement:/ { exit 1 }
+            END { if (!seen || p != 1 || e != 1 || s != 1) exit 1 }
+          ' .trivyignore.yaml
           test "$ids" -eq "$(grep '^  - id: CVE-' .trivyignore.yaml | sort -u | wc -l)"
 
       - name: Scan product image for HIGH and CRITICAL vulnerabilities
