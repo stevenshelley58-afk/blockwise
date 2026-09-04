@@ -6,11 +6,22 @@ type TemplateGalleryProps = {
   templates: TemplateSummary[];
   query: string;
   filter: string;
+  hasAvailableTemplates: boolean;
   createAction: (formData: FormData) => void | Promise<void>;
 };
 
-export function TemplateGallery({ templates, query, filter, createAction }: TemplateGalleryProps) {
+export function TemplateGallery({ templates, query, filter, hasAvailableTemplates, createAction }: TemplateGalleryProps) {
   const hasActiveFilter = Boolean(query) || filter !== "all";
+
+  if (!hasAvailableTemplates) {
+    return (
+      <section aria-labelledby="template-review-heading" className="rounded-(--r-panel) border border-dashed border-(--line-heavy) bg-(--surface-subtle)/50 px-6 py-12 text-center sm:py-16">
+        <h2 id="template-review-heading" className="font-display text-[20px] font-extrabold tracking-[-.02em]">Templates are in final review</h2>
+        <p className="mx-auto mt-2 max-w-[48ch] text-sm leading-6 text-muted-foreground">New ads start only from a reviewed Feed + Story design. Your saved ads remain available while the next pack is being checked.</p>
+        <Link href="/ad-studio/library?view=ads" className="mt-5 inline-flex min-h-11 items-center justify-center rounded-full border border-border bg-card px-4 text-[12.5px] font-semibold hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Open saved ads</Link>
+      </section>
+    );
+  }
 
   return (
     <section aria-labelledby="template-results-heading">
