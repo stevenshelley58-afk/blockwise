@@ -230,16 +230,23 @@ scripts/vps/customer-ops-bootstrap.sh \
   --env-file /etc/blockwise/customer-ops/customer-ops.env --apply
 ```
 
-`--apply` creates the documented Mautic lifecycle field and registers the
-operator-supplied Chatwoot email-inbox JSON and signed webhook URL when those
-files/settings are present. Existing resources are accepted as idempotent `409`
-conflicts and can be verified again with `--check`; other provider errors fail
-closed. The
-bootstrap requires explicit lifecycle segment/campaign mappings, distinct
+`--apply` creates/ verifies the configured Mautic lifecycle fields and tags and
+verifies every operator-supplied segment/campaign ID through the official API.
+It registers the operator-supplied Chatwoot email-inbox JSON and signed webhook
+URL; `--apply` fails closed unless both are supplied. Existing resources are accepted as
+idempotent `409` conflicts and can be verified again with `--check`; other
+provider errors fail closed. The projection worker, rather than bootstrap,
+applies per-contact lifecycle membership. The bootstrap requires explicit
+lifecycle segment/campaign mappings, distinct
 Stalwart identities, and API tokens in root-owned `0600` files. It verifies
 GoTrue and transactional-outbox SMTP routing to the shared `product-mail`,
 Mautic/Chatwoot API authentication, and SnagTime readiness; it never claims a
 signup, external-mail, booking, or action receipt.
+
+The Mautic cron/worker healthchecks require recent log progress. The SnagTime
+worker healthcheck requires the published worker image to update
+`SNAGTIME_WORKER_HEARTBEAT_FILE` after each queue cycle; a missing or stale file
+is unhealthy even when the process is still running.
 
 ## Receipt-based staging smoke matrix
 

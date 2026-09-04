@@ -132,6 +132,18 @@ verify_mautic_resource() {
 }
 
 if [[ "$MODE" == apply ]]; then
+  require_value CHATWOOT_INBOX_PAYLOAD_FILE
+  require_value CHATWOOT_WEBHOOK_URL
+  require_secret chatwoot_webhook_probe_secret
+  [[ "$CHATWOOT_INBOX_PAYLOAD_FILE" = /* && -f "$CHATWOOT_INBOX_PAYLOAD_FILE" && ! -L "$CHATWOOT_INBOX_PAYLOAD_FILE" ]] || { echo 'CHATWOOT_INBOX_PAYLOAD_FILE must be an absolute regular file' >&2; exit 64; }
+  [[ "$(readlink -f -- "$CHATWOOT_INBOX_PAYLOAD_FILE")" == "$CHATWOOT_INBOX_PAYLOAD_FILE" ]] || { echo 'CHATWOOT_INBOX_PAYLOAD_FILE may not contain symlinked path components' >&2; exit 64; }
+  [[ "$(stat -c '%a' "$CHATWOOT_INBOX_PAYLOAD_FILE" 2>/dev/null || stat -f '%Lp' "$CHATWOOT_INBOX_PAYLOAD_FILE")" == 600 && "$(stat -c '%u' "$CHATWOOT_INBOX_PAYLOAD_FILE" 2>/dev/null || stat -f '%u' "$CHATWOOT_INBOX_PAYLOAD_FILE")" == 0 ]] || { echo 'CHATWOOT_INBOX_PAYLOAD_FILE must be root-owned, mode 0600' >&2; exit 64; }
+  payload_dir="$(dirname "$CHATWOOT_INBOX_PAYLOAD_FILE")"
+  while [[ "$payload_dir" != / ]]; do
+    payload_dir_stat="$(stat -c '%a %u' "$payload_dir" 2>/dev/null || stat -f '%Lp %u' "$payload_dir")"
+    [[ "${payload_dir_stat##* }" == 0 && $((8#${payload_dir_stat%% *} & 18)) -eq 0 ]] || { echo 'CHATWOOT_INBOX_PAYLOAD_FILE has an unsafe parent directory' >&2; exit 64; }
+    payload_dir="$(dirname "$payload_dir")"
+  done
   while IFS=$'\t' read -r alias field_type; do
     existing="$(api_request mautic_api_token GET "${MAUTIC_API_URL%/}/fields/contact/${alias}")"
     if [[ "$existing" == 2* ]]; then continue; fi
@@ -160,12 +172,10 @@ PY
   done
   if [[ -n "${CHATWOOT_INBOX_PAYLOAD_FILE:-}" ]]; then
     payload="$CHATWOOT_INBOX_PAYLOAD_FILE"
-    [[ "$payload" = /* && -f "$payload" && ! -L "$payload" ]] || { echo 'CHATWOOT_INBOX_PAYLOAD_FILE must be an absolute regular file' >&2; exit 64; }
     code="$(api_request chatwoot_api_token POST "${CHATWOOT_API_URL%/}/accounts/${CHATWOOT_ACCOUNT_ID}/inboxes" "$payload")"
     [[ "$code" == 2* || "$code" == 409 ]] || { echo "Chatwoot inbox bootstrap failed (HTTP $code)" >&2; exit 65; }
   fi
   if [[ -n "${CHATWOOT_WEBHOOK_URL:-}" ]]; then
-    require_secret chatwoot_webhook_probe_secret
     hook_file="$(mktemp /tmp/blockwise-chatwoot-webhook.XXXXXX)"; chmod 600 "$hook_file"
     python3 - "$CHATWOOT_WEBHOOK_URL" > "$hook_file" <<'PY'
 import json,sys

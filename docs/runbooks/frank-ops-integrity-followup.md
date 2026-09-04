@@ -3,8 +3,9 @@
 The Blockwise worker is the single writer for the Frank projection root. The
 production product-worker mounts `/srv/frank/data/ops-projections` read/write;
 the standalone worker definition deliberately has no projection-root mount.
-Frank mounts that same host root read-only (`/ops-projections:ro`) on its
-private network, with `HERMES_OPS_PROJECTION_ROOT=/ops-projections`.
+Frank mounts that same host root read-only (`/ops-projections:ro`) with
+`HERMES_OPS_PROJECTION_ROOT=/ops-projections`; no Blockwise network attachment
+is required for this file-only handoff.
 
 Frank #122 is the accepted consumer for this contract. It reads `manifest.json`
 and verifies the exact

@@ -5,16 +5,7 @@
 services:
   frank:
     environment:
-      HERMES_OPS_PROJECTION_ROOT: /data/ops-projections
+      HERMES_OPS_PROJECTION_ROOT: /ops-projections
       HERMES_OPS_PROJECTION_INTEGRITY_REQUIRED: "true"
     volumes:
-      - ${HERMES_OPS_PROJECTION_ROOT:?Set the shared Blockwise projection path}:/data/ops-projections:ro
-    networks:
-      - hermes-private
-      - blockwise-product
-
-networks:
-  hermes-private:
-    external: true
-  blockwise-product:
-    external: true
+      - ${HERMES_OPS_PROJECTION_ROOT:?Set the shared Blockwise projection path}:/ops-projections:ro

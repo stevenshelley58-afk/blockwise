@@ -30,7 +30,7 @@ test("production runtime has one projection writer and the accepted Frank RO han
   assert.equal((productCompose.match(/\/data\/ops-projections:rw/g) ?? []).length, 1);
   assert.doesNotMatch(standaloneWorker, /ops-projections:rw/);
   assert.match(frankCompose, /ops-projections:ro/);
-  assert.match(frankCompose, /hermes-private/);
+  assert.doesNotMatch(frankCompose, /blockwise-product|hermes-private/);
   assert.match(frankRunbook, /Frank #122/);
   assert.match(frankRunbook, /single writer/);
 });
@@ -67,6 +67,9 @@ test("bootstrap is explicit, idempotent, and credential-file based", () => {
   assert.match(bootstrap, /tags\/new/);
   assert.match(bootstrap, /verify_mautic_resource segments/);
   assert.match(bootstrap, /verify_mautic_resource campaigns/);
+  assert.match(bootstrap, /require_value CHATWOOT_INBOX_PAYLOAD_FILE/);
+  assert.match(bootstrap, /require_value CHATWOOT_WEBHOOK_URL/);
+  assert.match(bootstrap, /CHATWOOT_INBOX_PAYLOAD_FILE.*root-owned/);
   assert.match(bootstrap, /curl --config "\$config"/);
   assert.doesNotMatch(bootstrap, /Authorization: Bearer "\$\{/);
   assert.match(env, /MAUTIC_LIFECYCLE_FIELDS_JSON=/);
