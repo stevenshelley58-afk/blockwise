@@ -1,14 +1,14 @@
 # Reproducible standalone Next image for the self-hosted product stack.
 # Pin the multi-architecture base by digest so the release image and its
 # vulnerability/SBOM evidence cannot drift while a workflow is running.
-FROM node:22-slim@sha256:83f487e0a63425e5b4d146fb5e5be574bcbe1b7b843d3ebafdd95eaf7767a7e5 AS deps
+FROM node:22-slim@sha256:4d676821dff059fd00d277ee4261ef34ea712317fed0737c03941481b5760c96 AS deps
 WORKDIR /app
 COPY packages/ad-template-contract/package.json packages/ad-template-contract/package.json
 COPY packages/ad-template-renderer/package.json packages/ad-template-renderer/package.json
 COPY package.json package-lock.json .npmrc ./
 RUN npm ci --ignore-scripts
 
-FROM node:22-slim@sha256:83f487e0a63425e5b4d146fb5e5be574bcbe1b7b843d3ebafdd95eaf7767a7e5 AS builder
+FROM node:22-slim@sha256:4d676821dff059fd00d277ee4261ef34ea712317fed0737c03941481b5760c96 AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
@@ -34,7 +34,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build:packages
 RUN npm run build
 
-FROM node:22-slim@sha256:83f487e0a63425e5b4d146fb5e5be574bcbe1b7b843d3ebafdd95eaf7767a7e5 AS runner
+FROM node:22-slim@sha256:4d676821dff059fd00d277ee4261ef34ea712317fed0737c03941481b5760c96 AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
