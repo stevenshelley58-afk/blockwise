@@ -93,4 +93,8 @@ test("provider worker healthchecks and SnagTime runtime contract are explicit", 
     assert.match(customerCompose, new RegExp(key));
   }
   assert.doesNotMatch(customerCompose, /SNAGTIME_WORKER_HEARTBEAT_FILE/);
+  const workerSection = customerCompose.match(/  snagtime-worker:[\s\S]*?(?=\n  smtp-client:|$)/)?.[0] ?? "";
+  for (const webOnly of ["AUTH_SECRET_FILE", "BOOKING_CAPABILITY_SECRET_FILE", "BOOKING_CAPABILITY_KEYRING_FILE", "TENANT_CONTEXT_SECRET_FILE", "RATE_LIMIT_HASH_SECRET_FILE", "PROXY_SHARED_SECRET_FILE"]) {
+    assert.doesNotMatch(workerSection, new RegExp(`\\b${webOnly}\\b`), `${webOnly} leaked into worker env`);
+  }
 });

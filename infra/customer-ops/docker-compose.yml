@@ -367,11 +367,32 @@ services:
     image: ${SNAGTIME_IMAGE:?set SNAGTIME_IMAGE to the immutable merged-main runtime image}
     command: ["node", "dist/worker.mjs"]
     environment:
-      <<: *snagtime_env
-      DATABASE_URL_FILE: ""
+      NODE_ENV: production
+      DATABASE_PROVIDER: postgresql
       DATABASE_ROLE: worker
       WORKER_DATABASE_URL_FILE: /run/secrets/worker_database_url
+      TOKEN_ENCRYPTION_KEY_FILE: /run/secrets/snagtime_token_encryption_key
       EMAIL_TOKEN_SECRET_FILE: /run/secrets/email_token_secret
+      NEXT_PUBLIC_APP_URL: https://${SNAGTIME_HOST:?set SNAGTIME_HOST}
+      OUTBOX_WORKER_MODE: dedicated
+      OUTBOX_WORKER_ENABLED: "false"
+      DEMO_MODE: "false"
+      EMAIL_PROVIDER: smtp
+      CALENDAR_PROVIDER: google
+      FREE_ONLY: "true"
+      NEXT_PUBLIC_FREE_ONLY: "true"
+      BUILD_ID: ${SNAGTIME_REVISION:?set SNAGTIME_REVISION to the full merged-main SHA}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:?set GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET_FILE: /run/secrets/google_client_secret
+      SMTP_HOST: ${MAIL_PUBLIC_HOST:?set MAIL_PUBLIC_HOST}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_TLS_MODE: ${SMTP_TLS_MODE:-starttls}
+      SMTP_USER: ${SNAGTIME_SMTP_USER:?set SNAGTIME_SMTP_USER}
+      SMTP_PASSWORD_FILE: /run/secrets/snagtime_smtp_password
+      EMAIL_FROM: ${SNAGTIME_EMAIL_FROM:?set SNAGTIME_EMAIL_FROM}
+      EMAIL_REPLY_TO: ${EMAIL_REPLY_TO:?set EMAIL_REPLY_TO}
+      EMAIL_SENDER_DOMAIN: ${EMAIL_SENDER_DOMAIN:?set EMAIL_SENDER_DOMAIN}
+      BLOCKWISE_WEBHOOK_URL: ${BLOCKWISE_WEBHOOK_URL:-}
       BLOCKWISE_WEBHOOK_SECRET_FILE: /run/secrets/blockwise_webhook_secret
       BLOCKWISE_BOOKING_ACTION_SECRET_FILE: /run/secrets/blockwise_booking_action_secret
       OPERATOR_HEALTH_SECRET_FILE: /run/secrets/operator_health_secret
