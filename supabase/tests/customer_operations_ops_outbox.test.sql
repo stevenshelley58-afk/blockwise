@@ -77,7 +77,7 @@ values ('85555555-5555-4555-8555-555555555551', '81111111-1111-4111-8111-1111111
 insert into public.customer_communication_preferences (id, workspace_id, email, marketing_consent, topics, updated_at, created_at)
 values ('85555555-5555-4555-8555-555555555552', '81111111-1111-4111-8111-111111111111', 'consent-case@example.test', 'withdrawn', array['product_updates'], now(), now());
 with ranked as (
-  select id, row_number() over (partition by workspace_id, lower(btrim(email)) order by updated_at desc, created_at desc, id desc) as rn
+  select id, workspace_id, email, row_number() over (partition by workspace_id, lower(btrim(email)) order by updated_at desc, created_at desc, id desc) as rn
   from public.customer_communication_preferences
 ), grouped as (
   select workspace_id, lower(btrim(email)) as email_key, bool_or(coalesce(suppressed, false)) as any_suppressed, max(unsubscribed_at) as latest_unsubscribed_at, bool_or(marketing_consent = 'withdrawn') as any_withdrawn, bool_or(marketing_consent = 'denied') as any_denied
