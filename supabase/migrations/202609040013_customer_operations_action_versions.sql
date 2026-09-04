@@ -346,4 +346,90 @@ revoke all on function public.ops_action_target_binding() from public, anon, aut
 revoke all on function public.assign_ops_enquiry(uuid,uuid,uuid,bigint,uuid) from public, anon, authenticated;
 grant execute on function public.assign_ops_enquiry(uuid,uuid,uuid,bigint,uuid) to service_role;
 
+-- GoTrue invitation delivery is an external side effect. Reserve it once per
+-- action before calling the provider so a lost response cannot cause a second
+-- email. Ambiguous attempts are reconciled from the invitation's authoritative
+-- delivery counters or quarantined for an operator; they are never retried
+-- blindly. The baseline fields preserve explicit team_resend intent.
+create table if not exists private.ops_invitation_delivery_ledger (
+  action_id uuid primary key references public.ops_action_outbox(action_id) on delete restrict,
+  idempotency_key text not null unique,
+  workspace_id uuid not null references public.workspaces(id) on delete restrict,
+  invitation_id uuid not null references public.workspace_invitations(id) on delete restrict,
+  state text not null default 'reserved' check (state in ('reserved','started','completed','needs_reconciliation')),
+  baseline_send_attempt_count integer not null check (baseline_send_attempt_count >= 0),
+  baseline_last_sent_at timestamptz,
+  baseline_provider_user_id uuid,
+  last_error text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+alter table private.ops_invitation_delivery_ledger enable row level security;
+revoke all on private.ops_invitation_delivery_ledger from public, anon, authenticated, service_role;
+
+create or replace function public.begin_ops_invitation_delivery(
+  p_action_id uuid, p_idempotency_key text, p_workspace_id uuid, p_invitation_id uuid
+) returns jsonb language plpgsql security definer set search_path = '' as $$
+declare v_row private.ops_invitation_delivery_ledger%rowtype; v_inv public.workspace_invitations%rowtype;
+begin
+  if p_action_id is null or p_workspace_id is null or p_invitation_id is null
+     or p_idempotency_key !~ '^[A-Za-z0-9][A-Za-z0-9:._/-]{7,255}$' then
+    raise exception 'invalid invitation delivery reservation' using errcode='22023';
+  end if;
+  select * into v_inv from public.workspace_invitations
+    where id=p_invitation_id and workspace_id=p_workspace_id and status='pending' for update;
+  if not found or not exists (
+    select 1 from public.ops_action_outbox o where o.action_id=p_action_id
+      and o.idempotency_key=p_idempotency_key and o.workspace_id=p_workspace_id
+      and o.target_id=p_invitation_id and o.action_type in ('team_invite','team_resend')
+  ) then
+    raise exception 'invitation delivery reservation is not action-bound' using errcode='42501';
+  end if;
+  insert into private.ops_invitation_delivery_ledger(action_id,idempotency_key,workspace_id,invitation_id,baseline_send_attempt_count,baseline_last_sent_at,baseline_provider_user_id)
+    values(p_action_id,p_idempotency_key,p_workspace_id,p_invitation_id,coalesce(v_inv.send_attempt_count,0),v_inv.last_sent_at,v_inv.provider_user_id)
+    on conflict(action_id) do update set updated_at=now();
+  select * into v_row from private.ops_invitation_delivery_ledger where action_id=p_action_id;
+  if v_row.idempotency_key <> p_idempotency_key or v_row.workspace_id <> p_workspace_id or v_row.invitation_id <> p_invitation_id then
+    raise exception 'invitation delivery reservation identity conflict' using errcode='23505';
+  end if;
+  return jsonb_build_object('state',v_row.state);
+end; $$;
+
+create or replace function public.start_ops_invitation_delivery(p_action_id uuid)
+returns boolean language sql security definer set search_path = '' as $$
+  update private.ops_invitation_delivery_ledger set state='started',updated_at=now()
+    where action_id=p_action_id and state='reserved' returning true;
+$$;
+
+create or replace function public.reconcile_ops_invitation_delivery(p_action_id uuid)
+returns text language plpgsql security definer set search_path = '' as $$
+declare v private.ops_invitation_delivery_ledger%rowtype; i public.workspace_invitations%rowtype; v_state text;
+begin
+  select * into v from private.ops_invitation_delivery_ledger where action_id=p_action_id for update;
+  if not found then raise exception 'invitation delivery reservation not found' using errcode='22023'; end if;
+  select * into i from public.workspace_invitations where id=v.invitation_id and workspace_id=v.workspace_id;
+  if found and (i.send_attempt_count > v.baseline_send_attempt_count
+      or (i.last_sent_at is not null and (v.baseline_last_sent_at is null or i.last_sent_at > v.baseline_last_sent_at))) then
+    v_state := 'completed';
+  else
+    v_state := 'needs_reconciliation';
+  end if;
+  update private.ops_invitation_delivery_ledger set state=v_state,updated_at=now() where action_id=p_action_id;
+  return v_state;
+end; $$;
+
+create or replace function public.complete_ops_invitation_delivery(p_action_id uuid, p_error text default null)
+returns boolean language sql security definer set search_path = '' as $$
+  update private.ops_invitation_delivery_ledger set state='completed',last_error=null,updated_at=now()
+    where action_id=p_action_id and state='started' returning true;
+$$;
+
+create or replace function public.quarantine_ops_invitation_delivery(p_action_id uuid, p_error text)
+returns boolean language sql security definer set search_path = '' as $$
+  update private.ops_invitation_delivery_ledger set state='needs_reconciliation',last_error=public.redact_ops_text(p_error),updated_at=now()
+    where action_id=p_action_id and state in ('reserved','started') returning true;
+$$;
+revoke all on function public.begin_ops_invitation_delivery(uuid,text,uuid,uuid), public.start_ops_invitation_delivery(uuid), public.reconcile_ops_invitation_delivery(uuid), public.complete_ops_invitation_delivery(uuid,text), public.quarantine_ops_invitation_delivery(uuid,text) from public, anon, authenticated;
+grant execute on function public.begin_ops_invitation_delivery(uuid,text,uuid,uuid), public.start_ops_invitation_delivery(uuid), public.reconcile_ops_invitation_delivery(uuid), public.complete_ops_invitation_delivery(uuid,text), public.quarantine_ops_invitation_delivery(uuid,text) to service_role;
+
 commit;

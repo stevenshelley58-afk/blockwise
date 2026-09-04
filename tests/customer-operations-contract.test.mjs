@@ -101,6 +101,11 @@ test("worker deployment mounts OSS provider secrets read-only and binds image pr
   assert.match(worker, /BLOCKWISE_WORKER_REVISION must be the full deployed Git SHA/);
   assert.match(worker, /CHATWOOT_ENQUIRY_SOURCE_ID/);
   assert.match(worker, /record_ops_provider_step/);
+  const executor = text("src/app/api/internal/customer-ops/actions/route.ts");
+  assert.match(executor, /begin_ops_invitation_delivery/);
+  assert.match(executor, /reconcile_ops_invitation_delivery/);
+  assert.match(executor, /quarantine_ops_invitation_delivery/);
+  assert.match(executor, /invitation_delivery_needs_reconciliation/);
 });
 
 test("Frank integrity handoff is explicit about current consumer boundary", () => {

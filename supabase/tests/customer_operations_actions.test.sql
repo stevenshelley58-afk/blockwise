@@ -87,7 +87,7 @@ select lives_ok($$ select public.enqueue_ops_action(
   'current invitation test', now()-interval '1 hour', now()+interval '2 hours', '{}'::jsonb
 ) $$, 'current invitation versions pass');
 
-update public.workspace_members set updated_at=now() where workspace_id='86666666-6666-4666-8666-666666666666' and profile_id='87777777-7777-4777-8777-777777777777';
+update public.workspace_members set role='admin' where workspace_id='86666666-6666-4666-8666-666666666666' and profile_id='87777777-7777-4777-8777-777777777777';
 select throws_ok($$ select public.enqueue_ops_action(
   '88888888-8888-4888-8888-888888888891', 'ops:test:stale-session',
   '86666666-6666-4666-8666-666666666666', '86666666-6666-4666-8666-666666666666',

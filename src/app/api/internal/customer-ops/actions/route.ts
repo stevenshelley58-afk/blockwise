@@ -57,7 +57,7 @@ export async function POST(request: Request) {
     if (!queuedPayload) return NextResponse.json({ error: "queued_payload_invalid" }, { status: 503 });
     if (actionType === "team_invite" || actionType === "team_resend") {
       const invitation = actionType === "team_invite" ? { email: String(queuedPayload.email ?? ""), role: String(queuedPayload.role ?? "member") } : await invitationDetails(service, workspaceId, targetId);
-      await invite(service, workspaceId, String(queued.actor_operator_id), invitation.email, invitation.role);
+      await invite(service, workspaceId, String(queued.actor_operator_id), invitation.email, invitation.role, actionId, String(queued.idempotency_key));
     }
     else if (actionType === "team_cancel") {
       const outcome = await requireRpc(service, "cancel_workspace_invitation", { p_workspace_id: workspaceId, p_invitation_id: targetId, p_actor_profile_id: String(queued.actor_operator_id), p_reason: "operator_action" });
@@ -98,7 +98,7 @@ export async function POST(request: Request) {
   }
 }
 
-async function invite(service: ReturnType<typeof createSupabaseServiceClient>, workspaceId: string, actorId: string, email: string, role: string): Promise<void> {
+async function invite(service: ReturnType<typeof createSupabaseServiceClient>, workspaceId: string, actorId: string, email: string, role: string, actionId: string, idempotencyKey: string): Promise<void> {
   const normalized = email.trim().toLowerCase(); if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized) || normalized.length > 320) throw new Error("invalid invitation email");
   if (!["admin", "member", "viewer"].includes(role)) throw new Error("invalid invitation role");
   const reservation = await requireRpc(service, "reserve_verified_workspace_invitation", { p_workspace_id: workspaceId, p_email: normalized, p_role: role, p_actor_profile_id: actorId });
@@ -107,11 +107,29 @@ async function invite(service: ReturnType<typeof createSupabaseServiceClient>, w
   const outcome = row && typeof row === "object" ? String((row as { outcome?: unknown }).outcome ?? "") : "";
   if (!invitationId && outcome !== "already_member") throw new ActionExecutionError(`invitation_${outcome || "reservation_failed"}`, ["owner_required", "paid_plan_required"].includes(outcome) ? 403 : 409);
   if (outcome === "already_member") return;
+  const deliveryReservation = await requireRpc(service, "begin_ops_invitation_delivery", { p_action_id: actionId, p_idempotency_key: idempotencyKey, p_workspace_id: workspaceId, p_invitation_id: invitationId });
+  const reservationState = record(deliveryReservation)?.state;
+  if (reservationState === "completed") return;
+  if (reservationState !== "reserved") {
+    const reconciled = await requireRpc(service, "reconcile_ops_invitation_delivery", { p_action_id: actionId });
+    if (reconciled === "completed") return;
+    throw new ActionExecutionError("invitation_delivery_needs_reconciliation", 409);
+  }
+  const started = await requireRpc(service, "start_ops_invitation_delivery", { p_action_id: actionId });
+  if (started !== true) throw new ActionExecutionError("invitation_delivery_needs_reconciliation", 409);
   const redirectTo = new URL("/auth/confirm", process.env.NEXT_PUBLIC_APP_URL ?? "https://blockwise.sale"); redirectTo.searchParams.set("next", "/settings#team");
-  const delivery = await service.auth.admin.inviteUserByEmail(normalized, { redirectTo: redirectTo.toString() });
-  if (delivery.error) throw new Error("invitation_delivery_failed");
-  const { error: updateError } = await service.from("workspace_invitations").update({ send_attempt_count: 1, last_sent_at: new Date().toISOString(), last_send_error: null, updated_at: new Date().toISOString() }).eq("id", invitationId).eq("workspace_id", workspaceId).eq("status", "pending");
-  if (updateError) throw new Error("invitation_state_update_failed");
+  try {
+    const delivery = await service.auth.admin.inviteUserByEmail(normalized, { redirectTo: redirectTo.toString() });
+    if (delivery.error) throw new Error("invitation_delivery_failed");
+    const providerUserId = id(record(record(delivery.data)?.user)?.id);
+    const { error: updateError } = await service.from("workspace_invitations").update({ send_attempt_count: 1, last_sent_at: new Date().toISOString(), last_send_error: null, updated_at: new Date().toISOString(), ...(providerUserId ? { provider_user_id: providerUserId } : {}) }).eq("id", invitationId).eq("workspace_id", workspaceId).eq("status", "pending");
+    if (updateError) throw new Error("invitation_state_update_failed");
+    const completed = await requireRpc(service, "complete_ops_invitation_delivery", { p_action_id: actionId });
+    if (completed !== true) throw new Error("invitation_delivery_completion_failed");
+  } catch (error) {
+    await service.rpc("quarantine_ops_invitation_delivery", { p_action_id: actionId, p_error: error instanceof Error ? error.message : "invitation delivery failed" });
+    throw error;
+  }
 }
 async function invitationDetails(service: ReturnType<typeof createSupabaseServiceClient>, workspaceId: string, invitationId: string): Promise<{ email: string; role: string }> { const { data, error } = await service.from("workspace_invitations").select("email,role").eq("id", invitationId).eq("workspace_id", workspaceId).eq("status", "pending").maybeSingle(); if (error) throw new Error("invitation_lookup_failed"); if (typeof data?.email !== "string" || typeof data.role !== "string") throw new ActionExecutionError("invitation_not_found", 404); return { email: data.email, role: data.role }; }
 async function requireRpc(service: ReturnType<typeof createSupabaseServiceClient>, fn: string, args: Record<string, unknown>): Promise<unknown> {

@@ -1,4 +1,4 @@
-select plan(19);
+select plan(25);
 
 select has_column('public', 'email_outbox', 'workspace_id', 'email ownership is an explicit tenant field');
 select has_column('private', 'ops_provider_operation_ledger', 'completed_steps', 'provider steps are durable');
@@ -20,5 +20,11 @@ select has_column('public', 'ops_enquiry_associations', 'ops_version', 'enquiry 
 select ok(exists(select 1 from pg_trigger where tgrelid='public.workspaces'::regclass and tgname='ops_workspace_target_version'), 'workspace updates advance action versions');
 select ok(exists(select 1 from pg_trigger where tgrelid='public.workspace_invitations'::regclass and tgname='ops_invitation_target_version'), 'invitation updates advance action versions');
 select ok(exists(select 1 from pg_trigger where tgrelid='public.billing_offer_acceptances'::regclass and tgname='ops_billing_target_version'), 'billing updates advance action versions');
+select has_table('private', 'ops_invitation_delivery_ledger', 'invitation side effects have a durable reservation ledger');
+select has_function('public', 'begin_ops_invitation_delivery', array['uuid','text','uuid','uuid'], 'invitation reservation RPC exists');
+select has_function('public', 'start_ops_invitation_delivery', array['uuid'], 'invitation start RPC exists');
+select has_function('public', 'reconcile_ops_invitation_delivery', array['uuid'], 'invitation reconciliation RPC exists');
+select has_function('public', 'quarantine_ops_invitation_delivery', array['uuid','text'], 'ambiguous invitation quarantine RPC exists');
+select ok(not exists(select 1 from information_schema.role_table_grants where table_schema='private' and table_name='ops_invitation_delivery_ledger' and grantee='service_role' and privilege_type in ('SELECT','INSERT','UPDATE','DELETE')), 'invitation ledger has no direct service-role access');
 
 select * from finish();
