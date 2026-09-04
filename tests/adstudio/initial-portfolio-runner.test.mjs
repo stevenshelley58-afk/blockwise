@@ -53,7 +53,10 @@ test("Frank skill requires one visible run per initial template and human approv
 });
 
 test("ID 006 cannot bypass the canonical authored runner contract", () => {
-  assert.match(readFileSync(VARIANT_PACK, "utf8"), /validateInitialPortfolioContract\(contract\)/);
+  const variantPack = readFileSync(VARIANT_PACK, "utf8");
+  assert.match(variantPack, /validateInitialPortfolioContract\(contract\)/);
+  assert.match(variantPack, /maxDeadSpacePx: STORY_MAX_DEAD_SPACE_PX, backingColour: STORY_BACKING_COLOUR/);
+  assert.doesNotMatch(variantPack, /backingColour: palette\?\.background/);
   assert.throws(
     () => validateInitialPortfolioContract({ templateId: "meta-006-canary", mode: "single-template" }),
     /canonical templateId meta-feed-006/,
