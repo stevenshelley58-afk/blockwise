@@ -4,6 +4,22 @@
 # ignores: every entry below was reported with an empty Fixed Version by Trivy.
 vulnerabilities:
   - id: CVE-2026-76642
+    expired_at: 2026-10-04
+    expired_at: 2026-10-04
+    expired_at: 2026-10-04
+    expired_at: 2026-10-04
+    expired_at: 2026-10-04
+    expired_at: 2026-10-04
+    expired_at: 2026-10-04
+    expired_at: 2026-10-04
+    expired_at: 2026-10-04
+    expired_at: 2026-10-04
+    expired_at: 2026-10-04
+    expired_at: 2026-10-04
+    expired_at: 2026-10-04
+    expired_at: 2026-10-04
+    expired_at: 2026-10-04
+    expired_at: 2026-10-04
     statement: "No upstream fixed version reported; review by 2026-10-04."
   - id: CVE-2026-78408
     statement: "No upstream fixed version reported; review by 2026-10-04."
