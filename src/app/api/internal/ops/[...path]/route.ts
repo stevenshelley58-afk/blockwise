@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { checkRateLimit } from "@/lib/rate-limit";
 import { loadCustomerDetail, loadCustomerSubresource, loadCustomerSummaries, loadPublicEnquiries, OpsInvalidCursorError, OpsNotFoundError } from "@/lib/ops/customer-operations";
+import { parseOpsLimit, readOpsCursor } from "@/lib/ops/pagination";
 import { verifyInternalRequest } from "@/lib/internal-auth";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
@@ -39,8 +40,8 @@ export async function GET(request: NextRequest, context: { params: Promise<{ pat
   try {
     if (path.length === 1 && path[0] === "customers") {
       const result = await loadCustomerSummaries({
-        cursor: request.nextUrl.searchParams.get("cursor") ?? undefined,
-        limit: queryLimit(request.nextUrl.searchParams.get("limit") ?? request.nextUrl.searchParams.get("pageSize")),
+        cursor: readOpsCursor(request.nextUrl.searchParams),
+        limit: parseOpsLimit(request.nextUrl.searchParams),
         query: request.nextUrl.searchParams.get("query") ?? undefined,
         serviceSupabase: service,
       });
@@ -48,8 +49,8 @@ export async function GET(request: NextRequest, context: { params: Promise<{ pat
     }
     if (path.length === 1 && path[0] === "enquiries") {
       const result = await loadPublicEnquiries({
-        cursor: request.nextUrl.searchParams.get("cursor") ?? undefined,
-        limit: queryLimit(request.nextUrl.searchParams.get("limit") ?? request.nextUrl.searchParams.get("pageSize")),
+        cursor: readOpsCursor(request.nextUrl.searchParams),
+        limit: parseOpsLimit(request.nextUrl.searchParams),
         serviceSupabase: service,
       });
       return NextResponse.json(readEnvelope(result, request.nextUrl.pathname), noStore());
@@ -74,12 +75,6 @@ export async function GET(request: NextRequest, context: { params: Promise<{ pat
   }
 }
 
-function queryLimit(value: string | null): number {
-  if (value === null || value.trim() === "") return 50;
-  const parsed = Number(value);
-  if (!Number.isSafeInteger(parsed) || parsed <= 0) throw new RangeError("invalid_limit");
-  return Math.min(100, parsed);
-}
 function noStore(status = 200): ResponseInit { return { status, headers: { "Cache-Control": "no-store" } }; }
 function notFound() { return NextResponse.json({ error: "not_found" }, noStore(404)); }
 

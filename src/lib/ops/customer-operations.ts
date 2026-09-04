@@ -1,6 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createSupabaseServiceClient } from "../supabase/service.ts";
 import { redactString, redactValue } from "../redact.ts";
+import { decodeOpsCursor, encodeOpsCursor } from "./pagination.ts";
+
+export { OpsInvalidCursorError } from "./pagination.ts";
 
 type ServiceClient = SupabaseClient;
 type Row = Record<string, unknown>;
@@ -21,7 +24,7 @@ const SNAPSHOT_FIELDS = ["id", "workspace_id", "provider", "snapshot_kind", "agg
 export async function loadCustomerSummaries(input: { cursor?: string; limit?: number; page?: number; pageSize?: number; query?: string; serviceSupabase?: ServiceClient } = {}) {
   const client = input.serviceSupabase ?? createSupabaseServiceClient();
   const pageSize = boundedLimit(input.limit ?? input.pageSize ?? 50);
-  const cursor = decodeCursor(input.cursor);
+  const cursor = decodeOpsCursor(input.cursor);
   let workspaces = client.from("workspaces").select(SUMMARY_FIELDS.join(","), { count: "exact" }).order("updated_at", { ascending: false }).order("id", { ascending: false }).limit(pageSize + 1);
   if (cursor) workspaces = workspaces.or(`updated_at.lt.${cursor.updatedAt},and(updated_at.eq.${cursor.updatedAt},id.lt.${cursor.id})`);
   if (input.query?.trim()) workspaces = workspaces.ilike("name", `%${escapeLike(input.query.trim())}%`);
@@ -38,7 +41,7 @@ export async function loadCustomerSummaries(input: { cursor?: string; limit?: nu
   ]);
   const profiles = await profilesForMembers(client, members);
   const last = rows.at(-1);
-  return { limit: pageSize, total: result.count ?? rows.length, nextCursor: hasMore && last ? encodeCursor({ updatedAt: String(last.updated_at), id: String(last.id) }) : null, rows: rows.map((row) => summarize(row, members, profiles, activations, bookings)) };
+  return { limit: pageSize, total: result.count ?? rows.length, nextCursor: hasMore && last ? encodeOpsCursor({ updatedAt: String(last.updated_at), id: String(last.id) }) : null, rows: rows.map((row) => summarize(row, members, profiles, activations, bookings)) };
 }
 
 export async function loadCustomerDetail(workspaceId: string, serviceSupabase?: ServiceClient) {
@@ -140,7 +143,7 @@ async function loadCustomerEmailStatus(client: ServiceClient, workspaceId: strin
 export async function loadPublicEnquiries(input: { cursor?: string; limit?: number; serviceSupabase?: ServiceClient } = {}) {
   const client = input.serviceSupabase ?? createSupabaseServiceClient();
   const limit = boundedLimit(input.limit ?? 50);
-  const cursor = decodeCursor(input.cursor);
+  const cursor = decodeOpsCursor(input.cursor);
   let query = client.from("ops_enquiry_associations").select(ENQUIRY_FIELDS.join(","), { count: "exact" }).is("workspace_id", null).order("created_at", { ascending: false }).order("id", { ascending: false }).limit(limit + 1);
   if (cursor) query = query.or(`created_at.lt.${cursor.updatedAt},and(created_at.eq.${cursor.updatedAt},id.lt.${cursor.id})`);
   const result = await query;
@@ -149,7 +152,7 @@ export async function loadPublicEnquiries(input: { cursor?: string; limit?: numb
   const hasMore = fetched.length > limit;
   const rows = hasMore ? fetched.slice(0, limit) : fetched;
   const last = rows.at(-1);
-  return { limit, total: result.count ?? rows.length, nextCursor: hasMore && last ? encodeCursor({ updatedAt: String(last.created_at), id: String(last.id) }) : null, rows: rows.map((row) => redact(row, ENQUIRY_FIELDS)) };
+  return { limit, total: result.count ?? rows.length, nextCursor: hasMore && last ? encodeOpsCursor({ updatedAt: String(last.created_at), id: String(last.id) }) : null, rows: rows.map((row) => redact(row, ENQUIRY_FIELDS)) };
 }
 async function profilesForMembers(client: ServiceClient, members: Row[]): Promise<Row[]> {
   const ids = members.map((row) => String(row.profile_id)).filter(Boolean);
@@ -193,12 +196,5 @@ function maskEmail(value: string): string {
 }
 function escapeLike(value: string): string { return value.replace(/[\\%_]/g, "\\$&"); }
 function boundedLimit(value: number): number { return Math.min(100, Math.max(1, Math.floor(Number.isFinite(value) ? value : 50))); }
-function encodeCursor(cursor: { updatedAt: string; id: string }): string { return Buffer.from(JSON.stringify(cursor), "utf8").toString("base64url"); }
-function decodeCursor(value: string | undefined): { updatedAt: string; id: string } | null {
-  if (!value) return null;
-  try {
-    const parsed = JSON.parse(Buffer.from(value, "base64url").toString("utf8")) as { updatedAt?: unknown; id?: unknown };
-    if (typeof parsed.updatedAt !== "string" || typeof parsed.id !== "string" || parsed.updatedAt.length > 64 || parsed.id.length > 64) throw new OpsInvalidCursorError();
-    return { updatedAt: parsed.updatedAt, id: parsed.id };
-  } catch (error) { if (error instanceof OpsInvalidCursorError) throw error; throw new OpsInvalidCursorError(); }
-}
+// Cursor parsing and validation live in the pure pagination module so the
+// route and focused unit tests exercise the same fail-closed behavior.

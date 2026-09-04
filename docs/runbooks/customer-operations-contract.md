@@ -22,7 +22,9 @@ Absent `limit`/`pageSize` defaults to 50. Positive integer values are bounded
 to 100; malformed, zero, and negative values return `400 invalid_limit`.
 Customer and enquiry lists order by
 updated_at/created_at DESC, id DESC; nextCursor is opaque and must be sent
-unchanged. A workspace detail contains only allowlisted source fields:
+unchanged. Only an absent `limit`/`pageSize` or `cursor` starts the first page;
+explicit empty/whitespace values return `400 invalid_limit` or
+`400 invalid_cursor`. A workspace detail contains only allowlisted source fields:
 members/profiles, activation lifecycle, bookings, explicitly associated
 enquiries, billing/entitlements, email preferences and suppressions, audit
 activity, projection receipts, and normalized provider snapshots. Enquiries
@@ -80,6 +82,12 @@ The durable outbox maps to this JSON shape:
       "payload": { "workspaceId": "workspace-uuid", "email": "owner@example.com" }
     }
 
+For an enquiry projection, `source.eventId` is
+`enquiry-association:<internal-association-uuid>:<sequence-version>` and the
+safe payload contains only `workspaceId`, `subject`, and `status`. Neither
+`source_id`, `external_id`, nor any provider/CRM identifier is copied into the
+payload or outbox source event.
+
 Adapter resources are fixed and provider-neutral:
 
 | provider | aggregate | resource | identity |
@@ -114,7 +122,8 @@ It first takes transactional `ACCESS EXCLUSIVE` locks over all source and
 derived operations tables, freezing writers and trigger inserts for the
 archive/count/drop cut.
 Before any drop it archives every row from the outbox, enquiry associations,
-communication preferences, and provider snapshots into
+communication preferences, provider snapshots, and the complete current
+`email_suppressions` rows (including `workspace_id`) into
 `legacy_archive.customer_operations_tables_archive`, then verifies per-table
 live/archive row counts for the current rollback run in the same transaction.
 Each run has its own `run_id`, so a previously retained archive cannot cause a

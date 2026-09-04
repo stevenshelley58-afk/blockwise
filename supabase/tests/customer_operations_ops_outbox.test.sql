@@ -1,7 +1,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(54);
+select plan(56);
 
 insert into public.workspaces (id, name, mode, region)
 values ('81111111-1111-4111-8111-111111111111', 'Ops contract test', 'self_serve', 'AU')
@@ -123,6 +123,8 @@ select is((select workspace_id from public.ops_enquiry_associations where source
 insert into public.ops_enquiry_associations (workspace_id, source_system, source_id, enquiry_type, subject)
 values ('81111111-1111-4111-8111-111111111111', 'crm', 'crm-1', 'sales', 'Explicit CRM association');
 select ok(exists (select 1 from public.ops_projection_outbox where provider = 'chatwoot' and aggregate_type = 'enquiry' and aggregate_id = (select id::text from public.ops_enquiry_associations where source_id = 'crm-1')), 'explicit enquiry association emits provider-neutral projection');
+select is((select payload - 'workspaceId' - 'subject' - 'status' from public.ops_projection_outbox where provider = 'chatwoot' and aggregate_type = 'enquiry' and aggregate_id = (select id::text from public.ops_enquiry_associations where source_id = 'crm-1') order by created_at desc limit 1), '{}'::jsonb, 'enquiry payload contains only safe workspace subject and status');
+select is((select source_event_id from public.ops_projection_outbox where provider = 'chatwoot' and aggregate_type = 'enquiry' and aggregate_id = (select id::text from public.ops_enquiry_associations where source_id = 'crm-1') order by created_at desc limit 1), 'enquiry-association:' || (select id::text from public.ops_enquiry_associations where source_id = 'crm-1') || ':' || (select source_version::text from public.ops_projection_outbox where provider = 'chatwoot' and aggregate_type = 'enquiry' and aggregate_id = (select id::text from public.ops_enquiry_associations where source_id = 'crm-1') order by created_at desc limit 1), 'enquiry source event uses internal association UUID and sequence version');
 
 insert into public.report_email_leads (email, postcode, suburb, source)
 values ('report-visitor@example.test', '6000', 'Perth', 'ops-test');

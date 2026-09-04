@@ -47,11 +47,16 @@ insert into legacy_archive.customer_operations_tables_archive (run_id, table_nam
 select :'rollback_run_id', 'customer_communication_preferences', id::text, to_jsonb(o) from public.customer_communication_preferences o;
 insert into legacy_archive.customer_operations_tables_archive (run_id, table_name, row_id, row_data)
 select :'rollback_run_id', 'ops_provider_snapshots', id::text, to_jsonb(o) from public.ops_provider_snapshots o;
+-- Preserve the complete suppression association/value before dropping the
+-- customer-operations workspace_id extension. This archive is per rollback
+-- run and is covered by the same writer-freeze locks and count check below.
+insert into legacy_archive.customer_operations_tables_archive (run_id, table_name, row_id, row_data)
+select :'rollback_run_id', 'email_suppressions', id::text, to_jsonb(s) from public.email_suppressions s;
 
 do $$
 declare v_live bigint; v_archived bigint; v_table text;
 begin
-  for v_table in select unnest(array['ops_projection_outbox','ops_enquiry_associations','customer_communication_preferences','ops_provider_snapshots']) loop
+  for v_table in select unnest(array['ops_projection_outbox','ops_enquiry_associations','customer_communication_preferences','ops_provider_snapshots','email_suppressions']) loop
     execute format('select count(*) from public.%I', v_table) into v_live;
     select count(*) into v_archived from legacy_archive.customer_operations_tables_archive where table_name = v_table and run_id = :'rollback_run_id';
     if v_live <> v_archived then raise exception 'rollback archive row-count mismatch for %: live %, archived %', v_table, v_live, v_archived; end if;

@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 import { buildProjectionEnvelope, mapProjectionForAdapter } from "../src/lib/ops/projection-contract.ts";
+import { decodeOpsCursor, encodeOpsCursor, parseOpsLimit, readOpsCursor } from "../src/lib/ops/pagination.ts";
 
 const routePath = new URL("../src/app/api/internal/ops/[...path]/route.ts", import.meta.url);
 const operationsPath = new URL("../src/lib/ops/customer-operations.ts", import.meta.url);
@@ -69,6 +70,7 @@ test("projection contract is versioned and adapter mapping is provider-neutral",
 test("bounded cursor and stale-version fencing are present in the service contract", () => {
   const source = readFileSync(operationsPath, "utf8");
   const migration = readFileSync(new URL("../supabase/migrations/202609040002_customer_operations_hardening.sql", import.meta.url), "utf8");
+  const projectionRepair = readFileSync(new URL("../supabase/migrations/202609040004_customer_operations_projection_identity.sql", import.meta.url), "utf8");
   const snapshots = readFileSync(new URL("../supabase/migrations/202609040003_customer_operations_provider_snapshots.sql", import.meta.url), "utf8");
   assert.match(source, /nextCursor/);
   assert.match(source, /OpsInvalidCursorError/);
@@ -82,4 +84,23 @@ test("bounded cursor and stale-version fencing are present in the service contra
   assert.match(snapshots, /create table if not exists public\.ops_provider_snapshots/);
   assert.match(snapshots, /upsert_ops_provider_snapshot/);
   assert.match(snapshots, /associate_ops_enquiry/);
+  assert.match(projectionRepair, /enquiry-association:' \|\| new\.id::text/);
+  assert.doesNotMatch(projectionRepair, /new\.source_id/);
+  assert.doesNotMatch(projectionRepair, /sourceEventId/);
+});
+
+test("ops pagination distinguishes absent values and validates durable cursors", () => {
+  assert.equal(parseOpsLimit(new URLSearchParams()), 50);
+  assert.equal(parseOpsLimit(new URLSearchParams("pageSize=25")), 25);
+  assert.equal(parseOpsLimit(new URLSearchParams("limit=250")), 100);
+  assert.throws(() => parseOpsLimit(new URLSearchParams("limit=")), /invalid_limit/);
+  assert.throws(() => parseOpsLimit(new URLSearchParams("pageSize=%20%20")), /invalid_limit/);
+  assert.equal(readOpsCursor(new URLSearchParams()), undefined);
+  assert.equal(readOpsCursor(new URLSearchParams("cursor=")), "");
+  assert.throws(() => decodeOpsCursor(""), /invalid operations cursor/);
+  assert.deepEqual(decodeOpsCursor(encodeOpsCursor({ updatedAt: "2026-09-04T00:00:00+00:00", id: "84444444-4444-4444-8444-444444444444" })), { updatedAt: "2026-09-04T00:00:00.000Z", id: "84444444-4444-4444-8444-444444444444" });
+  const encoded = encodeOpsCursor({ updatedAt: "2026-09-04T00:00:00.000Z", id: "84444444-4444-4444-8444-444444444444" });
+  assert.deepEqual(decodeOpsCursor(encoded), { updatedAt: "2026-09-04T00:00:00.000Z", id: "84444444-4444-4444-8444-444444444444" });
+  assert.throws(() => decodeOpsCursor(Buffer.from(JSON.stringify({ updatedAt: "not-a-date", id: "84444444-4444-4444-8444-444444444444" })).toString("base64url")), /invalid operations cursor/);
+  assert.throws(() => decodeOpsCursor(Buffer.from(JSON.stringify({ updatedAt: "2026-09-04T00:00:00.000Z", id: "crm-1" })).toString("base64url")), /invalid operations cursor/);
 });
