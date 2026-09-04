@@ -159,6 +159,7 @@ grep -q 'CHATWOOT_WEBHOOK_SECRET_HOST_FILE=.*chatwoot_webhook_secret' "$ROOT_DIR
 grep -q 'api/webhooks/chatwoot' "$ROOT_DIR/infra/customer-ops/customer-ops.env.example" || { echo 'Blockwise Chatwoot receiver route missing' >&2; exit 1; }
 ! grep -q '/api/internal/booking/webhook' "$ROOT_DIR/infra/customer-ops/customer-ops.env.example" || { echo 'obsolete internal booking webhook route remains' >&2; exit 1; }
 grep -q 'X-Chatwoot-Signature' "$ROOT_DIR/scripts/vps/customer-ops-smoke.sh" || { echo 'official Chatwoot signed smoke probe missing' >&2; exit 1; }
+grep -q 'CHATWOOT_SMOKE_INBOX_ID' "$ROOT_DIR/scripts/vps/customer-ops-smoke.sh" || { echo 'Chatwoot harmless smoke inbox contract missing' >&2; exit 1; }
 grep -q 'write_chatwoot_webhook_secret' "$ROOT_DIR/scripts/vps/customer-ops-bootstrap.sh" || { echo 'Chatwoot API webhook secret capture missing' >&2; exit 1; }
 grep -q 'blockwise_webhook_secret' "$ROOT_DIR/scripts/vps/customer-ops-smoke.sh" || { echo 'paired SnagTime webhook secret missing from smoke' >&2; exit 1; }
 grep -q 'chatwoot_webhook_secret' "$ROOT_DIR/scripts/vps/customer-ops-bootstrap.sh" || { echo 'Chatwoot webhook secret contract missing' >&2; exit 1; }

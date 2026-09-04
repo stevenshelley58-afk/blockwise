@@ -106,7 +106,8 @@ test("bootstrap is explicit, idempotent, and credential-file based", () => {
   assert.match(text("scripts/vps/customer-ops-smoke.sh"), /X-Chatwoot-Signature/);
   assert.match(text("scripts/vps/customer-ops-smoke.sh"), /chatwoot_webhook_secret/);
   assert.match(text("scripts/vps/customer-ops-smoke.sh"), /CHATWOOT_ACCOUNT_ID/);
-  assert.match(text("scripts/vps/customer-ops-smoke.sh"), /conversation_status_changed/);
+  assert.match(text("scripts/vps/customer-ops-smoke.sh"), /CHATWOOT_SMOKE_INBOX_ID/);
+  assert.match(text("scripts/vps/customer-ops-smoke.sh"), /private.:True/);
   for (const marker of ["Signup magic link", "Transactional mail", "External support mail", "Support reply", "Mautic contact\/flow", "SnagTime booking", "Control action"]) {
     assert.match(runbook, new RegExp(marker));
   }
