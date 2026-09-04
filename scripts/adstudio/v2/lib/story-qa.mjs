@@ -17,13 +17,26 @@ const BACKING_X_SAMPLE_FRACTIONS = [0.05, 0.275, 0.5, 0.725, 0.95];
 const BACKING_Y_SAMPLE_FRACTIONS = [0.03, 0.12, 0.275, 0.5, 0.725, 0.88, 0.97];
 const MAX_EXPECTED_BACKING_DELTA = 32;
 const MAX_UNIFORM_BACKING_DELTA = 18;
+const MAX_PAINTED_BOUNDS_OVERFLOW_PX = 0.5;
+const MIN_TEXT_OVERLAP_PX = 0.5;
+
+function layerIdentity(layer) {
+  return `${layer.inputKey ?? ""} ${layer.id ?? ""}`
+    .replace(/([a-z0-9])([A-Z])/gu, "$1 $2")
+    .toLowerCase();
+}
 
 function roleFor(layer) {
-  const value = `${layer.inputKey ?? ""} ${layer.id ?? ""}`.toLowerCase();
+  const value = layerIdentity(layer);
+  if (/(about.*(heading|title|label)|(?:heading|title|label).*about)/u.test(value)) return "about-heading";
+  if (/(about.*(copy|body)|(?:copy|body).*about)/u.test(value)) return "about-copy";
+  if (/(features?.*(heading|title|label)|(?:heading|title|label).*features?)/u.test(value)) return "feature-heading";
+  if (/(features?.*(copy|list|row|item|\d)|(?:copy|list|row|item).*features?)/u.test(value)) return "feature-row";
   if (/(headline|title|heading)/u.test(value)) return "headline";
   if (/(support|subhead|description|body)/u.test(value)) return "supporting";
   if (/(handle|username|agent|instagram|social)/u.test(value)) return "handle";
   if (/(arrow|cta|action|learn|contact)/u.test(value)) return "arrow";
+  if (/(address|price|phone|email|website|brand)/u.test(value)) return "detail";
   return null;
 }
 
@@ -36,7 +49,45 @@ function intersection(left, right) {
 }
 
 function verticalGap(left, right) {
-  return Math.max(0, right.y - (left.y + left.height)) * STORY_HEIGHT;
+  return (right.y - (left.y + left.height)) * STORY_HEIGHT;
+}
+
+function horizontalOverlap(left, right) {
+  return Math.max(0, Math.min(left.x + left.width, right.x + right.width) - Math.max(left.x, right.x));
+}
+
+function normalizedPaintedBounds(layer) {
+  // Native renderer diagnostics can attach one union bound. Older authored
+  // documents retain the same information as the exact per-line paint frames.
+  const declared = layer.typo?.paintedBounds ?? layer.paintedBounds;
+  if (declared && [declared.x, declared.y, declared.width, declared.height].every(Number.isFinite)) {
+    const usesPixels = declared.x > 1 || declared.y > 1 || declared.width > 1 || declared.height > 1;
+    return usesPixels
+      ? { x: declared.x / STORY_WIDTH, y: declared.y / STORY_HEIGHT, width: declared.width / STORY_WIDTH, height: declared.height / STORY_HEIGHT }
+      : declared;
+  }
+
+  const measured = layer.typo?.measuredLines
+    ?.map((line) => line?.box)
+    .filter((box) => box && [box.x, box.y, box.width, box.height].every(Number.isFinite));
+  if (!measured?.length) return null;
+  return measured.slice(1).reduce((bounds, box) => ({
+    x: Math.min(bounds.x, box.x),
+    y: Math.min(bounds.y, box.y),
+    width: Math.max(bounds.x + bounds.width, box.x + box.width) - Math.min(bounds.x, box.x),
+    height: Math.max(bounds.y + bounds.height, box.y + box.height) - Math.min(bounds.y, box.y),
+  }), { ...measured[0] });
+}
+
+function paintedBoundsOverflowPx(layer) {
+  const painted = normalizedPaintedBounds(layer);
+  if (!painted) return null;
+  return {
+    left: Math.max(0, layer.box.x - painted.x) * STORY_WIDTH,
+    top: Math.max(0, layer.box.y - painted.y) * STORY_HEIGHT,
+    right: Math.max(0, painted.x + painted.width - (layer.box.x + layer.box.width)) * STORY_WIDTH,
+    bottom: Math.max(0, painted.y + painted.height - (layer.box.y + layer.box.height)) * STORY_HEIGHT,
+  };
 }
 
 function hexRgb(hex) {
@@ -189,6 +240,31 @@ export async function evaluateStoryQa(doc, storyPreviewBytes) {
   for (const layer of text) {
     if (layer.box.y * STORY_HEIGHT < STORY_SAFE_TOP || (layer.box.y + layer.box.height) * STORY_HEIGHT > STORY_HEIGHT - STORY_SAFE_BOTTOM) {
       blockers.push(`text layer ${layer.id} breaks the Story safe zone`);
+    }
+    const overflow = paintedBoundsOverflowPx(layer);
+    if (overflow && Object.values(overflow).some((value) => value > MAX_PAINTED_BOUNDS_OVERFLOW_PX)) {
+      const sides = Object.entries(overflow)
+        .filter(([, value]) => value > MAX_PAINTED_BOUNDS_OVERFLOW_PX)
+        .map(([side, value]) => `${side} ${Math.round(value)}px`)
+        .join(", ");
+      blockers.push(`Story text layer ${layer.id} painted bounds exceed declared geometry (${sides})`);
+    }
+  }
+
+  const essentialText = text
+    .map((layer) => ({ layer, role: roleFor(layer), bounds: normalizedPaintedBounds(layer) ?? layer.box }))
+    .filter(({ role }) => role !== null)
+    .sort((left, right) => left.layer.box.y - right.layer.box.y);
+  const declaredCtaLayerIds = new Set(policy.ctaGroup?.layerIds ?? []);
+  for (let leftIndex = 0; leftIndex < essentialText.length; leftIndex += 1) {
+    for (let rightIndex = leftIndex + 1; rightIndex < essentialText.length; rightIndex += 1) {
+      const left = essentialText[leftIndex];
+      const right = essentialText[rightIndex];
+      if (declaredCtaLayerIds.has(left.layer.id) && declaredCtaLayerIds.has(right.layer.id)) continue;
+      const gap = verticalGap(left.bounds, right.bounds);
+      if (gap < -MIN_TEXT_OVERLAP_PX && horizontalOverlap(left.bounds, right.bounds) > 0) {
+        blockers.push(`Story essential text layers ${left.layer.id} (${left.role}) and ${right.layer.id} (${right.role}) overlap by ${Math.round(-gap)}px vertically`);
+      }
     }
   }
 
