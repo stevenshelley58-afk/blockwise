@@ -131,6 +131,11 @@ const PAYLOAD_KEYS: Record<OpsActionName, readonly string[]> = {
   enquiry_assign: ["assigneeProfileId"], enquiry_close: [], enquiry_reply: ["body"], booking_cancel: [], booking_reschedule: ["scheduledStartAt", "scheduledEndAt"],
   billing_reconcile: [], billing_cancel_at_period_end: ["cancelAtPeriodEnd"], billing_portal_link: [],
 };
+const REQUIRED_PAYLOAD_KEYS: Record<OpsActionName, readonly string[]> = {
+  ...PAYLOAD_KEYS,
+  consent_withdraw: [],
+  booking_reschedule: ["scheduledStartAt"],
+};
 
 export function actionCapability(action: OpsActionName): OpsActionCapabilityDefinition {
   return OPS_ACTION_CAPABILITIES[action];
@@ -146,7 +151,8 @@ export function parseOpsAction(input: unknown): OpsActionEnvelope {
   const payload = record(value.payload, "payload");
   const keys = Object.keys(payload).sort();
   const expectedKeys = [...PAYLOAD_KEYS[name]].sort();
-  if (keys.length !== expectedKeys.length || keys.some((key, index) => key !== expectedKeys[index])) throw new Error("action payload fields are not allowlisted");
+  const requiredKeys = [...REQUIRED_PAYLOAD_KEYS[name]].sort();
+  if (keys.some((key) => !expectedKeys.includes(key)) || requiredKeys.some((key) => !keys.includes(key))) throw new Error("action payload fields are not allowlisted");
   const actionId = uuid(value.actionId, "actionId");
   const workspaceId = uuid(value.workspaceId, "workspaceId");
   const customerId = uuid(value.customerId, "customerId");

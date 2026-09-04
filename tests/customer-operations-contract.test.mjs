@@ -13,6 +13,8 @@ test("product allowlist and rollback procedure cover the ops contract", () => {
   assert.match(allowlist, /202609040004_customer_operations_projection_identity\.sql/);
   assert.match(allowlist, /202609040005_customer_operations_provider_matrix_privileges\.sql/);
   assert.match(allowlist, /202609040006_customer_operations_action_outbox\.sql/);
+  assert.match(allowlist, /202609040007_customer_operations_action_payload_fix\.sql/);
+  assert.match(allowlist, /202609040008_customer_operations_action_fencing\.sql/);
   const rollback = text("scripts/ops/rollback-customer-operations.sql");
   assert.match(rollback, /ROLLBACK_CUSTOMER_OPERATIONS/);
   assert.match(rollback, /customer_operations_tables_archive/);
@@ -77,4 +79,11 @@ test("operator action contract is capability-gated and RPC-only", () => {
   assert.match(migration, /superseded_by_newer_action_version/);
   assert.match(migration, /ops_action_receipts_immutable/);
   assert.doesNotMatch(migration, /portal_url|portalUrl.*safe_result/i);
+  const fencing = text("supabase/migrations/202609040008_customer_operations_action_fencing.sql");
+  assert.match(fencing, /ops_action_target_binding/);
+  assert.match(fencing, /workspace_invitations/);
+  assert.match(fencing, /ops_enquiry_associations/);
+  assert.match(fencing, /workspace_onboarding_bookings/);
+  assert.match(fencing, /transition_seq.*identity/i);
+  assert.match(fencing, /revoke insert, update, delete on public\.ops_action_capabilities from service_role/i);
 });

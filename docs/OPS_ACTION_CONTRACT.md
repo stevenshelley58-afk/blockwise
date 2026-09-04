@@ -1,7 +1,9 @@
 # Blockwise operator action contract
 
-The service-only contract is `blockwise.ops.action.v1`. It records operator
-intent for Hermes; it never calls a provider or mutates a customer inline.
+The service-only foundation contract is `blockwise.ops.action.v1`. It records
+bounded operator intent for a future executor; it never calls a provider or
+mutates a customer inline. This PR does not expose an operator HTTP API, ship
+a Hermes worker, or claim end-to-end action usability.
 Every envelope carries a UUID `actionId`, bounded unique `idempotencyKey`,
 equal `workspaceId`/`customerId`, UUID target, operator ID/role with `aal2`,
 positive `expectedVersion`, a 500-character reason, canonical UTC
@@ -49,8 +51,9 @@ action name.
 | `billing_portal_link` | billing | available: existing portal capability; URL is never stored |
 
 Capability-gated and unsupported actions are recorded as `rejected` with an
-immutable receipt explaining the capability state. No worker may infer an
-implementation from the action name.
+immutable receipt explaining the capability state. The `available` labels are
+source-system capability registrations only; no executor is included here and
+no worker may infer an implementation from the action name.
 
 ## Durable lifecycle
 
@@ -61,6 +64,16 @@ are service-only with direct service-role INSERT/UPDATE/DELETE revoked.
 Receipts are append-only and each transition is mirrored to `audit_logs`.
 Claims, heartbeats, settlement, and failure all reject or supersede stale
 versions for the same workspace/target under a transaction lock.
+
+The database trigger binds every target to the requested workspace before an
+intent is stored: profiles and sessions must be workspace members, invitations
+and bookings must belong to the workspace, enquiries must already have an
+explicit workspace association (global/unassigned enquiries are not inferred),
+and billing/workspace actions target the workspace UUID. A stale or
+cross-workspace target is rejected before capability evaluation. Each enqueue,
+claim, retry, supersede, settle, expiry, or terminal failure transition
+appends a monotonic immutable receipt and audit row; repeated pending or
+processing transitions are retained.
 
 Payloads never contain provider IDs, portal URLs, secrets, or nested metadata;
 reply bodies are capped at 4,000 characters. Settlement results are capped at

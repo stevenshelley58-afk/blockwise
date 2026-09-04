@@ -1,7 +1,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(35);
+select plan(42);
 
 select has_table('public', 'ops_action_capabilities', 'action capability registry exists');
 select has_table('public', 'ops_action_outbox', 'action outbox exists');
@@ -14,6 +14,9 @@ select ok(not has_table_privilege('service_role', 'public.ops_action_outbox', 'D
 select ok(not has_table_privilege('service_role', 'public.ops_action_receipts', 'INSERT'), 'service_role cannot directly insert receipts');
 select ok(not has_table_privilege('service_role', 'public.ops_action_receipts', 'UPDATE'), 'service_role cannot directly update receipts');
 select ok(not has_table_privilege('service_role', 'public.ops_action_receipts', 'DELETE'), 'service_role cannot directly delete receipts');
+select ok(not has_table_privilege('service_role', 'public.ops_action_capabilities', 'INSERT'), 'service_role cannot directly insert capabilities');
+select ok(not has_table_privilege('service_role', 'public.ops_action_capabilities', 'UPDATE'), 'service_role cannot directly update capabilities');
+select ok(not has_table_privilege('service_role', 'public.ops_action_capabilities', 'DELETE'), 'service_role cannot directly delete capabilities');
 select is((select count(*)::int from public.ops_action_capabilities), 20, 'all agreed actions have a capability entry');
 select is((select capability_state from public.ops_action_capabilities where action_type = 'team_suspend'), 'unsupported', 'suspension is explicitly unsupported');
 select is((select capability_state from public.ops_action_capabilities where action_type = 'team_role_change'), 'capability_required', 'role changes are explicitly gated');
@@ -27,6 +30,9 @@ on conflict (id) do nothing;
 insert into public.profiles (id, email, full_name, is_operator, operator_role)
 values ('87777777-7777-4777-8777-777777777777', 'ops-action-owner@example.test', 'Action Owner', true, 'owner')
 on conflict (id) do update set is_operator = true, operator_role = 'owner';
+insert into public.workspace_members (workspace_id, profile_id, role)
+values ('86666666-6666-4666-8666-666666666666', '87777777-7777-4777-8777-777777777777', 'owner')
+on conflict (workspace_id, profile_id) do nothing;
 
 select lives_ok($$ select public.enqueue_ops_action(
   '88888888-8888-4888-8888-888888888881', 'ops:test:invite:v1',
@@ -40,6 +46,9 @@ select is((select status from public.ops_action_outbox where action_id = '888888
 select is((select count(*)::int from public.ops_action_receipts where action_id = '88888888-8888-4888-8888-888888888881' and status = 'pending'), 1, 'accepted action has an immutable pending receipt');
 select is((select count(*)::int from public.claim_ops_action(60)), 1, 'worker can claim through the RPC');
 select is((select status from public.ops_action_outbox where action_id = '88888888-8888-4888-8888-888888888881'), 'processing', 'claim is atomic');
+select is((select count(*)::int from public.ops_action_receipts where action_id = '88888888-8888-4888-8888-888888888881' and status = 'processing'), 1, 'claim records a processing receipt');
+select is(public.fail_ops_action((select id from public.ops_action_outbox where action_id = '88888888-8888-4888-8888-888888888881'), (select lease_token from public.ops_action_outbox where action_id = '88888888-8888-4888-8888-888888888881'), 'temporary worker failure', true), 'pending', 'retry transition is durable');
+select is((select count(*)::int from public.ops_action_receipts where action_id = '88888888-8888-4888-8888-888888888881' and status = 'pending'), 2, 'repeated pending transitions retain separate receipts');
 
 select lives_ok($$ select public.enqueue_ops_action(
   '88888888-8888-4888-8888-888888888882', 'ops:test:invite:v2',
@@ -76,6 +85,15 @@ select lives_ok($$ select public.enqueue_ops_action(
 ) $$, 'unsupported action is recorded without execution');
 select is((select status from public.ops_action_outbox where action_id = '88888888-8888-4888-8888-888888888884'), 'rejected', 'unsupported action is rejected explicitly');
 select is((select last_error from public.ops_action_outbox where action_id = '88888888-8888-4888-8888-888888888884'), 'unsupported', 'unsupported reason is persisted safely');
+
+select throws_ok($$ select public.enqueue_ops_action(
+  '88888888-8888-4888-8888-888888888888', 'ops:test:cross-workspace',
+  '86666666-6666-4666-8666-666666666666', '86666666-6666-4666-8666-666666666666',
+  'team_invite', 'workspace', '87777777-7777-4777-8777-777777777777',
+  '87777777-7777-4777-8777-777777777777', 'owner', 'aal2', 1,
+  'cross-workspace target must fail', now() - interval '1 hour', now() + interval '2 hours',
+  '{"email":"invite@example.test","role":"member"}'::jsonb
+) $$, '42501', 'operations action target is not owned by workspace', 'cross-workspace targets are rejected before enqueue');
 
 select throws_ok($$ select public.enqueue_ops_action(
   '88888888-8888-4888-8888-888888888885', 'ops:test:unsafe',

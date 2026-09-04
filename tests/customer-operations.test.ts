@@ -130,6 +130,10 @@ test("operator action envelope is normalized, allowlisted, and capability-gated"
   assert.throws(() => parseOpsAction({ ...base, schema: "blockwise.ops.action.v0" }), /schema is invalid/);
   assert.throws(() => parseOpsAction({ ...base, actor: { ...base.actor, aal: "aal1" } }), /AAL2/);
   assert.throws(() => parseOpsAction({ ...base, payload: { email: "a@example.test", role: "member", url: "https://example.test" } }), /allowlisted/);
+  assert.deepEqual(parseOpsAction({ ...base, action: "consent_withdraw", target: { type: "profile", id: base.target.id }, payload: {} }).payload, {});
+  assert.throws(() => parseOpsAction({ ...base, action: "consent_withdraw", target: { type: "profile", id: base.target.id }, payload: { topic: null } }), /allowlisted|topic/);
+  assert.deepEqual(parseOpsAction({ ...base, action: "booking_reschedule", target: { type: "booking", id: base.target.id }, payload: { scheduledStartAt: "2026-09-04T01:00:00.000Z" } }).payload, { scheduledStartAt: "2026-09-04T01:00:00.000Z" });
+  assert.throws(() => parseOpsAction({ ...base, action: "booking_reschedule", target: { type: "booking", id: base.target.id }, payload: { scheduledStartAt: "2026-09-04T01:00:00.000Z", unexpected: "field" } }), /allowlisted/);
   assert.throws(() => parseOpsAction({ ...base, action: "enquiry_reply", target: { type: "enquiry", id: base.target.id }, payload: { body: "x".repeat(4001) } }), /too long/);
   assert.throws(() => parseOpsAction({ ...base, expiresAt: "2026-09-05T01:00:00.000Z" }), /expiry/);
 });
