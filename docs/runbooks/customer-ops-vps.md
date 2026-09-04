@@ -7,8 +7,8 @@ or production.
 
 ## Components and boundaries
 
-`infra/customer-ops/docker-compose.yml` runs Stalwart mail/JMAP, Mautic CRM and
-campaign cron, Chatwoot web/Sidekiq, and SnagTime web/worker. Chatwoot and
+`infra/customer-ops/docker-compose.yml` runs Stalwart mail/JMAP, Mautic CRM,
+campaign cron/worker, Chatwoot web/Sidekiq, and SnagTime web/worker. Chatwoot and
 SnagTime use independent PostgreSQL databases and login roles. Mautic uses its
 own MariaDB database and login because the upstream Mautic 5 image requires
 MySQL/MariaDB. Chatwoot uses only the private customer-ops Redis instance.
@@ -61,6 +61,11 @@ checkout and replace all example values. Keep API tokens for the smoke test in
 `mautic_api_token` and `chatwoot_api_token` files under the secret directory;
 set `CHATWOOT_WEBHOOK_URL` in the env file. The installer generates only
 missing random application/database secrets and never prints their contents.
+Google and SMTP provider credentials must already exist as non-empty
+mode-0600 files (`google_client_secret` and `smtp_password`); provider
+credentials are never generated. A temporary secret-backed
+`admin:<random>` Stalwart recovery credential is generated for first setup;
+remove its secret mount and wrapper after a permanent administrator is created.
 
 Run the fail-closed check first:
 
@@ -69,9 +74,17 @@ chmod 600 /etc/blockwise/customer-ops/customer-ops.env
 scripts/vps/customer-ops-install.sh --env-file /etc/blockwise/customer-ops/customer-ops.env --check
 ```
 
-The check requires DNS resolution, valid public TLS for HTTPS hosts, free
-mail ports, all secret mounts, immutable SnagTime identity, and quiet
-`docker compose config`. Only after those checks and the edge/firewall review:
+After the shared edge is attached and certificates are issued, run the
+post-edge TLS gate:
+
+```bash
+scripts/vps/customer-ops-install.sh --env-file /etc/blockwise/customer-ops/customer-ops.env --check --post-edge-tls
+```
+
+The initial check requires DNS resolution, free mail ports, all secret mounts,
+immutable SnagTime identity, and quiet `docker compose config`. After the
+shared edge is attached and certificates are issued, run the post-edge TLS
+gate:
 
 ```bash
 scripts/vps/customer-ops-install.sh --env-file /etc/blockwise/customer-ops/customer-ops.env --apply
@@ -101,7 +114,7 @@ API response bodies.
 ## Encrypted backup and restore
 
 Back up to an off-host restic repository; the script captures PostgreSQL
-globals and all three databases, the full Mautic MariaDB, Stalwart config/data,
+globals and both application databases, the full Mautic MariaDB, Stalwart config/data,
 Mautic config/media, and Chatwoot storage:
 
 ```bash

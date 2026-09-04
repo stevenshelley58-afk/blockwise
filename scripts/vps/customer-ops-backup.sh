@@ -30,16 +30,16 @@ compose() { docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" "$@"; }
 compose exec -T postgres sh -c 'PGPASSWORD="$(cat /run/secrets/postgres_owner_password)" pg_dumpall -U "$POSTGRES_USER" --globals-only' > "$WORK_DIR/postgres-globals.sql"
 compose exec -T postgres sh -c 'PGPASSWORD="$(cat /run/secrets/postgres_owner_password)" pg_dump -U "$POSTGRES_USER" -d chatwoot --format=custom' > "$WORK_DIR/chatwoot.dump"
 compose exec -T postgres sh -c 'PGPASSWORD="$(cat /run/secrets/postgres_owner_password)" pg_dump -U "$POSTGRES_USER" -d snagtime --format=custom' > "$WORK_DIR/snagtime.dump"
-compose exec -T postgres sh -c 'PGPASSWORD="$(cat /run/secrets/postgres_owner_password)" pg_dump -U "$POSTGRES_USER" -d frank_projection --format=custom' > "$WORK_DIR/frank_projection.dump"
 compose exec -T mariadb sh -c 'mariadb-dump --all-databases --single-transaction -uroot --password="$(cat /run/secrets/mautic_db_root_password)"' > "$WORK_DIR/mautic.sql"
 compose exec -T stalwart sh -c 'tar -C /etc/stalwart -cf - .' > "$WORK_DIR/stalwart-etc.tar"
 compose exec -T stalwart sh -c 'tar -C /var/lib/stalwart -cf - .' > "$WORK_DIR/stalwart-data.tar"
 compose exec -T mautic sh -c 'tar -C /var/www/html/config -cf - .' > "$WORK_DIR/mautic-config.tar"
-compose exec -T mautic sh -c 'tar -C /var/www/html/docroot/media -cf - .' > "$WORK_DIR/mautic-media.tar"
+compose exec -T mautic sh -c 'tar -C /var/www/html/docroot/media/files -cf - .' > "$WORK_DIR/mautic-media-files.tar"
+compose exec -T mautic sh -c 'tar -C /var/www/html/docroot/media/images -cf - .' > "$WORK_DIR/mautic-media-images.tar"
 compose exec -T chatwoot-web sh -c 'tar -C /app/storage -cf - .' > "$WORK_DIR/chatwoot-storage.tar"
 cat > "$WORK_DIR/MANIFEST" <<'EOF'
 blockwise customer-ops encrypted backup
-coverage: postgres roles/chatwoot/snagtime/frank_projection, mariadb/mautic, stalwart config/data, mautic config/media, chatwoot storage
+coverage: postgres roles/chatwoot/snagtime, mariadb/mautic, stalwart config/data, mautic config/media, chatwoot storage
 restore target must be empty and isolated; this artifact contains no runtime env file
 EOF
 restic backup "$WORK_DIR" --tag blockwise-customer-ops
