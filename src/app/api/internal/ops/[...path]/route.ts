@@ -1,8 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { checkRateLimit } from "@/lib/rate-limit";
-import { loadCustomerDetail, loadCustomerSubresource, loadCustomerSummaries, OpsNotFoundError } from "@/lib/ops/customer-operations";
-import { verifyInternalOpsSignature } from "@/lib/ops/internal-auth";
+import { loadCustomerDetail, loadCustomerSubresource, loadCustomerSummaries, loadPublicEnquiries, OpsNotFoundError } from "@/lib/ops/customer-operations";
+import { verifyInternalRequest } from "@/lib/internal-auth";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const runtime = "nodejs";
@@ -17,20 +17,15 @@ export const dynamic = "force-dynamic";
  * GET /api/internal/ops/customers
  * GET /api/internal/ops/customers/:workspaceId
  * GET /api/internal/ops/customers/:workspaceId/{lifecycle,activity,email,enquiries,bookings,billing,projections}
+ * GET /api/internal/ops/enquiries
  */
 export async function GET(request: NextRequest, context: { params: Promise<{ path: string[] }> }) {
-  const auth = verifyInternalOpsSignature({
-    method: request.method,
-    pathname: request.nextUrl.pathname,
-    body: "",
-    timestamp: request.headers.get("x-blockwise-timestamp"),
-    signature: request.headers.get("x-blockwise-signature"),
-  });
+  const service = createSupabaseServiceClient();
+  const auth = await verifyInternalRequest(request, "ops.read", { body: "", supabase: service });
   if (!auth.ok) {
-    return NextResponse.json({ error: auth.error === "expired" ? "request_expired" : "internal_auth_required" }, { status: 401 });
+    return NextResponse.json({ error: auth.error }, noStore(auth.status));
   }
 
-  const service = createSupabaseServiceClient();
   const limited = await checkRateLimit(null, "hermes", {
     bucket: "internal-ops-read",
     maxRequests: 600,
@@ -44,9 +39,17 @@ export async function GET(request: NextRequest, context: { params: Promise<{ pat
   try {
     if (path.length === 1 && path[0] === "customers") {
       const result = await loadCustomerSummaries({
-        page: numberParam(request.nextUrl.searchParams.get("page"), 1),
-        pageSize: numberParam(request.nextUrl.searchParams.get("pageSize"), 50),
+        cursor: request.nextUrl.searchParams.get("cursor") ?? undefined,
+        limit: numberParam(request.nextUrl.searchParams.get("limit"), numberParam(request.nextUrl.searchParams.get("pageSize"), 50)),
         query: request.nextUrl.searchParams.get("query") ?? undefined,
+        serviceSupabase: service,
+      });
+      return NextResponse.json({ data: result }, noStore());
+    }
+    if (path.length === 1 && path[0] === "enquiries") {
+      const result = await loadPublicEnquiries({
+        cursor: request.nextUrl.searchParams.get("cursor") ?? undefined,
+        limit: numberParam(request.nextUrl.searchParams.get("limit"), 50),
         serviceSupabase: service,
       });
       return NextResponse.json({ data: result }, noStore());

@@ -1,39 +1,47 @@
 import assert from "node:assert/strict";
-import { createHmac } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 
-import { signInternalOpsRequest, verifyInternalOpsSignature } from "../src/lib/ops/internal-auth.ts";
+import { buildProjectionEnvelope, mapProjectionForAdapter } from "../src/lib/ops/projection-contract.ts";
 
-test("internal ops signatures bind method, path, body, and expire", () => {
-  const input = {
-    method: "GET",
-    pathname: "/api/internal/ops/customers",
-    body: "",
-    secret: "ops-test-secret",
-    timestamp: 1_800_000_000,
-  };
-  const signature = signInternalOpsRequest(input);
-  assert.deepEqual(verifyInternalOpsSignature({ ...input, signature, timestamp: String(input.timestamp), nowSeconds: input.timestamp }), { ok: true });
-  assert.equal(verifyInternalOpsSignature({ ...input, signature, pathname: "/api/internal/ops/customers/other", timestamp: String(input.timestamp), nowSeconds: input.timestamp }).ok, false);
-  assert.deepEqual(verifyInternalOpsSignature({ ...input, signature, timestamp: String(input.timestamp), nowSeconds: input.timestamp + 301 }), { ok: false, error: "expired" });
-});
+const routePath = new URL("../src/app/api/internal/ops/[...path]/route.ts", import.meta.url);
+const operationsPath = new URL("../src/lib/ops/customer-operations.ts", import.meta.url);
 
-test("signature contract is independently reproducible by Hermes", () => {
-  const timestamp = 1_800_000_000;
-  const canonical = `${timestamp}.GET./api/internal/ops/customers.`;
-  const signature = createHmac("sha256", "ops-test-secret").update(canonical).digest("hex");
-  assert.deepEqual(verifyInternalOpsSignature({ method: "GET", pathname: "/api/internal/ops/customers", body: "", secret: "ops-test-secret", timestamp: String(timestamp), signature, nowSeconds: timestamp }), { ok: true });
-});
-
-test("ops route and migration keep provider work out of request paths", () => {
-  const route = readFileSync(new URL("../src/app/api/internal/ops/[...path]/route.ts", import.meta.url), "utf8");
-  const migration = readFileSync(new URL("../supabase/migrations/202609040001_customer_operations_ops_outbox.sql", import.meta.url), "utf8");
-  assert.match(route, /verifyInternalOpsSignature/);
+test("ops route uses canonical scoped internal auth and has no duplicate verifier", () => {
+  const route = readFileSync(routePath, "utf8");
+  assert.match(route, /verifyInternalRequest\(request,\s*["']ops\.read["']/);
+  assert.doesNotMatch(route, /verifyInternalOpsSignature/);
+  assert.equal(existsSync(new URL("../src/lib/ops/internal-auth.ts", import.meta.url)), false);
   assert.match(route, /Cache-Control.*no-store/);
-  assert.doesNotMatch(route, /from ["'](?:mautic|chatwoot|stripe)/i);
-  assert.match(migration, /enqueue_ops_projection/);
-  assert.match(migration, /claim_ops_projection/);
-  assert.match(migration, /can_send_marketing/);
-  assert.match(migration, /pg_advisory_xact_lock/);
+});
+
+test("workspace detail never infers enquiries or mail delivery from shared email", () => {
+  const source = readFileSync(operationsPath, "utf8");
+  assert.doesNotMatch(source, /from\(["'](?:demo_requests|report_email_leads)["'][\s\S]{0,500}\.eq\(["']email/i);
+  assert.match(source, /ops_enquiry_associations/);
+  assert.match(source, /loadPublicEnquiries/);
+});
+
+test("projection contract is versioned and adapter mapping is provider-neutral", () => {
+  const envelope = buildProjectionEnvelope({
+    workspaceId: "workspace-1",
+    provider: "chatwoot",
+    aggregate: { type: "support", id: "booking-1" },
+    operation: "upsert",
+    source: { eventId: "booking-event-1", version: 2 },
+    payload: { subject: "Onboarding", status: "open", metadata: { token: "must not persist" } as never },
+  });
+  assert.equal(envelope.contractVersion, "blockwise.ops.projection.v1");
+  assert.equal(envelope.payload.workspaceId, "workspace-1");
+  assert.equal((envelope.payload as Record<string, unknown>).metadata, undefined);
+  assert.equal(mapProjectionForAdapter(envelope).provider, "chatwoot");
+});
+
+test("bounded cursor and stale-version fencing are present in the service contract", () => {
+  const source = readFileSync(operationsPath, "utf8");
+  const migration = readFileSync(new URL("../supabase/migrations/202609040002_customer_operations_hardening.sql", import.meta.url), "utf8");
+  assert.match(source, /nextCursor/);
+  assert.match(source, /order\("id", \{ ascending: false \}\)/);
+  assert.match(migration, /not exists \(select 1 from public\.ops_projection_outbox newer/);
+  assert.match(migration, /email_suppressions/);
 });

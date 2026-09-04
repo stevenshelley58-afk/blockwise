@@ -14,10 +14,13 @@ export async function assertMarketingSendAllowed(input: {
   topic: string;
   serviceSupabase: SupabaseClient;
 }): Promise<MarketingSendDecision> {
+  const email = input.email.trim().toLowerCase();
+  const topic = input.topic.trim().toLowerCase();
+  if (!email || !topic) return { allowed: false, reason: "invalid_recipient_or_topic" };
   const { data, error } = await input.serviceSupabase.rpc("can_send_marketing", {
     p_workspace_id: input.workspaceId,
-    p_email: input.email,
-    p_topic: input.topic,
+    p_email: email,
+    p_topic: topic,
   });
   if (error) throw new Error(`Marketing send guard failed: ${error.message}`);
   const row = Array.isArray(data) ? data[0] : data;

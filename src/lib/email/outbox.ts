@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { redactString } from "../redact.ts";
+import { enqueueOperationsProjectionAfterCommit } from "../ops/projection-outbox.ts";
 import { escapeHtml } from "./provider.ts";
 import type { EmailMessage, EmailProvider } from "./provider.ts";
 
@@ -113,16 +114,36 @@ export async function enqueueEmail(
 
 export async function recordEmailSuppression(
   supabase: SupabaseClient,
-  input: { email: string; reason: "bounce" | "complaint" | "unsubscribe" | "admin"; source: string },
+  input: { email: string; reason: "bounce" | "complaint" | "unsubscribe" | "admin"; source: string; workspaceId?: string },
 ): Promise<void> {
+  const email = input.email.toLowerCase().trim();
   const { error } = await supabase
     .from("email_suppressions")
     .upsert(
-      { email: input.email.toLowerCase().trim(), reason: input.reason, source: input.source },
+      { email, reason: input.reason, source: input.source },
       { onConflict: "email,reason", ignoreDuplicates: true },
     );
   if (error) {
     throw new Error(`email_suppressions record failed: ${error.message}`);
+  }
+  // Suppression is authoritative in email_suppressions. When a source path
+  // has an explicit workspace association, append a provider-neutral contact
+  // refresh after the source write; never infer a workspace from the address.
+  if (input.workspaceId) {
+    try {
+      await enqueueOperationsProjectionAfterCommit({
+        workspaceId: input.workspaceId,
+        provider: "mautic",
+        aggregateType: "contact",
+        aggregateId: email,
+        sourceEventId: `email-suppression:${input.reason}:${email}`,
+        sourceVersion: Date.now(),
+        payload: { workspaceId: input.workspaceId, topic: input.reason },
+        serviceSupabase: supabase,
+      });
+    } catch (projectionError) {
+      console.error("[email-outbox] suppression projection enqueue failed", redactString(projectionError instanceof Error ? projectionError.message : String(projectionError)));
+    }
   }
 }
 
