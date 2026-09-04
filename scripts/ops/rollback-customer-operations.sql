@@ -22,7 +22,8 @@ lock table public.audit_logs, public.billing_offer_acceptances,
   public.customer_activations, public.customer_communication_preferences,
   public.demo_requests, public.email_suppressions, public.lead_events,
   public.leads, public.ops_enquiry_associations, public.ops_projection_outbox,
-  public.ops_provider_snapshots, public.profiles,
+  public.ops_provider_snapshots, public.ops_action_capabilities,
+  public.ops_action_outbox, public.ops_action_receipts, public.profiles,
   public.report_email_leads, public.workspace_members,
   public.workspace_onboarding_bookings, public.workspaces
   in access exclusive mode;
@@ -47,6 +48,12 @@ insert into legacy_archive.customer_operations_tables_archive (run_id, table_nam
 select :'rollback_run_id', 'customer_communication_preferences', id::text, to_jsonb(o) from public.customer_communication_preferences o;
 insert into legacy_archive.customer_operations_tables_archive (run_id, table_name, row_id, row_data)
 select :'rollback_run_id', 'ops_provider_snapshots', id::text, to_jsonb(o) from public.ops_provider_snapshots o;
+insert into legacy_archive.customer_operations_tables_archive (run_id, table_name, row_id, row_data)
+select :'rollback_run_id', 'ops_action_capabilities', action_type, to_jsonb(o) from public.ops_action_capabilities o;
+insert into legacy_archive.customer_operations_tables_archive (run_id, table_name, row_id, row_data)
+select :'rollback_run_id', 'ops_action_outbox', id::text, to_jsonb(o) from public.ops_action_outbox o;
+insert into legacy_archive.customer_operations_tables_archive (run_id, table_name, row_id, row_data)
+select :'rollback_run_id', 'ops_action_receipts', receipt_id::text, to_jsonb(o) from public.ops_action_receipts o;
 -- Preserve the complete suppression association/value before dropping the
 -- customer-operations workspace_id extension. This archive is per rollback
 -- run and is covered by the same writer-freeze locks and count check below.
@@ -56,7 +63,7 @@ select :'rollback_run_id', 'email_suppressions', id::text, to_jsonb(s) from publ
 do $$
 declare v_live bigint; v_archived bigint; v_table text;
 begin
-  for v_table in select unnest(array['ops_projection_outbox','ops_enquiry_associations','customer_communication_preferences','ops_provider_snapshots','email_suppressions']) loop
+  for v_table in select unnest(array['ops_projection_outbox','ops_enquiry_associations','customer_communication_preferences','ops_provider_snapshots','ops_action_capabilities','ops_action_outbox','ops_action_receipts','email_suppressions']) loop
     execute format('select count(*) from public.%I', v_table) into v_live;
     select count(*) into v_archived from legacy_archive.customer_operations_tables_archive where table_name = v_table and run_id = :'rollback_run_id';
     if v_live <> v_archived then raise exception 'rollback archive row-count mismatch for %: live %, archived %', v_table, v_live, v_archived; end if;
@@ -77,6 +84,7 @@ drop trigger if exists ops_lead_projection on public.leads;
 drop trigger if exists ops_lead_event_projection on public.lead_events;
 drop trigger if exists ops_billing_projection on public.billing_offer_acceptances;
 drop trigger if exists ops_preference_projection on public.customer_communication_preferences;
+drop trigger if exists ops_action_receipts_immutable on public.ops_action_receipts;
 drop function if exists public.ops_enqueue_source_projection();
 drop function if exists public.ops_record_enquiry_association();
 drop function if exists public.ops_enqueue_enquiry_projection();
@@ -91,10 +99,23 @@ drop function if exists public.heartbeat_ops_projection(uuid,uuid,uuid,integer);
 drop function if exists public.complete_ops_projection(uuid,uuid,uuid);
 drop function if exists public.claim_ops_projection(text,integer);
 drop function if exists public.enqueue_ops_projection(uuid,text,text,text,text,text,bigint,jsonb);
+drop function if exists public.reap_ops_actions();
+drop function if exists public.fail_ops_action(uuid,uuid,text,boolean);
+drop function if exists public.complete_ops_action(uuid,uuid,jsonb);
+drop function if exists public.heartbeat_ops_action(uuid,uuid,integer);
+drop function if exists public.claim_ops_action(integer);
+drop function if exists public.enqueue_ops_action(uuid,text,uuid,uuid,text,text,uuid,uuid,text,text,bigint,text,timestamptz,timestamptz,jsonb);
+drop function if exists public.ops_action_receipts_immutable();
+drop function if exists public.ops_record_action_receipt(uuid,text,jsonb,text);
+drop function if exists public.ops_action_result_is_safe(jsonb);
+drop function if exists public.ops_action_payload_is_valid(text,jsonb);
 drop view if exists public.ops_customer_summary;
 drop table if exists public.ops_enquiry_associations;
 drop table if exists public.ops_provider_snapshots;
+drop table if exists public.ops_action_receipts;
 drop table if exists public.ops_projection_outbox;
+drop table if exists public.ops_action_outbox;
+drop table if exists public.ops_action_capabilities;
 drop table if exists public.customer_communication_preferences;
 drop sequence if exists public.ops_projection_source_version_seq;
 drop index if exists public.email_suppressions_lower_reason_key;

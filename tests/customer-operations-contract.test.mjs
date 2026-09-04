@@ -12,6 +12,7 @@ test("product allowlist and rollback procedure cover the ops contract", () => {
   assert.match(allowlist, /202609040003_customer_operations_provider_snapshots\.sql/);
   assert.match(allowlist, /202609040004_customer_operations_projection_identity\.sql/);
   assert.match(allowlist, /202609040005_customer_operations_provider_matrix_privileges\.sql/);
+  assert.match(allowlist, /202609040006_customer_operations_action_outbox\.sql/);
   const rollback = text("scripts/ops/rollback-customer-operations.sql");
   assert.match(rollback, /ROLLBACK_CUSTOMER_OPERATIONS/);
   assert.match(rollback, /customer_operations_tables_archive/);
@@ -20,6 +21,9 @@ test("product allowlist and rollback procedure cover the ops contract", () => {
   assert.match(rollback, /where table_name = v_table and run_id =/);
   assert.match(rollback, /'email_suppressions', id::text, to_jsonb\(s\)/);
   assert.match(rollback, /'email_suppressions'\]\)/);
+  assert.match(rollback, /ops_action_outbox/);
+  assert.match(rollback, /ops_action_receipts/);
+  assert.match(rollback, /ops_action_capabilities/);
   assert.match(rollback, /lock table public\.audit_logs/);
   assert.match(rollback, /in access exclusive mode/);
 });
@@ -50,4 +54,27 @@ test("projection adapter and database enforce the provider aggregate matrix", ()
   assert.match(migration, /chatwoot.*enquiry.*support/s);
   assert.match(migration, /revoke insert, update, delete on public\.ops_projection_outbox from service_role/i);
   assert.match(migration, /grant select on public\.ops_projection_outbox to service_role/i);
+});
+
+test("operator action contract is capability-gated and RPC-only", () => {
+  const contract = text("src/lib/ops/action-contract.ts");
+  const migration = text("supabase/migrations/202609040006_customer_operations_action_outbox.sql");
+  assert.match(contract, /blockwise\.ops\.action\.v1/);
+  assert.match(contract, /team_invite.*team_resend.*team_cancel/s);
+  assert.match(contract, /billing_reconcile.*billing_cancel_at_period_end.*billing_portal_link/s);
+  assert.match(contract, /capability_required/);
+  assert.match(contract, /unsupported/);
+  assert.match(migration, /create table if not exists public\.ops_action_outbox/);
+  assert.match(migration, /create table if not exists public\.ops_action_receipts/);
+  assert.match(migration, /security definer set search_path = ''/);
+  assert.match(migration, /revoke insert, update, delete on public\.ops_action_outbox from service_role/i);
+  assert.match(migration, /revoke insert, update, delete on public\.ops_action_receipts from service_role/i);
+  assert.match(migration, /claim_ops_action/);
+  assert.match(migration, /heartbeat_ops_action/);
+  assert.match(migration, /complete_ops_action/);
+  assert.match(migration, /fail_ops_action/);
+  assert.match(migration, /reap_ops_actions/);
+  assert.match(migration, /superseded_by_newer_action_version/);
+  assert.match(migration, /ops_action_receipts_immutable/);
+  assert.doesNotMatch(migration, /portal_url|portalUrl.*safe_result/i);
 });

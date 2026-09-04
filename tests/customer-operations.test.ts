@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 import { buildProjectionEnvelope, mapProjectionForAdapter } from "../src/lib/ops/projection-contract.ts";
+import { OPS_ACTION_CAPABILITIES, parseOpsAction } from "../src/lib/ops/action-contract.ts";
 import { decodeOpsCursor, encodeOpsCursor, parseOpsLimit, readOpsCursor } from "../src/lib/ops/pagination.ts";
 
 const routePath = new URL("../src/app/api/internal/ops/[...path]/route.ts", import.meta.url);
@@ -101,6 +102,35 @@ test("bounded cursor and stale-version fencing are present in the service contra
   assert.match(projectionRepair, /enquiry-association:' \|\| new\.id::text/);
   assert.doesNotMatch(projectionRepair, /new\.source_id/);
   assert.doesNotMatch(projectionRepair, /sourceEventId/);
+});
+
+test("operator action envelope is normalized, allowlisted, and capability-gated", () => {
+  const base = {
+    schema: "blockwise.ops.action.v1",
+    actionId: "84444444-4444-4444-8444-444444444444",
+    idempotencyKey: "ops:invite:1",
+    workspaceId: "81111111-1111-4111-8111-111111111111",
+    customerId: "81111111-1111-4111-8111-111111111111",
+    actor: { operatorId: "82222222-2222-4222-8222-222222222222", role: "owner", aal: "aal2" },
+    target: { type: "workspace", id: "81111111-1111-4111-8111-111111111111" },
+    action: "team_invite",
+    expectedVersion: 1,
+    reason: "Invite requested by customer support",
+    createdAt: "2026-09-04T00:00:00.000Z",
+    expiresAt: "2026-09-04T01:00:00.000Z",
+    payload: { email: "Owner@Example.Test", role: "member" },
+  };
+  const parsed = parseOpsAction(base);
+  assert.equal(parsed.schema, "blockwise.ops.action.v1");
+  assert.equal((parsed.payload as { email: string }).email, "owner@example.test");
+  assert.equal(OPS_ACTION_CAPABILITIES.team_invite.capability, "available");
+  assert.equal(OPS_ACTION_CAPABILITIES.team_suspend.capability, "unsupported");
+  assert.equal(OPS_ACTION_CAPABILITIES.team_role_change.capability, "capability_required");
+  assert.equal(Object.keys(OPS_ACTION_CAPABILITIES).length, 20);
+  assert.throws(() => parseOpsAction({ ...base, actor: { ...base.actor, aal: "aal1" } }), /AAL2/);
+  assert.throws(() => parseOpsAction({ ...base, payload: { email: "a@example.test", role: "member", url: "https://example.test" } }), /allowlisted/);
+  assert.throws(() => parseOpsAction({ ...base, action: "enquiry_reply", target: { type: "enquiry", id: base.target.id }, payload: { body: "x".repeat(4001) } }), /too long/);
+  assert.throws(() => parseOpsAction({ ...base, expiresAt: "2026-09-05T01:00:00.000Z" }), /expiry/);
 });
 
 test("ops pagination distinguishes absent values and validates durable cursors", () => {
