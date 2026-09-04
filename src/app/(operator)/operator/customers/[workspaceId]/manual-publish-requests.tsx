@@ -101,9 +101,16 @@ export function ManualPublishRequests({ requests }: { requests: DisplayRequest[]
               </div>
               {request.notes ? <p>{request.notes}</p> : <p className="item-meta">No customer note was provided.</p>}
               {request.publishSummary ? <PublishSummaryDetails summary={request.publishSummary} /> : null}
+              {Object.keys(request.publishControls).length > 0 ? (
+                <details className="item-meta" open>
+                  <summary><strong>Captured publish controls</strong></summary>
+                  <p>These are the exact customer-confirmed controls for the manual handoff, including IDs and fulfilment settings.</p>
+                  <pre>{JSON.stringify(request.publishControls, null, 2)}</pre>
+                </details>
+              ) : null}
               <div className="actions" aria-label={`Preview files for ${request.adName || "this ad"}`}>
-                {request.feedPngPath ? <a className="button secondary" href={mediaHref(request.feedPngPath, request.workspaceId)} target="_blank" rel="noreferrer">Open Feed preview</a> : null}
-                {request.storyPngPath ? <a className="button secondary" href={mediaHref(request.storyPngPath, request.workspaceId)} target="_blank" rel="noreferrer">Open Story preview</a> : null}
+                {request.feedPngPath ? <a className="button secondary" href={mediaHref(request.requestId, request.feedPngPath, request.workspaceId)} target="_blank" rel="noreferrer">Open Feed preview</a> : null}
+                {request.storyPngPath ? <a className="button secondary" href={mediaHref(request.requestId, request.storyPngPath, request.workspaceId)} target="_blank" rel="noreferrer">Open Story preview</a> : null}
               </div>
               <dl className="item-meta">
                 <div><dt>Document hash</dt><dd>{request.documentHash}</dd></div>
@@ -151,8 +158,8 @@ function PublishSummaryDetails({ summary }: { summary: PublishSummary }) {
   );
 }
 
-function mediaHref(path: string, workspaceId: string) {
-  return `/api/adstudio/media?path=${encodeURIComponent(path)}&workspaceId=${encodeURIComponent(workspaceId)}`;
+function mediaHref(requestId: string, path: string, workspaceId: string) {
+  return `/api/operator/manual-publish/${encodeURIComponent(requestId)}/media?path=${encodeURIComponent(path)}&workspaceId=${encodeURIComponent(workspaceId)}`;
 }
 
 function formatDate(value: string) {

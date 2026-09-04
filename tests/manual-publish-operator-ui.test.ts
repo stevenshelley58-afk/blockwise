@@ -12,8 +12,11 @@ test("operator customer detail loads and renders the manual publishing queue", a
   assert.match(page, /<ManualPublishRequests requests=\{manualPublishRequests\}/);
   assert.doesNotMatch(page, /MetaPartnerAssignment/);
   assert.match(component, /Manual Meta publishing requests/);
-  assert.match(component, /\/api\/adstudio\/media\?path=.*workspaceId=/);
+  assert.match(component, /\/api\/operator\/manual-publish/);
   assert.match(component, /encodeURIComponent\(path\)/);
+  assert.match(component, /\/api\/operator\/manual-publish/);
+  assert.match(component, /Captured publish controls/);
+  assert.match(component, /JSON\.stringify\(request\.publishControls, null, 2\)/);
   assert.match(component, /Publish setup captured from customer/);
   assert.match(component, /usesExistingAdSetSettings/);
 });
@@ -35,4 +38,15 @@ test("operator controls require reasons and distinguish manual completion from M
   assert.match(component, /method: "PATCH"/);
   assert.match(component, /status, reason/);
   assert.doesNotMatch(component, /Meta Connected/);
+});
+
+test("operator media route binds access to an authenticated request and exact captured asset paths", async () => {
+  const route = await readFile("src/app/api/operator/manual-publish/[requestId]/media/route.ts", "utf8");
+  assert.match(route, /requireOperator/);
+  assert.match(route, /getManualPublishRequest/);
+  assert.match(route, /manualRequest\.workspaceId !== workspaceId/);
+  assert.match(route, /path !== manualRequest\.feedPngPath && path !== manualRequest\.storyPngPath/);
+  assert.match(route, /createSupabaseServiceClient/);
+  assert.match(route, /workspace-artifacts/);
+  assert.match(route, /cache-control.*private, no-store/s);
 });
