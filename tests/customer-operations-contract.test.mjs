@@ -90,11 +90,11 @@ test("projection adapter and database enforce the provider aggregate matrix", ()
 
 test("worker deployment mounts OSS provider secrets read-only and binds image provenance", () => {
   const compose = text("infra/coolify/docker-compose.product.yml");
-  assert.match(compose, /MAUTIC_TOKEN_HOST_FILE[\s\S]*:\/run\/secrets\/mautic_token:ro/);
-  assert.match(compose, /CHATWOOT_API_TOKEN_HOST_FILE[\s\S]*:\/run\/secrets\/chatwoot_api_token:ro/);
-  assert.match(compose, /BLOCKWISE_OPS_CORRELATION_KEY_HOST_FILE[\s\S]*:\/run\/secrets\/ops_correlation_key:ro/);
-  assert.match(compose, /MAUTIC_TOKEN_FILE: \/run\/secrets\/mautic_token/);
-  assert.match(compose, /CHATWOOT_API_TOKEN_FILE: \/run\/secrets\/chatwoot_api_token/);
+  assert.match(compose, /MAUTIC_TOKEN_HOST_FILE[\s\S]*:\/run\/secrets\/mautic-token-source:ro/);
+  assert.match(compose, /CHATWOOT_API_TOKEN_HOST_FILE[\s\S]*:\/run\/secrets\/chatwoot-api-token-source:ro/);
+  assert.match(compose, /BLOCKWISE_OPS_CORRELATION_KEY_HOST_FILE[\s\S]*:\/run\/secrets\/ops-correlation-key-source:ro/);
+  assert.match(compose, /MAUTIC_TOKEN_FILE: \/run\/blockwise-secrets\/mautic-token/);
+  assert.match(compose, /CHATWOOT_API_TOKEN_FILE: \/run\/blockwise-secrets\/chatwoot-api-token/);
   assert.match(compose, /BLOCKWISE_WORKER_REVISION: \$\{BLOCKWISE_GIT_SHA\}/);
   const worker = text("worker/ops-projection.ts");
   assert.match(worker, /api_access_token/);

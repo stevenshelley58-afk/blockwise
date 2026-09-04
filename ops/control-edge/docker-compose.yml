@@ -4,6 +4,8 @@ services:
     # has no public port and is reachable only on the private networks below.
     image: "${CONTROL_EDGE_IMAGE:?Set CONTROL_EDGE_IMAGE to an immutable digest-pinned image}"
     pull_policy: never
+    user: "0:0"
+    entrypoint: ["/usr/local/bin/blockwise-control-edge-entrypoint"]
     restart: unless-stopped
     init: true
     read_only: true
@@ -12,13 +14,13 @@ services:
     networks: [hermes-private, blockwise-product]
     env_file: [/etc/blockwise/customer-ops/control-edge.env]
     volumes:
-      - "${CONTROL_EDGE_INTERNAL_AUTH_HOST_FILE:?Set CONTROL_EDGE_INTERNAL_AUTH_HOST_FILE to a root-owned 0600 file}:/run/secrets/internal-auth:ro"
-      - "${CONTROL_EDGE_SUPABASE_SERVICE_ROLE_HOST_FILE:?Set CONTROL_EDGE_SUPABASE_SERVICE_ROLE_HOST_FILE to a root-owned 0600 file}:/run/secrets/supabase-service-role:ro"
-      - "${CONTROL_EDGE_EXECUTOR_SECRET_HOST_FILE:?Set CONTROL_EDGE_EXECUTOR_SECRET_HOST_FILE to a root-owned 0600 file}:/run/secrets/action-executor:ro"
+      - "${CONTROL_EDGE_INTERNAL_AUTH_HOST_FILE:?Set CONTROL_EDGE_INTERNAL_AUTH_HOST_FILE to a root-owned 0600 file}:/run/secrets/internal-auth-source:ro"
+      - "${CONTROL_EDGE_SUPABASE_SERVICE_ROLE_HOST_FILE:?Set CONTROL_EDGE_SUPABASE_SERVICE_ROLE_HOST_FILE to a root-owned 0600 file}:/run/secrets/supabase-service-role-source:ro"
+      - "${CONTROL_EDGE_EXECUTOR_SECRET_HOST_FILE:?Set CONTROL_EDGE_EXECUTOR_SECRET_HOST_FILE to a root-owned 0600 file}:/run/secrets/action-executor-source:ro"
     environment:
-      BLOCKWISE_INTERNAL_AUTH_SECRET_FILE: /run/secrets/internal-auth
-      SUPABASE_SERVICE_ROLE_KEY_FILE: /run/secrets/supabase-service-role
-      BLOCKWISE_ACTION_EXECUTOR_SECRET_FILE: /run/secrets/action-executor
+      BLOCKWISE_INTERNAL_AUTH_SECRET_FILE: /run/blockwise-secrets/internal-auth
+      SUPABASE_SERVICE_ROLE_KEY_FILE: /run/blockwise-secrets/supabase-service-role
+      BLOCKWISE_ACTION_EXECUTOR_SECRET_FILE: /run/blockwise-secrets/action-executor
       CONTROL_EDGE_EXPECTED_REVISION: "${CONTROL_EDGE_EXPECTED_REVISION:?Set CONTROL_EDGE_EXPECTED_REVISION to the published image Git SHA}"
     expose: ["8660"]
     healthcheck:

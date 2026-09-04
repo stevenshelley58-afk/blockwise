@@ -8,9 +8,11 @@ LABEL org.opencontainers.image.title="Blockwise customer-ops control edge" \
       org.opencontainers.image.created="${BUILD_DATE}"
 COPY package*.json ./
 COPY ops/control-edge/package.json ops/control-edge/package.json
-RUN npm ci --omit=dev --ignore-scripts
+RUN apk add --no-cache su-exec \
+    && npm ci --omit=dev --ignore-scripts
 COPY src/lib/ops/action-contract.ts src/lib/ops/action-contract.ts
 COPY ops/control-edge ops/control-edge
+COPY --chmod=0755 ops/control-edge/runtime-entrypoint.sh /usr/local/bin/blockwise-control-edge-entrypoint
 RUN node -e 'const [sha, date] = process.argv.slice(1); if (!/^[0-9a-f]{40}$/.test(sha ?? "")) throw new Error("GIT_SHA must be a full lowercase Git SHA"); if (!date || Number.isNaN(Date.parse(date))) throw new Error("BUILD_DATE must be an ISO timestamp")' "$GIT_SHA" "$BUILD_DATE" \
     && printf '%s\n' "$GIT_SHA" > /app/REVISION
 USER node

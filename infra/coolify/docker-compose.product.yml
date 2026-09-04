@@ -200,6 +200,8 @@ services:
         NEXT_PUBLIC_GOOGLE_ADS_ID: ${NEXT_PUBLIC_GOOGLE_ADS_ID:-}
         NEXT_PUBLIC_BLOCKWISE_SAMPLE_DATA: ${NEXT_PUBLIC_BLOCKWISE_SAMPLE_DATA:-false}
     restart: unless-stopped
+    user: "0:0"
+    entrypoint: ["/usr/local/bin/blockwise-product-entrypoint"]
     depends_on:
       product-rest: { condition: service_healthy }
       product-auth: { condition: service_healthy }
@@ -315,7 +317,7 @@ services:
       STALWART_WEBHOOK_SECRET: ${STALWART_WEBHOOK_SECRET:-}
       BLOCKWISE_GIT_SHA: ${BLOCKWISE_GIT_SHA}
     volumes:
-      - ${SUPABASE_SERVICE_ROLE_KEY_HOST_FILE:?SUPABASE_SERVICE_ROLE_KEY_HOST_FILE is required}:/run/secrets/supabase-service-role:ro
+      - ${SUPABASE_SERVICE_ROLE_KEY_HOST_FILE:?SUPABASE_SERVICE_ROLE_KEY_HOST_FILE is required}:/run/secrets/supabase-service-role-source:ro
     networks: [blockwise-product]
     healthcheck:
       test: [CMD, "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
@@ -326,6 +328,8 @@ services:
   product-worker:
     image: ${BLOCKWISE_WORKER_IMAGE:?BLOCKWISE_WORKER_IMAGE is required}
     profiles: [worker]
+    user: "0:0"
+    entrypoint: ["/usr/local/bin/blockwise-worker-entrypoint"]
     restart: unless-stopped
     depends_on:
       product-rest: { condition: service_healthy }
@@ -342,14 +346,14 @@ services:
       start_period: 10s
     volumes:
       - ${HERMES_OPS_PROJECTION_ROOT:-/srv/frank/data/window/ops-projections}:/data/ops-projections:rw
-      - ${MAUTIC_TOKEN_HOST_FILE:-/srv/blockwise/secrets/mautic_token}:/run/secrets/mautic_token:ro
-      - ${CHATWOOT_API_TOKEN_HOST_FILE:-/srv/blockwise/secrets/chatwoot_api_token}:/run/secrets/chatwoot_api_token:ro
-      - ${BLOCKWISE_OPS_CORRELATION_KEY_HOST_FILE:-/srv/blockwise/secrets/ops_correlation_key}:/run/secrets/ops_correlation_key:ro
-      - ${SUPABASE_SERVICE_ROLE_KEY_HOST_FILE:?SUPABASE_SERVICE_ROLE_KEY_HOST_FILE is required}:/run/secrets/supabase-service-role:ro
+      - ${MAUTIC_TOKEN_HOST_FILE:-/srv/blockwise/secrets/mautic_token}:/run/secrets/mautic-token-source:ro
+      - ${CHATWOOT_API_TOKEN_HOST_FILE:-/srv/blockwise/secrets/chatwoot_api_token}:/run/secrets/chatwoot-api-token-source:ro
+      - ${BLOCKWISE_OPS_CORRELATION_KEY_HOST_FILE:-/srv/blockwise/secrets/ops_correlation_key}:/run/secrets/ops-correlation-key-source:ro
+      - ${SUPABASE_SERVICE_ROLE_KEY_HOST_FILE:?SUPABASE_SERVICE_ROLE_KEY_HOST_FILE is required}:/run/secrets/supabase-service-role-source:ro
     environment:
       NODE_ENV: production
       NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:?NEXT_PUBLIC_SUPABASE_URL is required}
-      SUPABASE_SERVICE_ROLE_KEY_FILE: /run/secrets/supabase-service-role
+      SUPABASE_SERVICE_ROLE_KEY_FILE: /run/blockwise-secrets/supabase-service-role
       TOKEN_ENCRYPTION_KEY: ${TOKEN_ENCRYPTION_KEY:?TOKEN_ENCRYPTION_KEY is required}
       BLOCKWISE_WORKER_REVISION: ${BLOCKWISE_GIT_SHA}
       BLOCKWISE_WORKER_EXPECTED_REVISION: ${BLOCKWISE_WORKER_EXPECTED_REVISION:?BLOCKWISE_WORKER_EXPECTED_REVISION is required}
@@ -358,14 +362,14 @@ services:
       BLOCKWISE_OPS_PROJECTION_WORKER: ${BLOCKWISE_OPS_PROJECTION_WORKER:-false}
       BLOCKWISE_OPS_PROJECTION_PROVIDER: ${BLOCKWISE_OPS_PROJECTION_PROVIDER:-}
       MAUTIC_BASE_URL: ${MAUTIC_BASE_URL:-}
-      MAUTIC_TOKEN_FILE: /run/secrets/mautic_token
+      MAUTIC_TOKEN_FILE: /run/blockwise-secrets/mautic-token
       MAUTIC_CONTACT_TAG: ${MAUTIC_CONTACT_TAG:-}
       MAUTIC_LIFECYCLE_TAG: ${MAUTIC_LIFECYCLE_TAG:-}
       MAUTIC_LIFECYCLE_SEGMENTS_JSON: ${MAUTIC_LIFECYCLE_SEGMENTS_JSON:-}
       MAUTIC_LIFECYCLE_CAMPAIGNS_JSON: ${MAUTIC_LIFECYCLE_CAMPAIGNS_JSON:-}
       CHATWOOT_BASE_URL: ${CHATWOOT_BASE_URL:-}
       CHATWOOT_ACCOUNT_ID: ${CHATWOOT_ACCOUNT_ID:-}
-      CHATWOOT_API_TOKEN_FILE: /run/secrets/chatwoot_api_token
+      CHATWOOT_API_TOKEN_FILE: /run/blockwise-secrets/chatwoot-api-token
       CHATWOOT_ENQUIRY_INBOX_ID: ${CHATWOOT_ENQUIRY_INBOX_ID:-}
       CHATWOOT_ENQUIRY_SOURCE_ID: ${CHATWOOT_ENQUIRY_SOURCE_ID:-}
       CHATWOOT_SUPPORT_INBOX_ID: ${CHATWOOT_SUPPORT_INBOX_ID:-}
@@ -373,7 +377,7 @@ services:
       CHATWOOT_GLOBAL_ACCOUNT_ID: ${CHATWOOT_GLOBAL_ACCOUNT_ID:-}
       CHATWOOT_GLOBAL_INBOX_ID: ${CHATWOOT_GLOBAL_INBOX_ID:-}
       CHATWOOT_GLOBAL_SOURCE_ID: ${CHATWOOT_GLOBAL_SOURCE_ID:-}
-      BLOCKWISE_OPS_CORRELATION_KEY_FILE: /run/secrets/ops_correlation_key
+      BLOCKWISE_OPS_CORRELATION_KEY_FILE: /run/blockwise-secrets/ops-correlation-key
       HERMES_OPS_PROJECTION_ROOT: ${HERMES_OPS_PROJECTION_ROOT:-/data/ops-projections}
       WORKER_POLL_IDLE_MS: ${WORKER_POLL_IDLE_MS:-3000}
       WORKER_POLL_BUSY_MS: ${WORKER_POLL_BUSY_MS:-250}

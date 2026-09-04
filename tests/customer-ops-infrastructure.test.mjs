@@ -15,7 +15,7 @@ test("customer operations keeps one mail server and wires private control edge",
   assert.match(customerCompose, /name: blockwise-customer-ops-mail/);
   assert.match(productCompose, /product-mail:[\s\S]*customer-ops-mail:/);
   assert.match(controlCompose, /CONTROL_EDGE_IMAGE:\?Set/);
-  assert.match(controlCompose, /CONTROL_EDGE_INTERNAL_AUTH_HOST_FILE:[\s\S]*\/run\/secrets\/internal-auth:ro/);
+  assert.match(controlCompose, /CONTROL_EDGE_INTERNAL_AUTH_HOST_FILE:[\s\S]*\/run\/secrets\/internal-auth-source:ro/);
   assert.match(controlCompose, /healthcheck:[\s\S]*health\/live/);
   assert.match(controlDockerfile, /^FROM node:[^@]+@sha256:[0-9a-f]{64}$/m);
   assert.match(workerDockerfile, /^FROM node:[^@]+@sha256:[0-9a-f]{64}/m);
@@ -43,14 +43,20 @@ test("production worker/control-edge compose uses immutable images and file secr
   assert.doesNotMatch(controlCompose, /customer-ops-control-edge:[\s\S]*?\n\s+build:/);
   assert.match(productCompose, /BLOCKWISE_WORKER_IMAGE:\?BLOCKWISE_WORKER_IMAGE is required/);
   assert.match(productCompose, /BLOCKWISE_WORKER_EXPECTED_REVISION:\?BLOCKWISE_WORKER_EXPECTED_REVISION is required/);
-  assert.match(productCompose, /SUPABASE_SERVICE_ROLE_KEY_HOST_FILE:[\s\S]*supabase-service-role:ro/);
+  assert.match(productCompose, /SUPABASE_SERVICE_ROLE_KEY_HOST_FILE:[\s\S]*supabase-service-role-source:ro/);
   assert.match(productCompose, /SUPABASE_SERVICE_ROLE_KEY_FILE: \/run\/secrets\/supabase-service-role/);
-  assert.match(productCompose, /SUPABASE_SERVICE_ROLE_KEY_HOST_FILE:[\s\S]*supabase-service-role:ro/);
+  assert.match(productCompose, /SUPABASE_SERVICE_ROLE_KEY_HOST_FILE:[\s\S]*supabase-service-role-source:ro/);
   assert.doesNotMatch(productCompose, /SUPABASE_SERVICE_ROLE_KEY:\s*\$\{/);
   assert.doesNotMatch(productCompose, /product-worker:[\s\S]*?SUPABASE_SERVICE_ROLE_KEY:/);
-  assert.match(workerCompose, /SUPABASE_SERVICE_ROLE_KEY_HOST_FILE:[\s\S]*supabase-service-role:ro/);
+  assert.match(workerCompose, /SUPABASE_SERVICE_ROLE_KEY_HOST_FILE:[\s\S]*supabase-service-role-source:ro/);
   assert.match(controlCompose, /CONTROL_EDGE_EXPECTED_REVISION/);
   assert.match(controlCompose, /\/app\/REVISION/);
+  for (const [script, user] of [["worker/runtime-entrypoint.sh", "gosu worker"], ["ops/control-edge/runtime-entrypoint.sh", "su-exec node"], ["infra/product/runtime-entrypoint.sh", "gosu nextjs"]]) {
+    const entrypoint = text(script);
+    assert.match(entrypoint, /install -d -m 700/);
+    assert.match(entrypoint, new RegExp(user.replace(" ", "\\s+")));
+    assert.match(entrypoint, /-m 600/);
+  }
 });
 
 test("bootstrap is explicit, idempotent, and credential-file based", () => {

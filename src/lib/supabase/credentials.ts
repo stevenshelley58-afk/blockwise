@@ -23,8 +23,9 @@ function readRootOwnedSecretFile(path: string): string {
   } | undefined;
   if (!fs) throw new Error("node:fs is unavailable for SUPABASE_SERVICE_ROLE_KEY_FILE.");
   const stat = fs.lstatSync(path);
-  if (!stat.isFile() || stat.isSymbolicLink() || stat.uid !== 0 || (stat.mode & 0o077) !== 0) {
-    throw new Error("SUPABASE_SERVICE_ROLE_KEY_FILE must be a root-owned 0600 regular file.");
+  const owner = typeof process.getuid === "function" ? process.getuid() : undefined;
+  if (!stat.isFile() || stat.isSymbolicLink() || (owner !== undefined && stat.uid !== owner) || (stat.mode & 0o077) !== 0) {
+    throw new Error("SUPABASE_SERVICE_ROLE_KEY_FILE must be an owner-readable 0600 regular file.");
   }
   return cleanSupabaseEnv(fs.readFileSync(path, "utf8"));
 }
