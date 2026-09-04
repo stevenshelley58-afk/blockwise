@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState, type Dispatch, type SetStateAction } from "react";
+import { useCallback, useEffect, useState, type Dispatch, type SetStateAction } from "react";
 
 import { InstantFormEditor } from "@/components/adstudio/instant-form-editor";
 import type { PublishRequirements } from "@/lib/adstudio/publish-adapter";
@@ -43,7 +43,7 @@ export interface PublishFlowProps {
   notSaved: boolean;
   initialState: {
     ad: { metaPrimaryText: string; metaHeadline: string; metaDescription: string; metaCta: string };
-    revision: { revisionNumber: number; feedPngHash: string; feedPngPath: string; storyPngHash: string; storyPngPath: string };
+    revision: { id: string; revisionNumber: number; documentHash: string; feedPngHash: string; feedPngPath: string; storyPngHash: string; storyPngPath: string };
     form: {
       name: string;
       formType: string;
@@ -56,6 +56,8 @@ export interface PublishFlowProps {
   audienceLocations: PublishAudienceLocation[];
   /** Optional last-checked Meta state for display only; publish re-verifies it server-side. */
   parentState?: MetaParentState;
+  canRequestManualPublish: boolean;
+  automatedPublishAvailable: boolean;
 }
 
 type PublishReceipt = {
@@ -85,6 +87,13 @@ type ActivationTargets = {
   campaignId?: string;
   adSetIds?: string[];
   adIds?: string[];
+};
+
+type ManualPublishState = {
+  status: "idle" | "loading" | "requested" | "in_review" | "published" | "cancelled" | "failed";
+  mutationId?: string;
+  message?: string;
+  error?: string;
 };
 
 const emptyFulfilment: PublishFulfilmentDraft = {
@@ -117,6 +126,8 @@ export function PublishFlow({
   providerWritesEnabled,
   audienceLocations,
   parentState,
+  canRequestManualPublish,
+  automatedPublishAvailable,
 }: PublishFlowProps) {
   const [submitting, setSubmitting] = useState(false);
   const [receipt, setReceipt] = useState<PublishReceipt | null>(null);
@@ -151,6 +162,9 @@ export function PublishFlow({
   // receipt; it is never automatic.
   const [activating, setActivating] = useState(false);
   const [activateReceipt, setActivateReceipt] = useState<ActivationReceipt | null>(null);
+  const [manualNotes, setManualNotes] = useState("");
+  const [manualPublish, setManualPublish] = useState<ManualPublishState>({ status: "idle" });
+  const [manualMutationId] = useState(() => crypto.randomUUID());
 
   const handlePinStateChange = useCallback((pinned: boolean) => {
     setFormPinned(pinned);
@@ -192,22 +206,50 @@ export function PublishFlow({
   const fieldsBuild = buildExplicitMetaPublishControls({ ...controlsDraft, setupConfirmed: true });
   const publishBuild = buildExplicitMetaPublishControls(controlsDraft);
 
-  const handlePublish = useCallback(async () => {
+  const handleManualPublish = useCallback(async () => {
+    if (!publishBuild.controls || !publishBuild.summary) return;
+    setSubmitting(true);
+    setManualPublish({ status: "loading" });
+    setPublishedSetupSummary(publishBuild.summary);
+    try {
+      const res = await fetch(
+        `/api/adstudio/ads/${encodeURIComponent(adId)}/manual-publish`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            workspaceId,
+            mutationId: manualMutationId,
+            notes: manualNotes.trim() || undefined,
+            controls: publishBuild.controls,
+            publishSummary: publishBuild.summary,
+            revisionId: initialState?.revision.id,
+            documentHash: initialState?.revision.documentHash,
+          }),
+        },
+      );
+      const body = (await res.json().catch(() => ({}))) as { request?: { status?: "requested" | "in_progress" | "completed" | "cancelled"; requestId?: string }; message?: string; error?: string };
+      const request = body.request;
+      const status = request?.status === "completed" ? "published" : request?.status === "cancelled" ? "cancelled" : request?.status === "in_progress" ? "in_review" : "requested";
+      setManualPublish(res.ok ? { status, mutationId: request?.requestId ?? manualMutationId, message: body.message ?? "Your request is in the Blockwise publishing queue." } : { status: "failed", error: body.error ?? "The manual publishing request could not be submitted." });
+    } catch (err) {
+      setManualPublish({ status: "failed", error: err instanceof Error ? err.message : "The manual publishing request could not be submitted." });
+    } finally {
+      setSubmitting(false);
+    }
+  }, [adId, initialState?.revision.documentHash, initialState?.revision.id, manualMutationId, manualNotes, publishBuild.controls, publishBuild.summary, workspaceId]);
+
+  const handleAutomatedPublish = useCallback(async () => {
     if (!publishBuild.controls || !publishBuild.summary) return;
     setSubmitting(true);
     setReceipt(null);
     setPublishedSetupSummary(publishBuild.summary);
     try {
-      const res = await fetch(
-        `/api/adstudio/ads/${encodeURIComponent(adId)}/publish?workspaceId=${encodeURIComponent(workspaceId)}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            controls: publishBuild.controls,
-          }),
-        },
-      );
+      const res = await fetch(`/api/adstudio/ads/${encodeURIComponent(adId)}/publish?workspaceId=${encodeURIComponent(workspaceId)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ controls: publishBuild.controls }),
+      });
       const body = (await res.json().catch(() => ({}))) as PublishReceipt;
       setReceipt(res.ok ? body : { ...body, error: body.error ?? "publish_failed" });
     } catch (err) {
@@ -216,6 +258,21 @@ export function PublishFlow({
       setSubmitting(false);
     }
   }, [adId, publishBuild.controls, publishBuild.summary, workspaceId]);
+
+  useEffect(() => {
+    if (automatedPublishAvailable) return;
+    let cancelled = false;
+    fetch(`/api/adstudio/ads/${encodeURIComponent(adId)}/manual-publish?workspaceId=${encodeURIComponent(workspaceId)}`, { cache: "no-store" })
+      .then(async response => ({ ok: response.ok, body: await response.json().catch(() => ({})) as { request?: { status?: "requested" | "in_progress" | "completed" | "cancelled"; requestId?: string }; message?: string } }))
+      .then(({ ok, body }) => {
+        if (!cancelled && ok && body.request?.status) {
+          const status = body.request.status === "completed" ? "published" : body.request.status === "cancelled" ? "cancelled" : body.request.status === "in_progress" ? "in_review" : "requested";
+          setManualPublish({ status, mutationId: body.request.requestId, message: body.message });
+        }
+      })
+      .catch(() => undefined);
+    return () => { cancelled = true; };
+  }, [adId, automatedPublishAvailable, workspaceId]);
 
   // BW-Q — a SECOND explicit click. Only ever offered after a publish receipt
   // that created PAUSED objects on Meta (mode "publish"), and it targets that
@@ -299,8 +356,8 @@ export function PublishFlow({
           {initialState ? (
              <div className="space-y-1 text-xs text-muted-foreground">
                <div className="grid gap-4 sm:grid-cols-2">
-                 <div><p className="mb-2">Feed</p><img src={`/api/adstudio/media?path=${encodeURIComponent(initialState.revision.feedPngPath)}`} alt="Saved Feed ad" className="w-full rounded-(--r-card) border border-border" /></div>
-                 <div><p className="mb-2">Story</p><img src={`/api/adstudio/media?path=${encodeURIComponent(initialState.revision.storyPngPath)}`} alt="Saved Story ad" className="w-full rounded-(--r-card) border border-border" /></div>
+                 <div><p className="mb-2">Feed</p><img src={`/api/adstudio/media?path=${encodeURIComponent(initialState.revision.feedPngPath)}`} alt="Saved Feed ad" className="w-full rounded-(--r-card) border border-border" /><a className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold underline underline-offset-4" href={`/api/adstudio/media?path=${encodeURIComponent(initialState.revision.feedPngPath)}`} download="blockwise-feed.png">Download Feed PNG</a></div>
+                 <div><p className="mb-2">Story</p><img src={`/api/adstudio/media?path=${encodeURIComponent(initialState.revision.storyPngPath)}`} alt="Saved Story ad" className="w-full rounded-(--r-card) border border-border" /><a className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold underline underline-offset-4" href={`/api/adstudio/media?path=${encodeURIComponent(initialState.revision.storyPngPath)}`} download="blockwise-story.png">Download Story PNG</a></div>
                </div>
             </div>
           ) : (
@@ -346,6 +403,19 @@ export function PublishFlow({
           </p>
           {selectedVariants.length === 0 ? <p className="text-xs text-amber-700">Choose at least one creative variant.</p> : null}
         </div>
+
+        {!automatedPublishAvailable ? <div className="mb-6 space-y-3 rounded-(--r-card) border border-(--line-heavy) bg-(--surface-subtle) p-4">
+          <div>
+            <h3 className="text-sm font-semibold">Request manual publishing</h3>
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">An authorised Blockwise operator will review this saved ad and publish it manually in Meta. This does not connect your Meta account to Blockwise or bypass Meta&apos;s app review.</p>
+          </div>
+          <label className="block text-xs font-semibold" htmlFor="manual-publish-notes">Optional note</label>
+          <textarea id="manual-publish-notes" value={manualNotes} onChange={(event) => setManualNotes(event.target.value)} maxLength={500} placeholder="Tell the operator anything important about this request" className="min-h-20 w-full resize-y rounded-(--r-card) border border-(--line-heavy) bg-(--surface) px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+          {manualPublish.status === "requested" || manualPublish.status === "in_review" || manualPublish.status === "published" || manualPublish.status === "cancelled" ? <p className={`text-sm font-semibold ${manualPublish.status === "cancelled" ? "text-muted-foreground" : "text-success"}`} role="status" aria-live="polite">{manualPublish.status === "published" ? "Completed by Blockwise. Check your Meta account for the result." : manualPublish.status === "cancelled" ? "This request was cancelled. You can send a new request when ready." : manualPublish.status === "in_review" ? "A Blockwise operator is reviewing your request." : "Request sent. A Blockwise operator will review it."}</p> : null}
+          {!canRequestManualPublish ? <p className="text-sm text-muted-foreground">Ask a workspace owner or admin to send this publishing request.</p> : null}
+          {manualPublish.status === "failed" ? <p className="text-sm font-semibold text-error" role="alert">{manualPublish.error}</p> : null}
+          {manualPublish.mutationId ? <p className="font-mono text-[10px] text-(--faint)">Request reference: {manualPublish.mutationId.slice(0, 8)}</p> : null}
+        </div> : null}
 
         <div className="mb-6 space-y-3 rounded-(--r-card) border border-(--line) bg-(--surface) p-4">
           <h3 className="text-sm font-semibold">Meta destination</h3>
@@ -496,9 +566,9 @@ export function PublishFlow({
         <details className="rounded-(--r-card) border border-(--line) bg-(--surface) p-4">
           <summary className="flex min-h-11 cursor-pointer items-center text-sm font-semibold">What happens next</summary>
           <p className="mt-1 text-xs text-muted-foreground">
-            {providerWritesEnabled
-              ? "Publishing saves your ad, creates the campaign, ad sets and ads on Meta, and turns them ACTIVE so they can start delivering. Blockwise confirms the result before reporting success."
-              : "Preview only is on — nothing will be created. You can still review the complete plan."}
+            {automatedPublishAvailable
+              ? "Blockwise will create the campaign objects on your connected Meta account and confirm their state before reporting success."
+              : "Nothing is sent to Meta from this page. Your saved creative and setup are sent to an authorised Blockwise operator for manual review."}
           </p>
         </details>
 
@@ -547,11 +617,11 @@ export function PublishFlow({
         )}
         <div className="ml-auto">
           <Button
-            onClick={handlePublish}
-             disabled={!ready || submitting || Boolean(receipt && !receipt.error)}
+            onClick={automatedPublishAvailable ? handleAutomatedPublish : handleManualPublish}
+             disabled={automatedPublishAvailable ? !ready || submitting || Boolean(receipt && !receipt.error) : !canRequestManualPublish || !ready || submitting || manualPublish.status === "requested" || manualPublish.status === "in_review" || manualPublish.status === "published"}
             className="min-h-11 rounded-full px-6 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
-            {submitting ? "Publishing…" : "Publish"}
+            {submitting ? (automatedPublishAvailable ? "Publishing…" : "Sending request…") : automatedPublishAvailable ? "Publish" : manualPublish.status === "requested" || manualPublish.status === "in_review" ? "Request sent" : "Request manual publishing"}
           </Button>
         </div>
       </footer>

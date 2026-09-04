@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { resolveMetaPageAccessToken } from "@/lib/providers/meta-assets";
 import {
   getMetaPartnerConfig,
+  isMetaPartnerStartEnabled,
   listPartnerVisibleAdAccounts,
   verifyPartnerAccountAccess,
 } from "@/lib/providers/meta-partner";
@@ -36,6 +37,9 @@ export async function PUT(request: Request, context: RouteContext) {
   if (!auth.ok) return auth.response;
   const workspaceId = await validWorkspaceId(context);
   if (!workspaceId) return invalidWorkspaceResponse();
+  if (!isMetaPartnerStartEnabled()) {
+    return NextResponse.json({ error: "Meta partner access is not currently enabled." }, { status: 503 });
+  }
   const body = (await request.json().catch(() => ({}))) as { adAccountId?: unknown; pageId?: unknown };
   const adAccountId = normalizeAdAccountId(body.adAccountId);
   const pageId = typeof body.pageId === "string" ? body.pageId.trim() : "";

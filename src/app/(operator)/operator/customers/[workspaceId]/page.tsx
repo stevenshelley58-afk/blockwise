@@ -5,10 +5,11 @@ import { PageHeading } from "@/components/page-heading";
 import { StatusPill } from "@/components/status-pill";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
 import { loadOperatorCustomerDetail } from "@/lib/operator/customers";
+import { listManualPublishRequestsForWorkspace } from "@/lib/adstudio/manual-publish";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 import { CustomerActions } from "./customer-actions";
-import { MetaPartnerAssignment } from "./meta-partner-assignment";
+import { ManualPublishRequests } from "./manual-publish-requests";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,7 @@ const detailSections = [
   ["credits", "Credits"],
   ["brand", "Brand Pack"],
   ["meta", "Meta & campaigns"],
+  ["manual-publishing", "Manual publishing"],
   ["team", "Team"],
   ["bookings", "Bookings"],
   ["audit", "Audit"],
@@ -29,11 +31,16 @@ const detailSections = [
 export default async function OperatorCustomerDetailPage({ params }: PageProps) {
   await requirePageSurfaceAccess("operator");
   const { workspaceId } = await params;
+  const serviceSupabase = createSupabaseServiceClient();
   const detail = await loadOperatorCustomerDetail({
     workspaceId,
-    serviceSupabase: createSupabaseServiceClient(),
+    serviceSupabase,
   });
   if (!detail) notFound();
+  const manualPublishRequests = await listManualPublishRequestsForWorkspace(
+    serviceSupabase,
+    workspaceId,
+  );
   const { summary } = detail;
 
   return (
@@ -68,7 +75,7 @@ export default async function OperatorCustomerDetailPage({ params }: PageProps) 
       </section>
 
       <CustomerActions workspaceId={workspaceId} />
-      <MetaPartnerAssignment workspaceId={workspaceId} />
+      <ManualPublishRequests requests={manualPublishRequests} />
 
       <DetailPanel id="activation" title="Activation timeline">
         <KeyValueTable rows={timestampEntries(detail.activation ?? {})} empty="No activation record is available." />
