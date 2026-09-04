@@ -43,7 +43,7 @@ export interface PublishFlowProps {
   notSaved: boolean;
   initialState: {
     ad: { metaPrimaryText: string; metaHeadline: string; metaDescription: string; metaCta: string };
-    revision: { revisionNumber: number; feedPngHash: string; feedPngPath: string; storyPngHash: string; storyPngPath: string };
+    revision: { id: string; revisionNumber: number; documentHash: string; feedPngHash: string; feedPngPath: string; storyPngHash: string; storyPngPath: string };
     form: {
       name: string;
       formType: string;
@@ -57,6 +57,7 @@ export interface PublishFlowProps {
   /** Optional last-checked Meta state for display only; publish re-verifies it server-side. */
   parentState?: MetaParentState;
   canRequestManualPublish: boolean;
+  automatedPublishAvailable: boolean;
 }
 
 type PublishReceipt = {
@@ -126,6 +127,7 @@ export function PublishFlow({
   audienceLocations,
   parentState,
   canRequestManualPublish,
+  automatedPublishAvailable,
 }: PublishFlowProps) {
   const [submitting, setSubmitting] = useState(false);
   const [receipt, setReceipt] = useState<PublishReceipt | null>(null);
@@ -221,6 +223,8 @@ export function PublishFlow({
             notes: manualNotes.trim() || undefined,
             controls: publishBuild.controls,
             publishSummary: publishBuild.summary,
+            revisionId: initialState?.revision.id,
+            documentHash: initialState?.revision.documentHash,
           }),
         },
       );
@@ -234,6 +238,26 @@ export function PublishFlow({
       setSubmitting(false);
     }
   }, [adId, manualMutationId, manualNotes, publishBuild.controls, publishBuild.summary, workspaceId]);
+
+  const handleAutomatedPublish = useCallback(async () => {
+    if (!publishBuild.controls || !publishBuild.summary) return;
+    setSubmitting(true);
+    setReceipt(null);
+    setPublishedSetupSummary(publishBuild.summary);
+    try {
+      const res = await fetch(`/api/adstudio/ads/${encodeURIComponent(adId)}/publish?workspaceId=${encodeURIComponent(workspaceId)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ controls: publishBuild.controls }),
+      });
+      const body = (await res.json().catch(() => ({}))) as PublishReceipt;
+      setReceipt(res.ok ? body : { ...body, error: body.error ?? "publish_failed" });
+    } catch (err) {
+      setReceipt({ error: err instanceof Error ? err.message : "Publish request failed." });
+    } finally {
+      setSubmitting(false);
+    }
+  }, [adId, publishBuild.controls, publishBuild.summary, workspaceId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -379,7 +403,7 @@ export function PublishFlow({
           {selectedVariants.length === 0 ? <p className="text-xs text-amber-700">Choose at least one creative variant.</p> : null}
         </div>
 
-        <div className="mb-6 space-y-3 rounded-(--r-card) border border-(--line-heavy) bg-(--surface-subtle) p-4">
+        {!automatedPublishAvailable ? <div className="mb-6 space-y-3 rounded-(--r-card) border border-(--line-heavy) bg-(--surface-subtle) p-4">
           <div>
             <h3 className="text-sm font-semibold">Request manual publishing</h3>
             <p className="mt-1 text-xs leading-relaxed text-muted-foreground">An authorised Blockwise operator will review this saved ad and publish it manually in Meta. This does not connect your Meta account to Blockwise or bypass Meta&apos;s app review.</p>
@@ -390,7 +414,7 @@ export function PublishFlow({
           {!canRequestManualPublish ? <p className="text-sm text-muted-foreground">Ask a workspace owner or admin to send this publishing request.</p> : null}
           {manualPublish.status === "failed" ? <p className="text-sm font-semibold text-error" role="alert">{manualPublish.error}</p> : null}
           {manualPublish.mutationId ? <p className="font-mono text-[10px] text-(--faint)">Request reference: {manualPublish.mutationId.slice(0, 8)}</p> : null}
-        </div>
+        </div> : null}
 
         <div className="mb-6 space-y-3 rounded-(--r-card) border border-(--line) bg-(--surface) p-4">
           <h3 className="text-sm font-semibold">Meta destination</h3>
@@ -541,7 +565,9 @@ export function PublishFlow({
         <details className="rounded-(--r-card) border border-(--line) bg-(--surface) p-4">
           <summary className="flex min-h-11 cursor-pointer items-center text-sm font-semibold">What happens next</summary>
           <p className="mt-1 text-xs text-muted-foreground">
-            "Nothing is sent to Meta from this page. Your saved creative and setup are sent to an authorised Blockwise operator for manual review."
+            {automatedPublishAvailable
+              ? "Blockwise will create the campaign objects on your connected Meta account and confirm their state before reporting success."
+              : "Nothing is sent to Meta from this page. Your saved creative and setup are sent to an authorised Blockwise operator for manual review."}
           </p>
         </details>
 
@@ -590,11 +616,11 @@ export function PublishFlow({
         )}
         <div className="ml-auto">
           <Button
-            onClick={handleManualPublish}
-             disabled={!canRequestManualPublish || !ready || submitting || manualPublish.status === "requested" || manualPublish.status === "in_review" || manualPublish.status === "published"}
+            onClick={automatedPublishAvailable ? handleAutomatedPublish : handleManualPublish}
+             disabled={automatedPublishAvailable ? !ready || submitting || Boolean(receipt && !receipt.error) : !canRequestManualPublish || !ready || submitting || manualPublish.status === "requested" || manualPublish.status === "in_review" || manualPublish.status === "published"}
             className="min-h-11 rounded-full px-6 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
-            {submitting ? "Sending request…" : manualPublish.status === "requested" || manualPublish.status === "in_review" ? "Request sent" : "Request manual publishing"}
+            {submitting ? (automatedPublishAvailable ? "Publishing…" : "Sending request…") : automatedPublishAvailable ? "Publish" : manualPublish.status === "requested" || manualPublish.status === "in_review" ? "Request sent" : "Request manual publishing"}
           </Button>
         </div>
       </footer>
