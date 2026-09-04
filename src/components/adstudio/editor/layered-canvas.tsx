@@ -17,7 +17,7 @@ import {
   effectiveTextFontSize,
   fabricCharSpacing,
   fabricCircleGeometry,
-  fabricIconCircleGeometry,
+  fabricLinePathData,
   fabricIconPathData,
   fabricPathPosition,
   fabricRectGeometry,
@@ -309,7 +309,7 @@ async function createLayerObject({
   if (layer.type === "vector") {
     const colour = fill(layer.colourRole);
     if (layer.shape === "line") {
-      const path = new fabric.Path(`M 0 ${geometry.height / 2} L ${geometry.width} ${geometry.height / 2}`, { fill: "", stroke: colour, strokeWidth: 2, ...interactive });
+      const path = new fabric.Path(fabricLinePathData(geometry.width, geometry.height), { fill: "", stroke: colour, strokeWidth: 2, ...interactive });
       path.set(fabricPathPosition(path, geometry));
       return path;
     }
@@ -335,15 +335,7 @@ async function createLayerObject({
   if (layer.type === "icon") {
     const w = geometry.width, h = geometry.height;
     const iconShape = resolveIconShape(layer.icon);
-    if (iconShape === "circle") {
-      return new fabric.Circle({
-        ...fabricIconCircleGeometry(geometry),
-        fill: "",
-        stroke: fill(layer.colourRole),
-        strokeWidth: Math.max(2, Math.min(w, h) * .1),
-        ...interactive,
-      });
-    }
+    if (!iconShape) return null;
     const iconPath = fabricIconPathData(layer.icon, w, h);
     if (!iconPath) return null;
     const path = new fabric.Path(iconPath, { fill: "", stroke: fill(layer.colourRole), strokeWidth: Math.max(2, Math.min(w, h) * .1), ...interactive });

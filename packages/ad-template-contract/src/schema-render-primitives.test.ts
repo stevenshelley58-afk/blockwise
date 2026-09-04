@@ -133,3 +133,37 @@ test("text tracking is absolute canvas pixels bounded to the authored -4..4 rang
   assert.equal(adTemplateSchema.safeParse(templateWithLayer({ ...textLayer(), tracking: -4.01 })).success, false);
   assert.equal(adTemplateSchema.safeParse(templateWithLayer({ ...textLayer(), tracking: 4.01 })).success, false);
 });
+
+test("multi-line text requires a full font-size of line separation", () => {
+  const tooTight = adTemplateSchema.safeParse(templateWithLayer({ ...textLayer(), lineHeight: 0.8 }));
+  assert.equal(tooTight.success, false);
+  if (!tooTight.success) {
+    assert.match(tooTight.error.issues[0]?.message ?? "", /feed text layer feed-headline with maxLines 2 must use lineHeight at least 1/);
+  }
+
+  assert.equal(adTemplateSchema.safeParse(templateWithLayer({ ...textLayer(), lineHeight: 1 })).success, true);
+  assert.equal(adTemplateSchema.safeParse(templateWithLayer({ ...textLayer(), lineHeight: 1.2 })).success, true);
+  assert.equal(adTemplateSchema.safeParse(templateWithLayer({ ...textLayer(), maxLines: 1, lineHeight: 0.8 })).success, true);
+});
+
+test("line vectors have visible length and icons name a painted semantic shape", () => {
+  assert.equal(adTemplateSchema.safeParse(templateWithLayer({
+    type: "vector", layerId: "feed-divider", shape: "line", colourRole: "mainText", opacity: 1,
+    geometry: { x: 80, y: 80, width: 3, height: 252 },
+  })).success, true);
+  assert.equal(adTemplateSchema.safeParse(templateWithLayer({
+    type: "vector", layerId: "feed-dot", shape: "line", colourRole: "mainText", opacity: 1,
+    geometry: { x: 80, y: 80, width: 3, height: 3 },
+  })).success, false);
+
+  for (const icon of ["phone", "mail", "globe", "location"]) {
+    assert.equal(adTemplateSchema.safeParse(templateWithLayer({
+      type: "icon", layerId: `feed-${icon}`, icon, colourRole: "mainText",
+      geometry: { x: 80, y: 80, width: 40, height: 40 },
+    })).success, true);
+  }
+  assert.equal(adTemplateSchema.safeParse(templateWithLayer({
+    type: "icon", layerId: "feed-empty-ring", icon: "unknown", colourRole: "mainText",
+    geometry: { x: 80, y: 80, width: 40, height: 40 },
+  })).success, false);
+});

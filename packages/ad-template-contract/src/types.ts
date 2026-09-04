@@ -2,6 +2,8 @@ export const COLOUR_ROLES = ["background", "primary", "secondary", "accent", "ma
 export type ColourRole = (typeof COLOUR_ROLES)[number];
 export const LAYER_TYPES = ["plate", "image_slot", "overlay_patch", "text", "logo", "vector", "icon"] as const;
 export type LayerType = (typeof LAYER_TYPES)[number];
+export const SUPPORTED_ICON_NAMES = ["arrow", "check", "tick", "phone", "mail", "globe", "location"] as const;
+export type SupportedIconName = (typeof SUPPORTED_ICON_NAMES)[number];
 export interface Rect { x: number; y: number; width: number; height: number; }
 export type SafeZone = Rect;
 export type MaskType = "rounded_rect" | "circle" | "none";
@@ -14,13 +16,17 @@ export interface OverlayPatchLayer { type: "overlay_patch"; layerId: string; geo
 export interface TextLayer extends TextLayerDefaults { type: "text"; layerId: string; geometry: Rect; }
 export interface LogoLayer { type: "logo"; layerId: string; geometry: Rect; inputKey: string; }
 export interface VectorLayer { type: "vector"; layerId: string; geometry: Rect; shape: "rect" | "rounded" | "circle" | "line" | "pill" | "notched" | "wave" | "ring"; colourRole: ColourRole; opacity: number; }
-export interface IconLayer { type: "icon"; layerId: string; geometry: Rect; icon: string; colourRole: ColourRole; }
+export interface IconLayer { type: "icon"; layerId: string; geometry: Rect; icon: SupportedIconName; colourRole: ColourRole; }
 export type LayoutLayer = PlateLayer | ImageSlotLayer | OverlayPatchLayer | TextLayer | LogoLayer | VectorLayer | IconLayer;
 export const PLACEMENTS = ["feed", "story"] as const;
 export type Placement = (typeof PLACEMENTS)[number];
 export const PLACEMENT_DIMENSIONS: Record<string, { width: number; height: number }> = { feed: { width: 1080, height: 1350 }, story: { width: 1080, height: 1920 } };
 /** Native-canvas readability floor shared by contract validation and rendering. */
 export const MINIMUM_TEXT_SIZE_PX: Record<Placement, number> = { feed: 24, story: 32 };
+/** Multi-line text needs at least one full font-size of baseline separation. */
+export const MINIMUM_MULTILINE_LINE_HEIGHT = 1;
+/** A line shorter than this resolves to a dot rather than a useful divider. */
+export const MINIMUM_VECTOR_LINE_LENGTH_PX = 8;
 export interface Layout { placement: Placement; layers: LayoutLayer[]; safeZones: SafeZone[]; }
 export interface ImageInput { key: string; label: string; required?: boolean; acceptedTypes: string[]; defaultAssetKey?: string; }
 export interface TextInput { key: string; label: string; placeholder: string; maxLength: number; }

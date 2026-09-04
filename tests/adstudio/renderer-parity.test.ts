@@ -1,17 +1,17 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { createCanvas, loadImage, type SKRSContext2D } from "@napi-rs/canvas";
-import type { AdTemplate } from "../../packages/ad-template-contract/src/types";
+import { createCanvas, loadImage } from "@napi-rs/canvas";
+import type { AdTemplate, SupportedIconName } from "../../packages/ad-template-contract/src/types";
 import { renderPlacement } from "../../packages/ad-template-renderer/src/renderer.ts";
 import {
   effectiveTextFontSize,
   fabricCharSpacing,
-  fabricIconCircleGeometry,
+  fabricIconPathData,
   fabricRectGeometry,
   resolveGeometry,
 } from "../../src/components/adstudio/editor/layer-geometry.ts";
 
-function iconTemplate(icon: string): AdTemplate {
+function iconTemplate(icon: SupportedIconName): AdTemplate {
   return {
     schema: "blockwise.ad-template",
     templateId: "renderer-parity",
@@ -28,7 +28,7 @@ function iconTemplate(icon: string): AdTemplate {
         },
         {
           type: "icon",
-          layerId: "fallback-icon",
+          layerId: `semantic-${icon}-icon`,
           icon,
           colourRole: "accent",
           geometry: { x: 0.25, y: 0.25, width: 0.5, height: 0.5 },
@@ -51,7 +51,7 @@ function iconTemplate(icon: string): AdTemplate {
     fonts: [],
     metadata: {
       title: "Renderer parity fixture",
-      description: "Deterministic icon fallback fixture",
+      description: "Deterministic semantic icon fixture",
       gallerySamples: {},
       metaCopyDefaults: { primaryText: [], headlines: [], descriptions: [], cta: "LEARN_MORE" },
       aiWritingGuidance: { summary: "", fields: {} },
@@ -66,11 +66,6 @@ function iconTemplate(icon: string): AdTemplate {
       realAssetRefs: [],
     },
   };
-}
-
-function pixelColour(ctx: SKRSContext2D, x: number, y: number): [number, number, number, number] {
-  const pixel = ctx.getImageData(x, y, 1, 1).data;
-  return [pixel[0] ?? 0, pixel[1] ?? 0, pixel[2] ?? 0, pixel[3] ?? 0];
 }
 
 describe("canonical renderer parity fixtures", () => {
@@ -105,47 +100,35 @@ describe("canonical renderer parity fixtures", () => {
     assert.ok(textbox.getBoundingRect().width <= geometry.width + 1);
   });
 
-  it("keeps an actual Fabric unknown-icon fallback centred with a stroked bound", async () => {
-    const { Circle } = await import("fabric/node");
-    const geometry = resolveGeometry({ x: 0.25, y: 0.25, width: 0.5, height: 0.5 }, { width: 1080, height: 1350 });
-    const strokeWidth = Math.max(2, Math.min(geometry.width, geometry.height) * 0.1);
-    const circle = new Circle({
-      ...fabricIconCircleGeometry(geometry),
-      fill: "",
-      stroke: "#ff0000",
-      strokeWidth,
-    });
-    const bounds = circle.getBoundingRect();
-    assert.equal(circle.fill, "");
-    assert.equal(circle.strokeWidth, strokeWidth);
-    assert.ok(Math.abs(circle.getCenterPoint().x - (geometry.x + geometry.width / 2)) < 1e-9);
-    assert.ok(Math.abs(circle.getCenterPoint().y - (geometry.y + geometry.height / 2)) < 1e-9);
-    assert.ok(Math.abs(bounds.width - (circle.radius * 2 + strokeWidth)) < 1e-9);
-  });
+  it("paints every semantic contact icon as a path instead of an empty ring", async () => {
+    for (const icon of ["phone", "mail", "globe", "location"] as const) {
+      const pathData = fabricIconPathData(icon, 100, 100);
+      assert.ok(pathData);
+      if (icon !== "globe") assert.notEqual(pathData, fabricIconPathData("globe", 100, 100), `${icon} must not collapse to a globe ring`);
 
-  it("renders an unknown icon as a centred stroked circle in normalized geometry", async () => {
-    const output = await renderPlacement({
-      template: iconTemplate("future-icon"),
-      imageValues: {},
-      textValues: {},
-      colourMap: {
-        background: "#ffffff",
-        primary: "#000000",
-        secondary: "#000000",
-        accent: "#ff0000",
-        mainText: "#000000",
-        inverseText: "#ffffff",
-      },
-    }, "feed");
-    const image = await loadImage(output.png);
-    const canvas = createCanvas(output.width, output.height);
-    const ctx = canvas.getContext("2d");
-    ctx.drawImage(image, 0, 0);
-
-    // The normalized box resolves to x=270..810, y=337.5..1012.5. The
-    // fallback is a circle centred at (540, 675), not the old check path.
-    assert.deepEqual(pixelColour(ctx, 540, 675), [255, 255, 255, 255], "fallback circle must not be filled");
-    assert.deepEqual(pixelColour(ctx, 724, 675), [255, 0, 0, 255], "fallback stroke should cross the right circumference");
-    assert.deepEqual(pixelColour(ctx, 540, 491), [255, 0, 0, 255], "fallback stroke should cross the top circumference");
+      const output = await renderPlacement({
+        template: iconTemplate(icon),
+        imageValues: {},
+        textValues: {},
+        colourMap: {
+          background: "#ffffff",
+          primary: "#000000",
+          secondary: "#000000",
+          accent: "#ff0000",
+          mainText: "#000000",
+          inverseText: "#ffffff",
+        },
+      }, "feed");
+      const image = await loadImage(output.png);
+      const canvas = createCanvas(output.width, output.height);
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(image, 0, 0);
+      const interiorPixels = ctx.getImageData(405, 505, 270, 340).data;
+      let paintedInterior = 0;
+      for (let index = 0; index < interiorPixels.length; index += 4) {
+        if (interiorPixels[index] === 255 && interiorPixels[index + 1] === 0 && interiorPixels[index + 2] === 0) paintedInterior += 1;
+      }
+      assert.ok(paintedInterior > 0, `${icon} must paint inside its perimeter`);
+    }
   });
 });
