@@ -3,6 +3,12 @@
 # entry as soon as Debian publishes a fixed package. These are not blanket
 # ignores: every entry below was reported with an empty Fixed Version by Trivy.
 vulnerabilities:
+  - id: CVE-2026-11822
+    expired_at: 2026-10-04
+    statement: "No fixed version reported; libsqlite3-0 is an unused base-image library and Blockwise does not invoke SQLite/FTS5 at runtime; review by 2026-10-04."
+  - id: CVE-2026-11824
+    expired_at: 2026-10-04
+    statement: "No fixed version reported; libsqlite3-0 is an unused base-image library and Blockwise does not invoke SQLite/FTS5 at runtime; review by 2026-10-04."
   - id: CVE-2026-76642
     expired_at: 2026-10-04
     statement: "No upstream fixed version reported; review by 2026-10-04."
