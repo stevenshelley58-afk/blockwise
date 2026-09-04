@@ -38,9 +38,9 @@ OTP, magic-link, invite and recovery mail. The Compose contract maps those to
 `GOTRUE_SMTP_*`; `BLOCKWISE_MAIL_ENABLED=true` makes the app readiness surface
 fail closed unless its outbox SMTP settings are complete and the non-secret
 `BLOCKWISE_AUTH_SMTP_CONFIGURED=true` receipt is set. The host-side
-`mail-validate.sh` checks the separate GoTrue SMTP credential contract before
-that receipt is set. Resend remains explicit compatibility-only and is not a
-production readiness path.
+`mail-validate.sh` checks both separate application and GoTrue SMTP identities
+over TLS before that receipt is set. Resend remains explicit compatibility-only
+and is not a production readiness path.
 
 ## Bootstrap (operator-run, no secrets in Git)
 
@@ -77,7 +77,7 @@ production readiness path.
    recovery mode and the two durable volume paths.
 
 3. Configure GoTrue and app services after the Stalwart account exists. Run
-   `scripts/vps/mail-validate.sh` with the generated GoTrue credentials; after
+   `scripts/vps/mail-validate.sh` with the generated application and GoTrue credentials; after
    it returns `gotrueCredentialCheck:true`, set the non-secret
    `BLOCKWISE_AUTH_SMTP_CONFIGURED=true` receipt in the rendered env and
    restart the app:
@@ -89,8 +89,10 @@ production readiness path.
    scripts/vps/product-health.sh
    ```
 
-   A healthy service means process/config/database readiness, not deliverability;
-   run the acceptance script below against the controlled external hostname.
+   `product-health.sh` additionally requires product-mail to be healthy and
+   both SMTP identities to authenticate over TLS. Run the acceptance script
+   below against the controlled external hostname to prove end-to-end
+   deliverability and token behaviour.
 
 ## DNS, TLS and reputation gate
 
