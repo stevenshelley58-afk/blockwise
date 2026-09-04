@@ -30,6 +30,71 @@ update public.ops_action_capabilities set capability_state='available', descript
   else description end
 where action_type in ('enquiry_close','enquiry_reply','enquiry_reopen');
 
+-- Provider-owned actions have a dedicated Hermes claimer. The generic
+-- control-edge lane must never complete one after the web executor returns.
+create or replace function public.claim_ops_action(p_lease_seconds integer default 600)
+returns table (id uuid, action_id uuid, workspace_id uuid, customer_id uuid, actor_operator_id uuid, actor_role text,
+  action_type text, target_type text, target_id uuid, expected_version bigint, reason text, payload jsonb,
+  attempts integer, max_attempts integer, expires_at timestamptz, lease_token uuid)
+language sql security definer set search_path = '' as $$
+  update public.ops_action_outbox as o set status='processing', attempts=o.attempts+1,
+    lease_token=gen_random_uuid(), lease_expires_at=now()+make_interval(secs=>greatest(30,least(coalesce(p_lease_seconds,600),3600))), updated_at=now()
+  where o.id=(select c.id from public.ops_action_outbox c where c.status='pending' and c.run_after<=now()
+    and c.expires_at>now() and c.attempts<c.max_attempts
+    and c.action_type not in ('enquiry_close','enquiry_reply','enquiry_reopen')
+    and not exists (select 1 from public.ops_action_outbox newer where newer.workspace_id=c.workspace_id and newer.target_type=c.target_type and newer.target_id=c.target_id and newer.expected_version>c.expected_version and newer.status not in ('rejected','expired','superseded'))
+    order by c.run_after,c.created_at,c.id for update skip locked limit 1)
+  returning o.id,o.action_id,o.workspace_id,o.customer_id,o.actor_operator_id,o.actor_role,o.action_type,o.target_type,o.target_id,o.expected_version,o.reason,o.payload,o.attempts,o.max_attempts,o.expires_at,o.lease_token;
+$$;
+
+create or replace function public.resolve_ops_provider_action_identity(p_workspace_id uuid, p_enquiry_id uuid)
+returns jsonb language sql security definer set search_path = '' as $$
+  select jsonb_build_object('ciphertext', l.provider_conversation_id_ciphertext, 'digest', l.provider_conversation_id_digest)
+  from private.ops_provider_operation_ledger l
+  where l.workspace_id=p_workspace_id and l.provider='chatwoot' and l.aggregate_type='enquiry'
+    and l.aggregate_id=p_enquiry_id::text and l.provider_conversation_id_ciphertext is not null
+  order by l.source_version desc, l.updated_at desc limit 1;
+$$;
+revoke all on function public.resolve_ops_provider_action_identity(uuid,uuid) from public, anon, authenticated;
+grant execute on function public.resolve_ops_provider_action_identity(uuid,uuid) to service_role;
+
+create or replace function public.record_ops_enquiry_action_message(p_action_id uuid, p_workspace_id uuid, p_enquiry_id uuid, p_body text)
+returns boolean language plpgsql security definer set search_path = '' as $$
+begin
+  if p_body is null or char_length(btrim(p_body)) not between 1 and 4000
+    or not exists (select 1 from public.ops_action_outbox where action_id=p_action_id and workspace_id=p_workspace_id and target_type='enquiry' and target_id=p_enquiry_id)
+    or not exists (select 1 from public.ops_enquiry_associations where id=p_enquiry_id and workspace_id=p_workspace_id) then
+    raise exception 'invalid enquiry action message' using errcode='22023';
+  end if;
+  insert into private.ops_enquiry_action_messages(action_id,workspace_id,enquiry_id,body)
+    values(p_action_id,p_workspace_id,p_enquiry_id,left(btrim(p_body),4000)) on conflict(action_id) do nothing;
+  return true;
+end;
+$$;
+revoke all on function public.record_ops_enquiry_action_message(uuid,uuid,uuid,text) from public, anon, authenticated;
+grant execute on function public.record_ops_enquiry_action_message(uuid,uuid,uuid,text) to service_role;
+
+create or replace function public.apply_ops_chatwoot_action_result(
+  p_action_id uuid, p_workspace_id uuid, p_enquiry_id uuid, p_expected_version bigint, p_status text
+) returns boolean language plpgsql security definer set search_path = '' as $$
+declare v_updated integer;
+begin
+  if p_status not in ('open','resolved') then raise exception 'invalid Chatwoot result status' using errcode='22023'; end if;
+  update public.ops_enquiry_associations set status=p_status, updated_at=now()
+    where id=p_enquiry_id and workspace_id=p_workspace_id and ops_version=p_expected_version
+      and exists (select 1 from public.ops_action_outbox where action_id=p_action_id and workspace_id=p_workspace_id and action_type in ('enquiry_close','enquiry_reopen'));
+  get diagnostics v_updated=row_count;
+  if v_updated=1 then
+    insert into public.audit_logs(workspace_id,action,target_type,target_id,correlation_id,metadata)
+      select p_workspace_id,'ops.chatwoot.'||o.action_type,'enquiry',p_enquiry_id,p_action_id::text,jsonb_build_object('status',p_status,'expectedVersion',p_expected_version)
+      from public.ops_action_outbox o where o.action_id=p_action_id;
+  end if;
+  return v_updated=1;
+end;
+$$;
+revoke all on function public.apply_ops_chatwoot_action_result(uuid,uuid,uuid,bigint,text) from public, anon, authenticated;
+grant execute on function public.apply_ops_chatwoot_action_result(uuid,uuid,uuid,bigint,text) to service_role;
+
 create or replace function public.claim_ops_provider_action(p_lease_seconds integer default 600)
 returns table (id uuid, action_id uuid, workspace_id uuid, customer_id uuid, actor_operator_id uuid, actor_role text,
   action_type text, target_type text, target_id uuid, expected_version bigint, reason text, payload jsonb,
