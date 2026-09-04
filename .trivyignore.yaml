@@ -5,49 +5,49 @@
 vulnerabilities:
   - id: CVE-2026-76642
     expired_at: 2026-10-04
-    expired_at: 2026-10-04
-    expired_at: 2026-10-04
-    expired_at: 2026-10-04
-    expired_at: 2026-10-04
-    expired_at: 2026-10-04
-    expired_at: 2026-10-04
-    expired_at: 2026-10-04
-    expired_at: 2026-10-04
-    expired_at: 2026-10-04
-    expired_at: 2026-10-04
-    expired_at: 2026-10-04
-    expired_at: 2026-10-04
-    expired_at: 2026-10-04
-    expired_at: 2026-10-04
-    expired_at: 2026-10-04
     statement: "No upstream fixed version reported; review by 2026-10-04."
   - id: CVE-2026-78408
+    expired_at: 2026-10-04
     statement: "No upstream fixed version reported; review by 2026-10-04."
   - id: CVE-2026-78409
+    expired_at: 2026-10-04
     statement: "No upstream fixed version reported; review by 2026-10-04."
   - id: CVE-2026-78410
+    expired_at: 2026-10-04
     statement: "No upstream fixed version reported; review by 2026-10-04."
   - id: CVE-2026-41992
+    expired_at: 2026-10-04
     statement: "No upstream fixed version reported; review by 2026-10-04."
   - id: CVE-2026-54369
+    expired_at: 2026-10-04
     statement: "No upstream fixed version reported; review by 2026-10-04."
   - id: CVE-2026-16742
+    expired_at: 2026-10-04
     statement: "No upstream fixed version reported; review by 2026-10-04."
   - id: CVE-2025-69720
+    expired_at: 2026-10-04
     statement: "No upstream fixed version reported; review by 2026-10-04."
   - id: CVE-2026-13221
+    expired_at: 2026-10-04
     statement: "No upstream fixed version reported; review by 2026-10-04."
   - id: CVE-2026-42496
+    expired_at: 2026-10-04
     statement: "No upstream fixed version reported; review by 2026-10-04."
   - id: CVE-2026-8376
+    expired_at: 2026-10-04
     statement: "No upstream fixed version reported; review by 2026-10-04."
   - id: CVE-2026-42497
+    expired_at: 2026-10-04
     statement: "No upstream fixed version reported; review by 2026-10-04."
   - id: CVE-2026-48962
+    expired_at: 2026-10-04
     statement: "No upstream fixed version reported; review by 2026-10-04."
   - id: CVE-2026-57432
+    expired_at: 2026-10-04
     statement: "No upstream fixed version reported; review by 2026-10-04."
   - id: CVE-2026-57433
+    expired_at: 2026-10-04
     statement: "No upstream fixed version reported; review by 2026-10-04."
   - id: CVE-2026-9538
+    expired_at: 2026-10-04
     statement: "No upstream fixed version reported; review by 2026-10-04."

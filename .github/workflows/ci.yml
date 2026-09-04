@@ -126,6 +126,14 @@ jobs:
       - name: Load product image
         run: gzip -dc product-image.tar.gz | docker load
 
+      - name: Validate scoped Trivy exceptions
+        run: |
+          ids=$(grep -c '^  - id: CVE-' .trivyignore.yaml)
+          expiries=$(grep -c '^    expired_at: 2026-10-04$' .trivyignore.yaml)
+          test "$ids" -gt 0
+          test "$ids" -eq "$expiries"
+          test "$(grep -c '^    expired_at:' .trivyignore.yaml)" -eq "$expiries"
+
       - name: Scan product image for HIGH and CRITICAL vulnerabilities
         run: >-
           docker run --rm
