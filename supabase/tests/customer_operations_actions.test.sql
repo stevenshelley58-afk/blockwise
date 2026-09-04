@@ -134,7 +134,7 @@ select lives_ok($$ select public.enqueue_ops_action(
   '88888888-8888-4888-8888-888888888896', 'ops:test:current-billing',
   '86666666-6666-4666-8666-666666666666', '86666666-6666-4666-8666-666666666666',
   'billing_reconcile', 'billing', '86666666-6666-4666-8666-666666666666',
-  '87777777-7777-4777-8777-777777777777', 'owner', 'aal2', 4,
+  '87777777-7777-4777-8777-777777777777', 'owner', 'aal2', (select ops_version from public.workspaces where id='86666666-6666-4666-8666-666666666666'),
   'current billing test', now()-interval '1 hour', now()+interval '2 hours', '{}'::jsonb
 ) $$, 'current billing versions pass');
 
@@ -142,7 +142,7 @@ select lives_ok($$ select public.enqueue_ops_action(
   '88888888-8888-4888-8888-888888888883', 'ops:test:role:gated',
   '86666666-6666-4666-8666-666666666666', '86666666-6666-4666-8666-666666666666',
   'team_role_change', 'profile', '87777777-7777-4777-8777-777777777777',
-  '87777777-7777-4777-8777-777777777777', 'owner', 'aal2', 1,
+  '87777777-7777-4777-8777-777777777777', 'owner', 'aal2', (select ops_version from public.workspace_members where workspace_id='86666666-6666-4666-8666-666666666666' and profile_id='87777777-7777-4777-8777-777777777777'),
   'Role executor is not enabled', now() - interval '1 hour', now() + interval '2 hours',
   '{"role":"viewer"}'::jsonb
 ) $$, 'capability-gated action is recorded without inventing execution');
@@ -153,7 +153,7 @@ select lives_ok($$ select public.enqueue_ops_action(
   '88888888-8888-4888-8888-888888888884', 'ops:test:suspend:unsupported',
   '86666666-6666-4666-8666-666666666666', '86666666-6666-4666-8666-666666666666',
   'team_suspend', 'profile', '87777777-7777-4777-8777-777777777777',
-  '87777777-7777-4777-8777-777777777777', 'owner', 'aal2', 1,
+  '87777777-7777-4777-8777-777777777777', 'owner', 'aal2', (select ops_version from public.workspace_members where workspace_id='86666666-6666-4666-8666-666666666666' and profile_id='87777777-7777-4777-8777-777777777777'),
   'Suspension capability is not implemented', now() - interval '1 hour', now() + interval '2 hours', '{}'::jsonb
 ) $$, 'unsupported action is recorded without execution');
 select is((select status from public.ops_action_outbox where action_id = '88888888-8888-4888-8888-888888888884'), 'rejected', 'unsupported action is rejected explicitly');
