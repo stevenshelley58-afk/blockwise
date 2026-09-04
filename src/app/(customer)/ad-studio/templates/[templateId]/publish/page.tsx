@@ -73,6 +73,15 @@ export default async function PublishPage({
     ? validatePublishState(state, { controls: validationControls }).filter((issue) => !isInteractiveDependencyIssue(issue))
     : [];
   const providerWrites = providerWritesEnabled();
+  const { data: metaConnection } = await supabase
+    .from("provider_connections")
+    .select("status")
+    .eq("workspace_id", access.workspaceId)
+    .eq("provider", "meta")
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const automatedPublishAvailable = providerWrites && metaConnection?.status === "connected";
   const metadata = (pack as unknown as { metadata?: { title?: string } }).metadata;
   const templateName = metadata?.title?.trim() || pack.metadata.title || pack.templateId;
 
@@ -115,6 +124,8 @@ export default async function PublishPage({
           initialIssues={issues}
           providerWritesEnabled={providerWrites}
           audienceLocations={audienceLocations}
+          canRequestManualPublish={access.isOperator || access.role === "owner" || access.role === "admin"}
+          automatedPublishAvailable={automatedPublishAvailable}
         />
       </div>
     </div>

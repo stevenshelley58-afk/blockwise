@@ -1,9 +1,11 @@
 "use client";
 
 import type { Layout, AdTemplate, Rect } from "../../../../packages/ad-template-contract/src/types";
+import { ArrowUp, MessageCircle, MoreHorizontal, Share2, ThumbsUp } from "lucide-react";
 import { LayeredCanvas } from "./layered-canvas";
 import { businessInitials, ctaLabelText, domainLabel, truncateForPreview } from "./preview-text";
 import type { MetaCopy } from "./use-editor-state";
+import { META_COPY_CONSTRAINTS } from "../../../lib/adstudio/meta-copy-contract";
 
 // ---------------------------------------------------------------------------
 // Meta previews — placement-specific mockups of how the ad appears on
@@ -47,17 +49,22 @@ export function BusinessAvatar({
   size?: number;
 }) {
   const initials = businessInitials(businessName);
+  // Brand Pack URLs are commonly signed on a separate storage origin. Do not
+  // put those URLs in this client preview: a CSP block would create a noisy
+  // failed request. Same-origin paths are safe; otherwise use initials.
+  const safeLogoUrl = logoUrl && logoUrl.startsWith("/") && !logoUrl.startsWith("//") ? logoUrl : null;
   return (
     <span
-      className="flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-blue-600 text-white"
+      className="flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-muted text-foreground"
       style={{ width: size, height: size, fontSize: size * 0.38 }}
-      aria-hidden="true"
+      role="img"
+      aria-label={`${businessName || "Business"} profile`}
     >
-      {logoUrl ? (
+      {safeLogoUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={logoUrl} alt="" className="h-full w-full object-cover" />
+        <img src={safeLogoUrl} alt="" className="h-full w-full object-cover" />
       ) : (
-        <span className="font-semibold leading-none">{initials || "B"}</span>
+        <span className="font-semibold leading-none">{initials}</span>
       )}
     </span>
   );
@@ -80,22 +87,26 @@ export function FeedPreview({
   destinationUrl,
   className,
 }: MetaPreviewProps) {
-  const domain = domainLabel(destinationUrl) || "your-business.com.au";
+  const domain = domainLabel(destinationUrl) || "Destination not set";
+  const primaryText = truncateForPreview(copy.primaryText, META_COPY_CONSTRAINTS.primaryText);
+  const headline = truncateForPreview(copy.headline, META_COPY_CONSTRAINTS.headline);
+  const description = truncateForPreview(copy.description, META_COPY_CONSTRAINTS.description);
+  const cta = truncateForPreview(ctaLabelText(copy.cta), META_COPY_CONSTRAINTS.cta) || "Learn more";
   return (
-    <div className={`w-full max-w-[420px] overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm ${className ?? ""}`} data-testid="meta-feed-preview">
+    <div className={`w-full max-w-[420px] overflow-hidden rounded-lg border border-border bg-card shadow-sm ${className ?? ""}`} data-testid="meta-feed-preview">
       {/* Header: avatar, business name, Sponsored */}
-      <div className="flex items-center gap-2.5 px-3 py-2.5">
+      <div className="flex items-center gap-2.5 px-4 py-3">
         <BusinessAvatar businessName={businessName} logoUrl={logoUrl} />
         <div className="min-w-0 flex-1 leading-tight">
-          <p className="truncate text-[13px] font-semibold text-neutral-900">{businessName || "Your business"}</p>
-          <p className="text-[11px] text-neutral-500">Sponsored</p>
+          <p className="truncate text-[13px] font-semibold text-foreground">{businessName || "Your business"}</p>
+          <p className="text-[11px] text-muted-foreground">Sponsored</p>
         </div>
-        <span className="text-neutral-400" aria-hidden="true">···</span>
+        <MoreHorizontal className="size-5 text-muted-foreground" aria-label="More options" />
       </div>
 
       {/* Primary text */}
-      <p className="px-3 pb-2 text-[13px] leading-snug text-neutral-900">
-        {truncateForPreview(copy.primaryText, 200) || "Your primary text appears here."}
+      <p className="px-4 pb-3 text-[13px] leading-relaxed text-foreground">
+        {primaryText || "Your primary text appears here."}
       </p>
 
       {/* 4:5 creative */}
@@ -112,26 +123,26 @@ export function FeedPreview({
       </div>
 
       {/* Link row: domain, headline, description, CTA */}
-      <div className="flex items-stretch justify-between gap-2 border-t border-neutral-200 bg-neutral-100 px-3 py-2.5">
+      <div className="flex items-stretch justify-between gap-3 border-t border-border bg-muted/50 px-4 py-3">
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[10px] uppercase tracking-wide text-neutral-500">{domain}</p>
-          <p className="mt-0.5 truncate text-[14px] font-semibold text-neutral-900">
-            {truncateForPreview(copy.headline, 60) || "Your headline"}
+          <p className="truncate text-[10px] uppercase tracking-wide text-muted-foreground">{domain}</p>
+          <p className="mt-0.5 truncate text-[14px] font-semibold text-foreground">
+            {headline || "Your headline"}
           </p>
-          <p className="truncate text-[12px] text-neutral-500">
-            {truncateForPreview(copy.description, 40) || "Your description"}
+          <p className="truncate text-[12px] text-muted-foreground">
+            {description || "Your description"}
           </p>
         </div>
-        <span className="flex shrink-0 items-center rounded-md bg-neutral-200 px-3 text-[13px] font-medium text-neutral-700">
-          {ctaLabelText(copy.cta)}
+        <span className="flex shrink-0 items-center rounded-md border border-border bg-card px-3 text-[13px] font-medium text-foreground">
+          {cta}
         </span>
       </div>
 
       {/* Engagement footer */}
-      <div className="flex items-center justify-between px-3 py-2 text-[12px] font-medium text-neutral-600">
-        <span>👍 Like</span>
-        <span>💬 Comment</span>
-        <span>↗ Share</span>
+      <div className="flex items-center justify-around border-t border-border px-3 py-2 text-[12px] font-medium text-muted-foreground" role="group" aria-label="Post actions">
+        <span className="inline-flex items-center gap-1"><ThumbsUp className="size-4" aria-hidden="true" />Like</span>
+        <span className="inline-flex items-center gap-1"><MessageCircle className="size-4" aria-hidden="true" />Comment</span>
+        <span className="inline-flex items-center gap-1"><Share2 className="size-4" aria-hidden="true" />Share</span>
       </div>
     </div>
   );
@@ -155,7 +166,7 @@ export function StoryPreview({
 }: MetaPreviewProps) {
   return (
     <div
-      className={`relative aspect-[9/16] w-full max-w-[300px] overflow-hidden rounded-xl bg-white shadow-sm ${className ?? ""}`}
+      className={`relative aspect-[9/16] w-full max-w-[300px] overflow-hidden rounded-lg bg-card shadow-sm ${className ?? ""}`}
       data-testid="meta-story-preview"
     >
       {/* The creative fills the frame */}
@@ -187,9 +198,9 @@ export function StoryPreview({
       <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/50 to-transparent px-3 pb-4 pt-10">
         <div className="flex items-center justify-between gap-2">
           <span className="max-w-[70%] truncate rounded-full bg-white/95 px-4 py-2 text-[12px] font-semibold text-neutral-900 shadow">
-            {ctaLabelText(copy.cta)}
+            {truncateForPreview(ctaLabelText(copy.cta), META_COPY_CONSTRAINTS.cta) || "Learn more"}
           </span>
-          <span className="text-white/90" aria-hidden="true">↑</span>
+          <ArrowUp className="size-4 text-white/90" aria-hidden="true" />
         </div>
       </div>
     </div>

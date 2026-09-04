@@ -35,14 +35,14 @@ export default async function ConnectMetaPage() {
     >
       <header className="mb-6">
         <p className="font-mono text-[9.5px] font-medium tracking-[0.12em] text-(--faint) uppercase">
-          Connect → paste → done
+          Meta publishing
         </p>
         <h1 className="mt-1 font-display text-[24px] font-extrabold tracking-[-0.02em] md:text-[27px]">
-          Connect your Meta ad account
+          Publish your ads with Blockwise
         </h1>
         <p className="mt-1 text-[13px] text-muted-foreground">
-          Give Blockwise access to your ad account through Meta&apos;s Partners page. No app to install, nothing to
-          approve on our side — access is instant once you save.
+          Meta app review is still in progress. You can prepare your ad now and request manual publishing by an
+          authorised Blockwise operator. This is not an API connection and does not bypass Meta&apos;s review.
         </p>
       </header>
 

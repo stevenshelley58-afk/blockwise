@@ -318,7 +318,7 @@ describe("Meta Feed and Story previews", () => {
   it("both previews take the live business name and fall back to Brand Pack initials", () => {
     assert.match(source, /businessInitials/);
     assert.match(source, /businessName \|\| "Your business"/);
-    assert.match(source, /logoUrl \?/);
+    assert.match(source, /safeLogoUrl \?/);
   });
 });
 
@@ -326,9 +326,16 @@ describe("publish reports active state honestly with safe retry", () => {
   const flow = readFileSync("src/app/(customer)/ad-studio/templates/[templateId]/publish/publish-flow.tsx", "utf8");
   const route = readFileSync("src/app/api/adstudio/ads/[id]/publish/route.ts", "utf8");
 
-  it("publish is a single explicit action with no paused language", () => {
-    assert.match(flow, /\{submitting \? "Publishing…" : "Publish"\}/);
-    assert.doesNotMatch(flow, /Freeze & Create|Paused on Meta|Activate Campaign|paused ads/);
+  it("uses automated publishing for connected accounts and manual handoff otherwise", () => {
+    assert.match(flow, /automatedPublishAvailable/);
+    assert.match(flow, /onClick=\{automatedPublishAvailable \? handleAutomatedPublish : handleManualPublish\}/);
+    assert.match(flow, /disabled=\{automatedPublishAvailable \?/);
+    assert.match(flow, /\/publish\?workspaceId=/);
+    assert.match(flow, /Request manual publishing/);
+    assert.match(flow, /\/manual-publish/);
+    assert.match(flow, /does not connect your Meta account to Blockwise or bypass Meta/);
+    assert.match(flow, /Ask a workspace owner or admin/);
+    assert.match(flow, /!canRequestManualPublish \|\| !ready/);
   });
 
   it("partial failure reports the real state and never claims the ad is active", () => {

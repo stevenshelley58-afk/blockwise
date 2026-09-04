@@ -16,6 +16,8 @@ type AssetUploadDropzoneProps = AssetUploadConstraints & {
   actionText?: string;
   previewUrl?: string;
   previewAlt?: string;
+  previewFit?: "cover" | "contain";
+  previewBackground?: string;
   fileName?: string;
   fileSize?: number;
   fileType?: string;
@@ -55,6 +57,8 @@ export function AssetUploadDropzone({
   actionText,
   previewUrl,
   previewAlt = "",
+  previewFit = "cover",
+  previewBackground,
   fileName,
   fileSize,
   fileType,
@@ -173,8 +177,8 @@ export function AssetUploadDropzone({
           aria-describedby={`${descriptionId}${localError ? ` ${errorId}` : ""}`}
           onClick={openFilePicker}
         >
-          <span className="asset-upload-preview" aria-hidden>
-            {previewUrl ? <img src={previewUrl} alt={previewAlt} /> : selected ? <FileText size={24} /> : <Upload size={24} />}
+          <span className="asset-upload-preview" style={previewBackground ? { background: previewBackground } : undefined} aria-hidden>
+            {previewUrl ? <img src={previewUrl} alt={previewAlt} style={{ objectFit: previewFit }} /> : selected ? <FileText size={24} /> : <Upload size={24} />}
           </span>
           <span className="asset-upload-copy">
             <strong>{fileName || actionText || label}</strong>

@@ -6,7 +6,7 @@ import {
 } from "@/lib/booking/service";
 import {
   BookingConfigurationError,
-  getHostedBookingUrl,
+  getBookingProviderReadiness,
   normalizeBookingMarket,
 } from "@/lib/booking/provider";
 import { requireWorkspaceAccess } from "@/lib/auth/workspace-access";
@@ -26,7 +26,7 @@ export async function GET() {
   });
   return NextResponse.json({
     market: context.market,
-    configured: Boolean(getHostedBookingUrl(context.market)),
+    configured: getBookingProviderReadiness().ok,
     booking: latest,
   });
 }

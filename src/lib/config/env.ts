@@ -1,4 +1,5 @@
 import { resolveSupabaseServerCredential } from "../supabase/credentials.ts";
+import { getBookingProviderReadiness } from "../booking/provider.ts";
 
 export const REQUIRED_ENV_KEYS = [
   "NEXT_PUBLIC_APP_URL",
@@ -34,6 +35,13 @@ const MAIL_REQUIRED_ENV_KEYS = [
   "SMTP_HOST",
   "SMTP_USER",
   "SMTP_PASSWORD",
+] as const;
+
+const AUTH_SMTP_REQUIRED_ENV_KEYS = [
+  "BLOCKWISE_AUTH_SMTP_HOST",
+  "BLOCKWISE_AUTH_SMTP_USER",
+  "BLOCKWISE_AUTH_SMTP_PASS",
+  "BLOCKWISE_AUTH_SMTP_ADMIN_EMAIL",
 ] as const;
 
 export const FIRST_TESTER_ENV_KEYS = [
@@ -118,7 +126,10 @@ export function getMailReadiness(env: NodeJS.ProcessEnv = process.env) {
       : { enabled: false, ok: true, missing: [], invalid: [] };
   }
 
-  const missing: string[] = MAIL_REQUIRED_ENV_KEYS.filter((key) => !env[key]?.trim());
+  const missing: string[] = [
+    ...MAIL_REQUIRED_ENV_KEYS,
+    ...AUTH_SMTP_REQUIRED_ENV_KEYS,
+  ].filter((key) => !env[key]?.trim());
   const invalid = [...missing];
   const publicUrl = env.BLOCKWISE_MAIL_PUBLIC_URL?.trim();
   const smtpPort = Number(env.SMTP_PORT ?? 587);
@@ -135,10 +146,15 @@ export function getMailReadiness(env: NodeJS.ProcessEnv = process.env) {
   }
   if (!Number.isInteger(smtpPort) || smtpPort < 1 || smtpPort > 65535) invalid.push("SMTP_PORT");
   if (!Number.isInteger(authSmtpPort) || authSmtpPort < 1 || authSmtpPort > 65535) invalid.push("BLOCKWISE_AUTH_SMTP_PORT");
+  for (const key of ["SMTP_HOST", "BLOCKWISE_AUTH_SMTP_HOST"] as const) {
+    const host = env[key]?.trim();
+    if (host && /[\s/:]/u.test(host)) invalid.push(key);
+  }
   if (env.EMAIL_PROVIDER?.trim().toLowerCase() !== "smtp") invalid.push("EMAIL_PROVIDER");
-  // This is a non-secret operator receipt: the host-side validator checks the
-  // actual GoTrue credentials, while the app only needs to know that check
-  // completed. Never inject the GoTrue password into product-app.
+  // This non-secret receipt is supplementary. The real GoTrue identity and
+  // app identity must both be present above; a manually toggled flag alone
+  // can never make readiness healthy. The host validator sets this only after
+  // a live TLS + AUTH check, and the values are never exposed in health JSON.
   if (env.BLOCKWISE_AUTH_SMTP_CONFIGURED?.trim().toLowerCase() !== "true") {
     invalid.push("BLOCKWISE_AUTH_SMTP_CONFIGURED");
   }
@@ -158,6 +174,7 @@ export function getDeploymentReadiness(env: NodeJS.ProcessEnv = process.env) {
   const invalidFirstTester = getInvalidFirstTesterEnvKeys(env);
   const providers = getAllProviderReadiness(env);
   const mail = getMailReadiness(env);
+  const booking = getBookingProviderReadiness(env);
   const allInvalid = uniqueStrings([...invalid, ...mail.invalid]);
 
   return {
@@ -175,14 +192,40 @@ export function getDeploymentReadiness(env: NodeJS.ProcessEnv = process.env) {
     },
     providers,
     mail,
+    booking,
     requiredCount: REQUIRED_ENV_KEYS.length,
     checkedAt: new Date().toISOString(),
   };
 }
 
 function isLocalOrManagedHost(hostname: string): boolean {
-  const host = hostname.toLowerCase();
-  return host === "localhost" || host === "127.0.0.1" || host === "::1" || host.endsWith(".vercel.app") || host.endsWith(".supabase.co");
+  const host = normalizeHostname(hostname);
+  return host === "localhost" || isReservedIp(host) || host.endsWith(".vercel.app") || host.endsWith(".supabase.co");
+}
+
+function normalizeHostname(hostname: string): string {
+  return hostname.trim().toLowerCase().replace(/^\[|\]$/g, "").replace(/\.$/u, "");
+}
+
+/** Reject hosts that cannot be an external production mail target. */
+function isReservedIp(hostname: string): boolean {
+  const host = normalizeHostname(hostname);
+  const octets = host.split(".").map(Number);
+  if (octets.length === 4 && octets.every((part) => Number.isInteger(part) && part >= 0 && part <= 255)) {
+    const [a, b] = octets;
+    return a === 0 || a === 10 || a === 127 || (a === 100 && b >= 64 && b <= 127) ||
+      (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) ||
+      (a === 192 && b === 0 && octets[2] === 0) || (a === 192 && b === 0 && octets[2] === 2) ||
+      (a === 192 && b === 168) ||
+      (a === 198 && b >= 18 && b <= 19) || (a === 198 && b === 51 && octets[2] === 100) ||
+      (a === 203 && b === 0 && octets[2] === 113) || a >= 224;
+  }
+  if (!host.includes(":")) return false;
+  const first = Number.parseInt(host.split(":")[0] || "0", 16);
+  const second = Number.parseInt(host.split(":")[1] || "0", 16);
+  return host === "::" || host === "::1" || (first & 0xfe00) === 0xfc00 ||
+    (first & 0xffc0) === 0xfe80 || (first === 0x2001 && second === 0x0db8) ||
+    (first & 0xff00) === 0xff00 || host.startsWith("::ffff:") && isReservedIp(host.slice(7));
 }
 
 function isMissingOrPlaceholder(rawValue: string | undefined): boolean {
