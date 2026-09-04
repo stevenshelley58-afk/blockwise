@@ -156,6 +156,7 @@ export async function loadPublishState(
   supabase: SupabaseClient,
   adId: string,
   workspaceId: string,
+  options: { templateSupabase?: SupabaseClient } = {},
 ): Promise<PublishLoadResult> {
   // 1. Load ad
   const { data: ad, error: adError } = await supabase
@@ -178,7 +179,9 @@ export async function loadPublishState(
   if (revError || !revision) throw new PublishError("revision_not_found", "Active revision not found");
 
   // 3. Load template
-  const { data: packRow, error: packError } = await supabase
+  // The ad lookup above proves workspace ownership. Customer callers may use
+  // a service-only template reader so saved history survives quarantine.
+  const { data: packRow, error: packError } = await (options.templateSupabase ?? supabase)
     .from("ad_templates")
     .select("template_json")
     .eq("template_id", ad.template_id)

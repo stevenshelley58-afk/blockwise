@@ -2,7 +2,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { renderPlacement } from "../../../../../../../packages/ad-template-renderer/src/renderer.ts";
 import type { AdTemplate } from "../../../../../../../packages/ad-template-contract/src/types.ts";
 import { requireAdStudioRequest } from "@/lib/adstudio/http";
-import { getTemplate, templateAssetStoragePath, type GallerySamplePlacement } from "@/lib/adstudio/pack-gallery";
+import { parseCustomerAdId } from "@/lib/adstudio/create-customer-ad";
+import { getTemplate, getTemplateForExistingCustomerAd, templateAssetStoragePath, type GallerySamplePlacement } from "@/lib/adstudio/pack-gallery";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
@@ -32,11 +33,22 @@ export async function GET(
   const placement = parsePlacement(request.nextUrl.searchParams.get("placement"));
   if (!placement) return notFoundResponse();
 
-  const template = await getTemplate(context.supabase, templateId);
+  const requestedAdId = parseCustomerAdId(request.nextUrl.searchParams.get("adId") ?? undefined);
+  const service = createSupabaseServiceClient();
+  const activeTemplate = await getTemplate(context.supabase, templateId);
+  const template = activeTemplate ?? (requestedAdId
+    ? await getTemplateForExistingCustomerAd({
+        customerSupabase: context.supabase,
+        internalSupabase: service,
+        workspaceId: context.access.workspaceId,
+        adId: requestedAdId,
+        templateId,
+      })
+    : null);
   if (!template) return notFoundResponse();
 
   try {
-    const assets = await loadDeclaredAssets(template);
+    const assets = await loadDeclaredAssets(template, service);
     const imageValues: Record<string, Buffer> = { ...assets };
     for (const input of template.imageInputs) {
       if (input.defaultAssetKey && assets[input.defaultAssetKey]) {
@@ -62,8 +74,7 @@ export async function GET(
   }
 }
 
-async function loadDeclaredAssets(template: AdTemplate): Promise<Record<string, Buffer>> {
-  const service = createSupabaseServiceClient();
+async function loadDeclaredAssets(template: AdTemplate, service = createSupabaseServiceClient()): Promise<Record<string, Buffer>> {
   const declarations = Object.entries(template.assets);
   if (declarations.length === 0) return {};
   const { data, error } = await service

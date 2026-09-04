@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { errorResponse, readJsonBody, requireAdStudioRequest } from "@/lib/adstudio/http";
-import { getTemplate, templateAssetStoragePath } from "@/lib/adstudio/pack-gallery";
+import { getTemplateForInternalInspection, templateAssetStoragePath } from "@/lib/adstudio/pack-gallery";
 import { saveAd, SaveError } from "@/lib/adstudio/save-ad";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { adDocumentSchema, type AdDocumentParsed } from "../../../../../../../packages/ad-template-contract/src/schema.ts";
@@ -72,13 +72,15 @@ export async function POST(request: NextRequest, context: RouteContext) {
   }
 
   try {
+    const serviceSupabase = createSupabaseServiceClient();
     const [customerImages, templateAssets] = await Promise.all([
-      resolveImageValues(document, access.access.workspaceId, id, createSupabaseServiceClient()),
-      resolveTemplateAssetValues(id, access.access.workspaceId),
+      resolveImageValues(document, access.access.workspaceId, id, serviceSupabase),
+      resolveTemplateAssetValues(id, access.access.workspaceId, serviceSupabase),
     ]);
     const persistedDocument = ({ ...document, sharedImageValues: customerImages.refs });
     const output = await saveAd({
       supabase: access.supabase,
+      templateSupabase: serviceSupabase,
       workspaceId: access.access.workspaceId,
       adId: id,
       document: persistedDocument,
@@ -126,8 +128,11 @@ export async function resolveImageValues(
 
 type StoredTemplateAsset = { asset_key: string; file_name: string; mime_type: string; storage_path: string };
 
-export async function resolveTemplateAssetValues(adId: string, workspaceId: string): Promise<Record<string, Buffer>> {
-  const service = createSupabaseServiceClient();
+export async function resolveTemplateAssetValues(
+  adId: string,
+  workspaceId: string,
+  service = createSupabaseServiceClient(),
+): Promise<Record<string, Buffer>> {
   const { data: ad, error: adError } = await service
     .from("ad_customer_ads")
     .select("template_id")
@@ -136,7 +141,7 @@ export async function resolveTemplateAssetValues(adId: string, workspaceId: stri
     .single();
   if (adError || !ad?.template_id) throw new SaveError("ad_not_found", "Ad not found");
 
-  const template = await getTemplate(service, ad.template_id);
+  const template = await getTemplateForInternalInspection(service, ad.template_id);
   if (!template) throw new SaveError("template_not_found", "Template not found");
   const declarations = Object.entries(template.assets);
   if (declarations.length === 0) return {};
