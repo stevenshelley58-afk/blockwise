@@ -3,16 +3,21 @@ import { NextResponse, type NextRequest } from "next/server";
 import { errorResponse, readJsonBody, requireAdStudioRequest } from "@/lib/adstudio/http";
 import {
   assertActivationReadiness,
-  loadLatestPublishPlanForAd,
   markPlanObjectsActive,
   PublishError,
 } from "@/lib/adstudio/publish-adapter";
 import {
+  claimMetaPublishExecution,
+  ensureMetaActivationMutation,
   loadMetaPublishPlan,
+  releaseMetaPublishExecutionLease,
+  renewMetaPublishExecutionLease,
   updateMetaPublishPlanExecution,
 } from "@/lib/providers/meta-execution";
 import { executeMetaMutationById } from "@/lib/providers/meta-mutation-worker";
-import { buildMetaPlanMutation, buildOwnedMetaActivationPayload } from "@/lib/providers/meta-mutations";
+import { buildOwnedMetaActivationPayload } from "@/lib/providers/meta-mutations";
+import { metaPublishProviderWritesEnabled } from "@/lib/providers/meta-provider-write-gate";
+import { createMetaExecutionLeaseHeartbeat, type MetaExecutionLeaseHeartbeat } from "@/lib/providers/meta-execution-lease-heartbeat";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const runtime = "nodejs";
@@ -23,13 +28,11 @@ type RouteContext = {
 };
 
 type ActivateBody = {
-  /** Optional explicit plan from the PAUSED publish receipt; defaults to the latest plan for the ad. */
+  /** Exact plan from the PAUSED publish receipt. */
   planId?: string;
+  controlsFingerprint?: string;
+  clientMutationKey?: string;
 };
-
-function providerWritesEnabled() {
-  return process.env.BLOCKWISE_ENABLE_PROVIDER_WRITES === "true";
-}
 
 /**
  * POST /api/adstudio/ads/[id]/activate?workspaceId=...
@@ -53,21 +56,241 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
   const body = await readJsonBody<ActivateBody>(request);
   const planId = typeof body.planId === "string" && body.planId.trim() ? body.planId.trim() : undefined;
+  const controlsFingerprint = typeof body.controlsFingerprint === "string" ? body.controlsFingerprint.trim() : "";
+  const clientMutationKey = typeof body.clientMutationKey === "string" ? body.clientMutationKey.trim() : "";
 
+  if (!planId) {
+    return NextResponse.json(
+      { error: "plan_id_required", message: "Activate requires the exact planId returned by publish." },
+      { status: 400 },
+    );
+  }
+  if (!controlsFingerprint) return NextResponse.json({ error: "controls_fingerprint_required", message: "Activate requires controlsFingerprint from publish." }, { status: 400 });
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(clientMutationKey)) return NextResponse.json({ error: "client_mutation_key_invalid", message: "Activate requires a UUID clientMutationKey." }, { status: 400 });
+
+  const serviceSupabase = createSupabaseServiceClient();
+  let leaseToken: string | null = null;
+  let leasePlanId: string | null = null;
+  let leaseHeartbeat: MetaExecutionLeaseHeartbeat | null = null;
   try {
-    const serviceSupabase = createSupabaseServiceClient();
-    const plan = planId
-      ? await loadMetaPublishPlan(serviceSupabase, {
-          workspaceId: access.access.workspaceId,
-          planId,
-        })
-      : await loadLatestPublishPlanForAd(serviceSupabase, access.access.workspaceId, id);
+    const plan = await loadMetaPublishPlan(serviceSupabase, {
+      workspaceId: access.access.workspaceId,
+      planId,
+    });
     if (!plan) {
       throw new PublishError("no_paused_plan", "No paused Meta publish plan found for this ad — publish it first.");
     }
     if (plan.adStudioCampaignId !== id) {
       throw new PublishError("plan_ad_mismatch", "That Meta publish plan belongs to a different ad.");
     }
+    if (controlsFingerprint !== plan.idempotencyKey) throw new PublishError("controls_fingerprint_mismatch", "The publish controls have changed; publish again before activating.");
+
+    const latestResult = await serviceSupabase
+      .from("meta_publish_plan_mutations")
+      .select("id,status,payload_json,request_log_json,response_log_json,last_error,outcome_status,unconfirmed_pause_ids_json,client_mutation_key")
+      .eq("workspace_id", plan.workspaceId)
+      .eq("meta_publish_plan_id", plan.planId)
+      .eq("action", "activate")
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (latestResult.error) throw new Error(latestResult.error.message);
+    const latest = latestResult.data;
+    const latestPayload = latest?.payload_json as { campaignId?: string; adSetIds?: string[]; adIds?: string[] } | undefined;
+    const latestTargets = {
+      campaignId: latestPayload?.campaignId ?? plan.reconciledObjects.campaignId,
+      adSetIds: latestPayload?.adSetIds ?? [],
+      adIds: latestPayload?.adIds ?? [],
+    };
+    if (latest?.status === "applied") {
+      return NextResponse.json({
+        ok: true,
+        mode: "activate",
+        status: "activated",
+        planId: plan.planId,
+        mutationId: latest.id,
+        targets: latestTargets,
+        message: "This publish plan is already active; no second activation was created.",
+      });
+    }
+    if (latest?.outcome_status === "unconfirmed") {
+      return NextResponse.json({
+        ok: false,
+        mode: "activate",
+        status: "unknown",
+        planId: plan.planId,
+        mutationId: latest.id,
+        targets: latestTargets,
+        error: "activation_unconfirmed",
+        message: latest.last_error ?? "Blockwise could not confirm that every owned object was paused.",
+        unconfirmedPauseIds: latest.unconfirmed_pause_ids_json ?? [],
+      }, { status: 502 });
+    }
+    const existingResult = await serviceSupabase
+      .from("meta_publish_plan_mutations")
+      .select("id,status,approval_request_id,payload_json,request_log_json,response_log_json,last_error,outcome_status,unconfirmed_pause_ids_json")
+      .eq("workspace_id", plan.workspaceId)
+      .eq("meta_publish_plan_id", plan.planId)
+      .eq("action", "activate")
+      .eq("client_mutation_key", clientMutationKey)
+      .maybeSingle();
+    if (existingResult.error) throw new Error(existingResult.error.message);
+    const existing = existingResult.data;
+    const existingPayload = existing?.payload_json as { campaignId?: string; adSetIds?: string[]; adIds?: string[] } | undefined;
+    const existingTargets = {
+      campaignId: existingPayload?.campaignId ?? plan.reconciledObjects.campaignId,
+      adSetIds: existingPayload?.adSetIds ?? [],
+      adIds: existingPayload?.adIds ?? [],
+    };
+    if (existing?.status === "applied") {
+      return NextResponse.json({
+        ok: true,
+        mode: "activate",
+        status: "activated",
+        planId: plan.planId,
+        mutationId: existing.id,
+        targets: existingTargets,
+        message: "Activation already completed for this exact request.",
+      });
+    }
+    if (existing?.status === "failed") {
+      const unconfirmed = existing.outcome_status === "unconfirmed";
+      return NextResponse.json(
+        {
+          ok: false,
+          mode: "activate",
+          status: unconfirmed ? "unknown" : "paused",
+          planId: plan.planId,
+          mutationId: existing.id,
+          targets: existingTargets,
+          error: unconfirmed ? "activation_unconfirmed" : "activation_failed",
+          message: existing.last_error ?? (unconfirmed
+            ? "Activation failed and Blockwise could not confirm that every owned object was paused."
+            : "Activation failed; the Blockwise-created objects remain paused."),
+          ...(unconfirmed ? { unconfirmedPauseIds: existing.unconfirmed_pause_ids_json ?? [] } : {}),
+        },
+        { status: 502 },
+      );
+    }
+
+    const lease = await claimMetaPublishExecution(serviceSupabase, { workspaceId: plan.workspaceId, planId: plan.planId });
+    if (!lease.claimed || !lease.leaseToken) {
+      return NextResponse.json({
+        ok: true,
+        mode: "activate",
+        status: "activating",
+        planId: plan.planId,
+        mutationId: latest?.id ?? existing?.id,
+        message: "Activation is already in progress; refresh shortly.",
+      }, { status: 202 });
+    }
+    const claimedLeaseToken = lease.leaseToken;
+    leaseToken = claimedLeaseToken;
+    leasePlanId = plan.planId;
+
+    // An applying mutation is genuinely in progress only while another
+    // executor still owns the plan lease. Reaching this branch means that
+    // lease expired (or was released), so a provider request may have escaped
+    // without a durable final outcome. Quarantine it atomically with its audit
+    // record instead of spinning forever or replaying ACTIVE writes.
+    const staleApplying = latest?.status === "applying"
+      ? latest
+      : existing?.status === "applying"
+        ? existing
+        : null;
+    if (staleApplying) {
+      const stalePayload = staleApplying.payload_json as { campaignId?: string; adSetIds?: string[]; adIds?: string[] } | undefined;
+      const unconfirmedPauseIds = Array.from(new Set([
+        stalePayload?.campaignId,
+        ...(stalePayload?.adSetIds ?? []),
+        ...(stalePayload?.adIds ?? []),
+      ].filter((value): value is string => typeof value === "string" && value.length > 0)));
+      const quarantineMessage = "A previous activation lost its execution lease while Meta may have been applying changes. Its final state is unconfirmed; verify these objects in Meta Ads Manager before any further activation.";
+      const quarantineResult = await serviceSupabase.rpc("finalize_meta_publish_plan_mutation", {
+        p_workspace_id: plan.workspaceId,
+        p_mutation_id: staleApplying.id,
+        p_status: "failed",
+        p_request_log: staleApplying.request_log_json ?? [],
+        p_response_log: staleApplying.response_log_json ?? [],
+        p_last_error: quarantineMessage,
+        p_outcome_status: "unconfirmed",
+        p_unconfirmed_pause_ids: unconfirmedPauseIds,
+      });
+      if (quarantineResult.error) throw new Error(quarantineResult.error.message);
+      if (quarantineResult.data !== true) {
+        // The previous executor may have committed its terminal outcome while
+        // this request was acquiring the expired lease. Final outcomes are
+        // monotonic in the RPC, so read and report that canonical result.
+        const canonicalResult = await serviceSupabase
+          .from("meta_publish_plan_mutations")
+          .select("id,status,payload_json,last_error,outcome_status,unconfirmed_pause_ids_json")
+          .eq("workspace_id", plan.workspaceId)
+          .eq("id", staleApplying.id)
+          .single();
+        if (canonicalResult.error || !canonicalResult.data) {
+          throw new Error(canonicalResult.error?.message ?? "Stale activation final state could not be loaded.");
+        }
+        const canonical = canonicalResult.data;
+        const canonicalPayload = canonical.payload_json as { campaignId?: string; adSetIds?: string[]; adIds?: string[] } | undefined;
+        const canonicalTargets = {
+          campaignId: canonicalPayload?.campaignId ?? plan.reconciledObjects.campaignId,
+          adSetIds: canonicalPayload?.adSetIds ?? [],
+          adIds: canonicalPayload?.adIds ?? [],
+        };
+        if (canonical.status === "applied") {
+          await updateMetaPublishPlanExecution(serviceSupabase, markPlanObjectsActive(plan));
+          return NextResponse.json({
+            ok: true,
+            mode: "activate",
+            status: "activated",
+            planId: plan.planId,
+            mutationId: canonical.id,
+            targets: canonicalTargets,
+            message: "The prior activation completed while its stale lease was being reconciled; no second activation was created.",
+          });
+        }
+        if (canonical.status === "failed") {
+          const unconfirmed = canonical.outcome_status === "unconfirmed";
+          return NextResponse.json({
+            ok: false,
+            mode: "activate",
+            status: unconfirmed ? "unknown" : "paused",
+            planId: plan.planId,
+            mutationId: canonical.id,
+            targets: canonicalTargets,
+            error: unconfirmed ? "activation_unconfirmed" : "activation_failed",
+            message: canonical.last_error ?? (unconfirmed
+              ? "Activation failed and Blockwise could not confirm the final Meta status."
+              : "Activation failed; the Blockwise-created objects remain paused."),
+            ...(unconfirmed ? { unconfirmedPauseIds: canonical.unconfirmed_pause_ids_json ?? [] } : {}),
+          }, { status: 502 });
+        }
+        throw new Error("Stale activation could not be quarantined atomically.");
+      }
+      return NextResponse.json({
+        ok: false,
+        mode: "activate",
+        status: "unknown",
+        planId: plan.planId,
+        mutationId: staleApplying.id,
+        targets: {
+          campaignId: stalePayload?.campaignId ?? plan.reconciledObjects.campaignId,
+          adSetIds: stalePayload?.adSetIds ?? [],
+          adIds: stalePayload?.adIds ?? [],
+        },
+        error: "activation_unconfirmed",
+        message: quarantineMessage,
+        unconfirmedPauseIds,
+      }, { status: 502 });
+    }
+
+    leaseHeartbeat = createMetaExecutionLeaseHeartbeat({
+      renew: () => renewMetaPublishExecutionLease(serviceSupabase, {
+        workspaceId: plan.workspaceId,
+        planId: plan.planId,
+        leaseToken: claimedLeaseToken,
+      }),
+    });
 
     const readiness = assertActivationReadiness(plan);
     if (!readiness.ok) throw new PublishError(readiness.code, readiness.message);
@@ -86,7 +309,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       adIds: mutationPayload.adIds ?? [],
     };
 
-    if (!providerWritesEnabled()) {
+    if (!metaPublishProviderWritesEnabled(plan.workspaceId)) {
       return NextResponse.json({
         ok: true,
         mode: "dry_run",
@@ -97,65 +320,52 @@ export async function POST(request: NextRequest, context: RouteContext) {
       });
     }
 
-    const mutation = buildMetaPlanMutation({
+    const mutation = await ensureMetaActivationMutation(serviceSupabase, {
       workspaceId: plan.workspaceId,
       planId: plan.planId,
       requestedBy: access.access.userId,
-      action: "activate",
-      payload: mutationPayload,
+      clientMutationKey: latest?.status === "approved" && latest.client_mutation_key
+        ? latest.client_mutation_key
+        : clientMutationKey,
+      planFingerprint: controlsFingerprint,
     });
-    const now = new Date().toISOString();
-    const { error: mutationError } = await serviceSupabase
-      .from("meta_publish_plan_mutations")
-      .insert({
-        id: mutation.mutationId,
-        workspace_id: mutation.workspaceId,
-        meta_publish_plan_id: mutation.planId,
-        action: mutation.action,
-        status: "approved",
-        payload_json: mutation.payload,
-        requested_by: mutation.requestedBy,
-        request_log_json: mutation.requestLog,
-        response_log_json: mutation.responseLog,
-        last_error: null,
-        updated_at: now,
-      });
-    if (mutationError) throw new Error(mutationError.message);
 
-    const { data: approval, error: approvalError } = await serviceSupabase
-      .from("approval_requests")
-      .insert({
-        workspace_id: mutation.workspaceId,
-        target_type: mutation.approval.targetType,
-        target_id: mutation.approval.targetId,
-        status: "approved",
-        requested_by: mutation.requestedBy,
-        approved_by: mutation.requestedBy,
-        resolved_at: now,
-        risk_summary: mutation.approval.riskSummary,
-      })
-      .select("id")
-      .single();
-    if (approvalError || !approval) {
-      throw new Error(approvalError?.message ?? "Unable to record the activation approval.");
-    }
-    const { error: linkError } = await serviceSupabase
-      .from("meta_publish_plan_mutations")
-      .update({ approval_request_id: approval.id, updated_at: now })
-      .eq("workspace_id", mutation.workspaceId)
-      .eq("id", mutation.mutationId);
-    if (linkError) throw new Error(linkError.message);
+    await leaseHeartbeat.renewNow();
 
     const executed = await executeMetaMutationById({
       serviceSupabase,
       workspaceId: plan.workspaceId,
       mutationId: mutation.mutationId,
+      fetchImpl: leaseHeartbeat.fetch,
+      compensationFetchImpl: fetch,
+      onCheckpoint: leaseHeartbeat.renewNow,
     });
+    leaseHeartbeat.assertOwned();
     if (executed.status !== "applied") {
-      throw new PublishError(
-        "activation_failed",
-        executed.lastError ?? "Meta could not activate the Blockwise-created ads; reused parents were not changed.",
-      );
+      const unconfirmedPauseIds = executed.unconfirmedPauseIds ?? [];
+      if (unconfirmedPauseIds.length > 0) {
+        return NextResponse.json({
+          ok: false,
+          mode: "activate",
+          status: "unknown",
+          planId: plan.planId,
+          mutationId: mutation.mutationId,
+          targets,
+          error: "activation_unconfirmed",
+          message: executed.lastError ?? "Activation failed and Blockwise could not confirm the final Meta status.",
+          unconfirmedPauseIds,
+        }, { status: 502 });
+      }
+      return NextResponse.json({
+        ok: false,
+        mode: "activate",
+        status: "paused",
+        planId: plan.planId,
+        mutationId: mutation.mutationId,
+        targets,
+        error: "activation_failed",
+        message: executed.lastError ?? "Meta could not activate the Blockwise-created ads; they remain paused.",
+      }, { status: 502 });
     }
     await updateMetaPublishPlanExecution(serviceSupabase, markPlanObjectsActive(plan));
 
@@ -173,11 +383,31 @@ export async function POST(request: NextRequest, context: RouteContext) {
       const status =
         err.code === "no_paused_plan"
           ? 404
-          : err.code === "activation_failed"
+          : err.code === "activation_failed" || err.code === "activation_unconfirmed"
             ? 502
             : 400;
-      return NextResponse.json({ error: err.code, message: err.message }, { status });
+      return NextResponse.json({
+        ok: false,
+        mode: "activate",
+        status: err.code === "activation_unconfirmed" ? "unknown" : undefined,
+        planId,
+        error: err.code,
+        message: err.message,
+      }, { status });
     }
     return errorResponse(err, 500);
+  } finally {
+    leaseHeartbeat?.stop();
+    if (leaseToken && leasePlanId) {
+      try {
+        await releaseMetaPublishExecutionLease(serviceSupabase, {
+          workspaceId: access.access.workspaceId,
+          planId: leasePlanId,
+          leaseToken,
+        });
+      } catch {
+        // Preserve the activation outcome; the lease expires safely.
+      }
+    }
   }
 }

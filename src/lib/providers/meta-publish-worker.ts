@@ -24,6 +24,7 @@ import {
 import { DEFAULT_META_GRAPH_VERSION } from "./meta-graph-version.ts";
 import { resolveMetaPageAccessToken } from "./meta-assets.ts";
 import { loadStoredProviderTokens } from "./provider-connections.ts";
+import { metaPublishProviderWritesEnabled } from "./meta-provider-write-gate.ts";
 import { deterministicUuid } from "../adstudio/id.ts";
 import {
   endTrialAfterFirstLiveCampaign,
@@ -38,10 +39,6 @@ import { recordAuditLog } from "../supabase/audit.ts";
 import type { createSupabaseServiceClient } from "../supabase/service.ts";
 
 type SupabaseServiceClient = ReturnType<typeof createSupabaseServiceClient>;
-
-function providerWritesEnabled() {
-  return process.env.BLOCKWISE_ENABLE_PROVIDER_WRITES === "true";
-}
 
 /**
  * A successful, server-error, or response-less POST may have created an object
@@ -128,11 +125,11 @@ export async function executeMetaPublishPlanById(input: {
   });
   input.signal?.throwIfAborted();
 
-  if (!providerWritesEnabled()) {
+  if (!metaPublishProviderWritesEnabled(plan.workspaceId)) {
     const failedPlan: MetaPublishPlan = {
       ...plan,
       status: "failed",
-      lastError: "Provider writes are disabled by BLOCKWISE_ENABLE_PROVIDER_WRITES.",
+      lastError: "Provider writes are disabled for this workspace by the Meta publish safety gate.",
       updatedAt: new Date().toISOString(),
     };
     await updateMetaPublishPlanExecution(input.serviceSupabase, failedPlan);

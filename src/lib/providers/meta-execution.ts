@@ -265,6 +265,16 @@ export type MetaPublishPlan = {
   legacyCampaignId: string | null;
   providerConnectionId: string;
   approvalRequestId: string | null;
+  publicationSnapshotId?: string | null;
+  source?: {
+    snapshotId: string;
+    creativeRevision: number | null;
+    documentHash: string | null;
+    feedPngHash: string | null;
+    storyPngHash: string | null;
+    formDraftId: string | null;
+    formRevision: number | null;
+  } | null;
   adapter: MetaExecutionAdapter;
   status: MetaPublishPlanStatus;
   idempotencyKey: string;
@@ -453,6 +463,7 @@ export function buildMetaPublishPlan(input: {
     legacyCampaignId: input.legacyCampaignId ?? null,
     providerConnectionId: input.connectionId,
     approvalRequestId: input.approvalRequestId ?? null,
+    publicationSnapshotId: null,
     adapter,
     status: "draft",
     idempotencyKey,
@@ -586,21 +597,52 @@ export function applyMetaPublishExecutionResult(
   };
 }
 
-export async function persistMetaPublishPlan(serviceSupabase: SupabaseServiceClient, plan: MetaPublishPlan, userId: string) {
+export async function persistMetaPublishPlan(
+  serviceSupabase: SupabaseServiceClient,
+  plan: MetaPublishPlan,
+  userId: string,
+): Promise<{ id: string; status: MetaPublishPlanStatus; idempotency_key: string }> {
   const { data, error } = await serviceSupabase
     .from("meta_publish_plans")
-    .upsert(
-      planToRow(plan, userId),
-      { onConflict: "workspace_id,idempotency_key" },
-    )
+    .insert(planToRow(plan, userId))
     .select("id,status,idempotency_key")
     .single();
 
-  if (error || !data) {
-    throw new Error(error?.message ?? "Unable to persist Meta publish plan.");
+  if (!error && data) return data as { id: string; status: MetaPublishPlanStatus; idempotency_key: string };
+
+  // A retry must adopt the canonical row. Never replace its logs, progress, or
+  // reconciliation state with the newly-built draft.
+  if (error?.code === "23505") {
+    const canonical = await loadMetaPublishPlanByIdempotencyKey(serviceSupabase, {
+      workspaceId: plan.workspaceId,
+      idempotencyKey: plan.idempotencyKey,
+    });
+    if (canonical) {
+      return { id: canonical.planId, status: canonical.status, idempotency_key: canonical.idempotencyKey };
+    }
   }
 
-  return data as { id: string; status: MetaPublishPlanStatus; idempotency_key: string };
+  throw new Error(error?.message ?? "Unable to persist Meta publish plan.");
+}
+
+export type MetaActivationMutationIds = { mutationId: string; approvalRequestId: string };
+
+/** Service-role-only atomic activation mutation/approval creation and recovery. */
+export async function ensureMetaActivationMutation(
+  serviceSupabase: SupabaseServiceClient,
+  input: { workspaceId: string; planId: string; clientMutationKey: string; planFingerprint: string; requestedBy: string },
+): Promise<MetaActivationMutationIds> {
+  const { data, error } = await serviceSupabase.rpc("ensure_meta_activation_mutation", {
+    p_workspace_id: input.workspaceId,
+    p_plan_id: input.planId,
+    p_client_mutation_key: input.clientMutationKey,
+    p_plan_fingerprint: input.planFingerprint,
+    p_requested_by: input.requestedBy,
+  });
+  if (error) throw new Error(error.message);
+  const row = (Array.isArray(data) ? data[0] : data) as Record<string, unknown> | null;
+  if (typeof row?.mutation_id !== "string" || typeof row.approval_request_id !== "string") throw new Error("Activation mutation RPC returned an invalid result.");
+  return { mutationId: row.mutation_id, approvalRequestId: row.approval_request_id };
 }
 
 export async function loadMetaPublishPlan(
@@ -640,7 +682,7 @@ export async function loadMetaPublishPlanByIdempotencyKey(
 }
 
 export async function updateMetaPublishPlanExecution(serviceSupabase: SupabaseServiceClient, plan: MetaPublishPlan) {
-  const { error } = await serviceSupabase
+  const { data, error } = await serviceSupabase
     .from("meta_publish_plans")
     .update({
       status: plan.status,
@@ -652,11 +694,50 @@ export async function updateMetaPublishPlanExecution(serviceSupabase: SupabaseSe
       updated_at: plan.updatedAt,
     })
     .eq("workspace_id", plan.workspaceId)
-    .eq("id", plan.planId);
+    .eq("id", plan.planId)
+    .select("id")
+    .maybeSingle();
 
   if (error) {
     throw new Error(error.message);
   }
+  if (!data) throw new Error("Meta publish plan was not found for this workspace.");
+}
+
+export type MetaPublishExecutionLease = {
+  claimed: boolean;
+  leaseToken: string | null;
+  leaseExpiresAt: string | null;
+};
+
+/** Service-role-only claim. A false result means another unexpired executor owns it. */
+export async function claimMetaPublishExecution(
+  serviceSupabase: SupabaseServiceClient,
+  input: { workspaceId: string; planId: string; leaseSeconds?: number },
+): Promise<MetaPublishExecutionLease> {
+  const { data, error } = await serviceSupabase.rpc("claim_meta_publish_execution", {
+    p_workspace_id: input.workspaceId,
+    p_plan_id: input.planId,
+    p_lease_seconds: input.leaseSeconds ?? 600,
+  });
+  if (error) throw new Error(error.message);
+  const row = (Array.isArray(data) ? data[0] : data) as Record<string, unknown> | null;
+  return { claimed: row?.claimed === true, leaseToken: typeof row?.lease_token === "string" ? row.lease_token : null, leaseExpiresAt: typeof row?.lease_expires_at === "string" ? row.lease_expires_at : null };
+}
+
+export async function renewMetaPublishExecutionLease(
+  serviceSupabase: SupabaseServiceClient,
+  input: { workspaceId: string; planId: string; leaseToken: string; leaseSeconds?: number },
+): Promise<boolean> {
+  const { data, error } = await serviceSupabase.rpc("renew_meta_publish_execution", { p_workspace_id: input.workspaceId, p_plan_id: input.planId, p_lease_token: input.leaseToken, p_lease_seconds: input.leaseSeconds ?? 600 });
+  if (error) throw new Error(error.message);
+  return data === true || (Array.isArray(data) && data[0]?.renewed === true);
+}
+
+export async function releaseMetaPublishExecutionLease(serviceSupabase: SupabaseServiceClient, input: { workspaceId: string; planId: string; leaseToken: string }): Promise<boolean> {
+  const { data, error } = await serviceSupabase.rpc("release_meta_publish_execution", { p_workspace_id: input.workspaceId, p_plan_id: input.planId, p_lease_token: input.leaseToken });
+  if (error) throw new Error(error.message);
+  return data === true || (Array.isArray(data) && data[0]?.released === true);
 }
 
 export function resolveMetaConnectionSetup(
@@ -2471,6 +2552,7 @@ function planToJson(plan: MetaPublishPlan) {
     ads: plan.ads,
     tracking: plan.tracking,
     controls: plan.controls,
+    source: plan.source ?? null,
   };
 }
 
@@ -2483,6 +2565,7 @@ function planToRow(plan: MetaPublishPlan, userId: string) {
     campaign_id: plan.legacyCampaignId,
     provider_connection_id: plan.providerConnectionId,
     approval_request_id: plan.approvalRequestId,
+    publication_snapshot_id: plan.publicationSnapshotId ?? null,
     adapter: plan.adapter,
     status: plan.status,
     idempotency_key: plan.idempotencyKey,
@@ -2512,6 +2595,7 @@ type MetaPublishPlanRow = {
   campaign_id: string | null;
   provider_connection_id: string;
   approval_request_id: string | null;
+  publication_snapshot_id: string | null;
   adapter: MetaExecutionAdapter;
   status: MetaPublishPlanStatus;
   idempotency_key: string;
@@ -2531,6 +2615,7 @@ type MetaPublishPlanRow = {
     ads?: MetaPublishAdPlan[];
     tracking?: MetaPublishTrackingPlan;
     controls?: MetaPublishControls;
+    source?: MetaPublishPlan["source"];
   };
   request_log_json: MetaProviderLogEntry[] | null;
   response_log_json: MetaProviderLogEntry[] | null;
@@ -2560,6 +2645,7 @@ function rowToPlan(row: MetaPublishPlanRow): MetaPublishPlan {
     legacyCampaignId: row.campaign_id,
     providerConnectionId: row.provider_connection_id,
     approvalRequestId: row.approval_request_id,
+    publicationSnapshotId: row.publication_snapshot_id ?? null,
     adapter: row.adapter,
     status: row.status,
     idempotencyKey: row.idempotency_key,
@@ -2574,6 +2660,7 @@ function rowToPlan(row: MetaPublishPlanRow): MetaPublishPlan {
       timezone: row.timezone,
     }),
     controls: planJson.controls ?? {},
+    source: planJson.source ?? null,
     // Plans persisted before these fields were added remain executable with
     // explicit safe defaults rather than emitting undefined Meta parameters.
     campaign: { ...campaignDefaults, ...(planJson.campaign ?? {}) },
