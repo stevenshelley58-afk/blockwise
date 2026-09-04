@@ -100,8 +100,8 @@ export function ConnectionsSection({
   const [message, setMessage] = useState<Msg>(null);
   const [busyProvider, setBusyProvider] = useState<string | null>(null);
 
-  const providers: Array<{ key: string; label: string; connectHref: string; enabled: boolean }> = [
-    { key: "meta", label: "Meta (Facebook & Instagram)", connectHref: metaConnectHref, enabled: true },
+  const providers: Array<{ key: string; label: string; connectHref: string; enabled: boolean; startLabel?: string }> = [
+    { key: "meta", label: "Meta (Facebook & Instagram)", connectHref: metaConnectHref, enabled: true, startLabel: "Share Meta assets" },
     { key: "google", label: "Google Ads", connectHref: googleConnectHref, enabled: googleAdsEnabled },
   ];
 
@@ -172,7 +172,7 @@ export function ConnectionsSection({
                 </div>
               ) : (
                 <Button asChild>
-                  <a href={prov.connectHref}>Connect</a>
+                  <a href={prov.connectHref}>{prov.startLabel ?? "Connect"}</a>
                 </Button>
               )}
             </div>
@@ -183,7 +183,7 @@ export function ConnectionsSection({
               <p className="text-sm text-muted-foreground">An owner or admin can view and change Meta publishing assets.</p>
             ) : null}
             {prov.key === "meta" && !connected ? (
-              <p className="text-sm text-muted-foreground">Connect Meta first, then choose the ad account, Page, lead destination, and privacy policy used for publishing.</p>
+              <p className="text-sm text-muted-foreground">Share your ad account, Facebook Page, and optional linked Instagram account with Blockwise for operator-assisted publishing while direct Meta app access is under review.</p>
             ) : null}
           </div>
         );
