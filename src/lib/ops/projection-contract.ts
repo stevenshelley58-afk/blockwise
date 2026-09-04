@@ -21,7 +21,7 @@ export type BlockwiseProjectionEnvelope = {
 export type AdapterMapping =
   | { provider: "mautic"; resource: "contact"; fields: { externalId: string; email?: string; name?: string; lifecycle?: string; activationStage?: string; bookingStatus?: string; bookingSubject?: string } }
   | { provider: "mautic"; resource: "lifecycle"; fields: { externalId: string; stage?: string; changedAt?: string } }
-  | { provider: "chatwoot"; resource: "enquiry" | "support"; fields: { externalId: string; subject?: string; status?: string; contactId?: string } };
+  | { provider: "chatwoot"; resource: "enquiry" | "support"; fields: { externalId: string; subject?: string; status?: string; contactId?: string; requesterEmail?: string; requesterName?: string; message?: string; reply?: string; assigneeId?: string } };
 
 const MAX_ID = 256;
 const MAX_FIELD = 512;
@@ -67,7 +67,7 @@ export function mapProjectionForAdapter(envelope: BlockwiseProjectionEnvelope): 
     return { provider: "mautic", resource: "lifecycle", fields: { externalId, stage: stringField(envelope.payload.stage), changedAt: stringField(envelope.payload.changedAt) } };
   }
   if (envelope.provider === "chatwoot" && (envelope.aggregate.type === "enquiry" || envelope.aggregate.type === "support")) {
-    return { provider: "chatwoot", resource: envelope.aggregate.type, fields: { externalId, subject: stringField(envelope.payload.subject), status: stringField(envelope.payload.status), contactId: stringField(envelope.payload.contactId) } };
+    return { provider: "chatwoot", resource: envelope.aggregate.type, fields: { externalId, subject: stringField(envelope.payload.subject), status: stringField(envelope.payload.status), contactId: stringField(envelope.payload.contactId), requesterEmail: stringField(envelope.payload.requesterEmail), requesterName: stringField(envelope.payload.requesterName), message: stringField(envelope.payload.message), reply: stringField(envelope.payload.reply), assigneeId: stringField(envelope.payload.assigneeId) } };
   }
   throw new Error("provider and aggregate type are incompatible");
 }

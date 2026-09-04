@@ -23,6 +23,8 @@ services:
     security_opt:
       - no-new-privileges:true
     stop_grace_period: 30s
+    volumes:
+      - ${HERMES_OPS_PROJECTION_ROOT:-/srv/frank/data/window/ops-projections}:/data/ops-projections:rw
     logging:
       driver: json-file
       options:

@@ -54,7 +54,8 @@ begin
   elsif p_aggregate_type in ('enquiry','support') then
     -- Association rows are the only legal customer link. A global enquiry has
     -- no workspace and therefore returns NULL: no email-based inference.
-    select jsonb_build_object('subject', left(coalesce(e.subject,''),512), 'status', left(coalesce(e.status,''),64)) into v_data
+    select jsonb_build_object('subject', left(coalesce(e.subject,''),512), 'status', left(coalesce(e.status,''),64), 'requesterEmail', left(coalesce(e.requester_email,''),320), 'requesterName', left(coalesce(e.requester_name,''),256))
+      || case when e.source_system = 'blockwise' and e.enquiry_type = 'demo_request' then coalesce((select jsonb_build_object('message', left(coalesce(d.message,''),2000)) from public.demo_requests d where d.id::text = e.source_id), '{}'::jsonb) else '{}'::jsonb end into v_data
     from public.ops_enquiry_associations e
     where e.workspace_id = p_workspace_id
       and (e.id::text = p_aggregate_id or (e.source_system = 'blockwise' and e.source_id = p_aggregate_id));

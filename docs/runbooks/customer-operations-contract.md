@@ -136,3 +136,20 @@ Consent normalization keeps the newest case-normalized preference row while
 carrying forward any restrictive withdrawn/denied, unsubscribe, or suppressed
 state. Discarded legacy rows are archived in
 `legacy_archive.customer_operations_consent_reconciliation_202609040003`.
+
+## Provider adapter contract
+
+Hermes uses Mautic's documented REST endpoints: contact create/edit under
+`/api/contacts/new` and `/api/contacts/{id}/edit`, segment membership under
+`/api/segments/{segment}/contact/{contact}/add`, and campaign membership under
+`/api/campaigns/{campaign}/contact/{contact}/add`. Contact tags are applied via
+the documented contact edit `tags` field. See the [Mautic Contacts API](https://devdocs.mautic.org/en/7.2/rest_api/contacts.html),
+[Segments API](https://devdocs.mautic.org/en/5.x/rest_api/segments.html), and
+[Campaigns API](https://devdocs.mautic.org/en/7.1/rest_api/campaigns.html).
+
+Chatwoot uses its account-scoped contact, conversation, messages, status, and
+assignment endpoints. Every contact and conversation carries a deterministic
+Blockwise custom attribute; every message carries the operation key so a crash
+after a remote write is reconciled before a retry. Provider IDs are retained
+only as encrypted values in the private operation ledger and reduced to a
+masked suffix in snapshots.

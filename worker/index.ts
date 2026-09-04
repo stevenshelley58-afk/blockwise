@@ -22,7 +22,7 @@ import { pathToFileURL } from "node:url";
 
 import { resolveSupabaseServerCredential } from "../src/lib/supabase/credentials.ts";
 import { createSupabaseServiceClient } from "../src/lib/supabase/service.ts";
-import { reapOpsProjections, runOpsProjectionOnce } from "./ops-projection.ts";
+import { reapOpsProjections, runGlobalProjectionOnce, runOpsProjectionOnce } from "./ops-projection.ts";
 
 type ServiceSupabase = ReturnType<typeof createSupabaseServiceClient>;
 type HandlerExecutionContext = {
@@ -713,7 +713,10 @@ async function main() {
   try {
     while (!shutdownRequested) {
       try {
-        if (projectionsEnabled) await runOpsProjectionOnce(supabase);
+        if (projectionsEnabled) {
+          await runOpsProjectionOnce(supabase);
+          await runGlobalProjectionOnce(supabase);
+        }
         const did = await runOnce(supabase, { shutdownSignal: shutdownController.signal });
         if (!shutdownRequested) await sleep(did ? POLL_BUSY_MS : POLL_IDLE_MS);
       } catch (err) {
