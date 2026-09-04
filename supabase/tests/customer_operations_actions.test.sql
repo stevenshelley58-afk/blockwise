@@ -1,7 +1,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(57);
+select plan(58);
 
 select has_table('public', 'ops_action_capabilities', 'action capability registry exists');
 select has_table('public', 'ops_action_outbox', 'action outbox exists');
@@ -20,6 +20,7 @@ select ok(not has_table_privilege('service_role', 'public.ops_action_capabilitie
 select is((select count(*)::int from public.ops_action_capabilities), 20, 'all agreed actions have a capability entry');
 select is((select capability_state from public.ops_action_capabilities where action_type = 'team_suspend'), 'unsupported', 'suspension is explicitly unsupported');
 select is((select capability_state from public.ops_action_capabilities where action_type = 'team_role_change'), 'capability_required', 'role changes are explicitly gated');
+select is((select capability_state from public.ops_action_capabilities where action_type = 'billing_portal_link'), 'capability_required', 'billing portal links are explicitly gated until an executor exists');
 
 insert into public.workspaces (id, name, mode, region)
 values ('86666666-6666-4666-8666-666666666666', 'Action contract test', 'self_serve', 'AU')

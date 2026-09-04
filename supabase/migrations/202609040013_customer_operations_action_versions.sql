@@ -190,14 +190,16 @@ begin
     'source_event_id',s.source_event_id,'source_version',s.source_version,
     'ops_version',s.source_version) order by s.updated_at desc),'[]'::jsonb) into v_flows
     from public.ops_provider_snapshots s where s.provider='mautic'
-      and s.snapshot_kind in ('flow','lifecycle') and s.workspace_id=any(v_workspace_ids::uuid[]);
+      and s.snapshot_kind in ('flow','lifecycle') and s.workspace_id=any(v_workspace_ids::uuid[])
+      and not (s.snapshot_kind='lifecycle' and s.aggregate_id=s.workspace_id::text);
   select coalesce(jsonb_agg(jsonb_build_object('id',s.id,'customer_id',s.workspace_id,
     'workspace_id',s.workspace_id,'stage',s.stage,'status',s.status,
     'provider_record_suffix',s.provider_record_suffix,'snapshot_kind',s.snapshot_kind,
     'source_event_id',s.source_event_id,'source_version',s.source_version,
     'ops_version',s.source_version,'updated_at',s.updated_at) order by s.updated_at desc),'[]'::jsonb) into v_mautic
     from public.ops_provider_snapshots s where s.provider='mautic'
-      and s.snapshot_kind='lifecycle' and s.workspace_id=any(v_workspace_ids::uuid[]);
+      and s.snapshot_kind='lifecycle' and s.workspace_id=any(v_workspace_ids::uuid[])
+      and not (s.aggregate_id=s.workspace_id::text);
   select coalesce(jsonb_agg(jsonb_build_object('id',e.id,'customer_id',e.workspace_id,
     'workspace_id',e.workspace_id,'subject',e.subject,'status',e.status,
     'enquiry_type',e.enquiry_type,'requester_email',e.requester_email,

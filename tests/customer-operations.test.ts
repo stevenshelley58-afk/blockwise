@@ -66,6 +66,16 @@ test("projection contract is versioned and adapter mapping is provider-neutral",
     bookingStatus: "confirmed",
     bookingSubject: "Onboarding booking",
   });
+  const lifecycle = buildProjectionEnvelope({
+    workspaceId: "workspace-1",
+    provider: "mautic",
+    aggregate: { type: "lifecycle", id: "profile-1" },
+    operation: "upsert",
+    source: { eventId: "lifecycle-1", version: 4 },
+    payload: { profileId: "profile-1", stage: "active" },
+  });
+  assert.deepEqual(mapProjectionForAdapter(lifecycle).fields, { externalId: "workspace-1:profile-1", profileId: "profile-1", stage: "active", changedAt: undefined });
+  assert.throws(() => mapProjectionForAdapter(buildProjectionEnvelope({ ...lifecycle, payload: { stage: "active" } })), /profileId/);
 
   assert.throws(() => buildProjectionEnvelope({
     workspaceId: "workspace-1",
@@ -126,6 +136,7 @@ test("operator action envelope is normalized, allowlisted, and capability-gated"
   assert.equal(OPS_ACTION_CAPABILITIES.team_invite.capability, "available");
   assert.equal(OPS_ACTION_CAPABILITIES.team_suspend.capability, "unsupported");
   assert.equal(OPS_ACTION_CAPABILITIES.team_role_change.capability, "capability_required");
+  assert.equal(OPS_ACTION_CAPABILITIES.billing_portal_link.capability, "capability_required");
   assert.equal(Object.keys(OPS_ACTION_CAPABILITIES).length, 20);
   assert.throws(() => parseOpsAction({ ...base, schema: "blockwise.ops.action.v0" }), /schema is invalid/);
   assert.throws(() => parseOpsAction({ ...base, actor: { ...base.actor, aal: "aal1" } }), /AAL2/);

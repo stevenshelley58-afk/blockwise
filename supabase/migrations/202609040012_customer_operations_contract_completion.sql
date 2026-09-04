@@ -25,7 +25,8 @@ declare v_count integer;
 begin
   if p_step is null or p_step !~ '^[a-z][a-z0-9_.-]{1,95}$'
     or (p_resource is not null and p_resource not in ('contact','conversation'))
-    or (p_provider_id_digest is not null and p_provider_id_digest !~ '^[0-9a-f]{64}$') then
+    or (p_provider_id_ciphertext is not null and (nullif(btrim(p_provider_id_ciphertext),'') is null or p_provider_id_ciphertext !~ '^v1:[A-Za-z0-9_-]+:[A-Za-z0-9_-]+:[A-Za-z0-9_-]+$' or p_provider_id_digest is null or p_provider_id_digest !~ '^[0-9a-f]{64}$'))
+    or (p_provider_id_ciphertext is null and p_provider_id_digest is not null) then
     raise exception 'invalid provider operation step' using errcode = '22023';
   end if;
   update private.ops_provider_operation_ledger
