@@ -31,14 +31,11 @@ export async function GET(request: NextRequest, context: { params: Promise<{ pat
   }
 
   const service = createSupabaseServiceClient();
-  // The service client is intentionally untyped (the generated Supabase
-  // schema is not checked into the app). Keep the shared limiter's runtime
-  // contract while avoiding generated-schema variance across CI builds.
-  const limited = await checkRateLimit(service as never, null, "hermes", {
+  const limited = await checkRateLimit(null, "hermes", {
     bucket: "internal-ops-read",
     maxRequests: 600,
     windowSeconds: 60,
-  });
+  }, service);
   if (!limited.ok) {
     return NextResponse.json({ error: "rate_limited" }, { status: 429, headers: { "Retry-After": String(limited.retryAfterSeconds) } });
   }
