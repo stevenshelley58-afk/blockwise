@@ -706,10 +706,17 @@ async function main() {
   const actionsEnabled = process.env.BLOCKWISE_OPS_ACTION_WORKER === "true";
   let lastCapabilityCheck = 0;
   const refreshCapabilities = async () => {
-    if (!actionsEnabled) { await supabase.rpc("set_ops_chatwoot_capability", { p_enabled: false, p_reason: "Chatwoot action worker disabled" }); return; }
-    try { await checkChatwootActionReadiness(); await supabase.rpc("set_ops_chatwoot_capability", { p_enabled: true, p_reason: "verified Hermes Chatwoot worker and provider health" }); }
-    catch { await supabase.rpc("set_ops_chatwoot_capability", { p_enabled: false, p_reason: "Chatwoot worker or provider health unavailable" }); log("Chatwoot action capability disabled: readiness/health check failed"); }
-    lastCapabilityCheck = Date.now();
+    try {
+      const reason = actionsEnabled ? "verified Hermes Chatwoot worker and provider health" : "Chatwoot action worker disabled";
+      if (actionsEnabled) await checkChatwootActionReadiness();
+      const result = await supabase.rpc("set_ops_chatwoot_capability", { p_enabled: actionsEnabled, p_reason: reason });
+      if (result.error) throw new Error(`capability state update failed: ${result.error.message}`);
+    } catch (error) {
+      // A failed enable/disable is not silently treated as truth; operators must
+      // see the failure because a stale available row is unsafe.
+      log(`Chatwoot capability refresh failed: ${error instanceof Error ? error.message : String(error)}`);
+      if (actionsEnabled) { try { await supabase.rpc("set_ops_chatwoot_capability", { p_enabled: false, p_reason: "Chatwoot worker or provider health unavailable" }); } catch { /* next refresh retries */ } }
+    } finally { lastCapabilityCheck = Date.now(); }
   };
   await refreshCapabilities();
   if (projectionsEnabled) {
