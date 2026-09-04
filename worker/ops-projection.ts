@@ -44,7 +44,22 @@ async function publishFrankBundleIfConfigured(supabase: Supabase): Promise<void>
   if (!revision || !/^[0-9a-f]{40}$/u.test(revision)) throw new Error("BLOCKWISE_WORKER_REVISION must be the full deployed Git SHA");
   const result = await Promise.resolve(supabase.rpc("resolve_ops_frank_bundle"));
   if (result.error || !result.data || typeof result.data !== "object") throw new Error("Frank operations bundle resolution failed");
-  publishOpsBundle(root, { ...(result.data as Parameters<typeof publishOpsBundle>[1]), source_revision: revision });
+  const bundle = result.data as Parameters<typeof publishOpsBundle>[1];
+  // Capabilities are effective state, not merely the last persisted intent.
+  // Require a recent verification lease before exposing provider actions.
+  const capabilityQuery = (supabase as unknown as { from?: (table: string) => { select: (columns: string) => Promise<{ data: Record<string, unknown>[] | null; error: { message: string } | null }> } }).from;
+  if (capabilityQuery) {
+    const capabilityRows = await Promise.resolve(capabilityQuery.call(supabase, "ops_action_capabilities").select("action_type,capability_state,description,verified_at,expires_at,updated_at"));
+    if (capabilityRows.error) throw new Error("Frank capability resolution failed");
+    const now = Date.now();
+    bundle.projections = { ...bundle.projections, capabilities: (capabilityRows.data ?? []).map((row: Record<string, unknown>) => {
+    const expires = typeof row.expires_at === "string" ? Date.parse(row.expires_at) : NaN;
+    const verified = typeof row.verified_at === "string" ? Date.parse(row.verified_at) : NaN;
+    const effective = row.capability_state === "available" && Number.isFinite(verified) && Number.isFinite(expires) && verified <= now && expires > now;
+    return { action: row.action_type, state: effective ? "available" : (row.capability_state === "unsupported" ? "unsupported" : "capability_required"), description: row.description, verified_at: row.verified_at, expires_at: row.expires_at, updated_at: row.updated_at };
+    }) };
+  }
+  publishOpsBundle(root, { ...bundle, source_revision: revision });
 }
 
 /** Global website leads use a dedicated queue and are never assigned to a customer. */
