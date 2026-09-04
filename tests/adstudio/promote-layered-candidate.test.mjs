@@ -7,7 +7,7 @@ import { spawnSync } from "node:child_process";
 import os from "node:os";
 import { fileURLToPath } from "node:url";
 
-import { assertLayeredEvidence } from "../../scripts/adstudio/v2/promote-layered-candidate.mjs";
+import { assertLayeredEvidence, sourceFreeSampleEvidence } from "../../scripts/adstudio/v2/promote-layered-candidate.mjs";
 import { appendGeneration, createGenerationTrace } from "../../scripts/adstudio/v2/generation-trace.mjs";
 import { fidelityTemplateHash } from "../../src/lib/adstudio/v2/fidelity-stress.ts";
 import { hashCanonicalJson } from "../../src/lib/adstudio/v2/template-hash.ts";
@@ -75,5 +75,19 @@ describe("source-free layered candidate promotion", () => {
     const input = fixture();
     input.trace = { ...input.trace, status: "active" };
     assert.throws(() => assertLayeredEvidence({ templateId: "meta-feed-006", ...input }), /trace status|accepted generation trace/);
+  });
+
+  it("replaces private source copy with an exact public sample manifest", () => {
+    const doc = { inputs: { text: [
+      { key: "headline", sample: "Find your next home" },
+      { key: "cta", sample: "Book a viewing" },
+    ] } };
+    const result = sourceFreeSampleEvidence(doc, {
+      sourceValues: { headline: "PRIVATE OCR", cta: "PRIVATE CTA" },
+      restyle: { sourceFree: true },
+    });
+    assert.deepEqual(result.sampleValues, { headline: "Find your next home", cta: "Book a viewing" });
+    assert.equal(Object.hasOwn(result.safeEvidence, "sourceValues"), false);
+    assert.deepEqual(result.safeEvidence.restyle, { sourceFree: true });
   });
 });

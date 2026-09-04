@@ -209,6 +209,24 @@ function wrapToWidth(ctx: Canvas2DLike, text: string, maxWidth: number, tracking
   const lines: string[] = [];
   let line = "";
   for (const word of words) {
+    if (measuredWidth(ctx, word, tracking) > maxWidth) {
+      if (line) {
+        lines.push(line);
+        line = "";
+      }
+      let chunk = "";
+      for (const character of Array.from(word)) {
+        const candidate = `${chunk}${character}`;
+        if (chunk && measuredWidth(ctx, candidate, tracking) > maxWidth) {
+          lines.push(chunk);
+          chunk = character;
+        } else {
+          chunk = candidate;
+        }
+      }
+      line = chunk;
+      continue;
+    }
     const candidate = line ? `${line} ${word}` : word;
     if (line && measuredWidth(ctx, candidate, tracking) > maxWidth) {
       lines.push(line);
@@ -376,20 +394,36 @@ function drawTextLayer(
   // Block-wrap fallback: shrink-to-fit from the measured size ratio down to
   // the floor, gating on the widest line, line count, and painted ink height.
   const maxTextWidth = rect.width * 0.98;
-  let fontSize = Math.max(1, rect.height * baseSizeRatio);
+  const initialFontSize = Math.max(1, rect.height * baseSizeRatio);
+  let fontSize = initialFontSize;
   const minimumSize = fontSize * floor;
   let lines: string[] = [];
-  for (; fontSize >= minimumSize; fontSize -= 0.5) {
-    ctx.font = fontString(layer, fontSize);
-    const candidate = wrapToWidth(ctx, value, maxTextWidth, layer.typo.tracking * fontSize);
-    if (candidate.length === 0) break;
-    if (candidate.length > layer.constraints.maxLines) continue;
-    const widest = Math.max(...candidate.map((line) => measuredWidth(ctx, line, layer.typo.tracking * fontSize)));
-    const tallestInk = Math.max(...candidate.map((line) => inkHeight(ctx, line, fontSize)));
-    const paintedHeight = tallestInk + (candidate.length - 1) * fontSize * layer.typo.lineHeight;
-    if (widest <= maxTextWidth && paintedHeight <= rect.height * 1.02) {
-      lines = candidate;
-      break;
+  if (layer.constraints.preferSingleLine === true && layer.constraints.maxLines > 1) {
+    for (; fontSize >= minimumSize; fontSize -= 0.5) {
+      ctx.font = fontString(layer, fontSize);
+      if (
+        measuredWidth(ctx, value, layer.typo.tracking * fontSize) <= maxTextWidth
+        && inkHeight(ctx, value, fontSize) <= rect.height * 1.02
+      ) {
+        lines = [value];
+        break;
+      }
+    }
+  }
+  if (lines.length === 0) {
+    fontSize = initialFontSize;
+    for (; fontSize >= minimumSize; fontSize -= 0.5) {
+      ctx.font = fontString(layer, fontSize);
+      const candidate = wrapToWidth(ctx, value, maxTextWidth, layer.typo.tracking * fontSize);
+      if (candidate.length === 0) break;
+      if (candidate.length > layer.constraints.maxLines) continue;
+      const widest = Math.max(...candidate.map((line) => measuredWidth(ctx, line, layer.typo.tracking * fontSize)));
+      const tallestInk = Math.max(...candidate.map((line) => inkHeight(ctx, line, fontSize)));
+      const paintedHeight = tallestInk + (candidate.length - 1) * fontSize * layer.typo.lineHeight;
+      if (widest <= maxTextWidth && paintedHeight <= rect.height * 1.02) {
+        lines = candidate;
+        break;
+      }
     }
   }
   if (lines.length === 0) {

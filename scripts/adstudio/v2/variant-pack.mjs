@@ -243,6 +243,7 @@ function textLayer(id, z, inputKey, box, typoOverrides, constraintsOverrides, me
       maxLength: constraintsOverrides.maxLength,
       maxLines: constraintsOverrides.maxLines,
       autoFitMinRatio: 0.6,
+      ...(constraintsOverrides.preferSingleLine === true ? { preferSingleLine: true } : {}),
     },
     measurement: measurement || { fitScore: 0.92, detectionScore: 0.9, source: "manual-verified", version: 2 },
   };
@@ -397,7 +398,11 @@ function buildLayoutFromSpec(format, specLayout, specInputs, palette, storyBacki
         color: paletteRoleColour(palette, colourRole),
         colourRole,
         sizeRatio: authored.sizeRatio ?? (isHeadline ? 0.72 : authored.role === "brand" ? 0.52 : 0.56),
-      }, { maxLength: input?.maxLength || 48, maxLines: authored.maxLines || (isHeadline ? 3 : 2) }, null));
+      }, {
+        maxLength: input?.maxLength || 48,
+        maxLines: authored.maxLines || (isHeadline ? 3 : 2),
+        preferSingleLine: authored.preferSingleLine === true,
+      }, null));
     } else if (authored.type === "overlay_patch") {
       // Story backing is an explicitly authored editable layer.  Preserve its
       // id and box; the deterministic one-pixel patch is only the neutral
