@@ -1,0 +1,34 @@
+# Customer-ops ingress snippets. Include these in the separately managed
+# Frank/shared edge after review; this file is deliberately not the live
+# product Caddyfile and is never mounted by the product Compose project.
+#
+# Caddy terminates public TLS. The upstreams below are private Compose service
+# names on blockwise-customer-ops-edge.
+
+mail.example.com {
+    encode gzip
+    reverse_proxy https://stalwart:443 {
+        transport http {
+            tls_insecure_skip_verify
+        }
+    }
+}
+
+crm.example.com {
+    encode gzip
+    reverse_proxy mautic:80
+}
+
+support.example.com {
+    encode gzip
+    reverse_proxy chatwoot-web:3000
+}
+
+book.example.com {
+    encode gzip
+    reverse_proxy snagtime-web:3000
+}
+
+# DNS remains an operator prerequisite for mail delivery. Configure A/AAAA,
+# MX, SPF, DKIM, and DMARC for mail.example.com and SRV records for submission
+# and IMAPS before enabling SMTP ports in the installer.
