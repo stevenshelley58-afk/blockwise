@@ -70,6 +70,11 @@ $$;
 
 alter table public.ops_projection_outbox
   add column if not exists superseded_at timestamptz;
+-- Existing installations may contain longer provider errors from before this
+-- contract. Normalize them before installing the bounded constraint.
+update public.ops_projection_outbox
+set last_error = public.redact_ops_text(last_error)
+where last_error is not null and char_length(last_error) > 512;
 alter table public.ops_projection_outbox
   drop constraint if exists ops_projection_outbox_identifier_length_check;
 alter table public.ops_projection_outbox
@@ -202,7 +207,10 @@ begin
   if tg_table_name = 'demo_requests' then
     insert into public.ops_enquiry_associations (workspace_id, source_system, source_id, enquiry_type, status, subject, requester_email, requester_name)
       values (null, 'blockwise', new.id::text, 'demo_request', 'open', 'Demo request', left(lower(btrim(new.email)), 320), left(new.name, 256)) on conflict (source_system, source_id) do nothing;
-  elsif tg_table_name = 'audit_logs' and new.workspace_id is not null and new.target_type in ('enquiry', 'support') then
+  elsif tg_table_name = 'report_email_leads' then
+    insert into public.ops_enquiry_associations (workspace_id, source_system, source_id, enquiry_type, status, subject, requester_email)
+      values (null, 'blockwise', new.id::text, 'report_email_lead', 'open', 'Suburb report', left(lower(btrim(new.email)), 320)) on conflict (source_system, source_id) do nothing;
+  elsif tg_table_name = 'audit_logs' and new.workspace_id is not null and new.target_type in ('enquiry', 'support') and new.action <> 'ops.enquiry.associated' then
     insert into public.ops_enquiry_associations (workspace_id, source_system, source_id, enquiry_type, status, subject)
       values (new.workspace_id, 'audit', new.id::text, case when new.target_type = 'support' then 'support' else 'audit' end, 'open', left(new.action, 512)) on conflict (source_system, source_id) do nothing;
   elsif tg_table_name = 'workspace_onboarding_bookings' then
@@ -215,6 +223,8 @@ $$;
 
 drop trigger if exists ops_demo_request_association on public.demo_requests;
 create trigger ops_demo_request_association after insert on public.demo_requests for each row execute function public.ops_record_enquiry_association();
+drop trigger if exists ops_report_email_lead_association on public.report_email_leads;
+create trigger ops_report_email_lead_association after insert on public.report_email_leads for each row execute function public.ops_record_enquiry_association();
 drop trigger if exists ops_audit_enquiry_association on public.audit_logs;
 create trigger ops_audit_enquiry_association after insert on public.audit_logs for each row execute function public.ops_record_enquiry_association();
 drop trigger if exists ops_booking_association on public.workspace_onboarding_bookings;
@@ -239,14 +249,30 @@ create trigger ops_enquiry_projection after insert or update of workspace_id, st
 
 create or replace function public.ops_enqueue_source_projection()
 returns trigger language plpgsql security definer set search_path = '' as $$
-declare v_version bigint := nextval('public.ops_projection_source_version_seq');
+declare v_version bigint := nextval('public.ops_projection_source_version_seq'); v_workspace_id uuid;
 begin
   if tg_table_name = 'workspaces' then
-    perform public.enqueue_ops_projection(new.id, 'mautic', 'contact', new.id::text, 'upsert', 'workspace:' || new.id::text || ':' || v_version::text, v_version, jsonb_build_object('workspaceId', new.id::text, 'sourceEventId', 'workspace'));
+    perform public.enqueue_ops_projection(new.id, 'mautic', 'contact', new.id::text, 'upsert', 'workspace:' || new.id::text || ':' || v_version::text, v_version, jsonb_build_object('workspaceId', new.id::text, 'sourceEventId', 'workspace', 'name', left(new.name, 512)));
   elsif tg_table_name = 'customer_activations' then
-    perform public.enqueue_ops_projection(new.workspace_id, 'mautic', 'lifecycle', new.workspace_id::text, 'upsert', 'activation:' || new.workspace_id::text || ':' || v_version::text, v_version, jsonb_build_object('workspaceId', new.workspace_id::text, 'sourceEventId', 'activation'));
+    perform public.enqueue_ops_projection(new.workspace_id, 'mautic', 'lifecycle', new.workspace_id::text, 'upsert', 'activation:' || new.workspace_id::text || ':' || v_version::text, v_version, jsonb_build_object('workspaceId', new.workspace_id::text, 'sourceEventId', 'activation', 'stage', case when new.activation_completed_at is not null then 'active' when new.checkout_completed_at is not null then 'activated' when new.email_verified_at is not null then 'trial' else 'lead' end));
+    perform public.enqueue_ops_projection(new.workspace_id, 'mautic', 'contact', new.workspace_id::text, 'upsert', 'activation-contact:' || new.workspace_id::text || ':' || v_version::text, v_version, jsonb_build_object('workspaceId', new.workspace_id::text, 'sourceEventId', 'activation', 'activationStage', case when new.activation_completed_at is not null then 'active' when new.checkout_completed_at is not null then 'activated' when new.email_verified_at is not null then 'trial' else 'lead' end));
   elsif tg_table_name = 'workspace_onboarding_bookings' then
-    perform public.enqueue_ops_projection(new.workspace_id, 'chatwoot', 'support', new.id::text, 'upsert', 'booking:' || new.id::text || ':' || v_version::text, v_version, jsonb_build_object('workspaceId', new.workspace_id::text, 'sourceEventId', 'booking'));
+    perform public.enqueue_ops_projection(new.workspace_id, 'chatwoot', 'support', new.id::text, 'upsert', 'booking:' || new.id::text || ':' || v_version::text, v_version, jsonb_build_object('workspaceId', new.workspace_id::text, 'sourceEventId', 'booking', 'subject', 'Onboarding booking', 'status', new.status));
+    perform public.enqueue_ops_projection(new.workspace_id, 'mautic', 'contact', new.workspace_id::text, 'upsert', 'booking-contact:' || new.workspace_id::text || ':' || v_version::text, v_version, jsonb_build_object('workspaceId', new.workspace_id::text, 'sourceEventId', 'booking', 'bookingSubject', 'Onboarding booking', 'bookingStatus', new.status));
+  elsif tg_table_name = 'profiles' then
+    for v_workspace_id in select wm.workspace_id from public.workspace_members wm where wm.profile_id = new.id loop
+      perform public.enqueue_ops_projection(v_workspace_id, 'mautic', 'contact', new.id::text, 'upsert', 'profile:' || new.id::text || ':' || v_version::text, v_version, jsonb_build_object('workspaceId', v_workspace_id::text, 'sourceEventId', 'profile', 'email', left(lower(btrim(new.email)), 320), 'name', left(coalesce(new.full_name, ''), 512)));
+    end loop;
+  elsif tg_table_name = 'workspace_members' then
+    perform public.enqueue_ops_projection(new.workspace_id, 'mautic', 'contact', new.profile_id::text, 'upsert', 'member:' || new.workspace_id::text || ':' || new.profile_id::text || ':' || v_version::text, v_version, jsonb_build_object('workspaceId', new.workspace_id::text, 'sourceEventId', 'member', 'profileId', new.profile_id::text));
+  elsif tg_table_name = 'leads' then
+    perform public.enqueue_ops_projection(new.workspace_id, 'chatwoot', 'enquiry', new.id::text, 'upsert', 'lead:' || new.id::text || ':' || v_version::text, v_version, jsonb_build_object('workspaceId', new.workspace_id::text, 'sourceEventId', 'lead', 'email', left(lower(coalesce(new.email, '')), 320), 'name', left(coalesce(new.full_name, ''), 512), 'status', 'open'));
+  elsif tg_table_name = 'lead_events' then
+    perform public.enqueue_ops_projection(new.workspace_id, 'chatwoot', 'support', new.lead_id::text, 'upsert', 'lead-event:' || new.id::text || ':' || v_version::text, v_version, jsonb_build_object('workspaceId', new.workspace_id::text, 'sourceEventId', 'lead-event', 'eventType', left(new.event_type, 128)));
+  elsif tg_table_name = 'billing_offer_acceptances' then
+    perform public.enqueue_ops_projection(new.workspace_id, 'mautic', 'lifecycle', new.workspace_id::text, 'upsert', 'billing:' || new.id::text || ':' || v_version::text, v_version, jsonb_build_object('workspaceId', new.workspace_id::text, 'sourceEventId', 'billing', 'stage', 'customer'));
+  elsif tg_table_name = 'customer_communication_preferences' then
+    perform public.enqueue_ops_projection(new.workspace_id, 'mautic', 'lifecycle', new.workspace_id::text, 'upsert', 'preference:' || new.id::text || ':' || v_version::text, v_version, jsonb_build_object('workspaceId', new.workspace_id::text, 'sourceEventId', 'preference', 'stage', case when new.marketing_consent = 'granted' then 'active' else 'unknown' end));
   end if;
   return new;
 end;
@@ -258,6 +284,18 @@ drop trigger if exists ops_activation_projection on public.customer_activations;
 create trigger ops_activation_projection after insert or update on public.customer_activations for each row execute function public.ops_enqueue_source_projection();
 drop trigger if exists ops_booking_projection on public.workspace_onboarding_bookings;
 create trigger ops_booking_projection after insert or update on public.workspace_onboarding_bookings for each row execute function public.ops_enqueue_source_projection();
+drop trigger if exists ops_profile_projection on public.profiles;
+create trigger ops_profile_projection after insert or update on public.profiles for each row execute function public.ops_enqueue_source_projection();
+drop trigger if exists ops_member_projection on public.workspace_members;
+create trigger ops_member_projection after insert or update on public.workspace_members for each row execute function public.ops_enqueue_source_projection();
+drop trigger if exists ops_lead_projection on public.leads;
+create trigger ops_lead_projection after insert or update on public.leads for each row execute function public.ops_enqueue_source_projection();
+drop trigger if exists ops_lead_event_projection on public.lead_events;
+create trigger ops_lead_event_projection after insert or update on public.lead_events for each row execute function public.ops_enqueue_source_projection();
+drop trigger if exists ops_billing_projection on public.billing_offer_acceptances;
+create trigger ops_billing_projection after insert on public.billing_offer_acceptances for each row execute function public.ops_enqueue_source_projection();
+drop trigger if exists ops_preference_projection on public.customer_communication_preferences;
+create trigger ops_preference_projection after insert or update on public.customer_communication_preferences for each row execute function public.ops_enqueue_source_projection();
 
 revoke all on function public.redact_ops_text(text) from public, anon, authenticated;
 revoke all on function public.ops_payload_is_safe(jsonb) from public, anon, authenticated;

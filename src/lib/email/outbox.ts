@@ -120,7 +120,7 @@ export async function recordEmailSuppression(
   const { error } = await supabase
     .from("email_suppressions")
     .upsert(
-      { email, reason: input.reason, source: input.source },
+      { email, reason: input.reason, source: input.source, ...(input.workspaceId ? { workspace_id: input.workspaceId } : {}) },
       { onConflict: "email,reason", ignoreDuplicates: true },
     );
   if (error) {

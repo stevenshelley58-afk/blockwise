@@ -1,7 +1,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(27);
+select plan(46);
 
 insert into public.workspaces (id, name, mode, region)
 values ('81111111-1111-4111-8111-111111111111', 'Ops contract test', 'self_serve', 'AU')
@@ -14,9 +14,21 @@ where workspace_id = '81111111-1111-4111-8111-111111111111';
 
 select ok(to_regclass('public.customer_communication_preferences') is not null, 'communication preferences table exists');
 select ok(to_regclass('public.ops_projection_outbox') is not null, 'projection outbox exists');
+select ok(to_regclass('public.ops_enquiry_associations') is not null, 'explicit enquiry association table exists');
+select ok(to_regclass('public.ops_provider_snapshots') is not null, 'provider snapshot table exists');
 select ok((select relrowsecurity from pg_class where oid = 'public.ops_projection_outbox'::regclass), 'projection outbox RLS is enabled');
 select ok(not has_table_privilege('anon', 'public.ops_projection_outbox', 'SELECT'), 'anon cannot read projection outbox');
+select ok(not has_table_privilege('anon', 'public.ops_provider_snapshots', 'SELECT'), 'anon cannot read provider snapshots');
+select ok(not has_table_privilege('service_role', 'public.ops_provider_snapshots', 'INSERT'), 'snapshot writes require the normalized RPC');
 select ok(not has_function_privilege('authenticated', 'public.enqueue_ops_projection(uuid,text,text,text,text,text,bigint,jsonb)', 'EXECUTE'), 'authenticated cannot enqueue projections');
+select ok(to_regclass('public.email_suppressions_lower_reason_key') is not null, 'suppression uniqueness is canonicalized');
+select ok(exists (select 1 from pg_trigger where tgrelid = 'public.profiles'::regclass and tgname = 'ops_profile_projection'), 'profile changes emit projections');
+select ok(exists (select 1 from pg_trigger where tgrelid = 'public.workspace_members'::regclass and tgname = 'ops_member_projection'), 'membership changes emit projections');
+select ok(exists (select 1 from pg_trigger where tgrelid = 'public.leads'::regclass and tgname = 'ops_lead_projection'), 'lead changes emit projections');
+select ok(exists (select 1 from pg_trigger where tgrelid = 'public.billing_offer_acceptances'::regclass and tgname = 'ops_billing_projection'), 'billing changes emit projections');
+select ok(exists (select 1 from pg_trigger where tgrelid = 'public.customer_communication_preferences'::regclass and tgname = 'ops_preference_projection'), 'preference changes emit projections');
+select ok(exists (select 1 from pg_trigger where tgrelid = 'public.email_suppressions'::regclass and tgname = 'ops_suppression_projection'), 'suppression changes emit projections');
+select ok(exists (select 1 from pg_trigger where tgrelid = 'public.report_email_leads'::regclass and tgname = 'ops_report_email_lead_association'), 'report leads have explicit enquiry association');
 
 select lives_ok($$ select public.enqueue_ops_projection(
   '81111111-1111-4111-8111-111111111111', 'mautic', 'contact', 'profile-1', 'upsert', 'event-1', 1,
@@ -58,9 +70,23 @@ select is((select reason from public.can_send_marketing('81111111-1111-4111-8111
 update public.customer_communication_preferences set unsubscribed_at = now() where workspace_id = '81111111-1111-4111-8111-111111111111';
 select is((select reason from public.can_send_marketing('81111111-1111-4111-8111-111111111111', 'owner@example.com', 'product_updates')), 'unsubscribed', 'unsubscribe is a hard deny');
 
+select lives_ok($$ select public.upsert_ops_provider_snapshot(
+  '81111111-1111-4111-8111-111111111111', 'mautic', 'delivery', 'contact', 'profile-1', 'delivered', null, null, 'email', 'delivered', '****1234', null, now(), 'delivery-1', 1, '{"deliveryStatus":"delivered"}'::jsonb
+) $$, 'safe provider snapshot is accepted');
+select is((select provider_record_suffix from public.ops_provider_snapshots where aggregate_id = 'profile-1'), '****1234', 'provider identifier is masked');
+select throws_ok($$ select public.upsert_ops_provider_snapshot(
+  '81111111-1111-4111-8111-111111111111', 'mautic', 'delivery', 'contact', 'profile-unsafe', 'delivered', null, null, 'email', 'delivered', 'provider-raw-id', null, now(), 'delivery-unsafe', 1, '{"metadata":{"secret":"no"}}'::jsonb
+) $$, '22023', 'invalid provider snapshot identity', 'raw provider suffix is rejected');
+select lives_ok($$ select public.upsert_ops_provider_snapshot(
+  '81111111-1111-4111-8111-111111111111', 'mautic', 'delivery', 'contact', 'profile-1', 'delivered', null, null, 'email', 'delivered', '****1234', null, now(), 'delivery-2', 2, '{"deliveryStatus":"delivered","email":"not persisted"}'::jsonb
+) $$, 'newer provider snapshot version is accepted');
+select is((select safe_data ? 'email' from public.ops_provider_snapshots where aggregate_id = 'profile-1'), false, 'snapshot safe data is allowlisted');
+
 select ok((select count(*)::int from public.ops_enquiry_associations) = 0, 'no implicit email enquiry association is created');
 insert into public.demo_requests (name, email, source) values ('Demo Visitor', 'demo@example.com', 'landing');
 select ok((select workspace_id from public.ops_enquiry_associations where source_id = (select id::text from public.demo_requests where email = 'demo@example.com' limit 1)) is null, 'demo enquiry remains unscoped until explicit association');
+select lives_ok($$ select public.associate_ops_enquiry((select id from public.ops_enquiry_associations where source_id = (select id::text from public.demo_requests where email = 'demo@example.com' limit 1)), '81111111-1111-4111-8111-111111111111', null, 'crm_match') $$, 'enquiry association uses service RPC');
+select is((select workspace_id from public.ops_enquiry_associations where source_id = (select id::text from public.demo_requests where email = 'demo@example.com' limit 1)), '81111111-1111-4111-8111-111111111111'::uuid, 'RPC association is workspace scoped');
 insert into public.ops_enquiry_associations (workspace_id, source_system, source_id, enquiry_type, subject)
 values ('81111111-1111-4111-8111-111111111111', 'crm', 'crm-1', 'sales', 'Explicit CRM association');
 select ok(exists (select 1 from public.ops_projection_outbox where provider = 'chatwoot' and aggregate_type = 'enquiry' and aggregate_id = (select id::text from public.ops_enquiry_associations where source_id = 'crm-1')), 'explicit enquiry association emits provider-neutral projection');

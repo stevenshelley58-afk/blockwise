@@ -4,7 +4,7 @@ import { buildProjectionEnvelope } from "./projection-contract.ts";
 
 export type ProjectionProvider = "mautic" | "chatwoot";
 export type ProjectionAggregate = "contact" | "lifecycle" | "enquiry" | "support";
-const SAFE_PAYLOAD_KEYS = new Set(["workspaceId", "sourceEventId", "sourceVersion", "profileId", "leadId", "topic", "eventType", "email", "name", "lifecycle", "stage", "changedAt", "subject", "status", "contactId"]);
+const SAFE_PAYLOAD_KEYS = new Set(["workspaceId", "sourceEventId", "sourceVersion", "profileId", "leadId", "topic", "eventType", "email", "name", "lifecycle", "stage", "activationStage", "changedAt", "subject", "status", "bookingSubject", "bookingStatus", "contactId"]);
 
 /** Call after the source transaction has committed. No provider I/O happens here. */
 export async function enqueueOperationsProjectionAfterCommit(input: {

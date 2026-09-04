@@ -44,7 +44,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ pat
         query: request.nextUrl.searchParams.get("query") ?? undefined,
         serviceSupabase: service,
       });
-      return NextResponse.json({ data: result }, noStore());
+      return NextResponse.json(readEnvelope(result, request.nextUrl.pathname), noStore());
     }
     if (path.length === 1 && path[0] === "enquiries") {
       const result = await loadPublicEnquiries({
@@ -52,17 +52,17 @@ export async function GET(request: NextRequest, context: { params: Promise<{ pat
         limit: numberParam(request.nextUrl.searchParams.get("limit"), 50),
         serviceSupabase: service,
       });
-      return NextResponse.json({ data: result }, noStore());
+      return NextResponse.json(readEnvelope(result, request.nextUrl.pathname), noStore());
     }
     if (path[0] !== "customers" || path.length < 2 || !path[1]) return notFound();
     const workspaceId = decodeURIComponent(path[1]);
     if (path.length === 2) {
       const result = await loadCustomerDetail(workspaceId, service);
-      return result ? NextResponse.json({ data: result }, noStore()) : notFound();
+      return result ? NextResponse.json(readEnvelope(result, request.nextUrl.pathname), noStore()) : notFound();
     }
     if (path.length === 3) {
       const result = await loadCustomerSubresource(workspaceId, path[2], service);
-      return result ? NextResponse.json({ data: result }, noStore()) : notFound();
+      return result ? NextResponse.json(readEnvelope(result, request.nextUrl.pathname), noStore()) : notFound();
     }
     return notFound();
   } catch (error) {
@@ -78,3 +78,31 @@ function numberParam(value: string | null, fallback: number): number {
 }
 function noStore(status = 200): ResponseInit { return { status, headers: { "Cache-Control": "no-store" } }; }
 function notFound() { return NextResponse.json({ error: "not_found" }, noStore(404)); }
+
+function readEnvelope(data: unknown, pathname: string) {
+  const generatedAt = new Date();
+  const freshUntil = new Date(generatedAt.getTime() + 5 * 60_000).toISOString();
+  const sourceReceiptIds = collectSourceReceipts(data, pathname);
+  return {
+    schema: "blockwise.ops.read.v1",
+    project_id: "blockwise",
+    generated_at: generatedAt.toISOString(),
+    fresh_until: freshUntil,
+    source_revision: "blockwise-ops-read-v1",
+    source_receipt_ids: sourceReceiptIds,
+    data,
+  };
+}
+
+function collectSourceReceipts(data: unknown, pathname: string): string[] {
+  const ids: string[] = [];
+  const visit = (value: unknown, depth: number) => {
+    if (depth > 4 || ids.length >= 100 || !value || typeof value !== "object") return;
+    if (Array.isArray(value)) { for (const item of value) visit(item, depth + 1); return; }
+    const row = value as Record<string, unknown>;
+    if (typeof row.id === "string" && row.id.length <= 64) ids.push(`receipt:ops/${pathname.replace(/^\/+/, "").replace(/[^A-Za-z0-9/_-]/g, "_")}/${row.id}`.slice(0, 128));
+    for (const child of Object.values(row)) visit(child, depth + 1);
+  };
+  visit(data, 0);
+  return [...new Set(ids.length ? ids : [`receipt:ops/${pathname.replace(/^\/+/, "").replace(/[^A-Za-z0-9/_-]/g, "_")}`])];
+}

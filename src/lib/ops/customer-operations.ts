@@ -5,12 +5,16 @@ import { redactString, redactValue } from "../redact.ts";
 type ServiceClient = SupabaseClient;
 type Row = Record<string, unknown>;
 
-const SUMMARY_FIELDS = ["id", "name", "mode", "region", "country_code", "managed_service_enabled", "billing_access_state", "billing_email", "stripe_subscription_status", "stripe_latest_invoice_status", "created_at", "updated_at"] as const;
+// Billing identifiers and billing email are deliberately excluded from the
+// workspace row. They are source-of-truth fields, but are not needed by the
+// service-only operations projection and must never cross this boundary raw.
+const SUMMARY_FIELDS = ["id", "name", "mode", "region", "country_code", "managed_service_enabled", "billing_access_state", "stripe_subscription_status", "stripe_latest_invoice_status", "created_at", "updated_at"] as const;
 const PROFILE_FIELDS = ["id", "email", "full_name", "created_at", "updated_at"] as const;
 const ACTIVATION_FIELDS = ["workspace_id", "email_verified_at", "country_confirmed_at", "website_submitted_at", "brand_pack_approved_at", "first_ad_pack_generated_at", "meta_connected_at", "checkout_completed_at", "first_campaign_live_at", "intro_invoice_paid_at", "onboarding_booked_at", "onboarding_completed_at", "activation_completed_at", "updated_at"] as const;
 const BOOKING_FIELDS = ["id", "workspace_id", "provider", "status", "scheduled_start_at", "scheduled_end_at", "booked_at", "cancelled_at", "completed_at", "created_at", "updated_at"] as const;
 const ENQUIRY_FIELDS = ["id", "workspace_id", "source_system", "source_id", "enquiry_type", "external_id", "status", "subject", "requester_email", "requester_name", "created_at", "updated_at"] as const;
 const PROJECTION_FIELDS = ["id", "workspace_id", "provider", "aggregate_type", "aggregate_id", "operation", "source_event_id", "source_version", "status", "attempts", "max_attempts", "run_after", "completed_at", "created_at", "updated_at"] as const;
+const SNAPSHOT_FIELDS = ["id", "workspace_id", "provider", "snapshot_kind", "aggregate_type", "aggregate_id", "status", "stage", "subject", "channel", "delivery_status", "provider_record_suffix", "occurred_at", "last_activity_at", "source_event_id", "source_version", "updated_at"] as const;
 
 export async function loadCustomerSummaries(input: { cursor?: string; limit?: number; page?: number; pageSize?: number; query?: string; serviceSupabase?: ServiceClient } = {}) {
   const client = input.serviceSupabase ?? createSupabaseServiceClient();
@@ -40,7 +44,7 @@ export async function loadCustomerDetail(workspaceId: string, serviceSupabase?: 
   const { data: workspace, error } = await client.from("workspaces").select(SUMMARY_FIELDS.join(",")).eq("id", workspaceId).maybeSingle();
   if (error) throw new Error(`ops customer query failed: ${error.message}`);
   if (!workspace) return null;
-  const [members, profiles, activation, bookings, leads, billing, audit, email, projections] = await Promise.all([
+  const [members, profiles, activation, bookings, leads, billing, audit, email, projections, snapshots] = await Promise.all([
     related(client, "workspace_members", [workspaceId], "workspace_id,profile_id,role,created_at"),
     relatedProfiles(client, workspaceId),
     one(client, "customer_activations", "workspace_id", workspaceId, ACTIVATION_FIELDS.join(",")),
@@ -50,8 +54,9 @@ export async function loadCustomerDetail(workspaceId: string, serviceSupabase?: 
     related(client, "audit_logs", [workspaceId], "id,workspace_id,action,target_type,target_id,created_at"),
     loadCustomerEmailStatus(client, workspaceId),
     related(client, "ops_projection_outbox", [workspaceId], PROJECTION_FIELDS.join(",")),
+    related(client, "ops_provider_snapshots", [workspaceId], SNAPSHOT_FIELDS.join(",")),
   ]);
-  return { workspace: redact(workspace as unknown as Row, SUMMARY_FIELDS), members: members.map((row) => redact(row, ["workspace_id", "profile_id", "role", "created_at"])), profiles, activation: activation ? redact(activation, ACTIVATION_FIELDS) : null, bookings: bookings.map((row) => redact(row, BOOKING_FIELDS)), enquiries: leads.map((row) => redact(row, ENQUIRY_FIELDS)), billing, email, projections: projections.map((row) => redactProjection(row)), activity: audit.map((row) => redactActivity(row)) };
+  return { workspace: redact(workspace as unknown as Row, SUMMARY_FIELDS), members: members.map((row) => redact(row, ["workspace_id", "profile_id", "role", "created_at"])), profiles, activation: activation ? redact(activation, ACTIVATION_FIELDS) : null, bookings: bookings.map((row) => redact(row, BOOKING_FIELDS)), enquiries: leads.map((row) => redact(row, ENQUIRY_FIELDS)), billing, email, projections: projections.map((row) => redactProjection(row)), providerSnapshots: snapshots.map((row) => redactSnapshot(row)), activity: audit.map((row) => redactActivity(row)) };
 }
 
 export async function loadCustomerSubresource(workspaceId: string, resource: string, serviceSupabase?: ServiceClient): Promise<unknown> {
@@ -71,7 +76,7 @@ export async function loadCustomerSubresource(workspaceId: string, resource: str
   if (resource === "billing") return { workspaceId, ...(await loadBilling(client, workspaceId)) };
   if (resource === "email") return { workspaceId, ...(await loadCustomerEmailStatus(client, workspaceId)) };
   if (resource === "enquiries") return { workspaceId, items: (await related(client, "ops_enquiry_associations", [workspaceId], ENQUIRY_FIELDS.join(","))).map((row) => redact(row, ENQUIRY_FIELDS)) };
-  if (resource === "projections") return { workspaceId, items: (await related(client, "ops_projection_outbox", [workspaceId], PROJECTION_FIELDS.join(","))).map((row) => redactProjection(row)) };
+  if (resource === "projections") return { workspaceId, items: (await related(client, "ops_projection_outbox", [workspaceId], PROJECTION_FIELDS.join(","))).map((row) => redactProjection(row)), providerSnapshots: (await related(client, "ops_provider_snapshots", [workspaceId], SNAPSHOT_FIELDS.join(","))).map((row) => redactSnapshot(row)) };
   throw new OpsNotFoundError();
 }
 
@@ -79,10 +84,12 @@ export class OpsNotFoundError extends Error {}
 
 async function loadBilling(client: ServiceClient, workspaceId: string) {
   const [workspace, acceptances] = await Promise.all([
-    one(client, "workspaces", "id", workspaceId, "id,billing_access_state,billing_email,billing_currency,billing_offer_key,billing_offer_version,stripe_customer_id,stripe_subscription_id,stripe_subscription_status,stripe_current_period_start,stripe_current_period_end,stripe_cancel_at_period_end,stripe_latest_invoice_status,stripe_latest_invoice_amount_paid,billing_payment_recovery_required,billing_reconciliation_required"),
+    one(client, "workspaces", "id", workspaceId, "id,billing_access_state,billing_email,billing_currency,billing_offer_key,billing_offer_version,stripe_subscription_status,stripe_current_period_start,stripe_current_period_end,stripe_cancel_at_period_end,stripe_latest_invoice_status,stripe_latest_invoice_amount_paid,billing_payment_recovery_required,billing_reconciliation_required"),
     related(client, "billing_offer_acceptances", [workspaceId], "id,workspace_id,offer_key,offer_version,accepted_at,market,currency,first_invoice_amount,renewal_amount"),
   ]);
-  return { workspace, acceptances };
+  const safeWorkspace = workspace ? redact(workspace, ["id", "billing_access_state", "billing_currency", "billing_offer_key", "billing_offer_version", "stripe_subscription_status", "stripe_current_period_start", "stripe_current_period_end", "stripe_cancel_at_period_end", "stripe_latest_invoice_status", "stripe_latest_invoice_amount_paid", "billing_payment_recovery_required", "billing_reconciliation_required"]) : null;
+  if (safeWorkspace && typeof workspace?.billing_email === "string") safeWorkspace.billing_email_masked = maskEmail(workspace.billing_email);
+  return { workspace: safeWorkspace, acceptances };
 }
 
 async function related(client: ServiceClient, table: string, ids: string[], fields: string): Promise<Row[]> {
@@ -117,7 +124,14 @@ async function loadCustomerEmailStatus(client: ServiceClient, workspaceId: strin
     if (result.error) throw new Error(`ops email suppressions query failed: ${result.error.message}`);
     suppressions = (result.data ?? []) as unknown as Row[];
   }
-  return { address: email, preferences, suppressions, deliveries: [] };
+  const preferenceFields = ["id", "workspace_id", "profile_id", "marketing_consent", "topics", "unsubscribed_at", "suppressed", "suppression_reason", "consent_source", "consent_recorded_at", "updated_at"];
+  const safePreferences = preferences.map((row) => {
+    const safe = redact(row, preferenceFields);
+    if (typeof row.email === "string") safe.email_masked = maskEmail(row.email);
+    return safe;
+  });
+  const safeSuppressions = suppressions.map((row) => ({ ...redact(row, ["reason", "source", "created_at"]), email_masked: typeof row.email === "string" ? maskEmail(row.email) : "[redacted-email]" }));
+  return { address: email, preferences: safePreferences, suppressions: safeSuppressions, deliveries: [] };
 }
 
 export async function loadPublicEnquiries(input: { cursor?: string; limit?: number; serviceSupabase?: ServiceClient } = {}) {
@@ -164,6 +178,15 @@ function redactProjection(row: Row): Row {
   const safe = redact(row, PROJECTION_FIELDS);
   if ("last_error" in row) safe.last_error = redactString(String(row.last_error ?? "")).slice(0, 512);
   return safe;
+}
+function redactSnapshot(row: Row): Row { return redact(row, SNAPSHOT_FIELDS); }
+function maskEmail(value: string): string {
+  const normalized = value.trim().toLowerCase();
+  const at = normalized.indexOf("@");
+  if (at <= 0 || at === normalized.length - 1) return "[redacted-email]";
+  const local = normalized.slice(0, at);
+  const domain = normalized.slice(at + 1);
+  return `${local.slice(0, 1)}***@${domain.slice(0, 128)}`;
 }
 function escapeLike(value: string): string { return value.replace(/[\\%_]/g, "\\$&"); }
 function boundedLimit(value: number): number { return Math.min(100, Math.max(1, Math.floor(Number.isFinite(value) ? value : 50))); }

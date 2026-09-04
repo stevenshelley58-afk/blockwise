@@ -19,7 +19,7 @@ export type BlockwiseProjectionEnvelope = {
 };
 
 export type AdapterMapping =
-  | { provider: "mautic"; resource: "contact"; fields: { externalId: string; email?: string; name?: string; lifecycle?: string } }
+  | { provider: "mautic"; resource: "contact"; fields: { externalId: string; email?: string; name?: string; lifecycle?: string; activationStage?: string; bookingStatus?: string; bookingSubject?: string } }
   | { provider: "mautic"; resource: "lifecycle"; fields: { externalId: string; stage?: string; changedAt?: string } }
   | { provider: "chatwoot"; resource: "enquiry" | "support"; fields: { externalId: string; subject?: string; status?: string; contactId?: string } };
 
@@ -44,7 +44,7 @@ export function buildProjectionEnvelope(input: Omit<BlockwiseProjectionEnvelope,
 export function mapProjectionForAdapter(envelope: BlockwiseProjectionEnvelope): AdapterMapping {
   const externalId = `${envelope.workspaceId}:${envelope.aggregate.id}`.slice(0, MAX_ID);
   if (envelope.provider === "mautic" && envelope.aggregate.type === "contact") {
-    return { provider: "mautic", resource: "contact", fields: { externalId, email: stringField(envelope.payload.email), name: stringField(envelope.payload.name), lifecycle: stringField(envelope.payload.lifecycle) } };
+    return { provider: "mautic", resource: "contact", fields: { externalId, email: stringField(envelope.payload.email), name: stringField(envelope.payload.name), lifecycle: stringField(envelope.payload.lifecycle) ?? stringField(envelope.payload.stage), activationStage: stringField(envelope.payload.activationStage) ?? stringField(envelope.payload.stage), bookingStatus: stringField(envelope.payload.bookingStatus), bookingSubject: stringField(envelope.payload.bookingSubject) } };
   }
   if (envelope.provider === "mautic" && envelope.aggregate.type === "lifecycle") {
     return { provider: "mautic", resource: "lifecycle", fields: { externalId, stage: stringField(envelope.payload.stage), changedAt: stringField(envelope.payload.changedAt) } };
