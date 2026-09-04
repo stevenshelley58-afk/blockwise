@@ -2,7 +2,7 @@
 
 Status: deployable foundation; DNS, mailbox provisioning and live acceptance
 remain operator gates. This package uses the open-source
-`stalwartlabs/stalwart:v0.16.18@sha256:0df5900cab389a8ec47b7521ef0681ec93598caf72a09097685845211861f6c2`
+`stalwartlabs/stalwart:v0.16.20@sha256:74ca4f7f6885fe302f38a99381f36a208547afce1033d8734d9e6d8d3eba7446`
 for the documented x86_64 VPS target. The exact patch and amd64 digest were
 verified against the [official image tags](https://hub.docker.com/r/stalwartlabs/stalwart/tags)
 and [release changelog](https://github.com/stalwartlabs/stalwart/blob/main/CHANGELOG.md).

@@ -5,12 +5,10 @@
 # Caddy terminates public TLS. The upstreams below are private Compose service
 # names on blockwise-customer-ops-edge.
 
-mail.example.com {
-    encode gzip
-    # Stalwart's private management/JMAP HTTP listener is reachable only on
-    # the customer-ops edge network; Caddy terminates public TLS here.
-    reverse_proxy stalwart:8080
-}
+# product-mail deliberately keeps its HTTP/JMAP/admin listener private in the
+# canonical product Compose contract. SMTP/IMAP are validated directly; do not
+# publish a public Caddy route for mail unless the product-mail runbook is
+# explicitly revised and the edge is attached to the shared mail network.
 
 crm.example.com {
     encode gzip
@@ -29,4 +27,4 @@ book.example.com {
 
 # DNS remains an operator prerequisite for mail delivery. Configure A/AAAA,
 # MX, SPF, DKIM, and DMARC for mail.example.com and SRV records for submission
-# and IMAPS before enabling SMTP ports in the installer.
+# and IMAPS before enabling those firewall listeners.

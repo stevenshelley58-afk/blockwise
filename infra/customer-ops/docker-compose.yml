@@ -1,7 +1,8 @@
 name: blockwise-customer-ops
 
-# Customer operations is a separate Compose project.  It must not share the
-# product or Hermes networks, databases, volumes, or migration allowlists.
+# Customer operations is a separate Compose project. It shares only the
+# narrowly scoped external mail network with product-mail; it does not share
+# product/Hermes backends, databases, volumes, or migration allowlists.
 services:
   postgres:
     image: postgres:18.6-bookworm@sha256:1c59e2c3c818eaa0f0628f695b36e7c9e362d6b219b36a54a32df645cbd7e1af
@@ -32,7 +33,7 @@ services:
         limits: { cpus: "2", memory: 2G }
 
   mariadb:
-    image: mariadb:11.4.5@sha256:49117dcc565cf51aa57ac5fca59ab31213402ff0eae6ffc13c46a37b938f7e4b
+    image: mariadb:11.4@sha256:611a2fcc5fa7c6ceb8644c6f74b25ede004ff6c3a6b38c8f8c23d3bbf6c26430
     environment:
       MARIADB_ROOT_PASSWORD_FILE: /run/secrets/mautic_db_root_password
       MARIADB_DATABASE: mautic
@@ -57,7 +58,7 @@ services:
         limits: { cpus: "2", memory: 1G }
 
   redis:
-    image: redis:7.4.2-alpine@sha256:02419de7eddf55aa5bcf49efb74e88fa8d931b4d77c07eff8a6b2144472b6952
+    image: redis:7.4-alpine@sha256:ff02b58f971e7d7d156a1267e283fcbbeee91773b6aa36c49dac28ecfe28eadf
     command: ["redis-server", "--appendonly", "yes", "--save", "60", "1", "--loglevel", "warning"]
     volumes: [customer_ops_redis:/data]
     networks: [backend]
@@ -75,38 +76,8 @@ services:
       resources:
         limits: { cpus: "1", memory: 512M }
 
-  stalwart:
-    image: stalwartlabs/stalwart:v0.16@sha256:74ca4f7f6885fe302f38a99381f36a208547afce1033d8734d9e6d8d3eba7446
-    entrypoint: ["/customer-ops/stalwart-entrypoint.sh"]
-    environment:
-      STALWART_HOSTNAME: ${MAIL_HOST:?set MAIL_HOST}
-      STALWART_PUBLIC_URL: https://${MAIL_HOST:?set MAIL_HOST}
-    secrets: [stalwart_recovery_admin]
-    volumes:
-      - customer_ops_stalwart_etc:/etc/stalwart
-      - customer_ops_stalwart_data:/var/lib/stalwart
-      - ./stalwart-entrypoint.sh:/customer-ops/stalwart-entrypoint.sh:ro
-    networks: [edge, backend, egress]
-    ports:
-      - "${STALWART_SMTP_BIND:-0.0.0.0}:${STALWART_SMTP_PORT:-25}:25"
-      - "${STALWART_SUBMISSION_BIND:-0.0.0.0}:${STALWART_SUBMISSION_PORT:-587}:587"
-      - "${STALWART_SMTPS_BIND:-0.0.0.0}:${STALWART_SMTPS_PORT:-465}:465"
-      - "${STALWART_IMAPS_BIND:-0.0.0.0}:${STALWART_IMAPS_PORT:-993}:993"
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:8080/healthz/live || exit 1"]
-      interval: 15s
-      timeout: 5s
-      retries: 10
-      start_period: 30s
-    restart: unless-stopped
-    security_opt: [no-new-privileges:true]
-    cap_drop: [ALL]
-    deploy:
-      resources:
-        limits: { cpus: "1", memory: 768M }
-
   mautic:
-    image: mautic/mautic:5.2-apache@sha256:e3fb45f69bf1a03effdf7d7cf214b269b82dd340acda328cf3cfb709971ada59
+    image: mautic/mautic:7.2.0-apache@sha256:dea3bb71a5c5bf4c0c7d1764e58a32109898e7b2e6a710f14f50e2a913c03a0f
     entrypoint: ["/customer-ops/mautic-entrypoint.sh"]
     environment:
       MAUTIC_DB_HOST: mariadb
@@ -114,17 +85,18 @@ services:
       MAUTIC_DB_NAME: mautic
       MAUTIC_DB_DATABASE: mautic
       MAUTIC_DB_USER: mautic
-      MAUTIC_DB_PASSWORD_FILE: /run/secrets/mautic_db_password
       DOCKER_MAUTIC_ROLE: mautic_web
       MAUTIC_RUN_CRON_JOBS: "false"
-    secrets: [mautic_db_password]
+      MAUTIC_MAILER_FROM_EMAIL: ${MAUTIC_EMAIL_FROM:?set MAUTIC_EMAIL_FROM}
+      SMTP_USER: ${MAUTIC_SMTP_USER:?set MAUTIC_SMTP_USER}
+    secrets: [mautic_db_password, mautic_smtp_password]
     volumes:
       - customer_ops_mautic_config:/var/www/html/config
       - customer_ops_mautic_media_files:/var/www/html/docroot/media/files
       - customer_ops_mautic_media_images:/var/www/html/docroot/media/images
       - customer_ops_mautic_logs:/var/www/html/var/logs
       - ./mautic-entrypoint.sh:/customer-ops/mautic-entrypoint.sh:ro
-    networks: [edge, backend, egress]
+    networks: [edge, backend, egress, mail]
     depends_on:
       mariadb: { condition: service_healthy }
     healthcheck:
@@ -143,7 +115,7 @@ services:
         limits: { cpus: "1", memory: 1G }
 
   mautic-cron:
-    image: mautic/mautic:5.2-apache@sha256:e3fb45f69bf1a03effdf7d7cf214b269b82dd340acda328cf3cfb709971ada59
+    image: mautic/mautic:7.2.0-apache@sha256:dea3bb71a5c5bf4c0c7d1764e58a32109898e7b2e6a710f14f50e2a913c03a0f
     entrypoint: ["/customer-ops/mautic-entrypoint.sh"]
     environment:
       MAUTIC_DB_HOST: mariadb
@@ -151,16 +123,17 @@ services:
       MAUTIC_DB_NAME: mautic
       MAUTIC_DB_DATABASE: mautic
       MAUTIC_DB_USER: mautic
-      MAUTIC_DB_PASSWORD_FILE: /run/secrets/mautic_db_password
       DOCKER_MAUTIC_ROLE: mautic_cron
-    secrets: [mautic_db_password]
+      MAUTIC_MAILER_FROM_EMAIL: ${MAUTIC_EMAIL_FROM:?set MAUTIC_EMAIL_FROM}
+      SMTP_USER: ${MAUTIC_SMTP_USER:?set MAUTIC_SMTP_USER}
+    secrets: [mautic_db_password, mautic_smtp_password]
     volumes:
       - customer_ops_mautic_config:/var/www/html/config
       - customer_ops_mautic_media_files:/var/www/html/docroot/media/files
       - customer_ops_mautic_media_images:/var/www/html/docroot/media/images
       - customer_ops_mautic_logs:/var/www/html/var/logs
       - ./mautic-entrypoint.sh:/customer-ops/mautic-entrypoint.sh:ro
-    networks: [backend, egress]
+    networks: [backend, egress, mail]
     depends_on:
       mariadb: { condition: service_healthy }
     restart: unless-stopped
@@ -173,7 +146,7 @@ services:
         limits: { cpus: "0.5", memory: 512M }
 
   mautic-worker:
-    image: mautic/mautic:5.2-apache@sha256:e3fb45f69bf1a03effdf7d7cf214b269b82dd340acda328cf3cfb709971ada59
+    image: mautic/mautic:7.2.0-apache@sha256:dea3bb71a5c5bf4c0c7d1764e58a32109898e7b2e6a710f14f50e2a913c03a0f
     entrypoint: ["/customer-ops/mautic-entrypoint.sh"]
     environment:
       MAUTIC_DB_HOST: mariadb
@@ -181,16 +154,17 @@ services:
       MAUTIC_DB_NAME: mautic
       MAUTIC_DB_DATABASE: mautic
       MAUTIC_DB_USER: mautic
-      MAUTIC_DB_PASSWORD_FILE: /run/secrets/mautic_db_password
       DOCKER_MAUTIC_ROLE: mautic_worker
-    secrets: [mautic_db_password]
+      MAUTIC_MAILER_FROM_EMAIL: ${MAUTIC_EMAIL_FROM:?set MAUTIC_EMAIL_FROM}
+      SMTP_USER: ${MAUTIC_SMTP_USER:?set MAUTIC_SMTP_USER}
+    secrets: [mautic_db_password, mautic_smtp_password]
     volumes:
       - customer_ops_mautic_config:/var/www/html/config
       - customer_ops_mautic_media_files:/var/www/html/docroot/media/files
       - customer_ops_mautic_media_images:/var/www/html/docroot/media/images
       - customer_ops_mautic_logs:/var/www/html/var/logs
       - ./mautic-entrypoint.sh:/customer-ops/mautic-entrypoint.sh:ro
-    networks: [backend, egress]
+    networks: [backend, egress, mail]
     depends_on:
       mariadb: { condition: service_healthy }
     restart: unless-stopped
@@ -203,7 +177,7 @@ services:
         limits: { cpus: "1", memory: 512M }
 
   chatwoot-prepare:
-    image: chatwoot/chatwoot:v4.14.2-ce@sha256:7d97dd1b1a610448b36f4e9d1f3ab801dd929fa9a774738f1eb5bbfdf6063c63
+    image: chatwoot/chatwoot:v4.17.1-ce@sha256:351465db8f96c591686b4667a63836f048aa1d7c86c6ea97d262d5f37c795030
     entrypoint: ["/customer-ops/chatwoot-entrypoint.sh"]
     command: ["bundle", "exec", "rails", "db:chatwoot_prepare"]
     environment: &chatwoot_prepare_env
@@ -216,7 +190,13 @@ services:
       POSTGRES_USERNAME: chatwoot
       POSTGRES_PASSWORD_FILE: /run/secrets/chatwoot_db_password
       REDIS_URL: redis://redis:6379/0
-    secrets: [chatwoot_secret_key_base, chatwoot_db_password]
+      SMTP_ADDRESS: product-mail
+      SMTP_PORT: "587"
+      SMTP_USERNAME: ${CHATWOOT_SMTP_USER:?set CHATWOOT_SMTP_USER}
+      SMTP_PASSWORD_FILE: /run/secrets/chatwoot_smtp_password
+      SMTP_ENABLE_STARTTLS_AUTO: "true"
+      MAILER_SENDER_EMAIL: ${CHATWOOT_EMAIL_FROM:?set CHATWOOT_EMAIL_FROM}
+    secrets: [chatwoot_secret_key_base, chatwoot_db_password, chatwoot_smtp_password]
     volumes:
       - customer_ops_chatwoot_storage:/app/storage
       - customer_ops_chatwoot_tmp:/app/tmp
@@ -232,7 +212,7 @@ services:
     cap_drop: [ALL]
 
   chatwoot-web:
-    image: chatwoot/chatwoot:v4.14.2-ce@sha256:7d97dd1b1a610448b36f4e9d1f3ab801dd929fa9a774738f1eb5bbfdf6063c63
+    image: chatwoot/chatwoot:v4.17.1-ce@sha256:351465db8f96c591686b4667a63836f048aa1d7c86c6ea97d262d5f37c795030
     entrypoint: ["/customer-ops/chatwoot-entrypoint.sh"]
     command: ["bundle", "exec", "rails", "s", "-b", "0.0.0.0", "-p", "3000"]
     environment: &chatwoot_env
@@ -248,12 +228,18 @@ services:
       FRONTEND_URL: ${CHATWOOT_HOST:?set CHATWOOT_HOST}
       ACTIVE_STORAGE_SERVICE: local
       RAILS_LOG_TO_STDOUT: "true"
-    secrets: [chatwoot_secret_key_base, chatwoot_db_password]
+      SMTP_ADDRESS: product-mail
+      SMTP_PORT: "587"
+      SMTP_USERNAME: ${CHATWOOT_SMTP_USER:?set CHATWOOT_SMTP_USER}
+      SMTP_PASSWORD_FILE: /run/secrets/chatwoot_smtp_password
+      SMTP_ENABLE_STARTTLS_AUTO: "true"
+      MAILER_SENDER_EMAIL: ${CHATWOOT_EMAIL_FROM:?set CHATWOOT_EMAIL_FROM}
+    secrets: [chatwoot_secret_key_base, chatwoot_db_password, chatwoot_smtp_password]
     volumes:
       - customer_ops_chatwoot_storage:/app/storage
       - customer_ops_chatwoot_tmp:/app/tmp
       - ./chatwoot-entrypoint.sh:/customer-ops/chatwoot-entrypoint.sh:ro
-    networks: [edge, backend, egress]
+    networks: [edge, backend, egress, mail]
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
@@ -274,16 +260,16 @@ services:
         limits: { cpus: "2", memory: 2G }
 
   chatwoot-worker:
-    image: chatwoot/chatwoot:v4.14.2-ce@sha256:7d97dd1b1a610448b36f4e9d1f3ab801dd929fa9a774738f1eb5bbfdf6063c63
+    image: chatwoot/chatwoot:v4.17.1-ce@sha256:351465db8f96c591686b4667a63836f048aa1d7c86c6ea97d262d5f37c795030
     entrypoint: ["/customer-ops/chatwoot-entrypoint.sh"]
     command: ["bundle", "exec", "sidekiq", "-C", "config/sidekiq.yml"]
     environment: *chatwoot_env
-    secrets: [chatwoot_secret_key_base, chatwoot_db_password]
+    secrets: [chatwoot_secret_key_base, chatwoot_db_password, chatwoot_smtp_password]
     volumes:
       - customer_ops_chatwoot_storage:/app/storage
       - customer_ops_chatwoot_tmp:/app/tmp
       - ./chatwoot-entrypoint.sh:/customer-ops/chatwoot-entrypoint.sh:ro
-    networks: [backend, egress]
+    networks: [backend, egress, mail]
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
@@ -299,8 +285,8 @@ services:
 
   snagtime-web:
     # Build/publish this image from the merged SnagTime main SHA documented in
-    # docs/runbooks/customer-ops-vps.md; this variable is intentionally an
-    # operator-supplied immutable image contract, not a fake implementation.
+    # docs/runbooks/customer-ops-vps.md. The operator must supply the published
+    # immutable digest; this stack never pretends to package SnagTime.
     image: ${SNAGTIME_IMAGE:?set SNAGTIME_IMAGE to the immutable merged-main runtime image}
     command: ["node", "apps/web/server.js"]
     environment: &snagtime_env
@@ -316,18 +302,18 @@ services:
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:?set GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET_FILE: /run/secrets/google_client_secret
       EMAIL_PROVIDER: smtp
-      SMTP_HOST: ${MAIL_HOST:?set MAIL_HOST}
+      SMTP_HOST: ${SMTP_HOST:-product-mail}
       SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_TLS_MODE: ${SMTP_TLS_MODE:-starttls}
-      SMTP_USER: ${SMTP_USER:?set SMTP_USER}
-      SMTP_PASSWORD_FILE: /run/secrets/smtp_password
-      EMAIL_FROM: ${EMAIL_FROM:?set EMAIL_FROM}
+      SMTP_USER: ${SNAGTIME_SMTP_USER:?set SNAGTIME_SMTP_USER}
+      SMTP_PASSWORD_FILE: /run/secrets/snagtime_smtp_password
+      EMAIL_FROM: ${SNAGTIME_EMAIL_FROM:?set SNAGTIME_EMAIL_FROM}
       EMAIL_REPLY_TO: ${EMAIL_REPLY_TO:?set EMAIL_REPLY_TO}
       EMAIL_SENDER_DOMAIN: ${EMAIL_SENDER_DOMAIN:?set EMAIL_SENDER_DOMAIN}
       AUTH_SECRET_FILE: /run/secrets/snagtime_auth_secret
       TOKEN_ENCRYPTION_KEY_FILE: /run/secrets/snagtime_token_encryption_key
-    secrets: [snagtime_database_url, google_client_secret, smtp_password, snagtime_auth_secret, snagtime_token_encryption_key]
-    networks: [edge, backend, egress]
+    secrets: [snagtime_database_url, google_client_secret, snagtime_smtp_password, snagtime_auth_secret, snagtime_token_encryption_key]
+    networks: [edge, backend, egress, mail]
     depends_on:
       postgres: { condition: service_healthy }
     healthcheck:
@@ -349,8 +335,8 @@ services:
     image: ${SNAGTIME_IMAGE:?set SNAGTIME_IMAGE to the immutable merged-main runtime image}
     command: ["node", "dist/worker.mjs"]
     environment: *snagtime_env
-    secrets: [snagtime_database_url, google_client_secret, smtp_password, snagtime_auth_secret, snagtime_token_encryption_key]
-    networks: [backend, egress]
+    secrets: [snagtime_database_url, google_client_secret, snagtime_smtp_password, snagtime_auth_secret, snagtime_token_encryption_key]
+    networks: [backend, egress, mail]
     depends_on:
       postgres: { condition: service_healthy }
     restart: unless-stopped
@@ -361,16 +347,6 @@ services:
     deploy:
       resources:
         limits: { cpus: "1", memory: 768M }
-
-  blockwise-outbox-contract:
-    image: ${BLOCKWISE_OUTBOX_IMAGE:-ghcr.io/stevenshelley58-afk/blockwise-outbox-adapter:contract-placeholder}
-    profiles: [contract-placeholders]
-    command: ["sh", "-c", "echo 'contract placeholder: Blockwise outbox worker is not implemented in this stack' >&2; exit 78"]
-    networks: [backend]
-    restart: "no"
-    read_only: true
-    security_opt: [no-new-privileges:true]
-    cap_drop: [ALL]
 
   hermes-adapter-contract:
     image: ${HERMES_ADAPTER_IMAGE:-ghcr.io/stevenshelley58-afk/hermes-adapter:contract-placeholder}
@@ -390,13 +366,14 @@ networks:
     internal: true
   egress:
     name: blockwise-customer-ops-egress
+  mail:
+    name: blockwise-customer-ops-mail
+    external: true
 
 volumes:
   customer_ops_postgres: {}
   customer_ops_mariadb: {}
   customer_ops_redis: {}
-  customer_ops_stalwart_etc: {}
-  customer_ops_stalwart_data: {}
   customer_ops_mautic_config: {}
   customer_ops_mautic_media_files: {}
   customer_ops_mautic_media_images: {}
@@ -413,7 +390,8 @@ secrets:
   chatwoot_secret_key_base: { file: "${CUSTOMER_OPS_SECRETS_DIR:-/etc/blockwise/customer-ops/secrets}/chatwoot_secret_key_base" }
   snagtime_database_url: { file: "${CUSTOMER_OPS_SECRETS_DIR:-/etc/blockwise/customer-ops/secrets}/snagtime_database_url" }
   google_client_secret: { file: "${CUSTOMER_OPS_SECRETS_DIR:-/etc/blockwise/customer-ops/secrets}/google_client_secret" }
-  smtp_password: { file: "${CUSTOMER_OPS_SECRETS_DIR:-/etc/blockwise/customer-ops/secrets}/smtp_password" }
+  mautic_smtp_password: { file: "${CUSTOMER_OPS_SECRETS_DIR:-/etc/blockwise/customer-ops/secrets}/mautic_smtp_password" }
+  chatwoot_smtp_password: { file: "${CUSTOMER_OPS_SECRETS_DIR:-/etc/blockwise/customer-ops/secrets}/chatwoot_smtp_password" }
+  snagtime_smtp_password: { file: "${CUSTOMER_OPS_SECRETS_DIR:-/etc/blockwise/customer-ops/secrets}/snagtime_smtp_password" }
   snagtime_auth_secret: { file: "${CUSTOMER_OPS_SECRETS_DIR:-/etc/blockwise/customer-ops/secrets}/snagtime_auth_secret" }
   snagtime_token_encryption_key: { file: "${CUSTOMER_OPS_SECRETS_DIR:-/etc/blockwise/customer-ops/secrets}/snagtime_token_encryption_key" }
-  stalwart_recovery_admin: { file: "${CUSTOMER_OPS_SECRETS_DIR:-/etc/blockwise/customer-ops/secrets}/stalwart_recovery_admin" }

@@ -7,23 +7,27 @@ or production.
 
 ## Components and boundaries
 
-`infra/customer-ops/docker-compose.yml` runs Stalwart mail/JMAP, Mautic CRM,
-campaign cron/worker, Chatwoot web/Sidekiq, and SnagTime web/worker. Chatwoot and
-SnagTime use independent PostgreSQL databases and login roles. Mautic uses its
-own MariaDB database and login because the upstream Mautic 5 image requires
-MySQL/MariaDB. Chatwoot uses only the private customer-ops Redis instance.
-Stalwart persists its own configuration/data volumes and does not share an
-application database.
+`infra/customer-ops/docker-compose.yml` runs Mautic CRM/campaign cron/worker,
+Chatwoot web/Sidekiq, and SnagTime web/worker. Chatwoot and SnagTime use
+independent PostgreSQL databases and login roles. Mautic uses its own MariaDB
+database and login because the upstream image requires MySQL/MariaDB. Chatwoot
+uses only the private customer-ops Redis instance. Mail is provided by the
+existing opt-in `product-mail` service; this stack deliberately has no second
+Stalwart server or mail volumes.
 
-The `blockwise-outbox-contract` and `hermes-adapter-contract` services are
-disabled placeholder contracts. They exit with status 78 and contain no
-implementation. Do not enable those profiles until a reviewed immutable image
-and contract are supplied.
+The `hermes-adapter-contract` service is a disabled placeholder contract. It
+exits with status 78 and contains no implementation. Blockwise's existing
+`infra/product/systemd/blockwise-email-outbox-drain.*` and
+`scripts/vps/email-outbox-drain.sh` remain the outbox contract; this stack does
+not duplicate it.
 
 ## Prerequisites
 
 - Linux VPS with Docker Engine and Compose v2, `bash`, `openssl`, `getent`,
   `ss`, `nc`, `curl`, and `restic`.
+- At least 1 GiB (2--4 GiB recommended) active swap for Chatwoot upgrade
+  safety. Provision it under the host's normal change control before
+  `--apply`; the installer fails closed when applying without swap.
 - A dedicated checkout and `/etc/blockwise/customer-ops/` outside the
   checkout. The env file and every secret file must be mode `0600`; secret
   directory mode is `0700`.
@@ -32,8 +36,12 @@ and contract are supplied.
   SMTPS 465, and IMAPS 993 only after firewall review.
 - The separately managed Frank/shared edge must include the reviewed
   `infra/customer-ops/Caddyfile.snippets` and attach to
-  `blockwise-customer-ops-edge`. Do not edit the live product Caddyfile as
-  part of this runbook.
+  `blockwise-customer-ops-edge` plus `blockwise-customer-ops-mail`. Do not edit
+  the live product Caddyfile as part of this runbook.
+- Before validation, an operator must create the narrowly shared mail network
+  once (`docker network create --driver bridge blockwise-customer-ops-mail`).
+  It is joined only by product-mail and customer-ops mail consumers; do not
+  join the product backend network.
 - A restic repository on an off-host target (SFTP, S3, or equivalent) and a
   separate mode-0600 restic password file. Restic encrypts backup contents;
   the repository and password are operator-managed.
@@ -43,10 +51,12 @@ and contract are supplied.
 The forked SnagTime `main` at the time this contract was written is
 `86f71128af79a0efc6eeac6003a40eb601ff7c4c`. Build the runtime from that exact
 merged source revision using SnagTime's own production Dockerfile target, then
-publish it to an operator-controlled registry. Supply the resulting immutable
-image reference as `SNAGTIME_IMAGE` and the full source SHA as
-`SNAGTIME_REVISION`. The installer rejects moving tags and rejects a revision
-that is not a full lowercase SHA.
+publish it to an operator-controlled registry. This repository has no GHCR
+publish workflow, so image publication and the resulting digest are an
+operator pre-deploy prerequisite. Supply the immutable `SNAGTIME_IMAGE`
+reference including its `@sha256:` digest and the full source SHA as
+`SNAGTIME_REVISION`; the installer rejects moving tags, undigested images, and
+a revision that is not a full lowercase SHA.
 
 The runtime must expose `node apps/web/server.js`, `node dist/worker.mjs`,
 `/api/health/live`, and `/api/health/ready`; accept `BUILD_ID`,
@@ -59,13 +69,16 @@ from this Blockwise checkout.
 Copy `infra/customer-ops/customer-ops.env.example` to a path outside the
 checkout and replace all example values. Keep API tokens for the smoke test in
 `mautic_api_token` and `chatwoot_api_token` files under the secret directory;
-set `CHATWOOT_WEBHOOK_URL` in the env file. The installer generates only
+set the optional `CHATWOOT_WEBHOOK_PROBE_URL` after a reviewed adapter exists. The installer generates only
 missing random application/database secrets and never prints their contents.
 Google and SMTP provider credentials must already exist as non-empty
-mode-0600 files (`google_client_secret` and `smtp_password`); provider
-credentials are never generated. A temporary secret-backed
-`admin:<random>` Stalwart recovery credential is generated for first setup;
-remove its secret mount and wrapper after a permanent administrator is created.
+mode-0600 files (`google_client_secret`, `mautic_smtp_password`,
+`chatwoot_smtp_password`, `snagtime_smtp_password`, and
+`chatwoot_inbox_password`); provider credentials are never generated. Use
+distinct Stalwart SMTP users for Mautic, Chatwoot, and SnagTime. Product-mail bootstrap,
+recovery-admin removal, mailbox creation, and mail volume backup/restore
+remain governed by `docs/runbooks/stalwart-mail.md` and
+`scripts/vps/stalwart-backup.sh`; do not duplicate those credentials or state.
 
 Run the fail-closed check first:
 
@@ -81,10 +94,10 @@ post-edge TLS gate:
 scripts/vps/customer-ops-install.sh --env-file /etc/blockwise/customer-ops/customer-ops.env --check --post-edge-tls
 ```
 
-The initial check requires DNS resolution, free mail ports, all secret mounts,
-immutable SnagTime identity, and quiet `docker compose config`. After the
-shared edge is attached and certificates are issued, run the post-edge TLS
-gate:
+The initial check requires DNS resolution, reachable SMTP submission port, all
+secret mounts, immutable SnagTime identity, and quiet `docker compose config`.
+After the shared edge is attached and certificates are issued, run the post-edge
+TLS gate:
 
 ```bash
 scripts/vps/customer-ops-install.sh --env-file /etc/blockwise/customer-ops/customer-ops.env --apply
@@ -106,16 +119,41 @@ scripts/vps/customer-ops-smoke.sh --env-file /etc/blockwise/customer-ops/custome
 ```
 
 It reports only pass/fail and status codes. It checks SMTP STARTTLS and AUTH
-(with `swaks` installed), Mautic API authentication, Chatwoot API and webhook
-reachability, SnagTime readiness plus Google/Calendar configuration, and the
-configured Frank projection freshness endpoint. It never emits credentials or
-API response bodies.
+(with `swaks` installed), Mautic API authentication, Chatwoot API, SnagTime
+readiness plus Google/Calendar configuration, and the configured Frank
+projection freshness endpoint. When `CHATWOOT_WEBHOOK_PROBE_URL` is set, it
+also sends a signed, non-credentialed probe and requires a 2xx response; until
+the adapter contract exists, the webhook assertion is explicitly deferred.
+It never emits credentials or API response bodies.
+
+## Mail and customer acceptance
+
+The Mautic entrypoint reads the operator-supplied `mautic_smtp_password` file and
+sets its SMTP transport to `product-mail:587` with STARTTLS. Confirm the
+Mautic mailer settings in its UI/API and send a controlled message to an
+external mailbox. Chatwoot web/worker use the product-mail submission network
+with their distinct `chatwoot_smtp_password` identity. After Chatwoot bootstrap, use the
+operator-supplied `CHATWOOT_INBOX_USER` and `chatwoot_inbox_password` to create
+its email channel with the support mailbox's IMAP host/port (`product-mail:993`)
+and SMTP host/port (`product-mail:587`), then perform this receipt-based
+acceptance:
+
+1. Send an inbound message from an unrelated external mailbox.
+2. Record the resulting Chatwoot conversation/inbox receipt and the signed
+   projection receipt (the Hermes adapter remains explicitly deferred).
+3. Reply from Chatwoot and verify delivery at the external mailbox over
+   authenticated SMTP.
+
+Also create a disposable SnagTime booking, verify the Google Calendar block,
+and record the booking/enquiry receipt plus Frank projection freshness. A
+health endpoint alone is not customer-operations acceptance.
 
 ## Encrypted backup and restore
 
 Back up to an off-host restic repository; the script captures PostgreSQL
-globals and both application databases, the full Mautic MariaDB, Stalwart config/data,
-Mautic config/media, and Chatwoot storage:
+globals and both application databases, the full Mautic MariaDB, Mautic
+config/media, and Chatwoot storage. Product-mail state is backed up separately
+by the existing Stalwart backup script:
 
 ```bash
 scripts/vps/customer-ops-backup.sh \
@@ -133,9 +171,48 @@ scripts/vps/customer-ops-restore.sh \
   --repository sftp:user@backup-host:/srv/restic/customer-ops \
   --password-file /etc/blockwise/customer-ops/restic-password \
   --snapshot latest \
-  --target-empty /srv/blockwise/customer-ops-restore-test
+  --target-empty /srv/blockwise/customer-ops-restore-test \
+  --receipt /srv/blockwise/customer-ops-restore-test/restore-receipt.txt
 ```
 
-Import dumps/tarballs only into an isolated test Compose project, validate the
-health and smoke checks, then record the restore receipt. Never restore over a
-live product or customer-ops volume.
+The command validates every customer-ops artifact and writes a mode-0600 receipt;
+then import into a newly created isolated Compose project with a unique name
+and fresh volumes. Set `ARTIFACT_DIR` to the directory containing `MANIFEST`:
+
+```bash
+export RESTORE_PROJECT=blockwise-customer-ops-restore-$(date -u +%Y%m%d%H%M%S)
+docker compose -p "$RESTORE_PROJECT" --env-file /etc/blockwise/customer-ops/customer-ops.env \
+  -f infra/customer-ops/docker-compose.yml up -d postgres mariadb redis
+# The fresh postgres-init contract recreates the customer_ops/chatwoot/snagtime
+# roles and databases. Keep postgres-globals.sql with the receipt for review;
+# do not replay its CREATE ROLE/CREATE DATABASE statements over that initialized
+# target.
+docker compose -p "$RESTORE_PROJECT" --env-file /etc/blockwise/customer-ops/customer-ops.env \
+  -f infra/customer-ops/docker-compose.yml exec -T postgres sh -c \
+  'PGPASSWORD="$(cat /run/secrets/postgres_owner_password)" pg_restore -U "$POSTGRES_USER" -d chatwoot --exit-on-error' < "$ARTIFACT_DIR/chatwoot.dump"
+docker compose -p "$RESTORE_PROJECT" --env-file /etc/blockwise/customer-ops/customer-ops.env \
+  -f infra/customer-ops/docker-compose.yml exec -T postgres sh -c \
+  'PGPASSWORD="$(cat /run/secrets/postgres_owner_password)" pg_restore -U "$POSTGRES_USER" -d snagtime --exit-on-error' < "$ARTIFACT_DIR/snagtime.dump"
+docker compose -p "$RESTORE_PROJECT" --env-file /etc/blockwise/customer-ops/customer-ops.env \
+  -f infra/customer-ops/docker-compose.yml exec -T mariadb sh -c \
+  'mariadb -uroot --password="$(cat /run/secrets/mautic_db_root_password)"' < "$ARTIFACT_DIR/mautic.sql"
+docker compose -p "$RESTORE_PROJECT" --env-file /etc/blockwise/customer-ops/customer-ops.env \
+  -f infra/customer-ops/docker-compose.yml run --rm --no-deps -T --entrypoint sh mautic -c \
+  'tar -C /var/www/html/config -xf -' < "$ARTIFACT_DIR/mautic-config.tar"
+docker compose -p "$RESTORE_PROJECT" --env-file /etc/blockwise/customer-ops/customer-ops.env \
+  -f infra/customer-ops/docker-compose.yml run --rm --no-deps -T --entrypoint sh mautic -c \
+  'tar -C /var/www/html/docroot/media/files -xf -' < "$ARTIFACT_DIR/mautic-media-files.tar"
+docker compose -p "$RESTORE_PROJECT" --env-file /etc/blockwise/customer-ops/customer-ops.env \
+  -f infra/customer-ops/docker-compose.yml run --rm --no-deps -T --entrypoint sh mautic -c \
+  'tar -C /var/www/html/docroot/media/images -xf -' < "$ARTIFACT_DIR/mautic-media-images.tar"
+docker compose -p "$RESTORE_PROJECT" --env-file /etc/blockwise/customer-ops/customer-ops.env \
+  -f infra/customer-ops/docker-compose.yml run --rm --no-deps -T --entrypoint sh chatwoot-web -c \
+  'tar -C /app/storage -xf -' < "$ARTIFACT_DIR/chatwoot-storage.tar"
+```
+
+Extract the Mautic and Chatwoot tarballs into the fresh project volumes using
+temporary one-shot containers, then start web/worker services and run health
+and smoke checks. Append the isolated project name, image digests, and smoke
+result to the mode-0600 restore receipt. Product-mail state is restored
+separately under `docs/runbooks/stalwart-mail.md`; never restore over a live
+product or customer-ops volume.

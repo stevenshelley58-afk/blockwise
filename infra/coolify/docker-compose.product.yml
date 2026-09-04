@@ -56,7 +56,7 @@ services:
   # been bootstrapped. Only SMTP (25) and submission (587) are published;
   # JMAP/IMAP/HTTP administration stays on the product network for now.
   product-mail:
-    image: stalwartlabs/stalwart:v0.16.18@sha256:0df5900cab389a8ec47b7521ef0681ec93598caf72a09097685845211861f6c2
+    image: stalwartlabs/stalwart:v0.16.20@sha256:74ca4f7f6885fe302f38a99381f36a208547afce1033d8734d9e6d8d3eba7446
     profiles: [mail]
     restart: unless-stopped
     environment:
@@ -75,7 +75,7 @@ services:
     volumes:
       - blockwise-product-mail-config:/etc/stalwart
       - blockwise-product-mail-data:/var/lib/stalwart
-    networks: [blockwise-product]
+    networks: [blockwise-product, customer-ops-mail]
     healthcheck:
       test: [CMD, "curl", "-fsS", "http://127.0.0.1:8080/healthz/ready"]
       interval: 15s
@@ -393,6 +393,9 @@ networks:
       config:
         - subnet: ${BLOCKWISE_PRODUCT_NETWORK_SUBNET:-172.30.0.0/24}
           ip_range: ${BLOCKWISE_PRODUCT_NETWORK_IP_RANGE:-172.30.0.128/25}
+  customer-ops-mail:
+    name: blockwise-customer-ops-mail
+    external: true
 
 volumes:
   blockwise-product-db-data:

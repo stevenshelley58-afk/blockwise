@@ -39,7 +39,12 @@ docker compose version >/dev/null || { echo 'docker compose plugin is required' 
 command -v getent >/dev/null || { echo 'getent is required for DNS validation' >&2; exit 69; }
 command -v openssl >/dev/null || { echo 'openssl is required for TLS validation' >&2; exit 69; }
 command -v nc >/dev/null || { echo 'nc is required for port validation' >&2; exit 69; }
-command -v ss >/dev/null || { echo 'ss is required for port validation' >&2; exit 69; }
+command -v timeout >/dev/null || { echo 'timeout is required for TLS validation' >&2; exit 69; }
+docker network inspect blockwise-customer-ops-mail >/dev/null 2>&1 || { echo 'shared product-mail network is missing: create blockwise-customer-ops-mail after review' >&2; exit 66; }
+if ! swapon --show 2>/dev/null | tail -n +2 | grep -q .; then
+  echo 'at least 1 GiB swap is required for Chatwoot upgrade safety' >&2
+  [[ "$MODE" == apply ]] && exit 66
+fi
 
 # shellcheck disable=SC1090
 set -a
@@ -47,29 +52,29 @@ set -a
 set +a
 SECRETS_DIR="${CUSTOMER_OPS_SECRETS_DIR:-$SECRETS_DIR}"
 export CUSTOMER_OPS_SECRETS_DIR="$SECRETS_DIR"
-required_vars=(MAIL_HOST MAUTIC_HOST CHATWOOT_HOST SNAGTIME_HOST GOOGLE_CLIENT_ID SMTP_USER EMAIL_FROM EMAIL_REPLY_TO SNAGTIME_IMAGE SNAGTIME_REVISION)
+required_vars=(MAIL_PUBLIC_HOST MAUTIC_HOST CHATWOOT_HOST SNAGTIME_HOST GOOGLE_CLIENT_ID MAUTIC_SMTP_USER CHATWOOT_SMTP_USER SNAGTIME_SMTP_USER MAUTIC_EMAIL_FROM CHATWOOT_EMAIL_FROM SNAGTIME_EMAIL_FROM EMAIL_REPLY_TO CHATWOOT_INBOX_USER SNAGTIME_IMAGE SNAGTIME_REVISION)
 for name in "${required_vars[@]}"; do
   [[ -n "${!name:-}" ]] || { echo "missing required setting: $name" >&2; exit 64; }
 done
 [[ "$SNAGTIME_REVISION" =~ ^[0-9a-f]{40}$ ]] || { echo 'SNAGTIME_REVISION must be a full lowercase Git SHA' >&2; exit 64; }
-[[ "$SNAGTIME_IMAGE" != *:latest && ( "$SNAGTIME_IMAGE" == *@sha256:* || "$SNAGTIME_IMAGE" == *:"$SNAGTIME_REVISION" ) ]] || { echo 'SNAGTIME_IMAGE must be immutable (digest or full revision tag)' >&2; exit 64; }
+[[ "$SNAGTIME_IMAGE" =~ @sha256:[0-9a-f]{64}$ && "$SNAGTIME_IMAGE" != *:latest@* ]] || { echo 'SNAGTIME_IMAGE must include the published immutable sha256 digest' >&2; exit 64; }
 
 mkdir -p "$SECRETS_DIR"
 chmod 700 "$SECRETS_DIR"
-secret_names=(postgres_owner_password chatwoot_db_password snagtime_db_password mautic_db_root_password mautic_db_password chatwoot_secret_key_base snagtime_auth_secret snagtime_token_encryption_key stalwart_recovery_admin)
+secret_names=(postgres_owner_password chatwoot_db_password snagtime_db_password mautic_db_root_password mautic_db_password chatwoot_secret_key_base snagtime_auth_secret snagtime_token_encryption_key)
 for secret in "${secret_names[@]}"; do
   path="$SECRETS_DIR/$secret"
   if [[ ! -e "$path" ]]; then
     umask 077
-    if [[ "$secret" == stalwart_recovery_admin ]]; then
-      printf 'admin:%s\n' "$(openssl rand -hex 32)" > "$path"
-    else
-      openssl rand -hex 48 > "$path"
-    fi
+    openssl rand -hex 48 > "$path"
   fi
   [[ -f "$path" && "$(stat -c '%a' "$path" 2>/dev/null || stat -f '%Lp' "$path")" == '600' ]] || { echo "secret file must be a regular mode-0600 file: $path" >&2; exit 64; }
 done
-for secret in google_client_secret smtp_password; do
+if [[ "$MAUTIC_SMTP_USER" == "$CHATWOOT_SMTP_USER" || "$MAUTIC_SMTP_USER" == "$SNAGTIME_SMTP_USER" || "$CHATWOOT_SMTP_USER" == "$SNAGTIME_SMTP_USER" ]]; then
+  echo 'Mautic, Chatwoot, and SnagTime SMTP users must be distinct' >&2
+  exit 64
+fi
+for secret in google_client_secret mautic_smtp_password chatwoot_smtp_password snagtime_smtp_password chatwoot_inbox_password; do
   path="$SECRETS_DIR/$secret"
   [[ -s "$path" && "$(stat -c '%a' "$path" 2>/dev/null || stat -f '%Lp' "$path")" == '600' ]] || { echo "provider credential must pre-exist as mode-0600 file: $path" >&2; exit 64; }
 done
@@ -86,26 +91,24 @@ write_url_secret() {
 }
 write_url_secret "$SECRETS_DIR/snagtime_database_url" snagtime snagtime "$SECRETS_DIR/snagtime_db_password"
 
-for host in "$MAIL_HOST" "$MAUTIC_HOST" "${CHATWOOT_HOST#https://}" "${CHATWOOT_HOST#http://}" "$SNAGTIME_HOST"; do
+for host in "$MAIL_PUBLIC_HOST" "$MAUTIC_HOST" "${CHATWOOT_HOST#https://}" "${CHATWOOT_HOST#http://}" "$SNAGTIME_HOST"; do
   host="${host%%/*}"; host="${host%%:*}"
   getent ahosts "$host" >/dev/null || { echo "DNS does not resolve: $host" >&2; exit 65; }
 done
 
+mail_port="${SMTP_PORT:-587}"
+nc -z -w 8 "$MAIL_PUBLIC_HOST" "$mail_port" >/dev/null 2>&1 || {
+  echo "mail submission port is not reachable: $MAIL_PUBLIC_HOST:$mail_port" >&2
+  exit 65
+}
+
 if [[ "$POST_EDGE_TLS" == 1 ]]; then
-  for url in "https://$MAIL_HOST" "https://$MAUTIC_HOST" "$CHATWOOT_HOST" "https://$SNAGTIME_HOST"; do
+  for url in "https://$MAUTIC_HOST" "$CHATWOOT_HOST" "https://$SNAGTIME_HOST"; do
     host="${url#https://}"; host="${host%%/*}"; host="${host%%:*}"
     timeout 12 openssl s_client -connect "$host:443" -servername "$host" -verify_return_error </dev/null 2>/dev/null | openssl x509 -noout -subject -issuer >/dev/null || { echo "TLS certificate validation failed: $host" >&2; exit 65; }
   done
-fi
-
-check_port_free() {
-  local port="$1"
-  if ss -ltn 2>/dev/null | awk '{print $4}' | grep -Eq "(^|:)${port}$"; then
-    echo "required host TCP port is already in use: $port" >&2; exit 66
-  fi
-}
-if [[ "$MODE" == check && "$POST_EDGE_TLS" == 0 ]]; then
-  for port in "${STALWART_SMTP_PORT:-25}" "${STALWART_SUBMISSION_PORT:-587}" "${STALWART_SMTPS_PORT:-465}" "${STALWART_IMAPS_PORT:-993}"; do check_port_free "$port"; done
+  mail_port="${SMTP_PORT:-587}"
+  timeout 12 openssl s_client -starttls smtp -connect "$MAIL_PUBLIC_HOST:$mail_port" -servername "$MAIL_PUBLIC_HOST" -verify_return_error </dev/null 2>/dev/null | openssl x509 -noout -subject -issuer >/dev/null || { echo "SMTP TLS certificate validation failed: $MAIL_PUBLIC_HOST:$mail_port" >&2; exit 65; }
 fi
 
 docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" config --quiet
