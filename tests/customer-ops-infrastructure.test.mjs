@@ -10,6 +10,7 @@ test("customer operations keeps one mail server and wires private control edge",
   const productCompose = text("infra/coolify/docker-compose.product.yml");
   const controlCompose = text("ops/control-edge/docker-compose.yml");
   const controlDockerfile = text("ops/control-edge/Dockerfile");
+  const workerDockerfile = text("worker/Dockerfile");
   assert.equal((customerCompose.match(/^  (?:product-)?stalwart:/gm) ?? []).length, 0);
   assert.match(customerCompose, /name: blockwise-customer-ops-mail/);
   assert.match(productCompose, /product-mail:[\s\S]*customer-ops-mail:/);
@@ -17,6 +18,7 @@ test("customer operations keeps one mail server and wires private control edge",
   assert.match(controlCompose, /CONTROL_EDGE_INTERNAL_AUTH_HOST_FILE:[\s\S]*\/run\/secrets\/internal-auth:ro/);
   assert.match(controlCompose, /healthcheck:[\s\S]*health\/live/);
   assert.match(controlDockerfile, /^FROM node:[^@]+@sha256:[0-9a-f]{64}$/m);
+  assert.match(workerDockerfile, /^FROM node:[^@]+@sha256:[0-9a-f]{64}/m);
   assert.doesNotMatch(controlCompose, /\/etc\/blockwise\/customer-ops\/secrets:\/run\/secrets/);
 });
 

@@ -123,6 +123,7 @@ grep -q 'customer-ops-contract-test.sh' "$ROOT_DIR/.github/workflows/hard-reset-
 grep -q 'BLOCKWISE_OPS_PROJECTION_WORKER' "$PRODUCT_COMPOSE_FILE" || { echo 'Blockwise projection worker feature gate missing' >&2; exit 1; }
 grep -q 'WORKER_REAP_INTERVAL_MS' "$PRODUCT_COMPOSE_FILE" || { echo 'worker recovery scheduler is not configured' >&2; exit 1; }
 grep -q 'healthcheck:' "$PRODUCT_COMPOSE_FILE" || { echo 'product worker healthcheck missing' >&2; exit 1; }
+grep -Eq '^FROM node:[^@]+@sha256:[0-9a-f]{64}' "$ROOT_DIR/worker/Dockerfile" || { echo 'worker base image is not digest-pinned' >&2; exit 1; }
 ! grep -q 'contract-placeholder' "$COMPOSE_FILE" || { echo 'moving placeholder image remains' >&2; exit 1; }
 grep -q 'run --rm --no-deps' "$ROOT_DIR/scripts/vps/customer-ops-smoke.sh" || { echo 'private-network IMAPS client contract missing' >&2; exit 1; }
 grep -q -- '--profile smoke' "$ROOT_DIR/scripts/vps/customer-ops-smoke.sh" || { echo 'private-network SMTP client profile missing' >&2; exit 1; }

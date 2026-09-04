@@ -9,12 +9,12 @@
 # SUPABASE_SERVICE_ROLE_KEY and TOKEN_ENCRYPTION_KEY are injected at runtime via
 # the compose environment / .env, exactly like the research stack.
 
-FROM node:22-slim AS deps
+FROM node:22-slim@sha256:83f487e0a63425e5b4d146fb5e5be574bcbe1b7b843d3ebafdd95eaf7767a7e5 AS deps
 WORKDIR /app
 COPY package.json package-lock.json .npmrc ./
 RUN npm ci --omit=dev --ignore-scripts
 
-FROM node:22-slim
+FROM node:22-slim@sha256:83f487e0a63425e5b4d146fb5e5be574bcbe1b7b843d3ebafdd95eaf7767a7e5
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates tini \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd -r worker && useradd -r -g worker worker
