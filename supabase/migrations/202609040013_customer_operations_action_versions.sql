@@ -276,7 +276,7 @@ begin
       where e.id=new.target_id
         and (e.workspace_id=new.workspace_id or e.workspace_id is null) for update;
   elsif new.action_type in ('team_role_change','team_suspend','team_reactivate',
-      'consent_grant','consent_withdraw','consent_unsubscribe','suppression_add','suppression_remove') then
+      'consent_grant','consent_withdraw','consent_unsubscribe','suppression_add','suppression_remove','flow_enroll','flow_pause','flow_resume') then
     if new.target_type <> 'profile' then
       raise exception 'operations action target is not owned by workspace' using errcode='42501';
     end if;

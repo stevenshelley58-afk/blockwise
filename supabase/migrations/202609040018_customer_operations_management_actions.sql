@@ -12,17 +12,22 @@ alter table public.ops_action_capabilities add column if not exists verification
 alter table public.ops_action_capabilities drop constraint if exists ops_action_capabilities_action_type_check;
 alter table public.ops_action_capabilities add constraint ops_action_capabilities_action_type_check check (action_type in (
   'team_invite','team_resend','team_cancel','team_role_change','team_suspend','team_reactivate','session_revoke',
-  'consent_grant','consent_withdraw','consent_unsubscribe','suppression_add','suppression_remove',
+  'consent_grant','consent_withdraw','consent_unsubscribe','suppression_add','suppression_remove','flow_enroll','flow_pause','flow_resume',
   'enquiry_assign','enquiry_close','enquiry_reply','enquiry_reopen','booking_cancel','booking_reschedule',
   'billing_reconcile','billing_cancel_at_period_end','billing_portal_link'));
 alter table public.ops_action_outbox drop constraint if exists ops_action_outbox_action_type_check;
 alter table public.ops_action_outbox add constraint ops_action_outbox_action_type_check check (action_type in (
   'team_invite','team_resend','team_cancel','team_role_change','team_suspend','team_reactivate','session_revoke',
-  'consent_grant','consent_withdraw','consent_unsubscribe','suppression_add','suppression_remove',
+  'consent_grant','consent_withdraw','consent_unsubscribe','suppression_add','suppression_remove','flow_enroll','flow_pause','flow_resume',
   'enquiry_assign','enquiry_close','enquiry_reply','enquiry_reopen','booking_cancel','booking_reschedule',
   'billing_reconcile','billing_cancel_at_period_end','billing_portal_link'));
 insert into public.ops_action_capabilities(action_type, capability_state, description)
 values ('enquiry_reopen','capability_required','action-bound Chatwoot reopen executor is not registered')
+on conflict (action_type) do nothing;
+insert into public.ops_action_capabilities(action_type, capability_state, description)
+values ('flow_enroll','capability_required','allowlisted Mautic flow enrollment executor is not registered'),
+       ('flow_pause','capability_required','allowlisted Mautic flow pause executor is not registered'),
+       ('flow_resume','capability_required','allowlisted Mautic flow resume executor is not registered')
 on conflict (action_type) do nothing;
 
 -- The worker lane is implemented but provider readiness is deployment state;
@@ -269,7 +274,7 @@ declare
 begin
   if p_action_id is null or p_workspace_id is null or p_target_id is null
     or p_expected_version is null or p_expected_version < 1
-    or p_action_type not in ('team_role_change','enquiry_close','enquiry_reply','enquiry_reopen','consent_grant','consent_withdraw','consent_unsubscribe','suppression_add','suppression_remove')
+    or p_action_type not in ('team_role_change','enquiry_close','enquiry_reply','enquiry_reopen','flow_enroll','flow_pause','flow_resume','consent_grant','consent_withdraw','consent_unsubscribe','suppression_add','suppression_remove')
     or jsonb_typeof(coalesce(p_payload, '{}'::jsonb)) <> 'object'
     or not exists (select 1 from public.ops_action_outbox where action_id=p_action_id and workspace_id=p_workspace_id and status='processing')
     or not exists (select 1 from public.profiles where id=p_actor_profile_id and is_operator=true and operator_role in ('owner','support'))
@@ -288,7 +293,7 @@ begin
       values(p_workspace_id,p_actor_profile_id,'ops.team_role_change','profile',p_target_id,p_action_id::text,
         jsonb_build_object('expectedVersion',p_expected_version,'role',v_role));
     return jsonb_build_object('status','applied','role',v_role);
-  elsif p_action_type like 'enquiry_%' then
+  elsif p_action_type like 'enquiry_%' or p_action_type like 'flow_%' then
     raise exception 'Chatwoot enquiry actions are provider-owned and must be executed by Hermes' using errcode='55000';
   end if;
 

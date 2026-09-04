@@ -16,6 +16,7 @@ export type OpsActionName =
   | "session_revoke"
   | "consent_grant" | "consent_withdraw" | "consent_unsubscribe"
   | "suppression_add" | "suppression_remove"
+  | "flow_enroll" | "flow_pause" | "flow_resume"
   | "enquiry_assign" | "enquiry_close" | "enquiry_reply"
   | "enquiry_reopen"
   | "booking_cancel" | "booking_reschedule"
@@ -35,6 +36,9 @@ export type OpsActionPayloadMap = {
   consent_unsubscribe: Record<string, never>;
   suppression_add: { reason: string };
   suppression_remove: { reason: string };
+  flow_enroll: { flowId: string };
+  flow_pause: { flowId: string };
+  flow_resume: { flowId: string };
   enquiry_assign: { assigneeProfileId: string | null };
   enquiry_close: Record<string, never>;
   enquiry_reply: { body: string };
@@ -59,6 +63,9 @@ export type OpsActionTargetMap = {
   consent_unsubscribe: "profile";
   suppression_add: "profile";
   suppression_remove: "profile";
+  flow_enroll: "profile";
+  flow_pause: "profile";
+  flow_resume: "profile";
   enquiry_assign: "enquiry";
   enquiry_close: "enquiry";
   enquiry_reply: "enquiry";
@@ -93,6 +100,9 @@ export const OPS_ACTION_CAPABILITIES: Record<OpsActionName, OpsActionCapabilityD
   consent_unsubscribe: { capability: "capability_required", description: "exact per-profile Mautic unsubscribe executor is not registered" },
   suppression_add: { capability: "capability_required", description: "durable Mautic suppression executor is not registered" },
   suppression_remove: { capability: "capability_required", description: "durable Mautic suppression executor is not registered" },
+  flow_enroll: { capability: "capability_required", description: "allowlisted Mautic flow enrollment executor is not registered" },
+  flow_pause: { capability: "capability_required", description: "allowlisted Mautic flow pause executor is not registered" },
+  flow_resume: { capability: "capability_required", description: "allowlisted Mautic flow resume executor is not registered" },
   enquiry_assign: { capability: "available", description: "existing explicit enquiry association RPC" },
   enquiry_close: { capability: "capability_required", description: "Hermes Chatwoot action lane requires verified provider readiness" },
   enquiry_reply: { capability: "capability_required", description: "Hermes Chatwoot action lane requires verified provider readiness" },
@@ -131,7 +141,7 @@ const MAX_TOPIC = 128;
 
 const PAYLOAD_KEYS: Record<OpsActionName, readonly string[]> = {
   team_invite: ["email", "role"], team_resend: [], team_cancel: [], team_role_change: ["role"], team_suspend: [], team_reactivate: [], session_revoke: [],
-  consent_grant: ["topic"], consent_withdraw: ["topic"], consent_unsubscribe: [], suppression_add: ["reason"], suppression_remove: ["reason"],
+  consent_grant: ["topic"], consent_withdraw: ["topic"], consent_unsubscribe: [], suppression_add: ["reason"], suppression_remove: ["reason"], flow_enroll: ["flowId"], flow_pause: ["flowId"], flow_resume: ["flowId"],
   enquiry_assign: ["assigneeProfileId"], enquiry_close: [], enquiry_reply: ["body"], enquiry_reopen: [], booking_cancel: [], booking_reschedule: ["scheduledStartAt", "scheduledEndAt"],
   billing_reconcile: [], billing_cancel_at_period_end: ["cancelAtPeriodEnd"], billing_portal_link: [],
 };
@@ -214,6 +224,11 @@ function normalizePayload<Name extends OpsActionName>(name: Name, payload: Recor
     if (reason.length > MAX_REASON) throw new Error("payload.reason is too long");
     return { reason } as OpsActionPayloadMap[Name];
   }
+  if (name === "flow_enroll" || name === "flow_pause" || name === "flow_resume") {
+    const flowId = string(payload.flowId, "payload.flowId");
+    if (flowId.length > 128 || !/^[A-Za-z0-9._:-]+$/.test(flowId)) throw new Error("payload.flowId is invalid");
+    return { flowId } as OpsActionPayloadMap[Name];
+  }
   if (name === "enquiry_assign") {
     if (payload.assigneeProfileId !== null && payload.assigneeProfileId !== undefined) uuid(payload.assigneeProfileId, "payload.assigneeProfileId");
     return { assigneeProfileId: payload.assigneeProfileId === undefined ? null : payload.assigneeProfileId } as OpsActionPayloadMap[Name];
@@ -239,7 +254,7 @@ function normalizePayload<Name extends OpsActionName>(name: Name, payload: Recor
 function targetTypeFor(action: OpsActionName): OpsActionTargetType {
   return ({
     team_invite: "workspace", team_resend: "invitation", team_cancel: "invitation", team_role_change: "profile", team_suspend: "profile", team_reactivate: "profile",
-    session_revoke: "session", consent_grant: "profile", consent_withdraw: "profile", consent_unsubscribe: "profile", suppression_add: "profile", suppression_remove: "profile",
+    session_revoke: "session", consent_grant: "profile", consent_withdraw: "profile", consent_unsubscribe: "profile", suppression_add: "profile", suppression_remove: "profile", flow_enroll: "profile", flow_pause: "profile", flow_resume: "profile",
     enquiry_assign: "enquiry", enquiry_close: "enquiry", enquiry_reply: "enquiry", enquiry_reopen: "enquiry", booking_cancel: "booking", booking_reschedule: "booking", billing_reconcile: "billing", billing_cancel_at_period_end: "billing", billing_portal_link: "billing",
   } as const)[action];
 }
