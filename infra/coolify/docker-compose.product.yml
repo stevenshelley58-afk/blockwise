@@ -217,7 +217,7 @@ services:
       # Readiness must not call the public/shared edge: product-caddy waits on
       # this app's health, so that would create a startup cycle.
       BLOCKWISE_READINESS_SUPABASE_URL: http://product-rest:3000
-      SUPABASE_SERVICE_ROLE_KEY_FILE: /run/secrets/supabase-service-role
+      SUPABASE_SERVICE_ROLE_KEY_FILE: /run/blockwise-secrets/supabase-service-role
       TOKEN_ENCRYPTION_KEY: ${TOKEN_ENCRYPTION_KEY:?TOKEN_ENCRYPTION_KEY is required}
       # AI and Meta are opt-in providers. Core auth, Ad Studio editing and
       # durable saves must boot without either external credential set.
@@ -318,6 +318,8 @@ services:
       BLOCKWISE_GIT_SHA: ${BLOCKWISE_GIT_SHA}
     volumes:
       - ${SUPABASE_SERVICE_ROLE_KEY_HOST_FILE:?SUPABASE_SERVICE_ROLE_KEY_HOST_FILE is required}:/run/secrets/supabase-service-role-source:ro
+    tmpfs:
+      - /run/blockwise-secrets:rw,noexec,nosuid,nodev
     networks: [blockwise-product]
     healthcheck:
       test: [CMD, "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
@@ -335,6 +337,8 @@ services:
       product-rest: { condition: service_healthy }
       product-auth: { condition: service_healthy }
     read_only: true
+    tmpfs:
+      - /run/blockwise-secrets:rw,noexec,nosuid,nodev
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
     stop_grace_period: 30s

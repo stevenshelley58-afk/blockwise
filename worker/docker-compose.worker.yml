@@ -27,6 +27,8 @@ services:
       BLOCKWISE_OPS_CORRELATION_KEY_FILE: /run/blockwise-secrets/ops-correlation-key
       SUPABASE_SERVICE_ROLE_KEY_FILE: /run/blockwise-secrets/supabase-service-role
     read_only: true
+    tmpfs:
+      - /run/blockwise-secrets:rw,noexec,nosuid,nodev
     cap_drop:
       - ALL
     security_opt:

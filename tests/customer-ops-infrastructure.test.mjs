@@ -44,7 +44,7 @@ test("production worker/control-edge compose uses immutable images and file secr
   assert.match(productCompose, /BLOCKWISE_WORKER_IMAGE:\?BLOCKWISE_WORKER_IMAGE is required/);
   assert.match(productCompose, /BLOCKWISE_WORKER_EXPECTED_REVISION:\?BLOCKWISE_WORKER_EXPECTED_REVISION is required/);
   assert.match(productCompose, /SUPABASE_SERVICE_ROLE_KEY_HOST_FILE:[\s\S]*supabase-service-role-source:ro/);
-  assert.match(productCompose, /SUPABASE_SERVICE_ROLE_KEY_FILE: \/run\/secrets\/supabase-service-role/);
+  assert.match(productCompose, /SUPABASE_SERVICE_ROLE_KEY_FILE: \/run\/blockwise-secrets\/supabase-service-role/);
   assert.match(productCompose, /SUPABASE_SERVICE_ROLE_KEY_HOST_FILE:[\s\S]*supabase-service-role-source:ro/);
   assert.doesNotMatch(productCompose, /SUPABASE_SERVICE_ROLE_KEY:\s*\$\{/);
   assert.doesNotMatch(productCompose, /product-worker:[\s\S]*?SUPABASE_SERVICE_ROLE_KEY:/);
@@ -53,10 +53,13 @@ test("production worker/control-edge compose uses immutable images and file secr
   assert.match(controlCompose, /\/app\/REVISION/);
   for (const [script, user] of [["worker/runtime-entrypoint.sh", "gosu worker"], ["ops/control-edge/runtime-entrypoint.sh", "su-exec node"], ["infra/product/runtime-entrypoint.sh", "gosu nextjs"]]) {
     const entrypoint = text(script);
-    assert.match(entrypoint, /install -d -m 700/);
+    assert.match(entrypoint, /install -d -o \w+ -g \w+ -m 700/);
     assert.match(entrypoint, new RegExp(user.replace(" ", "\\s+")));
     assert.match(entrypoint, /-m 600/);
   }
+  assert.match(productCompose, /\/run\/blockwise-secrets:rw,noexec,nosuid,nodev/);
+  assert.match(controlCompose, /\/run\/blockwise-secrets:rw,noexec,nosuid,nodev/);
+  assert.match(workerCompose, /\/run\/blockwise-secrets:rw,noexec,nosuid,nodev/);
 });
 
 test("bootstrap is explicit, idempotent, and credential-file based", () => {

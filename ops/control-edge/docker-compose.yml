@@ -9,6 +9,8 @@ services:
     restart: unless-stopped
     init: true
     read_only: true
+    tmpfs:
+      - /run/blockwise-secrets:rw,noexec,nosuid,nodev
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
     networks: [hermes-private, blockwise-product]
