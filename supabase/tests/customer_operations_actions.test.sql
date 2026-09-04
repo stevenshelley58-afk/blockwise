@@ -33,7 +33,7 @@ select lives_ok($$ select public.enqueue_ops_action(
   '86666666-6666-4666-8666-666666666666', '86666666-6666-4666-8666-666666666666',
   'team_invite', 'workspace', '86666666-6666-4666-8666-666666666666',
   '87777777-7777-4777-8777-777777777777', 'owner', 'aal2', 1,
-  'Customer requested team access', now() + interval '1 hour', now() + interval '2 hours',
+  'Customer requested team access', now() - interval '1 hour', now() + interval '2 hours',
   '{"email":"invite@example.test","role":"member"}'::jsonb
 ) $$, 'available action is accepted through the RPC');
 select is((select status from public.ops_action_outbox where action_id = '88888888-8888-4888-8888-888888888881'), 'pending', 'accepted action starts pending');
@@ -46,7 +46,7 @@ select lives_ok($$ select public.enqueue_ops_action(
   '86666666-6666-4666-8666-666666666666', '86666666-6666-4666-8666-666666666666',
   'team_invite', 'workspace', '86666666-6666-4666-8666-666666666666',
   '87777777-7777-4777-8777-777777777777', 'owner', 'aal2', 2,
-  'Customer updated the invite request', now() + interval '1 hour', now() + interval '2 hours',
+  'Customer updated the invite request', now() - interval '1 hour', now() + interval '2 hours',
   '{"email":"invite-2@example.test","role":"admin"}'::jsonb
 ) $$, 'newer action version is accepted');
 select is((select status from public.ops_action_outbox where action_id = '88888888-8888-4888-8888-888888888881'), 'superseded', 'newer version fences processing action');
@@ -61,7 +61,7 @@ select lives_ok($$ select public.enqueue_ops_action(
   '86666666-6666-4666-8666-666666666666', '86666666-6666-4666-8666-666666666666',
   'team_role_change', 'profile', '87777777-7777-4777-8777-777777777777',
   '87777777-7777-4777-8777-777777777777', 'owner', 'aal2', 1,
-  'Role executor is not enabled', now() + interval '1 hour', now() + interval '2 hours',
+  'Role executor is not enabled', now() - interval '1 hour', now() + interval '2 hours',
   '{"role":"viewer"}'::jsonb
 ) $$, 'capability-gated action is recorded without inventing execution');
 select is((select status from public.ops_action_outbox where action_id = '88888888-8888-4888-8888-888888888883'), 'rejected', 'capability-gated action is rejected explicitly');
@@ -72,7 +72,7 @@ select lives_ok($$ select public.enqueue_ops_action(
   '86666666-6666-4666-8666-666666666666', '86666666-6666-4666-8666-666666666666',
   'team_suspend', 'profile', '87777777-7777-4777-8777-777777777777',
   '87777777-7777-4777-8777-777777777777', 'owner', 'aal2', 1,
-  'Suspension capability is not implemented', now() + interval '1 hour', now() + interval '2 hours', '{}'::jsonb
+  'Suspension capability is not implemented', now() - interval '1 hour', now() + interval '2 hours', '{}'::jsonb
 ) $$, 'unsupported action is recorded without execution');
 select is((select status from public.ops_action_outbox where action_id = '88888888-8888-4888-8888-888888888884'), 'rejected', 'unsupported action is rejected explicitly');
 select is((select last_error from public.ops_action_outbox where action_id = '88888888-8888-4888-8888-888888888884'), 'unsupported', 'unsupported reason is persisted safely');
@@ -82,7 +82,7 @@ select throws_ok($$ select public.enqueue_ops_action(
   '86666666-6666-4666-8666-666666666666', '86666666-6666-4666-8666-666666666666',
   'team_invite', 'workspace', '86666666-6666-4666-8666-666666666666',
   '87777777-7777-4777-8777-777777777777', 'owner', 'aal2', 1,
-  'unsafe payload test', now() + interval '1 hour', now() + interval '2 hours',
+  'unsafe payload test', now() - interval '1 hour', now() + interval '2 hours',
   '{"email":"invite@example.test","role":"member","portalUrl":"https://secret.example"}'::jsonb
 ) $$, '22023', 'operations action payload is invalid', 'payload fields are strictly allowlisted');
 select throws_ok($$ select public.enqueue_ops_action(
@@ -90,7 +90,7 @@ select throws_ok($$ select public.enqueue_ops_action(
   '86666666-6666-4666-8666-666666666666', '86666666-6666-4666-8666-666666666666',
   'team_invite', 'workspace', '86666666-6666-4666-8666-666666666666',
   '87777777-7777-4777-8777-777777777777', 'owner', 'aal1', 1,
-  'aal test', now() + interval '1 hour', now() + interval '2 hours',
+  'aal test', now() - interval '1 hour', now() + interval '2 hours',
   '{"email":"invite@example.test","role":"member"}'::jsonb
 ) $$, '22023', 'invalid operations action identity', 'AAL2 provenance is mandatory');
 select throws_ok($$ select public.enqueue_ops_action(
@@ -98,7 +98,7 @@ select throws_ok($$ select public.enqueue_ops_action(
   '86666666-6666-4666-8666-666666666666', '86666666-6666-4666-8666-666666666666',
   'session_revoke', 'session', '87777777-7777-4777-8777-777777777777',
   '87777777-7777-4777-8777-777777777777', 'support', 'aal2', 1,
-  'support owner test', now() + interval '1 hour', now() + interval '2 hours', '{}'::jsonb
+  'support owner test', now() - interval '1 hour', now() + interval '2 hours', '{}'::jsonb
 ) $$, '42501', 'owner_role_required', 'owner-only actions reject support actors');
 
 select * from finish();
