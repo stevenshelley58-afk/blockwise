@@ -82,7 +82,7 @@ chatwoot_account_id="${CHATWOOT_ACCOUNT_ID:?CHATWOOT_ACCOUNT_ID is required}"
 chatwoot_payload="$(python3 - "$chatwoot_account_id" <<'PY'
 import json,sys
 account_id=int(sys.argv[1])
-print(json.dumps({'event':'conversation_created','id':'customer-ops-smoke','account':{'id':account_id},'conversation':{'id':1,'status':'open','inbox_id':1,'messages':[]}} ,separators=(',',':')))
+print(json.dumps({'event':'conversation_status_changed','id':'customer-ops-smoke','account':{'id':account_id},'conversation':{'id':1,'status':'open','inbox_id':1}} ,separators=(',',':')))
 PY
 )"
 chatwoot_signature="$(printf '%s.%s' "$chatwoot_timestamp" "$chatwoot_payload" | openssl dgst -sha256 -mac HMAC -macopt "key:file:$SECRETS_DIR/chatwoot_webhook_secret" -binary | xxd -p -c 256)"
