@@ -21,13 +21,9 @@ insert into public.ops_action_capabilities(action_type, capability_state, descri
 values ('enquiry_reopen','capability_required','action-bound Chatwoot reopen executor is not registered')
 on conflict (action_type) do nothing;
 
--- Chatwoot action execution is owned by Hermes; local mutation-only actions
--- below remain capability_required until their provider adapters are present.
-update public.ops_action_capabilities set capability_state='available', description=case action_type
-  when 'enquiry_close' then 'Hermes action-bound Chatwoot status executor'
-  when 'enquiry_reply' then 'Hermes action-bound Chatwoot reply executor'
-  when 'enquiry_reopen' then 'Hermes action-bound Chatwoot reopen executor'
-  else description end
+-- The worker lane is implemented but provider readiness is deployment state;
+-- leave these disabled until a readiness check explicitly enables them.
+update public.ops_action_capabilities set capability_state='capability_required', description='Hermes Chatwoot action lane requires verified provider readiness'
 where action_type in ('enquiry_close','enquiry_reply','enquiry_reopen');
 
 -- Provider-owned actions have a dedicated Hermes claimer. The generic
@@ -94,6 +90,60 @@ end;
 $$;
 revoke all on function public.apply_ops_chatwoot_action_result(uuid,uuid,uuid,bigint,text) from public, anon, authenticated;
 grant execute on function public.apply_ops_chatwoot_action_result(uuid,uuid,uuid,bigint,text) to service_role;
+
+create table if not exists private.ops_chatwoot_webhook_events (
+  event_id text primary key check (char_length(event_id) between 1 and 256),
+  payload_hash text not null check (payload_hash ~ '^[0-9a-f]{64}$'),
+  provider_conversation_id text not null check (provider_conversation_id ~ '^[0-9]+$'),
+  event_type text not null check (event_type in ('message_created','message_updated','conversation_status_changed','conversation_updated')),
+  status text not null default 'received' check (status in ('received','processed','ignored')),
+  created_at timestamptz not null default now(), processed_at timestamptz
+);
+create table if not exists private.ops_enquiry_messages (
+  provider_message_id text primary key check (provider_message_id ~ '^[0-9]+$'),
+  workspace_id uuid not null references public.workspaces(id) on delete restrict,
+  enquiry_id uuid not null references public.ops_enquiry_associations(id) on delete restrict,
+  body text not null check (char_length(body) between 1 and 4000),
+  direction text not null check (direction in ('incoming','outgoing')),
+  created_at timestamptz not null default now()
+);
+alter table private.ops_chatwoot_webhook_events enable row level security;
+alter table private.ops_enquiry_messages enable row level security;
+revoke all on private.ops_chatwoot_webhook_events, private.ops_enquiry_messages from public,anon,authenticated,service_role;
+
+create or replace function public.record_ops_chatwoot_webhook(
+  p_event_id text, p_payload_hash text, p_account_id text, p_event_type text,
+  p_provider_conversation_id text, p_provider_message_id text, p_status text, p_body text
+) returns jsonb language plpgsql security definer set search_path = '' as $$
+declare v_workspace uuid; v_enquiry uuid; v_existing text; v_updated integer;
+begin
+  if nullif(btrim(p_event_id),'') is null or p_payload_hash !~ '^[0-9a-f]{64}$'
+    or p_event_type not in ('message_created','message_updated','conversation_status_changed','conversation_updated')
+    or p_provider_conversation_id !~ '^[0-9]+$' or char_length(coalesce(p_body,'')) > 4000 then raise exception 'invalid Chatwoot webhook' using errcode='22023'; end if;
+  select e.workspace_id,e.id into v_workspace,v_enquiry
+    from private.ops_provider_operation_ledger l join public.ops_enquiry_associations e on e.id=l.aggregate_id::uuid
+    where l.provider='chatwoot' and l.aggregate_type='enquiry'
+      and l.provider_conversation_id_digest=encode(public.digest(p_provider_conversation_id,'sha256'),'hex')
+      and e.workspace_id is not null limit 1;
+  if v_workspace is null then return jsonb_build_object('status','ignored'); end if;
+  insert into private.ops_chatwoot_webhook_events(event_id,payload_hash,provider_conversation_id,event_type)
+    values(left(p_event_id,256),p_payload_hash,p_provider_conversation_id,p_event_type)
+    on conflict(event_id) do nothing;
+  get diagnostics v_updated=row_count;
+  if v_updated=0 then select status into v_existing from private.ops_chatwoot_webhook_events where event_id=left(p_event_id,256); return jsonb_build_object('status',coalesce(v_existing,'received'),'duplicate',true); end if;
+  if p_event_type in ('message_created','message_updated') and p_provider_message_id ~ '^[0-9]+$' and nullif(btrim(p_body),'') is not null then
+    insert into private.ops_enquiry_messages(provider_message_id,workspace_id,enquiry_id,body,direction)
+      values(p_provider_message_id,v_workspace,v_enquiry,left(p_body,4000),'incoming') on conflict(provider_message_id) do nothing;
+  end if;
+  if p_status in ('open','pending','resolved','closed') then
+    update public.ops_enquiry_associations set status=case when p_status='resolved' then 'closed' else p_status end, updated_at=now() where id=v_enquiry and workspace_id=v_workspace;
+  end if;
+  update private.ops_chatwoot_webhook_events set status='processed',processed_at=now() where event_id=left(p_event_id,256);
+  return jsonb_build_object('status','processed','workspaceId',v_workspace::text,'enquiryId',v_enquiry::text);
+end;
+$$;
+revoke all on function public.record_ops_chatwoot_webhook(text,text,text,text,text,text,text,text) from public,anon,authenticated;
+grant execute on function public.record_ops_chatwoot_webhook(text,text,text,text,text,text,text,text) to service_role;
 
 create or replace function public.claim_ops_provider_action(p_lease_seconds integer default 600)
 returns table (id uuid, action_id uuid, workspace_id uuid, customer_id uuid, actor_operator_id uuid, actor_role text,

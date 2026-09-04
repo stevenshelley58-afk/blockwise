@@ -17,7 +17,7 @@ select ok(not has_table_privilege('service_role', 'public.ops_action_receipts', 
 select ok(not has_table_privilege('service_role', 'public.ops_action_capabilities', 'INSERT'), 'service_role cannot directly insert capabilities');
 select ok(not has_table_privilege('service_role', 'public.ops_action_capabilities', 'UPDATE'), 'service_role cannot directly update capabilities');
 select ok(not has_table_privilege('service_role', 'public.ops_action_capabilities', 'DELETE'), 'service_role cannot directly delete capabilities');
-select is((select count(*)::int from public.ops_action_capabilities), 20, 'all agreed actions have a capability entry');
+select is((select count(*)::int from public.ops_action_capabilities), 21, 'all agreed actions have a capability entry');
 select is((select capability_state from public.ops_action_capabilities where action_type = 'team_suspend'), 'unsupported', 'suspension is explicitly unsupported');
 select is((select capability_state from public.ops_action_capabilities where action_type = 'team_role_change'), 'capability_required', 'role changes are explicitly gated');
 select is((select capability_state from public.ops_action_capabilities where action_type = 'billing_portal_link'), 'capability_required', 'billing portal links are explicitly gated until an executor exists');

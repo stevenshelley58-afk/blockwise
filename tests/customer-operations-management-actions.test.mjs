@@ -33,3 +33,15 @@ test("Chatwoot action lane is worker-only and action-bound", async () => {
   assert.match(worker, /fail_ops_action/);
   assert.match(worker, /enquiry_reopen/);
 });
+
+test("Chatwoot webhook is signed, bounded, allowlisted, and ledger-resolved", async () => {
+  const routeSource = await readFile("src/app/api/webhooks/chatwoot/route.ts", "utf8");
+  const sql = await readFile(migration, "utf8");
+  assert.match(routeSource, /x-chatwoot-signature/);
+  assert.match(routeSource, /timingSafeEqual/);
+  assert.match(routeSource, /readBoundedRequestBody/);
+  assert.match(routeSource, /CHATWOOT_WEBHOOK_SECRET/);
+  assert.match(sql, /record_ops_chatwoot_webhook/);
+  assert.match(sql, /provider_conversation_id_digest=encode\(digest/);
+  assert.match(sql, /ops_chatwoot_webhook_events/);
+});
