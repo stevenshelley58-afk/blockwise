@@ -36,9 +36,20 @@ jobs:
       - name: Run hard-reset verification
         run: npm run verify:hard-reset
 
-      # The broad typecheck/test/build suite runs once in Release CI's
-      # "Build and test" job. Keeping this job to contracts/static checks
-      # preserves its stable required check without paying for duplicate work.
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Run full test suite
+        run: npm test
+
+      - name: Build
+        run: npm run build
+        env:
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
+          NEXT_PUBLIC_SUPABASE_URL: https://dummy-project.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: dummy-anon-key
+          SUPABASE_SERVICE_ROLE_KEY: dummy-service-role-key
+          TOKEN_ENCRYPTION_KEY: "0000000000000000000000000000000000000000000000000000000000000000"
 
   database-contracts:
     name: Database migration and pgTAP checks

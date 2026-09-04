@@ -1,0 +1,24 @@
+# Reviewed deterministic fixtures only. Fingerprints are commit/file/rule/line,
+# so new values, files, or commits remain covered by the full-history scan.
+8bc50b499615b1479da216188f2518c3fcd02f1a:docs/plans/AD-RADAR-FRANK-EXTERNAL-SCRAPER.md:generic-api-key:243
+baa0653dacbe6c4dab55894ccba98ea2737ca9e5:docs/plans/AD-RADAR-FRANK-EXTERNAL-SCRAPER.md:generic-api-key:243
+bae59be3f66995a72150ee425da6ec8d9a17a673:scripts/meta/fixtures/proof-receipt-example.json:generic-api-key:118
+c92862fb765b1366cf69128f8f4588fbaf8c20c9:tests/security-redaction.test.ts:generic-api-key:67
+7e26c4c52b819bc4f96ca9340b72483526dbd328:tests/security-redaction.test.ts:generic-api-key:67
+7357063757efa9c751a717ab7fcfc6c7e054e6ed:tests/internal-auth.test.ts:generic-api-key:12
+444a1e78795feb53a38737285ccf5a85ce8cb72e:tests/meta-free-live-conversion.test.ts:generic-api-key:76
+444a1e78795feb53a38737285ccf5a85ce8cb72e:tests/provider-runtime-token-vault.test.ts:generic-api-key:10
+444a1e78795feb53a38737285ccf5a85ce8cb72e:tests/provider-runtime-token-vault.test.ts:generic-api-key:154
+50b75682c11a528de518497772e70019a2a00833:tests/frank-release-public-url.test.ts:stripe-access-token:39
+50b75682c11a528de518497772e70019a2a00833:tests/frank-release-safety-parity.test.ts:stripe-access-token:111
+50b75682c11a528de518497772e70019a2a00833:tests/frank-release-safety-parity.test.ts:stripe-access-token:146
+4776e6f9f7faaa107d42689d688d8c2ab4275fee:tests/adstudio/vault-template-provider-neutral.test.mjs:generic-api-key:15
+ea694c548722248ee7a89dc0121e9435e2db3954:tests/adstudio/vault-template-provider-neutral.test.mjs:generic-api-key:15
+17543c014b95b7282e721ec3ab419f71196e04e8:tests/adstudio-vault-template-execution.test.mjs:generic-api-key:15
+269ac5e6a33c4249aeb702356a13c8e8afc182ed:tests/adstudio-vault-template-execution.test.mjs:generic-api-key:15
+0cd587b43fe87b4467b37bac15e740e5e39167b4:tests/provider-runtime-token-vault.test.ts:generic-api-key:10
+0cd587b43fe87b4467b37bac15e740e5e39167b4:tests/provider-runtime-token-vault.test.ts:generic-api-key:127
+85d8b1fc75f9cbe9203fbf9495e0c23cbf059242:tests/provider-runtime-token-vault.test.ts:generic-api-key:125
+802408cb735dd2f71b2bb20bca1a4979cd190fe5:tests/provider-runtime-token-vault.test.ts:generic-api-key:9
+bcfe63c189beb2776087471c619414e67a20e6eb:tests/meta-free-live-conversion.test.ts:generic-api-key:76
+ba170a7813e81260bd9a6612f10aaa3bf52d86ce:tests/meta-free-live-conversion.test.ts:generic-api-key:76

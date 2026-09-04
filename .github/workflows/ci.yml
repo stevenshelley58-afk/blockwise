@@ -31,7 +31,7 @@ jobs:
           ghcr.io/gitleaks/gitleaks:v8.29.1@sha256:e29229c8ad4038a586684ec85bd595c71b0627ea078e127f4e7e7f44a06d97b0
           git --redact --exit-code 1 --report-format sarif
           --report-path=/report/gitleaks-results.sarif
-          --config=/repo/.gitleaks.toml --log-opts="--all" /repo
+          --log-opts="--all" /repo
 
       - name: Upload secret scan report
         if: always()
