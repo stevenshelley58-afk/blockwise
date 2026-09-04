@@ -64,6 +64,7 @@ export interface PublishLoadResult {
     feedPngPath: string;
     storyPngHash: string;
     storyPngPath: string;
+    createdAt?: string;
   };
   pack: AdTemplate;
   form: InstantForm | null;
@@ -171,7 +172,7 @@ export async function loadPublishState(
   // 2. Load active revision
   const { data: revision, error: revError } = await supabase
     .from("ad_revisions")
-    .select("id, revision_number, document_hash, feed_png_hash, feed_png_path, story_png_hash, story_png_path")
+    .select("id, revision_number, document_hash, feed_png_hash, feed_png_path, story_png_hash, story_png_path, created_at")
     .eq("id", ad.active_revision_id)
     .single();
 
@@ -216,6 +217,7 @@ export async function loadPublishState(
       feedPngPath: revision.feed_png_path,
       storyPngHash: revision.story_png_hash,
       storyPngPath: revision.story_png_path,
+      createdAt: revision.created_at,
     },
     pack,
     form,

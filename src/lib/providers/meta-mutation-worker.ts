@@ -41,6 +41,7 @@ export async function executeMetaMutationById(input: {
       ...mutation,
       status: "failed" as const,
       lastError: "Provider writes are disabled by BLOCKWISE_ENABLE_PROVIDER_WRITES.",
+      unconfirmedPauseIds: undefined as string[] | undefined,
       updatedAt: new Date().toISOString(),
     };
     await updateMutation(input.serviceSupabase, skipped);
@@ -98,9 +99,7 @@ export async function executeMetaMutationById(input: {
     const unconfirmedPauseIds = "unconfirmedPauseIds" in result
       ? (result as { unconfirmedPauseIds?: string[] }).unconfirmedPauseIds
       : undefined;
-    const executionOutcome = unconfirmedPauseIds?.length
-      ? { ...updated, unconfirmedPauseIds }
-      : updated;
+    const executionOutcome = { ...updated, unconfirmedPauseIds };
 
     await updateMutation(input.serviceSupabase, updated);
     await input.serviceSupabase.from("audit_logs").insert({

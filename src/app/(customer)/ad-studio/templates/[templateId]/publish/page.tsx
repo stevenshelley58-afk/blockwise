@@ -13,11 +13,10 @@ export const dynamic = "force-dynamic";
 // ---------------------------------------------------------------------------
 // Ad Studio — Publish flow.
 //
-// One click completes the whole server-side lifecycle: freezes the LAST
-// SAVED revision, creates the Meta objects and activates them. The receipt
-// reports "active" only after Meta confirms; partial failures report the
-// real state with a safe retry. Server-renders the frozen publish state,
-// issues, and provider-write mode; the client drives the publish call.
+// Two explicit steps: freeze the LAST SAVED revision and create PAUSED Meta
+// objects, then let the customer separately approve activation. Server-renders
+// the frozen publish state, issues, and provider-write mode; the client drives
+// both explicit actions.
 // ---------------------------------------------------------------------------
 
 function providerWritesEnabled() {

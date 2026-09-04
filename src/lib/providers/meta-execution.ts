@@ -586,21 +586,32 @@ export function applyMetaPublishExecutionResult(
   };
 }
 
-export async function persistMetaPublishPlan(serviceSupabase: SupabaseServiceClient, plan: MetaPublishPlan, userId: string) {
+export async function persistMetaPublishPlan(
+  serviceSupabase: SupabaseServiceClient,
+  plan: MetaPublishPlan,
+  userId: string,
+): Promise<{ id: string; status: MetaPublishPlanStatus; idempotency_key: string }> {
   const { data, error } = await serviceSupabase
     .from("meta_publish_plans")
-    .upsert(
-      planToRow(plan, userId),
-      { onConflict: "workspace_id,idempotency_key" },
-    )
+    .insert(planToRow(plan, userId))
     .select("id,status,idempotency_key")
     .single();
 
-  if (error || !data) {
-    throw new Error(error?.message ?? "Unable to persist Meta publish plan.");
+  if (!error && data) return data as { id: string; status: MetaPublishPlanStatus; idempotency_key: string };
+
+  // A retry must adopt the canonical row. Never replace its logs, progress, or
+  // reconciliation state with the newly-built draft.
+  if (error?.code === "23505") {
+    const canonical = await loadMetaPublishPlanByIdempotencyKey(serviceSupabase, {
+      workspaceId: plan.workspaceId,
+      idempotencyKey: plan.idempotencyKey,
+    });
+    if (canonical) {
+      return { id: canonical.planId, status: canonical.status, idempotency_key: canonical.idempotencyKey };
+    }
   }
 
-  return data as { id: string; status: MetaPublishPlanStatus; idempotency_key: string };
+  throw new Error(error?.message ?? "Unable to persist Meta publish plan.");
 }
 
 export async function loadMetaPublishPlan(
@@ -640,7 +651,7 @@ export async function loadMetaPublishPlanByIdempotencyKey(
 }
 
 export async function updateMetaPublishPlanExecution(serviceSupabase: SupabaseServiceClient, plan: MetaPublishPlan) {
-  const { error } = await serviceSupabase
+  const { data, error } = await serviceSupabase
     .from("meta_publish_plans")
     .update({
       status: plan.status,
@@ -652,11 +663,50 @@ export async function updateMetaPublishPlanExecution(serviceSupabase: SupabaseSe
       updated_at: plan.updatedAt,
     })
     .eq("workspace_id", plan.workspaceId)
-    .eq("id", plan.planId);
+    .eq("id", plan.planId)
+    .select("id")
+    .maybeSingle();
 
   if (error) {
     throw new Error(error.message);
   }
+  if (!data) throw new Error("Meta publish plan was not found for this workspace.");
+}
+
+export type MetaPublishExecutionLease = {
+  claimed: boolean;
+  leaseToken: string | null;
+  leaseExpiresAt: string | null;
+};
+
+/** Service-role-only claim. A false result means another unexpired executor owns it. */
+export async function claimMetaPublishExecution(
+  serviceSupabase: SupabaseServiceClient,
+  input: { workspaceId: string; planId: string; leaseSeconds?: number },
+): Promise<MetaPublishExecutionLease> {
+  const { data, error } = await serviceSupabase.rpc("claim_meta_publish_execution", {
+    p_workspace_id: input.workspaceId,
+    p_plan_id: input.planId,
+    p_lease_seconds: input.leaseSeconds ?? 600,
+  });
+  if (error) throw new Error(error.message);
+  const row = (Array.isArray(data) ? data[0] : data) as Record<string, unknown> | null;
+  return { claimed: row?.claimed === true, leaseToken: typeof row?.lease_token === "string" ? row.lease_token : null, leaseExpiresAt: typeof row?.lease_expires_at === "string" ? row.lease_expires_at : null };
+}
+
+export async function renewMetaPublishExecutionLease(
+  serviceSupabase: SupabaseServiceClient,
+  input: { workspaceId: string; planId: string; leaseToken: string; leaseSeconds?: number },
+): Promise<boolean> {
+  const { data, error } = await serviceSupabase.rpc("renew_meta_publish_execution", { p_workspace_id: input.workspaceId, p_plan_id: input.planId, p_lease_token: input.leaseToken, p_lease_seconds: input.leaseSeconds ?? 600 });
+  if (error) throw new Error(error.message);
+  return data === true || (Array.isArray(data) && data[0]?.renewed === true);
+}
+
+export async function releaseMetaPublishExecutionLease(serviceSupabase: SupabaseServiceClient, input: { workspaceId: string; planId: string; leaseToken: string }): Promise<boolean> {
+  const { data, error } = await serviceSupabase.rpc("release_meta_publish_execution", { p_workspace_id: input.workspaceId, p_plan_id: input.planId, p_lease_token: input.leaseToken });
+  if (error) throw new Error(error.message);
+  return data === true || (Array.isArray(data) && data[0]?.released === true);
 }
 
 export function resolveMetaConnectionSetup(

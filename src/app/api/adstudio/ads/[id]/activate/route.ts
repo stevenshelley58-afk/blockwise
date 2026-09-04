@@ -3,12 +3,13 @@ import { NextResponse, type NextRequest } from "next/server";
 import { errorResponse, readJsonBody, requireAdStudioRequest } from "@/lib/adstudio/http";
 import {
   assertActivationReadiness,
-  loadLatestPublishPlanForAd,
   markPlanObjectsActive,
   PublishError,
 } from "@/lib/adstudio/publish-adapter";
 import {
+  claimMetaPublishExecution,
   loadMetaPublishPlan,
+  releaseMetaPublishExecutionLease,
   updateMetaPublishPlanExecution,
 } from "@/lib/providers/meta-execution";
 import { executeMetaMutationById } from "@/lib/providers/meta-mutation-worker";
@@ -23,8 +24,10 @@ type RouteContext = {
 };
 
 type ActivateBody = {
-  /** Optional explicit plan from the PAUSED publish receipt; defaults to the latest plan for the ad. */
+  /** Exact plan from the PAUSED publish receipt. */
   planId?: string;
+  controlsFingerprint?: string;
+  clientMutationKey?: string;
 };
 
 function providerWritesEnabled() {
@@ -53,20 +56,153 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
   const body = await readJsonBody<ActivateBody>(request);
   const planId = typeof body.planId === "string" && body.planId.trim() ? body.planId.trim() : undefined;
+  const controlsFingerprint = typeof body.controlsFingerprint === "string" ? body.controlsFingerprint.trim() : "";
+  const clientMutationKey = typeof body.clientMutationKey === "string" ? body.clientMutationKey.trim() : "";
 
+  if (!planId) {
+    return NextResponse.json(
+      { error: "plan_id_required", message: "Activate requires the exact planId returned by publish." },
+      { status: 400 },
+    );
+  }
+  if (!controlsFingerprint) return NextResponse.json({ error: "controls_fingerprint_required", message: "Activate requires controlsFingerprint from publish." }, { status: 400 });
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(clientMutationKey)) return NextResponse.json({ error: "client_mutation_key_invalid", message: "Activate requires a UUID clientMutationKey." }, { status: 400 });
+
+  const serviceSupabase = createSupabaseServiceClient();
+  let leaseToken: string | null = null;
+  let leasePlanId: string | null = null;
   try {
-    const serviceSupabase = createSupabaseServiceClient();
-    const plan = planId
-      ? await loadMetaPublishPlan(serviceSupabase, {
-          workspaceId: access.access.workspaceId,
-          planId,
-        })
-      : await loadLatestPublishPlanForAd(serviceSupabase, access.access.workspaceId, id);
+    const plan = await loadMetaPublishPlan(serviceSupabase, {
+      workspaceId: access.access.workspaceId,
+      planId,
+    });
     if (!plan) {
       throw new PublishError("no_paused_plan", "No paused Meta publish plan found for this ad — publish it first.");
     }
     if (plan.adStudioCampaignId !== id) {
       throw new PublishError("plan_ad_mismatch", "That Meta publish plan belongs to a different ad.");
+    }
+    if (controlsFingerprint !== plan.idempotencyKey) throw new PublishError("controls_fingerprint_mismatch", "The publish controls have changed; publish again before activating.");
+
+    const latestResult = await serviceSupabase
+      .from("meta_publish_plan_mutations")
+      .select("id,status,payload_json,last_error,outcome_status,unconfirmed_pause_ids_json")
+      .eq("workspace_id", plan.workspaceId)
+      .eq("meta_publish_plan_id", plan.planId)
+      .eq("action", "activate")
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (latestResult.error) throw new Error(latestResult.error.message);
+    const latest = latestResult.data;
+    const latestPayload = latest?.payload_json as { campaignId?: string; adSetIds?: string[]; adIds?: string[] } | undefined;
+    const latestTargets = {
+      campaignId: latestPayload?.campaignId ?? plan.reconciledObjects.campaignId,
+      adSetIds: latestPayload?.adSetIds ?? [],
+      adIds: latestPayload?.adIds ?? [],
+    };
+    if (latest?.status === "applied") {
+      return NextResponse.json({
+        ok: true,
+        mode: "activate",
+        status: "activated",
+        planId: plan.planId,
+        mutationId: latest.id,
+        targets: latestTargets,
+        message: "This publish plan is already active; no second activation was created.",
+      });
+    }
+    if (latest?.outcome_status === "unconfirmed") {
+      return NextResponse.json({
+        ok: false,
+        mode: "activate",
+        status: "unknown",
+        planId: plan.planId,
+        mutationId: latest.id,
+        targets: latestTargets,
+        error: "activation_unconfirmed",
+        message: latest.last_error ?? "Blockwise could not confirm that every owned object was paused.",
+        unconfirmedPauseIds: latest.unconfirmed_pause_ids_json ?? [],
+      }, { status: 502 });
+    }
+    if ((latest?.status === "approved" || latest?.status === "applying") && latest.id !== clientMutationKey) {
+      return NextResponse.json({
+        ok: true,
+        mode: "activate",
+        status: "activating",
+        planId: plan.planId,
+        mutationId: latest.id,
+        targets: latestTargets,
+        message: "A prior activation request is still in progress; no second activation was created.",
+      }, { status: 202 });
+    }
+
+    const existingResult = await serviceSupabase
+      .from("meta_publish_plan_mutations")
+      .select("id,status,approval_request_id,payload_json,last_error,outcome_status,unconfirmed_pause_ids_json")
+      .eq("workspace_id", plan.workspaceId)
+      .eq("meta_publish_plan_id", plan.planId)
+      .eq("action", "activate")
+      .eq("client_mutation_key", clientMutationKey)
+      .maybeSingle();
+    if (existingResult.error) throw new Error(existingResult.error.message);
+    const existing = existingResult.data;
+    const existingPayload = existing?.payload_json as { campaignId?: string; adSetIds?: string[]; adIds?: string[] } | undefined;
+    const existingTargets = {
+      campaignId: existingPayload?.campaignId ?? plan.reconciledObjects.campaignId,
+      adSetIds: existingPayload?.adSetIds ?? [],
+      adIds: existingPayload?.adIds ?? [],
+    };
+    if (existing?.status === "applied") {
+      return NextResponse.json({
+        ok: true,
+        mode: "activate",
+        status: "activated",
+        planId: plan.planId,
+        mutationId: existing.id,
+        targets: existingTargets,
+        message: "Activation already completed for this exact request.",
+      });
+    }
+    if (existing?.status === "failed") {
+      const unconfirmed = existing.outcome_status === "unconfirmed";
+      return NextResponse.json(
+        {
+          ok: false,
+          mode: "activate",
+          status: unconfirmed ? "unknown" : "paused",
+          planId: plan.planId,
+          mutationId: existing.id,
+          targets: existingTargets,
+          error: unconfirmed ? "activation_unconfirmed" : "activation_failed",
+          message: existing.last_error ?? (unconfirmed
+            ? "Activation failed and Blockwise could not confirm that every owned object was paused."
+            : "Activation failed; the Blockwise-created objects remain paused."),
+          ...(unconfirmed ? { unconfirmedPauseIds: existing.unconfirmed_pause_ids_json ?? [] } : {}),
+        },
+        { status: 502 },
+      );
+    }
+
+    const lease = await claimMetaPublishExecution(serviceSupabase, { workspaceId: plan.workspaceId, planId: plan.planId });
+    if (!lease.claimed || !lease.leaseToken) {
+      return NextResponse.json({
+        ok: true,
+        mode: "activate",
+        status: "activating",
+        planId: plan.planId,
+        mutationId: existing?.id,
+        message: "Activation is already in progress; refresh shortly.",
+      }, { status: 202 });
+    }
+    leaseToken = lease.leaseToken;
+    leasePlanId = plan.planId;
+
+    if (existing?.status === "applying") {
+      throw new PublishError(
+        "activation_unconfirmed",
+        "A previous activation attempt stopped while Meta was applying it. Check Meta Ads Manager before trying again.",
+      );
     }
 
     const readiness = assertActivationReadiness(plan);
@@ -103,48 +239,69 @@ export async function POST(request: NextRequest, context: RouteContext) {
       requestedBy: access.access.userId,
       action: "activate",
       payload: mutationPayload,
+      mutationId: clientMutationKey,
     });
     const now = new Date().toISOString();
-    const { error: mutationError } = await serviceSupabase
-      .from("meta_publish_plan_mutations")
-      .insert({
-        id: mutation.mutationId,
-        workspace_id: mutation.workspaceId,
-        meta_publish_plan_id: mutation.planId,
-        action: mutation.action,
-        status: "approved",
-        payload_json: mutation.payload,
-        requested_by: mutation.requestedBy,
-        request_log_json: mutation.requestLog,
-        response_log_json: mutation.responseLog,
-        last_error: null,
-        updated_at: now,
-      });
-    if (mutationError) throw new Error(mutationError.message);
-
-    const { data: approval, error: approvalError } = await serviceSupabase
-      .from("approval_requests")
-      .insert({
-        workspace_id: mutation.workspaceId,
-        target_type: mutation.approval.targetType,
-        target_id: mutation.approval.targetId,
-        status: "approved",
-        requested_by: mutation.requestedBy,
-        approved_by: mutation.requestedBy,
-        resolved_at: now,
-        risk_summary: mutation.approval.riskSummary,
-      })
-      .select("id")
-      .single();
-    if (approvalError || !approval) {
-      throw new Error(approvalError?.message ?? "Unable to record the activation approval.");
+    if (!existing) {
+      const { error: mutationError } = await serviceSupabase
+        .from("meta_publish_plan_mutations")
+        .insert({
+          id: mutation.mutationId,
+          workspace_id: mutation.workspaceId,
+          meta_publish_plan_id: mutation.planId,
+          action: mutation.action,
+          status: "approved",
+          payload_json: mutation.payload,
+          requested_by: mutation.requestedBy,
+          client_mutation_key: clientMutationKey,
+          request_log_json: mutation.requestLog,
+          response_log_json: mutation.responseLog,
+          last_error: null,
+          updated_at: now,
+        });
+      if (mutationError) throw new Error(mutationError.message);
     }
-    const { error: linkError } = await serviceSupabase
-      .from("meta_publish_plan_mutations")
-      .update({ approval_request_id: approval.id, updated_at: now })
-      .eq("workspace_id", mutation.workspaceId)
-      .eq("id", mutation.mutationId);
-    if (linkError) throw new Error(linkError.message);
+
+    if (!existing?.approval_request_id) {
+      const priorApprovalResult = await serviceSupabase
+        .from("approval_requests")
+        .select("id")
+        .eq("workspace_id", mutation.workspaceId)
+        .eq("target_type", mutation.approval.targetType)
+        .eq("target_id", mutation.approval.targetId)
+        .eq("status", "approved")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (priorApprovalResult.error) throw new Error(priorApprovalResult.error.message);
+      let approvalId = priorApprovalResult.data?.id as string | undefined;
+      if (!approvalId) {
+        const { data: approval, error: approvalError } = await serviceSupabase
+          .from("approval_requests")
+          .insert({
+            workspace_id: mutation.workspaceId,
+            target_type: mutation.approval.targetType,
+            target_id: mutation.approval.targetId,
+            status: "approved",
+            requested_by: mutation.requestedBy,
+            approved_by: mutation.requestedBy,
+            resolved_at: now,
+            risk_summary: mutation.approval.riskSummary,
+          })
+          .select("id")
+          .single();
+        if (approvalError || !approval) {
+          throw new Error(approvalError?.message ?? "Unable to record the activation approval.");
+        }
+        approvalId = approval.id;
+      }
+      const { error: linkError } = await serviceSupabase
+        .from("meta_publish_plan_mutations")
+        .update({ approval_request_id: approvalId, updated_at: now })
+        .eq("workspace_id", mutation.workspaceId)
+        .eq("id", mutation.mutationId);
+      if (linkError) throw new Error(linkError.message);
+    }
 
     const executed = await executeMetaMutationById({
       serviceSupabase,
@@ -152,10 +309,41 @@ export async function POST(request: NextRequest, context: RouteContext) {
       mutationId: mutation.mutationId,
     });
     if (executed.status !== "applied") {
-      throw new PublishError(
-        "activation_failed",
-        executed.lastError ?? "Meta could not activate the Blockwise-created ads; reused parents were not changed.",
-      );
+      const unconfirmedPauseIds = executed.unconfirmedPauseIds ?? [];
+      const outcomeStatus = unconfirmedPauseIds.length > 0 ? "unconfirmed" : "confirmed_paused";
+      const { error: outcomeError } = await serviceSupabase
+        .from("meta_publish_plan_mutations")
+        .update({
+          outcome_status: outcomeStatus,
+          unconfirmed_pause_ids_json: unconfirmedPauseIds,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("workspace_id", plan.workspaceId)
+        .eq("id", mutation.mutationId);
+      if (outcomeError) throw new Error(outcomeError.message);
+      if (unconfirmedPauseIds.length > 0) {
+        return NextResponse.json({
+          ok: false,
+          mode: "activate",
+          status: "unknown",
+          planId: plan.planId,
+          mutationId: mutation.mutationId,
+          targets,
+          error: "activation_unconfirmed",
+          message: executed.lastError ?? "Activation failed and Blockwise could not confirm the final Meta status.",
+          unconfirmedPauseIds,
+        }, { status: 502 });
+      }
+      return NextResponse.json({
+        ok: false,
+        mode: "activate",
+        status: "paused",
+        planId: plan.planId,
+        mutationId: mutation.mutationId,
+        targets,
+        error: "activation_failed",
+        message: executed.lastError ?? "Meta could not activate the Blockwise-created ads; they remain paused.",
+      }, { status: 502 });
     }
     await updateMetaPublishPlanExecution(serviceSupabase, markPlanObjectsActive(plan));
 
@@ -173,11 +361,30 @@ export async function POST(request: NextRequest, context: RouteContext) {
       const status =
         err.code === "no_paused_plan"
           ? 404
-          : err.code === "activation_failed"
+          : err.code === "activation_failed" || err.code === "activation_unconfirmed"
             ? 502
             : 400;
-      return NextResponse.json({ error: err.code, message: err.message }, { status });
+      return NextResponse.json({
+        ok: false,
+        mode: "activate",
+        status: err.code === "activation_unconfirmed" ? "unknown" : undefined,
+        planId,
+        error: err.code,
+        message: err.message,
+      }, { status });
     }
     return errorResponse(err, 500);
+  } finally {
+    if (leaseToken && leasePlanId) {
+      try {
+        await releaseMetaPublishExecutionLease(serviceSupabase, {
+          workspaceId: access.access.workspaceId,
+          planId: leasePlanId,
+          leaseToken,
+        });
+      } catch {
+        // Preserve the activation outcome; the lease expires safely.
+      }
+    }
   }
 }

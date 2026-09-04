@@ -338,8 +338,15 @@ describe("publish reports active state honestly with safe retry", () => {
     assert.match(flow, /!canRequestManualPublish \|\| !ready/);
   });
 
+  it("publish creates a paused receipt before a separate activation", () => {
+    assert.match(flow, /Create paused on Meta/);
+    assert.match(flow, /Created paused on Meta/);
+    assert.match(flow, /body: JSON\.stringify\(\{ planId, controlsFingerprint: receipt\?\.controlsFingerprint, clientMutationKey \}\)/);
+    assert.match(flow, /Activate on Meta/);
+  });
+
   it("partial failure reports the real state and never claims the ad is active", () => {
-    assert.match(flow, /Created on Meta — activation incomplete/);
+    assert.match(flow, /Created paused on Meta/);
     assert.match(flow, /nothing is running or spending/);
     assert.match(flow, /Published — active on Meta/);
   });
@@ -347,23 +354,21 @@ describe("publish reports active state honestly with safe retry", () => {
   it("retry targets the existing plan and never creates duplicates", () => {
     assert.match(flow, /RetryActivationSection/);
     assert.match(flow, /No new objects are created/);
-    assert.match(route, /activationError/);
-    assert.match(route, /status: unconfirmed \? "unknown" : "paused"/);
+    assert.match(flow, /clientMutationKey/);
+    assert.match(flow, /controlsFingerprint/);
   });
 
   it("never reports a confirmed pause when the safety pause is unverified", () => {
     // Indeterminate compensation → distinct "unknown" state with honest
     // messaging, not a claimed pause while objects may be ACTIVE.
-    assert.match(route, /activation_unconfirmed/);
-    assert.match(route, /status: unconfirmed \? "unknown" : "paused"/);
-    assert.match(route, /could not confirm that every object was paused/);
     assert.match(flow, /state unconfirmed/);
-    // Both partial states offer the same idempotent safe retry.
-    assert.match(flow, /receipt\.status === "paused" \|\| receipt\.status === "unknown"/);
+    // Unknown state suppresses activation; only a confirmed paused receipt can continue.
+    assert.match(flow, /receipt\.status === "paused"/);
+    assert.match(flow, /do not retry activation until their status is known/i);
   });
 
-  it("the publish route verifies configured ACTIVE before reporting success", () => {
-    assert.match(route, /campaign.*ACTIVE|ACTIVE.*campaign/s);
-    assert.match(route, /adSets.*ACTIVE|ads.*ACTIVE/s);
+  it("the publish UI reserves ACTIVE language for the explicit activation receipt", () => {
+    assert.match(flow, /Activated on Meta/);
+    assert.match(flow, /explicit approval to make the exact objects/);
   });
 });
