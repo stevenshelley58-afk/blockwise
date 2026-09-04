@@ -17,6 +17,9 @@ services:
       WORKER_LEASE_SECONDS: ${WORKER_LEASE_SECONDS:-600}
       WORKER_HEARTBEAT_INTERVAL_MS: ${WORKER_HEARTBEAT_INTERVAL_MS:-200000}
       WORKER_REAP_INTERVAL_MS: ${WORKER_REAP_INTERVAL_MS:-60000}
+      MAUTIC_TOKEN_FILE: /run/secrets/mautic_token
+      CHATWOOT_API_TOKEN_FILE: /run/secrets/chatwoot_api_token
+      BLOCKWISE_OPS_CORRELATION_KEY_FILE: /run/secrets/ops_correlation_key
     read_only: true
     cap_drop:
       - ALL
@@ -25,6 +28,9 @@ services:
     stop_grace_period: 30s
     volumes:
       - ${HERMES_OPS_PROJECTION_ROOT:-/srv/frank/data/window/ops-projections}:/data/ops-projections:rw
+      - ${MAUTIC_TOKEN_HOST_FILE:-/srv/blockwise/secrets/mautic_token}:/run/secrets/mautic_token:ro
+      - ${CHATWOOT_API_TOKEN_HOST_FILE:-/srv/blockwise/secrets/chatwoot_api_token}:/run/secrets/chatwoot_api_token:ro
+      - ${BLOCKWISE_OPS_CORRELATION_KEY_HOST_FILE:-/srv/blockwise/secrets/ops_correlation_key}:/run/secrets/ops_correlation_key:ro
     logging:
       driver: json-file
       options:

@@ -26,8 +26,16 @@ export function publishOpsBundle(root: string, input: OpsBundle): { receiptId: s
   const bodyHashes: Record<string, string> = {};
   for (const name of PROJECTIONS) { const envelope = { schema: schemas[name], version: 1, projection: name, project_id: "blockwise", workspace_ids: [...input.workspace_ids].sort(), source_scope: { project_id: "blockwise", workspace_ids: [...input.workspace_ids].sort(), system: name }, source_revision: input.source_revision, source_receipt_ids: [...input.source_receipt_ids].sort(), publication_receipt_id: publicationReceiptId, published_at: generated.toISOString(), fresh_until: freshUntil.toISOString(), items: input.projections[name] ?? [] }; const body = JSON.stringify(envelope) + "\n"; durable(join(staging, names[name]), body); bodyHashes[names[name]] = createHash("sha256").update(body).digest("hex"); }
   const receipt = { schema: "schema://frank.ops-publication-receipt/v1", project_id: "blockwise", workspace_ids: [...input.workspace_ids].sort(), publication_receipt_id: publicationReceiptId, source_revision: input.source_revision, source_receipt_ids: [...input.source_receipt_ids].sort(), published_at: generated.toISOString(), projection_count: PROJECTIONS.length };
-  durable(join(staging, "publication-receipt.json"), JSON.stringify(receipt) + "\n"); fsyncDir(staging); renameSync(staging, join(generations, generation)); fsyncDir(generations);
-  const pointer = { schema: "schema://frank.ops-pointer/v1", version: 1, generation, publication_receipt_id: publicationReceiptId }; const pointerTemp = join(output, `.current.${randomUUID()}.tmp`); durable(pointerTemp, JSON.stringify(pointer) + "\n"); renameSync(pointerTemp, join(output, "current.json")); fsyncDir(output);
+  const receiptBody = JSON.stringify(receipt) + "\n"; durable(join(staging, "publication-receipt.json"), receiptBody);
+  const pointer = { schema: "schema://frank.ops-pointer/v1", version: 1, generation, publication_receipt_id: publicationReceiptId };
+  const pointerBody = JSON.stringify(pointer) + "\n";
+  const receiptSha256 = createHash("sha256").update(receiptBody).digest("hex");
+  const pointerSha256 = createHash("sha256").update(pointerBody).digest("hex");
+  const manifestInput = { generation, publication_receipt_id: publicationReceiptId, files: { ...bodyHashes, "publication-receipt.json": receiptSha256 }, pointer_sha256: pointerSha256 };
+  const bundleSha256 = createHash("sha256").update(JSON.stringify(manifestInput)).digest("hex");
+  const manifest = { schema: "schema://frank.ops-manifest/v1", version: 1, ...manifestInput, bundle_sha256: bundleSha256 };
+  durable(join(staging, "manifest.json"), JSON.stringify(manifest) + "\n"); fsyncDir(staging); renameSync(staging, join(generations, generation)); fsyncDir(generations);
+  const pointerTemp = join(output, `.current.${randomUUID()}.tmp`); durable(pointerTemp, pointerBody); renameSync(pointerTemp, join(output, "current.json")); fsyncDir(output);
   for (const old of readdirSync(generations)) if (old !== generation && !old.startsWith(".")) { try { /* only remove old complete generations; keep three for rollback. */ const all = readdirSync(generations).filter((v) => !v.startsWith(".")).sort().reverse(); if (all.indexOf(old) >= 3) { /* recursive removal intentionally avoided; files are immutable and old generations may be operator-retained. */ } } catch { /* best effort GC never affects publication */ } }
-  return { receiptId: publicationReceiptId, sha256: createHash("sha256").update(JSON.stringify(bodyHashes)).digest("hex"), generation };
+  return { receiptId: publicationReceiptId, sha256: `sha256:${bundleSha256}`, generation };
 }

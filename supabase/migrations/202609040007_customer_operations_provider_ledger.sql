@@ -13,11 +13,19 @@ create table if not exists private.ops_provider_operation_ledger (
   intent jsonb not null default '{}'::jsonb check (jsonb_typeof(intent) = 'object'),
   provider_id_ciphertext text,
   provider_id_digest text,
+  provider_contact_id_ciphertext text,
+  provider_contact_id_digest text,
+  provider_conversation_id_ciphertext text,
+  provider_conversation_id_digest text,
   last_error text,
   updated_at timestamptz not null default now(),
   created_at timestamptz not null default now()
 );
 alter table private.ops_provider_operation_ledger enable row level security;
+alter table private.ops_provider_operation_ledger add column if not exists provider_contact_id_ciphertext text;
+alter table private.ops_provider_operation_ledger add column if not exists provider_contact_id_digest text;
+alter table private.ops_provider_operation_ledger add column if not exists provider_conversation_id_ciphertext text;
+alter table private.ops_provider_operation_ledger add column if not exists provider_conversation_id_digest text;
 revoke all on private.ops_provider_operation_ledger from public, anon, authenticated;
 grant select, insert, update on private.ops_provider_operation_ledger to service_role;
 
@@ -36,7 +44,28 @@ begin
   values (left(p_operation_key,512),p_workspace_id,p_provider,left(p_aggregate_type,64),left(p_aggregate_id,256),p_source_version,coalesce(p_intent,'{}'))
   on conflict(operation_key) do update set updated_at=now(), source_version=greatest(private.ops_provider_operation_ledger.source_version,excluded.source_version);
   select * into v_row from private.ops_provider_operation_ledger where operation_key=left(p_operation_key,512);
-  return jsonb_build_object('state',v_row.state,'provider_id_ciphertext',v_row.provider_id_ciphertext,'provider_id_digest',v_row.provider_id_digest);
+  return jsonb_build_object('state',v_row.state,'provider_id_ciphertext',v_row.provider_id_ciphertext,'provider_id_digest',v_row.provider_id_digest,'provider_contact_id_ciphertext',v_row.provider_contact_id_ciphertext,'provider_contact_id_digest',v_row.provider_contact_id_digest,'provider_conversation_id_ciphertext',v_row.provider_conversation_id_ciphertext,'provider_conversation_id_digest',v_row.provider_conversation_id_digest);
+end; $$;
+
+create or replace function public.record_ops_provider_identifier(
+  p_operation_key text, p_resource text, p_provider_id_ciphertext text,
+  p_provider_id_digest text, p_status text
+) returns boolean language plpgsql security definer set search_path = '' as $$
+begin
+  if p_resource not in ('contact','conversation') or p_status <> 'remote_succeeded'
+    or nullif(btrim(p_provider_id_ciphertext),'') is null
+    or p_provider_id_ciphertext !~ '^v1:[A-Za-z0-9_-]+:[A-Za-z0-9_-]+:[A-Za-z0-9_-]+$'
+    or p_provider_id_digest !~ '^[0-9a-f]{64}$' then
+    raise exception 'invalid protected provider identifier' using errcode='22023';
+  end if;
+  if p_resource = 'contact' then
+    update private.ops_provider_operation_ledger set state='remote_succeeded', provider_contact_id_ciphertext=left(p_provider_id_ciphertext,2048), provider_contact_id_digest=p_provider_id_digest, updated_at=now()
+      where operation_key=left(p_operation_key,512) and state in ('prepared','remote_succeeded');
+  else
+    update private.ops_provider_operation_ledger set state='remote_succeeded', provider_conversation_id_ciphertext=left(p_provider_id_ciphertext,2048), provider_conversation_id_digest=p_provider_id_digest, updated_at=now()
+      where operation_key=left(p_operation_key,512) and state in ('prepared','remote_succeeded');
+  end if;
+  return found;
 end; $$;
 
 create or replace function public.record_ops_provider_operation(
@@ -56,7 +85,8 @@ returns boolean language sql security definer set search_path = '' as $$
   returning true;
 $$;
 revoke all on function public.begin_ops_provider_operation(text,uuid,text,text,text,bigint,jsonb), public.record_ops_provider_operation(text,text,text,text), public.settle_ops_provider_operation(text,bigint) from public, anon, authenticated;
-grant execute on function public.begin_ops_provider_operation(text,uuid,text,text,text,bigint,jsonb), public.record_ops_provider_operation(text,text,text,text), public.settle_ops_provider_operation(text,bigint) to service_role;
+grant execute on function public.begin_ops_provider_operation(text,uuid,text,text,text,bigint,jsonb), public.record_ops_provider_operation(text,text,text,text), public.record_ops_provider_identifier(text,text,text,text,text), public.settle_ops_provider_operation(text,bigint) to service_role;
+revoke all on function public.record_ops_provider_identifier(text,text,text,text,text) from public, anon, authenticated;
 
 create table if not exists public.ops_global_projection_outbox (
   id uuid primary key default gen_random_uuid(),
@@ -111,17 +141,23 @@ grant execute on function public.enqueue_ops_global_projection(), public.claim_o
 -- is deliberately a safe, normalized read model; providers are not queried.
 create or replace function public.resolve_ops_frank_bundle() returns jsonb
 language plpgsql security definer set search_path='' as $$
-declare v_revision text := coalesce(nullif(current_setting('app.blockwise_revision', true), ''), 'worker'); v_workspaces jsonb; v_workspace_ids text[]; v_members jsonb; v_bookings jsonb; v_billing jsonb; v_email jsonb; v_mautic jsonb; v_enquiries jsonb; v_activity jsonb;
+declare v_revision text := 'unbound'; v_workspaces jsonb; v_workspace_ids text[]; v_receipts text[]; v_members jsonb; v_bookings jsonb; v_billing jsonb; v_email jsonb; v_flows jsonb; v_mautic jsonb; v_enquiries jsonb; v_activity jsonb;
 begin
   select coalesce(jsonb_agg(jsonb_build_object('id',s.workspace_id,'workspace_id',s.workspace_id,'name',s.workspace_name,'mode',s.mode,'region',s.region,'country_code',s.country_code,'managed_service_enabled',s.managed_service_enabled,'billing_access_state',s.billing_access_state,'stripe_subscription_status',s.stripe_subscription_status,'stripe_latest_invoice_status',s.stripe_latest_invoice_status,'created_at',s.created_at,'updated_at',s.updated_at,'email',s.owner_email,'display_name',s.owner_name) order by s.workspace_id),'[]'::jsonb), coalesce(array_agg(s.workspace_id::text order by s.workspace_id),'{}'::text[]) into v_workspaces,v_workspace_ids from public.ops_customer_summary s;
+  select coalesce(array_agg(r.receipt order by r.receipt), '{}'::text[]) into v_receipts from (
+    select distinct 'receipt:ops/source-' || lower(left(regexp_replace(o.source_event_id,'[^A-Za-z0-9_-]','','g'),96)) as receipt from public.ops_projection_outbox o where o.workspace_id=any(v_workspace_ids::uuid[])
+    union select distinct 'receipt:ops/snapshot-' || lower(left(regexp_replace(s.source_event_id,'[^A-Za-z0-9_-]','','g'),96)) from public.ops_provider_snapshots s where s.workspace_id=any(v_workspace_ids::uuid[])
+    union select distinct 'receipt:ops/global-' || g.id::text from public.ops_global_projection_outbox g
+  ) r;
   select coalesce(jsonb_agg(jsonb_build_object('id','member:'||wm.workspace_id::text||':'||wm.profile_id::text,'customer_id',wm.workspace_id,'workspace_id',wm.workspace_id,'profile_id',p.id,'email',p.email,'full_name',p.full_name,'role',wm.role,'status','active','created_at',wm.created_at) order by wm.created_at),'[]'::jsonb) into v_members from public.workspace_members wm join public.profiles p on p.id=wm.profile_id where wm.workspace_id=any(v_workspace_ids::uuid[]);
   select coalesce(jsonb_agg(jsonb_build_object('id',b.id,'customer_id',b.workspace_id,'workspace_id',b.workspace_id,'booking_ref',b.id::text,'status',b.status,'provider',b.provider,'scheduled_start_at',b.scheduled_start_at,'scheduled_end_at',b.scheduled_end_at,'booked_at',b.booked_at,'cancelled_at',b.cancelled_at,'completed_at',b.completed_at,'created_at',b.created_at,'updated_at',b.updated_at) order by b.updated_at desc),'[]'::jsonb) into v_bookings from public.workspace_onboarding_bookings b where b.workspace_id=any(v_workspace_ids::uuid[]);
   select coalesce(jsonb_agg(jsonb_build_object('id',a.id,'customer_id',a.workspace_id,'workspace_id',a.workspace_id,'status','customer','plan',a.offer_key,'currency',a.currency,'first_invoice_amount',a.first_invoice_amount,'renewal_amount',a.renewal_amount,'accepted_at',a.accepted_at,'offer_key',a.offer_key,'offer_version',a.offer_version) order by a.accepted_at desc),'[]'::jsonb) into v_billing from public.billing_offer_acceptances a where a.workspace_id=any(v_workspace_ids::uuid[]);
-  select coalesce(jsonb_agg(jsonb_build_object('id',s.id,'customer_id',s.workspace_id,'workspace_id',s.workspace_id,'status',s.status,'delivery_status',s.delivery_status,'provider','mautic','provider_record_suffix',s.provider_record_suffix,'snapshot_kind',s.snapshot_kind,'source_event_id',s.source_event_id,'source_version',s.source_version,'updated_at',s.updated_at) order by s.updated_at desc),'[]'::jsonb) into v_email from public.ops_provider_snapshots s where s.provider='mautic' and s.snapshot_kind='delivery' and s.workspace_id=any(v_workspace_ids::uuid[]);
+  select coalesce(jsonb_agg(jsonb_build_object('id',e.id::text||':'||wm.workspace_id::text,'customer_id',wm.workspace_id,'workspace_id',wm.workspace_id,'template',e.template_id,'subject',left(coalesce(e.payload->>'subject',''),512),'status',e.status,'delivery_status',e.status,'created_at',e.created_at,'sent_at',e.sent_at,'updated_at',coalesce(e.sent_at,e.created_at),'failure_reason',public.redact_ops_text(e.last_error),'provider','stalwart','kind',e.message_type,'suppression_state',case when e.status='suppressed' then 'suppressed' else 'allowed' end,'provider_record_suffix',case when e.provider_message_id is null then null else '****'||right(e.provider_message_id,4) end) order by e.created_at desc),'[]'::jsonb) into v_email from public.email_outbox e join public.profiles p on lower(p.email)=lower(e.recipient) join public.workspace_members wm on wm.profile_id=p.id and wm.workspace_id=any(v_workspace_ids::uuid[]);
+  select coalesce(jsonb_agg(jsonb_build_object('id',s.id,'customer_id',s.workspace_id,'workspace_id',s.workspace_id,'name','Mautic '||coalesce(s.stage,'lifecycle'),'type','lifecycle','status',s.status,'stage',s.stage,'campaign',coalesce(s.safe_data->>'campaign_status','not_configured'),'enrolled_at',s.created_at,'last_activity_at',s.last_activity_at,'updated_at',s.updated_at,'snapshot_kind',s.snapshot_kind,'source_event_id',s.source_event_id,'source_version',s.source_version) order by s.updated_at desc),'[]'::jsonb) into v_flows from public.ops_provider_snapshots s where s.provider='mautic' and s.snapshot_kind in ('flow','lifecycle') and s.workspace_id=any(v_workspace_ids::uuid[]);
   select coalesce(jsonb_agg(jsonb_build_object('id',s.id,'customer_id',s.workspace_id,'workspace_id',s.workspace_id,'stage',s.stage,'status',s.status,'provider_record_suffix',s.provider_record_suffix,'snapshot_kind',s.snapshot_kind,'source_event_id',s.source_event_id,'source_version',s.source_version,'updated_at',s.updated_at) order by s.updated_at desc),'[]'::jsonb) into v_mautic from public.ops_provider_snapshots s where s.provider='mautic' and s.snapshot_kind='lifecycle' and s.workspace_id=any(v_workspace_ids::uuid[]);
   select coalesce(jsonb_agg(jsonb_build_object('id',e.id,'customer_id',e.workspace_id,'workspace_id',e.workspace_id,'subject',e.subject,'status',e.status,'enquiry_type',e.enquiry_type,'requester_email',e.requester_email,'requester_name',e.requester_name,'source_system',e.source_system,'created_at',e.created_at,'updated_at',e.updated_at) order by e.updated_at desc),'[]'::jsonb) into v_enquiries from public.ops_enquiry_associations e where e.workspace_id=any(v_workspace_ids::uuid[]) or e.workspace_id is null;
   select coalesce(jsonb_agg(jsonb_build_object('id',a.id,'customer_id',a.workspace_id,'workspace_id',a.workspace_id,'kind',a.target_type,'title',a.action,'occurred_at',a.created_at,'created_at',a.created_at) order by a.created_at desc),'[]'::jsonb) into v_activity from public.audit_logs a where a.workspace_id=any(v_workspace_ids::uuid[]);
-  return jsonb_build_object('project_id','blockwise','source_revision',v_revision,'source_receipt_ids',jsonb_build_array('receipt:ops/worker-' || left(regexp_replace(v_revision,'[^A-Za-z0-9._:-]','','g'),128)),'workspace_ids',to_jsonb(v_workspace_ids),'fresh_until',(now()+interval '15 minutes'),'projections',jsonb_build_object('customers',v_workspaces,'email',v_email,'flows','[]'::jsonb,'mautic',v_mautic,'enquiries',v_enquiries,'bookings',v_bookings,'billing',v_billing,'activity',v_activity,'members',v_members));
+  return jsonb_build_object('project_id','blockwise','source_revision',v_revision,'source_receipt_ids',to_jsonb(v_receipts),'workspace_ids',to_jsonb(v_workspace_ids),'fresh_until',(now()+interval '15 minutes'),'projections',jsonb_build_object('customers',v_workspaces,'email',v_email,'flows',v_flows,'mautic',v_mautic,'enquiries',v_enquiries,'bookings',v_bookings,'billing',v_billing,'activity',v_activity,'members',v_members));
 end; $$;
 revoke all on function public.resolve_ops_frank_bundle() from public, anon, authenticated;
 grant execute on function public.resolve_ops_frank_bundle() to service_role;

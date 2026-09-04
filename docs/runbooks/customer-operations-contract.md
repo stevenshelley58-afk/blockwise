@@ -148,8 +148,20 @@ the documented contact edit `tags` field. See the [Mautic Contacts API](https://
 [Campaigns API](https://devdocs.mautic.org/en/7.1/rest_api/campaigns.html).
 
 Chatwoot uses its account-scoped contact, conversation, messages, status, and
-assignment endpoints. Every contact and conversation carries a deterministic
-Blockwise custom attribute; every message carries the operation key so a crash
-after a remote write is reconciled before a retry. Provider IDs are retained
-only as encrypted values in the private operation ledger and reduced to a
-masked suffix in snapshots.
+assignment endpoints with the official `api_access_token` header (the legacy
+Bearer header is retained only for compatibility). Every contact and
+conversation carries a deterministic Blockwise custom attribute; every message
+carries the operation key so a crash after a remote write is reconciled before
+a retry. Contact and conversation identifiers are stored in separate encrypted
+ledger columns and reduced to masked suffixes in snapshots. Website leads with
+no workspace use only the fixed global account/inbox and are published to
+Frank after the global queue settles; they are never associated by email.
+
+The Hermes publisher writes Frank's exact PR #121 receipt and pointer shape,
+plus a generation `manifest.json` containing SHA-256 checksums for every
+projection, receipt, and pointer. The deployed `BLOCKWISE_WORKER_REVISION`
+(full image Git SHA) is the bundle source revision; provider/source row and
+queue identifiers form the durable source receipt set. Mautic lifecycle
+snapshots also materialize configured segment/campaign flow status, while the
+Frank email projection is sourced from Blockwise `email_outbox` delivery,
+failure, and suppression state rather than Mautic contact snapshots.

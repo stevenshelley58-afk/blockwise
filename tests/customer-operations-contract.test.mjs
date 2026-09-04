@@ -12,6 +12,8 @@ test("product allowlist and rollback procedure cover the ops contract", () => {
   assert.match(allowlist, /202609040003_customer_operations_provider_snapshots\.sql/);
   assert.match(allowlist, /202609040004_customer_operations_projection_identity\.sql/);
   assert.match(allowlist, /202609040005_customer_operations_provider_matrix_privileges\.sql/);
+  assert.match(allowlist, /202609040006_customer_operations_runtime_resolution\.sql/);
+  assert.match(allowlist, /202609040007_customer_operations_provider_ledger\.sql/);
   const rollback = text("scripts/ops/rollback-customer-operations.sql");
   assert.match(rollback, /ROLLBACK_CUSTOMER_OPERATIONS/);
   assert.match(rollback, /customer_operations_tables_archive/);
@@ -22,6 +24,9 @@ test("product allowlist and rollback procedure cover the ops contract", () => {
   assert.match(rollback, /'email_suppressions'\]\)/);
   assert.match(rollback, /lock table public\.audit_logs/);
   assert.match(rollback, /in access exclusive mode/);
+  assert.match(rollback, /ops_global_projection_outbox/);
+  assert.match(rollback, /ops_provider_operation_ledger/);
+  assert.match(rollback, /provider_id_ciphertext/);
 });
 
 test("ops surface is service-only and provider-free", () => {
@@ -50,4 +55,17 @@ test("projection adapter and database enforce the provider aggregate matrix", ()
   assert.match(migration, /chatwoot.*enquiry.*support/s);
   assert.match(migration, /revoke insert, update, delete on public\.ops_projection_outbox from service_role/i);
   assert.match(migration, /grant select on public\.ops_projection_outbox to service_role/i);
+});
+
+test("worker deployment mounts OSS provider secrets read-only and binds image provenance", () => {
+  const compose = text("infra/coolify/docker-compose.product.yml");
+  assert.match(compose, /MAUTIC_TOKEN_HOST_FILE[\s\S]*:\/run\/secrets\/mautic_token:ro/);
+  assert.match(compose, /CHATWOOT_API_TOKEN_HOST_FILE[\s\S]*:\/run\/secrets\/chatwoot_api_token:ro/);
+  assert.match(compose, /BLOCKWISE_OPS_CORRELATION_KEY_HOST_FILE[\s\S]*:\/run\/secrets\/ops_correlation_key:ro/);
+  assert.match(compose, /MAUTIC_TOKEN_FILE: \/run\/secrets\/mautic_token/);
+  assert.match(compose, /CHATWOOT_API_TOKEN_FILE: \/run\/secrets\/chatwoot_api_token/);
+  assert.match(compose, /BLOCKWISE_WORKER_REVISION: \$\{BLOCKWISE_GIT_SHA\}/);
+  const worker = text("worker/ops-projection.ts");
+  assert.match(worker, /api_access_token/);
+  assert.match(worker, /BLOCKWISE_WORKER_REVISION must be the full deployed Git SHA/);
 });

@@ -336,6 +336,9 @@ services:
     stop_grace_period: 30s
     volumes:
       - ${HERMES_OPS_PROJECTION_ROOT:-/srv/frank/data/window/ops-projections}:/data/ops-projections:rw
+      - ${MAUTIC_TOKEN_HOST_FILE:-/srv/blockwise/secrets/mautic_token}:/run/secrets/mautic_token:ro
+      - ${CHATWOOT_API_TOKEN_HOST_FILE:-/srv/blockwise/secrets/chatwoot_api_token}:/run/secrets/chatwoot_api_token:ro
+      - ${BLOCKWISE_OPS_CORRELATION_KEY_HOST_FILE:-/srv/blockwise/secrets/ops_correlation_key}:/run/secrets/ops_correlation_key:ro
     environment:
       NODE_ENV: production
       NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:?NEXT_PUBLIC_SUPABASE_URL is required}
@@ -348,19 +351,19 @@ services:
       BLOCKWISE_OPS_PROJECTION_WORKER: ${BLOCKWISE_OPS_PROJECTION_WORKER:-false}
       BLOCKWISE_OPS_PROJECTION_PROVIDER: ${BLOCKWISE_OPS_PROJECTION_PROVIDER:-}
       MAUTIC_BASE_URL: ${MAUTIC_BASE_URL:-}
-      MAUTIC_TOKEN_FILE: ${MAUTIC_TOKEN_FILE:-}
+      MAUTIC_TOKEN_FILE: /run/secrets/mautic_token
       MAUTIC_CONTACT_TAG: ${MAUTIC_CONTACT_TAG:-}
       MAUTIC_LIFECYCLE_TAG: ${MAUTIC_LIFECYCLE_TAG:-}
       MAUTIC_LIFECYCLE_SEGMENTS_JSON: ${MAUTIC_LIFECYCLE_SEGMENTS_JSON:-}
       MAUTIC_LIFECYCLE_CAMPAIGNS_JSON: ${MAUTIC_LIFECYCLE_CAMPAIGNS_JSON:-}
       CHATWOOT_BASE_URL: ${CHATWOOT_BASE_URL:-}
       CHATWOOT_ACCOUNT_ID: ${CHATWOOT_ACCOUNT_ID:-}
-      CHATWOOT_API_TOKEN_FILE: ${CHATWOOT_API_TOKEN_FILE:-}
+      CHATWOOT_API_TOKEN_FILE: /run/secrets/chatwoot_api_token
       CHATWOOT_ENQUIRY_INBOX_ID: ${CHATWOOT_ENQUIRY_INBOX_ID:-}
       CHATWOOT_SUPPORT_INBOX_ID: ${CHATWOOT_SUPPORT_INBOX_ID:-}
       CHATWOOT_GLOBAL_ACCOUNT_ID: ${CHATWOOT_GLOBAL_ACCOUNT_ID:-}
       CHATWOOT_GLOBAL_INBOX_ID: ${CHATWOOT_GLOBAL_INBOX_ID:-}
-      BLOCKWISE_OPS_CORRELATION_KEY_FILE: ${BLOCKWISE_OPS_CORRELATION_KEY_FILE:-}
+      BLOCKWISE_OPS_CORRELATION_KEY_FILE: /run/secrets/ops_correlation_key
       HERMES_OPS_PROJECTION_ROOT: ${HERMES_OPS_PROJECTION_ROOT:-/data/ops-projections}
     networks: [blockwise-product]
 

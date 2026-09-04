@@ -22,7 +22,8 @@ lock table public.audit_logs, public.billing_offer_acceptances,
   public.customer_activations, public.customer_communication_preferences,
   public.demo_requests, public.email_suppressions, public.lead_events,
   public.leads, public.ops_enquiry_associations, public.ops_projection_outbox,
-  public.ops_provider_snapshots, public.profiles,
+  public.ops_provider_snapshots, public.ops_global_projection_outbox,
+  private.ops_provider_operation_ledger, public.profiles,
   public.report_email_leads, public.workspace_members,
   public.workspace_onboarding_bookings, public.workspaces
   in access exclusive mode;
@@ -47,6 +48,12 @@ insert into legacy_archive.customer_operations_tables_archive (run_id, table_nam
 select :'rollback_run_id', 'customer_communication_preferences', id::text, to_jsonb(o) from public.customer_communication_preferences o;
 insert into legacy_archive.customer_operations_tables_archive (run_id, table_name, row_id, row_data)
 select :'rollback_run_id', 'ops_provider_snapshots', id::text, to_jsonb(o) from public.ops_provider_snapshots o;
+insert into legacy_archive.customer_operations_tables_archive (run_id, table_name, row_id, row_data)
+select :'rollback_run_id', 'ops_global_projection_outbox', id::text, to_jsonb(o) from public.ops_global_projection_outbox o;
+insert into legacy_archive.customer_operations_tables_archive (run_id, table_name, row_id, row_data)
+-- row_data intentionally retains operation_key plus provider_id_ciphertext,
+-- provider_contact_id_ciphertext, and provider_conversation_id_ciphertext.
+select :'rollback_run_id', 'ops_provider_operation_ledger', operation_key, to_jsonb(o) from private.ops_provider_operation_ledger o;
 -- Preserve the complete suppression association/value before dropping the
 -- customer-operations workspace_id extension. This archive is per rollback
 -- run and is covered by the same writer-freeze locks and count check below.
@@ -56,11 +63,14 @@ select :'rollback_run_id', 'email_suppressions', id::text, to_jsonb(s) from publ
 do $$
 declare v_live bigint; v_archived bigint; v_table text;
 begin
-  for v_table in select unnest(array['ops_projection_outbox','ops_enquiry_associations','customer_communication_preferences','ops_provider_snapshots','email_suppressions']) loop
+  for v_table in select unnest(array['ops_projection_outbox','ops_enquiry_associations','customer_communication_preferences','ops_provider_snapshots','ops_global_projection_outbox','email_suppressions']) loop
     execute format('select count(*) from public.%I', v_table) into v_live;
     select count(*) into v_archived from legacy_archive.customer_operations_tables_archive where table_name = v_table and run_id = :'rollback_run_id';
     if v_live <> v_archived then raise exception 'rollback archive row-count mismatch for %: live %, archived %', v_table, v_live, v_archived; end if;
   end loop;
+  select count(*) into v_live from private.ops_provider_operation_ledger;
+  select count(*) into v_archived from legacy_archive.customer_operations_tables_archive where table_name = 'ops_provider_operation_ledger' and run_id = :'rollback_run_id';
+  if v_live <> v_archived then raise exception 'rollback archive row-count mismatch for provider ledger: live %, archived %', v_live, v_archived; end if;
 end $$;
 
 drop trigger if exists ops_workspace_projection on public.workspaces;
@@ -91,11 +101,25 @@ drop function if exists public.heartbeat_ops_projection(uuid,uuid,uuid,integer);
 drop function if exists public.complete_ops_projection(uuid,uuid,uuid);
 drop function if exists public.claim_ops_projection(text,integer);
 drop function if exists public.enqueue_ops_projection(uuid,text,text,text,text,text,bigint,jsonb);
+drop function if exists public.settle_ops_provider_operation(text,bigint);
+drop function if exists public.record_ops_provider_identifier(text,text,text,text,text);
+drop function if exists public.record_ops_provider_operation(text,text,text,text);
+drop function if exists public.begin_ops_provider_operation(text,uuid,text,text,text,bigint,jsonb);
+drop function if exists public.resolve_ops_frank_bundle();
+drop function if exists public.enqueue_ops_global_projection();
+drop function if exists public.claim_ops_global_projection(integer);
+drop function if exists public.resolve_global_ops_enquiry(uuid);
+drop function if exists public.complete_ops_global_projection(uuid,uuid);
+drop function if exists public.heartbeat_ops_global_projection(uuid,uuid,integer);
+drop function if exists public.reap_ops_global_projection(integer);
+drop function if exists public.fail_ops_global_projection(uuid,uuid,text);
 drop view if exists public.ops_customer_summary;
 drop table if exists public.ops_enquiry_associations;
 drop table if exists public.ops_provider_snapshots;
 drop table if exists public.ops_projection_outbox;
+drop table if exists public.ops_global_projection_outbox;
 drop table if exists public.customer_communication_preferences;
+drop table if exists private.ops_provider_operation_ledger;
 drop sequence if exists public.ops_projection_source_version_seq;
 drop index if exists public.email_suppressions_lower_reason_key;
 alter table if exists public.email_suppressions drop column if exists workspace_id;
