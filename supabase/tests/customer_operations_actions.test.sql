@@ -104,20 +104,20 @@ select lives_ok($$ select public.enqueue_ops_action(
 ) $$, 'current member versions pass');
 
 insert into public.ops_enquiry_associations (id,workspace_id,source_system,source_id,enquiry_type,status,subject)
-values ('8aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','86666666-6666-4666-8666-666666666666','blockwise','action-test-enquiry','support','open','Action test enquiry')
+values ('8aaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','86666666-6666-4666-8666-666666666666','blockwise','action-test-enquiry','support','open','Action test enquiry')
 on conflict (id) do nothing;
-update public.ops_enquiry_associations set updated_at=now() where id='8aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+update public.ops_enquiry_associations set updated_at=now() where id='8aaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 select throws_ok($$ select public.enqueue_ops_action(
   '88888888-8888-4888-8888-888888888893', 'ops:test:stale-enquiry',
   '86666666-6666-4666-8666-666666666666', '86666666-6666-4666-8666-666666666666',
-  'enquiry_assign', 'enquiry', '8aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+  'enquiry_assign', 'enquiry', '8aaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
   '87777777-7777-4777-8777-777777777777', 'owner', 'aal2', 1,
   'stale enquiry test', now()-interval '1 hour', now()+interval '2 hours', '{"assigneeProfileId":null}'::jsonb
 ) $$, '40001', 'operations action target version is stale', 'stale enquiry versions reject');
 select lives_ok($$ select public.enqueue_ops_action(
   '88888888-8888-4888-8888-888888888894', 'ops:test:current-enquiry',
   '86666666-6666-4666-8666-666666666666', '86666666-6666-4666-8666-666666666666',
-  'enquiry_assign', 'enquiry', '8aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+  'enquiry_assign', 'enquiry', '8aaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
   '87777777-7777-4777-8777-777777777777', 'owner', 'aal2', 2,
   'current enquiry test', now()-interval '1 hour', now()+interval '2 hours', '{"assigneeProfileId":null}'::jsonb
 ) $$, 'current enquiry versions pass');
