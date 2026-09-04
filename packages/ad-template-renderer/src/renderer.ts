@@ -31,6 +31,35 @@ export interface RenderOutput {
   png: Buffer;
 }
 
+export const TEXT_PREFLIGHT_ERROR_CODE = "AD_TEMPLATE_TEXT_PREFLIGHT_FAILED";
+
+export type TextPreflightViolation = {
+  placement: Placement;
+  layerId: string;
+  kind: "below_readability_floor" | "cannot_fit_readability_floor";
+  readabilityFloorPx: number;
+  reason: string;
+};
+
+/**
+ * One deterministic, machine-readable refusal for every text-fit problem in a
+ * template. Valid templates contain at most 512 layout layers, and layer IDs
+ * are normalized to 160 printable identifier characters, keeping stderr
+ * bounded and free of filesystem or stack-trace data.
+ */
+export class TextPreflightError extends Error {
+  readonly code = TEXT_PREFLIGHT_ERROR_CODE;
+  readonly violations: readonly TextPreflightViolation[];
+
+  constructor(violations: readonly TextPreflightViolation[]) {
+    const normalized = violations.slice(0, 512).map(normalizeTextPreflightViolation);
+    const payload = { code: TEXT_PREFLIGHT_ERROR_CODE, violations: normalized };
+    super(`${TEXT_PREFLIGHT_ERROR_CODE} ${JSON.stringify(payload)}`);
+    this.name = "TextPreflightError";
+    this.violations = normalized;
+  }
+}
+
 const DIMENSIONS: Record<Placement, { width: number; height: number }> = {
   feed: { width: 1080, height: 1350 },
   story: { width: 1080, height: 1920 },
@@ -41,6 +70,13 @@ export async function renderPlacement(input: RenderInput, placement: Placement):
   const layout = placement === "feed" ? input.template.feedLayout : input.template.storyLayout;
   const dims = DIMENSIONS[placement];
   assertFullCanvasBackground(layout.layers, dims, placement);
+  assertTextPreflight(input, [placement]);
+  return renderPlacementPrepared(input, placement);
+}
+
+async function renderPlacementPrepared(input: RenderInput, placement: Placement): Promise<RenderOutput> {
+  const layout = placement === "feed" ? input.template.feedLayout : input.template.storyLayout;
+  const dims = DIMENSIONS[placement];
   const canvas = createCanvas(dims.width, dims.height);
   const ctx = canvas.getContext("2d");
   ctx.imageSmoothingEnabled = false;
@@ -55,7 +91,11 @@ export async function renderPlacement(input: RenderInput, placement: Placement):
 }
 
 export async function renderBoth(input: RenderInput): Promise<[RenderOutput, RenderOutput]> {
-  return [await renderPlacement(input, "feed"), await renderPlacement(input, "story")];
+  registerTemplateFonts(input.template, input.fontValues);
+  assertFullCanvasBackground(input.template.feedLayout.layers, DIMENSIONS.feed, "feed");
+  assertFullCanvasBackground(input.template.storyLayout.layers, DIMENSIONS.story, "story");
+  assertTextPreflight(input, ["feed", "story"]);
+  return [await renderPlacementPrepared(input, "feed"), await renderPlacementPrepared(input, "story")];
 }
 
 async function renderLayer(ctx: SKRSContext2D, layer: LayoutLayer, input: RenderInput, placement: Placement, dims: { width: number; height: number }): Promise<void> {
@@ -210,6 +250,17 @@ type RenderTextLayer = TextLayer & {
   case?: "upper" | "lower" | "none";
 };
 
+type PreparedText = {
+  kind: "paint";
+  textLayer: RenderTextLayer;
+  geometry: Rect;
+  fontSize: number;
+  lines: string[];
+  trackingPixels: number;
+};
+
+type TextPreparation = PreparedText | { kind: "skip" } | { kind: "violation"; violation: TextPreflightViolation };
+
 /**
  * Resolve the authored text size after geometry normalization. The optional
  * ratio is the pack's scale-independent type treatment and is intentionally
@@ -222,27 +273,72 @@ export function effectiveTextFontSize(layer: Pick<TextLayer, "fontSize"> & { siz
 }
 
 function renderText(ctx: SKRSContext2D, layer: TextLayer, input: RenderInput, placement: Placement, dims: CanvasDimensions): void {
-  const source = input.textValues[layer.inputKey];
-  if (!source) return;
-  if (layer.overflowBehaviour === "refuse" && source.length > layer.maxCharacters) return;
-  const textLayer = layer as RenderTextLayer;
-  const text = applyTextCase(source.slice(0, layer.maxCharacters), textLayer.case);
-  const geometry = resolveRenderGeometry(layer.geometry, dims);
+  const prepared = prepareText(ctx, layer, input, placement, dims);
+  if (prepared.kind === "skip") return;
+  if (prepared.kind === "violation") throw new TextPreflightError([prepared.violation]);
+
+  const { textLayer, geometry, fontSize, lines, trackingPixels } = prepared;
   ctx.save();
   ctx.fillStyle = input.colourMap[layer.colourRole] ?? "#000000";
   ctx.textAlign = layer.alignment;
   ctx.textBaseline = "alphabetic";
+  ctx.font = fontDeclaration(textLayer, resolveTextFontFamily(textLayer), fontSize);
 
-  const registeredFamily = layer.font.file.replace(/\.[^.]+$/, "");
-  // only when this process actually registered it; otherwise a family label
-  // such as "Barlow" would silently select a host fallback face.
-  const requestedFamily = textLayer.fontFamily?.trim();
-  const family = requestedFamily && GlobalFonts.has(requestedFamily) ? requestedFamily : registeredFamily;
+  const x = layer.alignment === "center" ? geometry.x + geometry.width / 2
+    : layer.alignment === "right" ? geometry.x + geometry.width
+    : geometry.x;
+  // Fabric's textbox reserves the line box from the largest ascent/descent
+  // in the text. Using the first line's ascent alone clips serif descenders
+  // when a later line has different font metrics.
+  const lineMetrics = lines.map((line) => textMetrics(ctx, line, fontSize));
+  const maxAscent = Math.max(0, ...lineMetrics.map((metrics) => metrics.ascent));
+  const baseline = geometry.y + maxAscent;
+  lines.forEach((line, index) => drawTrackedText(
+    ctx,
+    line,
+    x,
+    baseline + index * fontSize * layer.lineHeight,
+    trackingPixels,
+    layer.alignment,
+  ));
+  ctx.restore();
+}
+
+function assertTextPreflight(input: RenderInput, placements: readonly Placement[]): void {
+  const ctx = createCanvas(1, 1).getContext("2d");
+  const violations: TextPreflightViolation[] = [];
+  for (const placement of placements) {
+    const layout = placement === "feed" ? input.template.feedLayout : input.template.storyLayout;
+    for (const layer of layout.layers) {
+      if (layer.type !== "text") continue;
+      const prepared = prepareText(ctx, layer, input, placement, DIMENSIONS[placement]);
+      if (prepared.kind === "violation") violations.push(prepared.violation);
+    }
+  }
+  if (violations.length > 0) throw new TextPreflightError(violations);
+}
+
+function prepareText(
+  ctx: SKRSContext2D,
+  layer: TextLayer,
+  input: RenderInput,
+  placement: Placement,
+  dims: CanvasDimensions,
+): TextPreparation {
+  const source = input.textValues[layer.inputKey];
+  if (!source) return { kind: "skip" };
+  if (layer.overflowBehaviour === "refuse" && source.length > layer.maxCharacters) return { kind: "skip" };
+  const textLayer = layer as RenderTextLayer;
+  const text = applyTextCase(source.slice(0, layer.maxCharacters), textLayer.case);
+  const geometry = resolveRenderGeometry(layer.geometry, dims);
+  const family = resolveTextFontFamily(textLayer);
   const baseFontSize = effectiveTextFontSize(textLayer, geometry);
   const readabilityFloor = MINIMUM_TEXT_SIZE_PX[placement];
   if (baseFontSize < readabilityFloor) {
-    ctx.restore();
-    throw new Error(`${placement} text layer ${layer.layerId} is below the ${readabilityFloor}px readability floor`);
+    return {
+      kind: "violation",
+      violation: textPreflightViolation(placement, layer.layerId, "below_readability_floor", readabilityFloor),
+    };
   }
   // A shrink floor must also be bounded by the box's line budget. The old
   // unconditional 8px floor could exceed short authored boxes and clip
@@ -267,12 +363,13 @@ function renderText(ctx: SKRSContext2D, layer: TextLayer, input: RenderInput, pl
     if (fits) break;
   }
   if (!fits && layer.overflowBehaviour === "refuse") {
-    ctx.restore();
-    return;
+    return { kind: "skip" };
   }
   if (!fits && layer.overflowBehaviour === "scale_down") {
-    ctx.restore();
-    throw new Error(`${placement} text layer ${layer.layerId} cannot fit at the ${readabilityFloor}px readability floor`);
+    return {
+      kind: "violation",
+      violation: textPreflightViolation(placement, layer.layerId, "cannot_fit_readability_floor", readabilityFloor),
+    };
   }
   if (!fits) {
     fontSize = Math.max(1, minimumSize);
@@ -285,25 +382,45 @@ function renderText(ctx: SKRSContext2D, layer: TextLayer, input: RenderInput, pl
       lines[lines.length - 1] = `${last.trimEnd()}${suffix}`;
     }
   }
+  return { kind: "paint", textLayer, geometry, fontSize, lines, trackingPixels };
+}
 
-  const x = layer.alignment === "center" ? geometry.x + geometry.width / 2
-    : layer.alignment === "right" ? geometry.x + geometry.width
-    : geometry.x;
-  // Fabric's textbox reserves the line box from the largest ascent/descent
-  // in the text. Using the first line's ascent alone clips serif descenders
-  // when a later line has different font metrics.
-  const lineMetrics = lines.map((line) => textMetrics(ctx, line, fontSize));
-  const maxAscent = Math.max(0, ...lineMetrics.map((metrics) => metrics.ascent));
-  const baseline = geometry.y + maxAscent;
-  lines.forEach((line, index) => drawTrackedText(
-    ctx,
-    line,
-    x,
-    baseline + index * fontSize * layer.lineHeight,
-    trackingPixels,
-    layer.alignment,
-  ));
-  ctx.restore();
+function resolveTextFontFamily(layer: RenderTextLayer): string {
+  const registeredFamily = layer.font.file.replace(/\.[^.]+$/, "");
+  // only when this process actually registered it; otherwise a family label
+  // such as "Barlow" would silently select a host fallback face.
+  const requestedFamily = layer.fontFamily?.trim();
+  return requestedFamily && GlobalFonts.has(requestedFamily) ? requestedFamily : registeredFamily;
+}
+
+function textPreflightViolation(
+  placement: Placement,
+  layerId: string,
+  kind: TextPreflightViolation["kind"],
+  readabilityFloorPx: number,
+): TextPreflightViolation {
+  const safeLayerId = normalizeLayerId(layerId);
+  const qualifier = kind === "below_readability_floor" ? "is below" : "cannot fit at";
+  return {
+    placement,
+    layerId: safeLayerId,
+    kind,
+    readabilityFloorPx,
+    reason: `${placement} text layer ${safeLayerId} ${qualifier} the ${readabilityFloorPx}px readability floor`,
+  };
+}
+
+function normalizeTextPreflightViolation(violation: TextPreflightViolation): TextPreflightViolation {
+  return textPreflightViolation(
+    violation.placement,
+    violation.layerId,
+    violation.kind,
+    violation.readabilityFloorPx,
+  );
+}
+
+function normalizeLayerId(layerId: string): string {
+  return layerId.replace(/[^A-Za-z0-9._:-]/g, "_").slice(0, 160) || "unnamed-layer";
 }
 
 function applyTextCase(text: string, mode: RenderTextLayer["case"]): string {

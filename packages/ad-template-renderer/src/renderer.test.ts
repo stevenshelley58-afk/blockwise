@@ -2,7 +2,13 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createCanvas } from "@napi-rs/canvas";
 import type { AdTemplate } from "@blockwise/ad-template-contract";
-import { measureTrackedTextWidth, renderPlacement } from "./renderer.ts";
+import {
+  measureTrackedTextWidth,
+  renderBoth,
+  renderPlacement,
+  TEXT_PREFLIGHT_ERROR_CODE,
+  TextPreflightError,
+} from "./renderer.ts";
 
 const colours = {
   background: "#ffffff",
@@ -71,10 +77,59 @@ test("scale-down fails instead of emitting unreadable text", async () => {
     overflowBehaviour: "scale_down",
     geometry: { x: 40, y: 40, width: 8, height: 8 },
   });
-  await assert.rejects(
-    renderPlacement({ template, imageValues: {}, textValues: { headline: "IMPOSSIBLE" }, colourMap: colours }, "feed"),
-    /cannot fit at the 24px readability floor/,
+  const failure = await renderPlacement(
+    { template, imageValues: {}, textValues: { headline: "IMPOSSIBLE" }, colourMap: colours },
+    "feed",
+  ).then(() => null, (error: unknown) => error);
+  assert.ok(failure instanceof TextPreflightError);
+  assert.equal(failure.message.startsWith(`${TEXT_PREFLIGHT_ERROR_CODE} `), true);
+  assert.equal(failure.violations.length, 1);
+  assert.equal(failure.violations[0]?.reason, "feed text layer feed-impossible cannot fit at the 24px readability floor");
+  assert.match(failure.message, /cannot fit at the 24px readability floor/);
+});
+
+test("c6-shaped failures report every feed and story layer in one ordered preflight", async () => {
+  const template = templateFixture();
+  template.fonts = [{ file: "manrope-800.woff2" }];
+  const failures = [
+    ["feed", "feed-email-text", "email"],
+    ["feed", "feed-web-text", "web"],
+    ["story", "story-address", "address"],
+    ["story", "story-phone-text", "phone"],
+  ] as const;
+  template.textInputs = failures.map(([, , key]) => ({ key, label: key, placeholder: "TEXT THAT CANNOT FIT", maxLength: 40 }));
+  for (const [placement, layerId, inputKey] of failures) {
+    const layout = placement === "feed" ? template.feedLayout : template.storyLayout;
+    layout.layers.push({
+      type: "text",
+      layerId,
+      inputKey,
+      font: { file: "manrope-800.woff2" },
+      fontSize: placement === "feed" ? 30 : 36,
+      lineHeight: 1,
+      tracking: 1,
+      alignment: "left",
+      maxCharacters: 40,
+      maxLines: 1,
+      colourRole: "mainText",
+      overflowBehaviour: "scale_down",
+      geometry: { x: 40, y: 40 + layout.layers.length * 12, width: 20, height: 20 },
+    });
+  }
+  const failure = await renderBoth({
+    template,
+    imageValues: {},
+    textValues: Object.fromEntries(template.textInputs.map((input) => [input.key, input.placeholder])),
+    colourMap: colours,
+  }).then(() => null, (error: unknown) => error);
+  assert.ok(failure instanceof TextPreflightError);
+  assert.deepEqual(
+    failure.violations.map(({ placement, layerId }) => [placement, layerId]),
+    failures.map(([placement, layerId]) => [placement, layerId]),
   );
+  assert.equal(failure.violations.at(-1)?.reason, "story text layer story-phone-text cannot fit at the 32px readability floor");
+  const payload = JSON.parse(failure.message.slice(TEXT_PREFLIGHT_ERROR_CODE.length + 1));
+  assert.deepEqual(payload.violations, failure.violations);
 });
 
 test("rendering fails when any output pixel remains transparent", async () => {
