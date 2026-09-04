@@ -4,7 +4,6 @@ import { canManageProviderConnections } from "@/lib/auth/access-control";
 import { requireApiWorkspace } from "@/lib/auth/api-guards";
 import {
   getMetaPartnerConfig,
-  isMetaPartnerStartEnabled,
   verifyPartnerAccountAccess,
 } from "@/lib/providers/meta-partner";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
@@ -25,7 +24,6 @@ type AssignmentRow = {
  * Manager's shared asset pool to a customer session.
  */
 export async function GET(request: NextRequest) {
-  if (!isMetaPartnerStartEnabled()) return NextResponse.json({ error: "Meta partner access is not currently enabled." }, { status: 503 });
   const guard = await requireApiWorkspace(request, "monitor");
   if (!guard.ok) return guard.response;
   if (!canManageProviderConnections(guard.access)) {
