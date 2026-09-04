@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import { runOpsProjectionOnce } from "../worker/ops-projection.ts";
+import { publishOpsBundle } from "../worker/ops-bundle.ts";
 
 const workspace = "81111111-1111-4111-8111-111111111111";
 function fixture(provider = "chatwoot", aggregateType = "enquiry") {
@@ -27,4 +28,21 @@ test("Chatwoot adapter performs deterministic contact, conversation, message and
 test("provider 429 is retried through the durable fail RPC and never settles", async () => {
   const secretRoot = mkdtempSync(join(tmpdir(), "ops-worker-")); const tokenPath = join(secretRoot, "token"); const keyPath = join(secretRoot, "key"); writeFileSync(tokenPath, "test-token\n", { mode: 0o600 }); writeFileSync(keyPath, "test-correlation-key\n", { mode: 0o600 }); Object.assign(process.env, { CHATWOOT_BASE_URL: "https://chatwoot.example.test", CHATWOOT_API_TOKEN_FILE: tokenPath, CHATWOOT_ACCOUNT_ID: "7", CHATWOOT_ENQUIRY_INBOX_ID: "8", BLOCKWISE_OPS_CORRELATION_KEY_FILE: keyPath });
   const { supabase, calls } = fixture(); const fetchImpl = async () => response({}, 429); await runOpsProjectionOnce(supabase, fetchImpl); assert.equal(calls.some(([name]) => name === "fail_ops_projection"), true); assert.equal(calls.some(([name]) => name === "complete_ops_projection"), false);
+});
+
+test("Frank bundle publication preserves nested scope and pointer compatibility", () => {
+  const root = mkdtempSync(join(tmpdir(), "ops-bundle-"));
+  const result = publishOpsBundle(root, {
+    project_id: "blockwise",
+    source_revision: "worker-test",
+    source_receipt_ids: ["receipt:ops/test-run"],
+    workspace_ids: [workspace],
+    fresh_until: new Date(Date.now() + 60_000).toISOString(),
+    projections: { customers: [{ id: workspace, workspace_id: workspace, name: "Test" }] },
+  });
+  const pointer = JSON.parse(readFileSync(join(root, "current.json"), "utf8"));
+  const envelope = JSON.parse(readFileSync(join(root, "generations", result.generation, "customers.json"), "utf8"));
+  assert.deepEqual(pointer, { schema: "schema://frank.ops-pointer/v1", version: 1, generation: result.generation, publication_receipt_id: result.receiptId });
+  assert.deepEqual(envelope.source_scope, { project_id: "blockwise", workspace_ids: [workspace], system: "customers" });
+  assert.equal(envelope.publication_receipt_id, result.receiptId);
 });
