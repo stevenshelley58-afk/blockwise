@@ -237,7 +237,7 @@ grant execute on function public.record_ops_chatwoot_webhook_adopt(text,text,tex
 create or replace function public.resolve_ops_enquiry_threads()
 returns jsonb language sql security definer set search_path = '' as $$
   select coalesce(jsonb_agg(jsonb_build_object('enquiry_id',m.enquiry_id,'messages',m.messages)), '[]'::jsonb)
-  from (select e.enquiry_id, jsonb_agg(jsonb_build_object('id',e.provider_message_id,'body',e.body,'direction',e.direction,'created_at',e.occurred_at,'sender',e.sender_display,'attachments',e.attachment_metadata) order by e.occurred_at desc, e.provider_message_id desc) filter (where e.rn <= 100) messages
+  from (select e.enquiry_id, jsonb_agg(jsonb_build_object('id',e.provider_message_id,'body',e.body,'direction',e.direction,'created_at',e.occurred_at,'sender',e.sender_display,'attachments',e.attachment_metadata) order by e.occurred_at desc, e.provider_message_id desc) filter (where e.rn <= 50) messages
         from (select m.*, row_number() over (partition by m.enquiry_id order by m.occurred_at desc, m.provider_message_id desc) rn from private.ops_enquiry_messages m) e group by e.enquiry_id) m;
 $$;
 revoke all on function public.resolve_ops_enquiry_threads() from public,anon,authenticated;
