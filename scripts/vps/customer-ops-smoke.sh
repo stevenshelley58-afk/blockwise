@@ -78,7 +78,13 @@ chatwoot_code="$(api_http_with_secret 'api_access_token' chatwoot_api_token "${C
 [[ "$chatwoot_code" == 2* ]] || { echo "Chatwoot API failed (HTTP $chatwoot_code)" >&2; exit 65; }
 [[ -n "${CHATWOOT_WEBHOOK_PROBE_URL:-}" ]] || { echo 'CHATWOOT_WEBHOOK_PROBE_URL is required for signed webhook acceptance' >&2; exit 64; }
 chatwoot_timestamp="$(date +%s)"
-chatwoot_payload='{"event":"conversation_created","id":"customer-ops-smoke","account":{"id":1},"conversation":{"id":1,"status":"open"}}'
+chatwoot_account_id="${CHATWOOT_ACCOUNT_ID:?CHATWOOT_ACCOUNT_ID is required}"
+chatwoot_payload="$(python3 - "$chatwoot_account_id" <<'PY'
+import json,sys
+account_id=int(sys.argv[1])
+print(json.dumps({'event':'conversation_created','id':'customer-ops-smoke','account':{'id':account_id},'conversation':{'id':1,'status':'open','inbox_id':1,'messages':[]}} ,separators=(',',':')))
+PY
+)"
 chatwoot_signature="$(printf '%s.%s' "$chatwoot_timestamp" "$chatwoot_payload" | openssl dgst -sha256 -mac HMAC -macopt "key:file:$SECRETS_DIR/chatwoot_webhook_secret" -binary | xxd -p -c 256)"
 webhook_code="$(quiet_http -X POST -H 'Content-Type: application/json' -H "X-Chatwoot-Signature: sha256=$chatwoot_signature" -H "X-Chatwoot-Timestamp: $chatwoot_timestamp" -H 'X-Chatwoot-Delivery: customer-ops-smoke' --data "$chatwoot_payload" "$CHATWOOT_WEBHOOK_PROBE_URL")"
 [[ "$webhook_code" == 2* ]] || { echo "signed Chatwoot webhook roundtrip failed (HTTP $webhook_code)" >&2; exit 65; }

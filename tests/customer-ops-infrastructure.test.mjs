@@ -47,6 +47,8 @@ test("production worker/control-edge compose uses immutable images and file secr
   assert.match(productCompose, /SUPABASE_SERVICE_ROLE_KEY_FILE: \/run\/blockwise-secrets\/supabase-service-role/);
   assert.match(productCompose, /SNAGTIME_WEBHOOK_SECRET_FILE: \/run\/blockwise-secrets\/snagtime-webhook/);
   assert.match(productCompose, /SNAGTIME_WEBHOOK_SECRET_HOST_FILE:[\s\S]*snagtime-webhook-source:ro/);
+  assert.match(productCompose, /CHATWOOT_WEBHOOK_SECRET_FILE: \/run\/blockwise-secrets\/chatwoot-webhook/);
+  assert.match(productCompose, /CHATWOOT_WEBHOOK_SECRET_HOST_FILE:[\s\S]*chatwoot-webhook-source:ro/);
   assert.doesNotMatch(productCompose, /SNAGTIME_WEBHOOK_SECRET:\s*\$\{/);
   assert.match(productCompose, /SUPABASE_SERVICE_ROLE_KEY_HOST_FILE:[\s\S]*supabase-service-role-source:ro/);
   assert.doesNotMatch(productCompose, /SUPABASE_SERVICE_ROLE_KEY:\s*\$\{/);
@@ -103,6 +105,7 @@ test("bootstrap is explicit, idempotent, and credential-file based", () => {
   assert.match(runbook, /blockwise_booking_action_secret/);
   assert.match(text("scripts/vps/customer-ops-smoke.sh"), /X-Chatwoot-Signature/);
   assert.match(text("scripts/vps/customer-ops-smoke.sh"), /chatwoot_webhook_secret/);
+  assert.match(text("scripts/vps/customer-ops-smoke.sh"), /CHATWOOT_ACCOUNT_ID/);
   for (const marker of ["Signup magic link", "Transactional mail", "External support mail", "Support reply", "Mautic contact\/flow", "SnagTime booking", "Control action"]) {
     assert.match(runbook, new RegExp(marker));
   }

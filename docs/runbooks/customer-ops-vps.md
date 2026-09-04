@@ -127,6 +127,15 @@ recovery-admin removal, mailbox creation, and mail volume backup/restore
 remain governed by `docs/runbooks/stalwart-mail.md` and
 `scripts/vps/stalwart-backup.sh`; do not duplicate those credentials or state.
 
+Set `CHATWOOT_WEBHOOK_URL` and `CHATWOOT_WEBHOOK_PROBE_URL` to the Blockwise
+receiver `/api/webhooks/chatwoot` (not the legacy Frank path). `--apply` lists
+the configured Chatwoot account webhooks and requires the exact named URL,
+account, and projection subscription set; it creates the webhook only when no
+matching object exists and stores the API-returned secret in the fixed
+root-owned `CHATWOOT_WEBHOOK_SECRET_HOST_FILE`. An existing matching webhook
+must have its operator-supplied secret file present; the bootstrap never
+guesses or accepts a generic conflict response.
+
 Booking webhook secret pairing is directional and file-backed. The installer creates
 `blockwise_webhook_secret` once; set `SNAGTIME_WEBHOOK_SECRET_HOST_FILE` in the
 Blockwise product environment to that same root-owned `0600` file. The customer-ops

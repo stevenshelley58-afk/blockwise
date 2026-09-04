@@ -302,6 +302,7 @@ services:
       BOOKING_INVITATION_SECRET: ${BOOKING_INVITATION_SECRET:-}
       SNAGTIME_BASE_URL: ${SNAGTIME_BASE_URL:-}
       SNAGTIME_WEBHOOK_SECRET_FILE: /run/blockwise-secrets/snagtime-webhook
+      CHATWOOT_WEBHOOK_SECRET_FILE: /run/blockwise-secrets/chatwoot-webhook
       VPS_HEALTH_URLS: ${VPS_HEALTH_URLS:-}
       OPENAI_MONTHLY_BUDGET_USD: ${OPENAI_MONTHLY_BUDGET_USD:-50}
       BLOCKWISE_ENABLE_PROVIDER_WRITES: ${BLOCKWISE_ENABLE_PROVIDER_WRITES:-false}
@@ -322,6 +323,7 @@ services:
     volumes:
       - ${SUPABASE_SERVICE_ROLE_KEY_HOST_FILE:?SUPABASE_SERVICE_ROLE_KEY_HOST_FILE is required}:/run/secrets/supabase-service-role-source:ro
       - ${SNAGTIME_WEBHOOK_SECRET_HOST_FILE:?SNAGTIME_WEBHOOK_SECRET_HOST_FILE is required}:/run/secrets/snagtime-webhook-source:ro
+      - ${CHATWOOT_WEBHOOK_SECRET_HOST_FILE:?CHATWOOT_WEBHOOK_SECRET_HOST_FILE is required}:/run/secrets/chatwoot-webhook-source:ro
     tmpfs:
       - /run/blockwise-secrets:rw,noexec,nosuid,nodev
     networks: [blockwise-product]

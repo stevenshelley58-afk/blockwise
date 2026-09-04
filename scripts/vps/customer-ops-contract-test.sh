@@ -50,6 +50,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=contract-anon
 NEXT_PUBLIC_SUPABASE_URL=https://supabase.example.com
 SUPABASE_SERVICE_ROLE_KEY_HOST_FILE=/tmp/blockwise-service-role
 SNAGTIME_WEBHOOK_SECRET_HOST_FILE=/tmp/blockwise-snagtime-webhook
+CHATWOOT_WEBHOOK_SECRET_HOST_FILE=/tmp/blockwise-chatwoot-webhook
 BLOCKWISE_WORKER_EXPECTED_REVISION=0123456789abcdef0123456789abcdef01234567
 TOKEN_ENCRYPTION_KEY=contract-token
 TRUSTED_PROXY_RANGES=127.0.0.1/32
@@ -154,6 +155,8 @@ grep -q 'conversation_status_changed' "$ROOT_DIR/scripts/vps/customer-ops-bootst
 grep -q 'message_updated' "$ROOT_DIR/scripts/vps/customer-ops-bootstrap.sh" || { echo 'Chatwoot message update webhook subscription missing' >&2; exit 1; }
 grep -q 'BLOCKWISE_WEBHOOK_URL=https://blockwise.example/api/booking/webhooks/snagtime' "$ROOT_DIR/infra/customer-ops/customer-ops.env.example" || { echo 'SnagTime Blockwise webhook route contract missing' >&2; exit 1; }
 grep -q 'SNAGTIME_WEBHOOK_SECRET_HOST_FILE=.*blockwise_webhook_secret' "$ROOT_DIR/infra/customer-ops/customer-ops.env.example" || { echo 'SnagTime webhook source pairing missing' >&2; exit 1; }
+grep -q 'CHATWOOT_WEBHOOK_SECRET_HOST_FILE=.*chatwoot_webhook_secret' "$ROOT_DIR/infra/customer-ops/customer-ops.env.example" || { echo 'Chatwoot webhook source pairing missing' >&2; exit 1; }
+grep -q 'api/webhooks/chatwoot' "$ROOT_DIR/infra/customer-ops/customer-ops.env.example" || { echo 'Blockwise Chatwoot receiver route missing' >&2; exit 1; }
 ! grep -q '/api/internal/booking/webhook' "$ROOT_DIR/infra/customer-ops/customer-ops.env.example" || { echo 'obsolete internal booking webhook route remains' >&2; exit 1; }
 grep -q 'X-Chatwoot-Signature' "$ROOT_DIR/scripts/vps/customer-ops-smoke.sh" || { echo 'official Chatwoot signed smoke probe missing' >&2; exit 1; }
 grep -q 'write_chatwoot_webhook_secret' "$ROOT_DIR/scripts/vps/customer-ops-bootstrap.sh" || { echo 'Chatwoot API webhook secret capture missing' >&2; exit 1; }
