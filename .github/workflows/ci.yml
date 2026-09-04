@@ -1,0 +1,169 @@
+name: Release CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+env:
+  PRODUCT_IMAGE: blockwise-product:ci
+
+jobs:
+  build-and-test:
+    name: Build and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Setup Node
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Run full test suite
+        run: npm test
+
+      - name: Build
+        run: npm run build
+        env:
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
+          NEXT_PUBLIC_SUPABASE_URL: https://dummy-project.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: dummy-anon-key
+          SUPABASE_SERVICE_ROLE_KEY: dummy-service-role-key
+          TOKEN_ENCRYPTION_KEY: "0000000000000000000000000000000000000000000000000000000000000000"
+
+  secret-scan:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+
+      - name: Scan repository history and working tree
+        run: >-
+          docker run --rm
+          -v "${{ github.workspace }}:/repo:ro"
+          ghcr.io/gitleaks/gitleaks:v8.29.1@sha256:e29229c8ad4038a586684ec85bd595c71b0627ea078e127f4e7e7f44a06d97b0
+          git --redact --exit-code 1 --log-opts="--all" /repo
+
+  product-image:
+    name: Product image build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      - name: Build the real product Dockerfile
+        run: >-
+          docker build --pull
+          --tag "$PRODUCT_IMAGE"
+          --file infra/product/Dockerfile
+          --build-arg NEXT_PUBLIC_APP_URL=https://blockwise.sale
+          --build-arg NEXT_PUBLIC_SITE_URL=https://blockwise.sale
+          --build-arg NEXT_PUBLIC_SUPABASE_URL=https://blockwise.sale
+          --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY=oss-build-placeholder
+          .
+
+      # The npm build above is intentionally not repeated here: a Docker image
+      # scan must inspect the exact multi-stage product image, including its
+      # pinned runtime base and installed production dependencies. This is the
+      # one additional image build required for release security evidence.
+      - name: Export image for security jobs
+        run: docker save "$PRODUCT_IMAGE" | gzip -1 > product-image.tar.gz
+
+      - name: Upload image artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: product-image
+          path: product-image.tar.gz
+          retention-days: 1
+
+  sbom:
+    name: SBOM
+    needs: product-image
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30af803 # v6
+
+      - name: Download image artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: product-image
+
+      - name: Load product image
+        run: gzip -dc product-image.tar.gz | docker load
+
+      - name: Generate SPDX SBOM
+        run: >-
+          docker run --rm
+          -v /var/run/docker.sock:/var/run/docker.sock
+          -v "${{ github.workspace }}:/work"
+          docker.io/anchore/syft:v1.33.0@sha256:cefadcf11bd9cce9e3ec5248bb1538a84e33d519486c1b4523ac155c9b5f5033
+          "$PRODUCT_IMAGE"
+          -o spdx-json=/work/product-sbom.spdx.json
+
+      - name: Upload SBOM artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: product-sbom
+          path: product-sbom.spdx.json
+          if-no-files-found: error
+          retention-days: 30
+
+  container-scan:
+    name: Container scan
+    needs: product-image
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Download image artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: product-image
+
+      - name: Load product image
+        run: gzip -dc product-image.tar.gz | docker load
+
+      - name: Scan product image for HIGH and CRITICAL vulnerabilities
+        run: >-
+          docker run --rm
+          -v /var/run/docker.sock:/var/run/docker.sock
+          -v "${{ github.workspace }}:/work"
+          docker.io/aquasec/trivy:0.66.0@sha256:adbf5948d99de471725d37d2cfbd982178971d1cf081615284671d1c8ba99fb8
+          image --scanners vuln
+          --severity HIGH,CRITICAL
+          --ignore-unfixed=false
+          --exit-code 1
+          --format sarif --output /work/trivy-results.sarif
+          "$PRODUCT_IMAGE"
+
+      - name: Upload vulnerability report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: product-container-scan
+          path: trivy-results.sarif
+          if-no-files-found: warn
+          retention-days: 30
