@@ -304,6 +304,7 @@ services:
       SNAGTIME_WEBHOOK_SECRET_FILE: /run/blockwise-secrets/snagtime-webhook
       CHATWOOT_WEBHOOK_SECRET_FILE: /run/blockwise-secrets/chatwoot-webhook
       CHATWOOT_ACCOUNT_ID: ${CHATWOOT_ACCOUNT_ID:-}
+      BLOCKWISE_OPS_CORRELATION_KEY_FILE: /run/blockwise-secrets/ops-correlation-key
       VPS_HEALTH_URLS: ${VPS_HEALTH_URLS:-}
       OPENAI_MONTHLY_BUDGET_USD: ${OPENAI_MONTHLY_BUDGET_USD:-50}
       BLOCKWISE_ENABLE_PROVIDER_WRITES: ${BLOCKWISE_ENABLE_PROVIDER_WRITES:-false}
@@ -325,6 +326,7 @@ services:
       - ${SUPABASE_SERVICE_ROLE_KEY_HOST_FILE:?SUPABASE_SERVICE_ROLE_KEY_HOST_FILE is required}:/run/secrets/supabase-service-role-source:ro
       - ${SNAGTIME_WEBHOOK_SECRET_HOST_FILE:?SNAGTIME_WEBHOOK_SECRET_HOST_FILE is required}:/run/secrets/snagtime-webhook-source:ro
       - ${CHATWOOT_WEBHOOK_SECRET_HOST_FILE:?CHATWOOT_WEBHOOK_SECRET_HOST_FILE is required}:/run/secrets/chatwoot-webhook-source:ro
+      - ${BLOCKWISE_OPS_CORRELATION_KEY_HOST_FILE:?BLOCKWISE_OPS_CORRELATION_KEY_HOST_FILE is required}:/run/secrets/ops-correlation-key-source:ro
     tmpfs:
       - /run/blockwise-secrets:rw,noexec,nosuid,nodev
     networks: [blockwise-product]
@@ -360,7 +362,7 @@ services:
       - ${HERMES_OPS_PROJECTION_ROOT:-/srv/frank/data/window/ops-projections}:/data/ops-projections:rw
       - ${MAUTIC_TOKEN_HOST_FILE:-/srv/blockwise/secrets/mautic_token}:/run/secrets/mautic-token-source:ro
       - ${CHATWOOT_API_TOKEN_HOST_FILE:-/srv/blockwise/secrets/chatwoot_api_token}:/run/secrets/chatwoot-api-token-source:ro
-      - ${BLOCKWISE_OPS_CORRELATION_KEY_HOST_FILE:-/srv/blockwise/secrets/ops_correlation_key}:/run/secrets/ops-correlation-key-source:ro
+      - ${BLOCKWISE_OPS_CORRELATION_KEY_HOST_FILE:?BLOCKWISE_OPS_CORRELATION_KEY_HOST_FILE is required}:/run/secrets/ops-correlation-key-source:ro
       - ${SUPABASE_SERVICE_ROLE_KEY_HOST_FILE:?SUPABASE_SERVICE_ROLE_KEY_HOST_FILE is required}:/run/secrets/supabase-service-role-source:ro
     environment:
       NODE_ENV: production

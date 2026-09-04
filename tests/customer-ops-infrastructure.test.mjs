@@ -49,6 +49,8 @@ test("production worker/control-edge compose uses immutable images and file secr
   assert.match(productCompose, /SNAGTIME_WEBHOOK_SECRET_HOST_FILE:[\s\S]*snagtime-webhook-source:ro/);
   assert.match(productCompose, /CHATWOOT_WEBHOOK_SECRET_FILE: \/run\/blockwise-secrets\/chatwoot-webhook/);
   assert.match(productCompose, /CHATWOOT_WEBHOOK_SECRET_HOST_FILE:[\s\S]*chatwoot-webhook-source:ro/);
+  assert.match(productCompose, /BLOCKWISE_OPS_CORRELATION_KEY_FILE: \/run\/blockwise-secrets\/ops-correlation-key/);
+  assert.match(productCompose, /BLOCKWISE_OPS_CORRELATION_KEY_HOST_FILE:\?BLOCKWISE_OPS_CORRELATION_KEY_HOST_FILE is required[\s\S]*ops-correlation-key-source:ro/);
   assert.doesNotMatch(productCompose, /SNAGTIME_WEBHOOK_SECRET:\s*\$\{/);
   assert.match(productCompose, /SUPABASE_SERVICE_ROLE_KEY_HOST_FILE:[\s\S]*supabase-service-role-source:ro/);
   assert.doesNotMatch(productCompose, /SUPABASE_SERVICE_ROLE_KEY:\s*\$\{/);
@@ -63,6 +65,7 @@ test("production worker/control-edge compose uses immutable images and file secr
     assert.match(entrypoint, /-m 600/);
   }
   assert.match(text("infra/product/runtime-entrypoint.sh"), /snagtime-webhook-source/);
+  assert.match(text("infra/product/runtime-entrypoint.sh"), /ops-correlation-key-source/);
   assert.match(productCompose, /\/run\/blockwise-secrets:rw,noexec,nosuid,nodev/);
   assert.match(controlCompose, /\/run\/blockwise-secrets:rw,noexec,nosuid,nodev/);
   assert.match(workerCompose, /\/run\/blockwise-secrets:rw,noexec,nosuid,nodev/);
@@ -103,6 +106,7 @@ test("bootstrap is explicit, idempotent, and credential-file based", () => {
   assert.match(runbook, /Receipt-based staging smoke matrix/);
   assert.match(runbook, /same root-owned `0600` file/);
   assert.match(runbook, /blockwise_booking_action_secret/);
+  assert.match(runbook, /same existing root-owned `0600` Hermes ops correlation-key file/);
   assert.match(text("scripts/vps/customer-ops-smoke.sh"), /X-Chatwoot-Signature/);
   assert.match(text("scripts/vps/customer-ops-smoke.sh"), /chatwoot_webhook_secret/);
   assert.match(text("scripts/vps/customer-ops-smoke.sh"), /CHATWOOT_ACCOUNT_ID/);

@@ -41,7 +41,7 @@ services:
     volumes:
       - ${MAUTIC_TOKEN_HOST_FILE:-/srv/blockwise/secrets/mautic_token}:/run/secrets/mautic-token-source:ro
       - ${CHATWOOT_API_TOKEN_HOST_FILE:-/srv/blockwise/secrets/chatwoot_api_token}:/run/secrets/chatwoot-api-token-source:ro
-      - ${BLOCKWISE_OPS_CORRELATION_KEY_HOST_FILE:-/srv/blockwise/secrets/ops_correlation_key}:/run/secrets/ops-correlation-key-source:ro
+      - ${BLOCKWISE_OPS_CORRELATION_KEY_HOST_FILE:?BLOCKWISE_OPS_CORRELATION_KEY_HOST_FILE is required}:/run/secrets/ops-correlation-key-source:ro
       - ${SUPABASE_SERVICE_ROLE_KEY_HOST_FILE:?Set SUPABASE_SERVICE_ROLE_KEY_HOST_FILE to a root-owned 0600 file}:/run/secrets/supabase-service-role-source:ro
     logging:
       driver: json-file

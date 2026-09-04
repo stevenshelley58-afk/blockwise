@@ -51,6 +51,7 @@ NEXT_PUBLIC_SUPABASE_URL=https://supabase.example.com
 SUPABASE_SERVICE_ROLE_KEY_HOST_FILE=/tmp/blockwise-service-role
 SNAGTIME_WEBHOOK_SECRET_HOST_FILE=/tmp/blockwise-snagtime-webhook
 CHATWOOT_WEBHOOK_SECRET_HOST_FILE=/tmp/blockwise-chatwoot-webhook
+BLOCKWISE_OPS_CORRELATION_KEY_HOST_FILE=/tmp/blockwise-ops-correlation-key
 BLOCKWISE_WORKER_EXPECTED_REVISION=0123456789abcdef0123456789abcdef01234567
 TOKEN_ENCRYPTION_KEY=contract-token
 TRUSTED_PROXY_RANGES=127.0.0.1/32
@@ -156,6 +157,7 @@ grep -q 'message_updated' "$ROOT_DIR/scripts/vps/customer-ops-bootstrap.sh" || {
 grep -q 'BLOCKWISE_WEBHOOK_URL=https://blockwise.example/api/booking/webhooks/snagtime' "$ROOT_DIR/infra/customer-ops/customer-ops.env.example" || { echo 'SnagTime Blockwise webhook route contract missing' >&2; exit 1; }
 grep -q 'SNAGTIME_WEBHOOK_SECRET_HOST_FILE=.*blockwise_webhook_secret' "$ROOT_DIR/infra/customer-ops/customer-ops.env.example" || { echo 'SnagTime webhook source pairing missing' >&2; exit 1; }
 grep -q 'CHATWOOT_WEBHOOK_SECRET_HOST_FILE=.*chatwoot_webhook_secret' "$ROOT_DIR/infra/customer-ops/customer-ops.env.example" || { echo 'Chatwoot webhook source pairing missing' >&2; exit 1; }
+grep -q 'BLOCKWISE_OPS_CORRELATION_KEY_HOST_FILE' "$ROOT_DIR/infra/coolify/docker-compose.product.yml" || { echo 'product correlation-key file mount missing' >&2; exit 1; }
 grep -q 'api/webhooks/chatwoot' "$ROOT_DIR/infra/customer-ops/customer-ops.env.example" || { echo 'Blockwise Chatwoot receiver route missing' >&2; exit 1; }
 ! grep -q '/api/internal/booking/webhook' "$ROOT_DIR/infra/customer-ops/customer-ops.env.example" || { echo 'obsolete internal booking webhook route remains' >&2; exit 1; }
 grep -q 'X-Chatwoot-Signature' "$ROOT_DIR/scripts/vps/customer-ops-smoke.sh" || { echo 'official Chatwoot signed smoke probe missing' >&2; exit 1; }

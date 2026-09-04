@@ -161,7 +161,12 @@ file exists at `CHATWOOT_WEBHOOK_SECRET_HOST_FILE` may the product Compose
 project be started or `product-app` restarted; its required bind mount fails
 closed before then. Keep the product environment's
 `SNAGTIME_WEBHOOK_SECRET_HOST_FILE` and Chatwoot host-file settings pointed at
-the fixed customer secret paths before starting the app.
+the fixed customer secret paths before starting the app. Set
+`BLOCKWISE_OPS_CORRELATION_KEY_HOST_FILE` in both product-app and product-worker
+to the same existing root-owned `0600` Hermes ops correlation-key file; the
+product entrypoint copies it into the app UID's protected tmpfs. Never generate
+a second correlation key, because the Chatwoot receiver and Hermes worker must
+decrypt the same adopted conversation identifiers.
 
 To produce the reviewed edge input without modifying this checkout, add
 `--render-caddy /etc/blockwise/customer-ops/Caddyfile.snippets`; the installer
