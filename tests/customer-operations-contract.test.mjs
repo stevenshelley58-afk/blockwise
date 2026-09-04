@@ -12,10 +12,10 @@ test("product allowlist and rollback procedure cover the ops contract", () => {
   assert.match(allowlist, /202609040003_customer_operations_provider_snapshots\.sql/);
   assert.match(allowlist, /202609040004_customer_operations_projection_identity\.sql/);
   assert.match(allowlist, /202609040005_customer_operations_provider_matrix_privileges\.sql/);
-  assert.match(allowlist, /202609040006_customer_operations_runtime_resolution\.sql/);
-  assert.match(allowlist, /202609040007_customer_operations_provider_ledger\.sql/);
-  assert.match(allowlist, /202609040008_customer_operations_contract_completion\.sql/);
-  assert.match(allowlist, /202609040009_customer_operations_action_versions\.sql/);
+  assert.match(allowlist, /202609040010_customer_operations_runtime_resolution\.sql/);
+  assert.match(allowlist, /202609040011_customer_operations_provider_ledger\.sql/);
+  assert.match(allowlist, /202609040012_customer_operations_contract_completion\.sql/);
+  assert.match(allowlist, /202609040013_customer_operations_action_versions\.sql/);
   const rollback = text("scripts/ops/rollback-customer-operations.sql");
   assert.match(rollback, /ROLLBACK_CUSTOMER_OPERATIONS/);
   assert.match(rollback, /customer_operations_tables_archive/);
@@ -33,7 +33,7 @@ test("product allowlist and rollback procedure cover the ops contract", () => {
 });
 
 test("Frank action targets have authoritative positive source-row versions", () => {
-  const migration = text("supabase/migrations/202609040009_customer_operations_action_versions.sql");
+  const migration = text("supabase/migrations/202609040013_customer_operations_action_versions.sql");
   for (const table of ["workspaces", "workspace_members", "workspace_invitations", "billing_offer_acceptances", "audit_logs", "ops_enquiry_associations"]) {
     assert.match(migration, new RegExp(`alter table public\\.${table}[\\s\\S]*ops_version bigint not null default 1`, "i"));
   }

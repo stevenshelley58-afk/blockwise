@@ -4,7 +4,7 @@ import test from "node:test";
 
 const root = new URL("../", import.meta.url);
 const worker = readFileSync(new URL("worker/ops-projection.ts", root), "utf8");
-const migration = readFileSync(new URL("supabase/migrations/202609040006_customer_operations_runtime_resolution.sql", root), "utf8");
+const migration = readFileSync(new URL("supabase/migrations/202609040010_customer_operations_runtime_resolution.sql", root), "utf8");
 const bundle = readFileSync(new URL("worker/ops-bundle.ts", root), "utf8");
 
 test("projection worker is provider-neutral and fail-closed", () => {
