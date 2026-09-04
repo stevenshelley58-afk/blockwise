@@ -5,6 +5,7 @@ import { authenticate } from "./auth.ts";
 import { loadConfig, type ControlConfig } from "./config.ts";
 import { createSupabaseRepository, type ActionRepository } from "./repository.ts";
 import { InternalBlockwiseExecutor, runMaintenance } from "./executor.ts";
+import { safeErrorCode } from "./safe-log.ts";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const CORRELATION = /^[A-Za-z0-9._:-]{8,128}$/;
@@ -46,7 +47,7 @@ export function createControlEdgeServer(deps: Dependencies): ReturnType<typeof c
         const result = await deps.repo.status(actionId, workspaceId); if (!result) return json(res, 404, { error: "action_not_found", correlationId }, correlationId); return json(res, 200, { ...result, correlationId }, correlationId);
       }
       return json(res, 404, { error: "not_found", correlationId }, correlationId);
-    } catch (error) { const status = (error as { status?: number }).status ?? 503; console.error(JSON.stringify({ event: "control_edge_error", status, error: error instanceof Error ? error.message.slice(0, 160) : "unknown", correlationId })); return json(res, status, { error: status === 413 ? "request_too_large" : "service_unavailable", correlationId }, correlationId); }
+    } catch (error) { const status = (error as { status?: number }).status ?? 503; console.error(JSON.stringify({ event: "control_edge_error", status, errorCode: safeErrorCode(error), correlationId })); return json(res, status, { error: status === 413 ? "request_too_large" : "service_unavailable", correlationId }, correlationId); }
     finally { /* response ownership stays local to this request */ }
   });
   server.requestTimeout = 30000;
@@ -59,7 +60,7 @@ export async function startControlEdge(config = loadConfig()): Promise<void> {
   const repo = await createSupabaseRepository(config.supabaseUrl, config.supabaseServiceRoleKey); const executor = new InternalBlockwiseExecutor(config.executorUrl, config.executorSecret);
   const server = createControlEdgeServer({ config, repo, executor });
   server.listen(config.port, config.host, () => console.log(JSON.stringify({ event: "control_edge_started", host: config.host, port: config.port, worker: config.workerEnabled })));
-  if (config.workerEnabled) { const tick = async () => { try { await runMaintenance(repo, executor); } catch (error) { console.error(JSON.stringify({ event: "control_edge_worker_error", error: error instanceof Error ? error.message.slice(0, 160) : "unknown" })); } }; await tick(); const timer = setInterval(tick, config.workerIntervalMs); timer.unref(); }
+  if (config.workerEnabled) { const tick = async () => { try { await runMaintenance(repo, executor); } catch (error) { console.error(JSON.stringify({ event: "control_edge_worker_error", errorCode: safeErrorCode(error) })); } }; await tick(); const timer = setInterval(tick, config.workerIntervalMs); timer.unref(); }
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) startControlEdge().catch((error) => { console.error(error instanceof Error ? error.message : "control edge failed"); process.exitCode = 1; });
+if (import.meta.url === `file://${process.argv[1]}`) startControlEdge().catch((error) => { console.error(JSON.stringify({ event: "control_edge_start_failed", errorCode: safeErrorCode(error) })); process.exitCode = 1; });

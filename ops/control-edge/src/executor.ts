@@ -25,7 +25,7 @@ export class InternalBlockwiseExecutor {
         res.on("data", (chunk) => { if (settled) return; const value = Buffer.from(chunk); size += value.length; if (size > 8192) { settled = true; res.destroy(); reject(new ExecutorError("executor_response_too_large", false)); return; } chunks.push(value); });
         res.on("end", () => { if (settled) return; settled = true; clearTimeout(timer); resolve({ status: res.statusCode ?? 599, body: Buffer.concat(chunks).toString("utf8") }); });
       });
-      outbound.on("error", (error) => { if (settled) return; settled = true; clearTimeout(timer); reject(new ExecutorError(error.message.slice(0, 200), true)); }); outbound.write(body); outbound.end();
+      outbound.on("error", () => { if (settled) return; settled = true; clearTimeout(timer); reject(new ExecutorError("executor_transport_error", true)); }); outbound.write(body); outbound.end();
     });
     if (response.status === 429 || response.status >= 500) throw new ExecutorError(`executor_http_${response.status}`, true);
     if (response.status < 200 || response.status >= 300) throw new ExecutorError(`executor_http_${response.status}`, false);

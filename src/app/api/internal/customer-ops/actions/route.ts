@@ -7,6 +7,7 @@ import { isSubscriptionBound, sameQueuedEnvelope } from "@/lib/ops/action-execut
 import { applyStripeBillingEvent, reconciliationEventForSubscription } from "@/lib/billing/billing-domain";
 import { retrieveStripeSubscription } from "@/lib/billing/stripe-scaffold";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { readBoundedRequestBody, RequestBodyTooLargeError } from "@/lib/ops/request-body";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,8 +23,11 @@ class ActionExecutionError extends Error { constructor(message: string, readonly
  * delegates to existing Blockwise domain RPCs. It is never a browser route.
  */
 export async function POST(request: Request) {
-  const raw = await request.text();
-  if (raw.length > MAX_BODY) return NextResponse.json({ error: "request_too_large" }, { status: 413 });
+  let raw: string;
+  try { raw = await readBoundedRequestBody(request, MAX_BODY); } catch (error) {
+    if (error instanceof RequestBodyTooLargeError) return NextResponse.json({ error: error.code }, { status: 413 });
+    return NextResponse.json({ error: "request_body_unavailable" }, { status: 400 });
+  }
   const service = createSupabaseServiceClient();
   const auth = await verifyInternalRequest(request, "ops.execute", { body: raw, supabase: service });
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
@@ -88,7 +92,7 @@ export async function POST(request: Request) {
     }
     return NextResponse.json({ status: "accepted", operationId: actionId });
   } catch (error) {
-    console.error(JSON.stringify({ event: "customer_ops_executor_failed", actionType, actionId, workspaceId, error: error instanceof Error ? error.message.slice(0, 160) : "unknown" }));
+    console.error(JSON.stringify({ event: "customer_ops_executor_failed", actionType, actionId: idSuffix(actionId), workspaceId: idSuffix(workspaceId), errorCode: safeCode(error) }));
     if (error instanceof ActionExecutionError) return NextResponse.json({ error: error.message }, { status: error.status });
     return NextResponse.json({ error: "action_execution_failed" }, { status: 502 });
   }
@@ -121,3 +125,5 @@ async function requireRpc(service: ReturnType<typeof createSupabaseServiceClient
 }
 function id(value: unknown): string { return typeof value === "string" && UUID.test(value.trim()) ? value.trim().toLowerCase() : ""; }
 function record(value: unknown): Record<string, unknown> | null { return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null; }
+function safeCode(error: unknown): string { const value = error instanceof Error ? error.message : ""; return /^[a-z][a-z0-9_]{0,63}$/.test(value) ? value : "unknown_error"; }
+function idSuffix(value: string): string { return value.length > 8 ? value.slice(-8) : value; }
