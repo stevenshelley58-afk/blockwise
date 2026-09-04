@@ -80,6 +80,11 @@ describe("customer Ad Studio workbench contract", () => {
     const command = readFileSync("src/components/adstudio/home-command.tsx", "utf8");
     assert.match(home, /<li key=\{template\.templateId\} className="min-w-0">/);
     assert.match(home, /<HomeCommand/);
+    assert.match(command, /Create your next ad/);
+    assert.match(command, /aria-label="Create a new ad from a reviewed template"/);
+    assert.match(command, />Create ad <ArrowRight/);
+    assert.match(command, /Or search templates by goal or format/);
+    assert.doesNotMatch(command, /Find a starting point/);
     assert.match(command, /formatLastEdited\(ad\.updatedAt, timeZone, dateLocale\)/);
     assert.match(home, /timeZone/);
     assert.match(home, /resolveTimeZone\(auth\.claims\?\.user_metadata\?\.timezone, access\.region\)/);
