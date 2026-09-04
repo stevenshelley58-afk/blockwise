@@ -1,4 +1,4 @@
-import type { Rect, TextLayer } from "../../../../packages/ad-template-contract/src/types";
+import type { Rect, SupportedIconName, TextLayer } from "../../../../packages/ad-template-contract/src/types";
 
 export interface CanvasDimensions {
   width: number;
@@ -46,21 +46,6 @@ export function fabricCircleGeometry(geometry: Rect) {
   };
 }
 
-/** Server icon fallbacks use a 0.34×minimum-dimension circle, not a box-filling circle. */
-export function fabricIconCircleGeometry(geometry: Rect) {
-  const radius = Math.min(geometry.width, geometry.height) * 0.34;
-  return {
-    // Use a center origin because Fabric includes stroke width in transformed
-    // dimensions for left/top origins, which would shift the visible circle
-    // by half its stroke compared with the server's centered arc.
-    left: geometry.x + geometry.width / 2,
-    top: geometry.y + geometry.height / 2,
-    originX: "center" as const,
-    originY: "center" as const,
-    radius,
-  };
-}
-
 /**
  * Template packs may include the optional type-treatment metadata produced by
  * Frank's authoring tools. `sizeRatio` is expressed against the resolved
@@ -81,19 +66,18 @@ export function fabricCharSpacing(trackingPixels: number, fontSizePixels: number
     : 0;
 }
 
-/** The canonical renderer draws unknown icons as a stroked circle. */
-export type FabricIconShape = "arrow" | "check" | "circle";
+/** Every accepted icon name maps to a painted semantic path. */
+export type FabricIconShape = SupportedIconName;
 
-export function resolveIconShape(icon: string): FabricIconShape {
+export function resolveIconShape(icon: string): FabricIconShape | null {
   if (icon === "arrow") return "arrow";
   if (icon === "check" || icon === "tick") return "check";
-  return "circle";
+  if (icon === "phone" || icon === "mail" || icon === "globe" || icon === "location") return icon;
+  return null;
 }
 
 /**
- * Return local path data for the two supported path icons. Circle fallbacks
- * are represented by a Fabric Circle instead, keeping its bounds centred in
- * the authored rectangle.
+ * Return local path data for every icon accepted by the shared contract.
  */
 export function fabricIconPathData(icon: string, width: number, height: number): string | null {
   const shape = resolveIconShape(icon);
@@ -103,7 +87,26 @@ export function fabricIconPathData(icon: string, width: number, height: number):
   if (shape === "check") {
     return `M ${width * .18} ${height / 2} L ${width * .42} ${height * .76} L ${width * .84} ${height * .24}`;
   }
+  if (shape === "phone") {
+    return `M ${width * .22} ${height * .16} C ${width * .12} ${height * .24} ${width * .2} ${height * .52} ${width * .43} ${height * .73} C ${width * .64} ${height * .92} ${width * .82} ${height * .89} ${width * .88} ${height * .76} L ${width * .68} ${height * .6} L ${width * .54} ${height * .7} C ${width * .43} ${height * .64} ${width * .34} ${height * .54} ${width * .29} ${height * .42} L ${width * .39} ${height * .3} Z`;
+  }
+  if (shape === "mail") {
+    return `M ${width * .1} ${height * .22} L ${width * .9} ${height * .22} L ${width * .9} ${height * .8} L ${width * .1} ${height * .8} Z M ${width * .1} ${height * .24} L ${width * .5} ${height * .56} L ${width * .9} ${height * .24}`;
+  }
+  if (shape === "globe") {
+    const cx = width / 2, cy = height / 2, radius = Math.min(width, height) * .36;
+    return `M ${cx + radius} ${cy} A ${radius} ${radius} 0 1 0 ${cx - radius} ${cy} A ${radius} ${radius} 0 1 0 ${cx + radius} ${cy} M ${cx} ${cy - radius} C ${cx - radius * .45} ${cy - radius * .55} ${cx - radius * .45} ${cy + radius * .55} ${cx} ${cy + radius} M ${cx} ${cy - radius} C ${cx + radius * .45} ${cy - radius * .55} ${cx + radius * .45} ${cy + radius * .55} ${cx} ${cy + radius} M ${cx - radius} ${cy} L ${cx + radius} ${cy}`;
+  }
+  if (shape === "location") {
+    return `M ${width * .5} ${height * .9} C ${width * .28} ${height * .68} ${width * .2} ${height * .5} ${width * .2} ${height * .36} C ${width * .2} ${height * .14} ${width * .34} ${height * .08} ${width * .5} ${height * .08} C ${width * .66} ${height * .08} ${width * .8} ${height * .14} ${width * .8} ${height * .36} C ${width * .8} ${height * .5} ${width * .72} ${height * .68} ${width * .5} ${height * .9} Z M ${width * .59} ${height * .35} A ${width * .09} ${width * .09} 0 1 0 ${width * .41} ${height * .35} A ${width * .09} ${width * .09} 0 1 0 ${width * .59} ${height * .35}`;
+  }
   return null;
+}
+
+export function fabricLinePathData(width: number, height: number): string {
+  return height > width
+    ? `M ${width / 2} 0 L ${width / 2} ${height}`
+    : `M 0 ${height / 2} L ${width} ${height / 2}`;
 }
 
 /** Rounded image masks use the canonical 16px radius, clamped to the box. */

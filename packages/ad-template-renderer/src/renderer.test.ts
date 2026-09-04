@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createCanvas } from "@napi-rs/canvas";
+import { createCanvas, loadImage } from "@napi-rs/canvas";
 import type { AdTemplate } from "@blockwise/ad-template-contract";
 import {
   measureTrackedTextWidth,
@@ -230,6 +230,53 @@ test("renderer rejects missing, partial, and non-square structural primitives", 
   await assert.rejects(
     renderPlacement({ template: ring, imageValues: {}, textValues: {}, colourMap: colours }, "feed"),
     /ring vector feed-stretched-ring must use square geometry/,
+  );
+
+  const dot = templateFixture();
+  dot.feedLayout.layers.push({
+    type: "vector",
+    layerId: "feed-dot-divider",
+    shape: "line",
+    colourRole: "mainText",
+    opacity: 1,
+    geometry: { x: 80, y: 80, width: 3, height: 3 },
+  });
+  await assert.rejects(
+    renderPlacement({ template: dot, imageValues: {}, textValues: {}, colourMap: colours }, "feed"),
+    /feed-dot-divider line vector must be at least 8px long/,
+  );
+});
+
+test("vertical line vectors follow their major axis and unsupported icons never become rings", async () => {
+  const template = templateFixture();
+  template.feedLayout.layers.push({
+    type: "vector",
+    layerId: "feed-column-divider",
+    shape: "line",
+    colourRole: "mainText",
+    opacity: 1,
+    geometry: { x: 100, y: 100, width: 3, height: 252 },
+  });
+  const output = await renderPlacement({ template, imageValues: {}, textValues: {}, colourMap: colours }, "feed");
+  const image = await loadImage(output.png);
+  const canvas = createCanvas(output.width, output.height);
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(image, 0, 0);
+  assert.deepEqual(Array.from(ctx.getImageData(101, 110, 1, 1).data), [17, 17, 17, 255]);
+  assert.deepEqual(Array.from(ctx.getImageData(101, 340, 1, 1).data), [17, 17, 17, 255]);
+  assert.deepEqual(Array.from(ctx.getImageData(130, 226, 1, 1).data), [255, 255, 255, 255]);
+
+  const unsupported = templateFixture();
+  unsupported.feedLayout.layers.push({
+    type: "icon",
+    layerId: "feed-unknown-icon",
+    icon: "unknown" as "phone",
+    colourRole: "mainText",
+    geometry: { x: 80, y: 80, width: 40, height: 40 },
+  });
+  await assert.rejects(
+    renderPlacement({ template: unsupported, imageValues: {}, textValues: {}, colourMap: colours }, "feed"),
+    /unsupported icon feed-unknown-icon/,
   );
 });
 
