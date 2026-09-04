@@ -384,7 +384,8 @@ begin
   if not found or not exists (
     select 1 from public.ops_action_outbox o where o.action_id=p_action_id
       and o.idempotency_key=p_idempotency_key and o.workspace_id=p_workspace_id
-      and o.target_id=p_invitation_id and o.action_type in ('team_invite','team_resend')
+      and ((o.action_type='team_invite' and o.target_type='workspace' and o.target_id=p_workspace_id)
+        or (o.action_type='team_resend' and o.target_type='invitation' and o.target_id=p_invitation_id))
   ) then
     raise exception 'invitation delivery reservation is not action-bound' using errcode='42501';
   end if;

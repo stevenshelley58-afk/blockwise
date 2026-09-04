@@ -1,7 +1,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(52);
+select plan(56);
 
 select has_table('public', 'ops_action_capabilities', 'action capability registry exists');
 select has_table('public', 'ops_action_outbox', 'action outbox exists');
@@ -207,6 +207,28 @@ select throws_ok($$ select public.begin_ops_invitation_delivery(
   '88888888-8888-4888-8888-888888888897','ops:test:new-invite-after-ambiguous',
   '86666666-6666-4666-8666-666666666666','89999999-9999-4999-8999-999999999999'
 ) $$, '55000', 'invitation delivery needs reconciliation', 'unresolved invite cannot be bypassed by a new action');
+
+insert into public.workspace_invitations (id,workspace_id,email,email_normalized,role,invited_by)
+values ('89999999-9999-4999-8999-999999999900','86666666-6666-4666-8666-666666666666','invite-native@example.test','invite-native@example.test','member','87777777-7777-4777-8777-777777777777');
+select lives_ok($$ select public.enqueue_ops_action(
+  '88888888-8888-4888-8888-888888888898', 'ops:test:native-invite',
+  '86666666-6666-4666-8666-666666666666', '86666666-6666-4666-8666-666666666666',
+  'team_invite', 'workspace', '86666666-6666-4666-8666-666666666666',
+  '87777777-7777-4777-8777-777777777777', 'owner', 'aal2', (select ops_version from public.workspaces where id='86666666-6666-4666-8666-666666666666'),
+  'native invitation reservation', now()-interval '1 hour', now()+interval '2 hours', '{"email":"invite-native@example.test","role":"member"}'::jsonb
+) $$, 'team invite workspace action is accepted');
+select is((public.begin_ops_invitation_delivery('88888888-8888-4888-8888-888888888898','ops:test:native-invite','86666666-6666-4666-8666-666666666666','89999999-9999-4999-8999-999999999900')->>'state'), 'reserved', 'team invite reserves against its workspace target');
+
+insert into public.workspace_invitations (id,workspace_id,email,email_normalized,role,invited_by)
+values ('89999999-9999-4999-8999-999999999901','86666666-6666-4666-8666-666666666666','resend-native@example.test','resend-native@example.test','member','87777777-7777-4777-8777-777777777777');
+select lives_ok($$ select public.enqueue_ops_action(
+  '88888888-8888-4888-8888-888888888899', 'ops:test:native-resend',
+  '86666666-6666-4666-8666-666666666666', '86666666-6666-4666-8666-666666666666',
+  'team_resend', 'invitation', '89999999-9999-4999-8999-999999999901',
+  '87777777-7777-4777-8777-777777777777', 'owner', 'aal2', 1,
+  'native resend reservation', now()-interval '1 hour', now()+interval '2 hours', '{}'::jsonb
+) $$, 'team resend invitation action is accepted');
+select is((public.begin_ops_invitation_delivery('88888888-8888-4888-8888-888888888899','ops:test:native-resend','86666666-6666-4666-8666-666666666666','89999999-9999-4999-8999-999999999901')->>'state'), 'reserved', 'team resend reserves against its invitation target');
 
 select * from finish();
 rollback;
