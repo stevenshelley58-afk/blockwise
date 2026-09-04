@@ -65,10 +65,35 @@ jobs:
           --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY=oss-build-placeholder
           .
 
-      # The npm build above is intentionally not repeated here: a Docker image
-      # scan must inspect the exact multi-stage product image, including its
-      # pinned runtime base and installed production dependencies. This is the
-      # one additional image build required for release security evidence.
+      - name: Smoke test the final image runtime
+        run: |
+          set -Eeuo pipefail
+          test "$(docker image inspect "$PRODUCT_IMAGE" --format '{{.Config.User}}')" = "65532"
+          test "$(docker image inspect "$PRODUCT_IMAGE" --format '{{json .Config.Entrypoint}}')" = '["/nodejs/bin/node"]'
+          docker run --rm "$PRODUCT_IMAGE" -e "const fs=require('fs'); for (const p of ['server.js','public','.next/static']) if (!fs.existsSync(p)) process.exit(1)"
+          container_id=$(docker run -d --user 65532:65532 --publish 18080:3000 \
+            --env HOSTNAME=0.0.0.0 \
+            --env PORT=3000 \
+            --env NEXT_PUBLIC_APP_URL=https://blockwise.sale \
+            --env NEXT_PUBLIC_SITE_URL=https://blockwise.sale \
+            --env NEXT_PUBLIC_SUPABASE_URL=https://blockwise.sale \
+            --env NEXT_PUBLIC_SUPABASE_ANON_KEY=oss-build-placeholder \
+            "$PRODUCT_IMAGE")
+          cleanup() { docker rm --force "$container_id" >/dev/null 2>&1 || true; }
+          trap cleanup EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent --show-error http://127.0.0.1:18080/api/health/live >/dev/null; then
+              exit 0
+            fi
+            if ! docker ps --quiet --filter "id=$container_id" | grep -q .; then
+              docker logs "$container_id" || true
+              exit 1
+            fi
+            sleep 1
+          done
+          docker logs "$container_id" || true
+          exit 1
+
       - name: Export image for security jobs
         run: docker save "$PRODUCT_IMAGE" | gzip -1 > product-image.tar.gz
 
@@ -174,30 +199,10 @@ jobs:
       - name: Bind Trivy report to immutable image ID
         run: docker image inspect "$PRODUCT_IMAGE" --format 'image_id={{.Id}}' > trivy-image-binding.txt
 
-      - name: Validate scoped Trivy exceptions
-        run: |
-          ids=$(grep -c '^  - id: CVE-' .trivyignore.yaml)
-          expiries=$(grep -c '^    expired_at: 2026-10-05$' .trivyignore.yaml)
-          test "$ids" -gt 0
-          test "$ids" -eq "$expiries"
-          test "$(grep -c '^    expired_at:' .trivyignore.yaml)" -eq "$expiries"
-          test "$(grep -c '^    purls:' .trivyignore.yaml)" -eq "$ids"
-          test "$(grep -c '^    statement:' .trivyignore.yaml)" -eq "$ids"
-          test "$(grep -c '^      - pkg:deb/debian/libsqlite3-0@3.46.1-7%2Bdeb13u1$' .trivyignore.yaml)" -eq "$ids"
-          awk '
-            /^  - id: CVE-/ { if (seen && (p != 1 || q != 1 || e != 1 || s != 1)) exit 1; seen=1; p=q=e=s=0; next }
-            /^    purls:/ { p++; next }
-            /^      - pkg:deb\/debian\/libsqlite3-0@3.46.1-7%2Bdeb13u1$/ { q++; next }
-            /^      - pkg:/ { exit 1 }
-            /^    expired_at: 2026-10-05$/ { e++; next }
-            /^    statement: "[^"].*"$/ { s++; next }
-            /^    statement:/ { exit 1 }
-            /^    [A-Za-z_][A-Za-z0-9_]*:/ { exit 1 }
-            /^      - / { exit 1 }
-            END { if (!seen || p != 1 || q != 1 || e != 1 || s != 1) exit 1 }
-          ' .trivyignore.yaml
-          test "$ids" -eq "$(grep '^  - id: CVE-' .trivyignore.yaml | sort -u | wc -l)"
-
+      - name: Confirm no Trivy exceptions are required
+        run: test ! -e .trivyignore.yaml
+        # The final distroless runtime has no previously excepted SQLite package.
+        # Keep this assertion to prevent an inert ignore file from returning.
       - name: Scan product image for HIGH and CRITICAL vulnerabilities
         run: >-
           docker run --rm
@@ -207,7 +212,6 @@ jobs:
           image --scanners vuln
           --severity HIGH,CRITICAL
           --ignore-unfixed=false
-          --ignorefile /work/.trivyignore.yaml
           --exit-code 1
           --format sarif --output /work/trivy-results.sarif
           "$PRODUCT_IMAGE"
