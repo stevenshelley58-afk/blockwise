@@ -106,7 +106,7 @@ export function AdsLibrary({ ads, embedded = false }: AdsLibraryProps) {
 function AdCard({ ad }: { ad: LibraryAdModel }) {
   const href = `/ad-studio/ads/${encodeURIComponent(ad.adId)}`;
   return (
-    <li>
+    <li className="min-w-0">
       <Card className="group relative gap-0 overflow-hidden rounded-(--r-card) border-(--line) bg-(--surface) py-0 shadow-card transition motion-reduce:transition-none hover:-translate-y-0.5 hover:shadow-float">
         <Link href={href} className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset" aria-label={`${ad.revisionId ? "Edit" : "Resume"} ${ad.name}`}>
           <div className="relative flex aspect-[4/5] items-center justify-center overflow-hidden bg-(--surface-subtle)">
