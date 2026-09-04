@@ -34,6 +34,7 @@ export type ManualPublishRequest = {
   notes: string | null;
   publishSummary: Record<string, unknown>;
   publishControls: Record<string, unknown>;
+  metaCopy: { primaryText: string; headline: string; description: string; cta: string };
   status: ManualPublishStatus;
   statusReason: string | null;
   createdAt: string;
@@ -67,6 +68,11 @@ function requirePlainObject(value: unknown, label: string): Record<string, unkno
   return value as Record<string, unknown>;
 }
 
+function requireNonEmpty(value: unknown, label: string): string {
+  if (typeof value !== "string" || !value.trim()) throw new ManualPublishError("invalid_input", `${label} is required.`);
+  return value.trim();
+}
+
 function statusFromMetadata(row: AuditRow): ManualPublishStatus | null {
   const value = row.metadata?.status;
   return typeof value === "string" && (MANUAL_STATUSES as readonly string[]).includes(value) ? value as ManualPublishStatus : null;
@@ -93,6 +99,12 @@ function toRequest(events: AuditRow[]): ManualPublishRequest | null {
     notes: typeof metadata.notes === "string" ? metadata.notes : null,
     publishSummary: metadata.publishSummary && typeof metadata.publishSummary === "object" && !Array.isArray(metadata.publishSummary) ? metadata.publishSummary as Record<string, unknown> : {},
     publishControls: metadata.publishControls && typeof metadata.publishControls === "object" && !Array.isArray(metadata.publishControls) ? metadata.publishControls as Record<string, unknown> : {},
+    metaCopy: metadata.metaCopy && typeof metadata.metaCopy === "object" && !Array.isArray(metadata.metaCopy) ? {
+      primaryText: String((metadata.metaCopy as Record<string, unknown>).primaryText ?? ""),
+      headline: String((metadata.metaCopy as Record<string, unknown>).headline ?? ""),
+      description: String((metadata.metaCopy as Record<string, unknown>).description ?? ""),
+      cta: String((metadata.metaCopy as Record<string, unknown>).cta ?? "LEARN_MORE"),
+    } : { primaryText: "", headline: "", description: "", cta: "LEARN_MORE" },
     status,
     statusReason: statusEvent && typeof statusEvent.metadata?.reason === "string" ? statusEvent.metadata.reason : null,
     createdAt: created.created_at,
@@ -118,6 +130,8 @@ export async function createOrLoadManualPublishRequest(input: {
   notes?: string | null;
   publishSummary: unknown;
   controls: unknown;
+  revisionId: string;
+  documentHash: string;
   actorProfileId: string;
 }): Promise<ManualPublishRequest> {
   const workspaceId = requireUuid(input.workspaceId, "workspaceId");
@@ -126,21 +140,31 @@ export async function createOrLoadManualPublishRequest(input: {
   const notes = input.notes?.trim() || null;
   const publishSummary = requirePlainObject(input.publishSummary, "publishSummary");
   const publishControls = requirePlainObject(input.controls, "controls");
+  const revisionId = requireUuid(input.revisionId, "revisionId");
+  const documentHash = requireNonEmpty(input.documentHash, "documentHash");
   if (notes && notes.length > 1000) throw new ManualPublishError("invalid_input", "notes must be 1,000 characters or fewer.");
 
-  const existing = await loadEvents(input.serviceSupabase, { mutationId });
+  const existing = await loadEvents(input.serviceSupabase, { workspaceId, mutationId });
   if (existing.length) {
     const request = toRequest(existing);
     if (!request || request.workspaceId !== workspaceId || request.adId !== adId) throw new ManualPublishError("idempotency_conflict", "mutationId is already used for another request.", 409);
     return request;
   }
 
-  const { data: ad, error: adError } = await input.serviceSupabase.from("ad_customer_ads").select("id,workspace_id,name,active_revision_id").eq("id", adId).eq("workspace_id", workspaceId).maybeSingle();
+  const { data: ad, error: adError } = await input.serviceSupabase.from("ad_customer_ads").select("id,workspace_id,name,active_revision_id,meta_primary_text,meta_headline,meta_description,meta_cta").eq("id", adId).eq("workspace_id", workspaceId).maybeSingle();
   if (adError || !ad) throw new ManualPublishError("ad_not_found", "The saved ad could not be found in this workspace.", 404);
   if (!ad.active_revision_id) throw new ManualPublishError("not_saved", "Save the ad before requesting manual publishing.");
-  const { data: revision, error: revisionError } = await input.serviceSupabase.from("ad_revisions").select("id,workspace_id,revision_number,document_hash,feed_png_path,story_png_path").eq("id", ad.active_revision_id).eq("ad_id", adId).eq("workspace_id", workspaceId).maybeSingle();
+  const { data: revision, error: revisionError } = await input.serviceSupabase.from("ad_revisions").select("id,workspace_id,revision_number,document_hash,document_json,feed_png_path,story_png_path").eq("id", ad.active_revision_id).eq("ad_id", adId).eq("workspace_id", workspaceId).maybeSingle();
   if (revisionError || !revision) throw new ManualPublishError("revision_not_found", "The active saved revision could not be found.", 404);
+  if (revision.id !== revisionId || revision.document_hash !== documentHash) throw new ManualPublishError("stale_revision", "The reviewed ad revision is no longer current. Reload and review the latest saved ad.", 409);
   if (typeof revision.feed_png_path !== "string" || !revision.feed_png_path || typeof revision.story_png_path !== "string" || !revision.story_png_path) throw new ManualPublishError("renders_missing", "Save both Feed and Story PNGs before requesting manual publishing.");
+  const document = revision.document_json && typeof revision.document_json === "object" && !Array.isArray(revision.document_json) ? revision.document_json as Record<string, unknown> : {};
+  const metaCopy = {
+    primaryText: typeof document.metaPrimaryText === "string" ? document.metaPrimaryText : typeof ad.meta_primary_text === "string" ? ad.meta_primary_text : "",
+    headline: typeof document.metaHeadline === "string" ? document.metaHeadline : typeof ad.meta_headline === "string" ? ad.meta_headline : "",
+    description: typeof document.metaDescription === "string" ? document.metaDescription : typeof ad.meta_description === "string" ? ad.meta_description : "",
+    cta: typeof document.metaCta === "string" ? document.metaCta : typeof ad.meta_cta === "string" ? ad.meta_cta : "LEARN_MORE",
+  };
 
   const metadata = {
     requestType: "manual_meta_publish",
@@ -156,6 +180,7 @@ export async function createOrLoadManualPublishRequest(input: {
     notes,
     publishSummary,
     publishControls,
+    metaCopy,
     status: "requested",
   } satisfies Record<string, unknown>;
   const { error } = await input.serviceSupabase.from("audit_logs").insert({
@@ -169,7 +194,7 @@ export async function createOrLoadManualPublishRequest(input: {
     metadata,
   });
   if (error && error.code !== "23505") throw new ManualPublishError("storage_error", "The manual publishing request could not be recorded.", 500);
-  const created = await loadEvents(input.serviceSupabase, { mutationId });
+  const created = await loadEvents(input.serviceSupabase, { workspaceId, mutationId });
   const request = toRequest(created);
   if (!request || request.workspaceId !== workspaceId || request.adId !== adId) throw new ManualPublishError("idempotency_conflict", "mutationId is already used for another request.", 409);
   return request;
