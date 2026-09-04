@@ -86,7 +86,6 @@ export async function loadCustomerSubresource(workspaceId: string, resource: str
 }
 
 export class OpsNotFoundError extends Error {}
-export class OpsInvalidCursorError extends Error {}
 
 async function loadBilling(client: ServiceClient, workspaceId: string) {
   const [workspace, acceptances] = await Promise.all([
