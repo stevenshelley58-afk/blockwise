@@ -4,6 +4,8 @@ import test from "node:test";
 
 const shell = readFileSync("src/components/adstudio/studio-shell.tsx", "utf8");
 const home = readFileSync("src/app/(customer)/ad-studio/page.tsx", "utf8");
+const templates = readFileSync("src/app/(customer)/ad-studio/templates/page.tsx", "utf8");
+const gallery = readFileSync("src/components/adstudio/template-gallery.tsx", "utf8");
 
 test("Ad Studio shell uses the Blockwise symbol as the customer-home link", () => {
   assert.match(shell, /import \{ BlockwiseLogo \} from "@\/components\/blockwise-logo"/);
@@ -21,9 +23,18 @@ test("Ad Studio keeps the Blockwise mark white without a logo background wrapper
   assert.doesNotMatch(shell, /bg-\(--surface\) text-\(--ink\)/);
 });
 
-test("Ad Studio creation navigation uses a calm creation icon", () => {
-  assert.match(shell, /SquarePen/);
+test("Ad Studio navigation exposes the simplified Home, Templates, Library, and Brand path", () => {
+  assert.match(shell, /label: "Home", icon: Home/);
+  assert.match(shell, /label: "Templates", icon: LayoutTemplate/);
+  assert.match(shell, /label: "Library", icon: Library/);
+  assert.match(shell, /label: "Brand Pack", icon: Palette/);
   assert.doesNotMatch(shell, /Sparkles/);
+  assert.match(shell, /const contextual = pathname\.startsWith\("\/ad-studio\/ads\/"\)/);
+  assert.doesNotMatch(shell, /contextual[\s\S]{0,120}templates/);
+});
+
+test("template search preserves the active guided filter", () => {
+  assert.match(templates, /filter !== "all" \? <input type="hidden" name="filter" value=\{filter\} \/> : null/);
 });
 
 test("template cards create the selected customer ad directly", () => {
@@ -36,9 +47,12 @@ test("template cards create the selected customer ad directly", () => {
   assert.match(home, /redirect\(`\/ad-studio\/ads\/\$\{encodeURIComponent\(ad\.adId\)\}`\)/);
   assert.match(home, /action=\{createAdAction\.bind\(null, crypto\.randomUUID\(\)\)\}/);
   assert.match(home, /<input type="hidden" name="templateId" value=\{template\.templateId\} \/>/);
-  assert.match(home, /<span>Start with this template<\/span>/);
-  assert.match(home, /<button\s+type="submit"[\s\S]*?aria-label=\{`Start with \$\{template\.name\}`}\s+[\s\S]*?Start with this template/);
-  assert.doesNotMatch(home, /href=\{`\/ad-studio\/templates\/\$\{encodeURIComponent\(template\.templateId\)\}`\}/);
+  assert.match(templates, /async function createAdAction\(formData: FormData\)/);
+  assert.match(templates, /const creationKey = String\(formData\.get\("creationKey"\)/);
+  assert.match(gallery, /name="creationKey" value=\{crypto\.randomUUID\(\)\}/);
+  assert.match(gallery, /name="templateId" value=\{template\.templateId\}/);
+  assert.match(gallery, /Use template/);
+  assert.match(gallery, /href=\{`\/ad-studio\/templates\/\$\{encodeURIComponent\(template\.templateId\)\}`\}/);
   assert.doesNotMatch(home, /listing|property/i);
 });
 

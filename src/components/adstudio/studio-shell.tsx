@@ -2,10 +2,10 @@
 
 import {
   ArrowLeft,
-  FolderOpen,
-  LayoutGrid,
+  Home,
+  Library,
+  LayoutTemplate,
   Palette,
-  SquarePen,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -21,9 +21,9 @@ type StudioShellProps = {
 };
 
 const items = [
-  { href: "/ad-studio", label: "Create", icon: SquarePen, exact: true },
-  { href: "/ad-studio/ads", label: "Ads", icon: LayoutGrid },
-  { href: "/ad-studio/assets", label: "Assets", icon: FolderOpen },
+  { href: "/ad-studio", label: "Home", icon: Home, exact: true },
+  { href: "/ad-studio/templates", label: "Templates", icon: LayoutTemplate },
+  { href: "/ad-studio/library", label: "Library", icon: Library, matches: ["/ad-studio/library", "/ad-studio/ads", "/ad-studio/assets"] },
   { href: "/ad-studio/brand", label: "Brand Pack", icon: Palette },
 ];
 
@@ -40,9 +40,7 @@ export function StudioShell({
   metaConnectionStatus,
 }: StudioShellProps) {
   const pathname = usePathname() ?? "/ad-studio";
-  const contextual =
-    pathname.startsWith("/ad-studio/templates/") ||
-    pathname.startsWith("/ad-studio/ads/");
+  const contextual = pathname.startsWith("/ad-studio/ads/");
   const connectionLabel =
     metaConnectionStatus === "connected"
       ? "Meta connected"
@@ -73,8 +71,10 @@ export function StudioShell({
           </div>
         </div>
         <nav className="grid gap-1 px-3" aria-label="Studio destinations">
-          {items.map(({ href, label, icon: Icon, exact }) => {
-            const active = activePath(pathname, href, exact);
+          {items.map(({ href, label, icon: Icon, exact, matches }) => {
+            const active = matches
+              ? matches.some(match => activePath(pathname, match))
+              : activePath(pathname, href, exact);
             return (
               <Link
                 key={href}
@@ -151,8 +151,10 @@ export function StudioShell({
             className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-border bg-card px-1 pt-1.5 pb-[calc(.5rem+env(safe-area-inset-bottom))] md:hidden"
             aria-label="Studio mobile navigation"
           >
-            {items.map(({ href, label, icon: Icon, exact }) => {
-              const active = activePath(pathname, href, exact);
+            {items.map(({ href, label, icon: Icon, exact, matches }) => {
+              const active = matches
+                ? matches.some(match => activePath(pathname, match))
+                : activePath(pathname, href, exact);
               return (
                 <Link
                   key={href}
