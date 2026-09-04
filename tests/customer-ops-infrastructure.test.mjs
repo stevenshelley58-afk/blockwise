@@ -60,6 +60,11 @@ test("production worker/control-edge compose uses immutable images and file secr
   assert.match(productCompose, /\/run\/blockwise-secrets:rw,noexec,nosuid,nodev/);
   assert.match(controlCompose, /\/run\/blockwise-secrets:rw,noexec,nosuid,nodev/);
   assert.match(workerCompose, /\/run\/blockwise-secrets:rw,noexec,nosuid,nodev/);
+  for (const compose of [productCompose, controlCompose, workerCompose]) {
+    assert.match(compose, /cap_drop:\s*(?:\[ALL\]|\n\s+- ALL)/);
+    assert.match(compose, /cap_add:\s*(?:\[CHOWN, SETUID, SETGID\]|[\s\S]*?- CHOWN[\s\S]*?- SETUID[\s\S]*?- SETGID)/);
+    assert.match(compose, /no-new-privileges:true/);
+  }
 });
 
 test("bootstrap is explicit, idempotent, and credential-file based", () => {

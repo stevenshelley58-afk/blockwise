@@ -31,6 +31,10 @@ services:
       - /run/blockwise-secrets:rw,noexec,nosuid,nodev
     cap_drop:
       - ALL
+    cap_add:
+      - CHOWN
+      - SETUID
+      - SETGID
     security_opt:
       - no-new-privileges:true
     stop_grace_period: 30s

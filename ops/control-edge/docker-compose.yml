@@ -12,6 +12,7 @@ services:
     tmpfs:
       - /run/blockwise-secrets:rw,noexec,nosuid,nodev
     cap_drop: [ALL]
+    cap_add: [CHOWN, SETUID, SETGID]
     security_opt: [no-new-privileges:true]
     networks: [hermes-private, blockwise-product]
     env_file: [/etc/blockwise/customer-ops/control-edge.env]

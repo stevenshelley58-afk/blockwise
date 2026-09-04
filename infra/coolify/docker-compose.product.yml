@@ -202,6 +202,9 @@ services:
     restart: unless-stopped
     user: "0:0"
     entrypoint: ["/usr/local/bin/blockwise-product-entrypoint"]
+    cap_drop: [ALL]
+    cap_add: [CHOWN, SETUID, SETGID]
+    security_opt: [no-new-privileges:true]
     depends_on:
       product-rest: { condition: service_healthy }
       product-auth: { condition: service_healthy }
@@ -340,6 +343,7 @@ services:
     tmpfs:
       - /run/blockwise-secrets:rw,noexec,nosuid,nodev
     cap_drop: [ALL]
+    cap_add: [CHOWN, SETUID, SETGID]
     security_opt: [no-new-privileges:true]
     stop_grace_period: 30s
     healthcheck:
