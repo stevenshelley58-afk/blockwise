@@ -60,3 +60,67 @@ test("only renderer-backed canonical icon names are accepted", () => {
     geometry: { x: 80, y: 80, width: 64, height: 64 },
   })).success, false);
 });
+
+test("ring vectors require square geometry after placement geometry is resolved", () => {
+  assert.equal(adTemplateSchema.safeParse(templateWithLayer({
+    type: "vector", layerId: "feed-ring", shape: "ring", colourRole: "mainText", opacity: 1,
+    geometry: { x: 80, y: 80, width: 240, height: 240 },
+  })).success, true);
+  assert.equal(adTemplateSchema.safeParse(templateWithLayer({
+    type: "vector", layerId: "feed-ring", shape: "ring", colourRole: "mainText", opacity: 1,
+    geometry: { x: 80, y: 80, width: 240, height: 400 },
+  })).success, false);
+
+  const normalizedStory = templateWithLayer({
+    type: "vector", layerId: "feed-ring", shape: "ring", colourRole: "mainText", opacity: 1,
+    geometry: { x: 80, y: 80, width: 240, height: 240 },
+  });
+  normalizedStory.storyLayout.layers.push({
+    type: "vector", layerId: "story-ring", shape: "ring", colourRole: "mainText", opacity: 1,
+    geometry: { x: 0.1, y: 0.1, width: 0.2, height: 0.2 },
+  });
+  assert.equal(adTemplateSchema.safeParse(normalizedStory).success, false,
+    "equal normalized fractions are not square on a 1080x1920 Story canvas");
+  normalizedStory.storyLayout.layers[1]!.geometry.height = 0.1125;
+  assert.equal(adTemplateSchema.safeParse(normalizedStory).success, true);
+});
+
+test("each placement starts with a protected full-canvas background plate", () => {
+  const missing = templateWithLayer(textLayer(1.1));
+  missing.storyLayout.layers = [];
+  assert.equal(adTemplateSchema.safeParse(missing).success, false);
+
+  const partial = templateWithLayer(textLayer(1.1));
+  partial.feedLayout.layers[0]!.geometry = { x: 1, y: 0, width: 1079, height: 1350 };
+  assert.equal(adTemplateSchema.safeParse(partial).success, false);
+
+  const normalized = templateWithLayer(textLayer(1.1));
+  normalized.feedLayout.layers[0]!.geometry = { x: 0, y: 0, width: 1, height: 1 };
+  normalized.storyLayout.layers[0]!.geometry = { x: 0, y: 0, width: 1, height: 1 };
+  assert.equal(adTemplateSchema.safeParse(normalized).success, true);
+});
+
+test("placeholder hard lines must fit every referencing text layer", () => {
+  const invalid = templateWithLayer(textLayer(1.1));
+  invalid.textInputs[0]!.placeholder = "First line\nSecond line\nThird line";
+  assert.equal(adTemplateSchema.safeParse(invalid).success, false);
+
+  const valid = templateWithLayer({ ...textLayer(1.1), maxLines: 3, geometry: { x: 80, y: 80, width: 800, height: 240 } });
+  valid.textInputs[0]!.placeholder = "First line\nSecond line\nThird line";
+  assert.equal(adTemplateSchema.safeParse(valid).success, true);
+});
+
+test("authored text meets placement readability floors", () => {
+  assert.equal(adTemplateSchema.safeParse(templateWithLayer({ ...textLayer(1.1), fontSize: 24 })).success, true);
+  assert.equal(adTemplateSchema.safeParse(templateWithLayer({ ...textLayer(1.1), fontSize: 23 })).success, false);
+
+  const story = templateWithLayer(textLayer(1.1));
+  story.feedLayout.layers = story.feedLayout.layers.slice(0, 1);
+  story.storyLayout.layers.push({
+    ...textLayer(1.1), layerId: "story-headline", fontSize: 31,
+    geometry: { x: 80, y: 240, width: 800, height: 180 },
+  });
+  assert.equal(adTemplateSchema.safeParse(story).success, false);
+  story.storyLayout.layers[1]!.fontSize = 32;
+  assert.equal(adTemplateSchema.safeParse(story).success, true);
+});

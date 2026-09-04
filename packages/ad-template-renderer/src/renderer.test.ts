@@ -83,17 +83,20 @@ test("image slots render with true cover instead of stretching a full-width sour
   const template = templateWithIcon("arrow");
   template.templateId = "renderer-cover-crop";
   template.imageInputs = [{ key: "hero", label: "Hero", acceptedTypes: ["image/png"] }];
-  template.feedLayout.layers = [{
-    type: "image_slot",
-    layerId: "feed-hero",
-    inputKey: "hero",
-    geometry: { x: 0, y: 0, width: 200, height: 200 },
-    mask: "none",
-    minSourceWidth: 1,
-    minSourceHeight: 1,
-    defaultCrop: { x: 0, y: 0, width: 1, height: 1 },
-    allowedPlacementOverrides: ["crop"],
-  }];
+  template.feedLayout.layers = [
+    { type: "plate", layerId: "feed-bg-cover", colourRole: "background", geometry: { x: 0, y: 0, width: 1080, height: 1350 }, protected: true },
+    {
+      type: "image_slot",
+      layerId: "feed-hero",
+      inputKey: "hero",
+      geometry: { x: 0, y: 0, width: 200, height: 200 },
+      mask: "none",
+      minSourceWidth: 1,
+      minSourceHeight: 1,
+      defaultCrop: { x: 0, y: 0, width: 1, height: 1 },
+      allowedPlacementOverrides: ["crop"],
+    },
+  ];
 
   const output = await renderPlacement({
     template,
@@ -158,7 +161,7 @@ test("scale-down preserves a complete word instead of accepting a vertical graph
       font: { file: "manrope-800.woff2" }, fontSize: 80, lineHeight: 1,
       tracking: 1, alignment: "left", maxCharacters: 20, maxLines: 1,
       colourRole: "mainText", overflowBehaviour: "scale_down",
-      geometry: { x: 40, y: 40, width: 48, height: 36 },
+      geometry: { x: 40, y: 40, width: 96, height: 40 },
     },
   ];
 
@@ -172,16 +175,75 @@ test("scale-down preserves a complete word instead of accepting a vertical graph
   const sample = createCanvas(1080, 1350);
   const context = sample.getContext("2d");
   context.drawImage(rendered, 0, 0);
-  const pixels = context.getImageData(35, 35, 60, 50).data;
-  let minX = 60, maxX = -1, minY = 50, maxY = -1;
-  for (let y = 0; y < 50; y += 1) for (let x = 0; x < 60; x += 1) {
-    const index = (y * 60 + x) * 4;
+  const pixels = context.getImageData(35, 35, 110, 55).data;
+  let minX = 110, maxX = -1, minY = 55, maxY = -1;
+  for (let y = 0; y < 55; y += 1) for (let x = 0; x < 110; x += 1) {
+    const index = (y * 110 + x) * 4;
     if (pixels[index] < 100 && pixels[index + 1] < 100 && pixels[index + 2] < 100) {
       minX = Math.min(minX, x); maxX = Math.max(maxX, x);
       minY = Math.min(minY, y); maxY = Math.max(maxY, y);
     }
   }
   assert.ok(maxX - minX > maxY - minY, "SALE must render as one horizontal word, never one grapheme per line");
+});
+
+test("scale-down fails instead of emitting unreadable one-pixel text", async () => {
+  const template = templateWithIcon("arrow");
+  template.templateId = "renderer-scale-down-floor";
+  template.textInputs = [{ key: "headline", label: "Headline", placeholder: "IMPOSSIBLE", maxLength: 20 }];
+  template.fonts = [{ file: "manrope-800.woff2" }];
+  template.feedLayout.layers.push({
+    type: "text", layerId: "feed-impossible", inputKey: "headline",
+    font: { file: "manrope-800.woff2" }, fontSize: 80, lineHeight: 1,
+    tracking: 1, alignment: "left", maxCharacters: 20, maxLines: 1,
+    colourRole: "mainText", overflowBehaviour: "scale_down",
+    geometry: { x: 40, y: 40, width: 8, height: 8 },
+  });
+  await assert.rejects(
+    renderPlacement({ template, imageValues: {}, textValues: { headline: "IMPOSSIBLE" }, colourMap: colours }, "feed"),
+    /cannot fit at the 24px readability floor/,
+  );
+});
+
+test("rendering fails when any output pixel remains transparent", async () => {
+  const template = templateWithIcon("arrow");
+  template.templateId = "renderer-transparent-output";
+  const transparent = createCanvas(1080, 1350).toBuffer("image/png");
+  template.assets = { background: { fileName: "transparent.png", mimeType: "image/png" } };
+  template.feedLayout.layers[0] = {
+    type: "plate", layerId: "feed-transparent-background", colourRole: "background",
+    assetKey: "background", geometry: { x: 0, y: 0, width: 1080, height: 1350 }, protected: true,
+  };
+  await assert.rejects(
+    renderPlacement({ template, imageValues: { background: transparent }, textValues: {}, colourMap: colours }, "feed"),
+    /feed render is not fully opaque/,
+  );
+});
+
+test("renderer rejects missing, partial, or non-square structural primitives even without schema parsing", async () => {
+  const missing = templateWithIcon("arrow");
+  missing.feedLayout.layers.shift();
+  await assert.rejects(
+    renderPlacement({ template: missing, imageValues: {}, textValues: {}, colourMap: colours }, "feed"),
+    /first layer must be a protected full-canvas background plate/,
+  );
+
+  const partial = templateWithIcon("arrow");
+  partial.feedLayout.layers[0]!.geometry = { x: 1, y: 0, width: 1079, height: 1350 };
+  await assert.rejects(
+    renderPlacement({ template: partial, imageValues: {}, textValues: {}, colourMap: colours }, "feed"),
+    /first layer must be a protected full-canvas background plate/,
+  );
+
+  const ring = templateWithIcon("arrow");
+  ring.feedLayout.layers.push({
+    type: "vector", layerId: "feed-stretched-ring", shape: "ring", colourRole: "mainText", opacity: 1,
+    geometry: { x: 80, y: 80, width: 240, height: 400 },
+  });
+  await assert.rejects(
+    renderPlacement({ template: ring, imageValues: {}, textValues: {}, colourMap: colours }, "feed"),
+    /ring vector feed-stretched-ring must use square geometry/,
+  );
 });
 
 test("logos are contained and centred without aspect distortion", async () => {
