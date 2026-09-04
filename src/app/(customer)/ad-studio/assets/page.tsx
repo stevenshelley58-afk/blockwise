@@ -13,5 +13,5 @@ export default async function AssetsPage() {
     supabase.from("adstudio_brand_kits").select("id,source_url").eq("workspace_id", workspaceId).order("updated_at", { ascending: false }).limit(10),
   ]);
   const kit = ((kits.data ?? []) as Array<{ id: unknown; source_url: unknown }>).find((row) => !isExampleBrandKitSourceUrl(typeof row.source_url === "string" ? row.source_url : ""));
-  return <MediaLibrary workspaceId={workspaceId} brandKitId={kit ? String(kit.id) : ""} assets={assetsPage.items as LibraryAssetModel[]} ads={[]} assetsOnly nextAssetCursor={assetsPage.nextCursor} nextAdCursor={null} />;
+  return <MediaLibrary workspaceId={workspaceId} brandKitId={kit ? String(kit.id) : ""} assets={assetsPage.items as LibraryAssetModel[]} nextAssetCursor={assetsPage.nextCursor} />;
 }

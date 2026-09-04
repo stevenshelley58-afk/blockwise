@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { requireOperator } from "@/lib/operator/auth";
+import { requireOwnerOperator } from "@/lib/operator/auth";
 import { assertPromptKey, createPromptServiceClient } from "@/lib/operator/prompts/prompt-registry";
 import { runPromptTest } from "@/lib/operator/prompts/prompt-test-runner";
 
@@ -12,7 +12,7 @@ type RouteContext = {
 };
 
 export async function POST(request: NextRequest, context: RouteContext) {
-  const guard = await requireOperator();
+  const guard = await requireOwnerOperator();
 
   if (!guard.ok) {
     return guard.response;

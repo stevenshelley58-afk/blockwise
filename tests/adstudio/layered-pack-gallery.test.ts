@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseTemplateJson, templateAssetProxyUrl, templateAssetStoragePath } from "../../src/lib/adstudio/pack-gallery.ts";
+import { adTemplateSchema } from "../../packages/ad-template-contract/src/schema.ts";
 
 const fixturePath = join(fileURLToPath(new URL("..", import.meta.url)), "fixtures", "ad-template", "minimal-feed-story.json");
 function fixture(): Record<string, unknown> {
@@ -24,6 +25,43 @@ describe("Ad Studio direct layered template gallery", () => {
     const invalid = fixture();
     invalid.schema = "blockwise.template";
     assert.equal(parseTemplateJson(invalid), null);
+  });
+
+  it("preserves an authored text sizeRatio through shared template validation", () => {
+    const candidate = fixture();
+    candidate.fonts = [{ file: "arimo-600.woff2" }];
+    candidate.textInputs = [{ key: "headline", label: "Headline", placeholder: "", maxLength: 80 }];
+    const feedLayout = candidate.feedLayout as { layers: unknown[] };
+    feedLayout.layers.push({
+      type: "text",
+      layerId: "feed-headline",
+      inputKey: "headline",
+      font: { file: "arimo-600.woff2" },
+      fontSize: 96,
+      sizeRatio: 0.05,
+      lineHeight: 1.1,
+      tracking: 0,
+      alignment: "left",
+      maxCharacters: 80,
+      maxLines: 2,
+      colourRole: "mainText",
+      overflowBehaviour: "scale_down",
+      geometry: { x: 0.1, y: 0.1, width: 0.8, height: 0.2 },
+    });
+    const parsed = adTemplateSchema.safeParse(candidate);
+    assert.equal(parsed.success, true);
+    if (!parsed.success) return;
+    const textLayer = parsed.data.feedLayout.layers.find(layer => layer.type === "text");
+    assert.equal(textLayer?.type, "text");
+    assert.equal(textLayer?.sizeRatio, 0.05);
+    const galleryParsed = parseTemplateJson(candidate);
+    const galleryTextLayer = galleryParsed?.feedLayout.layers.find(layer => layer.type === "text");
+    assert.equal(galleryTextLayer?.type, "text");
+    assert.equal(galleryTextLayer?.sizeRatio, 0.05);
+    const invalid = structuredClone(candidate);
+    const invalidTextLayer = (invalid.feedLayout as { layers: Array<Record<string, unknown>> }).layers.find(layer => layer.type === "text");
+    if (invalidTextLayer) invalidTextLayer.sizeRatio = 0;
+    assert.equal(adTemplateSchema.safeParse(invalid).success, false);
   });
 
   it("builds only canonical same-origin asset URLs", () => {

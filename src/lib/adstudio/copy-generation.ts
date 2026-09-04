@@ -19,13 +19,15 @@ import {
   recordAdStudioProviderRun,
   type ProviderRunAttempt,
 } from "../operator/prompts/redact-prompt-run.ts";
+import {
+  META_COPY_CTA_VALUES,
+  META_COPY_CONSTRAINTS,
+  truncateAtWordBoundary,
+  type AdStudioMetaCopy,
+} from "./meta-copy-contract.ts";
+import { toMetaCta } from "./meta-cta.ts";
 
-export type AdStudioCopyFields = {
-  primaryText: string;
-  headline: string;
-  description: string;
-  cta: string;
-};
+export type AdStudioCopyFields = AdStudioMetaCopy;
 
 export type AdStudioAiWritingGuidance = {
   summary: string;
@@ -96,12 +98,8 @@ const COPY_PROMPT_KEYS: PromptKey[] = [
   "adstudio.copy.compliance_rules",
 ];
 
-export const ADSTUDIO_COPY_LIMITS: Record<keyof AdStudioCopyFields, number> = {
-  primaryText: 125,
-  headline: 40,
-  description: 90,
-  cta: 24,
-};
+/** @deprecated Use META_COPY_CONSTRAINTS from ./meta-copy-contract.ts. */
+export const ADSTUDIO_COPY_LIMITS = META_COPY_CONSTRAINTS;
 
 export const ADSTUDIO_GUIDANCE_LIMITS = {
   summary: 600,
@@ -157,7 +155,7 @@ export async function generateAdStudioCopy(
     }, input.providerEnv, input.signal);
     const output = generation.output;
     const json = (output.json ?? {}) as Record<string, unknown>;
-    const current = input.copy ?? {};
+    const normalizedCopy = normalizeAdStudioCopy(json, input.copy);
 
     finalizationStarted = true;
     await recordAdStudioProviderRun({
@@ -180,14 +178,11 @@ export async function generateAdStudioCopy(
 
     return {
       copy: {
-        headline: clamp(json.headline, ADSTUDIO_COPY_LIMITS.headline, current.headline ?? ""),
-        primaryText: clamp(json.primaryText, ADSTUDIO_COPY_LIMITS.primaryText, current.primaryText ?? ""),
-        description: clamp(json.description, ADSTUDIO_COPY_LIMITS.description, current.description ?? ""),
-        cta: clamp(json.cta, ADSTUDIO_COPY_LIMITS.cta, current.cta ?? "Learn more"),
+        ...normalizedCopy,
       },
       alternates: {
-        headline: clampList(json.altHeadlines, ADSTUDIO_COPY_LIMITS.headline),
-        primaryText: clampList(json.altPrimaryTexts, ADSTUDIO_COPY_LIMITS.primaryText),
+        headline: clampList(json.altHeadlines, META_COPY_CONSTRAINTS.headline),
+        primaryText: clampList(json.altPrimaryTexts, META_COPY_CONSTRAINTS.primaryText),
       },
       source: "ai",
     };
@@ -300,16 +295,8 @@ export async function generateAdStudioTemplateCopy(
       mutationId,
     }, input.providerEnv, input.signal);
     const json = (generation.output.json ?? {}) as Record<string, unknown>;
-    const onImageRaw = (json.onImage ?? {}) as Record<string, unknown>;
-    const onImage: Record<string, string> = {};
-    for (const field of input.fields) {
-      const raw = typeof onImageRaw[field.key] === "string" ? (onImageRaw[field.key] as string).trim() : "";
-      // Fall back to the sample so the clone never receives an empty label;
-      // the brief-grounded value is strongly preferred.
-      const value = raw || field.sample || "";
-      onImage[field.key] =
-        field.maxLength && value.length > field.maxLength ? value.slice(0, field.maxLength).trimEnd() : value;
-    }
+    const normalizedCopy = normalizeAdStudioCopy(json);
+    const onImage = normalizeAdStudioOnImage(json.onImage, input.fields);
 
     finalizationStarted = true;
     await recordAdStudioProviderRun({
@@ -333,10 +320,7 @@ export async function generateAdStudioTemplateCopy(
     return {
       onImage,
       copy: {
-        headline: clamp(json.headline, ADSTUDIO_COPY_LIMITS.headline, ""),
-        primaryText: clamp(json.primaryText, ADSTUDIO_COPY_LIMITS.primaryText, ""),
-        description: clamp(json.description, ADSTUDIO_COPY_LIMITS.description, ""),
-        cta: clamp(json.cta, ADSTUDIO_COPY_LIMITS.cta, "Learn more"),
+        ...normalizedCopy,
       },
       source: "ai",
     };
@@ -377,10 +361,68 @@ function generationLogInput(input: AdStudioCopyGenerationInput) {
   };
 }
 
-function clamp(value: unknown, limit: number, fallback: string): string {
-  const text = typeof value === "string" ? value.trim() : "";
-  if (!text) return fallback;
-  return text.length > limit ? text.slice(0, limit).trimEnd() : text;
+export class AdStudioCopyNormalizationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AdStudioCopyNormalizationError";
+  }
+}
+
+/**
+ * Normalize provider payloads at the paid boundary. Providers sometimes
+ * return a singular string where the schema asks for an array (or use the
+ * plural field names from Meta's publish pack). Missing required fields fail
+ * explicitly; they never become a silent empty string.
+ */
+export function normalizeAdStudioCopy(
+  value: Record<string, unknown>,
+  _current?: Partial<AdStudioCopyFields>,
+): AdStudioCopyFields {
+  const primaryText = normalizeRequiredCopyField(
+    firstProviderString(value.primaryText ?? value.primaryTexts ?? value.primary_text),
+    META_COPY_CONSTRAINTS.primaryText,
+    "primary text",
+  );
+  const headline = normalizeRequiredCopyField(
+    firstProviderString(value.headline ?? value.headlines),
+    META_COPY_CONSTRAINTS.headline,
+    "headline",
+  );
+  const description = normalizeRequiredCopyField(
+    firstProviderString(value.description ?? value.descriptions),
+    META_COPY_CONSTRAINTS.description,
+    "description",
+  );
+  const rawCta = firstProviderString(value.cta ?? value.callToAction);
+  const cta = normalizeProviderCta(rawCta);
+  return { primaryText, headline, description, cta };
+}
+
+function normalizeRequiredCopyField(
+  value: string | undefined,
+  limit: number,
+  field: string,
+): string {
+  const text = (value ?? "").trim();
+  if (!text) throw new AdStudioCopyNormalizationError(`Provider returned no ${field}.`);
+  return truncateAtWordBoundary(text, limit);
+}
+
+function firstProviderString(value: unknown): string | undefined {
+  if (typeof value === "string") return value.trim() || undefined;
+  if (Array.isArray(value)) {
+    const first = value.find((item): item is string => typeof item === "string" && item.trim().length > 0);
+    return first?.trim();
+  }
+  return undefined;
+}
+
+function normalizeProviderCta(value: string | undefined): string {
+  const text = value?.trim() ?? "";
+  if (!text) throw new AdStudioCopyNormalizationError("Provider returned no CTA.");
+  const mapped = toMetaCta(text);
+  if (META_COPY_CTA_VALUES.includes(mapped)) return mapped;
+  throw new AdStudioCopyNormalizationError(`Provider returned an unsupported CTA: ${text}.`);
 }
 
 function clampList(value: unknown, limit: number): string[] {
@@ -388,8 +430,26 @@ function clampList(value: unknown, limit: number): string[] {
   return value
     .filter((item): item is string => typeof item === "string" && item.trim().length > 0)
     .slice(0, 2)
-    .map((item) => (item.length > limit ? item.slice(0, limit).trimEnd() : item.trim()));
+    .map((item) => truncateAtWordBoundary(item, limit));
 }
+
+/** Normalize every declared on-image field without inventing campaign facts. */
+export function normalizeAdStudioOnImage(
+  value: unknown,
+  fields: AdStudioTemplateCopyFieldSpec[],
+): Record<string, string> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new AdStudioCopyNormalizationError("Provider returned no on-image copy object.");
+  }
+  const rawFields = value as Record<string, unknown>;
+  return Object.fromEntries(fields.map((field) => {
+    const raw = typeof rawFields[field.key] === "string" ? (rawFields[field.key] as string).trim() : "";
+    if (!raw) throw new AdStudioCopyNormalizationError(`Provider returned no on-image field: ${field.key}.`);
+    return [field.key, field.maxLength ? truncateAtWordBoundary(raw, field.maxLength) : raw];
+  }));
+}
+
+export { truncateAtWordBoundary } from "./meta-copy-contract.ts";
 
 // Only forward references a vision model can actually read.
 function usableModelImage(ref: string | undefined): string | undefined {

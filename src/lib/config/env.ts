@@ -1,4 +1,5 @@
 import { resolveSupabaseServerCredential } from "../supabase/credentials.ts";
+import { getBookingProviderReadiness } from "../booking/provider.ts";
 
 export const REQUIRED_ENV_KEYS = [
   "NEXT_PUBLIC_APP_URL",
@@ -98,6 +99,7 @@ export function getDeploymentReadiness(env: NodeJS.ProcessEnv = process.env) {
   const missingRecommendedSecurity = getMissingRecommendedSecurityEnvKeys(env);
   const invalidFirstTester = getInvalidFirstTesterEnvKeys(env);
   const providers = getAllProviderReadiness(env);
+  const booking = getBookingProviderReadiness(env);
 
   return {
     ok: invalid.length === 0,
@@ -113,6 +115,7 @@ export function getDeploymentReadiness(env: NodeJS.ProcessEnv = process.env) {
       missingRecommended: missingRecommendedSecurity,
     },
     providers,
+    booking,
     requiredCount: REQUIRED_ENV_KEYS.length,
     checkedAt: new Date().toISOString(),
   };

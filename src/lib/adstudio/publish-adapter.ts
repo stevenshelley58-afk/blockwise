@@ -14,6 +14,8 @@ import { hasExplicitMetaPublishAudience, validateMetaOfferFulfilment } from "../
 import { buildMetaPlanMutation, type BuiltMetaPlanMutation } from "../providers/meta-mutations.ts";
 import { executeMetaMutationById } from "../providers/meta-mutation-worker.ts";
 import type { createSupabaseServiceClient } from "../supabase/service.ts";
+import { metaCopyLimitIssues } from "./meta-copy-contract.ts";
+import { toMetaCta } from "./meta-cta.ts";
 import type {
   MetaConnectionSetup,
   MetaPublishControls,
@@ -249,15 +251,22 @@ export function validatePublishState(
 
   if (!state.revision.feedPngHash) issues.push("Missing Feed PNG");
   if (!state.revision.storyPngHash) issues.push("Missing Story PNG");
+  issues.push(...metaCopyLimitIssues({
+    primaryText: state.ad.metaPrimaryText,
+    headline: state.ad.metaHeadline,
+    description: state.ad.metaDescription,
+    cta: state.ad.metaCta,
+  }).map(issue => `${issue.field} must be ${issue.maxLength} characters or fewer.`));
   if (!state.ad.metaPrimaryText) issues.push("Missing primary text");
   if (!state.ad.metaHeadline) issues.push("Missing headline");
-  if (!state.ad.metaCta) issues.push("Missing CTA");
+  if (!state.ad.metaCta?.trim()) issues.push("Missing CTA");
+  const mappedCta = state.ad.metaCta?.trim() ? toMetaCta(state.ad.metaCta) : "";
   if (!destinationUrl || !isHttpsUrl(destinationUrl)) {
     issues.push(mode === "website"
       ? "Missing valid HTTPS destination URL/article — add the article or website URL before publishing"
       : "Missing valid HTTPS destination URL — add the Instant Form thank-you website URL before publishing");
   }
-  if (requirements.requiredCtaTypes.length > 0 && !requirements.requiredCtaTypes.includes(state.ad.metaCta)) {
+  if (requirements.requiredCtaTypes.length > 0 && !requirements.requiredCtaTypes.includes(mappedCta)) {
     issues.push(`CTA must be one of: ${requirements.requiredCtaTypes.join(", ")}`);
   }
   if (mode === "instant_form") {
@@ -554,7 +563,7 @@ function buildPausedCreative(
     headline: state.ad.metaHeadline || label,
     primaryText: state.ad.metaPrimaryText || label,
     description: state.ad.metaDescription || "",
-    cta: state.ad.metaCta || "LEARN_MORE",
+    cta: toMetaCta(state.ad.metaCta || "LEARN_MORE"),
     leadFormLocalId: destinationMode === "instant_form" ? "form_primary" : "",
     adStudioCreativeId: null,
     format,

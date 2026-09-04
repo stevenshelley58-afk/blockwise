@@ -1,10 +1,9 @@
 /**
- * Alert delivery for the paid-service watchdog: email via Resend and WhatsApp
- * via Twilio. Both use plain fetch (no npm dependency) and are no-ops when
- * their environment variables are missing, mirroring demo-request-email.ts.
+ * Alert delivery for the paid-service watchdog: email via the durable provider-neutral outbox and WhatsApp via Twilio.
+ * Both are no-ops when their environment variables are missing.
  *
- * Email (Resend):
- *   RESEND_API_KEY     – shared with demo notifications
+ * Email (outbox provider):
+ *   EMAIL_PROVIDER / SMTP_* / RESEND_API_KEY - explicit provider configuration
  *   ALERT_EMAIL_FROM   – falls back to DEMO_NOTIFY_FROM
  *   ALERT_EMAIL_TO     – falls back to DEMO_NOTIFY_TO
  *
@@ -14,6 +13,11 @@
  *   TWILIO_WHATSAPP_FROM – Twilio WhatsApp sender, e.g. +14155238886 (sandbox)
  *   ALERT_WHATSAPP_TO    – your number in E.164, e.g. +614xxxxxxxx
  */
+
+import { createHash } from "node:crypto";
+import { enqueueEmail } from "../email/outbox.ts";
+import { escapeHtml } from "../email/provider.ts";
+import { createSupabaseServiceClient } from "../supabase/service.ts";
 
 export type AlertMessage = {
   subject: string;
@@ -39,49 +43,23 @@ export function resolveAlertEmailRecipient(
   );
 }
 
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
 
 export async function sendAlertEmail(message: AlertMessage): Promise<boolean> {
-  const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.ALERT_EMAIL_FROM || process.env.DEMO_NOTIFY_FROM;
+  const from = process.env.ALERT_EMAIL_FROM || process.env.DEMO_NOTIFY_FROM || "alerts@blockwise.sale";
   const to = resolveAlertEmailRecipient();
-
-  if (!apiKey || !from || !to) return false;
-
   try {
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      signal: AbortSignal.timeout(5_000),
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-        ...(message.idempotencyKey ? { "Idempotency-Key": message.idempotencyKey } : {}),
-      },
-      body: JSON.stringify({
-        from,
-        to: [to],
-        subject: message.subject,
-        text: message.text,
-        html: `<pre style="font-family:ui-monospace,monospace;font-size:13px;white-space:pre-wrap">${escapeHtml(message.text)}</pre>`,
-      }),
+    const result = await enqueueEmail(createSupabaseServiceClient(), {
+      messageType: "operator_alert", templateId: "alert", templateVersion: 1,
+      to, from, subject: message.subject, text: message.text,
+      html: '<pre style="font-family:ui-monospace,monospace;font-size:13px;white-space:pre-wrap">' + escapeHtml(message.text) + "</pre>",
+      idempotencyKey: message.idempotencyKey?.trim() || "alert:" + createHash("sha256").update([message.subject, message.text, String(Math.floor(Date.now() / 3_600_000))].join("\0")).digest("hex"),
     });
-    if (!res.ok) {
-      console.error("Alert email send failed", res.status, await res.text().catch(() => ""));
-      return false;
-    }
-    return true;
+    return result.queued || result.duplicateOf !== null;
   } catch (err) {
-    console.error("Alert email send threw", err);
+    console.error("Alert email enqueue failed", err);
     return false;
   }
 }
-
 function whatsappAddress(value: string): string {
   return value.startsWith("whatsapp:") ? value : `whatsapp:${value}`;
 }

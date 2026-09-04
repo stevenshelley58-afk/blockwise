@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AdDocumentParsed } from "../../../packages/ad-template-contract/src/schema";
 import type { AdTemplate } from "../../../packages/ad-template-contract/src/types";
 import { documentToken } from "./document-token.ts";
+import { metaCopyLimitIssues } from "./meta-copy-contract.ts";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -37,6 +38,19 @@ export interface SaveAdOutput {
   unchanged: boolean;
 }
 
+/** Shared server-side guard for every AdDocument persistence path. */
+export function validateMetaCopyForSave(copy: Pick<AdDocumentParsed, "metaPrimaryText" | "metaHeadline" | "metaDescription" | "metaCta">): void {
+  const issue = metaCopyLimitIssues({
+    primaryText: copy.metaPrimaryText,
+    headline: copy.metaHeadline,
+    description: copy.metaDescription,
+    cta: copy.metaCta,
+  })[0];
+  if (issue) {
+    throw new SaveError("meta_copy_too_long", `${issue.field} must be ${issue.maxLength} characters or fewer.`);
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Save transaction
 // ---------------------------------------------------------------------------
@@ -69,6 +83,7 @@ export async function saveAd(input: SaveAdInput): Promise<SaveAdOutput> {
   }
   const effectiveTextValues = Object.fromEntries(templatePack.textInputs.map((text) => [text.key, input.document.sharedTextValues[text.key] ?? text.placeholder]));
   validateRequiredInputs(templatePack, input, effectiveTextValues);
+  validateMetaCopyForSave(input.document);
 
   // 3. Canonicalize and hash the document
   const documentJson = input.document as unknown as Record<string, unknown>;

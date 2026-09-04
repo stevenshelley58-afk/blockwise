@@ -41,7 +41,9 @@ export function CustomerActions({ workspaceId }: { workspaceId: string }) {
           : action === "adjust_credits"
             ? "Credits adjusted and audited."
             : action === "resend_booking"
-              ? "Booking link sent and audited."
+              ? payload.result?.delivery === "queued"
+                ? "Booking link queued for delivery and audited."
+                : "Booking link sent and audited."
               : "Onboarding marked completed and audited.",
       });
       setReason("");

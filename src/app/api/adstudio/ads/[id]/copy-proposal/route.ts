@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { generateAdStudioTemplateCopy, normalizeAdStudioAiWritingGuidance } from "@/lib/adstudio/copy-generation";
 import { buildDeterministicCopyProposal } from "@/lib/adstudio/copy-proposal";
 import { errorResponse, readJsonBody, requireAdStudioRequest } from "@/lib/adstudio/http";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { adTemplateSchema } from "@/lib/adstudio/ingest-artifact";
 
 export const runtime = "nodejs";
@@ -24,6 +25,17 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
   const { id } = await context.params;
   const access = await requireAdStudioRequest(request);
   if (!access.ok) return access.response;
+  const rateLimit = await checkRateLimit(access.access.workspaceId, access.access.userId, {
+    windowSeconds: 300,
+    maxRequests: 20,
+    bucket: "adstudio-ai-copy",
+  });
+  if (!rateLimit.ok) {
+    return NextResponse.json(
+      { error: "Copy generation limit reached. Try again later." },
+      { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } },
+    );
+  }
   const body = await readJsonBody<{ brief?: unknown; copy?: unknown }>(request);
   const brief = typeof body.brief === "string" ? body.brief : "";
   const { data: ad } = await access.supabase
