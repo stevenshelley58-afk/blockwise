@@ -12,6 +12,7 @@ import type {
   Placement,
   ColourRole,
 } from "@blockwise/ad-template-contract";
+import { MINIMUM_TEXT_SIZE_PX } from "@blockwise/ad-template-contract";
 
 export interface RenderInput {
   template: AdTemplate;
@@ -39,6 +40,7 @@ export async function renderPlacement(input: RenderInput, placement: Placement):
   registerTemplateFonts(input.template, input.fontValues);
   const layout = placement === "feed" ? input.template.feedLayout : input.template.storyLayout;
   const dims = DIMENSIONS[placement];
+  assertFullCanvasBackground(layout.layers, dims, placement);
   const canvas = createCanvas(dims.width, dims.height);
   const ctx = canvas.getContext("2d");
   ctx.imageSmoothingEnabled = false;
@@ -47,6 +49,7 @@ export async function renderPlacement(input: RenderInput, placement: Placement):
     await renderLayer(ctx, layer, input, placement, dims);
   }
 
+  assertFullyOpaque(ctx, dims, placement);
   const png = canvas.toBuffer("image/png");
   return { placement, width: dims.width, height: dims.height, png };
 }
@@ -60,7 +63,7 @@ async function renderLayer(ctx: SKRSContext2D, layer: LayoutLayer, input: Render
     case "plate": return renderPlate(ctx, layer, input, dims);
     case "image_slot": return renderImageSlot(ctx, layer, input, dims);
     case "overlay_patch": return renderOverlay(ctx, layer, input, dims);
-    case "text": return renderText(ctx, layer, input, dims);
+    case "text": return renderText(ctx, layer, input, placement, dims);
     case "logo": return renderLogo(ctx, layer, input, dims);
     case "vector": return renderVector(ctx, layer, input, dims);
     case "icon": return renderIcon(ctx, layer, input, dims);
@@ -68,6 +71,38 @@ async function renderLayer(ctx: SKRSContext2D, layer: LayoutLayer, input: Render
 }
 
 type CanvasDimensions = { width: number; height: number };
+
+function assertFullCanvasBackground(
+  layers: LayoutLayer[],
+  dims: CanvasDimensions,
+  placement: Placement,
+): void {
+  const background = layers[0];
+  if (background?.type !== "plate" || !background.protected) {
+    throw new Error(`${placement} first layer must be a protected full-canvas background plate`);
+  }
+  const geometry = resolveRenderGeometry(background.geometry, dims);
+  if (
+    Math.abs(geometry.x) > 0.5
+    || Math.abs(geometry.y) > 0.5
+    || Math.abs(geometry.width - dims.width) > 0.5
+    || Math.abs(geometry.height - dims.height) > 0.5
+  ) {
+    throw new Error(`${placement} first layer must be a protected full-canvas background plate`);
+  }
+}
+
+function assertFullyOpaque(ctx: SKRSContext2D, dims: CanvasDimensions, placement: Placement): void {
+  const pixels = ctx.getImageData(0, 0, dims.width, dims.height).data;
+  for (let index = 3; index < pixels.length; index += 4) {
+    if (pixels[index] !== 255) {
+      const pixel = (index - 3) / 4;
+      const x = pixel % dims.width;
+      const y = Math.floor(pixel / dims.width);
+      throw new Error(`${placement} render is not fully opaque at (${x}, ${y})`);
+    }
+  }
+}
 
 /** Internal parity fixture helper; the package index intentionally exposes only render APIs. */
 export function resolveRenderGeometry(geometry: Rect, dims: CanvasDimensions): Rect {
@@ -186,7 +221,7 @@ export function effectiveTextFontSize(layer: Pick<TextLayer, "fontSize"> & { siz
   return Number.isFinite(ratio) && ratio > 0 ? geometry.height * ratio : layer.fontSize;
 }
 
-function renderText(ctx: SKRSContext2D, layer: TextLayer, input: RenderInput, dims: CanvasDimensions): void {
+function renderText(ctx: SKRSContext2D, layer: TextLayer, input: RenderInput, placement: Placement, dims: CanvasDimensions): void {
   const source = input.textValues[layer.inputKey];
   if (!source) return;
   if (layer.overflowBehaviour === "refuse" && source.length > layer.maxCharacters) return;
@@ -204,15 +239,20 @@ function renderText(ctx: SKRSContext2D, layer: TextLayer, input: RenderInput, di
   const requestedFamily = textLayer.fontFamily?.trim();
   const family = requestedFamily && GlobalFonts.has(requestedFamily) ? requestedFamily : registeredFamily;
   const baseFontSize = effectiveTextFontSize(textLayer, geometry);
+  const readabilityFloor = MINIMUM_TEXT_SIZE_PX[placement];
+  if (baseFontSize < readabilityFloor) {
+    ctx.restore();
+    throw new Error(`${placement} text layer ${layer.layerId} is below the ${readabilityFloor}px readability floor`);
+  }
   // A shrink floor must also be bounded by the box's line budget. The old
   // unconditional 8px floor could exceed short authored boxes and clip
   // descenders; truncation gets the same geometry guard while refusal remains
   // strict at the explicit authored size.
   const boxFloor = geometry.height / Math.max(1, layer.maxLines * layer.lineHeight);
   const minimumSize = layer.overflowBehaviour === "scale_down"
-    ? Math.max(1, Math.min(baseFontSize * 0.45, boxFloor))
+    ? readabilityFloor
     : layer.overflowBehaviour === "truncate"
-      ? Math.max(1, Math.min(baseFontSize, boxFloor))
+      ? Math.max(readabilityFloor, Math.min(baseFontSize, boxFloor))
       : baseFontSize;
   let fontSize = Math.max(1, baseFontSize);
   let lines: string[] = [];
@@ -228,6 +268,10 @@ function renderText(ctx: SKRSContext2D, layer: TextLayer, input: RenderInput, di
   if (!fits && layer.overflowBehaviour === "refuse") {
     ctx.restore();
     return;
+  }
+  if (!fits && layer.overflowBehaviour === "scale_down") {
+    ctx.restore();
+    throw new Error(`${placement} text layer ${layer.layerId} cannot fit at the ${readabilityFloor}px readability floor`);
   }
   if (!fits) {
     fontSize = Math.max(1, minimumSize);
@@ -364,6 +408,13 @@ function renderVector(ctx: SKRSContext2D, layer: Extract<LayoutLayer, { type: "v
   ctx.globalAlpha = Math.min(1, Math.max(0, layer.opacity));
   ctx.fillStyle = input.colourMap[layer.colourRole] ?? "#000000";
   const { x, y, width, height } = resolveRenderGeometry(layer.geometry, dims);
+  if (layer.shape === "ring") {
+    const squareTolerance = Math.max(1, Math.min(width, height) * 0.01);
+    if (Math.abs(width - height) > squareTolerance) {
+      ctx.restore();
+      throw new Error(`ring vector ${layer.layerId} must use square geometry`);
+    }
+  }
   if (layer.shape === "circle" || layer.shape === "ring") {
     ctx.beginPath();
     ctx.arc(x + width / 2, y + height / 2, Math.min(width, height) / 2, 0, Math.PI * 2);
