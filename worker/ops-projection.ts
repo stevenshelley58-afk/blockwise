@@ -45,6 +45,10 @@ async function publishFrankBundleIfConfigured(supabase: Supabase): Promise<void>
   const result = await Promise.resolve(supabase.rpc("resolve_ops_frank_bundle"));
   if (result.error || !result.data || typeof result.data !== "object") throw new Error("Frank operations bundle resolution failed");
   const bundle = result.data as Parameters<typeof publishOpsBundle>[1];
+  const threads = await Promise.resolve(supabase.rpc("resolve_ops_enquiry_threads"));
+  if (threads.error) throw new Error("Frank enquiry thread resolution failed");
+  const threadByEnquiry = new Map<string, unknown>((Array.isArray(threads.data) ? threads.data : []).map((row: Record<string, unknown>) => [String(row.enquiry_id), row.messages ?? []]));
+  if (Array.isArray(bundle.projections.enquiries)) bundle.projections = { ...bundle.projections, enquiries: bundle.projections.enquiries.map((item: unknown) => { const row = item as Record<string, unknown>; const key = String(row.id ?? "").split(":")[0]; return { ...row, messages: threadByEnquiry.get(key) ?? [] }; }) };
   // Capabilities are effective state, not merely the last persisted intent.
   // Require a recent verification lease before exposing provider actions.
   const capabilityQuery = (supabase as unknown as { from?: (table: string) => { select: (columns: string) => Promise<{ data: Record<string, unknown>[] | null; error: { message: string } | null }> } }).from;

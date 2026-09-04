@@ -207,6 +207,15 @@ end; $$;
 revoke all on function public.record_ops_chatwoot_webhook_adopt(text,text,text,text,text,text,text,text,text,text) from public,anon,authenticated;
 grant execute on function public.record_ops_chatwoot_webhook_adopt(text,text,text,text,text,text,text,text,text,text) to service_role;
 
+create or replace function public.resolve_ops_enquiry_threads()
+returns jsonb language sql security definer set search_path = '' as $$
+  select coalesce(jsonb_agg(jsonb_build_object('enquiry_id',m.enquiry_id,'messages',m.messages)), '[]'::jsonb)
+  from (select e.enquiry_id, jsonb_agg(jsonb_build_object('id',e.provider_message_id,'body',e.body,'direction',e.direction,'created_at',e.created_at) order by e.created_at desc, e.provider_message_id desc) filter (where e.rn <= 100) messages
+        from (select m.*, row_number() over (partition by m.enquiry_id order by m.created_at desc, m.provider_message_id desc) rn from private.ops_enquiry_messages m) e group by e.enquiry_id) m;
+$$;
+revoke all on function public.resolve_ops_enquiry_threads() from public,anon,authenticated;
+grant execute on function public.resolve_ops_enquiry_threads() to service_role;
+
 create or replace function public.claim_ops_provider_action(p_lease_seconds integer default 600)
 returns table (id uuid, action_id uuid, workspace_id uuid, customer_id uuid, actor_operator_id uuid, actor_role text,
   action_type text, target_type text, target_id uuid, expected_version bigint, reason text, payload jsonb,
