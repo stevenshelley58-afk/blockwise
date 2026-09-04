@@ -7,11 +7,9 @@
 
 mail.example.com {
     encode gzip
-    reverse_proxy https://stalwart:443 {
-        transport http {
-            tls_insecure_skip_verify
-        }
-    }
+    # Stalwart's private management/JMAP HTTP listener is reachable only on
+    # the customer-ops edge network; Caddy terminates public TLS here.
+    reverse_proxy stalwart:8080
 }
 
 crm.example.com {
