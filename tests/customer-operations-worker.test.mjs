@@ -16,7 +16,7 @@ test("projection worker is provider-neutral and fail-closed", () => {
   assert.match(worker, /redirect: "error"/);
   assert.match(worker, /idempotency-key/);
   assert.match(worker, /must use HTTPS/);
-  assert.match(worker, /permissions are too broad/);
+  assert.match(worker, /must be mode 0600/);
   assert.match(worker, /providerRecordSuffix/);
   assert.doesNotMatch(worker, /console\.log\(.*token/i);
 });
