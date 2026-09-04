@@ -205,6 +205,8 @@ select lives_ok($$ select public.enqueue_ops_action(
 insert into private.ops_invitation_delivery_ledger(action_id,idempotency_key,workspace_id,invitation_id,state,baseline_send_attempt_count)
 values ('88888888-8888-4888-8888-888888888897','ops:test:ambiguous-original',
   '86666666-6666-4666-8666-666666666666','89999999-9999-4999-8999-999999999902','needs_reconciliation',0);
+update public.workspace_invitations set updated_at=now()
+  where id='89999999-9999-4999-8999-999999999902';
 select lives_ok($$ select public.enqueue_ops_action(
   '88888888-8888-4888-8888-888888888900', 'ops:test:new-invite-after-ambiguous',
   '86666666-6666-4666-8666-666666666666', '86666666-6666-4666-8666-666666666666',
