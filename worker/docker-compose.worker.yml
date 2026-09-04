@@ -19,6 +19,9 @@ services:
       WORKER_REAP_INTERVAL_MS: ${WORKER_REAP_INTERVAL_MS:-60000}
       MAUTIC_TOKEN_FILE: /run/secrets/mautic_token
       CHATWOOT_API_TOKEN_FILE: /run/secrets/chatwoot_api_token
+      CHATWOOT_ENQUIRY_SOURCE_ID: ${CHATWOOT_ENQUIRY_SOURCE_ID:-}
+      CHATWOOT_SUPPORT_SOURCE_ID: ${CHATWOOT_SUPPORT_SOURCE_ID:-}
+      CHATWOOT_GLOBAL_SOURCE_ID: ${CHATWOOT_GLOBAL_SOURCE_ID:-}
       BLOCKWISE_OPS_CORRELATION_KEY_FILE: /run/secrets/ops_correlation_key
     read_only: true
     cap_drop:

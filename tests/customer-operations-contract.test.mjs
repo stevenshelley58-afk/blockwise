@@ -14,6 +14,7 @@ test("product allowlist and rollback procedure cover the ops contract", () => {
   assert.match(allowlist, /202609040005_customer_operations_provider_matrix_privileges\.sql/);
   assert.match(allowlist, /202609040006_customer_operations_runtime_resolution\.sql/);
   assert.match(allowlist, /202609040007_customer_operations_provider_ledger\.sql/);
+  assert.match(allowlist, /202609040008_customer_operations_contract_completion\.sql/);
   const rollback = text("scripts/ops/rollback-customer-operations.sql");
   assert.match(rollback, /ROLLBACK_CUSTOMER_OPERATIONS/);
   assert.match(rollback, /customer_operations_tables_archive/);
@@ -27,6 +28,7 @@ test("product allowlist and rollback procedure cover the ops contract", () => {
   assert.match(rollback, /ops_global_projection_outbox/);
   assert.match(rollback, /ops_provider_operation_ledger/);
   assert.match(rollback, /provider_id_ciphertext/);
+  assert.match(rollback, /ops_provider_correlations/);
 });
 
 test("ops surface is service-only and provider-free", () => {
@@ -68,4 +70,13 @@ test("worker deployment mounts OSS provider secrets read-only and binds image pr
   const worker = text("worker/ops-projection.ts");
   assert.match(worker, /api_access_token/);
   assert.match(worker, /BLOCKWISE_WORKER_REVISION must be the full deployed Git SHA/);
+  assert.match(worker, /CHATWOOT_ENQUIRY_SOURCE_ID/);
+  assert.match(worker, /record_ops_provider_step/);
+});
+
+test("Frank integrity handoff is explicit about current consumer boundary", () => {
+  const handoff = text("docs/runbooks/frank-ops-integrity-followup.md");
+  assert.match(handoff, /manifest\.json/);
+  assert.match(handoff, /does not consume this sidecar/);
+  assert.match(handoff, /active Frank consumer must add/);
 });

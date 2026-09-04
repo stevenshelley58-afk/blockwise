@@ -148,18 +148,27 @@ the documented contact edit `tags` field. See the [Mautic Contacts API](https://
 [Campaigns API](https://devdocs.mautic.org/en/7.1/rest_api/campaigns.html).
 
 Chatwoot uses its account-scoped contact, conversation, messages, status, and
-assignment endpoints with the official `api_access_token` header (the legacy
-Bearer header is retained only for compatibility). Every contact and
+assignment endpoints with only the official `api_access_token` header. Contact
+search uses the documented email query and then exact deterministic attributes;
+the configured inbox-specific `source_id` is supplied when creating a
+conversation. Every contact and
 conversation carries a deterministic Blockwise custom attribute; every message
 carries the operation key so a crash after a remote write is reconciled before
 a retry. Contact and conversation identifiers are stored in separate encrypted
 ledger columns and reduced to masked suffixes in snapshots. Website leads with
 no workspace use only the fixed global account/inbox and are published to
 Frank after the global queue settles; they are never associated by email.
+Deployment must set `CHATWOOT_ENQUIRY_SOURCE_ID`,
+`CHATWOOT_SUPPORT_SOURCE_ID`, and `CHATWOOT_GLOBAL_SOURCE_ID` to the source IDs
+belonging to their respective configured inboxes; the worker refuses to create
+a conversation when the binding is absent.
 
 The Hermes publisher writes Frank's exact PR #121 receipt and pointer shape,
 plus a generation `manifest.json` containing SHA-256 checksums for every
-projection, receipt, and pointer. The deployed `BLOCKWISE_WORKER_REVISION`
+projection, receipt, and pointer. The active Frank #121 reader does not yet
+consume that sidecar; the required consumer change and verification procedure
+are documented in `frank-ops-integrity-followup.md`, so the manifest is not
+represented as a consumer-enforced integrity boundary. The deployed `BLOCKWISE_WORKER_REVISION`
 (full image Git SHA) is the bundle source revision; provider/source row and
 queue identifiers form the durable source receipt set. Mautic lifecycle
 snapshots also materialize configured segment/campaign flow status, while the

@@ -116,6 +116,7 @@ export async function POST(request: NextRequest) {
   try {
     const firstName = parsed.data.name.split(/\s+/)[0] || "there";
     await enqueueEmail(serviceClient, {
+      workspaceId: undefined,
       messageType: "lead_welcome",
       templateId: "lead-welcome",
       templateVersion: 1,

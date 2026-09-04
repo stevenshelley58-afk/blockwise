@@ -51,6 +51,7 @@ export type DigestLead = {
 };
 
 export type DigestInput = {
+  workspaceId?: string;
   agentEmail: string;
   agentName: string;
   from: string;
@@ -92,6 +93,7 @@ ${leadRows}
   const idempotencyKey = `digest:${createHash("sha256").update([input.agentEmail, input.date].join("\0")).digest("hex")}`;
 
   const result = await enqueueEmail(input.supabase ?? createSupabaseServiceClient(), {
+    workspaceId: input.workspaceId,
     messageType: "lead_digest", templateId: "lead-digest", templateVersion: 1,
     to: input.agentEmail, from: input.from,
     subject: `${input.leads.length} new lead${input.leads.length === 1 ? "" : "s"} — ${input.date}`,
@@ -139,6 +141,7 @@ export async function scheduleFollowUpEmail(input: ScheduledFollowUpInput): Prom
     topic: input.topic,
     serviceSupabase,
     message: {
+    workspaceId: input.workspaceId,
     messageType: "lead_followup", templateId: "lead-followup", templateVersion: 1,
     to: input.to, from: input.from, subject: input.subject,
     html: input.html ?? `<p>${escapeHtml(input.text).replace(/\n/g, "<br>")}</p>`, text: input.text, nextAttemptAt: input.scheduledAt,
