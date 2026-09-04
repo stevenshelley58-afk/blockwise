@@ -32,10 +32,11 @@ not duplicate it.
   checkout. The env file and every secret file must be mode `0600`; secret
   directory mode is `0700`.
 - DNS A/AAAA records for mail, CRM, support, and SnagTime hostnames. Set MX,
-  SPF, DKIM, and DMARC for the mail domain; expose SMTP 25, submission 587,
-  SMTPS 465, and IMAPS 993 only after firewall review.
+  SPF, DKIM, and DMARC for the mail domain; expose SMTP 25 and submission 587
+  only after firewall review. IMAPS 993 remains private on the shared mail
+  network and must not be published by this stack.
 - The separately managed Frank/shared edge must include the reviewed
-  `infra/customer-ops/Caddyfile.snippets` and attach to
+`infra/customer-ops/Caddyfile.snippets.tmpl` (render with the installer) and attach to
   `blockwise-customer-ops-edge` plus `blockwise-customer-ops-mail`. Do not edit
   the live product Caddyfile as part of this runbook.
 - Before validation, an operator must create the narrowly shared mail network
@@ -90,6 +91,11 @@ chmod 600 /etc/blockwise/customer-ops/customer-ops.env
 scripts/vps/customer-ops-install.sh --env-file /etc/blockwise/customer-ops/customer-ops.env --check
 ```
 
+To produce the reviewed edge input without modifying this checkout, add
+`--render-caddy /etc/blockwise/customer-ops/Caddyfile.snippets`; the installer
+renders and validates the three configured web hostnames. Mail HTTP/JMAP is not
+rendered because product-mail keeps that listener private.
+
 The initial check requires DNS resolution, reachable SMTP submission port, all
 secret mounts, immutable SnagTime identity, and quiet `docker compose config`.
 
@@ -127,6 +133,11 @@ also sends a signed, non-credentialed probe and requires a 2xx response; until
 the adapter contract exists, the webhook assertion is explicitly deferred.
 It never emits credentials or API response bodies.
 
+Frank freshness must return the JSON contract
+`{"status":"fresh","fresh_until":"<RFC3339 future timestamp>","receipt":"<non-empty receipt>"}`;
+an arbitrary HTTP 2xx is not accepted. The SnagTime booking and external-mail
+receipts remain live acceptance gates after provider setup.
+
 ## Mail and customer acceptance
 
 The Mautic entrypoint reads the operator-supplied `mautic_smtp_password` file and
@@ -135,7 +146,8 @@ Mautic mailer settings in its UI/API and send a controlled message to an
 external mailbox. Chatwoot web/worker use the product-mail submission network
 with their distinct `chatwoot_smtp_password` identity. After Chatwoot bootstrap, use the
 operator-supplied `CHATWOOT_INBOX_USER` and `chatwoot_inbox_password` to create
-its email channel with the support mailbox's IMAP host/port (`product-mail:993`)
+its email channel with the support mailbox's IMAP host/port
+(`${MAIL_PUBLIC_HOST}:993` on the private mail-network alias)
 and SMTP host/port (`product-mail:587`), then perform this receipt-based
 acceptance:
 

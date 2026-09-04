@@ -14,11 +14,14 @@ done
 # shellcheck disable=SC1090
 set -a; . "$ENV_FILE"; set +a
 SECRETS_DIR="${CUSTOMER_OPS_SECRETS_DIR:-/etc/blockwise/customer-ops/secrets}"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 for name in mautic_smtp_password chatwoot_smtp_password snagtime_smtp_password chatwoot_inbox_password google_client_secret mautic_api_token chatwoot_api_token; do
   [[ -s "$SECRETS_DIR/$name" ]] || { echo "missing secret file: $name" >&2; exit 64; }
 done
 command -v curl >/dev/null || { echo 'curl is required' >&2; exit 69; }
+command -v docker >/dev/null || { echo 'docker is required for private-network IMAPS acceptance' >&2; exit 69; }
 command -v openssl >/dev/null || { echo 'openssl is required' >&2; exit 69; }
+command -v python3 >/dev/null || { echo 'python3 is required for projection freshness validation' >&2; exit 69; }
 command -v swaks >/dev/null || { echo 'swaks is required for the SMTP STARTTLS/AUTH acceptance gate' >&2; exit 69; }
 
 quiet_http() { curl --fail --silent --show-error --output /dev/null --write-out '%{http_code}' "$@"; }
@@ -26,7 +29,7 @@ smtp_host="${MAIL_PUBLIC_HOST:?MAIL_PUBLIC_HOST is required}"
 smtp_port="${SMTP_PORT:-587}"
 smtp_auth_check() {
   local label="$1" user="$2" secret_file="$3"
-  swaks --server "$smtp_host" --port "$smtp_port" --tls --auth LOGIN \
+  swaks --server "$smtp_host" --port "$smtp_port" --tls --tls-verify --auth LOGIN \
     --auth-user "$user" --auth-password "$(<"$SECRETS_DIR/$secret_file")" \
     --quit-after AUTH >/dev/null 2>&1 || { echo "$label SMTP STARTTLS/AUTH failed" >&2; exit 65; }
 }
@@ -34,14 +37,11 @@ smtp_auth_check 'Mautic' "${MAUTIC_SMTP_USER:?MAUTIC_SMTP_USER is required}" mau
 smtp_auth_check 'Chatwoot' "${CHATWOOT_SMTP_USER:?CHATWOOT_SMTP_USER is required}" chatwoot_smtp_password
 smtp_auth_check 'SnagTime' "${SNAGTIME_SMTP_USER:?SNAGTIME_SMTP_USER is required}" snagtime_smtp_password
 
-imap_netrc="$(mktemp)"
-trap 'rm -f "$imap_netrc"' EXIT
-chmod 600 "$imap_netrc"
-printf 'machine %s login %s password %s\n' "$smtp_host" \
-  "${CHATWOOT_INBOX_USER:?CHATWOOT_INBOX_USER is required}" \
-  "$(<"$SECRETS_DIR/chatwoot_inbox_password")" > "$imap_netrc"
-curl --fail --silent --show-error --output /dev/null --netrc-file "$imap_netrc" \
-  "imaps://${smtp_host}/INBOX" || { echo 'Chatwoot support inbox IMAPS authentication failed' >&2; exit 65; }
+inbox_user="${CHATWOOT_INBOX_USER:?CHATWOOT_INBOX_USER is required}"
+docker compose --env-file "$ENV_FILE" -f "$ROOT_DIR/infra/customer-ops/docker-compose.yml" \
+  run --rm --no-deps -T --entrypoint sh chatwoot-web -c \
+  'curl --fail --silent --show-error --output /dev/null --user "$${1}:$$(cat /run/secrets/chatwoot_inbox_password)" "imaps://$${2}/INBOX"' \
+  sh "$inbox_user" "$smtp_host" || { echo 'Chatwoot support inbox IMAPS authentication failed' >&2; exit 65; }
 
 mautic_code="$(quiet_http -H "Authorization: Bearer $(<"$SECRETS_DIR/mautic_api_token")" "${MAUTIC_API_URL:?MAUTIC_API_URL is required}/contacts?limit=1")"
 [[ "$mautic_code" == 2* ]] || { echo "Mautic API failed (HTTP $mautic_code)" >&2; exit 65; }
@@ -59,6 +59,18 @@ fi
 snagtime_body="$(curl --fail --silent --show-error "https://${SNAGTIME_HOST:?SNAGTIME_HOST is required}/api/health/ready")" || { echo 'SnagTime readiness failed' >&2; exit 65; }
 grep -Eq '"status"[[:space:]]*:[[:space:]]*"ready"|"ready"[[:space:]]*:[[:space:]]*true' <<<"$snagtime_body" || { echo 'SnagTime is not ready' >&2; exit 65; }
 grep -Eiq 'google|calendar' <<<"$snagtime_body" || { echo 'SnagTime Google configuration is not reported' >&2; exit 65; }
-projection_code="$(quiet_http "${FRANK_PROJECTION_HEALTH_URL:?FRANK_PROJECTION_HEALTH_URL is required}")"
-[[ "$projection_code" == 2* ]] || { echo "Frank projection freshness failed (HTTP $projection_code)" >&2; exit 65; }
+projection_body="$(curl --fail --silent --show-error "${FRANK_PROJECTION_HEALTH_URL:?FRANK_PROJECTION_HEALTH_URL is required}")" || { echo 'Frank projection endpoint unavailable' >&2; exit 65; }
+python3 -c 'import json,sys
+from datetime import datetime,timezone
+try:
+    value=json.load(sys.stdin)
+    if value.get("status") != "fresh": raise ValueError("status is not fresh")
+    fresh_until=value.get("fresh_until")
+    receipt=value.get("receipt")
+    if not isinstance(fresh_until,str) or not fresh_until: raise ValueError("fresh_until is missing")
+    if not isinstance(receipt,str) or not receipt: raise ValueError("receipt is missing")
+    expiry=datetime.fromisoformat(fresh_until.replace("Z","+00:00"))
+    if expiry <= datetime.now(timezone.utc): raise ValueError("fresh_until is expired")
+except (ValueError,TypeError,KeyError) as error:
+    raise SystemExit(f"invalid Frank projection freshness contract: {error}")' <<<"$projection_body" || exit 65
 echo 'customer-ops smoke passed: SMTP TLS/AUTH, Mautic API, Chatwoot API, SnagTime Google readiness, Frank projection freshness (webhook signed roundtrip optional/deferred)'

@@ -97,6 +97,7 @@ services:
       - customer_ops_mautic_media_files:/var/www/html/docroot/media/files
       - customer_ops_mautic_media_images:/var/www/html/docroot/media/images
       - customer_ops_mautic_logs:/var/www/html/var/logs
+      - customer_ops_mautic_var:/var/www/html/var
       - ./mautic-entrypoint.sh:/customer-ops/mautic-entrypoint.sh:ro
     networks: [edge, backend, egress, mail]
     depends_on:
@@ -136,6 +137,7 @@ services:
       - customer_ops_mautic_media_files:/var/www/html/docroot/media/files
       - customer_ops_mautic_media_images:/var/www/html/docroot/media/images
       - customer_ops_mautic_logs:/var/www/html/var/logs
+      - customer_ops_mautic_var:/var/www/html/var
       - ./mautic-entrypoint.sh:/customer-ops/mautic-entrypoint.sh:ro
     networks: [backend, egress, mail]
     depends_on:
@@ -169,6 +171,7 @@ services:
       - customer_ops_mautic_media_files:/var/www/html/docroot/media/files
       - customer_ops_mautic_media_images:/var/www/html/docroot/media/images
       - customer_ops_mautic_logs:/var/www/html/var/logs
+      - customer_ops_mautic_var:/var/www/html/var
       - ./mautic-entrypoint.sh:/customer-ops/mautic-entrypoint.sh:ro
     networks: [backend, egress, mail]
     depends_on:
@@ -240,7 +243,7 @@ services:
       SMTP_PASSWORD_FILE: /run/secrets/chatwoot_smtp_password
       SMTP_ENABLE_STARTTLS_AUTO: "true"
       MAILER_SENDER_EMAIL: ${CHATWOOT_EMAIL_FROM:?set CHATWOOT_EMAIL_FROM}
-    secrets: [chatwoot_secret_key_base, chatwoot_db_password, chatwoot_smtp_password]
+    secrets: [chatwoot_secret_key_base, chatwoot_db_password, chatwoot_smtp_password, chatwoot_inbox_password]
     volumes:
       - customer_ops_chatwoot_storage:/app/storage
       - customer_ops_chatwoot_tmp:/app/tmp
@@ -384,6 +387,7 @@ volumes:
   customer_ops_mautic_media_files: {}
   customer_ops_mautic_media_images: {}
   customer_ops_mautic_logs: {}
+  customer_ops_mautic_var: {}
   customer_ops_chatwoot_storage: {}
   customer_ops_chatwoot_tmp: {}
 
@@ -399,5 +403,6 @@ secrets:
   mautic_smtp_password: { file: "${CUSTOMER_OPS_SECRETS_DIR:-/etc/blockwise/customer-ops/secrets}/mautic_smtp_password" }
   chatwoot_smtp_password: { file: "${CUSTOMER_OPS_SECRETS_DIR:-/etc/blockwise/customer-ops/secrets}/chatwoot_smtp_password" }
   snagtime_smtp_password: { file: "${CUSTOMER_OPS_SECRETS_DIR:-/etc/blockwise/customer-ops/secrets}/snagtime_smtp_password" }
+  chatwoot_inbox_password: { file: "${CUSTOMER_OPS_SECRETS_DIR:-/etc/blockwise/customer-ops/secrets}/chatwoot_inbox_password" }
   snagtime_auth_secret: { file: "${CUSTOMER_OPS_SECRETS_DIR:-/etc/blockwise/customer-ops/secrets}/snagtime_auth_secret" }
   snagtime_token_encryption_key: { file: "${CUSTOMER_OPS_SECRETS_DIR:-/etc/blockwise/customer-ops/secrets}/snagtime_token_encryption_key" }

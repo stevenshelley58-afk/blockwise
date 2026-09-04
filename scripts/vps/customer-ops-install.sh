@@ -7,19 +7,22 @@ usage: customer-ops-install.sh --env-file /etc/blockwise/customer-ops/customer-o
 
 --check (default) validates prerequisites and rendered Compose without starting services.
 --apply additionally starts the isolated customer-ops Compose project.
---post-edge-tls validates public HTTPS certificates after the shared edge routes exist.
+--post-edge-tls validates public HTTPS/SMTP certificates after the shared edge routes exist.
+--render-caddy FILE renders the hostname-safe edge snippet outside the checkout.
 EOF
 }
 
 MODE=check
 ENV_FILE=''
 POST_EDGE_TLS=0
+CADDY_OUTPUT=''
 while (($#)); do
   case "$1" in
     --env-file) [[ $# -ge 2 ]] || { usage; exit 64; }; ENV_FILE="$2"; shift 2 ;;
     --check) MODE=check; shift ;;
     --apply) MODE=apply; shift ;;
     --post-edge-tls) POST_EDGE_TLS=1; shift ;;
+    --render-caddy) [[ $# -ge 2 ]] || { usage; exit 64; }; CADDY_OUTPUT="$2"; shift 2 ;;
     -h|--help) usage; exit 0 ;;
     *) usage; exit 64 ;;
   esac
@@ -31,6 +34,7 @@ done
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 COMPOSE_FILE="$ROOT_DIR/infra/customer-ops/docker-compose.yml"
+CADDY_TEMPLATE="$ROOT_DIR/infra/customer-ops/Caddyfile.snippets.tmpl"
 SECRETS_DIR="${CUSTOMER_OPS_SECRETS_DIR:-/etc/blockwise/customer-ops/secrets}"
 export COMPOSE_PROJECT_NAME=blockwise-customer-ops
 
@@ -40,11 +44,10 @@ command -v getent >/dev/null || { echo 'getent is required for DNS validation' >
 command -v openssl >/dev/null || { echo 'openssl is required for TLS validation' >&2; exit 69; }
 command -v nc >/dev/null || { echo 'nc is required for port validation' >&2; exit 69; }
 command -v timeout >/dev/null || { echo 'timeout is required for TLS validation' >&2; exit 69; }
+command -v python3 >/dev/null || { echo 'python3 is required for URI-safe secret generation' >&2; exit 69; }
 docker network inspect blockwise-customer-ops-mail >/dev/null 2>&1 || { echo 'shared product-mail network is missing: create blockwise-customer-ops-mail after review' >&2; exit 66; }
-if ! swapon --show 2>/dev/null | tail -n +2 | grep -q .; then
-  echo 'at least 1 GiB swap is required for Chatwoot upgrade safety' >&2
-  [[ "$MODE" == apply ]] && exit 66
-fi
+swap_bytes="$(swapon --show=SIZE --bytes --noheadings 2>/dev/null | awk '{ total += $1 } END { print total + 0 }')"
+(( swap_bytes >= 1073741824 )) || { echo "at least 1 GiB active swap is required (detected ${swap_bytes} bytes)" >&2; exit 66; }
 
 # shellcheck disable=SC1090
 set -a
@@ -58,6 +61,26 @@ for name in "${required_vars[@]}"; do
 done
 [[ "$SNAGTIME_REVISION" =~ ^[0-9a-f]{40}$ ]] || { echo 'SNAGTIME_REVISION must be a full lowercase Git SHA' >&2; exit 64; }
 [[ "$SNAGTIME_IMAGE" =~ @sha256:[0-9a-f]{64}$ && "$SNAGTIME_IMAGE" != *:latest@* ]] || { echo 'SNAGTIME_IMAGE must include the published immutable sha256 digest' >&2; exit 64; }
+hostname_pattern='^[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?$'
+[[ "$MAIL_PUBLIC_HOST" =~ $hostname_pattern && "$MAUTIC_HOST" =~ $hostname_pattern && "$SNAGTIME_HOST" =~ $hostname_pattern ]] || { echo 'mail, Mautic, and SnagTime hosts must be DNS hostnames' >&2; exit 64; }
+CHATWOOT_CADDY_HOST="${CHATWOOT_HOST#https://}"
+CHATWOOT_CADDY_HOST="${CHATWOOT_CADDY_HOST#http://}"
+[[ "$CHATWOOT_CADDY_HOST" =~ $hostname_pattern ]] || { echo 'CHATWOOT_HOST must be an http(s) DNS URL without a path' >&2; exit 64; }
+[[ -f "$CADDY_TEMPLATE" ]] || { echo 'Caddy snippet template is missing' >&2; exit 66; }
+CADDY_RENDERED="$(mktemp /tmp/blockwise-customer-ops-caddy.XXXXXX)"
+trap 'rm -f "$CADDY_RENDERED"' EXIT
+sed -e "s|\${MAUTIC_HOST}|$MAUTIC_HOST|g" \
+  -e "s|\${CHATWOOT_HOST}|$CHATWOOT_CADDY_HOST|g" \
+  -e "s|\${SNAGTIME_HOST}|$SNAGTIME_HOST|g" "$CADDY_TEMPLATE" > "$CADDY_RENDERED"
+! grep -Eq '\$\{[A-Za-z_][A-Za-z0-9_]*\}' "$CADDY_RENDERED" || { echo 'unresolved Caddy hostname placeholder' >&2; exit 64; }
+grep -Fq "$MAUTIC_HOST" "$CADDY_RENDERED" && grep -Fq "$CHATWOOT_CADDY_HOST" "$CADDY_RENDERED" && grep -Fq "$SNAGTIME_HOST" "$CADDY_RENDERED" || { echo 'rendered Caddy hostnames do not match env' >&2; exit 64; }
+if command -v caddy >/dev/null; then
+  caddy validate --config "$CADDY_RENDERED" --adapter caddyfile >/dev/null || { echo 'rendered Caddy snippets failed validation' >&2; exit 65; }
+fi
+if [[ -n "$CADDY_OUTPUT" ]]; then
+  case "$CADDY_OUTPUT" in "$ROOT_DIR"/*) echo 'Caddy output must be outside the checkout' >&2; exit 64 ;; esac
+  install -m 0644 "$CADDY_RENDERED" "$CADDY_OUTPUT"
+fi
 
 mkdir -p "$SECRETS_DIR"
 chmod 700 "$SECRETS_DIR"
@@ -81,11 +104,11 @@ done
 
 write_url_secret() {
   local path="$1" user="$2" db="$3" password_file="$4"
-  if [[ ! -e "$path" ]]; then
+  password_encoded="$(python3 -c 'import sys,urllib.parse; print(urllib.parse.quote(sys.stdin.read().rstrip("\n"), safe=""))' < "$password_file")"
+  expected="postgresql://${user}:${password_encoded}@postgres:5432/${db}?connect_timeout=3"
+  if [[ ! -s "$path" ]] || ! cmp -s <(printf '%s\n' "$expected") "$path"; then
     umask 077
-    password="$(<"$password_file")"
-    password="${password//%/%25}"; password="${password//\//%2F}"; password="${password//:/%3A}"; password="${password//+/%2B}"; password="${password//=/%3D}"; password="${password//$'\n'/}"
-    printf 'postgresql://%s:%s@postgres:5432/%s?connect_timeout=3\n' "$user" "$password" "$db" > "$path"
+    printf '%s\n' "$expected" > "$path"
   fi
   chmod 600 "$path"
 }
@@ -105,10 +128,10 @@ nc -z -w 8 "$MAIL_PUBLIC_HOST" "$mail_port" >/dev/null 2>&1 || {
 if [[ "$POST_EDGE_TLS" == 1 ]]; then
   for url in "https://$MAUTIC_HOST" "$CHATWOOT_HOST" "https://$SNAGTIME_HOST"; do
     host="${url#https://}"; host="${host%%/*}"; host="${host%%:*}"
-    timeout 12 openssl s_client -connect "$host:443" -servername "$host" -verify_return_error </dev/null 2>/dev/null | openssl x509 -noout -subject -issuer >/dev/null || { echo "TLS certificate validation failed: $host" >&2; exit 65; }
+    timeout 12 openssl s_client -connect "$host:443" -servername "$host" -verify_return_error -verify_hostname "$host" </dev/null 2>/dev/null | openssl x509 -noout -subject -issuer >/dev/null || { echo "TLS certificate validation failed: $host" >&2; exit 65; }
   done
   mail_port="${SMTP_PORT:-587}"
-  timeout 12 openssl s_client -starttls smtp -connect "$MAIL_PUBLIC_HOST:$mail_port" -servername "$MAIL_PUBLIC_HOST" -verify_return_error </dev/null 2>/dev/null | openssl x509 -noout -subject -issuer >/dev/null || { echo "SMTP TLS certificate validation failed: $MAIL_PUBLIC_HOST:$mail_port" >&2; exit 65; }
+  timeout 12 openssl s_client -starttls smtp -connect "$MAIL_PUBLIC_HOST:$mail_port" -servername "$MAIL_PUBLIC_HOST" -verify_return_error -verify_hostname "$MAIL_PUBLIC_HOST" </dev/null 2>/dev/null | openssl x509 -noout -subject -issuer >/dev/null || { echo "SMTP TLS certificate validation failed: $MAIL_PUBLIC_HOST:$mail_port" >&2; exit 65; }
 fi
 
 docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" config --quiet
