@@ -32,7 +32,6 @@ command -v curl >/dev/null || { echo 'curl is required' >&2; exit 69; }
 command -v docker >/dev/null || { echo 'docker is required for private-network IMAPS acceptance' >&2; exit 69; }
 command -v openssl >/dev/null || { echo 'openssl is required' >&2; exit 69; }
 command -v python3 >/dev/null || { echo 'python3 is required for projection freshness validation' >&2; exit 69; }
-command -v swaks >/dev/null || { echo 'swaks is required for the SMTP STARTTLS/AUTH acceptance gate' >&2; exit 69; }
 
 quiet_http() { curl --fail --silent --show-error --output /dev/null --write-out '%{http_code}' "$@"; }
 smtp_host="${MAIL_PUBLIC_HOST:?MAIL_PUBLIC_HOST is required}"
@@ -44,9 +43,10 @@ smtp_auth_check() {
   chmod 600 "$config"
   trap 'rm -f "$config"' RETURN
   printf '%s\n' "--auth-password=$(<"$SECRETS_DIR/$secret_file")" > "$config"
-  swaks --config "$config" --server "$smtp_host" --port "$smtp_port" --tls --tls-sni-name "$smtp_host" --tls-verify --auth LOGIN \
-    --auth-user "$user" \
-    --quit-after AUTH >/dev/null 2>&1 || { echo "$label SMTP STARTTLS/AUTH failed" >&2; exit 65; }
+  docker compose --env-file "$ENV_FILE" -f "$ROOT_DIR/infra/customer-ops/docker-compose.yml" --profile smoke \
+    run --build --rm --no-deps -T -v "$config:/run/swaks.conf:ro" --entrypoint swaks smtp-client \
+    --config /run/swaks.conf --server "$smtp_host" --port "$smtp_port" --tls --tls-sni-name "$smtp_host" --tls-verify --auth LOGIN \
+    --auth-user "$user" --quit-after AUTH >/dev/null 2>&1 || { echo "$label SMTP STARTTLS/AUTH failed" >&2; exit 65; }
   rm -f "$config"
   trap - RETURN
 }

@@ -10,7 +10,7 @@ CADDY_TEST="$(mktemp)"
 trap 'rm -f "$PRODUCT_ENV" "$CUSTOMER_ENV" "$CADDY_TEST"' EXIT
 DOCKER_BIN="${DOCKER_BIN:-docker}"
 [[ -f "$COMPOSE_FILE" ]] || { echo 'customer-ops compose file missing' >&2; exit 1; }
-for service in postgres mariadb redis mautic mautic-cron mautic-worker chatwoot-prepare chatwoot-web chatwoot-worker snagtime-web snagtime-worker; do
+for service in postgres mariadb redis mautic mautic-cron mautic-worker chatwoot-prepare chatwoot-web chatwoot-worker snagtime-web snagtime-worker smtp-client; do
   grep -Eq "^  ${service}:$" "$COMPOSE_FILE" || { echo "missing service: $service" >&2; exit 1; }
 done
 grep -q 'internal: true' "$COMPOSE_FILE" || { echo 'backend network is not private' >&2; exit 1; }
@@ -111,11 +111,21 @@ grep -q 'source_receipt_ids' "$ROOT_DIR/scripts/vps/customer-ops-smoke.sh" || { 
 grep -q 'stalwart-backup.sh' "$ROOT_DIR/scripts/vps/customer-ops-backup.sh" || { echo 'product-mail backup integration missing' >&2; exit 1; }
 grep -q 'product-mail' "$ROOT_DIR/scripts/vps/customer-ops-restore.sh" || { echo 'product-mail restore coverage missing' >&2; exit 1; }
 grep -q 'sha256sum --check' "$ROOT_DIR/scripts/vps/customer-ops-restore.sh" || { echo 'product-mail checksum validation missing' >&2; exit 1; }
+grep -q 'refusing to overwrite' "$ROOT_DIR/scripts/vps/customer-ops-restore.sh" || { echo 'restore receipt no-clobber guard missing' >&2; exit 1; }
+grep -q 'mktemp.*customer-ops-restore-receipt' "$ROOT_DIR/scripts/vps/customer-ops-restore.sh" || { echo 'restore receipt temporary publication missing' >&2; exit 1; }
+grep -q 'ln --.*RECEIPT' "$ROOT_DIR/scripts/vps/customer-ops-restore.sh" || { echo 'restore receipt atomic publication missing' >&2; exit 1; }
 grep -q 'RESTORE_PROJECT}-mail-config:/target' "$ROOT_DIR/docs/runbooks/customer-ops-vps.md" || { echo 'isolated product-mail restore volume import missing' >&2; exit 1; }
 grep -q 'BLOCKWISE_MAIL_CONFIG_VOLUME_NAME=' "$ROOT_DIR/docs/runbooks/customer-ops-vps.md" || { echo 'isolated product-mail Compose volume override missing' >&2; exit 1; }
-grep -q 'CADDY_VALIDATOR_IMAGE=.*@sha256:' "$ROOT_DIR/scripts/vps/customer-ops-install.sh" || { echo 'pinned Caddy validator missing' >&2; exit 1; }
+CADDY_VALIDATOR='caddy:2.11.3-alpine@sha256:86deaf5e3d3408a6ccec08fbb79989783dd26e206ae10bcf78a801dc8c9ab794'
+grep -q "$CADDY_VALIDATOR" "$ROOT_DIR/scripts/vps/customer-ops-install.sh" || { echo 'pinned Caddy validator missing' >&2; exit 1; }
+grep -q "$CADDY_VALIDATOR" "$ROOT_DIR/.github/workflows/hard-reset-verification.yml" || { echo 'CI Caddy validator digest differs or is missing' >&2; exit 1; }
+grep -q 'customer-ops-contract-test.sh' "$ROOT_DIR/.github/workflows/hard-reset-verification.yml" || { echo 'customer-ops contract test is not wired into CI' >&2; exit 1; }
 ! grep -q 'contract-placeholder' "$COMPOSE_FILE" || { echo 'moving placeholder image remains' >&2; exit 1; }
 grep -q 'run --rm --no-deps' "$ROOT_DIR/scripts/vps/customer-ops-smoke.sh" || { echo 'private-network IMAPS client contract missing' >&2; exit 1; }
+grep -q -- '--profile smoke' "$ROOT_DIR/scripts/vps/customer-ops-smoke.sh" || { echo 'private-network SMTP client profile missing' >&2; exit 1; }
+grep -q -- '--tls-sni-name' "$ROOT_DIR/scripts/vps/customer-ops-install.sh" || { echo 'installer SMTP SNI contract missing' >&2; exit 1; }
+grep -q -- '--profile smoke' "$ROOT_DIR/scripts/vps/customer-ops-install.sh" || { echo 'installer private SMTP client profile missing' >&2; exit 1; }
+grep -q 'FROM alpine:3.22.1@sha256:' "$ROOT_DIR/infra/customer-ops/smtp-client/Dockerfile" || { echo 'SMTP client base image is not digest-pinned' >&2; exit 1; }
 if grep -Eq '(^|[/:])latest([@:]|$)' "$COMPOSE_FILE"; then echo 'floating latest image tag found' >&2; exit 1; fi
 for script in customer-ops-install.sh customer-ops-backup.sh customer-ops-restore.sh customer-ops-smoke.sh customer-ops-contract-test.sh; do
   bash -n "$ROOT_DIR/scripts/vps/$script"

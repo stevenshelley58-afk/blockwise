@@ -357,6 +357,23 @@ services:
       resources:
         limits: { cpus: "1", memory: 768M }
 
+  smtp-client:
+    # Built only for acceptance checks; it has no persistent state and no
+    # ingress. The Dockerfile pins its Alpine base by digest.
+    build:
+      context: ./smtp-client
+      dockerfile: Dockerfile
+    profiles: [smoke]
+    entrypoint: ["swaks"]
+    networks: [mail]
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    deploy:
+      resources:
+        limits: { cpus: "0.25", memory: 256M }
+
 networks:
   edge:
     name: blockwise-customer-ops-edge

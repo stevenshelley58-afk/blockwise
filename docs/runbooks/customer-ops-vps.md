@@ -100,8 +100,12 @@ To produce the reviewed edge input without modifying this checkout, add
 renders and validates the three configured web hostnames. Mail HTTP/JMAP is not
 rendered because product-mail keeps that listener private.
 
-The initial check requires DNS resolution, reachable SMTP submission port, all
-secret mounts, immutable SnagTime identity, and quiet `docker compose config`.
+The initial check requires DNS resolution, reachable private SMTP submission
+port and authenticated STARTTLS for all three service identities, all secret
+mounts, immutable SnagTime identity, and quiet `docker compose config`. SMTP
+checks run in a build-only ephemeral `smtp-client` container attached solely
+to `blockwise-customer-ops-mail`, targeting the `MAIL_PUBLIC_HOST` alias at
+the container's submission port; they do not probe a public host port.
 
 ```bash
 scripts/vps/customer-ops-install.sh --env-file /etc/blockwise/customer-ops/customer-ops.env --apply
@@ -130,7 +134,7 @@ scripts/vps/customer-ops-smoke.sh --env-file /etc/blockwise/customer-ops/custome
 ```
 
 It reports only pass/fail and status codes. It checks strict SMTP STARTTLS/AUTH
-for all three service identities (with `swaks` installed), runs support IMAPS
+for all three service identities in the pinned ephemeral `smtp-client`, runs support IMAPS
 authentication from an ephemeral Chatwoot client on the private mail network,
 checks Mautic API authentication, Chatwoot API, SnagTime readiness plus
 Google/Calendar configuration, and the configured Frank projection freshness

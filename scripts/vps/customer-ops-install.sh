@@ -45,7 +45,6 @@ command -v docker >/dev/null || { echo 'docker is required' >&2; exit 69; }
 docker compose version >/dev/null || { echo 'docker compose plugin is required' >&2; exit 69; }
 command -v getent >/dev/null || { echo 'getent is required for DNS validation' >&2; exit 69; }
 command -v openssl >/dev/null || { echo 'openssl is required for TLS validation' >&2; exit 69; }
-command -v nc >/dev/null || { echo 'nc is required for port validation' >&2; exit 69; }
 command -v timeout >/dev/null || { echo 'timeout is required for TLS validation' >&2; exit 69; }
 command -v python3 >/dev/null || { echo 'python3 is required for URI-safe secret generation' >&2; exit 69; }
 command -v readlink >/dev/null || { echo 'readlink is required for secret path validation' >&2; exit 69; }
@@ -176,17 +175,37 @@ for host in "$MAIL_PUBLIC_HOST" "$MAUTIC_HOST" "$CHATWOOT_CADDY_HOST" "$SNAGTIME
 done
 
 mail_port="${SMTP_PORT:-587}"
-nc -z -w 8 "$MAIL_PUBLIC_HOST" "$mail_port" >/dev/null 2>&1 || {
-  echo "mail submission port is not reachable: $MAIL_PUBLIC_HOST:$mail_port" >&2
+docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" --profile smoke run --build --rm --no-deps -T --entrypoint sh smtp-client \
+  -ceu 'nc -z -w 8 "$1" "$2"' sh "$MAIL_PUBLIC_HOST" "$mail_port" >/dev/null 2>&1 || {
+  echo "private mail submission port is not reachable: $MAIL_PUBLIC_HOST:$mail_port" >&2
   exit 65
 }
+smtp_auth_check() {
+  local label="$1" user="$2" secret_file="$3" config
+  config="$(mktemp /tmp/blockwise-installer-swaks.XXXXXX)"
+  chmod 600 "$config"
+  trap 'rm -f "$config"' RETURN
+  printf '%s\n' "--auth-password=$(<"$SECRETS_DIR/$secret_file")" > "$config"
+  docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" --profile smoke \
+    run --build --rm --no-deps -T -v "$config:/run/swaks.conf:ro" --entrypoint swaks smtp-client \
+    --config /run/swaks.conf --server "$MAIL_PUBLIC_HOST" --port "$mail_port" \
+    --tls --tls-sni-name "$MAIL_PUBLIC_HOST" --tls-verify --auth LOGIN \
+    --auth-user "$user" --quit-after AUTH >/dev/null 2>&1 || { echo "$label SMTP STARTTLS/AUTH failed" >&2; exit 65; }
+  rm -f "$config"
+  trap - RETURN
+}
+smtp_auth_check Mautic "$MAUTIC_SMTP_USER" mautic_smtp_password
+smtp_auth_check Chatwoot "$CHATWOOT_SMTP_USER" chatwoot_smtp_password
+smtp_auth_check SnagTime "$SNAGTIME_SMTP_USER" snagtime_smtp_password
 
 if [[ "$POST_EDGE_TLS" == 1 ]]; then
   for host in "$MAUTIC_HOST" "$CHATWOOT_CADDY_HOST" "$SNAGTIME_HOST"; do
     timeout 12 openssl s_client -connect "$host:443" -servername "$host" -verify_return_error -verify_hostname "$host" </dev/null 2>/dev/null | openssl x509 -noout -subject -issuer >/dev/null || { echo "TLS certificate validation failed: $host" >&2; exit 65; }
   done
   mail_port="${SMTP_PORT:-587}"
-  timeout 12 openssl s_client -starttls smtp -connect "$MAIL_PUBLIC_HOST:$mail_port" -servername "$MAIL_PUBLIC_HOST" -verify_return_error -verify_hostname "$MAIL_PUBLIC_HOST" </dev/null 2>/dev/null | openssl x509 -noout -subject -issuer >/dev/null || { echo "SMTP TLS certificate validation failed: $MAIL_PUBLIC_HOST:$mail_port" >&2; exit 65; }
+  docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" --profile smoke run --build --rm --no-deps -T --entrypoint sh smtp-client \
+    -ceu 'set -o pipefail; timeout 12 openssl s_client -starttls smtp -connect "$1:$2" -servername "$1" -verify_return_error -verify_hostname "$1" </dev/null 2>/dev/null | openssl x509 -noout -subject -issuer >/dev/null' \
+    sh "$MAIL_PUBLIC_HOST" "$mail_port" || { echo "SMTP TLS certificate validation failed: $MAIL_PUBLIC_HOST:$mail_port" >&2; exit 65; }
 fi
 
 docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" config --quiet

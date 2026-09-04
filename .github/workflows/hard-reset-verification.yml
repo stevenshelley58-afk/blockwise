@@ -28,11 +28,14 @@ jobs:
       - name: Check for NUL-byte corruption
         run: npm run check:nul
 
+      - name: Run customer-ops infrastructure contract test
+        run: bash scripts/vps/customer-ops-contract-test.sh
+
       - name: Validate product Caddy configuration
         env:
           BLOCKWISE_PRODUCT_DOMAIN: blockwise.sale
           TRUSTED_PROXY_RANGES: 172.30.0.2/32
-        run: docker run --rm -e BLOCKWISE_PRODUCT_DOMAIN -e TRUSTED_PROXY_RANGES -v "${{ github.workspace }}/infra/product/Caddyfile:/etc/caddy/Caddyfile:ro" caddy:2.11.3-alpine caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+        run: docker run --rm -e BLOCKWISE_PRODUCT_DOMAIN -e TRUSTED_PROXY_RANGES -v "${{ github.workspace }}/infra/product/Caddyfile:/etc/caddy/Caddyfile:ro" caddy:2.11.3-alpine@sha256:86deaf5e3d3408a6ccec08fbb79989783dd26e206ae10bcf78a801dc8c9ab794 caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
       - name: Run hard-reset verification
         run: npm run verify:hard-reset
 

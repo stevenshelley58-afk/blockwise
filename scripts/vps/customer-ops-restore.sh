@@ -21,10 +21,15 @@ command -v sha256sum >/dev/null || { echo 'sha256sum is required for product-mai
 [[ "$(readlink -f -- "$PASSWORD_FILE")" == "$PASSWORD_FILE" && "$(readlink -f -- "$TARGET")" == "$TARGET" ]] || { echo 'password/target path may not contain symlinks' >&2; exit 64; }
 [[ "$REPOSITORY" =~ ^(sftp|s3|rest|rclone|b2|azure|gs): ]] || { echo 'repository must be an off-host restic backend (sftp:, s3:, rest:, rclone:, b2:, azure:, or gs:)' >&2; exit 64; }
 [[ -d "$TARGET" ]] || { echo 'restore target must already exist' >&2; exit 64; }
+[[ "$(stat -c '%a' "$TARGET" 2>/dev/null || stat -f '%Lp' "$TARGET")" == 700 && "$(stat -c '%u' "$TARGET" 2>/dev/null || stat -f '%u' "$TARGET")" == 0 ]] || { echo 'restore target must be root-owned mode 0700' >&2; exit 64; }
 [[ -z "$(find "$TARGET" -mindepth 1 -maxdepth 1 -print -quit)" ]] || { echo 'restore target is not empty; refusing to overwrite' >&2; exit 65; }
+receipt_dir=''
 if [[ -n "$RECEIPT" ]]; then
   [[ "$RECEIPT" = /* && ! -L "$RECEIPT" ]] || { echo 'restore receipt must be an absolute non-symlink path' >&2; exit 64; }
-  [[ ! -e "$RECEIPT" || "$(readlink -f -- "$RECEIPT")" == "$RECEIPT" ]] || { echo 'restore receipt path may not contain symlinks' >&2; exit 64; }
+  receipt_dir="$(dirname -- "$RECEIPT")"
+  [[ -d "$receipt_dir" && ! -L "$receipt_dir" && "$(readlink -f -- "$receipt_dir")" == "$receipt_dir" ]] || { echo 'restore receipt parent must be an absolute regular directory without symlinked path components' >&2; exit 64; }
+  [[ "$(stat -c '%a' "$receipt_dir" 2>/dev/null || stat -f '%Lp' "$receipt_dir")" == 700 && "$(stat -c '%u' "$receipt_dir" 2>/dev/null || stat -f '%u' "$receipt_dir")" == 0 ]] || { echo 'restore receipt parent must be root-owned mode 0700' >&2; exit 64; }
+  [[ ! -e "$RECEIPT" ]] || { echo 'restore receipt already exists; refusing to overwrite' >&2; exit 65; }
 fi
 [[ "$(stat -c '%a' "$PASSWORD_FILE" 2>/dev/null || stat -f '%Lp' "$PASSWORD_FILE")" == 600 && "$(stat -c '%u' "$PASSWORD_FILE" 2>/dev/null || stat -f '%u' "$PASSWORD_FILE")" == 0 ]] || { echo 'restic password file must be root-owned mode 0600' >&2; exit 64; }
 command -v restic >/dev/null || { echo 'restic is required' >&2; exit 69; }
@@ -43,13 +48,21 @@ MAIL_ARTIFACT_DIR="$(dirname "$MANIFEST")/product-mail"
 (cd "$MAIL_ARTIFACT_DIR" && sha256sum --check SHA256SUMS --status) || { echo 'product-mail artifact checksum validation failed' >&2; exit 65; }
 if [[ -n "$RECEIPT" ]]; then
   umask 077
+  receipt_tmp="$(mktemp "$receipt_dir/.customer-ops-restore-receipt.XXXXXX")"
+  chmod 600 "$receipt_tmp"
+  cleanup_receipt() { [[ -z "${receipt_tmp:-}" ]] || rm -f -- "$receipt_tmp"; }
+  trap cleanup_receipt EXIT
   {
     echo 'blockwise customer-ops prepared restore receipt'
     date -u +%Y-%m-%dT%H:%M:%SZ
     echo "snapshot=$SNAPSHOT"
     echo 'validated: empty-target guard, coverage manifest, postgres/mariadb/mautic/chatwoot/product-mail artifacts and Stalwart checksums'
     echo 'status: complete artifact extraction and checksum validation; isolated service import and smoke drill are still required'
-  } > "$RECEIPT"
-  chmod 600 "$RECEIPT"
+  } > "$receipt_tmp"
+  # A same-directory hard link publishes the complete file atomically and
+  # fails if a receipt appeared after the initial no-clobber check.
+  ln -- "$receipt_tmp" "$RECEIPT" || { echo 'restore receipt appeared during restore; refusing overwrite' >&2; exit 65; }
+  rm -f "$receipt_tmp"
+  receipt_tmp=''
 fi
 echo "restore completed into empty target: $TARGET; customer-ops and product-mail state are present; import into isolated services only"
