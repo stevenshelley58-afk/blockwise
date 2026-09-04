@@ -21,6 +21,8 @@ export type Placement = (typeof PLACEMENTS)[number];
 export const PLACEMENT_DIMENSIONS: Record<string, { width: number; height: number }> = { feed: { width: 1080, height: 1350 }, story: { width: 1080, height: 1920 } };
 /** Native-canvas readability floor shared by contract validation and rendering. */
 export const MINIMUM_TEXT_SIZE_PX: Record<Placement, number> = { feed: 24, story: 32 };
+/** Multi-line text needs at least one full font-size of baseline separation. */
+export const MINIMUM_MULTILINE_LINE_HEIGHT = 1;
 export interface Layout { placement: Placement; layers: LayoutLayer[]; safeZones: SafeZone[]; }
 export interface ImageInput { key: string; label: string; required?: boolean; acceptedTypes: string[]; defaultAssetKey?: string; }
 export interface TextInput { key: string; label: string; placeholder: string; maxLength: number; }

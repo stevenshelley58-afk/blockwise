@@ -29,6 +29,7 @@ test("CLI text refusal is one path-free line and leaves no partial output or rec
         layers: [
           { type: "plate", layerId: "feed-bg", colourRole: "background", geometry: { x: 0, y: 0, width: 1080, height: 1350 }, protected: true },
           { type: "text", layerId: "feed-email-text", inputKey: "email", font: { file: "manrope-800.woff2" }, fontSize: 30, lineHeight: 1, tracking: 1, alignment: "left", maxCharacters: 40, maxLines: 1, colourRole: "mainText", overflowBehaviour: "scale_down", geometry: { x: 20, y: 20, width: 8, height: 8 } },
+          { type: "text", layerId: "feed-features", inputKey: "features", font: { file: "manrope-800.woff2" }, fontSize: 30, lineHeight: 0.8, tracking: 0, alignment: "left", maxCharacters: 40, maxLines: 2, colourRole: "mainText", overflowBehaviour: "scale_down", geometry: { x: 40, y: 100, width: 800, height: 120 } },
         ],
         safeZones: [],
       },
@@ -43,6 +44,7 @@ test("CLI text refusal is one path-free line and leaves no partial output or rec
       imageInputs: [],
       textInputs: [
         { key: "email", label: "Email", placeholder: "hello@example.com", maxLength: 40 },
+        { key: "features", label: "Features", placeholder: "ONE\nTWO", maxLength: 40 },
         { key: "phone", label: "Phone", placeholder: "+61 400 000 000", maxLength: 40 },
       ],
       semanticColours: colours,
@@ -76,6 +78,7 @@ test("CLI text refusal is one path-free line and leaves no partial output or rec
     assert.equal(stderr.split(/\r?\n/).length, 1);
     assert.ok(stderr.startsWith(`${TEXT_PREFLIGHT_ERROR_CODE} `));
     assert.match(stderr, /feed text layer feed-email-text cannot fit at the 24px readability floor/);
+    assert.match(stderr, /feed text layer feed-features with maxLines 2 must use lineHeight at least 1/);
     assert.match(stderr, /story text layer story-phone-text cannot fit at the 32px readability floor/);
     assert.doesNotMatch(stderr, /renderer\.(?:ts|js)|[A-Za-z]:\\|\/opt\//);
     await assert.rejects(access(outDir));
