@@ -167,6 +167,7 @@ jobs:
           image --scanners vuln
           --severity HIGH,CRITICAL
           --ignore-unfixed=false
+          --ignorefile /work/.trivyignore.yaml
           --exit-code 1
           --format sarif --output /work/trivy-results.sarif
           "$PRODUCT_IMAGE"

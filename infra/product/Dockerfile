@@ -38,6 +38,9 @@ FROM node:22-trixie-slim@sha256:a05717adfe7289e2a0fa36a694dc430a510adab6467c7036
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+# npm is needed only while building; removing it from the runtime image
+# eliminates unused CLI dependency exposure without changing the app runtime.
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 # Next's standalone server must listen on the container interface, not only
 # loopback, so the Compose healthcheck and Caddy can reach it.
 ENV HOSTNAME=0.0.0.0

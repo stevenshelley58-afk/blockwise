@@ -1,0 +1,37 @@
+# Temporary, CVE-specific exceptions for distro packages in node:22-trixie-slim.
+# Owner: Blockwise release engineering. Review/renew by 2026-10-04; remove each
+# entry as soon as Debian publishes a fixed package. These are not blanket
+# ignores: every entry below was reported with an empty Fixed Version by Trivy.
+vulnerabilities:
+  - id: CVE-2026-76642
+    statement: "No upstream fixed version reported; review by 2026-10-04."
+  - id: CVE-2026-78408
+    statement: "No upstream fixed version reported; review by 2026-10-04."
+  - id: CVE-2026-78409
+    statement: "No upstream fixed version reported; review by 2026-10-04."
+  - id: CVE-2026-78410
+    statement: "No upstream fixed version reported; review by 2026-10-04."
+  - id: CVE-2026-41992
+    statement: "No upstream fixed version reported; review by 2026-10-04."
+  - id: CVE-2026-54369
+    statement: "No upstream fixed version reported; review by 2026-10-04."
+  - id: CVE-2026-16742
+    statement: "No upstream fixed version reported; review by 2026-10-04."
+  - id: CVE-2025-69720
+    statement: "No upstream fixed version reported; review by 2026-10-04."
+  - id: CVE-2026-13221
+    statement: "No upstream fixed version reported; review by 2026-10-04."
+  - id: CVE-2026-42496
+    statement: "No upstream fixed version reported; review by 2026-10-04."
+  - id: CVE-2026-8376
+    statement: "No upstream fixed version reported; review by 2026-10-04."
+  - id: CVE-2026-42497
+    statement: "No upstream fixed version reported; review by 2026-10-04."
+  - id: CVE-2026-48962
+    statement: "No upstream fixed version reported; review by 2026-10-04."
+  - id: CVE-2026-57432
+    statement: "No upstream fixed version reported; review by 2026-10-04."
+  - id: CVE-2026-57433
+    statement: "No upstream fixed version reported; review by 2026-10-04."
+  - id: CVE-2026-9538
+    statement: "No upstream fixed version reported; review by 2026-10-04."
