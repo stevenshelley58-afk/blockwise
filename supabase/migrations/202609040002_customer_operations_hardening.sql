@@ -156,7 +156,7 @@ $$;
 
 create or replace function public.heartbeat_ops_projection(p_workspace_id uuid, p_id uuid, p_lease_token uuid, p_lease_seconds integer default 600)
 returns boolean language sql security definer set search_path = '' as $$
-  with touched as (update public.ops_projection_outbox o set lease_expires_at = now() + make_interval(secs = greatest(30, least(coalesce(p_lease_seconds, 600), 3600))), updated_at = now()
+  with touched as (update public.ops_projection_outbox o set lease_expires_at = now() + make_interval(secs => greatest(30, least(coalesce(p_lease_seconds, 600), 3600))), updated_at = now()
    where o.id = p_id and o.workspace_id = p_workspace_id and o.status = 'processing' and o.lease_token = p_lease_token and o.lease_expires_at > now()
      and not exists (select 1 from public.ops_projection_outbox newer where newer.workspace_id = o.workspace_id and newer.provider = o.provider
        and newer.aggregate_type = o.aggregate_type and newer.aggregate_id = o.aggregate_id and newer.operation = o.operation and newer.source_version > o.source_version)
