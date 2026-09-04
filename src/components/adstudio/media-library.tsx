@@ -34,10 +34,11 @@ type MediaLibraryProps = {
   brandKitId: string;
   assets: LibraryAssetModel[];
   nextAssetCursor: string | null;
-  assetsOnly?: boolean;
+  /** Render inside the unified Library surface without repeating its page head. */
+  embedded?: boolean;
 };
 
-export function MediaLibrary({ workspaceId, brandKitId, assets, nextAssetCursor: initialCursor }: MediaLibraryProps) {
+export function MediaLibrary({ workspaceId, brandKitId, assets, nextAssetCursor: initialCursor, embedded = false }: MediaLibraryProps) {
   const [loadedAssets, setLoadedAssets] = useState(assets);
   const [nextCursor, setNextCursor] = useState(initialCursor);
   const [uploaded, setUploaded] = useState<LibraryAssetModel[]>([]);
@@ -117,14 +118,14 @@ export function MediaLibrary({ workspaceId, brandKitId, assets, nextAssetCursor:
   return (
     <>
       <Toaster />
-      <div className="mx-auto w-full max-w-[1120px] px-4 pb-28 pt-8 md:px-6 md:pb-16 md:pt-10">
-      <header className="flex flex-wrap items-start justify-between gap-4">
+      <div className={embedded ? "w-full" : "mx-auto w-full max-w-[1120px] px-4 pb-28 pt-8 md:px-6 md:pb-16 md:pt-10"}>
+      {!embedded ? <header className="flex flex-wrap items-start justify-between gap-4">
         <div><h1 className="font-display text-[27px] font-extrabold tracking-[-.02em]">Assets</h1><p className="mt-2 max-w-[62ch] text-sm leading-6 text-muted-foreground">Keep your media ready for the next ad.</p></div>
         <Button type="button" size="pill" className="min-h-11" disabled={!brandKitId} onClick={openPicker}><Upload aria-hidden /> Upload assets</Button>
-        <input ref={inputRef} type="file" accept={AD_IMAGE_UPLOAD_TYPES.join(",")} multiple hidden aria-label="Upload assets" onChange={(event) => chooseFiles(event.target.files ?? [])} />
-      </header>
+      </header> : null}
+      <input ref={inputRef} type="file" accept={AD_IMAGE_UPLOAD_TYPES.join(",")} multiple hidden aria-label="Upload assets" onChange={(event) => chooseFiles(event.target.files ?? [])} />
 
-      <section className="mt-8 rounded-(--r-panel) border border-(--line) bg-(--surface) p-3 shadow-card" aria-label="Asset library controls">
+      <section className={`${embedded ? "mt-0" : "mt-8"} rounded-(--r-panel) border border-(--line) bg-(--surface) p-3 shadow-card`} aria-label="Asset library controls">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
           <label className="relative min-w-0 flex-1"><Search aria-hidden className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search filenames" aria-label="Search filenames" className="h-11 rounded-(--r-card) pl-9" /></label>
           <div className="flex min-w-0 flex-wrap items-center gap-1" role="group" aria-label="Filter assets by role">

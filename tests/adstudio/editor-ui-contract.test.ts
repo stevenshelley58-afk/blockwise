@@ -19,7 +19,7 @@ describe("customer Ad Studio workbench contract", () => {
     const publishRoute = readFileSync("src/app/(customer)/ad-studio/templates/[templateId]/publish/page.tsx", "utf8");
     assert.doesNotMatch(editorRoute, /fixed inset-0/);
     assert.doesNotMatch(publishRoute, /fixed inset-0/);
-    assert.match(editorRoute, /Create ad/);
+    assert.match(editorRoute, /Use this template/);
     assert.match(stableEditorRoute, /<EditorShell/);
     assert.match(stableEditorRoute, /h-full min-h-0 flex-col overflow-hidden/);
     assert.match(stableEditorRoute, /h-full min-h-0 overflow-y-auto/);
@@ -68,22 +68,26 @@ describe("customer Ad Studio workbench contract", () => {
     assert.match(shell, /grid-cols-\[auto_minmax\(0,1fr\)_auto\]/);
     assert.match(shell, /<span className="xl:hidden">Review<\/span>/);
     assert.match(shell, /className="hidden xl:inline">\{state\.isSaving \? "Saving…" : "Save"\}<\/span>/);
-    assert.match(shell, /grid-cols-4/);
+    assert.match(shell, /grid-cols-5/);
     assert.match(shell, /<Eye className="size-4" \/>Preview/);
     assert.match(shell, /setPreviewMode\("meta"\)/);
+    assert.match(shell, /<Layers3 className="size-4" \/>Layers/);
+    assert.match(shell, /<Sheet open=\{mobileLayersOpen\}/);
   });
 
   it("keeps Home cards contained and exposes exact edit/review destinations", () => {
     const home = readFileSync("src/app/(customer)/ad-studio/page.tsx", "utf8");
+    const command = readFileSync("src/components/adstudio/home-command.tsx", "utf8");
     assert.match(home, /<li key=\{template\.templateId\} className="min-w-0">/);
-    assert.match(home, /formatLastEdited\(ad\.updatedAt, timeZone, dateLocale\)/);
+    assert.match(home, /<HomeCommand/);
+    assert.match(command, /formatLastEdited\(ad\.updatedAt, timeZone, dateLocale\)/);
     assert.match(home, /timeZone/);
     assert.match(home, /resolveTimeZone\(auth\.claims\?\.user_metadata\?\.timezone, access\.region\)/);
     assert.match(home, /dateLocale = access\.region === "US" \? "en-US" : "en-AU"/);
-    assert.match(home, /href=\{`\/ad-studio\/ads\/\$\{encodeURIComponent\(ad\.adId\)\}`\}/);
-    assert.match(home, /href=\{`\/ad-studio\/templates\/\$\{encodeURIComponent\(ad\.templateId\)\}\/publish\?adId=\$\{encodeURIComponent\(ad\.adId\)\}`\}/);
-    assert.match(home, /<Link[^>]*>Edit/);
-    assert.match(home, /<Link[^>]*>Review<\/Link>/);
+    assert.match(command, /href=\{`\/ad-studio\/ads\/\$\{encodeURIComponent\(ad\.adId\)\}`\}/);
+    assert.match(command, /href=\{`\/ad-studio\/templates\/\$\{encodeURIComponent\(ad\.templateId\)\}\/publish\?adId=\$\{encodeURIComponent\(ad\.adId\)\}`\}/);
+    assert.match(command, /<Link[^>]*>Edit<\/Link>/);
+    assert.match(command, /<Link[^>]*>Review<\/Link>/);
   });
 
   it("keeps editor inputs rounded, labelled, and progressive", () => {
@@ -100,6 +104,11 @@ describe("customer Ad Studio workbench contract", () => {
     assert.match(shell, /AI brief/);
     assert.match(shell, /Generate copy/);
     assert.match(shell, /"design" \| "meta" \| "split"/);
+    assert.match(shell, /TabsTrigger value="both"/);
+    assert.match(shell, /aria-label="Canvas tools"/);
+    assert.match(shell, /aria-label="Canvas zoom"/);
+    assert.match(shell, /aria-label="Editor inspector"/);
+    assert.match(shell, /setInspectorOpen/);
     assert.match(shell, /publish\?adId=/);
     assert.match(shell, /e\.key\.toLowerCase\(\)/);
     assert.match(shell, /key === "y"/);

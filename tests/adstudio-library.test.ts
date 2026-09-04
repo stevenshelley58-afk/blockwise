@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
@@ -71,6 +72,22 @@ test("library read model stays workspace-scoped and exposes asset metadata", asy
   assert.equal(page.items.length, 1);
   assert.partialDeepStrictEqual(page.items[0], { label: "front.webp", role: "property", dimensionsLabel: "1000 × 750", usageCount: 2 });
   assert.deepEqual(client.scopes, ["workspace-1"]);
+});
+
+test("the Library route unifies ads and assets without retiring their feature routes", () => {
+  const page = readFileSync("src/app/(customer)/ad-studio/library/page.tsx", "utf8");
+  const shell = readFileSync("src/components/adstudio/studio-library.tsx", "utf8");
+  const ads = readFileSync("src/components/adstudio/ads-library.tsx", "utf8");
+  const assets = readFileSync("src/components/adstudio/media-library.tsx", "utf8");
+
+  assert.doesNotMatch(page, /redirect\(/);
+  assert.match(page, /kind: "ads"/);
+  assert.match(page, /kind: "assets"/);
+  assert.match(shell, /TabsList/);
+  assert.match(shell, /value="ads"/);
+  assert.match(shell, /value="assets"/);
+  assert.match(ads, /embedded\?: boolean/);
+  assert.match(assets, /embedded\?: boolean/);
 });
 
 function mockClient(rows: Record<string, unknown[]>) {

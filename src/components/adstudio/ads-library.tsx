@@ -19,7 +19,13 @@ import type { LibraryAdModel } from "@/lib/adstudio/library-read-model";
 const STATUS_ORDER: AdLibraryStatus[] = ["saved", "created_on_meta_paused", "active", "ended"];
 type SortMode = "recent" | "name" | "status";
 
-export function AdsLibrary({ ads }: { ads: LibraryAdModel[] }) {
+type AdsLibraryProps = {
+  ads: LibraryAdModel[];
+  /** Render inside the unified Library surface without repeating its page head. */
+  embedded?: boolean;
+};
+
+export function AdsLibrary({ ads, embedded = false }: AdsLibraryProps) {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<AdLibraryStatus | "all">("all");
   const [sort, setSort] = useState<SortMode>("recent");
@@ -35,8 +41,8 @@ export function AdsLibrary({ ads }: { ads: LibraryAdModel[] }) {
   }, [ads, query, sort, status]);
 
   return (
-    <div className="mx-auto w-full max-w-[1120px] px-4 pb-28 pt-8 md:px-6 md:pb-16 md:pt-10">
-      <header className="flex flex-wrap items-start justify-between gap-4">
+    <div className={embedded ? "w-full" : "mx-auto w-full max-w-[1120px] px-4 pb-28 pt-8 md:px-6 md:pb-16 md:pt-10"}>
+      {!embedded ? <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="font-display text-[27px] font-extrabold tracking-[-.02em]">Your ads</h1>
           <p className="mt-2 max-w-[62ch] text-sm leading-6 text-muted-foreground">
@@ -44,11 +50,11 @@ export function AdsLibrary({ ads }: { ads: LibraryAdModel[] }) {
           </p>
         </div>
         <Button asChild size="pill" className="min-h-11">
-          <Link href="/ad-studio#templates"><Plus aria-hidden /> New ad</Link>
+          <Link href="/ad-studio/templates"><Plus aria-hidden /> New ad</Link>
         </Button>
-      </header>
+      </header> : null}
 
-      <section className="mt-8 rounded-(--r-panel) border border-(--line) bg-(--surface) p-3 shadow-card" aria-label="Ad library controls">
+      <section className={`${embedded ? "mt-0" : "mt-8"} rounded-(--r-panel) border border-(--line) bg-(--surface) p-3 shadow-card`} aria-label="Ad library controls">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
           <label className="relative min-w-0 flex-1">
             <Search aria-hidden className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -140,7 +146,7 @@ function FilterButton({ active, count, children, onClick }: { active: boolean; c
 }
 
 function EmptyAds() {
-  return <div className="mt-4 rounded-(--r-panel) border border-dashed border-(--line-heavy) bg-(--surface-subtle)/50 p-10 text-center"><h2 className="font-display text-[17px] font-extrabold">No saved ads yet</h2><p className="mx-auto mt-1 max-w-[42ch] text-sm text-muted-foreground">Choose a template to create your first ad. It will appear here after you save it.</p><Button asChild size="pill" className="mt-5"><Link href="/ad-studio#templates">Choose a template <Plus aria-hidden /></Link></Button></div>;
+  return <div className="mt-4 rounded-(--r-panel) border border-dashed border-(--line-heavy) bg-(--surface-subtle)/50 p-10 text-center"><h2 className="font-display text-[17px] font-extrabold">No saved ads yet</h2><p className="mx-auto mt-1 max-w-[42ch] text-sm text-muted-foreground">Choose a template to create your first ad. It will appear here after you save it.</p><Button asChild size="pill" className="mt-5"><Link href="/ad-studio/templates">Choose a template <Plus aria-hidden /></Link></Button></div>;
 }
 
 function formatUpdatedAt(value: string | null): string { const date = value ? new Date(value) : null; return date && !Number.isNaN(date.getTime()) ? `Edited ${new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(date)}` : "Recently edited"; }
