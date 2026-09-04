@@ -150,6 +150,16 @@ begin
   then raise exception 'mutation logs and unconfirmed ids must be arrays'; end if;
   select * into v_mut from public.meta_publish_plan_mutations where workspace_id=p_workspace_id and id=p_mutation_id for update;
   if not found then raise exception 'Meta mutation was not found for this workspace'; end if;
+  -- Final outcomes are monotonic. A late executor whose lease expired must
+  -- never overwrite a quarantine (and a quarantine racing a completed
+  -- executor must never overwrite its durable provider result). Exact retries
+  -- remain idempotent.
+  if v_mut.status in ('applied','failed') then
+    return v_mut.status = p_status
+      and v_mut.outcome_status is not distinct from p_outcome_status
+      and v_mut.unconfirmed_pause_ids_json = coalesce(p_unconfirmed_pause_ids,'[]'::jsonb);
+  end if;
+  if v_mut.status <> 'applying' then raise exception 'Meta mutation is not applying'; end if;
   update public.meta_publish_plan_mutations set
     status=p_status,
     request_log_json=coalesce(p_request_log,'[]'::jsonb),

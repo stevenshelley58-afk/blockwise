@@ -54,6 +54,8 @@ test("activation creation is an atomic fenced service RPC", () => {
 test("provider mutation outcome and audit finalize atomically", () => {
   assert.match(migration, /create or replace function public\.finalize_meta_publish_plan_mutation/i);
   assert.match(migration, /select \* into v_mut[\s\S]*for update/i);
+  assert.match(migration, /if v_mut\.status in \('applied','failed'\)[\s\S]*is not distinct from p_outcome_status/i);
+  assert.match(migration, /if v_mut\.status <> 'applying' then raise exception/i);
   assert.match(migration, /update public\.meta_publish_plan_mutations set[\s\S]*outcome_status=p_outcome_status/i);
   assert.match(migration, /insert into public\.audit_logs[\s\S]*'meta\.' \|\| v_mut\.action/i);
   assert.match(migration, /revoke all on function public\.finalize_meta_publish_plan_mutation[\s\S]*from public, anon, authenticated/i);

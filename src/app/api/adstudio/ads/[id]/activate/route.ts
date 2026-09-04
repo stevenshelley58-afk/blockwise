@@ -87,7 +87,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
     const latestResult = await serviceSupabase
       .from("meta_publish_plan_mutations")
-      .select("id,status,payload_json,last_error,outcome_status,unconfirmed_pause_ids_json,client_mutation_key")
+      .select("id,status,payload_json,request_log_json,response_log_json,last_error,outcome_status,unconfirmed_pause_ids_json,client_mutation_key")
       .eq("workspace_id", plan.workspaceId)
       .eq("meta_publish_plan_id", plan.planId)
       .eq("action", "activate")
@@ -126,21 +126,9 @@ export async function POST(request: NextRequest, context: RouteContext) {
         unconfirmedPauseIds: latest.unconfirmed_pause_ids_json ?? [],
       }, { status: 502 });
     }
-    if (latest?.status === "applying") {
-      return NextResponse.json({
-        ok: true,
-        mode: "activate",
-        status: "activating",
-        planId: plan.planId,
-        mutationId: latest.id,
-        targets: latestTargets,
-        message: "A prior activation request is still in progress; no second activation was created.",
-      }, { status: 202 });
-    }
-
     const existingResult = await serviceSupabase
       .from("meta_publish_plan_mutations")
-      .select("id,status,approval_request_id,payload_json,last_error,outcome_status,unconfirmed_pause_ids_json")
+      .select("id,status,approval_request_id,payload_json,request_log_json,response_log_json,last_error,outcome_status,unconfirmed_pause_ids_json")
       .eq("workspace_id", plan.workspaceId)
       .eq("meta_publish_plan_id", plan.planId)
       .eq("action", "activate")
@@ -192,13 +180,110 @@ export async function POST(request: NextRequest, context: RouteContext) {
         mode: "activate",
         status: "activating",
         planId: plan.planId,
-        mutationId: existing?.id,
+        mutationId: latest?.id ?? existing?.id,
         message: "Activation is already in progress; refresh shortly.",
       }, { status: 202 });
     }
     const claimedLeaseToken = lease.leaseToken;
     leaseToken = claimedLeaseToken;
     leasePlanId = plan.planId;
+
+    // An applying mutation is genuinely in progress only while another
+    // executor still owns the plan lease. Reaching this branch means that
+    // lease expired (or was released), so a provider request may have escaped
+    // without a durable final outcome. Quarantine it atomically with its audit
+    // record instead of spinning forever or replaying ACTIVE writes.
+    const staleApplying = latest?.status === "applying"
+      ? latest
+      : existing?.status === "applying"
+        ? existing
+        : null;
+    if (staleApplying) {
+      const stalePayload = staleApplying.payload_json as { campaignId?: string; adSetIds?: string[]; adIds?: string[] } | undefined;
+      const unconfirmedPauseIds = Array.from(new Set([
+        stalePayload?.campaignId,
+        ...(stalePayload?.adSetIds ?? []),
+        ...(stalePayload?.adIds ?? []),
+      ].filter((value): value is string => typeof value === "string" && value.length > 0)));
+      const quarantineMessage = "A previous activation lost its execution lease while Meta may have been applying changes. Its final state is unconfirmed; verify these objects in Meta Ads Manager before any further activation.";
+      const quarantineResult = await serviceSupabase.rpc("finalize_meta_publish_plan_mutation", {
+        p_workspace_id: plan.workspaceId,
+        p_mutation_id: staleApplying.id,
+        p_status: "failed",
+        p_request_log: staleApplying.request_log_json ?? [],
+        p_response_log: staleApplying.response_log_json ?? [],
+        p_last_error: quarantineMessage,
+        p_outcome_status: "unconfirmed",
+        p_unconfirmed_pause_ids: unconfirmedPauseIds,
+      });
+      if (quarantineResult.error) throw new Error(quarantineResult.error.message);
+      if (quarantineResult.data !== true) {
+        // The previous executor may have committed its terminal outcome while
+        // this request was acquiring the expired lease. Final outcomes are
+        // monotonic in the RPC, so read and report that canonical result.
+        const canonicalResult = await serviceSupabase
+          .from("meta_publish_plan_mutations")
+          .select("id,status,payload_json,last_error,outcome_status,unconfirmed_pause_ids_json")
+          .eq("workspace_id", plan.workspaceId)
+          .eq("id", staleApplying.id)
+          .single();
+        if (canonicalResult.error || !canonicalResult.data) {
+          throw new Error(canonicalResult.error?.message ?? "Stale activation final state could not be loaded.");
+        }
+        const canonical = canonicalResult.data;
+        const canonicalPayload = canonical.payload_json as { campaignId?: string; adSetIds?: string[]; adIds?: string[] } | undefined;
+        const canonicalTargets = {
+          campaignId: canonicalPayload?.campaignId ?? plan.reconciledObjects.campaignId,
+          adSetIds: canonicalPayload?.adSetIds ?? [],
+          adIds: canonicalPayload?.adIds ?? [],
+        };
+        if (canonical.status === "applied") {
+          await updateMetaPublishPlanExecution(serviceSupabase, markPlanObjectsActive(plan));
+          return NextResponse.json({
+            ok: true,
+            mode: "activate",
+            status: "activated",
+            planId: plan.planId,
+            mutationId: canonical.id,
+            targets: canonicalTargets,
+            message: "The prior activation completed while its stale lease was being reconciled; no second activation was created.",
+          });
+        }
+        if (canonical.status === "failed") {
+          const unconfirmed = canonical.outcome_status === "unconfirmed";
+          return NextResponse.json({
+            ok: false,
+            mode: "activate",
+            status: unconfirmed ? "unknown" : "paused",
+            planId: plan.planId,
+            mutationId: canonical.id,
+            targets: canonicalTargets,
+            error: unconfirmed ? "activation_unconfirmed" : "activation_failed",
+            message: canonical.last_error ?? (unconfirmed
+              ? "Activation failed and Blockwise could not confirm the final Meta status."
+              : "Activation failed; the Blockwise-created objects remain paused."),
+            ...(unconfirmed ? { unconfirmedPauseIds: canonical.unconfirmed_pause_ids_json ?? [] } : {}),
+          }, { status: 502 });
+        }
+        throw new Error("Stale activation could not be quarantined atomically.");
+      }
+      return NextResponse.json({
+        ok: false,
+        mode: "activate",
+        status: "unknown",
+        planId: plan.planId,
+        mutationId: staleApplying.id,
+        targets: {
+          campaignId: stalePayload?.campaignId ?? plan.reconciledObjects.campaignId,
+          adSetIds: stalePayload?.adSetIds ?? [],
+          adIds: stalePayload?.adIds ?? [],
+        },
+        error: "activation_unconfirmed",
+        message: quarantineMessage,
+        unconfirmedPauseIds,
+      }, { status: 502 });
+    }
+
     leaseHeartbeat = createMetaExecutionLeaseHeartbeat({
       renew: () => renewMetaPublishExecutionLease(serviceSupabase, {
         workspaceId: plan.workspaceId,
@@ -206,13 +291,6 @@ export async function POST(request: NextRequest, context: RouteContext) {
         leaseToken: claimedLeaseToken,
       }),
     });
-
-    if (existing?.status === "applying") {
-      throw new PublishError(
-        "activation_unconfirmed",
-        "A previous activation attempt stopped while Meta was applying it. Check Meta Ads Manager before trying again.",
-      );
-    }
 
     const readiness = assertActivationReadiness(plan);
     if (!readiness.ok) throw new PublishError(readiness.code, readiness.message);

@@ -5,12 +5,27 @@ import { createMetaExecutionLeaseHeartbeat } from "../src/lib/providers/meta-exe
 
 test("lease heartbeat renews independently of provider checkpoints", async () => {
   let renewals = 0;
+  let signalSecondRenewal = () => undefined;
+  const secondRenewal = new Promise<void>((resolve, reject) => {
+    const deadline = setTimeout(() => reject(new Error("timed lease renewals did not continue")), 1_000);
+    signalSecondRenewal = () => {
+      clearTimeout(deadline);
+      resolve();
+    };
+  });
   const heartbeat = createMetaExecutionLeaseHeartbeat({
     intervalMs: 5,
-    renew: async () => { renewals += 1; return true; },
+    renew: async () => {
+      renewals += 1;
+      if (renewals >= 2) signalSecondRenewal();
+      return true;
+    },
   });
-  await new Promise((resolve) => setTimeout(resolve, 24));
-  heartbeat.stop();
+  try {
+    await secondRenewal;
+  } finally {
+    heartbeat.stop();
+  }
   assert.ok(renewals >= 2, `expected multiple timed renewals, received ${renewals}`);
   heartbeat.assertOwned();
 });

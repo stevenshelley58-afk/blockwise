@@ -43,6 +43,20 @@ test("activate requires the exact plan returned by publish", () => {
   assert.match(activateRoute, /status: "activating"/);
 });
 
+test("stale applying activations are quarantined only after the execution lease expires", () => {
+  const leaseClaim = activateRoute.indexOf("const lease = await claimMetaPublishExecution");
+  const staleRecovery = activateRoute.indexOf("const staleApplying =");
+  assert.ok(leaseClaim >= 0 && staleRecovery > leaseClaim, "the route must test lease ownership before classifying an applying mutation as stale");
+  assert.match(activateRoute, /if \(!lease\.claimed \|\| !lease\.leaseToken\)[\s\S]*status: "activating"/);
+  assert.match(activateRoute, /finalize_meta_publish_plan_mutation/);
+  assert.match(activateRoute, /p_status: "failed"/);
+  assert.match(activateRoute, /p_outcome_status: "unconfirmed"/);
+  assert.match(activateRoute, /p_unconfirmed_pause_ids: unconfirmedPauseIds/);
+  assert.match(activateRoute, /lost its execution lease/);
+  assert.match(activateRoute, /quarantineResult\.data !== true[\s\S]*canonicalResult/);
+  assert.match(activateRoute, /canonical\.status === "applied"[\s\S]*markPlanObjectsActive\(plan\)/);
+});
+
 test("results resolves and focuses the campaign owned by the exact publish plan", () => {
   assert.match(resultsPage, /resolvedParams\.planId/);
   assert.match(resultsPage, /from\("meta_publish_plans"\)[\s\S]*eq\("workspace_id", access\.workspaceId\)[\s\S]*eq\("id", requestedPlanId\)/);
