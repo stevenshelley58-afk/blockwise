@@ -6,6 +6,10 @@ on:
         description: "Deployed Vercel Preview URL (https:// only; no localhost)"
         required: true
         type: string
+      source_sha:
+        description: "Exact source SHA deployed to the Preview"
+        required: true
+        type: string
 jobs:
   browser-csp:
     name: Browser CSP smoke (Preview)
@@ -26,11 +30,21 @@ jobs:
       - name: Validate trusted Vercel Preview URL
         env:
           PREVIEW_URL: ${{ inputs.preview_url }}
+          EXPECTED_SHA: ${{ inputs.source_sha }}
         run: |
-          case "$PREVIEW_URL" in
-            https://*.vercel.app/*|https://*.vercel.app) ;;
-            *) echo "Preview URL must be an HTTPS Vercel preview host" >&2; exit 1 ;;
-          esac
+          python - <<'PY'
+          import os, urllib.parse, re
+          u = urllib.parse.urlparse(os.environ['PREVIEW_URL'])
+          host = (u.hostname or '').lower()
+          if u.scheme != 'https' or u.username or u.password or u.query or u.fragment:
+              raise SystemExit('Preview URL must be credential-free HTTPS')
+          if host not in {'blockwise-tan.vercel.app'} and not re.fullmatch(r'blockwise-[a-z0-9-]+\.vercel\.app', host):
+              raise SystemExit('Preview URL is outside the Blockwise Vercel host allowlist')
+          if not re.fullmatch(r'[0-9a-f]{40}', os.environ['EXPECTED_SHA']):
+              raise SystemExit('source_sha must be a full Git SHA')
+          if os.environ['EXPECTED_SHA'] != os.environ['GITHUB_SHA']:
+              raise SystemExit('source_sha must equal the workflow source SHA')
+          PY
       - name: Check deployed Preview CSP in a browser
         env:
           PREVIEW_URL: ${{ inputs.preview_url }}

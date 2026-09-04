@@ -44,11 +44,12 @@ assert that a historical runtime receipt describes current main.
 
 ## CI/control-plane disposition
 
-The new release workflow provides stable checks named `Build and test`,
-`Secret scan`, `SBOM`, and `Container scan`; existing `Contract and static
-checks` and `Database migration and pgTAP checks` remain separate. The manual
-Preview CSP workflow remains a deployed-preview gate and now writes a receipt
-artifact when run, but this branch does not claim that it was run.
+The single full suite is the `Contract and static checks` context in Hard Reset
+Verification. Release CI provides `Secret scan`, `SBOM`, and `Container scan`;
+image evidence binds the saved image ID and tar digest to the SBOM and scan.
+Preview CSP remains manual/advisory until provenance-bound automation exists;
+this branch does not claim that it was run. Changes to `.gitleaksignore` are
+security-review events; post-merge branch protection requires GitGuardian.
 
 Main branch protection must be changed only after these exact checks have
 passed on the new PR and the context names are confirmed. Required settings:
