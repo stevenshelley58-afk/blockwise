@@ -1,5 +1,5 @@
 import { adTemplateSchema } from "../../../packages/ad-template-contract/src/schema.ts";
-import type { AdTemplate, Layout } from "../../../packages/ad-template-contract/src/types.ts";
+import { MINIMUM_TEXT_SIZE_PX, type AdTemplate, type Layout } from "../../../packages/ad-template-contract/src/types.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export interface TemplateSummary {
@@ -61,13 +61,17 @@ export async function getTemplate(supabase: SupabaseClient, templateId: string):
 
 /** Service-role inspection only. Customer discovery must use getTemplate. */
 export async function getTemplateForInternalInspection(supabase: SupabaseClient, templateId: string): Promise<AdTemplate | null> {
+  return parseTemplateJson(await readTemplateJson(supabase, templateId));
+}
+
+async function readTemplateJson(supabase: SupabaseClient, templateId: string): Promise<unknown> {
   const { data, error } = await supabase
     .from("ad_templates")
     .select("template_json")
     .eq("template_id", templateId)
     .maybeSingle();
   if (error) throw new Error(error.message);
-  return parseTemplateJson(data ? (data as { template_json: unknown }).template_json : null);
+  return data ? (data as { template_json: unknown }).template_json : null;
 }
 
 /**
@@ -90,7 +94,8 @@ export async function getTemplateForExistingCustomerAd(input: {
     .eq("template_id", input.templateId)
     .maybeSingle();
   if (error) throw new Error(error.message);
-  return ad ? getTemplateForInternalInspection(input.internalSupabase, input.templateId) : null;
+  if (!ad) return null;
+  return parseTemplateJsonForSavedAdHistory(await readTemplateJson(input.internalSupabase, input.templateId));
 }
 function summaryFromTemplate(template: AdTemplate, row: TemplateRow): TemplateSummary {
   const metadata = record(template.metadata);
@@ -109,4 +114,59 @@ function summaryFromTemplate(template: AdTemplate, row: TemplateRow): TemplateSu
 export function parseTemplateJson(value: unknown): AdTemplate | null {
   const parsed = adTemplateSchema.safeParse(value);
   return parsed.success ? parsed.data as AdTemplate : null;
+}
+
+/**
+ * Compatibility reader for an exact workspace-owned saved ad. Historical
+ * templates predate the release-only 24px Feed / 32px Story readability floor,
+ * but their authored sizes must remain unchanged when old work is reopened.
+ * All other current structural, geometry, input, asset, font, and tracking
+ * constraints still pass through adTemplateSchema. Discovery and new-ad flows
+ * continue to use parseTemplateJson and therefore remain strict.
+ */
+export function parseTemplateJsonForSavedAdHistory(value: unknown): AdTemplate | null {
+  const template = record(value);
+  if (!template) return null;
+  const originalFontSizes = new Map<string, number>();
+
+  const validationLayout = (rawLayout: unknown, placement: "feed" | "story"): unknown => {
+    const layout = record(rawLayout);
+    if (!layout || !Array.isArray(layout.layers)) return rawLayout;
+    return {
+      ...layout,
+      layers: layout.layers.map((rawLayer) => {
+        const layer = record(rawLayer);
+        if (
+          layer?.type !== "text"
+          || typeof layer.layerId !== "string"
+          || typeof layer.fontSize !== "number"
+          || !Number.isFinite(layer.fontSize)
+          || layer.fontSize <= 0
+        ) return rawLayer;
+        originalFontSizes.set(`${placement}:${layer.layerId}`, layer.fontSize);
+        return { ...layer, fontSize: Math.max(layer.fontSize, MINIMUM_TEXT_SIZE_PX[placement]) };
+      }),
+    };
+  };
+
+  const parsed = adTemplateSchema.safeParse({
+    ...template,
+    feedLayout: validationLayout(template.feedLayout, "feed"),
+    storyLayout: validationLayout(template.storyLayout, "story"),
+  });
+  if (!parsed.success) return null;
+
+  const restoreLayout = (layout: Layout, placement: "feed" | "story"): Layout => ({
+    ...layout,
+    layers: layout.layers.map((layer) => (
+      layer.type === "text" && originalFontSizes.has(`${placement}:${layer.layerId}`)
+        ? { ...layer, fontSize: originalFontSizes.get(`${placement}:${layer.layerId}`)! }
+        : layer
+    )),
+  });
+  return {
+    ...parsed.data,
+    feedLayout: restoreLayout(parsed.data.feedLayout, "feed"),
+    storyLayout: restoreLayout(parsed.data.storyLayout, "story"),
+  } as AdTemplate;
 }
