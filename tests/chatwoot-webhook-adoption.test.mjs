@@ -6,7 +6,7 @@ const route = readFileSync(new URL("../src/app/api/webhooks/chatwoot/route.ts", 
 const sql = readFileSync(new URL("../supabase/migrations/202609040018_customer_operations_management_actions.sql", import.meta.url), "utf8");
 
 test("Chatwoot webhook authenticates full timestamped body and skew", () => {
-  assert.match(route, /x-chatwoot-timestamp/); assert.match(route, /300000/); assert.match(route, /timestamp\.\$\{raw\}/); assert.match(route, /timingSafeEqual/);
+  assert.match(route, /x-chatwoot-timestamp/); assert.match(route, /300000/); assert.match(route, /\$\{timestamp\}\.\$\{raw\}/); assert.match(route, /timingSafeEqual/);
 });
 test("Chatwoot adoption has malformed/account/inbox/private/outgoing gates", () => {
   assert.match(route, /JSON\.parse/); assert.match(route, /allowedInboxes/); assert.match(route, /private === true/); assert.match(route, /message_type/); assert.match(route, /unsupported_webhook/);
