@@ -82,8 +82,9 @@ test("bootstrap is explicit, idempotent, and credential-file based", () => {
   assert.match(bootstrap, /api_access_token/);
   assert.match(bootstrap, /conversation_status_changed/);
   assert.match(bootstrap, /message_updated/);
-  assert.doesNotMatch(bootstrap, /chatwoot_webhook_secret/);
-  assert.match(bootstrap, /chatwoot_webhook_probe_secret/);
+  assert.match(bootstrap, /write_chatwoot_webhook_secret/);
+  assert.match(bootstrap, /chatwoot_webhook_secret/);
+  assert.doesNotMatch(bootstrap, /chatwoot_webhook_probe_secret/);
   assert.match(bootstrap, /tags\/new/);
   assert.match(bootstrap, /verify_mautic_resource segments/);
   assert.match(bootstrap, /verify_mautic_resource campaigns/);
@@ -100,7 +101,8 @@ test("bootstrap is explicit, idempotent, and credential-file based", () => {
   assert.match(runbook, /Receipt-based staging smoke matrix/);
   assert.match(runbook, /same root-owned `0600` file/);
   assert.match(runbook, /blockwise_booking_action_secret/);
-  assert.match(text("scripts/vps/customer-ops-smoke.sh"), /signed SnagTime webhook roundtrip/);
+  assert.match(text("scripts/vps/customer-ops-smoke.sh"), /X-Chatwoot-Signature/);
+  assert.match(text("scripts/vps/customer-ops-smoke.sh"), /chatwoot_webhook_secret/);
   for (const marker of ["Signup magic link", "Transactional mail", "External support mail", "Support reply", "Mautic contact\/flow", "SnagTime booking", "Control action"]) {
     assert.match(runbook, new RegExp(marker));
   }

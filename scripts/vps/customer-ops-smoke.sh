@@ -25,7 +25,7 @@ require_secret_file() {
   [[ "$path" = /* && ! -L "$path" && -f "$path" && "$(readlink -f -- "$path")" == "$path" ]] || { echo "secret must be an absolute regular non-symlink file: $name" >&2; exit 64; }
   [[ "$(stat -c '%a' "$path" 2>/dev/null || stat -f '%Lp' "$path")" == '600' && "$(stat -c '%u' "$path" 2>/dev/null || stat -f '%u' "$path")" == '0' && -s "$path" ]] || { echo "secret must be root-owned, non-empty, mode 0600: $name" >&2; exit 64; }
 }
-for name in mautic_smtp_password chatwoot_smtp_password snagtime_smtp_password chatwoot_inbox_password google_client_secret mautic_api_token chatwoot_api_token chatwoot_webhook_probe_secret blockwise_webhook_secret blockwise_booking_action_secret; do
+for name in mautic_smtp_password chatwoot_smtp_password snagtime_smtp_password chatwoot_inbox_password google_client_secret mautic_api_token chatwoot_api_token chatwoot_webhook_secret blockwise_webhook_secret blockwise_booking_action_secret; do
   require_secret_file "$name"
 done
 command -v curl >/dev/null || { echo 'curl is required' >&2; exit 69; }
@@ -77,9 +77,10 @@ mautic_code="$(api_http_with_secret 'Authorization' mautic_api_token "${MAUTIC_A
 chatwoot_code="$(api_http_with_secret 'api_access_token' chatwoot_api_token "${CHATWOOT_API_URL:?CHATWOOT_API_URL is required}/accounts/${CHATWOOT_ACCOUNT_ID:?CHATWOOT_ACCOUNT_ID is required}/inboxes")"
 [[ "$chatwoot_code" == 2* ]] || { echo "Chatwoot API failed (HTTP $chatwoot_code)" >&2; exit 65; }
 [[ -n "${CHATWOOT_WEBHOOK_PROBE_URL:-}" ]] || { echo 'CHATWOOT_WEBHOOK_PROBE_URL is required for signed webhook acceptance' >&2; exit 64; }
-payload="customer-ops-smoke-$(date +%s)"
-signature="$(printf '%s' "$payload" | openssl dgst -sha256 -mac HMAC -macopt "key:file:$SECRETS_DIR/chatwoot_webhook_probe_secret" -binary | base64 -w0)"
-webhook_code="$(quiet_http -X POST -H "Content-Type: text/plain" -H "X-Blockwise-Signature: sha256=$signature" --data "$payload" "$CHATWOOT_WEBHOOK_PROBE_URL")"
+chatwoot_timestamp="$(date +%s)"
+chatwoot_payload='{"event":"conversation_created","id":"customer-ops-smoke","account":{"id":1},"conversation":{"id":1,"status":"open"}}'
+chatwoot_signature="$(printf '%s.%s' "$chatwoot_timestamp" "$chatwoot_payload" | openssl dgst -sha256 -mac HMAC -macopt "key:file:$SECRETS_DIR/chatwoot_webhook_secret" -binary | xxd -p -c 256)"
+webhook_code="$(quiet_http -X POST -H 'Content-Type: application/json' -H "X-Chatwoot-Signature: sha256=$chatwoot_signature" -H "X-Chatwoot-Timestamp: $chatwoot_timestamp" -H 'X-Chatwoot-Delivery: customer-ops-smoke' --data "$chatwoot_payload" "$CHATWOOT_WEBHOOK_PROBE_URL")"
 [[ "$webhook_code" == 2* ]] || { echo "signed Chatwoot webhook roundtrip failed (HTTP $webhook_code)" >&2; exit 65; }
 snagtime_timestamp="$(date +%s)"
 snagtime_probe_body='{"spec":"customer-ops.smoke.v1","id":"00000000-0000-4000-8000-000000000001","type":"booking.created","occurredAt":"2025-01-01T00:00:00.000Z","data":{}}'

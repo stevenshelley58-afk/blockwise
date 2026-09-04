@@ -155,10 +155,11 @@ grep -q 'message_updated' "$ROOT_DIR/scripts/vps/customer-ops-bootstrap.sh" || {
 grep -q 'BLOCKWISE_WEBHOOK_URL=https://blockwise.example/api/booking/webhooks/snagtime' "$ROOT_DIR/infra/customer-ops/customer-ops.env.example" || { echo 'SnagTime Blockwise webhook route contract missing' >&2; exit 1; }
 grep -q 'SNAGTIME_WEBHOOK_SECRET_HOST_FILE=.*blockwise_webhook_secret' "$ROOT_DIR/infra/customer-ops/customer-ops.env.example" || { echo 'SnagTime webhook source pairing missing' >&2; exit 1; }
 ! grep -q '/api/internal/booking/webhook' "$ROOT_DIR/infra/customer-ops/customer-ops.env.example" || { echo 'obsolete internal booking webhook route remains' >&2; exit 1; }
-grep -q 'signed SnagTime webhook roundtrip' "$ROOT_DIR/scripts/vps/customer-ops-smoke.sh" || { echo 'signed SnagTime smoke probe missing' >&2; exit 1; }
+grep -q 'X-Chatwoot-Signature' "$ROOT_DIR/scripts/vps/customer-ops-smoke.sh" || { echo 'official Chatwoot signed smoke probe missing' >&2; exit 1; }
+grep -q 'write_chatwoot_webhook_secret' "$ROOT_DIR/scripts/vps/customer-ops-bootstrap.sh" || { echo 'Chatwoot API webhook secret capture missing' >&2; exit 1; }
 grep -q 'blockwise_webhook_secret' "$ROOT_DIR/scripts/vps/customer-ops-smoke.sh" || { echo 'paired SnagTime webhook secret missing from smoke' >&2; exit 1; }
-! grep -q 'chatwoot_webhook_secret' "$ROOT_DIR/scripts/vps/customer-ops-bootstrap.sh" || { echo 'undocumented webhook secret filename remains' >&2; exit 1; }
-grep -q 'chatwoot_webhook_probe_secret' "$ROOT_DIR/scripts/vps/customer-ops-bootstrap.sh" || { echo 'webhook probe secret contract missing' >&2; exit 1; }
+grep -q 'chatwoot_webhook_secret' "$ROOT_DIR/scripts/vps/customer-ops-bootstrap.sh" || { echo 'Chatwoot webhook secret contract missing' >&2; exit 1; }
+! grep -q 'chatwoot_webhook_probe_secret' "$ROOT_DIR/scripts/vps/customer-ops-bootstrap.sh" || { echo 'obsolete webhook probe secret filename remains' >&2; exit 1; }
 for service in mautic-cron mautic-worker snagtime-worker; do
   awk -v service="$service" '$0 ~ "^  " service ":" { in_service=1; next } in_service && /^  [A-Za-z0-9_-]+:/ { exit } in_service { print }' "$ROOT_DIR/infra/customer-ops/docker-compose.yml" | grep -q 'healthcheck:' || { echo "$service healthcheck missing" >&2; exit 1; }
 done

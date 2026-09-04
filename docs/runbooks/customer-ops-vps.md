@@ -120,7 +120,7 @@ never prints their contents.
 Google and SMTP provider credentials must already exist as non-empty
 mode-0600 files (`google_client_secret`, `mautic_smtp_password`,
 `chatwoot_smtp_password`, `snagtime_smtp_password`, and
-`chatwoot_inbox_password`, and `chatwoot_webhook_probe_secret`); provider
+`chatwoot_inbox_password`); provider
 credentials are never generated. Use
 distinct Stalwart SMTP users for Mautic, Chatwoot, and SnagTime. Product-mail bootstrap,
 recovery-admin removal, mailbox creation, and mail volume backup/restore

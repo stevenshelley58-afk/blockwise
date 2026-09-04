@@ -104,6 +104,52 @@ api_request() {
   printf '%s' "$code"
 }
 
+chatwoot_webhook_secret_path="$SECRETS_DIR/chatwoot_webhook_secret"
+chatwoot_webhook_subscriptions='conversation_created conversation_updated conversation_status_changed message_created message_updated'
+
+chatwoot_webhook_matches() {
+  local response="$1" url="$2"
+  python3 - "$response" "$url" "$chatwoot_webhook_subscriptions" <<'PY'
+import json,sys
+path,url,expected=sys.argv[1:]
+expected=set(expected.split())
+with open(path,encoding='utf-8') as fh: data=json.load(fh)
+def walk(value):
+    if isinstance(value,dict):
+        candidate=value.get('url')
+        subscriptions=value.get('subscriptions')
+        if candidate == url:
+            return 'match' if isinstance(subscriptions,list) and expected.issubset(set(subscriptions)) else 'invalid'
+        for child in value.values():
+            result=walk(child)
+            if result != 'none': return result
+    elif isinstance(value,list):
+        for child in value:
+            result=walk(child)
+            if result != 'none': return result
+    return 'none'
+print(walk(data))
+PY
+}
+
+write_chatwoot_webhook_secret() {
+  local response="$1" temp="$SECRETS_DIR/.chatwoot-webhook-secret.$$.tmp"
+  [[ ! -e "$temp" && ! -L "$temp" ]] || { echo 'temporary Chatwoot webhook secret path already exists' >&2; exit 64; }
+  python3 - "$response" "$temp" <<'PY'
+import json,os,sys
+response,target=sys.argv[1:]
+with open(response,encoding='utf-8') as fh: data=json.load(fh)
+secret=data.get('secret') if isinstance(data,dict) else None
+if not isinstance(secret,str) or not secret.strip():
+    raise SystemExit('Chatwoot webhook API did not return a secret; supply chatwoot_webhook_secret for an existing webhook')
+fd=os.open(target, os.O_WRONLY|os.O_CREAT|os.O_EXCL, 0o600)
+with os.fdopen(fd,'w',encoding='utf-8') as fh: fh.write(secret.strip()+'\n')
+PY
+  chown root:root "$temp"; chmod 600 "$temp"
+  if [[ -e "$chatwoot_webhook_secret_path" ]]; then rm -f "$temp"; else mv -- "$temp" "$chatwoot_webhook_secret_path"; fi
+  require_secret chatwoot_webhook_secret
+}
+
 verify_mautic_tag() {
   local tag="$1" response code
   response="$(mktemp /tmp/blockwise-mautic-tags.XXXXXX)"; chmod 600 "$response"
@@ -134,7 +180,6 @@ verify_mautic_resource() {
 if [[ "$MODE" == apply ]]; then
   require_value CHATWOOT_INBOX_PAYLOAD_FILE
   require_value CHATWOOT_WEBHOOK_URL
-  require_secret chatwoot_webhook_probe_secret
   [[ "$CHATWOOT_INBOX_PAYLOAD_FILE" = /* && -f "$CHATWOOT_INBOX_PAYLOAD_FILE" && ! -L "$CHATWOOT_INBOX_PAYLOAD_FILE" ]] || { echo 'CHATWOOT_INBOX_PAYLOAD_FILE must be an absolute regular file' >&2; exit 64; }
   [[ "$(readlink -f -- "$CHATWOOT_INBOX_PAYLOAD_FILE")" == "$CHATWOOT_INBOX_PAYLOAD_FILE" ]] || { echo 'CHATWOOT_INBOX_PAYLOAD_FILE may not contain symlinked path components' >&2; exit 64; }
   [[ "$(stat -c '%a' "$CHATWOOT_INBOX_PAYLOAD_FILE" 2>/dev/null || stat -f '%Lp' "$CHATWOOT_INBOX_PAYLOAD_FILE")" == 600 && "$(stat -c '%u' "$CHATWOOT_INBOX_PAYLOAD_FILE" 2>/dev/null || stat -f '%u' "$CHATWOOT_INBOX_PAYLOAD_FILE")" == 0 ]] || { echo 'CHATWOOT_INBOX_PAYLOAD_FILE must be root-owned, mode 0600' >&2; exit 64; }
@@ -176,13 +221,30 @@ PY
     [[ "$code" == 2* || "$code" == 409 ]] || { echo "Chatwoot inbox bootstrap failed (HTTP $code)" >&2; exit 65; }
   fi
   if [[ -n "${CHATWOOT_WEBHOOK_URL:-}" ]]; then
-    hook_file="$(mktemp /tmp/blockwise-chatwoot-webhook.XXXXXX)"; chmod 600 "$hook_file"
-    python3 - "$CHATWOOT_WEBHOOK_URL" > "$hook_file" <<'PY'
+    webhook_list="$(mktemp /tmp/blockwise-chatwoot-webhooks.XXXXXX)"; chmod 600 "$webhook_list"
+    list_code="$(api_request chatwoot_api_token GET "${CHATWOOT_API_URL%/}/accounts/${CHATWOOT_ACCOUNT_ID}/webhooks" '' "$webhook_list")"
+    [[ "$list_code" == 2* ]] || { rm -f "$webhook_list"; echo "Chatwoot webhook listing failed (HTTP $list_code)" >&2; exit 65; }
+    webhook_state="$(chatwoot_webhook_matches "$webhook_list" "$CHATWOOT_WEBHOOK_URL")"
+    rm -f "$webhook_list"
+    if [[ "$webhook_state" == invalid ]]; then
+      echo 'Chatwoot webhook exists with an incorrect URL/subscription contract' >&2
+      exit 65
+    elif [[ "$webhook_state" == match ]]; then
+      require_secret chatwoot_webhook_secret
+    else
+      [[ ! -e "$chatwoot_webhook_secret_path" ]] || { echo 'Chatwoot webhook is not listed; refusing to create a duplicate while chatwoot_webhook_secret exists' >&2; exit 65; }
+      hook_response="$(mktemp /tmp/blockwise-chatwoot-webhook-response.XXXXXX)"; chmod 600 "$hook_response"
+      hook_file="$(mktemp /tmp/blockwise-chatwoot-webhook.XXXXXX)"; chmod 600 "$hook_file"
+      python3 - "$CHATWOOT_WEBHOOK_URL" > "$hook_file" <<'PY'
 import json,sys
-print(json.dumps({'url':sys.argv[1],'subscriptions':['conversation_created','conversation_updated','conversation_status_changed','message_created','message_updated']}))
+print(json.dumps({'name':'blockwise-customer-ops','url':sys.argv[1],'subscriptions':['conversation_created','conversation_updated','conversation_status_changed','message_created','message_updated']}))
 PY
-    code="$(api_request chatwoot_api_token POST "${CHATWOOT_API_URL%/}/accounts/${CHATWOOT_ACCOUNT_ID}/webhooks" "$hook_file")"; rm -f "$hook_file"
-    [[ "$code" == 2* || "$code" == 409 ]] || { echo "Chatwoot webhook bootstrap failed (HTTP $code)" >&2; exit 65; }
+      code="$(api_request chatwoot_api_token POST "${CHATWOOT_API_URL%/}/accounts/${CHATWOOT_ACCOUNT_ID}/webhooks" "$hook_file" "$hook_response")"
+      rm -f "$hook_file"
+      [[ "$code" == 2* ]] || { rm -f "$hook_response"; echo "Chatwoot webhook bootstrap failed (HTTP $code)" >&2; exit 65; }
+      write_chatwoot_webhook_secret "$hook_response"
+      rm -f "$hook_response"
+    fi
   fi
 fi
 
