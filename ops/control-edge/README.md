@@ -40,11 +40,17 @@ configured; no portal URL is stored in a receipt, log, or outbox payload.
 
 The service requires `BLOCKWISE_INTERNAL_AUTH_SECRET_FILE` and
 `SUPABASE_SERVICE_ROLE_KEY_FILE` (0600 regular files, owner-only directory on
-Linux), plus an HTTPS `SUPABASE_URL`. Set
+Linux, owned by the container's non-root UID 1000), plus an HTTPS
+`SUPABASE_URL`. Set
 `BLOCKWISE_ACTION_EXECUTOR_URL` and
 `BLOCKWISE_ACTION_EXECUTOR_SECRET_FILE` to enable the worker. Secrets are never
 accepted from ordinary environment variables. See `.env.example` for names;
 the real file belongs outside the checkout.
+
+The Compose image runs as UID 1000 and never as root. Before starting it, make
+the secret directory `0700`, the files `0600`, and their owner UID 1000 (or use
+the deployment's equivalent non-root UID); otherwise the fail-closed file
+checks intentionally refuse to start.
 
 `CONTROL_EDGE_WORKER_ENABLED=true` enables the lease claimant in the same
 process. For larger deployments, run a second replica with the worker enabled;
