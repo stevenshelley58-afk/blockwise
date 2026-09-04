@@ -15,6 +15,7 @@ test("product allowlist and rollback procedure cover the ops contract", () => {
   assert.match(allowlist, /202609040006_customer_operations_runtime_resolution\.sql/);
   assert.match(allowlist, /202609040007_customer_operations_provider_ledger\.sql/);
   assert.match(allowlist, /202609040008_customer_operations_contract_completion\.sql/);
+  assert.match(allowlist, /202609040009_customer_operations_action_versions\.sql/);
   const rollback = text("scripts/ops/rollback-customer-operations.sql");
   assert.match(rollback, /ROLLBACK_CUSTOMER_OPERATIONS/);
   assert.match(rollback, /customer_operations_tables_archive/);
@@ -29,6 +30,22 @@ test("product allowlist and rollback procedure cover the ops contract", () => {
   assert.match(rollback, /ops_provider_operation_ledger/);
   assert.match(rollback, /provider_id_ciphertext/);
   assert.match(rollback, /ops_provider_correlations/);
+});
+
+test("Frank action targets have authoritative positive source-row versions", () => {
+  const migration = text("supabase/migrations/202609040009_customer_operations_action_versions.sql");
+  for (const table of ["workspaces", "workspace_members", "workspace_invitations", "billing_offer_acceptances", "audit_logs", "ops_enquiry_associations"]) {
+    assert.match(migration, new RegExp(`alter table public\\.${table}[\\s\\S]*ops_version bigint not null default 1`, "i"));
+  }
+  assert.match(migration, /create or replace function public\.ops_bump_target_version/i);
+  assert.match(migration, /new\.ops_version := old\.ops_version \+ 1/i);
+  assert.match(migration, /'ops_version',s\.ops_version/);
+  assert.match(migration, /'ops_version',wm\.ops_version/);
+  assert.match(migration, /'ops_version',i\.ops_version/);
+  assert.match(migration, /'ops_version',a\.ops_version/);
+  assert.match(migration, /'ops_version',e\.ops_version/);
+  assert.match(migration, /'ops_version',a\.ops_version/);
+  assert.match(migration, /where i\.workspace_id=any\(v_workspace_ids::uuid\[\]\) and i\.status='pending'/i);
 });
 
 test("ops surface is service-only and provider-free", () => {

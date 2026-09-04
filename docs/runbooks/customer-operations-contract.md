@@ -110,6 +110,17 @@ plus activation stage and booking status/subject; Chatwoot envelopes carry
 safe enquiry/support subject/status fields. The outbox is the durable handoff;
 there are no provider calls in customer request paths.
 
+Every action-capable row also carries a positive `ops_version`: workspace rows
+for invite/billing actions, member and pending-invitation rows for access
+actions, audit activity rows for session actions, and enquiry-association rows
+for assignment. These are source-row versions (initial value `1`, incremented
+by a protected BEFORE UPDATE trigger), not timestamps, provider IDs, or a
+worker-generated fallback. Frank sends the exact row version as
+`expectedVersion`; the action executor must reject a stale value under its
+target lock (the enquiry-assignment RPC already uses this CAS contract).
+Rows without an authoritative source target are omitted, leaving the related
+control disabled rather than inventing a usable-looking version.
+
 ## Rollback
 
 Run only against the intended database, after confirming the archive has
