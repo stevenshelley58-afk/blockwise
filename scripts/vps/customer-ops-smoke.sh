@@ -79,7 +79,7 @@ chatwoot_code="$(api_http_with_secret 'api_access_token' chatwoot_api_token "${C
 [[ -n "${CHATWOOT_WEBHOOK_PROBE_URL:-}" ]] || { echo 'CHATWOOT_WEBHOOK_PROBE_URL is required for signed webhook acceptance' >&2; exit 64; }
 chatwoot_timestamp="$(date +%s)"
 chatwoot_account_id="${CHATWOOT_ACCOUNT_ID:?CHATWOOT_ACCOUNT_ID is required}"
-chatwoot_smoke_inbox_id="${CHATWOOT_SMOKE_INBOX_ID:?CHATWOOT_SMOKE_INBOX_ID is required}"
+chatwoot_smoke_inbox_id="${CHATWOOT_ENQUIRY_INBOX_ID:?CHATWOOT_ENQUIRY_INBOX_ID is required}"
 chatwoot_payload="$(python3 - "$chatwoot_account_id" "$chatwoot_smoke_inbox_id" <<'PY'
 import json,sys
 account_id,inbox_id=(int(value) for value in sys.argv[1:])

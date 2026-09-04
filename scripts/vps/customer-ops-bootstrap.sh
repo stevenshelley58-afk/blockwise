@@ -47,7 +47,7 @@ require_secret() {
 }
 for name in mautic_api_token chatwoot_api_token mautic_smtp_password chatwoot_smtp_password snagtime_smtp_password chatwoot_inbox_password google_client_secret; do require_secret "$name"; done
 require_value() { [[ -n "${!1:-}" ]] || { echo "missing required setting: $1" >&2; exit 64; }; }
-for name in MAIL_PUBLIC_HOST MAUTIC_SMTP_USER CHATWOOT_SMTP_USER SNAGTIME_SMTP_USER MAUTIC_API_URL CHATWOOT_API_URL CHATWOOT_ACCOUNT_ID CHATWOOT_INBOX_USER SNAGTIME_HOST; do require_value "$name"; done
+for name in MAIL_PUBLIC_HOST MAUTIC_SMTP_USER CHATWOOT_SMTP_USER SNAGTIME_SMTP_USER MAUTIC_API_URL CHATWOOT_API_URL CHATWOOT_ACCOUNT_ID CHATWOOT_ENQUIRY_INBOX_ID CHATWOOT_SUPPORT_INBOX_ID CHATWOOT_GLOBAL_ACCOUNT_ID CHATWOOT_GLOBAL_INBOX_ID CHATWOOT_INBOX_USER SNAGTIME_HOST; do require_value "$name"; done
 [[ "${CHATWOOT_WEBHOOK_SECRET_HOST_FILE:-}" == "$SECRETS_DIR/chatwoot_webhook_secret" ]] || { echo 'CHATWOOT_WEBHOOK_SECRET_HOST_FILE must be the bootstrap-created chatwoot_webhook_secret path' >&2; exit 64; }
 [[ "$MAUTIC_API_URL" == https://* && "$CHATWOOT_API_URL" == https://* ]] || { echo 'provider API URLs must use HTTPS' >&2; exit 64; }
 [[ "$MAUTIC_SMTP_USER" != "$CHATWOOT_SMTP_USER" && "$MAUTIC_SMTP_USER" != "$SNAGTIME_SMTP_USER" && "$CHATWOOT_SMTP_USER" != "$SNAGTIME_SMTP_USER" ]] || { echo 'Stalwart identities must be distinct' >&2; exit 64; }

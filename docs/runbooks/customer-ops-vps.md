@@ -132,7 +132,13 @@ receiver `/api/webhooks/chatwoot` (not the legacy Frank path). `--apply` lists
 the configured Chatwoot account webhooks and requires the exact named URL,
 account, and projection subscription set; it creates the webhook only when no
 matching object exists and stores the API-returned secret in the fixed
-root-owned `CHATWOOT_WEBHOOK_SECRET_HOST_FILE`. An existing matching webhook
+root-owned `CHATWOOT_WEBHOOK_SECRET_HOST_FILE`. Set
+`CHATWOOT_ENQUIRY_INBOX_ID`, `CHATWOOT_SUPPORT_INBOX_ID`,
+`CHATWOOT_GLOBAL_ACCOUNT_ID`, and `CHATWOOT_GLOBAL_INBOX_ID` from the actual
+Chatwoot account/inbox IDs; capture the support inbox ID returned by the
+official inbox-create response (or retrieve it from the account inbox list)
+before starting product-app, because the receiver rejects missing or mismatched IDs.
+An existing matching webhook
 must have its operator-supplied secret file present; the bootstrap never
 guesses or accepts a generic conflict response.
 

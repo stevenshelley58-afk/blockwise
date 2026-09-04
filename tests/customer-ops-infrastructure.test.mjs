@@ -78,6 +78,7 @@ test("production worker/control-edge compose uses immutable images and file secr
 
 test("bootstrap is explicit, idempotent, and credential-file based", () => {
   const bootstrap = text("scripts/vps/customer-ops-bootstrap.sh");
+  const productCompose = text("infra/coolify/docker-compose.product.yml");
   const env = text("infra/customer-ops/customer-ops.env.example");
   const runbook = text("docs/runbooks/customer-ops-vps.md");
   assert.match(bootstrap, /--apply/);
@@ -110,7 +111,10 @@ test("bootstrap is explicit, idempotent, and credential-file based", () => {
   assert.match(text("scripts/vps/customer-ops-smoke.sh"), /X-Chatwoot-Signature/);
   assert.match(text("scripts/vps/customer-ops-smoke.sh"), /chatwoot_webhook_secret/);
   assert.match(text("scripts/vps/customer-ops-smoke.sh"), /CHATWOOT_ACCOUNT_ID/);
-  assert.match(text("scripts/vps/customer-ops-smoke.sh"), /CHATWOOT_SMOKE_INBOX_ID/);
+  assert.match(text("scripts/vps/customer-ops-smoke.sh"), /CHATWOOT_ENQUIRY_INBOX_ID/);
+  for (const key of ["CHATWOOT_ENQUIRY_INBOX_ID", "CHATWOOT_SUPPORT_INBOX_ID", "CHATWOOT_GLOBAL_ACCOUNT_ID", "CHATWOOT_GLOBAL_INBOX_ID"]) {
+    assert.match(productCompose, new RegExp(`${key}: \\$\\{${key}:\\?`));
+  }
   assert.match(text("scripts/vps/customer-ops-smoke.sh"), /private.:True/);
   for (const marker of ["Signup magic link", "Transactional mail", "External support mail", "Support reply", "Mautic contact\/flow", "SnagTime booking", "Control action"]) {
     assert.match(runbook, new RegExp(marker));

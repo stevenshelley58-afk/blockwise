@@ -52,6 +52,11 @@ SUPABASE_SERVICE_ROLE_KEY_HOST_FILE=/tmp/blockwise-service-role
 SNAGTIME_WEBHOOK_SECRET_HOST_FILE=/tmp/blockwise-snagtime-webhook
 CHATWOOT_WEBHOOK_SECRET_HOST_FILE=/tmp/blockwise-chatwoot-webhook
 BLOCKWISE_OPS_CORRELATION_KEY_HOST_FILE=/tmp/blockwise-ops-correlation-key
+CHATWOOT_ACCOUNT_ID=1
+CHATWOOT_ENQUIRY_INBOX_ID=2
+CHATWOOT_SUPPORT_INBOX_ID=3
+CHATWOOT_GLOBAL_ACCOUNT_ID=1
+CHATWOOT_GLOBAL_INBOX_ID=4
 BLOCKWISE_WORKER_EXPECTED_REVISION=0123456789abcdef0123456789abcdef01234567
 TOKEN_ENCRYPTION_KEY=contract-token
 TRUSTED_PROXY_RANGES=127.0.0.1/32
@@ -161,7 +166,10 @@ grep -q 'BLOCKWISE_OPS_CORRELATION_KEY_HOST_FILE' "$ROOT_DIR/infra/coolify/docke
 grep -q 'api/webhooks/chatwoot' "$ROOT_DIR/infra/customer-ops/customer-ops.env.example" || { echo 'Blockwise Chatwoot receiver route missing' >&2; exit 1; }
 ! grep -q '/api/internal/booking/webhook' "$ROOT_DIR/infra/customer-ops/customer-ops.env.example" || { echo 'obsolete internal booking webhook route remains' >&2; exit 1; }
 grep -q 'X-Chatwoot-Signature' "$ROOT_DIR/scripts/vps/customer-ops-smoke.sh" || { echo 'official Chatwoot signed smoke probe missing' >&2; exit 1; }
-grep -q 'CHATWOOT_SMOKE_INBOX_ID' "$ROOT_DIR/scripts/vps/customer-ops-smoke.sh" || { echo 'Chatwoot harmless smoke inbox contract missing' >&2; exit 1; }
+grep -q 'CHATWOOT_ENQUIRY_INBOX_ID' "$ROOT_DIR/scripts/vps/customer-ops-smoke.sh" || { echo 'Chatwoot harmless smoke inbox contract missing' >&2; exit 1; }
+for key in CHATWOOT_ENQUIRY_INBOX_ID CHATWOOT_SUPPORT_INBOX_ID CHATWOOT_GLOBAL_ACCOUNT_ID CHATWOOT_GLOBAL_INBOX_ID; do
+  grep -q "$key" "$PRODUCT_COMPOSE_FILE" || { echo "product Chatwoot receiver setting missing: $key" >&2; exit 1; }
+done
 grep -q 'write_chatwoot_webhook_secret' "$ROOT_DIR/scripts/vps/customer-ops-bootstrap.sh" || { echo 'Chatwoot API webhook secret capture missing' >&2; exit 1; }
 grep -q 'blockwise_webhook_secret' "$ROOT_DIR/scripts/vps/customer-ops-smoke.sh" || { echo 'paired SnagTime webhook secret missing from smoke' >&2; exit 1; }
 grep -q 'chatwoot_webhook_secret' "$ROOT_DIR/scripts/vps/customer-ops-bootstrap.sh" || { echo 'Chatwoot webhook secret contract missing' >&2; exit 1; }
