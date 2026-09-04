@@ -127,6 +127,16 @@ recovery-admin removal, mailbox creation, and mail volume backup/restore
 remain governed by `docs/runbooks/stalwart-mail.md` and
 `scripts/vps/stalwart-backup.sh`; do not duplicate those credentials or state.
 
+Booking webhook secret pairing is directional and file-backed. The installer creates
+`blockwise_webhook_secret` once; set `SNAGTIME_WEBHOOK_SECRET_HOST_FILE` in the
+Blockwise product environment to that same root-owned `0600` file. The customer-ops
+Compose mount exposes it to SnagTime as `BLOCKWISE_WEBHOOK_SECRET_FILE`, while the
+product entrypoint copies the same source to the app UID and exposes it as
+`SNAGTIME_WEBHOOK_SECRET_FILE`. Never generate two values for this direction. The
+separate `blockwise_booking_action_secret` is reserved for Blockwise-to-SnagTime
+action signing and must not be conflated with the webhook secret; its receiver/client
+registration remains a staging credential gate until the action endpoint is enabled.
+
 Run the fail-closed check first:
 
 ```bash

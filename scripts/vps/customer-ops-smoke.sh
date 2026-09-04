@@ -25,12 +25,13 @@ require_secret_file() {
   [[ "$path" = /* && ! -L "$path" && -f "$path" && "$(readlink -f -- "$path")" == "$path" ]] || { echo "secret must be an absolute regular non-symlink file: $name" >&2; exit 64; }
   [[ "$(stat -c '%a' "$path" 2>/dev/null || stat -f '%Lp' "$path")" == '600' && "$(stat -c '%u' "$path" 2>/dev/null || stat -f '%u' "$path")" == '0' && -s "$path" ]] || { echo "secret must be root-owned, non-empty, mode 0600: $name" >&2; exit 64; }
 }
-for name in mautic_smtp_password chatwoot_smtp_password snagtime_smtp_password chatwoot_inbox_password google_client_secret mautic_api_token chatwoot_api_token chatwoot_webhook_probe_secret; do
+for name in mautic_smtp_password chatwoot_smtp_password snagtime_smtp_password chatwoot_inbox_password google_client_secret mautic_api_token chatwoot_api_token chatwoot_webhook_probe_secret blockwise_webhook_secret blockwise_booking_action_secret; do
   require_secret_file "$name"
 done
 command -v curl >/dev/null || { echo 'curl is required' >&2; exit 69; }
 command -v docker >/dev/null || { echo 'docker is required for private-network IMAPS acceptance' >&2; exit 69; }
 command -v openssl >/dev/null || { echo 'openssl is required' >&2; exit 69; }
+command -v xxd >/dev/null || { echo 'xxd is required for signed SnagTime probe' >&2; exit 69; }
 command -v python3 >/dev/null || { echo 'python3 is required for projection freshness validation' >&2; exit 69; }
 
 quiet_http() { curl --fail --silent --show-error --output /dev/null --write-out '%{http_code}' "$@"; }
@@ -80,6 +81,11 @@ payload="customer-ops-smoke-$(date +%s)"
 signature="$(printf '%s' "$payload" | openssl dgst -sha256 -mac HMAC -macopt "key:file:$SECRETS_DIR/chatwoot_webhook_probe_secret" -binary | base64 -w0)"
 webhook_code="$(quiet_http -X POST -H "Content-Type: text/plain" -H "X-Blockwise-Signature: sha256=$signature" --data "$payload" "$CHATWOOT_WEBHOOK_PROBE_URL")"
 [[ "$webhook_code" == 2* ]] || { echo "signed Chatwoot webhook roundtrip failed (HTTP $webhook_code)" >&2; exit 65; }
+snagtime_timestamp="$(date +%s)"
+snagtime_probe_body='{"spec":"customer-ops.smoke.v1","id":"00000000-0000-4000-8000-000000000001","type":"booking.created","occurredAt":"2025-01-01T00:00:00.000Z","data":{}}'
+snagtime_signature="$(printf '%s.%s' "$snagtime_timestamp" "$snagtime_probe_body" | openssl dgst -sha256 -mac HMAC -macopt "key:file:$SECRETS_DIR/blockwise_webhook_secret" -binary | xxd -p -c 256)"
+snagtime_webhook_code="$(quiet_http -X POST -H 'Content-Type: application/json' -H "x-snagtime-timestamp: $snagtime_timestamp" -H "x-snagtime-signature: sha256=$snagtime_signature" --data "$snagtime_probe_body" "${BLOCKWISE_WEBHOOK_URL:?BLOCKWISE_WEBHOOK_URL is required}")"
+[[ "$snagtime_webhook_code" == 2* ]] || { echo "signed SnagTime webhook roundtrip failed (HTTP $snagtime_webhook_code)" >&2; exit 65; }
 snagtime_body="$(curl --fail --silent --show-error "https://${SNAGTIME_HOST:?SNAGTIME_HOST is required}/api/health/ready")" || { echo 'SnagTime readiness failed' >&2; exit 65; }
 grep -Eq '"status"[[:space:]]*:[[:space:]]*"ready"|"ready"[[:space:]]*:[[:space:]]*true' <<<"$snagtime_body" || { echo 'SnagTime is not ready' >&2; exit 65; }
 grep -Eiq 'google|calendar' <<<"$snagtime_body" || { echo 'SnagTime Google configuration is not reported' >&2; exit 65; }
@@ -129,4 +135,4 @@ try:
     if len(revisions)!=1 or len(publication_receipts)!=1: raise ValueError("publication provenance is inconsistent")
 except (ValueError,TypeError,KeyError,OverflowError) as error:
     raise SystemExit(f"invalid Frank /api/ops/overview contract: {error}")' <<<"$projection_body" || exit 65
-echo 'customer-ops smoke passed: SMTP TLS/AUTH, private IMAPS, Mautic API, Chatwoot API, SnagTime Google readiness, Frank /api/ops/overview provenance'
+echo 'customer-ops smoke passed: SMTP TLS/AUTH, private IMAPS, Mautic API, Chatwoot API, signed Chatwoot and SnagTime probes, SnagTime Google readiness, Frank /api/ops/overview provenance'

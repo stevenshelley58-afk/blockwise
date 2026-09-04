@@ -179,7 +179,7 @@ PY
     hook_file="$(mktemp /tmp/blockwise-chatwoot-webhook.XXXXXX)"; chmod 600 "$hook_file"
     python3 - "$CHATWOOT_WEBHOOK_URL" > "$hook_file" <<'PY'
 import json,sys
-print(json.dumps({'url':sys.argv[1],'subscriptions':['conversation_created','conversation_updated','message_created']}))
+print(json.dumps({'url':sys.argv[1],'subscriptions':['conversation_created','conversation_updated','conversation_status_changed','message_created','message_updated']}))
 PY
     code="$(api_request chatwoot_api_token POST "${CHATWOOT_API_URL%/}/accounts/${CHATWOOT_ACCOUNT_ID}/webhooks" "$hook_file")"; rm -f "$hook_file"
     [[ "$code" == 2* || "$code" == 409 ]] || { echo "Chatwoot webhook bootstrap failed (HTTP $code)" >&2; exit 65; }

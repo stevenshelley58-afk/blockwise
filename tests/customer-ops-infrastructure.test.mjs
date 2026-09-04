@@ -45,6 +45,9 @@ test("production worker/control-edge compose uses immutable images and file secr
   assert.match(productCompose, /BLOCKWISE_WORKER_EXPECTED_REVISION:\?BLOCKWISE_WORKER_EXPECTED_REVISION is required/);
   assert.match(productCompose, /SUPABASE_SERVICE_ROLE_KEY_HOST_FILE:[\s\S]*supabase-service-role-source:ro/);
   assert.match(productCompose, /SUPABASE_SERVICE_ROLE_KEY_FILE: \/run\/blockwise-secrets\/supabase-service-role/);
+  assert.match(productCompose, /SNAGTIME_WEBHOOK_SECRET_FILE: \/run\/blockwise-secrets\/snagtime-webhook/);
+  assert.match(productCompose, /SNAGTIME_WEBHOOK_SECRET_HOST_FILE:[\s\S]*snagtime-webhook-source:ro/);
+  assert.doesNotMatch(productCompose, /SNAGTIME_WEBHOOK_SECRET:\s*\$\{/);
   assert.match(productCompose, /SUPABASE_SERVICE_ROLE_KEY_HOST_FILE:[\s\S]*supabase-service-role-source:ro/);
   assert.doesNotMatch(productCompose, /SUPABASE_SERVICE_ROLE_KEY:\s*\$\{/);
   assert.doesNotMatch(productCompose, /product-worker:[\s\S]*?SUPABASE_SERVICE_ROLE_KEY:/);
@@ -57,6 +60,7 @@ test("production worker/control-edge compose uses immutable images and file secr
     assert.match(entrypoint, new RegExp(user.replace(" ", "\\s+")));
     assert.match(entrypoint, /-m 600/);
   }
+  assert.match(text("infra/product/runtime-entrypoint.sh"), /snagtime-webhook-source/);
   assert.match(productCompose, /\/run\/blockwise-secrets:rw,noexec,nosuid,nodev/);
   assert.match(controlCompose, /\/run\/blockwise-secrets:rw,noexec,nosuid,nodev/);
   assert.match(workerCompose, /\/run\/blockwise-secrets:rw,noexec,nosuid,nodev/);
@@ -76,6 +80,8 @@ test("bootstrap is explicit, idempotent, and credential-file based", () => {
   assert.match(bootstrap, /accounts\/\$\{CHATWOOT_ACCOUNT_ID\}\/inboxes/);
   assert.match(bootstrap, /accounts\/\$\{CHATWOOT_ACCOUNT_ID\}\/webhooks/);
   assert.match(bootstrap, /api_access_token/);
+  assert.match(bootstrap, /conversation_status_changed/);
+  assert.match(bootstrap, /message_updated/);
   assert.doesNotMatch(bootstrap, /chatwoot_webhook_secret/);
   assert.match(bootstrap, /chatwoot_webhook_probe_secret/);
   assert.match(bootstrap, /tags\/new/);
@@ -89,7 +95,12 @@ test("bootstrap is explicit, idempotent, and credential-file based", () => {
   assert.match(env, /MAUTIC_LIFECYCLE_FIELDS_JSON=/);
   assert.match(env, /MAUTIC_LIFECYCLE_SEGMENTS_JSON=/);
   assert.match(env, /MAUTIC_LIFECYCLE_CAMPAIGNS_JSON=/);
+  assert.match(env, /BLOCKWISE_WEBHOOK_URL=https:\/\/blockwise\.example\/api\/booking\/webhooks\/snagtime/);
+  assert.doesNotMatch(env, /\/api\/internal\/booking\/webhook/);
   assert.match(runbook, /Receipt-based staging smoke matrix/);
+  assert.match(runbook, /same root-owned `0600` file/);
+  assert.match(runbook, /blockwise_booking_action_secret/);
+  assert.match(text("scripts/vps/customer-ops-smoke.sh"), /signed SnagTime webhook roundtrip/);
   for (const marker of ["Signup magic link", "Transactional mail", "External support mail", "Support reply", "Mautic contact\/flow", "SnagTime booking", "Control action"]) {
     assert.match(runbook, new RegExp(marker));
   }
