@@ -1,4 +1,12 @@
 import { z } from "zod";
+import { META_COPY_CTA_VALUES } from "./meta-copy-contract.ts";
+import { toMetaCta } from "./meta-cta.ts";
+export {
+  META_COPY_CONSTRAINTS,
+  META_COPY_CTA_VALUES,
+  metaCopyLimitIssues,
+} from "./meta-copy-contract.ts";
+export type { AdStudioMetaCopy, MetaCopyField } from "./meta-copy-contract.ts";
 
 export const adStudioGoalSchema = z.enum([
   "seller_leads",
@@ -341,13 +349,25 @@ export type AdStudioCreative = {
   previewSvg: string;
 };
 
+const providerMetaCopyArraySchema = z.preprocess(
+  (value) => typeof value === "string" ? [value] : value,
+  z.array(z.string().min(1)).min(1),
+);
+
+/** Normalize human CTA labels to the enum values Meta can publish. */
+function normalizeProviderCta(value: unknown): unknown {
+  if (typeof value !== "string") return value;
+  const text = value.trim();
+  return text ? toMetaCta(text) : value;
+}
+
 export const metaLeadAdPackSchema = z.object({
   platform: z.literal("meta"),
   specialAdCategory: z.union([z.literal("housing"), z.null()]),
-  primaryText: z.array(z.string()).min(1),
-  headlines: z.array(z.string()).min(1),
-  descriptions: z.array(z.string()).min(1),
-  cta: z.enum(["LEARN_MORE", "SIGN_UP", "DOWNLOAD", "CONTACT_US"]),
+  primaryText: providerMetaCopyArraySchema,
+  headlines: providerMetaCopyArraySchema,
+  descriptions: providerMetaCopyArraySchema,
+  cta: z.preprocess(normalizeProviderCta, z.enum(META_COPY_CTA_VALUES)),
   leadForm: z.object({
     headline: z.string().min(1),
     questions: z.array(z.string()),

@@ -48,8 +48,7 @@ export function extractBrandKitFromWebsite(input: ExtractBrandKitInput): AdStudi
   const cssText = [extractCssText(homepageHtml), ...Object.values(input.stylesheetTextByUrl ?? {})].filter(Boolean).join("\n");
   const colours = extractColours(cssText);
   const typography = extractTypography(cssText);
-  const logo = extractLogoUrl(homepageHtml, normalizedUrl);
-  const favicon = extractLinkUrl(homepageHtml, normalizedUrl, ["icon", "shortcut icon", "apple-touch-icon"]);
+  const logos = extractLogoUrls(homepageHtml, normalizedUrl);
   const privacyPolicyUrl = extractAnchorUrl(homepageHtml, normalizedUrl, /privacy/i);
   const termsUrl = extractAnchorUrl(homepageHtml, normalizedUrl, /terms|conditions/i);
   const socialLinks = extractSocialLinks(homepageHtml);
@@ -71,10 +70,10 @@ export function extractBrandKitFromWebsite(input: ExtractBrandKitInput): AdStudi
       licenceText: extractLicenceText(homepageHtml),
     },
     logos: {
-      primaryLogoUrl: logo,
-      darkLogoUrl: null,
-      lightLogoUrl: null,
-      faviconUrl: favicon,
+      primaryLogoUrl: logos.primary,
+      darkLogoUrl: logos.dark,
+      lightLogoUrl: logos.light,
+      faviconUrl: logos.mark,
     },
     colours: {
       primary: colours.primary ?? DEFAULT_COLOURS.primary,
@@ -281,25 +280,112 @@ function firstUsefulFont(value: string): string | null {
   return fonts.find((font) => !COMMON_SYSTEM_FONTS.has(font)) ?? fonts[0] ?? null;
 }
 
-function extractLogoUrl(html: string, baseUrl: string): string | null {
-  const imgMatches = [...html.matchAll(/<img\b[^>]*>/gi)].map((match) => match[0]);
-  const logoImg = imgMatches.find((tag) => /logo|brand/i.test(tag));
-  const src = logoImg?.match(/\bsrc=["']([^"']+)["']/i)?.[1];
+type LogoCandidate = {
+  url: string;
+  signal: string;
+  context: string;
+  compact: boolean;
+  score: number;
+};
 
-  return absoluteUrl(baseUrl, src ?? null) ?? extractLinkUrl(html, baseUrl, ["mask-icon"]);
+function extractLogoUrls(
+  html: string,
+  baseUrl: string,
+): { primary: string | null; dark: string | null; light: string | null; mark: string | null } {
+  const candidates = [...html.matchAll(/<img\b[^>]*>/gi)]
+    .map((match): LogoCandidate | null => {
+      const tag = match[0];
+      const attributes = extractAttributes(tag);
+      const source = extractImageSource(attributes);
+      const url = absoluteUrl(baseUrl, source);
+      if (!url) return null;
+
+      const ownSignal = [
+        attributes.alt,
+        attributes.title,
+        attributes.class,
+        attributes.id,
+        attributes.src,
+        attributes["data-src"],
+        attributes["data-lazy-src"],
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      const start = Math.max(0, (match.index ?? 0) - 280);
+      const end = Math.min(html.length, (match.index ?? 0) + tag.length + 120);
+      const context = html.slice(start, end).toLowerCase();
+      const logoLike = /\b(?:logo|brand|site-title)\b/.test(`${ownSignal} ${context}`);
+      if (!logoLike || /captcha|tracking|analytics|payment/.test(ownSignal)) return null;
+
+      const compact = /\b(?:favicon|icon|mark|symbol|monogram|small|mobile-logo)\b/.test(ownSignal);
+      let score = /\b(?:logo|brand)\b/.test(ownSignal) ? 100 : 40;
+      if (/site-title|header|navbar|navigation|masthead/.test(context)) score += 35;
+      if (/rel=["']home["']/.test(context)) score += 15;
+      if (/footer/.test(context)) score -= 25;
+      if (compact) score -= 60;
+
+      return { url, signal: ownSignal, context, compact, score };
+    })
+    .filter((candidate): candidate is LogoCandidate => candidate !== null)
+    .filter((candidate, index, all) => all.findIndex((item) => item.url === candidate.url) === index);
+
+  const primaryCandidate = [...candidates].sort((a, b) => b.score - a.score)[0] ?? null;
+  const variants = candidates.filter((candidate) => candidate !== primaryCandidate && !candidate.compact);
+  const lightCandidate = variants.find((candidate) =>
+    /\b(?:white|light|inverse|reversed?|negative|on[-_ ]?dark)\b/.test(candidate.signal) ||
+    /footer|dark[-_ ]?(?:background|surface|theme)/.test(candidate.context),
+  );
+  const darkCandidate = variants.find((candidate) =>
+    candidate !== lightCandidate &&
+    (/\b(?:black|dark|on[-_ ]?light)\b/.test(candidate.signal) || /light[-_ ]?(?:background|surface|theme)/.test(candidate.context)),
+  );
+  const compactCandidate = candidates.find((candidate) => candidate.compact);
+  const linkedMark = extractBestLinkUrl(html, baseUrl, ["icon", "shortcut icon", "apple-touch-icon"]);
+
+  return {
+    primary: primaryCandidate?.url ?? extractBestLinkUrl(html, baseUrl, ["mask-icon"]),
+    dark: darkCandidate?.url ?? null,
+    light: lightCandidate?.url ?? null,
+    mark: linkedMark ?? compactCandidate?.url ?? null,
+  };
 }
 
-function extractLinkUrl(html: string, baseUrl: string, relCandidates: string[]): string | null {
-  for (const rel of relCandidates) {
-    const pattern = new RegExp(`<link[^>]+rel=["'][^"']*${rel}[^"']*["'][^>]+href=["']([^"']+)["'][^>]*>`, "i");
-    const match = html.match(pattern);
-    const url = absoluteUrl(baseUrl, match?.[1] ?? null);
-    if (url) {
-      return url;
-    }
-  }
+function extractImageSource(attributes: Record<string, string>): string | null {
+  const src = attributes.src?.trim();
+  const lazySource = [attributes["data-src"], attributes["data-lazy-src"], attributes["data-original"]]
+    .find((value) => value?.trim())
+    ?.trim();
+  if (src && !/^data:image\/(?:gif|svg\+xml);base64,/i.test(src)) return src;
+  if (lazySource) return lazySource;
 
-  return null;
+  const srcset = attributes.srcset ?? attributes["data-srcset"];
+  if (!srcset) return src || null;
+  const entries = srcset
+    .split(",")
+    .map((entry) => entry.trim().split(/\s+/)[0])
+    .filter((entry): entry is string => Boolean(entry));
+  return entries.at(-1) ?? src ?? null;
+}
+
+function extractBestLinkUrl(html: string, baseUrl: string, relCandidates: string[]): string | null {
+  const candidates = [...html.matchAll(/<link\b[^>]*>/gi)]
+    .map((match) => {
+      const attributes = extractAttributes(match[0]);
+      const rel = attributes.rel?.toLowerCase() ?? "";
+      if (!relCandidates.some((candidate) => rel.includes(candidate.toLowerCase()))) return null;
+      const url = absoluteUrl(baseUrl, attributes.href ?? null);
+      if (!url) return null;
+      const declaredSizes = [...(attributes.sizes ?? "").matchAll(/(\d+)x(\d+)/gi)].map((size) =>
+        Math.max(Number(size[1]), Number(size[2])),
+      );
+      const score = attributes.sizes === "any" || /\.svg(?:$|[?#])/i.test(url) ? Number.MAX_SAFE_INTEGER : Math.max(0, ...declaredSizes);
+      return { url, score };
+    })
+    .filter((candidate): candidate is { url: string; score: number } => candidate !== null)
+    .sort((a, b) => b.score - a.score);
+
+  return candidates[0]?.url ?? null;
 }
 
 function extractAnchorUrl(html: string, baseUrl: string, labelPattern: RegExp): string | null {

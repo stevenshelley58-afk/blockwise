@@ -1,26 +1,30 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { ingestTemplateArtifact } from "@/lib/adstudio/ingest-artifact";
+import { verifyInternalRequest } from "@/lib/internal-auth";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export function isAuthorizedInternalTemplateRequest(
-  authorization: string | null,
-  configuredSecret = process.env.BLOCKWISE_INTERNAL_AUTH_SECRET,
-): boolean {
-  const expected = configuredSecret?.trim();
-  const provided = authorization?.match(/^Bearer\s+(.+)$/i)?.[1]?.trim();
-  return Boolean(expected && provided && provided === expected);
-}
-
 export async function POST(request: NextRequest) {
-  if (!isAuthorizedInternalTemplateRequest(request.headers.get("authorization"))) {
-    return NextResponse.json({ error: "Internal authentication required." }, { status: 401 });
+  const rawBody = await request.text();
+  const auth = await verifyInternalRequest(request, "adstudio.templates", { body: rawBody });
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+  const rateLimit = await checkRateLimit(null, "internal:adstudio.templates", {
+    windowSeconds: 60,
+    maxRequests: 120,
+    bucket: "internal-api",
+    failClosed: true,
+  });
+  if (!rateLimit.ok) {
+    return NextResponse.json({ error: "rate_limited" }, { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } });
   }
   let body: unknown;
-  try { body = await request.json(); } catch { return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 }); }
+  try { body = JSON.parse(rawBody); } catch { return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 }); }
   try {
     const result = await ingestTemplateArtifact(createSupabaseServiceClient(), body);
     return NextResponse.json(result, { status: result.replayed ? 200 : 201 });

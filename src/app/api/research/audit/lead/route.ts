@@ -8,6 +8,7 @@ import {
 } from "@/lib/notify/demo-request-email";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { getClientIp } from "@/lib/client-ip";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -27,7 +28,7 @@ const payloadSchema = z.object({
   top_platform: z.string().trim().max(60).optional().or(z.literal("")),
   top_format: z.string().trim().max(60).optional().or(z.literal("")),
   top_angles: z.string().trim().max(200).optional().or(z.literal("")),
-  company_website: z.string().max(0).optional().or(z.literal("")),
+  company_website: z.string().max(200).optional().or(z.literal("")),
 });
 
 function clean(value: string | undefined): string | null {
@@ -58,14 +59,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
-  const ip =
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-    request.headers.get("x-real-ip") ??
-    "unknown";
+  const ip = getClientIp(request.headers);
 
   const supabase = createSupabaseServiceClient();
 
-  const rateLimit = await checkRateLimit(supabase, null, ip, {
+  const rateLimit = await checkRateLimit(null, ip, {
     windowSeconds: 3600,
     maxRequests: 8,
     bucket: "audit-lead",
@@ -140,6 +138,7 @@ export async function POST(request: NextRequest) {
       topFormat: clean(parsed.data.top_format),
       topAngles: clean(parsed.data.top_angles),
       reportUrl: reportUrl.toString(),
+      demoRequestId: inserted.id,
     }),
     sendDemoRequestNotification({
       name,
@@ -148,28 +147,29 @@ export async function POST(request: NextRequest) {
       phone: clean(parsed.data.phone),
       suburb: location,
       message,
+      demoRequestId: inserted.id,
     }),
   ]);
   const { error: deliveryUpdateError } = await supabase
     .from("demo_requests")
     .update({
-      customer_email_status: customerEmail.sent ? "sent" : "failed",
+      customer_email_status: customerEmail.sent ? "sent" : customerEmail.queued ? "queued" : "failed",
       customer_emailed_at: customerEmail.sent ? new Date().toISOString() : null,
       customer_email_error: customerEmail.error,
-      customer_email_message_id: customerEmail.messageId,
-      operator_notification_status: operatorNotification.sent ? "sent" : "failed",
+      customer_email_message_id: customerEmail.sent ? customerEmail.messageId : null,
+      operator_notification_status: operatorNotification.sent ? "sent" : operatorNotification.queued ? "queued" : "failed",
       operator_notified_at: operatorNotification.sent ? new Date().toISOString() : null,
       operator_notification_error: operatorNotification.error,
-      operator_notification_message_id: operatorNotification.messageId,
+      operator_notification_message_id: operatorNotification.sent ? operatorNotification.messageId : null,
     })
     .eq("id", inserted.id);
   if (deliveryUpdateError) {
     console.error("audit-lead delivery status update failed", deliveryUpdateError);
   }
-  if (!operatorNotification.sent) {
+  if (!operatorNotification.sent && !operatorNotification.queued) {
     console.error("audit-lead operator notification failed", operatorNotification.error);
   }
-  if (!customerEmail.sent) {
+  if (!customerEmail.sent && !customerEmail.queued) {
     console.error("audit-lead customer email failed", customerEmail.error);
     return NextResponse.json(
       { error: "We saved your request but could not send the plan. Please try again shortly." },

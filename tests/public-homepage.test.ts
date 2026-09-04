@@ -270,7 +270,8 @@ test("managed-setup form posts to the demo-request endpoint with an intact honey
   // stay visually hidden, and never be a user-facing field.
   assert.match(form, /name="company_website"/);
   assert.match(form, /hw-ms-hp/);
-  assert.match(route, /company_website/);
+  assert.match(route, /company_website: z\.string\(\)\.max\(200\)/);
+  assert.match(route, /if \(parsed\.data\.company_website\)/);
 });
 
 test("legal pages rely on root title template and define page canonicals", () => {

@@ -7,7 +7,7 @@ export type SafeZone = Rect;
 export type MaskType = "rounded_rect" | "circle" | "none";
 export interface FontRef { file: string; }
 export interface ImageSlotDefaults { inputKey: string; geometry: Rect; mask: MaskType; minSourceWidth: number; minSourceHeight: number; defaultCrop: Rect; allowedPlacementOverrides: ("crop" | "position")[]; }
-export interface TextLayerDefaults { inputKey: string; font: FontRef; fontSize: number; lineHeight: number; tracking: number; alignment: "left" | "center" | "right"; maxCharacters: number; maxLines: number; colourRole: ColourRole; overflowBehaviour: "refuse" | "truncate" | "scale_down"; }
+export interface TextLayerDefaults { inputKey: string; font: FontRef; fontSize: number; sizeRatio?: number; lineHeight: number; tracking: number; alignment: "left" | "center" | "right"; maxCharacters: number; maxLines: number; colourRole: ColourRole; overflowBehaviour: "refuse" | "truncate" | "scale_down"; }
 export interface PlateLayer { type: "plate"; layerId: string; colourRole: ColourRole; assetKey?: string; geometry: Rect; protected: boolean; }
 export interface ImageSlotLayer extends ImageSlotDefaults { type: "image_slot"; layerId: string; }
 export interface OverlayPatchLayer { type: "overlay_patch"; layerId: string; geometry: Rect; colourRole: ColourRole; opacity: number; assetKey?: string; }

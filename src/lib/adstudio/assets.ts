@@ -1,4 +1,5 @@
 import { workspaceMediaSrc } from "./image-src.ts";
+import { createAdStudioMediaUrls } from "./media-urls.ts";
 import type { AdStudioBrandKit } from "./types.ts";
 
 export const ADSTUDIO_EMBEDDED_ASSET_LIMIT = 24;
@@ -10,6 +11,8 @@ export type AdStudioBrandAssetRow = {
   storage_path?: unknown;
   metadata_json?: unknown;
   created_at?: unknown;
+  width?: unknown;
+  height?: unknown;
 };
 
 export type AdStudioMediaLibraryAsset = {
@@ -118,6 +121,20 @@ export async function loadAdStudioWorkspaceAssetRows(
 
   if (error) throw new Error(error.message);
   return data ?? [];
+}
+
+export async function loadAdStudioWorkspaceLibraryAssets(
+  supabase: { from: (table: string) => any; storage: any },
+  workspaceId: string,
+): Promise<Array<{ id: string; url: string; label: string }>> {
+  const rows = await loadAdStudioWorkspaceAssetRows(supabase, workspaceId);
+  const paths = rows.flatMap((row) => typeof row.storage_path === "string" && row.storage_path.trim() ? [row.storage_path.trim()] : []);
+  const signed = paths.length ? await createAdStudioMediaUrls({ supabase, workspaceId, paths }) : {};
+  return rows.flatMap((row) => {
+    const path = typeof row.storage_path === "string" ? row.storage_path.trim() : "";
+    const url = signed[path]?.full ?? assetUrlForRow(workspaceId, row);
+    return url && path ? [{ id: String(row.id), url, label: labelForAssetRow(row) }] : [];
+  });
 }
 
 function roleForAssetType(assetType: string): AdStudioMediaLibraryAsset["role"] {

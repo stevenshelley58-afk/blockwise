@@ -17,6 +17,18 @@ import {
 import { assertBookingWorkspaceBinding } from "../src/lib/booking/service.ts";
 
 const migrationPath = "supabase/migrations/20260727024000_onboarding_booking_foundation.sql";
+const hardeningMigrationPath = "supabase/migrations/20260903020000_booking_provider_contract_hardening.sql";
+
+test("booking provider apply is atomic and conditionally rejects stale transitions", () => {
+  const sql = readFileSync(hardeningMigrationPath, "utf8");
+  assert.match(sql, /add column if not exists last_provider_occurred_at timestamptz/i);
+  assert.match(sql, /create or replace function public\.apply_booking_provider_event/i);
+  assert.match(sql, /for update/i);
+  assert.match(sql, /p_occurred_at <= coalesce\(/i);
+  assert.match(sql, /return query select 'stale'/i);
+  assert.match(sql, /return query select 'applied'/i);
+  assert.match(sql, /v_booking\.workspace_id <> p_workspace_id/i);
+});
 
 test("booking migration is workspace-scoped, provider-neutral, idempotent, and reminder-ready", () => {
   const sql = readFileSync(migrationPath, "utf8");
@@ -42,6 +54,7 @@ test("market adapter uses the configured hosted event without provider API calls
   const workspaceId = "00000000-0000-4000-8000-000000000001";
   const env = {
     ...process.env,
+    BOOKING_PROVIDER: "calcom",
     CALCOM_ONBOARDING_URL_US: "https://cal.com/blockwise/us-onboarding",
     BOOKING_INVITATION_SECRET: "test-invitation-secret",
   };

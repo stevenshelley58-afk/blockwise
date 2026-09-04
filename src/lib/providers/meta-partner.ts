@@ -1,5 +1,4 @@
 import { DEFAULT_META_GRAPH_VERSION } from "./meta-graph-version.ts";
-import { fetchMetaAdAccounts } from "./meta-reporting.ts";
 
 /**
  * Meta partner access (Flow B).
@@ -19,6 +18,23 @@ export type MetaPartnerConfig = {
   systemToken: string;
 };
 
+export const META_PARTNER_STARTS_ENABLED_ENV = "BLOCKWISE_META_PARTNER_STARTS_ENABLED";
+
+/** Public onboarding information, available to the manual guide while automated partner starts stay disabled. */
+export function getMetaPartnerBusinessId(): string | null {
+  const businessId = process.env.META_BUSINESS_ID?.trim();
+  return businessId && /^\d{6,25}$/.test(businessId) ? businessId : null;
+}
+
+/**
+ * Partner-start is deliberately opt-in. Existing provider connections continue
+ * to use their stored vault credentials; this gate only protects the unproven
+ * partner assignment/claim onboarding path.
+ */
+export function isMetaPartnerStartEnabled(): boolean {
+  return process.env[META_PARTNER_STARTS_ENABLED_ENV]?.trim() === "true";
+}
+
 // The deep link to Meta's Business settings → Partners screen, where the
 // customer pastes Blockwise's Business ID to share their assets.
 export const META_PARTNERS_URL = "https://business.facebook.com/settings/partners";
@@ -29,7 +45,9 @@ export const META_PARTNERS_URL = "https://business.facebook.com/settings/partner
 export const META_PARTNER_SCOPES = ["ads_management", "business_management"];
 
 export function getMetaPartnerConfig(): MetaPartnerConfig | null {
-  const businessId = process.env.META_BUSINESS_ID?.trim();
+  if (!isMetaPartnerStartEnabled()) return null;
+
+  const businessId = getMetaPartnerBusinessId();
   const systemToken = process.env.META_SYSTEM_USER_TOKEN?.trim();
 
   // A placeholder value is treated as unconfigured so the connect page can
@@ -59,15 +77,15 @@ export type PartnerAdAccountCandidate = {
 export async function listPartnerVisibleAdAccounts(
   systemToken: string,
 ): Promise<PartnerAdAccountCandidate[]> {
-  const accounts = await fetchMetaAdAccounts(systemToken);
+  const accounts = await fetchPartnerAdAccounts(systemToken);
 
-  return accounts.map((account) => ({
-    id: account.id,
-    name: account.name,
+  return accounts.filter((account) => account.id || account.account_id).map((account) => ({
+    id: account.id ?? `act_${account.account_id}`,
+    name: account.name ?? account.id ?? "Meta ad account",
     currency: account.currency ?? "",
-    timezone: account.timezone ?? "",
-    isActive: account.isActive,
-    businessName: account.businessName ?? null,
+    timezone: account.timezone_name ?? "",
+    isActive: account.account_status == null || account.account_status === 1,
+    businessName: account.business?.name ?? null,
   }));
 }
 
@@ -86,9 +104,55 @@ export async function verifyPartnerAccountAccess(
     `https://graph.facebook.com/${DEFAULT_META_GRAPH_VERSION}/${encodeURIComponent(accountId)}`,
   );
   url.searchParams.set("fields", "id,name");
-  url.searchParams.set("access_token", systemToken);
 
-  const response = await fetch(url.toString(), { cache: "no-store" });
+  const response = await fetch(url.toString(), {
+    cache: "no-store",
+    headers: { authorization: `Bearer ${systemToken}` },
+  });
 
   return response.ok;
+}
+
+async function fetchPartnerAdAccounts(systemToken: string): Promise<Array<{
+  id?: string;
+  account_id?: string;
+  name?: string | null;
+  currency?: string;
+  timezone_name?: string;
+  account_status?: number;
+  business?: { name?: string | null } | null;
+}>> {
+  const rows: Array<{
+    id?: string;
+    account_id?: string;
+    name?: string | null;
+    currency?: string;
+    timezone_name?: string;
+    account_status?: number;
+    business?: { name?: string | null } | null;
+  }> = [];
+  let nextUrl: string | null = null;
+  const firstUrl = new URL(`https://graph.facebook.com/${DEFAULT_META_GRAPH_VERSION}/me/adaccounts`);
+  firstUrl.searchParams.set("fields", "id,account_id,name,currency,timezone_name,account_status,business{name}");
+  firstUrl.searchParams.set("limit", "25");
+  nextUrl = firstUrl.toString();
+
+  while (nextUrl) {
+    const response = await fetch(nextUrl, {
+      cache: "no-store",
+      headers: { authorization: `Bearer ${systemToken}` },
+    });
+    const payload = (await response.json().catch(() => ({}))) as {
+      data?: typeof rows;
+      paging?: { next?: string };
+      error?: { message?: string };
+    };
+    if (!response.ok) {
+      throw new Error(payload.error?.message ?? `Meta request failed with ${response.status}.`);
+    }
+    rows.push(...(payload.data ?? []));
+    nextUrl = payload.paging?.next ?? null;
+  }
+
+  return rows;
 }

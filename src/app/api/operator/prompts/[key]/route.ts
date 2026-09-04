@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { requireOperator } from "@/lib/operator/auth";
+import { requireOwnerOperator } from "@/lib/operator/auth";
 import {
   assertPromptKey,
   createPromptServiceClient,
@@ -16,7 +16,7 @@ type RouteContext = {
 };
 
 export async function GET(_request: NextRequest, context: RouteContext) {
-  const guard = await requireOperator();
+  const guard = await requireOwnerOperator();
 
   if (!guard.ok) {
     return guard.response;

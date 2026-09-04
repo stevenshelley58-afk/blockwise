@@ -47,8 +47,12 @@ const ACTION_LABELS: Record<ActionType, string> = {
 export interface InstantFormEditorProps {
   adId: string;
   workspaceId: string;
-  /** Reports whether a draft is currently pinned (saved as the active revision). */
-  onPinStateChange?: (pinned: boolean) => void;
+  /** Reports the exact form revision that publish will bind to. */
+  onPinStateChange?: (state: {
+    pinned: boolean;
+    revision: number | null;
+    form: InstantForm | null;
+  }) => void;
 }
 
 type Status = "loading" | "idle" | "generating" | "saving";
@@ -66,8 +70,8 @@ export function InstantFormEditor({ adId, workspaceId, onPinStateChange }: Insta
   const pinned = pinnedRevision !== null && !dirty;
   useEffect(() => {
     if (status === "loading") return;
-    onPinStateChange?.(pinned);
-  }, [pinned, status, onPinStateChange]);
+    onPinStateChange?.({ pinned, revision: pinned ? pinnedRevision : null, form });
+  }, [form, pinned, pinnedRevision, status, onPinStateChange]);
 
   const basePath = `/api/adstudio/ads/${encodeURIComponent(adId)}/instant-form?workspaceId=${encodeURIComponent(workspaceId)}`;
 
@@ -101,11 +105,12 @@ export function InstantFormEditor({ adId, workspaceId, onPinStateChange }: Insta
       const body = (await res.json().catch(() => ({}))) as {
         form?: InstantForm | null;
         revision?: number | null;
+        pinned?: boolean;
         error?: string;
       };
       if (!res.ok) throw new Error(body.error ?? `Failed to load form (${res.status})`);
       setForm(body.form ?? null);
-      setPinnedRevision(body.revision ?? null);
+      setPinnedRevision(body.pinned === false ? null : (body.revision ?? null));
       setDirty(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load form");
@@ -153,8 +158,8 @@ export function InstantFormEditor({ adId, workspaceId, onPinStateChange }: Insta
       };
       if (!res.ok) throw new Error(body.error ?? `Failed to save draft (${res.status})`);
       setForm(body.form ?? form);
-      setPinnedRevision(body.revision ?? null);
-      setDirty(false);
+      setPinnedRevision(body.pinned === false ? null : (body.revision ?? null));
+      setDirty(body.pinned === false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save draft");
     } finally {
@@ -220,9 +225,9 @@ export function InstantFormEditor({ adId, workspaceId, onPinStateChange }: Insta
   }
 
   return (
-    <section aria-labelledby="instant-form-heading" className="rounded-(--r-card) border border-(--line) bg-(--surface)">
+    <section aria-labelledby="instant-form-heading" className="w-full min-w-0 rounded-(--r-card) border border-(--line) bg-(--surface)">
       {/* Header */}
-      <header className="flex items-center justify-between border-b border-(--line) px-5 py-4">
+      <header className="flex flex-wrap items-start gap-3 border-b border-(--line) px-4 py-4 sm:items-center sm:justify-between sm:px-5">
         <div>
           <h3 id="instant-form-heading" className="text-sm font-semibold">Instant Form</h3>
           <p className="mt-0.5 text-xs text-muted-foreground">
@@ -236,6 +241,7 @@ export function InstantFormEditor({ adId, workspaceId, onPinStateChange }: Insta
                 ? "bg-yellow-100 text-yellow-700"
                 : "bg-green-100 text-green-700"
             }`}
+            role="status"
             aria-live="polite"
           >
             {dirty
@@ -289,7 +295,7 @@ export function InstantFormEditor({ adId, workspaceId, onPinStateChange }: Insta
           </button>
         </div>
       ) : (
-        <div className="space-y-6 p-5">
+        <div className="space-y-6 p-4 sm:p-5">
           {/* Name */}
           <Field label="Form name">
             <TextInput label="Form name" value={form.name} onChange={name => update({ ...form, name })} placeholder="e.g. Free home valuation" />
@@ -319,18 +325,18 @@ export function InstantFormEditor({ adId, workspaceId, onPinStateChange }: Insta
                         type="checkbox"
                         checked={!!present}
                         onChange={e => toggleContactField(type, e.target.checked)}
-                        className="size-4 accent-(--ui-primary)"
+                          className="size-4 accent-(--ui-primary) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--ui-primary) focus-visible:ring-offset-2"
                       />
                       <span className="text-sm">{FIELD_LABELS[type]}</span>
                     </label>
                     {present && (
-                      <label htmlFor={`contact-${type}-required`} className="flex min-h-11 items-center gap-1.5 text-xs text-muted-foreground">
+                      <label htmlFor={`contact-${type}-required`} className="flex min-h-11 shrink-0 items-center gap-1.5 text-xs text-muted-foreground">
                         <input
                           id={`contact-${type}-required`}
                           type="checkbox"
                           checked={present.required}
                           onChange={e => setContactRequired(type, e.target.checked)}
-                          className="size-3.5 accent-(--ui-primary)"
+                          className="size-4 accent-(--ui-primary) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--ui-primary) focus-visible:ring-offset-2"
                         />
                         Required
                       </label>
@@ -345,7 +351,7 @@ export function InstantFormEditor({ adId, workspaceId, onPinStateChange }: Insta
           <Field label={`Custom questions (${form.customQuestions.length}/5)`}>
             <div className="space-y-2">
               {form.customQuestions.map((question, index) => (
-                <div key={index} className="flex items-center gap-2">
+                <div key={index} className="flex min-w-0 items-center gap-2">
                   <TextInput
                     label={`Question ${index + 1}`}
                     value={question.label}
@@ -356,7 +362,7 @@ export function InstantFormEditor({ adId, workspaceId, onPinStateChange }: Insta
                   <button
                     type="button"
                     onClick={() => removeQuestion(index)}
-                    className="min-h-11 shrink-0 rounded-(--r-ctl) px-3 py-2 text-xs text-muted-foreground hover:bg-(--surface-subtle) hover:text-red-600"
+                    className="min-h-11 shrink-0 rounded-(--r-ctl) px-3 py-2 text-xs text-muted-foreground outline-none hover:bg-(--surface-subtle) hover:text-red-600 focus-visible:ring-2 focus-visible:ring-(--ui-primary)"
                     aria-label={`Remove question ${index + 1}`}
                   >
                     Remove
@@ -367,7 +373,7 @@ export function InstantFormEditor({ adId, workspaceId, onPinStateChange }: Insta
                 <button
                   type="button"
                   onClick={addQuestion}
-                  className="min-h-11 rounded-(--r-ctl) border border-dashed border-(--line) px-4 py-2 text-sm text-muted-foreground transition hover:border-(--ui-primary) hover:text-(--ui-primary)"
+                    className="min-h-11 rounded-(--r-ctl) border border-dashed border-(--line) px-4 py-2 text-sm text-muted-foreground outline-none transition hover:border-(--ui-primary) hover:text-(--ui-primary) focus-visible:ring-2 focus-visible:ring-(--ui-primary)"
                 >
                   + Add question
                 </button>
@@ -388,13 +394,14 @@ export function InstantFormEditor({ adId, workspaceId, onPinStateChange }: Insta
             <div className="space-y-2">
               <TextInput label="Thank-you title" value={form.thankYou.title} onChange={title => updateThankYou({ title })} placeholder="Thank you!" maxLength={60} />
               <TextArea label="Thank-you message" value={form.thankYou.body} onChange={body => updateThankYou({ body })} placeholder="We've received your details..." maxLength={500} />
-              <div className="flex gap-2">
+              <div className="flex flex-col gap-2 sm:flex-row">
                 <label htmlFor="instant-form-action" className="sr-only">Thank-you action</label>
                 <select
                   id="instant-form-action"
                   value={form.thankYou.actionType}
                   onChange={e => updateThankYou({ actionType: e.target.value as ActionType })}
-                  className="min-h-11 w-44 rounded-(--r-ctl) border border-(--line) bg-(--canvas) px-3 py-2 text-sm outline-none focus:border-(--ui-primary)"
+                  aria-describedby="instant-form-action-help"
+                  className="min-h-11 w-full rounded-(--r-ctl) border border-(--line) bg-(--canvas) px-3 py-2 text-sm outline-none focus:border-(--ui-primary) focus-visible:ring-2 focus-visible:ring-(--ui-primary) sm:w-44"
                 >
                   {ACTION_TYPES.map(type => (
                     <option key={type} value={type}>
@@ -411,6 +418,7 @@ export function InstantFormEditor({ adId, workspaceId, onPinStateChange }: Insta
                   />
                 )}
               </div>
+              <p id="instant-form-action-help" className="text-xs text-muted-foreground">Choose what happens after a customer submits the form.</p>
             </div>
           </Field>
 
@@ -453,12 +461,14 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 function TextInput({
+  id,
   label,
   value,
   onChange,
   placeholder,
   maxLength,
 }: {
+  id?: string;
   label: string;
   value: string;
   onChange: (value: string) => void;
@@ -467,24 +477,27 @@ function TextInput({
 }) {
   return (
     <input
+      id={id}
       type="text"
       aria-label={label}
       value={value}
       onChange={e => onChange(e.target.value)}
       placeholder={placeholder}
       maxLength={maxLength}
-      className="min-h-11 w-full rounded-(--r-ctl) border border-(--line) bg-(--canvas) px-3 py-2 text-sm text-foreground outline-none transition focus:border-(--ui-primary)"
+      className="min-h-11 w-full min-w-0 rounded-(--r-ctl) border border-(--line) bg-(--canvas) px-3 py-2 text-sm text-foreground outline-none transition focus:border-(--ui-primary) focus-visible:ring-2 focus-visible:ring-(--ui-primary) focus-visible:ring-offset-2"
     />
   );
 }
 
 function TextArea({
+  id,
   label,
   value,
   onChange,
   placeholder,
   maxLength,
 }: {
+  id?: string;
   label: string;
   value: string;
   onChange: (value: string) => void;
@@ -493,13 +506,14 @@ function TextArea({
 }) {
   return (
     <textarea
+      id={id}
       aria-label={label}
       value={value}
       onChange={e => onChange(e.target.value)}
       placeholder={placeholder}
       maxLength={maxLength}
       rows={2}
-      className="min-h-11 w-full resize-none rounded-(--r-ctl) border border-(--line) bg-(--canvas) px-3 py-2 text-sm text-foreground outline-none transition focus:border-(--ui-primary)"
+      className="min-h-11 w-full resize-none rounded-(--r-ctl) border border-(--line) bg-(--canvas) px-3 py-2 text-sm text-foreground outline-none transition focus:border-(--ui-primary) focus-visible:ring-2 focus-visible:ring-(--ui-primary) focus-visible:ring-offset-2"
     />
   );
 }

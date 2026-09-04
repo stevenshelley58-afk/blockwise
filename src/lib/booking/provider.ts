@@ -1,10 +1,11 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
+export type BookingProvider = "calcom" | "snagtime";
 export type BookingMarket = "US" | "AU";
 export type BookingState = "link_sent" | "booked" | "rescheduled" | "cancelled" | "completed" | "failed";
 
 export type ProviderBookingEvent = {
-  provider: "calcom";
+  provider: BookingProvider;
   providerEventId: string;
   providerBookingId: string;
   providerEventTypeId: string | null;
@@ -60,17 +61,90 @@ export function getHostedBookingUrl(
   }
 }
 
+/** Provider selection is explicit; the legacy Cal.com route remains available
+ * regardless of which provider owns newly-created invitations. */
+export function resolveBookingProvider(env: NodeJS.ProcessEnv = process.env): BookingProvider {
+  const configured = env.BOOKING_PROVIDER?.trim().toLowerCase();
+  // Provider selection is explicit. This prevents a partially provisioned
+  // host from silently switching booking systems based on URL presence.
+  if (!configured) throw new BookingConfigurationError("BOOKING_PROVIDER must be explicitly set to calcom or snagtime.");
+  if (configured === "calcom" || configured === "snagtime") return configured;
+  throw new BookingConfigurationError("BOOKING_PROVIDER must be calcom or snagtime.");
+}
+
+function getSnagtimeBookingUrl(env: NodeJS.ProcessEnv): string | null {
+  const base = env.SNAGTIME_BASE_URL?.trim();
+  if (!base) return null;
+  try {
+    const url = new URL(base);
+    return url.protocol === "https:" ? url.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
+export function getBookingProviderReadiness(env: NodeJS.ProcessEnv = process.env): {
+  provider: BookingProvider | null;
+  ok: boolean;
+  missing: string[];
+  invalid: string[];
+} {
+  let provider: BookingProvider;
+  try {
+    provider = resolveBookingProvider(env);
+  } catch {
+    return {
+      provider: null,
+      ok: false,
+      missing: env.BOOKING_PROVIDER?.trim() ? [] : ["BOOKING_PROVIDER"],
+      invalid: env.BOOKING_PROVIDER?.trim() ? ["BOOKING_PROVIDER"] : [],
+    };
+  }
+  const missing: string[] = [];
+  const invalid: string[] = [];
+  if (!env.BOOKING_INVITATION_SECRET?.trim()) missing.push("BOOKING_INVITATION_SECRET");
+  if (provider === "snagtime") {
+    if (!env.SNAGTIME_BASE_URL?.trim()) missing.push("SNAGTIME_BASE_URL");
+    else if (!getSnagtimeBookingUrl(env)) invalid.push("SNAGTIME_BASE_URL");
+    if (!env.SNAGTIME_WEBHOOK_SECRET?.trim()) missing.push("SNAGTIME_WEBHOOK_SECRET");
+  } else {
+    for (const key of ["CALCOM_ONBOARDING_URL_US", "CALCOM_ONBOARDING_URL_AU"] as const) {
+      if (!env[key]?.trim()) missing.push(key);
+      else if (!getHostedBookingUrl(key.endsWith("US") ? "US" : "AU", env)) invalid.push(key);
+    }
+    if (!env.CALCOM_WEBHOOK_SECRET?.trim()) missing.push("CALCOM_WEBHOOK_SECRET");
+  }
+  return { provider, ok: missing.length === 0 && invalid.length === 0, missing, invalid };
+}
+
 export function buildHostedBookingUrl(input: {
   market: BookingMarket;
   invitationId: string;
+  provider?: BookingProvider;
   env?: NodeJS.ProcessEnv;
 }): string {
-  const configured = getHostedBookingUrl(input.market, input.env);
+  const env = input.env ?? process.env;
+  const provider = input.provider ?? resolveBookingProvider(env);
+  if (provider === "snagtime") {
+    const base = getSnagtimeBookingUrl(env);
+    if (!base) {
+      throw new BookingConfigurationError("The SnagTime booking base URL is not configured.");
+    }
+    const url = new URL(base);
+    const invitationToken = signBookingInvitation(input.invitationId, env);
+    url.searchParams.set("invitation", invitationToken);
+    url.searchParams.set("market", input.market);
+    url.searchParams.set("utm_source", "blockwise");
+    url.searchParams.set("utm_medium", "product");
+    url.searchParams.set("utm_campaign", "onboarding");
+    return url.toString();
+  }
+  const configured = getHostedBookingUrl(input.market, env);
   if (!configured) {
     throw new BookingConfigurationError(`The ${input.market} onboarding booking URL is not configured.`);
   }
   const url = new URL(configured);
-  const invitationToken = signBookingInvitation(input.invitationId, input.env);
+  const invitationToken = signBookingInvitation(input.invitationId, env);
   url.searchParams.set("utm_source", "blockwise");
   url.searchParams.set("utm_medium", "product");
   url.searchParams.set("utm_campaign", "onboarding");
@@ -120,6 +194,7 @@ export function parseCalcomWebhook(input: {
   raw: Record<string, unknown>;
   providerEventId: string;
 }): ProviderBookingEvent {
+  assertRecord(input.raw, "Booking webhook body must be a JSON object.");
   const trigger = stringValue(input.raw.triggerEvent);
   if (!isSupportedTrigger(trigger)) {
     throw new BookingWebhookError("Unsupported booking webhook event.", 202);
@@ -183,4 +258,10 @@ function stringValue(value: unknown): string | null {
 
 function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+function assertRecord(value: unknown, message: string): asserts value is Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new BookingWebhookError(message, 400);
+  }
 }

@@ -13,6 +13,17 @@ import type {
 import { PLACEMENT_DIMENSIONS } from "../../../../packages/ad-template-contract/src/types";
 import { templateAssetProxyUrl } from "@/lib/adstudio/pack-gallery";
 import { cn } from "@/lib/utils";
+import {
+  effectiveTextFontSize,
+  fabricCircleGeometry,
+  fabricIconCircleGeometry,
+  fabricIconPathData,
+  fabricPathPosition,
+  fabricRectGeometry,
+  imageMaskRadius,
+  resolveIconShape,
+  resolveGeometry,
+} from "./layer-geometry";
 
 type LayerTarget = { layer: LayoutLayer; object: FabricObject };
 
@@ -37,6 +48,8 @@ function ensureLocalFont(font: { file: string }): Promise<void> {
 
 export interface LayeredCanvasProps {
   templateId: string;
+  /** Saved-ad identity used to authorize withdrawn template assets. */
+  existingAdId: string;
   layout: Layout;
   colours: AdTemplate["semanticColours"];
   imageValues?: Record<string, string | null | undefined>;
@@ -55,6 +68,7 @@ export interface LayeredCanvasProps {
  */
 export function LayeredCanvas({
   templateId,
+  existingAdId,
   layout,
   colours,
   imageValues = {},
@@ -119,12 +133,11 @@ export function LayeredCanvas({
     const resize = () => {
       const width = Math.max(1, host.clientWidth);
       const height = Math.max(1, host.clientHeight);
-      const zoom = Math.max(0.01, Math.min(width / dims.width, height / dims.height));
-      // The host is already the zoomed display box. Keep the canvas CSS size
-      // in host pixels and use the viewport transform for pack coordinates;
-      // multiplying the logical dimensions here shrinks the preview twice.
-      canvas.setDimensions({ width, height });
-      canvas.setViewportTransform([zoom, 0, 0, zoom, 0, 0]);
+      // Fabric's backing store stays in pack coordinates so objects and hit
+      // testing remain aligned. Only the CSS box follows the responsive host.
+      canvas.setDimensions({ width: dims.width, height: dims.height });
+      canvas.setDimensions({ width, height }, { cssOnly: true });
+      canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
       canvas.requestRenderAll();
     };
     resize();
@@ -151,6 +164,8 @@ export function LayeredCanvas({
         const object = await createLayerObject({
           fabric,
           templateId,
+          existingAdId,
+          placement: layout.placement,
           layer,
           colours,
           imageValues,
@@ -170,7 +185,7 @@ export function LayeredCanvas({
     return () => {
       renderVersionRef.current += 1;
     };
-  }, [colours, cropOverrides, imageValues, layout, templateId, ready, selectedLayerId, textValues]);
+  }, [colours, cropOverrides, existingAdId, imageValues, layout, templateId, ready, selectedLayerId, textValues]);
 
   useEffect(() => {
     const canvas = fabricRef.current;
@@ -197,6 +212,8 @@ export function LayeredCanvas({
 async function createLayerObject({
   fabric,
   templateId,
+  existingAdId,
+  placement,
   layer,
   colours,
   imageValues,
@@ -205,13 +222,18 @@ async function createLayerObject({
 }: {
   fabric: typeof import("fabric");
   templateId: string;
+  existingAdId: string;
+  placement: Layout["placement"];
   layer: LayoutLayer;
   colours: AdTemplate["semanticColours"];
   imageValues: Record<string, string | null | undefined>;
   textValues: Record<string, string | null | undefined>;
   cropOverrides: Record<string, Rect | null | undefined>;
 }): Promise<FabricObject | null> {
-  const geometry = layer.geometry;
+  // Packs may author geometry as normalized ratios. Keep the editor's Fabric
+  // scene in the same logical coordinates as the server renderer, regardless
+  // of whether a signed pack used pixels or ratios for this placement.
+  const geometry = resolveGeometry(layer.geometry, PLACEMENT_DIMENSIONS[placement]);
   const passive = { selectable: false, evented: false, objectCaching: true } as const;
   const interactive = {
     selectable: true,
@@ -232,7 +254,7 @@ async function createLayerObject({
   const fill = (role: keyof AdTemplate["semanticColours"]) => colours[role] ?? "#d3d7df";
 
   if (layer.type === "plate") {
-    const assetUrl = layer.assetKey ? templateAssetProxyUrl(templateId, layer.assetKey) : null;
+    const assetUrl = layer.assetKey ? templateAssetProxyUrl(templateId, layer.assetKey, existingAdId) : null;
     if (assetUrl) {
       try {
         const image = await fabric.FabricImage.fromURL(assetUrl);
@@ -257,15 +279,19 @@ async function createLayerObject({
   }
 
   if (layer.type === "text") {
-    const text = textValues[layer.inputKey] ?? "";
+    const source = textValues[layer.inputKey] ?? "";
+    if (layer.overflowBehaviour === "refuse" && source.length > layer.maxCharacters) return null;
+    const text = source.slice(0, layer.maxCharacters);
     await ensureLocalFont(layer.font);
     const textbox = new fabric.Textbox(text, {
       left: geometry.x,
       top: geometry.y,
+      originX: "left",
+      originY: "top",
       width: geometry.width,
       height: geometry.height,
       fontFamily: fontStem(layer.font.file),
-      fontSize: layer.fontSize,
+      fontSize: effectiveTextFontSize(layer, geometry),
       lineHeight: layer.lineHeight,
       charSpacing: layer.tracking * 1000,
       textAlign: layer.alignment,
@@ -280,24 +306,47 @@ async function createLayerObject({
 
   if (layer.type === "vector") {
     const colour = fill(layer.colourRole);
-    if (layer.shape === "line") return new fabric.Path(`M ${geometry.x} ${geometry.y + geometry.height / 2} L ${geometry.x + geometry.width} ${geometry.y + geometry.height / 2}`, { fill: "", stroke: colour, strokeWidth: 2, ...interactive });
-    if (layer.shape === "wave") return new fabric.Path(`M ${geometry.x} ${geometry.y + geometry.height / 2} C ${geometry.x + geometry.width * .25} ${geometry.y - geometry.height / 2} ${geometry.x + geometry.width * .75} ${geometry.y + geometry.height * 1.5} ${geometry.x + geometry.width} ${geometry.y + geometry.height / 2}`, { fill: "", stroke: colour, strokeWidth: 2, ...interactive });
+    if (layer.shape === "line") {
+      const path = new fabric.Path(`M 0 ${geometry.height / 2} L ${geometry.width} ${geometry.height / 2}`, { fill: "", stroke: colour, strokeWidth: 2, ...interactive });
+      path.set(fabricPathPosition(path, geometry));
+      return path;
+    }
+    if (layer.shape === "wave") {
+      const path = new fabric.Path(`M 0 ${geometry.height / 2} C ${geometry.width * .25} ${-geometry.height / 2} ${geometry.width * .75} ${geometry.height * 1.5} ${geometry.width} ${geometry.height / 2}`, { fill: "", stroke: colour, strokeWidth: 2, ...interactive });
+      path.set(fabricPathPosition(path, geometry));
+      return path;
+    }
     if (layer.shape === "notched") {
-      const x = geometry.x, y = geometry.y, w = geometry.width, h = geometry.height, n = Math.min(w, h) * .2;
-      return new fabric.Polygon([{ x, y }, { x: x + w - n, y }, { x: x + w, y: y + n }, { x: x + w, y: y + h }, { x: x + n, y: y + h }, { x, y: y + h - n }], { fill: colour, ...interactive });
+      const w = geometry.width, h = geometry.height, n = Math.min(w, h) * .2;
+      const polygon = new fabric.Polygon([{ x: 0, y: 0 }, { x: w - n, y: 0 }, { x: w, y: n }, { x: w, y: h }, { x: n, y: h }, { x: 0, y: h - n }], { fill: colour, ...interactive });
+      polygon.set(fabricPathPosition(polygon, geometry));
+      return polygon;
     }
     if (layer.shape === "ring") return new fabric.Circle({ left: geometry.x + geometry.width / 2, top: geometry.y + geometry.height / 2, originX: "center", originY: "center", radius: Math.min(geometry.width, geometry.height) / 2, fill: "", stroke: colour, strokeWidth: Math.max(2, Math.min(geometry.width, geometry.height) * .08), opacity: layer.opacity ?? 1, ...interactive });
     const radius = layer.shape === "pill" ? Math.min(geometry.width, geometry.height) / 2 : layer.shape === "rounded" ? Math.min(16, geometry.width / 4, geometry.height / 4) : 0;
     if (layer.shape === "circle") {
-      return new fabric.Circle({ left: geometry.x, top: geometry.y, radius: Math.min(geometry.width, geometry.height) / 2, fill: colour, opacity: layer.opacity ?? 1, ...interactive });
+      return new fabric.Circle({ ...fabricCircleGeometry(geometry), fill: colour, opacity: layer.opacity ?? 1, ...interactive });
     }
     return new fabric.Rect({ ...fabricRectGeometry(geometry), rx: radius, ry: radius, fill: colour, opacity: layer.opacity ?? 1, ...interactive });
   }
 
   if (layer.type === "icon") {
-    const x = geometry.x, y = geometry.y, w = geometry.width, h = geometry.height;
-    const iconPath = layer.icon === "arrow" ? `M ${x + w * .1} ${y + h / 2} L ${x + w * .9} ${y + h / 2} M ${x + w * .55} ${y + h * .18} L ${x + w * .9} ${y + h / 2} L ${x + w * .55} ${y + h * .82}` : `M ${x + w * .12} ${y + h * .52} L ${x + w * .4} ${y + h * .8} L ${x + w * .88} ${y + h * .2}`;
-    return new fabric.Path(iconPath, { fill: "", stroke: fill(layer.colourRole), strokeWidth: Math.max(2, Math.min(w, h) * .1), ...interactive });
+    const w = geometry.width, h = geometry.height;
+    const iconShape = resolveIconShape(layer.icon);
+    if (iconShape === "circle") {
+      return new fabric.Circle({
+        ...fabricIconCircleGeometry(geometry),
+        fill: "",
+        stroke: fill(layer.colourRole),
+        strokeWidth: Math.max(2, Math.min(w, h) * .1),
+        ...interactive,
+      });
+    }
+    const iconPath = fabricIconPathData(layer.icon, w, h);
+    if (!iconPath) return null;
+    const path = new fabric.Path(iconPath, { fill: "", stroke: fill(layer.colourRole), strokeWidth: Math.max(2, Math.min(w, h) * .1), ...interactive });
+    path.set(fabricPathPosition(path, geometry));
+    return path;
   }
 
   const src = (layer.type === "image_slot" || layer.type === "logo") ? imageValues[layer.inputKey] ?? null : null;
@@ -306,7 +355,7 @@ async function createLayerObject({
       const image = await fabric.FabricImage.fromURL(src);
       if (layer.type === "image_slot") {
         cropImageToGeometry(image, geometry, cropOverrides[layer.inputKey] ?? layer.defaultCrop);
-        image.clipPath = maskForSlot(fabric, layer);
+        image.clipPath = maskForSlot(fabric, layer, geometry);
       } else {
         fitImageToGeometry(image, geometry);
       }
@@ -322,12 +371,10 @@ async function createLayerObject({
     if (layer.type === "logo") {
       return new fabric.Rect({ ...fabricRectGeometry(geometry), rx: Math.min(12, geometry.height / 3), ry: Math.min(12, geometry.height / 3), fill: "#f1f2f4", stroke: "#d3d7df", strokeWidth: 2, ...interactive });
     }
-    const radius = layer.mask === "rounded_rect" ? Math.min(24, geometry.width / 4, geometry.height / 4) : 0;
+    const radius = layer.mask === "rounded_rect" ? imageMaskRadius(geometry) : 0;
     if (layer.mask === "circle") {
       return new fabric.Circle({
-        left: geometry.x,
-        top: geometry.y,
-        radius: Math.min(geometry.width, geometry.height) / 2,
+        ...fabricCircleGeometry(geometry),
         fill: "#f1f2f4",
         stroke: "#d3d7df",
         strokeWidth: 2,
@@ -354,22 +401,14 @@ async function createLayerObject({
   });
 }
 
-/** Fabric uses left/top for object placement; pack contracts use x/y. */
-function fabricRectGeometry(geometry: Rect) {
-  return {
-    left: geometry.x,
-    top: geometry.y,
-    width: geometry.width,
-    height: geometry.height,
-  };
-}
-
 function fitImageToGeometry(image: import("fabric").FabricImage, geometry: Rect) {
   const width = Math.max(1, image.width);
   const height = Math.max(1, image.height);
   image.set({
     left: geometry.x,
     top: geometry.y,
+    originX: "left",
+    originY: "top",
     scaleX: geometry.width / width,
     scaleY: geometry.height / height,
   });
@@ -385,6 +424,8 @@ function cropImageToGeometry(image: import("fabric").FabricImage, geometry: Rect
   image.set({
     left: geometry.x,
     top: geometry.y,
+    originX: "left",
+    originY: "top",
     cropX: crop.x * sourceWidth,
     cropY: crop.y * sourceHeight,
     width: cropWidth,
@@ -405,16 +446,13 @@ function normalizedCrop(crop: Rect): Rect {
   };
 }
 
-function maskForSlot(fabric: typeof import("fabric"), layer: ImageSlotLayer) {
-  const geometry = layer.geometry;
+function maskForSlot(fabric: typeof import("fabric"), layer: ImageSlotLayer, geometry: Rect) {
   if (layer.mask === "circle") {
     return new fabric.Circle({
-      left: geometry.x,
-      top: geometry.y,
-      radius: Math.min(geometry.width, geometry.height) / 2,
+      ...fabricCircleGeometry(geometry),
       absolutePositioned: true,
     });
   }
-  const radius = layer.mask === "rounded_rect" ? Math.min(24, geometry.width / 4, geometry.height / 4) : 0;
+  const radius = layer.mask === "rounded_rect" ? imageMaskRadius(geometry) : 0;
   return new fabric.Rect({ ...fabricRectGeometry(geometry), rx: radius, ry: radius, absolutePositioned: true });
 }

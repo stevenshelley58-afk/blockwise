@@ -6,6 +6,9 @@ import type { AdStudioBrandKit } from "@/lib/adstudio/types";
 import { deriveFormGenerationInput, generateInstantForm, validateInstantForm } from "@/lib/adstudio/instant-form-generator";
 import { instantFormSchema, type InstantForm } from "@/lib/adstudio/instant-form-types";
 import { sha256Hex } from "@/lib/adstudio/document-token";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -55,12 +58,24 @@ export async function POST(request: NextRequest, context: RouteContext) {
   const { id } = await Promise.resolve(context.params);
   const access = await requireAdStudioRequest(request);
   if (!access.ok) return access.response;
+  const rateLimit = await checkRateLimit(access.access.workspaceId, access.access.userId, {
+    windowSeconds: 300,
+    maxRequests: 20,
+    bucket: "adstudio-instant-form",
+  });
+  if (!rateLimit.ok) {
+    return NextResponse.json(
+      { error: "Instant form generation limit reached. Try again later." },
+      { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } },
+    );
+  }
 
   const ad = await loadAd(access.supabase, id, access.access.workspaceId);
   if (!ad) return NextResponse.json({ error: "Ad not found" }, { status: 404 });
 
   const contextInput = await buildFormGenerationContext(
     access.supabase,
+    createSupabaseServiceClient(),
     access.access.workspaceId,
     ad,
   );
@@ -153,7 +168,7 @@ async function loadBrandKit(
 
 /** Pack classification label — fallback campaign goal when the ad has no copy. */
 async function loadPackContext(
-  supabase: Awaited<ReturnType<typeof import("@/lib/supabase/server").createSupabaseServerClient>>,
+  supabase: SupabaseClient,
   templateId: string,
 ): Promise<{ goal?: string; templateFormDefaults?: unknown }> {
   const { data } = await supabase
@@ -174,12 +189,13 @@ async function loadPackContext(
 
 async function buildFormGenerationContext(
   supabase: Awaited<ReturnType<typeof import("@/lib/supabase/server").createSupabaseServerClient>>,
+  templateSupabase: SupabaseClient,
   workspaceId: string,
   ad: AdRow,
 ) {
   const [brandKit, packContext, workspaceRow] = await Promise.all([
     loadBrandKit(supabase, workspaceId),
-    loadPackContext(supabase, ad.template_id),
+    loadPackContext(templateSupabase, ad.template_id),
     supabase.from("workspaces").select("name").eq("id", workspaceId).maybeSingle(),
   ]);
 

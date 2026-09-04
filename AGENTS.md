@@ -98,8 +98,12 @@ UI or UX task must explicitly invoke `$impeccable` and name the commands used.
 
 - `npm run typecheck` and `npm run test` pass; update or delete stale tests
   deliberately, never skip them.
-- Runtime verification happens on Vercel Preview or Production URLs only.
-  Localhost is never acceptance.
+- Runtime verification happens on the controlled self-hosted VPS/Caddy staging
+  or production target defined by the
+  [production-readiness](docs/runbooks/production-readiness.md),
+  [OSS product migration](docs/runbooks/oss-product-migration.md), and
+  [rollback](docs/runbooks/rollback.md) runbooks. Localhost and Vercel Preview
+  are not acceptance targets.
 - If trigger.dev tasks or Supabase migrations changed, deploy/apply them and
   confirm they register before merge.
 

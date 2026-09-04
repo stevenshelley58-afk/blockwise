@@ -14,6 +14,8 @@ import { hasExplicitMetaPublishAudience, validateMetaOfferFulfilment } from "../
 import { buildMetaPlanMutation, type BuiltMetaPlanMutation } from "../providers/meta-mutations.ts";
 import { executeMetaMutationById } from "../providers/meta-mutation-worker.ts";
 import type { createSupabaseServiceClient } from "../supabase/service.ts";
+import { metaCopyLimitIssues } from "./meta-copy-contract.ts";
+import { toMetaCta } from "./meta-cta.ts";
 import type {
   MetaConnectionSetup,
   MetaPublishControls,
@@ -62,6 +64,7 @@ export interface PublishLoadResult {
     feedPngPath: string;
     storyPngHash: string;
     storyPngPath: string;
+    createdAt?: string;
   };
   pack: AdTemplate;
   form: InstantForm | null;
@@ -154,6 +157,7 @@ export async function loadPublishState(
   supabase: SupabaseClient,
   adId: string,
   workspaceId: string,
+  options: { templateSupabase?: SupabaseClient } = {},
 ): Promise<PublishLoadResult> {
   // 1. Load ad
   const { data: ad, error: adError } = await supabase
@@ -169,14 +173,16 @@ export async function loadPublishState(
   // 2. Load active revision
   const { data: revision, error: revError } = await supabase
     .from("ad_revisions")
-    .select("id, revision_number, document_hash, feed_png_hash, feed_png_path, story_png_hash, story_png_path")
+    .select("id, revision_number, document_hash, feed_png_hash, feed_png_path, story_png_hash, story_png_path, created_at")
     .eq("id", ad.active_revision_id)
     .single();
 
   if (revError || !revision) throw new PublishError("revision_not_found", "Active revision not found");
 
   // 3. Load template
-  const { data: packRow, error: packError } = await supabase
+  // The ad lookup above proves workspace ownership. Customer callers may use
+  // a service-only template reader so saved history survives quarantine.
+  const { data: packRow, error: packError } = await (options.templateSupabase ?? supabase)
     .from("ad_templates")
     .select("template_json")
     .eq("template_id", ad.template_id)
@@ -214,6 +220,7 @@ export async function loadPublishState(
       feedPngPath: revision.feed_png_path,
       storyPngHash: revision.story_png_hash,
       storyPngPath: revision.story_png_path,
+      createdAt: revision.created_at,
     },
     pack,
     form,
@@ -249,15 +256,22 @@ export function validatePublishState(
 
   if (!state.revision.feedPngHash) issues.push("Missing Feed PNG");
   if (!state.revision.storyPngHash) issues.push("Missing Story PNG");
+  issues.push(...metaCopyLimitIssues({
+    primaryText: state.ad.metaPrimaryText,
+    headline: state.ad.metaHeadline,
+    description: state.ad.metaDescription,
+    cta: state.ad.metaCta,
+  }).map(issue => `${issue.field} must be ${issue.maxLength} characters or fewer.`));
   if (!state.ad.metaPrimaryText) issues.push("Missing primary text");
   if (!state.ad.metaHeadline) issues.push("Missing headline");
-  if (!state.ad.metaCta) issues.push("Missing CTA");
+  if (!state.ad.metaCta?.trim()) issues.push("Missing CTA");
+  const mappedCta = state.ad.metaCta?.trim() ? toMetaCta(state.ad.metaCta) : "";
   if (!destinationUrl || !isHttpsUrl(destinationUrl)) {
     issues.push(mode === "website"
       ? "Missing valid HTTPS destination URL/article — add the article or website URL before publishing"
       : "Missing valid HTTPS destination URL — add the Instant Form thank-you website URL before publishing");
   }
-  if (requirements.requiredCtaTypes.length > 0 && !requirements.requiredCtaTypes.includes(state.ad.metaCta)) {
+  if (requirements.requiredCtaTypes.length > 0 && !requirements.requiredCtaTypes.includes(mappedCta)) {
     issues.push(`CTA must be one of: ${requirements.requiredCtaTypes.join(", ")}`);
   }
   if (mode === "instant_form") {
@@ -393,6 +407,7 @@ export interface PausedPublishPlanInput {
   adId: string;
   workspaceId: string;
   connectionId: string;
+  publicationSnapshotId?: string | null;
   setup: MetaConnectionSetup;
   controls?: MetaPublishControls;
   state: PublishLoadResult;
@@ -510,6 +525,16 @@ export function buildPausedMetaPublishPlan(input: PausedPublishPlanInput): MetaP
     legacyCampaignId: null,
     providerConnectionId: input.connectionId,
     approvalRequestId: null,
+    publicationSnapshotId: input.publicationSnapshotId ?? null,
+    source: {
+      snapshotId: input.publicationSnapshotId ?? state.revision.id,
+      creativeRevision: state.revision.revisionNumber,
+      documentHash: state.revision.documentHash,
+      feedPngHash: state.revision.feedPngHash,
+      storyPngHash: state.revision.storyPngHash,
+      formDraftId: state.formDraftId,
+      formRevision: state.formRevision,
+    },
     adapter: "marketing_api",
     status: "draft",
     idempotencyKey,
@@ -554,7 +579,7 @@ function buildPausedCreative(
     headline: state.ad.metaHeadline || label,
     primaryText: state.ad.metaPrimaryText || label,
     description: state.ad.metaDescription || "",
-    cta: state.ad.metaCta || "LEARN_MORE",
+    cta: toMetaCta(state.ad.metaCta || "LEARN_MORE"),
     leadFormLocalId: destinationMode === "instant_form" ? "form_primary" : "",
     adStudioCreativeId: null,
     format,
@@ -1165,6 +1190,15 @@ export async function activatePausedMetaPublish(
   });
 
   if (executed.status !== "applied") {
+    // An unconfirmed safety pause means some objects may still be ACTIVE on
+    // Meta — surfaced as a distinct code so receipts never claim a confirmed
+    // pause that could not be verified.
+    if ("unconfirmedPauseIds" in executed && Array.isArray(executed.unconfirmedPauseIds) && executed.unconfirmedPauseIds.length > 0) {
+      throw new PublishError(
+        "activation_unconfirmed",
+        executed.lastError ?? "Meta activation failed and Blockwise could not confirm that every object was paused.",
+      );
+    }
     throw new PublishError(
       "activation_failed",
       executed.lastError ?? "Meta could not activate the paused campaign — it stays PAUSED on Meta.",

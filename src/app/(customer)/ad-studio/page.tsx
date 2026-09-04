@@ -1,93 +1,96 @@
+import { ArrowRight } from "lucide-react";
+import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import { listTemplates } from "@/lib/adstudio/pack-gallery";
+import { HomeCommand } from "@/components/adstudio/home-command";
+import { getTemplate, listTemplates, type TemplateSummary } from "@/lib/adstudio/pack-gallery";
+import { createCustomerAd } from "@/lib/adstudio/create-customer-ad";
+import { loadAdStudioLibraryPage, type LibraryAdModel, type LibraryAssetModel } from "@/lib/adstudio/library-read-model";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
 
 export const dynamic = "force-dynamic";
 
-// ---------------------------------------------------------------------------
-// Ad Studio — template gallery.
-// Final layered templates are delivered by Hermes through the authenticated internal endpoint.
-// This page is read-only: opening a template takes the customer into the layered
-// editor shell. Save/Publish land in a later phase.
-// ---------------------------------------------------------------------------
+// Creation stays server-side and receives a fresh idempotency key per form.
+async function createAdAction(creationKey: string, formData: FormData) {
+  "use server";
+  const { supabase, access } = await requirePageSurfaceAccess("adstudio");
+  const templateId = String(formData.get("templateId") ?? "").trim();
+  if (!templateId) notFound();
+  const pack = await getTemplate(supabase, templateId);
+  if (!pack) notFound();
+  const ad = await createCustomerAd(supabase, access.workspaceId, pack, creationKey);
+  redirect(`/ad-studio/ads/${encodeURIComponent(ad.adId)}`);
+}
 
 export default async function AdStudioPage() {
-  const { supabase } = await requirePageSurfaceAccess("adstudio");
-  const templates = await listTemplates(supabase);
+  const { supabase, access, auth } = await requirePageSurfaceAccess("adstudio");
+  const timeZone = resolveTimeZone(auth.claims?.user_metadata?.timezone, access.region);
+  const dateLocale = access.region === "US" ? "en-US" : "en-AU";
+  const [templatesResult, assetsResult, adsResult] = await Promise.allSettled([
+    listTemplates(supabase),
+    loadAdStudioLibraryPage({ supabase, workspaceId: access.workspaceId, kind: "assets", limit: 5 }),
+    loadAdStudioLibraryPage({ supabase, workspaceId: access.workspaceId, kind: "ads", limit: 3 }),
+  ]);
+  const templates = templatesResult.status === "fulfilled" ? templatesResult.value : [];
+  const assets = assetsResult.status === "fulfilled" ? assetsResult.value.items as LibraryAssetModel[] : [];
+  const ads = adsResult.status === "fulfilled" ? adsResult.value.items as LibraryAdModel[] : [];
 
   return (
-    <div className="flex min-h-[calc(100dvh-54px)] flex-col bg-background text-foreground md:min-h-[calc(100dvh-60px)]">
-      <header className="border-b border-border bg-card">
-        <div className="mx-auto flex w-full max-w-6xl items-baseline justify-between gap-4 px-6 py-6">
+    <div className="mx-auto w-full max-w-[1120px] px-4 pt-6 pb-28 md:px-6 md:pt-8 md:pb-16">
+      <HomeCommand
+        ads={ads}
+        assets={assets}
+        adsError={adsResult.status === "rejected"}
+        assetsError={assetsResult.status === "rejected"}
+        timeZone={timeZone}
+        dateLocale={dateLocale}
+      />
+      <section className="mt-10" aria-labelledby="quick-starts-heading">
+        <div className="flex items-end justify-between gap-4">
           <div>
-            <h1 className="text-xl font-semibold tracking-tight">Ad Studio</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Choose a starting point, then shape the ad in the editor.
-            </p>
+            <p className="font-mono text-[9.5px] uppercase tracking-[.12em] text-muted-foreground">Quick starts</p>
+            <h2 id="quick-starts-heading" className="mt-1 font-display text-[17px] font-extrabold tracking-[-.015em]">Start from a proven layout</h2>
           </div>
-          <span className="hidden text-xs tabular-nums text-muted-foreground sm:block">
-            {templates.length === 1 ? "1 template" : `${templates.length} templates`}
-          </span>
+          <Link href="/ad-studio/templates" className="inline-flex min-h-11 items-center gap-1 text-[12px] font-semibold hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Browse all <ArrowRight size={15} aria-hidden /></Link>
         </div>
-      </header>
-
-      <div className="mx-auto w-full max-w-6xl flex-1 px-6 py-8">
-        {templates.length === 0 ? (
-          <EmptyState />
-        ) : (
-          <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
-            {templates.map((template) => (
-              <li key={template.templateId}>
-                <Link
-                  href={`/ad-studio/templates/${encodeURIComponent(template.templateId)}`}
-                  className="group block overflow-hidden rounded-(--r-card) border border-border bg-card transition duration-200 hover:-translate-y-0.5 hover:border-foreground/25 hover:shadow-float focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:hover:translate-y-0"
-                >
-                  <div className="overflow-hidden border-b border-border bg-muted">
-                    <img
-                      loading="lazy"
-                      width={1080}
-                      height={1350}
-                      src={template.gallerySampleUrl}
-                      alt={`${template.name} Feed preview`}
-                      className="aspect-[4/5] w-full object-cover transition duration-300 group-hover:scale-[1.01] motion-reduce:transform-none"
-                    />
-                  </div>
-                  <div className="p-4">
-                    <h2 className="truncate text-base font-semibold tracking-tight text-foreground">{template.name}</h2>
-                    <p className="mt-1 line-clamp-2 min-h-10 text-sm leading-5 text-muted-foreground">{template.description}</p>
-                    <div className="mt-4 flex items-center justify-between text-xs font-medium">
-                      <span className="text-muted-foreground">Feed + Story</span>
-                      <span className="text-primary transition group-hover:translate-x-0.5 motion-reduce:transform-none">Customise →</span>
-                    </div>
-                  </div>
-                </Link>
+        {templates.length > 0 ? (
+          <ul className="mt-4 grid gap-3 sm:grid-cols-3">
+            {templates.slice(0, 3).map((template) => (
+              <li key={template.templateId} className="min-w-0">
+                <form action={createAdAction.bind(null, crypto.randomUUID())} className="h-full">
+                  <input type="hidden" name="templateId" value={template.templateId} />
+                  <button type="submit" aria-label={`Start with ${template.name}`} className="group flex min-h-11 w-full items-center gap-3 rounded-(--r-card) border border-border bg-card p-3 text-left transition hover:border-(--line-heavy) hover:shadow-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                    <img src={template.gallerySampleUrl} alt="" className="size-14 shrink-0 rounded-lg object-cover" />
+                    <span className="min-w-0 flex-1"><span className="block truncate font-display text-[14px] font-extrabold">{template.name}</span><span className="mt-1 block truncate text-xs text-muted-foreground">Feed + Story · {template.imageInputs + template.textInputs} inputs</span></span>
+                    <ArrowRight className="size-4 shrink-0 text-muted-foreground transition group-hover:translate-x-0.5" aria-hidden />
+                  </button>
+                </form>
               </li>
             ))}
           </ul>
+        ) : templatesResult.status === "rejected" ? <ReadError label="templates" /> : (
+          <div className="mt-4 rounded-(--r-card) border border-dashed border-(--line-heavy) bg-(--surface-subtle)/50 p-6 text-center text-sm text-muted-foreground">No starting points are available yet. Check the template gallery again when packs are ready.</div>
         )}
-      </div>
+      </section>
     </div>
   );
 }
 
-function EmptyState() {
-  return (
-    <div className="grid place-items-center py-24">
-      <div className="max-w-sm text-center">
-        <div className="mx-auto mb-5 grid size-12 place-items-center rounded-(--r-card) border border-border bg-card text-muted-foreground">
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-            <rect x="3" y="3" width="14" height="14" rx="2" stroke="currentColor" strokeWidth="1.4" />
-            <path d="M3 12.5 7 8.5l3 3 4-4.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </div>
-        <h2 className="text-base font-semibold tracking-tight text-foreground">
-          No templates yet
-        </h2>
-        <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-          New starting points will appear here when they’re ready. Your saved ads
-          stay private to your workspace.
-        </p>
-      </div>
-    </div>
-  );
+function ReadError({ label }: { label: string }) {
+  return <div className="mt-4 rounded-(--r-card) border border-(--ui-error)/25 bg-(--ui-error-soft) p-5 text-sm"><p className="font-semibold text-(--ui-error)">Couldn’t load {label}.</p><p className="mt-1 text-muted-foreground">Refresh to try again. Your other Studio sections remain available.</p></div>;
 }
+
+function resolveTimeZone(value: unknown, region: string | undefined): string {
+  const candidate = typeof value === "string" ? value.trim() : "";
+  if (candidate) {
+    try { new Intl.DateTimeFormat("en", { timeZone: candidate }).format(); return candidate; } catch { /* use region default */ }
+  }
+  return region === "US" ? "America/New_York" : "Australia/Sydney";
+}
+
+export function formatLastEdited(value: string | null, timeZone: string, locale: "en-AU" | "en-US"): string {
+  if (!value) return "recently";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "recently" : new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short", timeZone }).format(date);
+}
+
+export type { TemplateSummary };

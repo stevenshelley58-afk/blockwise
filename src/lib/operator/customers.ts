@@ -1,9 +1,11 @@
 import { recordCustomerActivationMilestone } from "../activation/customer-activation.ts";
 import { createBookingInvitation, getLatestOnboardingBooking } from "../booking/service.ts";
 import { normalizeBookingMarket } from "../booking/provider.ts";
-import { sendOperatorEmail, getOperatorMailboxConfig } from "./email-service.ts";
+import { sendOperatorEmail } from "./email-service.ts";
 import { recordAuditLog } from "../supabase/audit.ts";
 import { createSupabaseServiceClient } from "../supabase/service.ts";
+import { MANUAL_REQUEST_ACTION, MANUAL_REQUEST_TARGET, MANUAL_STATUS_ACTION } from "../adstudio/manual-publish.ts";
+import { META_PARTNER_REQUEST_ACTION, META_PARTNER_REQUEST_TARGET, META_PARTNER_STATUS_ACTION } from "../providers/meta-partner-access-requests.ts";
 
 type ServiceClient = ReturnType<typeof createSupabaseServiceClient>;
 
@@ -191,14 +193,14 @@ export async function runOperatorCustomerAction(input: {
       mutationKey,
       serviceSupabase: service,
     });
-    let delivery: "email" | "manual" = "manual";
-    if (customer.email && getOperatorMailboxConfig().configured) {
+    let delivery: "queued" | "manual" = "manual";
+    if (customer.email) {
       await sendOperatorEmail({
         to: [customer.email],
         subject: "Book your Blockwise onboarding call",
         text: `Choose a convenient onboarding time with the Blockwise team:\n\n${booking.hostedBookingUrl}\n\nYour product access is not affected if you book later.`,
       });
-      delivery = "email";
+      delivery = "queued";
     }
     result = { action: input.action, bookingUrl: booking.hostedBookingUrl, delivery };
   } else {
@@ -268,7 +270,13 @@ async function loadCustomerRelations(service: ServiceClient, workspaceIds: strin
     table("workspace_onboarding_bookings"),
     table("meta_free_live_claims"),
     detail ? table("workspace_credit_ledger") : Promise.resolve({ data: [], error: null }),
-    detail ? table("audit_logs") : Promise.resolve({ data: [], error: null }),
+    detail
+      ? table("audit_logs")
+      : service
+          .from("audit_logs")
+          .select("workspace_id,action,target_type,correlation_id,metadata,created_at")
+          .in("workspace_id", workspaceIds)
+          .in("target_type", [MANUAL_REQUEST_TARGET, META_PARTNER_REQUEST_TARGET]),
   ]);
   const results = {
     activations, wallets, brandPacks, connections, publishPlans, campaigns,
@@ -311,12 +319,14 @@ function buildCustomerRow(workspace: WorkspaceRow, related: CustomerRelations): 
   const freeLive = related.freeLiveClaims.find((row) => row.workspace_id === workspaceId);
   const publishes = related.publishPlans.filter((row) => row.workspace_id === workspaceId);
   const campaigns = related.campaigns.filter((row) => row.workspace_id === workspaceId);
-  const stage = activationStage(activation);
+  const manualPublishPending = hasOpenManualPublishRequest(related.audit, workspaceId);
+  const metaPartnerAccessPending = hasOpenMetaPartnerAccessRequest(related.audit, workspaceId);
+  const stage = activationStage(activation, manualPublishPending, metaPartnerAccessPending);
   const queues: CustomerQueueKey[] = [];
   if (activation?.email_verified_at && !activation.website_submitted_at) queues.push("verified_no_website");
   if (["failed", "error"].includes(String(brand?.review_status ?? ""))) queues.push("brand_scan_failed");
   if (activation?.first_ad_pack_generated_at && meta?.status !== "connected") queues.push("generated_no_meta");
-  if (activation?.meta_help_selected_at && meta?.status !== "connected") queues.push("meta_help_needed");
+  if ((activation?.meta_help_selected_at || manualPublishPending || metaPartnerAccessPending) && meta?.status !== "connected") queues.push("meta_help_needed");
   if (activation?.meta_connected_at && !activation.checkout_completed_at) queues.push("checkout_incomplete");
   if (activation?.intro_invoice_paid_at && !["booked", "rescheduled", "completed"].includes(String(booking?.status ?? ""))) queues.push("paid_no_booking");
   if (publishes.some((row) => ["failed", "error"].includes(String(row.status ?? "")))) queues.push("publish_failed");
@@ -356,18 +366,55 @@ function buildCustomerRow(workspace: WorkspaceRow, related: CustomerRelations): 
   };
 }
 
-function activationStage(row: Record<string, unknown> | null): { label: string; nextAction: string } {
+function activationStage(row: Record<string, unknown> | null, manualPublishPending = false, metaPartnerAccessPending = false): { label: string; nextAction: string } {
   if (!row?.email_verified_at) return { label: "Email pending", nextAction: "Verify email" };
   if (!row.country_confirmed_at) return { label: "Market setup", nextAction: "Confirm country" };
   if (!row.website_submitted_at) return { label: "Brand setup", nextAction: "Add website" };
   if (!row.brand_pack_approved_at) return { label: "Brand review", nextAction: "Approve Brand Pack" };
   if (!row.first_ad_pack_generated_at) return { label: "First value", nextAction: "Generate first ad" };
+  if (metaPartnerAccessPending) return { label: "Meta access", nextAction: "Verify partner access" };
+  if (manualPublishPending) return { label: "Manual publishing", nextAction: "Process publish request" };
   if (!row.meta_connected_at) return { label: "Meta setup", nextAction: "Connect Meta" };
   if (!row.checkout_completed_at) return { label: "Conversion", nextAction: "Complete Checkout" };
   if (!row.first_campaign_live_at) return { label: "Launch", nextAction: "Launch first campaign" };
   if (!row.intro_invoice_paid_at) return { label: "Billing", nextAction: "Confirm first invoice" };
   if (!row.onboarding_completed_at) return { label: "Activated", nextAction: "Complete onboarding" };
   return { label: "Active", nextAction: "Operate workspace" };
+}
+
+function hasOpenManualPublishRequest(audit: Record<string, unknown>[], workspaceId: string): boolean {
+  const statuses = new Map<string, string>();
+  const ordered = audit
+    .filter((row) => row.workspace_id === workspaceId && row.target_type === MANUAL_REQUEST_TARGET)
+    .sort((left, right) => String(left.created_at ?? "").localeCompare(String(right.created_at ?? "")));
+  for (const row of ordered) {
+    const requestId = string(row.correlation_id);
+    if (!requestId) continue;
+    if (row.action === MANUAL_REQUEST_ACTION) statuses.set(requestId, "requested");
+    if (row.action === MANUAL_STATUS_ACTION) {
+      const metadata = oneRecord(row.metadata);
+      const status = string(metadata?.status);
+      if (status) statuses.set(requestId, status);
+    }
+  }
+  return [...statuses.values()].some((status) => status === "requested" || status === "in_progress");
+}
+
+function hasOpenMetaPartnerAccessRequest(audit: Record<string, unknown>[], workspaceId: string): boolean {
+  const statuses = new Map<string, string>();
+  const ordered = audit
+    .filter((row) => row.workspace_id === workspaceId && row.target_type === META_PARTNER_REQUEST_TARGET)
+    .sort((left, right) => String(left.created_at ?? "").localeCompare(String(right.created_at ?? "")));
+  for (const row of ordered) {
+    const requestId = string(row.correlation_id);
+    if (!requestId) continue;
+    if (row.action === META_PARTNER_REQUEST_ACTION) statuses.set(requestId, "requested");
+    if (row.action === META_PARTNER_STATUS_ACTION) {
+      const status = string(oneRecord(row.metadata)?.status);
+      if (status) statuses.set(requestId, status);
+    }
+  }
+  return [...statuses.values()].some((status) => status === "requested" || status === "verifying");
 }
 
 async function loadBookingRecipient(service: ServiceClient, workspaceId: string) {

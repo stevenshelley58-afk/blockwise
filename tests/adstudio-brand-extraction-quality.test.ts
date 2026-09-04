@@ -85,13 +85,51 @@ test("deduplicates copy repeated by responsive website markup", () => {
   assert.deepEqual(kit.tone.preferredPhrases, ["Here for your property journey", "Property experts since 1902"]);
 });
 
+test("extracts the primary, reversed, and highest-resolution mark from a real-world logo set", () => {
+  const kit = extract(`
+    <html>
+      <head>
+        <link sizes="32x32" href="/media/mark-32.png" rel="icon">
+        <link href="/media/mark-192.png" rel="icon" sizes="192x192">
+      </head>
+      <body>
+        <header class="site-header">
+          <a rel="home"><img alt="logo" src="/media/agency-logo.png"></a>
+        </header>
+        <footer class="dark-background">
+          <img src="/media/agency-logo-dark.png" alt="logo">
+          <img src="/media/agency-logo-small-dark.png" alt="logo">
+        </footer>
+      </body>
+    </html>
+  `);
+
+  assert.equal(kit.logos.primaryLogoUrl, "https://www.raywhite.com/media/agency-logo.png");
+  assert.equal(kit.logos.lightLogoUrl, "https://www.raywhite.com/media/agency-logo-dark.png");
+  assert.equal(kit.logos.darkLogoUrl, null);
+  assert.equal(kit.logos.faviconUrl, "https://www.raywhite.com/media/mark-192.png");
+});
+
+test("uses a lazy-loaded logo source instead of a placeholder image", () => {
+  const kit = extract(`
+    <header class="site-header">
+      <img class="brand-logo" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==" data-src="/media/real-logo.svg" alt="Agency logo">
+    </header>
+  `);
+
+  assert.equal(kit.logos.primaryLogoUrl, "https://www.raywhite.com/media/real-logo.svg");
+});
+
 test("Brand Studio replaces stale previews and never invents logo variants", () => {
   const source = readFileSync("src/components/adstudio/brand-studio.tsx", "utf8");
 
   assert.match(source, /setLogoFile\(null\);[\s\S]*setLogoPreviewUrl\(scannedKit\.logos\.primaryLogoUrl \?\? ""\)/);
   assert.doesNotMatch(source, /\{initial\}★/);
   assert.match(source, /kit\.logos\.lightLogoUrl/);
+  assert.match(source, /kit\.logos\.darkLogoUrl/);
   assert.match(source, /kit\.logos\.faviconUrl/);
+  assert.match(source, /previewFit="contain"/);
+  assert.match(source, /previewBackground=\{kit\.colours\.primary\}/);
 });
 
 test("website extraction fetches stylesheet content before building the brand kit", () => {

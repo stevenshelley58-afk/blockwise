@@ -6,10 +6,11 @@ import {
 } from "@/lib/booking/service";
 import {
   BookingConfigurationError,
-  getHostedBookingUrl,
+  getBookingProviderReadiness,
   normalizeBookingMarket,
 } from "@/lib/booking/provider";
 import { requireWorkspaceAccess } from "@/lib/auth/workspace-access";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
@@ -25,7 +26,7 @@ export async function GET() {
   });
   return NextResponse.json({
     market: context.market,
-    configured: Boolean(getHostedBookingUrl(context.market)),
+    configured: getBookingProviderReadiness().ok,
     booking: latest,
   });
 }
@@ -37,6 +38,18 @@ export async function POST(request: Request) {
   const mutationId = typeof body.mutationId === "string" ? body.mutationId.trim() : "";
   if (!mutationId || mutationId.length > 160) {
     return NextResponse.json({ error: "A valid booking mutation ID is required." }, { status: 400 });
+  }
+
+  const rateLimit = await checkRateLimit(context.workspaceId, context.workspaceId, {
+    windowSeconds: 3600,
+    maxRequests: 10,
+    bucket: "booking-invitation",
+  });
+  if (!rateLimit.ok) {
+    return NextResponse.json(
+      { error: "Too many booking attempts. Please try again later." },
+      { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } },
+    );
   }
 
   try {

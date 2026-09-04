@@ -206,7 +206,7 @@ export async function ensureOperatorSession(
   const [{ data: profile }, { data: memberships }] = await Promise.all([
     supabase
       .from("profiles")
-      .select("is_operator")
+      .select("is_operator, operator_role")
       .eq("id", user.id)
       .maybeSingle(),
     supabase

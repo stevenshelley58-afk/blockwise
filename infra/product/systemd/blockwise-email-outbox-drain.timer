@@ -1,0 +1,11 @@
+[Unit]
+Description=Run the Blockwise transactional email outbox drain
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=1min
+Persistent=true
+Unit=blockwise-email-outbox-drain.service
+
+[Install]
+WantedBy=timers.target

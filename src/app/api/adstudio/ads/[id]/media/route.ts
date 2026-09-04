@@ -2,10 +2,12 @@ import { NextResponse, type NextRequest } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { requireAdStudioRequest } from "@/lib/adstudio/http";
-import { buildCustomerImageRef, CUSTOMER_IMAGE_BUCKET, imageSha256, parseCustomerImageRef, type CustomerImageMime } from "@/lib/adstudio/customer-image-ref";
+import { buildCustomerImageRef, CUSTOMER_IMAGE_BUCKET, parseCustomerImageRef, type CustomerImageMime } from "@/lib/adstudio/customer-image-ref";
+import { imageSha256 } from "@/lib/adstudio/customer-image-hash.server";
 import { CUSTOMER_IMAGE_MAX_BYTES, CustomerImageValidationError, validateCustomerImageBytes } from "@/lib/adstudio/image-validation";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { adoptWorkspaceAsset, AdoptAssetError } from "@/lib/adstudio/adopt-workspace-asset";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,6 +19,7 @@ type ImageBody = {
   sha256?: unknown;
   mime?: unknown;
   size?: unknown;
+  sourceAssetId?: unknown;
 };
 
 const CUSTOMER_MIMES = new Set<CustomerImageMime>(["image/png", "image/jpeg", "image/webp"]);
@@ -34,6 +37,24 @@ export async function POST(request: NextRequest, context: RouteContext) {
   const { id } = await Promise.resolve(context.params);
 
   const body = (await request.json().catch(() => ({}))) as ImageBody;
+  if (body.operation === "adopt") {
+    const sourceAssetId = typeof body.sourceAssetId === "string" ? body.sourceAssetId.trim() : "";
+    if (!sourceAssetId) return NextResponse.json({ error: "Select a workspace image first.", code: "invalid_source" }, { status: 400 });
+    const { data: ad, error: adError } = await access.supabase.from("ad_customer_ads").select("id").eq("id", id).eq("workspace_id", access.access.workspaceId).maybeSingle();
+    if (adError) return NextResponse.json({ error: "We could not verify this ad." }, { status: 500 });
+    if (!ad) return NextResponse.json({ error: "Ad not found." }, { status: 404 });
+    const rateLimit = await checkRateLimit(access.access.workspaceId, access.access.userId, { windowSeconds: 60 * 60, maxRequests: 120, bucket: "adstudio-media-upload" });
+    if (!rateLimit.ok) return NextResponse.json({ error: "Upload limit reached. Try again later." }, { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } });
+    const service = createSupabaseServiceClient();
+    try {
+      const adopted = await adoptWorkspaceAsset({ accessSupabase: access.supabase, serviceSupabase: service, workspaceId: access.access.workspaceId, adId: id, sourceAssetId });
+      return NextResponse.json(adopted, { headers: { "cache-control": "private, no-store" } });
+    } catch (error) {
+      const status = error instanceof AdoptAssetError && error.code === "source_not_found" ? 404 : error instanceof AdoptAssetError && error.code === "database" ? 500 : error instanceof AdoptAssetError && error.code === "quota" ? 413 : error instanceof AdoptAssetError && error.code === "source_expired" ? 410 : 400;
+      console.error("Ad Studio workspace asset adoption failed", { code: error instanceof AdoptAssetError ? error.code : "storage" });
+      return NextResponse.json({ error: error instanceof AdoptAssetError ? error.message : "We could not use this workspace image.", code: error instanceof AdoptAssetError ? error.code : "storage" }, { status });
+    }
+  }
   const operation = body.operation === "finalize" ? "finalize" : body.operation === "prepare" ? "prepare" : body.operation === "discard" ? "discard" : null;
   const validated = validateMetadata(body);
   const reservationId = typeof body.reservationId === "string" && isUuid(body.reservationId) ? body.reservationId : null;
@@ -53,7 +74,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
   }
   if (!ad) return NextResponse.json({ error: "Ad not found." }, { status: 404 });
 
-  const rateLimit = await checkRateLimit(access.supabase, access.access.workspaceId, access.access.userId, {
+  const rateLimit = await checkRateLimit(access.access.workspaceId, access.access.userId, {
     windowSeconds: 60 * 60,
     maxRequests: 120,
     bucket: "adstudio-media-upload",

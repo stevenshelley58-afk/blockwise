@@ -1,14 +1,37 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+
+import { verifyInternalRequest } from "@/lib/internal-auth";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { loadPublishState, validatePublishState, freezePublicationSnapshot } from "@/lib/adstudio/publish-adapter";
+import type { MetaConnectionSetup, MetaPublishControls } from "@/lib/providers/meta-execution";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+type FreezeRequestBody = {
+  adId?: string;
+  workspaceId?: string;
+  connectionId?: string;
+  setup?: MetaConnectionSetup;
+  controls?: MetaPublishControls;
+};
 
 /**
  * GET /api/internal/adstudio/publish/state?adId=...&workspaceId=...
  *
  * Loads the authoritative publish state: ad metadata, active revision
  * PNG outputs, direct template, and latest Instant Form.
+ *
+ * Internal-only: requires the BLOCKWISE_INTERNAL_SECRET HMAC headers
+ * (scope "adstudio.publish").
  */
 export async function GET(request: Request) {
+  const auth = await verifyInternalRequest(request, "adstudio.publish");
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+
   const { searchParams } = new URL(request.url);
   const adId = searchParams.get("adId");
   const workspaceId = searchParams.get("workspaceId");
@@ -25,6 +48,19 @@ export async function GET(request: Request) {
 
   const supabase = createClient(supabaseUrl, supabaseKey);
 
+  const rateLimit = await checkRateLimit(null, "internal:adstudio.publish", {
+    windowSeconds: 60,
+    maxRequests: 120,
+    bucket: "internal-api",
+    failClosed: true,
+  });
+  if (!rateLimit.ok) {
+    return NextResponse.json(
+      { error: "rate_limited" },
+      { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } },
+    );
+  }
+
   try {
     const state = await loadPublishState(supabase, adId, workspaceId);
     const issues = validatePublishState(state);
@@ -40,10 +76,24 @@ export async function GET(request: Request) {
  *
  * Freezes a publication snapshot for the given ad + revision.
  * Body: { adId, workspaceId, connectionId, setup, controls }
+ *
+ * Internal-only: requires the BLOCKWISE_INTERNAL_SECRET HMAC headers
+ * (scope "adstudio.publish").
  */
 export async function POST(request: Request) {
-  const body = await request.json().catch(() => null);
-  if (!body || !body.adId || !body.workspaceId) {
+  const rawBody = await request.text();
+  const auth = await verifyInternalRequest(request, "adstudio.publish", { body: rawBody });
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+
+  let body: FreezeRequestBody | null = null;
+  try {
+    body = JSON.parse(rawBody) as FreezeRequestBody;
+  } catch {
+    return NextResponse.json({ error: "invalid_json" }, { status: 400 });
+  }
+  if (!body || !body.adId || !body.workspaceId || !body.setup) {
     return NextResponse.json({ error: "missing_params" }, { status: 400 });
   }
 
@@ -55,9 +105,22 @@ export async function POST(request: Request) {
 
   const supabase = createClient(supabaseUrl, supabaseKey);
 
+  const rateLimit = await checkRateLimit(null, "internal:adstudio.publish", {
+    windowSeconds: 60,
+    maxRequests: 120,
+    bucket: "internal-api",
+    failClosed: true,
+  });
+  if (!rateLimit.ok) {
+    return NextResponse.json(
+      { error: "rate_limited" },
+      { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } },
+    );
+  }
+
   try {
     const state = await loadPublishState(supabase, body.adId, body.workspaceId);
-    const issues = validatePublishState(state, { controls: body.controls ?? {}, setup: body.setup ?? {} });
+    const issues = validatePublishState(state, { controls: body.controls ?? {}, setup: body.setup });
     if (issues.length > 0) {
       return NextResponse.json({ error: "not_ready", issues }, { status: 400 });
     }
@@ -66,7 +129,7 @@ export async function POST(request: Request) {
       adId: body.adId,
       workspaceId: body.workspaceId,
       connectionId: body.connectionId ?? "",
-      setup: body.setup ?? {},
+      setup: body.setup,
       controls: body.controls ?? {},
     }, state);
 

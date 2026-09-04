@@ -2,8 +2,12 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 
 import { sendDemoRequestNotification } from "@/lib/notify/demo-request-email";
+import { enqueueEmail } from "@/lib/email/outbox";
+import { escapeHtml } from "@/lib/email/provider";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { getClientIp } from "@/lib/client-ip";
+import { redactString } from "@/lib/redact";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,7 +20,7 @@ const payloadSchema = z.object({
   suburb: z.string().trim().max(120).optional().or(z.literal("")),
   message: z.string().trim().max(2000).optional().or(z.literal("")),
   // Honeypot: real users never fill this hidden field.
-  company_website: z.string().max(0).optional().or(z.literal("")),
+  company_website: z.string().max(200).optional().or(z.literal("")),
 });
 
 function clean(value: string | undefined): string | null {
@@ -46,12 +50,9 @@ export async function POST(request: NextRequest) {
   }
 
   // Rate limit by IP: 5 demo requests per hour per IP.
-  const ip =
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-    request.headers.get("x-real-ip") ??
-    "unknown";
+  const ip = getClientIp(request.headers);
   const serviceClient = createSupabaseServiceClient();
-  const rateLimit = await checkRateLimit(serviceClient, null, ip, {
+  const rateLimit = await checkRateLimit(null, ip, {
     windowSeconds: 3600,
     maxRequests: 5,
     bucket: "demo-request",
@@ -73,6 +74,7 @@ export async function POST(request: NextRequest) {
     source: "landing",
     user_agent: request.headers.get("user-agent"),
     referrer: request.headers.get("referer"),
+    lead_welcome_enqueue_status: "pending",
   }).select("id").single();
 
   if (error) {
@@ -90,14 +92,15 @@ export async function POST(request: NextRequest) {
     phone: clean(parsed.data.phone),
     suburb: clean(parsed.data.suburb),
     message: clean(parsed.data.message),
+    demoRequestId: inserted.id,
   });
   const { error: notificationUpdateError } = await serviceClient
     .from("demo_requests")
     .update({
-      operator_notification_status: notification.sent ? "sent" : "failed",
+      operator_notification_status: notification.sent ? "sent" : notification.queued ? "queued" : "failed",
       operator_notified_at: notification.sent ? new Date().toISOString() : null,
       operator_notification_error: notification.error,
-      operator_notification_message_id: notification.messageId,
+      operator_notification_message_id: notification.sent ? notification.messageId : null,
     })
     .eq("id", inserted.id);
   if (notificationUpdateError) {
@@ -105,6 +108,33 @@ export async function POST(request: NextRequest) {
   }
   if (!notification.sent) {
     console.error("demo-request notification failed", notification.error);
+  }
+
+  // Queue the lead welcome after the request commit. If this process crashes
+  // in the gap, the drain scanner retries rows left in pending/failed state.
+  let leadWelcomeQueued = false;
+  try {
+    const firstName = parsed.data.name.split(/\s+/)[0] || "there";
+    await enqueueEmail(serviceClient, {
+      messageType: "lead_welcome",
+      templateId: "lead-welcome",
+      templateVersion: 1,
+      to: parsed.data.email,
+      from: process.env.DEMO_NOTIFY_FROM?.trim() || "hello@blockwise.sale",
+      replyTo: "support@blockwise.sale",
+      subject: "Your Blockwise demo request — what happens next",
+      html: `<p>Hi ${escapeHtml(firstName)},</p><p>Thanks for requesting a demo. The Blockwise team has your details and will be in touch within one business day.</p><p>— Blockwise</p>`,
+      text: `Hi ${firstName},\n\nThanks for requesting a demo. The Blockwise team has your details and will be in touch within one business day.\n\n— Blockwise`,
+      payload: { demoRequestId: inserted.id },
+      idempotencyKey: `lead-welcome:${inserted.id}`,
+    });
+    leadWelcomeQueued = true;
+  } catch (error) {
+    await serviceClient.from("demo_requests").update({ lead_welcome_enqueue_status: "failed", lead_welcome_enqueue_error: redactString(error instanceof Error ? error.message : String(error)) }).eq("id", inserted.id);
+    console.error("demo-request lead welcome enqueue failed", error instanceof Error ? error.message : error);
+  }
+  if (leadWelcomeQueued) {
+    await serviceClient.from("demo_requests").update({ lead_welcome_enqueue_status: "queued", lead_welcome_enqueue_error: null }).eq("id", inserted.id);
   }
 
   return NextResponse.json({ ok: true });

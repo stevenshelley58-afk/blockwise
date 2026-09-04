@@ -4,6 +4,7 @@ import { describe, it } from "node:test";
 import {
   PublishError,
   buildPausedMetaPublishPlan,
+  validatePublishState,
   type PausedPublishPlanInput,
   type PublishLoadResult,
 } from "../../src/lib/adstudio/publish-adapter.ts";
@@ -34,6 +35,29 @@ const exactOffer: MetaOfferFulfilment = {
 };
 
 describe("paused Ad Studio Meta publish planning", () => {
+  it("applies the shared Meta copy limits before a publish plan can be built", () => {
+    const state = publishState();
+    state.ad.metaPrimaryText = "x".repeat(126);
+    assert.match(validatePublishState(state, { controls: validNewAdSetControls() }).join("; "), /primaryText must be 125 characters or fewer/);
+  });
+
+  it("maps legacy human CTA labels to a provider enum in the publish plan", () => {
+    const state = publishState();
+    state.ad.metaCta = "Book free appraisal";
+    state.pack = {
+      ...state.pack,
+      metadata: {
+        ...state.pack.metadata,
+        publishRequirements: {
+          ...state.pack.metadata.publishRequirements,
+          requiredCtaTypes: [],
+        },
+      },
+    };
+    const plan = buildPausedMetaPublishPlan(buildInput(validNewAdSetControls(), state));
+    assert.deepEqual(plan.creatives.map(creative => creative.cta), ["CONTACT_US", "CONTACT_US"]);
+  });
+
   it("preserves a validated Free guide promise in plan controls and the Instant Form", () => {
     const plan = buildPausedMetaPublishPlan(buildInput(validNewAdSetControls()));
 
@@ -313,7 +337,7 @@ function existingParentState(
   };
 }
 
-function buildInput(controls: MetaPublishControls): PausedPublishPlanInput {
+function buildInput(controls: MetaPublishControls, state = publishState()): PausedPublishPlanInput {
   return {
     adId: "ad_123",
     workspaceId: "workspace_123",
@@ -329,7 +353,7 @@ function buildInput(controls: MetaPublishControls): PausedPublishPlanInput {
       timezone: "Australia/Perth",
     },
     controls,
-    state: publishState(),
+    state,
   };
 }
 
@@ -341,7 +365,7 @@ function publishState(): PublishLoadResult {
       colourMode: "template",
       metaPrimaryText: "Download the free seller guide.",
       metaHeadline: "Free seller guide",
-      metaDescription: "A practical guide for Perth homeowners.",
+      metaDescription: "Practical Perth seller guide",
       metaCta: "LEARN_MORE",
     },
     revision: {

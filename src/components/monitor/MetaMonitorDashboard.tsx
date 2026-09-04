@@ -76,6 +76,7 @@ export function MetaMonitorDashboard({
   workspaceId,
   metaConnectHref,
   oauthNotice,
+  focusCampaignId,
 }: {
   initialPayload: MetaMonitorPayload;
   initialEtag: string;
@@ -84,6 +85,7 @@ export function MetaMonitorDashboard({
   workspaceId: string;
   metaConnectHref?: string;
   oauthNotice?: OAuthNotice | null;
+  focusCampaignId?: string | null;
 }) {
   const [payload, setPayload] = useState(initialPayload);
   const [etag, setEtag] = useState(initialEtag);
@@ -309,9 +311,9 @@ export function MetaMonitorDashboard({
           <EmptyMetaState issue={payload.issue} connected={payload.connected} metaConnectHref={metaConnectHref} />
         )
       ) : isRefreshing ? (
-        <Dashboard payload={payload} onSelectAd={scrollToAd} refreshing />
+        <Dashboard payload={payload} onSelectAd={scrollToAd} focusCampaignId={focusCampaignId} refreshing />
       ) : (
-        <Dashboard payload={payload} onSelectAd={scrollToAd} />
+        <Dashboard payload={payload} onSelectAd={scrollToAd} focusCampaignId={focusCampaignId} />
       )}
     </div>
   );
@@ -320,10 +322,12 @@ export function MetaMonitorDashboard({
 function Dashboard({
   payload,
   onSelectAd,
+  focusCampaignId,
   refreshing = false,
 }: {
   payload: MetaMonitorPayload;
   onSelectAd: (adId: string) => void;
+  focusCampaignId?: string | null;
   refreshing?: boolean;
 }) {
   const copy = niche.copy.performance;
@@ -333,6 +337,7 @@ function Dashboard({
   const ctr = safeRate(summary.clicks, summary.impressions);
   const previousCtr = previous ? safeRate(previous.clicks, previous.impressions) : null;
   const compare = previous ? `vs previous ${payload.range.days} day${payload.range.days === 1 ? "" : "s"}` : undefined;
+  const focusedCampaignVisible = Boolean(focusCampaignId && hierarchy.some((campaign) => campaign.campaignId === focusCampaignId));
   return (
     <div
       className={`grid gap-3.5 transition-opacity duration-250 motion-reduce:transition-none ${
@@ -343,6 +348,13 @@ function Dashboard({
       inert={refreshing || undefined}
       aria-busy={refreshing || undefined}
     >
+      {focusCampaignId ? (
+        <p className="rounded-(--r-card) border border-(--line) bg-(--surface) px-4 py-3 text-[13px] font-semibold" role="status">
+          {focusedCampaignVisible
+            ? "Showing the campaign created by this publish plan."
+            : "This publish is active; its campaign will appear here after Meta reporting refreshes."}
+        </p>
+      ) : null}
       <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 xl:grid-cols-6">
         <MetaKpiCard
           icon={Eye}
@@ -436,7 +448,7 @@ function Dashboard({
 
       {payload.ads.length > 0 ? (
         <>
-          <CampaignManagementTable rows={hierarchy} onSelectAd={onSelectAd} />
+          <CampaignManagementTable rows={hierarchy} onSelectAd={onSelectAd} focusCampaignId={focusCampaignId} />
           <SectionHeading
             title={copy.leadResults.title}
             subtitle={copy.leadResults.subtitle}
@@ -488,11 +500,23 @@ function SectionHeading({ title, subtitle }: { title: string; subtitle: string }
 function CampaignManagementTable({
   rows,
   onSelectAd,
+  focusCampaignId,
 }: {
   rows: ResultsCampaignRow[];
   onSelectAd: (adId: string) => void;
+  focusCampaignId?: string | null;
 }) {
   const [openRows, setOpenRows] = useState<Set<string>>(() => new Set(rows.map((row) => row.id)));
+  const focusedCampaignRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!focusCampaignId || focusedCampaignRef.current === focusCampaignId) return;
+    const row = document.getElementById(campaignRowDomId(focusCampaignId));
+    if (!row) return;
+    focusedCampaignRef.current = focusCampaignId;
+    row.scrollIntoView({ behavior: "smooth", block: "center" });
+    row.focus({ preventScroll: true });
+  }, [focusCampaignId, rows]);
 
   function toggle(rowId: string) {
     setOpenRows((current) => {
@@ -542,7 +566,11 @@ function CampaignManagementTable({
               const campaignOpen = openRows.has(campaign.id);
               return (
                 <Fragment key={campaign.id}>
-                  <TableRow className="border-t-2 border-t-(--line-heavy)">
+                  <TableRow
+                    id={campaignRowDomId(campaign.campaignId)}
+                    tabIndex={campaign.campaignId === focusCampaignId ? -1 : undefined}
+                    className={`border-t-2 border-t-(--line-heavy) focus:outline-none ${campaign.campaignId === focusCampaignId ? "bg-primary/5 ring-2 ring-inset ring-primary/40" : ""}`}
+                  >
                     <NameCell
                       depth={0}
                       label={campaign.name}
@@ -632,6 +660,10 @@ function CampaignManagementTable({
       </div>
     </section>
   );
+}
+
+function campaignRowDomId(campaignId: string): string {
+  return `meta-campaign-${campaignId.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
 }
 
 function TableCreativePreview({ ad }: { ad: ResultsCampaignRow["adSets"][number]["ads"][number]["ad"] }) {

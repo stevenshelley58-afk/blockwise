@@ -1,12 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { errorResponse, readJsonBody, requireAdStudioRequest } from "@/lib/adstudio/http";
+import { summarizePersistedPublishPlan, summarizePersistedPublishSource } from "@/lib/adstudio/publish-receipt";
 import {
   PublishError,
   backfillPublishMetaCopy,
   buildPausedMetaPublishPlan,
   freezePublicationSnapshot,
   loadPublishState,
+  loadLatestPublishPlanForAd,
   resolvePublishCreativeAssets,
   validatePublishState,
 } from "@/lib/adstudio/publish-adapter";
@@ -14,13 +16,19 @@ import { resolveMetaPageAccessToken } from "@/lib/providers/meta-assets";
 import {
   applyMetaPublishExecutionResult,
   createMetaExecutionAdapter,
+  claimMetaPublishExecution,
+  loadMetaPublishPlan,
   persistMetaPublishPlan,
+  releaseMetaPublishExecutionLease,
+  renewMetaPublishExecutionLease,
   resolveMetaConnectionSetup,
   updateMetaPublishPlanExecution,
   validateMetaConnectionSetup,
   type MetaPublishControls,
 } from "@/lib/providers/meta-execution";
 import { loadStoredProviderTokens } from "@/lib/providers/provider-connections";
+import { metaPublishProviderWritesEnabled } from "@/lib/providers/meta-provider-write-gate";
+import { createMetaExecutionLeaseHeartbeat } from "@/lib/providers/meta-execution-lease-heartbeat";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const runtime = "nodejs";
@@ -34,21 +42,66 @@ type PublishBody = {
   controls?: unknown;
 };
 
-function providerWritesEnabled() {
-  return process.env.BLOCKWISE_ENABLE_PROVIDER_WRITES === "true";
+export async function GET(request: NextRequest, context: RouteContext) {
+  const { id } = await Promise.resolve(context.params);
+  const access = await requireAdStudioRequest(request);
+  if (!access.ok) return access.response;
+  try {
+    const serviceSupabase = createSupabaseServiceClient();
+    const plan = await loadLatestPublishPlanForAd(serviceSupabase, access.access.workspaceId, id);
+    if (!plan) return NextResponse.json({ receipt: null });
+    const activation = await loadLatestActivationReceiptState(
+      serviceSupabase,
+      access.access.workspaceId,
+      plan.planId,
+    );
+    const dryRun = plan.status === "draft";
+    const status = activation.status ?? (dryRun
+      ? "paused_disabled"
+      : plan.status === "paused_live"
+        ? "paused"
+        : plan.status === "publishing"
+          ? "publishing"
+          : plan.status === "failed"
+            ? "failed"
+            : "unknown");
+    return NextResponse.json({
+      ok: true,
+      mode: dryRun ? "dry_run" : "publish",
+      providerWritesEnabled: metaPublishProviderWritesEnabled(access.access.workspaceId),
+      ...summarizePersistedPublishSource(plan),
+      planId: plan.planId,
+      status,
+      controlsFingerprint: plan.idempotencyKey,
+      lastCheckedAt: activation.lastCheckedAt ?? plan.updatedAt,
+      setupSummary: summarizePersistedPublishPlan(plan),
+      message: durableReceiptMessage(status, activation.lastError ?? plan.lastError),
+      reconciledObjects: plan.reconciledObjects,
+      plannedObjects: {
+        campaigns: 1,
+        adSets: plan.adSets.length,
+        leadForms: plan.leadForms.length,
+        creatives: plan.creatives.length,
+        ads: plan.ads.length,
+      },
+      ...(activation.lastError ? { activationError: activation.lastError } : {}),
+      ...(activation.status === "unknown" ? { unconfirmedPauseIds: activation.unconfirmedPauseIds } : {}),
+    });
+  } catch (err) { return errorResponse(err); }
 }
 
 /**
  * POST /api/adstudio/ads/[id]/publish?workspaceId=...
  *
- * Separate Publish flow (BW-M): freezes the LAST SAVED revision into a
- * publication snapshot, then creates Meta objects PAUSED through the existing
- * Meta pipeline (marketing_api adapter). Activation is a later task — this
- * flow never reports "live".
+ * Complete Publish lifecycle (BW-M + BW-Q): freezes the LAST SAVED revision
+ * into a publication snapshot and creates the Meta objects through the
+ * existing Meta pipeline (marketing_api adapter), all PAUSED. The response
+ * reports the truthful paused receipt and stops; activation is a separate,
+ * explicit action at /activate.
  *
  * When BLOCKWISE_ENABLE_PROVIDER_WRITES is not "true" the API returns a clear
- * dry-run / paused-disabled receipt: snapshot frozen + plan drafted, NO Meta
- * writes, and no fake "live" success.
+ * dry-run receipt: snapshot frozen + plan drafted, NO Meta writes, and no
+ * fake success.
  */
 export async function POST(request: NextRequest, context: RouteContext) {
   const { id } = await Promise.resolve(context.params);
@@ -81,7 +134,9 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
     // 3. Freeze the LAST SAVED revision — rejects when the ad has unsaved
     // changes (no active revision). This is the authoritative server state.
-    const loaded = await loadPublishState(access.supabase, id, access.access.workspaceId);
+    const loaded = await loadPublishState(access.supabase, id, access.access.workspaceId, {
+      templateSupabase: serviceSupabase,
+    });
 
     const state = loaded;
 
@@ -109,6 +164,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       adId: id,
       workspaceId: access.access.workspaceId,
       connectionId: connection.id,
+      publicationSnapshotId: snapshotId,
       setup,
       controls,
       state,
@@ -117,16 +173,64 @@ export async function POST(request: NextRequest, context: RouteContext) {
     // 7. Provider writes disabled → clear dry-run / paused-disabled receipt.
     // Snapshot is frozen and the plan is drafted, but nothing is written to
     // Meta and nothing is reported as created.
-    if (!providerWritesEnabled()) {
-      await persistMetaPublishPlan(serviceSupabase, { ...plan, status: "draft" }, access.access.userId);
+    if (!metaPublishProviderWritesEnabled(access.access.workspaceId)) {
+      const persisted = await persistMetaPublishPlan(
+        serviceSupabase,
+        { ...plan, status: "draft" },
+        access.access.userId,
+      );
+      const canonical = await loadMetaPublishPlan(serviceSupabase, {
+        workspaceId: access.access.workspaceId,
+        planId: persisted.id,
+      });
+
+      if (canonical.status !== "draft") {
+        let status = canonical.status === "paused_live"
+          ? "paused"
+          : canonical.status === "publishing"
+            ? "publishing"
+            : "failed";
+        let lastCheckedAt = canonical.updatedAt;
+        let activationError: string | null = null;
+        let unconfirmedPauseIds: string[] = [];
+        if (canonical.status === "paused_live") {
+          const activation = await loadLatestActivationReceiptState(
+            serviceSupabase,
+            canonical.workspaceId,
+            canonical.planId,
+          );
+          status = activation.status ?? status;
+          lastCheckedAt = activation.lastCheckedAt ?? canonical.updatedAt;
+          activationError = activation.lastError;
+          unconfirmedPauseIds = activation.unconfirmedPauseIds;
+        }
+        return NextResponse.json({
+          ok: canonical.status === "paused_live",
+          mode: "publish",
+          providerWritesEnabled: false,
+          ...summarizePersistedPublishSource(canonical),
+          planId: canonical.planId,
+          status,
+          controlsFingerprint: canonical.idempotencyKey,
+          lastCheckedAt,
+          setupSummary: summarizePersistedPublishPlan(canonical),
+          reconciledObjects: canonical.reconciledObjects,
+          message: durableReceiptMessage(status, activationError ?? canonical.lastError),
+          ...(activationError ? { activationError } : {}),
+          ...(status === "unknown" ? { unconfirmedPauseIds } : {}),
+        });
+      }
 
       return NextResponse.json({
         ok: true,
         mode: "dry_run",
         providerWritesEnabled: false,
-        snapshotId,
-        planId: plan.planId,
+        ...summarizePersistedPublishSource(canonical),
+        planId: canonical.planId,
         status: "paused_disabled",
+        controlsFingerprint: canonical.idempotencyKey,
+        lastCheckedAt: canonical.updatedAt,
+        setupSummary: summarizePersistedPublishPlan(canonical),
         plannedObjects: {
           campaigns: 1,
           adSets: plan.adSets.length,
@@ -143,54 +247,143 @@ export async function POST(request: NextRequest, context: RouteContext) {
     // 8. Provider writes enabled → execute the paused create via the existing
     // marketing_api adapter, reading back the created object IDs.
     const publishingPlan = { ...plan, status: "publishing" as const };
-    await persistMetaPublishPlan(serviceSupabase, publishingPlan, access.access.userId);
-
-    const tokens = await loadStoredProviderTokens(serviceSupabase, connection.id);
-    if (!tokens.accessToken) {
-      return NextResponse.json({ error: "meta_token_missing", message: "The Meta access token is missing — reconnect Meta." }, { status: 502 });
-    }
-
-    const pageAccessToken = await resolveMetaPageAccessToken({
-      accessToken: tokens.accessToken,
-      pageId: setup.pageId,
-    });
-
-    const executionPlan = await resolvePublishCreativeAssets(serviceSupabase, publishingPlan);
-    const result = await createMetaExecutionAdapter(executionPlan.adapter).publish(executionPlan, {
-      accessToken: tokens.accessToken,
-      pageAccessToken,
-      onCheckpoint: async (checkpoint) => {
-        await updateMetaPublishPlanExecution(
-          serviceSupabase,
-          applyMetaPublishExecutionResult(publishingPlan, checkpoint),
-        );
-      },
-    });
-
-    const completed = applyMetaPublishExecutionResult(publishingPlan, result);
-    await updateMetaPublishPlanExecution(serviceSupabase, completed);
-
-    if (result.status !== "paused_live") {
-      return NextResponse.json(
-        { error: "publish_failed", message: result.lastError ?? "Meta object creation failed." },
-        { status: 502 },
+    const persisted = await persistMetaPublishPlan(serviceSupabase, publishingPlan, access.access.userId);
+    const canonical = await loadMetaPublishPlan(serviceSupabase, { workspaceId: access.access.workspaceId, planId: persisted.id });
+    if (canonical.status === "paused_live") {
+      const activation = await loadLatestActivationReceiptState(
+        serviceSupabase,
+        canonical.workspaceId,
+        canonical.planId,
       );
+      const status = activation.status ?? "paused";
+      return NextResponse.json({
+        ok: true,
+        mode: "publish",
+        providerWritesEnabled: true,
+        ...summarizePersistedPublishSource(canonical),
+        planId: canonical.planId,
+        status,
+        controlsFingerprint: canonical.idempotencyKey,
+        lastCheckedAt: activation.lastCheckedAt ?? canonical.updatedAt,
+        setupSummary: summarizePersistedPublishPlan(canonical),
+        reconciledObjects: canonical.reconciledObjects,
+        message: durableReceiptMessage(status, activation.lastError),
+        ...(activation.lastError ? { activationError: activation.lastError } : {}),
+        ...(status === "unknown" ? { unconfirmedPauseIds: activation.unconfirmedPauseIds } : {}),
+      });
     }
-
-    return NextResponse.json({
-      ok: true,
-      mode: "publish",
-      providerWritesEnabled: true,
-      snapshotId,
-      planId: completed.planId,
-      // NEVER "live" — these objects are PAUSED on Meta. Activation is a
-      // separate later task.
-      status: "paused",
-      reconciledObjects: completed.reconciledObjects,
-      message:
-        "Created PAUSED on Meta: campaign, ad set, lead form, creatives, and ads. " +
-        "Nothing is running — activation is a separate step.",
+    const lease = await claimMetaPublishExecution(serviceSupabase, { workspaceId: access.access.workspaceId, planId: canonical.planId });
+    if (!lease.claimed || !lease.leaseToken) {
+      const latest = await loadMetaPublishPlan(serviceSupabase, { workspaceId: access.access.workspaceId, planId: canonical.planId });
+      return NextResponse.json({ ok: true, mode: "publish", providerWritesEnabled: true, ...summarizePersistedPublishSource(latest), planId: latest.planId, status: latest.status === "paused_live" ? "paused" : "publishing", controlsFingerprint: latest.idempotencyKey, lastCheckedAt: latest.updatedAt, setupSummary: summarizePersistedPublishPlan(latest), reconciledObjects: latest.reconciledObjects, message: "Publishing is already in progress; refresh shortly for the paused receipt." }, { status: 202 });
+    }
+    const claimedLeaseToken = lease.leaseToken;
+    const leaseHeartbeat = createMetaExecutionLeaseHeartbeat({
+      renew: () => renewMetaPublishExecutionLease(serviceSupabase, {
+        workspaceId: access.access.workspaceId,
+        planId: canonical.planId,
+        leaseToken: claimedLeaseToken,
+      }),
     });
+    try {
+      await leaseHeartbeat.renewNow();
+      await updateMetaPublishPlanExecution(serviceSupabase, {
+        ...canonical,
+        status: "publishing",
+        updatedAt: new Date().toISOString(),
+      });
+
+      const tokens = await loadStoredProviderTokens(serviceSupabase, connection.id);
+      if (!tokens.accessToken) {
+        throw new Error("The Meta access token is missing — reconnect Meta.");
+      }
+
+      const pageAccessToken = await resolveMetaPageAccessToken({
+        accessToken: tokens.accessToken,
+        pageId: setup.pageId,
+        fetchImpl: leaseHeartbeat.fetch,
+      });
+
+      const executionPlan = await resolvePublishCreativeAssets(serviceSupabase, {
+        ...canonical,
+        status: "publishing",
+      });
+      const result = await createMetaExecutionAdapter(executionPlan.adapter).publish(executionPlan, {
+        accessToken: tokens.accessToken,
+        pageAccessToken,
+        fetchImpl: leaseHeartbeat.fetch,
+        onCheckpoint: async (checkpoint) => {
+          await leaseHeartbeat.renewNow();
+          await updateMetaPublishPlanExecution(
+            serviceSupabase,
+            applyMetaPublishExecutionResult({ ...canonical, status: "publishing" }, checkpoint),
+          );
+        },
+      });
+      leaseHeartbeat.assertOwned();
+
+      const completed = applyMetaPublishExecutionResult({ ...canonical, status: "publishing" }, result);
+      await updateMetaPublishPlanExecution(serviceSupabase, completed);
+
+      if (result.status !== "paused_live") {
+        return NextResponse.json(
+          {
+            ok: false,
+            mode: "publish",
+            status: "failed",
+            planId: completed.planId,
+            ...summarizePersistedPublishSource(completed),
+            controlsFingerprint: completed.idempotencyKey,
+            lastCheckedAt: completed.updatedAt,
+            setupSummary: summarizePersistedPublishPlan(completed),
+            reconciledObjects: completed.reconciledObjects,
+            error: "publish_failed",
+            message: result.lastError ?? "Meta object creation failed.",
+          },
+          { status: 502 },
+        );
+      }
+
+      return NextResponse.json({
+        ok: true,
+        mode: "publish",
+        providerWritesEnabled: true,
+        ...summarizePersistedPublishSource(completed),
+        planId: completed.planId,
+        status: "paused",
+        controlsFingerprint: completed.idempotencyKey,
+        lastCheckedAt: completed.updatedAt,
+        setupSummary: summarizePersistedPublishPlan(completed),
+        reconciledObjects: completed.reconciledObjects,
+        message:
+          "Created on Meta in PAUSED state. These new objects cannot deliver until you explicitly activate them.",
+      });
+    } catch (executionError) {
+      const latest = await loadMetaPublishPlan(serviceSupabase, {
+        workspaceId: access.access.workspaceId,
+        planId: canonical.planId,
+      });
+      if (latest.status === "publishing") {
+        await updateMetaPublishPlanExecution(serviceSupabase, {
+          ...latest,
+          status: "failed",
+          lastError: executionError instanceof Error ? executionError.message : "Meta publish execution failed.",
+          updatedAt: new Date().toISOString(),
+        });
+      }
+      throw executionError;
+    } finally {
+      leaseHeartbeat.stop();
+      try {
+        await releaseMetaPublishExecutionLease(serviceSupabase, {
+          workspaceId: access.access.workspaceId,
+          planId: canonical.planId,
+          leaseToken: lease.leaseToken,
+        });
+      } catch {
+        // Preserve the publish outcome; the token-fenced lease expires safely.
+      }
+    }
   } catch (err) {
     if (err instanceof PublishError) {
       const status = err.code === "ad_not_found" || err.code === "revision_not_found" || err.code === "template_not_found"
@@ -239,4 +432,54 @@ async function loadMetaConnection(
 function isMetaPublishControls(value: unknown): value is MetaPublishControls {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   return true;
+}
+
+function durableReceiptMessage(status: string, lastError: string | null | undefined): string {
+  if (status === "active") return "Meta confirmed that the separately approved activation completed.";
+  if (status === "paused") return lastError
+    ? `The Blockwise-created objects remain paused after activation failed: ${lastError}`
+    : "Meta confirmed that the Blockwise-created objects are paused.";
+  if (status === "publishing") return "Meta object creation is still in progress.";
+  if (status === "activating") return "The separately approved activation is still in progress.";
+  if (status === "paused_disabled") return "Preview only: provider writes were disabled and no Meta objects were created.";
+  if (status === "unknown") return lastError ?? "Blockwise could not confirm the final Meta status.";
+  return lastError ?? "Meta creation did not complete.";
+}
+
+async function loadLatestActivationReceiptState(
+  serviceSupabase: ReturnType<typeof createSupabaseServiceClient>,
+  workspaceId: string,
+  planId: string,
+): Promise<{
+  status: "active" | "unknown" | "activating" | null;
+  lastError: string | null;
+  lastCheckedAt: string | null;
+  unconfirmedPauseIds: string[];
+}> {
+  const result = await serviceSupabase
+    .from("meta_publish_plan_mutations")
+    .select("status,last_error,outcome_status,unconfirmed_pause_ids_json,updated_at")
+    .eq("workspace_id", workspaceId)
+    .eq("meta_publish_plan_id", planId)
+    .eq("action", "activate")
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (result.error) throw new Error(result.error.message);
+  const mutation = result.data;
+  const status = mutation?.status === "applied"
+    ? "active"
+    : mutation?.outcome_status === "unconfirmed"
+      ? "unknown"
+      : mutation?.status === "approved" || mutation?.status === "applying"
+        ? "activating"
+        : null;
+  return {
+    status,
+    lastError: mutation?.last_error ?? null,
+    lastCheckedAt: mutation?.updated_at ? String(mutation.updated_at) : null,
+    unconfirmedPauseIds: Array.isArray(mutation?.unconfirmed_pause_ids_json)
+      ? mutation.unconfirmed_pause_ids_json.filter((value): value is string => typeof value === "string")
+      : [],
+  };
 }
