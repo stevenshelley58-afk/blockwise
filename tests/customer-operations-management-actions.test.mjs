@@ -42,6 +42,6 @@ test("Chatwoot webhook is signed, bounded, allowlisted, and ledger-resolved", as
   assert.match(routeSource, /readBoundedRequestBody/);
   assert.match(routeSource, /CHATWOOT_WEBHOOK_SECRET/);
   assert.match(sql, /record_ops_chatwoot_webhook/);
-  assert.match(sql, /provider_conversation_id_digest=encode\(digest/);
+  assert.match(sql, /provider_conversation_id_digest=encode\(public\.digest/);
   assert.match(sql, /ops_chatwoot_webhook_events/);
 });
