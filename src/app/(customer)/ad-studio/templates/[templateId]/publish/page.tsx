@@ -94,7 +94,10 @@ export default async function PublishPage({
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  const automatedPublishAvailable = providerWrites && metaConnection?.status === "connected";
+  // A connected fixture may exercise the full server-side planner while
+  // provider writes are disabled. The publish route returns a dry-run,
+  // PAUSED-only receipt in that mode and never calls Meta.
+  const automatedPublishAvailable = metaConnection?.status === "connected";
   const metadata = (pack as unknown as { metadata?: { title?: string } }).metadata;
   const templateName = metadata?.title?.trim() || pack.metadata.title || pack.templateId;
 

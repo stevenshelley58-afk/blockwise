@@ -566,7 +566,9 @@ export function PublishFlow({
         <details className="rounded-(--r-card) border border-(--line) bg-(--surface) p-4">
           <summary className="flex min-h-11 cursor-pointer items-center text-sm font-semibold">What happens next</summary>
           <p className="mt-1 text-xs text-muted-foreground">
-            {automatedPublishAvailable
+            {!providerWritesEnabled
+              ? "Preview only is on. Blockwise will freeze the saved revision and draft an all-PAUSED plan, but no Meta objects will be created."
+              : automatedPublishAvailable
               ? "Blockwise will create the campaign objects on your connected Meta account and confirm their state before reporting success."
               : "Nothing is sent to Meta from this page. Your saved creative and setup are sent to an authorised Blockwise operator for manual review."}
           </p>
@@ -621,7 +623,13 @@ export function PublishFlow({
              disabled={automatedPublishAvailable ? !ready || submitting || Boolean(receipt && !receipt.error) : !canRequestManualPublish || !ready || submitting || manualPublish.status === "requested" || manualPublish.status === "in_review" || manualPublish.status === "published"}
             className="min-h-11 rounded-full px-6 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
-            {submitting ? (automatedPublishAvailable ? "Publishing…" : "Sending request…") : automatedPublishAvailable ? "Publish" : manualPublish.status === "requested" || manualPublish.status === "in_review" ? "Request sent" : "Request manual publishing"}
+            {submitting
+              ? automatedPublishAvailable
+                ? providerWritesEnabled ? "Publishing…" : "Drafting PAUSED plan…"
+                : "Sending request…"
+              : automatedPublishAvailable
+                ? providerWritesEnabled ? "Publish" : "Freeze & Create PAUSED"
+                : manualPublish.status === "requested" || manualPublish.status === "in_review" ? "Request sent" : "Request manual publishing"}
           </Button>
         </div>
       </footer>

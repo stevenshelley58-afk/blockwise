@@ -12,7 +12,9 @@
 // Env: NEXT_PUBLIC_SUPABASE_URL or SUPABASE_URL, SUPABASE_SECRET_KEY
 //      (preferred) or SUPABASE_SERVICE_ROLE_KEY,
 //      ADSTUDIO_E2E_EMAIL (default adstudio-e2e@blockwise.test),
-//      ADSTUDIO_E2E_PASSWORD (required, >= 16 chars).
+//      ADSTUDIO_E2E_PASSWORD (required, >= 16 chars),
+//      ADSTUDIO_E2E_TEMPLATE_ID (optional quarantined template to attach to a
+//      deterministic test ad; the script prints ADSTUDIO_E2E_AD_ID).
 
 import { createClient } from "@supabase/supabase-js";
 import {
@@ -30,6 +32,7 @@ const supabaseUrl = cleanEnv(process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env
 const serverCredential = resolveSupabaseServerCredential(process.env);
 const email = (cleanEnv(process.env.ADSTUDIO_E2E_EMAIL) ?? "adstudio-e2e@blockwise.test").toLowerCase();
 const password = cleanEnv(process.env.ADSTUDIO_E2E_PASSWORD);
+const quarantinedTemplateId = cleanEnv(process.env.ADSTUDIO_E2E_TEMPLATE_ID);
 
 if (!supabaseUrl || !serverCredential) {
   throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL/SUPABASE_URL or SUPABASE_SECRET_KEY/SUPABASE_SERVICE_ROLE_KEY.");
@@ -167,4 +170,54 @@ requireNoError(
   "Grant AdStudio e2e render credits",
 );
 
+let quarantinedAdId = null;
+if (quarantinedTemplateId) {
+  const template = requireNoError(
+    await supabase
+      .from("ad_templates")
+      .select("template_id, template_json, library_status")
+      .eq("template_id", quarantinedTemplateId)
+      .single(),
+    `Fetch quarantined template ${quarantinedTemplateId}`,
+  );
+  if (template.library_status !== "quarantined") {
+    throw new Error(`Refusing to seed ${quarantinedTemplateId}: expected library_status=quarantined, got ${template.library_status}.`);
+  }
+  const semanticColours = template.template_json?.semanticColours;
+  if (!semanticColours || typeof semanticColours !== "object" || Array.isArray(semanticColours)) {
+    throw new Error(`Refusing to seed ${quarantinedTemplateId}: template_json.semanticColours is missing.`);
+  }
+
+  const creationKey = `adstudio-e2e:quarantined-canary:${quarantinedTemplateId}`;
+  const existingAd = requireNoError(
+    await supabase
+      .from("ad_customer_ads")
+      .select("id, template_id")
+      .eq("workspace_id", ADSTUDIO_E2E_WORKSPACE_ID)
+      .eq("creation_key", creationKey)
+      .maybeSingle(),
+    "Find quarantined canary ad",
+  );
+  if (existingAd && existingAd.template_id !== quarantinedTemplateId) {
+    throw new Error(`Creation key collision for ${creationKey}.`);
+  }
+  const ad = existingAd ?? requireNoError(
+    await supabase
+      .from("ad_customer_ads")
+      .insert({
+        workspace_id: ADSTUDIO_E2E_WORKSPACE_ID,
+        template_id: quarantinedTemplateId,
+        name: `Quarantined canary ${quarantinedTemplateId}`,
+        colour_mode: "template",
+        resolved_colour_map: semanticColours,
+        creation_key: creationKey,
+      })
+      .select("id, template_id")
+      .single(),
+    "Create quarantined canary ad",
+  );
+  quarantinedAdId = ad.id;
+}
+
 console.log(`Seeded AdStudio e2e fixture: ${email} → workspace ${ADSTUDIO_E2E_WORKSPACE_ID}`);
+if (quarantinedAdId) console.log(`ADSTUDIO_E2E_AD_ID=${quarantinedAdId}`);

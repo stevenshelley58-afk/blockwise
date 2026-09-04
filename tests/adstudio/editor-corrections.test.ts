@@ -324,12 +324,16 @@ describe("Meta Feed and Story previews", () => {
 
 describe("publish reports active state honestly with safe retry", () => {
   const flow = readFileSync("src/app/(customer)/ad-studio/templates/[templateId]/publish/publish-flow.tsx", "utf8");
+  const publishPage = readFileSync("src/app/(customer)/ad-studio/templates/[templateId]/publish/page.tsx", "utf8");
   const route = readFileSync("src/app/api/adstudio/ads/[id]/publish/route.ts", "utf8");
 
   it("uses automated publishing for connected accounts and manual handoff otherwise", () => {
     assert.match(flow, /automatedPublishAvailable/);
     assert.match(flow, /onClick=\{automatedPublishAvailable \? handleAutomatedPublish : handleManualPublish\}/);
     assert.match(flow, /disabled=\{automatedPublishAvailable \?/);
+    assert.match(flow, /Freeze & Create PAUSED/);
+    assert.match(flow, /Preview only is on/);
+    assert.match(publishPage, /const automatedPublishAvailable = metaConnection\?\.status === "connected"/);
     assert.match(flow, /\/publish\?workspaceId=/);
     assert.match(flow, /Request manual publishing/);
     assert.match(flow, /\/manual-publish/);

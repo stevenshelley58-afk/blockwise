@@ -103,6 +103,11 @@ describe("customer Ad Studio workbench contract", () => {
     assert.match(copy, /border border-input/);
     assert.match(shell, /AI brief/);
     assert.match(shell, /Generate copy/);
+    assert.match(shell, /Review generated copy/);
+    assert.match(shell, /Use all/);
+    assert.match(shell, /aria-label=\{`Use \$\{label\}`\}/);
+    assert.match(shell, /setProposal\(\{ onImage:/);
+    assert.doesNotMatch(shell, /if \(!response\.ok \|\| !body\.copy\)[\s\S]{0,180}applyGeneratedCopy/);
     assert.match(shell, /"design" \| "meta" \| "split"/);
     assert.match(shell, /TabsTrigger value="both"/);
     assert.match(shell, /aria-label="Canvas tools"/);
