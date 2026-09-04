@@ -17,6 +17,11 @@ test("operator customer detail loads and renders the manual publishing queue", a
   assert.match(component, /\/api\/operator\/manual-publish/);
   assert.match(component, /Captured publish controls/);
   assert.match(component, /JSON\.stringify\(request\.publishControls, null, 2\)/);
+  assert.match(component, /Captured Meta ad copy/);
+  assert.match(component, /copy\.primaryText/);
+  assert.match(component, /copy\.headline/);
+  assert.match(component, /copy\.description/);
+  assert.match(component, /copy\.cta/);
   assert.match(component, /Publish setup captured from customer/);
   assert.match(component, /usesExistingAdSetSettings/);
 });

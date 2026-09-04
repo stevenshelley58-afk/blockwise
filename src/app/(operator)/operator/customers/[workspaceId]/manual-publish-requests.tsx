@@ -100,6 +100,7 @@ export function ManualPublishRequests({ requests }: { requests: DisplayRequest[]
                 <StatusPill tone={STATUS_TONES[request.status]}>{STATUS_LABELS[request.status]}</StatusPill>
               </div>
               {request.notes ? <p>{request.notes}</p> : <p className="item-meta">No customer note was provided.</p>}
+              <MetaCopyDetails copy={request.metaCopy} />
               {request.publishSummary ? <PublishSummaryDetails summary={request.publishSummary} /> : null}
               {Object.keys(request.publishControls).length > 0 ? (
                 <details className="item-meta" open>
@@ -133,6 +134,20 @@ export function ManualPublishRequests({ requests }: { requests: DisplayRequest[]
       </div>
       {message ? <p className={message.tone === "success" ? "form-success" : "form-error"} role={message.tone === "error" ? "alert" : "status"}>{message.text}</p> : null}
     </section>
+  );
+}
+
+function MetaCopyDetails({ copy }: { copy: ManualPublishRequest["metaCopy"] }) {
+  return (
+    <div className="item-meta" aria-label="Captured Meta ad copy">
+      <strong>Captured Meta ad copy</strong>
+      <dl>
+        <div><dt>Primary text</dt><dd>{copy.primaryText || "—"}</dd></div>
+        <div><dt>Headline</dt><dd>{copy.headline || "—"}</dd></div>
+        <div><dt>Description</dt><dd>{copy.description || "—"}</dd></div>
+        <div><dt>Call to action</dt><dd>{copy.cta || "—"}</dd></div>
+      </dl>
+    </div>
   );
 }
 
