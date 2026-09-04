@@ -18,7 +18,9 @@ Every response is `Cache-Control: no-store`.
     GET /api/internal/ops/customers/{workspaceId}/{lifecycle|activity|email|enquiries|bookings|billing|projections}
     GET /api/internal/ops/enquiries?limit=50&cursor=<opaque>
 
-limit is bounded to 1–100. Customer and enquiry lists order by
+Absent `limit`/`pageSize` defaults to 50. Positive integer values are bounded
+to 100; malformed, zero, and negative values return `400 invalid_limit`.
+Customer and enquiry lists order by
 updated_at/created_at DESC, id DESC; nextCursor is opaque and must be sent
 unchanged. A workspace detail contains only allowlisted source fields:
 members/profiles, activation lifecycle, bookings, explicitly associated
@@ -55,6 +57,10 @@ and source version. Hermes writes snapshots after settlement through the
 service-role `upsert_ops_provider_snapshot` RPC; Frank never calls a provider.
 
 Unassigned public enquiries are listed by `GET /api/internal/ops/enquiries`.
+This route returns only associations with `workspace_id = null`; totals and
+opaque cursors are calculated over that same unassigned set. The `id` field is
+the internal Blockwise association reference. Source/provider identifiers such
+as `source_id` and `external_id` are omitted.
 An operator associates one through the service-role
 `associate_ops_enquiry(enquiry_id, workspace_id, actor_profile_id, reason)` RPC,
 which locks the row, writes an audit event, and lets the association trigger
@@ -104,6 +110,9 @@ enough retention:
     psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -v confirm=ROLLBACK_CUSTOMER_OPERATIONS -f scripts/ops/rollback-customer-operations.sql
 
 The procedure requires the exact sentinel `ROLLBACK_CUSTOMER_OPERATIONS`.
+It first takes transactional `ACCESS EXCLUSIVE` locks over all source and
+derived operations tables, freezing writers and trigger inserts for the
+archive/count/drop cut.
 Before any drop it archives every row from the outbox, enquiry associations,
 communication preferences, and provider snapshots into
 `legacy_archive.customer_operations_tables_archive`, then verifies per-table
@@ -113,3 +122,8 @@ false mismatch or be overwritten. It refuses to continue on a count mismatch.
 The archive remains available for retention and recovery;
 only then are the operations objects and canonical suppression association
 objects removed.
+
+Consent normalization keeps the newest case-normalized preference row while
+carrying forward any restrictive withdrawn/denied, unsubscribe, or suppressed
+state. Discarded legacy rows are archived in
+`legacy_archive.customer_operations_consent_reconciliation_202609040003`.

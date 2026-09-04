@@ -15,6 +15,17 @@ begin
     raise exception 'rollback sentinel mismatch; refusing to mutate database';
   end if;
 end $$;
+-- Freeze every source and derived table before taking the archive counts. The
+-- ACCESS EXCLUSIVE locks block writers and trigger-backed outbox inserts until
+-- this transaction commits, so archive/count/drop is one consistent cut.
+lock table public.audit_logs, public.billing_offer_acceptances,
+  public.customer_activations, public.customer_communication_preferences,
+  public.demo_requests, public.email_suppressions, public.lead_events,
+  public.leads, public.ops_enquiry_associations, public.ops_projection_outbox,
+  public.ops_provider_snapshots, public.profiles,
+  public.report_email_leads, public.workspace_members,
+  public.workspace_onboarding_bookings, public.workspaces
+  in access exclusive mode;
 create schema if not exists legacy_archive;
 create table if not exists legacy_archive.customer_operations_tables_archive (
   archived_at timestamptz not null default now(),
@@ -61,11 +72,9 @@ drop trigger if exists ops_lead_projection on public.leads;
 drop trigger if exists ops_lead_event_projection on public.lead_events;
 drop trigger if exists ops_billing_projection on public.billing_offer_acceptances;
 drop trigger if exists ops_preference_projection on public.customer_communication_preferences;
-drop trigger if exists ops_suppression_projection on public.email_suppressions;
 drop function if exists public.ops_enqueue_source_projection();
 drop function if exists public.ops_record_enquiry_association();
 drop function if exists public.ops_enqueue_enquiry_projection();
-drop function if exists public.ops_enqueue_suppression_projection();
 drop function if exists public.associate_ops_enquiry(uuid,uuid,uuid,text);
 drop function if exists public.upsert_ops_provider_snapshot(uuid,text,text,text,text,text,text,text,text,text,text,timestamptz,timestamptz,text,bigint,jsonb);
 drop function if exists public.redact_ops_text(text);

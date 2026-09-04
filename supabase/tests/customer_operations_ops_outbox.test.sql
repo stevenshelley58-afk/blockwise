@@ -1,7 +1,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(52);
+select plan(54);
 
 insert into public.workspaces (id, name, mode, region)
 values ('81111111-1111-4111-8111-111111111111', 'Ops contract test', 'self_serve', 'AU')
@@ -27,7 +27,6 @@ select ok(exists (select 1 from pg_trigger where tgrelid = 'public.workspace_mem
 select ok(exists (select 1 from pg_trigger where tgrelid = 'public.leads'::regclass and tgname = 'ops_lead_projection'), 'lead changes emit projections');
 select ok(exists (select 1 from pg_trigger where tgrelid = 'public.billing_offer_acceptances'::regclass and tgname = 'ops_billing_projection'), 'billing changes emit projections');
 select ok(exists (select 1 from pg_trigger where tgrelid = 'public.customer_communication_preferences'::regclass and tgname = 'ops_preference_projection'), 'preference changes emit projections');
-select ok(exists (select 1 from pg_trigger where tgrelid = 'public.email_suppressions'::regclass and tgname = 'ops_suppression_projection'), 'suppression changes emit projections');
 select ok(exists (select 1 from pg_trigger where tgrelid = 'public.report_email_leads'::regclass and tgname = 'ops_report_email_lead_association'), 'report leads have explicit enquiry association');
 
 select lives_ok($$ select public.enqueue_ops_projection(
@@ -69,6 +68,40 @@ select is((select allowed from public.can_send_marketing('81111111-1111-4111-811
 select is((select reason from public.can_send_marketing('81111111-1111-4111-8111-111111111111', 'owner@example.com', 'newsletter')), 'topic_not_consented', 'unconsented topic is denied');
 update public.customer_communication_preferences set unsubscribed_at = now() where workspace_id = '81111111-1111-4111-8111-111111111111';
 select is((select reason from public.can_send_marketing('81111111-1111-4111-8111-111111111111', 'owner@example.com', 'product_updates')), 'unsubscribed', 'unsubscribe is a hard deny');
+
+-- Legacy case-variant duplicate: the newer withdrawn state wins, but the
+-- restrictive state survives and the discarded row is retained in archive.
+drop index public.customer_communication_preferences_workspace_lower_email_key;
+insert into public.customer_communication_preferences (id, workspace_id, email, marketing_consent, topics, updated_at, created_at)
+values ('85555555-5555-4555-8555-555555555551', '81111111-1111-4111-8111-111111111111', 'Consent-Case@example.test', 'granted', array['product_updates'], now() - interval '2 days', now() - interval '2 days');
+insert into public.customer_communication_preferences (id, workspace_id, email, marketing_consent, topics, updated_at, created_at)
+values ('85555555-5555-4555-8555-555555555552', '81111111-1111-4111-8111-111111111111', 'consent-case@example.test', 'withdrawn', array['product_updates'], now(), now());
+with ranked as (
+  select id, row_number() over (partition by workspace_id, lower(btrim(email)) order by updated_at desc, created_at desc, id desc) as rn
+  from public.customer_communication_preferences
+), grouped as (
+  select workspace_id, lower(btrim(email)) as email_key, bool_or(coalesce(suppressed, false)) as any_suppressed, max(unsubscribed_at) as latest_unsubscribed_at, bool_or(marketing_consent = 'withdrawn') as any_withdrawn, bool_or(marketing_consent = 'denied') as any_denied
+  from public.customer_communication_preferences group by workspace_id, lower(btrim(email))
+), winners as (
+  select r.id, g.any_suppressed, g.latest_unsubscribed_at, g.any_withdrawn, g.any_denied
+  from ranked r join grouped g on g.workspace_id = r.workspace_id and g.email_key = lower(btrim(r.email)) where r.rn = 1
+)
+update public.customer_communication_preferences p set suppressed = p.suppressed or w.any_suppressed, unsubscribed_at = coalesce(p.unsubscribed_at, w.latest_unsubscribed_at), marketing_consent = case when w.any_withdrawn then 'withdrawn' when w.any_denied then 'denied' else p.marketing_consent end from winners w where p.id = w.id;
+with ranked as (
+  select id, row_number() over (partition by workspace_id, lower(btrim(email)) order by updated_at desc, created_at desc, id desc) as rn
+  from public.customer_communication_preferences
+)
+insert into legacy_archive.customer_operations_consent_reconciliation_202609040003 (source_table, row_id, reason, row_data)
+select 'customer_communication_preferences', p.id::text, 'test_duplicate_canonical_workspace_email', to_jsonb(p) from public.customer_communication_preferences p join ranked r on r.id = p.id where r.rn > 1;
+with ranked as (
+  select id, row_number() over (partition by workspace_id, lower(btrim(email)) order by updated_at desc, created_at desc, id desc) as rn
+  from public.customer_communication_preferences
+)
+delete from public.customer_communication_preferences p using ranked r where p.id = r.id and r.rn > 1;
+create unique index customer_communication_preferences_workspace_lower_email_key on public.customer_communication_preferences (workspace_id, lower(email));
+select is((select marketing_consent from public.customer_communication_preferences where id = '85555555-5555-4555-8555-555555555552'), 'withdrawn', 'newest consent state is retained');
+select is((select reason from public.can_send_marketing('81111111-1111-4111-8111-111111111111', 'CONSENT-CASE@EXAMPLE.TEST', 'product_updates')), 'consent_not_granted', 'withdrawn duplicate cannot resurrect marketing permission');
+select is((select count(*)::int from legacy_archive.customer_operations_consent_reconciliation_202609040003 where row_id = '85555555-5555-4555-8555-555555555551'), 1, 'discarded consent duplicate is archived');
 
 select lives_ok($$ select public.upsert_ops_provider_snapshot(
   '81111111-1111-4111-8111-111111111111', 'mautic', 'delivery', 'contact', 'profile-1', 'delivered', null, null, 'email', 'delivered', '****1234', null, now(), 'delivery-1', 1, '{"deliveryStatus":"delivered"}'::jsonb

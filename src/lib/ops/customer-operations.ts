@@ -12,7 +12,9 @@ const SUMMARY_FIELDS = ["id", "name", "mode", "region", "country_code", "managed
 const PROFILE_FIELDS = ["id", "email", "full_name", "created_at", "updated_at"] as const;
 const ACTIVATION_FIELDS = ["workspace_id", "email_verified_at", "country_confirmed_at", "website_submitted_at", "brand_pack_approved_at", "first_ad_pack_generated_at", "meta_connected_at", "checkout_completed_at", "first_campaign_live_at", "intro_invoice_paid_at", "onboarding_booked_at", "onboarding_completed_at", "activation_completed_at", "updated_at"] as const;
 const BOOKING_FIELDS = ["id", "workspace_id", "provider", "status", "scheduled_start_at", "scheduled_end_at", "booked_at", "cancelled_at", "completed_at", "created_at", "updated_at"] as const;
-const ENQUIRY_FIELDS = ["id", "workspace_id", "source_system", "source_id", "enquiry_type", "external_id", "status", "subject", "requester_email", "requester_name", "created_at", "updated_at"] as const;
+// `id` is the durable Blockwise association reference. Source/provider
+// identifiers are intentionally not part of the Frank read contract.
+const ENQUIRY_FIELDS = ["id", "workspace_id", "source_system", "enquiry_type", "status", "subject", "requester_email", "requester_name", "created_at", "updated_at"] as const;
 const PROJECTION_FIELDS = ["id", "workspace_id", "provider", "aggregate_type", "aggregate_id", "operation", "source_event_id", "source_version", "status", "attempts", "max_attempts", "run_after", "completed_at", "created_at", "updated_at"] as const;
 const SNAPSHOT_FIELDS = ["id", "workspace_id", "provider", "snapshot_kind", "aggregate_type", "aggregate_id", "status", "stage", "subject", "channel", "delivery_status", "provider_record_suffix", "occurred_at", "last_activity_at", "source_event_id", "source_version", "updated_at"] as const;
 
@@ -81,6 +83,7 @@ export async function loadCustomerSubresource(workspaceId: string, resource: str
 }
 
 export class OpsNotFoundError extends Error {}
+export class OpsInvalidCursorError extends Error {}
 
 async function loadBilling(client: ServiceClient, workspaceId: string) {
   const [workspace, acceptances] = await Promise.all([
@@ -138,7 +141,7 @@ export async function loadPublicEnquiries(input: { cursor?: string; limit?: numb
   const client = input.serviceSupabase ?? createSupabaseServiceClient();
   const limit = boundedLimit(input.limit ?? 50);
   const cursor = decodeCursor(input.cursor);
-  let query = client.from("ops_enquiry_associations").select(ENQUIRY_FIELDS.join(","), { count: "exact" }).order("created_at", { ascending: false }).order("id", { ascending: false }).limit(limit + 1);
+  let query = client.from("ops_enquiry_associations").select(ENQUIRY_FIELDS.join(","), { count: "exact" }).is("workspace_id", null).order("created_at", { ascending: false }).order("id", { ascending: false }).limit(limit + 1);
   if (cursor) query = query.or(`created_at.lt.${cursor.updatedAt},and(created_at.eq.${cursor.updatedAt},id.lt.${cursor.id})`);
   const result = await query;
   if (result.error) throw new Error(`ops enquiries query failed: ${result.error.message}`);
@@ -195,7 +198,7 @@ function decodeCursor(value: string | undefined): { updatedAt: string; id: strin
   if (!value) return null;
   try {
     const parsed = JSON.parse(Buffer.from(value, "base64url").toString("utf8")) as { updatedAt?: unknown; id?: unknown };
-    if (typeof parsed.updatedAt !== "string" || typeof parsed.id !== "string" || parsed.updatedAt.length > 64 || parsed.id.length > 64) return null;
+    if (typeof parsed.updatedAt !== "string" || typeof parsed.id !== "string" || parsed.updatedAt.length > 64 || parsed.id.length > 64) throw new OpsInvalidCursorError();
     return { updatedAt: parsed.updatedAt, id: parsed.id };
-  } catch { return null; }
+  } catch (error) { if (error instanceof OpsInvalidCursorError) throw error; throw new OpsInvalidCursorError(); }
 }

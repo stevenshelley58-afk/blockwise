@@ -16,6 +16,8 @@ test("product allowlist and rollback procedure cover the ops contract", () => {
   assert.match(rollback, /ops_provider_snapshots/);
   assert.match(rollback, /rollback_run_id/);
   assert.match(rollback, /where table_name = v_table and run_id =/);
+  assert.match(rollback, /lock table public\.audit_logs/);
+  assert.match(rollback, /in access exclusive mode/);
 });
 
 test("ops surface is service-only and provider-free", () => {
@@ -24,6 +26,9 @@ test("ops surface is service-only and provider-free", () => {
   assert.match(route, /ops\.read/);
   assert.match(route, /blockwise\.ops\.read\.v1/);
   assert.match(route, /source_receipt_ids/);
+  assert.match(route, /invalid_cursor/);
+  assert.match(route, /invalid_limit/);
+  assert.match(route, /Cache-Control.*no-store/);
   assert.doesNotMatch(route, /from\s+["'](?:mautic|chatwoot|stripe)["']/i);
   assert.equal(existsSync(new URL("src/lib/ops/internal-auth.ts", root)), false);
 });

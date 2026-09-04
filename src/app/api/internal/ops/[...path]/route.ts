@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { checkRateLimit } from "@/lib/rate-limit";
-import { loadCustomerDetail, loadCustomerSubresource, loadCustomerSummaries, loadPublicEnquiries, OpsNotFoundError } from "@/lib/ops/customer-operations";
+import { loadCustomerDetail, loadCustomerSubresource, loadCustomerSummaries, loadPublicEnquiries, OpsInvalidCursorError, OpsNotFoundError } from "@/lib/ops/customer-operations";
 import { verifyInternalRequest } from "@/lib/internal-auth";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
@@ -32,7 +32,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ pat
     windowSeconds: 60,
   }, service);
   if (!limited.ok) {
-    return NextResponse.json({ error: "rate_limited" }, { status: 429, headers: { "Retry-After": String(limited.retryAfterSeconds) } });
+    return NextResponse.json({ error: "rate_limited" }, { status: 429, headers: { "Retry-After": String(limited.retryAfterSeconds), "Cache-Control": "no-store" } });
   }
 
   const { path = [] } = await context.params;
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ pat
     if (path.length === 1 && path[0] === "customers") {
       const result = await loadCustomerSummaries({
         cursor: request.nextUrl.searchParams.get("cursor") ?? undefined,
-        limit: numberParam(request.nextUrl.searchParams.get("limit"), numberParam(request.nextUrl.searchParams.get("pageSize"), 50)),
+        limit: queryLimit(request.nextUrl.searchParams.get("limit") ?? request.nextUrl.searchParams.get("pageSize")),
         query: request.nextUrl.searchParams.get("query") ?? undefined,
         serviceSupabase: service,
       });
@@ -49,7 +49,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ pat
     if (path.length === 1 && path[0] === "enquiries") {
       const result = await loadPublicEnquiries({
         cursor: request.nextUrl.searchParams.get("cursor") ?? undefined,
-        limit: numberParam(request.nextUrl.searchParams.get("limit"), 50),
+        limit: queryLimit(request.nextUrl.searchParams.get("limit") ?? request.nextUrl.searchParams.get("pageSize")),
         serviceSupabase: service,
       });
       return NextResponse.json(readEnvelope(result, request.nextUrl.pathname), noStore());
@@ -67,14 +67,18 @@ export async function GET(request: NextRequest, context: { params: Promise<{ pat
     return notFound();
   } catch (error) {
     if (error instanceof OpsNotFoundError) return notFound();
+    if (error instanceof OpsInvalidCursorError) return NextResponse.json({ error: "invalid_cursor" }, noStore(400));
+    if (error instanceof RangeError && error.message === "invalid_limit") return NextResponse.json({ error: "invalid_limit" }, noStore(400));
     console.error("[internal-ops] read failed", error);
     return NextResponse.json({ error: "ops_read_failed" }, noStore(500));
   }
 }
 
-function numberParam(value: string | null, fallback: number): number {
+function queryLimit(value: string | null): number {
+  if (value === null || value.trim() === "") return 50;
   const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : fallback;
+  if (!Number.isSafeInteger(parsed) || parsed <= 0) throw new RangeError("invalid_limit");
+  return Math.min(100, parsed);
 }
 function noStore(status = 200): ResponseInit { return { status, headers: { "Cache-Control": "no-store" } }; }
 function notFound() { return NextResponse.json({ error: "not_found" }, noStore(404)); }

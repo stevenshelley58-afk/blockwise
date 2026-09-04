@@ -26,6 +26,9 @@ test("workspace detail never infers enquiries or mail delivery from shared email
   assert.doesNotMatch(source, /from\(["'](?:demo_requests|report_email_leads)["'][\s\S]{0,500}\.eq\(["']email/i);
   assert.match(source, /ops_enquiry_associations/);
   assert.match(source, /loadPublicEnquiries/);
+  assert.match(source, /\.is\("workspace_id", null\)/);
+  assert.doesNotMatch(source, /external_id/);
+  assert.doesNotMatch(source, /source_id/);
   assert.match(source, /billing_email_masked/);
   assert.doesNotMatch(source, /stripe_customer_id/);
   assert.doesNotMatch(source, /stripe_subscription_id/);
@@ -68,9 +71,12 @@ test("bounded cursor and stale-version fencing are present in the service contra
   const migration = readFileSync(new URL("../supabase/migrations/202609040002_customer_operations_hardening.sql", import.meta.url), "utf8");
   const snapshots = readFileSync(new URL("../supabase/migrations/202609040003_customer_operations_provider_snapshots.sql", import.meta.url), "utf8");
   assert.match(source, /nextCursor/);
+  assert.match(source, /OpsInvalidCursorError/);
   assert.match(source, /order\("id", \{ ascending: false \}\)/);
   assert.match(migration, /not exists \(select 1 from public\.ops_projection_outbox newer/);
   assert.match(migration, /email_suppressions/);
+  assert.doesNotMatch(snapshots, /ops_enqueue_suppression_projection/);
+  assert.doesNotMatch(snapshots, /aggregateId.*email/);
   assert.match(migration, /activation-contact/);
   assert.match(migration, /booking-contact/);
   assert.match(snapshots, /create table if not exists public\.ops_provider_snapshots/);

@@ -1,7 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { redactString } from "../redact.ts";
-import { enqueueOperationsProjectionAfterCommit } from "../ops/projection-outbox.ts";
 import { escapeHtml } from "./provider.ts";
 import type { EmailMessage, EmailProvider } from "./provider.ts";
 
@@ -125,25 +124,6 @@ export async function recordEmailSuppression(
     );
   if (error) {
     throw new Error(`email_suppressions record failed: ${error.message}`);
-  }
-  // Suppression is authoritative in email_suppressions. When a source path
-  // has an explicit workspace association, append a provider-neutral contact
-  // refresh after the source write; never infer a workspace from the address.
-  if (input.workspaceId) {
-    try {
-      await enqueueOperationsProjectionAfterCommit({
-        workspaceId: input.workspaceId,
-        provider: "mautic",
-        aggregateType: "contact",
-        aggregateId: email,
-        sourceEventId: `email-suppression:${input.reason}:${email}`,
-        sourceVersion: Date.now(),
-        payload: { workspaceId: input.workspaceId, topic: input.reason },
-        serviceSupabase: supabase,
-      });
-    } catch (projectionError) {
-      console.error("[email-outbox] suppression projection enqueue failed", redactString(projectionError instanceof Error ? projectionError.message : String(projectionError)));
-    }
   }
 }
 

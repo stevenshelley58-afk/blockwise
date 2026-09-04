@@ -49,10 +49,25 @@ revoke insert, update, delete on public.ops_enquiry_associations from service_ro
 
 -- Suppression is globally authoritative, while an explicit workspace link is
 -- optional for projection refreshes. Reconcile case variants before enforcing
--- canonical lower(email) uniqueness.
+-- canonical lower(email) uniqueness. Discarded duplicates are archived first.
+create schema if not exists legacy_archive;
+create table if not exists legacy_archive.customer_operations_consent_reconciliation_202609040003 (
+  archived_at timestamptz not null default now(),
+  source_table text not null,
+  row_id text not null,
+  reason text not null,
+  row_data jsonb not null
+);
 alter table public.email_suppressions add column if not exists workspace_id uuid references public.workspaces (id) on delete set null;
 with ranked as (
-  select id, row_number() over (partition by lower(btrim(email)), reason order by created_at asc, id asc) as rn
+  select id, row_number() over (partition by lower(btrim(email)), reason order by created_at desc, id desc) as rn
+  from public.email_suppressions
+)
+insert into legacy_archive.customer_operations_consent_reconciliation_202609040003 (source_table, row_id, reason, row_data)
+select 'email_suppressions', s.id::text, 'duplicate_canonical_email_reason', to_jsonb(s)
+from public.email_suppressions s join ranked r on r.id = s.id where r.rn > 1;
+with ranked as (
+  select id, row_number() over (partition by lower(btrim(email)), reason order by created_at desc, id desc) as rn
   from public.email_suppressions
 )
 delete from public.email_suppressions s using ranked r where s.id = r.id and r.rn > 1;
@@ -60,29 +75,48 @@ update public.email_suppressions set email = lower(btrim(email));
 create unique index if not exists email_suppressions_lower_reason_key on public.email_suppressions (lower(email), reason);
 
 -- Preferences are also canonicalized because the marketing guard compares
--- lower(email). Keep the oldest row for a workspace/address and retain the
--- source-of-truth consent record deterministically before adding the index.
+-- lower(email). Keep the newest row for a workspace/address, but carry every
+-- restrictive unsubscribe/suppression state forward so dedupe cannot
+-- resurrect permission. Discarded rows are archived before removal.
 with ranked as (
-  select id, row_number() over (partition by workspace_id, lower(btrim(email)) order by updated_at asc, created_at asc, id asc) as rn
+  select id, row_number() over (partition by workspace_id, lower(btrim(email)) order by updated_at desc, created_at desc, id desc) as rn
+  from public.customer_communication_preferences
+)
+insert into legacy_archive.customer_operations_consent_reconciliation_202609040003 (source_table, row_id, reason, row_data)
+select 'customer_communication_preferences', p.id::text, 'duplicate_canonical_workspace_email', to_jsonb(p)
+from public.customer_communication_preferences p join ranked r on r.id = p.id where r.rn > 1;
+with grouped as (
+  select workspace_id, lower(btrim(email)) as email_key,
+    bool_or(coalesce(suppressed, false)) as any_suppressed,
+    max(unsubscribed_at) as latest_unsubscribed_at,
+    bool_or(marketing_consent = 'withdrawn') as any_withdrawn,
+    bool_or(marketing_consent = 'denied') as any_denied,
+    max(suppression_reason) filter (where suppression_reason is not null) as any_suppression_reason
+  from public.customer_communication_preferences
+  group by workspace_id, lower(btrim(email))
+), ranked as (
+  select p.*, row_number() over (partition by workspace_id, lower(btrim(email)) order by updated_at desc, created_at desc, id desc) as rn
+  from public.customer_communication_preferences p
+), winners as (
+  select r.id, g.any_suppressed, g.latest_unsubscribed_at, g.any_withdrawn, g.any_denied, g.any_suppression_reason
+  from ranked r join grouped g on g.workspace_id = r.workspace_id and g.email_key = lower(btrim(r.email))
+  where r.rn = 1
+)
+update public.customer_communication_preferences p set
+  suppressed = p.suppressed or w.any_suppressed,
+  unsubscribed_at = coalesce(p.unsubscribed_at, w.latest_unsubscribed_at),
+  marketing_consent = case when w.any_withdrawn then 'withdrawn' when w.any_denied then 'denied' else p.marketing_consent end,
+  suppression_reason = coalesce(p.suppression_reason, w.any_suppression_reason),
+  email = lower(btrim(p.email))
+from winners w where p.id = w.id;
+with ranked as (
+  select id, row_number() over (partition by workspace_id, lower(btrim(email)) order by updated_at desc, created_at desc, id desc) as rn
   from public.customer_communication_preferences
 )
 delete from public.customer_communication_preferences p using ranked r where p.id = r.id and r.rn > 1;
 update public.customer_communication_preferences set email = lower(btrim(email));
 create unique index if not exists customer_communication_preferences_workspace_lower_email_key
   on public.customer_communication_preferences (workspace_id, lower(email));
-
-create or replace function public.ops_enqueue_suppression_projection()
-returns trigger language plpgsql security definer set search_path = '' as $$
-declare v_version bigint;
-begin
-  if new.workspace_id is null then return new; end if;
-  v_version := nextval('public.ops_projection_source_version_seq');
-  perform public.enqueue_ops_projection(new.workspace_id, 'mautic', 'lifecycle', new.workspace_id::text, 'upsert', 'suppression:' || new.id::text || ':' || v_version::text, v_version, jsonb_build_object('workspaceId', new.workspace_id::text, 'sourceEventId', 'suppression', 'stage', 'suppressed'));
-  return new;
-end;
-$$;
-drop trigger if exists ops_suppression_projection on public.email_suppressions;
-create trigger ops_suppression_projection after insert or update on public.email_suppressions for each row execute function public.ops_enqueue_suppression_projection();
 
 create or replace function public.upsert_ops_provider_snapshot(
   p_workspace_id uuid, p_provider text, p_snapshot_kind text,
@@ -148,6 +182,5 @@ revoke all on function public.upsert_ops_provider_snapshot(uuid,text,text,text,t
 grant execute on function public.upsert_ops_provider_snapshot(uuid,text,text,text,text,text,text,text,text,text,text,timestamptz,timestamptz,text,bigint,jsonb) to service_role;
 revoke all on function public.associate_ops_enquiry(uuid,uuid,uuid,text) from public, anon, authenticated;
 grant execute on function public.associate_ops_enquiry(uuid,uuid,uuid,text) to service_role;
-revoke all on function public.ops_enqueue_suppression_projection() from public, anon, authenticated;
 
 commit;
