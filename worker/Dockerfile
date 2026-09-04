@@ -6,8 +6,8 @@
 # (@supabase/supabase-js + ws + node builtins) is installed.
 #
 # No secrets are baked into the image. NEXT_PUBLIC_SUPABASE_URL,
-# SUPABASE_SERVICE_ROLE_KEY and TOKEN_ENCRYPTION_KEY are injected at runtime via
-# the compose environment / .env, exactly like the research stack.
+# Supabase service-role credentials and TOKEN_ENCRYPTION_KEY are supplied at
+# runtime via protected mounts/environment and never baked into the image.
 
 FROM node:22-slim@sha256:83f487e0a63425e5b4d146fb5e5be574bcbe1b7b843d3ebafdd95eaf7767a7e5 AS deps
 WORKDIR /app

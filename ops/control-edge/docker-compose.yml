@@ -4,9 +4,6 @@ services:
     # has no public port and is reachable only on the private networks below.
     image: "${CONTROL_EDGE_IMAGE:?Set CONTROL_EDGE_IMAGE to an immutable digest-pinned image}"
     pull_policy: never
-    build:
-      context: ../..
-      dockerfile: ops/control-edge/Dockerfile
     restart: unless-stopped
     init: true
     read_only: true
@@ -22,9 +19,10 @@ services:
       BLOCKWISE_INTERNAL_AUTH_SECRET_FILE: /run/secrets/internal-auth
       SUPABASE_SERVICE_ROLE_KEY_FILE: /run/secrets/supabase-service-role
       BLOCKWISE_ACTION_EXECUTOR_SECRET_FILE: /run/secrets/action-executor
+      CONTROL_EDGE_EXPECTED_REVISION: "${CONTROL_EDGE_EXPECTED_REVISION:?Set CONTROL_EDGE_EXPECTED_REVISION to the published image Git SHA}"
     expose: ["8660"]
     healthcheck:
-      test: ["CMD", "wget", "--spider", "--quiet", "http://127.0.0.1:8660/health/live"]
+      test: ["CMD-SHELL", "test \"$(cat /app/REVISION)\" = \"$${CONTROL_EDGE_EXPECTED_REVISION}\" && wget --spider --quiet http://127.0.0.1:8660/health/live"]
       interval: 10s
       timeout: 3s
       retries: 12

@@ -1,25 +1,22 @@
 # Frank operations-bundle integrity handoff
 
-The Blockwise worker writes a `manifest.json` beside each Frank `schema://frank.ops/v1`
-generation. It contains SHA-256 hashes for every projection file,
-`publication-receipt.json`, the exact `current.json` pointer, and the aggregate
-bundle hash. The active Frank #121 reader intentionally rejects unknown keys in
-the pointer and publication receipt and therefore does not consume this sidecar.
-The manifest is not an integrity guarantee until Frank verifies it.
+The Blockwise worker is the single writer for the Frank projection root. The
+production product-worker mounts `/srv/frank/data/ops-projections` read/write;
+the standalone worker definition deliberately has no projection-root mount.
+Frank mounts that same host root read-only (`/ops-projections:ro`) on its
+private network, with `HERMES_OPS_PROJECTION_ROOT=/ops-projections`.
 
-The active Frank consumer must add this focused, backwards-compatible check:
+Frank #122 is the accepted consumer for this contract. It reads `manifest.json`
+and verifies the exact
+pointer SHA, bundle SHA, every listed file hash, generation identity and
+complete file set, publication receipt, source revision/receipt/workspace
+metadata, and freshness before exposing a projection. The Blockwise-side
+Compose handoff is recorded in `infra/frank/docker-compose.customer-ops.yml`;
+apply that override to the Frank deployment and confirm its service name before
+starting the stack.
 
-1. After reading `current.json`, read the same generation's `manifest.json`.
-2. Require `schema = schema://frank.ops-manifest/v1`, version `1`, matching
-   `generation` and `publication_receipt_id`.
-3. Recompute SHA-256 for each listed projection and
-   `publication-receipt.json`; compare exact lowercase hex values.
-4. Recompute `pointer_sha256` from the exact bytes of `current.json`, and
-   `bundle_sha256` from the canonical manifest file map; reject the generation
-   on any mismatch, missing file, path traversal, or stale receipt.
-5. Keep the strict existing pointer/receipt schema and surface an integrity
-   error in Frank's read-only UI.
-
-Until that Frank-side change is deployed, the manifest is diagnostic evidence,
-not a claimed consumer-enforced integrity boundary. The worker continues to
-publish only the exact Frank #121-compatible pointer and receipt shapes.
+The handoff is fail-closed: do not run a second projection writer, do not mount
+the projection root read/write into Frank, and stop the deployment if the
+Frank-side read-only mount or #122 integrity checks are absent. The runtime
+receipt must include the worker revision and publication receipt before the
+staging smoke gates are accepted.

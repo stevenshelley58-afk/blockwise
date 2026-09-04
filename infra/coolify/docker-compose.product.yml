@@ -215,7 +215,7 @@ services:
       # Readiness must not call the public/shared edge: product-caddy waits on
       # this app's health, so that would create a startup cycle.
       BLOCKWISE_READINESS_SUPABASE_URL: http://product-rest:3000
-      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:?SUPABASE_SERVICE_ROLE_KEY is required}
+      SUPABASE_SERVICE_ROLE_KEY_FILE: /run/secrets/supabase-service-role
       TOKEN_ENCRYPTION_KEY: ${TOKEN_ENCRYPTION_KEY:?TOKEN_ENCRYPTION_KEY is required}
       # AI and Meta are opt-in providers. Core auth, Ad Studio editing and
       # durable saves must boot without either external credential set.
@@ -314,6 +314,8 @@ services:
       BLOCKWISE_AUTH_SMTP_CONFIGURED: ${BLOCKWISE_AUTH_SMTP_CONFIGURED:-false}
       STALWART_WEBHOOK_SECRET: ${STALWART_WEBHOOK_SECRET:-}
       BLOCKWISE_GIT_SHA: ${BLOCKWISE_GIT_SHA}
+    volumes:
+      - ${SUPABASE_SERVICE_ROLE_KEY_HOST_FILE:?SUPABASE_SERVICE_ROLE_KEY_HOST_FILE is required}:/run/secrets/supabase-service-role:ro
     networks: [blockwise-product]
     healthcheck:
       test: [CMD, "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
@@ -324,12 +326,6 @@ services:
   product-worker:
     image: ${BLOCKWISE_WORKER_IMAGE:?BLOCKWISE_WORKER_IMAGE is required}
     profiles: [worker]
-    build:
-      context: ../..
-      dockerfile: worker/Dockerfile
-      args:
-        GIT_SHA: ${BLOCKWISE_GIT_SHA}
-        BUILD_DATE: ${BLOCKWISE_BUILD_DATE}
     restart: unless-stopped
     depends_on:
       product-rest: { condition: service_healthy }
@@ -339,7 +335,7 @@ services:
     security_opt: [no-new-privileges:true]
     stop_grace_period: 30s
     healthcheck:
-      test: ["CMD", "node", "-e", "require('node:fs').accessSync('/app/REVISION')"]
+      test: ["CMD", "node", "-e", "const fs=require('node:fs'); const expected=process.env.BLOCKWISE_WORKER_EXPECTED_REVISION; if(!expected || fs.readFileSync('/app/REVISION','utf8').trim()!==expected) process.exit(1)"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -349,13 +345,14 @@ services:
       - ${MAUTIC_TOKEN_HOST_FILE:-/srv/blockwise/secrets/mautic_token}:/run/secrets/mautic_token:ro
       - ${CHATWOOT_API_TOKEN_HOST_FILE:-/srv/blockwise/secrets/chatwoot_api_token}:/run/secrets/chatwoot_api_token:ro
       - ${BLOCKWISE_OPS_CORRELATION_KEY_HOST_FILE:-/srv/blockwise/secrets/ops_correlation_key}:/run/secrets/ops_correlation_key:ro
+      - ${SUPABASE_SERVICE_ROLE_KEY_HOST_FILE:?SUPABASE_SERVICE_ROLE_KEY_HOST_FILE is required}:/run/secrets/supabase-service-role:ro
     environment:
       NODE_ENV: production
       NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:?NEXT_PUBLIC_SUPABASE_URL is required}
-      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:?SUPABASE_SERVICE_ROLE_KEY is required}
+      SUPABASE_SERVICE_ROLE_KEY_FILE: /run/secrets/supabase-service-role
       TOKEN_ENCRYPTION_KEY: ${TOKEN_ENCRYPTION_KEY:?TOKEN_ENCRYPTION_KEY is required}
       BLOCKWISE_WORKER_REVISION: ${BLOCKWISE_GIT_SHA}
-      BLOCKWISE_WORKER_EXPECTED_REVISION: ${BLOCKWISE_WORKER_EXPECTED_REVISION:-}
+      BLOCKWISE_WORKER_EXPECTED_REVISION: ${BLOCKWISE_WORKER_EXPECTED_REVISION:?BLOCKWISE_WORKER_EXPECTED_REVISION is required}
       BLOCKWISE_ENABLE_PROVIDER_WRITES: ${BLOCKWISE_ENABLE_PROVIDER_WRITES:-false}
       BLOCKWISE_META_PUBLISH_WORKSPACE_ALLOWLIST: ${BLOCKWISE_META_PUBLISH_WORKSPACE_ALLOWLIST:-}
       BLOCKWISE_OPS_PROJECTION_WORKER: ${BLOCKWISE_OPS_PROJECTION_WORKER:-false}

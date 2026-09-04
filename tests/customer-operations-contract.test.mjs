@@ -111,8 +111,10 @@ test("worker deployment mounts OSS provider secrets read-only and binds image pr
 test("Frank integrity handoff is explicit about current consumer boundary", () => {
   const handoff = text("docs/runbooks/frank-ops-integrity-followup.md");
   assert.match(handoff, /manifest\.json/);
-  assert.match(handoff, /does not consume this sidecar/);
-  assert.match(handoff, /active Frank consumer must add/);
+  assert.match(handoff, /Frank #122/);
+  assert.match(handoff, /manifest\.json/);
+  assert.match(handoff, /single writer/);
+  assert.match(handoff, /ops-projections:ro/);
 });
 
 test("operator action contract is capability-gated and RPC-only", () => {

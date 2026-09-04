@@ -48,7 +48,8 @@ BOOKING_PROVIDER=snagtime
 NEXT_PUBLIC_APP_URL=https://example.com
 NEXT_PUBLIC_SUPABASE_ANON_KEY=contract-anon
 NEXT_PUBLIC_SUPABASE_URL=https://supabase.example.com
-SUPABASE_SERVICE_ROLE_KEY=contract-service
+SUPABASE_SERVICE_ROLE_KEY_HOST_FILE=/tmp/blockwise-service-role
+BLOCKWISE_WORKER_EXPECTED_REVISION=0123456789abcdef0123456789abcdef01234567
 TOKEN_ENCRYPTION_KEY=contract-token
 TRUSTED_PROXY_RANGES=127.0.0.1/32
 BLOCKWISE_MAIL_PUBLIC_HOST=mail.example.com
@@ -123,6 +124,12 @@ grep -q 'customer-ops-contract-test.sh' "$ROOT_DIR/.github/workflows/hard-reset-
 grep -q 'BLOCKWISE_OPS_PROJECTION_WORKER' "$PRODUCT_COMPOSE_FILE" || { echo 'Blockwise projection worker feature gate missing' >&2; exit 1; }
 grep -q 'WORKER_REAP_INTERVAL_MS' "$PRODUCT_COMPOSE_FILE" || { echo 'worker recovery scheduler is not configured' >&2; exit 1; }
 grep -q 'healthcheck:' "$PRODUCT_COMPOSE_FILE" || { echo 'product worker healthcheck missing' >&2; exit 1; }
+grep -q 'BLOCKWISE_WORKER_EXPECTED_REVISION:?BLOCKWISE_WORKER_EXPECTED_REVISION is required' "$PRODUCT_COMPOSE_FILE" || { echo 'worker expected revision guard missing' >&2; exit 1; }
+grep -q 'SUPABASE_SERVICE_ROLE_KEY_FILE: /run/secrets/supabase-service-role' "$PRODUCT_COMPOSE_FILE" || { echo 'worker service-role file env missing' >&2; exit 1; }
+! awk -v service='product-worker' '$0 ~ "^  " service ":" { in_service=1; next } in_service && /^  [A-Za-z0-9_-]+:/ { exit } in_service && /^    build:/ { found=1 } END { exit found ? 0 : 1 }' "$PRODUCT_COMPOSE_FILE" || { echo 'production product-worker build section remains' >&2; exit 1; }
+! grep -q 'ops-projections:rw' "$ROOT_DIR/worker/docker-compose.worker.yml" || { echo 'standalone worker must not write Frank projections' >&2; exit 1; }
+test "$(grep -c '/data/ops-projections:rw' "$PRODUCT_COMPOSE_FILE")" -eq 1 || { echo 'projection root must have exactly one active writer' >&2; exit 1; }
+grep -q 'ops-projections:ro' "$ROOT_DIR/infra/frank/docker-compose.customer-ops.yml" || { echo 'Frank read-only projection handoff missing' >&2; exit 1; }
 grep -Eq '^FROM node:[^@]+@sha256:[0-9a-f]{64}' "$ROOT_DIR/worker/Dockerfile" || { echo 'worker base image is not digest-pinned' >&2; exit 1; }
 ! grep -q 'contract-placeholder' "$COMPOSE_FILE" || { echo 'moving placeholder image remains' >&2; exit 1; }
 grep -q 'run --rm --no-deps' "$ROOT_DIR/scripts/vps/customer-ops-smoke.sh" || { echo 'private-network IMAPS client contract missing' >&2; exit 1; }
@@ -130,12 +137,23 @@ grep -q -- '--profile smoke' "$ROOT_DIR/scripts/vps/customer-ops-smoke.sh" || { 
 grep -q -- '--tls-sni-name' "$ROOT_DIR/scripts/vps/customer-ops-install.sh" || { echo 'installer SMTP SNI contract missing' >&2; exit 1; }
 grep -q -- '--profile smoke' "$ROOT_DIR/scripts/vps/customer-ops-install.sh" || { echo 'installer private SMTP client profile missing' >&2; exit 1; }
 grep -q 'CONTROL_EDGE_IMAGE' "$ROOT_DIR/ops/control-edge/docker-compose.yml" || { echo 'control-edge immutable image contract missing' >&2; exit 1; }
+! grep -Eq '^    build:' "$ROOT_DIR/ops/control-edge/docker-compose.yml" || { echo 'production control-edge build section remains' >&2; exit 1; }
 grep -Eq '^FROM node:[^@]+@sha256:[0-9a-f]{64}$' "$ROOT_DIR/ops/control-edge/Dockerfile" || { echo 'control-edge base image is not digest-pinned' >&2; exit 1; }
 grep -q 'CONTROL_EDGE_INTERNAL_AUTH_HOST_FILE' "$ROOT_DIR/ops/control-edge/docker-compose.yml" || { echo 'control-edge strict per-file secret mount missing' >&2; exit 1; }
 grep -q 'healthcheck:' "$ROOT_DIR/ops/control-edge/docker-compose.yml" || { echo 'control-edge healthcheck missing' >&2; exit 1; }
 grep -q 'customer-ops-bootstrap.sh' "$ROOT_DIR/scripts/vps/customer-ops-bootstrap.sh" || { echo 'customer-ops bootstrap script missing' >&2; exit 1; }
 grep -q 'MAUTIC_LIFECYCLE_FIELDS_JSON' "$ROOT_DIR/scripts/vps/customer-ops-bootstrap.sh" || { echo 'Mautic lifecycle field bootstrap contract missing' >&2; exit 1; }
 grep -q 'fields/contact/new' "$ROOT_DIR/scripts/vps/customer-ops-bootstrap.sh" || { echo 'Mautic documented fields API bootstrap missing' >&2; exit 1; }
+grep -q 'tags/new' "$ROOT_DIR/scripts/vps/customer-ops-bootstrap.sh" || { echo 'Mautic tag API bootstrap missing' >&2; exit 1; }
+grep -q 'verify_mautic_resource segments' "$ROOT_DIR/scripts/vps/customer-ops-bootstrap.sh" || { echo 'Mautic segment verification missing' >&2; exit 1; }
+grep -q 'verify_mautic_resource campaigns' "$ROOT_DIR/scripts/vps/customer-ops-bootstrap.sh" || { echo 'Mautic campaign verification missing' >&2; exit 1; }
+grep -q 'api_access_token' "$ROOT_DIR/scripts/vps/customer-ops-bootstrap.sh" || { echo 'Chatwoot official auth header missing' >&2; exit 1; }
+! grep -q 'chatwoot_webhook_secret' "$ROOT_DIR/scripts/vps/customer-ops-bootstrap.sh" || { echo 'undocumented webhook secret filename remains' >&2; exit 1; }
+grep -q 'chatwoot_webhook_probe_secret' "$ROOT_DIR/scripts/vps/customer-ops-bootstrap.sh" || { echo 'webhook probe secret contract missing' >&2; exit 1; }
+for service in mautic-cron mautic-worker snagtime-worker; do
+  awk -v service="$service" '$0 ~ "^  " service ":" { in_service=1; next } in_service && /^  [A-Za-z0-9_-]+:/ { exit } in_service { print }' "$ROOT_DIR/infra/customer-ops/docker-compose.yml" | grep -q 'healthcheck:' || { echo "$service healthcheck missing" >&2; exit 1; }
+done
+grep -q 'SNAGTIME_WORKER_HEARTBEAT_FILE' "$ROOT_DIR/infra/customer-ops/docker-compose.yml" || { echo 'SnagTime queue heartbeat contract missing' >&2; exit 1; }
 grep -Fq 'accounts/${CHATWOOT_ACCOUNT_ID}/inboxes' "$ROOT_DIR/scripts/vps/customer-ops-bootstrap.sh" || { echo 'Chatwoot email inbox API bootstrap missing' >&2; exit 1; }
 grep -Fq 'accounts/${CHATWOOT_ACCOUNT_ID}/webhooks' "$ROOT_DIR/scripts/vps/customer-ops-bootstrap.sh" || { echo 'Chatwoot webhook API bootstrap missing' >&2; exit 1; }
 ! grep -qi 'adapter.*deferred' "$ROOT_DIR/docs/runbooks/customer-ops-vps.md" || { echo 'obsolete adapter deferred language remains' >&2; exit 1; }

@@ -1,0 +1,10 @@
+# Non-production developer override only. Production must use the immutable
+# image from docker-compose.yml and must never include this file.
+services:
+  customer-ops-control-edge:
+    build:
+      context: ../..
+      dockerfile: ops/control-edge/Dockerfile
+      args:
+        GIT_SHA: ${BLOCKWISE_GIT_SHA}
+        BUILD_DATE: ${BLOCKWISE_BUILD_DATE}

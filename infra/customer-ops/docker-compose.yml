@@ -145,6 +145,12 @@ services:
     restart: unless-stopped
     read_only: true
     tmpfs: [/tmp]
+    healthcheck:
+      test: ["CMD-SHELL", "find /var/www/html/var/logs -type f -mmin -15 -print -quit | grep -q ."]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 15m
     security_opt: [no-new-privileges:true]
     cap_drop: [ALL]
     deploy:
@@ -179,6 +185,12 @@ services:
     restart: unless-stopped
     read_only: true
     tmpfs: [/tmp]
+    healthcheck:
+      test: ["CMD-SHELL", "find /var/www/html/var/logs -type f -mmin -15 -print -quit | grep -q ."]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 15m
     security_opt: [no-new-privileges:true]
     cap_drop: [ALL]
     deploy:
@@ -343,14 +355,25 @@ services:
   snagtime-worker:
     image: ${SNAGTIME_IMAGE:?set SNAGTIME_IMAGE to the immutable merged-main runtime image}
     command: ["node", "dist/worker.mjs"]
-    environment: *snagtime_env
+    environment:
+      <<: *snagtime_env
+      SNAGTIME_WORKER_HEARTBEAT_FILE: /run/customer-ops/snagtime-worker-heartbeat
     secrets: [snagtime_database_url, google_client_secret, snagtime_smtp_password, snagtime_auth_secret, snagtime_token_encryption_key]
     networks: [backend, egress, mail]
     depends_on:
       postgres: { condition: service_healthy }
     restart: unless-stopped
     read_only: true
-    tmpfs: [/tmp]
+    # The published worker must touch this file after each completed queue
+    # cycle. A stale/missing heartbeat fails closed rather than reporting a
+    # live process whose queue is wedged.
+    healthcheck:
+      test: ["CMD-SHELL", "test -s /run/customer-ops/snagtime-worker-heartbeat && find /run/customer-ops/snagtime-worker-heartbeat -mmin -5 -print -quit | grep -q ."]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 10m
+    tmpfs: [/tmp, /run/customer-ops]
     security_opt: [no-new-privileges:true]
     cap_drop: [ALL]
     deploy:

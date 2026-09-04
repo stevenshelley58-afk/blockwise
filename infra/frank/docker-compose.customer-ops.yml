@@ -1,0 +1,20 @@
+# Frank-side deployment override. Apply this file to the Frank Compose project
+# after copying it outside this checkout. The Blockwise worker is the sole
+# writer; Frank receives the bundle read-only and must enforce the manifest
+# verification contract before serving projections.
+services:
+  frank:
+    environment:
+      HERMES_OPS_PROJECTION_ROOT: /data/ops-projections
+      HERMES_OPS_PROJECTION_INTEGRITY_REQUIRED: "true"
+    volumes:
+      - ${HERMES_OPS_PROJECTION_ROOT:?Set the shared Blockwise projection path}:/data/ops-projections:ro
+    networks:
+      - hermes-private
+      - blockwise-product
+
+networks:
+  hermes-private:
+    external: true
+  blockwise-product:
+    external: true

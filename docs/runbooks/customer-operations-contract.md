@@ -174,12 +174,15 @@ Deployment must set `CHATWOOT_ENQUIRY_SOURCE_ID`,
 belonging to their respective configured inboxes; the worker refuses to create
 a conversation when the binding is absent.
 
-The Hermes publisher writes Frank's exact PR #121 receipt and pointer shape,
-plus a generation `manifest.json` containing SHA-256 checksums for every
-projection, receipt, and pointer. The active Frank #121 reader does not yet
-consume that sidecar; the required consumer change and verification procedure
-are documented in `frank-ops-integrity-followup.md`, so the manifest is not
-represented as a consumer-enforced integrity boundary. The deployed `BLOCKWISE_WORKER_REVISION`
+The Hermes publisher writes Frank's exact pointer and publication-receipt
+shape, plus a generation `manifest.json` containing SHA-256 checksums for every
+projection, receipt, and pointer. Accepted Frank #122 verifies the pointer SHA,
+bundle SHA, every listed file hash, generation identity and complete file set,
+publication receipt, source revision/receipt/workspace metadata, and freshness
+before exposing a projection. The Blockwise-side read-only mount handoff is
+defined in `infra/frank/docker-compose.customer-ops.yml`; the production
+Frank service must apply the corresponding `/ops-projections:ro` mount. The
+deployed `BLOCKWISE_WORKER_REVISION`
 (full image Git SHA) is the bundle source revision; provider/source row and
 queue identifiers form the durable source receipt set. Mautic lifecycle
 snapshots also materialize configured segment/campaign flow status, while the

@@ -60,6 +60,10 @@ try: parsed=json.loads(value)
 except json.JSONDecodeError as exc: raise SystemExit(f'{name} must be valid JSON: {exc.msg}')
 if not isinstance(parsed,dict) or not parsed or any(not isinstance(k,str) or not k.strip() or not isinstance(v,(str,int)) or not str(v).strip() for k,v in parsed.items()):
     raise SystemExit(f'{name} must be a non-empty object of stage to provider id')
+if 'SEGMENTS' in name or 'CAMPAIGNS' in name:
+    for key, value in parsed.items():
+        if not str(value).isdigit() or int(value) <= 0:
+            raise SystemExit(f'{name} must contain real positive numeric provider IDs; placeholder values are not accepted ({key})')
 PY
 }
 validate_json_mapping MAUTIC_LIFECYCLE_FIELDS_JSON
@@ -67,6 +71,7 @@ validate_json_mapping MAUTIC_LIFECYCLE_SEGMENTS_JSON
 validate_json_mapping MAUTIC_LIFECYCLE_CAMPAIGNS_JSON
 require_value MAUTIC_CONTACT_TAG
 require_value MAUTIC_LIFECYCLE_TAG
+[[ "$MAUTIC_CONTACT_TAG" =~ ^[A-Za-z0-9._:-]{1,128}$ && "$MAUTIC_LIFECYCLE_TAG" =~ ^[A-Za-z0-9._:-]{1,128}$ ]] || { echo 'Mautic tags contain unsupported characters' >&2; exit 64; }
 
 # GoTrue and the existing transactional outbox must use the same Stalwart
 # submission service. Only routing names are inspected; passwords stay in the
@@ -81,17 +86,49 @@ grep -Eq "^SMTP_HOST=(${MAIL_PUBLIC_HOST//./\\.}|product-mail)$" "$PRODUCT_ENV_F
 # Execute one documented provider API call without placing the bearer token on
 # argv or in ordinary process environment. The response body is discarded.
 api_request() {
-  local token_name="$1" method="$2" url="$3" body_file="${4:-}" config code
+  local token_name="$1" method="$2" url="$3" body_file="${4:-}" response_file="${5:-/dev/null}" config code
   config="$(mktemp /tmp/blockwise-customer-ops-api.XXXXXX)"; chmod 600 "$config"
   {
-    printf 'silent\nshow-error\nrequest = "%s"\nurl = "%s"\nheader = "Authorization: Bearer ' "$method" "$url"
+    printf 'silent\nshow-error\nrequest = "%s"\nurl = "%s"\nheader = "' "$method" "$url"
+    if [[ "$token_name" == chatwoot_api_token ]]; then
+      printf 'api_access_token: '
+    else
+      printf 'Authorization: Bearer '
+    fi
     tr -d '\r\n' < "$SECRETS_DIR/$token_name"
     printf '"\n'
     [[ -z "$body_file" ]] || printf 'header = "Content-Type: application/json"\ndata-binary = "@%s"\n' "$body_file"
   } > "$config"
-  code="$(curl --config "$config" --output /dev/null --write-out '%{http_code}')" || code=000
+  code="$(curl --config "$config" --output "$response_file" --write-out '%{http_code}')" || code=000
   rm -f "$config"
   printf '%s' "$code"
+}
+
+verify_mautic_tag() {
+  local tag="$1" response code
+  response="$(mktemp /tmp/blockwise-mautic-tags.XXXXXX)"; chmod 600 "$response"
+  code="$(api_request mautic_api_token GET "${MAUTIC_API_URL%/}/tags?search=$(python3 -c 'import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1]))' "$tag")" '' "$response")"
+  [[ "$code" == 2* ]] || { rm -f "$response"; echo "Mautic tag lookup failed (HTTP $code): $tag" >&2; exit 65; }
+  python3 - "$tag" "$response" <<'PY'
+import json,sys
+tag,path=sys.argv[1:]
+with open(path,encoding='utf-8') as fh: data=json.load(fh)
+def found(value):
+    if isinstance(value,dict):
+        if any(value.get(k)==tag for k in ('tag','name','label')): return True
+        return any(found(v) for v in value.values())
+    if isinstance(value,list): return any(found(v) for v in value)
+    return False
+if not found(data): raise SystemExit(f'Mautic tag is absent: {tag}')
+PY
+  rm -f "$response"
+}
+
+verify_mautic_resource() {
+  local kind="$1" id="$2" code
+  [[ "$id" =~ ^[0-9]+$ && "$id" -gt 0 ]] || { echo "invalid Mautic $kind id: $id" >&2; exit 64; }
+  code="$(api_request mautic_api_token GET "${MAUTIC_API_URL%/}/${kind}/${id}")"
+  [[ "$code" == 2* ]] || { echo "Mautic $kind $id is not available (HTTP $code)" >&2; exit 65; }
 }
 
 if [[ "$MODE" == apply ]]; then
@@ -112,6 +149,15 @@ import json,sys
 for alias,field_type in json.loads(sys.argv[1]).items(): print(alias+'\t'+str(field_type))
 PY
   )
+  for tag in "$MAUTIC_CONTACT_TAG" "$MAUTIC_LIFECYCLE_TAG"; do
+    tag_file="$(mktemp /tmp/blockwise-mautic-tag.XXXXXX)"; chmod 600 "$tag_file"
+    python3 - "$tag" > "$tag_file" <<'PY'
+import json,sys
+print(json.dumps({'tag':sys.argv[1]}))
+PY
+    code="$(api_request mautic_api_token POST "${MAUTIC_API_URL%/}/tags/new" "$tag_file")"; rm -f "$tag_file"
+    [[ "$code" == 2* || "$code" == 409 ]] || { echo "Mautic tag bootstrap failed (HTTP $code)" >&2; exit 65; }
+  done
   if [[ -n "${CHATWOOT_INBOX_PAYLOAD_FILE:-}" ]]; then
     payload="$CHATWOOT_INBOX_PAYLOAD_FILE"
     [[ "$payload" = /* && -f "$payload" && ! -L "$payload" ]] || { echo 'CHATWOOT_INBOX_PAYLOAD_FILE must be an absolute regular file' >&2; exit 64; }
@@ -119,7 +165,7 @@ PY
     [[ "$code" == 2* || "$code" == 409 ]] || { echo "Chatwoot inbox bootstrap failed (HTTP $code)" >&2; exit 65; }
   fi
   if [[ -n "${CHATWOOT_WEBHOOK_URL:-}" ]]; then
-    require_secret chatwoot_webhook_secret
+    require_secret chatwoot_webhook_probe_secret
     hook_file="$(mktemp /tmp/blockwise-chatwoot-webhook.XXXXXX)"; chmod 600 "$hook_file"
     python3 - "$CHATWOOT_WEBHOOK_URL" > "$hook_file" <<'PY'
 import json,sys
@@ -129,6 +175,29 @@ PY
     [[ "$code" == 2* || "$code" == 409 ]] || { echo "Chatwoot webhook bootstrap failed (HTTP $code)" >&2; exit 65; }
   fi
 fi
+
+# Verify every configured provider object through its documented API. Contact
+# membership is deliberately not created here: the projection worker applies
+# lifecycle tags/segments per contact after durable receipt processing.
+while IFS=$'\t' read -r alias _; do
+  code="$(api_request mautic_api_token GET "${MAUTIC_API_URL%/}/fields/contact/${alias}")"
+  [[ "$code" == 2* ]] || { echo "Mautic lifecycle field ${alias} is unavailable (HTTP $code)" >&2; exit 65; }
+done < <(python3 - "${MAUTIC_LIFECYCLE_FIELDS_JSON}" <<'PY'
+import json,sys
+for key in json.loads(sys.argv[1]): print(key+'\tfield')
+PY
+)
+for tag in "$MAUTIC_CONTACT_TAG" "$MAUTIC_LIFECYCLE_TAG"; do verify_mautic_tag "$tag"; done
+while IFS=$'\t' read -r _ id; do verify_mautic_resource segments "$id"; done < <(python3 - "${MAUTIC_LIFECYCLE_SEGMENTS_JSON}" <<'PY'
+import json,sys
+for key,value in json.loads(sys.argv[1]).items(): print(key+'\t'+str(value))
+PY
+)
+while IFS=$'\t' read -r _ id; do verify_mautic_resource campaigns "$id"; done < <(python3 - "${MAUTIC_LIFECYCLE_CAMPAIGNS_JSON}" <<'PY'
+import json,sys
+for key,value in json.loads(sys.argv[1]).items(): print(key+'\t'+str(value))
+PY
+)
 
 # Readiness is a real request; no live success is synthesized when credentials
 # or DNS are absent. Response bodies are discarded and never logged.

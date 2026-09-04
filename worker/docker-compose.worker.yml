@@ -23,6 +23,7 @@ services:
       CHATWOOT_SUPPORT_SOURCE_ID: ${CHATWOOT_SUPPORT_SOURCE_ID:-}
       CHATWOOT_GLOBAL_SOURCE_ID: ${CHATWOOT_GLOBAL_SOURCE_ID:-}
       BLOCKWISE_OPS_CORRELATION_KEY_FILE: /run/secrets/ops_correlation_key
+      SUPABASE_SERVICE_ROLE_KEY_FILE: /run/secrets/supabase-service-role
     read_only: true
     cap_drop:
       - ALL
@@ -30,10 +31,10 @@ services:
       - no-new-privileges:true
     stop_grace_period: 30s
     volumes:
-      - ${HERMES_OPS_PROJECTION_ROOT:-/srv/frank/data/window/ops-projections}:/data/ops-projections:rw
       - ${MAUTIC_TOKEN_HOST_FILE:-/srv/blockwise/secrets/mautic_token}:/run/secrets/mautic_token:ro
       - ${CHATWOOT_API_TOKEN_HOST_FILE:-/srv/blockwise/secrets/chatwoot_api_token}:/run/secrets/chatwoot_api_token:ro
       - ${BLOCKWISE_OPS_CORRELATION_KEY_HOST_FILE:-/srv/blockwise/secrets/ops_correlation_key}:/run/secrets/ops_correlation_key:ro
+      - ${SUPABASE_SERVICE_ROLE_KEY_HOST_FILE:?Set SUPABASE_SERVICE_ROLE_KEY_HOST_FILE to a root-owned 0600 file}:/run/secrets/supabase-service-role:ro
     logging:
       driver: json-file
       options:
