@@ -168,6 +168,19 @@ describe("Ad Studio direct layered template gallery", () => {
     assert.match(formRoute, /createSupabaseServiceClient/);
     assert.match(publishRoute, /templateSupabase: serviceSupabase/);
   });
+
+  it("keeps template quarantine schema history in the product migration set", () => {
+    const productMigrations = readFileSync("infra/product/product-migrations.txt", "utf8");
+    for (const migration of [
+      "20260903130000_ad_template_library_status.sql",
+      "20260904010000_ad_template_review_activation_columns.sql",
+      "20260904011000_quarantine_unreviewed_ad_templates.sql",
+      "20260904012000_enforce_ad_template_review_activation.sql",
+    ]) {
+      assert.match(productMigrations, new RegExp(`^${migration}$`, "m"));
+      assert.ok(readFileSync(`supabase/migrations/${migration}`, "utf8").length > 0);
+    }
+  });
 });
 
 type TemplateTestRow = {
