@@ -333,6 +333,11 @@ networks:
   blockwise-product:
     name: blockwise-product
     driver: bridge
+    # Frank's edge is attached to this persistent product network in production.
+    # Keep the subnet stable so an app-only deploy never attempts to replace it.
+    ipam:
+      config:
+        - subnet: ${BLOCKWISE_PRODUCT_NETWORK_SUBNET:-172.30.0.0/24}
 
 volumes:
   blockwise-product-db-data:

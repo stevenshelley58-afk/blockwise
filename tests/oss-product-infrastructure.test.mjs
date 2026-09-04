@@ -9,6 +9,7 @@ const read = (path) => readFile(new URL(path, root), "utf8");
 test("OSS product compose is isolated and has no managed deployment endpoint", async () => {
   const compose = await read("infra/coolify/docker-compose.product.yml");
   assert.match(compose, /name: blockwise-product/);
+  assert.match(compose, /BLOCKWISE_PRODUCT_NETWORK_SUBNET:-172\.30\.0\.0\/24/);
   assert.match(compose, /postgres:17\.6-alpine/);
   assert.match(compose, /postgrest\/postgrest:v14\.15/);
   assert.match(compose, /supabase\/gotrue:v2\.189\.0/);
