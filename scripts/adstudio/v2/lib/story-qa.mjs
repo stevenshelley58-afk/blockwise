@@ -10,7 +10,13 @@ import {
 const STORY_WIDTH = 1080;
 const STORY_HEIGHT = 1920;
 const MIN_TEXT_BACKING_CONTRAST = 4.5;
-const BACKING_SAMPLE_FRACTIONS = [0.15, 0.5, 0.85];
+const MIN_LARGE_TEXT_BACKING_CONTRAST = 3;
+const MIN_BOLD_LARGE_TEXT_PX = 18;
+const MIN_REGULAR_LARGE_TEXT_PX = 24;
+const BACKING_X_SAMPLE_FRACTIONS = [0.05, 0.275, 0.5, 0.725, 0.95];
+const BACKING_Y_SAMPLE_FRACTIONS = [0.03, 0.12, 0.275, 0.5, 0.725, 0.88, 0.97];
+const MAX_EXPECTED_BACKING_DELTA = 32;
+const MAX_UNIFORM_BACKING_DELTA = 18;
 
 function roleFor(layer) {
   const value = `${layer.inputKey ?? ""} ${layer.id ?? ""}`.toLowerCase();
@@ -67,6 +73,80 @@ function containsPoint(box, x, y) {
   return x >= box.x && x <= box.x + box.width && y >= box.y && y <= box.y + box.height;
 }
 
+function layerOrder(layer, index) {
+  return Number.isFinite(layer.z) ? layer.z : index;
+}
+
+function coversText(backing, text, widthCoverage = 0.85) {
+  const overlap = intersection(backing.box, text.box);
+  return overlap.width >= text.box.width * widthCoverage && overlap.height >= text.box.height;
+}
+
+function isContentImageSlot(layer) {
+  if (layer.type !== "image_slot") return false;
+  const identity = `${layer.inputKey ?? ""} ${layer.id ?? ""}`.toLowerCase();
+  return layer.inputKey !== "logo_slot" && !/(^|[-_ ])(logo|brand-mark)([-_ ]|$)/u.test(identity);
+}
+
+function isOpaqueVectorBacking(layer) {
+  return layer.type === "vector"
+    && (layer.opacity ?? 1) === 1
+    && !["line", "wave", "ring"].includes(layer.shape)
+    && Boolean(hexRgb(layer.fill));
+}
+
+function effectiveBacking(layers, textLayer, policyBackingRgb) {
+  const textIndex = layers.indexOf(textLayer);
+  const textOrder = layerOrder(textLayer, textIndex);
+  const candidates = layers
+    .map((layer, index) => ({ layer, order: layerOrder(layer, index) }))
+    .filter(({ layer, order }) => order < textOrder
+      && (layer.type === "overlay_patch" || isOpaqueVectorBacking(layer))
+      && coversText(layer, textLayer))
+    .sort((left, right) => right.order - left.order);
+  const backing = candidates[0]?.layer;
+  if (!backing) return null;
+  return {
+    layer: backing,
+    rgb: backing.type === "vector" ? hexRgb(backing.fill) : policyBackingRgb,
+  };
+}
+
+function minimumContrastFor(layer) {
+  const renderedSizePx = layer.box.height * STORY_HEIGHT * (layer.typo?.sizeRatio ?? 1);
+  const isBold = (layer.typo?.weight ?? 400) >= 600;
+  const isLargeText = renderedSizePx >= (isBold ? MIN_BOLD_LARGE_TEXT_PX : MIN_REGULAR_LARGE_TEXT_PX);
+  return isLargeText ? MIN_LARGE_TEXT_BACKING_CONTRAST : MIN_TEXT_BACKING_CONTRAST;
+}
+
+function paletteColours(doc) {
+  const roles = doc.restyle?.paletteRoles;
+  if (!roles || typeof roles !== "object" || Array.isArray(roles)) return new Set();
+  return new Set(Object.values(roles).filter((value) => hexRgb(value)).map((value) => String(value).toLowerCase()));
+}
+
+function medianRgb(samples) {
+  return [0, 1, 2].map((channel) => {
+    const values = samples.map((sample) => sample[channel]).sort((left, right) => left - right);
+    return values[Math.floor(values.length / 2)];
+  });
+}
+
+function isSamplingOccluder(layer) {
+  return layer.type === "text"
+    || layer.type === "icon"
+    || layer.type === "image_slot"
+    || layer.type === "overlay_patch"
+    || isOpaqueVectorBacking(layer);
+}
+
+function topmostLayerAtPoint(layers, x, y) {
+  return layers
+    .map((layer, index) => ({ layer, order: layerOrder(layer, index) }))
+    .filter(({ layer }) => isSamplingOccluder(layer) && containsPoint(layer.box, x, y))
+    .sort((left, right) => right.order - left.order)[0]?.layer ?? null;
+}
+
 /**
  * Release-time deterministic Story gate. It combines structural checks with
  * a few pixel probes over each declared backing patch, so a Story cannot claim
@@ -96,8 +176,13 @@ export async function evaluateStoryQa(doc, storyPreviewBytes) {
   if (!Number.isFinite(policy.ctaGroup?.maxGapPx) || policy.ctaGroup.maxGapPx <= 0 || policy.ctaGroup.maxGapPx > STORY_CTA_MAX_GAP_PX) {
     blockers.push(`Story CTA maxGapPx must be a positive value no greater than the canonical ${STORY_CTA_MAX_GAP_PX}px`);
   }
-  if (String(policy.backingColour).toLowerCase() !== STORY_BACKING_COLOUR) {
-    blockers.push(`Story backingColour must be the canonical ivory ${STORY_BACKING_COLOUR}`);
+  const policyBackingRgb = hexRgb(policy.backingColour);
+  const allowedBackingColours = paletteColours(doc);
+  allowedBackingColours.add(STORY_BACKING_COLOUR);
+  if (!policyBackingRgb) {
+    blockers.push("Story backingColour must be a valid design-system hex colour");
+  } else if (!allowedBackingColours.has(String(policy.backingColour).toLowerCase())) {
+    blockers.push("Story backingColour must belong to the template design system");
   }
 
   const text = story.layers.filter((layer) => layer.type === "text");
@@ -108,12 +193,12 @@ export async function evaluateStoryQa(doc, storyPreviewBytes) {
   }
 
   const byId = new Map(story.layers.map((layer) => [layer.id, layer]));
+  const declaredBackings = policy.backingLayerIds.map((id) => byId.get(id)).filter(Boolean);
   const support = text.find((layer) => roleFor(layer) === "supporting");
-  const supportBackingId = policy.backingLayerIds.find((id) => byId.get(id)?.type === "overlay_patch" && id.includes("supporting"));
-  const supportBacking = supportBackingId ? byId.get(supportBackingId) : null;
-  if (support && (!supportBacking || intersection(support.box, supportBacking.box).width < support.box.width * 0.9 || intersection(support.box, supportBacking.box).height < support.box.height)) {
-    blockers.push("supporting copy requires a full-coverage backing patch");
-  }
+  const supportBacking = support
+    ? declaredBackings.find((layer) => layer.type === "overlay_patch" && coversText(layer, support, 0.9))
+    : null;
+  if (support && !supportBacking) blockers.push("supporting copy requires a full-coverage declared backing patch");
 
   const ctaIds = policy.ctaGroup.layerIds;
   const ctaLayers = ctaIds.map((id) => byId.get(id)).filter((layer) => layer?.type === "text");
@@ -124,30 +209,37 @@ export async function evaluateStoryQa(doc, storyPreviewBytes) {
     const ctaBottom = Math.max(...ctaLayers.map((layer) => layer.box.y + layer.box.height));
     const ctaYSpread = (Math.max(...ctaLayers.map((layer) => layer.box.y)) - Math.min(...ctaLayers.map((layer) => layer.box.y))) * STORY_HEIGHT;
     if (ctaYSpread > STORY_CTA_MAX_GAP_PX || (ctaBottom - ctaTop) * STORY_HEIGHT > STORY_MAX_DEAD_SPACE_PX) blockers.push("Story CTA group is too spread out");
-    const ctaBacking = policy.backingLayerIds.map((id) => byId.get(id)).find((layer) => layer?.type === "overlay_patch" && layer.id.includes("cta"));
-    if (!ctaBacking || ctaLayers.some((layer) => intersection(layer.box, ctaBacking.box).width < layer.box.width * 0.85 || intersection(layer.box, ctaBacking.box).height < layer.box.height)) {
-      blockers.push("Story CTA group requires one shared backing patch");
+    const sharedCtaBacking = declaredBackings.find((layer) => (
+      layer.type === "overlay_patch" && ctaLayers.every((textLayer) => coversText(layer, textLayer))
+    ));
+    if (!sharedCtaBacking) {
+      blockers.push("Story CTA group requires one shared declared backing patch");
     }
   }
 
-  const image = story.layers.find((layer) => layer.type === "image_slot");
-  const occupied = [image, ...text].filter(Boolean).map((layer) => ({ y: layer.box.y, height: layer.box.height })).sort((a, b) => a.y - b.y);
+  const images = story.layers.filter(isContentImageSlot);
+  const occupied = [...images, ...text].map((layer) => ({ y: layer.box.y, height: layer.box.height })).sort((a, b) => a.y - b.y);
   let maxGap = 0;
   for (let index = 1; index < occupied.length; index += 1) maxGap = Math.max(maxGap, verticalGap(occupied[index - 1], occupied[index]));
   if (maxGap > STORY_MAX_DEAD_SPACE_PX) blockers.push(`Story dead space ${Math.round(maxGap)}px exceeds the canonical ${STORY_MAX_DEAD_SPACE_PX}px`);
 
-  const backingRgb = hexRgb(STORY_BACKING_COLOUR);
   const backingTextLayers = [support, ...ctaLayers].filter(Boolean);
   for (const layer of backingTextLayers) {
+    const backing = policyBackingRgb ? effectiveBacking(story.layers, layer, policyBackingRgb) : null;
+    if (!backing?.rgb) {
+      blockers.push(`Story text layer ${layer.id} has no verifiable rendered backing`);
+      continue;
+    }
     const colours = textColours(layer);
     if (!colours.length) {
       blockers.push(`Story text layer ${layer.id} must declare a colour for backing contrast verification`);
       continue;
     }
+    const minimumContrast = minimumContrastFor(layer);
     for (const colour of colours) {
       const rgb = hexRgb(colour);
-      if (!rgb || contrastRatio(rgb, backingRgb) < MIN_TEXT_BACKING_CONTRAST) {
-        blockers.push(`Story text layer ${layer.id} does not meet ${MIN_TEXT_BACKING_CONTRAST}:1 contrast against canonical ivory`);
+      if (!rgb || contrastRatio(rgb, backing.rgb) < minimumContrast) {
+        blockers.push(`Story text layer ${layer.id} does not meet ${minimumContrast}:1 contrast against its rendered backing`);
       }
     }
   }
@@ -160,17 +252,25 @@ export async function evaluateStoryQa(doc, storyPreviewBytes) {
       continue;
     }
     const points = [];
-    for (const yFraction of BACKING_SAMPLE_FRACTIONS) {
-      for (const xFraction of BACKING_SAMPLE_FRACTIONS) {
+    for (const yFraction of BACKING_Y_SAMPLE_FRACTIONS) {
+      for (const xFraction of BACKING_X_SAMPLE_FRACTIONS) {
         const x = layer.box.x + layer.box.width * xFraction;
         const y = layer.box.y + layer.box.height * yFraction;
-        // Text is intentionally above the patch. Ignore those covered points
-        // while still requiring several independent exposed interior samples.
-        if (!text.some((entry) => containsPoint(entry.box, x, y))) points.push([x, y]);
+        // Sample only pixels where this declared patch is actually topmost.
+        // Later text, vectors, images, or another patch are intentional
+        // authored content and must not be mistaken for backing corruption.
+        if (topmostLayerAtPoint(story.layers, x, y)?.id === layer.id) points.push([x, y]);
       }
     }
     if (points.length < 3) {
-      blockers.push(`Story backing ${id} has too few unobscured interior samples for uniformity verification`);
+      const coveredText = backingTextLayers.filter((textLayer) => coversText(layer, textLayer));
+      const allUseLaterVectorBackings = coveredText.length > 0 && coveredText.every((textLayer) => {
+        const backing = policyBackingRgb ? effectiveBacking(story.layers, textLayer, policyBackingRgb) : null;
+        return backing?.layer?.type === "vector";
+      });
+      if (!allUseLaterVectorBackings) {
+        blockers.push(`Story backing ${id} has too few unobscured interior samples for uniformity verification`);
+      }
       continue;
     }
     const samples = points.map(([xNorm, yNorm]) => {
@@ -179,8 +279,13 @@ export async function evaluateStoryQa(doc, storyPreviewBytes) {
       const offset = (y * raw.info.width + x) * raw.info.channels;
       return [raw.data[offset], raw.data[offset + 1], raw.data[offset + 2]];
     });
-    if (samples.some((sample) => sample.some((value, index) => Math.abs(value - backingRgb[index]) > 18))) {
-      blockers.push(`Story backing ${id} is not rendered uniformly in canonical ivory`);
+    const renderedBackingRgb = medianRgb(samples);
+    if (policyBackingRgb && renderedBackingRgb.some((value, index) => Math.abs(value - policyBackingRgb[index]) > MAX_EXPECTED_BACKING_DELTA)) {
+      blockers.push(`Story backing ${id} does not match its declared design-system colour`);
+      continue;
+    }
+    if (samples.some((sample) => sample.some((value, index) => Math.abs(value - renderedBackingRgb[index]) > MAX_UNIFORM_BACKING_DELTA))) {
+      blockers.push(`Story backing ${id} is not rendered uniformly in its design-system colour`);
     }
   }
 

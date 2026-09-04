@@ -430,7 +430,7 @@ function buildLayoutFromSpec(format, specLayout, specInputs, palette, storyBacki
     ...(format === "9:16" ? {
       storyPolicy: {
         schema: "adstudio.story-policy.v1", safeTopPx: 240, safeBottomPx: 300,
-        maxDeadSpacePx: STORY_MAX_DEAD_SPACE_PX, backingColour: palette?.background || STORY_BACKING_COLOUR,
+        maxDeadSpacePx: STORY_MAX_DEAD_SPACE_PX, backingColour: STORY_BACKING_COLOUR,
         backingLayerIds: declaredBackingLayers.map((layer) => layer.id),
         ctaGroup: { layerIds: layers.filter((layer) => layer.type === "text" && ["cta", "contact"].includes(layer.inputKey)).map((layer) => layer.id), maxGapPx: STORY_CTA_MAX_GAP_PX },
       },
