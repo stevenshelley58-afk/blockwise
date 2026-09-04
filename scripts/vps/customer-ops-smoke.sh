@@ -14,7 +14,7 @@ done
 # shellcheck disable=SC1090
 set -a; . "$ENV_FILE"; set +a
 SECRETS_DIR="${CUSTOMER_OPS_SECRETS_DIR:-/etc/blockwise/customer-ops/secrets}"
-for name in chatwoot_smtp_password google_client_secret mautic_api_token chatwoot_api_token; do
+for name in mautic_smtp_password chatwoot_smtp_password snagtime_smtp_password chatwoot_inbox_password google_client_secret mautic_api_token chatwoot_api_token; do
   [[ -s "$SECRETS_DIR/$name" ]] || { echo "missing secret file: $name" >&2; exit 64; }
 done
 command -v curl >/dev/null || { echo 'curl is required' >&2; exit 69; }
@@ -24,9 +24,24 @@ command -v swaks >/dev/null || { echo 'swaks is required for the SMTP STARTTLS/A
 quiet_http() { curl --fail --silent --show-error --output /dev/null --write-out '%{http_code}' "$@"; }
 smtp_host="${SMTP_PUBLIC_HOST:-${MAIL_PUBLIC_HOST:?MAIL_PUBLIC_HOST is required}}"
 smtp_port="${SMTP_PORT:-587}"
-swaks --server "$smtp_host" --port "$smtp_port" --tls --auth LOGIN \
-  --auth-user "${CHATWOOT_SMTP_USER:?CHATWOOT_SMTP_USER is required}" --auth-password "$(<"$SECRETS_DIR/chatwoot_smtp_password")" \
-  --quit-after AUTH >/dev/null 2>&1 || { echo 'SMTP STARTTLS/AUTH failed' >&2; exit 65; }
+smtp_auth_check() {
+  local label="$1" user="$2" secret_file="$3"
+  swaks --server "$smtp_host" --port "$smtp_port" --tls --auth LOGIN \
+    --auth-user "$user" --auth-password "$(<"$SECRETS_DIR/$secret_file")" \
+    --quit-after AUTH >/dev/null 2>&1 || { echo "$label SMTP STARTTLS/AUTH failed" >&2; exit 65; }
+}
+smtp_auth_check 'Mautic' "${MAUTIC_SMTP_USER:?MAUTIC_SMTP_USER is required}" mautic_smtp_password
+smtp_auth_check 'Chatwoot' "${CHATWOOT_SMTP_USER:?CHATWOOT_SMTP_USER is required}" chatwoot_smtp_password
+smtp_auth_check 'SnagTime' "${SNAGTIME_SMTP_USER:?SNAGTIME_SMTP_USER is required}" snagtime_smtp_password
+
+imap_netrc="$(mktemp)"
+trap 'rm -f "$imap_netrc"' EXIT
+chmod 600 "$imap_netrc"
+printf 'machine %s login %s password %s\n' "$smtp_host" \
+  "${CHATWOOT_INBOX_USER:?CHATWOOT_INBOX_USER is required}" \
+  "$(<"$SECRETS_DIR/chatwoot_inbox_password")" > "$imap_netrc"
+curl --fail --silent --show-error --output /dev/null --netrc-file "$imap_netrc" \
+  "imaps://${smtp_host}/INBOX" || { echo 'Chatwoot support inbox IMAPS authentication failed' >&2; exit 65; }
 
 mautic_code="$(quiet_http -H "Authorization: Bearer $(<"$SECRETS_DIR/mautic_api_token")" "${MAUTIC_API_URL:?MAUTIC_API_URL is required}/contacts?limit=1")"
 [[ "$mautic_code" == 2* ]] || { echo "Mautic API failed (HTTP $mautic_code)" >&2; exit 65; }

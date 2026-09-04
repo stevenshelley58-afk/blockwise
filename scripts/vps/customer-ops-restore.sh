@@ -33,11 +33,11 @@ done
 if [[ -n "$RECEIPT" ]]; then
   umask 077
   {
-    echo 'blockwise customer-ops restore validation receipt'
+    echo 'blockwise customer-ops prepared restore receipt'
     date -u +%Y-%m-%dT%H:%M:%SZ
     echo "snapshot=$SNAPSHOT"
     echo 'validated: empty-target guard, coverage manifest, postgres/mariadb/mautic/chatwoot artifacts'
-    echo 'next: import into a newly created isolated Compose project and run customer-ops-smoke.sh'
+    echo 'status: extraction and artifact validation only; isolated import and smoke drill are still required'
   } > "$RECEIPT"
   chmod 600 "$RECEIPT"
 fi

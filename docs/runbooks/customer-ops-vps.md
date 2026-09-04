@@ -42,6 +42,9 @@ not duplicate it.
   once (`docker network create --driver bridge blockwise-customer-ops-mail`).
   It is joined only by product-mail and customer-ops mail consumers; do not
   join the product backend network.
+  Set product Compose `BLOCKWISE_MAIL_PUBLIC_HOST` to the same hostname as
+  customer-ops `MAIL_PUBLIC_HOST`; product-mail receives it as the shared
+  network alias so strict SMTP/IMAPS verification uses the Stalwart identity.
 - A restic repository on an off-host target (SFTP, S3, or equivalent) and a
   separate mode-0600 restic password file. Restic encrypts backup contents;
   the repository and password are operator-managed.
@@ -173,8 +176,9 @@ scripts/vps/customer-ops-restore.sh \
   --receipt /srv/blockwise/customer-ops-restore-test/restore-receipt.txt
 ```
 
-The command validates every customer-ops artifact and writes a mode-0600 receipt;
-then import into a newly created isolated Compose project with a unique name
+The command validates every customer-ops artifact and writes a mode-0600
+prepared-restore receipt; it does not claim an import proof. Then import into a
+newly created isolated Compose project with a unique name
 and fresh volumes. Set `ARTIFACT_DIR` to the directory containing `MANIFEST`:
 
 ```bash
@@ -208,9 +212,10 @@ docker compose -p "$RESTORE_PROJECT" --env-file /etc/blockwise/customer-ops/cust
   'tar -C /app/storage -xf -' < "$ARTIFACT_DIR/chatwoot-storage.tar"
 ```
 
-Extract the Mautic and Chatwoot tarballs into the fresh project volumes using
-temporary one-shot containers, then start web/worker services and run health
-and smoke checks. Append the isolated project name, image digests, and smoke
-result to the mode-0600 restore receipt. Product-mail state is restored
-separately under `docs/runbooks/stalwart-mail.md`; never restore over a live
-product or customer-ops volume.
+The commands above extract the Mautic and Chatwoot tarballs into fresh project
+volumes using temporary one-shot containers. Start web/worker services and run
+health and smoke checks; append the isolated project name, image digests, and
+smoke result to the mode-0600 receipt only after that drill has actually run.
+Product-mail state is restored separately under
+`docs/runbooks/stalwart-mail.md`; never restore over a live product or
+customer-ops volume.

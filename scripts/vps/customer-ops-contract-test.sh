@@ -16,7 +16,8 @@ grep -q 'redis:7.4-alpine@sha256:' "$COMPOSE_FILE" || { echo 'Redis image pin is
 grep -q 'stalwartlabs/stalwart:v0.16.20@sha256:' "$PRODUCT_COMPOSE_FILE" || { echo 'product-mail Stalwart image pin is stale or missing' >&2; exit 1; }
 ! grep -q '^  stalwart:' "$COMPOSE_FILE" || { echo 'duplicate customer-ops Stalwart server found' >&2; exit 1; }
 grep -q 'name: blockwise-customer-ops-mail' "$COMPOSE_FILE" || { echo 'customer-ops mail network contract missing' >&2; exit 1; }
-grep -q 'networks: \[blockwise-product, customer-ops-mail\]' "$PRODUCT_COMPOSE_FILE" || { echo 'product-mail is not attached to shared mail network' >&2; exit 1; }
+grep -q 'customer-ops-mail:' "$PRODUCT_COMPOSE_FILE" || { echo 'product-mail is not attached to shared mail network' >&2; exit 1; }
+grep -q 'aliases: \[\${BLOCKWISE_MAIL_PUBLIC_HOST:-mail.example.com}\]' "$PRODUCT_COMPOSE_FILE" || { echo 'product-mail TLS identity alias missing' >&2; exit 1; }
 grep -q 'POSTGRES_PASSWORD_FILE' "$COMPOSE_FILE" || { echo 'postgres secret-file contract missing' >&2; exit 1; }
 grep -q 'cat /run/secrets/mautic_db_password' "$ROOT_DIR/infra/customer-ops/mautic-entrypoint.sh" || { echo 'mautic secret-reading wrapper missing' >&2; exit 1; }
 grep -q 'export MAUTIC_DB_PASSWORD=' "$ROOT_DIR/infra/customer-ops/mautic-entrypoint.sh" || { echo 'mautic official password contract missing' >&2; exit 1; }

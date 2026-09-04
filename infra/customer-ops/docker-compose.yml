@@ -89,6 +89,8 @@ services:
       MAUTIC_RUN_CRON_JOBS: "false"
       MAUTIC_MAILER_FROM_EMAIL: ${MAUTIC_EMAIL_FROM:?set MAUTIC_EMAIL_FROM}
       SMTP_USER: ${MAUTIC_SMTP_USER:?set MAUTIC_SMTP_USER}
+      SMTP_HOST: ${MAIL_PUBLIC_HOST:?set MAIL_PUBLIC_HOST}
+      SMTP_PORT: ${SMTP_PORT:-587}
     secrets: [mautic_db_password, mautic_smtp_password]
     volumes:
       - customer_ops_mautic_config:/var/www/html/config
@@ -126,6 +128,8 @@ services:
       DOCKER_MAUTIC_ROLE: mautic_cron
       MAUTIC_MAILER_FROM_EMAIL: ${MAUTIC_EMAIL_FROM:?set MAUTIC_EMAIL_FROM}
       SMTP_USER: ${MAUTIC_SMTP_USER:?set MAUTIC_SMTP_USER}
+      SMTP_HOST: ${MAIL_PUBLIC_HOST:?set MAIL_PUBLIC_HOST}
+      SMTP_PORT: ${SMTP_PORT:-587}
     secrets: [mautic_db_password, mautic_smtp_password]
     volumes:
       - customer_ops_mautic_config:/var/www/html/config
@@ -157,6 +161,8 @@ services:
       DOCKER_MAUTIC_ROLE: mautic_worker
       MAUTIC_MAILER_FROM_EMAIL: ${MAUTIC_EMAIL_FROM:?set MAUTIC_EMAIL_FROM}
       SMTP_USER: ${MAUTIC_SMTP_USER:?set MAUTIC_SMTP_USER}
+      SMTP_HOST: ${MAIL_PUBLIC_HOST:?set MAIL_PUBLIC_HOST}
+      SMTP_PORT: ${SMTP_PORT:-587}
     secrets: [mautic_db_password, mautic_smtp_password]
     volumes:
       - customer_ops_mautic_config:/var/www/html/config
@@ -190,8 +196,8 @@ services:
       POSTGRES_USERNAME: chatwoot
       POSTGRES_PASSWORD_FILE: /run/secrets/chatwoot_db_password
       REDIS_URL: redis://redis:6379/0
-      SMTP_ADDRESS: product-mail
-      SMTP_PORT: "587"
+      SMTP_ADDRESS: ${MAIL_PUBLIC_HOST:?set MAIL_PUBLIC_HOST}
+      SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_USERNAME: ${CHATWOOT_SMTP_USER:?set CHATWOOT_SMTP_USER}
       SMTP_PASSWORD_FILE: /run/secrets/chatwoot_smtp_password
       SMTP_ENABLE_STARTTLS_AUTO: "true"
@@ -228,8 +234,8 @@ services:
       FRONTEND_URL: ${CHATWOOT_HOST:?set CHATWOOT_HOST}
       ACTIVE_STORAGE_SERVICE: local
       RAILS_LOG_TO_STDOUT: "true"
-      SMTP_ADDRESS: product-mail
-      SMTP_PORT: "587"
+      SMTP_ADDRESS: ${MAIL_PUBLIC_HOST:?set MAIL_PUBLIC_HOST}
+      SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_USERNAME: ${CHATWOOT_SMTP_USER:?set CHATWOOT_SMTP_USER}
       SMTP_PASSWORD_FILE: /run/secrets/chatwoot_smtp_password
       SMTP_ENABLE_STARTTLS_AUTO: "true"
@@ -302,7 +308,7 @@ services:
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:?set GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET_FILE: /run/secrets/google_client_secret
       EMAIL_PROVIDER: smtp
-      SMTP_HOST: ${SMTP_HOST:-product-mail}
+      SMTP_HOST: ${MAIL_PUBLIC_HOST:?set MAIL_PUBLIC_HOST}
       SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_TLS_MODE: ${SMTP_TLS_MODE:-starttls}
       SMTP_USER: ${SNAGTIME_SMTP_USER:?set SNAGTIME_SMTP_USER}
