@@ -4,7 +4,7 @@ begin;
 
 create table if not exists private.ops_provider_operation_ledger (
   operation_key text primary key,
-  workspace_id uuid not null references public.workspaces(id) on delete cascade,
+  workspace_id uuid references public.workspaces(id) on delete cascade,
   provider text not null check (provider in ('mautic','chatwoot')),
   aggregate_type text not null,
   aggregate_id text not null,
@@ -27,7 +27,7 @@ create or replace function public.begin_ops_provider_operation(
 ) returns jsonb language plpgsql security definer set search_path = '' as $$
 declare v_row private.ops_provider_operation_ledger%rowtype;
 begin
-  if nullif(btrim(p_operation_key),'') is null or p_workspace_id is null or p_provider not in ('mautic','chatwoot')
+  if nullif(btrim(p_operation_key),'') is null or (p_workspace_id is null and p_aggregate_type <> 'global_enquiry') or p_provider not in ('mautic','chatwoot')
     or nullif(btrim(p_aggregate_id),'') is null or p_source_version is null or p_source_version < 1 or jsonb_typeof(coalesce(p_intent,'{}')) <> 'object'
     or not public.ops_payload_is_safe(coalesce(p_intent,'{}')) then
     raise exception 'invalid provider operation intent' using errcode='22023';
