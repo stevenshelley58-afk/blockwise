@@ -14,7 +14,7 @@ export class InternalBlockwiseExecutor {
     if (!AVAILABLE.has(action.action_type)) throw new ExecutorError("action_capability_not_available", false);
     if (!this.baseUrl) throw new ExecutorError("action_executor_not_configured", false);
     const body = JSON.stringify({ schema: "blockwise.ops.action.v1", actionId: action.action_id, leaseToken: action.lease_token, workspaceId: action.workspace_id, customerId: action.customer_id, actor: { operatorId: action.actor_operator_id, role: action.actor_role, aal: "aal2" }, action: action.action_type, target: { type: action.target_type, id: action.target_id }, expectedVersion: action.expected_version, reason: action.reason, payload: action.payload, createdAt: new Date(Date.now() - 1000).toISOString(), expiresAt: action.expires_at });
-    const url = new URL("/internal/customer-ops/actions", this.baseUrl);
+    const url = new URL("/api/internal/customer-ops/actions", this.baseUrl);
     const timestamp = Math.floor(Date.now() / 1000).toString(); const nonce = randomBytes(18).toString("base64url");
     const signature = signRequest(this.secret, { timestamp, nonce, scope: "ops.execute", method: "POST", path: `${url.pathname}${url.search}`, body });
     const response = await new Promise<{ status: number; body: string }>((resolve, reject) => {
