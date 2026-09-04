@@ -87,22 +87,20 @@ chmod 600 /etc/blockwise/customer-ops/customer-ops.env
 scripts/vps/customer-ops-install.sh --env-file /etc/blockwise/customer-ops/customer-ops.env --check
 ```
 
-After the shared edge is attached and certificates are issued, run the
-post-edge TLS gate:
-
-```bash
-scripts/vps/customer-ops-install.sh --env-file /etc/blockwise/customer-ops/customer-ops.env --check --post-edge-tls
-```
-
 The initial check requires DNS resolution, reachable SMTP submission port, all
 secret mounts, immutable SnagTime identity, and quiet `docker compose config`.
-After the shared edge is attached and certificates are issued, run the post-edge
-TLS gate:
 
 ```bash
 scripts/vps/customer-ops-install.sh --env-file /etc/blockwise/customer-ops/customer-ops.env --apply
 docker compose --env-file /etc/blockwise/customer-ops/customer-ops.env \
   -f infra/customer-ops/docker-compose.yml ps
+```
+
+After the shared edge is attached and certificates are issued, run the post-edge
+TLS gate (web HTTPS plus SMTP STARTTLS certificate validation):
+
+```bash
+scripts/vps/customer-ops-install.sh --env-file /etc/blockwise/customer-ops/customer-ops.env --check --post-edge-tls
 ```
 
 Never use plain `docker compose config` or inspect container environments; both
