@@ -133,3 +133,15 @@ test("text tracking is absolute canvas pixels bounded to the authored -4..4 rang
   assert.equal(adTemplateSchema.safeParse(templateWithLayer({ ...textLayer(), tracking: -4.01 })).success, false);
   assert.equal(adTemplateSchema.safeParse(templateWithLayer({ ...textLayer(), tracking: 4.01 })).success, false);
 });
+
+test("multi-line text requires a full font-size of line separation", () => {
+  const tooTight = adTemplateSchema.safeParse(templateWithLayer({ ...textLayer(), lineHeight: 0.8 }));
+  assert.equal(tooTight.success, false);
+  if (!tooTight.success) {
+    assert.match(tooTight.error.issues[0]?.message ?? "", /feed text layer feed-headline with maxLines 2 must use lineHeight at least 1/);
+  }
+
+  assert.equal(adTemplateSchema.safeParse(templateWithLayer({ ...textLayer(), lineHeight: 1 })).success, true);
+  assert.equal(adTemplateSchema.safeParse(templateWithLayer({ ...textLayer(), lineHeight: 1.2 })).success, true);
+  assert.equal(adTemplateSchema.safeParse(templateWithLayer({ ...textLayer(), maxLines: 1, lineHeight: 0.8 })).success, true);
+});

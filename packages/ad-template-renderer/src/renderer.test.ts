@@ -132,6 +132,59 @@ test("c6-shaped failures report every feed and story layer in one ordered prefli
   assert.deepEqual(payload.violations, failure.violations);
 });
 
+test("multi-line text below a 1.0 line height is aggregated and single-line text is unchanged", async () => {
+  const template = templateFixture();
+  template.fonts = [{ file: "manrope-800.woff2" }];
+  template.textInputs = [
+    { key: "feedFeatures", label: "Feed features", placeholder: "ONE\nTWO", maxLength: 20 },
+    { key: "storyFeatures", label: "Story features", placeholder: "ONE\nTWO", maxLength: 20 },
+    { key: "singleLine", label: "Single line", placeholder: "ONE", maxLength: 20 },
+  ];
+  const layer = {
+    type: "text" as const,
+    font: { file: "manrope-800.woff2" },
+    fontSize: 40,
+    lineHeight: 0.8,
+    tracking: 0,
+    alignment: "left" as const,
+    maxCharacters: 20,
+    maxLines: 2,
+    colourRole: "mainText" as const,
+    overflowBehaviour: "scale_down" as const,
+    geometry: { x: 40, y: 40, width: 800, height: 200 },
+  };
+  template.feedLayout.layers.push({ ...layer, layerId: "feed-features", inputKey: "feedFeatures" });
+  template.storyLayout.layers.push({ ...layer, layerId: "story-features", inputKey: "storyFeatures" });
+  template.feedLayout.layers.push({ ...layer, layerId: "feed-single", inputKey: "singleLine", maxLines: 1 });
+
+  const failure = await renderBoth({
+    template,
+    imageValues: {},
+    textValues: { feedFeatures: "ONE\nTWO", storyFeatures: "ONE\nTWO", singleLine: "ONE" },
+    colourMap: colours,
+  }).then(() => null, (error: unknown) => error);
+  assert.ok(failure instanceof TextPreflightError);
+  assert.deepEqual(failure.violations.map(({ placement, layerId }) => [placement, layerId]), [
+    ["feed", "feed-features"],
+    ["story", "story-features"],
+  ]);
+  assert.deepEqual(failure.violations.map(({ kind }) => kind), [
+    "multiline_line_height_below_minimum",
+    "multiline_line_height_below_minimum",
+  ]);
+  assert.match(failure.message, /feed text layer feed-features with maxLines 2 must use lineHeight at least 1/);
+  assert.match(failure.message, /story text layer story-features with maxLines 2 must use lineHeight at least 1/);
+
+  template.feedLayout.layers[1]!.lineHeight = 1;
+  template.storyLayout.layers[1]!.lineHeight = 1.1;
+  await assert.doesNotReject(renderBoth({
+    template,
+    imageValues: {},
+    textValues: { feedFeatures: "ONE\nTWO", storyFeatures: "ONE\nTWO", singleLine: "ONE" },
+    colourMap: colours,
+  }));
+});
+
 test("rendering fails when any output pixel remains transparent", async () => {
   const template = templateFixture();
   const transparent = createCanvas(1080, 1350).toBuffer("image/png");

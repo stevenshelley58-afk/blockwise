@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { MINIMUM_TEXT_SIZE_PX } from "./types.ts";
+import { MINIMUM_MULTILINE_LINE_HEIGHT, MINIMUM_TEXT_SIZE_PX } from "./types.ts";
 
 const colourRoleSchema = z.enum(["background", "primary", "secondary", "accent", "mainText", "inverseText"]);
 const rectSchema = z.object({ x: z.number().finite(), y: z.number().finite(), width: z.number().positive(), height: z.number().positive() }).strict();
@@ -63,6 +63,12 @@ const layoutSchema = z.object({
     }
     if (layer.type === "text" && layer.fontSize < minimumTextSize) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: `${layout.placement} text must be at least ${minimumTextSize}px` });
+    }
+    if (layer.type === "text" && layer.maxLines > 1 && layer.lineHeight < MINIMUM_MULTILINE_LINE_HEIGHT) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `${layout.placement} text layer ${layer.layerId} with maxLines ${layer.maxLines} must use lineHeight at least ${MINIMUM_MULTILINE_LINE_HEIGHT}`,
+      });
     }
     if (layer.type === "vector" && layer.shape === "ring") {
       const squareTolerance = Math.max(1, Math.min(geometry.width, geometry.height) * 0.01);

@@ -12,7 +12,7 @@ import type {
   Placement,
   ColourRole,
 } from "@blockwise/ad-template-contract";
-import { MINIMUM_TEXT_SIZE_PX } from "@blockwise/ad-template-contract";
+import { MINIMUM_MULTILINE_LINE_HEIGHT, MINIMUM_TEXT_SIZE_PX } from "@blockwise/ad-template-contract";
 
 export interface RenderInput {
   template: AdTemplate;
@@ -33,13 +33,25 @@ export interface RenderOutput {
 
 export const TEXT_PREFLIGHT_ERROR_CODE = "AD_TEMPLATE_TEXT_PREFLIGHT_FAILED";
 
-export type TextPreflightViolation = {
+type TextPreflightViolationBase = {
   placement: Placement;
   layerId: string;
-  kind: "below_readability_floor" | "cannot_fit_readability_floor";
-  readabilityFloorPx: number;
   reason: string;
 };
+
+type TextReadabilityPreflightViolation = TextPreflightViolationBase & {
+  kind: "below_readability_floor" | "cannot_fit_readability_floor";
+  readabilityFloorPx: number;
+};
+
+type MultilineLineHeightPreflightViolation = TextPreflightViolationBase & {
+  kind: "multiline_line_height_below_minimum";
+  maxLines: number;
+  lineHeight: number;
+  minimumLineHeight: number;
+};
+
+export type TextPreflightViolation = TextReadabilityPreflightViolation | MultilineLineHeightPreflightViolation;
 
 /**
  * One deterministic, machine-readable refusal for every text-fit problem in a
@@ -311,6 +323,9 @@ function assertTextPreflight(input: RenderInput, placements: readonly Placement[
     const layout = placement === "feed" ? input.template.feedLayout : input.template.storyLayout;
     for (const layer of layout.layers) {
       if (layer.type !== "text") continue;
+      if (layer.maxLines > 1 && layer.lineHeight < MINIMUM_MULTILINE_LINE_HEIGHT) {
+        violations.push(multilineLineHeightViolation(placement, layer));
+      }
       const prepared = prepareText(ctx, layer, input, placement, DIMENSIONS[placement]);
       if (prepared.kind === "violation") violations.push(prepared.violation);
     }
@@ -396,9 +411,9 @@ function resolveTextFontFamily(layer: RenderTextLayer): string {
 function textPreflightViolation(
   placement: Placement,
   layerId: string,
-  kind: TextPreflightViolation["kind"],
+  kind: TextReadabilityPreflightViolation["kind"],
   readabilityFloorPx: number,
-): TextPreflightViolation {
+): TextReadabilityPreflightViolation {
   const safeLayerId = normalizeLayerId(layerId);
   const qualifier = kind === "below_readability_floor" ? "is below" : "cannot fit at";
   return {
@@ -410,7 +425,26 @@ function textPreflightViolation(
   };
 }
 
+function multilineLineHeightViolation(
+  placement: Placement,
+  layer: Pick<TextLayer, "layerId" | "lineHeight" | "maxLines">,
+): MultilineLineHeightPreflightViolation {
+  const safeLayerId = normalizeLayerId(layer.layerId);
+  return {
+    placement,
+    layerId: safeLayerId,
+    kind: "multiline_line_height_below_minimum",
+    maxLines: layer.maxLines,
+    lineHeight: layer.lineHeight,
+    minimumLineHeight: MINIMUM_MULTILINE_LINE_HEIGHT,
+    reason: `${placement} text layer ${safeLayerId} with maxLines ${layer.maxLines} must use lineHeight at least ${MINIMUM_MULTILINE_LINE_HEIGHT}`,
+  };
+}
+
 function normalizeTextPreflightViolation(violation: TextPreflightViolation): TextPreflightViolation {
+  if (violation.kind === "multiline_line_height_below_minimum") {
+    return multilineLineHeightViolation(violation.placement, violation);
+  }
   return textPreflightViolation(
     violation.placement,
     violation.layerId,
