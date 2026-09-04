@@ -3,10 +3,11 @@ import Link from "next/link";
 
 import { PublishFlow } from "./publish-flow";
 import { normalizeSavedPublishAudienceLocations } from "./publish-controls";
-import { loadCustomerAd } from "@/lib/adstudio/create-customer-ad";
-import { getTemplate } from "@/lib/adstudio/pack-gallery";
+import { CustomerAdNotFoundError, loadCustomerAd, parseCustomerAdId } from "@/lib/adstudio/create-customer-ad";
+import { getTemplateForExistingCustomerAd } from "@/lib/adstudio/pack-gallery";
 import { loadPublishState, PublishError, readTemplatePublishRequirements, validatePublishState } from "@/lib/adstudio/publish-adapter";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
+import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const dynamic = "force-dynamic";
 
@@ -32,14 +33,26 @@ export default async function PublishPage({
   searchParams?: Promise<{ adId?: string }>;
 }) {
   const { templateId } = await params;
-  const { supabase, access } = await requirePageSurfaceAccess("adstudio");
-  const pack = await getTemplate(supabase, templateId);
-  if (!pack) notFound();
-
-  const adId = (await searchParams)?.adId?.trim();
+  const adId = parseCustomerAdId((await searchParams)?.adId);
   if (!adId) notFound();
-  const ad = await loadCustomerAd(supabase, access.workspaceId, adId);
+  const { supabase, access } = await requirePageSurfaceAccess("adstudio");
+  let ad;
+  try {
+    ad = await loadCustomerAd(supabase, access.workspaceId, adId);
+  } catch (error) {
+    if (error instanceof CustomerAdNotFoundError) notFound();
+    throw error;
+  }
   if (ad.templateId !== templateId) notFound();
+  const serviceSupabase = createSupabaseServiceClient();
+  const pack = await getTemplateForExistingCustomerAd({
+    customerSupabase: supabase,
+    internalSupabase: serviceSupabase,
+    workspaceId: access.workspaceId,
+    adId,
+    templateId,
+  });
+  if (!pack) notFound();
   const { data: campaignMarkets, error: campaignMarketsError } = await supabase
     .from("adstudio_campaigns")
     .select("market_json")
@@ -56,7 +69,7 @@ export default async function PublishPage({
   let state: Awaited<ReturnType<typeof loadPublishState>> | null = null;
   let notSaved = false;
   try {
-    state = await loadPublishState(supabase, adId, access.workspaceId);
+    state = await loadPublishState(supabase, adId, access.workspaceId, { templateSupabase: serviceSupabase });
   } catch (err) {
     if (err instanceof PublishError && err.code === "not_saved") {
       notSaved = true;
@@ -89,7 +102,7 @@ export default async function PublishPage({
     <div className="flex min-h-[calc(100dvh-54px)] flex-col bg-background text-foreground md:min-h-[calc(100dvh-60px)]">
       <header className="flex min-h-12 shrink-0 items-center border-b border-border bg-card px-4 md:px-5">
         <Link
-          href={`/ad-studio/templates/${encodeURIComponent(templateId)}`}
+          href={`/ad-studio/ads/${encodeURIComponent(adId)}`}
           className="inline-flex min-h-11 items-center gap-1.5 text-sm text-muted-foreground transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">

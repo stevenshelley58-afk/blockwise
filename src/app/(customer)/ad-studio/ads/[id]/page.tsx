@@ -1,10 +1,11 @@
 import { notFound } from "next/navigation";
 import { EditorShell } from "@/components/adstudio/editor/editor-shell";
 import { loadCustomerAd, InvalidActiveRevisionError, CustomerAdNotFoundError } from "@/lib/adstudio/create-customer-ad";
-import { getTemplate } from "@/lib/adstudio/pack-gallery";
+import { getTemplateForExistingCustomerAd } from "@/lib/adstudio/pack-gallery";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
 import { loadAdStudioBrandDefaults } from "@/lib/adstudio/brand-defaults";
 import { loadAdStudioWorkspaceLibraryAssets } from "@/lib/adstudio/assets";
+import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +20,13 @@ export default async function CustomerAdEditorPage({ params }: { params: Promise
     if (error instanceof InvalidActiveRevisionError) return <RecoveryScreen adId={id} revisionId={error.revisionId} issues={error.issues} />;
     throw error;
   }
-  const pack = await getTemplate(supabase, ad.templateId);
+  const pack = await getTemplateForExistingCustomerAd({
+    customerSupabase: supabase,
+    internalSupabase: createSupabaseServiceClient(),
+    workspaceId: access.workspaceId,
+    adId: ad.adId,
+    templateId: ad.templateId,
+  });
   if (!pack) notFound();
   const [brand, libraryAssets] = await Promise.all([
     loadAdStudioBrandDefaults(supabase, access.workspaceId),

@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { META_COPY_CONSTRAINTS } from "../../../lib/adstudio/meta-copy-contract";
+import { templateAssetProxyUrl } from "@/lib/adstudio/pack-gallery";
 
 // ---------------------------------------------------------------------------
 // Editor Shell — Phase 6 foundation
@@ -334,6 +335,7 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
   const persistableLibraryAssets = libraryAssets?.filter((asset): asset is { id: string; url: string; label: string } => Boolean(asset.id));
   return <RedesignedEditor
     pack={pack}
+    adId={adId}
     state={state}
     activeLayout={activeLayout}
     templateId={pack.templateId}
@@ -382,15 +384,15 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
   />;
 }
 
-function RedesignedEditor({ pack, templateId, state, activeLayout, brandColours, brandBusinessName, brandLogoUrl, libraryAssets, canSave, canUndo, canRedo, saveConflict, pendingImageUploads, inspectorTab, setInspectorTab, mobileInspectorOpen, setMobileInspectorOpen, handleSave, handlePublish, handleKeyDown, undo, redo, setActivePlacement, selectLayer, handleColourModeChange, handleCustomColourChange, handleTemplateCopyChange, handleBusinessNameChange, handleLibraryPick, handleImageChange, openCrop, openCropForInput, updateTextValue, updateMetaCopy, updateCrop, setError, cropTarget, setCropTarget, proposalBrief, setProposalBrief, proposal, proposalBusy, proposeCopy, name, setName, persistName }: {
-  pack: AdTemplate; templateId: string; state: EditorState; activeLayout: AdTemplate["feedLayout"]; brandColours: BrandPackColours | null; brandBusinessName: string; brandLogoUrl: string | null; libraryAssets?: Array<{ id: string; url: string; label: string }>; canSave: boolean; canUndo: boolean; canRedo: boolean; saveConflict: boolean; pendingImageUploads: number;
+function RedesignedEditor({ pack, adId, templateId, state, activeLayout, brandColours, brandBusinessName, brandLogoUrl, libraryAssets, canSave, canUndo, canRedo, saveConflict, pendingImageUploads, inspectorTab, setInspectorTab, mobileInspectorOpen, setMobileInspectorOpen, handleSave, handlePublish, handleKeyDown, undo, redo, setActivePlacement, selectLayer, handleColourModeChange, handleCustomColourChange, handleTemplateCopyChange, handleBusinessNameChange, handleLibraryPick, handleImageChange, openCrop, openCropForInput, updateTextValue, updateMetaCopy, updateCrop, setError, cropTarget, setCropTarget, proposalBrief, setProposalBrief, proposal, proposalBusy, proposeCopy, name, setName, persistName }: {
+  pack: AdTemplate; adId: string; templateId: string; state: EditorState; activeLayout: AdTemplate["feedLayout"]; brandColours: BrandPackColours | null; brandBusinessName: string; brandLogoUrl: string | null; libraryAssets?: Array<{ id: string; url: string; label: string }>; canSave: boolean; canUndo: boolean; canRedo: boolean; saveConflict: boolean; pendingImageUploads: number;
   inspectorTab: InspectorTab; setInspectorTab: (value: InspectorTab) => void; mobileInspectorOpen: boolean; setMobileInspectorOpen: (value: boolean) => void; handleSave: () => Promise<boolean>; handlePublish: () => Promise<void>; handleKeyDown: (event: KeyboardEvent) => void; undo: () => void; redo: () => void; setActivePlacement: (value: Placement) => void; selectLayer: (value: string | null) => void;
   handleColourModeChange: (mode: ColourMode) => void; handleCustomColourChange: (role: ColourRole, hex: string) => void; handleTemplateCopyChange: (enabled: boolean) => void; handleBusinessNameChange: (value: string) => void; handleLibraryPick: (key: string, sourceAssetId: string) => Promise<void>; handleImageChange: (key: string, change: { file: File; previewUrl: string } | null) => Promise<void>; openCrop: (slot: ImageSlotLayer) => void; openCropForInput: (key: string) => void; updateTextValue: (key: string, value: string) => void; updateMetaCopy: (field: keyof MetaCopy, value: string) => void; updateCrop: (key: string, placement: Placement, crop: Rect) => void; setError: (value: string | null) => void;
   cropTarget: { slot: ImageSlotLayer; placement: Placement } | null; setCropTarget: (value: { slot: ImageSlotLayer; placement: Placement } | null) => void; proposalBrief: string; setProposalBrief: (value: string) => void; proposal: { onImage: Record<string, string>; copy: MetaCopy; source: string } | null; proposalBusy: boolean; proposeCopy: () => Promise<void>;
   name: string; setName: (value: string) => void; persistName: () => Promise<void>;
 }) {
   const defaultImageValues = Object.fromEntries(pack.imageInputs.flatMap(input => input.defaultAssetKey
-    ? [[input.key, `/api/adstudio/templates/${encodeURIComponent(templateId)}/assets/${encodeURIComponent(input.defaultAssetKey)}`] as const]
+    ? [[input.key, templateAssetProxyUrl(templateId, input.defaultAssetKey, adId)!] as const]
     : []));
   const customerImageValues = Object.fromEntries(state.imageValues.flatMap(value => {
     const image = value.previewUrl ?? value.dataUrl;
@@ -406,6 +408,7 @@ function RedesignedEditor({ pack, templateId, state, activeLayout, brandColours,
   const [mobileLayersOpen, setMobileLayersOpen] = useState(false);
   const metaPreviewBase = {
     templateId,
+    existingAdId: adId,
     colours: state.resolvedColourMap,
     textValues: previewCopy,
     imageValues: previewImages,
@@ -447,6 +450,7 @@ function RedesignedEditor({ pack, templateId, state, activeLayout, brandColours,
   const canvasFor = (placement: Placement, canvasZoom: "fit" | 0.8 | 1 | 1.25 = zoom, interactive = true) => (
     <DesignCanvas
       templateId={templateId}
+      existingAdId={adId}
       layout={placement === "feed" ? pack.feedLayout : pack.storyLayout}
       placement={placement}
       colours={state.resolvedColourMap}
@@ -536,6 +540,7 @@ function PlacementCanvas({ label, active = false, children }: { label: string; a
 
 type DesignCanvasProps = {
   templateId: string;
+  existingAdId: string;
   layout: Layout;
   placement: Placement;
   colours: AdTemplate["semanticColours"];
@@ -548,7 +553,7 @@ type DesignCanvasProps = {
   zoom?: "fit" | 0.8 | 1 | 1.25;
 };
 
-function DesignCanvas({ templateId, layout, placement, colours, imageValues, textValues, cropOverrides, selectedLayerId, onSelect, onCropImage, zoom = "fit" }: DesignCanvasProps) {
+function DesignCanvas({ templateId, existingAdId, layout, placement, colours, imageValues, textValues, cropOverrides, selectedLayerId, onSelect, onCropImage, zoom = "fit" }: DesignCanvasProps) {
   const viewport = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: 800, height: 700 });
   useEffect(() => { const node = viewport.current; if (!node) return; const observer = new ResizeObserver(() => setSize({ width: node.clientWidth, height: node.clientHeight })); observer.observe(node); return () => observer.disconnect(); }, []);
@@ -556,7 +561,7 @@ function DesignCanvas({ templateId, layout, placement, colours, imageValues, tex
   const fit = Math.min((size.width - 24) / dims.width, (size.height - 24) / dims.height, 1);
   const scale = zoom === "fit" ? Math.max(0.05, Math.min(1, fit)) : zoom;
   const width = Math.round(dims.width * scale), height = Math.round(dims.height * scale);
-  return <div ref={viewport} className="flex min-h-0 min-w-0 flex-1 items-start justify-start overflow-auto p-3"><div className="m-auto" style={{ width, height, minWidth: width, minHeight: height }}><LayeredCanvas templateId={templateId} layout={layout} colours={colours} imageValues={imageValues} textValues={textValues} cropOverrides={cropOverrides} selectedLayerId={selectedLayerId} onSelect={onSelect} onCropImage={onCropImage} className="h-full w-full" /></div></div>;
+  return <div ref={viewport} className="flex min-h-0 min-w-0 flex-1 items-start justify-start overflow-auto p-3"><div className="m-auto" style={{ width, height, minWidth: width, minHeight: height }}><LayeredCanvas templateId={templateId} existingAdId={existingAdId} layout={layout} colours={colours} imageValues={imageValues} textValues={textValues} cropOverrides={cropOverrides} selectedLayerId={selectedLayerId} onSelect={onSelect} onCropImage={onCropImage} className="h-full w-full" /></div></div>;
 }
 
 function InspectorTabs({ value, onChange }: { value: InspectorTab; onChange: (value: InspectorTab) => void }) {

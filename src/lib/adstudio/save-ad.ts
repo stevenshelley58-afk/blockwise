@@ -11,6 +11,8 @@ import { metaCopyLimitIssues } from "./meta-copy-contract.ts";
 
 export interface SaveAdInput {
   supabase: SupabaseClient;
+  /** Internal template reader for workspace-owned historical ads. */
+  templateSupabase?: SupabaseClient;
   workspaceId: string;
   adId: string;
   /** The full AdDocument v1. */
@@ -67,7 +69,7 @@ export async function saveAd(input: SaveAdInput): Promise<SaveAdOutput> {
   if (adError || !ad) throw new SaveError("ad_not_found", "Ad not found");
   const expectedActiveRevisionId = ad.active_revision_id ?? null;
 
-  const { data: pack, error: packError } = await input.supabase
+  const { data: pack, error: packError } = await (input.templateSupabase ?? input.supabase)
     .from("ad_templates")
     .select("template_json")
     .eq("template_id", ad.template_id)
