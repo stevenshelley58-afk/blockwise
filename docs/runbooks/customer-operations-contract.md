@@ -78,7 +78,7 @@ Adapter resources are fixed and provider-neutral:
 
 | provider | aggregate | resource | identity |
 | --- | --- | --- | --- |
-| mautic | contact | contact | workspaceId:aggregate.id |
+| mautic | contact | contact | workspaceId:profileId (aggregate id is a Blockwise profile) |
 | mautic | lifecycle | lifecycle | workspaceId:aggregate.id |
 | chatwoot | enquiry | enquiry | workspaceId:aggregate.id |
 | chatwoot | support | support | workspaceId:aggregate.id |
