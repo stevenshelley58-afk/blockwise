@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { errorResponse, readJsonBody, requireAdStudioRequest } from "@/lib/adstudio/http";
-import { summarizePersistedPublishPlan } from "@/lib/adstudio/publish-receipt";
+import { summarizePersistedPublishPlan, summarizePersistedPublishSource } from "@/lib/adstudio/publish-receipt";
 import {
   PublishError,
   backfillPublishMetaCopy,
@@ -20,12 +20,15 @@ import {
   loadMetaPublishPlan,
   persistMetaPublishPlan,
   releaseMetaPublishExecutionLease,
+  renewMetaPublishExecutionLease,
   resolveMetaConnectionSetup,
   updateMetaPublishPlanExecution,
   validateMetaConnectionSetup,
   type MetaPublishControls,
 } from "@/lib/providers/meta-execution";
 import { loadStoredProviderTokens } from "@/lib/providers/provider-connections";
+import { metaPublishProviderWritesEnabled } from "@/lib/providers/meta-provider-write-gate";
+import { createMetaExecutionLeaseHeartbeat } from "@/lib/providers/meta-execution-lease-heartbeat";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const runtime = "nodejs";
@@ -65,7 +68,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
     return NextResponse.json({
       ok: true,
       mode: dryRun ? "dry_run" : "publish",
-      providerWritesEnabled: providerWritesEnabled(),
+      providerWritesEnabled: metaPublishProviderWritesEnabled(access.access.workspaceId),
+      ...summarizePersistedPublishSource(plan),
       planId: plan.planId,
       status,
       controlsFingerprint: plan.idempotencyKey,
@@ -84,10 +88,6 @@ export async function GET(request: NextRequest, context: RouteContext) {
       ...(activation.status === "unknown" ? { unconfirmedPauseIds: activation.unconfirmedPauseIds } : {}),
     });
   } catch (err) { return errorResponse(err); }
-}
-
-function providerWritesEnabled() {
-  return process.env.BLOCKWISE_ENABLE_PROVIDER_WRITES === "true";
 }
 
 /**
@@ -162,6 +162,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       adId: id,
       workspaceId: access.access.workspaceId,
       connectionId: connection.id,
+      publicationSnapshotId: snapshotId,
       setup,
       controls,
       state,
@@ -170,7 +171,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     // 7. Provider writes disabled → clear dry-run / paused-disabled receipt.
     // Snapshot is frozen and the plan is drafted, but nothing is written to
     // Meta and nothing is reported as created.
-    if (!providerWritesEnabled()) {
+    if (!metaPublishProviderWritesEnabled(access.access.workspaceId)) {
       const persisted = await persistMetaPublishPlan(
         serviceSupabase,
         { ...plan, status: "draft" },
@@ -205,7 +206,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
           ok: canonical.status === "paused_live",
           mode: "publish",
           providerWritesEnabled: false,
-          snapshotId,
+          ...summarizePersistedPublishSource(canonical),
           planId: canonical.planId,
           status,
           controlsFingerprint: canonical.idempotencyKey,
@@ -222,7 +223,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
         ok: true,
         mode: "dry_run",
         providerWritesEnabled: false,
-        snapshotId,
+        ...summarizePersistedPublishSource(canonical),
         planId: canonical.planId,
         status: "paused_disabled",
         controlsFingerprint: canonical.idempotencyKey,
@@ -257,7 +258,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
         ok: true,
         mode: "publish",
         providerWritesEnabled: true,
-        snapshotId,
+        ...summarizePersistedPublishSource(canonical),
         planId: canonical.planId,
         status,
         controlsFingerprint: canonical.idempotencyKey,
@@ -272,9 +273,18 @@ export async function POST(request: NextRequest, context: RouteContext) {
     const lease = await claimMetaPublishExecution(serviceSupabase, { workspaceId: access.access.workspaceId, planId: canonical.planId });
     if (!lease.claimed || !lease.leaseToken) {
       const latest = await loadMetaPublishPlan(serviceSupabase, { workspaceId: access.access.workspaceId, planId: canonical.planId });
-      return NextResponse.json({ ok: true, mode: "publish", providerWritesEnabled: true, snapshotId, planId: latest.planId, status: latest.status === "paused_live" ? "paused" : "publishing", controlsFingerprint: latest.idempotencyKey, lastCheckedAt: latest.updatedAt, setupSummary: summarizePersistedPublishPlan(latest), reconciledObjects: latest.reconciledObjects, message: "Publishing is already in progress; refresh shortly for the paused receipt." }, { status: 202 });
+      return NextResponse.json({ ok: true, mode: "publish", providerWritesEnabled: true, ...summarizePersistedPublishSource(latest), planId: latest.planId, status: latest.status === "paused_live" ? "paused" : "publishing", controlsFingerprint: latest.idempotencyKey, lastCheckedAt: latest.updatedAt, setupSummary: summarizePersistedPublishPlan(latest), reconciledObjects: latest.reconciledObjects, message: "Publishing is already in progress; refresh shortly for the paused receipt." }, { status: 202 });
     }
+    const claimedLeaseToken = lease.leaseToken;
+    const leaseHeartbeat = createMetaExecutionLeaseHeartbeat({
+      renew: () => renewMetaPublishExecutionLease(serviceSupabase, {
+        workspaceId: access.access.workspaceId,
+        planId: canonical.planId,
+        leaseToken: claimedLeaseToken,
+      }),
+    });
     try {
+      await leaseHeartbeat.renewNow();
       await updateMetaPublishPlanExecution(serviceSupabase, {
         ...canonical,
         status: "publishing",
@@ -289,6 +299,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       const pageAccessToken = await resolveMetaPageAccessToken({
         accessToken: tokens.accessToken,
         pageId: setup.pageId,
+        fetchImpl: leaseHeartbeat.fetch,
       });
 
       const executionPlan = await resolvePublishCreativeAssets(serviceSupabase, {
@@ -298,13 +309,16 @@ export async function POST(request: NextRequest, context: RouteContext) {
       const result = await createMetaExecutionAdapter(executionPlan.adapter).publish(executionPlan, {
         accessToken: tokens.accessToken,
         pageAccessToken,
+        fetchImpl: leaseHeartbeat.fetch,
         onCheckpoint: async (checkpoint) => {
+          await leaseHeartbeat.renewNow();
           await updateMetaPublishPlanExecution(
             serviceSupabase,
             applyMetaPublishExecutionResult({ ...canonical, status: "publishing" }, checkpoint),
           );
         },
       });
+      leaseHeartbeat.assertOwned();
 
       const completed = applyMetaPublishExecutionResult({ ...canonical, status: "publishing" }, result);
       await updateMetaPublishPlanExecution(serviceSupabase, completed);
@@ -316,6 +330,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
             mode: "publish",
             status: "failed",
             planId: completed.planId,
+            ...summarizePersistedPublishSource(completed),
             controlsFingerprint: completed.idempotencyKey,
             lastCheckedAt: completed.updatedAt,
             setupSummary: summarizePersistedPublishPlan(completed),
@@ -331,7 +346,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
         ok: true,
         mode: "publish",
         providerWritesEnabled: true,
-        snapshotId,
+        ...summarizePersistedPublishSource(completed),
         planId: completed.planId,
         status: "paused",
         controlsFingerprint: completed.idempotencyKey,
@@ -356,6 +371,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       }
       throw executionError;
     } finally {
+      leaseHeartbeat.stop();
       try {
         await releaseMetaPublishExecutionLease(serviceSupabase, {
           workspaceId: access.access.workspaceId,

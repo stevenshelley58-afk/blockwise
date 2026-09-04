@@ -65,6 +65,7 @@ export interface PublishFlowProps {
   parentState?: MetaParentState;
   canRequestManualPublish: boolean;
   automatedPublishAvailable: boolean;
+  metaConnectionConnected: boolean;
 }
 
 type PublishReceipt = {
@@ -72,6 +73,23 @@ type PublishReceipt = {
   mode?: "dry_run" | "publish";
   providerWritesEnabled?: boolean;
   snapshotId?: string;
+  source?: {
+    snapshotId: string;
+    creativeRevision: number | null;
+    documentHash: string | null;
+    feedPngHash: string | null;
+    storyPngHash: string | null;
+    formDraftId: string | null;
+    formRevision: number | null;
+  } | null;
+  publishedCreative?: {
+    feedPngPath: string | null;
+    storyPngPath: string | null;
+    primaryText: string;
+    headline: string;
+    description: string;
+    cta: string;
+  } | null;
   planId?: string;
   /** "active" only after the separate Activate action; "paused" = durable Meta receipt. */
   status?: "publishing" | "paused" | "unknown" | "active" | string;
@@ -140,6 +158,7 @@ export function PublishFlow({
   parentState,
   canRequestManualPublish,
   automatedPublishAvailable,
+  metaConnectionConnected,
 }: PublishFlowProps) {
   const [submitting, setSubmitting] = useState(false);
   const [receipt, setReceipt] = useState<PublishReceipt | null>(null);
@@ -182,6 +201,8 @@ export function PublishFlow({
   const [receiptRefreshError, setReceiptRefreshError] = useState<string | null>(null);
   const [clientMutationKey, setClientMutationKey] = useState(() => crypto.randomUUID());
   const receiptRequestVersion = useRef(0);
+  const previousStage = useRef<number | null>(null);
+  const receiptRegionRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let current = true;
@@ -205,6 +226,10 @@ export function PublishFlow({
       .finally(() => { if (current) setReceiptLoading(false); });
     return () => { current = false; };
   }, [adId, workspaceId]);
+
+  useEffect(() => {
+    if (receipt) receiptRegionRef.current?.focus({ preventScroll: true });
+  }, [receipt]);
 
   const handlePinStateChange = useCallback((state: { pinned: boolean; revision: number | null; form: InstantForm | null }) => {
     setFormPinned(state.pinned);
@@ -379,25 +404,6 @@ export function PublishFlow({
     [adId, workspaceId, receipt?.controlsFingerprint, clientMutationKey],
   );
 
-  if (notSaved) {
-    return (
-      <div className="flex h-full items-center justify-center bg-(--canvas)">
-        <div className="max-w-md rounded-(--r-card) border border-amber-200 bg-amber-50 p-6 text-center">
-          <h2 className="mb-2 text-base font-semibold text-amber-900">Nothing to publish yet</h2>
-          <p className="text-sm text-amber-800">
-            Save this ad in the editor before you choose where it should be created.
-          </p>
-          <a
-            href={`/ad-studio/templates/${encodeURIComponent(templateId)}`}
-            className="mt-4 inline-flex min-h-11 items-center rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            Go to editor
-          </a>
-        </div>
-      </div>
-    );
-  }
-
   const issues = initialIssues ?? [];
   const requiresForm = publishRequirements.destinationMode === "instant_form";
   const formReady = !requiresForm || Boolean(initialState?.form) || formPinned;
@@ -417,6 +423,39 @@ export function PublishFlow({
     : !setupConfirmed
       ? 3
       : 4;
+
+  useEffect(() => {
+    if (notSaved) return;
+    if (previousStage.current === null) {
+      previousStage.current = currentStage;
+      return;
+    }
+    if (previousStage.current === currentStage) return;
+    previousStage.current = currentStage;
+    const frame = requestAnimationFrame(() => {
+      document.getElementById(`publish-stage-${currentStage}`)?.focus({ preventScroll: false });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [currentStage, notSaved]);
+
+  if (notSaved) {
+    return (
+      <div className="flex h-full items-center justify-center bg-(--canvas)">
+        <div className="max-w-md rounded-(--r-card) border border-amber-200 bg-amber-50 p-6 text-center">
+          <h2 className="mb-2 text-base font-semibold text-amber-900">Nothing to publish yet</h2>
+          <p className="text-sm text-amber-800">
+            Save this ad in the editor before you choose where it should be created.
+          </p>
+          <a
+            href={`/ad-studio/templates/${encodeURIComponent(templateId)}`}
+            className="mt-4 inline-flex min-h-11 items-center rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            Go to editor
+          </a>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-full flex-col bg-(--canvas)">
@@ -452,7 +491,7 @@ export function PublishFlow({
         )}
 
         {/* Saved creative */}
-        <h2 id="publish-stage-1" className="mb-3 scroll-mt-4 text-base font-semibold">1. Creative & copy</h2>
+        <h2 id="publish-stage-1" tabIndex={-1} className="mb-3 scroll-mt-4 text-base font-semibold focus:outline-none">1. Creative & copy</h2>
         <div className="mb-6 rounded-(--r-card) border border-(--line) bg-(--surface) p-4">
           <h3 className="mb-2 text-sm font-semibold">Saved creative</h3>
           {initialState ? (
@@ -522,9 +561,20 @@ export function PublishFlow({
           {!canRequestManualPublish ? <p className="text-sm text-muted-foreground">Ask a workspace owner or admin to send this publishing request.</p> : null}
           {manualPublish.status === "failed" ? <p className="text-sm font-semibold text-error" role="alert">{manualPublish.error}</p> : null}
           {manualPublish.mutationId ? <p className="font-mono text-[10px] text-(--faint)">Request reference: {manualPublish.mutationId.slice(0, 8)}</p> : null}
+          {metaConnectionConnected && !providerWritesEnabled ? (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleManualPublish}
+              disabled={!canRequestManualPublish || !ready || submitting || manualPublish.status === "requested" || manualPublish.status === "in_review" || manualPublish.status === "published"}
+              className="min-h-11 w-full rounded-full sm:w-auto"
+            >
+              {manualPublish.status === "loading" ? "Sending request…" : manualPublish.status === "requested" || manualPublish.status === "in_review" ? "Request sent" : "Request manual publishing"}
+            </Button>
+          ) : null}
         </div> : null}
 
-        <h2 id="publish-stage-2" className="mb-3 scroll-mt-4 text-base font-semibold">2. Destination & form</h2>
+        <h2 id="publish-stage-2" tabIndex={-1} className="mb-3 scroll-mt-4 text-base font-semibold focus:outline-none">2. Destination & form</h2>
         <div className="mb-6 space-y-3 rounded-(--r-card) border border-(--line) bg-(--surface) p-4">
           <h3 className="text-sm font-semibold">Meta destination</h3>
           <p className="text-xs text-muted-foreground">Choose where the paused objects belong. Existing campaigns and ad sets are never edited.</p>
@@ -629,7 +679,7 @@ export function PublishFlow({
           {fulfilmentActive && !fulfilmentReady ? <p className="text-xs text-amber-700">Complete every promise field and add valid HTTPS privacy and fulfilment delivery URLs.</p> : null}
         </div>
 
-        <h2 id="publish-stage-3" className="mb-3 scroll-mt-4 text-base font-semibold">3. Audience, budget & schedule</h2>
+        <h2 id="publish-stage-3" tabIndex={-1} className="mb-3 scroll-mt-4 text-base font-semibold focus:outline-none">3. Audience, budget & schedule</h2>
         <PublishSetupFields
           targetMode={targetMode}
           audienceLocations={audienceLocations}
@@ -672,7 +722,7 @@ export function PublishFlow({
         />
 
         {/* Provider mode */}
-        <h2 id="publish-stage-4" className="mb-3 scroll-mt-4 text-base font-semibold">4. Review & create paused</h2>
+        <h2 id="publish-stage-4" tabIndex={-1} className="mb-3 scroll-mt-4 text-base font-semibold focus:outline-none">4. Review & create paused</h2>
         <div className="mb-4 rounded-(--r-card) border border-(--line) bg-(--surface) p-4">
           <h3 className="text-sm font-semibold">Exact setup to create</h3>
           <p className="mt-1 text-xs text-muted-foreground">
@@ -698,7 +748,7 @@ export function PublishFlow({
         {/* Receipt */}
         {receiptLoading ? <p className="mb-4 text-xs text-muted-foreground" role="status">Checking saved publish status…</p> : null}
         {receiptRefreshError ? <p className="mb-4 text-xs text-amber-700" role="status">{receiptRefreshError} You can retry from this page.</p> : null}
-        {receipt && <ReceiptCard receipt={receipt} />}
+        {receipt ? <div ref={receiptRegionRef} tabIndex={-1} className="focus:outline-none"><ReceiptCard receipt={receipt} /></div> : null}
 
         {/* Safe retry — offered when Meta objects were created but activation
             did not complete (confirmed paused, or unconfirmed state — the
@@ -742,11 +792,19 @@ export function PublishFlow({
         )}
         <div className="w-full sm:ml-auto sm:w-auto">
           <Button
-            onClick={automatedPublishAvailable ? handleAutomatedPublish : handleManualPublish}
-            disabled={automatedPublishAvailable ? !ready || submitting || Boolean(receipt && !receipt.error) : !canRequestManualPublish || !ready || submitting || manualPublish.status === "requested" || manualPublish.status === "in_review" || manualPublish.status === "published"}
+            onClick={metaConnectionConnected ? handleAutomatedPublish : handleManualPublish}
+            disabled={metaConnectionConnected ? !ready || submitting || Boolean(receipt && !receipt.error) : !canRequestManualPublish || !ready || submitting || manualPublish.status === "requested" || manualPublish.status === "in_review" || manualPublish.status === "published"}
             className="min-h-11 w-full rounded-full px-6 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:w-auto"
           >
-            {submitting ? (automatedPublishAvailable ? "Creating paused on Meta…" : "Sending request…") : automatedPublishAvailable ? "Create paused on Meta" : manualPublish.status === "requested" || manualPublish.status === "in_review" ? "Request sent" : "Request manual publishing"}
+            {metaConnectionConnected
+              ? providerWritesEnabled
+                ? submitting ? "Creating paused on Meta…" : "Create paused on Meta"
+                : submitting ? "Previewing paused plan…" : "Preview paused plan"
+              : submitting
+                ? "Sending request…"
+                : manualPublish.status === "requested" || manualPublish.status === "in_review"
+                  ? "Request sent"
+                  : "Request manual publishing"}
           </Button>
         </div>
       </footer>
@@ -1136,6 +1194,7 @@ function ReceiptCard({ receipt }: { receipt: PublishReceipt }) {
           <ReceiptStat label="Creatives" value={String(receipt.plannedObjects?.creatives ?? 0)} />
           <ReceiptStat label="Ads" value={String(receipt.plannedObjects?.ads ?? 0)} />
         </dl>
+        <PublishedSourceReceipt receipt={receipt} />
         <p className="mt-3 text-xs font-medium text-amber-800">
           No Meta objects were created.
         </p>
@@ -1165,6 +1224,7 @@ function ReceiptCard({ receipt }: { receipt: PublishReceipt }) {
             <ReceiptStat label="Ad set IDs" value={formatIds(objects?.adSetIds)} />
             <ReceiptStat label="Ad IDs" value={formatIds(objects?.adIds)} />
           </dl>
+          <PublishedSourceReceipt receipt={receipt} />
         </div>
       );
     }
@@ -1182,6 +1242,7 @@ function ReceiptCard({ receipt }: { receipt: PublishReceipt }) {
             <ReceiptStat label="Ad set IDs" value={formatIds(objects?.adSetIds)} />
             <ReceiptStat label="Ad IDs" value={formatIds(objects?.adIds)} />
           </dl>
+          <PublishedSourceReceipt receipt={receipt} />
           <p className="mt-3 text-xs font-medium text-amber-800">
             The campaign is paused on Meta — nothing is running or spending. Review the exact setup below, then use the separate Activate action when you are ready.
           </p>
@@ -1200,11 +1261,45 @@ function ReceiptCard({ receipt }: { receipt: PublishReceipt }) {
           <ReceiptStat label="Creative IDs" value={formatIds(objects?.creativeIds)} />
           <ReceiptStat label="Ad IDs" value={formatIds(objects?.adIds)} />
         </dl>
+        <PublishedSourceReceipt receipt={receipt} />
       </div>
     );
   }
 
   return null;
+}
+
+function PublishedSourceReceipt({ receipt }: { receipt: PublishReceipt }) {
+  const source = receipt.source;
+  const creative = receipt.publishedCreative;
+  if (!source && !creative && !receipt.snapshotId && !receipt.planId) return null;
+  return (
+    <div className="mt-4 border-t border-current/15 pt-3">
+      <p className="text-xs font-semibold">Exact saved source</p>
+      <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2 text-xs sm:grid-cols-4">
+        <ReceiptStat label="Creative revision" value={source?.creativeRevision != null ? `v${source.creativeRevision}` : "—"} />
+        <ReceiptStat label="Form revision" value={source?.formRevision != null ? `v${source.formRevision}` : "Not used"} />
+        <ReceiptStat label="Snapshot" value={shortHash(receipt.snapshotId ?? source?.snapshotId ?? "")} />
+        <ReceiptStat label="Plan" value={shortHash(receipt.planId ?? "")} />
+        <ReceiptStat label="Document hash" value={shortHash(source?.documentHash ?? "")} />
+        <ReceiptStat label="Feed PNG hash" value={shortHash(source?.feedPngHash ?? "")} />
+        <ReceiptStat label="Story PNG hash" value={shortHash(source?.storyPngHash ?? "")} />
+        <ReceiptStat label="Controls fingerprint" value={shortHash(receipt.controlsFingerprint ?? "")} />
+        <ReceiptStat label="Last checked" value={formatReceiptTime(receipt.lastCheckedAt)} />
+      </dl>
+      {creative ? (
+        <div className="mt-3">
+          <p className="text-xs"><span className="font-medium">Published copy:</span> {creative.headline} · {creative.primaryText}</p>
+          {(creative.feedPngPath || creative.storyPngPath) ? (
+            <div className="mt-2 grid grid-cols-2 gap-3">
+              {creative.feedPngPath ? <img src={`/api/adstudio/media?path=${encodeURIComponent(creative.feedPngPath)}`} alt="Exact published Feed creative" className="w-full rounded-(--r-card) border border-current/15" /> : null}
+              {creative.storyPngPath ? <img src={`/api/adstudio/media?path=${encodeURIComponent(creative.storyPngPath)}`} alt="Exact published Story creative" className="w-full rounded-(--r-card) border border-current/15" /> : null}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 function ReceiptStat({ label, value }: { label: string; value: string }) {
@@ -1219,6 +1314,12 @@ function ReceiptStat({ label, value }: { label: string; value: string }) {
 function shortHash(value: string): string {
   if (!value) return "—";
   return value.length > 12 ? `${value.slice(0, 12)}…` : value;
+}
+
+function formatReceiptTime(value: string | undefined): string {
+  if (!value) return "—";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleString("en-AU");
 }
 
 function validHttpsUrl(value: string): boolean {

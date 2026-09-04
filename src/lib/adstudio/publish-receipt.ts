@@ -14,6 +14,40 @@ export type PublishPlanSummary = {
   usesExistingAdSetSettings: boolean;
 };
 
+export type PersistedPublishSource = {
+  snapshotId: string | null;
+  source: MetaPublishPlan["source"];
+  publishedCreative: {
+    feedPngPath: string | null;
+    storyPngPath: string | null;
+    primaryText: string;
+    headline: string;
+    description: string;
+    cta: string;
+  } | null;
+};
+
+/** Reconstruct the immutable creative/revision receipt from the persisted plan. */
+export function summarizePersistedPublishSource(plan: MetaPublishPlan): PersistedPublishSource {
+  const feed = plan.creatives.find((creative) => creative.localId === "creative_feed");
+  const story = plan.creatives.find((creative) => creative.localId === "creative_story");
+  const representative = feed ?? story;
+  const storagePath = (creative: typeof representative): string | null =>
+    creative?.asset?.source === "storage" ? creative.asset.storagePath ?? null : null;
+  return {
+    snapshotId: plan.publicationSnapshotId ?? plan.source?.snapshotId ?? null,
+    source: plan.source ?? null,
+    publishedCreative: representative ? {
+      feedPngPath: storagePath(feed),
+      storyPngPath: storagePath(story),
+      primaryText: representative.primaryText,
+      headline: representative.headline,
+      description: representative.description,
+      cta: representative.cta,
+    } : null,
+  };
+}
+
 /** Build receipt copy only from the normalized, persisted server plan. */
 export function summarizePersistedPublishPlan(plan: MetaPublishPlan): PublishPlanSummary {
   const controls = plan.controls;

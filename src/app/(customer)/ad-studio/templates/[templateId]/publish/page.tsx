@@ -7,6 +7,7 @@ import { loadCustomerAd } from "@/lib/adstudio/create-customer-ad";
 import { getTemplate } from "@/lib/adstudio/pack-gallery";
 import { loadPublishState, PublishError, readTemplatePublishRequirements, validatePublishState } from "@/lib/adstudio/publish-adapter";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
+import { metaPublishProviderWritesEnabled } from "@/lib/providers/meta-provider-write-gate";
 
 export const dynamic = "force-dynamic";
 
@@ -18,10 +19,6 @@ export const dynamic = "force-dynamic";
 // the frozen publish state, issues, and provider-write mode; the client drives
 // both explicit actions.
 // ---------------------------------------------------------------------------
-
-function providerWritesEnabled() {
-  return process.env.BLOCKWISE_ENABLE_PROVIDER_WRITES === "true";
-}
 
 export default async function PublishPage({
   params,
@@ -71,7 +68,7 @@ export default async function PublishPage({
   const issues = state
     ? validatePublishState(state, { controls: validationControls }).filter((issue) => !isInteractiveDependencyIssue(issue))
     : [];
-  const providerWrites = providerWritesEnabled();
+  const providerWrites = metaPublishProviderWritesEnabled(access.workspaceId);
   const { data: metaConnection } = await supabase
     .from("provider_connections")
     .select("status")
@@ -80,7 +77,8 @@ export default async function PublishPage({
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  const automatedPublishAvailable = providerWrites && metaConnection?.status === "connected";
+  const metaConnectionConnected = metaConnection?.status === "connected";
+  const automatedPublishAvailable = providerWrites && metaConnectionConnected;
   const metadata = (pack as unknown as { metadata?: { title?: string } }).metadata;
   const templateName = metadata?.title?.trim() || pack.metadata.title || pack.templateId;
 
@@ -125,6 +123,7 @@ export default async function PublishPage({
           audienceLocations={audienceLocations}
           canRequestManualPublish={access.isOperator || access.role === "owner" || access.role === "admin"}
           automatedPublishAvailable={automatedPublishAvailable}
+          metaConnectionConnected={metaConnectionConnected}
         />
       </div>
     </div>

@@ -8,12 +8,16 @@ import {
 } from "@/lib/adstudio/publish-adapter";
 import {
   claimMetaPublishExecution,
+  ensureMetaActivationMutation,
   loadMetaPublishPlan,
   releaseMetaPublishExecutionLease,
+  renewMetaPublishExecutionLease,
   updateMetaPublishPlanExecution,
 } from "@/lib/providers/meta-execution";
 import { executeMetaMutationById } from "@/lib/providers/meta-mutation-worker";
-import { buildMetaPlanMutation, buildOwnedMetaActivationPayload } from "@/lib/providers/meta-mutations";
+import { buildOwnedMetaActivationPayload } from "@/lib/providers/meta-mutations";
+import { metaPublishProviderWritesEnabled } from "@/lib/providers/meta-provider-write-gate";
+import { createMetaExecutionLeaseHeartbeat, type MetaExecutionLeaseHeartbeat } from "@/lib/providers/meta-execution-lease-heartbeat";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const runtime = "nodejs";
@@ -29,10 +33,6 @@ type ActivateBody = {
   controlsFingerprint?: string;
   clientMutationKey?: string;
 };
-
-function providerWritesEnabled() {
-  return process.env.BLOCKWISE_ENABLE_PROVIDER_WRITES === "true";
-}
 
 /**
  * POST /api/adstudio/ads/[id]/activate?workspaceId=...
@@ -71,6 +71,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
   const serviceSupabase = createSupabaseServiceClient();
   let leaseToken: string | null = null;
   let leasePlanId: string | null = null;
+  let leaseHeartbeat: MetaExecutionLeaseHeartbeat | null = null;
   try {
     const plan = await loadMetaPublishPlan(serviceSupabase, {
       workspaceId: access.access.workspaceId,
@@ -86,7 +87,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
     const latestResult = await serviceSupabase
       .from("meta_publish_plan_mutations")
-      .select("id,status,payload_json,last_error,outcome_status,unconfirmed_pause_ids_json")
+      .select("id,status,payload_json,last_error,outcome_status,unconfirmed_pause_ids_json,client_mutation_key")
       .eq("workspace_id", plan.workspaceId)
       .eq("meta_publish_plan_id", plan.planId)
       .eq("action", "activate")
@@ -125,7 +126,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
         unconfirmedPauseIds: latest.unconfirmed_pause_ids_json ?? [],
       }, { status: 502 });
     }
-    if ((latest?.status === "approved" || latest?.status === "applying") && latest.id !== clientMutationKey) {
+    if (latest?.status === "applying") {
       return NextResponse.json({
         ok: true,
         mode: "activate",
@@ -195,8 +196,16 @@ export async function POST(request: NextRequest, context: RouteContext) {
         message: "Activation is already in progress; refresh shortly.",
       }, { status: 202 });
     }
-    leaseToken = lease.leaseToken;
+    const claimedLeaseToken = lease.leaseToken;
+    leaseToken = claimedLeaseToken;
     leasePlanId = plan.planId;
+    leaseHeartbeat = createMetaExecutionLeaseHeartbeat({
+      renew: () => renewMetaPublishExecutionLease(serviceSupabase, {
+        workspaceId: plan.workspaceId,
+        planId: plan.planId,
+        leaseToken: claimedLeaseToken,
+      }),
+    });
 
     if (existing?.status === "applying") {
       throw new PublishError(
@@ -222,7 +231,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       adIds: mutationPayload.adIds ?? [],
     };
 
-    if (!providerWritesEnabled()) {
+    if (!metaPublishProviderWritesEnabled(plan.workspaceId)) {
       return NextResponse.json({
         ok: true,
         mode: "dry_run",
@@ -233,94 +242,29 @@ export async function POST(request: NextRequest, context: RouteContext) {
       });
     }
 
-    const mutation = buildMetaPlanMutation({
+    const mutation = await ensureMetaActivationMutation(serviceSupabase, {
       workspaceId: plan.workspaceId,
       planId: plan.planId,
       requestedBy: access.access.userId,
-      action: "activate",
-      payload: mutationPayload,
-      mutationId: clientMutationKey,
+      clientMutationKey: latest?.status === "approved" && latest.client_mutation_key
+        ? latest.client_mutation_key
+        : clientMutationKey,
+      planFingerprint: controlsFingerprint,
     });
-    const now = new Date().toISOString();
-    if (!existing) {
-      const { error: mutationError } = await serviceSupabase
-        .from("meta_publish_plan_mutations")
-        .insert({
-          id: mutation.mutationId,
-          workspace_id: mutation.workspaceId,
-          meta_publish_plan_id: mutation.planId,
-          action: mutation.action,
-          status: "approved",
-          payload_json: mutation.payload,
-          requested_by: mutation.requestedBy,
-          client_mutation_key: clientMutationKey,
-          request_log_json: mutation.requestLog,
-          response_log_json: mutation.responseLog,
-          last_error: null,
-          updated_at: now,
-        });
-      if (mutationError) throw new Error(mutationError.message);
-    }
 
-    if (!existing?.approval_request_id) {
-      const priorApprovalResult = await serviceSupabase
-        .from("approval_requests")
-        .select("id")
-        .eq("workspace_id", mutation.workspaceId)
-        .eq("target_type", mutation.approval.targetType)
-        .eq("target_id", mutation.approval.targetId)
-        .eq("status", "approved")
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (priorApprovalResult.error) throw new Error(priorApprovalResult.error.message);
-      let approvalId = priorApprovalResult.data?.id as string | undefined;
-      if (!approvalId) {
-        const { data: approval, error: approvalError } = await serviceSupabase
-          .from("approval_requests")
-          .insert({
-            workspace_id: mutation.workspaceId,
-            target_type: mutation.approval.targetType,
-            target_id: mutation.approval.targetId,
-            status: "approved",
-            requested_by: mutation.requestedBy,
-            approved_by: mutation.requestedBy,
-            resolved_at: now,
-            risk_summary: mutation.approval.riskSummary,
-          })
-          .select("id")
-          .single();
-        if (approvalError || !approval) {
-          throw new Error(approvalError?.message ?? "Unable to record the activation approval.");
-        }
-        approvalId = approval.id;
-      }
-      const { error: linkError } = await serviceSupabase
-        .from("meta_publish_plan_mutations")
-        .update({ approval_request_id: approvalId, updated_at: now })
-        .eq("workspace_id", mutation.workspaceId)
-        .eq("id", mutation.mutationId);
-      if (linkError) throw new Error(linkError.message);
-    }
+    await leaseHeartbeat.renewNow();
 
     const executed = await executeMetaMutationById({
       serviceSupabase,
       workspaceId: plan.workspaceId,
       mutationId: mutation.mutationId,
+      fetchImpl: leaseHeartbeat.fetch,
+      compensationFetchImpl: fetch,
+      onCheckpoint: leaseHeartbeat.renewNow,
     });
+    leaseHeartbeat.assertOwned();
     if (executed.status !== "applied") {
       const unconfirmedPauseIds = executed.unconfirmedPauseIds ?? [];
-      const outcomeStatus = unconfirmedPauseIds.length > 0 ? "unconfirmed" : "confirmed_paused";
-      const { error: outcomeError } = await serviceSupabase
-        .from("meta_publish_plan_mutations")
-        .update({
-          outcome_status: outcomeStatus,
-          unconfirmed_pause_ids_json: unconfirmedPauseIds,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("workspace_id", plan.workspaceId)
-        .eq("id", mutation.mutationId);
-      if (outcomeError) throw new Error(outcomeError.message);
       if (unconfirmedPauseIds.length > 0) {
         return NextResponse.json({
           ok: false,
@@ -375,6 +319,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     }
     return errorResponse(err, 500);
   } finally {
+    leaseHeartbeat?.stop();
     if (leaseToken && leasePlanId) {
       try {
         await releaseMetaPublishExecutionLease(serviceSupabase, {

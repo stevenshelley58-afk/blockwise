@@ -404,6 +404,7 @@ export interface PausedPublishPlanInput {
   adId: string;
   workspaceId: string;
   connectionId: string;
+  publicationSnapshotId?: string | null;
   setup: MetaConnectionSetup;
   controls?: MetaPublishControls;
   state: PublishLoadResult;
@@ -521,6 +522,16 @@ export function buildPausedMetaPublishPlan(input: PausedPublishPlanInput): MetaP
     legacyCampaignId: null,
     providerConnectionId: input.connectionId,
     approvalRequestId: null,
+    publicationSnapshotId: input.publicationSnapshotId ?? null,
+    source: {
+      snapshotId: input.publicationSnapshotId ?? state.revision.id,
+      creativeRevision: state.revision.revisionNumber,
+      documentHash: state.revision.documentHash,
+      feedPngHash: state.revision.feedPngHash,
+      storyPngHash: state.revision.storyPngHash,
+      formDraftId: state.formDraftId,
+      formRevision: state.formRevision,
+    },
     adapter: "marketing_api",
     status: "draft",
     idempotencyKey,
