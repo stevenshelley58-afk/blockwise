@@ -126,3 +126,10 @@ test("authored text meets placement readability floors", () => {
   story.storyLayout.layers[1].fontSize = 32;
   assert.equal(adTemplateSchema.safeParse(story).success, true);
 });
+
+test("text tracking is absolute canvas pixels bounded to the authored -4..4 range", () => {
+  assert.equal(adTemplateSchema.safeParse(templateWithLayer({ ...textLayer(), tracking: -4 })).success, true);
+  assert.equal(adTemplateSchema.safeParse(templateWithLayer({ ...textLayer(), tracking: 4 })).success, true);
+  assert.equal(adTemplateSchema.safeParse(templateWithLayer({ ...textLayer(), tracking: -4.01 })).success, false);
+  assert.equal(adTemplateSchema.safeParse(templateWithLayer({ ...textLayer(), tracking: 4.01 })).success, false);
+});

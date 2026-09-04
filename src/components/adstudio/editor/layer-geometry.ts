@@ -74,6 +74,13 @@ export function effectiveTextFontSize(layer: Pick<TextLayer, "fontSize"> & { siz
   return layer.fontSize;
 }
 
+/** Convert absolute placement-canvas tracking pixels to Fabric's thousandths-of-em unit. */
+export function fabricCharSpacing(trackingPixels: number, fontSizePixels: number): number {
+  return Number.isFinite(fontSizePixels) && fontSizePixels > 0
+    ? trackingPixels * 1000 / fontSizePixels
+    : 0;
+}
+
 /** The canonical renderer draws unknown icons as a stroked circle. */
 export type FabricIconShape = "arrow" | "check" | "circle";
 

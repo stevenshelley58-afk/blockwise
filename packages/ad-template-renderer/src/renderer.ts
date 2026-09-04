@@ -257,10 +257,11 @@ function renderText(ctx: SKRSContext2D, layer: TextLayer, input: RenderInput, pl
   let fontSize = Math.max(1, baseFontSize);
   let lines: string[] = [];
   let fits = false;
+  const trackingPixels = layer.tracking;
   for (; fontSize >= minimumSize - 0.001; fontSize -= 0.5) {
     ctx.font = fontDeclaration(textLayer, family, fontSize);
-    lines = wrapText(ctx, text, geometry.width, layer.tracking * fontSize);
-    const widest = Math.max(0, ...lines.map((line) => measuredWidth(ctx, line, layer.tracking * fontSize)));
+    lines = wrapText(ctx, text, geometry.width, trackingPixels);
+    const widest = Math.max(0, ...lines.map((line) => measureTrackedTextWidth(ctx, line, trackingPixels)));
     const height = paintedHeight(ctx, lines, fontSize, layer.lineHeight);
     fits = lines.length <= layer.maxLines && widest <= geometry.width && height <= geometry.height;
     if (fits) break;
@@ -276,11 +277,11 @@ function renderText(ctx: SKRSContext2D, layer: TextLayer, input: RenderInput, pl
   if (!fits) {
     fontSize = Math.max(1, minimumSize);
     ctx.font = fontDeclaration(textLayer, family, fontSize);
-    lines = wrapText(ctx, text, geometry.width, layer.tracking * fontSize).slice(0, layer.maxLines);
+    lines = wrapText(ctx, text, geometry.width, trackingPixels).slice(0, layer.maxLines);
     if (layer.overflowBehaviour === "truncate" && lines.length > 0) {
       let last = lines[lines.length - 1] ?? "";
       const suffix = "…";
-      while (last && measuredWidth(ctx, `${last}${suffix}`, layer.tracking * fontSize) > geometry.width) last = last.slice(0, -1);
+      while (last && measureTrackedTextWidth(ctx, `${last}${suffix}`, trackingPixels) > geometry.width) last = last.slice(0, -1);
       lines[lines.length - 1] = `${last.trimEnd()}${suffix}`;
     }
   }
@@ -299,7 +300,7 @@ function renderText(ctx: SKRSContext2D, layer: TextLayer, input: RenderInput, pl
     line,
     x,
     baseline + index * fontSize * layer.lineHeight,
-    layer.tracking * fontSize,
+    trackingPixels,
     layer.alignment,
   ));
   ctx.restore();
@@ -324,8 +325,9 @@ function graphemes(text: string): string[] {
   return Array.from(text);
 }
 
-function measuredWidth(ctx: SKRSContext2D, text: string, tracking: number): number {
-  return text.length === 0 ? 0 : ctx.measureText(text).width + tracking * Math.max(0, graphemes(text).length - 1);
+/** Internal parity helper: tracking is absolute placement-canvas pixels per inter-grapheme gap. */
+export function measureTrackedTextWidth(ctx: SKRSContext2D, text: string, trackingPixels: number): number {
+  return text.length === 0 ? 0 : ctx.measureText(text).width + trackingPixels * Math.max(0, graphemes(text).length - 1);
 }
 
 function textMetrics(ctx: SKRSContext2D, text: string, fontSize: number): { ascent: number; descent: number; ink: number } {
@@ -343,25 +345,25 @@ function paintedHeight(ctx: SKRSContext2D, lines: string[], fontSize: number, li
   return ascent + descent + Math.max(0, lines.length - 1) * fontSize * lineHeight;
 }
 
-function drawTrackedText(ctx: SKRSContext2D, text: string, x: number, y: number, tracking: number, align: TextLayer["alignment"]): void {
+function drawTrackedText(ctx: SKRSContext2D, text: string, x: number, y: number, trackingPixels: number, align: TextLayer["alignment"]): void {
   if (text.length === 0) return;
-  if (tracking === 0) {
+  if (trackingPixels === 0) {
     ctx.fillText(text, x, y);
     return;
   }
   const glyphs = graphemes(text);
-  const total = measuredWidth(ctx, text, tracking);
+  const total = measureTrackedTextWidth(ctx, text, trackingPixels);
   let cursor = align === "left" ? x : align === "right" ? x - total : x - total / 2;
   const previousAlign = ctx.textAlign;
   ctx.textAlign = "left";
   for (const glyph of glyphs) {
     ctx.fillText(glyph, cursor, y);
-    cursor += ctx.measureText(glyph).width + tracking;
+    cursor += ctx.measureText(glyph).width + trackingPixels;
   }
   ctx.textAlign = previousAlign;
 }
 
-function wrapText(ctx: SKRSContext2D, text: string, maxWidth: number, tracking = 0): string[] {
+function wrapText(ctx: SKRSContext2D, text: string, maxWidth: number, trackingPixels = 0): string[] {
   const output: string[] = [];
   for (const paragraph of text.split(/\r?\n/)) {
     const words = paragraph.trim().split(/\s+/).filter(Boolean);
@@ -371,12 +373,12 @@ function wrapText(ctx: SKRSContext2D, text: string, maxWidth: number, tracking =
     }
     let line = "";
     for (const word of words) {
-      if (measuredWidth(ctx, word, tracking) > maxWidth) {
+      if (measureTrackedTextWidth(ctx, word, trackingPixels) > maxWidth) {
         if (line) output.push(line);
         line = "";
         for (const glyph of graphemes(word)) {
           const candidate = `${line}${glyph}`;
-          if (line && measuredWidth(ctx, candidate, tracking) > maxWidth) {
+          if (line && measureTrackedTextWidth(ctx, candidate, trackingPixels) > maxWidth) {
             output.push(line);
             line = glyph;
           } else line = candidate;
@@ -384,7 +386,7 @@ function wrapText(ctx: SKRSContext2D, text: string, maxWidth: number, tracking =
         continue;
       }
       const candidate = `${line} ${word}`;
-      if (!line || measuredWidth(ctx, candidate.trim(), tracking) <= maxWidth) line = line ? candidate : word;
+      if (!line || measureTrackedTextWidth(ctx, candidate.trim(), trackingPixels) <= maxWidth) line = line ? candidate : word;
       else {
         output.push(line);
         line = word;

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createCanvas } from "@napi-rs/canvas";
 import type { AdTemplate } from "@blockwise/ad-template-contract";
-import { renderPlacement } from "./renderer.ts";
+import { measureTrackedTextWidth, renderPlacement } from "./renderer.ts";
 
 const colours = {
   background: "#ffffff",
@@ -123,4 +123,41 @@ test("renderer rejects missing, partial, and non-square structural primitives", 
     renderPlacement({ template: ring, imageValues: {}, textValues: {}, colourMap: colours }, "feed"),
     /ring vector feed-stretched-ring must use square geometry/,
   );
+});
+
+test("tracking is one absolute canvas pixel per grapheme gap and c5 REAL ESTATE fits", async () => {
+  const measuringContext = createCanvas(320, 80).getContext("2d");
+  measuringContext.font = '24px "manrope-800"';
+  const untrackedWidth = measureTrackedTextWidth(measuringContext, "AB", 0);
+  const trackedWidth = measureTrackedTextWidth(measuringContext, "AB", 1);
+  assert.equal(trackedWidth - untrackedWidth, 1, "tracking=1 must add 1px, not one font-size, to one grapheme gap");
+
+  const template = templateFixture();
+  template.textInputs = [{ key: "brandName", label: "Brand name", placeholder: "REAL ESTATE", maxLength: 11 }];
+  template.fonts = [{ file: "manrope-800.woff2" }];
+  template.feedLayout.layers.push({
+    type: "text",
+    layerId: "feed-brand-name",
+    inputKey: "brandName",
+    font: { file: "manrope-800.woff2" },
+    fontSize: 30,
+    lineHeight: 1,
+    tracking: 1,
+    alignment: "left",
+    maxCharacters: 11,
+    maxLines: 1,
+    colourRole: "mainText",
+    overflowBehaviour: "scale_down",
+    geometry: { x: 40, y: 40, width: 254, height: 38 },
+  });
+
+  const rendered = await renderPlacement({
+    template,
+    imageValues: {},
+    textValues: { brandName: "REAL ESTATE" },
+    colourMap: colours,
+  }, "feed");
+  assert.equal(rendered.width, 1080);
+  assert.equal(rendered.height, 1350);
+  assert.ok(rendered.png.length > 0, "successful render proves the text remains at or above the 24px floor");
 });

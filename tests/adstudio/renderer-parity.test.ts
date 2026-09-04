@@ -5,6 +5,7 @@ import type { AdTemplate } from "../../packages/ad-template-contract/src/types";
 import { renderPlacement } from "../../packages/ad-template-renderer/src/renderer.ts";
 import {
   effectiveTextFontSize,
+  fabricCharSpacing,
   fabricIconCircleGeometry,
   fabricRectGeometry,
   resolveGeometry,
@@ -88,14 +89,17 @@ describe("canonical renderer parity fixtures", () => {
 
     const authored = { x: 0.1, y: 0.2, width: 0.5, height: 0.4 };
     const geometry = resolveGeometry(authored, { width: 1080, height: 1920 });
+    const fontSize = effectiveTextFontSize({ fontSize: 96, sizeRatio: 0.05 }, geometry);
     const textbox = new Textbox("Parity", {
       ...fabricRectGeometry(geometry),
       width: geometry.width,
-      fontSize: effectiveTextFontSize({ fontSize: 96, sizeRatio: 0.05 }, geometry),
+      fontSize,
       lineHeight: 1.1,
+      charSpacing: fabricCharSpacing(1, fontSize),
       splitByGrapheme: true,
     });
     assert.ok(Math.abs(textbox.fontSize - 38.4) < 1e-9);
+    assert.ok(Math.abs(textbox.charSpacing * textbox.fontSize / 1000 - 1) < 1e-9, "Fabric tracking must remain absolute across font sizes");
     assert.equal(textbox.left, geometry.x);
     assert.equal(textbox.top, geometry.y);
     assert.ok(textbox.getBoundingRect().width <= geometry.width + 1);

@@ -15,6 +15,7 @@ import { templateAssetProxyUrl } from "@/lib/adstudio/pack-gallery";
 import { cn } from "@/lib/utils";
 import {
   effectiveTextFontSize,
+  fabricCharSpacing,
   fabricCircleGeometry,
   fabricIconCircleGeometry,
   fabricIconPathData,
@@ -283,6 +284,7 @@ async function createLayerObject({
     if (layer.overflowBehaviour === "refuse" && source.length > layer.maxCharacters) return null;
     const text = source.slice(0, layer.maxCharacters);
     await ensureLocalFont(layer.font);
+    const fontSize = effectiveTextFontSize(layer, geometry);
     const textbox = new fabric.Textbox(text, {
       left: geometry.x,
       top: geometry.y,
@@ -291,9 +293,9 @@ async function createLayerObject({
       width: geometry.width,
       height: geometry.height,
       fontFamily: fontStem(layer.font.file),
-      fontSize: effectiveTextFontSize(layer, geometry),
+      fontSize,
       lineHeight: layer.lineHeight,
-      charSpacing: layer.tracking * 1000,
+      charSpacing: fabricCharSpacing(layer.tracking, fontSize),
       textAlign: layer.alignment,
       fill: fill(layer.colourRole),
       splitByGrapheme: true,

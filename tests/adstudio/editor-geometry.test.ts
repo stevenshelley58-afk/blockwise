@@ -33,7 +33,7 @@ describe("Ad Studio editor geometry contract", () => {
   });
 
   it("resolves normalized pack rectangles with the same dimensions as the server renderer", async () => {
-    const { resolveGeometry, effectiveTextFontSize, fabricPathPosition } = await import("../../src/components/adstudio/editor/layer-geometry.ts");
+    const { resolveGeometry, effectiveTextFontSize, fabricCharSpacing, fabricPathPosition } = await import("../../src/components/adstudio/editor/layer-geometry.ts");
     const { resolveRenderGeometry, effectiveTextFontSize: serverTextFontSize } = await import("../../packages/ad-template-renderer/src/renderer.ts");
     const geometry = { x: 0.1, y: 0.2, width: 0.5, height: 0.4 };
     const resolved = resolveGeometry(geometry, { width: 1080, height: 1920 });
@@ -47,6 +47,8 @@ describe("Ad Studio editor geometry contract", () => {
     const textLayer = { fontSize: 96, sizeRatio: 0.05 };
     assert.ok(Math.abs(effectiveTextFontSize(textLayer, resolved) - 38.4) < 1e-9);
     assert.ok(Math.abs(serverTextFontSize(textLayer, resolved) - effectiveTextFontSize(textLayer, resolved)) < 1e-9);
+    assert.ok(Math.abs(fabricCharSpacing(1, 24) - (1000 / 24)) < 1e-9);
+    assert.ok(Math.abs(fabricCharSpacing(1, 24) * 24 / 1000 - 1) < 1e-9, "Fabric must paint one canvas pixel per authored tracking unit");
     // Local line commands are normalized around their path bounds; preserve
     // the line's intended half-height offset when returning to canvas space.
     assert.deepEqual(fabricPathPosition({ width: 540, height: 0, pathOffset: { x: 270, y: 384 } }, { x: 108, y: 384, width: 540, height: 768 }), {
