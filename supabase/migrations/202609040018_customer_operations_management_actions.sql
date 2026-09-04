@@ -26,6 +26,18 @@ on conflict (action_type) do nothing;
 update public.ops_action_capabilities set capability_state='capability_required', description='Hermes Chatwoot action lane requires verified provider readiness'
 where action_type in ('enquiry_close','enquiry_reply','enquiry_reopen');
 
+create or replace function public.set_ops_chatwoot_capability(p_enabled boolean, p_reason text)
+returns boolean language plpgsql security definer set search_path = '' as $$
+begin
+  update public.ops_action_capabilities set capability_state=case when p_enabled then 'available' else 'capability_required' end,
+    description=left(coalesce(p_reason,'Chatwoot worker readiness unavailable'),256)
+    where action_type in ('enquiry_close','enquiry_reply','enquiry_reopen');
+  return true;
+end;
+$$;
+revoke all on function public.set_ops_chatwoot_capability(boolean,text) from public,anon,authenticated;
+grant execute on function public.set_ops_chatwoot_capability(boolean,text) to service_role;
+
 -- Provider-owned actions have a dedicated Hermes claimer. The generic
 -- control-edge lane must never complete one after the web executor returns.
 create or replace function public.claim_ops_action(p_lease_seconds integer default 600)
@@ -126,6 +138,8 @@ begin
       and l.provider_conversation_id_digest=encode(public.digest(p_provider_conversation_id,'sha256'),'hex')
       and e.workspace_id is not null limit 1;
   if v_workspace is null then return jsonb_build_object('status','ignored'); end if;
+  select payload_hash into v_existing from private.ops_chatwoot_webhook_events where event_id=left(p_event_id,256);
+  if v_existing is not null and v_existing <> p_payload_hash then raise exception 'Chatwoot webhook event hash mismatch' using errcode='22023'; end if;
   insert into private.ops_chatwoot_webhook_events(event_id,payload_hash,provider_conversation_id,event_type)
     values(left(p_event_id,256),p_payload_hash,p_provider_conversation_id,p_event_type)
     on conflict(event_id) do nothing;

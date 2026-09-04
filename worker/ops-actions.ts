@@ -12,6 +12,13 @@ type Action = { id: string; action_id: string; workspace_id: string; action_type
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 class ProviderActionError extends Error { readonly retryable: boolean; constructor(message: string, retryable: boolean) { super(message); this.retryable = retryable; } }
 
+export function assertChatwootActionReadiness(): void {
+  new URL(env("CHATWOOT_BASE_URL"));
+  env("CHATWOOT_ACCOUNT_ID");
+  secretFile("CHATWOOT_API_TOKEN_FILE");
+  secretFile("BLOCKWISE_OPS_CORRELATION_KEY_FILE");
+}
+
 export async function runOpsActionOnce(supabase: Supabase, fetchImpl: typeof fetch = fetch): Promise<boolean> {
   const claimed = await Promise.resolve(supabase.rpc("claim_ops_provider_action", { p_lease_seconds: 600 }));
   if (claimed.error) throw new Error("customer operations action claim failed");

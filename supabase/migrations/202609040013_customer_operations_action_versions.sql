@@ -104,7 +104,7 @@ declare
   v_revision text := 'unbound';
   v_workspaces jsonb; v_workspace_ids text[]; v_receipts text[];
   v_members jsonb; v_bookings jsonb; v_billing jsonb; v_email jsonb;
-  v_flows jsonb; v_mautic jsonb; v_enquiries jsonb; v_activity jsonb;
+  v_flows jsonb; v_mautic jsonb; v_enquiries jsonb; v_activity jsonb; v_capabilities jsonb;
 begin
   select coalesce(jsonb_agg(jsonb_build_object(
     'id',s.workspace_id,'workspace_id',s.workspace_id,'name',s.workspace_name,
@@ -223,12 +223,15 @@ begin
       from public.audit_logs a where a.workspace_id=any(v_workspace_ids::uuid[])
   ) x;
 
+  select coalesce(jsonb_agg(jsonb_build_object('action',action_type,'state',capability_state,'description',description) order by action_type),'[]'::jsonb)
+    into v_capabilities from public.ops_action_capabilities;
+
   return jsonb_build_object('project_id','blockwise','source_revision',v_revision,
     'source_receipt_ids',to_jsonb(v_receipts),'workspace_ids',to_jsonb(v_workspace_ids),
     'fresh_until',(now()+interval '15 minutes'),'projections',jsonb_build_object(
       'customers',v_workspaces,'email',v_email,'flows',v_flows,'mautic',v_mautic,
       'enquiries',v_enquiries,'bookings',v_bookings,'billing',v_billing,
-      'activity',v_activity,'members',v_members));
+      'activity',v_activity,'members',v_members,'capabilities',v_capabilities));
 end; $$;
 revoke all on function public.resolve_ops_frank_bundle() from public, anon, authenticated;
 grant execute on function public.resolve_ops_frank_bundle() to service_role;

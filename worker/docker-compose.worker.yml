@@ -20,6 +20,7 @@ services:
       WORKER_REAP_INTERVAL_MS: ${WORKER_REAP_INTERVAL_MS:-60000}
       MAUTIC_TOKEN_FILE: /run/secrets/mautic_token
       CHATWOOT_API_TOKEN_FILE: /run/secrets/chatwoot_api_token
+      CHATWOOT_WEBHOOK_SECRET_FILE: /run/secrets/chatwoot_webhook_secret
       CHATWOOT_ENQUIRY_SOURCE_ID: ${CHATWOOT_ENQUIRY_SOURCE_ID:-}
       CHATWOOT_SUPPORT_SOURCE_ID: ${CHATWOOT_SUPPORT_SOURCE_ID:-}
       CHATWOOT_GLOBAL_SOURCE_ID: ${CHATWOOT_GLOBAL_SOURCE_ID:-}
@@ -34,6 +35,7 @@ services:
       - ${HERMES_OPS_PROJECTION_ROOT:-/srv/frank/data/window/ops-projections}:/data/ops-projections:rw
       - ${MAUTIC_TOKEN_HOST_FILE:-/srv/blockwise/secrets/mautic_token}:/run/secrets/mautic_token:ro
       - ${CHATWOOT_API_TOKEN_HOST_FILE:-/srv/blockwise/secrets/chatwoot_api_token}:/run/secrets/chatwoot_api_token:ro
+      - ${CHATWOOT_WEBHOOK_SECRET_HOST_FILE:-/srv/blockwise/secrets/chatwoot_webhook_secret}:/run/secrets/chatwoot_webhook_secret:ro
       - ${BLOCKWISE_OPS_CORRELATION_KEY_HOST_FILE:-/srv/blockwise/secrets/ops_correlation_key}:/run/secrets/ops_correlation_key:ro
     logging:
       driver: json-file

@@ -23,7 +23,7 @@ import { pathToFileURL } from "node:url";
 import { resolveSupabaseServerCredential } from "../src/lib/supabase/credentials.ts";
 import { createSupabaseServiceClient } from "../src/lib/supabase/service.ts";
 import { reapOpsProjections, runGlobalProjectionOnce, runOpsProjectionOnce } from "./ops-projection.ts";
-import { runOpsActionOnce } from "./ops-actions.ts";
+import { assertChatwootActionReadiness, runOpsActionOnce } from "./ops-actions.ts";
 
 type ServiceSupabase = ReturnType<typeof createSupabaseServiceClient>;
 type HandlerExecutionContext = {
@@ -703,6 +703,10 @@ async function main() {
   await reap(supabase);
   const projectionsEnabled = process.env.BLOCKWISE_OPS_PROJECTION_WORKER === "true";
   const actionsEnabled = process.env.BLOCKWISE_OPS_ACTION_WORKER === "true";
+  if (actionsEnabled) {
+    try { assertChatwootActionReadiness(); await supabase.rpc("set_ops_chatwoot_capability", { p_enabled: true, p_reason: "verified Hermes Chatwoot worker readiness" }); }
+    catch { await supabase.rpc("set_ops_chatwoot_capability", { p_enabled: false, p_reason: "Chatwoot worker readiness unavailable" }); log("Chatwoot action capability disabled: readiness check failed"); }
+  }
   if (projectionsEnabled) {
     await reapOpsProjections(supabase);
     log("customer-operations projection lane enabled");
