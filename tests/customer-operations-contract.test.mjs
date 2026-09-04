@@ -11,6 +11,7 @@ test("product allowlist and rollback procedure cover the ops contract", () => {
   assert.match(allowlist, /202609040002_customer_operations_hardening\.sql/);
   assert.match(allowlist, /202609040003_customer_operations_provider_snapshots\.sql/);
   assert.match(allowlist, /202609040004_customer_operations_projection_identity\.sql/);
+  assert.match(allowlist, /202609040005_customer_operations_provider_matrix_privileges\.sql/);
   const rollback = text("scripts/ops/rollback-customer-operations.sql");
   assert.match(rollback, /ROLLBACK_CUSTOMER_OPERATIONS/);
   assert.match(rollback, /customer_operations_tables_archive/);
@@ -36,4 +37,17 @@ test("ops surface is service-only and provider-free", () => {
   assert.match(route, /Cache-Control.*no-store/);
   assert.doesNotMatch(route, /from\s+["'](?:mautic|chatwoot|stripe)["']/i);
   assert.equal(existsSync(new URL("src/lib/ops/internal-auth.ts", root)), false);
+});
+
+test("projection adapter and database enforce the provider aggregate matrix", () => {
+  const contract = text("src/lib/ops/projection-contract.ts");
+  const migration = text("supabase/migrations/202609040005_customer_operations_provider_matrix_privileges.sql");
+  assert.match(contract, /mautic: \["contact", "lifecycle"\]/);
+  assert.match(contract, /chatwoot: \["enquiry", "support"\]/);
+  assert.match(contract, /provider and aggregate type are incompatible/);
+  assert.match(migration, /ops_projection_provider_aggregate_check/);
+  assert.match(migration, /mautic.*contact.*lifecycle/s);
+  assert.match(migration, /chatwoot.*enquiry.*support/s);
+  assert.match(migration, /revoke insert, update, delete on public\.ops_projection_outbox from service_role/i);
+  assert.match(migration, /grant select on public\.ops_projection_outbox to service_role/i);
 });

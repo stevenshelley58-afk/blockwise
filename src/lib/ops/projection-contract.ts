@@ -26,7 +26,21 @@ export type AdapterMapping =
 const MAX_ID = 256;
 const MAX_FIELD = 512;
 
+const PROVIDER_AGGREGATES: Record<ProjectionProvider, readonly ProjectionAggregate[]> = {
+  mautic: ["contact", "lifecycle"],
+  chatwoot: ["enquiry", "support"],
+};
+
+function providerAggregateAllowed(provider: unknown, aggregateType: unknown): provider is ProjectionProvider {
+  return (provider === "mautic" || provider === "chatwoot")
+    && typeof aggregateType === "string"
+    && PROVIDER_AGGREGATES[provider].includes(aggregateType as ProjectionAggregate);
+}
+
 export function buildProjectionEnvelope(input: Omit<BlockwiseProjectionEnvelope, "contractVersion">): BlockwiseProjectionEnvelope {
+  if (!providerAggregateAllowed(input.provider, input.aggregate.type)) {
+    throw new Error("provider and aggregate type are incompatible");
+  }
   const workspaceId = bounded(input.workspaceId, MAX_ID, "workspaceId");
   const aggregateId = bounded(input.aggregate.id, MAX_ID, "aggregate.id");
   const eventId = bounded(input.source.eventId, MAX_ID, "source.eventId");
@@ -42,6 +56,9 @@ export function buildProjectionEnvelope(input: Omit<BlockwiseProjectionEnvelope,
 }
 
 export function mapProjectionForAdapter(envelope: BlockwiseProjectionEnvelope): AdapterMapping {
+  if (!providerAggregateAllowed(envelope.provider, envelope.aggregate.type)) {
+    throw new Error("provider and aggregate type are incompatible");
+  }
   const externalId = `${envelope.workspaceId}:${envelope.aggregate.id}`.slice(0, MAX_ID);
   if (envelope.provider === "mautic" && envelope.aggregate.type === "contact") {
     return { provider: "mautic", resource: "contact", fields: { externalId, email: stringField(envelope.payload.email), name: stringField(envelope.payload.name), lifecycle: stringField(envelope.payload.lifecycle) ?? stringField(envelope.payload.stage), activationStage: stringField(envelope.payload.activationStage) ?? stringField(envelope.payload.stage), bookingStatus: stringField(envelope.payload.bookingStatus), bookingSubject: stringField(envelope.payload.bookingSubject) } };
@@ -49,7 +66,10 @@ export function mapProjectionForAdapter(envelope: BlockwiseProjectionEnvelope): 
   if (envelope.provider === "mautic" && envelope.aggregate.type === "lifecycle") {
     return { provider: "mautic", resource: "lifecycle", fields: { externalId, stage: stringField(envelope.payload.stage), changedAt: stringField(envelope.payload.changedAt) } };
   }
-  return { provider: "chatwoot", resource: envelope.aggregate.type === "enquiry" ? "enquiry" : "support", fields: { externalId, subject: stringField(envelope.payload.subject), status: stringField(envelope.payload.status), contactId: stringField(envelope.payload.contactId) } };
+  if (envelope.provider === "chatwoot" && (envelope.aggregate.type === "enquiry" || envelope.aggregate.type === "support")) {
+    return { provider: "chatwoot", resource: envelope.aggregate.type, fields: { externalId, subject: stringField(envelope.payload.subject), status: stringField(envelope.payload.status), contactId: stringField(envelope.payload.contactId) } };
+  }
+  throw new Error("provider and aggregate type are incompatible");
 }
 
 function bounded(value: string, max: number, label: string): string { const result = value.trim(); if (!result || result.length > max) throw new Error(`${label} is invalid`); return result; }

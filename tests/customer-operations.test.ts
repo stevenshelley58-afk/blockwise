@@ -65,6 +65,20 @@ test("projection contract is versioned and adapter mapping is provider-neutral",
     bookingStatus: "confirmed",
     bookingSubject: "Onboarding booking",
   });
+
+  assert.throws(() => buildProjectionEnvelope({
+    workspaceId: "workspace-1",
+    provider: "mautic",
+    aggregate: { type: "enquiry", id: "enquiry-1" },
+    operation: "upsert",
+    source: { eventId: "invalid-1", version: 1 },
+    payload: {},
+  }), /incompatible/);
+  assert.throws(() => mapProjectionForAdapter({
+    ...contact,
+    provider: "chatwoot",
+    aggregate: { type: "lifecycle", id: "workspace-1" },
+  }), /incompatible/);
 });
 
 test("bounded cursor and stale-version fencing are present in the service contract", () => {
@@ -103,4 +117,7 @@ test("ops pagination distinguishes absent values and validates durable cursors",
   assert.deepEqual(decodeOpsCursor(encoded), { updatedAt: "2026-09-04T00:00:00.000Z", id: "84444444-4444-4444-8444-444444444444" });
   assert.throws(() => decodeOpsCursor(Buffer.from(JSON.stringify({ updatedAt: "not-a-date", id: "84444444-4444-4444-8444-444444444444" })).toString("base64url")), /invalid operations cursor/);
   assert.throws(() => decodeOpsCursor(Buffer.from(JSON.stringify({ updatedAt: "2026-09-04T00:00:00.000Z", id: "crm-1" })).toString("base64url")), /invalid operations cursor/);
+  assert.throws(() => decodeOpsCursor(`${encoded}=`), /invalid operations cursor/);
+  assert.throws(() => decodeOpsCursor(encoded.replace(/[A-Za-z0-9]/, "+")), /invalid operations cursor/);
+  assert.throws(() => decodeOpsCursor(`${encoded}junk`), /invalid operations cursor/);
 });

@@ -31,9 +31,11 @@ export function encodeOpsCursor(cursor: { updatedAt: string; id: string }): stri
 
 export function decodeOpsCursor(value: string | undefined): { updatedAt: string; id: string } | null {
   if (value === undefined) return null;
-  if (value.length === 0 || value.length > 512) throw new OpsInvalidCursorError();
+  if (value.length === 0 || value.length > 512 || value.length % 4 === 1 || !/^[A-Za-z0-9_-]+$/.test(value)) throw new OpsInvalidCursorError();
   try {
-    const parsed = JSON.parse(Buffer.from(value, "base64url").toString("utf8")) as { updatedAt?: unknown; id?: unknown };
+    const decoded = Buffer.from(value, "base64url");
+    if (decoded.length === 0 || decoded.toString("base64url") !== value) throw new OpsInvalidCursorError();
+    const parsed = JSON.parse(decoded.toString("utf8")) as { updatedAt?: unknown; id?: unknown };
     if (typeof parsed.updatedAt !== "string" || typeof parsed.id !== "string") throw new OpsInvalidCursorError();
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(parsed.id)) throw new OpsInvalidCursorError();
     return { updatedAt: normalizeCursorTimestamp(parsed.updatedAt, true), id: parsed.id.toLowerCase() };

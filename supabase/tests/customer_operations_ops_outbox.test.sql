@@ -1,7 +1,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(56);
+select plan(61);
 
 insert into public.workspaces (id, name, mode, region)
 values ('81111111-1111-4111-8111-111111111111', 'Ops contract test', 'self_serve', 'AU')
@@ -18,6 +18,9 @@ select ok(to_regclass('public.ops_enquiry_associations') is not null, 'explicit 
 select ok(to_regclass('public.ops_provider_snapshots') is not null, 'provider snapshot table exists');
 select ok((select relrowsecurity from pg_class where oid = 'public.ops_projection_outbox'::regclass), 'projection outbox RLS is enabled');
 select ok(not has_table_privilege('anon', 'public.ops_projection_outbox', 'SELECT'), 'anon cannot read projection outbox');
+select ok(not has_table_privilege('service_role', 'public.ops_projection_outbox', 'INSERT'), 'service_role cannot directly insert projections');
+select ok(not has_table_privilege('service_role', 'public.ops_projection_outbox', 'UPDATE'), 'service_role cannot directly update projections');
+select ok(not has_table_privilege('service_role', 'public.ops_projection_outbox', 'DELETE'), 'service_role cannot directly delete projections');
 select ok(not has_table_privilege('anon', 'public.ops_provider_snapshots', 'SELECT'), 'anon cannot read provider snapshots');
 select ok(not has_table_privilege('service_role', 'public.ops_provider_snapshots', 'INSERT'), 'snapshot writes require the normalized RPC');
 select ok(not has_function_privilege('authenticated', 'public.enqueue_ops_projection(uuid,text,text,text,text,text,bigint,jsonb)', 'EXECUTE'), 'authenticated cannot enqueue projections');
@@ -34,6 +37,14 @@ select lives_ok($$ select public.enqueue_ops_projection(
   '{"email":"owner@example.com"}'::jsonb
 ) $$, 'valid contact projection is accepted');
 select is((select count(*)::int from public.ops_projection_outbox), 1, 'one projection is queued');
+select throws_ok($$ select public.enqueue_ops_projection(
+  '81111111-1111-4111-8111-111111111111', 'mautic', 'enquiry', 'invalid-mautic-enquiry', 'upsert', 'invalid-event-1', 1,
+  '{}'::jsonb
+) $$, '23514', 'new row for relation "ops_projection_outbox" violates check constraint "ops_projection_provider_aggregate_check"', 'Mautic cannot receive enquiry aggregates');
+select throws_ok($$ select public.enqueue_ops_projection(
+  '81111111-1111-4111-8111-111111111111', 'chatwoot', 'contact', 'invalid-chatwoot-contact', 'upsert', 'invalid-event-2', 1,
+  '{}'::jsonb
+) $$, '23514', 'new row for relation "ops_projection_outbox" violates check constraint "ops_projection_provider_aggregate_check"', 'Chatwoot cannot receive contact aggregates');
 select lives_ok($$ select public.enqueue_ops_projection(
   '81111111-1111-4111-8111-111111111111', 'mautic', 'contact', 'profile-1', 'upsert', 'event-1', 1,
   '{"email":"owner@example.com"}'::jsonb
