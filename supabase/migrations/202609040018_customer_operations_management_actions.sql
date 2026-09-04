@@ -135,6 +135,8 @@ create table if not exists private.ops_enquiry_messages (
 );
 alter table private.ops_chatwoot_webhook_events enable row level security;
 alter table private.ops_enquiry_messages enable row level security;
+alter table private.ops_enquiry_messages drop constraint if exists ops_enquiry_messages_provider_message_id_check;
+alter table private.ops_enquiry_messages add constraint ops_enquiry_messages_provider_message_id_check check (provider_message_id ~ '^[0-9a-f]{64}$');
 revoke all on private.ops_chatwoot_webhook_events, private.ops_enquiry_messages from public,anon,authenticated,service_role;
 
 create or replace function public.record_ops_chatwoot_webhook(
@@ -161,7 +163,7 @@ begin
   if v_updated=0 then select status into v_existing from private.ops_chatwoot_webhook_events where event_id=left(p_event_id,256); return jsonb_build_object('status',coalesce(v_existing,'received'),'duplicate',true); end if;
   if p_event_type in ('message_created','message_updated') and p_provider_message_id ~ '^[0-9]+$' and nullif(btrim(p_body),'') is not null then
     insert into private.ops_enquiry_messages(provider_message_id,workspace_id,enquiry_id,body,direction)
-      values(p_provider_message_id,v_workspace,v_enquiry,left(p_body,4000),'incoming') on conflict(provider_message_id) do nothing;
+      values(encode(public.digest(p_provider_message_id,'sha256'),'hex'),v_workspace,v_enquiry,left(p_body,4000),'incoming') on conflict(provider_message_id) do nothing;
   end if;
   if p_status in ('open','pending','resolved','closed') then
     update public.ops_enquiry_associations set status=case when p_status='resolved' then 'closed' else p_status end, updated_at=now() where id=v_enquiry and workspace_id=v_workspace;
@@ -189,13 +191,14 @@ begin
     or p_payload_hash !~ '^[0-9a-f]{64}$' or char_length(coalesce(p_body,'')) > 4000 then raise exception 'invalid Chatwoot adoption webhook' using errcode='22023'; end if;
   select l.workspace_id into v_workspace from private.ops_provider_operation_ledger l
     where l.provider='chatwoot' and l.aggregate_type='contact' and l.provider_contact_id_digest=p_contact_id_digest
+      and l.intent->>'accountId'=p_account_id and l.intent->>'inboxId'=p_inbox_id
     order by l.updated_at desc limit 1;
   if v_workspace is null then return jsonb_build_object('status','ignored'); end if;
   select e.id into v_enquiry from private.ops_provider_operation_ledger l join public.ops_enquiry_associations e on e.id=l.aggregate_id::uuid
     where l.provider='chatwoot' and l.aggregate_type='enquiry' and l.provider_conversation_id_digest=encode(public.digest(p_provider_conversation_id,'sha256'),'hex') and e.workspace_id=v_workspace limit 1;
   if v_enquiry is null then
     insert into public.ops_enquiry_associations(workspace_id,source_system,source_id,enquiry_type,status,subject)
-      values(v_workspace,'chatwoot',p_provider_conversation_id,'support',case when p_status='resolved' then 'closed' else coalesce(nullif(p_status,''),'open') end,'Chatwoot enquiry') returning id into v_enquiry;
+      values(v_workspace,'chatwoot','conversation:'||encode(public.digest(p_provider_conversation_id,'sha256'),'hex'),'support',case when p_status='resolved' then 'closed' else coalesce(nullif(p_status,''),'open') end,'Chatwoot enquiry') returning id into v_enquiry;
     insert into private.ops_provider_operation_ledger(operation_key,workspace_id,provider,aggregate_type,aggregate_id,source_version,intent,provider_conversation_id_digest)
       values('chatwoot:conversation:'||encode(public.digest(p_provider_conversation_id,'sha256'),'hex'),v_workspace,'chatwoot','enquiry',v_enquiry::text,1,jsonb_build_object('accountId',p_account_id,'inboxId',p_inbox_id),encode(public.digest(p_provider_conversation_id,'sha256'),'hex')) on conflict(operation_key) do nothing;
   end if;
@@ -203,7 +206,7 @@ begin
   if v_existing is not null and v_existing <> p_payload_hash then raise exception 'Chatwoot webhook event hash mismatch' using errcode='22023'; end if;
   insert into private.ops_chatwoot_webhook_events(event_id,payload_hash,provider_conversation_id,event_type) values(left(p_event_id,256),p_payload_hash,p_provider_conversation_id,p_event_type) on conflict(event_id) do nothing;
   if p_event_type like 'message_%' and p_provider_message_id ~ '^[0-9]+$' and nullif(btrim(p_body),'') is not null then
-    insert into private.ops_enquiry_messages(provider_message_id,workspace_id,enquiry_id,body,direction) values(p_provider_message_id,v_workspace,v_enquiry,left(p_body,4000),'incoming') on conflict(provider_message_id) do nothing;
+    insert into private.ops_enquiry_messages(provider_message_id,workspace_id,enquiry_id,body,direction) values(encode(public.digest(p_provider_message_id,'sha256'),'hex'),v_workspace,v_enquiry,left(p_body,4000),'incoming') on conflict(provider_message_id) do nothing;
   end if;
   if p_status in ('open','pending','resolved','closed') then update public.ops_enquiry_associations set status=case when p_status='resolved' then 'closed' else p_status end,updated_at=now() where id=v_enquiry and workspace_id=v_workspace; end if;
   update private.ops_chatwoot_webhook_events set status='processed',processed_at=now() where event_id=left(p_event_id,256);
