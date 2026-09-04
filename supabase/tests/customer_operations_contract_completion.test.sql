@@ -1,5 +1,9 @@
 select plan(29);
 
+insert into public.workspaces (id, name, mode, region)
+values ('81111111-1111-4111-8111-111111111111', 'Provider step contract test', 'self_serve', 'AU')
+on conflict (id) do nothing;
+
 select has_column('public', 'email_outbox', 'workspace_id', 'email ownership is an explicit tenant field');
 select has_column('private', 'ops_provider_operation_ledger', 'completed_steps', 'provider steps are durable');
 select has_column('private', 'ops_provider_operation_ledger', 'step_digests', 'provider step digests are durable');
