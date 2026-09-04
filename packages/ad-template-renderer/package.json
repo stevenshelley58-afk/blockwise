@@ -6,7 +6,10 @@
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "bin": { "ad-template-render": "./dist/cli.js" },
+  "bin": {
+    "ad-template-render": "./dist/cli.js",
+    "ad-template-audit": "./dist/audit-cli.js"
+  },
   "exports": {
     ".": {
       "import": "./dist/index.js",

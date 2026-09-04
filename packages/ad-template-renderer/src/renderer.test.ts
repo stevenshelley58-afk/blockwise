@@ -161,3 +161,48 @@ test("tracking is one absolute canvas pixel per grapheme gap and c5 REAL ESTATE 
   assert.equal(rendered.height, 1350);
   assert.ok(rendered.png.length > 0, "successful render proves the text remains at or above the 24px floor");
 });
+
+test("diagnostics report actual painted text bounds, font size, and line count", async () => {
+  const template = templateFixture();
+  template.textInputs = [{ key: "headline", label: "Headline", placeholder: "HELLO HOME", maxLength: 40 }];
+  template.fonts = [{ file: "manrope-800.woff2" }];
+  template.feedLayout.layers.push({
+    type: "text",
+    layerId: "feed-headline",
+    inputKey: "headline",
+    font: { file: "manrope-800.woff2" },
+    fontSize: 48,
+    lineHeight: 1.1,
+    tracking: 0,
+    alignment: "left",
+    maxCharacters: 40,
+    maxLines: 1,
+    colourRole: "mainText",
+    overflowBehaviour: "scale_down",
+    geometry: { x: 80, y: 120, width: 600, height: 100 },
+  });
+  const rendered = await renderPlacement({
+    template,
+    imageValues: {},
+    textValues: { headline: "HELLO HOME" },
+    colourMap: colours,
+    collectDiagnostics: true,
+  }, "feed");
+  const withoutDiagnostics = await renderPlacement({
+    template,
+    imageValues: {},
+    textValues: { headline: "HELLO HOME" },
+    colourMap: colours,
+  }, "feed");
+  assert.deepEqual(rendered.png, withoutDiagnostics.png);
+  const diagnostic = rendered.diagnostics?.textLayers[0];
+  assert.equal(diagnostic?.status, "painted");
+  assert.equal(diagnostic?.fontFamily, "manrope-800");
+  assert.equal(diagnostic?.fontSizePx, 48);
+  assert.equal(diagnostic?.lineCount, 1);
+  assert.equal(diagnostic?.maxLines, 1);
+  assert.equal(diagnostic?.withinGeometry, true);
+  assert.ok(diagnostic?.paintedBounds);
+  assert.ok(diagnostic!.paintedBounds!.width > 0);
+  assert.ok(diagnostic!.paintedBounds!.height > 0);
+});
