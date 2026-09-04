@@ -151,8 +151,8 @@ begin
     'scheduled_end_at',b.scheduled_end_at,'booked_at',b.booked_at,
     'cancelled_at',b.cancelled_at,'completed_at',b.completed_at,
     'created_at',b.created_at,'updated_at',b.updated_at,
-    'ops_version',coalesce((select max(o.source_version) from public.ops_projection_outbox o
-      where o.workspace_id=b.workspace_id and o.aggregate_type='support' and o.aggregate_id=b.id::text),1))
+    'ops_version',(select max(o.source_version) from public.ops_projection_outbox o
+      where o.workspace_id=b.workspace_id and o.aggregate_type='support' and o.aggregate_id=b.id::text))
     order by b.updated_at desc),'[]'::jsonb) into v_bookings
     from public.workspace_onboarding_bookings b where b.workspace_id=any(v_workspace_ids::uuid[]);
 
@@ -179,7 +179,7 @@ begin
     'updated_at',coalesce(e.sent_at,e.created_at),'failure_reason',public.redact_ops_text(e.last_error),
     'provider','stalwart','kind',e.message_type,'suppression_state',case when e.status='suppressed' then 'suppressed' else 'allowed' end,
     'provider_record_suffix',case when e.provider_message_id is null then null else '****'||right(e.provider_message_id,4) end,
-    'ops_version',coalesce((select max(o.source_version) from public.ops_projection_outbox o where o.workspace_id=e.workspace_id),1))
+    'ops_version',(select max(o.source_version) from public.ops_projection_outbox o where o.workspace_id=e.workspace_id))
     order by e.created_at desc),'[]'::jsonb) into v_email from public.email_outbox e
     where e.workspace_id is not null and e.workspace_id=any(v_workspace_ids::uuid[]);
 
