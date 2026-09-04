@@ -15,6 +15,19 @@ if [[ "$mail_enabled" == "true" ]] && ! compose_with_all_profiles ps --status ru
   echo "BLOCKWISE_MAIL_ENABLED=true but product-mail is not running" >&2
   exit 2
 fi
+if [[ "$mail_enabled" == "true" ]]; then
+  # Running is not sufficient: Stalwart must report its durable stores and
+  # listeners ready before the app health endpoint can be accepted.
+  mail_health="$(compose_with_all_profiles ps --format '{{.Service}} {{.State}} {{.Health}}' product-mail 2>/dev/null || true)"
+  [[ "$mail_health" == "product-mail running healthy" ]] || {
+    echo "BLOCKWISE_MAIL_ENABLED=true but product-mail health is not healthy" >&2
+    exit 2
+  }
+  if ! BLOCKWISE_PRODUCT_ENV_FILE="$ENV_FILE" "$SCRIPT_DIR/mail-validate.sh" >/dev/null; then
+    echo "BLOCKWISE_MAIL_ENABLED=true but SMTP identities are not authenticated over TLS" >&2
+    exit 2
+  fi
+fi
 
 # A worker is deliberately not part of the foundation/canary posture. Catch a
 # stale worker left running from an earlier cutover before reporting readiness.

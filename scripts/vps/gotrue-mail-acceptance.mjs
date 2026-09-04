@@ -10,6 +10,8 @@
  * links are deliberately never printed.
  */
 
+import { validateExternalUrl } from "./external-target.mjs";
+
 class AcceptanceFailure extends Error {}
 
 async function run() {
@@ -32,13 +34,8 @@ function fail(message) {
 function externalUrl(name) {
   const raw = process.env[name]?.trim();
   if (!raw) return null;
-  let url;
-  try { url = new URL(raw); } catch { fail(`${name} must be a valid URL`); return null; }
-  if (url.protocol !== "https:") fail(`${name} must use HTTPS`);
-  const host = url.hostname.toLowerCase();
-  if (host === "localhost" || host === "127.0.0.1" || host === "::1" || host.endsWith(".vercel.app") || host.endsWith(".supabase.co")) {
-    fail(`${name} must not target localhost, Vercel or managed Supabase`);
-  }
+  const url = validateExternalUrl(raw);
+  if (!url) fail(`${name} must be an external HTTPS URL (localhost, private and managed targets are refused)`);
   return url;
 }
 

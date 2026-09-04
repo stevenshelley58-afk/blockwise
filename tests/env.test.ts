@@ -36,6 +36,32 @@ test("production readiness cannot report ready when mail is explicitly disabled"
   assert.deepEqual(readiness.invalid, ["BLOCKWISE_MAIL_ENABLED"]);
 });
 
+test("mail readiness parses IPv6 hostnames and rejects private/reserved targets without substring matching", () => {
+  const configured = {
+    BLOCKWISE_MAIL_ENABLED: "true",
+    BLOCKWISE_DEPLOYMENT_ENV: "production",
+    BLOCKWISE_MAIL_HOSTNAME: "mail.blockwise.sale",
+    BLOCKWISE_MAIL_DOMAIN: "blockwise.sale",
+    BLOCKWISE_MAIL_PUBLIC_URL: "https://mail.blockwise.sale",
+    STALWART_WEBHOOK_SECRET: "webhook-secret",
+    EMAIL_PROVIDER: "smtp",
+    SMTP_HOST: "product-mail",
+    SMTP_PORT: "587",
+    SMTP_USER: "app-user",
+    SMTP_PASSWORD: "app-password",
+    BLOCKWISE_AUTH_SMTP_HOST: "product-mail",
+    BLOCKWISE_AUTH_SMTP_PORT: "587",
+    BLOCKWISE_AUTH_SMTP_USER: "auth-user",
+    BLOCKWISE_AUTH_SMTP_PASS: "auth-password",
+    BLOCKWISE_AUTH_SMTP_ADMIN_EMAIL: "auth@blockwise.sale",
+    BLOCKWISE_AUTH_SMTP_CONFIGURED: "true",
+  } as unknown as NodeJS.ProcessEnv;
+  assert.equal(getMailReadiness(configured).ok, true);
+  assert.equal(getMailReadiness({ ...configured, BLOCKWISE_MAIL_PUBLIC_URL: "https://[::1]" }).ok, false);
+  assert.equal(getMailReadiness({ ...configured, BLOCKWISE_MAIL_PUBLIC_URL: "https://localhost.evil.example" }).ok, true);
+  assert.equal(getMailReadiness({ ...configured, BLOCKWISE_MAIL_PUBLIC_URL: "https://169.254.169.254" }).ok, false);
+});
+
 test("external AI and Meta credentials are optional provider readiness gates", () => {
   assert.equal(REQUIRED_ENV_KEYS.includes("OPENAI_API_KEY" as never), false);
   assert.equal(REQUIRED_ENV_KEYS.includes("META_APP_SECRET" as never), false);
