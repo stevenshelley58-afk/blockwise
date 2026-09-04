@@ -41,6 +41,7 @@ async function executeChatwootAction(supabase: Supabase, action: Action, fetchIm
   if (begun.error) throw new ProviderActionError("chatwoot action ledger unavailable", true);
   const state = typeof begun.data === "object" && begun.data ? String((begun.data as Record<string, unknown>).state ?? "prepared") : "prepared";
   if (state === "settled") return { provider: "chatwoot", status: "settled", replay: true };
+  if (state === "failed") throw new ProviderActionError("chatwoot action ledger is failed", false);
   const reconcileOnly = state === "remote_succeeded";
   const verify = await call(base, `/api/v1/accounts/${encodeURIComponent(account)}/conversations/${encodeURIComponent(conversationId)}`, "GET", token, operationKey + ":verify", undefined, fetchImpl);
   const expectedExternalId = `${action.workspace_id}:${action.target_id}`;
@@ -62,8 +63,9 @@ async function executeChatwootAction(supabase: Supabase, action: Action, fetchIm
     await step(supabase, operationKey, "message.reply", messageId);
   } else {
     status = action.action_type === "enquiry_close" ? "resolved" : "open";
-    if (reconcileOnly && String(verify.body?.status ?? "") !== status) throw new ProviderActionError("chatwoot status receipt not reconciled", true);
-    if (!reconcileOnly) await call(base, `/api/v1/accounts/${encodeURIComponent(account)}/conversations/${encodeURIComponent(conversationId)}`, "PATCH", token, operationKey + ":status", { status }, fetchImpl);
+    const remoteStatus = String(verify.body?.status ?? "");
+    if (reconcileOnly && remoteStatus !== status) throw new ProviderActionError("chatwoot status receipt not reconciled", true);
+    if (!reconcileOnly && remoteStatus !== status) await call(base, `/api/v1/accounts/${encodeURIComponent(account)}/conversations/${encodeURIComponent(conversationId)}`, "PATCH", token, operationKey + ":status", { status }, fetchImpl);
     await step(supabase, operationKey, "conversation.status", conversationId);
   }
   if (action.action_type !== "enquiry_reply") {
