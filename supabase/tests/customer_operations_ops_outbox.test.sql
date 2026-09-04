@@ -1,7 +1,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(63);
+select plan(67);
 
 insert into public.workspaces (id, name, mode, region)
 values ('81111111-1111-4111-8111-111111111111', 'Ops contract test', 'self_serve', 'AU')
@@ -161,6 +161,11 @@ select is((select payload ->> 'email' from public.ops_projection_outbox where wo
 select is((select payload ->> 'activationStage' from public.ops_projection_outbox where workspace_id = '83333333-3333-4333-8333-333333333333' and aggregate_type = 'contact' and status = 'pending' limit 1), 'trial', 'owner contact carries activation stage');
 select is((select count(*)::int from public.ops_projection_outbox where workspace_id = '83333333-3333-4333-8333-333333333333' and provider = 'mautic' and aggregate_type = 'lifecycle' and aggregate_id = '84444444-4444-4444-8444-444444444444' and status = 'pending'), 1, 'activation lifecycle targets the real owner profile');
 select is((select count(*)::int from public.ops_projection_outbox where workspace_id = '83333333-3333-4333-8333-333333333333' and provider = 'mautic' and aggregate_type = 'lifecycle' and aggregate_id = '83333333-3333-4333-8333-333333333333'), 0, 'activation never creates a synthetic workspace lifecycle contact');
+select public.enqueue_ops_projection('83333333-3333-4333-8333-333333333333', 'mautic', 'lifecycle', '83333333-3333-4333-8333-333333333333', 'upsert', 'legacy-test-source', nextval('public.ops_projection_source_version_seq'), '{}'::jsonb);
+select is(public.repair_ops_legacy_lifecycle_projections(), 1, 'legacy workspace lifecycle work is replaced once');
+select is((select count(*)::int from public.ops_projection_outbox where workspace_id = '83333333-3333-4333-8333-333333333333' and provider = 'mautic' and aggregate_type = 'lifecycle' and aggregate_id = '84444444-4444-4444-8444-444444444444' and source_event_id like 'legacy-lifecycle-repair:%'), 1, 'legacy repair queues a profile lifecycle replacement');
+select is((select payload ->> 'profileId' from public.ops_projection_outbox where provider = 'mautic' and aggregate_type = 'lifecycle' and source_event_id like 'legacy-lifecycle-repair:%' limit 1), '84444444-4444-4444-8444-444444444444', 'legacy lifecycle replacement carries the exact profile identity');
+select is((select last_error from public.ops_projection_outbox where workspace_id = '83333333-3333-4333-8333-333333333333' and aggregate_type = 'lifecycle' and aggregate_id = '83333333-3333-4333-8333-333333333333' and source_event_id = 'legacy-test-source'), 'repaired_legacy_workspace_lifecycle_identity', 'legacy synthetic row is marked only after replacement queueing');
 
 select * from finish();
 rollback;
