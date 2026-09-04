@@ -284,7 +284,7 @@ begin
       raise exception 'operations action target is not owned by workspace' using errcode='42501';
     end if;
     select w.ops_version into v_current from public.workspaces w where w.id=new.workspace_id for update;
-  elsif new.action_type in ('enquiry_close','enquiry_reply') then
+  elsif new.action_type in ('enquiry_close','enquiry_reply','enquiry_reopen') then
     if new.target_type <> 'enquiry' then
       raise exception 'operations action target is not owned by workspace' using errcode='42501';
     end if;

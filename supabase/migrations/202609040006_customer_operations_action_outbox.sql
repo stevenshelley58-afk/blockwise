@@ -20,7 +20,7 @@ create table if not exists public.ops_action_capabilities (
     'session_revoke',
     'consent_grant', 'consent_withdraw', 'consent_unsubscribe',
     'suppression_add', 'suppression_remove',
-    'enquiry_assign', 'enquiry_close', 'enquiry_reply',
+    'enquiry_assign', 'enquiry_close', 'enquiry_reply', 'enquiry_reopen',
     'booking_cancel', 'booking_reschedule',
     'billing_reconcile', 'billing_cancel_at_period_end', 'billing_portal_link'
   )),
@@ -45,6 +45,7 @@ insert into public.ops_action_capabilities (action_type, capability_state, descr
   ('enquiry_assign', 'available', 'existing explicit enquiry association RPC'),
   ('enquiry_close', 'capability_required', 'operator enquiry close executor is not registered'),
   ('enquiry_reply', 'capability_required', 'operator reply executor is not registered'),
+  ('enquiry_reopen', 'capability_required', 'operator reopen executor is not registered'),
   ('booking_cancel', 'capability_required', 'operator booking cancellation executor is not registered'),
   ('booking_reschedule', 'capability_required', 'operator booking reschedule executor is not registered'),
   ('billing_reconcile', 'available', 'existing billing reconciliation path'),
@@ -244,7 +245,7 @@ begin
     or p_action_type is null or p_action_type not in (
       'team_invite', 'team_resend', 'team_cancel', 'team_role_change', 'team_suspend', 'team_reactivate', 'session_revoke',
       'consent_grant', 'consent_withdraw', 'consent_unsubscribe', 'suppression_add', 'suppression_remove',
-      'enquiry_assign', 'enquiry_close', 'enquiry_reply', 'booking_cancel', 'booking_reschedule',
+    'enquiry_assign', 'enquiry_close', 'enquiry_reply', 'enquiry_reopen', 'booking_cancel', 'booking_reschedule',
       'billing_reconcile', 'billing_cancel_at_period_end', 'billing_portal_link'
     )
     or p_target_type is null or p_target_type not in ('workspace', 'invitation', 'profile', 'session', 'enquiry', 'booking', 'billing')
@@ -258,7 +259,7 @@ begin
   if p_action_type in ('team_resend', 'team_cancel') and p_target_type <> 'invitation' then raise exception 'invalid operations action target' using errcode = '22023'; end if;
   if p_action_type in ('team_role_change', 'team_suspend', 'team_reactivate', 'consent_grant', 'consent_withdraw', 'consent_unsubscribe', 'suppression_add', 'suppression_remove') and p_target_type <> 'profile' then raise exception 'invalid operations action target' using errcode = '22023'; end if;
   if p_action_type = 'session_revoke' and p_target_type <> 'session' then raise exception 'invalid operations action target' using errcode = '22023'; end if;
-  if p_action_type in ('enquiry_assign', 'enquiry_close', 'enquiry_reply') and p_target_type <> 'enquiry' then raise exception 'invalid operations action target' using errcode = '22023'; end if;
+  if p_action_type in ('enquiry_assign', 'enquiry_close', 'enquiry_reply', 'enquiry_reopen') and p_target_type <> 'enquiry' then raise exception 'invalid operations action target' using errcode = '22023'; end if;
   if p_action_type in ('booking_cancel', 'booking_reschedule') and p_target_type <> 'booking' then raise exception 'invalid operations action target' using errcode = '22023'; end if;
   if p_action_type in ('billing_reconcile', 'billing_cancel_at_period_end', 'billing_portal_link') and p_target_type <> 'billing' then raise exception 'invalid operations action target' using errcode = '22023'; end if;
   if p_action_type in ('team_role_change', 'team_suspend', 'team_reactivate', 'session_revoke', 'billing_cancel_at_period_end') and p_actor_role <> 'owner' then raise exception 'owner_role_required' using errcode = '42501'; end if;

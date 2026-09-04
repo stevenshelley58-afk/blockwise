@@ -17,6 +17,7 @@ export type OpsActionName =
   | "consent_grant" | "consent_withdraw" | "consent_unsubscribe"
   | "suppression_add" | "suppression_remove"
   | "enquiry_assign" | "enquiry_close" | "enquiry_reply"
+  | "enquiry_reopen"
   | "booking_cancel" | "booking_reschedule"
   | "billing_reconcile" | "billing_cancel_at_period_end" | "billing_portal_link";
 
@@ -37,6 +38,7 @@ export type OpsActionPayloadMap = {
   enquiry_assign: { assigneeProfileId: string | null };
   enquiry_close: Record<string, never>;
   enquiry_reply: { body: string };
+  enquiry_reopen: Record<string, never>;
   booking_cancel: Record<string, never>;
   booking_reschedule: { scheduledStartAt: string; scheduledEndAt?: string };
   billing_reconcile: Record<string, never>;
@@ -60,6 +62,7 @@ export type OpsActionTargetMap = {
   enquiry_assign: "enquiry";
   enquiry_close: "enquiry";
   enquiry_reply: "enquiry";
+  enquiry_reopen: "enquiry";
   booking_cancel: "booking";
   booking_reschedule: "booking";
   billing_reconcile: "billing";
@@ -91,8 +94,9 @@ export const OPS_ACTION_CAPABILITIES: Record<OpsActionName, OpsActionCapabilityD
   suppression_add: { capability: "capability_required", description: "durable Mautic suppression executor is not registered" },
   suppression_remove: { capability: "capability_required", description: "durable Mautic suppression executor is not registered" },
   enquiry_assign: { capability: "available", description: "existing explicit enquiry association RPC" },
-  enquiry_close: { capability: "capability_required", description: "action-bound Chatwoot status executor is not registered" },
-  enquiry_reply: { capability: "capability_required", description: "action-bound Chatwoot reply executor is not registered" },
+  enquiry_close: { capability: "available", description: "Hermes action-bound Chatwoot status executor" },
+  enquiry_reply: { capability: "available", description: "Hermes action-bound Chatwoot reply executor" },
+  enquiry_reopen: { capability: "available", description: "Hermes action-bound Chatwoot reopen executor" },
   booking_cancel: { capability: "capability_required", description: "operator booking cancellation executor is not registered" },
   booking_reschedule: { capability: "capability_required", description: "operator booking reschedule executor is not registered" },
   billing_reconcile: { capability: "available", description: "existing billing reconciliation path" },
@@ -128,7 +132,7 @@ const MAX_TOPIC = 128;
 const PAYLOAD_KEYS: Record<OpsActionName, readonly string[]> = {
   team_invite: ["email", "role"], team_resend: [], team_cancel: [], team_role_change: ["role"], team_suspend: [], team_reactivate: [], session_revoke: [],
   consent_grant: ["topic"], consent_withdraw: ["topic"], consent_unsubscribe: [], suppression_add: ["reason"], suppression_remove: ["reason"],
-  enquiry_assign: ["assigneeProfileId"], enquiry_close: [], enquiry_reply: ["body"], booking_cancel: [], booking_reschedule: ["scheduledStartAt", "scheduledEndAt"],
+  enquiry_assign: ["assigneeProfileId"], enquiry_close: [], enquiry_reply: ["body"], enquiry_reopen: [], booking_cancel: [], booking_reschedule: ["scheduledStartAt", "scheduledEndAt"],
   billing_reconcile: [], billing_cancel_at_period_end: ["cancelAtPeriodEnd"], billing_portal_link: [],
 };
 const REQUIRED_PAYLOAD_KEYS: Record<OpsActionName, readonly string[]> = {
@@ -236,7 +240,7 @@ function targetTypeFor(action: OpsActionName): OpsActionTargetType {
   return ({
     team_invite: "workspace", team_resend: "invitation", team_cancel: "invitation", team_role_change: "profile", team_suspend: "profile", team_reactivate: "profile",
     session_revoke: "session", consent_grant: "profile", consent_withdraw: "profile", consent_unsubscribe: "profile", suppression_add: "profile", suppression_remove: "profile",
-    enquiry_assign: "enquiry", enquiry_close: "enquiry", enquiry_reply: "enquiry", booking_cancel: "booking", booking_reschedule: "booking", billing_reconcile: "billing", billing_cancel_at_period_end: "billing", billing_portal_link: "billing",
+    enquiry_assign: "enquiry", enquiry_close: "enquiry", enquiry_reply: "enquiry", enquiry_reopen: "enquiry", booking_cancel: "booking", booking_reschedule: "booking", billing_reconcile: "billing", billing_cancel_at_period_end: "billing", billing_portal_link: "billing",
   } as const)[action];
 }
 

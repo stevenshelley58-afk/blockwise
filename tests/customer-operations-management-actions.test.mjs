@@ -23,3 +23,15 @@ test("control-edge executor exposes only the implemented management actions", as
   }
   assert.match(source, /execute_ops_customer_action/);
 });
+
+test("Chatwoot action lane is worker-only and action-bound", async () => {
+  const worker = await readFile("worker/ops-actions.ts", "utf8");
+  assert.match(worker, /claim_ops_provider_action/);
+  assert.match(worker, /CHATWOOT_API_TOKEN_FILE/);
+  assert.match(worker, /provider_conversation_id_ciphertext/);
+  assert.match(worker, /blockwise_external_id/);
+  assert.match(worker, /idempotency-key/);
+  assert.match(worker, /complete_ops_action/);
+  assert.match(worker, /fail_ops_action/);
+  assert.match(worker, /enquiry_reopen/);
+});

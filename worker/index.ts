@@ -23,6 +23,7 @@ import { pathToFileURL } from "node:url";
 import { resolveSupabaseServerCredential } from "../src/lib/supabase/credentials.ts";
 import { createSupabaseServiceClient } from "../src/lib/supabase/service.ts";
 import { reapOpsProjections, runGlobalProjectionOnce, runOpsProjectionOnce } from "./ops-projection.ts";
+import { runOpsActionOnce } from "./ops-actions.ts";
 
 type ServiceSupabase = ReturnType<typeof createSupabaseServiceClient>;
 type HandlerExecutionContext = {
@@ -701,6 +702,7 @@ async function main() {
   reaper.unref?.();
   await reap(supabase);
   const projectionsEnabled = process.env.BLOCKWISE_OPS_PROJECTION_WORKER === "true";
+  const actionsEnabled = process.env.BLOCKWISE_OPS_ACTION_WORKER === "true";
   if (projectionsEnabled) {
     await reapOpsProjections(supabase);
     log("customer-operations projection lane enabled");
@@ -717,6 +719,7 @@ async function main() {
           await runOpsProjectionOnce(supabase);
           await runGlobalProjectionOnce(supabase);
         }
+        if (actionsEnabled) await runOpsActionOnce(supabase);
         const did = await runOnce(supabase, { shutdownSignal: shutdownController.signal });
         if (!shutdownRequested) await sleep(did ? POLL_BUSY_MS : POLL_IDLE_MS);
       } catch (err) {

@@ -3,9 +3,49 @@
 -- effects remain in the Hermes projection worker and are never performed here.
 begin;
 
--- These mutations intentionally remain capability_required until the worker
--- owns an exact per-action provider operation and receipt. A local DB write
--- alone must never be advertised as a completed provider action.
+-- The action enum is a CHECK in the original outbox migration; extend it for
+-- already-migrated databases as well as fresh replays.
+alter table public.ops_action_capabilities drop constraint if exists ops_action_capabilities_action_type_check;
+alter table public.ops_action_capabilities add constraint ops_action_capabilities_action_type_check check (action_type in (
+  'team_invite','team_resend','team_cancel','team_role_change','team_suspend','team_reactivate','session_revoke',
+  'consent_grant','consent_withdraw','consent_unsubscribe','suppression_add','suppression_remove',
+  'enquiry_assign','enquiry_close','enquiry_reply','enquiry_reopen','booking_cancel','booking_reschedule',
+  'billing_reconcile','billing_cancel_at_period_end','billing_portal_link'));
+alter table public.ops_action_outbox drop constraint if exists ops_action_outbox_action_type_check;
+alter table public.ops_action_outbox add constraint ops_action_outbox_action_type_check check (action_type in (
+  'team_invite','team_resend','team_cancel','team_role_change','team_suspend','team_reactivate','session_revoke',
+  'consent_grant','consent_withdraw','consent_unsubscribe','suppression_add','suppression_remove',
+  'enquiry_assign','enquiry_close','enquiry_reply','enquiry_reopen','booking_cancel','booking_reschedule',
+  'billing_reconcile','billing_cancel_at_period_end','billing_portal_link'));
+insert into public.ops_action_capabilities(action_type, capability_state, description)
+values ('enquiry_reopen','capability_required','action-bound Chatwoot reopen executor is not registered')
+on conflict (action_type) do nothing;
+
+-- Chatwoot action execution is owned by Hermes; local mutation-only actions
+-- below remain capability_required until their provider adapters are present.
+update public.ops_action_capabilities set capability_state='available', description=case action_type
+  when 'enquiry_close' then 'Hermes action-bound Chatwoot status executor'
+  when 'enquiry_reply' then 'Hermes action-bound Chatwoot reply executor'
+  when 'enquiry_reopen' then 'Hermes action-bound Chatwoot reopen executor'
+  else description end
+where action_type in ('enquiry_close','enquiry_reply','enquiry_reopen');
+
+create or replace function public.claim_ops_provider_action(p_lease_seconds integer default 600)
+returns table (id uuid, action_id uuid, workspace_id uuid, customer_id uuid, actor_operator_id uuid, actor_role text,
+  action_type text, target_type text, target_id uuid, expected_version bigint, reason text, payload jsonb,
+  attempts integer, max_attempts integer, expires_at timestamptz, lease_token uuid)
+language sql security definer set search_path = '' as $$
+  update public.ops_action_outbox as o set status='processing', attempts=o.attempts+1,
+    lease_token=gen_random_uuid(), lease_expires_at=now()+make_interval(secs=>greatest(30,least(coalesce(p_lease_seconds,600),3600))), updated_at=now()
+  where o.id=(select c.id from public.ops_action_outbox c where c.status='pending' and c.run_after<=now()
+    and c.expires_at>now() and c.attempts<c.max_attempts
+    and c.action_type in ('enquiry_close','enquiry_reply','enquiry_reopen')
+    and not exists (select 1 from public.ops_action_outbox newer where newer.workspace_id=c.workspace_id and newer.target_type=c.target_type and newer.target_id=c.target_id and newer.expected_version>c.expected_version and newer.status not in ('rejected','expired','superseded'))
+    order by c.run_after,c.created_at,c.id for update skip locked limit 1)
+  returning o.id,o.action_id,o.workspace_id,o.customer_id,o.actor_operator_id,o.actor_role,o.action_type,o.target_type,o.target_id,o.expected_version,o.reason,o.payload,o.attempts,o.max_attempts,o.expires_at,o.lease_token;
+$$;
+revoke all on function public.claim_ops_provider_action(integer) from public, anon, authenticated;
+grant execute on function public.claim_ops_provider_action(integer) to service_role;
 
 create table if not exists private.ops_enquiry_action_messages (
   action_id uuid primary key references public.ops_action_outbox(action_id) on delete restrict,
@@ -44,7 +84,7 @@ declare
 begin
   if p_action_id is null or p_workspace_id is null or p_target_id is null
     or p_expected_version is null or p_expected_version < 1
-    or p_action_type not in ('team_role_change','enquiry_close','enquiry_reply','consent_grant','consent_withdraw','consent_unsubscribe','suppression_add','suppression_remove')
+    or p_action_type not in ('team_role_change','enquiry_close','enquiry_reply','enquiry_reopen','consent_grant','consent_withdraw','consent_unsubscribe','suppression_add','suppression_remove')
     or jsonb_typeof(coalesce(p_payload, '{}'::jsonb)) <> 'object'
     or not exists (select 1 from public.ops_action_outbox where action_id=p_action_id and workspace_id=p_workspace_id and status='processing')
     or not exists (select 1 from public.profiles where id=p_actor_profile_id and is_operator=true and operator_role in ('owner','support'))
@@ -68,12 +108,12 @@ begin
       where id=p_target_id and workspace_id=p_workspace_id for update;
     if not found then raise exception 'operations enquiry target is not owned by workspace' using errcode='42501'; end if;
     if v_enquiry.ops_version <> p_expected_version then raise exception 'operations action target version is stale' using errcode='40001'; end if;
-    if p_action_type = 'enquiry_close' then
-      update public.ops_enquiry_associations set status='closed', updated_at=now()
+    if p_action_type in ('enquiry_close','enquiry_reopen') then
+      update public.ops_enquiry_associations set status=case when p_action_type='enquiry_close' then 'closed' else 'open' end, updated_at=now()
         where id=p_target_id and workspace_id=p_workspace_id and ops_version=p_expected_version;
       get diagnostics v_updated = row_count;
       if v_updated <> 1 then raise exception 'enquiry version conflict' using errcode='40001'; end if;
-      v_status := 'closed';
+      v_status := case when p_action_type='enquiry_close' then 'closed' else 'open' end;
     else
       v_status := v_enquiry.status;
       if nullif(btrim(p_payload->>'body'),'') is null then raise exception 'enquiry reply body is required' using errcode='22023'; end if;

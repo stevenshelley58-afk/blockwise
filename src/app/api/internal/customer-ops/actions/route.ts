@@ -13,7 +13,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const ACTIONS = new Set(["team_invite", "team_resend", "team_cancel", "team_role_change", "session_revoke", "enquiry_assign", "enquiry_close", "enquiry_reply", "consent_grant", "consent_withdraw", "consent_unsubscribe", "suppression_add", "suppression_remove", "billing_reconcile"]);
+const ACTIONS = new Set(["team_invite", "team_resend", "team_cancel", "team_role_change", "session_revoke", "enquiry_assign", "enquiry_close", "enquiry_reply", "enquiry_reopen", "consent_grant", "consent_withdraw", "consent_unsubscribe", "suppression_add", "suppression_remove", "billing_reconcile"]);
 const MAX_BODY = 128 * 1024;
 class ActionExecutionError extends Error { constructor(message: string, readonly status: number) { super(message); } }
 
@@ -70,7 +70,7 @@ export async function POST(request: Request) {
     else if (actionType === "session_revoke") {
       if (targetId === String(queued.actor_operator_id)) return NextResponse.json({ error: "cannot_revoke_actor_session" }, { status: 409 });
       await requireRpc(service, "revoke_user_sessions", { p_user_id: targetId });
-    } else if (["team_role_change", "enquiry_close", "enquiry_reply", "consent_grant", "consent_withdraw", "consent_unsubscribe", "suppression_add", "suppression_remove"].includes(actionType)) {
+    } else if (["team_role_change", "enquiry_close", "enquiry_reply", "enquiry_reopen", "consent_grant", "consent_withdraw", "consent_unsubscribe", "suppression_add", "suppression_remove"].includes(actionType)) {
       const mutation = await requireRpc(service, "execute_ops_customer_action", {
         p_action_id: actionId,
         p_workspace_id: workspaceId,
