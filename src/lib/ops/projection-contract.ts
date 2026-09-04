@@ -20,7 +20,7 @@ export type BlockwiseProjectionEnvelope = {
 
 export type AdapterMapping =
   | { provider: "mautic"; resource: "contact"; fields: { externalId: string; email?: string; name?: string; lifecycle?: string; activationStage?: string; bookingStatus?: string; bookingSubject?: string } }
-  | { provider: "mautic"; resource: "lifecycle"; fields: { externalId: string; stage?: string; changedAt?: string } }
+  | { provider: "mautic"; resource: "lifecycle"; fields: { externalId: string; profileId: string; stage?: string; changedAt?: string } }
   | { provider: "chatwoot"; resource: "enquiry" | "support"; fields: { externalId: string; subject?: string; status?: string; contactId?: string; requesterEmail?: string; requesterName?: string; message?: string; reply?: string; assigneeId?: string } };
 
 const MAX_ID = 256;
@@ -64,7 +64,9 @@ export function mapProjectionForAdapter(envelope: BlockwiseProjectionEnvelope): 
     return { provider: "mautic", resource: "contact", fields: { externalId, email: stringField(envelope.payload.email), name: stringField(envelope.payload.name), lifecycle: stringField(envelope.payload.lifecycle) ?? stringField(envelope.payload.stage), activationStage: stringField(envelope.payload.activationStage) ?? stringField(envelope.payload.stage), bookingStatus: stringField(envelope.payload.bookingStatus), bookingSubject: stringField(envelope.payload.bookingSubject) } };
   }
   if (envelope.provider === "mautic" && envelope.aggregate.type === "lifecycle") {
-    return { provider: "mautic", resource: "lifecycle", fields: { externalId, stage: stringField(envelope.payload.stage), changedAt: stringField(envelope.payload.changedAt) } };
+    const profileId = stringField(envelope.payload.profileId);
+    if (!profileId) throw new Error("Mautic lifecycle projection requires an explicit profileId");
+    return { provider: "mautic", resource: "lifecycle", fields: { externalId: `${envelope.workspaceId}:${profileId}`.slice(0, MAX_ID), profileId, stage: stringField(envelope.payload.stage), changedAt: stringField(envelope.payload.changedAt) } };
   }
   if (envelope.provider === "chatwoot" && (envelope.aggregate.type === "enquiry" || envelope.aggregate.type === "support")) {
     return { provider: "chatwoot", resource: envelope.aggregate.type, fields: { externalId, subject: stringField(envelope.payload.subject), status: stringField(envelope.payload.status), contactId: stringField(envelope.payload.contactId), requesterEmail: stringField(envelope.payload.requesterEmail), requesterName: stringField(envelope.payload.requesterName), message: stringField(envelope.payload.message), reply: stringField(envelope.payload.reply), assigneeId: stringField(envelope.payload.assigneeId) } };

@@ -1,7 +1,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(61);
+select plan(63);
 
 insert into public.workspaces (id, name, mode, region)
 values ('81111111-1111-4111-8111-111111111111', 'Ops contract test', 'self_serve', 'AU')
@@ -159,6 +159,8 @@ select is((select count(*)::int from public.ops_projection_outbox where workspac
 select is((select count(*)::int from public.ops_projection_outbox where workspace_id = '83333333-3333-4333-8333-333333333333' and provider = 'mautic' and aggregate_type = 'contact' and aggregate_id = '83333333-3333-4333-8333-333333333333'), 0, 'bootstrap never creates a workspace contact aggregate');
 select is((select payload ->> 'email' from public.ops_projection_outbox where workspace_id = '83333333-3333-4333-8333-333333333333' and aggregate_type = 'contact' and status = 'pending' limit 1), 'bootstrap-owner@example.test', 'owner contact payload uses canonical lowercase email');
 select is((select payload ->> 'activationStage' from public.ops_projection_outbox where workspace_id = '83333333-3333-4333-8333-333333333333' and aggregate_type = 'contact' and status = 'pending' limit 1), 'trial', 'owner contact carries activation stage');
+select is((select count(*)::int from public.ops_projection_outbox where workspace_id = '83333333-3333-4333-8333-333333333333' and provider = 'mautic' and aggregate_type = 'lifecycle' and aggregate_id = '84444444-4444-4444-8444-444444444444' and status = 'pending'), 1, 'activation lifecycle targets the real owner profile');
+select is((select count(*)::int from public.ops_projection_outbox where workspace_id = '83333333-3333-4333-8333-333333333333' and provider = 'mautic' and aggregate_type = 'lifecycle' and aggregate_id = '83333333-3333-4333-8333-333333333333'), 0, 'activation never creates a synthetic workspace lifecycle contact');
 
 select * from finish();
 rollback;

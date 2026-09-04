@@ -49,8 +49,15 @@ begin
     join public.workspace_members wm on wm.profile_id = p.id and wm.workspace_id = p_workspace_id
     where p.id::text = p_aggregate_id;
   elsif p_aggregate_type = 'lifecycle' then
-    select jsonb_build_object('stage', case when a.activation_completed_at is not null then 'completed' when a.checkout_completed_at is not null then 'customer' when a.email_verified_at is not null then 'trial' else 'unknown' end, 'changedAt', a.updated_at) into v_data
-    from public.customer_activations a where a.workspace_id = p_workspace_id and p_aggregate_id = p_workspace_id::text;
+    -- Lifecycle enrollment is a provider operation on a real customer
+    -- contact, never on a synthetic workspace contact. Require the aggregate
+    -- to be an actual member of this workspace before resolving its stage.
+    select jsonb_build_object('profileId', wm.profile_id::text)
+      || case when a.workspace_id is null then '{}'::jsonb else jsonb_build_object('stage', case when a.activation_completed_at is not null then 'completed' when a.checkout_completed_at is not null then 'customer' when a.email_verified_at is not null then 'trial' else 'unknown' end, 'changedAt', a.updated_at) end
+      into v_data
+    from public.workspace_members wm
+    left join public.customer_activations a on a.workspace_id = wm.workspace_id
+    where wm.workspace_id = p_workspace_id and wm.profile_id::text = p_aggregate_id;
   elsif p_aggregate_type in ('enquiry','support') then
     -- Association rows are the only legal customer link. A global enquiry has
     -- no workspace and therefore returns NULL: no email-based inference.

@@ -97,7 +97,7 @@ export const OPS_ACTION_CAPABILITIES: Record<OpsActionName, OpsActionCapabilityD
   booking_reschedule: { capability: "capability_required", description: "operator booking reschedule executor is not registered" },
   billing_reconcile: { capability: "available", description: "existing billing reconciliation path" },
   billing_cancel_at_period_end: { capability: "capability_required", description: "operator cancellation executor is not registered" },
-  billing_portal_link: { capability: "available", description: "existing billing portal capability; URL is never persisted" },
+  billing_portal_link: { capability: "capability_required", description: "operator billing portal-link executor is not registered" },
 };
 
 type OpsActionFor<Name extends OpsActionName> = {

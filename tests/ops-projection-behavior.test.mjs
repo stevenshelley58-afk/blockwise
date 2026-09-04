@@ -27,6 +27,23 @@ test("Chatwoot adapter performs deterministic contact, conversation, message and
   assert.equal(calls.some(([name]) => name === "upsert_ops_provider_snapshot"), true); assert.equal(calls.some(([name]) => name === "complete_ops_projection"), true);
 });
 
+test("Mautic lifecycle enrollments reuse the authoritative profile contact id", async () => {
+  const secretRoot = mkdtempSync(join(tmpdir(), "ops-mautic-")); const tokenPath = join(secretRoot, "mautic-token"); const keyPath = join(secretRoot, "correlation-key"); writeFileSync(tokenPath, "test-token\n", { mode: 0o600 }); writeFileSync(keyPath, "test-correlation-key\n", { mode: 0o600 });
+  Object.assign(process.env, { MAUTIC_BASE_URL: "https://mautic.example.test", MAUTIC_TOKEN_FILE: tokenPath, MAUTIC_CONTACT_TAG: "blockwise-contact", MAUTIC_LIFECYCLE_TAG: "blockwise-active", MAUTIC_LIFECYCLE_SEGMENTS_JSON: JSON.stringify({ active: "segment-active" }), MAUTIC_LIFECYCLE_CAMPAIGNS_JSON: JSON.stringify({ active: "campaign-active" }), BLOCKWISE_OPS_CORRELATION_KEY_FILE: keyPath });
+  delete process.env.HERMES_OPS_PROJECTION_ROOT;
+  const profileId = "84444444-4444-4444-8444-444444444444";
+  const rows = [
+    { id: "91111111-1111-4111-8111-111111111111", workspace_id: workspace, provider: "mautic", aggregate_type: "contact", aggregate_id: profileId, operation: "upsert", source_event_id: "contact-event-1", source_version: 1, payload: {}, attempts: 1, max_attempts: 8, lease_token: "92222222-2222-4222-8222-222222222222" },
+    { id: "91111111-1111-4111-8111-111111111112", workspace_id: workspace, provider: "mautic", aggregate_type: "lifecycle", aggregate_id: profileId, operation: "upsert", source_event_id: "lifecycle-event-1", source_version: 2, payload: { profileId, stage: "active" }, attempts: 1, max_attempts: 8, lease_token: "92222222-2222-4222-8222-222222222223" },
+  ];
+  let claim = 0; const calls = []; const rpc = async (name, args) => { calls.push([name, args]); if (name === "claim_ops_projection") return { data: claim < rows.length ? [rows[claim++]] : [], error: null }; if (name === "resolve_ops_projection_data") return { data: args.p_aggregate_type === "contact" ? { email: "owner@example.test", name: "Owner" } : { profileId, stage: "active" }, error: null }; if (name === "begin_ops_provider_operation") return { data: {}, error: null }; return { data: true, error: null }; };
+  const supabase = { rpc }; const urls = [];
+  const fetchImpl = async (url, init) => { const parsed = new URL(url); const body = JSON.parse(init.body ?? "{}"); urls.push([init.method, parsed.pathname + parsed.search, body]); if (parsed.pathname === "/api/contacts" && init.method === "GET" && claim === 1) return response({ contacts: {} }); if (parsed.pathname === "/api/contacts" && init.method === "GET") return response({ contacts: { "42": { id: 42, fields: { core: { blockwise_external_id: { value: `${workspace}:${profileId}` } } } } } }); if (parsed.pathname === "/api/contacts/new") return response({ contact: { id: 42 } }); return response({ ok: true }); };
+  assert.equal(await runOpsProjectionOnce(supabase, fetchImpl), true); assert.equal(await runOpsProjectionOnce(supabase, fetchImpl), true);
+  assert.deepEqual(urls.map(([method, path]) => [method, path]), [["GET", `/api/contacts?search=blockwise_external_id%3A${workspace}%3A${profileId}`], ["POST", "/api/contacts/new"], ["GET", `/api/contacts?search=blockwise_external_id%3A${workspace}%3A${profileId}`], ["POST", "/api/segments/segment-active/contact/42/add"], ["PATCH", "/api/contacts/42/edit"], ["POST", "/api/campaigns/campaign-active/contact/42/add"]]);
+  assert.equal(calls.filter(([name]) => name === "complete_ops_projection").length, 2); assert.equal(calls.some(([name]) => name === "fail_ops_projection"), false); assert.equal(urls.find(([, path]) => path.includes("/contacts/42/edit"))[2].tags[0], "blockwise-active");
+});
+
 test("provider 429 is retried through the durable fail RPC and never settles", async () => {
   const secretRoot = mkdtempSync(join(tmpdir(), "ops-worker-")); const tokenPath = join(secretRoot, "token"); const keyPath = join(secretRoot, "key"); writeFileSync(tokenPath, "test-token\n", { mode: 0o600 }); writeFileSync(keyPath, "test-correlation-key\n", { mode: 0o600 }); Object.assign(process.env, { CHATWOOT_BASE_URL: "https://chatwoot.example.test", CHATWOOT_API_TOKEN_FILE: tokenPath, CHATWOOT_ACCOUNT_ID: "7", CHATWOOT_ENQUIRY_INBOX_ID: "8", BLOCKWISE_OPS_CORRELATION_KEY_FILE: keyPath });
   const { supabase, calls } = fixture(); const fetchImpl = async () => response({}, 429); await runOpsProjectionOnce(supabase, fetchImpl); assert.equal(calls.some(([name]) => name === "fail_ops_projection"), true); assert.equal(calls.some(([name]) => name === "complete_ops_projection"), false);

@@ -97,7 +97,7 @@ async function processProjection(supabase: Supabase, row: Row, fetchImpl: Fetche
   if (resolved.error) throw new Error(`projection data resolution failed: ${redact(resolved.error.message)}`);
   if (!resolved.data || typeof resolved.data !== "object") throw new Error("projection data is unavailable; refusing provider call");
   const queued = row.payload && typeof row.payload === "object" ? row.payload : {};
-  const safeQueued = Object.fromEntries(Object.entries(queued).filter(([key, value]) => /^(subject|status|requesterEmail|requesterName|message|reply|assigneeId|stage|changedAt|activationStage|bookingStatus|bookingSubject|lifecycle)$/u.test(key) && (typeof value === "string" || typeof value === "number" || typeof value === "boolean" || value === null)));
+  const safeQueued = Object.fromEntries(Object.entries(queued).filter(([key, value]) => /^(subject|status|requesterEmail|requesterName|message|reply|assigneeId|stage|changedAt|activationStage|bookingStatus|bookingSubject|lifecycle|profileId)$/u.test(key) && (typeof value === "string" || typeof value === "number" || typeof value === "boolean" || value === null)));
   const sourcePayload = { ...safeQueued, ...(resolved.data as Record<string, unknown>), workspaceId: row.workspace_id };
   const envelope = buildProjectionEnvelope({ workspaceId: row.workspace_id, provider: row.provider, aggregate: { type: row.aggregate_type, id: row.aggregate_id }, operation: row.operation, source: { eventId: row.source_event_id, version: row.source_version }, payload: sourcePayload as BlockwiseProjectionEnvelope["payload"] });
   const mapping = mapProjectionForAdapter(envelope); const operationKey = `${row.provider}:${row.workspace_id}:${row.aggregate_type}:${row.aggregate_id}:${row.source_version}`;
