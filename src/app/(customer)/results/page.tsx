@@ -56,6 +56,20 @@ export default async function ResultsPage({
 }) {
   const resolvedParams = await searchParams;
   const { supabase, access } = await requirePageSurfaceAccess("monitor");
+  const requestedPlanId = typeof resolvedParams.planId === "string" ? resolvedParams.planId.trim() : "";
+  let focusCampaignId: string | null = null;
+  if (requestedPlanId) {
+    const { data: focusPlan } = await supabase
+      .from("meta_publish_plans")
+      .select("reconciled_objects_json")
+      .eq("workspace_id", access.workspaceId)
+      .eq("id", requestedPlanId)
+      .maybeSingle();
+    const reconciled = focusPlan?.reconciled_objects_json as { campaignId?: unknown } | null | undefined;
+    focusCampaignId = typeof reconciled?.campaignId === "string" && reconciled.campaignId.trim()
+      ? reconciled.campaignId.trim()
+      : null;
+  }
   const reporting = await Sentry.startSpan(
     {
       name: "Load Performance reporting snapshot",
@@ -91,6 +105,7 @@ export default async function ResultsPage({
       // Partner-access connect: one guided page handles share → poll → claim.
       metaConnectHref="/connect-meta"
       oauthNotice={oauthNotice}
+      focusCampaignId={focusCampaignId}
     />
   );
 }
