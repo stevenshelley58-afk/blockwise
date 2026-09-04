@@ -10,13 +10,15 @@ type TemplateGalleryProps = {
 };
 
 export function TemplateGallery({ templates, query, filter, createAction }: TemplateGalleryProps) {
+  const hasActiveFilter = Boolean(query) || filter !== "all";
+
   return (
     <section aria-labelledby="template-results-heading">
       <div className="flex items-center justify-between gap-4">
         <div><p className="font-mono text-[9.5px] uppercase tracking-[.12em] text-muted-foreground">Results</p><h2 id="template-results-heading" className="mt-1 font-display text-[17px] font-extrabold">{templates.length} {templates.length === 1 ? "template" : "templates"}</h2></div>
-        <span className="hidden items-center gap-1.5 text-xs text-muted-foreground sm:inline-flex"><SlidersHorizontal className="size-3.5" aria-hidden /> {query || filter !== "all" ? "Filtered to your brief" : "Showing all available packs"}</span>
+        <span className="hidden items-center gap-1.5 text-xs text-muted-foreground sm:inline-flex"><SlidersHorizontal className="size-3.5" aria-hidden /> {hasActiveFilter ? "Filtered to your brief" : "Showing all available packs"}</span>
       </div>
-      {templates.length > 0 ? <ul className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{templates.map((template) => <TemplateCard key={template.templateId} template={template} createAction={createAction} />)}</ul> : <div className="mt-4 rounded-(--r-panel) border border-dashed border-(--line-heavy) bg-(--surface-subtle)/50 p-10 text-center"><h3 className="font-display text-[17px] font-extrabold">No templates match{query ? ` “${query}”` : " this filter"}</h3><p className="mx-auto mt-2 max-w-[44ch] text-sm leading-6 text-muted-foreground">Try a broader phrase or clear the filter. All available packs will stay in this gallery.</p><Link href="/ad-studio/templates" className="mt-5 inline-flex min-h-11 items-center rounded-full border border-border bg-card px-4 text-[12.5px] font-semibold hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Clear search</Link></div>}
+      {templates.length > 0 ? <ul className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{templates.map((template) => <TemplateCard key={template.templateId} template={template} createAction={createAction} />)}</ul> : hasActiveFilter ? <div className="mt-4 rounded-(--r-panel) border border-dashed border-(--line-heavy) bg-(--surface-subtle)/50 p-10 text-center"><h3 className="font-display text-[17px] font-extrabold">No templates match{query ? ` “${query}”` : " this filter"}</h3><p className="mx-auto mt-2 max-w-[44ch] text-sm leading-6 text-muted-foreground">Try a broader phrase or clear the filter. All available packs will stay in this gallery.</p><Link href="/ad-studio/templates" className="mt-5 inline-flex min-h-11 items-center rounded-full border border-border bg-card px-4 text-[12.5px] font-semibold hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Clear search</Link></div> : <div className="mt-4 rounded-(--r-panel) border border-dashed border-(--line-heavy) bg-(--surface-subtle)/50 p-10 text-center"><h3 className="font-display text-[17px] font-extrabold">New templates are being prepared</h3><p className="mx-auto mt-2 max-w-[44ch] text-sm leading-6 text-muted-foreground">Reviewed Feed and Story packs will appear here as soon as they are ready to use.</p></div>}
     </section>
   );
 }
