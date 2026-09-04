@@ -40,12 +40,15 @@ top-level shape (the existing rows, `nextCursor`, and `limit` remain inside
       "project_id": "blockwise",
       "generated_at": "2026-09-04T00:00:00.000Z",
       "fresh_until": "2026-09-04T00:05:00.000Z",
-      "source_revision": "blockwise-ops-read-v1",
+      "source_revision": "<BLOCKWISE_BUILD_REVISION or VERCEL_GIT_COMMIT_SHA>",
       "source_receipt_ids": ["receipt:ops/api/internal/ops/customers/<id>"],
       "data": { "limit": 50, "total": 1, "nextCursor": null, "rows": [] }
     }
 
-`source_receipt_ids` are opaque Blockwise read receipts, not provider IDs.
+`source_receipt_ids` are opaque Blockwise read receipts derived from durable
+source/outbox/snapshot/audit row IDs, not provider IDs. `source_revision` is
+the immutable `BLOCKWISE_BUILD_REVISION` (or Vercel commit SHA) when supplied;
+the contract version is used only as a deterministic local fallback.
 Provider snapshots expose only normalized delivery/flow/lifecycle/conversation
 status, stage, subject, channel, masked provider record suffix, timestamps,
 and source version. Hermes writes snapshots after settlement through the
@@ -104,7 +107,9 @@ The procedure requires the exact sentinel `ROLLBACK_CUSTOMER_OPERATIONS`.
 Before any drop it archives every row from the outbox, enquiry associations,
 communication preferences, and provider snapshots into
 `legacy_archive.customer_operations_tables_archive`, then verifies per-table
-live/archive row counts in the same transaction. It refuses to continue on a
-count mismatch. The archive remains available for retention and recovery;
+live/archive row counts for the current rollback run in the same transaction.
+Each run has its own `run_id`, so a previously retained archive cannot cause a
+false mismatch or be overwritten. It refuses to continue on a count mismatch.
+The archive remains available for retention and recovery;
 only then are the operations objects and canonical suppression association
 objects removed.

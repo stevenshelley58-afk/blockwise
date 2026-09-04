@@ -1,7 +1,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(46);
+select plan(52);
 
 insert into public.workspaces (id, name, mode, region)
 values ('81111111-1111-4111-8111-111111111111', 'Ops contract test', 'self_serve', 'AU')
@@ -90,6 +90,29 @@ select is((select workspace_id from public.ops_enquiry_associations where source
 insert into public.ops_enquiry_associations (workspace_id, source_system, source_id, enquiry_type, subject)
 values ('81111111-1111-4111-8111-111111111111', 'crm', 'crm-1', 'sales', 'Explicit CRM association');
 select ok(exists (select 1 from public.ops_projection_outbox where provider = 'chatwoot' and aggregate_type = 'enquiry' and aggregate_id = (select id::text from public.ops_enquiry_associations where source_id = 'crm-1')), 'explicit enquiry association emits provider-neutral projection');
+
+insert into public.report_email_leads (email, postcode, suburb, source)
+values ('report-visitor@example.test', '6000', 'Perth', 'ops-test');
+select is((select enquiry_type from public.ops_enquiry_associations where source_id = (select id::text from public.report_email_leads where email = 'report-visitor@example.test' limit 1)), 'report_email_lead', 'report lead association preserves its source type');
+select ok((select workspace_id from public.ops_enquiry_associations where source_id = (select id::text from public.report_email_leads where email = 'report-visitor@example.test' limit 1)) is null, 'report lead remains unscoped until explicit association');
+
+-- Fresh bootstrap fixture: contact identity is the real owner profile, not a
+-- synthetic workspace contact. Activation may add lifecycle fields but must
+-- converge to the same profile aggregate and leave one usable pending row.
+insert into public.workspaces (id, name, mode, region)
+values ('83333333-3333-4333-8333-333333333333', 'Bootstrap identity test', 'self_serve', 'AU');
+insert into auth.users (instance_id, id, aud, role, email, encrypted_password, raw_app_meta_data, raw_user_meta_data, email_confirmed_at, created_at, updated_at)
+values ('00000000-0000-0000-0000-000000000000', '84444444-4444-4444-8444-444444444444', 'authenticated', 'authenticated', 'bootstrap-owner@example.test', '', '{}'::jsonb, '{}'::jsonb, now(), now(), now());
+insert into public.profiles (id, email, full_name)
+values ('84444444-4444-4444-8444-444444444444', 'Bootstrap-Owner@Example.Test', 'Bootstrap Owner');
+insert into public.workspace_members (workspace_id, profile_id, role)
+values ('83333333-3333-4333-8333-333333333333', '84444444-4444-4444-8444-444444444444', 'owner');
+insert into public.customer_activations (workspace_id, email_verified_at)
+values ('83333333-3333-4333-8333-333333333333', now());
+select is((select count(*)::int from public.ops_projection_outbox where workspace_id = '83333333-3333-4333-8333-333333333333' and provider = 'mautic' and aggregate_type = 'contact' and aggregate_id = '84444444-4444-4444-8444-444444444444' and status = 'pending'), 1, 'bootstrap has one usable owner contact mapping');
+select is((select count(*)::int from public.ops_projection_outbox where workspace_id = '83333333-3333-4333-8333-333333333333' and provider = 'mautic' and aggregate_type = 'contact' and aggregate_id = '83333333-3333-4333-8333-333333333333'), 0, 'bootstrap never creates a workspace contact aggregate');
+select is((select payload ->> 'email' from public.ops_projection_outbox where workspace_id = '83333333-3333-4333-8333-333333333333' and aggregate_type = 'contact' and status = 'pending' limit 1), 'bootstrap-owner@example.test', 'owner contact payload uses canonical lowercase email');
+select is((select payload ->> 'activationStage' from public.ops_projection_outbox where workspace_id = '83333333-3333-4333-8333-333333333333' and aggregate_type = 'contact' and status = 'pending' limit 1), 'trial', 'owner contact carries activation stage');
 
 select * from finish();
 rollback;

@@ -18,26 +18,31 @@ end $$;
 create schema if not exists legacy_archive;
 create table if not exists legacy_archive.customer_operations_tables_archive (
   archived_at timestamptz not null default now(),
+  run_id uuid not null,
   table_name text not null,
   row_id text not null,
   row_data jsonb not null
 );
+alter table legacy_archive.customer_operations_tables_archive add column if not exists run_id uuid;
+update legacy_archive.customer_operations_tables_archive set run_id = gen_random_uuid() where run_id is null;
+alter table legacy_archive.customer_operations_tables_archive alter column run_id set not null;
+select gen_random_uuid() as rollback_run_id \gset
 
-insert into legacy_archive.customer_operations_tables_archive (table_name, row_id, row_data)
-select 'ops_projection_outbox', id::text, to_jsonb(o) from public.ops_projection_outbox o;
-insert into legacy_archive.customer_operations_tables_archive (table_name, row_id, row_data)
-select 'ops_enquiry_associations', id::text, to_jsonb(o) from public.ops_enquiry_associations o;
-insert into legacy_archive.customer_operations_tables_archive (table_name, row_id, row_data)
-select 'customer_communication_preferences', id::text, to_jsonb(o) from public.customer_communication_preferences o;
-insert into legacy_archive.customer_operations_tables_archive (table_name, row_id, row_data)
-select 'ops_provider_snapshots', id::text, to_jsonb(o) from public.ops_provider_snapshots o;
+insert into legacy_archive.customer_operations_tables_archive (run_id, table_name, row_id, row_data)
+select :'rollback_run_id', 'ops_projection_outbox', id::text, to_jsonb(o) from public.ops_projection_outbox o;
+insert into legacy_archive.customer_operations_tables_archive (run_id, table_name, row_id, row_data)
+select :'rollback_run_id', 'ops_enquiry_associations', id::text, to_jsonb(o) from public.ops_enquiry_associations o;
+insert into legacy_archive.customer_operations_tables_archive (run_id, table_name, row_id, row_data)
+select :'rollback_run_id', 'customer_communication_preferences', id::text, to_jsonb(o) from public.customer_communication_preferences o;
+insert into legacy_archive.customer_operations_tables_archive (run_id, table_name, row_id, row_data)
+select :'rollback_run_id', 'ops_provider_snapshots', id::text, to_jsonb(o) from public.ops_provider_snapshots o;
 
 do $$
 declare v_live bigint; v_archived bigint; v_table text;
 begin
   for v_table in select unnest(array['ops_projection_outbox','ops_enquiry_associations','customer_communication_preferences','ops_provider_snapshots']) loop
     execute format('select count(*) from public.%I', v_table) into v_live;
-    select count(*) into v_archived from legacy_archive.customer_operations_tables_archive where table_name = v_table;
+    select count(*) into v_archived from legacy_archive.customer_operations_tables_archive where table_name = v_table and run_id = :'rollback_run_id';
     if v_live <> v_archived then raise exception 'rollback archive row-count mismatch for %: live %, archived %', v_table, v_live, v_archived; end if;
   end loop;
 end $$;

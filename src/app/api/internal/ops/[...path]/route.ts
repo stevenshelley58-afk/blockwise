@@ -88,7 +88,9 @@ function readEnvelope(data: unknown, pathname: string) {
     project_id: "blockwise",
     generated_at: generatedAt.toISOString(),
     fresh_until: freshUntil,
-    source_revision: "blockwise-ops-read-v1",
+    // Bind freshness to the deployed immutable revision when the host
+    // provides one; the contract version is the deterministic local fallback.
+    source_revision: process.env.BLOCKWISE_BUILD_REVISION?.trim() || process.env.VERCEL_GIT_COMMIT_SHA?.trim() || "blockwise-ops-read-v1",
     source_receipt_ids: sourceReceiptIds,
     data,
   };

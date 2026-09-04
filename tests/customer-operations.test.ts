@@ -13,6 +13,7 @@ test("ops route uses canonical scoped internal auth and has no duplicate verifie
   assert.match(route, /schema:\s*["']blockwise\.ops\.read\.v1["']/);
   assert.match(route, /project_id:\s*["']blockwise["']/);
   assert.match(route, /source_receipt_ids/);
+  assert.match(route, /VERCEL_GIT_COMMIT_SHA/);
   assert.match(route, /generated_at/);
   assert.match(route, /fresh_until/);
   assert.doesNotMatch(route, /verifyInternalOpsSignature/);

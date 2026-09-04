@@ -14,6 +14,8 @@ test("product allowlist and rollback procedure cover the ops contract", () => {
   assert.match(rollback, /ROLLBACK_CUSTOMER_OPERATIONS/);
   assert.match(rollback, /customer_operations_tables_archive/);
   assert.match(rollback, /ops_provider_snapshots/);
+  assert.match(rollback, /rollback_run_id/);
+  assert.match(rollback, /where table_name = v_table and run_id =/);
 });
 
 test("ops surface is service-only and provider-free", () => {

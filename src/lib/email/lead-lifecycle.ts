@@ -14,6 +14,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { enqueueEmail } from "./outbox.ts";
 import { escapeHtml } from "./provider.ts";
 import { createSupabaseServiceClient } from "../supabase/service.ts";
+import { enqueueMarketingMessage } from "../ops/provider-adapter.ts";
 
 // ---------------------------------------------------------------------------
 // Lifecycle event helpers
@@ -112,6 +113,8 @@ export async function sendBatchDigests(digests: DigestInput[]): Promise<{ ids: s
 // ---------------------------------------------------------------------------
 
 export type ScheduledFollowUpInput = {
+  workspaceId: string;
+  topic: string;
   to: string;
   from: string;
   subject: string;
@@ -129,11 +132,18 @@ export type ScheduledFollowUpInput = {
  */
 export async function scheduleFollowUpEmail(input: ScheduledFollowUpInput): Promise<{ id: string }> {
   const idempotencyKey = buildFollowupKey(input);
-  const result = await enqueueEmail(input.supabase ?? createSupabaseServiceClient(), {
+  const serviceSupabase = input.supabase ?? createSupabaseServiceClient();
+  const result = await enqueueMarketingMessage({
+    workspaceId: input.workspaceId,
+    email: input.to,
+    topic: input.topic,
+    serviceSupabase,
+    message: {
     messageType: "lead_followup", templateId: "lead-followup", templateVersion: 1,
     to: input.to, from: input.from, subject: input.subject,
     html: input.html ?? `<p>${escapeHtml(input.text).replace(/\n/g, "<br>")}</p>`, text: input.text, nextAttemptAt: input.scheduledAt,
     payload: { scheduledAt: input.scheduledAt, leadId: input.leadId ?? null }, idempotencyKey,
+    },
   });
   return { id: result.queued ? result.id : (result.duplicateOf ?? "queued") };
 }
