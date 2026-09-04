@@ -17,13 +17,13 @@ function text(id, inputKey, y, width = 0.72, height = 0.05, color = "#2b2118") {
 
 function goodDoc() {
   const layers = [
-    { id: "story-slot", type: "image_slot", inputKey: "photo", box: { x: 0.1, y: 0.27, width: 0.8, height: 0.34 } },
-    text("story-text-headline", "headline", 0.15, 0.8, 0.1),
-    text("story-text-supporting", "supporting", 0.64),
-    text("story-text-handle", "handle", 0.75, 0.4),
-    text("story-text-arrow", "arrow", 0.75, 0.16),
-    { id: "story-backing-supporting", type: "overlay_patch", box: { x: 0.078, y: 0.622, width: 0.764, height: 0.086 } },
-    { id: "story-backing-cta", type: "overlay_patch", box: { x: 0.08, y: 0.732, width: 0.78, height: 0.086 } },
+    { id: "story-slot", z: 1, type: "image_slot", inputKey: "photo", box: { x: 0.1, y: 0.27, width: 0.8, height: 0.34 } },
+    { ...text("story-text-headline", "headline", 0.15, 0.8, 0.1), z: 2 },
+    { id: "story-backing-supporting", z: 3, type: "overlay_patch", box: { x: 0.078, y: 0.622, width: 0.764, height: 0.086 } },
+    { ...text("story-text-supporting", "supporting", 0.64), z: 4 },
+    { id: "story-backing-cta", z: 5, type: "overlay_patch", box: { x: 0.08, y: 0.732, width: 0.78, height: 0.086 } },
+    { ...text("story-text-handle", "handle", 0.75, 0.4), z: 6 },
+    { ...text("story-text-arrow", "arrow", 0.75, 0.16), z: 7 },
   ];
   return {
     formats: {
@@ -91,7 +91,7 @@ describe("deterministic Story composition", () => {
     doc.formats.story.layers = doc.formats.story.layers.filter((layer) => layer.id !== "story-backing-supporting");
     const result = await evaluateStoryQa(doc, await ivoryPreview());
     assert.equal(result.passed, false);
-    assert.match(result.blockers.join("; "), /supporting copy requires a full-coverage backing patch/);
+    assert.match(result.blockers.join("; "), /supporting copy requires a full-coverage declared backing patch/);
   });
 
   it("passes rendered Story QA when supporting and CTA backings are present", async () => {
@@ -102,7 +102,7 @@ describe("deterministic Story composition", () => {
   it("rejects a rendered dark backing even when the policy names an ivory patch", async () => {
     const result = await evaluateStoryQa(goodDoc(), await darkPreview());
     assert.equal(result.passed, false);
-    assert.match(result.blockers.join("; "), /not rendered uniformly in canonical ivory/);
+    assert.match(result.blockers.join("; "), /does not match its declared design-system colour/);
   });
 
   it("rejects a candidate policy that widens the canonical geometry bounds", async () => {
@@ -120,13 +120,61 @@ describe("deterministic Story composition", () => {
     doc.formats.story.layers.find((layer) => layer.id === "story-text-supporting").typo.color = IVORY;
     const result = await evaluateStoryQa(doc, await ivoryPreview());
     assert.equal(result.passed, false);
-    assert.match(result.blockers.join("; "), /contrast against canonical ivory/);
+    assert.match(result.blockers.join("; "), /contrast against its rendered backing/);
   });
 
   it("samples multiple exposed backing points for uniformity", async () => {
     const result = await evaluateStoryQa(goodDoc(), await nonUniformPreview());
     assert.equal(result.passed, false);
-    assert.match(result.blockers.join("; "), /not rendered uniformly in canonical ivory/);
+    assert.match(result.blockers.join("; "), /not rendered uniformly in its design-system colour/);
+  });
+
+  it("uses all property media for dead-space QA but ignores an optional logo", async () => {
+    const doc = goodDoc();
+    doc.formats.story.layers.unshift({
+      id: "logo_slot", type: "image_slot", inputKey: "logo_slot",
+      box: { x: 0.72, y: 0.13, width: 0.2, height: 0.04 },
+    });
+    doc.formats.story.layers.push({
+      id: "story-supporting-photo", type: "image_slot", inputKey: "property_image_1",
+      box: { x: 0.1, y: 0.62, width: 0.18, height: 0.08 },
+    });
+    const result = await evaluateStoryQa(doc, await ivoryPreview());
+    assert.equal(result.passed, true, result.blockers.join("; "));
+  });
+
+  it("checks CTA copy against its authored vector backing", async () => {
+    const doc = goodDoc();
+    const handle = doc.formats.story.layers.find((layer) => layer.id === "story-text-handle");
+    const arrow = doc.formats.story.layers.find((layer) => layer.id === "story-text-arrow");
+    handle.z = 12;
+    arrow.z = 14;
+    handle.typo = { color: "#11181b", weight: 600, sizeRatio: 0.45 };
+    arrow.typo = { color: "#ffffff", weight: 700, sizeRatio: 0.5 };
+    doc.restyle = { paletteRoles: { background: "#ffffff", surface: "#dce1e4", accent: "#657b88", ink: "#11181b", inverseText: "#ffffff" } };
+    doc.formats.story.storyPolicy.backingColour = "#ffffff";
+    doc.formats.story.layers.push(
+      { id: "story-contact-bar", z: 11, type: "vector", shape: "rect", fill: "#dce1e4", box: { x: 0.08, y: 0.732, width: 0.46, height: 0.086 } },
+      { id: "story-cta-button", z: 13, type: "vector", shape: "rounded", fill: "#657b88", box: { x: 0.68, y: 0.732, width: 0.22, height: 0.086 } },
+    );
+    handle.box = { x: 0.1, y: 0.75, width: 0.4, height: 0.04 };
+    arrow.box = { x: 0.71, y: 0.75, width: 0.16, height: 0.04 };
+    const result = await evaluateStoryQa(doc, await ivoryPreview());
+    assert.equal(result.passed, true, result.blockers.join("; "));
+
+    arrow.typo.color = "#657b88";
+    const lowContrast = await evaluateStoryQa(doc, await ivoryPreview());
+    assert.equal(lowContrast.passed, false);
+    assert.match(lowContrast.blockers.join("; "), /rendered backing/);
+  });
+
+  it("rejects a backing colour outside the template design system", async () => {
+    const doc = goodDoc();
+    doc.restyle = { paletteRoles: { background: "#ffffff", ink: "#2b2118" } };
+    doc.formats.story.storyPolicy.backingColour = "#ff00ff";
+    const result = await evaluateStoryQa(doc, await ivoryPreview());
+    assert.equal(result.passed, false);
+    assert.match(result.blockers.join("; "), /belong to the template design system/);
   });
 
   it("rejects a CTA whose handle and arrow are not a safe grouped unit", async () => {
