@@ -47,6 +47,10 @@ Linux, owned by the container's non-root UID 1000), plus an HTTPS
 accepted from ordinary environment variables. See `.env.example` for names;
 the real file belongs outside the checkout.
 
+The executor secret must match the product's `BLOCKWISE_INTERNAL_AUTH_SECRET`
+used by `/api/internal/customer-ops/actions`; it is a separate file mount in
+the edge container, never a value copied into the repository or action payload.
+
 The Compose image runs as UID 1000 and never as root. Before starting it, make
 the secret directory `0700`, the files `0600`, and their owner UID 1000 (or use
 the deployment's equivalent non-root UID); otherwise the fail-closed file
