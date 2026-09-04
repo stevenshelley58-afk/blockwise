@@ -138,6 +138,9 @@ alter table private.ops_enquiry_messages enable row level security;
 alter table private.ops_enquiry_messages drop constraint if exists ops_enquiry_messages_provider_message_id_check;
 alter table private.ops_enquiry_messages add constraint ops_enquiry_messages_provider_message_id_check check (provider_message_id ~ '^[0-9a-f]{64}$');
 alter table private.ops_enquiry_messages alter column workspace_id drop not null;
+alter table private.ops_enquiry_messages add column if not exists occurred_at timestamptz not null default now();
+alter table private.ops_enquiry_messages add column if not exists sender_display text;
+alter table private.ops_enquiry_messages add column if not exists attachment_metadata jsonb not null default '[]'::jsonb;
 create unique index if not exists ops_chatwoot_enquiry_source_unique on public.ops_enquiry_associations(source_system,source_id) where source_system='chatwoot';
 
 create or replace function public.sync_ops_chatwoot_enquiry_workspace()
@@ -194,7 +197,8 @@ grant execute on function public.record_ops_chatwoot_webhook(text,text,text,text
 create or replace function public.record_ops_chatwoot_webhook_adopt(
   p_event_id text, p_payload_hash text, p_account_id text, p_inbox_id text,
   p_event_type text, p_provider_conversation_id text, p_provider_message_id text,
-  p_contact_id_digest text, p_conversation_ciphertext text, p_status text, p_body text
+  p_contact_id_digest text, p_conversation_ciphertext text, p_status text, p_body text,
+  p_occurred_at text default null, p_sender_display text default null, p_attachments jsonb default '[]'::jsonb
 ) returns jsonb language plpgsql security definer set search_path = '' as $$
 declare v_workspace uuid; v_enquiry uuid; v_existing text;
 begin
@@ -221,20 +225,20 @@ begin
   if v_existing is not null and v_existing <> p_payload_hash then raise exception 'Chatwoot webhook event hash mismatch' using errcode='22023'; end if;
   insert into private.ops_chatwoot_webhook_events(event_id,payload_hash,provider_conversation_id,event_type) values(left(p_event_id,256),p_payload_hash,p_provider_conversation_id,p_event_type) on conflict(event_id) do nothing;
   if p_event_type like 'message_%' and p_provider_message_id ~ '^[0-9]+$' and nullif(btrim(p_body),'') is not null then
-    insert into private.ops_enquiry_messages(provider_message_id,workspace_id,enquiry_id,body,direction) values(encode(public.digest(p_provider_message_id,'sha256'),'hex'),v_workspace,v_enquiry,left(p_body,4000),'incoming') on conflict(provider_message_id) do nothing;
+    insert into private.ops_enquiry_messages(provider_message_id,workspace_id,enquiry_id,body,direction,occurred_at,sender_display,attachment_metadata) values(encode(public.digest(p_provider_message_id,'sha256'),'hex'),v_workspace,v_enquiry,left(p_body,4000),'incoming',coalesce(p_occurred_at::timestamptz,now()),left(p_sender_display,256),coalesce(p_attachments,'[]'::jsonb)) on conflict(provider_message_id) do nothing;
   end if;
   if p_status in ('open','pending','resolved','closed') then update public.ops_enquiry_associations set status=case when p_status='resolved' then 'closed' else p_status end,updated_at=now() where id=v_enquiry and workspace_id=v_workspace; end if;
   update private.ops_chatwoot_webhook_events set status='processed',processed_at=now() where event_id=left(p_event_id,256);
   return jsonb_build_object('status','processed','workspaceId',v_workspace::text,'enquiryId',v_enquiry::text);
 end; $$;
-revoke all on function public.record_ops_chatwoot_webhook_adopt(text,text,text,text,text,text,text,text,text,text,text) from public,anon,authenticated;
-grant execute on function public.record_ops_chatwoot_webhook_adopt(text,text,text,text,text,text,text,text,text,text,text) to service_role;
+revoke all on function public.record_ops_chatwoot_webhook_adopt(text,text,text,text,text,text,text,text,text,text,text,text,text) from public,anon,authenticated;
+grant execute on function public.record_ops_chatwoot_webhook_adopt(text,text,text,text,text,text,text,text,text,text,text,text,text) to service_role;
 
 create or replace function public.resolve_ops_enquiry_threads()
 returns jsonb language sql security definer set search_path = '' as $$
   select coalesce(jsonb_agg(jsonb_build_object('enquiry_id',m.enquiry_id,'messages',m.messages)), '[]'::jsonb)
-  from (select e.enquiry_id, jsonb_agg(jsonb_build_object('id',e.provider_message_id,'body',e.body,'direction',e.direction,'created_at',e.created_at) order by e.created_at desc, e.provider_message_id desc) filter (where e.rn <= 100) messages
-        from (select m.*, row_number() over (partition by m.enquiry_id order by m.created_at desc, m.provider_message_id desc) rn from private.ops_enquiry_messages m) e group by e.enquiry_id) m;
+  from (select e.enquiry_id, jsonb_agg(jsonb_build_object('id',e.provider_message_id,'body',e.body,'direction',e.direction,'created_at',e.occurred_at,'sender',e.sender_display,'attachments',e.attachment_metadata) order by e.occurred_at desc, e.provider_message_id desc) filter (where e.rn <= 100) messages
+        from (select m.*, row_number() over (partition by m.enquiry_id order by m.occurred_at desc, m.provider_message_id desc) rn from private.ops_enquiry_messages m) e group by e.enquiry_id) m;
 $$;
 revoke all on function public.resolve_ops_enquiry_threads() from public,anon,authenticated;
 grant execute on function public.resolve_ops_enquiry_threads() to service_role;
