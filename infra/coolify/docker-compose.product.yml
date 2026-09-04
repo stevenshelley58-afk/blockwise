@@ -79,7 +79,7 @@ services:
       blockwise-product: {}
       customer-ops-mail:
         aliases:
-          - "${BLOCKWISE_MAIL_PUBLIC_HOST:-mail.example.com}"
+          - "${BLOCKWISE_MAIL_PUBLIC_HOST:?BLOCKWISE_MAIL_PUBLIC_HOST is required}"
     healthcheck:
       test: [CMD, "curl", "-fsS", "http://127.0.0.1:8080/healthz/ready"]
       interval: 15s

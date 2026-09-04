@@ -357,16 +357,6 @@ services:
       resources:
         limits: { cpus: "1", memory: 768M }
 
-  hermes-adapter-contract:
-    image: ${HERMES_ADAPTER_IMAGE:-ghcr.io/stevenshelley58-afk/hermes-adapter:contract-placeholder}
-    profiles: [contract-placeholders]
-    command: ["sh", "-c", "echo 'contract placeholder: Hermes adapter is not implemented in this stack' >&2; exit 78"]
-    networks: [backend]
-    restart: "no"
-    read_only: true
-    security_opt: [no-new-privileges:true]
-    cap_drop: [ALL]
-
 networks:
   edge:
     name: blockwise-customer-ops-edge

@@ -5,8 +5,10 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 COMPOSE_FILE="$ROOT_DIR/infra/customer-ops/docker-compose.yml"
 PRODUCT_COMPOSE_FILE="$ROOT_DIR/infra/coolify/docker-compose.product.yml"
 PRODUCT_ENV="$(mktemp)"
+CUSTOMER_ENV="$(mktemp)"
 CADDY_TEST="$(mktemp)"
-trap 'rm -f "$PRODUCT_ENV" "$CADDY_TEST"' EXIT
+trap 'rm -f "$PRODUCT_ENV" "$CUSTOMER_ENV" "$CADDY_TEST"' EXIT
+DOCKER_BIN="${DOCKER_BIN:-docker}"
 [[ -f "$COMPOSE_FILE" ]] || { echo 'customer-ops compose file missing' >&2; exit 1; }
 for service in postgres mariadb redis mautic mautic-cron mautic-worker chatwoot-prepare chatwoot-web chatwoot-worker snagtime-web snagtime-worker; do
   grep -Eq "^  ${service}:$" "$COMPOSE_FILE" || { echo "missing service: $service" >&2; exit 1; }
@@ -20,7 +22,7 @@ grep -q 'stalwartlabs/stalwart:v0.16.20@sha256:' "$PRODUCT_COMPOSE_FILE" || { ec
 ! grep -q '^  stalwart:' "$COMPOSE_FILE" || { echo 'duplicate customer-ops Stalwart server found' >&2; exit 1; }
 grep -q 'name: blockwise-customer-ops-mail' "$COMPOSE_FILE" || { echo 'customer-ops mail network contract missing' >&2; exit 1; }
 grep -q 'customer-ops-mail:' "$PRODUCT_COMPOSE_FILE" || { echo 'product-mail is not attached to shared mail network' >&2; exit 1; }
-grep -q '"\${BLOCKWISE_MAIL_PUBLIC_HOST:-mail.example.com}"' "$PRODUCT_COMPOSE_FILE" || { echo 'product-mail alias interpolation is not quoted' >&2; exit 1; }
+grep -q '"\${BLOCKWISE_MAIL_PUBLIC_HOST:?BLOCKWISE_MAIL_PUBLIC_HOST is required}"' "$PRODUCT_COMPOSE_FILE" || { echo 'product-mail alias interpolation is not fail-closed and quoted' >&2; exit 1; }
 grep -q 'aliases:' "$PRODUCT_COMPOSE_FILE" || { echo 'product-mail TLS identity alias missing' >&2; exit 1; }
 cat > "$PRODUCT_ENV" <<'EOF'
 BLOCKWISE_APP_IMAGE=ghcr.io/example/blockwise:contract
@@ -51,7 +53,28 @@ TOKEN_ENCRYPTION_KEY=contract-token
 TRUSTED_PROXY_RANGES=127.0.0.1/32
 BLOCKWISE_MAIL_PUBLIC_HOST=mail.example.com
 EOF
-docker compose --env-file "$PRODUCT_ENV" -f "$PRODUCT_COMPOSE_FILE" --profile mail config --quiet || { echo 'product mail profile Compose config failed' >&2; exit 1; }
+"$DOCKER_BIN" compose --env-file "$PRODUCT_ENV" -f "$PRODUCT_COMPOSE_FILE" --profile mail config --quiet || { echo 'product mail profile Compose config failed' >&2; exit 1; }
+cat > "$CUSTOMER_ENV" <<'EOF'
+BLOCKWISE_MAIL_PUBLIC_HOST=mail.example.com
+MAIL_PUBLIC_HOST=mail.example.com
+MAUTIC_HOST=crm.example.com
+CHATWOOT_HOST=https://support.example.com
+SNAGTIME_HOST=book.example.com
+MAUTIC_EMAIL_FROM=crm@example.com
+CHATWOOT_EMAIL_FROM=support@example.com
+SNAGTIME_EMAIL_FROM=booking@example.com
+EMAIL_REPLY_TO=support@example.com
+EMAIL_SENDER_DOMAIN=example.com
+MAUTIC_SMTP_USER=mautic
+CHATWOOT_SMTP_USER=chatwoot
+SNAGTIME_SMTP_USER=snagtime
+CHATWOOT_INBOX_USER=support
+GOOGLE_CLIENT_ID=contract-google-client
+SNAGTIME_IMAGE=ghcr.io/example/snagtime@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+SNAGTIME_REVISION=0123456789abcdef0123456789abcdef01234567
+CUSTOMER_OPS_SECRETS_DIR=/tmp/blockwise-customer-ops-contract-secrets
+EOF
+"$DOCKER_BIN" compose --env-file "$CUSTOMER_ENV" -f "$COMPOSE_FILE" config --quiet || { echo 'customer-ops Compose config failed' >&2; exit 1; }
 sed -e 's|\${MAUTIC_HOST}|crm.example.com|g' -e 's|\${CHATWOOT_HOST}|support.example.com|g' -e 's|\${SNAGTIME_HOST}|book.example.com|g' "$ROOT_DIR/infra/customer-ops/Caddyfile.snippets.tmpl" > "$CADDY_TEST"
 ! grep -Eq '\$\{[A-Za-z_][A-Za-z0-9_]*\}' "$CADDY_TEST" || { echo 'Caddy template render left placeholders' >&2; exit 1; }
 grep -q '^crm.example.com {' "$CADDY_TEST" && grep -q '^support.example.com {' "$CADDY_TEST" && grep -q '^book.example.com {' "$CADDY_TEST" || { echo 'Caddy template host render failed' >&2; exit 1; }
@@ -69,12 +92,33 @@ grep -q '/var/www/html/docroot/media/files' "$COMPOSE_FILE" || { echo 'mautic fi
 grep -q '/var/www/html/docroot/media/images' "$COMPOSE_FILE" || { echo 'mautic images volume contract missing' >&2; exit 1; }
 grep -q '/var/www/html/var$' "$COMPOSE_FILE" || { echo 'mautic writable var volume contract missing' >&2; exit 1; }
 grep -q -- '--tls-verify' "$ROOT_DIR/scripts/vps/customer-ops-smoke.sh" || { echo 'SMTP certificate verification missing' >&2; exit 1; }
+grep -q -- '--tls-sni-name' "$ROOT_DIR/scripts/vps/customer-ops-smoke.sh" || { echo 'SMTP SNI verification missing' >&2; exit 1; }
 grep -q -- '-verify_hostname' "$ROOT_DIR/scripts/vps/customer-ops-install.sh" || { echo 'OpenSSL hostname verification missing' >&2; exit 1; }
 grep -q 'swapon --show=SIZE --bytes' "$ROOT_DIR/scripts/vps/customer-ops-install.sh" || { echo 'active swap-size gate missing' >&2; exit 1; }
+grep -q 'urlsplit' "$ROOT_DIR/scripts/vps/customer-ops-install.sh" || { echo 'URL hostname parsing contract missing' >&2; exit 1; }
+! grep -Eq '\$\{CHATWOOT_HOST[#%]|host[[:space:]]*=[[:space:]]*https' "$ROOT_DIR/scripts/vps/customer-ops-install.sh" || { echo 'literal scheme can reach DNS/TLS host checks' >&2; exit 1; }
+grep -q 'readlink -f' "$ROOT_DIR/scripts/vps/customer-ops-install.sh" || { echo 'installer symlink path guard missing' >&2; exit 1; }
+grep -q -- '--config "$config"' "$ROOT_DIR/scripts/vps/customer-ops-smoke.sh" || { echo 'swaks secret config-file contract missing' >&2; exit 1; }
+grep -q -- 'curl --config "$config"' "$ROOT_DIR/scripts/vps/customer-ops-smoke.sh" || { echo 'curl secret config-file contract missing' >&2; exit 1; }
+! grep -Eq -- 'swaks.*--auth-password|psql.*--set=[^ ]*password=|mariadb(-dump)?.*--password=' "$ROOT_DIR/scripts/vps/customer-ops-smoke.sh" "$ROOT_DIR/infra/customer-ops/postgres-init/001-roles.sh" "$ROOT_DIR/scripts/vps/customer-ops-backup.sh" "$ROOT_DIR/docs/runbooks/customer-ops-vps.md" || { echo 'secret appears in process argv contract' >&2; exit 1; }
+! grep -q 'rawurlencode(\$argv' "$ROOT_DIR/infra/customer-ops/mautic-entrypoint.sh" || { echo 'Mautic SMTP secret appears in PHP argv contract' >&2; exit 1; }
+grep -q 'key:file:' "$ROOT_DIR/scripts/vps/customer-ops-smoke.sh" || { echo 'webhook key-file contract missing' >&2; exit 1; }
 grep -q 'fresh_until' "$ROOT_DIR/scripts/vps/customer-ops-smoke.sh" || { echo 'Frank freshness schema check missing' >&2; exit 1; }
+grep -q '/api/ops/overview' "$ROOT_DIR/scripts/vps/customer-ops-smoke.sh" || { echo 'Frank real ops endpoint missing' >&2; exit 1; }
+grep -q 'schema://frank.ops/v1' "$ROOT_DIR/scripts/vps/customer-ops-smoke.sh" || { echo 'Frank overview schema check missing' >&2; exit 1; }
+grep -q 'publication_receipt_id' "$ROOT_DIR/scripts/vps/customer-ops-smoke.sh" || { echo 'Frank publication receipt check missing' >&2; exit 1; }
+grep -q 'source_receipt_ids' "$ROOT_DIR/scripts/vps/customer-ops-smoke.sh" || { echo 'Frank source receipt check missing' >&2; exit 1; }
+grep -q 'stalwart-backup.sh' "$ROOT_DIR/scripts/vps/customer-ops-backup.sh" || { echo 'product-mail backup integration missing' >&2; exit 1; }
+grep -q 'product-mail' "$ROOT_DIR/scripts/vps/customer-ops-restore.sh" || { echo 'product-mail restore coverage missing' >&2; exit 1; }
+grep -q 'sha256sum --check' "$ROOT_DIR/scripts/vps/customer-ops-restore.sh" || { echo 'product-mail checksum validation missing' >&2; exit 1; }
+grep -q 'RESTORE_PROJECT}-mail-config:/target' "$ROOT_DIR/docs/runbooks/customer-ops-vps.md" || { echo 'isolated product-mail restore volume import missing' >&2; exit 1; }
+grep -q 'BLOCKWISE_MAIL_CONFIG_VOLUME_NAME=' "$ROOT_DIR/docs/runbooks/customer-ops-vps.md" || { echo 'isolated product-mail Compose volume override missing' >&2; exit 1; }
+grep -q 'CADDY_VALIDATOR_IMAGE=.*@sha256:' "$ROOT_DIR/scripts/vps/customer-ops-install.sh" || { echo 'pinned Caddy validator missing' >&2; exit 1; }
+! grep -q 'contract-placeholder' "$COMPOSE_FILE" || { echo 'moving placeholder image remains' >&2; exit 1; }
 grep -q 'run --rm --no-deps' "$ROOT_DIR/scripts/vps/customer-ops-smoke.sh" || { echo 'private-network IMAPS client contract missing' >&2; exit 1; }
 if grep -Eq '(^|[/:])latest([@:]|$)' "$COMPOSE_FILE"; then echo 'floating latest image tag found' >&2; exit 1; fi
-for script in customer-ops-install.sh customer-ops-backup.sh customer-ops-restore.sh customer-ops-smoke.sh; do
+for script in customer-ops-install.sh customer-ops-backup.sh customer-ops-restore.sh customer-ops-smoke.sh customer-ops-contract-test.sh; do
   bash -n "$ROOT_DIR/scripts/vps/$script"
 done
+bash -n "$ROOT_DIR/infra/customer-ops/postgres-init/001-roles.sh"
 echo 'customer-ops contract checks passed'

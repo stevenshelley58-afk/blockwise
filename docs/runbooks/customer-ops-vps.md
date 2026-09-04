@@ -15,8 +15,9 @@ uses only the private customer-ops Redis instance. Mail is provided by the
 existing opt-in `product-mail` service; this stack deliberately has no second
 Stalwart server or mail volumes.
 
-The `hermes-adapter-contract` service is a disabled placeholder contract. It
-exits with status 78 and contains no implementation. Blockwise's existing
+The Hermes CRM/support projection adapter is intentionally not an image in this
+stack; its dedicated worker PR must provide the immutable adapter and contract
+receipt before projection delivery is enabled. Blockwise's existing
 `infra/product/systemd/blockwise-email-outbox-drain.*` and
 `scripts/vps/email-outbox-drain.sh` remain the outbox contract; this stack does
 not duplicate it.
@@ -46,6 +47,9 @@ not duplicate it.
   Set product Compose `BLOCKWISE_MAIL_PUBLIC_HOST` to the same hostname as
   customer-ops `MAIL_PUBLIC_HOST`; product-mail receives it as the shared
   network alias so strict SMTP/IMAPS verification uses the Stalwart identity.
+  Product-mail must be started with that alias before the customer-ops
+  installer check; the installer inspects the live network and fails closed if
+  no product-mail container owns the expected alias.
 - A restic repository on an off-host target (SFTP, S3, or equivalent) and a
   separate mode-0600 restic password file. Restic encrypts backup contents;
   the repository and password are operator-managed.
@@ -135,22 +139,29 @@ also sends a signed, non-credentialed probe and requires a 2xx response; until
 the adapter contract exists, the webhook assertion is explicitly deferred.
 It never emits credentials or API response bodies.
 
-Frank freshness must return the JSON contract
-`{"status":"fresh","fresh_until":"<RFC3339 future timestamp>","receipt":"<non-empty receipt>"}`;
-an arbitrary HTTP 2xx is not accepted. The SnagTime booking and external-mail
-receipts remain live acceptance gates after provider setup.
+Frank freshness must return the PR #118 `/api/ops/overview` contract:
+`schema` is `schema://frank.ops/v1`, `version` is `1`, `status` is `ready`,
+and `projections` contains exactly `customers`, `email`, `flows`, `mautic`,
+`enquiries`, `bookings`, `billing`, `activity`, and `members`. Each projection
+must expose its schema/version/status, RFC3339 `published_at` and future
+`fresh_until`, a non-empty `source_revision`, receipt-shaped
+`source_receipt_ids`, and a receipt-shaped `publication_receipt_id`. A
+complete overview uses one source revision, source receipt set, and
+publication receipt across all projections. An arbitrary HTTP 2xx is not
+accepted. The SnagTime booking and external-mail receipts remain live
+acceptance gates after provider setup.
 
 ## Mail and customer acceptance
 
 The Mautic entrypoint reads the operator-supplied `mautic_smtp_password` file and
-sets its SMTP transport to `product-mail:587` with STARTTLS. Confirm the
+sets its SMTP transport to `${MAIL_PUBLIC_HOST}:587` with STARTTLS. Confirm the
 Mautic mailer settings in its UI/API and send a controlled message to an
 external mailbox. Chatwoot web/worker use the product-mail submission network
 with their distinct `chatwoot_smtp_password` identity. After Chatwoot bootstrap, use the
 operator-supplied `CHATWOOT_INBOX_USER` and `chatwoot_inbox_password` to create
 its email channel with the support mailbox's IMAP host/port
 (`${MAIL_PUBLIC_HOST}:993` on the private mail-network alias)
-and SMTP host/port (`product-mail:587`), then perform this receipt-based
+and SMTP host/port (`${MAIL_PUBLIC_HOST}:587`), then perform this receipt-based
 acceptance:
 
 1. Send an inbound message from an unrelated external mailbox.
@@ -165,10 +176,13 @@ health endpoint alone is not customer-operations acceptance.
 
 ## Encrypted backup and restore
 
-Back up to an off-host restic repository; the script captures PostgreSQL
-globals and both application databases, the full Mautic MariaDB, Mautic
-config/media, and Chatwoot storage. Product-mail state is backed up separately
-by the existing Stalwart backup script:
+Back up to an off-host restic repository; one encrypted snapshot captures
+PostgreSQL globals and both application databases, the full Mautic MariaDB,
+Mautic config/media, Chatwoot storage, and the existing product-mail Stalwart
+config/data. The customer backup invokes the existing Stalwart backup script
+into the same staging directory, so the product-mail state is covered by the
+same manifest and restic artifact. Stop product-mail under change control
+first, as required by `scripts/vps/stalwart-backup.sh`:
 
 ```bash
 scripts/vps/customer-ops-backup.sh \
@@ -190,9 +204,10 @@ scripts/vps/customer-ops-restore.sh \
   --receipt /srv/blockwise/customer-ops-restore-test/restore-receipt.txt
 ```
 
-The command validates every customer-ops artifact and writes a mode-0600
-prepared-restore receipt; it does not claim an import proof. Then import into a
-newly created isolated Compose project with a unique name
+The command validates every customer-ops and product-mail artifact, including
+the Stalwart SHA256 manifest, and writes a mode-0600 prepared-restore receipt;
+it does not claim an import proof. Then import into a newly created isolated
+Compose project with a unique name
 and fresh volumes. Set `ARTIFACT_DIR` to the directory containing `MANIFEST`:
 
 ```bash
@@ -211,7 +226,7 @@ docker compose -p "$RESTORE_PROJECT" --env-file /etc/blockwise/customer-ops/cust
   'PGPASSWORD="$(cat /run/secrets/postgres_owner_password)" pg_restore -U "$POSTGRES_USER" -d snagtime --exit-on-error' < "$ARTIFACT_DIR/snagtime.dump"
 docker compose -p "$RESTORE_PROJECT" --env-file /etc/blockwise/customer-ops/customer-ops.env \
   -f infra/customer-ops/docker-compose.yml exec -T mariadb sh -c \
-  'mariadb -uroot --password="$(cat /run/secrets/mautic_db_root_password)"' < "$ARTIFACT_DIR/mautic.sql"
+  'MYSQL_PWD="$(cat /run/secrets/mautic_db_root_password)" mariadb -uroot' < "$ARTIFACT_DIR/mautic.sql"
 docker compose -p "$RESTORE_PROJECT" --env-file /etc/blockwise/customer-ops/customer-ops.env \
   -f infra/customer-ops/docker-compose.yml run --rm --no-deps -T --entrypoint sh mautic -c \
   'tar -C /var/www/html/config -xf -' < "$ARTIFACT_DIR/mautic-config.tar"
@@ -224,12 +239,35 @@ docker compose -p "$RESTORE_PROJECT" --env-file /etc/blockwise/customer-ops/cust
 docker compose -p "$RESTORE_PROJECT" --env-file /etc/blockwise/customer-ops/customer-ops.env \
   -f infra/customer-ops/docker-compose.yml run --rm --no-deps -T --entrypoint sh chatwoot-web -c \
   'tar -C /app/storage -xf -' < "$ARTIFACT_DIR/chatwoot-storage.tar"
+docker volume create "${RESTORE_PROJECT}-mail-config"
+docker volume create "${RESTORE_PROJECT}-mail-data"
+docker run --rm --network none --read-only --cap-drop ALL --security-opt no-new-privileges \
+  -v "${RESTORE_PROJECT}-mail-config:/target" \
+  -v "$ARTIFACT_DIR/product-mail/stalwart-config.tar.gz:/backup.tar.gz:ro" \
+  --entrypoint sh caddy:2.11.3-alpine@sha256:86deaf5e3d3408a6ccec08fbb79989783dd26e206ae10bcf78a801dc8c9ab794 \
+  -ceu 'test -z "$(find /target -mindepth 1 -print -quit)"; tar -C /target -xzf /backup.tar.gz'
+docker run --rm --network none --read-only --cap-drop ALL --security-opt no-new-privileges \
+  -v "${RESTORE_PROJECT}-mail-data:/target" \
+  -v "$ARTIFACT_DIR/product-mail/stalwart-data.tar.gz:/backup.tar.gz:ro" \
+  --entrypoint sh caddy:2.11.3-alpine@sha256:86deaf5e3d3408a6ccec08fbb79989783dd26e206ae10bcf78a801dc8c9ab794 \
+  -ceu 'test -z "$(find /target -mindepth 1 -print -quit)"; tar -C /target -xzf /backup.tar.gz'
 ```
 
-The commands above extract the Mautic and Chatwoot tarballs into fresh project
-volumes using temporary one-shot containers. Start web/worker services and run
-health and smoke checks; append the isolated project name, image digests, and
-smoke result to the mode-0600 receipt only after that drill has actually run.
-Product-mail state is restored separately under
-`docs/runbooks/stalwart-mail.md`; never restore over a live product or
-customer-ops volume.
+The commands above extract the Mautic, Chatwoot, and product-mail tarballs
+into fresh isolated volumes using temporary one-shot containers. The
+extraction image reference is digest-pinned; replace it only with another verified
+immutable digest. Start web/worker services and run health and smoke checks;
+append the isolated project name, image digests, and smoke result to the
+mode-0600 receipt only after that drill has actually run. Never restore over a
+live product or customer-ops volume.
+
+To start the restored product-mail service against those isolated volumes, use
+the product Compose file with the restore project and explicit volume names;
+never rely on its production defaults:
+
+```bash
+export BLOCKWISE_MAIL_CONFIG_VOLUME_NAME="${RESTORE_PROJECT}-mail-config"
+export BLOCKWISE_MAIL_DATA_VOLUME_NAME="${RESTORE_PROJECT}-mail-data"
+docker compose -p "$RESTORE_PROJECT" --env-file /etc/blockwise/customer-ops/customer-ops.env \
+  -f infra/coolify/docker-compose.product.yml --profile mail up -d product-mail
+```
