@@ -2,8 +2,8 @@
 
 Status: **INCOMPLETE — no deployment performed** (2026-09-04)
 
-This branch repairs release controls from current `origin/main` at
-`d0d005ee`. It does not deploy, replay stale production-only commits, or
+This branch began from `origin/main` at `d0d005ee` and was forward-merged with
+the later `origin/main` release at `a2a35bf9`. It does not deploy, replay stale production-only commits, or
 assert that a historical runtime receipt describes current main.
 
 ## Current known facts
