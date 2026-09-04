@@ -153,6 +153,16 @@ chmod 600 /etc/blockwise/customer-ops/customer-ops.env
 scripts/vps/customer-ops-install.sh --env-file /etc/blockwise/customer-ops/customer-ops.env --check
 ```
 
+Deployment order is strict: create the operator API/provider files and the
+`blockwise_webhook_secret`, run the customer-ops `--check`/`--apply`, then run
+`customer-ops-bootstrap.sh --env-file ... --apply` so Chatwoot creates or
+reconciles its webhook and writes `chatwoot_webhook_secret`. Only after that
+file exists at `CHATWOOT_WEBHOOK_SECRET_HOST_FILE` may the product Compose
+project be started or `product-app` restarted; its required bind mount fails
+closed before then. Keep the product environment's
+`SNAGTIME_WEBHOOK_SECRET_HOST_FILE` and Chatwoot host-file settings pointed at
+the fixed customer secret paths before starting the app.
+
 To produce the reviewed edge input without modifying this checkout, add
 `--render-caddy /etc/blockwise/customer-ops/Caddyfile.snippets`; the installer
 renders and validates the three configured web hostnames. Mail HTTP/JMAP is not
