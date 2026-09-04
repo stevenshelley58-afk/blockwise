@@ -376,6 +376,10 @@ describe("variant-pack — authoritative exactly-five pack", () => {
       assert.equal(qaEvidence.feedPassed, true);
       assert.equal(qaEvidence.storyPassed, true);
       assert.equal(Object.keys(qaEvidence.stressFixtureResults).length, 10);
+      assert.deepEqual(
+        new Set(Object.values(qaEvidence.stressFixtureResults)),
+        new Set(["pass"]),
+      );
     } finally {
       const privateReleaseRoot = join(candidate, "hermes-home", "tool_releases", "ad-template-generator");
       if (existsSync(privateReleaseRoot)) {
