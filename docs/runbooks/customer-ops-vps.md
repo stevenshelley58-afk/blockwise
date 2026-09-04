@@ -125,10 +125,12 @@ After the edge routes and provider setup are complete, run:
 scripts/vps/customer-ops-smoke.sh --env-file /etc/blockwise/customer-ops/customer-ops.env
 ```
 
-It reports only pass/fail and status codes. It checks SMTP STARTTLS and AUTH
-(with `swaks` installed), Mautic API authentication, Chatwoot API, SnagTime
-readiness plus Google/Calendar configuration, and the configured Frank
-projection freshness endpoint. When `CHATWOOT_WEBHOOK_PROBE_URL` is set, it
+It reports only pass/fail and status codes. It checks strict SMTP STARTTLS/AUTH
+for all three service identities (with `swaks` installed), runs support IMAPS
+authentication from an ephemeral Chatwoot client on the private mail network,
+checks Mautic API authentication, Chatwoot API, SnagTime readiness plus
+Google/Calendar configuration, and the configured Frank projection freshness
+schema. When `CHATWOOT_WEBHOOK_PROBE_URL` is set, it
 also sends a signed, non-credentialed probe and requires a 2xx response; until
 the adapter contract exists, the webhook assertion is explicitly deferred.
 It never emits credentials or API response bodies.
