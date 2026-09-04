@@ -22,6 +22,34 @@ export interface RenderInput {
   cropOverrides?: Record<string, Rect>;
   /** Imported font bytes for server-side canary renders; avoids host-font drift. */
   fontValues?: Record<string, Buffer>;
+  /** Emit deterministic per-layer evidence for offline QA. */
+  collectDiagnostics?: boolean;
+}
+
+export interface PixelBounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface TextRenderDiagnostic {
+  placement: Placement;
+  layerId: string;
+  inputKey: string;
+  status: "painted" | "empty" | "refused";
+  reason?: "max_characters" | "does_not_fit";
+  geometry: Rect;
+  paintedBounds: PixelBounds | null;
+  withinGeometry: boolean;
+  fontFamily: string;
+  fontSizePx: number;
+  lineCount: number;
+  maxLines: number;
+}
+
+export interface RenderDiagnostics {
+  textLayers: TextRenderDiagnostic[];
 }
 
 export interface RenderOutput {
@@ -29,6 +57,7 @@ export interface RenderOutput {
   width: number;
   height: number;
   png: Buffer;
+  diagnostics?: RenderDiagnostics;
 }
 
 export const TEXT_PREFLIGHT_ERROR_CODE = "AD_TEMPLATE_TEXT_PREFLIGHT_FAILED";
@@ -80,14 +109,15 @@ async function renderPlacementPrepared(input: RenderInput, placement: Placement)
   const canvas = createCanvas(dims.width, dims.height);
   const ctx = canvas.getContext("2d");
   ctx.imageSmoothingEnabled = false;
+  const diagnostics: RenderDiagnostics | undefined = input.collectDiagnostics ? { textLayers: [] } : undefined;
 
   for (const layer of layout.layers) {
-    await renderLayer(ctx, layer, input, placement, dims);
+    await renderLayer(ctx, layer, input, placement, dims, diagnostics);
   }
 
   assertFullyOpaque(ctx, dims, placement);
   const png = canvas.toBuffer("image/png");
-  return { placement, width: dims.width, height: dims.height, png };
+  return { placement, width: dims.width, height: dims.height, png, ...(diagnostics ? { diagnostics } : {}) };
 }
 
 export async function renderBoth(input: RenderInput): Promise<[RenderOutput, RenderOutput]> {
@@ -98,12 +128,23 @@ export async function renderBoth(input: RenderInput): Promise<[RenderOutput, Ren
   return [await renderPlacementPrepared(input, "feed"), await renderPlacementPrepared(input, "story")];
 }
 
-async function renderLayer(ctx: SKRSContext2D, layer: LayoutLayer, input: RenderInput, placement: Placement, dims: { width: number; height: number }): Promise<void> {
+async function renderLayer(
+  ctx: SKRSContext2D,
+  layer: LayoutLayer,
+  input: RenderInput,
+  placement: Placement,
+  dims: { width: number; height: number },
+  diagnostics?: RenderDiagnostics,
+): Promise<void> {
   switch (layer.type) {
     case "plate": return renderPlate(ctx, layer, input, dims);
     case "image_slot": return renderImageSlot(ctx, layer, input, dims);
     case "overlay_patch": return renderOverlay(ctx, layer, input, dims);
-    case "text": return renderText(ctx, layer, input, placement, dims);
+    case "text": {
+      const diagnostic = renderText(ctx, layer, input, placement, dims, Boolean(diagnostics));
+      if (diagnostic) diagnostics?.textLayers.push(diagnostic);
+      return;
+    }
     case "logo": return renderLogo(ctx, layer, input, dims);
     case "vector": return renderVector(ctx, layer, input, dims);
     case "icon": return renderIcon(ctx, layer, input, dims);
@@ -254,12 +295,24 @@ type PreparedText = {
   kind: "paint";
   textLayer: RenderTextLayer;
   geometry: Rect;
+  family: string;
   fontSize: number;
   lines: string[];
   trackingPixels: number;
 };
 
-type TextPreparation = PreparedText | { kind: "skip" } | { kind: "violation"; violation: TextPreflightViolation };
+type SkippedText = {
+  kind: "skip";
+  status: "empty" | "refused";
+  reason?: TextRenderDiagnostic["reason"];
+  textLayer: RenderTextLayer;
+  geometry: Rect;
+  family: string;
+  fontSize: number;
+  lineCount: number;
+};
+
+type TextPreparation = PreparedText | SkippedText | { kind: "violation"; violation: TextPreflightViolation };
 
 /**
  * Resolve the authored text size after geometry normalization. The optional
@@ -272,17 +325,39 @@ export function effectiveTextFontSize(layer: Pick<TextLayer, "fontSize"> & { siz
   return Number.isFinite(ratio) && ratio > 0 ? geometry.height * ratio : layer.fontSize;
 }
 
-function renderText(ctx: SKRSContext2D, layer: TextLayer, input: RenderInput, placement: Placement, dims: CanvasDimensions): void {
+function renderText(
+  ctx: SKRSContext2D,
+  layer: TextLayer,
+  input: RenderInput,
+  placement: Placement,
+  dims: CanvasDimensions,
+  collectDiagnostics: boolean,
+): TextRenderDiagnostic | undefined {
   const prepared = prepareText(ctx, layer, input, placement, dims);
-  if (prepared.kind === "skip") return;
   if (prepared.kind === "violation") throw new TextPreflightError([prepared.violation]);
+  if (prepared.kind === "skip") {
+    return collectDiagnostics ? {
+      placement,
+      layerId: layer.layerId,
+      inputKey: layer.inputKey,
+      status: prepared.status,
+      ...(prepared.reason ? { reason: prepared.reason } : {}),
+      geometry: prepared.geometry,
+      paintedBounds: null,
+      withinGeometry: prepared.status === "empty",
+      fontFamily: prepared.family,
+      fontSizePx: prepared.fontSize,
+      lineCount: prepared.lineCount,
+      maxLines: layer.maxLines,
+    } : undefined;
+  }
 
-  const { textLayer, geometry, fontSize, lines, trackingPixels } = prepared;
+  const { textLayer, geometry, family, fontSize, lines, trackingPixels } = prepared;
   ctx.save();
   ctx.fillStyle = input.colourMap[layer.colourRole] ?? "#000000";
   ctx.textAlign = layer.alignment;
   ctx.textBaseline = "alphabetic";
-  ctx.font = fontDeclaration(textLayer, resolveTextFontFamily(textLayer), fontSize);
+  ctx.font = fontDeclaration(textLayer, family, fontSize);
 
   const x = layer.alignment === "center" ? geometry.x + geometry.width / 2
     : layer.alignment === "right" ? geometry.x + geometry.width
@@ -293,15 +368,35 @@ function renderText(ctx: SKRSContext2D, layer: TextLayer, input: RenderInput, pl
   const lineMetrics = lines.map((line) => textMetrics(ctx, line, fontSize));
   const maxAscent = Math.max(0, ...lineMetrics.map((metrics) => metrics.ascent));
   const baseline = geometry.y + maxAscent;
-  lines.forEach((line, index) => drawTrackedText(
-    ctx,
-    line,
-    x,
-    baseline + index * fontSize * layer.lineHeight,
-    trackingPixels,
-    layer.alignment,
-  ));
+  const diagnosticCanvas = collectDiagnostics ? createCanvas(dims.width, dims.height) : null;
+  const diagnosticContext = diagnosticCanvas?.getContext("2d") ?? null;
+  if (diagnosticContext) {
+    diagnosticContext.fillStyle = input.colourMap[layer.colourRole] ?? "#000000";
+    diagnosticContext.textAlign = layer.alignment;
+    diagnosticContext.textBaseline = "alphabetic";
+    diagnosticContext.font = ctx.font;
+  }
+  for (const [index, line] of lines.entries()) {
+    const y = baseline + index * fontSize * layer.lineHeight;
+    drawTrackedText(ctx, line, x, y, trackingPixels, layer.alignment);
+    if (diagnosticContext) drawTrackedText(diagnosticContext, line, x, y, trackingPixels, layer.alignment);
+  }
   ctx.restore();
+  if (!diagnosticContext) return undefined;
+  const paintedBounds = alphaBounds(diagnosticContext, dims);
+  return {
+    placement,
+    layerId: layer.layerId,
+    inputKey: layer.inputKey,
+    status: "painted",
+    geometry,
+    paintedBounds,
+    withinGeometry: paintedBounds ? boundsWithinGeometry(paintedBounds, geometry) : false,
+    fontFamily: family,
+    fontSizePx: fontSize,
+    lineCount: lines.length,
+    maxLines: layer.maxLines,
+  };
 }
 
 function assertTextPreflight(input: RenderInput, placements: readonly Placement[]): void {
@@ -325,14 +420,18 @@ function prepareText(
   placement: Placement,
   dims: CanvasDimensions,
 ): TextPreparation {
-  const source = input.textValues[layer.inputKey];
-  if (!source) return { kind: "skip" };
-  if (layer.overflowBehaviour === "refuse" && source.length > layer.maxCharacters) return { kind: "skip" };
   const textLayer = layer as RenderTextLayer;
-  const text = applyTextCase(source.slice(0, layer.maxCharacters), textLayer.case);
   const geometry = resolveRenderGeometry(layer.geometry, dims);
   const family = resolveTextFontFamily(textLayer);
   const baseFontSize = effectiveTextFontSize(textLayer, geometry);
+  const source = input.textValues[layer.inputKey];
+  if (!source) {
+    return { kind: "skip", status: "empty", textLayer, geometry, family, fontSize: baseFontSize, lineCount: 0 };
+  }
+  if (layer.overflowBehaviour === "refuse" && source.length > layer.maxCharacters) {
+    return { kind: "skip", status: "refused", reason: "max_characters", textLayer, geometry, family, fontSize: baseFontSize, lineCount: 0 };
+  }
+  const text = applyTextCase(source.slice(0, layer.maxCharacters), textLayer.case);
   const readabilityFloor = MINIMUM_TEXT_SIZE_PX[placement];
   if (baseFontSize < readabilityFloor) {
     return {
@@ -363,7 +462,7 @@ function prepareText(
     if (fits) break;
   }
   if (!fits && layer.overflowBehaviour === "refuse") {
-    return { kind: "skip" };
+    return { kind: "skip", status: "refused", reason: "does_not_fit", textLayer, geometry, family, fontSize, lineCount: lines.length };
   }
   if (!fits && layer.overflowBehaviour === "scale_down") {
     return {
@@ -382,7 +481,7 @@ function prepareText(
       lines[lines.length - 1] = `${last.trimEnd()}${suffix}`;
     }
   }
-  return { kind: "paint", textLayer, geometry, fontSize, lines, trackingPixels };
+  return { kind: "paint", textLayer, geometry, family, fontSize, lines, trackingPixels };
 }
 
 function resolveTextFontFamily(layer: RenderTextLayer): string {
@@ -421,6 +520,34 @@ function normalizeTextPreflightViolation(violation: TextPreflightViolation): Tex
 
 function normalizeLayerId(layerId: string): string {
   return layerId.replace(/[^A-Za-z0-9._:-]/g, "_").slice(0, 160) || "unnamed-layer";
+}
+
+function alphaBounds(ctx: SKRSContext2D, dims: CanvasDimensions): PixelBounds | null {
+  const pixels = ctx.getImageData(0, 0, dims.width, dims.height).data;
+  let minX = dims.width;
+  let minY = dims.height;
+  let maxX = -1;
+  let maxY = -1;
+  for (let y = 0; y < dims.height; y += 1) {
+    for (let x = 0; x < dims.width; x += 1) {
+      if (pixels[(y * dims.width + x) * 4 + 3] === 0) continue;
+      minX = Math.min(minX, x);
+      minY = Math.min(minY, y);
+      maxX = Math.max(maxX, x);
+      maxY = Math.max(maxY, y);
+    }
+  }
+  return maxX < minX || maxY < minY
+    ? null
+    : { x: minX, y: minY, width: maxX - minX + 1, height: maxY - minY + 1 };
+}
+
+function boundsWithinGeometry(bounds: PixelBounds, geometry: Rect): boolean {
+  const tolerance = 1;
+  return bounds.x >= geometry.x - tolerance
+    && bounds.y >= geometry.y - tolerance
+    && bounds.x + bounds.width <= geometry.x + geometry.width + tolerance
+    && bounds.y + bounds.height <= geometry.y + geometry.height + tolerance;
 }
 
 function applyTextCase(text: string, mode: RenderTextLayer["case"]): string {
