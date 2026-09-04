@@ -237,7 +237,7 @@ export function PublishFlow({
     } finally {
       setSubmitting(false);
     }
-  }, [adId, manualMutationId, manualNotes, publishBuild.controls, publishBuild.summary, workspaceId]);
+  }, [adId, initialState?.revision.documentHash, initialState?.revision.id, manualMutationId, manualNotes, publishBuild.controls, publishBuild.summary, workspaceId]);
 
   const handleAutomatedPublish = useCallback(async () => {
     if (!publishBuild.controls || !publishBuild.summary) return;
@@ -260,6 +260,7 @@ export function PublishFlow({
   }, [adId, publishBuild.controls, publishBuild.summary, workspaceId]);
 
   useEffect(() => {
+    if (automatedPublishAvailable) return;
     let cancelled = false;
     fetch(`/api/adstudio/ads/${encodeURIComponent(adId)}/manual-publish?workspaceId=${encodeURIComponent(workspaceId)}`, { cache: "no-store" })
       .then(async response => ({ ok: response.ok, body: await response.json().catch(() => ({})) as { request?: { status?: "requested" | "in_progress" | "completed" | "cancelled"; requestId?: string }; message?: string } }))
@@ -271,7 +272,7 @@ export function PublishFlow({
       })
       .catch(() => undefined);
     return () => { cancelled = true; };
-  }, [adId, workspaceId]);
+  }, [adId, automatedPublishAvailable, workspaceId]);
 
   // BW-Q — a SECOND explicit click. Only ever offered after a publish receipt
   // that created PAUSED objects on Meta (mode "publish"), and it targets that
