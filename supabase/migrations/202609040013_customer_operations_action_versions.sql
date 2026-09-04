@@ -54,11 +54,9 @@ create trigger ops_billing_target_version before update on public.billing_offer_
 drop trigger if exists ops_audit_target_version on public.audit_logs;
 create trigger ops_audit_target_version before update on public.audit_logs
   for each row execute function public.ops_bump_target_version();
--- #433 owns the enquiry-assignment trigger when present. This generic trigger
--- is additive and makes fresh installs versioned even before that branch lands.
-drop trigger if exists ops_enquiry_target_version on public.ops_enquiry_associations;
-create trigger ops_enquiry_target_version before update on public.ops_enquiry_associations
-  for each row execute function public.ops_bump_target_version();
+-- #435 owns the enquiry-assignment trigger. Do not install a second increment
+-- trigger here: two BEFORE UPDATE version bumps would skip versions and break
+-- Frank's exact CAS contract.
 
 revoke all on function public.ops_bump_target_version() from public, anon, authenticated, service_role;
 
