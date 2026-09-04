@@ -17,13 +17,22 @@ function iconTemplate(icon: string): AdTemplate {
     createdAt: "2026-09-03T00:00:00.000Z",
     feedLayout: {
       placement: "feed",
-      layers: [{
-        type: "icon",
-        layerId: "fallback-icon",
-        icon,
-        colourRole: "accent",
-        geometry: { x: 0.25, y: 0.25, width: 0.5, height: 0.5 },
-      }],
+      layers: [
+        {
+          type: "plate",
+          layerId: "feed-background",
+          colourRole: "background",
+          geometry: { x: 0, y: 0, width: 1, height: 1 },
+          protected: true,
+        },
+        {
+          type: "icon",
+          layerId: "fallback-icon",
+          icon,
+          colourRole: "accent",
+          geometry: { x: 0.25, y: 0.25, width: 0.5, height: 0.5 },
+        },
+      ],
       safeZones: [],
     },
     storyLayout: { placement: "story", layers: [], safeZones: [] },
@@ -58,8 +67,9 @@ function iconTemplate(icon: string): AdTemplate {
   };
 }
 
-function pixelAlpha(ctx: SKRSContext2D, x: number, y: number): number {
-  return ctx.getImageData(x, y, 1, 1).data[3] ?? 0;
+function pixelColour(ctx: SKRSContext2D, x: number, y: number): [number, number, number, number] {
+  const pixel = ctx.getImageData(x, y, 1, 1).data;
+  return [pixel[0] ?? 0, pixel[1] ?? 0, pixel[2] ?? 0, pixel[3] ?? 0];
 }
 
 describe("canonical renderer parity fixtures", () => {
@@ -130,8 +140,8 @@ describe("canonical renderer parity fixtures", () => {
 
     // The normalized box resolves to x=270..810, y=337.5..1012.5. The
     // fallback is a circle centred at (540, 675), not the old check path.
-    assert.equal(pixelAlpha(ctx, 540, 675), 0, "fallback circle must not be filled");
-    assert.ok(pixelAlpha(ctx, 724, 675) > 0, "fallback stroke should cross the right circumference");
-    assert.ok(pixelAlpha(ctx, 540, 491) > 0, "fallback stroke should cross the top circumference");
+    assert.deepEqual(pixelColour(ctx, 540, 675), [255, 255, 255, 255], "fallback circle must not be filled");
+    assert.deepEqual(pixelColour(ctx, 724, 675), [255, 0, 0, 255], "fallback stroke should cross the right circumference");
+    assert.deepEqual(pixelColour(ctx, 540, 491), [255, 0, 0, 255], "fallback stroke should cross the top circumference");
   });
 });
