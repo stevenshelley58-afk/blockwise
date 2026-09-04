@@ -243,10 +243,10 @@ GoTrue and transactional-outbox SMTP routing to the shared `product-mail`,
 Mautic/Chatwoot API authentication, and SnagTime readiness; it never claims a
 signup, external-mail, booking, or action receipt.
 
-The Mautic cron/worker healthchecks require recent log progress. The SnagTime
-worker healthcheck requires the published worker image to update
-`SNAGTIME_WORKER_HEARTBEAT_FILE` after each queue cycle; a missing or stale file
-is unhealthy even when the process is still running.
+The Mautic cron/worker healthchecks require recent log progress. SnagTime's
+published worker image owns its worker liveness contract; this Compose wiring
+uses its exact `WORKER_DATABASE_URL_FILE` and secret set and does not invent a
+heartbeat file that the image does not update.
 
 ## Receipt-based staging smoke matrix
 

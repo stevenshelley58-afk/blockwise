@@ -82,12 +82,15 @@ test("bootstrap is explicit, idempotent, and credential-file based", () => {
   assert.doesNotMatch(runbook, /adapter remains explicitly deferred|adapter contract exists, the webhook assertion is explicitly deferred/i);
 });
 
-test("provider worker healthchecks require progress heartbeats", () => {
+test("provider worker healthchecks and SnagTime runtime contract are explicit", () => {
   const customerCompose = text("infra/customer-ops/docker-compose.yml");
   for (const service of ["mautic-cron", "mautic-worker", "snagtime-worker"]) {
     const section = customerCompose.match(new RegExp(`  ${service}:[\\s\\S]*?(?=\\n  [A-Za-z0-9_-]+:|$)`))?.[0] ?? "";
     assert.match(section, /healthcheck:/, `${service} healthcheck missing`);
   }
-  assert.match(customerCompose, /SNAGTIME_WORKER_HEARTBEAT_FILE/);
-  assert.match(customerCompose, /mmin -5/);
+  assert.match(customerCompose, /WORKER_DATABASE_URL_FILE: \/run\/secrets\/worker_database_url/);
+  for (const key of ["BOOKING_CAPABILITY_KEY_ID", "EMAIL_TOKEN_SECRET_FILE", "TENANT_CONTEXT_SECRET_FILE", "RATE_LIMIT_HASH_SECRET_FILE", "PROXY_SHARED_SECRET_FILE", "OPERATOR_HEALTH_SECRET_FILE", "BLOCKWISE_WEBHOOK_SECRET_FILE", "BLOCKWISE_BOOKING_ACTION_SECRET_FILE"]) {
+    assert.match(customerCompose, new RegExp(key));
+  }
+  assert.doesNotMatch(customerCompose, /SNAGTIME_WORKER_HEARTBEAT_FILE/);
 });

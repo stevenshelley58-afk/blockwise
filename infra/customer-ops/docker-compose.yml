@@ -314,7 +314,7 @@ services:
       NODE_ENV: production
       DATABASE_PROVIDER: postgresql
       DATABASE_ROLE: app
-      DATABASE_URL_FILE: /run/secrets/snagtime_database_url
+      DATABASE_URL_FILE: /run/secrets/app_database_url
       BUILD_ID: ${SNAGTIME_REVISION:?set SNAGTIME_REVISION to the full merged-main SHA}
       NEXT_PUBLIC_APP_URL: https://${SNAGTIME_HOST:?set SNAGTIME_HOST}
       FREE_ONLY: "true"
@@ -332,8 +332,19 @@ services:
       EMAIL_REPLY_TO: ${EMAIL_REPLY_TO:?set EMAIL_REPLY_TO}
       EMAIL_SENDER_DOMAIN: ${EMAIL_SENDER_DOMAIN:?set EMAIL_SENDER_DOMAIN}
       AUTH_SECRET_FILE: /run/secrets/snagtime_auth_secret
+      BOOKING_CAPABILITY_KEY_ID: ${BOOKING_CAPABILITY_KEY_ID:?set BOOKING_CAPABILITY_KEY_ID}
+      BOOKING_CAPABILITY_SECRET_FILE: /run/secrets/booking_capability_secret
+      BOOKING_CAPABILITY_KEYRING_FILE: /run/secrets/booking_capability_keyring
       TOKEN_ENCRYPTION_KEY_FILE: /run/secrets/snagtime_token_encryption_key
-    secrets: [snagtime_database_url, google_client_secret, snagtime_smtp_password, snagtime_auth_secret, snagtime_token_encryption_key]
+      EMAIL_TOKEN_SECRET_FILE: /run/secrets/email_token_secret
+      TENANT_CONTEXT_SECRET_FILE: /run/secrets/tenant_context_secret
+      RATE_LIMIT_HASH_SECRET_FILE: /run/secrets/rate_limit_hash_secret
+      PROXY_SHARED_SECRET_FILE: /run/secrets/proxy_shared_secret
+      OPERATOR_HEALTH_SECRET_FILE: /run/secrets/operator_health_secret
+      BLOCKWISE_WEBHOOK_URL: ${BLOCKWISE_WEBHOOK_URL:-}
+      BLOCKWISE_WEBHOOK_SECRET_FILE: /run/secrets/blockwise_webhook_secret
+      BLOCKWISE_BOOKING_ACTION_SECRET_FILE: /run/secrets/blockwise_booking_action_secret
+    secrets: [app_database_url, google_client_secret, snagtime_smtp_password, snagtime_auth_secret, booking_capability_secret, booking_capability_keyring, snagtime_token_encryption_key, email_token_secret, tenant_context_secret, rate_limit_hash_secret, proxy_shared_secret, operator_health_secret, blockwise_webhook_secret, blockwise_booking_action_secret]
     networks: [edge, backend, egress, mail]
     depends_on:
       postgres: { condition: service_healthy }
@@ -357,23 +368,26 @@ services:
     command: ["node", "dist/worker.mjs"]
     environment:
       <<: *snagtime_env
-      SNAGTIME_WORKER_HEARTBEAT_FILE: /run/customer-ops/snagtime-worker-heartbeat
-    secrets: [snagtime_database_url, google_client_secret, snagtime_smtp_password, snagtime_auth_secret, snagtime_token_encryption_key]
+      DATABASE_URL_FILE: ""
+      DATABASE_ROLE: worker
+      WORKER_DATABASE_URL_FILE: /run/secrets/worker_database_url
+      EMAIL_TOKEN_SECRET_FILE: /run/secrets/email_token_secret
+      BLOCKWISE_WEBHOOK_SECRET_FILE: /run/secrets/blockwise_webhook_secret
+      BLOCKWISE_BOOKING_ACTION_SECRET_FILE: /run/secrets/blockwise_booking_action_secret
+      OPERATOR_HEALTH_SECRET_FILE: /run/secrets/operator_health_secret
+    secrets: [worker_database_url, google_client_secret, snagtime_smtp_password, snagtime_token_encryption_key, email_token_secret, blockwise_webhook_secret, blockwise_booking_action_secret, operator_health_secret]
     networks: [backend, egress, mail]
     depends_on:
       postgres: { condition: service_healthy }
     restart: unless-stopped
     read_only: true
-    # The published worker must touch this file after each completed queue
-    # cycle. A stale/missing heartbeat fails closed rather than reporting a
-    # live process whose queue is wedged.
+    tmpfs: [/tmp]
     healthcheck:
-      test: ["CMD-SHELL", "test -s /run/customer-ops/snagtime-worker-heartbeat && find /run/customer-ops/snagtime-worker-heartbeat -mmin -5 -print -quit | grep -q ."]
+      test: ["CMD", "node", "-e", "const fs=require('node:fs'); const secret=fs.readFileSync(process.env.OPERATOR_HEALTH_SECRET_FILE,'utf8').trim(); fetch('http://snagtime-web:3000/api/health/operator',{headers:{'x-tempocove-operator-secret':secret}}).then(async r=>{const j=await r.json(); const w=j.worker; if(!r.ok||!w||!['RUNNING','IDLE'].includes(w.status)||Date.now()-Date.parse(w.lastSeenAt)>60000||w.buildId!==process.env.BUILD_ID)process.exit(1)}).catch(()=>process.exit(1))"]
       interval: 60s
       timeout: 10s
       retries: 3
       start_period: 10m
-    tmpfs: [/tmp, /run/customer-ops]
     security_opt: [no-new-privileges:true]
     cap_drop: [ALL]
     deploy:
@@ -428,7 +442,8 @@ secrets:
   mautic_db_root_password: { file: "${CUSTOMER_OPS_SECRETS_DIR:-/etc/blockwise/customer-ops/secrets}/mautic_db_root_password" }
   mautic_db_password: { file: "${CUSTOMER_OPS_SECRETS_DIR:-/etc/blockwise/customer-ops/secrets}/mautic_db_password" }
   chatwoot_secret_key_base: { file: "${CUSTOMER_OPS_SECRETS_DIR:-/etc/blockwise/customer-ops/secrets}/chatwoot_secret_key_base" }
-  snagtime_database_url: { file: "${CUSTOMER_OPS_SECRETS_DIR:-/etc/blockwise/customer-ops/secrets}/snagtime_database_url" }
+  app_database_url: { file: "${CUSTOMER_OPS_SECRETS_DIR:-/etc/blockwise/customer-ops/secrets}/app_database_url" }
+  worker_database_url: { file: "${CUSTOMER_OPS_SECRETS_DIR:-/etc/blockwise/customer-ops/secrets}/worker_database_url" }
   google_client_secret: { file: "${CUSTOMER_OPS_SECRETS_DIR:-/etc/blockwise/customer-ops/secrets}/google_client_secret" }
   mautic_smtp_password: { file: "${CUSTOMER_OPS_SECRETS_DIR:-/etc/blockwise/customer-ops/secrets}/mautic_smtp_password" }
   chatwoot_smtp_password: { file: "${CUSTOMER_OPS_SECRETS_DIR:-/etc/blockwise/customer-ops/secrets}/chatwoot_smtp_password" }
@@ -436,3 +451,12 @@ secrets:
   chatwoot_inbox_password: { file: "${CUSTOMER_OPS_SECRETS_DIR:-/etc/blockwise/customer-ops/secrets}/chatwoot_inbox_password" }
   snagtime_auth_secret: { file: "${CUSTOMER_OPS_SECRETS_DIR:-/etc/blockwise/customer-ops/secrets}/snagtime_auth_secret" }
   snagtime_token_encryption_key: { file: "${CUSTOMER_OPS_SECRETS_DIR:-/etc/blockwise/customer-ops/secrets}/snagtime_token_encryption_key" }
+  booking_capability_secret: { file: "${CUSTOMER_OPS_SECRETS_DIR:-/etc/blockwise/customer-ops/secrets}/booking_capability_secret" }
+  booking_capability_keyring: { file: "${CUSTOMER_OPS_SECRETS_DIR:-/etc/blockwise/customer-ops/secrets}/booking_capability_keyring" }
+  email_token_secret: { file: "${CUSTOMER_OPS_SECRETS_DIR:-/etc/blockwise/customer-ops/secrets}/email_token_secret" }
+  tenant_context_secret: { file: "${CUSTOMER_OPS_SECRETS_DIR:-/etc/blockwise/customer-ops/secrets}/tenant_context_secret" }
+  rate_limit_hash_secret: { file: "${CUSTOMER_OPS_SECRETS_DIR:-/etc/blockwise/customer-ops/secrets}/rate_limit_hash_secret" }
+  proxy_shared_secret: { file: "${CUSTOMER_OPS_SECRETS_DIR:-/etc/blockwise/customer-ops/secrets}/proxy_shared_secret" }
+  operator_health_secret: { file: "${CUSTOMER_OPS_SECRETS_DIR:-/etc/blockwise/customer-ops/secrets}/operator_health_secret" }
+  blockwise_webhook_secret: { file: "${CUSTOMER_OPS_SECRETS_DIR:-/etc/blockwise/customer-ops/secrets}/blockwise_webhook_secret" }
+  blockwise_booking_action_secret: { file: "${CUSTOMER_OPS_SECRETS_DIR:-/etc/blockwise/customer-ops/secrets}/blockwise_booking_action_secret" }

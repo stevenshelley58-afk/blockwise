@@ -140,7 +140,7 @@ if [[ "$MAUTIC_SMTP_USER" == "$CHATWOOT_SMTP_USER" || "$MAUTIC_SMTP_USER" == "$S
   echo 'Mautic, Chatwoot, and SnagTime SMTP users must be distinct' >&2
   exit 64
 fi
-for secret in google_client_secret mautic_smtp_password chatwoot_smtp_password snagtime_smtp_password chatwoot_inbox_password chatwoot_webhook_probe_secret; do
+for secret in google_client_secret mautic_smtp_password chatwoot_smtp_password snagtime_smtp_password chatwoot_inbox_password chatwoot_webhook_probe_secret app_database_url worker_database_url booking_capability_secret booking_capability_keyring snagtime_token_encryption_key email_token_secret tenant_context_secret rate_limit_hash_secret proxy_shared_secret operator_health_secret blockwise_webhook_secret blockwise_booking_action_secret; do
   path="$SECRETS_DIR/$secret"
   [[ -s "$path" && ! -L "$path" && "$(readlink -f -- "$path")" == "$path" && "$(stat -c '%a' "$path" 2>/dev/null || stat -f '%Lp' "$path")" == '600' && "$(stat -c '%u' "$path" 2>/dev/null || stat -f '%u' "$path")" == '0' ]] || { echo "provider credential must pre-exist as absolute regular root-owned mode-0600 file: $path" >&2; exit 64; }
 done
