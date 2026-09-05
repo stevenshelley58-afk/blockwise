@@ -7,13 +7,6 @@ begin;
 set local lock_timeout = '3s';
 set local statement_timeout = '60s';
 
--- Opt-in VPS pre-apply verification (the final ROLLBACK keeps 011-014 unapplied):
--- {
---   printf '%s\n' 'BEGIN;' "SET LOCAL lock_timeout = '3s';" "SET LOCAL statement_timeout = '60s';"
---   cat supabase/migrations/20260905001{1,2,3,4}_*.sql
---   cat supabase/tests/ad_db_archive_native.sql
--- } | docker exec -i blockwise-research-db psql -U postgres -d blockwise_research -v ON_ERROR_STOP=1
--- Run from /root/work/blockwise on the VPS. This file expects the caller's transaction.
 
 create function pg_temp.assert_true(p_ok boolean, p_message text)
 returns void language plpgsql as $$
