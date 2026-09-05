@@ -5,16 +5,18 @@ alter table research.ad_fetch_runs
 
 create or replace function research.mark_missing_ads_inactive(p_run_id uuid, p_seen_external_ad_ids text[])
 returns jsonb language plpgsql security definer set search_path = research, pg_temp as $$
-declare v_run research.ad_fetch_runs; v_page_id uuid; v_now timestamptz := now(); v_marked bigint := 0;
+declare v_run research.ad_fetch_runs; v_page_id uuid; v_now timestamptz; v_marked bigint := 0;
 begin
   select * into v_run from research.ad_fetch_runs where id = p_run_id for update;
   if not found then raise exception 'ad_fetch_run % not found', p_run_id; end if;
-  if v_run.status <> 'success' or not coalesce(v_run.coverage_complete, false) or not coalesce(v_run.pagination_exhausted, false) then
+  if v_run.completed_at is null or v_run.status <> 'success' or not coalesce(v_run.coverage_complete, false) or not coalesce(v_run.pagination_exhausted, false) then
     return jsonb_build_object('allowed', false, 'reason', 'run_not_complete_comparable');
   end if;
   if v_run.lifecycle_reconciled_at is not null then return jsonb_build_object('allowed', false, 'reason', 'run_already_reconciled'); end if;
   v_page_id := v_run.advertiser_page_id;
+  v_now := v_run.completed_at;
   if v_page_id is null then raise exception 'run % has no advertiser_page_id', p_run_id; end if;
+  perform pg_advisory_xact_lock(hashtextextended(v_page_id::text, 0));
   if coalesce(v_run.input_payload->>'country', '') <> 'AU' or coalesce(v_run.input_payload->>'activeStatus', '') <> 'all' then
     return jsonb_build_object('allowed', false, 'reason', 'unsupported_scan_scope');
   end if;
@@ -27,7 +29,7 @@ begin
       and newer.input_payload->>'activeStatus' = v_run.input_payload->>'activeStatus'
   ) then return jsonb_build_object('allowed', false, 'reason', 'run_out_of_order'); end if;
 
-  drop table if exists _seen_ads;
+  drop table if exists pg_temp._seen_ads;
   create temp table _seen_ads on commit drop as
     select distinct x as external_ad_id from unnest(coalesce(p_seen_external_ad_ids, '{}'::text[])) as x where x is not null and x <> '';
   update research.observed_ads oa
@@ -35,6 +37,7 @@ begin
       missing_since = coalesce(oa.missing_since, v_now), last_checked_at = v_now
   where oa.advertiser_page_id = v_page_id and oa.active_status = 'active'
     and not exists (select 1 from _seen_ads s where s.external_ad_id = oa.external_ad_id);
+  update research.observed_ads oa set missing_successive_checks = 0, missing_since = null, last_checked_at = v_now  where oa.advertiser_page_id = v_page_id and oa.active_status = 'active'    and exists (select 1 from _seen_ads s where s.external_ad_id = oa.external_ad_id);
   update research.observed_ads oa set active_status = 'inactive', inactive_at = v_now
   where oa.advertiser_page_id = v_page_id and oa.active_status = 'active'
     and oa.missing_successive_checks >= 2
