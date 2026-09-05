@@ -33,7 +33,7 @@ export const home: HomeCopy = {
     adsLive: "Ads live",
     adsLiveUnit: (created) => `of ${created} created`,
     publishedThisWeek: (count) =>
-      count === 1 ? "1 published this week" : `${count} published this week`,
+      count === 1 ? "1 created this week" : `${count} created this week`,
     adPacksLeft: "Ad packs left",
     adsCreated: "Ads created",
     noAdsYet: "No ads yet",

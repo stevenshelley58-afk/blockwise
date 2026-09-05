@@ -3,6 +3,7 @@ import test from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
+import { HomePerformanceChart } from "../src/components/self-serve/home-chart.tsx";
 import { MetaMonitorHeader } from "../src/components/monitor/MetaMonitorHeader.tsx";
 import { homePerformanceFromReporting } from "../src/lib/home/home-dashboard-data.ts";
 import { buildSampleMetaMonitorPayload } from "../src/lib/meta-monitor/sampleMetaMonitorData.ts";
@@ -103,4 +104,16 @@ test("Results labels samples plainly and never invents a recent timestamp", () =
 
   const real = header("2026-08-01T02:03:00.000Z", false);
   assert.match(real, /Last known/);
+});
+
+
+test("Home chart does not describe missing data as zero enquiries", () => {
+  for (const daily of [null, []]) {
+    const html = renderToStaticMarkup(createElement(HomePerformanceChart, { daily }));
+    assert.match(html, /Reporting unavailable/);
+    assert.doesNotMatch(html, /No enquiries recorded|No leads yet/);
+  }
+  const html = renderToStaticMarkup(createElement(HomePerformanceChart, { daily: [{ date: "2026-09-06", leads: 0 }] }));
+  assert.match(html, /No enquiries recorded/);
+  assert.doesNotMatch(html, /Reporting unavailable/);
 });

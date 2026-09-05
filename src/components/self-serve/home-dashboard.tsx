@@ -204,7 +204,7 @@ export function HomeDashboard({ data }: { data: HomeData }) {
             icon={<UsersRound size={15} strokeWidth={1.8} />}
             foot={
               <>
-                <span>{copy.kpis.vsPrior}</span>
+                <span>{performance?.previousLeads != null ? copy.kpis.vsPrior : "Last 30 days"}</span>
                 <Sparkline points={sparkPoints} />
               </>
             }

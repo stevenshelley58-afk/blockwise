@@ -271,7 +271,7 @@ export function needsLogoImportRecovery(src: string | null | undefined): boolean
 function LogoPreview({ src, alt, className, fallbackText = "Not found" }: { src: string | null | undefined; alt: string; className: string; fallbackText?: string }) {
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
 
-  if (!src || failedSrc === src) {
+  if (!src || needsLogoImportRecovery(src) || failedSrc === src) {
     return <span className="text-xs text-muted-foreground">{fallbackText}</span>;
   }
 
@@ -655,7 +655,7 @@ function BrandStudioEditor({ brandKit: initialKit, returnTo }: { brandKit: AdStu
                 label="Upload logo"
                 actionText="Upload logo"
                 helperText="PNG, JPG, WebP, or SVG / up to 5 MB"
-                previewUrl={logoPreviewUrl}
+                previewUrl={hasExternalPrimaryLogo ? undefined : logoPreviewUrl}
                 previewAlt=""
                 previewFit="contain"
                 previewBackground={kit.colours.primary}

@@ -134,7 +134,7 @@ test.describe("customer navigation canary", () => {
     await page.goto("/results?workspaceId=" + encodeURIComponent(workspaceId!));
     await expect(page.getByText(/recent sync/i)).toHaveCount(0);
     await expect(page).toHaveURL(/\/results/);
-    await expect(page.getByText("Enquiries", { exact: true })).toBeVisible();
+    await expect(page.getByRole("main").getByText("Enquiries", { exact: true })).toBeVisible();
     await expect(page.getByText("Example data", { exact: true })).toBeVisible();
     await expect(page.getByText(/^Last known /)).toHaveCount(0);
     await settle(page);
@@ -148,6 +148,8 @@ test.describe("customer navigation canary", () => {
     await page.screenshot({ path: testInfo.outputPath("customer-leads-desktop.png"), fullPage: true });
     await page.goto(`/ad-studio/brand?workspaceId=${encodeURIComponent(workspaceId!)}`);
     await expect(page.locator('[aria-current="page"]:visible')).toHaveCount(1);
+    await expect(page.getByText("Your saved website logo needs to be copied into Blockwise.", { exact: true })).toBeVisible();
+    await expect(page.locator('img[src*="realtyplushq.com.au"]')).toHaveCount(0);
     await page.goto(`/settings?workspaceId=${encodeURIComponent(workspaceId!)}`);
     await expect(page.locator('[aria-current="page"]:visible')).toHaveCount(1);
     await settle(page);
@@ -185,9 +187,9 @@ test.describe("customer navigation canary", () => {
       await page.goto("/results?workspaceId=" + encodeURIComponent(workspaceId!));
       await expect(page.getByText(/recent sync/i)).toHaveCount(0);
       await expect(page).toHaveURL(/\/results/);
-      await expect(page.getByText("Enquiries", { exact: true })).toBeVisible();
+      await expect(page.getByRole("main").getByText("Enquiries", { exact: true })).toBeVisible();
       await expect(page.getByText("Example data", { exact: true })).toBeVisible();
-    await expect(page.getByText(/^Last known /)).toHaveCount(0);
+      await expect(page.getByText(/^Last known /)).toHaveCount(0);
       await settle(page);
       await assertNothingClipped(page);
       await page.screenshot({ path: testInfo.outputPath("customer-results-" + width + ".png"), fullPage: true });
