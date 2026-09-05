@@ -126,6 +126,18 @@
       "bytes": 4612
     },
     {
+      "file": "/fonts/adstudio/bodoni-moda-400.woff2",
+      "fontId": "bodoni-moda",
+      "family": "Bodoni Moda",
+      "weight": 400,
+      "italic": false,
+      "sourceUrl": "https://fonts.gstatic.com/s/bodonimoda/v28/aFT67PxzY382XsXX63LUYL6GYFcan6NJrKp-VPjfJMShrpsGFUt8oU7a8Id4tA.woff2",
+      "license": "SIL Open Font License, 1.1",
+      "licenseUrl": "https://openfontlicense.org",
+      "sha256": "e2863d3bbe2e094f1ce98053ee3c6200cfa35f82b9f4cc6fd95fbaead4125d4f",
+      "bytes": 14528
+    },
+    {
       "file": "/fonts/adstudio/cairo-900.woff2",
       "fontId": "cairo",
       "family": "Cairo",
