@@ -10,6 +10,7 @@ import type { createSupabaseServiceClient } from "../src/lib/supabase/service.ts
 type Supabase = ReturnType<typeof createSupabaseServiceClient>;
 type Action = { id: string; action_id: string; workspace_id: string; action_type: string; target_id: string; expected_version: number; payload: Record<string, unknown>; lease_token: string };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
+const MAUTIC_ACTIONS = new Set(["consent_grant", "consent_withdraw", "consent_unsubscribe", "suppression_add", "suppression_remove", "flow_enroll", "flow_pause", "flow_resume"]);
 class ProviderActionError extends Error { readonly retryable: boolean; constructor(message: string, retryable: boolean) { super(message); this.retryable = retryable; } }
 
 export function assertChatwootActionReadiness(): void {
@@ -27,6 +28,18 @@ export async function checkChatwootActionReadiness(fetchImpl: typeof fetch = fet
   await call(base, `/api/v1/accounts/${encodeURIComponent(account)}/conversations?per_page=1`, "GET", secretFile("CHATWOOT_API_TOKEN_FILE"), "chatwoot:capability-health", undefined, fetchImpl);
 }
 
+export function assertMauticActionReadiness(): void {
+  new URL(env("MAUTIC_BASE_URL"));
+  secretFile("MAUTIC_TOKEN_FILE");
+  secretFile("BLOCKWISE_OPS_CORRELATION_KEY_FILE");
+}
+
+/** Mautic health is checked against an authenticated, bounded read on every capability refresh. */
+export async function checkMauticActionReadiness(fetchImpl: typeof fetch = fetch): Promise<void> {
+  assertMauticActionReadiness();
+  await callMautic(httpsEnv("MAUTIC_BASE_URL"), "/api/contacts?limit=1", "GET", secretFile("MAUTIC_TOKEN_FILE"), "mautic:capability-health", undefined, fetchImpl);
+}
+
 export async function runOpsActionOnce(supabase: Supabase, fetchImpl: typeof fetch = fetch): Promise<boolean> {
   const claimed = await Promise.resolve(supabase.rpc("claim_ops_provider_action", { p_lease_seconds: 600 }));
   if (claimed.error) throw new Error("customer operations action claim failed");
@@ -34,7 +47,9 @@ export async function runOpsActionOnce(supabase: Supabase, fetchImpl: typeof fet
   if (!action) return false;
   try {
     if (!UUID.test(action.workspace_id) || !UUID.test(action.target_id)) throw new Error("invalid action target");
-    const result = await executeChatwootAction(supabase, action, fetchImpl);
+    const result = MAUTIC_ACTIONS.has(action.action_type)
+      ? await executeMauticAction(supabase, action, fetchImpl)
+      : await executeChatwootAction(supabase, action, fetchImpl);
     const completed = await Promise.resolve(supabase.rpc("complete_ops_action", { p_id: action.id, p_lease_token: action.lease_token, p_safe_result: result }));
     if (completed.error || completed.data !== true) throw new Error("action completion lease lost");
   } catch (error) {

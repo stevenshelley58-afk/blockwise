@@ -247,7 +247,7 @@ begin
     or p_idempotency_key <> btrim(p_idempotency_key) or p_idempotency_key !~ '^[A-Za-z0-9][A-Za-z0-9:._/-]*$'
     or p_action_type is null or p_action_type not in (
       'team_invite', 'team_resend', 'team_cancel', 'team_role_change', 'team_suspend', 'team_reactivate', 'session_revoke',
-      'consent_grant', 'consent_withdraw', 'consent_unsubscribe', 'suppression_add', 'suppression_remove',
+      'consent_grant', 'consent_withdraw', 'consent_unsubscribe', 'suppression_add', 'suppression_remove', 'flow_enroll', 'flow_pause', 'flow_resume',
     'enquiry_assign', 'enquiry_close', 'enquiry_reply', 'enquiry_reopen', 'booking_cancel', 'booking_reschedule',
       'billing_reconcile', 'billing_cancel_at_period_end', 'billing_portal_link'
     )
