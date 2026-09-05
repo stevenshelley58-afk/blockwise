@@ -232,8 +232,8 @@ begin
   update private.ops_chatwoot_webhook_events set status='processed',processed_at=now() where event_id=left(p_event_id,256);
   return jsonb_build_object('status','processed','workspaceId',v_workspace::text,'enquiryId',v_enquiry::text);
 end; $$;
-revoke all on function public.record_ops_chatwoot_webhook_adopt(text,text,text,text,text,text,text,text,text,text,text,text,text) from public,anon,authenticated;
-grant execute on function public.record_ops_chatwoot_webhook_adopt(text,text,text,text,text,text,text,text,text,text,text,text,text) to service_role;
+revoke all on function public.record_ops_chatwoot_webhook_adopt(text,text,text,text,text,text,text,text,text,text,text,text,text,jsonb) from public,anon,authenticated;
+grant execute on function public.record_ops_chatwoot_webhook_adopt(text,text,text,text,text,text,text,text,text,text,text,text,text,jsonb) to service_role;
 
 create or replace function public.resolve_ops_enquiry_threads()
 returns jsonb language sql security definer set search_path = '' as $$
