@@ -21,6 +21,7 @@ import {
 import { CONTENT_RUN_JOB_TYPE, handleHermesContentRun } from "./content-engine.mjs";
 import { runAdRadarAccuracyAudit } from "./ad-radar-accuracy-audit.mjs";
 import { resolveAdRadarRuntime } from "./ad-radar-runtime-gate.mjs";
+import { classifyMetaAdLibraryPayload } from "./meta-ad-library-parser.mjs";
 import { publishCustomerReadModels } from "./customer-read-model-publisher.mjs";
 import { runInactiveAdPurge } from "./inactive-ad-purge.mjs";
 import {
@@ -2826,24 +2827,72 @@ function captureModeForSourceProvider(sourceProvider, suffix = "") {
 // extraction and never proxies video bytes through ScrapingBee; media bytes
 // are still captured by the existing media collector directly from source.
 
+let scrapingBeeUsageCache = { at: 0, value: null };
+
+// ScrapingBee /usage is rate-limited (6 calls/min). Cached and used for
+// reconciliation reporting only — the DB credit budget is the spending gate.
 async function scrapingBeeUsage() {
+  if (scrapingBeeUsageCache.value && Date.now() - scrapingBeeUsageCache.at < 20_000) {
+    return scrapingBeeUsageCache.value;
+  }
   const response = await fetch(`https://app.scrapingbee.com/api/v1/usage?api_key=${encodeURIComponent(scrapingBeeApiKey)}`, {
     signal: AbortSignal.timeout(15_000),
   });
   if (!response.ok) throw new Error(`scrapingbee usage failed ${response.status}`);
-  return response.json().catch(() => null);
+  const value = await response.json().catch(() => null);
+  scrapingBeeUsageCache = { at: Date.now(), value };
+  return value;
 }
 
+// ScrapingBee reports max_api_credit / used_api_credit. Informational only.
 async function scrapingBeeCreditsRemaining() {
   try {
     const usage = await scrapingBeeUsage();
-    const used = Number(usage?.totalRequestUsed ?? usage?.monthlyRequestUsed ?? usage?.credit?.used ?? 0);
-    const max = Number(usage?.totalRequestLimit ?? usage?.monthlyRequestLimit ?? usage?.credit?.limit ?? 0);
+    const max = Number(usage?.max_api_credit ?? 0);
+    const used = Number(usage?.used_api_credit ?? 0);
     if (!Number.isFinite(max) || max <= 0) return null;
     return Math.max(0, max - used);
   } catch (error) {
-    log("ScrapingBee usage check failed; refusing to spend credits unbounded", { error: error.message }, "warn");
-    return 0;
+    log("ScrapingBee usage check failed; DB credit budget remains the authority", { error: error.message }, "warn");
+    return null;
+  }
+}
+
+// DB-side atomic credit budget (research.provider_credit_budgets). Reserve
+// before each paid request; settle with the actual Spb-cost afterwards.
+// HERMES_SCRAPINGBEE_MONTHLY_CREDIT_CAP is enforced inside the same atomic
+// reservation as an external ceiling on top of the period budget.
+async function reserveProviderCredits(credits) {
+  const result = await rpc("reserve_provider_credits", {
+    p_provider: "scrapingbee",
+    p_credits: credits,
+    p_max_credits: scrapingBeeMonthlyCreditCap,
+  });
+  return result?.id ?? result ?? null;
+}
+
+async function settleProviderCredits(budgetId, reserved, actual) {
+  if (!budgetId) return;
+  try {
+    await rpc("settle_provider_credits", { p_budget_id: budgetId, p_reserved: reserved, p_actual: actual });
+  } catch (error) {
+    log("Provider credit settle failed", { budget_id: budgetId, error: error.message }, "warn");
+  }
+}
+
+// One row per external provider request, regardless of outcome. Paid failed
+// attempts are never dropped.
+async function recordAdFetchAttempt(attempt) {
+  try {
+    await writeFetchRunWithMissingColumnFallback("ad_fetch_attempts", {
+      method: "POST",
+    }, attempt);
+  } catch (error) {
+    if (missingSchemaRelation(error, "ad_fetch_attempts")) {
+      log("ad_fetch_attempts unavailable; attempt not recorded", { attempt: attempt.idempotency_key }, "warn");
+      return;
+    }
+    log("ad_fetch_attempts write failed", { error: error.message }, "warn");
   }
 }
 
@@ -2852,14 +2901,21 @@ async function runScrapingBeePageCapture(input) {
   if (!scrapingBeeApiKey) {
     return skippedCaptureOutcome(META_SCRAPINGBEE_SOURCE_PROVIDER, input, startedAt, "scrapingbee_api_key_missing");
   }
-  const remaining = await scrapingBeeCreditsRemaining();
-  if (remaining !== null && remaining < scrapingBeeMaxCostPerCapture) {
+
+  // Atomic reservation: raises credit_budget_exhausted when the remaining
+  // budget cannot cover the worst-case request cost.
+  let budgetId = null;
+  try {
+    budgetId = await reserveProviderCredits(scrapingBeeMaxCostPerCapture);
+  } catch (error) {
+    const remaining = await scrapingBeeCreditsRemaining();
     return failedCaptureOutcome(META_SCRAPINGBEE_SOURCE_PROVIDER, input, startedAt,
-      `scrapingbee_credit_cap_reached (remaining=${remaining}, max_per_capture=${scrapingBeeMaxCostPerCapture})`,
-      { credits_remaining: remaining }, 0);
+      `scrapingbee_credit_budget_exhausted (${error.message})`,
+      { credits_remaining: remaining, max_per_capture: scrapingBeeMaxCostPerCapture }, 0);
   }
 
   const url = metaAdLibraryPageUrl(input);
+  const requestStartedAt = Date.now();
   const params = new URLSearchParams({
     api_key: scrapingBeeApiKey,
     url,
@@ -2868,12 +2924,43 @@ async function runScrapingBeePageCapture(input) {
   });
   const telemetry = {
     provider_request_count: 1,
-    provider_credits: null,
+    provider_credits: 0,
     provider_cost_usd: null,
     scrapingbee_tier: "auto_mode",
     scraper_run_id: null,
     request_ids: [],
     url_without_key: url,
+  };
+  const attemptBase = {
+    ad_fetch_run_id: input.adFetchRunId || null,
+    advertiser_page_id: input.advertiserPageId || null,
+    provider: META_SCRAPINGBEE_SOURCE_PROVIDER,
+    attempt_index: 1,
+    idempotency_key: `scrapingbee:${input.advertiserPageId || input.metaPageId}:${requestStartedAt}`,
+    tier: "auto_mode",
+    request_url_host: "app.scrapingbee.com",
+    request_params: { mode: "auto", max_cost: scrapingBeeMaxCostPerCapture, target_host: new URL(url).host },
+    started_at: new Date(requestStartedAt).toISOString(),
+  };
+  const finalizeAttempt = async ({ outcome, httpStatus = null, providerStatus = null, responseBytes = null, error = null }) => {
+    const durationMs = Date.now() - requestStartedAt;
+    await recordAdFetchAttempt({
+      ...attemptBase,
+      http_status: httpStatus,
+      provider_http_status: providerStatus,
+      spb_cost: telemetry.provider_credits || null,
+      spb_auto_cost: null,
+      spb_request_id: telemetry.scraper_run_id,
+      credits_charged: telemetry.provider_credits || 0,
+      cost_usd: scrapingBeeCostUsd(telemetry.provider_credits),
+      outcome,
+      response_bytes: responseBytes,
+      duration_ms: durationMs,
+      error,
+      completed_at: now(),
+    });
+    await settleProviderCredits(budgetId, scrapingBeeMaxCostPerCapture, telemetry.provider_credits || 0);
+    telemetry.provider_cost_usd = scrapingBeeCostUsd(telemetry.provider_credits);
   };
 
   try {
@@ -2882,6 +2969,8 @@ async function runScrapingBeePageCapture(input) {
     });
     const html = await response.text();
     const header = (name) => response.headers.get(name);
+    // Spb-cost carries the actual charged credits on the auto tier;
+    // Spb-auto-cost and Spb-request-id are recorded alongside it.
     telemetry.provider_credits = Number(header("spb-cost") ?? header("spb-auto-cost") ?? 0);
     if (!Number.isFinite(telemetry.provider_credits)) telemetry.provider_credits = 0;
     telemetry.scraper_run_id = header("spb-request-id") || null;
@@ -2891,34 +2980,47 @@ async function runScrapingBeePageCapture(input) {
     const blocked = response.status === 401 || response.status === 429
       || (!Number.isNaN(spbInitialStatus) && [403, 429].includes(spbInitialStatus));
     if (!response.ok || blocked) {
-      return failedCaptureOutcome(META_SCRAPINGBEE_SOURCE_PROVIDER, input, startedAt,
-        `scrapingbee request failed ${response.status}${Number.isNaN(spbInitialStatus) ? "" : ` (initial ${spbInitialStatus})`}`,
+      const message = `scrapingbee request failed ${response.status}${Number.isNaN(spbInitialStatus) ? "" : ` (initial ${spbInitialStatus})`}`;
+      await finalizeAttempt({ outcome: "blocked", httpStatus: response.status, providerStatus: Number.isNaN(spbInitialStatus) ? null : spbInitialStatus, responseBytes: html.length, error: message });
+      return failedCaptureOutcome(META_SCRAPINGBEE_SOURCE_PROVIDER, input, startedAt, message,
         { ...telemetry, http_status: response.status, spb_initial_status_code: spbInitialStatus },
         scrapingBeeCostUsd(telemetry.provider_credits));
     }
 
+    // Shared deterministic parser: classification + structured pagination.
+    const classified = classifyMetaAdLibraryPayload(html);
+    if (classified.outcome === "challenge" || classified.outcome === "login_wall") {
+      const message = `scrapingbee_${classified.outcome}`;
+      await finalizeAttempt({ outcome: "blocked", httpStatus: response.status, providerStatus: Number.isNaN(spbInitialStatus) ? null : spbInitialStatus, responseBytes: html.length, error: message });
+      return failedCaptureOutcome(META_SCRAPINGBEE_SOURCE_PROVIDER, input, startedAt, message,
+        { ...telemetry, outcome: classified.outcome, html_bytes: html.length },
+        scrapingBeeCostUsd(telemetry.provider_credits));
+    }
+    if (classified.outcome === "unparseable") {
+      // Operational failure, never a zero-ad result. Keep head/tail snippets
+      // so the payload variant can be diagnosed offline without re-spending.
+      const debugHtml = html.length <= 10_000 ? { head: html } : { head: html.slice(0, 5_000), tail: html.slice(-5_000) };
+      const message = "scrapingbee payload could not be parsed";
+      await finalizeAttempt({ outcome: "unparseable", httpStatus: response.status, responseBytes: html.length, error: message });
+      return failedCaptureOutcome(META_SCRAPINGBEE_SOURCE_PROVIDER, input, startedAt, message,
+        { ...telemetry, html_bytes: html.length, debug_html: debugHtml },
+        scrapingBeeCostUsd(telemetry.provider_credits));
+    }
+
+    // success / partial / confirmed_absence: normalise items through the
+    // ingestion pipeline (escape-aware since extractJsonObjectsAfterKey
+    // handles escaped variants).
     const parsed = normaliseMetaAdLibraryHtml({
       html,
       pageId: input.metaPageId,
       limit: input.resultsLimit,
     });
-    // A parse failure or challenge is an operational failure, never a
-    // zero-ad result. Keep head/tail snippets so the payload variant can be
-    // diagnosed offline without re-spending credits.
-    if (!parsed.items.length && !parsed.confirmedAbsence) {
-      const debugHtml = html.length <= 10_000 ? { head: html } : { head: html.slice(0, 5_000), tail: html.slice(-5_000) };
-      return failedCaptureOutcome(META_SCRAPINGBEE_SOURCE_PROVIDER, input, startedAt,
-        parsed.warnings[0] || "scrapingbee payload could not be parsed",
-        {
-          ...telemetry,
-          challenge_detected: parsed.challengeDetected,
-          html_bytes: html.length,
-          debug_html: debugHtml,
-        },
-        scrapingBeeCostUsd(telemetry.provider_credits));
-    }
-
-    const paginationExhausted = parsed.items.length < input.resultsLimit;
+    // Pagination evidence comes ONLY from page_info.has_next_page. A bounded
+    // result list alone never proves exhaustion.
+    const paginationExhausted = classified.pageInfo.hasNextPage === false;
+    const confirmedAbsence = classified.outcome === "confirmed_absence";
+    const coverageComplete = confirmedAbsence || paginationExhausted;
+    await finalizeAttempt({ outcome: "success", httpStatus: response.status, responseBytes: html.length });
     return {
       runId: `scrapingbee-${input.metaPageId}-${Date.now()}`,
       provider: META_SCRAPINGBEE_SOURCE_PROVIDER,
@@ -2930,23 +3032,26 @@ async function runScrapingBeePageCapture(input) {
       items: parsed.items,
       rawDatasetId: null,
       errorMessage: parsed.warnings.join("; ") || null,
-      coverageComplete: parsed.confirmedAbsence || paginationExhausted,
+      coverageComplete,
       paginationExhausted,
-      stopReason: parsed.confirmedAbsence ? "confirmed_absence" : paginationExhausted ? "page_exhausted" : "results_limit_reached",
+      stopReason: confirmedAbsence ? "confirmed_absence" : paginationExhausted ? "page_exhausted" : "pagination_unresolved",
       metadata: {
         advertiserPageId: input.advertiserPageId,
         resolverDecisionId: input.resolverDecisionId,
-        confirmed_absence: parsed.confirmedAbsence,
-        challenge_detected: parsed.challengeDetected,
-        connection_count: parsed.connectionCount,
-        warnings: parsed.warnings,
+        confirmed_absence: confirmedAbsence,
+        challenge_detected: false,
+        connection_count: classified.connectionCount,
+        page_info: classified.pageInfo,
+        parser_outcome: classified.outcome,
+        warnings: [...new Set([...classified.warnings, ...parsed.warnings])],
         provider_telemetry: telemetry,
       },
     };
   } catch (error) {
+    await finalizeAttempt({ outcome: "error", error: error.message });
     return failedCaptureOutcome(META_SCRAPINGBEE_SOURCE_PROVIDER, input, startedAt,
       `scrapingbee request error: ${error.message}`,
-      { ...telemetry, error: error.message }, 0);
+      { ...telemetry, error: error.message }, scrapingBeeCostUsd(telemetry.provider_credits));
   }
 }
 
@@ -2959,17 +3064,39 @@ function scrapingBeeCostUsd(credits) {
 
 async function runMetaPageCapture(input) {
   const fallbackSourceProvider = configuredMetaFallbackSourceProvider();
+  // A page scan makes AT MOST ONE paid ScrapingBee request. A failed primary
+  // attempt is never followed by a second paid attempt for the same page.
+  let scrapingBeeAttempted = false;
 
-  if (scrapingBeeEnabled && scrapingBeeOrder === "primary") {
+  const tryScrapingBee = async (metadataExtras = {}) => {
+    if (!scrapingBeeEnabled || scrapingBeeAttempted) return null;
+    scrapingBeeAttempted = true;
     const spb = await runScrapingBeePageCapture(input);
     if (spb.status === "SUCCEEDED") {
-      return { outcome: spb, sourceProvider: META_SCRAPINGBEE_SOURCE_PROVIDER, captureMode: captureModeForSourceProvider(META_SCRAPINGBEE_SOURCE_PROVIDER) };
+      return {
+        outcome: { ...spb, metadata: { ...(spb.metadata || {}), ...metadataExtras } },
+        sourceProvider: META_SCRAPINGBEE_SOURCE_PROVIDER,
+        captureMode: captureModeForSourceProvider(META_SCRAPINGBEE_SOURCE_PROVIDER),
+      };
     }
-    log("ScrapingBee primary capture failed; falling back", {
+    log("ScrapingBee capture failed", {
       advertiser_page_id: input.advertiserPageId,
       meta_page_id: input.metaPageId,
       error: spb.errorMessage,
     }, "warn");
+    return null;
+  };
+
+  if (scrapingBeeEnabled && scrapingBeeOrder === "primary") {
+    const primary = await tryScrapingBee();
+    if (primary) return primary;
+    const fallback = await runFallbackMetaPageCapture(input, fallbackSourceProvider);
+    const sourceProvider = fallback.provider || fallbackSourceProvider;
+    return {
+      outcome: fallback,
+      sourceProvider,
+      captureMode: captureModeForSourceProvider(sourceProvider, "after_scrapingbee_failure"),
+    };
   }
 
   if (metaOfficialApiEnabled) {
@@ -2983,23 +3110,8 @@ async function runMetaPageCapture(input) {
       meta_page_id: input.metaPageId,
       error: official.errorMessage,
     }, "warn");
-    if (scrapingBeeEnabled) {
-      const spb = await runScrapingBeePageCapture(input);
-      if (spb.status === "SUCCEEDED") {
-        return {
-          outcome: {
-            ...spb,
-            metadata: {
-              ...(spb.metadata || {}),
-              official_api_failed: true,
-              official_api_error: official.errorMessage,
-            },
-          },
-          sourceProvider: META_SCRAPINGBEE_SOURCE_PROVIDER,
-          captureMode: captureModeForSourceProvider(META_SCRAPINGBEE_SOURCE_PROVIDER, "after_official_api_failure"),
-        };
-      }
-    }
+    const spb = await tryScrapingBee({ official_api_failed: true, official_api_error: official.errorMessage });
+    if (spb) return spb;
     const fallback = await runFallbackMetaPageCapture(input, fallbackSourceProvider);
     const sourceProvider = fallback.provider || fallbackSourceProvider;
     return {
@@ -3016,12 +3128,8 @@ async function runMetaPageCapture(input) {
     };
   }
 
-  if (scrapingBeeEnabled) {
-    const spb = await runScrapingBeePageCapture(input);
-    if (spb.status === "SUCCEEDED") {
-      return { outcome: spb, sourceProvider: META_SCRAPINGBEE_SOURCE_PROVIDER, captureMode: captureModeForSourceProvider(META_SCRAPINGBEE_SOURCE_PROVIDER) };
-    }
-  }
+  const spb = await tryScrapingBee();
+  if (spb) return spb;
 
   const fallback = await runFallbackMetaPageCapture(input, fallbackSourceProvider);
   const sourceProvider = fallback.provider || fallbackSourceProvider;
@@ -3328,31 +3436,46 @@ function normaliseMetaAdLibraryHtml({ html, pageId, limit }) {
   };
 }
 
+function softUnescape(text) {
+  // One level of JS-string unescaping: \" -> ", \\ -> \. Escaped payload
+  // variants (JSON embedded in a JS string) only become parseable after this.
+  return String(text).replaceAll('\\"', '"').replaceAll("\\\\", "\\");
+}
+
 function extractJsonObjectsAfterKey(text, key) {
   const out = [];
-  let cursor = 0;
-  // Search the bare key so escaped-quote variants (\"key\":...) also match.
-  const marker = key;
-  while (cursor < text.length) {
-    const keyIndex = text.indexOf(marker, cursor);
-    if (keyIndex === -1) break;
-    const colonIndex = text.indexOf(":", keyIndex + marker.length);
-    const braceIndex = colonIndex === -1 ? -1 : text.indexOf("{", colonIndex + 1);
-    if (braceIndex === -1) {
-      cursor = keyIndex + marker.length;
-      continue;
+  const seen = new Set();
+  // Scan both the raw text and a one-level-unescaped copy. Brace matching and
+  // JSON.parse must run over the SAME text the key was found in: escaped
+  // variants break string-aware brace matching in raw form.
+  for (const source of [String(text), softUnescape(text)]) {
+    let cursor = 0;
+    while (cursor < source.length) {
+      const keyIndex = source.indexOf(key, cursor);
+      if (keyIndex === -1) break;
+      const colonIndex = source.indexOf(":", keyIndex + key.length);
+      const braceIndex = colonIndex === -1 ? -1 : source.indexOf("{", colonIndex + 1);
+      if (braceIndex === -1) {
+        cursor = keyIndex + key.length;
+        continue;
+      }
+      const endIndex = findJsonObjectEnd(source, braceIndex);
+      if (endIndex === -1) {
+        cursor = braceIndex + 1;
+        continue;
+      }
+      try {
+        const parsed = JSON.parse(source.slice(braceIndex, endIndex + 1));
+        const dedupeKey = json(parsed);
+        if (!seen.has(dedupeKey)) {
+          seen.add(dedupeKey);
+          out.push(parsed);
+        }
+      } catch {
+        // Meta can change embedded payloads without changing the page shell.
+      }
+      cursor = endIndex + 1;
     }
-    const endIndex = findJsonObjectEnd(text, braceIndex);
-    if (endIndex === -1) {
-      cursor = braceIndex + 1;
-      continue;
-    }
-    try {
-      out.push(JSON.parse(text.slice(braceIndex, endIndex + 1)));
-    } catch {
-      // Meta can change embedded payloads without changing the page shell.
-    }
-    cursor = endIndex + 1;
   }
   return out;
 }
@@ -4481,6 +4604,8 @@ async function handleAdCollector(job) {
   const adFetchRunId = await insertFetchRun(job, buildRunId, input, initialSourceProvider);
   if (!adFetchRunId) throw new Error("ad_fetch_run insert did not return an id");
   await markAdvertiserPageScanStarted(pageRow.id);
+  // Link provider attempts back to the run row.
+  input.adFetchRunId = adFetchRunId;
   const capture = await runMetaPageCapture(input);
   const { outcome, sourceProvider, captureMode: capture_mode } = capture;
   if (outcome.status === "SKIPPED") {

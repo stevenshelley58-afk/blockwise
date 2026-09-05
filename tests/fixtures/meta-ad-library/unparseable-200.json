@@ -1,0 +1,6 @@
+<!doctype html><html><head><title>Facebook</title></head><body>
+<!-- HTTP 200 HTML that contains no Ad Library connection payload at all:
+     a consent/redirect shell. Must classify as unparseable, not zero ads. -->
+<div id="pagelet_bluebar"></div>
+<script>window.location.replace("https://www.facebook.com/privacy/consent/user_cookie_choice/");</script>
+</body></html>
