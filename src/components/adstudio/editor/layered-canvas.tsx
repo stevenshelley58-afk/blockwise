@@ -79,6 +79,7 @@ export interface LayeredCanvasProps {
 export function LayeredCanvas({
   templateId,
   existingAdId,
+  assets,
   layout,
   colours,
   imageValues = {},
@@ -176,6 +177,7 @@ export function LayeredCanvas({
           fabric,
           templateId,
           existingAdId,
+          assets,
           placement: layout.placement,
           layer,
           colours,

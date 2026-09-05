@@ -474,6 +474,7 @@ function RedesignedEditor({ pack, adId, templateId, state, activeLayout, brandCo
     <DesignCanvas
       templateId={templateId}
       existingAdId={adId}
+      assets={pack.assets}
       layout={placement === "feed" ? pack.feedLayout : pack.storyLayout}
       placement={placement}
       colours={state.resolvedColourMap}
@@ -482,6 +483,7 @@ function RedesignedEditor({ pack, adId, templateId, state, activeLayout, brandCo
       cropOverrides={Object.fromEntries(state.imageValues.map(iv => [iv.inputKey, iv.crops[placement]]))}
       selectedLayerId={interactive && placement === state.activePlacement ? state.selectedLayerId : null}
       onSelect={interactive ? layerId => { if (layerId) editLayer(placement, layerId); } : undefined}
+      onError={setError}
       zoom={canvasZoom}
     />
   );
@@ -577,7 +579,7 @@ type DesignCanvasProps = {
   zoom?: "fit" | 0.8 | 1 | 1.25;
 };
 
-function DesignCanvas({ templateId, existingAdId, layout, placement, colours, imageValues, textValues, cropOverrides, selectedLayerId, onSelect, onCropImage, zoom = "fit" }: DesignCanvasProps) {
+function DesignCanvas({ templateId, existingAdId, assets, layout, placement, colours, imageValues, textValues, cropOverrides, selectedLayerId, onSelect, onCropImage, onError, zoom = "fit" }: DesignCanvasProps) {
   const viewport = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: 800, height: 700 });
   useEffect(() => { const node = viewport.current; if (!node) return; const observer = new ResizeObserver(() => setSize({ width: node.clientWidth, height: node.clientHeight })); observer.observe(node); return () => observer.disconnect(); }, []);
@@ -585,7 +587,7 @@ function DesignCanvas({ templateId, existingAdId, layout, placement, colours, im
   const fit = Math.min((size.width - 24) / dims.width, (size.height - 24) / dims.height, 1);
   const scale = zoom === "fit" ? Math.max(0.05, Math.min(1, fit)) : zoom;
   const width = Math.round(dims.width * scale), height = Math.round(dims.height * scale);
-  return <div ref={viewport} className="flex min-h-0 min-w-0 flex-1 items-start justify-start overflow-auto p-3"><div className="m-auto" style={{ width, height, minWidth: width, minHeight: height }}><LayeredCanvas templateId={templateId} existingAdId={existingAdId} assets={pack.assets} layout={layout} colours={colours} imageValues={imageValues} textValues={textValues} cropOverrides={cropOverrides} selectedLayerId={selectedLayerId} onSelect={onSelect} onCropImage={onCropImage} onError={setError} className="h-full w-full" /></div></div>;
+  return <div ref={viewport} className="flex min-h-0 min-w-0 flex-1 items-start justify-start overflow-auto p-3"><div className="m-auto" style={{ width, height, minWidth: width, minHeight: height }}><LayeredCanvas templateId={templateId} existingAdId={existingAdId} assets={assets} layout={layout} colours={colours} imageValues={imageValues} textValues={textValues} cropOverrides={cropOverrides} selectedLayerId={selectedLayerId} onSelect={onSelect} onCropImage={onCropImage} onError={onError} className="h-full w-full" /></div></div>;
 }
 
 function InspectorTabs({ value, onChange }: { value: InspectorTab; onChange: (value: InspectorTab) => void }) {

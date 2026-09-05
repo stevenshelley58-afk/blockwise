@@ -79,6 +79,7 @@ export function BusinessAvatar({
 export function FeedPreview({
   templateId,
   existingAdId,
+  assets,
   layout,
   colours,
   textValues,
@@ -160,6 +161,7 @@ export function FeedPreview({
 export function StoryPreview({
   templateId,
   existingAdId,
+  assets,
   layout,
   colours,
   textValues,

@@ -19,7 +19,7 @@ export function TemplateDetailPreview({ template }: { template: AdTemplate }) {
     description: template.metadata.metaCopyDefaults.descriptions[0] ?? "",
     cta: template.metadata.metaCopyDefaults.cta,
   };
-  const common = { templateId: template.templateId, existingAdId: "", colours: template.semanticColours, textValues, imageValues, copy, businessName: "Your business", logoUrl: null, destinationUrl: "https://your-business.example" } as const;
+  const common = { templateId: template.templateId, existingAdId: "", assets: template.assets, colours: template.semanticColours, textValues, imageValues, copy, businessName: "Your business", logoUrl: null, destinationUrl: "https://your-business.example" } as const;
   return (
     <section className="mt-7" aria-label="Template preview">
       <Tabs value={mode} onValueChange={(value) => setMode(value as "meta" | "artwork")}>
